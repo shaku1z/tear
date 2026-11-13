@@ -8,7 +8,7 @@ import type {
   GhostSupportScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
-  LegacyScreenRendererRegistry,
+  ScreenRendererTable,
   PlaygroundScreenView,
   ProfileScreenView,
   ReplayScreenView,
@@ -47,6 +47,8 @@ export interface LiveScreenRendererOptions {
   readonly deltaSeconds: () => number;
   readonly mouse: () => Readonly<{ x: number; y: number }>;
   readonly scroll: () => number;
+  /** Lets a phone composition clamp the shared scroll to the extent it measured. */
+  readonly setScroll?: (value: number) => void;
   readonly focus: () => number;
   readonly touch: () => boolean;
   readonly reducedMotion: () => boolean;
@@ -54,6 +56,8 @@ export interface LiveScreenRendererOptions {
   readonly safeInsets?: () => Readonly<{ l: number; r: number; t: number; b: number }>;
   readonly dispatch: (action: ScreenAction) => void;
   readonly enqueue: (button: LiveScreenButton) => void;
+  /** Whether an action's surface is available in this build; omitted means every action is available. */
+  readonly available?: (action: ScreenAction) => boolean;
   readonly renderPreview: (id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
 }
 
@@ -116,7 +120,7 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
 }
 
 /** Composes every typed canvas screen renderer against one live context. */
-export function createLiveScreenRenderers(options: LiveScreenRendererOptions): LegacyScreenRendererRegistry {
+export function createLiveScreenRenderers(options: LiveScreenRendererOptions): ScreenRendererTable {
   const context: ScreenRenderContext = {
     canvas: options.canvas, ui: options.ui, width: options.width, height: options.height,
     get time() { return options.time(); },
@@ -133,6 +137,8 @@ export function createLiveScreenRenderers(options: LiveScreenRendererOptions): L
     },
     get safeInsets() { return options.safeInsets?.() ?? { l: 0, r: 0, t: 0, b: 0 }; },
     enqueue(control: ScreenControl) { options.enqueue(toButton(control, options.dispatch)); },
+    setScroll: (value: number) => { options.setScroll?.(value); },
+    available: (action: ScreenAction) => options.available?.(action) ?? true,
     renderPreview: options.renderPreview,
   };
   const cold = createColdScreenBoundary(context);

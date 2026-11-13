@@ -1,3 +1,4 @@
+import { achievementOutbox, tutorialLedger } from "../domain/reward-receipts";
 import {
   asRecord,
   extensionFields,
@@ -10,7 +11,7 @@ import {
 } from "./json";
 import { invalid, unsupportedVersion, type MigrationResult } from "./result";
 
-export const PROFILE_ENVELOPE_VERSION = 2;
+export const PROFILE_ENVELOPE_VERSION = 3;
 const KNOWN_FIELDS = new Set(["schema", "schemaVersion", "revision", "updatedAtMs", "writerId", "profile", "data", "extensions"]);
 
 export interface ProfileEnvelopeV2 {
@@ -36,6 +37,7 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
 
   const profile = validateJsonObject(isEnvelope ? (source.profile ?? source.data ?? {}) : source);
   if (!profile.ok) return invalid(profile.error);
+  try { if (profile.value.tutorialCompletion !== undefined) tutorialLedger(profile.value.tutorialCompletion); if (profile.value.achievementOutbox !== undefined) achievementOutbox(profile.value.achievementOutbox); } catch { return invalid("Invalid profile completion/reward ledger."); }
   const extensions = extensionFields(isEnvelope ? source : {}, KNOWN_FIELDS);
   if (!extensions.ok) return invalid(extensions.error);
   return {

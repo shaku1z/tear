@@ -2,7 +2,7 @@ import type { GhostVaultBackend } from "../ghost";
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearAgentIntentTrace } from "./contracts";
-import type { TearPolicyDecisionReceipt } from "./policy-runtime";
+import { DEFAULT_TEAR_POLICY_RUNTIME_LIMITS, type TearPolicyDecisionReceipt } from "./policy-runtime";
 
 const JOURNAL_PREFIX = "policy-decision-journal:v1:";
 const QUARANTINE_PREFIX = "policy-decision-journal-quarantine:v1:";
@@ -65,15 +65,32 @@ function hash(value: unknown): value is string { return typeof value === "string
 function journalKey(id: string): string { return `${JOURNAL_PREFIX}${id}`; }
 
 function freezeReceipt(value: TearPolicyDecisionReceipt): TearPolicyDecisionReceipt {
+  const version: unknown = value.factorizedVersion;
+  const v4BudgetRefusal = version === 4 && value.source === "refused" && value.reason === "decision-budget-exceeded";
   if (!hash(value.observationHash) || (value.artifactId !== undefined && !text(value.artifactId))
+    || !["artifact", "model-default", "scripted-fallback", "refused"].includes(value.source)
     || (value.artifactHash !== undefined && !hash(value.artifactHash))
     || (value.reason !== undefined && !["no-active-artifact", "invalid-model", "missing-decision", "invalid-action", "decision-budget-exceeded", "invalid-active-artifact", "canonical-source-unavailable", "no-legal-action"].includes(value.reason))
     || (value.activationHash !== undefined && !hash(value.activationHash))
     || (value.source === "artifact" && (value.artifactId === undefined || value.artifactHash === undefined || value.reason !== undefined))
-    || (value.source === "refused" && (value.reason !== "invalid-active-artifact" && value.reason !== "canonical-source-unavailable"))) {
+    || (value.source === "refused" && !v4BudgetRefusal && (value.reason !== "invalid-active-artifact" && value.reason !== "canonical-source-unavailable"))) {
     throw new TypeError("invalid policy decision receipt");
   }
-  return Object.freeze({ ...value });
+  if (version !== undefined && (version !== 4 || value.support !== undefined
+    || !["artifact", "refused"].includes(value.source) || value.artifactId === undefined || value.artifactHash === undefined || value.activationHash === undefined)
+    || value.factorizedSupport !== undefined && (version !== 4 || !record(value.factorizedSupport)
+      || !["observed-motor", "generalized", "unknown"].includes(value.factorizedSupport.kind)
+      || ![value.factorizedSupport.motorResponse, value.factorizedSupport.threatResponse].every(v => Number.isFinite(v) && v >= 0 && v <= 1)
+      || !integer(value.factorizedSupport.headUpdates) || value.factorizedSupport.headUpdates < 1 || value.decisionMilliseconds === undefined)) throw new TypeError("invalid V4 factor support receipt");
+  if (value.support !== undefined && (!record(value.support) || typeof value.support.entryPresent !== "boolean" || !Number.isFinite(value.support.value)
+    || !hash(value.support.stateKey) || !hash(value.support.semanticActionHash)
+    || value.source !== (value.support.entryPresent ? "artifact" : "model-default")
+    || value.decisionMilliseconds === undefined)) throw new TypeError("invalid return policy support receipt");
+  if (value.source === "model-default" && (value.support === undefined || value.artifactId === undefined || value.artifactHash === undefined || value.reason !== undefined)
+    || value.decisionMilliseconds !== undefined && (!Number.isFinite(value.decisionMilliseconds) || value.decisionMilliseconds < 0
+      || value.source !== "scripted-fallback" && !v4BudgetRefusal && value.decisionMilliseconds > DEFAULT_TEAR_POLICY_RUNTIME_LIMITS.maxDecisionMilliseconds)) throw new TypeError("invalid return policy budget receipt");
+  return Object.freeze({ ...value, ...(value.support === undefined ? {} : { support: Object.freeze({ ...value.support }) }),
+    ...(value.factorizedSupport === undefined ? {} : { factorizedSupport: Object.freeze({ ...value.factorizedSupport }) }) });
 }
 
 function freezeTrace(value: TearAgentIntentTrace): TearAgentIntentTrace {
@@ -101,7 +118,8 @@ function journalHash(value: Omit<TearPolicyDecisionJournalV1, "journalHash">): s
 function freezeEntry(value: Omit<TearPolicyDecisionJournalEntryV1, "entryHash">): TearPolicyDecisionJournalEntryV1 {
   if (!integer(value.sequence) || value.sequence < 1 || !integer(value.tick) || value.tick < 0
     || value.trace.tick !== value.tick || !hash(value.actionHash) || value.actionHash !== stableVerificationHash(value.actions)
-    || (value.previousEntryHash !== undefined && !hash(value.previousEntryHash))) throw new TypeError("invalid policy decision journal entry");
+    || (value.previousEntryHash !== undefined && !hash(value.previousEntryHash))
+    || value.receipt.factorizedVersion === 4 && value.receipt.source === "refused" && value.actions.length !== 0) throw new TypeError("invalid policy decision journal entry");
   return Object.freeze({ ...value, receipt: freezeReceipt(value.receipt), actions: freezeActions(value.actions), trace: freezeTrace(value.trace), entryHash: entryHash(value) });
 }
 

@@ -134,8 +134,9 @@ export function buildGameoverSnapshot(input: {
   readonly log: readonly ResultLogView[]; readonly formatTime: (seconds: number) => string;
 }): GameoverScreenView {
   return Object.freeze({ id: "gameover", summary: `wave ${String(input.wave)}   ·   ${String(input.score)} pts   ·   ${input.formatTime(input.time)}`,
-    isNew: input.isNew, ...(input.best === undefined ? {} : { best: `best: wave ${String(input.best.wave)} · ${String(input.best.score)} pts` }),
-    earned: input.earned, coins: input.coins, replayAvailable: input.replayAvailable,
+    // A first scoreless run is technically a record but celebrating 0 points reads as broken.
+    isNew: input.isNew && input.score > 0, ...(input.best === undefined ? {} : { best: `best: wave ${String(input.best.wave)} · ${String(input.best.score)} pts` }),
+    earned: input.earned, coins: input.coins, replayAvailable: input.replayAvailable, celebrate: input.score > 0,
     abilities: input.abilities, progress: input.progress, log: input.log });
 }
 
@@ -145,5 +146,5 @@ export function buildWinSnapshot(input: {
   readonly formatTime: (seconds: number) => string;
 }): WinScreenView {
   return Object.freeze({ id: "win", campaign: input.campaign, score: input.score, time: input.formatTime(input.time),
-    isNew: input.isNew, earned: input.earned, coins: input.coins, difficulty: input.difficulty, log: input.log });
+    isNew: input.isNew && input.score > 0, earned: input.earned, coins: input.coins, difficulty: input.difficulty, log: input.log });
 }

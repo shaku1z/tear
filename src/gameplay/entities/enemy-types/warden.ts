@@ -1,3 +1,4 @@
+import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type { EnemyDependencies, ArenaZone, EnemyPlatform, EnemyPlayerPort, EnemyProjectile, Point } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
@@ -44,6 +45,20 @@ export function createWardenType(dependencies: EnemyDependencies, Enemy: EnemyBa
       this.vaultCd = 0;
       this.stringIdx = 0; this.stringN = 2; this.beatPh = "wind"; this.beatHeavy = false; this.beatParried = false;   // baton strings
       this.mortarKickT = 0;
+    }
+    /** Practice requests cross an authored threshold; normal update owns every transition effect. */
+    requestPracticePhase(phase: 2 | 3): boolean {
+      const entry = this.practicePhaseEntry();
+      if (!entry.ready || entry.targetPhase !== entry.phase || phase !== entry.phase + 1 || this.dead || this.dying || this.hp <= 0) return false;
+      this.hp = this.maxHp * practicePhaseEntryHealth(bossPhaseMarks("warden"), phase);
+      this.hpDisplay = this.hp;
+      return true;
+    }
+    practicePhaseEntry(): BossPracticeActorEntry {
+      const phase = this.phaseMarker === 3 ? 3 : this.phaseMarker === 2 ? 2 : 1;
+      return Object.freeze({ phase, targetPhase: this.phase,
+        ready: this.state !== "fakedeath" && this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
+        stage: this.introT > 0 ? "opening" : this.cinematicRequest !== null || this.cinematicT > 0 ? "transition" : this.state === "fakedeath" ? "transition" : "combat" });
     }
     get phase() { const f = this.hp / this.maxHp, marks = bossPhaseMarks("warden"); return f > marks[0] ? 1 : (f > marks[1] ? 2 : 3); }
     override damageTakenMult() { return this.guardBrokenT > 0 ? CONFIG.warden.guardBreakMult : 1; }

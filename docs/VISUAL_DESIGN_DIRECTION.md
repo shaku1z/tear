@@ -30,15 +30,15 @@ The interface must remain immediately usable on a 16:9 browser canvas, an ultraw
 The authored safe composition remains 1600×900. `screenRectangle` is the true physical viewport expressed in logical coordinates and includes aspect-ratio overscan.
 
 - World layers, ambient scenery, full-screen clears, dims, washes, vignettes, transitions, and the menu's dark wash paint through `screenRectangle` or the shared overscan contract.
-- Titles, buttons, cards, HUD telemetry, and pointer targets remain inside the authored safe composition.
+- Titles, buttons, cards and pointer targets remain inside the authored safe composition. HUD groups and on-screen touch controls anchor to the visible screen corners plus device safe-area insets, so they stay out of the arena on every aspect ratio.
 - Wider browser shapes—including the reported 2048×1024 laptop capture—reveal more world but never reveal an unpainted strip, draw a false safe-area boundary, or shift the interaction rail.
 - 4:3 windows reveal vertical bleed without cropping the safe composition.
-- Touch portrait is an explicit orientation gate; touch landscape uses the same composition with a density increase and safe-area insets.
+- Touch portrait is an explicit orientation gate; touch landscape uses the same logical frame with a derived density (text ≥ 11 CSS px, targets ≥ 44 CSS px) and safe-area insets. Phone-sized screens switch to their compact composition (see DESIGN_SYSTEM.md, Density).
 - DOM overlays use the bundled body family and stay subordinate to canvas UI.
 
 ## Shared surface grammar
 
-- **Field sheet:** translucent paper over the live attract world, signature-color top edge, hairline boundary, restrained shadow, and registration marks.
+- **Field sheet:** effectively solid paper (`alpha.sheet`) over the live attract world, signature-color top edge, hairline boundary, restrained shadow, and registration marks. Scene art never shows through body text.
 - **Card:** solid readable body, hard border, optional identity edge, compact metadata line, measured description, and one clear state zone.
 - **Section:** condensed uppercase label, colored identity, count where useful, and a hairline that reserves separation before content.
 - **Primary action:** solid cyan or screen hue, dark label, clear action glyph, and an optional mono consequence line.
@@ -58,9 +58,9 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 
 ### Main-menu composition contract
 
-- The established logical anchors remain `x=100`, wordmark baseline `y=150`, identity `y=240`, PLAY `y=318`, and navigation beginning `y=426` in the 1600×900 composition.
-- Aspect-ratio overscan changes only the painted world and wash extent. It must not introduce a visible seam, resize the logo, relocate controls, or reinterpret a laptop browser as a special layout.
-- The left wash uses the original 0→800 logical gradient and extends its fill through the true viewport rectangle. This preserves the old laptop balance while preventing exposed canvas strips.
+- The established logical anchors are `x=100` measured from the **true left edge of the window** (`screenRectangle.x + 100`, plus the safe-area inset), wordmark baseline `y=150`, identity `y=240`, PLAY `y=318`, and navigation beginning `y=426` with a 61 px rhythm. Extra rows (Practice Lab after the tutorial, then the music row) continue that rhythm under SETTINGS.
+- On wider windows the rail stays anchored to the left edge and the extra width goes to the living scene on the right; an empty band never opens left of the rail. Touch uses the same anchor; the compact density flows the navigation into two columns.
+- The rail sits on the established soft dark fade from the physical left edge into the scene (`color.rail` from `alpha.rail` through `alpha.railMid` to clear over `metric.railFadeW`), never a solid slab. Each rail control carries its own dark fill (`alpha.railControl`), so every label reads at 4.5:1 or better whatever biome is showing.
 - The attract scene carries the spectacle: silhouette clarity, biome palette, and readable combat motion matter more than adding menu ornament.
 - Pending-finale recovery remains the sole justified secondary content block because it exposes otherwise unavailable actions.
 
@@ -112,10 +112,18 @@ The authored safe composition remains 1600×900. `screenRectangle` is the true p
 - Master, music, sound effects, and interface volume remain independent and explain their mix relationship.
 - Rename remains a focused modal with clear validation, length state, and contextual return.
 
+### Adventure chapters, boss cards, and the finale
+
+- A chapter intro is a title card the biome writes into its own upper sky: numeral, condensed title, a short accent rule and one mono lore page at a time, in the biome ink, on a haze of the sky's own colour. No panel, plate, outline or halo; the arena, the player and the far side of the sky stay in full colour.
+- The text keeps a clear field above every platform of its stage, and pages hold long enough to read before they play on by themselves. One true, device-worded prompt sits in the floor band.
+- Skipping lands on the biome reveal, never on combat. The HUD returns on the READY beat, before control; the first wave starts only after the card ends, and its WAVE banner is not repeated.
+- Boss arrival cards keep every line inside their letterbox bars and hide the HUD while they play. The finale epilogue alone sits on the dark rail fade, because it is already on the cinematic field.
+- The full contract, its tokens and its test are in DESIGN_SYSTEM.md, "Adventure chapter presentation contract".
+
 ### Playground and HUD
 
 - Playground groups spawn, boss, arena/weapon, modifier, action, and ability-lab controls rather than presenting one control wall.
-- HUD stays inside safe composition and device insets while the world bleeds outward.
+- HUD anchors to the visible screen corners and device insets while the world bleeds outward. The HUD has no plates, boxes, outlines or halos: its text is plain per-biome ink drawn directly on the scene, so the world reads right up to every number.
 - Health, boss state, wave, score, multiplier, weapon state, and transient alerts each keep one visual authority.
 
 ## Motion and accessibility

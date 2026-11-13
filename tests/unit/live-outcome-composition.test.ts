@@ -2,16 +2,26 @@ import { describe, expect, it, vi } from "vitest";
 
 const captured = vi.hoisted(() => ({ context: null as Record<string, unknown> | null }));
 
-vi.mock("../../src/app/live-run-outcome-host", () => ({
+vi.mock("../../src/app/run/run-outcome-host", () => ({
   createLiveRunOutcomeHost: (context: Record<string, unknown>) => { captured.context = context; },
 }));
 vi.mock("../../src/gameplay/runtime/gameplay-event-publishers", () => ({
   createTearTerminalRunFactPublisher: () => vi.fn(),
 }));
 
-import { createLiveOutcomeComposition } from "../../src/app/live-outcome-composition";
+import { createLiveOutcomeComposition } from "../../src/app/run/outcome-composition";
 
 describe("live outcome composition pending-finale persistence", () => {
+  it("keeps the same semantic input through scored Campaign closure and stops it at actual finale termination", () => {
+    const order: string[] = [], run = { mode: "campaign" };
+    createLiveOutcomeComposition({ dependencies: { GAMEPLAY_EVENTS: {}, pendingFinalePersistence: { pending: () => null },
+      GHOST: { stopRec: () => { order.push("ghost2-closed"); return null; } }, Input: { stopSemanticRecording: () => { order.push("input-stopped"); } } } as never,
+      run: () => run, cleanupBossActors: () => undefined, environment: { clear: () => undefined }, lifecycle: { terminate: () => undefined } } as never);
+    const context = captured.context as unknown as { stopRecording(summary: { won: boolean }): void; terminate(outcome: "victory"): void };
+    context.stopRecording({ won: true }); expect(order).toEqual(["ghost2-closed"]);
+    context.terminate("victory"); expect(order).toEqual(["ghost2-closed", "input-stopped"]);
+    run.mode = "endless"; context.stopRecording({ won: true }); expect(order.slice(-2)).toEqual(["ghost2-closed", "input-stopped"]);
+  });
   it.each([
     ["defeat", "defeat"],
     ["victory", "boss-terminal"],
@@ -56,7 +66,7 @@ describe("live outcome composition pending-finale persistence", () => {
       GAMEPLAY_EVENTS: {}, pendingFinalePersistence: { persist, saveProfile, clear, pending },
       outcomeDefeatProgressPersistence: { record: recordDefeatProgress },
       DAILY: { bump: dailyBump }, Cloud: { push, logEvent },
-    } as never, achievementCheck, economyTelemetry: () => ({}), finishRecording } as never);
+    } as never, run: () => ({}), achievementCheck, economyTelemetry: () => ({}), finishRecording } as never);
 
     const context = captured.context as unknown as {
       readonly persistPendingFinale: (record: object) => void;
@@ -99,7 +109,7 @@ describe("live outcome composition pending-finale persistence", () => {
 
     const context = captured.context as unknown as {
       readonly saveBest: (run: { mode: string; diff: string; wave: number; score: number; runTime: number }) => boolean;
-      readonly awardCoins: (score: number) => number; readonly achievementTracking: () => boolean;
+      readonly awardCoins: (score: number) => number; readonly achievementTracking: () => boolean; readonly finishRecording: (won: boolean) => void;
       readonly recordDefeatProgress: (run: object, earned: number) => void;
       readonly executeVictoryIntents: (intents: readonly object[]) => void;
       readonly persistPendingFinale: (record: object) => void; readonly saveProfile: () => void;
@@ -107,6 +117,7 @@ describe("live outcome composition pending-finale persistence", () => {
     };
     expect(context.saveBest({ mode: "endless", diff: "normal", wave: 2, score: 100, runTime: 20 })).toBe(false);
     expect(context.awardCoins(100)).toBe(0);
+    context.finishRecording(false); context.finishRecording(true); expect(finishRecording).not.toHaveBeenCalled();
     expect(context.achievementTracking()).toBe(false);
     context.recordDefeatProgress({}, 0); context.executeVictoryIntents([{}]); context.persistPendingFinale({});
     context.saveProfile(); context.clearPendingFinale(); context.pushCloud();

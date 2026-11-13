@@ -16,7 +16,7 @@ export interface TearFoundryFrozenInputsV1 {
   readonly invariantSetHash: string;
   readonly budgetHash: string;
   readonly stopConditionsHash: string;
-  /** V2 only: immutable protocol (cases/thresholds/metrics), never a future challenger-bound paired plan. */
+  /** V2/V3: immutable protocol, never a future challenger-bound paired plan. V3 additionally requires a numeric budget ledger. */
   readonly evaluationProtocol?: TearFoundryEvaluationProtocolV1;
 }
 
@@ -44,7 +44,7 @@ export interface TearFoundryJobEventV1 {
 
 export interface TearFoundryJobV1 {
   readonly format: "tear-foundry-job";
-  readonly schemaVersion: 1 | 2;
+  readonly schemaVersion: 1 | 2 | 3;
   readonly id: string;
   readonly inputs: TearFoundryFrozenInputsV1;
   readonly phase: TearFoundryJobPhase;
@@ -97,18 +97,18 @@ const NEXT: Readonly<Record<TearFoundryJobPhase, readonly TearFoundryJobPhase[]>
   rejected: [], "rolled-back": [], completed: [], cancelled: [], failed: [],
 });
 
-function copyInputs(value: TearFoundryFrozenInputsV1, schemaVersion: 1 | 2): TearFoundryFrozenInputsV1 {
+function copyInputs(value: TearFoundryFrozenInputsV1, schemaVersion: 1 | 2 | 3): TearFoundryFrozenInputsV1 {
   const protocol = value.evaluationProtocol;
   if (!text(value.champion.id) || !hash(value.champion.artifactHash) || !Array.isArray(value.corpusRecordHashes)
     || value.corpusRecordHashes.length < 1 || value.corpusRecordHashes.length > 2_000 || !value.corpusRecordHashes.every(hash)
     || new Set(value.corpusRecordHashes).size !== value.corpusRecordHashes.length
     || ![value.evaluationPlanHash, value.rewardDefinitionHash, value.invariantSetHash, value.budgetHash, value.stopConditionsHash].every(hash)
-    || (schemaVersion === 2 && protocol === undefined)
+    || (schemaVersion !== 1 && protocol === undefined)
     || (schemaVersion === 1 && value.evaluationProtocol !== undefined)) {
     throw new TypeError("invalid frozen Foundry job inputs");
   }
-  if (schemaVersion === 2 && protocol === undefined) throw new TypeError("invalid frozen Foundry job inputs");
-  const protocolValue = schemaVersion === 2 ? parseProtocol(protocol) : undefined;
+  if (schemaVersion !== 1 && protocol === undefined) throw new TypeError("invalid frozen Foundry job inputs");
+  const protocolValue = schemaVersion !== 1 ? parseProtocol(protocol) : undefined;
   return Object.freeze({ champion: Object.freeze({ id: value.champion.id, artifactHash: value.champion.artifactHash }),
     corpusRecordHashes: Object.freeze([...value.corpusRecordHashes].sort()), evaluationPlanHash: value.evaluationPlanHash,
     rewardDefinitionHash: value.rewardDefinitionHash, invariantSetHash: value.invariantSetHash,
@@ -153,10 +153,14 @@ export function createTearFoundryJob(input: Omit<TearFoundryJobV1, "format" | "s
 export function createTearFoundryJobV2(input: Omit<TearFoundryJobV1, "format" | "schemaVersion" | "phase" | "events" | "jobHash" | "inputs"> & Readonly<{ createdAt: string; reason: string; inputs: Omit<TearFoundryFrozenInputsV1, "evaluationProtocol"> & { evaluationProtocol: TearFoundryEvaluationProtocolInputV1 } }>): TearFoundryJobV1 {
   return freeze({ format: "tear-foundry-job", schemaVersion: 2, id: input.id, inputs: { ...input.inputs, evaluationProtocol: createProtocol(input.inputs.evaluationProtocol) }, phase: "created", events: Object.freeze([append([], null, "created", input.createdAt, input.reason)]) });
 }
+/** V3 cannot be persisted or executed without its hash-bound numeric allowance. No legacy job is implicitly migrated. */
+export function createTearFoundryBudgetedJob(input: Parameters<typeof createTearFoundryJobV2>[0]): TearFoundryJobV1 {
+  return freeze({ ...createTearFoundryJobV2(input), schemaVersion: 3 });
+}
 export function parseTearFoundryJob(value: unknown): TearFoundryJobV1 {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry job");
   const source = value as Record<string, unknown>;
-  if (source.format !== "tear-foundry-job" || (source.schemaVersion !== 1 && source.schemaVersion !== 2) || !hash(source.jobHash)) throw new TypeError("invalid Foundry job");
+  if (source.format !== "tear-foundry-job" || (source.schemaVersion !== 1 && source.schemaVersion !== 2 && source.schemaVersion !== 3) || !hash(source.jobHash)) throw new TypeError("invalid Foundry job");
   const typed = source as unknown as TearFoundryJobV1;
   const { jobHash, ...draft } = typed, parsed = freeze(draft);
   if (jobHash !== parsed.jobHash) throw new TypeError("Foundry job integrity mismatch");
@@ -165,7 +169,7 @@ export function parseTearFoundryJob(value: unknown): TearFoundryJobV1 {
 /** Source evaluation may use only V2's pre-challenger protocol identity; V1 final-plan hashes are intentionally unrecoverable. */
 export function requireTearFoundryEvaluationProtocol(jobInput: TearFoundryJobV1): TearFoundryEvaluationProtocolV1 {
   const job = parseTearFoundryJob(jobInput), protocol = job.inputs.evaluationProtocol;
-  if (job.schemaVersion !== 2 || protocol === undefined) throw new RangeError("historical Foundry V1 final-plan identity is ineligible for source evaluation");
+  if (job.schemaVersion === 1 || protocol === undefined) throw new RangeError("historical Foundry V1 final-plan identity is ineligible for source evaluation");
   return protocol;
 }
 /** Advances only the fixed C36 workflow. This does not invoke a trainer, evaluator, registry, or policy activation. */

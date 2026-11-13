@@ -1,196 +1,25 @@
 import { stableVerificationHash } from "../replay/hash";
-import { decodeGhostChunkPayload, encodeGhostChunkPayload, type GhostChunkEncoding } from "./capsule-codec";
+import { decodeGhostChunkPayload } from "./capsule-codec";
+import { prepareForensicGhostImport, prepareGhostCapsuleImport, commitGhostCapsuleImport, ghostRootIntegrity, parseGhostCapsuleManifest, type GhostCapsuleImportPlan, type GhostImportBaseline } from "./capsule-import-plan";
+import { ghostPortableArchiveData, type PreparedGhostPortableArchive } from "./capsule-paired-archive";
+import { readGhostColdRestoreCompletion, type GhostColdRestoreCompletion } from "./cold-restore-job";
 import {
   createGhostCapsuleManifestV2,
-  parseGhostCapsuleManifest as parseCapsuleContractManifest,
   reviseGhostCapsuleManifest,
   type TearGhostManifest,
 } from "./capsule-contract";
 import type { GhostRecordingProfileId } from "./recording-profiles";
+import { ghostCapsuleProtectionKey, parseGhostCapsuleProtection, prepareGhostCapsuleSourceGuards } from "./capsule-protection";
 
 export * from "./capsule-contract";
+export * from "./capsule-protection";
 
-export const GHOST_VAULT_STORES = Object.freeze([
-  "manifests", "chunks", "assets", "indexes", "uploadJobs", "analysis", "lineage", "settings", "journals", "quarantine", "libraries",
-] as const);
-export type GhostVaultStore = typeof GHOST_VAULT_STORES[number];
-export const GHOST_VAULT_DATABASE_VERSION = 2;
-
-export type GhostChunkKind = "commands" | "rng" | "events" | "results" | "keyframes" | "presentation";
-
-export interface TearGhostChunkIndexEntry {
-  readonly id: string;
-  readonly kind: GhostChunkKind;
-  readonly sequence: number;
-  readonly fromTick: number;
-  readonly toTick: number;
-  readonly encoding: GhostChunkEncoding;
-  readonly compressedBytes: number;
-  readonly uncompressedBytes: number;
-  readonly checksum: string;
-}
-
-export interface GhostEncodedChunk {
-  readonly encoding: GhostChunkEncoding;
-  readonly encoded: string;
-  readonly compressedBytes: number;
-  readonly uncompressedBytes: number;
-  readonly checksum: string;
-  readonly thumbnail?: string;
-}
-
-export interface GhostEncoderWorkerPort {
-  encode(payload: unknown, prepareThumbnail: boolean): Promise<GhostEncodedChunk>;
-}
-
-function isGhostChunkEncoding(value: unknown): value is GhostChunkEncoding {
-  return value === "utf8-base64" || value === "utf8-base64-v1" || value === "gzip-base64-v1";
-}
-
-export function createInlineGhostEncoderWorker(): GhostEncoderWorkerPort {
-  return {
-    encode(payload: unknown, prepareThumbnail: boolean): Promise<GhostEncodedChunk> {
-      const encoded = encodeGhostChunkPayload(payload);
-      return Promise.resolve({
-        encoding: encoded.encoding,
-        encoded: encoded.encoded,
-        compressedBytes: encoded.compressedBytes,
-        uncompressedBytes: encoded.uncompressedBytes,
-        checksum: stableVerificationHash(encoded.encoded),
-        ...(prepareThumbnail ? { thumbnail: `data:application/x-tearghost-thumb,${stableVerificationHash(payload)}` } : {}),
-      });
-    },
-  };
-}
-
-interface GhostEncoderWorkerResponse extends Partial<GhostEncodedChunk> {
-  readonly id: number;
-  readonly error?: string;
-}
-
-/**
- * Creates the production browser encoder transport. Vite emits the worker as
- * a separate module; callers keep the inline encoder only for non-browser
- * runtimes and focused deterministic tests.
- */
-export function createBrowserGhostEncoderWorker(): GhostEncoderWorkerPort | undefined {
-  if (typeof Worker === "undefined") return undefined;
-  const worker = new Worker(new URL("./capsule-encoder-worker.ts", import.meta.url), { type: "module" });
-  let nextId = 0;
-  const pending = new Map<number, Readonly<{ resolve(value: GhostEncodedChunk): void; reject(reason: unknown): void }>>();
-  const rejectPending = (reason: unknown): void => {
-    for (const entry of pending.values()) entry.reject(reason);
-    pending.clear();
-  };
-  worker.addEventListener("error", (event) => { rejectPending(event.error ?? new Error(event.message)); });
-  worker.addEventListener("message", (event: MessageEvent<GhostEncoderWorkerResponse>) => {
-    const response = event.data;
-    const entry = pending.get(response.id);
-    if (entry === undefined) return;
-    pending.delete(response.id);
-    if (response.error !== undefined) { entry.reject(new Error(response.error)); return; }
-    if (!isGhostChunkEncoding(response.encoding)
-      || typeof response.encoded !== "string" || typeof response.compressedBytes !== "number"
-      || typeof response.uncompressedBytes !== "number" || typeof response.checksum !== "string") {
-      entry.reject(new TypeError("Ghost encoder worker returned an invalid response"));
-      return;
-    }
-    entry.resolve(Object.freeze({
-      encoding: response.encoding,
-      encoded: response.encoded,
-      compressedBytes: response.compressedBytes,
-      uncompressedBytes: response.uncompressedBytes,
-      checksum: response.checksum,
-      ...(typeof response.thumbnail === "string" ? { thumbnail: response.thumbnail } : {}),
-    }));
-  });
-  return Object.freeze({
-    encode(payload: unknown, prepareThumbnail: boolean): Promise<GhostEncodedChunk> {
-      return new Promise<GhostEncodedChunk>((resolve, reject) => {
-        const id = ++nextId;
-        pending.set(id, Object.freeze({ resolve, reject }));
-        try {
-          worker.postMessage(Object.freeze({ id, payload, prepareThumbnail }));
-        } catch (error) {
-          pending.delete(id);
-          reject(error instanceof Error ? error : new Error(String(error)));
-        }
-      });
-    },
-  });
-}
-
-export interface GhostVaultBackend {
-  get(store: GhostVaultStore, key: string): Promise<string | undefined>;
-  put(store: GhostVaultStore, key: string, value: string): Promise<void>;
-  remove(store: GhostVaultStore, key: string): Promise<void>;
-  keys(store: GhostVaultStore): Promise<readonly string[]>;
-  commit(operations: readonly GhostVaultWrite[]): Promise<void>;
-  /** Generic optimistic concurrency guard for non-recording durable workflows. */
-  commitIfMatches(guards: readonly Readonly<{ store: GhostVaultStore; key: string; expected?: string }>[], operations: readonly GhostVaultWrite[]): Promise<void>;
-  commitWhileJournalMatches(sessionId: string, leaseId: string, operations: readonly GhostVaultWrite[]): Promise<void>;
-}
-
-/** A single durable write used for journals, chunks, manifests, and indexes. */
-export interface GhostVaultWrite {
-  readonly store: GhostVaultStore;
-  readonly key: string;
-  readonly value?: string;
-}
+export * from "./capsule-vault-backend";
+import { createInlineGhostEncoderWorker, type GhostChunkKind, type TearGhostChunkIndexEntry,
+  type GhostEncoderWorkerPort, type GhostVaultBackend, type GhostVaultWrite, type GhostVaultGuard } from "./capsule-vault-backend";
 
 function dataRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function ghostVaultJournalLease(value: string | undefined): string | undefined {
-  try {
-    const parsed: unknown = value === undefined ? undefined : JSON.parse(value);
-    return dataRecord(parsed) && typeof parsed.leaseId === "string" ? parsed.leaseId : undefined;
-  } catch { return undefined; }
-}
-
-export function createMemoryGhostVaultBackend(
-  stores = new Map<GhostVaultStore, Map<string, string>>(),
-): GhostVaultBackend {
-  const store = (name: GhostVaultStore): Map<string, string> => {
-    let values = stores.get(name);
-    if (values === undefined) {
-      values = new Map();
-      stores.set(name, values);
-    }
-    return values;
-  };
-  const commit = (operations: readonly GhostVaultWrite[]): Promise<void> => {
-    const copies = new Map<GhostVaultStore, Map<string, string>>();
-    const target = (name: GhostVaultStore): Map<string, string> => {
-      let values = copies.get(name);
-      if (values === undefined) { values = new Map(store(name)); copies.set(name, values); }
-      return values;
-    };
-    for (const operation of operations) {
-      if (operation.value === undefined) target(operation.store).delete(operation.key);
-      else target(operation.store).set(operation.key, operation.value);
-    }
-    for (const [name, values] of copies) stores.set(name, values);
-    return Promise.resolve();
-  };
-  return Object.freeze({
-    get(name, key) { return Promise.resolve(store(name).get(key)); },
-    put(name, key, value) { store(name).set(key, value); return Promise.resolve(); },
-    remove(name, key) { store(name).delete(key); return Promise.resolve(); },
-    keys(name) { return Promise.resolve(Object.freeze([...store(name).keys()].sort())); },
-    commit,
-    commitIfMatches(guards, operations) {
-      if (guards.some((guard) => store(guard.store).get(guard.key) !== guard.expected)) return Promise.reject(new Error("Vault conditional write no longer matches"));
-      return commit(operations);
-    },
-    commitWhileJournalMatches(sessionId, leaseId, operations) {
-      if (ghostVaultJournalLease(store("journals").get(sessionId)) !== leaseId) {
-        return Promise.reject(new Error(`recording journal is no longer active: ${sessionId}`));
-      }
-      return commit(operations);
-    },
-  } satisfies GhostVaultBackend);
 }
 
 export interface GhostVaultImportLimits {
@@ -207,29 +36,44 @@ const DEFAULT_IMPORT_LIMITS: GhostVaultImportLimits = Object.freeze({
   maxExpansionRatio: 100,
 });
 
-export function ghostRootIntegrity(chunks: readonly TearGhostChunkIndexEntry[]): string {
-  return stableVerificationHash(chunks.map((chunk) => ({
-    id: chunk.id, checksum: chunk.checksum, kind: chunk.kind,
-    sequence: chunk.sequence, fromTick: chunk.fromTick, toTick: chunk.toTick,
-  })));
+const GHOST_MANIFEST_MUTATION_EPOCH_KEY = "ghost-manifest-mutation-epoch:v1";
+
+interface GhostMutationEpoch {
+  readonly raw: string | undefined;
+  readonly next: string;
 }
 
-export function parseGhostCapsuleManifest(value: unknown): TearGhostManifest {
-  const manifest = parseCapsuleContractManifest(value);
-  if (manifest.schemaVersion === 2 && ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) {
-    throw new TypeError("capsule manifest integrity mismatch");
-  }
-  return manifest;
+function isOptimisticConflict(error: unknown): boolean {
+  return error instanceof Error && /(?:no longer matches|conditional write)/u.test(error.message);
 }
+
+function parseMutationEpoch(raw: string | undefined): number {
+  if (raw === undefined) return 0;
+  if (!/^\d+$/u.test(raw)) throw new TypeError("invalid Ghost manifest mutation epoch");
+  const value = Number(raw);
+  if (!Number.isSafeInteger(value)) throw new RangeError("Ghost manifest mutation epoch exceeds safe integer range");
+  return value;
+}
+
+export { ghostRootIntegrity, parseGhostCapsuleManifest } from "./capsule-import-plan";
 
 export class GhostLocalVault {
   readonly #backend: GhostVaultBackend;
+  readonly #importOwner = Object.freeze({});
 
   constructor(backend: GhostVaultBackend) {
     this.#backend = backend;
   }
 
   backend(): GhostVaultBackend { return this.#backend; }
+
+  async prepareCapsuleImport(archive: PreparedGhostPortableArchive, baseline?: GhostImportBaseline): Promise<GhostCapsuleImportPlan> {
+    return prepareGhostCapsuleImport(this.#backend, this.#importOwner, ghostPortableArchiveData(archive), baseline);
+  }
+
+  async commitCapsuleImport(plan: GhostCapsuleImportPlan, completion: GhostColdRestoreCompletion): Promise<"imported" | "existing-exact"> {
+    return commitGhostCapsuleImport(this.#backend, this.#importOwner, plan, readGhostColdRestoreCompletion(completion), (build) => this.#commitMutation(build, true));
+  }
 
   #manifestWrites(manifest: TearGhostManifest): readonly GhostVaultWrite[] {
     // Every schema-v2 write re-validates the hash-bound contract. This guards
@@ -244,8 +88,97 @@ export class GhostLocalVault {
     ]);
   }
 
+  async #mutationEpoch(): Promise<GhostMutationEpoch> {
+    const raw = await this.#backend.get("indexes", GHOST_MANIFEST_MUTATION_EPOCH_KEY);
+    const current = parseMutationEpoch(raw);
+    if (current === Number.MAX_SAFE_INTEGER) throw new RangeError("Ghost manifest mutation epoch exhausted");
+    return Object.freeze({ raw, next: String(current + 1) });
+  }
+
+  #epochGuard(epoch: GhostMutationEpoch): GhostVaultGuard {
+    return Object.freeze({ store: "indexes", key: GHOST_MANIFEST_MUTATION_EPOCH_KEY, ...(epoch.raw === undefined ? {} : { expected: epoch.raw }) });
+  }
+
+  #epochWrite(epoch: GhostMutationEpoch): GhostVaultWrite {
+    return Object.freeze({ store: "indexes", key: GHOST_MANIFEST_MUTATION_EPOCH_KEY, value: epoch.next });
+  }
+
+  /**
+   * Manifest creation/update/removal all advance one durable epoch.  A global
+   * epoch is intentionally small: it serializes the reference scan against
+   * every public manifest mutation without requiring an untrusted caller to
+   * supply a complete chunk catalog.  Short retries preserve independent
+   * recorder progress when unrelated mutations happen at the same time.
+   */
+  async #commitMutation(
+    build: (epoch: GhostMutationEpoch) => Promise<{ readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[] } | undefined>,
+    rejectGuardDrift = false,
+  ): Promise<boolean> {
+    let lastConflict: unknown;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const epoch = await this.#mutationEpoch();
+      const plan = await build(epoch);
+      if (plan === undefined) return false;
+      try {
+        await this.#backend.commitIfMatches(
+          Object.freeze([this.#epochGuard(epoch), ...plan.guards]),
+          Object.freeze([...plan.writes, this.#epochWrite(epoch)]),
+        );
+        return true;
+      } catch (error) {
+        if (!isOptimisticConflict(error)) throw error;
+        if (rejectGuardDrift) for (const guard of plan.guards) {
+          if (await this.#backend.get(guard.store, guard.key) !== guard.expected) throw error;
+        }
+        lastConflict = error;
+      }
+    }
+    throw (lastConflict instanceof Error ? lastConflict : new Error("Ghost manifest mutation remained contended"));
+  }
+
+  async #commitRecordingMutation(
+    sessionId: string,
+    leaseId: string,
+    build: (epoch: GhostMutationEpoch) => Promise<{ readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[] }>,
+  ): Promise<void> {
+    let lastConflict: unknown;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const epoch = await this.#mutationEpoch();
+      const plan = await build(epoch);
+      try {
+        await this.#backend.commitWhileJournalMatches(
+          sessionId,
+          leaseId,
+          Object.freeze([...plan.writes, this.#epochWrite(epoch)]),
+          Object.freeze([this.#epochGuard(epoch), ...plan.guards]),
+        );
+        return;
+      } catch (error) {
+        if (!isOptimisticConflict(error)) throw error;
+        lastConflict = error;
+      }
+    }
+    throw (lastConflict instanceof Error ? lastConflict : new Error("Ghost recording mutation remained contended"));
+  }
+
   async putManifest(manifest: TearGhostManifest): Promise<void> {
-    await this.#backend.commit(this.#manifestWrites(manifest));
+    const durable = parseGhostCapsuleManifest(manifest);
+    await this.#commitMutation(async () => {
+      const previous = await this.#backend.get("manifests", durable.id);
+      const chunkGuards: GhostVaultGuard[] = [];
+      for (const chunk of durable.chunks) {
+        const encoded = await this.#backend.get("chunks", chunk.id);
+        if (encoded === undefined) throw new RangeError(`chunk is missing before manifest commit: ${chunk.id}`);
+        if (stableVerificationHash(encoded) !== chunk.checksum) {
+          throw new TypeError(`chunk checksum mismatch before manifest commit: ${chunk.id}`);
+        }
+        chunkGuards.push({ store: "chunks", key: chunk.id, expected: encoded });
+      }
+      return Object.freeze({
+        guards: Object.freeze([{ store: "manifests" as const, key: durable.id, ...(previous === undefined ? {} : { expected: previous }) }, ...chunkGuards]),
+        writes: this.#manifestWrites(durable),
+      });
+    });
   }
 
   /**
@@ -260,27 +193,48 @@ export class GhostLocalVault {
     corruptChunkIds: readonly string[],
     repairedAt: string,
   ): Promise<void> {
-    if (await this.getManifest(parentId) === undefined) throw new RangeError(`manifest does not exist: ${parentId}`);
-    if (await this.getManifest(child.id) !== undefined) throw new RangeError(`repair child already exists: ${child.id}`);
     if (child.lineage?.parentId !== parentId) {
       throw new TypeError("repair child must declare its repaired-from parent");
     }
-    const quarantined = await Promise.all(corruptChunkIds.map(async (chunkId) => Object.freeze({
-      chunkId,
-      encoded: await this.#backend.get("chunks", chunkId),
-    })));
-    await this.#backend.commit([
-      ...this.#manifestWrites(child),
-      { store: "lineage", key: `repair:${child.id}`, value: JSON.stringify({
-        format: "tearghost-lineage", schemaVersion: 1, id: `repair:${child.id}`,
-        parentId, childId: child.id, relation: "repair", createdAt: repairedAt,
-      }) },
-      ...quarantined.flatMap(({ chunkId, encoded }) => encoded === undefined ? [] : [{
-        store: "quarantine" as const, key: `repair:${child.id}:${chunkId}`, value: JSON.stringify({
-          parentId, childId: child.id, chunkId, encoded, quarantinedAt: repairedAt,
-        }),
-      }]),
-    ]);
+    await this.#commitMutation(async () => {
+      const parentRaw = await this.#backend.get("manifests", parentId);
+      if (parentRaw === undefined) throw new RangeError(`manifest does not exist: ${parentId}`);
+      const childRaw = await this.#backend.get("manifests", child.id);
+      if (childRaw !== undefined) throw new RangeError(`repair child already exists: ${child.id}`);
+      // Read the parent and child existence in the same epoch-guarded commit.
+      // A parent removal that wins first advances the epoch; a child creation
+      // that wins first makes the removal's reference scan fail its epoch CAS.
+      const quarantined = await Promise.all(corruptChunkIds.map(async (chunkId) => Object.freeze({
+        chunkId,
+        encoded: await this.#backend.get("chunks", chunkId),
+      })));
+      const chunkGuards: GhostVaultGuard[] = [];
+      for (const chunk of child.chunks) {
+        const encoded = await this.#backend.get("chunks", chunk.id);
+        if (encoded === undefined || stableVerificationHash(encoded) !== chunk.checksum) throw new RangeError("repair source chunk changed");
+        chunkGuards.push({ store: "chunks", key: chunk.id, expected: encoded });
+      }
+      return Object.freeze({
+        guards: Object.freeze([
+          { store: "manifests" as const, key: parentId, expected: parentRaw },
+          { store: "manifests" as const, key: child.id },
+          ...chunkGuards,
+          ...quarantined.map(({ chunkId, encoded }) => ({ store: "chunks" as const, key: chunkId, ...(encoded === undefined ? {} : { expected: encoded }) })),
+        ]),
+        writes: Object.freeze([
+          ...this.#manifestWrites(child),
+          { store: "lineage" as const, key: `repair:${child.id}`, value: JSON.stringify({
+            format: "tearghost-lineage", schemaVersion: 1, id: `repair:${child.id}`,
+            parentId, childId: child.id, relation: "repair", createdAt: repairedAt,
+          }) },
+          ...quarantined.flatMap(({ chunkId, encoded }) => encoded === undefined ? [] : [{
+            store: "quarantine" as const, key: `repair:${child.id}:${chunkId}`, value: JSON.stringify({
+              parentId, childId: child.id, chunkId, encoded, quarantinedAt: repairedAt,
+            }),
+          }]),
+        ]),
+      });
+    });
   }
 
   async getManifest(id: string): Promise<TearGhostManifest | undefined> {
@@ -293,60 +247,126 @@ export class GhostLocalVault {
    * durable tombstone to these writes, so source deletion and its authorization
    * record cannot diverge. Repair children prevent destructive parent removal.
    */
-  async capsuleRemovalWrites(id: string): Promise<readonly GhostVaultWrite[]> {
-    const manifest = await this.getManifest(id);
-    if (manifest === undefined) throw new RangeError(`manifest does not exist: ${id}`);
-    const manifests = await Promise.all((await this.#backend.keys("manifests"))
-      .filter((candidate) => candidate !== id)
-      .map((candidate) => this.getManifest(candidate)));
-    if (manifests.some((candidate) => candidate?.lineage?.parentId === id)) {
+  async prepareCapsuleRemoval(id: string, releasingOwner?: string): Promise<{
+    readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[];
+  }> {
+    // Capture the mutation epoch before reading any references.  A manifest
+    // created during the scan must invalidate this plan rather than becoming
+    // invisible to a late epoch read.
+    const epoch = await this.#mutationEpoch();
+    const manifestRaw = await this.#backend.get("manifests", id);
+    if (manifestRaw === undefined) throw new RangeError(`manifest does not exist: ${id}`);
+    const manifest = parseGhostCapsuleManifest(JSON.parse(manifestRaw));
+    const protectionKey = ghostCapsuleProtectionKey(id);
+    const protectionRaw = await this.#backend.get("analysis", protectionKey);
+    if (protectionRaw !== undefined) {
+      const protection = parseGhostCapsuleProtection(protectionRaw, id);
+      if (protection.rootIntegrity !== manifest.rootIntegrity || releasingOwner === undefined
+        || protection.owners.length !== 1 || protection.owners[0] !== releasingOwner) {
+        throw new RangeError("cannot remove a protected source capsule");
+      }
+    }
+    const manifestKeys = await this.#backend.keys("manifests");
+    const manifestEntries = await Promise.all(manifestKeys.map(async (candidate) => Object.freeze({
+      id: candidate,
+      raw: await this.#backend.get("manifests", candidate),
+    })));
+    const manifests = manifestEntries.map(({ raw }) => raw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(raw)));
+    if (manifests.some((candidate) => candidate !== undefined && candidate.id !== id && candidate.lineage?.parentId === id)) {
       throw new RangeError("cannot remove a capsule with retained repair children");
     }
+    const retainedChunkIds = new Set(manifests
+      .filter((candidate): candidate is TearGhostManifest => candidate !== undefined && candidate.id !== id)
+      .flatMap((candidate) => candidate.chunks.map((chunk) => chunk.id)));
     const assetKeys = (await this.#backend.keys("assets")).filter((key) => key.startsWith(`${id}:`));
-    return Object.freeze([
-      ...manifest.chunks.map((chunk) => Object.freeze({ store: "chunks" as const, key: chunk.id })),
+    const writes: readonly GhostVaultWrite[] = Object.freeze([
+      ...manifest.chunks
+        .filter((chunk) => !retainedChunkIds.has(chunk.id))
+        .map((chunk) => Object.freeze({ store: "chunks" as const, key: chunk.id })),
       Object.freeze({ store: "manifests" as const, key: id }),
       Object.freeze({ store: "indexes" as const, key: `manifest:${id}` }),
       Object.freeze({ store: "journals" as const, key: id }),
       ...assetKeys.map((key) => Object.freeze({ store: "assets" as const, key })),
+      Object.freeze({ store: "analysis" as const, key: protectionKey }),
+      this.#epochWrite(epoch),
     ]);
+    return Object.freeze({ guards: Object.freeze([
+      { store: "manifests" as const, key: id, expected: manifestRaw },
+      { store: "analysis" as const, key: protectionKey, ...(protectionRaw === undefined ? {} : { expected: protectionRaw }) },
+      this.#epochGuard(epoch),
+      ...manifestEntries
+        .filter(({ id: candidate }) => candidate !== id)
+        .flatMap(({ id: candidate, raw }) => raw === undefined ? [] : [{ store: "manifests" as const, key: candidate, expected: raw }]),
+    ]), writes });
   }
 
   async removeCapsule(id: string): Promise<void> {
-    await this.#backend.commit(await this.capsuleRemovalWrites(id));
-  }
-
-  async putChunk(sessionId: string, entry: TearGhostChunkIndexEntry, encoded: string): Promise<void> {
-    if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
-    await this.#backend.commit([
-      { store: "chunks", key: entry.id, value: encoded },
-      { store: "journals", key: sessionId, value: JSON.stringify({ sessionId, lastChunkId: entry.id, committedSequence: entry.sequence }) },
-    ]);
+    let lastConflict: unknown;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const removal = await this.prepareCapsuleRemoval(id);
+      try {
+        await this.#backend.commitIfMatches(removal.guards, removal.writes);
+        return;
+      } catch (error) {
+        if (!isOptimisticConflict(error)) throw error;
+        lastConflict = error;
+      }
+    }
+    throw (lastConflict instanceof Error ? lastConflict : new Error("Ghost capsule removal remained contended"));
   }
 
   /** Atomically exposes one newly encoded recording chunk and its recovery state. */
-  async commitRecordingChunk(manifest: TearGhostManifest, entry: TearGhostChunkIndexEntry, encoded: string, leaseId: string): Promise<void> {
+  async commitRecordingChunk(
+    manifest: TearGhostManifest,
+    entry: TearGhostChunkIndexEntry,
+    encoded: string,
+    leaseId: string,
+    thumbnail?: string,
+  ): Promise<void> {
     if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
     if (!manifest.chunks.some((chunk) => chunk.id === entry.id && chunk.checksum === entry.checksum)) {
       throw new TypeError(`recording manifest does not include committed chunk: ${entry.id}`);
     }
-    await this.#backend.commitWhileJournalMatches(manifest.id, leaseId, [
-      { store: "chunks", key: entry.id, value: encoded },
-      { store: "journals", key: manifest.id, value: JSON.stringify({
-        sessionId: manifest.id, leaseId, lastChunkId: entry.id, committedSequence: entry.sequence,
-      }) },
-      ...this.#manifestWrites(manifest),
-    ]);
+    await this.#commitRecordingMutation(manifest.id, leaseId, async () => {
+      const previous = await this.#backend.get("manifests", manifest.id);
+      if (previous === undefined) throw new RangeError(`manifest does not exist: ${manifest.id}`);
+      const previousChunk = await this.#backend.get("chunks", entry.id);
+      if (previousChunk !== undefined && previousChunk !== encoded) throw new RangeError("recording chunk id conflicts with stored evidence");
+      return Object.freeze({
+        guards: Object.freeze([{ store: "manifests" as const, key: manifest.id, expected: previous }, { store: "chunks" as const, key: entry.id, ...(previousChunk === undefined ? {} : { expected: previousChunk }) }]),
+        writes: Object.freeze([
+          { store: "chunks" as const, key: entry.id, value: encoded },
+          { store: "journals" as const, key: manifest.id, value: JSON.stringify({
+            sessionId: manifest.id, leaseId, lastChunkId: entry.id, committedSequence: entry.sequence,
+          }) },
+          ...this.#manifestWrites(manifest),
+          ...(thumbnail === undefined ? [] : [{
+            store: "assets" as const, key: `${manifest.id}:thumbnail:${String(entry.sequence)}`, value: thumbnail,
+          }]),
+        ]),
+      });
+    });
   }
 
   /** Starts a recoverable session without exposing a manifest with no journal. */
   async beginSession(manifest: TearGhostManifest, leaseId: string): Promise<void> {
     if (manifest.status !== "recording") throw new TypeError("only a recording manifest can begin a session");
-    if (await this.getManifest(manifest.id) !== undefined) throw new RangeError(`recording session already exists: ${manifest.id}`);
-    await this.#backend.commit([
-      ...this.#manifestWrites(manifest),
-      { store: "journals", key: manifest.id, value: JSON.stringify({ sessionId: manifest.id, leaseId, committedSequence: -1 }) },
-    ]);
+    await this.#commitMutation(async () => {
+      const existingManifest = await this.#backend.get("manifests", manifest.id);
+      if (existingManifest !== undefined) throw new RangeError(`recording session already exists: ${manifest.id}`);
+      const existingJournal = await this.#backend.get("journals", manifest.id);
+      if (existingJournal !== undefined) throw new RangeError(`recording journal already exists: ${manifest.id}`);
+      return Object.freeze({
+        guards: Object.freeze([
+          { store: "manifests" as const, key: manifest.id },
+          { store: "journals" as const, key: manifest.id },
+        ]),
+        writes: Object.freeze([
+          ...this.#manifestWrites(manifest),
+          { store: "journals" as const, key: manifest.id, value: JSON.stringify({ sessionId: manifest.id, leaseId, committedSequence: -1 }) },
+        ]),
+      });
+    });
   }
 
   async readChunk(entry: TearGhostChunkIndexEntry): Promise<unknown> {
@@ -357,41 +377,73 @@ export class GhostLocalVault {
   }
 
   async completeSession(manifest: TearGhostManifest, leaseId: string): Promise<void> {
-    await this.#backend.commitWhileJournalMatches(manifest.id, leaseId, [
-      ...this.#manifestWrites(manifest),
-      { store: "journals", key: manifest.id },
-    ]);
+    await this.#commitRecordingMutation(manifest.id, leaseId, async () => {
+      const previous = await this.#backend.get("manifests", manifest.id);
+      if (previous === undefined) throw new RangeError(`manifest does not exist: ${manifest.id}`);
+      const sourceGuards = await prepareGhostCapsuleSourceGuards(this.#backend, manifest.id, manifest.rootIntegrity);
+      return Object.freeze({
+        guards: Object.freeze([{ store: "manifests" as const, key: manifest.id, expected: previous }, ...sourceGuards]),
+        writes: Object.freeze([
+          ...this.#manifestWrites(manifest),
+          { store: "journals" as const, key: manifest.id },
+        ]),
+      });
+    });
   }
 
   async recoverIncompleteSessions(): Promise<readonly TearGhostManifest[]> {
     const recovered: TearGhostManifest[] = [];
     for (const id of await this.#backend.keys("journals")) {
-      const manifest = await this.getManifest(id);
-      if (manifest === undefined) continue;
-      let status: "recovered" | "quarantined" = "recovered";
-      let reason: string | undefined;
-      try {
-        if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) {
-          throw new TypeError("recording manifest root integrity mismatch");
+      if (await this.#backend.get("manifests", id) === undefined) continue;
+      const committed = await this.#commitMutation(async () => {
+        const manifestRaw = await this.#backend.get("manifests", id);
+        const journalRaw = await this.#backend.get("journals", id);
+        if (manifestRaw === undefined || journalRaw === undefined) {
+          // Completion, removal, or another recovery may win after enumeration
+          // (including during a conflict retry). Leave that terminal state alone
+          // and continue recovering the remaining sessions.
+          return undefined;
         }
-        for (const entry of manifest.chunks) await this.readChunk(entry);
-      } catch (error) {
-        status = "quarantined";
-        reason = error instanceof Error ? error.message : String(error);
-      }
-      const next = reviseGhostCapsuleManifest(manifest, { status });
-      await this.#backend.commit([
-        ...this.#manifestWrites(next),
-        ...(reason === undefined ? [] : [{ store: "quarantine" as const, key: `recovery:${id}`, value: JSON.stringify({
-          capsuleId: id,
-          reason,
-          recoveredAt: new Date().toISOString(),
-        }) }]),
-      // A recovery attempt has reached a terminal durable state. Keeping the
-      // journal would repeatedly mutate the same manifest on every startup.
-        { store: "journals", key: id },
-      ]);
-      recovered.push(next);
+        const manifest = parseGhostCapsuleManifest(JSON.parse(manifestRaw));
+        let status: "recovered" | "quarantined" = "recovered";
+        let reason: string | undefined;
+        const chunkGuards: GhostVaultGuard[] = [];
+        for (const chunk of manifest.chunks) {
+          const raw = await this.#backend.get("chunks", chunk.id);
+          chunkGuards.push({ store: "chunks", key: chunk.id, ...(raw === undefined ? {} : { expected: raw }) });
+        }
+        try {
+          if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) {
+            throw new TypeError("recording manifest root integrity mismatch");
+          }
+          for (const entry of manifest.chunks) await this.readChunk(entry);
+        } catch (error) {
+          status = "quarantined";
+          reason = error instanceof Error ? error.message : String(error);
+        }
+        const next = reviseGhostCapsuleManifest(manifest, { status });
+        return Object.freeze({
+          guards: Object.freeze([
+            { store: "manifests" as const, key: id, expected: manifestRaw },
+            { store: "journals" as const, key: id, expected: journalRaw },
+            ...chunkGuards,
+          ]),
+          writes: Object.freeze([
+            ...this.#manifestWrites(next),
+            ...(reason === undefined ? [] : [{ store: "quarantine" as const, key: `recovery:${id}`, value: JSON.stringify({
+              capsuleId: id,
+              reason,
+              recoveredAt: new Date().toISOString(),
+            }) }]),
+            // A recovery attempt has reached a terminal durable state. Keeping
+            // the journal would repeatedly mutate the same manifest on startup.
+            { store: "journals" as const, key: id },
+          ]),
+        });
+      });
+      if (!committed) continue;
+      const recoveredManifest = await this.getManifest(id);
+      if (recoveredManifest !== undefined) recovered.push(recoveredManifest);
     }
     return Object.freeze(recovered);
   }
@@ -423,8 +475,6 @@ export class GhostLocalVault {
     const chunks = root.chunks;
     if (manifest.chunks.length > limits.maxChunks) throw new RangeError("capsule exceeds chunk-count limit");
     if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) throw new TypeError("capsule root integrity mismatch");
-    if (await this.getManifest(manifest.id) !== undefined) throw new RangeError(`capsule already exists: ${manifest.id}`);
-    const writes: GhostVaultWrite[] = [];
     for (const entry of manifest.chunks) {
       const encoded = chunks[entry.id];
       if (typeof encoded !== "string") throw new TypeError(`capsule chunk is missing: ${entry.id}`);
@@ -438,27 +488,24 @@ export class GhostLocalVault {
       // size is also the hard streaming ceiling, so dishonest metadata cannot
       // turn a small compressed import into an unbounded allocation.
       await decodeGhostChunkPayload(entry.encoding, encoded, entry.uncompressedBytes);
-      const existing = await this.#backend.get("chunks", entry.id);
-      if (existing !== undefined && existing !== encoded) {
-        throw new RangeError(`capsule chunk id conflicts with stored evidence: ${entry.id}`);
-      }
-      if (existing === undefined) writes.push({ store: "chunks", key: entry.id, value: encoded });
     }
-    await this.#backend.commit([...writes, ...this.#manifestWrites(manifest)]);
+    await this.#commitMutation(() => prepareForensicGhostImport(this.#backend, manifest, chunks, this.#manifestWrites(manifest)), true);
     return manifest;
   }
 
   async enforceQuota(maxBytes: number, retention: Readonly<Record<string, "pinned" | "standard" | "temporary">>): Promise<readonly string[]> {
     const manifests = await this.#backend.keys("manifests");
-    const candidates: Readonly<{ id: string; bytes: number; tier: string; createdAt: string }>[] = [];
-    let total = 0;
+    const candidates: Readonly<{ id: string; tier: string; createdAt: string }>[] = [];
+    const chunkBytes = new Map<string, number>();
     for (const id of manifests) {
       const manifest = await this.getManifest(id);
       if (manifest === undefined) continue;
-      const bytes = manifest.chunks.reduce((sum, chunk) => sum + chunk.compressedBytes, 0);
-      total += bytes;
-      candidates.push({ id, bytes, tier: retention[id] ?? "standard", createdAt: manifest.createdAt });
+      for (const chunk of manifest.chunks) {
+        if (!chunkBytes.has(chunk.id)) chunkBytes.set(chunk.id, chunk.compressedBytes);
+      }
+      candidates.push({ id, tier: retention[id] ?? "standard", createdAt: manifest.createdAt });
     }
+    let total = [...chunkBytes.values()].reduce((sum, bytes) => sum + bytes, 0);
     const removed: string[] = [];
     for (const candidate of [...candidates].sort((left, right) =>
       (left.tier === "temporary" ? 0 : left.tier === "standard" ? 1 : 2)
@@ -466,11 +513,31 @@ export class GhostLocalVault {
       || left.createdAt.localeCompare(right.createdAt))) {
       if (total <= maxBytes) break;
       if (candidate.tier === "pinned") continue;
-      const manifest = await this.getManifest(candidate.id);
-      for (const chunk of manifest?.chunks ?? []) await this.#backend.remove("chunks", chunk.id);
-      await this.#backend.remove("manifests", candidate.id);
-      await this.#backend.remove("indexes", `manifest:${candidate.id}`);
-      total -= candidate.bytes;
+      if (await this.#backend.get("analysis", ghostCapsuleProtectionKey(candidate.id)) !== undefined) continue;
+      let removedBytes = 0;
+      let committed = false;
+      for (let attempt = 0; attempt < 8 && !committed; attempt += 1) {
+        try {
+          const removal = await this.prepareCapsuleRemoval(candidate.id);
+          const reclaimed = removal.writes
+            .filter((write) => write.store === "chunks")
+            .reduce((sum, write) => sum + (chunkBytes.get(write.key) ?? 0), 0);
+          await this.#backend.commitIfMatches(removal.guards, removal.writes);
+          removedBytes = reclaimed;
+          committed = true;
+        } catch (error) {
+          if (isOptimisticConflict(error)) continue;
+          // A protection record acquired after the initial candidate scan is
+          // an authorization race, not a candidate that merely disappeared.
+          // Surface it so the caller cannot report quota maintenance as a
+          // successful no-op after accepted custody has won the fence.
+          if (error instanceof RangeError && error.message.includes("protected source capsule")) throw error;
+          if (error instanceof RangeError) break;
+          throw error;
+        }
+      }
+      if (!committed) continue;
+      total -= removedBytes;
       removed.push(candidate.id);
     }
     return Object.freeze(removed);
@@ -559,11 +626,10 @@ export class GhostStreamingRecorder {
         checksum: encoded.checksum,
       });
       const nextChunks = Object.freeze([...this.#chunks, index]);
-      await this.#options.vault.commitRecordingChunk(this.#manifest("recording", undefined, nextChunks), index, encoded.encoded, this.#leaseId);
+      await this.#options.vault.commitRecordingChunk(
+        this.#manifest("recording", undefined, nextChunks), index, encoded.encoded, this.#leaseId, encoded.thumbnail,
+      );
       this.#chunks.push(index);
-      if (encoded.thumbnail !== undefined) {
-        await this.#options.vault.backend().put("assets", `${this.#options.sessionId}:thumbnail:${String(sequence)}`, encoded.thumbnail);
-      }
     } finally {
       this.#pendingWrites -= 1;
     }

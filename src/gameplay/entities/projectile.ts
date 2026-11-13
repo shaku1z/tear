@@ -1,3 +1,4 @@
+import { runDnaShotEnded } from "../runtime/run-dna-observer";
 // ------- projectiles (enemy fire, deflectable) -------
 import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
 
@@ -245,6 +246,10 @@ class Projectile {
   }
 
   update(dt: number): void {
+    try { this.updateNative(dt); } finally { if (this.dead) runDnaShotEnded(this); }
+  }
+
+  private updateNative(dt: number): void {
     if (this.sweeper) {
       if (this.owner && (this.owner.dead || this.owner.dying)) { this.dead = true; this.harmless = true; return; }
       if (this.hitLatchT > 0) { this.hitLatchT = Math.max(0, this.hitLatchT - dt); if (this.hitLatchT <= 0) this.hitLatch = false; }

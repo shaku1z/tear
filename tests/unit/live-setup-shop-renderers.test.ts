@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveSetupShopRenderers } from "../../src/app/live-setup-shop-renderers";
+import { createLiveSetupShopRenderers } from "../../src/app/run/setup-shop-renderers";
 
 describe("live setup shop renderers", () => {
   it("keeps purchase feedback and achievement checking around the progress adapter", () => {

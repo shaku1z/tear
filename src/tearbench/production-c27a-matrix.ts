@@ -1,5 +1,6 @@
 import { EnvelopeSequencer, type CommandEnvelope } from "../domain/envelopes";
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
+import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import type { GameAction } from "../input/game-action";
 import type { TearScenarioV1, TearSnapshotV1 } from "./contracts";
@@ -21,6 +22,7 @@ export type ProductionC27ASegment =
 export interface ProductionC27ATrace {
   readonly scenario: TearScenarioV1;
   readonly origin: TearSnapshotV1;
+  readonly originInput?: AuthoritativeInputSnapshot;
   readonly schedule: Readonly<Record<string, readonly Readonly<{ tick: number; id: number; command: GameAction }>[]>>;
   readonly hashes: readonly ProductionC27AHashReceipt[];
   readonly engineEventProjection: Readonly<{
@@ -98,6 +100,7 @@ export function replayProductionC27ATrace(trace: ProductionC27ATrace): Productio
     mode: trace.scenario.start.mode,
     weaponId: trace.scenario.start.weapon,
     gameplayEvents,
+    ...(trace.originInput === undefined ? {} : { inputSnapshots: new Map([[trace.origin.tick, trace.originInput]]) }),
   }).create(trace.origin);
   const { simulation } = composed;
   gameplayEvents.setTickSource(() => simulation.scheduler.tick);

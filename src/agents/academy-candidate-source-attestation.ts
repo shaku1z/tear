@@ -3,6 +3,7 @@ import type { TearBuildIdentityV1 } from "../tearbench/contracts";
 import type { ProductionHeadlessAcademyIntakeItem } from "../tearbench/production-headless-academy-intake";
 import { GhostCapsuleReader, mapGhostCapsuleToReplayEnvelope, readGhostReplayRunContext } from "../ghost";
 import type { GhostLocalVault } from "../ghost";
+import { academyCandidateHash } from "./academy-candidate-tracks";
 
 export const TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT = "tear-academy-candidate-terminal-anchor" as const;
 
@@ -45,13 +46,6 @@ export interface TearAcademyCandidateSourceAttestationV1 {
   readonly attestationHash: string;
 }
 
-function candidateHash(candidate: ProductionHeadlessAcademyIntakeItem): string {
-  return stableVerificationHash({
-    sequence: candidate.sequence, episodeId: candidate.episodeId, tick: candidate.tick,
-    scenario: candidate.artifact.scenario, actions: candidate.artifact.actions, terminal: candidate.artifact.terminal,
-  });
-}
-
 function terminalAnchor(
   value: unknown,
   expectedCandidateHash: string,
@@ -78,7 +72,7 @@ function terminalAnchor(
 export function createAcademyCandidateTerminalAnchor(
   candidate: ProductionHeadlessAcademyIntakeItem,
 ): TearAcademyCandidateTerminalAnchorV1 {
-  const hash = candidateHash(candidate);
+  const hash = academyCandidateHash(candidate);
   return Object.freeze({
     format: TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT, schemaVersion: 1, candidateHash: hash,
     terminal: Object.freeze({ ...candidate.artifact.terminal }),
@@ -95,7 +89,7 @@ export async function attestAcademyCandidateSource(
   vault: GhostLocalVault,
   capsuleId: string,
 ): Promise<TearAcademyCandidateSourceAttestationV1> {
-  const expectedCandidateHash = candidateHash(candidate);
+  const expectedCandidateHash = academyCandidateHash(candidate);
   const capsule = await new GhostCapsuleReader(vault).read(capsuleId);
   if (capsule.manifest.id !== capsuleId || capsule.manifest.status !== "complete" || capsule.manifest.schemaVersion !== 2) {
     throw new RangeError("C31 candidate requires a complete schema-v2 Vault capsule");
@@ -103,6 +97,8 @@ export async function attestAcademyCandidateSource(
   const context = readGhostReplayRunContext(capsule.manifest.provenance);
   if (context === undefined) throw new TypeError("C31 candidate capsule lacks a valid sealed replay context");
   const scenario = candidate.artifact.scenario;
+  if (stableVerificationHash(context.simulation.applicationFramePolicy ?? null)
+    !== stableVerificationHash(candidate.artifact.bootstrap.applicationFramePolicy ?? null)) throw new RangeError("C31 candidate generated clock policy differs from its source bootstrap");
   if (context.run.seed !== scenario.seed || context.run.mode !== scenario.start.mode
     || context.run.difficulty !== scenario.start.difficulty || context.run.weaponId !== scenario.start.weapon) {
     throw new RangeError("C31 candidate capsule bootstrap does not match the C30 source scenario");

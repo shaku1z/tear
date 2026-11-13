@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { SeededRandom } from "../../src/domain/random";
+import { TearHeadlessRunner } from "../../src/tearbench/headless";
 import {
   BoundedArtifactSampler,
   TearHeadlessEnvironmentPool,
@@ -57,6 +58,79 @@ const policy: TearHeadlessPolicy<Observation, Action> = {
     return Object.freeze(Array.from({ length: 8 }, () => Object.freeze([{ amount: 1 }])));
   },
 };
+
+describe("cooperative execution owner", () => {
+  it("preserves the existing synchronous zero-step caller contract", () => {
+    const scenario = { seed: "zero", targetTicks: 6 };
+    const episode = new TearHeadlessRunner(environment()).run({ id: "zero", scenario, maxTicks: 0 }, policy);
+    expect(episode.ticks).toBe(0); expect(episode.observations).toHaveLength(1); expect(episode.outcome).toBe("truncated");
+  });
+  it("awaits acknowledgement without an extra source step and matches unchanged synchronous execution", async () => {
+    const scenario = { seed: "cooperative", targetTicks: 6 }, options = { id: "shared", scenario, maxTicks: 6 };
+    const sync = new TearHeadlessRunner(environment()).run(options, policy, 1);
+    let release!: () => void, reached!: () => void;
+    const barrier = new Promise<void>((resolve) => { reached = resolve; });
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const steps: number[] = [];
+    const runner = new TearHeadlessRunner(environment());
+    const pending = runner.runCooperatively(options, policy, {
+      yieldToHost: () => Promise.resolve(),
+      afterStep: async (progress) => { steps.push(progress.endTick); if (progress.endTick === 3) { reached(); await held; } },
+    });
+    await barrier;
+    expect(steps).toEqual([1, 2, 3]);
+    expect(() => runner.run(options, policy)).toThrow(/already owns an active execution/);
+    await Promise.resolve(); expect(steps).toEqual([1, 2, 3]);
+    release(); const result = await pending;
+    expect(result.episode).toEqual(sync);
+    expect(result).toMatchObject({ startTick: 0, endTick: 6, executedTicks: 6 });
+  });
+
+  it("initializes restored work once, preserves the absolute horizon and counts only suffix steps", async () => {
+    const source = environment(), scenario = { seed: "suffix", targetTicks: 6 };
+    source.reset(scenario); source.step([{ amount: 1 }]); const saved = source.step([{ amount: 1 }]).observation;
+    const runner = new TearHeadlessRunner({ ...source, reset: () => { throw new Error("must not reset restored world"); } });
+    const result = await runner.runCooperatively({ id: "suffix", scenario, maxTicks: 6 }, policy, {
+      initialize: () => ({ tick: 2, observation: saved }), yieldToHost: () => Promise.resolve(),
+    });
+    expect(result).toMatchObject({ startTick: 2, endTick: 6, executedTicks: 4 });
+    expect(result.episode.ticks).toBe(4); expect(result.episode.observations[0]).toEqual(saved);
+  });
+
+  it("charges acknowledgement wait to the timeout and never advances after rejected custody", async () => {
+    let clock = 0;
+    const scenario = { seed: "timeout", targetTicks: 10 }, options = { id: "timeout", scenario, maxTicks: 10 };
+    const result = await new TearHeadlessRunner(environment()).runCooperatively(options, policy, {
+      now: () => clock, timeoutMilliseconds: 5, yieldToHost: () => Promise.resolve(),
+      afterStep: () => { clock = 6; return Promise.resolve(); },
+    });
+    expect(result.episode.outcome).toBe("timed-out"); expect(result.executedTicks).toBe(1);
+    let steps = 0;
+    await expect(new TearHeadlessRunner(environment()).runCooperatively(options, policy, {
+      yieldToHost: () => Promise.resolve(), onStep: () => { steps += 1; }, afterStep: () => Promise.reject(new Error("custody unknown")),
+    })).rejects.toThrow("custody unknown");
+    expect(steps).toBe(1);
+  });
+
+  it("releases the execution owner after initialization, source-step and acknowledgement failures", async () => {
+    for (const phase of ["initialization", "step", "acknowledgement"]) {
+      const source = environment(); let fail = true;
+      const scenario = { seed: `cleanup-${phase}`, targetTicks: 2 }, options = { id: phase, scenario, maxTicks: 2 };
+      const runner = new TearHeadlessRunner({ ...source, step: (actions: readonly Action[]) => {
+        if (phase === "step" && fail) { fail = false; throw new Error(phase); }
+        return source.step(actions);
+      } });
+      await expect(runner.runCooperatively(options, policy, {
+        ...(phase === "initialization" ? { initialize: () => { throw new Error(phase); } } : {}),
+        yieldToHost: () => Promise.resolve(), afterStep: () => {
+          if (phase === "acknowledgement" && fail) { fail = false; return Promise.reject(new Error(phase)); }
+          return Promise.resolve();
+        },
+      })).rejects.toThrow(phase);
+      expect(runner.run(options, policy).ticks).toBe(2);
+    }
+  });
+});
 
 describe("DOM-free TearBench headless scale", () => {
   it("matches browser-fast semantic outcomes for the golden parity corpus", () => {

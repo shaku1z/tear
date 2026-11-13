@@ -48,8 +48,32 @@ export interface TearHeadlessExecutionControl {
   readonly onArtifact?: (tick: number, artifact: unknown) => void;
 }
 
+export interface TearHeadlessProgress<TObservation> {
+  readonly startTick: number;
+  readonly endTick: number;
+  readonly executedTicks: number;
+  readonly transition: TearHeadlessTransition<TObservation>;
+}
+
+export interface TearHeadlessCooperativeControl<TObservation> extends TearHeadlessExecutionControl {
+  /** Production callers supply only an observation returned by validated restoreCheckpoint. */
+  readonly initialize?: () => Readonly<{ tick: number; observation: TObservation }>;
+  readonly afterStep?: (progress: TearHeadlessProgress<TObservation>) => Promise<void>;
+  readonly yieldToHost: () => Promise<void>;
+  readonly quantumTicks?: number;
+}
+
+export interface TearHeadlessExecutionResult<TScenario, TObservation> {
+  /** Observations/events and episode.ticks describe actual work in this process only. */
+  readonly episode: TearHeadlessEpisode<TScenario, TObservation>;
+  readonly startTick: number;
+  readonly endTick: number;
+  readonly executedTicks: number;
+}
+
 export class TearHeadlessRunner<TScenario, TObservation, TAction> {
   readonly #environment: TearHeadlessEnvironment<TScenario, TObservation, TAction>;
+  #executionActive = false;
 
   constructor(environment: TearHeadlessEnvironment<TScenario, TObservation, TAction>) {
     this.#environment = environment;
@@ -61,56 +85,97 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
     batchSize = 1,
     control: TearHeadlessExecutionControl = {},
   ): TearHeadlessEpisode<TScenario, TObservation> {
-    if (!Number.isSafeInteger(batchSize) || batchSize < 1) throw new RangeError("batchSize must be positive");
-    if (control.timeoutMilliseconds !== undefined
-      && (!Number.isFinite(control.timeoutMilliseconds) || control.timeoutMilliseconds < 0)) {
-      throw new RangeError("headless timeout must be a non-negative finite number");
-    }
-    const now = control.now ?? (() => performance.now());
-    const startedAt = now();
-    const observations: TObservation[] = [this.#environment.reset(options.scenario)];
-    const events: TearCausalEventV1[] = [];
-    let outcome: TearHeadlessEpisode<TScenario, TObservation>["outcome"] = "truncated";
-    let metrics: Readonly<Record<string, number>> = {};
-    const stopOutcome = (): "cancelled" | "timed-out" | undefined => {
-      if (control.isCancelled?.() === true) return "cancelled";
-      if (control.timeoutMilliseconds !== undefined && now() - startedAt >= control.timeoutMilliseconds) return "timed-out";
-      return undefined;
-    };
-    let steps = 0;
-    while (steps < options.maxTicks) {
-      const stopped = stopOutcome();
-      if (stopped !== undefined) { outcome = stopped; break; }
-      const input = observations.slice(-batchSize);
-      const actionBatches = policy.decide(input);
-      const permitted = actionBatches.slice(0, Math.min(batchSize, options.maxTicks - steps));
-      if (permitted.length === 0) throw new RangeError("headless policy must provide at least one action batch");
-      for (const actions of permitted) {
-        const transition = this.#environment.step(actions);
-        steps += 1;
-        observations.push(transition.observation);
-        events.push(...(transition.events ?? []));
-        metrics = transition.metrics ?? metrics;
-        control.onStep?.(steps);
-        if (transition.artifact !== undefined) control.onArtifact?.(steps, transition.artifact);
-        if (transition.terminated) { outcome = "terminated"; break; }
-        if (transition.truncated) { outcome = "truncated"; break; }
-        const stoppedAfterStep = stopOutcome();
-        if (stoppedAfterStep !== undefined) { outcome = stoppedAfterStep; break; }
+    const execution = this.#execute(options, policy, batchSize, control);
+    let result = execution.next();
+    while (!result.done) result = execution.next();
+    return result.value.episode;
+  }
+
+  async runCooperatively(
+    options: TearHeadlessRunOptions<TScenario>,
+    policy: TearHeadlessPolicy<TObservation, TAction>,
+    control: TearHeadlessCooperativeControl<TObservation>,
+  ): Promise<TearHeadlessExecutionResult<TScenario, TObservation>> {
+    const quantum = control.quantumTicks ?? 32;
+    if (!Number.isSafeInteger(quantum) || quantum < 1) throw new RangeError("invalid cooperative quantum");
+    const execution = this.#execute(options, policy, 1, control, control.initialize);
+    try {
+      let result = execution.next();
+      while (!result.done) {
+        await control.afterStep?.(result.value);
+        if (result.value.executedTicks % quantum === 0) await control.yieldToHost();
+        result = execution.next();
       }
-      if (outcome !== "truncated" || steps >= options.maxTicks) break;
-    }
-    const ticks = observations.length - 1;
-    return Object.freeze({
-      id: options.id,
-      scenario: options.scenario,
-      observations: Object.freeze(observations),
-      events: Object.freeze(events),
-      outcome,
-      ticks,
-      semanticHash: stableVerificationHash(observations.at(-1)),
-      metrics: Object.freeze({ ...metrics }),
-    });
+      return result.value;
+    } finally { execution.return(undefined as never); }
+  }
+
+  *#execute(
+    options: TearHeadlessRunOptions<TScenario>, policy: TearHeadlessPolicy<TObservation, TAction>,
+    batchSize: number, control: TearHeadlessExecutionControl,
+    initialize?: () => Readonly<{ tick: number; observation: TObservation }>,
+  ): Generator<TearHeadlessProgress<TObservation>, TearHeadlessExecutionResult<TScenario, TObservation>> {
+    if (this.#executionActive) throw new Error("headless runner already owns an active execution");
+    this.#executionActive = true;
+    try {
+      if (!Number.isSafeInteger(batchSize) || batchSize < 1) throw new RangeError("batchSize must be positive");
+      if (control.timeoutMilliseconds !== undefined
+        && (!Number.isFinite(control.timeoutMilliseconds) || control.timeoutMilliseconds < 0)) {
+        throw new RangeError("headless timeout must be a non-negative finite number");
+      }
+      const now = control.now ?? (() => performance.now());
+      const startedAt = now();
+      const initial = initialize?.() ?? { tick: 0, observation: this.#environment.reset(options.scenario) };
+      if (!Number.isSafeInteger(initial.tick) || initial.tick < 0 || initialize !== undefined && initial.tick >= options.maxTicks) {
+        throw new RangeError("headless start must precede the absolute horizon");
+      }
+      const observations: TObservation[] = [initial.observation];
+      const events: TearCausalEventV1[] = [];
+      let outcome: TearHeadlessEpisode<TScenario, TObservation>["outcome"] = "truncated";
+      let metrics: Readonly<Record<string, number>> = {};
+      const stopOutcome = (): "cancelled" | "timed-out" | undefined => {
+        if (control.isCancelled?.() === true) return "cancelled";
+        if (control.timeoutMilliseconds !== undefined && now() - startedAt >= control.timeoutMilliseconds) return "timed-out";
+        return undefined;
+      };
+      let steps = 0;
+      const remainingTicks = options.maxTicks - initial.tick;
+      while (steps < remainingTicks) {
+        const stopped = stopOutcome();
+        if (stopped !== undefined) { outcome = stopped; break; }
+        const input = observations.slice(-batchSize);
+        const actionBatches = policy.decide(input);
+        const permitted = actionBatches.slice(0, Math.min(batchSize, remainingTicks - steps));
+        if (permitted.length === 0) throw new RangeError("headless policy must provide at least one action batch");
+        for (const actions of permitted) {
+          const transition = this.#environment.step(actions);
+          steps += 1;
+          observations.push(transition.observation);
+          events.push(...(transition.events ?? []));
+          metrics = transition.metrics ?? metrics;
+          control.onStep?.(steps);
+          if (transition.artifact !== undefined) control.onArtifact?.(steps, transition.artifact);
+          yield Object.freeze({ startTick: initial.tick, endTick: initial.tick + steps, executedTicks: steps, transition });
+          if (transition.terminated) { outcome = "terminated"; break; }
+          if (transition.truncated) { outcome = "truncated"; break; }
+          const stoppedAfterStep = stopOutcome();
+          if (stoppedAfterStep !== undefined) { outcome = stoppedAfterStep; break; }
+        }
+        if (outcome !== "truncated" || steps >= remainingTicks) break;
+      }
+      const ticks = observations.length - 1;
+      const episode = Object.freeze({
+        id: options.id,
+        scenario: options.scenario,
+        observations: Object.freeze(observations),
+        events: Object.freeze(events),
+        outcome,
+        ticks,
+        semanticHash: stableVerificationHash(observations.at(-1)),
+        metrics: Object.freeze({ ...metrics }),
+      });
+      return Object.freeze({ episode, startTick: initial.tick, endTick: initial.tick + ticks, executedTicks: ticks });
+    } finally { this.#executionActive = false; }
   }
 
   dispose(): void { this.#environment.dispose(); }

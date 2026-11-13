@@ -136,6 +136,7 @@ export function createLiveRuntimeSnapshotController(
         seed: seed ?? String(context.state.run()?.runSeed ?? "unknown"),
         observationClass: accessClass === "A" ? "privileged-diagnostic" : "structured-state",
         producer: "live-tear-runtime", target: runtimeBuild?.target ?? "test-standalone", contentHash: runtimeBuild?.contentHash ?? contentHash,
+        // Context readback is observational; rendering belongs to public policy capture.
         visualHash: stableVerificationHash(context.screenshot()),
       });
     },

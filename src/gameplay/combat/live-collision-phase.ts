@@ -1,3 +1,4 @@
+import type { TutorialAttemptFact } from "../training/tutorial-failure-coach";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import type { HeldBladeCollisionInput, HeldBladeEnemy, HeldBladePlayer, HeldBladeRun,
   HeldBladeWeapon, HeldWeaponEffect } from "./held-blade-collision-contracts";
@@ -49,7 +50,9 @@ export interface LiveCollisionPhaseHost {
   weaponHit: (enemy: LiveEnemy, quality: number, damage: number, slam: boolean, launch: boolean, empowered: boolean) => HeldWeaponEffect | null | undefined;
   throwHit: (enemy: LiveEnemy, secondary: boolean, throwId: number) => ThrowEffect | null | undefined;
   runDamageMultiplier: () => number; noteFirstDamage: (enemy: LiveEnemy, first: boolean) => void;
+  observeTutorialAttempt?(fact: TutorialAttemptFact): void;
   logWeapon: (type: string, detail: Readonly<Record<string, unknown>>) => void; emitThrowResolve: (enemy: ThrownEnemy | null, damage: number) => void;
+  weaponEffect?: (weaponId: string, effect: string) => void;
   onKill: (enemy: LiveEnemy, cause?: string) => void; addFloater: (x: number, y: number, text: string, big: boolean, color?: string) => void;
   readonly effects: HeldBladeCollisionInput["effects"];
   sound: (cue: string, big?: boolean) => void; flare: (x: number, y: number, color: string, radius: number, seconds: number) => void;
@@ -108,7 +111,7 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
     onHit: () => { host.loseStyle(); host.sound("hurt"); }, onAbsorbed: host.onShieldAbsorb,
     onHostileBladeResolved: (target, weapon) => { host.effects.burst(target.x, target.y, weapon.vx, weapon.vy, 8, config.colors.perfect); } });
   markFallenEnemies(state.enemies, config.view.h + 40); host.combat.resolveBomberDeaths(projectileTuning(host));
-  for (const projectile of state.projectiles) if (projectile.dead) host.projectileExpired(projectile);
+  for (const projectile of state.projectiles) if (projectile.dead) { if (run.mode === "tutorial" && !projectile.deflected) host.observeTutorialAttempt?.({ kind: "projectile", event: "expired", projectileId: host.combat.id(projectile, "projectile") }); host.projectileExpired(projectile); }
   const tail = finalizeCombatTick({ dt, enemies: state.enemies, projectiles: state.projectiles, floaters: state.floaters,
     shake: state.shake, shakeDecay: config.juice.shakeDecay, floaterMotionScale: host.reducedMotion?.() ? 0 : 1,
     player, run, hooks: tailHooks(host) });
@@ -139,7 +142,8 @@ function heldEffects(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["eff
   return host.effects;
 }
 function heldHooks(host: LiveCollisionPhaseHost): HeldBladeCollisionInput["hooks"] {
-  return { weaponHit: host.weaponHit, noteFirstDamage: host.noteFirstDamage,
+  return { observeTutorialContact: (enemy, fact) => { if (host.run.mode === "tutorial") host.observeTutorialAttempt?.({ ...fact, targetId: host.combat.id(enemy, "enemy"), targetKind: enemy.kind }); }, weaponHit: host.weaponHit, noteFirstDamage: host.noteFirstDamage,
+    ...(host.weaponEffect === undefined ? {} : { weaponEffect: host.weaponEffect }),
     logHit: (damage, quality, observation, mechanic) => {
       host.logWeapon("heldHit", { damage, quality, ...observation, ...(mechanic ? { mechanic } : {}) });
     },
@@ -164,6 +168,7 @@ function runThrown(host: LiveCollisionPhaseHost): void {
     distance: host.distance, clamp: host.clamp, weaponHit: host.throwHit, runDamageMultiplier: host.runDamageMultiplier,
     noteFirstDamage: host.noteFirstDamage, logHit: (throwId, damage, secondary, mechanic) => { host.logWeapon("throwHit", { throwId, damage, secondary, ...(mechanic ? { mechanic } : {}) }); },
     emitResolve: host.emitThrowResolve, onKill: host.onKill,
+    ...(host.weaponEffect === undefined ? {} : { weaponEffect: host.weaponEffect }),
     burst: (...args) => { host.effects.burst(...args); }, ribbon: (...args) => { host.effects.ribbon(...args); },
     ring: (...args) => { host.effects.ring(...args); }, floater: host.addFloater,
     soundDeflect: () => { host.sound("deflect"); }, shake: host.addShake, setHitStop: (value) => { state.hitStop = value; }, style: host.addStyle,
@@ -197,7 +202,7 @@ function runParries(host: LiveCollisionPhaseHost, held: HeldBladeCollisionInput[
       if (host.blade.weapon?.id === "sword" && source && typeof source === "object") host.blade.primeReversal(source);
       host.logWeapon("perfectParry", { source: source && typeof source === "object" && "kind" in source ? Reflect.get(source, "kind") : undefined });
     },
-    projectileDeflected: (projectile) => { host.projectileDeflected(projectile); },
+    projectileDeflected: (projectile) => { if (run.mode === "tutorial") host.observeTutorialAttempt?.({ kind: "projectile", event: "deflected", projectileId: host.combat.id(projectile, "projectile") }); host.projectileDeflected(projectile); },
     emitPerfectParry: host.emitPerfectParry, firePerfectParry: host.makePerfectParryEvent });
 }
 

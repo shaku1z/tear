@@ -113,7 +113,7 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
   return released;
 }
 
-withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page, waitScreen, clickAndWait }) => {
+withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
   for (const bossId of BOSSES) {
     await startReadyBoss(page, bossId);
     const before = await bossSnapshot(page, bossId);
@@ -139,8 +139,8 @@ withJourney({ name: "boss oracle parity", port: 8237 }, async ({ page, waitScree
   // route as the rest of the roster; only the test hook supplies terminal HP.
   await startReadyBoss(page, "rootbound");
   await page.evaluate(() => window.__PANTHEON_TEST.defeatPlayer());
-  await waitScreen("gameover");
-  await clickAndWait(220, 347, "playing");
+  await waitArmed("gameover");
+  await clickLabel("RETRY", "playing");
   await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === "rootbound"), undefined, { timeout: 10000 });
   const retriedStage = await page.evaluate(() => window.__PANTHEON_TEST.bossStage("rootbound"));
   assert.equal(retriedStage.currentId, retriedStage.authoredId, "Rootbound retry must return to Verdant Sanctum");

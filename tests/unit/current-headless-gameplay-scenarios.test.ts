@@ -4,12 +4,34 @@ import type { GameAction } from "../../src/input/game-action";
 import {
   CANONICAL_ENGINEERING_SCENARIOS,
   createProductionHeadlessEnvironment,
+  type ProductionHeadlessEnvironment,
   type TearCausalEventV1,
   type TearObservationV1,
 } from "../../src/tearbench";
 
 const scenarios = CANONICAL_ENGINEERING_SCENARIOS.filter((scenario) =>
   scenario.subject.kind === "gameplay" && scenario.backends.includes("headless"));
+
+function chapterState(environment: ProductionHeadlessEnvironment): unknown {
+  return (environment.captureCheckpoint().snapshot.state["tear.run.v1"] as { chapterState?: unknown }).chapterState;
+}
+
+/**
+ * Since 6dfd99c7 a natural headless Campaign opening plays the real opening
+ * chapter (player locked), as live play does. Fixed ticks neither time nor
+ * confirm its pages, so skip it the way a player does: release confirm long
+ * enough to arm the latch, then hold it (HOLD TO SKIP CHAPTER) through real
+ * application frames until the chapter hands over to the live wave.
+ */
+function skipOpeningChapter(environment: ProductionHeadlessEnvironment): void {
+  expect(chapterState(environment)).toBe("LORE_ENTER");
+  // Checkpoint capture is the probe, so sample it every eight frames.
+  for (let frame = 0; frame < 600 && (frame % 8 !== 0 || chapterState(environment) !== "WAVE_LIVE"); frame += 1) {
+    environment.advanceApplicationFrame(1 / 60, { key: frame >= 12 });
+  }
+  expect(chapterState(environment)).toBe("WAVE_LIVE");
+  environment.advanceApplicationFrame(1 / 60, { key: false });
+}
 
 function assertSubjectTransition(subject: string, initial: TearObservationV1,
   observations: readonly TearObservationV1[], events: readonly TearCausalEventV1[],
@@ -56,6 +78,7 @@ describe("source-owned current headless gameplay scenario subjects", () => {
     const actions: GameAction[] = [];
     try {
       environment.reset(scenario);
+      if (scenario.start.mode === "campaign") skipOpeningChapter(environment);
       let opening = environment.policyObservation();
       if (scenario.subject.id === "movement") {
         for (let tick = 0; tick < 30 && !opening.player.grounded; tick += 1) {
@@ -84,11 +107,14 @@ describe("source-owned current headless gameplay scenario subjects", () => {
     const environment = createProductionHeadlessEnvironment();
     try {
       environment.reset(scenario);
+      if (scenario.start.mode === "campaign") skipOpeningChapter(environment);
       const opening = environment.policyObservation();
       expect(() => { assertSubjectTransition("dash", opening, [], [], []); })
         .toThrow(/never advanced its production backend/u);
       const action: GameAction = { type: "move", x: 1_000, y: 0 };
       const transition = environment.step([action]);
+      // The rejected receipt is genuine movement, not a frozen world.
+      expect(environment.policyObservation().player.x).not.toBe(opening.player.x);
       expect(() => {
         assertSubjectTransition("dash", opening, [environment.policyObservation()], transition.events ?? [], [action]);
       }).toThrow(/did not exercise its declared source-owned subject/u);

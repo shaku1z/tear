@@ -1,12 +1,15 @@
+import { liveTutorialCoachFrame } from "../app/training/tutorial-coach-frame";
 import type { AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import { createTearCombatSimulation } from "../gameplay/runtime/tear-combat-simulation";
+import type { DeferredCanonicalState } from "../gameplay/runtime/authoritative-step";
 import type { ProductionReplayWorld } from "./production-world-factory";
 import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./production-combat-phases";
-import { bindLiveAuroraTrackActors } from "../app/live-aurora-track-wiring";
-import { bindLiveWhiteHartActors } from "../app/live-white-hart-wiring";
+import { bindLiveAuroraTrackActors } from "../app/world/biomes/aurora-track-wiring";
+import { bindLiveWhiteHartActors } from "../app/world/biomes/white-hart-wiring";
+import { bindLiveRootboundActors } from "../app/world/biomes/rootbound-wiring";
 
 export interface ProductionCombatSimulationOptions<State> extends ProductionCombatPhaseOptions {
-  snapshot(tick: number, input: AuthoritativeInputState): State;
+  snapshot(tick: number, input: AuthoritativeInputState): State | DeferredCanonicalState<State>;
 }
 
 /**
@@ -37,7 +40,10 @@ export function createProductionCombatSimulation<State>(
       };
     },
     authoritative: {
-      actionPort: replay.input.actionPort,
+      actionPort: { apply(input, tick, actions) { replay.tutorial.captureCoachCommands(actions.map((entry) => entry.command)); replay.input.actionPort.apply(input, tick, actions); } },
+      afterWorldStep: (tick, input) => {
+        replay.tutorial.afterWorldStep(liveTutorialCoachFrame(replay.tutorial, tick, replay.world.state, core.combatEntityRuntime, replay.stage.index), input.snapshot());
+      },
       snapshot: (tick, input) => options.snapshot(tick, input),
     },
   });
@@ -54,6 +60,10 @@ export function createProductionCombatSimulation<State>(
     () => replay.world.state.player() as never,
     () => replay.world.state.enemies(),
     (enemy) => core.combatEntityRuntime.id(enemy, "enemy"));
+  bindLiveRootboundActors(replay.world.context.environment,
+    () => replay.world.state.player() as never,
+    () => replay.world.state.enemies(),
+    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"), config);
   replay.world.context.environment.setAvailableActorIdsSource(() => new Set(["player", "blade",
     ...replay.world.state.enemies().map((enemy) => core.combatEntityRuntime.id(enemy, "enemy")),
     ...replay.world.state.projectiles().map((projectile) => core.combatEntityRuntime.id(projectile, "projectile"))]));

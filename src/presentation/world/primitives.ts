@@ -1,3 +1,5 @@
+import { wrapSpaceSeparated } from "../ui-text-fit";
+
 export function clamp(value: number, minimum = 0, maximum = 1): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
@@ -20,17 +22,11 @@ export function wrapLeft(
   canvas: CanvasRenderingContext2D, text: string, x: number, y: number,
   maximumWidth: number, lineHeight: number,
 ): number {
-  const words = text.split(" ");
-  let line = "";
+  const lines = wrapSpaceSeparated((value) => canvas.measureText(value).width, text, maximumWidth);
   let lineY = y;
-  for (const word of words) {
-    const candidate = line.length > 0 ? `${line} ${word}` : word;
-    if (line.length > 0 && canvas.measureText(candidate).width > maximumWidth) {
-      canvas.fillText(line, x, lineY);
-      line = word;
-      lineY += lineHeight;
-    } else line = candidate;
-  }
-  if (line.length > 0) canvas.fillText(line, x, lineY);
+  lines.forEach((line, index) => {
+    if (index > 0) lineY += lineHeight;
+    canvas.fillText(line, x, lineY);
+  });
   return lineY;
 }

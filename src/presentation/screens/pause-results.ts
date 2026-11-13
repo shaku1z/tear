@@ -1,8 +1,10 @@
 import type {
-  ContinueScreenView, GameoverScreenView, PausedScreenView, ResultLogView,
+  ConfirmQuitScreenView, ContinueScreenView, GameoverScreenView, PausedScreenView,
   ScreenAction, ScreenRenderContext, WinScreenView,
 } from "./contracts";
-import { verticalMenu } from "./screen-primitives";
+import { wrapSpaceSeparated } from "../ui-text-fit";
+import { actionRow, menuHeight, overlayHeader, overlayLayout, verticalMenu, type OverlayLayout } from "./screen-primitives";
+import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
 import { RUN_MONITOR_ACTIONS } from "../../agents/surface-route";
 
 const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
@@ -10,225 +12,218 @@ const clampValue = (value: number, minimum: number, maximum: number) => Math.max
 export function createPauseResultRenderers(context: ScreenRenderContext) {
   const { ui, width, height } = context;
 
-  // source drawResultsTable (win screen's centred table)
-  function resultLog(rows: readonly ResultLogView[], x: number, y: number, panelWidth: number): void {
-    const { canvas } = context;
-    canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.label, true);
-    canvas.textAlign = "left"; canvas.fillText("WAVE", x, y);
-    canvas.textAlign = "right";
-    canvas.fillText("TIME", x + 200, y); canvas.fillText("KILLS", x + 330, y); canvas.fillText("BEST TRICK", x + panelWidth, y);
-    ui.divider(canvas, x, y + 8, panelWidth, ui.t.alpha.full);
-    const visible = 8, maxOffset = Math.max(0, rows.length - visible);
-    const offset = clampValue(Math.round(context.scroll / 26), 0, maxOffset);
-    let rowY = y + 30;
-    for (const row of rows.slice(offset, offset + visible)) {
-      canvas.textAlign = "left"; ui.text(canvas, `${row.died ? "✗ " : ""}${row.wave}`, x, rowY, ui.t.type.body);
-      canvas.textAlign = "right";
-      ui.text(canvas, row.time, x + 200, rowY, ui.t.type.body);
-      ui.text(canvas, String(row.kills), x + 330, rowY, ui.t.type.body);
-      ui.text(canvas, row.peak, x + panelWidth, rowY, ui.t.type.body);
-      rowY += 26;
-    }
-    canvas.textAlign = "left";
-    if (maxOffset > 0) ui.scrollHint(canvas, width / 2, rowY + 6, offset > 0, offset < maxOffset);
-  }
-
-  // source drawWaveLogPanel (defeat screen's middle column) — scrollable
-  function waveLogPanel(rows: readonly ResultLogView[], px: number, py: number, pw: number, ph: number): void {
-    const { canvas } = context;
-    ui.tag(canvas, "RUN LOG", px, py - 10, ui.t.color.accent, "left", ui.t.type.micro);
-    canvas.textAlign = "left"; canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.label, true); canvas.globalAlpha = 0.7;
-    canvas.fillText("WAVE", px + 4, py + 12);
-    canvas.textAlign = "right";
-    canvas.fillText("TIME", px + pw - 250, py + 12); canvas.fillText("KILLS", px + pw - 120, py + 12); canvas.fillText("PEAK", px + pw - 4, py + 12);
-    canvas.globalAlpha = 1; canvas.textAlign = "left";
-    ui.divider(canvas, px, py + 20, pw, 0.4);
-    if (rows.length === 0) { ui.text(canvas, "No waves cleared.", px + pw / 2, py + 60, ui.t.type.caption, "center", ui.t.alpha.muted); return; }
-    const rowH = 32, top = py + 40, viewH = ph - 44;
-    const maxScroll = Math.max(0, rows.length * rowH - viewH);
-    const scroll = clampValue(context.scroll, 0, maxScroll);
-    canvas.save(); canvas.beginPath(); canvas.rect(px, top - 8, pw, viewH + 16); canvas.clip();
-    rows.forEach((row, index) => {
-      const y = top + index * rowH - scroll;
-      if (y < top - rowH || y > top + viewH) return;
-      canvas.textAlign = "left"; canvas.fillStyle = row.died ? ui.t.color.danger : ui.ink; canvas.font = ui.font(ui.t.type.body, true);
-      canvas.fillText((row.died ? "✗ " : "") + row.wave, px + 4, y);
-      canvas.textAlign = "right"; canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.body, false);
-      canvas.fillText(row.time, px + pw - 250, y);
-      canvas.fillText(String(row.kills), px + pw - 120, y);
-      canvas.fillStyle = row.peakColor ?? ui.ink; canvas.font = ui.font(ui.t.type.body, true);
-      canvas.fillText(row.peak, px + pw - 4, y);
-      ui.divider(canvas, px, y + 9, pw, 0.06);
-    });
-    canvas.restore(); canvas.textAlign = "left";
-    if (maxScroll > 0) ui.scrollHint(canvas, px + pw / 2, top + viewH + 16, scroll > 0, scroll < maxScroll);
-  }
-
-  // source drawArsenalCard + drawArsenalPanel (pause screen's middle column) — scrollable
-  function arsenalCard(x: number, y: number, w: number, h: number, ability: PausedScreenView["abilities"][number]): void {
-    const { canvas } = context;
-    ui.card(canvas, x, y, w, h, false);
-    ui.accentStrip(canvas, x, y, w, ability.accent);
-    canvas.textAlign = "left"; canvas.textBaseline = "alphabetic";
-    canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.lead, true);
-    const name = ability.label.length > 26 ? ability.label.slice(0, 25) + "…" : ability.label;
-    canvas.fillText(name, x + 14, y + 26);
-    if (ability.footer) ui.tag(canvas, ability.footer, x + w - 14, y + 24, ability.accent, "right", ui.t.type.micro);
-    wrapText(ability.description ?? "", x + 14, y + 44, w - 28, 15, ui.t.type.micro, "rgba(40,42,54,0.85)");
-  }
-
   function wrapText(text: string, x: number, y: number, maxW: number, lineHeight: number, size: number, color: string): void {
     const { canvas } = context;
     canvas.font = ui.font(size, false); canvas.textAlign = "center"; canvas.fillStyle = color;
-    const words = text.split(" "); let line = "", yy = y;
+    const lines = wrapSpaceSeparated((value) => canvas.measureText(value).width, text, maxW);
     const cx = x + maxW / 2;
-    for (const word of words) {
-      const test = line ? line + " " + word : word;
-      if (canvas.measureText(test).width > maxW && line) { canvas.fillText(line, cx, yy); line = word; yy += lineHeight; }
-      else line = test;
-    }
-    if (line) canvas.fillText(line, cx, yy);
+    let lineY = y;
+    lines.forEach((line, index) => {
+      if (index > 0) lineY += lineHeight;
+      canvas.fillText(line, cx, lineY);
+    });
   }
 
-  function arsenalPanel(abilities: PausedScreenView["abilities"], px: number, py: number, pw: number, ph: number): void {
+  function tutorialPaused(session: NonNullable<PausedScreenView["tutorial"]>): void {
     const { canvas } = context;
-    ui.tag(canvas, "YOUR ARSENAL", px, py - 10, ui.t.color.accent, "left", ui.t.type.micro);
-    if (abilities.length === 0) {
-      ui.text(canvas, "No abilities yet — they drop between waves.", px + pw / 2, py + 46, ui.t.type.caption, "center", ui.t.alpha.muted);
+    ui.dim(canvas, width, height, 0.9);
+    const unfinished = session.unfinished === true && session.phase === "free-practice";
+    const lab = session.practiceOnly === true, annexes = lab && session.annexSelector === true, catalog = lab && session.catalogSelector === true, bosses = lab && session.bossSelector === true,
+      complete = (session.courseCompleted || lab) && session.phase === "free-practice", current = session.lessons.find((lesson) => lesson.current);
+    // Geometry comes from the shared overlay pattern; compact density (phone) tightens gaps.
+    const compact = ui.density.compact, header = overlayLayout(context, { subtitleLines: 1 }), titleY = header.titleY, top = header.bodyTop;
+    ui.title(canvas, lab ? "PRACTICE LAB" : unfinished ? "UNFINISHED COURSE" : complete ? "TECHNIQUES LEARNED" : "CUTTING ROOM", width / 2, titleY, ui.t.type.display);
+    const activeTitle = session.bossPractice ? `${session.bossPractice.bossId.toUpperCase()} · PHASE ${String(session.bossPractice.phase)}` : session.enemyPractice ? `${session.enemyPractice.id.toUpperCase()} ENCOUNTER` : session.annex ? `${session.annex.id.toUpperCase()} ANNEX` : current?.title ?? "";
+    ui.text(canvas, unfinished ? "Skipped exercises remain unearned · revisit below · no course reward or Lab unlock" : complete ? lab ? bosses ? "Choose a boss phase · baseline sword · no rewards" : catalog ? "Choose an opponent · baseline sword · no rewards" : annexes ? "Choose a weapon · baseline loadout · no rewards" : "Choose a technique · baseline sword · no rewards" : "Course complete · baseline practice · no waves" : `${activeTitle} · ${String(session.progress[0])} / ${String(session.progress[1])}`, width / 2, header.subtitleY, ui.t.type.caption, "center", ui.t.alpha.soft);
+    const menu: { label: string; action: ScreenAction }[] = [
+      { label: unfinished ? "CONTINUE FREE PRACTICE" : complete ? "CONTINUE PRACTICE" : "RESUME LESSON", action: { type: "run.resume" } },
+      ...(current?.canPractice || session.annex || session.enemyPractice || session.bossPractice ? [{ label: "RESTART LESSON", action: { type: "tutorial.action", command: "restart" } as const }] : []),
+      { label: session.helpVisible ? "HIDE HELP" : "LESSON HELP", action: { type: "tutorial.action", command: "help" } },
+      ...(session.coach?.available && current?.canPractice && !session.annex && !session.enemyPractice && !session.bossPractice ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }] : []),
+      ...(session.helpVisible && current?.canPractice && session.phase !== "free-practice" && !session.annex && !session.enemyPractice && !session.bossPractice ? [{ label: "SKIP UNFINISHED", action: { type: "tutorial.action", command: "skip" } as const }] : []),
+      ...(session.coach?.adaptive?.assistOffered && session.phase !== "free-practice" ? [{ label: "ADVANCE UNFINISHED", action: { type: "tutorial.action", command: "assist" } as const }] : []),
+      ...(lab ? [{ label: annexes ? "BASELINE EXERCISES" : "WEAPON ANNEXES", action: { type: "tutorial.action", command: "annexes" } as const }] : []),
+      ...(lab ? [{ label: bosses ? "BASELINE EXERCISES" : "BOSS PRACTICE", action: { type: "tutorial.action", command: "bosses" } as const }] : []),
+      ...(lab ? [{ label: catalog ? "BASELINE EXERCISES" : "ENEMY CATALOG", action: { type: "tutorial.action", command: "catalog" } as const }] : []),
+      { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
+      { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
+    ];
+    const menuGap = compact ? 4 : 8, menuH = Math.max(ui.t.type.micro + 12, Math.min(ui.t.metric.btnH, (header.bodyBottom - top) / menu.length - menuGap));
+    menu.forEach((item, index) => { context.enqueue({ x: width * 0.06, y: top + index * (menuH + menuGap),
+      w: width * 0.29, h: menuH, label: item.label, action: item.action, size: ui.t.type.caption }); });
+    const panelX = width * 0.39, panelW = width * 0.54, rowTop = top + (compact ? 38 : 45), helpH = compact ? catalog ? 70 : 90 : 130;
+    ui.tag(canvas, bosses ? "BOSS PHASE ENTRIES" : catalog ? "KNOWN OPPONENTS" : annexes ? "CHOOSE A WEAPON" : lab ? "UNLOCKED EXERCISES" : complete ? "PRACTICE A TECHNIQUE" : "REACHED LESSONS", panelX, top, ui.t.color.accent, "left", ui.t.type.micro);
+    ui.text(canvas, bosses ? "P1: defeated identity or seen phase · P2/3: saved exact exposure" : catalog ? "Unknown history stays unknown · practice never unlocks entries" : annexes ? "Real weapon effects · restart any attempt · no rewards" : lab ? "Restart any exercise, or use help and demos." : session.coach?.adaptive?.assistOffered ? "Assist: advance checkpoint unfinished. No completion credit." : "Skip advances unfinished. Revisit it to earn completion.", panelX, top + 21, ui.t.type.micro, "left", ui.t.alpha.soft);
+    const exercises = bosses ? (session.bossCatalog ?? []).map((boss) => ({ ...boss, current: session.bossPractice?.bossId === boss.bossId && session.bossPractice.phase === boss.phase, completed: false, reached: true })) : catalog ? (session.enemyCatalog ?? []).map((enemy) => ({ ...enemy, current: session.enemyPractice?.id === enemy.id, completed: false, reached: true })) : annexes ? (session.annexes ?? []).map((annex) => ({ ...annex, completed: false, reached: true, canPractice: true })) : session.lessons.filter((lesson) => lesson.id !== "ready");
+    const rows = bosses ? compact ? 3 : 6 : catalog ? Math.max(1, Math.ceil(exercises.length / 2)) : 7, rowH = Math.min(bosses ? compact ? 42 : 62 : catalog ? 62 : 46, (height - rowTop - helpH - 16) / rows);
+    const bossOffset = bosses && compact ? clampValue(Math.floor(context.scroll / 48), 0, 3) * 3 : 0;
+    exercises.forEach((lesson, originalIndex) => {
+      const index = originalIndex - bossOffset; if (bosses && compact && (index < 0 || index >= 9)) return;
+      const columns = bosses ? 3 : 2, column = index % columns, row = Math.floor(index / columns);
+      context.enqueue({ x: panelX + column * (panelW / (bosses ? 3 : 2) + 4), y: rowTop + row * rowH, w: panelW / (bosses ? 3 : 2) - 8, h: rowH - 4,
+        label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · UNFINISHED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
+        ...("knowledge" in lesson && typeof lesson.knowledge === "string" ? { sub: ({ "defeated-identity": "DEFEATED IDENTITY", "encountered-phase": "SAVED PHASE EXPOSURE", "confirmed-defeated": "CONFIRMED DEFEATED", encountered: "ENCOUNTERED", "save-unconfirmed": "SAVE NOT CONFIRMED", unknown: "HISTORY NOT RECORDED" } as Readonly<Record<string, string>>)[lesson.knowledge] } : {}),
+        enabled: lesson.canPractice, selected: lesson.current,
+        action: { type: "tutorial.action", command: bosses ? "select-boss" : catalog ? "select-enemy" : annexes ? "select-annex" : "select", lessonId: lesson.id }, size: compact ? ui.t.type.micro : ui.t.type.caption });
+    });
+    if (bosses && compact) ui.scrollHint(canvas, panelX + panelW / 2, rowTop + rows * rowH + 10, bossOffset > 0, bossOffset < 9);
+    const help = bosses
+      ? compact ? "Scroll for more bosses. P1: recorded defeat or seen phase. Later phases: exact saved exposure. Real entry transitions and rituals; baseline, no rewards." : "Opening phase access from a recorded defeat does not reconstruct old phase history. Later phases require their exact saved exposure. Each exercise starts at its real authored transition; rituals remain interactive. No rewards or discovery."
+      : catalog
+      ? "Confirmed defeated uses an existing recorded kill. Encountered means an opponent was exposed in ordinary live play. Missing older history is not proof you have never met it. Practice uses a real opponent; pause to reset."
+      : session.helpVisible || session.annex || session.enemyPractice || session.bossPractice ? session.instruction
+      : annexes
+      ? "Sword: Reversal and launch. Hammer: slam and Break. Greatsword: Cleave and Wheel Cut. Chainblade: Hook and Sling. Riftlock: Capture and Razor Rounds. Select a weapon to try its real mechanics."
+      : complete
+      ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then evade and punish. Select any technique above to revisit its baseline exercise."
+      : "Pause at any time to restart a block or revisit a reached lesson. Complete the action yourself to advance.";
+    if (session.coach?.available && !bosses && !catalog && !annexes) {
+      const coach = session.coach, controls: { label: string; command: "coach-rate" | "coach-diagnostic" | "coach-compare" }[] = [{ label: `PLAYBACK ${String(coach.rate)}×`, command: "coach-rate" }, { label: "DIAGNOSTIC DEMO", command: "coach-diagnostic" }, ...(coach.canCompare ? [{ label: "COMPARE ATTEMPT", command: "coach-compare" as const }] : [])];
+      controls.forEach((control, index) => { context.enqueue({ x: panelX + index * panelW / controls.length, y: header.footerY, w: panelW / controls.length - 8, h: ui.t.metric.btnH, label: control.label, action: { type: "tutorial.action", command: control.command }, size: ui.t.type.micro }); });
+      wrapText(coach.adaptive?.assistOffered ? "ASSIST OFFER: advance checkpoint unfinished. No credit or reward. Choose ADVANCE UNFINISHED explicitly." : coach.adaptive?.nudge ?? (session.helpVisible ? session.instruction : coach.diagnosis), panelX, header.footerY - ui.t.space.md - ui.t.type.micro * 2, panelW, Math.round(ui.t.type.micro * 1.3), ui.t.type.micro, ui.ink);
       return;
     }
-    const cardH = 64, gap = 8, rowH = cardH + gap;
-    const maxScroll = Math.max(0, abilities.length * rowH - ph);
-    const scroll = clampValue(context.scroll, 0, maxScroll);
-    canvas.save(); canvas.beginPath(); canvas.rect(px, py - 4, pw, ph + 8); canvas.clip();
-    abilities.forEach((ability, index) => {
-      const y = py + index * rowH - scroll;
-      if (y + cardH < py - 4 || y > py + ph) return;
-      arsenalCard(px, y, pw, cardH, ability);
-    });
-    canvas.restore();
-    if (maxScroll > 0) ui.scrollHint(canvas, px + pw / 2, py + ph + 16, scroll > 0, scroll < maxScroll);
+    canvas.textBaseline = "alphabetic";
+    wrapText(help, panelX, rowTop + rows * rowH + (catalog ? 28 : 18), panelW, Math.round(ui.t.type.caption * 1.35), ui.t.type.caption, ui.ink);
   }
 
-  // source drawProgressRow + drawRunProgressPanel (pause/defeat right column)
-  function progressRow(px: number, y: number, pw: number, row: PausedScreenView["progress"][number]): void {
-    const { canvas } = context;
-    const barColor = row.barColor ?? ui.t.color.accent;
-    canvas.textAlign = "left"; canvas.fillStyle = row.labelColor ?? ui.ink; canvas.font = ui.font(ui.t.type.caption, row.done === true);
-    canvas.fillText(row.label.length > 40 ? row.label.slice(0, 39) + "…" : row.label, px, y + 12);
-    const bw = pw - 66;
-    canvas.globalAlpha = 0.15; canvas.fillStyle = ui.ink; canvas.fillRect(px, y + 20, bw, 4); canvas.globalAlpha = 1;
-    canvas.fillStyle = barColor;
-    canvas.fillRect(px, y + 20, bw * clampValue(row.goal ? row.current / row.goal : (row.done ? 1 : 0), 0, 1), 4);
-    canvas.textAlign = "right"; canvas.fillStyle = barColor; canvas.font = ui.font(10, true);
-    canvas.fillText(row.detail ?? "", px + pw, y + 14); canvas.textAlign = "left";
+  /**
+   * Body columns shared by pause and defeat: the action rail (left), a primary panel
+   * (arsenal or run log) and the run's progress. Compact density stacks the progress
+   * under the primary panel instead of squeezing a third column.
+   */
+  function bodyColumns(layout: OverlayLayout) {
+    const t = ui.t, gap = t.space.xl, railW = t.metric.btnW;
+    const x = layout.left + railW + gap, rest = layout.right - x, compact = ui.density.compact;
+    const primaryW = compact ? rest : Math.round(rest * 0.58 - gap / 2);
+    const primaryTop = panelTagTop(layout);
+    const primaryH = compact ? Math.round((layout.bodyBottom - primaryTop) * 0.55) : layout.bodyBottom - primaryTop;
+    return { railX: layout.left + railW / 2, railW,
+      primary: { x, y: primaryTop, w: primaryW, h: primaryH },
+      progress: compact ? { x, y: primaryTop + primaryH + t.space.lg, w: rest }
+        : { x: x + primaryW + gap, y: layout.bodyTop, w: layout.right - (x + primaryW + gap) } };
   }
 
-  function runProgressPanel(rows: PausedScreenView["progress"], px: number, py: number, pw: number): void {
-    const { canvas } = context;
-    let y = py;
-    ui.tag(canvas, "DAILY CHALLENGES", px, y - 10, ui.t.color.accent, "left", ui.t.type.micro);
-    const dailies = rows.filter((row) => row.kind !== "achievement");
-    const achievements = rows.filter((row) => row.kind === "achievement");
-    for (const row of dailies) { progressRow(px, y, pw, row); y += 38; }
-    y += 16;
-    ui.tag(canvas, "ACHIEVEMENTS", px, y - 10, ui.t.color.accent, "left", ui.t.type.micro);
-    for (const row of achievements) { progressRow(px, y, pw, row); y += 38; }
-    if (achievements.length === 0) ui.text(canvas, "Keep fighting to make progress.", px + pw / 2, y + 20, ui.t.type.caption, "center", ui.t.alpha.muted);
+  function panelTagTop(layout: OverlayLayout): number {
+    return layout.bodyTop + ui.t.type.micro + ui.t.space.sm;
   }
 
-  function paused(view: PausedScreenView): void {
-    const { canvas } = context;
-    ui.dim(canvas, width, height, 0.86);
-    ui.title(canvas, "PAUSED", width / 2, 78, ui.t.type.display);
-    if (view.runSummary) ui.text(canvas, view.runSummary, width / 2, 110, ui.t.type.body, "center", ui.t.alpha.soft);
-    verticalMenu(context, [
+  function pauseActions(view: PausedScreenView): { label: string; action: ScreenAction }[] {
+    const actions: { label: string; action: ScreenAction }[] = [
       { label: "RESUME", action: { type: "run.resume" } },
       { label: "RESTART", action: { type: "run.restart" } },
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
-    ], 220, 210);
+    ];
+    if (view.ghostChase) {
+      actions.push({ label: view.ghostChase.visible ? "HIDE GHOST" : "SHOW GHOST", action: { type: "chase.control", command: "toggle" } },
+        { label: "STOP CHASE", action: { type: "chase.control", command: "stop" } });
+    }
     const watch = view.playerWatch;
     if (watch !== undefined) {
-      ui.tag(canvas, `RUN MONITOR / ${String(watch.decisions)} DECISIONS`, 220, 410, ui.t.color.accent, "center", ui.t.type.micro);
-      context.enqueue({ x: 80, y: 426, w: 280, h: 42,
-        label: watch.status === "running" ? "PAUSE RUN MONITOR" : "RESUME RUN MONITOR",
-        action: { type: RUN_MONITOR_ACTIONS.control, command: watch.status === "running" ? "pause" : "resume" } });
-      context.enqueue({ x: 80, y: 476, w: 280, h: 42, label: "STOP RUN MONITOR",
-        action: { type: RUN_MONITOR_ACTIONS.control, command: "stop" } });
+      actions.push({ label: watch.status === "running" ? "PAUSE RUN MONITOR" : "RESUME RUN MONITOR",
+        action: { type: RUN_MONITOR_ACTIONS.control, command: watch.status === "running" ? "pause" : "resume" } },
+      { label: "STOP RUN MONITOR", action: { type: RUN_MONITOR_ACTIONS.control, command: "stop" } });
     }
-    // ---- middle column: the player's arsenal (scrollable) ----
-    arsenalPanel(view.abilities, 400, 210, 640, 600);
-    // ---- right column: this run's daily + achievement progress ----
-    runProgressPanel(view.progress, 1090, 210, 430);
+    return actions;
   }
 
-  function confirmquit(): void {
+  function paused(view: PausedScreenView): void {
+    const { canvas } = context;
+    if (view.tutorial !== undefined) {
+      tutorialPaused(view.tutorial);
+      return;
+    }
+    ui.dim(canvas, width, height, 0.86);
+    const layout = overlayHeader(context, { title: "PAUSED", subtitle: view.runSummary ? [view.runSummary] : [] });
+    const actions = pauseActions(view), columns = bodyColumns(layout);
+    verticalMenu(context, actions, columns.railX, layout.bodyTop, columns.railW);
+    if (view.playerWatch !== undefined) {
+      const tagY = layout.bodyTop + menuHeight(context, actions.length) + ui.t.space.md + ui.t.type.micro;
+      ui.tag(canvas, `RUN MONITOR / ${String(view.playerWatch.decisions)} DECISIONS`, layout.left, tagY, ui.readable(ui.t.color.accent), "left", ui.t.type.micro);
+    }
+    panelTag(context, "YOUR ARSENAL", columns.primary.x, layout.bodyTop);
+    arsenalPanel(context, view.abilities, columns.primary);
+    runProgressPanel(context, view.progress, columns.progress.x, columns.progress.y, columns.progress.w, layout.bodyBottom);
+  }
+
+  function confirmquit(view: ConfirmQuitScreenView): void {
     const { canvas } = context;
     ui.dim(canvas, width, height, 0.85);
-    ui.title(canvas, "QUIT RUN?", width / 2, 250, ui.t.type.display);
-    ui.text(canvas, "Your progress (cleared waves & score) is saved to High Scores.", width / 2, 300, ui.t.type.body, "center", ui.t.alpha.soft);
-    context.enqueue({ x: width / 2 - 230, y: 350, w: 200, h: 56, label: "QUIT", action: { type: "run.quit" } });
-    context.enqueue({ x: width / 2 + 30, y: 350, w: 200, h: 56, label: "CANCEL", action: { type: "navigate", to: "paused" } });
+    const layout = overlayHeader(context, { title: "QUIT RUN?", subtitle: [view.practice
+      ? "Local practice ends without saved progression or High Scores."
+      : "Your progress (cleared waves & score) is saved to High Scores."] });
+    actionRow(context, [{ label: "QUIT", action: { type: "run.quit" } }, { label: "CANCEL", action: { type: "navigate", to: "paused" } }],
+      layout.bodyTop + ui.t.space.lg, layout.width);
   }
 
   function continueRun(view: ContinueScreenView): void {
     const { canvas } = context;
     ui.dim(canvas, width, height, 0.85);
-    ui.title(canvas, "YOU FELL", width / 2, 220, ui.t.type.display);
-    ui.text(canvas, "Watch a short ad to revive with 35% health and keep this run going.", width / 2, 290, ui.t.type.body, "center", ui.t.alpha.soft);
-    ui.text(canvas, `Offer lapses in ${String(view.requesting ? 0 : Math.max(0, Math.ceil(view.seconds)))}s`, width / 2, 322, ui.t.type.caption, "center", ui.t.alpha.muted);
-    context.enqueue({ x: width / 2 - 250, y: 360, w: 300, h: 60, label: "REVIVE  ▶ WATCH AD", enabled: !view.requesting, action: { type: "continue.revive" } });
-    context.enqueue({ x: width / 2 + 80, y: 360, w: 170, h: 60, label: "GIVE UP", enabled: !view.requesting, action: { type: "continue.giveUp" } });
+    const seconds = view.requesting ? 0 : Math.max(0, Math.ceil(view.seconds));
+    const layout = overlayHeader(context, { title: "YOU FELL",
+      subtitle: ["Watch a short ad to revive with 35% health and keep this run going.", `Offer lapses in ${String(seconds)}s`] });
+    actionRow(context, [
+      { label: "REVIVE  ▶ WATCH AD", action: { type: "continue.revive" }, enabled: !view.requesting },
+      { label: "GIVE UP", action: { type: "continue.giveUp" }, enabled: !view.requesting },
+    ], layout.bodyTop + ui.t.space.lg, layout.width);
+  }
+
+  /** Coins earned: a celebration only when the run scored; a 0-point run keeps the coins quietly. */
+  function rewards(view: GameoverScreenView, x: number, y: number): number {
+    const t = ui.t, total = `coins  ·  ${String(view.coins)} total`;
+    let cursor = panelTag(context, "REWARDS", x, y);
+    if (view.celebrate) {
+      cursor += t.type.h2;
+      ui.tag(context.canvas, `+${String(view.earned)}`, x, cursor, ui.readable(t.color.accent), "left", t.type.h2);
+      cursor += t.space.xs + t.type.caption;
+      ui.text(context.canvas, total, x, cursor, t.type.caption, "left", t.alpha.soft);
+    } else {
+      cursor += t.type.caption;
+      ui.text(context.canvas, `+${String(view.earned)} ${total}`, x, cursor, t.type.caption, "left", t.alpha.soft);
+    }
+    return cursor + t.space.lg;
   }
 
   function gameover(view: GameoverScreenView): void {
     const { canvas } = context;
     ui.dim(canvas, width, height, 0.9);
-    ui.title(canvas, "DEFEATED", width / 2, 74, ui.t.type.display);
-    ui.text(canvas, view.summary, width / 2, 106, ui.t.type.lead, "center");
-    if (view.isNew) ui.tag(canvas, "★ NEW BEST", width / 2, 130, ui.t.color.accent, "center", ui.t.type.caption);
-    else if (view.best) ui.text(canvas, view.best, width / 2, 130, ui.t.type.caption, "center", ui.t.alpha.muted);
-    ui.tag(canvas, "REWARDS", 80, 200, ui.t.color.accent, "left", ui.t.type.micro);
-    canvas.textAlign = "left"; canvas.fillStyle = "#0f9fb0"; canvas.font = ui.font(ui.t.type.h2, true);
-    canvas.fillText(`+${String(view.earned)}`, 80, 236);
-    canvas.fillStyle = ui.ink; canvas.font = ui.font(ui.t.type.caption, false); canvas.globalAlpha = 0.7;
-    canvas.fillText(`coins  ·  ${String(view.coins)} total`, 80, 258); canvas.globalAlpha = 1;
+    const standing = view.isNew ? "★ NEW BEST" : view.best;
+    const layout = overlayHeader(context, { title: "DEFEATED", subtitle: [view.summary, ...(standing ? [standing] : [])] });
     const actions: { label: string; action: ScreenAction }[] = [{ label: "RETRY", action: { type: "results.retry" } }];
     if (view.replayAvailable) actions.push({ label: "▶  WATCH REPLAY", action: { type: "results.watchReplay" } });
     actions.push({ label: "MAIN MENU", action: { type: "navigate", to: "menu" } });
-    verticalMenu(context, actions, 220, 320);
-    // ---- middle column: the per-wave run log (scrollable) ----
-    waveLogPanel(view.log, 400, 210, 640, 600);
-    // ---- right column: this run's daily + achievement progress ----
-    runProgressPanel(view.progress, 1090, 210, 430);
+    const columns = bodyColumns(layout);
+    verticalMenu(context, actions, columns.railX, rewards(view, layout.left, layout.bodyTop), columns.railW);
+    panelTag(context, "RUN LOG", columns.primary.x, layout.bodyTop);
+    waveLogPanel(context, view.log, columns.primary);
+    runProgressPanel(context, view.progress, columns.progress.x, columns.progress.y, columns.progress.w, layout.bodyBottom);
   }
 
   function win(view: WinScreenView): void {
     const { canvas } = context;
+    const again: { label: string; action: ScreenAction } = view.campaign
+      ? { label: "DESCEND AGAIN", action: { type: "results.descendAgain" } } : { label: "PLAY AGAIN", action: { type: "results.retry" } };
+    const actions = [again, { label: "MAIN MENU", action: { type: "navigate", to: "menu" } as const }];
     if (view.campaign) {
-      ui.finalReward(canvas, {
+      const panel = ui.finalReward(canvas, {
         amount: context.enterAmount, label: "ADVENTURE COMPLETE", title: "THE WORLD, RESTORED",
-        sigil: "◇", color: ui.t.color.accent,
+        sigil: "◇", color: ui.t.color.accent, actions: true,
         reward: `${String(view.score)} PTS  ·  ${view.time}${view.isNew ? "  ·  NEW BEST" : ""}`,
         detail: `+${String(view.earned)} COINS  ·  ${String(view.coins)} TOTAL`,
       });
-      verticalMenu(context, [
-        { label: "DESCEND AGAIN", action: { type: "results.descendAgain" } },
-        { label: "MAIN MENU", action: { type: "navigate", to: "menu" } },
-      ], width / 2, height / 2 + 155);
+      actionRow(context, actions, panel.actionsY, panel.w - ui.t.space.xl * 2);
       return;
     }
     ui.dim(canvas, width, height, 0.92);
-    ui.title(canvas, "VICTORY", width / 2, 110, ui.t.type.display);
-    ui.text(canvas, `boss down!   ·   ${String(view.score)} pts   ·   ${view.time}`, width / 2, 152, ui.t.type.lead, "center");
-    if (view.isNew) ui.title(canvas, "NEW BEST!", width / 2, 184, ui.t.type.title);
-    ui.text(canvas, `+${String(view.earned)} coins  (${String(view.coins)} total)`, width / 2, 210, ui.t.type.body, "center", ui.t.alpha.soft);
-    resultLog(view.log, width / 2 - 270, 250, 540);
-    verticalMenu(context, [
-      { label: "PLAY AGAIN", action: { type: "results.retry" } },
-      { label: "MAIN MENU", action: { type: "navigate", to: "menu" } },
-    ], width / 2, 560, 260);
+    const layout = overlayHeader(context, { title: "VICTORY", subtitle: [
+      `boss down   ·   ${String(view.score)} pts   ·   ${view.time}${view.isNew ? "   ·   NEW BEST" : ""}`,
+      `+${String(view.earned)} coins  (${String(view.coins)} total)`,
+    ] });
+    const logW = Math.min(720, layout.width), logX = layout.centerX - logW / 2;
+    panelTag(context, "RUN LOG", logX, layout.bodyTop);
+    waveLogPanel(context, view.log, { x: logX, y: panelTagTop(layout), w: logW, h: layout.bodyBottom - panelTagTop(layout) });
+    actionRow(context, actions, layout.footerY, layout.width);
   }
 
   return { paused, confirmquit, continue: continueRun, gameover, win };

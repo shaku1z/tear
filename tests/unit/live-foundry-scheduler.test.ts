@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LiveFoundryScheduler } from "../../src/app/live-foundry-scheduler";
+import { LiveFoundryScheduler } from "../../src/app/engineering/foundry-scheduler";
 import type { TearFoundryScheduleProjectionV1 } from "../../src/agents";
 
 const hash = "a".repeat(16);

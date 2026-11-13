@@ -174,9 +174,10 @@ function parseObservation(value: Record<string, unknown>, issues: TearContractVa
   else {
     for (const key of ["handX", "handY", "tipX", "tipY", "vx", "vy", "tipSpeed"]) if (!finite(blade[key])) issue(issues, `blade.${key}`, "must be finite");
     if (!stringValue(blade.state)) issue(issues, "blade.state", "must be a bounded string");
-    for (const key of ["chambers", "chamberCooldown", "wheelSpin", "reversalCount"]) {
+    for (const key of ["chambers", "chamberCooldown", "fireCooldown", "wheelSpin", "reversalCount"]) {
       if (blade[key] !== undefined && !finite(blade[key])) issue(issues, `blade.${key}`, "must be finite when present");
     }
+    if (finite(blade.fireCooldown) && blade.fireCooldown < 0) issue(issues, "blade.fireCooldown", "must be nonnegative");
   }
   if (!boundedArray(value.entities)) issue(issues, "entities", "must be a bounded array");
   else value.entities.forEach((entry, index) => {
@@ -231,6 +232,7 @@ function parseEvent(value: Record<string, unknown>, issues: TearContractValidati
   if (typeof value.phase !== "string" || !(WITHIN_TICK_PHASES as readonly string[]).includes(value.phase)) issue(issues, "phase", "is not registered");
   if (!["engine", "derived", "agent", "developer"].includes(String(value.source))) issue(issues, "source", "is not recognized");
   if (!isRecord(value.payload)) issue(issues, "payload", "must be an object");
+  if (value.actorId !== undefined && !stringValue(value.actorId)) issue(issues, "actorId", "must be a bounded identifier");
   if (value.confidence !== undefined && (!finite(value.confidence) || value.confidence < 0 || value.confidence > 1)) issue(issues, "confidence", "must be from 0 to 1");
   for (const key of ["targetIds", "parentIds"] as const) {
     if (value[key] !== undefined && (!boundedArray(value[key]) || value[key].some((entry) => !stringValue(entry)))) issue(issues, key, "must be a bounded identifier array");

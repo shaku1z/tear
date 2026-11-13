@@ -15,6 +15,18 @@ function baseTuning() {
 }
 
 describe("Tear world configuration", () => {
+  it("returns detached authoritative custom base snapshots after current tuning has changed", () => {
+    const customBase = { presentation: { revealCharsPerSec: 7 }, world: { gravity: 42 } };
+    const configuration = createTearWorldConfiguration(customBase);
+    configuration.value.presentation.revealCharsPerSec = 99;
+    customBase.presentation.revealCharsPerSec = 100;
+    const baseline = configuration.baseSnapshot();
+    expect(baseline).toEqual({ presentation: { revealCharsPerSec: 7 }, world: { gravity: 42 } });
+    baseline.presentation.revealCharsPerSec = 12;
+    expect(configuration.baseSnapshot().presentation.revealCharsPerSec).toBe(7);
+    expect(configuration.value.presentation.revealCharsPerSec).toBe(99);
+  });
+
   it("deep-clones existing tuning so two worlds cannot mutate each other or the process base", () => {
     const base = baseTuning();
     const first = createTearWorldConfiguration(base);

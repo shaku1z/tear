@@ -81,7 +81,7 @@ Passed on the final pre-commit working tree:
 - `pnpm build:test:standalone`;
 - `pnpm test:browser:game-agent-run-monitor` — canonical Run Monitor panel
   and preserved `watchagent=1` panel journey passed;
-- `pnpm test:browser:c32-active-policy` — existing legacy active-policy
+- `pnpm checkpoint test:browser:c32-active-policy` — existing legacy active-policy
   journey passed;
 - `pnpm build` — standalone and CrazyGames production builds passed;
 - `pnpm test:browser:production-isolation` — test-only bridge/global/panel

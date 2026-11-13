@@ -1,6 +1,7 @@
+import type { RecordedGhostChallenge } from "./recorded-challenge";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { stableVerificationHash } from "../replay/hash";
-import type { TearSimulationRuntime } from "../gameplay/runtime/tear-simulation-runtime";
+import type { TearSimulationRuntime, TearSimulationAdvanceLifecycle } from "../gameplay/runtime/tear-simulation-runtime";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
 import {
   createDefaultStateCodecRegistry,
@@ -27,6 +28,16 @@ export interface GhostSeekCorrection {
   readonly afterHash: string;
 }
 
+/** Draw-only capability over one isolated, settled production seek. No runtime/world mutators escape. */
+export interface GhostReplayRenderView {
+  readonly tick: number;
+  readonly viewport: Readonly<{ width: number; height: number }>;
+  readonly clockSeconds: number;
+  readonly camera: Readonly<{ policy: "player-follow"; x: number; y: number; scale: number; reconstructed: true }>;
+  readonly screen: string;
+  readonly clockBlocked: boolean;
+  draw(canvas: CanvasRenderingContext2D, rectangle: Readonly<{ x: number; y: number; w: number; h: number }>): void;
+}
 export interface GhostSeekResult {
   readonly tick: number;
   readonly semanticHash: string;
@@ -42,9 +53,19 @@ export interface GhostSeekResult {
  */
 export interface GhostProductionReplaySession<State> {
   readonly simulation: TearSimulationRuntime<State>;
+  /** Production-owned screen gating; absent for generic unconditional sessions. */
+  readonly replayLifecycle?: TearSimulationAdvanceLifecycle;
+  renderView?(): GhostReplayRenderView;
   semanticProjection(): unknown;
   /** Optional State Forge semantic hash, only when its codec projection is available. */
   snapshotSemanticHash?(): string;
+  /** Complete an admitted post-capture start transaction before its first simulation tick. */
+  completeRecordedOpening?(): void;
+  invalidateRecordedOpening?(): void;
+  /** Read-only evidence observer; simulation still advances through the existing loop. */
+  afterReplayAdvance?(): void;
+  /** Consume admitted between-tick application inputs before this real simulation tick. */
+  beforeReplayAdvance?(tick: number): void;
 }
 
 export interface GhostProductionReplayComposition<State> {
@@ -99,11 +120,26 @@ export class GhostReplayWorld {
       if (!result.ok) throw new TypeError(`replay snapshot restore failed: ${result.issues.map((issue) => issue.message).join("; ")}`);
       this.#tick = snapshot.tick;
     }
-    for (const action of this.#ghost.actions) {
-      if (action.tick <= this.#tick || action.tick > targetTick) continue;
-      this.#simulation.advance(this.#world, this.#tick, action.tick);
-      this.#tick = action.tick;
-      this.#simulation.apply(this.#world, action);
+    let actionIndex = 0;
+    while (actionIndex < this.#ghost.actions.length) {
+      const actionTick = this.#ghost.actions[actionIndex]?.tick;
+      if (actionTick === undefined) break;
+      const groupStart = actionIndex;
+      while (actionIndex < this.#ghost.actions.length
+        && this.#ghost.actions[actionIndex]?.tick === actionTick) {
+        actionIndex += 1;
+      }
+      if (actionTick > targetTick) continue;
+      // A snapshot already includes all commands at its tick. Keep the whole
+      // group skipped at/before the restored tick, while applying every
+      // command in a newly reached tick in authored order.
+      if (actionTick <= this.#tick) continue;
+      this.#simulation.advance(this.#world, this.#tick, actionTick);
+      this.#tick = actionTick;
+      for (let index = groupStart; index < actionIndex; index += 1) {
+        const action = this.#ghost.actions[index];
+        if (action !== undefined) this.#simulation.apply(this.#world, action);
+      }
     }
     this.#simulation.advance(this.#world, this.#tick, targetTick);
     this.#tick = targetTick;
@@ -143,6 +179,8 @@ export class GhostProductionReplayWorld<State> {
   readonly #composition: GhostProductionReplayComposition<State>;
   #session: GhostProductionReplaySession<State> | null = null;
   #tick = 0;
+  #seeking = false;
+  #originSnapshot: TearSnapshotV1 | undefined;
 
   constructor(ghost: GhostEnvelopeV3, composition: GhostProductionReplayComposition<State>) {
     this.#ghost = ghost;
@@ -151,12 +189,35 @@ export class GhostProductionReplayWorld<State> {
 
   /** Exposes the active production runtime for identity-level evidence only. */
   simulation(): TearSimulationRuntime<State> | null { return this.#session?.simulation ?? null; }
+  renderView(): GhostReplayRenderView {
+    if (this.#session?.renderView === undefined) throw new Error("production replay presentation is unavailable");
+    return this.#session.renderView();
+  }
   semanticHash(): string {
     if (this.#session === null) throw new Error("production replay world has not been sought");
     return stableVerificationHash(this.#session.semanticProjection());
   }
 
   seek(targetTick: number): GhostSeekResult {
+    if (this.#seeking) { this.#session?.invalidateRecordedOpening?.(); throw new Error("production replay seek is reentrant"); }
+    this.#seeking = true;
+    try { return this.#seek(targetTick); } finally { this.#seeking = false; }
+  }
+
+  /** Opt-in continuous playback. Backward targets rebuild using ordinary seek. */
+  advanceTo(targetTick: number): GhostSeekResult {
+    if (this.#seeking) { this.#session?.invalidateRecordedOpening?.(); throw new Error("production replay seek is reentrant"); }
+    if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
+    this.#seeking = true;
+    try {
+      return this.#session === null || targetTick < this.#tick ? this.#seek(targetTick) : this.#advance(targetTick);
+    } catch (error) {
+      // A failed observer/step must not leave a partially advanced reusable world.
+      this.#session = null; this.#originSnapshot = undefined; this.#tick = 0; throw error;
+    } finally { this.#seeking = false; }
+  }
+
+  #seek(targetTick: number): GhostSeekResult {
     if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
     const snapshot = [...this.#ghost.snapshots]
       .filter((candidate) => candidate.tick <= targetTick)
@@ -167,10 +228,20 @@ export class GhostProductionReplayWorld<State> {
       throw new TypeError(`production replay composition started at tick ${String(session.simulation.scheduler.tick)}, expected ${String(startingTick)}`);
     }
     this.#session = session;
+    this.#originSnapshot = snapshot;
     this.#tick = startingTick;
+    return this.#advance(targetTick);
+  }
+
+  #advance(targetTick: number): GhostSeekResult {
+    const session = this.#session; if (session === null) throw new Error("production replay world has no active session");
+    const snapshot = this.#originSnapshot;
+    if (targetTick > this.#tick && this.#tick === (snapshot?.tick ?? 0)) session.completeRecordedOpening?.();
     for (let tick = this.#tick + 1; tick <= targetTick; tick += 1) {
       const actions = this.#ghost.actions.filter((action) => action.tick === tick);
-      session.simulation.advanceOne(actions);
+      session.beforeReplayAdvance?.(tick);
+      session.simulation.advanceExact(() => actions, session.replayLifecycle);
+      session.afterReplayAdvance?.();
     }
     this.#tick = targetTick;
     const semanticHash = this.semanticHash();
@@ -199,6 +270,7 @@ export type GhostPracticeMode =
   | "race-practice" | "coach-assisted";
 
 export interface GhostPracticeChild {
+  readonly challenge?: RecordedGhostChallenge;
   readonly id: string;
   readonly sourceGhostId: string;
   readonly sourceRootHash: string;

@@ -3,7 +3,7 @@ import {
   RuntimeFrameCoordinator,
   type RuntimeFrameCoordinatorOptions,
   type RuntimeFrameInputPort,
-} from "../../src/app/runtime-frame-coordinator";
+} from "../../src/app/shell/runtime-frame-coordinator";
 
 function createHarness(initialState = "playing") {
   let state = initialState;
@@ -54,7 +54,7 @@ function createHarness(initialState = "playing") {
     gameplayStart: () => { events.push("gameplay-start"); },
     gameplayStop: () => { events.push("gameplay-stop"); },
     cssPerLogicalPixel: () => cssPerLogicalPixel,
-    setUiDensity: (density) => { events.push(`density:${density}`); },
+    setUiDensity: (density) => { events.push(`density:${density.touch ? "touch" : "desktop"}@${String(density.cssPerLogicalPixel)}`); },
     syncMusic: () => { events.push("music"); },
     render: () => { events.push("render"); },
     handleUi: () => { events.push("ui"); },
@@ -76,6 +76,7 @@ function createHarness(initialState = "playing") {
     },
     setCssPerLogicalPixel: (value: number) => { cssPerLogicalPixel = value; },
     setSimulationSteps: (value: number) => { simulationSteps = value; },
+    advanceClock: (milliseconds: number) => { now += milliseconds; },
     options,
   };
 }
@@ -138,6 +139,50 @@ describe("RuntimeFrameCoordinator", () => {
     expect(replayHarness.events).toContain("exit-replay");
   });
 
+  it("toggles pause with P or Escape after the settle window and consumes the keys it acted on", () => {
+    const harness = createHarness();
+    harness.setPause(true);
+    harness.input.pressed.add("KeyP");
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("paused");
+    expect(harness.input.pressed.has("KeyP")).toBe(false);
+
+    // The same Escape/P burst that paused (or a stray repeat) cannot resume at once.
+    harness.events.length = 0;
+    harness.setPause(false);
+    harness.setEscape(true);
+    harness.input.pressed.add("Escape");
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("paused");
+    expect(harness.input.pressed.has("Escape")).toBe(false);
+    expect(harness.events).not.toContain("request-lock");
+
+    harness.advanceClock(400);
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("playing");
+    expect(harness.events).toContain("request-lock");
+
+    harness.setEscape(false);
+    harness.setPause(true);
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("paused");
+    // A second pause measures its own settle window, not the previous pause's.
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("paused");
+    harness.events.length = 0;
+    harness.advanceClock(400);
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("playing");
+    expect(harness.events).toContain("request-lock");
+
+    const replay = createHarness("replay");
+    replay.setEscape(true);
+    replay.input.pressed.add("Escape");
+    replay.coordinator.run(1 / 60);
+    // The UI frame that follows must not read the same Escape as BACK on the next screen.
+    expect(replay.input.pressed.has("Escape")).toBe(false);
+  });
+
   it("applies touch density and cinema input ownership without changing simulation cadence", () => {
     const harness = createHarness();
     harness.setTouch(true);
@@ -147,7 +192,7 @@ describe("RuntimeFrameCoordinator", () => {
     harness.coordinator.run(1 / 30);
 
     expect(harness.events).toContain("cinema");
-    expect(harness.events).toContain("density:touch");
+    expect(harness.events).toContain("density:touch@0.5");
     expect(harness.input.uiMode).toBe(true);
     expect(harness.events.filter((event) => event === "simulation")).toHaveLength(1);
   });

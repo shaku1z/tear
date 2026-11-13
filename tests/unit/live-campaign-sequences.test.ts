@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { CampaignRuntimeState } from "../../src/app/campaign-runtime-state";
+import { CampaignRuntimeState } from "../../src/app/campaign/campaign-runtime-state";
 import { CampaignChapterController, type CampaignStage, type ChapterIntent } from "../../src/gameplay/campaign/chapter-controller";
 import { FinaleController } from "../../src/gameplay/campaign/finale-controller";
 import {
@@ -7,7 +7,7 @@ import {
   launchCampaignChapter,
   type CampaignCinematicChannel,
   type CampaignCinematicScript,
-} from "../../src/app/live-campaign-sequences";
+} from "../../src/app/campaign/campaign-sequences";
 import type { FinaleIntent } from "../../src/gameplay/campaign/finale-controller";
 import type { CinematicDirectorBinding } from "../../src/gameplay/runtime/cinematic-director";
 
@@ -55,7 +55,8 @@ class ExercisingCinema implements CampaignCinematicChannel {
       beatId: binding.script.beats[0]?.id, brief: false, blocksCombat: true, hideHud: true,
       playerMode: "locked", skipTo: () => true, requestSkip: () => undefined,
       complete: () => undefined, cancel: () => undefined, captureState: () => { throw new Error("not used"); },
-      validateState: () => { throw new Error("not used"); }, restoreState: () => undefined };
+      validateState: () => { throw new Error("not used"); }, restoreState: () => undefined,
+      captureRecordedInput: () => { throw new Error("not used"); }, restoreRecordedInput: () => { throw new Error("not used"); }, validateRecordedInput: () => { throw new Error("not used"); } };
     binding.script.onStart?.(binding.context, director);
     binding.script.beats[0]?.onEnter?.(binding.context, director);
     binding.script.onComplete?.(binding.context, director);

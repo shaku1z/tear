@@ -230,7 +230,7 @@ behavior cloning, or C36 Foundry automation.
 
 ## Evidence
 
-- `pnpm check:c31:foundation` passes: typecheck, full lint, architecture
+- `pnpm checkpoint check:c31:foundation` passes: typecheck, full lint, architecture
   checks, thirteen focused Vitest suites / forty-four tests, a test-standalone
   build, and the real-pointer browser navigation journey.
 - `academy-candidate-admission.test.ts` generates a real C30 terminal through
@@ -294,7 +294,7 @@ behavior cloning, or C36 Foundry automation.
 - That same custody proof rejects a foreign Vault for deletion, atomically
   removes the actual materialized source capsule only from its matching Vault,
   and retains the durable `deleted` tombstone outside future held queries.
-- `pnpm check:c28:vault-reachable` passes after the shared Vault removal
+- `pnpm checkpoint check:c28:vault-reachable` passes after the shared Vault removal
   primitive: six focused suites / thirty-eight tests; browser library,
   migration, interrupted-recovery, and physical-quota journeys. The physical
   bucket is a test-only 256 KiB quota because the current browser's IndexedDB
@@ -302,7 +302,7 @@ behavior cloning, or C36 Foundry automation.
   retained; the 1,200-tick pressure run still receives a real quota rejection.
 - `agent-academy.test.ts` and
   `production-headless-academy-intake.test.ts` remain green in the same gate.
-- `pnpm check:c30:foundation` also passes after the opt-in observer addition:
+- `pnpm checkpoint check:c30:foundation` also passes after the opt-in observer addition:
   seven focused Vitest files / eighteen tests, six bounded worker proofs, both
   browser terminal reruns, and the 13-scenario C27A parity capture.
 

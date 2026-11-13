@@ -1,3 +1,5 @@
+import { readGhostForkOrigin } from "./fork-origin";
+import { readGhostFinaleCompanion } from "./finale-companion";
 import {
   createBrowserGhostEncoderWorker,
   GhostLocalVault,
@@ -6,9 +8,10 @@ import {
   type GhostEncoderWorkerPort,
   type TearGhostManifest,
   type GhostVaultWrite,
+  type GhostVaultGuard,
 } from "./capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
-import { createLiveGhostBootstrapEvent } from "./live-causal-events";
+import { createLiveGhostBootstrapEvent, createLiveGhostForkBootstrapEvent } from "./live-causal-events";
 import { ghostRecordingProfile, type GhostRecordingProfileId } from "./recording-profiles";
 
 export interface GhostLiveRecorderStart {
@@ -73,6 +76,7 @@ export class GhostLiveRecorder {
   #nextSequence = 0;
   #lastCompletedSequence = 0;
   #lastFailureSequence = 0;
+  readonly #finalizing = new Map<LiveGhostCaptureSession, Promise<TearGhostManifest | null>>();
 
   constructor(options: GhostLiveRecorderOptions) {
     const profile = ghostRecordingProfile(options.recordingProfile ?? "coaching");
@@ -104,8 +108,16 @@ export class GhostLiveRecorder {
   get failure(): string | null { return this.#failure; }
   get lastManifest(): TearGhostManifest | null { return this.#lastManifest; }
 
+  /** Retain the interrupted journal/bytes; a replacement cannot turn it into a completed capture. */
+  interrupt(reason: string): void {
+    const session = this.#activeSession; this.#activeSession = null;
+    if (session !== null) this.#fail(session, new Error(reason));
+  }
+
   start(input: GhostLiveRecorderStart): void {
     if (this.active) throw new Error("Ghost V3 recorder session is already active");
+    const origin = readGhostForkOrigin(input.provenance);
+    const finale = readGhostFinaleCompanion(input.provenance);
     const session: LiveGhostCaptureSession = {
       id: input.sessionId,
       sequence: ++this.#nextSequence,
@@ -114,12 +126,15 @@ export class GhostLiveRecorder {
       opening: null,
       flushing: null,
       pending: [],
-      lastRecordedTick: 0,
+      lastRecordedTick: finale?.origin.tick ?? origin?.checkpoint.tick ?? 0,
       failure: null,
     };
     this.#activeSession = session;
     this.#failure = null;
-    this.#enqueue(session, "events", 0, createLiveGhostBootstrapEvent(input.sessionId, input.provenance));
+    const bootstrap = finale === undefined ? (origin === undefined ? createLiveGhostBootstrapEvent(input.sessionId, input.provenance) : createLiveGhostForkBootstrapEvent(input.sessionId, input.provenance))
+      : { format: "tear-contract", kind: "event", schemaVersion: 1, type: "system.checkpoint", tick: finale.origin.tick, sequence: 0, source: "engine", phase: "post-simulation-commit",
+        id: `finale-open-${input.sessionId}`, payload: { boundary: "v3-finale-sidecar-opened", provenance: input.provenance } };
+    this.#enqueue(session, "events", session.lastRecordedTick, bootstrap);
     session.opening = this.#open(session);
   }
 
@@ -141,14 +156,37 @@ export class GhostLiveRecorder {
     void this.#flush(session);
   }
 
-  async finish(result: Readonly<Record<string, unknown>> = {}): Promise<TearGhostManifest | null> {
+  /** Wait for this call's accepted work, without sealing a partial encoder chunk or starting/finalizing a session. */
+  async drain(): Promise<void> {
     const session = this.#activeSession;
-    if (session === null) return null;
-    // Relinquish live ownership synchronously. Ghost 2 can start a replacement
-    // run during the same call stack that stopped this one; the old capsule may
-    // finish its IndexedDB writes independently without stealing new-run input.
+    const finalizing = session === null ? [...this.#finalizing].filter(([owner]) => owner.sequence === this.#nextSequence) : [];
+    if (session === null && finalizing.length === 0 && this.#failure !== null) throw new Error(this.#failure);
+    if (session !== null) {
+      await session.opening;
+      await this.#flush(session);
+      if (session.failure !== null) throw new Error(`session ${session.id}: ${session.failure}`);
+    }
+    for (const [finishing, promise] of finalizing) {
+      await promise;
+      if (finishing.failure !== null) throw new Error(`session ${finishing.id}: ${finishing.failure}`);
+    }
+  }
+
+  finish(result: Readonly<Record<string, unknown>> = {}, tail?: Promise<readonly Readonly<{ kind: GhostChunkKind; tick: number; value: unknown }>[] >): Promise<TearGhostManifest | null> {
+    const session = this.#activeSession;
+    if (session === null) return Promise.resolve(null);
+    // Relinquish live ownership synchronously; a replacement may start while
+    // this original session's already-started finalization settles independently.
     this.#activeSession = null;
+    const finalizing = this.#finish(session, result, tail);
+    this.#finalizing.set(session, finalizing);
+    void finalizing.then(() => { this.#finalizing.delete(session); }, () => { this.#finalizing.delete(session); });
+    return finalizing;
+  }
+
+  async #finish(session: LiveGhostCaptureSession, result: Readonly<Record<string, unknown>>, tail?: Promise<readonly Readonly<{ kind: GhostChunkKind; tick: number; value: unknown }>[]>): Promise<TearGhostManifest | null> {
     try {
+      for (const entry of await tail ?? []) this.#enqueue(session, entry.kind, entry.tick, entry.value);
       this.#enqueue(session, "results", session.lastRecordedTick, result);
       await session.opening;
       if (this.#hasFailed(session)) return null;
@@ -168,7 +206,7 @@ export class GhostLiveRecorder {
         catch (error) { console.warn("Ghost V3 finalized observer failed; capture remains complete", error); }
       }
       return manifest;
-    } finally {
+    } catch (error) { this.#fail(session, error); return null; } finally {
       session.pending = [];
       this.#surfaceFailure(session);
     }
@@ -273,9 +311,21 @@ export function createBrowserGhostLiveRecorder(
           await beforeCommit(operations);
           await backend.commit(operations);
         },
-        commitWhileJournalMatches: async (sessionId: string, leaseId: string, operations: readonly GhostVaultWrite[]): Promise<void> => {
+        commitIfMatches: async (
+          guards: readonly GhostVaultGuard[],
+          operations: readonly GhostVaultWrite[],
+        ): Promise<void> => {
           await beforeCommit(operations);
-          await backend.commitWhileJournalMatches(sessionId, leaseId, operations);
+          await backend.commitIfMatches(guards, operations);
+        },
+        commitWhileJournalMatches: async (
+          sessionId: string,
+          leaseId: string,
+          operations: readonly GhostVaultWrite[],
+          guards?: readonly GhostVaultGuard[],
+        ): Promise<void> => {
+          await beforeCommit(operations);
+          await backend.commitWhileJournalMatches(sessionId, leaseId, operations, guards);
         },
       }));
     },

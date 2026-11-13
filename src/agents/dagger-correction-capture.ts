@@ -4,7 +4,7 @@ import { createProductionHeadlessEnvironment, type TearScenarioV1 } from "../tea
 import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
 import type { TearPolicyArtifactRegistry } from "./policy-artifact-registry";
 import { TearActivePolicyRuntime, type TearPolicyDecisionReceipt } from "./policy-runtime";
-import { projectStructuredPolicyFeatures } from "./policy-feature-vector";
+import { projectStructuredPolicyFeatures, isTearPolicyFeatureSchema, TEAR_POLICY_FEATURE_SCHEMA_HASH_V1 } from "./policy-feature-vector";
 import { createTearPolicyConditioningV2, projectScenarioPolicyConditionV2, type TearPolicyConditioningV2 } from "./policy-condition-vector";
 import { TearAgentOrchestrator } from "./scripted-policy";
 
@@ -39,6 +39,8 @@ export interface TearDaggerCorrectionCandidateV1 {
 export interface TearDaggerCorrectionCaptureV1 {
   readonly format: "tear-dagger-correction-capture";
   readonly schemaVersion: 1;
+  /** Historical missing values mean V1; new captures bind their actual projection. */
+  readonly featureSchemaHash?: string;
   readonly artifact: Readonly<{ id: string; hash: string }>;
   readonly scenario: Readonly<{ id: string; version: number; seed: string; hash: string }>;
   readonly maxCorrections: number;
@@ -59,8 +61,13 @@ export async function captureTearDaggerCorrections(
   if (!validLimit(maxCorrections)) throw new TypeError("DAgger correction capture requires a bounded correction limit");
   const active = await registry.active();
   if (active === undefined) throw new RangeError("DAgger correction capture requires an active verified artifact");
+  const artifact = await registry.get(active.artifactId);
+  if (artifact?.artifactHash !== active.artifactHash) throw new RangeError("DAgger artifact changed");
+  const model = JSON.parse(artifact.model.payload) as { featureSchemaHash?: unknown };
+  const featureSchemaHash = artifact.model.format === "table-policy-v1" ? TEAR_POLICY_FEATURE_SCHEMA_HASH_V1 : model.featureSchemaHash;
+  if (!isTearPolicyFeatureSchema(featureSchemaHash)) throw new TypeError("DAgger artifact feature schema is unavailable");
   const conditioning = createTearPolicyConditioningV2(options.conditioning ?? { personaId: options.teacherProfile ?? "competent" });
-  const challenger = new TearActivePolicyRuntime(registry, options.teacherProfile ?? "competent", { conditioning });
+  const challenger = new TearActivePolicyRuntime(artifact, options.teacherProfile ?? "competent", { conditioning });
   const teacher = new TearAgentOrchestrator(options.teacherProfile ?? "competent");
   await challenger.reset();
   const environment = createProductionHeadlessEnvironment();
@@ -71,10 +78,11 @@ export async function captureTearDaggerCorrections(
     const condition = Object.freeze([...projectScenarioPolicyConditionV2(scenario, conditioning)]);
     while (!terminated && !truncated && terminal.tick < scenario.maxTicks) {
       const observation = environment.policyObservation();
-      const features = Object.freeze([...projectStructuredPolicyFeatures({ state: observation, ui: { screen: "playing" } })]);
+      const input = Object.freeze({ state: observation, ui: environment.policyUiObservation() });
+      const features = Object.freeze([...projectStructuredPolicyFeatures(input, featureSchemaHash)]);
       featureHistory.push([...features]); if (featureHistory.length > 64) featureHistory.shift();
-      const challengerDecision = challenger.decide({ state: observation, ui: { screen: "playing" } });
-      const teacherDecision = teacher.decide({ state: observation, ui: { screen: "playing" } });
+      const challengerDecision = challenger.decide(input);
+      const teacherDecision = teacher.decide(input);
       const beforeObservationHash = stableVerificationHash(observation);
       const transition = environment.step(challengerDecision.actions);
       terminal = transition.observation; terminated = transition.terminated; truncated = transition.truncated;
@@ -92,7 +100,7 @@ export async function captureTearDaggerCorrections(
       }
     }
     const draft = {
-      format: "tear-dagger-correction-capture" as const, schemaVersion: 1 as const,
+      format: "tear-dagger-correction-capture" as const, schemaVersion: 1 as const, featureSchemaHash,
       artifact: Object.freeze({ id: active.artifactId, hash: active.artifactHash }),
       scenario: Object.freeze({ id: scenario.id, version: scenario.version, seed: scenario.seed, hash: stableVerificationHash(scenario) }),
       maxCorrections, corrections: Object.freeze(corrections),

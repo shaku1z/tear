@@ -198,6 +198,43 @@ async function stopTraceAfterHitch(browser, snapshot, label) {
   console.log(`browser performance trace captured ${label} hitch at ${snapshot.frameInterval.maxMs} ms: ${traceOutput}`);
 }
 
+/**
+ * Clicks a control by the label the game draws, until the screen changes. The
+ * text hook exists only while the label is being located, so it never runs
+ * inside a measured window. Interrupting screens ignore input until they settle,
+ * hence the repeat.
+ */
+async function clickDrawnLabelUntil(page, label, state) {
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    const point = await page.evaluate((expected) => new Promise((resolve) => {
+      const proto = CanvasRenderingContext2D.prototype, original = proto.fillText;
+      let found = null, frames = 0;
+      proto.fillText = function locateLabel(value, x, y, ...rest) {
+        if (String(value) === expected && this.canvas.id === "game") {
+          const m = this.getTransform(), bounds = this.canvas.getBoundingClientRect(), k = bounds.width / this.canvas.width;
+          found = { x: bounds.left + (m.a * x + m.c * y + m.e) * k, y: bounds.top + (m.b * x + m.d * y + m.f) * k };
+        }
+        return original.call(this, value, x, y, ...rest);
+      };
+      const tick = () => {
+        frames += 1;
+        if (frames < 20) { requestAnimationFrame(tick); return; }
+        proto.fillText = original; resolve(found);
+      };
+      requestAnimationFrame(tick);
+    }), label);
+    if (point) await page.mouse.click(point.x, point.y);
+    try {
+      await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, state, { timeout: 1_000 });
+      return;
+    } catch (error) {
+      if (error.name !== "TimeoutError") throw error;
+    }
+  }
+  throw new Error(`the drawn ${label} control did not open ${state}`);
+}
+
 async function waitForGameState(page, state) {
   await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, state);
 }
@@ -540,10 +577,8 @@ async function repeatedRunScenario(browser, pageErrors) {
     }
     await page.keyboard.press("p");
     await waitForGameState(page, "paused");
-    await page.mouse.click(300, 430);
-    await waitForGameState(page, "confirmquit");
-    await page.keyboard.press("Enter");
-    await waitForGameState(page, "menu");
+    await clickDrawnLabelUntil(page, "MAIN MENU", "confirmquit");
+    await clickDrawnLabelUntil(page, "QUIT", "menu");
     await session.send("HeapProfiler.collectGarbage");
     const heap = await session.send("Runtime.getHeapUsage");
     cycles.push({ cycle: cycle + 1, reset, peak, afterQuit: (await diagnostics(page)).gauges, heapUsedBytes: heap.usedSize });

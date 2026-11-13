@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { withJourney } = require("./browser-journey-harness");
+const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 
 function scenario(id, seed) {
   return {
@@ -53,7 +53,7 @@ withJourney({
     environment.step([]);
     environment.terminate();
   }, scenario("c27-browser-quota-recovery", "c27-browser-quota-recovery-seed"));
-  await page.waitForFunction(async (id) => (await window.__TEAR_GHOST_V3__.manifests())
+  await waitForBrowserValue(page, async (id) => (await window.__TEAR_GHOST_V3__.manifests())
     .some((entry) => entry.id === id && entry.status === "recovered"), stranded.id, { timeout: 20000 });
   const recovered = await page.evaluate(async (id) => (await window.__TEAR_GHOST_V3__.manifests())
     .find((entry) => entry.id === id), stranded.id);

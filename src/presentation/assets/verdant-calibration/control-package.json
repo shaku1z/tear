@@ -1,0 +1,69 @@
+{
+  "format": "tear-verdant-image-package",
+  "version": 1,
+  "id": "verdant-IN1-control",
+  "stageId": "verdant-sanctum",
+  "approvedSourceSHA256": "0c332d1b114af9ad88435896fa52af6a75fe2cfbf2cb0256d953a1bc96fbffcd",
+  "authoredSize": [
+    1672,
+    941
+  ],
+  "assets": [
+    {
+      "id": "control-top",
+      "key": "control-top",
+      "sha256": "2110eebad95d07710c9bb83856a0ddc8c70720c0b554f8219fc2e135a709c724",
+      "width": 1672,
+      "height": 471,
+      "alpha": "opaque"
+    },
+    {
+      "id": "control-bottom",
+      "key": "control-bottom",
+      "sha256": "6de1afe398b0fe4956c469f589a75cc63d7d1964317f2e67821ba61a05fdf475",
+      "width": 1672,
+      "height": 470,
+      "alpha": "opaque"
+    }
+  ],
+  "layers": [
+    {
+      "id": "control-top",
+      "assetId": "control-top",
+      "rect": [
+        0,
+        0,
+        1672,
+        471
+      ],
+      "order": 0,
+      "purpose": "support",
+      "motion": {
+        "kind": "static",
+        "maxDisplacement": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "control-bottom",
+      "assetId": "control-bottom",
+      "rect": [
+        0,
+        471,
+        1672,
+        470
+      ],
+      "order": 1,
+      "purpose": "support",
+      "motion": {
+        "kind": "static",
+        "maxDisplacement": [
+          0,
+          0
+        ]
+      }
+    }
+  ]
+}

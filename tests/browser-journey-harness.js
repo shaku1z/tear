@@ -13,6 +13,36 @@ function contentType(file) {
   return "application/octet-stream";
 }
 
+/** Page init script for `recordFrames`: the last drawn frame's text and stroked rectangles, in CSS pixels. */
+function recordCanvasFrames() {
+  const frame = { texts: [], rects: [] };
+  let pending = { texts: [], rects: [] };
+  const toCss = (context, x, y) => {
+    const m = context.getTransform(), bounds = context.canvas.getBoundingClientRect(), k = bounds.width / context.canvas.width;
+    return { x: bounds.left + (m.a * x + m.c * y + m.e) * k, y: bounds.top + (m.b * x + m.d * y + m.f) * k, k: k * Math.hypot(m.a, m.b) };
+  };
+  const fillText = CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText = function recordText(value, x, y, ...rest) {
+    if (this.canvas.id === "game") pending.texts.push({ text: String(value), baseline: this.textBaseline, ...toCss(this, x, y) });
+    return fillText.call(this, value, x, y, ...rest);
+  };
+  const strokeRect = CanvasRenderingContext2D.prototype.strokeRect;
+  CanvasRenderingContext2D.prototype.strokeRect = function recordRect(x, y, w, h) {
+    if (this.canvas.id === "game") {
+      const origin = toCss(this, x, y);
+      pending.rects.push({ x: origin.x, y: origin.y, w: w * origin.k, h: h * origin.k });
+    }
+    return strokeRect.call(this, x, y, w, h);
+  };
+  const raf = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = (callback) => raf((time) => {
+    if (pending.texts.length > 0) { frame.texts = pending.texts; frame.rects = pending.rects; }
+    pending = { texts: [], rects: [] };
+    callback(time);
+  });
+  window.__TEAR_JOURNEY_FRAME__ = frame;
+}
+
 async function withJourney(options, run) {
   const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
   const root = path.resolve(__dirname, "..", "dist", buildDirectory);
@@ -66,8 +96,17 @@ async function withJourney(options, run) {
     // its own production and offline browser gates.
     const page = await browser.newPage({
       viewport: options.viewport || { width: 1600, height: 900 },
+      deviceScaleFactor: options.deviceScaleFactor || 1,
       serviceWorkers: "block",
     });
+    if (options.settings) {
+      await page.addInitScript((settings) => {
+        window.__TEAR_TEST_STORAGE__ = {
+          tear_settings: JSON.stringify({ gfx: settings.gfx, reducedMotion: settings.reducedMotion,
+            highContrast: settings.highContrast, flash: settings.flashScale }),
+        };
+      }, options.settings);
+    }
     if (options.colorScheme || options.reducedMotion) {
       await page.emulateMedia({ colorScheme: options.colorScheme, reducedMotion: options.reducedMotion });
     }
@@ -75,12 +114,20 @@ async function withJourney(options, run) {
     page.on("pageerror", (error) => errors.push(error.stack || error.message));
     await page.route("**/*", (route) => route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort());
 
-    const initialQuery = { test: "1", bossdebug: "1", ...(options.query || {}) };
+    const initialQuery = { test: "1", ...(options.debugApi === false ? {} : { bossdebug: "1" }), ...(options.query || {}) };
     async function boot(query = initialQuery) {
       await page.goto(`${baseUrl}/index.html?${new URLSearchParams(query).toString()}`, { waitUntil: "domcontentloaded", timeout: 30000 });
       try {
-        await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__, undefined, { timeout: 15000 });
-        await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, { timeout: 15000 });
+        if (options.ordinaryWatch) {
+          await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__ && window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST
+            && [...document.querySelectorAll("canvas")].some((canvas) => canvas.width > 0 && canvas.height > 0
+              && canvas.getBoundingClientRect().width > 0 && canvas.getContext("2d")?.getImageData(0, 0, 1, 1).data[3] > 0), undefined, { timeout: 15000 });
+          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        } else {
+          await page.waitForFunction((debugApi) => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_RUNTIME_ENVIRONMENT__
+            && (!debugApi || window.__PANTHEON_TEST), options.debugApi !== false, { timeout: 15000 });
+          await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, { timeout: 15000 });
+        }
       } catch (error) {
         throw new Error(`Tear browser boot unavailable: ${errors.join("\n") || "no page error was emitted"}`, { cause: error });
       }
@@ -98,6 +145,61 @@ async function withJourney(options, run) {
       await page.mouse.click(x, y);
       await waitScreen(screen);
     }
+    // Canvas screens have no DOM controls, so `recordFrames` journeys find them the way a
+    // player does: from what the last frame drew. Each frame's text and stroked rectangles
+    // are kept in CSS pixels; a reward card is the outlined frame around its number badge.
+    if (options.recordFrames) await page.addInitScript(recordCanvasFrames);
+    /** Choice and results screens ignore input for UI_CONFIRM_SETTLE_SECONDS (0.35 s) after they open. */
+    async function waitArmed(screen) {
+      await waitScreen(screen);
+      await page.evaluate(() => new Promise((resolve) => {
+        const start = performance.now();
+        const tick = () => { if (performance.now() - start >= 450) resolve(); else requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+      }));
+    }
+    // Screens ease in when they open, so a control is located only once two consecutive
+    // frames drew it in the same place: where a player sees it come to rest.
+    /** The middle of a drawn control label (RETRY, SKIP RESERVE, a tab name). */
+    async function labelPoint(label) {
+      assert.ok(options.recordFrames, "labelPoint needs the recordFrames journey option");
+      await page.evaluate(() => { window.__TEAR_JOURNEY_LAST_POINT__ = null; });
+      const handle = await page.waitForFunction((text) => {
+        const entry = window.__TEAR_JOURNEY_FRAME__.texts.find((candidate) => candidate.text === text);
+        const point = entry ? { x: Math.round(entry.x), y: Math.round(entry.y - 4) } : null;
+        const previous = window.__TEAR_JOURNEY_LAST_POINT__;
+        window.__TEAR_JOURNEY_LAST_POINT__ = { key: `label:${text}`, point };
+        return point && previous?.key === `label:${text}` && previous.point?.x === point.x && previous.point.y === point.y ? point : null;
+      }, label, { timeout: 5000 });
+      return handle.jsonValue();
+    }
+    async function clickLabel(label, screen) {
+      const point = await labelPoint(label);
+      await clickAndWait(point.x, point.y, screen);
+    }
+    /** Centre of the drawn card whose key badge reads `number`: the smallest outlined frame around the badge. */
+    async function cardCentre(number) {
+      assert.ok(options.recordFrames, "cardCentre needs the recordFrames journey option");
+      await page.evaluate(() => { window.__TEAR_JOURNEY_LAST_POINT__ = null; });
+      const handle = await page.waitForFunction((label) => {
+        const frame = window.__TEAR_JOURNEY_FRAME__;
+        const badge = frame.texts.find((entry) => entry.text === label && entry.baseline === "middle");
+        if (!badge) return null;
+        const cards = frame.rects.filter((rect) => rect.h > 150 && rect.w > 150
+          && badge.x > rect.x && badge.x < rect.x + rect.w && badge.y > rect.y && badge.y < rect.y + rect.h);
+        if (cards.length === 0) return null;
+        const card = cards.reduce((best, rect) => rect.w * rect.h < best.w * best.h ? rect : best);
+        const point = { x: Math.round(card.x + card.w / 2), y: Math.round(card.y + card.h / 2) };
+        const previous = window.__TEAR_JOURNEY_LAST_POINT__;
+        window.__TEAR_JOURNEY_LAST_POINT__ = { key: `card:${label}`, point };
+        return previous?.key === `card:${label}` && previous.point?.x === point.x && previous.point.y === point.y ? point : null;
+      }, String(number), { timeout: 5000 });
+      return handle.jsonValue();
+    }
+    async function clickCard(number, screen) {
+      const centre = await cardCentre(number);
+      await clickAndWait(centre.x, centre.y, screen);
+    }
     // Migration tests need to create a legacy IndexedDB schema at this exact
     // HTTP origin before the application opens it. Ordinary journeys retain
     // their existing eager boot behavior.
@@ -105,13 +207,46 @@ async function withJourney(options, run) {
     const served = await page.request.get(`${baseUrl}/build-info.json`);
     assert.ok(served.ok(), "served build-info.json is unavailable");
     assert.deepEqual(await served.json(), buildInfo, "served build metadata differs from the verified local artifact");
-    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait, buildInfo });
+    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait, buildInfo,
+      waitArmed, labelPoint, clickLabel, cardCentre, clickCard });
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
-    if (browser) await browser.close();
+    if (browser && options.browserCloseTimeoutMs) {
+      let timeout;
+      try {
+        await Promise.race([
+          browser.close(),
+          new Promise((resolve) => { timeout = setTimeout(resolve, options.browserCloseTimeoutMs); }),
+        ]);
+      } finally {
+        clearTimeout(timeout);
+      }
+    } else if (browser) await browser.close();
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   }
 }
 
-module.exports = { withJourney };
+/** Poll resolved durable evidence rather than an async predicate's Promise. */
+async function waitForBrowserValue(page, predicate, argument, { timeout = 20_000, polling = 50 } = {}) {
+  assert.ok(Number.isFinite(timeout) && timeout > 0, "async browser wait requires a positive timeout");
+  assert.ok(Number.isFinite(polling) && polling > 0, "async browser wait requires a positive polling interval");
+  let cancelled = false, timer;
+  const deadline = new Promise((resolve, reject) => {
+    void resolve;
+    timer = setTimeout(() => reject(new Error(`async browser condition did not become truthy within ${timeout}ms`)), timeout);
+  });
+  const poll = async () => {
+    while (!cancelled) {
+      const value = await page.evaluate(predicate, argument);
+      if (cancelled) return undefined;
+      if (value) return value;
+      await new Promise((resolve) => setTimeout(resolve, polling));
+    }
+    return undefined;
+  };
+  try { return await Promise.race([poll(), deadline]); }
+  finally { cancelled = true; clearTimeout(timer); }
+}
+
+module.exports = { withJourney, waitForBrowserValue };

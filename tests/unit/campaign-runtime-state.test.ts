@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { CampaignRuntimeState } from "../../src/app/campaign-runtime-state";
-import { createCampaignChapterController, createFinaleController } from "../../src/app/campaign-controller-factory";
+import { CampaignRuntimeState } from "../../src/app/campaign/campaign-runtime-state";
+import { createCampaignChapterController, createFinaleController } from "../../src/app/campaign/campaign-controller-factory";
 
 const motion = { loreReveal: 1, chapterIn: 1, loreExit: 1, biomeRevealBrief: 1, biomeRevealFull: 1, readyBrief: 1, readyFull: 1 };
 const config = { presentation: { dialogueDuck: 1, biomeRevealDuck: 1 }, finale: { anchorRadius: 10, worldZoom: 1,

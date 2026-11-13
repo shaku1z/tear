@@ -14,11 +14,12 @@ export function createGhostLabRenderers(context: ScreenRenderContext) {
       // Embedded and availability-gated compatibility entries cannot become self-loop routes.
       view.routes.filter((route) => route.id !== "watch" && route.id !== "botevidence").forEach((route, index) => {
         const y = top + index * 100;
-        ui.card(canvas, left, y, cardWidth, 82);
+        const hovered = context.mouse.x >= left && context.mouse.x <= left + cardWidth && context.mouse.y >= y && context.mouse.y <= y + 82;
+        ui.card(canvas, left, y, cardWidth, 82, hovered || context.focus === index);
         ui.text(canvas, route.label, left + 24, y + 33, ui.t.type.label, "left", ui.t.alpha.full);
         ui.wrappedText(canvas, route.detail, left + 24, y + 55, cardWidth - 44, 17, ui.t.type.caption, "left", ui.t.alpha.soft);
         const action = { type: REPLAY_HUB_ACTIONS.open, destination: route.id };
-        context.enqueue({ x: left, y, w: cardWidth, h: 82, label: route.label, sub: route.detail, action });
+        context.enqueue({ x: left, y, w: cardWidth, h: 82, label: route.label, hiddenBox: true, action });
       });
       const watch = view.watch;
       ui.sectionLabel(canvas, "RUN MONITOR", left, 620, cardWidth);

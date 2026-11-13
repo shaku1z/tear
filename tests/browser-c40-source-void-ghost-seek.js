@@ -94,24 +94,23 @@ withJourney({ name: "C40 Source void Ghost seek", port: 8292, query: { "ghost-v3
   const rescueEvent = capsule.tracks.events.find((entry) => entry.value?.type === "world.void-rescue");
   assert.ok(rescueEvent, "the sealed V3 capsule must retain the native rescue event");
   const verification = await page.evaluate((id) => window.__TEAR_GHOST_V3__.verify(id), manifest.id);
-  assert.equal(verification.status, "mismatch", "post-rescue Source void must not claim detached parity");
+  // Source-linked campaign finales replay Source's void descent through the
+  // production detached composition, so the capsule verifies end to end.
+  assert.equal(verification.status, "verified", "the Source void capsule must reproduce every authoritative receipt");
   const postReceipt = [...capsule.tracks.results].find((entry) => entry.tick >= rescueEvent.tick && entry.value?.kind === "authoritative-hash");
   assert.ok(postReceipt, "a post-rescue authoritative hash receipt must be retained");
   const postComparisons = verification.comparisons.filter((entry) => entry.tick >= rescueEvent.tick);
   assert.ok(postComparisons.length > 0, "post-rescue receipts must be checked");
-  assert.ok(postComparisons.every((entry) => entry.equal === false
-    && entry.reason?.includes("Source void descent/scroll is unsupported")),
-  "post-rescue detached verification must disclose the unsupported Source void boundary");
-  const preComparison = verification.comparisons.find((entry) => entry.tick < rescueEvent.tick && entry.equal === true);
-  assert.ok(preComparison, "one supported pre-void detached receipt must reproduce its authoritative hash");
-  const preReceipt = capsule.tracks.results.find((entry) => entry.tick === preComparison.tick
-    && entry.value?.kind === "authoritative-hash");
-  assert.ok(preReceipt, "the verified pre-void authoritative hash receipt must be retained");
-  const refused = await page.evaluate(async ({ id, tick }) => {
-    try { await window.__TEAR_GHOST_V3__.seek(id, tick); return null; }
-    catch (error) { return error instanceof Error ? error.message : String(error); }
-  }, { id: manifest.id, tick: postReceipt.tick });
-  assert.match(refused ?? "", /production replay requires verified authoritative receipts \(mismatch\)|Source void descent\/scroll is unsupported/u,
-    "post-rescue detached seek must refuse explicitly");
-  console.log("C40 Source one-HP void rescue remains live-only after supported pre-rescue replay and explicit post-rescue detached refusal");
+  assert.ok(verification.comparisons.every((entry) => entry.equal === true && entry.actualHash === entry.expectedHash),
+    "every pre- and post-rescue detached receipt must reproduce its authoritative hash");
+  const preReceipt = capsule.tracks.results.find((entry) => entry.tick < rescueEvent.tick && entry.value?.kind === "authoritative-hash");
+  assert.ok(preReceipt, "a pre-rescue authoritative hash receipt must be retained");
+  for (const [label, receipt] of [["pre-rescue", preReceipt], ["post-rescue", postReceipt]]) {
+    const seeks = await page.evaluate(async ({ id, tick }) => Promise.all([window.__TEAR_GHOST_V3__.seek(id, tick),
+      window.__TEAR_GHOST_V3__.seek(id, tick), window.__TEAR_GHOST_V3__.seek(id, tick)]), { id: manifest.id, tick: receipt.tick });
+    assert.ok(seeks.every((seek) => seek?.tick === receipt.tick && seek.usedSnapshotId), `${label} seeks must reopen fresh production worlds`);
+    assert.equal(new Set(seeks.map((seek) => seek.semanticHash)).size, 1, `${label} seeks diverged semantically`);
+    assert.equal(seeks[0].semanticHash, receipt.value.stateHash, `${label} seek did not reproduce the recorded hash`);
+  }
+  console.log("C40 Source one-HP void rescue verifies and seeks before and after the rescue through production replay");
 });

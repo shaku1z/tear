@@ -17,6 +17,8 @@ export function createGhostStudioCutListFromTheater(
   capsule: GhostReadCapsule,
   session: GhostVerifiedProductionReplaySession,
   currentTick: number,
+  fromTick?: number,
+  speed: 0.25 | 0.5 | 1 | 2 | 4 = 1,
 ): GhostStudioCutListTheaterProjection {
   if (capsule.manifest.schemaVersion !== 2 || capsule.manifest.status !== "complete") {
     return Object.freeze({ available: false, unavailable: "Replay Editor requires a complete current V3 capsule." });
@@ -27,16 +29,17 @@ export function createGhostStudioCutListFromTheater(
   if (!Number.isSafeInteger(currentTick) || !session.verifiedReceiptTicks.includes(currentTick)) {
     return Object.freeze({ available: false, unavailable: "Replay Editor requires the current verified replay checkpoint." });
   }
-  const priorCheckpoint = [...session.verifiedReceiptTicks].reverse().find((tick) => tick < currentTick) ?? 0;
+  const priorCheckpoint = fromTick ?? [...session.verifiedReceiptTicks].reverse().find((tick) => tick < currentTick) ?? 0;
+  if (!session.verifiedReceiptTicks.includes(priorCheckpoint) || priorCheckpoint >= currentTick) return Object.freeze({ available: false, unavailable: "Mark an earlier verified IN checkpoint, then seek a later OUT checkpoint." });
   const edl = createStudioEdl({
     id: `theater-cut-${session.sourceId}-${String(priorCheckpoint)}-${String(currentTick)}`,
     sourceGhostId: session.sourceId,
     sourceRootHash: session.sourceRootHash,
     aspectRatio: "16:9",
     clips: [Object.freeze({ id: "verified-theater-window", sourceFromTick: priorCheckpoint, sourceToTick: currentTick,
-      outputOrder: 0, speed: 1, camera: "source" as const })],
+      outputOrder: 0, speed, camera: "player-follow" as const })],
     title: "Verified Theater Cut List",
-    credits: "LOCAL EDL ONLY",
+    credits: "RECONSTRUCTED PLAYER-FOLLOW · SIMULATION TIME",
   });
   return Object.freeze({ available: true, edl });
 }

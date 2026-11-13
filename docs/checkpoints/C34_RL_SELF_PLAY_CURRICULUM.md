@@ -196,3 +196,142 @@ The resulting V3 candidate may be named by a C36 approval package only after
 the exact completed/passed evidence and candidate-only registry bytes still
 match. The package is non-promotional custody, not a C34 quality result or
 runtime rollout.
+
+### C33 projection repair is separate from C34 learning evidence
+
+C33's shared V2 structured feature projection corrects training/execution units
+and semantics for the existing linear and temporal-window perceptrons. Its
+lossless bounded weight delivery and exact natural-checkpoint evaluation do not
+change the C34 V3 canonical state/Q adapter, manufacture a native V3 receipt,
+or establish RL/self-play or held-out quality. The engineering fitted models and
+source episodes remain explicitly separate from consented human evidence and
+from the native promotion/Watch fixtures. C33's strict completion metric still
+requires a genuinely completable source task; Endless truncation is no success.
+
+
+### Explicit native return-subskill adapters and measured limits
+
+The local resumption implementation adds opt-in `return-exact.v2` and
+`return-features.v2` adapters, then additive `return-exact.v3` and
+`return-features.v3` adapters. The exact variants encode the complete canonical
+state and declared action mask. The feature variants share the declared
+quantized player/blade/threat projection; they exclude seed, absolute tick,
+score and actor IDs. Their offline playing mask is a curriculum declaration,
+not a reconstructed historical observation mask. Runtime selection uses the
+actual available action types.
+
+These adapters admit a genuine empty batch plus at most fifteen canonical
+commands. Reward schema 2 can credit an actual native Sword catch. Empty
+transitions remain empty in the source trace. Entry-present zero values,
+missing defaults, supported decisions and scripted fallbacks retain separate
+receipts. V3 prefers a present entry over a missing entry only at equal Q;
+higher Q still wins, and remaining ties use semantic batch hashes. V1 and both
+return-V2 descriptor hashes, selection behavior and candidate identities remain
+unchanged. Distinct V3 adapter and candidate-protocol hashes bind the new rule;
+the unchanged model/payload/encoder containers retain schema versions 1/2/2.
+
+Constructors now prepare detached immutable models, normalized vocabulary and
+a private Q index once. Public unknown-input parsing remains strict, and each
+decision still validates its source state, legal mask and 8 ms budget. On the
+retained training/validation component measurement at `b50149e0`, median
+candidate decision time was 0.087 ms for the 2,100-entry exact model and
+0.073 ms for the 1,051-entry feature model. The unchanged public selection plus
+source-hash path measured 5.23 ms and 2.71 ms respectively. Forty-eight
+selection/support comparisons matched on twenty-four retained states; 576
+measured runtime calls produced no budget fallback. This measures that host and
+process, without claiming universal timing or learned-policy quality.
+
+The original governed return-V2 comparison at `e56c5ae9` completed 168 fixed
+cases and retained its primary held-out result of zero successes out of eight.
+After the explicit V3 rule at `3d9f0da4`, a separate experiment reused the six
+original governed sources without rewriting their capture build, consent,
+custody or bytes. Both final models were frozen before external validation.
+Its 24 training/validation cases completed with no unavailable cases or scripted
+fallbacks. The feature model succeeded in one of two training paths (recovery
+only), while the exact model succeeded in both. Each model scored zero out of
+four validation paths. All horizon endpoints remained censored at tick 300.
+The predeclared continuation criteria therefore failed, and all 32 planned
+fresh held-out cases remained unopened. Internal train-only qualification is
+not held-out quality evidence.
+
+Retained training decisions 139 and 140 also demonstrate an unresolved feature
+alias: different demonstrated actions share one quantized state. V3 neither
+adds time/seed/tick features nor changes bins or reward to hide this limit.
+Further changes require a concrete training/validation diagnosis. These results
+do not close C33 DAgger, C34 online/self-play/curriculum quality, C35 population
+calibration, C36 unattended operation or C40 release acceptance.
+
+Local evidence: `C:/tmp/tear-r14-runtime-selector-measurement-20261020/parent-verification.json`
+and `C:/tmp/tear-r14-return-v3-comparison-20261020/parent-train-validation-verification.json`.
+
+## Factorized return V4 implementation boundary
+
+V4 is a new protocol, not a reinterpretation of `return-features.v2` or
+`return-features.v3`. `c34-causal-action-features.ts` projects continuous
+player/blade geometry, real held input, an independent nearest-threat vector
+and ordered past control/effect context. Seed, actor/run identity, absolute
+tick, run time, mentor schedule, future outcomes and initial held-age do not
+enter the numeric features. Tick/run/frontier identities are ordering and
+checkpoint witnesses only. Historical absent aim magnitude retains its
+existing full-scale input meaning; unavailable native readiness/cooldowns
+remain unavailable. A requested throw/recall is distinct from an accepted
+native launch/catch or observed blade-phase change.
+Equal-distance threat ties use the complete emitted nonidentity vector,
+including known attack-phase semantics, so roster order cannot choose a feature.
+
+`c34-factorized-action-q.ts` fits bounded per-action value heads over independent
+motor/threat Gaussian bases and continuous terms. Normalization, centers and
+bandwidths come only from training transitions. The declared configuration
+bounds centers to 512 per block, weights to 24,000, serialized model bytes to
+1 MiB and runtime decisions to 8 ms. Basis selection, regularization and
+support rules are fixed before fitting. A basis motor match is labelled
+`observed-motor`; other positive responses are explicitly generalized or
+unknown. Neither is a tabular entry, probability of success or quality verdict.
+Only legal literal empty-or-one-command batches are scored. No scripted,
+timeout or unsupported-action fallback is introduced.
+
+The offline and online paths use the same projector, context updater and TD
+scorer. A recovery prefix is declared before execution and replayed through
+the real production environment; both each source state and its native effects
+must match. Online resume stores the exact world checkpoint with causal
+context and retains its frozen basis/configuration/vocabulary. Runtime context
+checkpoints bind model, actual run and committed frontier; their expected hash
+must come from the accepted enclosing authority. A self-supplied hash is not
+authentication. Nonzero activation without such a checkpoint or prefix refuses.
+Online resume also joins the exact declared case/cursor, source scenario and
+bootstrap, origin frontier and retained prefix commands before world adoption.
+It neither switches to a valid foreign source nor steps/relearns a prefix.
+
+The optional browser route recognizes V4 separately, stays inactive unless
+explicitly activated by an outside authority, and never claims the V3 promotion
+monitor. Watch obtains the actual tick-zero canonical projection and forwards
+real consumed commands/native effects after one 120 Hz commit. Zero-commit
+application frames retain the already queued action without resubmitting it;
+context capture refuses while that commit is pending. Older Watch cadence and
+model behavior are unchanged. A native next-run start discards the old causal
+context and pending batch; it does not authorize cold recovery at a nonzero tick.
+The journal retains versioned factor support
+and explicit empty-action budget refusals, including measured over-budget
+latency. No canonical world/receipt schema or gameplay timer is changed.
+
+Four focused implementation cases pass: the native held-pose alias separates
+while a changed threat does not erase learned motor terms; ordering/prefix
+refusals hold; a diagnostic conformance model produces a genuine native launch,
+pressed recall causing flying-to-returning, and matching catch from fresh and
+actual tick-145 origins; and a three-tick native reward fixture preserves
+offline/online resume, inactive candidate/browser routing and journal boundaries.
+The diagnostic model uses declared unit label targets, not governed reward
+training. An additional Watch lifecycle regression fails before the native-start
+reset and verifies that a second run binds its own tick-zero context afterward.
+These controls establish executable wiring, not learned competence.
+The paired evaluator retains native return-goal evidence separately from its
+declared scalar reward-gain criterion; the latter alone is not R14 acceptance.
+
+No governed fitting, source enrichment or validation/held-out rollout was run
+for this implementation. The six original source bytes/splits and all prior
+V2/V3 verdicts remain historical. All 32 fresh V3 held-out cases remain unopened.
+The exact native runtime must first incorporate the separately reviewed combat
+binding corrections. Only then may an owner-approved frozen protocol run the
+original 24 train/validation cases with their unchanged 300-native-tick budgets,
+fresh and recovery paths, baselines and accepted-recall matcher. No recovery-only
+success or conformance fixture closes the original C33/C34 quality goal.

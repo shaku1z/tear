@@ -34,6 +34,8 @@ export interface LiveAchievementTracker {
 }
 
 export interface LiveStyleAchievementOptions<TProjectile extends SplitProjectile> {
+  readonly observeStyle?: (technique: string | undefined, before: ReturnType<typeof snapshotStyle>, after: ReturnType<typeof snapshotStyle>, tuning: TrickTuning) => void;
+  readonly persistentEffects?: () => boolean;
   readonly run: () => LiveStyleRun | null;
   readonly player: () => LiveStylePlayer;
   readonly enemies: () => readonly AchievementEnemy[];
@@ -71,11 +73,12 @@ export function createLiveStyleAchievementRuntime<TProjectile extends SplitProje
     if (current === null) throw new Error("style runtime requires an active run");
     return current;
   };
+  const tracks = () => options.persistentEffects?.() !== false && tracksAchievements(options.run());
   const dispatch = (intents: Parameters<typeof executeAchievementIntents>[0]): void => {
-    executeAchievementIntents(intents, options.profileMax, options.achievementCheck);
+    if (options.persistentEffects?.() !== false) executeAchievementIntents(intents, options.profileMax, options.achievementCheck);
   };
   const achievements: LiveAchievementTracker = {
-    on: () => tracksAchievements(options.run()),
+    on: tracks,
     stageReset: () => { resetStageRestrictions(options.run()); },
     swung: () => { markStageRestriction(options.run(), "swung"); },
     thrown: () => { markStageRestriction(options.run(), "thrown"); },
@@ -98,16 +101,19 @@ export function createLiveStyleAchievementRuntime<TProjectile extends SplitProje
     achievements,
     addStyle: (kind: string) => {
       const current = run(), player = options.player();
-      const result = addStyle({ kind, state: snapshotStyle(current), tuning: options.tuning(),
+      const before = snapshotStyle(current), tuning = options.tuning();
+      const result = addStyle({ kind, state: before, tuning,
         player: { x: player.x, y: player.y }, ghostRecording: options.ghostRecording(),
         achievementTracking: tracksAchievements(current) });
       applyStyleSnapshot(current, result.state); executeStyleIntents(result.intents, options.styleIntents);
+      options.observeStyle?.(kind, before, result.state, tuning);
     },
-    tracks: () => tracksAchievements(options.run()),
-    check: options.achievementCheck,
+    tracks,
+    check: () => { if (options.persistentEffects?.() !== false) options.achievementCheck(); },
     loseStyle: () => { const current = run(); applyStyleSnapshot(current, loseStyle(snapshotStyle(current), options.tuning())); },
     recompute: () => { const current = run(), next = rankForCombo(current.combo, options.tuning().tiers);
-      current.mult = next.mult; current.rank = next.rank; },
+      const before = snapshotStyle(current); current.mult = next.mult; current.rank = next.rank;
+      options.observeStyle?.(undefined, before, snapshotStyle(current), options.tuning()); },
     update: (dt: number) => { const current = run(); applyStyleSnapshot(current, updateStyle(snapshotStyle(current), options.tuning(), dt)); },
     color: (multiplier: number) => trickColor(multiplier, options.colors()),
     splitProjectile: (projectile: TProjectile) => { splitParryProjectile(projectile, options.projectileSpeed(),

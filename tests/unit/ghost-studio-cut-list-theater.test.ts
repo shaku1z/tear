@@ -15,7 +15,7 @@ describe("verified Theater Studio Cut List", () => {
     const source = capsule(), before = JSON.stringify(source);
     const projection = createGhostStudioCutListFromTheater(source, session, 240);
     expect(projection.edl).toMatchObject({ format: "ghost-studio-edl", schemaVersion: 1, sourceGhostId: "verified-capsule",
-      sourceRootHash: "root-verified", aspectRatio: "16:9", clips: [{ sourceFromTick: 120, sourceToTick: 240, speed: 1, camera: "source" }] });
+      sourceRootHash: "root-verified", aspectRatio: "16:9", clips: [{ sourceFromTick: 120, sourceToTick: 240, speed: 1, camera: "player-follow" }] });
     expect(projection.edl?.edlHash).toMatch(/^[a-f0-9]{16}$/);
     expect(JSON.stringify(source)).toBe(before);
   });

@@ -385,6 +385,84 @@ normal-canary certificate, does not repair the serial constrained miss, does
 not provide full-canary p50/p95 cost acceptance, and does not unblock the
 planted-failure canary. The predeclared no-retry stop condition applies.
 
+### Bounded five-run qualification cohort
+
+The owner authorized one statistically aggregated campaign on existing
+GitHub-hosted runners with all task and performance thresholds unchanged. The
+manual workflow therefore exposes exactly five `sample-1` through `sample-5`
+normal-mode slots in addition to the default `single` slot. The five signed
+slots share one non-cancelling campaign concurrency key, while `single` retains
+its independent cancellation behavior. The five samples are dispatched once
+each, sequentially, and protected main is rechecked by each campaign run; this
+avoids self-contention in the shared hosted-runner pool. The cohort verifier
+also rejects overlapping provider job intervals. If the source advances, the
+campaign stops rather than mixing revisions. A non-normal mode must use the
+default slot.
+
+The qualification reporter requires exactly five unique first workflow
+attempts. Every sample must bind its aggregate artifact ID, exact artifact name
+and downloaded archive SHA-256 to GitHub's artifact API metadata. The input
+manifest declares the exact protected source, plan and shard-plan digests,
+required task count, mutable hosted-runner label, Node/pnpm versions, and pinned
+browser identity before aggregation. Each sample supplies its raw provider run,
+complete job pagination, shard plan, schema-v3 parity report and provider report;
+the qualification reporter replays the canonical provider topology and clock
+verifier instead of trusting the supplied summary. It also validates exact
+slot identity, runner names, claims, retry attempt sequences, retry dispositions,
+and denominators. Altered reports, duplicate run/attempts or slots, rerun
+attempts, cross-source samples, planted samples, hidden retries and incomplete
+provenance fail closed.
+
+The report uses nearest-rank p50 and p95 over candidate-to-certificate and
+serial decision wall time, critical paths, provider job wall, experiment wall,
+setup time, maximum dispatch wait, browser-shard balance, retry rate, and
+parallel-to-serial wall and job-cost ratios. `complete-equivalent-cohort`
+requires five successful equivalent normal samples; any valid failed sample
+produces `rejected-cohort` while retaining its measurements. The cohort report
+also retains initial failures separately from retries and keeps task-stage setup
+separate from complete provider job wall. It does not invent a wall-time, flake,
+balance or runner-cost acceptance threshold,
+is not a billing attestation or release certificate, and cannot itself authorize
+VAP-7. A planted-failure run remains blocked until the measured cohort satisfies
+the VAP-6 exit decision.
+
+### Retained archive membership correction
+
+The qualification verifier now requires the actual downloaded archive bytes in
+both its CLI and in-process inputs. It recomputes the archive SHA-256 and size
+against the retained provider metadata, then reads the aggregate's sole
+`vap6-canary-report.json` member. Qualification uses this verified parity report
+and rejects a supplied parity sidecar whose content differs, even if that
+sidecar and its replayed provider metrics have valid recomputed report digests.
+The output retains the verified member name, byte count and SHA-256 alongside
+the provider archive identity.
+
+The current aggregate upload contains the parity report only. Shard-plan data
+is therefore bound transitively: the verifier independently recomputes the
+supplied shard plan's cryptographic digest and requires the digest embedded in
+the verified parity member. It does not claim the shard plan is itself an
+archive member. Provider metrics are still recomputed from retained raw run and
+complete jobs snapshots against the verified report and digest-bound shard
+plan, rather than accepting a re-signed summary.
+
+The bounded reader accepts stored or deflated ordinary ZIPs, including data
+descriptors, with a 32 MiB archive and report limit. It requires exactly one
+member at the upload's exact filename and rejects missing, duplicate, nested,
+escaping, linked, encrypted, ZIP64, corrupt or inconsistent members without
+extracting anything to disk. Unsupported layouts fail closed; no archive
+library dependency, workflow upload change or caller-asserted membership flag
+is introduced.
+
+Two discriminating regressions fail against the original implementation:
+substituting and re-signing parity alone, and substituting and re-signing the
+shard plan together with parity and replayed provider metrics while retaining
+the original provider-verified archive. Both now reject. The positive CLI
+fixture uses a real deflated ZIP instead of plaintext archive bytes; hostile
+ZIP controls and a CLI sidecar-substitution control cover the retained-byte
+boundary. This local contract correction does not qualify a native cohort,
+change protected-source requirements, performance thresholds, retry rules or
+the five-sample minimum, dispatch work, or authorize VAP-7.
+
 ## Completed-provider measurement contract
 
 ### Resumed qualification: live task routing repair

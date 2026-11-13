@@ -29,6 +29,13 @@ const scenario = (): TearScenarioV1 => Object.freeze({
 });
 
 describe("TearBench shared contracts", () => {
+  it("requires every optional causal actor identifier to be a bounded string", () => {
+    const event = { format: TEAR_CONTRACT_FORMAT, kind: "event", schemaVersion: 1,
+      id: "event-1", tick: 0, sequence: 0, type: "enemy.spawned", phase: "wave-draft-and-state-transitions", source: "engine", payload: {} };
+    expect(validateTearContract(event).ok).toBe(true);
+    expect(validateTearContract({ ...event, actorId: "enemy:1" }).ok).toBe(true);
+    for (const actorId of [7, "", "x".repeat(10000), null, [], {}]) expect(validateTearContract({ ...event, actorId }).ok).toBe(false);
+  });
   it("round-trips a valid scenario through hostile-input validation", () => {
     const parsed = validateTearContract(JSON.stringify(scenario()));
     expect(parsed.ok).toBe(true);

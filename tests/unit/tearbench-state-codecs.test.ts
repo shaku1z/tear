@@ -1,4 +1,9 @@
+import { readFileSync } from "node:fs";
+import { preflightGhostRecordedCanonicalSnapshot } from "../../src/ghost/capsule-replay-envelope";
 import { describe, expect, it, vi } from "vitest";
+import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
+import { createLiveStateCodec } from "../../src/tearbench/state-codecs";
+import { stableVerificationHash } from "../../src/replay/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 import {
@@ -55,6 +60,58 @@ function populatedWorld(): TearCodecWorld {
   return candidate;
 }
 
+describe("presentation-only UI checkpoints", () => {
+  it("retains tutorial help/demo exactly but keeps lesson progress semantic", () => {
+    const ui = createLiveStateCodec("tear.ui.v1"), world = createLiveStateCodec("tear.world.v1"), a = populatedWorld(), b = populatedWorld();
+    const display = { version: 1, ghostTime: 1, anchorX: 320, evidencePulse: false, coachIdle: 0, coachDemoTime: 4, helpVisible: true };
+    a.components.set("tear.ui.v1", { screen: "paused", focusId: "0", tutorialPresentation: display });
+    b.components.set("tear.ui.v1", { screen: "paused", focusId: "0", tutorialPresentation: { ...display, ghostTime: 2 } });
+    expect(ui.capture(a)).not.toEqual(ui.capture(b)); expect(ui.hashProjection(a)).toEqual(ui.hashProjection(b));
+    a.components.set("tear.world.v1", { runtime: { tutorialSession: { lessonId: "jump" } } });
+    b.components.set("tear.world.v1", { runtime: { tutorialSession: { lessonId: "dash" } } });
+    expect(world.hashProjection(a)).not.toEqual(world.hashProjection(b));
+  });
+
+  it("retains v2 entropy exactly without widening semantic RNG or hiding existing UI extensions", () => {
+    const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld(), entropy = createCosmeticEmissionRandom();
+    const common = { screen: "playing", focusId: "-1", extension: 7 };
+    const particles = { version: 2, list: [], view: null, replacementCursor: 0, policy: { effects: { highBudget: 0, lowBudget: 0, cullMargin: 0 }, lowGraphics: false, reducedMotion: false } };
+    a.components.set("tear.ui.v1", { ...common, particlesPresentation: { ...particles, entropy: entropy.snapshot() } });
+    entropy.next(); b.components.set("tear.ui.v1", { ...common, particlesPresentation: { ...particles, entropy: entropy.snapshot() } });
+    expect(codec.capture(a)).not.toEqual(codec.capture(b)); expect(codec.hashProjection(a)).toEqual(common); expect(codec.hashProjection(b)).toEqual(common);
+    expect(a.components.get("tear.rng.v1")).toEqual(b.components.get("tear.rng.v1"));
+    b.components.set("tear.ui.v1", { ...common, extension: 8 }); expect(codec.hashProjection(a)).not.toEqual(codec.hashProjection(b));
+  });
+  it("retains particles exactly while preserving HUD and every existing semantic extension", () => {
+    const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld();
+    const legacy = { screen: "playing", focusId: "-1", extensionSentinel: { preserved: 42 }, hudPresentation: { version: 1, clockSeconds: 3, lagHp: 1, multiplier: 1, multiplierPop: 0 } };
+    const particles = { version: 1, list: [], view: null, replacementCursor: 9, policy: { effects: { highBudget: 0, lowBudget: 0, cullMargin: 180 }, lowGraphics: false, reducedMotion: false } };
+    a.components.set("tear.ui.v1", legacy); b.components.set("tear.ui.v1", { ...legacy, particlesPresentation: particles });
+    expect(codec.capture(b)).toEqual({ ...legacy, particlesPresentation: particles });
+    expect(codec.hashProjection(b)).toEqual({ screen: "playing", focusId: "-1", extensionSentinel: { preserved: 42 } });
+    expect(codec.hashProjection(b)).toEqual(codec.hashProjection(a)); expect(codec.capture(b)).not.toEqual(codec.capture(a));
+    b.components.set("tear.ui.v1", { ...legacy, extensionSentinel: { preserved: 43 }, particlesPresentation: particles });
+    expect(codec.hashProjection(b)).not.toEqual(codec.hashProjection(a));
+  });
+  it("retains HUD exactly while preserving semantic projection and historical extension fields", () => {
+    const codec = createLiveStateCodec("tear.ui.v1"), a = populatedWorld(), b = populatedWorld();
+    const legacy = { screen: "playing", focusId: "-1", extensionSentinel: { preserved: 42 } };
+    const hud = { version: 1, clockSeconds: 3.25, lagHp: 0.9, multiplier: 2, multiplierPop: 0.5 };
+    a.components.set("tear.ui.v1", legacy);
+    b.components.set("tear.ui.v1", { ...legacy, hudPresentation: hud });
+    expect(codec.capture(b)).toEqual({ ...legacy, hudPresentation: hud });
+    expect(codec.hashProjection(b)).toEqual(codec.hashProjection(a));
+    expect(codec.hashProjection(a)).toEqual(legacy);
+    expect(codec.migrate(legacy, 1)).toEqual(legacy);
+    const aState = captureCodecState(a, createDefaultStateCodecRegistry());
+    const bState = captureCodecState(b, createDefaultStateCodecRegistry());
+    expect(bState.state).not.toEqual(aState.state);
+    expect(stableVerificationHash(bState.state)).not.toBe(stableVerificationHash(aState.state));
+    const semantic = (candidate: TearCodecWorld) => Object.fromEntries(createDefaultStateCodecRegistry().list().map((entry) => [entry.id, entry.hashProjection(candidate)]));
+    expect(stableVerificationHash(semantic(b))).toBe(stableVerificationHash(semantic(a)));
+  });
+});
+
 function snapshotFrom(candidate: TearCodecWorld): TearSnapshotV1 {
   const captured = captureCodecState(candidate, createDefaultStateCodecRegistry());
   return {
@@ -107,6 +164,67 @@ function advance(candidate: TearCodecWorld, direction: -1 | 1): void {
 }
 
 describe("TearBench shared state codec registry", () => {
+  it("roundtrips a legitimate external capsule assistance binding without changing exact hashes", () => {
+    const original = populatedWorld(), registry = createDefaultStateCodecRegistry();
+    original.components.set("tear.run.v1", { ...(original.components.get("tear.run.v1") as Record<string, never>), ghostAssistance: assistanceBinding() });
+    const snapshot = snapshotFrom(original), originalState = JSON.stringify(snapshot.state);
+    let restored = world();
+    const result = restoreSnapshotTransactionally(snapshot, registry, factory, { replace(candidate) { restored = candidate; } });
+    expect(result).toMatchObject({ ok: true, exactHash: stableVerificationHash(snapshot.state) });
+    expect(captureCodecState(restored, registry).state).toEqual(snapshot.state);
+    expect(restored.entityIds.has(assistanceBinding().sourceId)).toBe(false);
+    expect([...restored.references.keys()].some(key => key.endsWith("$.ghostAssistance.sourceId"))).toBe(false);
+    expect(JSON.stringify(snapshot.state)).toBe(originalState);
+  });
+
+  it.each(["actor", "nested-run", "wrong-owner"])("still rejects a dangling sourceId at %s", (location) => {
+    const original = populatedWorld(), id = assistanceBinding().sourceId;
+    const run = original.components.get("tear.run.v1") as Record<string, never>;
+    original.components.set("tear.run.v1", { ...run, ghostAssistance: assistanceBinding(), ...(location === "nested-run" ? { other: { sourceId: id } } : {}) });
+    if (location === "actor") original.components.set("tear.projectile.v1", [{ id: "projectile-1", factoryId: "projectile", x: 1, y: 2, sourceId: id }]);
+    if (location === "wrong-owner") original.components.set("tear.player.v1", { id: "player", x: 1, y: 2, hp: 100, maxHp: 100, ghostAssistance: assistanceBinding() });
+    const replace = vi.fn();
+    const result = restoreSnapshotTransactionally(snapshotFrom(original), createDefaultStateCodecRegistry(), factory, { replace });
+    expect(result.ok).toBe(false); expect(replace).not.toHaveBeenCalled();
+    if (!result.ok) expect(result.issues.some(issue => issue.message.includes(id))).toBe(true);
+  });
+
+  it.each([
+    { sourceRoot: "not-a-root" }, { sourceManifestHash: "bad" }, { competitiveEligible: true },
+    { coachEnabled: false }, { extra: "unexpected" }, { actor: ["human"] }, { sourceId: "" },
+  ])("rejects malformed assistance atomically: %j", (invalid) => {
+    const original = populatedWorld(), destination = populatedWorld(), originalRefs = [destination.components, destination.references, destination.entityIds];
+    const destinationBefore = structuredClone(destination), originalState = original.components.get("tear.run.v1") as Record<string, never>;
+    // Use an existing actor identity so refusal must come from assistance validation.
+    original.components.set("tear.run.v1", { ...originalState, ghostAssistance: { ...assistanceBinding(), sourceId: "player", ...invalid } });
+    const replace = vi.fn();
+    const result = restoreSnapshotTransactionally(snapshotFrom(original), createDefaultStateCodecRegistry(), factory, { replace });
+    expect(result.ok).toBe(false); expect(replace).not.toHaveBeenCalled();
+    expect([destination.components, destination.references, destination.entityIds]).toEqual(originalRefs);
+    [destination.components, destination.references, destination.entityIds].forEach((ref, index) => { expect(ref).toBe(originalRefs[index]); });
+    expect(destination).toEqual(destinationBefore);
+    if (!result.ok) expect(result.issues.some(issue => issue.path === "$.ghostAssistance")).toBe(true);
+  });
+
+  it.skipIf(!process.env.TEAR_ASSISTED_CAPSULE_PATH)("accepts optional retained native assisted keyframes without rewriting the input", () => {
+    const path = process.env.TEAR_ASSISTED_CAPSULE_PATH; if (!path) throw new Error("explicit optional input missing");
+    const before = readFileSync(path), capsule = JSON.parse(before.toString("utf8").replace(/^\uFEFF/u, "")) as { tracks: { keyframes: { value: TearSnapshotV1 }[] } };
+    expect(capsule.tracks.keyframes.length).toBeGreaterThan(0);
+    for (const entry of capsule.tracks.keyframes) expect(preflightGhostRecordedCanonicalSnapshot(entry.value), `keyframe ${String(entry.value.tick)}`).toMatchObject({ ok: true, exactHash: entry.value.hashes.exact });
+    expect(readFileSync(path).equals(before)).toBe(true);
+  });
+
+  it.each(["tear.world.v1", "tear.run.v1"] as const)("versions %s without inventing historical time or callback order", (id) => {
+    const codec = createLiveStateCodec(id);
+    expect(codec.version).toBe(2);
+    const legacy = { clock: 42, mods: { onHit: [null] }, extension: { retained: true } };
+    const migrated = codec.migrate(legacy, 1);
+    expect(migrated).toEqual(legacy);
+    expect(migrated).not.toBe(legacy);
+    const current = { simulationSeconds: 0.173456789, mods: { onHit: [{ $upgradeHook: "rupture" }] } };
+    expect(codec.migrate(codec.migrate(current, 2), 2)).toEqual(current);
+    expect(() => codec.migrate(current, 3)).toThrow(/cannot migrate/);
+  });
   it("migrates pre-cinematic v1 snapshots to the canonical inactive component", () => {
     const registry = createDefaultStateCodecRegistry();
     const base = structuredClone(snapshotFrom(populatedWorld()));
@@ -271,3 +389,8 @@ describe("TearBench shared state codec registry", () => {
     expect(commit).toHaveBeenCalledOnce();
   });
 });
+
+function assistanceBinding() {
+  return { format: "tear-ghost-chase", version: 1, sourceId: "ghost-v3-run-1d4s7zb-84ea8db9-1374-474f-848b-97d7345096a7",
+    sourceManifestHash: "a".repeat(16), sourceRoot: "b".repeat(16), actor: "human", coachEnabled: true, ghostVisible: true, competitiveEligible: false };
+}

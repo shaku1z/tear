@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveVictoryProfileProgressPersistence } from "../../src/app/live-victory-profile-progress-persistence";
+import { createLiveVictoryProfileProgressPersistence } from "../../src/app/progress/victory-profile-progress-persistence";
 
 describe("live victory profile progress persistence", () => {
   it("preserves victory profile-data mutations and their maxima", () => {

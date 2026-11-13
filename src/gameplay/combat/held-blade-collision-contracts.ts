@@ -94,6 +94,8 @@ export interface HeldBladeCollisionEffects {
 }
 
 export interface HeldBladeCollisionHooks {
+  observeTutorialContact?(enemy: HeldBladeEnemy, fact: Readonly<{ kind: "contact"; result: "slow" | "accepted"; grounded: boolean; strike?: string }>): void;
+  weaponEffect?(weaponId: string, effect: string): void;
   weaponHit(enemy: HeldBladeEnemy, quality: number, damage: number, isSlam: boolean, isLaunch: boolean, empowered: boolean): HeldWeaponEffect | null | undefined;
   noteFirstDamage(enemy: HeldBladeEnemy, firstDamage: boolean): void;
   logHit(

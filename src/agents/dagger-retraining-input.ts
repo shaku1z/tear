@@ -4,6 +4,8 @@ import type { TearBehaviorCloningNormalizationV1 } from "./academy-behavior-clon
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
 import type { TearDaggerCorrectionCaptureV1 } from "./dagger-correction-capture";
 import type { TearDaggerCorrectionReviewV1 } from "./dagger-correction-review";
+import { TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, tearPolicyFeatureWidth } from "./policy-feature-vector";
+import { assertTearBehaviorCloningNormalization } from "./academy-behavior-cloning-batches";
 
 export interface TearDaggerRetrainingExampleV1 {
   readonly correctionHash: string;
@@ -28,6 +30,10 @@ export function createTearDaggerRetrainingInput(
   capture: TearDaggerCorrectionCaptureV1,
   reviews: readonly TearDaggerCorrectionReviewV1[],
 ): TearDaggerRetrainingInputV1 {
+  assertTearBehaviorCloningNormalization(dataset, normalization);
+  if ((capture.featureSchemaHash ?? TEAR_POLICY_FEATURE_SCHEMA_HASH_V1) !== normalization.featureSchemaHash
+    || capture.corrections.some((entry) => entry.features.length !== tearPolicyFeatureWidth(normalization.featureSchemaHash)
+      || entry.features.some((value) => !Number.isFinite(value)))) throw new TypeError("DAgger feature schema mismatch");
   if (normalization.datasetHash !== dataset.datasetHash || reviews.some((review) => review.captureHash !== capture.captureHash
     || review.artifactHash !== capture.artifact.hash || review.disposition !== "accepted")) {
     throw new RangeError("DAgger retraining input requires matching accepted correction reviews");

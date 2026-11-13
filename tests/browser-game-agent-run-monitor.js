@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Browser journey scripts run directly under Node CommonJS. */
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 

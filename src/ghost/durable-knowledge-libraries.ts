@@ -10,7 +10,7 @@ import {
   type GhostLibraryKind,
 } from "./knowledge-libraries";
 import type { GhostEnvelopeV3 } from "./truth-kernel";
-import type { GhostVaultBackend } from "./capsule-vault";
+import type { GhostVaultBackend, GhostVaultGuard, GhostVaultWrite } from "./capsule-vault";
 
 const GHOST_LIBRARY_ENTRY_FORMAT = "tearghost-library-entry";
 const GHOST_LIBRARY_ENTRY_SCHEMA_VERSION = 1;
@@ -133,6 +133,15 @@ export class GhostVaultKnowledgeLibraries {
     report: GhostDoctorReport,
     discoveredAt: string,
   ): Promise<GhostLibraryEntry> {
+    const prepared = await this.prepareCorruptCapsuleRecord(manifest, report, discoveredAt);
+    await this.#backend.commitIfMatches([prepared.guard], prepared.write === undefined ? [] : [prepared.write]);
+    return prepared.entry;
+  }
+
+  /** Validate and prepare one record without writing; callers may join its exact guard to source custody. */
+  async prepareCorruptCapsuleRecord(manifest: TearGhostManifest, report: GhostDoctorReport, discoveredAt: string): Promise<Readonly<{
+    entry: GhostLibraryEntry; guard: GhostVaultGuard; write?: GhostVaultWrite;
+  }>> {
     if (report.healthy) throw new TypeError("only an unhealthy capsule belongs in the Ghost Graveyard");
     const entry: GhostLibraryEntry = Object.freeze({
       id: `graveyard:${manifest.id}`, library: "graveyard", ghostId: manifest.id,
@@ -140,7 +149,12 @@ export class GhostVaultKnowledgeLibraries {
       provenance: Object.freeze({ source: "ghost-doctor", corruptChunks: String(report.corruptChunkIds.length),
         missingChunks: String(report.missingChunkIds.length) }),
     });
-    return this.#ensure(entry);
+    const key = entryKey(entry), existing = await this.#backend.get("libraries", key);
+    if (existing === undefined) return Object.freeze({ entry, guard: Object.freeze({ store: "libraries", key }),
+      write: Object.freeze({ store: "libraries", key, value: JSON.stringify({ format: GHOST_LIBRARY_ENTRY_FORMAT, schemaVersion: GHOST_LIBRARY_ENTRY_SCHEMA_VERSION, entry } satisfies StoredGhostLibraryEntry) }) });
+    const parsed = parseStoredEntry(existing);
+    if (parsed.library !== entry.library || parsed.ghostId !== entry.ghostId || parsed.rootHash !== entry.rootHash || parsed.id !== entry.id) throw new TypeError(`Ghost library entry conflicts with custody record: ${entry.id}`);
+    return Object.freeze({ entry: parsed, guard: Object.freeze({ store: "libraries", key, expected: existing }) });
   }
 
   async promoteToCanon(
@@ -181,14 +195,4 @@ export class GhostVaultKnowledgeLibraries {
     return Object.freeze(structuredClone(entry));
   }
 
-  async #ensure(entry: GhostLibraryEntry): Promise<GhostLibraryEntry> {
-    const key = entryKey(entry);
-    const existing = await this.#backend.get("libraries", key);
-    if (existing === undefined) return this.#insert(entry);
-    const parsed = parseStoredEntry(existing);
-    if (parsed.library !== entry.library || parsed.ghostId !== entry.ghostId || parsed.rootHash !== entry.rootHash) {
-      throw new TypeError(`Ghost library entry conflicts with custody record: ${entry.id}`);
-    }
-    return parsed;
-  }
 }

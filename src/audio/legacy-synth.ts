@@ -162,7 +162,13 @@ function apply(settings: Record<string, unknown>): void {
   if (runtime) runtime.applySettings(pendingSettings);
 }
 
-function cue(action: RuntimeAction): void { invoke(action); }
+/**
+ * A synthesized cue needs the one bound audio context. Until a user gesture
+ * binds it (or after it is disposed), a cue is a silent no-op: gameplay never
+ * waits on, or fails because of, an unavailable context. Queued cues are
+ * checked again when they run, so a stale effect is never played late.
+ */
+function cue(action: RuntimeAction): void { invoke((audio) => { if (audio.ctx !== null) action(audio); }); }
 
 /** Lightweight first-gesture facade for the concrete synthesized audio runtime. */
 return Object.freeze({

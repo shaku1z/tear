@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LiveFoundryScreenController } from "../../src/app/live-foundry-screen";
+import { LiveFoundryScreenController } from "../../src/app/engineering/foundry-screen";
 import { TearFoundryJobVault, createTearFoundryJob, transitionTearFoundryJob } from "../../src/agents";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 

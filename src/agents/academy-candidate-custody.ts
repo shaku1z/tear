@@ -1,5 +1,7 @@
 import { stableVerificationHash } from "../replay/hash";
-import type { GhostLocalVault, GhostVaultBackend } from "../ghost";
+import type { GhostLocalVault, GhostVaultBackend, GhostVaultWrite } from "../ghost";
+import { prepareGhostCapsuleProtection, ghostCapsuleProtectionKey, parseGhostCapsuleProtection, type GhostVaultGuard, type GhostCapsuleProtection } from "../ghost/capsule-protection";
+import { parseGhostCapsuleManifest } from "../ghost/capsule-vault";
 import {
   assessAcademyCandidateEligibility,
   type TearAcademyCandidateDeclarationV1,
@@ -373,7 +375,13 @@ export class TearAcademyCandidateCustodyStore {
       admissionHash: stableVerificationHash(admission), declarationHash: stableVerificationHash(input.declaration),
       consent, privacyRetention: privacy, retention: policy, events: Object.freeze([initial]),
     });
-    await this.#backend.commit([Object.freeze({ store: "analysis", key, value: JSON.stringify(durable) })]);
+    const protection = await prepareGhostCapsuleProtection(this.#backend,
+      durable.source.capsuleRange.capsuleId, durable.source.capsuleRange.rootIntegrity, candidateHash);
+    const sourceGuards = await this.sourceGuards(durable, false);
+    await this.#backend.commitIfMatches([{ store: "analysis", key }, ...protection.guards,
+      ...sourceGuards.filter((guard) => guard.store !== "analysis" || guard.key !== key)], [
+      Object.freeze({ store: "analysis", key, value: JSON.stringify(durable) }), ...protection.writes,
+    ]);
     return durable;
   }
 
@@ -394,7 +402,9 @@ export class TearAcademyCandidateCustodyStore {
     void ignoredRecordHash;
     const revised = freezeRecord({ ...prior, status: "revoked", consent: copyConsent(input.consent),
       events: Object.freeze([...current.events, event]) });
-    await this.#backend.commit([Object.freeze({ store: "analysis", key: custodyKey(revised.candidateHash), value: JSON.stringify(revised) })]);
+    await this.#backend.commitIfMatches([
+      { store: "analysis", key: custodyKey(current.candidateHash), expected: JSON.stringify(current) },
+    ], [Object.freeze({ store: "analysis", key: custodyKey(revised.candidateHash), value: JSON.stringify(revised) })]);
     return revised;
   }
 
@@ -412,7 +422,9 @@ export class TearAcademyCandidateCustodyStore {
     const { recordHash: ignoredRecordHash, ...prior } = current;
     void ignoredRecordHash;
     const revised = freezeRecord({ ...prior, status: "expired", events: Object.freeze([...current.events, event]) });
-    await this.#backend.commit([Object.freeze({ store: "analysis", key: custodyKey(revised.candidateHash), value: JSON.stringify(revised) })]);
+    await this.#backend.commitIfMatches([
+      { store: "analysis", key: custodyKey(current.candidateHash), expected: JSON.stringify(current) },
+    ], [Object.freeze({ store: "analysis", key: custodyKey(revised.candidateHash), value: JSON.stringify(revised) })]);
     return revised;
   }
 
@@ -433,6 +445,7 @@ export class TearAcademyCandidateCustodyStore {
       throw new RangeError("C31 source deletion requires its exact attested capsule");
     }
     const inventory = await this.inventory();
+    if (inventory.rejectedKeys.length > 0) throw new RangeError("cannot delete a source while malformed legacy custody is unresolved");
     if (inventory.records.some((entry) => entry.candidateHash !== current.candidateHash
       && entry.status !== "deleted" && entry.source.capsuleRange.capsuleId === capsuleId)) {
       throw new RangeError("C31 source capsule is still referenced by another custody record");
@@ -444,8 +457,12 @@ export class TearAcademyCandidateCustodyStore {
     const { recordHash: ignoredRecordHash, ...prior } = current;
     void ignoredRecordHash;
     const tombstone = freezeRecord({ ...prior, status: "deleted", events: Object.freeze([...current.events, event]) });
-    await this.#backend.commit([
-      ...(await input.vault.capsuleRemovalWrites(capsuleId)),
+    const sourceGuards = await this.sourceGuards(current);
+    const removal = await input.vault.prepareCapsuleRemoval(capsuleId, current.candidateHash);
+    await this.#backend.commitIfMatches([
+      ...sourceGuards, ...removal.guards,
+    ], [
+      ...removal.writes,
       Object.freeze({ store: "analysis", key: custodyKey(tombstone.candidateHash), value: JSON.stringify(tombstone) }),
     ]);
     return tombstone;
@@ -454,9 +471,86 @@ export class TearAcademyCandidateCustodyStore {
   async held(at: string): Promise<readonly TearAcademyCandidateCustodyRecordV1[]> {
     if (!timestamp(at)) throw new TypeError("Academy custody query requires a valid timestamp");
     const inventory = await this.inventory();
-    return Object.freeze(inventory.records.filter((entry) => entry.status === "held"
+    const eligible = inventory.records.filter((entry) => entry.status === "held"
       && (entry.retention.mode === "indefinite" || (entry.retention.expiresAt !== undefined
-        && Date.parse(entry.retention.expiresAt) > Date.parse(at)))));
+        && Date.parse(entry.retention.expiresAt) > Date.parse(at))));
+    const available = await Promise.all(eligible.map(async (entry) => {
+      try { await this.sourceGuards(entry); return entry; }
+      catch (error) { if (error instanceof RangeError || error instanceof TypeError || error instanceof SyntaxError) return undefined; throw error; }
+    }));
+    return Object.freeze(available.filter((entry): entry is TearAcademyCandidateCustodyRecordV1 => entry !== undefined));
+  }
+
+  /** Source presence is action-time authority, including for pre-protection records. */
+  async sourceGuards(record: TearAcademyCandidateCustodyRecordV1, requireProtectedOwner = true): Promise<readonly GhostVaultGuard[]> {
+    const custodyRaw = await this.#backend.get("analysis", custodyKey(record.candidateHash));
+    if (requireProtectedOwner && (custodyRaw === undefined || parseRecord(custodyRaw).recordHash !== record.recordHash)) throw new RangeError("C31 custody revision changed");
+    const id = record.source.capsuleRange.capsuleId, raw = await this.#backend.get("manifests", id);
+    if (raw === undefined) throw new RangeError("C31 custody source is unavailable");
+    const manifest = parseGhostCapsuleManifest(JSON.parse(raw));
+    if (manifest.id !== id || manifest.rootIntegrity !== record.source.capsuleRange.rootIntegrity) {
+      throw new RangeError("C31 custody source changed");
+    }
+    const protectionKey = ghostCapsuleProtectionKey(id), protection = await this.#backend.get("analysis", protectionKey);
+    if (protection !== undefined) {
+      const parsed = parseGhostCapsuleProtection(protection, id);
+      if (parsed.rootIntegrity !== manifest.rootIntegrity || requireProtectedOwner && !parsed.owners.includes(record.candidateHash)) {
+        throw new RangeError("C31 custody source protection changed");
+      }
+    }
+    const guards: GhostVaultGuard[] = [
+      { store: "analysis", key: custodyKey(record.candidateHash), ...(custodyRaw === undefined ? {} : { expected: custodyRaw }) },
+      { store: "manifests", key: id, expected: raw },
+      { store: "analysis", key: protectionKey, ...(protection === undefined ? {} : { expected: protection }) },
+    ];
+    for (const chunk of manifest.chunks) {
+      const encoded = await this.#backend.get("chunks", chunk.id);
+      if (encoded === undefined || stableVerificationHash(encoded) !== chunk.checksum) throw new RangeError("C31 custody source chunk is unavailable or changed");
+      guards.push({ store: "chunks", key: chunk.id, expected: encoded });
+    }
+    return Object.freeze(guards);
+  }
+
+  /** Retention authority survives damaged or absent source bytes; it grants no eligibility. */
+  async #prepareRetentionProtection(record: TearAcademyCandidateCustodyRecordV1): Promise<Readonly<{
+    guards: readonly GhostVaultGuard[]; writes: readonly GhostVaultWrite[]; available: boolean;
+  }>> {
+    const custodyRaw = await this.#backend.get("analysis", custodyKey(record.candidateHash));
+    if (custodyRaw === undefined || parseRecord(custodyRaw).recordHash !== record.recordHash || record.status === "deleted") throw new RangeError("C31 retention custody changed");
+    const id = record.source.capsuleRange.capsuleId, rootIntegrity = record.source.capsuleRange.rootIntegrity;
+    const manifestRaw = await this.#backend.get("manifests", id), manifest = manifestRaw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(manifestRaw));
+    if (manifest !== undefined && (manifest.id !== id || manifest.rootIntegrity !== rootIntegrity)) throw new RangeError("C31 retention source changed");
+    const key = ghostCapsuleProtectionKey(id), raw = await this.#backend.get("analysis", key), previous = raw === undefined ? undefined : parseGhostCapsuleProtection(raw, id);
+    if (previous !== undefined && previous.rootIntegrity !== rootIntegrity) throw new RangeError("C31 retention protection changed");
+    const value: GhostCapsuleProtection = { format: "ghost-capsule-protection", schemaVersion: 1, capsuleId: id, rootIntegrity,
+      owners: [...new Set([...(previous?.owners ?? []), record.candidateHash])].sort() };
+    parseGhostCapsuleProtection(JSON.stringify(value), id);
+    // Availability is diagnostic only. It never determines whether retained custody is protected.
+    let available = manifest !== undefined;
+    for (const chunk of manifest?.chunks ?? []) {
+      const encoded = await this.#backend.get("chunks", chunk.id);
+      if (encoded === undefined || stableVerificationHash(encoded) !== chunk.checksum) available = false;
+    }
+    return Object.freeze({ guards: Object.freeze([
+      { store: "analysis" as const, key: custodyKey(record.candidateHash), expected: custodyRaw },
+      { store: "manifests" as const, key: id, ...(manifestRaw === undefined ? {} : { expected: manifestRaw }) },
+      { store: "analysis" as const, key, ...(raw === undefined ? {} : { expected: raw }) },
+    ]), writes: Object.freeze(previous?.owners.includes(record.candidateHash) === true ? [] : [{ store: "analysis" as const, key, value: JSON.stringify(value) }]), available });
+  }
+
+  /** Backfill retention fences before quota upkeep, without inventing custody events. */
+  async ensureSourceProtection(): Promise<Readonly<{ protectedCandidateHashes: readonly string[]; unavailableCandidateHashes: readonly string[] }>> {
+    const inventory = await this.inventory();
+    if (inventory.rejectedKeys.length > 0) throw new RangeError("cannot migrate malformed C31 custody before quota cleanup");
+    const protectedCandidateHashes: string[] = [], unavailableCandidateHashes: string[] = [];
+    for (const record of inventory.records) {
+      if (record.status === "deleted") continue;
+      const protection = await this.#prepareRetentionProtection(record);
+      await this.#backend.commitIfMatches(protection.guards, protection.writes);
+      protectedCandidateHashes.push(record.candidateHash);
+      if (!protection.available) unavailableCandidateHashes.push(record.candidateHash);
+    }
+    return Object.freeze({ protectedCandidateHashes: Object.freeze(protectedCandidateHashes), unavailableCandidateHashes: Object.freeze(unavailableCandidateHashes) });
   }
 
   async inventory(): Promise<TearAcademyCandidateCustodyInventoryV1> {

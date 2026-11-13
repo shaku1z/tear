@@ -1,3 +1,7 @@
+import { overrunDamageMultiplier } from "../../src/gameplay/combat/overrun";
+import { tierUp } from "../../src/gameplay/upgrades";
+import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
+import type { GameAction } from "../../src/input/game-action";
 import { describe, expect, it } from "vitest";
 import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { CONFIG } from "../../src/config/game-config";
@@ -9,8 +13,224 @@ import { captureProductionReplayCheckpoint, createProductionCombatSimulation,
   createProductionGhostReplayComposition, createProductionReplayWorld } from "../../src/tearbench";
 import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
 import { environmentHash, environmentSnapshotToObservation } from "../../src/tearbench";
+import { RunDnaObserver } from "../../src/gameplay/runtime/run-dna-observer";
+import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
+import { GhostLiveRecorder } from "../../src/ghost/live-recorder";
+import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
+import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
+import { createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
+import { projectGhostRunDnaTheater } from "../../src/ghost/run-dna-theater";
 
 describe("production TearBench combat parity", () => {
+  it("dispatches acquired held-hit callbacks and the existing Overrun multiplier", () => {
+    const source = semanticBindingFixture(); source.acquire("rupture"); source.acquire("overrun");
+    const { blade, run, target } = source; run.mods.overrunStacks = 2;
+    Object.assign(blade, { x: target.x - 30, y: target.y, tipX: target.x + 30, tipY: target.y, tipVX: 1300, tipVY: 0, tipSpeed: 1300 });
+    expect.soft(source.host.combat.collision.runDamageMultiplier()).toBe(overrunDamageMultiplier(run.mods, source.host.replay.configuration.value.overrun));
+    runLiveCollisionPhase(source.host.combat.collision, 1 / 120);
+    expect(target.hp).toBeLessThan(target.maxHp); expect(target.bleedStacks).toBe(1);
+  });
+  it("dispatches acquired perfect-parry hooks and preserves their HP/transient effects", () => {
+    const source = semanticBindingFixture(); source.acquire("riposte", 2);
+    source.player.hp = source.player.maxHp - 12;
+    const { blade } = source, speed = source.host.replay.configuration.value.blade.perfectSpeed * 1.1;
+    Object.assign(blade, { x: 800, y: 600, tipX: 900, tipY: 600, tipVX: speed, tipVY: 0, tipSpeed: speed });
+    const shot = source.host.replay.world.entities.createProjectile(880, 600, -100, 0); source.host.replay.world.state.setProjectiles([shot]);
+    runLiveCollisionPhase(source.host.combat.collision, 1 / 120);
+    expect(shot.perfect).toBe(true); expect(source.player.hp).toBe(source.player.maxHp - 6);
+    expect(source.host.replay.transient.impact.slowMotion).toBe(source.host.replay.configuration.value.juice.parrySlowmo);
+  });
+  it.each([false, true])("routes actual absorbed damage through native shield feedback and burst=%s", (burst) => {
+    const source = semanticBindingFixture(); source.acquire("aegis", burst ? 3 : 1);
+    source.player.shield = 1; source.target.x = source.player.x + 80; source.target.y = source.player.y;
+    const hp = source.target.hp;
+    source.host.combat.combatEntityRuntime.execute([{ type: "damage-player", damage: 2, sourceX: source.player.x + 30, sourceId: null,
+      cause: "projectile", projectileId: "missing", onHit: [], onRejected: [], onAbsorbed: [{ type: "shield-absorbed" }] }], new Map());
+    expect(source.player.shield).toBe(0); expect(source.host.replay.transient.impact.hitStop).toBe(source.host.replay.configuration.value.hitStop.small);
+    expect(source.target.hp).toBe(burst ? hp - 28 : hp);
+  });
+  it("routes authored environment contacts through the per-world native clock", () => {
+    const source = semanticBindingFixture(), environment = source.host.replay.world.context.environment;
+    environment.setStage("verdant-sanctum", "restore");
+    environment.addCombatObject({ id: "binding-link", factoryId: "root-link", kind: "root-link", ownerId: null, targetId: null,
+      geometry: { x: 830, y: 580, w: 8, h: 40 }, integrity: 1, maxIntegrity: 1, counterplayTags: ["cut"], procEligible: false,
+      damageDedupeId: "binding-link:damage", state: "active", stateTick: 1, cleanupReason: null });
+    source.host.replay.clock.sim = 3.125; source.host.simulation.scheduler.reset(900);
+    Object.assign(source.blade, { x: 800, y: 600, tipX: 900, tipY: 600, tipVX: 1300, tipVY: 0, tipSpeed: 1300 });
+    runLiveCollisionPhase(source.host.combat.collision, 1 / 120);
+    expect(environment.combatObjects()[0]).toMatchObject({ state: "destroyed", stateTick: 375, integrity: 0 });
+  });
+
+  it("aims a real perfect parry from the projectile rather than the blade origin", () => {
+    // Engineered settled collision boundary, composed from actual production actors.
+    const source = createProductionGhostReplayComposition({ seed: "projectile-origin-parry", mode: "endless" }).create(undefined);
+    const { replay, combat } = source, run = replay.world.state.run(), blade = replay.world.state.blade();
+    if (!run || !blade) throw new Error("production parry actors missing");
+    const bladeNear = replay.world.entities.createEnemy("charger", 750, 550, run);
+    const shotNear = replay.world.entities.createEnemy("ranged", 950, 650, run);
+    Object.assign(bladeNear, { spawnT: 0 }); Object.assign(shotNear, { spawnT: 0 });
+    replay.world.state.setEnemies([bladeNear, shotNear]);
+    const speed = replay.configuration.value.blade.perfectSpeed * 1.1;
+    Object.assign(blade, { state: "held", x: 800, y: 600, tipX: 900, tipY: 600, tipVX: speed, tipVY: 0, tipSpeed: speed });
+    const shot = replay.world.entities.createProjectile(890, 600, -100, 0);
+    replay.world.state.setProjectiles([shot]);
+    const dx = shotNear.x - shot.x, dy = shotNear.y - shot.y, expected = Math.hypot(dx, dy);
+    expect(combat.opening.nearestEnemy()).toBe(bladeNear);
+    runLiveCollisionPhase(combat.collision, 1 / 120);
+    expect(shot.deflected).toBe(true); expect(shot.perfect).toBe(true); expect(run.weaponStats.perfectParries).toBe(1);
+    const reflectedSpeed = Math.hypot(shot.vx, shot.vy);
+    expect(shot.vx / reflectedSpeed).toBeCloseTo(dx / expected, 12);
+    expect(shot.vy / reflectedSpeed).toBeCloseTo(dy / expected, 12);
+    expect(combat.opening.nearestEnemy()).toBe(bladeNear);
+  });
+
+  it("applies native Riftlock recoil after movement and preserves restored chamber state", () => {
+    const composition = createProductionGhostReplayComposition({ seed: "riftlock-native-shot-phase", mode: "endless", weaponId: "riftlock" });
+    const source = composition.create(undefined), player = source.replay.world.state.player(), blade = source.replay.world.state.blade();
+    if (!player || !blade) throw new Error("missing Riftlock actors");
+    const beforeX = player.x, sequence = new EnvelopeSequencer();
+    source.simulation.advanceOne([
+      sequence.command<GameAction>(1, { type: "move", x: 1000, y: 0 }),
+      sequence.command<GameAction>(1, { type: "aim", turn: 0, magnitude: 1000 }),
+      sequence.command<GameAction>(1, { type: "weapon", intent: "primary", phase: "pressed" }),
+    ]);
+    // A real shot recoils left, but cannot move the player backwards retroactively.
+    expect(player.x).toBeGreaterThan(beforeX);
+    expect(player.vx).toBeLessThan(0);
+    expect(blade.riftChambers).toBe(source.replay.configuration.value.weapons.riftlock.chambers - 1);
+    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "riftlock-shot-restoration");
+    const restored = createProductionGhostReplayComposition({ seed: checkpoint.snapshot.seed,
+      inputSnapshots: new Map([[checkpoint.snapshot.tick, checkpoint.input]]) }).create(checkpoint.snapshot);
+    const restoredBlade = restored.replay.world.state.blade();
+    if (!restoredBlade) throw new Error("missing restored Riftlock");
+    const next = [sequence.command<GameAction>(2, { type: "weapon", intent: "primary", phase: "released" })];
+    source.simulation.advanceOne(next); restored.simulation.advanceOne(next);
+    expect(restoredBlade.riftChambers).toBe(blade.riftChambers);
+    expect(restoredBlade.riftFireCooldown).toBe(blade.riftFireCooldown);
+    expect(restoredBlade.riftChamberCooldown).toBe(blade.riftChamberCooldown);
+    expect(restored.semanticProjection()).toEqual(source.semanticProjection());
+  });
+  it("attributes real held contact on the catch tick to the returning throw", () => {
+    const replay = createProductionReplayWorld({ seed: "dna-catch", mode: "endless", enemies: [{ id: "charger", x: 1400, y: CONFIG.world.groundY - 20 }] });
+    const player = replay.world.state.player(), blade = replay.world.state.blade(), run = replay.world.state.run(), enemy = replay.world.state.enemies()[0];
+    if (!player || !blade || !run || !enemy) throw new Error("missing production actors");
+    const observer = new RunDnaObserver("catch-run", "catch-session"); observer.bind(player, blade, run);
+    const core = createProductionCombatSimulation(replay, { snapshot: (tick) => ({ tick }) });
+    const floor = core.opening.platforms.find((platform) => Reflect.get(platform, "floor") === true);
+    if (!floor) throw new Error("missing authored production floor");
+    player.y = floor.y - player.hh; player.onGround = true;
+    const sequence = new EnvelopeSequencer();
+    let catchContact = false, catching = false, returningHit = false, catchHpLost = 0;
+    const nativeTrace: unknown[] = [];
+    const hit = enemy.hit.bind(enemy);
+    enemy.hit = (...args: Parameters<typeof hit>) => { const before = { hp: enemy.hp, hitCd: enemy.hitCd, state: blade.state, caught: blade.caughtNew }; const dealt = hit(...args); nativeTrace.push({ contact: before, after: { hp: enemy.hp, hitCd: enemy.hitCd }, dealt }); if (dealt > 0 && blade.state === "returning") returningHit = true; if (dealt > 0 && catching && blade.state === "held" && blade.throwId > 0) { catchContact = true; catchHpLost += Math.max(0, before.hp - enemy.hp); } return dealt; };
+    for (let tick = 1; tick <= 30; tick++) {
+      observer.beginTick(tick, player, run);
+      const handBefore = blade.handPos(player);
+      const before = { tick, state: blade.state, homeD: Math.hypot(blade.x - handBefore.x, blade.y - handBefore.y), retraceDone: Reflect.get(blade, "retraceDone"), origin: blade.throwOrigin, gate: Math.max(26, CONFIG.blade.throw.returnSpeed * blade.channel("returnSpeed") / 120), caught: blade.caughtNew, enemy: { hp: enemy.hp, hitCd: enemy.hitCd, dead: enemy.dead, spawn: enemy.spawnT }, segment: [blade.x, blade.y, blade.tipX, blade.tipY], speed: blade.tipSpeed };
+      catching = false;
+      if (blade.state === "returning" && !enemy.dead) {
+        const hand = blade.handPos(player);
+        if (Math.hypot(blade.x - hand.x, blade.y - hand.y) <= Math.max(26, CONFIG.blade.throw.returnSpeed * blade.channel("returnSpeed") / 120)) { catching = true; enemy.x = hand.x + Math.cos(blade.angle) * 45; enemy.y = hand.y + Math.sin(blade.angle) * 45; enemy.stun = 10; }
+      }
+      core.simulationRuntime.advanceOne(tick === 1 ? [sequence.command<GameAction>(tick, { type: "aim", turn: 0, magnitude: 1000 }), sequence.command<GameAction>(tick, { type: "weapon", intent: "throw", phase: "pressed" })]
+        : tick === 5 ? [sequence.command<GameAction>(tick, { type: "weapon", intent: "recall", phase: "pressed" })] : []);
+      observer.completeTick(tick, player);
+      if (before.state === "returning" || blade.state === "held") nativeTrace.push({ before, after: { state: blade.state, caught: blade.caughtNew, tipSpeed: blade.tipSpeed, segment: [blade.x, blade.y, blade.tipX, blade.tipY], enemyHp: enemy.hp, enemyHitCd: enemy.hitCd } });
+    }
+    const result = observer.capture(30); observer.dispose();
+    expect(catchContact, JSON.stringify(nativeTrace)).toBe(true);
+    expect(returningHit).toBe(false); expect(catchHpLost).toBeGreaterThan(0);
+    expect(result.capture.invalid).toEqual([]);
+    expect(result.capture.successful).toBe(1);
+  });
+  it("records native attack outcomes, movement, HP and upgrade capabilities without changing production continuation", async () => {
+    // Engineered combat placement, not a natural-run/pacing claim. Both worlds
+    // execute identical real commands and native collision/damage owners.
+    const runCase = (observed: boolean) => {
+      const replay = createProductionReplayWorld({ seed: "native-dna", mode: "endless", weaponId: "sword", enemies: [
+        { id: "charger", x: 1400, y: CONFIG.world.groundY - 20 },
+        { id: "charger", x: 1400, y: CONFIG.world.groundY - 20 },
+      ] });
+      const player = replay.world.state.player(), blade = replay.world.state.blade(), run = replay.world.state.run();
+      if (!player || !blade || !run) throw new Error("production world is missing its actors");
+      const observer = new RunDnaObserver("native-run", "native-capsule");
+      if (observed) observer.bind(player, blade, run);
+      const core = createProductionCombatSimulation(replay, { snapshot: (tick) => ({ tick }) });
+      const sequence = new EnvelopeSequencer();
+      const initialHp = player.maxHp;
+      let lost = 0, hits = 0;
+      const trace: unknown[] = [];
+      const actorState = (enemy: ReturnType<typeof replay.world.state.enemies>[number]) => ({ hp: enemy.hp, dead: enemy.dead, dying: enemy.dying, spawn: enemy.spawnT, hitCd: enemy.hitCd });
+      for (const enemy of replay.world.state.enemies()) {
+        const hit = enemy.hit.bind(enemy);
+        enemy.hit = (...args: Parameters<typeof hit>) => { const before = actorState(enemy); const dealt = hit(...args); if (observed) trace.push({ contact: { before, after: actorState(enemy), dealt } }); return dealt; };
+      }
+      for (let index = 1; index <= 420; index++) {
+        const tick = core.simulationRuntime.scheduler.tick + 1;
+        observer.beginTick(tick, player, run);
+        if (index === 60) {
+          player.iframe = 0; player.cinematicGraceT = 0; const before = player.hp;
+          player.takeDamage(20, player.x - 100); lost += before - player.hp; player.heal(8);
+          for (const id of ["vitality", "air_dash", "phase_step"]) {
+            const upgrade = UPGRADES.find((value) => value.id === id);
+            if (!upgrade) throw new Error("missing authored upgrade");
+            applyUpgrade(upgrade, { config: replay.configuration.value, player, blade, mods: run.mods });
+          }
+        }
+        // A later accepted throw crosses two genuine enemy hitboxes. The first
+        // throw is away from both enemies and completes without contact.
+        if (index === 260) for (const enemy of replay.world.state.enemies()) {
+          enemy.x = player.x + 90; enemy.y = player.y; enemy.stun = 10; enemy.hitCd = 0;
+        }
+        const actions = index === 1 || index === 260 ? [sequence.command<GameAction>(tick, { type: "aim", turn: index === 1 ? 500000 : 0, magnitude: 1000 }),
+          sequence.command<GameAction>(tick, { type: "weapon", intent: "throw", phase: "pressed" })] : index === 2 || index === 3 ? [sequence.command<GameAction>(tick, { type: "weapon", intent: "throw", phase: "pressed" })]
+          : index === 270 ? [sequence.command<GameAction>(tick, { type: "weapon", intent: "recall", phase: "pressed" })] : index === 20 ? [sequence.command<GameAction>(tick, { type: "move", x: 1000, y: 0 })]
+            : index === 40 ? [sequence.command<GameAction>(tick, { type: "move", x: 0, y: 0 })] : [];
+        const beforeState = blade.state;
+        core.simulationRuntime.advanceOne(actions);
+        if (observed && (beforeState !== blade.state || index === 270 || index === 420)) trace.push({ index, throwId: blade.throwId, beforeState, state: blade.state, caught: blade.caughtNew, distance: Math.hypot(blade.x - player.x, blade.y - player.y) });
+        observer.completeTick(tick, player);
+        hits = run.weaponStats.throwHits;
+        if (index === 100) {
+          // Real scheduler skips: no actions or combat commit during a paused tail.
+          core.simulationRuntime.advance(25, () => [], { shouldStep: () => false });
+          observer.frameEnded(core.simulationRuntime.scheduler.tick);
+        }
+      }
+      const capture = observer.capture(core.simulationRuntime.scheduler.tick);
+      observer.dispose();
+      return { capture, lost, hits, initialHp, trace, state: { player: [player.x, player.y, player.hp, player.maxHp], blade: [blade.x, blade.y, blade.state],
+        run: [run.weaponStats.throws, run.weaponStats.throwHits, run.score], rng: replay.world.context.services.random.snapshot() } };
+    };
+    const measured = runCase(true), ordinary = runCase(false);
+    expect(measured.state).toEqual(ordinary.state);
+    expect(measured.capture.metrics.attacks).toBeGreaterThanOrEqual(2);
+    expect(measured.capture.metrics.misses).toBeGreaterThanOrEqual(1);
+    expect(measured.hits).toBeGreaterThanOrEqual(2);
+    expect(measured.capture.capture.successful, JSON.stringify({ trace: measured.trace, capture: measured.capture })).toBeGreaterThanOrEqual(1);
+    expect(measured.capture.metrics.damageTaken).toBeGreaterThanOrEqual(measured.lost);
+    expect(measured.capture.metrics.maxHp).toBe(measured.initialHp + 30);
+    expect(measured.capture.metrics.movingTicks).toBeGreaterThan(0);
+    expect(measured.capture.capture.available).toEqual(expect.arrayContaining(["air-dash", "phase-step"]));
+    expect(measured.capture.capture.skippedTicks).toBeGreaterThan(0);
+    expect(measured.capture.capture.complete).toBe(true);
+    const context = createGhostReplayRunContext({ runId: "native-run", seed: "native-dna", mode: "endless", difficulty: "normal", weaponId: "sword", ticksPerSecond: 120,
+      build: { version: "test", revision: "test", target: "test-standalone", rulesetVersion: "test", configHash: "test", contentHash: "test" }, rng: { gameplay: { state: 1 } } });
+    const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+    const recorder = new GhostLiveRecorder({ createVault: () => Promise.resolve(vault), now: () => "2026-10-20T00:00:00Z" });
+    recorder.start({ sessionId: "native-capsule", createdAt: "2026-10-20T00:00:00Z", provenance: { replayContext: context } });
+    for (const [tick, transition] of [[0, "started"], [measured.capture.capture.terminalTick, "abandoned"]] as const) recorder.record("events", tick,
+      createLiveGhostCausalEvent({ kind: "run", tick, transition, runId: "native-run", mode: "endless", difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: tick / 120 }, tick + 1));
+    recorder.record("results", measured.capture.capture.endTick, measured.capture);
+    expect(await recorder.finish({ abandoned: "engineered unit boundary" })).not.toBeNull();
+    const capsule = await new GhostCapsuleReader(vault).read("native-capsule");
+    const projection = projectGhostRunDnaTheater(capsule);
+    expect(projection.nativePolicy).toBe("native-combat-episodes-v1");
+    expect(projection.sourceMetrics).toEqual(measured.capture.metrics);
+    expect(projection.dimensions?.defense).toBeDefined();
+  });
   it("proves non-empty environment parity through supported detached production composition", () => {
     const create = (seed: string) => {
       const replay = createProductionReplayWorld({ seed });
@@ -168,34 +388,19 @@ describe("production TearBench combat parity", () => {
     expect(ids).toEqual([...adds, clone].map((enemy) => core.combatEntityRuntime.id(enemy as object, "enemy")));
   });
 
-  it("explicitly refuses Source void descent instead of silently claiming detached parity", () => {
-    const replay = createProductionReplayWorld({ seed: "parity-source-void", enemies: [
-      { id: "source", x: CONFIG.view.w / 2, y: CONFIG.world.groundY - 120 },
-    ] });
-    const phases = createProductionCombatPhases(replay);
-    const source = replay.world.state.enemies()[0];
-    if (source === undefined) throw new Error("the current Source encounter is unavailable");
-    expect(() => phases.opening.startVoidDescent(source as never)).toThrow(/Source void.*unsupported/u);
-    (replay.run as { voidScroll?: unknown }).voidScroll = {};
-    expect(() => { phases.opening.updateVoidScroll(1 / 60); }).toThrow(/Source void.*unsupported/u);
-    expect(() => { phases.opening.syncVoidSupport(); }).toThrow(/Source void.*unsupported/u);
-  });
+  // Source descent, restored stream continuity and malformed bindings are covered by ghost-finale-companion.test.ts.
 
-  it("refuses hydrated Source void snapshots before an exact-keyframe seek", () => {
-    const composition = createProductionGhostReplayComposition({ seed: "parity-source-void-boundary" });
-    const composed = composition.create(undefined);
-    const captured = captureProductionReplayCheckpoint(
-      composed.replay, composed.combat, composed.waveReward, "parity-source-void-boundary",
-    );
-    expect(() => composition.create(captured.snapshot)).not.toThrow();
-    const voidSnapshot = structuredClone(captured.snapshot) as unknown as {
-      state: Record<string, Record<string, unknown>>;
-    };
-    const run = voidSnapshot.state["tear.run.v1"];
-    if (run === undefined) throw new Error("production snapshot is missing its run component");
-    run.voidScroll = { active: true, frozen: false, speed: 1, speedCap: 1 };
-    expect(() => composition.create(voidSnapshot as never)).toThrow(
-      /Source void descent\/scroll is unsupported; use the live backend/u,
-    );
-  });
 });
+
+function semanticBindingFixture() {
+  const host = createProductionGhostReplayComposition({ seed: "semantic-collision-bindings", mode: "endless" }).create(undefined);
+  const run = host.replay.world.state.run(), player = host.replay.world.state.player(), blade = host.replay.world.state.blade();
+  if (!run || !player || !blade) throw new Error("production binding actors missing");
+  const target = host.replay.world.entities.createEnemy("charger", 1100, 600, run);
+  Object.assign(target, { spawnT: 0, hp: 10000, maxHp: 10000, stun: 10 }); host.replay.world.state.setEnemies([target]);
+  const context = { mods: run.mods, player, blade, config: host.replay.configuration.value };
+  return { host, run, player, blade, target, acquire(id: string, tier = 1) {
+    const upgrade = UPGRADES.find(candidate => candidate.id === id); if (!upgrade) throw new Error(`missing upgrade ${id}`);
+    applyUpgrade(upgrade, context); for (let level = 1; level < tier; level++) tierUp(id, context);
+  } };
+}

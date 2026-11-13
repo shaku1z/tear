@@ -46,7 +46,7 @@ describe("presentation system boundaries", () => {
     } satisfies CinematicScript;
     const dialogue = (values: Record<string, unknown>[]) => ({
       t: { motion: { finalRewardIn: 1 } },
-      chapterHeader: () => undefined, chapterProgress: () => undefined, loreFragment: () => undefined,
+      chapterHeader: () => undefined, loreFragment: () => undefined,
       chapterPrompt: () => undefined, biomeReveal: () => undefined, cinematicFrame: () => undefined,
       finaleFracture: () => undefined, finalReward: () => undefined, cinematicPrompt: () => undefined,
       bossDeclaration: () => undefined, dialogueCard: (_context: CanvasRenderingContext2D, options: Record<string, unknown>) => { values.push(options); },

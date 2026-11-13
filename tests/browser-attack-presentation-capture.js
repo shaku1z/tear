@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- browser evidence is executed directly by Node. */
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");

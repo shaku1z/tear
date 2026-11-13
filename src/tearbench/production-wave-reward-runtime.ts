@@ -1,3 +1,5 @@
+import { WEAPONS } from "../gameplay/weapons";
+import type { EnemyKind } from "../gameplay/run/content-director";
 import { createTearSpawnFactPublisher, createTearWaveFactPublisher } from "../gameplay/runtime/gameplay-event-publishers";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { dispatchWaveClearIntents, dispatchWavePlanIntents } from "../gameplay/run/wave-intent-dispatcher";
@@ -17,6 +19,7 @@ import { applyUpgrade, rollUpgrades, tierUp, UPGRADES, type UpgradeDefinition } 
 import type { GameAction } from "../input/game-action";
 import { routeLiveTearBenchAction } from "./live-runtime-action-routing";
 import type { ProductionReplayWorld } from "./production-world-factory";
+import type { ChapterPage } from "../gameplay/campaign/chapter-controller";
 
 export interface ProductionWaveRewardRuntimeOptions {
   readonly gameplayEvents?: TearGameplayEventPort;
@@ -27,6 +30,9 @@ export interface ProductionWaveRewardRuntimeOptions {
   readonly recordIntent?: (entry: ProductionWaveRewardIntent) => void;
   /** The authoritative scheduler tick when an intent is applied. */
   readonly currentTick?: () => number;
+  readonly beginCampaignChapter?: (index: number, priorOutro?: ChapterPage | null) => void;
+  readonly chapterFlowActive?: () => boolean;
+  readonly bossIntroDelay?: (enemy: object, duration: number) => number;
 }
 
 /**
@@ -43,7 +49,11 @@ export interface ProductionWaveRewardRuntime {
   readonly update: (seconds: number) => void;
   readonly routeAction: (action: GameAction) => boolean;
   readonly screen: () => string;
+  readonly restoreScreen: (screen: string) => void;
+  readonly focus: () => number;
+  readonly restoreUi: (screen: string, focus: number) => void;
   readonly startNaturalOpening: () => void;
+  readonly spawnTutorial: (kind: EnemyKind, hpScale: number) => ReturnType<ProductionReplayWorld["world"]["entities"]["createEnemy"]>;
   readonly outward: readonly string[];
 }
 
@@ -135,6 +145,8 @@ export function createProductionWaveRewardRuntime(
           arenaFor: (bossId) => (createBossArena(bossId, config.view.w, config.view.h, config.world.groundY,
             config.bossArena.reformWarn)?.map((platform) => ({ ...platform })) ?? null) as never,
         });
+        world.state.setBossIntro({ boss: enemy, t: 0, dur: config.bossTheater.introDur,
+          delay: options.bossIntroDelay?.(enemy, config.bossTheater.introDur) ?? 0 });
         note("bossPresentation")();
       },
     },
@@ -160,6 +172,7 @@ export function createProductionWaveRewardRuntime(
 
   let reward: RewardRuntime<UpgradeDefinition> | null = null;
   let screen = "playing";
+  let focus = -1;
   const waves = new LiveWaveController({
     run,
     tuning: () => config.run,
@@ -169,7 +182,7 @@ export function createProductionWaveRewardRuntime(
     modeDefinition: (mode) => config.modes.find((candidate) => candidate.id === mode) ?? {},
     currentStage: () => ({ index: stage.index, accent: stageAt(stage.index).accent }),
     stageHasChapter: () => true,
-    chapterFlowActive: () => false,
+    chapterFlowActive: options.chapterFlowActive ?? (() => false),
     lifecycle: {
       hasPreparedWave: () => world.lifecycle.hasPreparedWave,
       isWaveActive: () => world.lifecycle.isWaveActive,
@@ -179,10 +192,15 @@ export function createProductionWaveRewardRuntime(
       beginWipe: note("beginWipe"),
       loadStage: (index) => { stage.index = index; stage.platforms = stagePlatforms(index, config); },
       setStageBanner: note("setStageBanner"),
-      beginCampaignChapter: () => undefined,
+      beginCampaignChapter: options.beginCampaignChapter ?? (() => undefined),
       recordWave: publishWave,
       snapshotReplay: note("snapshotReplay"),
-      prepareWave: (wave, boss, deferred) => { world.lifecycle.prepareWave(wave, boss, deferred); },
+      prepareWave: (wave, boss, deferred) => {
+        const weapon = WEAPONS.find(candidate => candidate.id === run().weaponId);
+        const blade = world.state.blade();
+        if (blade) weapon?.onReset?.({ blade });
+        world.lifecycle.prepareWave(wave, boss, deferred);
+      },
       activateWave: () => { world.lifecycle.activateWave(); },
       showWaveBanner: note("showWaveBanner"),
       playWaveSound: note("playWaveSound"),
@@ -213,7 +231,7 @@ export function createProductionWaveRewardRuntime(
     }); },
     spawn: (spec) => { content.spawn(spec); },
     enemyCount: () => world.state.enemies().length,
-    loreBusy: () => false,
+    loreBusy: options.chapterFlowActive ?? (() => false),
     achievementTracking: () => false,
     playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
     availableTierUpCount: () => eligibleTierChoices(UPGRADES, run().mods.owned, run().mods.tier).length,
@@ -234,7 +252,7 @@ export function createProductionWaveRewardRuntime(
         options.gameplayEvents?.emit({ kind: "effect", effect, x: player.x, y: player.y });
       },
       consumeInput: note("consumeInput"),
-      resetUi: note("resetUi"),
+      resetUi: (intent) => { if (intent.focus) focus = -1; note("resetUi")(); },
       setScreen: (next) => { screen = next; },
       startNextWave: () => { waves.startNextWave(); },
       requestPointer: note("requestPointer"),
@@ -252,7 +270,7 @@ export function createProductionWaveRewardRuntime(
     dispatchPlayground: () => undefined,
     renderControls: () => undefined,
     controls: () => [],
-    focus: () => -1,
+    focus: () => focus,
   };
   const startNaturalOpening = () => {
     if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
@@ -264,15 +282,29 @@ export function createProductionWaveRewardRuntime(
     options.gameplayEvents?.emit({ kind: "run", transition: "started", runId: session.sessionId,
       mode: active.mode, difficulty: active.diff, weaponId: active.weaponId,
       wave: active.wave, score: active.score, runTimeSeconds: active.runTime });
-    waves.startNextWave();
+    if (active.mode === "tutorial" || active.mode === "playground") {
+      active.wave = 1; world.lifecycle.activateTraining(); replay.installTrainingHome();
+      if (active.mode === "tutorial") replay.tutorial.start("unissued");
+    } else waves.startNextWave();
   };
   return Object.freeze({
     waves,
     reward: activeReward,
-    update: (seconds: number) => { waves.update(seconds); },
+    update: (seconds: number) => { if (run().mode !== "tutorial" && run().mode !== "playground") waves.update(seconds); },
     routeAction: (action: GameAction) => routeLiveTearBenchAction(routing, action),
     screen: () => screen,
+    restoreScreen: (next: string) => { screen = next; },
+    focus: () => focus,
+    restoreUi: (next: string, nextFocus: number) => {
+      if (!Number.isSafeInteger(nextFocus) || nextFocus < -1) throw new RangeError("production UI focus is invalid");
+      screen = next; focus = nextFocus;
+    },
     startNaturalOpening,
+    spawnTutorial: (kind: EnemyKind, hpScale: number) => {
+      content.spawn({ type: kind, hpScale });
+      const enemy = world.state.enemies().at(-1); if (enemy === undefined) throw new Error("tutorial content spawn did not install its actor");
+      return enemy;
+    },
     get outward() { return Object.freeze([...outward]); },
   });
 }

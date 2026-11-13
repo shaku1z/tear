@@ -1,73 +1,151 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Node browser journey. */
 const assert = require("node:assert/strict");
-const { withJourney } = require("./browser-journey-harness");
-const startedAt = Date.now();
-const mark = (name) => console.log(`c37-watch: ${name} +${Date.now() - startedAt}ms`);
-const hardTimeout = setTimeout(() => { console.error(`c37-watch: hard timeout +${Date.now() - startedAt}ms`); process.exit(2); }, 50_000);
+const fs = require("node:fs");
+const path = require("node:path");
+const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 
-function canonical(value) {
-  if (value === null || typeof value === "boolean" || typeof value === "string" || typeof value === "number") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+// Produced by the focused native observation unit case using actual source
+// training/evaluation owners. This is engineering synthetic data, not learned
+// quality or participant evidence. Never hand-author an active pointer here.
+const fixturePath = process.env.TEAR_C37_NATIVE_FIXTURE;
+assert.ok(fixturePath && path.isAbsolute(fixturePath), "Set TEAR_C37_NATIVE_FIXTURE to the generated native awaiting-promotion fixture.");
+const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+assert.equal(fixture.format, "tear-c37-native-promotion-fixture");
+assert.equal(fixture.classification, "engineering-synthetic-source-control");
+assert.ok(fixture.stores && fixture.scheduleHash);
+const evidence = process.env.TEAR_C37_ARTIFACT_DIR;
+if (evidence) { assert.ok(path.isAbsolute(evidence)); fs.mkdirSync(evidence, { recursive: true }); }
+const save = (name, value) => { if (evidence) fs.writeFileSync(path.join(evidence, name + ".json"), JSON.stringify(value, null, 2), { flag: "wx" }); };
+async function settle(page) { await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))); }
+async function installText(page) {
+  await page.addInitScript(() => {
+    window.__C37_TEXT__ = [];
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function c37Text(value, x, y, ...rest) {
+      window.__C37_TEXT__.push({ text: String(value), x, y, at: performance.now() });
+      if (window.__C37_TEXT__.length > 600) window.__C37_TEXT__.splice(0, 300);
+      return original.call(this, value, x, y, ...rest);
+    };
+  });
 }
-function hash(value) {
-  const source = canonical(value); let result = 0xcbf29ce484222325n;
-  for (let index = 0; index < source.length; index += 1) { result ^= BigInt(source.charCodeAt(index) & 0xff); result = (result * 0x100000001b3n) & 0xffffffffffffffffn; result ^= BigInt(source.charCodeAt(index) >>> 8); result = (result * 0x100000001b3n) & 0xffffffffffffffffn; }
-  return result.toString(16).padStart(16, "0");
+async function clickText(page, label) {
+  try {
+    await page.waitForFunction((text) => window.__C37_TEXT__?.some((entry) => entry.text === text && performance.now() - entry.at < 250), label);
+  } catch (error) {
+    const context = await page.evaluate(() => ({ labelState: window.__PANTHEON_TEST?.state(), text: window.__C37_TEXT__ }));
+    console.error(`Missing Run Monitor control ${label}: ${JSON.stringify(context)}`);
+    if (evidence) await page.screenshot({ path: path.join(evidence, "missing-control.png") });
+    throw error;
+  }
+  const position = await page.evaluate((text) => window.__C37_TEXT__.filter((entry) => entry.text === text).at(-1), label);
+  await page.mouse.click(position.x, position.y - 4); await settle(page);
 }
-function records() {
-  const sourceAdapter = { id: "tear-c34-c32-canonical-source-state.v1", schemaVersion: 1, stateSchema: "tear-canonical-gameplay-state.v1", actionSchema: "tear-game-action-command-envelope.v1", selection: "highest-q-then-semantic-action-hash.v1" }, sourceAdapterHash = hash(sourceAdapter);
-  const protocol = { id: "tear-c34-v3-c32-candidate.v1", schemaVersion: 1, sourceAdapter: sourceAdapter.id, sourceAdapterHash, selection: sourceAdapter.selection, evaluation: "completed-passed-online-v3-source-evaluation.v1" }, actionVocabulary = [{ type: "move", x: 1000, y: 0 }];
-  const modelDraft = { format: "tear-c34-c32-tabular-q-model", schemaVersion: 1, sourceStateAdapter: { id: sourceAdapter.id, adapterHash: sourceAdapterHash }, entries: [] };
-  const payload = JSON.stringify({ format: "c34-v3-c32-tabular-q-policy-v1", schemaVersion: 1, protocolHash: hash(protocol), sourceStateAdapter: { id: sourceAdapter.id, adapterHash: sourceAdapterHash }, lineage: { offlinePlanHash: "1111111111111111", offlineTrainingHash: "2222222222222222", onlinePlanHash: "3333333333333333", onlineCheckpointHash: "4444444444444444", onlineEvaluationHash: "5555555555555555", actionVocabularyHash: hash(actionVocabulary) }, actionVocabulary, model: { ...modelDraft, modelHash: hash(modelDraft) } });
-  const draft = { format: "tear-policy-artifact", schemaVersion: 1, id: "browser-c37-player-watch-v3", createdAt: "2026-08-09T00:00:00.000Z", model: { format: "c34-v3-c32-tabular-q-policy-v1", payload, modelHash: hash(payload) }, encoder: { id: sourceAdapter.id, schemaVersion: 1, observationClass: "structured-state", normalizationHash: "0123456789abcdef" }, actionSchema: "tear-game-action-command-envelope.v1", recurrentState: { kind: "none", schemaVersion: 1 }, trainingManifest: { id: "browser-c37-player-watch", version: 1, rootHash: "fedcba9876543210" }, rewardVersion: "c34-v3", build: { version: "test", revision: "c37-player-watch", target: "browser", rulesetVersion: "rules-1", contentHash: "content-1", configHash: "config-1" }, metrics: { legalActionRate: 1 }, levelTarget: "class-a", lineage: { trainingRunId: "browser-c37-player-watch-run" }, signature: { kind: "local-unsigned", keyId: "browser-test" }, compatibility: { runtime: "tear-policy-runtime.v1", observationClass: "structured-state", actionSchema: "tear-game-action-command-envelope.v1", modelFormats: ["c34-v3-c32-tabular-q-policy-v1"] }, extensions: { c34V3C32ProtocolHash: hash(protocol), candidateOnly: true } };
-  const stored = { ...draft, artifactHash: hash(draft) }, activationDraft = { format: "tear-policy-activation", schemaVersion: 1, revision: 1, artifactId: stored.id, artifactHash: stored.artifactHash, activatedAt: "2026-08-09T00:01:00.000Z" };
-  return { stored, activation: { ...activationDraft, activationHash: hash(activationDraft) } };
+async function readAnalysis(page) {
+  return page.evaluate(async () => {
+    const database = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("tear-ghost-v3", 2); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+    try { return await new Promise((resolve, reject) => {
+      const tx = database.transaction(["analysis", "indexes"], "readonly"), result = {};
+      for (const name of ["analysis", "indexes"]) {
+        const store = tx.objectStore(name), keys = store.getAllKeys(), values = store.getAll();
+        keys.onsuccess = () => { result[name + "Keys"] = keys.result; }; values.onsuccess = () => { result[name + "Values"] = values.result; };
+      }
+      tx.oncomplete = () => resolve(Object.fromEntries(["analysis", "indexes"].map((name) => [name, result[name + "Keys"].map((key, index) => [key, result[name + "Values"][index]])])));
+      tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
+    }); } finally { database.close(); }
+  });
 }
-async function seed(page, input) {
-  await page.evaluate(async (value) => new Promise((resolve, reject) => { const request = indexedDB.open("tear-ghost-v3", 2); request.onerror = () => reject(request.error); request.onsuccess = () => { const transaction = request.result.transaction(["analysis", "indexes"], "readwrite"); transaction.objectStore("analysis").put(JSON.stringify(value.stored), `policy-artifact:v1:${value.stored.id}`); transaction.objectStore("analysis").put(JSON.stringify(value.activation), "policy-active:v1"); transaction.objectStore("indexes").put(JSON.stringify(value.activation), "policy-activation:v1:000000000001"); transaction.oncomplete = () => { request.result.close(); resolve(); }; transaction.onerror = () => reject(transaction.error); }; }), input);
-}
+const value = (snapshot, key) => snapshot.analysis.find(([id]) => id === key)?.[1];
+const monitorRows = (snapshot) => snapshot.analysis.filter(([key]) => key.startsWith("foundry-job-v3-post-promotion-monitor:v1:"));
 
-withJourney({ name: "C37 ordinary Player Watch", port: 8180, deferBoot: true }, async ({ page, baseUrl, boot, waitScreen }) => {
-  mark("boot");
+withJourney({ name: "normal native Run Monitor observation", port: 8180, deferBoot: true }, async ({ page, boot, waitScreen, buildInfo }) => {
+  await installText(page); await boot();
+  await page.evaluate(async (input) => {
+    const database = await new Promise((resolve, reject) => {
+      const request = indexedDB.open("tear-ghost-v3", 2); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+    try { await new Promise((resolve, reject) => {
+      const names = Object.keys(input.stores), tx = database.transaction(names, "readwrite");
+      for (const name of names) for (const [key, raw] of input.stores[name]) tx.objectStore(name).put(raw, key);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
+    }); } finally { database.close(); }
+  }, fixture);
   await boot();
-  await page.evaluate(() => { const captured = []; const original = CanvasRenderingContext2D.prototype.fillText; CanvasRenderingContext2D.prototype.fillText = function playerWatchText(value, ...rest) { captured.push(String(value)); if (captured.length > 800) captured.splice(0, 400); return original.call(this, value, ...rest); }; window.__TEAR_C37_PLAYER_WATCH_TEXT__ = captured; });
-  await page.mouse.click(780, 757); await waitScreen("ghostlab");
-  await page.waitForFunction(() => window.__TEAR_C37_PLAYER_WATCH_TEXT__.includes("No validated canonical V3 policy is available locally."));
-  const active = records(); await seed(page, active);
-  mark("seeded");
-  await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0);
-  mark("rebooted");
-  const text = [];
-  await page.evaluate(() => { const captured = []; const original = CanvasRenderingContext2D.prototype.fillText; CanvasRenderingContext2D.prototype.fillText = function playerWatchText(value, ...rest) { captured.push(String(value)); if (captured.length > 800) captured.splice(0, 400); return original.call(this, value, ...rest); }; window.__TEAR_C37_PLAYER_WATCH_TEXT__ = captured; });
-  await page.mouse.click(780, 757); await waitScreen("ghostlab");
-  mark("lab");
-  await page.waitForTimeout(750); mark("post-lab-wait");
-  mark("before-text"); const initialText = await page.evaluate(() => window.__TEAR_C37_PLAYER_WATCH_TEXT__); mark("after-text");
-  assert.ok(initialText.includes("Canonical V3 policy is available locally."), `seeded ordinary Watch did not validate: ${initialText.slice(-80).join(" | ")}`);
-  assert.ok(initialText.includes("START WATCH"), "seeded ordinary Watch did not visibly enable start");
-  mark("validated");
-  // This is the normal canvas pointer route using the authored logical target,
-  // not a test-only action bridge or Watch-agent query host.
-  await page.mouse.click(360, 727); mark("start-clicked");
-  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, { timeout: 10_000 });
-  await page.waitForTimeout(400);
-  await page.keyboard.press("p"); await waitScreen("paused");
-  const running = await page.evaluate(() => window.__TEAR_C37_PLAYER_WATCH_TEXT__.filter((line) => line.startsWith("PLAYER WATCH /")).at(-1));
-  assert.match(running, /[1-9]\d* DECISIONS/, `ordinary Watch did not advance from the canonical policy: ${running}`);
-  await page.mouse.click(220, 447); await page.waitForFunction(() => window.__TEAR_C37_PLAYER_WATCH_TEXT__.includes("RESUME PLAYER WATCH"));
-  const paused = await page.evaluate(() => window.__TEAR_C37_PLAYER_WATCH_TEXT__.filter((line) => line.startsWith("PLAYER WATCH /")).at(-1));
-  await page.waitForTimeout(300);
-  const frozenWatch = await page.evaluate(() => window.__TEAR_C37_PLAYER_WATCH_TEXT__.filter((line) => line.startsWith("PLAYER WATCH /")).at(-1));
-  assert.equal(frozenWatch, paused, "paused Watch continued to issue decisions");
-  await page.mouse.click(220, 447); await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
-  await page.waitForTimeout(300); await page.keyboard.press("p"); await waitScreen("paused");
-  const resumed = await page.evaluate(() => window.__TEAR_C37_PLAYER_WATCH_TEXT__.filter((line) => line.startsWith("PLAYER WATCH /")).at(-1));
-  assert.notEqual(resumed, paused, "resumed Watch did not advance");
-  await page.mouse.click(220, 497); await page.waitForTimeout(150);
-  await page.mouse.click(220, 233); await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
-  await page.keyboard.down("ArrowLeft"); await page.waitForTimeout(200); await page.keyboard.up("ArrowLeft");
-  assert.ok((await page.evaluate(() => window.__PANTHEON_TEST.state().playerTrace.vx)) < 0,
-    "stopped Watch did not restore native physical input authority");
-}).then(() => { clearTimeout(hardTimeout); console.log("browser ordinary Player Watch passed"); }).catch((error) => { clearTimeout(hardTimeout); console.error(error); process.exit(1); });
+  // The normal 220px menu button clips this long label through fitLine.
+  // Click its authored logical center and require the actual screen transition.
+  await page.mouse.click(548, 757); await waitScreen("foundry");
+  await clickText(page, "PROMOTE");
+  await waitForBrowserValue(page, async () => {
+    const database = await new Promise((resolve) => { const request = indexedDB.open("tear-ghost-v3", 2); request.onsuccess = () => resolve(request.result); });
+    try { return await new Promise((resolve) => { const tx = database.transaction("analysis", "readonly"), request = tx.objectStore("analysis").getAllKeys(); request.onsuccess = () => resolve(request.result.some((key) => key.startsWith("training-operations-v3-promotion-cycle:v1:"))); }); }
+    finally { database.close(); }
+  });
+  const promoted = await readAnalysis(page); save("native-promoted", { buildInfo, stores: promoted });
+  const activeRaw = value(promoted, "policy-active:v1"), active = JSON.parse(activeRaw);
+  assert.ok(promoted.analysis.some(([key, raw]) => key.startsWith("foundry-job-v3-promotion-approval:") && JSON.parse(raw).format === "training-operations-v3-native-promotion-approval"));
+  await clickText(page, "‹  BACK"); await waitScreen("menu");
+  await clickText(page, "REPLAY HUB"); await waitScreen("ghostlab");
+  await clickText(page, "START RUN MONITOR"); await waitScreen("playing");
+  await page.waitForTimeout(250); await page.keyboard.press("p"); await waitScreen("paused");
+  await clickText(page, "PAUSE RUN MONITOR"); await page.waitForTimeout(500);
+  const paused = await readAnalysis(page); save("paused", paused);
+  const beforePause = paused.analysis.filter(([key]) => key.startsWith("policy-decision-journal:v1:watch-policy:v1:normal:"));
+  assert.equal(beforePause.length, 1);
+  await page.waitForTimeout(200);
+  assert.deepEqual((await readAnalysis(page)).analysis.filter(([key]) => key.startsWith("policy-decision-journal:v1:watch-policy:v1:normal:")), beforePause, "pause changed its observation journal");
+  await clickText(page, "RESUME RUN MONITOR"); await waitScreen("playing");
+  await page.waitForTimeout(200); await page.keyboard.press("p"); await waitScreen("paused");
+  await clickText(page, "STOP RUN MONITOR");
+  // Return through normal menu controls; the stopped controller now reports the durable result in Replay Hub.
+  await clickText(page, "MAIN MENU"); await waitScreen("confirmquit");
+  await clickText(page, "QUIT"); await waitScreen("menu");
+  await clickText(page, "REPLAY HUB"); await waitScreen("ghostlab");
+  await page.waitForFunction(() => window.__C37_TEXT__?.some((entry) => /^(Previous observation retained|Observation retained): stopped/u.test(entry.text)));
+  const retained = await readAnalysis(page); save("retained", { buildInfo, stores: retained, text: await page.evaluate(() => window.__C37_TEXT__) });
+  if (evidence) await page.screenshot({ path: path.join(evidence, "normal-observation-retained.png") });
+  const rows = monitorRows(retained); assert.equal(rows.length, 1);
+  const record = JSON.parse(rows[0][1]);
+  assert.equal(record.evidence.terminalStatus, "stopped"); assert.equal(record.promotion.activationHash, active.activationHash);
+  assert.equal(record.classification, "threshold-breach", "user stop was relabelled as passing health");
+  const journals = retained.analysis.filter(([key]) => key.startsWith("policy-decision-journal:v1:watch-policy:v1:normal:"));
+  assert.equal(journals.length, 1);
+  const journal = JSON.parse(journals[0][1]);
+  assert.equal(journal.droppedEntries, 0); assert.ok(journal.entries.length > 0 && journal.entries.length <= 256);
+  assert.equal(record.evidence.journalHash, journal.journalHash);
+  assert.ok(journal.entries.every((entry) => entry.receipt.source === "artifact" && entry.receipt.activationHash === active.activationHash && entry.receipt.artifactHash === active.artifactHash));
+  assert.equal(value(retained, "policy-active:v1"), activeRaw, "observation changed the active pointer");
+  await boot(); await clickText(page, "REPLAY HUB"); await waitScreen("ghostlab");
+  await page.waitForFunction(() => window.__C37_TEXT__?.some((entry) => entry.text.startsWith("Previous observation retained: stopped")));
+  const reload = await readAnalysis(page); save("reloaded", { buildInfo, stores: reload });
+  assert.deepEqual(monitorRows(reload), rows); assert.equal(value(reload, "policy-active:v1"), activeRaw);
+  await clickText(page, "‹  BACK"); await waitScreen("menu");
+  await page.mouse.click(548, 757); await waitScreen("foundry");
+  await clickText(page, "RESTORE BASELINE");
+  await waitForBrowserValue(page, async () => {
+    const database = await new Promise((resolve, reject) => { const request = indexedDB.open("tear-ghost-v3", 2); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    try { return await new Promise((resolve, reject) => { const tx = database.transaction("analysis", "readonly"), request = tx.objectStore("analysis").getAllKeys(); request.onsuccess = () => resolve(request.result.some((key) => key.startsWith("training-operations-v3-post-promotion-cycle:v1:"))); request.onerror = () => reject(request.error); }); }
+    finally { database.close(); }
+  });
+  const restored = await readAnalysis(page); save("baseline-restored", { buildInfo, stores: restored, text: await page.evaluate(() => window.__C37_TEXT__) });
+  if (evidence) await page.screenshot({ path: path.join(evidence, "baseline-restored.png") });
+  const approval = JSON.parse(promoted.analysis.find(([key, raw]) => key.startsWith("foundry-job-v3-promotion-approval:") && JSON.parse(raw).format === "training-operations-v3-native-promotion-approval")[1]);
+  const restoredActiveRaw = value(restored, "policy-active:v1"), restoredActive = JSON.parse(restoredActiveRaw);
+  assert.equal(restoredActive.artifactId, approval.rollbackBaseline.artifactId);
+  assert.equal(restoredActive.artifactHash, approval.rollbackBaseline.artifactHash);
+  assert.equal(restoredActive.revision, active.revision + 1);
+  assert.equal(restoredActive.previousArtifactId, active.artifactId);
+  const terminals = restored.analysis.filter(([key]) => key.startsWith("training-operations-v3-post-promotion-cycle:v1:"));
+  assert.equal(terminals.length, 1);
+  const terminal = JSON.parse(terminals[0][1]);
+  assert.equal(terminal.intent.baselineActivationHash, approval.rollbackBaseline.activationHash);
+  assert.equal(terminal.intent.monitorHash, record.recordHash);
+  assert.equal(terminal.receipt.rollback.activationHash, restoredActive.activationHash);
+  assert.deepEqual(monitorRows(restored), rows, "explicit restoration relabelled its stopped observation");
+  const allowance = restored.analysis.filter(([key]) => key.startsWith("training-operations-budget:v1:"));
+  await boot(); await page.mouse.click(548, 757); await waitScreen("foundry");
+  await page.waitForFunction(() => window.__C37_TEXT__?.some((entry) => entry.text === "BASELINE RESTORED / retained after reload"));
+  const restoredReload = await readAnalysis(page); save("restored-reloaded", { buildInfo, stores: restoredReload });
+  assert.equal(value(restoredReload, "policy-active:v1"), restoredActiveRaw);
+  assert.deepEqual(restoredReload.analysis.filter(([key]) => key.startsWith("training-operations-v3-post-promotion-cycle:v1:")), terminals);
+  assert.deepEqual(restoredReload.analysis.filter(([key]) => key.startsWith("training-operations-budget:v1:")), allowance, "reload recharged restoration");
+}).then(() => { console.log("normal native Run Monitor observation and explicit baseline restoration passed (engineering synthetic source fixture)"); }).catch((error) => { console.error(error); process.exit(1); });

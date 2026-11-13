@@ -149,7 +149,7 @@ remain C25/C39/C40 work.
 
 ## Evidence
 
-pnpm check:c29:production-replay is the named gate. It runs the source
+pnpm checkpoint check:c29:production-replay is the named gate. It runs the source
 traceability, type/lint/architecture, receipt/production-runtime tests, and a
 rebuilt browser V3 capture that reopens the completed IndexedDB capsule and
 compares all captured authoritative receipts through source-owned replay. That
@@ -161,3 +161,128 @@ visible comparison of two durable capsules and a repeated semantic occurrence.
 `test:browser:c29-active-campaign-cinematic` adds the settled-boundary campaign
 capture and same-tick production replay comparison. Neither is a substitute
 for pixel/device-output fidelity.
+
+Recorded openings now retain their captured UI/focus at seek zero. A capsule-linked
+permit admits the source start transaction only for supported Endless or prepared
+Campaign openings: the explicit versioned descriptor, native start fact and a
+separate checkpoint recorded after playing exposure must agree with the exact
+anchor. Legacy inference requires a later canonical playing anchor and aligned
+receipt; missing completion is unavailable, never invented. This proves linkage,
+not authenticity. Raw Campaign restoration alone grants no playback transition.
+Native start currently describes the initial session at wave zero, while its
+opening-initialized installed world is wave one; publication order is preserved.
+A tick-zero native terminal may follow that sealed playing completion without
+invalidating the original anchor: it must identify the same run and follow the
+completion in both native terminal phase and strict event sequence. Without a
+sealed completion, legacy inference does not admit a tick-zero terminal. This
+same-anchor comparison does not prove later continuation or endurance.
+Public verified sessions capture the recorded tick range and reject out-of-range
+or noninteger seeks before constructing a replay world.
+
+Fresh authoritative receipts explicitly record held aim magnitude, including
+full scale, while canonical full-scale state hashes keep their existing shape.
+The v1 reader preserves historical absence. Same-tick receipt-assisted restore
+does not prove a missing magnitude: the verifier folds admitted original actions
+through the shared input owner with source-bound bootstrap linkage. An original
+aim assignment can establish full magnitude from that point; the current v1
+seeded-state declaration does not witness an actual initial input reset.
+Unknown or established nonfull legacy omission is unavailable.
+Later commands never establish earlier input. Only validated explicit full
+magnitude is removed for canonical input comparison; other fields remain.
+Original receipt/archive bytes and hashes are not rewritten or promoted.
+
+The separate opening-continuation verifier derives an explicitly disclosed
+in-memory envelope containing only the original opening anchor, executes exactly
+180 existing-runtime steps, and compares source state and held input at 60/120/180.
+It leaves archive bytes unchanged and never injects later receipt input. Normal
+browser input is neutral in the reset tick-zero receipt; keyboard movement held
+before start is queued for tick one. A unit fixture also injects nonneutral tick-zero
+input to test restoration, without claiming that fixture is normal device evidence.
+The optional `TEAR_C29_OPENING_JOURNEY=1` consumer requires a unique empty
+`TEAR_OPENING_ARTIFACT_DIR` and uses rendered menu/setup controls, browser keyboard/
+pointer input, held/released/repressed movement and edge actions, and natural
+One-Hit Endless/Chainblade defeat and results retry in the forensic-QA test build.
+Fresh execution is required before claiming this browser acceptance. Its test-only
+inspector mode is `verify(id, "opening-continuation")`; unknown modes refuse.
+This bounded source/input proof does not verify the entire causal event track,
+native output, or a natural full Campaign/finale.
+
+
+### Reconstructed world and local media implementation (2026-10-19)
+
+Verified V3 seeks expose only settled render metadata and narrow draw capability,
+bound to capsule/source roots, tick and semantic hash. Optional per-world native
+presentation uses the same actor/platform/world renderers; headless defaults stay
+unchanged. Cosmetics, player-follow camera and letterboxing are reconstructed,
+not historical pixels. Draw does not step simulation or consume gameplay RNG.
+Coach View Moment exposes the scene and a return-to-Coach action.
+
+Studio now supports ordered appended verified ranges, existing clip speeds and
+native browser WebM from a dedicated replay canvas, bounded to 1800 frames/60s
+and 64 MiB. It validates source/EDL bindings, local decode, dimensions and duration;
+the first accepted rendered frame supplies the PNG thumbnail. Download is a
+separate explicit action. Source identity is rechecked before export publication
+and download. Cancel/source replacement aborts work and stops tracks/encoders.
+Source-time cinema/intro intervals, historical cameras and GIF remain unavailable;
+no browser-frame time is inferred from 120Hz ticks. The existing engineered
+240-tick browser journey is authored to save two world-only PNGs and decode its
+actual one-second120→240 WebM; parent execution passed at `56a49044`.
+
+Practice outward disposition now blocks profile/daily/achievement/biome writes
+while retaining original mode and style/combat mathematics. An integrated existing
+host/runtime control failed with eight outward calls before the repair and passes
+with zero practice writes and ordinary calls restored after practice ends. This
+is a bounded local implementation, not full Campaign or population acceptance.
+
+
+The local WebM encoder now uses native WebCodecs VP8 with explicit 30fps
+microsecond frame timestamps/durations and quality latency mode, rather than
+MediaRecorder wall time. A bounded WebM mux preserves native payload/key flags,
+1ms TimestampScale, exact duration, SeekHead and keyframe Cues. Reconstruction
+speed cannot retime the clip. Queued frames/encoder close on cancellation and
+unsupported native configuration refuses. The existing browser journey waits
+for actual UI frames and decodes separated video times (0.1s/0.8s) to PNGs.
+Native browser acceptance passed on clean `56a490449bf7917b03c31bd4f6097b74d34108f9`:
+`test-standalone` build and `tests/browser-ghost-v3-live-capture.js` both exited0.
+Build identity `a80b60188df9c4d19cd6944d7c59b3d301a472ccfbd16fb20fcde76fbe462237`;
+artifact hash `d597f31309cef277abb9d22b2efb47709fdb53ea2b8c9a67f76a4579fdf48dfa`.
+The downloaded 92,317-byte WebM decoded at640×360 for exactly1s, and native
+video seeks at0.1/0.8s produced different PNGs. Nine-source comparison, actual
+world frames120/240 and unchanged source custody passed in that same journey.
+Retained local evidence: `.codex/tmp/tear-resumption-20261018/studio-56a49044`
+under the owner's home, with adjacent build/browser logs. This is an engineered
+240-tick source; full-run, device and historical-pixel acceptance remain open.
+
+Recorded local challenge children now have a separately versioned fork origin.
+Theater opens such children at their admitted absolute checkpoint tick F and
+refuses seeks before F. Parent root/checkpoint/input/configuration/RNG custody is
+required again on reopen; ordinary tick-zero and v1 replay meanings are unchanged.
+Only explicit challenge launch enables a local child recording. Its native result
+is reexecuted from the origin before a guarded local result is retained; it never
+uses score/publication finish. See C37 for the supported rules and evidence limits.
+
+### Linked scored-run/finale portable files
+
+Normal Profile > Vault keeps the single-capsule DOWNLOAD and adds an explicit
+DOWNLOAD LINKED PAIR for an available scored-run/finale relationship. The new
+`tearghost-linked-archive` version 1 envelope holds exactly two existing archive
+JSON strings, parent then companion. Their encoded chunk strings, manifest roots,
+input/receipt/event bytes and fidelity declarations are retained. Existing single
+archives, forensic exports and version-1 restore jobs keep their contracts.
+
+Selection validates both bounded members and the existing exact finale-parent
+linkage before preview names the scored run and finale. RESTORE BOTH is explicit.
+One version-2 restore job adopts both members with one epoch-fenced transaction,
+including shared chunk deduplication and its completion result. Exact existing
+members are accepted independently; conflicting/missing existing custody is not
+healed. Cancellation, exact-file reselection, non-evicting quota and uncertain
+commit resolution cover the joint custody. Existing local protection owners are
+guarded and preserved; no source-local holds, consent, training, publication or
+Career authority travels in the file. No new dependency retention owner is added.
+
+Focused controls cover this file/transaction/UI boundary. The optional external
+source control validates retained original captures without rewriting them; it
+is separate from portable generated fixtures. Archive import does not certify
+independent scored-prefix or finale playback. Fresh normal download > fresh
+profile > RESTORE BOTH > linked Theater acceptance remains a separate browser
+gate, including any source snapshot reconstruction limitations.

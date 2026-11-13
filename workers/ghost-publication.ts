@@ -322,7 +322,7 @@ function immutableManifestMatches(row: UploadRow, body: BeginBody): boolean {
 }
 
 function resumedBegin(row: UploadRow): Response {
-  return json({ capsuleId: row.capsule_id, uploadId: row.upload_id, status: "uploading", resumed: true });
+  return json({ capsuleId: row.capsule_id, uploadId: row.upload_id, status: row.status, resumed: true });
 }
 
 async function begin(request: Request, env: Env, verifier: FirebaseIdTokenVerifier): Promise<Response> {
@@ -330,7 +330,7 @@ async function begin(request: Request, env: Env, verifier: FirebaseIdTokenVerifi
   const body = parseBegin(await boundedJson(request));
   const existing = await loadUpload(env, body.capsuleId);
   if (existing !== null) {
-    if (existing.owner_id === actor && existing.status === "uploading" && immutableManifestMatches(existing, body)) {
+    if (existing.owner_id === actor && ["uploading", "verifying", "finalized", "quarantined"].includes(existing.status) && immutableManifestMatches(existing, body)) {
       return resumedBegin(existing);
     }
     throw new Error("upload manifest conflict");
@@ -454,6 +454,11 @@ async function complete(request: Request, env: Env, capsuleId: string, verifier:
 async function verifyCompleted(env: Env, row: UploadRow, actor: string, completedEtag?: string): Promise<Response> {
   if (row.status !== "verifying") throw new Error("upload is not awaiting verification");
   const capsuleId = row.capsule_id;
+  const hiddenAfterDeletion = async (): Promise<Response | undefined> => {
+    const current = await loadUpload(env, capsuleId);
+    return current?.owner_id !== actor || current.status === "deleting" || current.status === "deleted"
+      ? json({ error: "not found" }, 404) : undefined;
+  };
   let verificationResponse: Response;
   try {
     verificationResponse = await env.GHOST_VERIFIER.fetch("https://verifier.internal/v1/verify", {
@@ -467,33 +472,37 @@ async function verifyCompleted(env: Env, row: UploadRow, actor: string, complete
       resultHash: row.result_hash,
     }),
     });
-  } catch { return json({ capsuleId, status: "verifying", retryable: true }, 202); }
+  } catch { return (await hiddenAfterDeletion()) ?? json({ capsuleId, status: "verifying", retryable: true }, 202); }
+  const hidden = await hiddenAfterDeletion();
+  if (hidden !== undefined) return hidden;
   if (!verificationResponse.ok) return json({ capsuleId, status: "verifying", retryable: true }, 202);
   let verdict: TrustedVerdict;
   try { verdict = parseTrustedVerdict(await verificationResponse.json(), row); }
   catch {
     const badAt = new Date().toISOString();
     await env.GHOST_METADATA.batch([
+      // Batch statements are ordered and transactional: record only an
+      // adoption this still-verifying row can make in the following update.
+      env.GHOST_METADATA.prepare("INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) SELECT ?, 'upload.verdict.quarantined', capsule_id, 'malformed-trusted-verdict', ? FROM ghost_uploads WHERE capsule_id = ? AND owner_id = ? AND status = 'verifying'").bind(actor, badAt, capsuleId, actor),
       env.GHOST_METADATA.prepare("UPDATE ghost_uploads SET status = 'quarantined', visibility = 'private', updated_at = ? WHERE capsule_id = ? AND status = 'verifying'").bind(badAt, capsuleId),
-      env.GHOST_METADATA.prepare("INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'upload.verdict.quarantined', ?, 'malformed-trusted-verdict', ?)").bind(actor, capsuleId, badAt),
     ]);
-    return json({ capsuleId, status: "quarantined", verification: "quarantined" });
+    return (await hiddenAfterDeletion()) ?? json({ capsuleId, status: "quarantined", verification: "quarantined" });
   }
   const publicationStatus = verdict.status === "verified" && verdict.moderation === "cleared" ? "finalized" : "quarantined";
   const verdictId = crypto.randomUUID();
   const now = new Date().toISOString();
   await env.GHOST_METADATA.batch([
     env.GHOST_METADATA.prepare(
-      "INSERT INTO ghost_verdict_receipts (verdict_id, capsule_id, verifier_id, verification_version, issued_at, verdict_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    ).bind(verdictId, capsuleId, verdict.verifierId, verdict.verificationVersion, verdict.issuedAt, JSON.stringify(verdict), now),
+      "INSERT INTO ghost_verdict_receipts (verdict_id, capsule_id, verifier_id, verification_version, issued_at, verdict_json, created_at) SELECT ?, capsule_id, ?, ?, ?, ?, ? FROM ghost_uploads WHERE capsule_id = ? AND owner_id = ? AND status = 'verifying'",
+    ).bind(verdictId, verdict.verifierId, verdict.verificationVersion, verdict.issuedAt, JSON.stringify(verdict), now, capsuleId, actor),
     env.GHOST_METADATA.prepare(
       "UPDATE ghost_uploads SET status = ?, visibility = CASE WHEN ? = 'finalized' THEN visibility ELSE 'private' END, verdict_json = ?, active_verdict_id = ?, updated_at = ? WHERE capsule_id = ? AND status = 'verifying'",
     ).bind(publicationStatus, publicationStatus, JSON.stringify(verdict), verdictId, now, capsuleId),
     env.GHOST_METADATA.prepare(
-      "INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'upload.finalize', ?, ?, ?)",
-    ).bind(actor, capsuleId, verdict.status, now),
+      "INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) SELECT ?, 'upload.finalize', capsule_id, ?, ? FROM ghost_uploads WHERE capsule_id = ? AND owner_id = ? AND status = ? AND active_verdict_id = ? AND verdict_json = ?",
+    ).bind(actor, verdict.status, now, capsuleId, actor, publicationStatus, verdictId, JSON.stringify(verdict)),
   ]);
-  return json({ capsuleId, status: publicationStatus, verification: verdict.status, etag: completedEtag ?? null });
+  return (await hiddenAfterDeletion()) ?? json({ capsuleId, status: publicationStatus, verification: verdict.status, etag: completedEtag ?? null });
 }
 
 async function verifyOwnerRetry(request: Request, env: Env, capsuleId: string, verifier: FirebaseIdTokenVerifier): Promise<Response> {
@@ -716,7 +725,7 @@ async function deleteCapsule(env: Env, row: UploadRow, actor: string, now: strin
   if (row.status === "deleted") return json({ capsuleId: row.capsule_id, status: "deleted", purge: "purged", localRetentionUnaffected: true });
   await env.GHOST_METADATA.batch([
     env.GHOST_METADATA.prepare(
-      "UPDATE ghost_uploads SET status = 'deleting', visibility = 'private', updated_at = ? WHERE capsule_id = ? AND owner_id = ? AND status IN ('finalized', 'quarantined', 'deleting')",
+      "UPDATE ghost_uploads SET status = 'deleting', visibility = 'private', updated_at = ? WHERE capsule_id = ? AND owner_id = ? AND status IN ('verifying', 'finalized', 'quarantined', 'deleting')",
     ).bind(now, row.capsule_id, actor),
     env.GHOST_METADATA.prepare(
       `INSERT INTO ghost_capsule_deletions (capsule_id, owner_id, state, attempts, requested_at, updated_at)
@@ -727,6 +736,11 @@ async function deleteCapsule(env: Env, row: UploadRow, actor: string, now: strin
       "INSERT INTO ghost_audit (actor_id, action, capsule_id, detail, created_at) VALUES (?, 'capsule.delete.requested', ?, 'deleting-private-before-r2', ?)",
     ).bind(actor, row.capsule_id, now),
   ]);
+  // A zero-row conditional UPDATE is not a D1 batch error. Recheck the durable
+  // deny state before effects instead of trusting the pre-request row.
+  const current = assertOwner(await loadUpload(env, row.capsule_id), actor);
+  if (current.status === "deleted") return json({ capsuleId: row.capsule_id, status: "deleted", purge: "purged", localRetentionUnaffected: true });
+  if (current.status !== "deleting" || current.visibility !== "private") throw new Error("capsule deletion was not durably privatized");
   try {
     await env.GHOST_CAPSULES.delete(row.object_key);
   } catch {

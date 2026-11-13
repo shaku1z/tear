@@ -8,6 +8,15 @@ import {
   type TearAgentObservation,
 } from "../../src/agents";
 import type { TearObservationV1, TearObservedActorV1 } from "../../src/tearbench";
+import { BladeMotorModule } from "../../src/agents/scripted-policy";
+import { createBlade } from "../../src/gameplay/entities/blade";
+import { applyWeapon } from "../../src/gameplay/weapons";
+import { CONFIG } from "../../src/config/game-config";
+import { clamp, len, lerp, lerpAngle } from "../../src/domain/geometry";
+import { createLiveAuthoritativeInputAdapter } from "../../src/app/world/authoritative-input-adapter";
+import { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
+import { EnvelopeSequencer } from "../../src/domain/envelopes";
+import { projectLiveBladeMechanics } from "../../src/tearbench/live-observation-actors";
 
 function state(
   tick: number,
@@ -47,6 +56,29 @@ function observation(current: TearObservationV1): TearAgentObservation {
 }
 
 describe("deterministic scripted agent hierarchy", () => {
+  it("rearms real Riftlock fire through public readiness and canonical motor edges at 120 Hz", () => {
+    const config = structuredClone(CONFIG), clock = { sim: 0 };
+    const Blade = createBlade({ CLOCK: clock, CONFIG: config,
+      Input: { touchAim: false, stickAim: null, locked: false, mouseX: 500, mouseY: 500, tetherHeld: false, consumeDelta: () => ({ x: 0, y: 0 }) },
+      presentation: { draw: () => undefined }, clamp, len, lerp, lerpAngle });
+    const blade = new Blade(), player = { x: 400, y: 500, vx: 0, vy: 0, facing: 1 };
+    blade.weapon = applyWeapon(config, "riftlock"); blade.resetRiftlock();
+    const adapter = createLiveAuthoritativeInputAdapter({ player: () => player, blade: () => blade, aimRadius: () => config.blade.aimRadius });
+    const motor = new BladeMotorModule(), input = new AuthoritativeInputState(), sequence = new EnvelopeSequencer();
+    let rounds = 0, releases = 0;
+    for (let tick = 1; tick <= 120 && rounds < 2; tick++) {
+      const target = actor("close-opponent", blade.x + 40, blade.y), current = state(tick, [target]);
+      const observed: TearObservationV1 = { ...current, run: { ...current.run, weapon: "riftlock" },
+        blade: { ...current.blade, handX: blade.x, handY: blade.y, ...projectLiveBladeMechanics(blade, "A") } };
+      const decision = motor.decide({ observation: observation(observed), target, profile: "competent" });
+      releases += decision.actions.filter((action) => action.type === "weapon" && action.intent === "primary" && action.phase === "released").length;
+      adapter.actionPort.apply(input, tick, decision.actions.map((action) => sequence.command(tick, action)));
+      clock.sim = tick / 120; blade.update(1 / 120, player, []);
+      rounds += blade.drainWeaponEvents().filter((event) => event.type === "razorRound").length;
+    }
+    expect(rounds).toBe(2); expect(releases).toBeGreaterThan(0);
+    expect(blade.riftChambers).toBe(config.weapons.riftlock.chambers - 2);
+  });
   it("exercises slash, secondary, throw, recall, parry, navigation, jump, and dash mechanics", () => {
     const competent = new TearScriptedPolicy("competent");
     const style = new TearScriptedPolicy("style");
@@ -133,7 +165,10 @@ describe("deterministic scripted agent hierarchy", () => {
 
     const returning = state(41, [actor("target", 500)], {}, "returning");
     const waiting = policy.decide(observation({ ...returning, run: { ...returning.run, weapon: "riftlock" } }));
-    expect(waiting.actions.some((action) => action.type === "weapon")).toBe(false);
+    expect(waiting.actions.filter((action) => action.type === "weapon")).toEqual([{ type: "weapon", intent: "primary", phase: "released" }]);
+    const unknown = state(42, [actor("close", 160)]);
+    const unavailable = policy.decide(observation({ ...unknown, run: { ...unknown.run, weapon: "riftlock" } }));
+    expect(unavailable.actions).toContainEqual({ type: "weapon", intent: "primary", phase: "released" });
   });
 
   it("evades a nearby movement threat without abandoning its locked attack target", () => {

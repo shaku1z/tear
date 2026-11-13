@@ -240,7 +240,7 @@ describe("Final Five weapon roster", () => {
     const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
     const target = {
       x: 150, y: 0, vx: 0, vy: 0, radius: 16, weight: 1, stun: 0,
-      dead: false, dying: false, isBoss: false, hit: () => undefined,
+      dead: false, dying: false, isBoss: false, hp: 100, hit: () => undefined,
     };
     blade.state = "hooked";
     blade.hookTarget = target;
@@ -271,7 +271,7 @@ describe("Final Five weapon roster", () => {
       const target = {
         x: 150, y: 0, vx: 0, vy: 0, radius: 16, weight, stun: 0,
         dead: false, dying: false, isBoss: false, cfg: { knockbackTaken },
-        hit: () => undefined,
+        hp: 100, hit: () => undefined,
       };
       blade.state = "hooked"; blade.hookTarget = target; blade.linkT = 2;
       blade.slingRadius = 150; blade.slingAngle = 0; blade.slingAngularVelocity = 4;
@@ -369,7 +369,7 @@ describe("Final Five weapon roster", () => {
     const player = { x: 0, y: 0, vx: 0, vy: 0, facing: 1 };
     const target = {
       x: 300, y: 100, vx: 0, vy: 0, radius: 20, dead: false, dying: false,
-      weight: 2, stun: 0, hit: () => undefined,
+      weight: 2, stun: 0, hp: 100, hit: () => undefined,
     };
     blade.state = "captured"; blade.hookTarget = target; blade.linkT = 1; blade.looseCannonT = 1;
     blade.aimX = 100; blade.aimY = 0;

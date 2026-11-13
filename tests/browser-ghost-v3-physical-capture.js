@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- direct Node browser evidence script. */
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
@@ -91,7 +90,24 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
     difficulty: "normal",
     weaponId: "sword",
   });
-  assert.deepEqual(admission.context.simulation, { ticksPerSecond: 120, initialState: "opening-initialized" });
+  assert.deepEqual(admission.context.simulation, {
+    ticksPerSecond: 120, initialState: "opening-initialized",
+    opening: { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup",
+      destination: "playing", runId: manifest.provenance.runId },
+  });
+  const openingCompletion = capsule.tracks.events.filter((entry) =>
+    entry.value?.payload?.boundary === "recorded-opening-playing-exposed");
+  assert.equal(openingCompletion.length, 1, "physical recorder must retain exactly one playing completion");
+  assert.deepEqual(openingCompletion[0].value.payload, {
+    boundary: "recorded-opening-playing-exposed", runId: manifest.provenance.runId, screen: "playing",
+  });
+  assert.equal(openingCompletion[0].value.type, "system.checkpoint");
+  assert.equal(openingCompletion[0].tick, 0);
+  assert.equal(openingCompletion[0].value.tick, 0);
+  assert.equal(openingCompletion[0].value.phase, "pre-simulation");
+  assert.equal(openingCompletion[0].value.source, "engine");
+  assert.ok(openingCompletion[0].value.sequence > capsule.tracks.events.find((entry) => entry.value?.type === "run.started").value.sequence);
+  assert.equal(capsule.tracks.keyframes.find((entry) => entry.tick === 0)?.value?.state?.["tear.ui.v1"]?.screen, "setup");
   assert.equal(admission.context.build.rulesetVersion, "tear-rules-six-biome-verdant-r3-pale-preview-v1");
   assert.ok(admission.context.build.contentHash.length > 0);
   assert.ok(admission.context.build.configHash.length > 0);
@@ -100,7 +116,7 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
   const bootstrap = capsule.tracks.events.find((entry) => entry.value?.id?.startsWith("ghost-live-bootstrap-")
     && entry.value?.payload?.boundary === "v3-sidecar-opened");
   assert.ok(bootstrap, "physical capsule lacks the integrity-protected V3 bootstrap event");
-  const staticBuild = ({ configHash: _configHash, ...build }) => build;
+  const staticBuild = ({ configHash: _configHash, ...build }) => { void _configHash; return build; };
   for (const keyframe of stateKeyframes) {
     assert.deepEqual(staticBuild(keyframe.value.provenance?.build), staticBuild(admission.context.build),
       "a State Forge keyframe diverged from the capsule's immutable replay build identity");

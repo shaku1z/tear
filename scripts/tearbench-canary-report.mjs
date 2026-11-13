@@ -169,7 +169,9 @@ function verifyProviderBundle(bundle, parallelReceipts, plan, errors) {
 }
 
 export function createCanaryParityReport({ plan, shardPlan, serialReceipts, parallelReceipts, serialTimings, parallelTimings,
-  serialCertificate, parallelCertificate, providerBundle, plantedFailureTaskId = null, generatedAt }) {
+  serialCertificate, parallelCertificate, providerBundle, plantedFailureTaskId = null, campaignSlot = "single", generatedAt }) {
+  if (!/^(?:single|sample-[1-5])$/u.test(campaignSlot)
+    || (plantedFailureTaskId !== null && campaignSlot !== "single")) throw new TypeError("invalid canary campaign slot");
   const errors = [], serial = resultMap("serial", serialReceipts, errors),
     parallel = resultMap("parallel", parallelReceipts, errors);
   verifyOwnership("serial", serialReceipts, serialTimings, [shardPlan.serialShard], errors);
@@ -216,7 +218,7 @@ export function createCanaryParityReport({ plan, shardPlan, serialReceipts, para
   const serialMetrics = comparisonClockValid ? timingSummary(serialTimings, "serial") : null;
   const parallelMetrics = comparisonClockValid ? timingSummary(parallelTimings, "parallel") : null;
   const minBrowser = Math.min(...browser.map((entry) => Math.max(1, entry.taskWallMs)));
-  const payload = { format: "tearbench-canary-parity-report", schemaVersion: 2, generatedAt,
+  const payload = { format: "tearbench-canary-parity-report", schemaVersion: 3, generatedAt, campaignSlot,
     status: errors.length === 0 ? (plantedFailureTaskId === null ? "equivalent" : "expected-rejection-proved") : "mismatched",
     planDigest: plan.planDigest, shardPlanDigest: shardPlan.shardPlanDigest, source: plan.source, providerOrigin,
     plantedFailureTaskId, taskParity: { required: plan.requiredTaskIds.length, serial: serial.size, parallel: parallel.size },
@@ -253,7 +255,7 @@ export function createCanaryProviderMetrics({ run, jobs, parityReport, shardPlan
     requireValue(receiptSha256(unsigned) === digest, `altered ${field}`);
   };
   verifyDigest(parityReport, "reportDigest"); verifyDigest(shardPlan, "shardPlanDigest");
-  requireValue(parityReport.format === "tearbench-canary-parity-report" && [1, 2].includes(parityReport.schemaVersion)
+  requireValue(parityReport.format === "tearbench-canary-parity-report" && [1, 2, 3].includes(parityReport.schemaVersion)
     && ["equivalent", "expected-rejection-proved", "mismatched"].includes(parityReport.status) && Array.isArray(parityReport.errors)
     && parityReport.planDigest === shardPlan.planDigest && parityReport.shardPlanDigest === shardPlan.shardPlanDigest,
   "report/shard plan mismatch");
@@ -262,7 +264,7 @@ export function createCanaryProviderMetrics({ run, jobs, parityReport, shardPlan
     && Number.isSafeInteger(run.id) && run.id > 0 && Number.isSafeInteger(run.run_attempt) && run.run_attempt > 0
     && /^[0-9a-f]{40}$/u.test(run.head_sha) && run.head_sha === parityReport.source?.revision, "run origin, source or completion mismatch");
   requireValue(Array.isArray(jobs?.jobs) && jobs.total_count === jobs.jobs.length, "incomplete job pagination");
-  const parityOriginBound = parityReport.schemaVersion === 2;
+  const parityOriginBound = parityReport.schemaVersion >= 2;
   if (parityOriginBound) {
     const origin = parityReport.providerOrigin;
     requireValue(origin?.kind === "github-actions" && origin.repository === run.repository.full_name
@@ -359,7 +361,7 @@ if (invoked === fileURLToPath(import.meta.url)) {
     // Successful measurement does not turn a failed run into qualification.
     if (!report.equivalenceReported) process.exitCode = 1;
   } else {
-  const names = ["--plan", "--shard-plan", "--serial-dir", "--parallel-dir", "--serial-certificate", "--parallel-certificate", "--provider-bundle", "--artifact", "--plant-failure"];
+  const names = ["--plan", "--shard-plan", "--serial-dir", "--parallel-dir", "--serial-certificate", "--parallel-certificate", "--provider-bundle", "--artifact", "--plant-failure", "--campaign-slot"];
   const args = process.argv.slice(2), values = {};
   if (args.length !== names.length * 2) throw new TypeError("invalid canary report arguments");
   for (let index = 0; index < args.length; index += 2) { if (!names.includes(args[index]) || values[args[index]] !== undefined) throw new TypeError("invalid canary report arguments"); values[args[index]] = args[index + 1]; }
@@ -373,7 +375,8 @@ if (invoked === fileURLToPath(import.meta.url)) {
     serialCertificate: JSON.parse(await readFile(resolve(values["--serial-certificate"]), "utf8")),
     parallelCertificate: JSON.parse(await readFile(resolve(values["--parallel-certificate"]), "utf8")),
     providerBundle: JSON.parse(await readFile(resolve(values["--provider-bundle"]), "utf8")),
-    plantedFailureTaskId: values["--plant-failure"] === "none" ? null : values["--plant-failure"], generatedAt: new Date().toISOString() });
+    plantedFailureTaskId: values["--plant-failure"] === "none" ? null : values["--plant-failure"],
+    campaignSlot: values["--campaign-slot"], generatedAt: new Date().toISOString() });
   const output = resolve(values["--artifact"]); await mkdir(dirname(output), { recursive: true }); await writeFile(output, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   console.log(`${report.status.toUpperCase()} ${report.reportDigest}`); if (report.errors.length > 0) process.exitCode = 1;
   }

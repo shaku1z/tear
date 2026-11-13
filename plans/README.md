@@ -34,7 +34,8 @@ their own.
 
 | Document | Owner | Status | Closure condition | Role |
 | --- | --- | --- | --- | --- |
-| [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Economy/balance owner | Active | Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model; no balance claim closes from documentation alone. | Partially implemented balance plan; remaining scope is live-balance validation and achievement-pool reconciliation. |
+| [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Economy/balance owner | Active | Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model; no balance claim closes from documentation alone. | Partially implemented balance plan; catalogue totals are reconciled; remaining scope is fresh-profile progression and live-balance validation. |
+| [RELEASE_READINESS_PLAN.md](active/RELEASE_READINESS_PLAN.md) | Release-readiness owner | Active | Every phase in the plan is done or explicitly dropped by the owner, `pnpm check` passes from the final commit, and the owner has authorised the merge and deployment. | Phased plan to make the game releasable to players: gate developer surfaces, green gates, input and first-run fixes, UI system and screen passes, payload, repository and workflow cleanup. |
 
 ## Completed plans
 
@@ -52,7 +53,7 @@ listed above; `archive/` remains a future G5 destination.
 Generated TearBench inputs and outputs remain at their current paths until an
 atomic scripts/tests/CI migration is authorized.
 
-The active-plan set is exactly the ten active rows in
+The active-plan set is exactly the eleven active rows in
 this index. `check:docs` derives that set from these tables, requires each
 plan's file metadata to match its Owner/Status/Closure condition cells, and
 fails closed on duplicate, malformed, empty, or additional active rows.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveShopFeedbackState } from "../../src/app/live-shop-feedback-state";
+import { createLiveShopFeedbackState } from "../../src/app/run/shop-feedback-state";
 
 describe("live shop feedback state", () => {
   it("owns shop display and flash feedback independently", () => {

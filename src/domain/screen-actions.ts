@@ -4,32 +4,43 @@
  * dependency, so automation contracts can refer to a control without importing
  * the presentation layer that drew it.
  */
-export type LegacyScreenId =
+export type ScreenId =
   | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
   | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
   | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
   | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication" | "ghostsupport";
 
 export type ScreenAction =
-  | { readonly type: "navigate"; readonly to: LegacyScreenId; readonly resetScroll?: boolean; readonly tab?: string }
+  | { readonly type: "chase.control"; readonly command: "toggle" | "stop" }
+  | { readonly type: "navigate"; readonly to: ScreenId; readonly resetScroll?: boolean; readonly tab?: string }
   | { readonly type: "menu.resumeFinale" }
   | { readonly type: "menu.claimFinale" }
   | { readonly type: "setup.selectMode"; readonly id: string }
   | { readonly type: "setup.selectDifficulty"; readonly id: string }
   | { readonly type: "setup.selectWeapon"; readonly id: string }
   | { readonly type: "setup.selectBoss"; readonly id: string }
-  | { readonly type: "setup.start" }
+  | { readonly type: "setup.start"; readonly race?: true }
   | { readonly type: "codex.selectTab"; readonly id: string }
   | { readonly type: "codex.selectFilter"; readonly id: string }
   | { readonly type: "codex.cycleSort" }
   | { readonly type: "codex.inspect"; readonly id: string }
   | { readonly type: "shop.buy"; readonly id: string }
+  | { readonly type: "career.control"; readonly command: string; readonly id?: string }
   | { readonly type: "profile.selectTab"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }
   | { readonly type: "profile.watchGhostCapsule"; readonly id: string }
   | { readonly type: "profile.compareGhostCapsule"; readonly id: string }
   | { readonly type: "profile.openGhostComparison" }
   | { readonly type: "profile.repairGhostCapsule"; readonly id: string }
+  | { readonly type: "profile.pickGhostArchive" }
+  | { readonly type: "profile.reselectGhostArchive"; readonly id: string }
+  | { readonly type: "profile.restoreGhostArchive"; readonly id: string; readonly revision: number }
+  | { readonly type: "profile.cancelGhostRestore"; readonly id: string; readonly revision: number }
+  | { readonly type: "profile.cancelGhostArchiveSelection" }
+  | { readonly type: "profile.downloadGhostArchive"; readonly id: string; readonly paired?: true }
+  | { readonly type: "profile.loadOwnGhostCapsules" }
+  | { readonly type: "profile.recoverOwnGhostCapsule"; readonly id: string }
+  | { readonly type: "profile.closeOwnGhostCatalog" }
   | { readonly type: "profile.openGhostPublication"; readonly id: string }
   | { readonly type: "profile.openGhostSupport"; readonly id: string }
   | { readonly type: "profile.signIn" }
@@ -51,17 +62,23 @@ export type ScreenAction =
   | { readonly type: "replay.jumpChapter"; readonly direction: -1 | 1 }
   | { readonly type: "replay.restart" }
   | { readonly type: "replay.practice" }
+  | { readonly type: "replay.challenge.open" }
+  | { readonly type: "replay.challenge.start"; readonly id: string }
   | { readonly type: "replay.coach.open" }
+  | { readonly type: "replay.coach.viewMoment"; readonly id: string }
+  | { readonly type: "replay.coach.control"; readonly command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section"; readonly delta: number }
   | { readonly type: "replay.coach.selectBaseline"; readonly id: string }
   | { readonly type: "replay.coach.practice"; readonly findingId: string }
   | { readonly type: "replay.runDna.toggle" }
   | { readonly type: "replay.editor.toggle" }
   | { readonly type: "replay.editor.createCutList" }
+  | { readonly type: "replay.editor.media"; readonly command: "markIn" | "clear" | "export" | "cancel" | "download" }
   | { readonly type: "replay.studio.toggle" }
   | { readonly type: "replay.studio.createCutList" }
   | { readonly type: "replay.toggleInfo" }
   | { readonly type: "replay.speed"; readonly value: number }
   | { readonly type: "replay.exit" }
+  | { readonly type: "replay.finale" }
   | { readonly type: "settings.selectTab"; readonly id: string }
   | { readonly type: "settings.step"; readonly key: string; readonly delta: number }
   | { readonly type: "settings.toggle"; readonly key: string }
@@ -82,6 +99,8 @@ export type ScreenAction =
   | { readonly type: "academy.humanCalibration.revoke" }
   | { readonly type: "training-operations.open" }
   | { readonly type: "training-operations.refresh" }
+  | { readonly type: "training-operations.restoreBaseline"; readonly scheduleHash: string; readonly intentHash: string }
+  | { readonly type: "training-operations.promote"; readonly scheduleHash: string; readonly intentHash: string }
   | { readonly type: "training-operations.bootstrap"; readonly profileId: string }
   | { readonly type: "training-operations.schedule.enable"; readonly scheduleHash: string }
   | { readonly type: "training-operations.schedule.disable"; readonly scheduleHash: string }
@@ -92,10 +111,10 @@ export type ScreenAction =
   | { readonly type: "game-agent.open" }
   | { readonly type: "run-monitor.open" }
   | { readonly type: "run-monitor.control"; readonly command: "start" | "pause" | "resume" | "stop" }
-  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career" }
   | { readonly type: "replay.hub.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
-  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" }
+  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career" }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }
@@ -115,4 +134,5 @@ export type ScreenAction =
   | { readonly type: "results.retry" }
   | { readonly type: "results.watchReplay" }
   | { readonly type: "results.descendAgain" }
-  | { readonly type: "playground.action"; readonly id: string };
+  | { readonly type: "playground.action"; readonly id: string }
+  | { readonly type: "tutorial.action"; readonly command: "open-practice" | "restart" | "select" | "help" | "demo" | "coach-rate" | "coach-compare" | "coach-diagnostic" | "skip" | "assist" | "annexes" | "select-annex" | "catalog" | "select-enemy" | "bosses" | "select-boss"; readonly lessonId?: string };

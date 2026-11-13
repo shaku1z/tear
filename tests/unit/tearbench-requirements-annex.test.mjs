@@ -18,8 +18,13 @@ const evidenceCatalog = JSON.parse(readFileSync(
   "utf8",
 ));
 
+// Each case rebuilds the full annex from the 13,725-line reviewed source.
+// Measured on 2026-11-11: 2.9-3.1 s alone and 3.9-4.1 s beside two other heavy
+// files, so the 5 s default timed out under suite load without a defect.
+const ANNEX_BUILD_TIMEOUT_MS = 20_000;
+
 describe("C21.0 non-lossy requirements annex", () => {
-  it("reconciles the reviewed source with zero validation errors", () => {
+  it("reconciles the reviewed source with zero validation errors", { timeout: ANNEX_BUILD_TIMEOUT_MS }, () => {
     const document = buildDocument(source, plan, evidenceCatalog);
     expect(validateDocument(document, source)).toEqual([]);
     expect(document.source.lineCount).toBe(13_725);
@@ -27,7 +32,7 @@ describe("C21.0 non-lossy requirements annex", () => {
     expect(document.counts.requirements).toBeGreaterThan(6_000);
   });
 
-  it("detects an unmapped source occurrence", () => {
+  it("detects an unmapped source occurrence", { timeout: ANNEX_BUILD_TIMEOUT_MS }, () => {
     const document = structuredClone(buildDocument(source, plan, evidenceCatalog));
     const removed = document.occurrences.shift();
     const errors = validateDocument(document, source);
@@ -35,7 +40,7 @@ describe("C21.0 non-lossy requirements annex", () => {
     expect(errors.some((error) => error.includes("unmapped nonblank source line"))).toBe(true);
   });
 
-  it("rejects a completion claim without evidence", () => {
+  it("rejects a completion claim without evidence", { timeout: ANNEX_BUILD_TIMEOUT_MS }, () => {
     const document = structuredClone(buildDocument(source, plan, evidenceCatalog));
     const requirement = document.requirements.find((item) => item.normative);
     expect(requirement).toBeDefined();

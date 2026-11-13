@@ -1,0 +1,239 @@
+{
+  "format": "tear-architecture-roles.v1",
+  "note": "Module roles named by scripts/architecture/rules.mjs. Every include/exclude pattern must match an existing file, so moving or renaming a listed module fails `pnpm check:architecture` until this map is updated in the same change. `anticipate` patterns guard files that do not exist yet and are exempt from that check. See docs/ARCHITECTURE.md.",
+  "roles": {
+    "biome.pale.sources": {
+      "purpose": "Pale-owned gameplay modules that must not reach Verdant implementation, directly or transitively.",
+      "include": [
+        "src/gameplay/environment/aurora-track.ts",
+        "src/gameplay/environment/aurora-track-runtime.ts",
+        "src/gameplay/environment/white-hart-route-runtime.ts",
+        "src/gameplay/environment/pale-environment-feature.ts",
+        "src/gameplay/entities/enemy-types/rimehound.ts",
+        "src/gameplay/entities/enemy-types/white-hart.ts"
+      ]
+    },
+    "biome.verdant.sources": {
+      "purpose": "Verdant-owned gameplay modules that must not reach Pale implementation, directly or transitively.",
+      "include": [
+        "src/gameplay/environment/bloom-well.ts",
+        "src/gameplay/environment/verdant-environment-feature.ts",
+        "src/gameplay/environment/graft-anchor.ts",
+        "src/gameplay/environment/root-cage.ts",
+        "src/gameplay/environment/regrowth-link.ts",
+        "src/gameplay/entities/rootbinder-runtime.ts",
+        "src/gameplay/entities/enemy-types/rootbound.ts"
+      ]
+    },
+    "biome.pale.implementation": {
+      "purpose": "Every module that implements Pale-specific behaviour (gameplay, app wiring); forbidden targets for Verdant and neutral code.",
+      "include": [
+        "src/gameplay/environment/aurora-track.ts",
+        "src/gameplay/environment/aurora-track-runtime.ts",
+        "src/gameplay/environment/pale-environment-feature.ts",
+        "src/gameplay/environment/white-hart-route-runtime.ts",
+        "src/gameplay/entities/enemy-types/white-hart.ts",
+        "src/gameplay/entities/enemy-types/rimehound.ts",
+        "src/app/world/biomes/aurora-track-wiring.ts"
+      ]
+    },
+    "biome.verdant.implementation": {
+      "purpose": "Every module that implements Verdant-specific behaviour (gameplay, presentation, app wiring, TearBench forge); forbidden targets for Pale and neutral code.",
+      "include": [
+        "src/gameplay/environment/bloom-well.ts",
+        "src/gameplay/environment/bloom-well-presentation-facts.ts",
+        "src/gameplay/environment/verdant-environment-feature.ts",
+        "src/gameplay/environment/graft-anchor.ts",
+        "src/gameplay/environment/root-cage.ts",
+        "src/gameplay/environment/regrowth-link.ts",
+        "src/gameplay/entities/rootbinder-runtime.ts",
+        "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/presentation/environment/bloom-well-presentation.ts",
+        "src/app/world/biomes/bloom-well-wiring.ts",
+        "src/tearbench/rootbound-graft-anchor-forge.ts"
+      ]
+    },
+    "environment.neutral-foundation": {
+      "purpose": "The biome-neutral environment runtime, state, contracts, ports, events and codecs; may not import any biome implementation.",
+      "include": [
+        "src/gameplay/environment/environment-runtime.ts",
+        "src/gameplay/environment/environment-state.ts",
+        "src/gameplay/environment/environment-contracts.ts",
+        "src/gameplay/environment/environment-feature-ports.ts",
+        "src/gameplay/environment/field-runtime.ts",
+        "src/gameplay/environment/environment-events.ts",
+        "src/gameplay/environment/presentation-snapshot.ts",
+        "src/tearbench/environment-codec.ts"
+      ]
+    },
+    "environment.neutral-schema": {
+      "purpose": "Neutral environment, codec and telemetry schema modules that must not contain biome-owned vocabulary.",
+      "include": [
+        "src/gameplay/environment/environment-contracts.ts",
+        "src/gameplay/environment/environment-runtime.ts",
+        "src/gameplay/environment/environment-state.ts",
+        "src/gameplay/environment/environment-feature-ports.ts",
+        "src/gameplay/environment/environment-events.ts",
+        "src/gameplay/environment/presentation-snapshot.ts",
+        "src/tearbench/environment-codec.ts",
+        "src/tearbench/contracts.ts",
+        "src/tearbench/state-codecs.ts",
+        "src/gameplay/progression/environment-telemetry.ts"
+      ]
+    },
+    "gameplay.portable-core": {
+      "purpose": "The C27A portable simulation composition: outward app/device adapters are supplied through ports.",
+      "include": [
+        "src/gameplay/runtime/tear-simulation-runtime.ts",
+        "src/gameplay/runtime/tear-combat-simulation.ts",
+        "src/gameplay/runtime/gameplay-event-publishers.ts",
+        "src/gameplay/runtime/tear-world-entity-construction.ts",
+        "src/gameplay/runtime/tear-world-legacy-entity-construction.ts",
+        "src/gameplay/runtime/tear-world-context.ts",
+        "src/gameplay/runtime/tear-world-composition.ts",
+        "src/gameplay/runtime/tear-world-simulation-factories.ts",
+        "src/gameplay/runtime/tear-world-bootstrap.ts",
+        "src/gameplay/run/reward-runtime.ts",
+        "src/gameplay/campaign/finale-runtime.ts",
+        "src/gameplay/campaign/finale-outward-call.ts"
+      ]
+    },
+    "gameplay.world-bootstrap": {
+      "purpose": "The generic world bootstrap, which receives base configuration from its caller.",
+      "include": ["src/gameplay/runtime/tear-world-bootstrap.ts"]
+    },
+    "tearbench.detached-world": {
+      "purpose": "Detached TearBench world hydration and runtime, portable outside the browser app.",
+      "include": ["src/tearbench/detached-world-hydrator.ts", "src/tearbench/detached-world-runtime.ts"]
+    },
+    "tearbench.production-headless-entry": {
+      "purpose": "The production headless environment entry, run outside any browser.",
+      "include": ["src/tearbench/production-headless-environment.ts"]
+    },
+    "tearbench.portable-live-runtime": {
+      "purpose": "Portable live TearBench environment and action routing.",
+      "include": ["src/tearbench/live-runtime-environment.ts", "src/tearbench/live-runtime-action-routing.ts"]
+    },
+    "tearbench.browser-adapters": {
+      "purpose": "Browser-facing TearBench adapters and developer UI.",
+      "include": ["src/tearbench/browser/**"]
+    },
+    "tearbench.portable-barrel": {
+      "purpose": "The portable TearBench barrel consumed by headless and test code.",
+      "include": ["src/tearbench/index.ts"]
+    },
+    "tearbench.developer-surfaces": {
+      "purpose": "Browser/developer UI and test-support modules that the portable barrel must not expose.",
+      "include": ["@tearbench.browser-adapters", "src/tearbench/test-support/**"],
+      "anticipate": [
+        "src/tearbench/ghost-lab-panel.ts",
+        "src/tearbench/state-forge-studio.ts",
+        "src/tearbench/live-state-forge-studio-host.ts",
+        "src/tearbench/test-environment.ts"
+      ]
+    },
+    "tearbench.ghost-inspector-adapter": {
+      "purpose": "The browser adapter that owns the Ghost V3 test inspection global.",
+      "include": ["src/tearbench/browser/live-runtime-bridge.ts"]
+    },
+    "replay.ghost2-compat": {
+      "purpose": "The Ghost 2 compatibility adapter, which portable research code must not depend on.",
+      "include": ["src/replay/legacy-compat.ts"]
+    },
+    "replay.ghost2-compat-family": {
+      "purpose": "The Ghost 2 compatibility adapter and its validation module, which portable and browser TearBench code and the portable gameplay core must not reach.",
+      "include": ["@replay.ghost2-compat", "src/replay/legacy-compat-validation.ts"]
+    },
+    "replay.ghost-recorder-session-owners": {
+      "purpose": "The Ghost V3 recorder and its typed live recording-session owner.",
+      "include": ["src/ghost/live-recorder.ts", "src/app/replay/ghost-recording-session-state.ts"]
+    },
+    "remote.adapters": {
+      "purpose": "Remote-service adapters; none exist yet, so game-reference purity guards their future paths.",
+      "anticipate": ["src/**/remote/**", "src/**/*remote-*"]
+    },
+    "config.game-config": {
+      "purpose": "The broad gameplay configuration module and its process-level singletons.",
+      "include": ["src/config/game-config.ts"]
+    },
+    "presentation.cosmetic-random": {
+      "purpose": "The cosmetic entropy source, created by composition and passed to renderers.",
+      "include": ["src/presentation/cosmetic-random.ts"]
+    },
+    "audio.context-handoff": {
+      "purpose": "The browser audio-context handoff constructed per composition.",
+      "include": ["src/audio/audio-context-handoff.ts"]
+    },
+    "audio.context-handoff-consumers": {
+      "purpose": "The only modules that may import the handoff: the composition root and the first-gesture audio facade.",
+      "include": ["src/app/shell/composition.ts", "src/audio/legacy-synth.ts"]
+    },
+    "app.world-runtime-types": {
+      "purpose": "Concrete app world types that portable TearBench code must not consume.",
+      "include": ["src/app/shell/game-runtime-state.ts"]
+    },
+    "app.live-runtime-root": {
+      "purpose": "The live runtime wiring root (startLiveGame); it composes typed owners and must not own world, interface or session state itself.",
+      "include": ["src/app/shell/game-runtime.ts"]
+    },
+    "app.navigator-owners": {
+      "purpose": "App modules that may touch the browser navigator directly; everything else in src/app receives it through the composition port.",
+      "include": [
+        "src/app/library/browser-ghost-archive-files.ts",
+        "src/app/shell/composition.ts",
+        "src/app/shell/runtime-frame-coordinator.ts",
+        "src/app/screens/settings-controller.ts"
+      ]
+    },
+    "app.document-owners": {
+      "purpose": "App modules that may touch the browser document directly; everything else in src/app receives it through the composition port.",
+      "include": [
+        "src/app/replay/browser-boss-memory.ts",
+        "src/app/library/browser-ghost-archive-files.ts",
+        "src/app/replay/browser-ghost-career-search.ts",
+        "src/app/replay/browser-ghost-career.ts",
+        "src/app/replay/browser-ghost-studio-media.ts",
+        "src/app/shell/composition.ts",
+        "src/app/campaign/campaign-training-composition.ts",
+        "src/app/engineering/debug-harness.ts",
+        "src/app/engineering/debug-snapshot.ts",
+        "src/app/run/outcome-composition.ts",
+        "src/app/shell/session-services-composition.ts",
+        "src/app/run/wave-composition.ts",
+        "src/app/shell/runtime-frame-coordinator.ts"
+      ]
+    },
+    "app.window-owners": {
+      "purpose": "App modules that may touch the browser window directly; everything else in src/app receives it through the composition port.",
+      "include": [
+        "src/app/shell/composition.ts",
+        "src/app/engineering/debug-composition.ts",
+        "src/app/run/run-orchestration-composition.ts",
+        "src/app/screens/rename-controller.ts",
+        "src/app/shell/runtime-frame-coordinator.ts",
+        "src/app/interface/ui-action-coordinator.ts",
+        "src/app/interface/ui-runtime-controller.ts"
+      ]
+    },
+    "app.music-direction-owner": {
+      "purpose": "The world composition, the only constructor of the music director.",
+      "include": ["src/app/world/world-composition.ts"]
+    },
+    "app.world-construction-owners": {
+      "purpose": "The production-world root and the session/composition modules it constructs.",
+      "include": ["src/app/shell/production-world.ts", "src/app/world/world-composition.ts", "src/app/world/world-session-state.ts"]
+    },
+    "progress.direct-profile-writers": {
+      "purpose": "Modules that still write PROFILE directly instead of through a composition-owned persistence adapter. Ratchet target: empty (plan step 12).",
+      "include": ["src/app/screens/menu-screen-adapters-runtime.ts", "src/app/run/run-start-host.ts"]
+    },
+    "engineering.channel-entries": {
+      "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import.",
+      "include": ["src/app/engineering/engineering-surfaces.ts", "src/app/engineering/verdant-calibration-composition.ts"]
+    },
+    "size.authored-data-exceptions": {
+      "purpose": "Authored data tables exempt from the 700-line module limit.",
+      "include": ["src/config/game-config.ts", "src/gameplay/upgrades.ts"]
+    }
+  }
+}

@@ -5,6 +5,7 @@ import type {
   ReflectionRenderSnapshot,
 } from "../../gameplay/entities/mirror";
 import { isCanvasSurface } from "./canvas-surface";
+import { createMirrorLockFeedback } from "../mirror-lock-feedback";
 
 export interface MirrorRendererPolicy {
   readonly world: Readonly<{ groundY: number }>;
@@ -20,6 +21,22 @@ export interface MirrorRendererDependencies {
   readonly theme: { readonly ink: string };
   readonly clamp: (value: number, min: number, max: number) => number;
   readonly cosmeticRandom: () => number;
+}
+
+/**
+ * The Echo is the player's reflection: a violet tint and a constant violet outline
+ * (low graphics included) keep it distinct from the player at a glance. Drawn in the
+ * actor's local space after the body fill.
+ */
+function drawReflectionMark(context: CanvasRenderingContext2D, color: string, halfWidth: number, halfHeight: number): void {
+  context.save();
+  context.globalAlpha *= 0.38;
+  context.fillStyle = color;
+  context.fillRect(-halfWidth, -halfHeight, halfWidth * 2, halfHeight * 2);
+  context.restore();
+  context.strokeStyle = color;
+  context.lineWidth = 2;
+  context.strokeRect(-halfWidth + 1, -halfHeight + 1, halfWidth * 2 - 2, halfHeight * 2 - 2);
 }
 
 export function createMirrorRenderer({
@@ -166,6 +183,7 @@ export function createMirrorRenderer({
       context.fillStyle = mirror.host.flash > 0 ? "#fff" : theme.ink;
       if (!graphics.low) { context.shadowColor = mirror.color; context.shadowBlur = 10; }
       context.fillRect(-actor.hw, -actor.hh, actor.hw * 2, actor.hh * 2); context.shadowBlur = 0;
+      drawReflectionMark(context, mirror.color, actor.hw, actor.hh);
       if (!graphics.low) {
         context.fillStyle = mirror.color;
         context.globalAlpha = (0.65 + 0.25 * Math.sin(clock.sim * 1000 / 220)) * (1 - mirror.white * 0.88);
@@ -182,7 +200,7 @@ export function createMirrorRenderer({
         context.stroke();
       }
       context.restore();
-      context.fillStyle = policy.colors.eye;
+      context.fillStyle = mirror.color;
       context.fillRect(actor.x + mirror.facing * 5 - 4, actor.y - actor.hh + 12, 8, 5);
       mirror.blade.draw(surface, actor);
       drawGlint(context, mirror); drawWaves(context, mirror); drawLock(context, mirror);
@@ -217,15 +235,6 @@ export function createMirrorRenderer({
       drawReflectionHp(surface, reflection);
     },
 
-    saberLockSparks(x: number, y: number, color: string): void {
-      effects.burst(
-        x + (cosmeticRandom() * 2 - 1) * 7,
-        y + (cosmeticRandom() * 2 - 1) * 7,
-        cosmeticRandom() * 2 - 1,
-        (cosmeticRandom() * 2 - 1) - 0.3,
-        3,
-        cosmeticRandom() < 0.5 ? "#ffffff" : color,
-      );
-    },
+    saberLockSparks: createMirrorLockFeedback(effects, cosmeticRandom),
   };
 }

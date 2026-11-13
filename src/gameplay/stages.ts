@@ -134,7 +134,7 @@ const AUTHORED_STAGES: readonly StageDefinition[] = [
         { label: "THE KEEPER", text: "One Warden remained after the orders stopped coming. Duty outlived everyone who might have released him." },
       ],
       bossOutro: { label: "BROKEN BADGE", text: "Inside the badge: ‘Directive: none shall reach the Undercroft.’ Beneath it, scratched by hand: ‘I never asked what was down there.’" } },
-    // living-biome chapter: text lives in the empty left sky over a pale ink-wash
+    // living-biome chapter: text lives in the empty upper-left sky, in the biome ink
     chapterArt: { composition: "left", wash: "light" },
     bg: "#ffffff", plat: "#111111", accent: "#e23b3b",
     // disciplined guards: melee front line, a few archers; heavy units only later
@@ -206,7 +206,8 @@ const AUTHORED_STAGES: readonly StageDefinition[] = [
         { label: "THE PRESERVATION", text: "The keeper refused the final loss. One by one, the sanctuary joined the roots until mercy and captivity became the same command." },
       ],
       bossOutro: { label: "THE NAMEPLATES", text: "Healers. Soldiers. Children. Every name marks the day they entered the garden. None records the day they left. At the center: ‘I kept every promise except the one that mattered. I did not let them go.’" } },
-    chapterArt: { composition: "right", wash: "light" },
+    // upper-left sky: the right sky holds a high platform (1030-1210 at y 250)
+    chapterArt: { composition: "left", wash: "light" },
     bg: "#dff2d6", plat: "#234a36", accent: "#e4c95a",
     pool: enemyPool(
       ["flyer", 0.75, 1], ["ranged", 0.70, 1], ["charger", 0.55, 1], ["rootbinder", 0.50, 2],

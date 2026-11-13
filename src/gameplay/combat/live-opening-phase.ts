@@ -1,3 +1,5 @@
+import { runDnaObserver, withRunDnaAttack } from "../runtime/run-dna-observer";
+import type { TutorialAttemptFact } from "../training/tutorial-failure-coach";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import { stepCombatPrelude, type CombatPreludeBlade, type CombatPreludePlayer, type CombatPreludeRun } from "./combat-step-prelude";
 import { stepLocomotionCombat, type LocomotionBlade, type LocomotionEnemy, type LocomotionPlayer } from "./locomotion-combat-runtime";
@@ -48,6 +50,7 @@ export interface LiveOpeningPhaseHost {
   readonly protection: { active: boolean; lastMode: string | null };
   readonly lowGraphics: boolean;
   readonly transformationBlocked: boolean;
+  readonly practicePreparing?: boolean;
   overrunMovementMultiplier: () => number;
   runDamageMultiplier: () => number;
   stepCinematic: (dt: number) => void;
@@ -76,6 +79,7 @@ export interface LiveOpeningPhaseHost {
   fireDashContact: (enemy: LiveEnemy) => void;
   fireWeaponCatch: () => void;
   fireThrowLaunch: (throwId: number) => void;
+  observeTutorialAttempt?(fact: TutorialAttemptFact): void;
   logThrowLaunch: (throwId: number) => void;
   weaponWorldImpact: () => Readonly<{ mechanic?: string }> | null;
   lobExplode: () => void;
@@ -107,7 +111,9 @@ export interface LiveOpeningPhaseResult { readonly blocked: boolean }
 export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): LiveOpeningPhaseResult {
   const { player, blade, run, state, config } = host;
   const timers = { throwCooldown: state.throwCooldown };
-  const prelude = stepCombatPrelude({ dt, blocking: host.blocking, playerMode: host.playerMode,
+  const preparing = host.practicePreparing === true && !host.blocking;
+  if (preparing) { player.cinematicProtected = true; host.protection.active = true; host.protection.lastMode = "locked"; host.flushClosingInput(); host.consumeThrow(); blade.update(dt, player, host.platforms); blade.drainWeaponEvents(); }
+  const prelude = preparing ? { blocked: false, previousBladeState: blade.state, wasReturning: false, linkBreakReason: false as const } : stepCombatPrelude({ dt, blocking: host.blocking, playerMode: host.playerMode,
     player, blade, run, platforms: host.platforms, protection: host.protection, timers,
     tuning: { flowGuardTier: config.resilience.flowGuardTier, flowGuardMultiplier: config.resilience.flowGuardMult,
       thrownMoveBoost: config.player.thrownMoveBoost },
@@ -119,8 +125,8 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
   state.throwCooldown = timers.throwCooldown;
   if (prelude.blocked) return { blocked: true };
   if (prelude.linkBreakReason) host.linkBroken(prelude.linkBreakReason);
-  runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
-  host.updateFeedback(dt); runLocomotion(host, dt); runTransport(host); host.updateWave(dt);
+  if (!preparing) { runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason); host.updateFeedback(dt); runLocomotion(host, dt); runTransport(host); }
+  host.updateWave(dt);
   const transformed = stepEnemyActors({ dt, enemies: host.enemies, platforms: host.platforms, player,
     projectiles: host.projectiles, freeze: run.pg?.freeze === true, gravity: config.world.gravity,
     groundY: config.world.groundY, viewportWidth: host.width,
@@ -134,12 +140,12 @@ export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): Liv
     onKill: (enemy) => { host.onKill(enemy as LiveEnemy, "skill"); } });
   host.resolveBossZones(); host.updateBossArenaPlatforms(dt); runPlatformLifecycle(host, dt); host.updateVoidScroll(dt);
   runBosses(host, dt); host.updateEffects(dt);
-  return { blocked: false };
+  return { blocked: preparing };
 }
 
 function runSecondary(host: LiveOpeningPhaseHost, dt: number, previousState: string, wasReturning: boolean, linkBroken: boolean): void {
   const { blade, run, config } = host;
-  stepWeaponSecondary({ previousState, wasReturning, linkBroken, blade, enemies: host.enemies,
+  withRunDnaAttack(blade, `throw:${String(blade.throwId)}`, () => { stepWeaponSecondary({ previousState, wasReturning, linkBroken, blade, enemies: host.enemies,
     secondPass: Number(run.mods.secondPass) || 1, redirect: !!run.mods.redirect, stormBurst: Number(run.mods.stormBurst) || 0,
     collisionDamage: config.weapons.chainblade.collisionDamage, slingSpeed: config.weapons.chainblade.slingSpeed,
     throwSpeed: config.blade.throw.speed, damageMultiplier: host.runDamageMultiplier(), distance: host.distance,
@@ -152,7 +158,8 @@ function runSecondary(host: LiveOpeningPhaseHost, dt: number, previousState: str
     onCatch: host.fireWeaponCatch,
     onStormBurst: () => { host.areaDamage(host.player.x, host.player.y, 155, 30); host.ring(host.player.x, host.player.y, 15, "perfect"); host.shake(true); host.sound("slam"); },
     worldImpact: host.weaponWorldImpact, lobExplode: host.lobExplode, emitThrowResolve: host.emitThrowResolve,
-    nearestEnemy: host.nearestEnemy });
+    nearestEnemy: host.nearestEnemy }); });
+  if (previousState !== "held" && blade.state === "held") runDnaObserver(blade)?.caught(blade.throwId);
 }
 
 function runLocomotion(host: LiveOpeningPhaseHost, dt: number): void {
@@ -181,7 +188,7 @@ function runTransport(host: LiveOpeningPhaseHost): void {
     onThrow: (throwId) => { host.run.weaponStats.throws++; host.logThrowLaunch(throwId); host.burst(host.blade.x, host.blade.y, host.blade.vx, host.blade.vy, 6); host.shake(); host.sound("throwBlade"); host.fireThrowLaunch(throwId); },
     onRecall: host.activateThrowSecondary,
     onQueued: (x, y) => { host.floater(x, y - 40, "LINK QUEUED", false, "bladeTrail"); },
-    onTooFar: (x, y) => { host.floater(x, y - 40, "too far", false); } });
+    onTooFar: (x, y) => { host.observeTutorialAttempt?.({ kind: "recall", result: "too-far" }); host.floater(x, y - 40, "too far", false); } });
   host.state.throwCooldown = result.cooldown;
 }
 

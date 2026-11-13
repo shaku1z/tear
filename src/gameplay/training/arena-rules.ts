@@ -218,7 +218,10 @@ export type SourceVoidIntent =
 export class SourceVoidController {
   constructor(private readonly config: SourceVoidConfig, private readonly viewport: Readonly<{ width: number; height?: number; groundY: number }>, private readonly physics: Readonly<{ jumpSpeed: number; gravity: number; moveSpeed: number; dashSpeed: number; dashDuration: number }>, private readonly descentTiming: SourceDescentTiming) {}
 
-  beginDescent(owner: SourceVoidActor): Readonly<{ transition: SourceVoidTransitionState; sequence: SourceDescentSequence; intents: readonly SourceVoidIntent[] }> {
+  beginDescent(owner: SourceVoidActor): Readonly<{ transition: SourceVoidTransitionState; sequence: SourceDescentSequence; intents: readonly SourceVoidIntent[] }> { return this.prepareDescent(owner); }
+
+  /** Pure authored sequence/context construction for callback rebinding during hydration. */
+  prepareDescent(owner: SourceVoidActor): Readonly<{ transition: SourceVoidTransitionState; sequence: SourceDescentSequence; intents: readonly SourceVoidIntent[] }> {
     const transition: SourceVoidTransitionState = { owner, unmade: false, floorReleased: false, stream: null };
     const sequence: SourceDescentSequence = { id: "voidDescent", color: owner.color, blocksCombat: true, hideHud: true, beats: [
       { id: "challenge", completion: "confirm-or-timeout", playerMode: "locked", speaker: "THE SOURCE", line: "YOU MISTOOK THE FLOOR FOR MERCY." },

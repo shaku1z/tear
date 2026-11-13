@@ -1,16 +1,8 @@
-import type { Align, ButtonSpec, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
+import type { Align, ButtonSpec, CompactLayoutMode, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
-
-function fitLine(context: CanvasRenderingContext2D, value: string, maximumWidth: number): string {
-    if (context.measureText(value).width <= maximumWidth) return value;
-    let low = 0, high = value.length;
-    while (low < high) {
-        const middle = Math.ceil((low + high) / 2);
-        if (context.measureText(value.slice(0, middle).trimEnd() + "…").width <= maximumWidth) low = middle;
-        else high = middle - 1;
-    }
-    return value.slice(0, low).trimEnd() + "…";
-}
+import { wrapSpaceSeparated } from "./ui-text-fit";
+import { densityTokens, isCompactDensity, type DensityProfile } from "./ui-density";
+import { inkIsLight, withAlpha } from "./ui-color";
 
 export function createUiFoundation(dependencies: UiDependencies) {
   const { Input, presentation: { overscan, view } } = dependencies;
@@ -44,40 +36,57 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             ctx.textAlign = savedAlign;
             return cx;
         },
-        // A directional ink-wash: an opaque-toward-the-edge → transparent gradient on
-        // one side of the screen, replacing the old full-screen dim. `side` is where
-        // the text lives (and where the wash is densest).
-        chapterWash(this: UiRuntime, ctx: CanvasRenderingContext2D, side: string, washKind: string | undefined, amount: number) {
-            const t = this.t, vw = view.w, vh = view.h, k = Math.max(0, Math.min(amount, 1));
-            const dense = washKind === "light" ? t.chapter.washLight : t.chapter.washDark;
-            const span = vw * t.chapter.washSpan;
+        // The chapter field. With a `sky` colour (every Adventure chapter) it is a haze of
+        // the biome's own sky, densest in the upper corner on the text's side and clearing
+        // in an elliptical falloff: it quiets backdrop props behind the words without ever
+        // reading as a shape, and the text keeps the biome ink (as the HUD does). Without
+        // one (the finale epilogue, on the cinematic field) it is the main-menu rail's soft
+        // dark fade from the screen edge. Neither paints below the arena floor. Returns the
+        // ink that reads on it.
+        chapterWash(this: UiRuntime, ctx: CanvasRenderingContext2D, side: string, amount: number, reach: number, sky?: string) {
+            const t = this.t, c = t.chapter, vw = view.w, k = Math.max(0, Math.min(amount, 1));
+            const right = side === "right", ink = sky !== undefined && inkIsLight(sky) ? c.skyInk : t.color.cinemaInk;
+            if (k <= 0)
+                return ink;
             ctx.save();
-            // a whole-screen breath of dim first (only ~26%, biome stays legible)
-            ctx.globalAlpha = k * t.chapter.washDim;
-            ctx.fillStyle = washKind === "light" ? "#f8f7f4" : "#06070c";
-            ctx.fillRect(-overscan.x, -overscan.y, vw + overscan.x * 2, vh + overscan.y * 2);
             ctx.globalAlpha = k;
-            const g = side === "right"
-                ? ctx.createLinearGradient(vw, 0, vw - span, 0)
-                : ctx.createLinearGradient(0, 0, span, 0);
-            g.addColorStop(0, dense);
-            g.addColorStop(1, washKind === "light" ? "rgba(248,247,244,0)" : "rgba(6,7,12,0)");
+            if (sky === undefined) {
+                const edge = right ? vw + overscan.x : -overscan.x, hold = right ? vw - reach - c.fadeHold : reach + c.fadeHold;
+                const end = right ? hold - c.fadeTail : hold + c.fadeTail, span = Math.abs(end - edge), at = Math.abs(hold - edge) / span;
+                const g = ctx.createLinearGradient(edge, 0, end, 0);
+                g.addColorStop(0, withAlpha(t.color.rail, t.alpha.rail));
+                g.addColorStop(at, withAlpha(t.color.rail, t.alpha.rail * 0.96));
+                g.addColorStop(at + (1 - at) * 0.45, withAlpha(t.color.rail, t.alpha.railMid * 0.8));
+                g.addColorStop(1, withAlpha(t.color.rail, 0));
+                ctx.fillStyle = g;
+                ctx.fillRect(Math.min(edge, end), -overscan.y, span, c.floorY + overscan.y);
+                ctx.restore();
+                return ink;
+            }
+            // Centred on the logical corner, so extra aspect (ultrawide, 4:3) never stretches it over the arena.
+            const rx = (reach + c.fadeHold) / c.hazeReach, ry = c.hazeDepth / c.hazeReach;
+            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, ry);
+            g.addColorStop(0, withAlpha(sky, t.alpha.chapterHaze));
+            g.addColorStop(c.hazeCore, withAlpha(sky, t.alpha.chapterHaze * 0.92));
+            g.addColorStop(1, withAlpha(sky, 0));
+            ctx.beginPath();
+            ctx.rect(right ? vw - rx : -overscan.x, -overscan.y, rx + overscan.x, c.floorY + overscan.y);
+            ctx.clip();
+            ctx.translate(right ? vw : 0, 0);
+            ctx.scale(rx / ry, 1);
             ctx.fillStyle = g;
-            if (side === "right")
-                ctx.fillRect(vw - span, -overscan.y, span + overscan.x, vh + overscan.y * 2);
-            else
-                ctx.fillRect(-overscan.x, -overscan.y, span + overscan.x, vh + overscan.y * 2);
+            ctx.fillRect(-ry, -ry, ry * 2, ry * 2);
             ctx.restore();
-            return washKind === "light" ? "#12131a" : "#f1eff9"; // the ink color that reads on this wash
+            return ink;
         },
         // ---- TEXT ---------------------------------------------------------------
         // body / inline copy. size defaults to the `body` token.
         text(this: UiRuntime, ctx: CanvasRenderingContext2D, str: string, x: number, y: number, size?: number, align?: Align, alpha?: number) {
-            ctx.globalAlpha = alpha ?? this.t.alpha.full;
             ctx.fillStyle = this.ink;
             ctx.font = this.font(truthyOr(size, () => this.t.type.body), false);
             ctx.textAlign = truthyOr(align, () => "left");
             ctx.textBaseline = "alphabetic";
+            ctx.globalAlpha = alpha ?? this.t.alpha.full;
             ctx.fillText(str, x, y);
             ctx.globalAlpha = 1;
         },
@@ -119,19 +128,7 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             ctx.font = this.font(truthyOr(size, () => this.t.type.body), false);
             ctx.textAlign = truthyOr(align, () => "center");
             ctx.textBaseline = "alphabetic";
-            const words = (str || "").split(" "), lines = [];
-            let line = "";
-            for (const word of words) {
-                const test = line ? line + " " + word : word;
-                if (ctx.measureText(test).width > maxW && line) {
-                    lines.push(line);
-                    line = word;
-                }
-                else
-                    line = test;
-            }
-            if (line)
-                lines.push(line);
+            const lines = wrapSpaceSeparated((value) => ctx.measureText(value).width, str || "", maxW);
             for (let i = 0; i < lines.length; i++)
                 ctx.fillText(lines[i] ?? "", x, y + i * lineH);
             ctx.restore();
@@ -186,132 +183,87 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             return x >= b.x - p && x <= b.x + b.w + p && y >= b.y - p && y <= b.y + b.h + p;
         },
         // ---- DENSITY (responsive profile) ----------------------------------------
-        // "touch" bumps the type scale + interactive metrics so menus stay readable
-        // and tappable on small screens; "desktop" restores the design defaults.
-        // Token-driven screens inherit automatically; layouts keep their geometry.
+        // Derives live tokens from the authored ones (ui-density.ts): desktop keeps
+        // them; touch guarantees the physical text and target floors at the current
+        // scale. `density.compact` marks a phone-sized touch screen, where screens
+        // switch to their compact (fewer columns, scrolling) composition.
         _baseTokens: null as TokenSnapshot | null,
-        setDensity(this: UiRuntime, mode: string) {
+        _densityProfile: { touch: false, cssPerLogicalPixel: 1 } as DensityProfile,
+        _compactMode: "always" as CompactLayoutMode,
+        density: { touch: false, compact: false, wideSheet: false, cssPerLogicalPixel: 1, textScale: 1 },
+        setDensity(this: UiRuntime, profile: DensityProfile) {
+            this._densityProfile = profile;
+            this._applyDensity();
+        },
+        // Each frame the render pipeline says whether the current screen has a compact
+        // composition; screens that have not adopted it keep the plain touch profile.
+        // `phoneOnly` screens adopt it at phone density only, so a tablet keeps exactly
+        // the plain touch profile (and the desktop composition) on them.
+        useCompactLayout(this: UiRuntime, ready: boolean, phoneOnly = false) {
+            const mode: CompactLayoutMode = ready ? "always" : phoneOnly ? "phone" : "never";
+            if (mode === this._compactMode) return;
+            this._compactMode = mode;
+            this._applyDensity();
+        },
+        _applyDensity(this: UiRuntime) {
             this._baseTokens ??= { type: Object.assign({}, this.t.type), metric: Object.assign({}, this.t.metric) };
-            const b = this._baseTokens;
-            if (mode === "touch") {
-                const bump = { micro: 3, caption: 3, label: 3, body: 3, lead: 3, title: 2, h2: 2, h1: 2 };
-                const typeTokens = this.t.type as Record<string, number>;
-                for (const key in b.type)
-                    typeTokens[key] = (b.type[key] ?? 0) + bump[key as keyof typeof bump];
-                Object.assign(this.t.metric, { btnH: 60, btnW: 320, chipH: 38, chipW: 116,
-                    settingsRowH: 66, settingsControlW: 272, settingsControlH: 54, settingsStepperW: 60 });
-            }
-            else {
-                Object.assign(this.t.type, b.type);
-                Object.assign(this.t.metric, b.metric);
-            }
+            const profile = this._densityProfile, phone = isCompactDensity(profile);
+            const floors = this._compactMode === "always" || (this._compactMode === "phone" && phone);
+            const live = densityTokens(this._baseTokens, profile, floors);
+            Object.assign(this.t.type, live.type);
+            Object.assign(this.t.metric, live.metric);
+            // textScale: live micro over authored micro, for text drawn outside the UI (world callouts).
+            this.density = { touch: profile.touch, compact: floors && phone, wideSheet: phone && this._compactMode === "phone",
+                cssPerLogicalPixel: profile.cssPerLogicalPixel, textScale: (live.type.micro ?? 1) / (this._baseTokens.type.micro ?? 1) };
         },
         // ---- BUTTON -------------------------------------------------------------
         // b: {x,y,w,h,label,enabled,size,sel} ; active = hovered | focused | selected
+        // Every label goes through the shared fitting rule (ui-text-fit.ts): measure,
+        // step down to the micro floor, wrap to two lines when the height allows,
+        // and only then ellipsize. Navigation labels (rail, hero) never ellipsize.
+        _fitLabel(this: UiRuntime, ctx: CanvasRenderingContext2D, label: string, maxWidth: number, size: number, height: number, nav: boolean) {
+            const lineHeight = Math.round(size * 1.12);
+            const maxLines = height >= lineHeight * 2 + 10 ? 2 : 1;
+            return this.fitText(ctx, label, maxWidth, { size, floor: Math.min(size, this.t.type.micro), maxLines, ellipsis: !nav, bold: true });
+        },
+        _drawLines(this: UiRuntime, ctx: CanvasRenderingContext2D, lines: readonly string[], x: number, centerY: number, size: number) {
+            const lineHeight = Math.round(size * 1.12), first = centerY - ((lines.length - 1) * lineHeight) / 2;
+            lines.forEach((line, index) => {
+                ctx.fillText(line, x, first + index * lineHeight);
+            });
+        },
         button(this: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, active?: boolean) {
+            const t = this.t;
             if (b.ghost) {
-                // main-menu rail button: translucent over the dark sidebar, a soft light edge,
-                // and a hot accent bar + label slide driven by the smooth hover progress (b._a).
-                // Optional trimmings: b.glyph (left icon), b.dot (status pip), b.sub (subline),
-                // b.hero (accent-filled call-to-action).
-                const a = b._a ?? (active ? 1 : 0);
-                const on = b.enabled !== false, cy = b.y + b.h / 2;
-                if (b.hero) {
-                    // HERO: the primary call-to-action — solid accent body, dark ink label that
-                    // brightens + slides on hover, a top sheen line, and an optional subline.
-                    ctx.fillStyle = this.t.color.accent;
-                    ctx.globalAlpha = on ? 0.88 + 0.12 * a : 0.5;
-                    ctx.fillRect(b.x, b.y, b.w, b.h);
-                    ctx.globalAlpha = 1;
-                    ctx.globalAlpha = 0.22 + 0.35 * a;
-                    ctx.fillStyle = "#ffffff";
-                    ctx.fillRect(b.x, b.y, b.w, 2);
-                    ctx.globalAlpha = 1;
-                    ctx.fillStyle = "#08131a";
-                    ctx.textAlign = "left";
-                    ctx.textBaseline = "middle";
-                    if (b.glyph) {
-                        ctx.font = this.font(30, true);
-                        ctx.fillText(b.glyph, b.x + 22, cy + 1);
-                    }
-                    const hx = b.x + (b.glyph ? 70 : 24) + a * 6;
-                    ctx.font = this.font(truthyOr(b.size, () => 34), true);
-                    ctx.fillText(fitLine(ctx, b.label, b.x + b.w - hx - 18), hx, cy - (b.sub ? 12 : 0) + 1);
-                    if (b.sub) {
-                        ctx.globalAlpha = 0.72;
-                        ctx.font = this.font(this.t.type.caption, true);
-                        ctx.fillText(fitLine(ctx, b.sub, b.x + b.w - hx - 18), hx, cy + 16);
-                        ctx.globalAlpha = 1;
-                    }
-                    ctx.textBaseline = "alphabetic";
-                    return;
-                }
-                ctx.fillStyle = "rgba(241,239,249," + (0.05 + a * 0.10).toFixed(3) + ")";
-                ctx.fillRect(b.x, b.y, b.w, b.h);
-                ctx.lineWidth = 1.5;
-                ctx.strokeStyle = "rgba(241,239,249," + (on ? 0.28 + a * 0.5 : 0.15).toFixed(3) + ")";
-                ctx.strokeRect(b.x, b.y, b.w, b.h);
-                ctx.globalAlpha = a;
-                ctx.fillStyle = this.t.color.accent;
-                ctx.fillRect(b.x, b.y, 4, b.h);
-                ctx.globalAlpha = 1;
-                ctx.textAlign = "left";
-                ctx.textBaseline = "middle";
-                let labelX = b.x + 18 + a * 8;
-                if (b.dot) { // status pip (player card sync state)
-                    ctx.beginPath();
-                    ctx.arc(b.x + 22, cy, 5, 0, 6.2832);
-                    ctx.fillStyle = b.dot;
-                    ctx.fill();
-                    labelX = b.x + 42 + a * 8;
-                }
-                else if (b.glyph) { // left glyph slot, warms on hover
-                    ctx.globalAlpha = on ? 0.5 + 0.5 * a : 0.3;
-                    ctx.fillStyle = this.t.color.accent;
-                    ctx.font = this.font(18, true);
-                    ctx.fillText(b.glyph, b.x + 16 + a * 8, cy + 1);
-                    ctx.globalAlpha = 1;
-                    labelX = b.x + 50 + a * 8;
-                }
-                ctx.fillStyle = on ? "#f1eff9" : "rgba(241,239,249,0.4)";
-                ctx.font = this.font(truthyOr(b.size, () => this.t.type.lead), true);
-                ctx.fillText(fitLine(ctx, b.label, b.x + b.w - labelX - 16), labelX, (b.sub ? cy - 10 : cy) + 1);
-                if (b.sub) {
-                    ctx.globalAlpha = 0.6;
-                    ctx.font = this.font(this.t.type.caption, false);
-                    ctx.fillText(fitLine(ctx, b.sub, b.x + b.w - labelX - 16), labelX, cy + 12);
-                    ctx.globalAlpha = 1;
-                }
-                ctx.textBaseline = "alphabetic";
+                drawRailButton(this, ctx, b, active);
                 return;
             }
             // default buttons share the menu's ghost language, adapted to light content zones:
-            // a frosted body + ink hairline; hover/focus warms the wash and slides in a cyan
-            // accent bar (b._a = smooth hover progress); a SELECTED button stays solid ink.
+            // a near-solid paper body + ink hairline; hover/focus warms the wash and slides in a
+            // cyan accent bar (b._a = smooth hover progress); a SELECTED button is solid ink.
+            // Strokes are inset so no state ever draws outside the control's box.
             const on = b.enabled !== false;
             const a = on ? (b._a ?? (active ? 1 : 0)) : 0;
             const selected = on && !!b.sel;
             if (selected) {
                 ctx.fillStyle = this.ink;
                 ctx.fillRect(b.x, b.y, b.w, b.h);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = this.ink;
-                ctx.strokeRect(b.x, b.y, b.w, b.h);
-                ctx.fillStyle = this.t.color.paper;
+                ctx.fillStyle = t.color.paper;
             }
             else {
-                ctx.globalAlpha = on ? 0.62 : 0.35;
-                ctx.fillStyle = this.t.color.paper;
+                ctx.globalAlpha = on ? 0.92 : 0.6;
+                ctx.fillStyle = t.color.paper;
                 ctx.fillRect(b.x, b.y, b.w, b.h);
                 if (a > 0.01) {
                     ctx.globalAlpha = 0.08 * a;
                     ctx.fillStyle = this.ink;
                     ctx.fillRect(b.x, b.y, b.w, b.h);
                 }
-                ctx.globalAlpha = on ? 0.55 + 0.45 * a : 1;
-                ctx.lineWidth = 1.5 + a * 0.8;
-                ctx.strokeStyle = on ? this.ink : this.t.color.disabled;
-                ctx.strokeRect(b.x, b.y, b.w, b.h);
+                const stroke = 1.5 + a * 0.5;
+                ctx.globalAlpha = on ? 0.6 + 0.4 * a : 1;
+                ctx.lineWidth = stroke;
+                ctx.strokeStyle = on ? this.ink : t.color.disabled;
+                ctx.strokeRect(b.x + stroke / 2, b.y + stroke / 2, b.w - stroke, b.h - stroke);
                 ctx.globalAlpha = 1;
                 if (b.accent) {
                     ctx.fillStyle = b.accent;
@@ -319,64 +271,101 @@ font(this: UiRuntime, size: number, bold?: boolean) {
                 } // identity bar (e.g. enemy kind colour)
                 if (a > 0.01) {
                     ctx.globalAlpha = a;
-                    ctx.fillStyle = this.t.color.accent;
+                    ctx.fillStyle = t.color.accent;
                     ctx.fillRect(b.x, b.y, b.accent ? 4 : 3, b.h);
                     ctx.globalAlpha = 1;
                 }
-                ctx.fillStyle = on ? this.ink : this.t.color.disabled;
+                ctx.fillStyle = on ? this.ink : "#8b8d98";
             }
             // optional trimmings (parity with the ghost style): b.glyph = left icon
             // slot, b.sub = caption subline, b.pips = {n, filled, color} right-aligned
-            // level/heat meter; otherwise, text lays out left-aligned.
+            // level/heat meter; otherwise, text lays out centred.
             const cy2 = b.y + b.h / 2;
             ctx.textBaseline = "middle";
             if (b.pips)
-                this.pips(ctx, b.x + b.w - 14, cy2, b.pips.n, b.pips.filled, selected ? this.t.color.paper : b.pips.color);
+                this.pips(ctx, b.x + b.w - 14, cy2, b.pips.n, b.pips.filled, selected ? t.color.paper : b.pips.color);
+            const size = truthyOr(b.size, () => t.type.lead);
             if (b.glyph || b.sub) {
                 let lx2 = b.x + 16;
                 if (b.glyph) {
-                    ctx.globalAlpha = selected ? 1 : 0.55 + 0.45 * a;
-                    ctx.fillStyle = selected ? this.t.color.paper : (truthyOr(b.accent, () => this.t.color.accent));
-                    ctx.font = this.font(17, true);
+                    // the icon slot grows with the type token (touch density) like the label
+                    const glyphSize = Math.max(17, t.type.label);
+                    ctx.globalAlpha = selected ? 1 : 0.6 + 0.4 * a;
+                    ctx.fillStyle = selected ? t.color.paper : (truthyOr(b.accent, () => t.color.accent));
+                    ctx.font = this.font(glyphSize, true);
                     ctx.textAlign = "left";
                     ctx.fillText(b.glyph, lx2, cy2 + 1);
                     ctx.globalAlpha = 1;
-                    lx2 += 30;
+                    lx2 += glyphSize + 13;
                 }
-                ctx.fillStyle = selected ? this.t.color.paper : (on ? this.ink : this.t.color.disabled);
-                ctx.font = this.font(truthyOr(b.size, () => this.t.type.lead), true);
+                const rightReserve = b.pips ? b.pips.n * 14 + 24 : 14;
+                const room = b.x + b.w - lx2 - rightReserve;
+                const fit = this._fitLabel(ctx, b.label, room, size, b.sub ? 0 : b.h, false);
+                ctx.fillStyle = selected ? t.color.paper : (on ? this.ink : "#8b8d98");
+                ctx.font = this.font(fit.size, true);
                 ctx.textAlign = "left";
-                const rightReserve = b.pips ? 110 : 16;
-                ctx.fillText(fitLine(ctx, b.label, b.x + b.w - lx2 - rightReserve), lx2, (b.sub ? cy2 - 9 : cy2) + 1);
+                this._drawLines(ctx, fit.lines, lx2, (b.sub ? cy2 - 10 : cy2) + 1, fit.size);
                 if (b.sub) {
-                    ctx.globalAlpha = selected ? 0.75 : 0.55;
-                    ctx.font = this.font(this.t.type.micro, false);
-                    ctx.fillText(fitLine(ctx, b.sub, b.x + b.w - lx2 - rightReserve), lx2, cy2 + 12);
+                    const sub = this.fitText(ctx, b.sub, room, { size: t.type.micro, floor: t.type.micro });
+                    ctx.globalAlpha = selected ? 0.85 : t.alpha.muted;
+                    ctx.font = this.font(sub.size, false);
+                    ctx.fillText(sub.lines[0] ?? "", lx2, cy2 + 13);
                     ctx.globalAlpha = 1;
                 }
                 ctx.textBaseline = "alphabetic";
                 return;
             }
-            ctx.font = this.font(truthyOr(b.size, () => this.t.type.lead), true);
+            const fit = this._fitLabel(ctx, b.label, b.w - 16, size, b.h, false);
+            ctx.font = this.font(fit.size, true);
             ctx.textAlign = "center";
-            ctx.fillText(b.label, b.x + b.w / 2, cy2 + 1);
+            this._drawLines(ctx, fit.lines, b.x + b.w / 2, cy2 + 1, fit.size);
             ctx.textBaseline = "alphabetic";
         },
         // ---- CHIP (compact toggle: filters, segmented controls) -----------------
+        // One chip style everywhere: paper body + hairline; the selected chip is solid
+        // ink at exactly the same size (inset stroke, no growth). Labels use the fitting rule.
         chip(this: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, on: boolean) {
-            ctx.lineWidth = on ? 2.5 : 1.5;
-            ctx.strokeStyle = on ? this.ink : this.t.color.muted;
-            ctx.fillStyle = on ? this.ink : this.t.color.paper;
-            ctx.beginPath();
-            ctx.rect(b.x, b.y, b.w, b.h);
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = on ? this.t.color.paper : this.ink;
-            ctx.font = this.font(truthyOr(b.size, () => this.t.type.micro), true);
+            const t = this.t, hover = (b._a ?? 0) > 0.01 && !on;
+            ctx.fillStyle = on ? this.ink : t.color.paper;
+            ctx.globalAlpha = on ? 1 : 0.94;
+            ctx.fillRect(b.x, b.y, b.w, b.h);
+            ctx.globalAlpha = 1;
+            if (hover) {
+                ctx.globalAlpha = 0.08 * (b._a ?? 0);
+                ctx.fillStyle = this.ink;
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+                ctx.globalAlpha = 1;
+            }
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = on ? this.ink : "rgba(40,42,54,0.55)";
+            ctx.strokeRect(b.x + 0.75, b.y + 0.75, b.w - 1.5, b.h - 1.5);
+            if (hover) {
+                ctx.globalAlpha = b._a ?? 0;
+                ctx.fillStyle = t.color.accent;
+                ctx.fillRect(b.x, b.y + b.h - 3, b.w, 3);
+                ctx.globalAlpha = 1;
+            }
+            const fit = this._fitLabel(ctx, b.label, b.w - 14, truthyOr(b.size, () => t.type.micro), b.h, false);
+            ctx.fillStyle = on ? t.color.paper : this.ink;
+            ctx.font = this.font(fit.size, true);
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 1);
+            this._drawLines(ctx, fit.lines, b.x + b.w / 2, b.y + b.h / 2 + 1, fit.size);
             ctx.textBaseline = "alphabetic";
+        },
+        // ---- FOCUS RING (keyboard / controller) ----------------------------------
+        // Drawn outside the control so it never covers the label; ink-on-sheet or
+        // rail-ink for ghost controls, with an accent inner line for identity.
+        focusRing(this: UiRuntime, ctx: CanvasRenderingContext2D, b: Rect & { readonly ghost?: boolean }) {
+            const m = this.t.metric, gap = m.focusGap, w = m.focusRing;
+            ctx.save();
+            ctx.lineWidth = w;
+            ctx.strokeStyle = b.ghost ? this.t.color.railInk : this.ink;
+            ctx.strokeRect(b.x - gap - w / 2, b.y - gap - w / 2, b.w + (gap + w / 2) * 2, b.h + (gap + w / 2) * 2);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = this.t.color.accent;
+            ctx.strokeRect(b.x - gap + 1.5, b.y - gap + 1.5, b.w + gap * 2 - 3, b.h + gap * 2 - 3);
+            ctx.restore();
         },
         // ---- TOGGLE (boolean switch: track + sliding knob) -----------------------
         // b: {x,y,w,h} = the clickable row (registered by the caller as a normal
@@ -417,12 +406,17 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // A centred strip of labels over one hairline, with a sliding accent underline
         // marking the active view. `push` receives one hitbox per tab (b._tab = index).
         _tabAnim: {} as Record<string, number>,
-        tabs(this: UiRuntime, ctx: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number, push?: (button: ButtonSpec) => void) {
-            const t = this.t, cx = view.w / 2, h = 34;
+        // `frame` (compact pages) places the strip in an explicit span at a given height:
+        // the segments share the span equally, so each one is a full touch target.
+        tabs(this: UiRuntime, ctx: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number, push?: (button: ButtonSpec) => void,
+            maxWidth = 1120, frame?: Readonly<{ x: number; w: number; h: number }>) {
+            const t = this.t, cx = frame ? frame.x + frame.w / 2 : view.w / 2, h = frame?.h ?? 34;
             ctx.font = this.font(t.type.label, true);
             let segW = 150;
             for (const l of labels)
                 segW = Math.max(segW, ctx.measureText(l).width + 48);
+            // the strip never grows wider than the content column it sits in
+            segW = frame ? frame.w / Math.max(1, labels.length) : Math.min(segW, maxWidth / Math.max(1, labels.length));
             const total = segW * labels.length, x0 = cx - total / 2;
             this.divider(ctx, x0, y + h, total, 0.18);
             // sliding accent underline eases toward the active segment
@@ -434,10 +428,16 @@ font(this: UiRuntime, size: number, bold?: boolean) {
                 const on = i === active;
                 ctx.fillStyle = this.ink;
                 ctx.globalAlpha = on ? 1 : t.alpha.muted;
-                ctx.font = this.font(t.type.label, true);
+                // A framed (compact) strip is tall enough to wrap a label onto two lines.
+                // It also keeps a wider inset, so neighbouring labels never read as one line.
+                const wrap = frame !== undefined && h >= Math.round(t.type.label * 1.12) * 2 + 10;
+                const room = frame ? segW - t.space.lg * 2 : segW - 16;
+                const fit = this.fitText(ctx, label, room, { size: t.type.label, floor: t.type.micro, ellipsis: false, bold: true, ...(wrap ? { maxLines: 2 } : {}) });
+                ctx.font = this.font(fit.size, true);
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillText(label, x0 + i * segW + segW / 2, y + h / 2);
+                if (frame) this._drawLines(ctx, fit.lines, x0 + i * segW + segW / 2, y + h / 2, fit.size);
+                else ctx.fillText(fit.lines[0] ?? label, x0 + i * segW + segW / 2, y + h / 2);
                 ctx.globalAlpha = 1;
                 if (push)
                     push({ x: x0 + i * segW, y, w: segW, h, label: "", _hideBox: true, _tab: i });
@@ -461,4 +461,98 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // a bordered key-cap chip ("W", "SHIFT", "RMB") for control listings.
         // Returns the width consumed so callers can lay a row of caps.
   };
+}
+
+/**
+ * Main-menu rail button: drawn over the rail's solid dark backing, a soft light
+ * edge, and a hot accent bar + label slide driven by the hover progress (b._a).
+ * Optional trimmings: b.glyph (left icon), b.dot (status pip), b.sub (subline),
+ * b.hero (accent-filled call-to-action).
+ */
+function drawRailButton(ui: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, active?: boolean): void {
+    const t = ui.t;
+    const a = b._a ?? (active ? 1 : 0);
+    const on = b.enabled !== false, cy = b.y + b.h / 2;
+    if (b.hero) {
+        drawHeroButton(ui, ctx, b, a, on, cy);
+        return;
+    }
+    // Its own dark fill (the rail colour at `alpha.railControl`) keeps the label's contrast
+    // over the open scene the rail fade lets through; then the light glass wash and edge.
+    ctx.globalAlpha = t.alpha.railControl;
+    ctx.fillStyle = t.color.rail;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "rgba(241,239,249," + (0.06 + a * 0.10).toFixed(3) + ")";
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(241,239,249," + (on ? 0.32 + a * 0.5 : 0.18).toFixed(3) + ")";
+    ctx.strokeRect(b.x + 0.75, b.y + 0.75, b.w - 1.5, b.h - 1.5);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = t.color.accent;
+    ctx.fillRect(b.x, b.y, 4, b.h);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    let labelX = b.x + 18 + a * 8;
+    if (b.dot) { // status pip (player card sync state)
+        ctx.beginPath();
+        ctx.arc(b.x + 22, cy, 5, 0, 6.2832);
+        ctx.fillStyle = b.dot;
+        ctx.fill();
+        labelX = b.x + 42 + a * 8;
+    }
+    else if (b.glyph) { // left glyph slot, warms on hover
+        const glyphSize = Math.max(18, t.type.label);
+        ctx.globalAlpha = on ? 0.6 + 0.4 * a : 0.35;
+        ctx.fillStyle = t.color.accent;
+        ctx.font = ui.font(glyphSize, true);
+        ctx.fillText(b.glyph, b.x + 16 + a * 8, cy + 1);
+        ctx.globalAlpha = 1;
+        labelX = b.x + glyphSize + 32 + a * 8;
+    }
+    const room = b.x + b.w - labelX - 16;
+    const fit = ui._fitLabel(ctx, b.label, room, truthyOr(b.size, () => t.type.lead), b.sub ? 0 : b.h, true);
+    ctx.fillStyle = on ? t.color.railInk : "rgba(241,239,249,0.5)";
+    ctx.font = ui.font(fit.size, true);
+    ui._drawLines(ctx, fit.lines, labelX, (b.sub ? cy - 10 : cy) + 1, fit.size);
+    if (b.sub) {
+        const sub = ui.fitText(ctx, b.sub, room, { size: t.type.caption, floor: t.type.micro });
+        ctx.globalAlpha = t.alpha.soft;
+        ctx.font = ui.font(sub.size, false);
+        ctx.fillText(sub.lines[0] ?? "", labelX, cy + 13);
+        ctx.globalAlpha = 1;
+    }
+    ctx.textBaseline = "alphabetic";
+}
+
+/** The accent-filled call-to-action variant of the rail button (PLAY). */
+function drawHeroButton(ui: UiRuntime, ctx: CanvasRenderingContext2D, b: ButtonSpec, a: number, on: boolean, cy: number): void {
+    const t = ui.t;
+    ctx.fillStyle = t.color.accent;
+    ctx.globalAlpha = on ? 0.9 + 0.1 * a : 0.5;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = 0.22 + 0.35 * a;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(b.x, b.y, b.w, 2);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#08131a";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    if (b.glyph) {
+        ctx.font = ui.font(30, true);
+        ctx.fillText(b.glyph, b.x + 22, cy + 1);
+    }
+    const hx = b.x + (b.glyph ? 70 : 24) + a * 6, room = b.x + b.w - hx - 18;
+    const fit = ui.fitText(ctx, b.label, room, { size: truthyOr(b.size, () => 34), floor: t.type.lead, ellipsis: false, bold: true });
+    ctx.font = ui.font(fit.size, true);
+    ctx.fillText(fit.lines[0] ?? b.label, hx, cy - (b.sub ? 12 : 0) + 1);
+    if (b.sub) {
+        const sub = ui.fitText(ctx, b.sub, room, { size: t.type.caption, floor: t.type.micro, bold: true });
+        ctx.globalAlpha = 0.82;
+        ctx.font = ui.font(sub.size, true);
+        ctx.fillText(sub.lines[0] ?? "", hx, cy + 16);
+        ctx.globalAlpha = 1;
+    }
+    ctx.textBaseline = "alphabetic";
 }

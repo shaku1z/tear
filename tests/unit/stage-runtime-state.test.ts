@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { StageRuntimeState } from "../../src/app/stage-runtime-state";
+import { StageRuntimeState } from "../../src/app/world/stage-runtime-state";
 
 describe("stage runtime state", () => {
   it("owns synchronized stage, platform and banner state", () => {

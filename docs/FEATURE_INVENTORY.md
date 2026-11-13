@@ -1,9 +1,58 @@
 # Tear Feature Preservation Inventory
 
+Chase Your Best now has a local source-backed implementation through Career's
+recorded-best views: verified production replay supplies immutable player/blade
+poses and native splits to a fresh independent run. Hiding the projection retains
+comparisons and the run's assisted/noncompetitive disposition; ordinary best-score,
+leaderboard submission and automatic publication paths refuse that disposition.
+Focused production replay/state/RNG and lifecycle/fairness controls pass. Normal
+browser acceptance is pending; seed-locked racing and full-Campaign qualification
+are not implied.
+
+Seed-Locked Race now has a source implementation through explicit Setup creation
+and Career **RACE THIS REFERENCE**. It shares setup/build/seed and common
+wave/reroll offers while preserving personal legal picks, rerolls, carried reserve
+and tier-ups. Race-only decision capture/playback and live/detached restore have
+focused controls; both roles are unranked and exclude ordinary progression and
+publication. Race09 normal-browser acceptance on clean `8a3751fa` retained two
+native clears per role, distinct first upgrades and later common offers, 40 + 38
+verified receipts, normal download/reopen/reload and preserved source/profile.
+Reserve/reroll/expanded/headstart, full-run and device coverage remain separate.
+Race-derived local
+challenge/practice forks are explicitly unsupported; this is not full R16 closure.
+See the [current C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#seed-locked-race-local-source-implementation-browser-acceptance-pending).
+
+Beat This Run now has a local source implementation: Career creates or receives
+a strict code for an already-public, verified native source; a fresh independent
+unranked attempt retains its goal and private legal decisions. Native result
+review, explicit save, reload and retry preserve source/attempt custody. Supported
+metrics expose missing authority honestly. Normal browser acceptance is pending;
+local provider contract evidence is not deployed-service or authenticated public
+publishing evidence. Existing private publication consent remains unchanged.
+
+Boss Memory now saves a named, annotated derived encounter from a verified
+living-boss checkpoint through native boss or player defeat. Recording history
+is removed; normal segment-only download/import, bounded Watch and independent
+entry Practice reuse existing owners. Source membership is explicitly unproven
+without original bytes; necessary entry gameplay state remains. Focused native
+construction controls are engineering evidence; fresh normal browser acceptance
+is pending. See the current C37 checkpoint for provenance and legacy limits.
+
 This is the migration checklist for the architectural redesign. A checked feature has characterization, contract, deterministic, or built-artifact browser coverage in the redesigned runtime and is included in `pnpm check`. Presence in a compatibility bundle alone does not count. A check records the existence of credible automated evidence; release readiness still requires that the complete gate pass from the final clean commit.
 
 ## Current integrated content authority
 
+- [x] Release/engineering surface policy: `src/domain/surface-availability.ts` is
+  the one source-owned table. Standalone and CrazyGames production builds use
+  the release channel; test builds and `vite dev` use the engineering channel.
+  Engineering-only (not drawn, not focusable, actions inert, screens refused):
+  Training Archive, Training Operations, Replay Hub, Game Agent Evidence, Run
+  Monitor controls, Boss Test and Enemy Test (still catalog modes) with the
+  boss picker, Seed-Locked Race, Beat This Run, Boss Memory, Coach, Replay
+  Editor, cloud capsule recovery, Vault/Career publish, support bundles,
+  linked-pair download, every engineering URL parameter (`test`, `stemcue`,
+  `stems`, `foundry*`, surface routes) and the weapon/audio-preview debug
+  globals.
 - [x] The published Adventure is exactly six stages and 60 waves: Grounds,
   Undercroft, Crimson Fields, Verdant Sanctum, Voidspire, and The Tear.
   Rootbound is the Wave 40 boss, Echo is Wave 50, and Source is Wave 60.
@@ -50,7 +99,7 @@ frozen evidence record.
     Sword, Hammer, Greatsword, Chainblade, and Riftlock, rejects Spear/Ringblade
     as active IDs, and supports `--expected-sha` fail-closed export validation.
 - [x] Progression reference catalogs — the fixed game-reference collections
-  now include 60 authored upgrades and 98 authored achievements with canonical
+  now include 60 authored upgrades and 100 authored achievements with canonical
   order, categories/rarities, explicit rule/tier metadata, and no runtime
   callbacks in the projection. `achievement-catalog.ts` is the immutable
   achievement metadata authority; runtime behavior joins onto it.
@@ -579,7 +628,7 @@ frozen evidence record.
   Source relocation values remain unchanged comparison data for C22; full-mode
   and durable-data integration remains PT3-C9. PT3-C9 proves Campaign,
   Endless, Gauntlet, Boss Test, Playground, and Enemy Test through the existing
-  planner/catalog paths while Tutorial remains Charger/Ranged-only. Pale and
+  planner/catalog paths while the finite Tutorial course remains Charger/Ranged-only; Lab encounters use separate explicit practice authority. Pale and
   White Hart ownership clears across reset, retry, quit, defeat, victory,
   stage transition, mode change, restore failure, and disposal. The exact
   seven-stage engineering ruleset is now distinct from the retained six-stage
@@ -794,10 +843,14 @@ frozen evidence record.
 ## Game flow and modes
 
 - [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.
+- Practice Lab boss entries: six published bosses × three authored phases, explicit v6 portable practice origin, historical-defeat P1 access and exact acknowledged ordinary-phase discovery for later entries. Actual entry owners preserve rituals, Source void transfer and Rootbound graft/regrowth preparation. Practice remains Sword/Normal with no progression effects. Focused controls: `production-tutorial-continuation.test.ts`, `live-profile-stats-persistence.test.ts`, `screen-renderers.test.ts`. Parent fresh-build `browser-playground-journeys.js` Practice-Lab-only fixture passed on `e09913f1`: normal selection/reset/reload and unchanged saved progress, using declared history. Physical mobile usability, preview White Hart and mastery medals remain separate work.
+- Tutorial gold coaching: verified saved-origin 120 Hz references for all thirteen action blocks plus legacy Field Test; explicit finite preview/help, recorded contact/stage response, adaptive tick-labelled input, 1×/0.5× display playback and reduced-motion poses. Optional baseline Lab comparison retains a bounded shortest valid same-reference session attempt without reward/objective effects or mastery grading. Shipping gold stays outside checkpoints; only verified identity/cursor and bounded personal presentation are retained. See `TUTORIAL_PARITY_AND_UPGRADE_PLAN.md`. Fresh `068c0514` build and the normal `browser-tutorial-journey.js` passed the full course in 12,543 fixed ticks, earned Lab unlock, real MOVE attempt, reduced-motion setting and comparison resume. This is scripted browser evidence; physical-device usability and broader mastery remain open.
+- Tutorial adaptive assistance: native resolved actions drive related-failure nudges at two, a finite diagnostic at four and explicit unfinished checkpoint advance at six. Visible Skip and versioned unearned summaries preserve original issued-course identity and real redo requirements. Fresh `2455393e` build/journey passed the ordinary course (12,892 ticks), restored thirteen-skipped summary and real 2/4/6-to-Assist UI without progress/currency grants. Baseline drills only; annex/enemy/boss coaching, mastery and physical-device acceptance remain separate.
 - [x] Endless, campaign/adventure and every published challenge/training mode — both browser mode matrices start all seven published modes; `run-wave-rules.test.ts` and `run-session.test.ts` characterize their lifecycle classes.
 - [x] Run start, wave progression, biome progression and boss transitions — the run lifecycle, wave planner/scheduler/clear, browser smoke, and boss phase suites.
 - [x] Upgrade draft, reroll, reserve and boss tier-up flows — `browser-progression-journeys.js`, `gameplay-definitions.test.ts`, and `weapon-ability-conformance.test.ts`.
 - [x] Pause, settings, rewarded continue, game-over, victory and finale — the navigation and terminal browser journeys plus the app state-machine suites.
+- [x] Input safety and first run (release-readiness phase 3) — confirm arming on screens that interrupt play (release plus 0.35 s settle for keyboard, controller and number keys; settle for clicks/taps on reward and results), Escape/Backspace/controller back activate BACK, P/Escape/Start toggle pause after the same settle, tier-up number keys, Adventure chapters skip to the stage banner once seen (session or a stage entered before the session), the first-run Tutorial nudge derived from `tutorialDone`, `runs` and started modes (no new saved field), device-correct cinematic prompts, an HTML loading/boot-failure state, and policy-driven `#fs`/`#hint`/`#lockhint` chrome. `ui-action-coordinator.test.ts`, `presentation-runtime-boundaries.test.ts`, `runtime-frame-coordinator.test.ts`, `live-campaign-runtime.test.ts`, `cinematic-preference.test.ts`, `first-run-experience.test.ts`; browser smoke/input-matrix journeys select Endless explicitly because a fresh profile now starts on the Tutorial.
 - [x] Shop, codex, profile, achievements, leaderboards and replay feed/viewer — `browser-progression-journeys.js`, progression/replay tests, and platform leaderboard contracts. Authenticated remote I/O remains adapter-contract evidence as documented in `BROWSER_JOURNEY_COVERAGE.md`.
 - [x] Attract mode, cinematics and chapter/finale sequences — the Attract navigation journey, `campaign-controllers.test.ts`, `presentation-systems.test.ts`, `boss-ritual-controller.test.ts`, and the terminal finale journey.
 
@@ -840,7 +893,17 @@ frozen evidence record.
   profile, economy, cloud, and recording effects. A dedicated built-browser
   campaign capture now preserves an active chapter director at the explicit
   `opening-initialized` tick-zero boundary and reproduces its receipt through
-  production replay. Pixel/device output fidelity remains C25/C40 work. C29
+  production replay. The codec-only replay fallback retains every same-tick
+  command in authored order and skips groups included in its restored snapshot;
+  `ghost-replay-world.test.ts` covers snapshot boundaries and repeated seeks.
+  Supported recorded openings retain captured UI/focus at seek zero and require
+  capsule-linked start/completion evidence before the one-shot playing transition.
+  A separate disclosed opening-only continuation verifier executes 180 shared-runtime
+  steps and compares source state/input at 60/120/180; same-keyframe verification
+  alone makes no continuation claim. Legacy completion inference needs a later
+  playing anchor/receipt. Fresh normal-browser acceptance remains required for
+  the new route; constructed win fixtures do not establish a full Campaign run.
+  Pixel/device output fidelity remains C25/C40 work. C29
   also now exposes
   player-visible semantic comparison: from Profile -> Vault, select two
   through nine healthy completed V3 capsules and use `COMPARE N` to
@@ -855,13 +918,47 @@ frozen evidence record.
    fact. An untouched one-hit source opening also reaches a real tick-222
    failure, retained as an immutable terminal artifact and visibly rerun at the
    same terminal tick/disposition in the Class-A browser; it is not durable or
-   training-stream output. An active, non-draft C30 episode can also carry an
-   in-memory State Forge source keyframe, held-input state, accepted command
-   envelopes, and canonical hash into a fresh C29 production composition. The
-   tick-60 movement/jump/dash proof restores that exact source state and reaches
-   an exactly equal tick-120 terminal artifact; malformed traces, surgical state,
-   and snapshot/scenario mismatches fail closed. This is not persistence,
-   worker-job recovery, or a draft/reward-route checkpoint claim. C30 also has
+   training-stream output. C30 in-memory nonterminal checkpoints now continue
+   prepared Campaign chapters, active waves and pending draft/reserve/tier-up
+   selections through the existing production/codec owners. They preserve
+   original bootstrap, current RNG, lifecycle, exact clocks/binding, configuration,
+   choices, focus, held input and authored command order. A required integrity-bound
+   frontier preserves pending original engine facts once and continues their IDs/
+   sequences; malformed or missing frontiers and inconsistent source state refuse
+   before destination replacement. Natural chapters reuse the canonical launcher
+   with explicit bounded application-frame seconds/confirm inputs before simulation,
+   never a tick-derived cinema clock or auto-confirm. Focused JSON/transition tests
+   retain the tick-60→120 active proof; rebased environment namespaces do not claim
+   original raw snapshot identity. Restored source tracks identify suffixes, and
+   external frame inputs are not in terminal command artifacts. This is not durable
+   checkpoint transport, full-trace attestation or natural full-Campaign/finale proof.
+   Fresh local Campaign capture also streams a separately source-linked V3 finale
+   companion after the unchanged scored/reward/Ghost 2/Run DNA boundary. Theater
+   reconstructs real FinaleController/Source/director behavior, recorded confirm
+   latch and zero-tick application frames from one exact parent-bound origin;
+   parent custody is required on each open and historical missing behavior is
+   unsupported. Direct owner/handoff controls pass; the optional existing
+   campaign-victory browser branch is constructed final-wave evidence pending
+   parent execution. Paired portable export, natural full-Campaign/ten-minute
+   acceptance and broader R07 closure remain open.
+   Retired Source restoration snapshots now validate frozen run-owned graph
+   aliases without installing them as collision actors; active/live references
+   stay strict. The unchanged external native finale pair passes continuation,
+   and the direct shared-owner restoration/refusal controls pass. Parent fresh
+   paired-file/Theater browser acceptance remains pending.
+   Native Theater/finale pointer and keyboard transport now reuse the existing
+   controller with SAFE geometry and source-time mapping; open overlays isolate
+   their input. The normal file caller asserts rendered restoration/final-frame
+   witnesses, rather than inferring seek success from a screenshot filename.
+   Focused transport controls pass; parent fresh browser acceptance is pending.
+   Schema-two C30 checkpoints require explicit held aim magnitude and reject older
+   or missing frontiers before replacement. Canonical input adds an optional nonfull
+   magnitude while preserving full-scale hashes. Fresh Ghost receipts explicitly
+   record even full magnitude, and the reader preserves historical absence.
+   Exact receipt-assisted verification refuses missing legacy magnitude when unknown
+   or established nonfull; linked original action history can establish full input
+   from that point only. A seeded declaration alone does not witness input reset.
+   It does not rewrite archives or recover earlier unknown aim.
    Every recorded-canonical keyframe now additionally passes an all-or-nothing
    isolated versioned-codec restore and declared exact/semantic-hash preflight
    before C29 can treat its state track as seekable. The preflight has no
@@ -884,7 +981,18 @@ frozen evidence record.
    unbounded fleet or target-throughput certification. A parent can also cancel
    one active source worker only after its first fixed tick; that child is
    terminated and the next episode gets a fresh PID, with no checkpoint,
-   restoration, retry, or durable job claim;
+   restoration, retry, or durable job claim in that legacy no-store path.
+   An opt-in local SQLite job store now adds immutable origin-input/source/
+   toolchain binding, guarded joint attempt/job/result publication and explicit
+   process-restart recovery. Real supervisor kills cover admission, actual
+   tick-one start, pre-publication result and post-COMMIT/pre-ACK; exact committed
+   retries launch no worker. Leases fence obsolete output, cancellation wins
+   later success, malformed records remain untouched, and the original absolute
+   admission deadline and one/two-attempt policy survive restart. Recovery
+   restarts from origin; it does not resume a checkpoint. Explicit lower-only
+   8 MiB request / 32 MiB result ceilings are application policy, not whole-heap
+   or target-hardware capacity evidence. Reward/draft/finale checkpoint recovery,
+   natural victory coverage and target capacity remain separate obligations;
    C31 now places a fail-closed Academy admission decision in front of that
    candidate stream. It separately checks local/cloud/analytics/model consent,
    privacy, structured-training provenance, build identity, and a verified raw
@@ -1098,6 +1206,17 @@ frozen evidence record.
 
 ## C36 Foundry status
 
+- [ ] Governed C31 → V3 → inactive C32 admission — an explicit local executor
+  trains an exact published trainer manifest with bounded offline and source
+  training, then atomically retains derived evidence, candidate/index pairs,
+  and its legal training successor. Final-transaction guards reject source,
+  custody, consent, curation, or output-slot drift. Numeric jobs charge bounded
+  attempts before source work and refuse missing or exhausted allowances.
+  `academy-candidate-curation.test.ts` executes the resulting inactive artifact
+  through the existing canonical C32 adapter in a real C30 world. This evidence
+  does not establish learned quality, population levels, promotion, or an
+  unattended full cycle.
+
 - [ ] C36 launch-profile screen action — the standard Foundry renderer receives
   only an opaque profile ID and `eligible`/`blocked` disposition. Its one
   semantic `foundry.bootstrap { profileId }` command rechecks the profile at
@@ -1304,7 +1423,7 @@ distribution, `unassigned` placement, `not compared` human calibration, and
 uses a genuinely executed and retained C35 report to prove the projection and
 tamper refusal; renderer and semantic-route tests protect the normal surface.
 
-### C37 verified Run DNA Theater projection
+### C37 recorded Run DNA Theater projection
 
 The normal C29 Theater exposes a `RUN DNA` panel only as an immutable
 projection of its already-verified durable capsule. `run-dna-v1` is calculated
@@ -1314,20 +1433,79 @@ names the formula, custody label, source metrics, and dimensions. It neither
 writes storage nor draws from profile/career/challenge/export state, hidden
 events, or player-behavior inference.
 
+Fresh ordinary whole-run captures additionally produce a versioned
+`native-combat-episodes-v1` basis from actual accepted attack episodes/contact
+outcomes, eligible combat/moving steps, mitigated HP loss/peak HP and the union
+of executable maneuver capabilities. Real weapon/upgrade transitions supply
+usage; derivatives remain grouped with their initiating attack. Formula v1 and
+historical declarations are unchanged. Interrupted/zero-attack precision is
+unavailable, while valid other dimensions remain visible. Exact run/session,
+terminal and committed/skipped coverage are checked before projection; malformed
+fresh declarations never fall back to legacy acceptance. The normal panel says
+`RECORDED METRICS`, exposes capture policy/refusal reasons, and has panel-relative
+columns. Focused production controls cover actual multi-target damage, resolved
+miss/return, capability/HP upgrades, observer-inert state/RNG equality, durable
+seal/read, catch-tick contact, terminal-inside-frame and projection refusal.
+Normal browser acceptance passed on clean `3af84eae`: real 300-tick recording,
+ordinary storage, Profile/Vault/Theater navigation, all eight values compared
+with the durable native declaration, desktop/800×450 captures, and reload/reopen
+with exact source custody preserved. See the C37 checkpoint for source/build
+identity and evidence. No historical skill, native counter re-execution, full-run
+or physical-device qualification claim is made.
+
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.
 
 ### C37 verified Theater Studio Cut List
 
-The normal verified C29 Theater exposes a separate `STUDIO CUT LIST` surface
-only for a complete schema-v2 V3 capsule at the current verified receipt
-checkpoint. It creates one immutable in-memory `ghost-studio-edl` from the
-exact Theater source identity, durable root, and previous-to-current verified
-tick window, then visibly names source, root, range, and EDL hash. It has no
-Vault write, source mutation, State Forge, fork, trace, cloud, or mutable-edit
-tool. The surface is explicitly `LOCAL EDL ONLY` and `MEDIA EXPORT
-UNAVAILABLE`: no production media renderer is connected.
+The verified V3 Theater now draws the reconstructed production world through
+per-world presentation ports and the shared actor/platform/world renderers.
+Coach View Moment minimizes its panel onto that scene, with a return control.
+Studio marks verified IN/OUT checkpoints and appends immutable ranges in chosen
+order at the transport speed. Local native WebM encoding uses a dedicated canvas,
+reconstructed player-follow, deterministic aspect fit, and explicit simulation
+time. Output is bounded to 1800 frames/60 seconds and 64 MiB, with local decode,
+dimensions/duration checks, accepted-frame PNG thumbnail and separate download.
+Cancellation/source replacement discards stale work. GIF, historical camera/pixel
+fidelity and source-time cinema/intro intervals remain unavailable. The exact
+`56a49044` standalone browser journey passed: a downloaded 92,317-byte VP8 WebM
+decoded at 640×360 for exactly one second, with different native frames after
+seeking to 0.1s and 0.8s; durable source bytes stayed unchanged. Practice keeps
+its source mode and combat/style math while suppressing outward profile, daily,
+achievement and biome writes through its active practice disposition.
+
+### C37 personal recorded-observation history
+
+Coach accepts an explicit selection of two to eight compatible local recordings.
+Its versioned native observations use a shared verified tick window, disclose
+usable sample counts and distributions, and show chronological per-run history.
+Identified moments link to verified Theater seeks and practice from a strictly
+preceding checkpoint. Missing or unclassified facts remain unavailable. The
+normal `56a49044` browser journey selected three recordings, displayed the
+shared `(0, 240]` interval, sought an identified throw at tick140, returned to
+Coach, and launched unranked practice at checkpoint120 without changing its
+source. Skill ratings and population claims remain unavailable. Explicit local
+Theater challenges now record an unranked child at its real checkpoint tick,
+reexecute native catch/wave/boss conditions and retain a guarded local result;
+normal browser/profile-equality acceptance remains pending. Broader challenges
+remain separate work.
 
 ### C38 local publication review
+
+Vault source retention now uses one shared backend with exact transaction
+guards, a manifest mutation fence, reference-safe shared-chunk removal, and
+owner protection acquired with Academy custody. Legacy source protection is
+backfilled from durable custody before quota upkeep, including damaged chunks
+and absent manifests. These retention fences preserve forensic evidence and
+future exact source reappearance without certifying chunk health. Malformed or
+conflicting source/protection records stop destructive upkeep. Imports honor
+the reserved source ID/root and guard its exact protection revision. Unavailable
+sources cannot enter held-custody queries. Source removal and its custody
+tombstone commit together. Publication
+enqueue and transport persistence fence the exact validated consent, source
+manifest/chunks, custody, queued job, and prior transport state. Focused race
+regressions cover changes immediately before those transactions; real IndexedDB
+journeys separately check atomic guard rejection and preserved corrupt bytes.
+These checks do not establish full-run device storage or real cloud publication.
 
 Healthy complete Ghost Vault rows now expose a normal local publication-review
 route. It fails closed when standalone publication capability is unconfigured,
@@ -1346,6 +1524,18 @@ or refreshing the screen never runs transport. Missing endpoint, unsupported
 target, anonymous account, unhealthy/revoked custody, or a missing job leaves
 both actions unavailable. This remains local browser wiring, not deployed or
 cross-device publication evidence.
+
+Reopening review restores the same queued job only for its current account and
+exact consent custody, preserving the consent revision and job identity.
+Superseded account, capsule, or foreground actions cannot send a pending bearer
+or repaint a newer screen; conditional transport commits preserve a newer
+cancellation across controller instances, including delayed success responses
+and response bodies. Durable job cancellation stops subsequent upload requests
+while remote abort is pending; exact consent withdrawal during token acquisition
+cancels the job before any request. Immutable remote uploads awaiting verification resume through
+verification without creating another multipart upload. The four focused
+publication controller/job/transport/Worker suites preserve these contracts.
+Configured-account browser resume and real cloud publication remain unproven.
 
 ### C36 approval-bound post-promotion monitor
 
@@ -1439,6 +1629,38 @@ publication, or transport path; unhealthy sources are unavailable. The screen
 explicitly names its excluded data and no-training/no-cloud/no-submission
 boundary. Focused unit and renderer evidence preserve this local UI boundary.
 
+### Linked scored-run/finale portable files
+
+Normal Vault adds a separate DOWNLOAD LINKED PAIR and named RESTORE BOTH preview.
+A strict versioned envelope carries the two existing archive strings; the normal
+single archive/forensic paths remain available. Parent linkage is validated before
+one joint import/job/result transaction. Shared chunks deduplicate, existing holds
+remain local and unchanged, and exact-file/cancellation/quota/uncertainty guards
+cover both recordings. This is file custody capability; browser paired download,
+fresh-profile restore and linked playback require their own attributed acceptance.
+
+### C39 normal local capsule files
+
+Profile → Vault exposes local archive selection in empty and populated views,
+bounded metadata preview, separate explicit Restore/Resume, exact-file
+reselection after reload, and revision-bound cancellation. Healthy complete
+capsules have an independent Download action even when Theater is unavailable.
+Ordinary downloads validate the original encoded chunks and source fence;
+forensic partial export and sanitized support bundles retain their separate
+contracts. The UI reports download requested, not saved-file confirmation.
+Initial and operation catalog inspection performs no maintenance, eviction,
+index rebuilding, repair, source-protection or consent/training/publication
+mutation. File bytes remain transient; BFCache clears selection while retaining
+the durable intent. Focused DOM, facade, controller, action and renderer tests
+cover these local boundaries. A fresh attributed browser journey saved a normal
+Download and restored its exact manifest and encoded chunks in separate browser
+processes, including pending-intent resume, completed-record validation,
+cancellation, corrupt-file refusal and read-only catalog checks. An independent
+file integrity/size audit passed for that short forensic-profile sample. A
+separate fresh-build check verified the shortened file-action labels and their
+normal Cancel/Restore actions. Remote redundancy, historical-runtime availability,
+device quotas, long-run performance and full C39 acceptance remain unproven.
+
 ### C38 explicit foreground owner recovery
 
 The authenticated own-capsule catalog now carries immutable recovery custody
@@ -1450,4 +1672,60 @@ strict UTF-8, and imports/reopens only through the local Vault's existing
 schema/root validation. Exact existing custody is idempotent; absent cloud
 records are explicit and conflicting local custody refuses. It retains no
 cloud catalog metadata or object bytes outside Vault and creates no scan,
-timer, autosync, normal UI, deploy, or account-lifecycle behavior.
+timer, autosync, deploy, or account-lifecycle behavior.
+
+Profile → Vault now has explicit **LOAD MY CLOUD CAPSULES** and per-entry
+**RECOVER TO THIS DEVICE** controls in a separate owner catalog. The existing
+valid standalone capability, non-guest account and local storage are required.
+Navigation/render/refresh stay inert. Actual account notifications invalidate
+actor/generation-bound operations even across A→B→A; stale credentials/responses
+cannot issue later requests or initiate import. Already-started committed imports
+retain their original operation ID and do not repaint a newer account's view.
+Exact existing local custody is idempotent, while local health/playback remain
+separate. Focused controller/service/Vault and UI controls cover this local
+wiring; the parent owns fresh negative normal-browser navigation evidence.
+Positive real-account retrieval, cross-device/outage acceptance, deployment and
+account deletion remain unverified or separate work.
+
+
+### Durable local Career Archive
+
+Profile CAREER / GhostLab CAREER ARCHIVE provide metadata-first whole retained
+history, eighteen searchable filters, nine evidence-bounded career views and
+paginated details. Canonical recordings enrich sequentially in one cancellable
+worker; retained Ghost2 recordings remain visual-only under their original owners.
+Career v1 passively records source-catalog loadouts, authored style/rank peaks,
+exact spawn loadouts and pre-cleanup terminal boss witnesses. Native Run DNA and
+legacy formula semantics are preserved. Mutable tags/retention are separate from
+immutable sources; existing protection/shared-chunk/CAS owners govern pin and local
+deletion. Publication status comes from matching retained declarations and finalized
+acknowledgements, never residence or upload intent. Missing historical facts, remote
+stubs and unavailable quota dimensions remain explicit. See the
+[C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#durable-career-archive-native-career-v1).
+Normal-storage browser acceptance passed at `1ee4ab92`: seven retained sources,
+three pages, ten view routes, persistent tags/pins, canonical/legacy playback,
+protected refusal and a real exact-byte archive download/delete/restore. Desktop
+and compact captures were inspected; physical-device and broader C37 acceptance
+remain separate.
+
+
+The explicit native return-subskill adapters now preserve real empty decisions,
+native catch rewards, support/default/fallback receipts and constructor-owned
+immutable selection. Additive return-V3 identities prefer observed support on
+equal Q without changing older model meanings. The actual 24-case V3
+training/validation experiment did not establish transfer: feature validation
+was 0/4 and its separate held-out stage was not opened. See
+[C34 return-subskill evidence](checkpoints/C34_RL_SELF_PLAY_CURRICULUM.md#explicit-native-return-subskill-adapters-and-measured-limits).
+
+An explicit factorized-return V4 implementation now has continuous motor and
+independent threat value features, ordered past-action/native-effect context,
+training-only bounded Gaussian bases, offline/online TD and source-replayed
+recovery prefixes. Its inactive artifacts use a separate strict C32/Watch route
+and distinguish basis support, generalization, unknown support and refusal.
+Four bounded implementation cases cover the retained quantization failure,
+native fresh/tick-145 return conformance, exact resume and candidate/journal
+boundaries. They are not a governed learning or quality experiment. V2/V3
+models and six historical sources are unchanged; the 32 held-out cases remain
+unopened. Final runtime integration and the original train/validation quality
+criteria remain open. See the
+[V4 implementation boundary](checkpoints/C34_RL_SELF_PLAY_CURRICULUM.md#factorized-return-v4-implementation-boundary).

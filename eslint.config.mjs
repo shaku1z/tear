@@ -45,7 +45,7 @@ const tearArchitecture = {
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules*/**", "vendor/**", "tear-crazygames/**", "workers/worker-configuration.d.ts", "scripts/release-artifact.d.mts", "scripts/campaign-publication-boundary.d.mts"],
+    ignores: ["dist/**", "node_modules*/**", "vendor/**", "tear-crazygames/**", "workers/worker-configuration.d.ts", "scripts/release-artifact.d.mts", "scripts/campaign-publication-boundary.d.mts", "scripts/tutorial-gold-compatibility.d.mts"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -75,20 +75,40 @@ export default tseslint.config(
     },
   },
   {
+    // Browser journeys and harnesses: CommonJS Node scripts driving Playwright. The callbacks they
+    // pass to page.evaluate()/waitForFunction() run in the page, so browser globals are valid too.
     files: ["tests/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
-      sourceType: "script",
+      sourceType: "commonjs",
       globals: {
-        ...globals.browser,
         ...globals.node,
+        ...globals.browser,
       },
     },
     rules: {
-      "no-undef": "off",
-      "no-unused-vars": "off",
-      "no-redeclare": "off",
-      "no-unreachable": "off"
+      // CommonJS is how these scripts load Playwright and each other.
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
+    files: ["tests/**/*.mjs"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ["tests/**/*.js", "tests/**/*.mjs"],
+    rules: {
+      // Module-scope bindings such as `const crypto = require("node:crypto")` or an explicit
+      // `import { setTimeout } from "node:timers"` shadow a global; they do not redeclare one.
+      "no-redeclare": ["error", { builtinGlobals: false }],
+      // `({ screenshot, ...entry }) => entry` is how these scripts drop a field from evidence.
+      "@typescript-eslint/no-unused-vars": ["error", { ignoreRestSiblings: true }],
+      // Bug patterns that type-aware rules would otherwise catch in TypeScript.
+      "array-callback-return": "error",
+      "no-self-compare": "error",
+      "no-unreachable-loop": "error",
     },
   },
   {

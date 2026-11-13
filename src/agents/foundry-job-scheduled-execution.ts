@@ -17,6 +17,8 @@ import { parseTearFoundryOfflineTrainingLaunch, TearFoundryOfflineTrainingLaunch
 import { TearOfflineRlCheckpointVault } from "./offline-rl-training";
 import type { TearFoundryJobScheduleVault } from "./foundry-job-schedule";
 import type { TearFoundryJobVault } from "./foundry-job-vault";
+import { TrainingOperationsV3ScheduledCycle } from "./training-operations-v3-scheduled-cycle";
+import type { trainTrainingArchiveV3Candidate } from "./training-archive-v3-candidate-training";
 
 const KEY = "foundry-job-scheduled-attempt:v1:"; const HASH = /^[a-f0-9]{16}$/u;
 export interface TearFoundryScheduledAttemptV1 { readonly format: "tear-foundry-scheduled-attempt"; readonly schemaVersion: 1; readonly scheduleHash: string; readonly bindingHash: string; readonly attemptedAt: string; readonly leaseId: string; readonly phase: TearFoundryExecutionBindingV3["job"]["phase"]; readonly dueReceiptHash: string; readonly attemptHash: string; }
@@ -27,10 +29,15 @@ function freeze(draft: Omit<TearFoundryScheduledAttemptV1, "attemptHash">): Tear
 function parse(value: unknown): TearFoundryScheduledAttemptV1 { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry scheduled attempt"); const source = value as TearFoundryScheduledAttemptV1, { attemptHash, ...draft } = source, parsed = freeze(draft); if (attemptHash !== parsed.attemptHash) throw new TypeError("Foundry scheduled attempt integrity mismatch"); return parsed; }
 /** Explicit local one-shot composition. It owns no loop: callers must invoke one exact bound phase themselves. */
 export class TearFoundryScheduledExecution {
+  readonly #native: TrainingOperationsV3ScheduledCycle;
   readonly #jobs: TearFoundryJobVault; readonly #schedules: TearFoundryJobScheduleVault; readonly #custody: TearAcademyCandidateCustodyStore; readonly #corpus: TearAcademyCorpusStore | undefined; readonly #loader: TearAcademyTrainingDatasetLoader | undefined; readonly #bindings: TearFoundryExecutionBindingVault; readonly #dispatcher: TearFoundryDueDispatcher; readonly #continuation: TearFoundryBoundContinuationCoordinator;
-  constructor(jobs: TearFoundryJobVault, schedules: TearFoundryJobScheduleVault, custody: TearAcademyCandidateCustodyStore, corpus?: TearAcademyCorpusStore, loader?: TearAcademyTrainingDatasetLoader) { this.#jobs = jobs; this.#schedules = schedules; this.#custody = custody; this.#corpus = corpus; this.#loader = loader; this.#bindings = new TearFoundryExecutionBindingVault(jobs); this.#dispatcher = new TearFoundryDueDispatcher(jobs, schedules, custody, corpus, loader); this.#continuation = new TearFoundryBoundContinuationCoordinator(jobs, schedules, { held: async (job, at) => { const held = await custody.held(at); return job.inputs.corpusRecordHashes.every((hash) => held.some((entry) => entry.recordHash === hash)); } }); }
+  constructor(jobs: TearFoundryJobVault, schedules: TearFoundryJobScheduleVault, custody: TearAcademyCandidateCustodyStore, corpus?: TearAcademyCorpusStore, loader?: TearAcademyTrainingDatasetLoader,
+    nativeServices?: Parameters<typeof trainTrainingArchiveV3Candidate>[0]) { this.#native = new TrainingOperationsV3ScheduledCycle(jobs, schedules, nativeServices); this.#jobs = jobs; this.#schedules = schedules; this.#custody = custody; this.#corpus = corpus; this.#loader = loader; this.#bindings = new TearFoundryExecutionBindingVault(jobs); this.#dispatcher = new TearFoundryDueDispatcher(jobs, schedules, custody, corpus, loader); this.#continuation = new TearFoundryBoundContinuationCoordinator(jobs, schedules, { held: async (job, at) => { const held = await custody.held(at); return job.inputs.corpusRecordHashes.every((hash) => held.some((entry) => entry.recordHash === hash)); } }); }
   async runScheduledOnce(scheduleHash: string, at: string, leaseId: string): Promise<TearFoundryScheduledAttemptV1> {
     if (!HASH.test(scheduleHash) || !time(at) || !text(leaseId)) throw new TypeError("invalid Foundry scheduled execution request");
+    const native = await this.#native.runIfBound(scheduleHash, at, leaseId);
+    if (native !== undefined) return freeze({ format: "tear-foundry-scheduled-attempt", schemaVersion: 1, scheduleHash,
+      bindingHash: native.bindingHash, attemptedAt: at, leaseId, phase: native.phase, dueReceiptHash: native.receiptHash });
     const key = `${KEY}${stableVerificationHash({ scheduleHash, at, leaseId })}`, old = await this.#jobs.backend().get("analysis", key);
     if (old !== undefined) { try { return parse(JSON.parse(old)); } catch { await this.#jobs.backend().put("quarantine", key, JSON.stringify(Object.freeze({ format: "foundry-scheduled-attempt-quarantine", schemaVersion: 1, key, raw: old }))); throw new RangeError("Foundry scheduled execution attempt is corrupt"); } }
     const schedule = (await this.#schedules.list()).find((entry) => entry.scheduleHash === scheduleHash); if (schedule?.state !== "enabled") throw new RangeError("Foundry scheduled execution requires an enabled schedule");

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   captureAcademyCandidateTracks,
+  attestAcademyCandidateSource,
+  createAcademyCandidateTerminalAnchor,
   materializeAcademyCandidateCapsule,
 } from "../../src/agents";
 import { GhostCapsuleReader, GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost";
@@ -49,6 +51,13 @@ describe("C31 Academy candidate capsule materializer", () => {
       attestation: { capsuleRange: { capsuleId: materialized.capsuleId, toTick: source.tick } },
     });
     expect(capsule.manifest).toMatchObject({ status: "complete", schemaVersion: 2 });
+    expect(capsule.manifest.provenance?.replayContext).toMatchObject({ simulation: {
+      applicationFramePolicy: { version: 1, kind: "generated-step-intro", secondsPerStep: 1 / 120 },
+    } });
+    const legacyBootstrap = { ...source.artifact.bootstrap }; delete legacyBootstrap.applicationFramePolicy;
+    const legacy = { ...source, artifact: { ...source.artifact, bootstrap: legacyBootstrap } };
+    expect(createAcademyCandidateTerminalAnchor(legacy).candidateHash).not.toBe(materialized.attestation.candidateHash);
+    await expect(attestAcademyCandidateSource(legacy, vault, materialized.capsuleId)).rejects.toThrow(/clock policy/);
     expect(capsule.tracks.results).toHaveLength(1);
     expect(capsule.tracks.events.length).toBeGreaterThan(0);
     expect(bundle.unavailableTracks).toEqual([]);

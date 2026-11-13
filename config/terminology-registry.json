@@ -309,7 +309,7 @@
       "persistenceImpact": {
         "scope": "legacy screen route and disposable live-run inspection panel",
         "legacyRead": [
-          "LegacyScreenId ghostlab",
+          "ScreenId ghostlab",
           "ghostlab.disposable-live-run"
         ],
         "canonicalWrite": "Replay Hub route/display vocabulary",
@@ -462,11 +462,11 @@
       "src/presentation/**/*.ts",
       "src/presentation/**/*.tsx",
       "src/app/**/*screen*.ts",
-      "src/app/live-*-home.ts",
-      "src/app/live-player-watch-controller.ts",
-      "src/app/live-interface-composition.ts",
-      "src/app/live-screen-*.ts",
-      "src/app/settings-controller.ts",
+      "src/app/replay/*-home.ts",
+      "src/app/engineering/player-watch-controller.ts",
+      "src/app/interface/interface-composition.ts",
+      "src/app/interface/screen-*.ts",
+      "src/app/screens/settings-controller.ts",
       "src/audio/signal/*.ts",
       "src/audio/music/*.ts",
       "src/agents/panel-surface.ts",
@@ -767,7 +767,7 @@
       },
       {
         "id": "compat-audio-composition",
-        "pathPattern": "src/app/composition.ts",
+        "pathPattern": "src/app/shell/composition.ts",
         "termIds": [
           "tear-music",
           "adaptive-soundtrack"
@@ -1148,7 +1148,7 @@
       },
       {
         "id": "compat-foundry-app",
-        "pathPattern": "src/app/live-foundry-*.ts",
+        "pathPattern": "src/app/engineering/foundry-*.ts",
         "termIds": [
           "training-operations"
         ],
@@ -1219,7 +1219,7 @@
       },
       {
         "id": "compat-foundry-home",
-        "pathPattern": "src/app/live-ghost-lab-home.ts",
+        "pathPattern": "src/app/replay/ghost-lab-home.ts",
         "termIds": [
           "training-operations",
           "replay-hub",
@@ -1257,7 +1257,7 @@
       },
       {
         "id": "compat-state-forge-app",
-        "pathPattern": "src/app/live-state-forge-*.ts",
+        "pathPattern": "src/app/engineering/state-forge-*.ts",
         "termIds": [
           "scenario-console"
         ],
@@ -1362,7 +1362,7 @@
       },
       {
         "id": "compat-replay-editor-app",
-        "pathPattern": "src/app/*replay*.ts",
+        "pathPattern": "src/app/*/replay-*.ts",
         "termIds": [
           "replay-editor"
         ],
@@ -1432,7 +1432,7 @@
       },
       {
         "id": "compat-replay-hub-app",
-        "pathPattern": "src/app/live-ghost-lab-home.ts",
+        "pathPattern": "src/app/replay/ghost-lab-home.ts",
         "termIds": [
           "replay-hub"
         ],
@@ -1522,7 +1522,7 @@
       },
       {
         "id": "compat-game-agent-app",
-        "pathPattern": "src/app/live-bot-evidence-controller.ts",
+        "pathPattern": "src/app/engineering/bot-evidence-controller.ts",
         "termIds": [
           "game-agent"
         ],
@@ -1575,7 +1575,7 @@
       },
       {
         "id": "compat-training-archive-app",
-        "pathPattern": "src/app/live-academy-screen.ts",
+        "pathPattern": "src/app/engineering/academy-screen.ts",
         "termIds": [
           "training-archive"
         ],
@@ -1617,7 +1617,7 @@
         "reason": "Headless intake format is a compatibility boundary for governed records.",
         "testEvidence": [
           "tests/unit/production-headless-academy-intake.test.ts",
-          "check:c30:foundation"
+          "checkpoint check:c30:foundation"
         ],
         "expiry": {
           "checkpoint": "G4-G-TRAINING-ARCHIVE",
@@ -1706,7 +1706,7 @@
       },
       {
         "id": "compat-interface-composition-surfaces",
-        "pathPattern": "src/app/live-interface-composition.ts",
+        "pathPattern": "src/app/interface/interface-composition.ts",
         "termIds": ["training-archive", "training-operations"],
         "owner": "Navigation/presentation owner",
         "reason": "The live interface composition owns current Academy and Foundry surface bindings.",
@@ -1718,7 +1718,7 @@
       },
       {
         "id": "compat-screen-action-bindings-academy",
-        "pathPattern": "src/app/live-screen-action-bindings.ts",
+        "pathPattern": "src/app/interface/screen-action-bindings.ts",
         "termIds": ["training-archive"],
         "owner": "Navigation contract owner",
         "reason": "Academy actions remain a typed compatibility route until Training Archive is canonical.",

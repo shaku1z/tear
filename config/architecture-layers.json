@@ -1,0 +1,55 @@
+{
+  "format": "tear-architecture-layers.v1",
+  "note": "Declared dependency direction between top-level src directories. Edges inside a layer are always allowed; a cross-layer edge must be listed under allow as \"any\" or \"type\" (type-only imports). Every existing edge that breaks this is recorded file-by-file in config/architecture-baseline.json and may only shrink. See docs/ARCHITECTURE.md.",
+  "layers": {
+    "domain": ["src/domain/**"],
+    "config": ["src/config/**"],
+    "simulation": ["src/simulation/**"],
+    "input": ["src/input/**"],
+    "gameplay": ["src/gameplay/**"],
+    "replay": ["src/replay/**"],
+    "audio": ["src/audio/**"],
+    "persistence": ["src/persistence/**"],
+    "platform": ["src/platform/**"],
+    "presentation": ["src/presentation/**"],
+    "ghost": ["src/ghost/**"],
+    "game-reference": ["src/game-reference/**"],
+    "diagnostics": ["src/diagnostics/**"],
+    "agents": ["src/agents/**"],
+    "tearbench": ["src/tearbench/**"],
+    "app": ["src/app/**"],
+    "entrypoints": ["src/entrypoints/**"],
+    "ambient": ["src/*.d.ts"]
+  },
+  "allow": {
+    "config": { "domain": "any" },
+    "simulation": { "domain": "any" },
+    "input": { "domain": "any", "simulation": "any" },
+    "gameplay": { "domain": "any", "simulation": "any", "config": "type", "input": "type" },
+    "replay": { "domain": "any", "simulation": "any", "gameplay": "any", "input": "any", "config": "type" },
+    "audio": { "domain": "any", "persistence": "any" },
+    "persistence": { "domain": "any" },
+    "platform": { "domain": "any", "config": "any", "persistence": "any" },
+    "presentation": { "domain": "any", "simulation": "any", "gameplay": "any", "audio": "any", "input": "type", "replay": "type", "ghost": "type" },
+    "ghost": { "domain": "any", "simulation": "any", "gameplay": "any", "input": "any", "replay": "any", "persistence": "any", "audio": "type", "platform": "type" },
+    "game-reference": { "domain": "any", "simulation": "any", "gameplay": "any" },
+    "diagnostics": { "domain": "any" },
+    "agents": {
+      "domain": "any", "config": "any", "simulation": "any", "input": "any", "gameplay": "any", "replay": "any", "ghost": "any",
+      "presentation": "any", "tearbench": "any"
+    },
+    "tearbench": {
+      "domain": "any", "config": "any", "simulation": "any", "input": "any", "gameplay": "any", "replay": "any", "audio": "any",
+      "persistence": "any", "platform": "any", "presentation": "any", "ghost": "any", "game-reference": "any", "diagnostics": "any"
+    },
+    "app": {
+      "domain": "any", "config": "any", "simulation": "any", "input": "any", "gameplay": "any", "replay": "any", "audio": "any",
+      "persistence": "any", "platform": "any", "presentation": "any", "ghost": "any", "game-reference": "any", "diagnostics": "any",
+      "agents": "any", "tearbench": "any"
+    },
+    "entrypoints": {
+      "domain": "any", "config": "any", "input": "any", "audio": "any", "persistence": "any", "platform": "any", "presentation": "any",
+      "app": "any"
+    }
+  }
+}

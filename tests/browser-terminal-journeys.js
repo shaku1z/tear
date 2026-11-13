@@ -1,39 +1,34 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
-withJourney({ name: "terminal journeys", port: 8143 }, async ({ page, waitScreen }) => {
+withJourney({ name: "terminal journeys", port: 8143, recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
   const hooks = await page.evaluate(() => Object.keys(window.__PANTHEON_TEST));
   assert.ok(hooks.includes("openTerminal"), "built artifact is missing required PANTHEON_DEBUG hook: openTerminal");
 
+  // Results screens ignore pointer input until they settle; then press the drawn control.
   await page.evaluate(() => window.__PANTHEON_TEST.openTerminal("gameover"));
-  await waitScreen("gameover");
-  await page.mouse.click(220, 347);
-  await waitScreen("playing");
+  await waitArmed("gameover");
+  await clickLabel("RETRY", "playing");
 
   await page.evaluate(() => window.__PANTHEON_TEST.openTerminal("gameover"));
-  await waitScreen("gameover");
-  await page.mouse.click(220, 409);
-  await waitScreen("menu");
+  await waitArmed("gameover");
+  await clickLabel("MAIN MENU", "menu");
 
   await page.evaluate(() => window.__PANTHEON_TEST.openTerminal("continue"));
-  await waitScreen("continue");
-  await page.mouse.click(965, 390);
-  await waitScreen("gameover");
+  await waitArmed("continue");
+  await clickLabel("GIVE UP", "gameover");
 
   await page.evaluate(() => window.__PANTHEON_TEST.openTerminal("win"));
-  await waitScreen("win");
-  await page.mouse.click(800, 585);
-  await waitScreen("playing");
+  await waitArmed("win");
+  await clickLabel("PLAY AGAIN", "playing");
 
   await page.evaluate(() => window.__PANTHEON_TEST.openTerminal("win"));
-  await waitScreen("win");
-  await page.mouse.click(800, 647);
-  await waitScreen("menu");
+  await waitArmed("win");
+  await clickLabel("MAIN MENU", "menu");
 
   await page.evaluate(() => window.__PANTHEON_TEST.openTerminal("campaignWin"));
-  await waitScreen("win");
-  await page.mouse.click(800, 685);
-  await waitScreen("menu");
+  await waitArmed("win");
+  await clickLabel("MAIN MENU", "menu");
 
   await page.evaluate(() => window.__PANTHEON_TEST.startFinale());
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().finale !== null);

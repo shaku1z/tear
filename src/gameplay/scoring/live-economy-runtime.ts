@@ -1,6 +1,8 @@
 import { calculateCoinAward } from "./coin-awards";
 
 export interface EconomyRunState {
+  readonly beatThisRun?: unknown;
+  readonly seedRace?: unknown;
   readonly wave: number;
   readonly diff: string;
   readonly coinMod: number;
@@ -33,6 +35,7 @@ export function createLiveEconomyRuntime<TShop>(options: LiveEconomyRuntimeOptio
   return Object.freeze({
     awardCoins: (score: number) => {
       const run = options.run();
+      if (run.beatThisRun !== undefined || run.seedRace !== undefined) return 0;
       const { earned } = calculateCoinAward({
         score, wave: run.wave || 0, difficultyId: run.diff,
         baseDifficultyMultiplier: run.coinMod || 1, remoteMultiplier: options.remoteCoinMultiplier(),

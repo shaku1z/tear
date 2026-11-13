@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import process from "node:process";
 import { resolve } from "node:path";
 import { rm } from "node:fs/promises";
+import { pruneCrazyGamesArtifact } from "./crazygames-artifact-scope.mjs";
 import { RELEASE_REPOSITORY, writeReleaseArtifactMetadata } from "./release-artifact.mjs";
 import { fanoutContentAddressedBuild, materializeContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 
@@ -33,6 +34,10 @@ const result = spawnSync(process.execPath, [viteCli, "build", "--mode", mode, "-
 });
 if (result.error !== undefined) throw result.error;
 if (result.status !== 0) process.exit(result.status ?? 1);
+if (target === "crazygames") {
+  const pruned = await pruneCrazyGamesArtifact(staging);
+  console.log(`CrazyGames output: left out ${String(pruned.files.length)} unrequested file(s), ${String(pruned.bytes)} bytes`);
+}
 
 const metadata = await writeReleaseArtifactMetadata({ directory: staging, repository, sha, target, mode, sourceDirectory: projectRoot });
 const stored = await materializeContentAddressedBuild({ workspaceRoot: projectRoot, directory: staging });

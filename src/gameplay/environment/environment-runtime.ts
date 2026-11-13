@@ -2,7 +2,7 @@ import { EnvironmentState, createEnvironmentState } from "./environment-state";
 import type { EnvironmentClearReason, EnvironmentObjectValidationPort, EnvironmentRuntimeConfiguration, EnvironmentRuntimeState, EnvironmentSnapshot } from "./environment-contracts";
 import { createEnvironmentCombatObjectRuntime, type EnvironmentCombatObjectRuntime, type EnvironmentCounterplayResolution } from "./combat-object-runtime";
 import type { EnvironmentCounterplayTag } from "./environment-definitions";
-import { cleanupOrphanedEnvironmentReferences } from "./environment-cleanup";
+import { cleanupOrphanedEnvironmentReferences, environmentActorReferenceId, environmentNeedsOrphanCleanup } from "./environment-cleanup";
 import type { TearGameplayEventPort } from "../runtime/gameplay-events";
 import { publishEnvironmentEvent } from "./environment-events";
 import type { EnvironmentFeature, EnvironmentFeatureContext } from "./environment-feature-ports";
@@ -26,16 +26,11 @@ function prunedActorReferenceLists(
   entry: Readonly<Record<string, unknown>>,
   availableActorIds: ReadonlySet<string>,
 ): Readonly<Record<string, unknown>> {
-  const actorReferenceId = (value: unknown): string | undefined => {
-    if (typeof value !== "object" || value === null) return undefined;
-    const actorId = (value as Readonly<{ actorId?: unknown }>).actorId;
-    return typeof actorId === "string" ? actorId : undefined;
-  };
   const patch: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(entry)) {
-    if (!Array.isArray(value) || !value.some((item: unknown) => actorReferenceId(item) !== undefined)) continue;
+    if (!Array.isArray(value) || !value.some((item: unknown) => environmentActorReferenceId(item) !== undefined)) continue;
     const filtered = value.filter((item: unknown) => {
-      const actorId = actorReferenceId(item);
+      const actorId = environmentActorReferenceId(item);
       return actorId === undefined || availableActorIds.has(actorId);
     });
     if (filtered.length !== value.length) patch[key] = Object.freeze(filtered);
@@ -104,7 +99,12 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     // cloning two complete snapshots merely to prove that an empty set stays
     // empty; populated authored worlds retain the full cleanup contract.
     if (this.fields().length === 0 && this.combatObjects().length === 0 && this.routes().length === 0) return;
-    const sourceIds = availableActorIds ?? this.#availableActorIds?.(); if (sourceIds === undefined) return; const ids = new Set(sourceIds); ids.add(this.stageId); const before = this.snapshot(); const after = cleanupOrphanedEnvironmentReferences(before, ids, "stage-transition");
+    const sourceIds = availableActorIds ?? this.#availableActorIds?.();
+    if (sourceIds === undefined) return;
+    // Clone and rewrite only when something would change; an unchanged pass is skipped exactly.
+    const stageId = this.stageId;
+    if (!environmentNeedsOrphanCleanup(this.fields(), this.combatObjects(), this.routes(), { has: (id) => id === stageId || sourceIds.has(id) })) return;
+    const ids = new Set(sourceIds); ids.add(this.stageId); const before = this.snapshot(); const after = cleanupOrphanedEnvironmentReferences(before, ids, "stage-transition");
     if (this.#events !== undefined) for (const [category, entries] of [["field", after.fields], ["combat-object", after.combatObjects], ["route", after.routes]] as const) { const prior = new Map((category === "field" ? before.fields : category === "combat-object" ? before.combatObjects : before.routes).map((entry) => [entry.id, entry])); for (const entry of entries) if (entry.cleanupReason !== null && prior.get(entry.id)?.cleanupReason !== entry.cleanupReason) publishEnvironmentEvent(this.#events, { event: "object-cleaned", objectId: entry.id, category, objectKind: entry.kind, reason: entry.cleanupReason }, tick); }
     for (const entry of after.fields) { const prior = before.fields.find((candidate) => candidate.id === entry.id); const pruned = prunedActorReferenceLists(entry as unknown as Readonly<Record<string, unknown>>, ids); if (lifecycleChanged(prior, entry) || Object.keys(pruned).length > 0) this.updateField(entry.id, { ...entry, ...pruned }); }
     for (const entry of after.combatObjects) { const prior = before.combatObjects.find((candidate) => candidate.id === entry.id); if (lifecycleChanged(prior, entry)) { this.updateCombatObject(entry.id, entry); this.#combatKernels.delete(entry.id); } }

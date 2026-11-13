@@ -1,6 +1,6 @@
 import { createBrowserPlatformServices } from "./browser";
 import type { CrazyGamesPlatformOptions, CrazyGamesPlatformServices, CrazyGamesSdkShape } from "./crazygames";
-import type { PlatformServices, Unsubscribe } from "./contracts";
+import type { AcknowledgedStorage, PlatformServices, StorageAcknowledgement, Unsubscribe } from "./contracts";
 import type { SyncStringStorage } from "./storage";
 
 export interface LegacyPlatformCompatibilityOptions {
@@ -28,6 +28,7 @@ export interface LegacyCrazyGamesFacade {
   midgame(onDone?: () => void): void;
   rewarded(onReward?: () => void, onDone?: (success: boolean) => void): void;
   readonly store: {
+    readonly acknowledged?: AcknowledgedStorage;
     get(key: string): string | null;
     set(key: string, value: string): void;
   };
@@ -45,12 +46,50 @@ function defaultStorage(): SyncStringStorage | undefined {
 /** Synchronous bridge retained only while classic callers cannot await the storage port. */
 function legacyStore(storage: SyncStringStorage | undefined, sdk: CrazyGamesSdkShape | undefined, isLive: () => boolean) {
   const memory = new Map<string, string>();
+  const tails = new Map<string, Promise<unknown>>();
+  const readBacking = async (key: string, portal = isLive()): Promise<string | null> => {
+    if (!storage && !(portal && sdk?.data)) throw new Error("Persistent storage is unavailable");
+    const value = portal && sdk?.data ? await sdk.data.getItem(key) : storage?.getItem(key);
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "string") throw new TypeError("Invalid persistent storage value");
+    return value;
+  };
+  const writeBacking = async (key: string, value: string, portal: boolean): Promise<void> => {
+    if (portal && sdk?.data) await sdk.data.setItem(key, value);
+    else if (storage) storage.setItem(key, value);
+    else throw new Error("Persistent storage is unavailable");
+    memory.set(key, value);
+  };
+  const acknowledged: AcknowledgedStorage = {
+    async read(key) {
+      await tails.get(key);
+      try { return { status: "committed", value: await readBacking(key) }; }
+      catch { return { status: storage || (isLive() && sdk?.data) ? "unknown" : "unavailable", reason: "Backing storage could not be read" }; }
+    },
+    update(key, change) {
+      const operation = (tails.get(key) ?? Promise.resolve()).then(async (): Promise<StorageAcknowledgement<string>> => {
+        const portal = isLive();
+        if (!storage && !(isLive() && sdk?.data)) return { status: "unavailable", reason: "Persistent storage is unavailable" };
+        let value: string;
+        try { value = change(await readBacking(key, portal)); }
+        catch { return { status: "unknown", reason: "Backing state could not be read or validated" }; }
+        try { await writeBacking(key, value, portal); return { status: "committed", value }; }
+        catch {
+          try { if (await readBacking(key, portal) === value) return { status: "committed", value }; } catch { /* retain uncertainty */ }
+          return { status: "unknown", reason: "Write acknowledgement is indeterminate" };
+        }
+      });
+      tails.set(key, operation.then(() => undefined)); return operation;
+    },
+  };
   return {
+    acknowledged,
     get(key: string): string | null {
       if (isLive() && sdk?.data) {
         try {
           const value = sdk.data.getItem(key);
           if (typeof value === "string") return value;
+          if (value instanceof Promise) void value.catch(() => undefined);
         } catch { /* use local mirror */ }
       }
       try {

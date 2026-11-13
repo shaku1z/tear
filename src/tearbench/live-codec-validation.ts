@@ -1,8 +1,12 @@
+import { readBeatRunBinding } from "../gameplay/run/beat-run";
+import { readGhostRunAssistance } from "../gameplay/run/ghost-assistance";
 import type { TearCodecId } from "./registries";
 import type { TearCodecIssue } from "./state-codecs";
 import { findVariant } from "../gameplay/variants";
 import { ROOTBOUND_LAST_SPRING } from "../gameplay/entities/enemy-types/rootbound";
 import { ROOTBOUND_REGROWTH_CONNECTION_COUNT, ROOTBOUND_REGROWTH_OUTCOMES } from "../gameplay/environment/regrowth-link";
+import { parseUiTutorialPresentationCheckpoint, parseUiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
+import { parseParticlePresentationCheckpoint } from "./particle-presentation-checkpoint";
 
 function issue(codecId: TearCodecId, path: string, message: string): TearCodecIssue {
   return Object.freeze({ codecId, path, message });
@@ -178,12 +182,28 @@ export function validateLiveCodecPayload(
     }
     if (typeof payload.weaponId !== "string") issues.push(issue(codecId, "$.weaponId", "blade requires weaponId"));
   } else if (codecId === "tear.run.v1") {
+    try {
+      const assistance = readGhostRunAssistance(payload.ghostAssistance);
+      // The legacy reader's enum check coerces untyped actors; codec data must
+      // retain the actual string discriminant rather than accepting ["human"].
+      if (assistance !== undefined && typeof assistance.actor !== "string") throw new TypeError("Invalid Chase disposition");
+    } catch (error) { issues.push(issue(codecId, "$.ghostAssistance", error instanceof Error ? error.message : "invalid Chase disposition")); }
+    try { readBeatRunBinding(payload.beatThisRun); }
+    catch (error) { issues.push(issue(codecId, "$.beatThisRun", error instanceof Error ? error.message : "invalid Beat binding")); }
+    try { readSeedRaceRun(payload.seedRace); }
+    catch (error) { issues.push(issue(codecId, "$.seedRace", error instanceof Error ? error.message : "invalid seed race")); }
     for (const key of ["mode", "difficulty"] as const) {
       if (typeof payload[key] !== "string") issues.push(issue(codecId, `$.${key}`, `${key} must be a string`));
     }
     issues.push(...finiteField(codecId, payload, "wave"), ...finiteField(codecId, payload, "tick"));
   } else if (codecId === "tear.world.v1") {
     issues.push(...finiteField(codecId, payload, "clock"));
+    if (payload.simulationSeconds !== undefined) {
+      issues.push(...finiteField(codecId, payload, "simulationSeconds"));
+      if (typeof payload.simulationSeconds === "number" && payload.simulationSeconds < 0) {
+        issues.push(issue(codecId, "$.simulationSeconds", "simulationSeconds must be nonnegative"));
+      }
+    }
     if (!record(payload.identityState)) issues.push(issue(codecId, "$.identityState", "world requires identity allocator state"));
   } else if (codecId === "tear.hazard.v1") {
     if (!Array.isArray(payload.slowZones) || !Array.isArray(payload.walls)) {
@@ -193,6 +213,12 @@ export function validateLiveCodecPayload(
     if (typeof payload.screen !== "string" || typeof payload.focusId !== "string") {
       issues.push(issue(codecId, "$", "UI codec requires screen and focusId"));
     }
+    try { parseUiTutorialPresentationCheckpoint(payload.tutorialPresentation); }
+    catch (error) { issues.push(issue(codecId, "$.tutorialPresentation", error instanceof Error ? error.message : "invalid tutorial presentation")); }
+    try { parseUiHudPresentationCheckpoint(payload.hudPresentation); }
+    catch (error) { issues.push(issue(codecId, "$.hudPresentation", error instanceof Error ? error.message : "invalid HUD presentation")); }
+    try { parseParticlePresentationCheckpoint(payload.particlesPresentation); }
+    catch (error) { issues.push(issue(codecId, "$.particlesPresentation", error instanceof Error ? error.message : "invalid particle presentation")); }
   } else if (codecId === "tear.reward.v1") {
     if (!("selection" in payload)) issues.push(issue(codecId, "$.selection", "reward codec requires selection"));
   } else if (codecId === "tear.configuration.v1") {
@@ -249,3 +275,4 @@ export function validateLiveCodecPayload(
   }
   return Object.freeze(issues);
 }
+import { readSeedRaceRun } from "../ghost/seed-race-contract";

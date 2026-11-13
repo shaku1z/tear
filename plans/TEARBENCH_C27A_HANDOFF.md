@@ -60,7 +60,7 @@ Before coding, read this file, then:
   because the application constructs combat while still on the menu. The
   remaining opening/collision transient state is explicit at that boundary.
 - `tests/unit/live-combat-world-state.test.ts` locks the collection replacement
-  behavior, and `package.json` includes it in `check:c27a:foundation`.
+  behavior, and `config/checkpoints.json` includes it in `check:c27a:foundation`.
 - `tests/browser-journey-harness.js` now includes captured page errors when
   bootstrap readiness times out. This made the pre-run lazy-access regression
   diagnosable without weakening browser evidence.
@@ -370,7 +370,7 @@ Before coding, read this file, then:
 
 All of the following were run from this worktree after the parity-passing slice:
 
-- Slice 41: `pnpm check:c27a` passed after per-world simulation tuning
+- Slice 41: `pnpm checkpoint check:c27a` passed after per-world simulation tuning
   ownership. Foundation: 36 files / 130 tests; browser live parity: 13
   scenarios / 5,732 ticks / 33 native facts with 40 detached comparisons;
   campaign victory: 10 files / 36 tests plus the 1,176-transition browser
@@ -380,7 +380,7 @@ All of the following were run from this worktree after the parity-passing slice:
   physics. This proof excludes particle policy, Backdrop, renderer/UI, input,
   audio, persistence, cloud, and complete multi-live-world operation.
 
-- `pnpm check:c27a` passed through Slice 40. Its foundation subgate passed 36
+- `pnpm checkpoint check:c27a` passed through Slice 40. Its foundation subgate passed 36
   files / 128 tests, regenerated all 13 browser scenarios across 5,732 ticks /
   33 native facts, and passed the 40-test detached comparator. Its campaign-
   victory subgate passed 10 files / 36 tests, executed the real Source-victory
@@ -397,35 +397,35 @@ All of the following were run from this worktree after the parity-passing slice:
   receipt sequence described above. This is a bounded browser observation, not
   a fresh full C27A gate or a production-audio claim.
 
-- `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after
+- `pnpm requirements:check` and `pnpm checkpoint check:c27a:foundation` passed after
   slice 34: zero unmapped source lines; typecheck, lint, planted architecture
   rules, 33 focused files / 112 tests, standalone rebuild, physical-input
   browser proof, a fresh 13-scenario / 5,732-tick live capture, and all 40
   exact state/native-stream/route comparisons.
 
-- `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after
+- `pnpm requirements:check` and `pnpm checkpoint check:c27a:foundation` passed after
   slice 33: zero unmapped source lines; typecheck, lint, planted architecture
   rules, 31 focused files / 108 tests, standalone rebuild, physical-input
   browser proof, fresh 12-scenario live capture, and all 37 exact
   state/native-stream parity tests.
 
-- `pnpm check:c27a:foundation` passed after slice 32: typecheck, lint,
+- `pnpm checkpoint check:c27a:foundation` passed after slice 32: typecheck, lint,
   architecture, 31 test files / 104 tests, standalone test build, the physical
   input browser proof, fresh 12-scenario live capture, and all 37 shared-core
   detached parity tests.
 
-- `pnpm check:c27a:foundation` passed after slice 31: typecheck, lint,
+- `pnpm checkpoint check:c27a:foundation` passed after slice 31: typecheck, lint,
   architecture (including planted portable-combat violations), 31 test files /
   103 tests, standalone test build, the physical-input browser proof, fresh
   12-scenario live capture, and all 37 detached parity tests.
 
-- `pnpm check:c27a:foundation` passed after slice 30: typecheck, lint,
+- `pnpm checkpoint check:c27a:foundation` passed after slice 30: typecheck, lint,
   architecture, 29 test files / 101 tests, standalone test build, the physical
   input browser proof, fresh 12-scenario live capture, and all 37 detached
   parity tests. This validates the shared event adapter but does not yet close
   outward-stream comparison.
 
-- `pnpm check:c27a:foundation` passed after slice 29: typecheck, lint,
+- `pnpm checkpoint check:c27a:foundation` passed after slice 29: typecheck, lint,
   architecture gate, 28 test files / 96 tests, standalone test build,
   `browser-c27a-physical-canonical-input`, and `browser-c27a-live-parity-trace`.
   The trace regenerated all 12 scenarios and the detached comparison passed
@@ -437,17 +437,17 @@ All of the following were run from this worktree after the parity-passing slice:
   `test:browser:features`, `test:browser:bosses`, `test:browser:journeys`,
   `test:browser:responsive`, and the blade-lifecycle, mirror-pursuit, and
   combat-resolution parity fixtures were also rerun and passed.
-- `pnpm check:c26` passed: 5 test files / 24 tests plus the planted live
+- `pnpm checkpoint check:c26` passed: 5 test files / 24 tests plus the planted live
   regression.
 - Note for future runs: `tests/unit/tearbench-progression-ledger.test.ts`
   synthesizes 10,000 states and takes ~36 s alone. It hit vitest's 120 s
   timeout once while other gates were competing for the machine, then passed
   on a clean rerun. Treat a timeout there as machine load, not a regression,
   but confirm with an isolated run.
-- `pnpm check:c27:foundation` passed: requirements, typecheck, lint,
+- `pnpm checkpoint check:c27:foundation` passed: requirements, typecheck, lint,
   architecture, 14 test files / 69 tests, standalone build, and all seven C27
   browser proofs.
-- `pnpm check:c23` passed after slice 29: requirements, typecheck, lint,
+- `pnpm checkpoint check:c23` passed after slice 29: requirements, typecheck, lint,
   architecture, 13 test files / 62 tests, standalone build, active-campaign
   cinematic restore/rollback plus the original 600-tick live continuation,
   State Forge Studio, and the exit matrix.

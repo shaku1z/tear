@@ -65,7 +65,10 @@ describe("Academy policy evaluation executor", () => {
       compatibility: { runtime: "tear-policy-runtime.v1", observationClass: "structured-state", actionSchema: "tear-game-action-command-envelope.v1", modelFormats: ["table-policy-v1"] } });
     const launch = createTearAcademyPolicyEvaluationLaunch({ plan: { id: plan.id, planHash: plan.planHash }, candidate,
       recovery: Object.freeze([{ scenarioHash: stableVerificationHash(recoveryScenario), evaluation: recovery(recoveryScenario) }]) });
-    const executor = new TearAcademyPolicyEvaluationExecutor(backend);
+    // The candidate runtime's 8 ms decision budget reads a wall clock. Under
+    // full-suite load one cold decision exceeded it and produced a different
+    // verdict hash; a fixed clock keeps this identity check deterministic.
+    const executor = new TearAcademyPolicyEvaluationExecutor(backend, { now: () => 0 });
     const first = await executor.execute(launch), second = await executor.execute(launch);
     expect(second).toEqual(first);
     expect(first).toMatchObject({ format: "tear-academy-policy-evaluation-result", passed: false,

@@ -1,3 +1,4 @@
+import { runDnaObserver } from "../runtime/run-dna-observer";
 import type { BladePlatformPort } from "../entities/blade-contracts";
 import type { BladeWeaponEvent } from "../entities/blade-contracts";
 
@@ -54,6 +55,7 @@ export function stepCombatPrelude(options: CombatStepPreludeOptions): CombatStep
     options.stepCinematic(dt);
     return { blocked: true, previousBladeState: blade.state, wasReturning: false, linkBreakReason: false };
   }
+  runDnaObserver(player)?.eligible();
   if (options.protection.active) {
     player.cinematicProtected = false;
     player.cinematicGraceT = Math.max(player.cinematicGraceT,
@@ -69,7 +71,8 @@ export function stepCombatPrelude(options: CombatStepPreludeOptions): CombatStep
   options.updateZonesAndWalls(dt);
   player.moveBoost = (blade.state !== "held" ? options.tuning.thrownMoveBoost : 1) * options.overrunMovementMultiplier *
     (player.tempoT > 0 ? 1.18 : 1) * (player.afterimageT > 0 ? player.afterimageSpeedMult : 1);
-  player.update(dt, options.platforms); run.weaponStats.distanceMoved += Math.hypot(player.vx, player.vy) * dt;
+  const beforeX = player.x, beforeY = player.y;
+  player.update(dt, options.platforms); runDnaObserver(player)?.moved(beforeX, beforeY, player); run.weaponStats.distanceMoved += Math.hypot(player.vx, player.vy) * dt;
   if (run.voidScroll) options.syncVoidSupport();
   else { player.supportPlatform = null; player.voidLane = null; player.voidMajorWindow = false; }
   const previousBladeState = blade.state, wasReturning = previousBladeState === "returning";

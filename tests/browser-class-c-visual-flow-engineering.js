@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- direct Node browser engineering script. */
 /**
  * Engineering-only visual-flow exercise.  The test harness prepares a draft
  * and terminal after real play has started, but the external policy sees only

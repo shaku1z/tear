@@ -1,8 +1,21 @@
 import { fork } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { HeadlessJobError, ProductionHeadlessJobStore, headlessAttemptLease, validateHeadlessWorkerReply } from "./production-headless-job-store.mjs";
+import { readSourceIdentitySync } from "./release-artifact.mjs";
+import { canonicalJson } from "./tearbench-task-receipts.mjs";
+import { executionToolchainBinding } from "./tearbench-runtime-identity.mjs";
 
 const defaultWorkerPath = resolve(import.meta.dirname, "production-headless-worker.mjs");
 const workerFormat = "tearbench-production-headless-worker";
+const root = resolve(import.meta.dirname, "..");
+const digest = (value) => createHash("sha256").update(value).digest("hex");
+
+function executionBinding() {
+  return { source: readSourceIdentitySync(root), dependencySha256: digest(readFileSync(resolve(root, "pnpm-lock.yaml"))),
+    toolchain: executionToolchainBinding(JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"))) };
+}
 
 function requestId(request) {
   if (request === null || typeof request !== "object" || Array.isArray(request)
@@ -41,7 +54,7 @@ function withAttempts(result, attempts) {
 }
 
 function available(slot) {
-  if (!slot.alive || slot.active !== null || slot.child.exitCode !== null || slot.child.signalCode !== null) return false;
+  if (!slot.alive || slot.reserved === true || slot.active !== null || slot.child.exitCode !== null || slot.child.signalCode !== null) return false;
   try {
     process.kill(slot.child.pid, 0);
     return true;
@@ -60,6 +73,11 @@ export class ProductionHeadlessWorkerDispatcher {
   #spawnCount = 0;
   #workers = new Set();
   #closed = false;
+  #store;
+  #owner = randomUUID();
+  #boundary;
+  #durableActive = new Map();
+  #durableRunning = false;
 
   constructor(options = {}) {
     this.#maxWorkers = options.maxWorkers ?? 2;
@@ -71,6 +89,10 @@ export class ProductionHeadlessWorkerDispatcher {
       ?? Math.max(this.#deadlineMilliseconds, 30_000);
     const workerPath = options.workerPath ?? defaultWorkerPath;
     this.#workerPathForSpawn = options.workerPathForSpawn ?? (() => workerPath);
+    this.#store = options.store;
+    this.#boundary = options.onDurableBoundary ?? (() => undefined);
+    if (this.#store !== undefined && !(this.#store instanceof ProductionHeadlessJobStore)) throw new TypeError("invalid durable job store");
+    if (typeof this.#boundary !== "function") throw new TypeError("invalid durable observation port");
     if (!Number.isSafeInteger(this.#maxWorkers) || this.#maxWorkers < 1) throw new RangeError("dispatcher maxWorkers must be positive");
     if (!Number.isFinite(this.#deadlineMilliseconds) || this.#deadlineMilliseconds < 0) {
       throw new RangeError("dispatcher deadlineMilliseconds must be non-negative");
@@ -84,6 +106,11 @@ export class ProductionHeadlessWorkerDispatcher {
   async run(requests) {
     if (this.#closed) throw new Error("dispatcher is disposed");
     const entries = [...requests];
+    if (this.#store !== undefined) {
+      if (this.#durableRunning) throw new HeadlessJobError("dispatcher-busy", "durable dispatcher already owns a batch");
+      this.#durableRunning = true;
+      try { return await this.#runDurable(entries); } finally { this.#durableRunning = false; }
+    }
     const results = new Array(entries.length);
     let cursor = 0;
     const scheduled = entries.filter((entry) => entry?.cancelled !== true).length;
@@ -124,6 +151,13 @@ export class ProductionHeadlessWorkerDispatcher {
    */
   cancel(requestId) {
     if (typeof requestId !== "string" || requestId.length === 0) throw new TypeError("cancel requestId must be non-empty");
+    if (this.#store !== undefined) {
+      const current = this.#store.read(requestId);
+      if (current === null) return Promise.resolve(false);
+      const cancelled = this.#store.cancel(requestId, current.job.revision);
+      if (cancelled.result.kind === "cancelled") this.#durableActive.get(requestId)?.stop();
+      return Promise.resolve(cancelled.result.kind === "cancelled");
+    }
     for (const slot of this.#workers) {
       const active = slot.active;
       if (active?.requestId !== requestId || active.cancelRequested) continue;
@@ -138,6 +172,7 @@ export class ProductionHeadlessWorkerDispatcher {
 
   dispose() {
     this.#closed = true;
+    for (const active of this.#durableActive.values()) active.stop();
     for (const slot of this.#workers) {
       slot.alive = false;
       if (slot.child.connected) slot.child.disconnect();
@@ -146,7 +181,15 @@ export class ProductionHeadlessWorkerDispatcher {
     this.#workers.clear();
   }
 
-  async #spawn() {
+  async close() {
+    const children = [...this.#workers].map((slot) => slot.child);
+    const exits = children.map((child) => child.exitCode !== null || child.signalCode !== null
+      ? Promise.resolve() : new Promise((resolveExit) => child.once("exit", resolveExit)));
+    this.dispose();
+    await Promise.all(exits);
+  }
+
+  async #spawn(startupMilliseconds = this.#startupDeadlineMilliseconds, onSpawn = () => undefined) {
     const workerPath = this.#workerPathForSpawn(this.#spawnCount++);
     if (typeof workerPath !== "string" || workerPath.length === 0) throw new TypeError("dispatcher worker path must be a non-empty string");
     const child = fork(workerPath, { silent: true });
@@ -154,6 +197,7 @@ export class ProductionHeadlessWorkerDispatcher {
     child.stderr?.on("data", (chunk) => { stderr = `${stderr}${String(chunk)}`.slice(-2_000); });
     const slot = { child, alive: true, active: null };
     this.#workers.add(slot);
+    onSpawn(slot);
     child.on("exit", (code, signal) => {
       slot.alive = false;
       this.#workers.delete(slot);
@@ -166,15 +210,189 @@ export class ProductionHeadlessWorkerDispatcher {
       }));
     });
     const ready = await new Promise((resolveReady, rejectReady) => {
-      const timer = setTimeout(() => rejectReady(new Error("worker did not become ready before dispatcher startup deadline")), this.#startupDeadlineMilliseconds);
+      const failed = (error) => { clearTimeout(timer); child.kill(); rejectReady(error); };
+      const onExit = () => failed(new Error("worker exited before readiness"));
+      const timer = setTimeout(() => failed(new Error("worker did not become ready before dispatcher startup deadline")), startupMilliseconds);
+      child.once("exit", onExit);
       child.once("message", (message) => {
         clearTimeout(timer);
-        if (message?.format === workerFormat && message.kind === "ready") resolveReady(slot);
-        else rejectReady(new Error("worker returned an invalid readiness message"));
+        child.off("exit", onExit);
+        if (message?.format === workerFormat && message.kind === "ready"
+          && (this.#store === undefined || message.schemaVersion === 1)) {
+          slot.readiness = message;
+          resolveReady(slot);
+        } else failed(new Error("worker returned an invalid readiness message"));
       });
-      child.once("error", rejectReady);
+      child.once("error", failed);
     });
     return ready;
+  }
+
+  async #runDurable(entries) {
+    const ids = new Set();
+    for (const request of entries) {
+      const descriptor = request !== null && typeof request === "object" ? Object.getOwnPropertyDescriptor(request, "requestId") : undefined;
+      if (descriptor === undefined || !Object.hasOwn(descriptor, "value") || typeof descriptor.value !== "string") {
+        throw new HeadlessJobError("invalid-record", "durable requestId must be an own data field");
+      }
+      if (ids.has(descriptor.value)) throw new HeadlessJobError("duplicate-request", "durable batch IDs must be unique");
+      ids.add(descriptor.value);
+    }
+    const observed = executionBinding();
+    // Admission is complete before spawning; exact committed retries never launch a worker.
+    const admitted = entries.map((request) => this.#store.admit(request, observed,
+      { deadlineMilliseconds: deadline(request, this.#deadlineMilliseconds), retry: retryPolicy(request) }));
+    for (const record of admitted) await this.#boundary("admitted", { record });
+    const results = new Array(admitted.length);
+    let cursor = 0, failed = false, firstFailure;
+    await Promise.all(Array.from({ length: Math.min(this.#maxWorkers, admitted.length) }, async () => {
+      try {
+        while (cursor < admitted.length && !failed) {
+          const index = cursor++;
+          results[index] = await this.#runDurableRequest(admitted[index], observed);
+        }
+      } catch (error) { if (!failed) firstFailure = error; failed = true; }
+    }));
+    if (failed) throw firstFailure;
+    return Object.freeze(results);
+  }
+
+  async #runDurableRequest(initial, observed) {
+    let record = initial;
+    const requestId = record.job.id;
+    while (record.result === null) {
+      if (this.#closed) throw new HeadlessJobError("disposed", "dispatcher disposed before durable claim");
+      record = this.#store.claim(requestId, record.job.revision, this.#owner);
+      if (record.result !== null) break;
+      const lease = headlessAttemptLease(record);
+      const checkpointEnabled = record.job.schemaVersion === 2;
+      const attempt = record.job.attempts.at(-1);
+      const envelope = { schemaVersion: checkpointEnabled ? 2 : 1, requestDigest: record.requestDigest,
+        executionDigest: digest(canonicalJson(observed)), token: lease.token, owner: lease.owner, ordinal: lease.ordinal,
+        ...(checkpointEnabled ? { claimRevision: attempt.claimRevision, origin: attempt.origin,
+          deadlineAt: record.job.deadlineAt, checkpointPolicy: record.input.policy.checkpoint } : {}) };
+      let slot, failure;
+      const active = { stop: () => {
+        failure ??= new HeadlessJobError("stale-owner", "durable attempt stopped");
+        if (slot?.reservation === lease.token) {
+          slot.alive = false; slot.child.kill(); slot.active?.resolve({ fenceError: failure });
+        }
+      } };
+      this.#durableActive.set(requestId, active);
+      const heartbeat = setInterval(() => {
+        try { this.#store.renew(lease); }
+        catch (error) { failure = error; active.stop(); }
+      }, Math.max(1, Math.floor(this.#store.leaseMilliseconds / 3)));
+      try {
+        await this.#boundary("claimed", { record });
+        const remaining = () => Math.max(0, record.job.deadlineAt - Date.now());
+        if (failure !== undefined) throw failure;
+        slot = [...this.#workers].find((candidate) => candidate.readiness !== undefined && available(candidate));
+        if (slot === undefined) slot = await this.#spawn(Math.min(this.#startupDeadlineMilliseconds, remaining()), (created) => {
+          slot = created; slot.reserved = true; slot.reservation = lease.token;
+          if (failure !== undefined) active.stop();
+        });
+        slot.reserved = true; slot.reservation = lease.token;
+        if (failure !== undefined) throw failure;
+        if (slot.readiness?.durable?.schemaVersion !== 1
+          || canonicalJson(slot.readiness.durable.binding) !== canonicalJson(observed)
+          || checkpointEnabled && slot.readiness.durable.checkpointVersion !== 2) {
+          throw new HeadlessJobError("worker-binding", "worker lacks the exact durable execution binding");
+        }
+        const result = await this.#dispatchDurable(slot, { ...record.input.request,
+          timeoutMilliseconds: remaining(), durable: envelope,
+          ...(checkpointEnabled ? { checkpoint: record.checkpoint } : {}) }, remaining(), lease, record.input.policy.maxResultBytes);
+        if (result.fenceError !== undefined) throw result.fenceError;
+        if (result.dispatch === "worker-exit") {
+          record = this.#store.interrupt(lease);
+          continue;
+        }
+        await this.#boundary("before-publish", { requestId, result, record: this.#store.read(requestId) });
+        if (failure !== undefined) throw failure;
+        record = this.#store.publish(lease, result);
+        clearInterval(heartbeat);
+        await this.#boundary("published", { record });
+      } catch (error) {
+        if (slot?.reservation === lease.token) { slot.alive = false; slot.child.kill(); }
+        if (error.code === "commit-indeterminate") throw error;
+        const current = this.#store.read(requestId);
+        if (current.result !== null) return current.result;
+        if (Date.now() >= current.job.deadlineAt) {
+          record = this.#store.claim(requestId, current.job.revision, this.#owner);
+          continue;
+        }
+        if (error.code === "stale-owner" || error.code === "clock-regression") {
+          throw error;
+        }
+        record = this.#store.publish(lease, { format: workerFormat, schemaVersion: 1, kind: "failed", requestId,
+          dispatch: "durable-refusal", errorCode: error.code ?? "worker-failure", error: error.message });
+      } finally {
+        clearInterval(heartbeat);
+        if (slot?.reservation === lease.token) { slot.reserved = false; delete slot.reservation; }
+        if (this.#durableActive.get(requestId) === active) this.#durableActive.delete(requestId);
+      }
+    }
+    return record.result;
+  }
+
+  #dispatchDurable(slot, request, remaining, lease, maxResultBytes) {
+    return new Promise((resolveResult) => {
+      let settled = false, chain = Promise.resolve();
+      const settle = (value) => {
+        if (settled) return;
+        settled = true; clearTimeout(timer); slot.active = null;
+        slot.child.off("message", onMessage); resolveResult(value);
+      };
+      const onMessage = (message) => {
+        chain = chain.then(async () => {
+          if (settled) return;
+          if (message?.format !== workerFormat || message.schemaVersion !== 1 || message.requestId !== request.requestId
+            || canonicalJson(message.durable) !== canonicalJson(request.durable)) {
+            throw new HeadlessJobError("worker-protocol", "uncorrelated durable worker message");
+          }
+          if (message.kind === "started") {
+            this.#store.markStarted(lease, { workerPid: slot.child.pid, tick: message.ticks });
+            await this.#boundary("started", { requestId: request.requestId, workerPid: slot.child.pid,
+              record: this.#store.read(request.requestId) });
+            return;
+          }
+          if (message.kind === "checkpoint") {
+            if (request.durable.schemaVersion !== 2
+              || Buffer.byteLength(canonicalJson(message)) > 8_388_608) {
+              throw new HeadlessJobError("worker-protocol", "invalid checkpoint offer transport");
+            }
+            const committed = this.#store.publishCheckpoint(lease, message.value?.previousDigest, message.value);
+            await this.#boundary("checkpoint-published", { requestId: request.requestId, workerPid: slot.child.pid, record: committed });
+            // Recheck ownership after any asynchronous observer, immediately before acknowledging custody.
+            const current = this.#store.read(request.requestId);
+            if (current.job.state !== "running" || current.job.lease?.token !== lease.token
+              || current.checkpoint?.digest !== committed.checkpoint.digest
+              || Date.now() >= current.job.lease.expiresAt || Date.now() >= current.job.deadlineAt) {
+              throw new HeadlessJobError("stale-owner", "checkpoint acknowledgement lost ownership");
+            }
+            slot.child.send({ format: workerFormat, schemaVersion: 1, kind: "checkpoint-ack", requestId: request.requestId,
+              durable: request.durable, digest: committed.checkpoint.digest,
+              generation: committed.checkpoint.value.generation, revision: committed.job.revision });
+            return;
+          }
+          const result = { ...message }; delete result.durable;
+          validateHeadlessWorkerReply(result, request, maxResultBytes, request.durable.schemaVersion === 2);
+          settle({ ...result, workerPid: slot.child.pid });
+        }).catch((error) => settle({ fenceError: error }));
+      };
+      const timer = setTimeout(() => {
+        slot.alive = false; slot.child.kill();
+        settle({ fenceError: new HeadlessJobError("stale-owner", "durable original deadline elapsed") });
+      }, remaining);
+      slot.active = { requestId: request.requestId, resolve: settle };
+      slot.child.on("message", onMessage);
+      if (request.durable.schemaVersion === 2 && Buffer.byteLength(canonicalJson(request)) > 8_388_608) {
+        settle({ fenceError: new HeadlessJobError("request-too-large", "checkpoint recovery wire exceeds request ceiling") }); return;
+      }
+      slot.child.send(request, (error) => {
+        if (error) settle({ fenceError: new HeadlessJobError("worker-send", error.message) });
+      });
+    });
   }
 
   #cancelActive(slot, active) {

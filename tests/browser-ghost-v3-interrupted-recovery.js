@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { withJourney } = require("./browser-journey-harness");
+const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 
 function scenario(id, seed) {
   return {
@@ -18,7 +18,7 @@ withJourney({ name: "C27 Ghost V3 interrupted browser recovery", port: 8157 }, a
     environment.reset(next);
     for (let tick = 1; tick <= 24; tick += 1) environment.step([]);
   }, scenario("c27-interrupted-before-refresh", "c27-interrupted-before-refresh-seed"));
-  await page.waitForFunction(async () => (await window.__TEAR_GHOST_V3__.manifests())
+  await waitForBrowserValue(page, async () => (await window.__TEAR_GHOST_V3__.manifests())
     .some((manifest) => manifest.status === "recording"), undefined, { timeout: 20000 });
   const interruptedId = await page.evaluate(async () => {
     const manifest = (await window.__TEAR_GHOST_V3__.manifests()).find((entry) => entry.status === "recording");
@@ -41,7 +41,7 @@ withJourney({ name: "C27 Ghost V3 interrupted browser recovery", port: 8157 }, a
     environment.step([]);
     environment.terminate();
   }, scenario("c27-recovery-trigger", "c27-recovery-trigger-seed"));
-  await page.waitForFunction(async (id) => (await window.__TEAR_GHOST_V3__.manifests())
+  await waitForBrowserValue(page, async (id) => (await window.__TEAR_GHOST_V3__.manifests())
     .some((entry) => entry.id === id && entry.status === "recovered"), interruptedId, { timeout: 20000 });
   const recovered = await page.evaluate(async (id) => (await window.__TEAR_GHOST_V3__.manifests())
     .find((entry) => entry.id === id), interruptedId);

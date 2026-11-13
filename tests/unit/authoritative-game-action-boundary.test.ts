@@ -7,6 +7,30 @@ function envelope(id: number, tick: number, command: GameAction) {
 }
 
 describe("authoritative GameAction boundary", () => {
+  it.each([0, 250, 1000])("round-trips held aim magnitude %s while retaining the full-scale legacy shape", (magnitude) => {
+    const source = new AuthoritativeInputState();
+    source.beginTick(1, [envelope(1, 1, { type: "aim", turn: 125000, magnitude })]);
+    const saved = source.snapshot(), restored = new AuthoritativeInputState();
+    expect(Object.hasOwn(saved, "aimMagnitude")).toBe(magnitude !== 1000);
+    restored.restore(JSON.parse(JSON.stringify(saved)) as typeof saved);
+    expect(restored.aimVector()).toEqual(source.aimVector());
+    restored.beginTick(2, []); source.beginTick(2, []);
+    expect(restored.aimVector()).toEqual(source.aimVector());
+    expect(restored.snapshot()).toEqual(source.snapshot());
+    const before = restored.snapshot();
+    for (const invalid of [-1, 1001, 0.5, Number.NaN, "250", null]) {
+      expect(() => { restored.restore({ ...saved, aimMagnitude: invalid } as unknown as typeof saved); }).toThrow(/snapshot/);
+      expect(restored.snapshot()).toEqual(before);
+    }
+  });
+
+  it("explicitly assumes full scale for a legacy snapshot without claiming recovered historical magnitude", () => {
+    const input = new AuthoritativeInputState();
+    const legacy = { tick: 4, moveX: 0, moveY: 0, aimTurn: 0, primaryHeld: false };
+    input.restore(legacy);
+    expect(input.aimVector()).toEqual({ x: 1, y: 0 });
+    expect(input.snapshot()).toEqual(legacy);
+  });
   it("consumes every simulation intent and phase at its fixed tick", () => {
     const input = new AuthoritativeInputState();
     input.beginTick(1, [
@@ -16,7 +40,7 @@ describe("authoritative GameAction boundary", () => {
       envelope(4, 1, { type: "dash", x: 1_000, y: -1_000 }),
       envelope(5, 1, { type: "weapon", intent: "primary", phase: "pressed" }),
     ]);
-    expect(input.snapshot()).toEqual({ tick: 1, moveX: -1, moveY: 1, aimTurn: 250_000, primaryHeld: true });
+    expect(input.snapshot()).toEqual({ tick: 1, moveX: -1, moveY: 1, aimTurn: 250_000, aimMagnitude: 500, primaryHeld: true });
     expect(input.aimVector().x).toBeCloseTo(0);
     expect(input.aimVector().y).toBeCloseTo(0.5);
     expect(input.jumpPressed()).toBe(true);

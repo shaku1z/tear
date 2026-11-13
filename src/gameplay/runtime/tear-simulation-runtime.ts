@@ -3,7 +3,7 @@ import type { GameAction } from "../../input/game-action";
 import { FixedStepScheduler, type FrameAdvance } from "../../simulation/fixed-step";
 import { TearGameplayEventBus, type TearGameplayEventPort } from "./gameplay-events";
 import { AuthoritativeInputState } from "./authoritative-input";
-import { AuthoritativeStepController, type AuthoritativeStepResult } from "./authoritative-step";
+import { AuthoritativeStepController, type AuthoritativeStepResult, type DeferredCanonicalState } from "./authoritative-step";
 import type { EnvironmentClearReason } from "../environment/environment-contracts";
 import type { EnvironmentStepPort } from "../environment/environment-runtime";
 
@@ -19,7 +19,9 @@ export interface TearSimulationRuntimeOptions<State> {
   readonly actionPort: TearSimulationActionPort;
   /** The actual gameplay tick; it must not depend on DOM, presentation, or storage. */
   step(seconds: number): void;
-  snapshot(tick: number, input: AuthoritativeInputState): State;
+  /** Host work between the completed world step and its canonical capture, in that order on every tick. */
+  afterWorldStep?(tick: number, input: AuthoritativeInputState): void;
+  snapshot(tick: number, input: AuthoritativeInputState): State | DeferredCanonicalState<State>;
   readonly events?: TearGameplayEventPort;
   readonly ticksPerSecond?: number;
   readonly maxCatchUpSteps?: number;
@@ -39,6 +41,8 @@ export interface TearSimulationAdvanceLifecycle {
   shouldStep?(tick: number): boolean;
   /** Runs immediately before command capture/application for an executed tick. */
   beforeStep?(tick: number): void;
+  /** Immutable copies of the actual canonical command batch, before one-shot inputs are consumed. */
+  captureCommands?(tick: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   /** Runs only after the authoritative step completed for an executed tick. */
   afterStep?(tick: number): void;
   /** Runs after every attempted executed tick, including an exceptional one. */
@@ -74,6 +78,7 @@ export class TearSimulationRuntime<State> {
     this.#authoritativeStep = new AuthoritativeStepController<State>({
       applyActions: (tick, actions) => { options.actionPort.apply(this.#input, tick, actions); },
       step: (seconds) => { options.step(seconds); },
+      ...(options.afterWorldStep === undefined ? {} : { afterWorldStep: (tick: number) => { options.afterWorldStep?.(tick, this.#input); } }),
       snapshot: (tick) => options.snapshot(tick, this.#input),
       ...(options.environment === undefined ? {} : { environment: options.environment }),
     });
@@ -91,7 +96,9 @@ export class TearSimulationRuntime<State> {
     if (lifecycle.shouldStep?.(tick) === false) return null;
     try {
       lifecycle.beforeStep?.(tick);
-      const result = this.#authoritativeStep.execute(tick, seconds, actionsForTick(tick));
+      const actions = actionsForTick(tick);
+      lifecycle.captureCommands?.(tick, Object.freeze(actions.map((action) => Object.freeze({ ...action, command: Object.freeze({ ...action.command }) }))));
+      const result = this.#authoritativeStep.execute(tick, seconds, actions);
       lifecycle.afterStep?.(tick);
       return result;
     } finally {

@@ -1,4 +1,5 @@
 import type { TutorialGhostSnapshot } from "../gameplay/training/tutorial-controller";
+import { drawTutorialGoldGhost } from "./tutorial-gold-ghost";
 
 export interface TutorialGhostPalette {
   readonly ink: string;
@@ -17,6 +18,7 @@ export function drawTutorialGhost(
   palette: TutorialGhostPalette,
   label: TutorialGhostLabelPort,
 ): void {
+  if (snapshot.gold) { drawTutorialGoldGhost(context, snapshot.gold, palette, label); return; }
   if (!snapshot.visible) return;
   const { actor, blade, target, shot } = snapshot;
   context.save();

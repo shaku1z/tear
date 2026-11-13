@@ -14,41 +14,50 @@ export interface TutorialLessonSource {
   readonly arenaLabel?: string; readonly teachingFocus?: string;
   readonly prog?: () => readonly [number, number];
 }
-export function buildTutorialCardSnapshot(index: number, count: number, lesson: TutorialLessonSource, doneTime: number): TutorialCardSnapshot {
+export function buildTutorialCardSnapshot(index: number, count: number, lesson: TutorialLessonSource, doneTime: number,
+  clearTop?: number): TutorialCardSnapshot {
   const progress = lesson.prog !== undefined && lesson.final !== true ? lesson.prog() : undefined;
   return Object.freeze({ lessonIndex: index, lessonCount: count, title: lesson.t, description: lesson.d,
+    ...(lesson.t.endsWith(" ANNEX") ? { annex: true } : {}),
+    ...(lesson.t.includes(" · PHASE ") ? { bossPractice: true } : {}),
+    ...(lesson.t.endsWith(" ENCOUNTER") ? { enemyPractice: true } : {}),
     keys: lesson.keys ?? [], final: lesson.final === true, completedBeat: doneTime,
     arenaLabel: lesson.arenaLabel ?? "TRAINING", teachingFocus: lesson.teachingFocus ?? "movement",
-    progress: progress === undefined ? undefined : { current: progress[0], goal: progress[1] } });
+    progress: progress === undefined ? undefined : { current: progress[0], goal: progress[1] },
+    clearTop });
 }
 
 export interface WeaponStatsSource {
   readonly heldHits: number; readonly throws: number; readonly throwHits: number;
   readonly perfectParries: number; readonly breakTriggers: number;
 }
-export function buildPlaygroundHelpSnapshot(weaponId: string, stats: WeaponStatsSource): PlaygroundHelpSnapshot {
+export function buildPlaygroundHelpSnapshot(weaponId: string, stats: WeaponStatsSource, clearTop?: number): PlaygroundHelpSnapshot {
   return Object.freeze({ weaponId, heldHits: stats.heldHits, throws: stats.throws, throwHits: stats.throwHits,
-    perfectParries: stats.perfectParries, breakTriggers: stats.breakTriggers });
+    perfectParries: stats.perfectParries, breakTriggers: stats.breakTriggers, clearTop });
 }
 
-export interface TouchButtonSource { readonly x: number; readonly y: number; readonly r: number; readonly label: string }
+export interface TouchCircleSource { readonly x: number; readonly y: number; readonly r: number }
+export interface TouchButtonSource extends TouchCircleSource { readonly label: string }
+/** The input layer's single touch layout (src/input/touch-control-layout.ts), passed through unchanged. */
 export interface TouchLayoutSource {
   readonly jump: TouchButtonSource; readonly dash: TouchButtonSource;
   readonly throwB: TouchButtonSource; readonly pause: TouchButtonSource;
+  readonly joystickHome: TouchCircleSource; readonly aimPad: TouchCircleSource;
 }
 export interface TouchJoystickSource { readonly active?: boolean; readonly ax: number; readonly ay: number; readonly dx: number; readonly dy: number }
 export function buildTouchControlsSnapshot(input: {
   readonly layout: TouchLayoutSource; readonly joystick: TouchJoystickSource; readonly held: Readonly<Record<string, boolean>>;
   readonly aim?: Readonly<{ x: number; y: number }>; readonly onboardingAlpha: number;
-  readonly safeLeft: number; readonly safeBottom: number; readonly height: number;
 }): TouchControlsSnapshot {
   const button = (source: TouchButtonSource, key: string, prominent: boolean) => ({
     x: source.x, y: source.y, radius: source.r, label: source.label, held: input.held[key] === true, prominent,
   });
+  const home = input.layout.joystickHome;
   return Object.freeze({ joystick: { active: input.joystick.active === true,
-    anchorX: input.joystick.active ? input.joystick.ax : 200 + input.safeLeft,
-    anchorY: input.joystick.active ? input.joystick.ay : input.height - 190 - input.safeBottom,
-    dx: input.joystick.dx, dy: input.joystick.dy }, aim: input.aim,
+    anchorX: input.joystick.active ? input.joystick.ax : home.x,
+    anchorY: input.joystick.active ? input.joystick.ay : home.y,
+    dx: input.joystick.dx, dy: input.joystick.dy, radius: home.r, homeX: home.x, homeY: home.y }, aim: input.aim,
+    aimPad: { x: input.layout.aimPad.x, y: input.layout.aimPad.y, r: input.layout.aimPad.r },
     buttons: [button(input.layout.jump, "jump", true), button(input.layout.dash, "dash", false),
       button(input.layout.throwB, "throwB", false), button(input.layout.pause, "pause", false)],
     onboardingAlpha: input.onboardingAlpha });

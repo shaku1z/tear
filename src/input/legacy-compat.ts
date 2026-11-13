@@ -1,8 +1,8 @@
 import { SemanticInputBuffer } from "./semantic-buffer";
-import type { Insets, LegacyInputConfig, Overscan } from "./legacy-input-contracts";
+import type { Insets, BrowserInputConfig, Overscan } from "./browser-input-contracts";
 
 export interface LegacyBrowserPorts {
-  readonly config: LegacyInputConfig;
+  readonly config: BrowserInputConfig;
   readonly safeArea: Insets;
   readonly overscan: Overscan;
   readonly window: Window;
@@ -16,7 +16,7 @@ export interface LegacyInputFactoryDependencies extends LegacyBrowserPorts {
 }
 
 export interface LegacyGamepadFactoryDependencies<TInput> {
-  readonly config: LegacyInputConfig;
+  readonly config: BrowserInputConfig;
   readonly window: Window;
   readonly navigator: Navigator;
   readonly input: TInput;

@@ -1,6 +1,6 @@
 # Legacy screen parity checklist
 
-This checklist is the deletion contract for the legacy screen ranges. A row is presentation-ready when its complete visual/control state can be represented by `LegacyScreenView`; the old range may be deleted only after the central adapter maps every listed dependency and its browser characterization passes.
+This checklist is the deletion contract for the legacy screen ranges. A row is presentation-ready when its complete visual/control state can be represented by `ScreenView`; the old range may be deleted only after the central adapter maps every listed dependency and its browser characterization passes.
 
 | Screen | Presentation parity carried by the snapshot | Adapter-owned work before deletion |
 | --- | --- | --- |

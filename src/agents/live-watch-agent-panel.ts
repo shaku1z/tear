@@ -76,7 +76,7 @@ export function installLiveWatchAgentPanel(
     const hierarchyWatchdogs = intent?.watchdog.map((incident) => `${incident.kind}:${incident.severity}`) ?? [];
     const watchdogNotes = [...snapshot.watchdogs.active, ...hierarchyWatchdogs];
     output.textContent = [
-      `Status: ${snapshot.status}`, `Screen: ${snapshot.screen}`, `Tick: ${String(snapshot.tick)}`,
+      `Status: ${snapshot.status}`, ...(snapshot.terminalReason === undefined ? [] : [`Reason: ${snapshot.terminalReason}`]), `Screen: ${snapshot.screen}`, `Tick: ${String(snapshot.tick)}`,
       `Policy: ${snapshot.selection.profile}`,
       `Run: ${snapshot.selection.mode} / ${snapshot.selection.difficulty} / ${snapshot.selection.weapon}`,
       `Journey: ${snapshot.selection.journey ?? "single-run"}`,
@@ -96,10 +96,12 @@ export function installLiveWatchAgentPanel(
       `Watchdogs: ${watchdogNotes.length > 0 ? watchdogNotes.join(", ") : "clear"} (progress ${String(snapshot.watchdogs.noProgressTicks)}/${String(snapshot.watchdogs.noProgressLimit)})`,
     ].join("\n");
   };
+  let advanceOwner = 0;
   const start = document.createElement("button"); start.textContent = surface.startLabel;
   start.addEventListener("click", () => {
     const numericSeed = Number(seed.value);
     if (!Number.isSafeInteger(numericSeed) || numericSeed < 1) throw new RangeError(surface.seedErrorLabel);
+    advanceOwner++;
     render(api.start({
       profile: profile.value as TearAgentProfileId,
       mode: mode.value as Required<TearWatchAgentOptions>["mode"],
@@ -112,13 +114,20 @@ export function installLiveWatchAgentPanel(
     }));
   });
   const advance = document.createElement("button"); advance.textContent = "Run 2,000 ticks";
-  advance.addEventListener("click", () => { render(api.run()); });
+  advance.addEventListener("click", () => {
+    const owner = ++advanceOwner;
+    advance.disabled = true; start.disabled = true;
+    void api.runAsync().then((snapshot) => { if (owner === advanceOwner) render(snapshot); }).catch((error: unknown) => {
+      if (owner === advanceOwner) output.textContent = `Watch advancement refused: ${error instanceof Error ? error.message : String(error)}`;
+    }).finally(() => { if (owner === advanceOwner) { advance.disabled = false; start.disabled = false; } });
+  });
+  const releaseAdvance = (): void => { advanceOwner++; advance.disabled = false; start.disabled = false; };
   const pause = document.createElement("button"); pause.textContent = "Pause";
-  pause.addEventListener("click", () => { render(api.pause()); });
+  pause.addEventListener("click", () => { render(api.pause()); releaseAdvance(); });
   const resume = document.createElement("button"); resume.textContent = "Resume";
-  resume.addEventListener("click", () => { render(api.resume()); });
+  resume.addEventListener("click", () => { render(api.resume()); releaseAdvance(); });
   const stop = document.createElement("button"); stop.textContent = "Stop";
-  stop.addEventListener("click", () => { render(api.stop()); });
+  stop.addEventListener("click", () => { render(api.stop()); releaseAdvance(); });
   root.append(title, document.createElement("br"), fields, start, advance, pause, resume, stop, output);
   document.body.append(root);
   render(api.snapshot());

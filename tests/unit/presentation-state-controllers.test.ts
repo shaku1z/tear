@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { AchievementToastController } from "../../src/app/achievement-toast-controller";
-import { TouchOnboardingController } from "../../src/app/touch-onboarding-controller";
+import { AchievementToastController } from "../../src/app/interface/achievement-toast-controller";
+import { TouchOnboardingController } from "../../src/app/training/touch-onboarding-controller";
 
 describe("presentation state controllers", () => {
   it("queues achievement toasts and records them as seen", () => {

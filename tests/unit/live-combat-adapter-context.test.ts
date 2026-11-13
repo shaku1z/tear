@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLiveCollisionStateView, createLiveCombatAdapters, type LiveCombatAdapterContext } from "../../src/app/live-combat-adapter-context";
+import { createLiveCollisionStateView, createLiveCombatAdapters, type LiveCombatAdapterContext } from "../../src/app/combat/combat-adapter-context";
 import type { CombatEntityRuntime } from "../../src/gameplay/combat/combat-entity-runtime";
 import type { LiveCollisionPhaseHost, LiveCollisionPhaseState } from "../../src/gameplay/combat/live-collision-phase";
 import type { LiveOpeningPhaseHost, LiveOpeningState } from "../../src/gameplay/combat/live-opening-phase";

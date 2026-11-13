@@ -35,6 +35,7 @@ export interface BladeChannels {
 export interface BladePlatformPort { x: number; y: number; w: number; h: number; oneway?: boolean; floor?: boolean }
 export interface BladePlayerPort { x: number; y: number; vx: number; vy: number; facing: number }
 export interface BladeEnemyPort {
+  readonly hp: number;
   x: number; y: number; vx: number; vy: number; radius: number; dead: boolean; dying?: boolean;
   isBoss?: boolean; weight: number; anchored?: boolean; stun: number;
   cfg?: { knockbackTaken?: number };

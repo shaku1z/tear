@@ -105,7 +105,7 @@ visual recorder and is not yet a completed, player-visible recorder.
   becoming complete, and a clean subsequent browser launch recovers it. This
   is deterministic fault-injection evidence, not a claim that a physical
   device has exhausted its actual quota or sustained long-run pressure.
-- `pnpm check:c27:foundation` is green from this worktree after the corrupt
+- `pnpm checkpoint check:c27:foundation` is green from this worktree after the corrupt
   recovery addition: requirements traceability, types, lint, source
   architecture, 69 focused unit tests, the standalone build, and all seven V3
   recorder/physical/recovery browser journeys pass. This is a C27 foundation
@@ -138,7 +138,7 @@ visual recorder and is not yet a completed, player-visible recorder.
   seam. Every physical and exact keyframe cites the bootstrap event made from
   that UUID-bearing ID, rather than a run-ID approximation, so a real reopened
   physical capture reaches the intended `unavailable` compatibility result
-  until a matching detached runtime is registered. `pnpm check:c27:foundation`
+  until a matching detached runtime is registered. `pnpm checkpoint check:c27:foundation`
   passes its requirements/type/lint/architecture checks, 14 focused suites / 74
   tests, test-standalone build, and seven V3 recorder/recovery browser paths.
 - A normal live V3 capture now additionally persists a versioned
@@ -247,3 +247,35 @@ visual recorder and is not yet a completed, player-visible recorder.
    fidelity claims owned by C39/C40.
 
 This is not a C27 completion claim.
+
+## Watch recorder scheduling repair — 2026-10-19
+
+The normal Watch panel previously advanced its default 2,000 application frames
+in one synchronous call. A fresh Campaign / Normal / Riftlock run with seed 121
+failed at authoritative tick 370: `Ghost V3 staging capacity exceeded (576 entries)`.
+Its incomplete manifest and journal were retained, with zero durable chunks.
+
+`f4700125` adds an owner-bound recorder drain and cooperative Watch advancement.
+The panel and longitudinal consumer use the asynchronous path. Pause, Resume,
+Stop and replacement invalidate stale advancement owners; a native task yield
+also keeps controls responsive when recording has no pending work. Draining
+does not start or finish a recording, seal partial chunks, enlarge the staging
+cap, or change simulation timing. The normal one-frame-per-RAF monitor is unchanged.
+
+Sixteen focused recorder/scheduling checks passed, including genuine before/after
+controls for native-task Pause and cross-session finalization isolation. Typecheck,
+scoped lint, syntax and architecture checks passed. The existing fourteen tutorial
+references were regenerated for the dependency change and replayed in a separate
+fresh process. The exact-source test standalone build passed its existing limits.
+
+An actual rendered-panel observation on that build used the same seed 121. Pause
+held tick 26 stable; Resume and Run continued to tick 6,960 / wave 5 with no recorder
+failure and 1,444 durable chunks. Stop and the read-only archive boundary retained
+an incomplete recording at tick 7,042 with 1,450 chunks. The observation ended at
+84 seconds under its original 90-second ceiling. It did not reach a natural terminal
+or prove complete-capsule integrity. Browser errors were empty and all owned
+processes and resource leases ended. The external evidence packet is
+`watch-f4700125-panel-attempt2` in the 2026-10-18 resumption evidence directory.
+
+This closes the reproduced Watch staging-overflow defect. Full-run, terminal,
+ten-minute, finale and device-pressure acceptance remain open.

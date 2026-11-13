@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LiveGhostSupportController } from "../../src/app/live-ghost-support-controller";
+import { LiveGhostSupportController } from "../../src/app/replay/ghost-support-controller";
 
 describe("LiveGhostSupportController", () => {
   it("fails closed without browser Vault storage and cannot synthesize a bundle", async () => {

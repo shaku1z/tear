@@ -29,10 +29,10 @@ import {
 import { createLiveWatchAgentHost } from "../../src/agents/live-watch-agent-host";
 import { createTearBotLadderEvaluationPlan } from "../../src/agents/tearbot-ladder-evaluation";
 import { createTearBotV3CanonicalEvaluationPlan } from "../../src/agents/tearbot-v3-canonical-evaluation";
-import { LiveBotEvidenceController } from "../../src/app/live-bot-evidence-controller";
-import { LivePlayerWatchController } from "../../src/app/live-player-watch-controller";
-import { GameAgentEvidenceController } from "../../src/app/game-agent";
-import { RunMonitorController } from "../../src/app/run-monitor";
+import { LiveBotEvidenceController } from "../../src/app/engineering/bot-evidence-controller";
+import { LivePlayerWatchController } from "../../src/app/engineering/player-watch-controller";
+import { GameAgentEvidenceController } from "../../src/app/engineering/game-agent";
+import { RunMonitorController } from "../../src/app/engineering/run-monitor";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { compileTearBotLevel } from "../../src/agents/ladder-foundry";
 

@@ -15,6 +15,9 @@ type CinematicConfiguration = typeof GAME_CONFIG;
 type CinematicPresentationConfiguration = CinematicConfiguration["presentation"];
 
 export interface CinematicDirectorPort {
+  captureRecordedInput(): CinematicRecordedInputV1;
+  restoreRecordedInput(value: unknown): void;
+  validateRecordedInput(value: unknown): void;
   readonly active: boolean;
   readonly id: string | undefined;
   readonly beatId: string | undefined;
@@ -95,6 +98,14 @@ export interface CinematicBeat {
   onExit?: (context: CinematicContext, director: CinematicDirectorPort) => void;
   onUpdate?: (context: CinematicContext, director: CinematicDirectorPort, deltaSeconds: number) => void;
   minDuration?: number;
+  /** Reading dwell for a confirm-or-timeout page: overrides the spoken-line fallback. */
+  dwell?: number;
+  /** Presentation: the run HUD may return while this beat plays. */
+  hud?: boolean;
+  /** Presentation: the floor colour under a chapter prompt. */
+  ground?: string;
+  /** Presentation: the biome sky colour behind chapter text. */
+  sky?: string;
   playerMode?: string;
   speaker?: string;
   view?: string;
@@ -140,6 +151,22 @@ export interface CinematicScript {
 interface ConfirmSources { key?: boolean; touch?: boolean; pad?: boolean; mouse?: boolean; click?: boolean }
 interface LatchResult { reveal: boolean; skip: boolean }
 
+export interface CinematicRecordedInputV1 {
+  readonly version: 1; readonly armed: boolean; readonly releasedSeconds: number; readonly holdSeconds: number;
+  readonly previous: Readonly<{ key: boolean; touch: boolean; pad: boolean }>;
+}
+function recordedInput(value: unknown): CinematicRecordedInputV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) throw new TypeError("Cinematic source input must be data");
+  const v = value as Record<string, unknown>, previous = v.previous;
+  if (Object.keys(v).sort().join() !== ["version", "armed", "releasedSeconds", "holdSeconds", "previous"].sort().join()
+    || Object.values(Object.getOwnPropertyDescriptors(v)).some((p) => !("value" in p)) || v.version !== 1 || typeof v.armed !== "boolean"
+    || [v.releasedSeconds, v.holdSeconds].some((n) => typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 86400)
+    || typeof previous !== "object" || previous === null || Array.isArray(previous) || Object.getPrototypeOf(previous) !== Object.prototype
+    || Object.keys(previous).sort().join() !== "key,pad,touch" || Object.values(Object.getOwnPropertyDescriptors(previous)).some((p) => !("value" in p))
+    || Object.values(previous).some((n) => typeof n !== "boolean")) throw new TypeError("Invalid/unsupported cinematic source input");
+  return structuredClone(value) as CinematicRecordedInputV1;
+}
+
 const CinematicTimeline = (() => {
   "use strict";
 
@@ -175,6 +202,7 @@ const CinematicTimeline = (() => {
     brief: boolean,
     presentation: CinematicPresentationConfiguration,
   ): number {
+    if (beat.dwell !== undefined) return beat.dwell;   // authored reading dwell (chapter pages)
     const p = presentation, words = wordCount(beat.line);
     if (brief) return Math.min(p.briefHoldMax, Math.max(p.briefHoldMin, p.briefHoldMin + words * p.briefHoldPerWord));
     return Math.min(p.bossAutoMax, Math.max(p.bossAutoMin, p.bossAutoBase + words / 3.2));
@@ -211,6 +239,12 @@ const CinematicTimeline = (() => {
   }
 
   class Director {
+    captureRecordedInput(): CinematicRecordedInputV1 { return { version: 1, armed: this._latch.armed,
+      releasedSeconds: this._latch.releasedT, holdSeconds: this._latch.holdT,
+      previous: { key: this._latch.prev.key === true, touch: this._latch.prev.touch === true, pad: this._latch.prev.pad === true } }; }
+    validateRecordedInput(value: unknown): void { recordedInput(value); }
+    restoreRecordedInput(value: unknown): void { const saved = recordedInput(value); this._latch.armed = saved.armed;
+      this._latch.releasedT = saved.releasedSeconds; this._latch.holdT = saved.holdSeconds; this._latch.prev = { ...saved.previous }; }
     private readonly _latch: InputLatch;
     script: CinematicScript | null = null;
     context: CinematicContext | null = null;

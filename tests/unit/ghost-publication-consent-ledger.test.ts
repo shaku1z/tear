@@ -4,6 +4,14 @@ import { GhostLocalPublicationConsentLedger, createMemoryGhostVaultBackend } fro
 const actor = Object.freeze({ subject: "firebase-account-opaque-123", isAnonymous: false });
 
 describe("C38 local publication consent ledger", () => {
+  it("fences a prepared exact consent revision in the caller's final transaction", async () => {
+    const backend = createMemoryGhostVaultBackend(), ledger = new GhostLocalPublicationConsentLedger(backend);
+    const granted = await ledger.decide(actor, { revision: 1, cloudPublication: "granted", decidedAt: "2026-08-09T00:00:00.000Z" });
+    const prepared = await ledger.prepareForJob(granted); expect(prepared.record).toEqual(granted);
+    await ledger.decide(actor, { revision: 2, cloudPublication: "revoked", decidedAt: "2026-08-09T00:01:00.000Z" });
+    await expect(backend.commitIfMatches(prepared.guards, [{ store: "analysis", key: "must-not-write", value: "stale consent" }])).rejects.toThrow();
+    expect(await backend.get("analysis", "must-not-write")).toBeUndefined(); expect((await ledger.read(actor)).revision).toBe(2);
+  });
   it("starts private, pseudonymous, and no-training; only a signed-in actor can grant", async () => {
     const backend = createMemoryGhostVaultBackend(), ledger = new GhostLocalPublicationConsentLedger(backend);
     expect(await ledger.read(actor)).toMatchObject({ cloudPublication: "denied", revision: 0, privacy: "pseudonymous", visibility: "private", trainingConsent: false });

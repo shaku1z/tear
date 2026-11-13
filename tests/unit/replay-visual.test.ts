@@ -32,6 +32,25 @@ const provenance = {
 } as const;
 
 describe("visual replay migration", () => {
+  it("closes the scored visual packet while retaining the same semantic sequencer only when explicitly requested", () => {
+    for (const samples of [0, 20]) {
+      const buffer = new SemanticInputBuffer();
+      const ghost = new LegacyGhostEngine({ store: { get: () => null, set: () => undefined }, document: {} as Document,
+        now: () => 1, random: () => 0.5, semanticInput: buffer,
+        defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 120, tearScore: () => provenance.tearScore } });
+      ghost.startRec(); buffer.push({ type: "confirm" });
+      expect(buffer.drain(120)[0]?.id).toBe(1);
+      for (let index = 0; index < samples; index++) ghost.sample(0.1, { x: index, y: 400, facing: 1 }, null, []);
+      expect(ghost.stopRec({}, { continueSemanticInput: true }) === null).toBe(samples === 0);
+      expect(ghost.recording()).toBe(false);
+      buffer.setAimVector(0, 1); buffer.push({ type: "weapon", intent: "primary", phase: "pressed" });
+      const after = buffer.drain(Math.max(241, buffer.lastSealedTick + 1));
+      expect(after.map((entry) => entry.id)).toEqual([2, 3]);
+      expect(after.map((entry) => entry.command.type)).toEqual(["aim", "weapon"]);
+      ghost.stopRec(); buffer.push({ type: "confirm" });
+      expect(buffer.drain(buffer.lastSealedTick + 1)).toEqual([]);
+    }
+  });
   it("upgrades hero-only v1 recordings without changing their path", () => {
     const legacy = { v: 1, dt: 0.1, px: [0, 10, 20], py: [400, 400, 400], bx: [5, 15, 25], by: [380, 380, 380], stage: 3 };
     const migrated = migrateVisualRecording(legacy);

@@ -1,0 +1,96 @@
+{
+  "format": "tear-verdant-image-package",
+  "version": 1,
+  "id": "verdant-IN2-lower-tail",
+  "stageId": "verdant-sanctum",
+  "approvedSourceSHA256": "0c332d1b114af9ad88435896fa52af6a75fe2cfbf2cb0256d953a1bc96fbffcd",
+  "authoredSize": [
+    1672,
+    941
+  ],
+  "assets": [
+    {
+      "id": "support-top",
+      "key": "support-top",
+      "sha256": "bf15e6225400f123c38f7d20b34034e76fd5b6535a5b060ecf404e3532cb4a05",
+      "width": 1672,
+      "height": 471,
+      "alpha": "opaque"
+    },
+    {
+      "id": "support-bottom",
+      "key": "support-bottom",
+      "sha256": "6de1afe398b0fe4956c469f589a75cc63d7d1964317f2e67821ba61a05fdf475",
+      "width": 1672,
+      "height": 470,
+      "alpha": "opaque"
+    },
+    {
+      "id": "tail",
+      "key": "tail",
+      "sha256": "4e0f26f2e7650bf3190c46f8c877f60eb1f7ba4dc2b8fa6b23c0571eb86530cc",
+      "width": 50,
+      "height": 50,
+      "alpha": "straight"
+    }
+  ],
+  "layers": [
+    {
+      "id": "support-top",
+      "assetId": "support-top",
+      "rect": [
+        0,
+        0,
+        1672,
+        471
+      ],
+      "order": 0,
+      "purpose": "support",
+      "motion": {
+        "kind": "static",
+        "maxDisplacement": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "support-bottom",
+      "assetId": "support-bottom",
+      "rect": [
+        0,
+        471,
+        1672,
+        470
+      ],
+      "order": 1,
+      "purpose": "support",
+      "motion": {
+        "kind": "static",
+        "maxDisplacement": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "tail",
+      "assetId": "tail",
+      "rect": [
+        1475,
+        330,
+        50,
+        50
+      ],
+      "order": 2,
+      "purpose": "tail",
+      "motion": {
+        "kind": "static",
+        "maxDisplacement": [
+          0,
+          0
+        ]
+      }
+    }
+  ]
+}

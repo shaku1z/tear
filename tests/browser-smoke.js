@@ -102,6 +102,9 @@ const path = require("node:path");
   };
   await page.mouse.click(260, 360); // PLAY
   await waitForScreen("setup");
+  // A fresh profile is preselected onto the Tutorial; this journey plays Endless, as a player would pick it.
+  await page.mouse.click(430, 255); // Endless
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
   await page.mouse.click(800, 758); // BEGIN
   await waitForScreen("playing");
   try {
@@ -123,18 +126,18 @@ const path = require("node:path");
   assert.ok(firstMusicRun.score.run?.runId);
   await page.keyboard.press("p");
   await waitForScreen("paused");
-  await page.mouse.click(300, 370); // SETTINGS (third pause action)
+  await page.mouse.click(190, 271); // SETTINGS (third action on the pause rail, overlay pattern)
   await waitForScreen("settings");
   assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().settingsReturn), "paused");
   await page.mouse.click(800, 840); // BACK TO PAUSE
   await waitForScreen("paused");
-  await page.mouse.click(300, 235); // RESUME
+  await page.mouse.click(190, 151); // RESUME
   await waitForScreen("playing");
   await page.keyboard.press("p");
   await waitForScreen("paused");
-  await page.mouse.click(300, 430); // MAIN MENU
+  await page.mouse.click(190, 331); // MAIN MENU
   await waitForScreen("confirmquit");
-  await page.mouse.click(650, 378); // QUIT
+  await page.mouse.click(644, 175); // QUIT (left of the confirm action row)
   await waitForScreen("menu");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().score.run === null);
   console.log("application state flow passed");
@@ -173,6 +176,8 @@ const path = require("node:path");
       await page.waitForTimeout(450);
     }
     await page.mouse.click(1180, 196 + i * 60);
+    await page.waitForTimeout(80);
+    await page.mouse.click(430, 255); // Endless (a fresh profile is preselected onto the Tutorial)
     await page.waitForTimeout(80);
     await page.mouse.click(800, 758);
     await page.waitForTimeout(500);

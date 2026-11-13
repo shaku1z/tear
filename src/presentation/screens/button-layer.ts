@@ -10,6 +10,7 @@ export interface ButtonLayerUiPort {
   pointIn(button: CanvasUiButton, x: number, y: number): boolean;
   chip(context: CanvasRenderingContext2D, button: CanvasUiButton, active: boolean): void;
   button(context: CanvasRenderingContext2D, button: CanvasUiButton, active: boolean): void;
+  focusRing?(context: CanvasRenderingContext2D, button: CanvasUiButton): void;
 }
 
 export interface ButtonLayerOptions {
@@ -23,6 +24,8 @@ export interface ButtonLayerOptions {
   readonly hoverAnimation: Record<string, number>;
   readonly ui: ButtonLayerUiPort;
   readonly entranceEase: (amount: number) => number;
+  /** Keyboard/controller owns input: draw the shared focus ring around the focused control. */
+  readonly focusVisible?: boolean;
 }
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
@@ -33,7 +36,11 @@ export function renderButtonLayer(options: ButtonLayerOptions): void {
   const smoothing = clamp(12 * options.deltaSeconds, 0, 1);
   for (let index = 0; index < buttons.length; index += 1) {
     const button = buttons[index];
-    if (button === undefined || button._hideBox) continue;
+    if (button === undefined) continue;
+    if (button._hideBox) {
+      if (options.focusVisible === true && index === options.focus && button.enabled !== false) ui.focusRing?.(context, button);
+      continue;
+    }
     const hovered = ui.pointIn(button, options.pointerX, options.pointerY) && button.enabled !== false;
     const active = hovered || Boolean(button.sel) || index === options.focus;
     const key = button._k ?? `${button.label}@${String(Math.round(button.x))},${String(Math.round(button.y))}`;
@@ -45,12 +52,14 @@ export function renderButtonLayer(options: ButtonLayerOptions): void {
     context.globalAlpha = entrance;
     const centerX = button.x + button.w / 2;
     const centerY = button.y + button.h / 2;
-    const scale = button.glyph || button.sub || button.pips ? 1 : 1 + progress * 0.04;
+    // Selected and chip controls never grow: a state must not change a control's footprint.
+    const scale = button.glyph || button.sub || button.pips || button.sel || button.chip ? 1 : 1 + progress * 0.03;
     context.translate(centerX, centerY + (1 - entrance) * 14);
     context.scale(scale, scale);
     context.translate(-centerX, -centerY);
     if (button.chip) ui.chip(context, button, active);
     else ui.button(context, button, active);
+    if (options.focusVisible === true && index === options.focus && entrance > 0.99) ui.focusRing?.(context, button);
     context.restore();
   }
 }

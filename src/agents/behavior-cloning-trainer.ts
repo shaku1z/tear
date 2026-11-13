@@ -1,3 +1,4 @@
+import { encodeTearPolicyModelPayload } from "./policy-model-weights";
 import type { GameAction } from "../input/game-action";
 import { normalizeGameAction } from "../input/game-action";
 import type { GhostVaultBackend } from "../ghost";
@@ -5,7 +6,7 @@ import { stableVerificationHash } from "../replay/hash";
 import { createTearBehaviorCloningBatches, type TearBehaviorCloningNormalizationV1 } from "./academy-behavior-cloning-batches";
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
 import { createTearPolicyArtifact, type TearPolicyArtifactDraft, type TearPolicyArtifactV1 } from "./policy-artifact-registry";
-import { TEAR_POLICY_FEATURE_SCHEMA_HASH_V1 } from "./policy-feature-vector";
+import { isTearPolicyFeatureSchema, tearPolicyFeatureWidth } from "./policy-feature-vector";
 import type { TearDaggerRetrainingInputV1 } from "./dagger-retraining-input";
 
 export interface TearBehaviorCloningTrainingConfigV1 {
@@ -113,7 +114,7 @@ export function completeTearBehaviorCloningCheckpoint(checkpoint: TearBehaviorCl
   if (completed.epoch !== config.epochs) throw new RangeError("behavior cloning checkpoint is not complete");
   const examples = trainingExamples(dataset, normalization, config, augmentation), classByAction = new Map(completed.classes.map((entry, index) => [actionKey(entry.actions), index]));
   const correct = examples.filter((example) => classByAction.get(actionKey(example.targetActions)) === predict(completed.weights, completed.biases, example.features)).length;
-  const model = Object.freeze({ format: "tear-linear-policy-model" as const, schemaVersion: 1 as const, featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1,
+  const model = Object.freeze({ format: "tear-linear-policy-model" as const, schemaVersion: 1 as const, featureSchemaHash: normalization.featureSchemaHash,
     mean: Object.freeze([...normalization.mean]), scale: Object.freeze([...normalization.scale]), classes: completed.classes,
     weights: completed.weights, biases: completed.biases });
   const metrics = Object.freeze({ examples: examples.length, classes: completed.classes.length, updates: completed.updates, trainingAccuracy: correct / examples.length });
@@ -207,7 +208,7 @@ export function trainTearBehaviorCloningPolicy(
     return expected !== undefined && predict(weights, biases, example.features) === expected;
   }).length;
   const model = Object.freeze({ format: "tear-linear-policy-model" as const, schemaVersion: 1 as const,
-    featureSchemaHash: TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, mean: Object.freeze([...normalization.mean]), scale: Object.freeze([...normalization.scale]),
+    featureSchemaHash: normalization.featureSchemaHash, mean: Object.freeze([...normalization.mean]), scale: Object.freeze([...normalization.scale]),
     classes: Object.freeze(classes.map((entry) => Object.freeze({ actions: Object.freeze(structuredClone(entry.actions)) }))),
     weights: Object.freeze(weights.map((entry) => Object.freeze([...entry]))), biases: Object.freeze([...biases]) });
   const metrics = Object.freeze({ examples: examples.length, classes: classes.length, updates,
@@ -224,8 +225,8 @@ function parseTraining(value: unknown): TearBehaviorCloningTrainingResultV1 {
   const config = value.config, model = value.model, metrics = value.metrics, checkpoint = value.checkpoint;
   if (value.format !== "tear-behavior-cloning-training" || value.schemaVersion !== 1 || !hashes(value.datasetHash)
     || !hashes(value.normalizationHash) || (value.augmentationHash !== undefined && !hashes(value.augmentationHash)) || !record(config) || !validConfig(config as unknown as TearBehaviorCloningTrainingConfigV1)
-    || !record(model) || model.format !== "tear-linear-policy-model" || model.schemaVersion !== 1 || !hashes(model.featureSchemaHash)
-    || !Array.isArray(model.mean) || !Array.isArray(model.scale) || model.mean.length < 1 || model.mean.length !== model.scale.length
+    || !record(model) || model.format !== "tear-linear-policy-model" || model.schemaVersion !== 1 || !isTearPolicyFeatureSchema(model.featureSchemaHash)
+    || !Array.isArray(model.mean) || !Array.isArray(model.scale) || model.mean.length !== tearPolicyFeatureWidth(model.featureSchemaHash) || model.mean.length !== model.scale.length
     || !model.mean.every((entry) => typeof entry === "number" && Number.isFinite(entry)) || !model.scale.every((entry) => typeof entry === "number" && Number.isFinite(entry) && entry > 0)
     || !Array.isArray(model.classes) || model.classes.length < 1 || model.classes.length > 16_384
     || !model.classes.every((entry) => record(entry) && Array.isArray(entry.actions) && entry.actions.every((action) => normalizeGameAction(action).ok))
@@ -277,9 +278,11 @@ export function createTearBehaviorCloningArtifact(
   training: TearBehaviorCloningTrainingResultV1,
   artifact: Omit<TearPolicyArtifactDraft, "model">,
 ): TearPolicyArtifactV1 {
-  if (artifact.lineage.trainingRunId !== training.trainingHash || !artifact.compatibility.modelFormats.includes("linear-policy-v1")) {
+  if (artifact.lineage.trainingRunId !== training.trainingHash || artifact.encoder.normalizationHash !== training.normalizationHash
+    || !isTearPolicyFeatureSchema(training.model.featureSchemaHash) || training.model.mean.length !== tearPolicyFeatureWidth(training.model.featureSchemaHash)
+    || !artifact.compatibility.modelFormats.includes("linear-policy-v1")) {
     throw new RangeError("behavior cloning artifact must declare its training result and linear runtime compatibility");
   }
-  return createTearPolicyArtifact({ ...artifact, model: { format: "linear-policy-v1", payload: JSON.stringify(training.model) },
+  return createTearPolicyArtifact({ ...artifact, model: { format: "linear-policy-v1", payload: encodeTearPolicyModelPayload(training.model) },
     metrics: Object.freeze({ ...artifact.metrics, trainingAccuracy: training.metrics.trainingAccuracy, trainingExamples: training.metrics.examples }), });
 }

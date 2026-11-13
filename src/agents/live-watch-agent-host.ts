@@ -1,6 +1,7 @@
 import type { ScreenAction } from "../presentation/screens/contracts";
 import type { RunDifficulty, RunMode } from "../gameplay/run/session";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
+import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { LiveTearRuntimeEnvironmentContext } from "../tearbench/live-runtime-contracts";
 import { projectLiveTearObservation } from "../tearbench/live-runtime-environment";
 import type { TearStructuredAgentIntent } from "../tearbench/scripted-agent-hierarchy";
@@ -9,6 +10,7 @@ import type { TearAgentIntentTrace, TearAgentProfileId } from "./contracts";
 import type { TearPolicyDecisionJournal, TearPolicyDecisionJournalSnapshot } from "./policy-decision-journal";
 import type { TearActivePolicyRuntime, TearPolicyDecisionReceipt } from "./policy-runtime";
 import type { TearC32CanonicalActivePolicyRuntime } from "./c32-canonical-active-policy-runtime";
+import type { FactorizedRuntimeCheckpoint } from "./c34-factorized-policy-runtime";
 import { createTearFoundryV3PostPromotionTerminalReceipt, type TearFoundryV3PostPromotionMonitor } from "./foundry-job-v3-post-promotion-monitor";
 import { stableVerificationHash } from "../replay/hash";
 import { buildWatchChoiceScore } from "./watch-build-choice";
@@ -94,13 +96,17 @@ export interface TearWatchAgentSnapshot {
 
 export interface TearWatchAgentApi {
   start(options?: TearWatchAgentOptions): TearWatchAgentSnapshot;
+  /** Synchronous bounded compatibility; sustained recorded advancement uses runAsync. */
   run(tickBudget?: number): TearWatchAgentSnapshot;
+  runAsync(tickBudget?: number): Promise<TearWatchAgentSnapshot>;
   pause(): TearWatchAgentSnapshot;
   resume(): TearWatchAgentSnapshot;
   stop(): TearWatchAgentSnapshot;
   activatePlaygroundAction(id: string): TearWatchAgentSnapshot;
   resumePlayground(): TearWatchAgentSnapshot;
   snapshot(): TearWatchAgentSnapshot;
+  capturePolicyContext(): FactorizedRuntimeCheckpoint | undefined;
+  restorePolicyContext(checkpoint: FactorizedRuntimeCheckpoint, authority: Readonly<{ expectedCheckpointHash: string; runId: string }>): void;
 }
 
 interface MutableState {
@@ -132,6 +138,9 @@ interface MutableState {
   postPromotionMonitor?: TearFoundryV3PostPromotionMonitor;
   monitorTerminalQueued?: true;
   director?: C24LongitudinalJourneyDirector;
+  causalStarted?: true;
+  causalRunId?: string;
+  causalPending?: CanonicalGameplayState;
 }
 
 const DEFAULTS: Required<TearWatchAgentOptions> = {
@@ -230,6 +239,9 @@ export function createLiveWatchAgentHost(
   postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
 ): TearWatchAgentApi {
   let decisionJournalRuns = 0;
+  let generation = 0;
+  let asyncOwner: Readonly<{ generation: number; cancelled: Promise<void>; cancel: () => void }> | undefined;
+  const invalidateAdvance = (): void => { generation++; asyncOwner?.cancel(); asyncOwner = undefined; };
   let state: MutableState = {
     status: "idle", decisions: 0, fixedTicks: 0, transitions: [], mechanics: new Set(),
     bladeStates: new Set(), bladeStateTransitions: [], tetherMinimum: Number.POSITIVE_INFINITY,
@@ -242,7 +254,18 @@ export function createLiveWatchAgentHost(
     ...(decisionJournal === undefined ? {} : { decisionJournal }),
     ...(postPromotionMonitor === undefined ? {} : { postPromotionMonitor }),
   };
+  let causalEvents: TearGameplayEvent[] = [], causalOverflow = false;
   context.subscribeEngineEvent((event) => {
+    if (state.canonicalRuntime?.requiresCausalContext === true && event.kind === "run" && event.transition === "started") {
+      state.canonicalRuntime.clearCausalContext(); delete state.causalStarted; delete state.causalPending;
+      causalEvents = []; causalOverflow = false; state.causalRunId = event.runId;
+    }
+    if (state.status === "running" && state.canonicalRuntime?.requiresCausalContext === true) {
+      if (state.causalStarted === true) {
+        if (causalEvents.length >= 4_096) causalOverflow = true;
+        else causalEvents.push(Object.freeze({ ...event }));
+      }
+    }
     if (state.status === "running" && state.engineEvents.length < 4_096) {
       state.engineEvents.push(Object.freeze({ ...event }));
     }
@@ -258,6 +281,19 @@ export function createLiveWatchAgentHost(
     state.status = "failed";
     state.terminalReason = reason;
     context.setSemanticInputAuthority(false);
+  };
+  const advanceCausalCommit = (): boolean => {
+    const from = state.causalPending;
+    if (!from || !state.causalRunId) { fail("canonical-policy-refused:missing-native-commit"); return false; }
+    context.advanceApplicationFrame(1 / 120);
+    const to = context.canonicalOriginState?.() ?? context.canonicalGameplayState(), commands = context.drainConsumedActions();
+    // Hit stop/accumulator can consume an application frame without a native commit.
+    // The already queued action is not resubmitted and no causal clock advances.
+    if (to?.tick === from.tick && commands.length === 0 && !causalOverflow) return true;
+    if (!to || causalOverflow || commands.some(command => command.tick !== to.tick)) { fail("canonical-policy-refused:missing-native-commit"); return false; }
+    try { state.canonicalRuntime?.observeCommitted({ from, to, actions: commands.map(command => command.command), events: causalEvents }, state.causalRunId); }
+    catch { fail("canonical-policy-refused:invalid-native-commit"); return false; }
+    state.fixedTicks += to.tick - from.tick; delete state.causalPending; causalEvents = []; causalOverflow = false; return true;
   };
   // This is an after-the-fact analysis handoff.  It is intentionally not
   // awaited by the simulation loop and any refusal remains observational.
@@ -287,6 +323,8 @@ export function createLiveWatchAgentHost(
   };
   const start = (options: TearWatchAgentOptions = {}): TearWatchAgentSnapshot => {
     if (context.screen() !== "menu") throw new Error("Watch Agent must start from the real main menu");
+    invalidateAdvance();
+    canonicalRuntime?.clearCausalContext(); causalEvents = []; causalOverflow = false;
     context.setSemanticInputAuthority(true);
     const resolved = { ...DEFAULTS, ...options };
     const director = resolved.journey === "longitudinal-earned-profile"
@@ -322,7 +360,7 @@ export function createLiveWatchAgentHost(
     transition();
     return immutableSnapshot(context, state);
   };
-  const run = (tickBudget = 2_000): TearWatchAgentSnapshot => {
+  const advance = (tickBudget = 2_000): TearWatchAgentSnapshot => {
     if (!Number.isSafeInteger(tickBudget) || tickBudget < 1 || tickBudget > 20_000) {
       throw new RangeError("Watch Agent tick budget must be an integer from 1 to 20000");
     }
@@ -401,10 +439,16 @@ export function createLiveWatchAgentHost(
         continue;
       }
       if (state.options.skipCinematics) context.skipCinematic();
+      if (state.causalPending !== undefined) { if (!advanceCausalCommit()) break; captureBlade(); continue; }
       // A new production run has no post-step receipt until C30 advances its
       // first fixed tick.  Establish that receipt through the real empty-input
       // frame before asking a strict V3 policy for its first source action.
-      if (state.canonicalRuntime !== undefined && context.canonicalGameplayState() === null) {
+      if (state.canonicalRuntime?.requiresCausalContext === true && state.causalStarted !== true && screen === "playing") {
+        const origin = context.canonicalOriginState?.();
+        if (origin === undefined || origin === null || state.causalRunId === undefined) { fail("canonical-policy-refused:missing-native-origin-or-context"); break; }
+        state.canonicalRuntime.beginCausalOrigin(origin, state.causalRunId); state.causalStarted = true; causalEvents = []; context.drainConsumedActions();
+      }
+      if (state.canonicalRuntime !== undefined && !state.canonicalRuntime.requiresCausalContext && context.canonicalGameplayState() === null) {
         const beforeTick = context.authoritative()?.tick ?? 0;
         context.advanceApplicationFrame(1 / 120);
         state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
@@ -424,7 +468,8 @@ export function createLiveWatchAgentHost(
       };
       const hierarchy = state.policy.decide(agentObservation);
       const artifact = state.artifactRuntime?.decide(agentObservation);
-      const sourceState = state.canonicalRuntime === undefined ? undefined : context.canonicalGameplayState();
+      const sourceState = state.canonicalRuntime === undefined ? undefined : state.canonicalRuntime.requiresCausalContext
+        ? context.canonicalOriginState?.() ?? context.canonicalGameplayState() : context.canonicalGameplayState();
       if (state.canonicalRuntime !== undefined && sourceState === null) {
         state.policyReceipt = Object.freeze({ observationHash: "0000000000000000", source: "refused", reason: "canonical-source-unavailable" });
         fail("canonical-policy-refused:canonical-source-unavailable");
@@ -438,13 +483,17 @@ export function createLiveWatchAgentHost(
         ...(canonical.artifactId === undefined ? {} : { artifactId: canonical.artifactId }),
         ...(canonical.artifactHash === undefined ? {} : { artifactHash: canonical.artifactHash }),
         ...(canonical.activationHash === undefined ? {} : { activationHash: canonical.activationHash }),
+        ...(canonical.support === undefined ? {} : { support: canonical.support }),
+        ...(canonical.factorizedSupport === undefined ? {} : { factorizedSupport: canonical.factorizedSupport }),
+        ...(canonical.factorizedVersion === undefined ? {} : { factorizedVersion: canonical.factorizedVersion }),
+        ...(canonical.decisionMilliseconds === undefined ? {} : { decisionMilliseconds: canonical.decisionMilliseconds }),
       });
-      if (canonical?.source === "refused") {
+      if (canonical?.source === "refused" || canonical?.source === "model-default") {
         if (canonicalReceipt !== undefined) {
           state.policyReceipt = canonicalReceipt;
           if (state.decisionJournal !== undefined) state.decisionJournal.append({ tick: observation.tick, receipt: canonicalReceipt, actions: [], trace: hierarchy.trace });
         }
-        fail(`canonical-policy-refused:${canonical.reason ?? "invalid-active-artifact"}`);
+        fail(`canonical-policy-refused:${canonical.source === "model-default" ? "model-default" : canonical.reason ?? "invalid-active-artifact"}`);
         break;
       }
       const decision = canonical?.source === "artifact"
@@ -471,14 +520,22 @@ export function createLiveWatchAgentHost(
         });
       }
       if (screen === "playing") {
+        causalEvents = []; causalOverflow = false;
         for (const action of decision.actions) context.pushAction(action);
         const beforeTick = context.authoritative()?.tick ?? 0;
-        context.advanceApplicationFrame(1 / 60);
-        state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
+        if (state.canonicalRuntime?.requiresCausalContext === true) {
+          if (!sourceState) { fail("canonical-policy-refused:missing-native-commit"); break; }
+          state.causalPending = sourceState; if (!advanceCausalCommit()) break;
+        } else { context.advanceApplicationFrame(1 / 60); state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick); }
         captureBlade();
       } else {
         let routed = false;
         for (const action of decision.actions) routed = context.routeAction(action) || routed;
+        if (screen === "cinematic") {
+          const beforeTick = context.authoritative()?.tick ?? 0;
+          context.advanceApplicationFrame(1 / 60);
+          state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
+        }
         if (!routed && screen !== "cinematic") {
           state.noProgressTicks += 1;
         }
@@ -498,18 +555,60 @@ export function createLiveWatchAgentHost(
     context.render();
     return immutableSnapshot(context, state);
   };
+  const run = (tickBudget = 2_000): TearWatchAgentSnapshot => {
+    if (asyncOwner !== undefined) throw new Error("Watch advancement is already in progress");
+    return advance(tickBudget);
+  };
+  const runAsync = async (tickBudget = 2_000): Promise<TearWatchAgentSnapshot> => {
+    if (!Number.isSafeInteger(tickBudget) || tickBudget < 1 || tickBudget > 20_000) throw new RangeError("Watch Agent tick budget must be an integer from 1 to 20000");
+    if (asyncOwner !== undefined) throw new Error("Watch advancement is already in progress");
+    if (state.status !== "running") return immutableSnapshot(context, state);
+    let cancel = (): void => undefined;
+    const cancelled = new Promise<void>((resolve) => { cancel = resolve; });
+    const owner = { generation, cancelled, cancel };
+    asyncOwner = owner;
+    const current = (): boolean => asyncOwner === owner && generation === owner.generation;
+    const running = (): boolean => state.status === "running";
+    const drain = (): Promise<void> => Promise.race([context.drainRecording(), owner.cancelled]);
+    try {
+      await drain();
+      for (let index = 0; index < tickBudget && current() && running(); index++) {
+        advance(1);
+        await drain();
+        // An idle/unavailable recorder can resolve in a microtask. Keep native
+        // Pause/Stop events serviceable independently of actual storage latency.
+        if ((index + 1) % 16 === 0 && current()) {
+          await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+          if (!current()) break;
+        }
+      }
+    } catch (error) {
+      if (current()) { fail(`recording-failed:${error instanceof Error ? error.message : String(error)}`); retainTerminalMonitor(); }
+    } finally { if (asyncOwner === owner) asyncOwner = undefined; }
+    return immutableSnapshot(context, state);
+  };
   return Object.freeze({
     start,
     run,
+    runAsync,
+    capturePolicyContext: () => { if (state.causalPending !== undefined) throw new TypeError("V4 context capture requires the pending native commit"); return state.canonicalRuntime?.captureCausalContext(); },
+    restorePolicyContext(checkpoint: FactorizedRuntimeCheckpoint, authority: Readonly<{ expectedCheckpointHash: string; runId: string }>) {
+      if (state.status === "running" || !state.canonicalRuntime?.requiresCausalContext) throw new TypeError("V4 recovery requires a stopped/paused matching runtime");
+      const current = context.canonicalGameplayState(); if (!current) throw new TypeError("native recovery frontier unavailable");
+      state.canonicalRuntime.restoreCausalContext(current, checkpoint, authority); state.causalStarted = true; state.causalRunId = authority.runId; delete state.causalPending; causalEvents = []; causalOverflow = false;
+    },
     pause() {
+      invalidateAdvance();
       if (state.status === "running") state.status = "paused";
       return immutableSnapshot(context, state);
     },
     resume() {
+      invalidateAdvance();
       if (state.status === "paused") state.status = "running";
       return immutableSnapshot(context, state);
     },
     stop() {
+      invalidateAdvance();
       if (state.status === "running" || state.status === "paused") state.status = "stopped";
       context.setSemanticInputAuthority(false);
       context.startFrameLoop();

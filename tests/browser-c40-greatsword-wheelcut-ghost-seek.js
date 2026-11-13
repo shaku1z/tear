@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- browser proof is executed directly by Node. */
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
@@ -38,7 +37,7 @@ withJourney({ name: "C40 Greatsword Wheel Cut Ghost seek", port: 8303, query: { 
     let wheelCut = null;
     for (let frame = 0; frame < 360; frame += 1) {
       environment.advanceApplicationFrame(1 / 120);
-      const run = environment.captureSnapshot("c40-greatsword-probe").state["tear.run.v1"];
+      environment.captureSnapshot("c40-greatsword-probe");
       // The Wheel Cut owns center-pivoting solid collision, so a terrain hit
       // is the canonical proof edge even when the authored charger moves away.
       if (environment.observe().blade.state === "embedded") {

@@ -2,11 +2,12 @@ import type { GhostVaultBackend } from "../ghost";
 import { stableVerificationHash } from "../replay/hash";
 import {
   createProductionHeadlessEnvironment,
+  validateProductionHeadlessCheckpoint,
+  type ProductionHeadlessCheckpoint,
   type ProductionHeadlessStateForgeEvaluation,
-  type TearObservationV1,
 } from "../tearbench";
 import { mapGameplayEventToCausalEvent } from "../tearbench/gameplay-causal-events";
-import type { TearAgentProfileId } from "./contracts";
+import type { TearAgentProfileId, TearAgentObservation } from "./contracts";
 import {
   TearAcademyPolicyEvaluationPlanVault,
   type TearAcademyPolicyEvaluationCaseV1,
@@ -19,10 +20,10 @@ import { TearAgentOrchestrator } from "./scripted-policy";
 const KEY = "academy-policy-evaluation-result:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
 
-export interface TearAcademyPolicyEvaluationRecoveryLaunchV1 {
+export type TearAcademyPolicyEvaluationRecoveryLaunchV1 = Readonly<{
   readonly scenarioHash: string;
   readonly evaluation: ProductionHeadlessStateForgeEvaluation;
-}
+}> | Readonly<{ scenarioHash: string; kind: "natural-checkpoint"; checkpoint: ProductionHeadlessCheckpoint }>;
 
 /**
  * A one-shot, hash-bound request to execute an already-persisted protocol.
@@ -43,6 +44,8 @@ export interface TearAcademyPolicyEvaluationCaseRunV1 {
   readonly kind: "unseen" | "recovery";
   readonly scenarioHash: string;
   readonly startedAtTick: number;
+  /** Present only for exact natural-checkpoint continuation; legacy surgical runs retain their original bytes. */
+  readonly startedAtSemanticHash?: string;
   readonly terminal: Readonly<{
     tick: number;
     semanticHash: string;
@@ -54,6 +57,7 @@ export interface TearAcademyPolicyEvaluationCaseRunV1 {
   readonly decisions: number;
   readonly artifactDecisions?: number;
   readonly fallbackDecisions?: number;
+  readonly fallbackReasons?: Readonly<Record<string, number>>;
 }
 
 export interface TearAcademyPolicyEvaluationLessonMetricV1 {
@@ -84,7 +88,7 @@ export interface TearAcademyPolicyEvaluationResultV1 {
 
 interface EvaluationPolicy {
   readonly reset: () => Promise<void>;
-  readonly decide: (observation: TearObservationV1) => Readonly<{ actions: readonly unknown[]; receipt?: Readonly<{ source: "artifact" | "scripted-fallback" }> }>;
+  readonly decide: (observation: TearAgentObservation) => Readonly<{ actions: readonly unknown[]; receipt?: Readonly<{ source: "artifact" | "scripted-fallback"; reason?: string }> }>;
 }
 
 function record(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
@@ -108,6 +112,12 @@ function freezeLaunch(draft: Omit<TearAcademyPolicyEvaluationLaunchV1, "launchHa
   }
   const recovery = draft.recovery.map((entry) => {
     if (!hash(entry.scenarioHash)) throw new TypeError("invalid Academy recovery evaluation launch");
+    if ("kind" in entry) {
+      if ((entry as { kind: unknown }).kind !== "natural-checkpoint" || "evaluation" in entry) throw new TypeError("unknown or ambiguous Academy recovery kind");
+      const checkpoint = validateProductionHeadlessCheckpoint(entry.checkpoint);
+      if (stableVerificationHash(checkpoint.scenario) !== entry.scenarioHash) throw new RangeError("natural recovery source scenario mismatch");
+      return Object.freeze({ scenarioHash: entry.scenarioHash, kind: "natural-checkpoint" as const, checkpoint: structuredClone(checkpoint) });
+    }
     return Object.freeze({ scenarioHash: entry.scenarioHash, evaluation: structuredClone(entry.evaluation) });
   });
   if (new Set(recovery.map((entry) => entry.scenarioHash)).size !== recovery.length) throw new RangeError("Academy recovery evaluation launch repeats a scenario");
@@ -147,14 +157,17 @@ function resultDraft(value: Omit<TearAcademyPolicyEvaluationResultV1, "resultHas
   const runs = [...candidateRuns, ...baselineRuns];
   if (runs.some((run) => !text(run.lessonId) || !["unseen", "recovery"].includes(run.kind) || !hash(run.scenarioHash)
     || !integer(run.startedAtTick) || run.startedAtTick < 0 || !integer(run.terminal.tick) || run.terminal.tick < run.startedAtTick
+    || (run.startedAtSemanticHash !== undefined && !hash(run.startedAtSemanticHash))
     || !hash(run.terminal.semanticHash) || typeof run.terminal.terminated !== "boolean" || typeof run.terminal.truncated !== "boolean"
     || !["completed", "defeated", "none"].includes(run.terminal.outcome)
     || !integer(run.terminal.revivals) || run.terminal.revivals < 0 || !integer(run.decisions) || run.decisions < 0
     || (run.artifactDecisions !== undefined && (!integer(run.artifactDecisions) || run.artifactDecisions < 0))
-    || (run.fallbackDecisions !== undefined && (!integer(run.fallbackDecisions) || run.fallbackDecisions < 0)))) throw new TypeError("invalid Academy policy evaluation run");
+    || (run.fallbackDecisions !== undefined && (!integer(run.fallbackDecisions) || run.fallbackDecisions < 0))
+    || (run.fallbackReasons !== undefined && (!record(run.fallbackReasons) || Object.values(run.fallbackReasons).some((count) => !integer(count) || count < 1)
+      || Object.values(run.fallbackReasons).reduce((sum, count) => sum + count, 0) !== run.fallbackDecisions)))) throw new TypeError("invalid Academy policy evaluation run");
   if (candidateRuns.some((run, index) => {
     const baseline = requiredAt(baselineRuns, index, "Academy policy evaluation baseline case is missing");
-    return run.lessonId !== baseline.lessonId || run.kind !== baseline.kind || run.scenarioHash !== baseline.scenarioHash
+    return run.lessonId !== baseline.lessonId || run.kind !== baseline.kind || run.scenarioHash !== baseline.scenarioHash || run.startedAtSemanticHash !== baseline.startedAtSemanticHash
       || run.artifactDecisions === undefined || run.fallbackDecisions === undefined || run.artifactDecisions + run.fallbackDecisions !== run.decisions
       || baseline.artifactDecisions !== undefined || baseline.fallbackDecisions !== undefined;
   })) throw new TypeError("Academy policy evaluation candidate/baseline cases do not match");
@@ -214,12 +227,12 @@ export class TearAcademyPolicyEvaluationResultVault {
   }
 }
 
-function recoveryFor(launch: TearAcademyPolicyEvaluationLaunchV1, entry: TearAcademyPolicyEvaluationCaseV1): ProductionHeadlessStateForgeEvaluation | undefined {
+function recoveryFor(launch: TearAcademyPolicyEvaluationLaunchV1, entry: TearAcademyPolicyEvaluationCaseV1): TearAcademyPolicyEvaluationRecoveryLaunchV1 | undefined {
   const identity = scenarioHash(entry);
-  return launch.recovery.find((recovery) => recovery.scenarioHash === identity)?.evaluation;
+  return launch.recovery.find((recovery) => recovery.scenarioHash === identity);
 }
 
-async function runCase(entry: TearAcademyPolicyEvaluationCaseV1, recovery: ProductionHeadlessStateForgeEvaluation | undefined,
+async function runCase(entry: TearAcademyPolicyEvaluationCaseV1, recovery: TearAcademyPolicyEvaluationRecoveryLaunchV1 | undefined,
   policy: EvaluationPolicy, candidate: boolean): Promise<TearAcademyPolicyEvaluationCaseRunV1> {
   const environment = createProductionHeadlessEnvironment({ captureSourceTracks: true });
   try {
@@ -227,43 +240,47 @@ async function runCase(entry: TearAcademyPolicyEvaluationCaseV1, recovery: Produ
     const scenarioIdentity = scenarioHash(entry);
     let terminal = entry.kind === "recovery"
       ? (() => {
-        if (recovery === undefined || stableVerificationHash(recovery.source.scenario) !== scenarioIdentity) {
+        if (recovery === undefined) throw new RangeError("Academy recovery evaluation source is unavailable");
+        const source = "kind" in recovery ? recovery.checkpoint : recovery.evaluation.source;
+        if (stableVerificationHash(source.scenario) !== scenarioIdentity) {
           throw new RangeError("Academy recovery evaluation source scenario does not match its plan case");
         }
-        if (recovery.source.checkpoint.tick >= entry.scenario.maxTicks) throw new RangeError("Academy recovery evaluation has no remaining case ticks");
-        return environment.restoreStateForgeEvaluation(recovery);
+        if (source.checkpoint.tick >= entry.scenario.maxTicks) throw new RangeError("Academy recovery evaluation has no remaining case ticks");
+        return "kind" in recovery ? environment.restoreCheckpoint(source) : environment.restoreStateForgeEvaluation(recovery.evaluation);
       })()
       : environment.reset(entry.scenario);
     const startedAtTick = terminal.tick;
+    const start = recovery !== undefined && "kind" in recovery ? { startedAtSemanticHash: stableVerificationHash(terminal) } : {};
     let terminated = false, truncated = false, decisions = 0, artifactDecisions = 0, fallbackDecisions = 0;
+    const fallbackReasons: Record<string, number> = {};
     while (!terminated && !truncated && terminal.tick < entry.scenario.maxTicks) {
-      const decision = policy.decide(environment.policyObservation());
+      const decision = policy.decide({ state: environment.policyObservation(), ui: environment.policyUiObservation() });
       const transition = environment.step(decision.actions as never);
       terminal = transition.observation; terminated = transition.terminated; truncated = transition.truncated; decisions += 1;
       if (candidate) {
         if (decision.receipt?.source === "artifact") artifactDecisions += 1;
-        else fallbackDecisions += 1;
+        else { fallbackDecisions += 1; const reason = decision.receipt?.reason ?? "unspecified"; fallbackReasons[reason] = (fallbackReasons[reason] ?? 0) + 1; }
       }
     }
     const events = environment.sourceTracks().nativeEvents.map(mapGameplayEventToCausalEvent);
     const completed = events.some((event) => event.type === "run.completed"), defeated = events.some((event) => event.type === "run.defeated");
     if (completed && defeated) throw new Error("Academy policy evaluation observed contradictory terminal facts");
-    return freezeRun({ lessonId: entry.lessonId, kind: entry.kind, scenarioHash: scenarioIdentity, startedAtTick,
+    return freezeRun({ lessonId: entry.lessonId, kind: entry.kind, scenarioHash: scenarioIdentity, startedAtTick, ...start,
       terminal: Object.freeze({ tick: terminal.tick, semanticHash: stableVerificationHash(terminal), terminated, truncated,
         outcome: completed ? "completed" as const : defeated ? "defeated" as const : "none" as const,
         revivals: events.filter((event) => event.type === "player.revived").length }), decisions,
-      ...(candidate ? { artifactDecisions, fallbackDecisions } : {}) });
+      ...(candidate ? { artifactDecisions, fallbackDecisions, ...(fallbackDecisions === 0 ? {} : { fallbackReasons: Object.freeze(fallbackReasons) }) } : {}) });
   } finally { environment.dispose(); }
 }
 
-function candidatePolicy(artifact: TearPolicyArtifactV1): EvaluationPolicy {
-  const runtime = new TearActivePolicyRuntime(artifact);
-  return Object.freeze({ reset: () => runtime.reset(), decide: (observation: TearObservationV1) => runtime.decide({ state: observation, ui: { screen: "playing" } }) });
+function candidatePolicy(artifact: TearPolicyArtifactV1, now: (() => number) | undefined): EvaluationPolicy {
+  const runtime = new TearActivePolicyRuntime(artifact, "competent", now === undefined ? {} : { now });
+  return Object.freeze({ reset: () => runtime.reset(), decide: (observation: TearAgentObservation) => runtime.decide(observation) });
 }
 
 function baselinePolicy(profile: TearAgentProfileId): EvaluationPolicy {
   const runtime = new TearAgentOrchestrator(profile);
-  return Object.freeze({ reset: () => Promise.resolve(), decide: (observation: TearObservationV1) => runtime.decide({ state: observation, ui: { screen: "playing" } }) });
+  return Object.freeze({ reset: () => Promise.resolve(), decide: (observation: TearAgentObservation) => runtime.decide(observation) });
 }
 
 function lessonMetrics(plan: TearAcademyPolicyEvaluationPlanV1, candidateRuns: readonly TearAcademyPolicyEvaluationCaseRunV1[],
@@ -287,7 +304,15 @@ function lessonMetrics(plan: TearAcademyPolicyEvaluationPlanV1, candidateRuns: r
 export class TearAcademyPolicyEvaluationExecutor {
   readonly #plans: TearAcademyPolicyEvaluationPlanVault;
   readonly #results: TearAcademyPolicyEvaluationResultVault;
-  constructor(backend: GhostVaultBackend) { this.#plans = new TearAcademyPolicyEvaluationPlanVault(backend); this.#results = new TearAcademyPolicyEvaluationResultVault(backend); }
+  readonly #now: (() => number) | undefined;
+  /**
+   * `now` is the candidate runtime's decision-budget clock. It defaults to the
+   * runtime's wall clock; contract tests inject one so a loaded host cannot
+   * turn a budget fallback into a different hash-bound verdict.
+   */
+  constructor(backend: GhostVaultBackend, options: Readonly<{ now?: () => number }> = {}) {
+    this.#plans = new TearAcademyPolicyEvaluationPlanVault(backend); this.#results = new TearAcademyPolicyEvaluationResultVault(backend); this.#now = options.now;
+  }
 
   async execute(input: TearAcademyPolicyEvaluationLaunchV1): Promise<TearAcademyPolicyEvaluationResultV1> {
     const launch = parseTearAcademyPolicyEvaluationLaunch(input);
@@ -306,7 +331,7 @@ export class TearAcademyPolicyEvaluationExecutor {
     const candidateRuns: TearAcademyPolicyEvaluationCaseRunV1[] = [], baselineRuns: TearAcademyPolicyEvaluationCaseRunV1[] = [];
     for (const entry of plan.cases) {
       const recovery = recoveryFor(launch, entry);
-      candidateRuns.push(await runCase(entry, recovery, candidatePolicy(launch.candidate), true));
+      candidateRuns.push(await runCase(entry, recovery, candidatePolicy(launch.candidate, this.#now), true));
       baselineRuns.push(await runCase(entry, recovery, baselinePolicy(plan.baselineProfile), false));
     }
     const lessons = lessonMetrics(plan, candidateRuns, baselineRuns);

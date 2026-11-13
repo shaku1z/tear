@@ -58,8 +58,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   const requestedMode = process.env.TEAR_JOURNEY_MODE;
   const modes = ["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]
     .filter((mode) => !requestedMode || mode === requestedMode);
-  for (let index = 0; index < modes.length; index++) {
-    const mode = modes[index];
+  for (const mode of modes) {
     const modeY = { campaign: 195, endless: 255, gauntlet: 315, playground: 375, tutorial: 435, bossonly: 509, sandbox: 549 }[mode];
     console.log(`navigation journey: starting ${mode}`);
     await boot();
@@ -89,11 +88,13 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().active), false, `${mode} opening is safely skippable`);
     await page.keyboard.press("p");
     await waitScreen("paused");
-    await clickAndWait(300, 235, "playing");
+    // Pause and confirm-quit use the shared overlay pattern: the action rail starts under
+    // the title (RESUME first); the tutorial pause lists its lesson actions before MAIN MENU.
+    await clickAndWait(200, 151, "playing");
     await page.keyboard.press("p");
     await waitScreen("paused");
-    await clickAndWait(300, 430, "confirmquit");
-    await clickAndWait(650, 378, "menu");
+    await clickAndWait(200, mode === "tutorial" ? 431 : 331, "confirmquit");
+    await clickAndWait(644, 175, "menu");
   }
 
   await boot();
@@ -108,8 +109,10 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   assert.equal((await page.evaluate(() => window.__PANTHEON_TEST.state().attract)).ready, false, "attract mode exits when a run begins");
   await page.keyboard.press("p");
   await waitScreen("paused");
-  await clickAndWait(300, 430, "confirmquit");
-  await clickAndWait(650, 378, "menu");
+  // A fresh profile starts the Tutorial, whose pause lists its lesson actions before MAIN MENU.
+  const tutorialPause = await page.evaluate(() => window.__PANTHEON_TEST.state().mode === "tutorial");
+  await clickAndWait(200, tutorialPause ? 431 : 331, "confirmquit");
+  await clickAndWait(644, 175, "menu");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().attract.ready);
 }).then(() => console.log("browser navigation journeys passed"))
   .catch((error) => { console.error(error); process.exit(1); });

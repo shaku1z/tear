@@ -14,6 +14,8 @@ import type { VoidPlatform } from "../gameplay/voidgen";
 import { stagePresentationDefinition } from "./stage-presentation-definitions";
 import { drawVerdantRootstone } from "./platform-materials/verdant-rootstone";
 import { drawPaleIce } from "./platform-materials/pale-ice";
+import type { PreparedVerdantCalibration } from "./prepared-verdant-calibration";
+import type { PreparedVerdantMaterial } from "./platform-materials/prepared-verdant-material";
 
 function truthyString(value: string | undefined, fallback: string): string {
   if (value) return value;
@@ -86,6 +88,8 @@ export interface BackdropController {
 
 /** Outward rendering adapters supplied by the composition that owns a world. */
 export interface BackdropPolicy {
+  readonly verdantCalibration?: PreparedVerdantCalibration;
+  readonly verdantMaterial?: Pick<PreparedVerdantMaterial, "draw">;
   readonly clock: TearWorldClock;
   readonly config: Readonly<{
     view: Readonly<{ w: number; h: number }>;
@@ -239,6 +243,13 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
   // === sky + parallax + motes (inside world camera, before platforms) ===
   // dispatches to per-biome art (BIOME_ART), falling back to the generic treatment.
   draw(ctx, stage, t, playerX, view) {
+    if (stage.id === "verdant-sanctum" && policy.verdantCalibration?.status() === "ready") {
+      // Outside the authored extent is visibly unprepared, not stretched art.
+      ctx.save(); ctx.fillStyle = "#123c34"; this.fillFull(ctx, view);
+      policy.verdantCalibration.draw(ctx, this.W, policy.clock.sim,
+        !this.reducedMotion() && !this.lowGraphics() && !this.highContrast(), this.flashScale()); ctx.restore();
+      return;
+    }
     const c = this._get(stage), gy = config.world.groundY;
     const px = (playerX - this.W / 2) / (this.W / 2);   // -1..1, drives parallax
     const art = biomeArtForStage(stage);
@@ -499,6 +510,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
       }
       const state = truthyString(p.arenaState, "stable");
       const materialPolicy = {
+        floor: isFloor === true,
         timeSeconds: clock.sim,
         lowGraphics: graphics.low,
         highContrast: accessibility.highContrast,
@@ -508,7 +520,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
         warningRatio: state === "warning" ? 1 - clamp((p.crackWarn ?? 0) / config.bossArena.crackWarn, 0, 1) : 0,
         reformRatio: state === "reforming" ? 1 - clamp((p.respawnIn ?? 0) / truthyNumber(p.respawnWarn, config.bossArena.reformWarn), 0, 1) : 0,
       };
-      if (material === "verdant-rootstone") drawVerdantRootstone(ctx, platform, materialPolicy);
+      if (material === "verdant-rootstone") drawVerdantRootstone(ctx, platform, materialPolicy, policy.verdantMaterial);
       else drawPaleIce(ctx, platform, materialPolicy);
       return;
     }

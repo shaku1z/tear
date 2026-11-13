@@ -4,6 +4,7 @@ import {
   type RecordingLoadoutEntry,
   type RecordingSummary,
 } from "./outcome-planner";
+import { readGhostRunAssistance } from "./ghost-assistance";
 
 export interface RecordedReplay {
   readonly thumb?: unknown;
@@ -59,6 +60,8 @@ export class LiveRecordingController<TReplay extends RecordedReplay> {
       this.#port.replayStored(vaultId);
     }
 
+    // Validate the captured run, not current visibility or a later replacement.
+    if (run.beatThisRun !== undefined || run.seedRace !== undefined || readGhostRunAssistance(run.ghostAssistance) !== undefined) return replay;
     const board = `lb_${run.mode}_${run.diff}`;
     void this.#port.submitScore(run.mode, run.diff, {
       score: run.score,

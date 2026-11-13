@@ -30,24 +30,29 @@ function record(value: unknown): Readonly<Record<string, unknown>> {
   return value as Readonly<Record<string, unknown>>;
 }
 
-function parseEntries(chunk: unknown, kind: GhostChunkKind, fromTick: number, toTick: number): readonly GhostCapsuleEntry[] {
+/** Shared pure readability check; normal import discards decoded values after this check. */
+export function validateGhostCapsuleEntries(chunk: unknown, kind: GhostChunkKind, fromTick: number, toTick: number, maxEntries = Number.MAX_SAFE_INTEGER): asserts chunk is readonly GhostCapsuleEntry[] {
   if (!Array.isArray(chunk)) throw new TypeError(`capsule ${kind} chunk must contain an entry array`);
-  const entries = chunk.map((value) => {
+  if (chunk.length > maxEntries) throw new RangeError("capsule exceeds decoded entry limit");
+  for (const value of chunk) {
     const candidate = record(value);
     if (candidate.kind !== kind || !Number.isSafeInteger(candidate.tick) || (candidate.tick as number) < fromTick
       || (candidate.tick as number) > toTick || !("value" in candidate)) {
       throw new TypeError(`capsule ${kind} chunk contains an invalid entry`);
     }
-    return Object.freeze({ kind, tick: candidate.tick as number, value: structuredClone(candidate.value) });
-  });
-  return Object.freeze(entries);
+  }
+}
+
+function parseEntries(chunk: unknown, kind: GhostChunkKind, fromTick: number, toTick: number): readonly GhostCapsuleEntry[] {
+  validateGhostCapsuleEntries(chunk, kind, fromTick, toTick);
+  return Object.freeze(chunk.map((entry) => Object.freeze({ kind, tick: entry.tick, value: structuredClone(entry.value) })));
 }
 
 /** Reads a capsule only through manifest indexes and verified Vault chunks. */
 export class GhostCapsuleReader {
-  readonly #vault: GhostLocalVault;
+  readonly #vault: Pick<GhostLocalVault, "getManifest" | "readChunk">;
 
-  constructor(vault: GhostLocalVault) { this.#vault = vault; }
+  constructor(vault: Pick<GhostLocalVault, "getManifest" | "readChunk">) { this.#vault = vault; }
 
   async read(id: string): Promise<GhostReadCapsule> {
     const manifest = await this.#vault.getManifest(id);

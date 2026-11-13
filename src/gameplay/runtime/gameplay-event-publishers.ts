@@ -1,3 +1,4 @@
+import type { RunLifecycleSnapshot } from "../run/lifecycle";
 import type { TearGameplayEventPort } from "./gameplay-events";
 import type { OutcomeRunState } from "../run/outcome-planner";
 
@@ -41,5 +42,19 @@ export function createTearTerminalRunFactPublisher(
       mode: run.mode, difficulty: run.diff, weaponId: run.weaponId,
       wave: run.wave, score: run.score, runTimeSeconds: run.runTime,
     });
+  };
+}
+
+/** Native UI pause/resume facts retain the active run's exact lifecycle and clock. */
+export function createTearRunScreenFactPublisher(events: TearGameplayEventPort,
+  lifecycle: () => Pick<RunLifecycleSnapshot, "sessionId" | "phase">,
+  currentRun: () => Pick<OutcomeRunState, "mode" | "diff" | "weaponId" | "wave" | "score" | "runTime">) {
+  return (transition: "paused" | "resumed"): void => {
+    const current = lifecycle();
+    if (current.sessionId === null || current.phase === "terminated") return;
+    const run = currentRun();
+    events.emit({ kind: "run", transition, runId: current.sessionId,
+      mode: run.mode, difficulty: run.diff, weaponId: run.weaponId, wave: run.wave, score: run.score,
+      runTimeSeconds: run.runTime });
   };
 }

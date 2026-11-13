@@ -1,4 +1,4 @@
-import type { LegacyScreenRendererRegistry, ScreenRenderContext } from "./contracts";
+import type { ScreenRendererTable, ScreenRenderContext } from "./contracts";
 import { createCodexShopRenderers } from "./codex-shop";
 import { createDraftRenderers } from "./draft-reserve-tierup";
 import { createLeaderboardReplayRenderers } from "./leaderboards-replays";
@@ -17,7 +17,7 @@ export type * from "./contracts";
  * Builds the presentation-only registry consumed by the legacy state adapter.
  * Every control carries a semantic action; the registry never mutates game state.
  */
-export function createLegacyScreenRenderers(context: ScreenRenderContext): LegacyScreenRendererRegistry {
+export function createScreenRenderers(context: ScreenRenderContext): ScreenRendererTable {
   const menuSetup = createMenuSetupRenderers(context);
   const codexShop = createCodexShopRenderers(context);
   const profileAchievements = createProfileAchievementRenderers(context);

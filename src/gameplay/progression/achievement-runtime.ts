@@ -1,4 +1,6 @@
 export interface AchievementRunState {
+  readonly beatThisRun?: unknown;
+  readonly seedRace?: unknown;
   mode: string;
   biomeState?: StageRestrictions;
   runTime: number;
@@ -52,7 +54,7 @@ export type AchievementIntent =
   | Readonly<{ type: "achievement-check" }>;
 
 export function tracksAchievements(run: AchievementRunState | null | undefined): boolean {
-  return Boolean(run && run.mode !== "tutorial" && run.mode !== "playground");
+  return Boolean(run && run.beatThisRun === undefined && run.seedRace === undefined && run.mode !== "tutorial" && run.mode !== "playground");
 }
 
 export function resetStageRestrictions(run: AchievementRunState | null | undefined): void {

@@ -1,6 +1,8 @@
 import type { AuthoritativeInputSnapshot } from "./authoritative-input";
+import type { TutorialSessionCheckpoint } from "../training/tutorial-controller";
 import type { EnvironmentSnapshot } from "../environment/environment-contracts";
 import { projectEnvironmentSemanticSnapshot } from "../../tearbench/environment-codec";
+import { DeferredCanonicalState } from "./authoritative-step";
 
 export interface RuntimeRunState {
   readonly mode: string;
@@ -79,6 +81,8 @@ export interface CanonicalWhiteHartState {
 }
 
 export interface CanonicalGameplayState {
+  /** Behavior only. Display/help/ghost cadence never affects simulation verification. */
+  readonly tutorial?: TutorialSessionCheckpoint;
   readonly tick: number;
   readonly input: AuthoritativeInputSnapshot;
   readonly run: Readonly<{ mode: string; wave: number; score: number; time: number; seed: number }> | null;
@@ -104,6 +108,7 @@ export function projectCanonicalGameplayState(
   blade: RuntimeBladeState | null,
   enemies: readonly RuntimeEnemyState[],
   environment?: EnvironmentSnapshot,
+  tutorial?: TutorialSessionCheckpoint,
 ): CanonicalGameplayState {
   return Object.freeze({
     tick,
@@ -147,5 +152,32 @@ export function projectCanonicalGameplayState(
       }) } : {}),
     })).sort((left, right) => left.id - right.id || left.kind.localeCompare(right.kind))),
     ...(environment === undefined ? {} : { environment: projectEnvironmentSemanticSnapshot(environment) }),
+    ...(run?.mode !== "tutorial" || tutorial === undefined || tutorial.phase === "inactive" ? {} : { tutorial: Object.freeze(structuredClone(tutorial)) }),
   });
+}
+
+/**
+ * Captures what projectCanonicalGameplayState reads and defers the projection
+ * until a consumer reads it. Run, player and blade are copied by value here.
+ * The other inputs are already detached from the live world by their owners:
+ * the input snapshot is frozen, enemy rows are fresh value copies whose route
+ * point arrays the White Hart only ever replaces with deeply frozen ones,
+ * environment snapshots hold immutable entries, and a tutorial checkpoint is a
+ * fresh copy. A deferred projection therefore equals the eager one at capture.
+ */
+export function captureCanonicalGameplayState(
+  tick: number,
+  input: AuthoritativeInputSnapshot,
+  run: RuntimeRunState | null,
+  player: RuntimePlayerState | null,
+  blade: RuntimeBladeState | null,
+  enemies: readonly RuntimeEnemyState[],
+  environment?: EnvironmentSnapshot,
+  tutorial?: TutorialSessionCheckpoint,
+): DeferredCanonicalState<CanonicalGameplayState> {
+  const runValue = run === null ? null : { mode: run.mode, wave: run.wave, score: run.score, runTime: run.runTime, runSeed: run.runSeed };
+  const playerValue = player === null ? null : { x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp };
+  const bladeValue = blade === null ? null : { state: blade.state, x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy };
+  return new DeferredCanonicalState(() => projectCanonicalGameplayState(tick, input, runValue, playerValue, bladeValue,
+    enemies, environment, tutorial));
 }

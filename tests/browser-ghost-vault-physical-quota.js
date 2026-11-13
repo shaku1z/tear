@@ -1,7 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
-const QUOTA_BUCKET = "tear-c28-physical-quota";
 const QUOTA_BYTES = 256 * 1024;
 
 function scenario(id, seed, maxTicks) {

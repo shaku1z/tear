@@ -1,8 +1,16 @@
-import type { InputMode, LegacyGamepad } from "../../input/legacy-input-contracts";
+import type { InputMode, BrowserGamepad } from "../../input/browser-input-contracts";
 
 export interface TutorialInputPrompt {
   readonly description: string;
   readonly keys: readonly string[];
+}
+/** Semantic gold edges are labelled by the active device, never baked into the trace. */
+export function tutorialGoldGlyphs(actions: readonly string[], mode: InputMode, gamepad: Pick<BrowserGamepad, "bindingLabel">): readonly string[] {
+  const keyboard: Readonly<Record<string, string>> = { left: "A", right: "D", up: "W", down: "S", jump: "SPACE", dash: "SHIFT", throw: "RMB", primary: "LMB", swing: "MOUSE SWING", aim: "MOUSE AIM" };
+  const touch: Readonly<Record<string, string>> = { left: "MOVE ←", right: "MOVE →", up: "MOVE ↑", down: "MOVE ↓", jump: "JUMP", dash: "DASH", throw: "THROW", primary: "HOLD", swing: "DRAG SWING", aim: "AIM" };
+  const pad: Readonly<Record<string, string>> = { left: "LS ←", right: "LS →", up: "LS ↑", down: "LS ↓", jump: gamepad.bindingLabel("jump"), dash: gamepad.bindingLabel("dash"), throw: gamepad.bindingLabel("throw"), primary: gamepad.bindingLabel("tether"), swing: "RS SWING", aim: "RS AIM" };
+  const labels = mode === "touch" ? touch : mode === "gamepad" ? pad : keyboard;
+  return actions.map((action) => labels[action] ?? action);
 }
 
 const keyboardPrompt = (description: string, keys: readonly string[]): TutorialInputPrompt =>
@@ -19,9 +27,21 @@ export function tutorialInputPrompt(
   description: string,
   keys: readonly string[],
   mode: InputMode,
-  gamepad: Pick<LegacyGamepad, "bindingLabel">,
+  gamepad: Pick<BrowserGamepad, "bindingLabel">,
 ): TutorialInputPrompt {
   if (mode === "keyboard" || mode === "mouse") return keyboardPrompt(description, keys);
+  if (title.endsWith(" ENCOUNTER") || title.includes(" · PHASE ")) return { description, keys: mode === "touch"
+    ? ["DRAG — SWING", "DASH", "THROW"] : ["RS — SWING", gamepad.bindingLabel("dash"), gamepad.bindingLabel("throw")] };
+  if (title.endsWith(" ANNEX")) {
+    const projected = keys.map((key) => mode === "touch"
+      ? ({ MOUSE: "DRAG — SWING", "MOUSE UP": "DRAG ↑", "MOUSE DOWN": "DRAG ↓", RMB: "THROW", LMB: "TETHER / FIRE", W: "JUMP" } as Readonly<Record<string, string>>)[key] ?? key
+      : ({ MOUSE: "RS — SWING", "MOUSE UP": "RS ↑", "MOUSE DOWN": "RS ↓", RMB: gamepad.bindingLabel("throw"), LMB: gamepad.bindingLabel("tether"), W: gamepad.bindingLabel("jump") } as Readonly<Record<string, string>>)[key] ?? key);
+    return { description, keys: projected };
+  }
+  if (title === "FIELD TEST" && keys.length === 0) return { description, keys: [] };
+  if (title === "FIELD TEST" && keys.includes("MOUSE UP")) return {
+    description, keys: mode === "touch" ? ["DRAG ↑", "DRAG — SWING"] : ["RS ↑", "RS — SWING"],
+  };
 
   if (mode === "touch") {
     const prompts: Readonly<Record<string, TutorialInputPrompt>> = {
@@ -36,10 +56,9 @@ export function tutorialInputPrompt(
       UPDRAFT: { description, keys: ["JUMP", "DRAG ↑"] },
       THROW: { description, keys: ["THROW"] },
       PARRY: { description, keys: ["DRAG — SWING"] },
-      "READ THE CHARGE": { description, keys: ["DASH", "DRAG — SWING"] },
-      "FIELD TEST": { description, keys: ["DASH", "DRAG — SWING", "DRAG ↑"] },
+      "READ THE CHARGE": { description, keys: ["DASH"] },
+      "FIELD TEST": { description, keys: ["DASH", "DRAG SWING"] },
     };
-    if (title === "FIELD TEST") return { description, keys: ["DASH", "DRAG SWING"] };
     return prompts[title] ?? keyboardPrompt(description, keys);
   }
 
@@ -58,9 +77,8 @@ export function tutorialInputPrompt(
     UPDRAFT: { description, keys: [jump, "RS ↑"] },
     THROW: { description, keys: [throwBlade] },
     PARRY: { description, keys: ["RS — SWING"] },
-    "READ THE CHARGE": { description, keys: [dash, "RS — SWING"] },
-    "FIELD TEST": { description, keys: [dash, "RS — SWING", "RS ↑"] },
+    "READ THE CHARGE": { description, keys: [dash] },
+    "FIELD TEST": { description, keys: [dash, "RS SWING"] },
   };
-  if (title === "FIELD TEST") return { description, keys: [dash, "RS SWING"] };
   return prompts[title] ?? keyboardPrompt(description, keys);
 }

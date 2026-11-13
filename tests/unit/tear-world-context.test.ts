@@ -40,7 +40,7 @@ describe("Tear world context", () => {
     const state = createTearWorldState<Run, Actor, Actor, Actor, Actor, Actor, Actor, Actor, BossMarker, BossMarker>();
     const services: TearWorldServices<{ readonly seed: string }, "spawn", { readonly id: string }> = {
       configuration: Object.freeze({
-        value: {}, snapshot: () => ({}), restore: () => { calls.push("configuration.restore"); },
+        value: {}, snapshot: () => ({}), baseSnapshot: () => ({}), restore: () => { calls.push("configuration.restore"); },
         resetToBase: () => { calls.push("configuration"); },
       }),
       random: Object.freeze({

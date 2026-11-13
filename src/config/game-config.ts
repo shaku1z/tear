@@ -1,4 +1,4 @@
-import type { GamepadSettings } from "../input/legacy-input-contracts";
+import type { GamepadSettings } from "../input/browser-input-contracts";
 import { MODE_CATALOG } from "../gameplay/run/mode-catalog";
 import { bossPhaseMark } from "../gameplay/run/boss-definitions";
 import { createLegacyDifficulties } from "../gameplay/run/difficulty-catalog";
@@ -518,7 +518,8 @@ const CONFIG = {
     ...(mode.training ? { training: true } : {}),
     ...(mode.bossOnly ? { bossOnly: true } : {}),
     ...(mode.sandbox ? { sandbox: true } : {}),
-    ...(mode.id === "bossonly" || mode.id === "sandbox" ? { debug: true } : {}),
+    // `debug` is the historical runtime projection of an engineering-surface mode.
+    ...(mode.surface === "engineering" ? { debug: true } : {}),
   })),
 };
 

@@ -17,6 +17,7 @@ export interface ProductionRunOutcomeRuntime {
 export function createProductionRunOutcomeRuntime(
   replay: ProductionReplayWorld,
   gameplayEvents?: TearGameplayEventPort,
+  observeTerminal?: (outcome: "defeat" | "victory") => void,
 ): ProductionRunOutcomeRuntime {
   const outward: string[] = [];
   const active = () => replay.world.state.run() as never as Record<string, unknown>;
@@ -24,13 +25,14 @@ export function createProductionRunOutcomeRuntime(
     ? () => undefined
     : createTearTerminalRunFactPublisher(gameplayEvents, () => replay.world.lifecycle.snapshot().sessionId);
   const port: LiveOutcomeControllerPort = {
+    ...(observeTerminal === undefined ? {} : { observeTerminal }),
     snapshot: () => snapshotOutcomeRun(active() as never),
     replaceWaveLog: (log) => { active().waveLog = [...log]; },
     waveActive: () => replay.world.lifecycle.isWaveActive,
     preparedVictory: () => (active()._victoryPrepared as PreparedVictory | null | undefined) ?? null,
     storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
     stopClipper: () => { outward.push("stopClipper"); },
-    terminate: (outcome) => { replay.world.lifecycle.terminate(outcome); },
+    terminate: (outcome) => { replay.world.context.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal"); replay.world.lifecycle.terminate(outcome); },
     publishTerminal,
     saveBest: () => false,
     best: (run) => ({ wave: run.wave, score: run.score, time: run.runTime }),
@@ -39,6 +41,7 @@ export function createProductionRunOutcomeRuntime(
     achievementTracking: () => false,
     economyTelemetry: () => Object.freeze({}),
     recordDefeatProgress: () => undefined,
+    finishRecording: (won) => { outward.push(`finishRecording:${String(won)}`); },
     executeVictoryIntents: () => undefined,
     persistPendingFinale: () => { outward.push("persistFinale"); },
     saveProfile: () => { outward.push("saveProfile"); },

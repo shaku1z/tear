@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveVictoryProgressionExecutor } from "../../src/app/live-victory-progression-host";
+import { createLiveVictoryProgressionExecutor } from "../../src/app/run/victory-progression-host";
 
 describe("live victory progression host", () => {
   it("routes generic stats through the shared adapter while retaining profile-data progress", () => {

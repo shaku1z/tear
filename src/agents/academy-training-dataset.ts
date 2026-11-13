@@ -90,6 +90,12 @@ export class TearAcademyTrainingDatasetLoader {
     return this.#loadManifest(manifest);
   }
 
+  /** Governed consumers must share both corpus and reviewed-sample custody. */
+  backend() {
+    if (this.#corpus.backend() !== this.#samples.backend()) throw new TypeError("Academy dataset stores must share one Vault backend");
+    return this.#corpus.backend();
+  }
+
   async #loadManifest(manifest: TearAcademyCorpusManifestV1): Promise<TearAcademyTrainingDatasetV1> {
     if (manifest.reader.kind !== "trainer" || manifest.entries.some((entry) => entry.split === "hidden-release-exam")) {
       throw new RangeError("Academy training datasets exclude hidden release exams");

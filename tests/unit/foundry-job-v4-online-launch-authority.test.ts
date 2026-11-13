@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMemoryGhostVaultBackend } from "../../src/ghost";
 import { stableVerificationHash } from "../../src/replay/hash";
-import { TearFoundryJobVault, TearFoundryScheduledExecution, TearFoundryV4OnlineLaunchAuthorityExecutor, createTearFoundryExecutionBindingV4, createTearFoundryJobSchedule, createTearFoundryJobV2, createTearFoundryLaunchProfile, transitionTearFoundryJob } from "../../src/agents";
+import { TearFoundryJobScheduleVault, TearFoundryJobVault, TearFoundryScheduledExecution, TearFoundryV4OnlineLaunchAuthorityExecutor, createTearFoundryExecutionBindingV4, createTearFoundryJobSchedule, createTearFoundryJobV2, createTearFoundryLaunchProfile, transitionTearFoundryJob } from "../../src/agents";
 
 const at = "2026-08-08T00:00:00.000Z", h = (value: string) => value.repeat(16);
 async function fixture() {
@@ -28,7 +28,9 @@ describe("C36 V4 online-launch authority", () => {
     expect(first.binding.payload).toMatchObject({ kind: "online-launch-ready", authorityHash: first.authority.authorityHash, handoffReceiptHash: first.receipt.receiptHash }); expect(retry).toEqual(first);
     // The opaque handoff itself remains only an authority record.  Actual
     // scheduled execution requires the governed C31 corpus/loader boundary.
-    const scheduled = new TearFoundryScheduledExecution(f.jobs, { list: () => Promise.resolve([f.input.schedule]) } as never, f.custody);
+    // Since 43e8c131 the scheduler also requires the real schedule Vault on the
+    // same governed backend; the fixture persisted the schedule there above.
+    const scheduled = new TearFoundryScheduledExecution(f.jobs, new TearFoundryJobScheduleVault(f.backend), f.custody);
     await expect(scheduled.runScheduledOnce(f.input.schedule.scheduleHash, "2026-08-08T00:01:00.000Z", "retain-only")).rejects.toThrow(/corpus|loader/u); expect((await f.backend.keys("analysis")).some((key) => key.startsWith("foundry-job-online-training-launch:v1:"))).toBe(false);
   });
   it("fails closed when custody, profile, readiness, or current V4 source authority changes", async () => {

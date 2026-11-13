@@ -19,6 +19,8 @@ export interface PerformanceDiagnosticsSnapshot {
   readonly outsideFrameWork: TimingSummary;
   readonly longTasks: number;
   readonly gauges: Readonly<Record<string, number>>;
+  /** Cumulative test-build cost counters since the last counter reset. */
+  readonly counters: Readonly<Record<string, number>>;
 }
 
 function percentile(sorted: Float64Array, sampleCount: number, fraction: number): number {
@@ -78,6 +80,7 @@ class SampleRing {
 export class PerformanceMonitor {
   readonly #timings: Record<TimingKind, SampleRing>;
   readonly #gauges = new Map<string, number>();
+  readonly #counters = new Map<string, number>();
   #longTasks = 0;
 
   constructor(capacity = 600) {
@@ -101,6 +104,19 @@ export class PerformanceMonitor {
     this.#gauges.set(name, value);
   }
 
+  /**
+   * Accumulates a named cost counter. Runtime call sites guard every call with
+   * `__TEAR_TEST_BUILD__`, so release bundles never count.
+   */
+  count(name: string, delta = 1): void {
+    if (name.length === 0 || !Number.isFinite(delta)) return;
+    this.#counters.set(name, (this.#counters.get(name) ?? 0) + delta);
+  }
+
+  resetCounters(): void {
+    this.#counters.clear();
+  }
+
   /** Clears percentile windows while retaining long-task and gauge history. */
   resetTimingSamples(): void {
     for (const timing of Object.values(this.#timings)) timing.clear();
@@ -116,6 +132,7 @@ export class PerformanceMonitor {
       outsideFrameWork: this.#timings.outsideFrameWork.summary(),
       longTasks: this.#longTasks,
       gauges: Object.freeze(Object.fromEntries([...this.#gauges].sort(([left], [right]) => left.localeCompare(right)))),
+      counters: Object.freeze(Object.fromEntries([...this.#counters].sort(([left], [right]) => left.localeCompare(right)))),
     });
   }
 }

@@ -173,7 +173,7 @@ Named status:
 - **C23:** production State Forge passed its named gate 2026-07-26.
 - **C24:** full scripted agent completed its named Class A gate 2026-07-26.
 - **C25:** physical/black-box foundation verified; exit open.
-- **C26:** regression discovery passed `pnpm check:c26` on 2026-07-28.
+- **C26:** regression discovery passed `pnpm checkpoint check:c26` on 2026-07-28.
 - **C27:** versioned durable capsule contract is complete; new V3 captures use
   a schema-v2 contract/integrity envelope with pure V1 migration, safe future
   rejection, extension preservation, and UUID-exact keyframe/bootstrap
@@ -582,11 +582,11 @@ Use `.agents/skills/tear-change-gate/SKILL.md` to select gates. Relevant command
 
 ```powershell
 pnpm requirements:check
-pnpm check:c23
-pnpm check:c25:foundation
-pnpm check:c26
-pnpm check:c27:foundation
-pnpm check:c27a:foundation
+pnpm checkpoint check:c23
+pnpm checkpoint check:c25:foundation
+pnpm checkpoint check:c26
+pnpm checkpoint check:c27:foundation
+pnpm checkpoint check:c27a:foundation
 pnpm typecheck
 pnpm lint
 pnpm check:architecture
@@ -781,43 +781,43 @@ custody, but it does not yet make temporal fitting resumable.
 
 All of the following were run from this worktree through C27A slice 36:
 
-- `pnpm check:c27a` passed after the certified Source-victory slice: foundation
+- `pnpm checkpoint check:c27a` passed after the certified Source-victory slice: foundation
   36 files / 127 tests, a fresh 13-scenario / 5,732-tick / 33-native-fact
   browser corpus, all 40 detached comparator tests, and a campaign-victory
   subgate covering 10 files / 35 tests, the 1,176-transition real browser
   route, and one dedicated detached finale-parity test. The C22 live-runtime
   browser proof and C23 through C27 package gates also passed in this worktree.
 
-- `pnpm requirements:check` and `pnpm check:c27a:foundation` passed after the
+- `pnpm requirements:check` and `pnpm checkpoint check:c27a:foundation` passed after the
   natural reward boundary: zero unmapped source lines, 33 focused files / 112
   tests, architecture, standalone build, physical browser proof, fresh
   13-scenario / 5,732-tick capture, and all 40 exact detached comparisons.
 
-- `pnpm check:c27a:foundation` passed after detached shared-core adoption:
+- `pnpm checkpoint check:c27a:foundation` passed after detached shared-core adoption:
   31 focused files / 104 tests, architecture, standalone build, physical
   browser proof, fresh 12-scenario capture, and 37 exact detached comparisons.
 
-- `pnpm check:c27a:foundation` passed after slice 31's shared combat
+- `pnpm checkpoint check:c27a:foundation` passed after slice 31's shared combat
   extraction: 31 focused files / 103 tests, architecture, standalone build,
   physical browser proof, fresh 12-scenario capture, and 37 detached parity
   tests.
 
-- `pnpm check:c27a:foundation` passed after the shared semantic event adapter:
+- `pnpm checkpoint check:c27a:foundation` passed after the shared semantic event adapter:
   29 focused files / 101 tests, standalone test build, physical browser proof,
   fresh 12-scenario capture, and 37 detached parity tests.
 
-- `pnpm check:c27a:foundation` passed:
+- `pnpm checkpoint check:c27a:foundation` passed:
   - typecheck, lint, architecture;
   - 28 test files / 96 tests;
   - standalone build;
   - physical C27A browser proof and 12-scenario parity capture;
   - 37 detached parity tests with all 12 scenarios exact and no exception.
-- `pnpm check:c27:foundation` passed:
+- `pnpm checkpoint check:c27:foundation` passed:
   - requirements, typecheck, lint, architecture;
   - 14 test files / 69 tests;
   - build and 7 browser proofs.
-- `pnpm check:c26` passed: 5 test files / 24 tests plus the planted live regression.
-- `pnpm check:c23` passed:
+- `pnpm checkpoint check:c26` passed: 5 test files / 24 tests plus the planted live regression.
+- `pnpm checkpoint check:c23` passed:
   - requirements, typecheck, lint, architecture;
   - 13 test files / 62 tests;
   - build and the State Forge active-cinema restore/studio/exit matrix.

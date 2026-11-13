@@ -6,10 +6,10 @@ import { browserIndexedDbForTestStorage } from "./test-browser-storage";
 
 const pwaUpdate = new PwaUpdateController();
 
-void bootstrapTear("standalone", async () => {
-  const { composeTearApplication } = await import("../app/composition");
+void bootstrapTear("standalone", async ({ surfaces, engineeringQuery }) => {
+  const { composeTearApplication } = await import("../app/shell/composition");
   const browserIndexedDb = await browserIndexedDbForTestStorage();
-  composeTearApplication({ target: "standalone", createCloud: createStandaloneCloud, pwaUpdate,
+  await composeTearApplication({ target: "standalone", createCloud: createStandaloneCloud, pwaUpdate, surfaces, engineeringQuery,
     ...(browserIndexedDb === undefined ? {} : { browserIndexedDb }) });
 });
 

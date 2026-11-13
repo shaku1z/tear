@@ -107,7 +107,7 @@ operational boundary it proves.
   artifacts, and identical 32-hash repeat output; the 4,439-episodes/minute
   repeat also met the recorded budget. This is one developer-machine natural
   workload, not BC/DAgger/RL capacity or worker-scale certification.
-- [x] Bounded developer-host long-run observation. `pnpm measure:c30:long-run`
+- [x] Bounded developer-host long-run observation. `pnpm checkpoint measure:c30:long-run`
   runs five fresh four-root production-pool cycles of 32 natural 600-tick
   episodes (160 episodes / 96,000 fixed steps total), retaining only eight
   first-cycle terminal samples. The versioned
@@ -130,7 +130,7 @@ operational boundary it proves.
   `tearbench-production-training-capacity` artifact, and reports each observed
   budget verdict. It deliberately measures episode-fabric capacity only: it
   does not claim BC fitting, DAgger review, RL optimization, policy quality, or
-  checkpoint completion. `pnpm measure:c30:long-run -- --capacity-declaration
+  checkpoint completion. `pnpm checkpoint measure:c30:long-run -- --capacity-declaration
   <file>` is the only target-measurement route; the former bare `--target-id`
   / `--declared-by` pair now rejects rather than relabeling a developer budget.
 - [x] Bounded eight-worker production stress. The permanent dispatcher proof
@@ -181,17 +181,44 @@ operational boundary it proves.
   verifies that unmarked input remains failed with one attempt, then verifies
   that explicitly idempotent serialized input retains the exit record and
   completes in the real production worker on a different PID.
-- [x] In-memory active-episode checkpoint restore. A C30 environment captures
-  only an active, non-draft natural episode through the existing State Forge
-  codec boundary, including its source snapshot, durable held-input state,
-  accepted command envelopes, and canonical hash. A fresh C29 production
-  composition restores the keyframe and must reproduce the captured canonical
-  state before it is accepted; the permanent tick-60 movement/jump/dash proof
-  then reaches an exactly equal tick-120 terminal artifact. Malformed command
-  traces, surgical snapshots, and snapshot/scenario mismatches fail closed.
-  This is caller-retained, in-process custody only — not storage, a worker
-  message, durable job recovery, or a claim that a draft/reward route can yet
-  be checkpointed.
+- [x] In-memory nonterminal checkpoint continuation. Prepared Campaign chapters,
+  active waves and pending draft/reserve/tier-up selections use the existing
+  State Forge codec and reward owners. Original scenario/bootstrap, current RNG,
+  lifecycle, exact seconds/chapter binding, configuration, choices/revisions,
+  rerolls, focus, held input and ordered command envelopes survive hydration.
+  A required delivery frontier binds the complete checkpoint to its next engine
+  sequence and emitted-but-undelivered facts. Pending facts retain their original
+  IDs, ticks and order once; subsequent facts continue the sequence. Hydration
+  emits no original facts. Schema-two checkpoints require explicit bounded held
+  aim magnitude, including zero and full scale. Legacy schema-one checkpoints
+  and missing frontiers/magnitudes refuse before world replacement. Accepted
+  command IDs are contiguous; a malformed action batch leaves the frontier
+  unchanged. The scenario seed uses the canonical production run-seed mapping.
+  Natural Campaign opening now reuses `launchCampaignChapter`; callers explicitly
+  supply application-frame seconds and confirm sources before simulation. The
+  detached API rejects nonfinite or out-of-domain deltas outside 0–0.1 seconds
+  rather than truncating time; fixed ticks neither time nor auto-confirm pages.
+  JSON roundtrips and same-input continuations cover prepared ticks 0/1, held
+  actions, actual reward-owner transitions and the existing tick-60→120 proof.
+  Malformed frontier, choices, configuration and UI/lifecycle pairs refuse before
+  replacing the active destination. The environment namespace rebases, so raw
+  snapshot hashes need not equal the original; owned runtime components and
+  semantic state remain equal, and repeated destination captures are stable.
+  This environment API alone provides caller-retained in-memory custody, not
+  original full-trace attestation. The opt-in durable transport below retains
+  its native checkpoint without inventing prefix observations. Explicit external frame inputs
+  are not recorded in terminal command artifacts. Opt-in native source tracks
+  label restored output as a suffix; surgical State Forge hydration does not
+  deliver the natural source's pending facts as original evidence.
+  Canonical input snapshots retain their old full-scale shape and carry an
+  optional magnitude only for nonfull input. Fresh Ghost receipts explicitly
+  record magnitude, including full scale; their reader preserves legacy absence.
+  Older missing-magnitude snapshots assume full scale for compatibility, without claiming recovery of
+  historical partial aim. Ghost exact verification refuses unknown or established
+  nonfull legacy omission before receipt-assisted restore; admitted original aim
+  history may establish full magnitude only from that point onward. This does
+  not treat a seeded declaration as reset evidence, rewrite historical receipts
+  or alter C30 canonical full-scale hashes.
 - [x] Explicit mid-run process cancellation. A worker reports `started` only
   after its first actual source fixed tick. `cancel(requestId)` waits for that
   signal, terminates only that active child, and returns one serializable
@@ -199,15 +226,103 @@ operational boundary it proves.
   proof warms a real worker, cancels a million-tick playground episode after
   that source-tick signal, then completes the next job on a fresh PID. It
   creates no checkpoint, retry, restoration, or durable job state.
-- [ ] Declared-target capacity and durable recovery evidence. Timeout,
-  validation, and ordinary worker-reported failures are not retried. No target
-  host is declared in this repository, and no durable job recovery is claimed.
+- [x] Opt-in durable local worker jobs and origin recovery.
+  `ProductionHeadlessJobStore` uses Node 24's built-in SQLite on an explicit
+  path outside the source tree. The dispatcher admits strict detached origin
+  scenario/action data with its effective policy, observed source fingerprint,
+  revision, dependency digest and toolchain before claiming an attempt or
+  spawning a worker. Requests, job revision, attempts and terminal result are
+  adopted in one guarded SQLite transaction; acknowledgement follows COMMIT.
+  Exact terminal retries return the existing result without spawning. Changed
+  input, unknown schemas and malformed records refuse without repair.
+  A claimed attempt consumes budget before send. Only an explicitly idempotent
+  worker exit or interrupted owner permits a second origin attempt; `never`
+  allows one total. Version-one stores retain origin replay behavior.
+  The original absolute deadline starts at admission and includes queue,
+  startup and process restart, bounded by any shorter cooperative timeout.
+  Lease renewal and opaque attempt tokens fence stale output; durable
+  cancellation can commit before tick one and wins over a later result.
+  A child slot stays reserved through publication and observation cleanup;
+  cancelling its prior job cannot affect a subsequent owner. Failed batches
+  drain their already-started lanes before accepting another batch, and
+  duplicate request IDs refuse before admission. Ready/start/reply versions and
+  serialized outcome/artifact consistency validate before persistence or the
+  validated-result observer; native-event counts do not infer lifecycle outcome.
+  Clock regression refuses instead of granting additional time. An uncertain
+  commit resolves only exact validated joint rows; unreadable resolution is
+  `commit-indeterminate`, with no cleanup or failure writes.
+  Real supervisor-kill controls cover admission, actual source tick-one start,
+  validated result before publication, and committed publication before ACK.
+  The restarted process preserves the original deadline and consumed attempts;
+  pre-publication origin replay matches the actual source terminal hash.
+  Transport `completed` remains separate from the runner's terminated/truncated
+  disposition and any actual native terminal facts. Legacy dispatch without a
+  store keeps its relative timers and source-tick-one cancellation behavior.
+  Durable callers must explicitly choose positive lower-only limits of at most
+  8 MiB per canonical request and 32 MiB per result. These are application
+  safety bounds, not hardware capacity or whole-heap certification: SQLite
+  reads, Node IPC and canonicalization may allocate before length checks.
+  Local process-crash tests do not certify power loss, network filesystems,
+  exactly-once computation, remote scheduling or training quality.
+- [x] Opt-in version-two durable nonterminal checkpoint transport. An explicit
+  `checkpoint: { intervalTicks: 32, maxBytes: 4194304 }` store policy creates a
+  separate version-two SQLite schema; opening an existing version-one database
+  with that policy refuses without migration. Policy is immutable at admission:
+  cadence is a positive integer up to 120 ticks and checkpoint bytes cannot
+  exceed either existing request/result ceiling. Production callers use 32 ticks
+  and 4 MiB; actual request/offer wire envelopes remain capped at 8 MiB. These
+  are application limits, not whole-heap guarantees.
+  One runner iterator owns source stepping. Synchronous callers drain it as
+  before; the cooperative driver yields bounded quanta and awaits one checkpoint
+  commit acknowledgement before another source step. Checkpoint capture forwards
+  the actual bootstrap build identity, preserving injected target/content checks.
+  The parent atomically adopts checkpoint bytes/digest and its job reference
+  under the active owner/token/attempt fence before ACK. Claim binds the exact
+  old checkpoint digest/generation/tick to the new attempt, independently of its
+  new token. Heartbeats continue while waiting. Cancellation, terminal state,
+  expired leases, original admission deadline and stale publishers retain their
+  existing authority; interruption consumes the original maximum-two-attempt
+  budget. Unknown/corrupt custody never silently restarts from origin.
+  Before candidate restoration, the production parser validates schema-two
+  state, original scenario and normalized ordered action prefix. The current
+  worker policy is the stateless absolute-tick action schedule at batch size one;
+  arbitrary stateful policy recovery is not supported. A resumed first source
+  step is `startTick + 1`; result `ticks` is absolute, with separate start/end and
+  executed suffix counts. V1 callers cannot introduce checkpoint execution claims.
+  Native pending facts and next sequence survive unchanged, without hydration
+  facts. Already-delivered native terminal facts are retained separately;
+  observations and general event streams remain suffix evidence. Post-step
+  checkpoints naturally have no pending facts. The native tick-zero roundtrip
+  separately exercises a genuinely nonempty pending frontier.
+  A bounded developer probe killed the supervisor after committed tick 32 but
+  before ACK; a new worker began at 33 and ran 88 steps to the original 120-tick
+  truncation, matching the uninterrupted terminal hash and complete action trace.
+  That developer proof is truncation. Final clean-source acceptance at
+  `58ceb9ceaed29d1ba7242b681210a311a5d15563` separately passed on 2026-10-20:
+  the existing 720-tick One-Hit scenario with held primary/partial aim naturally
+  defeated at tick 222. After killing supervisor 53464 and worker 55420 at
+  committed tick 32, worker 39808 began at 33 and executed only 190 suffix steps.
+  Its complete terminal state/action trace and native `run.defeated` event were
+  identical to the uninterrupted run, with semantic hash `d144232e478164fb`.
+  Original request/admission/deadline were unchanged; stale publication refused
+  without mutation. Source binding was clean and exact. Retained artifacts:
+  `C:/Users/realm/AppData/Local/Temp/tear-r12-checkpoint-native-FF1Buz/`;
+  log `C:/tmp/tear-r12-checkpoint-20261020/parent-natural-clean-58ceb9ce.log`.
+  Reproduce with the named `R12 checkpoint v2 real supervisor kill` test in
+  `tests/production-headless-worker-dispatcher.test.mjs` with
+  `TEAR_R12_NATURAL_TERMINAL=1` and without `TEAR_R12_NATIVE_BASELINE_ONLY` for that
+  acceptance. The default named test retains the bounded 120-tick control.
+- [ ] Declared-target capacity and broader natural terminal/finale recovery evidence.
+  Timeout, validation, and ordinary worker-reported failures are not retried.
+  No target host is declared in this repository. Durable origin restart does
+  not close natural victory/finale continuation. Prepared/active checkpoint
+  eligibility stays explicit; completed/finale/horizon states are not extended.
 - [x] A sampled natural terminal episode is visibly rerunnable from its
   production artifact. The environment now seals a versioned
   `tearbench-production-headless-terminal` artifact with its exact validated
   scenario, accepted command envelopes, fixed-tick disposition, and semantic
   hash. The committed `movement-jump` fixture is asserted against a fresh C30
-  production execution. `pnpm test:browser:production-headless-terminal`
+  production execution. `pnpm checkpoint test:browser:production-headless-terminal`
   builds the test standalone client, admits that artifact without caller
   overrides, and runs its exact three commands through the real Class-A browser
   runtime. On this worktree the 120-tick live rerun retained the source terminal
@@ -242,17 +357,17 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 
 ## Evidence
 
-- `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
+- `pnpm checkpoint check:c30:foundation` passes: typecheck, full lint, C30 source
   architecture fences, seven focused Vitest files / 18 tests, six Node worker
   tests, standalone build, Class-A truncated and natural-failure terminal
   reruns, a fresh C27A 13-scenario browser capture, and the 14-test exact
   source-matrix comparison.
-- `pnpm check:c27a:foundation` passes 36 files / 138 tests after its detached
+- `pnpm checkpoint check:c27a:foundation` passes 36 files / 138 tests after its detached
   host adopts the shared source runtime; the rebuilt browser corpus and all 40
   detached comparisons retain C27A evidence. C30 separately proves the source
   matrix above through its own ordered gate.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes the developer observation plus target-declaration integrity and three-workload artifact tests. A declared target artifact remains an observation, not certification.
-- `pnpm measure:c30:long-run` invokes Node with `--expose-gc`, writes the
+- `pnpm checkpoint measure:c30:long-run` invokes Node with `--expose-gc`, writes the
   versioned bounded long-run artifact to
   `artifacts/tearbench/checkpoints/core/C30/production-headless/long-run.json`, and records the
   exact host classification rather than inferring target hardware. The current
@@ -277,7 +392,7 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
   source-start/mid-run-cancel/fresh-PID matrix. Its cold-worker readiness
   allowance is separately bounded at 30 seconds (60 seconds for the explicit
   eight-worker stress) and never changes the asserted request deadline.
-- `pnpm build:test:standalone`, `pnpm test:browser:production-headless-terminal`, and `pnpm test:browser:production-headless-failure-terminal` pass. The browser materializer admits only versioned natural C30 terminal coordinates, proves exact action provenance plus a rendered screenshot, and checks that the live terminal tick/disposition match the failure artifact.
+- `pnpm build:test:standalone`, `pnpm checkpoint test:browser:production-headless-terminal`, and `pnpm checkpoint test:browser:production-headless-failure-terminal` pass. The browser materializer admits only versioned natural C30 terminal coordinates, proves exact action provenance plus a rendered screenshot, and checks that the live terminal tick/disposition match the failure artifact.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 
@@ -291,5 +406,6 @@ episode-fabric budgets, then run it on that declared target host and retain the
 artifact before capacity can be assessed. While that waits, the next
 implementation boundary is C31 eligibility, consent, and provenance before its
 Academy candidate intake can become a corpus. Keep all completed C30 boundaries
-restricted to active, non-draft natural episodes: they must not become a new
-simulator, storage format, or durable job-recovery claim.
+restricted to their stated natural or constructed boundary evidence. Durable
+checkpoint transport reuses the existing runtime; its bounded recovery evidence
+does not imply natural full-Campaign/finale acceptance or target-host capacity.

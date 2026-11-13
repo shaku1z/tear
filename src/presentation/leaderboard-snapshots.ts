@@ -12,12 +12,22 @@ interface CommonInput {
   readonly cloudAvailable: boolean;
   readonly message: string;
   readonly loading: boolean;
+  /** The last request failed (offline or the service is unreachable). */
+  readonly failed?: boolean;
   readonly height: number;
   readonly scroll: number;
 }
 
 function tabViews(input: CommonInput) {
   return input.tabs.map(([id, label]) => ({ id, label, selected: id === input.tab }));
+}
+
+type LeaderboardStatus = NonNullable<LeaderboardsScreenView["status"]>;
+function leaderboardStatus(input: CommonInput, count: number): LeaderboardStatus {
+  if (!input.cloudAvailable) return "signin";
+  if (input.loading) return "loading";
+  if (input.failed === true) return "offline";
+  return count === 0 ? "empty" : "ready";
 }
 
 function scrollState(maximum: number, scroll: number) {
@@ -28,12 +38,12 @@ function scrollState(maximum: number, scroll: number) {
 export function buildFeedLeaderboardSnapshot(input: CommonInput & {
   readonly rows: readonly ReplayView[];
 }): LeaderboardSnapshotResult {
-  const maximumScroll = Math.max(0, input.rows.length * 96 - (input.height - 364));
+  const maximumScroll = Math.max(0, input.rows.length * 96 - (input.height - 320));
   const state = scrollState(maximumScroll, input.scroll);
   return Object.freeze({ maximumScroll, view: Object.freeze({
     id: "leaderboards", tab: input.tab, tabs: tabViews(input), rows: input.rows,
-    signInRequired: !input.cloudAvailable,
-    message: input.message || (!input.cloudAvailable ? "The global feed needs an account."
+    signInRequired: !input.cloudAvailable, status: leaderboardStatus(input, input.rows.length),
+    message: input.message || (!input.cloudAvailable ? "The replay feed needs an account."
       : input.loading ? "Loading the feed…"
         : input.rows.length === 0 ? "Nothing published yet — be the first."
           : ""),
@@ -60,7 +70,7 @@ export function buildRankedLeaderboardSnapshot(input: CommonInput & {
   const medals = ["#e0a326", "#c9ccd6", "#cd7f32"] as const;
   const podium = input.data.slice(0, 3).map((row, index) => ({
     rank: index + 1, name: (row.name ?? "Player").slice(0, 14),
-    detail: `wave ${String(row.wave ?? 0)} · ${(row.score ?? 0).toLocaleString()} pts`,
+    detail: `wave ${String(row.wave ?? 0)} · ${(row.score ?? 0).toLocaleString("en-US")} pts`,
     color: medals[index] ?? medals[2], mine: input.currentUserId !== undefined && row.uid === input.currentUserId,
     ...(row.replayId !== undefined ? { replayId: row.replayId } : {}),
   }));
@@ -69,15 +79,16 @@ export function buildRankedLeaderboardSnapshot(input: CommonInput & {
   const state = scrollState(maximumScroll, input.scroll);
   const myIndex = input.currentUserId === undefined ? -1 : input.data.findIndex((row) => row.uid === input.currentUserId);
   const ownRank = input.currentUserId !== undefined && myIndex >= 10
-    ? `#${String(myIndex + 1)} YOU · wave ${String(input.data[myIndex]?.wave ?? 0)} · ${String(input.data[myIndex]?.score ?? 0)} pts`
+    ? `#${String(myIndex + 1)} YOU · wave ${String(input.data[myIndex]?.wave ?? 0)} · ${(input.data[myIndex]?.score ?? 0).toLocaleString("en-US")} pts`
     : input.currentUserId !== undefined && myIndex === -1
       ? input.localBest.wave || input.localBest.score
-        ? `unranked · local best wave ${String(input.localBest.wave)} · ${String(input.localBest.score)} pts`
+        ? `unranked · local best wave ${String(input.localBest.wave)} · ${input.localBest.score.toLocaleString("en-US")} pts`
         : "unranked · no local record yet"
       : undefined;
   return Object.freeze({ maximumScroll, view: Object.freeze({
     id: "leaderboards", tab: input.tab, tabs: tabViews(input), rows, podium,
     ...(ownRank === undefined ? {} : { ownRank }), ...(ghostId === undefined ? {} : { legacyGhostId: ghostId }), signInRequired: !input.cloudAvailable,
+    status: leaderboardStatus(input, input.data.length),
     modes: input.modes.map((mode) => ({ id: mode.id, label: mode.label.toUpperCase(), selected: mode.id === input.mode })),
     difficulties: input.difficulties.map((difficulty) => ({ id: difficulty.id, label: difficulty.label.toUpperCase(), selected: difficulty.id === input.difficulty })),
     message: input.message || (!input.cloudAvailable ? "Global leaderboards need an account — your runs are waiting to count."

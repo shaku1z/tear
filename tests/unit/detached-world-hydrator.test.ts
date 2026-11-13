@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { createParticleSystem } from "../../src/presentation/particles";
+import { createLiveParticlePresentationState } from "../../src/app/world/particle-presentation-state";
+import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 
 import {
   hydrateTearCodecWorld,
@@ -187,6 +190,37 @@ function objectValue(value: unknown, message: string): Record<string, unknown> {
 }
 
 describe("detached Tear codec world hydrator", () => {
+  it("retains detached particles and historical absence without consulting an outgoing FX owner", () => {
+    const source = completeCodecWorld(), effects = { highBudget: 3, lowBudget: 1, cullMargin: 180 };
+    const fx = createParticleSystem({ effects, lowGraphics: () => false, reducedMotion: () => false, random: () => 0.5 });
+    fx.spark(1, 2, 1, 0);
+    const saved = createLiveParticlePresentationState(fx, () => ({ effects, lowGraphics: false, reducedMotion: false }), createCosmeticEmissionRandom()).capture();
+    source.components.set("tear.ui.v1", JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", particlesPresentation: saved })) as TearCodecValue);
+    const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
+    fx.update(0.01); source.components.set("tear.ui.v1", { screen: "menu", focusId: "0" });
+    expect(staged.particlesPresentation).toEqual(saved);
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).particlesPresentation).toBeUndefined();
+    const legacy = { version: 1, list: saved.list, view: saved.view, replacementCursor: saved.replacementCursor, policy: saved.policy };
+    source.components.set("tear.ui.v1", JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", particlesPresentation: legacy })) as TearCodecValue);
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).particlesPresentation).toEqual(legacy);
+  });
+  it("retains a detached JSON HUD checkpoint without consulting outgoing UI", () => {
+    const source = completeCodecWorld();
+    const hud = { version: 1, clockSeconds: 3.125, lagHp: 0.8, multiplier: 2, multiplierPop: 0.5 };
+    source.components.set("tear.ui.v1", JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", hudPresentation: hud })) as { screen: string; focusId: string; hudPresentation: typeof hud });
+    const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
+    source.components.set("tear.ui.v1", { screen: "menu", focusId: "0" });
+    expect(staged.hudPresentation).toEqual(hud);
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).hudPresentation).toBeUndefined();
+  });
+
+  it("retains exact fractional seconds and historical absence separately from ticks", () => {
+    const source = completeCodecWorld();
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds).toBeUndefined();
+    const world = objectValue(source.components.get("tear.world.v1"), "world is missing");
+    source.components.set("tear.world.v1", { ...world, simulationSeconds: 0.173456789 });
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds).toBe(0.173456789);
+  });
   it("restores stable references and dispatches each factory with the decoded Echo run", () => {
     const calls: EnemyConstruction[] = [];
     const identity = hydrationContext();

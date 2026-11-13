@@ -4,11 +4,11 @@
   "tasks": [
     {
       "taskId": "unit.tearbench-canary-contract",
-      "version": 3,
+      "version": 4,
       "runner": {
         "kind": "node",
         "executable": "node",
-        "args": ["--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-workflow.test.mjs", "tests/tearbench-performance-sample.test.mjs", "tests/tearbench-paired-performance-report.test.mjs", "tests/tearbench-simulation-boundary-report.test.mjs"]
+        "args": ["--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-qualification-report.test.mjs", "tests/tearbench-canary-workflow.test.mjs", "tests/tearbench-performance-sample.test.mjs", "tests/tearbench-paired-performance-report.test.mjs", "tests/tearbench-simulation-boundary-report.test.mjs"]
       },
       "claimIds": ["unit", "canary-control-plane"],
       "dependencies": [],
@@ -598,6 +598,93 @@
       "intentionalReplica": "none"
     },
     {
+      "taskId": "static.check-code-budget",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/check-code-budget.mjs"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "check:code-budget"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-code-budget",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/code-budget.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:code-budget"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-architecture",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/source-architecture.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:architecture"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "unit.test-tutorial-gold-fingerprint",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "--test",
+          "tests/tutorial-gold-fingerprint.test.mjs"
+        ]
+      },
+      "claimIds": [
+        "unit",
+        "test:tutorial-gold-fingerprint"
+      ],
+      "dependencies": [],
+      "resourceClass": "unit",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
       "taskId": "unit.test-preservation-corpus",
       "version": 1,
       "runner": {
@@ -914,6 +1001,34 @@
       ],
       "outputs": [],
       "timeoutMs": 180000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "browser.test-browser-release-adventure",
+      "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "tests/browser-release-adventure-journey.js"
+        ]
+      },
+      "claimIds": [
+        "browser",
+        "test:browser:release-adventure"
+      ],
+      "dependencies": [
+        {
+          "taskId": "build.standalone",
+          "outputId": "build-artifact"
+        }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": [
+        "resources/browser"
+      ],
+      "outputs": [],
+      "timeoutMs": 600000,
       "intentionalReplica": "none"
     },
     {
@@ -3799,6 +3914,10 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-architecture",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -3812,6 +3931,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -3886,6 +4006,10 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-architecture",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -3899,6 +4023,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -3971,6 +4096,10 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-architecture",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -3984,6 +4113,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -4036,6 +4166,7 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit"
@@ -4071,6 +4202,10 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-architecture",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -4084,6 +4219,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -4156,6 +4292,10 @@
       "static.typecheck",
       "static.lint",
       "static.check-architecture",
+      "static.check-code-budget",
+      "unit.test-code-budget",
+      "unit.test-architecture",
+      "unit.test-tutorial-gold-fingerprint",
       "unit.test-preservation-corpus",
       "unit.test-unit-without-preservation-corpus",
       "unit.test-parity-unit",
@@ -4169,6 +4309,7 @@
       "build.crazygames",
       "static.check-test-isolation",
       "browser.test-browser-production-isolation",
+      "browser.test-browser-release-adventure",
       "build.check-bundles",
       "build.check-crazygames-package",
       "certify.reproducible",
@@ -4215,7 +4356,8 @@
       "static.requirements-check",
       "static.typecheck",
       "static.lint",
-      "static.check-architecture"
+      "static.check-architecture",
+      "static.check-code-budget"
     ],
     "endurance": [
       "endurance.test-endurance",

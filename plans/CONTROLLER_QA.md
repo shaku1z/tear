@@ -73,7 +73,21 @@ For **Default / Standard / Tear / Classic / Split**:
 - [ ] Missing/invalid stored preset falls back to Default; existing players are NOT silently migrated.
 - [ ] QA passes on DualSense, Xbox, and a generic XInput pad, standalone and in the CG iframe.
 
+## Automated coverage and remaining evidence
+- Tutorial action prompts and the Codex controller guide use `PAD.bindingLabel()`;
+  setup, tab hints, and Settings previews use `PAD.glyph()`. READ THE CHARGE shows
+  the evade control only; FIELD TEST shows the evade-then-punish controls.
+- Adapter regressions cover held-trigger preset changes, blur with a released or
+  still-held tether button, immediate menu direction changes, and analog-trigger
+  input ownership. These checks preserve the five shipped presets and fixed
+  keyboard bindings; there is no keyboard-remapping feature.
+- Automated and synthetic browser evidence does not close the unchecked hardware
+  rows above: DualSense / Xbox / generic XInput × five presets × standalone / the
+  CrazyGames iframe remains a 30-combination physical pass. Record the actual
+  device, preset, build, target, and result for each combination.
+- Real mobile touch usability and human feel/visual acceptance remain separate
+  evidence; emulated touch, fullscreen checks, and screenshot capture do not
+  establish them.
+
 ## Known follow-ups (not in this pass)
-- Exhaustive replacement of hard-coded controller prompt strings with `PAD.bindingLabel()` /
-  `PAD.glyph()` across tutorials and the control guide (resolver is in place; wiring pending).
 - Per-biome chapter motif art and the Source HUD-bar fracture (Pantheon VI deferred visual pass).

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleReplayTransport } from "../../src/app/replay-transport-controller";
+import { handleReplayTransport } from "../../src/app/library/replay-transport-controller";
 
 describe("replay transport controller", () => {
   it("handles scrub, pause, and keyboard seeks", () => {

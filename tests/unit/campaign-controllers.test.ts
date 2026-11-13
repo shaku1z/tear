@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CAMPAIGN_INTRO, CampaignChapterController } from "../../src/gameplay/campaign/chapter-controller";
+import { CAMPAIGN_INTRO, CampaignChapterController, chapterPageDwell } from "../../src/gameplay/campaign/chapter-controller";
 import { FinaleController } from "../../src/gameplay/campaign/finale-controller";
 
 const chapterTiming = { loreReveal: 0.5, chapterIn: 0.3, loreExit: 0.4, biomeRevealBrief: 0.5,
@@ -9,11 +9,11 @@ const stage = { name: "The Yard", blurb: "Steel remembers.", accent: "red", dark
   chapter: { number: 1, symbol: "I", title: "WARDEN", intro: "Enter.", transition: "ash" as const, pages: [{ label: "YARD", text: "A gate." }] } };
 
 describe("campaign chapter controller", () => {
-  it("shows the three-page prologue once and preserves beat timing", () => {
+  it("shows the three-page prologue once and holds each page for its reading dwell", () => {
     const controller = new CampaignChapterController(chapterTiming);
     const first = controller.begin(0, stage, null, false);
     expect(first.flow.pages).toHaveLength(CAMPAIGN_INTRO.length + 1);
-    expect(first.sequence.beats[1]).toMatchObject({ id: "page-0", completion: "confirm", duration: 2.35 });
+    expect(first.sequence.beats[1]).toMatchObject({ id: "page-0", completion: "confirm-or-timeout", dwell: 0.5 + chapterPageDwell(CAMPAIGN_INTRO[0].text) });
     controller.complete(false, false);
     expect(controller.begin(0, stage, null, true).flow.pages).toHaveLength(1);
   });

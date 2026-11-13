@@ -26,7 +26,8 @@ import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { CANONICAL_ENGINEERING_SCENARIOS, materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
 import { ENVIRONMENT_REQUIRED_INVARIANT_IDS } from "../../src/tearbench/invariants";
-import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
+import { createProductionHeadlessEnvironment, type ProductionHeadlessEnvironment } from
+  "../../src/tearbench/production-headless-environment";
 import { PRODUCTION_UPGRADE_BY_ID } from "../../src/tearbench/progression-synthesis-policy";
 import { validateTearContract } from "../../src/tearbench/validation";
 import {
@@ -288,6 +289,23 @@ describe("TearBench current-game catalog authority", () => {
       .toThrow(/Bloom Well lifecycle horizon/u);
   });
 
+  /**
+   * Since 6dfd99c7 a natural headless Campaign opening plays the real opening
+   * chapter with the player locked, as live play does; fixed ticks neither time
+   * nor confirm its pages. Skip it as a player does (release to arm the latch,
+   * then HOLD TO SKIP CHAPTER) through real application frames, at tick zero.
+   */
+  function skipOpeningChapter(environment: ProductionHeadlessEnvironment, id: string): void {
+    const chapter = () => (environment.captureCheckpoint().snapshot.state["tear.run.v1"] as { chapterState?: unknown }).chapterState;
+    expect(chapter(), id).toBe("LORE_ENTER");
+    // Checkpoint capture is the probe, so sample it every eight frames.
+    for (let frame = 0; frame < 600 && (frame % 8 !== 0 || chapter() !== "WAVE_LIVE"); frame += 1) {
+      environment.advanceApplicationFrame(1 / 60, { key: frame >= 12 });
+    }
+    expect(chapter(), id).toBe("WAVE_LIVE");
+    environment.advanceApplicationFrame(1 / 60, { key: false });
+  }
+
   it("really resets and advances every declared current headless scenario", () => {
     for (const entry of currentCatalog.filter((candidate) => candidate.backends.includes("headless"))) {
       const environment = createProductionHeadlessEnvironment();
@@ -296,6 +314,7 @@ describe("TearBench current-game catalog authority", () => {
         const observed = environment.policyObservation();
         expect(observed.run, entry.id).toMatchObject({ mode: entry.start.mode,
           difficulty: entry.start.difficulty, weapon: entry.start.weapon, stage: "grounds" });
+        if (entry.start.mode === "campaign") skipOpeningChapter(environment, entry.id);
         const advanced = environment.step([{ type: "move", x: 1_000, y: 0 }]);
         expect(advanced.observation.tick, entry.id).toBe(1);
         if (advanced.observation.player === null || opening.player === null) {

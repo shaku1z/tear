@@ -18,6 +18,51 @@ function time(v: unknown): v is string { return text(v) && Number.isFinite(Date.
 function approval(d: Omit<TearFoundryV3PromotionApprovalV1, "approvalHash">): TearFoundryV3PromotionApprovalV1 { if (!text(d.job.id) || ![d.job.jobHash, d.job.protocolHash, d.job.stopConditionsHash, d.bridge.bridgeHash, d.bridge.decisionReceiptHash, d.bridge.monitoringReceiptHash, d.bridge.evaluationResultHash, d.candidate.artifactHash, d.candidate.adapterHash, d.candidate.actionVocabularyHash, d.candidate.offlinePlanHash, d.candidate.offlineTrainingHash, d.candidate.onlinePlanHash, d.candidate.onlineCheckpointHash, d.candidate.evaluationHash].every(hash) || !text(d.candidate.id) || !time(d.approvedAt) || !Object.values(d.conditions as Record<string, unknown>).every((value) => value === true) || (d.rollbackBaseline !== undefined && (!Number.isSafeInteger(d.rollbackBaseline.revision) || d.rollbackBaseline.revision < 1 || !text(d.rollbackBaseline.artifactId) || ![d.rollbackBaseline.artifactHash, d.rollbackBaseline.activationHash].every(hash)))) throw new TypeError("invalid Foundry V3 promotion approval"); const value = Object.freeze({ ...d, job: Object.freeze({ ...d.job }), bridge: Object.freeze({ ...d.bridge }), candidate: Object.freeze({ ...d.candidate }), conditions: Object.freeze({ ...d.conditions }), ...(d.rollbackBaseline === undefined ? {} : { rollbackBaseline: Object.freeze({ ...d.rollbackBaseline }) }) }); return Object.freeze({ ...value, approvalHash: stableVerificationHash(value) }); }
 export function parseTearFoundryV3PromotionApproval(value: unknown): TearFoundryV3PromotionApprovalV1 { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry V3 promotion approval"); const typed = value as TearFoundryV3PromotionApprovalV1, { approvalHash, ...draft } = typed, parsed = approval(draft); if (!hash(approvalHash) || approvalHash !== parsed.approvalHash) throw new TypeError("Foundry V3 promotion approval integrity mismatch"); return parsed; }
 
+/** Explicit native provenance. It contains no legacy bridge or V2 receipt identifiers. */
+export interface TrainingOperationsV3NativePromotionApprovalV1 extends Omit<TearFoundryV3PromotionApprovalV1, "format" | "bridge"> {
+  readonly format: "training-operations-v3-native-promotion-approval";
+  readonly nativeOrigin: Readonly<{ authorityHash: string; trainingSourceJobHash: string; trainingReceiptHash: string;
+    evaluationReceiptHash: string; decisionReceiptHash: string; intentHash: string; scheduleHash: string; bindingHash: string }>;
+}
+export function createTrainingOperationsV3NativePromotionApproval(
+  input: Omit<TrainingOperationsV3NativePromotionApprovalV1, "approvalHash">,
+): TrainingOperationsV3NativePromotionApprovalV1 {
+  const raw = input as unknown as Record<string, unknown>;
+  const conditions: readonly unknown[] = [input.conditions.currentMonitoringHead, input.conditions.monitoringReadyDecision,
+    input.conditions.evidenceRetained, input.conditions.heldCustody, input.conditions.completedPassedV3,
+    input.conditions.inactiveCandidateOnly, input.conditions.approverFree];
+  const keys = ["format", "schemaVersion", "job", "candidate", "rollbackBaseline", "conditions", "approvedAt", "nativeOrigin"];
+  if (Object.keys(input).length !== keys.length || Object.keys(input).some((key) => !keys.includes(key))
+    || raw.format !== "training-operations-v3-native-promotion-approval" || raw.schemaVersion !== 1
+    || input.rollbackBaseline === undefined || Object.keys(input.nativeOrigin).length !== 8
+    || ![input.nativeOrigin.authorityHash, input.nativeOrigin.trainingSourceJobHash, input.nativeOrigin.trainingReceiptHash,
+      input.nativeOrigin.evaluationReceiptHash, input.nativeOrigin.decisionReceiptHash, input.nativeOrigin.intentHash,
+      input.nativeOrigin.scheduleHash, input.nativeOrigin.bindingHash].every(hash)) throw new TypeError("invalid native promotion origin");
+  const baseline = input.rollbackBaseline;
+  if (!text(input.job.id) || !text(input.candidate.id) || !time(input.approvedAt)
+    || ![input.job.jobHash, input.job.protocolHash, input.job.stopConditionsHash, input.candidate.artifactHash,
+      input.candidate.adapterHash, input.candidate.actionVocabularyHash, input.candidate.offlinePlanHash,
+      input.candidate.offlineTrainingHash, input.candidate.onlinePlanHash, input.candidate.onlineCheckpointHash,
+      input.candidate.evaluationHash, baseline.artifactHash, baseline.activationHash].every(hash)
+    || !Number.isSafeInteger(baseline.revision) || baseline.revision < 1 || !text(baseline.artifactId)
+    || Object.keys(input.conditions).length !== 7 || !conditions.every((entry) => entry === true)) {
+    throw new TypeError("invalid native promotion eligibility");
+  }
+  const draft = structuredClone(input);
+  return Object.freeze({ ...draft, approvalHash: stableVerificationHash(draft) });
+}
+export function parseTrainingOperationsV3NativePromotionApproval(value: unknown): TrainingOperationsV3NativePromotionApprovalV1 {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError("invalid native promotion approval");
+  const { approvalHash, ...draft } = value as TrainingOperationsV3NativePromotionApprovalV1;
+  const parsed = createTrainingOperationsV3NativePromotionApproval(draft);
+  if (approvalHash !== parsed.approvalHash) throw new TypeError("native promotion approval integrity mismatch");
+  return parsed;
+}
+export function parseTearFoundryV3PromotionApprovalOrigin(value: unknown): TearFoundryV3PromotionApprovalV1 | TrainingOperationsV3NativePromotionApprovalV1 {
+  return value !== null && typeof value === "object" && "format" in value && value.format === "training-operations-v3-native-promotion-approval"
+    ? parseTrainingOperationsV3NativePromotionApproval(value) : parseTearFoundryV3PromotionApproval(value);
+}
+
 /** Freezes only exact existing eligibility evidence for a later atomic promotion; it never registers, activates, or places a policy. */
 export class TearFoundryV3PromotionApprovalExecutor {
   readonly #jobs: TearFoundryJobVault; readonly #custody: TearAcademyCandidateCustodyStore;

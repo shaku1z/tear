@@ -4,7 +4,7 @@ import {
   initialAppState,
   transitionAppState,
   type AppState,
-} from "../../src/app/state-machine";
+} from "../../src/app/interface/state-machine";
 
 describe("application state machine", () => {
   it("covers the live run, interstitial, and terminal flow with explicit edges", () => {

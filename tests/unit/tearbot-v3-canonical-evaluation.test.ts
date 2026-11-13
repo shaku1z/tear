@@ -10,7 +10,7 @@ import {
   TearC34V3C32CandidateRegistry, TearPolicyArtifactRegistry, TEAR_C34_V3_C32_POLICY_RUNTIME_COMPATIBILITY,
   type TearAcademyTrainingDatasetV1,
 } from "../../src/agents";
-import { LiveBotEvidenceController } from "../../src/app/live-bot-evidence-controller";
+import { LiveBotEvidenceController } from "../../src/app/engineering/bot-evidence-controller";
 import type { TearScenarioV1 } from "../../src/tearbench";
 
 const scenario: TearScenarioV1 = Object.freeze({ format: "tear-contract" as const, kind: "scenario" as const, schemaVersion: 1 as const, id: "c35-v3-canonical", version: 1, description: "C35 C32 canonical source-world fixture", stateClass: "recorded-canonical" as const, executionClass: "training" as const, seed: "c35-v3-canonical", start: Object.freeze({ mode: "endless" as const, difficulty: "normal" as const, weapon: "sword" as const }), maxTicks: 3, assertions: Object.freeze(["runtime.finite-state"] as const), tags: Object.freeze(["c35", "c36"] as const) });

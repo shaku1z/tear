@@ -60,7 +60,7 @@ certification.
 The full verified foundation command is:
 
 ```text
-pnpm check:c25:foundation
+pnpm checkpoint check:c25:foundation
 ```
 
 It includes requirements reconciliation, types, lint, the 700-line architecture

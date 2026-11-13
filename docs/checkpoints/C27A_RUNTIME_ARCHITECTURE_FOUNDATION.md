@@ -104,7 +104,7 @@ execution evidence.
   construction, and transient input-projection rejection. Its browser
   companion, `tests/browser-state-forge-runtime.js`, proves a hostile
   mid-commit restoration reconstructs the prior live State Forge snapshot
-  exactly. The expanded `pnpm check:c23` gate passes requirements, types,
+  exactly. The expanded `pnpm checkpoint check:c23` gate passes requirements, types,
   lint, architecture, 39 unit tests, standalone build, and all State Forge
   browser journeys from this worktree.
 - `tests/unit/detached-world-runtime.test.ts` proves a hydrated world takes
@@ -195,7 +195,7 @@ execution evidence.
   restores dilation and framing and deliberately does not clear the rank popup.
   State Forge snapshot keys are again unchanged. `check:c27a:foundation` passed
   14 suites / 45 tests with the Class-C physical-input browser journey, and
-  `pnpm check:c23`, `pnpm check:c27:foundation`, and the full unit suite were
+  `pnpm checkpoint check:c23`, `pnpm checkpoint check:c27:foundation`, and the full unit suite were
   rerun from this worktree afterwards.
 - `src/app/live-world-simulation-factories.ts` extracts one world's entity
   constructors out of the composition root. `createLiveWorldSimulationFactories`
@@ -668,7 +668,7 @@ of replay, headless execution, or learning portability.
   route. This proves campaign outcome execution and finale *intent* parity. It
   does not yet prove equality of every adapter-produced particle, audio sample,
   controller vibration, rendered pixel, or other presentation side effect.
-  The integrated post-slice `pnpm check:c27a` gate passed: the foundation
+  The integrated post-slice `pnpm checkpoint check:c27a` gate passed: the foundation
   subgate ran 36 files / 127 tests, regenerated the 13-scenario live corpus
   across 5,732 ticks / 33 native facts, and passed all 40 detached comparator
   tests; the campaign-victory subgate ran 10 files / 31 tests, completed the
@@ -704,7 +704,7 @@ of replay, headless execution, or learning portability.
   exactly, including zoom's before/after current-target pair and the maximum
   aggregation of flash and shake. This proves logical feel state and transient
   restoration, not rendered pixels, audio scheduling, PCM/audibility, audio
-  graph/device output, or physical haptics. The integrated `pnpm check:c27a`
+  graph/device output, or physical haptics. The integrated `pnpm checkpoint check:c27a`
   gate now passes through Slice 40: foundation 36 files / 128 tests, 13 browser
   scenarios / 5,732 ticks / 33 native facts, 40 detached comparisons, campaign
   victory 10 files / 36 tests with the 1,176-transition Source browser route and
@@ -765,7 +765,7 @@ of replay, headless execution, or learning portability.
   globally captured platform fixture. Unit evidence exercises two distinct
   tuning records through real weapon, upgrade, difficulty, and stage rules;
   focused tests cover the combat/cinematic/tutorial ports and campaign
-  frontier. The complete `pnpm check:c27a` gate passed from this worktree:
+  frontier. The complete `pnpm checkpoint check:c27a` gate passed from this worktree:
   foundation 36 files / 130 tests, a fresh 13-scenario / 5,732-tick / 33-native
   fact browser corpus with 40 detached comparisons, campaign-victory 10 files
   / 36 tests plus the 1,176-transition browser route, and Slice 41's 7 files /

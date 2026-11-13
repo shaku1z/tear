@@ -25,3 +25,29 @@ The test writes its measured profile to `artifacts/tearbench/generated/browser-p
 Pull requests and `main` run the deterministic functional contract in the required `check` job. The machine-sensitive performance contract runs once for the final release candidate on a controlled host through `pnpm check`; its report records the exact browser executable and version. Manual TearBench canaries may also execute it on a shared provider for parallel-equivalence evidence. Raw scheduler cadence remains visible there, but CPU-throttled cadence is not attributed to game work. This keeps every numeric threshold and the unthrottled pacing gate intact without turning host contention into a gameplay budget change.
 
 When hardware-independent changes deliberately alter the representative workload, capture several clean runs, document why the contract changed, and update the workload and budget together. Do not raise a threshold solely to silence one overloaded or contended machine.
+
+## Runtime cost profile (reported, not yet a budget)
+
+`node tests/browser-runtime-cost-profile.js` measures a test build (`dist/test-standalone` by default, or `TEAR_PROFILE_BUILD`) in eight scenes: the menu attract scene, Adventure wave 1, an Endless wave 9 composition, the Verdant Rootbinder/Bloom workload, White Hart phase two, a tutorial lesson, the Shop sheet and the draft overlay. Each scene runs on a fresh page in three separate passes so instrumentation never touches the timing numbers:
+
+- **timing**: simulation and render per frame and the canonical tick, from the test-build `PerformanceMonitor`, plus its test-only cost counters (authoritative captures, canonical projections and their cost, environment cleanup actor sets, ticks). Counting call sites are guarded by `__TEAR_TEST_BUILD__`, so release bundles neither count nor contain the counter names.
+- **counters**: an init script counts Canvas `measureText`, gradient and pattern creation, font and shadow assignments, `fillText`, `Object.freeze`, `structuredClone` and DOM writes (inline style through an `element.style` proxy, attributes, classes, text) per frame. `TEAR_PROFILE_CALLSITES=1` also attributes each count to its source line.
+- **allocation**: Chrome's sampling heap profiler with objects collected by minor and major GC included, so the summed sample sizes estimate every byte allocated in the window rather than what survived it; a CPU profile runs alongside for attribution. With a source-mapped build (`vite build --mode test-standalone --sourcemap`) both are attributed to source files; `TEAR_PROFILE_RAW_DIR` keeps the raw profiles.
+
+Every pass repeats `TEAR_PROFILE_REPEATS` times (default 3) over a `TEAR_PROFILE_WINDOW_MS` window (default 4,000 ms) after a warm-up, and the report (`TEAR_PROFILE_OUTPUT`) keeps each run with the median, minimum and maximum. Sampled allocation is an estimate with a few per cent of sampling noise; counters are close to deterministic for a given workload.
+
+Path to budgets: once several clean runs on the controlled release host agree, promote the deterministic metrics first (canonical projections per second outside recording, `measureText`, gradient and DOM writes per frame per scene) as ceilings about 10% above the measured median in `config/browser-performance-budgets.json`, then allocation bytes per frame. Wall-clock scene timings stay reported until the controlled host shows a stable spread.
+
+## Download and startup budgets
+
+`pnpm check:bundles` (`scripts/check-bundle-budget.mjs`, budgets in [`config/bundle-budgets.json`](../config/bundle-budgets.json)) measures both release builds, `dist/standalone` and `dist/crazygames`:
+
+- **Startup scripts.** The bytes of the entry script plus every `modulepreload` that `index.html` references are at most `startupScriptBytes` (2,300,000 bytes uncompressed; about 2.09 MB measured). The on-demand tutorial corpus may never be among them.
+- **Main chunk.** The largest application JavaScript chunk, excluding worker bundles and the on-demand tutorial corpus, stays within `standaloneMainGzipBytes` / `crazygamesMainGzipBytes` gzip bytes.
+- **Workers.** The largest worker bundle (Career Archive, coach history, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
+- **Tutorial corpus.** The tutorial demonstration corpus is a separate chunk of at most `tutorialGoldGzipBytes` gzip bytes. Training preflight fetches it before a tutorial or practice run; the service worker runtime-caches it on first use, so it then works offline, rather than precaching it for every player.
+- **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (42 entries and about 6.74 MB measured), and never the tutorial corpus.
+
+`pnpm check:test-isolation` proves the engineering channel stays out of both release builds. Research and diagnostic screens (Training Archive, Training Operations, Replay Hub, Game Agent evidence, Run Monitor), human-calibration capture and the agent training modules they use load only through a dynamic import guarded by `__TEAR_ENGINEERING_SURFACES__` in `src/app/shell/composition.ts`, and the Verdant calibration scene only through one guarded by `__TEAR_TEST_BUILD__`. The gate fails if a release file contains one of their distinctive markers (storage keys, format identifiers and diagnostic sentences listed in the script) or a calibration image, and it fails if a marker disappears from its source module, so a renamed string cannot make the check pass vacuously.
+
+Set a new ceiling about 10% above a deliberate, measured change and record why here; never raise one to absorb an unexplained increase.

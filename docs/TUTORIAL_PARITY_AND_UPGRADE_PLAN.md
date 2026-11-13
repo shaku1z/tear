@@ -25,6 +25,92 @@ The governing principle is:
 
 ## Cutting Room 2.0 implementation status
 
+### Contextual campaign choices and shop guidance
+
+The first-wave campaign draft shows: “This choice lasts for this run only. Clear
+waves, build your abilities, then face the chapter boss.” It appears while both
+`stageClears` and `campaignClears` are zero, including retries; this is an
+early-campaign policy, not a first-ever-run claim. Other modes and later drafts
+do not show it.
+
+Before the first shop purchase, inline copy reads: “Spend coins on permanent
+upgrades for future runs. Buying is optional.” It requires zero owned ranks,
+zero `shopBuys` and zero META `lifetimeSpent`. Both notices use existing facts,
+wrap at normal body size in the existing header/card gap, and add no persistence
+flag, modal, timer, confirmation or forced purchase. Prices, controls and tutorial
+baseline behavior are unchanged. The focused browser fixture visits these normal
+renderers through existing debug routing; it is UI evidence, not a natural
+campaign-completion or purchase-pacing claim.
+
+### Additive Field Test transfer contract
+
+Current courses keep all fourteen lesson IDs. Field Test starts with the unchanged
+Charger evade → recovery punish route (wave 1), then clears the encounter for a
+1.25-second visible inter-wave breath. Wave 2 installs a fresh baseline target
+and real ranged attacker. It requires a new upward launch, a later airborne hit,
+and a production projectile deflect or parry after activation. Ordinary cuts,
+earlier-room evidence, help and demonstrations cannot satisfy these goals.
+There are no campaign waves, shops, drafts or upgrades in this miniature cadence.
+
+Tutorial session checkpoint version 2 records curriculum version 2, the current
+Field Test encounter and remaining breath time. Version 1 sessions retain the
+original Charger-only rule and serialize as version 1; their completed evidence
+is never relabeled. Fresh courses use version 2. Lesson restart/reached selection
+and completed practice retain their course's curriculum, restarting Field Test at
+its first encounter. Restore does not reinstall or respawn an installed room.
+The previous actual full course took 11,970 fixed ticks. The extended journey
+declares a finite 16,000-tick total budget: the new breath alone takes 150 ticks,
+with the remaining allowance for genuine launch, follow-up and projectile input.
+The extended actual journey passed in 12,458 fixed ticks at `ea010cde`, including
+the summary and reached-lesson practice selection. Its captured two-wave Field
+Test replay matched every authoritative tick through READY in the detached host.
+
+Retained tutorial behavior now has an executable detached owner. Production replay
+and headless worlds use the same `createLiveTutorialRuntime`, lesson controller,
+content spawning and shared actor reset/recovery helpers as live. Restoration
+loads the versioned `world.runtime.tutorialSession` without starting a new course,
+issuing an ID, installing an already retained arena or consulting persistence.
+Actual pending lesson transitions still reset actors and install their authored
+arena. Style/collision marks and the existing post-collision tutorial update feed
+that owner at the authoritative simulation delta; ghost/help/display cadence is
+separate and is excluded from canonical behavior.
+
+Canonical live and detached state in tutorial mode includes a noninactive session's
+behavior, including its course ID, completion guard, evidence, windows and timers.
+Ordinary/inactive runs omit that field and retain their prior canonical shape.
+An active tutorial snapshot with missing behavior refuses explicitly. Existing
+codec bytes and historical receipts are not rewritten: executing retained behavior
+does not retroactively verify tutorial hashes recorded before that behavior was
+part of the canonical projection.
+
+READY executes the real controller's once-only completion and practice handoff.
+Detached completion emits only a nonpersistent intent. Headless reports an explicit
+`awaiting-next-run` episode boundary, without inventing a lifecycle victory or
+`run.completed` event, and refuses further steps in that old episode. The live
+handoff creates a fresh run seed which is absent from the retained tutorial bytes.
+`continueTutorialPractice(nextScenario)` therefore requires a separately supplied,
+fresh Normal/Playground/Sword scenario identity. It constructs the actual baseline
+practice world, carries the completed course guard, and leaves the new episode
+paused. It neither substitutes the old seed nor claims exact continuation into an
+unrecorded future run. Callers must resume before advancing its fixed simulation;
+the tutorial does not add a presentation clock or advance while the host is paused.
+
+The distinct `tearbench-production-tutorial-handoff` artifact is intentionally
+refused by ordinary production-terminal Training Archive/durable worker consumers; it is
+not an ordinary terminal receipt or a natural victory. Explicit support in those
+consumers is a separate contract. The existing full-course browser journey can
+optionally export its actual Field Test-to-READY snapshot, held input, commands
+and canonical receipts with `TEAR_TUTORIAL_CONTINUATION_TRACE`; the focused
+continuation test consumes that path only when explicitly provided. Constructed
+snapshot round trips alone prove reconstructed-byte continuation, not live parity.
+
+Live and detached tutorial movement evidence both read the actor's authoritative
+input, which physical controls and Class A commands share. The controller still
+counts actual displacement as before. Historical courses whose counters consulted
+unrecorded physical host input are not retroactively verified. `KeyN` is read by
+the live port, but the controller explicitly ignores `skipPressed`: it cannot
+advance a lesson or grant evidence and introduces no skip replay behavior.
+
 The live tutorial now uses the Cutting Room curriculum rather than the old
 shared playground layout. This is deliberately a baseline-only teaching run:
 
@@ -54,17 +140,51 @@ shared playground layout. This is deliberately a baseline-only teaching run:
 - `READ THE CHARGE` uses a real baseline Charger. Only a dash *away from its
   live committed charge* earns the evade; only a subsequent blade hit inside
   recovery earns the punish. Generic dashes and cuts cannot complete it.
-- `FIELD TEST` is the shipped two-step encounter in `THE FIELD`: evade a fresh
-  committed Charger attack, then land a blade hit during its recovery. It uses
-  no draft, shop, meta, or tutorial damage bonus and hands directly into the
-  same no-wave practice arena. Upward-launch and projectile mixed testing are
-  future work, not Field Test completion requirements.
+- `FIELD TEST` opens with the same two-step Charger encounter in `THE FIELD`:
+  evade its commitment, then punish recovery. Current curriculum version 2 adds
+  the inter-wave breath and mixed transfer encounter specified above. It uses
+  no draft, shop, meta, or tutorial damage bonus. Historical version 1 sessions
+  retain their Charger-only completion rule and practice policy.
 - The coach ghosts for both encounter rooms are sampled from the production
   Player movement model, so their escape routes are physically possible.
 
-Selectable checkpoints, explicit assist controls, a technique summary, and a
-post-completion practice selector remain follow-up work; they are not implied by
-the completed enemy-language and field-test slice.
+The tutorial pause panel now provides restart-current-lesson, reached-lesson
+selection, explicit lesson help and a labeled ghost demo. Restart and selection
+clear task evidence, actors, dash carry, blade latches and cooldowns. Help/demo
+never provide objective credit. READY remains a summary rather than a selectable
+exercise. Completion opens a technique summary with a baseline, no-wave practice
+selector; completed exercises return to that summary without repeating course
+credit. Ordinary Playground starts retain their existing progression behavior.
+
+Scenario Console captures the behavior-bearing tutorial session in world runtime and
+keeps help/ghost display cadence in a separate presentation-only UI field. Exact
+restore does not reinstall an already installed room; malformed or cold-loaded
+sessions are refused before mutation, and historical absence clears stale state.
+A cold host must load training before restoring a tutorial session. Autonomous
+detached tutorial replay remains separate required work. The session guard means
+that a completion request was emitted; durable profile receipts decide whether
+that request earns credit after an intentional pre-award rewind or reload.
+
+Normal course start issues an independent UUID through acknowledged profile
+storage. Profile schema 3 retains issued/completed course receipts and commits
+the completion receipt, additive `tutorialDone` count, Apprentice unlock and
+pending reward together. META commits the stable achievement grant receipt and
+its existing 75-coin payout together; only then does the profile acknowledge the
+outbox entry. Boot and subsequent commits drain pending entries, including the
+normal mastery achievement cascade. Repeating a completed course ID cannot add
+credit or coins. A fresh course adds credit; an already earned Apprentice does
+not pay again. Restart, practice and Scenario Console restore retain the course ID;
+restore neither issues IDs nor writes persistence.
+
+Historical counts, balances and unlocks remain baseline values; migration does
+not mint rewards for old unlocks. Receipt unions are retained through profile
+and META merges and ordinary saves. An unavailable or indeterminate write leaves
+the course playable and explicitly shows that progress storage is unavailable
+or completion was not confirmed. A write that never reached backing cannot be
+recovered after process loss. This is a recoverable two-owner outbox, not an
+atomic transaction across profile and META keys. Standalone stored-byte failure
+and reload controls and an asynchronous fake-provider control cover this path;
+live provider and cross-device durability have not been demonstrated.
 
 ## Version 1 repair status
 
@@ -86,10 +206,11 @@ The current parity repair now establishes a trustworthy baseline:
 - Tutorial prompts adapt to the active keyboard/mouse, controller, or touch
   input mode. Controller action labels come from the configured preset and
   glyph resolver.
-- Completion stops the controller before awarding `tutorialDone`, checking
-  achievements, releasing the pointer, and handing off synchronously to the
-  no-wave practice arena. A regression test proves that credit is emitted once
-  and the browser journey proves the live handoff.
+- Completion stops the controller, emits a course completion request, releases
+  the pointer, and hands off synchronously to the no-wave practice arena. The
+  acknowledged profile and META owners apply credit and achievement rewards
+  asynchronously. The browser journey proves the live course and handoff;
+  focused persistence controls prove retry and stored-byte recovery semantics.
 - A deterministic browser journey completes every lesson using real semantic
   gameplay actions. It does not mutate counters, skip lessons, or call tutorial
   internals to manufacture success.
@@ -478,9 +599,9 @@ the tether rather than falsely implying unlimited recall.
 
 ## Act III: Read and survive a fight
 
-The mixed launch/projectile encounter described in this act is future-only. It
-is not a description of the shipped Field Test: the shipped contract is only
-the Charger evade followed by a recovery punish.
+Current Field Test implements two miniature waves: the Charger route followed
+by baseline launch/airborne/projectile transfer. The broader armor, elite and
+campaign-style final exam described below remains a future proposal.
 
 ### Block 7: Answer a threat
 
@@ -576,8 +697,52 @@ Version 2 should teach or deliberately defer each one:
 
 ## Ghost 2.0: a movement coach, not scenery
 
-The current hand-authored ghost is renderer-neutral and deterministic, but it is
-kinematic and visually shallow. It demonstrates a rough pose, not the timing,
+The current implementation replaces normal lesson ghost motion with a verified
+immutable 120 Hz corpus for all thirteen action blocks, plus an explicitly
+separate legacy Field Test reference. Saved-origin production replays retain
+actual body, blade, target, projectile and stage states, canonical inputs and
+accepted contact/objective facts. Source validation runs once; shipping data is
+reused. Gold proof origins explicitly omit the coach's own presentation identity
+so corpus hashes do not recursively depend on the previous corpus.
+
+The product default remains explicit **SHOW DEMO / LESSON HELP**, without a new
+automatic first-attempt or idle trigger. Preview is finite; meaningful gameplay
+dismisses it, while aim drift alone does not. Long successful proofs remain
+intact. Display selects actual successful contact/takeoff/launch or projectile
+spawn context, shows the recorded segment duration, and keeps the mixed Field
+Test's whole two-wave route. Diagnostic help reports observed facts and leaves
+uncertain causes explicitly unknown. The 1× / 0.5× control changes only display
+time. Glyph pulses are anchored to recorded ticks; reduced motion uses discrete
+poses and markers without trajectory trails. Contact/target response is never
+replaced by authored motion.
+
+Optional comparison follows a genuinely valid baseline Practice Lab attempt.
+It retains the shortest valid duration for the same reference in the current
+session, ties newest; this is not mastery grading or population evidence.
+Personal paths retain at most 128 observed poses with event markers under a
+24 KB presentation bound. Reset aborts unfinished recording; a new lesson or
+document reload clears personal comparison. Scenario Console retains a bounded
+completed comparison and verified gold identity/cursor, never shipping gold;
+restoring aborts partial capture and requires reset before recording anew. Coaching never grants
+objective or reward evidence. The fresh `068c0514` test-standalone build and
+existing normal browser journey passed the complete course in 12,543 fixed
+ticks, finite preview and movement dismissal, explicit help, half-speed display,
+earned Lab unlock, a genuine MOVE attempt, the real reduced-motion setting and
+comparison resume. Saved progress/currency and objective counters remain unchanged
+by playback and practice. Parent inspected the diagnostic and reduced-motion
+comparison captures. This scripted browser result is separate from the corpus
+proof; physical usability and Version 1 retirement are unclaimed.
+
+Completion constructs free practice after the terminal canonical step and its
+receipt return. Exact outgoing-run and phase guards reject stale callbacks.
+Normal menu Lab entry still constructs its baseline synchronously. This repairs
+the observed completion/reset race without changing authoritative tick rules.
+The original 2 MiB per-asset precache limit is retained: lossless pose tuples keep
+the training chunk at 1,546.27 kB, and the fresh build precaches all 45 entries.
+Browser offline installation and device performance remain separate evidence.
+
+The previous hand-authored ghost was renderer-neutral and deterministic, but was
+kinematic and visually shallow. It demonstrated a rough pose, not the timing,
 momentum, contact, or recovery a player needs.
 
 ### Three ghost modes
@@ -720,10 +885,11 @@ The shipped Cutting Room now additionally includes:
 - [x] Add enemy-language training and a baseline-only Field Test with actual
   Charger `commit`/`recover` evidence: evade the charge, then punish recovery.
 - [x] Hand off immediately to the no-wave practice arena after course completion.
-- [ ] Add launch/projectile mixed testing, explicit wave cadence, a technique
-  summary, and a post-completion practice selector.
-- Add contextual first-run campaign onboarding for the real draft/shop screens;
+- [x] Add a technique summary and post-completion reached-lesson practice selector.
+- [x] Add launch/projectile mixed transfer and two-wave miniature cadence.
+- [x] Add contextual early-campaign draft and first-purchase shop guidance;
   keep them absent from the tutorial.
+- [x] Reopen baseline exercises from menu/setup using saved completion eligibility.
 - Retire version 1 only after completion and abandonment metrics meet targets.
 
 - activation tick;
@@ -759,24 +925,164 @@ Never leave a half-installed stage.
 
 ## Practice Lab after first completion
 
+The normal-enemy catalog now offers published normal opponents from the Lab.
+An existing positive exact `kill_<identity>` record is labeled **CONFIRMED
+DEFEATED**. Missing historical records are **HISTORY NOT RECORDED**, not a claim
+that the player never met that opponent. Aggregate historical `kill_support`
+does not establish Priest, Mender, Herald or Anchor knowledge.
+
+Future **ENCOUNTERED** entries require a naturally installed opponent to be
+visible after its spawn delay in a committed, nonblocking ordinary gameplay
+tick, followed by an acknowledged monotonic profile save. Spawn alone, menus,
+cinema, restore/replay and training do not discover opponents. A failed or
+unavailable acknowledgement is shown as **SAVE NOT CONFIRMED**; a later new
+exposure may retry without a per-tick save loop.
+
+Selecting a known entry starts one real opponent with Sword, Normal and no run
+upgrades. Pause can reset it instantly; defeating it returns to the Lab without
+course credit, coins, achievements or discovery. Version 5 captures the exact
+selected canonical opponent, known-selection provenance, spawn/defeat state and
+normal tutorial timing. A restored selected attempt does not consult destination
+profile history, invent old course history or unlock anything. Versions 1–4 keep
+their existing meanings and shapes. Boss-phase practice remains a separate
+future feature. The short normal-UI journey uses a declared completed-profile
+and legacy-kill fixture; it does not claim a real cross-device persistence run.
+
+Observed at `dd43b735`: the fresh standalone build and normal menu/setup Lab
+journey passed known-opponent selection/reset, unknown support-subtype history,
+reload, and equality of all saved stats, achievements and balances. The first
+journey caught `modesPlayed` changing during baseline practice; the existing
+practice disposition now excludes those starts from progression tracking, with
+the full-stats assertion retained. Seven focused catalog controls and two
+repair controls passed, including actual Mender collision defeat and portable
+continuation through the practice handoff. The browser fixture checks UI and
+test-adapter bytes; it does not establish human combat or device evidence.
+
+The delivered baseline entry is available from the normal menu and setup after
+a positive saved `tutorialDone` count is loaded, including after reboot. Opening
+it reads that existing completion fact and starts normal-difficulty sword
+practice with permanent upgrades excluded. It neither issues a course UUID nor
+writes completion, achievements or currency. The selector offers the thirteen
+current action exercises; READY remains a course summary rather than a drill.
+
+These are unlocked exercises, not an invented historical lesson transcript.
+The practice session has explicit version-3 `durable-profile-completion` origin,
+the observed eligibility count, an empty course ID and `completionAwarded=false`.
+Historical completed lessons remain unknown; only new local practice attempts
+can populate local exercise progress. Restart, selection and exact Scenario Console
+restore retain this origin. Practice completion returns to baseline practice and
+cannot emit course credit. Version-1/2 course checkpoint shapes stay unchanged.
+
+The Lab now also offers five optional weapon annexes, each using its own normal
+baseline loadout and real target effects: Sword Reversal followed by a fresh
+launch; Hammer airborne slam followed by an actual Break; Greatsword Cleave
+followed by a Wheel Cut target hit; Chainblade established Hook followed by
+tangential Sling release; Riftlock established Capture followed by a real Razor
+Round or Backblast target hit. A successful step activates the next objective
+at the tutorial's fixed update boundary, so one contact cannot complete both.
+Selection and restart clear the attempt, replace the actual weapon/arena/targets,
+and never issue a course identity, completion credit, purchases or currency.
+Help describes the mechanic; no annex demo is offered without a matching trace.
+
+Annex attempts have explicit version-4 practice checkpoints, including the
+canonical weapon, ordered progress and pending effect. The selected weapon must
+match the restored run before restoration can commit. The baseline/annex selector
+tab remains presentation data. Existing version-1/2 course and version-3 baseline
+practice checkpoint meanings and byte shapes remain unchanged; annexes do not
+invent historical completion. Production collision/release/projectile controls
+exercise all five drills and reconstructed-byte continuation through 150 fixed
+ticks, including the actual begin-practice handoff without course credit. On
+clean `c0d5530e`, one fresh standalone build and the short normal UI fixture
+passed selection and restart of all five annexes, checking the actual weapon,
+normal difficulty, empty run upgrades and unchanged completion/coin/purchase
+effects. The fixture uses loaded historical completion eligibility and rendered
+controls; its selection/reset proof does not claim human completion of the five
+drills, physical-device coverage or natural full-course progression. A real
+Hammer control exposed incomplete new-world weapon statistics in the detached
+factory; fresh worlds now use the canonical eight zeroed counters, while
+restored historical records retain their original data.
+
+Encountered-enemy catalog, boss-phase selection, gold-trace comparison and
+mastery medals remain future slices. On clean `dcf67a2e`, the
+fresh standalone build and short browser fixture passed rendered menu entry,
+LAUNCH selection, pause/restart, quit and setup reentry after reload. The fixture
+loads a declared historical completed profile plus an owned shop rank into the
+test adapter, observes that adapter's actual storage, and reconstructs it from
+its retained bytes on reload. Completion credit, achievements, earnings,
+spending and purchases remain unchanged. The first fixture attempt incorrectly
+seeded localStorage instead of test mode's isolated adapter; that fixture-only
+repair leaves product eligibility unchanged. This proves loaded-profile entry
+and controls, not production localStorage persistence, a natural full-course
+replay, physical-device use or purchase progression.
+
+### Boss phase Practice Lab implementation (2026-10-19)
+
+The normal Lab now projects the six published bosses (Warden, Colossus, Aldric,
+Rootbound, Echo and Source), each with three authored entry exercises. White Hart
+remains preview content. A positive historical boss defeat grants only its
+opening exercise, labelled **defeated identity**. Later phases require their exact
+acknowledged ordinary-play exposure; missing legacy history stays unknown and a
+pending/failed save remains locked. The same naturally installed boss can record
+separate phases, with no retry loop and no discovery from practice or restoration.
+
+Each selection starts Sword/Normal with permanent upgrade bonuses disabled and
+grants no currency, course credit or profile progress. Earlier prerequisites prepare through the actual
+owners; selected transitions stay interactive: Aldric's unwitnessed kneel,
+Rootbound's representative fresh graft baseline and real regrowth entry, and
+Source's descent/transfer or downed/freeze. Reset starts a fresh matching attempt.
+A real boss defeat produces a finished attempt, rather than inferring victory
+from absence during setup. Help has no completion effect; no substitute demo is
+advertised. Small landscape uses the existing wheel/touch/right-stick/PageUp/Down
+scroll owner for the boss list while keeping the Lab menu reachable.
+
+Version6 carries explicit practice eligibility and encounter lifecycle. Versions1–5
+retain their meanings and shapes. Restore validates the candidate baseline,
+selected actor/arena and cinematic binding before mutation; destination history
+is not queried. Source stream/platform aliases and Aldric crown context are
+reconstructed from captured ownership, with no transition replay or cinema skip.
+Focused controls cover exact exposure/save failure, real Aldric/Source entry
+continuation at120Hz plus application frames, actual boss defeat/removal and
+finished restoration, and800×360 control geometry. The short existing Lab browser
+fixture declares legacy ColossusP1 and saved WardenP2 history and exercises normal
+buttons/reset/reload with full stats/balances and cinematic-seen equality.
+Parent execution on clean `e09913f1` passed a fresh test-standalone build and this
+normal rendered-control journey, including Colossus P1 selection/restart,
+Warden P2 entry and menu/setup re-entry after retained adapter bytes were reloaded.
+The initial fixture stopped before practice because its declared Colossus defeat
+lacked the corresponding historical achievement; adding that fixture receipt
+preserved the original balance assertion and ordinary achievement behavior.
+The desktop selector capture fits. The physical 800×360 browser capture scales
+the fixed 1600×900 canvas; it establishes visibility, not compact pagination or
+mobile usability. The separate logical 800×360 renderer control checks compact
+geometry. These fixtures do not establish natural human encounter history or
+physical-device acceptance.
+Gold coaching and session-local baseline comparison are described above;
+mastery medals remain separate work.
+
 The finite tutorial should unlock a separate revisitable Practice Lab:
 
 - replay any completed action block;
 - select baseline weapon;
 - practice optional mastery medals;
 - spawn previously encountered normal enemies;
-- practice previously encountered bosses by phase;
+- practice previously encountered bosses by phase (implemented with bounded normal-browser acceptance above);
 - compare personal and gold ghosts;
 - turn coaching overlays on or off;
 - reset instantly without profile or currency effects.
 
-Weapon-specific annexes belong here:
+Current weapon-specific annexes:
 
-- sword cut and launch precision;
-- hammer committed slam timing;
-- spear line, embed, and reel behavior;
-- chainblade latch/yank grammar;
-- ringblade orbit/circuit control.
+- Sword Reversal and launch precision;
+- Hammer committed slam and Break timing;
+- Greatsword Cleave and Wheel Cut;
+- Chainblade Hook and Sling grammar;
+- Riftlock Capture and Razor Round control.
+
+The earlier spear and ringblade proposal predates the canonical Final Five.
+Current selection migration maps `spear` to `greatsword` and `ringblade` to
+`riftlock`; it does not rename historical telemetry or replay mechanics. These
+annexes teach the current definitions and do not claim retired embed/reel or
+orbit/circuit behavior.
 
 The annex is selected by semantic capability, not by duplicating the whole
 tutorial for each weapon.
@@ -828,11 +1134,11 @@ Keep Version 1 available as a fallback until Version 2 meets every gate.
 - Implement miniature wave cadence and mixed encounter.
 - Add style-meter introduction and technique summary.
 - Add immediate campaign handoff.
-- Add first-campaign contextual draft/shop onboarding outside the tutorial.
+- [x] Add early-campaign draft and first-purchase shop guidance outside the tutorial.
 
 ### T6: Practice Lab and retirement decision
 
-- Add revisitable blocks, enemy catalog, boss practice, and weapon annexes.
+- [x] Implement revisitable blocks, enemy catalog, boss phase entries and current weapon annexes; retain the bounded browser acceptance gate described above.
 - Compare completion, abandonment, help, and first-run survival metrics.
 - Retire Version 1 only when Version 2 is more reliable across input modes and
   accessibility configurations.
@@ -870,7 +1176,9 @@ Keep Version 1 available as a fallback until Version 2 meets every gate.
 - A struggling policy receives nudge, demonstration, and disclosed assistance.
 - Exit/resume restores the current sealed block.
 - Skip advanced returns a completable path.
-- Completing or exiting never mutates currency, drafts, reserves, or upgrades.
+- Completing or exiting never grants run currency, drafts, reserves, or upgrades.
+  The existing one-time Apprentice achievement payout follows the durable reward
+  path above; baseline practice never repeats it.
 
 ### Failure and recovery gates
 
@@ -903,7 +1211,7 @@ Track:
 - final-exam techniques and elevations used;
 - stationary time during combat blocks;
 - first real-run mechanic use and survival after tutorial;
-- any tutorial upgrade, currency, shop, or draft mutation, target zero;
+- any tutorial upgrade, run currency, shop, or draft mutation, target zero;
 - duplicate tutorial completion credit, target zero.
 
 Success is not merely a higher completion rate. A good tutorial should improve:
@@ -943,3 +1251,46 @@ The following should be prototyped and playtested before locking:
 
 The plan deliberately defines the learning outcome and verification contract
 while leaving these experience variables open to evidence.
+
+
+### Implemented adaptive coaching (current curriculum, 2026-10-19)
+
+Current baseline drills resolve genuine swing, contact-separation, accepted takeoff/landing,
+dash-end, throw/return and refused-recall episodes. Native collision facts retain accepted
+strike classification and target identity; projectile observations retain shot identity.
+Below-speed contact, grounded wrong-strike contact and out-of-range recall are observed
+facts. Missed-contact/shot position or early/late timing explanations remain unknown when
+not established by the source owner. Repeated transfer without new objective progress is
+guidance, not fabricated failure-cause certainty. No-input/idle, walking/exploration,
+settings, pointer drift alone, resets and interrupted attempts do not escalate assistance.
+
+Two related resolved failures show a nudge; four play one finite diagnostic gold segment
+at the resolved boundary; six offer an explicit **ADVANCE UNFINISHED** checkpoint assist.
+New objective progress decays the local variant count; ordinary lesson selection retains
+that variant's ledger. Field Test Charger and mixed variants are separate; breath is not an
+attempt. New coach-presentation v2 saves bounded ledgers and aborts partial episodes on
+restore. Historical coach v1 and tutorial-session v1–v6 meanings remain unchanged.
+Annex, enemy and boss exercises are outside baseline gold-reference adaptive coaching.
+
+Objective help exposes **SKIP UNFINISHED**. Skip and the disclosed checkpoint assist do
+not synthesize marks, completed lessons, profile completion, Lab eligibility or Apprentice
+coins. In an issued course, v7 records skipped/unearned work with the original issued ID;
+READY shows an unfinished summary and revisitable exercises. Redo uses the original
+objective predicates, preserves genuinely completed work, and reaches normal completion
+only after every remaining exercise is earned. In already-unlocked Lab drills, the same
+explicit advance exits the attempt without changing durable eligibility or prior credit.
+The fresh clean `2455393e` test-standalone build and expanded normal browser journey
+passed: the original course completed in 12,892 fixed ticks, followed by genuine Lab
+comparison, a separately issued course with thirteen rendered skips, restored unearned
+summary, native blade failures observed through 2/4/6 and the rendered checkpoint assist.
+Saved progress and currency stayed unchanged across skipping and assistance. Production
+controls also prove genuine skipped-lesson redo and single completion, post-success
+failure suppression, interruption handling and inactive annex assistance. Parent inspected
+the unfinished-summary and Assist captures. This is scripted desktop evidence; physical
+device usability, mastery and Version 1 retirement remain open.
+
+Browser acceptance exposed and repaired comparison mode surviving after its personal best
+was cleared on a new course or lesson. Clearing now selects preview and preserves playback
+rate; strict reference validation remains intact. The final HUD says **training summary**
+for both earned and unearned outcomes. All fourteen gold references replay against current
+source; the original precache limit remains unchanged (training chunk 1,554.76 kB).

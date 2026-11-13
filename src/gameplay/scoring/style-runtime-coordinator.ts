@@ -1,3 +1,4 @@
+import { runDnaObserver, type RunDnaManeuver } from "../runtime/run-dna-observer";
 import type { StyleIntent, StyleState } from "./style-runtime";
 import type { AchievementIntent } from "../progression/achievement-runtime";
 
@@ -11,6 +12,10 @@ export function snapshotStyle(run: MutableStyleRun): StyleState {
 }
 
 export function applyStyleSnapshot(run: MutableStyleRun, state: StyleState): void {
+  if (state.combo > run.combo) {
+    const id = ({ hit: "swing", throwHit: "throw", launch: "launch", slam: "slam", superslam: "superslam", updraft: "updraft", parry: "parry", deflect: "deflect", reversal: "reversal", threadcut: "threadcut", break: "break", cleave: "cleave", wheelCut: "wheelCut", lash: "lash", recoilCut: "recoilCut" } as Readonly<Record<string, RunDnaManeuver>>)[state.lastTrick];
+    if (id !== undefined) runDnaObserver(run)?.maneuver(id);
+  }
   run.combo = state.combo; run.comboTimer = state.comboTimer; run.lastTrick = state.lastTrick;
   run.mult = state.mult; run.rank = state.rank; run.wavePeak = state.wavePeak;
 }

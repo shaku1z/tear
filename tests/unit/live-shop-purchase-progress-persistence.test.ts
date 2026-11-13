@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLiveShopPurchaseProgressPersistence } from "../../src/app/live-shop-purchase-progress-persistence";
+import { createLiveShopPurchaseProgressPersistence } from "../../src/app/progress/shop-purchase-progress-persistence";
 
 describe("live shop purchase progress persistence adapter", () => {
   it("records the purchase before recalculating the maxed-shop stat", () => {

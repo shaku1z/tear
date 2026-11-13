@@ -19,7 +19,58 @@ const scenario = {
   tags: ["c23", "state-forge", "live-restore"],
 };
 
-withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page }) => {
+withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildInfo }) => {
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: 15_000 });
+  const ordinaryReset = await page.evaluate((scenarioValue) => {
+    const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
+    const resetScenario = { ...scenarioValue, id: "state-forge.ordinary-opening-reset",
+      seed: "ordinary-opening-reset", maxTicks: 2000,
+      start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" } };
+    environment.reset(resetScenario);
+    const clean = environment.captureSnapshot("ordinary-reset-clean");
+    const controlledHistory = structuredClone(clean);
+    controlledHistory.stateClass = "surgical-valid";
+    const history = {
+      throwCd: 0.4, wasDashing: true, wasSwinging: true, wasOnGround: false, dashGhostT: 0.2, landingV: 900,
+    };
+    Object.assign(controlledHistory.state["tear.world.v1"].runtime, history);
+    const seeded = environment.restoreSnapshot(controlledHistory);
+    const beforeSeededReset = environment.captureSnapshot("ordinary-reset-seeded-history");
+    environment.reset(resetScenario);
+    const afterSeededReset = environment.captureSnapshot("ordinary-reset-after-seeded-history");
+    for (let tick = 0; tick < 30; tick++) environment.step();
+    for (let frame = 0; frame < 30; frame++) environment.advanceApplicationFrame(1 / 120);
+    const beforeAdvancedReset = environment.captureSnapshot("ordinary-reset-after-real-steps");
+    environment.reset(resetScenario);
+    const afterAdvancedReset = environment.captureSnapshot("ordinary-reset-after-advancing-history");
+    environment.reset(resetScenario);
+    const afterNeutralReset = environment.captureSnapshot("ordinary-reset-neutral-control");
+    return { scenario: resetScenario, history, seeded, clean, beforeSeededReset, afterSeededReset,
+      beforeAdvancedReset, afterAdvancedReset, afterNeutralReset };
+  }, scenario);
+  const resetArtifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints", "core", "C23", "state-forge");
+  fs.mkdirSync(resetArtifactDirectory, { recursive: true });
+  // Retain the complete discriminating states before the unchanged strict comparison can fail.
+  fs.writeFileSync(path.join(resetArtifactDirectory, "ordinary-opening-reset.json"), JSON.stringify({
+    build: buildInfo, historySetup: "Class A surgical prior history through State Forge; ordinary scenario resets",
+    ...ordinaryReset,
+  }, null, 2));
+  assert.equal(ordinaryReset.seeded.ok, true, JSON.stringify(ordinaryReset.seeded));
+  assert.deepEqual(Object.fromEntries(Object.keys(ordinaryReset.history).map((key) =>
+    [key, ordinaryReset.beforeSeededReset.state["tear.world.v1"].runtime[key]])), ordinaryReset.history,
+  "the prior-history fixture must actually restore every nonneutral opening field");
+  assert.deepEqual(ordinaryReset.afterSeededReset.state, ordinaryReset.clean.state,
+    "ordinary reset must clear complete outgoing actor history and reproduce the clean full snapshot");
+  assert.ok(ordinaryReset.beforeAdvancedReset.tick > 0, "real stepping must advance the scheduler");
+  assert.ok(ordinaryReset.beforeAdvancedReset.state["tear.world.v1"].simulationSeconds > 0,
+    "real application frames must advance the accumulated clock before reset");
+  assert.deepEqual(ordinaryReset.afterAdvancedReset.state, ordinaryReset.clean.state,
+    "ordinary reset after real steps must reproduce the clean full snapshot including exact simulation seconds");
+  assert.deepEqual(ordinaryReset.afterNeutralReset.state, ordinaryReset.clean.state,
+    "neutral prior history must produce the same strict reset baseline");
+  // Structured reset owns a stopped frame loop; the original cinematic journey needs a fresh live boot.
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
   await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: 15_000 });
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("campaign"));
@@ -214,7 +265,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page }) => {
       try {
         source.step(tickActions);
       } catch (error) {
-        throw new Error(`source tick=${String(source.observe().tick)} actionTick=${String(tickActions[0]?.tick)}: ${String(error)}`);
+        throw new Error(`source tick=${String(source.observe().tick)} actionTick=${String(tickActions[0]?.tick)}: ${String(error)}`, { cause: error });
       }
       sourceHashes.push(source.stateHash());
       sourceTrace.push({ observation: source.observe(), rng: source.rng() });
@@ -236,7 +287,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page }) => {
       try {
         restored.step(tickActions);
       } catch (error) {
-        throw new Error(`restored tick=${String(restored.observe().tick)} actionTick=${String(tickActions[0]?.tick)} restore=${JSON.stringify(restoreResult)}: ${String(error)}`);
+        throw new Error(`restored tick=${String(restored.observe().tick)} actionTick=${String(tickActions[0]?.tick)} restore=${JSON.stringify(restoreResult)}: ${String(error)}`, { cause: error });
       }
       restoredHashes.push(restored.stateHash());
       const index = restoredHashes.length - 1;

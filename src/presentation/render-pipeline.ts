@@ -12,11 +12,8 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly resizeIfNeeded: () => void;
   readonly screenRectangle: () => ScreenRectangle;
   readonly touchActive: () => boolean;
-  readonly cssPerLogicalPixel: () => number;
-  readonly uiZoom: () => number;
-  readonly setUiZoom: (zoom: number) => void;
-  readonly deltaSeconds: () => number;
-  readonly clamp: (value: number, minimum: number, maximum: number) => number;
+  /** Selects the screen's density: compact compositions get the phone floors. */
+  readonly applyScreenDensity: (screen: Screen) => void;
   readonly resetControls: () => void;
   readonly background: (playLike: boolean) => string;
   readonly setTheme: (background: string, playLike: boolean) => void;
@@ -42,8 +39,8 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly updateDomHints: (screen: Screen) => void;
 }
 
-const zoomScreens = new Set(["draft", "tierup", "paused", "confirmquit", "gameover", "win", "continue"]);
-const worldScreens = new Set(["playing", "draft", "tierup", "paused", "gameover", "win", "confirmquit", "continue", "pgmenu", "pglab"]);
+const worldScreens = new Set(["playing", "draft", "reserve", "tierup", "paused", "gameover", "win", "confirmquit", "continue", "pgmenu", "pglab"]);
+export const isWorldScreen = (screen: string): boolean => worldScreens.has(screen);
 
 /** Stable, testable ordering for the canvas presentation frame. */
 export function renderPresentationFrame<Screen extends string>(ports: RenderPipelinePorts<Screen>): void {
@@ -52,16 +49,7 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
   const scale = ports.canvas.width / (ports.logicalWidth + overscan.x * 2);
   ports.context.setTransform(scale, 0, 0, scale, overscan.x * scale, overscan.y * scale);
   const screen = ports.screen();
-  const target = zoomScreens.has(screen) && ports.touchActive() && ports.cssPerLogicalPixel() < 0.55
-    ? ports.clamp(0.55 / ports.cssPerLogicalPixel(), 1, 1.45) : 1;
-  let zoom = ports.uiZoom() + (target - ports.uiZoom()) * ports.clamp(10 * ports.deltaSeconds(), 0, 1);
-  if (Math.abs(zoom - target) < 0.004) zoom = target;
-  ports.setUiZoom(zoom);
-  if (zoom > 1.001) {
-    ports.context.translate(ports.logicalWidth / 2, ports.logicalHeight / 2);
-    ports.context.scale(zoom, zoom);
-    ports.context.translate(-ports.logicalWidth / 2, -ports.logicalHeight / 2);
-  }
+  ports.applyScreenDensity(screen);
   const rectangle = ports.screenRectangle();
   const playLike = worldScreens.has(screen);
   const background = ports.background(playLike);

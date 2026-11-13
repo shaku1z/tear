@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- small dependency-free PNG reader for external Class-C screenshots. */
 const assert = require("node:assert/strict");
 const zlib = require("node:zlib");
 

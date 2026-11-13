@@ -292,6 +292,7 @@ test("output is new-only, archive-contained, and never overwrites", () => {
 
 test("CLI requires every external root and summary-only remains write-free", () => {
   const fixture = createFixture();
+  const cliRetainUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   try {
     createSourceFixture(fixture);
     const missing = spawnSync(process.execPath, [reporterPath, "--repo-root", fixture.root], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
@@ -304,7 +305,7 @@ test("CLI requires every external root and summary-only remains write-free", () 
       "--temp-root", fixture.tempRoot,
       "--archive-root", fixture.archiveRoot,
       "--owner", "g5-cli-test",
-      "--retain-until", retainUntil,
+      "--retain-until", cliRetainUntil,
       "--summary-only",
     ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
     assert.equal(result.status, 0, result.stderr);
@@ -321,7 +322,7 @@ test("CLI requires every external root and summary-only remains write-free", () 
       "--archive-root", fixture.archiveRoot,
       "--owner", "first",
       "--owner", "second",
-      "--retain-until", retainUntil,
+      "--retain-until", cliRetainUntil,
     ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
     assert.notEqual(duplicateFlag.status, 0);
     assert.match(duplicateFlag.stderr, /duplicate argument: --owner/u);

@@ -1,3 +1,4 @@
+import { runDnaObserver, withRunDnaAttack } from "../runtime/run-dna-observer";
 import { addOverrunStack, overrunDamageMultiplier, type OverrunConfig, type OverrunState } from "./overrun";
 import { dischargeStormbank, type StormbankConfig, type StormbankState } from "./stormbank";
 import { addKillScore, advanceWeaponAbilities, appendWeaponEvent, collapseTargets, invokeWeaponHook,
@@ -5,6 +6,7 @@ import { addKillScore, advanceWeaponAbilities, appendWeaponEvent, collapseTarget
 import type { UpgradeEnemyPort, UpgradeEvent, UpgradeMods, UpgradePlayerPort } from "../upgrades";
 
 export interface LiveWeaponEnemy extends WeaponRuntimeTarget, UpgradeEnemyPort {
+  readonly hp: number;
   firstPlayerDamageAt?: number | null; hh: number; color: string; stun: number;
   applySever?(tier: number): void;
   hit(damage: number, fromX: number, fromY: number, options?: Readonly<{ playerOwned: boolean }>): void;
@@ -123,8 +125,10 @@ export function createLiveWeaponRuntime<TEnemy extends LiveWeaponEnemy>(
       ribbon: (x1, y1, x2, y2) => { options.ribbon(x1, y1, x2, y2, options.colors().perfect); }, killed: (target) => { options.onKill(target, "skill"); }, }); },
     dischargeStormbank(mods, source) { if (!source.primaryTarget) return;
       const result = dischargeStormbank(mods, options.stormbank(), source, source.primaryTarget, source.damageDealt ?? 0, options.enemies()); if (!result) return;
-      source.primaryTarget.hit(result.primaryBonus, source.primaryTarget.x - source.x, source.primaryTarget.y - source.y);
-      for (const arc of result.arcs) { const target = arc.target; target.hit(arc.damage, target.x - source.x, target.y - source.y);
+      const beforeHp = source.primaryTarget.hp; source.primaryTarget.hit(result.primaryBonus, source.primaryTarget.x - source.x, source.primaryTarget.y - source.y);
+      runDnaObserver(options.player())?.derivativeDamage(Math.max(0, beforeHp - source.primaryTarget.hp));
+      for (const arc of result.arcs) { const target = arc.target, priorHp = target.hp; target.hit(arc.damage, target.x - source.x, target.y - source.y);
+        runDnaObserver(options.player())?.derivativeDamage(Math.max(0, priorHp - target.hp));
         if (arc.stun > 0) target.stun = Math.max(target.stun, arc.stun); options.ribbon(source.x, source.y, target.x, target.y, options.colors().perfect);
         if (target.dead) options.onKill(target, "skill"); }
       options.ring(source.x, source.y, 18, options.colors().perfect); floater(source.x, source.y - 32, result.label, true, options.colors().perfect); },
@@ -134,14 +138,15 @@ export function createLiveWeaponRuntime<TEnemy extends LiveWeaponEnemy>(
       source.dischargeStormbank = (mods: UpgradeMods) => { api.dischargeStormbank(mods, source); }; fire(requireRun().mods.onThrowResolve, source); },
     collapseAt(x, y) { const run = requireRun(); if (!run.mods.collapse) return; collapseTargets(options.enemies(), x, y); options.ring(x, y, 14, options.colors().perfect); },
     activateThrowSecondary() { const blade = options.blade(); options.ring(blade.x, blade.y, 8); api.addShake(options.juice().shakeSmall); options.recallSound(); api.collapseAt(blade.x, blade.y);
-      const run = requireRun(); fire(run.mods.onThrowSecondary, event(blade.x, blade.y, null, "secondary", { type: "throwSecondary", throwId: blade.throwId, weaponId: run.weaponId })); },
+      const run = requireRun(); withRunDnaAttack(blade, `throw:${String(blade.throwId)}`, () => { fire(run.mods.onThrowSecondary, event(blade.x, blade.y, null, "secondary", { type: "throwSecondary", throwId: blade.throwId, weaponId: run.weaponId })); }); },
     hook: (name, context) => invokeWeaponHook(options.blade().weapon, name, context),
     shieldAbsorb() { const player = options.player(), colors = options.colors(), run = requireRun(); options.parrySound(); options.ring(player.x, player.y, 14, colors.armoredShield);
       floater(player.x, player.y - 30, "BLOCK", true, colors.armoredShield); api.addShake(options.juice().shakeSmall); options.setHitStop(options.smallHitStop());
       if (run.mods.shieldBurst) { api.dealArea(player.x, player.y, 145, 28); options.ring(player.x, player.y, 18, colors.armoredShield); } },
     dealArea(cx, cy, radius, damage, areaOptions) { const playerOwned = areaOptions?.playerOwned !== false; if (playerOwned) damage *= api.damageMultiplier(); let kills = 0;
       for (const enemy of options.enemies()) { if (enemy.dead || options.distance(enemy.x - cx, enemy.y - cy) > radius + enemy.radius) continue;
-        const first = enemy.firstPlayerDamageAt == null; enemy.hit(damage, enemy.x - cx, enemy.y - cy, { playerOwned }); if (playerOwned) api.noteFirstDamage(enemy, first);
+        const first = enemy.firstPlayerDamageAt == null, beforeHp = enemy.hp; enemy.hit(damage, enemy.x - cx, enemy.y - cy, { playerOwned });
+        if (playerOwned) runDnaObserver(options.player())?.derivativeDamage(Math.max(0, beforeHp - enemy.hp)); if (playerOwned) api.noteFirstDamage(enemy, first);
         options.burst(enemy.x, enemy.y, enemy.x - cx, enemy.y - cy, 5, enemy.color); floater(enemy.x, enemy.y - 24, String(Math.round(damage)));
         if (isDead(enemy)) { api.addKillScore(); options.death(enemy.x, enemy.y, options.deathShards(), enemy.color); kills += 1; } } return kills; },
     addKillScore() { const score = options.score(); addKillScore(requireRun(), score.perKill, score.multiplier); },

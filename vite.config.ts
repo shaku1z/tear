@@ -1,3 +1,4 @@
+import { assertTutorialGoldFresh, tutorialGoldSourceFingerprint } from "./scripts/tutorial-gold-compatibility.mjs";
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
@@ -69,6 +70,20 @@ function targetDependencyBoundary(target: "standalone" | "crazygames"): Plugin {
   };
 }
 
+const TUTORIAL_GOLD_DATA = "gameplay/training/tutorial-gold-reference-data.json";
+
+/**
+ * `src/app/<folder>/` -> chunk; other folders and the app root go to runtime-app-core.
+ * A group also takes the static dependencies of its modules that an earlier group
+ * (in name order) has not taken, so catalog and combat hold their folders' closures
+ * and core holds the rest of the application.
+ */
+const APPLICATION_FOLDER_CHUNKS: Readonly<Record<string, string>> = {
+  library: "runtime-app-catalog",
+  combat: "runtime-app-combat",
+  world: "runtime-app-combat",
+};
+
 /** Keep the async application composition below the release transfer budget. */
 function applicationChunk(id: string): string | undefined {
   const normalized = id.replaceAll("\\", "/");
@@ -76,14 +91,10 @@ function applicationChunk(id: string): string | undefined {
   if (source < 0) return undefined;
   const relative = normalized.slice(source + "/src/".length);
   const topLevel = relative.split("/")[0] ?? "";
-  if (topLevel === "app") {
-    const file = relative.split("/").at(-1) ?? "";
-    if (file === "live-game-runtime.ts" || file === "live-frame-runtime.ts" || file === "runtime-frame-coordinator.ts") return "runtime-app-loop";
-    if (file.includes("library") || file.includes("academy") || file.includes("foundry") || file.includes("ghost-theater")) return "runtime-app-catalog";
-    if (file.includes("combat") || file.includes("world-")) return "runtime-app-combat";
-    if (file.includes("run-") || file.includes("campaign") || file.includes("wave") || file.includes("outcome")) return "runtime-app-run";
-    return "runtime-app-core";
-  }
+  if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
+  // The ~1.5 MB tutorial demonstration corpus is imported only by training
+  // preflight; its own chunk keeps it out of the startup modulepreload set.
+  if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
   if (topLevel === "gameplay") {
     const area = relative.split("/").slice(1, 2)[0] ?? "core";
     return `gameplay-${area}`;
@@ -92,10 +103,11 @@ function applicationChunk(id: string): string | undefined {
   return undefined;
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const testBuild = mode === "test-standalone" || mode === "test-crazygames";
   const target = mode === "crazygames" || mode === "test-crazygames" ? "crazygames" : "standalone";
   const source = readSourceIdentitySync(process.cwd());
+  const tutorialGoldHash = command === "build" ? assertTutorialGoldFresh() : tutorialGoldSourceFingerprint().sourceHash;
   return {
     // CrazyGames unpacks uploads below a portal-owned path, so bundle assets
     // must be relative instead of rooted at the host origin.
@@ -130,16 +142,45 @@ export default defineConfig(({ mode }) => {
           clientsClaim: true,
           navigateFallback: "/index.html",
           globPatterns: ["**/*.{html,js,css,woff2,png,webmanifest}"],
+          // The tutorial corpus is fetched on demand (training preflight), not at
+          // install: it is runtime-cached on first use so it then works offline.
+          // Workers bundle a lazy copy they never request; it is not precached.
+          globIgnores: ["**/node_modules/**/*", "assets/tutorial-gold-reference-*.js", "assets/worker-tutorial-gold-*.js"],
+          runtimeCaching: [{
+            urlPattern: /\/assets\/tutorial-gold-reference-[\w-]+\.js$/u,
+            handler: "CacheFirst",
+            options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 1 } },
+          }],
         },
       })] : []),
     ],
     define: {
+      __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: JSON.stringify(tutorialGoldHash),
       __TEAR_TEST_BUILD__: JSON.stringify(testBuild),
+      // Engineering surfaces (research screens, Boss/Enemy Test, engineering
+      // query routes and debug globals) exist only in test builds and `vite dev`.
+      __TEAR_ENGINEERING_SURFACES__: JSON.stringify(testBuild || command === "serve"),
       __TEAR_BUILD_REVISION__: JSON.stringify(source.revision),
       __TEAR_BUILD_SOURCE_STATE__: JSON.stringify(source.state),
       __TEAR_BUILD_SOURCE_FINGERPRINT__: JSON.stringify(source.fingerprint),
       __TEAR_BUILD_MODE__: JSON.stringify(mode),
       __TEAR_BUILD_TARGET__: JSON.stringify(target),
+    },
+    // Build outputs must not reload the preview or hold Windows staging folders open.
+    server: { watch: { ignored: ["**/artifacts/**", "**/dist/**"] } },
+    // Both worker consumers use module workers. Keep the shipping gold data in
+    // an imported ES chunk so every worker asset fits the ordinary PWA cache.
+    // Workers never run a tutorial, so they never request that lazy chunk.
+    worker: {
+      format: "es",
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [{ name: "worker-tutorial-gold", test: (id) => id.replaceAll("\\", "/")
+              .endsWith("/src/gameplay/training/tutorial-gold-reference-data.json") }],
+          },
+        },
+      },
     },
     build: {
       outDir: testBuild ? `dist/test-${target}` : `dist/${target}`,

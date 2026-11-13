@@ -4189,7 +4189,7 @@ Add the authored Verdant stage to current typed catalogs and campaign flow for e
 - `pnpm exec vitest run tests/unit/stage-runtime-state.test.ts tests/unit/chapter-cinematic-binding.test.ts tests/unit/live-wave-controller.test.ts tests/unit/verdant-stage-catalog.test.ts`
 - `pnpm build:test:standalone`
 - `pnpm test:browser:current-gameplay-scenarios`
-- `pnpm test:browser:c29-active-campaign-cinematic`
+- `pnpm checkpoint test:browser:c29-active-campaign-cinematic`
 
 ## Exit conditions
 

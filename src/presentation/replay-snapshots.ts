@@ -1,6 +1,12 @@
 import type { ReplayScreenView } from "./screens/contracts";
 import type { UpgradeCategoryPresentation, UpgradePresentationSource } from "./run-screen-snapshots";
 
+/** Simulation ticks (120 per second) as the m:ss a player reads. */
+export function replayClock(ticks: number, ticksPerSecond = 120): string {
+  const seconds = Math.max(0, Math.floor(ticks / ticksPerSecond));
+  return `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
 export interface ReplayDataSource {
   readonly name?: string; readonly mode?: string; readonly wave?: number; readonly score?: number; readonly won?: boolean;
   readonly kills?: number; readonly peak?: number; readonly time?: number;
@@ -19,9 +25,9 @@ export function buildReplayScreenSnapshot(input: {
   const data = input.data;
   const infoRows = [
     { label: "PLAYER", value: data.name ?? "Player" },
-    { label: "RESULT", value: data.won ? "VICTORY" : "wave " + String(data.wave ?? 0) },
-    { label: "SCORE", value: String(data.score ?? 0) },
-    { label: "KILLS", value: data.kills === undefined ? "—" : String(data.kills) },
+    { label: "RESULT", value: data.won ? "VICTORY" : "WAVE " + String(data.wave ?? 0) },
+    { label: "SCORE", value: (data.score ?? 0).toLocaleString("en-US") },
+    { label: "KILLS", value: data.kills === undefined ? "—" : data.kills.toLocaleString("en-US") },
     { label: "PEAK MULTIPLIER", value: "×" + String(data.peak ?? 1) },
     { label: "TIME", value: input.formatTime(data.time ?? input.duration) },
   ];
@@ -38,11 +44,12 @@ export function buildReplayScreenSnapshot(input: {
     return [{ id: item.id, label: upgrade.name, accent: upgrade.tiers !== undefined ? input.specialColor : category.color,
       footer: upgrade.tiers !== undefined ? "TIER " + String(item.tier) : (upgrade.unique ? "UNIQUE" : "×" + String(item.n)) }];
   });
+  // The header states the run's final result; the right-hand readout is the wave on screen now.
   return Object.freeze({ id: "replay", title: data.name ?? "Player",
-    detail: input.modeLabel + " · wave " + String(data.wave ?? 0) + " · " + String(data.score ?? 0) + " pts" + (data.won ? " · ★ VICTORY" : ""),
+    detail: (input.modeLabel + " · reached wave " + String(data.wave ?? 0) + " · " + (data.score ?? 0).toLocaleString("en-US") + " pts").toUpperCase() + (data.won ? " · ★ VICTORY" : ""),
     paused: input.playback?.playing !== true, speed: input.playback?.speed ?? 1,
     elapsed: input.formatTime(input.playback?.t ?? 0), duration: input.formatTime(input.duration), progress: input.progress,
-    stage: input.stageName, score: "WAVE " + String(input.wave),
+    stage: input.stageName, score: "NOW · WAVE " + String(Math.max(1, input.wave)),
     chapters: input.chapters.map((chapter) => ({ fraction: chapter.t / Math.max(input.duration, 0.001), boss: chapter.boss === true })),
     wave: input.wave, infoVisible: input.infoVisible, infoRows, loadout });
 }

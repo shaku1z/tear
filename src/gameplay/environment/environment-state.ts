@@ -58,6 +58,7 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   #combatObjects: EnvironmentCombatObjectState[] = [];
   #routes: EnvironmentRouteState[] = [];
   #nextSequence = 1;
+  #allocatorKnown = true;
   #revision = 0;
   #snapshotRevision = -1;
   #snapshotCache: EnvironmentSnapshot | null = null;
@@ -89,7 +90,7 @@ export class EnvironmentState implements EnvironmentRuntimeState {
     // Entries are copied and deeply frozen on admission/update. Snapshot only
     // needs new owning arrays: later updates replace entries, so older snapshots
     // retain their immutable objects without cloning every graph each revision.
-    const snapshot = Object.freeze({ worldId: this.worldId, stageId: this.#stageId, fields: Object.freeze([...this.#fields]),
+    const snapshot = Object.freeze({ ...(this.#allocatorKnown ? { allocator: Object.freeze({ version: 1 as const, nextSequence: this.#nextSequence }) } : {}), worldId: this.worldId, stageId: this.#stageId, fields: Object.freeze([...this.#fields]),
       combatObjects: Object.freeze([...this.#combatObjects]), routes: Object.freeze([...this.#routes]) });
     this.#snapshotRevision = this.#revision;
     this.#snapshotCache = snapshot;
@@ -129,6 +130,15 @@ export class EnvironmentState implements EnvironmentRuntimeState {
       assertEnvironmentObjectCategory("route", route.kind);
       for (const validator of this.#validators) validator.validateRoute?.(route);
     });
+    const allocator: unknown = snapshot.allocator;
+    if (allocator !== undefined && (!allocator || typeof allocator !== "object" || Array.isArray(allocator) || (allocator as Record<string, unknown>).version !== 1 || !Number.isSafeInteger((allocator as Record<string, unknown>).nextSequence) || Number((allocator as Record<string, unknown>).nextSequence) < 1)) throw new TypeError("Invalid environment allocator continuation");
+    if (snapshot.allocator !== undefined) for (const id of all) {
+      const prefix = `${this.worldId}:`; if (!id.startsWith(prefix)) continue;
+      const suffix = id.slice(prefix.length); const match = /^(?:field|combat-object|route):(\d+)$/u.exec(suffix);
+      if (match && Number(match[1]) >= snapshot.allocator.nextSequence) throw new TypeError("Environment allocator precedes a retained object");
+    }
+    this.#allocatorKnown = snapshot.allocator !== undefined;
+    this.#nextSequence = snapshot.allocator?.nextSequence ?? 1;
     this.#fields.splice(0, this.#fields.length, ...snapshot.fields.map(copyField));
     this.#combatObjects.splice(0, this.#combatObjects.length, ...snapshot.combatObjects.map(copyCombatObject));
     this.#routes.splice(0, this.#routes.length, ...snapshot.routes.map(copyRoute));
@@ -137,7 +147,7 @@ export class EnvironmentState implements EnvironmentRuntimeState {
 
   clear(reason: EnvironmentClearReason): void {
     this.#fields.length = 0; this.#combatObjects.length = 0; this.#routes.length = 0;
-    this.#nextSequence = 1; this.#lastClearReason = reason; this.#revision += 1;
+    this.#nextSequence = 1; this.#allocatorKnown = true; this.#lastClearReason = reason; this.#revision += 1;
   }
 
   setStage(stageId: string, reason: EnvironmentClearReason = "stage-transition"): void {
@@ -146,6 +156,8 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   }
 
   #id(category: "field" | "combat-object" | "route"): string {
+    if (!this.#allocatorKnown) throw new TypeError("Historical environment snapshot lacks exact allocator continuation");
+    if (this.#nextSequence >= Number.MAX_SAFE_INTEGER) throw new RangeError("Environment allocator exhausted");
     const id = `${this.worldId}:${category}:${String(this.#nextSequence)}`; this.#nextSequence += 1; return id;
   }
   #claim(id: string | undefined, category: "field" | "combat-object" | "route"): string {

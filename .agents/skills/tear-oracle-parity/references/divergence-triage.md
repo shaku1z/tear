@@ -4,7 +4,7 @@ Classify before fixing. Line-level fixes on systemic causes waste phases — fou
 
 ## Systemic families (check these first when "feel" is implicated)
 
-- **dt / step model.** Oracle ran its tuned regime (blade springs, `lerp(…, k*dt)`, tip-speed hit gating are dt-sensitive). Redesign parity restored 120 Hz fixed step in `src/app/live-frame-runtime.ts`; any timing change silently rebalances weapons and whip feel. Verify sim rate before touching constants.
+- **dt / step model.** Oracle ran its tuned regime (blade springs, `lerp(…, k*dt)`, tip-speed hit gating are dt-sensitive). Redesign parity restored 120 Hz fixed step in `src/app/shell/frame-runtime.ts`; any timing change silently rebalances weapons and whip feel. Verify sim rate before touching constants.
 - **Sampling order / double consumption.** Oracle had exactly one pointer-delta sampler (`_updateAim`). Redesign once added a pre-sim `sampleAim` for replay recording that consumed deltas first — classic "mushy aim". Ghost/replay taping must be passive observers, never in the authoritative input path.
 - **State ownership.** Cursor: oracle policy is `data-imode` body attribute + ink arrow drawn on every non-playing screen, nothing extra while playing; `Input.allowLock = (state === "playing")` set every frame; `exitPointerLock()` on every transition out of play; `consumeDelta()` flush on re-lock. A single missed exit/flush = reticle jump or stuck cursor.
 - **Latching vs per-frame writes.** Oracle wrote aim overrides explicitly each frame (attract/mirror); lazy `??=` latching hijacks the player blade until cleared. Watch for redesign code converting per-frame writes into cached state.

@@ -5,9 +5,12 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
+  "AGENTS.md": "current authority",
+  "CLAUDE.md": "current authority",
   "CONTRIBUTING.md": "current authority",
   "CRAZYGAMES.md": "current authority",
   "DEPLOYMENT.md": "current authority",
+  "README.md": "current authority",
 });
 
 const ROOT_CLASSIFICATION_HEADING = "## Root Markdown classification";
@@ -34,6 +37,7 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
   "plans/TEARBENCH_MASTER_HANDOFF.md",
   "plans/active/ECONOMY_REWORK_PLAN.md",
+  "plans/active/RELEASE_READINESS_PLAN.md",
 ]);
 
 // Compatibility export for callers that need the canonical active-plan list.

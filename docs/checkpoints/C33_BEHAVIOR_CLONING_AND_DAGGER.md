@@ -18,7 +18,7 @@ promotion eligibility, or DAgger improvement.
 - Results are content-addressed, immutable sequences ordered by candidate hash.
   The loader bounds sequence, observation, and action counts before returning a
   dataset. It does not construct a model, calculate loss, or write an artifact.
-- `createTearBehaviorCloningNormalization` derives a fixed 17-feature numeric
+- `createTearBehaviorCloningNormalization` derives the shared V2 14-feature numeric
   normalization from the `training` split only. Stable batches normalize each
   canonical observation with those training-only statistics and attach only the
   semantic actions for its next authoritative tick. Validation, calibration,
@@ -27,7 +27,7 @@ promotion eligibility, or DAgger improvement.
 - `trainTearBehaviorCloningPolicy` deterministically fits a bounded multiclass
   perceptron over those batches and records its dataset, normalization, config,
   classes, update count, training accuracy, and content hash. Its
-  `linear-policy-v1` output shares a 17-feature projection with C32's real
+  `linear-policy-v1` output declares its projection hash for C32's real
   structured runtime; `createTearBehaviorCloningArtifact` binds that result to
   C32's versioned artifact envelope and rejects incompatible lineage/runtime
   declarations. It is a real executable artifact, not a promotion decision.
@@ -380,3 +380,104 @@ The next C33 slice is therefore one integrated quality candidate:
    records only after that contract exists.
 4. A quality tick still requires a declared-metric advantage on genuinely
    unseen lesson/recovery seeds; a tie or loss remains observation only.
+
+## Shared V2 feature semantics and delivery
+
+The historical V1 projection used the same field-name hash for incompatible
+training and execution values: canonical spatial/HP fields were fixed integers
+at 1,000 units per world unit, while structured execution supplied world units;
+run seconds were confused with scheduler ticks, enemy HP with HP ratios,
+dead-enemy counts with living actors/projectiles, and primary input with zero.
+V1's existing hash, model bytes, and execution interpretation remain readable
+for historical replay and explicit comparison. New normalization defaults to V2;
+unknown schemas and mismatched normalization/model/correction schemas refuse.
+
+V2 hashes an explicit semantics descriptor, not just field names. Its 14 values
+are scheduler tick, wave, score; player position/velocity/absolute HP; blade
+position/velocity; living enemy count; and observed blade-held state. Spatial
+and HP values use world units rounded to 0.001 on both routes. Enemy counts
+exclude canonical dead actors and structured projectiles. Blade-held deliberately
+replaces primary-input state, which structured observations do not expose.
+Enemy health ratio is omitted because canonical tracks do not expose enemy max
+HP. No input authority or health ratio is invented. V2 temporal execution
+normalizes every causal history frame with training-only statistics; historical
+V1 history behavior remains unchanged. New DAgger captures declare their feature
+hash, and historical captures without that field retain V1 meaning.
+
+Longer governed engineering captures also exposed executable upgrade definitions
+inside reward snapshots. Source-track capture now reuses the ordinary canonical
+reward encoding rather than cloning catalog functions; choices, order, reserves,
+revision and all portable selection data retain their existing codec meaning.
+
+The retained 4,802-example fits have 1,403 exact action classes each. Their dense
+V1/V2 payloads were 1,487,039 / 1,332,760 bytes, exceeding the unchanged ordinary
+runtime limit of 1 MiB. A tagged `sparse-float64-le.v1` weight representation
+retains exact finite coefficients, class order and dense dot-product order,
+including zero terms. It bounds encoded bytes, dimensions, nonzeros and decoded
+work, and does not expand a dense matrix at execution. Small existing dense
+payload bytes remain unchanged; artifact builders refuse an overbudget result
+that cannot be delivered losslessly. This is delivery, not model improvement.
+
+The first retained comparison used a surgical State Forge boundary and all
+candidate decisions fell back because of the dense payload cap. It is excluded
+from natural-recovery and learned-quality evidence. The evaluator now has an
+explicit natural-checkpoint variant using the original checkpoint validator and
+exact restore owner, while preserving the legacy surgical launch shape. Natural
+continuation records its actual starting canonical hash. Endless truncation is
+never `run.completed`; a longer Endless horizon cannot establish C33's strict
+completion-rate advantage. These repairs do not close C33 quality or R14.
+
+The amended observation protocol retains the original two 2,400-tick training
+episodes (`c33-projection-train-a-seed`, `c33-projection-train-b-seed`), separate
+validation seed, exact fitted V1/V2 models and window-4/three-epoch configuration.
+Before reusing a fit it rechecks regenerated dataset, config, normalization,
+logical-model and training hashes. Delivery controls compare every coefficient
+and decisions on 32 genuine source frames; their dense numerical-control limit
+is excluded from gameplay evidence. Gameplay uses the ordinary 1 MiB limit.
+
+The bounded task is Normal Campaign/Sword: seed `m-92` fresh and seed `m-91`
+continued from its untouched competent tick-1,200 checkpoint. Both versions and
+the separately identified competent baseline use the same 20,000-tick maximum,
+the existing evaluation cap. Captured and restored initial canonical hashes must
+match. Campaign is finite in principle, but this horizon is not qualified for a
+full completion comparison; zero/tied/truncated outcomes authorize no quality
+closure. The existing completion criterion, 0.8 lesson threshold and 0.01
+baseline margin remain unchanged. No timeout or wave count substitutes for a
+native completed-run fact.
+
+Evaluation now exposes the production reward owner's actual screen, ordered
+choice IDs and focus, and advertises actions for that screen. The existing
+scripted policy can choose a naturally reached reward through the original
+semantic-action owner. The original retained fits have zero reward-choice
+labels; observation repair does not teach them reward selection or delegate it
+to a script. Their reward stalls remain outcomes. Training lesson/persona/style
+context is also not silently inferred into the evaluator runtime; that remaining
+conditioning limitation is separate from shared numeric feature parity.
+
+The retained amended observation executed both original fits without retraining.
+Lossless delivered payloads were 912,581 bytes (V1) and 835,177 bytes (V2), both
+within the unchanged ordinary cap. All 141,703 / 124,867 coefficients and 32
+actual-frame decisions per model matched dense numerical controls. The untouched
+tick-1,200 canonical hash `4253c1c28776a198` matched each actual natural restore.
+
+All four learner runs truncated at tick 20,000, with no native completion or
+defeat; the two baseline cases also truncated and repeated identically across
+versions. V1 recovery/fresh executed 18,791 / 19,998 artifact decisions and
+9 / 2 fallbacks. V2 executed 18,798 / 19,994 artifact decisions and 2 / 6
+fallbacks. Every fallback was `decision-budget-exceeded` under the unchanged
+8 ms limit. Both persisted evaluation results have `passed:false`. The strict
+zero-fallback experiment assertion failed, and these mixed executions establish
+no pure learned-policy advantage. No limit was raised and the pair was not
+rerun to seek a better result. The expensive measurement is opt-in through
+`TEAR_C33_PROJECTION_REPORT`; ordinary unit gates do not retrain or repeat it.
+
+Parent integration accepted source commit `1b4d0ce06e80a20d89335fa38e98f798e7f0b12c`:
+one fresh `test-standalone` build and the existing normal C37 native Watch,
+retained observation and explicit baseline-restoration journey passed. This is
+compatibility evidence using the existing engineering native fixture, not a
+browser quality result for either C33 fit. Build artifact hash:
+`20742e673cb50dd54f1ac0c23daaad74125b5402bd77dd49cd971e9825b95192`;
+build identity:
+`7f2e61650c8fff9bf02c5b8dc0ee24539c10a838c1fc4ddd6275c6760a88bda3`.
+Logs are retained under
+`C:/Users/realm/.codex/tmp/tear-resumption-20261018/c33-projection-1b4d0ce0-{build,browser}.log`.

@@ -96,7 +96,9 @@ function exerciseCurrentHeadlessWeapon(weaponId: WeaponId) {
     }));
     replayClock.current = () => replay.simulation()?.scheduler.tick ?? forgedSnapshot.tick;
     const replayResult = replay.seek(terminal.tick);
-    return { opening, observations, events, startupEvents,
+    // A State Forge suffix continues the source run's global causal sequence
+    // (6dfd99c7): its first fact is numbered after every source-delivered fact.
+    return { opening, observations, events, startupEvents, sequenceBase: source.delivery.nextSequence,
       nativeEvents: environment.sourceTracks().nativeEvents,
       replayEvents, replayResult, replayTerminal: replay.simulation()?.lastResult?.state, terminal };
   } finally {
@@ -115,12 +117,15 @@ describe("source-owned ordinary headless current-weapon parity", () => {
     expect(result.replayResult.tick).toBe(result.terminal.tick);
     expect(result.replayEvents, `${weaponId} independently replayed native gameplay facts`)
       .toEqual(result.nativeEvents);
-    expect(result.replayEvents.map(projectGameplayEventForParity), `${weaponId} independently replayed causal projection`)
+    expect(result.sequenceBase, `${weaponId} State Forge suffix continues after the delivered startup facts`)
+      .toBe(result.startupEvents.length);
+    expect(result.replayEvents.map((event, index) => projectGameplayEventForParity(event, result.sequenceBase + index)),
+      `${weaponId} independently replayed causal projection`)
       .toEqual(result.events.map((event) => ({
         tick: event.tick, sequence: event.sequence, type: event.type, phase: event.phase,
         ...(event.actorId === undefined ? {} : { actorId: event.actorId }), payload: event.payload,
       })));
-    expect(result.nativeEvents.map(projectGameplayEventForParity)).toEqual(result.events.map((event) => ({
+    expect(result.nativeEvents.map((event, index) => projectGameplayEventForParity(event, result.sequenceBase + index))).toEqual(result.events.map((event) => ({
       tick: event.tick, sequence: event.sequence, type: event.type, phase: event.phase,
       ...(event.actorId === undefined ? {} : { actorId: event.actorId }), payload: event.payload,
     })));

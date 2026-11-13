@@ -1,7 +1,8 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
-withJourney({ name: "agent engineering journey", port: 8152 }, async ({ page, waitScreen, clickAndWait }) => {
+withJourney({ name: "agent engineering journey", port: 8152, recordFrames: true },
+  async ({ page, waitScreen, clickAndWait, waitArmed, clickLabel, clickCard }) => {
   const evidence = {
     executionClass: "engineering",
     observationClass: "structured-state",
@@ -17,24 +18,28 @@ withJourney({ name: "agent engineering journey", port: 8152 }, async ({ page, wa
   evidence.transitions.push("menu");
   await clickAndWait(260, 360, "setup");
   evidence.transitions.push("setup");
-  await page.mouse.click(430, 195); // Adventure
-  await page.mouse.click(820, 197); // Easy
-  await page.mouse.click(1180, 203); // Sword
-  await page.mouse.click(800, 758); // Begin
-  await transition("playing");
+  // A fresh profile is preselected onto the Tutorial, which hides difficulty;
+  // choose each option where the setup screen drew it, as a player would.
+  await clickLabel("ADVENTURE", "setup");
+  await clickLabel("EASY", "setup");
+  await clickLabel("SWORD", "setup");
+  await clickLabel("START", "playing");
+  evidence.transitions.push("playing");
   await page.evaluate(() => window.__PANTHEON_TEST.skip());
 
   const hooks = await page.evaluate(() => Object.keys(window.__PANTHEON_TEST));
   assert.ok(hooks.includes("advanceAgentJourney"), "test build lacks the engineering journey hook");
   await page.evaluate(() => window.__PANTHEON_TEST.advanceAgentJourney("draft"));
-  await transition("draft");
-  await page.mouse.click(314, 300);
-  await transition("playing");
+  await waitArmed("draft");
+  evidence.transitions.push("draft");
+  await clickCard(1, "playing");
+  evidence.transitions.push("playing");
 
   await page.evaluate(() => window.__PANTHEON_TEST.advanceAgentJourney("tier"));
-  await transition("tierup");
-  await page.mouse.click(314, 300);
-  await transition("playing");
+  await waitArmed("tierup");
+  evidence.transitions.push("tierup");
+  await clickCard(1, "playing");
+  evidence.transitions.push("playing");
 
   await page.evaluate(() => window.__PANTHEON_TEST.openTerminal("campaignWin"));
   await transition("win");

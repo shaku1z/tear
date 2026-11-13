@@ -11,7 +11,29 @@ app -> input, presentation, audio, persistence ports
 presentation -> immutable render state
 ```
 
-Dependencies point inward. Code in `domain`, `simulation`, and gameplay rules must not import browser, presentation, persistence, audio, or platform modules. Browser APIs belong in presentation, device input, audio backends, persistence adapters, and platform adapters.
+Dependencies point inward. Code in `domain`, `simulation`, and gameplay rules must not import browser, presentation, persistence, audio, or platform modules. Browser APIs belong in presentation, device input, audio backends, persistence adapters, and platform adapters. Research code (`agents`, `tearbench`) is not a dependency of game rules or player-facing layers.
+
+### Direction as enforced
+
+`config/architecture-layers.json` declares one layer per top-level `src` directory and the cross-layer edges each may use; edges inside a layer are always allowed, and "type" means `import type` only. Every `src` file must belong to exactly one layer, so a new top-level directory fails the gate until it is placed.
+
+```text
+entrypoints    -> app, platform, presentation, audio, persistence, input, config, domain
+app            -> every layer except entrypoints (composition)
+agents         -> tearbench, ghost, replay, presentation, gameplay, input, simulation, config, domain
+tearbench      -> ghost, replay, presentation, audio, persistence, platform, game-reference, diagnostics, gameplay, input, simulation, config, domain
+presentation   -> gameplay, audio, simulation, domain; type-only: input, replay, ghost
+ghost          -> replay, gameplay, persistence, input, simulation, domain; type-only: audio, platform
+replay         -> gameplay, input, simulation, domain; type-only: config
+game-reference -> gameplay, simulation, domain
+platform       -> persistence, config, domain
+audio          -> persistence, domain
+gameplay       -> simulation, domain; type-only: config, input
+input          -> simulation, domain
+simulation, config, persistence, diagnostics -> domain
+```
+
+The edges that break this today (90: 64 value, 26 type-only, for example `gameplay -> tearbench`, `tearbench -> app`, `ghost -> tearbench`, `presentation -> agents`) are recorded file by file in `config/architecture-baseline.json`. The gate fails on any new one, on a type-only allowance that becomes a value import, and on an entry whose file no longer exists. The baseline also records file-level import cycles over static value imports (type-only imports are erased and dynamic imports are lazy): today one 16-file cycle (15 `ghost` files and `tearbench/production-replay-composition.ts`). A new cycle, or a recorded one that absorbs another file, fails. The gate summary also lists directory pairs that import each other with value edges (nine today).
 
 ## Runtime ownership
 
@@ -28,6 +50,8 @@ Dependencies point inward. Code in `domain`, `simulation`, and gameplay rules mu
 ## Composition and targets
 
 `src/entrypoints/standalone.ts` and `src/entrypoints/crazygames.ts` are deliberately small. They compose platform capabilities and start the shared application. A future Steam web shell should add another entrypoint and adapter set without changing gameplay. A future native or console client may replace render, device input, audio, and platform adapters while retaining deterministic rules and application commands.
+
+Engineering-channel code (research and diagnostic screen controllers, human-calibration capture, the agent training modules behind them, and the test-only Verdant calibration scene) is loaded only by `src/app/shell/composition.ts` through a dynamic import guarded by a build constant and injected into the runtime; release builds use inert stand-ins and their bundles contain none of it (`pnpm check:test-isolation`, `pnpm check:bundles`).
 
 The standalone build alone contains the generated web manifest and service worker. The CrazyGames artifact contains neither. Cloudflare deploys only `dist/standalone`; repository source is never a deploy asset.
 
@@ -65,3 +89,31 @@ Bump the relevant envelope version, validate untrusted data, and add a pure migr
 - Standalone, CrazyGames, PWA, platform lifecycle, audio, and performance browser gates pass.
 - Build outputs are content-hashed, reproducible, budgeted, and contain no source/test/repository files.
 - No handwritten cache version, script-order dependency, writable production debug global, or direct domain dependency on external services is permitted.
+
+## Architecture gate
+
+`pnpm check:architecture` (`scripts/check-source-architecture.mjs`, modules in `scripts/architecture/`, tests in `pnpm test:architecture`) reads every `src` module with the TypeScript parser, so `import type`, inline `type` specifiers, re-exports, dynamic `import()` and `import("...")` type queries are told apart, and comments never count as imports. It runs in about 3 seconds and checks, in order:
+
+1. **Fail-closed configuration.** Rules in `scripts/architecture/rules.mjs` name directory globs or `@roles`, never single files; roles live in `config/architecture-roles.json`. Every role pattern and every glob a rule or layer names must match an existing file, every role must be used, and every relative import must reach a file. Only patterns under a role's `anticipate` list (guards for files that do not exist yet, such as remote adapters) are exempt.
+2. **Planted fixtures.** Each rule carries reject and accept fixtures that are re-planted in a current member of its scope on every run; a rule that can no longer fire fails the gate.
+3. **Rule findings** (56 rules). The families are: biome isolation (Pale and Verdant may not reach each other's implementation, directly or transitively; the neutral environment foundation imports neither and carries no biome vocabulary); portability (game-reference, the portable gameplay core, detached, headless and live TearBench modules and the TearBench barrel stay free of app, presentation, service, browser and Ghost 2 compatibility code); per-world instances (no shared clock, random, particle, SFX, backdrop or cinematics instance; presentation receives configuration and cosmetic entropy through ports; core layers never value-import `config/game-config`); composition-owned capabilities (in `src/app`, only the declared owner roles touch `navigator`, `document`, `window` or browser storage; only the Ghost inspector adapter names its global; only the declared direct writers call `PROFILE` writes; only the world composition constructs the music director and only the production-world root constructs the world); the live runtime root owns no world, interface or session state; engineering-channel modules are reached only by dynamic import; structure (TypeScript only, the 700-line limit with two data-table exemptions, no `@ts-ignore`, `@ts-nocheck` or `eslint-disable`).
+4. **Layer edges and cycles** against `config/architecture-baseline.json`, as described above.
+
+`node scripts/check-source-architecture.mjs --explain <file>` prints a file's layer and permitted edges, its roles, every rule that applies to it or exempts it, the rules that protect it as an import target, its allowlisted edges, cycle membership and current findings.
+
+The baselines only shrink. `--update` rewrites `config/architecture-baseline.json` from the current graph and refuses any new edge, stronger kind, or new or grown cycle unless one of its files is named with `--allow-increase <file>`, which prints a loud notice and must be justified in review. `--update` refuses to run while any configuration error or rule finding remains. Every planted case of the pre-role gate, and each deliberate strengthening, is kept in `tests/fixtures/architecture-legacy-cases.json`; the tests require the same verdict.
+
+### Moving or renaming a file
+
+1. Move the file and rewrite its importers with a TypeScript-aware codemod; `tsc` must pass.
+2. Run `pnpm check:architecture`. Every role pattern that named the old path fails with `role <name>.include: "<old path>" matches no file`; replace it with the new path in `config/architecture-roles.json`, or widen the role to a directory glob if that is the real invariant.
+3. Allowlisted edges and recorded cycles that name the old path fail as stale. Run `node scripts/check-source-architecture.mjs --update --move <old>=<new>` (repeatable; a trailing `/` moves a directory prefix) or `--moves-file <json>` with an `{ "old": "new" }` map. The moved entries are carried across, so the update needs no `--allow-increase`.
+4. Do the same for the code budget (`node scripts/check-code-budget.mjs --update --move <old>=<new>`). Its character count ignores import and re-export declarations and dynamic module specifiers, so a move never raises the recorded size of the moved file or its importers. Then update path strings outside `src` that name the file, for example in `tests/fixtures/architecture-legacy-cases.json`, `src/tearbench/evidence-routes.json`, `scripts/check-production-test-isolation.mjs` and `config/terminology-registry.json`. `vite.config.ts` assigns `src/app` modules to chunks by folder (`APPLICATION_FOLDER_CHUNKS`); a new folder goes to `runtime-app-core` unless it is listed there.
+
+## Code budget and refactor safety nets
+
+`pnpm check:code-budget` (`scripts/check-code-budget.mjs`) measures every `src/**/*.ts` file with the TypeScript parser. A file without an entry in `config/code-budget-baseline.json` must stay within all four ceilings: 28,000 characters excluding indentation, line breaks, import and re-export declarations and the module specifiers of `import()` calls and `import("...")` types (wiring, not code: a pure move must not register as growth), a longest line of 160 characters not counting string, template or regex literal text and ignoring import declarations, no line on which two statements or class members begin (a one-line guard such as `if (done) return;` is one statement), and at most 80 statements owned by any function, nested functions excluded. A baselined file is ratcheted: each recorded value may fall but never rise. `--update` lowers recorded values, drops files that are back within every ceiling, and carries a moved file's entry with `--move <old>=<new>`; it refuses any increase unless the file is named with `--allow-increase <file>`, which prints a loud notice and must be justified in review. Lines are reported but not ratcheted, so splitting packed lines or reformatting is never blocked. The budget supersedes the 700-line rule of `pnpm check:architecture` once the recorded debt reaches zero; until then both apply.
+
+`pnpm test:determinism` (`tests/unit/canonical-hash-stream.test.ts`) drives every weapon through scripted endless and boss runs in the production headless environment and compares the canonical state hash every 60 ticks with `tests/fixtures/canonical-hash-stream.json`. A refactor that claims no behaviour change must leave it green; a failure names the first diverging stream and tick. Regenerate only for an intended gameplay change, with `TEAR_HASH_STREAM_WRITE=1`.
+
+The tutorial reference fingerprint (`scripts/tutorial-gold-compatibility.mjs`) hashes the value-import closure of the tutorial roots after normalising each module's syntax tree: comments, whitespace, grouping parentheses, separators, quote style of property names and numeric spelling are ignored, and import paths are replaced by the hashes of the modules they resolve to. Moving, renaming or reformatting covered files therefore keeps it stable, while any change to code does not. The fingerprint is stored in the small `src/gameplay/training/tutorial-gold-binding.json`, so a refresh that does not change the gold output leaves the large corpus and proof files untouched.

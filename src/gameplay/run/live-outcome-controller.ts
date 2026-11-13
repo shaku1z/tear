@@ -14,6 +14,7 @@ type TerminalOutcome = "defeat" | "victory";
 type BestRecord = Readonly<{ wave: number; score: number; time: number }>;
 
 export interface LiveOutcomeControllerPort {
+  observeTerminal?(outcome: TerminalOutcome, run: OutcomeRunState): void;
   snapshot(): OutcomeRunState;
   replaceWaveLog(log: OutcomeRunState["waveLog"]): void;
   waveActive(): boolean;
@@ -29,6 +30,7 @@ export interface LiveOutcomeControllerPort {
   achievementTracking(): boolean;
   economyTelemetry(earned: number): Readonly<Record<string, unknown>>;
   recordDefeatProgress(run: OutcomeRunState, earned: number): void;
+  finishRecording(won: boolean): void;
   executeVictoryIntents(intents: readonly VictoryProgressionIntent[]): void;
   persistPendingFinale(record: ReturnType<typeof buildPendingFinale>): void;
   saveProfile(): void;
@@ -55,6 +57,7 @@ export class LiveRunOutcomeController {
     let run = this.#port.snapshot();
     this.#port.replaceWaveLog(appendDefeatWave(run.waveLog, this.#port.waveActive(), run));
     run = this.#port.snapshot();
+    this.#port.observeTerminal?.("defeat", run);
     this.#port.terminate("defeat");
     this.#record({ type: "outcome.lifecycle-terminated", outcome: "defeat" });
     this.#port.publishTerminal("defeat", run);
@@ -64,6 +67,7 @@ export class LiveRunOutcomeController {
       this.#port.recordDefeatProgress(run, prepared.earned);
       this.#record({ type: "outcome.defeat-progression-dispatched", run, earned: prepared.earned });
     }
+    if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined)) this.#port.finishRecording(false);
     const result = buildRunResult(run, { best: this.#best(run), prepared, victory: false });
     this.#port.present("defeat", result);
     this.#record({ type: "outcome.presentation-dispatched", outcome: "defeat", result });
@@ -82,6 +86,7 @@ export class LiveRunOutcomeController {
     const prepared = this.#prepareResult(run);
     // Completion is established at the scored/progression boundary. This must
     // precede the victory recording intent, which closes the V3 sidecar.
+    this.#port.observeTerminal?.("victory", run);
     this.#port.publishTerminal("victory", run);
     this.#record({ type: "outcome.terminal-published", outcome: "victory", run });
     const achievementTracking = this.#achievementTracking();
@@ -98,6 +103,10 @@ export class LiveRunOutcomeController {
     this.#record({ type: "outcome.victory-intents-dispatched", intents });
     this.#port.storePreparedVictory(prepared);
     this.#record({ type: "outcome.prepared-stored", prepared });
+    // Unranked native recordings still close at the scored boundary; progression
+    // intentionally has no recording intent for these categories. The cache
+    // above prevents another finish when Campaign subsequently exits FinalCut.
+    if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined)) this.#port.finishRecording(true);
     if (campaign && persistFinale) {
       const record = buildPendingFinale(run, this.#best(run), prepared);
       this.#port.persistPendingFinale(record);

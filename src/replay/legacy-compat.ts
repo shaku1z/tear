@@ -325,11 +325,11 @@ export class LegacyGhostEngine {
     }
   }
 
-  stopRec(meta: Readonly<Record<string, unknown>> = {}): VisualReplayPacket | null {
+  stopRec(meta: Readonly<Record<string, unknown>> = {}, options: Readonly<{ continueSemanticInput?: boolean }> = {}): VisualReplayPacket | null {
     const recording = this.rec;
     this.rec = null;
     if (recording === null || recording.px.length < 20) {
-      this.#semanticInput()?.stopRecording();
+      if (options.continueSemanticInput !== true) this.#semanticInput()?.stopRecording();
       if (recording !== null) this.#recordingObserver?.stopped(meta);
       return null;
     }
@@ -339,7 +339,7 @@ export class LegacyGhostEngine {
     const finalTick = Math.max(0, Math.round(recording.elapsed * recording.provenance.ticksPerSecond),
       this.#semanticInput()?.lastSealedTick ?? 0);
     recording.actions.push(...(this.#semanticInput()?.drain(finalTick) ?? []));
-    this.#semanticInput()?.stopRecording();
+    if (options.continueSemanticInput !== true) this.#semanticInput()?.stopRecording();
     recording.provenance = {
       ...recording.provenance,
       tearScore: tearScoreMetadata(this.#dependencies.defaults.tearScore()),

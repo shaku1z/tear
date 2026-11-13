@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLegacyProfile } from "../../src/persistence/legacy-profile";
+import { createProfileStore } from "../../src/persistence/profile-store";
 
 function storage(initial: Readonly<Record<string, string>> = {}) {
   const values = new Map(Object.entries(initial));
@@ -20,7 +20,7 @@ describe("legacy profile compatibility", () => {
         profile: { modes: {}, stats: {}, ach: {}, seen: {} }, extensions: {},
       }),
     });
-    const profile = createLegacyProfile({
+    const profile = createProfileStore({
       store: saved.store, getAchievements: () => undefined, getMeta: () => undefined, writerId: () => "test",
     });
     profile.load();
@@ -34,7 +34,7 @@ describe("legacy profile compatibility", () => {
       tear_profile_v2: future,
       tear_profile: JSON.stringify({ shards: 4, modes: {}, stats: {}, ach: {}, seen: {} }),
     });
-    const profile = createLegacyProfile({
+    const profile = createProfileStore({
       store: saved.store, getAchievements: () => undefined, getMeta: () => undefined, writerId: () => "test",
     });
     expect(profile.load().shards).toBe(4);
@@ -45,7 +45,7 @@ describe("legacy profile compatibility", () => {
 
   it("defaults safely when both stored representations are corrupt", () => {
     const saved = storage({ tear_profile_v2: "{", tear_profile: "not-json" });
-    const profile = createLegacyProfile({
+    const profile = createProfileStore({
       store: saved.store, getAchievements: () => undefined, getMeta: () => undefined, writerId: () => "test",
     });
     const data = profile.load();
@@ -59,7 +59,7 @@ describe("legacy profile compatibility", () => {
     const saved = storage({ tear_profile: JSON.stringify({
       modes: {}, ach: {}, seen: {}, stats: { _biomes: Object.fromEntries([...published, "The Pale Traverse"].map((name) => [name, 1])) },
     }) });
-    const profile = createLegacyProfile({
+    const profile = createProfileStore({
       store: saved.store, countedBiomeNames: published,
       getAchievements: () => undefined, getMeta: () => undefined, writerId: () => "test",
     });

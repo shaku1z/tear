@@ -1,3 +1,4 @@
+import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type { EnemyDependencies, ArenaZone, EnemyPlatform, EnemyPlayerPort, EnemyProjectile, Point } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
@@ -46,6 +47,20 @@ export function createAldricType(dependencies: EnemyDependencies, Enemy: EnemyBa
       this.verticalCd = CONFIG.aldric.verticalCdDuel * 0.55; this.verticalTrackT = 0; this.verticalIndex = 0;
       this.verticalTarget = null; this.verticalTargetX = x; this.verticalTargetY = y;
       this.verticalStartX = x; this.verticalStartY = y; this.verticalMaxT = 0; this.verticalHitSpent = false;
+    }
+    /** Practice requests cross an authored threshold; normal update owns every transition effect. */
+    requestPracticePhase(phase: 2 | 3): boolean {
+      const entry = this.practicePhaseEntry();
+      if (!entry.ready || entry.targetPhase !== entry.phase || phase !== entry.phase + 1 || this.dead || this.dying || this.hp <= 0) return false;
+      this.hp = this.maxHp * practicePhaseEntryHealth(bossPhaseMarks("aldric"), phase);
+      this.hpDisplay = this.hp;
+      return true;
+    }
+    practicePhaseEntry(): BossPracticeActorEntry {
+      const phase = this.faked || this.mode === "downed" || this.mode === "frenzy" ? 3 : this.mode === "fire" ? 2 : 1;
+      return Object.freeze({ phase, targetPhase: this.phase,
+        ready: this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
+        stage: this.introT > 0 ? "opening" : this.cinematicRequest !== null || this.cinematicT > 0 ? "transition" : this.mode === "downed" ? "kneel" : "combat" });
     }
     get phase() {
       const f = this.hp / this.maxHp, marks = bossPhaseMarks("aldric");

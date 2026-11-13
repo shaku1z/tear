@@ -50,6 +50,19 @@ describe("PerformanceMonitor", () => {
     expect(monitor.snapshot().render).toEqual({ samples: 4, p50Ms: 2, p95Ms: 5, p99Ms: 5, maxMs: 5 });
   });
 
+  it("accumulates cost counters until they are reset, independently of timing windows", () => {
+    const monitor = new PerformanceMonitor(2);
+    monitor.count("ticks");
+    monitor.count("ticks");
+    monitor.count("snapshotMs", 0.25);
+    monitor.count("", 1);
+    monitor.count("ticks", Number.NaN);
+    monitor.resetTimingSamples();
+    expect(monitor.snapshot().counters).toEqual({ snapshotMs: 0.25, ticks: 2 });
+    monitor.resetCounters();
+    expect(monitor.snapshot().counters).toEqual({});
+  });
+
   it("requires diagnostic traces to isolate one browser workload", () => {
     const source = readFileSync(new URL("../browser-performance.js", import.meta.url), "utf8");
     expect(source).toContain('assert.ok(traceOutput === null || selectedScenario !== "all"');

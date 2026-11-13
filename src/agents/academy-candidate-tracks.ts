@@ -91,6 +91,7 @@ export function academyCandidateHash(candidate: ProductionHeadlessAcademyIntakeI
   return stableVerificationHash({
     sequence: candidate.sequence, episodeId: candidate.episodeId, tick: candidate.tick,
     scenario: candidate.artifact.scenario, actions: candidate.artifact.actions, terminal: candidate.artifact.terminal,
+    ...(candidate.artifact.bootstrap.applicationFramePolicy === undefined ? {} : { applicationFramePolicy: candidate.artifact.bootstrap.applicationFramePolicy }),
   });
 }
 

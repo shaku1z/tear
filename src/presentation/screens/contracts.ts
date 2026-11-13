@@ -1,5 +1,10 @@
-import type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
-export type { LegacyScreenId, ScreenAction } from "../../domain/screen-actions";
+import type { CareerRow, CareerQuery, CareerUsage } from "../../ghost/career-archive";
+import type { GhostCoachHistoryView } from "../../ghost/coach-history";
+import type { ScreenId, ScreenAction } from "../../domain/screen-actions";
+import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
+import type { ScreenUiPort } from "./screen-ui-port";
+export type { ScreenId, ScreenAction } from "../../domain/screen-actions";
+export type { ScreenUiPort, ScreenUiTokens } from "./screen-ui-port";
 
 export interface ScreenControl {
   readonly x: number; readonly y: number; readonly w: number; readonly h: number;
@@ -8,47 +13,6 @@ export interface ScreenControl {
   readonly hero?: boolean | undefined; readonly glyph?: string | undefined; readonly dot?: string | undefined; readonly sub?: string | undefined; readonly accent?: string | undefined;
   readonly confirm?: boolean | undefined; readonly hiddenBox?: boolean | undefined; readonly size?: number | undefined;
   readonly pips?: Readonly<{ readonly n: number; readonly filled: number; readonly color: string }> | undefined;
-}
-
-export interface ScreenUiPort {
-  readonly ink: string;
-  font(size: number, bold?: boolean): string;
-  readonly t: {
-    readonly type: Record<string, number> & { readonly wordmark: number; readonly display: number; readonly h1: number; readonly h2: number; readonly title: number; readonly lead: number; readonly body: number; readonly label: number; readonly caption: number; readonly micro: number };
-    readonly font: Readonly<{ readonly brand: string; readonly display: string; readonly body: string; readonly displayWeight: number; readonly bodyWeight: number; readonly bodyMediumWeight: number }>;
-    readonly alpha: Record<string, number> & { readonly full: number; readonly soft: number; readonly muted: number; readonly faint: number };
-    readonly color: Record<string, string> & { readonly accent: string; readonly muted: string; readonly danger: string };
-    readonly metric: Record<string, number> & { readonly btnH: number; readonly btnGap: number };
-  };
-  text(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
-  wordmark(context: CanvasRenderingContext2D, x: number, y: number, time: number, reducedMotion?: boolean): void;
-  displayText(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
-  title(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number): void;
-  tag(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;
-  header(context: CanvasRenderingContext2D, title: string, subtitle?: string, animation?: number, hue?: string): void;
-  sectionLabel(context: CanvasRenderingContext2D, label: string, x: number, y: number, width: number, hue?: string): number;
-  card(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, hovered?: boolean,
-    options?: { readonly dashed?: boolean; readonly edge?: string; readonly shimmer?: number }): void;
-  panel(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number): void;
-  divider(context: CanvasRenderingContext2D, x: number, y: number, width: number, alpha?: number): void;
-  bar(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, fraction: number, fill?: string, line?: string): void;
-  dim(context: CanvasRenderingContext2D, width: number, height: number, alpha?: number): void;
-  wrappedText(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
-  accentStrip(context: CanvasRenderingContext2D, x: number, y: number, width: number, color?: string, thickness?: number): void;
-  fitTitle(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, startSize?: number, minSize?: number): void;
-  spine(context: CanvasRenderingContext2D, x: number, y: number, height: number, color?: string, width?: number): void;
-  badge(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): number;
-  avatar(context: CanvasRenderingContext2D, x: number, y: number, size: number): void;
-  seal(context: CanvasRenderingContext2D, cx: number, cy: number, radius: number, color: string, glyph: string, muted?: boolean): void;
-  pips(context: CanvasRenderingContext2D, rightX: number, y: number, count: number, filled: number, color?: string): void;
-  tabs(context: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number,
-    push?: (button: Readonly<{ x: number; y: number; w: number; h: number; label: string; _tab?: number; _hideBox?: boolean }>) => void): void;
-  keyBadge(context: CanvasRenderingContext2D, x: number, y: number, size: number, label: string | number, color?: string): void;
-  tierPips(context: CanvasRenderingContext2D, cx: number, y: number, count: number, next: number, color: string): void;
-  scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean): void;
-  finalReward(context: CanvasRenderingContext2D, options: {
-    amount: number; label: string; title: string; sigil: string; color: string; reward: string; detail: string;
-  }): void;
 }
 
 export interface ScreenRenderContext {
@@ -72,6 +36,10 @@ export interface ScreenRenderContext {
   readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly safeInsets: Readonly<{ l: number; r: number; t: number; b: number }>;
   enqueue(control: ScreenControl): void;
+  /** A phone composition owns its scroll extent: it writes back the clamped scroll it measured. */
+  setScroll?(value: number): void;
+  /** Whether an action's surface is available in this build (layout hint; unavailable controls are never enqueued). */
+  available?(action: ScreenAction): boolean;
   renderPreview?(id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>): void;
 }
 
@@ -97,7 +65,20 @@ export interface CardView extends ChoiceView {
   readonly boss?: boolean;
 }
 export interface StatView { readonly label: string; readonly value: string; readonly detail?: string; readonly glyph?: string; readonly accent?: string }
-export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly repairable?: boolean; readonly theaterUnavailable?: boolean; readonly comparisonSelected?: boolean; readonly comparisonSourceCount?: number; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
+export interface ReplayView { readonly id: string; readonly title: string; readonly detail: string; readonly available?: boolean; readonly repairable?: boolean; readonly canDownloadArchive?: boolean; readonly canDownloadLinkedPair?: boolean; readonly theaterUnavailable?: boolean; readonly comparisonSelected?: boolean; readonly comparisonSourceCount?: number; readonly badge?: string; readonly timestamp?: string; readonly thumbnailId?: string; readonly pinned?: boolean; readonly shared?: boolean; readonly local?: boolean; readonly rank?: number; readonly mine?: boolean; readonly wave?: string; readonly time?: string; readonly score?: string }
+export interface GhostArchiveOperationView {
+  readonly status: "idle" | "unavailable" | "picking" | "validating" | "ready" | "restoring" | "reselect-required" | "complete" | "cancelled" | "failed" | "download-requested";
+  readonly detail: string; readonly canPick: boolean; readonly jobId?: string; readonly revision?: number;
+  readonly capsuleId?: string; readonly schemaVersion?: number; readonly byteLength?: number; readonly sha256?: string; readonly rootIntegrity?: string;
+  readonly pairedCapsuleIds?: readonly string[];
+  readonly canRestore?: boolean; readonly canReselect?: boolean; readonly canCancel?: boolean; readonly canCancelSelection?: boolean;
+}
+export interface GhostOwnerRecoveryView {
+  readonly status: "idle" | "unavailable" | "loading" | "ready" | "recovering" | "failed";
+  readonly detail: string; readonly catalogVisible: boolean; readonly canLoad: boolean; readonly canRecover: boolean;
+  readonly entries: readonly Readonly<{ capsuleId: string; buildId: string; rootIntegrity: string; byteLength: number;
+    localStatus?: "recovered" | "already-recovered" }>[];
+}
 export interface ProgressView {
   readonly label: string; readonly current: number; readonly goal: number; readonly detail?: string; readonly done?: boolean;
   /** Section heading the row belongs to on the pause/defeat progress panel (source drawRunProgressPanel). */
@@ -107,19 +88,30 @@ export interface ProgressView {
 export interface DailyChallengeView extends ProgressView { readonly reward: string }
 
 export interface MenuScreenView {
+  readonly practiceAvailable?: boolean;
   readonly id: "menu"; readonly playerName: string; readonly signedIn: boolean;
   readonly coins: number; readonly shards: number; readonly unlocked: number;
   readonly modeLabel: string; readonly difficultyLabel: string; readonly biome?: string;
+  /** Replaces the PLAY sub-label (mode · difficulty), e.g. the first-run tutorial nudge. */
+  readonly playSub?: string;
   readonly pendingFinale?: boolean;
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
+  /** Engineering builds only: TRAINING ARCHIVE, TRAINING OPERATIONS and REPLAY HUB entries. */
+  readonly engineeringRoutes?: boolean;
 }
 export interface SetupScreenView {
+  readonly practiceAvailable?: boolean;
   readonly id: "setup"; readonly modes: readonly ChoiceView[]; readonly difficulties: readonly ChoiceView[];
   readonly weapons: readonly ChoiceView[]; readonly showDifficulty: boolean; readonly startSummary: string;
+  /** Context glyph for START; empty unless a controller owns input. */
   readonly startGlyph: string;
+  /** One line of plain first-run guidance shown near START. */
+  readonly guidance?: string;
   readonly bestSummary?: string; readonly bountySummary?: string;
   readonly bossChoices?: readonly ChoiceView[];
   readonly bounties?: readonly Readonly<{ label: string; detail: string; done: boolean }>[];
+  /** Engineering builds only: the selected mode can create a Seed-Locked Race. */
+  readonly raceAvailable?: boolean;
 }
 export interface PlayingScreenView { readonly id: "playing" }
 export interface CodexScreenView {
@@ -135,6 +127,8 @@ export interface CodexScreenView {
   };
 }
 export interface ShopScreenView {
+  readonly race?: Readonly<{ ordinal: number; carried?: DraftCardView; pass: boolean }>;
+  readonly onboarding?: string;
   readonly id: "shop"; readonly coins: number; readonly ownedLevels: number; readonly totalLevels: number;
   readonly lifetimeEarned: number; readonly sections: readonly { readonly label: string; readonly items: readonly CardView[] }[];
   readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
@@ -153,6 +147,9 @@ export interface ProfileScreenView {
   readonly records?: readonly { readonly mode: string; readonly difficulty: string; readonly wave: string; readonly time: string; readonly score: string; readonly accent?: string }[];
   readonly journey?: { readonly biomes: readonly ChoiceView[]; readonly bosses: readonly ChoiceView[] };
   readonly emptyMessage?: string;
+  readonly career?: Readonly<{ usage?: CareerUsage; status: "idle" | "loading" | "ready" | "failed"; indexing: boolean; message: string; query: CareerQuery; rows: readonly CareerRow[]; selected: CareerRow | undefined; confirming: boolean; retained: number; known: number; total: number; page: number; pages: number }>;
+  readonly archive?: GhostArchiveOperationView;
+  readonly ownerRecovery?: GhostOwnerRecoveryView;
 }
 export interface AchievementsScreenView {
   readonly id: "achievements"; readonly category: string; readonly categories: readonly ChoiceView[];
@@ -167,6 +164,8 @@ export interface LeaderboardsScreenView {
   readonly modes?: readonly ChoiceView[]; readonly difficulties?: readonly ChoiceView[];
   readonly podium?: readonly { readonly rank: number; readonly name: string; readonly detail: string; readonly color: string; readonly mine?: boolean; readonly replayId?: string }[];
   readonly ownRank?: string; readonly signInRequired?: boolean; readonly legacyGhostId?: string;
+  /** Distinct designed states: account needed, loading, unreachable, nothing recorded yet, or rows to show. */
+  readonly status?: "signin" | "loading" | "offline" | "empty" | "ready";
 }
 export interface ReplayChapterView { readonly fraction: number; readonly boss: boolean }
 export interface ReplayComparisonView {
@@ -174,6 +173,7 @@ export interface ReplayComparisonView {
   readonly runs: readonly Readonly<{ sourceId: string; tick: number | null; semanticHash: string | null }>[];
 }
 export interface ReplayScreenView {
+  readonly finaleNavigation?: "FINALE CONTINUATION" | "BACK TO SCORED RUN";
   readonly id: "replay"; readonly title: string; readonly detail: string; readonly paused: boolean;
   readonly speed: number; readonly elapsed: string; readonly duration: string; readonly progress: number;
   readonly stage?: string; readonly score?: string;
@@ -186,33 +186,34 @@ export interface ReplayScreenView {
   /** C29 comparison is semantic source-simulation evidence, not output-device fidelity. */
   readonly comparison?: ReplayComparisonView;
   readonly notice?: string;
-  /** C37 Coach is an explicit, local same-build comparison; missing domains stay unavailable. */
-  readonly coach?: Readonly<{
-    readonly targetId: string; readonly baselineId?: string; readonly buildId?: string; readonly provenanceHash?: string;
-    readonly candidates: readonly Readonly<{ id: string; enabled: boolean; detail: string }>[];
-    readonly findings: readonly Readonly<{ id: string; domain: string; detail: string; practiceAvailable: boolean }>[];
-    readonly unavailable: readonly string[];
-  }>;
+  /** Explicit selected-recording observations; no skill or accuracy inference. */
+  readonly bossMemory?: Readonly<{ available: boolean; title?: string; notes?: string; result?: string }>;
+  readonly challenge?: Readonly<{ tick: number; choices: readonly Readonly<{ id: string; label: string }>[]; result?: string; elapsedTicks?: number }>;
+  readonly coach?: GhostCoachHistoryView;
   /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
   readonly runDna?: Readonly<{
-    readonly available: boolean; readonly formulaVersion: string; readonly evidenceCustody: string;
+    readonly available: boolean; readonly formulaVersion: string; readonly evidenceCustody: string; readonly nativePolicy?: string;
     readonly sourceMetrics: Readonly<Record<string, number | undefined>>;
     readonly dimensions?: Readonly<Record<string, number>>; readonly unavailable: readonly string[];
   }>;
-  /** C37 local-only immutable Studio decision list; no media renderer is wired. */
+  readonly worldVisible?: boolean; readonly coachReturnAvailable?: boolean;
+  readonly studioMedia?: Readonly<{ available: boolean; status: string; markIn: number | undefined; thumbnail: string | undefined; duration: number | undefined }>;
+  /** C37 immutable decision list; media work stays in the app adapter. */
   readonly studioCutList?: Readonly<{
     readonly available: boolean; readonly sourceGhostId?: string; readonly sourceRootHash?: string;
-    readonly fromTick?: number; readonly toTick?: number; readonly edlHash?: string; readonly unavailable?: string;
+    readonly fromTick?: number; readonly toTick?: number; readonly edlHash?: string; readonly unavailable?: string; readonly clipCount?: number;
   }>;
 }
 export interface SettingRowView {
   readonly key: string; readonly label: string; readonly value: string; readonly kind: "stepper" | "toggle" | "cycle";
   readonly on?: boolean; readonly enabled?: boolean; readonly note?: string;
+  /** A stepper's companion mute switch (toggled through settings.toggle with this key). */
+  readonly muteKey?: string; readonly muted?: boolean;
 }
 export interface SettingsScreenView {
   readonly id: "settings"; readonly tab: string; readonly tabs: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly rows: readonly SettingRowView[] }[];
-  readonly returnTo: LegacyScreenId;
+  readonly returnTo: ScreenId;
   readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
 }
 export interface RenameScreenView {
@@ -221,23 +222,29 @@ export interface RenameScreenView {
 }
 export interface DraftCardView extends CardView { readonly tier?: number; readonly nextTier?: number; readonly badgeColor?: string }
 export interface DraftScreenView {
+  readonly race?: Readonly<{ ordinal: number; carried?: DraftCardView; pass: boolean }>;
+  readonly onboarding?: string;
   readonly id: "draft"; readonly wave: number; readonly cards: readonly DraftCardView[]; readonly rerolls: number;
 }
-export interface ReserveScreenView { readonly id: "reserve"; readonly cards: readonly DraftCardView[] }
+export interface ReserveScreenView { readonly race?: boolean; readonly keepCarried?: boolean; readonly id: "reserve"; readonly cards: readonly DraftCardView[] }
 export interface TierUpScreenView {
   readonly id: "tierup"; readonly cards: readonly DraftCardView[]; readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
 }
 export interface PausedScreenView {
+  readonly ghostChase?: Readonly<{ visible: boolean; message: string }>;
+  readonly tutorial?: TutorialSessionView;
   readonly id: "paused"; readonly runSummary?: string; readonly abilities: readonly CardView[]; readonly progress: readonly ProgressView[];
   /** Present only for a locally running Player Watch; never a Foundry operation. */
   readonly playerWatch?: Readonly<{ readonly status: "running" | "paused"; readonly decisions: number }>;
 }
-export interface ConfirmQuitScreenView { readonly id: "confirmquit" }
+export interface ConfirmQuitScreenView { readonly id: "confirmquit"; readonly practice?: boolean }
 export interface ContinueScreenView { readonly id: "continue"; readonly seconds: number; readonly requesting: boolean }
 export interface ResultLogView { readonly wave: string; readonly time: string; readonly kills: number; readonly peak: string; readonly peakColor?: string; readonly died?: boolean }
 export interface GameoverScreenView {
   readonly id: "gameover"; readonly summary: string; readonly isNew: boolean; readonly best?: string;
   readonly earned: number; readonly coins: number; readonly replayAvailable: boolean;
+  /** The run scored: rewards get the celebration styling (a 0-point run keeps its coins quietly). */
+  readonly celebrate: boolean;
   readonly abilities: readonly CardView[]; readonly progress: readonly ProgressView[]; readonly log: readonly ResultLogView[];
 }
 export interface WinScreenView {
@@ -269,6 +276,10 @@ export interface AcademyScreenView {
 /** Read-only C36 local recovery projection. It deliberately contains no custody or model data. */
 export interface FoundryScreenView {
   readonly id: "foundry";
+  /** Exact local action token; eligibility alone does not activate a policy. */
+  readonly promotion?: Readonly<{ scheduleHash: string; intentHash: string }>;
+  readonly restoration?: Readonly<{ scheduleHash: string; intentHash: string }>;
+  readonly restored?: Readonly<{ artifactId: string; receiptHash: string }>;
   readonly status: "loading" | "unavailable" | "ready";
   readonly subtitle: string;
   /** Local lifecycle scheduler state; it never implies a worker, cloud task, policy activation, or promotion. */
@@ -288,7 +299,7 @@ export interface GhostLabScreenView {
   readonly id: "ghostlab";
   readonly subtitle: string;
   readonly routes: readonly Readonly<{
-    readonly id: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence";
+    readonly id: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career";
     readonly label: string;
     readonly detail: string;
   }>[];
@@ -327,13 +338,13 @@ export interface GhostSupportScreenView {
   readonly bundleHash?: string; readonly canCreate: boolean;
 }
 
-export type LegacyScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
+export type ScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | CodexScreenView
   | ShopScreenView | ProfileScreenView | AchievementsScreenView | LeaderboardsScreenView
   | ReplayScreenView | SettingsScreenView | RenameScreenView | DraftScreenView | ReserveScreenView
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
   | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView | BotEvidenceScreenView | GhostPublicationScreenView | GhostSupportScreenView;
 
-export type ScreenViewById<Id extends LegacyScreenId, View = LegacyScreenView> =
+export type ScreenViewById<Id extends ScreenId, View = ScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;
-export type ScreenRenderer<Id extends LegacyScreenId> = (view: ScreenViewById<Id>) => void;
-export type LegacyScreenRendererRegistry = { readonly [Id in LegacyScreenId]: ScreenRenderer<Id> };
+export type ScreenRenderer<Id extends ScreenId> = (view: ScreenViewById<Id>) => void;
+export type ScreenRendererTable = { readonly [Id in ScreenId]: ScreenRenderer<Id> };

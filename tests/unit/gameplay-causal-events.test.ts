@@ -14,6 +14,12 @@ const run = {
 } as const;
 
 describe("native gameplay causal-event adapter", () => {
+  it.each(["pickup", "tierup"])("retains %s feedback separately from authoritative loadout selections", (effect) => {
+    const event = createGameplayCausalEvent({ kind: "effect", tick: 7, effect, x: 1, y: 2 }, 2, "reward-feedback", "engine");
+    expect(event).toMatchObject({ type: "system.checkpoint", phase: "post-simulation-commit", payload: { observation: "native-reward-feedback", effect, x: 1, y: 2 } });
+    expect(validateTearContract(event).ok).toBe(true);
+  });
+
   it("separates real native events from historical-only ontology claims", () => {
     expect(nativeCausalEventAvailability("enemy.spawned")).toBe("native");
     expect(nativeCausalEventAvailability("boss.intro-started")).toBe("native");

@@ -1,158 +1,222 @@
 import type {
-  LegacyWorldRenderContext, PlaygroundHelpSnapshot, TouchControlsSnapshot, TutorialCardSnapshot,
+  WorldRenderContext, PlaygroundHelpSnapshot, TouchControlsSnapshot, TutorialCardSnapshot,
 } from "./contracts";
-import { clamp, wrapLeft } from "./primitives";
+import { clamp } from "./primitives";
+import { bossHudTop, hudFrame, hudType } from "./hud";
 
 export interface TutorialCardLayout {
-  readonly x: number; readonly y: number; readonly width: number; readonly height: number;
+  readonly x: number; readonly y: number; readonly width: number;
 }
 
 /**
- * Keeps the lesson card out of the centered style-meter lane. At narrow
- * logical widths the card drops below that lane instead of squeezing its copy.
+ * Keeps the lesson card out of the centred multiplier lane, anchored to the HUD's
+ * screen-edge frame. At narrow widths the card drops below that lane instead of
+ * squeezing its copy. The card's height comes from its content.
  */
-export function tutorialCardLayout(
-  viewportWidth: number,
-  safe: Readonly<{ top: number; right: number; left: number }>,
-): TutorialCardLayout {
-  const height = 138;
-  const right = 28 + safe.right;
-  const meterRight = viewportWidth / 2 + 120;
-  const gap = 28;
-  const availableBesideMeter = viewportWidth - right - (meterRight + gap);
-  if (availableBesideMeter >= 460) {
-    const width = Math.min(700, availableBesideMeter);
-    return { x: viewportWidth - right - width, y: 24 + safe.top, width, height };
+export function tutorialCardLayout(frame: Readonly<{ left: number; right: number; top: number; centerX: number }>,
+  laneBottom: number, minimumTop = 0): TutorialCardLayout {
+  const meterRight = frame.centerX + 150, gap = 24;
+  const besideMeter = frame.right - (meterRight + gap);
+  if (besideMeter >= 460) {
+    const width = Math.min(700, besideMeter);
+    return { x: frame.right - width, y: Math.max(frame.top, minimumTop), width };
   }
-  const width = Math.min(700, Math.max(320, viewportWidth - 56 - safe.left - safe.right));
-  return { x: (viewportWidth - width) / 2, y: 138 + safe.top, width, height };
+  const width = Math.min(700, frame.right - frame.left);
+  return { x: frame.centerX - width / 2, y: Math.max(laneBottom, minimumTop), width };
 }
 
-export function createTrainingTouchRenderers(context: LegacyWorldRenderContext) {
+export function createTrainingTouchRenderers(context: WorldRenderContext) {
   const canvas = context.canvas;
   const ui = context.ui;
+  /** This frame's lesson card (drawn with the HUD, before the touch controls), which the touch coaching keeps clear of. */
+  let lessonCard: Readonly<{ x: number; y: number; w: number; h: number }> | null = null;
 
-  function drawKeyCap(x: number, y: number, label: string): number {
-    canvas.font = ui.font(11, true);
-    const width = Math.max(30, canvas.measureText(label).width + 16);
-    canvas.fillStyle = "rgba(0,0,0,0.07)"; canvas.fillRect(x, y, width, 22);
-    canvas.strokeStyle = "rgba(0,0,0,0.55)"; canvas.lineWidth = 1.5; canvas.strokeRect(x, y, width, 22);
-    canvas.fillStyle = "rgba(0,0,0,0.35)"; canvas.fillRect(x + 2, y + 19, width - 4, 2);
-    canvas.fillStyle = "#000"; canvas.textAlign = "center"; canvas.textBaseline = "middle";
-    canvas.fillText(label, x + width / 2, y + 11); canvas.textBaseline = "alphabetic";
-    return x + width + 8;
+  function practiceFooter(snapshot: TutorialCardSnapshot): string {
+    if (snapshot.bossPractice) return "BOSS PRACTICE · BASELINE · NO REWARDS";
+    if (snapshot.enemyPractice) return "ENEMY PRACTICE · BASELINE · NO REWARDS";
+    if (snapshot.annex) return "WEAPON ANNEX · BASELINE · NO REWARDS";
+    return `BLOCK ${String(snapshot.lessonIndex + 1)} / ${String(snapshot.lessonCount)}`;
   }
 
+  /**
+   * The lesson card: one vertical stack (focus tag, title + count, instruction,
+   * progress bar, keys, lesson dots + block) so no row can overlap another.
+   */
   function tutorialCard(snapshot: TutorialCardSnapshot): void {
-    const type = ui.t.type;
-    const { width, x, y, height } = tutorialCardLayout(context.width, context.safe);
-    canvas.save();
-    canvas.globalAlpha = 0.88; canvas.fillStyle = ui.t.color.paper; canvas.fillRect(x, y, width, height);
-    canvas.globalAlpha = 0.45; canvas.strokeStyle = "#000"; canvas.lineWidth = 1.5; canvas.strokeRect(x, y, width, height);
-    canvas.globalAlpha = 1; canvas.fillStyle = ui.t.color.accent; canvas.fillRect(x, y, 4, height);
-    ui.tag(canvas, `${snapshot.arenaLabel ?? "TRAINING"}  /  ${(snapshot.teachingFocus ?? "movement").toUpperCase()}`, x + 18, y + 22, ui.t.color.accent, "left", type.micro);
-    canvas.fillStyle = "#000"; canvas.font = ui.font(type.label + 10, true); canvas.textAlign = "left";
-    canvas.fillText(snapshot.title, x + 18, y + 50);
-    canvas.font = ui.font(type.caption, false); canvas.fillStyle = "rgba(0,0,0,0.75)";
-    wrapLeft(canvas, snapshot.description, x + 18, y + 70, width - 36, 18);
-    if (snapshot.progress && !snapshot.final) {
-      const progress = snapshot.progress;
-      canvas.font = ui.font(26, true); canvas.textAlign = "right";
-      canvas.fillStyle = progress.current >= progress.goal ? ui.t.color.accent : "#000";
-      canvas.fillText(`${String(progress.current)} / ${String(progress.goal)}`, x + width - 18, y + 50);
-      canvas.globalAlpha = 0.15; canvas.fillStyle = "#000"; canvas.fillRect(x + width - 118, y + 60, 96, 4);
-      canvas.globalAlpha = 1; canvas.fillStyle = ui.t.color.accent;
-      canvas.fillRect(x + width - 118, y + 60, 96 * clamp(progress.current / Math.max(1, progress.goal)), 4);
+    const t = ui.t, type = hudType(context), pad = t.space.md, frame = hudFrame(context);
+    const minimumTop = Math.max(snapshot.bossPractice ? bossHudTop(context) + 3 * t.metric.bossHudH + type.label * 2 : 0, snapshot.clearTop ?? 0);
+    const { x, y, width } = tutorialCardLayout(frame, bossHudTop(context), minimumTop);
+    const inner = width - pad * 2, left = x + pad;
+    const progress = snapshot.final ? undefined : snapshot.progress;
+    const countText = progress ? `${String(progress.current)} / ${String(progress.goal)}` : "";
+    canvas.font = ui.font(type.title, true);
+    const countW = countText ? canvas.measureText(countText).width + t.space.md : 0;
+    const tagY = y + pad + type.micro, titleY = tagY + t.space.sm + type.title;
+    const description = ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner,
+      { size: type.body, measureOnly: true, maxLines: 4 });
+    const barY = titleY + t.space.sm + description.height + t.space.xs;
+    const keysY = barY + (progress ? t.space.md : 0) + type.micro + t.space.sm;
+    const footerY = keysY + (snapshot.keys.length > 0 ? Math.round(type.micro * 1.7) + t.space.sm : 0);
+    const height = footerY + pad - y;
+    lessonCard = { x, y, w: width, h: height };
+    ui.hudPlate(canvas, x, y, width, height);
+    canvas.fillStyle = t.color.accent;
+    canvas.fillRect(x, y, 4, height);
+    ui.tag(canvas, `${snapshot.arenaLabel ?? "TRAINING"}  /  ${(snapshot.teachingFocus ?? "movement").toUpperCase()}`,
+      left, tagY, ui.readable(t.color.accent), "left", type.micro);
+    if (snapshot.final) ui.text(canvas, "training summary · practice arena loading…", x + width - pad, tagY, type.micro, "right", t.alpha.muted);
+    const title = ui.fitText(canvas, snapshot.title, inner - countW, { size: type.title, floor: type.label, bold: true });
+    ui.displayText(canvas, title.lines[0] ?? snapshot.title, left, titleY, title.size);
+    if (progress) {
+      const done = progress.current >= progress.goal;
+      ui.tag(canvas, countText, x + width - pad, titleY, done ? ui.readable(t.color.accent) : ui.ink, "right", type.title);
     }
-    if (snapshot.keys.length > 0) {
-      let keyX = x + 20;
-      canvas.save();
-      for (const key of snapshot.keys) keyX = drawKeyCap(keyX, y + 108, key);
-      canvas.restore();
-    }
-    for (let index = 0; index < snapshot.lessonCount; index++) {
-      const dotX = x + 18 + index * 14;
-      canvas.beginPath(); canvas.arc(dotX, y + height - 14, 3, 0, Math.PI * 2);
-      if (index < snapshot.lessonIndex) { canvas.fillStyle = ui.t.color.accent; canvas.fill(); }
-      else if (index === snapshot.lessonIndex) { canvas.fillStyle = "#000"; canvas.fill(); }
-      else { canvas.strokeStyle = "rgba(0,0,0,0.3)"; canvas.lineWidth = 1.5; canvas.stroke(); }
-    }
-    canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.42)"; canvas.textAlign = "right";
-    canvas.fillText(`BLOCK ${String(snapshot.lessonIndex + 1)} / ${String(snapshot.lessonCount)}`, x + width - 16, y + height - 10);
+    ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner, { size: type.body, alpha: t.alpha.soft, maxLines: 4 });
+    if (progress) progressBar(left, barY, inner, progress);
+    let keyX = left;
+    for (const key of snapshot.keys) keyX += ui.keycap(canvas, key, keyX, keysY) + t.space.sm;
+    lessonDots(snapshot, left, footerY - type.micro * 0.35);
+    ui.text(canvas, practiceFooter(snapshot), x + width - pad, footerY, type.micro, "right", t.alpha.muted);
     if (snapshot.completedBeat > 0) {
       const scale = 1 + (1 - Math.abs(snapshot.completedBeat - 0.9) / 0.9) * 0.4;
-      canvas.font = ui.font(Math.round(40 * scale), true); canvas.fillStyle = ui.t.color.accent; canvas.textAlign = "right";
-      canvas.fillText("✓", x + width - 22, y + 108);
+      ui.tag(canvas, "✓", x + width - pad, keysY, ui.readable(t.color.accent), "right", Math.round(type.h2 * scale));
     }
-    if (snapshot.final) {
-      canvas.font = ui.font(type.micro, true); canvas.fillStyle = "rgba(0,0,0,0.5)"; canvas.textAlign = "right";
-      canvas.fillText("course complete · practice arena loading…", x + width - 16, y + 24);
-    }
-    canvas.restore(); canvas.textAlign = "left";
+    canvas.textAlign = "left";
   }
 
-  function playgroundHelp(snapshot: PlaygroundHelpSnapshot): void {
-    const type = ui.t.type, width = 700, x = context.width - width - 28 - context.safe.right;
-    const y = 24 + context.safe.top, height = 116;
+  function progressBar(x: number, y: number, width: number, meter: Readonly<{ current: number; goal: number }>): void {
     canvas.save();
-    canvas.globalAlpha = 0.84; canvas.fillStyle = ui.t.color.paper; canvas.fillRect(x, y, width, height);
-    canvas.globalAlpha = 0.45; canvas.strokeStyle = "#000"; canvas.lineWidth = 1.5; canvas.strokeRect(x, y, width, height);
-    canvas.globalAlpha = 1; canvas.fillStyle = ui.t.color.accent; canvas.fillRect(x, y, 4, height);
-    ui.tag(canvas, "PLAYGROUND", x + 20, y + 24, ui.t.color.accent, "left", type.micro);
-    canvas.fillStyle = "rgba(0,0,0,0.78)"; canvas.font = ui.font(type.caption, false); canvas.textAlign = "left";
-    canvas.fillText("TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss", x + 20, y + 50);
-    canvas.fillText("K clear   ·   H heal   ·   U ability lab   ·   P pause", x + 20, y + 74);
-    canvas.fillText(`${snapshot.weaponId.toUpperCase()}  ·  held ${String(snapshot.heldHits)}  ·  throws ${String(snapshot.throws)}/${String(snapshot.throwHits)}  ·  parries ${String(snapshot.perfectParries)}  ·  breaks ${String(snapshot.breakTriggers)}`,
-      x + 20, y + 98);
-    canvas.restore(); canvas.textAlign = "left";
+    canvas.globalAlpha = 0.18;
+    canvas.fillStyle = ui.ink;
+    canvas.fillRect(x, y, width, 5);
+    canvas.globalAlpha = 1;
+    canvas.fillStyle = ui.t.color.accent;
+    canvas.fillRect(x, y, width * clamp(meter.current / Math.max(1, meter.goal)), 5);
+    canvas.restore();
   }
 
+  function lessonDots(snapshot: TutorialCardSnapshot, x: number, y: number): void {
+    if (snapshot.annex || snapshot.enemyPractice || snapshot.bossPractice) return;
+    for (let index = 0; index < snapshot.lessonCount; index++) {
+      canvas.beginPath();
+      canvas.arc(x + 4 + index * 14, y, 3.5, 0, Math.PI * 2);
+      if (index <= snapshot.lessonIndex) {
+        canvas.fillStyle = index < snapshot.lessonIndex ? ui.t.color.accent : ui.ink;
+        canvas.fill();
+      } else {
+        canvas.globalAlpha = 0.45;
+        canvas.strokeStyle = ui.ink;
+        canvas.lineWidth = 1.5;
+        canvas.stroke();
+        canvas.globalAlpha = 1;
+      }
+    }
+  }
+
+  /**
+   * Playground help: a quiet plate at the top-right of the HUD frame, below the
+   * multiplier lane so it never meets the combo meter.
+   */
+  function playgroundHelp(snapshot: PlaygroundHelpSnapshot): void {
+    const t = ui.t, type = hudType(context), pad = t.space.md, frame = hudFrame(context);
+    // Keyboard shortcuts only help a keyboard; touch keeps the live weapon stats.
+    const lines = context.ui.density.touch ? []
+      : ["TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss", "K clear   ·   H heal   ·   U ability lab   ·   P pause"];
+    const stats = `${snapshot.weaponId.toUpperCase()}  ·  held ${String(snapshot.heldHits)}  ·  throws ${String(snapshot.throws)}/${String(snapshot.throwHits)}`
+      + `  ·  parries ${String(snapshot.perfectParries)}  ·  breaks ${String(snapshot.breakTriggers)}`;
+    const layout = tutorialCardLayout(frame, bossHudTop(context), snapshot.clearTop ?? 0);
+    const lineH = type.caption + t.space.sm, height = pad * 2 + type.micro + t.space.sm + (lines.length + 1) * lineH;
+    ui.hudPlate(canvas, layout.x, layout.y, layout.width, height);
+    canvas.fillStyle = t.color.accent;
+    canvas.fillRect(layout.x, layout.y, 4, height);
+    let lineY = layout.y + pad + type.micro;
+    ui.tag(canvas, "PLAYGROUND", layout.x + pad, lineY, ui.readable(t.color.accent), "left", type.micro);
+    for (const line of [...lines, stats]) {
+      lineY += lineH;
+      const fit = ui.fitText(canvas, line, layout.width - pad * 2, { size: type.caption, floor: type.micro });
+      ui.text(canvas, fit.lines[0] ?? line, layout.x + pad, lineY, fit.size, "left", t.alpha.soft);
+    }
+  }
+
+  /**
+   * Touch controls sit on the real screen edges, over sky or a dark floor alike, so
+   * they use one theme-independent treatment: a dark disc, a light ring and a light
+   * label (the scrim / scrimInk pair), readable on any backdrop.
+   */
+  function disc(x: number, y: number, radius: number, fillAlpha: number, ring: string, ringAlpha: number, lineWidth: number): void {
+    canvas.globalAlpha = fillAlpha;
+    canvas.fillStyle = ui.t.color.scrim;
+    canvas.beginPath();
+    canvas.arc(x, y, radius, 0, Math.PI * 2);
+    canvas.fill();
+    canvas.globalAlpha = ringAlpha;
+    canvas.strokeStyle = ring;
+    canvas.lineWidth = lineWidth;
+    canvas.beginPath();
+    canvas.arc(x, y, radius - lineWidth / 2, 0, Math.PI * 2);
+    canvas.stroke();
+    canvas.globalAlpha = 1;
+  }
+
+  function touchButton(button: TouchControlsSnapshot["buttons"][number]): void {
+    const t = ui.t;
+    disc(button.x, button.y, button.radius, button.held ? 0.62 : 0.4, button.held ? t.color.accent : t.color.scrimInk, button.held ? 0.95 : 0.7, button.held ? 4 : 3);
+    const size = button.prominent ? t.type.label : t.type.micro;
+    ui.tag(canvas, button.label, button.x, button.y + size * 0.36, t.color.scrimInk, "center", size);
+  }
+
+  /** On-screen controls: every circle comes from the input layer's single touch layout. */
   function touchControls(snapshot: TouchControlsSnapshot): void {
-    const joystick = snapshot.joystick;
+    const joystick = snapshot.joystick, t = ui.t;
     const magnitude = Math.hypot(joystick.dx, joystick.dy) || 1;
     const cap = Math.min(magnitude, 70);
     canvas.save();
-    canvas.globalAlpha = joystick.active ? 0.38 : 0.16;
-    canvas.strokeStyle = context.ink; canvas.lineWidth = 3;
-    canvas.beginPath(); canvas.arc(joystick.anchorX, joystick.anchorY, 92, 0, Math.PI * 2); canvas.stroke();
-    if (joystick.active) {
-      canvas.globalAlpha = 0.30;
-      canvas.beginPath(); canvas.arc(joystick.anchorX, joystick.anchorY, 26, 0, Math.PI * 2); canvas.stroke();
-      canvas.fillStyle = context.ink; canvas.beginPath(); canvas.arc(joystick.anchorX, joystick.anchorY, 4, 0, Math.PI * 2); canvas.fill();
-    }
-    canvas.globalAlpha = joystick.active ? 0.5 : 0.22; canvas.fillStyle = context.ink;
-    canvas.beginPath();
-    canvas.arc(joystick.anchorX + (joystick.active ? joystick.dx / magnitude * cap : 0),
-      joystick.anchorY + (joystick.active ? joystick.dy / magnitude * cap : 0), 42, 0, Math.PI * 2);
-    canvas.fill();
+    disc(joystick.anchorX, joystick.anchorY, joystick.radius, joystick.active ? 0.3 : 0.18, t.color.scrimInk, joystick.active ? 0.7 : 0.45, 3);
+    disc(joystick.anchorX + (joystick.active ? joystick.dx / magnitude * cap : 0), joystick.anchorY + (joystick.active ? joystick.dy / magnitude * cap : 0),
+      joystick.radius * 0.46, joystick.active ? 0.6 : 0.4, t.color.scrimInk, 0.8, 2);
     if (snapshot.aim) {
-      const aimX = context.width - 300 - context.safe.right, aimY = context.height - 260 - context.safe.bottom;
-      canvas.globalAlpha = 0.20; canvas.strokeStyle = context.ink; canvas.lineWidth = 3;
-      canvas.beginPath(); canvas.arc(aimX, aimY, 64, 0, Math.PI * 2); canvas.stroke();
-      canvas.globalAlpha = 0.5; canvas.fillStyle = context.ink;
-      canvas.beginPath(); canvas.arc(aimX + snapshot.aim.x * 52, aimY + snapshot.aim.y * 52, 22, 0, Math.PI * 2); canvas.fill();
+      const pad = snapshot.aimPad;
+      disc(pad.x, pad.y, pad.r, 0.22, t.color.scrimInk, 0.5, 3);
+      disc(pad.x + snapshot.aim.x * pad.r * 0.8, pad.y + snapshot.aim.y * pad.r * 0.8, pad.r * 0.34, 0.55, t.color.scrimInk, 0.8, 2);
     }
-    for (const button of snapshot.buttons) {
-      canvas.globalAlpha = button.held ? 0.34 : 0.16; canvas.fillStyle = button.held ? ui.t.color.accent : context.ink;
-      canvas.beginPath(); canvas.arc(button.x, button.y, button.radius * (button.held ? 0.94 : 1), 0, Math.PI * 2); canvas.fill();
-      canvas.globalAlpha = button.held ? 0.8 : 0.4; canvas.strokeStyle = button.held ? ui.t.color.accent : context.ink;
-      canvas.lineWidth = button.held ? 4 : 3; canvas.beginPath(); canvas.arc(button.x, button.y, button.radius, 0, Math.PI * 2); canvas.stroke();
-      canvas.globalAlpha = 0.62; canvas.fillStyle = context.ink;
-      canvas.font = ui.font(button.prominent ? 16 : 13, true); canvas.textAlign = "center"; canvas.textBaseline = "middle";
-      canvas.fillText(button.label, button.x, button.y + 1); canvas.textBaseline = "alphabetic";
+    for (const button of snapshot.buttons) touchButton(button);
+    if (snapshot.onboardingAlpha > 0) onboarding(snapshot);
+    canvas.restore();
+    canvas.globalAlpha = 1;
+    lessonCard = null;
+  }
+
+  /** The coaching line's bottom, moved under this frame's lesson card when the two would meet. */
+  function clearOfLessonCard(line: Readonly<{ title: string; hint: string; x: number; bottom: number; align: CanvasTextAlign }>, height: number): number {
+    const card = lessonCard;
+    if (card === null) return line.bottom;
+    const t = ui.t;
+    canvas.font = ui.font(t.type.lead, true);
+    const width = Math.max(canvas.measureText(line.title).width, canvas.measureText(line.hint).width) + t.space.md;
+    const left = line.align === "left" ? line.x : line.x - width, right = line.align === "left" ? line.x + width : line.x;
+    const meets = left < card.x + card.w && right > card.x && line.bottom - height < card.y + card.h && line.bottom > card.y;
+    return meets ? card.y + card.h + t.space.md + height : line.bottom;
+  }
+
+  /**
+   * First-touch coaching (plain text in the biome ink, no plates): beside the joystick (clear of THROW above it) and
+   * above the aim pad (right-aligned to it), so neither line can leave the screen.
+   */
+  function onboarding(snapshot: TouchControlsSnapshot): void {
+    const t = ui.t, alpha = clamp(snapshot.onboardingAlpha), joystick = snapshot.joystick, pad = snapshot.aimPad;
+    const lines = [
+      { title: "◉ MOVE", hint: "left thumb — anywhere on the left", x: joystick.homeX + joystick.radius + t.space.md,
+        bottom: joystick.homeY + (t.type.lead + t.type.label + t.space.sm * 3) / 2, align: "left" as const },
+      { title: "DRAG TO AIM & SWING ↷", hint: "fast flicks = fast cuts · second finger = throw", x: pad.x + pad.r, bottom: pad.y - pad.r - t.space.md, align: "right" as const },
+    ];
+    for (const line of lines) {
+      const height = t.type.lead + t.type.label + t.space.sm * 3, bottom = clearOfLessonCard(line, height);
+      const textX = line.align === "left" ? line.x + t.space.md : line.x - t.space.md;
+      canvas.globalAlpha = alpha;
+      ui.tag(canvas, line.title, textX, bottom - height + t.space.sm + t.type.lead, ui.ink, line.align, t.type.lead);
+      ui.text(canvas, line.hint, textX, bottom - t.space.sm, t.type.label, line.align, t.alpha.soft * alpha);
     }
-    if (snapshot.onboardingAlpha > 0) {
-      const alpha = clamp(snapshot.onboardingAlpha);
-      canvas.globalAlpha = alpha * 0.85; canvas.fillStyle = context.ink; canvas.textAlign = "center"; canvas.textBaseline = "alphabetic";
-      canvas.font = ui.font(20, true);
-      canvas.fillText("◉ MOVE", context.width * 0.20, context.height - 320 - context.safe.bottom);
-      canvas.fillText("DRAG TO AIM & SWING ↷", context.width * 0.68, context.height - 340 - context.safe.bottom);
-      canvas.font = ui.font(13, false); canvas.globalAlpha = alpha * 0.6;
-      canvas.fillText("left thumb — anywhere on the left", context.width * 0.20, context.height - 294 - context.safe.bottom);
-      canvas.fillText("fast flicks = fast cuts · second finger = throw", context.width * 0.68, context.height - 314 - context.safe.bottom);
-      canvas.textAlign = "left";
-    }
-    canvas.restore(); canvas.globalAlpha = 1;
+    canvas.globalAlpha = 1;
   }
 
   return { tutorialCard, playgroundHelp, touchControls };

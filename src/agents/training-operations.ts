@@ -83,6 +83,8 @@ export const TRAINING_OPERATIONS_ACTIONS = Object.freeze({
   bootstrap: "training-operations.bootstrap",
   scheduleEnable: "training-operations.schedule.enable",
   scheduleDisable: "training-operations.schedule.disable",
+  promote: "training-operations.promote",
+  restoreBaseline: "training-operations.restoreBaseline",
 } as const);
 export const LEGACY_TRAINING_OPERATIONS_ACTIONS = Object.freeze({
   refresh: "foundry.refresh",

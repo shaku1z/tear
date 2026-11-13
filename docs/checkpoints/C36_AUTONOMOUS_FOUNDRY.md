@@ -835,3 +835,150 @@ retry, retained source/schedule/job/pointer/terminal/authority/declaration/
 approval/promotion/active/artifact refusal, held and raw C31-custody refusal,
 and planted conditional-commit loss recovery. It has no timer, dispatcher,
 automatic invocation, traffic, placement, UI, or cloud behavior.
+
+## Native admitted V3 evaluation and decision
+
+`TrainingOperationsV3EvaluationExecutor` consumes an exact retained V3 training
+receipt directly, without retraining or rewriting its job history. It admits
+the ordered frozen evaluation cases, runs the compatible V3 champion and
+inactive challenger in separate fresh production source worlds, then retains a
+native comparison and a `monitoring-ready` or `rejected` decision. The frozen
+reward/completion protocol determines that decision; it does not activate the
+candidate or establish learned quality.
+
+Each durable transition pins current corpus, custody, consent, curation,
+reviewed sample, source bytes, artifact/index identities and active baseline.
+Evaluation spends its bounded numeric compute allowance before execution.
+Receipt/job/event/current-index writes share the guarded successor transaction;
+exact retries verify the budget owner and durable side records without another
+charge. The focused `native V3 admitted candidate evaluation` cases in
+`academy-candidate-curation.test.ts` use synthetic governed inputs to exercise
+actual source execution, exact retries, inactive output and source loss at the
+final comparison transaction.
+
+This completes the direct native evaluation leaf. Scheduling an already
+admitted head still needs receipt-bound adoption/continuation, and the legacy
+V2 monitoring bridge cannot consume a native V3 decision by relabeling it.
+Native monitoring and authorized promotion continuation remain separate work;
+this leaf supplies no real-corpus, participant, calibration or unattended
+lifecycle claim.
+
+## Receipt-bound native scheduled continuation
+
+`TrainingOperationsV3ScheduledCycle.adoptAndEnable` accepts an exact retained
+training receipt, its current training head, explicit frozen evaluation cases
+and a declared disabled schedule. It records the admission receipt as the
+initial binding origin with no preceding binding; it does not retrain, rewind
+the job or manufacture legacy launch history. A budgeted job must retain the
+matching numeric schedule declaration. A new explicitly supplied schedule is
+created through that job's metered transaction; existing unowned storage is
+not adopted as free allowance.
+
+The normal `runScheduledOnce` dispatcher and browser scheduler consume these
+persisted native bindings. Each due wake performs one admission, comparison or
+decision transition, joining its job, receipt, attempt, schedule and next
+binding in the same conditional commit. Reload reads the retained current
+binding. Completed wake retries verify native receipts, binding/pointer/index
+bytes, current job lineage, source custody and budget authority without another
+charge or transition. Native pause/resume keeps the same frozen experiment.
+Late binding drift leaves the existing schedule, job and candidate unchanged.
+
+Monitoring-ready disables the schedule at `awaiting-promotion`; an enabled
+schedule never supplies promotion authority. Existing V1–V4 launch profiles
+and bindings keep their historical route. The legacy hash-only profile does
+not supply a native training request or evaluation cases. This completes the
+explicit native scheduled evaluation path, while native monitoring and
+authorized promotion continuation remain separate from it.
+
+
+### Native monitoring authority and explicit promotion
+
+Native scheduled cycles now retain their native decision/evaluation/training provenance
+through a separately tagged monitoring authority and promotion approval. The normal
+Training Operations screen exposes PROMOTE only for a current eligible, disabled
+awaiting-promotion schedule. Its exact displayed intent binds the schedule, binding,
+monitoring head, decision, candidate and rollback activation. Merely enabling a schedule
+never authorizes activation. Eligibility remains approver-free; the deliberate local
+action supplies product intent.
+
+The existing V3 promotion executor remains the sole activation writer. It atomically
+commits native authority/approval/receipt, promoted binding and indexes with the numeric
+retention ledger and guarded policy pointer/history. Source, current consent/curation,
+custody, reviewed dataset, budget and rollback baseline are revalidated at that boundary.
+Exact retries verify retained authority without a second activation or charge. Existing
+legacy bridge bytes remain separate; no V2 decision or monitoring receipt is fabricated.
+
+The existing V3 Watch journal monitor and rollback owners can read either approval
+origin using their common frozen policy and baseline fields. This does not create Watch
+observations, auto-run a Watch session, claim learned quality or participant evidence,
+or complete the remaining unattended post-promotion orchestration. The normal Run
+Monitor journey below now includes browser evidence for the explicit action.
+
+
+### Normal Run Monitor durable native observations
+
+The existing normal Replay Hub START RUN MONITOR path now binds the exact local
+active artifact/activation and its promotion/approval records. It runs the canonical
+V3 policy, journals the actual decision receipts/actions, and preserves one session
+across pause/resume. The production run-domain started/completed/defeated/abandoned
+facts bind its run identity and finalize genuine terminal outcomes; screen navigation
+or restoration alone cannot report completion. Outgoing canonical state is ignored
+until the new run supplies its first source tick. A replacement run stops the old
+observation rather than inheriting it.
+
+Each observation is explicitly limited to 256 decisions, stopping before decision
+257. User stop and the decision limit are retained as stopped, never passed health.
+The normal loop/input remain available. Finalization runs once, waits for the bounded
+journal flush/read, and only then invokes the existing C36 monitor. Partial, refused,
+dropped or changed-policy evidence visibly reports that it was not retained. Native
+journal and monitor records/indexes consume the existing job's numeric retained-byte
+budget, with no new compute charge, activation or automatic rollback. Legacy monitor
+records keep their existing route. Reopening Replay Hub/reloading projects an exact
+historical retained observation through the existing detail text.
+
+The focused integration fixture uses actual native training/evaluation/promotion
+owners over an engineering synthetic corpus and canonical source worlds. It can export
+an awaiting-promotion fixture using TEAR_C37_NATIVE_FIXTURE (exclusive new file).
+The updated browser-c37-player-watch journey imports those source receipts into its
+isolated context, clicks normal PROMOTE, then START/pause/resume/STOP and verifies the
+exact durable observation after reload. On clean `ef5e8a5c`, the fresh standalone
+build and normal browser journey passed actual PROMOTE, START, pause/resume and
+STOP. One journal retained 68 actual decisions with zero drops, bound to activation
+`6554b4059ec697ba`; observation `8c7e24a115df0130` remained byte-identical after
+reload. The user stop remains `stopped` / `threshold-breach`, with the active
+pointer unchanged. This engineering synthetic source fixture does not establish
+learned quality, participant evidence, natural victory or a complete unattended
+lifecycle. Replay Hub route cards draw their wrapped copy once and retain normal
+pointer/keyboard focus through the existing hidden-box control contract.
+
+
+### Explicit native monitored baseline restoration
+
+A disabled native promoted cycle with an eligible retained breach now exposes
+RESTORE BASELINE in normal Training Operations. The displayed action token binds its
+schedule, promoted binding, job, named monitor, native approval/promotion, exact active
+candidate and frozen rollback activation. The monitor remains classify-only. A stopped
+observation's existing threshold-breach classification establishes neither learned
+regression nor automatic restoration authority; the deliberate action supplies intent.
+
+The existing V3 rollback executor remains the sole restoration pointer writer. Its
+native branch validates current source/custody/consent/curation, decision lineage,
+monitor/index and budget ownership, then atomically restores the frozen artifact with
+a new policy activation revision and meters the receipt/index/cycle-terminal/new-binding
+outputs. The policy pointer/history remain policy-owned. The retained native binding
+is restored and scheduling stays disabled; the monitoring job and original observation
+are not relabelled as passed or retrained. Exact retries and reload verify the active
+successor, terminal bytes/indexes and metered ownership without activation or charge.
+Late drift refuses the entire transaction.
+
+One focused engineering source control covers actual native promotion/observation,
+stale intent, final-CAS drift, restoration, exact retry and malformed terminal refusal.
+The existing normal browser journey now continues after its retained stopped
+observation/reload through normal RESTORE BASELINE and verifies the original frozen
+artifact plus native terminal after a second reload. At `f3de399a`, the fresh
+standalone build and that normal browser journey passed. The action restored
+`foundry-champion` (`4c1b3c6a1e6750af`) in activation revision 3, retained restoration
+receipt `781e70e64e37e9b9`, and kept the exact terminal, active pointer and budget
+unchanged after reload. Monitor `7cdb1e26659f225e` retained its original stopped
+observation and threshold-breach classification. The declared engineering source
+fixture supplies no learned quality, human evidence or unattended rollback claim.

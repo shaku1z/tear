@@ -1,3 +1,4 @@
+import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
 import type { EnemyBaseConstructor, EnemyBaseInstance } from "./enemy-base";
 import type { BossRuntime } from "./boss-runtime";
@@ -194,6 +195,20 @@ export function createSourceType(dependencies: EnemyDependencies, Enemy: EnemyBa
           this.y = clamp(this.y, 70, CONFIG.world.groundY - this.hh);
           this.onGround = false;
         }
+    /** Practice requests cross an authored threshold; normal update owns every transition effect. */
+    requestPracticePhase(phase: 2 | 3): boolean {
+      const entry = this.practicePhaseEntry();
+      if (!entry.ready || entry.targetPhase !== entry.phase || phase !== entry.phase + 1 || this.dead || this.dying || this.hp <= 0) return false;
+      this.hp = this.maxHp * practicePhaseEntryHealth(this.phaseMarks, phase);
+      this.hpDisplay = this.hp;
+      return true;
+    }
+    practicePhaseEntry(): BossPracticeActorEntry {
+      const phase = this.phaseMarker === 3 ? 3 : this.phaseMarker === 2 ? 2 : 1;
+      return Object.freeze({ phase, targetPhase: this.phase === 3 ? 3 : this.phase === 2 ? 2 : 1,
+        ready: this.mode !== "collapse" && this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
+        stage: this.introT > 0 ? "opening" : this.cinematicRequest !== null || this.cinematicT > 0 ? "transition" : this.mode === "collapse" ? "void-descent" : this.mode === "downed" ? "kneel" : "combat" });
+    }
         _enterPhase(ph: number) {
           const C = CONFIG.source;
           this._cancelSoftBreach(C.breachIntervalMin);

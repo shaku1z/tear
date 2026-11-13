@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createLiveReviveCountdownState } from "../../src/app/live-revive-countdown-state";
+import { createLiveReviveCountdownState } from "../../src/app/run/revive-countdown-state";
 
 describe("live revive countdown state", () => {
   it("owns the remaining rewarded-revive seconds", () => {

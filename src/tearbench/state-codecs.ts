@@ -1,3 +1,5 @@
+import { sourceVoidHistoryReferences } from "./source-void-history-references";
+import { isAuthoredArenaSlotReference } from "./arena-slot-references";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import { CODEC_REGISTRY, type TearCodecId } from "./registries";
@@ -77,7 +79,8 @@ export const TEAR_REFERENCE_KEYS = Object.freeze([
 ] as const);
 const referenceKeys = new Set<string>(TEAR_REFERENCE_KEYS);
 
-function isCanonicalReferenceTarget(source: string, target: string): boolean {
+function isCanonicalReferenceTarget(source: string, target: string, world: TearCodecWorld): boolean {
+  if (isAuthoredArenaSlotReference(world, source, target)) return true;
   if (target === "player" || target === "blade") return true;
   // Environment fields can be owned by their canonical stage rather than a
   // transient actor. Keep this narrow: only hazard owner edges receive stage
@@ -105,6 +108,8 @@ function declaresIdentity(codecId: TearCodecId, key: string, ownerPath: string):
 }
 
 function declaresReference(codecId: TearCodecId, key: string, ownerPath: string): boolean {
+  // This one run-owned source is an external capsule binding, not an actor edge.
+  if (codecId === "tear.run.v1" && ownerPath === "$.ghostAssistance" && key === "sourceId") return false;
   // The Source stream retains its generated ingress record as historical
   // generator/cinematic metadata after that platform has been recycled.  Its
   // embedded platformId is an alias, not a live cross-codec ownership edge.
@@ -164,9 +169,11 @@ export function createDataOnlyCodec(id: TearCodecId): TearStateCodec {
       indexIdentitiesAndReferences(world, id, cloned);
     },
     resolveReferences(world) {
-      const issues: TearCodecIssue[] = [];
+      const history = id === "tear.run.v1" ? sourceVoidHistoryReferences(world) : undefined;
+      const issues: TearCodecIssue[] = [...(history?.issues ?? [])];
       for (const [source, target] of world.references) {
-        if (source.startsWith(`${id}:`) && !world.entityIds.has(target) && !isCanonicalReferenceTarget(source, target)) {
+        if (history?.local.has(source)) continue;
+        if (source.startsWith(`${id}:`) && !world.entityIds.has(target) && !isCanonicalReferenceTarget(source, target, world)) {
           issues.push({ codecId: id, path: `references.${source}`, message: `reference target ${target} does not exist` });
         }
       }
@@ -187,11 +194,29 @@ export function createLiveStateCodec(id: TearCodecId): TearStateCodec {
   const dataCodec = createDataOnlyCodec(id);
   return Object.freeze({
     ...dataCodec,
+    version: id === "tear.world.v1" || id === "tear.run.v1" ? 2 : dataCodec.version,
+    migrate(payload: unknown, fromVersion: number): unknown {
+      if (id !== "tear.world.v1" && id !== "tear.run.v1") return dataCodec.migrate(payload, fromVersion);
+      if (fromVersion !== 1 && fromVersion !== 2) throw new RangeError(`${id} cannot migrate schema version ${String(fromVersion)}`);
+      // Preserve extensions and historical absence of exact seconds. Legacy
+      // null callbacks remain unsupported; acquisition IDs cannot recover order.
+      return structuredClone(payload);
+    },
     validate(payload: unknown) {
       const dataIssues = dataCodec.validate(payload);
       return dataIssues.length > 0
         ? dataIssues
         : Object.freeze(validateLiveCodecPayload(id, payload));
+    },
+    hashProjection(world: TearCodecWorld): TearCodecValue {
+      const payload = dataCodec.hashProjection(world);
+      if (id !== "tear.ui.v1" || payload === null || typeof payload !== "object" || Array.isArray(payload)) return payload;
+      // Exact capture retains this new field. Existing UI fields/extensions stay semantic.
+      const projection = structuredClone(payload);
+      Reflect.deleteProperty(projection, "hudPresentation");
+      Reflect.deleteProperty(projection, "tutorialPresentation");
+      Reflect.deleteProperty(projection, "particlesPresentation");
+      return projection;
     },
   });
 }
@@ -257,7 +282,8 @@ export interface TearIdentityGraph {
 export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph {
   const identities = new Map<string, Readonly<{ codecId: TearCodecId; path: string }>>();
   const references = new Map<string, string>();
-  const issues: TearCodecIssue[] = [];
+  const history = sourceVoidHistoryReferences(world);
+  const issues: TearCodecIssue[] = [...history.issues];
   const visit = (codecId: TearCodecId, value: TearCodecValue, path: string): void => {
     if (Array.isArray(value)) {
       const entries = value as readonly TearCodecValue[];
@@ -293,7 +319,8 @@ export function buildTearIdentityGraph(world: TearCodecWorld): TearIdentityGraph
     if (value !== undefined) visit(codecId, value, "$");
   }
   for (const [source, target] of references) {
-    if (isCanonicalReferenceTarget(source, target) || identities.has(target) || world.entityIds.has(target)) continue;
+    if (history.local.has(source)) continue;
+    if (isCanonicalReferenceTarget(source, target, world) || identities.has(target) || world.entityIds.has(target)) continue;
     const separator = source.indexOf(":");
     const codecId = source.slice(0, separator) as TearCodecId;
     issues.push({ codecId, path: source.slice(separator + 1), message: `reference target ${target} does not exist` });

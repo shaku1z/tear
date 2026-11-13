@@ -13,7 +13,17 @@ export function createPlayerRenderer({ colors, graphics, theme, clamp }: PlayerR
     draw(surface: unknown, player: PlayerRenderSnapshot): void {
       if (!isCanvasSurface(surface)) return;
       const context = surface;
-      if (player.iframe > 0 && player.dashTimer <= 0 && Math.floor(player.iframe * 20) % 2 === 0) return;
+      // Hit invulnerability blinks the body, but the off frames keep an outline so the
+      // player never disappears from the fight.
+      if (player.iframe > 0 && player.dashTimer <= 0 && Math.floor(player.iframe * 20) % 2 === 0) {
+        context.save();
+        context.globalAlpha = 0.75;
+        context.strokeStyle = theme.ink;
+        context.lineWidth = 2;
+        context.strokeRect(player.x - player.hw + 1, player.y - player.hh + 1, player.hw * 2 - 2, player.hh * 2 - 2);
+        context.restore();
+        return;
+      }
 
       if (player.cinematicGraceT > 0) {
         const grace = clamp(player.cinematicGraceT / 0.7, 0, 1);

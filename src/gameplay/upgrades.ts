@@ -6,7 +6,7 @@
 // (read by the combat loop) or push handlers into hook arrays.
 
 import type { CONFIG as GAME_CONFIG } from "../config/game-config";
-import { len } from "../domain/geometry";
+import { bindUpgradeHook } from "./upgrade-hooks";
 
 export type UpgradeCategory = "offense" | "throw" | "parry" | "mobility" | "resilience" | "utility";
 
@@ -323,25 +323,25 @@ const UPGRADES: readonly UpgradeDefinition[] = [
   // ===== unique abilities =====
   // ---- resilience: the healing rework's "earned survivability" set ----
   { id: "bloodrite", name: "Bloodrite", unique: true, rare: true, cat: "resilience",
-    desc: "Skill kills (slam, spike, perfect-parry) restore HP.",
-    apply: ({ mods, config }) => { mods.bloodrite = true; mods.onKill.push((ev) => { if (ev.cause === "skill") { ev.player.heal(config.resilience.bloodriteHeal); if (mods.bloodGuard) ev.player.guardT = Math.max(ev.player.guardT, 1.0); } else if (mods.killHeal) ev.player.heal(mods.killHeal); }); },
+    desc: "Slam, spike (airborne foe into the floor) and perfect-parry kills restore HP.",
+    apply: ({ mods, config }) => { mods.bloodrite = true; bindUpgradeHook("bloodrite", { mods, config }); },
     tiers: [
-      { desc: "Skill kills (slam, spike, perfect-parry) restore much more HP and grant 1s of invincibility.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 16; mods.bloodGuard = true; } },
-      { desc: "Skill kills (slam, spike, perfect-parry) restore massive HP and grant 1s of invincibility. Plus, EVERY normal kill now trickles HP back.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 22; mods.killHeal = 4; } },
+      { desc: "Slam, spike and perfect-parry kills restore much more HP and grant 1s of invincibility.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 16; mods.bloodGuard = true; } },
+      { desc: "Slam, spike and perfect-parry kills restore massive HP and grant 1s of invincibility; other kills trickle HP.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 22; mods.killHeal = 4; } },
     ] },
   { id: "riposte", name: "Riposte", unique: true, cat: "parry",
     desc: "After a perfect parry, take 60% less damage for 1.2s.",
     apply: ({ mods }) => { mods.parryGuard = true; },
     tiers: [
-      { desc: "After a perfect parry, restore HP and take 75% less damage for 1.8s.", apply: ({ mods, config }) => { config.resilience.parryGuardTime = 1.8; config.resilience.parryGuardMult = 0.25; mods.onParry.push((ev) => { ev.player.heal(6); }); } },
+      { desc: "After a perfect parry, restore HP and take 75% less damage for 1.8s.", apply: ({ mods, config }) => { config.resilience.parryGuardTime = 1.8; config.resilience.parryGuardMult = 0.25; bindUpgradeHook("riposte:2", { mods, config }); } },
       { desc: "After a perfect parry, restore HP and become completely INVINCIBLE for 2.3s.", apply: ({ config }) => { config.resilience.parryGuardTime = 2.3; config.resilience.parryGuardMult = 0.0; } },
     ] },
   { id: "flow_guard", name: "Flow Guard", unique: true, cat: "resilience",
-    desc: "Take 30% less damage while your trick rank is BRUTAL (x3) or higher.",
+    desc: "Take 30% less damage while your multiplier is ×3 or higher.",
     apply: ({ mods }) => { mods.flowGuard = true; },
     tiers: [
-      { desc: "Take 50% less damage while your trick rank is BRUTAL (x3) or higher.", apply: ({ config }) => { config.resilience.flowGuardMult = 0.5; } },
-      { desc: "Take 50% less damage starting at STYLISH (x2). At BRUTAL (x3) or higher, you also rapidly REGENERATE HP.", apply: ({ mods, config }) => { config.resilience.flowGuardMult = 0.5; config.resilience.flowGuardTier = 2; mods.flowRegen = true; } },
+      { desc: "Take 50% less damage while your multiplier is ×3 or higher.", apply: ({ config }) => { config.resilience.flowGuardMult = 0.5; } },
+      { desc: "Take 50% less damage from a ×2 multiplier. At ×3 or higher you also regenerate HP fast.", apply: ({ mods, config }) => { config.resilience.flowGuardMult = 0.5; config.resilience.flowGuardTier = 2; mods.flowRegen = true; } },
     ] },
   { id: "aegis", name: "Aegis", unique: true, cat: "resilience",
     desc: "Slam kills grant a shield that blocks the next hit (max 2 shields).",
@@ -358,7 +358,7 @@ const UPGRADES: readonly UpgradeDefinition[] = [
   { id: "backfire", name: "Backfire", unique: true, cat: "parry", desc: "Your reflected shots STUN the enemies they strike.",
     apply: ({ mods }) => { mods.parryStun = true; } },
   { id: "crater", name: "Crater", unique: true, cat: "offense",
-    desc: "Power Slams erupt in a shockwave that grows with your descent speed.",
+    desc: "Power Slams (slams from a fast fall) erupt in a shockwave that grows with fall speed.",
     apply: ({ mods }) => { mods.crater = true; } },
   { id: "aerial_rave", name: "Aerial Rave", unique: true, cat: "offense",
     desc: "Staying airborne ramps up your swing damage over time (up to +50%).",
@@ -369,11 +369,11 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     ] },
 
   { id: "seismic_slam", name: "Seismic Slam", unique: true, cat: "offense", desc: "Slams blast nearby enemies for 22.",
-    apply: ({ mods, config }) => { mods.onSlam.push((ev) => { ev.dealAoE(ev.x, ev.y, 130, 22); ev.fx.explode(ev.x, ev.y, config.colors.slam, 0.9); }); } },
+    apply: (ctx) => { bindUpgradeHook("seismic_slam", ctx); } },
   { id: "detonate", name: "Detonate", unique: true, cat: "offense", desc: "Kills explode for 18 to nearby foes.",
-    apply: ({ mods, config }) => { mods.onKill.push((ev) => { ev.dealAoE(ev.x, ev.y, 120, 18); ev.fx.explode(ev.x, ev.y, config.colors.bomber, 0.7); }); } },
+    apply: (ctx) => { bindUpgradeHook("detonate", ctx); } },
   { id: "adrenaline", name: "Adrenaline", unique: true, cat: "mobility", desc: "Kills instantly refresh your dash.",
-    apply: ({ mods }) => { mods.onKill.push((ev) => { ev.player.dashCd = 0; }); } },
+    apply: (ctx) => { bindUpgradeHook("adrenaline", ctx); } },
 
   // Overdrive interaction ramp, capped in the combat loop so it cannot snowball
   { id: "throw_momentum", name: "Overdrive", unique: true, cat: "throw",
@@ -397,11 +397,11 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     desc: "Rising updrafts also launch all nearby enemies skyward.",
     apply: ({ mods }) => { mods.tempest = true; } },
   { id: "storm_recall", name: "Second Pass", unique: true, cat: "throw",
-    desc: "Your weapon’s secondary throw action deals significantly more damage.",
+    desc: "Your throw follow-up (throw again while it is out) deals much more damage.",
     apply: ({ mods }) => { mods.secondPass = 1.85; mods.stormRecall = true; },
     tiers: [
-      { desc: "Your secondary throw action deals +140% damage and gains force.", apply: ({ mods }) => { mods.secondPass = 2.4; mods.stormMult = 2.4; } },
-      { desc: "Your secondary throw action deals +200% damage. Catching the weapon unleashes a shockwave.", apply: ({ mods }) => { mods.secondPass = 3.0; mods.stormMult = 3.0; mods.stormBurst = true; } },
+      { desc: "Your throw follow-up deals +140% damage and hits with more force.", apply: ({ mods }) => { mods.secondPass = 2.4; mods.stormMult = 2.4; } },
+      { desc: "Your throw follow-up deals +200% damage. Catching the weapon unleashes a shockwave.", apply: ({ mods }) => { mods.secondPass = 3.0; mods.stormMult = 3.0; mods.stormBurst = true; } },
     ] },
   { id: "phantom_dash", name: "Phantom Dash", unique: true, cat: "mobility",
     desc: "Dashing directly through enemies unleashes a damaging phase-slice.",
@@ -430,7 +430,7 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     apply: ({ player }) => { player.abilityRevives += 1; } },
 
   // ===== more stackable upgrades — keep every category at 4+ =====
-  { id: "whetstone", name: "Whetstone", unique: false, cat: "throw", desc: "Your weapon’s secondary throw action hits +25% harder.",
+  { id: "whetstone", name: "Whetstone", unique: false, cat: "throw", desc: "Your throw follow-up (throw again while it is out) hits +25% harder.",
     apply: ({ blade }) => { blade.channelMods.secondaryPower *= 1.25; } },
   { id: "gyroblade", name: "Gyroblade", unique: false, cat: "throw", desc: "The thrown blade flies and returns 12% faster.",
     apply: ({ blade }) => { blade.channelMods.throwSpeed *= 1.12; blade.channelMods.returnSpeed *= 1.12; } },
@@ -457,19 +457,14 @@ const UPGRADES: readonly UpgradeDefinition[] = [
   // --- OFFENSE ---
   { id: "rupture", name: "Rupture", unique: true, cat: "offense",
     desc: "Cuts inflict BLEED—a stacking wound that damages over time.",
-    apply: ({ mods }) => { mods.bleedHit = 1; mods.onHit.push((ev) => { if (mods.bleedHit && ev.enemy?.applyBleed) ev.enemy.applyBleed(mods.bleedHit); }); },
+    apply: ({ mods, config }) => { mods.bleedHit = 1; bindUpgradeHook("rupture", { mods, config }); },
     tiers: [
       { desc: "Cuts inflict 2 BLEED stacks. Power Slams instantly DETONATE nearby bleed for a burst of damage.", apply: ({ mods }) => { mods.bleedHit = 2; mods.bleedDetonate = true; } },
       { desc: "Cuts inflict 3 BLEED stacks. Slams DETONATE bleed, and dying bleeding enemies splash their stacks onto the nearby crowd.", apply: ({ mods }) => { mods.bleedHit = 3; mods.bleedNova = true; } },
     ] },
   { id: "sunder", name: "Sunder", unique: true, cat: "offense",
     desc: "Hits MARK enemies, making them take +30% damage from all sources for 4s.",
-    apply: ({ mods }) => { mods.sunderHit = true; mods.onHit.push((ev) => {
-      const e = ev.enemy; if (!mods.sunderHit || !e?.applyMark) return;
-      if (mods.sunderSpread && e.markT > 0) for (const o of ev.enemies) { if (o !== e && !o.dead && o.applyMark && len(o.x - e.x, o.y - e.y) < 150) o.applyMark(); }
-      e.applyMark();
-      if (mods.sunderShatter && e.cfg?.breakSpeed && !e.enraged) { e.enraged = true; e.stun = Math.max(e.stun, 0.5); }
-    }); },
+    apply: ({ mods, config }) => { mods.sunderHit = true; bindUpgradeHook("sunder", { mods, config }); },
     tiers: [
       { desc: "MARKED enemies take +40% damage. Marking armored or shielded foes instantly SHATTERS their guard.", apply: ({ mods, config }) => { config.status.markMult = 1.40; mods.sunderShatter = true; } },
       { desc: "MARKED enemies take +50% damage. Marks SHATTER guards, and striking a marked foe SPREADS the mark to nearby enemies.", apply: ({ mods, config }) => { config.status.markMult = 1.50; mods.sunderSpread = true; } },
@@ -483,14 +478,11 @@ const UPGRADES: readonly UpgradeDefinition[] = [
       { desc: "Direct hits apply maximum control and BLEED; secondary hits rupture captured wounds.", apply: ({ mods }) => { mods.capture = 3; mods.impale = 5; mods.impaleRecall = true; } },
     ] },
   { id: "stormbank", name: "Stormbank", unique: true, cat: "throw",
-    desc: "Skill kills bank electrical charge. Your next successful throw releases chain lightning.",
+    desc: "Slam, spike and perfect-parry kills bank charge; your next landed throw releases chain lightning.",
     apply: ({ mods, config }) => {
       mods.stormbank = 1;
-      mods.onSkillKill.push(() => {
-        const chargeCap = config.stormbank.maxCharges[mods.stormbank - 1] ?? 0;
-        mods.stormCharges = Math.min(chargeCap, mods.stormCharges + 1);
-      });
-      mods.onThrowResolve.push((ev) => { if (ev.dischargeStormbank) ev.dischargeStormbank(mods); });
+      bindUpgradeHook("stormbank:charge", { mods, config });
+      bindUpgradeHook("stormbank:resolve", { mods, config });
     },
     tiers: [
       { desc: "Bank up to 8 charges. Lightning reaches more targets and briefly STUNS them.", apply: ({ mods }) => { mods.stormbank = 2; } },
@@ -498,9 +490,9 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     ] },
   { id: "overrun", name: "Overrun", unique: true, cat: "offense",
     desc: "Eliminate enemies quickly after first contact to build damage.",
-    apply: ({ mods }) => {
+    apply: ({ mods, config }) => {
       mods.overrun = 1;
-      mods.onEnemyDeath.push((ev) => { if (ev.cleanElimination && ev.addOverrunStack) ev.addOverrunStack(mods); });
+      bindUpgradeHook("overrun", { mods, config });
     },
     tiers: [
       { desc: "Build up to 6 stacks. Each stack also grants +3% movement speed.", apply: ({ mods }) => { mods.overrun = 2; } },
@@ -508,10 +500,10 @@ const UPGRADES: readonly UpgradeDefinition[] = [
     ] },
   { id: "sever", name: "Sever", unique: true, cat: "parry",
     desc: "Perfect parries Sever enemy power, reducing the damage they deal.",
-    apply: ({ mods }) => {
+    apply: ({ mods, config }) => {
       mods.sever = 1;
-      mods.onPerfectParry.push((ev) => { if (ev.applySever && ev.sourceEnemy) ev.applySever(ev.sourceEnemy, mods.sever); });
-      mods.onReflectedHit.push((ev) => { if (mods.sever >= 2 && ev.applySever && ev.enemy) ev.applySever(ev.enemy, 1); });
+      bindUpgradeHook("sever:parry", { mods, config });
+      bindUpgradeHook("sever:reflected", { mods, config });
     },
     tiers: [
       { desc: "Sever is stronger, and enemies hit by reflected projectiles are also Severed.", apply: ({ mods }) => { mods.sever = 2; } },
@@ -520,21 +512,14 @@ const UPGRADES: readonly UpgradeDefinition[] = [
   // --- PARRY ---
   { id: "tempo", name: "Tempo", unique: true, cat: "parry",
     desc: "Perfect parries grant TEMPO (+25% damage, faster speed, refreshes dash) for 4s.",
-    apply: ({ mods }) => { mods.tempo = 0.25; mods.onParry.push((ev) => { const p = ev.player; p.tempoStk = Math.min(mods.tempoMax, (p.tempoT > 0 ? p.tempoStk : 0) + 1); p.tempoT = 4; p.dashCd = 0; p.dashCharges = p.maxDashCharges; }); },
+    apply: ({ mods, config }) => { mods.tempo = 0.25; bindUpgradeHook("tempo", { mods, config }); },
     tiers: [
       { desc: "Perfect parries grant TEMPO (+30% damage, faster speed, refreshes dash) for 6s. Stacks up to 2 times.", apply: ({ mods }) => { mods.tempo = 0.3; mods.tempoMax = 2; } },
       { desc: "Perfect parries plunge the room into deep slow-mo and grant TEMPO (+34% damage per stack, max 2, faster speed, refreshes dash).", apply: ({ mods }) => { mods.tempo = 0.34; mods.tempoSurge = true; } },
     ] },
   { id: "backlash", name: "Backlash", unique: true, cat: "parry",
     desc: "A perfect parry erupts a COUNTER-SHOCK, damaging and stunning nearby enemies.",
-    apply: ({ mods, config }) => { mods.backlash = 26; mods.onParry.push((ev) => {
-      if (!mods.backlash) return;
-      const r = mods.backlashSurge ? 250 : 175;
-      ev.dealAoE(ev.x, ev.y, r, mods.backlash);
-      for (const e of ev.enemies) { if (!e.dead && len(e.x - ev.x, e.y - ev.y) < r) { if (!e.isBoss) e.stun = Math.max(e.stun, mods.backlashSurge ? 1.1 : 0.55); if (mods.backlashMark && e.applyMark) e.applyMark(); } }
-      ev.fx.ring(ev.x, ev.y, mods.backlashSurge ? 16 : 11, config.colors.perfect);
-      if (mods.backlashSurge) ev.player.iframe = Math.max(ev.player.iframe, 1.0);
-    }); },
+    apply: ({ mods, config }) => { mods.backlash = 26; bindUpgradeHook("backlash", { mods, config }); },
     tiers: [
       { desc: "A perfect parry erupts a larger COUNTER-SHOCK, damaging, stunning, and MARKING nearby enemies.", apply: ({ mods }) => { mods.backlash = 44; mods.backlashMark = true; } },
       { desc: "A perfect parry erupts a massive COUNTER-SHOCK (damages, stuns, marks), and leaves you completely INVINCIBLE for a beat.", apply: ({ mods }) => { mods.backlash = 70; mods.backlashSurge = true; } },

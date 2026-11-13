@@ -1,9 +1,9 @@
 import type {
-  DebugPlatformSnapshot, EnemyStatusSnapshot, LegacyWorldRenderContext, PantheonDebugSnapshot, WorldBounds,
+  DebugPlatformSnapshot, EnemyStatusSnapshot, WorldRenderContext, PantheonDebugSnapshot, WorldBounds,
 } from "./contracts";
 import { clamp } from "./primitives";
 
-export function createStatusDebugRenderers(context: LegacyWorldRenderContext) {
+export function createStatusDebugRenderers(context: WorldRenderContext) {
   const canvas = context.canvas;
 
   function enemyStatus(snapshot: EnemyStatusSnapshot): void {
