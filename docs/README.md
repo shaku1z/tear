@@ -9,6 +9,8 @@ owning test/script references in one reviewable transaction.
 | Topic | Primary authority | Supporting contract/evidence |
 | --- | --- | --- |
 | Where each workstream stands (generated) | [POSITION.md](POSITION.md) | Rendered from `config/position.json` by `pnpm position:render`; `check:docs` fails when it is stale or edited by hand. `config/tearbench-current-program-state.json` records only the TearBench C25–C40 program state for the 2026-08-30 production build. |
+| Decisions and their triggers | [DECISIONS.md](DECISIONS.md) | Dated entries amended in place; inferred entries are marked |
+| Pitfalls and the guard behind each rule | [PITFALLS.md](PITFALLS.md) | `tests/unit/pitfall-guards.test.mjs`; [AGENTS.md](../AGENTS.md) "Known traps" |
 | Developer orientation and routine commands | [README.md](../README.md) | [CONTRIBUTING.md](../CONTRIBUTING.md); `package.json` scripts |
 | AI agent working guide | [AGENTS.md](../AGENTS.md) | [CLAUDE.md](../CLAUDE.md); `.agents/skills/`; the parent-directory `AGENTS.md` and the governance skill remain authoritative |
 | Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) | Current typed module boundaries and architecture checks |

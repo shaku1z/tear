@@ -144,6 +144,9 @@ Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 
 ## Known traps
 
+Each trap below is also a row in [docs/PITFALLS.md](docs/PITFALLS.md) with the check that
+guards it; the decisions behind the hard rules are in [docs/DECISIONS.md](docs/DECISIONS.md).
+
 - **`pnpm deploy --help` runs the script.** pnpm 11 ignores `--help` after a
   script name and runs `deploy` (a build plus Wrangler dry run). Read
   `package.json` instead of passing `--help` to a script.
