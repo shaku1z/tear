@@ -1,4 +1,5 @@
 import type { EnvironmentSnapshot, EnvironmentObjectState } from "./environment-contracts";
+import { isEnvironmentOwnedData } from "./environment-state";
 
 export interface EnvironmentPresentationSnapshot {
   readonly stageId: string;
@@ -13,9 +14,19 @@ function bounds(geometry: Readonly<{ x: number; y: number; w?: number; h?: numbe
   return Object.freeze({ minX: geometry.x, maxX: geometry.x + (geometry.w ?? 0), minY: geometry.y, maxY: geometry.y + (geometry.h ?? 0) });
 }
 
+/**
+ * A value presentation may keep. Primitives and graphs an environment state admitted are immutable and
+ * reachable from no caller, so they are shared; anything else (a snapshot decoded or assembled outside a
+ * state) is still cloned so the view never aliases mutable caller data.
+ */
+function detached(value: unknown): unknown {
+  if (value === null || (typeof value !== "object" && typeof value !== "function" && typeof value !== "symbol")) return value;
+  return isEnvironmentOwnedData(value) ? value : structuredClone(value);
+}
+
 function authoredDetails(value: Readonly<Record<string, unknown>>, excluded: ReadonlySet<string>): Readonly<Record<string, unknown>> {
   return Object.freeze(Object.fromEntries(Object.keys(value).sort().filter((key) => !excluded.has(key)
-    && !/^(?:cosmetic|presentation)/iu.test(key)).map((key) => [key, structuredClone(value[key])])));
+    && !/^(?:cosmetic|presentation)/iu.test(key)).map((key) => [key, detached(value[key])])));
 }
 
 const FIELD_BASE = new Set(["id", "kind", "state", "geometry", "stateTick", "timer", "ownerId", "schedule", "eligibility", "force", "cleanupReason"]);
@@ -35,7 +46,7 @@ export function buildEnvironmentPresentationSnapshot(snapshot: EnvironmentSnapsh
     }); })),
     combatObjects: Object.freeze(snapshot.combatObjects.map((object) => {
       const extension = object as unknown as Readonly<Record<string, unknown>>;
-      return Object.freeze({ id: object.id, kind: object.kind, state: object.state, geometry: structuredClone(object.geometry), integrityRatio: object.maxIntegrity > 0 ? object.integrity / object.maxIntegrity : 0, counterplayTags: Object.freeze([...object.counterplayTags]),
+      return Object.freeze({ id: object.id, kind: object.kind, state: object.state, geometry: detached(object.geometry) as typeof object.geometry, integrityRatio: object.maxIntegrity > 0 ? object.integrity / object.maxIntegrity : 0, counterplayTags: Object.freeze([...object.counterplayTags]),
       ...authoredDetails(extension, COMBAT_BASE),
     }); })),
     routes: Object.freeze(snapshot.routes.map((route) => { const extension = route as unknown as Readonly<Record<string, unknown>>; return Object.freeze({ id: route.id, kind: route.kind,

@@ -15,18 +15,33 @@ const DEFAULT_CONFIGURATION: EnvironmentRuntimeConfiguration = Object.freeze({
   maxFields: 64, maxCombatObjects: 128, maxRoutes: 64,
 });
 
+/**
+ * Every graph `freezeData` returns: plain, deeply frozen, built from fresh objects and reachable from no
+ * caller, so it can never change. Re-copying one yields an identical graph, so it is shared instead; an
+ * update then copies only the values it actually brings in, not the unchanged rest of the entry.
+ */
+const OWNED_DATA = new WeakSet();
+
+/** Whether `value` is an immutable graph admitted by an environment state (safe to share without a copy). */
+export function isEnvironmentOwnedData(value: unknown): boolean {
+  return typeof value === "object" && value !== null && OWNED_DATA.has(value);
+}
+
 function freezeData(value: unknown): unknown {
+  if (typeof value === "object" && value !== null && OWNED_DATA.has(value)) return value;
   if (Array.isArray(value)) {
     const copy = new Array<unknown>(value.length);
     for (let index = 0; index < value.length; index += 1) {
       if (index in value) copy[index] = freezeData(value[index]);
     }
+    OWNED_DATA.add(copy);
     return Object.freeze(copy);
   }
   if (typeof value !== "object" || value === null) return value;
   const source = value as Record<string, unknown>;
   const copy: Record<string, unknown> = {};
   for (const key of Object.keys(source)) copy[key] = freezeData(source[key]);
+  OWNED_DATA.add(copy);
   return Object.freeze(copy);
 }
 

@@ -13,8 +13,11 @@ export function createLiveGhostChase(options: Readonly<{ beat?: () => Readonly<{
     const run = options.run();
     if (!run) return undefined;
     const player = options.player();
+    // Only a selected reference frame compares arenas, so the platform hash is derived when read, not on every tick and frame.
+    let arena: string | undefined;
     return { runId: run.runSeed, mode: run.mode, difficulty: run.diff, weapon: run.weaponId, time: run.runTime, waveTime: run.waveTime,
-      stage: options.stage(), wave: run.wave, score: run.score, hp: player.hp, maxHp: player.maxHp, arena: ghostReferenceArena(options.platforms()), blocked: options.blocked(),
+      stage: options.stage(), wave: run.wave, score: run.score, hp: player.hp, maxHp: player.maxHp,
+      get arena() { return arena ??= ghostReferenceArena(options.platforms()); }, blocked: options.blocked(),
       ...(run.ghostAssistance === undefined ? {} : { assistance: run.ghostAssistance }) };
   };
   const view = () => { const beat = options.beat?.(); if (beat?.active) return Object.freeze({ active: false, visible: false, beat: true, message: beat.message || "BEAT THIS RUN · independent attempt · NONCOMPETITIVE / no progression" }); const run = options.run(), race = run?.seedRace, current = controller.snapshot(live()); if (race?.role === "reference" && current.message.length === 0) return Object.freeze({ active: false, visible: false, raceRole: race.role, message: "Shared seed and offers - no competitor selected" }); const value = { ...current, ...(race ? { raceRole: race.role } : {}) }; return !value.active && (run?.ghostAssistance || race) && value.message.length === 0 ? Object.freeze({ ...value, message: race ? "Seed-Locked Race · unranked · reference not active" : "Assisted / noncompetitive run · reference not active" }) : value; };
