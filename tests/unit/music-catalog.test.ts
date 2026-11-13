@@ -28,6 +28,9 @@ const EXPECTED_WORK_IDS = [
   "bladeless",
   "steady",
   "troubleshooting",
+  "once-at-a-time",
+  "nocturnal-urgency",
+  "spring",
 ] as const;
 
 function expectedRights(workId: string): MusicRights {
@@ -121,7 +124,7 @@ describe("Music catalog", () => {
     expect(works).toContain("beserker");
   });
 
-  it("mirrors the canonical conservative rights contract for all eleven works", () => {
+  it("mirrors the canonical conservative rights contract for every work", () => {
     expect(catalog.works).toHaveLength(EXPECTED_WORK_IDS.length);
     for (const work of catalog.works) {
       expect(work.rights, work.id).toEqual(expectedRights(work.id));

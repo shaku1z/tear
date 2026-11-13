@@ -1004,7 +1004,8 @@
         "archive"
       ],
       "unlock": {
-        "type": "default"
+        "type": "biome-enter",
+        "biome": "The Verdant Sanctum"
       },
       "rights": {
         "gameUse": true,
@@ -1089,7 +1090,8 @@
         "archive"
       ],
       "unlock": {
-        "type": "default"
+        "type": "boss-defeat",
+        "bossId": "rootbound"
       },
       "rights": {
         "gameUse": true,
@@ -1174,7 +1176,8 @@
         "archive"
       ],
       "unlock": {
-        "type": "default"
+        "type": "biome-enter",
+        "biome": "The Verdant Sanctum"
       },
       "rights": {
         "gameUse": true,

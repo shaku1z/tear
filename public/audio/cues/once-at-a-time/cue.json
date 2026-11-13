@@ -28,6 +28,9 @@
     {
       "id": "rhythm",
       "role": "rhythm",
+      "kinds": [
+        "drums"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
@@ -41,6 +44,9 @@
     {
       "id": "pulse",
       "role": "bass",
+      "kinds": [
+        "bass"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
@@ -54,6 +60,11 @@
     {
       "id": "foundation",
       "role": "bed",
+      "kinds": [
+        "keys",
+        "other",
+        "strings"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "crossfade",
@@ -68,6 +79,9 @@
     {
       "id": "apex",
       "role": "apex",
+      "kinds": [
+        "percussion"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
@@ -81,6 +95,9 @@
     {
       "id": "melody",
       "role": "motif",
+      "kinds": [
+        "synth"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "crossfade",

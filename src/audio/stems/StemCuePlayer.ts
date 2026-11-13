@@ -1,5 +1,5 @@
 import { loopSeconds, planTierGains, secondsPerBar } from "./tier";
-import type { LoopMode, StemAsset, StemCueManifest, Tier } from "./types";
+import type { LoopMode, StemAsset, StemCueManifest, StemMixPreset, Tier } from "./types";
 import { assertValidStemCue } from "./validate";
 
 /**
@@ -58,7 +58,13 @@ export class StemCuePlayer {
   #backend: StemAudioBackend | null = null;
   #voices = new Map<string, StemVoice>();
   #tier: Tier = 0;
+  #preset: StemMixPreset | undefined;
   #started = false;
+
+  /** Set the player's mix preset (applies from the next start or tier change). */
+  setMixPreset(preset: StemMixPreset | undefined): void {
+    this.#preset = preset;
+  }
 
   async load(cue: StemCueManifest, backend: StemAudioBackend): Promise<void> {
     assertValidStemCue(cue);
@@ -82,7 +88,7 @@ export class StemCuePlayer {
     const introOffset = options.fromIntro && cue.intro ? cue.intro.startFrame / cue.sourceSampleRate : startSeconds;
 
     const at = backend.now() + (options.leadSeconds ?? 0.15);
-    const gains = planTierGains(cue, this.#tier);
+    const gains = planTierGains(cue, this.#tier, this.#preset);
     for (const [id, voice] of this.#voices) {
       const asset = cue.stems.find((candidate) => candidate.id === id);
       const crossfadeFrames = asset?.crossfadeFrames ?? cue.loop.crossfadeFrames;
@@ -107,7 +113,7 @@ export class StemCuePlayer {
     const backend = this.#backend;
     if (!cue || !backend) throw new Error("StemCuePlayer.load must run before setTier");
     this.#tier = tier;
-    const gains = planTierGains(cue, tier);
+    const gains = planTierGains(cue, tier, this.#preset);
     const rampSeconds = (options.transitionBars ?? 1) * secondsPerBar(cue);
     const at = backend.now();
     for (const [id, voice] of this.#voices) voice.rampGain(gains[id] ?? 0, at, rampSeconds);
