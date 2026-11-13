@@ -34,7 +34,7 @@ const bossStart = { mode: "bossonly", difficulty: "normal", weapon: "sword", bos
 const CASES = [
   resolved(
     "verdant-wave-wells-rootbinders",
-    { mode: "playground", difficulty: "normal", weapon: "sword", stage: "verdant-sanctum", wave: 31 },
+    { mode: "campaign", difficulty: "normal", weapon: "sword", stage: "verdant-sanctum", wave: 31 },
     {
       enemyComposition: [
         { kind: "rootbinder", count: 2 },
@@ -61,17 +61,27 @@ withJourney(
         const launched = environment.forgeResolvedScenario(scenario);
         if (!launched.ok) return { launched };
         let command = 1;
-        for (let frame = 0; frame < 900; frame += 1) {
-          if (frame % 90 === 30) {
-            const tick = environment.captureSnapshot(`${scenario.document.id}-${String(frame)}`).tick + 1;
-            const x = frame % 180 === 30 ? 1000 : -1000;
-            environment.step([{ kind: "command", tick, id: command++, command: { type: "move", x, y: 0 } }]);
-          } else environment.advanceApplicationFrame(1 / 60);
+        let last = environment.captureSnapshot(`${scenario.document.id}-start`);
+        let ended = false;
+        // Stop at the first natural end of the run (wave clear or defeat); the recording seals there.
+        try {
+          for (let frame = 0; frame < 900; frame += 1) {
+            if (frame % 90 === 30) {
+              last = environment.captureSnapshot(`${scenario.document.id}-${String(frame)}`);
+              const x = frame % 180 === 30 ? 1000 : -1000;
+              environment.step([
+                { kind: "command", tick: last.tick + 1, id: command++, command: { type: "move", x, y: 0 } },
+              ]);
+            } else environment.advanceApplicationFrame(1 / 60);
+          }
+          last = environment.captureSnapshot(`${scenario.document.id}-end`);
+        } catch (error) {
+          if (!String(error).includes("requires a running Tear runtime")) throw error;
+          ended = true;
         }
-        const last = environment.captureSnapshot(`${scenario.document.id}-end`);
-        environment.terminate();
+        if (!ended) environment.terminate();
         const bosses = last.state["tear.boss.v1"] ?? [];
-        return { launched, tick: last.tick, bossPhases: bosses.map((boss) => boss.phaseMarker) };
+        return { launched, ended, tick: last.tick, bossPhases: bosses.map((boss) => boss.phaseMarker) };
       }, entry);
       assert.equal(played.launched.ok, true, `${id}: ${JSON.stringify(played.launched)}`);
       await page.waitForFunction(
@@ -91,7 +101,7 @@ withJourney(
       assert.deepEqual(diverged, [], `${id}: replay diverged from live play`);
       assert.equal(verification.status, "verified", `${id}: ${verification.status}`);
       console.log(
-        `${id}: ${String(verification.comparisons.length)} receipts match (phases ${played.bossPhases.join(",") || "-"})`,
+        `${id}: ${String(verification.comparisons.length)} receipts match (ended ${String(played.ended)} at tick ${String(played.tick)}, phases ${played.bossPhases.join(",") || "-"})`,
       );
     }
   },
