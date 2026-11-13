@@ -44,7 +44,8 @@ const CASES = [
   ),
   resolved("rootbound-phase-1", bossStart, undefined),
   resolved("rootbound-phase-2", bossStart, { boss: { hp: 1375 } }),
-  resolved("rootbound-phase-3", bossStart, { boss: { hp: 625 } }),
+  // Phase III plays through Regrowth into the Last Spring rotation before the run ends.
+  { ...resolved("rootbound-phase-3", bossStart, { boss: { hp: 625 } }), frames: 1500 },
 ];
 
 // Each case gets a fresh page and Ghost vault, so recordings cannot interact through vault retention.
@@ -66,7 +67,7 @@ async function runCase(entry, port) {
         let ended = false;
         // Stop at the first natural end of the run (wave clear or defeat); the recording seals there.
         try {
-          for (let frame = 0; frame < 900; frame += 1) {
+          for (let frame = 0; frame < (scenario.frames ?? 900); frame += 1) {
             // Yield every frame as real play does; boss phases record enough per tick that bursts overflow staging.
             await new Promise((resolve) => setTimeout(resolve, 0));
             if (frame % 90 === 30) {
