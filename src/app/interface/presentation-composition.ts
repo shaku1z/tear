@@ -142,7 +142,7 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly inputHint: HTMLElement | null;
   readonly fullscreenButton: HTMLElement | null;
   /** Current run age and the profile's completed runs, for the control legend. */
-  readonly controlHintContext: () => Readonly<{ runSeconds: number; completedRuns: number }>;
+  readonly controlHintContext: () => Readonly<{ runSeconds: number; completedRuns: number; coached: boolean }>;
   readonly clamp: (value: number, minimum: number, maximum: number) => number;
   readonly ease: (amount: number) => number;
   readonly blendColor: (from: string, to: string, amount: number) => string;
@@ -391,6 +391,7 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
           pointerLocked: services.pointerLocked(),
           runSeconds: run.runSeconds,
           completedRuns: run.completedRuns,
+          coached: run.coached,
           presentationBusy: services.cinema.active || state.bossIntroActive(),
         });
         setDisplay(services.lockHint, visible.lockHint ? "block" : "none");
