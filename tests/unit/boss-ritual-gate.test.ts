@@ -28,7 +28,7 @@ function createTestEnemyTypes() {
 }
 
 // The live runtime gates every boss ritual behind this shape check
-// (src/app/shell/game-runtime.ts isRitualOwner).
+// (src/app/combat/live-combat-action-ports.ts isRitualOwner).
 function isRitualOwner(value: unknown): boolean {
   return typeof value === "object" && value !== null && "bossName" in value
     && typeof value.bossName === "string"
@@ -36,7 +36,7 @@ function isRitualOwner(value: unknown): boolean {
 }
 
 // The descent derives its actor id from presentationId/bossId, so the live gate only
-// has to recognise a game enemy (src/app/shell/game-runtime.ts isSourceOwner).
+// has to recognise a game enemy (src/app/combat/live-combat-action-ports.ts isSourceOwner).
 function isSourceOwner(value: unknown): boolean {
   const v = value as { presentationId?: unknown; bossId?: unknown };
   return typeof value === "object" && value !== null

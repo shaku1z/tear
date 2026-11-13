@@ -1,4 +1,4 @@
-import { EnvelopeSequencer, type CommandEnvelope } from "../app/messages";
+import { EnvelopeSequencer, type CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "./game-action";
 import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE, normalizeGameAction } from "./game-action";
 

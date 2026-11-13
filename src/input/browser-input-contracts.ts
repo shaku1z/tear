@@ -1,4 +1,4 @@
-import type { CommandEnvelope } from "../app/messages";
+import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "./game-action";
 import type { SemanticInputBuffer } from "./semantic-buffer";
 import type { TouchControlLayout } from "./touch-control-layout";

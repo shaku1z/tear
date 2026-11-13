@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { dispatchWaveClearIntents, dispatchWavePlanIntents } from "../../src/app/live-wave-intent-coordinator";
+import { dispatchWaveClearIntents, dispatchWavePlanIntents } from "../../src/gameplay/run/wave-intent-dispatcher";
 import type { WaveClearIntent } from "../../src/gameplay/run/wave-clear-planner";
 import type { WavePlanIntent } from "../../src/gameplay/run/wave-planner";
 

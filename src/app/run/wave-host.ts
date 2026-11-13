@@ -1,6 +1,6 @@
 import { LiveWaveController, type LiveWavePort } from "../../gameplay/run/live-wave-controller";
 import { bindWaveClearIntents, bindWavePlanIntents, type WaveClearIntentPort,
-  type WavePlanIntentPort } from "../live-wave-intent-coordinator";
+  type WavePlanIntentPort } from "../../gameplay/run/wave-intent-dispatcher";
 
 export interface LiveWaveHostOptions extends Omit<LiveWavePort, "executePlanIntents" | "executeClearIntents"> {
   readonly planIntents: WavePlanIntentPort;

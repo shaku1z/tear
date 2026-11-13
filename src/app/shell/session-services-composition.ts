@@ -86,3 +86,5 @@ export function createLiveSessionServices(options: LiveSessionServicesOptions) {
     controllers, economy, reward, bestScores, seedRace, beat,
   });
 }
+
+export type LiveSessionServices = ReturnType<typeof createLiveSessionServices>;
