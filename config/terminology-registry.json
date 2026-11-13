@@ -309,7 +309,7 @@
       "persistenceImpact": {
         "scope": "legacy screen route and disposable live-run inspection panel",
         "legacyRead": [
-          "ScreenId ghostlab",
+          "AppScreen ghostlab",
           "ghostlab.disposable-live-run"
         ],
         "canonicalWrite": "Replay Hub route/display vocabulary",

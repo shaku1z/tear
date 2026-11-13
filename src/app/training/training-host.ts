@@ -9,7 +9,7 @@ import type { RunDifficulty } from "../../gameplay/run/session";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 
 interface TrainingLifecycle { terminate(reason: string): void }
 interface TrainingStage { platforms: ArenaPlatform[]; readonly current: { readonly accent: string } }

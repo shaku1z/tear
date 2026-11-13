@@ -5,7 +5,7 @@ import { BestScoreRepository } from "../../gameplay/scoring/best-scores";
 import { createLiveEconomyRuntime } from "../../gameplay/scoring/live-economy-runtime";
 import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import { initializeLivePlatformBootstrap } from "./platform-bootstrap";
 import { createRewardRuntime } from "../../gameplay/run/reward-runtime";
 import { LiveRunControllerRegistry } from "../run/run-controller-api";

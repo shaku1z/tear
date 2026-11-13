@@ -3,7 +3,7 @@ import { createGhostFinalePlayback } from "../../ghost/finale-playback";
 import type { GhostFinalePermit } from "../../ghost/finale-companion";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import type { GhostTheaterScreenServices } from "../library/ghost-theater-screen-adapter";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 
 /** Source-time transport uses recorded frames, including multiple positions at the same canonical tick. */
 export function createGhostFinaleScreenAdapter(services: GhostTheaterScreenServices) {

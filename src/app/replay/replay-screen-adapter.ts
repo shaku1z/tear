@@ -9,7 +9,7 @@ import { stableVerificationHash } from "../../replay/hash";
 import { createBrowserGhostCoachHistoryPort } from "./browser-ghost-coach-history";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import { readBrowserGhostCapsule, listBrowserGhostCapsuleManifests } from "../../ghost/browser-capsule-vault";
 import { createGhostComparisonScreenAdapter } from "./ghost-comparison-screen-adapter";
 import { createGhostTheaterScreenAdapter } from "../library/ghost-theater-screen-adapter";

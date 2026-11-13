@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  IllegalLegacyAppTransitionError,
-  APP_SCREENS,
-  LEGAL_TRANSITIONS,
-  AppStateController,
-  type AppScreen,
-} from "../../src/app/interface/app-state-controller";
+import { IllegalLegacyAppTransitionError, AppStateController } from "../../src/app/interface/app-state-controller";
+import { APP_SCREENS, LEGAL_TRANSITIONS, type AppScreen } from "../../src/domain/screen-catalog";
 import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 
 const ENGINEERING = createSurfaceAvailability("engineering");

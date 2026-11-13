@@ -15,6 +15,7 @@ import { buildBossIntroSnapshot, buildPlaygroundHelpSnapshot, buildReticleSnapsh
 import { buildEnemyStatusSnapshot, buildEntityLayerSnapshot, buildFinaleWorldSnapshot,
   buildPantheonDebugSnapshot, buildSceneEffectsSnapshot, type VisualEnemySource } from "../../presentation/world/runtime-snapshots";
 import { tutorialInputPrompt } from "../../presentation/world/tutorial-input-prompts";
+import { isSheetScreen } from "../../domain/screen-catalog";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
 import { projectRootbinderPresentation } from "../../gameplay/environment/rootbinder-presentation-facts";
 import { renderRootbinderPresentation } from "../../presentation/environment/rootbinder-presentation";
@@ -97,9 +98,6 @@ export interface LiveWorldPresentationAdapters {
   readonly drawStageBanner: () => void;
   readonly drawReticle: () => void;
 }
-
-/** Menu screens drawn on the paper sheet (the toast rests left of BACK in their footer row). */
-const SHEET_SCREENS: ReadonlySet<string> = new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings"]);
 
 export function createLiveWorldPresentationAdapters(
   state: WorldPresentationState,
@@ -288,7 +286,7 @@ export function createLiveWorldPresentationAdapters(
         coinsFor: (achievement) => { const source = d.ACH.byId(achievement.id); return source ? d.ACH.coinsFor(source) : 0; } });
       if (snapshot) {
         const screen = state.screen();
-        const placement = screen === "playing" ? "hud" : SHEET_SCREENS.has(screen) ? "sheet-footer" : "corner";
+        const placement = screen === "playing" ? "hud" : isSheetScreen(screen) ? "sheet-footer" : "corner";
         const clearTop = touchClearTop();
         world.achievementToast({ ...snapshot, placement, ...(clearTop === undefined ? {} : { clearTop }) });
       }

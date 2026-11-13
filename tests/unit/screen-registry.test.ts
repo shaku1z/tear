@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { APP_SCREENS, type AppScreen } from "../../src/app/interface/app-state-controller";
-import { isMenuScreen, isWorldScreen, renderRegisteredScreen, type ScreenRendererRegistry } from "../../src/app/interface/screen-registry";
+import { APP_SCREENS, isMenuScreen, isWorldScreen, type AppScreen } from "../../src/domain/screen-catalog";
+import { renderRegisteredScreen, type ScreenRendererRegistry } from "../../src/app/interface/screen-registry";
 
 describe("screen registry", () => {
   it("dispatches every application screen through its exact renderer", () => {

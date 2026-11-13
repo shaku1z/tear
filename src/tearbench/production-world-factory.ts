@@ -8,15 +8,12 @@ import { stageAt } from "../gameplay/stages";
 import type { EnemyKind } from "../gameplay/run/content-director";
 import { A11Y, CONFIG, GFX, REMOTE } from "../config/game-config";
 import { createLiveAuthoritativeInputAdapter } from "../app/world/authoritative-input-adapter";
-import { createLiveWorldState, type LiveWorldSessionPort } from "../app/world/world-composition";
-import { createLiveWorldServices } from "../app/world/world-context";
-import { createLiveWorldEntityFactory } from "../app/world/world-entity-factory";
+import { createLiveWorldComposition, type LiveWorldSessionPort } from "../app/world/world-composition";
 import type { GameRuntimeDependencies } from "../app/shell/game-runtime-dependencies";
 import { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist } from "../domain/geometry";
 import { applyWeapon } from "../gameplay/weapons";
 import { CinematicTimeline } from "../gameplay/runtime/cinematic-director";
 import { createTearWorldBootstrap } from "../gameplay/runtime/tear-world-bootstrap";
-import { createTearWorldComposition } from "../gameplay/runtime/tear-world-composition";
 import {
   createTearWorldSimulationFactories,
   type TearWorldEntityPresentationPorts,
@@ -30,11 +27,6 @@ import { cosmeticRandom } from "../presentation/cosmetic-random";
 import { createCosmeticEmissionRandom } from "../domain/cosmetic-emission-random";
 import { createMirrorLockFeedback } from "../presentation/mirror-lock-feedback";
 import { createParticleSystem } from "../presentation/particles";
-import { createEnvironmentRuntime } from "../gameplay/environment/environment-runtime";
-import { BLOOM_WELL_VALIDATION } from "../gameplay/environment/bloom-well";
-import { PALE_TRACK_VALIDATION } from "../gameplay/environment/aurora-track";
-import { createVerdantEnvironmentFeature } from "../gameplay/environment/verdant-environment-feature";
-import { createPaleEnvironmentFeature } from "../gameplay/environment/pale-environment-feature";
 import { createLiveTutorialRuntime, recoverTutorialBlade, resetTutorialActors } from "../gameplay/training/live-tutorial-runtime";
 import { createTutorialArena } from "../gameplay/training/tutorial-arenas";
 import { trainingPlatforms } from "../gameplay/training/playground-controller";
@@ -173,24 +165,15 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     lastVaultId: () => null, setLastVaultId: () => undefined,
     winSeconds: () => 0, setWinSeconds: () => undefined,
   };
-  // The same parts as the live world composition (src/app/world/world-composition.ts),
-  // assembled here with three differences: the environment does not publish on
-  // the gameplay event bus, no music director is built, and services are built
-  // before the cinema. Both constructors are in the tutorial gold fingerprint
-  // closure, so merging them refreshes src/gameplay/training/tutorial-gold-binding.json.
-  const state = createLiveWorldState(session);
-  const entities = createLiveWorldEntityFactory(dependencies);
-  const worldId = options.worldId ?? `production-replay:${options.seed}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`;
-  const environment = createEnvironmentRuntime({
-    worldId,
-    features: [createVerdantEnvironmentFeature(), createPaleEnvironmentFeature()],
-    validators: [BLOOM_WELL_VALIDATION, PALE_TRACK_VALIDATION],
+  // The live world's constructor. A detached world keeps its environment off
+  // the gameplay event bus (options.gameplayEvents never receives environment
+  // facts) and has no music direction.
+  const world = createLiveWorldComposition({
+    dependencies, configuration, session,
+    worldId: options.worldId ?? `production-replay:${options.seed}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`,
+    publishEnvironmentEvents: false, musicDirection: false,
   });
-  const world = createTearWorldComposition({
-    state, entities, services: createLiveWorldServices({ dependencies, configuration }),
-    cinema: new CinematicTimeline.Director(config),
-    worldId, environment,
-  });
+  const { state } = world;
   world.context.services.random.resetRun(runSeed);
   const difficulty = options.difficulty ?? "normal";
   const difficultyPlan = productionDifficultyPlan(difficulty);
@@ -231,7 +214,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     addShake: (value) => { world.context.transient.impact.shake = Math.max(world.context.transient.impact.shake, value); },
     loseStyle: () => undefined, shieldAbsorb: () => undefined, addFloater: () => undefined, finaleBladeCut: finale.runtime.tryBladeCut, playSound: () => undefined });
   const tutorialOutward: string[] = [];
-  let tutorialSpawn: ((kind: EnemyKind, hpScale: number) => ReturnType<typeof entities.createEnemy>) | undefined;
+  let tutorialSpawn: ((kind: EnemyKind, hpScale: number) => ReturnType<typeof world.entities.createEnemy>) | undefined;
   const requirePlayer = () => { const value = world.state.player(); if (value === undefined) throw new Error("tutorial requires its world player"); return value; };
   const tutorial = createLiveTutorialRuntime({
     weaponId: () => world.state.run()?.weaponId ?? "sword",

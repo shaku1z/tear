@@ -18,8 +18,8 @@ import { createLiveHudFeedbackState } from "../interface/hud-feedback-state";
 import { createLiveInterfaceFrameState } from "../interface/interface-frame-state";
 import { createLiveInterfaceInteractionState } from "../interface/interface-interaction-state";
 import { assembleLiveInterface } from "../interface/live-interface-assembly";
-import { createLiveScreenNavigation, isAppScreen } from "../interface/live-screen-navigation";
-import { isMenuScreen } from "../interface/screen-registry";
+import { createLiveScreenNavigation } from "../interface/live-screen-navigation";
+import { isAppScreen, isMenuScreen } from "../../domain/screen-catalog";
 import { bindGhostArchiveFileLifecycle } from "../library/browser-ghost-archive-files";
 import { createBrowserGhostVaultLibrary } from "../library/ghost-vault-library-controller";
 import { createBrowserLiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
@@ -326,7 +326,7 @@ export function startLiveGame(dependencies: GameRuntimeDependencies, configurati
         Attract.update(dt);
       } else Attract.ready = false;
     },
-    isMenuScreen: (screen) => isAppScreen(screen) && isMenuScreen(screen),
+    isMenuScreen,
     gameplayStart: () => {
       CG.gameplayStart();
     },

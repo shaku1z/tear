@@ -1,5 +1,5 @@
 import { createScreenActionRouter } from "./screen-action-router";
-import type { AppScreen } from "./app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { LibraryScreenAdapters } from "../library/library-screen-adapters";
 import type { ReplayScreenAdapter } from "../replay/replay-screen-adapter";
 import type { SettingsRenameAdapters } from "../screens/settings-rename-adapters";

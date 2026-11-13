@@ -1,3 +1,5 @@
+import { isWorldScreen, screenResetsScrollOnEnter } from "../domain/screen-catalog";
+
 export interface ScreenRectangle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
 
 export interface RenderPipelinePorts<Screen extends string> {
@@ -39,9 +41,6 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly updateDomHints: (screen: Screen) => void;
 }
 
-const worldScreens = new Set(["playing", "draft", "reserve", "tierup", "paused", "gameover", "win", "confirmquit", "continue", "pgmenu", "pglab"]);
-export const isWorldScreen = (screen: string): boolean => worldScreens.has(screen);
-
 /** Stable, testable ordering for the canvas presentation frame. */
 export function renderPresentationFrame<Screen extends string>(ports: RenderPipelinePorts<Screen>): void {
   ports.resizeIfNeeded();
@@ -51,7 +50,7 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
   const screen = ports.screen();
   ports.applyScreenDensity(screen);
   const rectangle = ports.screenRectangle();
-  const playLike = worldScreens.has(screen);
+  const playLike = isWorldScreen(screen);
   const background = ports.background(playLike);
   // This opaque full-surface fill replaces every pixel. A preceding clear
   // doubles the high-DPI raster work and cannot affect the resulting image.
@@ -66,7 +65,7 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
 
   if (screen !== ports.previousScreen()) {
     ports.setEnterSeconds(0);
-    if (screen === "shop" || screen === "draft" || screen === "reserve" || screen === "tierup") ports.resetScroll();
+    if (screenResetsScrollOnEnter(screen)) ports.resetScroll();
   }
   if (ports.isMenuScreen(screen)) {
     ports.setEnterAmount(ports.ease(ports.enterSeconds() / 0.24));

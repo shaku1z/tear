@@ -1,6 +1,6 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { LiveGameHostState } from "../world/game-host-state";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 
 interface DebugCinemaSnapshot {
   readonly id: string | undefined;

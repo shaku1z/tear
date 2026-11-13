@@ -6,9 +6,8 @@ import {
 import type { ScreenAction } from "../../src/domain/screen-actions";
 import { createEngineeringQuery } from "../../src/app/shell/engineering-query";
 import { gateScreenActions } from "../../src/app/interface/screen-action-bindings";
-import {
-  IllegalLegacyAppTransitionError, APP_SCREENS, AppStateController, UnavailableLegacyAppScreenError,
-} from "../../src/app/interface/app-state-controller";
+import { IllegalLegacyAppTransitionError, AppStateController, UnavailableLegacyAppScreenError } from "../../src/app/interface/app-state-controller";
+import { APP_SCREENS } from "../../src/domain/screen-catalog";
 import { MODE_CATALOG, RELEASE_FALLBACK_MODE, admittedRunMode, modeSurface } from "../../src/gameplay/run/mode-catalog";
 
 const RELEASE = createSurfaceAvailability("release");

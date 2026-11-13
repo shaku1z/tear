@@ -1,7 +1,7 @@
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import { createLiveMusicObservation, projectLiveMusicRun } from "../interface/music-observation-adapter";
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
-import { isMenuScreen } from "../interface/screen-registry";
+import { isMenuScreen } from "../../domain/screen-catalog";
 import type { LiveGhostCapture } from "../replay/live-ghost-capture";
 import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
 import type { LiveGhostPracticeChallenge } from "../replay/live-ghost-practice-challenge";

@@ -14,7 +14,7 @@ import { createGhostProductionReplaySession, type GhostVerifiedProductionReplayS
 import { GhostTheaterTransport, type GhostTheaterState } from "../../ghost/theater";
 import type { GhostPracticeChild, GhostSeekResult } from "../../ghost/replay-world";
 import type { ReplayScreenView } from "../../presentation/screens/contracts";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { GhostPracticeLaunchResult } from "../replay/ghost-practice-launch";
 import { ghostCoachCandidate } from "../../ghost/coach-history";
 import { createGhostCoachHistoryController, type GhostCoachHistoryPort } from "./ghost-coach-history-controller";

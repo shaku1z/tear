@@ -1,4 +1,4 @@
-import type { AppScreen } from "./app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 
 export interface LiveInterfaceFrameState {
   readonly previousScreen: () => AppScreen;

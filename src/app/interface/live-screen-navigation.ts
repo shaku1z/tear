@@ -1,15 +1,6 @@
-import type { AppScreen, AppStateController, AppTransitionContext } from "./app-state-controller";
+import type { AppStateController, AppTransitionContext } from "./app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { BrowserInput } from "../../input/browser-input-contracts";
-
-/**
- * Screens the frame coordinator, State Forge restore and menu checks accept by
- * name. The engineering screens (academy, foundry, ghostlab, botevidence,
- * ghostpublication, ghostsupport) are not in this list.
- */
-export const isAppScreen = (screen: string): screen is AppScreen =>
-  ["menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings", "continue",
-    "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
-    "leaderboards", "rename", "pgmenu", "pglab"].includes(screen);
 
 /** Collaborators that react to a transition but are constructed after the navigation owner. */
 export interface LiveScreenTransitionHooks {

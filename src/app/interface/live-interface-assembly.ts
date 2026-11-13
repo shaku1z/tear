@@ -22,7 +22,8 @@ import type { LiveInterfaceFrameState } from "./interface-frame-state";
 import type { LiveInterfaceInteractionState } from "./interface-interaction-state";
 import { createLiveScreenActions, type LiveEngineeringScreens, type LiveGhostLibraryScreens } from "./live-screen-actions";
 import type { LiveScreenNavigation } from "./live-screen-navigation";
-import { isMenuScreen, renderRegisteredScreen } from "./screen-registry";
+import { renderRegisteredScreen } from "./screen-registry";
+import { isMenuScreen } from "../../domain/screen-catalog";
 
 export interface LiveInterfaceAssemblyOptions {
   readonly dependencies: GameRuntimeDependencies;

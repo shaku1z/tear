@@ -9,7 +9,7 @@ import { createLiveScreenActionBindings, gateScreenActions, type ScreenActionBin
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import { createLiveSettingsRenameAdapters, type SettingsRenameAdapters,
   type SettingsRenameServices } from "../screens/settings-rename-adapters";
-import type { AppScreen } from "./app-state-controller";
+import { isAppScreen, type AppScreen } from "../../domain/screen-catalog";
 import type { AcademyScreenView } from "../../presentation/screens/contracts";
 import type { FoundryScreenView } from "../../presentation/screens/contracts";
 import type { GhostLabScreenView } from "../../presentation/screens/contracts";
@@ -57,12 +57,6 @@ export interface LiveScreenPresentationComposition {
   readonly chooseTier: (index: number) => void;
   readonly rerollDraft: () => void;
   readonly dispatch: ReturnType<typeof createLiveScreenActionBindings>;
-}
-
-function isAppScreen(value: string): value is AppScreen {
-  return ["menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings",
-    "continue", "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile",
-    "achievements", "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence", "ghostpublication", "ghostsupport"].includes(value);
 }
 
 /** Resolves the deliberately lazy screen-adapter cycle behind one strict composition boundary. */
