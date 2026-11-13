@@ -526,6 +526,28 @@ describe("TearBench shared state codec registry", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("keeps a broken boss-arena platform's retired id as an alias while it waits to re-form", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const snapshot = snapshotFrom(populatedWorld());
+    const retired = { platformId: "arena:rootbound:0", arenaState: "broken", x: 0, y: 0, w: 200, h: 22 };
+    const valid: TearSnapshotV1 = {
+      ...structuredClone(snapshot),
+      state: {
+        ...snapshot.state,
+        "tear.run.v1": {
+          ...(snapshot.state["tear.run.v1"] as Record<string, unknown>),
+          _arenaBroken: [{ ...retired, baseSpec: { ...retired } }],
+        },
+      },
+    };
+    const result = restoreSnapshotTransactionally(valid, registry, factory, {
+      replace() {
+        /* expected */
+      },
+    });
+    expect(result.ok, result.ok ? "" : JSON.stringify(result.issues)).toBe(true);
+  });
+
   it("stages constructor/reference rebuilding off-run and rolls back a failed live commit", () => {
     const registry = createDefaultStateCodecRegistry();
     const original = populatedWorld();
