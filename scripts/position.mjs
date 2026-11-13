@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Renders docs/POSITION.md from the curated config/position.json and checks that the rendered
 // file is current. `pnpm position:render` writes it; `pnpm check:docs` calls checkPosition(), so
 // a stale or hand-edited POSITION.md fails check:quick and CI's static.check-docs task.
