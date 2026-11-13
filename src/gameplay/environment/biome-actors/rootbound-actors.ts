@@ -1,9 +1,6 @@
 import { ROOTBOUND_ROOTLINE, type RootboundRootlineStage } from "../../entities/enemy-types/rootbound";
 import type { EnvironmentRuntime } from "../environment-runtime";
-import {
-  createVerdantEnvironmentFeature,
-  type RootboundEnvironmentActor,
-} from "../verdant-environment-feature";
+import { createVerdantEnvironmentFeature, type RootboundEnvironmentActor } from "../verdant-environment-feature";
 import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
 import type { CONFIG } from "../../../config/game-config";
 import { bindLiveBloomWellActors } from "./bloom-well-actors";

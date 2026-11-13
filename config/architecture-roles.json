@@ -36,7 +36,7 @@
         "src/gameplay/environment/white-hart-route-runtime.ts",
         "src/gameplay/entities/enemy-types/white-hart.ts",
         "src/gameplay/entities/enemy-types/rimehound.ts",
-        "src/app/world/biomes/aurora-track-wiring.ts"
+        "src/gameplay/environment/biome-actors/aurora-track-actors.ts"
       ]
     },
     "biome.verdant.implementation": {
@@ -53,7 +53,7 @@
         "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
         "src/gameplay/entities/enemy-types/rootbound-ground-verbs.ts",
         "src/presentation/environment/bloom-well-presentation.ts",
-        "src/app/world/biomes/bloom-well-wiring.ts",
+        "src/gameplay/environment/biome-actors/bloom-well-actors.ts",
         "src/tearbench/rootbound-graft-anchor-forge.ts"
       ]
     },

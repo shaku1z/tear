@@ -1,8 +1,5 @@
 import type { EnvironmentRuntime } from "../environment-runtime";
-import {
-  createVerdantEnvironmentFeature,
-  type RootbinderEnvironmentActor,
-} from "../verdant-environment-feature";
+import { createVerdantEnvironmentFeature, type RootbinderEnvironmentActor } from "../verdant-environment-feature";
 import { severRootbinder, type RootbinderCandidate } from "../../entities/rootbinder-runtime";
 import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
 
@@ -51,7 +48,8 @@ export function bindLiveRootbinderActors(
     });
     return rootbinders.map((enemy): RootbinderEnvironmentActor => {
       const id = actorId(enemy);
-      const state = (enemy as BiomeActorEnemy & { rootbinderState?: RootbinderEnvironmentActor["state"] }).rootbinderState;
+      const state = (enemy as BiomeActorEnemy & { rootbinderState?: RootbinderEnvironmentActor["state"] })
+        .rootbinderState;
       if (state === undefined) throw new Error("live Rootbinder is missing its deterministic state");
       (enemy as BiomeActorEnemy & { rootbinderOwnerId?: string }).rootbinderOwnerId = id;
       return Object.freeze({

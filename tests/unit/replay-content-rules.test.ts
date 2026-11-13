@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { EnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { ENEMY_IDENTITY_IDS } from "../../src/gameplay/run/content-director";
-import { bindLiveBiomeActors } from "../../src/app/world/biomes/live-biome-actors";
+import { bindBiomeActors } from "../../src/gameplay/environment/biome-actors/bind-biome-actors";
 import { createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
 
 // Rules over all content: whatever live play can build or bind, the production replay world must
@@ -30,7 +30,7 @@ describe("production replay covers all live content", () => {
 
   it("binds every biome actor source that live play binds, in the same order", () => {
     const live = recordActorSourceBindings(() => {
-      bindLiveBiomeActors({
+      bindBiomeActors({
         environment: new EnvironmentRuntime("probe", "probe"),
         config: CONFIG,
         player: () => ({}) as never,

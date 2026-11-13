@@ -1,8 +1,5 @@
 import type { EnvironmentRuntime } from "../environment-runtime";
-import {
-  createPaleEnvironmentFeature,
-  type WhiteHartEnvironmentActor,
-} from "../pale-environment-feature";
+import { createPaleEnvironmentFeature, type WhiteHartEnvironmentActor } from "../pale-environment-feature";
 import type { WhiteHartEnvironmentRequest } from "../white-hart-route-runtime";
 import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
 

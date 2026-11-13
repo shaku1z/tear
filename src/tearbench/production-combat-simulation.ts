@@ -4,9 +4,7 @@ import { createTearCombatSimulation } from "../gameplay/runtime/tear-combat-simu
 import type { DeferredCanonicalState } from "../gameplay/runtime/authoritative-step";
 import type { ProductionReplayWorld } from "./production-world-factory";
 import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./production-combat-phases";
-import { bindLiveAuroraTrackActors } from "../app/world/biomes/aurora-track-wiring";
-import { bindLiveWhiteHartActors } from "../app/world/biomes/white-hart-wiring";
-import { bindLiveVerdantActors } from "../app/world/biomes/rootbound-wiring";
+import { bindBiomeActors } from "../gameplay/environment/biome-actors/bind-biome-actors";
 
 export interface ProductionCombatSimulationOptions<State> extends ProductionCombatPhaseOptions {
   snapshot(tick: number, input: AuthoritativeInputState): State | DeferredCanonicalState<State>;
@@ -62,39 +60,16 @@ export function createProductionCombatSimulation<State>(
       snapshot: (tick, input) => options.snapshot(tick, input),
     },
   });
-  const config = replay.configuration.value;
-  // Live binds Verdant first (live-biome-actors.ts); the same order keeps replayed
-  // Bloom lift and Rootbinder links identical to the run that was recorded.
-  bindLiveVerdantActors(
-    replay.world.context.environment,
-    () => replay.world.state.player() as never,
-    () => replay.world.state.enemies(),
-    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
-    config,
-  );
-  bindLiveAuroraTrackActors(
-    replay.world.context.environment,
-    () => replay.world.state.player() as never,
-    () => replay.world.state.blade() as never,
-    () => replay.world.state.enemies(),
-    () => replay.world.state.projectiles(),
-    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
-    (projectile) => core.combatEntityRuntime.id(projectile, "projectile"),
-    {
-      playerAcceleration: config.player.groundAccel,
-      playerMaximumSpeed: config.player.moveSpeed,
-      bladeAcceleration: config.blade.throw.speed,
-      bladeMaximumSpeed: config.blade.throw.maxSpeed,
-      projectileAcceleration: config.proj.speed,
-      projectileMaximumSpeed: config.chargedShot.speed,
-    },
-  );
-  bindLiveWhiteHartActors(
-    replay.world.context.environment,
-    () => replay.world.state.player() as never,
-    () => replay.world.state.enemies(),
-    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
-  );
+  // The same registration path live play uses, so replayed biome actors match the recorded run.
+  bindBiomeActors({
+    environment: replay.world.context.environment,
+    config: replay.configuration.value,
+    player: () => replay.world.state.player() as never,
+    blade: () => replay.world.state.blade() as never,
+    enemies: () => replay.world.state.enemies(),
+    projectiles: () => replay.world.state.projectiles(),
+    entityId: (entity, prefix) => core.combatEntityRuntime.id(entity, prefix),
+  });
   replay.world.context.environment.setAvailableActorIdsSource(
     () =>
       new Set([
