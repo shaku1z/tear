@@ -20,6 +20,7 @@ https://tearblade.com runs `9e7d6a70` (deployed 2026-08-30). Production still ru
 | [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Its pull request, then the lead's review. | Playtest the reworked stage. |
 | [Tutorial and Playground experience](#training-ux) | In progress | Its pull request, then the lead's review. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
+| [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | One pull request per item, reviewed by the lead. | Decide whether the Git hooks and the owner-safe merge helper move into the repository (a proposal will be written; hook changes are reserved for the owner). |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
 
@@ -82,6 +83,16 @@ https://tearblade.com runs `9e7d6a70` (deployed 2026-08-30). Production still ru
 - Next: Start once the Verdant gameplay rework has landed.
 - Owner action: none
 - Evidence: [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
+
+<a id="wiki"></a>
+
+### Player wiki
+
+**In progress.** The wiki moves into this repository as wiki/, built from the same commit as the game: facts come from the exporter (pnpm export:wiki), pictures from the game's own renderers and test build. The separate tear-wiki repository is archived once a deploy from here is live.
+
+- Next: Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy.
+- Owner action: Archive shaku1z/tear-wiki after the first deploy from this repository.
+- Evidence: [wiki/README.md](../wiki/README.md), [wiki/ARCHIVE.md](../wiki/ARCHIVE.md)
 
 <a id="repository-structure"></a>
 
