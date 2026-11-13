@@ -1,0 +1,2099 @@
+{
+  "schema": 1,
+  "about": "Every package script and every tool entry point under scripts/, with what it is for, what it touches and how long it usually takes. tests/unit/tool-catalogue.test.mjs fails on an unregistered or dangling entry. Durations are typical on the owner's Windows machine and were estimated, not timed.",
+  "effectClasses": {
+    "read-only": "Reads files or git state only (temporary directories it cleans up do not count)",
+    "writes-repo-files": "Rewrites tracked files (formatting, generated documents, baselines)",
+    "writes-artifacts": "Writes ignored outputs such as dist/, artifacts/ or build caches",
+    "network": "Talks to a remote service (GitHub, Cloudflare, Firebase, package registries)",
+    "deploys": "Publishes something players or the wiki can see",
+    "starts-server": "Runs a local server until stopped",
+    "launches-browser": "Starts a headless browser"
+  },
+  "durations": {
+    "seconds": "under about 15 seconds",
+    "under-a-minute": "15 to 60 seconds",
+    "minutes": "1 to 10 minutes",
+    "long": "over 10 minutes, or runs until stopped"
+  },
+  "scripts": {
+    "dev": {
+      "purpose": "Vite dev server for the standalone build on port 5173, with engineering surfaces; for local UI and gameplay work",
+      "effects": [
+        "starts-server"
+      ],
+      "duration": "long"
+    },
+    "dev:crazygames": {
+      "purpose": "Vite dev server in CrazyGames mode, for checking the CrazyGames adapter locally",
+      "effects": [
+        "starts-server"
+      ],
+      "duration": "long"
+    },
+    "build": {
+      "purpose": "Production builds of both targets (standalone then CrazyGames) into dist/",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "build:standalone": {
+      "purpose": "Production standalone build into dist/standalone (checks the tutorial gold fingerprint first)",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "build:crazygames": {
+      "purpose": "Production CrazyGames build into dist/crazygames",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "build:test": {
+      "purpose": "Test builds of both targets (test hooks enabled) for browser tests",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "build:test:standalone": {
+      "purpose": "Test build of the standalone target into dist/test-standalone, needed before browser tests",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "build:test:crazygames": {
+      "purpose": "Test build of the CrazyGames target into dist/test-crazygames",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "package:crazygames": {
+      "purpose": "Builds the CrazyGames target and zips it into the upload package under artifacts/",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "package:crazygames:existing": {
+      "purpose": "Zips an existing dist/crazygames into the CrazyGames upload package without rebuilding",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute"
+    },
+    "preview": {
+      "purpose": "Serves an existing dist/standalone production build on port 4173 to look at what players get",
+      "effects": [
+        "starts-server"
+      ],
+      "duration": "long"
+    },
+    "typecheck": {
+      "purpose": "TypeScript project-references type check (writes tsbuildinfo cache under artifacts/build-cache)",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "lint": {
+      "purpose": "ESLint over the canonical target list; pass --fix to repair",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "minutes"
+    },
+    "format": {
+      "purpose": "Rewrites tracked source files with Prettier; run before handing off",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "under-a-minute"
+    },
+    "format:check": {
+      "purpose": "Fails if any Prettier target is unformatted; part of check:quick and CI",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test": {
+      "purpose": "Full Vitest unit suite",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "minutes"
+    },
+    "test:watch": {
+      "purpose": "Vitest in watch mode while iterating",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "long"
+    },
+    "test:related": {
+      "purpose": "Runs only the Vitest tests related to the given changed source files",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:agent-skills": {
+      "purpose": "Checks .claude/skills pointers mirror the .agents/skills sources",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:checkpoints": {
+      "purpose": "Node tests for the checkpoint runner and config/checkpoints.json",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:quick": {
+      "purpose": "Cheap static gate: format check, typecheck, lint, architecture, code budget and docs",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "test:unit:without-preservation-corpus": {
+      "purpose": "Whole Vitest suite run serially, minus the ghost preservation corpus (used by check:local)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "long"
+    },
+    "test:endurance": {
+      "purpose": "Endurance Vitest config (for example 10,000 TearBench episodes); weekly",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "long"
+    },
+    "tearbench": {
+      "purpose": "TearBench CLI (tasks, ci, parity, graveyard, forge, evidence, bisect); effects depend on the subcommand",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "tearbench:run-task": {
+      "purpose": "Runs one registered TearBench task and writes its receipt under artifacts/tearbench",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "tearbench:certify-plan": {
+      "purpose": "Certifies a TearBench plan from its task receipts and writes the plan certificate",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute"
+    },
+    "tearbench:record-build-provider": {
+      "purpose": "CI only: records a GitHub Actions build-artifact provider receipt from build records",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds"
+    },
+    "requirements:generate": {
+      "purpose": "Regenerates the Ghost3 requirements JSON, annex and capability dashboard under docs/",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "seconds"
+    },
+    "requirements:check": {
+      "purpose": "Fails if the generated Ghost3 requirements documents are stale",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:weapons": {
+      "purpose": "Vitest for the final five weapon roster; run after weapon or ability changes",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:determinism": {
+      "purpose": "Vitest canonical hash stream; must stay green for no-behaviour-change refactors",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:headless:current-weapon-parity": {
+      "purpose": "Headless Vitest weapon parity scenarios for the current build",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:headless:current-gameplay-scenarios": {
+      "purpose": "Headless Vitest gameplay scenarios for the current build",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:tearbench-selection": {
+      "purpose": "Node tests for TearBench evidence and route selection (temp dirs)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:terminology": {
+      "purpose": "Node tests for the terminology and active-roster checkers",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:code-budget": {
+      "purpose": "Node tests for the code budget checker",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:architecture": {
+      "purpose": "Node tests for the source architecture gate",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:tutorial-gold-fingerprint": {
+      "purpose": "Node tests for the tutorial gold reference fingerprint",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:docs": {
+      "purpose": "Node tests for the docs authority checker",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:workspace": {
+      "purpose": "Node tests for the workspace checker",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:parent-layout": {
+      "purpose": "Node tests for the parent workspace layout checker",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:artifact-retention": {
+      "purpose": "Node tests for the artifact retention report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:artifact-disposition": {
+      "purpose": "Node tests for artifact disposition validation",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:workspace-recovery": {
+      "purpose": "Node tests for the workspace recovery report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:workspace-recovery-second-wave": {
+      "purpose": "Node tests for the second-wave workspace recovery flow",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:deferred-workspace-dependency": {
+      "purpose": "Node tests for the deferred workspace dependency report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:preserved-copy-comparison": {
+      "purpose": "Node tests for the preserved-copy comparison tool",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:remaining-workspace-inventory": {
+      "purpose": "Node tests for the remaining workspace inventory report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:workspace-quarantine": {
+      "purpose": "Node tests for preparing a workspace quarantine",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:workspace-preservation-quarantine": {
+      "purpose": "Node tests for applying a preservation quarantine",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:serve": {
+      "purpose": "Node tests for the scripts/serve.py loopback server contract (starts it briefly on temp dirs)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser": {
+      "purpose": "Basic browser smoke test of a built dist/ (build first)",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:features": {
+      "purpose": "Browser feature matrix over a test build",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:bosses": {
+      "purpose": "Browser boss parity checks over a test build",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:journeys": {
+      "purpose": "Browser navigation, progression, playground, terminal and cinematic-preference journeys",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:fresh-run-meta": {
+      "purpose": "Browser journey for fresh-run meta progression",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:agent-journey": {
+      "purpose": "Browser journey driven by the scripted game agent",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:tear-runtime": {
+      "purpose": "Browser check of the Tear runtime environment in a test build",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:current-gameplay-scenarios": {
+      "purpose": "Browser run of the current gameplay scenarios",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:current-weapon-parity": {
+      "purpose": "TearBench current-weapon parity run in the browser, artifact under artifacts/tearbench/generated",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:ghost-v3-live-capture": {
+      "purpose": "Browser check of Ghost v3 live replay capture",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:verdant-presentation": {
+      "purpose": "Browser capture of the Verdant biome presentation",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:pale-rimehound": {
+      "purpose": "Browser check of the Pale Rimehound enemy",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:pale-variants": {
+      "purpose": "Browser check of Pale enemy variants",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:pale-presentation": {
+      "purpose": "Browser capture of the Pale biome presentation",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:pale-white-hart-foundation": {
+      "purpose": "Browser check of the White Hart boss foundation",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:pale-white-hart-phases": {
+      "purpose": "Browser check of the White Hart boss phases",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-v3-physical-capture": {
+      "purpose": "Browser check of Ghost v3 physical capture",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-v3-dynamic-config": {
+      "purpose": "Browser check of Ghost v3 dynamic capture config",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:current-live-detached-parity": {
+      "purpose": "Live browser parity trace then detached-world parity Vitest for one C27A scenario",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:ghost-v3-interrupted-recovery": {
+      "purpose": "Browser check of Ghost v3 recovery after an interrupted capture",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-v3-corrupt-recovery": {
+      "purpose": "Browser check of Ghost v3 recovery from corrupt storage",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-v3-storage-fault": {
+      "purpose": "Browser check of Ghost v3 behaviour under storage faults",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-vault-library": {
+      "purpose": "Browser check of the Ghost Vault library screen",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-lab-home": {
+      "purpose": "Browser check of the Ghost Lab home screen",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:preservation-corpus": {
+      "purpose": "Vitest ghost preservation corpus with a JSON report under artifacts/tearbench/checkpoints",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:ghost-vault-conditional-commit": {
+      "purpose": "Browser check of Ghost Vault conditional commits",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-vault-interrupted-recovery": {
+      "purpose": "Browser check of Ghost Vault interrupted-write recovery",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-vault-physical-quota": {
+      "purpose": "Browser check of Ghost Vault under a physical storage quota",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ghost-vault-schema-migration": {
+      "purpose": "Browser check of Ghost Vault schema migration",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:state-forge": {
+      "purpose": "Browser State Forge runtime, studio and exit-matrix journeys",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:state-forge-studio": {
+      "purpose": "Browser State Forge studio journey only",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:scripted-agent": {
+      "purpose": "Browser scripted-agent autonomy run",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:game-agent-run-monitor": {
+      "purpose": "Browser check of the game agent run monitor",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:scripted-agent-matrix": {
+      "purpose": "Browser scripted-agent scenario matrix",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:scripted-agent-longitudinal": {
+      "purpose": "Browser longitudinal scripted-agent run",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:scripted-agent-repeatability": {
+      "purpose": "Browser scripted-agent repeatability check",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:production-isolation": {
+      "purpose": "Browser check that a production build exposes no test or engineering runtime",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:release-adventure": {
+      "purpose": "Browser release Adventure journey over a production build",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:class-c-production-smoke": {
+      "purpose": "Class C production smoke in the browser with evidence under artifacts/",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:class-c-touch-smoke": {
+      "purpose": "Class C touch-input smoke in the browser",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:class-c-crazygames-iframe-smoke": {
+      "purpose": "Class C CrazyGames iframe smoke in the browser",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:production-input-edge": {
+      "purpose": "Browser production input edge-case smoke",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:class-c-pwa-physical-smoke": {
+      "purpose": "Class C PWA install and offline smoke in the browser",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:class-c-visual-flow-engineering": {
+      "purpose": "Engineering visual-flow capture across screens in the browser",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:class-c-touch-terminal-engineering": {
+      "purpose": "Engineering visual-flow capture with touch input",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:test-only-pixel-fixtures": {
+      "purpose": "Browser pixel fixtures that exist only in test builds",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:input": {
+      "purpose": "Browser keyboard, pointer, touch and gamepad input matrix",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:blade-lifecycle": {
+      "purpose": "Browser blade lifecycle trace on the current build only",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:player-locomotion": {
+      "purpose": "Browser player locomotion trace on the current build only",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:enemy-charge": {
+      "purpose": "Browser enemy charge-cycle trace on the current build only",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:combat-resolution": {
+      "purpose": "Browser combat resolution trace on the current build only",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:ranged-cycle": {
+      "purpose": "Browser ranged fire-cycle trace on the current build only",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:projectile-parry": {
+      "purpose": "Browser projectile parry trace on the current build only",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:mirror-pursuit": {
+      "purpose": "Browser Mirror pursuit trace on the current build only",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:parity:unit": {
+      "purpose": "Node tests for the parity diff tool",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "parity:blade": {
+      "purpose": "Blade parity trace comparing the current build with the oracle",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "parity:player": {
+      "purpose": "Player locomotion parity trace against the oracle",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "parity:enemy": {
+      "purpose": "Enemy charge-cycle parity trace against the oracle",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "parity:combat": {
+      "purpose": "Combat resolution parity trace against the oracle",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "parity:ranged": {
+      "purpose": "Ranged fire-cycle parity trace against the oracle",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "parity:projectile-parry": {
+      "purpose": "Projectile parry parity trace against the oracle",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "parity:mirror": {
+      "purpose": "Mirror pursuit parity trace against the oracle",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "parity:diff": {
+      "purpose": "Diffs two parity trace files and prints (or with an output path writes) a report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "test:browser:responsive": {
+      "purpose": "Browser responsive layout matrix across viewports",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:performance": {
+      "purpose": "Browser performance measurement of a test build",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:audio": {
+      "purpose": "Browser audio smoke",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:browser:platform": {
+      "purpose": "Platform smoke of the standalone and CrazyGames builds in the browser",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "test:browser:crazygames-iframe": {
+      "purpose": "Browser check of the CrazyGames build inside an iframe host",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "test:pwa": {
+      "purpose": "Browser check that the PWA works offline",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "check:bundles": {
+      "purpose": "Fails if built bundles exceed their size budget",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:architecture": {
+      "purpose": "Source architecture gate (roles, layer edges, cycles, module size); --update lowers the baseline",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:code-budget": {
+      "purpose": "Code budget ratchet (file size, line length, function size); --update lowers the baseline",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:test-isolation": {
+      "purpose": "Fails if engineering or test-only code reached a production bundle",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:tear-score": {
+      "purpose": "Verifies vendored TearScore files against their provenance checksums",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:adaptive-soundtrack": {
+      "purpose": "Verifies the vendored adaptive soundtrack against its provenance",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:docs": {
+      "purpose": "Docs authority checker: plans index, links, POSITION.md freshness, repository map and size caps",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "position:render": {
+      "purpose": "Renders docs/POSITION.md from config/position.json",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "seconds"
+    },
+    "check:position": {
+      "purpose": "Fails if docs/POSITION.md is stale",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "who": {
+      "purpose": "Lists every worktree with branch, ahead/behind main, dirty files, pull request, age and unsafe-to-remove flags",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:terminology": {
+      "purpose": "Checks player-facing and doc text against the terminology registry",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:active-roster": {
+      "purpose": "Checks the active weapon and enemy roster names against the registry",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:game-reference": {
+      "purpose": "Exports the game reference to a temp dir and validates it",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "check:publication-boundary": {
+      "purpose": "Node tests for the campaign publication boundary and release preflight",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "export:game-reference": {
+      "purpose": "Exports the game reference JSON for the wiki (stdout, or a file with --output)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "publish:game-reference": {
+      "purpose": "CI: writes the game reference manifest and receipt under artifacts/game-reference for upload",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute"
+    },
+    "dispatch:wiki-reference": {
+      "purpose": "CI: sends a GitHub repository_dispatch so the wiki repository rebuilds from the published reference",
+      "effects": [
+        "network",
+        "deploys"
+      ],
+      "duration": "seconds"
+    },
+    "test:game-reference-artifact": {
+      "purpose": "Node tests for game reference publication and wiki dispatch (mocked fetch)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:artifact-disposition": {
+      "purpose": "Validates the artifact disposition records",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:artifacts": {
+      "purpose": "Checks config/artifact-layout.json against the tree and ignore rules",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:parent-layout": {
+      "purpose": "Checks the parent workspace folder layout policy",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:parent-layout:local": {
+      "purpose": "Strict local check of the parent workspace layout",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "report:artifacts": {
+      "purpose": "Reports artifact retention status (stdout, or a file with --output)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "report:workspace-recovery": {
+      "purpose": "Reports recoverable work in sibling worktrees and preserved copies",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "report:deferred-workspace-dependency": {
+      "purpose": "Reports workspace items deferred on a dependency",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "compare:preserved-copies": {
+      "purpose": "Compares preserved repository copies against the canonical checkout",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "report:remaining-workspace-inventory": {
+      "purpose": "Inventories what remains in the parent workspace",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "prepare:workspace-quarantine": {
+      "purpose": "Builds a workspace quarantine manifest (dry run unless --apply)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
+    "quarantine:workspace": {
+      "purpose": "Moves preserved workspace entries into quarantine with --apply (outside the repository)",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute"
+    },
+    "check:workspace": {
+      "purpose": "Workspace hygiene gate: requirements, docs, workspace tool tests and checks",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "minutes"
+    },
+    "check:workspace:local": {
+      "purpose": "Strict local workspace check",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:reproducible": {
+      "purpose": "Builds each target twice plus CrazyGames packages and certifies byte-identical output",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "check:cloudflare": {
+      "purpose": "Verifies dist/standalone and runs Wrangler deploy --dry-run (no deploy), writing a receipt",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute"
+    },
+    "generate:ghost-types": {
+      "purpose": "Regenerates workers/worker-configuration.d.ts with Wrangler types",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "seconds"
+    },
+    "check:ghost-types": {
+      "purpose": "Fails if workers/worker-configuration.d.ts is stale",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "check:ghost-cloud": {
+      "purpose": "Ghost worker types check, worker typecheck and Wrangler dry-run of the ghost worker",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute"
+    },
+    "checkpoint": {
+      "purpose": "Runs a historical milestone checkpoint gate from config/checkpoints.json; --list shows them",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "check:crazygames-package": {
+      "purpose": "Packages an existing dist/crazygames and checks the upload size budget",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute"
+    },
+    "check:local": {
+      "purpose": "Local development gate: requirements, typecheck, lint, architecture, all unit tests and parity unit",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "long"
+    },
+    "check:pr": {
+      "purpose": "TearBench CI selection for changed files, then the full release gate",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "long"
+    },
+    "check:nightly": {
+      "purpose": "Nightly alias for the full release gate",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "long"
+    },
+    "check:weekly": {
+      "purpose": "Weekly endurance tests plus ghost replay and vault suites",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "long"
+    },
+    "check:functional": {
+      "purpose": "CI-required functional profile: static checks, unit tests, builds and browser suites via TearBench",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "long"
+    },
+    "check:performance": {
+      "purpose": "TearBench performance profile: test build plus browser performance",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
+    "check": {
+      "purpose": "Full release gate (TearBench check profile); run once per release candidate",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "long"
+    },
+    "deploy": {
+      "purpose": "Alias for deploy:dry-run; does not deploy",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "deploy:dry-run": {
+      "purpose": "Standalone build then Cloudflare dry-run; does not deploy",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
+    "release:preflight": {
+      "purpose": "Release preflight: git state, publication boundary and release prerequisites",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "release:verify-plan-certificate": {
+      "purpose": "Verifies a TearBench plan certificate against its receipts",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
+    "release:verify-artifact": {
+      "purpose": "Verifies a built release artifact identity against the expected Git SHA",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    }
+  },
+  "entryPoints": {
+    "scripts/apply-workspace-quarantine.mjs": {
+      "purpose": "Applies a prepared preservation quarantine manifest, moving workspace entries aside (dry run without --apply)",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "quarantine:workspace"
+      ]
+    },
+    "scripts/benchmark-tearbench-clients.mjs": {
+      "purpose": "Benchmarks concurrent TearBench client missions and writes a report under artifacts/tearbench",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes",
+      "via": [],
+      "runBy": [
+        "tests/benchmark-tearbench-clients.test.mjs",
+        "docs/TEARBENCH_VERIFICATION_ACCELERATION_EXECUTION_PLAN.md"
+      ]
+    },
+    "scripts/build-target.mjs": {
+      "purpose": "Runs a Vite build for one target mode with tutorial gold and build-info checks",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes",
+      "via": [
+        "build:standalone",
+        "build:crazygames",
+        "build:test:standalone",
+        "build:test:crazygames"
+      ]
+    },
+    "scripts/build-tear-score-tone-host.mjs": {
+      "purpose": "Builds the Tone host ESM bundle into .tmp-tone-host-esm (ignored) for TearScore vendoring",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        "docs/TEAR_SCORE_INTEGRATION.md"
+      ]
+    },
+    "scripts/check-active-roster.mjs": {
+      "purpose": "Checks active roster names against the terminology registry",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:active-roster"
+      ]
+    },
+    "scripts/check-artifact-layout.mjs": {
+      "purpose": "Checks config/artifact-layout.json against the tree and ignore rules",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:artifacts"
+      ]
+    },
+    "scripts/check-bundle-budget.mjs": {
+      "purpose": "Fails if built bundles exceed the size budget",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:bundles"
+      ]
+    },
+    "scripts/check-cloudflare-dry-run.mjs": {
+      "purpose": "Verifies dist/standalone, runs Wrangler deploy --dry-run and writes a receipt",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "check:cloudflare"
+      ]
+    },
+    "scripts/check-code-budget.mjs": {
+      "purpose": "Code budget ratchet; --update lowers the tracked baseline",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:code-budget"
+      ]
+    },
+    "scripts/check-docs.mjs": {
+      "purpose": "Docs authority checker",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:docs"
+      ]
+    },
+    "scripts/check-game-reference.mjs": {
+      "purpose": "Exports the game reference to a temp dir and validates it",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "check:game-reference"
+      ]
+    },
+    "scripts/check-ghost-worker-types.mjs": {
+      "purpose": "Checks (or with --write regenerates) workers/worker-configuration.d.ts via Wrangler",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "generate:ghost-types",
+        "check:ghost-types"
+      ]
+    },
+    "scripts/check-parent-layout.mjs": {
+      "purpose": "Checks the parent workspace layout policy",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:parent-layout",
+        "check:parent-layout:local"
+      ]
+    },
+    "scripts/check-production-test-isolation.mjs": {
+      "purpose": "Fails if engineering or test-only markers reached production bundles",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:test-isolation"
+      ]
+    },
+    "scripts/check-reproducible-build.mjs": {
+      "purpose": "Builds targets twice and certifies reproducible output under artifacts/",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes",
+      "via": [
+        "check:reproducible"
+      ]
+    },
+    "scripts/check-source-architecture.mjs": {
+      "purpose": "Source architecture gate; --update lowers the baseline, --explain describes a file",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:architecture"
+      ]
+    },
+    "scripts/check-terminology.mjs": {
+      "purpose": "Checks text against the terminology registry",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:terminology"
+      ]
+    },
+    "scripts/check-workspace.mjs": {
+      "purpose": "Workspace hygiene checker",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:workspace",
+        "check:workspace:local"
+      ]
+    },
+    "scripts/compare-preserved-copies.mjs": {
+      "purpose": "Compares preserved repository copies against the canonical checkout",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "compare:preserved-copies"
+      ]
+    },
+    "scripts/dispatch-wiki-reference.mjs": {
+      "purpose": "Sends a GitHub repository_dispatch to the wiki repository for a published reference",
+      "effects": [
+        "network",
+        "deploys"
+      ],
+      "duration": "seconds",
+      "via": [
+        "dispatch:wiki-reference"
+      ]
+    },
+    "scripts/export-game-reference.mjs": {
+      "purpose": "Exports the game reference JSON through a Vite SSR loader",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "export:game-reference"
+      ]
+    },
+    "scripts/format.mjs": {
+      "purpose": "Runs Prettier over the canonical target list (--write or --check)",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "format",
+        "format:check"
+      ]
+    },
+    "scripts/lint.mjs": {
+      "purpose": "Runs ESLint over the canonical target list",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "minutes",
+      "via": [
+        "lint"
+      ]
+    },
+    "scripts/measure-production-headless-long-run.mjs": {
+      "purpose": "Measures a long production headless run and writes a JSON artifact (C30 checkpoint)",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes",
+      "via": [],
+      "runBy": [
+        "config/checkpoints.json"
+      ]
+    },
+    "scripts/package-crazygames.mjs": {
+      "purpose": "Zips dist/crazygames into the CrazyGames upload package and checks its size",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "package:crazygames",
+        "package:crazygames:existing",
+        "check:crazygames-package"
+      ]
+    },
+    "scripts/parity-diff.mjs": {
+      "purpose": "Diffs two parity trace files",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "parity:diff"
+      ]
+    },
+    "scripts/position.mjs": {
+      "purpose": "Renders (render) or checks (check) docs/POSITION.md from config/position.json",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "seconds",
+      "via": [
+        "position:render",
+        "check:position"
+      ]
+    },
+    "scripts/prepare-workspace-quarantine.mjs": {
+      "purpose": "Builds a workspace quarantine manifest (dry run unless --apply)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "prepare:workspace-quarantine"
+      ]
+    },
+    "scripts/production-headless-worker.mjs": {
+      "purpose": "Child process spawned by the headless worker dispatcher; runs production headless episodes over IPC",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        "scripts/production-headless-worker-dispatcher.mjs"
+      ]
+    },
+    "scripts/publish-game-reference-artifact.mjs": {
+      "purpose": "Writes the game reference manifest and receipt under artifacts/game-reference for CI upload",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "publish:game-reference"
+      ]
+    },
+    "scripts/record-build-provider-artifact.mjs": {
+      "purpose": "CI: writes a GitHub Actions provider-artifact receipt for build records",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [
+        "tearbench:record-build-provider"
+      ]
+    },
+    "scripts/release-preflight.mjs": {
+      "purpose": "Release preflight checks",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "release:preflight"
+      ]
+    },
+    "scripts/report-artifacts.mjs": {
+      "purpose": "Artifact retention report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "report:artifacts"
+      ]
+    },
+    "scripts/report-deferred-workspace-dependency.mjs": {
+      "purpose": "Deferred workspace dependency report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "report:deferred-workspace-dependency"
+      ]
+    },
+    "scripts/report-remaining-workspace-inventory.mjs": {
+      "purpose": "Remaining parent workspace inventory report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "report:remaining-workspace-inventory"
+      ]
+    },
+    "scripts/report-workspace-recovery.mjs": {
+      "purpose": "Workspace recovery report over sibling worktrees and preserved copies",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "report:workspace-recovery"
+      ]
+    },
+    "scripts/run-checkpoint.mjs": {
+      "purpose": "Runs a named historical checkpoint gate from config/checkpoints.json",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [
+        "checkpoint"
+      ]
+    },
+    "scripts/run-current-live-detached-parity.mjs": {
+      "purpose": "Runs the C27A live browser parity trace then the detached parity Vitest",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [
+        "test:browser:current-live-detached-parity"
+      ]
+    },
+    "scripts/serve.py": {
+      "purpose": "Loopback-only static server for local tools such as the oracle workbench",
+      "effects": [
+        "starts-server"
+      ],
+      "duration": "long",
+      "via": [],
+      "runBy": [
+        "CONTRIBUTING.md",
+        "tests/serve-contract.test.mjs"
+      ]
+    },
+    "scripts/tearbench-bisect-worktree.mjs": {
+      "purpose": "Local C26 regression bisection in a temporary detached worktree under artifacts/",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [],
+      "runBy": [
+        "scripts/tearbench.mjs"
+      ]
+    },
+    "scripts/tearbench-canary-bundle.mjs": {
+      "purpose": "CI canary: bundles a mission's artifacts and timing into an upload directory",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/tearbench-canary.yml"
+      ]
+    },
+    "scripts/tearbench-canary-compose.mjs": {
+      "purpose": "CI canary: copies downloaded dist/ and artifacts/ files into a workspace",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/tearbench-canary.yml"
+      ]
+    },
+    "scripts/tearbench-canary-incomplete-report.mjs": {
+      "purpose": "CI canary: writes an incomplete parity report when evidence is missing",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/tearbench-canary.yml"
+      ]
+    },
+    "scripts/tearbench-canary-plan.mjs": {
+      "purpose": "CI canary: derives a shard plan from a TearBench plan and history",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/tearbench-canary.yml"
+      ]
+    },
+    "scripts/tearbench-canary-qualification-report.mjs": {
+      "purpose": "Builds the canary qualification report from an aggregate manifest",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        "tests/tearbench-canary-qualification-report.test.mjs"
+      ]
+    },
+    "scripts/tearbench-canary-report.mjs": {
+      "purpose": "CI canary: post-run parity and timing report across shards",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/tearbench-canary.yml",
+        "scripts/tearbench-canary-qualification-report.mjs"
+      ]
+    },
+    "scripts/tearbench-canary-run-shard.mjs": {
+      "purpose": "CI canary: runs one shard of TearBench tasks and writes its results",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [],
+      "runBy": [
+        ".github/workflows/tearbench-canary.yml"
+      ]
+    },
+    "scripts/tearbench-paired-performance-report.mjs": {
+      "purpose": "Compares paired performance samples against a baseline revision",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/tearbench-canary.yml"
+      ]
+    },
+    "scripts/tearbench-requirements.mjs": {
+      "purpose": "Generates (generate) or checks (check) the Ghost3 requirements docs",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "seconds",
+      "via": [
+        "requirements:generate",
+        "requirements:check"
+      ]
+    },
+    "scripts/tearbench-simulation-boundary-report.mjs": {
+      "purpose": "Reports simulation-boundary timing from performance samples",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/tearbench-canary.yml"
+      ]
+    },
+    "scripts/tearbench-task-execution.mjs": {
+      "purpose": "Runs a registered TearBench task (run-task) or certifies a plan (certify)",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [
+        "tearbench:run-task",
+        "tearbench:certify-plan"
+      ]
+    },
+    "scripts/tearbench.mjs": {
+      "purpose": "TearBench CLI multiplexer",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [
+        "tearbench"
+      ]
+    },
+    "scripts/validate-artifact-disposition.mjs": {
+      "purpose": "Validates artifact disposition records",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:artifact-disposition"
+      ]
+    },
+    "scripts/vendor-tear-score-esm.mjs": {
+      "purpose": "Copies TearScore and Tone ESM bundles into public/vendor/tear-score and rewrites provenance",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        "docs/TEAR_SCORE_INTEGRATION.md"
+      ]
+    },
+    "scripts/verify-adaptive-soundtrack-provenance.mjs": {
+      "purpose": "Verifies the vendored adaptive soundtrack provenance",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:adaptive-soundtrack"
+      ]
+    },
+    "scripts/verify-plan-certificate.mjs": {
+      "purpose": "Verifies a TearBench plan certificate",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "release:verify-plan-certificate"
+      ]
+    },
+    "scripts/verify-release-artifact.mjs": {
+      "purpose": "Verifies a release artifact identity against the expected SHA",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "release:verify-artifact"
+      ]
+    },
+    "scripts/verify-tear-score-provenance.mjs": {
+      "purpose": "Verifies vendored TearScore checksums",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:tear-score"
+      ]
+    },
+    "scripts/who.mjs": {
+      "purpose": "Read-only worktree overview behind pnpm who; never fetches, writes, prunes or deletes",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "who"
+      ]
+    }
+  },
+  "libraries": {
+    "scripts/architecture/analyze.mjs": [
+      "scripts/check-source-architecture.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/architecture/baseline.mjs": [
+      "scripts/architecture/analyze.mjs",
+      "scripts/check-source-architecture.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/architecture/cycles.mjs": [
+      "scripts/architecture/analyze.mjs",
+      "scripts/check-source-architecture.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/architecture/evaluate.mjs": [
+      "scripts/architecture/analyze.mjs",
+      "scripts/architecture/explain.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/architecture/explain.mjs": [
+      "scripts/check-source-architecture.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/architecture/layering.mjs": [
+      "scripts/architecture/analyze.mjs",
+      "scripts/check-source-architecture.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/architecture/rules.mjs": [
+      "scripts/architecture/analyze.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/architecture/selectors.mjs": [
+      "scripts/architecture/analyze.mjs",
+      "scripts/architecture/layering.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/architecture/source-graph.mjs": [
+      "scripts/architecture/evaluate.mjs",
+      "scripts/check-source-architecture.mjs",
+      "tests/source-architecture.test.mjs"
+    ],
+    "scripts/campaign-publication-boundary.mjs": [
+      "scripts/publish-game-reference-artifact.mjs",
+      "scripts/release-preflight.mjs",
+      "tests/campaign-publication-boundary.test.mjs",
+      "tests/unit/verdant-publication-boundary.test.ts"
+    ],
+    "scripts/check-repository.mjs": [
+      "scripts/check-docs.mjs",
+      "tests/unit/repository-map.test.mjs"
+    ],
+    "scripts/crazygames-artifact-scope.mjs": [
+      "scripts/build-target.mjs",
+      "tests/unit/crazygames-artifact-scope.test.mjs"
+    ],
+    "scripts/game-reference-export-preflight.mjs": [
+      "scripts/export-game-reference.mjs",
+      "tests/unit/game-reference-export-preflight.test.mjs"
+    ],
+    "scripts/production-headless-checkpoint.mjs": [
+      "scripts/production-headless-job-store.mjs",
+      "scripts/production-headless-worker.mjs",
+      "tests/production-headless-job-store.test.mjs",
+      "tests/production-headless-worker.test.mjs"
+    ],
+    "scripts/production-headless-job-store.mjs": [
+      "scripts/production-headless-worker-dispatcher.mjs",
+      "tests/fixtures/production-headless-job-crash.mjs",
+      "tests/production-headless-job-store.test.mjs",
+      "tests/production-headless-worker-dispatcher.test.mjs"
+    ],
+    "scripts/production-headless-worker-dispatcher.mjs": [
+      "tests/fixtures/production-headless-job-crash.mjs",
+      "tests/production-headless-worker-dispatcher.test.mjs"
+    ],
+    "scripts/release-artifact.mjs": [
+      "scripts/apply-workspace-quarantine.mjs",
+      "scripts/build-target.mjs",
+      "scripts/check-bundle-budget.mjs",
+      "scripts/check-cloudflare-dry-run.mjs",
+      "scripts/check-reproducible-build.mjs",
+      "scripts/check-workspace.mjs",
+      "scripts/package-crazygames.mjs",
+      "scripts/prepare-workspace-quarantine.mjs",
+      "scripts/production-headless-worker-dispatcher.mjs",
+      "scripts/production-headless-worker.mjs",
+      "scripts/release-preflight.mjs",
+      "scripts/report-artifacts.mjs",
+      "scripts/report-deferred-workspace-dependency.mjs",
+      "scripts/report-remaining-workspace-inventory.mjs",
+      "scripts/report-workspace-recovery.mjs",
+      "scripts/tearbench-build-artifact.mjs",
+      "scripts/tearbench-release-evidence-verifier.mjs",
+      "scripts/tearbench-task-execution.mjs",
+      "scripts/tearbench.mjs",
+      "scripts/verify-plan-certificate.mjs",
+      "scripts/verify-release-artifact.mjs",
+      "tests/browser-journey-harness.js",
+      "tests/fixtures/production-headless-job-crash.mjs",
+      "tests/release-artifact-source-identity.test.mjs",
+      "tests/tearbench-build-artifact.test.mjs",
+      "tests/unit/current-live-detached-mechanic-parity.test.ts",
+      "vite.config.ts"
+    ],
+    "scripts/repository-identity.mjs": [
+      "scripts/apply-workspace-quarantine.mjs",
+      "scripts/check-parent-layout.mjs",
+      "scripts/check-workspace.mjs",
+      "scripts/prepare-workspace-quarantine.mjs",
+      "scripts/report-artifacts.mjs",
+      "scripts/report-deferred-workspace-dependency.mjs",
+      "scripts/report-remaining-workspace-inventory.mjs",
+      "scripts/report-workspace-recovery.mjs"
+    ],
+    "scripts/tearbench-build-artifact.mjs": [
+      "scripts/build-target.mjs",
+      "scripts/record-build-provider-artifact.mjs",
+      "scripts/tearbench-task-execution.mjs",
+      "scripts/tearbench.mjs",
+      "tests/tearbench-build-artifact.test.mjs"
+    ],
+    "scripts/tearbench-client-mission.mjs": [
+      "scripts/benchmark-tearbench-clients.mjs",
+      "scripts/tearbench-task-execution.mjs",
+      "tests/tearbench-client-mission.test.mjs",
+      "tests/tearbench-task-execution.test.mjs"
+    ],
+    "scripts/tearbench-performance-sample.mjs": [
+      "scripts/tearbench-canary-plan.mjs",
+      "scripts/tearbench-canary-report.mjs",
+      "scripts/tearbench-canary-run-shard.mjs",
+      "scripts/tearbench-task-receipts.mjs",
+      "tests/tearbench-performance-sample.test.mjs",
+      "tests/tearbench-task-receipts.test.mjs"
+    ],
+    "scripts/tearbench-release-evidence-verifier.mjs": [
+      "scripts/tearbench.mjs",
+      "tests/tearbench-release-evidence-verifier.test.mjs"
+    ],
+    "scripts/tearbench-reproducibility-contract.mjs": [
+      "scripts/check-reproducible-build.mjs",
+      "tests/tearbench-build-graph.test.mjs"
+    ],
+    "scripts/tearbench-resource-leases.mjs": [
+      "scripts/tearbench-bisect-worktree.mjs",
+      "scripts/tearbench-task-execution.mjs",
+      "scripts/tearbench.mjs",
+      "tests/tearbench-resource-leases.test.mjs",
+      "tests/tearbench-task-execution.test.mjs"
+    ],
+    "scripts/tearbench-run-artifact.mjs": [
+      "scripts/tearbench.mjs",
+      "tests/browser-tearbench-live-materialize.js",
+      "tests/tearbench-evidence-selection.test.mjs"
+    ],
+    "scripts/tearbench-runtime-identity.mjs": [
+      "scripts/production-headless-worker-dispatcher.mjs",
+      "scripts/production-headless-worker.mjs",
+      "scripts/tearbench-task-execution.mjs",
+      "scripts/tearbench.mjs",
+      "tests/fixtures/production-headless-job-crash.mjs",
+      "tests/tearbench-task-execution.test.mjs"
+    ],
+    "scripts/tearbench-shadow-plan.mjs": [
+      "scripts/tearbench-task-execution.mjs",
+      "scripts/tearbench.mjs",
+      "tests/tearbench-shadow-plan.test.mjs"
+    ],
+    "scripts/tearbench-task-profile.mjs": [
+      "scripts/tearbench.mjs",
+      "tests/tearbench-build-graph.test.mjs"
+    ],
+    "scripts/tearbench-task-receipts.mjs": [
+      "scripts/production-headless-checkpoint.mjs",
+      "scripts/production-headless-job-store.mjs",
+      "scripts/production-headless-worker-dispatcher.mjs",
+      "scripts/production-headless-worker.mjs",
+      "scripts/record-build-provider-artifact.mjs",
+      "scripts/tearbench-canary-bundle.mjs",
+      "scripts/tearbench-canary-incomplete-report.mjs",
+      "scripts/tearbench-canary-plan.mjs",
+      "scripts/tearbench-canary-qualification-report.mjs",
+      "scripts/tearbench-canary-report.mjs",
+      "scripts/tearbench-canary-run-shard.mjs",
+      "scripts/tearbench-client-mission.mjs",
+      "scripts/tearbench-task-execution.mjs",
+      "scripts/verify-plan-certificate.mjs",
+      "tests/production-headless-worker.test.mjs",
+      "tests/tearbench-canary-plan.test.mjs",
+      "tests/tearbench-canary-qualification-report.test.mjs",
+      "tests/tearbench-client-mission.test.mjs",
+      "tests/tearbench-task-execution.test.mjs",
+      "tests/tearbench-task-receipts.test.mjs"
+    ],
+    "scripts/tutorial-gold-compatibility.mjs": [
+      "tests/tutorial-gold-fingerprint.test.mjs",
+      "tests/unit/tutorial-production-ghost.test.ts",
+      "vite.config.ts"
+    ]
+  },
+  "declarations": [
+    "scripts/campaign-publication-boundary.d.mts",
+    "scripts/release-artifact.d.mts",
+    "scripts/tutorial-gold-compatibility.d.mts"
+  ]
+}
