@@ -173,6 +173,11 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
     lastVaultId: () => null, setLastVaultId: () => undefined,
     winSeconds: () => 0, setWinSeconds: () => undefined,
   };
+  // The same parts as the live world composition (src/app/world/world-composition.ts),
+  // assembled here with three differences: the environment does not publish on
+  // the gameplay event bus, no music director is built, and services are built
+  // before the cinema. Both constructors are in the tutorial gold fingerprint
+  // closure, so merging them refreshes src/gameplay/training/tutorial-gold-binding.json.
   const state = createLiveWorldState(session);
   const entities = createLiveWorldEntityFactory(dependencies);
   const worldId = options.worldId ?? `production-replay:${options.seed}:${options.mode ?? "endless"}:${options.weaponId ?? "sword"}`;

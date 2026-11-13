@@ -209,3 +209,5 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   });
   return Object.freeze({ ...content, lobExplode, loadTransitionStage });
 }
+
+export type LiveRunOrchestration = ReturnType<typeof createLiveRunOrchestration>;

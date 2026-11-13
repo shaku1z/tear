@@ -552,7 +552,7 @@
       "multiStatementLines": 2
     },
     "src/app/interface/presentation-composition.ts": {
-      "maxLineLength": 169,
+      "maxLineLength": 163,
       "multiStatementLines": 13
     },
     "src/app/interface/screen-action-bindings.ts": {
@@ -767,12 +767,6 @@
     },
     "src/app/shell/game-runtime-dependencies.ts": {
       "maxLineLength": 231
-    },
-    "src/app/shell/game-runtime.ts": {
-      "chars": 77465,
-      "maxLineLength": 3969,
-      "multiStatementLines": 131,
-      "largestFunctionStatements": 143
     },
     "src/app/shell/platform-bootstrap.ts": {
       "multiStatementLines": 2
@@ -1770,7 +1764,7 @@
     },
     "src/presentation/screens/profile-achievements.ts": {
       "maxLineLength": 201,
-      "multiStatementLines": 13
+      "multiStatementLines": 12
     },
     "src/presentation/screens/screen-primitives.ts": {
       "maxLineLength": 187,
