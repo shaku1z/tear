@@ -53,6 +53,10 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
    `pnpm test:related <changed src files>`; add `pnpm test:weapons` for weapon
    or ability changes.
 4. Add the smallest permanent test or scenario that fails without your change.
+   A new file under `src/` needs a TearBench evidence route in
+   `src/tearbench/evidence-routes.json` or a line in
+   `config/change-impact-defaults.json`; `tests/unit/change-impact.test.mjs`
+   fails otherwise ([docs/CHANGE_IMPACT.md](docs/CHANGE_IMPACT.md)).
 5. If you changed a file covered by the tutorial reference fingerprint, refresh
    it before any build (see "Known traps").
 6. `pnpm format` (Prettier), `pnpm typecheck` (about 2 minutes), then

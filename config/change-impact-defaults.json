@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "about": "Tracked paths that no TearBench evidence route in src/tearbench/evidence-routes.json matches. They select the shared-runtime fallback route; tests/unit/change-impact.test.mjs fails when a tracked path is neither routed nor listed here. See docs/CHANGE_IMPACT.md.",
+  "fallbackRoute": "shared-runtime",
+  "fallback": [
+    {
+      "id": "game-source",
+      "reason": "Game code with no specific route. A change here gets only the shared-runtime evidence; listed file by file so each new unrouted source file is a visible decision.",
+      "paths": [
+        "src/config/game-config.ts",
+        "src/diagnostics/performance-monitor.ts",
+        "src/entrypoints/bootstrap.ts",
+        "src/entrypoints/crazygames.ts",
+        "src/entrypoints/standalone.ts",
+        "src/entrypoints/test-browser-storage.ts",
+        "src/gameplay/affixes.ts",
+        "src/gameplay/campaign/chapter-cinematic-binding.ts",
+        "src/gameplay/campaign/chapter-controller.ts",
+        "src/gameplay/campaign/cinematic-contracts.ts",
+        "src/gameplay/campaign/cinematic-launch-runtime.ts",
+        "src/gameplay/campaign/cinematic-player-runtime.ts",
+        "src/gameplay/campaign/finale-binding.ts",
+        "src/gameplay/campaign/finale-controller.ts",
+        "src/gameplay/campaign/finale-outward-call.ts",
+        "src/gameplay/campaign/finale-runtime.ts",
+        "src/gameplay/campaign/live-cinematic-runtime.ts",
+        "src/gameplay/runtime/authoritative-input.ts",
+        "src/gameplay/runtime/cinematic-director.ts",
+        "src/gameplay/runtime/run-dna-observer.ts",
+        "src/gameplay/runtime/tear-combat-simulation.ts",
+        "src/gameplay/runtime/tear-world-bootstrap.ts",
+        "src/gameplay/runtime/tear-world-clock.ts",
+        "src/gameplay/runtime/tear-world-configuration.ts",
+        "src/gameplay/runtime/tear-world-entity-construction.ts",
+        "src/gameplay/runtime/tear-world-simulation-factories.ts",
+        "src/gameplay/runtime/tear-world-transient-state.ts",
+        "src/gameplay/scoring/best-scores.ts",
+        "src/gameplay/scoring/live-style-achievement-runtime.ts",
+        "src/gameplay/scoring/style-runtime-coordinator.ts",
+        "src/gameplay/scoring/style-runtime.ts",
+        "src/gameplay/training/arena-rules.ts",
+        "src/gameplay/training/arena-runtime-bridge.ts",
+        "src/gameplay/training/boss-phase-practice-runtime.ts",
+        "src/gameplay/training/boss-practice-source-restore.ts",
+        "src/gameplay/training/live-playground-presentation.ts",
+        "src/gameplay/training/live-tutorial-runtime.ts",
+        "src/gameplay/training/playground-controller.ts",
+        "src/gameplay/training/practice-boss-catalog.ts",
+        "src/gameplay/training/practice-enemy-catalog.ts",
+        "src/gameplay/training/runtime-bridge.ts",
+        "src/gameplay/training/tutorial-arenas.ts",
+        "src/gameplay/training/tutorial-contract.ts",
+        "src/gameplay/training/tutorial-controller.ts",
+        "src/gameplay/training/tutorial-failure-coach.ts",
+        "src/gameplay/training/tutorial-ghost-coach.ts",
+        "src/gameplay/training/tutorial-gold-binding.json",
+        "src/gameplay/training/tutorial-gold-reference-data.json",
+        "src/gameplay/training/tutorial-gold-reference.ts",
+        "src/gameplay/training/tutorial-gold-shipping.ts",
+        "src/gameplay/training/tutorial-production-ghost.ts",
+        "src/gameplay/training/tutorial-weapon-annexes.ts",
+        "src/gameplay/upgrade-hooks.ts",
+        "src/gameplay/voidgen-chunks.ts",
+        "src/gameplay/voidgen-contracts.ts",
+        "src/gameplay/voidgen-core.ts",
+        "src/gameplay/voidgen-graph.ts",
+        "src/gameplay/voidgen-hazards.ts",
+        "src/gameplay/voidgen-inspection.ts",
+        "src/gameplay/voidgen.ts",
+        "src/gameplay/weapon-tuning.ts",
+        "src/replay/envelope.ts",
+        "src/replay/hash.ts",
+        "src/replay/index.ts",
+        "src/replay/legacy-compat-validation.ts",
+        "src/replay/surface-route.ts",
+        "src/test-build.d.ts"
+      ]
+    },
+    {
+      "id": "tests",
+      "reason": "Test files. A changed test is run by the unit, contract or browser suites that include it, not by a route.",
+      "paths": [
+        "tests/"
+      ]
+    },
+    {
+      "id": "tooling",
+      "reason": "Repository tooling and gates; check:functional and the tool tests cover them.",
+      "paths": [
+        "scripts/"
+      ]
+    },
+    {
+      "id": "static-assets",
+      "reason": "Served static files and brand sources; the build and the asset-provenance checks cover them.",
+      "paths": [
+        "public/",
+        "branding/"
+      ]
+    },
+    {
+      "id": "agent-and-ci-configuration",
+      "reason": "Agent skills, editor and CI configuration; covered by test:agent-skills and the workflow tests.",
+      "paths": [
+        ".agents/",
+        ".claude/",
+        ".github/"
+      ]
+    },
+    {
+      "id": "repository-records",
+      "reason": "Configuration, preservation and research records; covered by check:docs, check:workspace and their own tests.",
+      "paths": [
+        "config/",
+        "preservation/",
+        "analysis/",
+        "experiments/",
+        "tear-wiki/"
+      ]
+    },
+    {
+      "id": "root-files",
+      "reason": "Top-level build, package and documentation files; a change here runs the full check:functional in CI.",
+      "paths": [
+        ".editorconfig",
+        ".git-blame-ignore-revs",
+        ".gitattributes",
+        ".gitignore",
+        ".node-version",
+        ".prettierignore",
+        ".prettierrc.json",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "eslint.config.mjs",
+        "firebase.json",
+        "firestore.rules",
+        "index.html",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "remoteconfig.template.json",
+        "tsconfig.app.json",
+        "tsconfig.json",
+        "tsconfig.node.json",
+        "tsconfig.test.json",
+        "tsconfig.worker-test.json",
+        "tsconfig.worker.json",
+        "vite.config.ts",
+        "vitest.config.ts",
+        "vitest.endurance.config.ts"
+      ]
+    }
+  ]
+}
