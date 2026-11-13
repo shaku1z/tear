@@ -52,12 +52,12 @@ function downloadScenario(fileName: string, source: string): void {
   anchor.download = fileName;
   anchor.href = href;
   anchor.click();
-  queueMicrotask(() => { URL.revokeObjectURL(href); });
+  queueMicrotask(() => {
+    URL.revokeObjectURL(href);
+  });
 }
 
-export function createLiveStateForgeStudioHost(
-  factory: TearRuntimeBridgeFactory,
-): StateForgeStudioHost {
+export function createLiveStateForgeStudioHost(factory: TearRuntimeBridgeFactory): StateForgeStudioHost {
   const environment = factory.create("A");
   const bank = new TearCheckpointBank();
   const snapshots = new Map<string, TearSnapshotV1>();
@@ -85,15 +85,23 @@ export function createLiveStateForgeStudioHost(
     const snapshot = snapshots.get(id);
     if (snapshot !== undefined) {
       return Object.freeze({
-        id, label: id, tick: entry.tick, state: snapshot.state, provenance: snapshot.provenance,
+        id,
+        label: id,
+        tick: entry.tick,
+        state: snapshot.state,
+        provenance: snapshot.provenance,
       });
     }
     const parentId = entry.parentId;
     const parent = parentId === undefined ? undefined : checkpointItem(parentId);
     if (parent === undefined) throw new RangeError(`fork ${id} has no provenance parent`);
     return Object.freeze({
-      id, label: id, tick: entry.tick, parentId: parent.id,
-      state: bank.materialize(id), provenance: parent.provenance,
+      id,
+      label: id,
+      tick: entry.tick,
+      parentId: parent.id,
+      state: bank.materialize(id),
+      provenance: parent.provenance,
     });
   };
 
@@ -111,8 +119,7 @@ export function createLiveStateForgeStudioHost(
     },
     watch(checkpointId: string) {
       const item = checkpointItem(checkpointId);
-      const template = snapshots.get(checkpointId)
-        ?? snapshots.get(bank.export().snapshots[0]?.id ?? "");
+      const template = snapshots.get(checkpointId) ?? snapshots.get(bank.export().snapshots[0]?.id ?? "");
       if (template === undefined) throw new RangeError("checkpoint bank has no live snapshot template");
       const result = environment.restoreSnapshot(
         snapshotForState(template, item.id, item.tick, bank.materialize(item.id)),
@@ -122,7 +129,9 @@ export function createLiveStateForgeStudioHost(
     launch(resolved: TearSdlResolved) {
       const result = environment.forgeResolvedScenario(resolved);
       if (!result.ok) {
-        throw new Error(`scenario forge failed during ${result.phase}: ${result.issues.map((issue) => issue.message).join("; ")}`);
+        throw new Error(
+          `scenario forge failed during ${result.phase}: ${result.issues.map((issue) => issue.message).join("; ")}`,
+        );
       }
       library.set(resolved.document.id, resolved.document);
       return addLiveCheckpoint(`Launch · ${resolved.scenario.id}`);

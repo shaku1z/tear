@@ -3,16 +3,26 @@ const { withJourney } = require("./browser-journey-harness");
 
 function scenario() {
   return {
-    format: "tear-contract", kind: "scenario", schemaVersion: 1,
-    id: "c27-physical-live-capture", version: 1, description: "C27 physical V3 capture proof",
-    stateClass: "recorded-canonical", executionClass: "engineering", seed: "c27-physical-capsule-seed",
-    start: { mode: "endless", difficulty: "normal", weapon: "sword" }, maxTicks: 240,
-    assertions: ["runtime.finite-state"], tags: ["c27", "ghost", "capsule", "physical-input"],
+    format: "tear-contract",
+    kind: "scenario",
+    schemaVersion: 1,
+    id: "c27-physical-live-capture",
+    version: 1,
+    description: "C27 physical V3 capture proof",
+    stateClass: "recorded-canonical",
+    executionClass: "engineering",
+    seed: "c27-physical-capsule-seed",
+    start: { mode: "endless", difficulty: "normal", weapon: "sword" },
+    maxTicks: 240,
+    assertions: ["runtime.finite-state"],
+    tags: ["c27", "ghost", "capsule", "physical-input"],
   };
 }
 
 withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({ page, waitScreen }) => {
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, { timeout: 15000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
+    timeout: 15000,
+  });
   // Only the physical Class-C adapter operates the visible menu and gameplay.
   // The final Class-A call is lifecycle cleanup for this test build; it does not
   // supply commands or advance simulation ticks.
@@ -39,8 +49,11 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
     physical.physicalInput({ type: "key", code: "KeyD", phase: "released" });
     window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").terminate();
   });
-  await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null
-    || window.__TEAR_GHOST_V3__.failure() !== null, undefined, { timeout: 20000 });
+  await page.waitForFunction(
+    () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
+    undefined,
+    { timeout: 20000 },
+  );
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
   const persisted = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifests());
@@ -50,28 +63,53 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
   const capsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id);
   const replay = await page.evaluate((id) => window.__TEAR_GHOST_V3__.replay(id), manifest.id);
   const admission = await page.evaluate((id) => window.__TEAR_GHOST_V3__.admission(id), manifest.id);
-  assert.ok(manifest.chunks.some((chunk) => chunk.kind === "commands"), "physical device input did not produce a sealed V3 command");
-  assert.ok(manifest.chunks.some((chunk) => chunk.kind === "keyframes"), "physical live loop did not produce a periodic V3 keyframe");
-  assert.ok(manifest.chunks.some((chunk) => chunk.kind === "rng"), "physical live loop did not capture named RNG state");
-  assert.ok(manifest.chunks.every((chunk) =>
-    chunk.encoding === "utf8-base64-v1" || chunk.encoding === "gzip-base64-v1"),
-  "new browser chunks did not use the versioned codec registry");
-  assert.ok(manifest.chunks.some((chunk) => chunk.encoding === "gzip-base64-v1"),
-    "compressible physical-run evidence did not use the worker gzip codec");
+  assert.ok(
+    manifest.chunks.some((chunk) => chunk.kind === "commands"),
+    "physical device input did not produce a sealed V3 command",
+  );
+  assert.ok(
+    manifest.chunks.some((chunk) => chunk.kind === "keyframes"),
+    "physical live loop did not produce a periodic V3 keyframe",
+  );
+  assert.ok(
+    manifest.chunks.some((chunk) => chunk.kind === "rng"),
+    "physical live loop did not capture named RNG state",
+  );
+  assert.ok(
+    manifest.chunks.every((chunk) => chunk.encoding === "utf8-base64-v1" || chunk.encoding === "gzip-base64-v1"),
+    "new browser chunks did not use the versioned codec registry",
+  );
+  assert.ok(
+    manifest.chunks.some((chunk) => chunk.encoding === "gzip-base64-v1"),
+    "compressible physical-run evidence did not use the worker gzip codec",
+  );
   assert.ok(capsule.tracks.commands.length > 0);
   assert.ok(capsule.tracks.keyframes.length > 0);
   assert.ok(capsule.tracks.rng.length > 0);
   const eventTypes = capsule.tracks.events.map((entry) => entry.value?.type);
   assert.ok(eventTypes.includes("run.started"), "physical live run omitted its authoritative start boundary");
   assert.ok(eventTypes.includes("run.abandoned"), "physical termination did not enter the V3 capsule before shutdown");
-  assert.ok(capsule.tracks.keyframes.some((entry) => entry.value?.kind === "snapshot"
-    && entry.value.tick === entry.tick && entry.value.stateClass === "recorded-canonical"),
-  "physical live loop did not retain a restorable State Forge keyframe");
+  assert.ok(
+    capsule.tracks.keyframes.some(
+      (entry) =>
+        entry.value?.kind === "snapshot" &&
+        entry.value.tick === entry.tick &&
+        entry.value.stateClass === "recorded-canonical",
+    ),
+    "physical live loop did not retain a restorable State Forge keyframe",
+  );
   assert.ok(replay.accepted.commands > 0, "sealed device command did not map into V3 replay truth");
-  assert.ok(replay.accepted.events > 0, `captured engine events did not map into V3 causal truth: ${JSON.stringify(replay.issues)}`);
+  assert.ok(
+    replay.accepted.events > 0,
+    `captured engine events did not map into V3 causal truth: ${JSON.stringify(replay.issues)}`,
+  );
   assert.ok(replay.accepted.snapshots > 0, "State Forge keyframe did not map into V3 replay truth");
   assert.deepEqual(replay.ghost.trident.command, {
-    kind: "command", status: "declared-unverified", available: true, resumable: false, seekable: false,
+    kind: "command",
+    status: "declared-unverified",
+    available: true,
+    resumable: false,
+    seekable: false,
     reason: "canonical V3 commands require compatible-runtime replay verification",
   });
   assert.equal(replay.ghost.trident.state.available, true);
@@ -91,37 +129,63 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
     weaponId: "sword",
   });
   assert.deepEqual(admission.context.simulation, {
-    ticksPerSecond: 120, initialState: "opening-initialized",
-    opening: { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup",
-      destination: "playing", runId: manifest.provenance.runId },
+    ticksPerSecond: 120,
+    initialState: "opening-initialized",
+    opening: {
+      version: 1,
+      phase: "opening-initialized-before-run-start",
+      previousScreen: "setup",
+      destination: "playing",
+      runId: manifest.provenance.runId,
+    },
   });
-  const openingCompletion = capsule.tracks.events.filter((entry) =>
-    entry.value?.payload?.boundary === "recorded-opening-playing-exposed");
+  const openingCompletion = capsule.tracks.events.filter(
+    (entry) => entry.value?.payload?.boundary === "recorded-opening-playing-exposed",
+  );
   assert.equal(openingCompletion.length, 1, "physical recorder must retain exactly one playing completion");
   assert.deepEqual(openingCompletion[0].value.payload, {
-    boundary: "recorded-opening-playing-exposed", runId: manifest.provenance.runId, screen: "playing",
+    boundary: "recorded-opening-playing-exposed",
+    runId: manifest.provenance.runId,
+    screen: "playing",
   });
   assert.equal(openingCompletion[0].value.type, "system.checkpoint");
   assert.equal(openingCompletion[0].tick, 0);
   assert.equal(openingCompletion[0].value.tick, 0);
   assert.equal(openingCompletion[0].value.phase, "pre-simulation");
   assert.equal(openingCompletion[0].value.source, "engine");
-  assert.ok(openingCompletion[0].value.sequence > capsule.tracks.events.find((entry) => entry.value?.type === "run.started").value.sequence);
-  assert.equal(capsule.tracks.keyframes.find((entry) => entry.tick === 0)?.value?.state?.["tear.ui.v1"]?.screen, "setup");
+  assert.ok(
+    openingCompletion[0].value.sequence >
+      capsule.tracks.events.find((entry) => entry.value?.type === "run.started").value.sequence,
+  );
+  assert.equal(
+    capsule.tracks.keyframes.find((entry) => entry.tick === 0)?.value?.state?.["tear.ui.v1"]?.screen,
+    "setup",
+  );
   assert.equal(admission.context.build.rulesetVersion, "tear-rules-six-biome-verdant-r3-pale-preview-v1");
   assert.ok(admission.context.build.contentHash.length > 0);
   assert.ok(admission.context.build.configHash.length > 0);
   const stateKeyframes = capsule.tracks.keyframes.filter((entry) => entry.value?.kind === "snapshot");
   assert.ok(stateKeyframes.length > 0, "physical capsule did not retain a State Forge keyframe to attest");
-  const bootstrap = capsule.tracks.events.find((entry) => entry.value?.id?.startsWith("ghost-live-bootstrap-")
-    && entry.value?.payload?.boundary === "v3-sidecar-opened");
+  const bootstrap = capsule.tracks.events.find(
+    (entry) =>
+      entry.value?.id?.startsWith("ghost-live-bootstrap-") && entry.value?.payload?.boundary === "v3-sidecar-opened",
+  );
   assert.ok(bootstrap, "physical capsule lacks the integrity-protected V3 bootstrap event");
-  const staticBuild = ({ configHash: _configHash, ...build }) => { void _configHash; return build; };
+  const staticBuild = ({ configHash: _configHash, ...build }) => {
+    void _configHash;
+    return build;
+  };
   for (const keyframe of stateKeyframes) {
-    assert.deepEqual(staticBuild(keyframe.value.provenance?.build), staticBuild(admission.context.build),
-      "a State Forge keyframe diverged from the capsule's immutable replay build identity");
-    assert.equal(keyframe.value.provenance?.sourceId, bootstrap.value.id,
-      "a State Forge keyframe did not cite the integrity-protected V3 bootstrap event");
+    assert.deepEqual(
+      staticBuild(keyframe.value.provenance?.build),
+      staticBuild(admission.context.build),
+      "a State Forge keyframe diverged from the capsule's immutable replay build identity",
+    );
+    assert.equal(
+      keyframe.value.provenance?.sourceId,
+      bootstrap.value.id,
+      "a State Forge keyframe did not cite the integrity-protected V3 bootstrap event",
+    );
   }
   assert.ok(Object.keys(admission.context.rng).length > 0);
   assert.equal(admission.context.rng.combat.algorithm, "mulberry32");

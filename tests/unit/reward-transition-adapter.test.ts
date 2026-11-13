@@ -8,8 +8,18 @@ describe("portable reward transition executor", () => {
     const choice = { id: "power" };
     const transition = {
       snapshot: {
-        phase: "complete", mode: "endless", wave: 4, choices: [choice], reserveChoices: [], reservedChoice: choice,
-        expandedDraft: false, reservePick: true, rerolls: 2, specialBlock: 1, specialsOffered: 3, revision: 1,
+        phase: "complete",
+        mode: "endless",
+        wave: 4,
+        choices: [choice],
+        reserveChoices: [],
+        reservedChoice: choice,
+        expandedDraft: false,
+        reservePick: true,
+        rerolls: 2,
+        specialBlock: 1,
+        specialsOffered: 3,
+        revision: 1,
       },
       intents: [
         { type: "apply-upgrade", choice },
@@ -18,17 +28,31 @@ describe("portable reward transition executor", () => {
         { type: "request-pointer" },
       ],
     } satisfies RewardSelectionTransition<typeof choice>;
-    const run = { wave: 4, specialBlock: -1, specialsOffered: 0, reservedUpgrade: null,
-      mods: { draftRerolls: 0, tier: { power: 2 } } };
+    const run = {
+      wave: 4,
+      specialBlock: -1,
+      specialsOffered: 0,
+      reservedUpgrade: null,
+      mods: { draftRerolls: 0, tier: { power: 2 } },
+    };
     const order: string[] = [];
     executeRewardTransition(transition, run, {
-      applyUpgrade: () => order.push("apply"), tierUp: vi.fn(),
+      applyUpgrade: () => order.push("apply"),
+      tierUp: vi.fn(),
       ghostLoadout: (_id, tier, wave) => order.push(`loadout:${String(tier)}:${String(wave)}`),
-      ghostEvent: vi.fn(), consumeInput: vi.fn(), resetUi: vi.fn(),
-      setScreen: (screen) => order.push(`screen:${screen}`), startNextWave: vi.fn(),
+      ghostEvent: vi.fn(),
+      consumeInput: vi.fn(),
+      resetUi: vi.fn(),
+      setScreen: (screen) => order.push(`screen:${screen}`),
+      startNextWave: vi.fn(),
       requestPointer: () => order.push("pointer"),
     });
-    expect(run).toMatchObject({ specialBlock: 1, specialsOffered: 3, reservedUpgrade: choice, mods: { draftRerolls: 2 } });
+    expect(run).toMatchObject({
+      specialBlock: 1,
+      specialsOffered: 3,
+      reservedUpgrade: choice,
+      mods: { draftRerolls: 2 },
+    });
     expect(order).toEqual(["apply", "loadout:2:4", "screen:playing", "pointer"]);
   });
 });

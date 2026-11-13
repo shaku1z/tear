@@ -2,1981 +2,229 @@
   "format": "tear-code-budget-baseline.v1",
   "note": "Debt recorded by `node scripts/check-code-budget.mjs --update`. Values may only fall; see docs/ARCHITECTURE.md.",
   "files": {
-    "src/agents/academy-behavior-cloning-batches.ts": {
-      "maxLineLength": 220,
-      "multiStatementLines": 2
-    },
-    "src/agents/academy-candidate-curation.ts": {
-      "multiStatementLines": 2
-    },
     "src/agents/academy-candidate-custody.ts": {
-      "chars": 29273,
-      "maxLineLength": 167,
-      "multiStatementLines": 5
-    },
-    "src/agents/academy-candidate-quality.ts": {
-      "multiStatementLines": 2
-    },
-    "src/agents/academy-candidate-splits.ts": {
-      "maxLineLength": 877,
-      "multiStatementLines": 18
-    },
-    "src/agents/academy-candidate-tracks.ts": {
-      "maxLineLength": 162
-    },
-    "src/agents/academy-corpus.ts": {
-      "maxLineLength": 631,
-      "multiStatementLines": 15
-    },
-    "src/agents/academy-custody-actions.ts": {
-      "multiStatementLines": 1
-    },
-    "src/agents/academy-inspection-controller.ts": {
-      "multiStatementLines": 1
-    },
-    "src/agents/academy-inspector.ts": {
-      "maxLineLength": 324
-    },
-    "src/agents/academy-policy-evaluation-executor.ts": {
-      "maxLineLength": 185,
-      "multiStatementLines": 10
-    },
-    "src/agents/academy-policy-evaluation.ts": {
-      "maxLineLength": 251,
-      "multiStatementLines": 11
-    },
-    "src/agents/academy-reviewed-sample.ts": {
-      "maxLineLength": 554,
-      "multiStatementLines": 11
-    },
-    "src/agents/academy-training-dataset.ts": {
-      "maxLineLength": 164,
-      "multiStatementLines": 2
-    },
-    "src/agents/behavior-cloning-evaluation.ts": {
-      "multiStatementLines": 4
-    },
-    "src/agents/behavior-cloning-trainer.ts": {
-      "maxLineLength": 389,
-      "multiStatementLines": 15
-    },
-    "src/agents/black-box-policy.ts": {
-      "multiStatementLines": 1
-    },
-    "src/agents/browser-temporal-dagger-program-inspection.ts": {
-      "maxLineLength": 167
-    },
-    "src/agents/browser-temporal-dagger-program-runtime.ts": {
-      "maxLineLength": 167
-    },
-    "src/agents/c32-canonical-active-policy-runtime.ts": {
-      "maxLineLength": 369,
-      "multiStatementLines": 10
-    },
-    "src/agents/c34-c32-runtime-compatibility.ts": {
-      "maxLineLength": 196,
-      "multiStatementLines": 5
-    },
-    "src/agents/c34-causal-action-features.ts": {
-      "maxLineLength": 214,
-      "multiStatementLines": 7
-    },
-    "src/agents/c34-factorized-action-q.ts": {
-      "maxLineLength": 217,
-      "multiStatementLines": 10
-    },
-    "src/agents/c34-factorized-online.ts": {
-      "maxLineLength": 242,
-      "multiStatementLines": 22
-    },
-    "src/agents/c34-factorized-policy-runtime.ts": {
-      "maxLineLength": 249,
-      "multiStatementLines": 16
-    },
-    "src/agents/c34-factorized-training.ts": {
-      "maxLineLength": 214,
-      "multiStatementLines": 12
-    },
-    "src/agents/c34-v3-c32-policy-adapter.ts": {
-      "maxLineLength": 729,
-      "multiStatementLines": 12
-    },
-    "src/agents/dagger-correction-capture.ts": {
-      "multiStatementLines": 4
-    },
-    "src/agents/dagger-correction-review.ts": {
-      "maxLineLength": 216,
-      "multiStatementLines": 5
+      "chars": 27059
     },
     "src/agents/foundry-job-bootstrap.ts": {
-      "maxLineLength": 328,
-      "multiStatementLines": 6
-    },
-    "src/agents/foundry-job-bound-continuation.ts": {
-      "maxLineLength": 891,
-      "multiStatementLines": 11
-    },
-    "src/agents/foundry-job-collection.ts": {
-      "maxLineLength": 238,
-      "multiStatementLines": 3
-    },
-    "src/agents/foundry-job-curation.ts": {
-      "maxLineLength": 400,
-      "multiStatementLines": 5
-    },
-    "src/agents/foundry-job-decision.ts": {
-      "maxLineLength": 431,
-      "multiStatementLines": 5
+      "maxLineLength": 185
     },
     "src/agents/foundry-job-due-dispatcher.ts": {
-      "chars": 28800,
-      "maxLineLength": 961,
-      "multiStatementLines": 52
-    },
-    "src/agents/foundry-job-execution-binding.ts": {
-      "maxLineLength": 1477,
-      "multiStatementLines": 34
-    },
-    "src/agents/foundry-job-monitoring.ts": {
-      "maxLineLength": 419,
-      "multiStatementLines": 7
-    },
-    "src/agents/foundry-job-offline-training-finalization.ts": {
-      "maxLineLength": 224,
-      "multiStatementLines": 5
-    },
-    "src/agents/foundry-job-offline-training.ts": {
-      "maxLineLength": 893,
-      "multiStatementLines": 15
-    },
-    "src/agents/foundry-job-online-training-launch.ts": {
-      "maxLineLength": 584,
-      "multiStatementLines": 10
-    },
-    "src/agents/foundry-job-recovery.ts": {
-      "maxLineLength": 399,
-      "multiStatementLines": 3
+      "chars": 26371
     },
     "src/agents/foundry-job-schedule.ts": {
-      "maxLineLength": 396,
-      "multiStatementLines": 30
+      "maxLineLength": 167
     },
     "src/agents/foundry-job-scheduled-execution.ts": {
-      "maxLineLength": 695,
-      "multiStatementLines": 31,
       "largestFunctionStatements": 110
     },
-    "src/agents/foundry-job-source-evaluation-execution.ts": {
-      "maxLineLength": 583,
-      "multiStatementLines": 13
-    },
-    "src/agents/foundry-job-source-evaluation-plan.ts": {
-      "maxLineLength": 458,
-      "multiStatementLines": 8
-    },
-    "src/agents/foundry-job-state.ts": {
-      "maxLineLength": 287,
-      "multiStatementLines": 5
-    },
-    "src/agents/foundry-job-successor-binding-material.ts": {
-      "maxLineLength": 1359,
-      "multiStatementLines": 7
-    },
-    "src/agents/foundry-job-v3-monitoring-bridge.ts": {
-      "maxLineLength": 812,
-      "multiStatementLines": 11
-    },
-    "src/agents/foundry-job-v3-post-promotion-monitor.ts": {
-      "maxLineLength": 862,
-      "multiStatementLines": 25
-    },
-    "src/agents/foundry-job-v3-post-promotion-rollback.ts": {
-      "maxLineLength": 856,
-      "multiStatementLines": 17
-    },
-    "src/agents/foundry-job-v3-promotion-approval.ts": {
-      "maxLineLength": 1527,
-      "multiStatementLines": 12
-    },
-    "src/agents/foundry-job-v3-promotion.ts": {
-      "maxLineLength": 607,
-      "multiStatementLines": 11
-    },
-    "src/agents/foundry-job-v4-decision.ts": {
-      "maxLineLength": 1443,
-      "multiStatementLines": 10
-    },
-    "src/agents/foundry-job-v4-monitoring-entry.ts": {
-      "maxLineLength": 780,
-      "multiStatementLines": 7
-    },
-    "src/agents/foundry-job-v4-offline-terminal.ts": {
-      "maxLineLength": 2983,
-      "multiStatementLines": 13
-    },
-    "src/agents/foundry-job-v4-online-execution-scheduler.ts": {
-      "maxLineLength": 2231,
-      "multiStatementLines": 11
-    },
-    "src/agents/foundry-job-v4-online-launch-authority.ts": {
-      "maxLineLength": 1366,
-      "multiStatementLines": 17
-    },
-    "src/agents/foundry-job-v4-online-launch-scheduler.ts": {
-      "maxLineLength": 906,
-      "multiStatementLines": 14
-    },
-    "src/agents/foundry-job-v4-online-terminal.ts": {
-      "maxLineLength": 1553,
-      "multiStatementLines": 15
-    },
     "src/agents/foundry-job-v4-post-promotion-monitor-terminal.ts": {
-      "maxLineLength": 1027,
-      "multiStatementLines": 13
-    },
-    "src/agents/foundry-job-v4-post-promotion-rollback.ts": {
-      "maxLineLength": 799,
-      "multiStatementLines": 14
-    },
-    "src/agents/foundry-job-v4-post-promotion-watch-authority.ts": {
-      "maxLineLength": 944,
-      "multiStatementLines": 8
-    },
-    "src/agents/foundry-job-v4-source-evaluation-execution.ts": {
-      "maxLineLength": 217
-    },
-    "src/agents/foundry-job-v4-source-evaluation-plan.ts": {
-      "maxLineLength": 709,
-      "multiStatementLines": 7
-    },
-    "src/agents/foundry-job-v4-v3-monitoring-bridge.ts": {
-      "maxLineLength": 2185,
-      "multiStatementLines": 10
-    },
-    "src/agents/foundry-job-v4-v3-promotion-approval.ts": {
-      "maxLineLength": 1016,
-      "multiStatementLines": 5
-    },
-    "src/agents/foundry-job-v4-v3-promotion.ts": {
-      "maxLineLength": 1208,
-      "multiStatementLines": 6
-    },
-    "src/agents/foundry-job-vault.ts": {
-      "maxLineLength": 263,
-      "multiStatementLines": 7
-    },
-    "src/agents/foundry-launch-profile.ts": {
-      "maxLineLength": 498,
-      "multiStatementLines": 16
-    },
-    "src/agents/journey-director.ts": {
-      "multiStatementLines": 11
-    },
-    "src/agents/ladder-foundry.ts": {
-      "multiStatementLines": 2
+      "maxLineLength": 161
     },
     "src/agents/live-watch-agent-host.ts": {
-      "chars": 29545,
-      "maxLineLength": 270,
-      "multiStatementLines": 26,
+      "chars": 27170,
       "largestFunctionStatements": 150
     },
     "src/agents/live-watch-agent-panel.ts": {
-      "maxLineLength": 167,
-      "multiStatementLines": 21
-    },
-    "src/agents/longitudinal-progression.ts": {
-      "multiStatementLines": 1
+      "maxLineLength": 171
     },
     "src/agents/offline-rl-training.ts": {
-      "chars": 44825,
-      "maxLineLength": 208,
-      "multiStatementLines": 27
-    },
-    "src/agents/offline-rl-v3-training.ts": {
-      "maxLineLength": 486,
-      "multiStatementLines": 20
-    },
-    "src/agents/online-rl-curriculum.ts": {
-      "maxLineLength": 517,
-      "multiStatementLines": 20
-    },
-    "src/agents/online-rl-headless-executor.ts": {
-      "maxLineLength": 520,
-      "multiStatementLines": 25
-    },
-    "src/agents/online-rl-source-evaluation.ts": {
-      "maxLineLength": 674,
-      "multiStatementLines": 18
-    },
-    "src/agents/online-rl-tournament.ts": {
-      "maxLineLength": 749,
-      "multiStatementLines": 23
-    },
-    "src/agents/online-rl-training.ts": {
-      "maxLineLength": 1046,
-      "multiStatementLines": 32
-    },
-    "src/agents/online-rl-v3-training.ts": {
-      "maxLineLength": 1115,
-      "multiStatementLines": 22
-    },
-    "src/agents/pixel-observation.ts": {
-      "maxLineLength": 198,
-      "multiStatementLines": 10
-    },
-    "src/agents/pixel-visual-comparison.ts": {
-      "maxLineLength": 247,
-      "multiStatementLines": 2
-    },
-    "src/agents/policy-artifact-registry.ts": {
-      "maxLineLength": 200,
-      "multiStatementLines": 14
-    },
-    "src/agents/policy-condition-vector.ts": {
-      "maxLineLength": 173,
-      "multiStatementLines": 2
-    },
-    "src/agents/policy-decision-journal.ts": {
-      "maxLineLength": 190,
-      "multiStatementLines": 12
-    },
-    "src/agents/policy-evaluation.ts": {
-      "multiStatementLines": 1
-    },
-    "src/agents/policy-feature-vector.ts": {
-      "maxLineLength": 171,
-      "multiStatementLines": 1
-    },
-    "src/agents/policy-model-weights.ts": {
-      "multiStatementLines": 5
-    },
-    "src/agents/policy-runtime.ts": {
-      "maxLineLength": 263,
-      "multiStatementLines": 8
-    },
-    "src/agents/production-policy-evaluation.ts": {
-      "maxLineLength": 251,
-      "multiStatementLines": 12
-    },
-    "src/agents/tearbot-human-calibration-admission.ts": {
-      "multiStatementLines": 1
-    },
-    "src/agents/tearbot-human-calibration-capture.ts": {
-      "maxLineLength": 178,
-      "multiStatementLines": 2
-    },
-    "src/agents/tearbot-human-calibration-consent-ledger.ts": {
-      "maxLineLength": 165,
-      "multiStatementLines": 1
-    },
-    "src/agents/tearbot-human-calibration-distribution.ts": {
-      "maxLineLength": 365,
-      "multiStatementLines": 1
-    },
-    "src/agents/tearbot-human-calibration-source.ts": {
-      "maxLineLength": 684,
-      "multiStatementLines": 12
+      "chars": 41199
     },
     "src/agents/tearbot-human-likeness-comparison.ts": {
-      "maxLineLength": 605,
-      "multiStatementLines": 13
-    },
-    "src/agents/tearbot-ladder-evaluation.ts": {
-      "maxLineLength": 1842,
-      "multiStatementLines": 13
+      "maxLineLength": 177
     },
     "src/agents/tearbot-v3-canonical-evaluation.ts": {
-      "maxLineLength": 498,
-      "multiStatementLines": 14
-    },
-    "src/agents/temporal-dagger-program-inspection.ts": {
-      "maxLineLength": 185,
-      "multiStatementLines": 1
-    },
-    "src/agents/temporal-dagger-program-runtime.ts": {
-      "multiStatementLines": 7
-    },
-    "src/agents/temporal-dagger-program.ts": {
-      "maxLineLength": 394,
-      "multiStatementLines": 15
-    },
-    "src/agents/temporal-policy-comparison.ts": {
-      "maxLineLength": 219,
-      "multiStatementLines": 9
-    },
-    "src/agents/temporal-policy-context.ts": {
-      "maxLineLength": 201
-    },
-    "src/agents/temporal-policy-trainer.ts": {
-      "maxLineLength": 303,
-      "multiStatementLines": 16
-    },
-    "src/agents/training-archive-v3-derived-evidence-contract.ts": {
-      "multiStatementLines": 4
-    },
-    "src/agents/training-operations-budget.ts": {
-      "maxLineLength": 180,
-      "multiStatementLines": 3
-    },
-    "src/agents/training-operations-v3-champion-evaluation.ts": {
-      "maxLineLength": 168,
-      "multiStatementLines": 2
-    },
-    "src/agents/training-operations-v3-comparison-result.ts": {
-      "maxLineLength": 238,
-      "multiStatementLines": 1
-    },
-    "src/agents/training-operations-v3-evaluation.ts": {
-      "maxLineLength": 178,
-      "multiStatementLines": 1
-    },
-    "src/agents/training-operations-v3-monitoring-authority.ts": {
-      "multiStatementLines": 1
-    },
-    "src/agents/training-operations-v3-post-promotion-cycle.ts": {
-      "maxLineLength": 249,
-      "multiStatementLines": 2
-    },
-    "src/agents/training-operations-v3-promotion-cycle.ts": {
-      "maxLineLength": 187,
-      "multiStatementLines": 1
-    },
-    "src/agents/training-operations-v3-scheduled-cycle.ts": {
-      "chars": 54997,
-      "maxLineLength": 237,
-      "multiStatementLines": 8
-    },
-    "src/agents/training-operations-v3-training.ts": {
-      "maxLineLength": 183,
-      "multiStatementLines": 4,
-      "largestFunctionStatements": 87
-    },
-    "src/app/campaign/boss-phase-practice.ts": {
-      "maxLineLength": 319,
-      "multiStatementLines": 20
-    },
-    "src/app/campaign/campaign-host.ts": {
-      "multiStatementLines": 12
-    },
-    "src/app/campaign/campaign-intent-coordinator.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/campaign/campaign-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/campaign/campaign-training-composition.ts": {
-      "maxLineLength": 210,
-      "multiStatementLines": 10
-    },
-    "src/app/campaign/cinematic-host.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/campaign/pending-finale-controller.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/combat/combat-action-context.ts": {
       "maxLineLength": 170
     },
-    "src/app/combat/combat-actions.ts": {
-      "maxLineLength": 357,
-      "multiStatementLines": 34
+    "src/agents/training-operations-v3-scheduled-cycle.ts": {
+      "chars": 50620,
+      "maxLineLength": 206
     },
-    "src/app/combat/combat-frame-context.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/combat/combat-host-factory.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/combat/style-host.ts": {
-      "multiStatementLines": 3
+    "src/agents/training-operations-v3-training.ts": {
+      "largestFunctionStatements": 87
     },
     "src/app/engineering/academy-screen.ts": {
-      "maxLineLength": 424,
-      "multiStatementLines": 5
-    },
-    "src/app/engineering/bot-evidence-controller.ts": {
-      "maxLineLength": 218,
-      "multiStatementLines": 2
-    },
-    "src/app/engineering/debug-composition.ts": {
-      "multiStatementLines": 1
+      "maxLineLength": 172
     },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 32485,
-      "maxLineLength": 227,
-      "multiStatementLines": 34
-    },
-    "src/app/engineering/debug-snapshot.ts": {
-      "multiStatementLines": 3
-    },
-    "src/app/engineering/foundry-scheduler.ts": {
-      "maxLineLength": 469,
-      "multiStatementLines": 9
-    },
-    "src/app/engineering/foundry-screen.ts": {
-      "maxLineLength": 500,
-      "multiStatementLines": 11
-    },
-    "src/app/engineering/player-watch-controller.ts": {
-      "maxLineLength": 194,
-      "multiStatementLines": 19
-    },
-    "src/app/engineering/player-watch-observation.ts": {
-      "maxLineLength": 210,
-      "multiStatementLines": 2
-    },
-    "src/app/engineering/state-forge-adapter.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/engineering/state-forge-runtime-bridge.ts": {
-      "maxLineLength": 218,
-      "multiStatementLines": 3
-    },
-    "src/app/interface/achievement-toast-controller.ts": {
-      "multiStatementLines": 3
-    },
-    "src/app/interface/app-state-controller.ts": {
-      "multiStatementLines": 4
-    },
-    "src/app/interface/hud-feedback-state.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/interface/interface-composition.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/interface/interface-frame-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/interface/presentation-capture.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/interface/presentation-composition.ts": {
-      "maxLineLength": 163,
-      "multiStatementLines": 13
-    },
-    "src/app/interface/screen-action-bindings.ts": {
-      "maxLineLength": 250,
-      "multiStatementLines": 25
-    },
-    "src/app/interface/screen-presentation-composition.ts": {
-      "multiStatementLines": 5
-    },
-    "src/app/interface/ui-action-coordinator.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/interface/ui-runtime-controller.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/library/browser-ghost-archive-files.ts": {
-      "maxLineLength": 176,
-      "multiStatementLines": 14
-    },
-    "src/app/library/ghost-career-controller.ts": {
-      "maxLineLength": 345,
-      "multiStatementLines": 21
-    },
-    "src/app/library/ghost-coach-history-controller.ts": {
-      "multiStatementLines": 13
-    },
-    "src/app/library/ghost-theater-screen-adapter.ts": {
-      "maxLineLength": 302,
-      "multiStatementLines": 38
-    },
-    "src/app/library/ghost-vault-library-controller.ts": {
-      "maxLineLength": 194,
-      "multiStatementLines": 18
-    },
-    "src/app/library/library-screen-adapters-runtime.ts": {
-      "maxLineLength": 1017,
-      "multiStatementLines": 29
-    },
-    "src/app/library/library-screen-adapters.ts": {
-      "maxLineLength": 256,
-      "multiStatementLines": 23
-    },
-    "src/app/library/replay-library-controller.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/library/replay-transport-controller.ts": {
-      "maxLineLength": 165,
-      "multiStatementLines": 3
-    },
-    "src/app/progress/practice-encounter-persistence.ts": {
-      "maxLineLength": 255,
-      "multiStatementLines": 5
-    },
-    "src/app/progress/style-achievement-persistence.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/progress/tutorial-completion-persistence.ts": {
-      "multiStatementLines": 5
-    },
-    "src/app/replay/beat-this-run-controller.ts": {
-      "maxLineLength": 211,
-      "multiStatementLines": 17
-    },
-    "src/app/replay/browser-boss-memory.ts": {
-      "maxLineLength": 162,
-      "multiStatementLines": 4
-    },
-    "src/app/replay/browser-ghost-career-search.ts": {
-      "maxLineLength": 179,
-      "multiStatementLines": 17
-    },
-    "src/app/replay/browser-ghost-career.ts": {
-      "maxLineLength": 346,
-      "multiStatementLines": 16
-    },
-    "src/app/replay/browser-ghost-coach-history.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/replay/browser-ghost-studio-media.ts": {
-      "maxLineLength": 264,
-      "multiStatementLines": 33
-    },
-    "src/app/replay/browser-ghost-studio-webm.ts": {
-      "maxLineLength": 280,
-      "multiStatementLines": 35
-    },
-    "src/app/replay/browser-live-ghost-reference.ts": {
-      "maxLineLength": 240,
-      "multiStatementLines": 5
-    },
-    "src/app/replay/ghost-challenge-composition.ts": {
-      "maxLineLength": 267,
-      "multiStatementLines": 7
-    },
-    "src/app/replay/ghost-challenge-controller.ts": {
-      "maxLineLength": 233,
-      "multiStatementLines": 9
-    },
-    "src/app/replay/ghost-chase-composition.ts": {
-      "maxLineLength": 617,
-      "multiStatementLines": 4
-    },
-    "src/app/replay/ghost-comparison-screen-adapter.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/replay/ghost-finale-companion.ts": {
-      "maxLineLength": 179,
-      "multiStatementLines": 7
-    },
-    "src/app/replay/ghost-finale-screen-adapter.ts": {
-      "maxLineLength": 235,
-      "multiStatementLines": 2
-    },
-    "src/app/replay/ghost-frame-recording.ts": {
-      "maxLineLength": 173,
-      "multiStatementLines": 12
-    },
-    "src/app/replay/ghost-lab-home.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/replay/ghost-opening-capture.ts": {
-      "maxLineLength": 165,
-      "multiStatementLines": 2
-    },
-    "src/app/replay/ghost-owner-recovery-controller.ts": {
-      "maxLineLength": 228,
-      "multiStatementLines": 11
-    },
-    "src/app/replay/ghost-practice-session-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/replay/ghost-publication-controller.ts": {
-      "maxLineLength": 368,
-      "multiStatementLines": 18
-    },
-    "src/app/replay/ghost-recording-session-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/replay/ghost-reference-controller.ts": {
-      "maxLineLength": 299,
-      "multiStatementLines": 16
-    },
-    "src/app/replay/ghost-run-dna-recording.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/replay/ghost-support-controller.ts": {
-      "maxLineLength": 352,
-      "multiStatementLines": 4
-    },
-    "src/app/replay/replay-screen-adapter-runtime.ts": {
-      "maxLineLength": 171,
-      "multiStatementLines": 15
-    },
-    "src/app/replay/replay-screen-adapter.ts": {
-      "maxLineLength": 368,
-      "multiStatementLines": 23
-    },
-    "src/app/replay/seed-race-composition.ts": {
-      "multiStatementLines": 4
-    },
-    "src/app/run/outcome-composition.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/run/outcome-intent-coordinator.ts": {
-      "multiStatementLines": 10
-    },
-    "src/app/run/revive-countdown-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/run/run-controller-api.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/run/run-orchestration-composition.ts": {
-      "maxLineLength": 192,
-      "multiStatementLines": 9
-    },
-    "src/app/run/run-screen-adapters.ts": {
-      "maxLineLength": 366,
-      "multiStatementLines": 4
-    },
-    "src/app/run/run-start-host.ts": {
-      "maxLineLength": 219,
-      "multiStatementLines": 17
-    },
-    "src/app/run/setup-shop-renderers.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/run/shop-feedback-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/screens/menu-screen-adapters-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/screens/rename-controller.ts": {
-      "multiStatementLines": 13
-    },
-    "src/app/screens/settings-controller.ts": {
-      "multiStatementLines": 4
-    },
-    "src/app/screens/settings-rename-adapters-runtime.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/screens/settings-rename-adapters.ts": {
-      "multiStatementLines": 12
-    },
-    "src/app/shell/composition.ts": {
-      "maxLineLength": 274,
-      "multiStatementLines": 1
-    },
-    "src/app/shell/frame-runtime.ts": {
-      "multiStatementLines": 5
-    },
-    "src/app/shell/game-runtime-dependencies.ts": {
-      "maxLineLength": 231
-    },
-    "src/app/shell/platform-bootstrap.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/shell/runtime-frame-coordinator.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/shell/runtime-frame-driver.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/shell/runtime-initialization.ts": {
-      "multiStatementLines": 3
-    },
-    "src/app/shell/session-services-composition.ts": {
-      "maxLineLength": 368,
-      "multiStatementLines": 2
-    },
-    "src/app/training/training-handoff.ts": {
-      "multiStatementLines": 4
-    },
-    "src/app/training/training-host-runtime.ts": {
-      "maxLineLength": 191,
-      "multiStatementLines": 13
-    },
-    "src/app/training/training-host.ts": {
-      "maxLineLength": 190,
-      "multiStatementLines": 13
-    },
-    "src/app/training/tutorial-session-actions.ts": {
-      "maxLineLength": 329,
-      "multiStatementLines": 10
-    },
-    "src/app/world/biomes/aurora-track-wiring.ts": {
-      "multiStatementLines": 9
-    },
-    "src/app/world/biomes/bloom-well-wiring.ts": {
-      "multiStatementLines": 6
-    },
-    "src/app/world/biomes/rootbinder-wiring.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/world/biomes/rootbound-wiring.ts": {
-      "maxLineLength": 179,
-      "multiStatementLines": 1
-    },
-    "src/app/world/content-composition.ts": {
-      "multiStatementLines": 2
-    },
-    "src/app/world/human-input-provenance.ts": {
-      "maxLineLength": 241,
-      "multiStatementLines": 5
-    },
-    "src/app/world/particle-presentation-state.ts": {
-      "maxLineLength": 179
-    },
-    "src/app/world/stage-runtime-state.ts": {
-      "multiStatementLines": 7
-    },
-    "src/app/world/world-composition.ts": {
-      "maxLineLength": 175,
-      "multiStatementLines": 10
-    },
-    "src/app/world/world-context.ts": {
-      "multiStatementLines": 3
-    },
-    "src/app/world/world-presentation-adapters.ts": {
-      "maxLineLength": 177,
-      "multiStatementLines": 3
-    },
-    "src/app/world/world-session-state.ts": {
-      "multiStatementLines": 1
-    },
-    "src/app/world/world-simulation-factories.ts": {
-      "maxLineLength": 166
-    },
-    "src/audio/audio-dispatch-receipts.ts": {
-      "multiStatementLines": 2
-    },
-    "src/audio/legacy-audio-lifecycle.ts": {
-      "multiStatementLines": 1
-    },
-    "src/audio/legacy-live-audio.ts": {
-      "multiStatementLines": 13
-    },
-    "src/audio/legacy-music-sequencer.ts": {
-      "multiStatementLines": 9
-    },
-    "src/audio/legacy-synth-runtime.ts": {
-      "maxLineLength": 258,
-      "multiStatementLines": 64
-    },
-    "src/audio/legacy-synth.ts": {
-      "maxLineLength": 177,
-      "multiStatementLines": 54
-    },
-    "src/audio/music/active-station.ts": {
-      "multiStatementLines": 4
-    },
-    "src/audio/music/stingers.ts": {
-      "multiStatementLines": 2
-    },
-    "src/audio/scheduled-audio-resources.ts": {
-      "multiStatementLines": 2
+      "chars": 29278
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83
     },
-    "src/audio/tear-score-adapter.ts": {
-      "multiStatementLines": 1
-    },
-    "src/audio/tear-score-module.ts": {
-      "multiStatementLines": 2
-    },
-    "src/audio/tone-host-surface.ts": {
-      "multiStatementLines": 1
-    },
     "src/config/game-config.ts": {
-      "chars": 33245,
-      "maxLineLength": 163
-    },
-    "src/domain/cosmetic-emission-random.ts": {
-      "multiStatementLines": 3
-    },
-    "src/domain/reward-receipts.ts": {
-      "maxLineLength": 303,
-      "multiStatementLines": 2
-    },
-    "src/game-reference/boss-reference.ts": {
-      "maxLineLength": 173
-    },
-    "src/game-reference/enemy-reference.ts": {
-      "maxLineLength": 220
+      "chars": 27922
     },
     "src/game-reference/game-reference.ts": {
-      "chars": 33245
-    },
-    "src/game-reference/stage-mode-reference.ts": {
-      "maxLineLength": 409
-    },
-    "src/gameplay/affixes.ts": {
-      "multiStatementLines": 3
-    },
-    "src/gameplay/campaign/chapter-controller.ts": {
-      "maxLineLength": 210,
-      "multiStatementLines": 8
-    },
-    "src/gameplay/campaign/cinematic-launch-runtime.ts": {
-      "maxLineLength": 212,
-      "multiStatementLines": 9
-    },
-    "src/gameplay/campaign/cinematic-player-runtime.ts": {
-      "multiStatementLines": 6
-    },
-    "src/gameplay/campaign/finale-binding.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/campaign/finale-controller.ts": {
-      "maxLineLength": 223,
-      "multiStatementLines": 15
-    },
-    "src/gameplay/campaign/finale-runtime.ts": {
-      "maxLineLength": 170,
-      "multiStatementLines": 23
-    },
-    "src/gameplay/campaign/live-cinematic-runtime.ts": {
-      "maxLineLength": 507,
-      "multiStatementLines": 9
-    },
-    "src/gameplay/campaign/source-void-runtime.ts": {
-      "multiStatementLines": 10
-    },
-    "src/gameplay/combat/blade-parry-runtime.ts": {
-      "maxLineLength": 269,
-      "multiStatementLines": 21
-    },
-    "src/gameplay/combat/boss-step-runtime.ts": {
-      "multiStatementLines": 11
-    },
-    "src/gameplay/combat/combat-entity-runtime.ts": {
-      "maxLineLength": 220,
-      "multiStatementLines": 36
-    },
-    "src/gameplay/combat/combat-step-prelude.ts": {
-      "maxLineLength": 168,
-      "multiStatementLines": 5
-    },
-    "src/gameplay/combat/combat-tail-runtime.ts": {
-      "maxLineLength": 180,
-      "multiStatementLines": 12
-    },
-    "src/gameplay/combat/contact-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/combat/enemy-step-runtime.ts": {
-      "multiStatementLines": 10
-    },
-    "src/gameplay/combat/held-blade-collision-contracts.ts": {
-      "maxLineLength": 161
+      "chars": 30731
     },
     "src/gameplay/combat/held-blade-collision-runtime.ts": {
-      "maxLineLength": 216,
-      "multiStatementLines": 34,
       "largestFunctionStatements": 171
     },
-    "src/gameplay/combat/kill-runtime.ts": {
-      "multiStatementLines": 12
-    },
-    "src/gameplay/combat/live-collision-gameplay-bindings.ts": {
-      "multiStatementLines": 2
-    },
-    "src/gameplay/combat/live-collision-phase.ts": {
-      "maxLineLength": 249,
-      "multiStatementLines": 23
-    },
-    "src/gameplay/combat/live-combat-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/combat/live-hammer-meteor.ts": {
-      "multiStatementLines": 4
-    },
-    "src/gameplay/combat/live-kill-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/combat/live-opening-phase.ts": {
-      "maxLineLength": 230,
-      "multiStatementLines": 13
-    },
-    "src/gameplay/combat/live-weapon-runtime.ts": {
-      "maxLineLength": 219,
-      "multiStatementLines": 33
-    },
-    "src/gameplay/combat/locomotion-combat-runtime.ts": {
-      "maxLineLength": 203,
-      "multiStatementLines": 13
-    },
-    "src/gameplay/combat/platform-lifecycle-runtime.ts": {
-      "multiStatementLines": 3
-    },
-    "src/gameplay/combat/support-aura-resolver.ts": {
-      "multiStatementLines": 11
-    },
-    "src/gameplay/combat/thrown-collision-runtime.ts": {
-      "maxLineLength": 332,
-      "multiStatementLines": 26
-    },
-    "src/gameplay/combat/weapon-runtime-coordinator.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/combat/weapon-secondary-runtime.ts": {
-      "multiStatementLines": 11
-    },
-    "src/gameplay/combat/weapon-transport-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/entities/blade-chain-runtime.ts": {
-      "multiStatementLines": 4
-    },
-    "src/gameplay/entities/blade-core.ts": {
-      "multiStatementLines": 34
-    },
     "src/gameplay/entities/blade.ts": {
-      "chars": 28455,
-      "multiStatementLines": 47
-    },
-    "src/gameplay/entities/boss-ritual-controller.ts": {
-      "maxLineLength": 224,
-      "multiStatementLines": 10
-    },
-    "src/gameplay/entities/boss-ritual-cues.ts": {
-      "maxLineLength": 245
+      "chars": 25484
     },
     "src/gameplay/entities/enemy-types/air-enemies.ts": {
-      "maxLineLength": 314,
-      "multiStatementLines": 56
+      "maxLineLength": 236
     },
     "src/gameplay/entities/enemy-types/aldric.ts": {
-      "maxLineLength": 258,
-      "multiStatementLines": 122,
       "largestFunctionStatements": 209
     },
-    "src/gameplay/entities/enemy-types/boss-runtime.ts": {
-      "maxLineLength": 202,
-      "multiStatementLines": 13
-    },
     "src/gameplay/entities/enemy-types/colossus.ts": {
-      "maxLineLength": 198,
-      "multiStatementLines": 73,
       "largestFunctionStatements": 160
     },
-    "src/gameplay/entities/enemy-types/echo-enemies.ts": {
-      "maxLineLength": 186,
-      "multiStatementLines": 54
-    },
     "src/gameplay/entities/enemy-types/enemy-base.ts": {
-      "maxLineLength": 193,
-      "multiStatementLines": 75,
       "largestFunctionStatements": 86
     },
     "src/gameplay/entities/enemy-types/ground-enemies.ts": {
-      "maxLineLength": 239,
-      "multiStatementLines": 69,
       "largestFunctionStatements": 90
     },
-    "src/gameplay/entities/enemy-types/rimehound.ts": {
-      "multiStatementLines": 1
-    },
     "src/gameplay/entities/enemy-types/rootbound.ts": {
-      "maxLineLength": 233,
-      "multiStatementLines": 19
+      "chars": 25452
     },
     "src/gameplay/entities/enemy-types/source-core.ts": {
-      "maxLineLength": 183,
-      "multiStatementLines": 109,
       "largestFunctionStatements": 98
     },
     "src/gameplay/entities/enemy-types/source.ts": {
-      "maxLineLength": 266,
-      "multiStatementLines": 64,
       "largestFunctionStatements": 113
     },
-    "src/gameplay/entities/enemy-types/special-enemies.ts": {
-      "maxLineLength": 229,
-      "multiStatementLines": 18
-    },
-    "src/gameplay/entities/enemy-types/throne-fire.ts": {
-      "multiStatementLines": 4
-    },
     "src/gameplay/entities/enemy-types/warden.ts": {
-      "maxLineLength": 180,
-      "multiStatementLines": 81,
       "largestFunctionStatements": 161
     },
-    "src/gameplay/entities/enemy-types/white-hart.ts": {
-      "multiStatementLines": 70
-    },
     "src/gameplay/entities/mirror-actions.ts": {
-      "maxLineLength": 385,
-      "multiStatementLines": 92,
       "largestFunctionStatements": 118
     },
-    "src/gameplay/entities/mirror-contracts.ts": {
-      "maxLineLength": 199
-    },
-    "src/gameplay/entities/mirror.ts": {
-      "maxLineLength": 292,
-      "multiStatementLines": 66
-    },
     "src/gameplay/entities/player.ts": {
-      "multiStatementLines": 16,
       "largestFunctionStatements": 128
     },
     "src/gameplay/entities/projectile.ts": {
-      "multiStatementLines": 69,
       "largestFunctionStatements": 98
     },
-    "src/gameplay/entities/rootbinder-runtime.ts": {
-      "maxLineLength": 237
-    },
-    "src/gameplay/environment/bloom-well.ts": {
-      "maxLineLength": 224,
-      "multiStatementLines": 2
-    },
-    "src/gameplay/environment/combat-object-runtime.ts": {
-      "maxLineLength": 183
-    },
-    "src/gameplay/environment/environment-runtime.ts": {
-      "maxLineLength": 556,
-      "multiStatementLines": 30
-    },
-    "src/gameplay/environment/environment-state.ts": {
-      "maxLineLength": 325,
-      "multiStatementLines": 27
-    },
-    "src/gameplay/environment/field-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/environment/graft-anchor.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/environment/pale-environment-feature.ts": {
-      "maxLineLength": 184,
-      "multiStatementLines": 3
-    },
-    "src/gameplay/environment/presentation-snapshot.ts": {
-      "maxLineLength": 308,
-      "multiStatementLines": 2
-    },
-    "src/gameplay/environment/verdant-environment-feature.ts": {
-      "maxLineLength": 1857,
-      "multiStatementLines": 34
-    },
-    "src/gameplay/environment/white-hart-route-runtime.ts": {
-      "multiStatementLines": 2
-    },
-    "src/gameplay/progression/achievement-catalog.ts": {
-      "maxLineLength": 168
-    },
-    "src/gameplay/progression/achievements.ts": {
-      "multiStatementLines": 3
-    },
-    "src/gameplay/progression/meta.ts": {
-      "maxLineLength": 345,
-      "multiStatementLines": 16
-    },
-    "src/gameplay/run/lifecycle.ts": {
-      "multiStatementLines": 13
-    },
-    "src/gameplay/run/live-content-runtime.ts": {
-      "multiStatementLines": 2
-    },
-    "src/gameplay/run/live-enemy-spawn.ts": {
-      "multiStatementLines": 5
-    },
-    "src/gameplay/run/live-outcome-controller.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/run/reward-runtime.ts": {
-      "multiStatementLines": 16
-    },
-    "src/gameplay/run/reward-selection.ts": {
-      "maxLineLength": 197,
-      "multiStatementLines": 11
-    },
-    "src/gameplay/run/seed-locked-draft.ts": {
-      "maxLineLength": 290,
-      "multiStatementLines": 1
-    },
-    "src/gameplay/run/wave-intent-dispatcher.ts": {
-      "multiStatementLines": 28
-    },
-    "src/gameplay/runtime/authoritative-input.ts": {
-      "multiStatementLines": 21
-    },
-    "src/gameplay/runtime/authoritative-step.ts": {
-      "multiStatementLines": 4
-    },
-    "src/gameplay/runtime/cinematic-director.ts": {
-      "maxLineLength": 170,
-      "multiStatementLines": 36
-    },
-    "src/gameplay/runtime/gameplay-events.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/runtime/run-dna-observer.ts": {
-      "maxLineLength": 417,
-      "multiStatementLines": 36
-    },
-    "src/gameplay/runtime/tear-simulation-runtime.ts": {
-      "multiStatementLines": 6
-    },
-    "src/gameplay/runtime/tear-world-composition.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/runtime/tear-world-context.ts": {
-      "maxLineLength": 167
-    },
-    "src/gameplay/runtime/tear-world-transient-state.ts": {
-      "multiStatementLines": 7
-    },
-    "src/gameplay/scoring/best-scores.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/scoring/live-style-achievement-runtime.ts": {
-      "maxLineLength": 170,
-      "multiStatementLines": 4
-    },
-    "src/gameplay/scoring/style-runtime-coordinator.ts": {
-      "maxLineLength": 239,
-      "multiStatementLines": 15
-    },
     "src/gameplay/training/arena-rules.ts": {
-      "chars": 29753,
-      "maxLineLength": 478,
-      "multiStatementLines": 35
-    },
-    "src/gameplay/training/arena-runtime-bridge.ts": {
-      "maxLineLength": 161,
-      "multiStatementLines": 1
-    },
-    "src/gameplay/training/boss-phase-practice-runtime.ts": {
-      "multiStatementLines": 7
-    },
-    "src/gameplay/training/boss-practice-source-restore.ts": {
-      "maxLineLength": 165,
-      "multiStatementLines": 5
-    },
-    "src/gameplay/training/live-playground-presentation.ts": {
-      "multiStatementLines": 3
-    },
-    "src/gameplay/training/live-tutorial-runtime.ts": {
-      "maxLineLength": 398,
-      "multiStatementLines": 49
-    },
-    "src/gameplay/training/playground-controller.ts": {
-      "maxLineLength": 163,
-      "multiStatementLines": 2
-    },
-    "src/gameplay/training/practice-boss-catalog.ts": {
-      "maxLineLength": 224,
-      "multiStatementLines": 1
-    },
-    "src/gameplay/training/practice-enemy-catalog.ts": {
-      "maxLineLength": 161,
-      "multiStatementLines": 2
-    },
-    "src/gameplay/training/runtime-bridge.ts": {
-      "multiStatementLines": 17
-    },
-    "src/gameplay/training/tutorial-arenas.ts": {
-      "multiStatementLines": 1
-    },
-    "src/gameplay/training/tutorial-contract.ts": {
-      "multiStatementLines": 1
+      "chars": 26787
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 52949,
-      "maxLineLength": 387,
-      "multiStatementLines": 74,
+      "chars": 47038,
       "largestFunctionStatements": 170
     },
-    "src/gameplay/training/tutorial-failure-coach.ts": {
-      "maxLineLength": 242,
-      "multiStatementLines": 16
-    },
-    "src/gameplay/training/tutorial-ghost-coach.ts": {
-      "maxLineLength": 385,
-      "multiStatementLines": 33
-    },
-    "src/gameplay/training/tutorial-gold-reference.ts": {
-      "maxLineLength": 198,
-      "multiStatementLines": 3
-    },
-    "src/gameplay/training/tutorial-production-ghost.ts": {
-      "maxLineLength": 185
-    },
-    "src/gameplay/training/tutorial-weapon-annexes.ts": {
-      "multiStatementLines": 2
-    },
-    "src/gameplay/upgrade-hooks.ts": {
-      "maxLineLength": 215,
-      "multiStatementLines": 8
-    },
     "src/gameplay/upgrades.ts": {
-      "chars": 33904,
-      "maxLineLength": 169,
-      "multiStatementLines": 58
-    },
-    "src/gameplay/variants.ts": {
-      "multiStatementLines": 17
+      "chars": 29224
     },
     "src/gameplay/voidgen-chunks.ts": {
-      "maxLineLength": 166,
-      "multiStatementLines": 14,
       "largestFunctionStatements": 83
     },
-    "src/gameplay/voidgen-core.ts": {
-      "multiStatementLines": 8
-    },
     "src/gameplay/voidgen-inspection.ts": {
-      "multiStatementLines": 1,
       "largestFunctionStatements": 111
     },
-    "src/gameplay/weapons.ts": {
-      "maxLineLength": 176,
-      "multiStatementLines": 29
-    },
-    "src/ghost/application-frame-events.ts": {
-      "maxLineLength": 260,
-      "multiStatementLines": 10
-    },
-    "src/ghost/authoritative-receipt.ts": {
-      "maxLineLength": 198,
-      "multiStatementLines": 1
-    },
-    "src/ghost/beat-this-run.ts": {
-      "maxLineLength": 301,
-      "multiStatementLines": 6
-    },
-    "src/ghost/boss-memory-origin.ts": {
-      "maxLineLength": 212
-    },
-    "src/ghost/boss-memory.ts": {
-      "maxLineLength": 442,
-      "multiStatementLines": 23
-    },
-    "src/ghost/browser-beat-this-run.ts": {
-      "maxLineLength": 244,
-      "multiStatementLines": 10
-    },
-    "src/ghost/browser-capsule-vault.ts": {
-      "maxLineLength": 183,
-      "multiStatementLines": 2
-    },
-    "src/ghost/browser-cold-restore.ts": {
-      "maxLineLength": 182,
-      "multiStatementLines": 1
-    },
-    "src/ghost/browser-finale-companion.ts": {
-      "multiStatementLines": 1
-    },
-    "src/ghost/browser-recorded-challenge.ts": {
-      "maxLineLength": 163
-    },
-    "src/ghost/capsule-archive.ts": {
-      "maxLineLength": 288,
-      "multiStatementLines": 9
-    },
-    "src/ghost/capsule-codec.ts": {
-      "maxLineLength": 198
-    },
-    "src/ghost/capsule-contract.ts": {
-      "maxLineLength": 165
-    },
-    "src/ghost/capsule-import-plan.ts": {
-      "maxLineLength": 289,
-      "multiStatementLines": 9
-    },
-    "src/ghost/capsule-paired-archive.ts": {
-      "maxLineLength": 240,
-      "multiStatementLines": 4
-    },
-    "src/ghost/capsule-reader.ts": {
-      "maxLineLength": 202,
-      "multiStatementLines": 1
-    },
-    "src/ghost/capsule-vault-backend.ts": {
-      "multiStatementLines": 5
-    },
-    "src/ghost/capsule-vault.ts": {
-      "maxLineLength": 198,
-      "multiStatementLines": 3
-    },
-    "src/ghost/career-archive-store.ts": {
-      "maxLineLength": 447,
-      "multiStatementLines": 21
-    },
-    "src/ghost/career-archive-worker.ts": {
-      "maxLineLength": 170,
-      "multiStatementLines": 2
-    },
-    "src/ghost/career-archive.ts": {
-      "maxLineLength": 552,
-      "multiStatementLines": 21
-    },
-    "src/ghost/coach-history.ts": {
-      "maxLineLength": 294
-    },
-    "src/ghost/coach-practice.ts": {
-      "maxLineLength": 250
-    },
-    "src/ghost/cold-restore-job.ts": {
-      "maxLineLength": 201,
-      "multiStatementLines": 6
-    },
-    "src/ghost/cold-restore.ts": {
-      "maxLineLength": 214,
-      "multiStatementLines": 8
-    },
-    "src/ghost/durable-knowledge-libraries.ts": {
-      "maxLineLength": 203,
-      "multiStatementLines": 2
-    },
-    "src/ghost/finale-companion.ts": {
-      "maxLineLength": 283,
-      "multiStatementLines": 4
-    },
-    "src/ghost/finale-playback.ts": {
-      "maxLineLength": 218,
-      "multiStatementLines": 6
-    },
-    "src/ghost/foreground-owner-recovery.ts": {
-      "maxLineLength": 305,
-      "multiStatementLines": 10
-    },
-    "src/ghost/fork-origin.ts": {
-      "maxLineLength": 292,
-      "multiStatementLines": 1
-    },
-    "src/ghost/ghost-doctor.ts": {
-      "multiStatementLines": 1
-    },
-    "src/ghost/indexeddb-vault-backend.ts": {
-      "maxLineLength": 177,
-      "multiStatementLines": 17
-    },
-    "src/ghost/knowledge-libraries.ts": {
-      "multiStatementLines": 2
-    },
-    "src/ghost/live-ghost-reference-data.ts": {
-      "maxLineLength": 216
-    },
-    "src/ghost/live-ghost-reference-worker.ts": {
-      "maxLineLength": 197
-    },
-    "src/ghost/live-ghost-reference.ts": {
-      "maxLineLength": 323,
-      "multiStatementLines": 6
-    },
-    "src/ghost/live-recorder.ts": {
-      "maxLineLength": 243,
-      "multiStatementLines": 10
-    },
-    "src/ghost/local-publication-job.ts": {
-      "maxLineLength": 698,
-      "multiStatementLines": 23
-    },
-    "src/ghost/player-experiences.ts": {
-      "multiStatementLines": 1
-    },
-    "src/ghost/preservation-corpus.ts": {
-      "maxLineLength": 632,
-      "multiStatementLines": 14
-    },
-    "src/ghost/production-replay-session.ts": {
-      "maxLineLength": 217,
-      "multiStatementLines": 4
-    },
-    "src/ghost/production-replay-verification.ts": {
-      "maxLineLength": 226,
-      "multiStatementLines": 5
-    },
-    "src/ghost/publication-consent-ledger.ts": {
-      "maxLineLength": 208,
-      "multiStatementLines": 7
-    },
     "src/ghost/publication-transport.ts": {
-      "maxLineLength": 1620,
-      "multiStatementLines": 20,
       "largestFunctionStatements": 100
     },
-    "src/ghost/recorded-challenge.ts": {
-      "maxLineLength": 284,
-      "multiStatementLines": 4
-    },
     "src/ghost/replay-admission.ts": {
-      "chars": 29414,
-      "maxLineLength": 192,
-      "multiStatementLines": 8
-    },
-    "src/ghost/replay-world.ts": {
-      "multiStatementLines": 8
-    },
-    "src/ghost/run-dna-theater.ts": {
-      "maxLineLength": 251,
-      "multiStatementLines": 3
-    },
-    "src/ghost/sanitized-support-bundle.ts": {
-      "maxLineLength": 272,
-      "multiStatementLines": 1
-    },
-    "src/ghost/seed-race-contract.ts": {
-      "maxLineLength": 291,
-      "multiStatementLines": 5
-    },
-    "src/ghost/seed-race-decisions.ts": {
-      "maxLineLength": 170,
-      "multiStatementLines": 3
-    },
-    "src/ghost/theater.ts": {
-      "multiStatementLines": 6
-    },
-    "src/ghost/truth-kernel.ts": {
-      "multiStatementLines": 5
+      "chars": 26832
     },
     "src/input/browser-gamepad.ts": {
-      "multiStatementLines": 30,
       "largestFunctionStatements": 124
     },
-    "src/input/browser-input.ts": {
-      "multiStatementLines": 45
-    },
-    "src/input/semantic-buffer.ts": {
-      "multiStatementLines": 1
-    },
-    "src/persistence/json.ts": {
-      "multiStatementLines": 3
-    },
-    "src/persistence/profile-envelope.ts": {
-      "maxLineLength": 242,
-      "multiStatementLines": 1
-    },
-    "src/persistence/profile-store.ts": {
-      "maxLineLength": 305,
-      "multiStatementLines": 33
-    },
-    "src/platform/browser-pointer-lock.ts": {
-      "multiStatementLines": 1
-    },
-    "src/platform/browser.ts": {
-      "multiStatementLines": 9
-    },
-    "src/platform/cloud.ts": {
-      "multiStatementLines": 14
-    },
-    "src/platform/crazygames.ts": {
-      "multiStatementLines": 8
-    },
-    "src/platform/firebase-cloud.ts": {
-      "multiStatementLines": 15
-    },
-    "src/platform/ghost-publication-runtime.ts": {
-      "multiStatementLines": 6
-    },
-    "src/platform/legacy-compat.ts": {
-      "multiStatementLines": 13
-    },
-    "src/platform/pwa-update.ts": {
-      "multiStatementLines": 1
-    },
-    "src/platform/standalone-cloud.ts": {
-      "multiStatementLines": 1
-    },
-    "src/platform/storage.ts": {
-      "multiStatementLines": 4
-    },
     "src/presentation/attract-runtime.ts": {
-      "maxLineLength": 280,
-      "multiStatementLines": 64,
       "largestFunctionStatements": 92
     },
-    "src/presentation/attract.ts": {
-      "multiStatementLines": 1
-    },
     "src/presentation/backdrop-biomes.ts": {
-      "maxLineLength": 206,
-      "multiStatementLines": 96,
       "largestFunctionStatements": 106
     },
     "src/presentation/backdrop.ts": {
-      "chars": 30656,
-      "maxLineLength": 207,
-      "multiStatementLines": 93,
+      "chars": 26406,
       "largestFunctionStatements": 140
     },
-    "src/presentation/canvas-viewport.ts": {
-      "multiStatementLines": 1
-    },
-    "src/presentation/codex-snapshots.ts": {
-      "maxLineLength": 161
-    },
     "src/presentation/combat/attack-presentation-director.ts": {
-      "multiStatementLines": 7,
       "largestFunctionStatements": 84
     },
     "src/presentation/enemies/renderers/aldric-echo-renderers.ts": {
-      "maxLineLength": 221,
-      "multiStatementLines": 37,
       "largestFunctionStatements": 114
     },
     "src/presentation/enemies/renderers/base-renderers.ts": {
-      "maxLineLength": 177,
-      "multiStatementLines": 54,
       "largestFunctionStatements": 81
     },
-    "src/presentation/enemies/renderers/enemy-renderer-runtime.ts": {
-      "maxLineLength": 297,
-      "multiStatementLines": 80
-    },
-    "src/presentation/enemies/renderers/rimehound-renderer.ts": {
-      "multiStatementLines": 2
-    },
     "src/presentation/enemies/renderers/rootbound-renderer.ts": {
-      "maxLineLength": 202,
-      "multiStatementLines": 19,
       "largestFunctionStatements": 165
     },
     "src/presentation/enemies/renderers/source-renderer.ts": {
-      "maxLineLength": 267,
-      "multiStatementLines": 57,
       "largestFunctionStatements": 165
     },
     "src/presentation/enemies/renderers/standard-renderers.ts": {
-      "maxLineLength": 190,
-      "multiStatementLines": 69,
       "largestFunctionStatements": 102
     },
     "src/presentation/enemies/renderers/warden-colossus-renderers.ts": {
-      "maxLineLength": 233,
-      "multiStatementLines": 48,
       "largestFunctionStatements": 134
     },
     "src/presentation/enemies/renderers/white-hart-renderer.ts": {
-      "multiStatementLines": 5,
       "largestFunctionStatements": 105
     },
     "src/presentation/entities/blade-renderer.ts": {
-      "maxLineLength": 206,
-      "multiStatementLines": 67,
       "largestFunctionStatements": 202
     },
-    "src/presentation/entities/mirror-renderer.ts": {
-      "maxLineLength": 162,
-      "multiStatementLines": 61
-    },
-    "src/presentation/entities/player-renderer.ts": {
-      "multiStatementLines": 4
-    },
     "src/presentation/entities/projectile-renderer.ts": {
-      "maxLineLength": 242,
-      "multiStatementLines": 107,
       "largestFunctionStatements": 488
     },
-    "src/presentation/environment/bloom-well-presentation.ts": {
-      "multiStatementLines": 7
-    },
-    "src/presentation/environment/pale-environment-presentation.ts": {
-      "multiStatementLines": 6
-    },
-    "src/presentation/environment/rootbinder-presentation.ts": {
-      "maxLineLength": 179,
-      "multiStatementLines": 7
-    },
     "src/presentation/environment/verdant-environment-presentation.ts": {
-      "maxLineLength": 288,
-      "multiStatementLines": 28,
       "largestFunctionStatements": 165
     },
-    "src/presentation/leaderboard-snapshots.ts": {
-      "maxLineLength": 167
-    },
-    "src/presentation/mirror-lock-feedback.ts": {
-      "maxLineLength": 166
-    },
     "src/presentation/particles.ts": {
-      "maxLineLength": 230,
-      "multiStatementLines": 44,
       "largestFunctionStatements": 139
     },
     "src/presentation/platform-materials/pale-ice.ts": {
-      "multiStatementLines": 1,
       "largestFunctionStatements": 82
     },
-    "src/presentation/platform-materials/prepared-verdant-material.ts": {
-      "multiStatementLines": 1
-    },
     "src/presentation/platform-materials/verdant-rootstone.ts": {
-      "multiStatementLines": 24,
       "largestFunctionStatements": 129
     },
-    "src/presentation/prepared-verdant-calibration.ts": {
-      "multiStatementLines": 12
-    },
-    "src/presentation/profile-snapshots.ts": {
-      "maxLineLength": 196
-    },
-    "src/presentation/replay-puppet-factory.ts": {
-      "multiStatementLines": 1
-    },
-    "src/presentation/replay-thumbnail.ts": {
-      "multiStatementLines": 5
-    },
-    "src/presentation/replay-world-frame.ts": {
-      "multiStatementLines": 7
-    },
-    "src/presentation/run-screen-snapshots.ts": {
-      "multiStatementLines": 1
-    },
-    "src/presentation/screens/academy.ts": {
-      "maxLineLength": 268,
-      "multiStatementLines": 1
-    },
     "src/presentation/screens/career-archive.ts": {
-      "maxLineLength": 204
-    },
-    "src/presentation/screens/codex-shop.ts": {
-      "maxLineLength": 175,
-      "multiStatementLines": 14
-    },
-    "src/presentation/screens/contracts.ts": {
-      "maxLineLength": 648
-    },
-    "src/presentation/screens/draft-reserve-tierup.ts": {
-      "multiStatementLines": 1
-    },
-    "src/presentation/screens/foundry.ts": {
-      "maxLineLength": 226
-    },
-    "src/presentation/screens/ghost-lab.ts": {
-      "maxLineLength": 245,
-      "multiStatementLines": 5
+      "maxLineLength": 175
     },
     "src/presentation/screens/leaderboards-replays.ts": {
-      "maxLineLength": 261,
-      "multiStatementLines": 23
-    },
-    "src/presentation/screens/menu-setup.ts": {
-      "multiStatementLines": 4
-    },
-    "src/presentation/screens/pause-results.ts": {
-      "maxLineLength": 547,
-      "multiStatementLines": 4
-    },
-    "src/presentation/screens/playground.ts": {
-      "multiStatementLines": 9
-    },
-    "src/presentation/screens/profile-achievements.ts": {
-      "maxLineLength": 201,
-      "multiStatementLines": 12
-    },
-    "src/presentation/screens/screen-primitives.ts": {
-      "maxLineLength": 187,
-      "multiStatementLines": 5
+      "maxLineLength": 229
     },
     "src/presentation/tear-wipe.ts": {
-      "multiStatementLines": 22,
       "largestFunctionStatements": 106
     },
-    "src/presentation/tutorial-ghost.ts": {
-      "multiStatementLines": 14
-    },
     "src/presentation/tutorial-gold-ghost.ts": {
-      "maxLineLength": 206,
-      "multiStatementLines": 24,
       "largestFunctionStatements": 101
     },
     "src/presentation/ui-cinematic.ts": {
-      "multiStatementLines": 1,
       "largestFunctionStatements": 104
-    },
-    "src/presentation/ui-foundation.ts": {
-      "maxLineLength": 179
-    },
-    "src/presentation/ui-ledger.ts": {
-      "multiStatementLines": 4
     },
     "src/presentation/verdant-foreground-occlusion.ts": {
       "maxLineLength": 7650
     },
     "src/presentation/verdant-pool-receiver.ts": {
+      "chars": 25609,
       "maxLineLength": 25156
     },
-    "src/presentation/verdant-scene-package.ts": {
-      "multiStatementLines": 2
-    },
-    "src/presentation/verdant-water-flow.ts": {
-      "multiStatementLines": 10
-    },
-    "src/presentation/world/entity-layer.ts": {
-      "multiStatementLines": 20
-    },
     "src/presentation/world/finale.ts": {
-      "multiStatementLines": 12,
       "largestFunctionStatements": 89
     },
-    "src/presentation/world/live-ghost-reference.ts": {
-      "maxLineLength": 224,
-      "multiStatementLines": 9
-    },
-    "src/presentation/world/overlay-snapshots.ts": {
-      "multiStatementLines": 1
-    },
-    "src/presentation/world/production-replay-frame.ts": {
-      "multiStatementLines": 3
-    },
-    "src/presentation/world/runtime-snapshots.ts": {
-      "maxLineLength": 183
-    },
     "src/presentation/world/scene-effects.ts": {
-      "maxLineLength": 215,
-      "multiStatementLines": 64,
       "largestFunctionStatements": 167
     },
     "src/presentation/world/status-debug.ts": {
-      "multiStatementLines": 19,
       "largestFunctionStatements": 86
     },
-    "src/presentation/world/training-touch.ts": {
-      "maxLineLength": 166
-    },
-    "src/presentation/world/tutorial-input-prompts.ts": {
-      "maxLineLength": 222
-    },
-    "src/presentation/world/world-frame.ts": {
-      "multiStatementLines": 2
-    },
-    "src/replay/envelope.ts": {
-      "maxLineLength": 161
-    },
-    "src/replay/hash.ts": {
-      "multiStatementLines": 5
-    },
-    "src/replay/legacy-compat.ts": {
-      "multiStatementLines": 63
-    },
-    "src/tearbench/authored-environment-codec-validation.ts": {
-      "multiStatementLines": 2
-    },
-    "src/tearbench/black-box-artifact-adapter.ts": {
-      "maxLineLength": 191
-    },
-    "src/tearbench/browser/ghost-lab-panel.ts": {
-      "multiStatementLines": 5
-    },
-    "src/tearbench/browser/live-runtime-bridge.ts": {
-      "maxLineLength": 315,
-      "multiStatementLines": 9
-    },
-    "src/tearbench/browser/live-state-forge-studio-host.ts": {
-      "multiStatementLines": 1
-    },
-    "src/tearbench/detached-world-hydrator.ts": {
-      "maxLineLength": 174
-    },
-    "src/tearbench/detached-world-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/tearbench/environment-codec.ts": {
-      "maxLineLength": 602,
-      "multiStatementLines": 8
-    },
-    "src/tearbench/graveyard.ts": {
-      "maxLineLength": 167
-    },
-    "src/tearbench/headless.ts": {
-      "multiStatementLines": 6
-    },
-    "src/tearbench/invariants.ts": {
-      "maxLineLength": 171
-    },
     "src/tearbench/live-codec-validation.ts": {
-      "multiStatementLines": 5,
       "largestFunctionStatements": 93
     },
     "src/tearbench/live-runtime-environment.ts": {
-      "chars": 32029,
-      "maxLineLength": 213,
-      "multiStatementLines": 7
-    },
-    "src/tearbench/observation-channels.ts": {
-      "multiStatementLines": 1
-    },
-    "src/tearbench/particle-presentation-checkpoint.ts": {
-      "maxLineLength": 178
-    },
-    "src/tearbench/production-c27a-matrix.ts": {
-      "multiStatementLines": 1
+      "chars": 29599
     },
     "src/tearbench/production-combat-phases.ts": {
-      "chars": 33439,
-      "maxLineLength": 228,
-      "multiStatementLines": 54
-    },
-    "src/tearbench/production-combat-simulation.ts": {
-      "maxLineLength": 184,
-      "multiStatementLines": 1
-    },
-    "src/tearbench/production-finale-runtime.ts": {
-      "maxLineLength": 228,
-      "multiStatementLines": 18
-    },
-    "src/tearbench/production-headless-academy-intake.ts": {
-      "multiStatementLines": 1
+      "chars": 30159
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 34782,
-      "maxLineLength": 193,
-      "multiStatementLines": 8
+      "chars": 31998
     },
     "src/tearbench/production-replay-composition.ts": {
-      "chars": 37735,
-      "maxLineLength": 268,
-      "multiStatementLines": 11
-    },
-    "src/tearbench/production-run-outcome-runtime.ts": {
-      "multiStatementLines": 1
-    },
-    "src/tearbench/production-wave-reward-runtime.ts": {
-      "multiStatementLines": 9
-    },
-    "src/tearbench/production-world-factory.ts": {
-      "maxLineLength": 369,
-      "multiStatementLines": 11
-    },
-    "src/tearbench/regression-minimization.ts": {
-      "maxLineLength": 245
-    },
-    "src/tearbench/reward-codec-hydrator.ts": {
-      "maxLineLength": 191
-    },
-    "src/tearbench/scripted-agent-hierarchy.ts": {
-      "multiStatementLines": 1
-    },
-    "src/tearbench/source-void-history-references.ts": {
-      "multiStatementLines": 6
-    },
-    "src/tearbench/state-codecs.ts": {
-      "multiStatementLines": 1
-    },
-    "src/tearbench/state-forge-exit-gate.ts": {
-      "multiStatementLines": 8
-    },
-    "src/tearbench/state-forge-factories.ts": {
-      "multiStatementLines": 1
-    },
-    "src/tearbench/task-registry.ts": {
-      "maxLineLength": 305,
-      "multiStatementLines": 6
+      "chars": 35031
     },
     "src/tearbench/tutorial-course-driver.ts": {
-      "maxLineLength": 229,
-      "multiStatementLines": 28,
       "largestFunctionStatements": 209
-    },
-    "src/tearbench/tutorial-gold-generation.ts": {
-      "maxLineLength": 255,
-      "multiStatementLines": 5
-    },
-    "src/tearbench/validation.ts": {
-      "maxLineLength": 182,
-      "multiStatementLines": 18
     }
   }
 }

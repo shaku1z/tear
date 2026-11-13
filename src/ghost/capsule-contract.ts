@@ -96,7 +96,8 @@ function clonePlainCapsuleData(value: unknown, depth = 0): unknown {
   if (!dataRecord(value)) throw new TypeError("capsule plain data must be JSON-compatible");
   const copy: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) {
-    if (key === "__proto__" || key === "constructor" || key === "prototype") throw new TypeError(`capsule plain data contains reserved key: ${key}`);
+    if (key === "__proto__" || key === "constructor" || key === "prototype")
+      throw new TypeError(`capsule plain data contains reserved key: ${key}`);
     copy[key] = clonePlainCapsuleData(entry, depth + 1);
   }
   return Object.freeze(copy);
@@ -113,7 +114,9 @@ function isGhostChunkEncoding(value: unknown): value is GhostChunkEncoding {
 }
 
 const GHOST_CAPSULE_CONTRACT_ENCODINGS = Object.freeze([
-  "utf8-base64", "utf8-base64-v1", "gzip-base64-v1",
+  "utf8-base64",
+  "utf8-base64-v1",
+  "gzip-base64-v1",
 ] as const satisfies readonly GhostChunkEncoding[]);
 
 const GHOST_CAPSULE_TRACK_CODECS = Object.freeze({
@@ -151,30 +154,38 @@ export function createGhostCapsuleContract(input: GhostCapsuleContractInput): Gh
 }
 
 function parseCapsuleContract(value: unknown): GhostCapsuleContractV1 {
-  if (!dataRecord(value) || value.format !== GHOST_CAPSULE_CONTRACT_FORMAT
-    || value.schemaVersion !== GHOST_CAPSULE_CONTRACT_SCHEMA_VERSION
-    || !["declared-json-v1", "absent-legacy"].includes(String(value.provenance))
-    || !dataRecord(value.compatibility) || !dataRecord(value.tracks) || !dataRecord(value.quality)) {
+  if (
+    !dataRecord(value) ||
+    value.format !== GHOST_CAPSULE_CONTRACT_FORMAT ||
+    value.schemaVersion !== GHOST_CAPSULE_CONTRACT_SCHEMA_VERSION ||
+    !["declared-json-v1", "absent-legacy"].includes(String(value.provenance)) ||
+    !dataRecord(value.compatibility) ||
+    !dataRecord(value.tracks) ||
+    !dataRecord(value.quality)
+  ) {
     throw new TypeError("unsupported capsule contract");
   }
   const compatibility = value.compatibility;
   const tracks = value.tracks;
   const quality = value.quality;
-  if (compatibility.capsuleReader !== "tearghost-capsule-v2"
-    || compatibility.replayContext !== "declared-v1-or-unavailable"
-    || !Array.isArray(compatibility.chunkEncodings)
-    || compatibility.chunkEncodings.length !== GHOST_CAPSULE_CONTRACT_ENCODINGS.length
-    || compatibility.chunkEncodings.some((encoding, index) => encoding !== GHOST_CAPSULE_CONTRACT_ENCODINGS[index])
-    || tracks.commands !== GHOST_CAPSULE_TRACK_CODECS.commands
-    || tracks.rng !== GHOST_CAPSULE_TRACK_CODECS.rng
-    || tracks.events !== GHOST_CAPSULE_TRACK_CODECS.events
-    || tracks.results !== GHOST_CAPSULE_TRACK_CODECS.results
-    || tracks.keyframes !== GHOST_CAPSULE_TRACK_CODECS.keyframes
-    || tracks.presentation !== GHOST_CAPSULE_TRACK_CODECS.presentation
-    || (typeof quality.recordingProfile !== "string"
-      || (quality.recordingProfile !== "legacy-unknown" && !(quality.recordingProfile in GHOST_RECORDING_PROFILES)))
-    || !["full", "reduced", "dropped"].includes(String(quality.presentation))
-    || !Array.isArray(quality.downgrades) || !quality.downgrades.every((entry) => typeof entry === "string")) {
+  if (
+    compatibility.capsuleReader !== "tearghost-capsule-v2" ||
+    compatibility.replayContext !== "declared-v1-or-unavailable" ||
+    !Array.isArray(compatibility.chunkEncodings) ||
+    compatibility.chunkEncodings.length !== GHOST_CAPSULE_CONTRACT_ENCODINGS.length ||
+    compatibility.chunkEncodings.some((encoding, index) => encoding !== GHOST_CAPSULE_CONTRACT_ENCODINGS[index]) ||
+    tracks.commands !== GHOST_CAPSULE_TRACK_CODECS.commands ||
+    tracks.rng !== GHOST_CAPSULE_TRACK_CODECS.rng ||
+    tracks.events !== GHOST_CAPSULE_TRACK_CODECS.events ||
+    tracks.results !== GHOST_CAPSULE_TRACK_CODECS.results ||
+    tracks.keyframes !== GHOST_CAPSULE_TRACK_CODECS.keyframes ||
+    tracks.presentation !== GHOST_CAPSULE_TRACK_CODECS.presentation ||
+    typeof quality.recordingProfile !== "string" ||
+    (quality.recordingProfile !== "legacy-unknown" && !(quality.recordingProfile in GHOST_RECORDING_PROFILES)) ||
+    !["full", "reduced", "dropped"].includes(String(quality.presentation)) ||
+    !Array.isArray(quality.downgrades) ||
+    !quality.downgrades.every((entry) => typeof entry === "string")
+  ) {
     throw new TypeError("invalid capsule contract");
   }
   return Object.freeze({
@@ -196,22 +207,30 @@ function parseCapsuleContract(value: unknown): GhostCapsuleContractV1 {
 }
 
 function parseChunkIndex(value: unknown): TearGhostChunkIndexEntry {
-  if (!dataRecord(value)
-    || typeof value.id !== "string"
-    || !["commands", "rng", "events", "results", "keyframes", "presentation"].includes(String(value.kind))
-    || !Number.isSafeInteger(value.sequence)
-    || !Number.isSafeInteger(value.fromTick)
-    || !Number.isSafeInteger(value.toTick)
-    || !isGhostChunkEncoding(value.encoding)
-    || !Number.isSafeInteger(value.compressedBytes)
-    || !Number.isSafeInteger(value.uncompressedBytes)
-    || typeof value.checksum !== "string") {
+  if (
+    !dataRecord(value) ||
+    typeof value.id !== "string" ||
+    !["commands", "rng", "events", "results", "keyframes", "presentation"].includes(String(value.kind)) ||
+    !Number.isSafeInteger(value.sequence) ||
+    !Number.isSafeInteger(value.fromTick) ||
+    !Number.isSafeInteger(value.toTick) ||
+    !isGhostChunkEncoding(value.encoding) ||
+    !Number.isSafeInteger(value.compressedBytes) ||
+    !Number.isSafeInteger(value.uncompressedBytes) ||
+    typeof value.checksum !== "string"
+  ) {
     throw new TypeError("capsule contains an invalid chunk index");
   }
   return Object.freeze({
-    id: value.id, kind: value.kind as GhostChunkKind, sequence: value.sequence as number,
-    fromTick: value.fromTick as number, toTick: value.toTick as number, encoding: value.encoding,
-    compressedBytes: value.compressedBytes as number, uncompressedBytes: value.uncompressedBytes as number, checksum: value.checksum,
+    id: value.id,
+    kind: value.kind as GhostChunkKind,
+    sequence: value.sequence as number,
+    fromTick: value.fromTick as number,
+    toTick: value.toTick as number,
+    encoding: value.encoding,
+    compressedBytes: value.compressedBytes as number,
+    uncompressedBytes: value.uncompressedBytes as number,
+    checksum: value.checksum,
   });
 }
 
@@ -219,20 +238,29 @@ type GhostCapsuleManifestV2Data = Omit<TearGhostManifestV2, "integrity">;
 
 function manifestIntegrityPayload(manifest: GhostCapsuleManifestV2Data): Readonly<Record<string, unknown>> {
   return Object.freeze({
-    format: manifest.format, schemaVersion: manifest.schemaVersion, id: manifest.id, status: manifest.status,
-    createdAt: manifest.createdAt, recordingProfile: manifest.recordingProfile,
+    format: manifest.format,
+    schemaVersion: manifest.schemaVersion,
+    id: manifest.id,
+    status: manifest.status,
+    createdAt: manifest.createdAt,
+    recordingProfile: manifest.recordingProfile,
     ...(manifest.provenance === undefined ? {} : { provenance: manifest.provenance }),
     ...(manifest.completedAt === undefined ? {} : { completedAt: manifest.completedAt }),
-    chunks: manifest.chunks, rootIntegrity: manifest.rootIntegrity, fidelity: manifest.fidelity,
-    ...(manifest.lineage === undefined ? {} : { lineage: manifest.lineage }), contract: manifest.contract,
+    chunks: manifest.chunks,
+    rootIntegrity: manifest.rootIntegrity,
+    fidelity: manifest.fidelity,
+    ...(manifest.lineage === undefined ? {} : { lineage: manifest.lineage }),
+    contract: manifest.contract,
     ...(manifest.extensions === undefined ? {} : { extensions: manifest.extensions }),
   });
 }
 
 function createManifestIntegrity(manifest: GhostCapsuleManifestV2Data): GhostCapsuleIntegrityV1 {
   return Object.freeze({
-    format: GHOST_CAPSULE_INTEGRITY_FORMAT, schemaVersion: GHOST_CAPSULE_INTEGRITY_SCHEMA_VERSION,
-    rootIntegrity: manifest.rootIntegrity, manifestHash: stableVerificationHash(manifestIntegrityPayload(manifest)),
+    format: GHOST_CAPSULE_INTEGRITY_FORMAT,
+    schemaVersion: GHOST_CAPSULE_INTEGRITY_SCHEMA_VERSION,
+    rootIntegrity: manifest.rootIntegrity,
+    manifestHash: stableVerificationHash(manifestIntegrityPayload(manifest)),
   });
 }
 
@@ -253,16 +281,32 @@ export interface CreateGhostCapsuleManifestV2Input {
 /** Creates a current envelope; the Vault supplies the independently computed chunk root. */
 export function createGhostCapsuleManifestV2(input: CreateGhostCapsuleManifestV2Input): TearGhostManifestV2 {
   const chunks = Object.freeze([...input.chunks]);
-  const fidelity = Object.freeze({ presentation: input.fidelity.presentation, downgrades: Object.freeze([...input.fidelity.downgrades]) });
-  const provenance = input.provenance === undefined ? undefined : parsePlainRecord(input.provenance, "capsule provenance");
-  const extensions = input.extensions === undefined ? undefined : parsePlainRecord(input.extensions, "capsule extensions");
+  const fidelity = Object.freeze({
+    presentation: input.fidelity.presentation,
+    downgrades: Object.freeze([...input.fidelity.downgrades]),
+  });
+  const provenance =
+    input.provenance === undefined ? undefined : parsePlainRecord(input.provenance, "capsule provenance");
+  const extensions =
+    input.extensions === undefined ? undefined : parsePlainRecord(input.extensions, "capsule extensions");
   const data: GhostCapsuleManifestV2Data = Object.freeze({
-    format: GHOST_CAPSULE_FORMAT, schemaVersion: GHOST_CAPSULE_SCHEMA_VERSION, id: input.id, status: input.status,
-    createdAt: input.createdAt, recordingProfile: input.recordingProfile,
-    ...(provenance === undefined ? {} : { provenance }), ...(input.completedAt === undefined ? {} : { completedAt: input.completedAt }),
-    chunks, rootIntegrity: input.rootIntegrity, fidelity,
+    format: GHOST_CAPSULE_FORMAT,
+    schemaVersion: GHOST_CAPSULE_SCHEMA_VERSION,
+    id: input.id,
+    status: input.status,
+    createdAt: input.createdAt,
+    recordingProfile: input.recordingProfile,
+    ...(provenance === undefined ? {} : { provenance }),
+    ...(input.completedAt === undefined ? {} : { completedAt: input.completedAt }),
+    chunks,
+    rootIntegrity: input.rootIntegrity,
+    fidelity,
     ...(input.lineage === undefined ? {} : { lineage: Object.freeze({ ...input.lineage }) }),
-    contract: createGhostCapsuleContract({ ...(provenance === undefined ? {} : { provenance }), recordingProfile: input.recordingProfile, fidelity }),
+    contract: createGhostCapsuleContract({
+      ...(provenance === undefined ? {} : { provenance }),
+      recordingProfile: input.recordingProfile,
+      fidelity,
+    }),
     ...(extensions === undefined ? {} : { extensions }),
   });
   return Object.freeze({ ...data, integrity: createManifestIntegrity(data) });
@@ -285,79 +329,148 @@ export interface GhostCapsuleManifestRevision {
 }
 
 /** Reissues schema-v2 integrity after a legitimate lifecycle or repair update. */
-export function reviseGhostCapsuleManifest(manifest: TearGhostManifest, revision: GhostCapsuleManifestRevision): TearGhostManifest {
+export function reviseGhostCapsuleManifest(
+  manifest: TearGhostManifest,
+  revision: GhostCapsuleManifestRevision,
+): TearGhostManifest {
   if (manifest.schemaVersion === 1) return Object.freeze({ ...manifest, ...revision });
   const completedAt = revision.completedAt ?? manifest.completedAt;
   const lineage = revision.lineage ?? manifest.lineage;
   return createGhostCapsuleManifestV2({
-    id: revision.id ?? manifest.id, status: revision.status ?? manifest.status, createdAt: revision.createdAt ?? manifest.createdAt,
-    recordingProfile: manifest.recordingProfile, ...(manifest.provenance === undefined ? {} : { provenance: manifest.provenance }),
-    ...(completedAt === undefined ? {} : { completedAt }), chunks: revision.chunks ?? manifest.chunks,
-    rootIntegrity: revision.rootIntegrity ?? manifest.rootIntegrity, fidelity: revision.fidelity ?? manifest.fidelity,
-    ...(lineage === undefined ? {} : { lineage }), ...(manifest.extensions === undefined ? {} : { extensions: manifest.extensions }),
+    id: revision.id ?? manifest.id,
+    status: revision.status ?? manifest.status,
+    createdAt: revision.createdAt ?? manifest.createdAt,
+    recordingProfile: manifest.recordingProfile,
+    ...(manifest.provenance === undefined ? {} : { provenance: manifest.provenance }),
+    ...(completedAt === undefined ? {} : { completedAt }),
+    chunks: revision.chunks ?? manifest.chunks,
+    rootIntegrity: revision.rootIntegrity ?? manifest.rootIntegrity,
+    fidelity: revision.fidelity ?? manifest.fidelity,
+    ...(lineage === undefined ? {} : { lineage }),
+    ...(manifest.extensions === undefined ? {} : { extensions: manifest.extensions }),
   });
 }
 
 function parseCapsuleManifestV1(value: Record<string, unknown>): TearGhostManifestV1 {
-  if (value.format !== GHOST_CAPSULE_FORMAT || value.schemaVersion !== 1 || typeof value.id !== "string"
-    || !["recording", "complete", "recovered", "repaired", "quarantined"].includes(String(value.status))
-    || typeof value.createdAt !== "string" || !Array.isArray(value.chunks) || typeof value.rootIntegrity !== "string"
-    || !dataRecord(value.fidelity) || !["full", "reduced", "dropped"].includes(String(value.fidelity.presentation))
-    || !Array.isArray(value.fidelity.downgrades) || !value.fidelity.downgrades.every((entry) => typeof entry === "string")) {
+  if (
+    value.format !== GHOST_CAPSULE_FORMAT ||
+    value.schemaVersion !== 1 ||
+    typeof value.id !== "string" ||
+    !["recording", "complete", "recovered", "repaired", "quarantined"].includes(String(value.status)) ||
+    typeof value.createdAt !== "string" ||
+    !Array.isArray(value.chunks) ||
+    typeof value.rootIntegrity !== "string" ||
+    !dataRecord(value.fidelity) ||
+    !["full", "reduced", "dropped"].includes(String(value.fidelity.presentation)) ||
+    !Array.isArray(value.fidelity.downgrades) ||
+    !value.fidelity.downgrades.every((entry) => typeof entry === "string")
+  ) {
     throw new TypeError("unsupported capsule manifest");
   }
   const provenance = parsePlainRecord(value.provenance, "capsule provenance");
   const chunks = Object.freeze(value.chunks.map(parseChunkIndex));
   return Object.freeze({
-    format: GHOST_CAPSULE_FORMAT, schemaVersion: 1, id: value.id, status: value.status as GhostCapsuleStatus, createdAt: value.createdAt,
-    recordingProfile: typeof value.recordingProfile === "string" && value.recordingProfile in GHOST_RECORDING_PROFILES
-      ? value.recordingProfile as GhostRecordingProfileId : "legacy-unknown",
-    ...(provenance === undefined ? {} : { provenance }), ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}),
-    chunks, rootIntegrity: value.rootIntegrity,
-    fidelity: Object.freeze({ presentation: value.fidelity.presentation as GhostCapsuleFidelity["presentation"], downgrades: Object.freeze([...value.fidelity.downgrades]) }),
-    ...(dataRecord(value.lineage) && typeof value.lineage.parentId === "string" && value.lineage.relation === "repaired-from"
-      ? { lineage: Object.freeze({ parentId: value.lineage.parentId, relation: "repaired-from" as const }) } : {}),
+    format: GHOST_CAPSULE_FORMAT,
+    schemaVersion: 1,
+    id: value.id,
+    status: value.status as GhostCapsuleStatus,
+    createdAt: value.createdAt,
+    recordingProfile:
+      typeof value.recordingProfile === "string" && value.recordingProfile in GHOST_RECORDING_PROFILES
+        ? (value.recordingProfile as GhostRecordingProfileId)
+        : "legacy-unknown",
+    ...(provenance === undefined ? {} : { provenance }),
+    ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}),
+    chunks,
+    rootIntegrity: value.rootIntegrity,
+    fidelity: Object.freeze({
+      presentation: value.fidelity.presentation as GhostCapsuleFidelity["presentation"],
+      downgrades: Object.freeze([...value.fidelity.downgrades]),
+    }),
+    ...(dataRecord(value.lineage) &&
+    typeof value.lineage.parentId === "string" &&
+    value.lineage.relation === "repaired-from"
+      ? { lineage: Object.freeze({ parentId: value.lineage.parentId, relation: "repaired-from" as const }) }
+      : {}),
   });
 }
 
 function parseCapsuleManifestV2(value: Record<string, unknown>): TearGhostManifestV2 {
-  if (value.format !== GHOST_CAPSULE_FORMAT || value.schemaVersion !== GHOST_CAPSULE_SCHEMA_VERSION || typeof value.id !== "string"
-    || !["recording", "complete", "recovered", "repaired", "quarantined"].includes(String(value.status))
-    || typeof value.createdAt !== "string" || !Array.isArray(value.chunks) || typeof value.rootIntegrity !== "string"
-    || !dataRecord(value.fidelity) || !["full", "reduced", "dropped"].includes(String(value.fidelity.presentation))
-    || !Array.isArray(value.fidelity.downgrades) || !value.fidelity.downgrades.every((entry) => typeof entry === "string")) {
+  if (
+    value.format !== GHOST_CAPSULE_FORMAT ||
+    value.schemaVersion !== GHOST_CAPSULE_SCHEMA_VERSION ||
+    typeof value.id !== "string" ||
+    !["recording", "complete", "recovered", "repaired", "quarantined"].includes(String(value.status)) ||
+    typeof value.createdAt !== "string" ||
+    !Array.isArray(value.chunks) ||
+    typeof value.rootIntegrity !== "string" ||
+    !dataRecord(value.fidelity) ||
+    !["full", "reduced", "dropped"].includes(String(value.fidelity.presentation)) ||
+    !Array.isArray(value.fidelity.downgrades) ||
+    !value.fidelity.downgrades.every((entry) => typeof entry === "string")
+  ) {
     throw new TypeError("unsupported capsule manifest");
   }
   const provenance = parsePlainRecord(value.provenance, "capsule provenance");
   const chunks = Object.freeze(value.chunks.map(parseChunkIndex));
-  const fidelity = Object.freeze({ presentation: value.fidelity.presentation as GhostCapsuleFidelity["presentation"], downgrades: Object.freeze([...value.fidelity.downgrades]) });
+  const fidelity = Object.freeze({
+    presentation: value.fidelity.presentation as GhostCapsuleFidelity["presentation"],
+    downgrades: Object.freeze([...value.fidelity.downgrades]),
+  });
   const contract = parseCapsuleContract(value.contract);
-  const recordingProfile = typeof value.recordingProfile === "string" && value.recordingProfile in GHOST_RECORDING_PROFILES
-    ? value.recordingProfile as GhostRecordingProfileId : "legacy-unknown";
-  if (contract.provenance !== (provenance === undefined ? "absent-legacy" : "declared-json-v1")
-    || contract.quality.recordingProfile !== recordingProfile || contract.quality.presentation !== fidelity.presentation
-    || stableVerificationHash(contract.quality.downgrades) !== stableVerificationHash(fidelity.downgrades)) {
+  const recordingProfile =
+    typeof value.recordingProfile === "string" && value.recordingProfile in GHOST_RECORDING_PROFILES
+      ? (value.recordingProfile as GhostRecordingProfileId)
+      : "legacy-unknown";
+  if (
+    contract.provenance !== (provenance === undefined ? "absent-legacy" : "declared-json-v1") ||
+    contract.quality.recordingProfile !== recordingProfile ||
+    contract.quality.presentation !== fidelity.presentation ||
+    stableVerificationHash(contract.quality.downgrades) !== stableVerificationHash(fidelity.downgrades)
+  ) {
     throw new TypeError("capsule contract does not match durable declarations");
   }
-  const extensions = value.extensions === undefined ? undefined : parsePlainRecord(value.extensions, "capsule extensions");
+  const extensions =
+    value.extensions === undefined ? undefined : parsePlainRecord(value.extensions, "capsule extensions");
   const data: GhostCapsuleManifestV2Data = Object.freeze({
-    format: GHOST_CAPSULE_FORMAT, schemaVersion: GHOST_CAPSULE_SCHEMA_VERSION, id: value.id, status: value.status as GhostCapsuleStatus,
-    createdAt: value.createdAt, recordingProfile, ...(provenance === undefined ? {} : { provenance }),
-    ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}), chunks, rootIntegrity: value.rootIntegrity, fidelity,
-    ...(dataRecord(value.lineage) && typeof value.lineage.parentId === "string" && value.lineage.relation === "repaired-from"
-      ? { lineage: Object.freeze({ parentId: value.lineage.parentId, relation: "repaired-from" as const }) } : {}),
-    contract, ...(extensions === undefined ? {} : { extensions }),
+    format: GHOST_CAPSULE_FORMAT,
+    schemaVersion: GHOST_CAPSULE_SCHEMA_VERSION,
+    id: value.id,
+    status: value.status as GhostCapsuleStatus,
+    createdAt: value.createdAt,
+    recordingProfile,
+    ...(provenance === undefined ? {} : { provenance }),
+    ...(typeof value.completedAt === "string" ? { completedAt: value.completedAt } : {}),
+    chunks,
+    rootIntegrity: value.rootIntegrity,
+    fidelity,
+    ...(dataRecord(value.lineage) &&
+    typeof value.lineage.parentId === "string" &&
+    value.lineage.relation === "repaired-from"
+      ? { lineage: Object.freeze({ parentId: value.lineage.parentId, relation: "repaired-from" as const }) }
+      : {}),
+    contract,
+    ...(extensions === undefined ? {} : { extensions }),
   });
-  if (!dataRecord(value.integrity) || value.integrity.format !== GHOST_CAPSULE_INTEGRITY_FORMAT
-    || value.integrity.schemaVersion !== GHOST_CAPSULE_INTEGRITY_SCHEMA_VERSION || value.integrity.rootIntegrity !== data.rootIntegrity
-    || typeof value.integrity.manifestHash !== "string"
-    || stableVerificationHash(manifestIntegrityPayload(data)) !== value.integrity.manifestHash) {
+  if (
+    !dataRecord(value.integrity) ||
+    value.integrity.format !== GHOST_CAPSULE_INTEGRITY_FORMAT ||
+    value.integrity.schemaVersion !== GHOST_CAPSULE_INTEGRITY_SCHEMA_VERSION ||
+    value.integrity.rootIntegrity !== data.rootIntegrity ||
+    typeof value.integrity.manifestHash !== "string" ||
+    stableVerificationHash(manifestIntegrityPayload(data)) !== value.integrity.manifestHash
+  ) {
     throw new TypeError("capsule manifest integrity mismatch");
   }
-  return Object.freeze({ ...data, integrity: Object.freeze({
-    format: GHOST_CAPSULE_INTEGRITY_FORMAT, schemaVersion: GHOST_CAPSULE_INTEGRITY_SCHEMA_VERSION,
-    rootIntegrity: data.rootIntegrity, manifestHash: value.integrity.manifestHash,
-  }) });
+  return Object.freeze({
+    ...data,
+    integrity: Object.freeze({
+      format: GHOST_CAPSULE_INTEGRITY_FORMAT,
+      schemaVersion: GHOST_CAPSULE_INTEGRITY_SCHEMA_VERSION,
+      rootIntegrity: data.rootIntegrity,
+      manifestHash: value.integrity.manifestHash,
+    }),
+  });
 }
 
 export function parseGhostCapsuleManifest(value: unknown): TearGhostManifest {

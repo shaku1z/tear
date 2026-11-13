@@ -74,7 +74,10 @@ function createFixture() {
   fs.mkdirSync(targetNodeModules, { recursive: true });
   fs.mkdirSync(path.join(sourceRoot, ".git"));
   fs.mkdirSync(path.join(targetRoot, ".git"));
-  fs.copyFileSync(secondWavePolicyPath, path.join(repoRoot, "preservation", "workspace-recovery-second-wave-sources.json"));
+  fs.copyFileSync(
+    secondWavePolicyPath,
+    path.join(repoRoot, "preservation", "workspace-recovery-second-wave-sources.json"),
+  );
   fs.copyFileSync(parentPolicyPath, path.join(repoRoot, "preservation", "workspace-parent-layout-policy.json"));
   git(repoRoot, ["add", "preservation"]);
   git(repoRoot, ["commit", "-q", "-m", "fixture policies"]);
@@ -152,11 +155,24 @@ test("valid deferred dependency fixture reports a matching, metadata-only audit"
     assert.equal(report.roots[1].git.status, "directory");
     assert.equal(report.mutation.payloadHashes, "none");
     assert.equal(report.summary.payloadHashes, "none");
-    assert.deepEqual(report.summary.sizingComparison.equalTotalsDoNotProve, ["content-equivalence", "path-equivalence", "mtime-equivalence"]);
+    assert.deepEqual(report.summary.sizingComparison.equalTotalsDoNotProve, [
+      "content-equivalence",
+      "path-equivalence",
+      "mtime-equivalence",
+    ]);
     assert.equal(report.dependency.relation.reparseTag, process.platform === "win32" ? "0xA0000003" : null);
-    assert.equal(report.dependency.relation.reparseType, process.platform === "win32" ? "mount-point" : "symlink-test-fixture");
-    assert.equal(report.roots[0].entries.some((entry) => entry.relativePath === "node_modules/not-counted.bin"), false);
-    assert.equal(report.roots[1].entries.some((entry) => entry.relativePath === "node_modules/not-counted.bin"), false);
+    assert.equal(
+      report.dependency.relation.reparseType,
+      process.platform === "win32" ? "mount-point" : "symlink-test-fixture",
+    );
+    assert.equal(
+      report.roots[0].entries.some((entry) => entry.relativePath === "node_modules/not-counted.bin"),
+      false,
+    );
+    assert.equal(
+      report.roots[1].entries.some((entry) => entry.relativePath === "node_modules/not-counted.bin"),
+      false,
+    );
     assert.equal(report.dependency.relation.targetMatches, true);
     assert.equal(fs.existsSync(report.outputPath), true);
   } finally {
@@ -189,7 +205,10 @@ test("an absent deferred-root .git is explicit metadata and does not trigger des
     assert.equal(report.roots[0].git.status, "absent");
     assert.equal(report.roots[0].git.valid, false);
     assert.equal(report.summary.status, "historical-sizing-match");
-    assert.equal(report.roots[1].entries.some((entry) => entry.relativePath.startsWith("node_modules/")), false);
+    assert.equal(
+      report.roots[1].entries.some((entry) => entry.relativePath.startsWith("node_modules/")),
+      false,
+    );
   } finally {
     cleanupFixture(fixture);
   }
@@ -220,10 +239,12 @@ test("a non-junction reparse tag is rejected through the injectable probe", (t) 
   try {
     if (!requireJunction(t, fixture)) return;
     assert.throws(
-      () => runFixture(fixture, "symlink-tag.json", {
-        reparseTagProbe: () => ({ value: WINDOWS_IO_REPARSE_TAG_SYMLINK }),
-      }),
-      (error) => error instanceof DeferredWorkspaceDependencyError && /mount-point junction|symbolic-link/u.test(error.message),
+      () =>
+        runFixture(fixture, "symlink-tag.json", {
+          reparseTagProbe: () => ({ value: WINDOWS_IO_REPARSE_TAG_SYMLINK }),
+        }),
+      (error) =>
+        error instanceof DeferredWorkspaceDependencyError && /mount-point junction|symbolic-link/u.test(error.message),
     );
     const report = runFixture(fixture, "injected-mount-point.json", {
       reparseTagProbe: () => ({ value: WINDOWS_IO_REPARSE_TAG_MOUNT_POINT }),
@@ -260,7 +281,8 @@ test("wrong junction target and extra reparses fail closed", (t) => {
     fs.symlinkSync(wrongNodeModules, fixture.sourceNodeModules, "junction");
     assert.throws(
       () => runFixture(fixture, "wrong-target.json"),
-      (error) => error instanceof DeferredWorkspaceDependencyError && /exact target path|must target/u.test(error.message),
+      (error) =>
+        error instanceof DeferredWorkspaceDependencyError && /exact target path|must target/u.test(error.message),
     );
 
     fs.unlinkSync(fixture.sourceNodeModules);
@@ -270,7 +292,8 @@ test("wrong junction target and extra reparses fail closed", (t) => {
     fs.symlinkSync(outside, path.join(fixture.sourceRoot, "unexpected-link"), "junction");
     assert.throws(
       () => runFixture(fixture, "extra-reparse.json"),
-      (error) => error instanceof DeferredWorkspaceDependencyError && /unexpected symlink or reparse/u.test(error.message),
+      (error) =>
+        error instanceof DeferredWorkspaceDependencyError && /unexpected symlink or reparse/u.test(error.message),
     );
   } finally {
     cleanupFixture(fixture);
@@ -290,7 +313,9 @@ test("an output parent alias is rejected before a report is written", (t) => {
     }
     assert.throws(
       () => runFixture(fixture, "aliased-output.json", { outputPath: path.join(alias, "aliased-output.json") }),
-      (error) => error instanceof DeferredWorkspaceDependencyError && /symlink or reparse|canonical directory/u.test(error.message),
+      (error) =>
+        error instanceof DeferredWorkspaceDependencyError &&
+        /symlink or reparse|canonical directory/u.test(error.message),
     );
     assert.equal(fs.existsSync(path.join(fixture.outputDirectory, "aliased-output.json")), false);
   } finally {
@@ -309,15 +334,17 @@ test("output is new-only, stays in the archive, and rejects overwrite", (t) => {
       (error) => error instanceof DeferredWorkspaceDependencyError && /already exists/u.test(error.message),
     );
     assert.throws(
-      () => runDeferredWorkspaceDependencyAudit({
-        repoRoot: fixture.repoRoot,
-        tempRoot: fixture.tempRoot,
-        archiveRoot: fixture.archiveRoot,
-        outputPath: path.join(fixture.tempRoot, "unsafe.json"),
-        secondWavePolicyPath: fixture.secondWavePolicyPath,
-        parentPolicyPath: fixture.parentPolicyPath,
-      }),
-      (error) => error instanceof DeferredWorkspaceDependencyError && /inside archive-root|outside/u.test(error.message),
+      () =>
+        runDeferredWorkspaceDependencyAudit({
+          repoRoot: fixture.repoRoot,
+          tempRoot: fixture.tempRoot,
+          archiveRoot: fixture.archiveRoot,
+          outputPath: path.join(fixture.tempRoot, "unsafe.json"),
+          secondWavePolicyPath: fixture.secondWavePolicyPath,
+          parentPolicyPath: fixture.parentPolicyPath,
+        }),
+      (error) =>
+        error instanceof DeferredWorkspaceDependencyError && /inside archive-root|outside/u.test(error.message),
     );
   } finally {
     cleanupFixture(fixture);

@@ -7,11 +7,18 @@ describe("live shop purchase progress persistence adapter", () => {
     const calls: string[] = [];
     const persistence = createLiveShopPurchaseProgressPersistence(
       {
-        addStat: vi.fn((key: string, value: number) => { calls.push(`add:${key}:${String(value)}`); }),
-        maxStat: vi.fn((key: string, value: number) => { calls.push(`max:${key}:${String(value)}`); }),
+        addStat: vi.fn((key: string, value: number) => {
+          calls.push(`add:${key}:${String(value)}`);
+        }),
+        maxStat: vi.fn((key: string, value: number) => {
+          calls.push(`max:${key}:${String(value)}`);
+        }),
       },
-      { level: (id) => id === "maxed" ? 2 : 1 },
-      [{ id: "maxed", maxLevel: 2 }, { id: "partial", maxLevel: 3 }],
+      { level: (id) => (id === "maxed" ? 2 : 1) },
+      [
+        { id: "maxed", maxLevel: 2 },
+        { id: "partial", maxLevel: 3 },
+      ],
     );
 
     persistence.recordPurchase();

@@ -123,11 +123,7 @@ test("young and future files are classified without content hashes", () => {
 test("active evidence, preserved nested repositories, and nested .git pointers are never eligible", () => {
   const root = createFixture();
   try {
-    const protectedPaths = [
-      "tearbench/generated",
-      "tearbench/receipts",
-      "t26w",
-    ];
+    const protectedPaths = ["tearbench/generated", "tearbench/receipts", "t26w"];
     for (const relativePath of protectedPaths) {
       const filePath = path.join(root, "artifacts", relativePath);
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -162,8 +158,14 @@ test("active evidence, preserved nested repositories, and nested .git pointers a
     assert.equal(pointer?.decision, "refused");
     assert.ok(pointer?.reasonCodes.includes("nested-git"));
     assert.equal(nestedGit?.decision, "refused");
-    assert.equal(manifest.entries.some((candidate) => candidate.relativePath === "nested-directory/.git/hidden.bin"), false);
-    assert.equal(manifest.entries.find((candidate) => candidate.relativePath === "nested-directory/visible.bin")?.decision, "eligible");
+    assert.equal(
+      manifest.entries.some((candidate) => candidate.relativePath === "nested-directory/.git/hidden.bin"),
+      false,
+    );
+    assert.equal(
+      manifest.entries.find((candidate) => candidate.relativePath === "nested-directory/visible.bin")?.decision,
+      "eligible",
+    );
   } finally {
     cleanup(root);
   }
@@ -252,17 +254,21 @@ test("the default CLI prints JSON and does not create an output file", () => {
     const filePath = path.join(root, "artifacts", "old.json");
     fs.writeFileSync(filePath, "old\n", "utf8");
     setMtime(filePath, new Date(reportTime.getTime() - 31 * 24 * 60 * 60 * 1000));
-    const result = spawnSync(process.execPath, [
-      reporterPath,
-      "--root",
-      root,
-      "--policy",
-      DEFAULT_ARTIFACT_RETENTION_POLICY_PATH,
-      "--source",
-      "ignored-artifacts",
-      "--min-age-days",
-      String(minAgeDays),
-    ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
+    const result = spawnSync(
+      process.execPath,
+      [
+        reporterPath,
+        "--root",
+        root,
+        "--policy",
+        DEFAULT_ARTIFACT_RETENTION_POLICY_PATH,
+        "--source",
+        "ignored-artifacts",
+        "--min-age-days",
+        String(minAgeDays),
+      ],
+      { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" },
+    );
     assert.equal(result.status, 0, result.stderr);
     const manifest = JSON.parse(result.stdout);
     assert.equal(manifest.format, "tear-artifact-retention-manifest");

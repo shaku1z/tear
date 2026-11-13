@@ -7,7 +7,7 @@ export interface SegmentPointDistance {
 }
 
 export function clamp(value: number, minimum: number, maximum: number): number {
-  return value < minimum ? minimum : (value > maximum ? maximum : value);
+  return value < minimum ? minimum : value > maximum ? maximum : value;
 }
 
 export function lerp(start: number, end: number, amount: number): number {
@@ -26,7 +26,12 @@ export function lerpAngle(start: number, end: number, amount: number): number {
 }
 
 export function segPointDist(
-  ax: number, ay: number, bx: number, by: number, cx: number, cy: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
 ): SegmentPointDistance {
   const dx = bx - ax;
   const dy = by - ay;
@@ -38,14 +43,26 @@ export function segPointDist(
 }
 
 export function segCircle(
-  ax: number, ay: number, bx: number, by: number, cx: number, cy: number, radius: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+  radius: number,
 ): boolean {
   return segPointDist(ax, ay, bx, by, cx, cy).dist <= radius;
 }
 
 export function segSegmentDist(
-  ax: number, ay: number, bx: number, by: number,
-  cx: number, cy: number, dx: number, dy: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+  dx: number,
+  dy: number,
 ): number {
   const rx = bx - ax;
   const ry = by - ay;
@@ -68,8 +85,14 @@ export function segSegmentDist(
 }
 
 export function aabbOverlap(
-  ax: number, ay: number, halfWidthA: number, halfHeightA: number,
-  bx: number, by: number, halfWidthB: number, halfHeightB: number,
+  ax: number,
+  ay: number,
+  halfWidthA: number,
+  halfHeightA: number,
+  bx: number,
+  by: number,
+  halfWidthB: number,
+  halfHeightB: number,
 ): boolean {
   return Math.abs(ax - bx) < halfWidthA + halfWidthB && Math.abs(ay - by) < halfHeightA + halfHeightB;
 }

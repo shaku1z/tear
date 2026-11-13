@@ -134,10 +134,18 @@ export class RuntimeFrameCoordinator {
     const { cinema, clipper, document, input, navigator, pad } = this.#options;
     if (pad !== null) {
       pad.poll(deltaSeconds, this.#options.state() !== "playing");
-      if (this.#padWasConnected && !pad.connected && this.#options.state() === "playing"
-        && this.#options.autoPauseDisconnect()) {
+      if (
+        this.#padWasConnected &&
+        !pad.connected &&
+        this.#options.state() === "playing" &&
+        this.#options.autoPauseDisconnect()
+      ) {
         this.#options.setState("paused");
-        try { document.exitPointerLock(); } catch { /* Pointer lock may already be gone. */ }
+        try {
+          document.exitPointerLock();
+        } catch {
+          /* Pointer lock may already be gone. */
+        }
       }
       this.#padWasConnected = pad.connected;
     }
@@ -179,7 +187,11 @@ export class RuntimeFrameCoordinator {
       this.#consume("KeyP", "Escape");
       this.#options.setState("paused");
       this.#wasPointerLocked = false;
-      try { document.exitPointerLock(); } catch { /* Pointer lock may already be gone. */ }
+      try {
+        document.exitPointerLock();
+      } catch {
+        /* Pointer lock may already be gone. */
+      }
       return 0;
     }
     return this.#options.advancePlayingSimulation(deltaSeconds);
@@ -192,8 +204,9 @@ export class RuntimeFrameCoordinator {
     const state = this.#options.state();
     if (state !== "paused") this.#pausedSinceMilliseconds = null;
     else this.#pausedSinceMilliseconds ??= this.#frameStartedMilliseconds;
-    const pauseSettled = this.#pausedSinceMilliseconds !== null
-      && this.#frameStartedMilliseconds - this.#pausedSinceMilliseconds >= UI_CONFIRM_SETTLE_SECONDS * 1_000;
+    const pauseSettled =
+      this.#pausedSinceMilliseconds !== null &&
+      this.#frameStartedMilliseconds - this.#pausedSinceMilliseconds >= UI_CONFIRM_SETTLE_SECONDS * 1_000;
     if (state === "paused" && (input.pausePressed() || input.escapePressed())) {
       // P, Escape and controller Start toggle pause. The settle window keeps the Escape
       // that released pointer lock (and paused) from also resuming; a resume that cannot
@@ -226,14 +239,18 @@ export class RuntimeFrameCoordinator {
     this.#options.advanceClocks(deltaSeconds, state);
     const playing = state === "playing";
     if (playing !== this.#gameplayActive) {
-      if (playing) this.#options.gameplayStart(); else this.#options.gameplayStop();
+      if (playing) this.#options.gameplayStart();
+      else this.#options.gameplayStop();
       this.#gameplayActive = playing;
     }
     this.#options.advanceContinue(deltaSeconds);
     this.#options.updateAttract(deltaSeconds, this.#options.isMenuScreen(state));
-    this.#options.input.uiMode = !playing
-      || (this.#options.cinema.active && this.#options.cinema.playerMode !== "finalBlade");
-    const density = { touch: this.#options.input.touchActive(), cssPerLogicalPixel: this.#options.cssPerLogicalPixel() };
+    this.#options.input.uiMode =
+      !playing || (this.#options.cinema.active && this.#options.cinema.playerMode !== "finalBlade");
+    const density = {
+      touch: this.#options.input.touchActive(),
+      cssPerLogicalPixel: this.#options.cssPerLogicalPixel(),
+    };
     // Desktop tokens do not depend on the scale; touch tokens are derived from it.
     const key = density.touch ? `touch:${density.cssPerLogicalPixel.toFixed(3)}` : "desktop";
     if (key !== this.#uiDensityKey) {
@@ -243,8 +260,12 @@ export class RuntimeFrameCoordinator {
     this.#options.syncMusic();
   }
 
-  #recordDiagnostics(frameStarted: number, simulationFinished: number, renderFinished: number,
-    frameIntervalSeconds: number): void {
+  #recordDiagnostics(
+    frameStarted: number,
+    simulationFinished: number,
+    renderFinished: number,
+    frameIntervalSeconds: number,
+  ): void {
     const now = this.#options.now();
     const frameWorkMilliseconds = now - frameStarted;
     const frameIntervalMilliseconds = Math.max(0, frameIntervalSeconds * 1000);
@@ -252,8 +273,10 @@ export class RuntimeFrameCoordinator {
     this.#options.diagnostics.record("render", renderFinished - simulationFinished);
     this.#options.diagnostics.record("frame", frameWorkMilliseconds);
     this.#options.diagnostics.record("frameInterval", frameIntervalMilliseconds);
-    this.#options.diagnostics.record("outsideFrameWork",
-      Math.max(0, frameIntervalMilliseconds - this.#previousFrameWorkMilliseconds));
+    this.#options.diagnostics.record(
+      "outsideFrameWork",
+      Math.max(0, frameIntervalMilliseconds - this.#previousFrameWorkMilliseconds),
+    );
     this.#previousFrameWorkMilliseconds = frameWorkMilliseconds;
     const counts = this.#options.entityCounts();
     this.#options.diagnostics.gauge("enemies", counts.enemies);

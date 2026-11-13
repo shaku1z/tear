@@ -6,8 +6,16 @@ const { withJourney } = require("./browser-journey-harness");
 const weapons = ["sword", "hammer", "greatsword", "chainblade", "riftlock"];
 const difficulties = ["easy", "normal", "hard", "extreme", "onehit"];
 const collectiveRequiredCoreMechanics = [
-  "heldSlash", "launch", "juggle", "slam", "updraft",
-  "throw", "recall", "tether", "projectileParry", "stolenBladeRecovery",
+  "heldSlash",
+  "launch",
+  "juggle",
+  "slam",
+  "updraft",
+  "throw",
+  "recall",
+  "tether",
+  "projectileParry",
+  "stolenBladeRecovery",
 ];
 const collectiveNonStolenMechanics = collectiveRequiredCoreMechanics.filter(
   (mechanic) => mechanic !== "stolenBladeRecovery",
@@ -31,24 +39,24 @@ const modeContracts = [
 
 function mechanics(snapshot) {
   const stats = snapshot.weaponStats ?? {};
-  const heldEvents = snapshot.weaponEvents.filter((event) =>
-    event && typeof event === "object" && event.type === "heldHit");
-  const effects = new Set(snapshot.engineEvents
-    .filter((event) => event.kind === "effect")
-    .map((event) => event.effect));
+  const heldEvents = snapshot.weaponEvents.filter(
+    (event) => event && typeof event === "object" && event.type === "heldHit",
+  );
+  const effects = new Set(
+    snapshot.engineEvents.filter((event) => event.kind === "effect").map((event) => event.effect),
+  );
   const states = new Set(snapshot.bladeStates);
   const control = snapshot.bladeStateTransitions;
   const observed = (condition, evidence) => ({
     status: condition ? "observed" : "not-observed",
     evidence: condition ? evidence : "No corresponding live signal occurred in this bounded run.",
   });
-  const recalled = stats.throws > 0 && [...states].some((state) =>
-    ["returning", "slinging", "held"].includes(state));
-  const tethered = snapshot.bladeTether.contracted
-    || control.some((entry) => entry.state === "hooked");
+  const recalled = stats.throws > 0 && [...states].some((state) => ["returning", "slinging", "held"].includes(state));
+  const tethered = snapshot.bladeTether.contracted || control.some((entry) => entry.state === "hooked");
   const stolenAt = control.findIndex((entry) => entry.hostile && entry.stolen);
-  const recoveredAt = control.findIndex((entry, index) =>
-    index > stolenAt && !entry.hostile && !entry.stolen && entry.state === "held");
+  const recoveredAt = control.findIndex(
+    (entry, index) => index > stolenAt && !entry.hostile && !entry.stolen && entry.state === "held",
+  );
   const stolenRecovered = stolenAt >= 0 && recoveredAt > stolenAt;
   return {
     heldSlash: observed(stats.heldHits > 0, `${String(stats.heldHits)} live held hits`),
@@ -68,11 +76,15 @@ function mechanics(snapshot) {
       tethered,
       `live tether factor ${snapshot.bladeTether.minimum.toFixed(3)}..${snapshot.bladeTether.maximum.toFixed(3)}`,
     ),
-    stolenBladeRecovery: observed(stolenRecovered, "ordered blade control timeline proved stolen/hostile then held recovery"),
+    stolenBladeRecovery: observed(
+      stolenRecovered,
+      "ordered blade control timeline proved stolen/hostile then held recovery",
+    ),
     tetherOrStolenRecovery: observed(
       tethered || stolenRecovered,
-      `ordered blade control timeline: ${control.map((entry) =>
-        `${entry.state}/${entry.hostile ? "hostile" : "owned"}`).join(", ")}`,
+      `ordered blade control timeline: ${control
+        .map((entry) => `${entry.state}/${entry.hostile ? "hostile" : "owned"}`)
+        .join(", ")}`,
     ),
     projectileParry: observed(
       stats.perfectParries > 0 || effects.has("parry") || effects.has("deflect"),
@@ -88,12 +100,15 @@ async function runTargetedScenario(page, scenario) {
   await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15_000 });
   await page.mouse.click(10, 10);
   let snapshot = await page.evaluate((options) => window.__TEAR_WATCH_AGENT__.start(options), {
-    profile: scenario.profile, mode: scenario.mode, difficulty: "easy",
-    weapon: scenario.weapon, boss: scenario.boss ?? "shuffle", seed: scenario.seed,
+    profile: scenario.profile,
+    mode: scenario.mode,
+    difficulty: "easy",
+    weapon: scenario.weapon,
+    boss: scenario.boss ?? "shuffle",
+    seed: scenario.seed,
   });
   await page.waitForLoadState("networkidle", { timeout: 10_000 });
-  await page.evaluate(() => new Promise((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const targetScreen = scenario.mode === "playground" ? "pgmenu" : "playing";
   for (let step = 0; step < 12 && snapshot.screen !== targetScreen; step += 1) {
     snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(1));
@@ -110,8 +125,7 @@ async function runTargetedScenario(page, scenario) {
       await page.mouse.click(900, 330);
       snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.snapshot());
     } else {
-      snapshot = await page.evaluate((id) =>
-        window.__TEAR_WATCH_AGENT__.activatePlaygroundAction(id), action);
+      snapshot = await page.evaluate((id) => window.__TEAR_WATCH_AGENT__.activatePlaygroundAction(id), action);
     }
   }
   if (scenario.mode === "playground") {
@@ -126,9 +140,10 @@ async function runTargetedScenario(page, scenario) {
   }
   return {
     id: scenario.id,
-    flow: scenario.mode === "playground"
-      ? "main menu -> setup -> Playground menu controls -> RESUME -> real simulation"
-      : "main menu -> setup -> typed boss selection -> real Boss Test simulation",
+    flow:
+      scenario.mode === "playground"
+        ? "main menu -> setup -> Playground menu controls -> RESUME -> real simulation"
+        : "main menu -> setup -> typed boss selection -> real Boss Test simulation",
     requestedActions: scenario.actions,
     profile: scenario.profile,
     weapon: scenario.weapon,
@@ -195,34 +210,50 @@ withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async 
   }
 
   const targetedScenarios = [];
-  targetedScenarios.push(await runTargetedScenario(page, {
-    id: "source-stolen-blade-recovery", profile: "competent", weapon: "sword",
-    mode: "bossonly", boss: "source", seed: 6, actions: [], batches: 100,
-  }));
+  targetedScenarios.push(
+    await runTargetedScenario(page, {
+      id: "source-stolen-blade-recovery",
+      profile: "competent",
+      weapon: "sword",
+      mode: "bossonly",
+      boss: "source",
+      seed: 6,
+      actions: [],
+      batches: 100,
+    }),
+  );
 
   const campaignStarts = results.filter((entry) =>
-    entry.transitions.some((transition) => transition.screen === "playing")).length;
+    entry.transitions.some((transition) => transition.screen === "playing"),
+  ).length;
   const contractArtifacts = modeContracts.map((contract) => {
-    const rows = contract.difficulties === null
-      ? [{
-          mode: contract.mode, difficulty: null, status: "unsupported",
-          reason: "Tutorial has no production difficulty selector; difficulty-specific completion is not applicable.",
-        }]
-      : contract.difficulties.map((difficulty) => ({
-          mode: contract.mode,
-          difficulty,
-          ...(contract.mode === "campaign" && difficulty === "easy"
-            ? {
-                status: "not-evaluated-here",
-                reason: `${String(campaignStarts)} bounded live starts were observed, but completion is owned by `
-                  + "tests/browser-scripted-agent-autonomy.js and "
-                  + "tests/browser-scripted-agent-repeatability.js.",
-              }
-            : {
-                status: "fail",
-                reason: "No natural completion evidence was executed for this contract row.",
-              }),
-        }));
+    const rows =
+      contract.difficulties === null
+        ? [
+            {
+              mode: contract.mode,
+              difficulty: null,
+              status: "unsupported",
+              reason:
+                "Tutorial has no production difficulty selector; difficulty-specific completion is not applicable.",
+            },
+          ]
+        : contract.difficulties.map((difficulty) => ({
+            mode: contract.mode,
+            difficulty,
+            ...(contract.mode === "campaign" && difficulty === "easy"
+              ? {
+                  status: "not-evaluated-here",
+                  reason:
+                    `${String(campaignStarts)} bounded live starts were observed, but completion is owned by ` +
+                    "tests/browser-scripted-agent-autonomy.js and " +
+                    "tests/browser-scripted-agent-repeatability.js.",
+                }
+              : {
+                  status: "fail",
+                  reason: "No natural completion evidence was executed for this contract row.",
+                }),
+          }));
     const artifact = {
       schemaVersion: 1,
       checkpoint: "C24",
@@ -258,29 +289,45 @@ withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async 
   await page.screenshot({ path: path.join(artifactDirectory, "weapon-mechanics-matrix.png") });
   assert.equal(results.length, 5);
   for (const mechanic of collectiveNonStolenMechanics) {
-    assert.ok(results.some((entry) => entry.mechanics[mechanic].status === "observed"),
-      `collective five-weapon matrix did not observe required core mechanic ${mechanic}`);
+    assert.ok(
+      results.some((entry) => entry.mechanics[mechanic].status === "observed"),
+      `collective five-weapon matrix did not observe required core mechanic ${mechanic}`,
+    );
   }
   for (const result of results) {
-    assert.equal(result.mechanics.heldSlash.status, "observed",
-      `${result.weapon} did not produce a production held hit`);
-    assert.equal(result.mechanics.tether.status, "observed",
-      `${result.weapon} did not exercise its production blade tether`);
+    assert.equal(
+      result.mechanics.heldSlash.status,
+      "observed",
+      `${result.weapon} did not produce a production held hit`,
+    );
+    assert.equal(
+      result.mechanics.tether.status,
+      "observed",
+      `${result.weapon} did not exercise its production blade tether`,
+    );
     for (const mechanic of weaponIdentityRequirements[result.weapon]) {
-      assert.equal(result.mechanics[mechanic].status, "observed",
-        `${result.weapon} did not exercise required identity mechanic ${mechanic}`);
+      assert.equal(
+        result.mechanics[mechanic].status,
+        "observed",
+        `${result.weapon} did not exercise required identity mechanic ${mechanic}`,
+      );
     }
   }
   const sourceRecovery = targetedScenarios.find((entry) => entry.id === "source-stolen-blade-recovery");
   assert.ok(sourceRecovery, "Source stolen-blade recovery scenario is missing");
-  assert.equal(sourceRecovery.mechanics.stolenBladeRecovery.status, "observed",
-    "Source scenario did not prove ordered hostile/stolen then owned/held recovery");
-  assert.ok(sourceRecovery.engineEvents.some((event) =>
-    event.kind === "effect" && event.effect === "stolenBlade"),
-  "Source scenario did not emit the semantic stolenBlade production event");
-  assert.ok(sourceRecovery.weaponEvents.some((event) =>
-    event && typeof event === "object" && event.type === "stolenBlade"),
-  "Source scenario did not emit the stolenBlade production weapon event");
+  assert.equal(
+    sourceRecovery.mechanics.stolenBladeRecovery.status,
+    "observed",
+    "Source scenario did not prove ordered hostile/stolen then owned/held recovery",
+  );
+  assert.ok(
+    sourceRecovery.engineEvents.some((event) => event.kind === "effect" && event.effect === "stolenBlade"),
+    "Source scenario did not emit the semantic stolenBlade production event",
+  );
+  assert.ok(
+    sourceRecovery.weaponEvents.some((event) => event && typeof event === "object" && event.type === "stolenBlade"),
+    "Source scenario did not emit the stolenBlade production weapon event",
+  );
   assert.equal(contractArtifacts.length, 7);
   assert.equal(contractArtifacts.flatMap((entry) => entry.rows).length, 31);
   assert.deepEqual(errors, []);

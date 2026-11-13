@@ -4,7 +4,9 @@ import { createOutcomeChronologyJournal } from "../../src/gameplay/run/outcome-c
 describe("outcome chronology journal", () => {
   it("publishes deeply immutable, monotonic data-only receipts", () => {
     const observed: unknown[] = [];
-    const journal = createOutcomeChronologyJournal((entry) => { observed.push(entry); });
+    const journal = createOutcomeChronologyJournal((entry) => {
+      observed.push(entry);
+    });
     const pattern = [18, 24, 34];
 
     journal.record({ type: "finale-outward", call: { type: "vibrate", pattern } });
@@ -28,8 +30,17 @@ describe("outcome chronology journal", () => {
       type: "outcome.presentation-dispatched",
       outcome: "victory",
       result: {
-        wave: 49, score: 9000, time: 600, log: [], best: { wave: 49, score: 9000, time: 600 },
-        isNew: true, earned: 90, coins: 123, win: true, campaign: true, diff: "normal",
+        wave: 49,
+        score: 9000,
+        time: 600,
+        log: [],
+        best: { wave: 49, score: 9000, time: 600 },
+        isNew: true,
+        earned: 90,
+        coins: 123,
+        win: true,
+        campaign: true,
+        diff: "normal",
       },
     });
 

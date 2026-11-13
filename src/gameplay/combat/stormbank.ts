@@ -66,8 +66,13 @@ export function dischargeStormbank<TTarget extends StormbankTarget>(
   const primaryBonus = primaryDamage * Math.min(maximumPrimary, charges * primaryPerCharge);
   const targetLimit = Math.min(maximumTargets, Math.ceil(charges / 2));
   const arcs = targets
-    .filter((target) => target !== primaryTarget && !target.dead && distance(target.x, target.y, origin.x, origin.y) <= config.radius)
-    .sort((left, right) => distance(left.x, left.y, origin.x, origin.y) - distance(right.x, right.y, origin.x, origin.y))
+    .filter(
+      (target) =>
+        target !== primaryTarget && !target.dead && distance(target.x, target.y, origin.x, origin.y) <= config.radius,
+    )
+    .sort(
+      (left, right) => distance(left.x, left.y, origin.x, origin.y) - distance(right.x, right.y, origin.x, origin.y),
+    )
     .slice(0, targetLimit)
     .map((target) => ({
       target,
@@ -94,7 +99,9 @@ export function advanceStormEchoes<TTarget extends StormbankTarget>(
       echo.arcT += config.echoInterval;
       const target = targets
         .filter((candidate) => !candidate.dead && distance(candidate.x, candidate.y, echo.x, echo.y) <= config.radius)
-        .sort((left, right) => distance(left.x, left.y, echo.x, echo.y) - distance(right.x, right.y, echo.x, echo.y))[0];
+        .sort(
+          (left, right) => distance(left.x, left.y, echo.x, echo.y) - distance(right.x, right.y, echo.x, echo.y),
+        )[0];
       if (target) emitted.push({ echo, arc: { target, damage: config.chainDamage * 0.45, stun: 0 } });
     }
   }

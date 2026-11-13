@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TearGameplayEventBus, type TearGameplayEvent } from
-  "../../src/gameplay/runtime/gameplay-events";
+import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { projectGameplayEventForParity } from "../../src/tearbench/gameplay-causal-events";
 import {
   createDetachedCombatSimulation,
@@ -13,27 +12,46 @@ import {
 describe("detached portable finale runtime", () => {
   it("publishes live-shaped boss and death facts through production kill and cleanup hooks", () => {
     const detached = createDetachedWorld({
-      seed: "detached-source-native-facts", mode: "campaign",
+      seed: "detached-source-native-facts",
+      mode: "campaign",
       enemies: [{ id: "source", x: 810, y: 330 }],
     });
     detached.stage.index = 6;
     const run = detached.world.state.run() as never as Record<string, unknown>;
     Object.assign(run, {
-      mode: "campaign", diff: "normal", wave: 60, score: 0, runTime: 0,
-      waveTime: 0, waveKills: 0, wavePeak: 1, waveLog: [], spawnQueue: [],
-      _dmgThisWave: false, _dmgThisRun: false, chapterState: "WAVE_LIVE",
+      mode: "campaign",
+      diff: "normal",
+      wave: 60,
+      score: 0,
+      runTime: 0,
+      waveTime: 0,
+      waveKills: 0,
+      wavePeak: 1,
+      waveLog: [],
+      spawnQueue: [],
+      _dmgThisWave: false,
+      _dmgThisRun: false,
+      chapterState: "WAVE_LIVE",
     });
     const events = new TearGameplayEventBus();
     const native: TearGameplayEvent[] = [];
-    events.subscribe((event) => { native.push(event); });
+    events.subscribe((event) => {
+      native.push(event);
+    });
     const core = createDetachedCombatSimulation(detached, {
       gameplayEvents: events,
       snapshot: (tick) => ({ tick }),
     });
     events.setTickSource(() => core.simulationRuntime.scheduler.tick);
-    const source = detached.world.state.enemies()[0] as unknown as ({
-      id?: string; _gid?: number; x: number; y: number; dead: boolean;
-    } | undefined);
+    const source = detached.world.state.enemies()[0] as unknown as
+      | {
+          id?: string;
+          _gid?: number;
+          x: number;
+          y: number;
+          dead: boolean;
+        }
+      | undefined;
     if (source === undefined) throw new Error("detached Source was not constructed");
     // Ghost 2's visual id only admits the actor to its cleanup hook. The fact
     // must use the shared core identity, never this legacy number.
@@ -45,12 +63,19 @@ describe("detached portable finale runtime", () => {
 
     expect(native.map((event, sequence) => projectGameplayEventForParity(event, sequence))).toEqual([
       {
-        tick: 0, sequence: 0, type: "boss.defeated", phase: "post-simulation-commit",
+        tick: 0,
+        sequence: 0,
+        type: "boss.defeated",
+        phase: "post-simulation-commit",
         payload: { effect: "bossKill", x: 810, y: 330 },
       },
       {
-        tick: 1, sequence: 1, type: "enemy.defeated", phase: "deaths-and-rewards",
-        actorId, payload: { cause: "combat" },
+        tick: 1,
+        sequence: 1,
+        type: "enemy.defeated",
+        phase: "deaths-and-rewards",
+        actorId,
+        payload: { cause: "combat" },
       },
     ]);
     expect(actorId).not.toBe("enemy:41");
@@ -64,11 +89,27 @@ describe("detached portable finale runtime", () => {
     const detached = createDetachedWorld({ seed: "detached-finale", mode: "campaign" });
     const run = detached.world.state.run() as never as Record<string, unknown>;
     Object.assign(run, {
-      mode: "campaign", diff: "normal", wave: 60, score: 12_345, runTime: 612,
-      waveTime: 18, waveKills: 1, wavePeak: 1, waveLog: [], bossesBeaten: 5,
-      isBossWave: true, horde: false, spawnQueue: [], spawnTimer: 0, clearTimer: -1,
-      pendingReward: null, _dmgThisWave: false, _dmgThisStage: false, _dmgThisRun: false,
-      chapterState: "WAVE_LIVE", finalBossDeath: { x: 800, y: 320 },
+      mode: "campaign",
+      diff: "normal",
+      wave: 60,
+      score: 12_345,
+      runTime: 612,
+      waveTime: 18,
+      waveKills: 1,
+      wavePeak: 1,
+      waveLog: [],
+      bossesBeaten: 5,
+      isBossWave: true,
+      horde: false,
+      spawnQueue: [],
+      spawnTimer: 0,
+      clearTimer: -1,
+      pendingReward: null,
+      _dmgThisWave: false,
+      _dmgThisStage: false,
+      _dmgThisRun: false,
+      chapterState: "WAVE_LIVE",
+      finalBossDeath: { x: 800, y: 320 },
     });
     detached.stage.index = 6;
     detached.world.state.setEnemies([]);
@@ -80,12 +121,16 @@ describe("detached portable finale runtime", () => {
 
     const events = new TearGameplayEventBus();
     const nativeEvents: TearGameplayEvent[] = [];
-    events.subscribe((event) => { nativeEvents.push(event); });
+    events.subscribe((event) => {
+      nativeEvents.push(event);
+    });
     const finale = createDetachedFinaleComposition(detached, events);
     let updateWave: (seconds: number) => void = () => undefined;
     const core = createDetachedCombatSimulation(detached, {
       gameplayEvents: events,
-      updateWave: (seconds) => { updateWave(seconds); },
+      updateWave: (seconds) => {
+        updateWave(seconds);
+      },
       finale: {
         snapshot: finale.snapshot,
         markLanded: finale.markLanded,
@@ -112,18 +157,30 @@ describe("detached portable finale runtime", () => {
 
     expect(entry.state).toMatchObject({ lifecycle: "finale", cinema: "adventure-final-cut" });
     expect(detached.world.lifecycle.snapshot()).toMatchObject({
-      phase: "finale", wave: 60, bossWave: true, outcome: null,
+      phase: "finale",
+      wave: 60,
+      bossWave: true,
+      outcome: null,
     });
     expect(finale.snapshot()?.phase).toBe("silence");
     expect(detached.world.state.bossIntro()).toBeNull();
     expect(detached.world.state.bossBeat()).toBeNull();
     expect(finale.outcome.pendingFinale()).not.toBeNull();
-    expect(nativeEvents).toContainEqual(expect.objectContaining({
-      kind: "wave", wave: 60, event: "clear",
-    }));
-    expect(nativeEvents).toContainEqual(expect.objectContaining({
-      kind: "run", transition: "completed", runId: "detached-finale-session", wave: 60,
-    }));
+    expect(nativeEvents).toContainEqual(
+      expect.objectContaining({
+        kind: "wave",
+        wave: 60,
+        event: "clear",
+      }),
+    );
+    expect(nativeEvents).toContainEqual(
+      expect.objectContaining({
+        kind: "run",
+        transition: "completed",
+        runId: "detached-finale-session",
+        wave: 60,
+      }),
+    );
 
     detached.world.context.cinema.requestSkip();
     expect(finale.snapshot()).toMatchObject({ phase: "restoration", severed: 3, restoring: true });
@@ -147,21 +204,30 @@ describe("detached portable finale runtime", () => {
     const presented = finale.outcome.presented();
     expect(presented?.outcome).toBe("victory");
     expect(presented?.result).toMatchObject({ win: true, campaign: true, wave: 60, score: 12_345 });
-    expect(finale.outward).toEqual(expect.arrayContaining([
-      "persistFinale", "clearFinale", "present:victory",
-    ]));
+    expect(finale.outward).toEqual(expect.arrayContaining(["persistFinale", "clearFinale", "present:victory"]));
     const chronology = finale.outcomeChronology;
     expect(chronology.map((entry) => entry.sequence)).toEqual(chronology.map((_, index) => index));
     expect(chronology.slice(0, 12).map((entry) => entry.effect.type)).toEqual([
-      "outcome.stop-clipper", "outcome.score-newness-decided", "outcome.coins-awarded",
-      "outcome.wallet-read", "outcome.terminal-published", "outcome.achievement-policy-read",
-      "outcome.economy-telemetry-read", "outcome.victory-intents-dispatched",
-      "outcome.prepared-stored", "outcome.best-read", "outcome.pending-finale-write-requested",
+      "outcome.stop-clipper",
+      "outcome.score-newness-decided",
+      "outcome.coins-awarded",
+      "outcome.wallet-read",
+      "outcome.terminal-published",
+      "outcome.achievement-policy-read",
+      "outcome.economy-telemetry-read",
+      "outcome.victory-intents-dispatched",
+      "outcome.prepared-stored",
+      "outcome.best-read",
+      "outcome.pending-finale-write-requested",
       "outcome.achievement-policy-read",
     ]);
     expect(chronology.slice(-6).map((entry) => entry.effect.type)).toEqual([
-      "outcome.prepared-cache-hit", "outcome.best-read", "outcome.pending-finale-clear-requested",
-      "outcome.achievement-policy-read", "outcome.lifecycle-terminated", "outcome.presentation-dispatched",
+      "outcome.prepared-cache-hit",
+      "outcome.best-read",
+      "outcome.pending-finale-clear-requested",
+      "outcome.achievement-policy-read",
+      "outcome.lifecycle-terminated",
+      "outcome.presentation-dispatched",
     ]);
     expect(nativeEvents.filter((event) => event.kind === "run" && event.transition === "completed")).toHaveLength(1);
   });

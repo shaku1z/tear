@@ -1,11 +1,10 @@
-import type {
-  CampaignStage,
-  ChapterIntent,
-  ChapterPage,
-} from "../../gameplay/campaign/chapter-controller";
+import type { CampaignStage, ChapterIntent, ChapterPage } from "../../gameplay/campaign/chapter-controller";
 import type { CampaignRuntimeState } from "./campaign-runtime-state";
-import { createCampaignChapterBindingSpec, stageCampaignChapterBinding,
-  type CampaignChapterBindingPort } from "../../gameplay/campaign/chapter-cinematic-binding";
+import {
+  createCampaignChapterBindingSpec,
+  stageCampaignChapterBinding,
+  type CampaignChapterBindingPort,
+} from "../../gameplay/campaign/chapter-cinematic-binding";
 import type { CinematicDirectorBinding } from "../../gameplay/runtime/cinematic-director";
 import type {
   FinaleCinematicBeat,
@@ -52,15 +51,21 @@ export function launchCampaignChapter(options: ChapterSequenceLaunchOptions): vo
     dispatch: options.dispatch,
     preparedWave: options.preparedWave,
     activationDeferred: options.activationDeferred,
-    clear: () => { options.runtime.clearChapterBinding(); },
+    clear: () => {
+      options.runtime.clearChapterBinding();
+    },
   };
-  const staged = stageCampaignChapterBinding(createCampaignChapterBindingSpec({
-    stageIndex: options.stageIndex,
-    priorOutro: options.priorOutro,
-    brief: options.brief,
-    prologueShownBefore: options.prologueShown,
-    timing: options.runtime.chapterController.timing,
-  }), options.stage, port);
+  const staged = stageCampaignChapterBinding(
+    createCampaignChapterBindingSpec({
+      stageIndex: options.stageIndex,
+      priorOutro: options.priorOutro,
+      brief: options.brief,
+      prologueShownBefore: options.prologueShown,
+      timing: options.runtime.chapterController.timing,
+    }),
+    options.stage,
+    port,
+  );
   options.runtime.installChapterBinding(staged);
   options.rememberPrologue(staged.prologueShownAfter);
   options.clearBossBeat();

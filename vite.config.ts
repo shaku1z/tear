@@ -10,15 +10,15 @@ function targetHtml(target: "standalone" | "crazygames"): Plugin {
       order: "pre",
       handler(html) {
         const entry = target === "standalone" ? "standalone" : "crazygames";
-        const sdk = target === "crazygames"
-          ? '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>'
-          : "";
-        const targetHtml = target === "crazygames"
-          ? html.replace(/\s*<!-- TEAR_STANDALONE_PWA_START -->[\s\S]*?<!-- TEAR_STANDALONE_PWA_END -->\s*/, "\n")
-          // VitePWA owns the generated production manifest link. Removing the
-          // template placeholder prevents duplicate links in production and a
-          // dead manifest request while the PWA plugin is disabled in dev.
-          : html.replace(/\s*<link rel="manifest" href="\/manifest\.webmanifest" \/>\s*/, "\n");
+        const sdk =
+          target === "crazygames" ? '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>' : "";
+        const targetHtml =
+          target === "crazygames"
+            ? html.replace(/\s*<!-- TEAR_STANDALONE_PWA_START -->[\s\S]*?<!-- TEAR_STANDALONE_PWA_END -->\s*/, "\n")
+            : // VitePWA owns the generated production manifest link. Removing the
+              // template placeholder prevents duplicate links in production and a
+              // dead manifest request while the PWA plugin is disabled in dev.
+              html.replace(/\s*<link rel="manifest" href="\/manifest\.webmanifest" \/>\s*/, "\n");
         return targetHtml
           .replace("<!-- TEAR_PLATFORM_SDK -->", sdk)
           .replace("<!-- TEAR_ENTRYPOINT -->", `<script type="module" src="/src/entrypoints/${entry}.ts"></script>`);
@@ -59,13 +59,16 @@ function targetDependencyBoundary(target: "standalone" | "crazygames"): Plugin {
   return {
     name: "tear-target-dependency-boundary",
     generateBundle(_options, bundle) {
-      const forbidden = target === "crazygames"
-        ? ["/src/platform/firebase-cloud.ts", "/src/platform/firebase-config.ts", "/src/platform/standalone-cloud.ts"]
-        : ["/src/platform/crazygames.ts", "/src/platform/crazygames-cloud.ts"];
-      const moduleIds = Object.values(bundle).flatMap((item) => item.type === "chunk" ? Object.keys(item.modules) : [])
+      const forbidden =
+        target === "crazygames"
+          ? ["/src/platform/firebase-cloud.ts", "/src/platform/firebase-config.ts", "/src/platform/standalone-cloud.ts"]
+          : ["/src/platform/crazygames.ts", "/src/platform/crazygames-cloud.ts"];
+      const moduleIds = Object.values(bundle)
+        .flatMap((item) => (item.type === "chunk" ? Object.keys(item.modules) : []))
         .map((id) => id.replaceAll("\\", "/"));
       const violations = moduleIds.filter((id) => forbidden.some((part) => id.endsWith(part)));
-      if (violations.length > 0) this.error(`${target} bundle crossed its platform boundary:\n${violations.join("\n")}`);
+      if (violations.length > 0)
+        this.error(`${target} bundle crossed its platform boundary:\n${violations.join("\n")}`);
     },
   };
 }
@@ -99,7 +102,24 @@ function applicationChunk(id: string): string | undefined {
     const area = relative.split("/").slice(1, 2)[0] ?? "core";
     return `gameplay-${area}`;
   }
-  if (["presentation", "audio", "ghost", "tearbench", "agents", "input", "persistence", "platform", "replay", "simulation", "diagnostics", "domain", "config"].includes(topLevel)) return `runtime-${topLevel}`;
+  if (
+    [
+      "presentation",
+      "audio",
+      "ghost",
+      "tearbench",
+      "agents",
+      "input",
+      "persistence",
+      "platform",
+      "replay",
+      "simulation",
+      "diagnostics",
+      "domain",
+      "config",
+    ].includes(topLevel)
+  )
+    return `runtime-${topLevel}`;
   return undefined;
 }
 
@@ -116,43 +136,58 @@ export default defineConfig(({ mode, command }) => {
       targetHtml(target),
       cloudflareHeaders(target),
       targetDependencyBoundary(target),
-      ...(target === "standalone" ? [VitePWA({
-        registerType: "prompt",
-        injectRegister: null,
-        manifest: {
-          name: "TEAR: BLADE",
-          short_name: "TEAR",
-          description: "A momentum-blade survival game — cut clean, keep moving, chase the multiplier.",
-          id: "/",
-          start_url: "/?source=pwa",
-          scope: "/",
-          display: "fullscreen",
-          orientation: "landscape",
-          background_color: "#0a0b10",
-          theme_color: "#0a0b10",
-          categories: ["games", "entertainment"],
-          icons: [
-            { src: "branding/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-            { src: "branding/icons/icon-512.png", sizes: "512x512", type: "image/png" },
-            { src: "branding/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-          ],
-        },
-        workbox: {
-          cleanupOutdatedCaches: true,
-          clientsClaim: true,
-          navigateFallback: "/index.html",
-          globPatterns: ["**/*.{html,js,css,woff2,png,webmanifest}"],
-          // The tutorial corpus is fetched on demand (training preflight), not at
-          // install: it is runtime-cached on first use so it then works offline.
-          // Workers bundle a lazy copy they never request; it is not precached.
-          globIgnores: ["**/node_modules/**/*", "assets/tutorial-gold-reference-*.js", "assets/worker-tutorial-gold-*.js"],
-          runtimeCaching: [{
-            urlPattern: /\/assets\/tutorial-gold-reference-[\w-]+\.js$/u,
-            handler: "CacheFirst",
-            options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 1 } },
-          }],
-        },
-      })] : []),
+      ...(target === "standalone"
+        ? [
+            VitePWA({
+              registerType: "prompt",
+              injectRegister: null,
+              manifest: {
+                name: "TEAR: BLADE",
+                short_name: "TEAR",
+                description: "A momentum-blade survival game — cut clean, keep moving, chase the multiplier.",
+                id: "/",
+                start_url: "/?source=pwa",
+                scope: "/",
+                display: "fullscreen",
+                orientation: "landscape",
+                background_color: "#0a0b10",
+                theme_color: "#0a0b10",
+                categories: ["games", "entertainment"],
+                icons: [
+                  { src: "branding/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+                  { src: "branding/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+                  {
+                    src: "branding/icons/icon-maskable-512.png",
+                    sizes: "512x512",
+                    type: "image/png",
+                    purpose: "maskable",
+                  },
+                ],
+              },
+              workbox: {
+                cleanupOutdatedCaches: true,
+                clientsClaim: true,
+                navigateFallback: "/index.html",
+                globPatterns: ["**/*.{html,js,css,woff2,png,webmanifest}"],
+                // The tutorial corpus is fetched on demand (training preflight), not at
+                // install: it is runtime-cached on first use so it then works offline.
+                // Workers bundle a lazy copy they never request; it is not precached.
+                globIgnores: [
+                  "**/node_modules/**/*",
+                  "assets/tutorial-gold-reference-*.js",
+                  "assets/worker-tutorial-gold-*.js",
+                ],
+                runtimeCaching: [
+                  {
+                    urlPattern: /\/assets\/tutorial-gold-reference-[\w-]+\.js$/u,
+                    handler: "CacheFirst",
+                    options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 1 } },
+                  },
+                ],
+              },
+            }),
+          ]
+        : []),
     ],
     define: {
       __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: JSON.stringify(tutorialGoldHash),
@@ -176,8 +211,13 @@ export default defineConfig(({ mode, command }) => {
       rolldownOptions: {
         output: {
           codeSplitting: {
-            groups: [{ name: "worker-tutorial-gold", test: (id) => id.replaceAll("\\", "/")
-              .endsWith("/src/gameplay/training/tutorial-gold-reference-data.json") }],
+            groups: [
+              {
+                name: "worker-tutorial-gold",
+                test: (id) =>
+                  id.replaceAll("\\", "/").endsWith("/src/gameplay/training/tutorial-gold-reference-data.json"),
+              },
+            ],
           },
         },
       },

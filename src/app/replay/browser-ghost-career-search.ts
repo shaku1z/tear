@@ -1,13 +1,37 @@
-export interface CareerTextPort { edit(title: string, fields: Readonly<Record<string, string>>, submit: (fields: Readonly<Record<string, string>>) => void): void; close(): void; }
+export interface CareerTextPort {
+  edit(
+    title: string,
+    fields: Readonly<Record<string, string>>,
+    submit: (fields: Readonly<Record<string, string>>) => void,
+  ): void;
+  close(): void;
+}
 
 /** Player-facing labels for the archive's filter keys. Unknown keys fall back to a readable form. */
 const FIELD_LABELS: Readonly<Record<string, string>> = Object.freeze({
-  search: "Search", date: "Date (YYYY-MM-DD..YYYY-MM-DD)", mode: "Mode", difficulty: "Difficulty", weapon: "Weapon",
-  wave: "Wave reached (e.g. 5..20)", result: "Result (victory / defeat)", archetype: "Build style", ability: "Ability used",
-  boss: "Boss fought", score: "Score (e.g. 1000..50000)", damage: "Damage taken (min..max)", tags: "Tags (comma-separated)",
-  pinned: "Pinned (true / false)", shared: "Shared (public / unlisted / private)", resumed: "Continued from a replay (true / false)",
-  verified: "Checked recording (receipts / integrity / unavailable)", actor: "Played by (human / bot)", version: "Game version",
-  title: "Title", notes: "Notes", retention: "Keep (recent / pinned)", code: "Code",
+  search: "Search",
+  date: "Date (YYYY-MM-DD..YYYY-MM-DD)",
+  mode: "Mode",
+  difficulty: "Difficulty",
+  weapon: "Weapon",
+  wave: "Wave reached (e.g. 5..20)",
+  result: "Result (victory / defeat)",
+  archetype: "Build style",
+  ability: "Ability used",
+  boss: "Boss fought",
+  score: "Score (e.g. 1000..50000)",
+  damage: "Damage taken (min..max)",
+  tags: "Tags (comma-separated)",
+  pinned: "Pinned (true / false)",
+  shared: "Shared (public / unlisted / private)",
+  resumed: "Continued from a replay (true / false)",
+  verified: "Checked recording (receipts / integrity / unavailable)",
+  actor: "Played by (human / bot)",
+  version: "Game version",
+  title: "Title",
+  notes: "Notes",
+  retention: "Keep (recent / pinned)",
+  code: "Code",
 });
 
 const DIALOG_CSS = `
@@ -34,40 +58,94 @@ const DIALOG_CSS = `
 function ensureStyles(document: Document): void {
   if (document.getElementById("tear-dialog-style") !== null) return;
   const style = document.createElement("style");
-  style.id = "tear-dialog-style"; style.textContent = DIALOG_CSS;
+  style.id = "tear-dialog-style";
+  style.textContent = DIALOG_CSS;
   document.head.append(style);
 }
 
 /** Explicit, accessible local text editing in the game's own look. Nothing is submitted to a server. */
-export function createCareerTextPort(document: Document, hintText = "Leave a box blank to match anything. Ranges use min..max (for example 5..20). Dates use YYYY-MM-DD. Separate tags with commas."): CareerTextPort {
+export function createCareerTextPort(
+  document: Document,
+  hintText = "Leave a box blank to match anything. Ranges use min..max (for example 5..20). Dates use YYYY-MM-DD. Separate tags with commas.",
+): CareerTextPort {
   let remove: (() => void) | undefined;
-  return { close() { remove?.(); remove = undefined; }, edit(title, fields, submit) {
-    remove?.(); ensureStyles(document);
-    const focus = document.activeElement, layer = document.createElement("dialog"), form = document.createElement("form");
-    layer.className = "tear-dialog";
-    layer.addEventListener("cancel", (event) => { event.preventDefault(); remove?.(); });
-    layer.setAttribute("role", "dialog"); layer.setAttribute("aria-modal", "true"); layer.setAttribute("aria-label", title);
-    const heading = document.createElement("h2"); heading.textContent = title;
-    const hint = document.createElement("p"); hint.textContent = hintText; form.append(heading, hint);
-    const inputs = new Map<string, HTMLInputElement>();
-    for (const [key, value] of Object.entries(fields)) {
-      const label = document.createElement("label"), input = document.createElement("input");
-      label.textContent = FIELD_LABELS[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2");
-      input.type = "text"; input.name = key; input.value = value; input.maxLength = key === "code" ? 32768 : key === "tags" ? 1024 : 256;
-      input.autocomplete = "off"; label.append(input); form.append(label); inputs.set(key, input);
-    }
-    const actions = document.createElement("div"); actions.className = "actions";
-    const save = document.createElement("button"), cancel = document.createElement("button");
-    save.type = "submit"; save.textContent = "APPLY"; cancel.type = "button"; cancel.textContent = "CANCEL"; actions.append(cancel, save); form.append(actions);
-    const close = () => { layer.close(); layer.remove(); if (focus instanceof HTMLElement && focus.isConnected) focus.focus(); if (remove === close) remove = undefined; };
-    remove = close; cancel.onclick = close;
-    form.onsubmit = (event) => {
-      event.preventDefault();
-      const next = Object.fromEntries([...inputs].map(([key, input]) => [key, input.value.trim()]));
-      close(); submit(next);
-    };
-    layer.addEventListener("keydown", (event) => { event.stopPropagation(); if (event.key === "Escape") { event.preventDefault(); close(); } });
-    for (const name of ["keyup", "pointerdown", "pointerup", "click"] as const) layer.addEventListener(name, (event) => { event.stopPropagation(); });
-    layer.append(form); document.body.append(layer); layer.showModal(); inputs.values().next().value?.focus();
-  } };
+  return {
+    close() {
+      remove?.();
+      remove = undefined;
+    },
+    edit(title, fields, submit) {
+      remove?.();
+      ensureStyles(document);
+      const focus = document.activeElement,
+        layer = document.createElement("dialog"),
+        form = document.createElement("form");
+      layer.className = "tear-dialog";
+      layer.addEventListener("cancel", (event) => {
+        event.preventDefault();
+        remove?.();
+      });
+      layer.setAttribute("role", "dialog");
+      layer.setAttribute("aria-modal", "true");
+      layer.setAttribute("aria-label", title);
+      const heading = document.createElement("h2");
+      heading.textContent = title;
+      const hint = document.createElement("p");
+      hint.textContent = hintText;
+      form.append(heading, hint);
+      const inputs = new Map<string, HTMLInputElement>();
+      for (const [key, value] of Object.entries(fields)) {
+        const label = document.createElement("label"),
+          input = document.createElement("input");
+        label.textContent = FIELD_LABELS[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2");
+        input.type = "text";
+        input.name = key;
+        input.value = value;
+        input.maxLength = key === "code" ? 32768 : key === "tags" ? 1024 : 256;
+        input.autocomplete = "off";
+        label.append(input);
+        form.append(label);
+        inputs.set(key, input);
+      }
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      const save = document.createElement("button"),
+        cancel = document.createElement("button");
+      save.type = "submit";
+      save.textContent = "APPLY";
+      cancel.type = "button";
+      cancel.textContent = "CANCEL";
+      actions.append(cancel, save);
+      form.append(actions);
+      const close = () => {
+        layer.close();
+        layer.remove();
+        if (focus instanceof HTMLElement && focus.isConnected) focus.focus();
+        if (remove === close) remove = undefined;
+      };
+      remove = close;
+      cancel.onclick = close;
+      form.onsubmit = (event) => {
+        event.preventDefault();
+        const next = Object.fromEntries([...inputs].map(([key, input]) => [key, input.value.trim()]));
+        close();
+        submit(next);
+      };
+      layer.addEventListener("keydown", (event) => {
+        event.stopPropagation();
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+        }
+      });
+      for (const name of ["keyup", "pointerdown", "pointerup", "click"] as const)
+        layer.addEventListener(name, (event) => {
+          event.stopPropagation();
+        });
+      layer.append(form);
+      document.body.append(layer);
+      layer.showModal();
+      inputs.values().next().value?.focus();
+    },
+  };
 }

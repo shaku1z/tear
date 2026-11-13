@@ -14,11 +14,7 @@ import {
 import type { RunMode } from "./session";
 import type { StageId } from "../stages";
 import { campaignStageCurve } from "./campaign-stage-curve";
-import {
-  eligibleCompositionPool,
-  emptyCompositionBudgetState,
-  recordCompositionKind,
-} from "./composition-budget";
+import { eligibleCompositionPool, emptyCompositionBudgetState, recordCompositionKind } from "./composition-budget";
 import { describeWave } from "./wave-rules";
 
 export interface WaveTuning {
@@ -117,9 +113,7 @@ export function stageAt(stages: readonly WaveStage[], index: number): WaveStage 
 }
 
 function nextBossOrder(state: WavePlanningState, random: RandomSource): readonly [readonly BossId[], number] {
-  return state.bossIdx >= state.bossOrder.length
-    ? [shuffledBossRoster(random), 0]
-    : [state.bossOrder, state.bossIdx];
+  return state.bossIdx >= state.bossOrder.length ? [shuffledBossRoster(random), 0] : [state.bossOrder, state.bossIdx];
 }
 
 function regularWaveQueue(
@@ -131,9 +125,8 @@ function regularWaveQueue(
   options: PlanNextWaveOptions,
 ): readonly WaveSpawnSpec[] {
   const tuning = options.tuning;
-  const localWave = state.mode === "endless" || state.mode === "gauntlet"
-    ? (wave - 1) % 5 + 1
-    : (wave - 1) % 10 + 1;
+  const localWave =
+    state.mode === "endless" || state.mode === "gauntlet" ? ((wave - 1) % 5) + 1 : ((wave - 1) % 10) + 1;
   let count: number;
   let hpScale: number;
   let dmgScale = 1;
@@ -164,40 +157,46 @@ function regularWaveQueue(
   const stageOwnsPool = state.mode === "campaign" || state.mode === "endless" || state.mode === "gauntlet";
   const contentStage = stageOwnsPool && stageIndex !== null ? stageAt(options.stages, stageIndex) : null;
   const composition = contentStage === null ? undefined : campaignStageCurve(contentStage.id).composition;
-  const sandboxPool: readonly CampaignPoolEntry[] | null = state.mode === "sandbox"
-    ? PUBLISHED_ENEMY_IDENTITY_IDS.map((kind) => ({ kind, weight: 1, unlockWave: 1 }))
-    : null;
+  const sandboxPool: readonly CampaignPoolEntry[] | null =
+    state.mode === "sandbox" ? PUBLISHED_ENEMY_IDENTITY_IDS.map((kind) => ({ kind, weight: 1, unlockWave: 1 })) : null;
   const authoredPool = contentStage?.pool ?? sandboxPool;
   const unlockedAuthoredPool = authoredPool?.filter((entry) => localWave >= entry.unlockWave) ?? null;
-  const availableAuthoredPool = authoredPool === null
-    ? null
-    : unlockedAuthoredPool !== null && unlockedAuthoredPool.length > 0 ? unlockedAuthoredPool : authoredPool;
+  const availableAuthoredPool =
+    authoredPool === null
+      ? null
+      : unlockedAuthoredPool !== null && unlockedAuthoredPool.length > 0
+        ? unlockedAuthoredPool
+        : authoredPool;
   let compositionState = emptyCompositionBudgetState();
   for (let index = 0; index < count; index += 1) {
-    const eligiblePool = contentStage === null || composition === undefined
-      ? availableAuthoredPool
-      : eligibleCompositionPool(availableAuthoredPool ?? [], composition, localWave, compositionState);
+    const eligiblePool =
+      contentStage === null || composition === undefined
+        ? availableAuthoredPool
+        : eligibleCompositionPool(availableAuthoredPool ?? [], composition, localWave, compositionState);
     if (contentStage !== null && (eligiblePool?.length ?? 0) === 0) {
       throw new RangeError(`${contentStage.id} composition budget excludes every available enemy`);
     }
     const stageTypes = eligiblePool?.map((entry) => entry.kind) ?? null;
     if (wave >= 4 && options.random.next() < 0.15) {
-      const candidates = stageTypes === null
-        ? options.presets
-        : options.presets.filter((preset) => stageTypes.includes(preset.type as EnemyKind));
+      const candidates =
+        stageTypes === null
+          ? options.presets
+          : options.presets.filter((preset) => stageTypes.includes(preset.type as EnemyKind));
       if (candidates.length > 0) {
         const preset = candidates[Math.floor(options.random.next() * candidates.length)];
         if (preset !== undefined) {
           queue.push({ type: preset.type as EnemyKind, hpScale, dmgScale, preset });
-          if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, preset.type as EnemyKind);
+          if (composition !== undefined)
+            compositionState = recordCompositionKind(composition, compositionState, preset.type as EnemyKind);
           continue;
         }
       }
     }
     const contentWave = state.mode === "sandbox" ? 99 : wave;
-    const kind = eligiblePool === null
-      ? pickEnemyKind(contentWave, options.random)
-      : pickEnemyKind(contentWave, options.random, eligiblePool, localWave);
+    const kind =
+      eligiblePool === null
+        ? pickEnemyKind(contentWave, options.random)
+        : pickEnemyKind(contentWave, options.random, eligiblePool, localWave);
     queue.push({ type: kind, hpScale, dmgScale });
     if (composition !== undefined) compositionState = recordCompositionKind(composition, compositionState, kind);
   }
@@ -282,9 +281,13 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
     ? [{ type: "boss" } as const]
     : regularWaveQueue(prior, wave, stage, horde, miniBoss, options);
   const attackKinds = new Set<EnemyKind>(["charger", "ranged", "flyer", "bomber", "armored"]);
-  const waveKinds = [...new Set(spawnQueue.map((spec) => spec.type).filter(
-    (type): type is EnemyKind => type !== "boss" && type !== "miniboss" && attackKinds.has(type),
-  ))];
+  const waveKinds = [
+    ...new Set(
+      spawnQueue
+        .map((spec) => spec.type)
+        .filter((type): type is EnemyKind => type !== "boss" && type !== "miniboss" && attackKinds.has(type)),
+    ),
+  ];
   const deferred = prior.mode === "campaign" && Boolean(options.chapterFlowActive);
   intents.push({ type: "ghost-wave", wave, marker: description.bossWave ? "boss" : "start" });
   if (wave === 2) intents.push({ type: "ghost-snapshot", slot: 0 });
@@ -299,9 +302,10 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
       bossIdx,
       currentStageIndex: stage ?? prior.currentStageIndex,
       biomeIdx,
-      pendingBossOutro: prior.mode === "campaign" && intents.some((intent) => intent.type === "begin-campaign-chapter")
-        ? null
-        : prior.pendingBossOutro,
+      pendingBossOutro:
+        prior.mode === "campaign" && intents.some((intent) => intent.type === "begin-campaign-chapter")
+          ? null
+          : prior.pendingBossOutro,
       isBossWave: description.bossWave,
       stage,
       horde,
@@ -320,15 +324,20 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
   };
 }
 
-export function activatePreparedWave(startDelay: number, currentMultiplier: number): Readonly<{
+export function activatePreparedWave(
+  startDelay: number,
+  currentMultiplier: number,
+): Readonly<{
   spawnTimer: number;
   waveTime: 0;
   waveKills: 0;
   wavePeak: number;
   intents: readonly WavePlanIntent[];
 }> {
-  if (!Number.isFinite(startDelay) || startDelay < 0) throw new RangeError("startDelay must be finite and non-negative");
-  if (!Number.isFinite(currentMultiplier) || currentMultiplier < 0) throw new RangeError("currentMultiplier must be finite and non-negative");
+  if (!Number.isFinite(startDelay) || startDelay < 0)
+    throw new RangeError("startDelay must be finite and non-negative");
+  if (!Number.isFinite(currentMultiplier) || currentMultiplier < 0)
+    throw new RangeError("currentMultiplier must be finite and non-negative");
   return Object.freeze({
     spawnTimer: startDelay,
     waveTime: 0,

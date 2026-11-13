@@ -21,18 +21,28 @@ export function createProductionRunOutcomeRuntime(
 ): ProductionRunOutcomeRuntime {
   const outward: string[] = [];
   const active = () => replay.world.state.run() as never as Record<string, unknown>;
-  const publishTerminal = gameplayEvents === undefined
-    ? () => undefined
-    : createTearTerminalRunFactPublisher(gameplayEvents, () => replay.world.lifecycle.snapshot().sessionId);
+  const publishTerminal =
+    gameplayEvents === undefined
+      ? () => undefined
+      : createTearTerminalRunFactPublisher(gameplayEvents, () => replay.world.lifecycle.snapshot().sessionId);
   const port: LiveOutcomeControllerPort = {
     ...(observeTerminal === undefined ? {} : { observeTerminal }),
     snapshot: () => snapshotOutcomeRun(active() as never),
-    replaceWaveLog: (log) => { active().waveLog = [...log]; },
+    replaceWaveLog: (log) => {
+      active().waveLog = [...log];
+    },
     waveActive: () => replay.world.lifecycle.isWaveActive,
     preparedVictory: () => (active()._victoryPrepared as PreparedVictory | null | undefined) ?? null,
-    storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
-    stopClipper: () => { outward.push("stopClipper"); },
-    terminate: (outcome) => { replay.world.context.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal"); replay.world.lifecycle.terminate(outcome); },
+    storePreparedVictory: (prepared) => {
+      active()._victoryPrepared = prepared;
+    },
+    stopClipper: () => {
+      outward.push("stopClipper");
+    },
+    terminate: (outcome) => {
+      replay.world.context.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal");
+      replay.world.lifecycle.terminate(outcome);
+    },
     publishTerminal,
     saveBest: () => false,
     best: (run) => ({ wave: run.wave, score: run.score, time: run.runTime }),
@@ -41,16 +51,34 @@ export function createProductionRunOutcomeRuntime(
     achievementTracking: () => false,
     economyTelemetry: () => Object.freeze({}),
     recordDefeatProgress: () => undefined,
-    finishRecording: (won) => { outward.push(`finishRecording:${String(won)}`); },
+    finishRecording: (won) => {
+      outward.push(`finishRecording:${String(won)}`);
+    },
     executeVictoryIntents: () => undefined,
-    persistPendingFinale: () => { outward.push("persistFinale"); },
-    saveProfile: () => { outward.push("saveProfile"); },
-    clearPendingFinale: () => { outward.push("clearFinale"); },
-    pushCloud: () => { outward.push("pushCloud"); },
-    present: (outcome) => { outward.push(`present:${outcome}`); },
-    midgame: (callback) => { callback(); },
+    persistPendingFinale: () => {
+      outward.push("persistFinale");
+    },
+    saveProfile: () => {
+      outward.push("saveProfile");
+    },
+    clearPendingFinale: () => {
+      outward.push("clearFinale");
+    },
+    pushCloud: () => {
+      outward.push("pushCloud");
+    },
+    present: (outcome) => {
+      outward.push(`present:${outcome}`);
+    },
+    midgame: (callback) => {
+      callback();
+    },
     restartCurrentRun: () => undefined,
   };
-  return Object.freeze({ controller: new LiveRunOutcomeController(port),
-    get outward() { return Object.freeze([...outward]); } });
+  return Object.freeze({
+    controller: new LiveRunOutcomeController(port),
+    get outward() {
+      return Object.freeze([...outward]);
+    },
+  });
 }

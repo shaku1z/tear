@@ -72,7 +72,7 @@ function createSourceFixture(fixture) {
   addFile(gsm, "mismatch.txt", "manifest mismatch\n");
   addFile(gsm, "unique.txt", "unique review material\n");
   addFile(gsm, ".env", "SECRET=not-read\n");
-  addFile(gsm, "foundry.local.json", "{\"gameRoot\":\"do-not-read\"}\n");
+  addFile(gsm, "foundry.local.json", '{"gameRoot":"do-not-read"}\n');
   addFile(gsm, "certificate.crt", "certificate\n");
   addFile(gsm, "node_modules/package.json", "protected\n");
   addFile(gsm, "Tear-archives/archive.bin", "protected\n");
@@ -114,15 +114,27 @@ test("discovers only exact source names and records bounded comparison tiers", (
   try {
     createSourceFixture(fixture);
     const preservedPath = path.join(fixture.archiveGroup, "preserved-manifest.json");
-    fs.writeFileSync(preservedPath, JSON.stringify({ entries: [
-      { relativePath: "preserved.txt", sha256: sha256("preserved duplicate\n") },
-      { relativePath: "mismatch.txt", sha256: sha256("different content\n") },
-    ] }), "utf8");
+    fs.writeFileSync(
+      preservedPath,
+      JSON.stringify({
+        entries: [
+          { relativePath: "preserved.txt", sha256: sha256("preserved duplicate\n") },
+          { relativePath: "mismatch.txt", sha256: sha256("different content\n") },
+        ],
+      }),
+      "utf8",
+    );
     const report = runWorkspaceRecoveryReport(reportOptions(fixture, { preservedManifestPaths: [preservedPath] }));
     assert.equal(report.repositoryState.branch, "main");
     assert.equal(report.repositoryState.head, report.repositoryState.originMain);
-    assert.equal(report.sources.some((source) => source.name === "not-a-candidate"), false);
-    assert.deepEqual(report.sources.map((source) => source.name).sort(), ["Tear-main-publication", "Tear-receipt-clean", "gsm-one"].sort());
+    assert.equal(
+      report.sources.some((source) => source.name === "not-a-candidate"),
+      false,
+    );
+    assert.deepEqual(
+      report.sources.map((source) => source.name).sort(),
+      ["Tear-main-publication", "Tear-receipt-clean", "gsm-one"].sort(),
+    );
 
     const source = report.sources.find((candidate) => candidate.name === "gsm-one");
     assert.equal(source.rootDecision, "scanned");
@@ -142,8 +154,14 @@ test("discovers only exact source names and records bounded comparison tiers", (
     assert.equal(entry("certificate.crt").sha256, null);
     assert.equal(entry(".git").sha256, null);
     assert.equal(entry(".git").gitPointer.targetExists, false);
-    assert.equal(source.entries.some((candidate) => candidate.relativePath === "node_modules/package.json"), false);
-    assert.equal(source.entries.some((candidate) => candidate.relativePath === "Tear-archives/archive.bin"), false);
+    assert.equal(
+      source.entries.some((candidate) => candidate.relativePath === "node_modules/package.json"),
+      false,
+    );
+    assert.equal(
+      source.entries.some((candidate) => candidate.relativePath === "Tear-archives/archive.bin"),
+      false,
+    );
     assert.equal(report.summary.quarantineEligibleEntries, 0);
     assert.equal(report.summary.status, "no-go");
     assert.equal(report.quarantine.eligibility, "never-emitted-by-this-reporter");
@@ -160,9 +178,20 @@ test("protected archive names are metadata-only and the default report makes no 
     fs.writeFileSync(path.join(fixture.workspaceRoot, "tear-git-recovery-test", "secret.bin"), "do not scan\n", "utf8");
     const beforeArchive = fs.readdirSync(fixture.archiveRoot, { withFileTypes: true }).map((entry) => entry.name);
     const report = runWorkspaceRecoveryReport(reportOptions(fixture));
-    assert.ok(report.protectedRoots.some((entry) => entry.name === "Tear-archives" && entry.status === "protected-metadata-only"));
-    assert.ok(report.protectedRoots.some((entry) => entry.name === "tear-git-recovery-test" && entry.status === "protected-metadata-only"));
-    assert.deepEqual(fs.readdirSync(fixture.archiveRoot, { withFileTypes: true }).map((entry) => entry.name), beforeArchive);
+    assert.ok(
+      report.protectedRoots.some(
+        (entry) => entry.name === "Tear-archives" && entry.status === "protected-metadata-only",
+      ),
+    );
+    assert.ok(
+      report.protectedRoots.some(
+        (entry) => entry.name === "tear-git-recovery-test" && entry.status === "protected-metadata-only",
+      ),
+    );
+    assert.deepEqual(
+      fs.readdirSync(fixture.archiveRoot, { withFileTypes: true }).map((entry) => entry.name),
+      beforeArchive,
+    );
     assert.equal(fs.existsSync(path.join(fixture.archiveGroup, "workspace-recovery-report.json")), false);
     assert.equal(report.restoreGuidance.status, "report-only");
   } finally {
@@ -266,25 +295,53 @@ test("output is new-only, archive-contained, and never overwrites", () => {
     const written = writeWorkspaceRecoveryReport(output, report, {
       archiveRoot: fixture.archiveRoot,
       repoRoot: fixture.root,
-      candidateRoots: { gsm: path.join(fixture.workspaceRoot, "gsm-one"), receipt: path.join(fixture.workspaceRoot, "Tear-receipt-clean"), publication: path.join(fixture.tempRoot, "Tear-main-publication") },
+      candidateRoots: {
+        gsm: path.join(fixture.workspaceRoot, "gsm-one"),
+        receipt: path.join(fixture.workspaceRoot, "Tear-receipt-clean"),
+        publication: path.join(fixture.tempRoot, "Tear-main-publication"),
+      },
     });
     assert.equal(written, output);
     assert.equal(JSON.parse(fs.readFileSync(output, "utf8")).format, "tear-workspace-recovery-report");
-    assert.throws(() => writeWorkspaceRecoveryReport(output, report, {
-      archiveRoot: fixture.archiveRoot,
-      repoRoot: fixture.root,
-      candidateRoots: { gsm: path.join(fixture.workspaceRoot, "gsm-one"), receipt: path.join(fixture.workspaceRoot, "Tear-receipt-clean"), publication: path.join(fixture.tempRoot, "Tear-main-publication") },
-    }), /refusing overwrite/u);
-    assert.throws(() => writeWorkspaceRecoveryReport(path.join(fixture.workspaceRoot, "report.json"), report, {
-      archiveRoot: fixture.archiveRoot,
-      repoRoot: fixture.root,
-      candidateRoots: { gsm: path.join(fixture.workspaceRoot, "gsm-one"), receipt: path.join(fixture.workspaceRoot, "Tear-receipt-clean"), publication: path.join(fixture.tempRoot, "Tear-main-publication") },
-    }), /inside archive-root|outside workspaceRoot/u);
-    assert.throws(() => writeWorkspaceRecoveryReport(path.join(fixture.archiveRoot, "report.json"), report, {
-      archiveRoot: fixture.archiveRoot,
-      repoRoot: fixture.root,
-      candidateRoots: { gsm: path.join(fixture.workspaceRoot, "gsm-one"), receipt: path.join(fixture.workspaceRoot, "Tear-receipt-clean"), publication: path.join(fixture.tempRoot, "Tear-main-publication") },
-    }), /dated g5 recovery group/u);
+    assert.throws(
+      () =>
+        writeWorkspaceRecoveryReport(output, report, {
+          archiveRoot: fixture.archiveRoot,
+          repoRoot: fixture.root,
+          candidateRoots: {
+            gsm: path.join(fixture.workspaceRoot, "gsm-one"),
+            receipt: path.join(fixture.workspaceRoot, "Tear-receipt-clean"),
+            publication: path.join(fixture.tempRoot, "Tear-main-publication"),
+          },
+        }),
+      /refusing overwrite/u,
+    );
+    assert.throws(
+      () =>
+        writeWorkspaceRecoveryReport(path.join(fixture.workspaceRoot, "report.json"), report, {
+          archiveRoot: fixture.archiveRoot,
+          repoRoot: fixture.root,
+          candidateRoots: {
+            gsm: path.join(fixture.workspaceRoot, "gsm-one"),
+            receipt: path.join(fixture.workspaceRoot, "Tear-receipt-clean"),
+            publication: path.join(fixture.tempRoot, "Tear-main-publication"),
+          },
+        }),
+      /inside archive-root|outside workspaceRoot/u,
+    );
+    assert.throws(
+      () =>
+        writeWorkspaceRecoveryReport(path.join(fixture.archiveRoot, "report.json"), report, {
+          archiveRoot: fixture.archiveRoot,
+          repoRoot: fixture.root,
+          candidateRoots: {
+            gsm: path.join(fixture.workspaceRoot, "gsm-one"),
+            receipt: path.join(fixture.workspaceRoot, "Tear-receipt-clean"),
+            publication: path.join(fixture.tempRoot, "Tear-main-publication"),
+          },
+        }),
+      /dated g5 recovery group/u,
+    );
   } finally {
     cleanup(fixture);
   }
@@ -295,35 +352,60 @@ test("CLI requires every external root and summary-only remains write-free", () 
   const cliRetainUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   try {
     createSourceFixture(fixture);
-    const missing = spawnSync(process.execPath, [reporterPath, "--repo-root", fixture.root], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
+    const missing = spawnSync(process.execPath, [reporterPath, "--repo-root", fixture.root], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      stdio: "pipe",
+    });
     assert.notEqual(missing.status, 0);
     assert.match(missing.stderr, /--workspace-root is required/u);
-    const result = spawnSync(process.execPath, [
-      reporterPath,
-      "--repo-root", fixture.root,
-      "--workspace-root", fixture.workspaceRoot,
-      "--temp-root", fixture.tempRoot,
-      "--archive-root", fixture.archiveRoot,
-      "--owner", "g5-cli-test",
-      "--retain-until", cliRetainUntil,
-      "--summary-only",
-    ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
+    const result = spawnSync(
+      process.execPath,
+      [
+        reporterPath,
+        "--repo-root",
+        fixture.root,
+        "--workspace-root",
+        fixture.workspaceRoot,
+        "--temp-root",
+        fixture.tempRoot,
+        "--archive-root",
+        fixture.archiveRoot,
+        "--owner",
+        "g5-cli-test",
+        "--retain-until",
+        cliRetainUntil,
+        "--summary-only",
+      ],
+      { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" },
+    );
     assert.equal(result.status, 0, result.stderr);
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.format, "tear-workspace-recovery-report");
     assert.equal(summary.status, "no-go");
     assert.doesNotMatch(result.stdout, new RegExp(fixture.root.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
     assert.equal(fs.existsSync(path.join(fixture.archiveGroup, "workspace-recovery-report.json")), false);
-    const duplicateFlag = spawnSync(process.execPath, [
-      reporterPath,
-      "--repo-root", fixture.root,
-      "--workspace-root", fixture.workspaceRoot,
-      "--temp-root", fixture.tempRoot,
-      "--archive-root", fixture.archiveRoot,
-      "--owner", "first",
-      "--owner", "second",
-      "--retain-until", cliRetainUntil,
-    ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
+    const duplicateFlag = spawnSync(
+      process.execPath,
+      [
+        reporterPath,
+        "--repo-root",
+        fixture.root,
+        "--workspace-root",
+        fixture.workspaceRoot,
+        "--temp-root",
+        fixture.tempRoot,
+        "--archive-root",
+        fixture.archiveRoot,
+        "--owner",
+        "first",
+        "--owner",
+        "second",
+        "--retain-until",
+        cliRetainUntil,
+      ],
+      { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" },
+    );
     assert.notEqual(duplicateFlag.status, 0);
     assert.match(duplicateFlag.stderr, /duplicate argument: --owner/u);
   } finally {

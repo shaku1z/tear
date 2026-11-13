@@ -31,17 +31,36 @@ function state(
     tick,
     observationClass: "structured-state",
     player: {
-      x: 100, y: 600, vx: 0, vy: 0, hp: 100, maxHp: 100,
-      facing: 1, grounded: true, dashCharges: 1, ...patch,
+      x: 100,
+      y: 600,
+      vx: 0,
+      vy: 0,
+      hp: 100,
+      maxHp: 100,
+      facing: 1,
+      grounded: true,
+      dashCharges: 1,
+      ...patch,
     },
     blade: {
-      handX: 120, handY: 580, tipX: 180, tipY: 560,
-      vx: 0, vy: 0, tipSpeed: 0, state: bladeState,
+      handX: 120,
+      handY: 580,
+      tipX: 180,
+      tipY: 560,
+      vx: 0,
+      vy: 0,
+      tipSpeed: 0,
+      state: bladeState,
     },
     entities,
     run: {
-      mode: "campaign", difficulty: "easy", weapon: "sword",
-      stage: "grounds", wave: 1, score: 0, elapsedTicks: tick,
+      mode: "campaign",
+      difficulty: "easy",
+      weapon: "sword",
+      stage: "grounds",
+      wave: 1,
+      score: 0,
+      elapsedTicks: tick,
     },
     availableActions: ["move", "jump", "dash", "aim", "weapon"],
   };
@@ -57,26 +76,63 @@ function observation(current: TearObservationV1): TearAgentObservation {
 
 describe("deterministic scripted agent hierarchy", () => {
   it("rearms real Riftlock fire through public readiness and canonical motor edges at 120 Hz", () => {
-    const config = structuredClone(CONFIG), clock = { sim: 0 };
-    const Blade = createBlade({ CLOCK: clock, CONFIG: config,
-      Input: { touchAim: false, stickAim: null, locked: false, mouseX: 500, mouseY: 500, tetherHeld: false, consumeDelta: () => ({ x: 0, y: 0 }) },
-      presentation: { draw: () => undefined }, clamp, len, lerp, lerpAngle });
-    const blade = new Blade(), player = { x: 400, y: 500, vx: 0, vy: 0, facing: 1 };
-    blade.weapon = applyWeapon(config, "riftlock"); blade.resetRiftlock();
-    const adapter = createLiveAuthoritativeInputAdapter({ player: () => player, blade: () => blade, aimRadius: () => config.blade.aimRadius });
-    const motor = new BladeMotorModule(), input = new AuthoritativeInputState(), sequence = new EnvelopeSequencer();
-    let rounds = 0, releases = 0;
+    const config = structuredClone(CONFIG),
+      clock = { sim: 0 };
+    const Blade = createBlade({
+      CLOCK: clock,
+      CONFIG: config,
+      Input: {
+        touchAim: false,
+        stickAim: null,
+        locked: false,
+        mouseX: 500,
+        mouseY: 500,
+        tetherHeld: false,
+        consumeDelta: () => ({ x: 0, y: 0 }),
+      },
+      presentation: { draw: () => undefined },
+      clamp,
+      len,
+      lerp,
+      lerpAngle,
+    });
+    const blade = new Blade(),
+      player = { x: 400, y: 500, vx: 0, vy: 0, facing: 1 };
+    blade.weapon = applyWeapon(config, "riftlock");
+    blade.resetRiftlock();
+    const adapter = createLiveAuthoritativeInputAdapter({
+      player: () => player,
+      blade: () => blade,
+      aimRadius: () => config.blade.aimRadius,
+    });
+    const motor = new BladeMotorModule(),
+      input = new AuthoritativeInputState(),
+      sequence = new EnvelopeSequencer();
+    let rounds = 0,
+      releases = 0;
     for (let tick = 1; tick <= 120 && rounds < 2; tick++) {
-      const target = actor("close-opponent", blade.x + 40, blade.y), current = state(tick, [target]);
-      const observed: TearObservationV1 = { ...current, run: { ...current.run, weapon: "riftlock" },
-        blade: { ...current.blade, handX: blade.x, handY: blade.y, ...projectLiveBladeMechanics(blade, "A") } };
+      const target = actor("close-opponent", blade.x + 40, blade.y),
+        current = state(tick, [target]);
+      const observed: TearObservationV1 = {
+        ...current,
+        run: { ...current.run, weapon: "riftlock" },
+        blade: { ...current.blade, handX: blade.x, handY: blade.y, ...projectLiveBladeMechanics(blade, "A") },
+      };
       const decision = motor.decide({ observation: observation(observed), target, profile: "competent" });
-      releases += decision.actions.filter((action) => action.type === "weapon" && action.intent === "primary" && action.phase === "released").length;
-      adapter.actionPort.apply(input, tick, decision.actions.map((action) => sequence.command(tick, action)));
-      clock.sim = tick / 120; blade.update(1 / 120, player, []);
+      releases += decision.actions.filter(
+        (action) => action.type === "weapon" && action.intent === "primary" && action.phase === "released",
+      ).length;
+      adapter.actionPort.apply(
+        input,
+        tick,
+        decision.actions.map((action) => sequence.command(tick, action)),
+      );
+      clock.sim = tick / 120;
+      blade.update(1 / 120, player, []);
       rounds += blade.drainWeaponEvents().filter((event) => event.type === "razorRound").length;
     }
-    expect(rounds).toBe(2); expect(releases).toBeGreaterThan(0);
+    expect(rounds).toBe(2);
+    expect(releases).toBeGreaterThan(0);
     expect(blade.riftChambers).toBe(config.weapons.riftlock.chambers - 2);
   });
   it("exercises slash, secondary, throw, recall, parry, navigation, jump, and dash mechanics", () => {
@@ -131,15 +187,17 @@ describe("deterministic scripted agent hierarchy", () => {
     const input = observation(state(77, [actor("a", 260), actor("b", 500)]));
     for (const profile of SCRIPTED_POLICY_PROFILES) {
       const decisions = Array.from({ length: 100 }, () =>
-        JSON.stringify(new TearScriptedPolicy(profile).decide(input)));
+        JSON.stringify(new TearScriptedPolicy(profile).decide(input)),
+      );
       expect(new Set(decisions), profile).toHaveLength(1);
     }
   });
 
   it("locks a living target and uses the real throw lifecycle for held-blade-immune wraiths", () => {
     const policy = new TearScriptedPolicy("competent");
-    expect(policy.decide(observation(state(1, [actor("locked", 180), actor("other", 500)]))).trace.targetId)
-      .toBe("locked");
+    expect(policy.decide(observation(state(1, [actor("locked", 180), actor("other", 500)]))).trace.targetId).toBe(
+      "locked",
+    );
     const locked = policy.decide(observation(state(2, [actor("locked", 500), actor("other", 180)])));
     expect(locked.trace.targetId).toBe("locked");
 
@@ -165,7 +223,9 @@ describe("deterministic scripted agent hierarchy", () => {
 
     const returning = state(41, [actor("target", 500)], {}, "returning");
     const waiting = policy.decide(observation({ ...returning, run: { ...returning.run, weapon: "riftlock" } }));
-    expect(waiting.actions.filter((action) => action.type === "weapon")).toEqual([{ type: "weapon", intent: "primary", phase: "released" }]);
+    expect(waiting.actions.filter((action) => action.type === "weapon")).toEqual([
+      { type: "weapon", intent: "primary", phase: "released" },
+    ]);
     const unknown = state(42, [actor("close", 160)]);
     const unavailable = policy.decide(observation({ ...unknown, run: { ...unknown.run, weapon: "riftlock" } }));
     expect(unavailable.actions).toContainEqual({ type: "weapon", intent: "primary", phase: "released" });
@@ -177,13 +237,9 @@ describe("deterministic scripted agent hierarchy", () => {
       const current = state(tick, entities);
       return { ...current, run: { ...current.run, weapon: "riftlock" } } satisfies TearObservationV1;
     };
-    expect(policy.decide(observation(riftlockState(1, [actor("locked", -300)]))).trace.targetId)
-      .toBe("locked");
+    expect(policy.decide(observation(riftlockState(1, [actor("locked", -300)]))).trace.targetId).toBe("locked");
 
-    const decision = policy.decide(observation(riftlockState(
-      2,
-      [actor("locked", -300), actor("contact", 180)],
-    )));
+    const decision = policy.decide(observation(riftlockState(2, [actor("locked", -300), actor("contact", 180)])));
 
     expect(decision.trace.targetId).toBe("locked");
     expect(decision.actions).toContainEqual({ type: "move", x: -1_000, y: 0 });
@@ -214,19 +270,33 @@ describe("deterministic scripted agent hierarchy", () => {
     const navigation = {
       surfaces: [
         {
-          id: "lower", bounds: { minX: 0, maxX: 300, minY: 780, maxY: 800 },
-          oneWay: false, collidable: true, materializationState: "active",
-          lane: "lower" as const, connectionIds: ["upper"],
+          id: "lower",
+          bounds: { minX: 0, maxX: 300, minY: 780, maxY: 800 },
+          oneWay: false,
+          collidable: true,
+          materializationState: "active",
+          lane: "lower" as const,
+          connectionIds: ["upper"],
         },
         {
-          id: "transfer", bounds: { minX: 250, maxX: 350, minY: 700, maxY: 720 },
-          oneWay: true, collidable: true, materializationState: "active",
-          lane: "lower" as const, transferNode: true, connectionIds: ["upper"],
+          id: "transfer",
+          bounds: { minX: 250, maxX: 350, minY: 700, maxY: 720 },
+          oneWay: true,
+          collidable: true,
+          materializationState: "active",
+          lane: "lower" as const,
+          transferNode: true,
+          connectionIds: ["upper"],
         },
         {
-          id: "upper", bounds: { minX: 500, maxX: 700, minY: 600, maxY: 620 },
-          oneWay: true, collidable: true, materializationState: "active",
-          lane: "upper" as const, transferNode: true, connectionIds: ["lower"],
+          id: "upper",
+          bounds: { minX: 500, maxX: 700, minY: 600, maxY: 620 },
+          oneWay: true,
+          collidable: true,
+          materializationState: "active",
+          lane: "upper" as const,
+          transferNode: true,
+          connectionIds: ["lower"],
         },
       ],
       hazards: [],
@@ -244,10 +314,16 @@ describe("deterministic scripted agent hierarchy", () => {
         ...state(31, [actor("enemy", 500)]),
         navigation: {
           surfaces: navigation.surfaces.slice(0, 1),
-          hazards: [{
-            id: "hazard:fire", surfaceId: "lower", type: "fire", state: "hot", active: true,
-            bounds: { minX: 140, maxX: 300, minY: 580, maxY: 800 },
-          }],
+          hazards: [
+            {
+              id: "hazard:fire",
+              surfaceId: "lower",
+              type: "fire",
+              state: "hot",
+              active: true,
+              bounds: { minX: 140, maxX: 300, minY: 580, maxY: 800 },
+            },
+          ],
         },
       }),
       target: actor("enemy", 500),

@@ -1,10 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type {
-  AudioGraphContext,
-  AudioNodePort,
-  GainNodePort,
-  GainParamPort,
-} from "../../src/audio/mixer";
+import type { AudioGraphContext, AudioNodePort, GainNodePort, GainParamPort } from "../../src/audio/mixer";
 import type { MusicRunSessionMetadata } from "../../src/audio/music-contracts";
 import {
   TearScoreMusicBackend,
@@ -19,18 +14,30 @@ class Node implements GainNodePort {
     setValueAtTime: () => undefined,
     linearRampToValueAtTime: () => undefined,
   };
-  connect(): void { return undefined; }
-  disconnect(): void { return undefined; }
+  connect(): void {
+    return undefined;
+  }
+  disconnect(): void {
+    return undefined;
+  }
 }
 
 class Context implements AudioGraphContext {
   readonly currentTime = 0;
   readonly state = "running" as const;
   readonly destination = new Node();
-  createGain(): GainNodePort { return new Node(); }
-  resume(): Promise<void> { return Promise.resolve(); }
-  suspend(): Promise<void> { return Promise.resolve(); }
-  close(): Promise<void> { return Promise.resolve(); }
+  createGain(): GainNodePort {
+    return new Node();
+  }
+  resume(): Promise<void> {
+    return Promise.resolve();
+  }
+  suspend(): Promise<void> {
+    return Promise.resolve();
+  }
+  close(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 describe("TearScore adapter contract", () => {
@@ -39,8 +46,15 @@ describe("TearScore adapter contract", () => {
     let initialization: TearScoreInitializeOptions | null = null;
     const client: TearScoreClient = {
       engineVersion: "0.1.0-alpha.1",
-      initialize: (options) => { initialization = options; calls.push("initialize"); return Promise.resolve(); },
-      start: () => { calls.push("start"); return Promise.resolve(); },
+      initialize: (options) => {
+        initialization = options;
+        calls.push("initialize");
+        return Promise.resolve();
+      },
+      start: () => {
+        calls.push("start");
+        return Promise.resolve();
+      },
       beginRun: () => Promise.resolve(),
       updateContext: () => undefined,
       emitEvent: () => undefined,

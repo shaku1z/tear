@@ -14,15 +14,27 @@ import type { TearCausalEventV1 } from "../../src/tearbench";
 
 const trident: GhostReplayTrident = {
   command: {
-    kind: "command", status: "verified", available: true, resumable: true, seekable: false,
+    kind: "command",
+    status: "verified",
+    available: true,
+    resumable: true,
+    seekable: false,
     reason: "fixed ruleset and environment hashes match",
   },
   state: {
-    kind: "state", status: "verified", available: true, resumable: true, seekable: true,
+    kind: "state",
+    status: "verified",
+    available: true,
+    resumable: true,
+    seekable: true,
     reason: "validated keyframes",
   },
   visual: {
-    kind: "visual", status: "verified", available: true, resumable: false, seekable: true,
+    kind: "visual",
+    status: "verified",
+    available: true,
+    resumable: false,
+    seekable: true,
     reason: "presentation samples",
   },
 };
@@ -34,13 +46,14 @@ function event(
   sequence: number,
   parentIds: readonly string[] = [],
 ): TearCausalEventV1 {
-  const payload = type === "run.started"
-    ? { mode: "campaign", difficulty: "normal", weapon: "sword" }
-    : type === "blade.hit"
-      ? { damage: 10, speed: 500 }
-      : type === "combat.kill"
-        ? { enemyKind: "charger", cause: "blade" }
-      : {};
+  const payload =
+    type === "run.started"
+      ? { mode: "campaign", difficulty: "normal", weapon: "sword" }
+      : type === "blade.hit"
+        ? { damage: 10, speed: 500 }
+        : type === "combat.kill"
+          ? { enemyKind: "charger", cause: "blade" }
+          : {};
   return {
     format: "tear-contract",
     kind: "event",
@@ -59,7 +72,11 @@ function event(
 describe("Ghost 3.0 truth kernel", () => {
   it("defines the four explicit capture profiles without silently dropping required truth", () => {
     expect(Object.keys(GHOST_RECORDING_PROFILES)).toEqual(["compact-public", "coaching", "forensic-qa", "cinematic"]);
-    expect(GHOST_RECORDING_PROFILES.coaching.tracks).toMatchObject({ commands: "required", rng: "required", keyframes: "required" });
+    expect(GHOST_RECORDING_PROFILES.coaching.tracks).toMatchObject({
+      commands: "required",
+      rng: "required",
+      keyframes: "required",
+    });
     expect(GHOST_RECORDING_PROFILES["forensic-qa"].tracks.presentation).toBe("required");
   });
 
@@ -77,16 +94,23 @@ describe("Ghost 3.0 truth kernel", () => {
     expect(resolveTridentPrecedence(trident, "watch").selected).toBe("visual");
     expect(resolveTridentPrecedence(trident, "seek").selected).toBe("state");
     expect(resolveTridentPrecedence(trident, "resume").selected).toBe("command");
-    const negotiated = negotiateRecordingProfile({
-      id: "causal-rich",
-      tracks: {
-        manifest: "required", commands: "required", rng: "required",
-        events: "preferred", keyframes: "preferred", presentation: "optional",
+    const negotiated = negotiateRecordingProfile(
+      {
+        id: "causal-rich",
+        tracks: {
+          manifest: "required",
+          commands: "required",
+          rng: "required",
+          events: "preferred",
+          keyframes: "preferred",
+          presentation: "optional",
+        },
       },
-    }, {
-      supportedTracks: ["manifest", "commands", "rng", "events", "keyframes", "presentation"],
-      maxTracks: 5,
-    });
+      {
+        supportedTracks: ["manifest", "commands", "rng", "events", "keyframes", "presentation"],
+        maxTracks: 5,
+      },
+    );
     expect(negotiated.viable).toBe(true);
     expect(negotiated.acceptedTracks).toEqual(["manifest", "commands", "rng", "events", "keyframes"]);
     expect(negotiated.droppedTracks).toEqual(["presentation"]);
@@ -99,9 +123,7 @@ describe("Ghost 3.0 truth kernel", () => {
       rulesetVersion: "rules-1",
       sourceClassification: "native-v3",
       trident,
-      actions: [
-        { kind: "command", id: 1, tick: 4, command: { type: "jump", phase: "pressed" } },
-      ],
+      actions: [{ kind: "command", id: 1, tick: 4, command: { type: "jump", phase: "pressed" } }],
       snapshots: [],
       events,
       visual: { samples: [{ tick: 0, x: 10, y: 20 }] },
@@ -115,8 +137,16 @@ describe("Ghost 3.0 truth kernel", () => {
       migration: true,
     });
     expect(Object.keys(ghost.quality)).toEqual([
-      "fidelity", "integrity", "compatibility", "completeness", "seekability",
-      "resumability", "eligibility", "coachingRichness", "creatorRichness", "privacy",
+      "fidelity",
+      "integrity",
+      "compatibility",
+      "completeness",
+      "seekability",
+      "resumability",
+      "eligibility",
+      "coachingRichness",
+      "creatorRichness",
+      "privacy",
     ]);
   });
 

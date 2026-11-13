@@ -42,7 +42,11 @@ export class BestScoreRepository {
   readonly api = Object.freeze({
     read: (mode: string, difficulty: string): BestScore => this.read(mode, difficulty),
     record: (mode: string, difficulty: string, wave: number, score: number, time = 0): boolean => {
-      try { return this.record({ mode, difficulty, wave, score, time }); } catch { return false; }
+      try {
+        return this.record({ mode, difficulty, wave, score, time });
+      } catch {
+        return false;
+      }
     },
   });
 
@@ -54,8 +58,8 @@ export class BestScoreRepository {
 
   record(candidate: BestScoreCandidate): boolean {
     const current = this.read(candidate.mode, candidate.difficulty);
-    const improves = candidate.wave > current.wave
-      || (candidate.wave === current.wave && candidate.score > current.score);
+    const improves =
+      candidate.wave > current.wave || (candidate.wave === current.wave && candidate.score > current.score);
     if (!improves) return false;
     const value: BestScore = {
       wave: nonnegative(candidate.wave),

@@ -4,10 +4,13 @@ import type { GhostCoachHistoryPort } from "../library/ghost-coach-history-contr
 
 export function createBrowserGhostCoachHistoryPort(factory: IDBFactory | undefined): GhostCoachHistoryPort {
   const list = async () => (await listBrowserGhostCapsuleManifests(factory)).map(ghostCoachCandidate);
-  const port: GhostCoachHistoryPort = { list,
+  const port: GhostCoachHistoryPort = {
+    list,
     async current(sources) {
       const current = await list();
-      return sources.every((source) => current.some((candidate) => candidate.id === source.id && candidate.identity === source.identity));
+      return sources.every((source) =>
+        current.some((candidate) => candidate.id === source.id && candidate.identity === source.identity),
+      );
     },
     analyze(sources) {
       if (factory === undefined) throw new Error("Local recordings are unavailable in this browser.");
@@ -15,14 +18,22 @@ export function createBrowserGhostCoachHistoryPort(factory: IDBFactory | undefin
       let rejectPending: (reason: Error) => void = () => undefined;
       const result = new Promise<GhostCoachHistory>((resolve, reject) => {
         rejectPending = reject;
-        worker.addEventListener("error", () => { reject(new Error("History worker unavailable.")); });
+        worker.addEventListener("error", () => {
+          reject(new Error("History worker unavailable."));
+        });
         worker.addEventListener("message", (event: MessageEvent<{ result?: GhostCoachHistory; error?: string }>) => {
           if (event.data.result !== undefined) resolve(event.data.result);
           else reject(new Error(event.data.error ?? "History unavailable."));
         });
         worker.postMessage({ sources });
       });
-      return Object.freeze({ result, cancel() { worker.terminate(); rejectPending(new Error("History selection cancelled.")); } });
+      return Object.freeze({
+        result,
+        cancel() {
+          worker.terminate();
+          rejectPending(new Error("History selection cancelled."));
+        },
+      });
     },
   };
   return Object.freeze(port);

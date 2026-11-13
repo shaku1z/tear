@@ -1,8 +1,5 @@
 import type { TearScenarioV1 } from "./contracts";
-import type {
-  LiveTearRuntimeEnvironmentContext,
-  TearStructuredRuntimeEnvironment,
-} from "./live-runtime-contracts";
+import type { LiveTearRuntimeEnvironmentContext, TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
 import type { LiveRuntimeSnapshotController } from "./live-runtime-snapshots";
 import { synthesizeProgression } from "./progression-ledger";
 import { compileResolvedTearSdlSnapshot } from "./state-forge-live-compiler";
@@ -22,15 +19,12 @@ function naturalScenario(resolved: TearSdlResolved): TearScenarioV1 {
       difficulty: requested.start.difficulty,
       weapon: requested.start.weapon,
       wave: 1,
-      ...(mode === "bossonly" && requested.start.boss !== undefined
-        ? { boss: requested.start.boss } : {}),
+      ...(mode === "bossonly" && requested.start.boss !== undefined ? { boss: requested.start.boss } : {}),
     }),
   });
 }
 
-function seekBoss(
-  context: LiveTearRuntimeEnvironmentContext,
-): void {
+function seekBoss(context: LiveTearRuntimeEnvironmentContext): void {
   for (let tick = 0; tick < 1_500 && !context.state.enemies().some((enemy) => enemy.isBoss); tick += 1) {
     // Source discovery must not enter TearBench's public session counters or
     // action-observation timeline. Advance the shared authoritative tick

@@ -3,7 +3,11 @@ import type { GameAction } from "../../input/game-action";
 import { FixedStepScheduler, type FrameAdvance } from "../../simulation/fixed-step";
 import { TearGameplayEventBus, type TearGameplayEventPort } from "./gameplay-events";
 import { AuthoritativeInputState } from "./authoritative-input";
-import { AuthoritativeStepController, type AuthoritativeStepResult, type DeferredCanonicalState } from "./authoritative-step";
+import {
+  AuthoritativeStepController,
+  type AuthoritativeStepResult,
+  type DeferredCanonicalState,
+} from "./authoritative-step";
 import type { EnvironmentClearReason } from "../environment/environment-contracts";
 import type { EnvironmentStepPort } from "../environment/environment-runtime";
 
@@ -76,28 +80,59 @@ export class TearSimulationRuntime<State> {
     });
     this.#events = options.events ?? new TearGameplayEventBus(() => this.#scheduler.tick);
     this.#authoritativeStep = new AuthoritativeStepController<State>({
-      applyActions: (tick, actions) => { options.actionPort.apply(this.#input, tick, actions); },
-      step: (seconds) => { options.step(seconds); },
-      ...(options.afterWorldStep === undefined ? {} : { afterWorldStep: (tick: number) => { options.afterWorldStep?.(tick, this.#input); } }),
+      applyActions: (tick, actions) => {
+        options.actionPort.apply(this.#input, tick, actions);
+      },
+      step: (seconds) => {
+        options.step(seconds);
+      },
+      ...(options.afterWorldStep === undefined
+        ? {}
+        : {
+            afterWorldStep: (tick: number) => {
+              options.afterWorldStep?.(tick, this.#input);
+            },
+          }),
       snapshot: (tick) => options.snapshot(tick, this.#input),
       ...(options.environment === undefined ? {} : { environment: options.environment }),
     });
   }
 
-  get scheduler(): FixedStepScheduler { return this.#scheduler; }
-  get input(): AuthoritativeInputState { return this.#input; }
-  get events(): TearGameplayEventPort { return this.#events; }
-  get authoritativeStep(): AuthoritativeStepController<State> { return this.#authoritativeStep; }
-  get lastResult(): AuthoritativeStepResult<State> | null { return this.#authoritativeStep.lastResult; }
-  get stepSeconds(): number { return this.#scheduler.stepMilliseconds / 1_000; }
+  get scheduler(): FixedStepScheduler {
+    return this.#scheduler;
+  }
+  get input(): AuthoritativeInputState {
+    return this.#input;
+  }
+  get events(): TearGameplayEventPort {
+    return this.#events;
+  }
+  get authoritativeStep(): AuthoritativeStepController<State> {
+    return this.#authoritativeStep;
+  }
+  get lastResult(): AuthoritativeStepResult<State> | null {
+    return this.#authoritativeStep.lastResult;
+  }
+  get stepSeconds(): number {
+    return this.#scheduler.stepMilliseconds / 1_000;
+  }
 
-  #executeTick(tick: number, seconds: number, actionsForTick: TearSimulationActionsForTick,
-    lifecycle: TearSimulationAdvanceLifecycle): AuthoritativeStepResult<State> | null {
+  #executeTick(
+    tick: number,
+    seconds: number,
+    actionsForTick: TearSimulationActionsForTick,
+    lifecycle: TearSimulationAdvanceLifecycle,
+  ): AuthoritativeStepResult<State> | null {
     if (lifecycle.shouldStep?.(tick) === false) return null;
     try {
       lifecycle.beforeStep?.(tick);
       const actions = actionsForTick(tick);
-      lifecycle.captureCommands?.(tick, Object.freeze(actions.map((action) => Object.freeze({ ...action, command: Object.freeze({ ...action.command }) }))));
+      lifecycle.captureCommands?.(
+        tick,
+        Object.freeze(
+          actions.map((action) => Object.freeze({ ...action, command: Object.freeze({ ...action.command }) })),
+        ),
+      );
       const result = this.#authoritativeStep.execute(tick, seconds, actions);
       lifecycle.afterStep?.(tick);
       return result;
@@ -107,8 +142,11 @@ export class TearSimulationRuntime<State> {
   }
 
   /** Advances one or more deterministic ticks at a render-independent elapsed time. */
-  advance(elapsedMilliseconds: number, actionsForTick: TearSimulationActionsForTick,
-    lifecycle: TearSimulationAdvanceLifecycle = {}): FrameAdvance {
+  advance(
+    elapsedMilliseconds: number,
+    actionsForTick: TearSimulationActionsForTick,
+    lifecycle: TearSimulationAdvanceLifecycle = {},
+  ): FrameAdvance {
     return this.#scheduler.advance(elapsedMilliseconds, (seconds, tick) => {
       this.#executeTick(tick, seconds, actionsForTick, lifecycle);
     });
@@ -119,8 +157,10 @@ export class TearSimulationRuntime<State> {
    * render-driven live simulation, while intentionally bypassing render-time
    * hit-stop and time scaling for deterministic tooling.
    */
-  advanceExact(actionsForTick: TearSimulationActionsForTick,
-    lifecycle: TearSimulationAdvanceLifecycle = {}): TearSimulationExactAdvance<State> {
+  advanceExact(
+    actionsForTick: TearSimulationActionsForTick,
+    lifecycle: TearSimulationAdvanceLifecycle = {},
+  ): TearSimulationExactAdvance<State> {
     const tick = this.#scheduler.tick + 1;
     // FixedStepScheduler owns the visible clock. Set it before simulation so
     // events emitted from gameplay receive the same authoritative tick.

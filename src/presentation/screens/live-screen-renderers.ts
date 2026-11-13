@@ -27,12 +27,25 @@ import type { createColdScreenRenderers } from "./cold-screen-renderers";
 
 export interface LiveScreenButton {
   readonly [key: string]: unknown;
-  readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly label: string;
-  readonly enabled?: boolean; readonly sel?: boolean; readonly ghost?: boolean; readonly chip?: boolean;
-  readonly hero?: boolean; readonly glyph?: string; readonly dot?: string; readonly sub?: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+  readonly label: string;
+  readonly enabled?: boolean;
+  readonly sel?: boolean;
+  readonly ghost?: boolean;
+  readonly chip?: boolean;
+  readonly hero?: boolean;
+  readonly glyph?: string;
+  readonly dot?: string;
+  readonly sub?: string;
   readonly pips?: Readonly<{ readonly n: number; readonly filled: number; readonly color: string }>;
-  readonly accent?: string; readonly confirm?: boolean; readonly _hideBox?: boolean;
-  readonly size?: number; readonly action: () => void;
+  readonly accent?: string;
+  readonly confirm?: boolean;
+  readonly _hideBox?: boolean;
+  readonly size?: number;
+  readonly action: () => void;
   readonly semanticAction: ScreenAction;
 }
 
@@ -63,7 +76,11 @@ export interface LiveScreenRendererOptions {
 
 function toButton(control: ScreenControl, dispatch: (action: ScreenAction) => void): LiveScreenButton {
   return {
-    x: control.x, y: control.y, w: control.w, h: control.h, label: control.label,
+    x: control.x,
+    y: control.y,
+    w: control.w,
+    h: control.h,
+    label: control.label,
     ...(control.enabled === undefined ? {} : { enabled: control.enabled }),
     ...(control.selected === undefined ? {} : { sel: control.selected }),
     ...(control.ghost === undefined ? {} : { ghost: control.ghost }),
@@ -77,7 +94,10 @@ function toButton(control: ScreenControl, dispatch: (action: ScreenAction) => vo
     ...(control.confirm === undefined ? {} : { confirm: control.confirm }),
     ...(control.hiddenBox === undefined ? {} : { _hideBox: control.hiddenBox }),
     ...(control.size === undefined ? {} : { size: control.size }),
-    semanticAction: control.action, action: () => { dispatch(control.action); },
+    semanticAction: control.action,
+    action: () => {
+      dispatch(control.action);
+    },
   };
 }
 
@@ -100,50 +120,127 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
   }
 
   return Object.freeze({
-    codex(view: CodexScreenView) { if (renderers) renderers.codex(view); else loadingFrame(); },
-    shop(view: ShopScreenView) { if (renderers) renderers.shop(view); else loadingFrame(); },
-    profile(view: ProfileScreenView) { if (renderers) renderers.profile(view); else loadingFrame(); },
-    achievements(view: AchievementsScreenView) { if (renderers) renderers.achievements(view); else loadingFrame(); },
-    leaderboards(view: LeaderboardsScreenView) { if (renderers) renderers.leaderboards(view); else loadingFrame(); },
-    replay(view: ReplayScreenView) { if (renderers) renderers.replay(view); else loadingFrame(); },
-    pgmenu(view: PlaygroundScreenView) { if (renderers) renderers.pgmenu(view); else loadingFrame(); },
-    pglab(view: PlaygroundScreenView) { if (renderers) renderers.pglab(view); else loadingFrame(); },
-    academy(view: AcademyScreenView) { if (renderers) renderers.academy(view); else loadingFrame(); },
-    foundry(view: FoundryScreenView) { if (renderers) renderers.foundry(view); else loadingFrame(); },
-    ghostlab(view: GhostLabScreenView) { if (renderers) renderers.ghostlab(view); else loadingFrame(); },
-    botevidence(view: BotEvidenceScreenView) { if (renderers) renderers.botevidence(view); else loadingFrame(); },
-    ghostpublication(view: GhostPublicationScreenView) { if (renderers) renderers.ghostpublication(view); else loadingFrame(); },
-    ghostsupport(view: GhostSupportScreenView) { if (renderers) renderers.ghostsupport(view); else loadingFrame(); },
-    settings(view: SettingsScreenView) { if (renderers) renderers.settings(view); else loadingFrame(); },
-    rename(view: RenameScreenView) { if (renderers) renderers.rename(view); else loadingFrame(); },
+    codex(view: CodexScreenView) {
+      if (renderers) renderers.codex(view);
+      else loadingFrame();
+    },
+    shop(view: ShopScreenView) {
+      if (renderers) renderers.shop(view);
+      else loadingFrame();
+    },
+    profile(view: ProfileScreenView) {
+      if (renderers) renderers.profile(view);
+      else loadingFrame();
+    },
+    achievements(view: AchievementsScreenView) {
+      if (renderers) renderers.achievements(view);
+      else loadingFrame();
+    },
+    leaderboards(view: LeaderboardsScreenView) {
+      if (renderers) renderers.leaderboards(view);
+      else loadingFrame();
+    },
+    replay(view: ReplayScreenView) {
+      if (renderers) renderers.replay(view);
+      else loadingFrame();
+    },
+    pgmenu(view: PlaygroundScreenView) {
+      if (renderers) renderers.pgmenu(view);
+      else loadingFrame();
+    },
+    pglab(view: PlaygroundScreenView) {
+      if (renderers) renderers.pglab(view);
+      else loadingFrame();
+    },
+    academy(view: AcademyScreenView) {
+      if (renderers) renderers.academy(view);
+      else loadingFrame();
+    },
+    foundry(view: FoundryScreenView) {
+      if (renderers) renderers.foundry(view);
+      else loadingFrame();
+    },
+    ghostlab(view: GhostLabScreenView) {
+      if (renderers) renderers.ghostlab(view);
+      else loadingFrame();
+    },
+    botevidence(view: BotEvidenceScreenView) {
+      if (renderers) renderers.botevidence(view);
+      else loadingFrame();
+    },
+    ghostpublication(view: GhostPublicationScreenView) {
+      if (renderers) renderers.ghostpublication(view);
+      else loadingFrame();
+    },
+    ghostsupport(view: GhostSupportScreenView) {
+      if (renderers) renderers.ghostsupport(view);
+      else loadingFrame();
+    },
+    settings(view: SettingsScreenView) {
+      if (renderers) renderers.settings(view);
+      else loadingFrame();
+    },
+    rename(view: RenameScreenView) {
+      if (renderers) renderers.rename(view);
+      else loadingFrame();
+    },
   });
 }
 
 /** Composes every typed canvas screen renderer against one live context. */
 export function createLiveScreenRenderers(options: LiveScreenRendererOptions): ScreenRendererTable {
   const context: ScreenRenderContext = {
-    canvas: options.canvas, ui: options.ui, width: options.width, height: options.height,
-    get time() { return options.time(); },
-    get enterAmount() { return options.enterAmount(); },
-    get enterSeconds() { return options.enterSeconds(); },
-    get deltaSeconds() { return options.deltaSeconds(); },
-    get mouse() { return options.mouse(); },
-    get scroll() { return options.scroll(); },
-    get focus() { return options.focus(); },
-    get touch() { return options.touch(); },
-    get reducedMotion() { return options.reducedMotion(); },
+    canvas: options.canvas,
+    ui: options.ui,
+    width: options.width,
+    height: options.height,
+    get time() {
+      return options.time();
+    },
+    get enterAmount() {
+      return options.enterAmount();
+    },
+    get enterSeconds() {
+      return options.enterSeconds();
+    },
+    get deltaSeconds() {
+      return options.deltaSeconds();
+    },
+    get mouse() {
+      return options.mouse();
+    },
+    get scroll() {
+      return options.scroll();
+    },
+    get focus() {
+      return options.focus();
+    },
+    get touch() {
+      return options.touch();
+    },
+    get reducedMotion() {
+      return options.reducedMotion();
+    },
     get screenRectangle() {
       return options.screenRectangle?.() ?? { x: 0, y: 0, w: options.width, h: options.height };
     },
-    get safeInsets() { return options.safeInsets?.() ?? { l: 0, r: 0, t: 0, b: 0 }; },
-    enqueue(control: ScreenControl) { options.enqueue(toButton(control, options.dispatch)); },
-    setScroll: (value: number) => { options.setScroll?.(value); },
+    get safeInsets() {
+      return options.safeInsets?.() ?? { l: 0, r: 0, t: 0, b: 0 };
+    },
+    enqueue(control: ScreenControl) {
+      options.enqueue(toButton(control, options.dispatch));
+    },
+    setScroll: (value: number) => {
+      options.setScroll?.(value);
+    },
     available: (action: ScreenAction) => options.available?.(action) ?? true,
     renderPreview: options.renderPreview,
   };
   const cold = createColdScreenBoundary(context);
   return Object.freeze({
-    playing: () => { return; },
+    playing: () => {
+      return;
+    },
     ...createMenuSetupRenderers(context),
     ...createDraftRenderers(context),
     ...createPauseResultRenderers(context),

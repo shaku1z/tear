@@ -53,11 +53,26 @@ export function createPreservationManifest(
   const unique = (values: readonly string[], label: string): void => {
     if (new Set(values).size !== values.length) throw new TypeError(`${label} must be unique`);
   };
-  unique(input.runtimes.map((entry) => entry.buildId), "historical build IDs");
-  unique(input.aliases.map((entry) => entry.alias), "stable aliases");
-  unique(input.tombstones.map((entry) => entry.id), "tombstones");
-  unique(input.migrations.map((entry) => entry.id), "migration fixture IDs");
-  unique(input.goldenReplays.map((entry) => entry.id), "golden replay IDs");
+  unique(
+    input.runtimes.map((entry) => entry.buildId),
+    "historical build IDs",
+  );
+  unique(
+    input.aliases.map((entry) => entry.alias),
+    "stable aliases",
+  );
+  unique(
+    input.tombstones.map((entry) => entry.id),
+    "tombstones",
+  );
+  unique(
+    input.migrations.map((entry) => entry.id),
+    "migration fixture IDs",
+  );
+  unique(
+    input.goldenReplays.map((entry) => entry.id),
+    "golden replay IDs",
+  );
   const activeIds = new Set([
     ...input.runtimes.map((entry) => entry.buildId),
     ...input.aliases.map((entry) => entry.alias),
@@ -119,15 +134,26 @@ export function resolvePreservedRuntime(
     buildId = alias.targetId;
   }
   const runtime = manifest.runtimes.find((entry) => entry.buildId === buildId);
-  if (runtime === undefined) return Object.freeze({ status: "unsupported", reason: "historical runtime is not preserved" });
-  return Object.freeze({ status: runtime.status, buildId: runtime.buildId, reason: `${runtime.playback} playback package preserved` });
+  if (runtime === undefined)
+    return Object.freeze({ status: "unsupported", reason: "historical runtime is not preserved" });
+  return Object.freeze({
+    status: runtime.status,
+    buildId: runtime.buildId,
+    reason: `${runtime.playback} playback package preserved`,
+  });
 }
 
 export const OPERATIONAL_METRICS = Object.freeze([
-  "recorder.health", "storage.pressure", "replay.drift", "verification.success",
-  "seek.latency", "practice.success", "scenario.compile", "policy.calibration",
+  "recorder.health",
+  "storage.pressure",
+  "replay.drift",
+  "verification.success",
+  "seek.latency",
+  "practice.success",
+  "scenario.compile",
+  "policy.calibration",
 ] as const);
-export type OperationalMetricName = typeof OPERATIONAL_METRICS[number];
+export type OperationalMetricName = (typeof OPERATIONAL_METRICS)[number];
 
 export interface OperationalMetricSample {
   readonly name: OperationalMetricName;
@@ -138,19 +164,26 @@ export interface OperationalMetricSample {
 
 export function buildOperationalDashboard(samples: readonly OperationalMetricSample[]): Readonly<{
   status: "healthy" | "warning" | "incomplete";
-  cards: readonly Readonly<{ name: OperationalMetricName; value?: number; status: "healthy" | "warning" | "missing" }>[];
+  cards: readonly Readonly<{
+    name: OperationalMetricName;
+    value?: number;
+    status: "healthy" | "warning" | "missing";
+  }>[];
 }> {
   const cards = OPERATIONAL_METRICS.map((name) => {
     const sample = [...samples].reverse().find((entry) => entry.name === name);
     if (sample === undefined) return Object.freeze({ name, status: "missing" as const });
-    const warning = (sample.warningBelow !== undefined && sample.value < sample.warningBelow)
-      || (sample.warningAbove !== undefined && sample.value > sample.warningAbove);
-    return Object.freeze({ name, value: sample.value, status: warning ? "warning" as const : "healthy" as const });
+    const warning =
+      (sample.warningBelow !== undefined && sample.value < sample.warningBelow) ||
+      (sample.warningAbove !== undefined && sample.value > sample.warningAbove);
+    return Object.freeze({ name, value: sample.value, status: warning ? ("warning" as const) : ("healthy" as const) });
   });
   return Object.freeze({
     status: cards.some((card) => card.status === "missing")
       ? "incomplete"
-      : cards.some((card) => card.status === "warning") ? "warning" : "healthy",
+      : cards.some((card) => card.status === "warning")
+        ? "warning"
+        : "healthy",
     cards: Object.freeze(cards),
   });
 }
@@ -189,8 +222,12 @@ export const TEAR_EVIDENCE_SELECTOR_AUTHORITY = "scripts/tearbench.mjs" as const
 
 function normalizedRepositoryPath(value: string, label: string): string {
   const normalized = value.replaceAll("\\", "/").trim().replace(/^\.\//u, "");
-  if (normalized.length === 0 || normalized.startsWith("/") || /^[A-Za-z]:\//u.test(normalized)
-    || normalized.split("/").includes("..")) {
+  if (
+    normalized.length === 0 ||
+    normalized.startsWith("/") ||
+    /^[A-Za-z]:\//u.test(normalized) ||
+    normalized.split("/").includes("..")
+  ) {
     throw new TypeError(`${label} must be a repository-relative path: ${value}`);
   }
   return normalized;
@@ -220,11 +257,15 @@ export function selectDiffAwareEvidence(
   }
   const normalized = [...new Set(changedFiles.map((file) => normalizedRepositoryPath(file, "changed file")))].sort();
   const selected = routes.filter((route) =>
-    normalized.some((file) => route.prefixes.some((prefix) => prefixOwnsPath(prefix, file))));
-  const unmatched = normalized.filter((file) =>
-    !routes.some((route) => route.prefixes.some((prefix) => prefixOwnsPath(prefix, file))));
-  const effective = (selected.length === 0 || unmatched.length > 0)
-    ? [...selected, ...fallback.filter((route) => !selected.includes(route))] : selected;
+    normalized.some((file) => route.prefixes.some((prefix) => prefixOwnsPath(prefix, file))),
+  );
+  const unmatched = normalized.filter(
+    (file) => !routes.some((route) => route.prefixes.some((prefix) => prefixOwnsPath(prefix, file))),
+  );
+  const effective =
+    selected.length === 0 || unmatched.length > 0
+      ? [...selected, ...fallback.filter((route) => !selected.includes(route))]
+      : selected;
   const collect = (pick: (route: EvidenceRoute) => readonly string[]): readonly string[] =>
     Object.freeze([...new Set(effective.flatMap((route) => [...pick(route)]))].sort());
   return Object.freeze({
@@ -244,10 +285,18 @@ export const TEAR_SUITE_PROFILES = Object.freeze({
   "pull-request": Object.freeze(["scenario:diff", "graveyard:diff", "journey:checkpoint", "comparison:base"]),
   nightly: Object.freeze(["unit:all", "scenario:all", "browser:all", "headless:population"]),
   "weekly-endurance": Object.freeze(["long-run:10000", "quota:stress", "replay:cross-version", "policy:calibration"]),
-  "release-candidate": Object.freeze(["check:full", "journey:all", "state:affected", "preservation:golden", "certificate"]),
+  "release-candidate": Object.freeze([
+    "check:full",
+    "journey:all",
+    "state:affected",
+    "preservation:golden",
+    "certificate",
+  ]),
 } as const satisfies Readonly<Record<TearSuiteCadence, readonly string[]>>);
 
 /** Compatibility projection of the single JSON policy authority consumed by the executable selector. */
-export const TEAR_INTERACTION_MATRICES = Object.freeze(Object.fromEntries(
-  Object.entries(evidencePolicy.matrices).map(([id, policy]) => [id, Object.freeze([...policy.variants])]),
-));
+export const TEAR_INTERACTION_MATRICES = Object.freeze(
+  Object.fromEntries(
+    Object.entries(evidencePolicy.matrices).map(([id, policy]) => [id, Object.freeze([...policy.variants])]),
+  ),
+);

@@ -1,8 +1,4 @@
-import type {
-  CinematicDirectorBinding,
-  CinematicDirectorPort,
-  CinematicScript,
-} from "../runtime/cinematic-director";
+import type { CinematicDirectorBinding, CinematicDirectorPort, CinematicScript } from "../runtime/cinematic-director";
 import {
   CampaignChapterController,
   type CampaignChapterFlow,
@@ -54,18 +50,22 @@ const REVISION = "tear.campaign-chapter-binding.v1";
 function definedData(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(definedData);
   if (typeof value !== "object" || value === null) return value;
-  return Object.fromEntries(Object.entries(value)
-    .filter((entry) => entry[1] !== undefined)
-    .map(([key, entry]) => [key, definedData(entry)]));
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter((entry) => entry[1] !== undefined)
+      .map(([key, entry]) => [key, definedData(entry)]),
+  );
 }
 
-export function createCampaignChapterBindingSpec(input: Readonly<{
-  stageIndex: number;
-  priorOutro: ChapterPage | null;
-  brief: boolean;
-  prologueShownBefore: boolean;
-  timing: CampaignChapterTiming;
-}>): CampaignChapterBindingSpecV1 {
+export function createCampaignChapterBindingSpec(
+  input: Readonly<{
+    stageIndex: number;
+    priorOutro: ChapterPage | null;
+    brief: boolean;
+    prologueShownBefore: boolean;
+    timing: CampaignChapterTiming;
+  }>,
+): CampaignChapterBindingSpecV1 {
   return Object.freeze({
     format: "tear.campaign-chapter-binding",
     schemaVersion: 1,
@@ -87,8 +87,12 @@ export function parseCampaignChapterBindingSpec(value: unknown): CampaignChapter
   if (!Number.isSafeInteger(spec.stageIndex) || Number(spec.stageIndex) < 0) {
     throw new RangeError("campaign chapter binding stageIndex is invalid");
   }
-  if (spec.priorOutro !== null && (typeof spec.priorOutro !== "object" ||
-    typeof spec.priorOutro.label !== "string" || typeof spec.priorOutro.text !== "string")) {
+  if (
+    spec.priorOutro !== null &&
+    (typeof spec.priorOutro !== "object" ||
+      typeof spec.priorOutro.label !== "string" ||
+      typeof spec.priorOutro.text !== "string")
+  ) {
     throw new TypeError("campaign chapter binding priorOutro is invalid");
   }
   if (typeof spec.brief !== "boolean" || typeof spec.prologueShownBefore !== "boolean") {
@@ -97,15 +101,26 @@ export function parseCampaignChapterBindingSpec(value: unknown): CampaignChapter
   if (typeof spec.prologueShownAfter !== "boolean" || typeof spec.timing !== "object") {
     throw new TypeError("campaign chapter binding reconstruction fields are invalid");
   }
-  const timingKeys: readonly (keyof CampaignChapterTiming)[] = ["loreReveal", "chapterIn", "loreExit",
-    "biomeRevealBrief", "biomeRevealFull", "readyBrief", "readyFull", "dialogueDuck", "biomeRevealDuck"];
-  const timing = Object.fromEntries(timingKeys.map((key) => {
-    const entry = spec.timing?.[key];
-    if (typeof entry !== "number" || !Number.isFinite(entry) || entry < 0) {
-      throw new TypeError(`campaign chapter binding timing ${key} is invalid`);
-    }
-    return [key, entry];
-  })) as unknown as CampaignChapterTiming;
+  const timingKeys: readonly (keyof CampaignChapterTiming)[] = [
+    "loreReveal",
+    "chapterIn",
+    "loreExit",
+    "biomeRevealBrief",
+    "biomeRevealFull",
+    "readyBrief",
+    "readyFull",
+    "dialogueDuck",
+    "biomeRevealDuck",
+  ];
+  const timing = Object.fromEntries(
+    timingKeys.map((key) => {
+      const entry = spec.timing?.[key];
+      if (typeof entry !== "number" || !Number.isFinite(entry) || entry < 0) {
+        throw new TypeError(`campaign chapter binding timing ${key} is invalid`);
+      }
+      return [key, entry];
+    }),
+  ) as unknown as CampaignChapterTiming;
   const states: readonly CampaignChapterState[] = ["LORE_ENTER", "LORE_READ", "LORE_EXIT", "BIOME_REVEAL", "READY"];
   const flowState = spec.flowState;
   if (flowState === undefined || !states.includes(flowState)) {
@@ -118,7 +133,8 @@ export function parseCampaignChapterBindingSpec(value: unknown): CampaignChapter
     format: "tear.campaign-chapter-binding",
     schemaVersion: 1,
     stageIndex: Number(spec.stageIndex),
-    priorOutro: spec.priorOutro === null ? null : Object.freeze({ label: spec.priorOutro.label, text: spec.priorOutro.text }),
+    priorOutro:
+      spec.priorOutro === null ? null : Object.freeze({ label: spec.priorOutro.label, text: spec.priorOutro.text }),
     brief: spec.brief,
     prologueShownBefore: spec.prologueShownBefore,
     prologueShownAfter: spec.prologueShownAfter,
@@ -151,13 +167,15 @@ export function stageCampaignChapterBinding(
   result.flow.page = spec.page;
   const bindingContext: CampaignChapterBindingContext = Object.freeze({ controller, flow: result.flow, port });
   const revision = `${REVISION}:${stableVerificationHash(definedData(result.sequence))}`;
-  const beats = result.sequence.beats.map((beat) => Object.freeze({
-    ...beat,
-    onEnter: (value: Record<string, unknown>) => {
-      const bound = context(value);
-      bound.port.dispatch(bound.controller.enterBeat(beat.id));
-    },
-  }));
+  const beats = result.sequence.beats.map((beat) =>
+    Object.freeze({
+      ...beat,
+      onEnter: (value: Record<string, unknown>) => {
+        const bound = context(value);
+        bound.port.dispatch(bound.controller.enterBeat(beat.id));
+      },
+    }),
+  );
   const script: CinematicScript = Object.freeze({
     ...result.sequence,
     revision,
@@ -166,7 +184,9 @@ export function stageCampaignChapterBinding(
       const bound = context(value);
       bound.port.dispatch(bound.controller.onStart());
     },
-    onSkip: (_value: Record<string, unknown>, director: CinematicDirectorPort) => { director.skipTo("reveal"); },
+    onSkip: (_value: Record<string, unknown>, director: CinematicDirectorPort) => {
+      director.skipTo("reveal");
+    },
     onComplete: (value: Record<string, unknown>) => {
       const bound = context(value);
       bound.port.dispatch(bound.controller.complete(bound.port.preparedWave(), bound.port.activationDeferred()));

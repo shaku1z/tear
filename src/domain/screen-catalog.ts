@@ -49,34 +49,153 @@ export interface ScreenFacts<Screen extends string = string> {
 }
 
 const CATALOG = {
-  menu: { channel: "release", frame: "menu", density: "compact",
-    transitions: ["setup", "playing", "profile", "shop", "achievements", "leaderboards", "codex", "settings", "rename", "replay", "academy", "foundry", "ghostlab"] },
-  setup: { channel: "release", frame: "menu", density: "compact", sheet: true, transitions: ["menu", "playing", "rename"] },
-  playing: { channel: "release", frame: "world", density: "compact",
-    transitions: ["menu", "paused", "draft", "reserve", "tierup", "continue", "gameover", "win", "pgmenu", "pglab", "rename"] },
-  paused: { channel: "release", frame: "world", density: "compact", confirmArming: true, transitions: ["playing", "settings", "confirmquit", "rename"] },
-  draft: { channel: "release", frame: "world", density: "compact", confirmArming: true, pointerSettle: true, resetScrollOnEnter: true,
-    transitions: ["playing", "reserve", "rename"] },
-  reserve: { channel: "release", frame: "world", density: "compact", confirmArming: true, pointerSettle: true, resetScrollOnEnter: true,
-    transitions: ["playing", "rename"] },
-  tierup: { channel: "release", frame: "world", density: "compact", confirmArming: true, pointerSettle: true, resetScrollOnEnter: true,
-    transitions: ["playing", "rename"] },
-  settings: { channel: "release", frame: "menu", density: "compact", sheet: true, transitions: ["menu", "paused", "codex", "rename"] },
-  continue: { channel: "release", frame: "world", density: "compact", confirmArming: true, pointerSettle: true,
-    transitions: ["playing", "gameover", "rename"] },
-  gameover: { channel: "release", frame: "world", density: "compact", confirmArming: true, pointerSettle: true,
-    transitions: ["menu", "playing", "replay", "rename"] },
-  win: { channel: "release", frame: "world", density: "compact", confirmArming: true, pointerSettle: true,
-    transitions: ["menu", "playing", "replay", "rename"] },
-  replay: { channel: "release", frame: "standalone", density: "touch",
-    transitions: ["menu", "profile", "leaderboards", "gameover", "win", "playing", "rename"] },
-  confirmquit: { channel: "release", frame: "world", density: "compact", confirmArming: true, transitions: ["paused", "menu", "rename"] },
-  shop: { channel: "release", frame: "menu", density: "phone", sheet: true, resetScrollOnEnter: true, transitions: ["menu", "rename"] },
+  menu: {
+    channel: "release",
+    frame: "menu",
+    density: "compact",
+    transitions: [
+      "setup",
+      "playing",
+      "profile",
+      "shop",
+      "achievements",
+      "leaderboards",
+      "codex",
+      "settings",
+      "rename",
+      "replay",
+      "academy",
+      "foundry",
+      "ghostlab",
+    ],
+  },
+  setup: {
+    channel: "release",
+    frame: "menu",
+    density: "compact",
+    sheet: true,
+    transitions: ["menu", "playing", "rename"],
+  },
+  playing: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    transitions: [
+      "menu",
+      "paused",
+      "draft",
+      "reserve",
+      "tierup",
+      "continue",
+      "gameover",
+      "win",
+      "pgmenu",
+      "pglab",
+      "rename",
+    ],
+  },
+  paused: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    confirmArming: true,
+    transitions: ["playing", "settings", "confirmquit", "rename"],
+  },
+  draft: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    confirmArming: true,
+    pointerSettle: true,
+    resetScrollOnEnter: true,
+    transitions: ["playing", "reserve", "rename"],
+  },
+  reserve: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    confirmArming: true,
+    pointerSettle: true,
+    resetScrollOnEnter: true,
+    transitions: ["playing", "rename"],
+  },
+  tierup: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    confirmArming: true,
+    pointerSettle: true,
+    resetScrollOnEnter: true,
+    transitions: ["playing", "rename"],
+  },
+  settings: {
+    channel: "release",
+    frame: "menu",
+    density: "compact",
+    sheet: true,
+    transitions: ["menu", "paused", "codex", "rename"],
+  },
+  continue: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    confirmArming: true,
+    pointerSettle: true,
+    transitions: ["playing", "gameover", "rename"],
+  },
+  gameover: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    confirmArming: true,
+    pointerSettle: true,
+    transitions: ["menu", "playing", "replay", "rename"],
+  },
+  win: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    confirmArming: true,
+    pointerSettle: true,
+    transitions: ["menu", "playing", "replay", "rename"],
+  },
+  replay: {
+    channel: "release",
+    frame: "standalone",
+    density: "touch",
+    transitions: ["menu", "profile", "leaderboards", "gameover", "win", "playing", "rename"],
+  },
+  confirmquit: {
+    channel: "release",
+    frame: "world",
+    density: "compact",
+    confirmArming: true,
+    transitions: ["paused", "menu", "rename"],
+  },
+  shop: {
+    channel: "release",
+    frame: "menu",
+    density: "phone",
+    sheet: true,
+    resetScrollOnEnter: true,
+    transitions: ["menu", "rename"],
+  },
   codex: { channel: "release", frame: "menu", density: "phone", sheet: true, transitions: ["menu", "rename"] },
-  profile: { channel: "release", frame: "menu", density: "phone", sheet: true,
-    transitions: ["menu", "setup", "achievements", "replay", "rename", "ghostpublication", "ghostsupport"] },
+  profile: {
+    channel: "release",
+    frame: "menu",
+    density: "phone",
+    sheet: true,
+    transitions: ["menu", "setup", "achievements", "replay", "rename", "ghostpublication", "ghostsupport"],
+  },
   achievements: { channel: "release", frame: "menu", density: "phone", sheet: true, transitions: ["menu", "rename"] },
-  leaderboards: { channel: "release", frame: "menu", density: "phone", sheet: true, transitions: ["menu", "profile", "replay", "rename"] },
+  leaderboards: {
+    channel: "release",
+    frame: "menu",
+    density: "phone",
+    sheet: true,
+    transitions: ["menu", "profile", "replay", "rename"],
+  },
   rename: { channel: "release", frame: "menu", density: "touch", transitions: "every-other-screen" },
   pgmenu: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pglab", "rename"] },
   pglab: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pgmenu", "rename"] },
@@ -85,18 +204,34 @@ const CATALOG = {
   // A locally validated Player Watch starts a normal run directly from its
   // dedicated home. The route remains local-only; this edge does not grant
   // any Foundry, traffic, or operational transition.
-  ghostlab: { channel: "engineering", frame: "menu", density: "touch",
-    transitions: ["menu", "playing", "academy", "foundry", "profile", "botevidence", "rename"] },
+  ghostlab: {
+    channel: "engineering",
+    frame: "menu",
+    density: "touch",
+    transitions: ["menu", "playing", "academy", "foundry", "profile", "botevidence", "rename"],
+  },
   botevidence: { channel: "engineering", frame: "menu", density: "touch", transitions: ["menu", "rename"] },
-  ghostpublication: { channel: "engineering", frame: "standalone", density: "touch", transitions: ["profile", "menu", "rename"] },
-  ghostsupport: { channel: "engineering", frame: "standalone", density: "touch", transitions: ["profile", "menu", "rename"] },
+  ghostpublication: {
+    channel: "engineering",
+    frame: "standalone",
+    density: "touch",
+    transitions: ["profile", "menu", "rename"],
+  },
+  ghostsupport: {
+    channel: "engineering",
+    frame: "standalone",
+    density: "touch",
+    transitions: ["profile", "menu", "rename"],
+  },
 } as const;
 
 /** Every application screen. */
 export type AppScreen = keyof typeof CATALOG;
 
 /** The screens whose channel is engineering. */
-export type EngineeringScreen = { [Screen in AppScreen]: (typeof CATALOG)[Screen]["channel"] extends "engineering" ? Screen : never }[AppScreen];
+export type EngineeringScreen = {
+  [Screen in AppScreen]: (typeof CATALOG)[Screen]["channel"] extends "engineering" ? Screen : never;
+}[AppScreen];
 
 /** The catalog, checked: every transition names a catalogued screen. */
 export const SCREEN_CATALOG: Readonly<Record<AppScreen, ScreenFacts<AppScreen>>> = Object.freeze(CATALOG);
@@ -114,12 +249,19 @@ export function screenFacts(screen: string): ScreenFacts<AppScreen> | undefined 
 }
 
 /** The legal transitions out of each screen. */
-export const LEGAL_TRANSITIONS: Readonly<Record<AppScreen, readonly AppScreen[]>> = Object.freeze(Object.fromEntries(
-  APP_SCREENS.map((screen) => {
-    const { transitions } = SCREEN_CATALOG[screen];
-    return [screen, Object.freeze(transitions === "every-other-screen" ? APP_SCREENS.filter((other) => other !== screen) : [...transitions])];
-  }),
-) as Record<AppScreen, readonly AppScreen[]>);
+export const LEGAL_TRANSITIONS: Readonly<Record<AppScreen, readonly AppScreen[]>> = Object.freeze(
+  Object.fromEntries(
+    APP_SCREENS.map((screen) => {
+      const { transitions } = SCREEN_CATALOG[screen];
+      return [
+        screen,
+        Object.freeze(
+          transitions === "every-other-screen" ? APP_SCREENS.filter((other) => other !== screen) : [...transitions],
+        ),
+      ];
+    }),
+  ) as Record<AppScreen, readonly AppScreen[]>,
+);
 
 /** The engineering screens, in catalog order. */
 export const ENGINEERING_SCREENS: readonly EngineeringScreen[] = Object.freeze(

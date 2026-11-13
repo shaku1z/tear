@@ -28,13 +28,18 @@ function buildId(capsule: GhostReadCapsule): string {
  * production-verified V3 sources, never chooses a peer automatically, and
  * derives its scalar observations solely from their sealed causal bytes.
  */
-export function projectGhostCoachPractice(target: GhostReadCapsule, baseline: GhostReadCapsule): GhostCoachPracticeProjection {
+export function projectGhostCoachPractice(
+  target: GhostReadCapsule,
+  baseline: GhostReadCapsule,
+): GhostCoachPracticeProjection {
   if (target.manifest.id === baseline.manifest.id) throw new RangeError("Coach baseline must be a distinct capsule");
   const targetSession = createGhostProductionReplaySession(target);
   const baselineSession = createGhostProductionReplaySession(baseline);
-  const targetBuild = buildId(target), baselineBuild = buildId(baseline);
+  const targetBuild = buildId(target),
+    baselineBuild = buildId(baseline);
   if (targetBuild !== baselineBuild) throw new RangeError("Coach baseline must use the target's verified build");
-  const targetMapped = mapGhostCapsuleToReplayEnvelope(target), baselineMapped = mapGhostCapsuleToReplayEnvelope(baseline);
+  const targetMapped = mapGhostCapsuleToReplayEnvelope(target),
+    baselineMapped = mapGhostCapsuleToReplayEnvelope(baseline);
   const metric = (events: readonly { readonly type: string }[], prefix: string, ticks: number): number =>
     events.filter((event) => event.type.startsWith(prefix)).length / Math.max(1, ticks);
   const metrics = Object.freeze({
@@ -44,10 +49,47 @@ export function projectGhostCoachPractice(target: GhostReadCapsule, baseline: Gh
     "targeting.badSwitchRatio": metric(targetMapped.ghost.events, "agent.target", target.maxTick),
     "boss.missedPunishRatio": metric(targetMapped.ghost.events, "boss.", target.maxTick),
   });
-  const baselineMetrics = Object.entries(metrics).map(([name]) => Object.freeze({ kind: "same-build" as const, id: baseline.manifest.id,
-    metric: name, value: metric(baselineMapped.ghost.events, name === "movement.idleRatio" ? "player.fell" : name === "blade.missRatio" ? "blade." : name === "defense.damagePerMinute" ? "player.damaged" : name === "targeting.badSwitchRatio" ? "agent.target" : "boss.", baseline.maxTick), sampleCount: 1 }));
-  const findings = analyzeGhostCoaching({ ghost: targetMapped.ghost, metrics, buildId: targetBuild, finalTick: target.maxTick }, baselineMetrics);
-  const provenanceHash = stableVerificationHash({ target: { id: target.manifest.id, root: targetSession.sourceRootHash }, baseline: { id: baseline.manifest.id, root: baselineSession.sourceRootHash }, buildId: targetBuild, metrics, baselineMetrics });
-  return Object.freeze({ targetId: target.manifest.id, baselineId: baseline.manifest.id, buildId: targetBuild, findings,
-    unavailable: Object.freeze(["draft: no verified counterfactual measurement", "run-management: no verified aggregate measurement"]), provenanceHash });
+  const baselineMetrics = Object.entries(metrics).map(([name]) =>
+    Object.freeze({
+      kind: "same-build" as const,
+      id: baseline.manifest.id,
+      metric: name,
+      value: metric(
+        baselineMapped.ghost.events,
+        name === "movement.idleRatio"
+          ? "player.fell"
+          : name === "blade.missRatio"
+            ? "blade."
+            : name === "defense.damagePerMinute"
+              ? "player.damaged"
+              : name === "targeting.badSwitchRatio"
+                ? "agent.target"
+                : "boss.",
+        baseline.maxTick,
+      ),
+      sampleCount: 1,
+    }),
+  );
+  const findings = analyzeGhostCoaching(
+    { ghost: targetMapped.ghost, metrics, buildId: targetBuild, finalTick: target.maxTick },
+    baselineMetrics,
+  );
+  const provenanceHash = stableVerificationHash({
+    target: { id: target.manifest.id, root: targetSession.sourceRootHash },
+    baseline: { id: baseline.manifest.id, root: baselineSession.sourceRootHash },
+    buildId: targetBuild,
+    metrics,
+    baselineMetrics,
+  });
+  return Object.freeze({
+    targetId: target.manifest.id,
+    baselineId: baseline.manifest.id,
+    buildId: targetBuild,
+    findings,
+    unavailable: Object.freeze([
+      "draft: no verified counterfactual measurement",
+      "run-management: no verified aggregate measurement",
+    ]),
+    provenanceHash,
+  });
 }

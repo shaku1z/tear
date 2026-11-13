@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { assertCampaignPublicationAllowed, validateCampaignPublicationPolicy } from "../scripts/campaign-publication-boundary.mjs";
+import {
+  assertCampaignPublicationAllowed,
+  validateCampaignPublicationPolicy,
+} from "../scripts/campaign-publication-boundary.mjs";
 
 const engineering = {
   format: "tear-campaign-publication-boundary",
@@ -20,14 +23,52 @@ test("recognizes the six-stage public policy with a Pale Playground preview", ()
 });
 
 test("rejects Pale in the published stage list or any non-Pale preview", () => {
-  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: [...engineering.activeStageIds, "pale-traverse"] }), /exact six published/u);
-  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, previewStageIds: ["white-hart"] }), /sole Playground preview/u);
-  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: ["pale-traverse", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"] }), /exact six published/u);
+  assert.throws(
+    () =>
+      validateCampaignPublicationPolicy({
+        ...engineering,
+        activeStageIds: [...engineering.activeStageIds, "pale-traverse"],
+      }),
+    /exact six published/u,
+  );
+  assert.throws(
+    () => validateCampaignPublicationPolicy({ ...engineering, previewStageIds: ["white-hart"] }),
+    /sole Playground preview/u,
+  );
+  assert.throws(
+    () =>
+      validateCampaignPublicationPolicy({
+        ...engineering,
+        activeStageIds: ["pale-traverse", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"],
+      }),
+    /exact six published/u,
+  );
 });
 
 test("fails closed on dropped, reordered, or obsolete joint-publication policies", () => {
-  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: engineering.activeStageIds.slice(0, 5) }), /exact six published/u);
-  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: ["grounds", "undercroft", "crimson-fields", "voidspire", "verdant-sanctum", "tear"] }), /exact six published/u);
-  assert.throws(() => assertCampaignPublicationAllowed({ ...engineering, status: "engineering-only" }), /publication prohibited/u);
-  assert.throws(() => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: [...engineering.activeStageIds, "pale-traverse"], previewStageIds: [] }), /exact six published/u);
+  assert.throws(
+    () => validateCampaignPublicationPolicy({ ...engineering, activeStageIds: engineering.activeStageIds.slice(0, 5) }),
+    /exact six published/u,
+  );
+  assert.throws(
+    () =>
+      validateCampaignPublicationPolicy({
+        ...engineering,
+        activeStageIds: ["grounds", "undercroft", "crimson-fields", "voidspire", "verdant-sanctum", "tear"],
+      }),
+    /exact six published/u,
+  );
+  assert.throws(
+    () => assertCampaignPublicationAllowed({ ...engineering, status: "engineering-only" }),
+    /publication prohibited/u,
+  );
+  assert.throws(
+    () =>
+      validateCampaignPublicationPolicy({
+        ...engineering,
+        activeStageIds: [...engineering.activeStageIds, "pale-traverse"],
+        previewStageIds: [],
+      }),
+    /exact six published/u,
+  );
 });

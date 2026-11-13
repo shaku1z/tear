@@ -66,7 +66,11 @@ export interface LiveEnemySpawnPort<TEnemy extends LiveSpawnEnemy> {
   readonly applyVariant: (enemy: TEnemy, variant: EnemyVariant | null) => void;
   readonly rollAffixes: (enemy: TEnemy, wave: number) => void;
   readonly arrivalEffect: (enemy: TEnemy, boss: boolean) => void;
-  readonly recordSpawn: (enemy: TEnemy, role: string, detail: Readonly<{ vn: string; b: string; vid?: string }>) => void;
+  readonly recordSpawn: (
+    enemy: TEnemy,
+    role: string,
+    detail: Readonly<{ vn: string; b: string; vid?: string }>,
+  ) => void;
   readonly install: (enemy: TEnemy) => void;
 }
 
@@ -86,14 +90,26 @@ export function constructLiveEnemy<TEnemy extends LiveSpawnEnemy>(
 ): TEnemy {
   let enemy: TEnemy;
   switch (spec.type) {
-    case "ranged": case "bomber": case "armored": case "chimera": case "rimehound":
-      enemy = port.createGround(spec.type); break;
-    case "flyer": case "wraith":
-      enemy = port.createAir(spec.type, port.sideSpawn(), spec.type === "flyer" ? 200 : 220); break;
-    case "priest": case "herald": case "mender": case "anchor":
-      enemy = port.createSupport(spec.type); break;
+    case "ranged":
+    case "bomber":
+    case "armored":
+    case "chimera":
+    case "rimehound":
+      enemy = port.createGround(spec.type);
+      break;
+    case "flyer":
+    case "wraith":
+      enemy = port.createAir(spec.type, port.sideSpawn(), spec.type === "flyer" ? 200 : 220);
+      break;
+    case "priest":
+    case "herald":
+    case "mender":
+    case "anchor":
+      enemy = port.createSupport(spec.type);
+      break;
     case "rootbinder":
-      enemy = port.createSupport(spec.type); break;
+      enemy = port.createSupport(spec.type);
+      break;
     case "boss":
       enemy = port.createBoss();
       if (enemy.isMirrorBoss) enemy._live = true;
@@ -122,7 +138,10 @@ export function completeEnemySpawn<TEnemy extends LiveSpawnEnemy>(
   const boss = spec.type === "boss" || spec.type === "miniboss";
   const run = port.run();
   if (!boss) {
-    if (spec.hpScale) { enemy.hp *= spec.hpScale; enemy.maxHp *= spec.hpScale; }
+    if (spec.hpScale) {
+      enemy.hp *= spec.hpScale;
+      enemy.maxHp *= spec.hpScale;
+    }
     if (spec.dmgScale && spec.dmgScale !== 1) {
       enemy.contactDmg *= spec.dmgScale;
       enemy.dmgScale = spec.dmgScale;
@@ -134,7 +153,7 @@ export function completeEnemySpawn<TEnemy extends LiveSpawnEnemy>(
       const discoveredVariantIds = run.discoveredVariantIds ?? run.variantDiscovery;
       const context: VariantSelectionContext = {
         stageId,
-        localWave: run.localWave ?? ((run.wave - 1) % 10 + 1),
+        localWave: run.localWave ?? ((run.wave - 1) % 10) + 1,
         globalWave,
         mode: run.mode,
         random: port.random,

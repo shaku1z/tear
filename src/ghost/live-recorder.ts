@@ -66,9 +66,17 @@ interface LiveGhostCaptureSession {
  * queue, then stream through the normal capsule recorder.
  */
 export class GhostLiveRecorder {
-  readonly #options: Required<Pick<GhostLiveRecorderOptions, "now">>
-    & Readonly<Pick<GhostLiveRecorderOptions, "createVault">>
-    & Readonly<{ chunkEntries: number; maxPendingWrites: number; maxStagingEntries: number; keyframeIntervalTicks: number; worker?: GhostEncoderWorkerPort; recordingProfile: GhostRecordingProfileId; onFinalized?: GhostLiveRecorderOptions["onFinalized"] }>;
+  readonly #options: Required<Pick<GhostLiveRecorderOptions, "now">> &
+    Readonly<Pick<GhostLiveRecorderOptions, "createVault">> &
+    Readonly<{
+      chunkEntries: number;
+      maxPendingWrites: number;
+      maxStagingEntries: number;
+      keyframeIntervalTicks: number;
+      worker?: GhostEncoderWorkerPort;
+      recordingProfile: GhostRecordingProfileId;
+      onFinalized?: GhostLiveRecorderOptions["onFinalized"];
+    }>;
   #activeSession: LiveGhostCaptureSession | null = null;
   #failure: string | null = null;
   #lastManifest: TearGhostManifest | null = null;
@@ -80,8 +88,8 @@ export class GhostLiveRecorder {
 
   constructor(options: GhostLiveRecorderOptions) {
     const profile = ghostRecordingProfile(options.recordingProfile ?? "coaching");
-    const maxStagingEntries = options.maxStagingEntries
-      ?? Math.max(profile.chunkEntries, profile.chunkEntries * profile.maxPendingWrites * 2);
+    const maxStagingEntries =
+      options.maxStagingEntries ?? Math.max(profile.chunkEntries, profile.chunkEntries * profile.maxPendingWrites * 2);
     if (!Number.isSafeInteger(maxStagingEntries) || maxStagingEntries < 1) {
       throw new RangeError("Ghost V3 staging capacity must be a positive safe integer");
     }
@@ -98,19 +106,30 @@ export class GhostLiveRecorder {
     });
   }
 
-  get active(): boolean { return this.#activeSession !== null; }
+  get active(): boolean {
+    return this.#activeSession !== null;
+  }
   get activeSessionId(): string {
     if (this.#activeSession === null) throw new Error("Ghost V3 recorder has no active session");
     return this.#activeSession.id;
   }
-  get keyframeIntervalTicks(): number { return this.#options.keyframeIntervalTicks; }
-  get maxStagingEntries(): number { return this.#options.maxStagingEntries; }
-  get failure(): string | null { return this.#failure; }
-  get lastManifest(): TearGhostManifest | null { return this.#lastManifest; }
+  get keyframeIntervalTicks(): number {
+    return this.#options.keyframeIntervalTicks;
+  }
+  get maxStagingEntries(): number {
+    return this.#options.maxStagingEntries;
+  }
+  get failure(): string | null {
+    return this.#failure;
+  }
+  get lastManifest(): TearGhostManifest | null {
+    return this.#lastManifest;
+  }
 
   /** Retain the interrupted journal/bytes; a replacement cannot turn it into a completed capture. */
   interrupt(reason: string): void {
-    const session = this.#activeSession; this.#activeSession = null;
+    const session = this.#activeSession;
+    this.#activeSession = null;
     if (session !== null) this.#fail(session, new Error(reason));
   }
 
@@ -131,9 +150,23 @@ export class GhostLiveRecorder {
     };
     this.#activeSession = session;
     this.#failure = null;
-    const bootstrap = finale === undefined ? (origin === undefined ? createLiveGhostBootstrapEvent(input.sessionId, input.provenance) : createLiveGhostForkBootstrapEvent(input.sessionId, input.provenance))
-      : { format: "tear-contract", kind: "event", schemaVersion: 1, type: "system.checkpoint", tick: finale.origin.tick, sequence: 0, source: "engine", phase: "post-simulation-commit",
-        id: `finale-open-${input.sessionId}`, payload: { boundary: "v3-finale-sidecar-opened", provenance: input.provenance } };
+    const bootstrap =
+      finale === undefined
+        ? origin === undefined
+          ? createLiveGhostBootstrapEvent(input.sessionId, input.provenance)
+          : createLiveGhostForkBootstrapEvent(input.sessionId, input.provenance)
+        : {
+            format: "tear-contract",
+            kind: "event",
+            schemaVersion: 1,
+            type: "system.checkpoint",
+            tick: finale.origin.tick,
+            sequence: 0,
+            source: "engine",
+            phase: "post-simulation-commit",
+            id: `finale-open-${input.sessionId}`,
+            payload: { boundary: "v3-finale-sidecar-opened", provenance: input.provenance },
+          };
     this.#enqueue(session, "events", session.lastRecordedTick, bootstrap);
     session.opening = this.#open(session);
   }
@@ -146,9 +179,13 @@ export class GhostLiveRecorder {
 
   #enqueue(session: LiveGhostCaptureSession, kind: GhostChunkKind, tick: number, value: unknown): void {
     if (session.failure !== null) return;
-    if (!Number.isSafeInteger(tick) || tick < 0) throw new RangeError("Ghost V3 entries require a non-negative integer tick");
+    if (!Number.isSafeInteger(tick) || tick < 0)
+      throw new RangeError("Ghost V3 entries require a non-negative integer tick");
     if (session.pending.length >= this.#options.maxStagingEntries) {
-      this.#fail(session, new Error(`Ghost V3 staging capacity exceeded (${String(this.#options.maxStagingEntries)} entries)`));
+      this.#fail(
+        session,
+        new Error(`Ghost V3 staging capacity exceeded (${String(this.#options.maxStagingEntries)} entries)`),
+      );
       return;
     }
     session.lastRecordedTick = Math.max(session.lastRecordedTick, tick);
@@ -159,7 +196,8 @@ export class GhostLiveRecorder {
   /** Wait for this call's accepted work, without sealing a partial encoder chunk or starting/finalizing a session. */
   async drain(): Promise<void> {
     const session = this.#activeSession;
-    const finalizing = session === null ? [...this.#finalizing].filter(([owner]) => owner.sequence === this.#nextSequence) : [];
+    const finalizing =
+      session === null ? [...this.#finalizing].filter(([owner]) => owner.sequence === this.#nextSequence) : [];
     if (session === null && finalizing.length === 0 && this.#failure !== null) throw new Error(this.#failure);
     if (session !== null) {
       await session.opening;
@@ -172,7 +210,10 @@ export class GhostLiveRecorder {
     }
   }
 
-  finish(result: Readonly<Record<string, unknown>> = {}, tail?: Promise<readonly Readonly<{ kind: GhostChunkKind; tick: number; value: unknown }>[] >): Promise<TearGhostManifest | null> {
+  finish(
+    result: Readonly<Record<string, unknown>> = {},
+    tail?: Promise<readonly Readonly<{ kind: GhostChunkKind; tick: number; value: unknown }>[]>,
+  ): Promise<TearGhostManifest | null> {
     const session = this.#activeSession;
     if (session === null) return Promise.resolve(null);
     // Relinquish live ownership synchronously; a replacement may start while
@@ -180,13 +221,24 @@ export class GhostLiveRecorder {
     this.#activeSession = null;
     const finalizing = this.#finish(session, result, tail);
     this.#finalizing.set(session, finalizing);
-    void finalizing.then(() => { this.#finalizing.delete(session); }, () => { this.#finalizing.delete(session); });
+    void finalizing.then(
+      () => {
+        this.#finalizing.delete(session);
+      },
+      () => {
+        this.#finalizing.delete(session);
+      },
+    );
     return finalizing;
   }
 
-  async #finish(session: LiveGhostCaptureSession, result: Readonly<Record<string, unknown>>, tail?: Promise<readonly Readonly<{ kind: GhostChunkKind; tick: number; value: unknown }>[]>): Promise<TearGhostManifest | null> {
+  async #finish(
+    session: LiveGhostCaptureSession,
+    result: Readonly<Record<string, unknown>>,
+    tail?: Promise<readonly Readonly<{ kind: GhostChunkKind; tick: number; value: unknown }>[]>,
+  ): Promise<TearGhostManifest | null> {
     try {
-      for (const entry of await tail ?? []) this.#enqueue(session, entry.kind, entry.tick, entry.value);
+      for (const entry of (await tail) ?? []) this.#enqueue(session, entry.kind, entry.tick, entry.value);
       this.#enqueue(session, "results", session.lastRecordedTick, result);
       await session.opening;
       if (this.#hasFailed(session)) return null;
@@ -202,11 +254,17 @@ export class GhostLiveRecorder {
       if (manifest !== null && session.sequence >= this.#lastCompletedSequence) {
         this.#lastCompletedSequence = session.sequence;
         this.#lastManifest = manifest;
-        try { await this.#options.onFinalized?.(manifest, await this.#openRecoveredVault()); }
-        catch (error) { console.warn("Ghost V3 finalized observer failed; capture remains complete", error); }
+        try {
+          await this.#options.onFinalized?.(manifest, await this.#openRecoveredVault());
+        } catch (error) {
+          console.warn("Ghost V3 finalized observer failed; capture remains complete", error);
+        }
       }
       return manifest;
-    } catch (error) { this.#fail(session, error); return null; } finally {
+    } catch (error) {
+      this.#fail(session, error);
+      return null;
+    } finally {
       session.pending = [];
       this.#surfaceFailure(session);
     }
@@ -250,7 +308,9 @@ export class GhostLiveRecorder {
   async #flush(session: LiveGhostCaptureSession): Promise<void> {
     if (session.recorder === null || session.failure !== null) return;
     if (session.flushing !== null) return session.flushing;
-    session.flushing = this.#flushQueued(session).catch((error: unknown) => { this.#fail(session, error); });
+    session.flushing = this.#flushQueued(session).catch((error: unknown) => {
+      this.#fail(session, error);
+    });
     try {
       await session.flushing;
     } finally {
@@ -277,7 +337,7 @@ export class GhostLiveRecorder {
     // Browser storage errors such as QuotaExceededError commonly carry an
     // empty message. Preserve their platform-defined name so a real durable
     // failure remains actionable instead of surfacing as a blank diagnostic.
-    session.failure = error instanceof Error ? (error.message || error.name) : String(error);
+    session.failure = error instanceof Error ? error.message || error.name : String(error);
     this.#surfaceFailure(session);
     // The recording journal remains durable and recoverable/quarantinable on
     // the next open, but no later entry may make a failed capture look whole.
@@ -285,12 +345,16 @@ export class GhostLiveRecorder {
   }
 
   #surfaceFailure(session: LiveGhostCaptureSession): void {
-    if (session.failure === null || session.sequence < this.#lastFailureSequence
-      || session.sequence < this.#lastCompletedSequence || !this.#isNewestSession(session)) return;
+    if (
+      session.failure === null ||
+      session.sequence < this.#lastFailureSequence ||
+      session.sequence < this.#lastCompletedSequence ||
+      !this.#isNewestSession(session)
+    )
+      return;
     this.#lastFailureSequence = session.sequence;
     this.#failure = `session ${session.id}: ${session.failure}`;
   }
-
 }
 
 /** Browser construction remains explicit so unsupported storage never affects play. */
@@ -305,29 +369,31 @@ export function createBrowserGhostLiveRecorder(
     createVault: async () => {
       const backend = await createIndexedDbGhostVaultBackend(factory);
       if (beforeCommit === undefined) return new GhostLocalVault(backend);
-      return new GhostLocalVault(Object.freeze({
-        ...backend,
-        commit: async (operations: readonly GhostVaultWrite[]): Promise<void> => {
-          await beforeCommit(operations);
-          await backend.commit(operations);
-        },
-        commitIfMatches: async (
-          guards: readonly GhostVaultGuard[],
-          operations: readonly GhostVaultWrite[],
-        ): Promise<void> => {
-          await beforeCommit(operations);
-          await backend.commitIfMatches(guards, operations);
-        },
-        commitWhileJournalMatches: async (
-          sessionId: string,
-          leaseId: string,
-          operations: readonly GhostVaultWrite[],
-          guards?: readonly GhostVaultGuard[],
-        ): Promise<void> => {
-          await beforeCommit(operations);
-          await backend.commitWhileJournalMatches(sessionId, leaseId, operations, guards);
-        },
-      }));
+      return new GhostLocalVault(
+        Object.freeze({
+          ...backend,
+          commit: async (operations: readonly GhostVaultWrite[]): Promise<void> => {
+            await beforeCommit(operations);
+            await backend.commit(operations);
+          },
+          commitIfMatches: async (
+            guards: readonly GhostVaultGuard[],
+            operations: readonly GhostVaultWrite[],
+          ): Promise<void> => {
+            await beforeCommit(operations);
+            await backend.commitIfMatches(guards, operations);
+          },
+          commitWhileJournalMatches: async (
+            sessionId: string,
+            leaseId: string,
+            operations: readonly GhostVaultWrite[],
+            guards?: readonly GhostVaultGuard[],
+          ): Promise<void> => {
+            await beforeCommit(operations);
+            await backend.commitWhileJournalMatches(sessionId, leaseId, operations, guards);
+          },
+        }),
+      );
     },
     now: () => new Date().toISOString(),
     ...(options.chunkEntries === undefined ? {} : { chunkEntries: options.chunkEntries }),

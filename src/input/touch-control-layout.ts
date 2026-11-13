@@ -47,25 +47,38 @@ export interface TouchControlViewport {
  * because its follow distance (`CONFIG.touch.joyFollow`) is a logical input rule.
  */
 export const TOUCH_CONTROL_METRICS = Object.freeze({
-  jumpCss: 96, dashCss: 80, throwCss: 76, pauseCss: 48, aimPadCss: 104,
-  edgeCss: 18, gapCss: 14, joystickRing: 92, joystickZoneFraction: 0.42,
+  jumpCss: 96,
+  dashCss: 80,
+  throwCss: 76,
+  pauseCss: 48,
+  aimPadCss: 104,
+  edgeCss: 18,
+  gapCss: 14,
+  joystickRing: 92,
+  joystickZoneFraction: 0.42,
 });
 
 export function touchControlLayout(viewport: TouchControlViewport): TouchControlLayout {
-  const m = TOUCH_CONTROL_METRICS, scale = viewport.cssPerLogicalPixel;
+  const m = TOUCH_CONTROL_METRICS,
+    scale = viewport.cssPerLogicalPixel;
   const radius = (diameterCss: number): number => cssToLogical(diameterCss, scale) / 2;
-  const edge = cssToLogical(m.edgeCss, scale), gap = cssToLogical(m.gapCss, scale);
+  const edge = cssToLogical(m.edgeCss, scale),
+    gap = cssToLogical(m.gapCss, scale);
   const left = -viewport.overscanX + viewport.safe.l + edge;
   const right = viewport.width + viewport.overscanX - viewport.safe.r - edge;
   const top = -viewport.overscanY + viewport.safe.t + edge;
   const bottom = viewport.height + viewport.overscanY - viewport.safe.b - edge;
-  const jumpR = radius(m.jumpCss), dashR = radius(m.dashCss), throwR = radius(m.throwCss);
-  const pauseR = radius(Math.max(m.pauseCss, INTERFACE_ACCESSIBILITY.minTouchTargetCssPx)), aimR = radius(m.aimPadCss);
+  const jumpR = radius(m.jumpCss),
+    dashR = radius(m.dashCss),
+    throwR = radius(m.throwCss);
+  const pauseR = radius(Math.max(m.pauseCss, INTERFACE_ACCESSIBILITY.minTouchTargetCssPx)),
+    aimR = radius(m.aimPadCss);
   const jump = { x: right - jumpR, y: bottom - jumpR, r: jumpR, label: "JUMP" };
   const dash = { x: jump.x - jumpR - gap - dashR, y: bottom - dashR, r: dashR, label: "DASH" };
   const joystickHome = { x: left + m.joystickRing, y: bottom - m.joystickRing, r: m.joystickRing };
   return Object.freeze({
-    jump, dash,
+    jump,
+    dash,
     throwB: { x: left + throwR, y: joystickHome.y - m.joystickRing - gap - throwR, r: throwR, label: "THROW" },
     pause: { x: right - pauseR, y: top + pauseR, r: pauseR, label: "▮▮" },
     joystickHome,

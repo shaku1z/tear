@@ -53,10 +53,7 @@ export function advanceOverrun(state: OverrunState, config: OverrunConfig, secon
   }
 }
 
-export function overrunDamageMultiplier(
-  state: Pick<OverrunState, "overrunStacks">,
-  config: OverrunConfig,
-): number {
+export function overrunDamageMultiplier(state: Pick<OverrunState, "overrunStacks">, config: OverrunConfig): number {
   return 1 + Math.max(0, state.overrunStacks) * config.damagePerStack;
 }
 

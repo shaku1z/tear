@@ -33,14 +33,16 @@ function createDetachedCombatWorld(seed: string) {
       const actor: { x: number; y: number; vx: number; vy: number; hp: number } = player();
       const weapon: { x: number; y: number; state: string } = blade();
       return {
-        tick, clock: Math.round(clock.sim * 1e6) / 1e6,
+        tick,
+        clock: Math.round(clock.sim * 1e6) / 1e6,
         player: { x: actor.x, y: actor.y, vx: actor.vx, vy: actor.vy, hp: actor.hp },
         blade: { x: weapon.x, y: weapon.y, state: weapon.state },
         enemies: world.state.enemies().map((enemy) => {
           const body = enemy as never as { x: number; y: number; hp: number; dead: boolean };
           return { x: body.x, y: body.y, hp: body.hp, dead: body.dead };
         }),
-        impact: { ...transient.impact }, opening: { ...transient.opening },
+        impact: { ...transient.impact },
+        opening: { ...transient.opening },
         rng: world.context.services.random.snapshot(),
       };
     },
@@ -93,7 +95,8 @@ describe("detached combat tick", () => {
     expect(detached.outward).toContain("weaponHit");
     expect(detached.outward).toContain("logWeapon:heldHit");
     expect(detached.outward).toContain("makeSwingEvent");
-    const wounded = detached.world.state.enemies()
+    const wounded = detached.world.state
+      .enemies()
       .map((enemy) => (enemy as never as { hp: number }).hp)
       .filter((hp) => hp < 60);
     expect(wounded.length).toBeGreaterThan(0);
@@ -112,8 +115,7 @@ describe("detached combat tick", () => {
     const other = runTrace("other-combat-seed", 240);
 
     expect(other.hashes).not.toEqual(base.hashes);
-    expect(base.detached.combat.captureIdentityState())
-      .not.toBe(other.detached.combat.captureIdentityState());
+    expect(base.detached.combat.captureIdentityState()).not.toBe(other.detached.combat.captureIdentityState());
   });
 
   it("routes detached kills through the shared production kill transaction", () => {

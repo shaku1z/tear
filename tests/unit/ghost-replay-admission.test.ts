@@ -69,35 +69,68 @@ function replayContextInput(overrides: Partial<GhostReplayRunContextInput> = {})
 
 function bootstrapSnapshot(context: ReturnType<typeof createGhostReplayRunContext>): TearSnapshotV1 {
   const world: TearCodecWorld = {
-    components: new Map<TearCodecId, TearCodecValue>(), references: new Map(), entityIds: new Set(),
+    components: new Map<TearCodecId, TearCodecValue>(),
+    references: new Map(),
+    entityIds: new Set(),
   };
   for (const id of CODEC_REGISTRY.ids) world.components.set(id, {});
   world.components.set("tear.configuration.v1", CONFIGURATION);
   world.components.set("tear.cinematic.v1", INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 as never);
-  world.components.set("tear.rng.v1", Object.freeze(Object.fromEntries(Object.entries(context.rng).map(([name, value]) => [name,
-    Object.freeze({ algorithm: value.algorithm, ...(value.seed === undefined ? {} : { seed: value.seed }), state: value.state,
-      ...(value.cursor === undefined ? {} : { cursor: value.cursor }) }),
-  ]))));
+  world.components.set(
+    "tear.rng.v1",
+    Object.freeze(
+      Object.fromEntries(
+        Object.entries(context.rng).map(([name, value]) => [
+          name,
+          Object.freeze({
+            algorithm: value.algorithm,
+            ...(value.seed === undefined ? {} : { seed: value.seed }),
+            state: value.state,
+            ...(value.cursor === undefined ? {} : { cursor: value.cursor }),
+          }),
+        ]),
+      ),
+    ),
+  );
   const captured = captureCodecState(world, createDefaultStateCodecRegistry());
   const snapshot: TearSnapshotV1 = Object.freeze({
-    format: "tear-contract", kind: "snapshot", schemaVersion: 1,
-    id: "replay-admission-bootstrap", tick: 0, stateClass: "recorded-canonical", seed: context.run.seed,
+    format: "tear-contract",
+    kind: "snapshot",
+    schemaVersion: 1,
+    id: "replay-admission-bootstrap",
+    tick: 0,
+    stateClass: "recorded-canonical",
+    seed: context.run.seed,
     hashes: {
-      exact: stableVerificationHash(captured.state), semantic: stableVerificationHash(captured.state),
-      visual: stableVerificationHash({ visual: "unit" }), progression: stableVerificationHash(captured.state["tear.run.v1"]),
+      exact: stableVerificationHash(captured.state),
+      semantic: stableVerificationHash(captured.state),
+      visual: stableVerificationHash({ visual: "unit" }),
+      progression: stableVerificationHash(captured.state["tear.run.v1"]),
       environment: stableVerificationHash(captured.state["tear.world.v1"]),
     },
     provenance: {
-      actor: "human" as const, producer: "ghost-replay-admission-test", build: context.build,
+      actor: "human" as const,
+      producer: "ghost-replay-admission-test",
+      build: context.build,
       sourceId: ghostLiveBootstrapEventId("replay-admission-run"),
-      executionClass: "engineering" as const, observationClass: "structured-state" as const, trainingConsent: "no-training" as const,
+      executionClass: "engineering" as const,
+      observationClass: "structured-state" as const,
+      trainingConsent: "no-training" as const,
     },
-    rng: Object.freeze(Object.fromEntries(Object.entries(context.rng).map(([name, value]) => [name,
-      Object.freeze({ algorithm: value.algorithm, state: value.state })]))),
-    codecs: captured.codecs, state: captured.state,
+    rng: Object.freeze(
+      Object.fromEntries(
+        Object.entries(context.rng).map(([name, value]) => [
+          name,
+          Object.freeze({ algorithm: value.algorithm, state: value.state }),
+        ]),
+      ),
+    ),
+    codecs: captured.codecs,
+    state: captured.state,
   });
   const validation = validateTearContract(snapshot);
-  if (!validation.ok) throw new TypeError(validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "));
+  if (!validation.ok)
+    throw new TypeError(validation.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; "));
   return snapshot;
 }
 
@@ -114,7 +147,11 @@ async function completeCapsule(provenance: Readonly<Record<string, unknown>>) {
     provenance,
   });
   await recorder.start();
-  await recorder.append({ kind: "events", tick: 0, value: createLiveGhostBootstrapEvent("replay-admission-run", provenance) });
+  await recorder.append({
+    kind: "events",
+    tick: 0,
+    value: createLiveGhostBootstrapEvent("replay-admission-run", provenance),
+  });
   await recorder.append({ kind: "keyframes", tick: 0, value: bootstrapSnapshot(context) });
   await recorder.append({ kind: "commands", tick: 1, value: { command: { type: "jump", phase: "pressed" } } });
   await recorder.finalize("2026-07-30T00:00:01.000Z");
@@ -125,39 +162,112 @@ describe("Ghost V3 replay admission", () => {
   it("binds fresh application-frame declarations and refuses accessor authority without reading it", () => {
     const legacy = createGhostReplayRunContext(replayContextInput());
     expect(legacy.simulation).not.toHaveProperty("applicationFrames");
-    const fresh = createGhostReplayRunContext(replayContextInput({ applicationFrames: { version: 1, coverage: "cinema-and-boss-intro" } }));
+    const fresh = createGhostReplayRunContext(
+      replayContextInput({ applicationFrames: { version: 1, coverage: "cinema-and-boss-intro" } }),
+    );
     expect(readGhostReplayRunContext({ replayContext: JSON.parse(JSON.stringify(fresh)) as unknown })).toEqual(fresh);
     expect(ghostReplayContextFingerprint(fresh)).not.toBe(ghostReplayContextFingerprint(legacy));
     let reads = 0;
     const simulation = { ...fresh.simulation };
-    Object.defineProperty(simulation, "applicationFrames", { get() { reads++; throw new Error("getter ran"); } });
+    Object.defineProperty(simulation, "applicationFrames", {
+      get() {
+        reads++;
+        throw new Error("getter ran");
+      },
+    });
     expect(readGhostReplayRunContext({ replayContext: { ...fresh, simulation } })).toBeUndefined();
     expect(reads).toBe(0);
-    expect(() => createGhostReplayRunContext(replayContextInput({ applicationFrames: { version: 1, coverage: "cinema-and-boss-intro" },
-      applicationFramePolicy: { version: 1, kind: "generated-step-intro", secondsPerStep: 1 / 120 } }))).toThrow(/mutually exclusive/);
-    expect(readGhostReplayRunContext({ replayContext: { ...fresh, simulation: { ...fresh.simulation,
-      applicationFrames: { version: 2, coverage: "cinema-and-boss-intro" } } } })).toBeUndefined();
+    expect(() =>
+      createGhostReplayRunContext(
+        replayContextInput({
+          applicationFrames: { version: 1, coverage: "cinema-and-boss-intro" },
+          applicationFramePolicy: { version: 1, kind: "generated-step-intro", secondsPerStep: 1 / 120 },
+        }),
+      ),
+    ).toThrow(/mutually exclusive/);
+    expect(
+      readGhostReplayRunContext({
+        replayContext: {
+          ...fresh,
+          simulation: { ...fresh.simulation, applicationFrames: { version: 2, coverage: "cinema-and-boss-intro" } },
+        },
+      }),
+    ).toBeUndefined();
   });
   it("round-trips explicit opening descriptors and preserves legacy absence", () => {
-    const legacy = createGhostReplayRunContext(replayContextInput()); expect(legacy.simulation).not.toHaveProperty("opening");
-    const context = createGhostReplayRunContext(replayContextInput({ opening: { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup", destination: "playing", runId: "replay-admission-run" } }));
-    expect(readGhostReplayRunContext({ replayContext: JSON.parse(JSON.stringify(context)) as unknown })).toEqual(context);
+    const legacy = createGhostReplayRunContext(replayContextInput());
+    expect(legacy.simulation).not.toHaveProperty("opening");
+    const context = createGhostReplayRunContext(
+      replayContextInput({
+        opening: {
+          version: 1,
+          phase: "opening-initialized-before-run-start",
+          previousScreen: "setup",
+          destination: "playing",
+          runId: "replay-admission-run",
+        },
+      }),
+    );
+    expect(readGhostReplayRunContext({ replayContext: JSON.parse(JSON.stringify(context)) as unknown })).toEqual(
+      context,
+    );
     expect(Object.isFrozen(context.simulation.opening)).toBe(true);
     expect(ghostReplayContextFingerprint(context)).not.toBe(ghostReplayContextFingerprint(legacy));
   });
 
-  it.each([{ version: 2 }, { phase: "playing" }, { previousScreen: "" }, { destination: "menu" }, { runId: "old-run" }, { extra: true }])("rejects malformed supplied opening descriptor %j", (patch) => {
-    expect(() => createGhostReplayRunContext(replayContextInput({ opening: { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup", destination: "playing", runId: "replay-admission-run", ...patch } as never }))).toThrow(/opening/);
+  it.each([
+    { version: 2 },
+    { phase: "playing" },
+    { previousScreen: "" },
+    { destination: "menu" },
+    { runId: "old-run" },
+    { extra: true },
+  ])("rejects malformed supplied opening descriptor %j", (patch) => {
+    expect(() =>
+      createGhostReplayRunContext(
+        replayContextInput({
+          opening: {
+            version: 1,
+            phase: "opening-initialized-before-run-start",
+            previousScreen: "setup",
+            destination: "playing",
+            runId: "replay-admission-run",
+            ...patch,
+          } as never,
+        }),
+      ),
+    ).toThrow(/opening/);
   });
 
   it("refuses opening accessors without invoking them", () => {
     let reads = 0;
     const context = createGhostReplayRunContext(replayContextInput());
-    const simulation = { ...context.simulation }; Object.defineProperty(simulation, "opening", { get() { reads++; throw new Error("getter ran"); } });
-    expect(readGhostReplayRunContext({ replayContext: { ...context, simulation } })).toBeUndefined(); expect(reads).toBe(0);
-    const opening = { version: 1, phase: "opening-initialized-before-run-start", previousScreen: "setup", destination: "playing", runId: context.run.id };
-    Object.defineProperty(opening, "previousScreen", { get() { reads++; throw new Error("getter ran"); } });
-    expect(readGhostReplayRunContext({ replayContext: { ...context, simulation: { ...context.simulation, opening } } })).toBeUndefined(); expect(reads).toBe(0);
+    const simulation = { ...context.simulation };
+    Object.defineProperty(simulation, "opening", {
+      get() {
+        reads++;
+        throw new Error("getter ran");
+      },
+    });
+    expect(readGhostReplayRunContext({ replayContext: { ...context, simulation } })).toBeUndefined();
+    expect(reads).toBe(0);
+    const opening = {
+      version: 1,
+      phase: "opening-initialized-before-run-start",
+      previousScreen: "setup",
+      destination: "playing",
+      runId: context.run.id,
+    };
+    Object.defineProperty(opening, "previousScreen", {
+      get() {
+        reads++;
+        throw new Error("getter ran");
+      },
+    });
+    expect(
+      readGhostReplayRunContext({ replayContext: { ...context, simulation: { ...context.simulation, opening } } }),
+    ).toBeUndefined();
+    expect(reads).toBe(0);
   });
   it("creates an immutable, canonical 120 Hz bootstrap context", () => {
     const context = createGhostReplayRunContext({
@@ -173,7 +283,11 @@ describe("Ghost V3 replay admission", () => {
       format: GHOST_REPLAY_CONTEXT_FORMAT,
       schemaVersion: GHOST_REPLAY_CONTEXT_SCHEMA_VERSION,
       run: {
-        id: "replay-admission-run", seed: "42", mode: "endless", difficulty: "normal", weaponId: "sword",
+        id: "replay-admission-run",
+        seed: "42",
+        mode: "endless",
+        difficulty: "normal",
+        weaponId: "sword",
       },
       simulation: { ticksPerSecond: 120, initialState: "opening-initialized" },
       build: BUILD,
@@ -194,19 +308,28 @@ describe("Ghost V3 replay admission", () => {
   it("reads only a complete valid context from the reserved provenance field", () => {
     const context = createGhostReplayRunContext(replayContextInput());
     expect(readGhostReplayRunContext({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: context })).toEqual(context);
-    const legacyBoundary = { ...context, simulation: { ...context.simulation, initialState: "seeded-run-start" as const } };
-    expect(readGhostReplayRunContext({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: legacyBoundary })).toEqual(legacyBoundary);
+    const legacyBoundary = {
+      ...context,
+      simulation: { ...context.simulation, initialState: "seeded-run-start" as const },
+    };
+    expect(readGhostReplayRunContext({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: legacyBoundary })).toEqual(
+      legacyBoundary,
+    );
     expect(readGhostReplayRunContext({ seed: "legacy-seed", mode: "endless" })).toBeUndefined();
-    expect(readGhostReplayRunContext({
-      [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: { ...context, schemaVersion: 2 },
-    })).toBeUndefined();
+    expect(
+      readGhostReplayRunContext({
+        [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: { ...context, schemaVersion: 2 },
+      }),
+    ).toBeUndefined();
     expect(ghostReplayContextFingerprint(context)).toBe(ghostReplayContextFingerprint(structuredClone(context)));
-    expect(readGhostReplayRunContext({
-      [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: {
-        ...context,
-        simulation: { ...context.simulation, ticksPerSecond: 60 },
-      },
-    })).toBeUndefined();
+    expect(
+      readGhostReplayRunContext({
+        [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: {
+          ...context,
+          simulation: { ...context.simulation, ticksPerSecond: 60 },
+        },
+      }),
+    ).toBeUndefined();
   });
 
   it("keeps a real complete capsule unavailable until a detached runtime is registered", async () => {
@@ -278,7 +401,8 @@ describe("Ghost V3 replay admission", () => {
     const capsule = await completeCapsule({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: context });
     const snapshotEntry = capsule.tracks.keyframes[0];
     const bootstrapEntry = capsule.tracks.events[0];
-    if (snapshotEntry === undefined || bootstrapEntry === undefined) throw new Error("test fixture lost bootstrap evidence");
+    if (snapshotEntry === undefined || bootstrapEntry === undefined)
+      throw new Error("test fixture lost bootstrap evidence");
     const snapshot = snapshotEntry.value as TearSnapshotV1;
     const bootstrap = bootstrapEntry.value as TearCausalEventV1;
 
@@ -286,10 +410,15 @@ describe("Ghost V3 replay admission", () => {
       ...capsule,
       tracks: {
         ...capsule.tracks,
-        keyframes: [{ ...snapshotEntry, value: {
-          ...snapshot,
-          provenance: { ...snapshot.provenance, sourceId: "other-bootstrap" },
-        } }],
+        keyframes: [
+          {
+            ...snapshotEntry,
+            value: {
+              ...snapshot,
+              provenance: { ...snapshot.provenance, sourceId: "other-bootstrap" },
+            },
+          },
+        ],
       },
     });
     expect(wrongSource).toMatchObject({ status: "rejected" });
@@ -299,15 +428,24 @@ describe("Ghost V3 replay admission", () => {
       ...capsule,
       tracks: {
         ...capsule.tracks,
-        events: [{ ...bootstrapEntry, value: {
-          ...bootstrap,
-          payload: { ...bootstrap.payload, provenance: {
-            ...(bootstrap.payload.provenance as Record<string, unknown>),
-            [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: {
-              ...context, run: { ...context.run, seed: "other-seed" },
+        events: [
+          {
+            ...bootstrapEntry,
+            value: {
+              ...bootstrap,
+              payload: {
+                ...bootstrap.payload,
+                provenance: {
+                  ...(bootstrap.payload.provenance as Record<string, unknown>),
+                  [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: {
+                    ...context,
+                    run: { ...context.run, seed: "other-seed" },
+                  },
+                },
+              },
             },
-          } },
-        } }],
+          },
+        ],
       },
     });
     expect(mismatchedContext).toMatchObject({ status: "rejected" });
@@ -317,9 +455,13 @@ describe("Ghost V3 replay admission", () => {
       ...capsule,
       tracks: {
         ...capsule.tracks,
-        keyframes: [...capsule.tracks.keyframes, {
-          ...snapshotEntry, value: { ...snapshot, id: "replay-admission-bootstrap-copy" },
-        }],
+        keyframes: [
+          ...capsule.tracks.keyframes,
+          {
+            ...snapshotEntry,
+            value: { ...snapshot, id: "replay-admission-bootstrap-copy" },
+          },
+        ],
       },
     });
     expect(duplicateTickZero).toMatchObject({ status: "rejected" });
@@ -329,12 +471,21 @@ describe("Ghost V3 replay admission", () => {
       ...capsule,
       tracks: {
         ...capsule.tracks,
-        keyframes: [{ ...snapshotEntry, value: {
-          ...snapshot,
-          provenance: { ...snapshot.provenance, build: {
-            ...snapshot.provenance.build, configHash: "stale-config-hash",
-          } },
-        } }],
+        keyframes: [
+          {
+            ...snapshotEntry,
+            value: {
+              ...snapshot,
+              provenance: {
+                ...snapshot.provenance,
+                build: {
+                  ...snapshot.provenance.build,
+                  configHash: "stale-config-hash",
+                },
+              },
+            },
+          },
+        ],
       },
     });
     expect(staleConfigHash).toMatchObject({ status: "rejected" });
@@ -344,11 +495,19 @@ describe("Ghost V3 replay admission", () => {
   it("preflights every recorded canonical keyframe in an isolated codec world before state seeking", () => {
     const environment = createProductionHeadlessEnvironment();
     const scenario = Object.freeze({
-      format: "tear-contract", kind: "scenario", schemaVersion: 1,
-      id: "c40-codec-preflight", version: 1, description: "real C30 checkpoint",
-      stateClass: "recorded-canonical", executionClass: "training", seed: "c40-codec-preflight-seed",
-      start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }), maxTicks: 12,
-      assertions: Object.freeze(["runtime.finite-state"] as const), tags: Object.freeze(["c30", "c40"] as const),
+      format: "tear-contract",
+      kind: "scenario",
+      schemaVersion: 1,
+      id: "c40-codec-preflight",
+      version: 1,
+      description: "real C30 checkpoint",
+      stateClass: "recorded-canonical",
+      executionClass: "training",
+      seed: "c40-codec-preflight-seed",
+      start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }),
+      maxTicks: 12,
+      assertions: Object.freeze(["runtime.finite-state"] as const),
+      tags: Object.freeze(["c30", "c40"] as const),
     } as const) satisfies TearScenarioV1;
     environment.reset(scenario);
     environment.step([]);
@@ -376,7 +535,14 @@ describe("Ghost V3 replay admission", () => {
 
     const mapped = mapGhostCapsuleToReplayEnvelope({
       manifest: { id: "hostile-preflight" },
-      tracks: { commands: [], rng: [], events: [], results: [], keyframes: [{ kind: "keyframes", tick: snapshot.tick, value: hostile }], presentation: [] },
+      tracks: {
+        commands: [],
+        rng: [],
+        events: [],
+        results: [],
+        keyframes: [{ kind: "keyframes", tick: snapshot.tick, value: hostile }],
+        presentation: [],
+      },
       maxTick: snapshot.tick,
     } as never);
     expect(mapped.accepted.snapshots).toBe(0);
@@ -384,10 +550,19 @@ describe("Ghost V3 replay admission", () => {
     expect(mapped.issues).toContainEqual(expect.objectContaining({ track: "keyframes" }));
     const hostileCapsule = {
       manifest: { id: "hostile-preflight" },
-      tracks: { commands: [], rng: [], events: [], results: [{ kind: "results", tick: snapshot.tick, value: { nope: true } }], keyframes: [{ kind: "keyframes", tick: snapshot.tick, value: hostile }], presentation: [] },
+      tracks: {
+        commands: [],
+        rng: [],
+        events: [],
+        results: [{ kind: "results", tick: snapshot.tick, value: { nope: true } }],
+        keyframes: [{ kind: "keyframes", tick: snapshot.tick, value: hostile }],
+        presentation: [],
+      },
       maxTick: snapshot.tick,
     } as never;
     expect(verifyGhostCapsuleProductionReplay(hostileCapsule)).toMatchObject({ status: "unavailable" });
-    expect(() => createGhostProductionReplaySession(hostileCapsule)).toThrow(/requires verified authoritative receipts \(unavailable\)/u);
+    expect(() => createGhostProductionReplaySession(hostileCapsule)).toThrow(
+      /requires verified authoritative receipts \(unavailable\)/u,
+    );
   });
 });

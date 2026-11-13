@@ -1,4 +1,9 @@
-import type { AcademyScreenView, BotEvidenceScreenView, FoundryScreenView, GhostLabScreenView } from "../../presentation/screens/contracts";
+import type {
+  AcademyScreenView,
+  BotEvidenceScreenView,
+  FoundryScreenView,
+  GhostLabScreenView,
+} from "../../presentation/screens/contracts";
 import type { createLiveAcademyScreen } from "./academy-screen";
 import type { createLiveFoundryScreen } from "./foundry-screen";
 import type { createLiveHumanCalibrationCaptureComposition } from "./human-calibration-capture-composition";
@@ -7,9 +12,15 @@ import type { LiveBotEvidenceController } from "./bot-evidence-controller";
 
 export type LiveAcademySurface = ReturnType<typeof createLiveAcademyScreen>;
 export type LiveFoundrySurface = ReturnType<typeof createLiveFoundryScreen>;
-export type LiveHumanCalibrationSurface = Pick<ReturnType<typeof createLiveHumanCalibrationCaptureComposition>, "capture">
-  & Readonly<{ input: Readonly<{ reset: () => void }> }>;
-export type LivePlayerWatchSurface = Pick<LivePlayerWatchController, "snapshot" | "refresh" | "start" | "pause" | "resume" | "stop" | "observeRunEvent" | "advance">;
+export type LiveHumanCalibrationSurface = Pick<
+  ReturnType<typeof createLiveHumanCalibrationCaptureComposition>,
+  "capture"
+> &
+  Readonly<{ input: Readonly<{ reset: () => void }> }>;
+export type LivePlayerWatchSurface = Pick<
+  LivePlayerWatchController,
+  "snapshot" | "refresh" | "start" | "pause" | "resume" | "stop" | "observeRunEvent" | "advance"
+>;
 export type LiveReplayHubSurface = Readonly<{ snapshot: () => GhostLabScreenView }>;
 export type LiveBotEvidenceSurface = Pick<LiveBotEvidenceController, "snapshot" | "refresh">;
 
@@ -24,7 +35,11 @@ export type LiveBotEvidenceSurface = Pick<LiveBotEvidenceController, "snapshot" 
  * state controller already refuses every screen they would back.
  */
 export interface LiveEngineeringSurfaceFactory {
-  humanCalibration(factory: IDBFactory | undefined, target: Window, currentSignedInActor: () => string | undefined): LiveHumanCalibrationSurface;
+  humanCalibration(
+    factory: IDBFactory | undefined,
+    target: Window,
+    currentSignedInActor: () => string | undefined,
+  ): LiveHumanCalibrationSurface;
   academy(factory: IDBFactory | undefined, currentSignedInActor: () => string | undefined): LiveAcademySurface;
   foundry(factory: IDBFactory | undefined): LiveFoundrySurface;
   playerWatch(factory: IDBFactory | undefined, port: PlayerWatchPort): LivePlayerWatchSurface;
@@ -60,37 +75,45 @@ const HUB_VIEW: GhostLabScreenView = Object.freeze({
   unavailable: Object.freeze([]),
   watch: WATCH_VIEW,
 });
-const BOT_VIEW: BotEvidenceScreenView = Object.freeze({ id: "botevidence", status: "unavailable", subtitle: unavailable, detail: unavailable });
+const BOT_VIEW: BotEvidenceScreenView = Object.freeze({
+  id: "botevidence",
+  status: "unavailable",
+  subtitle: unavailable,
+  detail: unavailable,
+});
 
 /** Inert release stand-ins: no storage reads, timers, listeners, or research code. */
 export const RELEASE_ENGINEERING_SURFACES: LiveEngineeringSurfaceFactory = Object.freeze({
   humanCalibration: () => Object.freeze({ input: Object.freeze({ reset: ignore }), capture: undefined }),
-  academy: () => Object.freeze({
-    snapshot: () => ACADEMY_VIEW,
-    refresh: ignore,
-    advance: ignore,
-    review: ignore,
-    withdrawModelTraining: ignore,
-    setHumanCalibrationConsent: ignore,
-  }),
-  foundry: () => Object.freeze({
-    snapshot: () => FOUNDRY_VIEW,
-    refresh: ignore,
-    bootstrap: ignore,
-    promote: ignore,
-    restoreBaseline: ignore,
-    setScheduleEnabled: ignore,
-  }),
-  playerWatch: () => Object.freeze({
-    snapshot: () => WATCH_VIEW,
-    refresh: settled,
-    start: ignore,
-    pause: ignore,
-    resume: ignore,
-    stop: ignore,
-    observeRunEvent: ignore,
-    advance: ignore,
-  }),
+  academy: () =>
+    Object.freeze({
+      snapshot: () => ACADEMY_VIEW,
+      refresh: ignore,
+      advance: ignore,
+      review: ignore,
+      withdrawModelTraining: ignore,
+      setHumanCalibrationConsent: ignore,
+    }),
+  foundry: () =>
+    Object.freeze({
+      snapshot: () => FOUNDRY_VIEW,
+      refresh: ignore,
+      bootstrap: ignore,
+      promote: ignore,
+      restoreBaseline: ignore,
+      setScheduleEnabled: ignore,
+    }),
+  playerWatch: () =>
+    Object.freeze({
+      snapshot: () => WATCH_VIEW,
+      refresh: settled,
+      start: ignore,
+      pause: ignore,
+      resume: ignore,
+      stop: ignore,
+      observeRunEvent: ignore,
+      advance: ignore,
+    }),
   replayHub: () => Object.freeze({ snapshot: () => HUB_VIEW }),
   botEvidence: () => Object.freeze({ snapshot: () => BOT_VIEW, refresh: settled }),
 });

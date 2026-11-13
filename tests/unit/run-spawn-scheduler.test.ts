@@ -15,7 +15,9 @@ import { installGraftAnchor, MAX_ACTIVE_GRAFT_ANCHORS } from "../../src/gameplay
 class SequenceRandom implements RandomSource {
   private index = 0;
   constructor(private readonly values: readonly number[]) {}
-  next(): number { return this.values[this.index++] ?? 0; }
+  next(): number {
+    return this.values[this.index++] ?? 0;
+  }
 }
 
 function state(overrides: Partial<SpawnScheduleState> = {}): SpawnScheduleState {
@@ -44,11 +46,27 @@ describe("spawn scheduling conformance", () => {
   it("keeps bounded environment objects outside the StageId-owned enemy cap", () => {
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "wave-cap" });
     const candidate = (id: string, x: number): RootbinderCandidate => ({
-      id, worldId: "wave-cap", stageId: "verdant-sanctum", kind: "ordinary", x, y: 400, dead: false, dying: false,
+      id,
+      worldId: "wave-cap",
+      stageId: "verdant-sanctum",
+      kind: "ordinary",
+      x,
+      y: 400,
+      dead: false,
+      dying: false,
     });
-    installRootNetwork(environment, {
-      id: "network", worldId: "wave-cap", stageId: "verdant-sanctum", ownerId: "rootbinder", sourceX: 400, sourceY: 400,
-    }, [candidate("ally-a", 520), candidate("ally-b", 640)]);
+    installRootNetwork(
+      environment,
+      {
+        id: "network",
+        worldId: "wave-cap",
+        stageId: "verdant-sanctum",
+        ownerId: "rootbinder",
+        sourceX: 400,
+        sourceY: 400,
+      },
+      [candidate("ally-a", 520), candidate("ally-b", 640)],
+    );
     const base = { ownerId: "rootbound", ownerPosition: { x: 800, y: 520 }, createdTick: 1 } as const;
     installGraftAnchor(environment, { ...base, graftType: "bastion", geometry: { x: 200, y: 600, radius: 20 } });
     installGraftAnchor(environment, { ...base, graftType: "mercy", geometry: { x: 600, y: 600, radius: 20 } });
@@ -56,8 +74,12 @@ describe("spawn scheduling conformance", () => {
     expect(environment.combatObjects()).toHaveLength(2 + MAX_ACTIVE_GRAFT_ANCHORS);
 
     const wave = state({ mode: "campaign", wave: 31, stageId: "verdant-sanctum", spawnTimer: 0 });
-    expect(scheduleWaveSpawn({ state: wave, tuning: CONFIG.run, enemyCount: 7, loreBusy: false, dt: 1 }).spawned).not.toBeNull();
-    expect(scheduleWaveSpawn({ state: wave, tuning: CONFIG.run, enemyCount: 8, loreBusy: false, dt: 1 })).toMatchObject({ eligible: false, spawned: null });
+    expect(
+      scheduleWaveSpawn({ state: wave, tuning: CONFIG.run, enemyCount: 7, loreBusy: false, dt: 1 }).spawned,
+    ).not.toBeNull();
+    expect(scheduleWaveSpawn({ state: wave, tuning: CONFIG.run, enemyCount: 8, loreBusy: false, dt: 1 })).toMatchObject(
+      { eligible: false, spawned: null },
+    );
   });
 
   it("holds queued spawns during lore and at the live-enemy cap", () => {
@@ -73,7 +95,13 @@ describe("spawn scheduling conformance", () => {
     const waiting = scheduleWaveSpawn({ state: state(), tuning: CONFIG.run, enemyCount: 0, loreBusy: false, dt: 0.1 });
     expect(waiting).toMatchObject({ eligible: true, spawned: null });
     expect(waiting.state.spawnTimer).toBeCloseTo(0.2);
-    const spawned = scheduleWaveSpawn({ state: waiting.state, tuning: CONFIG.run, enemyCount: 0, loreBusy: false, dt: 10 });
+    const spawned = scheduleWaveSpawn({
+      state: waiting.state,
+      tuning: CONFIG.run,
+      enemyCount: 0,
+      loreBusy: false,
+      dt: 10,
+    });
     expect(spawned.spawned).toEqual({ type: "charger" });
     expect(spawned.state.spawnQueue).toEqual([{ type: "ranged" }]);
     expect(spawned.state.spawnTimer).toBe(CONFIG.run.spawnInterval);
@@ -82,7 +110,10 @@ describe("spawn scheduling conformance", () => {
   it("preserves platform and side ground-spawn coordinates and random draw order", () => {
     const platform = planGroundSpawn(
       20,
-      [{ x: 100, y: 300, w: 200, oneway: true }, { x: 500, y: 600, w: 100 }],
+      [
+        { x: 100, y: 300, w: 200, oneway: true },
+        { x: 500, y: 600, w: 100 },
+      ],
       820,
       1600,
       new SequenceRandom([0.2, 0, 0.5]),

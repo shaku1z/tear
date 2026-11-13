@@ -11,8 +11,8 @@ export function resolveEnemyBladeCatch<TEnemy extends BladeCatchEnemy>(
 ): TEnemy | null {
   for (const enemy of enemies) {
     const catchBlade = enemy.tryCatchBlade;
-    if (!enemy.dead && typeof catchBlade === "function"
-      && Reflect.apply(catchBlade, enemy, [blade, player]) === true) return enemy;
+    if (!enemy.dead && typeof catchBlade === "function" && Reflect.apply(catchBlade, enemy, [blade, player]) === true)
+      return enemy;
   }
   return null;
 }

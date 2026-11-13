@@ -107,26 +107,36 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
         result = execution.next();
       }
       return result.value;
-    } finally { execution.return(undefined as never); }
+    } finally {
+      execution.return(undefined as never);
+    }
   }
 
   *#execute(
-    options: TearHeadlessRunOptions<TScenario>, policy: TearHeadlessPolicy<TObservation, TAction>,
-    batchSize: number, control: TearHeadlessExecutionControl,
+    options: TearHeadlessRunOptions<TScenario>,
+    policy: TearHeadlessPolicy<TObservation, TAction>,
+    batchSize: number,
+    control: TearHeadlessExecutionControl,
     initialize?: () => Readonly<{ tick: number; observation: TObservation }>,
   ): Generator<TearHeadlessProgress<TObservation>, TearHeadlessExecutionResult<TScenario, TObservation>> {
     if (this.#executionActive) throw new Error("headless runner already owns an active execution");
     this.#executionActive = true;
     try {
       if (!Number.isSafeInteger(batchSize) || batchSize < 1) throw new RangeError("batchSize must be positive");
-      if (control.timeoutMilliseconds !== undefined
-        && (!Number.isFinite(control.timeoutMilliseconds) || control.timeoutMilliseconds < 0)) {
+      if (
+        control.timeoutMilliseconds !== undefined &&
+        (!Number.isFinite(control.timeoutMilliseconds) || control.timeoutMilliseconds < 0)
+      ) {
         throw new RangeError("headless timeout must be a non-negative finite number");
       }
       const now = control.now ?? (() => performance.now());
       const startedAt = now();
       const initial = initialize?.() ?? { tick: 0, observation: this.#environment.reset(options.scenario) };
-      if (!Number.isSafeInteger(initial.tick) || initial.tick < 0 || initialize !== undefined && initial.tick >= options.maxTicks) {
+      if (
+        !Number.isSafeInteger(initial.tick) ||
+        initial.tick < 0 ||
+        (initialize !== undefined && initial.tick >= options.maxTicks)
+      ) {
         throw new RangeError("headless start must precede the absolute horizon");
       }
       const observations: TObservation[] = [initial.observation];
@@ -135,14 +145,18 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
       let metrics: Readonly<Record<string, number>> = {};
       const stopOutcome = (): "cancelled" | "timed-out" | undefined => {
         if (control.isCancelled?.() === true) return "cancelled";
-        if (control.timeoutMilliseconds !== undefined && now() - startedAt >= control.timeoutMilliseconds) return "timed-out";
+        if (control.timeoutMilliseconds !== undefined && now() - startedAt >= control.timeoutMilliseconds)
+          return "timed-out";
         return undefined;
       };
       let steps = 0;
       const remainingTicks = options.maxTicks - initial.tick;
       while (steps < remainingTicks) {
         const stopped = stopOutcome();
-        if (stopped !== undefined) { outcome = stopped; break; }
+        if (stopped !== undefined) {
+          outcome = stopped;
+          break;
+        }
         const input = observations.slice(-batchSize);
         const actionBatches = policy.decide(input);
         const permitted = actionBatches.slice(0, Math.min(batchSize, remainingTicks - steps));
@@ -155,11 +169,25 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
           metrics = transition.metrics ?? metrics;
           control.onStep?.(steps);
           if (transition.artifact !== undefined) control.onArtifact?.(steps, transition.artifact);
-          yield Object.freeze({ startTick: initial.tick, endTick: initial.tick + steps, executedTicks: steps, transition });
-          if (transition.terminated) { outcome = "terminated"; break; }
-          if (transition.truncated) { outcome = "truncated"; break; }
+          yield Object.freeze({
+            startTick: initial.tick,
+            endTick: initial.tick + steps,
+            executedTicks: steps,
+            transition,
+          });
+          if (transition.terminated) {
+            outcome = "terminated";
+            break;
+          }
+          if (transition.truncated) {
+            outcome = "truncated";
+            break;
+          }
           const stoppedAfterStep = stopOutcome();
-          if (stoppedAfterStep !== undefined) { outcome = stoppedAfterStep; break; }
+          if (stoppedAfterStep !== undefined) {
+            outcome = stoppedAfterStep;
+            break;
+          }
         }
         if (outcome !== "truncated" || steps >= remainingTicks) break;
       }
@@ -175,10 +203,14 @@ export class TearHeadlessRunner<TScenario, TObservation, TAction> {
         metrics: Object.freeze({ ...metrics }),
       });
       return Object.freeze({ episode, startTick: initial.tick, endTick: initial.tick + ticks, executedTicks: ticks });
-    } finally { this.#executionActive = false; }
+    } finally {
+      this.#executionActive = false;
+    }
   }
 
-  dispose(): void { this.#environment.dispose(); }
+  dispose(): void {
+    this.#environment.dispose();
+  }
 }
 
 export type TearHeadlessJob<TScenario> = TearHeadlessRunOptions<TScenario>;
@@ -202,7 +234,9 @@ export class BoundedArtifactSampler {
     if (this.#samples.length < this.#limit) this.#samples.push(Object.freeze(structuredClone(sample)));
   }
 
-  samples(): readonly TearArtifactSample[] { return Object.freeze([...this.#samples]); }
+  samples(): readonly TearArtifactSample[] {
+    return Object.freeze([...this.#samples]);
+  }
 }
 
 export interface TearHeadlessPoolRunOptions<TScenario, TObservation> {
@@ -288,24 +322,26 @@ export function compareHeadlessBrowserParity<TScenario, TObservation, TAction>(
   createBrowserFast: () => TearHeadlessEnvironment<TScenario, TObservation, TAction>,
   createPolicy: () => TearHeadlessPolicy<TObservation, TAction>,
 ): readonly TearParityResult[] {
-  return Object.freeze(cases.map((entry) => {
-    const headless = new TearHeadlessRunner(createHeadless());
-    const browser = new TearHeadlessRunner(createBrowserFast());
-    try {
-      const options = { id: entry.id, scenario: entry.scenario, maxTicks: entry.maxTicks };
-      const headlessResult = headless.run(options, createPolicy(), 8);
-      const browserResult = browser.run(options, createPolicy(), 8);
-      return Object.freeze({
-        id: entry.id,
-        headlessHash: headlessResult.semanticHash,
-        browserFastHash: browserResult.semanticHash,
-        equal: headlessResult.semanticHash === browserResult.semanticHash,
-      });
-    } finally {
-      headless.dispose();
-      browser.dispose();
-    }
-  }));
+  return Object.freeze(
+    cases.map((entry) => {
+      const headless = new TearHeadlessRunner(createHeadless());
+      const browser = new TearHeadlessRunner(createBrowserFast());
+      try {
+        const options = { id: entry.id, scenario: entry.scenario, maxTicks: entry.maxTicks };
+        const headlessResult = headless.run(options, createPolicy(), 8);
+        const browserResult = browser.run(options, createPolicy(), 8);
+        return Object.freeze({
+          id: entry.id,
+          headlessHash: headlessResult.semanticHash,
+          browserFastHash: browserResult.semanticHash,
+          equal: headlessResult.semanticHash === browserResult.semanticHash,
+        });
+      } finally {
+        headless.dispose();
+        browser.dispose();
+      }
+    }),
+  );
 }
 
 export interface TearHeadlessBenchmark {
@@ -330,7 +366,7 @@ export async function benchmarkHeadlessPool<TScenario, TObservation, TAction>(
   return Object.freeze({
     episodes: jobs.length,
     elapsedMilliseconds,
-    episodesPerSecond: jobs.length / elapsedMilliseconds * 1_000,
+    episodesPerSecond: (jobs.length / elapsedMilliseconds) * 1_000,
     deterministic: hashes.every((hash, index) => hash === repeated[index]?.semanticHash),
   });
 }

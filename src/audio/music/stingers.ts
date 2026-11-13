@@ -18,8 +18,12 @@ export type StingerId = "boss-arrival" | "tearing" | "victory";
  * derived from its own material.
  */
 let enabled = false;
-export function setStingersEnabled(value: boolean): void { enabled = value; }
-export function stingersEnabled(): boolean { return enabled; }
+export function setStingersEnabled(value: boolean): void {
+  enabled = value;
+}
+export function stingersEnabled(): boolean {
+  return enabled;
+}
 
 const ASSETS: Readonly<Record<StingerId, string>> = {
   "boss-arrival": "audio/stingers/boss-arrival.ogg",
@@ -41,12 +45,7 @@ const GLOBAL_COOLDOWN_SECONDS = 3;
  * Pure rate-limit policy: may `id` fire at `now`?
  * Kept separate from playback so the behaviour is directly testable.
  */
-export function canFire(
-  id: StingerId,
-  now: number,
-  lastPlayed: number | undefined,
-  lastAny: number,
-): boolean {
+export function canFire(id: StingerId, now: number, lastPlayed: number | undefined, lastAny: number): boolean {
   if (now - lastAny < GLOBAL_COOLDOWN_SECONDS) return false;
   return now - (lastPlayed ?? Number.NEGATIVE_INFINITY) >= COOLDOWN_SECONDS[id];
 }

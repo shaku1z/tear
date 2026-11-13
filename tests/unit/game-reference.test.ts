@@ -27,12 +27,20 @@ if (firstWeapon === undefined) throw new Error("Final Five source is empty");
 const achievementSource = ACHIEVEMENT_CATALOG;
 const enemyFamilySource = ENEMY_IDENTITY_IDS.map((id) => ({ id, variants: VARIANTS[id] ?? [] }));
 
-function reference(sourceSha = "a".repeat(40), weapons: readonly WeaponDefinition[] = WEAPONS,
-  upgrades: readonly UpgradeDefinition[] = UPGRADES, achievements = achievementSource,
-  stages = STAGES, modes = MODE_CATALOG, enemyFamilies = enemyFamilySource,
-  enemyAffixes = AFFIXES, enemyPresets = PRESETS, bossDefinitions = BOSS_DEFINITIONS,
+function reference(
+  sourceSha = "a".repeat(40),
+  weapons: readonly WeaponDefinition[] = WEAPONS,
+  upgrades: readonly UpgradeDefinition[] = UPGRADES,
+  achievements = achievementSource,
+  stages = STAGES,
+  modes = MODE_CATALOG,
+  enemyFamilies = enemyFamilySource,
+  enemyAffixes = AFFIXES,
+  enemyPresets = PRESETS,
+  bossDefinitions = BOSS_DEFINITIONS,
   difficulties = DIFFICULTY_CATALOG,
-  tuningOverride: Readonly<Record<string, Readonly<Record<string, unknown>>>> = tuningByWeapon): GameReferenceV1 {
+  tuningOverride: Readonly<Record<string, Readonly<Record<string, unknown>>>> = tuningByWeapon,
+): GameReferenceV1 {
   return buildGameReferenceV1({
     repository: "shaku1z/tear",
     sourceSha,
@@ -65,18 +73,33 @@ function tuningEntry(value: MutableWeaponTuningFixture, id: string): Record<stri
 
 function referenceWithTuning(tuningOverride: MutableWeaponTuningFixture): GameReferenceV1 {
   return reference(
-    "a".repeat(40), WEAPONS, UPGRADES, achievementSource, STAGES, MODE_CATALOG,
-    enemyFamilySource, AFFIXES, PRESETS, BOSS_DEFINITIONS, DIFFICULTY_CATALOG, tuningOverride,
+    "a".repeat(40),
+    WEAPONS,
+    UPGRADES,
+    achievementSource,
+    STAGES,
+    MODE_CATALOG,
+    enemyFamilySource,
+    AFFIXES,
+    PRESETS,
+    BOSS_DEFINITIONS,
+    DIFFICULTY_CATALOG,
+    tuningOverride,
   );
 }
 
 function assertJsonSafe(value: unknown, path = "$"): void {
-  if (value === undefined || typeof value === "function" || typeof value === "symbol" || typeof value === "bigint") throw new Error(`${path} is not JSON-safe`);
+  if (value === undefined || typeof value === "function" || typeof value === "symbol" || typeof value === "bigint")
+    throw new Error(`${path} is not JSON-safe`);
   if (typeof value === "number" && !Number.isFinite(value)) throw new Error(`${path} is not finite`);
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => { assertJsonSafe(entry, `${path}[${String(index)}]`); });
+    value.forEach((entry, index) => {
+      assertJsonSafe(entry, `${path}[${String(index)}]`);
+    });
   } else if (value !== null && typeof value === "object") {
-    Object.entries(value).forEach(([key, entry]) => { assertJsonSafe(entry, `${path}.${key}`); });
+    Object.entries(value).forEach(([key, entry]) => {
+      assertJsonSafe(entry, `${path}.${key}`);
+    });
   }
 }
 
@@ -93,7 +116,14 @@ describe("game-reference.v1", () => {
     expect(result.collections.weapons.items.every((weapon) => weapon.mechanics.length > 0)).toBe(true);
     expect(result.collections.weapons.items.find((weapon) => weapon.id === "riftlock")?.tuning.chambers).toBe(4);
     expect(Object.keys(result.collections)).toEqual([
-      "weapons", "upgrades", "enemies", "bosses", "stages", "modes", "achievements", "public-tuning",
+      "weapons",
+      "upgrades",
+      "enemies",
+      "bosses",
+      "stages",
+      "modes",
+      "achievements",
+      "public-tuning",
     ]);
     expect(result.collections.weapons.status).toBe("complete");
     expect(result.collections.upgrades.status).toBe("complete");
@@ -101,20 +131,55 @@ describe("game-reference.v1", () => {
     expect(result.collections.achievements.status).toBe("complete");
     expect(result.collections.achievements.items).toHaveLength(100);
     expect(result.collections.stages.status).toBe("complete");
-    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual(["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"]);
+    expect(result.collections.stages.items.map((stage) => stage.id)).toEqual([
+      "grounds",
+      "undercroft",
+      "crimson-fields",
+      "verdant-sanctum",
+      "voidspire",
+      "tear",
+    ]);
     expect(result.collections.modes.status).toBe("complete");
-    expect(result.collections.modes.items.map((mode) => mode.id)).toEqual(["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
+    expect(result.collections.modes.items.map((mode) => mode.id)).toEqual([
+      "campaign",
+      "endless",
+      "gauntlet",
+      "playground",
+      "tutorial",
+      "bossonly",
+      "sandbox",
+    ]);
     expect(result.collections.enemies.status).toBe("complete");
     expect(result.collections.enemies.items.families.map((family) => family.id)).toEqual([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
+      "charger",
+      "ranged",
+      "flyer",
+      "bomber",
+      "armored",
+      "priest",
+      "mender",
+      "herald",
+      "anchor",
+      "wraith",
+      "chimera",
+      "rootbinder",
     ]);
-    expect(result.collections.enemies.items.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
+    expect(result.collections.enemies.items.families.find((family) => family.id === "rootbinder")?.variants).toEqual(
+      [],
+    );
     expect(result.collections.enemies.items.families.find((family) => family.id === "armored")?.variants).toEqual([
       { id: "bark-sentinel", name: "Bark Sentinel", weight: 0.45, minWave: 5 },
     ]);
     expect(JSON.stringify(result.collections.enemies.items)).not.toContain("pale-traverse");
     expect(JSON.stringify(result.collections.enemies.items)).not.toContain("rimehound");
-    expect(result.collections.enemies.items.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
+    expect(result.collections.enemies.items.affixes.map((affix) => affix.id)).toEqual([
+      "tank",
+      "swift",
+      "rapid",
+      "volley",
+      "armed",
+      "warded",
+    ]);
     expect(result.collections.enemies.items.presets).toEqual([
       { familyId: "ranged", affixIds: ["rapid", "volley"] },
       { familyId: "charger", affixIds: ["tank", "armed"] },
@@ -122,17 +187,21 @@ describe("game-reference.v1", () => {
     ]);
     expect(result.collections.bosses.status).toBe("complete");
     expect(result.collections.bosses.items).toEqual([
-      { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.30] },
-      { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
-      { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
+      { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.3] },
+      { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.6, 0.25] },
+      { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.2] },
       { id: "rootbound", name: "The Rootbound", stageId: "verdant-sanctum", phaseMarks: [0.65, 0.28] },
-      { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
+      { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.6, 0.25] },
       { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
     ]);
     expect(result.collections["public-tuning"].status).toBe("complete");
     expect(result.collections["public-tuning"].items.schemaVersion).toBe(1);
     expect(result.collections["public-tuning"].items.difficultyCatalog.map((difficulty) => difficulty.id)).toEqual([
-      "easy", "normal", "hard", "extreme", "onehit",
+      "easy",
+      "normal",
+      "hard",
+      "extreme",
+      "onehit",
     ]);
   });
 
@@ -145,13 +214,21 @@ describe("game-reference.v1", () => {
     expect(upgrades.every((upgrade) => upgrade.tiers.every((tier) => tier.description.length > 0))).toBe(true);
     const achievements = result.collections.achievements.items;
     expect(new Set(achievements.map((achievement) => achievement.id)).size).toBe(100);
-    expect(new Set(achievements.map((achievement) => achievement.category))).toEqual(new Set(["combat", "skill", "progress", "boss", "survival", "mastery"]));
-    expect(new Set(achievements.map((achievement) => achievement.rarity))).toEqual(new Set(["common", "uncommon", "rare", "epic", "legendary"]));
+    expect(new Set(achievements.map((achievement) => achievement.category))).toEqual(
+      new Set(["combat", "skill", "progress", "boss", "survival", "mastery"]),
+    );
+    expect(new Set(achievements.map((achievement) => achievement.rarity))).toEqual(
+      new Set(["common", "uncommon", "rare", "epic", "legendary"]),
+    );
     expect(achievements.some((achievement) => achievement.rule.kind === "manual")).toBe(true);
     expect(achievements.some((achievement) => achievement.rule.kind === "all-shop-items")).toBe(true);
     expect(achievements.some((achievement) => achievement.rule.kind === "category-complete")).toBe(true);
     expect(achievements.some((achievement) => achievement.rule.kind === "all-achievements")).toBe(true);
-    expect(achievements.filter((achievement) => achievement.rule.kind === "stat-threshold").every((achievement) => achievement.rule.stat !== null && achievement.rule.goal !== null)).toBe(true);
+    expect(
+      achievements
+        .filter((achievement) => achievement.rule.kind === "stat-threshold")
+        .every((achievement) => achievement.rule.stat !== null && achievement.rule.goal !== null),
+    ).toBe(true);
   });
 
   it("projects only stable stage data and cross-reference IDs", () => {
@@ -159,7 +236,10 @@ describe("game-reference.v1", () => {
     const stages = result.collections.stages.items;
     expect(stages).toHaveLength(6);
     expect(stages[0]).toMatchObject({
-      id: "grounds", name: "The Grounds", musicId: "grounds", boss: "warden",
+      id: "grounds",
+      name: "The Grounds",
+      musicId: "grounds",
+      boss: "warden",
       theme: { background: "#ffffff", platform: "#111111", accent: "#e23b3b", dark: false },
     });
     expect(stages[0]?.pool[0]).toEqual({ kind: "charger", weight: 1, unlockWave: 1 });
@@ -167,13 +247,18 @@ describe("game-reference.v1", () => {
     expect(stages[0]?.narrative.chapter.pages).toHaveLength(2);
     expect(stages[0]?.narrative.art).toEqual({ composition: "left", wash: "light" });
     expect(stages[3]).toMatchObject({
-      id: "verdant-sanctum", name: "The Verdant Sanctum", musicId: "verdant-sanctum", boss: "rootbound",
+      id: "verdant-sanctum",
+      name: "The Verdant Sanctum",
+      musicId: "verdant-sanctum",
+      boss: "rootbound",
       theme: { background: "#dff2d6", platform: "#234a36", accent: "#e4c95a", dark: false },
     });
     expect(stages[5]?.theme.dark).toBe(true);
     expect(Object.keys(stages[0] ?? {})).not.toContain("stagePlatforms");
     expect(Object.keys(stages[0] ?? {})).not.toContain("hazards");
-    expect(Object.values(stages).every((stage) => stage.pool.every((entry) => entry.weight > 0 && entry.unlockWave > 0))).toBe(true);
+    expect(
+      Object.values(stages).every((stage) => stage.pool.every((entry) => entry.weight > 0 && entry.unlockWave > 0)),
+    ).toBe(true);
   });
 
   it("projects the seven authored modes without runtime debug flags or planners", () => {
@@ -181,11 +266,29 @@ describe("game-reference.v1", () => {
     const modes = result.collections.modes.items;
     expect(modes.map((mode) => mode.order)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(modes.map((mode) => mode.classification)).toEqual([
-      "campaign", "endless", "gauntlet", "training", "training", "boss-only", "sandbox",
+      "campaign",
+      "endless",
+      "gauntlet",
+      "training",
+      "training",
+      "boss-only",
+      "sandbox",
     ]);
-    expect(modes.find((mode) => mode.id === "tutorial")).toMatchObject({ training: true, bossOnly: false, sandbox: false });
-    expect(modes.find((mode) => mode.id === "bossonly")).toMatchObject({ training: false, bossOnly: true, sandbox: false });
-    expect(modes.find((mode) => mode.id === "sandbox")).toMatchObject({ training: false, bossOnly: false, sandbox: true });
+    expect(modes.find((mode) => mode.id === "tutorial")).toMatchObject({
+      training: true,
+      bossOnly: false,
+      sandbox: false,
+    });
+    expect(modes.find((mode) => mode.id === "bossonly")).toMatchObject({
+      training: false,
+      bossOnly: true,
+      sandbox: false,
+    });
+    expect(modes.find((mode) => mode.id === "sandbox")).toMatchObject({
+      training: false,
+      bossOnly: false,
+      sandbox: true,
+    });
     expect(modes.every((mode) => !Object.prototype.hasOwnProperty.call(mode, "debug"))).toBe(true);
     expect(Object.keys(modes[0] ?? {})).not.toContain("planner");
   });
@@ -201,13 +304,29 @@ describe("game-reference.v1", () => {
       shop: [],
       clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
     });
-    expect(runtime._all.map((achievement) => ({
-      id: achievement.id, cat: achievement.cat, rarity: achievement.rarity, name: achievement.name, desc: achievement.desc,
-      hidden: achievement.hidden ?? false, manual: achievement.manual ?? false, master: achievement.master ?? false,
-    }))).toEqual(ACHIEVEMENT_CATALOG.map((entry) => ({
-      id: entry.id, cat: entry.cat, rarity: entry.rarity, name: entry.name, desc: entry.desc,
-      hidden: entry.hidden, manual: entry.manual, master: entry.master,
-    })));
+    expect(
+      runtime._all.map((achievement) => ({
+        id: achievement.id,
+        cat: achievement.cat,
+        rarity: achievement.rarity,
+        name: achievement.name,
+        desc: achievement.desc,
+        hidden: achievement.hidden ?? false,
+        manual: achievement.manual ?? false,
+        master: achievement.master ?? false,
+      })),
+    ).toEqual(
+      ACHIEVEMENT_CATALOG.map((entry) => ({
+        id: entry.id,
+        cat: entry.cat,
+        rarity: entry.rarity,
+        name: entry.name,
+        desc: entry.desc,
+        hidden: entry.hidden,
+        manual: entry.manual,
+        master: entry.master,
+      })),
+    );
     for (const entry of ACHIEVEMENT_CATALOG) {
       const achievement = runtime.byId(entry.id);
       if (achievement === undefined) throw new Error(`runtime achievement missing ${entry.id}`);
@@ -228,13 +347,24 @@ describe("game-reference.v1", () => {
 
   it("is deterministic even when the typed source definitions arrive in another order", () => {
     const first = encodeGameReferenceV1(reference());
-    const reordered = encodeGameReferenceV1(reference("a".repeat(40), WEAPONS.slice().reverse(), UPGRADES.slice().reverse(), achievementSource.slice().reverse(), STAGES.slice().reverse(), MODE_CATALOG.slice().reverse()));
+    const reordered = encodeGameReferenceV1(
+      reference(
+        "a".repeat(40),
+        WEAPONS.slice().reverse(),
+        UPGRADES.slice().reverse(),
+        achievementSource.slice().reverse(),
+        STAGES.slice().reverse(),
+        MODE_CATALOG.slice().reverse(),
+      ),
+    );
     expect(reordered).toBe(first);
   });
 
   it("contains no callbacks, browser objects, undefined values, or non-finite numbers", () => {
     const result = reference();
-    expect(() => { assertJsonSafe(result); }).not.toThrow();
+    expect(() => {
+      assertJsonSafe(result);
+    }).not.toThrow();
     expect(() => JSON.stringify(result)).not.toThrow();
     expect(() => encodeGameReferenceV1(result)).not.toThrow();
   });
@@ -252,65 +382,94 @@ describe("game-reference.v1", () => {
 
   it("rejects stale or abbreviated source generations", () => {
     const result = reference();
-    expect(() => { assertCurrentSourceSha(result, "b".repeat(40)); }).toThrow(/stale game reference/u);
-    expect(() => { assertCurrentSourceSha(result, "a".repeat(7)); }).toThrow(/full 40-character/u);
+    expect(() => {
+      assertCurrentSourceSha(result, "b".repeat(40));
+    }).toThrow(/stale game reference/u);
+    expect(() => {
+      assertCurrentSourceSha(result, "a".repeat(7));
+    }).toThrow(/full 40-character/u);
     expect(() => reference("a".repeat(7))).toThrow(/full 40-character/u);
   });
 
   it("binds the contract to the canonical game repository", () => {
-    expect(() => buildGameReferenceV1({
-      repository: "shaku1z/tear-wiki",
-      sourceSha: "a".repeat(40),
-      terminologyVersion: "g4-terminology-v1",
-      weapons: WEAPONS,
-      upgrades: UPGRADES,
-      achievements: achievementSource,
-      enemyFamilies: enemyFamilySource,
-      enemyAffixes: AFFIXES,
-      enemyPresets: PRESETS,
-      bossDefinitions: BOSS_DEFINITIONS,
-      stages: STAGES,
-      modes: MODE_CATALOG,
-      difficulties: DIFFICULTY_CATALOG,
-      tuningByWeapon,
-    })).toThrow(/repository must be shaku1z\/tear/u);
+    expect(() =>
+      buildGameReferenceV1({
+        repository: "shaku1z/tear-wiki",
+        sourceSha: "a".repeat(40),
+        terminologyVersion: "g4-terminology-v1",
+        weapons: WEAPONS,
+        upgrades: UPGRADES,
+        achievements: achievementSource,
+        enemyFamilies: enemyFamilySource,
+        enemyAffixes: AFFIXES,
+        enemyPresets: PRESETS,
+        bossDefinitions: BOSS_DEFINITIONS,
+        stages: STAGES,
+        modes: MODE_CATALOG,
+        difficulties: DIFFICULTY_CATALOG,
+        tuningByWeapon,
+      }),
+    ).toThrow(/repository must be shaku1z\/tear/u);
   });
 
   it("rejects a runtime callback accidentally entering the projected mechanics", () => {
-    const unsafe = { ...firstWeapon, mechanics: [(() => undefined) as unknown as string] } as unknown as WeaponDefinition;
+    const unsafe = {
+      ...firstWeapon,
+      mechanics: [(() => undefined) as unknown as string],
+    } as unknown as WeaponDefinition;
     expect(() => reference("a".repeat(40), [unsafe, ...WEAPONS.slice(1)])).toThrow(/non-empty string/u);
   });
 
   it("validates every imported weapon field instead of trusting IDs alone", () => {
-    const malformed = structuredClone(reference()) as unknown as { collections: { weapons: { items: Record<string, unknown>[] } } };
+    const malformed = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: Record<string, unknown>[] } };
+    };
     const weapon = malformed.collections.weapons.items.at(0);
     if (weapon === undefined) throw new Error("missing weapon fixture");
     weapon.ratings = {};
-    expect(() => { assertValidGameReferenceV1(malformed); }).toThrow(/ratings/u);
+    expect(() => {
+      assertValidGameReferenceV1(malformed);
+    }).toThrow(/ratings/u);
 
-    const malformedMechanics = structuredClone(reference()) as unknown as { collections: { weapons: { items: Record<string, unknown>[] } } };
+    const malformedMechanics = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: Record<string, unknown>[] } };
+    };
     const mechanicsWeapon = malformedMechanics.collections.weapons.items.at(0);
     if (mechanicsWeapon === undefined) throw new Error("missing weapon fixture");
     mechanicsWeapon.mechanics = [];
-    expect(() => { assertValidGameReferenceV1(malformedMechanics); }).toThrow(/mechanics/u);
+    expect(() => {
+      assertValidGameReferenceV1(malformedMechanics);
+    }).toThrow(/mechanics/u);
 
-    const malformedTuning = structuredClone(reference()) as unknown as { collections: { weapons: { items: Record<string, unknown>[] } } };
+    const malformedTuning = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: Record<string, unknown>[] } };
+    };
     const tuningWeapon = malformedTuning.collections.weapons.items.at(0);
     if (tuningWeapon === undefined) throw new Error("missing weapon fixture");
     tuningWeapon.tuning = {};
-    expect(() => { assertValidGameReferenceV1(malformedTuning); }).toThrow(/tuning/u);
+    expect(() => {
+      assertValidGameReferenceV1(malformedTuning);
+    }).toThrow(/tuning/u);
 
-    const malformedUpgrade = structuredClone(reference()) as unknown as { collections: { upgrades: { items: Record<string, unknown>[] } } };
+    const malformedUpgrade = structuredClone(reference()) as unknown as {
+      collections: { upgrades: { items: Record<string, unknown>[] } };
+    };
     const upgrade = malformedUpgrade.collections.upgrades.items.at(0);
     if (upgrade === undefined) throw new Error("missing upgrade fixture");
     upgrade.tiers = [{ description: "ok", extra: true }];
-    expect(() => { assertValidGameReferenceV1(malformedUpgrade); }).toThrow(/unexpected or missing fields/u);
+    expect(() => {
+      assertValidGameReferenceV1(malformedUpgrade);
+    }).toThrow(/unexpected or missing fields/u);
 
-    const malformedAchievement = structuredClone(reference()) as unknown as { collections: { achievements: { items: Record<string, unknown>[] } } };
+    const malformedAchievement = structuredClone(reference()) as unknown as {
+      collections: { achievements: { items: Record<string, unknown>[] } };
+    };
     const achievement = malformedAchievement.collections.achievements.items.at(0);
     if (achievement === undefined) throw new Error("missing achievement fixture");
     (achievement.rule as Record<string, unknown>).goal = "one";
-    expect(() => { assertValidGameReferenceV1(malformedAchievement); }).toThrow(/finite number/u);
+    expect(() => {
+      assertValidGameReferenceV1(malformedAchievement);
+    }).toThrow(/finite number/u);
   });
 
   it("requires canonical Final Five tuning keys and values during projection and import", () => {
@@ -330,187 +489,302 @@ describe("game-reference.v1", () => {
     reordered.greatsword = Object.fromEntries(Object.entries(tuningEntry(reordered, "greatsword")).reverse());
     expect(() => referenceWithTuning(reordered)).not.toThrow();
 
-    const importedMissing = structuredClone(reference()) as unknown as { collections: { weapons: { items: { tuning: Record<string, unknown> }[] } } };
+    const importedMissing = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: { tuning: Record<string, unknown> }[] } };
+    };
     const importedMissingWeapon = importedMissing.collections.weapons.items.at(2);
     if (importedMissingWeapon === undefined) throw new Error("missing imported tuning fixture");
     delete importedMissingWeapon.tuning.cleaveDamageMult;
-    expect(() => { assertValidGameReferenceV1(importedMissing); }).toThrow(/tuning has unexpected or missing fields/u);
+    expect(() => {
+      assertValidGameReferenceV1(importedMissing);
+    }).toThrow(/tuning has unexpected or missing fields/u);
 
-    const importedExtra = structuredClone(reference()) as unknown as { collections: { weapons: { items: { tuning: Record<string, unknown> }[] } } };
+    const importedExtra = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: { tuning: Record<string, unknown> }[] } };
+    };
     const importedExtraWeapon = importedExtra.collections.weapons.items.at(2);
     if (importedExtraWeapon === undefined) throw new Error("missing imported tuning fixture");
     importedExtraWeapon.tuning.unexpected = 1;
-    expect(() => { assertValidGameReferenceV1(importedExtra); }).toThrow(/tuning has unexpected or missing fields/u);
+    expect(() => {
+      assertValidGameReferenceV1(importedExtra);
+    }).toThrow(/tuning has unexpected or missing fields/u);
 
-    const importedWrong = structuredClone(reference()) as unknown as { collections: { weapons: { items: { tuning: Record<string, unknown> }[] } } };
+    const importedWrong = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: { tuning: Record<string, unknown> }[] } };
+    };
     const importedWrongWeapon = importedWrong.collections.weapons.items.at(2);
     if (importedWrongWeapon === undefined) throw new Error("missing imported tuning fixture");
     importedWrongWeapon.tuning.cleaveDamageMult = 9;
-    expect(() => { assertValidGameReferenceV1(importedWrong); }).toThrow(/does not match canonical greatsword tuning/u);
+    expect(() => {
+      assertValidGameReferenceV1(importedWrong);
+    }).toThrow(/does not match canonical greatsword tuning/u);
 
-    const importedReordered = structuredClone(reference()) as unknown as { collections: { weapons: { items: { tuning: Record<string, unknown> }[] } } };
+    const importedReordered = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: { tuning: Record<string, unknown> }[] } };
+    };
     const importedReorderedWeapon = importedReordered.collections.weapons.items.at(2);
     if (importedReorderedWeapon === undefined) throw new Error("missing imported tuning fixture");
     importedReorderedWeapon.tuning = Object.fromEntries(Object.entries(importedReorderedWeapon.tuning).reverse());
-    expect(() => { assertValidGameReferenceV1(importedReordered); }).not.toThrow();
+    expect(() => {
+      assertValidGameReferenceV1(importedReordered);
+    }).not.toThrow();
   });
 
   it("enforces explicit achievement rule payloads", () => {
-    const missingStatGoal = structuredClone(reference()) as unknown as { collections: { achievements: { items: Record<string, unknown>[] } } };
-    const statThreshold = missingStatGoal.collections.achievements.items.find((item) => (item.rule as Record<string, unknown>).kind === "stat-threshold");
+    const missingStatGoal = structuredClone(reference()) as unknown as {
+      collections: { achievements: { items: Record<string, unknown>[] } };
+    };
+    const statThreshold = missingStatGoal.collections.achievements.items.find(
+      (item) => (item.rule as Record<string, unknown>).kind === "stat-threshold",
+    );
     if (statThreshold === undefined) throw new Error("missing stat-threshold fixture");
     (statThreshold.rule as Record<string, unknown>).goal = null;
-    expect(() => { assertValidGameReferenceV1(missingStatGoal); }).toThrow(/stat-threshold requires stat and goal/u);
+    expect(() => {
+      assertValidGameReferenceV1(missingStatGoal);
+    }).toThrow(/stat-threshold requires stat and goal/u);
 
-    const manualPayload = structuredClone(reference()) as unknown as { collections: { achievements: { items: Record<string, unknown>[] } } };
-    const manual = manualPayload.collections.achievements.items.find((item) => (item.rule as Record<string, unknown>).kind === "manual");
+    const manualPayload = structuredClone(reference()) as unknown as {
+      collections: { achievements: { items: Record<string, unknown>[] } };
+    };
+    const manual = manualPayload.collections.achievements.items.find(
+      (item) => (item.rule as Record<string, unknown>).kind === "manual",
+    );
     if (manual === undefined) throw new Error("missing manual fixture");
     (manual.rule as Record<string, unknown>).stat = "unexpected";
-    expect(() => { assertValidGameReferenceV1(manualPayload); }).toThrow(/manual requires null stat, goal, and category/u);
+    expect(() => {
+      assertValidGameReferenceV1(manualPayload);
+    }).toThrow(/manual requires null stat, goal, and category/u);
   });
 
   it("binds imported provenance and terminology to their supported values", () => {
     const wrongRepository = structuredClone(reference()) as unknown as { source: { repository: string } };
     wrongRepository.source.repository = "shaku1z/tear-wiki";
-    expect(() => { assertValidGameReferenceV1(wrongRepository); }).toThrow(/source repository/u);
+    expect(() => {
+      assertValidGameReferenceV1(wrongRepository);
+    }).toThrow(/source repository/u);
 
     const wrongTerminology = structuredClone(reference()) as unknown as { terminologyVersion: string };
     wrongTerminology.terminologyVersion = "unsupported-terminology-v9";
-    expect(() => { assertValidGameReferenceV1(wrongTerminology); }).toThrow(/terminologyVersion/u);
+    expect(() => {
+      assertValidGameReferenceV1(wrongTerminology);
+    }).toThrow(/terminologyVersion/u);
   });
 
   it("requires canonical positional order for imported roster arrays", () => {
     const activePermutation = structuredClone(reference()) as unknown as { roster: { activeWeaponIds: string[] } };
     activePermutation.roster.activeWeaponIds.reverse();
-    expect(() => { assertValidGameReferenceV1(activePermutation); }).toThrow(/canonical Final Five order/u);
+    expect(() => {
+      assertValidGameReferenceV1(activePermutation);
+    }).toThrow(/canonical Final Five order/u);
 
-    const weaponPermutation = structuredClone(reference()) as unknown as { collections: { weapons: { items: { id: string }[] } } };
+    const weaponPermutation = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: { id: string }[] } };
+    };
     weaponPermutation.collections.weapons.items.reverse();
-    expect(() => { assertValidGameReferenceV1(weaponPermutation); }).toThrow(/canonical Final Five order/u);
+    expect(() => {
+      assertValidGameReferenceV1(weaponPermutation);
+    }).toThrow(/canonical Final Five order/u);
 
-    const upgradePermutation = structuredClone(reference()) as unknown as { collections: { upgrades: { items: { id: string }[] } } };
+    const upgradePermutation = structuredClone(reference()) as unknown as {
+      collections: { upgrades: { items: { id: string }[] } };
+    };
     upgradePermutation.collections.upgrades.items.reverse();
-    expect(() => { assertValidGameReferenceV1(upgradePermutation); }).toThrow(/canonical authored order/u);
+    expect(() => {
+      assertValidGameReferenceV1(upgradePermutation);
+    }).toThrow(/canonical authored order/u);
 
-    const achievementPermutation = structuredClone(reference()) as unknown as { collections: { achievements: { items: { id: string }[] } } };
+    const achievementPermutation = structuredClone(reference()) as unknown as {
+      collections: { achievements: { items: { id: string }[] } };
+    };
     achievementPermutation.collections.achievements.items.reverse();
-    expect(() => { assertValidGameReferenceV1(achievementPermutation); }).toThrow(/canonical authored order/u);
+    expect(() => {
+      assertValidGameReferenceV1(achievementPermutation);
+    }).toThrow(/canonical authored order/u);
 
-    const stagePermutation = structuredClone(reference()) as unknown as { collections: { stages: { items: { id: string }[] } } };
+    const stagePermutation = structuredClone(reference()) as unknown as {
+      collections: { stages: { items: { id: string }[] } };
+    };
     stagePermutation.collections.stages.items.reverse();
-    expect(() => { assertValidGameReferenceV1(stagePermutation); }).toThrow(/canonical authored order/u);
+    expect(() => {
+      assertValidGameReferenceV1(stagePermutation);
+    }).toThrow(/canonical authored order/u);
 
-    const modePermutation = structuredClone(reference()) as unknown as { collections: { modes: { items: { id: string }[] } } };
+    const modePermutation = structuredClone(reference()) as unknown as {
+      collections: { modes: { items: { id: string }[] } };
+    };
     modePermutation.collections.modes.items.reverse();
-    expect(() => { assertValidGameReferenceV1(modePermutation); }).toThrow(/canonical authored order/u);
+    expect(() => {
+      assertValidGameReferenceV1(modePermutation);
+    }).toThrow(/canonical authored order/u);
   });
 
   it("strictly validates stage references, geometry, and normalized narrative fields", () => {
-    const wrongBoss = structuredClone(reference()) as unknown as { collections: { stages: { items: { boss: string }[] } } };
+    const wrongBoss = structuredClone(reference()) as unknown as {
+      collections: { stages: { items: { boss: string }[] } };
+    };
     const firstStage = wrongBoss.collections.stages.items.at(0);
     if (firstStage === undefined) throw new Error("missing stage fixture");
     firstStage.boss = "not-a-boss";
-    expect(() => { assertValidGameReferenceV1(wrongBoss); }).toThrow(/canonical boss ID/u);
+    expect(() => {
+      assertValidGameReferenceV1(wrongBoss);
+    }).toThrow(/canonical boss ID/u);
 
-    const mismatchedBoss = structuredClone(reference()) as unknown as { collections: { stages: { items: { boss: string }[] } } };
+    const mismatchedBoss = structuredClone(reference()) as unknown as {
+      collections: { stages: { items: { boss: string }[] } };
+    };
     const mismatchedStage = mismatchedBoss.collections.stages.items.at(0);
     if (mismatchedStage === undefined) throw new Error("missing stage fixture");
     mismatchedStage.boss = "source";
-    expect(() => { assertValidGameReferenceV1(mismatchedBoss); }).toThrow(/boss\/stage reference mismatch|(?:5|five)-way bijection/u);
+    expect(() => {
+      assertValidGameReferenceV1(mismatchedBoss);
+    }).toThrow(/boss\/stage reference mismatch|(?:5|five)-way bijection/u);
 
-    const wrongEnemy = structuredClone(reference()) as unknown as { collections: { stages: { items: { pool: { kind: string }[] }[] } } };
+    const wrongEnemy = structuredClone(reference()) as unknown as {
+      collections: { stages: { items: { pool: { kind: string }[] }[] } };
+    };
     const enemyStage = wrongEnemy.collections.stages.items.at(0);
     const enemyEntry = enemyStage?.pool[0];
     if (enemyEntry === undefined) throw new Error("missing stage pool fixture");
     enemyEntry.kind = "not-an-enemy";
-    expect(() => { assertValidGameReferenceV1(wrongEnemy); }).toThrow(/canonical enemy kind/u);
+    expect(() => {
+      assertValidGameReferenceV1(wrongEnemy);
+    }).toThrow(/canonical enemy kind/u);
 
-    const duplicatePool = structuredClone(reference()) as unknown as { collections: { stages: { items: { pool: { kind: string }[] }[] } } };
+    const duplicatePool = structuredClone(reference()) as unknown as {
+      collections: { stages: { items: { pool: { kind: string }[] }[] } };
+    };
     const duplicateStage = duplicatePool.collections.stages.items.at(0);
     const duplicateEntry = duplicateStage?.pool[0];
     if (duplicateStage === undefined || duplicateEntry === undefined) throw new Error("missing stage pool fixture");
     duplicateStage.pool.push({ ...duplicateEntry });
-    expect(() => { assertValidGameReferenceV1(duplicatePool); }).toThrow(/duplicate enemy kinds/u);
+    expect(() => {
+      assertValidGameReferenceV1(duplicatePool);
+    }).toThrow(/duplicate enemy kinds/u);
 
-    const nonPositive = structuredClone(reference()) as unknown as { collections: { stages: { items: { pool: { weight: number }[] }[] } } };
+    const nonPositive = structuredClone(reference()) as unknown as {
+      collections: { stages: { items: { pool: { weight: number }[] }[] } };
+    };
     const weightedStage = nonPositive.collections.stages.items.at(0);
     const weightedEntry = weightedStage?.pool[0];
     if (weightedEntry === undefined) throw new Error("missing stage pool fixture");
     weightedEntry.weight = 0;
-    expect(() => { assertValidGameReferenceV1(nonPositive); }).toThrow(/must be positive/u);
+    expect(() => {
+      assertValidGameReferenceV1(nonPositive);
+    }).toThrow(/must be positive/u);
 
-    const badLayout = structuredClone(reference()) as unknown as { collections: { stages: { items: { layout: { w: number }[] }[] } } };
+    const badLayout = structuredClone(reference()) as unknown as {
+      collections: { stages: { items: { layout: { w: number }[] }[] } };
+    };
     const layoutStage = badLayout.collections.stages.items.at(0);
     const layoutEntry = layoutStage?.layout[0];
     if (layoutEntry === undefined) throw new Error("missing stage layout fixture");
     layoutEntry.w = 0;
-    expect(() => { assertValidGameReferenceV1(badLayout); }).toThrow(/must be positive/u);
+    expect(() => {
+      assertValidGameReferenceV1(badLayout);
+    }).toThrow(/must be positive/u);
 
-    const extraNarrative = structuredClone(reference()) as unknown as { collections: { stages: { items: { narrative: { art: Record<string, unknown> } }[] } } };
+    const extraNarrative = structuredClone(reference()) as unknown as {
+      collections: { stages: { items: { narrative: { art: Record<string, unknown> } }[] } };
+    };
     const narrativeStage = extraNarrative.collections.stages.items.at(0);
     if (narrativeStage === undefined) throw new Error("missing narrative fixture");
     narrativeStage.narrative.art.extra = true;
-    expect(() => { assertValidGameReferenceV1(extraNarrative); }).toThrow(/unexpected or missing fields/u);
+    expect(() => {
+      assertValidGameReferenceV1(extraNarrative);
+    }).toThrow(/unexpected or missing fields/u);
   });
 
   it("strictly validates mode metadata and excludes runtime-only flags", () => {
-    const extraDebug = structuredClone(reference()) as unknown as { collections: { modes: { items: Record<string, unknown>[] } } };
+    const extraDebug = structuredClone(reference()) as unknown as {
+      collections: { modes: { items: Record<string, unknown>[] } };
+    };
     const mode = extraDebug.collections.modes.items.at(0);
     if (mode === undefined) throw new Error("missing mode fixture");
     mode.debug = true;
-    expect(() => { assertValidGameReferenceV1(extraDebug); }).toThrow(/unexpected or missing fields/u);
+    expect(() => {
+      assertValidGameReferenceV1(extraDebug);
+    }).toThrow(/unexpected or missing fields/u);
 
-    const badClassification = structuredClone(reference()) as unknown as { collections: { modes: { items: { classification: string }[] } } };
+    const badClassification = structuredClone(reference()) as unknown as {
+      collections: { modes: { items: { classification: string }[] } };
+    };
     const classified = badClassification.collections.modes.items.at(0);
     if (classified === undefined) throw new Error("missing mode fixture");
     classified.classification = "debug";
-    expect(() => { assertValidGameReferenceV1(badClassification); }).toThrow(/classification is not supported/u);
+    expect(() => {
+      assertValidGameReferenceV1(badClassification);
+    }).toThrow(/classification is not supported/u);
 
-    const badOrder = structuredClone(reference()) as unknown as { collections: { modes: { items: { order: number }[] } } };
+    const badOrder = structuredClone(reference()) as unknown as {
+      collections: { modes: { items: { order: number }[] } };
+    };
     const ordered = badOrder.collections.modes.items.at(0);
     if (ordered === undefined) throw new Error("missing mode fixture");
     ordered.order = 99;
-    expect(() => { assertValidGameReferenceV1(badOrder); }).toThrow(/canonical authored order/u);
+    expect(() => {
+      assertValidGameReferenceV1(badOrder);
+    }).toThrow(/canonical authored order/u);
   });
 
   it("rejects the unsupported schema-1 foundation shape", () => {
     const schemaOne = structuredClone(reference()) as unknown as { schemaVersion: number };
     schemaOne.schemaVersion = 1;
-    expect(() => { assertValidGameReferenceV1(schemaOne); }).toThrow(/unsupported game-reference\.v1 schema/u);
+    expect(() => {
+      assertValidGameReferenceV1(schemaOne);
+    }).toThrow(/unsupported game-reference\.v1 schema/u);
   });
 
   it("rejects extra rating and channel keys from imported artifacts", () => {
-    const extraRating = structuredClone(reference()) as unknown as { collections: { weapons: { items: { ratings: Record<string, unknown> }[] } } };
+    const extraRating = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: { ratings: Record<string, unknown> }[] } };
+    };
     const rating = extraRating.collections.weapons.items.at(0);
     if (rating === undefined) throw new Error("missing weapon fixture");
     rating.ratings.extra = 1;
-    expect(() => { assertValidGameReferenceV1(extraRating); }).toThrow(/ratings has unexpected/u);
+    expect(() => {
+      assertValidGameReferenceV1(extraRating);
+    }).toThrow(/ratings has unexpected/u);
 
-    const extraChannel = structuredClone(reference()) as unknown as { collections: { weapons: { items: { channels: Record<string, unknown> }[] } } };
+    const extraChannel = structuredClone(reference()) as unknown as {
+      collections: { weapons: { items: { channels: Record<string, unknown> }[] } };
+    };
     const channel = extraChannel.collections.weapons.items.at(0);
     if (channel === undefined) throw new Error("missing weapon fixture");
     channel.channels.extra = 1;
-    expect(() => { assertValidGameReferenceV1(extraChannel); }).toThrow(/channels has unexpected/u);
+    expect(() => {
+      assertValidGameReferenceV1(extraChannel);
+    }).toThrow(/channels has unexpected/u);
   });
 
   it("rejects duplicate progression IDs and an incomplete fixed-key authority", () => {
-    const duplicateUpgrade = structuredClone(reference()) as unknown as { collections: { upgrades: { items: { id: string }[] } } };
+    const duplicateUpgrade = structuredClone(reference()) as unknown as {
+      collections: { upgrades: { items: { id: string }[] } };
+    };
     const firstUpgrade = duplicateUpgrade.collections.upgrades.items.at(0);
     const secondUpgrade = duplicateUpgrade.collections.upgrades.items.at(1);
     if (firstUpgrade === undefined || secondUpgrade === undefined) throw new Error("missing upgrade fixture");
     secondUpgrade.id = firstUpgrade.id;
-    expect(() => { assertValidGameReferenceV1(duplicateUpgrade); }).toThrow(/duplicate IDs/u);
+    expect(() => {
+      assertValidGameReferenceV1(duplicateUpgrade);
+    }).toThrow(/duplicate IDs/u);
 
-    const duplicateAchievement = structuredClone(reference()) as unknown as { collections: { achievements: { items: { id: string }[] } } };
+    const duplicateAchievement = structuredClone(reference()) as unknown as {
+      collections: { achievements: { items: { id: string }[] } };
+    };
     const firstAchievement = duplicateAchievement.collections.achievements.items.at(0);
     const secondAchievement = duplicateAchievement.collections.achievements.items.at(1);
-    if (firstAchievement === undefined || secondAchievement === undefined) throw new Error("missing achievement fixture");
+    if (firstAchievement === undefined || secondAchievement === undefined)
+      throw new Error("missing achievement fixture");
     secondAchievement.id = firstAchievement.id;
-    expect(() => { assertValidGameReferenceV1(duplicateAchievement); }).toThrow(/duplicate IDs/u);
+    expect(() => {
+      assertValidGameReferenceV1(duplicateAchievement);
+    }).toThrow(/duplicate IDs/u);
 
     const missingCollection = structuredClone(reference()) as unknown as { collections: Record<string, unknown> };
     delete missingCollection.collections.achievements;
-    expect(() => { assertValidGameReferenceV1(missingCollection); }).toThrow(/unexpected or missing fields/u);
+    expect(() => {
+      assertValidGameReferenceV1(missingCollection);
+    }).toThrow(/unexpected or missing fields/u);
   });
 
   it("rejects extra, duplicate, or incomplete source catalogs before reduction", () => {
@@ -524,7 +798,9 @@ describe("game-reference.v1", () => {
     const duplicateUpgrade = [...UPGRADES.slice(0, -1), firstUpgrade];
     expect(() => reference("a".repeat(40), WEAPONS, duplicateUpgrade)).toThrow(/duplicate IDs/u);
 
-    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, ACHIEVEMENT_CATALOG.slice(0, -1))).toThrow(/exactly 100/u);
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, ACHIEVEMENT_CATALOG.slice(0, -1))).toThrow(
+      /exactly 100/u,
+    );
     const lastAchievement = ACHIEVEMENT_CATALOG.at(-1);
     if (lastAchievement === undefined) throw new Error("missing achievement source fixture");
     const firstAchievement = ACHIEVEMENT_CATALOG.at(0);
@@ -535,14 +811,22 @@ describe("game-reference.v1", () => {
     expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, duplicateAchievement)).toThrow(/duplicate IDs/u);
 
     const unknownStage = [...STAGES.slice(0, -1), { ...STAGES.at(-1), id: "future-stage" } as never];
-    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, unknownStage)).toThrow(/exact canonical ID set/u);
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, unknownStage)).toThrow(
+      /exact canonical ID set/u,
+    );
     const duplicateStage = [...STAGES.slice(0, -1), STAGES.at(0)];
-    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, duplicateStage as never)).toThrow(/duplicate IDs|exact canonical ID set/u);
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, duplicateStage as never)).toThrow(
+      /duplicate IDs|exact canonical ID set/u,
+    );
 
     const unknownMode = [...MODE_CATALOG.slice(0, -1), { ...MODE_CATALOG.at(-1), id: "future-mode" } as never];
-    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, STAGES, unknownMode)).toThrow(/exact canonical ID set/u);
+    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, STAGES, unknownMode)).toThrow(
+      /exact canonical ID set/u,
+    );
     const duplicateMode = [...MODE_CATALOG.slice(0, -1), MODE_CATALOG.at(0)];
-    expect(() => reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, STAGES, duplicateMode as never)).toThrow(/duplicate IDs|exact canonical ID set/u);
+    expect(() =>
+      reference("a".repeat(40), WEAPONS, UPGRADES, achievementSource, STAGES, duplicateMode as never),
+    ).toThrow(/duplicate IDs|exact canonical ID set/u);
   });
 
   it("does not let canonical JSON silently drop unsafe values", () => {
@@ -553,6 +837,8 @@ describe("game-reference.v1", () => {
   it("fails closed when an imported artifact activates a retired ID", () => {
     const imported = structuredClone(reference()) as unknown as { roster: { activeWeaponIds: string[] } };
     imported.roster.activeWeaponIds[0] = "spear";
-    expect(() => { assertValidGameReferenceV1(imported); }).toThrow(/retired|missing canonical/u);
+    expect(() => {
+      assertValidGameReferenceV1(imported);
+    }).toThrow(/retired|missing canonical/u);
   });
 });

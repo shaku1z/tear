@@ -20,8 +20,19 @@ describe("stable verification hash", () => {
     sparse[1] = "present";
     sparse[3] = null;
     const values: readonly unknown[] = [
-      null, true, false, 0, -0, 1.25, 1e30,
-      "plain", "quote\"slash\\", "\b\t\n\f\r\u0000\u001f", "\u2028\u2029", "emoji 💧", "lone \ud800 \udfff",
+      null,
+      true,
+      false,
+      0,
+      -0,
+      1.25,
+      1e30,
+      "plain",
+      'quote"slash\\',
+      "\b\t\n\f\r\u0000\u001f",
+      "\u2028\u2029",
+      "emoji 💧",
+      "lone \ud800 \udfff",
       sparse,
       { z: [3, 2, 1], a: { nested: "value", controls: "\u0001" }, unicode: "🌸" },
       { payload: "encoded-like-value/with+base64=".repeat(4_096) },
@@ -36,7 +47,8 @@ describe("stable verification hash", () => {
     expect(() => stableVerificationHash({ bad: Number.NaN })).toThrow("$.bad contains a non-finite number");
     expect(() => stableVerificationHash({ bad: undefined })).toThrow("$.bad is undefined");
     expect(() => stableVerificationHash({ bad: () => undefined })).toThrow("$.bad is not canonical JSON data");
-    expect(() => stableVerificationHash({ nested: [{ bad: Number.POSITIVE_INFINITY }] }))
-      .toThrow("$.nested[0].bad contains a non-finite number");
+    expect(() => stableVerificationHash({ nested: [{ bad: Number.POSITIVE_INFINITY }] })).toThrow(
+      "$.nested[0].bad contains a non-finite number",
+    );
   });
 });

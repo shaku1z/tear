@@ -33,7 +33,9 @@ export function createScreenRenderers(context: ScreenRenderContext): ScreenRende
   return {
     menu: menuSetup.menu,
     setup: menuSetup.setup,
-    playing: () => { /* World rendering remains owned by the gameplay frame. */ },
+    playing: () => {
+      /* World rendering remains owned by the gameplay frame. */
+    },
     paused: results.paused,
     draft: drafts.draft,
     reserve: drafts.reserve,

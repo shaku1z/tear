@@ -29,13 +29,25 @@ export function snapshotOutcomeRun(
     ...(run.ghostAssistance === undefined ? {} : { ghostAssistance: run.ghostAssistance }),
     ...(run.beatThisRun === undefined ? {} : { beatThisRun: run.beatThisRun }),
     ...(run.seedRace === undefined ? {} : { seedRace: run.seedRace }),
-    mode: run.mode, diff: run.diff, wave: run.wave, score: run.score, runTime: run.runTime,
-    waveTime: run.waveTime, waveKills: run.waveKills, wavePeak: run.wavePeak,
-    waveLog: run.waveLog, weaponId: run.weaponId, damagedThisRun: Boolean(run._dmgThisRun),
+    mode: run.mode,
+    diff: run.diff,
+    wave: run.wave,
+    score: run.score,
+    runTime: run.runTime,
+    waveTime: run.waveTime,
+    waveKills: run.waveKills,
+    wavePeak: run.wavePeak,
+    waveLog: run.waveLog,
+    weaponId: run.weaponId,
+    damagedThisRun: Boolean(run._dmgThisRun),
   });
 }
 
-export interface RecordingLoadoutEntry { readonly id: string; readonly tier: number; readonly count: number }
+export interface RecordingLoadoutEntry {
+  readonly id: string;
+  readonly tier: number;
+  readonly count: number;
+}
 
 export interface RecordingSummary {
   readonly ghostAssistance?: GhostRunAssistance;
@@ -83,7 +95,9 @@ export function buildRecordingSummary(
     name: options.displayName,
     stage: options.stageIndex,
     weapon: run.weaponId,
-    loadout: Object.freeze(options.loadout.map((entry) => Object.freeze({ id: entry.id, tier: entry.tier, n: entry.count }))),
+    loadout: Object.freeze(
+      options.loadout.map((entry) => Object.freeze({ id: entry.id, tier: entry.tier, n: entry.count })),
+    ),
     authoritativeTick: options.authoritativeTick ?? 0,
     authoritativeStateHash: options.authoritativeStateHash ?? "",
   });
@@ -95,16 +109,23 @@ export function appendDefeatWave(
   run: Pick<OutcomeRunState, "wave" | "waveTime" | "waveKills" | "wavePeak">,
 ): readonly OutcomeWaveLogEntry[] {
   if (!waveActive) return Object.freeze([...waveLog]);
-  return Object.freeze([...waveLog, Object.freeze({
-    wave: run.wave,
-    time: run.waveTime,
-    kills: run.waveKills,
-    peak: run.wavePeak,
-    died: true,
-  })]);
+  return Object.freeze([
+    ...waveLog,
+    Object.freeze({
+      wave: run.wave,
+      time: run.waveTime,
+      kills: run.waveKills,
+      peak: run.wavePeak,
+      died: true,
+    }),
+  ]);
 }
 
-export interface PreparedVictory { readonly isNew: boolean; readonly earned: number; readonly coins: number }
+export interface PreparedVictory {
+  readonly isNew: boolean;
+  readonly earned: number;
+  readonly coins: number;
+}
 
 export type VictoryProgressionIntent =
   | Readonly<{ type: "profile-add"; stat: string; value: number }>
@@ -117,13 +138,15 @@ export type VictoryProgressionIntent =
   | Readonly<{ type: "cloud-log"; payload: Readonly<Record<string, unknown>> }>
   | Readonly<{ type: "finish-recording"; won: true }>;
 
-export function planVictoryProgression(input: Readonly<{
-  run: OutcomeRunState;
-  campaign: boolean;
-  achievementTracking: boolean;
-  earned: number;
-  economy: Readonly<Record<string, unknown>>;
-}>): readonly VictoryProgressionIntent[] {
+export function planVictoryProgression(
+  input: Readonly<{
+    run: OutcomeRunState;
+    campaign: boolean;
+    achievementTracking: boolean;
+    earned: number;
+    economy: Readonly<Record<string, unknown>>;
+  }>,
+): readonly VictoryProgressionIntent[] {
   if (!input.achievementTracking) return Object.freeze([]);
   const run = input.run;
   const intents: VictoryProgressionIntent[] = [
@@ -145,11 +168,20 @@ export function planVictoryProgression(input: Readonly<{
   }
   intents.push(
     { type: "achievement-check" },
-    { type: "cloud-log", payload: Object.freeze({
-      mode: run.mode, diff: run.diff, wave: run.wave, score: run.score,
-      time: Math.round(run.runTime), peak: run.wavePeak, won: true, campaign: input.campaign,
-      ...input.economy,
-    }) },
+    {
+      type: "cloud-log",
+      payload: Object.freeze({
+        mode: run.mode,
+        diff: run.diff,
+        wave: run.wave,
+        score: run.score,
+        time: Math.round(run.runTime),
+        peak: run.wavePeak,
+        won: true,
+        campaign: input.campaign,
+        ...input.economy,
+      }),
+    },
     { type: "finish-recording", won: true },
   );
   return Object.freeze(intents);

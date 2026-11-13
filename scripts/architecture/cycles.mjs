@@ -1,6 +1,11 @@
 /** Static value edges only: type-only imports are erased and dynamic imports are lazy, so neither forms an evaluation cycle. */
 export function valueGraph(graph) {
-  return new Map([...graph].map(([file, edges]) => [file, edges.filter((edge) => edge.staticValue && graph.has(edge.to)).map((edge) => edge.to)]));
+  return new Map(
+    [...graph].map(([file, edges]) => [
+      file,
+      edges.filter((edge) => edge.staticValue && graph.has(edge.to)).map((edge) => edge.to),
+    ]),
+  );
 }
 
 function strongConnect(start, graph, state) {
@@ -33,7 +38,8 @@ function strongConnect(start, graph, state) {
       const parent = work[work.length - 1].node;
       state.low.set(parent, Math.min(state.low.get(parent), state.low.get(frame.node)));
     }
-    if (state.low.get(frame.node) === state.index.get(frame.node)) state.components.push(popComponent(frame.node, state));
+    if (state.low.get(frame.node) === state.index.get(frame.node))
+      state.components.push(popComponent(frame.node, state));
   }
 }
 
@@ -80,5 +86,9 @@ export function compareCycles(current, recorded, available) {
 }
 
 export function cycleSummary(cycles) {
-  return { count: cycles.length, files: cycles.reduce((sum, cycle) => sum + cycle.length, 0), largest: cycles[0]?.length ?? 0 };
+  return {
+    count: cycles.length,
+    files: cycles.reduce((sum, cycle) => sum + cycle.length, 0),
+    largest: cycles[0]?.length ?? 0,
+  };
 }

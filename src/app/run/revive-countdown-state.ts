@@ -9,7 +9,12 @@ export function createLiveReviveCountdownState(): LiveReviveCountdownState {
   let seconds = 0;
   return Object.freeze({
     seconds: (): number => seconds,
-    setSeconds: (value: number): void => { seconds = value; },
-    elapse: (deltaSeconds: number): number => { seconds -= deltaSeconds; return seconds; },
+    setSeconds: (value: number): void => {
+      seconds = value;
+    },
+    elapse: (deltaSeconds: number): number => {
+      seconds -= deltaSeconds;
+      return seconds;
+    },
   });
 }

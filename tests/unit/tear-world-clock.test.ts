@@ -31,7 +31,9 @@ describe("per-world time and randomness", () => {
   it("gives each world its own particle system", () => {
     const policy = {
       effects: { highBudget: 2, lowBudget: 1, cullMargin: 0 },
-      lowGraphics: () => false, reducedMotion: () => false, random: () => 0.5,
+      lowGraphics: () => false,
+      reducedMotion: () => false,
+      random: () => 0.5,
     };
     const first = particles.createParticleSystem(policy);
     const second = particles.createParticleSystem(policy);

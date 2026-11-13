@@ -1,6 +1,9 @@
 import type { EnvironmentRuntime } from "../../gameplay/environment/environment-runtime";
 import type { AuthoritativeInputState } from "../../gameplay/runtime/authoritative-input";
-import { captureCanonicalGameplayState, type projectCanonicalGameplayState } from "../../gameplay/runtime/canonical-state";
+import {
+  captureCanonicalGameplayState,
+  type projectCanonicalGameplayState,
+} from "../../gameplay/runtime/canonical-state";
 import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../shell/game-runtime-state";
 import type { LiveTrainingHost } from "../training/training-host";
 import { projectLiveCanonicalEnemy } from "../world/canonical-enemy-projection";
@@ -21,8 +24,17 @@ export interface LiveCanonicalStateSources {
 
 /** Captures the live world's canonical gameplay state at a tick with the given authoritative input. */
 export function createLiveCanonicalStateCapture(sources: LiveCanonicalStateSources) {
-  return (tick: number, input: AuthoritativeInputState) => captureCanonicalGameplayState(tick, input.snapshot(), sources.run(), sources.player(),
-    sources.blade(), sources.enemies().map(projectLiveCanonicalEnemy), sources.environment.snapshot(), sources.tutorial.captureSession());
+  return (tick: number, input: AuthoritativeInputState) =>
+    captureCanonicalGameplayState(
+      tick,
+      input.snapshot(),
+      sources.run(),
+      sources.player(),
+      sources.blade(),
+      sources.enemies().map(projectLiveCanonicalEnemy),
+      sources.environment.snapshot(),
+      sources.tutorial.captureSession(),
+    );
 }
 
 export type LiveCanonicalStateCapture = ReturnType<typeof createLiveCanonicalStateCapture>;

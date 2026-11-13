@@ -1,6 +1,11 @@
 import { isWorldScreen, screenResetsScrollOnEnter } from "../domain/screen-catalog";
 
-export interface ScreenRectangle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
+export interface ScreenRectangle {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
 
 export interface RenderPipelinePorts<Screen extends string> {
   readonly canvas: HTMLCanvasElement;

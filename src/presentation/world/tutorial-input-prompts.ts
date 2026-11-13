@@ -5,16 +5,52 @@ export interface TutorialInputPrompt {
   readonly keys: readonly string[];
 }
 /** Semantic gold edges are labelled by the active device, never baked into the trace. */
-export function tutorialGoldGlyphs(actions: readonly string[], mode: InputMode, gamepad: Pick<BrowserGamepad, "bindingLabel">): readonly string[] {
-  const keyboard: Readonly<Record<string, string>> = { left: "A", right: "D", up: "W", down: "S", jump: "SPACE", dash: "SHIFT", throw: "RMB", primary: "LMB", swing: "MOUSE SWING", aim: "MOUSE AIM" };
-  const touch: Readonly<Record<string, string>> = { left: "MOVE ←", right: "MOVE →", up: "MOVE ↑", down: "MOVE ↓", jump: "JUMP", dash: "DASH", throw: "THROW", primary: "HOLD", swing: "DRAG SWING", aim: "AIM" };
-  const pad: Readonly<Record<string, string>> = { left: "LS ←", right: "LS →", up: "LS ↑", down: "LS ↓", jump: gamepad.bindingLabel("jump"), dash: gamepad.bindingLabel("dash"), throw: gamepad.bindingLabel("throw"), primary: gamepad.bindingLabel("tether"), swing: "RS SWING", aim: "RS AIM" };
+export function tutorialGoldGlyphs(
+  actions: readonly string[],
+  mode: InputMode,
+  gamepad: Pick<BrowserGamepad, "bindingLabel">,
+): readonly string[] {
+  const keyboard: Readonly<Record<string, string>> = {
+    left: "A",
+    right: "D",
+    up: "W",
+    down: "S",
+    jump: "SPACE",
+    dash: "SHIFT",
+    throw: "RMB",
+    primary: "LMB",
+    swing: "MOUSE SWING",
+    aim: "MOUSE AIM",
+  };
+  const touch: Readonly<Record<string, string>> = {
+    left: "MOVE ←",
+    right: "MOVE →",
+    up: "MOVE ↑",
+    down: "MOVE ↓",
+    jump: "JUMP",
+    dash: "DASH",
+    throw: "THROW",
+    primary: "HOLD",
+    swing: "DRAG SWING",
+    aim: "AIM",
+  };
+  const pad: Readonly<Record<string, string>> = {
+    left: "LS ←",
+    right: "LS →",
+    up: "LS ↑",
+    down: "LS ↓",
+    jump: gamepad.bindingLabel("jump"),
+    dash: gamepad.bindingLabel("dash"),
+    throw: gamepad.bindingLabel("throw"),
+    primary: gamepad.bindingLabel("tether"),
+    swing: "RS SWING",
+    aim: "RS AIM",
+  };
   const labels = mode === "touch" ? touch : mode === "gamepad" ? pad : keyboard;
   return actions.map((action) => labels[action] ?? action);
 }
 
-const keyboardPrompt = (description: string, keys: readonly string[]): TutorialInputPrompt =>
-  ({ description, keys });
+const keyboardPrompt = (description: string, keys: readonly string[]): TutorialInputPrompt => ({ description, keys });
 
 /**
  * Projects a semantic tutorial block onto the device that currently owns input.
@@ -30,18 +66,46 @@ export function tutorialInputPrompt(
   gamepad: Pick<BrowserGamepad, "bindingLabel">,
 ): TutorialInputPrompt {
   if (mode === "keyboard" || mode === "mouse") return keyboardPrompt(description, keys);
-  if (title.endsWith(" ENCOUNTER") || title.includes(" · PHASE ")) return { description, keys: mode === "touch"
-    ? ["DRAG — SWING", "DASH", "THROW"] : ["RS — SWING", gamepad.bindingLabel("dash"), gamepad.bindingLabel("throw")] };
+  if (title.endsWith(" ENCOUNTER") || title.includes(" · PHASE "))
+    return {
+      description,
+      keys:
+        mode === "touch"
+          ? ["DRAG — SWING", "DASH", "THROW"]
+          : ["RS — SWING", gamepad.bindingLabel("dash"), gamepad.bindingLabel("throw")],
+    };
   if (title.endsWith(" ANNEX")) {
-    const projected = keys.map((key) => mode === "touch"
-      ? ({ MOUSE: "DRAG — SWING", "MOUSE UP": "DRAG ↑", "MOUSE DOWN": "DRAG ↓", RMB: "THROW", LMB: "TETHER / FIRE", W: "JUMP" } as Readonly<Record<string, string>>)[key] ?? key
-      : ({ MOUSE: "RS — SWING", "MOUSE UP": "RS ↑", "MOUSE DOWN": "RS ↓", RMB: gamepad.bindingLabel("throw"), LMB: gamepad.bindingLabel("tether"), W: gamepad.bindingLabel("jump") } as Readonly<Record<string, string>>)[key] ?? key);
+    const projected = keys.map((key) =>
+      mode === "touch"
+        ? ((
+            {
+              MOUSE: "DRAG — SWING",
+              "MOUSE UP": "DRAG ↑",
+              "MOUSE DOWN": "DRAG ↓",
+              RMB: "THROW",
+              LMB: "TETHER / FIRE",
+              W: "JUMP",
+            } as Readonly<Record<string, string>>
+          )[key] ?? key)
+        : ((
+            {
+              MOUSE: "RS — SWING",
+              "MOUSE UP": "RS ↑",
+              "MOUSE DOWN": "RS ↓",
+              RMB: gamepad.bindingLabel("throw"),
+              LMB: gamepad.bindingLabel("tether"),
+              W: gamepad.bindingLabel("jump"),
+            } as Readonly<Record<string, string>>
+          )[key] ?? key),
+    );
     return { description, keys: projected };
   }
   if (title === "FIELD TEST" && keys.length === 0) return { description, keys: [] };
-  if (title === "FIELD TEST" && keys.includes("MOUSE UP")) return {
-    description, keys: mode === "touch" ? ["DRAG ↑", "DRAG — SWING"] : ["RS ↑", "RS — SWING"],
-  };
+  if (title === "FIELD TEST" && keys.includes("MOUSE UP"))
+    return {
+      description,
+      keys: mode === "touch" ? ["DRAG ↑", "DRAG — SWING"] : ["RS ↑", "RS — SWING"],
+    };
 
   if (mode === "touch") {
     const prompts: Readonly<Record<string, TutorialInputPrompt>> = {

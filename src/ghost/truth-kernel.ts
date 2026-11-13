@@ -37,15 +37,16 @@ export interface GhostEventPayloadSchema {
   readonly required: Readonly<Record<string, "string" | "number" | "boolean" | "string-array">>;
 }
 
-export const GHOST_EVENT_PAYLOAD_SCHEMAS: Readonly<Partial<Record<TearEventId, GhostEventPayloadSchema>>> = Object.freeze({
-  "run.started": { required: { mode: "string", difficulty: "string", weapon: "string" } },
-  "blade.hit": { required: { damage: "number", speed: "number" } },
-  "combat.kill": { required: { enemyKind: "string", cause: "string" } },
-  "boss.phase-changed": { required: { bossId: "string", from: "string", to: "string" } },
-  "draft.selected": { required: { choiceId: "string", tier: "number" } },
-  "system.exception": { required: { code: "string", message: "string" } },
-  "agent.objective-changed": { required: { objective: "string", confidence: "number" } },
-});
+export const GHOST_EVENT_PAYLOAD_SCHEMAS: Readonly<Partial<Record<TearEventId, GhostEventPayloadSchema>>> =
+  Object.freeze({
+    "run.started": { required: { mode: "string", difficulty: "string", weapon: "string" } },
+    "blade.hit": { required: { damage: "number", speed: "number" } },
+    "combat.kill": { required: { enemyKind: "string", cause: "string" } },
+    "boss.phase-changed": { required: { bossId: "string", from: "string", to: "string" } },
+    "draft.selected": { required: { choiceId: "string", tier: "number" } },
+    "system.exception": { required: { code: "string", message: "string" } },
+    "agent.objective-changed": { required: { objective: "string", confidence: "number" } },
+  });
 
 export function validateGhostEventPayload(event: TearCausalEventV1): readonly string[] {
   const schema = GHOST_EVENT_PAYLOAD_SCHEMAS[event.type];
@@ -53,9 +54,10 @@ export function validateGhostEventPayload(event: TearCausalEventV1): readonly st
   const issues: string[] = [];
   for (const [field, expected] of Object.entries(schema.required)) {
     const value = event.payload[field];
-    const valid = expected === "string-array"
-      ? Array.isArray(value) && value.every((entry) => typeof entry === "string")
-      : typeof value === expected && (expected !== "number" || Number.isFinite(value));
+    const valid =
+      expected === "string-array"
+        ? Array.isArray(value) && value.every((entry) => typeof entry === "string")
+        : typeof value === expected && (expected !== "number" || Number.isFinite(value));
     if (!valid) issues.push(`${event.type}.${field} must be ${expected}`);
   }
   return Object.freeze(issues);
@@ -66,17 +68,22 @@ export class GhostTimeline {
   readonly #byId: ReadonlyMap<string, GhostTimelineEntry>;
 
   constructor(events: readonly TearCausalEventV1[]) {
-    const entries = events.map((event) => {
-      if (!Number.isSafeInteger(event.tick) || event.tick < 0) throw new TypeError(`event ${event.id} has an invalid integer tick`);
-      EVENT_REGISTRY.assert(event.type);
-      const payloadIssues = validateGhostEventPayload(event);
-      if (payloadIssues.length > 0) throw new TypeError(payloadIssues.join("; "));
-      return Object.freeze({ tick: event.tick, phase: event.phase, sequence: event.sequence, event });
-    }).sort((left, right) =>
-      left.tick - right.tick
-      || withinTickPhaseOrder(left.phase) - withinTickPhaseOrder(right.phase)
-      || left.sequence - right.sequence
-      || left.event.id.localeCompare(right.event.id));
+    const entries = events
+      .map((event) => {
+        if (!Number.isSafeInteger(event.tick) || event.tick < 0)
+          throw new TypeError(`event ${event.id} has an invalid integer tick`);
+        EVENT_REGISTRY.assert(event.type);
+        const payloadIssues = validateGhostEventPayload(event);
+        if (payloadIssues.length > 0) throw new TypeError(payloadIssues.join("; "));
+        return Object.freeze({ tick: event.tick, phase: event.phase, sequence: event.sequence, event });
+      })
+      .sort(
+        (left, right) =>
+          left.tick - right.tick ||
+          withinTickPhaseOrder(left.phase) - withinTickPhaseOrder(right.phase) ||
+          left.sequence - right.sequence ||
+          left.event.id.localeCompare(right.event.id),
+      );
     const byId = new Map(entries.map((entry) => [entry.event.id, entry]));
     if (byId.size !== entries.length) throw new TypeError("GhostTimeline event IDs must be unique");
     for (const entry of entries) {
@@ -90,7 +97,9 @@ export class GhostTimeline {
     this.#byId = byId;
   }
 
-  entries(): readonly GhostTimelineEntry[] { return this.#entries; }
+  entries(): readonly GhostTimelineEntry[] {
+    return this.#entries;
+  }
 
   range(fromTick: number, toTick: number): readonly GhostTimelineEntry[] {
     return Object.freeze(this.#entries.filter((entry) => entry.tick >= fromTick && entry.tick <= toTick));
@@ -156,7 +165,15 @@ export interface GhostNegotiatedProfile {
 }
 
 const TRACK_SURVIVAL_PRIORITY = Object.freeze([
-  "manifest", "commands", "rng", "events", "result", "keyframes", "visual-player", "visual-entities", "presentation",
+  "manifest",
+  "commands",
+  "rng",
+  "events",
+  "result",
+  "keyframes",
+  "visual-player",
+  "visual-entities",
+  "presentation",
 ]);
 
 export function negotiateRecordingProfile(
@@ -165,7 +182,9 @@ export function negotiateRecordingProfile(
 ): GhostNegotiatedProfile {
   const supported = new Set(environment.supportedTracks);
   const requested = Object.entries(profile.tracks).filter(([, need]) => need !== "disabled");
-  const missingRequired = requested.filter(([track, need]) => need === "required" && !supported.has(track)).map(([track]) => track);
+  const missingRequired = requested
+    .filter(([track, need]) => need === "required" && !supported.has(track))
+    .map(([track]) => track);
   const eligible = requested.filter(([track]) => supported.has(track)).map(([track]) => track);
   eligible.sort((left, right) => {
     const leftIndex = TRACK_SURVIVAL_PRIORITY.indexOf(left);
@@ -180,9 +199,14 @@ export function negotiateRecordingProfile(
     acceptedTracks: Object.freeze(accepted),
     droppedTracks: Object.freeze(dropped),
     viable: missingRequired.length === 0 && !requiredDropped,
-    reason: missingRequired.length > 0
-      ? `required tracks unsupported: ${missingRequired.join(", ")}`
-      : requiredDropped ? "capacity dropped a required track" : dropped.length > 0 ? "optional tracks degraded by capacity" : "all requested tracks accepted",
+    reason:
+      missingRequired.length > 0
+        ? `required tracks unsupported: ${missingRequired.join(", ")}`
+        : requiredDropped
+          ? "capacity dropped a required track"
+          : dropped.length > 0
+            ? "optional tracks degraded by capacity"
+            : "all requested tracks accepted",
   });
 }
 
@@ -217,43 +241,70 @@ export function resolveTridentPrecedence(
   purpose: "watch" | "seek" | "resume" | "verify",
 ): Readonly<{ selected?: GhostTruthKind; reason: string }> {
   if (purpose === "resume") {
-    if (trident.command.status === "verified" && trident.command.resumable) return { selected: "command", reason: "verified command truth has resume precedence" };
-    if (trident.state.status === "verified" && trident.state.resumable) return { selected: "state", reason: "verified state truth provides a resumable checkpoint" };
+    if (trident.command.status === "verified" && trident.command.resumable)
+      return { selected: "command", reason: "verified command truth has resume precedence" };
+    if (trident.state.status === "verified" && trident.state.resumable)
+      return { selected: "state", reason: "verified state truth provides a resumable checkpoint" };
     return { reason: "no verified resumable truth track" };
   }
   if (purpose === "seek") {
-    if (trident.state.available && trident.state.seekable) return { selected: "state", reason: "state keyframes have seek precedence" };
-    if (trident.visual.available && trident.visual.seekable) return { selected: "visual", reason: "visual samples provide degraded seek" };
+    if (trident.state.available && trident.state.seekable)
+      return { selected: "state", reason: "state keyframes have seek precedence" };
+    if (trident.visual.available && trident.visual.seekable)
+      return { selected: "visual", reason: "visual samples provide degraded seek" };
     return { reason: "no seekable truth track" };
   }
   if (purpose === "verify") {
-    if (trident.command.status === "verified") return { selected: "command", reason: "verified deterministic commands have verification precedence" };
-    if (trident.state.status === "verified") return { selected: "state", reason: "verified state truth has verification precedence" };
+    if (trident.command.status === "verified")
+      return { selected: "command", reason: "verified deterministic commands have verification precedence" };
+    if (trident.state.status === "verified")
+      return { selected: "state", reason: "verified state truth has verification precedence" };
     return { reason: "visual or unverified tracks cannot establish simulation verification" };
   }
   if (trident.visual.available) return { selected: "visual", reason: "visual truth has watch precedence" };
   if (trident.state.available) return { selected: "state", reason: "state projection supplies degraded watch mode" };
-  if (trident.command.available) return { selected: "command", reason: "commands require compatible simulation playback" };
+  if (trident.command.available)
+    return { selected: "command", reason: "commands require compatible simulation playback" };
   return { reason: "Ghost contains no watchable truth track" };
 }
 
 function qualityFor(trident: GhostReplayTrident, legacy: boolean): GhostQualityCard {
   const dimension = (score: number, reason: string): GhostQualityDimension => Object.freeze({ score, reason });
   return Object.freeze({
-    fidelity: dimension(trident.visual.available ? 1 : trident.state.available ? 0.75 : 0.5, "derived only from declared truth tracks"),
+    fidelity: dimension(
+      trident.visual.available ? 1 : trident.state.available ? 0.75 : 0.5,
+      "derived only from declared truth tracks",
+    ),
     integrity: dimension(legacy ? 0.35 : 1, legacy ? "legacy source lacks native chunk integrity" : "native root hash"),
     compatibility: dimension(legacy ? 0.9 : 1, legacy ? "legacy adapter required" : "native schema"),
-    completeness: dimension([trident.command, trident.state, trident.visual].filter((entry) => entry.available).length / 3, "independent track coverage"),
-    seekability: dimension(trident.state.seekable ? 1 : trident.visual.seekable ? 0.6 : 0, "state or visual seek capability"),
-    resumability: dimension(trident.command.resumable || trident.state.resumable ? 1 : 0, "verified resumable truth required"),
-    eligibility: dimension(legacy ? 0 : 1, legacy ? "legacy visual is ineligible for verified competition" : "native evidence"),
-    coachingRichness: dimension(trident.command.available && trident.state.available ? 1 : 0.25, "commands plus state support causal coaching"),
+    completeness: dimension(
+      [trident.command, trident.state, trident.visual].filter((entry) => entry.available).length / 3,
+      "independent track coverage",
+    ),
+    seekability: dimension(
+      trident.state.seekable ? 1 : trident.visual.seekable ? 0.6 : 0,
+      "state or visual seek capability",
+    ),
+    resumability: dimension(
+      trident.command.resumable || trident.state.resumable ? 1 : 0,
+      "verified resumable truth required",
+    ),
+    eligibility: dimension(
+      legacy ? 0 : 1,
+      legacy ? "legacy visual is ineligible for verified competition" : "native evidence",
+    ),
+    coachingRichness: dimension(
+      trident.command.available && trident.state.available ? 1 : 0.25,
+      "commands plus state support causal coaching",
+    ),
     creatorRichness: dimension(trident.visual.available ? 1 : 0.4, "presentation tracks improve authoring"),
     privacy: dimension(1, "local no-training default"),
   });
 }
 
-export function createGhostV3(input: Omit<GhostEnvelopeV3, "format" | "schemaVersion" | "quality" | "rootHash">): GhostEnvelopeV3 {
+export function createGhostV3(
+  input: Omit<GhostEnvelopeV3, "format" | "schemaVersion" | "quality" | "rootHash">,
+): GhostEnvelopeV3 {
   const quality = qualityFor(input.trident, input.sourceClassification !== "native-v3");
   const rootHash = stableVerificationHash({
     id: input.id,
@@ -281,10 +332,23 @@ export function migrateLegacyReplayToGhost(value: unknown): GhostEnvelopeV3 {
     rulesetVersion: replay.rulesetVersion,
     sourceClassification: replay.sourceClassification,
     trident: Object.freeze({
-      command: capability("command", "declared-unverified", replay.actions.length > 0, false, false,
-        "legacy actions lack a verified Final Five weapon schema and checkpoint verification"),
+      command: capability(
+        "command",
+        "declared-unverified",
+        replay.actions.length > 0,
+        false,
+        false,
+        "legacy actions lack a verified Final Five weapon schema and checkpoint verification",
+      ),
       state: capability("state", "absent", false, false, false, "legacy replay has only a final hash"),
-      visual: capability("visual", "legacy-visual", true, false, true, "watchable legacy presentation; never simulation verification"),
+      visual: capability(
+        "visual",
+        "legacy-visual",
+        true,
+        false,
+        true,
+        "watchable legacy presentation; never simulation verification",
+      ),
     }),
     actions: replay.actions,
     snapshots: [],
@@ -303,18 +367,24 @@ function legacyReplayPreview(value: unknown): Readonly<{
   const source = parseLegacyRecord(value);
   if (source === null) throw new TypeError("legacy replay is invalid: expected a replay object");
   const legacyV1 = source.schemaVersion === 1;
-  const rulesetVersion = typeof source.rulesetVersion === "string" && source.rulesetVersion.length > 0
-    ? source.rulesetVersion : "legacy-ruleset-unknown";
+  const rulesetVersion =
+    typeof source.rulesetVersion === "string" && source.rulesetVersion.length > 0
+      ? source.rulesetVersion
+      : "legacy-ruleset-unknown";
   const runId = legacyV1
     ? `legacy-${stringValue(source.seed, "unknown")}`
     : typeof (source.run as Record<string, unknown> | undefined)?.runId === "string"
-      ? (source.run as Record<string, unknown>).runId as string : "legacy-run-unknown";
+      ? ((source.run as Record<string, unknown>).runId as string)
+      : "legacy-run-unknown";
   const actions = legacyActions(source.actions, legacyV1);
   const final = legacyV1
     ? { tick: integer(source.finalTick), stateHash: stringValue(source.finalHash, "legacy-final-hash") }
     : legacyFinal(source.final);
   return Object.freeze({
-    run: Object.freeze({ runId }), rulesetVersion, actions: Object.freeze(actions), final: Object.freeze(final),
+    run: Object.freeze({ runId }),
+    rulesetVersion,
+    actions: Object.freeze(actions),
+    final: Object.freeze(final),
     sourceClassification: legacyV1 ? "legacy-v1" : "legacy-v2",
   });
 }
@@ -322,12 +392,15 @@ function legacyReplayPreview(value: unknown): Readonly<{
 function parseLegacyRecord(value: unknown): Record<string, unknown> | null {
   let parsed = value;
   if (typeof parsed === "string") {
-    try { parsed = JSON.parse(parsed) as unknown; } catch { return null; }
+    try {
+      parsed = JSON.parse(parsed) as unknown;
+    } catch {
+      return null;
+    }
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
   const outer = parsed as Record<string, unknown>;
-  const recording = outer.schema === "tear.replay" && isRecord(outer.recording)
-    ? outer.recording : outer;
+  const recording = outer.schema === "tear.replay" && isRecord(outer.recording) ? outer.recording : outer;
   return recording;
 }
 
@@ -349,14 +422,21 @@ function legacyActions(value: unknown, legacyV1: boolean): ReplayActionEnvelope[
 }
 
 function legacyFinal(value: unknown): Readonly<{ tick: number; stateHash: string }> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return { tick: 0, stateHash: "legacy-final-hash" };
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return { tick: 0, stateHash: "legacy-final-hash" };
   const record = value as Record<string, unknown>;
   return { tick: integer(record.tick), stateHash: stringValue(record.stateHash, "legacy-final-hash") };
 }
 
-function integer(value: unknown): number { return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0; }
-function stringValue(value: unknown, fallback: string): string { return typeof value === "string" && value.length > 0 ? value : fallback; }
-function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+function integer(value: unknown): number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+function stringValue(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.length > 0 ? value : fallback;
+}
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 export interface GhostRoundTripReport {
   readonly record: boolean;
@@ -371,7 +451,7 @@ export function verifyGhostRoundTrips(ghost: GhostEnvelopeV3): GhostRoundTripRep
   const serialized = JSON.stringify(ghost);
   const imported: unknown = JSON.parse(serialized);
   const importedRecord: Readonly<Record<string, unknown>> =
-    typeof imported === "object" && imported !== null ? imported as Readonly<Record<string, unknown>> : {};
+    typeof imported === "object" && imported !== null ? (imported as Readonly<Record<string, unknown>>) : {};
   const timeline = new GhostTimeline(ghost.events);
   const seekTick = ghost.snapshots[0]?.tick ?? ghost.events[0]?.tick ?? 0;
   const forkHash = stableVerificationHash({ actions: ghost.actions, snapshots: ghost.snapshots, events: ghost.events });
@@ -385,9 +465,10 @@ export function verifyGhostRoundTrips(ghost: GhostEnvelopeV3): GhostRoundTripRep
     seek: resolveTridentPrecedence(ghost.trident, "seek").selected !== undefined || seekTick === 0,
     zeroModificationFork: forkHash === originalHash,
     practice: resolveTridentPrecedence(ghost.trident, "resume").selected !== undefined,
-    exportImport: importedRecord.format === GHOST_FORMAT
-      && importedRecord.schemaVersion === GHOST_SCHEMA_VERSION
-      && importedRecord.rootHash === ghost.rootHash,
+    exportImport:
+      importedRecord.format === GHOST_FORMAT &&
+      importedRecord.schemaVersion === GHOST_SCHEMA_VERSION &&
+      importedRecord.rootHash === ghost.rootHash,
     migration: ghost.sourceClassification === "native-v3" || ghost.quality.integrity.score < 1,
   });
 }

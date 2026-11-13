@@ -53,8 +53,12 @@ interface PlaygroundPort {
   reset(): void;
 }
 
-interface TutorialPort { start(): void }
-interface InstalledRunStartController { start(mode: RunMode, difficulty: RunDifficulty): GameRun }
+interface TutorialPort {
+  start(): void;
+}
+interface InstalledRunStartController {
+  start(mode: RunMode, difficulty: RunDifficulty): GameRun;
+}
 
 export interface LiveOpeningCaptureBoundary {
   readonly phase: "opening-initialized-before-run-start";
@@ -78,7 +82,12 @@ interface RunStartHostContext {
   readonly environment: EnvironmentRuntimeState;
   readonly resetAuthoritativeClocks: () => void;
   readonly resetCombatIdentity: () => void;
-  readonly race?: Readonly<{ active(): boolean; apply(): boolean; finalize(): void; discovery(ordinary: readonly string[]): readonly string[] }>;
+  readonly race?: Readonly<{
+    active(): boolean;
+    apply(): boolean;
+    finalize(): void;
+    discovery(ordinary: readonly string[]): readonly string[];
+  }>;
   readonly createRunSeed?: () => number;
   readonly loadStage: (index: number) => void;
   readonly stage: StagePort;
@@ -110,7 +119,9 @@ interface RunStartHostContext {
 }
 
 /** Owns the complete new-run transaction and its world-reset side effects. */
-export function createLiveRunStartHost(context: RunStartHostContext): LiveRunStartController<ReturnType<GameRuntimeDependencies["newMods"]>> {
+export function createLiveRunStartHost(
+  context: RunStartHostContext,
+): LiveRunStartController<ReturnType<GameRuntimeDependencies["newMods"]>> {
   const { dependencies, state } = context;
   const { CONFIG, REMOTE, GHOST, PROFILE, META, SFX, GAMEPLAY_EVENTS, Input, createRunSeed, newMods } = dependencies;
   const replacement = new RunReplacementGuard({
@@ -121,14 +132,23 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       if (activeRun !== null && lifecycle.sessionId !== null && lifecycle.phase !== "terminated") {
         context.lifecycle.terminate("quit");
         GAMEPLAY_EVENTS.emit({
-        kind: "run", transition: "abandoned", runId: lifecycle.sessionId,
-          mode: activeRun.mode, difficulty: activeRun.diff, weaponId: activeRun.weaponId,
-          wave: activeRun.wave, score: activeRun.score,
-          runTimeSeconds: activeRun.runTime, reason: "replaced-by-new-run",
+          kind: "run",
+          transition: "abandoned",
+          runId: lifecycle.sessionId,
+          mode: activeRun.mode,
+          difficulty: activeRun.diff,
+          weaponId: activeRun.weaponId,
+          wave: activeRun.wave,
+          score: activeRun.score,
+          runTimeSeconds: activeRun.runTime,
+          reason: "replaced-by-new-run",
         });
       }
-      try { GHOST.stopRec({ interruptedByNewRun: true }); }
-      finally { Input.stopSemanticRecording(); }
+      try {
+        GHOST.stopRec({ interruptedByNewRun: true });
+      } finally {
+        Input.stopSemanticRecording();
+      }
     },
   });
   let startingPlan: RunStartPlan | null = null;
@@ -136,8 +156,11 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
   const controller = new LiveRunStartController({
     replaceActiveRun: () => {
       context.discardOpeningCapture?.();
-      try { replacement.sealActiveRecording(); }
-      finally { Input.stopSemanticRecording(); }
+      try {
+        replacement.sealActiveRecording();
+      } finally {
+        Input.stopSemanticRecording();
+      }
     },
     initializeWorld: (mode, difficulty) => {
       context.clearPracticeSession?.();
@@ -152,10 +175,17 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       const weaponId = migrateWeaponSelection(state.selectedWeapon());
       state.setSelectedWeapon(weaponId);
       context.applySettings();
-      try { SFX.setVoidDescent(0, 0.05); SFX.setMusicDuck(1, 0.12); } catch { /* optional audio backend */ }
-      const difficulties = CONFIG.difficulties.flatMap((definition) => isRunDifficulty(definition.id)
-        ? [{ id: definition.id, oneHit: definition.oneHit === true, mods: definition.mods }]
-        : []);
+      try {
+        SFX.setVoidDescent(0, 0.05);
+        SFX.setMusicDuck(1, 0.12);
+      } catch {
+        /* optional audio backend */
+      }
+      const difficulties = CONFIG.difficulties.flatMap((definition) =>
+        isRunDifficulty(definition.id)
+          ? [{ id: definition.id, oneHit: definition.oneHit === true, mods: definition.mods }]
+          : [],
+      );
       startingPlan = planRunStart(difficulty, difficulties, REMOTE);
       CONFIG.player.dmgTakenMult *= startingPlan.playerDamageMultiplier;
       const player = context.createPlayer(context.width * 0.5, CONFIG.world.groundY - 60);
@@ -173,8 +203,16 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       context.services.clock.reset();
       const biomeTracker = PROFILE.data.stats._biomes;
       const discoveredBiomes = Object.keys((biomeTracker ?? {}) as Record<string, unknown>);
-      return { weaponId, mods: newMods(), scaling: startingPlan.scaling,
-        achievementSnapshot: Object.keys(PROFILE.data.ach), variantDiscovery: [...(context.race?.discovery(resolveDiscoveredVariantIds(mode, discoveredBiomes)) ?? resolveDiscoveredVariantIds(mode, discoveredBiomes))] };
+      return {
+        weaponId,
+        mods: newMods(),
+        scaling: startingPlan.scaling,
+        achievementSnapshot: Object.keys(PROFILE.data.ach),
+        variantDiscovery: [
+          ...(context.race?.discovery(resolveDiscoveredVariantIds(mode, discoveredBiomes)) ??
+            resolveDiscoveredVariantIds(mode, discoveredBiomes)),
+        ],
+      };
     },
     resetAuthoritativeClocks: context.resetAuthoritativeClocks,
     finishWorldReset: () => {
@@ -184,16 +222,26 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       context.story.resetChapter();
     },
     createRunSeed: context.createRunSeed ?? createRunSeed,
-    resetRunRandom: (seed) => { context.services.random.resetRun(seed); },
+    resetRunRandom: (seed) => {
+      context.services.random.resetRun(seed);
+    },
     installSession: (session) => {
       const run: GameRun = {
-        ...session, diffDmg: 1, bossIdx: 0, bossOrder: [], curBoss: null, voidScroll: null,
-        pg: {}, reservedUpgrade: null,
+        ...session,
+        diffDmg: 1,
+        bossIdx: 0,
+        bossOrder: [],
+        curBoss: null,
+        voidScroll: null,
+        pg: {},
+        reservedUpgrade: null,
       };
       context.installRun(run);
       context.runInstalled?.(run);
     },
-    startLifecycle: (sessionId) => { context.lifecycle.start(sessionId); },
+    startLifecycle: (sessionId) => {
+      context.lifecycle.start(sessionId);
+    },
     exposeDebugState: () => {
       // The weapon inspector is an engineering global: never installed in release builds.
       if (!dependencies.surfaces.allows("global:weapon-debug") || (!context.testMode && !import.meta.env.DEV)) return;
@@ -202,61 +250,158 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
         const player = requirePlayer(state);
         const blade = requireBlade(state);
         return {
-          weapon: run.weaponId, stats: { ...run.weaponStats }, events: run.weaponLog.slice(),
+          weapon: run.weaponId,
+          stats: { ...run.weaponStats },
+          events: run.weaponLog.slice(),
           player: { x: player.x, y: player.y, vx: player.vx, vy: player.vy },
-          blade: { state: blade.state, throwId: blade.throwId, x: blade.x, y: blade.y,
-            tipX: blade.tipX, tipY: blade.tipY, tipVX: blade.tipVX, tipVY: blade.tipVY, tipSpeed: blade.tipSpeed,
-            aimX: blade.aimX, aimY: blade.aimY,
-            vx: blade.vx, vy: blade.vy, flyTime: blade.flyTime, secondaryActive: blade.secondaryActive,
-            impactResolved: blade.impactResolved, pierced: blade.pierced.size, tension: blade.tension,
-            linkTime: blade.linkT, chambers: blade.riftChambers, chamberCooldown: blade.riftChamberCooldown,
+          blade: {
+            state: blade.state,
+            throwId: blade.throwId,
+            x: blade.x,
+            y: blade.y,
+            tipX: blade.tipX,
+            tipY: blade.tipY,
+            tipVX: blade.tipVX,
+            tipVY: blade.tipVY,
+            tipSpeed: blade.tipSpeed,
+            aimX: blade.aimX,
+            aimY: blade.aimY,
+            vx: blade.vx,
+            vy: blade.vy,
+            flyTime: blade.flyTime,
+            secondaryActive: blade.secondaryActive,
+            impactResolved: blade.impactResolved,
+            pierced: blade.pierced.size,
+            tension: blade.tension,
+            linkTime: blade.linkT,
+            chambers: blade.riftChambers,
+            chamberCooldown: blade.riftChamberCooldown,
             actionRange: Number.isFinite(blade.actionRange()) ? blade.actionRange() : null,
-            actionDistance: blade.actionDistance(player) },
-          enemies: state.enemies().filter((enemy) => !enemy.dead).slice(0, 24).map((enemy) => {
-            const authored = enemy as typeof enemy & { state?: string; stateT?: number; atk?: string; atkT?: number; phase?: number;
-              phaseMarker?: number; mode?: string; cinematicT?: number; cinematicRequest?: unknown;
-              requestVoidCinematic?: boolean; isMirrorBoss?: boolean; _live?: boolean;
-              packRole?: string; packFlank?: number; packAttackAuthorized?: boolean; pounceTargetX?: number;
-              variant?: string; variantName?: string; behavior?: string; rimeRebounds?: number;
-              snowWakeT?: number; glacierCracked?: boolean; attackCursor?: number; attackStep?: number;
-              attackSequence?: number; environmentSequence?: number; routeProgress?: number; trueRouteIndex?: number;
-              batonStrike?: number; auroraBossChargeActive?: boolean; parryOutcome?: string;
-              routeTelegraph?: readonly Readonly<{ x: number; y: number }>[];
-              candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[])[] };
-            return { kind: enemy.kind, x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, maxHp: enemy.maxHp,
-              stun: enemy.stun, spawnT: enemy.spawnT, introT: enemy.introT ?? 0, aliveT: enemy.aliveT,
-              boss: enemy.isBoss, bossId: enemy.bossId, state: authored.state, stateT: authored.stateT,
-              atk: authored.atk, atkT: authored.atkT,
-              phase: authored.isMirrorBoss === true ? dependencies.Mirror.phase : authored.phase,
-              phaseMarker: authored.phaseMarker, mode: authored.mode,
-              cinematicT: authored.cinematicT, cinematicPending: authored.cinematicRequest != null,
-              voidPending: authored.requestVoidCinematic === true, mirrorBoss: authored.isMirrorBoss,
-              live: authored._live, bound: enemy.boundT || 0,
-              variant: authored.variant, variantName: authored.variantName, behavior: authored.behavior,
-              rimeRebounds: authored.rimeRebounds, snowWakeT: authored.snowWakeT,
-              glacierCracked: authored.glacierCracked, enraged: enemy.enraged,
-              attackCursor: authored.attackCursor, attackStep: authored.attackStep,
-              attackSequence: authored.attackSequence, environmentSequence: authored.environmentSequence,
-              routeProgress: authored.routeProgress, trueRouteIndex: authored.trueRouteIndex,
-              batonStrike: authored.batonStrike, auroraBossChargeActive: authored.auroraBossChargeActive,
-              parryOutcome: authored.parryOutcome, routeTelegraph: authored.routeTelegraph,
-              candidateRoutes: authored.candidateRoutes,
-              packRole: authored.packRole, packFlank: authored.packFlank,
-              packAttackAuthorized: authored.packAttackAuthorized, pounceTargetX: authored.pounceTargetX };
-          }),
-          projectiles: state.projectiles().filter((projectile) => !projectile.dead).slice(0, 48).map((projectile) => ({
-            kind: projectile.kind, x: projectile.x, y: projectile.y, vx: projectile.vx, vy: projectile.vy,
-            deflected: projectile.deflected, perfect: projectile.perfect, counterplay: projectile.counterplay,
-          })),
+            actionDistance: blade.actionDistance(player),
+          },
+          enemies: state
+            .enemies()
+            .filter((enemy) => !enemy.dead)
+            .slice(0, 24)
+            .map((enemy) => {
+              const authored = enemy as typeof enemy & {
+                state?: string;
+                stateT?: number;
+                atk?: string;
+                atkT?: number;
+                phase?: number;
+                phaseMarker?: number;
+                mode?: string;
+                cinematicT?: number;
+                cinematicRequest?: unknown;
+                requestVoidCinematic?: boolean;
+                isMirrorBoss?: boolean;
+                _live?: boolean;
+                packRole?: string;
+                packFlank?: number;
+                packAttackAuthorized?: boolean;
+                pounceTargetX?: number;
+                variant?: string;
+                variantName?: string;
+                behavior?: string;
+                rimeRebounds?: number;
+                snowWakeT?: number;
+                glacierCracked?: boolean;
+                attackCursor?: number;
+                attackStep?: number;
+                attackSequence?: number;
+                environmentSequence?: number;
+                routeProgress?: number;
+                trueRouteIndex?: number;
+                batonStrike?: number;
+                auroraBossChargeActive?: boolean;
+                parryOutcome?: string;
+                routeTelegraph?: readonly Readonly<{ x: number; y: number }>[];
+                candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[])[];
+              };
+              return {
+                kind: enemy.kind,
+                x: enemy.x,
+                y: enemy.y,
+                vx: enemy.vx,
+                vy: enemy.vy,
+                hp: enemy.hp,
+                maxHp: enemy.maxHp,
+                stun: enemy.stun,
+                spawnT: enemy.spawnT,
+                introT: enemy.introT ?? 0,
+                aliveT: enemy.aliveT,
+                boss: enemy.isBoss,
+                bossId: enemy.bossId,
+                state: authored.state,
+                stateT: authored.stateT,
+                atk: authored.atk,
+                atkT: authored.atkT,
+                phase: authored.isMirrorBoss === true ? dependencies.Mirror.phase : authored.phase,
+                phaseMarker: authored.phaseMarker,
+                mode: authored.mode,
+                cinematicT: authored.cinematicT,
+                cinematicPending: authored.cinematicRequest != null,
+                voidPending: authored.requestVoidCinematic === true,
+                mirrorBoss: authored.isMirrorBoss,
+                live: authored._live,
+                bound: enemy.boundT || 0,
+                variant: authored.variant,
+                variantName: authored.variantName,
+                behavior: authored.behavior,
+                rimeRebounds: authored.rimeRebounds,
+                snowWakeT: authored.snowWakeT,
+                glacierCracked: authored.glacierCracked,
+                enraged: enemy.enraged,
+                attackCursor: authored.attackCursor,
+                attackStep: authored.attackStep,
+                attackSequence: authored.attackSequence,
+                environmentSequence: authored.environmentSequence,
+                routeProgress: authored.routeProgress,
+                trueRouteIndex: authored.trueRouteIndex,
+                batonStrike: authored.batonStrike,
+                auroraBossChargeActive: authored.auroraBossChargeActive,
+                parryOutcome: authored.parryOutcome,
+                routeTelegraph: authored.routeTelegraph,
+                candidateRoutes: authored.candidateRoutes,
+                packRole: authored.packRole,
+                packFlank: authored.packFlank,
+                packAttackAuthorized: authored.packAttackAuthorized,
+                pounceTargetX: authored.pounceTargetX,
+              };
+            }),
+          projectiles: state
+            .projectiles()
+            .filter((projectile) => !projectile.dead)
+            .slice(0, 48)
+            .map((projectile) => ({
+              kind: projectile.kind,
+              x: projectile.x,
+              y: projectile.y,
+              vx: projectile.vx,
+              vy: projectile.vy,
+              deflected: projectile.deflected,
+              perfect: projectile.perfect,
+              counterplay: projectile.counterplay,
+            })),
           lifecycle: context.lifecycle.snapshot(),
         };
       };
     },
     updateProgressionTracking: (mode) => {
       if (context.baselinePractice?.() === true || context.race?.active()) return;
-      if (context.achievementTracking() && META.level("reach") > 0 && META.level("throwarm") > 0
-        && META.level("aircharge") > 0 && META.level("lifeline") > 0) PROFILE.maxStat("exodiaBuild", 1);
-      if (tracksModeProgress(mode)) { PROFILE.markMode(mode); context.achievementCheck(); }
+      if (
+        context.achievementTracking() &&
+        META.level("reach") > 0 &&
+        META.level("throwarm") > 0 &&
+        META.level("aircharge") > 0 &&
+        META.level("lifeline") > 0
+      )
+        PROFILE.maxStat("exodiaBuild", 1);
+      if (tracksModeProgress(mode)) {
+        PROFILE.markMode(mode);
+        context.achievementCheck();
+      }
     },
     startRecording: (runId, seed) => {
       // Canonical device input is the live simulation's normal route, not a
@@ -267,16 +412,35 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
       Input.startSemanticRecording();
       Input.syncSemanticMovement();
       if (context.achievementTracking() || context.race?.active()) {
-        const record = () => { GHOST.startRec({ runId, seed: String(seed), weaponId: migrateWeaponSelection(requireRun(state).weaponId), weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION }); };
+        const record = () => {
+          GHOST.startRec({
+            runId,
+            seed: String(seed),
+            weaponId: migrateWeaponSelection(requireRun(state).weaponId),
+            weaponSchemaVersion: FINAL_FIVE_WEAPON_SCHEMA_VERSION,
+          });
+        };
         if (context.withOpeningCapture === undefined) record();
         else context.withOpeningCapture({ phase: "opening-initialized-before-run-start", runId, seed }, record);
       }
     },
     publishRunStarted: (session, runId) => {
-      try { GAMEPLAY_EVENTS.emit({
-        kind: "run", transition: "started", runId, mode: session.mode, difficulty: session.diff,
-        weaponId: session.weaponId, wave: session.wave, score: session.score, runTimeSeconds: session.runTime,
-      }); } catch (error) { context.discardOpeningCapture?.(); throw error; }
+      try {
+        GAMEPLAY_EVENTS.emit({
+          kind: "run",
+          transition: "started",
+          runId,
+          mode: session.mode,
+          difficulty: session.diff,
+          weaponId: session.weaponId,
+          wave: session.wave,
+          score: session.score,
+          runTimeSeconds: session.runTime,
+        });
+      } catch (error) {
+        context.discardOpeningCapture?.();
+        throw error;
+      }
     },
     configureMode: (mode) => {
       const run = requireRun(state);
@@ -287,47 +451,80 @@ export function createLiveRunStartHost(context: RunStartHostContext): LiveRunSta
           // The production selector can only supply policy-published IDs. A
           // test-build engineering launch may explicitly supply an authored
           // preview boss, which remains absent from every ordinary roster.
-          const index = order.indexOf(selected); if (index >= 0) order.splice(index, 1); order.unshift(selected);
+          const index = order.indexOf(selected);
+          if (index >= 0) order.splice(index, 1);
+          order.unshift(selected);
         }
         const first = order[0];
         if (first === undefined) throw new Error("Boss-only mode requires a boss roster");
-        run.bossOrder = order; run.bossIdx = 0; run.bossesBeaten = 0; run.curBoss = first;
+        run.bossOrder = order;
+        run.bossIdx = 0;
+        run.bossesBeaten = 0;
+        run.curBoss = first;
         // Remove the reset stage before activating the selected boss biome so
         // its authored environment fields survive the replacement boundary.
         context.environment.clear("boss-encounter-replacement");
         context.loadStage(context.bossBiome(first));
       } else if (mode === "gauntlet") {
-        run.bossOrder = context.shuffledRoster(); run.bossIdx = 0; run.bossesBeaten = 0;
+        run.bossOrder = context.shuffledRoster();
+        run.bossIdx = 0;
+        run.bossesBeaten = 0;
       }
     },
     applyMetaProgression: () => {
       const run = requireRun(state);
       if (!tutorialUsesBaselineLoadout(run.mode) && context.baselinePractice?.() !== true) {
-        if (context.race?.apply() !== true) META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: run.mods });
+        if (context.race?.apply() !== true)
+          META.apply({ player: requirePlayer(state), blade: requireBlade(state), mods: run.mods });
       }
       context.resetRewards();
     },
     activateOpeningContent: (mode) => {
       const run = requireRun(state);
-      if (mode !== "tutorial" && mode !== "playground") { context.startNextWave(); return; }
-      context.stage.platforms = context.trainingPlatforms(); run.wave = 1; context.lifecycle.activateTraining();
+      if (mode !== "tutorial" && mode !== "playground") {
+        context.startNextWave();
+        return;
+      }
+      context.stage.platforms = context.trainingPlatforms();
+      run.wave = 1;
+      context.lifecycle.activateTraining();
       run.diffDmg = requirePlan(startingPlan).playerDamageMultiplier;
       if (mode === "playground") {
-        context.playground.reset(); run.bossOrder = context.shuffledRoster(); run.bossIdx = 0;
-        run.pg = context.playground.state; run.pgArena = -1;
+        context.playground.reset();
+        run.bossOrder = context.shuffledRoster();
+        run.bossIdx = 0;
+        run.pg = context.playground.state;
+        run.pgArena = -1;
       } else context.tutorial.start();
     },
     enterPlayingState: (sessionId) => {
-      try { context.setScreen("playing", { runId: sessionId }); context.openingExposed?.(sessionId); }
-      catch (error) { context.discardOpeningCapture?.(); throw error; }
+      try {
+        context.setScreen("playing", { runId: sessionId });
+        context.openingExposed?.(sessionId);
+      } catch (error) {
+        context.discardOpeningCapture?.();
+        throw error;
+      }
     },
-    beginMusic: (runId, seed) => { context.music.begin({ runId, runSeed: String(seed), rulesetVersion: CURRENT_RULESET_VERSION,
-      gameVersion: "0.1.0", scoreVersion: SFX.musicScoreVersion() }); },
+    beginMusic: (runId, seed) => {
+      context.music.begin({
+        runId,
+        runSeed: String(seed),
+        rulesetVersion: CURRENT_RULESET_VERSION,
+        gameVersion: "0.1.0",
+        scoreVersion: SFX.musicScoreVersion(),
+      });
+    },
     requestPointerLock: context.requestPointerLock,
   });
   // Every start path (setup, restart, retry, challenge codes) passes here, so an
   // engineering mode can never start in a release build.
-  context.install({ start(mode, difficulty) { controller.start(admittedRunMode(mode, dependencies.surfaces), difficulty); return requireRun(state); } });
+  context.install({
+    start(mode, difficulty) {
+      controller.start(admittedRunMode(mode, dependencies.surfaces), difficulty);
+      return requireRun(state);
+    },
+  });
   return controller;
 }
 

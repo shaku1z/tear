@@ -49,17 +49,28 @@ export class AuthoritativeStepController<State> {
   #lastTick = -1;
   #lastResult: AuthoritativeStepResult<State> | null = null;
 
-  constructor(dependencies: AuthoritativeStepDependencies<State>) { this.#dependencies = dependencies; }
+  constructor(dependencies: AuthoritativeStepDependencies<State>) {
+    this.#dependencies = dependencies;
+  }
 
-  execute(tick: number, seconds: number, actions: readonly CommandEnvelope<GameAction>[]): AuthoritativeStepResult<State> {
-    if (!Number.isSafeInteger(tick) || tick <= this.#lastTick) throw new RangeError("authoritative ticks must increase exactly once");
+  execute(
+    tick: number,
+    seconds: number,
+    actions: readonly CommandEnvelope<GameAction>[],
+  ): AuthoritativeStepResult<State> {
+    if (!Number.isSafeInteger(tick) || tick <= this.#lastTick)
+      throw new RangeError("authoritative ticks must increase exactly once");
     if (!(seconds > 0) || !Number.isFinite(seconds)) throw new RangeError("step duration must be finite and positive");
     this.#dependencies.applyActions(tick, actions);
     if (this.#dependencies.environment === undefined) this.#dependencies.step(seconds);
-    else this.#dependencies.environment.step(tick, seconds, () => { this.#dependencies.step(seconds); });
+    else
+      this.#dependencies.environment.step(tick, seconds, () => {
+        this.#dependencies.step(seconds);
+      });
     this.#dependencies.afterWorldStep?.(tick);
     const captured = this.#dependencies.snapshot(tick);
-    const canonical = captured instanceof DeferredCanonicalState ? captured : new DeferredCanonicalState(() => captured);
+    const canonical =
+      captured instanceof DeferredCanonicalState ? captured : new DeferredCanonicalState(() => captured);
     let cachedStateHash: string | undefined;
     const result = Object.freeze({
       tick,
@@ -71,11 +82,17 @@ export class AuthoritativeStepController<State> {
         return cachedStateHash;
       },
     });
-    this.#lastTick = tick; this.#lastResult = result;
+    this.#lastTick = tick;
+    this.#lastResult = result;
     return result;
   }
 
-  get lastResult(): AuthoritativeStepResult<State> | null { return this.#lastResult; }
+  get lastResult(): AuthoritativeStepResult<State> | null {
+    return this.#lastResult;
+  }
 
-  reset(): void { this.#lastTick = -1; this.#lastResult = null; }
+  reset(): void {
+    this.#lastTick = -1;
+    this.#lastResult = null;
+  }
 }

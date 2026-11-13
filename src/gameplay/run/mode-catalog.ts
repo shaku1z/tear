@@ -29,44 +29,99 @@ export interface ModeDefinition {
 
 /** Exact published mode set; debug harnesses are not additional modes. */
 export const MODE_IDS = Object.freeze([
-  "campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox",
+  "campaign",
+  "endless",
+  "gauntlet",
+  "playground",
+  "tutorial",
+  "bossonly",
+  "sandbox",
 ] as const);
 
 const authoredModes = [
   {
-    id: "campaign", order: 0, label: "Adventure",
+    id: "campaign",
+    order: 0,
+    label: "Adventure",
     blurb: "Journey through biomes — 9 waves then a boss, stage after stage, ever deeper.",
-    enabled: true, classification: "campaign", training: false, bossOnly: false, sandbox: false, surface: "release",
+    enabled: true,
+    classification: "campaign",
+    training: false,
+    bossOnly: false,
+    sandbox: false,
+    surface: "release",
   },
   {
-    id: "endless", order: 1, label: "Endless",
+    id: "endless",
+    order: 1,
+    label: "Endless",
     blurb: "Survive forever — biomes cycle, hordes swell, mini-bosses crash in. Chase your best.",
-    enabled: true, classification: "endless", training: false, bossOnly: false, sandbox: false, surface: "release",
+    enabled: true,
+    classification: "endless",
+    training: false,
+    bossOnly: false,
+    sandbox: false,
+    surface: "release",
   },
   {
-    id: "gauntlet", order: 2, label: "Gauntlet",
+    id: "gauntlet",
+    order: 2,
+    label: "Gauntlet",
     blurb: `Endless, but a full boss storms in every 8 waves — cycling all ${String(bossIdsAvailableOn("gauntlet").length)}, ever tougher.`,
-    enabled: true, classification: "gauntlet", training: false, bossOnly: false, sandbox: false, surface: "release",
+    enabled: true,
+    classification: "gauntlet",
+    training: false,
+    bossOnly: false,
+    sandbox: false,
+    surface: "release",
   },
   {
-    id: "playground", order: 3, label: "Playground",
+    id: "playground",
+    order: 3,
+    label: "Playground",
     blurb: "An open arena — spawn any enemy, grab any ability at any tier, test everything.",
-    enabled: true, classification: "training", training: true, bossOnly: false, sandbox: false, surface: "release",
+    enabled: true,
+    classification: "training",
+    training: true,
+    bossOnly: false,
+    sandbox: false,
+    surface: "release",
   },
   {
-    id: "tutorial", order: 4, label: "Tutorial",
+    id: "tutorial",
+    order: 4,
+    label: "Tutorial",
     blurb: "Learn the blade: swings, slams, power slams, launches, juggles, updrafts, throws, parries.",
-    enabled: true, classification: "training", training: true, bossOnly: false, sandbox: false, surface: "release",
+    enabled: true,
+    classification: "training",
+    training: true,
+    bossOnly: false,
+    sandbox: false,
+    surface: "release",
   },
   {
-    id: "bossonly", order: 5, label: "Boss Test",
+    id: "bossonly",
+    order: 5,
+    label: "Boss Test",
     blurb: "Boss gauntlet — fight every boss in a row, evolving an ability after each.",
-    enabled: true, classification: "boss-only", training: false, bossOnly: true, sandbox: false, surface: "engineering",
+    enabled: true,
+    classification: "boss-only",
+    training: false,
+    bossOnly: true,
+    sandbox: false,
+    surface: "engineering",
   },
   {
-    id: "sandbox", order: 6, label: "Enemy Test",
+    id: "sandbox",
+    order: 6,
+    label: "Enemy Test",
     blurb: "Sandbox: every enemy variant spawns from wave 1 — try the full roster.",
-    enabled: true, classification: "sandbox", training: false, bossOnly: false, sandbox: true, surface: "engineering",
+    enabled: true,
+    classification: "sandbox",
+    training: false,
+    bossOnly: false,
+    sandbox: true,
+    surface: "engineering",
   },
 ] satisfies readonly ModeDefinition[];
 
@@ -76,9 +131,7 @@ if (authoredIds.length !== MODE_IDS.length || authoredIds.some((id, index) => id
 }
 
 /** The sole authored metadata source for the seven published RunMode values. */
-export const MODE_CATALOG: readonly ModeDefinition[] = Object.freeze(
-  authoredModes.map((mode) => Object.freeze(mode)),
-);
+export const MODE_CATALOG: readonly ModeDefinition[] = Object.freeze(authoredModes.map((mode) => Object.freeze(mode)));
 
 /** Modes persisted by the standard-play progression path; test modes remain intentionally excluded. */
 export const PROFILE_TRACKED_MODE_IDS: readonly RunMode[] = Object.freeze(
@@ -87,9 +140,10 @@ export const PROFILE_TRACKED_MODE_IDS: readonly RunMode[] = Object.freeze(
 
 /** Modes whose natural run lifecycle owns campaign-style wave actors. */
 export const WAVE_OWNING_MODE_IDS: readonly RunMode[] = Object.freeze(
-  MODE_CATALOG.filter((mode) => mode.classification === "campaign"
-    || mode.classification === "endless" || mode.classification === "gauntlet")
-    .map((mode) => mode.id),
+  MODE_CATALOG.filter(
+    (mode) =>
+      mode.classification === "campaign" || mode.classification === "endless" || mode.classification === "gauntlet",
+  ).map((mode) => mode.id),
 );
 
 export function modeOwnsWaveActors(mode: RunMode): boolean {

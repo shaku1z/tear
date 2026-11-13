@@ -1,8 +1,14 @@
 /** Pure authored boss identity authority. */
 export const BOSS_IDENTITY_IDS = Object.freeze([
-  "warden", "colossus", "aldric", "rootbound", "white-hart", "echo", "source",
+  "warden",
+  "colossus",
+  "aldric",
+  "rootbound",
+  "white-hart",
+  "echo",
+  "source",
 ] as const);
-export type BossDefinitionId = typeof BOSS_IDENTITY_IDS[number];
+export type BossDefinitionId = (typeof BOSS_IDENTITY_IDS)[number];
 
 export function isBossDefinitionId(value: string): value is BossDefinitionId {
   return BOSS_IDENTITY_IDS.some((id) => id === value);
@@ -29,19 +35,19 @@ export const WHITE_HART_DEFINITION = Object.freeze({
 } as const satisfies BossDefinition);
 
 export const BOSS_DEFINITIONS = Object.freeze([
-  Object.freeze({ id: "warden", name: "The Warden", phaseMarks: Object.freeze([0.65, 0.30] as const) }),
-  Object.freeze({ id: "colossus", name: "Iron Colossus", phaseMarks: Object.freeze([0.60, 0.25] as const) }),
-  Object.freeze({ id: "aldric", name: "Berserker King", phaseMarks: Object.freeze([0.65, 0.20] as const) }),
+  Object.freeze({ id: "warden", name: "The Warden", phaseMarks: Object.freeze([0.65, 0.3] as const) }),
+  Object.freeze({ id: "colossus", name: "Iron Colossus", phaseMarks: Object.freeze([0.6, 0.25] as const) }),
+  Object.freeze({ id: "aldric", name: "Berserker King", phaseMarks: Object.freeze([0.65, 0.2] as const) }),
   ROOTBOUND_DEFINITION,
   WHITE_HART_DEFINITION,
-  Object.freeze({ id: "echo", name: "The Echo", phaseMarks: Object.freeze([0.60, 0.25] as const) }),
+  Object.freeze({ id: "echo", name: "The Echo", phaseMarks: Object.freeze([0.6, 0.25] as const) }),
   Object.freeze({ id: "source", name: "The Source", phaseMarks: Object.freeze([0.58, 0.28] as const) }),
 ] as const satisfies readonly BossDefinition[]);
 
 /** Source-derived display projection; boss IDs and names remain definition-owned. */
-export const BOSS_DISPLAY_NAMES = Object.freeze(Object.fromEntries(
-  BOSS_DEFINITIONS.map(({ id, name }) => [id, name]),
-) as Readonly<Record<BossDefinitionId, string>>);
+export const BOSS_DISPLAY_NAMES = Object.freeze(
+  Object.fromEntries(BOSS_DEFINITIONS.map(({ id, name }) => [id, name])) as Readonly<Record<BossDefinitionId, string>>,
+);
 
 /** Validate an injected boss-name projection against the authored definitions. */
 export function assertBossDisplayProjection(projection: Readonly<Record<string, string>>): void {

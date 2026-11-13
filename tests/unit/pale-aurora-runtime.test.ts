@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { assertAuroraTrackFieldState, createAuroraTrackFieldState, type AuroraTrackFieldState } from "../../src/gameplay/environment/aurora-track";
-import { advanceAuroraTrack, type AuroraTransportActor, type AuroraTransportKind } from "../../src/gameplay/environment/aurora-track-runtime";
+import {
+  assertAuroraTrackFieldState,
+  createAuroraTrackFieldState,
+  type AuroraTrackFieldState,
+} from "../../src/gameplay/environment/aurora-track";
+import {
+  advanceAuroraTrack,
+  type AuroraTransportActor,
+  type AuroraTransportKind,
+} from "../../src/gameplay/environment/aurora-track-runtime";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { bindPaleEnvironmentActors } from "./environment-feature-fixture";
 import { environmentHash } from "../../src/tearbench/environment-codec";
@@ -9,11 +17,25 @@ import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import { createProductionCombatSimulation, createProductionReplayWorld } from "../../src/tearbench";
 
 function track(state: "warning" | "active" | "cooldown" = "active"): AuroraTrackFieldState {
-  return Object.freeze({ ...createAuroraTrackFieldState({ id: "aurora:stage:1", ownerId: "pale-traverse", variant: "stage",
-    direction: 1, geometry: { x: 0, y: 0, w: 100, h: 40 }, startTick: 0 }), state, stateTick: 0 });
+  return Object.freeze({
+    ...createAuroraTrackFieldState({
+      id: "aurora:stage:1",
+      ownerId: "pale-traverse",
+      variant: "stage",
+      direction: 1,
+      geometry: { x: 0, y: 0, w: 100, h: 40 },
+      startTick: 0,
+    }),
+    state,
+    stateTick: 0,
+  });
 }
 
-function actor(id: string, kind: AuroraTransportKind, overrides: Partial<AuroraTransportActor> = {}): AuroraTransportActor {
+function actor(
+  id: string,
+  kind: AuroraTransportKind,
+  overrides: Partial<AuroraTransportActor> = {},
+): AuroraTransportActor {
   return { id, kind, x: 20, y: 20, vx: 100, intentX: 1, normalAcceleration: 600, maximumSpeed: 300, ...overrides };
 }
 
@@ -32,7 +54,10 @@ function simulate(renderHz: 30 | 60 | 144): Readonly<{ vx: number; hash: string 
       accumulator -= 1 / 120;
     }
   }
-  return Object.freeze({ vx: hero.vx, hash: environmentHash({ stageId: "pale-traverse", fields: [current], combatObjects: [], routes: [] }) });
+  return Object.freeze({
+    vx: hero.vx,
+    hash: environmentHash({ stageId: "pale-traverse", fields: [current], combatObjects: [], routes: [] }),
+  });
 }
 
 describe("Pale Aurora fixed-step runtime", () => {
@@ -70,7 +95,11 @@ describe("Pale Aurora fixed-step runtime", () => {
   });
 
   it("uses one eligibility path for thrown blade, deflected projectile, and boss charge", () => {
-    const actors = [actor("blade", "thrown-blade"), actor("shot", "deflected-projectile"), actor("hart-charge", "boss-charge")];
+    const actors = [
+      actor("blade", "thrown-blade"),
+      actor("shot", "deflected-projectile"),
+      actor("hart-charge", "boss-charge"),
+    ];
     const result = advanceAuroraTrack(track(), 1, 1 / 120, actors);
     expect(result.influencedActorIds).toEqual(["blade", "hart-charge", "shot"]);
     expect(actors.every((entry) => entry.vx > 100)).toBe(true);
@@ -83,8 +112,11 @@ describe("Pale Aurora fixed-step runtime", () => {
 
   it("restores carry state, isolates worlds, and clears all track state through lifecycle cleanup", () => {
     const hero = actor("player", "player");
-    const first = createEnvironmentRuntime({ stageId: "pale-traverse", worldId: "aurora-a",
-      availableActorIds: () => new Set(["player", "blade"]) });
+    const first = createEnvironmentRuntime({
+      stageId: "pale-traverse",
+      worldId: "aurora-a",
+      availableActorIds: () => new Set(["player", "blade"]),
+    });
     bindPaleEnvironmentActors(first, "aurora-track", () => [hero]);
     first.addField(track());
     first.step(1, 1 / 120, () => undefined);
@@ -94,8 +126,11 @@ describe("Pale Aurora fixed-step runtime", () => {
     assertAuroraTrackFieldState(restoredField);
     expect(restoredField.carryStates).toEqual([{ actorId: "player", direction: 1, remainingTicks: 48 }]);
     const restoredHero = actor("player", "player", { vx: hero.vx });
-    const second = createEnvironmentRuntime({ stageId: "pale-traverse", worldId: "aurora-b",
-      availableActorIds: () => new Set(["player", "blade"]) });
+    const second = createEnvironmentRuntime({
+      stageId: "pale-traverse",
+      worldId: "aurora-b",
+      availableActorIds: () => new Set(["player", "blade"]),
+    });
     bindPaleEnvironmentActors(second, "aurora-track", () => [restoredHero]);
     second.replace({ ...snapshot, worldId: "aurora-b" });
     expect(environmentHash(second.snapshot())).toBe(environmentHash(snapshot));
@@ -109,11 +144,19 @@ describe("Pale Aurora fixed-step runtime", () => {
   });
 
   it("prunes carry owned by actors that no longer exist without orphaning the stage-owned Track", () => {
-    const runtime = createEnvironmentRuntime({ stageId: "pale-traverse", worldId: "aurora-prune",
-      availableActorIds: () => new Set(["blade"]) });
-    runtime.addField(Object.freeze({ ...track(), carryStates: Object.freeze([
-      Object.freeze({ actorId: "despawned-enemy", direction: 1 as const, remainingTicks: 12 }),
-    ]) }));
+    const runtime = createEnvironmentRuntime({
+      stageId: "pale-traverse",
+      worldId: "aurora-prune",
+      availableActorIds: () => new Set(["blade"]),
+    });
+    runtime.addField(
+      Object.freeze({
+        ...track(),
+        carryStates: Object.freeze([
+          Object.freeze({ actorId: "despawned-enemy", direction: 1 as const, remainingTicks: 12 }),
+        ]),
+      }),
+    );
     runtime.step(1, 1 / 120, () => undefined);
     expect(runtime.snapshot().fields).toHaveLength(1);
     const prunedField = runtime.snapshot().fields[0];
@@ -123,8 +166,9 @@ describe("Pale Aurora fixed-step runtime", () => {
   });
 
   it("fails closed on duplicate transport identities", () => {
-    expect(() => advanceAuroraTrack(track(), 1, 1 / 120, [actor("same", "player"), actor("same", "light-enemy")]))
-      .toThrow(/duplicate Aurora transport actor ID/u);
+    expect(() =>
+      advanceAuroraTrack(track(), 1, 1 / 120, [actor("same", "player"), actor("same", "light-enemy")]),
+    ).toThrow(/duplicate Aurora transport actor ID/u);
   });
 
   it("bounds added velocity without erasing velocity authored above the Track cap", () => {
@@ -133,8 +177,9 @@ describe("Pale Aurora fixed-step runtime", () => {
     advanceAuroraTrack(track(), 1, 1 / 120, [capped, external]);
     expect(capped.vx).toBe(135);
     expect(external.vx).toBe(500);
-    expect(() => advanceAuroraTrack(track(), 1, 1 / 120, [actor("invalid", "player", { maximumSpeed: 0 })]))
-      .toThrow(/finite state/u);
+    expect(() => advanceAuroraTrack(track(), 1, 1 / 120, [actor("invalid", "player", { maximumSpeed: 0 })])).toThrow(
+      /finite state/u,
+    );
   });
 
   it("uses the same Aurora source port in the detached production combat world", () => {
@@ -143,9 +188,20 @@ describe("Pale Aurora fixed-step runtime", () => {
       const core = createProductionCombatSimulation<{ tick: number }>(replay, { snapshot: (tick) => ({ tick }) });
       const environment = replay.world.context.environment;
       environment.setStage("pale-traverse", "restore");
-      if (withTrack) environment.addField(Object.freeze({ ...createAuroraTrackFieldState({ id: "detached-track",
-        ownerId: "pale-traverse", variant: "stage", direction: 1,
-        geometry: { x: 0, y: 620, w: 1600, h: 220 }, startTick: 0 }), state: "active" as const }));
+      if (withTrack)
+        environment.addField(
+          Object.freeze({
+            ...createAuroraTrackFieldState({
+              id: "detached-track",
+              ownerId: "pale-traverse",
+              variant: "stage",
+              direction: 1,
+              geometry: { x: 0, y: 620, w: 1600, h: 220 },
+              startTick: 0,
+            }),
+            state: "active" as const,
+          }),
+        );
       core.simulationRuntime.reset(0);
       const sequence = new EnvelopeSequencer();
       core.simulationRuntime.advanceOne([sequence.command(1, { type: "move", x: 1_000, y: 0 })]);

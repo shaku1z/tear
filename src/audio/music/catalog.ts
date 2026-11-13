@@ -8,12 +8,7 @@
 
 export type CompatibilityClass = "A" | "B" | "C" | "D";
 
-export type MusicRightsClaimKey =
-  | "gameUse"
-  | "streamSafe"
-  | "vodSafe"
-  | "albumRelease"
-  | "commercialDistribution";
+export type MusicRightsClaimKey = "gameUse" | "streamSafe" | "vodSafe" | "albumRelease" | "commercialDistribution";
 
 export type MusicRightsClaimStatus = "asserted" | "unknown" | "blocked" | "cleared";
 
@@ -113,9 +108,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * rights, and unknown extension fields are preserved byte-for-byte in memory.
  */
 export function parseMusicCatalog(value: unknown): MusicCatalog {
-  if (!isRecord(value) || value.version !== 1 ||
-      (value.format !== "tear-music-catalog" && value.format !== "tear-signal-catalog") ||
-      !Array.isArray(value.works) || !Array.isArray(value.stations)) {
+  if (
+    !isRecord(value) ||
+    value.version !== 1 ||
+    (value.format !== "tear-music-catalog" && value.format !== "tear-signal-catalog") ||
+    !Array.isArray(value.works) ||
+    !Array.isArray(value.stations)
+  ) {
     throw new TypeError("unsupported music catalog format/version");
   }
   return Object.freeze({ ...value, format: "tear-music-catalog", version: 1 }) as MusicCatalog;

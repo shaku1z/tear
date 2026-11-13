@@ -36,12 +36,16 @@ async function manifest(overrides: Partial<GhostPublicationManifest> = {}): Prom
 function service(supported = true): GhostCloudPublicationService {
   return new GhostCloudPublicationService(
     { maximumBytes: 1024, maximumParts: 8, relayDelayTicks: 120, requestsPerWindow: 100 },
-    supported ? [{
-      buildId: "tear-1",
-      verify() {
-        return Promise.resolve({ resultHash: "result-ok", anomalous: false });
-      },
-    }] : [],
+    supported
+      ? [
+          {
+            buildId: "tear-1",
+            verify() {
+              return Promise.resolve({ resultHash: "result-ok", anomalous: false });
+            },
+          },
+        ]
+      : [],
     {
       id: "test-verifier",
       algorithm: "test-signature-v1",
@@ -90,15 +94,17 @@ describe("Ghost cloud publication", () => {
   });
 
   it("prevents assisted and forged runs from masquerading as human records", () => {
-    expect(classifyRunEligibility({
-      resumed: false,
-      modded: false,
-      coached: true,
-      ghostAssisted: false,
-      bot: false,
-      debug: false,
-      stateForge: true,
-    })).toMatchObject({
+    expect(
+      classifyRunEligibility({
+        resumed: false,
+        modded: false,
+        coached: true,
+        ghostAssisted: false,
+        bot: false,
+        debug: false,
+        stateForge: true,
+      }),
+    ).toMatchObject({
       eligibleForHumanRecords: false,
       reasons: ["coached", "stateForge"],
     });
@@ -135,7 +141,9 @@ describe("Ghost cloud publication", () => {
     cloud.report("reviewer", dirty.capsuleId, "suspicious result");
     cloud.block("moderator", "bad-actor");
     expect(cloud.auditLog().map((entry) => entry.action)).toEqual([
-      "upload.begin", "moderation.report", "identity.block",
+      "upload.begin",
+      "moderation.report",
+      "identity.block",
     ]);
   });
 });

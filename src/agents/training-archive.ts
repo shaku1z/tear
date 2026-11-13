@@ -29,9 +29,7 @@ export type {
   TearBehaviorClonedPolicy as TrainingArchivePolicy,
 } from "./academy";
 
-export {
-  assessAcademyCandidateEligibility as assessTrainingArchiveCandidateEligibility,
-} from "./academy-candidate-admission";
+export { assessAcademyCandidateEligibility as assessTrainingArchiveCandidateEligibility } from "./academy-candidate-admission";
 export type {
   TearConsentDisposition as TrainingArchiveConsentDisposition,
   TearAcademyModelTrainingConsent as TrainingArchiveModelTrainingConsent,
@@ -47,16 +45,12 @@ export {
   captureAcademyCandidateTracks as captureTrainingArchiveCandidateTracks,
 } from "./academy-candidate-tracks";
 export type { TearAcademyCandidateTrackBundleV1 as TrainingArchiveCandidateTrackBundleV1 } from "./academy-candidate-tracks";
-export {
-  materializeAcademyCandidateCapsule as materializeTrainingArchiveCandidateCapsule,
-} from "./academy-candidate-capsule-materializer";
+export { materializeAcademyCandidateCapsule as materializeTrainingArchiveCandidateCapsule } from "./academy-candidate-capsule-materializer";
 export type {
   TearAcademyCandidateCapsuleMaterializationRequest as TrainingArchiveCandidateCapsuleMaterializationRequest,
   TearAcademyCandidateCapsuleMaterializationReceiptV1 as TrainingArchiveCandidateCapsuleMaterializationReceiptV1,
 } from "./academy-candidate-capsule-materializer";
-export {
-  TearAcademyCandidateCustodyStore as TrainingArchiveCandidateCustodyStore,
-} from "./academy-candidate-custody";
+export { TearAcademyCandidateCustodyStore as TrainingArchiveCandidateCustodyStore } from "./academy-candidate-custody";
 export type {
   TearAcademyCandidateCustodyStatus as TrainingArchiveCandidateCustodyStatus,
   TearAcademyCandidateRevocationScope as TrainingArchiveCandidateRevocationScope,
@@ -69,9 +63,7 @@ export type {
   TearAcademyCandidateCustodyDeletion as TrainingArchiveCandidateCustodyDeletion,
   TearAcademyCandidateCustodyInventoryV1 as TrainingArchiveCandidateCustodyInventoryV1,
 } from "./academy-candidate-custody";
-export {
-  TearAcademyCandidateQualityStore as TrainingArchiveCandidateQualityStore,
-} from "./academy-candidate-quality";
+export { TearAcademyCandidateQualityStore as TrainingArchiveCandidateQualityStore } from "./academy-candidate-quality";
 export type {
   TearAcademyCandidateQualityDisposition as TrainingArchiveCandidateQualityDisposition,
   TearAcademyCandidateOutlierReason as TrainingArchiveCandidateOutlierReason,
@@ -81,9 +73,7 @@ export type {
   TearAcademyCandidateQualityAssessmentRequest as TrainingArchiveCandidateQualityAssessmentRequest,
   TearAcademyCandidateQualityInventoryV1 as TrainingArchiveCandidateQualityInventoryV1,
 } from "./academy-candidate-quality";
-export {
-  TearAcademyCandidateCurationStore as TrainingArchiveCandidateCurationStore,
-} from "./academy-candidate-curation";
+export { TearAcademyCandidateCurationStore as TrainingArchiveCandidateCurationStore } from "./academy-candidate-curation";
 export type {
   TearAcademyCandidateCurationDisposition as TrainingArchiveCandidateCurationDisposition,
   TearAcademyCandidateCorrectionKind as TrainingArchiveCandidateCorrectionKind,
@@ -91,9 +81,7 @@ export type {
   TearAcademyCandidateCurationRequest as TrainingArchiveCandidateCurationRequest,
   TearAcademyCandidateCurationInventoryV1 as TrainingArchiveCandidateCurationInventoryV1,
 } from "./academy-candidate-curation";
-export {
-  TearAcademyCandidateSplitStore as TrainingArchiveCandidateSplitStore,
-} from "./academy-candidate-splits";
+export { TearAcademyCandidateSplitStore as TrainingArchiveCandidateSplitStore } from "./academy-candidate-splits";
 export type {
   TearAcademyDatasetSplitV1 as TrainingArchiveDatasetSplitV1,
   TearAcademyManifestReader as TrainingArchiveManifestReader,
@@ -102,33 +90,28 @@ export type {
   TearAcademyPreCorpusManifestV1 as TrainingArchivePreCorpusManifestV1,
   TearAcademyPreCorpusManifestPublishRequest as TrainingArchivePreCorpusManifestPublishRequest,
 } from "./academy-candidate-splits";
-export {
-  TearAcademyReviewedSampleStore as TrainingArchiveReviewedSampleStore,
-} from "./academy-reviewed-sample";
+export { TearAcademyReviewedSampleStore as TrainingArchiveReviewedSampleStore } from "./academy-reviewed-sample";
 export type { TearAcademyReviewedSampleV1 as TrainingArchiveReviewedSampleV1 } from "./academy-reviewed-sample";
-export {
-  TearAcademyCorpusStore as TrainingArchiveCorpusStore,
-} from "./academy-corpus";
+export { TearAcademyCorpusStore as TrainingArchiveCorpusStore } from "./academy-corpus";
 export type {
   TearAcademyCorpusEntryV1 as TrainingArchiveCorpusEntryV1,
   TearAcademyCorpusAdmissionRequest as TrainingArchiveCorpusAdmissionRequest,
   TearAcademyCorpusManifestV1 as TrainingArchiveCorpusManifestV1,
   TearAcademyCorpusManifestPublishRequest as TrainingArchiveCorpusManifestPublishRequest,
 } from "./academy-corpus";
-export {
-  TearAcademyTrainingDatasetLoader as TrainingArchiveTrainingDatasetLoader,
-} from "./academy-training-dataset";
+export { TearAcademyTrainingDatasetLoader as TrainingArchiveTrainingDatasetLoader } from "./academy-training-dataset";
 export type {
   TearAcademyTrainingDatasetRequestV1 as TrainingArchiveTrainingDatasetRequestV1,
   TearAcademyTrainingSequenceV1 as TrainingArchiveTrainingSequenceV1,
   TearAcademyTrainingDatasetV1 as TrainingArchiveTrainingDatasetV1,
   TearAcademyTrainingDatasetLimits as TrainingArchiveTrainingDatasetLimits,
 } from "./academy-training-dataset";
-export {
-  TearAcademyInspectionController as TrainingArchiveInspectionController,
-} from "./academy-inspection-controller";
+export { TearAcademyInspectionController as TrainingArchiveInspectionController } from "./academy-inspection-controller";
 export type { TearAcademyInspectionState as TrainingArchiveInspectionState } from "./academy-inspection-controller";
-export { inspectAcademy as inspectTrainingArchive, inspectAcademy as inspectTrainingArchiveSnapshot } from "./academy-inspector";
+export {
+  inspectAcademy as inspectTrainingArchive,
+  inspectAcademy as inspectTrainingArchiveSnapshot,
+} from "./academy-inspector";
 export type {
   TearAcademyInspectionSnapshotV1 as TrainingArchiveInspectionSnapshotV1,
   TearAcademyInspectionStores as TrainingArchiveInspectionStores,
@@ -165,8 +148,12 @@ export const LEGACY_TRAINING_ARCHIVE_ACTIONS = Object.freeze({
 
 /** Resolves canonical and preserved Academy route tokens. */
 export function resolveTrainingArchiveRoute(route: string): TrainingArchiveSurface | undefined {
-  if (route === TRAINING_ARCHIVE_ROUTE || route === TRAINING_ARCHIVE_SCREEN
-    || LEGACY_TRAINING_ARCHIVE_ROUTES.includes(route as never)) return TRAINING_ARCHIVE_ROUTE;
+  if (
+    route === TRAINING_ARCHIVE_ROUTE ||
+    route === TRAINING_ARCHIVE_SCREEN ||
+    LEGACY_TRAINING_ARCHIVE_ROUTES.includes(route as never)
+  )
+    return TRAINING_ARCHIVE_ROUTE;
   return undefined;
 }
 
@@ -179,8 +166,7 @@ function enabledFlag(parameters: URLSearchParams, key: string): boolean {
 /** Returns true for a canonical or enabled legacy Training Archive link. */
 export function isTrainingArchiveRequested(search: string): boolean {
   const parameters = new URLSearchParams(search);
-  return [TRAINING_ARCHIVE_QUERY, ...LEGACY_TRAINING_ARCHIVE_QUERY_ALIASES]
-    .some((key) => enabledFlag(parameters, key));
+  return [TRAINING_ARCHIVE_QUERY, ...LEGACY_TRAINING_ARCHIVE_QUERY_ALIASES].some((key) => enabledFlag(parameters, key));
 }
 
 /** Returns the canonical surface when a link requests Training Archive. */

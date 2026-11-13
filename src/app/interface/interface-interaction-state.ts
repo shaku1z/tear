@@ -22,12 +22,20 @@ export function createLiveInterfaceInteractionState(): LiveInterfaceInteractionS
   const hoverAnimations: Record<string, number> = {};
   return Object.freeze({
     buttons: (): LiveInterfaceButton[] => buttons,
-    enqueue: (button: LiveInterfaceButton): void => { buttons.push(button); },
-    resetButtons: (): void => { buttons = []; },
+    enqueue: (button: LiveInterfaceButton): void => {
+      buttons.push(button);
+    },
+    resetButtons: (): void => {
+      buttons = [];
+    },
     focus: (): number => focus,
-    setFocus: (value: number): void => { focus = value; },
+    setFocus: (value: number): void => {
+      focus = value;
+    },
     scroll: (): number => scroll,
-    setScroll: (value: number): void => { scroll = value; },
+    setScroll: (value: number): void => {
+      scroll = value;
+    },
     hoverAnimations: (): Record<string, number> => hoverAnimations,
   });
 }

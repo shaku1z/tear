@@ -42,13 +42,29 @@ describe("blade mouse sensitivity contract", () => {
     config.blade.aimSensitivity = 0.4;
     let consumed = 0;
     const Blade = createBlade({
-      CLOCK: { sim: 0 }, CONFIG: config,
-      Input: { touchAim: false, stickAim: null, locked: true, mouseX: 0, mouseY: 0, tetherHeld: false,
-        consumeDelta: () => { consumed += 1; return { x: 10, y: -5 }; } },
-      presentation: { draw: () => undefined }, clamp, len, lerp, lerpAngle,
+      CLOCK: { sim: 0 },
+      CONFIG: config,
+      Input: {
+        touchAim: false,
+        stickAim: null,
+        locked: true,
+        mouseX: 0,
+        mouseY: 0,
+        tetherHeld: false,
+        consumeDelta: () => {
+          consumed += 1;
+          return { x: 10, y: -5 };
+        },
+      },
+      presentation: { draw: () => undefined },
+      clamp,
+      len,
+      lerp,
+      lerpAngle,
     });
     const blade = new Blade();
-    blade.aimX = 0; blade.aimY = -80;
+    blade.aimX = 0;
+    blade.aimY = -80;
     blade.aimOverride = { x: -500, y: 500 };
 
     const sampled = blade.captureDeviceAim({ x: 100, y: 100 });

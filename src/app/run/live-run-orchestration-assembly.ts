@@ -37,14 +37,23 @@ export interface LiveRunOrchestrationAssemblyOptions {
   readonly blade: () => GameBlade;
   readonly requestPointerLock: () => void;
   /** Collaborators constructed after the run orchestration. */
-  readonly combat: () => Pick<LiveCanonicalCombatHost, "combatEntityRuntime" | "simulationRuntime" | "authoritativeStep" | "frameRuntime">;
+  readonly combat: () => Pick<
+    LiveCanonicalCombatHost,
+    "combatEntityRuntime" | "simulationRuntime" | "authoritativeStep" | "frameRuntime"
+  >;
   readonly presentation: () => Pick<LiveInterfaceComposition, "wipe">;
 }
 
 /** Connects the run transaction, content, wave, terminal and victory controllers to the live runtime. */
 export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemblyOptions) {
   const { dependencies, world, session, services, campaignTraining, surface, navigation, ghostRecording } = options;
-  const { state: hostState, entities: worldEntities, lifecycle: RUN_LIFECYCLE, music: musicDirector, environment } = world;
+  const {
+    state: hostState,
+    entities: worldEntities,
+    lifecycle: RUN_LIFECYCLE,
+    music: musicDirector,
+    environment,
+  } = world;
   const { transient } = world.context;
   const { impact, feel } = transient;
   const CINEMA = world.context.cinema;
@@ -59,11 +68,24 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
   const { opening: openingCapture } = ghostRecording;
   const { outcomeChronology } = options.journals;
   return createLiveRunOrchestration({
-    dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, controllers: runControllers,
-    campaign: campaignHost, training: trainingHost, baselinePractice: () => options.practiceStart.active(), weapon: weaponRuntime,
+    dependencies,
+    entities: worldEntities,
+    state: hostState,
+    lifecycle: RUN_LIFECYCLE,
+    controllers: runControllers,
+    campaign: campaignHost,
+    training: trainingHost,
+    baselinePractice: () => options.practiceStart.active(),
+    weapon: weaponRuntime,
     music: musicDirector,
-    width: surface.width, height: surface.height, canvas: surface.canvas, testMode: surface.testMode,
-    run: options.run, player: options.player, blade: options.blade, enemies: () => hostState.enemies(),
+    width: surface.width,
+    height: surface.height,
+    canvas: surface.canvas,
+    testMode: surface.testMode,
+    run: options.run,
+    player: options.player,
+    blade: options.blade,
+    enemies: () => hostState.enemies(),
     actorId: (enemy) => options.combat().combatEntityRuntime.id(enemy, "enemy"),
     observeTerminal: ghostRecording.career.terminal,
     observeBossIntro: (actorId, duration, delay) => {
@@ -79,7 +101,9 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
       options.chase.installed(run);
       beat.installed(run);
     },
-    selectedBoss: () => session.selectedBoss(), worldServices: world.context.services, applySettings,
+    selectedBoss: () => session.selectedBoss(),
+    worldServices: world.context.services,
+    applySettings,
     attackPresentation: options.attackPresentation,
     environment,
     prepareWorld: () => {
@@ -117,7 +141,9 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
       },
     },
     createRunSeed: () => beat.seed() ?? seedRace.seed() ?? session.takeRunSeed() ?? dependencies.createRunSeed(),
-    withOpeningCapture: openingCapture.withCapture, openingExposed: openingCapture.exposed, discardOpeningCapture: openingCapture.discard,
+    withOpeningCapture: openingCapture.withCapture,
+    openingExposed: openingCapture.exposed,
+    discardOpeningCapture: openingCapture.discard,
     authoritativeResult: () => options.combat().authoritativeStep.lastResult,
     setScreen: (screen, detail) => {
       navigation.setScreen(screen, detail);
@@ -130,11 +156,15 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     setBannerSeconds: (value) => {
       feel.bannerSeconds = value;
     },
-    openTier: openRewardTier, openDraft: openRewardDraft,
+    openTier: openRewardTier,
+    openDraft: openRewardDraft,
     resetRewards: () => {
       services.reward.reset();
     },
-    saveBest, getBest, awardCoins, economyTelemetry,
+    saveBest,
+    getBest,
+    awardCoins,
+    economyTelemetry,
     setLastRecording: (value) => {
       session.setLastRecording(value);
     },
@@ -147,7 +177,10 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     resetWinSeconds: () => {
       session.setWinSeconds(0);
     },
-    achievementTracking: () => achTracks(), achievementCheck: achCheck, achievementTracker: AT, practiceSession: options.ghostPractice,
+    achievementTracking: () => achTracks(),
+    achievementCheck: achCheck,
+    achievementTracker: AT,
+    practiceSession: options.ghostPractice,
     emitMusicOutcome: (outcome) => {
       options.combat().frameRuntime.emitMusicEvent(outcome);
     },

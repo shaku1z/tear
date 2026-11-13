@@ -39,9 +39,9 @@ describe("Verdant stage catalog", () => {
       accent: "#e4c95a",
       pool: [
         ["flyer", 0.75, 1],
-        ["ranged", 0.70, 1],
+        ["ranged", 0.7, 1],
         ["charger", 0.55, 1],
-        ["rootbinder", 0.50, 2],
+        ["rootbinder", 0.5, 2],
         ["mender", 0.32, 3],
         ["anchor", 0.28, 4],
         ["armored", 0.35, 4],
@@ -57,7 +57,12 @@ describe("Verdant stage catalog", () => {
       ],
     });
     expect(CAMPAIGN_STAGE_IDS).toEqual([
-      "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear",
+      "grounds",
+      "undercroft",
+      "crimson-fields",
+      "verdant-sanctum",
+      "voidspire",
+      "tear",
     ]);
     expect(STAGES.map((entry) => entry.chapter.number)).toEqual(["I", "II", "III", "IV", "V", "VI"]);
   });

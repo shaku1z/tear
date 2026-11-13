@@ -26,17 +26,14 @@ export type GameAction =
   | Readonly<{ type: "tier-up-choice"; choiceId: string }>;
 
 export type GameActionNormalizationResult =
-  | Readonly<{ ok: true; action: GameAction }>
-  | Readonly<{ ok: false; reason: string }>;
+  Readonly<{ ok: true; action: GameAction }> | Readonly<{ ok: false; reason: string }>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function fixedInteger(value: unknown, min: number, max: number): number | undefined {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= min && value <= max
-    ? value
-    : undefined;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= min && value <= max ? value : undefined;
 }
 
 function identifier(value: unknown): string | undefined {
@@ -59,22 +56,25 @@ function success(action: GameAction): GameActionNormalizationResult {
 
 /** Validates and canonicalizes a semantic action. Unknown adapter metadata is discarded. */
 export function normalizeGameAction(candidate: unknown): GameActionNormalizationResult {
-  if (!isRecord(candidate) || typeof candidate.type !== "string") return failure("action must be an object with a type");
+  if (!isRecord(candidate) || typeof candidate.type !== "string")
+    return failure("action must be an object with a type");
 
   switch (candidate.type) {
     case "move":
     case "dash": {
       const x = fixedInteger(candidate.x, -INPUT_AXIS_SCALE, INPUT_AXIS_SCALE);
       const y = fixedInteger(candidate.y, -INPUT_AXIS_SCALE, INPUT_AXIS_SCALE);
-      if (x === undefined || y === undefined) return failure("direction values must be fixed-point integers from -1000 to 1000");
+      if (x === undefined || y === undefined)
+        return failure("direction values must be fixed-point integers from -1000 to 1000");
       return success({ type: candidate.type, x, y });
     }
     case "aim": {
       const turn = fixedInteger(candidate.turn, 0, AIM_TURN_SCALE - 1);
       if (turn === undefined) return failure("aim turn must be an integer from 0 to 999999");
-      const magnitude = candidate.magnitude === undefined
-        ? AIM_MAGNITUDE_SCALE
-        : fixedInteger(candidate.magnitude, 0, AIM_MAGNITUDE_SCALE);
+      const magnitude =
+        candidate.magnitude === undefined
+          ? AIM_MAGNITUDE_SCALE
+          : fixedInteger(candidate.magnitude, 0, AIM_MAGNITUDE_SCALE);
       return magnitude === undefined
         ? failure("aim magnitude must be an integer from 0 to 1000")
         : success({ type: "aim", turn, magnitude });

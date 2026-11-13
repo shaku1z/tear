@@ -18,7 +18,10 @@ export interface AppTransitionContext {
 }
 
 export class IllegalLegacyAppTransitionError extends Error {
-  constructor(readonly from: AppScreen, readonly to: AppScreen) {
+  constructor(
+    readonly from: AppScreen,
+    readonly to: AppScreen,
+  ) {
     super(`Illegal legacy application transition: ${from} -> ${to}`);
     this.name = "IllegalLegacyAppTransitionError";
   }
@@ -55,10 +58,18 @@ export class AppStateController {
     this.#surfaces = surfaces;
   }
 
-  get screen(): AppScreen { return this.#snapshot.screen; }
-  get settingsReturn(): AppScreen { return this.#snapshot.settingsReturn; }
-  get replayReturn(): AppScreen { return this.#snapshot.replayReturn; }
-  snapshot(): AppStateSnapshot { return this.#snapshot; }
+  get screen(): AppScreen {
+    return this.#snapshot.screen;
+  }
+  get settingsReturn(): AppScreen {
+    return this.#snapshot.settingsReturn;
+  }
+  get replayReturn(): AppScreen {
+    return this.#snapshot.replayReturn;
+  }
+  snapshot(): AppStateSnapshot {
+    return this.#snapshot;
+  }
 
   transition(to: AppScreen, context: AppTransitionContext = {}): AppScreen {
     ensureScreen(to, "to");
@@ -72,9 +83,12 @@ export class AppStateController {
     let replayReturn = current.replayReturn;
     if (to === "settings") {
       const requested = context.returnTo;
-      settingsReturn = requested === undefined
-        ? (current.screen === "rename" ? current.settingsReturn : current.screen)
-        : ensureScreen(requested, "settings return");
+      settingsReturn =
+        requested === undefined
+          ? current.screen === "rename"
+            ? current.settingsReturn
+            : current.screen
+          : ensureScreen(requested, "settings return");
     } else if (current.screen === "settings" && to === settingsReturn) {
       settingsReturn = "menu";
     }

@@ -9,7 +9,7 @@ export interface FocusableRect {
 }
 
 export function enabledButtonIndexes(buttons: readonly FocusableRect[]): readonly number[] {
-  return buttons.flatMap((button, index) => button.enabled === false ? [] : [index]);
+  return buttons.flatMap((button, index) => (button.enabled === false ? [] : [index]));
 }
 
 /**

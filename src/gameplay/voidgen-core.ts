@@ -1,4 +1,11 @@
-import type { VoidHazardType, VoidLane, VoidOptions, VoidOptionsInput, VoidPlatform, VoidSeed } from "./voidgen-contracts";
+import type {
+  VoidHazardType,
+  VoidLane,
+  VoidOptions,
+  VoidOptionsInput,
+  VoidPlatform,
+  VoidSeed,
+} from "./voidgen-contracts";
 
 export const LANES: readonly VoidLane[] = Object.freeze(["lower", "upper"]);
 // These names describe invisible reachability relationships, not scenery.
@@ -43,7 +50,9 @@ export const DEFAULTS: Readonly<VoidOptions> = Object.freeze({
   }),
 });
 
-export interface RngState { value: number }
+export interface RngState {
+  value: number;
+}
 export interface RawPlatformSpec {
   rx: number;
   y: number;
@@ -54,33 +63,43 @@ export interface RawPlatformSpec {
 }
 export type PendingConnector = [VoidLane, number, VoidLane, number, string];
 
-export function clamp(v: number, lo: number, hi: number): number { return v < lo ? lo : (v > hi ? hi : v); }
-export function overlap(a0: number, a1: number, b0: number, b1: number): boolean { return Math.max(a0, b0) < Math.min(a1, b1); }
-export function finite(v: unknown, fallback: number): number { return typeof v === "number" && Number.isFinite(v) ? v : fallback; }
+export function clamp(v: number, lo: number, hi: number): number {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+export function overlap(a0: number, a1: number, b0: number, b1: number): boolean {
+  return Math.max(a0, b0) < Math.min(a1, b1);
+}
+export function finite(v: unknown, fallback: number): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : fallback;
+}
 
 export function seed32(value: VoidSeed): number {
-  if (typeof value === "number" && Number.isFinite(value)) return (value >>> 0) || 1;
+  if (typeof value === "number" && Number.isFinite(value)) return value >>> 0 || 1;
   const text = String(value ?? "void");
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  return (h >>> 0) || 1;
+  return h >>> 0 || 1;
 }
 
 export function mix32(value: number): number {
   let x = value >>> 0;
-  x ^= x >>> 16; x = Math.imul(x, 0x7feb352d);
-  x ^= x >>> 15; x = Math.imul(x, 0x846ca68b);
   x ^= x >>> 16;
-  return (x >>> 0) || 1;
+  x = Math.imul(x, 0x7feb352d);
+  x ^= x >>> 15;
+  x = Math.imul(x, 0x846ca68b);
+  x ^= x >>> 16;
+  return x >>> 0 || 1;
 }
 
 export function rngStep(value: number): number {
   let x = value >>> 0;
-  x ^= x << 13; x ^= x >>> 17; x ^= x << 5;
-  return (x >>> 0) || 0x9e3779b9;
+  x ^= x << 13;
+  x ^= x >>> 17;
+  x ^= x << 5;
+  return x >>> 0 || 0x9e3779b9;
 }
 
 export function random(rng: RngState): number {
@@ -88,8 +107,12 @@ export function random(rng: RngState): number {
   return rng.value / 4294967296;
 }
 
-export function randomInt(rng: RngState, count: number): number { return Math.floor(random(rng) * count); }
-export function randomRange(rng: RngState, lo: number, hi: number): number { return lo + (hi - lo) * random(rng); }
+export function randomInt(rng: RngState, count: number): number {
+  return Math.floor(random(rng) * count);
+}
+export function randomRange(rng: RngState, lo: number, hi: number): number {
+  return lo + (hi - lo) * random(rng);
+}
 
 export function normaliseOptions(overrides?: VoidOptionsInput): VoidOptions {
   const src = overrides ?? {};

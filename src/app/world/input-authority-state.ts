@@ -6,14 +6,16 @@ export interface LiveInputAuthorityState {
 }
 
 /** Keeps automated-input authority from performing browser-owned device actions. */
-export function createLiveInputAuthorityState(
-  requestPointerLock: () => void,
-): LiveInputAuthorityState {
+export function createLiveInputAuthorityState(requestPointerLock: () => void): LiveInputAuthorityState {
   let semanticInputAuthority = false;
   return Object.freeze({
     semanticInputAuthority: () => semanticInputAuthority,
-    setSemanticInputAuthority: (active) => { semanticInputAuthority = active; },
-    requestPointerLock: () => { if (!semanticInputAuthority) requestPointerLock(); },
+    setSemanticInputAuthority: (active) => {
+      semanticInputAuthority = active;
+    },
+    requestPointerLock: () => {
+      if (!semanticInputAuthority) requestPointerLock();
+    },
     allowsDeviceAimCapture: () => !semanticInputAuthority,
   } satisfies LiveInputAuthorityState);
 }

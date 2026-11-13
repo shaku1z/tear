@@ -32,7 +32,11 @@ export function advanceWeaponAbilities<TTarget extends WeaponRuntimeTarget>(
   }
 }
 
-export interface WeaponLogEntry extends Record<string, unknown> { readonly t: number; readonly type: string; readonly weaponId: string }
+export interface WeaponLogEntry extends Record<string, unknown> {
+  readonly t: number;
+  readonly type: string;
+  readonly weaponId: string;
+}
 
 export function appendWeaponEvent(
   log: unknown[] | null | undefined,
@@ -48,31 +52,37 @@ export function appendWeaponEvent(
 }
 
 export function nearestLivingTarget<T extends Readonly<{ x: number; y: number; dead?: boolean }>>(
-  targets: readonly T[], x: number, y: number,
+  targets: readonly T[],
+  x: number,
+  y: number,
 ): T | null {
   let best: T | null = null;
   let distance = Number.POSITIVE_INFINITY;
   for (const target of targets) {
     if (target.dead) continue;
     const candidate = Math.hypot(target.x - x, target.y - y);
-    if (candidate < distance) { distance = candidate; best = target; }
+    if (candidate < distance) {
+      distance = candidate;
+      best = target;
+    }
   }
   return best;
 }
 
-type CollapsibleTarget = Pick<WeaponRuntimeTarget, "x" | "y" | "vx" | "vy" | "dead" | "anchored" | "weight" | "radius" | "isBoss">;
+type CollapsibleTarget = Pick<
+  WeaponRuntimeTarget,
+  "x" | "y" | "vx" | "vy" | "dead" | "anchored" | "weight" | "radius" | "isBoss"
+>;
 
-export function collapseTargets(
-  targets: readonly CollapsibleTarget[], x: number, y: number, radius = 190,
-): void {
+export function collapseTargets(targets: readonly CollapsibleTarget[], x: number, y: number, radius = 190): void {
   for (const target of targets) {
     if (target.dead || target.anchored || Math.hypot(target.x - x, target.y - y) > radius + target.radius) continue;
     const dx = x - target.x;
     const dy = y - target.y;
     const magnitude = Math.hypot(dx, dy) || 1;
     const resistance = target.isBoss ? 0.12 : 1 / target.weight;
-    target.vx += dx / magnitude * 640 * resistance;
-    target.vy += dy / magnitude * 420 * resistance;
+    target.vx += (dx / magnitude) * 640 * resistance;
+    target.vy += (dy / magnitude) * 420 * resistance;
   }
 }
 

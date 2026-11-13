@@ -29,27 +29,39 @@ export async function validateReleaseRepository({
   if (fetch) runGit(repositoryRoot, ["fetch", "--no-tags", "origin", "main"]);
   const head = runGit(repositoryRoot, ["rev-parse", "HEAD"]).toLowerCase();
   const remote = runGit(repositoryRoot, ["rev-parse", "origin/main"]).toLowerCase();
-  const [aheadText, behindText] = runGit(repositoryRoot, ["rev-list", "--left-right", "--count", "HEAD...origin/main"])
-    .split(/\s+/u);
+  const [aheadText, behindText] = runGit(repositoryRoot, [
+    "rev-list",
+    "--left-right",
+    "--count",
+    "HEAD...origin/main",
+  ]).split(/\s+/u);
   const ahead = Number(aheadText);
   const behind = Number(behindText);
   if (head !== remote || ahead !== 0 || behind !== 0) {
-    throw new Error(`main must exactly equal origin/main (ahead=${String(ahead)}, behind=${String(behind)}, HEAD=${head}, origin/main=${remote})`);
+    throw new Error(
+      `main must exactly equal origin/main (ahead=${String(ahead)}, behind=${String(behind)}, HEAD=${head}, origin/main=${remote})`,
+    );
   }
   if (expectedSha !== undefined && head !== expectedSha.toLowerCase()) {
     throw new Error(`release HEAD ${head} does not equal expected validated SHA ${expectedSha.toLowerCase()}`);
   }
   const evidence = JSON.parse(await readFile(resolve(evidencePath), "utf8"));
   const evidenceErrors = [];
-  if (evidence.format !== "tear-release-evidence" || evidence.schemaVersion !== 1) evidenceErrors.push("unsupported evidence format");
-  if (evidence.repository !== expectedRepository) evidenceErrors.push(`repository ${String(evidence.repository)} != ${expectedRepository}`);
+  if (evidence.format !== "tear-release-evidence" || evidence.schemaVersion !== 1)
+    evidenceErrors.push("unsupported evidence format");
+  if (evidence.repository !== expectedRepository)
+    evidenceErrors.push(`repository ${String(evidence.repository)} != ${expectedRepository}`);
   if (evidence.sha !== head) evidenceErrors.push(`SHA ${String(evidence.sha)} != ${head}`);
   if (evidence.validationWorkflow !== "Validate") evidenceErrors.push("validation workflow is not Validate");
   if (evidence.validationConclusion !== "success") evidenceErrors.push("validation conclusion is not success");
   if (!/^[1-9][0-9]*$/u.test(String(evidence.validationRunId))) evidenceErrors.push("validation run ID is missing");
   if (evidenceErrors.length > 0) throw new Error(`release evidence rejected:\n- ${evidenceErrors.join("\n- ")}`);
   assertCampaignPublicationAllowed(await readCampaignPublicationPolicy(repositoryRoot));
-  return Object.freeze({ repository: expectedRepository, sha: head, validationRunId: String(evidence.validationRunId) });
+  return Object.freeze({
+    repository: expectedRepository,
+    sha: head,
+    validationRunId: String(evidence.validationRunId),
+  });
 }
 
 const invokedPath = process.argv[1] === undefined ? "" : resolve(process.argv[1]);

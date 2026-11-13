@@ -1,9 +1,5 @@
 import type { TearScoreReplayMetadata } from "./envelope";
-import {
-  migrateVisualRecording,
-  verifyVisualReplayPacket,
-  type VisualRecordingV2,
-} from "./visual-replay";
+import { migrateVisualRecording, verifyVisualReplayPacket, type VisualRecordingV2 } from "./visual-replay";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -38,18 +34,24 @@ export function acceptedRecording(value: unknown): VisualRecordingV2 | null {
 
 export function tearScoreMetadata(value: unknown): TearScoreReplayMetadata {
   if (!isRecord(value) || typeof value.enabled !== "boolean") return { enabled: false, reason: "not-recorded" };
-  if (!value.enabled) return value.reason === "disabled" || value.reason === "fallback" || value.reason === "not-recorded"
-    ? { enabled: false, reason: value.reason } : { enabled: false, reason: "not-recorded" };
-  return typeof value.engineVersion === "string" && value.engineVersion.length > 0
-    && typeof value.scoreVersion === "string" && value.scoreVersion.length > 0
-    && typeof value.seed === "string" && value.seed.length > 0
-    && typeof value.eventJournalHash === "string" && value.eventJournalHash.length > 0
+  if (!value.enabled)
+    return value.reason === "disabled" || value.reason === "fallback" || value.reason === "not-recorded"
+      ? { enabled: false, reason: value.reason }
+      : { enabled: false, reason: "not-recorded" };
+  return typeof value.engineVersion === "string" &&
+    value.engineVersion.length > 0 &&
+    typeof value.scoreVersion === "string" &&
+    value.scoreVersion.length > 0 &&
+    typeof value.seed === "string" &&
+    value.seed.length > 0 &&
+    typeof value.eventJournalHash === "string" &&
+    value.eventJournalHash.length > 0
     ? {
-      enabled: true,
-      engineVersion: value.engineVersion,
-      scoreVersion: value.scoreVersion,
-      seed: value.seed,
-      eventJournalHash: value.eventJournalHash,
-    }
+        enabled: true,
+        engineVersion: value.engineVersion,
+        scoreVersion: value.scoreVersion,
+        seed: value.seed,
+        eventJournalHash: value.eventJournalHash,
+      }
     : { enabled: false, reason: "not-recorded" };
 }

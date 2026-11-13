@@ -20,8 +20,18 @@ export interface DebugLifecycle {
   prepareReward(reward: "draft" | "boss"): void;
   terminate(outcome: "defeat" | "victory"): void;
 }
-interface DebugCinema { active: boolean; beat: unknown; cancel(reason: string): void; requestSkip(): void; advance(): void }
-interface DebugStage { index: number; current: unknown; platforms: unknown[] }
+interface DebugCinema {
+  active: boolean;
+  beat: unknown;
+  cancel(reason: string): void;
+  requestSkip(): void;
+  advance(): void;
+}
+interface DebugStage {
+  index: number;
+  current: unknown;
+  platforms: unknown[];
+}
 type ExplicitVariantKind = "charger" | "ranged" | "flyer" | "bomber" | "armored";
 
 export interface LiveDebugHarnessContext {
@@ -74,14 +84,27 @@ export function clearPreparedOrActiveDebugWave(lifecycle: DebugLifecycle): void 
 
 type DiagnosticData = null | boolean | number | string | DiagnosticData[] | { [key: string]: DiagnosticData };
 const particleVariantFields: Readonly<Record<string, readonly string[]>> = {
-  spark: ["vx", "vy"], ring: ["r"], ribbon: ["x1", "y1"], edgeTrace: ["x1", "y1", "thickness"],
-  contactMark: ["tx", "ty", "length", "thickness"], groundPulse: ["nx", "ny", "halfWidth"],
-  muzzleWedge: ["dx", "dy", "length", "halfWidth"], shard: ["vx", "vy", "rot", "spin", "size"],
-  flash: ["r"], shock: ["r", "vr", "thick"], smoke: ["vx", "vy", "size"], ghost: ["hw", "hh"],
-  ember: ["vx", "vy", "size"], drip: ["vx", "vy", "size"],
+  spark: ["vx", "vy"],
+  ring: ["r"],
+  ribbon: ["x1", "y1"],
+  edgeTrace: ["x1", "y1", "thickness"],
+  contactMark: ["tx", "ty", "length", "thickness"],
+  groundPulse: ["nx", "ny", "halfWidth"],
+  muzzleWedge: ["dx", "dy", "length", "halfWidth"],
+  shard: ["vx", "vy", "rot", "spin", "size"],
+  flash: ["r"],
+  shock: ["r", "vr", "thick"],
+  smoke: ["vx", "vy", "size"],
+  ghost: ["hw", "hh"],
+  ember: ["vx", "vy", "size"],
+  drip: ["vx", "vy", "size"],
 };
-const invalidParticleDiagnostic = (): never => { throw new TypeError("invalid particle diagnostic data"); };
-const diagnosticQuotaExceeded = (): never => { throw new RangeError("presentation diagnostic clone quota exceeded"); };
+const invalidParticleDiagnostic = (): never => {
+  throw new TypeError("invalid particle diagnostic data");
+};
+const diagnosticQuotaExceeded = (): never => {
+  throw new RangeError("presentation diagnostic clone quota exceeded");
+};
 // A transport quota, independent of valid effect-admission budgets and renderer geometry.
 const rendererDiagnosticArrayQuota = 65536;
 function diagnosticOwn(value: object, key: string): unknown {
@@ -90,7 +113,12 @@ function diagnosticOwn(value: object, key: string): unknown {
   if (!("value" in descriptor)) return invalidParticleDiagnostic();
   return descriptor.value as unknown;
 }
-function cloneDiagnosticData(value: unknown, maximumArray: number, depth = 0, budget = { remaining: Math.min(65536, maximumArray * 64 + 256) }): DiagnosticData {
+function cloneDiagnosticData(
+  value: unknown,
+  maximumArray: number,
+  depth = 0,
+  budget = { remaining: Math.min(65536, maximumArray * 64 + 256) },
+): DiagnosticData {
   if (depth > 8 || --budget.remaining < 0) return diagnosticQuotaExceeded();
   if (value === null || typeof value === "boolean") return value;
   if (typeof value === "number") return Number.isFinite(value) ? value : invalidParticleDiagnostic();
@@ -98,438 +126,935 @@ function cloneDiagnosticData(value: unknown, maximumArray: number, depth = 0, bu
   if (typeof value !== "object" || Object.getOwnPropertySymbols(value).length > 0) return invalidParticleDiagnostic();
   if (Array.isArray(value)) {
     if (value.length > maximumArray || value.length > budget.remaining) return diagnosticQuotaExceeded();
-    if (Object.getOwnPropertyNames(value).length !== value.length + 1 || Object.keys(value).length !== value.length) return invalidParticleDiagnostic();
-    return Array.from({ length: value.length }, (_, index) => cloneDiagnosticData(diagnosticOwn(value, String(index)), maximumArray, depth + 1, budget));
+    if (Object.getOwnPropertyNames(value).length !== value.length + 1 || Object.keys(value).length !== value.length)
+      return invalidParticleDiagnostic();
+    return Array.from({ length: value.length }, (_, index) =>
+      cloneDiagnosticData(diagnosticOwn(value, String(index)), maximumArray, depth + 1, budget),
+    );
   }
-  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) return invalidParticleDiagnostic();
+  if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
+    return invalidParticleDiagnostic();
   const keys = Object.getOwnPropertyNames(value).sort();
-  if (keys.length > 64 || keys.some((key) => ["__proto__", "constructor", "prototype"].includes(key) || !Object.getOwnPropertyDescriptor(value, key)?.enumerable)) return invalidParticleDiagnostic();
-  return Object.fromEntries(keys.map((key) => [key, cloneDiagnosticData(diagnosticOwn(value, key), maximumArray, depth + 1, budget)]));
+  if (
+    keys.length > 64 ||
+    keys.some(
+      (key) =>
+        ["__proto__", "constructor", "prototype"].includes(key) ||
+        !Object.getOwnPropertyDescriptor(value, key)?.enumerable,
+    )
+  )
+    return invalidParticleDiagnostic();
+  return Object.fromEntries(
+    keys.map((key) => [key, cloneDiagnosticData(diagnosticOwn(value, key), maximumArray, depth + 1, budget)]),
+  );
 }
 function diagnosticObject(value: unknown): Record<string, DiagnosticData> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return invalidParticleDiagnostic();
   return value as Record<string, DiagnosticData>;
 }
-function diagnosticProjection(value: object | undefined, fields: readonly string[], maximumArray: number): Record<string, DiagnosticData> | null {
+function diagnosticProjection(
+  value: object | undefined,
+  fields: readonly string[],
+  maximumArray: number,
+): Record<string, DiagnosticData> | null {
   if (!value) return null;
-  return Object.fromEntries(fields.flatMap((key) => {
-    const entry = diagnosticOwn(value, key);
-    return entry === undefined ? [] : [[key, cloneDiagnosticData(entry, maximumArray)]];
-  }));
+  return Object.fromEntries(
+    fields.flatMap((key) => {
+      const entry = diagnosticOwn(value, key);
+      return entry === undefined ? [] : [[key, cloneDiagnosticData(entry, maximumArray)]];
+    }),
+  );
 }
 /** Observes detached presentation inputs only; never emits, updates or rewinds effects. */
 function presentationDiagnostics(context: LiveDebugHarnessContext) {
-  const d = context.dependencies, fx = d.FX;
+  const d = context.dependencies,
+    fx = d.FX;
   const effects = diagnosticObject(cloneDiagnosticData(d.CONFIG.effects, 64));
-  const high = effects.highBudget, low = effects.lowBudget;
-  if (typeof high !== "number" || typeof low !== "number" || !Number.isSafeInteger(high) || !Number.isSafeInteger(low) || high < 0 || low < 0) return invalidParticleDiagnostic();
+  const high = effects.highBudget,
+    low = effects.lowBudget;
+  if (
+    typeof high !== "number" ||
+    typeof low !== "number" ||
+    !Number.isSafeInteger(high) ||
+    !Number.isSafeInteger(low) ||
+    high < 0 ||
+    low < 0
+  )
+    return invalidParticleDiagnostic();
   if (typeof effects.cullMargin !== "number" || effects.cullMargin < 0) return invalidParticleDiagnostic();
-  const capacity = Math.max(high, low), list = diagnosticOwn(fx, "list");
+  const capacity = Math.max(high, low),
+    list = diagnosticOwn(fx, "list");
   if (!Array.isArray(list) || list.length > capacity) return invalidParticleDiagnostic();
   const particles = cloneDiagnosticData(list, capacity);
   if (!Array.isArray(particles)) return invalidParticleDiagnostic();
   for (const entry of particles) {
-    const particle = diagnosticObject(entry), type = particle.type;
+    const particle = diagnosticObject(entry),
+      type = particle.type;
     if (typeof type !== "string" || !Object.hasOwn(particleVariantFields, type)) return invalidParticleDiagnostic();
     const numeric = ["x", "y", "life", "max", ...(particleVariantFields[type] ?? [])];
     const allowed = new Set(["type", ...numeric, "col", "priority"]);
-    if (Object.keys(particle).some((key) => !allowed.has(key)) || numeric.some((key) => typeof particle[key] !== "number")) return invalidParticleDiagnostic();
-    if (typeof particle.life !== "number" || typeof particle.max !== "number" || particle.life < 0 || particle.max <= 0) return invalidParticleDiagnostic();
-    if (["r", "thickness", "length", "halfWidth", "size", "hw", "hh", "thick"].some((key) => typeof particle[key] === "number" && particle[key] < 0)) return invalidParticleDiagnostic();
-    if (Object.hasOwn(particle, "col") && particle.col !== null && typeof particle.col !== "string") return invalidParticleDiagnostic();
-    if (Object.hasOwn(particle, "priority") && (typeof particle.priority !== "string" || !["cosmetic", "combat", "hazard"].includes(particle.priority))) return invalidParticleDiagnostic();
+    if (
+      Object.keys(particle).some((key) => !allowed.has(key)) ||
+      numeric.some((key) => typeof particle[key] !== "number")
+    )
+      return invalidParticleDiagnostic();
+    if (typeof particle.life !== "number" || typeof particle.max !== "number" || particle.life < 0 || particle.max <= 0)
+      return invalidParticleDiagnostic();
+    if (
+      ["r", "thickness", "length", "halfWidth", "size", "hw", "hh", "thick"].some(
+        (key) => typeof particle[key] === "number" && particle[key] < 0,
+      )
+    )
+      return invalidParticleDiagnostic();
+    if (Object.hasOwn(particle, "col") && particle.col !== null && typeof particle.col !== "string")
+      return invalidParticleDiagnostic();
+    if (
+      Object.hasOwn(particle, "priority") &&
+      (typeof particle.priority !== "string" || !["cosmetic", "combat", "hazard"].includes(particle.priority))
+    )
+      return invalidParticleDiagnostic();
   }
   const view = cloneDiagnosticData(diagnosticOwn(fx, "view"), 4);
   if (view !== null) {
-    const rectangle = diagnosticObject(view), keys = ["left", "top", "right", "bottom"];
-    if (Object.keys(rectangle).length !== 4 || keys.some((key) => typeof rectangle[key] !== "number")) return invalidParticleDiagnostic();
-    if (Number(rectangle.left) > Number(rectangle.right) || Number(rectangle.top) > Number(rectangle.bottom)) return invalidParticleDiagnostic();
+    const rectangle = diagnosticObject(view),
+      keys = ["left", "top", "right", "bottom"];
+    if (Object.keys(rectangle).length !== 4 || keys.some((key) => typeof rectangle[key] !== "number"))
+      return invalidParticleDiagnostic();
+    if (Number(rectangle.left) > Number(rectangle.right) || Number(rectangle.top) > Number(rectangle.bottom))
+      return invalidParticleDiagnostic();
   }
   const cursor = diagnosticOwn(fx, "_replacementCursor");
   // Compaction can shrink the list below this existing admission cursor.
   if (typeof cursor !== "number" || !Number.isSafeInteger(cursor) || cursor < 0) return invalidParticleDiagnostic();
-  const player = context.state.player(), blade = context.state.blade();
-  const playerInput = diagnosticProjection(player, ["x", "y", "vy", "hw", "hh", "facing", "onGround", "iframe", "dashTimer", "cinematicGraceT"], rendererDiagnosticArrayQuota);
-  const bladeInput = diagnosticProjection(blade, ["x", "y", "angle", "tipX", "tipY", "glowV", "state", "throwSizeMult", "model", "trailColor", "glowColor", "restoredTrail", "tension", "riftChambers", "riftChamberCooldown", "finalFree", "hostile", "hideThrowUI"], rendererDiagnosticArrayQuota);
+  const player = context.state.player(),
+    blade = context.state.blade();
+  const playerInput = diagnosticProjection(
+    player,
+    ["x", "y", "vy", "hw", "hh", "facing", "onGround", "iframe", "dashTimer", "cinematicGraceT"],
+    rendererDiagnosticArrayQuota,
+  );
+  const bladeInput = diagnosticProjection(
+    blade,
+    [
+      "x",
+      "y",
+      "angle",
+      "tipX",
+      "tipY",
+      "glowV",
+      "state",
+      "throwSizeMult",
+      "model",
+      "trailColor",
+      "glowColor",
+      "restoredTrail",
+      "tension",
+      "riftChambers",
+      "riftChamberCooldown",
+      "finalFree",
+      "hostile",
+      "hideThrowUI",
+    ],
+    rendererDiagnosticArrayQuota,
+  );
   if (blade && bladeInput) {
-    for (const [key, fields] of [["trail", ["hx", "hy", "tx", "ty"]], ["chainPoints", ["x", "y"]], ["reversals", ["x", "y", "directionX", "directionY", "exited"]]] as const) {
+    for (const [key, fields] of [
+      ["trail", ["hx", "hy", "tx", "ty"]],
+      ["chainPoints", ["x", "y"]],
+      ["reversals", ["x", "y", "directionX", "directionY", "exited"]],
+    ] as const) {
       const points = diagnosticOwn(blade, key);
       if (!Array.isArray(points)) return invalidParticleDiagnostic();
       if (points.length > rendererDiagnosticArrayQuota) return diagnosticQuotaExceeded();
-      bladeInput[key] = Array.from({ length: points.length }, (_, index) => diagnosticProjection(diagnosticObject(diagnosticOwn(points, String(index))), fields, rendererDiagnosticArrayQuota));
+      bladeInput[key] = Array.from({ length: points.length }, (_, index) =>
+        diagnosticProjection(
+          diagnosticObject(diagnosticOwn(points, String(index))),
+          fields,
+          rendererDiagnosticArrayQuota,
+        ),
+      );
     }
     const stolenBy = diagnosticOwn(blade, "stolenBy");
     if (typeof stolenBy === "function") return invalidParticleDiagnostic();
     bladeInput.stolenByPresent = Boolean(stolenBy);
     const lastHand = diagnosticOwn(blade, "_lastHand");
-    if (lastHand !== undefined) bladeInput.lastHand = lastHand === null ? null : diagnosticProjection(diagnosticObject(lastHand), ["x", "y"], rendererDiagnosticArrayQuota);
+    if (lastHand !== undefined)
+      bladeInput.lastHand =
+        lastHand === null
+          ? null
+          : diagnosticProjection(diagnosticObject(lastHand), ["x", "y"], rendererDiagnosticArrayQuota);
   }
-  return cloneDiagnosticData({ format: "tear-presentation-input-diagnostic", version: 1, particles: { list: particles, view, _replacementCursor: cursor },
-    policy: { effects, settings: { lowGraphics: d.GFX.low, reducedMotion: d.A11Y.reducedMotion, highContrast: d.A11Y.highContrast, flashScale: d.A11Y.flashScale }, entropyOwner: "per-world cosmetic emission; particlesPresentation.v2", entropy: d.cosmeticEmissionRandom.snapshot() },
-    renderInputs: { player: playerInput, blade: bladeInput, clockSeconds: d.CLOCK.sim,
-      handOffset: diagnosticProjection(d.CONFIG.blade, ["handOffsetX", "handOffsetY"], rendererDiagnosticArrayQuota),
-      theme: { dark: d.THEME.dark, ink: d.THEME.ink, rim: d.THEME.rim }, colors: { eye: d.CONFIG.colors.eye, perfect: d.CONFIG.colors.perfect } } }, Math.max(capacity, rendererDiagnosticArrayQuota));
+  return cloneDiagnosticData(
+    {
+      format: "tear-presentation-input-diagnostic",
+      version: 1,
+      particles: { list: particles, view, _replacementCursor: cursor },
+      policy: {
+        effects,
+        settings: {
+          lowGraphics: d.GFX.low,
+          reducedMotion: d.A11Y.reducedMotion,
+          highContrast: d.A11Y.highContrast,
+          flashScale: d.A11Y.flashScale,
+        },
+        entropyOwner: "per-world cosmetic emission; particlesPresentation.v2",
+        entropy: d.cosmeticEmissionRandom.snapshot(),
+      },
+      renderInputs: {
+        player: playerInput,
+        blade: bladeInput,
+        clockSeconds: d.CLOCK.sim,
+        handOffset: diagnosticProjection(d.CONFIG.blade, ["handOffsetX", "handOffsetY"], rendererDiagnosticArrayQuota),
+        theme: { dark: d.THEME.dark, ink: d.THEME.ink, rim: d.THEME.rim },
+        colors: { eye: d.CONFIG.colors.eye, perfect: d.CONFIG.colors.perfect },
+      },
+    },
+    Math.max(capacity, rendererDiagnosticArrayQuota),
+  );
 }
 
 /** Installs the browser-journey control surface without leaking it into production. */
 export function installLiveDebugHarness(context: LiveDebugHarnessContext): void {
   if (!context.enabled) return;
   const d = context.dependencies;
-  const clearCombat = (): void => { context.state.setEnemies([]); context.state.setProjectiles([]); };
+  const clearCombat = (): void => {
+    context.state.setEnemies([]);
+    context.state.setProjectiles([]);
+  };
   const prepareCurrentGameplay = (): void => {
     if (context.cinema.active) context.cinema.cancel("tearbench-current-gameplay");
     const player = context.state.player();
     if (player === undefined) throw new Error("Current gameplay scenario requires a live player");
     Object.assign(player, { y: d.CONFIG.world.groundY - player.hh, vy: 0, onGround: true });
   };
-  context.install(Object.freeze({
-    presentationDiagnostics: () => presentationDiagnostics(context),
-    startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
-    prepareCurrentGameplayScenario: prepareCurrentGameplay,
-    prepareCalibrationMovement() {
-      prepareCurrentGameplay();
-      const run = runOf(context.state);
-      // Keep the pending wave intact, but defer combat during this short proof.
-      if (context.state.enemies().length === 0) {
-        context.state.setEnemies([context.entities.createEnemy("charger", 30,
-          d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, run)]);
-      }
-      run.spawnTimer = 30;
-      context.state.setProjectiles([]);
-      for (const enemy of context.state.enemies()) {
-        Object.assign(enemy, { x: 30, y: d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2,
-          vx: 0, vy: 0, stun: 30, atkCd: 30, spawnT: 30 });
-      }
-    },
-    setCalibrationPlatformState(index: number, state: string) {
-      if (!["stable", "stressed", "warning", "broken", "reforming"].includes(state)) throw new Error("Invalid calibration platform state");
-      const platform = context.stage.platforms[index];
-      if (typeof platform !== "object" || platform === null || !("y" in platform)
-        || typeof platform.y !== "number" || platform.y >= d.CONFIG.world.groundY) throw new Error("Expected an elevated calibration platform");
-      // Presentation fixture only: no new lifecycle rule or collision geometry.
-      Object.assign(platform, { arenaState: state === "stressed" ? "stable" : state,
-        stress: state === "stressed" ? 0.6 : 0, crackWarn: 0.2, respawnIn: 0.2 });
-    },
-    ...createDebugPerformanceScenarios(context, { run: () => runOf(context.state), prepareCurrentGameplay,
-      retireWave: () => { clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("draft"); } }),
-    prepareVariantSelectionScenario(kind: ExplicitVariantKind, variantId: string) {
-      const run = runOf(context.state);
-      if (run.mode !== "playground" && run.mode !== "sandbox") throw new Error("explicit variant selection is limited to Playground/Enemy Test");
-      if (context.spawnExplicitVariant === undefined) throw new Error("explicit variant training port is unavailable");
-      if (!(context.dependencies.VARIANTS[kind] ?? []).some((variant) => variant.id === variantId)) {
-        throw new RangeError(`unknown variant ${variantId} for ${kind}`);
-      }
-      clearCombat(); context.spawnExplicitVariant(kind, variantId);
-    },
-    /** PT3-C4 browser fixture: puts one canonical Pale variant at the start of its authored readable action. */
-    preparePaleVariantEvidenceScenario(kind: ExplicitVariantKind, variantId: string) {
-      const run = runOf(context.state);
-      if (run.mode !== "playground" && run.mode !== "sandbox") throw new Error("Pale variant evidence requires Playground/Enemy Test");
-      if (context.spawnExplicitVariant === undefined) throw new Error("explicit variant training port is unavailable");
-      clearCombat(); context.spawnExplicitVariant(kind, variantId);
-      const actor = context.state.enemies().find((enemy) => enemy.variant === variantId) as
-        GameEnemy & { state?: string; aimTimer?: number; windT?: number; windMax?: number; warnT?: number;
-          diveX?: number | null; lobTimer?: number; rimeRebounds?: number } | undefined;
-      const player = context.state.player();
-      if (actor === undefined || player === undefined) throw new Error(`Pale evidence actor ${variantId} was not composed`);
-      Object.assign(player, { x: 800, y: d.CONFIG.world.groundY - player.hh, vx: 0, vy: 0,
-        onGround: true, hp: Math.max(player.hp, 1_000) });
-      Object.assign(actor, { spawnT: 0, stun: 0, hitCd: 0, aliveT: 0, vx: 0, vy: 0 });
-      if (kind === "charger") {
-        player.x = 1_450;
-        Object.assign(actor, { x: 1_100, y: d.CONFIG.world.groundY - actor.hh,
-        onGround: true, atk: "windup", atkT: 0.3, atkMax: 0.3, atkDir: 1, atkCd: 0,
-        chargePower: 0.72, rimeRebounds: 0 });
-      }
-      else if (kind === "ranged") Object.assign(actor, { x: 1_150, y: d.CONFIG.world.groundY - actor.hh,
-        onGround: true, state: "windup", windT: 0.35, windMax: 0.35, aimTimer: 99 });
-      else if (kind === "flyer") Object.assign(actor, { x: 800, y: 72, onGround: false,
-        state: "warn", warnT: 0.82, aimTimer: 99, diveX: 800 });
-      else if (kind === "bomber") Object.assign(actor, { x: 1_150, y: d.CONFIG.world.groundY - actor.hh,
-        onGround: true, lobTimer: 0.12 });
-      else Object.assign(actor, { x: 1_000, y: d.CONFIG.world.groundY - actor.hh, onGround: true });
-    },
-    positionDebugPlayer(x: number) {
-      const player = context.state.player();
-      if (player === undefined) throw new Error("Debug player positioning requires a live player");
-      Object.assign(player, { x: d.clamp(x, player.hw, context.width - player.hw),
-        y: d.CONFIG.world.groundY - player.hh, vx: 0, vy: 0, onGround: true });
-    },
-    /** Invokes canonical counterplay entry points on the live PT3-C4 evidence actor; it never writes authored result state. */
-    triggerPaleVariantCounterplay(variantId: "prism-seer" | "glacier-guard", action: "perfect-parry" | "launch" | "break") {
-      const actor = context.state.enemies().find((enemy) => enemy.variant === variantId);
-      if (actor === undefined) throw new Error(`Pale counterplay actor ${variantId} is unavailable`);
-      if (variantId === "prism-seer" && action === "perfect-parry") {
-        const shard = context.state.projectiles().find((projectile) => projectile.kind === "prism-shard");
-        if (shard === undefined) throw new Error("Prism counterplay requires a live shard pair");
-        shard.deflect(1, 0, d.CONFIG.blade.perfectSpeed, true); return;
-      }
-      if (variantId === "glacier-guard" && action === "launch") { actor.hit(1, 0, -1, { playerOwned: true }); return; }
-      if (variantId === "glacier-guard" && action === "break") {
-        actor.applyBreak(d.CONFIG.weapons.hammer.breakThreshold * 2); return;
-      }
-      throw new RangeError(`unsupported Pale counterplay action ${variantId}/${action}`);
-    },
-    prepareNaturalWaveClearScenario() {
-      prepareCurrentGameplay();
-      const run = runOf(context.state);
-      if (context.lifecycle.phase === "wave-prepared") context.lifecycle.activateWave();
-      if (context.lifecycle.phase !== "wave-active") {
-        throw new Error(`Current wave-clear scenario requires an active wave, received ${context.lifecycle.phase}`);
-      }
-      run.spawnQueue.length = 0;
-      context.state.setEnemies([]);
-    },
-    /** Adds a real live actor without a wave-spawn fact so ownership projection can prove it stays unrelated. */
-    addUnownedWaveObserverActor() {
-      if (context.lifecycle.phase !== "wave-active") {
-        throw new Error(`Unowned wave observer requires an active live wave, received ${context.lifecycle.phase}`);
-      }
-      const actor = context.entities.createEnemy("charger", context.width - 180,
-        d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, runOf(context.state));
-      Object.assign(actor, { vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 30, hitCd: 0, aliveT: 0,
-        behavior: "bull", atk: "idle", atkT: 0, atkCd: 30, canClimb: false, climber: false,
-        variant: "", variantName: "", affixes: [], affixCount: 0 });
-      context.state.setEnemies([...context.state.enemies(), actor]);
-    },
-    prepareBossSupportScenario(id: "aldric" | "echo") {
-      if (context.cinema.active) context.cinema.cancel("tearbench-current-boss-support");
-      const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === id);
-      if (boss === undefined) throw new Error(`Current boss support requires its actual ${id} encounter`);
-      Object.assign(boss, { spawnT: 0, introT: 0,
-        ...(id === "echo" ? { _live: true, spawnClone: true } : { spawnAdds: true }) });
-    },
-    /** Exact-tick parity fixture: author one Charger after the run exists, before its next step. */
-    prepareEnemyParityScenario() {
-      const player = context.state.player();
-      if (player === undefined) throw new Error("Enemy parity scenario requires a live player");
-      player.x = context.width / 2; player.y = d.CONFIG.world.groundY - player.hh;
-      player.vx = 0; player.vy = 0; player.onGround = true;
-      const enemy = context.entities.createEnemy("charger", context.width / 2 + 300,
-        d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, runOf(context.state));
-      Object.assign(enemy, {
-        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
-        behavior: "bull", atk: "windup", atkT: 0.3, atkMax: 0.3, atkDir: -1,
-        atkCd: 0, chargePower: 0.5, chargeMult: 1, canClimb: false, climber: false,
-        variant: "", variantName: "", affixes: [], affixCount: 0,
-      });
-      context.state.setEnemies([enemy]);
-      context.state.setProjectiles([]);
-    },
-    /** PT3-C3 browser fixture: compose two real Rimehounds through the live factory. */
-    prepareRimehoundScenario() {
-      const player = context.state.player(), run = runOf(context.state);
-      if (player === undefined) throw new Error("Rimehound scenario requires a live player");
-      Object.assign(player, { x: 900, y: d.CONFIG.world.groundY - player.hh,
-        vx: 0, vy: 0, onGround: true, hp: Math.max(player.hp, 1_000) });
-      const hounds = [430, 620].map((x) => context.entities.createEnemy(
-        "rimehound", x, d.CONFIG.world.groundY - 17, run,
-      ));
-      for (const hound of hounds) Object.assign(hound, {
-        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
-        atk: "flank", atkT: 0, atkCd: 0, canClimb: false, climber: false,
-        variant: "", variantName: "", affixes: [], affixCount: 0,
-      });
-      context.state.setEnemies(hounds);
-      context.state.setProjectiles([]);
-    },
-    /** Exact-tick parity fixture: enter the real Ranged telegraph, fire, and kite loop. */
-    prepareRangedParityScenario() {
-      const player = context.state.player();
-      if (player === undefined) throw new Error("Ranged parity scenario requires a live player");
-      Object.assign(player, { x: 450, y: d.CONFIG.world.groundY - player.hh,
-        vx: 0, vy: 0, onGround: true });
-      const enemy = context.entities.createEnemy("ranged", 1150, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2,
-        runOf(context.state)) as
-        GameEnemy & { state: string; aimTimer: number; windT: number; windMax: number };
-      Object.assign(enemy, {
-        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
-        behavior: "", state: "kite", aimTimer: 0.05, windT: 0, windMax: 0,
-        fireRateMult: 1, auraHaste: 1, auraDmg: 1, volley: 1,
-        canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
-      });
-      context.state.setEnemies([enemy]);
-      context.state.setProjectiles([]);
-    },
-    /** Exact-tick parity fixture: cross one hostile shot with a real high-speed held tip. */
-    prepareProjectileParryScenario() {
-      const player = context.state.player(), blade = context.state.blade(), run = runOf(context.state);
-      if (player === undefined || blade === undefined) throw new Error("Parry parity scenario requires a live player and blade");
-      const owner = context.entities.createEnemy("ranged", 1500, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2, run);
-      Object.assign(owner, {
-        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 9, hitCd: 0, aliveT: 0,
-        behavior: "", state: "kite", aimTimer: 9, windT: 0, windMax: 0,
-        canClimb: false, climber: false, variant: "", variantName: "", affixes: [], affixCount: 0,
-      });
-      const actualTipX = blade.tipX, actualTipY = blade.tipY;
-      const shot = context.entities.createProjectile(blade.x + (actualTipX - blade.x) * 0.62,
-        blade.y + (actualTipY - blade.y) * 0.62, -800, 0);
-      shot.r = 18; shot.owner = owner; shot.sourceEnemy = owner; shot.dmg = d.CONFIG.proj.dmg;
-      Object.assign(blade, { state: "held", vx: 0, vy: 0,
-        tipX: actualTipX - 28, tipY: actualTipY, prevTipX: actualTipX - 28, prevTipY: actualTipY });
-      run.mods.parryGuard = true; run.weaponStats.perfectParries = 0; player.guardT = 0;
-      context.state.setEnemies([owner]);
-      context.state.setProjectiles([shot]);
-    },
-    /** Exact-tick parity fixture: attach THE ECHO and observe deterministic neutral pursuit. */
-    prepareMirrorPursuitScenario() {
-      const player = context.state.player(), run = runOf(context.state);
-      if (player === undefined) throw new Error("Mirror parity scenario requires a live player");
-      Object.assign(player, { x: 350, y: d.CONFIG.world.groundY - player.hh,
-        vx: 0, vy: 0, onGround: true, lastTrickT: 0, lastTrickKind: "" });
-      d.Mirror.active = false; d.Mirror.host = null; d.Mirror.fxq.length = 0;
-      const host = context.entities.createEnemy("echo", 1200, d.CONFIG.world.groundY - d.CONFIG.echo.h / 2, run) as
-        unknown as GameEnemy & { _live: boolean };
-      Object.assign(host, {
-        bossId: "echo", presentationId: "echo", _live: true,
-        vx: 0, vy: 0, onGround: true, spawnT: 0, introT: 0,
-        stun: 0, hitCd: 0, aliveT: 0, variant: "", variantName: "", affixes: [], affixCount: 0,
-      });
-      context.state.setEnemies([host]);
-      context.state.setProjectiles([]);
-    },
-    /** Exact-tick parity fixture: drive a real held strike through damage, kill, and cleanup. */
-    prepareCombatParityScenario() {
-      const player = context.state.player(), blade = context.state.blade(), run = runOf(context.state);
-      if (player === undefined || blade === undefined) throw new Error("Combat parity scenario requires a live player and blade");
-      const dx = blade.tipX - blade.x, dy = blade.tipY - blade.y;
-      const survivor = context.entities.createEnemy("charger", blade.x + dx * 0.48, blade.y + dy * 0.48, run);
-      const victim = context.entities.createEnemy("charger", blade.x + dx * 0.78, blade.y + dy * 0.78, run);
-      for (const enemy of [survivor, victim]) Object.assign(enemy, {
-        vx: 0, vy: 0, onGround: false, spawnT: 0, stun: 0.75, hitCd: 0, aliveT: 0,
-        behavior: "bull", atk: "idle", atkT: 0, atkCd: 9, canClimb: false, climber: false,
-        variant: "", variantName: "", affixes: [], affixCount: 0,
-      });
-      victim.hp = 1; victim.hpDisplay = 1;
-      Object.assign(blade, { state: "held", vx: 1800, vy: 0 });
-      context.state.setEnemies([survivor, victim]);
-      context.state.setProjectiles([]);
-    },
-    /** Journey-only: drop the live boss to a health fraction so phase gates are reachable. */
-    setBossHealthFraction(fraction: number) {
-      const boss = context.state.enemies().find((enemy) => enemy.isBoss && !enemy.dead);
-      if (boss === undefined) throw new Error("No live boss to damage");
-      boss.hp = Math.max(1, Math.round(boss.maxHp * fraction));
-      boss.hpDisplay = boss.hp;
-    },
-    /** PT3-C7 evidence fixture: chooses a real phase-local attack, then lets the ordinary live update author the result. */
-    prepareWhiteHartAttack(attack: WhiteHartAttackId) {
-      const boss = context.state.enemies().find((enemy) => enemy.bossId === "white-hart" && !enemy.dead) as
-        GameEnemy & { phase: 1 | 2 | 3; state: string; stateT: number; stateMax: number; attackCursor: number;
-          pendingEnvironmentRequests: unknown[]; routeTelegraph: readonly unknown[];
-          candidateRoutes: readonly (readonly unknown[])[] } | undefined;
-      const player = context.state.player();
-      if (boss === undefined || player === undefined) throw new Error("White Hart evidence requires its live encounter");
-      const phaseAttacks = WHITE_HART_PHASE_ATTACKS[boss.phase];
-      const cursor = phaseAttacks.indexOf(attack as never);
-      if (cursor < 0) throw new RangeError(`${attack} is not available in White Hart phase ${String(boss.phase)}`);
-      Object.assign(player, { x: context.width * 0.72, y: d.CONFIG.world.groundY - player.hh,
-        vx: 0, vy: 0, onGround: true, hp: Math.max(player.hp, 1_000) });
-      Object.assign(boss, { spawnT: 0, introT: 0, stun: 0, hitCd: 0, aliveT: 0,
-        state: "idle", stateT: 0, stateMax: 0, atk: "idle", attackCursor: cursor,
-        pendingEnvironmentRequests: [], routeTelegraph: Object.freeze([]), candidateRoutes: Object.freeze([]) });
-      context.state.setProjectiles([]);
-    },
-    /** Journey-only: enter the normal player-death/outcome path on the next simulation tail. */
-    defeatPlayer() {
-      const player = context.state.player();
-      if (player === undefined) throw new Error("No live player to defeat");
-      player.hp = 0;
-    },
-    startBoss(boss: BossId, difficulty?: RunDifficulty) {
-      context.selectBoss(boss); context.startRun("bossonly", difficulty ?? "normal");
-    },
-    bossStage(boss: BossId) {
-      const authored = d.PLAYGROUND_STAGES.find((stage) => stage.boss === boss);
-      if (authored === undefined) throw new Error(`No authored stage exists for boss ${boss}`);
-      const current = context.stage.current;
-      const currentId: unknown = typeof current === "object" && current !== null
-        ? Reflect.get(current, "id") : undefined;
-      return Object.freeze({
-        currentId: typeof currentId === "string" ? currentId : null,
-        currentIndex: context.stage.index,
-        authoredId: authored.id,
-        authoredIndex: d.PLAYGROUND_STAGES.indexOf(authored),
-      });
-    },
-    openDraft(options?: { expanded?: boolean; rerolls?: number; reserve?: boolean; preserveRun?: boolean }) {
-      const selected = { expanded: true, rerolls: 2, reserve: true, ...options };
-      if (selected.preserveRun !== true) context.startRun("endless", "normal");
-      const run = runOf(context.state); run.wave = Math.max(1, run.wave); run.spawnQueue.length = 0; context.state.setEnemies([]);
-      clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("draft");
-      run.mods.expandedDraft = selected.expanded; run.mods.draftRerolls = Math.max(0, selected.rerolls | 0);
-      run.mods.reservePick = selected.reserve; context.openDraft(); document.exitPointerLock();
-    },
-    openTierUp() {
-      context.startRun("endless", "normal");
-      const run = runOf(context.state); run.wave = Math.max(1, run.wave); run.spawnQueue.length = 0; context.state.setEnemies([]);
-      clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("boss");
-      for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4)) context.applyUpgrade(upgrade);
-      context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier)); document.exitPointerLock();
-    },
-    advanceAgentJourney(kind: "draft" | "tier") {
-      const run = runOf(context.state);
-      run.spawnQueue.length = 0;
-      clearCombat();
-      clearPreparedOrActiveDebugWave(context.lifecycle);
-      if (kind === "draft") {
-        context.lifecycle.prepareReward("draft");
-        run.mods.expandedDraft = false;
-        run.mods.reservePick = false;
-        run.mods.draftRerolls = 0;
-        context.openDraft();
-      } else {
-        run.wave = Math.max(10, run.wave);
-        context.lifecycle.prepareReward("boss");
-        for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4)) {
-          context.applyUpgrade(upgrade);
+  context.install(
+    Object.freeze({
+      presentationDiagnostics: () => presentationDiagnostics(context),
+      startMode(mode?: RunMode, difficulty?: RunDifficulty) {
+        context.startRun(mode ?? "endless", difficulty ?? "normal");
+      },
+      prepareCurrentGameplayScenario: prepareCurrentGameplay,
+      prepareCalibrationMovement() {
+        prepareCurrentGameplay();
+        const run = runOf(context.state);
+        // Keep the pending wave intact, but defer combat during this short proof.
+        if (context.state.enemies().length === 0) {
+          context.state.setEnemies([
+            context.entities.createEnemy("charger", 30, d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2, run),
+          ]);
         }
+        run.spawnTimer = 30;
+        context.state.setProjectiles([]);
+        for (const enemy of context.state.enemies()) {
+          Object.assign(enemy, {
+            x: 30,
+            y: d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2,
+            vx: 0,
+            vy: 0,
+            stun: 30,
+            atkCd: 30,
+            spawnT: 30,
+          });
+        }
+      },
+      setCalibrationPlatformState(index: number, state: string) {
+        if (!["stable", "stressed", "warning", "broken", "reforming"].includes(state))
+          throw new Error("Invalid calibration platform state");
+        const platform = context.stage.platforms[index];
+        if (
+          typeof platform !== "object" ||
+          platform === null ||
+          !("y" in platform) ||
+          typeof platform.y !== "number" ||
+          platform.y >= d.CONFIG.world.groundY
+        )
+          throw new Error("Expected an elevated calibration platform");
+        // Presentation fixture only: no new lifecycle rule or collision geometry.
+        Object.assign(platform, {
+          arenaState: state === "stressed" ? "stable" : state,
+          stress: state === "stressed" ? 0.6 : 0,
+          crackWarn: 0.2,
+          respawnIn: 0.2,
+        });
+      },
+      ...createDebugPerformanceScenarios(context, {
+        run: () => runOf(context.state),
+        prepareCurrentGameplay,
+        retireWave: () => {
+          clearPreparedOrActiveDebugWave(context.lifecycle);
+          context.lifecycle.prepareReward("draft");
+        },
+      }),
+      prepareVariantSelectionScenario(kind: ExplicitVariantKind, variantId: string) {
+        const run = runOf(context.state);
+        if (run.mode !== "playground" && run.mode !== "sandbox")
+          throw new Error("explicit variant selection is limited to Playground/Enemy Test");
+        if (context.spawnExplicitVariant === undefined)
+          throw new Error("explicit variant training port is unavailable");
+        if (!(context.dependencies.VARIANTS[kind] ?? []).some((variant) => variant.id === variantId)) {
+          throw new RangeError(`unknown variant ${variantId} for ${kind}`);
+        }
+        clearCombat();
+        context.spawnExplicitVariant(kind, variantId);
+      },
+      /** PT3-C4 browser fixture: puts one canonical Pale variant at the start of its authored readable action. */
+      preparePaleVariantEvidenceScenario(kind: ExplicitVariantKind, variantId: string) {
+        const run = runOf(context.state);
+        if (run.mode !== "playground" && run.mode !== "sandbox")
+          throw new Error("Pale variant evidence requires Playground/Enemy Test");
+        if (context.spawnExplicitVariant === undefined)
+          throw new Error("explicit variant training port is unavailable");
+        clearCombat();
+        context.spawnExplicitVariant(kind, variantId);
+        const actor = context.state.enemies().find((enemy) => enemy.variant === variantId) as
+          | (GameEnemy & {
+              state?: string;
+              aimTimer?: number;
+              windT?: number;
+              windMax?: number;
+              warnT?: number;
+              diveX?: number | null;
+              lobTimer?: number;
+              rimeRebounds?: number;
+            })
+          | undefined;
+        const player = context.state.player();
+        if (actor === undefined || player === undefined)
+          throw new Error(`Pale evidence actor ${variantId} was not composed`);
+        Object.assign(player, {
+          x: 800,
+          y: d.CONFIG.world.groundY - player.hh,
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          hp: Math.max(player.hp, 1_000),
+        });
+        Object.assign(actor, { spawnT: 0, stun: 0, hitCd: 0, aliveT: 0, vx: 0, vy: 0 });
+        if (kind === "charger") {
+          player.x = 1_450;
+          Object.assign(actor, {
+            x: 1_100,
+            y: d.CONFIG.world.groundY - actor.hh,
+            onGround: true,
+            atk: "windup",
+            atkT: 0.3,
+            atkMax: 0.3,
+            atkDir: 1,
+            atkCd: 0,
+            chargePower: 0.72,
+            rimeRebounds: 0,
+          });
+        } else if (kind === "ranged")
+          Object.assign(actor, {
+            x: 1_150,
+            y: d.CONFIG.world.groundY - actor.hh,
+            onGround: true,
+            state: "windup",
+            windT: 0.35,
+            windMax: 0.35,
+            aimTimer: 99,
+          });
+        else if (kind === "flyer")
+          Object.assign(actor, {
+            x: 800,
+            y: 72,
+            onGround: false,
+            state: "warn",
+            warnT: 0.82,
+            aimTimer: 99,
+            diveX: 800,
+          });
+        else if (kind === "bomber")
+          Object.assign(actor, { x: 1_150, y: d.CONFIG.world.groundY - actor.hh, onGround: true, lobTimer: 0.12 });
+        else Object.assign(actor, { x: 1_000, y: d.CONFIG.world.groundY - actor.hh, onGround: true });
+      },
+      positionDebugPlayer(x: number) {
+        const player = context.state.player();
+        if (player === undefined) throw new Error("Debug player positioning requires a live player");
+        Object.assign(player, {
+          x: d.clamp(x, player.hw, context.width - player.hw),
+          y: d.CONFIG.world.groundY - player.hh,
+          vx: 0,
+          vy: 0,
+          onGround: true,
+        });
+      },
+      /** Invokes canonical counterplay entry points on the live PT3-C4 evidence actor; it never writes authored result state. */
+      triggerPaleVariantCounterplay(
+        variantId: "prism-seer" | "glacier-guard",
+        action: "perfect-parry" | "launch" | "break",
+      ) {
+        const actor = context.state.enemies().find((enemy) => enemy.variant === variantId);
+        if (actor === undefined) throw new Error(`Pale counterplay actor ${variantId} is unavailable`);
+        if (variantId === "prism-seer" && action === "perfect-parry") {
+          const shard = context.state.projectiles().find((projectile) => projectile.kind === "prism-shard");
+          if (shard === undefined) throw new Error("Prism counterplay requires a live shard pair");
+          shard.deflect(1, 0, d.CONFIG.blade.perfectSpeed, true);
+          return;
+        }
+        if (variantId === "glacier-guard" && action === "launch") {
+          actor.hit(1, 0, -1, { playerOwned: true });
+          return;
+        }
+        if (variantId === "glacier-guard" && action === "break") {
+          actor.applyBreak(d.CONFIG.weapons.hammer.breakThreshold * 2);
+          return;
+        }
+        throw new RangeError(`unsupported Pale counterplay action ${variantId}/${action}`);
+      },
+      prepareNaturalWaveClearScenario() {
+        prepareCurrentGameplay();
+        const run = runOf(context.state);
+        if (context.lifecycle.phase === "wave-prepared") context.lifecycle.activateWave();
+        if (context.lifecycle.phase !== "wave-active") {
+          throw new Error(`Current wave-clear scenario requires an active wave, received ${context.lifecycle.phase}`);
+        }
+        run.spawnQueue.length = 0;
+        context.state.setEnemies([]);
+      },
+      /** Adds a real live actor without a wave-spawn fact so ownership projection can prove it stays unrelated. */
+      addUnownedWaveObserverActor() {
+        if (context.lifecycle.phase !== "wave-active") {
+          throw new Error(`Unowned wave observer requires an active live wave, received ${context.lifecycle.phase}`);
+        }
+        const actor = context.entities.createEnemy(
+          "charger",
+          context.width - 180,
+          d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2,
+          runOf(context.state),
+        );
+        Object.assign(actor, {
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          spawnT: 0,
+          stun: 30,
+          hitCd: 0,
+          aliveT: 0,
+          behavior: "bull",
+          atk: "idle",
+          atkT: 0,
+          atkCd: 30,
+          canClimb: false,
+          climber: false,
+          variant: "",
+          variantName: "",
+          affixes: [],
+          affixCount: 0,
+        });
+        context.state.setEnemies([...context.state.enemies(), actor]);
+      },
+      prepareBossSupportScenario(id: "aldric" | "echo") {
+        if (context.cinema.active) context.cinema.cancel("tearbench-current-boss-support");
+        const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === id);
+        if (boss === undefined) throw new Error(`Current boss support requires its actual ${id} encounter`);
+        Object.assign(boss, {
+          spawnT: 0,
+          introT: 0,
+          ...(id === "echo" ? { _live: true, spawnClone: true } : { spawnAdds: true }),
+        });
+      },
+      /** Exact-tick parity fixture: author one Charger after the run exists, before its next step. */
+      prepareEnemyParityScenario() {
+        const player = context.state.player();
+        if (player === undefined) throw new Error("Enemy parity scenario requires a live player");
+        player.x = context.width / 2;
+        player.y = d.CONFIG.world.groundY - player.hh;
+        player.vx = 0;
+        player.vy = 0;
+        player.onGround = true;
+        const enemy = context.entities.createEnemy(
+          "charger",
+          context.width / 2 + 300,
+          d.CONFIG.world.groundY - d.CONFIG.enemy.h / 2,
+          runOf(context.state),
+        );
+        Object.assign(enemy, {
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          spawnT: 0,
+          stun: 0,
+          hitCd: 0,
+          aliveT: 0,
+          behavior: "bull",
+          atk: "windup",
+          atkT: 0.3,
+          atkMax: 0.3,
+          atkDir: -1,
+          atkCd: 0,
+          chargePower: 0.5,
+          chargeMult: 1,
+          canClimb: false,
+          climber: false,
+          variant: "",
+          variantName: "",
+          affixes: [],
+          affixCount: 0,
+        });
+        context.state.setEnemies([enemy]);
+        context.state.setProjectiles([]);
+      },
+      /** PT3-C3 browser fixture: compose two real Rimehounds through the live factory. */
+      prepareRimehoundScenario() {
+        const player = context.state.player(),
+          run = runOf(context.state);
+        if (player === undefined) throw new Error("Rimehound scenario requires a live player");
+        Object.assign(player, {
+          x: 900,
+          y: d.CONFIG.world.groundY - player.hh,
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          hp: Math.max(player.hp, 1_000),
+        });
+        const hounds = [430, 620].map((x) =>
+          context.entities.createEnemy("rimehound", x, d.CONFIG.world.groundY - 17, run),
+        );
+        for (const hound of hounds)
+          Object.assign(hound, {
+            vx: 0,
+            vy: 0,
+            onGround: true,
+            spawnT: 0,
+            stun: 0,
+            hitCd: 0,
+            aliveT: 0,
+            atk: "flank",
+            atkT: 0,
+            atkCd: 0,
+            canClimb: false,
+            climber: false,
+            variant: "",
+            variantName: "",
+            affixes: [],
+            affixCount: 0,
+          });
+        context.state.setEnemies(hounds);
+        context.state.setProjectiles([]);
+      },
+      /** Exact-tick parity fixture: enter the real Ranged telegraph, fire, and kite loop. */
+      prepareRangedParityScenario() {
+        const player = context.state.player();
+        if (player === undefined) throw new Error("Ranged parity scenario requires a live player");
+        Object.assign(player, { x: 450, y: d.CONFIG.world.groundY - player.hh, vx: 0, vy: 0, onGround: true });
+        const enemy = context.entities.createEnemy(
+          "ranged",
+          1150,
+          d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2,
+          runOf(context.state),
+        ) as GameEnemy & { state: string; aimTimer: number; windT: number; windMax: number };
+        Object.assign(enemy, {
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          spawnT: 0,
+          stun: 0,
+          hitCd: 0,
+          aliveT: 0,
+          behavior: "",
+          state: "kite",
+          aimTimer: 0.05,
+          windT: 0,
+          windMax: 0,
+          fireRateMult: 1,
+          auraHaste: 1,
+          auraDmg: 1,
+          volley: 1,
+          canClimb: false,
+          climber: false,
+          variant: "",
+          variantName: "",
+          affixes: [],
+          affixCount: 0,
+        });
+        context.state.setEnemies([enemy]);
+        context.state.setProjectiles([]);
+      },
+      /** Exact-tick parity fixture: cross one hostile shot with a real high-speed held tip. */
+      prepareProjectileParryScenario() {
+        const player = context.state.player(),
+          blade = context.state.blade(),
+          run = runOf(context.state);
+        if (player === undefined || blade === undefined)
+          throw new Error("Parry parity scenario requires a live player and blade");
+        const owner = context.entities.createEnemy("ranged", 1500, d.CONFIG.world.groundY - d.CONFIG.ranged.h / 2, run);
+        Object.assign(owner, {
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          spawnT: 0,
+          stun: 9,
+          hitCd: 0,
+          aliveT: 0,
+          behavior: "",
+          state: "kite",
+          aimTimer: 9,
+          windT: 0,
+          windMax: 0,
+          canClimb: false,
+          climber: false,
+          variant: "",
+          variantName: "",
+          affixes: [],
+          affixCount: 0,
+        });
+        const actualTipX = blade.tipX,
+          actualTipY = blade.tipY;
+        const shot = context.entities.createProjectile(
+          blade.x + (actualTipX - blade.x) * 0.62,
+          blade.y + (actualTipY - blade.y) * 0.62,
+          -800,
+          0,
+        );
+        shot.r = 18;
+        shot.owner = owner;
+        shot.sourceEnemy = owner;
+        shot.dmg = d.CONFIG.proj.dmg;
+        Object.assign(blade, {
+          state: "held",
+          vx: 0,
+          vy: 0,
+          tipX: actualTipX - 28,
+          tipY: actualTipY,
+          prevTipX: actualTipX - 28,
+          prevTipY: actualTipY,
+        });
+        run.mods.parryGuard = true;
+        run.weaponStats.perfectParries = 0;
+        player.guardT = 0;
+        context.state.setEnemies([owner]);
+        context.state.setProjectiles([shot]);
+      },
+      /** Exact-tick parity fixture: attach THE ECHO and observe deterministic neutral pursuit. */
+      prepareMirrorPursuitScenario() {
+        const player = context.state.player(),
+          run = runOf(context.state);
+        if (player === undefined) throw new Error("Mirror parity scenario requires a live player");
+        Object.assign(player, {
+          x: 350,
+          y: d.CONFIG.world.groundY - player.hh,
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          lastTrickT: 0,
+          lastTrickKind: "",
+        });
+        d.Mirror.active = false;
+        d.Mirror.host = null;
+        d.Mirror.fxq.length = 0;
+        const host = context.entities.createEnemy(
+          "echo",
+          1200,
+          d.CONFIG.world.groundY - d.CONFIG.echo.h / 2,
+          run,
+        ) as unknown as GameEnemy & { _live: boolean };
+        Object.assign(host, {
+          bossId: "echo",
+          presentationId: "echo",
+          _live: true,
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          spawnT: 0,
+          introT: 0,
+          stun: 0,
+          hitCd: 0,
+          aliveT: 0,
+          variant: "",
+          variantName: "",
+          affixes: [],
+          affixCount: 0,
+        });
+        context.state.setEnemies([host]);
+        context.state.setProjectiles([]);
+      },
+      /** Exact-tick parity fixture: drive a real held strike through damage, kill, and cleanup. */
+      prepareCombatParityScenario() {
+        const player = context.state.player(),
+          blade = context.state.blade(),
+          run = runOf(context.state);
+        if (player === undefined || blade === undefined)
+          throw new Error("Combat parity scenario requires a live player and blade");
+        const dx = blade.tipX - blade.x,
+          dy = blade.tipY - blade.y;
+        const survivor = context.entities.createEnemy("charger", blade.x + dx * 0.48, blade.y + dy * 0.48, run);
+        const victim = context.entities.createEnemy("charger", blade.x + dx * 0.78, blade.y + dy * 0.78, run);
+        for (const enemy of [survivor, victim])
+          Object.assign(enemy, {
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            spawnT: 0,
+            stun: 0.75,
+            hitCd: 0,
+            aliveT: 0,
+            behavior: "bull",
+            atk: "idle",
+            atkT: 0,
+            atkCd: 9,
+            canClimb: false,
+            climber: false,
+            variant: "",
+            variantName: "",
+            affixes: [],
+            affixCount: 0,
+          });
+        victim.hp = 1;
+        victim.hpDisplay = 1;
+        Object.assign(blade, { state: "held", vx: 1800, vy: 0 });
+        context.state.setEnemies([survivor, victim]);
+        context.state.setProjectiles([]);
+      },
+      /** Journey-only: drop the live boss to a health fraction so phase gates are reachable. */
+      setBossHealthFraction(fraction: number) {
+        const boss = context.state.enemies().find((enemy) => enemy.isBoss && !enemy.dead);
+        if (boss === undefined) throw new Error("No live boss to damage");
+        boss.hp = Math.max(1, Math.round(boss.maxHp * fraction));
+        boss.hpDisplay = boss.hp;
+      },
+      /** PT3-C7 evidence fixture: chooses a real phase-local attack, then lets the ordinary live update author the result. */
+      prepareWhiteHartAttack(attack: WhiteHartAttackId) {
+        const boss = context.state.enemies().find((enemy) => enemy.bossId === "white-hart" && !enemy.dead) as
+          | (GameEnemy & {
+              phase: 1 | 2 | 3;
+              state: string;
+              stateT: number;
+              stateMax: number;
+              attackCursor: number;
+              pendingEnvironmentRequests: unknown[];
+              routeTelegraph: readonly unknown[];
+              candidateRoutes: readonly (readonly unknown[])[];
+            })
+          | undefined;
+        const player = context.state.player();
+        if (boss === undefined || player === undefined)
+          throw new Error("White Hart evidence requires its live encounter");
+        const phaseAttacks = WHITE_HART_PHASE_ATTACKS[boss.phase];
+        const cursor = phaseAttacks.indexOf(attack as never);
+        if (cursor < 0) throw new RangeError(`${attack} is not available in White Hart phase ${String(boss.phase)}`);
+        Object.assign(player, {
+          x: context.width * 0.72,
+          y: d.CONFIG.world.groundY - player.hh,
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          hp: Math.max(player.hp, 1_000),
+        });
+        Object.assign(boss, {
+          spawnT: 0,
+          introT: 0,
+          stun: 0,
+          hitCd: 0,
+          aliveT: 0,
+          state: "idle",
+          stateT: 0,
+          stateMax: 0,
+          atk: "idle",
+          attackCursor: cursor,
+          pendingEnvironmentRequests: [],
+          routeTelegraph: Object.freeze([]),
+          candidateRoutes: Object.freeze([]),
+        });
+        context.state.setProjectiles([]);
+      },
+      /** Journey-only: enter the normal player-death/outcome path on the next simulation tail. */
+      defeatPlayer() {
+        const player = context.state.player();
+        if (player === undefined) throw new Error("No live player to defeat");
+        player.hp = 0;
+      },
+      startBoss(boss: BossId, difficulty?: RunDifficulty) {
+        context.selectBoss(boss);
+        context.startRun("bossonly", difficulty ?? "normal");
+      },
+      bossStage(boss: BossId) {
+        const authored = d.PLAYGROUND_STAGES.find((stage) => stage.boss === boss);
+        if (authored === undefined) throw new Error(`No authored stage exists for boss ${boss}`);
+        const current = context.stage.current;
+        const currentId: unknown =
+          typeof current === "object" && current !== null ? Reflect.get(current, "id") : undefined;
+        return Object.freeze({
+          currentId: typeof currentId === "string" ? currentId : null,
+          currentIndex: context.stage.index,
+          authoredId: authored.id,
+          authoredIndex: d.PLAYGROUND_STAGES.indexOf(authored),
+        });
+      },
+      openDraft(options?: { expanded?: boolean; rerolls?: number; reserve?: boolean; preserveRun?: boolean }) {
+        const selected = { expanded: true, rerolls: 2, reserve: true, ...options };
+        if (selected.preserveRun !== true) context.startRun("endless", "normal");
+        const run = runOf(context.state);
+        run.wave = Math.max(1, run.wave);
+        run.spawnQueue.length = 0;
+        context.state.setEnemies([]);
+        clearPreparedOrActiveDebugWave(context.lifecycle);
+        context.lifecycle.prepareReward("draft");
+        run.mods.expandedDraft = selected.expanded;
+        run.mods.draftRerolls = Math.max(0, selected.rerolls | 0);
+        run.mods.reservePick = selected.reserve;
+        context.openDraft();
+        document.exitPointerLock();
+      },
+      openTierUp() {
+        context.startRun("endless", "normal");
+        const run = runOf(context.state);
+        run.wave = Math.max(1, run.wave);
+        run.spawnQueue.length = 0;
+        context.state.setEnemies([]);
+        clearPreparedOrActiveDebugWave(context.lifecycle);
+        context.lifecycle.prepareReward("boss");
+        for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4))
+          context.applyUpgrade(upgrade);
         context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier));
-      }
-      document.exitPointerLock();
-    },
-    openTerminal(kind: "campaignWin" | "win" | "continue" | "gameover") {
-      const campaign = kind === "campaignWin"; context.startRun(campaign ? "campaign" : "endless", "normal");
-      if (context.cinema.active) context.cinema.cancel("debug-terminal");
-      const run = runOf(context.state); run.wave = campaign ? d.STAGES.length * 10 : 8; run.score = 12345; run.runTime = 96;
-      run.spawnQueue.length = 0; context.state.setEnemies([]); context.state.setLastRecording(null); context.state.setWinSeconds(campaign ? 1 : 0);
-      run.waveLog = [{ wave: 1, time: 12.5, kills: 5, peak: 2 }];
-      context.state.setOutcome({ wave: run.wave, score: run.score, time: run.runTime, log: run.waveLog.slice(),
-        best: { wave: run.wave, score: run.score, time: run.runTime }, isNew: true,
-        ...(kind === "win" || campaign ? { win: true as const } : {}), campaign,
-        earned: 120, coins: d.META.coins(), diff: run.diff });
-      if (kind === "continue") { context.setContinueSeconds(1e9); context.setScreen("continue"); }
-      else { context.lifecycle.terminate(kind === "gameover" ? "defeat" : "victory"); context.setScreen(kind === "gameover" ? "gameover" : "win"); }
-      document.exitPointerLock();
-    },
-    openReplay() {
-      const count = 96;
-      const px = Array.from({ length: count }, (_, index) => 300 + index * 8);
-      const py = Array.from({ length: count }, (_, index) => 680 - Math.round(Math.sin(index / 8) * 70));
-      const tx = px.map((x, index) => x + 70 + Math.round(Math.cos(index / 6) * 20));
-      const ty = py.map((y, index) => y - 20 + Math.round(Math.sin(index / 6) * 20));
-      context.enterReplay({ v: 2, dt: 0.1, edt: 0.25, px, py, tx, ty, fc: px.map(() => 1),
-        stages: [{ t: 0, s: 0 }, { t: 4.5, s: 1 }], waves: [{ t: 0, w: 1, e: "start" }, { t: 3, w: 1, e: "clear" }, { t: 4.5, w: 2, e: "boss" }],
-        spawns: [], esamp: [], deaths: [], events: [],
-        // Oracle-published ghosts use the final summary form instead of timed picks.
-        loadout: [{ id: "tempo", tier: 3, n: 1 }, { id: "reach", tier: 1, n: 2 }], thumb: null,
-        mode: "endless", diff: "normal", name: "Journey Tester", wave: 2, score: 1234, won: true }, "menu");
-    },
-    openRename() { if (context.screen() !== "menu") context.setScreen("menu"); context.setScreen("profile"); context.beginRename(); },
-    setOptions(options?: object) { context.applyOptions(options ?? {}); },
-    startFinale() {
-      context.startRun("campaign", "normal"); if (context.cinema.active) context.cinema.cancel("debug-final-cut");
-      const run = runOf(context.state); run.wave = d.STAGES.length * 10; run.score = 12345; run.runTime = 612; run.spawnQueue.length = 0;
-      run._victoryPrepared = { isNew: true, earned: 321, coins: d.META.coins() };
-      context.stage.index = d.STAGES.length - 1; context.stage.current = d.stageAt(context.stage.index);
-      context.stage.platforms = d.stagePlatforms(context.stage.index, d.CONFIG); clearCombat(); context.stopRecording();
-      context.startFinale({ x: context.width / 2, y: context.height * 0.4 }, true);
-    },
-    cut: context.severFinale, skip() { context.cinema.requestSkip(); },
-    advance() { if (context.cinema.active && context.cinema.beat) context.cinema.advance(); },
-    pause() { if (context.screen() === "playing") context.setScreen("paused"); },
-    resume() { if (context.screen() === "paused") context.setScreen("playing"); },
-    openSettings(tab?: string) { if (context.screen() !== "menu") context.setScreen("menu"); context.setScreen("settings", { returnTo: "menu" }); if (tab) context.selectSettingsTab(tab); },
-    auditEffects: context.auditEffects, tutorial: context.tutorialSnapshot, state: context.snapshot,
-  }));
+        document.exitPointerLock();
+      },
+      advanceAgentJourney(kind: "draft" | "tier") {
+        const run = runOf(context.state);
+        run.spawnQueue.length = 0;
+        clearCombat();
+        clearPreparedOrActiveDebugWave(context.lifecycle);
+        if (kind === "draft") {
+          context.lifecycle.prepareReward("draft");
+          run.mods.expandedDraft = false;
+          run.mods.reservePick = false;
+          run.mods.draftRerolls = 0;
+          context.openDraft();
+        } else {
+          run.wave = Math.max(10, run.wave);
+          context.lifecycle.prepareReward("boss");
+          for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4)) {
+            context.applyUpgrade(upgrade);
+          }
+          context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier));
+        }
+        document.exitPointerLock();
+      },
+      openTerminal(kind: "campaignWin" | "win" | "continue" | "gameover") {
+        const campaign = kind === "campaignWin";
+        context.startRun(campaign ? "campaign" : "endless", "normal");
+        if (context.cinema.active) context.cinema.cancel("debug-terminal");
+        const run = runOf(context.state);
+        run.wave = campaign ? d.STAGES.length * 10 : 8;
+        run.score = 12345;
+        run.runTime = 96;
+        run.spawnQueue.length = 0;
+        context.state.setEnemies([]);
+        context.state.setLastRecording(null);
+        context.state.setWinSeconds(campaign ? 1 : 0);
+        run.waveLog = [{ wave: 1, time: 12.5, kills: 5, peak: 2 }];
+        context.state.setOutcome({
+          wave: run.wave,
+          score: run.score,
+          time: run.runTime,
+          log: run.waveLog.slice(),
+          best: { wave: run.wave, score: run.score, time: run.runTime },
+          isNew: true,
+          ...(kind === "win" || campaign ? { win: true as const } : {}),
+          campaign,
+          earned: 120,
+          coins: d.META.coins(),
+          diff: run.diff,
+        });
+        if (kind === "continue") {
+          context.setContinueSeconds(1e9);
+          context.setScreen("continue");
+        } else {
+          context.lifecycle.terminate(kind === "gameover" ? "defeat" : "victory");
+          context.setScreen(kind === "gameover" ? "gameover" : "win");
+        }
+        document.exitPointerLock();
+      },
+      openReplay() {
+        const count = 96;
+        const px = Array.from({ length: count }, (_, index) => 300 + index * 8);
+        const py = Array.from({ length: count }, (_, index) => 680 - Math.round(Math.sin(index / 8) * 70));
+        const tx = px.map((x, index) => x + 70 + Math.round(Math.cos(index / 6) * 20));
+        const ty = py.map((y, index) => y - 20 + Math.round(Math.sin(index / 6) * 20));
+        context.enterReplay(
+          {
+            v: 2,
+            dt: 0.1,
+            edt: 0.25,
+            px,
+            py,
+            tx,
+            ty,
+            fc: px.map(() => 1),
+            stages: [
+              { t: 0, s: 0 },
+              { t: 4.5, s: 1 },
+            ],
+            waves: [
+              { t: 0, w: 1, e: "start" },
+              { t: 3, w: 1, e: "clear" },
+              { t: 4.5, w: 2, e: "boss" },
+            ],
+            spawns: [],
+            esamp: [],
+            deaths: [],
+            events: [],
+            // Oracle-published ghosts use the final summary form instead of timed picks.
+            loadout: [
+              { id: "tempo", tier: 3, n: 1 },
+              { id: "reach", tier: 1, n: 2 },
+            ],
+            thumb: null,
+            mode: "endless",
+            diff: "normal",
+            name: "Journey Tester",
+            wave: 2,
+            score: 1234,
+            won: true,
+          },
+          "menu",
+        );
+      },
+      openRename() {
+        if (context.screen() !== "menu") context.setScreen("menu");
+        context.setScreen("profile");
+        context.beginRename();
+      },
+      setOptions(options?: object) {
+        context.applyOptions(options ?? {});
+      },
+      startFinale() {
+        context.startRun("campaign", "normal");
+        if (context.cinema.active) context.cinema.cancel("debug-final-cut");
+        const run = runOf(context.state);
+        run.wave = d.STAGES.length * 10;
+        run.score = 12345;
+        run.runTime = 612;
+        run.spawnQueue.length = 0;
+        run._victoryPrepared = { isNew: true, earned: 321, coins: d.META.coins() };
+        context.stage.index = d.STAGES.length - 1;
+        context.stage.current = d.stageAt(context.stage.index);
+        context.stage.platforms = d.stagePlatforms(context.stage.index, d.CONFIG);
+        clearCombat();
+        context.stopRecording();
+        context.startFinale({ x: context.width / 2, y: context.height * 0.4 }, true);
+      },
+      cut: context.severFinale,
+      skip() {
+        context.cinema.requestSkip();
+      },
+      advance() {
+        if (context.cinema.active && context.cinema.beat) context.cinema.advance();
+      },
+      pause() {
+        if (context.screen() === "playing") context.setScreen("paused");
+      },
+      resume() {
+        if (context.screen() === "paused") context.setScreen("playing");
+      },
+      openSettings(tab?: string) {
+        if (context.screen() !== "menu") context.setScreen("menu");
+        context.setScreen("settings", { returnTo: "menu" });
+        if (tab) context.selectSettingsTab(tab);
+      },
+      auditEffects: context.auditEffects,
+      tutorial: context.tutorialSnapshot,
+      state: context.snapshot,
+    }),
+  );
 }

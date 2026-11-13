@@ -65,7 +65,7 @@ export function drawPaleIce(
       context.save();
       context.translate((index - 2.5) * 3, 18 + (index % 3) * 13);
       context.rotate((index - 2.5) * 0.04);
-      context.fillRect(platform.x + index * platform.w / 6, platform.y, width, platform.h);
+      context.fillRect(platform.x + (index * platform.w) / 6, platform.y, width, platform.h);
       context.restore();
     }
     context.restore();
@@ -108,13 +108,14 @@ export function drawPaleIce(
     context.fillStyle = PALE_ICE_COLORS.iceEdge;
     const count = Math.min(PALE_ICE_DETAIL_LIMITS.icicles, Math.max(1, Math.floor(platform.w / 82)));
     for (let index = 0; index < count; index += 1) {
-      const x = platform.x + platform.w * (0.1 + index * 0.8 / Math.max(1, count - 1));
+      const x = platform.x + platform.w * (0.1 + (index * 0.8) / Math.max(1, count - 1));
       const length = 5 + (index % 3) * 4;
       context.beginPath();
       context.moveTo(x - 4, platform.y + platform.h - 1);
       context.lineTo(x, platform.y + platform.h + length);
       context.lineTo(x + 4, platform.y + platform.h - 1);
-      context.closePath(); context.fill();
+      context.closePath();
+      context.fill();
     }
   }
 
@@ -126,7 +127,7 @@ export function drawPaleIce(
   context.lineWidth = policy.highContrast ? 2.5 : 1.5;
   context.beginPath();
   for (let index = 0; index < fractureCount; index += 1) {
-    const x = platform.x + platform.w * (0.12 + index * 0.76 / Math.max(1, fractureCount - 1));
+    const x = platform.x + platform.w * (0.12 + (index * 0.76) / Math.max(1, fractureCount - 1));
     context.moveTo(x, platform.y + 8);
     context.lineTo(x + (index % 2 === 0 ? 9 : -9), platform.y + Math.min(platform.h - 3, 15 + (index % 3) * 5));
   }
@@ -138,8 +139,9 @@ export function drawPaleIce(
     context.fillRect(platform.x, platform.y, platform.w, platform.h);
   }
   if (state === "warning") {
-    const pulse = policy.reducedMotion ? 1 : 1 - 0.26 * policy.flashScale
-      + 0.26 * policy.flashScale * Math.sin(policy.timeSeconds * 6);
+    const pulse = policy.reducedMotion
+      ? 1
+      : 1 - 0.26 * policy.flashScale + 0.26 * policy.flashScale * Math.sin(policy.timeSeconds * 6);
     context.globalAlpha = (0.58 + warning * 0.34) * pulse;
     context.strokeStyle = policy.highContrast ? PALE_ICE_COLORS.highContrastWarning : PALE_ICE_COLORS.warning;
     context.lineWidth = (policy.highContrast ? 5 : 3) + warning;

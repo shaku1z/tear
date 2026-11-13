@@ -1,7 +1,10 @@
 import type { AudioDispatchReceipt } from "../../audio/audio-dispatch-receipts";
 import type { FinaleIntent } from "../../gameplay/campaign/finale-controller";
 import type { FinaleOutwardCall } from "../../gameplay/campaign/finale-outward-call";
-import { createOutcomeChronologyJournal, type OutcomeChronologyJournal } from "../../gameplay/run/outcome-chronology-journal";
+import {
+  createOutcomeChronologyJournal,
+  type OutcomeChronologyJournal,
+} from "../../gameplay/run/outcome-chronology-journal";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 
 export interface LiveTestBuildJournals {
@@ -18,16 +21,22 @@ export interface LiveTestBuildJournals {
  * Observation journals that TearBench reads in test builds. Release builds keep
  * the journals empty: no audio observer is installed and no chronology exists.
  */
-export function createLiveTestBuildJournals(sfx: Pick<GameRuntimeDependencies["SFX"], "observeDispatchReceipts">): LiveTestBuildJournals {
+export function createLiveTestBuildJournals(
+  sfx: Pick<GameRuntimeDependencies["SFX"], "observeDispatchReceipts">,
+): LiveTestBuildJournals {
   const finaleIntentBatches: (readonly FinaleIntent[])[] = [];
   const finaleOutwardCalls: FinaleOutwardCall[] = [];
   const audioDispatchReceipts: AudioDispatchReceipt[] = [];
-  if (__TEAR_TEST_BUILD__) sfx.observeDispatchReceipts((receipt) => {
-    audioDispatchReceipts.push(receipt);
-  });
+  if (__TEAR_TEST_BUILD__)
+    sfx.observeDispatchReceipts((receipt) => {
+      audioDispatchReceipts.push(receipt);
+    });
   const outcomeChronology = __TEAR_TEST_BUILD__ ? createOutcomeChronologyJournal() : null;
   return Object.freeze({
-    finaleIntentBatches, finaleOutwardCalls, audioDispatchReceipts, outcomeChronology,
+    finaleIntentBatches,
+    finaleOutwardCalls,
+    audioDispatchReceipts,
+    outcomeChronology,
     observeFinaleIntents: (intents: readonly FinaleIntent[]) => {
       finaleIntentBatches.push(intents);
     },

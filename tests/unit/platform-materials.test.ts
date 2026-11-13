@@ -14,27 +14,48 @@ import {
   type PaleIceRenderPolicy,
 } from "../../src/presentation/platform-materials/pale-ice";
 
-function render(state: string, policy: Partial<VerdantRootstoneRenderPolicy> = {}, material?: Parameters<typeof drawVerdantRootstone>[3]) {
+function render(
+  state: string,
+  policy: Partial<VerdantRootstoneRenderPolicy> = {},
+  material?: Parameters<typeof drawVerdantRootstone>[3],
+) {
   const calls: string[] = [];
-  const gradient = { addColorStop: (_offset: number, color: string) => { calls.push(`stop:${color}`); } };
-  const context = new Proxy({}, {
-    get: (_target, key) => {
-      if (key === "createLinearGradient") return () => gradient;
-      return () => { calls.push(String(key)); };
+  const gradient = {
+    addColorStop: (_offset: number, color: string) => {
+      calls.push(`stop:${color}`);
     },
-    set: (_target, key, value) => { calls.push(`${String(key)}:${String(value)}`); return true; },
-  }) as unknown as CanvasRenderingContext2D;
-  drawVerdantRootstone(context, { x: 20, y: 30, w: 240, h: 24, arenaState: state, stress: 0.8 }, {
-    timeSeconds: 1,
-    lowGraphics: false,
-    highContrast: false,
-    reducedMotion: false,
-    flashScale: 1,
-    stressRatio: 0.8,
-    warningRatio: 0.7,
-    reformRatio: 0.6,
-    ...policy,
-  }, material);
+  };
+  const context = new Proxy(
+    {},
+    {
+      get: (_target, key) => {
+        if (key === "createLinearGradient") return () => gradient;
+        return () => {
+          calls.push(String(key));
+        };
+      },
+      set: (_target, key, value) => {
+        calls.push(`${String(key)}:${String(value)}`);
+        return true;
+      },
+    },
+  ) as unknown as CanvasRenderingContext2D;
+  drawVerdantRootstone(
+    context,
+    { x: 20, y: 30, w: 240, h: 24, arenaState: state, stress: 0.8 },
+    {
+      timeSeconds: 1,
+      lowGraphics: false,
+      highContrast: false,
+      reducedMotion: false,
+      flashScale: 1,
+      stressRatio: 0.8,
+      warningRatio: 0.7,
+      reformRatio: 0.6,
+      ...policy,
+    },
+    material,
+  );
   return calls;
 }
 
@@ -42,7 +63,11 @@ describe("verdant-rootstone platform material", () => {
   it("uses prepared stone for surfaces and fragments while retaining warning and hollow reform cues", () => {
     const draw = vi.fn(() => true);
     const stable = render("stable", { floor: true }, { draw });
-    expect(draw).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ x: 20, y: 30, w: 240, h: 24 }), true);
+    expect(draw).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ x: 20, y: 30, w: 240, h: 24 }),
+      true,
+    );
     expect(stable).not.toContain(`fillStyle:${VERDANT_ROOTSTONE_COLORS.wetEdge}`);
     const warning = render("warning", { highContrast: true, flashScale: 0 }, { draw });
     expect(warning).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.highContrastWarning}`);
@@ -96,36 +121,67 @@ describe("verdant-rootstone platform material", () => {
     expect(normal).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.bodyDeep}`);
     expect(normal).toContain("globalAlpha:0.65");
     expect(normal).not.toContain("fillRect");
-    const accessible = render("reforming", { highContrast: true, lowGraphics: true, reducedMotion: true, flashScale: 0, reformRatio: 0 });
+    const accessible = render("reforming", {
+      highContrast: true,
+      lowGraphics: true,
+      reducedMotion: true,
+      flashScale: 0,
+      reformRatio: 0,
+    });
     expect(accessible).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.paleWarm}`);
     expect(accessible).toContain(`strokeStyle:${VERDANT_ROOTSTONE_COLORS.highContrastWarning}`);
     expect(accessible).toContain("globalAlpha:1");
     expect(accessible).not.toContain("fillRect");
-    expect(accessible).toEqual(render("reforming", { highContrast: true, lowGraphics: true, reducedMotion: true, flashScale: 0, reformRatio: 0, timeSeconds: 100 }));
+    expect(accessible).toEqual(
+      render("reforming", {
+        highContrast: true,
+        lowGraphics: true,
+        reducedMotion: true,
+        flashScale: 0,
+        reformRatio: 0,
+        timeSeconds: 100,
+      }),
+    );
   });
 });
 
 function renderPale(state: string, policy: Partial<PaleIceRenderPolicy> = {}) {
   const calls: string[] = [];
-  const gradient = { addColorStop: (_offset: number, color: string) => { calls.push(`stop:${color}`); } };
-  const context = new Proxy({}, {
-    get: (_target, key) => {
-      if (key === "createLinearGradient") return () => gradient;
-      return () => { calls.push(String(key)); };
+  const gradient = {
+    addColorStop: (_offset: number, color: string) => {
+      calls.push(`stop:${color}`);
     },
-    set: (_target, key, value) => { calls.push(`${String(key)}:${String(value)}`); return true; },
-  }) as unknown as CanvasRenderingContext2D;
-  drawPaleIce(context, { x: 20, y: 30, w: 420, h: 28, arenaState: state, stress: 0.8 }, {
-    timeSeconds: 1,
-    lowGraphics: false,
-    highContrast: false,
-    reducedMotion: false,
-    flashScale: 1,
-    stressRatio: 0.8,
-    warningRatio: 0.7,
-    reformRatio: 0.6,
-    ...policy,
-  });
+  };
+  const context = new Proxy(
+    {},
+    {
+      get: (_target, key) => {
+        if (key === "createLinearGradient") return () => gradient;
+        return () => {
+          calls.push(String(key));
+        };
+      },
+      set: (_target, key, value) => {
+        calls.push(`${String(key)}:${String(value)}`);
+        return true;
+      },
+    },
+  ) as unknown as CanvasRenderingContext2D;
+  drawPaleIce(
+    context,
+    { x: 20, y: 30, w: 420, h: 28, arenaState: state, stress: 0.8 },
+    {
+      timeSeconds: 1,
+      lowGraphics: false,
+      highContrast: false,
+      reducedMotion: false,
+      flashScale: 1,
+      stressRatio: 0.8,
+      warningRatio: 0.7,
+      reformRatio: 0.6,
+      ...policy,
+    },
+  );
   return calls;
 }
 

@@ -10,14 +10,21 @@ import { createBrowserPlatformServices } from "../../src/platform/browser";
 
 function dependencies() {
   const profile: LegacyProfilePort = {
-    data: {}, username: () => "", usernameSetAt: () => 0, setUsername: vi.fn(), merge: vi.fn(), save: vi.fn(),
+    data: {},
+    username: () => "",
+    usernameSetAt: () => 0,
+    setUsername: vi.fn(),
+    merge: vi.fn(),
+    save: vi.fn(),
   };
   const meta: LegacyMetaPort = { data: {}, merge: vi.fn(), save: vi.fn() };
   const shared: SharedCloudService = {
     available: false,
     submitScore: () => Promise.resolve(false),
     topScores: () => Promise.resolve(null),
-    logEvent() { return; },
+    logEvent() {
+      return;
+    },
     publishReplay: () => Promise.resolve(null),
     loadReplay: () => Promise.resolve(null),
     replayFeed: () => Promise.resolve(null),
@@ -59,7 +66,9 @@ describe("cloud compatibility", () => {
       getMeta: () => deps.meta,
       shared: { ...deps.shared, available: true, submitScore: () => Promise.reject(new Error("network")) },
     });
-    compatibility.Cloud.onChange(() => { throw new Error("UI listener"); });
+    compatibility.Cloud.onChange(() => {
+      throw new Error("UI listener");
+    });
     await expect(compatibility.Cloud.init()).resolves.toBe("guest");
     await expect(compatibility.Cloud.submitScore("endless", "normal", { score: 1 })).resolves.toBe(false);
   });

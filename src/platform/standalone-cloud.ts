@@ -12,31 +12,66 @@ export const createStandaloneCloud: CloudFactory = (options) => {
   const load = (): Promise<FirebaseCloudCompatibility> => {
     loading ??= Promise.all([import("./firebase-cloud"), import("./firebase-config")]).then(([cloud, config]) => {
       const firebaseWindow: Window & { readonly firebase?: FirebaseCompatSdk } = window;
-      firebase = cloud.createFirebaseCloudCompatibility({ config: config.FIREBASE_CONFIG,
-        getSdk: () => firebaseWindow.firebase, loadScript: cloud.createBrowserScriptLoader(document), remote: REMOTE });
+      firebase = cloud.createFirebaseCloudCompatibility({
+        config: config.FIREBASE_CONFIG,
+        getSdk: () => firebaseWindow.firebase,
+        loadScript: cloud.createBrowserScriptLoader(document),
+        remote: REMOTE,
+      });
       return firebase;
     });
     return loading;
   };
   const account: AccountProvider = {
-    kind: "firebase", signInLabel: "SIGN IN WITH GOOGLE",
-    async init(context) { await (await load()).account.init(context); },
-    async signIn(context) { return (await load()).account.signIn?.(context) ?? false; },
-    async signOut(context) { await (await load()).account.signOut?.(context); },
-    async load(context) { return (await load()).account.load?.(context) ?? null; },
-    async save(context, payload) { await (await load()).account.save?.(context, payload); },
-    dispose() { firebase?.account.dispose?.(); },
+    kind: "firebase",
+    signInLabel: "SIGN IN WITH GOOGLE",
+    async init(context) {
+      await (await load()).account.init(context);
+    },
+    async signIn(context) {
+      return (await load()).account.signIn?.(context) ?? false;
+    },
+    async signOut(context) {
+      await (await load()).account.signOut?.(context);
+    },
+    async load(context) {
+      return (await load()).account.load?.(context) ?? null;
+    },
+    async save(context, payload) {
+      await (await load()).account.save?.(context, payload);
+    },
+    dispose() {
+      firebase?.account.dispose?.();
+    },
   };
   const shared: SharedCloudService = {
     available: true,
-    async submitScore(...args) { return (await load()).shared.submitScore(...args); },
-    async topScores(...args) { return (await load()).shared.topScores(...args); },
-    logEvent(...args) { void load().then((value) => { value.shared.logEvent(...args); }); },
-    async publishReplay(...args) { return (await load()).shared.publishReplay(...args); },
-    async loadReplay(...args) { return (await load()).shared.loadReplay(...args); },
-    async replayFeed(...args) { return (await load()).shared.replayFeed(...args); },
-    async linkReplay(...args) { return (await load()).shared.linkReplay(...args); },
-    async loadGhost(...args) { return (await load()).shared.loadGhost(...args); },
+    async submitScore(...args) {
+      return (await load()).shared.submitScore(...args);
+    },
+    async topScores(...args) {
+      return (await load()).shared.topScores(...args);
+    },
+    logEvent(...args) {
+      void load().then((value) => {
+        value.shared.logEvent(...args);
+      });
+    },
+    async publishReplay(...args) {
+      return (await load()).shared.publishReplay(...args);
+    },
+    async loadReplay(...args) {
+      return (await load()).shared.loadReplay(...args);
+    },
+    async replayFeed(...args) {
+      return (await load()).shared.replayFeed(...args);
+    },
+    async linkReplay(...args) {
+      return (await load()).shared.linkReplay(...args);
+    },
+    async loadGhost(...args) {
+      return (await load()).shared.loadGhost(...args);
+    },
   };
   const publicationEndpoint: unknown = import.meta.env.VITE_GHOST_PUBLICATION_ENDPOINT;
   const ghostPublication = createStandaloneGhostPublicationRuntime({

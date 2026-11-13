@@ -9,7 +9,9 @@ class ManualFrames implements AnimationFrameSource {
     this.callbacks.set(handle, callback);
     return handle;
   }
-  cancelAnimationFrame(handle: number): void { this.callbacks.delete(handle); }
+  cancelAnimationFrame(handle: number): void {
+    this.callbacks.delete(handle);
+  }
   fire(timestamp: number): void {
     const entry = [...this.callbacks.entries()][0];
     if (entry === undefined) throw new Error("no frame scheduled");
@@ -21,9 +23,13 @@ class ManualFrames implements AnimationFrameSource {
 describe("runtime frame driver", () => {
   it("normalizes and bounds browser frame deltas", () => {
     const source = new ManualFrames();
-    const deltas: number[] = [], intervals: number[] = [];
+    const deltas: number[] = [],
+      intervals: number[] = [];
     const driver = new RuntimeFrameDriver(source, 0.1);
-    driver.start((frame) => { deltas.push(frame.deltaSeconds); intervals.push(frame.intervalSeconds); });
+    driver.start((frame) => {
+      deltas.push(frame.deltaSeconds);
+      intervals.push(frame.intervalSeconds);
+    });
     source.fire(1_000);
     source.fire(1_016);
     source.fire(2_000);

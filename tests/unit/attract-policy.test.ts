@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { clamp } from "../../src/domain/geometry";
 import { STAGES } from "../../src/gameplay/stages";
-import { createAttract, type AttractDependencies, type AttractVisualPolicy } from "../../src/presentation/attract-runtime";
+import {
+  createAttract,
+  type AttractDependencies,
+  type AttractVisualPolicy,
+} from "../../src/presentation/attract-runtime";
 import type { ParticleSystem } from "../../src/presentation/particles";
 
 class PlayerStub {
@@ -12,9 +16,16 @@ class PlayerStub {
   hp = 1;
   maxHp = 1;
   onGround = true;
-  constructor(public x: number, public y: number) {}
-  update(): void { void 0; }
-  draw(): void { void 0; }
+  constructor(
+    public x: number,
+    public y: number,
+  ) {}
+  update(): void {
+    void 0;
+  }
+  draw(): void {
+    void 0;
+  }
 }
 
 class BladeStub {
@@ -24,22 +35,30 @@ class BladeStub {
   y = 0;
   tipX = 0;
   tipY = 0;
-  update(): void { void 0; }
-  draw(): void { void 0; }
+  update(): void {
+    void 0;
+  }
+  draw(): void {
+    void 0;
+  }
 }
 
-function policy(
-  width: number,
-  height: number,
-  prefix: string,
-  random: () => number = () => 0.5,
-): AttractVisualPolicy {
+function policy(width: number, height: number, prefix: string, random: () => number = () => 0.5): AttractVisualPolicy {
   return {
-    view: { w: width, h: height }, world: { gravity: 1000, groundY: height - 20 },
-    blade: { aimRadius: 80, minHitSpeed: 900 }, overscan: { x: 9 }, lowGraphics: () => false, random,
+    view: { w: width, h: height },
+    world: { gravity: 1000, groundY: height - 20 },
+    blade: { aimRadius: 80, minHitSpeed: 900 },
+    overscan: { x: 9 },
+    lowGraphics: () => false,
+    random,
     colors: {
-      charger: `${prefix}-charger`, ranged: `${prefix}-ranged`, bomber: `${prefix}-bomber`,
-      armored: `${prefix}-armored`, flyer: `${prefix}-flyer`, wraith: `${prefix}-wraith`, perfect: `${prefix}-perfect`,
+      charger: `${prefix}-charger`,
+      ranged: `${prefix}-ranged`,
+      bomber: `${prefix}-bomber`,
+      armored: `${prefix}-armored`,
+      flyer: `${prefix}-flyer`,
+      wraith: `${prefix}-wraith`,
+      perfect: `${prefix}-perfect`,
     },
     theme: { dark: false, ink: `${prefix}-ink`, rim: `${prefix}-rim`, set: () => undefined },
   };
@@ -47,24 +66,40 @@ function policy(
 
 function dependencies(visualPolicy: AttractVisualPolicy, effects: string[][]): AttractDependencies {
   const fx = {
-    reset: () => undefined, update: () => undefined, draw: () => undefined,
-    death: (...values: unknown[]) => { effects.push(["death", ...values.map(String)]); },
-    burst: (...values: unknown[]) => { effects.push(["burst", ...values.map(String)]); },
-    explode: (...values: unknown[]) => { effects.push(["explode", ...values.map(String)]); },
-    flash: (...values: unknown[]) => { effects.push(["flash", ...values.map(String)]); },
-    ghost: (...values: unknown[]) => { effects.push(["ghost", ...values.map(String)]); },
+    reset: () => undefined,
+    update: () => undefined,
+    draw: () => undefined,
+    death: (...values: unknown[]) => {
+      effects.push(["death", ...values.map(String)]);
+    },
+    burst: (...values: unknown[]) => {
+      effects.push(["burst", ...values.map(String)]);
+    },
+    explode: (...values: unknown[]) => {
+      effects.push(["explode", ...values.map(String)]);
+    },
+    flash: (...values: unknown[]) => {
+      effects.push(["flash", ...values.map(String)]);
+    },
+    ghost: (...values: unknown[]) => {
+      effects.push(["ghost", ...values.map(String)]);
+    },
   } as unknown as ParticleSystem;
   return {
     Backdrop: { fillFull: () => undefined, draw: () => undefined, platform: () => undefined, post: () => undefined },
-    Blade: BladeStub as unknown as AttractDependencies["Blade"], FX: fx,
-    Player: PlayerStub as unknown as AttractDependencies["Player"], STAGES,
-    policy: visualPolicy, clamp,
+    Blade: BladeStub as unknown as AttractDependencies["Blade"],
+    FX: fx,
+    Player: PlayerStub as unknown as AttractDependencies["Player"],
+    STAGES,
+    policy: visualPolicy,
+    clamp,
   };
 }
 
 describe("attract visual policy", () => {
   it("keeps view, world layout, and palette effects local to each controller", () => {
-    const firstEffects: string[][] = [], secondEffects: string[][] = [];
+    const firstEffects: string[][] = [],
+      secondEffects: string[][] = [];
     const first = createAttract(dependencies(policy(400, 300, "first"), firstEffects));
     const second = createAttract(dependencies(policy(700, 500, "second"), secondEffects));
 
@@ -86,14 +121,24 @@ describe("attract visual policy", () => {
   it("uses the visual policy's local cosmetic entropy", () => {
     let firstCalls = 0;
     let secondCalls = 0;
-    const first = createAttract(dependencies(policy(400, 300, "first", () => {
-      firstCalls += 1;
-      return 0.1;
-    }), []));
-    const second = createAttract(dependencies(policy(400, 300, "second", () => {
-      secondCalls += 1;
-      return 0.9;
-    }), []));
+    const first = createAttract(
+      dependencies(
+        policy(400, 300, "first", () => {
+          firstCalls += 1;
+          return 0.1;
+        }),
+        [],
+      ),
+    );
+    const second = createAttract(
+      dependencies(
+        policy(400, 300, "second", () => {
+          secondCalls += 1;
+          return 0.9;
+        }),
+        [],
+      ),
+    );
 
     first.reset();
     second.reset();

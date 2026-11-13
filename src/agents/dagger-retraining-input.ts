@@ -31,23 +31,52 @@ export function createTearDaggerRetrainingInput(
   reviews: readonly TearDaggerCorrectionReviewV1[],
 ): TearDaggerRetrainingInputV1 {
   assertTearBehaviorCloningNormalization(dataset, normalization);
-  if ((capture.featureSchemaHash ?? TEAR_POLICY_FEATURE_SCHEMA_HASH_V1) !== normalization.featureSchemaHash
-    || capture.corrections.some((entry) => entry.features.length !== tearPolicyFeatureWidth(normalization.featureSchemaHash)
-      || entry.features.some((value) => !Number.isFinite(value)))) throw new TypeError("DAgger feature schema mismatch");
-  if (normalization.datasetHash !== dataset.datasetHash || reviews.some((review) => review.captureHash !== capture.captureHash
-    || review.artifactHash !== capture.artifact.hash || review.disposition !== "accepted")) {
+  if (
+    (capture.featureSchemaHash ?? TEAR_POLICY_FEATURE_SCHEMA_HASH_V1) !== normalization.featureSchemaHash ||
+    capture.corrections.some(
+      (entry) =>
+        entry.features.length !== tearPolicyFeatureWidth(normalization.featureSchemaHash) ||
+        entry.features.some((value) => !Number.isFinite(value)),
+    )
+  )
+    throw new TypeError("DAgger feature schema mismatch");
+  if (
+    normalization.datasetHash !== dataset.datasetHash ||
+    reviews.some(
+      (review) =>
+        review.captureHash !== capture.captureHash ||
+        review.artifactHash !== capture.artifact.hash ||
+        review.disposition !== "accepted",
+    )
+  ) {
     throw new RangeError("DAgger retraining input requires matching accepted correction reviews");
   }
   const approved = new Map(reviews.map((review) => [review.correctionHash, review]));
   if (approved.size !== reviews.length) throw new TypeError("DAgger retraining input repeats a correction review");
-  const examples = capture.corrections.filter((correction) => approved.has(correction.correctionHash)).map((correction) => Object.freeze({
-    correctionHash: correction.correctionHash,
-    features: Object.freeze(correction.features.map((value, index) => (value - (normalization.mean[index] ?? 0)) / (normalization.scale[index] ?? 1))),
-    targetActions: Object.freeze(structuredClone(correction.teacherActions)),
-  })).sort((left, right) => left.correctionHash.localeCompare(right.correctionHash));
-  if (examples.length < 1 || examples.length > 256) throw new RangeError("DAgger retraining input requires bounded approved corrections");
-  const draft = { format: "tear-dagger-retraining-input" as const, schemaVersion: 1 as const, datasetHash: dataset.datasetHash,
-    normalizationHash: normalization.normalizationHash, captureHash: capture.captureHash,
-    acceptedReviewHashes: Object.freeze([...reviews].map((review) => review.reviewHash).sort()), examples: Object.freeze(examples) };
+  const examples = capture.corrections
+    .filter((correction) => approved.has(correction.correctionHash))
+    .map((correction) =>
+      Object.freeze({
+        correctionHash: correction.correctionHash,
+        features: Object.freeze(
+          correction.features.map(
+            (value, index) => (value - (normalization.mean[index] ?? 0)) / (normalization.scale[index] ?? 1),
+          ),
+        ),
+        targetActions: Object.freeze(structuredClone(correction.teacherActions)),
+      }),
+    )
+    .sort((left, right) => left.correctionHash.localeCompare(right.correctionHash));
+  if (examples.length < 1 || examples.length > 256)
+    throw new RangeError("DAgger retraining input requires bounded approved corrections");
+  const draft = {
+    format: "tear-dagger-retraining-input" as const,
+    schemaVersion: 1 as const,
+    datasetHash: dataset.datasetHash,
+    normalizationHash: normalization.normalizationHash,
+    captureHash: capture.captureHash,
+    acceptedReviewHashes: Object.freeze([...reviews].map((review) => review.reviewHash).sort()),
+    examples: Object.freeze(examples),
+  };
   return Object.freeze({ ...draft, inputHash: stableVerificationHash(draft) });
 }

@@ -17,9 +17,18 @@ describe("run session factory", () => {
       achievementSnapshot: ["first"],
     });
     expect(session).toMatchObject({
-      mode, diff: "normal", wave: 0, score: 0, clearTimer: -1,
-      weaponId: "greatsword", runSeed: 123, voidSeed: 456,
-      coinMod: 1.1, scoreMod: 1.4, diffHp: 1.3, diffCount: 1.15,
+      mode,
+      diff: "normal",
+      wave: 0,
+      score: 0,
+      clearTimer: -1,
+      weaponId: "greatsword",
+      runSeed: 123,
+      voidSeed: 456,
+      coinMod: 1.1,
+      scoreMod: 1.4,
+      diffHp: 1.3,
+      diffCount: 1.15,
       chapterState: mode === "campaign" ? "LORE_ENTER" : "WAVE_LIVE",
     });
     expect(session.mods.weaponId).toBe("greatsword");
@@ -30,22 +39,42 @@ describe("run session factory", () => {
   it("copies achievement identity and rejects invalid deterministic seeds", () => {
     const achievements = ["a"];
     const session = createRunSession({
-      mode: "endless", difficulty: "easy", weaponId: "sword", runSeed: 1, voidSeed: 2,
-      mods: {}, scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 }, achievementSnapshot: achievements,
+      mode: "endless",
+      difficulty: "easy",
+      weaponId: "sword",
+      runSeed: 1,
+      voidSeed: 2,
+      mods: {},
+      scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 },
+      achievementSnapshot: achievements,
     });
     achievements.push("b");
     expect(session._achSnap).toEqual(["a"]);
-    expect(() => createRunSession({
-      mode: "endless", difficulty: "easy", weaponId: "sword", runSeed: 0, voidSeed: 2,
-      mods: {}, scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 }, achievementSnapshot: [],
-    })).toThrow(RangeError);
+    expect(() =>
+      createRunSession({
+        mode: "endless",
+        difficulty: "easy",
+        weaponId: "sword",
+        runSeed: 0,
+        voidSeed: 2,
+        mods: {},
+        scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 },
+        achievementSnapshot: [],
+      }),
+    ).toThrow(RangeError);
   });
 
   it("copies the source-owned variant discovery authority into the run", () => {
     const discovered = ["briar-stalker"];
     const session = createRunSession({
-      mode: "endless", difficulty: "normal", weaponId: "sword", runSeed: 1, voidSeed: 2,
-      mods: {}, scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 }, achievementSnapshot: [],
+      mode: "endless",
+      difficulty: "normal",
+      weaponId: "sword",
+      runSeed: 1,
+      voidSeed: 2,
+      mods: {},
+      scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 },
+      achievementSnapshot: [],
       variantDiscovery: discovered,
     });
     discovered.push("seedcaster");

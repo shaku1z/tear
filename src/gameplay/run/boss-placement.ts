@@ -22,11 +22,7 @@ export interface BossPlacement {
   readonly y: number;
 }
 
-export function planBossPlacement(
-  id: string,
-  width: number,
-  config: BossPlacementConfig,
-): BossPlacement {
+export function planBossPlacement(id: string, width: number, config: BossPlacementConfig): BossPlacement {
   const x = width / 2;
   const ground = config.world.groundY;
   if (id === "source") return Object.freeze({ factoryId: "source", x, y: ground - 300 });

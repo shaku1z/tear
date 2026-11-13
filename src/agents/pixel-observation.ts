@@ -35,7 +35,8 @@ export interface TearPixelRegion extends TearPixelBounds {
  * deliberately describe what is visible (a reward-card row or terminal-like
  * result surface) instead of leaking a renderer, route, or game-state name.
  */
-export type TearPixelScreenKind = "unknown" | "menu-like" | "setup-like" | "playing-like" | "overlay-like" | "draft-like" | "terminal-like";
+export type TearPixelScreenKind =
+  "unknown" | "menu-like" | "setup-like" | "playing-like" | "overlay-like" | "draft-like" | "terminal-like";
 
 export interface TearPixelObservation {
   readonly kind: TearPixelScreenKind;
@@ -75,10 +76,16 @@ const DEFAULT_LOGICAL_HEIGHT = 900;
 const DEFAULT_BRIGHT_THRESHOLD = 0.78;
 
 function requireFrame(frame: TearPixelFrame): void {
-  if (!Number.isSafeInteger(frame.width) || frame.width < 1 || !Number.isSafeInteger(frame.height) || frame.height < 1) {
+  if (
+    !Number.isSafeInteger(frame.width) ||
+    frame.width < 1 ||
+    !Number.isSafeInteger(frame.height) ||
+    frame.height < 1
+  ) {
     throw new RangeError("pixel frame dimensions must be positive safe integers");
   }
-  if (frame.rgba.length !== frame.width * frame.height * 4) throw new RangeError("pixel frame must contain exactly RGBA pixels");
+  if (frame.rgba.length !== frame.width * frame.height * 4)
+    throw new RangeError("pixel frame must contain exactly RGBA pixels");
   if (!Number.isFinite(frame.capturedAtMs)) throw new RangeError("pixel frame capture time must be finite");
 }
 
@@ -97,11 +104,20 @@ function pixelRgb(frame: TearPixelFrame, x: number, y: number): readonly [number
 }
 
 function edgeBackground(frame: TearPixelFrame): readonly [number, number, number] {
-  const points = [[0, 0], [frame.width - 1, 0], [0, frame.height - 1], [frame.width - 1, frame.height - 1]] as const;
-  let red = 0, green = 0, blue = 0;
+  const points = [
+    [0, 0],
+    [frame.width - 1, 0],
+    [0, frame.height - 1],
+    [frame.width - 1, frame.height - 1],
+  ] as const;
+  let red = 0,
+    green = 0,
+    blue = 0;
   for (const [x, y] of points) {
     const [r, g, b] = pixelRgb(frame, x, y);
-    red += r; green += g; blue += b;
+    red += r;
+    green += g;
+    blue += b;
   }
   return [red / points.length, green / points.length, blue / points.length];
 }
@@ -123,18 +139,25 @@ export function calibratePixelViewport(
   options: Pick<TearPixelObserverOptions, "logicalWidth" | "logicalHeight"> = {},
 ): TearPixelViewportCalibration {
   requireFrame(frame);
-  let minX = frame.width, minY = frame.height, maxX = -1, maxY = -1, visible = 0;
+  let minX = frame.width,
+    minY = frame.height,
+    maxX = -1,
+    maxY = -1,
+    visible = 0;
   for (let y = 0; y < frame.height; y += 1) {
     for (let x = 0; x < frame.width; x += 1) {
       if (!isVisible(frame, x, y)) continue;
       visible += 1;
-      minX = Math.min(minX, x); minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
     }
   }
-  const bounds = maxX < minX
-    ? Object.freeze({ x: 0, y: 0, width: frame.width, height: frame.height })
-    : Object.freeze({ x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 });
+  const bounds =
+    maxX < minX
+      ? Object.freeze({ x: 0, y: 0, width: frame.width, height: frame.height })
+      : Object.freeze({ x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 });
   const logicalWidth = options.logicalWidth ?? DEFAULT_LOGICAL_WIDTH;
   const logicalHeight = options.logicalHeight ?? DEFAULT_LOGICAL_HEIGHT;
   const coverage = visible / (frame.width * frame.height);
@@ -146,12 +169,18 @@ export function calibratePixelViewport(
   });
 }
 
-function density(frame: TearPixelFrame, bounds: TearPixelBounds, threshold: number, background: readonly [number, number, number]): number {
+function density(
+  frame: TearPixelFrame,
+  bounds: TearPixelBounds,
+  threshold: number,
+  background: readonly [number, number, number],
+): number {
   const left = Math.max(0, Math.floor(bounds.x));
   const top = Math.max(0, Math.floor(bounds.y));
   const right = Math.min(frame.width, Math.ceil(bounds.x + bounds.width));
   const bottom = Math.min(frame.height, Math.ceil(bounds.y + bounds.height));
-  let samples = 0, bright = 0;
+  let samples = 0,
+    bright = 0;
   for (let y = top; y < bottom; y += 1) {
     for (let x = left; x < right; x += 1) {
       samples += 1;
@@ -179,32 +208,50 @@ export function detectBrightPixelRegions(
   const bottom = Math.min(frame.height, Math.ceil(bounds.y + bounds.height));
   const visited = new Uint8Array(frame.width * frame.height);
   const regions: TearPixelRegion[] = [];
-  const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+  const directions = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ] as const;
   for (let startY = top; startY < bottom; startY += 1) {
     for (let startX = left; startX < right; startX += 1) {
       const start = startY * frame.width + startX;
       if (visited[start] === 1 || contrast(frame, startX, startY, background) < threshold) continue;
       const queue: (readonly [number, number])[] = [[startX, startY]];
       visited[start] = 1;
-      let index = 0, count = 0, minX = startX, minY = startY, maxX = startX, maxY = startY;
+      let index = 0,
+        count = 0,
+        minX = startX,
+        minY = startY,
+        maxX = startX,
+        maxY = startY;
       while (index < queue.length) {
         const point = queue[index];
         if (point === undefined) throw new Error("pixel region queue lost its active point");
         index += 1;
         const [x, y] = point;
-        count += 1; minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+        count += 1;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
         for (const [dx, dy] of directions) {
-          const nextX = x + dx, nextY = y + dy;
+          const nextX = x + dx,
+            nextY = y + dy;
           if (nextX < left || nextX >= right || nextY < top || nextY >= bottom) continue;
           const next = nextY * frame.width + nextX;
           if (visited[next] === 1 || contrast(frame, nextX, nextY, background) < threshold) continue;
-          visited[next] = 1; queue.push([nextX, nextY]);
+          visited[next] = 1;
+          queue.push([nextX, nextY]);
         }
       }
       if (count < minimum) continue;
       const regionBounds = { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
       const regionDensity = count / (regionBounds.width * regionBounds.height);
-      regions.push(Object.freeze({ ...regionBounds, density: regionDensity, confidence: Math.min(1, count / minimum / 4) }));
+      regions.push(
+        Object.freeze({ ...regionBounds, density: regionDensity, confidence: Math.min(1, count / minimum / 4) }),
+      );
     }
   }
   return Object.freeze(regions.sort((a, b) => b.density * b.width * b.height - a.density * a.width * a.height));
@@ -212,7 +259,8 @@ export function detectBrightPixelRegions(
 
 function countDraftCards(regions: readonly TearPixelRegion[], bounds: TearPixelBounds): number {
   return regions.filter((region) => {
-    const width = region.width / bounds.width, height = region.height / bounds.height;
+    const width = region.width / bounds.width,
+      height = region.height / bounds.height;
     const centreY = (region.y + region.height / 2 - bounds.y) / bounds.height;
     return width >= 0.12 && width <= 0.28 && height >= 0.25 && height <= 0.58 && centreY >= 0.32 && centreY <= 0.62;
   }).length;
@@ -220,7 +268,8 @@ function countDraftCards(regions: readonly TearPixelRegion[], bounds: TearPixelB
 
 function countTerminalActions(regions: readonly TearPixelRegion[], bounds: TearPixelBounds): number {
   return regions.filter((region) => {
-    const width = region.width / bounds.width, height = region.height / bounds.height;
+    const width = region.width / bounds.width,
+      height = region.height / bounds.height;
     const centreY = (region.y + region.height / 2 - bounds.y) / bounds.height;
     return width >= 0.12 && width <= 0.28 && height >= 0.025 && height <= 0.12 && centreY >= 0.28 && centreY <= 0.82;
   }).length;
@@ -228,13 +277,20 @@ function countTerminalActions(regions: readonly TearPixelRegion[], bounds: TearP
 
 function countTopTitleMarks(regions: readonly TearPixelRegion[], bounds: TearPixelBounds): number {
   return regions.filter((region) => {
-    const width = region.width / bounds.width, height = region.height / bounds.height;
+    const width = region.width / bounds.width,
+      height = region.height / bounds.height;
     const centreY = (region.y + region.height / 2 - bounds.y) / bounds.height;
     return width >= 0.008 && width <= 0.055 && height >= 0.015 && height <= 0.08 && centreY <= 0.18;
   }).length;
 }
 
-function classify(top: number, centre: number, bottom: number, regions: readonly TearPixelRegion[], bounds: TearPixelBounds): TearPixelScreenKind {
+function classify(
+  top: number,
+  centre: number,
+  bottom: number,
+  regions: readonly TearPixelRegion[],
+  bounds: TearPixelBounds,
+): TearPixelScreenKind {
   const draftCards = countDraftCards(regions, bounds);
   // A row of three or more tall, similarly sized visual cards is a robust
   // affordance pattern. It contains no card labels, choice IDs, or UI state.
@@ -244,7 +300,8 @@ function classify(top: number, centre: number, bottom: number, regions: readonly
   // Result surfaces are intentionally kept generic: a compact top title and
   // one or more central action panels on a low-density canvas. This avoids
   // treating OCR or route names as Class-C observations.
-  if (top >= 0.006 && top <= 0.03 && centre <= 0.02 && bottom <= 0.012 && terminalActions >= 1 && titleMarks >= 4) return "terminal-like";
+  if (top >= 0.006 && top <= 0.03 && centre <= 0.02 && bottom <= 0.012 && terminalActions >= 1 && titleMarks >= 4)
+    return "terminal-like";
   const largeCentralRegions = regions.filter((region) => region.width >= 40 && region.height >= 6).length;
   if (top > 0.025 && centre > 0.018 && largeCentralRegions >= 3) return "menu-like";
   if (top > 0.018 && centre > 0.005 && largeCentralRegions >= 2) return "setup-like";
@@ -258,23 +315,51 @@ export function observePixels(frame: TearPixelFrame, options: TearPixelObserverO
   const threshold = Math.min(0.45, options.brightThreshold ?? DEFAULT_BRIGHT_THRESHOLD);
   const background = edgeBackground(frame);
   const { bounds } = calibration;
-  const top = density(frame, { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height / 3 }, threshold, background);
-  const centre = density(frame, { x: bounds.x, y: bounds.y + bounds.height / 3, width: bounds.width, height: bounds.height / 3 }, threshold, background);
-  const bottom = density(frame, { x: bounds.x, y: bounds.y + bounds.height * 2 / 3, width: bounds.width, height: bounds.height / 3 }, threshold, background);
+  const top = density(
+    frame,
+    { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height / 3 },
+    threshold,
+    background,
+  );
+  const centre = density(
+    frame,
+    { x: bounds.x, y: bounds.y + bounds.height / 3, width: bounds.width, height: bounds.height / 3 },
+    threshold,
+    background,
+  );
+  const bottom = density(
+    frame,
+    { x: bounds.x, y: bounds.y + (bounds.height * 2) / 3, width: bounds.width, height: bounds.height / 3 },
+    threshold,
+    background,
+  );
   const brightRegions = detectBrightPixelRegions(frame, calibration, options);
   const kind = classify(top, centre, bottom, brightRegions, bounds);
-  const confidence = kind === "unknown" ? Math.min(0.45, calibration.confidence) : Math.min(1, 0.45 + calibration.confidence * 0.25 + Math.min(0.3, brightRegions.length / 40));
-  return Object.freeze({ kind, confidence, calibration, brightRegions, topBandDensity: top, centreBandDensity: centre, bottomBandDensity: bottom });
+  const confidence =
+    kind === "unknown"
+      ? Math.min(0.45, calibration.confidence)
+      : Math.min(1, 0.45 + calibration.confidence * 0.25 + Math.min(0.3, brightRegions.length / 40));
+  return Object.freeze({
+    kind,
+    confidence,
+    calibration,
+    brightRegions,
+    topBandDensity: top,
+    centreBandDensity: centre,
+    bottomBandDensity: bottom,
+  });
 }
 
 function frameDifference(previous: TearPixelFrame, next: TearPixelFrame): number {
   if (previous.width !== next.width || previous.height !== next.height) return 1;
-  let difference = 0, samples = 0;
+  let difference = 0,
+    samples = 0;
   // A sparse lattice keeps the policy bounded for full-resolution browser frames.
   const stride = Math.max(1, Math.floor(Math.min(next.width, next.height) / 96));
   for (let y = 0; y < next.height; y += stride) {
     for (let x = 0; x < next.width; x += stride) {
-      difference += Math.abs(pixelLuma(previous, x, y) - pixelLuma(next, x, y)); samples += 1;
+      difference += Math.abs(pixelLuma(previous, x, y) - pixelLuma(next, x, y));
+      samples += 1;
     }
   }
   return samples === 0 ? 0 : difference / samples;
@@ -283,9 +368,12 @@ function frameDifference(previous: TearPixelFrame, next: TearPixelFrame): number
 function rgbDifference(previous: TearPixelFrame, next: TearPixelFrame, x: number, y: number): number {
   const left = (y * previous.width + x) * 4;
   const right = (y * next.width + x) * 4;
-  return (Math.abs((previous.rgba[left] ?? 0) - (next.rgba[right] ?? 0))
-    + Math.abs((previous.rgba[left + 1] ?? 0) - (next.rgba[right + 1] ?? 0))
-    + Math.abs((previous.rgba[left + 2] ?? 0) - (next.rgba[right + 2] ?? 0))) / 765;
+  return (
+    (Math.abs((previous.rgba[left] ?? 0) - (next.rgba[right] ?? 0)) +
+      Math.abs((previous.rgba[left + 1] ?? 0) - (next.rgba[right + 1] ?? 0)) +
+      Math.abs((previous.rgba[left + 2] ?? 0) - (next.rgba[right + 2] ?? 0))) /
+    765
+  );
 }
 
 /**
@@ -307,7 +395,8 @@ export function detectPixelMotionRegions(
     return Object.freeze({ motionEnergy: 0, motionRegions: Object.freeze([]) });
   }
   requireFrame(previous);
-  if (!Number.isFinite(minimumEnergy) || minimumEnergy <= 0 || minimumEnergy > 1) throw new RangeError("pixel motion energy must be within (0, 1]");
+  if (!Number.isFinite(minimumEnergy) || minimumEnergy <= 0 || minimumEnergy > 1)
+    throw new RangeError("pixel motion energy must be within (0, 1]");
   const stride = Math.max(2, Math.floor(Math.min(next.width, next.height) / 180));
   const left = Math.max(0, Math.floor(calibration.bounds.x));
   const top = Math.max(0, Math.floor(calibration.bounds.y));
@@ -328,7 +417,12 @@ export function detectPixelMotionRegions(
   }
   const visited = new Uint8Array(active.length);
   const regions: TearPixelRegion[] = [];
-  const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+  const directions = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ] as const;
   const minimumCells = 3;
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
@@ -336,36 +430,56 @@ export function detectPixelMotionRegions(
       if (active[start] === 0 || visited[start] === 1) continue;
       const queue: (readonly [number, number])[] = [[column, row]];
       visited[start] = 1;
-      let index = 0, count = 0, minColumn = column, maxColumn = column, minRow = row, maxRow = row;
+      let index = 0,
+        count = 0,
+        minColumn = column,
+        maxColumn = column,
+        minRow = row,
+        maxRow = row;
       while (index < queue.length) {
         const point = queue[index];
         if (point === undefined) throw new Error("motion-region queue lost its active point");
         index += 1;
         const [currentColumn, currentRow] = point;
         count += 1;
-        minColumn = Math.min(minColumn, currentColumn); maxColumn = Math.max(maxColumn, currentColumn);
-        minRow = Math.min(minRow, currentRow); maxRow = Math.max(maxRow, currentRow);
+        minColumn = Math.min(minColumn, currentColumn);
+        maxColumn = Math.max(maxColumn, currentColumn);
+        minRow = Math.min(minRow, currentRow);
+        maxRow = Math.max(maxRow, currentRow);
         for (const [columnDelta, rowDelta] of directions) {
-          const candidateColumn = currentColumn + columnDelta, candidateRow = currentRow + rowDelta;
+          const candidateColumn = currentColumn + columnDelta,
+            candidateRow = currentRow + rowDelta;
           if (candidateColumn < 0 || candidateColumn >= columns || candidateRow < 0 || candidateRow >= rows) continue;
           const candidate = candidateRow * columns + candidateColumn;
           if (active[candidate] === 0 || visited[candidate] === 1) continue;
-          visited[candidate] = 1; queue.push([candidateColumn, candidateRow]);
+          visited[candidate] = 1;
+          queue.push([candidateColumn, candidateRow]);
         }
       }
       if (count < minimumCells) continue;
       const width = Math.min(right, left + (maxColumn + 1) * stride) - (left + minColumn * stride);
       const height = Math.min(bottom, top + (maxRow + 1) * stride) - (top + minRow * stride);
-      regions.push(Object.freeze({
-        x: left + minColumn * stride, y: top + minRow * stride, width, height,
-        density: count / ((maxColumn - minColumn + 1) * (maxRow - minRow + 1)),
-        confidence: Math.min(1, count / (minimumCells * 3)),
-      }));
+      regions.push(
+        Object.freeze({
+          x: left + minColumn * stride,
+          y: top + minRow * stride,
+          width,
+          height,
+          density: count / ((maxColumn - minColumn + 1) * (maxRow - minRow + 1)),
+          confidence: Math.min(1, count / (minimumCells * 3)),
+        }),
+      );
     }
   }
   return Object.freeze({
     motionEnergy: rows * columns === 0 ? 0 : energyTotal / (rows * columns),
-    motionRegions: Object.freeze(regions.sort((leftRegion, rightRegion) => rightRegion.width * rightRegion.height * rightRegion.density - leftRegion.width * leftRegion.height * leftRegion.density)),
+    motionRegions: Object.freeze(
+      regions.sort(
+        (leftRegion, rightRegion) =>
+          rightRegion.width * rightRegion.height * rightRegion.density -
+          leftRegion.width * leftRegion.height * leftRegion.density,
+      ),
+    ),
   });
 }
 
@@ -373,7 +487,9 @@ export class TearPixelTemporalTracker {
   readonly #options: TearPixelObserverOptions;
   readonly #frames: TearPixelFrame[] = [];
 
-  constructor(options: TearPixelObserverOptions = {}) { this.#options = Object.freeze({ ...options }); }
+  constructor(options: TearPixelObserverOptions = {}) {
+    this.#options = Object.freeze({ ...options });
+  }
 
   observe(frame: TearPixelFrame): TearPixelTemporalObservation {
     const observation = observePixels(frame, this.#options);
@@ -386,6 +502,13 @@ export class TearPixelTemporalTracker {
     const opaque = observation.calibration.confidence > 0;
     const occluded = !opaque || (previous !== undefined && difference > 0.88);
     const stable = !occluded && this.#frames.length >= 2 && difference <= 0.12;
-    return Object.freeze({ observation, world, frameDifference: difference, stable, occluded, trackedFrames: this.#frames.length });
+    return Object.freeze({
+      observation,
+      world,
+      frameDifference: difference,
+      stable,
+      occluded,
+      trackedFrames: this.#frames.length,
+    });
   }
 }

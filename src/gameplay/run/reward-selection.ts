@@ -89,7 +89,11 @@ function immutableSnapshot<TChoice extends RewardChoice>(
     readonly reserveChoices: readonly TChoice[];
   },
 ): RewardSelectionSnapshot<TChoice> {
-  return Object.freeze({ ...snapshot, choices: Object.freeze([...snapshot.choices]), reserveChoices: Object.freeze([...snapshot.reserveChoices]) });
+  return Object.freeze({
+    ...snapshot,
+    choices: Object.freeze([...snapshot.choices]),
+    reserveChoices: Object.freeze([...snapshot.reserveChoices]),
+  });
 }
 
 function transition<TChoice extends RewardChoice>(
@@ -103,13 +107,21 @@ function transition<TChoice extends RewardChoice>(
   });
 }
 
-function noChange<TChoice extends RewardChoice>(snapshot: RewardSelectionSnapshot<TChoice>): RewardSelectionTransition<TChoice> {
+function noChange<TChoice extends RewardChoice>(
+  snapshot: RewardSelectionSnapshot<TChoice>,
+): RewardSelectionTransition<TChoice> {
   return Object.freeze({ snapshot, intents: NO_INTENTS });
 }
 
-function isTraining(mode: RunMode): boolean { return mode === "tutorial" || mode === "playground"; }
-function isSpecial(choice: RewardChoice): boolean { return choice.tiers !== undefined; }
-function specialCount(choices: readonly RewardChoice[]): number { return choices.filter(isSpecial).length; }
+function isTraining(mode: RunMode): boolean {
+  return mode === "tutorial" || mode === "playground";
+}
+function isSpecial(choice: RewardChoice): boolean {
+  return choice.tiers !== undefined;
+}
+function specialCount(choices: readonly RewardChoice[]): number {
+  return choices.filter(isSpecial).length;
+}
 
 function completionIntents<TChoice extends RewardChoice>(mode: RunMode): readonly RewardSelectionIntent<TChoice>[] {
   return [
@@ -120,12 +132,25 @@ function completionIntents<TChoice extends RewardChoice>(mode: RunMode): readonl
 }
 
 function rollDraft<TChoice extends RewardChoice>(
-  snapshot: RewardSelectionSnapshot<TChoice>, wave: number, roller: DraftRoller<TChoice>, excludeIds: readonly string[],
+  snapshot: RewardSelectionSnapshot<TChoice>,
+  wave: number,
+  roller: DraftRoller<TChoice>,
+  excludeIds: readonly string[],
 ): Pick<RewardSelectionSnapshot<TChoice>, "wave" | "choices" | "reservedChoice" | "specialBlock" | "specialsOffered"> {
   if (snapshot.seedLocked !== undefined) {
-    const result = rollSeedLockedDraft(snapshot.seedLocked, wave, snapshot.rerollOrdinal ?? 0, snapshot.expandedDraft ? 4 : 3);
-    return { wave, choices: result.choices as unknown as readonly TChoice[], reservedChoice: snapshot.reservedChoice,
-      specialBlock: result.specialBlock, specialsOffered: result.specialsOffered };
+    const result = rollSeedLockedDraft(
+      snapshot.seedLocked,
+      wave,
+      snapshot.rerollOrdinal ?? 0,
+      snapshot.expandedDraft ? 4 : 3,
+    );
+    return {
+      wave,
+      choices: result.choices as unknown as readonly TChoice[],
+      reservedChoice: snapshot.reservedChoice,
+      specialBlock: result.specialBlock,
+      specialsOffered: result.specialsOffered,
+    };
   }
   const block = Math.floor((wave - 1) / 10);
   const specialBlock = snapshot.specialBlock === block ? snapshot.specialBlock : block;
@@ -134,7 +159,9 @@ function rollDraft<TChoice extends RewardChoice>(
   const draftsLeft = Math.max(1, 10 - localWave);
   const needed = 2 - offeredBefore;
   const count = snapshot.expandedDraft ? 4 : 3;
-  const rolled = [...roller({ count, forceSpecial: needed > 0 && draftsLeft <= needed, excludeIds: Object.freeze([...excludeIds]) })];
+  const rolled = [
+    ...roller({ count, forceSpecial: needed > 0 && draftsLeft <= needed, excludeIds: Object.freeze([...excludeIds]) }),
+  ];
   if (rolled.length > count) throw new RangeError("draft roller returned more choices than requested");
 
   const reserved = snapshot.reservedChoice;
@@ -147,7 +174,10 @@ function rollDraft<TChoice extends RewardChoice>(
     rolled[replacement] = reserved;
   }
   return {
-    wave, choices: rolled, reservedChoice: null, specialBlock,
+    wave,
+    choices: rolled,
+    reservedChoice: null,
+    specialBlock,
     specialsOffered: offeredBefore + specialCount(rolled),
   };
 }
@@ -157,24 +187,42 @@ export function initialRewardSelectionSnapshot<TChoice extends RewardChoice>(
 ): RewardSelectionSnapshot<TChoice> {
   return immutableSnapshot({
     ...(options.seedLocked === undefined ? {} : { seedLocked: options.seedLocked, rerollOrdinal: 0 }),
-    phase: "idle", mode: options.mode, wave: 0, choices: [], reserveChoices: [],
+    phase: "idle",
+    mode: options.mode,
+    wave: 0,
+    choices: [],
+    reserveChoices: [],
     reservedChoice: options.reservedChoice ?? null,
-    expandedDraft: options.expandedDraft === true, reservePick: options.reservePick === true,
+    expandedDraft: options.expandedDraft === true,
+    reservePick: options.reservePick === true,
     rerolls: nonNegativeInteger(options.rerolls ?? 0, "rerolls"),
     specialBlock: options.specialBlock ?? -1,
-    specialsOffered: nonNegativeInteger(options.specialsOffered ?? 0, "specialsOffered"), revision: 0,
+    specialsOffered: nonNegativeInteger(options.specialsOffered ?? 0, "specialsOffered"),
+    revision: 0,
   });
 }
 
 export function transitionRewardSelection<TChoice extends RewardChoice>(
-  snapshot: RewardSelectionSnapshot<TChoice>, event: RewardSelectionEvent<TChoice>,
+  snapshot: RewardSelectionSnapshot<TChoice>,
+  event: RewardSelectionEvent<TChoice>,
 ): RewardSelectionTransition<TChoice> {
   if (event.type === "open-draft") {
     const wave = positiveWave(event.wave);
-    return transition(snapshot, {
-      phase: "draft", reserveChoices: [], ...(snapshot.seedLocked === undefined ? {} : { rerollOrdinal: 0 }),
-      ...rollDraft(snapshot.seedLocked === undefined ? snapshot : immutableSnapshot({ ...snapshot, rerollOrdinal: 0 }), wave, event.roll, []),
-    }, [{ type: "set-screen", screen: "draft" }]);
+    return transition(
+      snapshot,
+      {
+        phase: "draft",
+        reserveChoices: [],
+        ...(snapshot.seedLocked === undefined ? {} : { rerollOrdinal: 0 }),
+        ...rollDraft(
+          snapshot.seedLocked === undefined ? snapshot : immutableSnapshot({ ...snapshot, rerollOrdinal: 0 }),
+          wave,
+          event.roll,
+          [],
+        ),
+      },
+      [{ type: "set-screen", screen: "draft" }],
+    );
   }
   if (event.type === "reroll") {
     if (snapshot.phase !== "draft" || snapshot.rerolls === 0) return noChange(snapshot);
@@ -183,63 +231,116 @@ export function transitionRewardSelection<TChoice extends RewardChoice>(
       ...(snapshot.seedLocked === undefined ? {} : { rerollOrdinal: (snapshot.rerollOrdinal ?? 0) + 1 }),
       specialsOffered: Math.max(0, snapshot.specialsOffered - specialCount(snapshot.choices)),
     });
-    return transition(snapshot, {
-      rerolls: snapshot.rerolls - 1,
-      ...(snapshot.seedLocked === undefined ? {} : { rerollOrdinal: adjusted.rerollOrdinal ?? 0 }),
-      ...rollDraft(adjusted, positiveWave(snapshot.wave), event.roll, snapshot.choices.map((choice) => choice.id)),
-    }, [{ type: "reset-ui", enter: true, focus: true, scroll: false }]);
+    return transition(
+      snapshot,
+      {
+        rerolls: snapshot.rerolls - 1,
+        ...(snapshot.seedLocked === undefined ? {} : { rerollOrdinal: adjusted.rerollOrdinal ?? 0 }),
+        ...rollDraft(
+          adjusted,
+          positiveWave(snapshot.wave),
+          event.roll,
+          snapshot.choices.map((choice) => choice.id),
+        ),
+      },
+      [{ type: "reset-ui", enter: true, focus: true, scroll: false }],
+    );
   }
   if (event.type === "select-draft") {
     if (snapshot.phase !== "draft") return noChange(snapshot);
     const race = snapshot.seedLocked !== undefined;
-    const choice = race && event.index === snapshot.choices.length ? snapshot.reservedChoice ?? undefined : snapshot.choices[event.index];
+    const choice =
+      race && event.index === snapshot.choices.length
+        ? (snapshot.reservedChoice ?? undefined)
+        : snapshot.choices[event.index];
     if (race) {
       if (event.legal === undefined) throw new TypeError("Race selection requires current owned-upgrade legality");
       if (choice !== undefined && !event.legal(choice)) return noChange(snapshot);
-      if (choice === undefined && (event.index !== -1 || [...snapshot.choices, ...(snapshot.reservedChoice === null ? [] : [snapshot.reservedChoice])].some(event.legal))) return noChange(snapshot);
+      if (
+        choice === undefined &&
+        (event.index !== -1 ||
+          [...snapshot.choices, ...(snapshot.reservedChoice === null ? [] : [snapshot.reservedChoice])].some(
+            event.legal,
+          ))
+      )
+        return noChange(snapshot);
     }
     const intents: RewardSelectionIntent<TChoice>[] = [];
-    if (choice) intents.push(
-      { type: "apply-upgrade", choice },
-      { type: "ghost-loadout", choiceId: choice.id, event: "pickup" },
-      { type: "ghost-event", event: "pickup" },
-    );
+    if (choice)
+      intents.push(
+        { type: "apply-upgrade", choice },
+        { type: "ghost-loadout", choiceId: choice.id, event: "pickup" },
+        { type: "ghost-event", event: "pickup" },
+      );
     intents.push({ type: "consume-input" });
     const reservedChoice = race && event.index === snapshot.choices.length ? null : snapshot.reservedChoice;
-    const reserveChoices = choice && snapshot.reservePick && !isTraining(snapshot.mode)
-      ? snapshot.choices.filter((_, index) => index !== event.index) : [];
-    if (reserveChoices.length > 0) return transition(snapshot, { phase: "reserve", reserveChoices, ...(race ? { reservedChoice, selectedDraftIndex: event.index } : {}) }, [
-      ...intents, { type: "set-screen", screen: "reserve" },
-      { type: "reset-ui", enter: false, focus: true, scroll: false },
+    const reserveChoices =
+      choice && snapshot.reservePick && !isTraining(snapshot.mode)
+        ? snapshot.choices.filter((_, index) => index !== event.index)
+        : [];
+    if (reserveChoices.length > 0)
+      return transition(
+        snapshot,
+        { phase: "reserve", reserveChoices, ...(race ? { reservedChoice, selectedDraftIndex: event.index } : {}) },
+        [
+          ...intents,
+          { type: "set-screen", screen: "reserve" },
+          { type: "reset-ui", enter: false, focus: true, scroll: false },
+        ],
+      );
+    return transition(snapshot, { phase: "complete", reserveChoices: [], ...(race ? { reservedChoice } : {}) }, [
+      ...intents,
+      ...completionIntents<TChoice>(snapshot.mode),
     ]);
-    return transition(snapshot, { phase: "complete", reserveChoices: [], ...(race ? { reservedChoice } : {}) }, [...intents, ...completionIntents<TChoice>(snapshot.mode)]);
   }
   if (event.type === "select-reserve") {
     if (snapshot.phase !== "reserve") return noChange(snapshot);
-    return transition(snapshot, {
-      phase: "complete", reservedChoice: snapshot.seedLocked !== undefined && event.index === -2 ? snapshot.reservedChoice : event.index >= 0 ? snapshot.reserveChoices[event.index] ?? null : null,
-      reserveChoices: [],
-    }, [{ type: "consume-input" }, ...completionIntents<TChoice>(snapshot.mode)]);
+    return transition(
+      snapshot,
+      {
+        phase: "complete",
+        reservedChoice:
+          snapshot.seedLocked !== undefined && event.index === -2
+            ? snapshot.reservedChoice
+            : event.index >= 0
+              ? (snapshot.reserveChoices[event.index] ?? null)
+              : null,
+        reserveChoices: [],
+      },
+      [{ type: "consume-input" }, ...completionIntents<TChoice>(snapshot.mode)],
+    );
   }
   if (event.type === "open-tier-up") {
-    return transition(snapshot, {
-      phase: "tierup", choices: event.choices, reserveChoices: [],
-    }, [{ type: "set-screen", screen: "tierup" }, { type: "reset-ui", enter: false, focus: false, scroll: true }]);
+    return transition(
+      snapshot,
+      {
+        phase: "tierup",
+        choices: event.choices,
+        reserveChoices: [],
+      },
+      [
+        { type: "set-screen", screen: "tierup" },
+        { type: "reset-ui", enter: false, focus: false, scroll: true },
+      ],
+    );
   }
   if (snapshot.phase !== "tierup") return noChange(snapshot);
   const choice = snapshot.choices[event.index];
   const intents: RewardSelectionIntent<TChoice>[] = [];
-  if (choice) intents.push(
-    { type: "tier-up", choice },
-    { type: "ghost-loadout", choiceId: choice.id, event: "tierup" },
-    { type: "ghost-event", event: "tierup" },
-  );
+  if (choice)
+    intents.push(
+      { type: "tier-up", choice },
+      { type: "ghost-loadout", choiceId: choice.id, event: "tierup" },
+      { type: "ghost-event", event: "tierup" },
+    );
   intents.push({ type: "consume-input" }, ...completionIntents<TChoice>(snapshot.mode));
   return transition(snapshot, { phase: "complete" }, intents);
 }
 
 export function eligibleTierChoices<TChoice extends RewardChoice>(
-  catalog: readonly TChoice[], owned: Readonly<Record<string, number>>, tiers: Readonly<Record<string, number>>,
+  catalog: readonly TChoice[],
+  owned: Readonly<Record<string, number>>,
+  tiers: Readonly<Record<string, number>>,
 ): readonly TChoice[] {
   const eligible: TChoice[] = [];
   for (const id of Object.keys(owned)) {
@@ -248,15 +349,19 @@ export function eligibleTierChoices<TChoice extends RewardChoice>(
     const current = tiers[id] ?? 1;
     if (current - 1 < choice.tiers.length) eligible.push(choice);
   }
-  eligible.sort((left, right) => (left.cat ?? "") < (right.cat ?? "") ? -1 : 1);
+  eligible.sort((left, right) => ((left.cat ?? "") < (right.cat ?? "") ? -1 : 1));
   return Object.freeze(eligible);
 }
 
 export class RewardSelectionController<TChoice extends RewardChoice> {
   #snapshot: RewardSelectionSnapshot<TChoice>;
 
-  constructor(options: RewardSelectionOptions<TChoice>) { this.#snapshot = initialRewardSelectionSnapshot(options); }
-  snapshot(): RewardSelectionSnapshot<TChoice> { return this.#snapshot; }
+  constructor(options: RewardSelectionOptions<TChoice>) {
+    this.#snapshot = initialRewardSelectionSnapshot(options);
+  }
+  snapshot(): RewardSelectionSnapshot<TChoice> {
+    return this.#snapshot;
+  }
   restore(snapshot: RewardSelectionSnapshot<TChoice>): void {
     nonNegativeInteger(snapshot.rerolls, "rerolls");
     nonNegativeInteger(snapshot.specialsOffered, "specialsOffered");
@@ -269,10 +374,22 @@ export class RewardSelectionController<TChoice extends RewardChoice> {
     this.#snapshot = result.snapshot;
     return result;
   }
-  openDraft(wave: number, roll: DraftRoller<TChoice>): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "open-draft", wave, roll }); }
-  reroll(roll: DraftRoller<TChoice>): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "reroll", roll }); }
-  selectDraft(index: number, legal?: (choice: TChoice) => boolean): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "select-draft", index, ...(legal === undefined ? {} : { legal }) }); }
-  selectReserve(index: number): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "select-reserve", index }); }
-  openTierUp(choices: readonly TChoice[]): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "open-tier-up", choices }); }
-  selectTierUp(index: number): RewardSelectionTransition<TChoice> { return this.dispatch({ type: "select-tier-up", index }); }
+  openDraft(wave: number, roll: DraftRoller<TChoice>): RewardSelectionTransition<TChoice> {
+    return this.dispatch({ type: "open-draft", wave, roll });
+  }
+  reroll(roll: DraftRoller<TChoice>): RewardSelectionTransition<TChoice> {
+    return this.dispatch({ type: "reroll", roll });
+  }
+  selectDraft(index: number, legal?: (choice: TChoice) => boolean): RewardSelectionTransition<TChoice> {
+    return this.dispatch({ type: "select-draft", index, ...(legal === undefined ? {} : { legal }) });
+  }
+  selectReserve(index: number): RewardSelectionTransition<TChoice> {
+    return this.dispatch({ type: "select-reserve", index });
+  }
+  openTierUp(choices: readonly TChoice[]): RewardSelectionTransition<TChoice> {
+    return this.dispatch({ type: "open-tier-up", choices });
+  }
+  selectTierUp(index: number): RewardSelectionTransition<TChoice> {
+    return this.dispatch({ type: "select-tier-up", index });
+  }
 }

@@ -4,10 +4,12 @@ import { buildGraph } from "./voidgen-graph";
 import { cageStandingFailures, clearanceFailures, selectRescue, simultaneousThreats } from "./voidgen-hazards";
 
 function hasCompleteMetadata(platform: VoidPlatform): boolean {
-  return typeof platform.chunkId === "number"
-    && typeof platform.voidType === "string"
-    && typeof platform.hazardSeed === "number"
-    && typeof platform.materializationState === "string";
+  return (
+    typeof platform.chunkId === "number" &&
+    typeof platform.voidType === "string" &&
+    typeof platform.hazardSeed === "number" &&
+    typeof platform.materializationState === "string"
+  );
 }
 
 function describeChunk(chunkId: number): string {
@@ -48,7 +50,11 @@ export function inspect(chunks: readonly VoidChunk[] = [], overrides?: VoidInspe
       const upperCenter = upperPlatform.x + upperPlatform.w * 0.5;
       if (Math.abs(lowerCenter - upperCenter) < 48) errors.push(`${label}: mirrored strata ${String(index)}`);
     }
-    if (!chunk.platforms.some((platform) => platform.voidType === "plain" && platform.x + platform.w >= chunk.x + chunk.width * 0.5)) {
+    if (
+      !chunk.platforms.some(
+        (platform) => platform.voidType === "plain" && platform.x + platform.w >= chunk.x + chunk.width * 0.5,
+      )
+    ) {
       errors.push(`${label}: no stable forward landing`);
     }
   }
@@ -60,7 +66,8 @@ export function inspect(chunks: readonly VoidChunk[] = [], overrides?: VoidInspe
     if (!hasCompleteMetadata(platform)) errors.push(`${platformLabel}: incomplete metadata`);
     const lo = platform.voidLane === "lower" ? options.lowerBandMin : options.upperBandMin;
     const hi = platform.voidLane === "lower" ? options.lowerBandMax : options.upperBandMax;
-    if (platform.y < lo - 0.001 || platform.y > hi + 0.001) errors.push(`${platform.id}: outside ${platform.voidLane} band`);
+    if (platform.y < lo - 0.001 || platform.y > hi + 0.001)
+      errors.push(`${platform.id}: outside ${platform.voidLane} band`);
   }
 
   const clearance = clearanceFailures(platforms, options);
@@ -78,7 +85,8 @@ export function inspect(chunks: readonly VoidChunk[] = [], overrides?: VoidInspe
     const adjacency = new Map<string, string[]>();
     for (const edge of graph.edges) {
       if (!edge.ok) {
-        if (edge.kind !== "lane") errors.push(`${edge.id ?? "connector"}: unreachable connector at scroll ${String(speed)}`);
+        if (edge.kind !== "lane")
+          errors.push(`${edge.id ?? "connector"}: unreachable connector at scroll ${String(speed)}`);
         continue;
       }
       const destinations = adjacency.get(edge.from) ?? [];
@@ -89,21 +97,39 @@ export function inspect(chunks: readonly VoidChunk[] = [], overrides?: VoidInspe
       const firstId = Math.min(...source.map((chunk) => chunk.chunkId));
       const lastId = Math.max(...source.map((chunk) => chunk.chunkId));
       const lastChunk = source.find((chunk) => chunk.chunkId === lastId);
-      const starts = platforms.filter((platform) => platform.chunkId === firstId && platform.voidRole !== "exit").map((platform) => platform.id);
-      const ends = new Set(lastChunk === undefined ? [] : platforms.filter((platform) => platform.chunkId === lastId
-        && platform.voidType === "plain" && platform.x + platform.w >= lastChunk.x + lastChunk.width * 0.5).map((platform) => platform.id));
+      const starts = platforms
+        .filter((platform) => platform.chunkId === firstId && platform.voidRole !== "exit")
+        .map((platform) => platform.id);
+      const ends = new Set(
+        lastChunk === undefined
+          ? []
+          : platforms
+              .filter(
+                (platform) =>
+                  platform.chunkId === lastId &&
+                  platform.voidType === "plain" &&
+                  platform.x + platform.w >= lastChunk.x + lastChunk.width * 0.5,
+              )
+              .map((platform) => platform.id),
+      );
       const seen = new Set(starts);
       const queue = starts.slice();
       for (const from of queue) {
         for (const to of adjacency.get(from) ?? []) {
-          if (!seen.has(to)) { seen.add(to); queue.push(to); }
+          if (!seen.has(to)) {
+            seen.add(to);
+            queue.push(to);
+          }
         }
       }
       if (![...ends].some((id) => seen.has(id))) errors.push(`no complete route at scroll ${String(speed)}`);
     }
   }
 
-  const connectorIds = source.filter((chunk) => chunk.hasTransfer).map((chunk) => chunk.chunkId).sort((a, b) => a - b);
+  const connectorIds = source
+    .filter((chunk) => chunk.hasTransfer)
+    .map((chunk) => chunk.chunkId)
+    .sort((a, b) => a - b);
   for (let index = 1; index < connectorIds.length; index++) {
     const current = connectorIds[index];
     const previous = connectorIds[index - 1];
@@ -115,7 +141,8 @@ export function inspect(chunks: readonly VoidChunk[] = [], overrides?: VoidInspe
 
   const firstChunk = source[0];
   const lastChunk = source[source.length - 1];
-  const center = firstChunk === undefined || lastChunk === undefined ? 0 : (firstChunk.x + lastChunk.x + lastChunk.width) * 0.5;
+  const center =
+    firstChunk === undefined || lastChunk === undefined ? 0 : (firstChunk.x + lastChunk.x + lastChunk.width) * 0.5;
   const rescue = selectRescue(platforms, center, 0, options);
   if (source.length > 0 && rescue === null) errors.push("no safe rescue candidate");
 
@@ -123,11 +150,13 @@ export function inspect(chunks: readonly VoidChunk[] = [], overrides?: VoidInspe
   if (overrides?.visibleRect !== undefined) {
     const { left, right } = overrides.visibleRect;
     live = { lower: 0, upper: 0 };
-    for (const platform of platforms) if (platform.x < right && platform.x + platform.w > left) live[platform.voidLane]++;
+    for (const platform of platforms)
+      if (platform.x < right && platform.x + platform.w > left) live[platform.voidLane]++;
     const min = overrides.liveMin ?? 5;
     const max = overrides.liveMax ?? 7;
     for (const lane of LANES) {
-      if (live[lane] < min || live[lane] > max) errors.push(`${lane} live count ${String(live[lane])} outside ${String(min)}-${String(max)}`);
+      if (live[lane] < min || live[lane] > max)
+        errors.push(`${lane} live count ${String(live[lane])} outside ${String(min)}-${String(max)}`);
     }
   }
 

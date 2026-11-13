@@ -11,7 +11,11 @@ const path = require("node:path");
   if (target === "crazygames") {
     assert.equal(builtHtml.includes('rel="manifest"'), false, "CrazyGames HTML must not advertise PWA installation");
     assert.equal(fs.existsSync(path.resolve(root, "sw.js")), false, "CrazyGames must not emit a service worker");
-    assert.equal(/(?:src|href)="\/assets\//.test(builtHtml), false, "CrazyGames game assets must use relative bundle paths");
+    assert.equal(
+      /(?:src|href)="\/assets\//.test(builtHtml),
+      false,
+      "CrazyGames game assets must use relative bundle paths",
+    );
     assert.match(builtHtml, /(?:src|href)="\.\/assets\//, "CrazyGames HTML should contain relative hashed assets");
   } else {
     assert.equal(builtHtml.includes('rel="manifest"'), true, "standalone HTML must advertise its PWA manifest");
@@ -21,9 +25,13 @@ const path = require("node:path");
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     const file = path.resolve(root, pathname === "/" ? "index.html" : pathname.slice(1));
     if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      response.writeHead(404).end(); return;
+      response.writeHead(404).end();
+      return;
     }
-    response.setHeader("Content-Type", file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream");
+    response.setHeader(
+      "Content-Type",
+      file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream",
+    );
     fs.createReadStream(file).pipe(response);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -40,12 +48,13 @@ const path = require("node:path");
         contentType: "text/javascript",
         body: `window.CrazyGames={SDK:{environment:"local",init:()=>Promise.resolve(),game:{settings:{muteAudio:false},addSettingsChangeListener:()=>{}},data:{getItem:()=>null,setItem:()=>{}}}};`,
       });
-    }
-    else if (url.startsWith(`http://127.0.0.1:${address.port}/`)) void route.continue();
+    } else if (url.startsWith(`http://127.0.0.1:${address.port}/`)) void route.continue();
     else void route.abort();
   });
   await page.goto(`http://127.0.0.1:${address.port}/?test=1`, { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_PLATFORM_SERVICES__, undefined, { timeout: 10_000 });
+  await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_PLATFORM_SERVICES__, undefined, {
+    timeout: 10_000,
+  });
   const boot = await page.evaluate(() => ({
     platform: window.__TEAR_PLATFORM_SERVICES__.id,
     envelope: JSON.parse(localStorage.getItem("tear_profile_v2") || "null"),
@@ -55,7 +64,11 @@ const path = require("node:path");
   // the platform check; the runtime identity here must not pretend to be a
   // shipped browser or CrazyGames session.
   assert.equal(boot.platform, "tearbench");
-  assert.equal(boot.envelope, null, "TearBench test services must not silently exercise production profile persistence");
+  assert.equal(
+    boot.envelope,
+    null,
+    "TearBench test services must not silently exercise production profile persistence",
+  );
 
   await page.mouse.click(260, 360);
   await page.waitForTimeout(350);
@@ -66,4 +79,7 @@ const path = require("node:path");
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
   console.log("platform browser smoke passed");
-})().catch((error) => { console.error(error); process.exit(1); });
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

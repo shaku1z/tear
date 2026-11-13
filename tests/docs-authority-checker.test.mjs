@@ -21,14 +21,7 @@ import {
 } from "../scripts/check-docs.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const rootFiles = [
-  "AGENTS.md",
-  "CLAUDE.md",
-  "CONTRIBUTING.md",
-  "CRAZYGAMES.md",
-  "DEPLOYMENT.md",
-  "README.md",
-];
+const rootFiles = ["AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "CRAZYGAMES.md", "DEPLOYMENT.md", "README.md"];
 
 function copyActivePlanFixture(fixtureRoot) {
   fs.mkdirSync(path.join(fixtureRoot, "plans"), { recursive: true });
@@ -45,13 +38,19 @@ function copyCurrentProgramFixture(fixtureRoot) {
   fs.mkdirSync(path.join(fixtureRoot, "config"), { recursive: true });
   fs.mkdirSync(path.join(fixtureRoot, "docs"), { recursive: true });
   fs.mkdirSync(path.join(fixtureRoot, "plans"), { recursive: true });
-  fs.copyFileSync(path.join(repositoryRoot, "config", "tearbench-current-program-state.json"),
-    path.join(fixtureRoot, "config", "tearbench-current-program-state.json"));
+  fs.copyFileSync(
+    path.join(repositoryRoot, "config", "tearbench-current-program-state.json"),
+    path.join(fixtureRoot, "config", "tearbench-current-program-state.json"),
+  );
   for (const relativePath of [
-    "plans/TEARBENCH_MASTER_HANDOFF.md", "docs/TEARBENCH_GHOST3_PROGRAM.md",
-    "docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md", "plans/TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md",
-    "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md", "docs/tearbench-ghost3-evidence-catalog.json",
-  ]) fs.copyFileSync(path.join(repositoryRoot, relativePath), path.join(fixtureRoot, relativePath));
+    "plans/TEARBENCH_MASTER_HANDOFF.md",
+    "docs/TEARBENCH_GHOST3_PROGRAM.md",
+    "docs/TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md",
+    "plans/TEAR_PROGRAM_NORMALIZATION_MASTER_PLAN.md",
+    "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md",
+    "docs/tearbench-ghost3-evidence-catalog.json",
+  ])
+    fs.copyFileSync(path.join(repositoryRoot, relativePath), path.join(fixtureRoot, relativePath));
 }
 
 test("docs checker passes the canonical tracked documentation baseline", () => {
@@ -67,12 +66,48 @@ test("docs checker passes the canonical tracked documentation baseline", () => {
 
 test("current program-state authority rejects semantic receipt and status mutations", () => {
   const mutations = [
-    ["marker", (state) => { state.marker = "<!-- tearbench-current-program-state: wrong-state -->"; }, /marker/u],
-    ["source", (state) => { state.receipts.gameProduction.sourceSha = "f".repeat(40); }, /source SHA diverges/u],
-    ["run", (state) => { state.receipts.wikiSync.validationRunId = "99999999999"; }, /wiki validation receipt diverges/u],
-    ["cumulative", (state) => { state.diffCapability.cumulative = true; }, /diff capability/u],
-    ["c40", (state) => { state.checkpoints.C40 = "complete"; }, /C40 state/u],
-    ["frozen-production", (state) => { state.g7.production = "frozen"; }, /G7 state/u],
+    [
+      "marker",
+      (state) => {
+        state.marker = "<!-- tearbench-current-program-state: wrong-state -->";
+      },
+      /marker/u,
+    ],
+    [
+      "source",
+      (state) => {
+        state.receipts.gameProduction.sourceSha = "f".repeat(40);
+      },
+      /source SHA diverges/u,
+    ],
+    [
+      "run",
+      (state) => {
+        state.receipts.wikiSync.validationRunId = "99999999999";
+      },
+      /wiki validation receipt diverges/u,
+    ],
+    [
+      "cumulative",
+      (state) => {
+        state.diffCapability.cumulative = true;
+      },
+      /diff capability/u,
+    ],
+    [
+      "c40",
+      (state) => {
+        state.checkpoints.C40 = "complete";
+      },
+      /C40 state/u,
+    ],
+    [
+      "frozen-production",
+      (state) => {
+        state.g7.production = "frozen";
+      },
+      /G7 state/u,
+    ],
   ];
   for (const [name, mutate, expected] of mutations) {
     const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `tear-tc8-state-${name}-`));
@@ -95,7 +130,11 @@ test("current program-state checker accepts historical text while requiring curr
   try {
     copyCurrentProgramFixture(fixtureRoot);
     const documentPath = path.join(fixtureRoot, "plans", "TEARBENCH_MASTER_HANDOFF.md");
-    fs.appendFileSync(documentPath, "\nHistorical G6 checkpoint: production remained frozen and no deployment was performed; baseline a8a476c6171d913581c01bb0e4432f53cf44f9e4.\n", "utf8");
+    fs.appendFileSync(
+      documentPath,
+      "\nHistorical G6 checkpoint: production remained frozen and no deployment was performed; baseline a8a476c6171d913581c01bb0e4432f53cf44f9e4.\n",
+      "utf8",
+    );
     assert.deepEqual(checkCurrentProgramState(fixtureRoot).errors, []);
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
@@ -137,9 +176,14 @@ test("active-plan metadata rejects missing owner or non-active status", () => {
   try {
     copyActivePlanFixture(fixtureRoot);
     const target = path.join(fixtureRoot, ACTIVE_PLAN_METADATA_PATHS[0]);
-    fs.writeFileSync(target, fs.readFileSync(target, "utf8")
-      .replace("- **Owner:** QA owner", "- **Owner:**")
-      .replace("- **Status:** Active", "- **Status:** Paused"), "utf8");
+    fs.writeFileSync(
+      target,
+      fs
+        .readFileSync(target, "utf8")
+        .replace("- **Owner:** QA owner", "- **Owner:**")
+        .replace("- **Status:** Active", "- **Status:** Paused"),
+      "utf8",
+    );
     const result = checkActivePlanMetadata(fixtureRoot);
     assert.match(result.errors.join("\n"), /nonempty Owner|Status: Active/u);
   } finally {
@@ -152,9 +196,17 @@ test("temporary correction authority requires an explicit temporary role and ret
   try {
     copyActivePlanFixture(fixtureRoot);
     const target = path.join(fixtureRoot, "plans", "TEARBENCH_CURRENT_CORRECTION_PLAN.md");
-    fs.writeFileSync(target, fs.readFileSync(target, "utf8")
-      .replace("- **Document role:** Temporary active execution authority", "- **Document role:** Active execution authority")
-      .replace(/^- \*\*Retirement:\*\*.*$/mu, "- **Retirement:**"), "utf8");
+    fs.writeFileSync(
+      target,
+      fs
+        .readFileSync(target, "utf8")
+        .replace(
+          "- **Document role:** Temporary active execution authority",
+          "- **Document role:** Active execution authority",
+        )
+        .replace(/^- \*\*Retirement:\*\*.*$/mu, "- **Retirement:**"),
+      "utf8",
+    );
     const errors = checkActivePlanMetadata(fixtureRoot).errors.join("\n");
     assert.match(errors, /Temporary Document role/u);
     assert.match(errors, /nonempty Retirement/u);
@@ -183,8 +235,16 @@ test("plan index and active-plan metadata must agree", () => {
   try {
     copyActivePlanFixture(fixtureRoot);
     const indexPath = path.join(fixtureRoot, "plans", "README.md");
-    fs.writeFileSync(indexPath, fs.readFileSync(indexPath, "utf8")
-      .replace("| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | QA owner |", "| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | Different owner |"), "utf8");
+    fs.writeFileSync(
+      indexPath,
+      fs
+        .readFileSync(indexPath, "utf8")
+        .replace(
+          "| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | QA owner |",
+          "| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | Different owner |",
+        ),
+      "utf8",
+    );
     const index = checkPlansAuthorityIndex(fixtureRoot);
     assert.deepEqual(index.errors, []);
     const result = checkActivePlanMetadata(fixtureRoot, index);
@@ -199,8 +259,12 @@ test("an added active-plan row requires an intentional canonical-set update and 
   try {
     copyActivePlanFixture(fixtureRoot);
     const indexPath = path.join(fixtureRoot, "plans", "README.md");
-    const indexText = fs.readFileSync(indexPath, "utf8")
-      .replace("## Completed plans", "| [EXTRA_ACTIVE.md](active/EXTRA_ACTIVE.md) | Extra owner | Active | Extra plan close condition. | Intentional negative fixture |\n\n## Completed plans");
+    const indexText = fs
+      .readFileSync(indexPath, "utf8")
+      .replace(
+        "## Completed plans",
+        "| [EXTRA_ACTIVE.md](active/EXTRA_ACTIVE.md) | Extra owner | Active | Extra plan close condition. | Intentional negative fixture |\n\n## Completed plans",
+      );
     fs.writeFileSync(indexPath, indexText, "utf8");
     fs.writeFileSync(path.join(fixtureRoot, "plans", "active", "EXTRA_ACTIVE.md"), "# Extra active plan\n", "utf8");
     const index = checkPlansAuthorityIndex(fixtureRoot);
@@ -243,7 +307,10 @@ test("anchors, fragments, external destinations, images, and fenced examples are
     "[query](README.md?raw=1#intro)",
   ].join("\n");
   const links = parseMarkdownLinks(markdown);
-  assert.deepEqual(links.map(({ destination }) => destination), ["README.md", "README.md"]);
+  assert.deepEqual(
+    links.map(({ destination }) => destination),
+    ["README.md", "README.md"],
+  );
   for (const link of links) {
     assert.equal(resolveLocalLink(repositoryRoot, "docs/README.md", link.destination).ok, true);
   }
@@ -261,13 +328,23 @@ test("root policy rejects a mutated classification table in a temporary fixture"
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-docs-"));
   try {
     fs.mkdirSync(path.join(fixtureRoot, "docs"), { recursive: true });
-    const index = fs.readFileSync(path.join(repositoryRoot, "docs", "README.md"), "utf8")
+    const index = fs
+      .readFileSync(path.join(repositoryRoot, "docs", "README.md"), "utf8")
       .replace("| `DEPLOYMENT.md` | current authority |", "| `DEPLOYMENT.md` | unknown |")
-      .replace("| `CONTRIBUTING.md` | current authority |", "| `CONTRIBUTING.md` | current authority |\n| `CONTRIBUTING.md` | current authority |\n");
+      .replace(
+        "| `CONTRIBUTING.md` | current authority |",
+        "| `CONTRIBUTING.md` | current authority |\n| `CONTRIBUTING.md` | current authority |\n",
+      );
     fs.writeFileSync(path.join(fixtureRoot, "docs", "README.md"), index, "utf8");
     const result = checkRootDocumentationPolicy(fixtureRoot, [...rootFiles, "docs/README.md"]);
-    assert.equal(result.errors.some((error) => /unknown classification/u.test(error)), true);
-    assert.equal(result.errors.some((error) => /more than once/u.test(error)), true);
+    assert.equal(
+      result.errors.some((error) => /unknown classification/u.test(error)),
+      true,
+    );
+    assert.equal(
+      result.errors.some((error) => /more than once/u.test(error)),
+      true,
+    );
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }

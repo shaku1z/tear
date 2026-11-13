@@ -25,7 +25,7 @@ export function calculateCoinAward(input: CoinAwardInput): CoinAward {
   if (input.difficultyId === "onehit") {
     const progress = clamp((input.wave - 8) / 12, 0, 1);
     const easeOut = 1 - (1 - progress) * (1 - progress);
-    difficultyMultiplier = (0.70 + 2.35 * easeOut) * input.remoteMultiplier;
+    difficultyMultiplier = (0.7 + 2.35 * easeOut) * input.remoteMultiplier;
   }
   const scoreCoins = Math.floor(input.score * 0.02 * (1 + 0.08 * input.coinMagnetLevel) * difficultyMultiplier);
   const depthCoins = Math.floor(input.wave * 10);

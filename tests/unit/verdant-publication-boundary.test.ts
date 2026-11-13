@@ -2,8 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import policy from "../../config/campaign-publication-boundary.json";
 import { CURRENT_RULESET_VERSION } from "../../src/gameplay/run/ruleset-version";
-import { CAMPAIGN_STAGE_IDS, PUBLISHED_STAGE_IDS, PREVIEW_STAGE_IDS, STAGE_IDS, STAGE_CONTENT_AVAILABILITY } from "../../src/gameplay/stages";
-import { assertCampaignPublicationAllowed, validateCampaignPublicationPolicy } from "../../scripts/campaign-publication-boundary.mjs";
+import {
+  CAMPAIGN_STAGE_IDS,
+  PUBLISHED_STAGE_IDS,
+  PREVIEW_STAGE_IDS,
+  STAGE_IDS,
+  STAGE_CONTENT_AVAILABILITY,
+} from "../../src/gameplay/stages";
+import {
+  assertCampaignPublicationAllowed,
+  validateCampaignPublicationPolicy,
+} from "../../scripts/campaign-publication-boundary.mjs";
 
 describe("published six-stage boundary with Pale preview", () => {
   it("binds the public policy to the exact published and preview authorities", () => {

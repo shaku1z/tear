@@ -100,7 +100,8 @@ export interface ReviewedPhysicalControllerHardwareSession extends PhysicalContr
   readonly reviewDisposition: Exclude<ControllerSessionReviewDisposition, "manual-review-required">;
 }
 
-const VIRTUAL_OR_SYNTHETIC_CONTROLLER_ID = /\b(?:virtual|synthetic|emulat(?:or|ed)|mock|test(?:ing)?|automation|playwright|webdriver|vjoy|vigem|rewasd)\b/iu;
+const VIRTUAL_OR_SYNTHETIC_CONTROLLER_ID =
+  /\b(?:virtual|synthetic|emulat(?:or|ed)|mock|test(?:ing)?|automation|playwright|webdriver|vjoy|vigem|rewasd)\b/iu;
 
 function nonEmpty(value: string, name: string): void {
   if (value.trim().length === 0) throw new TypeError(`${name} must be non-empty`);
@@ -116,11 +117,15 @@ function sha256(value: string, name: string): void {
 }
 
 function copySnapshot(snapshot: ControllerDeviceSnapshot): ControllerDeviceSnapshot {
-  if (!Number.isSafeInteger(snapshot.index) || snapshot.index < 0) throw new RangeError("controller index must be a non-negative safe integer");
+  if (!Number.isSafeInteger(snapshot.index) || snapshot.index < 0)
+    throw new RangeError("controller index must be a non-negative safe integer");
   nonEmpty(snapshot.id, "controller id");
-  if (!Number.isFinite(snapshot.timestamp) || snapshot.timestamp < 0) throw new RangeError("controller timestamp must be non-negative");
-  if (!Number.isSafeInteger(snapshot.buttonCount) || snapshot.buttonCount < 0) throw new RangeError("controller buttonCount must be non-negative");
-  if (!Number.isSafeInteger(snapshot.axisCount) || snapshot.axisCount < 0) throw new RangeError("controller axisCount must be non-negative");
+  if (!Number.isFinite(snapshot.timestamp) || snapshot.timestamp < 0)
+    throw new RangeError("controller timestamp must be non-negative");
+  if (!Number.isSafeInteger(snapshot.buttonCount) || snapshot.buttonCount < 0)
+    throw new RangeError("controller buttonCount must be non-negative");
+  if (!Number.isSafeInteger(snapshot.axisCount) || snapshot.axisCount < 0)
+    throw new RangeError("controller axisCount must be non-negative");
   return Object.freeze({ ...snapshot });
 }
 
@@ -129,8 +134,12 @@ function copySnapshot(snapshot: ControllerDeviceSnapshot): ControllerDeviceSnaps
  * It neither writes browser state nor uses test-only globals; a missing index
  * simply means there is no browser-observed controller to attest.
  */
-export function readBrowserControllerSnapshot(navigatorPort: BrowserGamepadPort, index: number): ControllerDeviceSnapshot | undefined {
-  if (!Number.isSafeInteger(index) || index < 0) throw new RangeError("controller index must be a non-negative safe integer");
+export function readBrowserControllerSnapshot(
+  navigatorPort: BrowserGamepadPort,
+  index: number,
+): ControllerDeviceSnapshot | undefined {
+  if (!Number.isSafeInteger(index) || index < 0)
+    throw new RangeError("controller index must be a non-negative safe integer");
   const gamepad = navigatorPort.getGamepads()[index];
   if (gamepad === null || gamepad === undefined) return undefined;
   return copySnapshot({
@@ -154,8 +163,10 @@ export function assessBrowserControllerOrigin(input: ControllerDeviceSnapshot): 
   const reasons: string[] = [];
   if (!snapshot.connected) reasons.push("browser reports the controller as disconnected");
   if (snapshot.timestamp <= 0) reasons.push("browser controller timestamp is unavailable");
-  if (snapshot.buttonCount < 4 || snapshot.axisCount < 2) reasons.push("controller lacks the minimum interactive controls");
-  if (VIRTUAL_OR_SYNTHETIC_CONTROLLER_ID.test(snapshot.id)) reasons.push("controller identifier declares a virtual or synthetic device");
+  if (snapshot.buttonCount < 4 || snapshot.axisCount < 2)
+    reasons.push("controller lacks the minimum interactive controls");
+  if (VIRTUAL_OR_SYNTHETIC_CONTROLLER_ID.test(snapshot.id))
+    reasons.push("controller identifier declares a virtual or synthetic device");
   const disposition: ControllerOriginDisposition = reasons.length > 0 ? "rejected" : "manual-attestation-required";
   return Object.freeze({
     disposition,
@@ -176,7 +187,8 @@ function copyEvent(event: ControllerConnectionEvent): ControllerConnectionEvent 
   if (event.kind === "connected" || event.kind === "reconnected") {
     if (event.snapshot === undefined) throw new TypeError(`${event.kind} event requires a browser controller snapshot`);
     const assessment = assessBrowserControllerOrigin(event.snapshot);
-    if (assessment.disposition === "rejected") throw new TypeError(`${event.kind} controller is not eligible: ${assessment.reasons.join("; ")}`);
+    if (assessment.disposition === "rejected")
+      throw new TypeError(`${event.kind} controller is not eligible: ${assessment.reasons.join("; ")}`);
     return Object.freeze({ kind: event.kind, recordedAt: event.recordedAt, snapshot: assessment.snapshot });
   }
   if (event.kind === "disconnected") {
@@ -187,16 +199,23 @@ function copyEvent(event: ControllerConnectionEvent): ControllerConnectionEvent 
   }
   nonEmpty(event.fromBindingProfile, "remap fromBindingProfile");
   nonEmpty(event.toBindingProfile, "remap toBindingProfile");
-  if (event.fromBindingProfile === event.toBindingProfile) throw new TypeError("remap-applied event must change the binding profile");
+  if (event.fromBindingProfile === event.toBindingProfile)
+    throw new TypeError("remap-applied event must change the binding profile");
   return Object.freeze({
-    kind: "remap-applied", recordedAt: event.recordedAt,
-    fromBindingProfile: event.fromBindingProfile, toBindingProfile: event.toBindingProfile,
+    kind: "remap-applied",
+    recordedAt: event.recordedAt,
+    fromBindingProfile: event.fromBindingProfile,
+    toBindingProfile: event.toBindingProfile,
   });
 }
 
 function validateEventSequence(events: readonly ControllerConnectionEvent[]): void {
-  if (events.length < 4) throw new TypeError("controller hardware session requires connected, disconnected, reconnected, and remap evidence");
-  if (events[0]?.kind !== "connected") throw new TypeError("controller hardware session must begin with a connected observation");
+  if (events.length < 4)
+    throw new TypeError(
+      "controller hardware session requires connected, disconnected, reconnected, and remap evidence",
+    );
+  if (events[0]?.kind !== "connected")
+    throw new TypeError("controller hardware session must begin with a connected observation");
   let disconnected = false;
   let reconnected = false;
   let remapped = false;
@@ -215,13 +234,18 @@ function validateEventSequence(events: readonly ControllerConnectionEvent[]): vo
       remapped = true;
     }
   }
-  if (!disconnected || !reconnected || !remapped) throw new TypeError("controller hardware session lacks disconnect, reconnect, or remap evidence");
+  if (!disconnected || !reconnected || !remapped)
+    throw new TypeError("controller hardware session lacks disconnect, reconnect, or remap evidence");
 }
 
 function integrityPayload(session: PhysicalControllerHardwareSessionDraft): PhysicalControllerHardwareSessionDraft {
   return {
-    format: session.format, schemaVersion: session.schemaVersion, buildId: session.buildId, recordedAt: session.recordedAt,
-    operatorId: session.operatorId, operatorAttestation: session.operatorAttestation,
+    format: session.format,
+    schemaVersion: session.schemaVersion,
+    buildId: session.buildId,
+    recordedAt: session.recordedAt,
+    operatorId: session.operatorId,
+    operatorAttestation: session.operatorAttestation,
     events: Object.freeze(session.events.map(copyEvent)),
     artifacts: Object.freeze({
       connectionTrace: copyArtifact(session.artifacts.connectionTrace, "connectionTrace"),
@@ -232,7 +256,9 @@ function integrityPayload(session: PhysicalControllerHardwareSessionDraft): Phys
 }
 
 /** Creates immutable manual-hardware evidence; it is intentionally not a certification result. */
-export function createPhysicalControllerHardwareSession(draft: PhysicalControllerHardwareSessionDraft): PhysicalControllerHardwareSession {
+export function createPhysicalControllerHardwareSession(
+  draft: PhysicalControllerHardwareSessionDraft,
+): PhysicalControllerHardwareSession {
   nonEmpty(draft.buildId, "controller buildId");
   timestamp(draft.recordedAt, "controller session recordedAt");
   nonEmpty(draft.operatorId, "controller operatorId");
@@ -240,7 +266,10 @@ export function createPhysicalControllerHardwareSession(draft: PhysicalControlle
   validateEventSequence(payload.events);
   return Object.freeze({
     ...payload,
-    integrity: Object.freeze({ algorithm: PHYSICAL_CONTROLLER_HARDWARE_INTEGRITY_ALGORITHM, contentHash: stableVerificationHash(payload) }),
+    integrity: Object.freeze({
+      algorithm: PHYSICAL_CONTROLLER_HARDWARE_INTEGRITY_ALGORITHM,
+      contentHash: stableVerificationHash(payload),
+    }),
     reviewDisposition: "manual-review-required",
     automaticallyProvesPhysicalHardware: false,
   });

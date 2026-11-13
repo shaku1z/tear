@@ -7,12 +7,23 @@ describe("Tear world transient state", () => {
     const transient = createTearWorldTransientState();
     const opening = transient.opening;
     const fresh = createTearWorldTransientState();
-    transient.assignOpening({ throwCooldown: 0.4, wasDashing: true, wasSwinging: true, wasOnGround: false,
-      dashGhostTime: 0.2, landingVelocity: 900 });
+    transient.assignOpening({
+      throwCooldown: 0.4,
+      wasDashing: true,
+      wasSwinging: true,
+      wasOnGround: false,
+      dashGhostTime: 0.2,
+      landingVelocity: 900,
+    });
     transient.assignImpact({ hitStop: 0.05, slowMotion: 0.75, shake: 8 });
     transient.assignProtection({ active: true, lastMode: "sever" });
-    transient.feel.rankPopupSeconds = 0.9; transient.feel.rankPopupText = "SSS";
-    const unrelated = structuredClone({ protection: transient.protection, impact: transient.impact, feel: transient.feel });
+    transient.feel.rankPopupSeconds = 0.9;
+    transient.feel.rankPopupText = "SSS";
+    const unrelated = structuredClone({
+      protection: transient.protection,
+      impact: transient.impact,
+      feel: transient.feel,
+    });
     transient.resetOpening();
     expect(transient.opening).toBe(opening);
     expect(transient.opening).toEqual(fresh.opening);
@@ -22,11 +33,25 @@ describe("Tear world transient state", () => {
     const transient = createTearWorldTransientState();
 
     expect(transient.protection).toEqual({ active: false, lastMode: null });
-    expect(transient.opening).toEqual({ throwCooldown: 0, wasDashing: false, wasSwinging: false,
-      wasOnGround: true, dashGhostTime: 0, landingVelocity: 0 });
+    expect(transient.opening).toEqual({
+      throwCooldown: 0,
+      wasDashing: false,
+      wasSwinging: false,
+      wasOnGround: true,
+      dashGhostTime: 0,
+      landingVelocity: 0,
+    });
     expect(transient.impact).toEqual({ hitStop: 0, slowMotion: 0, shake: 0 });
-    expect(transient.feel).toEqual({ timeScale: 1, zoom: 1, flash: 0, bannerSeconds: 0,
-      worldZoom: 1, worldZoomTarget: 1, rankPopupSeconds: 0, rankPopupText: "" });
+    expect(transient.feel).toEqual({
+      timeScale: 1,
+      zoom: 1,
+      flash: 0,
+      bannerSeconds: 0,
+      worldZoom: 1,
+      worldZoomTarget: 1,
+      rankPopupSeconds: 0,
+      rankPopupText: "",
+    });
     expect(Object.isFrozen(transient)).toBe(true);
   });
 
@@ -34,13 +59,29 @@ describe("Tear world transient state", () => {
     const transient = createTearWorldTransientState();
     const feel = transient.feel;
 
-    Object.assign(feel, { timeScale: 0.2, zoom: 1.4, flash: 0.8, bannerSeconds: 2,
-      worldZoom: 0.6, worldZoomTarget: 0.6, rankPopupSeconds: 0.9, rankPopupText: "SSS" });
+    Object.assign(feel, {
+      timeScale: 0.2,
+      zoom: 1.4,
+      flash: 0.8,
+      bannerSeconds: 2,
+      worldZoom: 0.6,
+      worldZoomTarget: 0.6,
+      rankPopupSeconds: 0.9,
+      rankPopupText: "SSS",
+    });
     transient.resetFeel();
 
     expect(feel).toBe(transient.feel);
-    expect(feel).toEqual({ timeScale: 1, zoom: 1, flash: 0, bannerSeconds: 0,
-      worldZoom: 1, worldZoomTarget: 1, rankPopupSeconds: 0.9, rankPopupText: "SSS" });
+    expect(feel).toEqual({
+      timeScale: 1,
+      zoom: 1,
+      flash: 0,
+      bannerSeconds: 0,
+      worldZoom: 1,
+      worldZoomTarget: 1,
+      rankPopupSeconds: 0.9,
+      rankPopupText: "SSS",
+    });
   });
 
   it("assigns into the owned records so existing readers never hold a stale object", () => {
@@ -50,8 +91,14 @@ describe("Tear world transient state", () => {
     const impact = transient.impact;
 
     transient.assignProtection({ active: true, lastMode: "sever" });
-    transient.assignOpening({ throwCooldown: 0.4, wasDashing: true, wasSwinging: true, wasOnGround: false,
-      dashGhostTime: 0.2, landingVelocity: 900 });
+    transient.assignOpening({
+      throwCooldown: 0.4,
+      wasDashing: true,
+      wasSwinging: true,
+      wasOnGround: false,
+      dashGhostTime: 0.2,
+      landingVelocity: 900,
+    });
     transient.assignImpact({ hitStop: 0.05, slowMotion: 0.75, shake: 8 });
 
     expect(protection).toBe(transient.protection);
@@ -63,8 +110,17 @@ describe("Tear world transient state", () => {
 
   it("keeps two worlds isolated and does not retain the seeded option objects", () => {
     const seed = { hitStop: 1, slowMotion: 2, shake: 3 };
-    const first = createTearWorldTransientState({ impact: seed, opening: { throwCooldown: 5, wasDashing: true,
-      wasSwinging: false, wasOnGround: false, dashGhostTime: 1, landingVelocity: 2 } });
+    const first = createTearWorldTransientState({
+      impact: seed,
+      opening: {
+        throwCooldown: 5,
+        wasDashing: true,
+        wasSwinging: false,
+        wasOnGround: false,
+        dashGhostTime: 1,
+        landingVelocity: 2,
+      },
+    });
     const second = createTearWorldTransientState();
 
     first.assignImpact({ hitStop: 9, slowMotion: 9, shake: 9 });

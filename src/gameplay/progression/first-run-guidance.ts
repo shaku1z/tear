@@ -27,7 +27,7 @@ export function firstRunProfileFacts(profile: FirstRunProfilePort): FirstRunProf
   });
 }
 
-const count = (value: number): number => Number.isFinite(value) && value > 0 ? value : 0;
+const count = (value: number): number => (Number.isFinite(value) && value > 0 ? value : 0);
 const playedOtherThanTutorial = (facts: FirstRunProfileFacts): boolean =>
   facts.modesPlayed.some((mode) => mode !== "tutorial");
 

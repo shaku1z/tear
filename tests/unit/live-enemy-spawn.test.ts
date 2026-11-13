@@ -3,8 +3,16 @@ import { completeEnemySpawn, constructLiveEnemy, type LiveSpawnEnemy } from "../
 
 function enemy(overrides: Partial<LiveSpawnEnemy> = {}): LiveSpawnEnemy {
   return {
-    kind: "charger", x: 0, y: 0, hp: 100, maxHp: 100, hh: 20, radius: 12,
-    color: "#f00", contactDmg: 10, ...overrides,
+    kind: "charger",
+    x: 0,
+    y: 0,
+    hp: 100,
+    maxHp: 100,
+    hh: 20,
+    radius: 12,
+    color: "#f00",
+    contactDmg: 10,
+    ...overrides,
   };
 }
 
@@ -17,12 +25,22 @@ function port(overrides: Record<string, unknown> = {}) {
     campaignStage: () => 0,
     contentWave: () => 4,
     groundSpawn: () => ({ x: 120, y: 500 }),
-    applyPreset: vi.fn(), rollVariant: vi.fn(() => ({
-      id: "swift", name: "Swift", weight: 1, apply: () => undefined,
+    applyPreset: vi.fn(),
+    rollVariant: vi.fn(() => ({
+      id: "swift",
+      name: "Swift",
+      weight: 1,
+      apply: () => undefined,
     })),
-    applyVariant: vi.fn(), rollAffixes: vi.fn(), arrivalEffect: vi.fn(),
-    recordSpawn: vi.fn((...args: unknown[]) => { recorded.push(args); }),
-    install: vi.fn((value: LiveSpawnEnemy) => { installed.push(value); }),
+    applyVariant: vi.fn(),
+    rollAffixes: vi.fn(),
+    arrivalEffect: vi.fn(),
+    recordSpawn: vi.fn((...args: unknown[]) => {
+      recorded.push(args);
+    }),
+    install: vi.fn((value: LiveSpawnEnemy) => {
+      installed.push(value);
+    }),
     ...overrides,
   };
   return { base, installed, recorded };
@@ -37,8 +55,15 @@ describe("live enemy spawn", () => {
       createGround: vi.fn((kind: string) => create(kind)),
       createAir: vi.fn((kind: string, x: number, y: number) => enemy({ kind, x, y })),
       createSupport: vi.fn((kind: string) => create(kind)),
-      createBoss: vi.fn((id?: string) => enemy({ kind: "boss", isBoss: true, isMirrorBoss: true,
-        ...(id === undefined ? {} : { bossId: id }), bossName: "Echo" })),
+      createBoss: vi.fn((id?: string) =>
+        enemy({
+          kind: "boss",
+          isBoss: true,
+          isMirrorBoss: true,
+          ...(id === undefined ? {} : { bossId: id }),
+          bossName: "Echo",
+        }),
+      ),
       beginBossPresentation,
     };
 
@@ -61,8 +86,19 @@ describe("live enemy spawn", () => {
     const { base, installed } = port();
     completeEnemySpawn(target, { type: "charger", hpScale: 2, dmgScale: 1.5 }, base);
 
-    expect(target).toMatchObject({ hp: 200, maxHp: 200, hpDisplay: 200, contactDmg: 15,
-      dmgScale: 1.5, x: 120, y: 500, canClimb: true, climber: true, climbApt: 0.75, spawnT: 0.35 });
+    expect(target).toMatchObject({
+      hp: 200,
+      maxHp: 200,
+      hpDisplay: 200,
+      contactDmg: 15,
+      dmgScale: 1.5,
+      x: 120,
+      y: 500,
+      canClimb: true,
+      climber: true,
+      climbApt: 0.75,
+      spawnT: 0.35,
+    });
     expect(base.applyVariant).toHaveBeenCalledWith(target, expect.objectContaining({ id: "swift" }));
     expect(base.rollAffixes).toHaveBeenCalledWith(target, 4);
     expect(base.recordSpawn).toHaveBeenCalledWith(target, "charger", { vn: "Swift", b: "" });
@@ -89,9 +125,16 @@ describe("live enemy spawn", () => {
       rollVariant: vi.fn(() => null),
     });
     completeEnemySpawn(target, { type: "charger" }, base);
-    expect(base.rollVariant).toHaveBeenCalledWith("charger", 6, expect.objectContaining({
-      stageId: "verdant-sanctum", localWave: 6, globalWave: 6, mode: "campaign",
-    }));
+    expect(base.rollVariant).toHaveBeenCalledWith(
+      "charger",
+      6,
+      expect.objectContaining({
+        stageId: "verdant-sanctum",
+        localWave: 6,
+        globalWave: 6,
+        mode: "campaign",
+      }),
+    );
 
     const restored = enemy();
     completeEnemySpawn(restored, { type: "charger", variantId: "briar-stalker" }, base);
@@ -102,20 +145,30 @@ describe("live enemy spawn", () => {
   it("rejects an unknown serialized identity before installing the enemy", () => {
     const target = enemy();
     const { base, installed } = port();
-    expect(() => completeEnemySpawn(target, { type: "charger", variantId: "seedcaster" }, base)).toThrow(/unknown variant/u);
+    expect(() => completeEnemySpawn(target, { type: "charger", variantId: "seedcaster" }, base)).toThrow(
+      /unknown variant/u,
+    );
     expect(installed).toHaveLength(0);
   });
 
   it("passes persisted discovery authority through the production spawn context", () => {
     const target = enemy();
     const { base } = port({
-      run: () => ({ mode: "endless" as const, wave: 20, stageId: "grounds" as const,
-        variantDiscovery: ["briar-stalker"] }),
+      run: () => ({
+        mode: "endless" as const,
+        wave: 20,
+        stageId: "grounds" as const,
+        variantDiscovery: ["briar-stalker"],
+      }),
       rollVariant: vi.fn(() => null),
     });
     completeEnemySpawn(target, { type: "charger" }, base);
-    expect(base.rollVariant).toHaveBeenCalledWith("charger", 4, expect.objectContaining({
-      discoveredVariantIds: ["briar-stalker"],
-    }));
+    expect(base.rollVariant).toHaveBeenCalledWith(
+      "charger",
+      4,
+      expect.objectContaining({
+        discoveredVariantIds: ["briar-stalker"],
+      }),
+    );
   });
 });

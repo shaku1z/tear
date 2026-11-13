@@ -34,16 +34,22 @@ function isDataRecord(value: unknown): value is DataRecord {
  * replace a branch a live constructor already depends on. */
 function hasCompatibleDataShape(baseline: unknown, candidate: unknown): boolean {
   if (Array.isArray(baseline)) {
-    return Array.isArray(candidate)
-      && baseline.length === candidate.length
-      && baseline.every((value, index) => hasCompatibleDataShape(value, candidate[index]));
+    return (
+      Array.isArray(candidate) &&
+      baseline.length === candidate.length &&
+      baseline.every((value, index) => hasCompatibleDataShape(value, candidate[index]))
+    );
   }
   if (isDataRecord(baseline)) {
     if (!isDataRecord(candidate)) return false;
-    const baselineKeys = Object.keys(baseline), candidateKeys = Object.keys(candidate);
-    return baselineKeys.length === candidateKeys.length
-      && baselineKeys.every((key) => Object.hasOwn(candidate, key)
-        && hasCompatibleDataShape(baseline[key], candidate[key]));
+    const baselineKeys = Object.keys(baseline),
+      candidateKeys = Object.keys(candidate);
+    return (
+      baselineKeys.length === candidateKeys.length &&
+      baselineKeys.every(
+        (key) => Object.hasOwn(candidate, key) && hasCompatibleDataShape(baseline[key], candidate[key]),
+      )
+    );
   }
   return typeof baseline === typeof candidate;
 }
@@ -58,7 +64,8 @@ function reconcile(target: unknown, source: unknown): unknown {
     const targetArray = target as unknown[];
     const sourceArray = source as readonly unknown[];
     const commonLength = Math.min(targetArray.length, sourceArray.length);
-    for (let index = 0; index < commonLength; index++) targetArray[index] = reconcile(targetArray[index], sourceArray[index]);
+    for (let index = 0; index < commonLength; index++)
+      targetArray[index] = reconcile(targetArray[index], sourceArray[index]);
     for (let index = commonLength; index < sourceArray.length; index++) targetArray[index] = clone(sourceArray[index]);
     targetArray.length = sourceArray.length;
     return targetArray;
@@ -97,6 +104,8 @@ export function createTearWorldConfiguration<Configuration extends object>(
     snapshot: () => clone(value),
     baseSnapshot: () => clone(baseline),
     restore,
-    resetToBase: () => { reconcile(value, baseline); },
+    resetToBase: () => {
+      reconcile(value, baseline);
+    },
   } satisfies TearWorldConfiguration<Configuration>);
 }

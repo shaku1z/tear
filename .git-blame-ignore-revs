@@ -1,0 +1,10 @@
+# Commits listed here are skipped by `git blame` when blame is configured with
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub's blame view reads this file automatically).
+#
+# Only list whole-tree, behaviour-free formatting commits, one full 40-character
+# hash per line with a comment naming it.
+#
+# Prettier adoption (one-time format of src, tests, scripts, workers and root
+# configs): add the squash-merge commit hash on `main` here after the pull
+# request merges. The hash cannot be known before the squash merge happens.

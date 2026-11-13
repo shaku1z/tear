@@ -28,11 +28,13 @@ Run everything from the repository root. "Slow" means minutes, not seconds.
 | `pnpm dev:crazygames` | Dev server for the CrazyGames target (adds the SDK wrapper). |
 | `pnpm typecheck` | Strict TypeScript check of all projects (`tsc -b`). Slow: about 2 minutes on Windows. |
 | `pnpm lint` | ESLint with type-aware rules. Slow: several minutes on Windows. |
+| `pnpm format` | Format code and root configs with Prettier (rewrites files). Settings in `.prettierrc.json`, targets in `scripts/format.mjs`, exclusions in `.prettierignore`. About 15 seconds. |
+| `pnpm format:check` | Fail if any formatted file differs from Prettier's output; CI runs it. About 15 seconds. |
 | `pnpm exec vitest run tests/unit/<name>.test.ts` | Run one unit test file. |
 | `pnpm test:watch` | Vitest in watch mode; reruns affected tests when you save. |
 | `pnpm test:related src/<path>.ts` | Run only the tests that import the given source files. Vitest scans the whole test import graph first, so expect about a minute. |
 | `pnpm test:weapons` | The five-weapon roster tests. |
-| `pnpm check:quick` | The cheap static gates: typecheck, lint, architecture, docs. Slow because of typecheck and lint. |
+| `pnpm check:quick` | The cheap static gates: format check, typecheck, lint, architecture, code budget, docs. Slow because of typecheck and lint. |
 | `pnpm build` | Build both production targets into `dist/standalone` and `dist/crazygames`. Slow. |
 | `pnpm preview` | Serve the last `dist/standalone` build (Vite's default port is 4173). |
 | `pnpm build:test:standalone` | Build the test variant into `dist/test-standalone`. Most browser tests load this build. Slow. |

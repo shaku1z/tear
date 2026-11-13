@@ -25,7 +25,7 @@ export function mapClientPointerToLogical(
 ): Readonly<{ x: number; y: number }> {
   const spanWidth = viewport.width + viewport.overscanX * 2;
   const spanHeight = viewport.height + viewport.overscanY * 2;
-  const x = (point.clientX - rectangle.left) / rectangle.width * spanWidth - viewport.overscanX;
-  const y = (point.clientY - rectangle.top) / rectangle.height * spanHeight - viewport.overscanY;
+  const x = ((point.clientX - rectangle.left) / rectangle.width) * spanWidth - viewport.overscanX;
+  const y = ((point.clientY - rectangle.top) / rectangle.height) * spanHeight - viewport.overscanY;
   return Object.freeze({ x, y });
 }

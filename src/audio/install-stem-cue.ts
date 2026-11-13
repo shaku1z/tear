@@ -13,9 +13,7 @@ const DEFAULT_CUE_ID = FALLBACK_MUSIC_ROUTING.defaultWorkId;
 const ROUTED_CUE_IDS = [
   DEFAULT_CUE_ID,
   ...FALLBACK_MUSIC_ROUTING.rules.flatMap((rule) =>
-    rule.selection.type === "primary"
-      ? [rule.selection.workId]
-      : rule.selection.entries.map((entry) => entry.workId),
+    rule.selection.type === "primary" ? [rule.selection.workId] : rule.selection.entries.map((entry) => entry.workId),
   ),
 ];
 
@@ -49,7 +47,9 @@ async function fetchCue(cueId: string): Promise<LoadedCueRef> {
  * The caller passes the composition-admitted engineering query, which is empty
  * in release builds.
  */
-export function requestedStemsMode(search: string): { mode: "biome" } | { mode: "single"; cueId: string } | { mode: "off" } {
+export function requestedStemsMode(
+  search: string,
+): { mode: "biome" } | { mode: "single"; cueId: string } | { mode: "off" } {
   try {
     const params = new URLSearchParams(search);
     const single = params.get("stemcue");
@@ -92,9 +92,7 @@ export async function installStemCueMusicBackend(cueId: string, previewSearch: s
       return response.json();
     })) as StemCueManifest;
     const preview = requestedFoundryPreview(previewSearch);
-    installPrimaryMusicBackend(
-      () => new StemCueMusicBackend(cue, base, preview),
-    );
+    installPrimaryMusicBackend(() => new StemCueMusicBackend(cue, base, preview));
     return true;
   } catch (error) {
     console.warn(`Stem cue "${cueId}" unavailable; falling back`, error);

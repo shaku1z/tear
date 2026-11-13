@@ -16,7 +16,9 @@ async function encode(request: EncodeRequest): Promise<Readonly<Record<string, u
     compressedBytes: encoded.compressedBytes,
     uncompressedBytes: encoded.uncompressedBytes,
     checksum: stableVerificationHash(encoded.encoded),
-    ...(request.prepareThumbnail ? { thumbnail: `data:application/x-tearghost-thumb,${stableVerificationHash(request.payload)}` } : {}),
+    ...(request.prepareThumbnail
+      ? { thumbnail: `data:application/x-tearghost-thumb,${stableVerificationHash(request.payload)}` }
+      : {}),
   });
 }
 
@@ -25,10 +27,12 @@ self.addEventListener("message", (event: MessageEvent<EncodeRequest>) => {
     try {
       self.postMessage(await encode(event.data));
     } catch (error) {
-      self.postMessage(Object.freeze({
-        id: event.data.id,
-        error: error instanceof Error ? error.message : String(error),
-      }));
+      self.postMessage(
+        Object.freeze({
+          id: event.data.id,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
     }
   })();
 });

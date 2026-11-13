@@ -51,18 +51,14 @@ async function transform(
   return new Uint8Array(await output);
 }
 
-const identity = (bytes: Uint8Array): Promise<Uint8Array<ArrayBuffer>> =>
-  Promise.resolve(new Uint8Array(bytes));
+const identity = (bytes: Uint8Array): Promise<Uint8Array<ArrayBuffer>> => Promise.resolve(new Uint8Array(bytes));
 
 function boundedIdentity(bytes: Uint8Array, maxOutputBytes: number): Promise<Uint8Array<ArrayBuffer>> {
   if (bytes.byteLength > maxOutputBytes) throw new RangeError("Ghost chunk exceeds decoded byte limit");
   return identity(bytes);
 }
 
-async function decompressGzip(
-  bytes: Uint8Array,
-  maxOutputBytes: number,
-): Promise<Uint8Array<ArrayBuffer>> {
+async function decompressGzip(bytes: Uint8Array, maxOutputBytes: number): Promise<Uint8Array<ArrayBuffer>> {
   const stream = new DecompressionStream("gzip");
   const writer = stream.writable.getWriter();
   const reader = stream.readable.getReader();
@@ -123,8 +119,9 @@ export class GhostChunkCodecRegistry {
   }
 
   list(): readonly Readonly<{ encoding: GhostChunkEncoding; version: number }>[] {
-    return Object.freeze([...this.#codecs.values()].map(({ encoding, version }) =>
-      Object.freeze({ encoding, version })));
+    return Object.freeze(
+      [...this.#codecs.values()].map(({ encoding, version }) => Object.freeze({ encoding, version })),
+    );
   }
 
   async encode(payload: unknown, preferCompression = true): Promise<GhostChunkCodecResult> {
@@ -157,16 +154,27 @@ export class GhostChunkCodecRegistry {
   }
 
   /** Strict normal-file lane; forensic decode above intentionally remains unchanged. */
-  async decodeMeasured(encoding: string, encoded: string, maxCompressedBytes: number, maxDecodedBytes: number): Promise<Readonly<{ value: unknown; compressedBytes: number; decodedBytes: number }>> {
-    if (encoding === "gzip-base64-v1" && typeof DecompressionStream !== "function") throw new DOMException("Ghost archive gzip decode is unavailable", "NotSupportedError");
-    if (![maxCompressedBytes, maxDecodedBytes].every((limit) => Number.isSafeInteger(limit) && limit > 0)) throw new RangeError("Ghost measured decode limits must be positive safe integers");
-    if (encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/u.test(encoded)) throw new TypeError("Ghost chunk is not bounded base64");
-    const length = encoded.length / 4 * 3 - (encoded.endsWith("==") ? 2 : encoded.endsWith("=") ? 1 : 0);
+  async decodeMeasured(
+    encoding: string,
+    encoded: string,
+    maxCompressedBytes: number,
+    maxDecodedBytes: number,
+  ): Promise<Readonly<{ value: unknown; compressedBytes: number; decodedBytes: number }>> {
+    if (encoding === "gzip-base64-v1" && typeof DecompressionStream !== "function")
+      throw new DOMException("Ghost archive gzip decode is unavailable", "NotSupportedError");
+    if (![maxCompressedBytes, maxDecodedBytes].every((limit) => Number.isSafeInteger(limit) && limit > 0))
+      throw new RangeError("Ghost measured decode limits must be positive safe integers");
+    if (encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/u.test(encoded))
+      throw new TypeError("Ghost chunk is not bounded base64");
+    const length = (encoded.length / 4) * 3 - (encoded.endsWith("==") ? 2 : encoded.endsWith("=") ? 1 : 0);
     if (length > maxCompressedBytes) throw new RangeError("Ghost chunk exceeds compressed byte limit");
     const bytes = base64ToBytes(encoded);
     const decoded = await this.#requireEncoding(encoding).decode(bytes, maxDecodedBytes);
-    return Object.freeze({ value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decoded)) as unknown,
-      compressedBytes: bytes.byteLength, decodedBytes: decoded.byteLength });
+    return Object.freeze({
+      value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decoded)) as unknown,
+      compressedBytes: bytes.byteLength,
+      decodedBytes: decoded.byteLength,
+    });
   }
 
   #require(encoding: GhostChunkEncoding): GhostChunkCodec {
@@ -201,10 +209,6 @@ export function encodeGhostChunkPayloadCompressed(payload: unknown): Promise<Gho
   return GHOST_CHUNK_CODECS.encode(payload, true);
 }
 
-export function decodeGhostChunkPayload(
-  encoding: string,
-  encoded: string,
-  maxOutputBytes?: number,
-): Promise<unknown> {
+export function decodeGhostChunkPayload(encoding: string, encoded: string, maxOutputBytes?: number): Promise<unknown> {
   return GHOST_CHUNK_CODECS.decode(encoding, encoded, maxOutputBytes);
 }

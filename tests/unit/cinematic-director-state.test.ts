@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
-import { CinematicTimeline, INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
-  type CinematicScript } from "../../src/gameplay/runtime/cinematic-director";
+import {
+  CinematicTimeline,
+  INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
+  type CinematicScript,
+} from "../../src/gameplay/runtime/cinematic-director";
 
 const script: CinematicScript = Object.freeze({
   id: "campaign.chapter.1",
@@ -52,7 +55,11 @@ describe("cinematic director state", () => {
     second.update(0.7, {});
     second.restoreState(snapshot);
 
-    for (const [seconds, controls] of [[0.11, {}], [0.2, { key: true }], [0.3, {}]] as const) {
+    for (const [seconds, controls] of [
+      [0.11, {}],
+      [0.2, { key: true }],
+      [0.3, {}],
+    ] as const) {
       first.update(seconds, controls);
       second.update(seconds, controls);
     }
@@ -67,7 +74,9 @@ describe("cinematic director state", () => {
     target.start({ ...script, id: "campaign.chapter.2" }, {});
     const before = target.captureState();
 
-    expect(() => { target.restoreState(captured); }).toThrow(/bound cinematic script/i);
+    expect(() => {
+      target.restoreState(captured);
+    }).toThrow(/bound cinematic script/i);
     expect(target.captureState()).toEqual(before);
   });
 
@@ -75,7 +84,9 @@ describe("cinematic director state", () => {
     const director = activeDirector();
     const before = director.captureState();
 
-    expect(() => { director.restoreState({ ...before, totalElapsedSeconds: -1 }); }).toThrow(/non-negative/i);
+    expect(() => {
+      director.restoreState({ ...before, totalElapsedSeconds: -1 });
+    }).toThrow(/non-negative/i);
     expect(director.captureState()).toEqual(before);
   });
 
@@ -83,7 +94,9 @@ describe("cinematic director state", () => {
     const director = activeDirector();
     const before = director.captureState();
 
-    expect(() => { director.restoreState({ ...before, scriptRevision: "" }); }).toThrow(/identity/i);
+    expect(() => {
+      director.restoreState({ ...before, scriptRevision: "" });
+    }).toThrow(/identity/i);
     expect(director.captureState()).toEqual(before);
   });
 
@@ -91,8 +104,9 @@ describe("cinematic director state", () => {
     const director = activeDirector();
     const before = director.captureState();
 
-    expect(() => { director.restoreState({ ...INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
-      elapsedSeconds: 1, totalElapsedSeconds: 1 }); }).toThrow(/canonical idle/i);
+    expect(() => {
+      director.restoreState({ ...INACTIVE_CINEMATIC_DIRECTOR_STATE_V1, elapsedSeconds: 1, totalElapsedSeconds: 1 });
+    }).toThrow(/canonical idle/i);
     expect(director.captureState()).toEqual(before);
   });
 
@@ -100,8 +114,9 @@ describe("cinematic director state", () => {
     const director = activeDirector();
     const before = director.captureState();
 
-    expect(() => { director.restoreState({ ...before, fullyVisible: false,
-      fullyVisibleElapsedSeconds: 0.01 }); }).toThrow(/visibility/i);
+    expect(() => {
+      director.restoreState({ ...before, fullyVisible: false, fullyVisibleElapsedSeconds: 0.01 });
+    }).toThrow(/visibility/i);
     expect(director.captureState()).toEqual(before);
   });
 
@@ -109,8 +124,15 @@ describe("cinematic director state", () => {
     const calls: string[] = [];
     const boundScript: CinematicScript = {
       ...script,
-      onStart: () => { calls.push("start"); },
-      beats: script.beats.map((beat) => ({ ...beat, onEnter: () => { calls.push(`enter:${beat.id}`); } })),
+      onStart: () => {
+        calls.push("start");
+      },
+      beats: script.beats.map((beat) => ({
+        ...beat,
+        onEnter: () => {
+          calls.push(`enter:${beat.id}`);
+        },
+      })),
     };
     const source = new CinematicTimeline.Director(CONFIG);
     source.start(boundScript, { world: "source" });

@@ -8,8 +8,12 @@ describe("live pending-finale persistence adapter", () => {
     const setPendingFinale = vi.fn();
     const save = vi.fn();
     const clearPendingFinale = vi.fn();
-    const persistence = createLivePendingFinalePersistence({ setPendingFinale, save, clearPendingFinale,
-      pendingFinale: () => pending });
+    const persistence = createLivePendingFinalePersistence({
+      setPendingFinale,
+      save,
+      clearPendingFinale,
+      pendingFinale: () => pending,
+    });
 
     persistence.persist(pending);
     persistence.saveProfile();

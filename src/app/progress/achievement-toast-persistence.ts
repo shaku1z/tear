@@ -10,7 +10,11 @@ export interface AchievementToastPersistence {
 
 export function createLiveAchievementToastPersistence(profile: Profile): AchievementToastPersistence {
   return Object.freeze({
-    markSeen: (id: string) => { profile.data.seen[id] = true; },
-    save: () => { profile.save(); },
+    markSeen: (id: string) => {
+      profile.data.seen[id] = true;
+    },
+    save: () => {
+      profile.save();
+    },
   });
 }

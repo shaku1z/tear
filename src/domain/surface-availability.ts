@@ -22,12 +22,18 @@ export type SurfaceId =
   // Boss Test boss picker on the setup screen.
   | "setup:boss-picker"
   // Unfinished player features.
-  | "feature:seed-race" | "feature:beat-this-run" | "feature:boss-memory" | "feature:coach"
-  | "feature:replay-editor" | "feature:ghost-cloud" | "feature:linked-pair-download"
+  | "feature:seed-race"
+  | "feature:beat-this-run"
+  | "feature:boss-memory"
+  | "feature:coach"
+  | "feature:replay-editor"
+  | "feature:ghost-cloud"
+  | "feature:linked-pair-download"
   // Every engineering query parameter and surface route.
   | "route:engineering-query"
   // Engineering window globals.
-  | "global:weapon-debug" | "global:foundry-audio-preview";
+  | "global:weapon-debug"
+  | "global:foundry-audio-preview";
 
 const screenSurfaceId = (screen: EngineeringScreen): `screen:${EngineeringScreen}` => `screen:${screen}`;
 
@@ -36,8 +42,10 @@ const screenSurfaceId = (screen: EngineeringScreen): `screen:${EngineeringScreen
  * channel here, or a screen by changing its channel in the screen catalog.
  */
 export const SURFACE_CHANNEL: Readonly<Record<SurfaceId, SurfaceChannel>> = Object.freeze({
-  ...Object.fromEntries(ENGINEERING_SCREENS.map((screen) => [screenSurfaceId(screen), "engineering"])) as
-    Record<`screen:${EngineeringScreen}`, SurfaceChannel>,
+  ...(Object.fromEntries(ENGINEERING_SCREENS.map((screen) => [screenSurfaceId(screen), "engineering"])) as Record<
+    `screen:${EngineeringScreen}`,
+    SurfaceChannel
+  >),
   "control:run-monitor": "engineering",
   "setup:boss-picker": "engineering",
   "feature:seed-race": "engineering",
@@ -81,9 +89,14 @@ export function screenSurface(screen: string): SurfaceId | undefined {
 }
 
 const CAREER_COMMAND_SURFACES: Readonly<Partial<Record<string, SurfaceId>>> = Object.freeze({
-  race: "feature:seed-race", coach: "feature:coach", publish: "feature:ghost-cloud",
-  beat: "feature:beat-this-run", "beat-receive": "feature:beat-this-run", "beat-review": "feature:beat-this-run",
-  "beat-save": "feature:beat-this-run", "beat-retry": "feature:beat-this-run",
+  race: "feature:seed-race",
+  coach: "feature:coach",
+  publish: "feature:ghost-cloud",
+  beat: "feature:beat-this-run",
+  "beat-receive": "feature:beat-this-run",
+  "beat-review": "feature:beat-this-run",
+  "beat-save": "feature:beat-this-run",
+  "beat-retry": "feature:beat-this-run",
 });
 
 /**
@@ -96,17 +109,26 @@ export function screenActionSurface(action: ScreenAction): SurfaceId | undefined
   if (action.type === "setup.start") return action.race === true ? "feature:seed-race" : undefined;
   if (action.type === "setup.selectBoss") return "setup:boss-picker";
   if (action.type === "career.control") return CAREER_COMMAND_SURFACES[action.command];
-  if (action.type === "replay.challenge.start") return action.id.startsWith("boss-memory-") ? "feature:boss-memory" : undefined;
-  if (action.type === "profile.downloadGhostArchive") return action.paired === true ? "feature:linked-pair-download" : undefined;
+  if (action.type === "replay.challenge.start")
+    return action.id.startsWith("boss-memory-") ? "feature:boss-memory" : undefined;
+  if (action.type === "profile.downloadGhostArchive")
+    return action.paired === true ? "feature:linked-pair-download" : undefined;
   if (type.startsWith("training-archive.") || type.startsWith("academy.")) return "screen:academy";
   if (type.startsWith("training-operations.") || type.startsWith("foundry.")) return "screen:foundry";
   if (type === "game-agent.open") return "screen:botevidence";
-  if (type === "run-monitor.control" || type === "replay.hub.watch" || type === "ghostlab.watch") return "control:run-monitor";
+  if (type === "run-monitor.control" || type === "replay.hub.watch" || type === "ghostlab.watch")
+    return "control:run-monitor";
   if (type === "run-monitor.open" || type === "replay.hub.open" || type === "ghostlab.open") return "screen:ghostlab";
   if (type.startsWith("replay.coach.")) return "feature:coach";
   if (type.startsWith("replay.editor.") || type.startsWith("replay.studio.")) return "feature:replay-editor";
-  if (type === "profile.loadOwnGhostCapsules" || type === "profile.recoverOwnGhostCapsule" || type === "profile.closeOwnGhostCatalog"
-    || type === "profile.openGhostPublication" || type.startsWith("ghostpublication.")) return "feature:ghost-cloud";
+  if (
+    type === "profile.loadOwnGhostCapsules" ||
+    type === "profile.recoverOwnGhostCapsule" ||
+    type === "profile.closeOwnGhostCatalog" ||
+    type === "profile.openGhostPublication" ||
+    type.startsWith("ghostpublication.")
+  )
+    return "feature:ghost-cloud";
   if (type === "profile.openGhostSupport" || type.startsWith("ghostsupport.")) return "screen:ghostsupport";
   return undefined;
 }

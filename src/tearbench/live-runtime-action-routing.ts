@@ -55,7 +55,7 @@ export function routeLiveTearBenchAction(context: TearBenchActionRouting, action
   const reward = context.reward();
   const choices = action.type === "reserve-choice" ? reward?.reserveChoices : reward?.choices;
   const choiceId = "choiceId" in action ? action.choiceId : undefined;
-  const index = choiceId === undefined ? -1 : choices?.findIndex((choice) => choice.id === choiceId) ?? -1;
+  const index = choiceId === undefined ? -1 : (choices?.findIndex((choice) => choice.id === choiceId) ?? -1);
   if (action.type === "draft-choice" && screen === "draft" && index >= 0) {
     context.chooseUpgrade(index);
     return true;
@@ -79,8 +79,11 @@ export function routeLiveTearBenchAction(context: TearBenchActionRouting, action
   }
   if (action.type !== "cancel") return false;
   context.renderControls();
-  const control = context.controls().find((entry) => entry.enabled !== false
-    && /back|cancel|resume|give up|main menu/u.test(entry.label.toLowerCase()));
+  const control = context
+    .controls()
+    .find(
+      (entry) => entry.enabled !== false && /back|cancel|resume|give up|main menu/u.test(entry.label.toLowerCase()),
+    );
   if (control === undefined) return false;
   control.action();
   return true;

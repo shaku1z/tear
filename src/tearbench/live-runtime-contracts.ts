@@ -8,7 +8,10 @@ import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1 } from "./contracts";
 import type { TearSnapshotV1, TearStateClass } from "./contracts";
 import type { EnvironmentRuntimeState } from "../gameplay/environment/environment-contracts";
-import type { BloomWellPresentationFacts, BloomWellPresentationOptions } from "../gameplay/environment/bloom-well-presentation-facts";
+import type {
+  BloomWellPresentationFacts,
+  BloomWellPresentationOptions,
+} from "../gameplay/environment/bloom-well-presentation-facts";
 import type { TearScenarioTransition } from "./runner";
 import type { TearLiveRestoreResult, TearLiveWorldAdapter } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
@@ -20,10 +23,7 @@ import type { FinaleIntent } from "../gameplay/campaign/finale-controller";
 import type { FinaleOutwardCall } from "../gameplay/campaign/finale-outward-call";
 import type { AudioDispatchReceipt } from "../audio/audio-dispatch-receipts";
 import type { OutcomeChronologyEntry } from "../gameplay/run/outcome-chronology-journal";
-import type {
-  TearSimulationEnemyView,
-  TearSimulationWorldView,
-} from "../simulation/runtime-world-port";
+import type { TearSimulationEnemyView, TearSimulationWorldView } from "../simulation/runtime-world-port";
 
 export type TearRuntimeAccessClass = "A" | "B" | "C";
 
@@ -97,10 +97,12 @@ export interface TearStructuredRuntimeEnvironment {
   observe(): TearObservationV1;
   step(actions?: readonly CommandEnvelope<GameAction>[]): TearScenarioTransition;
   renderFrame(deltaSeconds: number, actions?: readonly CommandEnvelope<GameAction>[]): TearScenarioTransition;
-  actionBatch(entries: readonly Readonly<{
-    actions: readonly CommandEnvelope<GameAction>[];
-    ticks: number;
-  }>[]): readonly TearScenarioTransition[];
+  actionBatch(
+    entries: readonly Readonly<{
+      actions: readonly CommandEnvelope<GameAction>[];
+      ticks: number;
+    }>[],
+  ): readonly TearScenarioTransition[];
   pause(): void;
   resume(): void;
   terminate(): void;
@@ -182,9 +184,7 @@ export interface TearClassCRuntimeEnvironment {
 }
 
 export type TearRuntimeEnvironment =
-  | TearClassARuntimeEnvironment
-  | TearClassBRuntimeEnvironment
-  | TearClassCRuntimeEnvironment;
+  TearClassARuntimeEnvironment | TearClassBRuntimeEnvironment | TearClassCRuntimeEnvironment;
 
 export interface LiveTearRuntimeEnvironmentContext {
   readonly width: number;
@@ -197,7 +197,13 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly platformsForStage: (index: number) => readonly unknown[];
   readonly actorId: (enemy: TearSimulationEnemyView) => string;
   readonly stage: () => Readonly<{ name: string; index: number }>;
-  readonly lifecycle: () => Readonly<{ phase: string; wave?: number | null; bossWave?: boolean; reward?: string | null; revision?: number }>;
+  readonly lifecycle: () => Readonly<{
+    phase: string;
+    wave?: number | null;
+    bossWave?: boolean;
+    reward?: string | null;
+    revision?: number;
+  }>;
   readonly bossIntroActive: () => boolean;
   readonly choiceIds: () => readonly string[];
   /** Present only when the host can resolve focus to a real current choice. */
@@ -221,10 +227,7 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly selectWeapon: (weaponId: string) => void;
   readonly selectBoss: (bossId: string) => void;
   readonly setRunSeed: (seed: number) => void;
-  readonly startRun: (
-    mode: TearScenarioV1["start"]["mode"],
-    difficulty: TearScenarioV1["start"]["difficulty"],
-  ) => void;
+  readonly startRun: (mode: TearScenarioV1["start"]["mode"], difficulty: TearScenarioV1["start"]["difficulty"]) => void;
   /** Settles accepted recorder staging and already-started finalization; never seals the run. */
   readonly drainRecording: () => Promise<void>;
   readonly stopFrameLoop: () => void;

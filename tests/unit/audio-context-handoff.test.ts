@@ -7,13 +7,21 @@ describe("browser audio-context handoff", () => {
     const firstClose = vi.fn().mockResolvedValue(undefined);
     const secondClose = vi.fn().mockResolvedValue(undefined);
     const firstContext = {
-      state: "running", resume: vi.fn().mockResolvedValue(undefined), close: firstClose,
+      state: "running",
+      resume: vi.fn().mockResolvedValue(undefined),
+      close: firstClose,
     } as unknown as AudioContext;
     const secondContext = {
-      state: "running", resume: vi.fn().mockResolvedValue(undefined), close: secondClose,
+      state: "running",
+      resume: vi.fn().mockResolvedValue(undefined),
+      close: secondClose,
     } as unknown as AudioContext;
-    const FirstAudioContext = vi.fn(function FirstAudioContext() { return firstContext; });
-    const SecondAudioContext = vi.fn(function SecondAudioContext() { return secondContext; });
+    const FirstAudioContext = vi.fn(function FirstAudioContext() {
+      return firstContext;
+    });
+    const SecondAudioContext = vi.fn(function SecondAudioContext() {
+      return secondContext;
+    });
     const first = createBrowserAudioContextHandoff({ AudioContext: FirstAudioContext } as unknown as Window);
     const second = createBrowserAudioContextHandoff({ AudioContext: SecondAudioContext } as unknown as Window);
 

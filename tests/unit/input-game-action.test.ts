@@ -16,18 +16,28 @@ describe("normalizeGameAction", () => {
   });
 
   it("preserves reticle distance while defaulting legacy angle-only aim to full reach", () => {
-    expect(normalizeGameAction({ type: "aim", turn: 250_000, magnitude: 500 }))
-      .toEqual({ ok: true, action: { type: "aim", turn: 250_000, magnitude: 500 } });
-    expect(normalizeGameAction({ type: "aim", turn: 250_000 }))
-      .toEqual({ ok: true, action: { type: "aim", turn: 250_000, magnitude: 1_000 } });
+    expect(normalizeGameAction({ type: "aim", turn: 250_000, magnitude: 500 })).toEqual({
+      ok: true,
+      action: { type: "aim", turn: 250_000, magnitude: 500 },
+    });
+    expect(normalizeGameAction({ type: "aim", turn: 250_000 })).toEqual({
+      ok: true,
+      action: { type: "aim", turn: 250_000, magnitude: 1_000 },
+    });
   });
 
   it("normalizes identifiers and weapon phases", () => {
-    expect(normalizeGameAction({ type: "ability", abilityId: "  blink  ", phase: "pressed" }))
-      .toEqual({ ok: true, action: { type: "ability", abilityId: "blink", phase: "pressed" } });
-    expect(normalizeGameAction({ type: "weapon", intent: "throw", phase: "released" }))
-      .toEqual({ ok: true, action: { type: "weapon", intent: "throw", phase: "released" } });
-    expect(normalizeGameAction({ type: "jump", phase: "pressed" }))
-      .toEqual({ ok: true, action: { type: "jump", phase: "pressed" } });
+    expect(normalizeGameAction({ type: "ability", abilityId: "  blink  ", phase: "pressed" })).toEqual({
+      ok: true,
+      action: { type: "ability", abilityId: "blink", phase: "pressed" },
+    });
+    expect(normalizeGameAction({ type: "weapon", intent: "throw", phase: "released" })).toEqual({
+      ok: true,
+      action: { type: "weapon", intent: "throw", phase: "released" },
+    });
+    expect(normalizeGameAction({ type: "jump", phase: "pressed" })).toEqual({
+      ok: true,
+      action: { type: "jump", phase: "pressed" },
+    });
   });
 });

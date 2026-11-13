@@ -2,8 +2,10 @@ import type { createProfileStore } from "../../persistence/profile-store";
 
 import type { PendingFinaleRecord } from "../campaign/pending-finale-controller";
 
-type Profile = Pick<ReturnType<typeof createProfileStore>,
-  "clearPendingFinale" | "pendingFinale" | "save" | "setPendingFinale">;
+type Profile = Pick<
+  ReturnType<typeof createProfileStore>,
+  "clearPendingFinale" | "pendingFinale" | "save" | "setPendingFinale"
+>;
 
 /** Composition-owned profile operations used by the live outcome and recovery host. */
 export interface PendingFinalePersistence {
@@ -15,9 +17,15 @@ export interface PendingFinalePersistence {
 
 export function createLivePendingFinalePersistence(profile: Profile): PendingFinalePersistence {
   return Object.freeze({
-    persist: (record: PendingFinaleRecord) => { profile.setPendingFinale(record); },
-    saveProfile: () => { profile.save(); },
-    clear: () => { profile.clearPendingFinale(); },
+    persist: (record: PendingFinaleRecord) => {
+      profile.setPendingFinale(record);
+    },
+    saveProfile: () => {
+      profile.save();
+    },
+    clear: () => {
+      profile.clearPendingFinale();
+    },
     pending: () => profile.pendingFinale(),
   });
 }

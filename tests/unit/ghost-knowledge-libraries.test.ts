@@ -21,27 +21,47 @@ const trident: GhostReplayTrident = {
 
 function event(id: string, tick: number, parents: readonly string[] = []): TearCausalEventV1 {
   return {
-    format: "tear-contract", kind: "event", schemaVersion: 1,
-    id, type: "test.invariant-failed", tick, phase: "post-simulation-commit", sequence: 1,
-    source: "developer", parentIds: parents,
+    format: "tear-contract",
+    kind: "event",
+    schemaVersion: 1,
+    id,
+    type: "test.invariant-failed",
+    tick,
+    phase: "post-simulation-commit",
+    sequence: 1,
+    source: "developer",
+    parentIds: parents,
     payload: { message: "failure", playerName: "Private Player", accountId: "secret" },
   };
 }
 
 function snapshot(): TearSnapshotV1 {
   return {
-    format: "tear-contract", kind: "snapshot", schemaVersion: 1,
-    id: "failure-start", tick: 10, stateClass: "recorded-canonical", seed: "7",
+    format: "tear-contract",
+    kind: "snapshot",
+    schemaVersion: 1,
+    id: "failure-start",
+    tick: 10,
+    stateClass: "recorded-canonical",
+    seed: "7",
     hashes: { exact: "e", semantic: "s", visual: "v", progression: "p", environment: "n" },
     provenance: {
-      actor: "developer", producer: "test",
+      actor: "developer",
+      producer: "test",
       build: {
-        version: "1", revision: "r", target: "unit", rulesetVersion: "rules",
-        contentHash: "c", configHash: "g",
+        version: "1",
+        revision: "r",
+        target: "unit",
+        rulesetVersion: "rules",
+        contentHash: "c",
+        configHash: "g",
       },
-      executionClass: "engineering", observationClass: "structured-state", trainingConsent: "no-training",
+      executionClass: "engineering",
+      observationClass: "structured-state",
+      trainingConsent: "no-training",
     },
-    rng: {}, codecs: {},
+    rng: {},
+    codecs: {},
     state: {
       "tear.run.v1": { mode: "campaign", difficulty: "normal", weapon: "sword", wave: 2 },
       profile: { playerName: "Private Player", email: "private@example.test", currency: 10 },
@@ -66,8 +86,14 @@ describe("governed Ghost knowledge libraries", () => {
   it("turns a failure into sanitized deterministic TearSDL and a watchable child Ghost", () => {
     const ghost = sourceGhost();
     const range: GhostRangeV1 = {
-      format: "tear-contract", kind: "ghost-range", schemaVersion: 1,
-      ghostId: ghost.id, fromTick: 18, toTick: 22, preRollTicks: 5, postRollTicks: 5,
+      format: "tear-contract",
+      kind: "ghost-range",
+      schemaVersion: 1,
+      ghostId: ghost.id,
+      fromTick: 18,
+      toTick: 22,
+      preRollTicks: 5,
+      postRollTicks: 5,
       requiredCheckpointId: "failure-start",
     };
     const bridge = compileGhostRangeToTearSdl(ghost, range, snapshot());
@@ -103,9 +129,13 @@ describe("governed Ghost knowledge libraries", () => {
     const graveyard = new GovernedGhostLibrary("graveyard");
     const frontier = new GovernedGhostLibrary("frontier");
     const promoted = promoteReviewedGhostToCanon(canon, ghost, {
-      approved: true, reviewer: "reviewer-1", at: "2026-07-23T00:00:00.000Z",
+      approved: true,
+      reviewer: "reviewer-1",
+      at: "2026-07-23T00:00:00.000Z",
     });
-    expect(() => { graveyard.add(promoted); }).toThrow(/cannot add canon/u);
+    expect(() => {
+      graveyard.add(promoted);
+    }).toThrow(/cannot add canon/u);
     expect(triageRareGhostToFrontier(frontier, ghost, 0.95, "2026-07-23T00:00:00.000Z")).toBeDefined();
     expect(triageRareGhostToFrontier(frontier, ghost, 0.5, "2026-07-23T00:00:00.000Z")).toBeUndefined();
     expect(canon.list()).toHaveLength(1);
@@ -117,14 +147,25 @@ describe("governed Ghost knowledge libraries", () => {
     const graph = new GhostLineageGraph();
     graph.addNode({ id: "root", rootHash: "root", kind: "ghost" });
     const relations = [
-      "migration", "repair", "clip", "fork", "challenge", "correction",
-      "scenario", "minimization", "training", "promotion",
+      "migration",
+      "repair",
+      "clip",
+      "fork",
+      "challenge",
+      "correction",
+      "scenario",
+      "minimization",
+      "training",
+      "promotion",
     ] as const;
     for (const relation of relations) {
       const child = `${relation}-child`;
       graph.addNode({ id: child, rootHash: child, kind: relation === "scenario" ? "scenario" : "ghost" });
       graph.connect({
-        id: `${relation}-edge`, parentId: "root", childId: child, relation,
+        id: `${relation}-edge`,
+        parentId: "root",
+        childId: child,
+        relation,
         createdAt: "2026-07-23T00:00:00.000Z",
       });
     }
@@ -136,14 +177,22 @@ describe("governed Ghost knowledge libraries", () => {
     const corpus = new GhostCorpus();
     const ghost = sourceGhost();
     corpus.ingest({
-      ghost, consent: "anonymous-improvement", split: "hidden-holdout",
-      createdAt: "2026-07-23T00:00:00.000Z", producer: "agent",
+      ghost,
+      consent: "anonymous-improvement",
+      split: "hidden-holdout",
+      createdAt: "2026-07-23T00:00:00.000Z",
+      producer: "agent",
     });
     expect(corpus.list()).toEqual([]);
     expect(corpus.list(true)).toHaveLength(1);
-    expect(() => corpus.ingest({
-      ghost, consent: "public-training", split: "train",
-      createdAt: "2026-07-23T00:00:00.000Z", producer: "agent",
-    })).toThrow(/duplicate/u);
+    expect(() =>
+      corpus.ingest({
+        ghost,
+        consent: "public-training",
+        split: "train",
+        createdAt: "2026-07-23T00:00:00.000Z",
+        producer: "agent",
+      }),
+    ).toThrow(/duplicate/u);
   });
 });

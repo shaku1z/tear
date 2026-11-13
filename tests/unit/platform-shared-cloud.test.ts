@@ -3,17 +3,36 @@ import { available, unavailable, type PlatformServices } from "../../src/platfor
 import { createPlatformSharedCloud } from "../../src/platform/platform-shared-cloud";
 
 function platform(submit: (board: string, score: number, replayId?: string) => Promise<void>): PlatformServices {
-  const lifecycle = { focused: true, visible: true, subscribe: () => () => undefined,
-    loadingStarted: () => undefined, loadingFinished: () => undefined, gameplayStarted: () => undefined,
-    gameplayFinished: () => undefined, happyMoment: () => undefined };
+  const lifecycle = {
+    focused: true,
+    visible: true,
+    subscribe: () => () => undefined,
+    loadingStarted: () => undefined,
+    loadingFinished: () => undefined,
+    gameplayStarted: () => undefined,
+    gameplayFinished: () => undefined,
+    happyMoment: () => undefined,
+  };
   const storage = { get: () => Promise.resolve(null), set: () => Promise.resolve(), remove: () => Promise.resolve() };
   return {
-    id: "test", lifecycle, settingsStorage: storage, profileStorage: storage,
-    identity: unavailable("test"), cloudSave: unavailable("test"), ads: unavailable("test"),
-    achievements: unavailable("test"), analytics: unavailable("test"), fullscreen: unavailable("test"), overlay: unavailable("test"),
-    leaderboards: available({ submit, entries: () => Promise.resolve([
-      { playerId: "p", displayName: "Player", score: 40, rank: 1, replayId: "replay-existing" },
-    ]), publishReplay: () => Promise.resolve("replay-new"), loadReplay: () => Promise.resolve("{}") }),
+    id: "test",
+    lifecycle,
+    settingsStorage: storage,
+    profileStorage: storage,
+    identity: unavailable("test"),
+    cloudSave: unavailable("test"),
+    ads: unavailable("test"),
+    achievements: unavailable("test"),
+    analytics: unavailable("test"),
+    fullscreen: unavailable("test"),
+    overlay: unavailable("test"),
+    leaderboards: available({
+      submit,
+      entries: () =>
+        Promise.resolve([{ playerId: "p", displayName: "Player", score: 40, rank: 1, replayId: "replay-existing" }]),
+      publishReplay: () => Promise.resolve("replay-new"),
+      loadReplay: () => Promise.resolve("{}"),
+    }),
   };
 }
 

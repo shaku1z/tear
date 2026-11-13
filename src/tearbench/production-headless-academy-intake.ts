@@ -33,11 +33,20 @@ function terminalArtifact(value: unknown): ProductionHeadlessTerminalArtifact {
   const artifact = value as Partial<ProductionHeadlessTerminalArtifact>;
   const scenario = artifact.scenario;
   const terminal = artifact.terminal;
-  if (artifact.format !== "tearbench-production-headless-terminal" || artifact.schemaVersion !== 1
-    || scenario === undefined || typeof scenario.id !== "string" || scenario.id.trim().length === 0
-    || terminal === undefined || !Number.isSafeInteger(terminal.tick) || terminal.tick < 1
-    || typeof terminal.semanticHash !== "string" || !/^[a-f0-9]{16}$/u.test(terminal.semanticHash)
-    || typeof terminal.terminated !== "boolean" || typeof terminal.truncated !== "boolean") {
+  if (
+    artifact.format !== "tearbench-production-headless-terminal" ||
+    artifact.schemaVersion !== 1 ||
+    scenario === undefined ||
+    typeof scenario.id !== "string" ||
+    scenario.id.trim().length === 0 ||
+    terminal === undefined ||
+    !Number.isSafeInteger(terminal.tick) ||
+    terminal.tick < 1 ||
+    typeof terminal.semanticHash !== "string" ||
+    !/^[a-f0-9]{16}$/u.test(terminal.semanticHash) ||
+    typeof terminal.terminated !== "boolean" ||
+    typeof terminal.truncated !== "boolean"
+  ) {
     throw new TypeError("Academy intake received an invalid production terminal artifact");
   }
   return Object.freeze(structuredClone(artifact)) as ProductionHeadlessTerminalArtifact;
@@ -83,25 +92,41 @@ export class ProductionHeadlessAcademyIntake {
       throw new TypeError("Academy intake terminal tick does not match its sample coordinate");
     }
     const item = Object.freeze({
-      format: "tearbench-production-headless-academy-intake" as const, schemaVersion: 1 as const,
-      sequence: ++this.#sequence, episodeId, tick, artifact,
+      format: "tearbench-production-headless-academy-intake" as const,
+      schemaVersion: 1 as const,
+      sequence: ++this.#sequence,
+      episodeId,
+      tick,
+      artifact,
     });
     this.#items.push(item);
     this.#accepted += 1;
-    return Object.freeze({ kind: "accepted", queued: this.#items.length, capacity: this.#capacity, sequence: item.sequence });
+    return Object.freeze({
+      kind: "accepted",
+      queued: this.#items.length,
+      capacity: this.#capacity,
+      sequence: item.sequence,
+    });
   }
 
   take(limit = this.#capacity): readonly ProductionHeadlessAcademyIntakeItem[] {
-    if (!Number.isSafeInteger(limit) || limit < 0) throw new RangeError("Academy intake take limit must be non-negative");
+    if (!Number.isSafeInteger(limit) || limit < 0)
+      throw new RangeError("Academy intake take limit must be non-negative");
     return Object.freeze(this.#items.splice(0, Math.min(limit, this.#items.length)));
   }
 
-  close(): void { this.#isClosed = true; }
+  close(): void {
+    this.#isClosed = true;
+  }
 
   snapshot(): ProductionHeadlessAcademyIntakeSnapshot {
     return Object.freeze({
-      capacity: this.#capacity, queued: this.#items.length, accepted: this.#accepted,
-      backpressured: this.#backpressured, closed: this.#closed, isClosed: this.#isClosed,
+      capacity: this.#capacity,
+      queued: this.#items.length,
+      accepted: this.#accepted,
+      backpressured: this.#backpressured,
+      closed: this.#closed,
+      isClosed: this.#isClosed,
     });
   }
 }

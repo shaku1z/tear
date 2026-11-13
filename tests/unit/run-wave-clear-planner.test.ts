@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  planWaveClear,
-  type WaveClearInput,
-  type WaveClearState,
-} from "../../src/gameplay/run/wave-clear-planner";
+import { planWaveClear, type WaveClearInput, type WaveClearState } from "../../src/gameplay/run/wave-clear-planner";
 
 function state(overrides: Partial<WaveClearState> = {}): WaveClearState {
   return {
@@ -72,12 +68,14 @@ describe("wave-clear and reward conformance", () => {
   });
 
   it("routes non-final campaign bosses to tier-up rewards and stage achievements", () => {
-    const result = planWaveClear(input({
-      state: state({ mode: "campaign", wave: 20, isBossWave: true }),
-      stageIndex: 1,
-      availableTierUpCount: 4,
-      dt: 2,
-    }));
+    const result = planWaveClear(
+      input({
+        state: state({ mode: "campaign", wave: 20, isBossWave: true }),
+        stageIndex: 1,
+        availableTierUpCount: 4,
+        dt: 2,
+      }),
+    );
     expect(result.terminal).toBe(false);
     expect(result.state).toMatchObject({ pendingReward: "boss", clearTimer: -1, damagedThisStage: false });
     expect(result.intents).toContainEqual({ type: "heal-player", amount: 27 });
@@ -88,13 +86,17 @@ describe("wave-clear and reward conformance", () => {
   });
 
   it("starts the finale directly after the final campaign boss", () => {
-    const result = planWaveClear(input({
-      state: state({ mode: "campaign", wave: 60, isBossWave: true }),
-      stageIndex: 5,
-    }));
+    const result = planWaveClear(
+      input({
+        state: state({ mode: "campaign", wave: 60, isBossWave: true }),
+        stageIndex: 5,
+      }),
+    );
     expect(result.terminal).toBe(true);
     expect(result.intents.at(-1)).toEqual({ type: "start-adventure-finale" });
-    expect(result.intents.some((intent) => intent.type === "prepare-reward" || intent.type === "heal-player")).toBe(false);
+    expect(result.intents.some((intent) => intent.type === "prepare-reward" || intent.type === "heal-player")).toBe(
+      false,
+    );
   });
 
   it("wins fixed-wave modes at their boss and keeps gauntlet cycling", () => {
@@ -102,16 +104,20 @@ describe("wave-clear and reward conformance", () => {
     expect(fixed.terminal).toBe(true);
     expect(fixed.intents.at(-1)).toEqual({ type: "win-run" });
 
-    const gauntlet = planWaveClear(input({ state: state({ mode: "gauntlet", wave: 8, isBossWave: true, bossesBeaten: 2 }) }));
+    const gauntlet = planWaveClear(
+      input({ state: state({ mode: "gauntlet", wave: 8, isBossWave: true, bossesBeaten: 2 }) }),
+    );
     expect(gauntlet.terminal).toBe(false);
     expect(gauntlet.state).toMatchObject({ bossesBeaten: 3, pendingReward: "boss" });
   });
 
   it("preserves one-hit healing suppression and endless difficulty milestones", () => {
-    const result = planWaveClear(input({
-      state: state({ diff: "extreme", wave: 100, horde: false }),
-      playerOneHit: true,
-    }));
+    const result = planWaveClear(
+      input({
+        state: state({ diff: "extreme", wave: 100, horde: false }),
+        playerOneHit: true,
+      }),
+    );
     expect(result.intents.some((intent) => intent.type === "heal-player")).toBe(false);
     expect(result.intents).toContainEqual({ type: "profile-max", stat: "oneHitWave", value: 100 });
     expect(result.intents).toContainEqual({ type: "profile-max", stat: "wave100Extreme", value: 1 });
@@ -121,16 +127,20 @@ describe("wave-clear and reward conformance", () => {
     const damaged = planWaveClear(input({ state: state({ damagedThisWave: true, damagedThisStage: true }) }));
     expect(damaged.intents.some((intent) => intent.type === "profile-add" && intent.stat === "noHitWaves")).toBe(false);
     const disabled = planWaveClear(input({ achievementTracking: false }));
-    expect(disabled.intents.some((intent) => intent.type.startsWith("profile-") || intent.type === "daily-bump")).toBe(false);
+    expect(disabled.intents.some((intent) => intent.type.startsWith("profile-") || intent.type === "daily-bump")).toBe(
+      false,
+    );
   });
 
   it("continues an already prepared reward timer without clearing twice", () => {
-    const result = planWaveClear(input({
-      state: state({ clearTimer: 0.2, pendingReward: "boss" }),
-      waveLifecycleActive: false,
-      availableTierUpCount: 1,
-      dt: 0.2,
-    }));
+    const result = planWaveClear(
+      input({
+        state: state({ clearTimer: 0.2, pendingReward: "boss" }),
+        waveLifecycleActive: false,
+        availableTierUpCount: 1,
+        dt: 0.2,
+      }),
+    );
     expect(result.state.clearTimer).toBe(-1);
     expect(result.intents).toEqual([{ type: "exit-pointer-lock" }, { type: "open-tier-up" }]);
   });

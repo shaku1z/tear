@@ -7,7 +7,11 @@ describe("CrazyGames platform contract", () => {
     const sdk: CrazyGamesSdkShape = {
       init: () => Promise.reject(new Error("blocked")),
       environment: "crazygames",
-      ad: { requestAd() { throw new Error("must not run"); } },
+      ad: {
+        requestAd() {
+          throw new Error("must not run");
+        },
+      },
     };
     const platform = await createCrazyGamesPlatformServices({ sdk });
     expect(platform.environment).toBe("disabled");
@@ -21,11 +25,15 @@ describe("CrazyGames platform contract", () => {
     const settings = { muteAudio: false };
     const gameplayStart = vi.fn();
     const sdk: CrazyGamesSdkShape = {
-      init() { return Promise.resolve(); },
+      init() {
+        return Promise.resolve();
+      },
       environment: "crazygames",
       game: {
         settings,
-        addSettingsChangeListener(listener) { settingsListener = listener; },
+        addSettingsChangeListener(listener) {
+          settingsListener = listener;
+        },
         gameplayStart,
       },
     };
@@ -44,13 +52,24 @@ describe("CrazyGames platform contract", () => {
   it("uses the current SDK v3 loading and gameplay lifecycle methods in order", async () => {
     const calls: string[] = [];
     const sdk: CrazyGamesSdkShape = {
-      init() { calls.push("init"); return Promise.resolve(); },
+      init() {
+        calls.push("init");
+        return Promise.resolve();
+      },
       environment: "local",
       game: {
-        loadingStart() { calls.push("loading-start"); },
-        loadingStop() { calls.push("loading-stop"); },
-        gameplayStart() { calls.push("gameplay-start"); },
-        gameplayStop() { calls.push("gameplay-stop"); },
+        loadingStart() {
+          calls.push("loading-start");
+        },
+        loadingStop() {
+          calls.push("loading-stop");
+        },
+        gameplayStart() {
+          calls.push("gameplay-start");
+        },
+        gameplayStop() {
+          calls.push("gameplay-stop");
+        },
       },
     };
     const platform = await createCrazyGamesPlatformServices({ sdk });
@@ -67,7 +86,9 @@ describe("CrazyGames platform contract", () => {
 
   it("brackets rewarded ads with suspension and temporary muting", async () => {
     const sdk: CrazyGamesSdkShape = {
-      init() { return Promise.resolve(); },
+      init() {
+        return Promise.resolve();
+      },
       environment: "crazygames",
       ad: {
         requestAd(type, callbacks) {
@@ -94,11 +115,15 @@ describe("CrazyGames platform contract", () => {
   it("uses injected data storage and mirrors it locally", async () => {
     const values = new Map<string, string>();
     const sdk: CrazyGamesSdkShape = {
-      init() { return Promise.resolve(); },
+      init() {
+        return Promise.resolve();
+      },
       environment: "crazygames",
       data: {
         getItem: (key) => values.get(key) ?? null,
-        setItem: (key, value) => { values.set(key, value); },
+        setItem: (key, value) => {
+          values.set(key, value);
+        },
       },
     };
     const platform = await createCrazyGamesPlatformServices({ sdk });

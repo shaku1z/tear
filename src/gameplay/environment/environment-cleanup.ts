@@ -1,6 +1,9 @@
 import type {
-  EnvironmentClearReason, EnvironmentCombatObjectState, EnvironmentFieldState,
-  EnvironmentRouteState, EnvironmentSnapshot,
+  EnvironmentClearReason,
+  EnvironmentCombatObjectState,
+  EnvironmentFieldState,
+  EnvironmentRouteState,
+  EnvironmentSnapshot,
 } from "./environment-contracts";
 
 type EnvironmentEntry = EnvironmentFieldState | EnvironmentCombatObjectState | EnvironmentRouteState;
@@ -15,11 +18,19 @@ function orphaned(entry: EnvironmentEntry, availableActorIds: EnvironmentActorId
   return entry.state !== "destroyed" && entry.state !== "expired" && (ownerOrphan || bossOwnerOrphan || targetOrphan);
 }
 
-function cleanupEntry<T extends EnvironmentEntry>(entry: T, availableActorIds: EnvironmentActorIds, reason: EnvironmentClearReason): T {
+function cleanupEntry<T extends EnvironmentEntry>(
+  entry: T,
+  availableActorIds: EnvironmentActorIds,
+  reason: EnvironmentClearReason,
+): T {
   if (!orphaned(entry, availableActorIds)) return entry;
-  const missingBossOwner = "bossOwnerId" in entry && typeof entry.bossOwnerId === "string" && !availableActorIds.has(entry.bossOwnerId);
-  return Object.freeze({ ...entry, state: entry.kind === "bloom-well" && missingBossOwner ? "dormant" : "expired",
-    cleanupReason: missingBossOwner ? "boss-terminal" : reason }) as unknown as T;
+  const missingBossOwner =
+    "bossOwnerId" in entry && typeof entry.bossOwnerId === "string" && !availableActorIds.has(entry.bossOwnerId);
+  return Object.freeze({
+    ...entry,
+    state: entry.kind === "bloom-well" && missingBossOwner ? "dormant" : "expired",
+    cleanupReason: missingBossOwner ? "boss-terminal" : reason,
+  }) as unknown as T;
 }
 
 /** The actor id an actor-reference list item names, if it is one. */
@@ -30,7 +41,10 @@ export function environmentActorReferenceId(value: unknown): string | undefined 
 }
 
 /** True when some array-valued property lists an actor reference to a missing actor. */
-function hasMissingActorReference(entry: Readonly<Record<string, unknown>>, availableActorIds: EnvironmentActorIds): boolean {
+function hasMissingActorReference(
+  entry: Readonly<Record<string, unknown>>,
+  availableActorIds: EnvironmentActorIds,
+): boolean {
   for (const key in entry) {
     const value = entry[key];
     if (!Array.isArray(value)) continue;

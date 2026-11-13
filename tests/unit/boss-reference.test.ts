@@ -9,12 +9,12 @@ import { createEnemyHarness } from "./enemy-test-harness";
 import { createMirrorTestHarness } from "./mirror-test-harness";
 
 const expected = [
-  { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.30] },
-  { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.60, 0.25] },
-  { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.20] },
+  { id: "warden", name: "The Warden", stageId: "grounds", phaseMarks: [0.65, 0.3] },
+  { id: "colossus", name: "Iron Colossus", stageId: "undercroft", phaseMarks: [0.6, 0.25] },
+  { id: "aldric", name: "Berserker King", stageId: "crimson-fields", phaseMarks: [0.65, 0.2] },
   { id: "rootbound", name: "The Rootbound", stageId: "verdant-sanctum", phaseMarks: [0.65, 0.28] },
   { id: "white-hart", name: "The White Hart", stageId: "pale-traverse", phaseMarks: [0.65, 0.28] },
-  { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.60, 0.25] },
+  { id: "echo", name: "The Echo", stageId: "voidspire", phaseMarks: [0.6, 0.25] },
   { id: "source", name: "The Source", stageId: "tear", phaseMarks: [0.58, 0.28] },
 ] as const;
 const expectedPublished = expected.filter(({ id }) => id !== "white-hart");
@@ -45,18 +45,26 @@ describe("authored boss reference", () => {
   });
 
   it("rejects reordered authored definitions, broken stage joins, and unsafe imported fields", () => {
-    expect(() => projectBossReference({ bossDefinitions: BOSS_DEFINITIONS.slice().reverse(), stages: STAGES })).toThrow(/exact canonical authored order/u);
+    expect(() => projectBossReference({ bossDefinitions: BOSS_DEFINITIONS.slice().reverse(), stages: STAGES })).toThrow(
+      /exact canonical authored order/u,
+    );
 
-    const brokenStages = STAGES.map((stage, index) => index === 0 ? { ...stage, boss: "source" as const } : stage);
-    expect(() => projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: brokenStages })).toThrow(/canonical stage mapping/u);
+    const brokenStages = STAGES.map((stage, index) => (index === 0 ? { ...stage, boss: "source" as const } : stage));
+    expect(() => projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: brokenStages })).toThrow(
+      /canonical stage mapping/u,
+    );
 
-    const malformed = structuredClone(projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: STAGES })) as unknown as Record<string, unknown>[];
+    const malformed = structuredClone(
+      projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: STAGES }),
+    ) as unknown as Record<string, unknown>[];
     const first = malformed[0];
     if (first === undefined) throw new Error("missing boss fixture");
     first.extra = true;
     expect(() => validateProjectedBosses(malformed, "bosses")).toThrow(/unexpected or missing fields/u);
 
-    const badMarks = structuredClone(projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: STAGES })) as unknown as Record<string, unknown>[];
+    const badMarks = structuredClone(
+      projectBossReference({ bossDefinitions: BOSS_DEFINITIONS, stages: STAGES }),
+    ) as unknown as Record<string, unknown>[];
     const source = badMarks.at(-1);
     if (source === undefined) throw new Error("missing source fixture");
     source.phaseMarks = [0.2, 0.3];
@@ -86,7 +94,13 @@ describe("authored boss reference", () => {
     expect(CONFIG.aldric.fakeTier).toBe(bossPhaseMarks("aldric")[1]);
     expect(CONFIG.source.voidTier).toBe(bossPhaseMarks("source")[0]);
     expect(CONFIG.source.fakeTier).toBe(bossPhaseMarks("source")[1]);
-    expect({ fireTier: CONFIG.aldric.fireTier, fakeTier: CONFIG.aldric.fakeTier }).toEqual({ fireTier: 0.65, fakeTier: 0.20 });
-    expect({ voidTier: CONFIG.source.voidTier, fakeTier: CONFIG.source.fakeTier }).toEqual({ voidTier: 0.58, fakeTier: 0.28 });
+    expect({ fireTier: CONFIG.aldric.fireTier, fakeTier: CONFIG.aldric.fakeTier }).toEqual({
+      fireTier: 0.65,
+      fakeTier: 0.2,
+    });
+    expect({ voidTier: CONFIG.source.voidTier, fakeTier: CONFIG.source.fakeTier }).toEqual({
+      voidTier: 0.58,
+      fakeTier: 0.28,
+    });
   });
 });

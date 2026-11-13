@@ -92,16 +92,20 @@ export type LongitudinalDirective =
   | Readonly<{ type: "fail"; reason: string }>;
 
 const COMBAT_LEVEL_IDS = Object.freeze([
-  "warding", "phoenix", "aircharge", "lifeline", "thickskin", "tough", "sharp",
+  "warding",
+  "phoenix",
+  "aircharge",
+  "lifeline",
+  "thickskin",
+  "tough",
+  "sharp",
 ] as const);
 
 function immutableLevels(levels: Readonly<Record<string, number>>): Readonly<Record<string, number>> {
   return Object.freeze({ ...levels });
 }
 
-export function freezeC24CombatLevels(
-  levels: Readonly<Record<string, number>>,
-): Readonly<Record<string, number>> {
+export function freezeC24CombatLevels(levels: Readonly<Record<string, number>>): Readonly<Record<string, number>> {
   return Object.freeze(Object.fromEntries(COMBAT_LEVEL_IDS.map((id) => [id, levels[id] ?? 0])));
 }
 
@@ -164,7 +168,9 @@ export class C24LongitudinalJourneyDirector {
     this.#episodeLevelsBefore = immutableLevels(initial.levels);
   }
 
-  seed(): number { return this.#currentSeed; }
+  seed(): number {
+    return this.#currentSeed;
+  }
 
   step(
     screen: string,
@@ -175,18 +181,20 @@ export class C24LongitudinalJourneyDirector {
     if (this.#terminalReason !== undefined) return { type: "fail", reason: this.#terminalReason };
     if ((screen === "gameover" || screen === "win") && this.#phase === "run") {
       if (outcome === null) return this.#fail("terminal-outcome-missing");
-      this.#episodes.push(Object.freeze({
-        episode: this.#currentEpisode,
-        seed: this.#currentSeed,
-        outcome: screen === "win" ? "victory" : "defeat",
-        wave: outcome.wave,
-        score: outcome.score,
-        coinsEarned: outcome.earned,
-        walletBefore: this.#episodeWalletBefore,
-        walletAfter: progression.wallet,
-        levelsBefore: this.#episodeLevelsBefore,
-        levelsAfter: immutableLevels(progression.levels),
-      }));
+      this.#episodes.push(
+        Object.freeze({
+          episode: this.#currentEpisode,
+          seed: this.#currentSeed,
+          outcome: screen === "win" ? "victory" : "defeat",
+          wave: outcome.wave,
+          score: outcome.score,
+          coinsEarned: outcome.earned,
+          walletBefore: this.#episodeWalletBefore,
+          walletAfter: progression.wallet,
+          levelsBefore: this.#episodeLevelsBefore,
+          levelsAfter: immutableLevels(progression.levels),
+        }),
+      );
       if (screen === "win") {
         this.#frozenCombatLevels = freezeC24CombatLevels(progression.levels);
         this.#phase = "victory-menu";
@@ -254,13 +262,15 @@ export class C24LongitudinalJourneyDirector {
       return;
     }
     this.#spent += pending.cost;
-    this.#purchases.push(Object.freeze({
-      ...pending,
-      episode: this.#currentEpisode,
-      walletBefore: this.#pendingWallet,
-      walletAfter: progression.wallet,
-      lifetimeEarned: progression.lifetimeEarned,
-    }));
+    this.#purchases.push(
+      Object.freeze({
+        ...pending,
+        episode: this.#currentEpisode,
+        walletBefore: this.#pendingWallet,
+        walletAfter: progression.wallet,
+        lifetimeEarned: progression.lifetimeEarned,
+      }),
+    );
     this.#pendingPurchase = null;
   }
 

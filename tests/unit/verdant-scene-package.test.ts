@@ -3,25 +3,64 @@ import rawPackage from "../../src/presentation/assets/verdant-calibration/scene-
 import control from "../../src/presentation/assets/verdant-calibration/control-package.json";
 import overscan from "../../src/presentation/assets/verdant-calibration/overscan-package.json";
 import living from "../../src/presentation/assets/verdant-calibration/living-stage-package.json";
-import { validateVerdantScenePackage, VERDANT_SCENE_MAX_DECODED_BYTES, VERDANT_PROTOTYPE_MAX_DECODED_BYTES } from "../../src/presentation/verdant-scene-package";
+import {
+  validateVerdantScenePackage,
+  VERDANT_SCENE_MAX_DECODED_BYTES,
+  VERDANT_PROTOTYPE_MAX_DECODED_BYTES,
+} from "../../src/presentation/verdant-scene-package";
 
 const prototype = {
-  ...overscan, id: "verdant-living-stage-prototype", water: undefined,
-  assets: [...overscan.assets.slice(0, 6),
-    { id: "structure-top", key: "structure-top", sha256: "c80afe4f99b2324d67ac702c9ccf93c8b269aeb57c1432f33d9e347f449eb832", width: 1672, height: 471, alpha: "opaque" },
-    { id: "structure-bottom", key: "structure-bottom", sha256: "5edccaf92b2b9f911a4613e823d12eba8ea5cdbe015a6e26da56658e41429c7a", width: 1672, height: 470, alpha: "opaque" },
-    { id: "foliage", key: "foliage", sha256: "70dfb0d6e5e31218c78fd712396ce3b433823477fe36a62ad56a61e17e9d708f", width: 1672, height: 623, alpha: "straight" }],
-  layers: [...overscan.layers.slice(0, 6),
+  ...overscan,
+  id: "verdant-living-stage-prototype",
+  water: undefined,
+  assets: [
+    ...overscan.assets.slice(0, 6),
+    {
+      id: "structure-top",
+      key: "structure-top",
+      sha256: "c80afe4f99b2324d67ac702c9ccf93c8b269aeb57c1432f33d9e347f449eb832",
+      width: 1672,
+      height: 471,
+      alpha: "opaque",
+    },
+    {
+      id: "structure-bottom",
+      key: "structure-bottom",
+      sha256: "5edccaf92b2b9f911a4613e823d12eba8ea5cdbe015a6e26da56658e41429c7a",
+      width: 1672,
+      height: 470,
+      alpha: "opaque",
+    },
+    {
+      id: "foliage",
+      key: "foliage",
+      sha256: "70dfb0d6e5e31218c78fd712396ce3b433823477fe36a62ad56a61e17e9d708f",
+      width: 1672,
+      height: 623,
+      alpha: "straight",
+    },
+  ],
+  layers: [
+    ...overscan.layers.slice(0, 6),
     ...["structure-top", "structure-bottom", "foliage"].map((id, index) => ({
-      id, assetId: id, rect: index === 0 ? [0, 0, 1672, 471] : index === 1 ? [0, 471, 1672, 470] : [0, 0, 1672, 623],
-      order: index + 6, purpose: index === 2 ? "foliage" : "support", motion: { kind: "static", maxDisplacement: [0, 0] },
-    }))],
+      id,
+      assetId: id,
+      rect: index === 0 ? [0, 0, 1672, 471] : index === 1 ? [0, 471, 1672, 470] : [0, 0, 1672, 623],
+      order: index + 6,
+      purpose: index === 2 ? "foliage" : "support",
+      motion: { kind: "static", maxDisplacement: [0, 0] },
+    })),
+  ],
 };
 
-const asset = (overrides: Record<string, unknown>) => ({ ...rawPackage,
-  assets: rawPackage.assets.map((value, index) => index === 0 ? { ...value, ...overrides } : value) });
-const layer = (overrides: Record<string, unknown>) => ({ ...rawPackage,
-  layers: rawPackage.layers.map((value, index) => index === 0 ? { ...value, ...overrides } : value) });
+const asset = (overrides: Record<string, unknown>) => ({
+  ...rawPackage,
+  assets: rawPackage.assets.map((value, index) => (index === 0 ? { ...value, ...overrides } : value)),
+});
+const layer = (overrides: Record<string, unknown>) => ({
+  ...rawPackage,
+  layers: rawPackage.layers.map((value, index) => (index === 0 ? { ...value, ...overrides } : value)),
+});
 
 describe("Verdant IN2 registered package contract", () => {
   it("admits the separate static living-stage prototype under only its approved budget", () => {
@@ -38,14 +77,42 @@ describe("Verdant IN2 registered package contract", () => {
   it.each([
     ["pool outside liquid envelope", { ...living, poolRefraction: { ...living.poolRefraction, minimumRow: 0 } }],
     ["excessive pool refraction", { ...living, poolRefraction: { ...living.poolRefraction, maxDisplacement: 9 } }],
-    ["excessive vertical refraction", { ...living, poolRefraction: { ...living.poolRefraction, maxVerticalDisplacement: 3 } }],
+    [
+      "excessive vertical refraction",
+      { ...living, poolRefraction: { ...living.poolRefraction, maxVerticalDisplacement: 3 } },
+    ],
     ["unregistered packet period", { ...living, poolRefraction: { ...living.poolRefraction, packetPeriod: 25 } }],
-    ["unregistered pool component", { ...living, poolRefraction: { ...living.poolRefraction, component: "all-openings" } }],
+    [
+      "unregistered pool component",
+      { ...living, poolRefraction: { ...living.poolRefraction, component: "all-openings" } },
+    ],
     ["unregistered pool mask", { ...living, poolRefraction: { ...living.poolRefraction, maskSHA256: "0".repeat(64) } }],
     ["pool on old comparison", { ...overscan, poolRefraction: living.poolRefraction }],
-    ["opaque foliage", { ...prototype, assets: prototype.assets.map((entry) => entry.key === "foliage" ? { ...entry, alpha: "opaque" } : entry) }],
-    ["moved foliage", { ...prototype, layers: prototype.layers.map((entry) => entry.assetId === "foliage" ? { ...entry, rect: [0, 1, 1672, 623] } : entry) }],
-    ["unregistered foliage motion", { ...prototype, layers: prototype.layers.map((entry) => entry.assetId === "foliage" ? { ...entry, motion: { kind: "bend", maxDisplacement: [2, 0] } } : entry) }],
+    [
+      "opaque foliage",
+      {
+        ...prototype,
+        assets: prototype.assets.map((entry) => (entry.key === "foliage" ? { ...entry, alpha: "opaque" } : entry)),
+      },
+    ],
+    [
+      "moved foliage",
+      {
+        ...prototype,
+        layers: prototype.layers.map((entry) =>
+          entry.assetId === "foliage" ? { ...entry, rect: [0, 1, 1672, 623] } : entry,
+        ),
+      },
+    ],
+    [
+      "unregistered foliage motion",
+      {
+        ...prototype,
+        layers: prototype.layers.map((entry) =>
+          entry.assetId === "foliage" ? { ...entry, motion: { kind: "bend", maxDisplacement: [2, 0] } } : entry,
+        ),
+      },
+    ],
     ["old tail assets", { ...overscan, id: prototype.id, water: undefined }],
     ["old water receiver", { ...prototype, water: overscan.water }],
   ])("rejects prototype %s", (_label, candidate) => {
@@ -60,12 +127,53 @@ describe("Verdant IN2 registered package contract", () => {
   });
   it.each([
     ["missing exterior", { ...overscan, assets: overscan.assets.slice(1) }],
-    ["misregistered exterior", { ...overscan, layers: overscan.layers.map((entry, index) => index === 0 ? { ...entry, rect: [-383, -1408, 1220, 1408] } : entry) }],
+    [
+      "misregistered exterior",
+      {
+        ...overscan,
+        layers: overscan.layers.map((entry, index) =>
+          index === 0 ? { ...entry, rect: [-383, -1408, 1220, 1408] } : entry,
+        ),
+      },
+    ],
     ["exterior in old package", { ...overscan, id: rawPackage.id }],
-    ["reordered center", { ...overscan, layers: overscan.layers.map((entry, index) => index === 6 ? { ...entry, order: 7 } : entry) }],
-    ["moved tail", { ...overscan, layers: overscan.layers.map((entry) => entry.assetId === "tail-motion" ? { ...entry, rect: [1474, 330, 50, 50] } : entry) }],
-    ["unsafe bend", { ...overscan, layers: overscan.layers.map((entry) => entry.assetId === "tail-motion" ? { ...entry, motion: { ...entry.motion, maxDisplacement: [3, 0] } } : entry) }],
-    ["dry water receiver", { ...overscan, water: { ...overscan.water, receiver: [[0, 0], [1, 0], [1, 1], [0, 1]] } }],
+    [
+      "reordered center",
+      { ...overscan, layers: overscan.layers.map((entry, index) => (index === 6 ? { ...entry, order: 7 } : entry)) },
+    ],
+    [
+      "moved tail",
+      {
+        ...overscan,
+        layers: overscan.layers.map((entry) =>
+          entry.assetId === "tail-motion" ? { ...entry, rect: [1474, 330, 50, 50] } : entry,
+        ),
+      },
+    ],
+    [
+      "unsafe bend",
+      {
+        ...overscan,
+        layers: overscan.layers.map((entry) =>
+          entry.assetId === "tail-motion" ? { ...entry, motion: { ...entry.motion, maxDisplacement: [3, 0] } } : entry,
+        ),
+      },
+    ],
+    [
+      "dry water receiver",
+      {
+        ...overscan,
+        water: {
+          ...overscan.water,
+          receiver: [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+          ],
+        },
+      },
+    ],
     ["unapproved source", { ...overscan, approvedSourceSHA256: "0".repeat(64) }],
   ])("rejects IN3 %s", (_label, candidate) => {
     expect(() => validateVerdantScenePackage(candidate)).toThrow();

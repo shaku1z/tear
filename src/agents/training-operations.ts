@@ -95,8 +95,12 @@ export const LEGACY_TRAINING_OPERATIONS_ACTIONS = Object.freeze({
 
 /** Resolves canonical and preserved Foundry route tokens. */
 export function resolveTrainingOperationsRoute(route: string): TrainingOperationsSurface | undefined {
-  if (route === TRAINING_OPERATIONS_ROUTE || route === TRAINING_OPERATIONS_SCREEN
-    || LEGACY_TRAINING_OPERATIONS_ROUTES.includes(route as never)) return TRAINING_OPERATIONS_ROUTE;
+  if (
+    route === TRAINING_OPERATIONS_ROUTE ||
+    route === TRAINING_OPERATIONS_SCREEN ||
+    LEGACY_TRAINING_OPERATIONS_ROUTES.includes(route as never)
+  )
+    return TRAINING_OPERATIONS_ROUTE;
   return undefined;
 }
 
@@ -109,8 +113,9 @@ function enabledFlag(parameters: URLSearchParams, key: string): boolean {
 /** Returns true for a canonical or enabled legacy Training Operations link. */
 export function isTrainingOperationsRequested(search: string): boolean {
   const parameters = new URLSearchParams(search);
-  return [TRAINING_OPERATIONS_QUERY, ...LEGACY_TRAINING_OPERATIONS_QUERY_ALIASES]
-    .some((key) => enabledFlag(parameters, key));
+  return [TRAINING_OPERATIONS_QUERY, ...LEGACY_TRAINING_OPERATIONS_QUERY_ALIASES].some((key) =>
+    enabledFlag(parameters, key),
+  );
 }
 
 /** Returns the canonical surface when a link requests Training Operations. */

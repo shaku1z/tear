@@ -17,20 +17,49 @@ function paintedPixelRatio(png) {
 
 const resolved = Object.freeze({
   document: Object.freeze({
-    format: "tearsdl", schemaVersion: 1, id: "verdant-stage-wave-31-engineering",
-    stateClass: "reconstructed-reachable", seed: "verdant-stage-wave-31",
-    start: Object.freeze({ mode: "campaign", difficulty: "normal", weapon: "sword", stage: "verdant-sanctum", wave: 31 }),
+    format: "tearsdl",
+    schemaVersion: 1,
+    id: "verdant-stage-wave-31-engineering",
+    stateClass: "reconstructed-reachable",
+    seed: "verdant-stage-wave-31",
+    start: Object.freeze({
+      mode: "campaign",
+      difficulty: "normal",
+      weapon: "sword",
+      stage: "verdant-sanctum",
+      wave: 31,
+    }),
     constraints: Object.freeze({ legalProgression: true }),
     tags: Object.freeze(["verdant-sanctum", "stage", "state-forge", "engineering-only", "non-publishable", "c9"]),
     maxTicks: 1_440,
   }),
   scenario: Object.freeze({
-    format: "tear-contract", kind: "scenario", schemaVersion: 1, id: "verdant-stage-wave-31-engineering", version: 1,
+    format: "tear-contract",
+    kind: "scenario",
+    schemaVersion: 1,
+    id: "verdant-stage-wave-31-engineering",
+    version: 1,
     description: "Resolved TearSDL scenario verdant-stage-wave-31-engineering",
-    stateClass: "reconstructed-reachable", executionClass: "engineering", seed: "verdant-stage-wave-31",
-    start: Object.freeze({ mode: "campaign", difficulty: "normal", weapon: "sword", stage: "verdant-sanctum", wave: 31 }),
+    stateClass: "reconstructed-reachable",
+    executionClass: "engineering",
+    seed: "verdant-stage-wave-31",
+    start: Object.freeze({
+      mode: "campaign",
+      difficulty: "normal",
+      weapon: "sword",
+      stage: "verdant-sanctum",
+      wave: 31,
+    }),
     maxTicks: 1_440,
-    assertions: Object.freeze(["runtime.finite-state", "entity.unique-id", "entity.valid-owner", "player.valid-health", "world.legal-bounds", "boss.valid-phase", "runtime.no-softlock"]),
+    assertions: Object.freeze([
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "player.valid-health",
+      "world.legal-bounds",
+      "boss.valid-phase",
+      "runtime.no-softlock",
+    ]),
     tags: Object.freeze(["verdant-sanctum", "stage", "state-forge", "engineering-only", "non-publishable", "c9"]),
   }),
   structural: Object.freeze({ valid: true, issues: Object.freeze([]) }),
@@ -60,7 +89,16 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
   assert.equal(state.hazard.stageId, "verdant-sanctum");
   assert.equal(state.bloom.length, 2);
 
-  const directory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints", "verdant-sanctum", "VS3-C9", "presentation");
+  const directory = path.resolve(
+    __dirname,
+    "..",
+    "artifacts",
+    "tearbench",
+    "checkpoints",
+    "verdant-sanctum",
+    "VS3-C9",
+    "presentation",
+  );
   fs.mkdirSync(directory, { recursive: true });
   const viewports = [
     ["desktop-1600x900", 1_600, 900],
@@ -81,23 +119,47 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
     const decoded = decodePng(png);
     const paintedRatio = paintedPixelRatio(png);
     assert.deepEqual([decoded.width, decoded.height], [width, height], `${label}: screenshot dimensions`);
-    assert.ok(paintedRatio >= 0.6, `${label}: world presentation did not paint the viewport (${paintedRatio.toFixed(3)})`);
-    screenshots.push({ label, width, height, file: `${label}.png`, paintedPixelRatio: Number(paintedRatio.toFixed(4)) });
+    assert.ok(
+      paintedRatio >= 0.6,
+      `${label}: world presentation did not paint the viewport (${paintedRatio.toFixed(3)})`,
+    );
+    screenshots.push({
+      label,
+      width,
+      height,
+      file: `${label}.png`,
+      paintedPixelRatio: Number(paintedRatio.toFixed(4)),
+    });
   }
-  await page.evaluate(() => window.__PANTHEON_TEST.setOptions({
-    flash: 0, reducedMotion: true, highContrast: true, gfx: "low", masterMuted: true,
-  }));
+  await page.evaluate(() =>
+    window.__PANTHEON_TEST.setOptions({
+      flash: 0,
+      reducedMotion: true,
+      highContrast: true,
+      gfx: "low",
+      masterMuted: true,
+    }),
+  );
   const accessibility = await page.evaluate(() => window.__PANTHEON_TEST.state());
   assert.equal(accessibility.reducedMotion, true);
   assert.equal(accessibility.highContrast, true);
   assert.equal(accessibility.lowEffects, true);
   assert.equal(accessibility.settings.masterMuted, true);
-  const accessibilityDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "checkpoints",
-    "verdant-sanctum", "VS3-C20", "accessibility");
+  const accessibilityDirectory = path.resolve(
+    __dirname,
+    "..",
+    "artifacts",
+    "tearbench",
+    "checkpoints",
+    "verdant-sanctum",
+    "VS3-C20",
+    "accessibility",
+  );
   fs.mkdirSync(accessibilityDirectory, { recursive: true });
   const accessibilityScreenshots = [];
   for (const [label, width, height] of [
-    ["desktop-1600x900", 1_600, 900], ["touch-landscape-896x414", 896, 414],
+    ["desktop-1600x900", 1_600, 900],
+    ["touch-landscape-896x414", 896, 414],
   ]) {
     await page.setViewportSize({ width, height });
     await page.evaluate(() => {
@@ -108,22 +170,50 @@ withJourney({ name: "Verdant C9 presentation", port: 8298 }, async ({ page, buil
     });
     const file = `${label}-contrast-motion-low-audio-off.png`;
     const png = await page.screenshot({ path: path.join(accessibilityDirectory, file) });
-    const decoded = decodePng(png), paintedRatio = paintedPixelRatio(png);
+    const decoded = decodePng(png),
+      paintedRatio = paintedPixelRatio(png);
     assert.deepEqual([decoded.width, decoded.height], [width, height], `${label}: accessible screenshot dimensions`);
-    assert.ok(paintedRatio >= 0.6, `${label}: accessible world presentation did not paint the viewport (${paintedRatio.toFixed(3)})`);
+    assert.ok(
+      paintedRatio >= 0.6,
+      `${label}: accessible world presentation did not paint the viewport (${paintedRatio.toFixed(3)})`,
+    );
     accessibilityScreenshots.push({ label, width, height, file, paintedPixelRatio: Number(paintedRatio.toFixed(4)) });
   }
-  fs.writeFileSync(path.join(accessibilityDirectory, "evidence.json"), `${JSON.stringify({
-    format: "tear-verdant-c20-accessibility-evidence", schemaVersion: 1,
-    engineeringOnly: true, certifying: false, build: buildInfo,
-    profile: { highContrast: true, reducedMotion: true, lowGraphics: true, flashScale: 0, audioEnabled: false },
-    stage: "verdant-sanctum", wave: 31, screenshots: accessibilityScreenshots,
-  }, null, 2)}\n`);
-  fs.writeFileSync(path.join(directory, "evidence.json"), `${JSON.stringify({
-    format: "tear-verdant-c9-browser-evidence", schemaVersion: 1,
-    engineeringOnly: true, certifying: false, build: buildInfo,
-    stage: "verdant-sanctum", wave: 31, bloomWells: state.bloom.length,
-    screenshots,
-  }, null, 2)}\n`);
+  fs.writeFileSync(
+    path.join(accessibilityDirectory, "evidence.json"),
+    `${JSON.stringify(
+      {
+        format: "tear-verdant-c20-accessibility-evidence",
+        schemaVersion: 1,
+        engineeringOnly: true,
+        certifying: false,
+        build: buildInfo,
+        profile: { highContrast: true, reducedMotion: true, lowGraphics: true, flashScale: 0, audioEnabled: false },
+        stage: "verdant-sanctum",
+        wave: 31,
+        screenshots: accessibilityScreenshots,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  fs.writeFileSync(
+    path.join(directory, "evidence.json"),
+    `${JSON.stringify(
+      {
+        format: "tear-verdant-c9-browser-evidence",
+        schemaVersion: 1,
+        engineeringOnly: true,
+        certifying: false,
+        build: buildInfo,
+        stage: "verdant-sanctum",
+        wave: 31,
+        bloomWells: state.bloom.length,
+        screenshots,
+      },
+      null,
+      2,
+    )}\n`,
+  );
   console.log(`Verdant C9 presentation passed at ${buildInfo.sha}`);
 });

@@ -13,12 +13,7 @@ import {
   type WaveStage,
   type WaveTuning,
 } from "./wave-planner";
-import {
-  planWaveClear,
-  type PendingWaveReward,
-  type WaveClearIntent,
-  type WaveLogEntry,
-} from "./wave-clear-planner";
+import { planWaveClear, type PendingWaveReward, type WaveClearIntent, type WaveLogEntry } from "./wave-clear-planner";
 
 export interface LiveWaveStageSource {
   readonly id: StageId;
@@ -125,9 +120,10 @@ export class LiveWaveController {
     const stage = this.#port.currentStage();
     const nextWave = run.wave + 1;
     const nextCampaignStage = run.mode === "campaign" ? Math.floor((nextWave - 1) / 10) : null;
-    const startsCampaignChapter = nextCampaignStage !== null
-      && (nextWave === 1 || nextCampaignStage !== stage.index)
-      && this.#port.stageHasChapter(nextCampaignStage);
+    const startsCampaignChapter =
+      nextCampaignStage !== null &&
+      (nextWave === 1 || nextCampaignStage !== stage.index) &&
+      this.#port.stageHasChapter(nextCampaignStage);
     const mode = this.#port.modeDefinition(run.mode);
     const tuning = this.#port.tuning();
     const plan = planNextWave({

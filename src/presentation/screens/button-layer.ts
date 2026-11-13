@@ -1,8 +1,18 @@
 export interface CanvasUiButton {
-  x: number; y: number; w: number; h: number;
-  label: string; enabled?: boolean; sel?: boolean; chip?: boolean;
-  glyph?: string; sub?: string; pips?: Readonly<{ n: number; filled: number; color: string }>;
-  _hideBox?: boolean; _k?: string; _a?: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string;
+  enabled?: boolean;
+  sel?: boolean;
+  chip?: boolean;
+  glyph?: string;
+  sub?: string;
+  pips?: Readonly<{ n: number; filled: number; color: string }>;
+  _hideBox?: boolean;
+  _k?: string;
+  _a?: number;
   readonly [key: string]: unknown;
 }
 
@@ -38,14 +48,15 @@ export function renderButtonLayer(options: ButtonLayerOptions): void {
     const button = buttons[index];
     if (button === undefined) continue;
     if (button._hideBox) {
-      if (options.focusVisible === true && index === options.focus && button.enabled !== false) ui.focusRing?.(context, button);
+      if (options.focusVisible === true && index === options.focus && button.enabled !== false)
+        ui.focusRing?.(context, button);
       continue;
     }
     const hovered = ui.pointIn(button, options.pointerX, options.pointerY) && button.enabled !== false;
     const active = hovered || Boolean(button.sel) || index === options.focus;
     const key = button._k ?? `${button.label}@${String(Math.round(button.x))},${String(Math.round(button.y))}`;
     button._k = key;
-    const progress = hoverAnimation[key] = lerp(hoverAnimation[key] ?? 0, active ? 1 : 0, smoothing);
+    const progress = (hoverAnimation[key] = lerp(hoverAnimation[key] ?? 0, active ? 1 : 0, smoothing));
     button._a = progress;
     const entrance = options.entranceEase((options.enterSeconds - index * 0.025) / 0.2);
     context.save();

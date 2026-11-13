@@ -28,28 +28,47 @@ import {
   type TearAcademySample,
 } from "../../src/agents";
 import { stableVerificationHash } from "../../src/replay/hash";
-import {
-  ProductionHeadlessAcademyIntake,
-} from "../../src/tearbench/production-headless-academy-intake";
+import { ProductionHeadlessAcademyIntake } from "../../src/tearbench/production-headless-academy-intake";
 import { TrainingArchiveHeadlessIntake } from "../../src/tearbench/training-archive";
 import type { TearObservationV1 } from "../../src/tearbench";
 
 function observation(): TearObservationV1 {
   return {
-    format: "tear-contract", kind: "observation", schemaVersion: 1, tick: 10,
+    format: "tear-contract",
+    kind: "observation",
+    schemaVersion: 1,
+    tick: 10,
     observationClass: "structured-state",
     player: {
-      x: 100, y: 600, vx: 0, vy: 0, hp: 100, maxHp: 100, facing: 1,
-      grounded: true, dashCharges: 1,
+      x: 100,
+      y: 600,
+      vx: 0,
+      vy: 0,
+      hp: 100,
+      maxHp: 100,
+      facing: 1,
+      grounded: true,
+      dashCharges: 1,
     },
     blade: {
-      handX: 120, handY: 580, tipX: 180, tipY: 560,
-      vx: 0, vy: 0, tipSpeed: 0, state: "held",
+      handX: 120,
+      handY: 580,
+      tipX: 180,
+      tipY: 560,
+      vx: 0,
+      vy: 0,
+      tipSpeed: 0,
+      state: "held",
     },
     entities: [{ id: "enemy-compat", kind: "charger", x: 250, y: 600, vx: 0, vy: 0 }],
     run: {
-      mode: "campaign", difficulty: "normal", weapon: "sword", stage: "grounds",
-      wave: 1, score: 0, elapsedTicks: 10,
+      mode: "campaign",
+      difficulty: "normal",
+      weapon: "sword",
+      stage: "grounds",
+      wave: 1,
+      score: 0,
+      elapsedTicks: 10,
     },
     availableActions: ["move", "dash", "aim", "weapon"],
   };
@@ -73,8 +92,12 @@ function sample(): TearAcademySample {
       actor: "scripted-bot",
       producer: "training-archive-compat-test",
       build: {
-        version: "1", revision: "compat", target: "unit", rulesetVersion: "rules",
-        contentHash: "content", configHash: "config",
+        version: "1",
+        revision: "compat",
+        target: "unit",
+        rulesetVersion: "rules",
+        contentHash: "content",
+        configHash: "config",
       },
       executionClass: "training",
       observationClass: "structured-state",
@@ -161,7 +184,12 @@ describe("Training Archive compatibility facade", () => {
     expect(TrainingArchiveHeadlessIntake).toBe(ProductionHeadlessAcademyIntake);
     const intake = new TrainingArchiveHeadlessIntake(1);
     expect(intake.snapshot()).toEqual({
-      capacity: 1, queued: 0, accepted: 0, backpressured: 0, closed: 0, isClosed: false,
+      capacity: 1,
+      queued: 0,
+      accepted: 0,
+      backpressured: 0,
+      closed: 0,
+      isClosed: false,
     });
   });
 });

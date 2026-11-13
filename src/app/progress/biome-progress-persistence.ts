@@ -9,6 +9,8 @@ export interface BiomeProgressPersistence {
 
 export function createLiveBiomeProgressPersistence(profile: Profile): BiomeProgressPersistence {
   return Object.freeze({
-    remember: (name: string) => { profile.maxStat("biomesSeen", profile.markBiome(name)); },
+    remember: (name: string) => {
+      profile.maxStat("biomesSeen", profile.markBiome(name));
+    },
   });
 }

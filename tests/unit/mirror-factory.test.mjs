@@ -8,21 +8,27 @@ class FakeEnemy {
     this.hh = (config.h || 46) / 2;
     this.hp = this.maxHp = config.hp || 100;
   }
-  tickTimers() { return undefined; }
+  tickTimers() {
+    return undefined;
+  }
   hit(damage, kx, ky) {
     this.hp -= damage;
     this.vx += kx;
     this.vy += ky;
     return damage;
   }
-  drawHpBar() { return undefined; }
+  drawHpBar() {
+    return undefined;
+  }
 }
 
 class FakePlayer {
   constructor(x, y) {
     Object.assign(this, { x, y, vx: 0, vy: 0, hh: 23, hw: 15, onGround: true, dashTimer: 0 });
   }
-  update() { return undefined; }
+  update() {
+    return undefined;
+  }
 }
 
 class FakeBlade {
@@ -30,8 +36,12 @@ class FakeBlade {
     Object.assign(this, { state: "held", tipSpeed: 0, tipX: 0, tipY: 0, tipVX: 0, tipVY: 0 });
     this.aimPoint = { x: 0, y: 0 };
   }
-  aimOverridePoint() { return this.aimPoint; }
-  update() { return undefined; }
+  aimOverridePoint() {
+    return this.aimPoint;
+  }
+  update() {
+    return undefined;
+  }
 }
 
 function dependencies(randomValues = [0]) {
@@ -54,8 +64,12 @@ function dependencies(randomValues = [0]) {
     GFX: { low: true },
     Player: FakePlayer,
     Projectile: class {
-      constructor() { this.kind = "test"; }
-      update() { return undefined; }
+      constructor() {
+        this.kind = "test";
+      }
+      update() {
+        return undefined;
+      }
     },
     SFX: {},
     THEME: { ink: "#111" },

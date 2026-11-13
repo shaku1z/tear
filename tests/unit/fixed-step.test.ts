@@ -6,7 +6,9 @@ function simulate(renderRate: number): { tick: number; value: number } {
   let value = 0;
   const frames = renderRate * 10;
   for (let frame = 0; frame < frames; frame += 1) {
-    scheduler.advance(1000 / renderRate, (seconds) => { value += 120 * seconds; });
+    scheduler.advance(1000 / renderRate, (seconds) => {
+      value += 120 * seconds;
+    });
   }
   return { tick: scheduler.tick, value };
 }

@@ -22,14 +22,16 @@ export type GhostPracticeLaunchResult =
 function validPracticeChild(child: GhostPracticeChild): boolean {
   const raw = child as unknown as Readonly<Record<string, unknown>>;
   const lineage = child.lineage as unknown as Readonly<Record<string, unknown>>;
-  return raw.rankedEligible === false
-    && raw.leaderboardEligible === false
-    && child.inputLatchPolicy === "release-all"
-    && child.snapshot.tick === child.forkTick
-    && lineage.relation === "forked-at"
-    && lineage.parentId === child.sourceGhostId
-    && lineage.parentRootHash === child.sourceRootHash
-    && lineage.forkTick === child.forkTick;
+  return (
+    raw.rankedEligible === false &&
+    raw.leaderboardEligible === false &&
+    child.inputLatchPolicy === "release-all" &&
+    child.snapshot.tick === child.forkTick &&
+    lineage.relation === "forked-at" &&
+    lineage.parentId === child.sourceGhostId &&
+    lineage.parentRootHash === child.sourceRootHash &&
+    lineage.forkTick === child.forkTick
+  );
 }
 
 /**
@@ -41,7 +43,8 @@ export function launchGhostPracticeChild(
   child: GhostPracticeChild,
   port: GhostPracticeLaunchPort,
 ): GhostPracticeLaunchResult {
-  if (!validPracticeChild(child)) return Object.freeze({ ok: false, message: "Practice child failed custody validation." });
+  if (!validPracticeChild(child))
+    return Object.freeze({ ok: false, message: "Practice child failed custody validation." });
   const stateForge: TearLiveWorldAdapter<unknown> = {
     capture: () => port.stateForge.capture(),
     stage: (world, context) => port.stateForge.stage(world, context),
@@ -55,13 +58,18 @@ export function launchGhostPracticeChild(
   };
   port.practice.activate(child);
   const restored = restoreSnapshotIntoLiveWorld(
-    child.snapshot, port.registry, createLiveStateForgeRestoreFactory(port.registry), stateForge,
+    child.snapshot,
+    port.registry,
+    createLiveStateForgeRestoreFactory(port.registry),
+    stateForge,
     { capturePrevious: port.hasLiveWorld() },
   );
   if (!restored.ok) {
     port.practice.clear();
-    return Object.freeze({ ok: false,
-      message: `Practice restore failed during ${restored.phase}: ${restored.issues.map((issue) => issue.message).join("; ")}` });
+    return Object.freeze({
+      ok: false,
+      message: `Practice restore failed during ${restored.phase}: ${restored.issues.map((issue) => issue.message).join("; ")}`,
+    });
   }
   port.setPlaying();
   port.requestPointer();

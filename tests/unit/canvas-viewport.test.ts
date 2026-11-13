@@ -6,16 +6,27 @@ describe("CanvasViewport", () => {
     const listeners = new Map<string, EventListener>();
     const browserWindow = {
       devicePixelRatio: 2,
-      addEventListener: vi.fn((kind: string, listener: EventListener) => { listeners.set(kind, listener); }),
+      addEventListener: vi.fn((kind: string, listener: EventListener) => {
+        listeners.set(kind, listener);
+      }),
       removeEventListener: vi.fn(),
       getComputedStyle: vi.fn(),
     } as unknown as Window;
     const browserDocument = {
-      addEventListener: vi.fn(), removeEventListener: vi.fn(), getElementById: vi.fn(() => null),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      getElementById: vi.fn(() => null),
     } as unknown as Document;
     const canvas = { clientWidth: 800, clientHeight: 450, width: 0, height: 0 } as HTMLCanvasElement;
-    const viewport = new CanvasViewport(canvas, 1600, 900, { x: 0, y: 0 }, { l: 0, r: 0, t: 0, b: 0 },
-      browserWindow, browserDocument);
+    const viewport = new CanvasViewport(
+      canvas,
+      1600,
+      900,
+      { x: 0, y: 0 },
+      { l: 0, r: 0, t: 0, b: 0 },
+      browserWindow,
+      browserDocument,
+    );
 
     viewport.start();
     expect([canvas.width, canvas.height]).toEqual([1600, 900]);
@@ -33,21 +44,39 @@ describe("CanvasViewport", () => {
     let notify: ResizeObserverCallback | undefined;
     const browserWindow = {
       devicePixelRatio: 1,
-      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
       getComputedStyle: vi.fn(),
       ResizeObserver: class {
-        constructor(callback: ResizeObserverCallback) { notify = callback; }
-        observe(target: Element): void { observed = target; }
-        disconnect(): void { observed = undefined; }
-        unobserve(target: Element): void { if (observed === target) observed = undefined; }
+        constructor(callback: ResizeObserverCallback) {
+          notify = callback;
+        }
+        observe(target: Element): void {
+          observed = target;
+        }
+        disconnect(): void {
+          observed = undefined;
+        }
+        unobserve(target: Element): void {
+          if (observed === target) observed = undefined;
+        }
       },
     } as unknown as Window;
     const browserDocument = {
-      addEventListener: vi.fn(), removeEventListener: vi.fn(), getElementById: vi.fn(() => null),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      getElementById: vi.fn(() => null),
     } as unknown as Document;
     const canvas = { clientWidth: 800, clientHeight: 450, width: 0, height: 0 } as HTMLCanvasElement;
-    const viewport = new CanvasViewport(canvas, 1600, 900, { x: 0, y: 0 }, { l: 0, r: 0, t: 0, b: 0 },
-      browserWindow, browserDocument);
+    const viewport = new CanvasViewport(
+      canvas,
+      1600,
+      900,
+      { x: 0, y: 0 },
+      { l: 0, r: 0, t: 0, b: 0 },
+      browserWindow,
+      browserDocument,
+    );
 
     viewport.start();
     expect(observed).toBe(canvas);

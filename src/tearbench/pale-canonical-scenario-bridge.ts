@@ -18,10 +18,7 @@ export function paleCanonicalDocumentForScenario(id: string): TearSdlDocumentV1 
  * document is an explicit error, while ordinary scenarios retain the existing
  * natural live path.
  */
-export function launchCanonicalLiveScenario(
-  environment: TearClassARuntimeEnvironment,
-  scenario: TearScenarioV1,
-): void {
+export function launchCanonicalLiveScenario(environment: TearClassARuntimeEnvironment, scenario: TearScenarioV1): void {
   const document = paleCanonicalDocumentForScenario(scenario.id);
   if (document === undefined) {
     environment.reset(scenario);
@@ -39,7 +36,11 @@ export function launchCanonicalLiveScenario(
 export function assertPaleCanonicalStateForgeDocument(id: string, seed: string, stateClass?: string): void {
   const document = paleCanonicalDocumentForScenario(id);
   if (document === undefined) throw new RangeError(`unknown Pale canonical State Forge document: ${id}`);
-  if (document.id !== id || document.seed !== seed || (stateClass !== undefined && document.stateClass !== stateClass)) {
+  if (
+    document.id !== id ||
+    document.seed !== seed ||
+    (stateClass !== undefined && document.stateClass !== stateClass)
+  ) {
     throw new RangeError(`Pale canonical State Forge document ${id} has a mismatched seed or identity`);
   }
 }

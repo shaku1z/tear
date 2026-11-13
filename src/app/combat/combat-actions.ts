@@ -7,7 +7,12 @@ import type { CombatEntityRuntimeHooks } from "../../gameplay/combat/combat-enti
 import type { LiveOpeningPhaseHost } from "../../gameplay/combat/live-opening-phase";
 import type { LiveCollisionPhaseHost } from "../../gameplay/combat/live-collision-phase";
 import type { LiveKillHost } from "../../gameplay/combat/live-kill-runtime";
-import type { LiveCombatActionAdapters, LiveCombatActionContext, CombatEnemy, CombatProjectile } from "./combat-action-context";
+import type {
+  LiveCombatActionAdapters,
+  LiveCombatActionContext,
+  CombatEnemy,
+  CombatProjectile,
+} from "./combat-action-context";
 import type { LiveEnemy, LiveCollisionPhaseState } from "../../gameplay/combat/live-collision-phase";
 import type { ParryProjectile } from "../../gameplay/combat/blade-parry-runtime";
 
@@ -20,138 +25,394 @@ export function createLiveCombatActions<
   const { dependencies: d, live, ports } = context;
   const f = ports.functions;
   const profileStats = d.profileStatsPersistence;
-  const player = () => live.player(), blade = () => live.blade(), run = () => live.run();
-  const enemies = () => live.enemies(), projectiles = () => live.projectiles();
+  const player = () => live.player(),
+    blade = () => live.blade(),
+    run = () => live.run();
+  const enemies = () => live.enemies(),
+    projectiles = () => live.projectiles();
   const gameplay = createLiveCollisionGameplayBindings<LiveEnemy, unknown>({
-    run, blade, simulationSeconds: () => d.CLOCK.sim, makeEvent: f.makeEvent, dispatch: (name, event) => { f.fireMod(f.modHook(name), event); },
-    applySever: f.applySever, damageMultiplier: f.runDamageMultiplier, noteFirstDamage: f.noteFirstDamage,
-    emitThrowResolve: f.emitThrowResolve, maximumThrowSpeed: () => d.CONFIG.blade.throw.maxSpeed,
-    projectileSpeed: () => d.CONFIG.proj.speed, perfectColor: () => d.CONFIG.colors.perfect, clamp: d.clamp,
-    weaponEffect: (weaponId, effect) => { ports.tutorial.weaponEffect?.(weaponId, effect); },
-    presentAttack: (cue) => { context.attackPresentation.emit(cue); }, floater: f.addFloater,
-    log: f.logWeaponEvent, resolveKill: context.resolveKill,
+    run,
+    blade,
+    simulationSeconds: () => d.CLOCK.sim,
+    makeEvent: f.makeEvent,
+    dispatch: (name, event) => {
+      f.fireMod(f.modHook(name), event);
+    },
+    applySever: f.applySever,
+    damageMultiplier: f.runDamageMultiplier,
+    noteFirstDamage: f.noteFirstDamage,
+    emitThrowResolve: f.emitThrowResolve,
+    maximumThrowSpeed: () => d.CONFIG.blade.throw.maxSpeed,
+    projectileSpeed: () => d.CONFIG.proj.speed,
+    perfectColor: () => d.CONFIG.colors.perfect,
+    clamp: d.clamp,
+    weaponEffect: (weaponId, effect) => {
+      ports.tutorial.weaponEffect?.(weaponId, effect);
+    },
+    presentAttack: (cue) => {
+      context.attackPresentation.emit(cue);
+    },
+    floater: f.addFloater,
+    log: f.logWeaponEvent,
+    resolveKill: context.resolveKill,
   });
   const entities: CombatEntityRuntimeHooks = {
-    actors: enemies, projectiles, player,
-    slowZones: () => live.slowZones(), setSlowZones: (value) => { live.setSlowZones(value); },
-    walls: () => live.walls(), setWalls: (value) => { live.setWalls(value); }, platforms: () => ports.stage.platforms,
-    ring: (...args) => { d.FX.ring(...args); }, burst: (...args) => { d.FX.burst(...args); }, explode: (...args) => { d.FX.explode(...args); },
-    fxFlash: (...args) => { d.FX.flash(...args); }, floater: f.addFloater, shake: f.addShake, flash: f.addFlash,
-    sound: (cue) => { f.playSound(cue); }, loseStyle: f.loseStyle, shieldAbsorbed: f.onShieldAbsorb, addStyle: f.addStyle,
-    dashDodge: ports.achievement.dashDodge, maxStat: profileStats.max,
+    actors: enemies,
+    projectiles,
+    player,
+    slowZones: () => live.slowZones(),
+    setSlowZones: (value) => {
+      live.setSlowZones(value);
+    },
+    walls: () => live.walls(),
+    setWalls: (value) => {
+      live.setWalls(value);
+    },
+    platforms: () => ports.stage.platforms,
+    ring: (...args) => {
+      d.FX.ring(...args);
+    },
+    burst: (...args) => {
+      d.FX.burst(...args);
+    },
+    explode: (...args) => {
+      d.FX.explode(...args);
+    },
+    fxFlash: (...args) => {
+      d.FX.flash(...args);
+    },
+    floater: f.addFloater,
+    shake: f.addShake,
+    flash: f.addFlash,
+    sound: (cue) => {
+      f.playSound(cue);
+    },
+    loseStyle: f.loseStyle,
+    shieldAbsorbed: f.onShieldAbsorb,
+    addStyle: f.addStyle,
+    dashDodge: ports.achievement.dashDodge,
+    maxStat: profileStats.max,
     checkAchievements: f.checkAchievements,
     noteFirstDamage: f.entityNoteFirstDamage,
-    reflectedHit: (enemy, shot, source) => { gameplay.reflectedHit(enemy as Enemy, shot, source); },
-    weaponProjectileHit: (projectile, target, hit) => { gameplay.weaponProjectileHit(projectile, target as Enemy, hit); },
-    bossHit: f.entityBossHit, onKill: f.entityResolveKill,
+    reflectedHit: (enemy, shot, source) => {
+      gameplay.reflectedHit(enemy as Enemy, shot, source);
+    },
+    weaponProjectileHit: (projectile, target, hit) => {
+      gameplay.weaponProjectileHit(projectile, target as Enemy, hit);
+    },
+    bossHit: f.entityBossHit,
+    onKill: f.entityResolveKill,
     areaDamage: (x, y, radius, damage, playerOwned) => f.areaDamage(x, y, radius, damage, playerOwned),
   };
   const opening: Omit<LiveOpeningPhaseHost, "state"> = {
     config: d.CONFIG,
-    get player() { return player(); }, get blade() { return blade(); }, get run() { return run(); },
-    get enemies() { return enemies(); }, get projectiles() { return projectiles(); },
-    get platforms() { return ports.stage.platforms; }, width: context.width,
-    get blocking() { return ports.cinema.active && ports.cinema.blocksCombat; },
-    get playerMode() { return ports.cinema.playerMode; }, get protection() { return live.openingProtection(); },
-    get lowGraphics() { return d.GFX.low; },
-    get practicePreparing() { return ports.tutorial.preparingBoss === true; },
-    get transformationBlocked() { return ports.cinema.active && ports.cinema.blocksCombat; },
-    overrunMovementMultiplier: () => overrunMovementMultiplier({ overrun: run().mods.overrun ?? 0,
-      overrunStacks: run().mods.overrunStacks ?? 0 }, d.CONFIG.overrun),
-    runDamageMultiplier: f.runDamageMultiplier, stepCinematic: f.stepCinematic,
-    flushClosingInput() { d.Input.takeClick(); d.Input.tJump = false; },
+    get player() {
+      return player();
+    },
+    get blade() {
+      return blade();
+    },
+    get run() {
+      return run();
+    },
+    get enemies() {
+      return enemies();
+    },
+    get projectiles() {
+      return projectiles();
+    },
+    get platforms() {
+      return ports.stage.platforms;
+    },
+    width: context.width,
+    get blocking() {
+      return ports.cinema.active && ports.cinema.blocksCombat;
+    },
+    get playerMode() {
+      return ports.cinema.playerMode;
+    },
+    get protection() {
+      return live.openingProtection();
+    },
+    get lowGraphics() {
+      return d.GFX.low;
+    },
+    get practicePreparing() {
+      return ports.tutorial.preparingBoss === true;
+    },
+    get transformationBlocked() {
+      return ports.cinema.active && ports.cinema.blocksCombat;
+    },
+    overrunMovementMultiplier: () =>
+      overrunMovementMultiplier(
+        { overrun: run().mods.overrun ?? 0, overrunStacks: run().mods.overrunStacks ?? 0 },
+        d.CONFIG.overrun,
+      ),
+    runDamageMultiplier: f.runDamageMultiplier,
+    stepCinematic: f.stepCinematic,
+    flushClosingInput() {
+      d.Input.takeClick();
+      d.Input.tJump = false;
+    },
     updateWeaponAbilities: f.updateWeaponAbilities,
     flushWeaponActions(events) {
       for (const event of events) {
         if (event.type === "slingRelease") {
           ports.tutorial.weaponEffect?.("chainblade", "slingRelease");
-          context.attackPresentation.emit({ weaponId: "chainblade", attackId: event.attackId, throwId: event.throwId,
-            action: "secondary", phase: "return", variant: "sling", sourceX: event.sourceX, sourceY: event.sourceY,
-            x: event.x, y: event.y, directionX: event.vx, directionY: event.vy,
-            normalX: -event.vy, normalY: event.vx, material: "air",
-            intensity: d.clamp(Math.hypot(event.vx, event.vy) / Math.max(1, d.CONFIG.weapons.chainblade.maxReleaseSpeed), 0, 1) });
+          context.attackPresentation.emit({
+            weaponId: "chainblade",
+            attackId: event.attackId,
+            throwId: event.throwId,
+            action: "secondary",
+            phase: "return",
+            variant: "sling",
+            sourceX: event.sourceX,
+            sourceY: event.sourceY,
+            x: event.x,
+            y: event.y,
+            directionX: event.vx,
+            directionY: event.vy,
+            normalX: -event.vy,
+            normalY: event.vx,
+            material: "air",
+            intensity: d.clamp(
+              Math.hypot(event.vx, event.vy) / Math.max(1, d.CONFIG.weapons.chainblade.maxReleaseSpeed),
+              0,
+              1,
+            ),
+          });
           f.logWeaponEvent(event.type, { attackId: event.attackId, throwId: event.throwId });
           continue;
         }
         const shot = new d.Projectile(event.x, event.y, event.vx, event.vy);
-        shot.setFamily("weaponProjectile"); shot.playerOwned = true; shot.weaponId = "riftlock";
+        shot.setFamily("weaponProjectile");
+        shot.playerOwned = true;
+        shot.weaponId = "riftlock";
         bindRunDnaShot(shot, blade(), event.attackId, event.secondary, event.throwId);
         if (!event.secondary) runDnaObserver(blade())?.end(`shot:${String(event.attackId)}`);
-        shot.attackId = event.attackId; shot.throwId = event.throwId; shot.remote = event.remote;
-        shot.secondary = event.secondary; shot.kind = "razor"; shot.r = d.CONFIG.weapons.riftlock.razorRadius;
-        shot.life = d.CONFIG.weapons.riftlock.razorLife; shot.dmg = event.damage;
-        shot.tint = d.CONFIG.colors.perfect; shot.unparryable = true; shot.counterplay = "weapon";
+        shot.attackId = event.attackId;
+        shot.throwId = event.throwId;
+        shot.remote = event.remote;
+        shot.secondary = event.secondary;
+        shot.kind = "razor";
+        shot.r = d.CONFIG.weapons.riftlock.razorRadius;
+        shot.life = d.CONFIG.weapons.riftlock.razorLife;
+        shot.dmg = event.damage;
+        shot.tint = d.CONFIG.colors.perfect;
+        shot.unparryable = true;
+        shot.counterplay = "weapon";
         projectiles().push(shot as unknown as Projectile);
-        context.attackPresentation.emit({ weaponId: "riftlock", attackId: event.attackId, throwId: event.throwId,
-          action: "projectile", phase: "start", variant: event.secondary ? "backblastRound" : "razorRound",
-          sourceX: event.x, sourceY: event.y, x: event.x, y: event.y,
-          directionX: event.vx, directionY: event.vy, material: "air",
-          intensity: d.clamp(Math.hypot(event.vx, event.vy) / Math.max(1, d.CONFIG.proj.speed), 0, 1) });
-        f.logWeaponEvent(event.type, { attackId: event.attackId, throwId: event.throwId,
-          remote: event.remote, secondary: event.secondary });
+        context.attackPresentation.emit({
+          weaponId: "riftlock",
+          attackId: event.attackId,
+          throwId: event.throwId,
+          action: "projectile",
+          phase: "start",
+          variant: event.secondary ? "backblastRound" : "razorRound",
+          sourceX: event.x,
+          sourceY: event.y,
+          x: event.x,
+          y: event.y,
+          directionX: event.vx,
+          directionY: event.vy,
+          material: "air",
+          intensity: d.clamp(Math.hypot(event.vx, event.vy) / Math.max(1, d.CONFIG.proj.speed), 0, 1),
+        });
+        f.logWeaponEvent(event.type, {
+          attackId: event.attackId,
+          throwId: event.throwId,
+          remote: event.remote,
+          secondary: event.secondary,
+        });
       }
     },
-    updateWorldHazards: (seconds) => { updateWorldHazards(context, seconds); },
-    syncVoidSupport: f.syncVoidSupport, activateThrowSecondary: f.activateThrowSecondary,
+    updateWorldHazards: (seconds) => {
+      updateWorldHazards(context, seconds);
+    },
+    syncVoidSupport: f.syncVoidSupport,
+    activateThrowSecondary: f.activateThrowSecondary,
     linkBroken(reason) {
       d.FX.ring(blade().tipX, blade().tipY, 8, d.CONFIG.colors.bladeTrail);
-      f.addFloater(blade().tipX, blade().tipY - 22, reason === "range" ? "LINK RANGE" : "LINK LOST", false, d.CONFIG.colors.bladeTrail);
+      f.addFloater(
+        blade().tipX,
+        blade().tipY - 22,
+        reason === "range" ? "LINK RANGE" : "LINK LOST",
+        false,
+        d.CONFIG.colors.bladeTrail,
+      );
     },
-    distance: (ax, ay, bx, by) => d.len(ax - bx, ay - by), areaDamage: f.areaDamage,
-    ring(x, y, radius, color) { d.FX.ring(x, y, radius, resolveColor(d, color)); },
-    burst(x, y, dx, dy, count, color) { d.FX.burst(x, y, dx, dy, count, resolveColor(d, color)); },
-    floater(x, y, text, big, color) { f.addFloater(x, y, text, big, color === undefined ? undefined : resolveColor(d, color)); },
-    shake: (big) => { f.addShake(big ? d.CONFIG.juice.shakeBig : d.CONFIG.juice.shakeSmall); },
-    sound: (name, speed) => { f.playSound(name, speed); },
-    ghost: (x, y, hw, hh, color) => { d.FX.ghost(x, y, hw, hh, color === "slam" ? d.CONFIG.colors.slam : undefined); },
-    ember: (x, y) => { d.FX.ember(x, y); }, smoke: (x, y) => { d.FX.smoke(x, y); }, drip: (x, y) => { d.FX.drip(x, y); },
-    overlap: (actor, enemy, padding) => d.aabbOverlap(actor.x, actor.y, actor.hw + (padding ?? 0), actor.hh + (padding ?? 0), enemy.x, enemy.y, enemy.hw, enemy.hh),
-    styleHit: () => { f.addStyle("hit"); }, onKill: context.resolveKill,
+    distance: (ax, ay, bx, by) => d.len(ax - bx, ay - by),
+    areaDamage: f.areaDamage,
+    ring(x, y, radius, color) {
+      d.FX.ring(x, y, radius, resolveColor(d, color));
+    },
+    burst(x, y, dx, dy, count, color) {
+      d.FX.burst(x, y, dx, dy, count, resolveColor(d, color));
+    },
+    floater(x, y, text, big, color) {
+      f.addFloater(x, y, text, big, color === undefined ? undefined : resolveColor(d, color));
+    },
+    shake: (big) => {
+      f.addShake(big ? d.CONFIG.juice.shakeBig : d.CONFIG.juice.shakeSmall);
+    },
+    sound: (name, speed) => {
+      f.playSound(name, speed);
+    },
+    ghost: (x, y, hw, hh, color) => {
+      d.FX.ghost(x, y, hw, hh, color === "slam" ? d.CONFIG.colors.slam : undefined);
+    },
+    ember: (x, y) => {
+      d.FX.ember(x, y);
+    },
+    smoke: (x, y) => {
+      d.FX.smoke(x, y);
+    },
+    drip: (x, y) => {
+      d.FX.drip(x, y);
+    },
+    overlap: (actor, enemy, padding) =>
+      d.aabbOverlap(
+        actor.x,
+        actor.y,
+        actor.hw + (padding ?? 0),
+        actor.hh + (padding ?? 0),
+        enemy.x,
+        enemy.y,
+        enemy.hw,
+        enemy.hh,
+      ),
+    styleHit: () => {
+      f.addStyle("hit");
+    },
+    onKill: context.resolveKill,
     fireDashStart() {
       f.playSound("dash");
-      f.fireMod(f.modHook("onDashStart"), f.makeEvent(player().x, player().y, null, "dash",
-        { type: "dashStart", dx: player().dashX, dy: player().dashY }));
+      f.fireMod(
+        f.modHook("onDashStart"),
+        f.makeEvent(player().x, player().y, null, "dash", {
+          type: "dashStart",
+          dx: player().dashX,
+          dy: player().dashY,
+        }),
+      );
       d.FX.burst(player().x, player().y, -player().dashX, -player().dashY, 6, d.CONFIG.colors.perfect);
       if (!d.GFX.low) d.FX.ring(player().x, player().y, 7, d.CONFIG.colors.perfect);
     },
-    fireDashContact(enemy) { f.fireMod(f.modHook("onDashContact"), f.makeEvent(enemy.x, enemy.y, enemy, "dash",
-      { type: "dashContact", dx: player().dashX, dy: player().dashY })); },
+    fireDashContact(enemy) {
+      f.fireMod(
+        f.modHook("onDashContact"),
+        f.makeEvent(enemy.x, enemy.y, enemy, "dash", { type: "dashContact", dx: player().dashX, dy: player().dashY }),
+      );
+    },
     fireWeaponCatch() {
-      const activeBlade = blade(), activeRun = run();
-      d.GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "catch", weaponId: activeRun.weaponId,
-        throwId: activeBlade.throwId, x: player().x, y: player().y });
-      f.fireMod(f.modHook("onWeaponCatch"), f.makeEvent(player().x, player().y, null, "catch",
-        { type: "weaponCatch", throwId: activeBlade.throwId, weaponId: activeRun.weaponId }));
+      const activeBlade = blade(),
+        activeRun = run();
+      d.GAMEPLAY_EVENTS.emit({
+        kind: "weapon",
+        event: "catch",
+        weaponId: activeRun.weaponId,
+        throwId: activeBlade.throwId,
+        x: player().x,
+        y: player().y,
+      });
+      f.fireMod(
+        f.modHook("onWeaponCatch"),
+        f.makeEvent(player().x, player().y, null, "catch", {
+          type: "weaponCatch",
+          throwId: activeBlade.throwId,
+          weaponId: activeRun.weaponId,
+        }),
+      );
     },
     fireThrowLaunch(throwId) {
-      const activeBlade = blade(), activeRun = run();
-      d.GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "throw-launch", weaponId: activeRun.weaponId,
-        throwId, x: activeBlade.x, y: activeBlade.y });
-      f.fireMod(f.modHook("onThrowLaunch"), f.makeEvent(activeBlade.x, activeBlade.y, null, "throw",
-        { type: "throwLaunch", throwId, weaponId: activeRun.weaponId, attackId: activeBlade.attackId }));
+      const activeBlade = blade(),
+        activeRun = run();
+      d.GAMEPLAY_EVENTS.emit({
+        kind: "weapon",
+        event: "throw-launch",
+        weaponId: activeRun.weaponId,
+        throwId,
+        x: activeBlade.x,
+        y: activeBlade.y,
+      });
+      f.fireMod(
+        f.modHook("onThrowLaunch"),
+        f.makeEvent(activeBlade.x, activeBlade.y, null, "throw", {
+          type: "throwLaunch",
+          throwId,
+          weaponId: activeRun.weaponId,
+          attackId: activeBlade.attackId,
+        }),
+      );
     },
-    observeTutorialAttempt: (fact) => { f.observeTutorialAttempt?.(fact); },
-    logThrowLaunch: (throwId) => { f.logWeaponEvent("throwLaunch", { throwId }); },
+    observeTutorialAttempt: (fact) => {
+      f.observeTutorialAttempt?.(fact);
+    },
+    logThrowLaunch: (throwId) => {
+      f.logWeaponEvent("throwLaunch", { throwId });
+    },
     weaponWorldImpact() {
-      const effect = f.weaponWorldImpact(), activeBlade = blade(), weaponId = run().weaponId;
-      if (effect?.mechanic === "meteor" && weaponId === "hammer" || effect?.mechanic === "wheelCut" && weaponId === "greatsword") {
-        context.attackPresentation.emit({ weaponId, attackId: activeBlade.attackId, swingId: activeBlade.swingId,
-          throwId: activeBlade.throwId, action: "impact", phase: "impact", variant: effect.mechanic,
-          sourceX: activeBlade.throwOrigin?.x ?? activeBlade.x, sourceY: activeBlade.throwOrigin?.y ?? activeBlade.y,
-          x: activeBlade.x, y: activeBlade.y, directionX: activeBlade.impactVX ?? activeBlade.vx,
+      const effect = f.weaponWorldImpact(),
+        activeBlade = blade(),
+        weaponId = run().weaponId;
+      if (
+        (effect?.mechanic === "meteor" && weaponId === "hammer") ||
+        (effect?.mechanic === "wheelCut" && weaponId === "greatsword")
+      ) {
+        context.attackPresentation.emit({
+          weaponId,
+          attackId: activeBlade.attackId,
+          swingId: activeBlade.swingId,
+          throwId: activeBlade.throwId,
+          action: "impact",
+          phase: "impact",
+          variant: effect.mechanic,
+          sourceX: activeBlade.throwOrigin?.x ?? activeBlade.x,
+          sourceY: activeBlade.throwOrigin?.y ?? activeBlade.y,
+          x: activeBlade.x,
+          y: activeBlade.y,
+          directionX: activeBlade.impactVX ?? activeBlade.vx,
           directionY: activeBlade.impactVY ?? activeBlade.vy,
-          normalX: 0, normalY: -1, material: "stone",
-          intensity: d.clamp(d.len(activeBlade.impactVX ?? activeBlade.vx, activeBlade.impactVY ?? activeBlade.vy)
-            / Math.max(1, d.CONFIG.blade.throw.maxSpeed), 0, 1) });
+          normalX: 0,
+          normalY: -1,
+          material: "stone",
+          intensity: d.clamp(
+            d.len(activeBlade.impactVX ?? activeBlade.vx, activeBlade.impactVY ?? activeBlade.vy) /
+              Math.max(1, d.CONFIG.blade.throw.maxSpeed),
+            0,
+            1,
+          ),
+        });
       }
       return effect;
-    }, lobExplode: () => { f.lobExplode(blade().x, blade().y); },
-    emitThrowResolve: () => { f.emitThrowResolve(null, blade().throwDmg); }, nearestEnemy: () => f.openingNearestEnemy(),
-    updateFeedback: (seconds) => { updateRuntimeFeedback(context, seconds); }, consumeThrow: f.consumeThrow, updateWave: f.updateWave,
-    startTransformation: f.startTransformation, updateSupports: (seconds) => { updateSupports(context, seconds); },
-    armorBypass() { if (f.achievementsEnabled()) profileStats.max("armorBypassKills", 1); },
-    resolveBossZones: () => { resolveBossZones(context); }, updateBossArenaPlatforms: f.updateBossArenaPlatforms, updateVoidScroll: f.updateVoidScroll,
-    unlockWitness() { if (f.achievementsEnabled()) d.ACH.unlock("witness"); },
+    },
+    lobExplode: () => {
+      f.lobExplode(blade().x, blade().y);
+    },
+    emitThrowResolve: () => {
+      f.emitThrowResolve(null, blade().throwDmg);
+    },
+    nearestEnemy: () => f.openingNearestEnemy(),
+    updateFeedback: (seconds) => {
+      updateRuntimeFeedback(context, seconds);
+    },
+    consumeThrow: f.consumeThrow,
+    updateWave: f.updateWave,
+    startTransformation: f.startTransformation,
+    updateSupports: (seconds) => {
+      updateSupports(context, seconds);
+    },
+    armorBypass() {
+      if (f.achievementsEnabled()) profileStats.max("armorBypassKills", 1);
+    },
+    resolveBossZones: () => {
+      resolveBossZones(context);
+    },
+    updateBossArenaPlatforms: f.updateBossArenaPlatforms,
+    updateVoidScroll: f.updateVoidScroll,
+    unlockWitness() {
+      if (f.achievementsEnabled()) d.ACH.unlock("witness");
+    },
     startVoidDescent: f.startVoidDescent,
     spawnBossAdds(boss) {
       const adds: Enemy[] = [];
@@ -159,11 +420,23 @@ export function createLiveCombatActions<
       const bossId = owner.bossId ?? owner.presentationId ?? owner.kind;
       if (bossId === undefined) throw new Error("boss support requires an authoritative parent boss identity");
       for (let offset = -1; offset <= 1; offset += 2) {
-        const add = f.createCharger(d.clamp(boss.x + offset * 130, 60, context.width - 60), d.CONFIG.world.groundY - 22);
-        add.behavior = "bull"; add.hp *= 2.2; add.maxHp = add.hp; add.hpDisplay = add.hp;
-        add.speedMult *= 1.35; add.contactDmg *= 1.3; add.canClimb = true; add.climber = true; add.climbApt = 0.85; add.spawnT = 0.35;
+        const add = f.createCharger(
+          d.clamp(boss.x + offset * 130, 60, context.width - 60),
+          d.CONFIG.world.groundY - 22,
+        );
+        add.behavior = "bull";
+        add.hp *= 2.2;
+        add.maxHp = add.hp;
+        add.hpDisplay = add.hp;
+        add.speedMult *= 1.35;
+        add.contactDmg *= 1.3;
+        add.canClimb = true;
+        add.climber = true;
+        add.climbApt = 0.85;
+        add.spawnT = 0.35;
         f.recordBossSupportSpawn(add, bossId);
-        enemies().push(add); adds.push(add);
+        enemies().push(add);
+        adds.push(add);
       }
       return adds;
     },
@@ -171,35 +444,62 @@ export function createLiveCombatActions<
       const owner = boss as typeof boss & { bossId?: string; presentationId?: string };
       const bossId = owner.bossId ?? owner.presentationId ?? owner.kind;
       if (bossId === undefined) throw new Error("boss clone requires an authoritative parent boss identity");
-      const clone = f.createReflection(d.clamp(boss.x - boss.facing * 220, 100, context.width - 100), d.CONFIG.world.groundY - 300);
-      clone.spawnT = 0.3; f.recordBossSupportSpawn(clone, bossId);
-      enemies().push(clone); f.addFloater(boss.x, boss.y - 70, "SPLIT", true, clone.color);
+      const clone = f.createReflection(
+        d.clamp(boss.x - boss.facing * 220, 100, context.width - 100),
+        d.CONFIG.world.groundY - 300,
+      );
+      clone.spawnT = 0.3;
+      f.recordBossSupportSpawn(clone, bossId);
+      enemies().push(clone);
+      f.addFloater(boss.x, boss.y - 70, "SPLIT", true, clone.color);
     },
-    removeBossClone: (clone) => { d.FX.ghost(clone.x, clone.y, clone.hw, clone.hh); },
-    dramaticBeat() { f.addShake(d.CONFIG.juice.shakeBig); f.addFlash(d.CONFIG.juice.flashParry); },
+    removeBossClone: (clone) => {
+      d.FX.ghost(clone.x, clone.y, clone.hw, clone.hh);
+    },
+    dramaticBeat() {
+      f.addShake(d.CONFIG.juice.shakeBig);
+      f.addFlash(d.CONFIG.juice.flashParry);
+    },
     onBladeStolen(enemy) {
       f.logWeaponEvent("stolenBlade", { enemyKind: enemy.kind });
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "stolenBlade", x: enemy.x, y: enemy.y });
     },
-    updateEffects: (seconds) => { d.FX.update(seconds); }, random: d.cosmeticEmissionRandom.next,
+    updateEffects: (seconds) => {
+      d.FX.update(seconds);
+    },
+    random: d.cosmeticEmissionRandom.next,
   };
   return { entities, opening, collision: createCollision(context, gameplay), kill: createKill(context) };
 }
 
-function createCollision(context: LiveCombatActionContext, gameplay: ReturnType<typeof createLiveCollisionGameplayBindings<LiveEnemy, unknown>>): Omit<LiveCollisionPhaseHost, "state" | "combat"> {
-  const { dependencies: d, live, ports } = context, f = ports.functions;
+function createCollision(
+  context: LiveCombatActionContext,
+  gameplay: ReturnType<typeof createLiveCollisionGameplayBindings<LiveEnemy, unknown>>,
+): Omit<LiveCollisionPhaseHost, "state" | "combat"> {
+  const { dependencies: d, live, ports } = context,
+    f = ports.functions;
   const profileStats = d.profileStatsPersistence;
-  const seenProjectiles = new WeakSet(), terminalProjectiles = new WeakSet();
-  const emitProjectile = (event: "spawned" | "deflected" | "owner-changed" | "hit" | "expired", shot: ParryProjectile,
-    target?: LiveCollisionPhaseState["enemies"][number]): void => {
+  const seenProjectiles = new WeakSet(),
+    terminalProjectiles = new WeakSet();
+  const emitProjectile = (
+    event: "spawned" | "deflected" | "owner-changed" | "hit" | "expired",
+    shot: ParryProjectile,
+    target?: LiveCollisionPhaseState["enemies"][number],
+  ): void => {
     if (event === "expired") {
       if (terminalProjectiles.has(shot)) return;
       terminalProjectiles.add(shot);
     }
     const runtime = context.combatRuntime();
     const source = shot.sourceEnemy ?? shot.owner;
-    d.GAMEPLAY_EVENTS.emit({ kind: "projectile", event, projectileId: runtime.id(shot, "projectile"),
-      x: shot.x, y: shot.y, vx: shot.vx, vy: shot.vy,
+    d.GAMEPLAY_EVENTS.emit({
+      kind: "projectile",
+      event,
+      projectileId: runtime.id(shot, "projectile"),
+      x: shot.x,
+      y: shot.y,
+      vx: shot.vx,
+      vy: shot.vy,
       owner: shot.deflected || Reflect.get(shot, "playerOwned") === true ? "player" : "enemy",
       ...(source && typeof source === "object" ? { sourceEnemyId: runtime.id(source, "enemy") } : {}),
       ...(target ? { targetEnemyId: runtime.id(target, "enemy") } : {}),
@@ -211,89 +511,262 @@ function createCollision(context: LiveCombatActionContext, gameplay: ReturnType<
     reducedMotion: () => d.A11Y.reducedMotion,
     environment: context.environment,
     environmentTick: gameplay.environmentTick,
-    get player() { return live.player(); }, get blade() { return live.blade(); }, get run() { return live.run(); }, width: context.width,
-    weaponHit: (enemy, quality, damage, slam, launch, empowered) => f.weaponHook("onHeldHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }),
-    throwHit: (enemy, secondary, throwId) => f.weaponHook("onThrowHit", { config: d.CONFIG, blade: live.blade(), player: live.player(), enemy, secondary, throwId }),
-    runDamageMultiplier: f.runDamageMultiplier, noteFirstDamage: f.noteFirstDamage, observeTutorialAttempt: (fact) => { f.observeTutorialAttempt?.(fact); }, logWeapon: f.logWeapon,
-    weaponEffect: (weaponId, effect) => { ports.tutorial.weaponEffect?.(weaponId, effect); },
-    emitThrowResolve: f.emitThrowResolve, onKill: context.resolveKill,
-    addFloater: f.addFloater, addShake: f.addShake, addZoom: f.addZoom, addFlash: f.addFlash, addStyle: f.addStyle,
-    effects: { burst: (...args) => { d.FX.burst(...args); }, ring: (...args) => { d.FX.ring(...args); }, flash: (...args) => { d.FX.flash(...args); },
-      ribbon: (...args) => { d.FX.ribbon(...args); }, explode: (...args) => { d.FX.explode(...args); }, floater: f.addFloater,
-      shake: f.addShake, zoom: f.addZoom, buzz: (milliseconds) => { d.Input.buzz(milliseconds); },
-      sound: (name, big) => { f.playSound(name, big); }, style: f.addStyle, tutorial: (name) => { ports.tutorial.mark(name); },
-      presentAttack: (cue) => { context.attackPresentation.emit(cue); } },
-    sound: (cue, big) => { f.playSound(cue, big); }, flare: (...args) => { d.Backdrop.flare(...args); },
-    segmentCircle: d.segCircle, segmentPointDistance: d.segPointDist,
+    get player() {
+      return live.player();
+    },
+    get blade() {
+      return live.blade();
+    },
+    get run() {
+      return live.run();
+    },
+    width: context.width,
+    weaponHit: (enemy, quality, damage, slam, launch, empowered) =>
+      f.weaponHook("onHeldHit", {
+        config: d.CONFIG,
+        blade: live.blade(),
+        player: live.player(),
+        enemy,
+        quality,
+        damage,
+        isSlam: slam,
+        isLaunch: launch,
+        empowered,
+      }),
+    throwHit: (enemy, secondary, throwId) =>
+      f.weaponHook("onThrowHit", {
+        config: d.CONFIG,
+        blade: live.blade(),
+        player: live.player(),
+        enemy,
+        secondary,
+        throwId,
+      }),
+    runDamageMultiplier: f.runDamageMultiplier,
+    noteFirstDamage: f.noteFirstDamage,
+    observeTutorialAttempt: (fact) => {
+      f.observeTutorialAttempt?.(fact);
+    },
+    logWeapon: f.logWeapon,
+    weaponEffect: (weaponId, effect) => {
+      ports.tutorial.weaponEffect?.(weaponId, effect);
+    },
+    emitThrowResolve: f.emitThrowResolve,
+    onKill: context.resolveKill,
+    addFloater: f.addFloater,
+    addShake: f.addShake,
+    addZoom: f.addZoom,
+    addFlash: f.addFlash,
+    addStyle: f.addStyle,
+    effects: {
+      burst: (...args) => {
+        d.FX.burst(...args);
+      },
+      ring: (...args) => {
+        d.FX.ring(...args);
+      },
+      flash: (...args) => {
+        d.FX.flash(...args);
+      },
+      ribbon: (...args) => {
+        d.FX.ribbon(...args);
+      },
+      explode: (...args) => {
+        d.FX.explode(...args);
+      },
+      floater: f.addFloater,
+      shake: f.addShake,
+      zoom: f.addZoom,
+      buzz: (milliseconds) => {
+        d.Input.buzz(milliseconds);
+      },
+      sound: (name, big) => {
+        f.playSound(name, big);
+      },
+      style: f.addStyle,
+      tutorial: (name) => {
+        ports.tutorial.mark(name);
+      },
+      presentAttack: (cue) => {
+        context.attackPresentation.emit(cue);
+      },
+    },
+    sound: (cue, big) => {
+      f.playSound(cue, big);
+    },
+    flare: (...args) => {
+      d.Backdrop.flare(...args);
+    },
+    segmentCircle: d.segCircle,
+    segmentPointDistance: d.segPointDist,
     weaponSegmentContact: f.weaponSegmentContact,
-    distance: d.len, clamp: d.clamp, lerp: d.lerp, nearestEnemy: f.nearestEnemy, areaDamage: f.areaDamage,
-    lobExplode: f.lobExplode, splitProjectile: f.splitProjectile, triggerSlowMotion: f.triggerSlowMotion,
-    emitPerfectParry: () => { context.emitMusicEvent("perfect-parry", { weaponId: live.run().weaponId }); },
-    makeHitEvent: gameplay.makeHitEvent, makeSwingEvent: gameplay.makeSwingEvent,
+    distance: d.len,
+    clamp: d.clamp,
+    lerp: d.lerp,
+    nearestEnemy: f.nearestEnemy,
+    areaDamage: f.areaDamage,
+    lobExplode: f.lobExplode,
+    splitProjectile: f.splitProjectile,
+    triggerSlowMotion: f.triggerSlowMotion,
+    emitPerfectParry: () => {
+      context.emitMusicEvent("perfect-parry", { weaponId: live.run().weaponId });
+    },
+    makeHitEvent: gameplay.makeHitEvent,
+    makeSwingEvent: gameplay.makeSwingEvent,
     observeProjectile: (shot) => {
       if (seenProjectiles.has(shot)) return;
-      seenProjectiles.add(shot); emitProjectile("spawned", shot);
+      seenProjectiles.add(shot);
+      emitProjectile("spawned", shot);
     },
-    projectileDeflected: (shot) => { emitProjectile("deflected", shot); emitProjectile("owner-changed", shot); },
-    projectileHit: (shot, enemy) => { emitProjectile("hit", shot, enemy); },
-    projectileExpired: (shot) => { emitProjectile("expired", shot); },
-    makeSlamEvent: gameplay.makeSlamEvent, makeReturnEvent: gameplay.makeReturnEvent,
+    projectileDeflected: (shot) => {
+      emitProjectile("deflected", shot);
+      emitProjectile("owner-changed", shot);
+    },
+    projectileHit: (shot, enemy) => {
+      emitProjectile("hit", shot, enemy);
+    },
+    projectileExpired: (shot) => {
+      emitProjectile("expired", shot);
+    },
+    makeSlamEvent: gameplay.makeSlamEvent,
+    makeReturnEvent: gameplay.makeReturnEvent,
     makePerfectParryEvent: gameplay.makePerfectParryEvent,
-    profileAdd: profileStats.add, profileMax: profileStats.max,
-    dailyBump: (name, value) => { d.DAILY.bump(name, value); }, achievementsEnabled: f.achievementsEnabled,
-    achievement(name, enemy) { if (name === "swing") { if (enemy) ports.achievement.bossHit(enemy, "melee"); else ports.achievement.swung(); }
-      else if (name === "throw") { ports.achievement.thrown(); if (enemy) ports.achievement.bossHit(enemy, "throw"); }
-      else if (name === "parry") ports.achievement.parry(); else if (name === "break") ports.achievement.breakStreak();
-      else if (name === "jump") ports.achievement.jumped(); else ports.achievement.revived(); },
-    checkAchievements: f.checkAchievements, tutorialMark: (name) => { ports.tutorial.mark(name); },
-    enemyDefeated: f.enemyDefeated, ghostRecording: () => d.GHOST.recording(), ghostSample: f.ghostSample,
+    profileAdd: profileStats.add,
+    profileMax: profileStats.max,
+    dailyBump: (name, value) => {
+      d.DAILY.bump(name, value);
+    },
+    achievementsEnabled: f.achievementsEnabled,
+    achievement(name, enemy) {
+      if (name === "swing") {
+        if (enemy) ports.achievement.bossHit(enemy, "melee");
+        else ports.achievement.swung();
+      } else if (name === "throw") {
+        ports.achievement.thrown();
+        if (enemy) ports.achievement.bossHit(enemy, "throw");
+      } else if (name === "parry") ports.achievement.parry();
+      else if (name === "break") ports.achievement.breakStreak();
+      else if (name === "jump") ports.achievement.jumped();
+      else ports.achievement.revived();
+    },
+    checkAchievements: f.checkAchievements,
+    tutorialMark: (name) => {
+      ports.tutorial.mark(name);
+    },
+    enemyDefeated: f.enemyDefeated,
+    ghostRecording: () => d.GHOST.recording(),
+    ghostSample: f.ghostSample,
     ghostRevive: () => {
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "revive", x: live.player().x, y: live.player().y });
-    }, updateTrick: f.updateTrick,
-    achievementTick: (seconds) => { ports.achievement.tick(seconds); }, updateTutorial: (seconds) => { ports.tutorial.update(seconds); },
-    updatePlayground: f.updatePlayground, overlap: d.aabbOverlap, onShieldAbsorb: f.onShieldAbsorb,
-    loseStyle: f.loseStyle, buzz: (milliseconds) => { d.Input.buzz(milliseconds); }, requestAdContinue: context.requestContinue,
-    adAvailable: () => d.CG.adsAvailable(), endRun: f.endRun,
+    },
+    updateTrick: f.updateTrick,
+    achievementTick: (seconds) => {
+      ports.achievement.tick(seconds);
+    },
+    updateTutorial: (seconds) => {
+      ports.tutorial.update(seconds);
+    },
+    updatePlayground: f.updatePlayground,
+    overlap: d.aabbOverlap,
+    onShieldAbsorb: f.onShieldAbsorb,
+    loseStyle: f.loseStyle,
+    buzz: (milliseconds) => {
+      d.Input.buzz(milliseconds);
+    },
+    requestAdContinue: context.requestContinue,
+    adAvailable: () => d.CG.adsAvailable(),
+    endRun: f.endRun,
   };
 }
 
 function createKill(context: LiveCombatActionContext): LiveKillHost {
-  const { dependencies: d, live, ports } = context, f = ports.functions;
+  const { dependencies: d, live, ports } = context,
+    f = ports.functions;
   const profileStats = d.profileStatsPersistence;
   return {
     config: d.CONFIG,
-    enemies: () => live.enemies(), projectiles: () => live.projectiles(), run: () => live.run(), player: () => live.player(), now: () => d.CLOCK.sim,
-    stageIndex: () => ports.stage.index, finalStageIndex: d.STAGES.length - 1,
-    stageAccent: () => ports.stage.current.accent ?? "#ffffff", stageChapterBossOutro: () => ports.stage.current.chapter?.bossOutro ?? null,
-    hasStageChapter: () => !!ports.stage.current.chapter, bossRosterSize: context.bossRosterSize, achievementsEnabled: f.achievementsEnabled,
-    addKillScore: f.addKillScore, addStat: profileStats.add,
-    maxStat: profileStats.max, bumpDaily: (name: string, value: number) => { d.DAILY.bump(name, value); },
-    bossKillAchievement: (enemy) => { ports.achievement.bossKill(enemy); },
-    killAchievement: (enemy) => { ports.achievement.onKill(enemy); }, checkAchievements: f.checkAchievements,
+    enemies: () => live.enemies(),
+    projectiles: () => live.projectiles(),
+    run: () => live.run(),
+    player: () => live.player(),
+    now: () => d.CLOCK.sim,
+    stageIndex: () => ports.stage.index,
+    finalStageIndex: d.STAGES.length - 1,
+    stageAccent: () => ports.stage.current.accent ?? "#ffffff",
+    stageChapterBossOutro: () => ports.stage.current.chapter?.bossOutro ?? null,
+    hasStageChapter: () => !!ports.stage.current.chapter,
+    bossRosterSize: context.bossRosterSize,
+    achievementsEnabled: f.achievementsEnabled,
+    addKillScore: f.addKillScore,
+    addStat: profileStats.add,
+    maxStat: profileStats.max,
+    bumpDaily: (name: string, value: number) => {
+      d.DAILY.bump(name, value);
+    },
+    bossKillAchievement: (enemy) => {
+      ports.achievement.bossKill(enemy);
+    },
+    killAchievement: (enemy) => {
+      ports.achievement.onKill(enemy);
+    },
+    checkAchievements: f.checkAchievements,
     bossGhostMoment: (enemy) => {
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: "bossKill", x: enemy.x, y: enemy.y });
       d.GHOST.snapshot(context.canvas, 4);
     },
-    deathEffect: (enemy, shards) => { d.FX.death(enemy.x, enemy.y, shards, enemy.color); }, deathSound: () => { f.playSound("death"); },
-    makeDeathEvent: (enemy, cause, clean) => f.makeEvent(enemy.x, enemy.y, enemy, cause,
-      { cleanElimination: clean, addOverrunStack: f.addOverrunStack }),
-    fire: f.fire, applySever: f.applySever, ring: (x: number, y: number, radius: number, color: string) => { d.FX.ring(x, y, radius, color); },
+    deathEffect: (enemy, shards) => {
+      d.FX.death(enemy.x, enemy.y, shards, enemy.color);
+    },
+    deathSound: () => {
+      f.playSound("death");
+    },
+    makeDeathEvent: (enemy, cause, clean) =>
+      f.makeEvent(enemy.x, enemy.y, enemy, cause, { cleanElimination: clean, addOverrunStack: f.addOverrunStack }),
+    fire: f.fire,
+    applySever: f.applySever,
+    ring: (x: number, y: number, radius: number, color: string) => {
+      d.FX.ring(x, y, radius, color);
+    },
     restorePlatforms: f.restorePlatforms,
-    releaseCamera: context.releaseCamera, happyTime: () => { d.CG.happytime(); },
-    bossPresentation: (enemy, accent) => { d.Backdrop.bloom("#ffffff", 0.22, 0.9); d.Backdrop.flare(enemy.x, enemy.y, accent, 520, 1); d.FX.explode(enemy.x, enemy.y, enemy.color, 2.2); d.FX.explode(enemy.x, enemy.y - 20, accent, 1.4); f.addShake(d.CONFIG.juice.shakeBig * 1.5); f.addZoom(d.CONFIG.juice.zoomBig); f.triggerSlowMotion(); d.Input.buzz([30, 40, 60]); },
-    releaseStolenBlade: (enemy) => { const weapon = live.blade(); if (weapon.stolenBy === enemy) { weapon.hostile = false; weapon.stolenBy = null; weapon.state = "returning"; } },
+    releaseCamera: context.releaseCamera,
+    happyTime: () => {
+      d.CG.happytime();
+    },
+    bossPresentation: (enemy, accent) => {
+      d.Backdrop.bloom("#ffffff", 0.22, 0.9);
+      d.Backdrop.flare(enemy.x, enemy.y, accent, 520, 1);
+      d.FX.explode(enemy.x, enemy.y, enemy.color, 2.2);
+      d.FX.explode(enemy.x, enemy.y - 20, accent, 1.4);
+      f.addShake(d.CONFIG.juice.shakeBig * 1.5);
+      f.addZoom(d.CONFIG.juice.zoomBig);
+      f.triggerSlowMotion();
+      d.Input.buzz([30, 40, 60]);
+    },
+    releaseStolenBlade: (enemy) => {
+      const weapon = live.blade();
+      if (weapon.stolenBy === enemy) {
+        weapon.hostile = false;
+        weapon.stolenBy = null;
+        weapon.state = "returning";
+      }
+    },
   };
 }
 
 function resolveColor(d: LiveCombatActionContext["dependencies"], color?: string): string {
-  if (color === "perfect") return d.CONFIG.colors.perfect; if (color === "slam") return d.CONFIG.colors.slam;
-  if (color === "ink") return d.THEME.ink; if (color === "bladeTrail") return d.CONFIG.colors.bladeTrail;
-  if (color === "reform") return "#c9ccd6"; if (color === "charger") return d.CONFIG.colors.charger;
+  if (color === "perfect") return d.CONFIG.colors.perfect;
+  if (color === "slam") return d.CONFIG.colors.slam;
+  if (color === "ink") return d.THEME.ink;
+  if (color === "bladeTrail") return d.CONFIG.colors.bladeTrail;
+  if (color === "reform") return "#c9ccd6";
+  if (color === "charger") return d.CONFIG.colors.charger;
   return color ?? d.CONFIG.colors.perfect;
 }
 
 function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number): void {
-  const { dependencies: d, live, ports } = context, f = ports.functions, target = live.player();
+  const { dependencies: d, live, ports } = context,
+    f = ports.functions,
+    target = live.player();
   if (d.Mirror.active) {
     // The combat read itself is shared simulation; the floater and the queued
     // effect flush below are this host's presentation.
@@ -303,26 +776,54 @@ function updateRuntimeFeedback(context: LiveCombatActionContext, seconds: number
     applyFeedback(context, d.Mirror.fxq.splice(0), { x: target.x, y: target.y - 70, color: d.Mirror.color }, true);
   }
   const bossEvents: CombatFeedbackEvent[] = d.BOSSFX.drain().map((event) => ({
-    ...(event.shake === undefined ? {} : { shake: event.shake }), ...(event.flash === undefined ? {} : { flash: event.flash }),
-    ...(event.hitstop === undefined ? {} : { hitstop: event.hitstop }), ...(event.slowmo === undefined ? {} : { slowmo: event.slowmo }),
-    ...(event.zoom === undefined ? {} : { zoom: event.zoom }), ...(event.banner === undefined ? {} : { banner: event.banner }),
-    ...(event.txt === undefined ? {} : { txt: event.txt }), ...(event.x === undefined ? {} : { x: event.x }),
-    ...(event.y === undefined ? {} : { y: event.y }), ...(event.big === undefined ? {} : { big: event.big }),
-    ...(event.quiet === undefined ? {} : { quiet: event.quiet }), ...(event.color === undefined ? {} : { color: event.color }),
+    ...(event.shake === undefined ? {} : { shake: event.shake }),
+    ...(event.flash === undefined ? {} : { flash: event.flash }),
+    ...(event.hitstop === undefined ? {} : { hitstop: event.hitstop }),
+    ...(event.slowmo === undefined ? {} : { slowmo: event.slowmo }),
+    ...(event.zoom === undefined ? {} : { zoom: event.zoom }),
+    ...(event.banner === undefined ? {} : { banner: event.banner }),
+    ...(event.txt === undefined ? {} : { txt: event.txt }),
+    ...(event.x === undefined ? {} : { x: event.x }),
+    ...(event.y === undefined ? {} : { y: event.y }),
+    ...(event.big === undefined ? {} : { big: event.big }),
+    ...(event.quiet === undefined ? {} : { quiet: event.quiet }),
+    ...(event.color === undefined ? {} : { color: event.color }),
     ...(event.cue === undefined ? {} : { cue: event.cue }),
   }));
   applyFeedback(context, bossEvents, { x: target.x, y: target.y - 70, color: d.CONFIG.colors.boss }, false);
 }
 
-function applyFeedback(context: LiveCombatActionContext, events: Parameters<typeof applyCombatFeedback>[0],
-  fallback: Parameters<typeof applyCombatFeedback>[2], slamOnImpact: boolean): void {
-  const { live, ports } = context, f = ports.functions;
-  const current = live.collisionState(), state = { hitStop: current.hitStop, slowMotion: current.slowMotion };
-  applyCombatFeedback(events, state, fallback, {
-    shake: f.addShake, flash: f.addFlash, zoom: f.addZoom,
-    banner: (text, color) => { f.setBossBanner(text, color); }, floater: f.addFloater,
-    sound: (cue) => { f.playSound(cue); }, slam: () => { f.playSound("slam"); },
-  }, slamOnImpact);
+function applyFeedback(
+  context: LiveCombatActionContext,
+  events: Parameters<typeof applyCombatFeedback>[0],
+  fallback: Parameters<typeof applyCombatFeedback>[2],
+  slamOnImpact: boolean,
+): void {
+  const { live, ports } = context,
+    f = ports.functions;
+  const current = live.collisionState(),
+    state = { hitStop: current.hitStop, slowMotion: current.slowMotion };
+  applyCombatFeedback(
+    events,
+    state,
+    fallback,
+    {
+      shake: f.addShake,
+      flash: f.addFlash,
+      zoom: f.addZoom,
+      banner: (text, color) => {
+        f.setBossBanner(text, color);
+      },
+      floater: f.addFloater,
+      sound: (cue) => {
+        f.playSound(cue);
+      },
+      slam: () => {
+        f.playSound("slam");
+      },
+    },
+    slamOnImpact,
+  );
   live.setCollisionState({ ...current, hitStop: state.hitStop, slowMotion: state.slowMotion });
 }
 
@@ -332,13 +833,21 @@ function updateSupports(context: LiveCombatActionContext, seconds: number): void
 }
 function updateWorldHazards(context: LiveCombatActionContext, seconds: number): void {
   const d = context.dependencies;
-  context.combatRuntime().updateWorldHazards(seconds, { groundY: d.CONFIG.world.groundY,
-    sludgeSlow: d.CONFIG.exotic.sludgeSlow, geoWallW: d.CONFIG.exotic.geoWallW,
-    geoWallH: d.CONFIG.exotic.geoWallH, geoWallLife: d.CONFIG.exotic.geoWallLife,
-    sludgeColor: d.CONFIG.colors.sludge });
+  context.combatRuntime().updateWorldHazards(seconds, {
+    groundY: d.CONFIG.world.groundY,
+    sludgeSlow: d.CONFIG.exotic.sludgeSlow,
+    geoWallW: d.CONFIG.exotic.geoWallW,
+    geoWallH: d.CONFIG.exotic.geoWallH,
+    geoWallLife: d.CONFIG.exotic.geoWallLife,
+    sludgeColor: d.CONFIG.colors.sludge,
+  });
 }
 function resolveBossZones(context: LiveCombatActionContext): void {
   const d = context.dependencies;
-  context.combatRuntime().resolveBossZones({ groundY: d.CONFIG.world.groundY, defaultWidth: d.CONFIG.warden.zoneW,
-    defaultDamage: d.CONFIG.warden.zoneTick, defaultTickCooldown: d.CONFIG.warden.zoneTickCd });
+  context.combatRuntime().resolveBossZones({
+    groundY: d.CONFIG.world.groundY,
+    defaultWidth: d.CONFIG.warden.zoneW,
+    defaultDamage: d.CONFIG.warden.zoneTick,
+    defaultTickCooldown: d.CONFIG.warden.zoneTickCd,
+  });
 }

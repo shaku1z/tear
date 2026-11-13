@@ -7,16 +7,39 @@ import { createVerdantEnvironmentFeature } from "../../src/gameplay/environment/
 import { createPaleEnvironmentFeature } from "../../src/gameplay/environment/pale-environment-feature";
 
 function runtime() {
-  return createEnvironmentRuntime({ stageId: "grounds", worldId: "official-transitions",
-    features: [createVerdantEnvironmentFeature(), createPaleEnvironmentFeature()] });
+  return createEnvironmentRuntime({
+    stageId: "grounds",
+    worldId: "official-transitions",
+    features: [createVerdantEnvironmentFeature(), createPaleEnvironmentFeature()],
+  });
 }
 
 function addTransientOwnership(environment: ReturnType<typeof runtime>, ownerId: string): void {
-  environment.addCombatObject({ kind: "root-link", ownerId, targetId: "player", geometry: { x: 10, y: 10 },
-    integrity: 1, maxIntegrity: 1, counterplayTags: ["cut"], procEligible: false,
-    damageDedupeId: `${ownerId}:damage`, state: "active", stateTick: 0, cleanupReason: null });
-  environment.addRoute({ kind: "regrowth-link", ownerId, points: [{ x: 10, y: 10 }, { x: 20, y: 20 }],
-    state: "active", stateTick: 0, cleanupReason: null });
+  environment.addCombatObject({
+    kind: "root-link",
+    ownerId,
+    targetId: "player",
+    geometry: { x: 10, y: 10 },
+    integrity: 1,
+    maxIntegrity: 1,
+    counterplayTags: ["cut"],
+    procEligible: false,
+    damageDedupeId: `${ownerId}:damage`,
+    state: "active",
+    stateTick: 0,
+    cleanupReason: null,
+  });
+  environment.addRoute({
+    kind: "regrowth-link",
+    ownerId,
+    points: [
+      { x: 10, y: 10 },
+      { x: 20, y: 20 },
+    ],
+    state: "active",
+    stateTick: 0,
+    cleanupReason: null,
+  });
 }
 
 describe("official six-stage environment transitions", () => {
@@ -39,9 +62,18 @@ describe("official six-stage environment transitions", () => {
   it("proves complete Voidspire cleanup into The Tear", () => {
     const environment = runtime();
     activateStageEnvironment(environment, "voidspire", 500, "stage-transition");
-    environment.addField({ kind: "rootline", ownerId: "voidspire", geometry: { x: 0, y: 0, w: 100, h: 100 },
-      state: "active", stateTick: 500, timer: 0, schedule: null,
-      eligibility: { player: true, enemies: false, bosses: false }, force: null, cleanupReason: null });
+    environment.addField({
+      kind: "rootline",
+      ownerId: "voidspire",
+      geometry: { x: 0, y: 0, w: 100, h: 100 },
+      state: "active",
+      stateTick: 500,
+      timer: 0,
+      schedule: null,
+      eligibility: { player: true, enemies: false, bosses: false },
+      force: null,
+      cleanupReason: null,
+    });
     addTransientOwnership(environment, "voidspire");
     activateStageEnvironment(environment, "tear", 600, "stage-transition");
     expect(environment.snapshot()).toMatchObject({ stageId: "tear", fields: [], combatObjects: [], routes: [] });
@@ -52,11 +84,22 @@ describe("official six-stage environment transitions", () => {
     for (const [index, stage] of STAGES.entries()) {
       activateStageEnvironment(environment, stage.id, index * 100, index === 0 ? "new-run" : "stage-transition");
       expect(environment.stageId).not.toBe("pale-traverse");
-      expect(environment.fields().some((field) => field.kind === "aurora-track"), stage.id).toBe(false);
-      expect(environment.routes().some((route) => route.kind === "ghost-track"), stage.id).toBe(false);
+      expect(
+        environment.fields().some((field) => field.kind === "aurora-track"),
+        stage.id,
+      ).toBe(false);
+      expect(
+        environment.routes().some((route) => route.kind === "ghost-track"),
+        stage.id,
+      ).toBe(false);
     }
     expect(STAGES.map((stage) => stage.id)).toEqual([
-      "grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear",
+      "grounds",
+      "undercroft",
+      "crimson-fields",
+      "verdant-sanctum",
+      "voidspire",
+      "tear",
     ]);
   });
 });

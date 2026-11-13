@@ -14,7 +14,11 @@ export interface CampaignCinematicBeat {
   readonly waitUntil?: (context: Record<string, unknown>, director: CampaignCinematicDirector) => boolean;
   readonly onEnter?: (context: Record<string, unknown>, director: CampaignCinematicDirector) => void;
   readonly onExit?: (context: Record<string, unknown>, director: CampaignCinematicDirector) => void;
-  readonly onUpdate?: (context: Record<string, unknown>, director: CampaignCinematicDirector, deltaSeconds: number) => void;
+  readonly onUpdate?: (
+    context: Record<string, unknown>,
+    director: CampaignCinematicDirector,
+    deltaSeconds: number,
+  ) => void;
 }
 
 export interface CampaignCinematicScript {

@@ -35,8 +35,10 @@ function enemyPayload(
   variantId?: string,
 ): Readonly<Record<string, unknown>> {
   const variant = variantId === undefined ? undefined : findVariant(kind, variantId);
-  if (variantId !== undefined && variant === null) throw new RangeError(`unknown ${kind} variant in State Forge: ${variantId}`);
-  const variantProbe = variant === undefined ? undefined : { behavior: "", contactReach: 0, speedMult: 1, hp: 1, maxHp: 1 };
+  if (variantId !== undefined && variant === null)
+    throw new RangeError(`unknown ${kind} variant in State Forge: ${variantId}`);
+  const variantProbe =
+    variant === undefined ? undefined : { behavior: "", contactReach: 0, speedMult: 1, hp: 1, maxHp: 1 };
   if (variant !== undefined && variant !== null && variantProbe !== undefined) variant.apply(variantProbe);
   return Object.freeze({
     id,
@@ -49,11 +51,23 @@ function enemyPayload(
 }
 
 function compositionPosition(spec: MutableRecord, count: number): Readonly<{ x: number; y: number }> | undefined {
-  const x = spec.x, y = spec.y;
+  const x = spec.x,
+    y = spec.y;
   if (x === undefined && y === undefined) return undefined;
-  if (count !== 1 || typeof x !== "number" || !Number.isFinite(x) || typeof y !== "number" || !Number.isFinite(y)
-    || x < 0 || x > 1600 || y < 0 || y > 800) {
-    throw new RangeError("positioned enemy composition requires exactly one finite actor within the authored 1600x800 arena");
+  if (
+    count !== 1 ||
+    typeof x !== "number" ||
+    !Number.isFinite(x) ||
+    typeof y !== "number" ||
+    !Number.isFinite(y) ||
+    x < 0 ||
+    x > 1600 ||
+    y < 0 ||
+    y > 800
+  ) {
+    throw new RangeError(
+      "positioned enemy composition requires exactly one finite actor within the authored 1600x800 arena",
+    );
   }
   return Object.freeze({ x, y });
 }
@@ -73,8 +87,7 @@ function patchEnemyComposition(snapshot: TearSnapshotV1, composition: unknown): 
       // The live combat identity owner accepts its canonical numeric namespace
       // only.  State Forge must stage real actors through that same namespace,
       // rather than smuggling descriptive test IDs into production restore.
-      const variantId = typeof spec.variantId === "string" && spec.variantId.trim() !== ""
-        ? spec.variantId : undefined;
+      const variantId = typeof spec.variantId === "string" && spec.variantId.trim() !== "" ? spec.variantId : undefined;
       payloads.push(enemyPayload(kind, `enemy:${String(payloads.length + 1)}`, payloads.length, position, variantId));
     }
   }
@@ -86,7 +99,8 @@ function patchEnvironment(snapshot: TearSnapshotV1, environment: unknown, expect
   const value = record(environment, "environment forge payload");
   const issues = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...value });
   const firstIssue = issues[0];
-  if (firstIssue !== undefined) throw new TypeError(`environment forge payload is invalid: ${firstIssue.path} ${firstIssue.message}`);
+  if (firstIssue !== undefined)
+    throw new TypeError(`environment forge payload is invalid: ${firstIssue.path} ${firstIssue.message}`);
   const hazard = record(snapshot.state["tear.hazard.v1"], "hazard codec");
   if (expectedStageId !== undefined && value.stageId !== undefined && value.stageId !== expectedStageId) {
     throw new RangeError("environment forge stage does not match the resolved scenario stage");
@@ -128,10 +142,7 @@ function patchExactStage(run: MutableRecord, stageId: string | undefined, wave: 
 }
 
 /** Compiles resolved TearSDL into a detached live-codec snapshot. */
-export function compileResolvedTearSdlSnapshot(
-  source: TearSnapshotV1,
-  resolved: TearSdlResolved,
-): TearSnapshotV1 {
+export function compileResolvedTearSdlSnapshot(source: TearSnapshotV1, resolved: TearSdlResolved): TearSnapshotV1 {
   if (!resolved.structural.valid) throw new TypeError("cannot compile structurally invalid TearSDL");
   const forged = structuredClone(source);
   const mutable = forged as unknown as MutableRecord;

@@ -7,7 +7,14 @@ import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulatio
 import { stableVerificationHash } from "../../src/replay/hash";
 import { createDetachedWorld, detachedPlatforms } from "./detached-world-harness";
 
-interface Platform { x: number; y: number; w: number; h: number; floor?: boolean; oneway?: boolean }
+interface Platform {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  floor?: boolean;
+  oneway?: boolean;
+}
 
 const PLATFORMS = detachedPlatforms(CONFIG) as readonly Platform[];
 
@@ -31,14 +38,24 @@ function createDetachedProductionWorld(seed: string) {
       const actor = world.state.player() as never as { update(dt: number, platforms: readonly Platform[]): void };
       actor.update(seconds, PLATFORMS);
       for (const enemy of world.state.enemies()) {
-        (enemy as never as { update(dt: number, platforms: readonly Platform[], target: unknown, shots: unknown[]): void })
-          .update(seconds, PLATFORMS, world.state.player(), world.state.projectiles());
+        (
+          enemy as never as {
+            update(dt: number, platforms: readonly Platform[], target: unknown, shots: unknown[]): void;
+          }
+        ).update(seconds, PLATFORMS, world.state.player(), world.state.projectiles());
       }
     },
     snapshot: (tick) => {
-      const actor = world.state.player() as never as { x: number; y: number; vx: number; vy: number; onGround: boolean };
+      const actor = world.state.player() as never as {
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        onGround: boolean;
+      };
       return {
-        tick, clock: Math.round(clock.sim * 1e6) / 1e6,
+        tick,
+        clock: Math.round(clock.sim * 1e6) / 1e6,
         player: { x: actor.x, y: actor.y, vx: actor.vx, vy: actor.vy, onGround: actor.onGround },
         enemies: world.state.enemies().map((enemy) => {
           const body = enemy as never as { x: number; y: number; vx: number; vy: number; hp: number };
@@ -129,8 +146,14 @@ describe("detached production world", () => {
     const detached = createDetachedWorld({ seed: "world-owned-transient" });
 
     detached.transient.assignImpact({ hitStop: 0.1, slowMotion: 0.2, shake: 3 });
-    detached.transient.assignOpening({ throwCooldown: 0.4, dashGhostTime: 0.5,
-      landingVelocity: 6, wasDashing: true, wasSwinging: false, wasOnGround: true });
+    detached.transient.assignOpening({
+      throwCooldown: 0.4,
+      dashGhostTime: 0.5,
+      landingVelocity: 6,
+      wasDashing: true,
+      wasSwinging: false,
+      wasOnGround: true,
+    });
 
     expect(detached.transient).toBe(detached.world.context.transient);
     expect(detached.world.context.transient.impact).toEqual({ hitStop: 0.1, slowMotion: 0.2, shake: 3 });

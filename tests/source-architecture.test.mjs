@@ -15,7 +15,13 @@ import { explainFile } from "../scripts/architecture/explain.mjs";
 import { assignLayers, compareLayerAllowlist, layerViolations } from "../scripts/architecture/layering.mjs";
 import { RULES } from "../scripts/architecture/rules.mjs";
 import { createSelectorResolver, globToRegExp, validateCoverage } from "../scripts/architecture/selectors.mjs";
-import { createSourceTree, extractImports, readSourceTree, resolveSpecifier, unresolvedEdges } from "../scripts/architecture/source-graph.mjs";
+import {
+  createSourceTree,
+  extractImports,
+  readSourceTree,
+  resolveSpecifier,
+  unresolvedEdges,
+} from "../scripts/architecture/source-graph.mjs";
 import { parseArguments } from "../scripts/check-source-architecture.mjs";
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -24,11 +30,17 @@ const configuration = loadConfiguration(repository);
 const realTree = readSourceTree(repository);
 const resolver = createSelectorResolver(configuration.roles);
 const context = { resolver, available: realTree.available };
-const legacy = JSON.parse(fs.readFileSync(path.join(repository, "tests", "fixtures", "architecture-legacy-cases.json"), "utf8")).cases;
+const legacy = JSON.parse(
+  fs.readFileSync(path.join(repository, "tests", "fixtures", "architecture-legacy-cases.json"), "utf8"),
+).cases;
 
 function tree(modules, extraFiles = []) {
   const files = [...new Set([...Object.keys(modules), ...extraFiles])].sort();
-  const map = new Map(Object.entries(modules).filter(([file]) => file.endsWith(".ts")).map(([file, text]) => [file, { text, imports: extractImports(file, text) }]));
+  const map = new Map(
+    Object.entries(modules)
+      .filter(([file]) => file.endsWith(".ts"))
+      .map(([file, text]) => [file, { text, imports: extractImports(file, text) }]),
+  );
   return createSourceTree(files, map, new Set(files));
 }
 
@@ -42,14 +54,33 @@ test("globs keep * inside a segment and let **/ span zero or more directories", 
 });
 
 test("the compiler-based import reader distinguishes type-only, value, dynamic and re-export references", () => {
-  const records = extractImports("src/a.ts", [
-    'import type { A } from "./a";', 'import { type B } from "./b";', 'import { type C, D } from "./c";', 'import "./side-effect";',
-    'export type { E } from "./e";', 'export * from "./f";', 'const g = import("./g");', 'let h: import("./h").H;', "// import { x } from './comment';",
-  ].join("\n"));
-  assert.deepEqual(records.map(({ specifier, typeOnly, dynamic }) => [specifier, typeOnly, dynamic]), [
-    ["./a", true, false], ["./b", true, false], ["./c", false, false], ["./side-effect", false, false], ["./e", true, false],
-    ["./f", false, false], ["./g", false, true], ["./h", true, false],
-  ]);
+  const records = extractImports(
+    "src/a.ts",
+    [
+      'import type { A } from "./a";',
+      'import { type B } from "./b";',
+      'import { type C, D } from "./c";',
+      'import "./side-effect";',
+      'export type { E } from "./e";',
+      'export * from "./f";',
+      'const g = import("./g");',
+      'let h: import("./h").H;',
+      "// import { x } from './comment';",
+    ].join("\n"),
+  );
+  assert.deepEqual(
+    records.map(({ specifier, typeOnly, dynamic }) => [specifier, typeOnly, dynamic]),
+    [
+      ["./a", true, false],
+      ["./b", true, false],
+      ["./c", false, false],
+      ["./side-effect", false, false],
+      ["./e", true, false],
+      ["./f", false, false],
+      ["./g", false, true],
+      ["./h", true, false],
+    ],
+  );
   assert.deepEqual(records[2].names, ["D"]);
 });
 
@@ -59,12 +90,24 @@ test("specifiers resolve like the bundler and keep unresolved candidates for pla
   assert.equal(resolveSpecifier("src/x/y.ts", "../a/b.js", available).target, "src/a/b.ts");
   assert.equal(resolveSpecifier("src/x/y.ts", "../a/c", available).target, "src/a/c/index.ts");
   assert.equal(resolveSpecifier("src/x/y.ts", "../data.json", available).target, "src/data.json");
-  assert.deepEqual(resolveSpecifier("src/x/y.ts", "../remote/config", available), { target: "src/remote/config", resolved: false, external: false });
+  assert.deepEqual(resolveSpecifier("src/x/y.ts", "../remote/config", available), {
+    target: "src/remote/config",
+    resolved: false,
+    external: false,
+  });
   assert.equal(resolveSpecifier("src/x/y.ts", "typescript", available).external, true);
 });
 
 test("an internal import that reaches no file is reported so the graph cannot silently lose an edge", () => {
-  const graph = new Map([["src/a.ts", [{ to: "src/missing", resolved: false }, { to: "config/architecture-roles.json", resolved: false }]]]);
+  const graph = new Map([
+    [
+      "src/a.ts",
+      [
+        { to: "src/missing", resolved: false },
+        { to: "config/architecture-roles.json", resolved: false },
+      ],
+    ],
+  ]);
   assert.deepEqual(unresolvedEdges(repository, graph), [{ from: "src/a.ts", to: "src/missing" }]);
 });
 
@@ -75,7 +118,8 @@ test("the current tree passes the gate with every rule fixture re-proved", () =>
 });
 
 test("every planted case of the pre-role gate keeps its verdict, and the deliberate strengthenings reject", () => {
-  const mismatches = legacy.filter((entry) => (evaluateText(RULES, entry.file, entry.text, context).length > 0) !== entry.reject)
+  const mismatches = legacy
+    .filter((entry) => evaluateText(RULES, entry.file, entry.text, context).length > 0 !== entry.reject)
     .map((entry) => `${entry.file} [${entry.legacy.join(",")}]: ${entry.text}`);
   assert.deepEqual(mismatches, []);
   const covered = new Set(legacy.filter((entry) => entry.reject).flatMap((entry) => entry.legacy));
@@ -90,16 +134,49 @@ test("transitive biome isolation reports a reach through an intermediate module"
   ]);
   const findings = transitiveFindings(rule, graph, resolver);
   assert.equal(findings.length, 1);
-  assert.equal(findings[0].detail, "transitively through src/gameplay/environment/__shared-hop.ts -> src/gameplay/environment/graft-anchor.ts");
+  assert.equal(
+    findings[0].detail,
+    "transitively through src/gameplay/environment/__shared-hop.ts -> src/gameplay/environment/graft-anchor.ts",
+  );
 });
 
 test("structural rules reject stray JavaScript, oversized modules and suppressions but honour the data-table exemption", () => {
-  const long = "const line = 1;\n".repeat(700);
-  const findings = evaluateTree(RULES, tree({
-    "src/gameplay/weapons.ts": long, "src/gameplay/upgrades.ts": long, "src/app/a.ts": "// @ts-nocheck\n", "src/app/b.js": "",
-  }), resolver);
-  assert.deepEqual(findings.map(({ file, rule }) => [file, rule]), [
-    ["src/app/a.ts", "structure.no-suppressions"], ["src/app/b.js", "structure.typescript-only"], ["src/gameplay/weapons.ts", "structure.module-line-limit"],
+  // 2,200 x 12 non-whitespace characters = 26,400 > 25,300 (700 line equivalents).
+  const long = "const line = 1;\n".repeat(2_200);
+  const findings = evaluateTree(
+    RULES,
+    tree({
+      "src/gameplay/weapons.ts": long,
+      "src/gameplay/upgrades.ts": long,
+      "src/app/a.ts": "// @ts-nocheck\n",
+      "src/app/b.js": "",
+    }),
+    resolver,
+  );
+  assert.deepEqual(
+    findings.map(({ file, rule }) => [file, rule]),
+    [
+      ["src/app/a.ts", "structure.no-suppressions"],
+      ["src/app/b.js", "structure.typescript-only"],
+      ["src/gameplay/weapons.ts", "structure.module-line-limit"],
+    ],
+  );
+});
+
+test("the module size limit ignores formatting and defers only to recorded, non-growing code-budget size debt", () => {
+  const sizeFindings = (modules, sizeAllowances) =>
+    evaluateTree(RULES, tree(modules), resolver, { sizeAllowances })
+      .filter(({ rule }) => rule === "structure.module-line-limit")
+      .map(({ file }) => file);
+  const packed = "const line = 1; ".repeat(2_200);
+  // Same code, one token per line: many more physical lines, same size.
+  const exploded = "const\nline\n=\n1;\n".repeat(1_000);
+  assert.deepEqual(sizeFindings({ "src/gameplay/weapons.ts": packed }, new Map()), ["src/gameplay/weapons.ts"]);
+  assert.deepEqual(sizeFindings({ "src/gameplay/weapons.ts": exploded }, new Map()), []);
+  const recorded = new Map([["src/gameplay/weapons.ts", 26_400]]);
+  assert.deepEqual(sizeFindings({ "src/gameplay/weapons.ts": packed }, recorded), []);
+  assert.deepEqual(sizeFindings({ "src/gameplay/weapons.ts": `${packed}const more = 2;\n` }, recorded), [
+    "src/gameplay/weapons.ts",
   ]);
 });
 
@@ -109,15 +186,25 @@ test("coverage fails closed when a referenced path, glob or role matches nothing
     unused: { purpose: "x", include: ["src/a.ts"] },
     future: { purpose: "x", anticipate: ["src/later/**"] },
   };
-  const errors = validateCoverage(roles, ["src/a.ts"], [{ where: "rule r", selectors: ["@used", "@future", "@missing", "src/none/**"] }]);
+  const errors = validateCoverage(
+    roles,
+    ["src/a.ts"],
+    [{ where: "rule r", selectors: ["@used", "@future", "@missing", "src/none/**"] }],
+  );
   assert.deepEqual(errors, [
-    'role used.include: "src/gone.ts" matches no file', "rule r: unknown role @missing", 'rule r: "src/none/**" matches no file', "role unused is not used by any rule",
+    'role used.include: "src/gone.ts" matches no file',
+    "rule r: unknown role @missing",
+    'rule r: "src/none/**" matches no file',
+    "role unused is not used by any rule",
   ]);
 });
 
 test("a rule whose scope or pattern can no longer fire fails its planted fixture", () => {
   const broken = [{ ...RULES.find((rule) => rule.id === "app.live-root-player"), pattern: /\blet\s+playerState\b/u }];
-  assert.match(runRuleFixtures(broken, realTree, resolver).join("\n"), /app\.live-root-player: reject fixture .* produced 0 findings/u);
+  assert.match(
+    runRuleFixtures(broken, realTree, resolver).join("\n"),
+    /app\.live-root-player: reject fixture .* produced 0 findings/u,
+  );
   const emptyScope = [{ ...RULES.find((rule) => rule.id === "app.live-root-player"), in: ["src/nowhere/**"] }];
   assert.match(runRuleFixtures(emptyScope, realTree, resolver).join("\n"), /no current module in scope/u);
 });
@@ -126,46 +213,89 @@ test("layering assigns every file once and reports undeclared edges with their k
   const layers = { low: ["src/low/**"], high: ["src/high/**"] };
   const { assignment, errors } = assignLayers(["src/low/a.ts", "src/high/b.ts", "src/stray.ts"], layers);
   assert.deepEqual(errors, ["src/stray.ts: belongs to no layer in config/architecture-layers.json"]);
-  const graph = new Map([["src/low/a.ts", [{ to: "src/high/b.ts", kind: "type" }]], ["src/high/b.ts", [{ to: "src/low/a.ts", kind: "value" }]]]);
-  assert.deepEqual(layerViolations(graph, assignment, { high: { low: "any" } }), [{ from: "src/low/a.ts", to: "src/high/b.ts", kind: "type", pair: "low -> high" }]);
+  const graph = new Map([
+    ["src/low/a.ts", [{ to: "src/high/b.ts", kind: "type" }]],
+    ["src/high/b.ts", [{ to: "src/low/a.ts", kind: "value" }]],
+  ]);
+  assert.deepEqual(layerViolations(graph, assignment, { high: { low: "any" } }), [
+    { from: "src/low/a.ts", to: "src/high/b.ts", kind: "type", pair: "low -> high" },
+  ]);
   assert.deepEqual(layerViolations(graph, assignment, { high: { low: "any" }, low: { high: "type" } }), []);
 });
 
 test("the layer allowlist ratchets: new edges and type-to-value upgrades fail, vanished files are stale, removed edges tighten", () => {
   const available = new Set(["src/a.ts", "src/b.ts", "src/c.ts"]);
-  const allowlist = [{ from: "src/a.ts", to: "src/b.ts", kind: "type" }, { from: "src/a.ts", to: "src/gone.ts", kind: "value" }, { from: "src/c.ts", to: "src/b.ts", kind: "value" }];
-  const violations = [{ from: "src/a.ts", to: "src/b.ts", kind: "value" }, { from: "src/b.ts", to: "src/c.ts", kind: "type" }];
+  const allowlist = [
+    { from: "src/a.ts", to: "src/b.ts", kind: "type" },
+    { from: "src/a.ts", to: "src/gone.ts", kind: "value" },
+    { from: "src/c.ts", to: "src/b.ts", kind: "value" },
+  ];
+  const violations = [
+    { from: "src/a.ts", to: "src/b.ts", kind: "value" },
+    { from: "src/b.ts", to: "src/c.ts", kind: "type" },
+  ];
   const result = compareLayerAllowlist(violations, allowlist, available);
-  assert.deepEqual(result.unexpected.map(({ from, to }) => `${from}>${to}`), ["src/a.ts>src/b.ts", "src/b.ts>src/c.ts"]);
-  assert.deepEqual(result.stale.map(({ to }) => to), ["src/gone.ts"]);
-  assert.deepEqual(result.tightenable.map(({ from }) => from), ["src/c.ts"]);
+  assert.deepEqual(
+    result.unexpected.map(({ from, to }) => `${from}>${to}`),
+    ["src/a.ts>src/b.ts", "src/b.ts>src/c.ts"],
+  );
+  assert.deepEqual(
+    result.stale.map(({ to }) => to),
+    ["src/gone.ts"],
+  );
+  assert.deepEqual(
+    result.tightenable.map(({ from }) => from),
+    ["src/c.ts"],
+  );
 });
 
 test("cycle detection finds strongly connected files over static value edges only", () => {
   const graph = new Map([
-    ["src/a.ts", [{ to: "src/b.ts", staticValue: true }]], ["src/b.ts", [{ to: "src/a.ts", staticValue: true }, { to: "src/c.ts", staticValue: true }]],
-    ["src/c.ts", [{ to: "src/b.ts", staticValue: false }]], ["src/d.ts", [{ to: "src/d.ts", staticValue: true }]],
+    ["src/a.ts", [{ to: "src/b.ts", staticValue: true }]],
+    [
+      "src/b.ts",
+      [
+        { to: "src/a.ts", staticValue: true },
+        { to: "src/c.ts", staticValue: true },
+      ],
+    ],
+    ["src/c.ts", [{ to: "src/b.ts", staticValue: false }]],
+    ["src/d.ts", [{ to: "src/d.ts", staticValue: true }]],
   ]);
   assert.deepEqual(findCycles(valueGraph(graph)), [["src/a.ts", "src/b.ts"], ["src/d.ts"]]);
 });
 
 test("the cycle baseline only shrinks: new or grown cycles fail, shrunk ones tighten, vanished files are stale", () => {
   const available = new Set(["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts"]);
-  const recorded = [["src/a.ts", "src/b.ts", "src/c.ts"], ["src/d.ts", "src/gone.ts"]];
+  const recorded = [
+    ["src/a.ts", "src/b.ts", "src/c.ts"],
+    ["src/d.ts", "src/gone.ts"],
+  ];
   const shrunk = compareCycles([["src/a.ts", "src/b.ts"]], recorded, available);
   assert.deepEqual(shrunk.unexpected, []);
   assert.deepEqual(shrunk.tightenable, [recorded[0]]);
   assert.deepEqual(shrunk.stale, [recorded[1]]);
-  assert.deepEqual(compareCycles([["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts"]], recorded, available).unexpected.length, 1);
+  assert.deepEqual(
+    compareCycles([["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts"]], recorded, available).unexpected.length,
+    1,
+  );
 });
 
 test("--update refuses growth unless a file is named, and carries declared moves", () => {
-  const previous = { layerViolations: [{ from: "src/old/a.ts", to: "src/b.ts", kind: "value" }], cycles: [["src/old/a.ts", "src/b.ts"]] };
+  const previous = {
+    layerViolations: [{ from: "src/old/a.ts", to: "src/b.ts", kind: "value" }],
+    cycles: [["src/old/a.ts", "src/b.ts"]],
+  };
   const current = [{ from: "src/new/a.ts", to: "src/b.ts", kind: "value" }];
   assert.equal(updateArchitectureBaseline(current, [["src/b.ts", "src/new/a.ts"]], previous).refused.length, 2);
   const moved = applyMoves(previous, new Map([["src/old/", "src/new/"]]));
   assert.deepEqual(updateArchitectureBaseline(current, [["src/b.ts", "src/new/a.ts"]], moved).refused, []);
-  const allowed = updateArchitectureBaseline([...current, { from: "src/c.ts", to: "src/b.ts", kind: "type" }], [], moved, new Set(["src/c.ts"]));
+  const allowed = updateArchitectureBaseline(
+    [...current, { from: "src/c.ts", to: "src/b.ts", kind: "type" }],
+    [],
+    moved,
+    new Set(["src/c.ts"]),
+  );
   assert.deepEqual(allowed.refused, []);
   assert.equal(allowed.increased.length, 1);
   assert.equal(movePath("src/old/x/y.ts", new Map([["src/old/", "src/new/"]])), "src/new/x/y.ts");
@@ -192,7 +322,12 @@ function copyRepository() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "tear-architecture-"));
   fs.cpSync(path.join(repository, "src"), path.join(root, "src"), { recursive: true });
   fs.mkdirSync(path.join(root, "config"));
-  for (const name of ["architecture-roles.json", "architecture-layers.json", "architecture-baseline.json"]) {
+  for (const name of [
+    "architecture-roles.json",
+    "architecture-layers.json",
+    "architecture-baseline.json",
+    "code-budget-baseline.json",
+  ]) {
     fs.copyFileSync(path.join(repository, "config", name), path.join(root, "config", name));
   }
   // Repository data that src imports from outside src (for example config/*.json), so every import still resolves.
@@ -207,31 +342,49 @@ function copyRepository() {
 
 test("the CLI fails closed on a move, rejects new edges and cycles, and ratchets the baseline", () => {
   const root = copyRepository();
-  const run = (...argumentsList) => spawnSync(process.execPath, [script, "--root", root, ...argumentsList], { encoding: "utf8" });
+  const run = (...argumentsList) =>
+    spawnSync(process.execPath, [script, "--root", root, ...argumentsList], { encoding: "utf8" });
   try {
     assert.equal(run().status, 0);
-    const runtime = path.join(root, "src", "app", "shell", "game-runtime.ts"), moved = path.join(root, "src", "app", "shell", "moved-game-runtime.ts");
+    const runtime = path.join(root, "src", "app", "shell", "game-runtime.ts"),
+      moved = path.join(root, "src", "app", "shell", "moved-game-runtime.ts");
     fs.renameSync(runtime, moved);
     const failedMove = run();
     assert.equal(failedMove.status, 1);
-    assert.match(failedMove.stderr, /role app\.live-runtime-root\.include: "src\/app\/shell\/game-runtime\.ts" matches no file/u);
+    assert.match(
+      failedMove.stderr,
+      /role app\.live-runtime-root\.include: "src\/app\/shell\/game-runtime\.ts" matches no file/u,
+    );
     fs.renameSync(moved, runtime);
-    const geometry = path.join(root, "src", "domain", "geometry.ts"), original = fs.readFileSync(geometry, "utf8");
-    fs.appendFileSync(geometry, '\nimport { CONFIG as plantedConfig } from "../config/game-config";\nvoid plantedConfig;\n');
+    const geometry = path.join(root, "src", "domain", "geometry.ts"),
+      original = fs.readFileSync(geometry, "utf8");
+    fs.appendFileSync(
+      geometry,
+      '\nimport { CONFIG as plantedConfig } from "../config/game-config";\nvoid plantedConfig;\n',
+    );
     const failed = run();
     assert.equal(failed.status, 1);
-    assert.match(failed.stderr, /src\/domain\/geometry\.ts: world-owned gameplay must receive configuration .*\[core\.world-config-injection\]/u);
+    assert.match(
+      failed.stderr,
+      /src\/domain\/geometry\.ts: world-owned gameplay must receive configuration .*\[core\.world-config-injection\]/u,
+    );
     assert.match(run("--update").stderr, /Fix these before updating the baseline/u);
     fs.writeFileSync(geometry, `${original}\nimport "../simulation/run-random";\n`);
     fs.appendFileSync(path.join(root, "src", "simulation", "run-random.ts"), '\nimport "../domain/geometry";\n');
     const ratchet = run();
     assert.equal(ratchet.status, 1);
-    assert.match(ratchet.stderr, /src\/domain\/geometry\.ts -> src\/simulation\/run-random\.ts \(value\): domain -> simulation is not an allowed layer edge/u);
+    assert.match(
+      ratchet.stderr,
+      /src\/domain\/geometry\.ts -> src\/simulation\/run-random\.ts \(value\): domain -> simulation is not an allowed layer edge/u,
+    );
     assert.match(ratchet.stderr, /new or grown import cycle of \d+ files: .*src\/domain\/geometry\.ts/u);
     assert.match(run("--update").stderr, /Refusing to grow the architecture baseline/u);
     const allowed = run("--update", "--allow-increase", "src/domain/geometry.ts");
     assert.equal(allowed.status, 0);
-    assert.match(allowed.stderr, /!!! ARCHITECTURE BASELINE RAISED: edge src\/domain\/geometry\.ts -> src\/simulation\/run-random\.ts/u);
+    assert.match(
+      allowed.stderr,
+      /!!! ARCHITECTURE BASELINE RAISED: edge src\/domain\/geometry\.ts -> src\/simulation\/run-random\.ts/u,
+    );
     assert.equal(run().status, 0);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

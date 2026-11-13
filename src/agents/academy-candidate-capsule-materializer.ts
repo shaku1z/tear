@@ -29,8 +29,7 @@ export interface TearAcademyCandidateCapsuleMaterializationReceiptV1 {
 
 function bootstrap(candidate: ProductionHeadlessAcademyIntakeItem): ProductionReplayBootstrap {
   const value: unknown = candidate.artifact.bootstrap;
-  if (value === undefined || value === null || typeof value !== "object"
-    || !("build" in value) || !("rng" in value)) {
+  if (value === undefined || value === null || typeof value !== "object" || !("build" in value) || !("rng" in value)) {
     throw new RangeError("C31 capsule materialization requires a C30 run-start bootstrap");
   }
   return value as ProductionReplayBootstrap;
@@ -46,23 +45,34 @@ export async function materializeAcademyCandidateCapsule(
   candidate: ProductionHeadlessAcademyIntakeItem,
   request: TearAcademyCandidateCapsuleMaterializationRequest,
 ): Promise<TearAcademyCandidateCapsuleMaterializationReceiptV1> {
-  if (request.capsuleId.trim().length === 0 || Number.isNaN(Date.parse(request.createdAt))
-    || Number.isNaN(Date.parse(request.completedAt))) {
+  if (
+    request.capsuleId.trim().length === 0 ||
+    Number.isNaN(Date.parse(request.createdAt)) ||
+    Number.isNaN(Date.parse(request.completedAt))
+  ) {
     throw new TypeError("C31 capsule materialization requires a capsule ID and valid timestamps");
   }
   const origin = bootstrap(candidate);
   const scenario = candidate.artifact.scenario;
   const context = createGhostReplayRunContext({
-    runId: candidate.episodeId, seed: scenario.seed, mode: scenario.start.mode,
-    difficulty: scenario.start.difficulty, weaponId: scenario.start.weapon,
-    ticksPerSecond: 120, build: origin.build, rng: origin.rng,
+    runId: candidate.episodeId,
+    seed: scenario.seed,
+    mode: scenario.start.mode,
+    difficulty: scenario.start.difficulty,
+    weaponId: scenario.start.weapon,
+    ticksPerSecond: 120,
+    build: origin.build,
+    rng: origin.rng,
     ...(origin.applicationFramePolicy === undefined ? {} : { applicationFramePolicy: origin.applicationFramePolicy }),
   });
   const sourceTracks = captureAcademyCandidateTracks(candidate);
   const recorder = new GhostStreamingRecorder({
-    sessionId: request.capsuleId, createdAt: request.createdAt,
-    chunkEntries: request.chunkEntries ?? 64, maxPendingWrites: request.maxPendingWrites ?? 2,
-    vault: request.vault, provenance: Object.freeze({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: context }),
+    sessionId: request.capsuleId,
+    createdAt: request.createdAt,
+    chunkEntries: request.chunkEntries ?? 64,
+    maxPendingWrites: request.maxPendingWrites ?? 2,
+    vault: request.vault,
+    provenance: Object.freeze({ [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: context }),
   });
   await recorder.start();
   for (const action of candidate.artifact.actions) {
@@ -70,15 +80,29 @@ export async function materializeAcademyCandidateCapsule(
   }
   let sequence = 0;
   for (const event of sourceTracks.nativeEvents) {
-    await recorder.append({ kind: "events", tick: event.tick,
-      value: createGameplayCausalEvent(event, ++sequence,
-        `academy-c30-${candidate.episodeId}-${String(sequence)}`, "engine") });
+    await recorder.append({
+      kind: "events",
+      tick: event.tick,
+      value: createGameplayCausalEvent(
+        event,
+        ++sequence,
+        `academy-c30-${candidate.episodeId}-${String(sequence)}`,
+        "engine",
+      ),
+    });
   }
-  await recorder.append({ kind: "results", tick: candidate.tick, value: createAcademyCandidateTerminalAnchor(candidate) });
+  await recorder.append({
+    kind: "results",
+    tick: candidate.tick,
+    value: createAcademyCandidateTerminalAnchor(candidate),
+  });
   await recorder.finalize(request.completedAt);
   const attestation = await attestAcademyCandidateSource(candidate, request.vault, request.capsuleId);
   return Object.freeze({
-    format: "tear-academy-candidate-capsule-materialization", schemaVersion: 1,
-    candidateId: candidate.episodeId, capsuleId: request.capsuleId, attestation,
+    format: "tear-academy-candidate-capsule-materialization",
+    schemaVersion: 1,
+    candidateId: candidate.episodeId,
+    capsuleId: request.capsuleId,
+    attestation,
   });
 }

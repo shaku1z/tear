@@ -5,9 +5,9 @@ withJourney({ name: "fresh-run meta progression", port: 8162, deferBoot: true },
   await page.addInitScript(() => {
     window.__TEAR_TEST_STORAGE__ = {
       tear_meta: JSON.stringify({
-      lifetimeEarned: 10_000,
-      lifetimeSpent: 0,
-      buy: { headstart: 1 },
+        lifetimeEarned: 10_000,
+        lifetimeSpent: 0,
+        buy: { headstart: 1 },
       }),
     };
   });
@@ -48,5 +48,9 @@ withJourney({ name: "fresh-run meta progression", port: 8162, deferBoot: true },
   assert.equal(result.bladeState, "held");
   assert.equal(result.keenEdgeStacks, 1, "the fixed seed must exercise the config-dependent Keen Edge upgrade");
   assert.equal(result.bladeDamageScale, 0.0092 * 1.12, "Head Start must apply Keen Edge to the live world config");
-}).then(() => console.log("fresh-run persisted Head Start passed"))
-  .catch((error) => { console.error(error); process.exit(1); });
+})
+  .then(() => console.log("fresh-run persisted Head Start passed"))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

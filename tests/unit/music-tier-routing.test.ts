@@ -4,10 +4,22 @@ import { tierFromSnapshot } from "../../src/audio/stems/tier-from-snapshot";
 
 function snapshot(scene: MusicContextSnapshot["scene"], biomeId: string): MusicContextSnapshot {
   return {
-    schemaVersion: MUSIC_CONTEXT_SCHEMA_VERSION, sequence: 1, timeMs: 0, scene,
-    modeId: "endless", difficultyId: "normal", biomeId, stageId: "0", wave: 1, totalWaves: 5,
-    bossActive: false, bossId: null, bossPhase: null, playerHealthRatio: 1,
-    comboRankId: "", playerMoving: false,
+    schemaVersion: MUSIC_CONTEXT_SCHEMA_VERSION,
+    sequence: 1,
+    timeMs: 0,
+    scene,
+    modeId: "endless",
+    difficultyId: "normal",
+    biomeId,
+    stageId: "0",
+    wave: 1,
+    totalWaves: 5,
+    bossActive: false,
+    bossId: null,
+    bossPhase: null,
+    playerHealthRatio: 1,
+    comboRankId: "",
+    playerMoving: false,
   };
 }
 

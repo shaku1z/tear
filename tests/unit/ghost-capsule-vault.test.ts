@@ -25,37 +25,138 @@ import {
 describe("Ghost capsule recorder and local Vault", () => {
   it("reserves an absent protected capsule id for its exact root and permits that exact source to return", async () => {
     const source = new GhostLocalVault(createMemoryGhostVaultBackend());
-    const record = async (id: string) => { const recorder = new GhostStreamingRecorder({ sessionId: id, createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault: source }); await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { action: id } }); return recorder.finalize("2026-08-10T00:00:01.000Z"); };
-    const original = await record("reserved-source"), foreign = await record("foreign-source"), base = createMemoryGhostVaultBackend(), vault = new GhostLocalVault(base);
-    const key = ghostCapsuleProtectionKey(original.id), marker = JSON.stringify({ format: "ghost-capsule-protection", schemaVersion: 1, capsuleId: original.id, rootIntegrity: original.rootIntegrity, owners: ["legacy-owner"] }); await base.put("analysis", key, marker);
+    const record = async (id: string) => {
+      const recorder = new GhostStreamingRecorder({
+        sessionId: id,
+        createdAt: "2026-08-10T00:00:00.000Z",
+        chunkEntries: 1,
+        maxPendingWrites: 1,
+        vault: source,
+      });
+      await recorder.start();
+      await recorder.append({ kind: "commands", tick: 1, value: { action: id } });
+      return recorder.finalize("2026-08-10T00:00:01.000Z");
+    };
+    const original = await record("reserved-source"),
+      foreign = await record("foreign-source"),
+      base = createMemoryGhostVaultBackend(),
+      vault = new GhostLocalVault(base);
+    const key = ghostCapsuleProtectionKey(original.id),
+      marker = JSON.stringify({
+        format: "ghost-capsule-protection",
+        schemaVersion: 1,
+        capsuleId: original.id,
+        rootIntegrity: original.rootIntegrity,
+        owners: ["legacy-owner"],
+      });
+    await base.put("analysis", key, marker);
     const foreignExport = JSON.parse(await source.exportCapsule(foreign.id)) as { chunks: Record<string, string> };
-    const occupied = await vault.importCapsule(JSON.stringify({ manifest: reviseGhostCapsuleManifest(foreign, { id: original.id }), chunks: foreignExport.chunks })).then(() => true, () => false);
-    expect(occupied).toBe(false); expect(await base.keys("manifests")).toEqual([]); expect(await base.keys("chunks")).toEqual([]); expect(await base.keys("indexes")).toEqual([]); expect(await base.get("analysis", key)).toBe(marker);
-    await expect(vault.importCapsule(await source.exportCapsule(original.id))).resolves.toEqual(original); expect(await base.get("analysis", key)).toBe(marker);
+    const occupied = await vault
+      .importCapsule(
+        JSON.stringify({
+          manifest: reviseGhostCapsuleManifest(foreign, { id: original.id }),
+          chunks: foreignExport.chunks,
+        }),
+      )
+      .then(
+        () => true,
+        () => false,
+      );
+    expect(occupied).toBe(false);
+    expect(await base.keys("manifests")).toEqual([]);
+    expect(await base.keys("chunks")).toEqual([]);
+    expect(await base.keys("indexes")).toEqual([]);
+    expect(await base.get("analysis", key)).toBe(marker);
+    await expect(vault.importCapsule(await source.exportCapsule(original.id))).resolves.toEqual(original);
+    expect(await base.get("analysis", key)).toBe(marker);
   });
 
-  it.each(["absent", "present"] as const)("refuses import when %s protection changes at final CAS without occupying the source id", async (presence) => {
-    const source = new GhostLocalVault(createMemoryGhostVaultBackend()), recorder = new GhostStreamingRecorder({ sessionId: "protected-import", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault: source });
-    await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } }); const manifest = await recorder.finalize("2026-08-10T00:00:01.000Z"), exported = await source.exportCapsule(manifest.id);
-    const base = createMemoryGhostVaultBackend(), key = ghostCapsuleProtectionKey(manifest.id), marker = (owner: string) => JSON.stringify({ format: "ghost-capsule-protection", schemaVersion: 1, capsuleId: manifest.id, rootIntegrity: manifest.rootIntegrity, owners: [owner] });
-    if (presence === "present") await base.put("analysis", key, marker("legacy-owner")); let raced = false;
-    const backend: GhostVaultBackend = { ...base, async commitIfMatches(guards, writes) { if (!raced) { raced = true; await base.put("analysis", key, marker("competing-owner")); } return base.commitIfMatches(guards, writes); } };
-    expect(await new GhostLocalVault(backend).importCapsule(exported).then(() => true, () => false)).toBe(false);
-    expect(await base.keys("manifests")).toEqual([]); expect(await base.keys("chunks")).toEqual([]); expect(await base.keys("indexes")).toEqual([]); expect(await base.get("analysis", key)).toBe(marker("competing-owner"));
-  });
-  it.each(["replacement", "deletion", "late-occupation"] as const)("refuses import chunk %s immediately before its transaction without adopting changed bytes", async (drift) => {
-    const source = new GhostLocalVault(createMemoryGhostVaultBackend()), recorder = new GhostStreamingRecorder({ sessionId: "atomic-import", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault: source });
-    await recorder.start(); await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } }); await recorder.finalize("2026-08-10T00:00:01.000Z");
-    const exported = await source.exportCapsule("atomic-import"), capsule = JSON.parse(exported) as { chunks: Record<string, string> }, chunkId = Object.keys(capsule.chunks)[0] ?? "";
-    const base = createMemoryGhostVaultBackend(); if (drift !== "late-occupation") await base.put("chunks", chunkId, capsule.chunks[chunkId] ?? ""); let raced = false;
-    const backend: GhostVaultBackend = { ...base, async commitIfMatches(guards, writes) {
-      if (!raced) { raced = true; if (drift === "deletion") await base.remove("chunks", chunkId); else await base.put("chunks", chunkId, "competing evidence"); }
-      return base.commitIfMatches(guards, writes);
-    } };
-    await expect(new GhostLocalVault(backend).importCapsule(exported)).rejects.toThrow();
-    expect(await base.get("chunks", chunkId)).toBe(drift === "deletion" ? undefined : "competing evidence");
-    expect(await base.keys("manifests")).toEqual([]); expect(await base.keys("indexes")).toEqual([]);
-  });
+  it.each(["absent", "present"] as const)(
+    "refuses import when %s protection changes at final CAS without occupying the source id",
+    async (presence) => {
+      const source = new GhostLocalVault(createMemoryGhostVaultBackend()),
+        recorder = new GhostStreamingRecorder({
+          sessionId: "protected-import",
+          createdAt: "2026-08-10T00:00:00.000Z",
+          chunkEntries: 1,
+          maxPendingWrites: 1,
+          vault: source,
+        });
+      await recorder.start();
+      await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
+      const manifest = await recorder.finalize("2026-08-10T00:00:01.000Z"),
+        exported = await source.exportCapsule(manifest.id);
+      const base = createMemoryGhostVaultBackend(),
+        key = ghostCapsuleProtectionKey(manifest.id),
+        marker = (owner: string) =>
+          JSON.stringify({
+            format: "ghost-capsule-protection",
+            schemaVersion: 1,
+            capsuleId: manifest.id,
+            rootIntegrity: manifest.rootIntegrity,
+            owners: [owner],
+          });
+      if (presence === "present") await base.put("analysis", key, marker("legacy-owner"));
+      let raced = false;
+      const backend: GhostVaultBackend = {
+        ...base,
+        async commitIfMatches(guards, writes) {
+          if (!raced) {
+            raced = true;
+            await base.put("analysis", key, marker("competing-owner"));
+          }
+          return base.commitIfMatches(guards, writes);
+        },
+      };
+      expect(
+        await new GhostLocalVault(backend).importCapsule(exported).then(
+          () => true,
+          () => false,
+        ),
+      ).toBe(false);
+      expect(await base.keys("manifests")).toEqual([]);
+      expect(await base.keys("chunks")).toEqual([]);
+      expect(await base.keys("indexes")).toEqual([]);
+      expect(await base.get("analysis", key)).toBe(marker("competing-owner"));
+    },
+  );
+  it.each(["replacement", "deletion", "late-occupation"] as const)(
+    "refuses import chunk %s immediately before its transaction without adopting changed bytes",
+    async (drift) => {
+      const source = new GhostLocalVault(createMemoryGhostVaultBackend()),
+        recorder = new GhostStreamingRecorder({
+          sessionId: "atomic-import",
+          createdAt: "2026-08-10T00:00:00.000Z",
+          chunkEntries: 1,
+          maxPendingWrites: 1,
+          vault: source,
+        });
+      await recorder.start();
+      await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
+      await recorder.finalize("2026-08-10T00:00:01.000Z");
+      const exported = await source.exportCapsule("atomic-import"),
+        capsule = JSON.parse(exported) as { chunks: Record<string, string> },
+        chunkId = Object.keys(capsule.chunks)[0] ?? "";
+      const base = createMemoryGhostVaultBackend();
+      if (drift !== "late-occupation") await base.put("chunks", chunkId, capsule.chunks[chunkId] ?? "");
+      let raced = false;
+      const backend: GhostVaultBackend = {
+        ...base,
+        async commitIfMatches(guards, writes) {
+          if (!raced) {
+            raced = true;
+            if (drift === "deletion") await base.remove("chunks", chunkId);
+            else await base.put("chunks", chunkId, "competing evidence");
+          }
+          return base.commitIfMatches(guards, writes);
+        },
+      };
+      await expect(new GhostLocalVault(backend).importCapsule(exported)).rejects.toThrow();
+      expect(await base.get("chunks", chunkId)).toBe(drift === "deletion" ? undefined : "competing evidence");
+      expect(await base.keys("manifests")).toEqual([]);
+      expect(await base.keys("indexes")).toEqual([]);
+    },
+  );
   it("streams a long run in bounded chunks without full-run serialization", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
@@ -78,7 +179,7 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(manifest.chunks.length).toBeGreaterThan(300);
     expect(manifest.rootIntegrity).toMatch(/^[a-f0-9]{16}$/u);
     expect(new Set(manifest.chunks.map((chunk) => chunk.checksum)).size).toBeGreaterThan(1);
-    expect(capsuleDebugJson(manifest)).toContain("\"format\": \"tearghost-capsule\"");
+    expect(capsuleDebugJson(manifest)).toContain('"format": "tearghost-capsule"');
   }, 30_000);
 
   it("recovers the last committed recording journal after a refresh", async () => {
@@ -102,58 +203,83 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(recovered[0]).toMatchObject({ id: "crashed-run", status: "recovered", chunks: [{ sequence: 0 }] });
     expect(await backend.keys("journals")).toEqual([]);
     await recorder.append({ kind: "commands", tick: 3, value: { action: "late-buffered" } });
-    await expect(recorder.append({ kind: "commands", tick: 4, value: { action: "late-write" } })).rejects.toThrow(/no longer active/u);
+    await expect(recorder.append({ kind: "commands", tick: 4, value: { action: "late-write" } })).rejects.toThrow(
+      /no longer active/u,
+    );
     expect(await afterRefresh.getManifest("crashed-run")).toMatchObject({ status: "recovered" });
     expect(await backend.keys("journals")).toEqual([]);
   });
 
-  it.each(["read", "commit"] as const)("continues recovery when another recorder completes an enumerated session during %s", async (phase) => {
-    const backend = createMemoryGhostVaultBackend();
-    const vault = new GhostLocalVault(backend);
-    const finishing = new GhostStreamingRecorder({
-      sessionId: "finishing-run", createdAt: "2026-07-23T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
-    });
-    const interrupted = new GhostStreamingRecorder({
-      sessionId: "interrupted-run", createdAt: "2026-07-23T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
-    });
-    await finishing.start();
-    await finishing.append({ kind: "commands", tick: 1, value: { action: "jump" } });
-    await interrupted.start();
-    await interrupted.append({ kind: "commands", tick: 2, value: { action: "move" } });
-    let completed: Awaited<ReturnType<typeof finishing.finalize>> | undefined;
-    const recovering = new GhostLocalVault({
-      ...backend,
-      get: async (store, key) => {
-        if (phase === "read" && store === "journals" && key === "finishing-run" && completed === undefined) {
-          completed = await finishing.finalize("2026-07-23T01:00:00.000Z");
-        }
-        return backend.get(store, key);
-      },
-      commitIfMatches: async (guards, writes) => {
-        if (phase === "commit" && completed === undefined && guards.some((guard) => guard.store === "journals" && guard.key === "finishing-run")) {
-          completed = await finishing.finalize("2026-07-23T01:00:00.000Z");
-        }
-        return backend.commitIfMatches(guards, writes);
-      },
-    });
-    await expect(recovering.recoverIncompleteSessions()).resolves.toMatchObject([
-      { id: "interrupted-run", status: "recovered", chunks: [{ sequence: 0 }] },
-    ]);
-    expect(completed).toBeDefined();
-    expect(await vault.getManifest("finishing-run")).toEqual(completed);
-    expect(await backend.keys("journals")).toEqual([]);
-  });
+  it.each(["read", "commit"] as const)(
+    "continues recovery when another recorder completes an enumerated session during %s",
+    async (phase) => {
+      const backend = createMemoryGhostVaultBackend();
+      const vault = new GhostLocalVault(backend);
+      const finishing = new GhostStreamingRecorder({
+        sessionId: "finishing-run",
+        createdAt: "2026-07-23T00:00:00.000Z",
+        chunkEntries: 1,
+        maxPendingWrites: 1,
+        vault,
+      });
+      const interrupted = new GhostStreamingRecorder({
+        sessionId: "interrupted-run",
+        createdAt: "2026-07-23T00:00:00.000Z",
+        chunkEntries: 1,
+        maxPendingWrites: 1,
+        vault,
+      });
+      await finishing.start();
+      await finishing.append({ kind: "commands", tick: 1, value: { action: "jump" } });
+      await interrupted.start();
+      await interrupted.append({ kind: "commands", tick: 2, value: { action: "move" } });
+      let completed: Awaited<ReturnType<typeof finishing.finalize>> | undefined;
+      const recovering = new GhostLocalVault({
+        ...backend,
+        get: async (store, key) => {
+          if (phase === "read" && store === "journals" && key === "finishing-run" && completed === undefined) {
+            completed = await finishing.finalize("2026-07-23T01:00:00.000Z");
+          }
+          return backend.get(store, key);
+        },
+        commitIfMatches: async (guards, writes) => {
+          if (
+            phase === "commit" &&
+            completed === undefined &&
+            guards.some((guard) => guard.store === "journals" && guard.key === "finishing-run")
+          ) {
+            completed = await finishing.finalize("2026-07-23T01:00:00.000Z");
+          }
+          return backend.commitIfMatches(guards, writes);
+        },
+      });
+      await expect(recovering.recoverIncompleteSessions()).resolves.toMatchObject([
+        { id: "interrupted-run", status: "recovered", chunks: [{ sequence: 0 }] },
+      ]);
+      expect(completed).toBeDefined();
+      expect(await vault.getManifest("finishing-run")).toEqual(completed);
+      expect(await backend.keys("journals")).toEqual([]);
+    },
+  );
 
   it("refuses a duplicate recording session before it can overwrite durable evidence", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const first = new GhostStreamingRecorder({
-      sessionId: "unique-capture", createdAt: "2026-07-23T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "unique-capture",
+      createdAt: "2026-07-23T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await first.start();
     await first.append({ kind: "commands", tick: 1, value: { action: "jump" } });
     const original = await vault.getManifest("unique-capture");
     const duplicate = new GhostStreamingRecorder({
-      sessionId: "unique-capture", createdAt: "2099-01-01T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "unique-capture",
+      createdAt: "2099-01-01T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await expect(duplicate.start()).rejects.toThrow(/already exists/u);
     expect(await vault.getManifest("unique-capture")).toEqual(original);
@@ -162,7 +288,11 @@ describe("Ghost capsule recorder and local Vault", () => {
   it("loads verified named tracks back from a completed capsule", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
-      sessionId: "reader-run", createdAt: "2026-07-28T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "reader-run",
+      createdAt: "2026-07-28T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
       provenance: { runId: "reader-run", seed: "reader-seed", rulesetVersion: "rules-a" },
     });
     await recorder.start();
@@ -175,7 +305,9 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(capsule.manifest.status).toBe("complete");
     expect(capsule.manifest.recordingProfile).toBe("forensic-qa");
     expect(capsule.manifest.provenance).toEqual({
-      runId: "reader-run", seed: "reader-seed", rulesetVersion: "rules-a",
+      runId: "reader-run",
+      seed: "reader-seed",
+      rulesetVersion: "rules-a",
     });
     expect(capsule.maxTick).toBe(4);
     expect(capsule.tracks.commands).toEqual([{ kind: "commands", tick: 3, value: { command: { type: "dash" } } }]);
@@ -187,7 +319,11 @@ describe("Ghost capsule recorder and local Vault", () => {
     const backend = createMemoryGhostVaultBackend();
     const vault = new GhostLocalVault(backend);
     const recorder = new GhostStreamingRecorder({
-      sessionId: "deletion-source", createdAt: "2026-08-02T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "deletion-source",
+      createdAt: "2026-08-02T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await recorder.start();
     await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
@@ -217,7 +353,7 @@ describe("Ghost capsule recorder and local Vault", () => {
     const manifest = await beforeRefresh.getManifest("interrupted-corrupt-run");
     const chunk = manifest?.chunks[0];
     if (chunk === undefined) throw new Error("interrupted fixture did not commit a chunk");
-    await backend.put("chunks", chunk.id, "{\"tampered\":true}");
+    await backend.put("chunks", chunk.id, '{"tampered":true}');
 
     const recovered = await new GhostLocalVault(backend).recoverIncompleteSessions();
     expect(recovered).toMatchObject([{ id: "interrupted-corrupt-run", status: "quarantined" }]);
@@ -241,7 +377,7 @@ describe("Ghost capsule recorder and local Vault", () => {
     const manifest = await recorder.finalize("2026-07-23T00:01:00.000Z");
     const corruptId = manifest.chunks[0]?.id;
     if (corruptId === undefined) throw new Error("fixture chunk is missing");
-    await backend.put("chunks", corruptId, "{\"corrupt\":true}");
+    await backend.put("chunks", corruptId, '{"corrupt":true}');
 
     const doctor = new GhostDoctor(new GhostLocalVault(backend), () => "2026-07-23T00:02:00.000Z");
     const report = await doctor.scan("corrupt-run");
@@ -250,11 +386,15 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(repaired.repairedChildId).toBe("corrupt-run-repaired");
     expect(await backend.get("chunks", corruptId)).toContain("corrupt");
     expect(await backend.get("quarantine", `repair:corrupt-run-repaired:${corruptId}`)).toContain("corrupt");
-    expect(JSON.parse(await backend.get("lineage", "repair:corrupt-run-repaired") ?? "{}")).toMatchObject({
-      parentId: "corrupt-run", childId: "corrupt-run-repaired", relation: "repair",
+    expect(JSON.parse((await backend.get("lineage", "repair:corrupt-run-repaired")) ?? "{}")).toMatchObject({
+      parentId: "corrupt-run",
+      childId: "corrupt-run-repaired",
+      relation: "repair",
     });
     expect(await vault.getManifest("corrupt-run-repaired")).toMatchObject({
-      status: "repaired", createdAt: "2026-07-23T00:02:00.000Z", lineage: { parentId: "corrupt-run", relation: "repaired-from" },
+      status: "repaired",
+      createdAt: "2026-07-23T00:02:00.000Z",
+      lineage: { parentId: "corrupt-run", relation: "repaired-from" },
     });
     expect(await doctor.rebuildIndex()).toBe(2);
   });
@@ -273,18 +413,27 @@ describe("Ghost capsule recorder and local Vault", () => {
     await recorder.finalize("2026-07-23T00:01:00.000Z");
     const exported = await source.exportCapsule("import-source");
     const destination = new GhostLocalVault(createMemoryGhostVaultBackend());
-    await expect(destination.importCapsule(exported, {
-      maxEncodedBytes: 10,
-      maxChunks: 10,
-      maxChunkBytes: 1_000,
-      maxExpansionRatio: 10,
-    })).rejects.toThrow(/encoded byte limit/u);
+    await expect(
+      destination.importCapsule(exported, {
+        maxEncodedBytes: 10,
+        maxChunks: 10,
+        maxChunkBytes: 1_000,
+        maxExpansionRatio: 10,
+      }),
+    ).rejects.toThrow(/encoded byte limit/u);
 
     const bomb: unknown = JSON.parse(exported);
-    if (typeof bomb !== "object" || bomb === null || !("manifest" in bomb)
-      || typeof bomb.manifest !== "object" || bomb.manifest === null || !("chunks" in bomb.manifest)
-      || !Array.isArray(bomb.manifest.chunks) || typeof bomb.manifest.chunks[0] !== "object"
-      || bomb.manifest.chunks[0] === null) {
+    if (
+      typeof bomb !== "object" ||
+      bomb === null ||
+      !("manifest" in bomb) ||
+      typeof bomb.manifest !== "object" ||
+      bomb.manifest === null ||
+      !("chunks" in bomb.manifest) ||
+      !Array.isArray(bomb.manifest.chunks) ||
+      typeof bomb.manifest.chunks[0] !== "object" ||
+      bomb.manifest.chunks[0] === null
+    ) {
       throw new Error("export fixture has an invalid shape");
     }
     const chunkCandidates: unknown[] = bomb.manifest.chunks;
@@ -298,19 +447,24 @@ describe("Ghost capsule recorder and local Vault", () => {
     // The v1 reader remains supported; its legacy index has no manifest-wide
     // declaration hash, so this verifies its pre-existing expansion guard.
     (bomb as { manifest: { schemaVersion: number } }).manifest.schemaVersion = 1;
-    await expect(destination.importCapsule(JSON.stringify(bomb), {
-      maxEncodedBytes: 1_000_000,
-      maxChunks: 10,
-      maxChunkBytes: 1_000,
-      maxExpansionRatio: 10,
-    })).rejects.toThrow(/expansion/u);
+    await expect(
+      destination.importCapsule(JSON.stringify(bomb), {
+        maxEncodedBytes: 1_000_000,
+        maxChunks: 10,
+        maxChunkBytes: 1_000,
+        maxExpansionRatio: 10,
+      }),
+    ).rejects.toThrow(/expansion/u);
   });
 
   it("rejects hostile imports before they can overwrite original Vault evidence", async () => {
     const source = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
-      sessionId: "protected-import-source", createdAt: "2026-07-23T00:00:00.000Z",
-      chunkEntries: 1, maxPendingWrites: 1, vault: source,
+      sessionId: "protected-import-source",
+      createdAt: "2026-07-23T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault: source,
     });
     await recorder.start();
     await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
@@ -327,21 +481,34 @@ describe("Ghost capsule recorder and local Vault", () => {
     await expect(destination.importCapsule(JSON.stringify(duplicate))).rejects.toThrow(/already exists/u);
 
     const hostile = JSON.parse(exported) as {
-      manifest: { id: string; chunks: { id: string; encoding: string; compressedBytes: number; uncompressedBytes: number; checksum: string }[]; rootIntegrity: string };
+      manifest: {
+        id: string;
+        chunks: {
+          id: string;
+          encoding: string;
+          compressedBytes: number;
+          uncompressedBytes: number;
+          checksum: string;
+        }[];
+        rootIntegrity: string;
+      };
       chunks: Record<string, string>;
     };
     const hostileChunk = hostile.manifest.chunks[0];
     if (hostileChunk === undefined) throw new Error("hostile import fixture needs a chunk");
-    const replacement = await createInlineGhostEncoderWorker().encode([
-      { kind: "commands", tick: 1, value: { action: "hostile-overwrite" } },
-    ], false);
+    const replacement = await createInlineGhostEncoderWorker().encode(
+      [{ kind: "commands", tick: 1, value: { action: "hostile-overwrite" } }],
+      false,
+    );
     hostile.manifest.id = "hostile-collision";
     hostileChunk.id = originalChunk.id;
     hostileChunk.encoding = replacement.encoding;
     hostileChunk.compressedBytes = replacement.compressedBytes;
     hostileChunk.uncompressedBytes = replacement.uncompressedBytes;
     hostileChunk.checksum = replacement.checksum;
-    hostile.manifest.rootIntegrity = ghostRootIntegrity(hostile.manifest.chunks as unknown as readonly TearGhostChunkIndexEntry[]);
+    hostile.manifest.rootIntegrity = ghostRootIntegrity(
+      hostile.manifest.chunks as unknown as readonly TearGhostChunkIndexEntry[],
+    );
     hostile.chunks = { [originalChunk.id]: replacement.encoded };
     await expect(destination.importCapsule(JSON.stringify(hostile))).rejects.toThrow(/manifest integrity mismatch/u);
 
@@ -357,18 +524,27 @@ describe("Ghost capsule recorder and local Vault", () => {
   it("writes a schema-v2 contract that binds declarations to the durable chunk root", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
-      sessionId: "contract-v2", createdAt: "2026-08-02T00:00:00.000Z",
-      chunkEntries: 1, maxPendingWrites: 1, vault, recordingProfile: "coaching",
+      sessionId: "contract-v2",
+      createdAt: "2026-08-02T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
+      recordingProfile: "coaching",
       provenance: { replayContext: { format: "tear-ghost-replay-context", schemaVersion: 1 } },
     });
     await recorder.start();
-    await recorder.append({ kind: "commands", tick: 1, value: { kind: "command", id: 1, tick: 1, command: { type: "jump" } } });
+    await recorder.append({
+      kind: "commands",
+      tick: 1,
+      value: { kind: "command", id: 1, tick: 1, command: { type: "jump" } },
+    });
     const manifest = await recorder.finalize("2026-08-02T00:00:01.000Z");
 
     expect(manifest).toMatchObject({
       schemaVersion: 2,
       contract: {
-        format: "tearghost-capsule-contract", schemaVersion: 1,
+        format: "tearghost-capsule-contract",
+        schemaVersion: 1,
         tracks: { commands: "canonical-action-envelope-v1", keyframes: "tear-snapshot-v1" },
         quality: { recordingProfile: "coaching", presentation: "full", downgrades: [] },
       },
@@ -379,25 +555,40 @@ describe("Ghost capsule recorder and local Vault", () => {
       manifest: { provenance: Record<string, unknown> };
     };
     tampered.manifest.provenance = { replayContext: { tampered: true } };
-    await expect(new GhostLocalVault(createMemoryGhostVaultBackend()).importCapsule(JSON.stringify(tampered)))
-      .rejects.toThrow(/manifest integrity mismatch/u);
+    await expect(
+      new GhostLocalVault(createMemoryGhostVaultBackend()).importCapsule(JSON.stringify(tampered)),
+    ).rejects.toThrow(/manifest integrity mismatch/u);
   });
 
   it("migrates v1 manifests purely, preserves supported V2 extensions, and rejects future versions without writes", async () => {
     const legacy = parseGhostCapsuleManifest({
-      format: "tearghost-capsule", schemaVersion: 1, id: "legacy-contract", status: "complete",
-      createdAt: "2026-07-01T00:00:00.000Z", recordingProfile: "legacy-unknown", chunks: [],
-      rootIntegrity: ghostRootIntegrity([]), fidelity: { presentation: "reduced", downgrades: ["legacy capture"] },
+      format: "tearghost-capsule",
+      schemaVersion: 1,
+      id: "legacy-contract",
+      status: "complete",
+      createdAt: "2026-07-01T00:00:00.000Z",
+      recordingProfile: "legacy-unknown",
+      chunks: [],
+      rootIntegrity: ghostRootIntegrity([]),
+      fidelity: { presentation: "reduced", downgrades: ["legacy capture"] },
     });
     if (legacy.schemaVersion !== 1) throw new Error("legacy fixture did not parse as V1");
     const migrated = migrateGhostCapsuleManifestV1(legacy);
-    expect(migrated).toMatchObject({ schemaVersion: 2, id: "legacy-contract", integrity: { rootIntegrity: legacy.rootIntegrity } });
+    expect(migrated).toMatchObject({
+      schemaVersion: 2,
+      id: "legacy-contract",
+      integrity: { rootIntegrity: legacy.rootIntegrity },
+    });
     expect(legacy.schemaVersion).toBe(1);
 
     const source = new GhostLocalVault(createMemoryGhostVaultBackend());
     const extensible = createGhostCapsuleManifestV2({
-      id: "extension-contract", status: "complete", createdAt: "2026-08-02T00:00:00.000Z",
-      completedAt: "2026-08-02T00:00:01.000Z", recordingProfile: "coaching", chunks: [],
+      id: "extension-contract",
+      status: "complete",
+      createdAt: "2026-08-02T00:00:00.000Z",
+      completedAt: "2026-08-02T00:00:01.000Z",
+      recordingProfile: "coaching",
+      chunks: [],
       rootIntegrity: ghostRootIntegrity([]),
       fidelity: { presentation: "full", downgrades: [] },
       extensions: { "com.tear.example": { note: "preserve me" } },
@@ -421,7 +612,9 @@ describe("Ghost capsule recorder and local Vault", () => {
     let release: (() => void) | undefined;
     const delayedWorker: GhostEncoderWorkerPort = {
       async encode(payload, thumbnail): Promise<GhostEncodedChunk> {
-        await new Promise<void>((resolve) => { release = resolve; });
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
         return createInlineGhostEncoderWorker().encode(payload, thumbnail);
       },
     };
@@ -444,15 +637,28 @@ describe("Ghost capsule recorder and local Vault", () => {
     expect(manifest.fidelity).toMatchObject({ presentation: "dropped" });
     expect(manifest.fidelity.downgrades).toContain("presentation dropped under encoder backpressure");
     expect(GHOST_VAULT_STORES).toEqual([
-      "manifests", "chunks", "assets", "indexes", "uploadJobs",
-      "analysis", "lineage", "settings", "journals", "quarantine", "libraries",
+      "manifests",
+      "chunks",
+      "assets",
+      "indexes",
+      "uploadJobs",
+      "analysis",
+      "lineage",
+      "settings",
+      "journals",
+      "quarantine",
+      "libraries",
     ]);
   });
 
   it("retains a shared chunk until the last referencing capsule is removed", async () => {
     const source = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
-      sessionId: "shared-source", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault: source,
+      sessionId: "shared-source",
+      createdAt: "2026-08-10T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault: source,
     });
     await recorder.start();
     await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
@@ -470,14 +676,20 @@ describe("Ghost capsule recorder and local Vault", () => {
     const original = await vault.getManifest("shared-source");
     if (original === undefined) throw new Error("shared fixture did not reopen");
     const copyManifest = createGhostCapsuleManifestV2({
-      id: "shared-copy", status: original.status, createdAt: original.createdAt,
+      id: "shared-copy",
+      status: original.status,
+      createdAt: original.createdAt,
       ...(original.completedAt === undefined ? {} : { completedAt: original.completedAt }),
-      recordingProfile: original.recordingProfile, chunks: original.chunks,
-      rootIntegrity: original.rootIntegrity, fidelity: original.fidelity,
+      recordingProfile: original.recordingProfile,
+      chunks: original.chunks,
+      rootIntegrity: original.rootIntegrity,
+      fidelity: original.fidelity,
     });
     await vault.importCapsule(JSON.stringify({ manifest: copyManifest, chunks: exported.chunks }));
     const bytes = await backend.get("chunks", sharedChunkId);
-    await expect(backend.commitIfMatches(preparedRemoval.guards, preparedRemoval.writes)).rejects.toThrow(/no longer matches/u);
+    await expect(backend.commitIfMatches(preparedRemoval.guards, preparedRemoval.writes)).rejects.toThrow(
+      /no longer matches/u,
+    );
     await vault.removeCapsule("shared-source");
     expect(await backend.get("chunks", sharedChunkId)).toBe(bytes);
     await vault.removeCapsule("shared-copy");
@@ -500,16 +712,24 @@ describe("Ghost capsule recorder and local Vault", () => {
     };
     const vault = new GhostLocalVault(backend);
     const recorder = new GhostStreamingRecorder({
-      sessionId: "late-manifest-source", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "late-manifest-source",
+      createdAt: "2026-08-10T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await recorder.start();
     await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
     const original = await recorder.finalize("2026-08-10T00:00:01.000Z");
     const copy = createGhostCapsuleManifestV2({
-      id: "late-manifest-copy", status: original.status, createdAt: original.createdAt,
+      id: "late-manifest-copy",
+      status: original.status,
+      createdAt: original.createdAt,
       ...(original.completedAt === undefined ? {} : { completedAt: original.completedAt }),
-      recordingProfile: original.recordingProfile, chunks: original.chunks,
-      rootIntegrity: original.rootIntegrity, fidelity: original.fidelity,
+      recordingProfile: original.recordingProfile,
+      chunks: original.chunks,
+      rootIntegrity: original.rootIntegrity,
+      fidelity: original.fidelity,
     });
     removeDuringCreation = true;
     await expect(vault.putManifest(copy)).rejects.toThrow(/chunk.*missing/u);
@@ -522,7 +742,11 @@ describe("Ghost capsule recorder and local Vault", () => {
     const backend = createMemoryGhostVaultBackend();
     const vault = new GhostLocalVault(backend);
     const recorder = new GhostStreamingRecorder({
-      sessionId: "repair-parent-race", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "repair-parent-race",
+      createdAt: "2026-08-10T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await recorder.start();
     await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
@@ -532,7 +756,9 @@ describe("Ghost capsule recorder and local Vault", () => {
     await backend.put("chunks", corruptChunk.id, "corrupted");
     const removal = await vault.prepareCapsuleRemoval(parent.id);
     const doctor = new GhostDoctor(vault, () => "2026-08-10T00:00:02.000Z");
-    await expect(doctor.repairChild(parent.id, "repair-child-race")).resolves.toMatchObject({ repairedChildId: "repair-child-race" });
+    await expect(doctor.repairChild(parent.id, "repair-child-race")).resolves.toMatchObject({
+      repairedChildId: "repair-child-race",
+    });
     await expect(backend.commitIfMatches(removal.guards, removal.writes)).rejects.toThrow(/no longer matches/u);
     expect(await vault.getManifest(parent.id)).toBeDefined();
     expect((await vault.getManifest("repair-child-race"))?.lineage?.parentId).toBe(parent.id);
@@ -541,7 +767,11 @@ describe("Ghost capsule recorder and local Vault", () => {
   it("invalidates removal when an import lands during the late reference scan", async () => {
     const source = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
-      sessionId: "late-scan-source", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault: source,
+      sessionId: "late-scan-source",
+      createdAt: "2026-08-10T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault: source,
     });
     await recorder.start();
     await recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } });
@@ -562,10 +792,14 @@ describe("Ghost capsule recorder and local Vault", () => {
           const original = await holder.vault?.getManifest("late-scan-source");
           if (original === undefined) throw new Error("late-scan fixture did not reopen");
           const copy = createGhostCapsuleManifestV2({
-            id: "late-scan-copy", status: original.status, createdAt: original.createdAt,
+            id: "late-scan-copy",
+            status: original.status,
+            createdAt: original.createdAt,
             ...(original.completedAt === undefined ? {} : { completedAt: original.completedAt }),
-            recordingProfile: original.recordingProfile, chunks: original.chunks,
-            rootIntegrity: original.rootIntegrity, fidelity: original.fidelity,
+            recordingProfile: original.recordingProfile,
+            chunks: original.chunks,
+            rootIntegrity: original.rootIntegrity,
+            fidelity: original.fidelity,
           });
           await holder.vault?.importCapsule(JSON.stringify({ manifest: copy, chunks: exported.chunks }));
         }
@@ -601,8 +835,11 @@ describe("Ghost capsule recorder and local Vault", () => {
     };
     const vault = new GhostLocalVault(racedBackend);
     const recorder = new GhostStreamingRecorder({
-      sessionId: "thumbnail-removal-race", createdAt: "2026-08-10T00:00:00.000Z",
-      chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "thumbnail-removal-race",
+      createdAt: "2026-08-10T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await recorder.start();
     await recorder.append({ kind: "presentation", tick: 1, value: { x: 1, y: 2 } });

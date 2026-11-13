@@ -113,7 +113,9 @@ export class TearStateTimeline {
     candidate.#bank.import(archive.checkpoints);
     for (const delta of archive.deltas) {
       const materialized = candidate.#bank.materialize(delta.id);
-      if (stableVerificationHash(materialized) !== stableVerificationHash(thisMaterialize(archive.checkpoints, delta.id))) {
+      if (
+        stableVerificationHash(materialized) !== stableVerificationHash(thisMaterialize(archive.checkpoints, delta.id))
+      ) {
         throw new TypeError(`timeline delta ${delta.id} does not match checkpoint state`);
       }
       candidate.#deltas.set(delta.id, cloneDelta(delta));
@@ -142,10 +144,14 @@ export function migrateTimelineArchive(
     schemaVersion: 2,
     cadenceTicks: positiveCadence(cadenceTicks),
     checkpoints: structuredClone(archive),
-    deltas: Object.freeze(archive.deltas.map((delta) => Object.freeze({
-      ...structuredClone(delta),
-      actions: Object.freeze([]),
-      events: Object.freeze([]),
-    }))),
+    deltas: Object.freeze(
+      archive.deltas.map((delta) =>
+        Object.freeze({
+          ...structuredClone(delta),
+          actions: Object.freeze([]),
+          events: Object.freeze([]),
+        }),
+      ),
+    ),
   });
 }

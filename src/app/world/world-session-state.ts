@@ -47,23 +47,45 @@ export function createLiveWorldSessionState(defaultMode: () => RunMode = () => "
   let runSeed: number | null = null;
   return Object.freeze({
     selectedMode: currentMode,
-    setSelectedMode: (value) => { chosenMode = value; },
+    setSelectedMode: (value) => {
+      chosenMode = value;
+    },
     selectedDifficulty: () => difficulty,
-    setSelectedDifficulty: (value) => { difficulty = value; },
+    setSelectedDifficulty: (value) => {
+      difficulty = value;
+    },
     selectedWeapon: () => weapon,
-    setSelectedWeapon: (value) => { weapon = value; },
+    setSelectedWeapon: (value) => {
+      weapon = value;
+    },
     selectedBoss: () => boss,
-    setSelectedBoss: (value) => { boss = value; },
+    setSelectedBoss: (value) => {
+      boss = value;
+    },
     selection: () => Object.freeze({ mode: currentMode(), difficulty, weapon, boss }),
-    setRunSeed: (value) => { runSeed = value; },
-    takeRunSeed: () => { const value = runSeed; runSeed = null; return value; },
+    setRunSeed: (value) => {
+      runSeed = value;
+    },
+    takeRunSeed: () => {
+      const value = runSeed;
+      runSeed = null;
+      return value;
+    },
     outcome: () => outcome,
-    setOutcome: (value) => { outcome = value; },
+    setOutcome: (value) => {
+      outcome = value;
+    },
     lastRecording: () => lastRecording,
-    setLastRecording: (value) => { lastRecording = value; },
+    setLastRecording: (value) => {
+      lastRecording = value;
+    },
     lastVaultId: () => lastVaultId,
-    setLastVaultId: (value) => { lastVaultId = value; },
+    setLastVaultId: (value) => {
+      lastVaultId = value;
+    },
     winSeconds: () => winSeconds,
-    setWinSeconds: (value) => { winSeconds = value; },
+    setWinSeconds: (value) => {
+      winSeconds = value;
+    },
   } satisfies LiveWorldSessionState);
 }

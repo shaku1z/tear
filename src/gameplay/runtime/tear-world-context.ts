@@ -7,18 +7,7 @@ import type { EnvironmentRuntimeState } from "../environment/environment-contrac
  * while simulation code keeps stable access to the current per-world values.
  * It deliberately contains no rendering, browser, persistence, or app types.
  */
-export interface TearWorldState<
-  Run,
-  Player,
-  Blade,
-  Enemy,
-  Projectile,
-  Floater,
-  SlowZone,
-  Wall,
-  BossIntro,
-  BossBeat,
-> {
+export interface TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, BossBeat> {
   run(): Run | null;
   setRun(value: Run | null): void;
   player(): Player | undefined;
@@ -79,7 +68,16 @@ export function createTearWorldState<
   BossBeat,
 >(
   options: TearWorldStateOptions<
-    Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, BossBeat
+    Run,
+    Player,
+    Blade,
+    Enemy,
+    Projectile,
+    Floater,
+    SlowZone,
+    Wall,
+    BossIntro,
+    BossBeat
   > = {},
 ): TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, BossBeat> {
   let run: Run | null = options.run ?? null;
@@ -93,22 +91,57 @@ export function createTearWorldState<
   let bossIntro: BossIntro | null = options.bossIntro ?? null;
   let bossBeat: BossBeat | null = options.bossBeat ?? null;
   const state: TearWorldState<Run, Player, Blade, Enemy, Projectile, Floater, SlowZone, Wall, BossIntro, BossBeat> = {
-    run: () => run, setRun: (value) => { run = value; },
-    player: () => player, setPlayer: (value) => { player = value; },
-    blade: () => blade, setBlade: (value) => { blade = value; },
-    enemies: () => enemies, setEnemies: (value) => { enemies = [...value]; },
-    projectiles: () => projectiles, setProjectiles: (value) => { projectiles = [...value]; },
-    floaters: () => floaters, setFloaters: (value) => { floaters = [...value]; },
-    slowZones: () => slowZones, setSlowZones: (value) => { slowZones = [...value]; },
-    temporaryWalls: () => temporaryWalls, setTemporaryWalls: (value) => { temporaryWalls = [...value]; },
-    bossIntro: () => bossIntro, setBossIntro: (value) => { bossIntro = value; },
-    bossBeat: () => bossBeat, setBossBeat: (value) => { bossBeat = value; },
+    run: () => run,
+    setRun: (value) => {
+      run = value;
+    },
+    player: () => player,
+    setPlayer: (value) => {
+      player = value;
+    },
+    blade: () => blade,
+    setBlade: (value) => {
+      blade = value;
+    },
+    enemies: () => enemies,
+    setEnemies: (value) => {
+      enemies = [...value];
+    },
+    projectiles: () => projectiles,
+    setProjectiles: (value) => {
+      projectiles = [...value];
+    },
+    floaters: () => floaters,
+    setFloaters: (value) => {
+      floaters = [...value];
+    },
+    slowZones: () => slowZones,
+    setSlowZones: (value) => {
+      slowZones = [...value];
+    },
+    temporaryWalls: () => temporaryWalls,
+    setTemporaryWalls: (value) => {
+      temporaryWalls = [...value];
+    },
+    bossIntro: () => bossIntro,
+    setBossIntro: (value) => {
+      bossIntro = value;
+    },
+    bossBeat: () => bossBeat,
+    setBossBeat: (value) => {
+      bossBeat = value;
+    },
   };
   return Object.freeze(state);
 }
 
 /** Explicit outward services a real world needs before its implementation can become per-world. */
-export interface TearWorldServices<RandomSnapshot, RandomStreamName extends string, RandomStream, Configuration extends object = object> {
+export interface TearWorldServices<
+  RandomSnapshot,
+  RandomStreamName extends string,
+  RandomStream,
+  Configuration extends object = object,
+> {
   readonly configuration: TearWorldConfiguration<Configuration>;
   readonly random: Readonly<{
     resetRun(seed: number | string): void;
@@ -116,7 +149,12 @@ export interface TearWorldServices<RandomSnapshot, RandomStreamName extends stri
     snapshot(): RandomSnapshot;
     restore(snapshot: RandomSnapshot): void;
   }>;
-  readonly clock: Readonly<{ seconds(): number; set(seconds: number): void; reset(): void; advance(seconds: number): void }>;
+  readonly clock: Readonly<{
+    seconds(): number;
+    set(seconds: number): void;
+    reset(): void;
+    advance(seconds: number): void;
+  }>;
   readonly effects: Readonly<{ resetWorld(): void; count(): number }>;
   readonly mirror: Readonly<{ reset(): void }>;
   readonly bossFeedback: Readonly<{ clear(): void }>;
@@ -127,7 +165,15 @@ export interface TearWorldServices<RandomSnapshot, RandomStreamName extends stri
  * transient per-step records to the shared runtime. It is intentionally not a
  * replacement for app-level UI or storage.
  */
-export interface TearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema, Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState> {
+export interface TearWorldContext<
+  State,
+  Entities,
+  Lifecycle,
+  Services,
+  Transient,
+  Cinema,
+  Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState,
+> {
   readonly state: State;
   readonly entities: Entities;
   readonly lifecycle: Lifecycle;
@@ -137,14 +183,25 @@ export interface TearWorldContext<State, Entities, Lifecycle, Services, Transien
   readonly environment: Environment;
 }
 
-export function createTearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema, Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState>(
+export function createTearWorldContext<
+  State,
+  Entities,
+  Lifecycle,
+  Services,
+  Transient,
+  Cinema,
+  Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState,
+>(
   state: State,
   entities: Entities,
   lifecycle: Lifecycle,
   services: Services,
   transient: Transient,
   cinema: Cinema,
-    environment: Environment = createEnvironmentRuntime({ stageId: "unknown", worldId: "context" }) as unknown as Environment,
+  environment: Environment = createEnvironmentRuntime({
+    stageId: "unknown",
+    worldId: "context",
+  }) as unknown as Environment,
 ): TearWorldContext<State, Entities, Lifecycle, Services, Transient, Cinema, Environment> {
   return Object.freeze({ state, entities, lifecycle, services, transient, cinema, environment });
 }

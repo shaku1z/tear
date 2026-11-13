@@ -3,21 +3,56 @@ import type { StyleIntent, StyleState } from "./style-runtime";
 import type { AchievementIntent } from "../progression/achievement-runtime";
 
 export interface MutableStyleRun {
-  combo: number; comboTimer: number; lastTrick: string; mult: number; rank: string; wavePeak: number; runTime: number;
+  combo: number;
+  comboTimer: number;
+  lastTrick: string;
+  mult: number;
+  rank: string;
+  wavePeak: number;
+  runTime: number;
 }
 
 export function snapshotStyle(run: MutableStyleRun): StyleState {
-  return Object.freeze({ combo: run.combo, comboTimer: run.comboTimer, lastTrick: run.lastTrick,
-    mult: run.mult, rank: run.rank, wavePeak: run.wavePeak, runTime: run.runTime });
+  return Object.freeze({
+    combo: run.combo,
+    comboTimer: run.comboTimer,
+    lastTrick: run.lastTrick,
+    mult: run.mult,
+    rank: run.rank,
+    wavePeak: run.wavePeak,
+    runTime: run.runTime,
+  });
 }
 
 export function applyStyleSnapshot(run: MutableStyleRun, state: StyleState): void {
   if (state.combo > run.combo) {
-    const id = ({ hit: "swing", throwHit: "throw", launch: "launch", slam: "slam", superslam: "superslam", updraft: "updraft", parry: "parry", deflect: "deflect", reversal: "reversal", threadcut: "threadcut", break: "break", cleave: "cleave", wheelCut: "wheelCut", lash: "lash", recoilCut: "recoilCut" } as Readonly<Record<string, RunDnaManeuver>>)[state.lastTrick];
+    const id = (
+      {
+        hit: "swing",
+        throwHit: "throw",
+        launch: "launch",
+        slam: "slam",
+        superslam: "superslam",
+        updraft: "updraft",
+        parry: "parry",
+        deflect: "deflect",
+        reversal: "reversal",
+        threadcut: "threadcut",
+        break: "break",
+        cleave: "cleave",
+        wheelCut: "wheelCut",
+        lash: "lash",
+        recoilCut: "recoilCut",
+      } as Readonly<Record<string, RunDnaManeuver>>
+    )[state.lastTrick];
     if (id !== undefined) runDnaObserver(run)?.maneuver(id);
   }
-  run.combo = state.combo; run.comboTimer = state.comboTimer; run.lastTrick = state.lastTrick;
-  run.mult = state.mult; run.rank = state.rank; run.wavePeak = state.wavePeak;
+  run.combo = state.combo;
+  run.comboTimer = state.comboTimer;
+  run.lastTrick = state.lastTrick;
+  run.mult = state.mult;
+  run.rank = state.rank;
+  run.wavePeak = state.wavePeak;
 }
 
 export interface StyleIntentPorts {
@@ -36,16 +71,36 @@ export interface StyleIntentPorts {
 export function executeStyleIntents(intents: readonly StyleIntent[], ports: StyleIntentPorts): void {
   for (const intent of intents) {
     switch (intent.type) {
-      case "tutorial-mark": ports.tutorialMark(intent.kind); break;
-      case "ghost-capture": ports.ghostCapture(intent.kind, intent.x, intent.y, intent.importance); break;
-      case "player-trick": ports.playerTrick(intent.kind, intent.at); break;
-      case "rank-up": ports.rankUp(intent.rank); break;
-      case "music-rank-changed": ports.musicRankChanged(intent.rank); break;
-      case "haptic": ports.haptic(intent.pattern); break;
-      case "profile-add": ports.profileAdd(intent.stat, intent.amount); break;
-      case "daily-bump": ports.dailyBump(intent.stat, intent.amount); break;
-      case "profile-max": ports.profileMax(intent.stat, intent.value); break;
-      case "achievement-check": ports.achievementCheck(); break;
+      case "tutorial-mark":
+        ports.tutorialMark(intent.kind);
+        break;
+      case "ghost-capture":
+        ports.ghostCapture(intent.kind, intent.x, intent.y, intent.importance);
+        break;
+      case "player-trick":
+        ports.playerTrick(intent.kind, intent.at);
+        break;
+      case "rank-up":
+        ports.rankUp(intent.rank);
+        break;
+      case "music-rank-changed":
+        ports.musicRankChanged(intent.rank);
+        break;
+      case "haptic":
+        ports.haptic(intent.pattern);
+        break;
+      case "profile-add":
+        ports.profileAdd(intent.stat, intent.amount);
+        break;
+      case "daily-bump":
+        ports.dailyBump(intent.stat, intent.amount);
+        break;
+      case "profile-max":
+        ports.profileMax(intent.stat, intent.value);
+        break;
+      case "achievement-check":
+        ports.achievementCheck();
+        break;
     }
   }
 }
@@ -62,8 +117,17 @@ export function executeAchievementIntents(
 }
 
 export interface SplitProjectile {
-  x: number; y: number; vx: number; vy: number; deflectDmg: number; bounces: number;
-  owner: unknown; sourceEnemy?: unknown; perfect: boolean; pierce?: boolean; pierced?: Set<unknown> | null;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  deflectDmg: number;
+  bounces: number;
+  owner: unknown;
+  sourceEnemy?: unknown;
+  perfect: boolean;
+  pierce?: boolean;
+  pierced?: Set<unknown> | null;
   deflect(x: number, y: number, speed: number, perfect: boolean): void;
 }
 
@@ -85,9 +149,14 @@ export function splitParryProjectile<T extends SplitProjectile>(
     shard.owner = parent.owner;
     shard.sourceEnemy = parent.sourceEnemy ?? parent.owner;
     shard.deflect(Math.cos(angle), Math.sin(angle), speed, parent.perfect);
-    shard.vx = Math.cos(angle) * speed; shard.vy = Math.sin(angle) * speed;
-    shard.deflectDmg = parent.deflectDmg; shard.bounces = 2;
-    if (parent.pierce) { shard.pierce = true; shard.pierced = new Set(); }
+    shard.vx = Math.cos(angle) * speed;
+    shard.vy = Math.sin(angle) * speed;
+    shard.deflectDmg = parent.deflectDmg;
+    shard.bounces = 2;
+    if (parent.pierce) {
+      shard.pierce = true;
+      shard.pierced = new Set();
+    }
     add(shard);
   }
 }

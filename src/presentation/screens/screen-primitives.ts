@@ -3,7 +3,8 @@ import type { CardView, ReplayView, ScreenAction, ScreenRenderContext } from "./
 export function ellipsize(context: CanvasRenderingContext2D, value: string, maximumWidth: number): string {
   if (context.measureText(value).width <= maximumWidth) return value;
   const suffix = "…";
-  let low = 0, high = value.length;
+  let low = 0,
+    high = value.length;
   while (low < high) {
     const middle = Math.ceil((low + high) / 2);
     if (context.measureText(value.slice(0, middle).trimEnd() + suffix).width <= maximumWidth) low = middle;
@@ -20,7 +21,9 @@ export function ellipsize(context: CanvasRenderingContext2D, value: string, maxi
 export interface PageLayout {
   readonly sheet: Readonly<{ x: number; y: number; w: number; h: number }>;
   /** Shared content column (1120 wide, centred). */
-  readonly left: number; readonly right: number; readonly contentWidth: number;
+  readonly left: number;
+  readonly right: number;
+  readonly contentWidth: number;
   /** First y available under the header. */
   readonly bodyTop: number;
   /** Last y content may use; everything below belongs to the footer. */
@@ -30,11 +33,19 @@ export interface PageLayout {
 }
 
 export function pageLayout(context: ScreenRenderContext): PageLayout {
-  const sheet = context.ui.sheetRect(), metric = context.ui.t.metric;
+  const sheet = context.ui.sheetRect(),
+    metric = context.ui.t.metric;
   const footerY = context.ui.sheetFooter().y;
   const left = context.width / 2 - 560;
-  return Object.freeze({ sheet, left, right: left + 1120, contentWidth: 1120,
-    bodyTop: metric.pageBodyTop, bodyBottom: footerY - 14, footerY });
+  return Object.freeze({
+    sheet,
+    left,
+    right: left + 1120,
+    contentWidth: 1120,
+    bodyTop: metric.pageBodyTop,
+    bodyBottom: footerY - 14,
+    footerY,
+  });
 }
 
 /**
@@ -44,8 +55,14 @@ export function pageLayout(context: ScreenRenderContext): PageLayout {
  * no title can clip and no row can collide at any density (desktop, tablet, phone).
  */
 export interface OverlayLayout {
-  readonly left: number; readonly right: number; readonly width: number; readonly centerX: number;
-  readonly top: number; readonly titleY: number; readonly ruleY: number; readonly subtitleY: number;
+  readonly left: number;
+  readonly right: number;
+  readonly width: number;
+  readonly centerX: number;
+  readonly top: number;
+  readonly titleY: number;
+  readonly ruleY: number;
+  readonly subtitleY: number;
   /** First y under the header (and the subtitle when there is one). */
   readonly bodyTop: number;
   /** Last y body content may use. */
@@ -54,17 +71,35 @@ export interface OverlayLayout {
   readonly footerY: number;
 }
 
-export function overlayLayout(context: ScreenRenderContext, options: Readonly<{ subtitleLines?: number }> = {}): OverlayLayout {
-  const t = context.ui.t, inset = context.safeInsets;
-  const top = inset.t + t.space.lg, bottom = context.height - inset.b - t.space.lg;
-  const left = inset.l + t.space.xl, right = context.width - inset.r - t.space.xl;
-  const titleY = top + Math.round(t.type.display * 0.8), ruleY = titleY + t.space.sm;
+export function overlayLayout(
+  context: ScreenRenderContext,
+  options: Readonly<{ subtitleLines?: number }> = {},
+): OverlayLayout {
+  const t = context.ui.t,
+    inset = context.safeInsets;
+  const top = inset.t + t.space.lg,
+    bottom = context.height - inset.b - t.space.lg;
+  const left = inset.l + t.space.xl,
+    right = context.width - inset.r - t.space.xl;
+  const titleY = top + Math.round(t.type.display * 0.8),
+    ruleY = titleY + t.space.sm;
   const subtitleY = ruleY + 3 + t.space.sm + t.type.caption;
   const lines = options.subtitleLines ?? 0;
   const bodyTop = (lines > 0 ? subtitleY + (lines - 1) * Math.round(t.type.caption * 1.4) : ruleY + 3) + t.space.lg;
   const footerY = bottom - t.metric.btnH;
-  return Object.freeze({ left, right, width: right - left, centerX: context.width / 2, top, titleY, ruleY, subtitleY,
-    bodyTop, bodyBottom: footerY - t.space.md, footerY });
+  return Object.freeze({
+    left,
+    right,
+    width: right - left,
+    centerX: context.width / 2,
+    top,
+    titleY,
+    ruleY,
+    subtitleY,
+    bodyTop,
+    bodyBottom: footerY - t.space.md,
+    footerY,
+  });
 }
 
 export interface OverlayHeader {
@@ -78,10 +113,16 @@ export interface OverlayHeader {
 
 /** Draws the overlay title, rule and subtitle lines; returns the layout for the body. */
 export function overlayHeader(context: ScreenRenderContext, header: OverlayHeader): OverlayLayout {
-  const { canvas, ui } = context, t = ui.t;
+  const { canvas, ui } = context,
+    t = ui.t;
   const subtitle = header.subtitle ?? [];
   const layout = overlayLayout(context, { subtitleLines: subtitle.length });
-  const title = ui.fitText(canvas, header.title, layout.width, { size: t.type.display, floor: t.type.h2, bold: true, ellipsis: false });
+  const title = ui.fitText(canvas, header.title, layout.width, {
+    size: t.type.display,
+    floor: t.type.h2,
+    bold: true,
+    ellipsis: false,
+  });
   ui.title(canvas, title.lines[0] ?? header.title, layout.centerX, layout.titleY, title.size);
   const rule = 160 * (header.reveal ?? 1);
   canvas.save();
@@ -91,20 +132,40 @@ export function overlayHeader(context: ScreenRenderContext, header: OverlayHeade
   canvas.restore();
   subtitle.forEach((line, index) => {
     const fit = ui.fitText(canvas, line, layout.width, { size: t.type.caption, floor: t.type.micro });
-    ui.text(canvas, fit.lines[0] ?? line, layout.centerX, layout.subtitleY + index * Math.round(t.type.caption * 1.4), fit.size, "center", t.alpha.muted);
+    ui.text(
+      canvas,
+      fit.lines[0] ?? line,
+      layout.centerX,
+      layout.subtitleY + index * Math.round(t.type.caption * 1.4),
+      fit.size,
+      "center",
+      t.alpha.muted,
+    );
   });
   return layout;
 }
 
 /** A centred row of equal buttons in the overlay footer (or at `y`). */
-export function actionRow(context: ScreenRenderContext, items: readonly Readonly<{ label: string; action: ScreenAction; enabled?: boolean }>[],
-  y: number, maxWidth: number): void {
-  const t = context.ui.t, gap = t.metric.btnGap;
+export function actionRow(
+  context: ScreenRenderContext,
+  items: readonly Readonly<{ label: string; action: ScreenAction; enabled?: boolean }>[],
+  y: number,
+  maxWidth: number,
+): void {
+  const t = context.ui.t,
+    gap = t.metric.btnGap;
   const width = Math.min(t.metric.btnW, (maxWidth - gap * (items.length - 1)) / Math.max(1, items.length));
   const start = context.width / 2 - (width * items.length + gap * (items.length - 1)) / 2;
   items.forEach((item, index) => {
-    context.enqueue({ x: start + index * (width + gap), y, w: width, h: t.metric.btnH, label: item.label, action: item.action,
-      ...(item.enabled === undefined ? {} : { enabled: item.enabled }) });
+    context.enqueue({
+      x: start + index * (width + gap),
+      y,
+      w: width,
+      h: t.metric.btnH,
+      label: item.label,
+      action: item.action,
+      ...(item.enabled === undefined ? {} : { enabled: item.enabled }),
+    });
   });
 }
 
@@ -115,15 +176,19 @@ export function menuHeight(context: ScreenRenderContext, count: number): number 
 }
 
 export interface PageHeader {
-  readonly title: string; readonly subtitle?: string | undefined; readonly hue?: string | undefined;
+  readonly title: string;
+  readonly subtitle?: string | undefined;
+  readonly hue?: string | undefined;
   /** Optional right-aligned figure in the header (for example the shop coin balance). */
-  readonly stat?: Readonly<{ value: string; label: string; color?: string | undefined; glyph?: string | undefined }> | undefined;
+  readonly stat?:
+    Readonly<{ value: string; label: string; color?: string | undefined; glyph?: string | undefined }> | undefined;
 }
 
 /** Draws the page header and returns the layout; `bodyTop` sits under the header's last line. */
 export function page(context: ScreenRenderContext, header: PageHeader): PageLayout {
   const { canvas, ui, width } = context;
-  const layout = pageLayout(context), titleY = ui.t.metric.pageTitleY;
+  const layout = pageLayout(context),
+    titleY = ui.t.metric.pageTitleY;
   ui.title(canvas, header.title, width / 2, titleY, ui.t.type.h1);
   const sweep = 130 * context.enterAmount;
   canvas.save();
@@ -141,7 +206,12 @@ export function page(context: ScreenRenderContext, header: PageHeader): PageLayo
 }
 
 /** The right-aligned header figure: optional glyph, value, and a small label under it. */
-function headerStat(context: ScreenRenderContext, stat: NonNullable<PageHeader["stat"]>, statX: number, titleY: number): void {
+function headerStat(
+  context: ScreenRenderContext,
+  stat: NonNullable<PageHeader["stat"]>,
+  statX: number,
+  titleY: number,
+): void {
   const { canvas, ui } = context;
   canvas.save();
   canvas.textAlign = "right";
@@ -173,9 +243,14 @@ export function clipBody(context: ScreenRenderContext, top: number, bottom: numb
 }
 
 /** Footer: BACK centred in the sheet footer row; the scroll hint sits to its right, never over rows. */
-export function pageFooter(context: ScreenRenderContext, options: Readonly<{
-  back?: ScreenAction; canScrollUp?: boolean | undefined; canScrollDown?: boolean | undefined;
-}> = {}): PageLayout {
+export function pageFooter(
+  context: ScreenRenderContext,
+  options: Readonly<{
+    back?: ScreenAction;
+    canScrollUp?: boolean | undefined;
+    canScrollDown?: boolean | undefined;
+  }> = {},
+): PageLayout {
   const layout = pageLayout(context);
   backControl(context, options.back);
   scrollHint(context, options.canScrollUp, options.canScrollDown);
@@ -183,38 +258,89 @@ export function pageFooter(context: ScreenRenderContext, options: Readonly<{
 }
 
 export function backControl(context: ScreenRenderContext, to: ScreenAction = { type: "navigate", to: "menu" }): void {
-  const metric = context.ui.t.metric, layout = pageLayout(context);
+  const metric = context.ui.t.metric,
+    layout = pageLayout(context);
   context.enqueue({
-    x: context.width / 2 - metric.backW / 2, y: layout.footerY, w: metric.backW, h: metric.btnH,
-    label: "‹  BACK", action: to,
+    x: context.width / 2 - metric.backW / 2,
+    y: layout.footerY,
+    w: metric.backW,
+    h: metric.btnH,
+    label: "‹  BACK",
+    action: to,
   });
 }
 
-export function tabs(context: ScreenRenderContext, values: readonly { id: string; label: string; selected?: boolean | undefined }[], action: (id: string) => ScreenAction, y = 124): void {
-  if (values.length === 0) return;
-  const active = Math.max(0, values.findIndex((value) => value.selected));
-  context.ui.tabs(context.canvas, values.map((value) => value.id).join("-"), values.map((value) => value.label), active, y, (button) => {
-    const index = button._tab ?? 0;
-    const value = values[index];
-    if (value === undefined) return;
-    context.enqueue({ x: button.x, y: button.y, w: button.w, h: button.h, label: "", hiddenBox: true, action: action(value.id) });
-  });
-}
-
-export function chips(context: ScreenRenderContext,
+export function tabs(
+  context: ScreenRenderContext,
   values: readonly { id: string; label: string; selected?: boolean | undefined }[],
-  action: (id: string) => ScreenAction, y: number, width: number, height: number, gap = 8, size?: number): void {
+  action: (id: string) => ScreenAction,
+  y = 124,
+): void {
+  if (values.length === 0) return;
+  const active = Math.max(
+    0,
+    values.findIndex((value) => value.selected),
+  );
+  context.ui.tabs(
+    context.canvas,
+    values.map((value) => value.id).join("-"),
+    values.map((value) => value.label),
+    active,
+    y,
+    (button) => {
+      const index = button._tab ?? 0;
+      const value = values[index];
+      if (value === undefined) return;
+      context.enqueue({
+        x: button.x,
+        y: button.y,
+        w: button.w,
+        h: button.h,
+        label: "",
+        hiddenBox: true,
+        action: action(value.id),
+      });
+    },
+  );
+}
+
+export function chips(
+  context: ScreenRenderContext,
+  values: readonly { id: string; label: string; selected?: boolean | undefined }[],
+  action: (id: string) => ScreenAction,
+  y: number,
+  width: number,
+  height: number,
+  gap = 8,
+  size?: number,
+): void {
   if (values.length === 0) return;
   const start = (context.width - (width * values.length + gap * (values.length - 1))) / 2;
-  values.forEach((value, index) => { context.enqueue({
-    x: start + index * (width + gap), y, w: width, h: height, label: value.label,
-    selected: value.selected, chip: true, action: action(value.id), size: size ?? context.ui.t.type.micro,
-  }); });
+  values.forEach((value, index) => {
+    context.enqueue({
+      x: start + index * (width + gap),
+      y,
+      w: width,
+      h: height,
+      label: value.label,
+      selected: value.selected,
+      chip: true,
+      action: action(value.id),
+      size: size ?? context.ui.t.type.micro,
+    });
+  });
 }
 
 /** Oracle replay-vault/feed row shared by Profile and Leaderboards. */
-export function replayRow(context: ScreenRenderContext, replay: ReplayView,
-  x: number, y: number, width: number, spineColor?: string, textRightReserve?: number): void {
+export function replayRow(
+  context: ScreenRenderContext,
+  replay: ReplayView,
+  x: number,
+  y: number,
+  width: number,
+  spineColor?: string,
+  textRightReserve?: number,
+): void {
   const { canvas, ui } = context;
   ui.card(canvas, x, y, width, 84, false);
   if (spineColor) ui.spine(canvas, x, y, 84, spineColor);
@@ -239,10 +365,23 @@ export function replayRow(context: ScreenRenderContext, replay: ReplayView,
   canvas.strokeRect(x + 12, y + 6, 128, 72);
   canvas.restore();
   const textWidth = Math.max(120, width - 156 - (textRightReserve ?? 400));
-  const title = ui.fitText(canvas, replay.title, textWidth, { size: ui.t.type.lead, floor: ui.t.type.label, bold: true });
+  const title = ui.fitText(canvas, replay.title, textWidth, {
+    size: ui.t.type.lead,
+    floor: ui.t.type.label,
+    bold: true,
+  });
   ui.displayText(canvas, title.lines[0] ?? replay.title, x + 156, y + 30, title.size);
-  ui.textBox(canvas, replay.detail, x + 156, y + 54, textWidth, { size: ui.t.type.caption, alpha: ui.t.alpha.soft, maxLines: 1 });
-  if (replay.timestamp) ui.textBox(canvas, replay.timestamp, x + 156, y + 74, textWidth, { size: ui.t.type.micro, alpha: ui.t.alpha.muted, maxLines: 1 });
+  ui.textBox(canvas, replay.detail, x + 156, y + 54, textWidth, {
+    size: ui.t.type.caption,
+    alpha: ui.t.alpha.soft,
+    maxLines: 1,
+  });
+  if (replay.timestamp)
+    ui.textBox(canvas, replay.timestamp, x + 156, y + 74, textWidth, {
+      size: ui.t.type.micro,
+      alpha: ui.t.alpha.muted,
+      maxLines: 1,
+    });
 }
 
 export function cardGrid(
@@ -270,7 +409,8 @@ export function cardGrid(
       ...(!card.locked && card.accent ? { edge: card.accent } : {}),
       ...(card.shimmer !== undefined ? { shimmer: card.shimmer } : {}),
     });
-    if (card.previewId) context.renderPreview?.(card.previewId, { x: x + 12, y: y + 32, w: width * 0.28, h: height - 44 });
+    if (card.previewId)
+      context.renderPreview?.(card.previewId, { x: x + 12, y: y + 32, w: width * 0.28, h: height - 44 });
     if (card.accent) context.ui.accentStrip(context.canvas, x, y, width, card.accent, 4);
     const heading = [card.badge, card.category].filter(Boolean).join("  ·  ");
     if (heading) context.ui.tag(context.canvas, heading, x + 16, y + 24, card.accent, "left", 11);
@@ -279,30 +419,76 @@ export function cardGrid(
       const selected = Math.max(0, Math.min(card.tier ?? 0, card.tierCount - 1));
       const startX = x + 18;
       for (let tier = 0; tier < card.tierCount; tier++) {
-        context.canvas.beginPath(); context.canvas.arc(startX + tier * 16, y + 72, 4, 0, Math.PI * 2);
-        if (tier === selected) { context.canvas.fillStyle = card.accent ?? context.ui.t.color.accent; context.canvas.fill(); }
-        else { context.canvas.strokeStyle = card.accent ?? context.ui.t.color.muted; context.canvas.lineWidth = 1.5; context.canvas.stroke(); }
+        context.canvas.beginPath();
+        context.canvas.arc(startX + tier * 16, y + 72, 4, 0, Math.PI * 2);
+        if (tier === selected) {
+          context.canvas.fillStyle = card.accent ?? context.ui.t.color.accent;
+          context.canvas.fill();
+        } else {
+          context.canvas.strokeStyle = card.accent ?? context.ui.t.color.muted;
+          context.canvas.lineWidth = 1.5;
+          context.canvas.stroke();
+        }
       }
-      context.ui.tag(context.canvas, selected === 0 ? "BASE" : `TIER ${String(selected + 1)}`, startX + card.tierCount * 16 + 4, y + 76, card.accent, "left", 10);
+      context.ui.tag(
+        context.canvas,
+        selected === 0 ? "BASE" : `TIER ${String(selected + 1)}`,
+        startX + card.tierCount * 16 + 4,
+        y + 76,
+        card.accent,
+        "left",
+        10,
+      );
     }
     if (card.description) {
       if (card.progress !== undefined) {
         context.canvas.font = `${String(context.ui.t.font.bodyWeight)} 11px ${context.ui.t.font.body}`;
-        context.ui.text(context.canvas, ellipsize(context.canvas, card.description, width - 36), x + width / 2, y + 74, 11, "center", context.ui.t.alpha.soft);
+        context.ui.text(
+          context.canvas,
+          ellipsize(context.canvas, card.description, width - 36),
+          x + width / 2,
+          y + 74,
+          11,
+          "center",
+          context.ui.t.alpha.soft,
+        );
       } else {
-        context.ui.wrappedText(context.canvas, card.description, x + width / 2, y + (card.tierCount && card.tierCount > 1 ? 94 : 78), width - 32, 18, 12, "center");
+        context.ui.wrappedText(
+          context.canvas,
+          card.description,
+          x + width / 2,
+          y + (card.tierCount && card.tierCount > 1 ? 94 : 78),
+          width - 32,
+          18,
+          12,
+          "center",
+        );
       }
     }
     if (card.progress !== undefined) {
       context.ui.bar(context.canvas, x + 16, y + height - 32, width - 132, 5, card.progress, card.accent);
-      if (card.progressLabel) context.ui.tag(context.canvas, card.progressLabel, x + 16, y + height - 12, card.accent, "left", 10);
+      if (card.progressLabel)
+        context.ui.tag(context.canvas, card.progressLabel, x + 16, y + height - 12, card.accent, "left", 10);
     }
-    if (card.rewardPrimary) context.ui.tag(context.canvas, card.rewardPrimary, x + width - 14, y + 24, card.accent, "right", 10);
-    if (card.rewardSecondary) context.ui.tag(context.canvas, card.rewardSecondary, x + width - 14, y + 42, undefined, "right", 10);
+    if (card.rewardPrimary)
+      context.ui.tag(context.canvas, card.rewardPrimary, x + width - 14, y + 24, card.accent, "right", 10);
+    if (card.rewardSecondary)
+      context.ui.tag(context.canvas, card.rewardSecondary, x + width - 14, y + 42, undefined, "right", 10);
     if (card.cost) context.ui.tag(context.canvas, card.cost, x + width - 14, y + height - 16, card.accent, "right", 11);
-    if (card.owned) context.ui.tag(context.canvas, `owned ×${String(card.owned)}`, x + 14, y + height - 16, undefined, "left", 11);
-    if (card.footer) context.ui.tag(context.canvas, card.footer, x + width / 2, y + height - 10, undefined, "center", 10);
-    context.enqueue({ x, y, w: width, h: height, label: "", hiddenBox: true, enabled: card.enabled, action: action(card.id, index) });
+    if (card.owned)
+      context.ui.tag(context.canvas, `owned ×${String(card.owned)}`, x + 14, y + height - 16, undefined, "left", 11);
+    if (card.footer)
+      context.ui.tag(context.canvas, card.footer, x + width / 2, y + height - 10, undefined, "center", 10);
+    context.enqueue({
+      x,
+      y,
+      w: width,
+      h: height,
+      label: "",
+      hiddenBox: true,
+      enabled: card.enabled,
+      action: action(card.id, index),
+    });
   });
 }
 
@@ -315,14 +501,34 @@ export function scrollHint(context: ScreenRenderContext, canUp = false, canDown 
     return;
   }
   const layout = pageLayout(context);
-  context.ui.scrollHint(context.canvas, layout.sheet.x + layout.sheet.w - 48, layout.footerY + context.ui.t.metric.btnH / 2 + 5, canUp, canDown, "right");
+  context.ui.scrollHint(
+    context.canvas,
+    layout.sheet.x + layout.sheet.w - 48,
+    layout.footerY + context.ui.t.metric.btnH / 2 + 5,
+    canUp,
+    canDown,
+    "right",
+  );
 }
 
-export function verticalMenu(context: ScreenRenderContext, items: readonly { label: string; action: ScreenAction; enabled?: boolean }[], x: number, top: number, width = 280): void {
+export function verticalMenu(
+  context: ScreenRenderContext,
+  items: readonly { label: string; action: ScreenAction; enabled?: boolean }[],
+  x: number,
+  top: number,
+  width = 280,
+): void {
   const height = context.ui.t.metric.btnH;
   const gap = context.ui.t.metric.btnGap;
-  items.forEach((item, index) => { context.enqueue({
-    x: x - width / 2, y: top + index * (height + gap), w: width, h: height,
-    label: item.label, action: item.action, enabled: item.enabled,
-  }); });
+  items.forEach((item, index) => {
+    context.enqueue({
+      x: x - width / 2,
+      y: top + index * (height + gap),
+      w: width,
+      h: height,
+      label: item.label,
+      action: item.action,
+      enabled: item.enabled,
+    });
+  });
 }

@@ -18,15 +18,33 @@ export function dispatchVictoryProgressionIntents(
 ): void {
   for (const intent of intents) {
     switch (intent.type) {
-      case "profile-add": port.profileAdd(intent.stat, intent.value); break;
-      case "profile-max": port.profileMax(intent.stat, intent.value); break;
-      case "daily-bump": port.dailyBump(intent.challenge, intent.value); break;
-      case "mark-weapon-win": port.markWeaponWin(intent.weaponId); break;
-      case "set-profile-reward": port.setProfileReward(intent.reward); break;
-      case "mark-adventure-difficulty": port.markAdventureDifficulty(intent.difficulty); break;
-      case "achievement-check": port.achievementCheck(); break;
-      case "cloud-log": port.cloudLog(intent.payload); break;
-      case "finish-recording": port.finishRecording(intent.won); break;
+      case "profile-add":
+        port.profileAdd(intent.stat, intent.value);
+        break;
+      case "profile-max":
+        port.profileMax(intent.stat, intent.value);
+        break;
+      case "daily-bump":
+        port.dailyBump(intent.challenge, intent.value);
+        break;
+      case "mark-weapon-win":
+        port.markWeaponWin(intent.weaponId);
+        break;
+      case "set-profile-reward":
+        port.setProfileReward(intent.reward);
+        break;
+      case "mark-adventure-difficulty":
+        port.markAdventureDifficulty(intent.difficulty);
+        break;
+      case "achievement-check":
+        port.achievementCheck();
+        break;
+      case "cloud-log":
+        port.cloudLog(intent.payload);
+        break;
+      case "finish-recording":
+        port.finishRecording(intent.won);
+        break;
     }
   }
 }
@@ -34,5 +52,7 @@ export function dispatchVictoryProgressionIntents(
 export function bindVictoryProgressionIntents(
   port: VictoryProgressionPort,
 ): (intents: readonly VictoryProgressionIntent[]) => void {
-  return (intents) => { dispatchVictoryProgressionIntents(intents, port); };
+  return (intents) => {
+    dispatchVictoryProgressionIntents(intents, port);
+  };
 }

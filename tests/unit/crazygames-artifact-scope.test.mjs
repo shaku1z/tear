@@ -14,18 +14,27 @@ async function fixture(files) {
   return root;
 }
 
-const cue = (urls, intro) => ({ stems: urls.map((url) => ({ sources: [{ url }] })), ...(intro ? { bossIntro: { asset: intro } } : {}) });
+const cue = (urls, intro) => ({
+  stems: urls.map((url) => ({ sources: [{ url }] })),
+  ...(intro ? { bossIntro: { asset: intro } } : {}),
+});
 
 it("keeps every file a cue, the page or a bundle requests and lists the rest", async () => {
   const root = await fixture({
     "index.html": '<link rel="icon" href="./branding/icons/icon-192.png">',
     "assets/index.js": 'draw("branding/logo.png")',
-    "branding/icons/icon-192.png": "a", "branding/icons/icon-512.png": "b", "branding/logo.png": "c",
+    "branding/icons/icon-192.png": "a",
+    "branding/icons/icon-512.png": "b",
+    "branding/logo.png": "c",
     "audio/cues/a/cue.json": cue(["opus/rhythm.ogg", "opus/revisions/r2/melody.ogg"], "intro.ogg"),
-    "audio/cues/a/intro.ogg": "i", "audio/cues/a/opus/rhythm.ogg": "r",
-    "audio/cues/a/opus/melody.ogg": "old", "audio/cues/a/opus/revisions/r2/melody.ogg": "new",
-    "audio/cues/a/opus/revisions/r1/melody.ogg": "older", "audio/cues/a/opus/revisions/r2/full-loop.ogg": "loop",
-    "audio/stingers/victory.ogg": "s", "audio/catalog.json": {},
+    "audio/cues/a/intro.ogg": "i",
+    "audio/cues/a/opus/rhythm.ogg": "r",
+    "audio/cues/a/opus/melody.ogg": "old",
+    "audio/cues/a/opus/revisions/r2/melody.ogg": "new",
+    "audio/cues/a/opus/revisions/r1/melody.ogg": "older",
+    "audio/cues/a/opus/revisions/r2/full-loop.ogg": "loop",
+    "audio/stingers/victory.ogg": "s",
+    "audio/catalog.json": {},
   });
   try {
     expect(await unrequestedCrazyGamesFiles(root)).toEqual([

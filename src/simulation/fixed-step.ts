@@ -19,8 +19,10 @@ export class FixedStepScheduler {
   constructor(options: FixedStepOptions = {}) {
     const ticksPerSecond = options.ticksPerSecond ?? 60;
     const maxCatchUpSteps = options.maxCatchUpSteps ?? 8;
-    if (!Number.isFinite(ticksPerSecond) || ticksPerSecond <= 0) throw new RangeError("ticksPerSecond must be positive");
-    if (!Number.isSafeInteger(maxCatchUpSteps) || maxCatchUpSteps < 1) throw new RangeError("maxCatchUpSteps must be a positive integer");
+    if (!Number.isFinite(ticksPerSecond) || ticksPerSecond <= 0)
+      throw new RangeError("ticksPerSecond must be positive");
+    if (!Number.isSafeInteger(maxCatchUpSteps) || maxCatchUpSteps < 1)
+      throw new RangeError("maxCatchUpSteps must be a positive integer");
     this.stepMilliseconds = 1000 / ticksPerSecond;
     this.maxCatchUpSteps = maxCatchUpSteps;
   }
@@ -30,7 +32,7 @@ export class FixedStepScheduler {
   }
 
   get simulationSeconds(): number {
-    return this.#tick * this.stepMilliseconds / 1000;
+    return (this.#tick * this.stepMilliseconds) / 1000;
   }
 
   advance(elapsedMilliseconds: number, step: (seconds: number, tick: number) => void): FrameAdvance {

@@ -6,26 +6,50 @@ import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelo
 import type { GameAction } from "../../src/input/game-action";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
-import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from
-  "../../src/tearbench/gameplay-causal-events";
+import {
+  projectGameplayEventForParity,
+  type TearSemanticEngineEventV1,
+} from "../../src/tearbench/gameplay-causal-events";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue } from "../../src/tearbench";
 import { applyWeapon } from "../../src/gameplay/weapons";
-import { createDetachedCombatSimulation, createDetachedWaveRewardRuntime, createDetachedWorld,
-  createDetachedRunOutcomeController, restoreDetachedChapterBinding } from "./detached-world-harness";
+import {
+  createDetachedCombatSimulation,
+  createDetachedWaveRewardRuntime,
+  createDetachedWorld,
+  createDetachedRunOutcomeController,
+  restoreDetachedChapterBinding,
+} from "./detached-world-harness";
 
 const ARTIFACT_DIR = resolve("artifacts/tearbench/checkpoints/core/C27A/live-parity");
 
 interface LiveTrace {
-  readonly scenario: { readonly id: string; readonly seed: string; readonly maxTicks: number;
-    readonly start: { readonly mode: string; readonly difficulty: string; readonly weapon: string;
-      readonly boss?: string } };
-  readonly schedule: Record<string, readonly { readonly tick: number; readonly id: number; readonly command: GameAction }[]>;
+  readonly scenario: {
+    readonly id: string;
+    readonly seed: string;
+    readonly maxTicks: number;
+    readonly start: {
+      readonly mode: string;
+      readonly difficulty: string;
+      readonly weapon: string;
+      readonly boss?: string;
+    };
+  };
+  readonly schedule: Record<
+    string,
+    readonly { readonly tick: number; readonly id: number; readonly command: GameAction }[]
+  >;
   readonly origin: { readonly tick: number; readonly state: Record<string, TearCodecValue> };
   readonly terminated?: boolean;
-  readonly hashes: readonly { readonly tick: number; readonly canonical: string;
-    readonly state: Record<string, unknown> }[];
-  readonly checkpoints: readonly { readonly tick: number; readonly state: Record<string, TearCodecValue>;
-    readonly canonical: Record<string, unknown> }[];
+  readonly hashes: readonly {
+    readonly tick: number;
+    readonly canonical: string;
+    readonly state: Record<string, unknown>;
+  }[];
+  readonly checkpoints: readonly {
+    readonly tick: number;
+    readonly state: Record<string, TearCodecValue>;
+    readonly canonical: Record<string, unknown>;
+  }[];
   readonly engineEventProjection: Readonly<{
     format: "tear-semantic-engine-events";
     schemaVersion: 1;
@@ -33,10 +57,13 @@ interface LiveTrace {
     events: readonly TearSemanticEngineEventV1[];
   }>;
   readonly segments?: readonly (
-    | Readonly<{ kind: "fixed"; fromTick: number; toTick: number;
-      actions: readonly { readonly command: GameAction }[] }>
-    | Readonly<{ kind: "route"; atTick: number;
-      actions: readonly { readonly command: GameAction }[] }>
+    | Readonly<{
+        kind: "fixed";
+        fromTick: number;
+        toTick: number;
+        actions: readonly { readonly command: GameAction }[];
+      }>
+    | Readonly<{ kind: "route"; atTick: number; actions: readonly { readonly command: GameAction }[] }>
   )[];
   readonly routeBoundaries?: readonly unknown[];
 }
@@ -64,11 +91,9 @@ function replayDetached(trace: LiveTrace) {
     references: new Map<string, string>(),
     entityIds: new Set<string>(),
   } as never;
-  const staged = hydrateTearCodecWorld(
-    { ...world.entities, hydrateReward: () => null },
-    codecWorld,
-    { requireIdentity: (id: string) => id },
-  );
+  const staged = hydrateTearCodecWorld({ ...world.entities, hydrateReward: () => null }, codecWorld, {
+    requireIdentity: (id: string) => id,
+  });
   world.state.setRun(staged.run);
   world.state.setPlayer(staged.player);
   world.state.setBlade(staged.blade);
@@ -102,26 +127,52 @@ function replayDetached(trace: LiveTrace) {
   let updateWave: (seconds: number) => void = () => undefined;
   const core = createDetachedCombatSimulation(detached, {
     ...(platforms === undefined ? {} : { platforms }),
-    updateWave: (seconds) => { updateWave(seconds); },
-    endRun: () => { outcome.controller.defeat(); },
+    updateWave: (seconds) => {
+      updateWave(seconds);
+    },
+    endRun: () => {
+      outcome.controller.defeat();
+    },
     gameplayEvents,
     // Exactly the live authoritative projection, so the hashes are comparable.
-    snapshot: (tick, authoritativeInput) => projectCanonicalGameplayState(
-      tick, authoritativeInput.snapshot(),
-      world.state.run(), world.state.player() as never, world.state.blade() as never,
-      world.state.enemies().map((entity) => {
-        const enemy = entity as never as { _gid?: number; kind: string; bossId?: string;
-          x: number; y: number; vx: number; vy: number; hp: number; dead: boolean };
-        return {
-          ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind,
-          ...(typeof enemy.bossId === "string" ? { bossId: enemy.bossId } : {}),
-          x: enemy.x, y: enemy.y, vx: enemy.vx, vy: enemy.vy, hp: enemy.hp, dead: enemy.dead,
-        };
-      }),
-    ),
+    snapshot: (tick, authoritativeInput) =>
+      projectCanonicalGameplayState(
+        tick,
+        authoritativeInput.snapshot(),
+        world.state.run(),
+        world.state.player() as never,
+        world.state.blade() as never,
+        world.state.enemies().map((entity) => {
+          const enemy = entity as never as {
+            _gid?: number;
+            kind: string;
+            bossId?: string;
+            x: number;
+            y: number;
+            vx: number;
+            vy: number;
+            hp: number;
+            dead: boolean;
+          };
+          return {
+            ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}),
+            kind: enemy.kind,
+            ...(typeof enemy.bossId === "string" ? { bossId: enemy.bossId } : {}),
+            x: enemy.x,
+            y: enemy.y,
+            vx: enemy.vx,
+            vy: enemy.vy,
+            hp: enemy.hp,
+            dead: enemy.dead,
+          };
+        }),
+      ),
   });
   const waves = createDetachedWaveRewardRuntime(
-    detached, gameplayEvents, (enemy) => core.combatEntityRuntime.id(enemy, "enemy"), platforms,
+    detached,
+    gameplayEvents,
+    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+    platforms,
   );
   updateWave = waves.update;
   const runtime = core.simulationRuntime;
@@ -141,21 +192,28 @@ function replayDetached(trace: LiveTrace) {
     const active = world.state.run() as never as { wave: number; mods: { owned: Record<string, number> } };
     const selection = waves.reward.snapshot();
     return {
-      tick: runtime.scheduler.tick, screen: waves.screen(), wave: active.wave,
+      tick: runtime.scheduler.tick,
+      screen: waves.screen(),
+      wave: active.wave,
       lifecycle: world.lifecycle.snapshot(),
-      reward: selection === null ? null : {
-        phase: selection.phase, choiceIds: selection.choices.map((choice) => choice.id),
-        reserveChoiceIds: selection.reserveChoices.map((choice) => choice.id),
-      },
-      focusableIds: waves.screen() === "draft" ? selection?.choices.map((choice) => choice.id) ?? [] : [],
+      reward:
+        selection === null
+          ? null
+          : {
+              phase: selection.phase,
+              choiceIds: selection.choices.map((choice) => choice.id),
+              reserveChoiceIds: selection.reserveChoices.map((choice) => choice.id),
+            },
+      focusableIds: waves.screen() === "draft" ? (selection?.choices.map((choice) => choice.id) ?? []) : [],
       owned: { ...active.mods.owned },
     };
   };
-  const segments = trace.segments ?? trace.hashes.map((_, index) => {
-    const tick = index + 1;
-    return { kind: "fixed" as const, fromTick: tick - 1, toTick: tick,
-      actions: trace.schedule[String(tick)] ?? [] };
-  });
+  const segments =
+    trace.segments ??
+    trace.hashes.map((_, index) => {
+      const tick = index + 1;
+      return { kind: "fixed" as const, fromTick: tick - 1, toTick: tick, actions: trace.schedule[String(tick)] ?? [] };
+    });
   for (const segment of segments) {
     if (segment.kind === "route") {
       const before = routeProjection();
@@ -166,15 +224,25 @@ function replayDetached(trace: LiveTrace) {
       routeBoundaries.push({ before, after: routeProjection() });
     } else {
       const actions: CommandEnvelope<GameAction>[] = segment.actions.map((entry) =>
-        sequencer.command(segment.toTick, entry.command));
+        sequencer.command(segment.toTick, entry.command),
+      );
       const result = runtime.advanceOne(actions);
       hashes.push({ tick: result.tick, canonical: result.stateHash });
       states.push(result.state);
     }
   }
-  return { detached, hashes, states, outward, staged,
-    originIdentity, finalIdentity: core.combatEntityRuntime.captureIdentityState(), gameplayEvents,
-    engineEvents: nativeEvents.map(projectGameplayEventForParity), routeBoundaries };
+  return {
+    detached,
+    hashes,
+    states,
+    outward,
+    staged,
+    originIdentity,
+    finalIdentity: core.combatEntityRuntime.captureIdentityState(),
+    gameplayEvents,
+    engineEvents: nativeEvents.map(projectGameplayEventForParity),
+    routeBoundaries,
+  };
 }
 
 const traces = readTraces();
@@ -196,7 +264,8 @@ describe.skipIf(traces.length === 0)("detached world against the live trace", ()
   });
 
   for (const live of traces) {
-    const label = `${live.scenario.start.mode}/${live.scenario.start.boss ?? live.scenario.start.difficulty}/${live.scenario.start.weapon}` +
+    const label =
+      `${live.scenario.start.mode}/${live.scenario.start.boss ?? live.scenario.start.difficulty}/${live.scenario.start.weapon}` +
       ` x${String(live.hashes.length)}${live.terminated === true ? " terminal" : ""}`;
 
     it(`hydrates the live origin snapshot into a production-composed world (${label})`, () => {

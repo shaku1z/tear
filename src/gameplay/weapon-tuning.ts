@@ -186,8 +186,10 @@ export const FINAL_FIVE_WEAPON_TUNING = Object.freeze({
   [K in keyof FinalFiveWeaponTuningConfig]: Readonly<FinalFiveWeaponTuningConfig[K]>;
 }>);
 
-if (Object.keys(FINAL_FIVE_WEAPON_TUNING).some((id, index) => id !== WEAPON_IDS[index])
-  || Object.keys(FINAL_FIVE_WEAPON_TUNING).length !== WEAPON_IDS.length) {
+if (
+  Object.keys(FINAL_FIVE_WEAPON_TUNING).some((id, index) => id !== WEAPON_IDS[index]) ||
+  Object.keys(FINAL_FIVE_WEAPON_TUNING).length !== WEAPON_IDS.length
+) {
   throw new Error("Final Five weapon tuning order must match the canonical weapon roster");
 }
 

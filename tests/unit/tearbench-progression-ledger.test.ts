@@ -31,19 +31,30 @@ const baseRequest: TearProgressionRequest = {
 };
 
 function selections(result: ReturnType<typeof synthesizeProgression>) {
-  return result.ledger.events.filter((event) =>
-    event.type === "draft.selected" || event.type === "tier.selected");
+  return result.ledger.events.filter((event) => event.type === "draft.selected" || event.type === "tier.selected");
 }
 
 describe("production progression ledger", () => {
   it("derives wave currency from production coin awards across the active weapon roster", () => {
     for (const weapon of WEAPON_IDS) {
       const request = {
-        ...baseRequest, mode: "campaign", difficulty: "normal", weapon, targetWave: 1, economy: { score: 0 },
+        ...baseRequest,
+        mode: "campaign",
+        difficulty: "normal",
+        weapon,
+        targetWave: 1,
+        economy: { score: 0 },
       } satisfies TearProgressionRequest;
       const canonical = buildCanonicalProgressionLedger(request);
       const synthesized = synthesizeProgression({ ...request, selections: [] });
-      expect(synthesized.statistics.estimatedFields).toEqual(["hp", "maxHp", "elapsedTicks", "score", "style", "kills"]);
+      expect(synthesized.statistics.estimatedFields).toEqual([
+        "hp",
+        "maxHp",
+        "elapsedTicks",
+        "score",
+        "style",
+        "kills",
+      ]);
       expect(synthesized.statistics.estimatedFields).not.toContain("currency");
       for (const events of [canonical.events, synthesized.ledger.events]) {
         const reward = events.find((event) => event.type === "reward.granted");
@@ -60,9 +71,13 @@ describe("production progression ledger", () => {
     const ledger = buildCanonicalProgressionLedger({ ...baseRequest, difficulty: "hard", targetWave: 10, economy });
     const reward = ledger.events.find((event) => event.type === "reward.granted" && event.wave === 10);
     const expected = calculateCoinAward({
-      score: economy.score, wave: 10, difficultyId: "hard",
-      baseDifficultyMultiplier: difficulty.modifiers.coinReward, remoteMultiplier: 1,
-      coinMagnetLevel: economy.coinMagnetLevel, fortuneLevel: economy.fortuneLevel,
+      score: economy.score,
+      wave: 10,
+      difficultyId: "hard",
+      baseDifficultyMultiplier: difficulty.modifiers.coinReward,
+      remoteMultiplier: 1,
+      coinMagnetLevel: economy.coinMagnetLevel,
+      fortuneLevel: economy.fortuneLevel,
     });
     expect(reward?.type === "reward.granted" ? reward.currency : undefined).toBe(expected.earned);
     expect(reward?.type === "reward.granted" ? reward.currency : undefined).toBe(201);
@@ -109,15 +124,17 @@ describe("production progression ledger", () => {
   it("records a legal offer and one production selection for every earned reward", () => {
     const result = synthesizeProgression(baseRequest);
     const selected = selections(result);
-    const earned = result.ledger.events.filter((event) =>
-      event.type === "draft.earned" || event.type === "tier.earned");
+    const earned = result.ledger.events.filter(
+      (event) => event.type === "draft.earned" || event.type === "tier.earned",
+    );
     expect(selected).toHaveLength(99);
     expect(earned).toHaveLength(99);
     expect(result.ledger.draftOpportunities + result.ledger.tierOpportunities).toBe(99);
     for (const event of selected) {
       const offeredType = event.type === "draft.selected" ? "draft.offered" : "tier.offered";
-      const offer = result.ledger.events.find((candidate) =>
-        candidate.type === offeredType && candidate.wave === event.wave);
+      const offer = result.ledger.events.find(
+        (candidate) => candidate.type === offeredType && candidate.wave === event.wave,
+      );
       expect(offer).toBeDefined();
       if (offer?.type === "draft.offered" || offer?.type === "tier.offered") {
         expect(offer.ids).toContain(event.id);
@@ -128,26 +145,37 @@ describe("production progression ledger", () => {
   it("generates 10,000 legal target states without pick, unique, tier, or hash errors", () => {
     const modes = ["campaign", "endless", "gauntlet", "playground"] as const;
     const policies: readonly TearBuildSynthesisPolicy[] = [
-      "exact-ledger", "replay-derived", "human-population", "agent-population",
-      "archetype", "optimized", "low-roll", "anti-synergy", "coverage-seeking",
+      "exact-ledger",
+      "replay-derived",
+      "human-population",
+      "agent-population",
+      "archetype",
+      "optimized",
+      "low-roll",
+      "anti-synergy",
+      "coverage-seeking",
     ];
     const catalogue = new Map(UPGRADES.map((upgrade) => [upgrade.id, upgrade] as const));
     const failures: string[] = [];
     const waveTargets = [1, 2, 3, 8, 9, 10, 24, 49, 99, 100] as const;
     const coverage = new Map<string, number>();
     for (let index = 0; index < 10_000; index += 1) {
-      const targetWave = index < 5_000
-        ? waveTargets[index % waveTargets.length] ?? 1
-        : index % 5 + 1;
+      const targetWave = index < 5_000 ? (waveTargets[index % waveTargets.length] ?? 1) : (index % 5) + 1;
       const mode = modes[index % modes.length] ?? "campaign";
       const difficulty = index % 3 === 0 ? "extreme" : index % 2 === 0 ? "normal" : "hard";
       const weapon = index % 3 === 0 ? "sword" : index % 3 === 1 ? "hammer" : "riftlock";
       const policy = policies[index % policies.length] ?? "coverage-seeking";
       const result = synthesizeProgression({
-        mode, difficulty, weapon, targetWave, policy,
+        mode,
+        difficulty,
+        weapon,
+        targetWave,
+        policy,
       });
-      coverage.set(`${mode}:${difficulty}:${weapon}:${policy}:${String(targetWave)}`,
-        (coverage.get(`${mode}:${difficulty}:${weapon}:${policy}:${String(targetWave)}`) ?? 0) + 1);
+      coverage.set(
+        `${mode}:${difficulty}:${weapon}:${policy}:${String(targetWave)}`,
+        (coverage.get(`${mode}:${difficulty}:${weapon}:${policy}:${String(targetWave)}`) ?? 0) + 1,
+      );
       if (!result.reachable) failures.push(`${String(index)}: unreachable`);
       if (selections(result).length !== targetWave) failures.push(`${String(index)}: earned pick count`);
       if (result.ledger.draftOpportunities + result.ledger.tierOpportunities !== targetWave) {
@@ -160,9 +188,12 @@ describe("production progression ledger", () => {
         failures.push(`${String(index)}: configuration hash`);
       }
       const replay = replayProgressionConfiguration(result.ledger, {
-        resetConfiguration: () => undefined, setupRun: () => undefined,
-        selectWeapon: () => undefined, applyMeta: () => undefined,
-        applyDraft: () => undefined, applyTier: () => undefined,
+        resetConfiguration: () => undefined,
+        setupRun: () => undefined,
+        selectWeapon: () => undefined,
+        applyMeta: () => undefined,
+        applyDraft: () => undefined,
+        applyTier: () => undefined,
       });
       if (replay.earnedPickCount !== targetWave || replay.appliedMutationCount !== targetWave) {
         failures.push(`${String(index)}: production-order replay count`);
@@ -179,18 +210,25 @@ describe("production progression ledger", () => {
     }
     const artifactDirectory = resolve("artifacts", "tearbench", "checkpoints", "core", "C23", "state-forge");
     mkdirSync(artifactDirectory, { recursive: true });
-    writeFileSync(resolve(artifactDirectory, "progression-10000.json"), JSON.stringify({
-      generatedTargets: 10_000,
-      failures,
-      distinctCoverageCells: coverage.size,
-      waveTargets: [...new Set([...waveTargets, 1, 2, 3, 4, 5])].sort((a, b) => a - b),
-      modes,
-      difficulties: ["normal", "hard", "extreme"],
-      weapons: ["sword", "hammer", "riftlock"],
-      policies,
-      productionCatalogueSize: UPGRADES.length,
-      orderedConfigurationReplay: true,
-    }, null, 2));
+    writeFileSync(
+      resolve(artifactDirectory, "progression-10000.json"),
+      JSON.stringify(
+        {
+          generatedTargets: 10_000,
+          failures,
+          distinctCoverageCells: coverage.size,
+          waveTargets: [...new Set([...waveTargets, 1, 2, 3, 4, 5])].sort((a, b) => a - b),
+          modes,
+          difficulties: ["normal", "hard", "extreme"],
+          weapons: ["sword", "hammer", "riftlock"],
+          policies,
+          productionCatalogueSize: UPGRADES.length,
+          orderedConfigurationReplay: true,
+        },
+        null,
+        2,
+      ),
+    );
     expect(failures).toEqual([]);
   }, 120_000);
 
@@ -231,33 +269,50 @@ describe("production progression ledger", () => {
 
   it("rejects tampered progression hashes and out-of-order configuration mutations", () => {
     const result = synthesizeProgression({ ...baseRequest, targetWave: 3 });
-    expect(() => reconstructProgression({
-      ...result.ledger,
-      progressionHash: "tampered",
-    })).toThrow(/progression hash/u);
+    expect(() =>
+      reconstructProgression({
+        ...result.ledger,
+        progressionHash: "tampered",
+      }),
+    ).toThrow(/progression hash/u);
 
     const mutation = result.ledger.events.find((event) => event.type === "configuration.mutated");
     expect(mutation).toBeDefined();
     if (mutation?.type !== "configuration.mutated") return;
     const events = result.ledger.events.map((event) =>
-      event.index === mutation.index ? { ...event, id: "wrong_mutation" } : event);
-    expect(() => reconstructProgression({
-      ...result.ledger,
-      events,
-      progressionHash: stableVerificationHash(events),
-    })).toThrow(/out-of-order configuration mutation/u);
+      event.index === mutation.index ? { ...event, id: "wrong_mutation" } : event,
+    );
+    expect(() =>
+      reconstructProgression({
+        ...result.ledger,
+        events,
+        progressionHash: stableVerificationHash(events),
+      }),
+    ).toThrow(/out-of-order configuration mutation/u);
   });
 
   it("replays production mutations in order with one application per earned pick", () => {
     const target = synthesizeProgression({ ...baseRequest, selections: [], policy: "optimized" });
     const calls: string[] = [];
     const replay = replayProgressionConfiguration(target.ledger, {
-      resetConfiguration: (revision) => { calls.push(`reset:${revision}`); },
-      setupRun: (mode, difficulty) => { calls.push(`setup:${mode}:${difficulty}`); },
-      selectWeapon: (weapon) => { calls.push(`weapon:${weapon}`); },
-      applyMeta: (id, value) => { calls.push(`meta:${id}:${String(value)}`); },
-      applyDraft: (id, occurrence) => { calls.push(`draft:${id}:${String(occurrence)}`); },
-      applyTier: (id, tier) => { calls.push(`tier:${id}:${String(tier)}`); },
+      resetConfiguration: (revision) => {
+        calls.push(`reset:${revision}`);
+      },
+      setupRun: (mode, difficulty) => {
+        calls.push(`setup:${mode}:${difficulty}`);
+      },
+      selectWeapon: (weapon) => {
+        calls.push(`weapon:${weapon}`);
+      },
+      applyMeta: (id, value) => {
+        calls.push(`meta:${id}:${String(value)}`);
+      },
+      applyDraft: (id, occurrence) => {
+        calls.push(`draft:${id}:${String(occurrence)}`);
+      },
+      applyTier: (id, tier) => {
+        calls.push(`tier:${id}:${String(tier)}`);
+      },
     });
     expect(calls.slice(0, 3).map((entry) => entry.split(":")[0])).toEqual(["reset", "setup", "weapon"]);
     expect(replay.earnedPickCount).toBe(99);

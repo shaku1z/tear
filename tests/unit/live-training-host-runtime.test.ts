@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-const captured: { tutorialOptions: unknown; presentationOptions: unknown } = vi.hoisted(() => ({ tutorialOptions: undefined, presentationOptions: undefined }));
+const captured: { tutorialOptions: unknown; presentationOptions: unknown } = vi.hoisted(() => ({
+  tutorialOptions: undefined,
+  presentationOptions: undefined,
+}));
 
 vi.mock("../../src/gameplay/training/live-tutorial-runtime", () => ({
   createLiveTutorialRuntime: (options: unknown) => {
@@ -9,7 +12,9 @@ vi.mock("../../src/gameplay/training/live-tutorial-runtime", () => ({
   },
 }));
 vi.mock("../../src/gameplay/training/playground-controller", () => ({
-  PlaygroundController: class { readonly state = { labFilter: "" }; },
+  PlaygroundController: class {
+    readonly state = { labFilter: "" };
+  },
   PLAYGROUND_ALL_KINDS: [],
 }));
 vi.mock("../../src/gameplay/training/runtime-bridge", () => ({
@@ -26,15 +31,33 @@ import { createLiveTrainingHostRuntime } from "../../src/app/training/training-h
 
 describe("live training host runtime", () => {
   it("supplies its tutorial profile-stat port from the shared adapter", () => {
-    const add = vi.fn(), input = { mode: "touch" };
+    const add = vi.fn(),
+      input = { mode: "touch" };
     createLiveTrainingHostRuntime({
       dependencies: { profileStatsPersistence: { add, max: vi.fn() }, Input: input } as never,
-      state: {} as never, width: 1600, height: 900, lifecycle: {} as never,
-      stage: {} as never, spawn: vi.fn(), navigate: vi.fn(), resetScroll: vi.fn(),
-      releasePointer: vi.fn(), requestPointer: vi.fn(), selectStage: vi.fn(),
-      wipe: vi.fn(), resetRun: vi.fn(), startPractice: vi.fn(), selectedWeapon: vi.fn(),
-      selectWeapon: vi.fn(), addFloater: vi.fn(), drawGhost: vi.fn(), abilityColors: vi.fn(),
-      scroll: vi.fn(), setScroll: vi.fn(), renderMenu: vi.fn(), renderLab: vi.fn(),
+      state: {} as never,
+      width: 1600,
+      height: 900,
+      lifecycle: {} as never,
+      stage: {} as never,
+      spawn: vi.fn(),
+      navigate: vi.fn(),
+      resetScroll: vi.fn(),
+      releasePointer: vi.fn(),
+      requestPointer: vi.fn(),
+      selectStage: vi.fn(),
+      wipe: vi.fn(),
+      resetRun: vi.fn(),
+      startPractice: vi.fn(),
+      selectedWeapon: vi.fn(),
+      selectWeapon: vi.fn(),
+      addFloater: vi.fn(),
+      drawGhost: vi.fn(),
+      abilityColors: vi.fn(),
+      scroll: vi.fn(),
+      setScroll: vi.fn(),
+      renderMenu: vi.fn(),
+      renderLab: vi.fn(),
     });
 
     const tutorial = captured.tutorialOptions as {

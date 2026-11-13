@@ -6,15 +6,20 @@ import { PUBLISHED_ENEMY_IDENTITY_IDS, type ActiveEnemyKind } from "../../src/ga
 import { STAGES } from "../../src/gameplay/stages";
 import { VARIANTS, applyVariant } from "../../src/gameplay/variants";
 import {
-  STANDARD_ACTOR_FACTORIES, behaviorSnapshot, createEnemyHarness, createStandardActor, updateActor,
+  STANDARD_ACTOR_FACTORIES,
+  behaviorSnapshot,
+  createEnemyHarness,
+  createStandardActor,
+  updateActor,
 } from "./enemy-test-harness";
 
 function keysOf<T extends object>(record: T): (keyof T)[] {
   return Object.keys(record) as (keyof T)[];
 }
 
-const PUBLISHED_KINDS = keysOf(STANDARD_ACTOR_FACTORIES).filter((kind) =>
-  PUBLISHED_ENEMY_IDENTITY_IDS.includes(kind)).sort();
+const PUBLISHED_KINDS = keysOf(STANDARD_ACTOR_FACTORIES)
+  .filter((kind) => PUBLISHED_ENEMY_IDENTITY_IDS.includes(kind))
+  .sort();
 const VARIANT_KINDS: readonly ActiveEnemyKind[] = ["charger", "ranged", "flyer", "bomber", "armored"];
 
 describe("enemy behavior preservation matrix", () => {
@@ -67,13 +72,25 @@ describe("enemy behavior preservation matrix", () => {
           expect(a.variant, kind).toBe(variant.id);
           expect(a.behavior, variant.id).not.toBe("");
           expect(behaviorSnapshot(a, shotsA), `${kind}/${variant.id}/${affix.id}`).toEqual(behaviorSnapshot(b, shotsB));
-          expect(Math.abs(a.x - 360) > 0.01 || Math.abs(a.y - (kind === "flyer" || kind === "bomber" ? 300 : a.y)) > 0.01 || shotsA.length > 0 || a.atk !== "idle", `${kind}/${variant.id} did not act`).toBe(true);
-          expect(a.applyBreak(CONFIG.weapons.hammer.breakThreshold * 2), `${kind}/${variant.id}/${affix.id} break`).toBe(true);
+          expect(
+            Math.abs(a.x - 360) > 0.01 ||
+              Math.abs(a.y - (kind === "flyer" || kind === "bomber" ? 300 : a.y)) > 0.01 ||
+              shotsA.length > 0 ||
+              a.atk !== "idle",
+            `${kind}/${variant.id} did not act`,
+          ).toBe(true);
+          expect(
+            a.applyBreak(CONFIG.weapons.hammer.breakThreshold * 2),
+            `${kind}/${variant.id}/${affix.id} break`,
+          ).toBe(true);
           a.applySever(2);
           expect(a.severTier, `${kind}/${variant.id}/${affix.id} sever`).toBe(2);
           a.hit(a.maxHp + a.shield + 10_000, 1, 0);
           expect(a.dead, `${kind}/${variant.id}/${affix.id} death`).toBe(true);
-          expect([a].filter((enemy) => !enemy.dead), `${kind}/${variant.id}/${affix.id} cleanup`).toEqual([]);
+          expect(
+            [a].filter((enemy) => !enemy.dead),
+            `${kind}/${variant.id}/${affix.id} cleanup`,
+          ).toEqual([]);
         }
       }
     }
@@ -85,24 +102,46 @@ describe("enemy behavior preservation matrix", () => {
         const actor = createStandardActor(kind, createEnemyHarness().types);
         const target = actor as unknown as AffixEnemy;
         const before = {
-          hp: actor.hp, weight: actor.weight, speedMult: actor.speedMult, fireRateMult: actor.fireRateMult,
-          volley: actor.volley, contactReach: actor.contactReach, contactDmg: actor.contactDmg,
-          hw: actor.hw, shield: actor.shield,
+          hp: actor.hp,
+          weight: actor.weight,
+          speedMult: actor.speedMult,
+          fireRateMult: actor.fireRateMult,
+          volley: actor.volley,
+          contactReach: actor.contactReach,
+          contactDmg: actor.contactDmg,
+          hw: actor.hw,
+          shield: actor.shield,
         };
         const accepted = applyAffix(target, affix.id);
         expect(accepted, `${kind}/${affix.id}`).toBe(affix.appliesTo(target));
-        if (accepted) expect({
-          hp: actor.hp, weight: actor.weight, speedMult: actor.speedMult, fireRateMult: actor.fireRateMult,
-          volley: actor.volley, contactReach: actor.contactReach, contactDmg: actor.contactDmg,
-          hw: actor.hw, shield: actor.shield,
-        }, `${kind}/${affix.id}`).not.toEqual(before);
+        if (accepted)
+          expect(
+            {
+              hp: actor.hp,
+              weight: actor.weight,
+              speedMult: actor.speedMult,
+              fireRateMult: actor.fireRateMult,
+              volley: actor.volley,
+              contactReach: actor.contactReach,
+              contactDmg: actor.contactDmg,
+              hw: actor.hw,
+              shield: actor.shield,
+            },
+            `${kind}/${affix.id}`,
+          ).not.toEqual(before);
       }
     }
-    expect(applyAffix(createStandardActor("armored", createEnemyHarness().types) as unknown as AffixEnemy, "swift")).toBe(false);
+    expect(
+      applyAffix(createStandardActor("armored", createEnemyHarness().types) as unknown as AffixEnemy, "swift"),
+    ).toBe(false);
     for (const id of ["rapid", "volley"]) {
-      expect(applyAffix(createStandardActor("charger", createEnemyHarness().types) as unknown as AffixEnemy, id)).toBe(false);
+      expect(applyAffix(createStandardActor("charger", createEnemyHarness().types) as unknown as AffixEnemy, id)).toBe(
+        false,
+      );
     }
-    expect(applyAffix(createStandardActor("ranged", createEnemyHarness().types) as unknown as AffixEnemy, "armed")).toBe(false);
+    expect(
+      applyAffix(createStandardActor("ranged", createEnemyHarness().types) as unknown as AffixEnemy, "armed"),
+    ).toBe(false);
   });
 
   it("preserves damage, shield, break, sever expiry, death and collection cleanup for every family", () => {
@@ -123,7 +162,10 @@ describe("enemy behavior preservation matrix", () => {
       expect(actor.hp, `${kind} shield ownership`).toBe(hpBeforeShield);
       actor.hit(actor.maxHp + actor.shield + 10_000, 1, 0);
       expect(actor.dead, `${kind} death`).toBe(true);
-      expect([actor].filter((enemy) => !enemy.dead), `${kind} cleanup`).toEqual([]);
+      expect(
+        [actor].filter((enemy) => !enemy.dead),
+        `${kind} cleanup`,
+      ).toEqual([]);
       expect(actor.hit(10, 1, 0), `${kind} post-death damage`).toBe(0);
     }
   });

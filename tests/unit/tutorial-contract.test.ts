@@ -6,7 +6,10 @@ describe("tutorial baseline contract", () => {
     expect(tutorialUsesBaselineLoadout("tutorial")).toBe(true);
     expect(tutorialUsesBaselineLoadout("campaign")).toBe(false);
     expect(TUTORIAL_BASELINE_CONTRACT).toMatchObject({
-      appliesPermanentUpgrades: false, allowsDrafts: false, allowsShop: false, restoresPlayerBetweenBlocks: true,
+      appliesPermanentUpgrades: false,
+      allowsDrafts: false,
+      allowsShop: false,
+      restoresPlayerBetweenBlocks: true,
     });
   });
 });

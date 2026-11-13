@@ -3,7 +3,8 @@ import type { EnvironmentObjectKind } from "./environment-object-kinds";
 /** Gameplay-only categories owned by the environment runtime. */
 export type EnvironmentObjectCategory = "field" | "combat-object" | "route";
 
-export type EnvironmentObjectState = "scheduled" | "warning" | "active" | "cooldown" | "dormant" | "destroyed" | "expired";
+export type EnvironmentObjectState =
+  "scheduled" | "warning" | "active" | "cooldown" | "dormant" | "destroyed" | "expired";
 
 export type EnvironmentClearReason =
   | "new-run"
@@ -19,7 +20,10 @@ export type EnvironmentClearReason =
   | "replay-seek"
   | "disposal";
 
-export interface EnvironmentPoint { readonly x: number; readonly y: number; }
+export interface EnvironmentPoint {
+  readonly x: number;
+  readonly y: number;
+}
 
 /** JSON-safe authored geometry; presentation coordinates do not belong here. */
 export interface EnvironmentGeometry {
@@ -152,12 +156,27 @@ export interface EnvironmentRuntimeState {
   replace(snapshot: EnvironmentSnapshot): void;
   clear(reason: EnvironmentClearReason): void;
   setStage(stageId: string, reason?: EnvironmentClearReason): void;
-  addField<T extends object>(value: Omit<EnvironmentFieldState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string;
-  addCombatObject<T extends object>(value: Omit<EnvironmentCombatObjectState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string;
-  addRoute<T extends object>(value: Omit<EnvironmentRouteState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string;
-  updateField<T extends object>(id: string, patch: Partial<Omit<EnvironmentFieldState, "id">> & T & Readonly<Partial<T>>): void;
-  updateCombatObject<T extends object>(id: string, patch: Partial<Omit<EnvironmentCombatObjectState, "id">> & T & Readonly<Partial<T>>): void;
-  updateRoute<T extends object>(id: string, patch: Partial<Omit<EnvironmentRouteState, "id">> & T & Readonly<Partial<T>>): void;
+  addField<T extends object>(
+    value: Omit<EnvironmentFieldState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string },
+  ): string;
+  addCombatObject<T extends object>(
+    value: Omit<EnvironmentCombatObjectState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string },
+  ): string;
+  addRoute<T extends object>(
+    value: Omit<EnvironmentRouteState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string },
+  ): string;
+  updateField<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentFieldState, "id">> & T & Readonly<Partial<T>>,
+  ): void;
+  updateCombatObject<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentCombatObjectState, "id">> & T & Readonly<Partial<T>>,
+  ): void;
+  updateRoute<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentRouteState, "id">> & T & Readonly<Partial<T>>,
+  ): void;
   removeField(id: string): void;
   removeCombatObject(id: string): void;
   removeRoute(id: string): void;

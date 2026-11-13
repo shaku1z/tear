@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { CampaignRuntimeState } from "../../src/app/campaign/campaign-runtime-state";
-import { CampaignChapterController, type CampaignStage, type ChapterIntent } from "../../src/gameplay/campaign/chapter-controller";
+import {
+  CampaignChapterController,
+  type CampaignStage,
+  type ChapterIntent,
+} from "../../src/gameplay/campaign/chapter-controller";
 import { FinaleController } from "../../src/gameplay/campaign/finale-controller";
 import {
   launchAdventureFinale,
@@ -13,20 +17,40 @@ import type { CinematicDirectorBinding } from "../../src/gameplay/runtime/cinema
 
 function runtime(): CampaignRuntimeState {
   return new CampaignRuntimeState(
-    () => new CampaignChapterController({
-      loreReveal: 0.1, chapterIn: 0.1, loreExit: 0.1, biomeRevealBrief: 0.1,
-      biomeRevealFull: 0.2, readyBrief: 0.1, readyFull: 0.2, dialogueDuck: 0.5, biomeRevealDuck: 0.4,
-    }),
-    () => new FinaleController({
-      anchorRadius: 20, worldZoom: 0.8, silence: 0.1, wound: 0.1, relics: 0.1,
-      cutAutoAt: 0.2, cutAutoStep: 0.1, cutSpeed: 10, restorationMin: 0.1,
-      epilogueReveal: 0.1, rewardHold: 0.1,
-    }),
+    () =>
+      new CampaignChapterController({
+        loreReveal: 0.1,
+        chapterIn: 0.1,
+        loreExit: 0.1,
+        biomeRevealBrief: 0.1,
+        biomeRevealFull: 0.2,
+        readyBrief: 0.1,
+        readyFull: 0.2,
+        dialogueDuck: 0.5,
+        biomeRevealDuck: 0.4,
+      }),
+    () =>
+      new FinaleController({
+        anchorRadius: 20,
+        worldZoom: 0.8,
+        silence: 0.1,
+        wound: 0.1,
+        relics: 0.1,
+        cutAutoAt: 0.2,
+        cutAutoStep: 0.1,
+        cutSpeed: 10,
+        restorationMin: 0.1,
+        epilogueReveal: 0.1,
+        rewardHold: 0.1,
+      }),
   );
 }
 
 const stage: CampaignStage = {
-  name: "Ash Vault", blurb: "Descend", accent: "#f00", dark: false,
+  name: "Ash Vault",
+  blurb: "Descend",
+  accent: "#f00",
+  dark: false,
   chapter: { number: 1, symbol: "I", title: "Embers", intro: "Enter", pages: [{ label: "ASH", text: "Burn." }] },
 };
 
@@ -34,10 +58,7 @@ class ExercisingCinema implements CampaignCinematicChannel {
   started = false;
   playerModes: unknown[] = [];
 
-  start<Context>(
-    script: CampaignCinematicScript<Context>,
-    context: Context,
-  ): void {
+  start<Context>(script: CampaignCinematicScript<Context>, context: Context): void {
     this.started = true;
     this.playerModes = script.beats.map((beat) => beat.playerMode);
     const director = { elapsed: 0, progress: 0, skipTo: () => true };
@@ -50,13 +71,41 @@ class ExercisingCinema implements CampaignCinematicChannel {
   startBinding(binding: CinematicDirectorBinding): void {
     this.started = true;
     this.playerModes = binding.script.beats.map((beat) => beat.playerMode);
-    const director = { elapsed: 0, totalElapsed: 0, skipping: false, progress: 0,
-      revealProgress: 1, fullyVisible: true, active: true, id: binding.script.id,
-      beatId: binding.script.beats[0]?.id, brief: false, blocksCombat: true, hideHud: true,
-      playerMode: "locked", skipTo: () => true, requestSkip: () => undefined,
-      complete: () => undefined, cancel: () => undefined, captureState: () => { throw new Error("not used"); },
-      validateState: () => { throw new Error("not used"); }, restoreState: () => undefined,
-      captureRecordedInput: () => { throw new Error("not used"); }, restoreRecordedInput: () => { throw new Error("not used"); }, validateRecordedInput: () => { throw new Error("not used"); } };
+    const director = {
+      elapsed: 0,
+      totalElapsed: 0,
+      skipping: false,
+      progress: 0,
+      revealProgress: 1,
+      fullyVisible: true,
+      active: true,
+      id: binding.script.id,
+      beatId: binding.script.beats[0]?.id,
+      brief: false,
+      blocksCombat: true,
+      hideHud: true,
+      playerMode: "locked",
+      skipTo: () => true,
+      requestSkip: () => undefined,
+      complete: () => undefined,
+      cancel: () => undefined,
+      captureState: () => {
+        throw new Error("not used");
+      },
+      validateState: () => {
+        throw new Error("not used");
+      },
+      restoreState: () => undefined,
+      captureRecordedInput: () => {
+        throw new Error("not used");
+      },
+      restoreRecordedInput: () => {
+        throw new Error("not used");
+      },
+      validateRecordedInput: () => {
+        throw new Error("not used");
+      },
+    };
     binding.script.onStart?.(binding.context, director);
     binding.script.beats[0]?.onEnter?.(binding.context, director);
     binding.script.onComplete?.(binding.context, director);
@@ -64,7 +113,9 @@ class ExercisingCinema implements CampaignCinematicChannel {
 }
 
 class SkippingCinema implements CampaignCinematicChannel {
-  startBinding(): void { throw new Error("chapter binding is not used by this finale fixture"); }
+  startBinding(): void {
+    throw new Error("chapter binding is not used by this finale fixture");
+  }
   start<Context>(script: CampaignCinematicScript<Context>, context: Context): void {
     const director = { elapsed: 1, progress: 1, skipTo: () => true };
     script.onStart?.(context, director);
@@ -80,11 +131,22 @@ describe("live campaign sequences", () => {
     const intents: ChapterIntent[] = [];
     let prologueShown = false;
     launchCampaignChapter({
-      runtime: state, cinema: new ExercisingCinema(), stageIndex: 0, stage, priorOutro: null,
-      brief: false, play: false, prologueShown: false,
-      preparedWave: () => true, activationDeferred: () => true,
-      dispatch: (next) => { intents.push(...next); },
-      rememberPrologue: (shown) => { prologueShown = shown; },
+      runtime: state,
+      cinema: new ExercisingCinema(),
+      stageIndex: 0,
+      stage,
+      priorOutro: null,
+      brief: false,
+      play: false,
+      prologueShown: false,
+      preparedWave: () => true,
+      activationDeferred: () => true,
+      dispatch: (next) => {
+        intents.push(...next);
+      },
+      rememberPrologue: (shown) => {
+        prologueShown = shown;
+      },
       clearBossBeat: () => undefined,
     });
 
@@ -99,9 +161,20 @@ describe("live campaign sequences", () => {
     const cinema = new ExercisingCinema();
     const intents: ChapterIntent[] = [];
     launchCampaignChapter({
-      runtime: state, cinema, stageIndex: 1, stage, priorOutro: null, brief: true, play: true,
-      prologueShown: true, preparedWave: () => false, activationDeferred: () => false,
-      dispatch: (next) => { intents.push(...next); }, rememberPrologue: () => undefined,
+      runtime: state,
+      cinema,
+      stageIndex: 1,
+      stage,
+      priorOutro: null,
+      brief: true,
+      play: true,
+      prologueShown: true,
+      preparedWave: () => false,
+      activationDeferred: () => false,
+      dispatch: (next) => {
+        intents.push(...next);
+      },
+      rememberPrologue: () => undefined,
       clearBossBeat: () => undefined,
     });
 
@@ -117,16 +190,34 @@ describe("live campaign sequences", () => {
     const intents: FinaleIntent[] = [];
     const assistVelocity = vi.fn(() => ({ x: 3, y: 4 }));
     const launched = launchAdventureFinale({
-      runtime: state, cinema: new SkippingCinema(), viewportWidth: 1600,
-      input: { campaign: true, recovered: false, prepared: { isNew: true },
-        player: { x: 800, y: 300 }, viewport: { width: 1600, height: 900 }, score: 100,
-        formattedTime: "1:00", perfectColor: "#fff" },
-      dispatch: (next) => { intents.push(...next); }, stopPlayer: vi.fn(), assistVelocity,
+      runtime: state,
+      cinema: new SkippingCinema(),
+      viewportWidth: 1600,
+      input: {
+        campaign: true,
+        recovered: false,
+        prepared: { isNew: true },
+        player: { x: 800, y: 300 },
+        viewport: { width: 1600, height: 900 },
+        score: 100,
+        formattedTime: "1:00",
+        perfectColor: "#fff",
+      },
+      dispatch: (next) => {
+        intents.push(...next);
+      },
+      stopPlayer: vi.fn(),
+      assistVelocity,
     });
     expect(launched).toBe(true);
     expect(assistVelocity).toHaveBeenCalledTimes(3);
-    expect(intents.filter((intent) => intent.type === "burst").map((intent) => ({ dx: intent.dx, dy: intent.dy })))
-      .toEqual([{ dx: 3, dy: 4 }, { dx: 3, dy: 4 }, { dx: 3, dy: 4 }]);
+    expect(
+      intents.filter((intent) => intent.type === "burst").map((intent) => ({ dx: intent.dx, dy: intent.dy })),
+    ).toEqual([
+      { dx: 3, dy: 4 },
+      { dx: 3, dy: 4 },
+      { dx: 3, dy: 4 },
+    ]);
     expect(state.finale).toBeNull();
   });
 });

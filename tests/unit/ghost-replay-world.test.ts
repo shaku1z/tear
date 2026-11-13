@@ -40,7 +40,11 @@ function emptyWorld(): TearCodecWorld {
   world.components.set("tear.platform.v1", []);
   world.components.set("tear.hazard.v1", { slowZones: [], walls: [] });
   world.components.set("tear.run.v1", {
-    mode: "endless", difficulty: "normal", wave: 1, tick: 5, elapsedTicks: 5,
+    mode: "endless",
+    difficulty: "normal",
+    wave: 1,
+    tick: 5,
+    elapsedTicks: 5,
   });
   world.components.set("tear.world.v1", { clock: 5, identityState: {} });
   world.components.set("tear.ui.v1", { screen: "playing", focusId: "-1" });
@@ -59,7 +63,11 @@ const simulation: GhostReplaySimulation = {
     if (envelope.command.type === "move") player.x += envelope.command.x / 1_000;
     if (envelope.command.type === "dash") player.x += envelope.command.x / 100;
     world.components.set("tear.player.v1", player);
-    const worldState = structuredClone(world.components.get("tear.world.v1")) as { clock: number; identityState: TearCodecValue; commandTrace?: string[] };
+    const worldState = structuredClone(world.components.get("tear.world.v1")) as {
+      clock: number;
+      identityState: TearCodecValue;
+      commandTrace?: string[];
+    };
     worldState.commandTrace = [...(worldState.commandTrace ?? []), envelope.command.type];
     world.components.set("tear.world.v1", worldState);
   },
@@ -80,30 +88,53 @@ function snapshot(): TearSnapshotV1 {
   const world = emptyWorld();
   const captured = captureCodecState(world, createDefaultStateCodecRegistry());
   return {
-    format: "tear-contract", kind: "snapshot", schemaVersion: 1,
-    id: "keyframe-5", tick: 5, stateClass: "recorded-canonical", seed: "1",
+    format: "tear-contract",
+    kind: "snapshot",
+    schemaVersion: 1,
+    id: "keyframe-5",
+    tick: 5,
+    stateClass: "recorded-canonical",
+    seed: "1",
     hashes: {
       exact: "exact",
       semantic: stableVerificationHash(simulation.semanticProjection(world)),
-      visual: "visual", progression: "progression", environment: "environment",
+      visual: "visual",
+      progression: "progression",
+      environment: "environment",
     },
     provenance: {
-      actor: "developer", producer: "test",
+      actor: "developer",
+      producer: "test",
       build: {
-        version: "0.1.0", revision: "test", target: "unit", rulesetVersion: "rules",
-        contentHash: "content", configHash: "config",
+        version: "0.1.0",
+        revision: "test",
+        target: "unit",
+        rulesetVersion: "rules",
+        contentHash: "content",
+        configHash: "config",
       },
-      executionClass: "engineering", observationClass: "structured-state", trainingConsent: "no-training",
+      executionClass: "engineering",
+      observationClass: "structured-state",
+      trainingConsent: "no-training",
     },
-    rng: {}, codecs: captured.codecs, state: captured.state,
+    rng: {},
+    codecs: captured.codecs,
+    state: captured.state,
   };
 }
 
 function causalEvent(id: string, tick: number): TearCausalEventV1 {
   return {
-    format: "tear-contract", kind: "event", schemaVersion: 1,
-    id, type: "boss.attack-started", tick, phase: "enemy-ai", sequence: 1,
-    source: "engine", payload: {},
+    format: "tear-contract",
+    kind: "event",
+    schemaVersion: 1,
+    id,
+    type: "boss.attack-started",
+    tick,
+    phase: "enemy-ai",
+    sequence: 1,
+    source: "engine",
+    payload: {},
   };
 }
 
@@ -180,13 +211,13 @@ describe("Ghost replay world, Theater, and practice", () => {
 
   it("skips a future group without discarding later authored commands before the seek target", () => {
     const source = sameTickGhost();
-    const replay = new GhostReplayWorld(createGhostV3({
-      ...source,
-      actions: [
-        { kind: "command", id: 5, tick: 30, command: { type: "move", x: 99_000, y: 0 } },
-        ...source.actions,
-      ],
-    }), simulation);
+    const replay = new GhostReplayWorld(
+      createGhostV3({
+        ...source,
+        actions: [{ kind: "command", id: 5, tick: 30, command: { type: "move", x: 99_000, y: 0 } }, ...source.actions],
+      }),
+      simulation,
+    );
 
     replay.seek(10);
     expect(replay.world().components.get("tear.player.v1")).toMatchObject({ x: 16 });
@@ -199,11 +230,17 @@ describe("Ghost replay world, Theater, and practice", () => {
     const sourceSnapshot = source.snapshots[0];
     if (sourceSnapshot === undefined) throw new Error("fixture snapshot is missing");
     for (const mode of [
-      "exact-practice", "repetition-drill", "counterfactual-sandbox", "race-practice", "coach-assisted",
+      "exact-practice",
+      "repetition-drill",
+      "counterfactual-sandbox",
+      "race-practice",
+      "coach-assisted",
     ] as const) {
       const child = createPracticeFromHere(source, sourceSnapshot, mode);
       expect(child).toMatchObject({
-        mode, rankedEligible: false, leaderboardEligible: false,
+        mode,
+        rankedEligible: false,
+        leaderboardEligible: false,
         lineage: { parentId: source.id, parentRootHash: source.rootHash, forkTick: 5 },
       });
     }
@@ -227,8 +264,13 @@ describe("Ghost replay world, Theater, and practice", () => {
     theater.accessibility(true, true);
     expect(theater.nextEvent("boss.attack-started")?.tick).toBe(20);
     expect(theater.state()).toMatchObject({
-      playing: true, tick: 20, speed: 2, camera: "target",
-      reducedMotion: true, highContrast: true, layout: "mobile",
+      playing: true,
+      tick: 20,
+      speed: 2,
+      camera: "target",
+      reducedMotion: true,
+      highContrast: true,
+      layout: "mobile",
     });
   });
 
@@ -238,9 +280,20 @@ describe("Ghost replay world, Theater, and practice", () => {
     expect(aligned).toHaveLength(1);
     expect(Object.keys(aligned[0]?.ticksByGhost ?? {})).toHaveLength(9);
     expect(aligned[0]?.ticksByGhost["run-8"]).toBe(44);
-    expect(diffTrajectories(
-      [{ tick: 1, x: 0, y: 0 }, { tick: 2, x: 2, y: 0 }],
-      [{ tick: 1, x: 3, y: 4 }, { tick: 2, x: 2, y: 0 }],
-    )).toEqual([{ tick: 1, distance: 5 }, { tick: 2, distance: 0 }]);
+    expect(
+      diffTrajectories(
+        [
+          { tick: 1, x: 0, y: 0 },
+          { tick: 2, x: 2, y: 0 },
+        ],
+        [
+          { tick: 1, x: 3, y: 4 },
+          { tick: 2, x: 2, y: 0 },
+        ],
+      ),
+    ).toEqual([
+      { tick: 1, distance: 5 },
+      { tick: 2, distance: 0 },
+    ]);
   });
 });

@@ -23,8 +23,20 @@ describe("Tear world composition", () => {
   });
 
   it("does not share lifecycle or transient records between worlds", () => {
-    const first = createTearWorldComposition({ state: {}, entities: {}, services: {}, cinema: {}, worldId: "composition-first" });
-    const second = createTearWorldComposition({ state: {}, entities: {}, services: {}, cinema: {}, worldId: "composition-second" });
+    const first = createTearWorldComposition({
+      state: {},
+      entities: {},
+      services: {},
+      cinema: {},
+      worldId: "composition-first",
+    });
+    const second = createTearWorldComposition({
+      state: {},
+      entities: {},
+      services: {},
+      cinema: {},
+      worldId: "composition-second",
+    });
 
     first.context.transient.impact.shake = 4;
     first.lifecycle.start("first");
@@ -34,13 +46,48 @@ describe("Tear world composition", () => {
     expect(second.lifecycle.phase).toBe("idle");
     expect(second.environment.lastClearReason).toBeNull();
     expect(first.environment.lastClearReason).toBe("retry");
-    expect(first.environment.addRoute({ kind: "regrowth-link", points: [], state: "active", stateTick: 0, ownerId: null, cleanupReason: null })).toBe("composition-first:route:1");
-    expect(second.environment.addRoute({ kind: "regrowth-link", points: [], state: "active", stateTick: 0, ownerId: null, cleanupReason: null })).toBe("composition-second:route:1");
+    expect(
+      first.environment.addRoute({
+        kind: "regrowth-link",
+        points: [],
+        state: "active",
+        stateTick: 0,
+        ownerId: null,
+        cleanupReason: null,
+      }),
+    ).toBe("composition-first:route:1");
+    expect(
+      second.environment.addRoute({
+        kind: "regrowth-link",
+        points: [],
+        state: "active",
+        stateTick: 0,
+        ownerId: null,
+        cleanupReason: null,
+      }),
+    ).toBe("composition-second:route:1");
   });
 
   it("routes every lifecycle clear reason through the single world environment", () => {
-    const world = createTearWorldComposition({ state: {}, entities: {}, services: {}, cinema: {}, worldId: "lifecycle" });
-    const reasons = ["new-run", "retry", "stage-transition", "boss-encounter-replacement", "boss-terminal", "defeat", "abandon", "tutorial-reset", "restore", "replay-seek"] as const;
+    const world = createTearWorldComposition({
+      state: {},
+      entities: {},
+      services: {},
+      cinema: {},
+      worldId: "lifecycle",
+    });
+    const reasons = [
+      "new-run",
+      "retry",
+      "stage-transition",
+      "boss-encounter-replacement",
+      "boss-terminal",
+      "defeat",
+      "abandon",
+      "tutorial-reset",
+      "restore",
+      "replay-seek",
+    ] as const;
     for (const reason of reasons) {
       world.resetEnvironment(reason);
       expect(world.environment.lastClearReason).toBe(reason);
@@ -51,7 +98,13 @@ describe("Tear world composition", () => {
   });
 
   it("updates authored stage identity through the same bounded clear transaction", () => {
-    const world = createTearWorldComposition({ state: {}, entities: {}, services: {}, cinema: {}, worldId: "stage-owner" });
+    const world = createTearWorldComposition({
+      state: {},
+      entities: {},
+      services: {},
+      cinema: {},
+      worldId: "stage-owner",
+    });
     world.environment.setStage("crimson-fields");
     expect(world.environment.stageId).toBe("crimson-fields");
     expect(world.environment.lastClearReason).toBe("stage-transition");

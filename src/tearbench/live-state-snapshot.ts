@@ -147,11 +147,11 @@ export interface TearLiveWorldAdapter<Candidate> {
 export type TearLiveRestoreResult =
   | Readonly<{ ok: true; exactHash: string; semanticHash: string }>
   | Readonly<{
-    ok: false;
-    phase: "decode" | "capture" | "stage" | "validate" | "commit";
-    issues: readonly TearCodecIssue[];
-    rolledBack: boolean;
-  }>;
+      ok: false;
+      phase: "decode" | "capture" | "stage" | "validate" | "commit";
+      issues: readonly TearCodecIssue[];
+      rolledBack: boolean;
+    }>;
 
 /** A first-world restore has no predecessor to capture or roll back to. */
 export interface TearLiveRestoreOptions {
@@ -196,13 +196,20 @@ export function restoreSnapshotIntoLiveWorld<Candidate>(
 ): TearLiveRestoreResult {
   let decoded: TearCodecWorld | undefined;
   const decodedResult = restoreSnapshotTransactionally(snapshot, registry, factory, {
-    replace(world) { decoded = cloneWorld(world); },
+    replace(world) {
+      decoded = cloneWorld(world);
+    },
   });
   if (!decodedResult.ok) {
     return Object.freeze({ ok: false, phase: "decode", issues: decodedResult.issues, rolledBack: false });
   }
   if (decoded === undefined) {
-    return Object.freeze({ ok: false, phase: "decode", issues: [worldIssue("decoded world was not produced")], rolledBack: false });
+    return Object.freeze({
+      ok: false,
+      phase: "decode",
+      issues: [worldIssue("decoded world was not produced")],
+      rolledBack: false,
+    });
   }
 
   let previous: TearCodecWorld | undefined;
@@ -245,12 +252,13 @@ export function restoreSnapshotIntoLiveWorld<Candidate>(
   try {
     adapter.commit(candidate);
   } catch (commitError) {
-    if (rollbackCandidate === undefined) return Object.freeze({
-      ok: false,
-      phase: "commit",
-      issues: [worldIssue(commitError instanceof Error ? commitError.message : String(commitError))],
-      rolledBack: false,
-    });
+    if (rollbackCandidate === undefined)
+      return Object.freeze({
+        ok: false,
+        phase: "commit",
+        issues: [worldIssue(commitError instanceof Error ? commitError.message : String(commitError))],
+        rolledBack: false,
+      });
     try {
       adapter.commit(rollbackCandidate);
     } catch (rollbackError) {
@@ -259,7 +267,9 @@ export function restoreSnapshotIntoLiveWorld<Candidate>(
         phase: "commit",
         issues: Object.freeze([
           worldIssue(commitError instanceof Error ? commitError.message : String(commitError)),
-          worldIssue(`rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`),
+          worldIssue(
+            `rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
+          ),
         ]),
         rolledBack: false,
       });

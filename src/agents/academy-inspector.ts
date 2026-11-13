@@ -11,23 +11,29 @@ export interface TearAcademyInspectionSnapshotV1 {
   readonly format: "tear-academy-inspection";
   readonly schemaVersion: 1;
   readonly observedAt: string;
-  readonly custody: Readonly<{ held: number; revoked: number; expired: number; deleted: number; rejectedBytes: number }>;
+  readonly custody: Readonly<{
+    held: number;
+    revoked: number;
+    expired: number;
+    deleted: number;
+    rejectedBytes: number;
+  }>;
   readonly quality: Readonly<{ reviewRequired: number; duplicates: number; rejectedBytes: number }>;
   readonly curation: Readonly<{ approved: number; corrections: number; rejected: number; rejectedBytes: number }>;
   readonly splits: Readonly<Record<string, number>>;
   readonly reviewedSamples: number;
   readonly corpusEntries: number;
   /** Read-only lesson coverage derived only from governed durable corpus entries. */
-  readonly lessons: readonly (Readonly<{
+  readonly lessons: readonly Readonly<{
     id: string;
     domain: string;
     governedEntries: number;
     recoveryEntries: number;
     status: "unrepresented" | "governed" | "recovery-evidenced";
-  }>)[];
-  readonly manifests: readonly (Readonly<{ id: string; version: number; entries: number; rootHash: string }>)[];
+  }>[];
+  readonly manifests: readonly Readonly<{ id: string; version: number; entries: number; rootHash: string }>[];
   /** Privacy-safe, immutable governance state for the player-visible Academy. */
-  readonly records: readonly (Readonly<{
+  readonly records: readonly Readonly<{
     candidateHash: string;
     custody: "held" | "revoked" | "expired" | "deleted";
     modelTrainingConsent: string;
@@ -41,7 +47,7 @@ export interface TearAcademyInspectionSnapshotV1 {
     split?: string;
     reviewed: boolean;
     inCorpus: boolean;
-  }>)[];
+  }>[];
 }
 
 export interface TearAcademyInspectionStores {
@@ -53,10 +59,19 @@ export interface TearAcademyInspectionStores {
   readonly corpus: TearAcademyCorpusStore;
 }
 
-export async function inspectAcademy(stores: TearAcademyInspectionStores, observedAt: string, actionActor?: string): Promise<TearAcademyInspectionSnapshotV1> {
+export async function inspectAcademy(
+  stores: TearAcademyInspectionStores,
+  observedAt: string,
+  actionActor?: string,
+): Promise<TearAcademyInspectionSnapshotV1> {
   if (!Number.isFinite(Date.parse(observedAt))) throw new TypeError("Academy inspection requires a timestamp");
   const [custody, quality, curation, splits, manifests, corpus] = await Promise.all([
-    stores.custody.inventory(), stores.quality.inventory(), stores.curation.inventory(), stores.splits.inventory(), stores.splits.manifestInventory(), stores.corpus.inventory(),
+    stores.custody.inventory(),
+    stores.quality.inventory(),
+    stores.curation.inventory(),
+    stores.splits.inventory(),
+    stores.splits.manifestInventory(),
+    stores.corpus.inventory(),
   ]);
   const samples = await Promise.all(splits.map((entry) => stores.samples.get(entry.candidateHash)));
   const count = <T>(values: readonly T[], predicate: (value: T) => boolean): number => values.filter(predicate).length;
@@ -65,41 +80,107 @@ export async function inspectAcademy(stores: TearAcademyInspectionStores, observ
   const splitByCandidate = new Map(splits.map((entry) => [entry.candidateHash, entry]));
   const sampleByCandidate = new Set(samples.filter((entry) => entry !== undefined).map((entry) => entry.candidateHash));
   const corpusByCandidate = new Set(corpus.map((entry) => entry.candidateHash));
-  const activeCandidateHashes = new Set(custody.records.filter((entry) => entry.status === "held"
-    && (entry.retention.mode === "indefinite" || (entry.retention.expiresAt !== undefined
-      && Date.parse(entry.retention.expiresAt) > Date.parse(observedAt))))
-    .map((entry) => entry.candidateHash));
-  const lessons = Object.freeze(CANONICAL_ACADEMY_LESSONS.map((lesson) => {
-    const entries = corpus.filter((entry) => entry.lessonId === lesson.id && activeCandidateHashes.has(entry.candidateHash));
-    const recoveryEntries = entries.filter((entry) => entry.segmentKind === "recovery").length;
-    const status = entries.length === 0 ? "unrepresented"
-      : lesson.recoveryRequired && recoveryEntries > 0 ? "recovery-evidenced" : "governed";
-    return Object.freeze({ id: lesson.id, domain: lesson.domain, governedEntries: entries.length, recoveryEntries, status });
-  }));
-  const records = Object.freeze(custody.records.map((entry) => {
-    const assessment = assessmentByCandidate.get(entry.candidateHash);
-    const decision = curationByCandidate.get(entry.candidateHash);
-    const split = splitByCandidate.get(entry.candidateHash);
-    return Object.freeze({ candidateHash: entry.candidateHash, custody: entry.status,
-      modelTrainingConsent: entry.consent.modelTraining, retention: entry.retention.mode,
-      canWithdrawModelTraining: entry.status === "held" && entry.consent.modelTraining !== "no-training" && actionActor !== undefined && entry.privacyRetention.authorizedActorIds.includes(actionActor),
-      ...(entry.retention.mode === "until" ? { expiresAt: entry.retention.expiresAt } : {}),
-      privacyClass: entry.privacyRetention.classification,
-      ...(assessment === undefined ? {} : { quality: assessment.disposition }),
-      ...(decision === undefined ? {} : { curation: decision.disposition }),
-      correctionCount: decision?.corrections.length ?? 0,
-      ...(split === undefined ? {} : { split: split.split }),
-      reviewed: sampleByCandidate.has(entry.candidateHash), inCorpus: corpusByCandidate.has(entry.candidateHash),
-    });
-  }));
-  return Object.freeze({ format: "tear-academy-inspection", schemaVersion: 1, observedAt,
-    custody: Object.freeze({ held: count(custody.records, (entry) => entry.status === "held"), revoked: count(custody.records, (entry) => entry.status === "revoked"), expired: count(custody.records, (entry) => entry.status === "expired"), deleted: count(custody.records, (entry) => entry.status === "deleted"), rejectedBytes: custody.rejectedKeys.length }),
-    quality: Object.freeze({ reviewRequired: count(quality.assessments, (entry) => entry.disposition === "review-required"), duplicates: count(quality.assessments, (entry) => entry.disposition === "duplicate"), rejectedBytes: quality.rejectedKeys.length }),
-    curation: Object.freeze({ approved: count(curation.decisions, (entry) => entry.disposition === "curation-approved"), corrections: count(curation.decisions, (entry) => entry.disposition === "needs-correction"), rejected: count(curation.decisions, (entry) => entry.disposition === "rejected"), rejectedBytes: curation.rejectedKeys.length }),
-    splits: Object.freeze(Object.fromEntries(["training", "validation", "calibration", "test", "hidden-release-exam"].map((split) => [split, count(splits, (entry) => entry.split === split)]))),
+  const activeCandidateHashes = new Set(
+    custody.records
+      .filter(
+        (entry) =>
+          entry.status === "held" &&
+          (entry.retention.mode === "indefinite" ||
+            (entry.retention.expiresAt !== undefined &&
+              Date.parse(entry.retention.expiresAt) > Date.parse(observedAt))),
+      )
+      .map((entry) => entry.candidateHash),
+  );
+  const lessons = Object.freeze(
+    CANONICAL_ACADEMY_LESSONS.map((lesson) => {
+      const entries = corpus.filter(
+        (entry) => entry.lessonId === lesson.id && activeCandidateHashes.has(entry.candidateHash),
+      );
+      const recoveryEntries = entries.filter((entry) => entry.segmentKind === "recovery").length;
+      const status =
+        entries.length === 0
+          ? "unrepresented"
+          : lesson.recoveryRequired && recoveryEntries > 0
+            ? "recovery-evidenced"
+            : "governed";
+      return Object.freeze({
+        id: lesson.id,
+        domain: lesson.domain,
+        governedEntries: entries.length,
+        recoveryEntries,
+        status,
+      });
+    }),
+  );
+  const records = Object.freeze(
+    custody.records.map((entry) => {
+      const assessment = assessmentByCandidate.get(entry.candidateHash);
+      const decision = curationByCandidate.get(entry.candidateHash);
+      const split = splitByCandidate.get(entry.candidateHash);
+      return Object.freeze({
+        candidateHash: entry.candidateHash,
+        custody: entry.status,
+        modelTrainingConsent: entry.consent.modelTraining,
+        retention: entry.retention.mode,
+        canWithdrawModelTraining:
+          entry.status === "held" &&
+          entry.consent.modelTraining !== "no-training" &&
+          actionActor !== undefined &&
+          entry.privacyRetention.authorizedActorIds.includes(actionActor),
+        ...(entry.retention.mode === "until" ? { expiresAt: entry.retention.expiresAt } : {}),
+        privacyClass: entry.privacyRetention.classification,
+        ...(assessment === undefined ? {} : { quality: assessment.disposition }),
+        ...(decision === undefined ? {} : { curation: decision.disposition }),
+        correctionCount: decision?.corrections.length ?? 0,
+        ...(split === undefined ? {} : { split: split.split }),
+        reviewed: sampleByCandidate.has(entry.candidateHash),
+        inCorpus: corpusByCandidate.has(entry.candidateHash),
+      });
+    }),
+  );
+  return Object.freeze({
+    format: "tear-academy-inspection",
+    schemaVersion: 1,
+    observedAt,
+    custody: Object.freeze({
+      held: count(custody.records, (entry) => entry.status === "held"),
+      revoked: count(custody.records, (entry) => entry.status === "revoked"),
+      expired: count(custody.records, (entry) => entry.status === "expired"),
+      deleted: count(custody.records, (entry) => entry.status === "deleted"),
+      rejectedBytes: custody.rejectedKeys.length,
+    }),
+    quality: Object.freeze({
+      reviewRequired: count(quality.assessments, (entry) => entry.disposition === "review-required"),
+      duplicates: count(quality.assessments, (entry) => entry.disposition === "duplicate"),
+      rejectedBytes: quality.rejectedKeys.length,
+    }),
+    curation: Object.freeze({
+      approved: count(curation.decisions, (entry) => entry.disposition === "curation-approved"),
+      corrections: count(curation.decisions, (entry) => entry.disposition === "needs-correction"),
+      rejected: count(curation.decisions, (entry) => entry.disposition === "rejected"),
+      rejectedBytes: curation.rejectedKeys.length,
+    }),
+    splits: Object.freeze(
+      Object.fromEntries(
+        ["training", "validation", "calibration", "test", "hidden-release-exam"].map((split) => [
+          split,
+          count(splits, (entry) => entry.split === split),
+        ]),
+      ),
+    ),
     reviewedSamples: samples.filter((entry) => entry !== undefined).length,
-    corpusEntries: corpus.length, lessons,
+    corpusEntries: corpus.length,
+    lessons,
     records,
-    manifests: Object.freeze(manifests.map((entry) => Object.freeze({ id: entry.id, version: entry.version, entries: entry.entries.length, rootHash: entry.rootHash }))),
+    manifests: Object.freeze(
+      manifests.map((entry) =>
+        Object.freeze({
+          id: entry.id,
+          version: entry.version,
+          entries: entry.entries.length,
+          rootHash: entry.rootHash,
+        }),
+      ),
+    ),
   });
 }

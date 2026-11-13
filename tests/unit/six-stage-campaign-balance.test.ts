@@ -10,17 +10,43 @@ import { CAMPAIGN_STAGE_IDS, STAGES } from "../../src/gameplay/stages";
 import { synthesizeProgression } from "../../src/tearbench/progression-ledger";
 
 function clearState(wave: number): WaveClearState {
-  return { mode: "campaign", diff: "normal", wave, isBossWave: wave % 10 === 0, horde: false,
-    waveTime: 30, waveKills: 12, wavePeak: 6, runTime: wave * 30, bossesBeaten: Math.floor((wave - 1) / 10),
-    damagedThisWave: false, damagedThisStage: false, clearTimer: -1, pendingReward: null, waveLog: [] };
+  return {
+    mode: "campaign",
+    diff: "normal",
+    wave,
+    isBossWave: wave % 10 === 0,
+    horde: false,
+    waveTime: 30,
+    waveKills: 12,
+    wavePeak: 6,
+    runTime: wave * 30,
+    bossesBeaten: Math.floor((wave - 1) / 10),
+    damagedThisWave: false,
+    damagedThisStage: false,
+    clearTimer: -1,
+    pendingReward: null,
+    waveLog: [],
+  };
 }
 
 function clearInput(wave: number): WaveClearInput {
-  return { state: clearState(wave), dt: 0.1, waveLifecycleActive: true, spawnQueueLength: 0, enemyCount: 0,
-    achievementTracking: true, playerOneHit: false, ownedAbilityCount: 12,
-    stageIndex: Math.floor((wave - 1) / 10), stageCount: CAMPAIGN_STAGE_IDS.length,
-    currentStageAccent: "#fff", healEachWave: CONFIG.run.healEachWave, waveHealBonus: 0,
-    waveClearPause: CONFIG.run.waveClearPause, availableTierUpCount: 4 };
+  return {
+    state: clearState(wave),
+    dt: 0.1,
+    waveLifecycleActive: true,
+    spawnQueueLength: 0,
+    enemyCount: 0,
+    achievementTracking: true,
+    playerOneHit: false,
+    ownedAbilityCount: 12,
+    stageIndex: Math.floor((wave - 1) / 10),
+    stageCount: CAMPAIGN_STAGE_IDS.length,
+    currentStageAccent: "#fff",
+    healEachWave: CONFIG.run.healEachWave,
+    waveHealBonus: 0,
+    waveClearPause: CONFIG.run.waveClearPause,
+    availableTierUpCount: 4,
+  };
 }
 
 describe("six-stage Adventure balance boundary", () => {
@@ -42,27 +68,45 @@ describe("six-stage Adventure balance boundary", () => {
       expect(curves[index]?.damage).toBeGreaterThanOrEqual(curves[index - 1]?.damage ?? 0);
       expect(curves[index]?.countAdd).toBeGreaterThanOrEqual(curves[index - 1]?.countAdd ?? 0);
     }
-    const caps = CAMPAIGN_STAGE_IDS.map((stageId, index) => concurrentEnemyCap({
-      mode: "campaign", wave: index * 10 + 1, stageId, horde: false,
-    }, CONFIG.run));
+    const caps = CAMPAIGN_STAGE_IDS.map((stageId, index) =>
+      concurrentEnemyCap(
+        {
+          mode: "campaign",
+          wave: index * 10 + 1,
+          stageId,
+          horde: false,
+        },
+        CONFIG.run,
+      ),
+    );
     expect(caps).toEqual([6, 7, 8, 8, 10, 10]);
     expect(caps.every((cap) => cap <= CONFIG.run.maxConcurrentCap)).toBe(true);
   });
 
   it("synthesizes sixty legal rewards, six bosses, bounded build power, economy and duration", () => {
-    const result = synthesizeProgression({ mode: "campaign", difficulty: "normal", weapon: "sword",
-      targetWave: 60, configuredCampaignWaves: 60, policy: "coverage-seeking",
-      economy: { score: 25_000, remoteMultiplier: 1, coinMagnetLevel: 2, fortuneLevel: 2 } });
+    const result = synthesizeProgression({
+      mode: "campaign",
+      difficulty: "normal",
+      weapon: "sword",
+      targetWave: 60,
+      configuredCampaignWaves: 60,
+      policy: "coverage-seeking",
+      economy: { score: 25_000, remoteMultiplier: 1, coinMagnetLevel: 2, fortuneLevel: 2 },
+    });
     expect(result.reachable).toBe(true);
-    expect(result.ledger.events.filter((event) => event.type === "stage.entered").map((event) => event.wave))
-      .toEqual([1, 11, 21, 31, 41, 51]);
-    expect(result.ledger.events.filter((event) => event.type === "boss.defeated").map((event) => event.wave))
-      .toEqual([10, 20, 30, 40, 50, 60]);
+    expect(result.ledger.events.filter((event) => event.type === "stage.entered").map((event) => event.wave)).toEqual([
+      1, 11, 21, 31, 41, 51,
+    ]);
+    expect(result.ledger.events.filter((event) => event.type === "boss.defeated").map((event) => event.wave)).toEqual([
+      10, 20, 30, 40, 50, 60,
+    ]);
     expect(result.ledger.draftOpportunities + result.ledger.tierOpportunities).toBe(60);
     // One source-owned reward remains available after every wave. The 60-wave
     // extension reaches more legal families without changing any ability.
     expect(Object.keys(result.build)).toHaveLength(48);
-    expect(Object.values(result.build).every((tierOrCount) => Number.isSafeInteger(tierOrCount) && tierOrCount >= 1)).toBe(true);
+    expect(
+      Object.values(result.build).every((tierOrCount) => Number.isSafeInteger(tierOrCount) && tierOrCount >= 1),
+    ).toBe(true);
     expect(result.statistics.currency).toBeGreaterThan(0);
     expect(result.statistics.elapsedTicks / 120).toBeGreaterThanOrEqual(25 * 60);
     expect(result.statistics.elapsedTicks / 120).toBeLessThanOrEqual(40 * 60);
@@ -97,8 +141,9 @@ describe("six-stage Adventure balance boundary", () => {
         economy: { score: 25_000, remoteMultiplier: 1, coinMagnetLevel: 2, fortuneLevel: 2 },
       });
       expect(result.reachable, `${difficulty.id} Adventure must remain reachable through Wave 60`).toBe(true);
-      expect(result.ledger.events.filter((event) => event.type === "boss.defeated").map((event) => event.wave))
-        .toEqual([10, 20, 30, 40, 50, 60]);
+      expect(result.ledger.events.filter((event) => event.type === "boss.defeated").map((event) => event.wave)).toEqual(
+        [10, 20, 30, 40, 50, 60],
+      );
     }
   });
 
@@ -111,6 +156,8 @@ describe("six-stage Adventure balance boundary", () => {
     const source = planWaveClear(clearInput(60));
     expect(source.terminal).toBe(true);
     expect(source.intents.at(-1)).toEqual({ type: "start-adventure-finale" });
-    expect(source.intents.some((intent) => intent.type === "heal-player" || intent.type === "prepare-reward")).toBe(false);
+    expect(source.intents.some((intent) => intent.type === "heal-player" || intent.type === "prepare-reward")).toBe(
+      false,
+    );
   });
 });

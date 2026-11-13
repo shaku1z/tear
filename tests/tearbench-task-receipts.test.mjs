@@ -4,28 +4,77 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import {
-  assessPlanTaskReceipts, certificateBindsPlan, createPlanCertificate, createTaskAttemptReceipt, expectedTaskBindings, receiptSha256, taskAttemptPath,
+  assessPlanTaskReceipts,
+  certificateBindsPlan,
+  createPlanCertificate,
+  createTaskAttemptReceipt,
+  expectedTaskBindings,
+  receiptSha256,
+  taskAttemptPath,
 } from "../scripts/tearbench-task-receipts.mjs";
 import { PERFORMANCE_TASK_ID } from "../scripts/tearbench-performance-sample.mjs";
 import { verifyProtectedPlanCertificate } from "../scripts/verify-plan-certificate.mjs";
 
-const origin = Object.freeze({ kind: "github-actions", repository: "shaku1z/tear", workflow: "Validate",
-  runId: "12345", job: "validation", attempt: 1 });
-const source = Object.freeze({ repository: "shaku1z/tear", revision: "a".repeat(40), state: "clean",
-  fingerprint: "b".repeat(64), worktreeFingerprint: "c".repeat(64) });
+const origin = Object.freeze({
+  kind: "github-actions",
+  repository: "shaku1z/tear",
+  workflow: "Validate",
+  runId: "12345",
+  job: "validation",
+  attempt: 1,
+});
+const source = Object.freeze({
+  repository: "shaku1z/tear",
+  revision: "a".repeat(40),
+  state: "clean",
+  fingerprint: "b".repeat(64),
+  worktreeFingerprint: "c".repeat(64),
+});
 const planPayload = Object.freeze({
-  format: "tearbench-shadow-plan", schemaVersion: 1, profileId: "release",
-  authoritativeGateUnchanged: true, source,
-  executionRequirements: { toolchain: { node: "24.1.0", pnpm: "11.15.0", playwright: "1.55.0" },
-    environment: { os: "linux", arch: "x64", runner: "ubuntu-latest" } },
-  scopeDigest: "2".repeat(64), taskRegistryDigest: "3".repeat(16), policyDigest: "4".repeat(64), plannerPolicyDigest: "5".repeat(64),
-  requiredTaskIds: ["task.a", "task.b"], requiredClaims: ["claim.a", "claim.b", "obligation.a"],
+  format: "tearbench-shadow-plan",
+  schemaVersion: 1,
+  profileId: "release",
+  authoritativeGateUnchanged: true,
+  source,
+  executionRequirements: {
+    toolchain: { node: "24.1.0", pnpm: "11.15.0", playwright: "1.55.0" },
+    environment: { os: "linux", arch: "x64", runner: "ubuntu-latest" },
+  },
+  scopeDigest: "2".repeat(64),
+  taskRegistryDigest: "3".repeat(16),
+  policyDigest: "4".repeat(64),
+  plannerPolicyDigest: "5".repeat(64),
+  requiredTaskIds: ["task.a", "task.b"],
+  requiredClaims: ["claim.a", "claim.b", "obligation.a"],
   taskNodes: [
-    { taskId: "task.a", taskDefinitionDigest: "6".repeat(16), claimIds: ["claim.a"], resourceClass: "unit", resourceKeys: [], dependencies: [],
-      outputs: [{ outputId: "proof", path: "artifacts/tearbench/missions/mission/task.a/proof.json" }] },
-    { taskId: "task.b", taskDefinitionDigest: "7".repeat(16), claimIds: ["claim.b"], resourceClass: "unit", resourceKeys: [], dependencies: [], outputs: [] },
+    {
+      taskId: "task.a",
+      taskDefinitionDigest: "6".repeat(16),
+      claimIds: ["claim.a"],
+      resourceClass: "unit",
+      resourceKeys: [],
+      dependencies: [],
+      outputs: [{ outputId: "proof", path: "artifacts/tearbench/missions/mission/task.a/proof.json" }],
+    },
+    {
+      taskId: "task.b",
+      taskDefinitionDigest: "7".repeat(16),
+      claimIds: ["claim.b"],
+      resourceClass: "unit",
+      resourceKeys: [],
+      dependencies: [],
+      outputs: [],
+    },
   ],
-  obligations: [{ obligationId: "obligation.a", kind: "matrix", backend: "live", observationClass: "source-owned", taskIds: ["task.a"] }],
+  obligations: [
+    {
+      obligationId: "obligation.a",
+      kind: "matrix",
+      backend: "live",
+      observationClass: "source-owned",
+      taskIds: ["task.a"],
+    },
+  ],
   explanations: [
     { taskId: "task.a", unprovedWithout: ["claim.a", "obligation.a"] },
     { taskId: "task.b", unprovedWithout: ["claim.b"] },
@@ -37,45 +86,91 @@ const performancePlanPayload = Object.freeze({
   ...planPayload,
   requiredTaskIds: [PERFORMANCE_TASK_ID],
   requiredClaims: ["claim.performance"],
-  taskNodes: [{ taskId: PERFORMANCE_TASK_ID, taskDefinitionDigest: "8".repeat(16), claimIds: ["claim.performance"],
-    resourceClass: "browser", resourceKeys: [], dependencies: [], outputs: [] }],
+  taskNodes: [
+    {
+      taskId: PERFORMANCE_TASK_ID,
+      taskDefinitionDigest: "8".repeat(16),
+      claimIds: ["claim.performance"],
+      resourceClass: "browser",
+      resourceKeys: [],
+      dependencies: [],
+      outputs: [],
+    },
+  ],
   obligations: [],
   explanations: [{ taskId: PERFORMANCE_TASK_ID, unprovedWithout: ["claim.performance"] }],
   diagnostics: { unsupported: [] },
 });
 const performancePlan = Object.freeze({ ...performancePlanPayload, planDigest: receiptSha256(performancePlanPayload) });
 const bytes = Buffer.from("artifact evidence\n", "utf8");
-const artifact = Object.freeze({ outputId: "proof", path: "artifacts/tearbench/missions/mission/task.a/proof.json", sha256: receiptSha256(bytes), size: bytes.length });
+const artifact = Object.freeze({
+  outputId: "proof",
+  path: "artifacts/tearbench/missions/mission/task.a/proof.json",
+  sha256: receiptSha256(bytes),
+  size: bytes.length,
+});
 
 function input(taskId, overrides = {}) {
   const bindings = expectedTaskBindings(plan, taskId);
   return {
-    missionId: "mission", plan, taskId, attemptNumber: 1, source, authority: "protected-ci", origin,
-    build: { requirement: bindings.build, attestations: [], produced: [] }, toolchain: bindings.toolchain,
-    environment: bindings.environment, evidence: bindings.evidence,
-    status: "passed", exitCode: 0, startedAt: "2026-08-31T00:00:00.000Z", finishedAt: "2026-08-31T00:00:01.000Z",
-    artifacts: taskId === "task.a" ? [artifact] : [], ...overrides,
+    missionId: "mission",
+    plan,
+    taskId,
+    attemptNumber: 1,
+    source,
+    authority: "protected-ci",
+    origin,
+    build: { requirement: bindings.build, attestations: [], produced: [] },
+    toolchain: bindings.toolchain,
+    environment: bindings.environment,
+    evidence: bindings.evidence,
+    status: "passed",
+    exitCode: 0,
+    startedAt: "2026-08-31T00:00:00.000Z",
+    finishedAt: "2026-08-31T00:00:01.000Z",
+    artifacts: taskId === "task.a" ? [artifact] : [],
+    ...overrides,
   };
 }
-function receipt(taskId, overrides) { return createTaskAttemptReceipt(input(taskId, overrides)); }
+function receipt(taskId, overrides) {
+  return createTaskAttemptReceipt(input(taskId, overrides));
+}
 function certify(receipts, overrides = {}) {
-  return createPlanCertificate({ plan, receipts, expectedOrigin: origin, artifactBytes: { [artifact.path]: bytes },
-    generatedAt: "2026-08-31T00:01:00.000Z", ...overrides });
+  return createPlanCertificate({
+    plan,
+    receipts,
+    expectedOrigin: origin,
+    artifactBytes: { [artifact.path]: bytes },
+    generatedAt: "2026-08-31T00:01:00.000Z",
+    ...overrides,
+  });
 }
 function resign(value) {
-  const copy = structuredClone(value); delete copy.receiptDigest;
+  const copy = structuredClone(value);
+  delete copy.receiptDigest;
   return { ...copy, receiptDigest: receiptSha256(copy) };
 }
 
 test("task assessment shares certificate validation without requiring unrelated task completion", () => {
-  const assess = (receipts) => assessPlanTaskReceipts({ plan, receipts, expectedOrigin: origin,
-    artifactBytes: { [artifact.path]: bytes }, generatedAt: "2026-08-31T00:01:00.000Z" });
+  const assess = (receipts) =>
+    assessPlanTaskReceipts({
+      plan,
+      receipts,
+      expectedOrigin: origin,
+      artifactBytes: { [artifact.path]: bytes },
+      generatedAt: "2026-08-31T00:01:00.000Z",
+    });
   const first = receipt("task.a");
-  assert.deepEqual(assess([first]).taskStatuses.map(({ status }) => status), ["valid", "missing"]);
+  assert.deepEqual(
+    assess([first]).taskStatuses.map(({ status }) => status),
+    ["valid", "missing"],
+  );
   assert.equal(certify([first]).status, "rejected");
   assert.equal(assess([receipt("task.a", { status: "failed", exitCode: 1 })]).taskStatuses[0].status, "failed");
-  for (const changed of [resign({ ...first, artifacts: [] }),
-    resign({ ...first, source: { ...source, fingerprint: "f".repeat(64) } })]) {
+  for (const changed of [
+    resign({ ...first, artifacts: [] }),
+    resign({ ...first, source: { ...source, fingerprint: "f".repeat(64) } }),
+  ]) {
     const result = assess([changed]);
     assert.equal(result.taskStatuses[0].status, "stale");
     assert.ok(result.taskStatuses[0].reasons.length > 0);
@@ -85,26 +180,53 @@ test("task assessment shares certificate validation without requiring unrelated 
   assert.deepEqual(assess([]).unsupported, plan.diagnostics.unsupported);
 });
 
-const contendedOutput = `${JSON.stringify({ scenario: "4x constrained gameplay", measurements: {
-  frame: { p95Ms: 14.6 }, frameInterval: { p99Ms: 150 }, outsideFrameWork: { p99Ms: 140.9 }, newLongTasks: 0,
-} })}\n`;
-const contendedFailure = "AssertionError [ERR_ASSERTION]: 4x constrained gameplay frame-interval p99 ms: 150 exceeded budget 50\n";
+const contendedOutput = `${JSON.stringify({
+  scenario: "4x constrained gameplay",
+  measurements: {
+    frame: { p95Ms: 14.6 },
+    frameInterval: { p99Ms: 150 },
+    outsideFrameWork: { p99Ms: 140.9 },
+    newLongTasks: 0,
+  },
+})}\n`;
+const contendedFailure =
+  "AssertionError [ERR_ASSERTION]: 4x constrained gameplay frame-interval p99 ms: 150 exceeded budget 50\n";
 function performanceReceipt(overrides = {}) {
   const bindings = expectedTaskBindings(performancePlan, PERFORMANCE_TASK_ID);
-  return createTaskAttemptReceipt({ missionId: "performance", plan: performancePlan, taskId: PERFORMANCE_TASK_ID,
-    attemptNumber: 1, source, authority: "protected-ci", origin,
-    build: { requirement: bindings.build, attestations: [], produced: [] }, toolchain: bindings.toolchain,
-    environment: bindings.environment, evidence: bindings.evidence, status: "passed", exitCode: 0,
-    startedAt: "2026-08-31T00:00:00.000Z", finishedAt: "2026-08-31T00:00:01.000Z",
-    artifacts: [], stdout: "", stderr: "", ...overrides });
+  return createTaskAttemptReceipt({
+    missionId: "performance",
+    plan: performancePlan,
+    taskId: PERFORMANCE_TASK_ID,
+    attemptNumber: 1,
+    source,
+    authority: "protected-ci",
+    origin,
+    build: { requirement: bindings.build, attestations: [], produced: [] },
+    toolchain: bindings.toolchain,
+    environment: bindings.environment,
+    evidence: bindings.evidence,
+    status: "passed",
+    exitCode: 0,
+    startedAt: "2026-08-31T00:00:00.000Z",
+    finishedAt: "2026-08-31T00:00:01.000Z",
+    artifacts: [],
+    stdout: "",
+    stderr: "",
+    ...overrides,
+  });
 }
 function certifyPerformance(receipts) {
-  return createPlanCertificate({ plan: performancePlan, receipts, expectedOrigin: origin,
-    generatedAt: "2026-08-31T00:01:00.000Z" });
+  return createPlanCertificate({
+    plan: performancePlan,
+    receipts,
+    expectedOrigin: origin,
+    generatedAt: "2026-08-31T00:01:00.000Z",
+  });
 }
 
 test("immutable task attempts and a plan-derived protected certificate are deterministic and complete", () => {
-  const left = receipt("task.a"), right = receipt("task.b");
+  const left = receipt("task.a"),
+    right = receipt("task.b");
   assert.match(left.executionKey, /^[0-9a-f]{64}$/u);
   assert.equal(left.immutablePath, taskAttemptPath(left));
   assert.equal(left.task.taskDefinitionDigest, plan.taskNodes[0].taskDefinitionDigest);
@@ -121,26 +243,38 @@ test("immutable task attempts and a plan-derived protected certificate are deter
 test("receipt production rejects dirty release authority and malformed result/path identities", () => {
   assert.throws(() => receipt("task.a", { source: { ...source, state: "dirty" } }), /clean source/u);
   assert.throws(() => receipt("task.a", { status: "passed", exitCode: 1 }), /inconsistent/u);
-  assert.throws(() => taskAttemptPath({ missionId: "../bad", taskId: "task.a", attemptNumber: 1, executionKey: "a".repeat(64) }), /safe stable/u);
+  assert.throws(
+    () => taskAttemptPath({ missionId: "../bad", taskId: "task.a", attemptNumber: 1, executionKey: "a".repeat(64) }),
+    /safe stable/u,
+  );
 });
 
 test("certificate rejects stale definition, plan, policy, scope, build, toolchain, environment, backend, observation, and matrix bindings", () => {
   const fields = [
-    ["task", "taskDefinitionDigest", "f".repeat(16)], ["plan", "digest", "f".repeat(64)],
-    ["plan", "policyDigest", "f".repeat(64)], ["plan", "scopeDigest", "f".repeat(64)],
-    ["bindings", "build", { kind: "other" }], ["bindings", "toolchain", { node: "old" }],
+    ["task", "taskDefinitionDigest", "f".repeat(16)],
+    ["plan", "digest", "f".repeat(64)],
+    ["plan", "policyDigest", "f".repeat(64)],
+    ["plan", "scopeDigest", "f".repeat(64)],
+    ["bindings", "build", { kind: "other" }],
+    ["bindings", "toolchain", { node: "old" }],
     ["bindings", "environment", { runner: "other" }],
-    ["bindings", "evidence", { scopeDigest: plan.scopeDigest, backend: "headless", observationClass: "invented", matrixCell: "fps:30" }],
+    [
+      "bindings",
+      "evidence",
+      { scopeDigest: plan.scopeDigest, backend: "headless", observationClass: "invented", matrixCell: "fps:30" },
+    ],
   ];
   for (const [section, key, value] of fields) {
-    const hostile = structuredClone(receipt("task.a")); hostile[section][key] = value;
+    const hostile = structuredClone(receipt("task.a"));
+    hostile[section][key] = value;
     const certificate = certify([resign(hostile), receipt("task.b")]);
     assert.equal(certificate.status, "rejected", `${section}.${key}`);
   }
 });
 
 test("task claims cannot be relabeled to manufacture matrix or journey coverage", () => {
-  const hostile = structuredClone(receipt("task.a")); hostile.task.claimIds = ["claim.a", "matrix:invented"];
+  const hostile = structuredClone(receipt("task.a"));
+  hostile.task.claimIds = ["claim.a", "matrix:invented"];
   const certificate = certify([resign(hostile), receipt("task.b")]);
   assert.equal(certificate.status, "rejected");
   assert.ok(certificate.errors.some((error) => error.includes("relabeled")));
@@ -150,7 +284,8 @@ test("local and forged protected origins remain below release authority", () => 
   const local = receipt("task.a", { authority: "local-engineering", origin: { kind: "local" } });
   assert.equal(local.canonicalReleaseAuthority, false);
   assert.equal(certify([local, receipt("task.b")]).status, "rejected");
-  const forged = structuredClone(receipt("task.a")); forged.origin.runId = "999";
+  const forged = structuredClone(receipt("task.a"));
+  forged.origin.runId = "999";
   assert.equal(certify([resign(forged), receipt("task.b")]).status, "rejected");
   const siblingJob = receipt("task.a", { origin: { ...origin, job: "browser-2" } });
   assert.equal(certify([siblingJob, receipt("task.b")]).status, "certified");
@@ -160,56 +295,104 @@ test("local and forged protected origins remain below release authority", () => 
 
 test("failed and authorized passing attempts are retained as recovered-flaky; hidden or failed retries reject", () => {
   const failed = receipt("task.a", { status: "failed", exitCode: 1 });
-  const recovered = receipt("task.a", { attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: "retry-policy-1" });
+  const recovered = receipt("task.a", {
+    attemptNumber: 2,
+    retryOf: failed.receiptDigest,
+    retryAuthorization: "retry-policy-1",
+  });
   const accepted = certify([failed, recovered, receipt("task.b")]);
   assert.equal(accepted.status, "certified");
   assert.equal(accepted.retryHistory.find((entry) => entry.taskId === "task.a").disposition, "recovered-flaky");
-  const assessment = assessPlanTaskReceipts({ plan, receipts: [failed, recovered, receipt("task.b")], expectedOrigin: origin,
-    artifactBytes: { [artifact.path]: bytes }, generatedAt: "2026-08-31T00:01:00.000Z" });
+  const assessment = assessPlanTaskReceipts({
+    plan,
+    receipts: [failed, recovered, receipt("task.b")],
+    expectedOrigin: origin,
+    artifactBytes: { [artifact.path]: bytes },
+    generatedAt: "2026-08-31T00:01:00.000Z",
+  });
   assert.deepEqual(assessment.retryHistory, accepted.retryHistory);
   const hidden = receipt("task.a", { attemptNumber: 2, retryOf: failed.receiptDigest });
   assert.equal(certify([failed, hidden, receipt("task.b")]).status, "rejected");
-  const failedAgain = receipt("task.a", { attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: "retry-policy-1",
-    status: "failed", exitCode: 2 });
+  const failedAgain = receipt("task.a", {
+    attemptNumber: 2,
+    retryOf: failed.receiptDigest,
+    retryAuthorization: "retry-policy-1",
+    status: "failed",
+    exitCode: 2,
+  });
   assert.equal(certify([failed, failedAgain, receipt("task.b")]).status, "rejected");
   assert.throws(() => receipt("task.a", { attemptNumber: 3 }), /initial run or one retry/u);
 });
 
 test("performance invalid-sample retries are receipt-proven, exact, bounded, and fail closed", () => {
-  const failed = performanceReceipt({ status: "failed", exitCode: 1, stdout: contendedOutput, stderr: contendedFailure });
+  const failed = performanceReceipt({
+    status: "failed",
+    exitCode: 1,
+    stdout: contendedOutput,
+    stderr: contendedFailure,
+  });
   assert.equal(failed.result.sampleValidity.classification, "infrastructure-invalid");
   const authorization = `bounded-canary-invalid-sample-retry:performance:${PERFORMANCE_TASK_ID}`;
-  const recovered = performanceReceipt({ attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: authorization });
+  const recovered = performanceReceipt({
+    attemptNumber: 2,
+    retryOf: failed.receiptDigest,
+    retryAuthorization: authorization,
+  });
   const accepted = certifyPerformance([failed, recovered]);
   assert.equal(accepted.status, "certified", accepted.errors.join("\n"));
   assert.equal(accepted.retryHistory[0].attempts[0].sampleValidity.classification, "infrastructure-invalid");
 
-  const wrongAuthorization = performanceReceipt({ attemptNumber: 2, retryOf: failed.receiptDigest,
-    retryAuthorization: "bounded-canary-single-retry:performance:browser.test-browser-performance" });
+  const wrongAuthorization = performanceReceipt({
+    attemptNumber: 2,
+    retryOf: failed.receiptDigest,
+    retryAuthorization: "bounded-canary-single-retry:performance:browser.test-browser-performance",
+  });
   assert.equal(certifyPerformance([failed, wrongAuthorization]).status, "rejected");
 
-  const productFailure = performanceReceipt({ status: "failed", exitCode: 1, stdout: contendedOutput,
-    stderr: "AssertionError [ERR_ASSERTION]: 4x constrained gameplay did not exercise representative enemies\n" });
+  const productFailure = performanceReceipt({
+    status: "failed",
+    exitCode: 1,
+    stdout: contendedOutput,
+    stderr: "AssertionError [ERR_ASSERTION]: 4x constrained gameplay did not exercise representative enemies\n",
+  });
   assert.equal(productFailure.result.sampleValidity.classification, "product-or-unclassified-failure");
-  const hiddenProductRetry = performanceReceipt({ attemptNumber: 2, retryOf: productFailure.receiptDigest,
-    retryAuthorization: authorization });
+  const hiddenProductRetry = performanceReceipt({
+    attemptNumber: 2,
+    retryOf: productFailure.receiptDigest,
+    retryAuthorization: authorization,
+  });
   assert.equal(certifyPerformance([productFailure, hiddenProductRetry]).status, "rejected");
 
-  const simulationFailure = performanceReceipt({ status: "failed", exitCode: 1, stdout: contendedOutput,
-    stderr: "AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: 12 exceeded budget 10\n" });
+  const simulationFailure = performanceReceipt({
+    status: "failed",
+    exitCode: 1,
+    stdout: contendedOutput,
+    stderr: "AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: 12 exceeded budget 10\n",
+  });
   assert.equal(simulationFailure.result.sampleValidity.classification, "product-or-unclassified-failure");
-  const hiddenSimulationRetry = performanceReceipt({ attemptNumber: 2, retryOf: simulationFailure.receiptDigest,
-    retryAuthorization: authorization });
+  const hiddenSimulationRetry = performanceReceipt({
+    attemptNumber: 2,
+    retryOf: simulationFailure.receiptDigest,
+    retryAuthorization: authorization,
+  });
   assert.equal(certifyPerformance([simulationFailure, hiddenSimulationRetry]).status, "rejected");
 
-  const exhausted = performanceReceipt({ attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: authorization,
-    status: "failed", exitCode: 1, stdout: contendedOutput, stderr: contendedFailure });
+  const exhausted = performanceReceipt({
+    attemptNumber: 2,
+    retryOf: failed.receiptDigest,
+    retryAuthorization: authorization,
+    status: "failed",
+    exitCode: 1,
+    stdout: contendedOutput,
+    stderr: contendedFailure,
+  });
   assert.equal(certifyPerformance([failed, exhausted]).status, "rejected");
 });
 
 test("performance sample classification is immutable and independently recomputed", () => {
   const passed = performanceReceipt();
-  const missing = structuredClone(passed); delete missing.result.sampleValidity;
+  const missing = structuredClone(passed);
+  delete missing.result.sampleValidity;
   const missingCertificate = certifyPerformance([resign(missing)]);
   assert.equal(missingCertificate.status, "rejected");
   assert.ok(missingCertificate.errors.some((error) => error.includes("classification is missing or malformed")));
@@ -222,16 +405,22 @@ test("performance sample classification is immutable and independently recompute
 });
 
 test("missing, extra, duplicate, and altered-artifact receipts fail closed", () => {
-  const first = receipt("task.a"), second = receipt("task.b");
+  const first = receipt("task.a"),
+    second = receipt("task.b");
   assert.equal(certify([first]).status, "rejected");
   assert.equal(certify([first, first, second]).status, "rejected");
-  const extra = structuredClone(second); extra.task.taskId = "task.extra";
+  const extra = structuredClone(second);
+  extra.task.taskId = "task.extra";
   assert.equal(certify([first, resign(extra), second]).status, "rejected");
-  assert.equal(certify([first, second], { artifactBytes: { [artifact.path]: Buffer.from("altered") } }).status, "rejected");
+  assert.equal(
+    certify([first, second], { artifactBytes: { [artifact.path]: Buffer.from("altered") } }).status,
+    "rejected",
+  );
 });
 
 test("independent verification rejects omitted and duplicate output descriptors even after receipt resigning", () => {
-  const first = receipt("task.a"), second = receipt("task.b");
+  const first = receipt("task.a"),
+    second = receipt("task.b");
   for (const artifacts of [[], [artifact, artifact]]) {
     const changed = resign({ ...first, artifacts });
     assert.equal(certify([changed, second]).status, "rejected");
@@ -251,7 +440,11 @@ test("malformed failed exit codes cannot become a valid recovered task", () => {
   for (const exitCode of ["not-an-exit-code", null, 1.5]) {
     const original = receipt("task.a", { status: "failed", exitCode: 1 });
     const failed = resign({ ...original, result: { ...original.result, exitCode } });
-    const retry = receipt("task.a", { attemptNumber: 2, retryOf: failed.receiptDigest, retryAuthorization: "owner-approved" });
+    const retry = receipt("task.a", {
+      attemptNumber: 2,
+      retryOf: failed.receiptDigest,
+      retryAuthorization: "owner-approved",
+    });
     const certificate = certify([failed, retry, receipt("task.b")]);
     assert.equal(certificate.status, "rejected");
     assert.ok(certificate.errors.some((error) => /result is invalid/u.test(error)));
@@ -261,7 +454,11 @@ test("malformed failed exit codes cannot become a valid recovered task", () => {
 test("malformed top-level receipts reject without hiding a passing repetition", () => {
   for (const malformed of [null, undefined]) assert.equal(certify([malformed]).status, "rejected");
   const first = receipt("task.a");
-  const repeated = receipt("task.a", { attemptNumber: 2, retryOf: first.receiptDigest, retryAuthorization: "intentional-proof" });
+  const repeated = receipt("task.a", {
+    attemptNumber: 2,
+    retryOf: first.receiptDigest,
+    retryAuthorization: "intentional-proof",
+  });
   const certificate = certify([first, repeated, receipt("task.b")]);
   assert.equal(certificate.status, "certified");
   assert.equal(certificate.retryHistory[0].disposition, "passed-repeated");
@@ -271,10 +468,21 @@ test("malformed top-level receipts reject without hiding a passing repetition", 
 test("attempt identity collisions invalidate every involved task, independent of order", () => {
   const first = receipt("task.a");
   const second = resign({ ...receipt("task.b"), attemptId: first.attemptId });
-  for (const receipts of [[first, second], [second, first]]) {
-    const assessment = assessPlanTaskReceipts({ plan, receipts, expectedOrigin: origin,
-      artifactBytes: { [artifact.path]: bytes }, generatedAt: "2026-08-31T00:01:00.000Z" });
-    assert.deepEqual(assessment.taskStatuses.map(({ status }) => status), ["stale", "stale"]);
+  for (const receipts of [
+    [first, second],
+    [second, first],
+  ]) {
+    const assessment = assessPlanTaskReceipts({
+      plan,
+      receipts,
+      expectedOrigin: origin,
+      artifactBytes: { [artifact.path]: bytes },
+      generatedAt: "2026-08-31T00:01:00.000Z",
+    });
+    assert.deepEqual(
+      assessment.taskStatuses.map(({ status }) => status),
+      ["stale", "stale"],
+    );
     assert.ok(assessment.errors.some((error) => /attempt identity/u.test(error)));
   }
 });
@@ -286,52 +494,134 @@ test("certificate digest binds exact plan and rejects certificate or plan mutati
 });
 
 test("build receipts bind canonical build-info paths and independently recomputed artifact hashes", () => {
-  const buildPath = "artifacts/tearbench/generated/build", buildInfoPath = `${buildPath}/build-info.json`;
-  const buildPlanPayload = { ...planPayload, requiredTaskIds: ["build", "consumer"], requiredClaims: ["claim.build", "claim.consumer"],
+  const buildPath = "artifacts/tearbench/generated/build",
+    buildInfoPath = `${buildPath}/build-info.json`;
+  const buildPlanPayload = {
+    ...planPayload,
+    requiredTaskIds: ["build", "consumer"],
+    requiredClaims: ["claim.build", "claim.consumer"],
     taskNodes: [
-      { taskId: "build", taskDefinitionDigest: "8".repeat(16), claimIds: ["claim.build"], resourceClass: "build", resourceKeys: [], dependencies: [],
+      {
+        taskId: "build",
+        taskDefinitionDigest: "8".repeat(16),
+        claimIds: ["claim.build"],
+        resourceClass: "build",
+        resourceKeys: [],
+        dependencies: [],
         build: { target: "standalone", mode: "test-standalone" },
-        outputs: [{ outputId: "build-artifact", path: buildPath }] },
-      { taskId: "consumer", taskDefinitionDigest: "9".repeat(16), claimIds: ["claim.consumer"], resourceClass: "browser", resourceKeys: [],
-        dependencies: [{ taskId: "build", outputId: "build-artifact" }], outputs: [] },
-    ], obligations: [], explanations: [
-      { taskId: "build", unprovedWithout: ["claim.build"] }, { taskId: "consumer", unprovedWithout: ["claim.consumer"] },
-    ], diagnostics: { unsupported: [] } };
+        outputs: [{ outputId: "build-artifact", path: buildPath }],
+      },
+      {
+        taskId: "consumer",
+        taskDefinitionDigest: "9".repeat(16),
+        claimIds: ["claim.consumer"],
+        resourceClass: "browser",
+        resourceKeys: [],
+        dependencies: [{ taskId: "build", outputId: "build-artifact" }],
+        outputs: [],
+      },
+    ],
+    obligations: [],
+    explanations: [
+      { taskId: "build", unprovedWithout: ["claim.build"] },
+      { taskId: "consumer", unprovedWithout: ["claim.consumer"] },
+    ],
+    diagnostics: { unsupported: [] },
+  };
   const buildPlan = { ...buildPlanPayload, planDigest: receiptSha256(buildPlanPayload) };
-  const info = Buffer.from(JSON.stringify({ format: "tear-build-info", schemaVersion: 1, sourceRevision: source.revision,
-    sourceFingerprint: source.fingerprint, target: "standalone", mode: "test-standalone", artifactHash: "d".repeat(64),
-    toolchain: { digest: "1".repeat(64) }, configuration: { digest: "2".repeat(64) }, buildIdentityDigest: "3".repeat(64),
-    contentAddressedPath: `artifacts/tearbench/builds/${"3".repeat(64)}/payload` }), "utf8");
+  const info = Buffer.from(
+    JSON.stringify({
+      format: "tear-build-info",
+      schemaVersion: 1,
+      sourceRevision: source.revision,
+      sourceFingerprint: source.fingerprint,
+      target: "standalone",
+      mode: "test-standalone",
+      artifactHash: "d".repeat(64),
+      toolchain: { digest: "1".repeat(64) },
+      configuration: { digest: "2".repeat(64) },
+      buildIdentityDigest: "3".repeat(64),
+      contentAddressedPath: `artifacts/tearbench/builds/${"3".repeat(64)}/payload`,
+    }),
+    "utf8",
+  );
   const recordPath = "artifacts/tearbench/generated/builds/test-standalone.json";
-  const recordUnsigned = { format: "tear-build-artifact-record", schemaVersion: 1, buildIdentityDigest: "3".repeat(64),
-    artifactHash: "d".repeat(64), contentAddressedPath: `artifacts/tearbench/builds/${"3".repeat(64)}/payload` };
+  const recordUnsigned = {
+    format: "tear-build-artifact-record",
+    schemaVersion: 1,
+    buildIdentityDigest: "3".repeat(64),
+    artifactHash: "d".repeat(64),
+    contentAddressedPath: `artifacts/tearbench/builds/${"3".repeat(64)}/payload`,
+  };
   const record = { ...recordUnsigned, recordDigest: receiptSha256(recordUnsigned) };
   const recordBytes = Buffer.from(JSON.stringify(record), "utf8");
-  const attestation = { taskId: "build", outputId: "build-artifact", path: buildPath, buildInfoPath,
-    buildInfoSha256: receiptSha256(info), artifactHash: "d".repeat(64), sourceRevision: source.revision,
-    sourceFingerprint: source.fingerprint, target: "standalone", mode: "test-standalone",
-    toolchainDigest: "1".repeat(64), configurationDigest: "2".repeat(64), buildIdentityDigest: "3".repeat(64),
+  const attestation = {
+    taskId: "build",
+    outputId: "build-artifact",
+    path: buildPath,
+    buildInfoPath,
+    buildInfoSha256: receiptSha256(info),
+    artifactHash: "d".repeat(64),
+    sourceRevision: source.revision,
+    sourceFingerprint: source.fingerprint,
+    target: "standalone",
+    mode: "test-standalone",
+    toolchainDigest: "1".repeat(64),
+    configurationDigest: "2".repeat(64),
+    buildIdentityDigest: "3".repeat(64),
     contentAddressedPath: `artifacts/tearbench/builds/${"3".repeat(64)}/payload`,
-    recordPath, recordDigest: record.recordDigest };
+    recordPath,
+    recordDigest: record.recordDigest,
+  };
   const make = (taskId, build, artifacts = []) => {
     const bindings = expectedTaskBindings(buildPlan, taskId);
-    return createTaskAttemptReceipt({ missionId: "build-mission", plan: buildPlan, taskId, attemptNumber: 1,
-      source, authority: "protected-ci", origin, build: { requirement: bindings.build, ...build },
-      toolchain: bindings.toolchain, environment: bindings.environment, evidence: bindings.evidence,
-      status: "passed", exitCode: 0, startedAt: "2026-08-31T00:00:00.000Z", finishedAt: "2026-08-31T00:00:01.000Z", artifacts });
+    return createTaskAttemptReceipt({
+      missionId: "build-mission",
+      plan: buildPlan,
+      taskId,
+      attemptNumber: 1,
+      source,
+      authority: "protected-ci",
+      origin,
+      build: { requirement: bindings.build, ...build },
+      toolchain: bindings.toolchain,
+      environment: bindings.environment,
+      evidence: bindings.evidence,
+      status: "passed",
+      exitCode: 0,
+      startedAt: "2026-08-31T00:00:00.000Z",
+      finishedAt: "2026-08-31T00:00:01.000Z",
+      artifacts,
+    });
   };
   const buildArtifactBytes = Buffer.from("x");
-  const buildArtifact = { outputId: "build-artifact", path: buildPath, sha256: receiptSha256(buildArtifactBytes), size: buildArtifactBytes.length };
+  const buildArtifact = {
+    outputId: "build-artifact",
+    path: buildPath,
+    sha256: receiptSha256(buildArtifactBytes),
+    size: buildArtifactBytes.length,
+  };
   const producer = make("build", { attestations: [], produced: [attestation] }, [buildArtifact]);
   const consumer = make("consumer", { attestations: [attestation], produced: [] });
-  const certificateInput = { plan: buildPlan, receipts: [producer, consumer], expectedOrigin: origin,
+  const certificateInput = {
+    plan: buildPlan,
+    receipts: [producer, consumer],
+    expectedOrigin: origin,
     artifactBytes: { [buildPath]: buildArtifactBytes, [buildInfoPath]: info, [recordPath]: recordBytes },
     buildArtifactHashes: { [buildPath]: "d".repeat(64), [attestation.contentAddressedPath]: "d".repeat(64) },
-    generatedAt: "2026-08-31T00:01:00.000Z" };
+    generatedAt: "2026-08-31T00:01:00.000Z",
+  };
   const buildCertificate = createPlanCertificate(certificateInput);
   assert.equal(buildCertificate.status, "certified", buildCertificate.errors.join("\n"));
-  assert.equal(createPlanCertificate({ ...certificateInput, buildArtifactHashes: { [buildPath]: "f".repeat(64) } }).status, "rejected");
-  assert.throws(() => make("consumer", { attestations: [{ ...attestation, buildInfoPath: "other/build-info.json" }], produced: [] }), /stale or malformed/u);
+  assert.equal(
+    createPlanCertificate({ ...certificateInput, buildArtifactHashes: { [buildPath]: "f".repeat(64) } }).status,
+    "rejected",
+  );
+  assert.throws(
+    () =>
+      make("consumer", { attestations: [{ ...attestation, buildInfoPath: "other/build-info.json" }], produced: [] }),
+    /stale or malformed/u,
+  );
 });
 
 test("production consumer requires the exact certified plan, source, coverage, and protected run origin", async () => {
@@ -339,24 +629,45 @@ test("production consumer requires the exact certified plan, source, coverage, a
   try {
     const receipts = [receipt("task.a"), receipt("task.b")];
     const certificate = certify(receipts);
-    const planPath = join(root, "artifacts/tearbench/generated/plan.json"), certificatePath = join(root, "artifacts/tearbench/generated/certificate.json");
+    const planPath = join(root, "artifacts/tearbench/generated/plan.json"),
+      certificatePath = join(root, "artifacts/tearbench/generated/certificate.json");
     await mkdir(join(root, "artifacts/tearbench/generated"), { recursive: true });
     await writeFile(planPath, JSON.stringify(plan), "utf8");
     await writeFile(certificatePath, JSON.stringify(certificate), "utf8");
     const receiptPaths = [];
     for (const entry of receipts) {
-      const path = join(root, entry.immutablePath); receiptPaths.push(path); await mkdir(join(path, ".."), { recursive: true });
+      const path = join(root, entry.immutablePath);
+      receiptPaths.push(path);
+      await mkdir(join(path, ".."), { recursive: true });
       await writeFile(path, JSON.stringify(entry), "utf8");
     }
-    const artifactPath = join(root, artifact.path); await mkdir(join(artifactPath, ".."), { recursive: true }); await writeFile(artifactPath, bytes);
-    const common = { certificatePath, planPath, receiptPaths, workspaceRoot: root, expectedRepository: "shaku1z/tear",
-      expectedSha: source.revision, expectedRunId: origin.runId, expectedRunAttempt: origin.attempt };
+    const artifactPath = join(root, artifact.path);
+    await mkdir(join(artifactPath, ".."), { recursive: true });
+    await writeFile(artifactPath, bytes);
+    const common = {
+      certificatePath,
+      planPath,
+      receiptPaths,
+      workspaceRoot: root,
+      expectedRepository: "shaku1z/tear",
+      expectedSha: source.revision,
+      expectedRunId: origin.runId,
+      expectedRunAttempt: origin.attempt,
+    };
     const verified = await verifyProtectedPlanCertificate(common);
     assert.equal(verified.planDigest, plan.planDigest);
-    await assert.rejects(verifyProtectedPlanCertificate({ ...common, expectedRunId: "999" }), /origin is forged or mismatched/u);
+    await assert.rejects(
+      verifyProtectedPlanCertificate({ ...common, expectedRunId: "999" }),
+      /origin is forged or mismatched/u,
+    );
     await assert.rejects(verifyProtectedPlanCertificate({ ...common, certificatePath: undefined }), /requires a plan/u);
     const rejectedPath = join(root, "artifacts/tearbench/generated/rejected.json");
     await writeFile(rejectedPath, JSON.stringify({ ...certificate, status: "rejected" }), "utf8");
-    await assert.rejects(verifyProtectedPlanCertificate({ ...common, certificatePath: rejectedPath }), /does not bind|not certified/u);
-  } finally { await rm(root, { recursive: true, force: true }); }
+    await assert.rejects(
+      verifyProtectedPlanCertificate({ ...common, certificatePath: rejectedPath }),
+      /does not bind|not certified/u,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

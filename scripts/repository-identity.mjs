@@ -1,12 +1,17 @@
 function normalizeRepositoryPath(value) {
-  return String(value).replaceAll("\\", "/").replace(/^\/+|\/+$/gu, "");
+  return String(value)
+    .replaceAll("\\", "/")
+    .replace(/^\/+|\/+$/gu, "");
 }
 
 /** Normalize SSH, HTTPS, and owner/repository forms to a comparable identity. */
 export function normalizeRepositoryIdentifier(value) {
   let raw = String(value ?? "").trim();
   if (raw === "") return "";
-  raw = raw.split(/[?#]/u, 1)[0].replace(/\/+$/u, "").replace(/\.git$/iu, "");
+  raw = raw
+    .split(/[?#]/u, 1)[0]
+    .replace(/\/+$/u, "")
+    .replace(/\.git$/iu, "");
 
   let hostPath = raw;
   const urlMatch = raw.match(/^[a-z][a-z0-9+.-]*:\/\//iu);

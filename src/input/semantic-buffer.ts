@@ -74,7 +74,7 @@ export class SemanticInputBuffer {
     if (!Number.isFinite(x) || !Number.isFinite(y) || length < 1e-9) return;
     const radians = Math.atan2(y, x);
     const normalized = radians < 0 ? radians + Math.PI * 2 : radians;
-    const turn = Math.round(normalized / (Math.PI * 2) * AIM_TURN_SCALE) % AIM_TURN_SCALE;
+    const turn = Math.round((normalized / (Math.PI * 2)) * AIM_TURN_SCALE) % AIM_TURN_SCALE;
     const magnitude = Math.round(Math.max(0, Math.min(1, length)) * AIM_MAGNITUDE_SCALE);
     if (this.#aim?.type === "aim" && this.#aim.turn === turn && this.#aim.magnitude === magnitude) return;
     this.#aim = Object.freeze({ type: "aim", turn, magnitude });
@@ -90,8 +90,11 @@ export class SemanticInputBuffer {
       return;
     }
     if (normalized.action.type === "aim") {
-      if (this.#aim?.type !== "aim" || this.#aim.turn !== normalized.action.turn
-        || this.#aim.magnitude !== normalized.action.magnitude) {
+      if (
+        this.#aim?.type !== "aim" ||
+        this.#aim.turn !== normalized.action.turn ||
+        this.#aim.magnitude !== normalized.action.magnitude
+      ) {
         this.#aim = normalized.action;
         this.#aimDirty = true;
       }
@@ -117,7 +120,9 @@ export class SemanticInputBuffer {
 
   subscribe(listener: SemanticInputListener): () => void {
     this.#listeners.add(listener);
-    return () => { this.#listeners.delete(listener); };
+    return () => {
+      this.#listeners.delete(listener);
+    };
   }
 
   reset(): void {

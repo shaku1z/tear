@@ -67,7 +67,8 @@ export class LiveRunOutcomeController {
       this.#port.recordDefeatProgress(run, prepared.earned);
       this.#record({ type: "outcome.defeat-progression-dispatched", run, earned: prepared.earned });
     }
-    if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined)) this.#port.finishRecording(false);
+    if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined))
+      this.#port.finishRecording(false);
     const result = buildRunResult(run, { best: this.#best(run), prepared, victory: false });
     this.#port.present("defeat", result);
     this.#record({ type: "outcome.presentation-dispatched", outcome: "defeat", result });
@@ -106,7 +107,8 @@ export class LiveRunOutcomeController {
     // Unranked native recordings still close at the scored boundary; progression
     // intentionally has no recording intent for these categories. The cache
     // above prevents another finish when Campaign subsequently exits FinalCut.
-    if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined)) this.#port.finishRecording(true);
+    if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined))
+      this.#port.finishRecording(true);
     if (campaign && persistFinale) {
       const record = buildPendingFinale(run, this.#best(run), prepared);
       this.#port.persistPendingFinale(record);
@@ -126,7 +128,10 @@ export class LiveRunOutcomeController {
     const prepared = this.prepareVictory(campaign, false);
     const run = this.#port.snapshot();
     const result = buildRunResult(run, {
-      best: this.#best(run), prepared, victory: true, campaign,
+      best: this.#best(run),
+      prepared,
+      victory: true,
+      campaign,
     });
     if (campaign) {
       this.#port.clearPendingFinale();
@@ -144,7 +149,9 @@ export class LiveRunOutcomeController {
   }
 
   retry(): void {
-    this.#port.midgame(() => { this.#port.restartCurrentRun(); });
+    this.#port.midgame(() => {
+      this.#port.restartCurrentRun();
+    });
   }
 
   #prepareResult(run: OutcomeRunState): PreparedVictory {

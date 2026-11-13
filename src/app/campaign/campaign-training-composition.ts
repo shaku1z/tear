@@ -89,108 +89,248 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     return style;
   };
   const campaign = createLiveCampaignHost({
-    dependencies: d, state: options.state, cinema: options.cinema,
-    installStage: (controller) => { options.controllers.installStage(controller); },
-    lifecycle: options.lifecycle, activatePreparedWave: options.controllers.api.activatePreparedWave,
-    prepareVictory: options.controllers.api.prepareVictoryRecord, win: options.controllers.api.winRun,
+    dependencies: d,
+    state: options.state,
+    cinema: options.cinema,
+    installStage: (controller) => {
+      options.controllers.installStage(controller);
+    },
+    lifecycle: options.lifecycle,
+    activatePreparedWave: options.controllers.api.activatePreparedWave,
+    prepareVictory: options.controllers.api.prepareVictoryRecord,
+    win: options.controllers.api.winRun,
     achievementsEnabled: () => requireStyle().tracks(),
-    checkAchievements: () => { requireStyle().check(); },
-    resetStageAchievements: () => { requireStyle().achievements.stageReset(); },
-    rememberBiome(name) { if (options.persistentEffects?.() !== false) d.biomeProgressPersistence.remember(name); requireStyle().check(); },
+    checkAchievements: () => {
+      requireStyle().check();
+    },
+    resetStageAchievements: () => {
+      requireStyle().achievements.stageReset();
+    },
+    rememberBiome(name) {
+      if (options.persistentEffects?.() !== false) d.biomeProgressPersistence.remember(name);
+      requireStyle().check();
+    },
     cinematicPreference: options.applySettingsCinematicPreference,
     addFlash: (amount): FinaleMaximumFeelReceipt => {
-      const before = options.getFlash(); options.setFlash(Math.max(before, amount));
+      const before = options.getFlash();
+      options.setFlash(Math.max(before, amount));
       return Object.freeze({ requested: amount, before, after: options.getFlash(), aggregation: "maximum" });
     },
     addShake: (amount): FinaleMaximumFeelReceipt => {
-      const before = options.getShake(); options.setShake(Math.max(before, amount));
+      const before = options.getShake();
+      options.setShake(Math.max(before, amount));
       return Object.freeze({ requested: amount, before, after: options.getShake(), aggregation: "maximum" });
     },
     formatTime: (seconds) => requireStyle().formatTime(seconds),
     setWorldZoom: (value) => options.setWorldZoom(value, true),
-    width: options.width, height: options.height,
+    width: options.width,
+    height: options.height,
     ...(options.observeFinaleIntents === undefined ? {} : { observeFinaleIntents: options.observeFinaleIntents }),
-    ...(options.observeFinaleOutwardCall === undefined ? {} : { observeFinaleOutwardCall: options.observeFinaleOutwardCall }),
+    ...(options.observeFinaleOutwardCall === undefined
+      ? {}
+      : { observeFinaleOutwardCall: options.observeFinaleOutwardCall }),
   });
 
   const addFloater = (x: number, y: number, text: string, big = false, color = "#000"): void => {
     options.state.floaters().push({ x, y, text, life: 0.8, big, col: color });
   };
   const weapon = createLiveWeaponRuntime<GameEnemy>({
-    run: options.run, player: options.player, blade: options.blade, enemies: options.enemies, time: () => d.CLOCK.sim,
-    overrun: () => d.CONFIG.overrun, stormbank: () => d.CONFIG.stormbank,
+    run: options.run,
+    player: options.player,
+    blade: options.blade,
+    enemies: options.enemies,
+    time: () => d.CLOCK.sim,
+    overrun: () => d.CONFIG.overrun,
+    stormbank: () => d.CONFIG.stormbank,
     score: () => ({ perKill: d.CONFIG.run.scorePerKill, multiplier: d.CONFIG.run.scoreMult }),
-    colors: () => d.CONFIG.colors, juice: () => d.CONFIG.juice, shakeScale: options.shakeScale,
-    motionScale: () => d.A11Y.motionScale, flashScale: () => d.A11Y.flashScale,
-    parrySlowmo: () => d.CONFIG.juice.parrySlowmo, bigShake: () => d.CONFIG.juice.shakeBig || 20,
-    clamp: d.clamp, distance: d.len, buzz: (pattern) => { d.Input.buzz(pattern); },
-    rumble: (strength, duration) => { d.PAD.rumble(strength, duration); },
-    setShake: options.setShake, shake: options.getShake, setZoom: options.setZoom, zoom: options.getZoom,
-    setFlash: options.setFlash, flash: options.getFlash, setSlowmo: options.setSlowMotion,
-    setHitStop: options.setHitStop, smallHitStop: () => d.CONFIG.hitStop.small, addFloater,
-    explode: (...args) => { d.FX.explode(...args); }, ring: (...args) => { d.FX.ring(...args); },
-    ribbon: (...args) => { d.FX.ribbon(...args); }, burst: (...args) => { d.FX.burst(...args); },
-    death: (...args) => { d.FX.death(...args); }, deathShards: () => d.CONFIG.juice.deathShards,
-    parrySound: () => { d.SFX.parry(); }, recallSound: () => { d.SFX.recall(); }, onKill: options.resolveKill,
+    colors: () => d.CONFIG.colors,
+    juice: () => d.CONFIG.juice,
+    shakeScale: options.shakeScale,
+    motionScale: () => d.A11Y.motionScale,
+    flashScale: () => d.A11Y.flashScale,
+    parrySlowmo: () => d.CONFIG.juice.parrySlowmo,
+    bigShake: () => d.CONFIG.juice.shakeBig || 20,
+    clamp: d.clamp,
+    distance: d.len,
+    buzz: (pattern) => {
+      d.Input.buzz(pattern);
+    },
+    rumble: (strength, duration) => {
+      d.PAD.rumble(strength, duration);
+    },
+    setShake: options.setShake,
+    shake: options.getShake,
+    setZoom: options.setZoom,
+    zoom: options.getZoom,
+    setFlash: options.setFlash,
+    flash: options.getFlash,
+    setSlowmo: options.setSlowMotion,
+    setHitStop: options.setHitStop,
+    smallHitStop: () => d.CONFIG.hitStop.small,
+    addFloater,
+    explode: (...args) => {
+      d.FX.explode(...args);
+    },
+    ring: (...args) => {
+      d.FX.ring(...args);
+    },
+    ribbon: (...args) => {
+      d.FX.ribbon(...args);
+    },
+    burst: (...args) => {
+      d.FX.burst(...args);
+    },
+    death: (...args) => {
+      d.FX.death(...args);
+    },
+    deathShards: () => d.CONFIG.juice.deathShards,
+    parrySound: () => {
+      d.SFX.parry();
+    },
+    recallSound: () => {
+      d.SFX.recall();
+    },
+    onKill: options.resolveKill,
   });
 
   const training = createLiveTrainingHost({
-    dependencies: d, state: options.state, width: options.width, height: options.height,
-    lifecycle: options.lifecycle, stage: campaign.stage, spawn: options.spawn,
-    navigate: options.setScreen, resetScroll: options.resetScroll,
-    releasePointer: () => { document.exitPointerLock(); }, requestPointer: options.requestPointerLock,
-    selectStage: options.selectStage, wipe: options.beginWipe, resetRun: options.resetRun, startPractice: options.startPractice,
+    dependencies: d,
+    state: options.state,
+    width: options.width,
+    height: options.height,
+    lifecycle: options.lifecycle,
+    stage: campaign.stage,
+    spawn: options.spawn,
+    navigate: options.setScreen,
+    resetScroll: options.resetScroll,
+    releasePointer: () => {
+      document.exitPointerLock();
+    },
+    requestPointer: options.requestPointerLock,
+    selectStage: options.selectStage,
+    wipe: options.beginWipe,
+    resetRun: options.resetRun,
+    startPractice: options.startPractice,
     ...(options.resetTrainingCarry === undefined ? {} : { resetTrainingCarry: options.resetTrainingCarry }),
     selectedWeapon: () => options.state.selectedWeapon(),
-    selectWeapon: (weapon) => { options.state.setSelectedWeapon(weapon); }, addFloater,
-    drawGhost: (snapshot) => { drawTutorialGhost(options.context, snapshot.gold ? { ...snapshot, gold: { ...snapshot.gold, glyphs: tutorialGoldGlyphs(snapshot.gold.glyphs, d.Input.mode, d.PAD) } } : snapshot, {
-      ink: d.THEME.ink, accent: d.CONFIG.colors.perfect, target: d.CONFIG.colors.charger,
-      hostileShot: d.CONFIG.colors.enemyShot,
-    }, { draw(context, text, x, y, color) { d.UI.tag(context, text, x, y, color, "center", d.UI.t.type.micro); } }); },
-    abilityColors: options.abilityColors, scroll: options.scroll, setScroll: options.setScroll,
-    renderMenu: options.renderMenu, renderLab: options.renderLab,
+    selectWeapon: (weapon) => {
+      options.state.setSelectedWeapon(weapon);
+    },
+    addFloater,
+    drawGhost: (snapshot) => {
+      drawTutorialGhost(
+        options.context,
+        snapshot.gold
+          ? {
+              ...snapshot,
+              gold: { ...snapshot.gold, glyphs: tutorialGoldGlyphs(snapshot.gold.glyphs, d.Input.mode, d.PAD) },
+            }
+          : snapshot,
+        {
+          ink: d.THEME.ink,
+          accent: d.CONFIG.colors.perfect,
+          target: d.CONFIG.colors.charger,
+          hostileShot: d.CONFIG.colors.enemyShot,
+        },
+        {
+          draw(context, text, x, y, color) {
+            d.UI.tag(context, text, x, y, color, "center", d.UI.t.type.micro);
+          },
+        },
+      );
+    },
+    abilityColors: options.abilityColors,
+    scroll: options.scroll,
+    setScroll: options.setScroll,
+    renderMenu: options.renderMenu,
+    renderLab: options.renderLab,
   });
 
   const sourceController = createLiveSourceVoidController(d, options.width, options.height);
   const cinematic = createLiveCinematicHost({
-    dependencies: d, state: options.state, sourceController, cinema: campaign.cinema,
-    stage: campaign.stage, width: options.width,
+    dependencies: d,
+    state: options.state,
+    sourceController,
+    cinema: campaign.cinema,
+    stage: campaign.stage,
+    width: options.width,
     story: {
-      get finale() { return campaign.story.finale; },
-      get lastCinemaPlayerMode() { return campaign.story.lastCinemaPlayerMode; },
-      set lastCinemaPlayerMode(value) { campaign.story.lastCinemaPlayerMode = value; },
-      markFinaleLanded: () => { campaign.story.finaleController.markLanded(); },
-      syncFinale: () => { campaign.story.syncFinale(); },
+      get finale() {
+        return campaign.story.finale;
+      },
+      get lastCinemaPlayerMode() {
+        return campaign.story.lastCinemaPlayerMode;
+      },
+      set lastCinemaPlayerMode(value) {
+        campaign.story.lastCinemaPlayerMode = value;
+      },
+      markFinaleLanded: () => {
+        campaign.story.finaleController.markLanded();
+      },
+      syncFinale: () => {
+        campaign.story.syncFinale();
+      },
     },
     policy: () => cinematicLaunchPolicy(options.applySettingsCinematicPreference()),
-    clearBossBeat: () => { options.state.setBossBeat(null); },
-    setWorldZoom: (value) => { options.setWorldZoom(value, false); },
+    clearBossBeat: () => {
+      options.state.setBossBeat(null);
+    },
+    setWorldZoom: (value) => {
+      options.setWorldZoom(value, false);
+    },
     spawnWisp: (x, y, lane) => {
       const wisp = options.entities.createEnemy("void-wisp", x, y, options.run()) as GameEnemy & { voidLane: string };
-      wisp.voidLane = lane; wisp.spawnT = 0.25;
+      wisp.voidLane = lane;
+      wisp.spawnT = 0.25;
       options.state.enemies().push(wisp);
     },
-    addFlash: (amount) => { weapon.addFlash(amount); }, addShake: (amount) => { weapon.addShake(amount); },
-    loseStyle: () => { requireStyle().loseStyle(); }, shieldAbsorb: () => { weapon.shieldAbsorb(); },
-    addFloater, finaleBladeCut: (...args) => { campaign.runtime.tryFinaleBladeCut(...args); },
+    addFlash: (amount) => {
+      weapon.addFlash(amount);
+    },
+    addShake: (amount) => {
+      weapon.addShake(amount);
+    },
+    loseStyle: () => {
+      requireStyle().loseStyle();
+    },
+    shieldAbsorb: () => {
+      weapon.shieldAbsorb();
+    },
+    addFloater,
+    finaleBladeCut: (...args) => {
+      campaign.runtime.tryFinaleBladeCut(...args);
+    },
     playSound(cue) {
-      if (cue === "wardenLockdown") d.SFX.wardenLockdown(); else if (cue === "sourceCross") d.SFX.sourceCross();
-      else if (cue === "echoResonance") d.SFX.echoResonance(); else if (cue === "colossusServo") d.SFX.colossusServo();
-      else if (cue === "aldricIgnite") d.SFX.aldricIgnite(); else if (cue === "aldricCrownFall") d.SFX.aldricCrownFall();
+      if (cue === "wardenLockdown") d.SFX.wardenLockdown();
+      else if (cue === "sourceCross") d.SFX.sourceCross();
+      else if (cue === "echoResonance") d.SFX.echoResonance();
+      else if (cue === "colossusServo") d.SFX.colossusServo();
+      else if (cue === "aldricIgnite") d.SFX.aldricIgnite();
+      else if (cue === "aldricCrownFall") d.SFX.aldricCrownFall();
     },
   });
 
   style = createLiveStyleHost({
     ...(options.observeStyle === undefined ? {} : { observeStyle: options.observeStyle }),
     ...(options.persistentEffects === undefined ? {} : { persistentEffects: options.persistentEffects }),
-    dependencies: d, entities: options.entities, state: options.state, tutorial: training.tutorial,
+    dependencies: d,
+    entities: options.entities,
+    state: options.state,
+    tutorial: training.tutorial,
     captureGhost: (trick, x, y, importance) => {
       d.GAMEPLAY_EVENTS.emit({ kind: "effect", effect: trick, x, y });
       d.GHOST.snapshot(options.canvas, importance);
     },
-    rankUp: (rank) => { options.showRank(rank); d.SFX.rankup(); },
-    musicRankChanged: (rank) => { options.emitMusicEvent("combo-rank-changed", { rankId: rank }); },
-    addProjectile: (projectile) => { options.projectiles().push(projectile); },
+    rankUp: (rank) => {
+      options.showRank(rank);
+      d.SFX.rankup();
+    },
+    musicRankChanged: (rank) => {
+      options.emitMusicEvent("combo-rank-changed", { rankId: rank });
+    },
+    addProjectile: (projectile) => {
+      options.projectiles().push(projectile);
+    },
   });
   return Object.freeze({ campaign, training, cinematic, style, weapon, addFloater });
 }

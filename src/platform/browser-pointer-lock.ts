@@ -7,8 +7,12 @@ export class BrowserPointerLock {
   #requestPending = false;
 
   readonly api = Object.freeze({
-    request: (): void => { this.request(); },
-    release: (): void => { this.release(); },
+    request: (): void => {
+      this.request();
+    },
+    release: (): void => {
+      this.release();
+    },
   });
 
   constructor(
@@ -24,12 +28,20 @@ export class BrowserPointerLock {
         this.#requestPending = true;
         void Promise.resolve(result)
           .catch(() => undefined)
-          .finally(() => { this.#requestPending = false; });
+          .finally(() => {
+            this.#requestPending = false;
+          });
       }
-    } catch { /* Unsupported or gesture-gated requests safely degrade. */ }
+    } catch {
+      /* Unsupported or gesture-gated requests safely degrade. */
+    }
   }
 
   release(): void {
-    try { this.document.exitPointerLock(); } catch { /* Pointer lock may already be absent. */ }
+    try {
+      this.document.exitPointerLock();
+    } catch {
+      /* Pointer lock may already be absent. */
+    }
   }
 }

@@ -44,7 +44,9 @@ function sourceGhost() {
     sourceClassification: "native-v3",
     trident,
     actions: [{ kind: "command", id: 1, tick: 1, command: { type: "move", x: 1_000, y: 0 } }],
-    snapshots: [], events: [], visual: { samples: [1, 2, 3] },
+    snapshots: [],
+    events: [],
+    visual: { samples: [1, 2, 3] },
   });
 }
 
@@ -72,8 +74,14 @@ describe("Replay Editor and Replay Hub compatibility facades", () => {
   });
 
   it("keeps canonical and legacy action vocabularies semantically paired", () => {
-    expect(REPLAY_EDITOR_ACTIONS).toEqual({ toggle: "replay.editor.toggle", createCutList: "replay.editor.createCutList" });
-    expect(LEGACY_REPLAY_EDITOR_ACTIONS).toEqual({ toggle: "replay.studio.toggle", createCutList: "replay.studio.createCutList" });
+    expect(REPLAY_EDITOR_ACTIONS).toEqual({
+      toggle: "replay.editor.toggle",
+      createCutList: "replay.editor.createCutList",
+    });
+    expect(LEGACY_REPLAY_EDITOR_ACTIONS).toEqual({
+      toggle: "replay.studio.toggle",
+      createCutList: "replay.studio.createCutList",
+    });
     expect(REPLAY_HUB_ACTIONS).toEqual({ open: "replay.hub.open", watch: "replay.hub.watch" });
     expect(LEGACY_REPLAY_HUB_ACTIONS).toEqual({ open: "ghostlab.open", watch: "ghostlab.watch" });
     expect(createLiveReplayEditor).toBe(createLiveReplayScreenAdapter);
@@ -96,7 +104,16 @@ describe("Replay Editor and Replay Hub compatibility facades", () => {
       aspectRatio: "16:9" as const,
       title: "Local cut",
       credits: "Local Player",
-      clips: [{ id: "opening", sourceFromTick: 0, sourceToTick: 1, outputOrder: 0, speed: 1 as const, camera: "source" as const }],
+      clips: [
+        {
+          id: "opening",
+          sourceFromTick: 0,
+          sourceToTick: 1,
+          outputOrder: 0,
+          speed: 1 as const,
+          camera: "source" as const,
+        },
+      ],
     };
     const legacy = createStudioEdl(input);
     const canonical = createReplayEditorEdl(input);
@@ -107,11 +124,13 @@ describe("Replay Editor and Replay Hub compatibility facades", () => {
     expect(canonical.sourceGhostId).toBe(source.id);
     expect(canonical.sourceRootHash).toBe(source.rootHash);
 
-    const render = vi.fn(({ source: value, edl }: { source: typeof source; edl: typeof canonical }) => Promise.resolve({
-      mimeType: "video/webm" as const,
-      bytes: new TextEncoder().encode(`${value.id}:${edl.edlHash}:${String(edl.clips[0]?.sourceToTick)}`),
-      thumbnail: "data:image/png;base64,replay-editor",
-    }));
+    const render = vi.fn(({ source: value, edl }: { source: typeof source; edl: typeof canonical }) =>
+      Promise.resolve({
+        mimeType: "video/webm" as const,
+        bytes: new TextEncoder().encode(`${value.id}:${edl.edlHash}:${String(edl.clips[0]?.sourceToTick)}`),
+        thumbnail: "data:image/png;base64,replay-editor",
+      }),
+    );
     const legacyExport = await renderStudioMediaLocally(source, legacy, { render });
     const canonicalExport = await renderReplayEditorMediaLocally(source, canonical, { render });
     expect(canonicalExport).toEqual(legacyExport);

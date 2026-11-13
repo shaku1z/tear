@@ -21,8 +21,16 @@ const trident: GhostReplayTrident = {
 
 function event(id: string, type: TearCausalEventV1["type"], tick: number): TearCausalEventV1 {
   return {
-    format: "tear-contract", kind: "event", schemaVersion: 1,
-    id, type, tick, phase: "post-simulation-commit", sequence: 1, source: "engine", payload: {},
+    format: "tear-contract",
+    kind: "event",
+    schemaVersion: 1,
+    id,
+    type,
+    tick,
+    phase: "post-simulation-commit",
+    sequence: 1,
+    source: "engine",
+    payload: {},
   };
 }
 
@@ -38,19 +46,31 @@ const events = [
 
 function snapshot(): TearSnapshotV1 {
   return {
-    format: "tear-contract", kind: "snapshot", schemaVersion: 1,
-    id: "coach-start", tick: 0, stateClass: "recorded-canonical", seed: "coach-seed",
+    format: "tear-contract",
+    kind: "snapshot",
+    schemaVersion: 1,
+    id: "coach-start",
+    tick: 0,
+    stateClass: "recorded-canonical",
+    seed: "coach-seed",
     hashes: { exact: "e", semantic: "semantic-state", visual: "v", progression: "p", environment: "n" },
     provenance: {
-      actor: "human", producer: "player",
+      actor: "human",
+      producer: "player",
       build: {
-        version: "1", revision: "r", target: "unit", rulesetVersion: "rules",
-        contentHash: "c", configHash: "g",
+        version: "1",
+        revision: "r",
+        target: "unit",
+        rulesetVersion: "rules",
+        contentHash: "c",
+        configHash: "g",
       },
-      executionClass: "engineering", observationClass: "human-equivalent",
+      executionClass: "engineering",
+      observationClass: "human-equivalent",
       trainingConsent: "private-personalization-only",
     },
-    rng: {}, codecs: {},
+    rng: {},
+    codecs: {},
     state: { "tear.run.v1": { mode: "campaign", difficulty: "normal", weapon: "sword", wave: 3 } },
   };
 }
@@ -92,7 +112,13 @@ describe("Ghost Coach", () => {
     const first = analyzeGhostCoaching(tracks, baselines);
     const second = analyzeGhostCoaching(tracks, baselines);
     expect(first.map((finding) => finding.domain)).toEqual([
-      "movement", "blade", "defense", "targeting", "draft", "boss", "run-management",
+      "movement",
+      "blade",
+      "defense",
+      "targeting",
+      "draft",
+      "boss",
+      "run-management",
     ]);
     expect(first.map((finding) => finding.evidenceHash)).toEqual(second.map((finding) => finding.evidenceHash));
     for (const finding of first) {
@@ -111,15 +137,17 @@ describe("Ghost Coach", () => {
       { choiceId: "tempo", meanOutcome: 120, standardError: 3, rolloutCount: 50 },
       { choiceId: "reach", meanOutcome: 105, standardError: 2, rolloutCount: 50 },
     ]);
-    expect(regret).toMatchObject({ selectedChoiceId: "guard", bestChoiceId: "tempo", estimatedRegret: 20, supported: true });
+    expect(regret).toMatchObject({
+      selectedChoiceId: "guard",
+      bestChoiceId: "tempo",
+      estimatedRegret: 20,
+      supported: true,
+    });
     expect(regret.uncertainty95).toBeGreaterThan(0);
   });
 
   it("selects one fix and compiles a legal repeatable drill with available actions required", () => {
-    const findings = analyzeGhostCoaching(
-      { ghost: ghost({}), metrics, buildId: "build", finalTick: 100 },
-      baselines,
-    );
+    const findings = analyzeGhostCoaching({ ghost: ghost({}), metrics, buildId: "build", finalTick: 100 }, baselines);
     const priority = selectOneFix(findings);
     if (priority === undefined) throw new Error("fixture finding is missing");
     const drill = compileFindingToDrill(priority, snapshot());
@@ -132,8 +160,14 @@ describe("Ghost Coach", () => {
   });
 
   it("ignores cosmetic-only replay changes when deriving conclusions", () => {
-    const red = analyzeGhostCoaching({ ghost: ghost({ color: "red" }), metrics, buildId: "build", finalTick: 100 }, baselines);
-    const blue = analyzeGhostCoaching({ ghost: ghost({ color: "blue", particles: 10_000 }), metrics, buildId: "build", finalTick: 100 }, baselines);
+    const red = analyzeGhostCoaching(
+      { ghost: ghost({ color: "red" }), metrics, buildId: "build", finalTick: 100 },
+      baselines,
+    );
+    const blue = analyzeGhostCoaching(
+      { ghost: ghost({ color: "blue", particles: 10_000 }), metrics, buildId: "build", finalTick: 100 },
+      baselines,
+    );
     expect(red.map((finding) => finding.evidenceHash)).toEqual(blue.map((finding) => finding.evidenceHash));
     expect(red.map((finding) => finding.metrics)).toEqual(blue.map((finding) => finding.metrics));
   });
@@ -149,10 +183,7 @@ describe("Ghost Coach", () => {
   });
 
   it("allows language models to explain but not invent structured evidence", async () => {
-    const finding = analyzeGhostCoaching(
-      { ghost: ghost({}), metrics, buildId: "build", finalTick: 100 },
-      baselines,
-    )[0];
+    const finding = analyzeGhostCoaching({ ghost: ghost({}), metrics, buildId: "build", finalTick: 100 }, baselines)[0];
     if (finding === undefined) throw new Error("fixture finding is missing");
     const result = await explainStructuredFinding(finding, {
       explain: (input) => Promise.resolve(`Practice ${input.suggestedDrill.title}.`),

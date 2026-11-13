@@ -7,17 +7,30 @@ const { assertPacingAssessment, createPacingAssessment } = require("./browser-pe
 
 const projectRoot = path.resolve(__dirname, "..");
 const buildRoot = path.resolve(projectRoot, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
-const budgets = JSON.parse(fs.readFileSync(path.resolve(projectRoot, "config", "browser-performance-budgets.json"), "utf8"));
+const budgets = JSON.parse(
+  fs.readFileSync(path.resolve(projectRoot, "config", "browser-performance-budgets.json"), "utf8"),
+);
 const buildInfoPath = path.resolve(buildRoot, "build-info.json");
 const buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, "utf8"));
 assert.equal(buildInfo.format, "tear-build-info", "performance evidence requires an attributed Tear build");
 assert.equal(buildInfo.schemaVersion, 1, "performance evidence requires the supported build-info schema");
 assert.equal(buildInfo.target, "standalone", "performance evidence must exercise a standalone build");
-assert.equal(buildInfo.mode, process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone", "performance evidence has the wrong build mode");
+assert.equal(
+  buildInfo.mode,
+  process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone",
+  "performance evidence has the wrong build mode",
+);
 assert.match(buildInfo.artifactHash, /^[a-f0-9]{64}$/u, "performance evidence requires the served artifact hash");
-assert.match(buildInfo.buildIdentityDigest, /^[a-f0-9]{64}$/u, "performance evidence requires the complete build identity");
-assert.equal(buildInfo.contentAddressedPath, `artifacts/tearbench/builds/${buildInfo.buildIdentityDigest}/payload`,
-  "performance evidence requires the content-addressed build");
+assert.match(
+  buildInfo.buildIdentityDigest,
+  /^[a-f0-9]{64}$/u,
+  "performance evidence requires the complete build identity",
+);
+assert.equal(
+  buildInfo.contentAddressedPath,
+  `artifacts/tearbench/builds/${buildInfo.buildIdentityDigest}/payload`,
+  "performance evidence requires the content-addressed build",
+);
 const performanceBuild = {
   sourceRevision: buildInfo.sourceRevision,
   sourceFingerprint: buildInfo.sourceFingerprint,
@@ -28,59 +41,76 @@ const port = Number(process.env.TEAR_PERF_PORT || 8126);
 const baseUrl = `http://127.0.0.1:${port}`;
 const selectedScenario = process.env.TEAR_PERF_SCENARIO || "all";
 const durationMultiplier = Number(process.env.TEAR_PERF_DURATION_MULTIPLIER || "1");
-assert.ok(Number.isFinite(durationMultiplier) && durationMultiplier >= 1,
-  "TEAR_PERF_DURATION_MULTIPLIER must be a finite number at least 1");
+assert.ok(
+  Number.isFinite(durationMultiplier) && durationMultiplier >= 1,
+  "TEAR_PERF_DURATION_MULTIPLIER must be a finite number at least 1",
+);
 const graphicsPreference = process.env.TEAR_PERF_GFX || "auto";
-assert.ok(["auto", "high", "low"].includes(graphicsPreference),
-  "TEAR_PERF_GFX must be auto, high, or low");
+assert.ok(["auto", "high", "low"].includes(graphicsPreference), "TEAR_PERF_GFX must be auto, high, or low");
 const browserPreference = process.env.TEAR_PERF_BROWSER || "auto";
-assert.ok(["auto", "stable", "bundled", "pinned"].includes(browserPreference),
-  "TEAR_PERF_BROWSER must be auto, stable, bundled, or pinned");
+assert.ok(
+  ["auto", "stable", "bundled", "pinned"].includes(browserPreference),
+  "TEAR_PERF_BROWSER must be auto, stable, bundled, or pinned",
+);
 const pinnedBrowserPath = process.env.TEAR_PERF_BROWSER_PATH;
 const pinnedBrowserVersion = process.env.TEAR_PERF_BROWSER_VERSION;
 const pinnedBrowserArchiveSha256 = process.env.TEAR_PERF_BROWSER_ARCHIVE_SHA256;
 const deviceScaleFactor = Number(process.env.TEAR_PERF_DEVICE_SCALE_FACTOR || "1");
-assert.ok(Number.isFinite(deviceScaleFactor) && deviceScaleFactor >= 1 && deviceScaleFactor <= 3,
-  "TEAR_PERF_DEVICE_SCALE_FACTOR must be between 1 and 3");
+assert.ok(
+  Number.isFinite(deviceScaleFactor) && deviceScaleFactor >= 1 && deviceScaleFactor <= 3,
+  "TEAR_PERF_DEVICE_SCALE_FACTOR must be between 1 and 3",
+);
 const traceOutput = process.env.TEAR_PERF_TRACE_PATH
   ? path.resolve(projectRoot, process.env.TEAR_PERF_TRACE_PATH)
   : null;
 const allocationProfileOutput = process.env.TEAR_PERF_ALLOC_PROFILE_PATH
   ? path.resolve(projectRoot, process.env.TEAR_PERF_ALLOC_PROFILE_PATH)
   : null;
-assert.ok(allocationProfileOutput === null || selectedScenario !== "all",
-  "TEAR_PERF_ALLOC_PROFILE_PATH requires one selected scenario");
-assert.ok(traceOutput === null || selectedScenario !== "all",
-  "TEAR_PERF_TRACE_PATH requires one selected scenario");
+assert.ok(
+  allocationProfileOutput === null || selectedScenario !== "all",
+  "TEAR_PERF_ALLOC_PROFILE_PATH requires one selected scenario",
+);
+assert.ok(traceOutput === null || selectedScenario !== "all", "TEAR_PERF_TRACE_PATH requires one selected scenario");
 let traceStarted = false;
 let traceCompleted = false;
 const traceHitchThresholdMs = Number(process.env.TEAR_PERF_TRACE_HITCH_MS || "50");
 
 function installedStableChromePath() {
-  const candidates = process.platform === "win32"
-    ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"]
-    : process.platform === "linux"
-      ? ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable"]
-      : process.platform === "darwin"
-        ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
-        : [];
+  const candidates =
+    process.platform === "win32"
+      ? ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"]
+      : process.platform === "linux"
+        ? ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable"]
+        : process.platform === "darwin"
+          ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
+          : [];
   return candidates.find((candidate) => fs.existsSync(candidate));
 }
 
 function selectedChromePath() {
   if (browserPreference === "bundled") return undefined;
   if (browserPreference === "pinned") {
-    assert.ok(pinnedBrowserPath && path.isAbsolute(pinnedBrowserPath) && fs.existsSync(pinnedBrowserPath),
-      "TEAR_PERF_BROWSER=pinned requires an existing absolute TEAR_PERF_BROWSER_PATH");
-    assert.match(pinnedBrowserVersion || "", /^\d+\.\d+\.\d+\.\d+$/u,
-      "TEAR_PERF_BROWSER=pinned requires an exact TEAR_PERF_BROWSER_VERSION");
-    assert.match(pinnedBrowserArchiveSha256 || "", /^[a-f0-9]{64}$/u,
-      "TEAR_PERF_BROWSER=pinned requires a lowercase TEAR_PERF_BROWSER_ARCHIVE_SHA256");
+    assert.ok(
+      pinnedBrowserPath && path.isAbsolute(pinnedBrowserPath) && fs.existsSync(pinnedBrowserPath),
+      "TEAR_PERF_BROWSER=pinned requires an existing absolute TEAR_PERF_BROWSER_PATH",
+    );
+    assert.match(
+      pinnedBrowserVersion || "",
+      /^\d+\.\d+\.\d+\.\d+$/u,
+      "TEAR_PERF_BROWSER=pinned requires an exact TEAR_PERF_BROWSER_VERSION",
+    );
+    assert.match(
+      pinnedBrowserArchiveSha256 || "",
+      /^[a-f0-9]{64}$/u,
+      "TEAR_PERF_BROWSER=pinned requires a lowercase TEAR_PERF_BROWSER_ARCHIVE_SHA256",
+    );
     return pinnedBrowserPath;
   }
   const chromePath = installedStableChromePath();
-  assert.ok(browserPreference !== "stable" || chromePath,
-    "TEAR_PERF_BROWSER=stable requires an installed stable Chrome executable");
+  assert.ok(
+    browserPreference !== "stable" || chromePath,
+    "TEAR_PERF_BROWSER=stable requires an installed stable Chrome executable",
+  );
   return chromePath;
 }
 
@@ -111,7 +141,11 @@ async function openInstrumentedPage(browser, pageErrors, options = {}) {
   const page = await browser.newPage({ viewport: budgets.referenceProfile.viewport, deviceScaleFactor });
   await page.addInitScript((gfx) => {
     let settings = {};
-    try { settings = JSON.parse(window.localStorage.getItem("tear_settings") || "{}"); } catch { /* use clean defaults */ }
+    try {
+      settings = JSON.parse(window.localStorage.getItem("tear_settings") || "{}");
+    } catch {
+      /* use clean defaults */
+    }
     window.localStorage.setItem("tear_settings", JSON.stringify({ ...settings, gfx }));
   }, graphicsPreference);
   if (traceOutput !== null && !traceStarted && !traceCompleted) {
@@ -120,8 +154,13 @@ async function openInstrumentedPage(browser, pageErrors, options = {}) {
       path: traceOutput,
       screenshots: false,
       categories: [
-        "devtools.timeline", "disabled-by-default-devtools.timeline.frame",
-        "v8", "disabled-by-default-v8.gc", "cc", "gpu", "blink.user_timing",
+        "devtools.timeline",
+        "disabled-by-default-devtools.timeline.frame",
+        "v8",
+        "disabled-by-default-v8.gc",
+        "cc",
+        "gpu",
+        "blink.user_timing",
       ],
     });
     traceStarted = true;
@@ -133,18 +172,24 @@ async function openInstrumentedPage(browser, pageErrors, options = {}) {
   });
   const playgroundControls = options.playgroundControls === true;
   const agentQuery = playgroundControls ? "&watchagent=1" : "";
-  await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1${agentQuery}`, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1${agentQuery}`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30000,
+  });
   await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__ && window.__PANTHEON_TEST);
   if (playgroundControls) {
     await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15000 });
-    await page.evaluate(() => { document.getElementById("tear-watch-agent")?.remove(); });
+    await page.evaluate(() => {
+      document.getElementById("tear-watch-agent")?.remove();
+    });
   }
   // Programmatic debug starts can dispatch wave audio before the first combat
   // pointer input. Give every measured page the same user activation required
   // by production so audio initialization cannot race the workload setup.
   await page.keyboard.press("Shift");
-  await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
-    undefined, { timeout: 20000 });
+  await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, {
+    timeout: 20000,
+  });
   return page;
 }
 
@@ -160,8 +205,13 @@ async function canvasBackingStore(page) {
   return page.evaluate(() => {
     const canvas = document.getElementById("game");
     if (!(canvas instanceof HTMLCanvasElement)) throw new Error("performance page is missing the game canvas");
-    return { width: canvas.width, height: canvas.height, cssWidth: canvas.clientWidth, cssHeight: canvas.clientHeight,
-      devicePixelRatio: window.devicePixelRatio };
+    return {
+      width: canvas.width,
+      height: canvas.height,
+      cssWidth: canvas.clientWidth,
+      cssHeight: canvas.clientHeight,
+      devicePixelRatio: window.devicePixelRatio,
+    };
   });
 }
 
@@ -169,8 +219,11 @@ async function startAllocationProfile(page) {
   if (allocationProfileOutput === null) return null;
   const session = await page.context().newCDPSession(page);
   await session.send("HeapProfiler.enable");
-  await session.send("HeapProfiler.startSampling", { samplingInterval: 16384,
-    includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true });
+  await session.send("HeapProfiler.startSampling", {
+    samplingInterval: 16384,
+    includeObjectsCollectedByMajorGC: true,
+    includeObjectsCollectedByMinorGC: true,
+  });
   return session;
 }
 
@@ -195,7 +248,9 @@ async function stopTraceAfterHitch(browser, snapshot, label) {
   await browser.stopTracing();
   traceStarted = false;
   traceCompleted = true;
-  console.log(`browser performance trace captured ${label} hitch at ${snapshot.frameInterval.maxMs} ms: ${traceOutput}`);
+  console.log(
+    `browser performance trace captured ${label} hitch at ${snapshot.frameInterval.maxMs} ms: ${traceOutput}`,
+  );
 }
 
 /**
@@ -207,26 +262,40 @@ async function stopTraceAfterHitch(browser, snapshot, label) {
 async function clickDrawnLabelUntil(page, label, state) {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
-    const point = await page.evaluate((expected) => new Promise((resolve) => {
-      const proto = CanvasRenderingContext2D.prototype, original = proto.fillText;
-      let found = null, frames = 0;
-      proto.fillText = function locateLabel(value, x, y, ...rest) {
-        if (String(value) === expected && this.canvas.id === "game") {
-          const m = this.getTransform(), bounds = this.canvas.getBoundingClientRect(), k = bounds.width / this.canvas.width;
-          found = { x: bounds.left + (m.a * x + m.c * y + m.e) * k, y: bounds.top + (m.b * x + m.d * y + m.f) * k };
-        }
-        return original.call(this, value, x, y, ...rest);
-      };
-      const tick = () => {
-        frames += 1;
-        if (frames < 20) { requestAnimationFrame(tick); return; }
-        proto.fillText = original; resolve(found);
-      };
-      requestAnimationFrame(tick);
-    }), label);
+    const point = await page.evaluate(
+      (expected) =>
+        new Promise((resolve) => {
+          const proto = CanvasRenderingContext2D.prototype,
+            original = proto.fillText;
+          let found = null,
+            frames = 0;
+          proto.fillText = function locateLabel(value, x, y, ...rest) {
+            if (String(value) === expected && this.canvas.id === "game") {
+              const m = this.getTransform(),
+                bounds = this.canvas.getBoundingClientRect(),
+                k = bounds.width / this.canvas.width;
+              found = { x: bounds.left + (m.a * x + m.c * y + m.e) * k, y: bounds.top + (m.b * x + m.d * y + m.f) * k };
+            }
+            return original.call(this, value, x, y, ...rest);
+          };
+          const tick = () => {
+            frames += 1;
+            if (frames < 20) {
+              requestAnimationFrame(tick);
+              return;
+            }
+            proto.fillText = original;
+            resolve(found);
+          };
+          requestAnimationFrame(tick);
+        }),
+      label,
+    );
     if (point) await page.mouse.click(point.x, point.y);
     try {
-      await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, state, { timeout: 1_000 });
+      await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, state, {
+        timeout: 1_000,
+      });
       return;
     } catch (error) {
       if (error.name !== "TimeoutError") throw error;
@@ -244,8 +313,12 @@ async function startPlayground(page) {
   await page.waitForFunction(() => {
     const runtime = window.__PANTHEON_TEST.state();
     const gauges = window.__TEAR_DIAGNOSTICS__.snapshot().gauges;
-    return runtime.game === "playing" && runtime.enemyCount === 0
-      && (gauges.enemies || 0) === 0 && (gauges.projectiles || 0) === 0;
+    return (
+      runtime.game === "playing" &&
+      runtime.enemyCount === 0 &&
+      (gauges.enemies || 0) === 0 &&
+      (gauges.projectiles || 0) === 0
+    );
   });
 }
 
@@ -255,7 +328,14 @@ async function warmPlaygroundRuntime(page) {
 }
 
 const representativeEnemyKinds = Object.freeze([
-  "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald",
+  "charger",
+  "ranged",
+  "flyer",
+  "bomber",
+  "armored",
+  "priest",
+  "mender",
+  "herald",
 ]);
 
 async function spawnRepresentativeEnemies(page, commandCount, onSample) {
@@ -268,8 +348,11 @@ async function spawnRepresentativeEnemies(page, commandCount, onSample) {
       if (error?.name !== "TimeoutError") throw error;
     }
   }
-  assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "pgmenu",
-    "performance fixture could not open the Playground build menu");
+  assert.equal(
+    await page.evaluate(() => window.__PANTHEON_TEST.state().game),
+    "pgmenu",
+    "performance fixture could not open the Playground build menu",
+  );
   await page.waitForLoadState("networkidle", { timeout: 10000 });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
@@ -294,7 +377,7 @@ function assertAtMost(actual, budget, label) {
 
 async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0, minimumCollectionRateFps = 10) {
   const startedAt = Date.now();
-  const sampleCollectionBoundMs = Math.ceil(minimumSamples / minimumCollectionRateFps * 1000);
+  const sampleCollectionBoundMs = Math.ceil((minimumSamples / minimumCollectionRateFps) * 1000);
   const deadline = startedAt + Math.max(durationMs + 20_000, sampleCollectionBoundMs);
   let direction = "d";
   let frameSamples = 0;
@@ -302,8 +385,10 @@ async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0, mi
   let iteration = 0;
   try {
     while (Date.now() - startedAt < durationMs || frameSamples < minimumSamples) {
-      assert.ok(Date.now() < deadline,
-        `active combat produced ${frameSamples}/${minimumSamples} required frame samples before the bounded deadline`);
+      assert.ok(
+        Date.now() < deadline,
+        `active combat produced ${frameSamples}/${minimumSamples} required frame samples before the bounded deadline`,
+      );
       if (iteration % 4 === 0) await page.mouse.click(800, 450, { button: "right" });
       else await page.mouse.click(800, 450);
       if (iteration > 0 && iteration % 12 === 0) {
@@ -383,8 +468,10 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   // Emit the measured values before enforcing budgets so a failing gate still
   // leaves enough evidence to distinguish sustained cost from isolated hitches.
   console.log(JSON.stringify({ scenario: label, measurements: result }));
-  assert.ok(activeFrameSamples >= scenario.minimumSamples,
-    `${label} produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`);
+  assert.ok(
+    activeFrameSamples >= scenario.minimumSamples,
+    `${label} produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`,
+  );
   assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, `${label} simulation p95 ms`);
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, `${label} render p95 ms`);
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, `${label} frame-work p95 ms`);
@@ -399,21 +486,36 @@ async function verdantGameplayScenario(browser, pageErrors) {
   const scenario = budgets.verdantGameplay;
   const page = await openInstrumentedPage(browser, pageErrors);
   await page.evaluate(() => window.__PANTHEON_TEST.startBoss("rootbound", "normal"));
-  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
-    .some((enemy) => enemy.bossId === "rootbound" && enemy.spawnT <= 0 && enemy.introT === 0), undefined, { timeout: 10000 });
+  await page.waitForFunction(
+    () =>
+      window
+        .TEAR_WEAPON_DEBUG?.()
+        .enemies.some((enemy) => enemy.bossId === "rootbound" && enemy.spawnT <= 0 && enemy.introT === 0),
+    undefined,
+    { timeout: 10000 },
+  );
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
-  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
-    .find((enemy) => enemy.bossId === "rootbound")?.phase === 2, undefined, { timeout: 5000 });
+  await page.waitForFunction(
+    () => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === "rootbound")?.phase === 2,
+    undefined,
+    { timeout: 5000 },
+  );
   await page.evaluate(() => {
     window.__PANTHEON_TEST.prepareVerdantPerformanceScenario();
   });
   const environmentSnapshot = () => page.evaluate(() => window.__PANTHEON_TEST.performanceEnvironmentSnapshot());
-  await page.waitForFunction(() => {
-    const snapshot = window.__PANTHEON_TEST.performanceEnvironmentSnapshot();
-    return Object.keys(snapshot.kinds).some((key) => key.startsWith("bloom-well:"))
-      && Object.keys(snapshot.kinds).some((key) => key.startsWith("graft-anchor:"))
-      && Object.keys(snapshot.kinds).some((key) => key.startsWith("root-link:"));
-  }, undefined, { timeout: 10000 });
+  await page.waitForFunction(
+    () => {
+      const snapshot = window.__PANTHEON_TEST.performanceEnvironmentSnapshot();
+      return (
+        Object.keys(snapshot.kinds).some((key) => key.startsWith("bloom-well:")) &&
+        Object.keys(snapshot.kinds).some((key) => key.startsWith("graft-anchor:")) &&
+        Object.keys(snapshot.kinds).some((key) => key.startsWith("root-link:"))
+      );
+    },
+    undefined,
+    { timeout: 10000 },
+  );
   const peakGauges = { enemies: 0, projectiles: 0, effects: 0, fields: 0, combatObjects: 0, routes: 0 };
   const peakEnvironmentKinds = {};
   const samplePeak = async () => {
@@ -432,20 +534,33 @@ async function verdantGameplayScenario(browser, pageErrors) {
   const allocationSession = await startAllocationProfile(page);
   await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
   await markTrace(page, "tear-perf-verdant-start");
-  const activeFrameSamples = await exerciseCombat(page, measuredDuration(scenario.durationMs), samplePeak,
-    scenario.minimumSamples, scenario.minimumCollectionRateFps);
+  const activeFrameSamples = await exerciseCombat(
+    page,
+    measuredDuration(scenario.durationMs),
+    samplePeak,
+    scenario.minimumSamples,
+    scenario.minimumCollectionRateFps,
+  );
   await markTrace(page, "tear-perf-verdant-end");
   const snapshot = await diagnostics(page);
   await stopAllocationProfile(allocationSession);
   await samplePeak();
-  const result = { simulation: snapshot.simulation, render: snapshot.render, frame: snapshot.frame,
+  const result = {
+    simulation: snapshot.simulation,
+    render: snapshot.render,
+    frame: snapshot.frame,
     frameInterval: snapshot.frameInterval,
     outsideFrameWork: snapshot.outsideFrameWork,
     backingStore: await canvasBackingStore(page),
-    newLongTasks: snapshot.longTasks - longTasksBefore, peakGauges, peakEnvironmentKinds };
+    newLongTasks: snapshot.longTasks - longTasksBefore,
+    peakGauges,
+    peakEnvironmentKinds,
+  };
   console.log(JSON.stringify({ scenario: "Verdant gameplay", measurements: result }));
-  assert.ok(activeFrameSamples >= scenario.minimumSamples,
-    `Verdant workload produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`);
+  assert.ok(
+    activeFrameSamples >= scenario.minimumSamples,
+    `Verdant workload produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`,
+  );
   assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, "Verdant simulation p95 ms");
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, "Verdant render p95 ms");
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, "Verdant frame-work p95 ms");
@@ -456,9 +571,13 @@ async function verdantGameplayScenario(browser, pageErrors) {
     assertAtMost(peakGauges[name], limit, `Verdant peak ${name} (${JSON.stringify(peakEnvironmentKinds)})`);
   }
   assert.ok(peakGauges.enemies >= 4, "Verdant workload did not retain Rootbound, Rootbinder, and ordinary enemies");
-  assert.ok(peakGauges.fields > 0 && peakGauges.combatObjects >= 4,
-    "Verdant workload did not exercise Bloom, Grafts, and Rootbinder relationships together");
-  await page.evaluate(() => { delete window.__VS3_PERFORMANCE_ENVIRONMENT__; });
+  assert.ok(
+    peakGauges.fields > 0 && peakGauges.combatObjects >= 4,
+    "Verdant workload did not exercise Bloom, Grafts, and Rootbinder relationships together",
+  );
+  await page.evaluate(() => {
+    delete window.__VS3_PERFORMANCE_ENVIRONMENT__;
+  });
   await closeMeasuredPage(page);
   return result;
 }
@@ -467,37 +586,62 @@ async function paleGameplayScenario(browser, pageErrors) {
   const scenario = budgets.paleGameplay;
   const page = await openInstrumentedPage(browser, pageErrors);
   await page.evaluate(() => window.__PANTHEON_TEST.startBoss("white-hart", "normal"));
-  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
-    .some((enemy) => enemy.bossId === "white-hart" && enemy.spawnT <= 0 && enemy.introT === 0), undefined,
-  { timeout: 10000 });
+  await page.waitForFunction(
+    () =>
+      window
+        .TEAR_WEAPON_DEBUG?.()
+        .enemies.some((enemy) => enemy.bossId === "white-hart" && enemy.spawnT <= 0 && enemy.introT === 0),
+    undefined,
+    { timeout: 10000 },
+  );
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
-  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG?.().enemies
-    .find((enemy) => enemy.bossId === "white-hart")?.phase === 2, undefined, { timeout: 5000 });
+  await page.waitForFunction(
+    () => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === "white-hart")?.phase === 2,
+    undefined,
+    { timeout: 5000 },
+  );
   await page.evaluate(() => {
     window.__PANTHEON_TEST.preparePalePerformanceScenario();
     window.__PANTHEON_TEST.prepareWhiteHartAttack("ghost-tracks");
   });
   const environmentSnapshot = () => page.evaluate(() => window.__PANTHEON_TEST.performanceEnvironmentSnapshot());
   try {
-    await page.waitForFunction(() => {
-      const snapshot = window.__PANTHEON_TEST.performanceEnvironmentSnapshot();
-      const auroraTracks = Object.entries(snapshot.kinds).filter(([key]) => key.startsWith("aurora-track:"))
-        .reduce((total, [, count]) => total + count, 0);
-      return auroraTracks >= 3 && Object.keys(snapshot.kinds).some((key) => key.startsWith("ghost-track:"));
-    }, undefined, { timeout: 10000 });
+    await page.waitForFunction(
+      () => {
+        const snapshot = window.__PANTHEON_TEST.performanceEnvironmentSnapshot();
+        const auroraTracks = Object.entries(snapshot.kinds)
+          .filter(([key]) => key.startsWith("aurora-track:"))
+          .reduce((total, [, count]) => total + count, 0);
+        return auroraTracks >= 3 && Object.keys(snapshot.kinds).some((key) => key.startsWith("ghost-track:"));
+      },
+      undefined,
+      { timeout: 10000 },
+    );
   } catch (error) {
     const snapshot = await environmentSnapshot();
     throw new Error(`Pale performance environment did not compose: ${JSON.stringify(snapshot)}`, { cause: error });
   }
-  const roster = await page.evaluate(() => window.TEAR_WEAPON_DEBUG().enemies.map((enemy) => ({
-    kind: enemy.kind, variant: enemy.variant, bossId: enemy.bossId,
-  })));
-  assert.equal(roster.filter((enemy) => enemy.kind === "rimehound").length, 2,
-    "Pale workload did not compose both Rimehounds");
-  assert.deepEqual(new Set(roster.map((enemy) => enemy.variant).filter(Boolean)), new Set([
-    "rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard",
-  ]), "Pale workload did not compose all five native variants");
-  assert.ok(roster.some((enemy) => enemy.bossId === "white-hart"), "Pale workload did not retain White Hart");
+  const roster = await page.evaluate(() =>
+    window.TEAR_WEAPON_DEBUG().enemies.map((enemy) => ({
+      kind: enemy.kind,
+      variant: enemy.variant,
+      bossId: enemy.bossId,
+    })),
+  );
+  assert.equal(
+    roster.filter((enemy) => enemy.kind === "rimehound").length,
+    2,
+    "Pale workload did not compose both Rimehounds",
+  );
+  assert.deepEqual(
+    new Set(roster.map((enemy) => enemy.variant).filter(Boolean)),
+    new Set(["rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard"]),
+    "Pale workload did not compose all five native variants",
+  );
+  assert.ok(
+    roster.some((enemy) => enemy.bossId === "white-hart"),
+    "Pale workload did not retain White Hart",
+  );
 
   const peakGauges = { enemies: 0, projectiles: 0, effects: 0, fields: 0, combatObjects: 0, routes: 0 };
   const peakEnvironmentKinds = {};
@@ -521,21 +665,35 @@ async function paleGameplayScenario(browser, pageErrors) {
     await samplePeak(snapshot);
     await stopTraceAfterHitch(browser, snapshot, "Pale");
   };
-  const activeFrameSamples = await exerciseCombat(page, measuredDuration(scenario.durationMs), sampleMeasuredPeak,
-    scenario.minimumSamples, scenario.minimumCollectionRateFps);
+  const activeFrameSamples = await exerciseCombat(
+    page,
+    measuredDuration(scenario.durationMs),
+    sampleMeasuredPeak,
+    scenario.minimumSamples,
+    scenario.minimumCollectionRateFps,
+  );
   await markTrace(page, "tear-perf-pale-end");
   const snapshot = await diagnostics(page);
   await stopAllocationProfile(allocationSession);
   await stopTraceAfterHitch(browser, snapshot, "Pale");
   await samplePeak();
-  const result = { simulation: snapshot.simulation, render: snapshot.render, frame: snapshot.frame,
+  const result = {
+    simulation: snapshot.simulation,
+    render: snapshot.render,
+    frame: snapshot.frame,
     frameInterval: snapshot.frameInterval,
     outsideFrameWork: snapshot.outsideFrameWork,
     backingStore: await canvasBackingStore(page),
-    newLongTasks: snapshot.longTasks - longTasksBefore, peakGauges, peakEnvironmentKinds, roster };
+    newLongTasks: snapshot.longTasks - longTasksBefore,
+    peakGauges,
+    peakEnvironmentKinds,
+    roster,
+  };
   console.log(JSON.stringify({ scenario: "Pale gameplay", measurements: result }));
-  assert.ok(activeFrameSamples >= scenario.minimumSamples,
-    `Pale workload produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`);
+  assert.ok(
+    activeFrameSamples >= scenario.minimumSamples,
+    `Pale workload produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`,
+  );
   assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, "Pale simulation p95 ms");
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, "Pale render p95 ms");
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, "Pale frame-work p95 ms");
@@ -546,9 +704,13 @@ async function paleGameplayScenario(browser, pageErrors) {
     assertAtMost(peakGauges[name], limit, `Pale peak ${name} (${JSON.stringify(peakEnvironmentKinds)})`);
   }
   assert.equal(peakGauges.enemies, 8, "Pale workload did not retain its exact integrated roster");
-  assert.ok(peakGauges.fields >= 3 && peakGauges.routes > 0,
-    "Pale workload did not exercise Aurora and Ghost Tracks together");
-  await page.evaluate(() => { delete window.__PT3_PERFORMANCE_ENVIRONMENT__; });
+  assert.ok(
+    peakGauges.fields >= 3 && peakGauges.routes > 0,
+    "Pale workload did not exercise Aurora and Ghost Tracks together",
+  );
+  await page.evaluate(() => {
+    delete window.__PT3_PERFORMANCE_ENVIRONMENT__;
+  });
   await closeMeasuredPage(page);
   return result;
 }
@@ -581,7 +743,13 @@ async function repeatedRunScenario(browser, pageErrors) {
     await clickDrawnLabelUntil(page, "QUIT", "menu");
     await session.send("HeapProfiler.collectGarbage");
     const heap = await session.send("Runtime.getHeapUsage");
-    cycles.push({ cycle: cycle + 1, reset, peak, afterQuit: (await diagnostics(page)).gauges, heapUsedBytes: heap.usedSize });
+    cycles.push({
+      cycle: cycle + 1,
+      reset,
+      peak,
+      afterQuit: (await diagnostics(page)).gauges,
+      heapUsedBytes: heap.usedSize,
+    });
   }
   const heapGrowth = Math.max(0, cycles.at(-1).heapUsedBytes - cycles[0].heapUsedBytes);
   assertAtMost(heapGrowth, budgets.runCycles.maxHeapGrowthBytes, "five-cycle retained JavaScript heap growth");
@@ -590,7 +758,10 @@ async function repeatedRunScenario(browser, pageErrors) {
 }
 
 (async () => {
-  assert.ok(fs.existsSync(path.resolve(buildRoot, "index.html")), "dist/standalone is missing; run pnpm build:standalone first");
+  assert.ok(
+    fs.existsSync(path.resolve(buildRoot, "index.html")),
+    "dist/standalone is missing; run pnpm build:standalone first",
+  );
   const server = staticServer();
   let browser;
   try {
@@ -598,7 +769,11 @@ async function repeatedRunScenario(browser, pageErrors) {
     const chromePath = selectedChromePath();
     browser = await chromium.launch({
       headless: budgets.referenceProfile.headless,
-      args: ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--enable-precise-memory-info"],
+      args: [
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--enable-precise-memory-info",
+      ],
       ...(chromePath ? { executablePath: chromePath } : {}),
     });
     const browserRuntime = {
@@ -613,39 +788,58 @@ async function repeatedRunScenario(browser, pageErrors) {
     // receipts remain attributable to the exact browser under measurement.
     console.log(JSON.stringify({ browserRuntime }));
     if (browserPreference === "pinned") {
-      assert.equal(browserRuntime.version, pinnedBrowserVersion,
-        "pinned performance evidence launched a different browser version");
-      assert.equal(browserRuntime.executable, pinnedBrowserPath,
-        "pinned performance evidence launched a different browser executable");
+      assert.equal(
+        browserRuntime.version,
+        pinnedBrowserVersion,
+        "pinned performance evidence launched a different browser version",
+      );
+      assert.equal(
+        browserRuntime.executable,
+        pinnedBrowserPath,
+        "pinned performance evidence launched a different browser executable",
+      );
     }
     const pageErrors = [];
-    assert.ok(["all", "active", "constrained", "verdant", "pale", "cycles"].includes(selectedScenario),
-      `unknown TEAR_PERF_SCENARIO: ${selectedScenario}`);
-    const activeGameplay = selectedScenario === "all" || selectedScenario === "active"
-      ? await activeGameplayScenario(browser, pageErrors, budgets.activeGameplay, "desktop gameplay")
-      : undefined;
-    const constrainedGameplay = selectedScenario === "all" || selectedScenario === "constrained"
-      ? await activeGameplayScenario(browser, pageErrors, budgets.constrainedGameplay, "4x constrained gameplay")
-      : undefined;
-    const verdantGameplay = selectedScenario === "all" || selectedScenario === "verdant"
-      ? await verdantGameplayScenario(browser, pageErrors)
-      : undefined;
-    const paleGameplay = selectedScenario === "all" || selectedScenario === "pale"
-      ? await paleGameplayScenario(browser, pageErrors)
-      : undefined;
-    const runCycles = selectedScenario === "all" || selectedScenario === "cycles"
-      ? await repeatedRunScenario(browser, pageErrors)
-      : undefined;
+    assert.ok(
+      ["all", "active", "constrained", "verdant", "pale", "cycles"].includes(selectedScenario),
+      `unknown TEAR_PERF_SCENARIO: ${selectedScenario}`,
+    );
+    const activeGameplay =
+      selectedScenario === "all" || selectedScenario === "active"
+        ? await activeGameplayScenario(browser, pageErrors, budgets.activeGameplay, "desktop gameplay")
+        : undefined;
+    const constrainedGameplay =
+      selectedScenario === "all" || selectedScenario === "constrained"
+        ? await activeGameplayScenario(browser, pageErrors, budgets.constrainedGameplay, "4x constrained gameplay")
+        : undefined;
+    const verdantGameplay =
+      selectedScenario === "all" || selectedScenario === "verdant"
+        ? await verdantGameplayScenario(browser, pageErrors)
+        : undefined;
+    const paleGameplay =
+      selectedScenario === "all" || selectedScenario === "pale"
+        ? await paleGameplayScenario(browser, pageErrors)
+        : undefined;
+    const runCycles =
+      selectedScenario === "all" || selectedScenario === "cycles"
+        ? await repeatedRunScenario(browser, pageErrors)
+        : undefined;
     assert.deepEqual(pageErrors, [], `browser page errors: ${pageErrors.join("\n")}`);
-    const report = { capturedAt: new Date().toISOString(),
+    const report = {
+      capturedAt: new Date().toISOString(),
       referenceProfile: { ...budgets.referenceProfile, durationMultiplier, deviceScaleFactor, graphicsPreference },
       build: buildInfo,
       browserRuntime,
-      ...(activeGameplay && { activeGameplay }), ...(constrainedGameplay && { constrainedGameplay }),
-      ...(verdantGameplay && { verdantGameplay }), ...(paleGameplay && { paleGameplay }),
-      ...(runCycles && { runCycles }) };
-    const output = path.resolve(projectRoot, process.env.TEAR_PERF_OUTPUT
-      || "artifacts/tearbench/generated/browser-performance.json");
+      ...(activeGameplay && { activeGameplay }),
+      ...(constrainedGameplay && { constrainedGameplay }),
+      ...(verdantGameplay && { verdantGameplay }),
+      ...(paleGameplay && { paleGameplay }),
+      ...(runCycles && { runCycles }),
+    };
+    const output = path.resolve(
+      projectRoot,
+      process.env.TEAR_PERF_OUTPUT || "artifacts/tearbench/generated/browser-performance.json",
+    );
     fs.mkdirSync(path.dirname(output), { recursive: true });
     fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`);
     console.log(JSON.stringify(report, null, 2));

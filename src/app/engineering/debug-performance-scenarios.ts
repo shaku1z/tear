@@ -14,7 +14,10 @@ export interface DebugPerformanceScenarioServices {
  * the production entity factory, wave planner and environment bindings; none
  * writes an authored result directly.
  */
-export function createDebugPerformanceScenarios(context: LiveDebugHarnessContext, services: DebugPerformanceScenarioServices) {
+export function createDebugPerformanceScenarios(
+  context: LiveDebugHarnessContext,
+  services: DebugPerformanceScenarioServices,
+) {
   const d = context.dependencies;
   const performanceEnvironmentSnapshot = () => {
     if (context.environment === undefined) throw new Error("Performance environment diagnostics are unavailable");
@@ -26,8 +29,12 @@ export function createDebugPerformanceScenarios(context: LiveDebugHarnessContext
       const key = `${entry.kind}:${entry.state}`;
       kinds[key] = (kinds[key] ?? 0) + 1;
     }
-    return Object.freeze({ fields: fields.length, combatObjects: combatObjects.length, routes: routes.length,
-      kinds: Object.freeze(kinds) });
+    return Object.freeze({
+      fields: fields.length,
+      combatObjects: combatObjects.length,
+      routes: routes.length,
+      kinds: Object.freeze(kinds),
+    });
   };
   return {
     performanceEnvironmentSnapshot,
@@ -37,7 +44,8 @@ export function createDebugPerformanceScenarios(context: LiveDebugHarnessContext
       const run = services.run();
       const player = context.state.player();
       const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === "rootbound" && !enemy.dead);
-      if (player === undefined || boss === undefined) throw new Error("Verdant performance requires the live Rootbound encounter");
+      if (player === undefined || boss === undefined)
+        throw new Error("Verdant performance requires the live Rootbound encounter");
       const phase = (boss as GameEnemy & { readonly phase?: number }).phase;
       if (phase !== 2) throw new Error(`Verdant performance requires Rootbound phase two, received ${String(phase)}`);
       const groundY = d.CONFIG.world.groundY;
@@ -56,23 +64,45 @@ export function createDebugPerformanceScenarios(context: LiveDebugHarnessContext
       services.prepareCurrentGameplay();
       const run = services.run();
       const player = context.state.player();
-      const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === "white-hart" && !enemy.dead);
-      if (player === undefined || boss === undefined) throw new Error("Pale performance requires the live White Hart encounter");
+      const boss = context.state
+        .enemies()
+        .find((enemy) => enemy.isBoss && enemy.bossId === "white-hart" && !enemy.dead);
+      if (player === undefined || boss === undefined)
+        throw new Error("Pale performance requires the live White Hart encounter");
       const phase = (boss as GameEnemy & { readonly phase?: number }).phase;
       if (phase !== 2) throw new Error(`Pale performance requires White Hart phase two, received ${String(phase)}`);
-      if (context.spawnExplicitVariant === undefined) throw new Error("Pale performance requires the explicit production variant seam");
+      if (context.spawnExplicitVariant === undefined)
+        throw new Error("Pale performance requires the explicit production variant seam");
       const groundY = d.CONFIG.world.groundY;
       const hounds = [430, 620].map((x) => context.entities.createEnemy("rimehound", x, groundY - 17, run));
-      for (const hound of hounds) Object.assign(hound, {
-        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
-        atk: "flank", atkT: 0, atkCd: 0, canClimb: false, climber: false,
-        variant: "", variantName: "", affixes: [], affixCount: 0,
-      });
+      for (const hound of hounds)
+        Object.assign(hound, {
+          vx: 0,
+          vy: 0,
+          onGround: true,
+          spawnT: 0,
+          stun: 0,
+          hitCd: 0,
+          aliveT: 0,
+          atk: "flank",
+          atkT: 0,
+          atkCd: 0,
+          canClimb: false,
+          climber: false,
+          variant: "",
+          variantName: "",
+          affixes: [],
+          affixCount: 0,
+        });
       context.state.setEnemies([boss, ...hounds]);
       for (const [kind, variantId] of [
-        ["charger", "rime-runner"], ["ranged", "prism-seer"], ["flyer", "snowfall-kite"],
-        ["bomber", "hailcaster"], ["armored", "glacier-guard"],
-      ] as const) context.spawnExplicitVariant(kind, variantId);
+        ["charger", "rime-runner"],
+        ["ranged", "prism-seer"],
+        ["flyer", "snowfall-kite"],
+        ["bomber", "hailcaster"],
+        ["armored", "glacier-guard"],
+      ] as const)
+        context.spawnExplicitVariant(kind, variantId);
       for (const enemy of context.state.enemies()) {
         Object.assign(enemy, { spawnT: 0, stun: 0, hitCd: 0, aliveT: 0 });
         enemy.hp = Math.max(enemy.hp, 1_000);
@@ -89,7 +119,8 @@ export function createDebugPerformanceScenarios(context: LiveDebugHarnessContext
     prepareWaveCompositionScenario(wave: number) {
       const run = services.run();
       if (run.mode !== "endless") throw new Error(`Wave composition requires an Endless run, received ${run.mode}`);
-      if (!Number.isSafeInteger(wave) || wave < 2) throw new RangeError("Wave composition requires a later authored wave");
+      if (!Number.isSafeInteger(wave) || wave < 2)
+        throw new RangeError("Wave composition requires a later authored wave");
       if (context.startNextWave === undefined) throw new Error("Wave composition requires the live wave controller");
       services.prepareCurrentGameplay();
       services.retireWave();

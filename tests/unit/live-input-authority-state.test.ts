@@ -5,7 +5,9 @@ import { createLiveInputAuthorityState } from "../../src/app/world/input-authori
 describe("live input authority state", () => {
   it("keeps automated semantic input from acquiring pointer lock or device aim", () => {
     let requested = 0;
-    const state = createLiveInputAuthorityState(() => { requested++; });
+    const state = createLiveInputAuthorityState(() => {
+      requested++;
+    });
 
     state.requestPointerLock();
     state.setSemanticInputAuthority(true);

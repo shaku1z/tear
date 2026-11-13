@@ -36,28 +36,54 @@ export interface LiveGhostPracticeChallengeOptions {
 
 /** Launches unranked practice children from a Ghost capsule and runs their recorded challenge. */
 export function createLiveGhostPracticeChallenge(options: LiveGhostPracticeChallengeOptions) {
-  const { recording, capture, stateForge, navigation, canonicalState, input: Input, requestPointerLock: requestLock, player: livePlayer } = options;
+  const {
+    recording,
+    capture,
+    stateForge,
+    navigation,
+    canonicalState,
+    input: Input,
+    requestPointerLock: requestLock,
+    player: livePlayer,
+  } = options;
   const { simulationRuntime } = options.combat;
   const { services } = options.world.context;
   const hostState = options.world.state;
   const ghostPracticeSession = options.practice;
-  const restoreGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]) => launchGhostPracticeChild(child, {
-    registry: capture.registry, stateForge, hasLiveWorld: () => hostState.run() !== null, practice: ghostPracticeSession,
-    clearRestoredRecording: () => {
-      options.ghost.restoreRuntimeState({ recording: null });
-      Input.stopSemanticRecording();
-    },
-    setPlaying: () => {
-      navigation.setScreen("playing", { practiceLaunch: true });
-    },
-    requestPointer: requestLock,
-  });
-  const launch = (child: Parameters<typeof launchGhostPracticeChild>[0]): ReturnType<typeof launchGhostPracticeChild> => challenge.request(child);
+  const restoreGhostPractice = (child: Parameters<typeof launchGhostPracticeChild>[0]) =>
+    launchGhostPracticeChild(child, {
+      registry: capture.registry,
+      stateForge,
+      hasLiveWorld: () => hostState.run() !== null,
+      practice: ghostPracticeSession,
+      clearRestoredRecording: () => {
+        options.ghost.restoreRuntimeState({ recording: null });
+        Input.stopSemanticRecording();
+      },
+      setPlaying: () => {
+        navigation.setScreen("playing", { practiceLaunch: true });
+      },
+      requestPointer: requestLock,
+    });
+  const launch = (child: Parameters<typeof launchGhostPracticeChild>[0]): ReturnType<typeof launchGhostPracticeChild> =>
+    challenge.request(child);
   const challenge = createLiveGhostChallengeComposition({
-    factory: options.indexedDb, recording: recording.session, frames: recording.frames, stateForge, registry: capture.registry,
-    launch: restoreGhostPractice, rng: () => services.random.snapshot(), input: () => simulationRuntime.input.snapshot(),
+    factory: options.indexedDb,
+    recording: recording.session,
+    frames: recording.frames,
+    stateForge,
+    registry: capture.registry,
+    launch: restoreGhostPractice,
+    rng: () => services.random.snapshot(),
+    input: () => simulationRuntime.input.snapshot(),
     releaseInput: (tick) => {
-      simulationRuntime.input.restore({ ...simulationRuntime.input.snapshot(), tick, moveX: 0, moveY: 0, primaryHeld: false });
+      simulationRuntime.input.restore({
+        ...simulationRuntime.input.snapshot(),
+        tick,
+        moveX: 0,
+        moveY: 0,
+        primaryHeld: false,
+      });
     },
     startInput: () => {
       Input.startSemanticRecording();
@@ -67,7 +93,8 @@ export function createLiveGhostPracticeChallenge(options: LiveGhostPracticeChall
     stopInput: () => {
       Input.stopSemanticRecording();
     },
-    stateHash: () => stableVerificationHash(canonicalState(simulationRuntime.scheduler.tick, simulationRuntime.input).state),
+    stateHash: () =>
+      stableVerificationHash(canonicalState(simulationRuntime.scheduler.tick, simulationRuntime.input).state),
     tick: () => simulationRuntime.scheduler.tick,
     pause: () => {
       if (navigation.screen() === "playing") navigation.setScreen("paused");

@@ -37,7 +37,9 @@ describe("C40 weapon-roster engineering evidence index", () => {
   });
 
   it("points every indexed proof at its canonical non-certifying scenario and narrow route", () => {
-    const index = readJson("docs/tearbench-c40-weapon-roster-evidence-index.json") as { proofs: readonly RosterProof[] };
+    const index = readJson("docs/tearbench-c40-weapon-roster-evidence-index.json") as {
+      proofs: readonly RosterProof[];
+    };
     const scenarios = readJson("src/tearbench/canonical-scenarios.json") as readonly Record<string, unknown>[];
     const routes = readJson("src/tearbench/evidence-routes.json") as readonly Record<string, unknown>[];
     for (const proof of index.proofs) {
@@ -60,10 +62,14 @@ describe("C40 weapon-roster engineering evidence index", () => {
 
   it("does not overclaim C40 completion or create generated certification coverage", () => {
     const index = readJson("docs/tearbench-c40-weapon-roster-evidence-index.json") as { nonClaims: readonly string[] };
-    const evidenceCatalog = readJson("docs/tearbench-ghost3-evidence-catalog.json") as { rules: readonly { id: string }[] };
+    const evidenceCatalog = readJson("docs/tearbench-ghost3-evidence-catalog.json") as {
+      rules: readonly { id: string }[];
+    };
     const dashboard = readFileSync(resolve(root, "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md"), "utf8");
     expect(index.nonClaims.join(" ")).toMatch(/not a C40 completion.*performance.*parity.*accessibility/iu);
-    expect(index.nonClaims.join(" ")).toMatch(/does not add a generated evidence-catalog rule.*generated C40 dashboard/iu);
+    expect(index.nonClaims.join(" ")).toMatch(
+      /does not add a generated evidence-catalog rule.*generated C40 dashboard/iu,
+    );
     expect(evidenceCatalog.rules.filter((rule) => rule.id.startsWith("EVID-C40-"))).toEqual([]);
     expect(dashboard).toContain("| C40 | 76 | 76 | 0 | 0 | 0 | 0 | 0 |");
   });

@@ -88,18 +88,15 @@ function achievementIntents(input: WaveClearInput): WaveClearIntent[] {
   if (state.mode === "endless") {
     intents.push({ type: "profile-max", stat: "bestWaveEndless", value: state.wave });
     if (state.diff === "hard" && state.wave >= 50) intents.push({ type: "profile-max", stat: "wave50Hard", value: 1 });
-    if (state.diff === "extreme" && state.wave >= 100) intents.push({ type: "profile-max", stat: "wave100Extreme", value: 1 });
+    if (state.diff === "extreme" && state.wave >= 100)
+      intents.push({ type: "profile-max", stat: "wave100Extreme", value: 1 });
     if (state.horde) intents.push({ type: "horde-cleared", waveTime: state.waveTime });
   }
   intents.push({ type: "achievement-check" });
   return intents;
 }
 
-function resolveTimer(
-  state: WaveClearState,
-  input: WaveClearInput,
-  intents: WaveClearIntent[],
-): WaveClearState {
+function resolveTimer(state: WaveClearState, input: WaveClearInput, intents: WaveClearIntent[]): WaveClearState {
   if (state.clearTimer <= 0) return state;
   const clearTimer = state.clearTimer - input.dt;
   if (clearTimer > 0) return { ...state, clearTimer };
@@ -135,8 +132,10 @@ export function planWaveClear(input: WaveClearInput): WaveClearResult {
         return { state, intents, terminal: true };
       }
       if (state.mode === "campaign" || state.mode === "bossonly" || state.mode === "gauntlet") {
-        if (!input.playerOneHit) intents.push({ type: "heal-player", amount: input.healEachWave * 2 + input.waveHealBonus });
-        if (state.mode === "bossonly" || state.mode === "gauntlet") state = { ...state, bossesBeaten: state.bossesBeaten + 1 };
+        if (!input.playerOneHit)
+          intents.push({ type: "heal-player", amount: input.healEachWave * 2 + input.waveHealBonus });
+        if (state.mode === "bossonly" || state.mode === "gauntlet")
+          state = { ...state, bossesBeaten: state.bossesBeaten + 1 };
         if (state.mode === "campaign" && input.achievementTracking) {
           intents.push({ type: "profile-add", stat: "stageClears", value: 1 });
           if (!state.damagedThisStage) intents.push({ type: "profile-add", stat: "noHitStages", value: 1 });

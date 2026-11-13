@@ -3,26 +3,19 @@ import {
   preparePinnedTearScoreClient,
   type TearScoreModuleApi,
 } from "./tear-score-module";
-import {
-  TearScoreMusicBackend,
-  type TearScoreClient,
-} from "./tear-score-adapter";
+import { TearScoreMusicBackend, type TearScoreClient } from "./tear-score-adapter";
 
 /**
  * Canonical vendored asset locations. The loader preloads the paired host and
  * the canonical module imports that same URL relatively; keeping the pair
  * explicit prevents a partial vendor from silently selecting another host.
  */
-export const ADAPTIVE_SOUNDTRACK_MODULE_PATH =
-  "vendor/tear-music/adaptive-soundtrack.esm.js";
-export const ADAPTIVE_SOUNDTRACK_TONE_HOST_PATH =
-  "vendor/tear-music/tone-host-14.9.17.esm.js";
+export const ADAPTIVE_SOUNDTRACK_MODULE_PATH = "vendor/tear-music/adaptive-soundtrack.esm.js";
+export const ADAPTIVE_SOUNDTRACK_TONE_HOST_PATH = "vendor/tear-music/tone-host-14.9.17.esm.js";
 
 /** Existing pinned assets remain the read-only compatibility fallback. */
-export const TEAR_SCORE_FALLBACK_MODULE_PATH =
-  "vendor/tear-score/tear-score.esm.js";
-export const TEAR_SCORE_FALLBACK_TONE_HOST_PATH =
-  "vendor/tear-score/tone-host-14.9.17.esm.js";
+export const TEAR_SCORE_FALLBACK_MODULE_PATH = "vendor/tear-score/tear-score.esm.js";
+export const TEAR_SCORE_FALLBACK_TONE_HOST_PATH = "vendor/tear-score/tone-host-14.9.17.esm.js";
 
 /** Canonical game-facing name for the existing audio client contract. */
 export type AdaptiveSoundtrackClient = TearScoreClient;
@@ -54,11 +47,13 @@ interface AdaptiveSoundtrackModule {
 function isModuleApi(value: unknown): value is TearScoreModuleApi {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record.initialize === "function"
-    && typeof record.start === "function"
-    && typeof record.updateContext === "function"
-    && typeof record.setMuteReason === "function"
-    && typeof record.dispose === "function";
+  return (
+    typeof record.initialize === "function" &&
+    typeof record.start === "function" &&
+    typeof record.updateContext === "function" &&
+    typeof record.setMuteReason === "function" &&
+    typeof record.dispose === "function"
+  );
 }
 
 function readModule(value: unknown): AdaptiveSoundtrackModule | null {
@@ -144,8 +139,7 @@ let preparation: Promise<AdaptiveSoundtrackClient> | null = null;
 export function preparePinnedAdaptiveSoundtrackClient(
   options: AdaptiveSoundtrackLoaderOptions = {},
 ): Promise<AdaptiveSoundtrackClient> {
-  const hasCustomLoader = options.canonicalLoader !== undefined
-    || options.fallbackLoader !== undefined;
+  const hasCustomLoader = options.canonicalLoader !== undefined || options.fallbackLoader !== undefined;
   const useCache = options.cache ?? !hasCustomLoader;
   if (useCache && preparation !== null) return preparation;
 

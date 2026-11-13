@@ -16,8 +16,16 @@ import {
 } from "./progression-synthesis-policy";
 
 export type TearBuildSynthesisPolicy =
-  | "exact-ledger" | "replay-derived" | "human-population" | "agent-population"
-  | "archetype" | "optimized" | "low-roll" | "anti-synergy" | "coverage-seeking" | "corruption";
+  | "exact-ledger"
+  | "replay-derived"
+  | "human-population"
+  | "agent-population"
+  | "archetype"
+  | "optimized"
+  | "low-roll"
+  | "anti-synergy"
+  | "coverage-seeking"
+  | "corruption";
 
 export type TearProgressionEvent =
   | Readonly<{ index: number; type: "configuration.reset"; revision: string }>
@@ -35,9 +43,14 @@ export type TearProgressionEvent =
   | Readonly<{ index: number; type: "tier.offered"; wave: number; slot: number; ids: readonly string[] }>
   | Readonly<{ index: number; type: "tier.selected"; wave: number; id: string; tier: number }>
   | Readonly<{
-    index: number; type: "configuration.mutated"; wave: number; source: "draft" | "tier";
-    id: string; occurrence: number; tier: number;
-  }>
+      index: number;
+      type: "configuration.mutated";
+      wave: number;
+      source: "draft" | "tier";
+      id: string;
+      occurrence: number;
+      tier: number;
+    }>
   | Readonly<{ index: number; type: "reward.granted"; wave: number; currency: number }>
   | Readonly<{ index: number; type: "player.revived"; wave: number; hp: number }>
   | Readonly<{ index: number; type: "run.completed"; wave: number }>;
@@ -86,8 +99,14 @@ export interface TearSynthesizedProgression {
   readonly provisionalPopulationData: boolean;
   readonly build: Readonly<Record<string, number>>;
   readonly statistics: Readonly<{
-    hp: number; maxHp: number; elapsedTicks: number; score: number; style: number;
-    kills: number; currency: number; revives: number;
+    hp: number;
+    maxHp: number;
+    elapsedTicks: number;
+    score: number;
+    style: number;
+    kills: number;
+    currency: number;
+    revives: number;
     /** Currency/revives are ledger-owned; combat and timing are synthetic estimates, never release evidence. */
     estimatedFields: readonly ("hp" | "maxHp" | "elapsedTicks" | "score" | "style" | "kills")[];
   }>;
@@ -226,7 +245,9 @@ function desiredBuild(requested: readonly TearBuildSelection[]): ProgressionDesi
     if (upgrade.tiers !== undefined) {
       const maximum = maximumUpgradeTier(upgrade);
       if (selection.tier > maximum) {
-        issues.push(`${selection.id} requests tier ${String(selection.tier)}; maximum production tier is ${String(maximum)}`);
+        issues.push(
+          `${selection.id} requests tier ${String(selection.tier)}; maximum production tier is ${String(maximum)}`,
+        );
         continue;
       }
       counts[selection.id] = 1;
@@ -245,7 +266,9 @@ function desiredBuild(requested: readonly TearBuildSelection[]): ProgressionDesi
       counts[selection.id] = next;
       tiers[selection.id] = 1;
     }
-    accepted.push(Object.freeze({ id: selection.id, tier: selection.tier, ...(upgrade.unique ? { unique: true } : {}) }));
+    accepted.push(
+      Object.freeze({ id: selection.id, tier: selection.tier, ...(upgrade.unique ? { unique: true } : {}) }),
+    );
   }
   return Object.freeze({
     counts: Object.freeze(counts),
@@ -264,18 +287,24 @@ function applyDraft(build: ProgressionMutableBuild, upgrade: UpgradeDefinition):
 }
 
 function buildSnapshot(build: ProgressionMutableBuild): Readonly<Record<string, number>> {
-  const entries = Object.keys(build.owned).sort().map((id) => {
-    const upgrade = PRODUCTION_UPGRADE_BY_ID.get(id);
-    return [id, upgrade?.tiers === undefined ? build.owned[id] ?? 0 : build.tiers[id] ?? 1] as const;
-  });
+  const entries = Object.keys(build.owned)
+    .sort()
+    .map((id) => {
+      const upgrade = PRODUCTION_UPGRADE_BY_ID.get(id);
+      return [id, upgrade?.tiers === undefined ? (build.owned[id] ?? 0) : (build.tiers[id] ?? 1)] as const;
+    });
   return Object.freeze(Object.fromEntries(entries));
 }
 
 function rewardCurrency(wave: number, inputs: ReturnType<typeof economyInputs>): number {
   return calculateCoinAward({
-    score: inputs.score, wave, difficultyId: inputs.difficultyId,
-    baseDifficultyMultiplier: inputs.baseDifficultyMultiplier, remoteMultiplier: inputs.remoteMultiplier,
-    coinMagnetLevel: inputs.coinMagnetLevel, fortuneLevel: inputs.fortuneLevel,
+    score: inputs.score,
+    wave,
+    difficultyId: inputs.difficultyId,
+    baseDifficultyMultiplier: inputs.baseDifficultyMultiplier,
+    remoteMultiplier: inputs.remoteMultiplier,
+    coinMagnetLevel: inputs.coinMagnetLevel,
+    fortuneLevel: inputs.fortuneLevel,
   }).earned;
 }
 
@@ -283,43 +312,54 @@ function requestedReachability(
   desired: ProgressionDesiredBuild,
   build: ProgressionMutableBuild,
 ): readonly TearBuildSelection[] {
-  return Object.freeze(desired.accepted.flatMap((selection) => {
-    const upgrade = PRODUCTION_UPGRADE_BY_ID.get(selection.id);
-    if (upgrade === undefined) return [];
-    const achieved = upgrade.tiers === undefined
-      ? Math.min(selection.tier, build.owned[selection.id] ?? 0)
-      : Math.min(selection.tier, build.tiers[selection.id] ?? 0);
-    return achieved < 1 ? [] : [Object.freeze({ id: selection.id, tier: achieved, ...(upgrade.unique ? { unique: true } : {}) })];
-  }));
+  return Object.freeze(
+    desired.accepted.flatMap((selection) => {
+      const upgrade = PRODUCTION_UPGRADE_BY_ID.get(selection.id);
+      if (upgrade === undefined) return [];
+      const achieved =
+        upgrade.tiers === undefined
+          ? Math.min(selection.tier, build.owned[selection.id] ?? 0)
+          : Math.min(selection.tier, build.tiers[selection.id] ?? 0);
+      return achieved < 1
+        ? []
+        : [Object.freeze({ id: selection.id, tier: achieved, ...(upgrade.unique ? { unique: true } : {}) })];
+    }),
+  );
 }
 
-function desiredIssues(
-  desired: ProgressionDesiredBuild,
-  build: ProgressionMutableBuild,
-): readonly string[] {
+function desiredIssues(desired: ProgressionDesiredBuild, build: ProgressionMutableBuild): readonly string[] {
   const issues = [...desired.issues];
   for (const [id, count] of Object.entries(desired.counts)) {
     const actual = build.owned[id] ?? 0;
-    if (actual < count) issues.push(`${id} requires ${String(count)} draft pick(s), but only ${String(actual)} were reachable`);
+    if (actual < count)
+      issues.push(`${id} requires ${String(count)} draft pick(s), but only ${String(actual)} were reachable`);
   }
   for (const [id, tier] of Object.entries(desired.tiers)) {
     const actual = build.tiers[id] ?? 0;
-    if (actual < tier) issues.push(`${id} requires tier ${String(tier)}, but only tier ${String(actual)} was reachable`);
+    if (actual < tier)
+      issues.push(`${id} requires tier ${String(tier)}, but only tier ${String(actual)} was reachable`);
   }
-  if (desired.accepted.length > 0 && Object.values(desired.counts).reduce((sum, count) => sum + count, 0) > 0
-    && Object.keys(build.owned).length === 0) {
+  if (
+    desired.accepted.length > 0 &&
+    Object.values(desired.counts).reduce((sum, count) => sum + count, 0) > 0 &&
+    Object.keys(build.owned).length === 0
+  ) {
     issues.push("the target has no earned draft opportunities");
   }
   return Object.freeze(issues);
 }
 
 function configurationHash(events: readonly TearProgressionEvent[]): string {
-  return stableVerificationHash(events.filter((event) =>
-    event.type === "configuration.reset"
-    || event.type === "run.setup"
-    || event.type === "weapon.selected"
-    || event.type === "meta.applied"
-    || event.type === "configuration.mutated"));
+  return stableVerificationHash(
+    events.filter(
+      (event) =>
+        event.type === "configuration.reset" ||
+        event.type === "run.setup" ||
+        event.type === "weapon.selected" ||
+        event.type === "meta.applied" ||
+        event.type === "configuration.mutated",
+    ),
+  );
 }
 
 function progressionStatistics(
@@ -328,7 +368,10 @@ function progressionStatistics(
   build: Readonly<Record<string, number>>,
 ): TearSynthesizedProgression["statistics"] {
   const bossCount = ledger.events.filter((event) => event.type === "boss.defeated").length;
-  const currency = ledger.events.reduce((sum, event) => sum + (event.type === "reward.granted" ? event.currency : 0), 0);
+  const currency = ledger.events.reduce(
+    (sum, event) => sum + (event.type === "reward.granted" ? event.currency : 0),
+    0,
+  );
   const vitality = build.vitality ?? 0;
   const maxHp = 100 + vitality * 30;
   const difficultyPace = request.difficulty === "extreme" ? 1.3 : request.difficulty === "hard" ? 1.15 : 1;
@@ -337,9 +380,14 @@ function progressionStatistics(
   const kills = request.targetWave * 6 + bossCount;
   const style = Math.min(5, 1 + Math.floor((build.offense ?? 0) / 2) + Math.floor(request.targetWave / 25));
   const score = Math.round(kills * 125 * style + bossCount * 5_000);
-  const healthRatio = request.policy === "low-roll" ? 0.35
-    : request.policy === "anti-synergy" ? 0.5
-      : request.policy === "human-population" ? 0.68 : 1;
+  const healthRatio =
+    request.policy === "low-roll"
+      ? 0.35
+      : request.policy === "anti-synergy"
+        ? 0.5
+        : request.policy === "human-population"
+          ? 0.68
+          : 1;
   return Object.freeze({
     hp: Math.max(1, Math.round(maxHp * healthRatio)),
     maxHp,
@@ -390,13 +438,22 @@ export function synthesizeProgression(request: TearProgressionRequest): TearSynt
       const slot = tierOpportunities;
       tierOpportunities += 1;
       builder.add({ type: "tier.earned", wave, slot });
-      builder.add({ type: "tier.offered", wave, slot, ids: Object.freeze(tiers.slice(0, 4).map((upgrade) => upgrade.id)) });
+      builder.add({
+        type: "tier.offered",
+        wave,
+        slot,
+        ids: Object.freeze(tiers.slice(0, 4).map((upgrade) => upgrade.id)),
+      });
       const tier = (build.tiers[tierChoice.id] ?? 1) + 1;
       build.tiers[tierChoice.id] = tier;
       builder.add({ type: "tier.selected", wave, id: tierChoice.id, tier });
       builder.add({
-        type: "configuration.mutated", wave, source: "tier", id: tierChoice.id,
-        occurrence: build.owned[tierChoice.id] ?? 1, tier,
+        type: "configuration.mutated",
+        wave,
+        source: "tier",
+        id: tierChoice.id,
+        occurrence: build.owned[tierChoice.id] ?? 1,
+        tier,
       });
     } else {
       const candidates = draftCandidates(request, build, desired, wave);
@@ -405,12 +462,21 @@ export function synthesizeProgression(request: TearProgressionRequest): TearSynt
       const slot = draftOpportunities;
       draftOpportunities += 1;
       builder.add({ type: "draft.earned", wave, slot });
-      builder.add({ type: "draft.offered", wave, slot, ids: Object.freeze(candidates.slice(0, 3).map((upgrade) => upgrade.id)) });
+      builder.add({
+        type: "draft.offered",
+        wave,
+        slot,
+        ids: Object.freeze(candidates.slice(0, 3).map((upgrade) => upgrade.id)),
+      });
       const occurrence = applyDraft(build, choice);
       builder.add({ type: "draft.selected", wave, id: choice.id, tier: build.tiers[choice.id] ?? 1 });
       builder.add({
-        type: "configuration.mutated", wave, source: "draft", id: choice.id,
-        occurrence, tier: build.tiers[choice.id] ?? 1,
+        type: "configuration.mutated",
+        wave,
+        source: "draft",
+        id: choice.id,
+        occurrence,
+        tier: build.tiers[choice.id] ?? 1,
       });
     }
     builder.add({ type: "reward.granted", wave, currency: rewardCurrency(wave, economy) });
@@ -432,10 +498,12 @@ export function synthesizeProgression(request: TearProgressionRequest): TearSynt
     build: immutableBuild,
     statistics: progressionStatistics(request, ledger, immutableBuild),
     configurationHash: configurationHash(ledger.events),
-    ...(issues.length === 0 ? {} : {
-      explanation: issues.join("; "),
-      nearestReachable,
-    }),
+    ...(issues.length === 0
+      ? {}
+      : {
+          explanation: issues.join("; "),
+          nearestReachable,
+        }),
   });
 }
 
@@ -457,7 +525,10 @@ export function reconstructProgression(
   }
   const build: ProgressionMutableBuild = { owned: {}, tiers: {}, ownedOrder: [] };
   let pendingMutation: Readonly<{
-    source: "draft" | "tier"; id: string; occurrence: number; tier: number;
+    source: "draft" | "tier";
+    id: string;
+    occurrence: number;
+    tier: number;
   }> | null = null;
   for (const event of ledger.events) {
     if (pendingMutation !== null && event.type !== "configuration.mutated") {
@@ -466,36 +537,50 @@ export function reconstructProgression(
     if (event.type === "draft.selected") {
       const upgrade = PRODUCTION_UPGRADE_BY_ID.get(event.id);
       if (upgrade === undefined) throw new TypeError(`ledger selects unknown production upgrade ${event.id}`);
-      if (upgrade.unique && (build.owned[event.id] ?? 0) > 0) throw new TypeError(`ledger selects unique upgrade ${event.id} twice`);
+      if (upgrade.unique && (build.owned[event.id] ?? 0) > 0)
+        throw new TypeError(`ledger selects unique upgrade ${event.id} twice`);
       const occurrence = applyDraft(build, upgrade);
       pendingMutation = Object.freeze({
-        source: "draft", id: event.id, occurrence, tier: build.tiers[event.id] ?? 1,
+        source: "draft",
+        id: event.id,
+        occurrence,
+        tier: build.tiers[event.id] ?? 1,
       });
     } else if (event.type === "tier.selected") {
       const upgrade = PRODUCTION_UPGRADE_BY_ID.get(event.id);
       const current = build.tiers[event.id] ?? 0;
-      if (upgrade?.tiers === undefined || current < 1
-        || event.tier !== current + 1 || event.tier > maximumUpgradeTier(upgrade)) {
+      if (
+        upgrade?.tiers === undefined ||
+        current < 1 ||
+        event.tier !== current + 1 ||
+        event.tier > maximumUpgradeTier(upgrade)
+      ) {
         throw new TypeError(`ledger contains illegal tier transition for ${event.id}`);
       }
       build.tiers[event.id] = event.tier;
       pendingMutation = Object.freeze({
-        source: "tier", id: event.id, occurrence: build.owned[event.id] ?? 1, tier: event.tier,
+        source: "tier",
+        id: event.id,
+        occurrence: build.owned[event.id] ?? 1,
+        tier: event.tier,
       });
     } else if (event.type === "configuration.mutated") {
       if (pendingMutation === null) {
         throw new TypeError(`ledger contains an out-of-order configuration mutation for ${event.id}`);
       }
-      if (event.source !== pendingMutation.source
-        || event.id !== pendingMutation.id
-        || event.occurrence !== pendingMutation.occurrence
-        || event.tier !== pendingMutation.tier) {
+      if (
+        event.source !== pendingMutation.source ||
+        event.id !== pendingMutation.id ||
+        event.occurrence !== pendingMutation.occurrence ||
+        event.tier !== pendingMutation.tier
+      ) {
         throw new TypeError(`ledger contains an out-of-order configuration mutation for ${event.id}`);
       }
       pendingMutation = null;
     }
   }
-  if (pendingMutation !== null) throw new TypeError(`ledger omits the ordered configuration mutation for ${pendingMutation.id}`);
+  if (pendingMutation !== null)
+    throw new TypeError(`ledger omits the ordered configuration mutation for ${pendingMutation.id}`);
   const earnedDrafts = ledger.events.filter((event) => event.type === "draft.earned").length;
   const earnedTiers = ledger.events.filter((event) => event.type === "tier.earned").length;
   if (earnedDrafts !== ledger.draftOpportunities || earnedTiers !== ledger.tierOpportunities) {

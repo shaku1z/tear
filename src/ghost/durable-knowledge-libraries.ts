@@ -31,41 +31,67 @@ type StoredGhostLibraryEntry = Readonly<{
 
 function record(value: unknown): Readonly<Record<string, unknown>> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value as Readonly<Record<string, unknown>> : undefined;
+    ? (value as Readonly<Record<string, unknown>>)
+    : undefined;
 }
 
 function stringRecord(value: unknown): Readonly<Record<string, string>> | undefined {
   const candidate = record(value);
-  if (candidate === undefined || !Object.values(candidate).every((entry) => typeof entry === "string")) return undefined;
+  if (candidate === undefined || !Object.values(candidate).every((entry) => typeof entry === "string"))
+    return undefined;
   return Object.freeze(Object.fromEntries(Object.entries(candidate).map(([key, entry]) => [key, entry as string])));
 }
 
 function libraryKind(value: unknown): GhostLibraryKind | undefined {
-  return libraryKinds.includes(value as GhostLibraryKind) ? value as GhostLibraryKind : undefined;
+  return libraryKinds.includes(value as GhostLibraryKind) ? (value as GhostLibraryKind) : undefined;
 }
 
 function baseEntry(value: unknown): GhostLibraryEntry | undefined {
   const candidate = record(value);
   const library = candidate === undefined ? undefined : libraryKind(candidate.library);
   const provenance = candidate === undefined ? undefined : stringRecord(candidate.provenance);
-  if (candidate === undefined || library === undefined || provenance === undefined
-    || typeof candidate.id !== "string" || candidate.id.length === 0
-    || typeof candidate.ghostId !== "string" || candidate.ghostId.length === 0
-    || typeof candidate.rootHash !== "string" || candidate.rootHash.length === 0
-    || typeof candidate.createdAt !== "string" || candidate.createdAt.length === 0) return undefined;
-  return Object.freeze({ id: candidate.id, library, ghostId: candidate.ghostId,
-    rootHash: candidate.rootHash, createdAt: candidate.createdAt, provenance });
+  if (
+    candidate === undefined ||
+    library === undefined ||
+    provenance === undefined ||
+    typeof candidate.id !== "string" ||
+    candidate.id.length === 0 ||
+    typeof candidate.ghostId !== "string" ||
+    candidate.ghostId.length === 0 ||
+    typeof candidate.rootHash !== "string" ||
+    candidate.rootHash.length === 0 ||
+    typeof candidate.createdAt !== "string" ||
+    candidate.createdAt.length === 0
+  )
+    return undefined;
+  return Object.freeze({
+    id: candidate.id,
+    library,
+    ghostId: candidate.ghostId,
+    rootHash: candidate.rootHash,
+    createdAt: candidate.createdAt,
+    provenance,
+  });
 }
 
 function corpusEntry(value: GhostLibraryEntry, source: unknown): GhostCorpusEntry | undefined {
   const candidate = record(source);
-  if (value.library !== "corpus" || candidate === undefined
-    || !["private-personalization-only", "anonymous-improvement", "public-training"].includes(String(candidate.consent))
-    || !["train", "validation", "test", "hidden-holdout"].includes(String(candidate.split))
-    || typeof candidate.deduplicationHash !== "string" || candidate.deduplicationHash.length === 0) return undefined;
-  return Object.freeze({ ...value, library: "corpus" as const,
+  if (
+    value.library !== "corpus" ||
+    candidate === undefined ||
+    !["private-personalization-only", "anonymous-improvement", "public-training"].includes(String(candidate.consent)) ||
+    !["train", "validation", "test", "hidden-holdout"].includes(String(candidate.split)) ||
+    typeof candidate.deduplicationHash !== "string" ||
+    candidate.deduplicationHash.length === 0
+  )
+    return undefined;
+  return Object.freeze({
+    ...value,
+    library: "corpus" as const,
     consent: candidate.consent as GhostCorpusEntry["consent"],
-    split: candidate.split as GhostCorpusEntry["split"], deduplicationHash: candidate.deduplicationHash });
+    split: candidate.split as GhostCorpusEntry["split"],
+    deduplicationHash: candidate.deduplicationHash,
+  });
 }
 
 function parseStoredEntry(value: string): GhostLibraryEntry | GhostCorpusEntry {
@@ -96,9 +122,11 @@ function freezeInventory(
   entries: readonly (GhostLibraryEntry | GhostCorpusEntry)[],
   rejectedEntryKeys: readonly string[],
 ): GhostVaultKnowledgeLibraryInventory {
-  return Object.freeze({ schemaVersion: 1 as const,
+  return Object.freeze({
+    schemaVersion: 1 as const,
     entries: Object.freeze([...entries].sort((left, right) => left.id.localeCompare(right.id))),
-    rejectedEntryKeys: Object.freeze([...rejectedEntryKeys].sort()) });
+    rejectedEntryKeys: Object.freeze([...rejectedEntryKeys].sort()),
+  });
 }
 
 /**
@@ -108,7 +136,9 @@ function freezeInventory(
 export class GhostVaultKnowledgeLibraries {
   readonly #backend: GhostVaultBackend;
 
-  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+  constructor(backend: GhostVaultBackend) {
+    this.#backend = backend;
+  }
 
   async inventory(): Promise<GhostVaultKnowledgeLibraryInventory> {
     const entries: (GhostLibraryEntry | GhostCorpusEntry)[] = [];
@@ -116,16 +146,23 @@ export class GhostVaultKnowledgeLibraries {
     for (const key of await this.#backend.keys("libraries")) {
       const value = await this.#backend.get("libraries", key);
       if (value === undefined) continue;
-      try { entries.push(parseStoredEntry(value)); }
-      catch { rejectedEntryKeys.push(key); }
+      try {
+        entries.push(parseStoredEntry(value));
+      } catch {
+        rejectedEntryKeys.push(key);
+      }
     }
     return freezeInventory(entries, rejectedEntryKeys);
   }
 
   async list(kind: GhostLibraryKind, includeHiddenHoldout = false): Promise<readonly GhostLibraryEntry[]> {
     const inventory = await this.inventory();
-    return Object.freeze(inventory.entries.filter((entry) => entry.library === kind
-      && (includeHiddenHoldout || !isCorpusEntry(entry) || entry.split !== "hidden-holdout")));
+    return Object.freeze(
+      inventory.entries.filter(
+        (entry) =>
+          entry.library === kind && (includeHiddenHoldout || !isCorpusEntry(entry) || entry.split !== "hidden-holdout"),
+      ),
+    );
   }
 
   async recordCorruptCapsule(
@@ -139,21 +176,54 @@ export class GhostVaultKnowledgeLibraries {
   }
 
   /** Validate and prepare one record without writing; callers may join its exact guard to source custody. */
-  async prepareCorruptCapsuleRecord(manifest: TearGhostManifest, report: GhostDoctorReport, discoveredAt: string): Promise<Readonly<{
-    entry: GhostLibraryEntry; guard: GhostVaultGuard; write?: GhostVaultWrite;
-  }>> {
+  async prepareCorruptCapsuleRecord(
+    manifest: TearGhostManifest,
+    report: GhostDoctorReport,
+    discoveredAt: string,
+  ): Promise<
+    Readonly<{
+      entry: GhostLibraryEntry;
+      guard: GhostVaultGuard;
+      write?: GhostVaultWrite;
+    }>
+  > {
     if (report.healthy) throw new TypeError("only an unhealthy capsule belongs in the Ghost Graveyard");
     const entry: GhostLibraryEntry = Object.freeze({
-      id: `graveyard:${manifest.id}`, library: "graveyard", ghostId: manifest.id,
-      rootHash: manifest.rootIntegrity, createdAt: discoveredAt,
-      provenance: Object.freeze({ source: "ghost-doctor", corruptChunks: String(report.corruptChunkIds.length),
-        missingChunks: String(report.missingChunkIds.length) }),
+      id: `graveyard:${manifest.id}`,
+      library: "graveyard",
+      ghostId: manifest.id,
+      rootHash: manifest.rootIntegrity,
+      createdAt: discoveredAt,
+      provenance: Object.freeze({
+        source: "ghost-doctor",
+        corruptChunks: String(report.corruptChunkIds.length),
+        missingChunks: String(report.missingChunkIds.length),
+      }),
     });
-    const key = entryKey(entry), existing = await this.#backend.get("libraries", key);
-    if (existing === undefined) return Object.freeze({ entry, guard: Object.freeze({ store: "libraries", key }),
-      write: Object.freeze({ store: "libraries", key, value: JSON.stringify({ format: GHOST_LIBRARY_ENTRY_FORMAT, schemaVersion: GHOST_LIBRARY_ENTRY_SCHEMA_VERSION, entry } satisfies StoredGhostLibraryEntry) }) });
+    const key = entryKey(entry),
+      existing = await this.#backend.get("libraries", key);
+    if (existing === undefined)
+      return Object.freeze({
+        entry,
+        guard: Object.freeze({ store: "libraries", key }),
+        write: Object.freeze({
+          store: "libraries",
+          key,
+          value: JSON.stringify({
+            format: GHOST_LIBRARY_ENTRY_FORMAT,
+            schemaVersion: GHOST_LIBRARY_ENTRY_SCHEMA_VERSION,
+            entry,
+          } satisfies StoredGhostLibraryEntry),
+        }),
+      });
     const parsed = parseStoredEntry(existing);
-    if (parsed.library !== entry.library || parsed.ghostId !== entry.ghostId || parsed.rootHash !== entry.rootHash || parsed.id !== entry.id) throw new TypeError(`Ghost library entry conflicts with custody record: ${entry.id}`);
+    if (
+      parsed.library !== entry.library ||
+      parsed.ghostId !== entry.ghostId ||
+      parsed.rootHash !== entry.rootHash ||
+      parsed.id !== entry.id
+    )
+      throw new TypeError(`Ghost library entry conflicts with custody record: ${entry.id}`);
     return Object.freeze({ entry: parsed, guard: Object.freeze({ store: "libraries", key, expected: existing }) });
   }
 
@@ -165,21 +235,27 @@ export class GhostVaultKnowledgeLibraries {
     return this.#insert(promoteReviewedGhostToCanon(canon, ghost, review));
   }
 
-  async triageToFrontier(ghost: GhostEnvelopeV3, noveltyScore: number, at: string): Promise<GhostLibraryEntry | undefined> {
+  async triageToFrontier(
+    ghost: GhostEnvelopeV3,
+    noveltyScore: number,
+    at: string,
+  ): Promise<GhostLibraryEntry | undefined> {
     const frontier = new GovernedGhostLibrary("frontier");
     const entry = triageRareGhostToFrontier(frontier, ghost, noveltyScore, at);
     return entry === undefined ? undefined : this.#insert(entry);
   }
 
-  async ingestCorpus(input: Readonly<{
-    ghost: GhostEnvelopeV3;
-    consent: GhostCorpusEntry["consent"];
-    split: GhostCorpusEntry["split"];
-    createdAt: string;
-    producer: string;
-  }>): Promise<GhostCorpusEntry> {
+  async ingestCorpus(
+    input: Readonly<{
+      ghost: GhostEnvelopeV3;
+      consent: GhostCorpusEntry["consent"];
+      split: GhostCorpusEntry["split"];
+      createdAt: string;
+      producer: string;
+    }>,
+  ): Promise<GhostCorpusEntry> {
     const draft = new GhostCorpus().ingest(input);
-    const existing = await this.list("corpus", true) as readonly GhostCorpusEntry[];
+    const existing = (await this.list("corpus", true)) as readonly GhostCorpusEntry[];
     if (existing.some((entry) => entry.deduplicationHash === draft.deduplicationHash)) {
       throw new TypeError("Corpus duplicate is already assigned");
     }
@@ -188,11 +264,17 @@ export class GhostVaultKnowledgeLibraries {
 
   async #insert(entry: GhostLibraryEntry | GhostCorpusEntry): Promise<GhostLibraryEntry | GhostCorpusEntry> {
     const key = entryKey(entry);
-    if (await this.#backend.get("libraries", key) !== undefined) throw new TypeError(`Ghost library entry already exists: ${entry.id}`);
-    await this.#backend.put("libraries", key, JSON.stringify({
-      format: GHOST_LIBRARY_ENTRY_FORMAT, schemaVersion: GHOST_LIBRARY_ENTRY_SCHEMA_VERSION, entry,
-    } satisfies StoredGhostLibraryEntry));
+    if ((await this.#backend.get("libraries", key)) !== undefined)
+      throw new TypeError(`Ghost library entry already exists: ${entry.id}`);
+    await this.#backend.put(
+      "libraries",
+      key,
+      JSON.stringify({
+        format: GHOST_LIBRARY_ENTRY_FORMAT,
+        schemaVersion: GHOST_LIBRARY_ENTRY_SCHEMA_VERSION,
+        entry,
+      } satisfies StoredGhostLibraryEntry),
+    );
     return Object.freeze(structuredClone(entry));
   }
-
 }

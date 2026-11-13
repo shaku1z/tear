@@ -1,9 +1,16 @@
 import { SeededRandom, type RandomSnapshot, type RandomSource } from "../domain/random";
 
 export const RUN_RANDOM_STREAM_NAMES = Object.freeze([
-  "legacy", "combat", "enemy-ai", "spawn", "draft", "boss", "world", "cosmetic",
+  "legacy",
+  "combat",
+  "enemy-ai",
+  "spawn",
+  "draft",
+  "boss",
+  "world",
+  "cosmetic",
 ] as const);
-export type RunRandomStreamName = typeof RUN_RANDOM_STREAM_NAMES[number];
+export type RunRandomStreamName = (typeof RUN_RANDOM_STREAM_NAMES)[number];
 export type RunRandomStreamsSnapshot = Readonly<Record<RunRandomStreamName, RandomSnapshot>>;
 
 /**
@@ -31,9 +38,12 @@ export class RunRandomStreams {
   }
 
   snapshot(): RunRandomStreamsSnapshot {
-    return Object.freeze(Object.fromEntries(
-      RUN_RANDOM_STREAM_NAMES.map((name) => [name, this.#streams[name].snapshot()]),
-    ) as Record<RunRandomStreamName, RandomSnapshot>);
+    return Object.freeze(
+      Object.fromEntries(RUN_RANDOM_STREAM_NAMES.map((name) => [name, this.#streams[name].snapshot()])) as Record<
+        RunRandomStreamName,
+        RandomSnapshot
+      >,
+    );
   }
 
   restore(snapshot: RunRandomStreamsSnapshot): void {

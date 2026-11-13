@@ -14,9 +14,15 @@ describe("browser platform fallback", () => {
 
   it("continues in memory when browser storage throws", async () => {
     const broken: SyncStringStorage = {
-      getItem() { throw new Error("blocked"); },
-      setItem() { throw new Error("quota"); },
-      removeItem() { throw new Error("blocked"); },
+      getItem() {
+        throw new Error("blocked");
+      },
+      setItem() {
+        throw new Error("quota");
+      },
+      removeItem() {
+        throw new Error("blocked");
+      },
     };
     const platform = createBrowserPlatformServices({ storage: broken, window: {} });
     await platform.profileStorage.set("save", "safe");

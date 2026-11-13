@@ -34,9 +34,29 @@ function createEnemyTypes(dependencies: EnemyDependencies) {
   const WhiteHart = createWhiteHartType(dependencies, Enemy);
 
   return Object.freeze({
-    Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo, Enemy,
-    Flyer, Ranged, Rimehound, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, WhiteHart, Wraith,
-    drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
+    Aldric,
+    Armored,
+    BOSSFX,
+    Bomber,
+    Boss,
+    Charger,
+    Chimera,
+    Colossus,
+    Echo,
+    Enemy,
+    Flyer,
+    Ranged,
+    Rimehound,
+    Rootbinder,
+    Rootbound,
+    Source,
+    Support,
+    VoidWisp,
+    Warden,
+    WhiteHart,
+    Wraith,
+    drawBossTransformationWorld,
+    weaponCapsuleIntersectsSegment,
   });
 }
 

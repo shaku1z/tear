@@ -22,9 +22,15 @@ describe("Rootbound Graft Anchor definitions", () => {
   it("defines the exact bounded Phase II roster without creating another environment kind", () => {
     expect(GRAFT_ANCHOR_TYPES).toEqual(["bastion", "mercy", "haste"]);
     expect(GRAFT_ANCHOR_DEFINITIONS.map((definition) => definition.graftType)).toEqual(GRAFT_ANCHOR_TYPES);
-    expect(GRAFT_ANCHOR_DEFINITIONS).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: "graft-anchor", factoryId: "graft-anchor", procPolicyId: "boss-combat-object" }),
-    ]));
+    expect(GRAFT_ANCHOR_DEFINITIONS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "graft-anchor",
+          factoryId: "graft-anchor",
+          procPolicyId: "boss-combat-object",
+        }),
+      ]),
+    );
     expect(MAX_ACTIVE_GRAFT_ANCHORS).toBe(3);
   });
 
@@ -96,7 +102,10 @@ describe("Rootbound Graft Anchor definitions", () => {
       procPolicyId: "boss-combat-object",
       procEligible: false,
     });
-    expect(state.connectionGeometry.points).toEqual([{ x: 800, y: 520 }, { x: 307, y: 655 }]);
+    expect(state.connectionGeometry.points).toEqual([
+      { x: 800, y: 520 },
+      { x: 307, y: 655 },
+    ]);
     expect(Object.isFrozen(state)).toBe(true);
     expect(Object.isFrozen(state.geometry)).toBe(true);
     expect(Object.isFrozen(state.connectionGeometry.points)).toBe(true);
@@ -104,7 +113,10 @@ describe("Rootbound Graft Anchor definitions", () => {
 
   it("composes the surgical Rootbound fixture through the existing combat-object factory", () => {
     const base: TearSdlDocumentV1 = {
-      format: "tearsdl", schemaVersion: 1, id: "rootbound-graft-anchor-destruction", stateClass: "surgical-valid",
+      format: "tearsdl",
+      schemaVersion: 1,
+      id: "rootbound-graft-anchor-destruction",
+      stateClass: "surgical-valid",
       seed: "rootbound-graft-anchor-destruction",
       start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
     };
@@ -112,20 +124,34 @@ describe("Rootbound Graft Anchor definitions", () => {
     expect(forged.id).toBe("rootbound-graft-anchor-destruction-graft-mercy");
     expect(forged.start).toEqual(base.start);
     expect(forged.state?.environment).toMatchObject({
-      fields: [], routes: [],
-      combatObjects: [expect.objectContaining({
-        id: "enemy:1:graft:mercy", factoryId: "graft-anchor", kind: "graft-anchor",
-        ownerId: "enemy:1", targetId: "enemy:1", graftType: "mercy", state: "active",
-      })],
+      fields: [],
+      routes: [],
+      combatObjects: [
+        expect.objectContaining({
+          id: "enemy:1:graft:mercy",
+          factoryId: "graft-anchor",
+          kind: "graft-anchor",
+          ownerId: "enemy:1",
+          targetId: "enemy:1",
+          graftType: "mercy",
+          state: "active",
+        }),
+      ],
     });
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"]).toMatchObject({
-      category: "combat-object", behavior: "generic-combat-object",
+      category: "combat-object",
+      behavior: "generic-combat-object",
     });
   });
 
   it("installs through the production environment owner with stable idempotent ownership", () => {
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "graft-production" });
-    const base = { ownerId: "enemy:rootbound", ownerPosition: { x: 800, y: 520 }, geometry: { x: 280, y: 610, w: 54, h: 90 }, createdTick: 240 } as const;
+    const base = {
+      ownerId: "enemy:rootbound",
+      ownerPosition: { x: 800, y: 520 },
+      geometry: { x: 280, y: 610, w: 54, h: 90 },
+      createdTick: 240,
+    } as const;
     const first = installGraftAnchor(environment, { ...base, graftType: "bastion" });
     const repeated = installGraftAnchor(environment, { ...base, graftType: "bastion", createdTick: 241 });
     installGraftAnchor(environment, { ...base, graftType: "mercy", geometry: { ...base.geometry, x: 773 } });
@@ -133,7 +159,9 @@ describe("Rootbound Graft Anchor definitions", () => {
     expect(repeated).toBe(first);
     expect(environment.combatObjects()).toHaveLength(MAX_ACTIVE_GRAFT_ANCHORS);
     expect(environment.combatObjects().map((object) => object.ownerId)).toEqual([
-      "enemy:rootbound", "enemy:rootbound", "enemy:rootbound",
+      "enemy:rootbound",
+      "enemy:rootbound",
+      "enemy:rootbound",
     ]);
     expect(environment.combatObjects().every((object) => object.factoryId === "graft-anchor")).toBe(true);
   });
@@ -148,7 +176,9 @@ describe("Rootbound Graft Anchor definitions", () => {
       createdTick: 240,
     } as const;
     const installed = installGraftAnchor(environment, input);
-    expect(environment.damageCombatObject(installed.id, installed.integrity, "player-destroyed-mercy", 360).destroyed).toBe(true);
+    expect(
+      environment.damageCombatObject(installed.id, installed.integrity, "player-destroyed-mercy", 360).destroyed,
+    ).toBe(true);
 
     const repeated = installGraftAnchor(environment, { ...input, createdTick: 361 });
 
@@ -157,23 +187,68 @@ describe("Rootbound Graft Anchor definitions", () => {
   });
 
   it("accepts the specialized source-owned factory in the existing codec and rejects invalid inputs", () => {
-    const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 1 });
-    expect(validateEnvironmentCodecPayload({ slowZones: [], walls: [], fields: [], combatObjects: [state], routes: [] })).toEqual([]);
-    expect(() => createGraftAnchorState({ ownerId: "", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 1 })).toThrow(/owner ID/u);
-    expect(() => createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20 }, createdTick: 1 })).toThrow(/geometry/u);
-    expect(() => createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "haste", geometry: { x: 10, y: 20, radius: 12 }, createdTick: -1 })).toThrow(/tick/u);
+    const state = createGraftAnchorState({
+      ownerId: "enemy:rootbound",
+      ownerPosition: { x: 0, y: 0 },
+      graftType: "haste",
+      geometry: { x: 10, y: 20, radius: 12 },
+      createdTick: 1,
+    });
+    expect(
+      validateEnvironmentCodecPayload({ slowZones: [], walls: [], fields: [], combatObjects: [state], routes: [] }),
+    ).toEqual([]);
+    expect(() =>
+      createGraftAnchorState({
+        ownerId: "",
+        ownerPosition: { x: 0, y: 0 },
+        graftType: "haste",
+        geometry: { x: 10, y: 20, radius: 12 },
+        createdTick: 1,
+      }),
+    ).toThrow(/owner ID/u);
+    expect(() =>
+      createGraftAnchorState({
+        ownerId: "enemy:rootbound",
+        ownerPosition: { x: 0, y: 0 },
+        graftType: "haste",
+        geometry: { x: 10, y: 20 },
+        createdTick: 1,
+      }),
+    ).toThrow(/geometry/u);
+    expect(() =>
+      createGraftAnchorState({
+        ownerId: "enemy:rootbound",
+        ownerPosition: { x: 0, y: 0 },
+        graftType: "haste",
+        geometry: { x: 10, y: 20, radius: 12 },
+        createdTick: -1,
+      }),
+    ).toThrow(/tick/u);
   });
 
   it("advances from visible warning to active on an absolute tick", () => {
-    const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "bastion", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 10 });
+    const state = createGraftAnchorState({
+      ownerId: "enemy:rootbound",
+      ownerPosition: { x: 0, y: 0 },
+      graftType: "bastion",
+      geometry: { x: 10, y: 20, radius: 12 },
+      createdTick: 10,
+    });
     expect(advanceGraftAnchor(state, 10 + GRAFT_ANCHOR_TIMING.warningTicks - 1).state).toBe("warning");
     expect(advanceGraftAnchor(state, 10 + GRAFT_ANCHOR_TIMING.warningTicks)).toMatchObject({
-      state: "active", stateTick: 10 + GRAFT_ANCHOR_TIMING.warningTicks,
+      state: "active",
+      stateTick: 10 + GRAFT_ANCHOR_TIMING.warningTicks,
     });
   });
 
   it("caps Mercy recovery at the exact definition budget even across a large tick jump", () => {
-    const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "mercy", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 0 });
+    const state = createGraftAnchorState({
+      ownerId: "enemy:rootbound",
+      ownerPosition: { x: 0, y: 0 },
+      graftType: "mercy",
+      geometry: { x: 10, y: 20, radius: 12 },
+      createdTick: 0,
+    });
     const mercy = graftAnchorDefinition("mercy");
     if (mercy.effect !== "bounded-pulse-recovery") throw new TypeError("expected Mercy definition");
     const after = advanceGraftAnchor(state, GRAFT_ANCHOR_TIMING.warningTicks + 120 * 30, (fraction) => fraction);
@@ -182,15 +257,26 @@ describe("Rootbound Graft Anchor definitions", () => {
   });
 
   it("carries Graft effect and spent-budget truth through hash and structured observation", () => {
-    const state = createGraftAnchorState({ ownerId: "enemy:rootbound", ownerPosition: { x: 0, y: 0 }, graftType: "mercy", geometry: { x: 10, y: 20, radius: 12 }, createdTick: 0 });
+    const state = createGraftAnchorState({
+      ownerId: "enemy:rootbound",
+      ownerPosition: { x: 0, y: 0 },
+      graftType: "mercy",
+      geometry: { x: 10, y: 20, radius: 12 },
+      createdTick: 0,
+    });
     const snapshot = { stageId: "verdant-sanctum", fields: [], combatObjects: [state], routes: [] } as const;
     const spent = { ...snapshot, combatObjects: [{ ...state, recoverySpentHealthFraction: 0.015 }] } as const;
     expect(environmentHash(spent)).not.toBe(environmentHash(snapshot));
     expect(environmentSnapshotToObservation(spent).combatObjects[0]).toMatchObject({
-      graftType: "mercy", effect: "bounded-pulse-recovery", recoverySpentHealthFraction: 0.015,
+      graftType: "mercy",
+      effect: "bounded-pulse-recovery",
+      recoverySpentHealthFraction: 0.015,
     });
     expect(validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...spent })).toEqual([]);
-    const invalid = validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...snapshot,
+    const invalid = validateEnvironmentCodecPayload({
+      slowZones: [],
+      walls: [],
+      ...snapshot,
       combatObjects: [{ ...state, pulseHealthFraction: 0.5 }],
     });
     expect(invalid.some((entry) => entry.path.endsWith(".pulseHealthFraction"))).toBe(true);

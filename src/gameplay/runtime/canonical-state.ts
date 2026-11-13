@@ -13,11 +13,18 @@ export interface RuntimeRunState {
 }
 
 export interface RuntimeBodyState {
-  readonly x: number; readonly y: number; readonly vx: number; readonly vy: number;
+  readonly x: number;
+  readonly y: number;
+  readonly vx: number;
+  readonly vy: number;
 }
 
-export interface RuntimePlayerState extends RuntimeBodyState { readonly hp: number }
-export interface RuntimeBladeState extends RuntimeBodyState { readonly state: string }
+export interface RuntimePlayerState extends RuntimeBodyState {
+  readonly hp: number;
+}
+export interface RuntimeBladeState extends RuntimeBodyState {
+  readonly state: string;
+}
 export interface RuntimeEnemyState extends RuntimeBodyState {
   readonly _gid?: number;
   readonly kind?: string;
@@ -52,7 +59,7 @@ export interface RuntimeEnemyState extends RuntimeBodyState {
   readonly auroraBossChargeActive?: boolean;
   readonly parryOutcome?: string;
   readonly routeTelegraph?: readonly Readonly<{ x: number; y: number }>[];
-  readonly candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[] )[];
+  readonly candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[])[];
 }
 
 export interface CanonicalRimehoundState {
@@ -71,11 +78,22 @@ export interface CanonicalRimehoundState {
 }
 
 export interface CanonicalWhiteHartState {
-  readonly state: string; readonly atk: string; readonly stateT: number; readonly stateMax: number;
-  readonly phaseMarker: number; readonly attackCursor: number; readonly attackStep: number;
-  readonly attackSequence: number; readonly environmentSequence: number; readonly routeProgress: number;
-  readonly trueRouteIndex: number; readonly fracturePlatformId: string | null; readonly fractureWindow: boolean;
-  readonly batonStrike: number; readonly auroraBossChargeActive: boolean; readonly parryOutcome: string;
+  readonly state: string;
+  readonly atk: string;
+  readonly stateT: number;
+  readonly stateMax: number;
+  readonly phaseMarker: number;
+  readonly attackCursor: number;
+  readonly attackStep: number;
+  readonly attackSequence: number;
+  readonly environmentSequence: number;
+  readonly routeProgress: number;
+  readonly trueRouteIndex: number;
+  readonly fracturePlatformId: string | null;
+  readonly fractureWindow: boolean;
+  readonly batonStrike: number;
+  readonly auroraBossChargeActive: boolean;
+  readonly parryOutcome: string;
   readonly routeTelegraph: readonly Readonly<{ x: number; y: number }>[];
   readonly candidateRoutes: readonly (readonly Readonly<{ x: number; y: number }>[])[];
 }
@@ -89,7 +107,15 @@ export interface CanonicalGameplayState {
   readonly player: Readonly<{ x: number; y: number; vx: number; vy: number; hp: number }> | null;
   readonly blade: Readonly<{ state: string; x: number; y: number; vx: number; vy: number }> | null;
   readonly enemies: readonly Readonly<{
-    id: number; kind: string; bossId: string; x: number; y: number; vx: number; vy: number; hp: number; dead: boolean;
+    id: number;
+    kind: string;
+    bossId: string;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    hp: number;
+    dead: boolean;
     rimehound?: Readonly<CanonicalRimehoundState>;
     whiteHart?: Readonly<CanonicalWhiteHartState>;
   }>[];
@@ -113,46 +139,117 @@ export function projectCanonicalGameplayState(
   return Object.freeze({
     tick,
     input,
-    run: run === null ? null : Object.freeze({
-      mode: run.mode, wave: run.wave, score: run.score, time: fixed(run.runTime), seed: run.runSeed,
-    }),
-    player: player === null ? null : Object.freeze({
-      x: fixed(player.x), y: fixed(player.y), vx: fixed(player.vx), vy: fixed(player.vy), hp: fixed(player.hp),
-    }),
-    blade: blade === null ? null : Object.freeze({
-      state: blade.state, x: fixed(blade.x), y: fixed(blade.y), vx: fixed(blade.vx), vy: fixed(blade.vy),
-    }),
-    enemies: Object.freeze(enemies.map((enemy) => Object.freeze({
-      id: enemy._gid ?? 0, kind: enemy.kind ?? "", bossId: enemy.bossId ?? "",
-      x: fixed(enemy.x), y: fixed(enemy.y), vx: fixed(enemy.vx), vy: fixed(enemy.vy),
-      hp: fixed(enemy.hp), dead: enemy.dead,
-      ...(enemy.kind === "rimehound" ? { rimehound: Object.freeze({
-        atk: enemy.atk ?? "", atkT: fixed(enemy.atkT ?? 0), atkCd: fixed(enemy.atkCd ?? 0),
-        packRole: enemy.packRole ?? "", packFlank: enemy.packFlank ?? 0,
-        packLockT: fixed(enemy.packLockT ?? 0), packAttackAuthorized: enemy.packAttackAuthorized ?? false,
-        pounceTargetX: fixed(enemy.pounceTargetX ?? 0), pounceAirborne: enemy.pounceAirborne ?? false,
-        auroraDirection: enemy.auroraDirection ?? 0, auroraResponseT: fixed(enemy.auroraResponseT ?? 0),
-        auroraPounceExtended: enemy.auroraPounceExtended ?? false,
-      }) } : {}),
-      ...(enemy.kind === "white-hart" ? { whiteHart: Object.freeze({
-        state: enemy.state ?? "", atk: enemy.atk ?? "", stateT: fixed(enemy.stateT ?? 0),
-        stateMax: fixed(enemy.stateMax ?? 0), phaseMarker: enemy.phaseMarker ?? 1,
-        attackCursor: enemy.attackCursor ?? 0, attackStep: enemy.attackStep ?? 0,
-        attackSequence: enemy.attackSequence ?? 0, environmentSequence: enemy.environmentSequence ?? 0,
-        routeProgress: fixed(enemy.routeProgress ?? 0), trueRouteIndex: enemy.trueRouteIndex ?? -1,
-        fracturePlatformId: enemy.fracturePlatformId ?? null, fractureWindow: enemy.fractureWindow ?? false,
-        batonStrike: fixed(enemy.batonStrike ?? 0), auroraBossChargeActive: enemy.auroraBossChargeActive ?? false,
-        parryOutcome: enemy.parryOutcome ?? "none",
-        routeTelegraph: Object.freeze((enemy.routeTelegraph ?? []).map((point) => Object.freeze({
-          x: fixed(point.x), y: fixed(point.y),
-        }))),
-        candidateRoutes: Object.freeze((enemy.candidateRoutes ?? []).map((route) => Object.freeze(route.map((point) => Object.freeze({
-          x: fixed(point.x), y: fixed(point.y),
-        }))))),
-      }) } : {}),
-    })).sort((left, right) => left.id - right.id || left.kind.localeCompare(right.kind))),
+    run:
+      run === null
+        ? null
+        : Object.freeze({
+            mode: run.mode,
+            wave: run.wave,
+            score: run.score,
+            time: fixed(run.runTime),
+            seed: run.runSeed,
+          }),
+    player:
+      player === null
+        ? null
+        : Object.freeze({
+            x: fixed(player.x),
+            y: fixed(player.y),
+            vx: fixed(player.vx),
+            vy: fixed(player.vy),
+            hp: fixed(player.hp),
+          }),
+    blade:
+      blade === null
+        ? null
+        : Object.freeze({
+            state: blade.state,
+            x: fixed(blade.x),
+            y: fixed(blade.y),
+            vx: fixed(blade.vx),
+            vy: fixed(blade.vy),
+          }),
+    enemies: Object.freeze(
+      enemies
+        .map((enemy) =>
+          Object.freeze({
+            id: enemy._gid ?? 0,
+            kind: enemy.kind ?? "",
+            bossId: enemy.bossId ?? "",
+            x: fixed(enemy.x),
+            y: fixed(enemy.y),
+            vx: fixed(enemy.vx),
+            vy: fixed(enemy.vy),
+            hp: fixed(enemy.hp),
+            dead: enemy.dead,
+            ...(enemy.kind === "rimehound"
+              ? {
+                  rimehound: Object.freeze({
+                    atk: enemy.atk ?? "",
+                    atkT: fixed(enemy.atkT ?? 0),
+                    atkCd: fixed(enemy.atkCd ?? 0),
+                    packRole: enemy.packRole ?? "",
+                    packFlank: enemy.packFlank ?? 0,
+                    packLockT: fixed(enemy.packLockT ?? 0),
+                    packAttackAuthorized: enemy.packAttackAuthorized ?? false,
+                    pounceTargetX: fixed(enemy.pounceTargetX ?? 0),
+                    pounceAirborne: enemy.pounceAirborne ?? false,
+                    auroraDirection: enemy.auroraDirection ?? 0,
+                    auroraResponseT: fixed(enemy.auroraResponseT ?? 0),
+                    auroraPounceExtended: enemy.auroraPounceExtended ?? false,
+                  }),
+                }
+              : {}),
+            ...(enemy.kind === "white-hart"
+              ? {
+                  whiteHart: Object.freeze({
+                    state: enemy.state ?? "",
+                    atk: enemy.atk ?? "",
+                    stateT: fixed(enemy.stateT ?? 0),
+                    stateMax: fixed(enemy.stateMax ?? 0),
+                    phaseMarker: enemy.phaseMarker ?? 1,
+                    attackCursor: enemy.attackCursor ?? 0,
+                    attackStep: enemy.attackStep ?? 0,
+                    attackSequence: enemy.attackSequence ?? 0,
+                    environmentSequence: enemy.environmentSequence ?? 0,
+                    routeProgress: fixed(enemy.routeProgress ?? 0),
+                    trueRouteIndex: enemy.trueRouteIndex ?? -1,
+                    fracturePlatformId: enemy.fracturePlatformId ?? null,
+                    fractureWindow: enemy.fractureWindow ?? false,
+                    batonStrike: fixed(enemy.batonStrike ?? 0),
+                    auroraBossChargeActive: enemy.auroraBossChargeActive ?? false,
+                    parryOutcome: enemy.parryOutcome ?? "none",
+                    routeTelegraph: Object.freeze(
+                      (enemy.routeTelegraph ?? []).map((point) =>
+                        Object.freeze({
+                          x: fixed(point.x),
+                          y: fixed(point.y),
+                        }),
+                      ),
+                    ),
+                    candidateRoutes: Object.freeze(
+                      (enemy.candidateRoutes ?? []).map((route) =>
+                        Object.freeze(
+                          route.map((point) =>
+                            Object.freeze({
+                              x: fixed(point.x),
+                              y: fixed(point.y),
+                            }),
+                          ),
+                        ),
+                      ),
+                    ),
+                  }),
+                }
+              : {}),
+          }),
+        )
+        .sort((left, right) => left.id - right.id || left.kind.localeCompare(right.kind)),
+    ),
     ...(environment === undefined ? {} : { environment: projectEnvironmentSemanticSnapshot(environment) }),
-    ...(run?.mode !== "tutorial" || tutorial === undefined || tutorial.phase === "inactive" ? {} : { tutorial: Object.freeze(structuredClone(tutorial)) }),
+    ...(run?.mode !== "tutorial" || tutorial === undefined || tutorial.phase === "inactive"
+      ? {}
+      : { tutorial: Object.freeze(structuredClone(tutorial)) }),
   });
 }
 
@@ -175,9 +272,14 @@ export function captureCanonicalGameplayState(
   environment?: EnvironmentSnapshot,
   tutorial?: TutorialSessionCheckpoint,
 ): DeferredCanonicalState<CanonicalGameplayState> {
-  const runValue = run === null ? null : { mode: run.mode, wave: run.wave, score: run.score, runTime: run.runTime, runSeed: run.runSeed };
-  const playerValue = player === null ? null : { x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp };
+  const runValue =
+    run === null
+      ? null
+      : { mode: run.mode, wave: run.wave, score: run.score, runTime: run.runTime, runSeed: run.runSeed };
+  const playerValue =
+    player === null ? null : { x: player.x, y: player.y, vx: player.vx, vy: player.vy, hp: player.hp };
   const bladeValue = blade === null ? null : { state: blade.state, x: blade.x, y: blade.y, vx: blade.vx, vy: blade.vy };
-  return new DeferredCanonicalState(() => projectCanonicalGameplayState(tick, input, runValue, playerValue, bladeValue,
-    enemies, environment, tutorial));
+  return new DeferredCanonicalState(() =>
+    projectCanonicalGameplayState(tick, input, runValue, playerValue, bladeValue, enemies, environment, tutorial),
+  );
 }

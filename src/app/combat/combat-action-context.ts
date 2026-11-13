@@ -1,7 +1,12 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { LiveCollisionPhaseHost, LiveCollisionPhaseState } from "../../gameplay/combat/live-collision-phase";
 import type { LiveOpeningPhaseHost, LiveOpeningState } from "../../gameplay/combat/live-opening-phase";
-import type { CombatEntityRuntime, CombatEntityRuntimeHooks, LiveCombatEntity, LiveCombatPlayer } from "../../gameplay/combat/combat-entity-runtime";
+import type {
+  CombatEntityRuntime,
+  CombatEntityRuntimeHooks,
+  LiveCombatEntity,
+  LiveCombatPlayer,
+} from "../../gameplay/combat/combat-entity-runtime";
 import type { LiveKillHost } from "../../gameplay/combat/live-kill-runtime";
 import type { KillEnemy, KillPlayer, KillProjectile, KillRun } from "../../gameplay/combat/kill-runtime";
 import type { MirrorBladePort, MirrorPlayerPort } from "../../gameplay/entities/mirror-contracts";
@@ -12,15 +17,28 @@ import type { AttackPresentationCueSink } from "../../gameplay/combat/attack-pre
 type Opening = LiveOpeningPhaseHost;
 type Collision = LiveCollisionPhaseHost;
 export type CombatPlayer = Opening["player"] & Collision["player"] & LiveCombatPlayer & KillPlayer & MirrorPlayerPort;
-export type CombatBlade = Opening["blade"] & Collision["blade"] & MirrorBladePort & {
-  tipX: number; tipY: number; throwDmg: number; throwBaseDmg?: number;
-  stolenBy?: unknown; hostile?: boolean;
-};
+export type CombatBlade = Opening["blade"] &
+  Collision["blade"] &
+  MirrorBladePort & {
+    tipX: number;
+    tipY: number;
+    throwDmg: number;
+    throwBaseDmg?: number;
+    stolenBy?: unknown;
+    hostile?: boolean;
+  };
 export type CombatRun = Opening["run"] & Collision["run"] & KillRun & { runTime: number; isBossWave?: boolean };
-export type CombatEnemy = Opening["enemies"][number] & Collision["state"]["enemies"][number] & {
-  color: string; facing: number; speedMult: number; contactDmg: number; canClimb: boolean; climber: boolean;
-  climbApt: number; hpDisplay: number;
-} & Omit<KillEnemy, "zones"> & { zones?: LiveCombatEntity["zones"] };
+export type CombatEnemy = Opening["enemies"][number] &
+  Collision["state"]["enemies"][number] & {
+    color: string;
+    facing: number;
+    speedMult: number;
+    contactDmg: number;
+    canClimb: boolean;
+    climber: boolean;
+    climbApt: number;
+    hpDisplay: number;
+  } & Omit<KillEnemy, "zones"> & { zones?: LiveCombatEntity["zones"] };
 export type CombatProjectile = Collision["state"]["projectiles"][number] & KillProjectile;
 
 export interface LiveCombatMutableState<
@@ -28,64 +46,120 @@ export interface LiveCombatMutableState<
   Projectile extends CombatProjectile = CombatProjectile,
   Floater extends LiveCollisionPhaseState["floaters"][number] = LiveCollisionPhaseState["floaters"][number],
 > {
-  player(): CombatPlayer; blade(): CombatBlade; run(): CombatRun;
-  enemies(): Enemy[]; setEnemies(value: Enemy[]): void;
-  projectiles(): Projectile[]; setProjectiles(value: Projectile[]): void;
-  floaters(): Floater[]; setFloaters(value: Floater[]): void;
+  player(): CombatPlayer;
+  blade(): CombatBlade;
+  run(): CombatRun;
+  enemies(): Enemy[];
+  setEnemies(value: Enemy[]): void;
+  projectiles(): Projectile[];
+  setProjectiles(value: Projectile[]): void;
+  floaters(): Floater[];
+  setFloaters(value: Floater[]): void;
   slowZones(): ReturnType<CombatEntityRuntimeHooks["slowZones"]>;
   setSlowZones(value: ReturnType<CombatEntityRuntimeHooks["slowZones"]>): void;
   walls(): ReturnType<CombatEntityRuntimeHooks["walls"]>;
   setWalls(value: ReturnType<CombatEntityRuntimeHooks["walls"]>): void;
-  openingProtection(): Opening["protection"]; setOpeningProtection(value: Opening["protection"]): void;
-  openingState(): LiveOpeningState; setOpeningState(value: LiveOpeningState): void;
+  openingProtection(): Opening["protection"];
+  setOpeningProtection(value: Opening["protection"]): void;
+  openingState(): LiveOpeningState;
+  setOpeningState(value: LiveOpeningState): void;
   collisionState(): Omit<LiveCollisionPhaseState, "enemies" | "projectiles" | "floaters">;
   setCollisionState(value: Omit<LiveCollisionPhaseState, "enemies" | "projectiles" | "floaters">): void;
 }
 
 export interface LiveCombatLocalPorts<Enemy extends CombatEnemy = CombatEnemy> {
-  readonly stage: { readonly index: number; bannerSeconds: number; platforms: Opening["platforms"];
-    readonly current: { readonly accent?: string; readonly name?: string; readonly chapter?: { readonly bossOutro?: unknown } } };
+  readonly stage: {
+    readonly index: number;
+    bannerSeconds: number;
+    platforms: Opening["platforms"];
+    readonly current: {
+      readonly accent?: string;
+      readonly name?: string;
+      readonly chapter?: { readonly bossOutro?: unknown };
+    };
+  };
   readonly story: { protection(): Opening["protection"]; applyProtection(value: Opening["protection"]): void };
   readonly cinema: { readonly active: boolean; readonly blocksCombat: boolean; readonly playerMode: string };
-  readonly tutorial: { readonly preparingBoss?: boolean; mark(name: string): void; update(seconds: number): void; weaponEffect?(weaponId: string, effect: string): void };
+  readonly tutorial: {
+    readonly preparingBoss?: boolean;
+    mark(name: string): void;
+    update(seconds: number): void;
+    weaponEffect?(weaponId: string, effect: string): void;
+  };
   readonly achievement: {
-    dashDodge: CombatEntityRuntimeHooks["dashDodge"]; bossHit(enemy: object, kind: string): void;
-    bossKill(enemy: object): void; onKill(enemy: object): void; swung(): void; thrown(): void;
-    parry(): void; breakStreak(): void; jumped(): void; revived(): void; tick(seconds: number): void;
+    dashDodge: CombatEntityRuntimeHooks["dashDodge"];
+    bossHit(enemy: object, kind: string): void;
+    bossKill(enemy: object): void;
+    onKill(enemy: object): void;
+    swung(): void;
+    thrown(): void;
+    parry(): void;
+    breakStreak(): void;
+    jumped(): void;
+    revived(): void;
+    tick(seconds: number): void;
   };
   readonly functions: Readonly<{
-    addFloater: Collision["addFloater"]; addShake: Collision["addShake"]; addZoom: Collision["addZoom"];
-    addFlash: Collision["addFlash"]; addStyle: Collision["addStyle"]; loseStyle: Collision["loseStyle"];
-    onShieldAbsorb: Collision["onShieldAbsorb"]; noteFirstDamage: Collision["noteFirstDamage"];
+    addFloater: Collision["addFloater"];
+    addShake: Collision["addShake"];
+    addZoom: Collision["addZoom"];
+    addFlash: Collision["addFlash"];
+    addStyle: Collision["addStyle"];
+    loseStyle: Collision["loseStyle"];
+    onShieldAbsorb: Collision["onShieldAbsorb"];
+    noteFirstDamage: Collision["noteFirstDamage"];
     entityNoteFirstDamage: CombatEntityRuntimeHooks["noteFirstDamage"];
-    entityBossHit: CombatEntityRuntimeHooks["bossHit"]; entityResolveKill: CombatEntityRuntimeHooks["onKill"];
-    runDamageMultiplier: Collision["runDamageMultiplier"]; updateWeaponAbilities: Opening["updateWeaponAbilities"];
-    stepCinematic: Opening["stepCinematic"]; syncVoidSupport: Opening["syncVoidSupport"];
-    activateThrowSecondary: Opening["activateThrowSecondary"]; updateWave: Opening["updateWave"];
-    updateBossArenaPlatforms: Opening["updateBossArenaPlatforms"]; updateVoidScroll: Opening["updateVoidScroll"];
-    startVoidDescent: Opening["startVoidDescent"]; nearestEnemy: Collision["nearestEnemy"];
+    entityBossHit: CombatEntityRuntimeHooks["bossHit"];
+    entityResolveKill: CombatEntityRuntimeHooks["onKill"];
+    runDamageMultiplier: Collision["runDamageMultiplier"];
+    updateWeaponAbilities: Opening["updateWeaponAbilities"];
+    stepCinematic: Opening["stepCinematic"];
+    syncVoidSupport: Opening["syncVoidSupport"];
+    activateThrowSecondary: Opening["activateThrowSecondary"];
+    updateWave: Opening["updateWave"];
+    updateBossArenaPlatforms: Opening["updateBossArenaPlatforms"];
+    updateVoidScroll: Opening["updateVoidScroll"];
+    startVoidDescent: Opening["startVoidDescent"];
+    nearestEnemy: Collision["nearestEnemy"];
     openingNearestEnemy: Opening["nearestEnemy"];
     areaDamage: (x: number, y: number, radius: number, damage: number, playerOwned?: boolean) => number;
     lobExplode: Collision["lobExplode"];
-    splitProjectile: Collision["splitProjectile"]; triggerSlowMotion: Collision["triggerSlowMotion"];
-    logWeapon: Collision["logWeapon"]; emitThrowResolve: Collision["emitThrowResolve"];
-    updateTrick: Collision["updateTrick"]; updatePlayground: Collision["updatePlayground"];
-    endRun: Collision["endRun"]; checkAchievements: Collision["checkAchievements"];
-    addKillScore: LiveKillHost["addKillScore"]; applySever: LiveKillHost["applySever"];
-    fire: LiveKillHost["fire"]; makeEvent(x: number, y: number, enemy: object | null,
-      cause?: string, detail?: Readonly<Record<string, unknown>>): unknown;
-    weaponHook(name: string, detail: Readonly<Record<string, unknown>>): Readonly<{ mechanic?: string }> | null | undefined;
-    modHook(name: keyof UpgradeMods): unknown; fireMod(hook: unknown, event: unknown): void;
+    splitProjectile: Collision["splitProjectile"];
+    triggerSlowMotion: Collision["triggerSlowMotion"];
+    logWeapon: Collision["logWeapon"];
+    emitThrowResolve: Collision["emitThrowResolve"];
+    updateTrick: Collision["updateTrick"];
+    updatePlayground: Collision["updatePlayground"];
+    endRun: Collision["endRun"];
+    checkAchievements: Collision["checkAchievements"];
+    addKillScore: LiveKillHost["addKillScore"];
+    applySever: LiveKillHost["applySever"];
+    fire: LiveKillHost["fire"];
+    makeEvent(
+      x: number,
+      y: number,
+      enemy: object | null,
+      cause?: string,
+      detail?: Readonly<Record<string, unknown>>,
+    ): unknown;
+    weaponHook(
+      name: string,
+      detail: Readonly<Record<string, unknown>>,
+    ): Readonly<{ mechanic?: string }> | null | undefined;
+    modHook(name: keyof UpgradeMods): unknown;
+    fireMod(hook: unknown, event: unknown): void;
     observeTutorialAttempt?: Collision["observeTutorialAttempt"];
     logWeaponEvent(name: string, detail: Readonly<Record<string, unknown>>): void;
     weaponWorldImpact(): Readonly<{ mechanic?: string }> | null;
-    startTransformation: Opening["startTransformation"]; achievementsEnabled: Collision["achievementsEnabled"];
+    startTransformation: Opening["startTransformation"];
+    achievementsEnabled: Collision["achievementsEnabled"];
     consumeThrow: Opening["consumeThrow"];
     weaponSegmentContact: Collision["weaponSegmentContact"];
     createCharger: (x: number, y: number) => Enemy;
     createReflection: (x: number, y: number) => Enemy;
     recordBossSupportSpawn: (enemy: CombatEnemy, bossId: string) => void;
-    enemyDefeated: Collision["enemyDefeated"]; ghostSample: Collision["ghostSample"];
+    enemyDefeated: Collision["enemyDefeated"];
+    ghostSample: Collision["ghostSample"];
     restorePlatforms: LiveKillHost["restorePlatforms"];
     playSound: (name: string, argument?: unknown) => void;
     addOverrunStack: () => void;

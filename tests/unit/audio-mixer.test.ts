@@ -12,7 +12,9 @@ class FakeParam implements GainParamPort {
   value = 1;
   readonly ramps: { readonly from: number; readonly to: number; readonly end: number }[] = [];
 
-  cancelScheduledValues(): void { return undefined; }
+  cancelScheduledValues(): void {
+    return undefined;
+  }
 
   setValueAtTime(value: number): void {
     this.value = value;
@@ -50,9 +52,15 @@ class FakeContext implements AudioGraphContext {
     return node;
   }
 
-  resume(): Promise<void> { return Promise.resolve(); }
-  suspend(): Promise<void> { return Promise.resolve(); }
-  close(): Promise<void> { return Promise.resolve(); }
+  resume(): Promise<void> {
+    return Promise.resolve();
+  }
+  suspend(): Promise<void> {
+    return Promise.resolve();
+  }
+  close(): Promise<void> {
+    return Promise.resolve();
+  }
 }
 
 describe("HierarchicalAudioMixer", () => {

@@ -36,7 +36,9 @@ const safeDisposeBoundaries = [
 ];
 const matchingBoundaries = safeDisposeBoundaries.filter((source) => moduleBundle.includes(source));
 if (matchingBoundaries.length !== 1) {
-  throw new Error(`Expected exactly one upstream-safe TearScore composer disposal boundary; found ${matchingBoundaries.length}`);
+  throw new Error(
+    `Expected exactly one upstream-safe TearScore composer disposal boundary; found ${matchingBoundaries.length}`,
+  );
 }
 if (moduleBundle.includes("globalThis.Tone")) throw new Error("Generated TearScore still depends on a Tone global");
 if (!moduleBundle.includes("export{")) throw new Error("Generated TearScore has no ESM exports");

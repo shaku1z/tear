@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { TearHeadlessEnvironmentPool, type TearHeadlessEnvironment } from "../../src/tearbench";
 
-interface Scenario { readonly value: number }
-interface Observation { readonly tick: number; readonly value: number }
+interface Scenario {
+  readonly value: number;
+}
+interface Observation {
+  readonly tick: number;
+  readonly value: number;
+}
 type Action = Readonly<{ increment: number }>;
 
 function environment(): TearHeadlessEnvironment<Scenario, Observation, Action> {
@@ -25,7 +30,9 @@ function environment(): TearHeadlessEnvironment<Scenario, Observation, Action> {
         metrics: { value },
       };
     },
-    dispose() { value = 0; },
+    dispose() {
+      value = 0;
+    },
   };
 }
 

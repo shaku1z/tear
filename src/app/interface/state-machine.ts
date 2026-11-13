@@ -1,19 +1,63 @@
-export interface MenuState { readonly type: "menu" }
-export interface SetupState { readonly type: "setup" }
-export interface PlayingState { readonly type: "playing"; readonly runId: string }
-export interface PausedState { readonly type: "paused"; readonly runId: string }
-export interface DraftState { readonly type: "draft"; readonly runId: string }
-export interface ReserveState { readonly type: "reserve"; readonly runId: string }
-export interface TierUpState { readonly type: "tier-up"; readonly runId: string }
-export interface ContinueState { readonly type: "continue"; readonly saveId: string }
-export interface GameOverState { readonly type: "gameover"; readonly runId: string }
-export interface VictoryState { readonly type: "victory"; readonly runId: string }
-export interface ReplayState { readonly type: "replay"; readonly replayId: string; readonly paused: boolean }
+export interface MenuState {
+  readonly type: "menu";
+}
+export interface SetupState {
+  readonly type: "setup";
+}
+export interface PlayingState {
+  readonly type: "playing";
+  readonly runId: string;
+}
+export interface PausedState {
+  readonly type: "paused";
+  readonly runId: string;
+}
+export interface DraftState {
+  readonly type: "draft";
+  readonly runId: string;
+}
+export interface ReserveState {
+  readonly type: "reserve";
+  readonly runId: string;
+}
+export interface TierUpState {
+  readonly type: "tier-up";
+  readonly runId: string;
+}
+export interface ContinueState {
+  readonly type: "continue";
+  readonly saveId: string;
+}
+export interface GameOverState {
+  readonly type: "gameover";
+  readonly runId: string;
+}
+export interface VictoryState {
+  readonly type: "victory";
+  readonly runId: string;
+}
+export interface ReplayState {
+  readonly type: "replay";
+  readonly replayId: string;
+  readonly paused: boolean;
+}
 
 export type NonSettingsAppState =
-  | MenuState | SetupState | PlayingState | PausedState | DraftState | ReserveState
-  | TierUpState | ContinueState | GameOverState | VictoryState | ReplayState;
-export interface SettingsState { readonly type: "settings"; readonly returnTo: NonSettingsAppState }
+  | MenuState
+  | SetupState
+  | PlayingState
+  | PausedState
+  | DraftState
+  | ReserveState
+  | TierUpState
+  | ContinueState
+  | GameOverState
+  | VictoryState
+  | ReplayState;
+export interface SettingsState {
+  readonly type: "settings";
+  readonly returnTo: NonSettingsAppState;
+}
 export type AppState = NonSettingsAppState | SettingsState;
 export type AppStateType = AppState["type"];
 
@@ -38,7 +82,10 @@ export type AppTransition =
   | Readonly<{ type: "return-menu" }>;
 
 export class IllegalAppTransitionError extends Error {
-  constructor(readonly state: AppStateType, readonly transition: AppTransition["type"]) {
+  constructor(
+    readonly state: AppStateType,
+    readonly transition: AppTransition["type"],
+  ) {
     super(`Illegal application transition: ${state} -> ${transition}`);
     this.name = "IllegalAppTransitionError";
   }
@@ -66,8 +113,10 @@ export function transitionAppState(state: AppState, transition: AppTransition): 
   switch (state.type) {
     case "menu":
       if (transition.type === "open-setup") return frozen({ type: "setup" });
-      if (transition.type === "show-continue") return frozen({ type: "continue", saveId: id(transition.saveId, "saveId") });
-      if (transition.type === "start-replay") return frozen({ type: "replay", replayId: id(transition.replayId, "replayId"), paused: false });
+      if (transition.type === "show-continue")
+        return frozen({ type: "continue", saveId: id(transition.saveId, "saveId") });
+      if (transition.type === "start-replay")
+        return frozen({ type: "replay", replayId: id(transition.replayId, "replayId"), paused: false });
       break;
     case "setup":
       if (transition.type === "start-run") return frozen({ type: "playing", runId: id(transition.runId, "runId") });
@@ -100,7 +149,8 @@ export function transitionAppState(state: AppState, transition: AppTransition): 
       break;
     case "gameover":
     case "victory":
-      if (transition.type === "start-replay") return frozen({ type: "replay", replayId: id(transition.replayId, "replayId"), paused: false });
+      if (transition.type === "start-replay")
+        return frozen({ type: "replay", replayId: id(transition.replayId, "replayId"), paused: false });
       break;
     case "replay":
       if (transition.type === "toggle-replay-pause") return frozen({ ...state, paused: !state.paused });

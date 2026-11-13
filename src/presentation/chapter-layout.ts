@@ -51,7 +51,12 @@ export interface ChapterPageInput {
   readonly line?: string | undefined;
 }
 
-export interface ChapterBounds { readonly left: number; readonly right: number; readonly top: number; readonly bottom: number }
+export interface ChapterBounds {
+  readonly left: number;
+  readonly right: number;
+  readonly top: number;
+  readonly bottom: number;
+}
 
 export interface ChapterPageLayout {
   readonly side: "left" | "right";
@@ -116,15 +121,20 @@ function fitBody(input: ChapterPageInput, columnW: number, maxLines: number, mea
 }
 
 /** Lays out one chapter page (or the biome reveal, which passes `line` instead of `text`). */
-export function layoutChapterPage(input: ChapterPageInput, tokens: ChapterLayoutTokens, measure: ChapterMeasure): ChapterPageLayout {
+export function layoutChapterPage(
+  input: ChapterPageInput,
+  tokens: ChapterLayoutTokens,
+  measure: ChapterMeasure,
+): ChapterPageLayout {
   const { sizes, vw } = input;
   const margin = Math.max(tokens.safeMargin, vw * tokens.safeVW);
   const columnW = Math.min(Math.max(tokens.bodyColW, sizes.body * 0.6 * 46), vw - margin * 2);
   const side = input.side === "right" ? "right" : "left";
   const anchorX = side === "right" ? vw - margin : margin;
   const title = fitTitle(input, Math.min(tokens.titleMaxW, vw - margin * 2), measure);
-  const titleY = title.lines.map((_line, index) => tokens.labelY + tokens.titleGap + title.size * 0.74
-    + index * title.size * sizes.titleLineHeight);
+  const titleY = title.lines.map(
+    (_line, index) => tokens.labelY + tokens.titleGap + title.size * 0.74 + index * title.size * sizes.titleLineHeight,
+  );
   const ruleY = (titleY.at(-1) ?? tokens.labelY) + tokens.ruleGap;
   const captionY = ruleY + tokens.captionGap;
   const body = fitBody(input, columnW, tokens.bodyMaxLines, measure);
@@ -138,14 +148,34 @@ export function layoutChapterPage(input: ChapterPageInput, tokens: ChapterLayout
     input.line ? measure(input.line, "line", sizes.line) : 0,
   ];
   const extent = Math.max(columnW, ...widths); // the whole column: the field stays stable across pages
-  const bottom = body.lines.length > 0 ? bodyY + (body.lines.length - 1) * bodyLineHeight + body.size * 0.3
-    : (input.line ? lineY + sizes.line * 0.3 : ruleY + 2);
-  const bounds = side === "right"
-    ? { left: anchorX - extent, right: anchorX, top: tokens.labelY - sizes.label, bottom }
-    : { left: anchorX, right: anchorX + extent, top: tokens.labelY - sizes.label, bottom };
+  const bottom =
+    body.lines.length > 0
+      ? bodyY + (body.lines.length - 1) * bodyLineHeight + body.size * 0.3
+      : input.line
+        ? lineY + sizes.line * 0.3
+        : ruleY + 2;
+  const bounds =
+    side === "right"
+      ? { left: anchorX - extent, right: anchorX, top: tokens.labelY - sizes.label, bottom }
+      : { left: anchorX, right: anchorX + extent, top: tokens.labelY - sizes.label, bottom };
   return {
-    side, align: side, anchorX, columnW, labelY: tokens.labelY, titleSize: title.size, titleLines: title.lines, titleY,
-    ruleY, captionY, bodySize: body.size, bodyLineHeight, bodyLines: body.lines, bodyY, lineY,
-    promptY: tokens.promptY, bounds, reach: margin + extent,
+    side,
+    align: side,
+    anchorX,
+    columnW,
+    labelY: tokens.labelY,
+    titleSize: title.size,
+    titleLines: title.lines,
+    titleY,
+    ruleY,
+    captionY,
+    bodySize: body.size,
+    bodyLineHeight,
+    bodyLines: body.lines,
+    bodyY,
+    lineY,
+    promptY: tokens.promptY,
+    bounds,
+    reach: margin + extent,
   };
 }

@@ -14,8 +14,7 @@ export interface ProductionC27AHashReceipt {
 }
 
 export type ProductionC27ASegment =
-  | Readonly<{ kind: "fixed"; fromTick: number; toTick: number;
-    actions: readonly Readonly<{ command: GameAction }>[] }>
+  | Readonly<{ kind: "fixed"; fromTick: number; toTick: number; actions: readonly Readonly<{ command: GameAction }>[] }>
   | Readonly<{ kind: "route"; atTick: number; actions: readonly Readonly<{ command: GameAction }>[] }>;
 
 /** A C27A browser artifact's portable, post-origin replay boundary. */
@@ -58,16 +57,20 @@ export interface ProductionC27AMatrixEntry {
 function fallbackSegments(trace: ProductionC27ATrace): readonly ProductionC27ASegment[] {
   let previousTick = trace.origin.tick;
   return trace.hashes.map((hash) => {
-    const segment = Object.freeze({ kind: "fixed" as const, fromTick: previousTick, toTick: hash.tick,
-      actions: Object.freeze((trace.schedule[String(hash.tick)] ?? []).map((entry) => Object.freeze({ command: entry.command }))) });
+    const segment = Object.freeze({
+      kind: "fixed" as const,
+      fromTick: previousTick,
+      toTick: hash.tick,
+      actions: Object.freeze(
+        (trace.schedule[String(hash.tick)] ?? []).map((entry) => Object.freeze({ command: entry.command })),
+      ),
+    });
     previousTick = hash.tick;
     return segment;
   });
 }
 
-function routeProjection(
-  result: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]>,
-) {
+function routeProjection(result: ReturnType<ReturnType<typeof createProductionGhostReplayComposition>["create"]>) {
   const run = result.replay.world.state.run() as never as { wave: number; mods: { owned: Record<string, number> } };
   const selection = result.waveReward.reward.snapshot();
   return Object.freeze({
@@ -75,12 +78,15 @@ function routeProjection(
     screen: result.waveReward.screen(),
     wave: run.wave,
     lifecycle: result.replay.world.lifecycle.snapshot(),
-    reward: selection === null ? null : Object.freeze({
-      phase: selection.phase,
-      choiceIds: selection.choices.map((choice) => choice.id),
-      reserveChoiceIds: selection.reserveChoices.map((choice) => choice.id),
-    }),
-    focusableIds: result.waveReward.screen() === "draft" ? selection?.choices.map((choice) => choice.id) ?? [] : [],
+    reward:
+      selection === null
+        ? null
+        : Object.freeze({
+            phase: selection.phase,
+            choiceIds: selection.choices.map((choice) => choice.id),
+            reserveChoiceIds: selection.reserveChoices.map((choice) => choice.id),
+          }),
+    focusableIds: result.waveReward.screen() === "draft" ? (selection?.choices.map((choice) => choice.id) ?? []) : [],
     owned: Object.freeze({ ...run.mods.owned }),
   });
 }
@@ -94,7 +100,9 @@ export function replayProductionC27ATrace(trace: ProductionC27ATrace): Productio
   let schedulerTick = trace.origin.tick;
   const gameplayEvents = new TearGameplayEventBus(() => schedulerTick);
   const nativeEvents: TearGameplayEvent[] = [];
-  gameplayEvents.subscribe((event) => { nativeEvents.push(event); });
+  gameplayEvents.subscribe((event) => {
+    nativeEvents.push(event);
+  });
   const composed = createProductionGhostReplayComposition({
     seed: trace.origin.seed,
     mode: trace.scenario.start.mode,
@@ -112,7 +120,9 @@ export function replayProductionC27ATrace(trace: ProductionC27ATrace): Productio
   for (const segment of segments) {
     if (segment.kind === "route") {
       if (simulation.scheduler.tick !== segment.atTick) {
-        throw new Error(`route segment expected tick ${String(segment.atTick)}, got ${String(simulation.scheduler.tick)}`);
+        throw new Error(
+          `route segment expected tick ${String(segment.atTick)}, got ${String(simulation.scheduler.tick)}`,
+        );
       }
       const before = routeProjection(composed);
       for (const entry of segment.actions) {
@@ -123,13 +133,18 @@ export function replayProductionC27ATrace(trace: ProductionC27ATrace): Productio
       continue;
     }
     if (segment.toTick !== segment.fromTick + 1) {
-      throw new Error(`fixed segment must advance exactly one tick (${String(segment.fromTick)} -> ${String(segment.toTick)})`);
+      throw new Error(
+        `fixed segment must advance exactly one tick (${String(segment.fromTick)} -> ${String(segment.toTick)})`,
+      );
     }
     if (simulation.scheduler.tick !== segment.fromTick) {
-      throw new Error(`fixed segment expected tick ${String(segment.fromTick)}, got ${String(simulation.scheduler.tick)}`);
+      throw new Error(
+        `fixed segment expected tick ${String(segment.fromTick)}, got ${String(simulation.scheduler.tick)}`,
+      );
     }
     const actions: CommandEnvelope<GameAction>[] = segment.actions.map((entry) =>
-      sequencer.command(segment.toTick, entry.command));
+      sequencer.command(segment.toTick, entry.command),
+    );
     const result = simulation.advanceOne(actions);
     schedulerTick = result.tick;
     hashes.push(Object.freeze({ tick: result.tick, canonical: result.stateHash, state: result.state }));
@@ -146,36 +161,43 @@ export function replayProductionC27ATrace(trace: ProductionC27ATrace): Productio
 export function replayProductionC27AMatrix(
   traces: readonly ProductionC27ATrace[],
 ): readonly ProductionC27AMatrixEntry[] {
-  return Object.freeze(traces.map((trace) => {
-    try {
-      return Object.freeze({ id: trace.scenario.id, status: "replayed" as const,
-        result: replayProductionC27ATrace(trace) });
-    } catch (error) {
-      return Object.freeze({ id: trace.scenario.id, status: "rejected" as const,
-        error: error instanceof Error ? error.message : String(error) });
-    }
-  }));
+  return Object.freeze(
+    traces.map((trace) => {
+      try {
+        return Object.freeze({
+          id: trace.scenario.id,
+          status: "replayed" as const,
+          result: replayProductionC27ATrace(trace),
+        });
+      } catch (error) {
+        return Object.freeze({
+          id: trace.scenario.id,
+          status: "rejected" as const,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }),
+  );
 }
 
 /** Compares a recorded source receipt without converting a mismatch into a pass. */
-export function firstProductionC27AHashDivergence(
-  trace: ProductionC27ATrace,
-  replay: ProductionC27AReplayResult,
-) {
+export function firstProductionC27AHashDivergence(trace: ProductionC27ATrace, replay: ProductionC27AReplayResult) {
   const comparable = Math.min(trace.hashes.length, replay.hashes.length);
   for (let index = 0; index < comparable; index += 1) {
     const expected = trace.hashes[index];
     const actual = replay.hashes[index];
-    if (expected?.canonical !== actual?.canonical) return Object.freeze({
-      tick: expected?.tick ?? actual?.tick ?? trace.origin.tick,
-      expected: expected?.canonical ?? null,
-      actual: actual?.canonical ?? null,
-    });
+    if (expected?.canonical !== actual?.canonical)
+      return Object.freeze({
+        tick: expected?.tick ?? actual?.tick ?? trace.origin.tick,
+        expected: expected?.canonical ?? null,
+        actual: actual?.canonical ?? null,
+      });
   }
-  if (trace.hashes.length !== replay.hashes.length) return Object.freeze({
-    tick: trace.hashes[comparable]?.tick ?? replay.hashes[comparable]?.tick ?? trace.origin.tick,
-    expected: trace.hashes[comparable]?.canonical ?? null,
-    actual: replay.hashes[comparable]?.canonical ?? null,
-  });
+  if (trace.hashes.length !== replay.hashes.length)
+    return Object.freeze({
+      tick: trace.hashes[comparable]?.tick ?? replay.hashes[comparable]?.tick ?? trace.origin.tick,
+      expected: trace.hashes[comparable]?.canonical ?? null,
+      actual: replay.hashes[comparable]?.canonical ?? null,
+    });
   return null;
 }

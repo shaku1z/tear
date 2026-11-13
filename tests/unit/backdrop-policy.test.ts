@@ -6,9 +6,12 @@ import { biomeArtForStage } from "../../src/presentation/backdrop-biomes";
 
 function canvas(): HTMLCanvasElement {
   const gradient = { addColorStop: () => undefined };
-  const context = new Proxy({}, {
-    get: (_target, key) => key === "createRadialGradient" ? () => gradient : () => undefined,
-  });
+  const context = new Proxy(
+    {},
+    {
+      get: (_target, key) => (key === "createRadialGradient" ? () => gradient : () => undefined),
+    },
+  );
   return { width: 0, height: 0, getContext: () => context } as unknown as HTMLCanvasElement;
 }
 
@@ -16,21 +19,28 @@ function policy(clock: { sim: number }, width: number, low = false): BackdropPol
   return {
     clock,
     config: {
-      view: { w: width, h: 900 }, world: { groundY: 760 }, source: { voidCrumbleStand: 1 },
+      view: { w: width, h: 900 },
+      world: { groundY: 760 },
+      source: { voidCrumbleStand: 1 },
       bossArena: { standBeforeWarn: 1, crackWarn: 1, brokenDuration: 1, reformWarn: 1 },
     },
-    graphics: { low }, accessibility: { highContrast: false, flashScale: 1, reducedMotion: false },
-    overscan: { x: width / 100, y: 4 }, theme: { dark: false },
-    createCanvas: canvas, performance: { now: () => 5_000 },
+    graphics: { low },
+    accessibility: { highContrast: false, flashScale: 1, reducedMotion: false },
+    overscan: { x: width / 100, y: 4 },
+    theme: { dark: false },
+    createCanvas: canvas,
+    performance: { now: () => 5_000 },
   };
 }
 
 describe("Backdrop policy", () => {
   it("keeps clocks, effects, caches, and visual policy local to each controller", () => {
-    const firstClock = { sim: 2 }, secondClock = { sim: 7 };
+    const firstClock = { sim: 2 },
+      secondClock = { sim: 7 };
     const firstPolicy = policy(firstClock, 1_600);
     const secondPolicy = policy(secondClock, 2_000);
-    const first = createBackdrop(firstPolicy), second = createBackdrop(secondPolicy);
+    const first = createBackdrop(firstPolicy),
+      second = createBackdrop(secondPolicy);
     const stage = STAGES[0];
     if (stage === undefined) throw new Error("backdrop policy test requires a stage");
 
@@ -49,7 +59,8 @@ describe("Backdrop policy", () => {
     expect(first._fx).toEqual([]);
     expect(second._fx).toHaveLength(1);
 
-    const firstCache = first._get(stage), secondCache = second._get(stage);
+    const firstCache = first._get(stage),
+      secondCache = second._get(stage);
     expect(firstCache).not.toBe(secondCache);
     expect(firstCache.vign).not.toBe(secondCache.vign);
     expect(firstCache.parts).not.toBe(secondCache.parts);
@@ -94,16 +105,33 @@ describe("Backdrop policy", () => {
     const stage = STAGES[0];
     if (stage === undefined) throw new Error("backdrop policy test requires a stage");
     const cache = controller._get(stage);
-    let fillStyle = "", fillStyleWrites = 0, globalAlpha = 1;
-    const filledColors: string[] = [], filledAlphas: number[] = [];
+    let fillStyle = "",
+      fillStyleWrites = 0,
+      globalAlpha = 1;
+    const filledColors: string[] = [],
+      filledAlphas: number[] = [];
     const context = {
-      save: () => undefined, restore: () => undefined, beginPath: () => undefined,
+      save: () => undefined,
+      restore: () => undefined,
+      beginPath: () => undefined,
       arc: () => undefined,
-      fill: () => { filledColors.push(fillStyle); filledAlphas.push(globalAlpha); },
-      set fillStyle(value: string) { fillStyle = value; fillStyleWrites += 1; },
-      get fillStyle() { return fillStyle; },
-      set globalAlpha(value: number) { globalAlpha = value; },
-      get globalAlpha() { return globalAlpha; },
+      fill: () => {
+        filledColors.push(fillStyle);
+        filledAlphas.push(globalAlpha);
+      },
+      set fillStyle(value: string) {
+        fillStyle = value;
+        fillStyleWrites += 1;
+      },
+      get fillStyle() {
+        return fillStyle;
+      },
+      set globalAlpha(value: number) {
+        globalAlpha = value;
+      },
+      get globalAlpha() {
+        return globalAlpha;
+      },
     } as unknown as CanvasRenderingContext2D;
 
     controller.motes(context, cache, 1.25, 0, { rgb: "228,201,90", aMul: 0.62 });

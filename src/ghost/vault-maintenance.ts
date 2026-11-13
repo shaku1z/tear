@@ -55,17 +55,29 @@ export async function maintainGhostVault(
     throw new RangeError("Ghost Vault maximum bytes must be a non-negative safe integer");
   }
   await options.beforeQuota?.(vault);
-  const evictedCapsuleIds = await vault.enforceQuota(maximumBytes, { ...await new GhostCareerStore(vault.backend()).retention(), ...options.retention });
+  const evictedCapsuleIds = await vault.enforceQuota(maximumBytes, {
+    ...(await new GhostCareerStore(vault.backend()).retention()),
+    ...options.retention,
+  });
   const remaining = await manifests(vault);
   const doctor = new GhostDoctor(vault);
   const checkedAt = (options.now ?? (() => new Date().toISOString()))();
-  const scans = await Promise.all(remaining.map(async (manifest) => Object.freeze({
-    manifest,
-    report: await doctor.scan(manifest.id),
-  })));
-  const integrity = Object.freeze(scans.map(({ manifest, report }) => Object.freeze({
-    id: manifest.id, healthy: report.healthy,
-  })));
+  const scans = await Promise.all(
+    remaining.map(async (manifest) =>
+      Object.freeze({
+        manifest,
+        report: await doctor.scan(manifest.id),
+      }),
+    ),
+  );
+  const integrity = Object.freeze(
+    scans.map(({ manifest, report }) =>
+      Object.freeze({
+        id: manifest.id,
+        healthy: report.healthy,
+      }),
+    ),
+  );
   const libraries = new GhostVaultKnowledgeLibraries(vault.backend());
   for (const { manifest, report } of scans) {
     if (!report.healthy) await libraries.recordCorruptCapsule(manifest, report, checkedAt);

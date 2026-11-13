@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  SYNTHESIZED_SFX_CUE_ROUTES,
-  synthesizedSfxRoute,
-} from "../../src/audio/synth-cue-routing";
+import { SYNTHESIZED_SFX_CUE_ROUTES, synthesizedSfxRoute } from "../../src/audio/synth-cue-routing";
 
 describe("synthesized SFX cue routing", () => {
   it("keeps the complete authored catalogue on explicit semantic buses", () => {

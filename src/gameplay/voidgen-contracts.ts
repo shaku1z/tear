@@ -189,10 +189,23 @@ export interface VoidGenerator {
   readonly motifs: readonly string[];
   create(seed: VoidSeed, overrides?: VoidOptionsInput): VoidGeneratorState;
   next(state: VoidGeneratorState, appendX?: number): { state: VoidGeneratorState; chunk: VoidChunk };
-  generate(seed: VoidSeed, count: number, overrides?: VoidOptionsInput): { state: VoidGeneratorState; chunks: VoidChunk[]; platforms: VoidPlatform[] };
+  generate(
+    seed: VoidSeed,
+    count: number,
+    overrides?: VoidOptionsInput,
+  ): { state: VoidGeneratorState; chunks: VoidChunk[]; platforms: VoidPlatform[] };
   inspect(chunks?: readonly VoidChunk[], overrides?: VoidInspectOptions): VoidInspection;
-  hazardState(platform: VoidPlatform | null | undefined, runTime: number, overrides?: VoidOptionsInput): VoidHazardState;
-  selectRescue(platforms: readonly VoidPlatform[], centerX: number, runTime: number, overrides?: VoidOptionsInput): VoidPlatform | null;
+  hazardState(
+    platform: VoidPlatform | null | undefined,
+    runTime: number,
+    overrides?: VoidOptionsInput,
+  ): VoidHazardState;
+  selectRescue(
+    platforms: readonly VoidPlatform[],
+    centerX: number,
+    runTime: number,
+    overrides?: VoidOptionsInput,
+  ): VoidPlatform | null;
   cageGeometry(platform: VoidPlatform | null | undefined, overrides?: VoidOptionsInput): VoidRect | null;
   materialize(chunk: VoidChunk, offsetX: number, materializationState?: string): VoidChunk;
   ingress(seed: VoidSeed, anchorX: number, anchorY: number, overrides?: VoidOptionsInput): VoidChunk;

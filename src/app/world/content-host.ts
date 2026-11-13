@@ -1,5 +1,9 @@
-import { createLiveContentRuntime, type ContentMode, type ContentStage,
-  type LiveContentRuntimeApi } from "../../gameplay/run/live-content-runtime";
+import {
+  createLiveContentRuntime,
+  type ContentMode,
+  type ContentStage,
+  type LiveContentRuntimeApi,
+} from "../../gameplay/run/live-content-runtime";
 import { beginBossEncounter } from "../../gameplay/run/boss-encounter";
 import type { EnemyPreset } from "../../gameplay/affixes";
 import type { RandomSource } from "../../domain/random";
@@ -8,7 +12,9 @@ import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import type { EnemyVariant, VariantSelectionContext } from "../../gameplay/variants";
 import type { StageId } from "../../gameplay/stages";
 
-export interface ContentHostEnemy extends LiveSpawnEnemy { introT?: number }
+export interface ContentHostEnemy extends LiveSpawnEnemy {
+  introT?: number;
+}
 
 export interface ContentHostRun extends LiveSpawnRun {
   readonly runTime: number;
@@ -99,9 +105,12 @@ export function createLiveContentHost<TEnemy extends ContentHostEnemy>(
     random: context.random,
     run: () => {
       const active = run();
-      return { mode: active.mode, wave: active.wave,
+      return {
+        mode: active.mode,
+        wave: active.wave,
         ...(active.curBoss === null || active.curBoss === undefined ? {} : { curBoss: active.curBoss }),
-        ...(active.variantDiscovery === undefined ? {} : { variantDiscovery: active.variantDiscovery }) };
+        ...(active.variantDiscovery === undefined ? {} : { variantDiscovery: active.variantDiscovery }),
+      };
     },
     modes: context.modes,
     stages: context.stages,

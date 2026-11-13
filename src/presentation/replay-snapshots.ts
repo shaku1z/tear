@@ -8,19 +8,41 @@ export function replayClock(ticks: number, ticksPerSecond = 120): string {
 }
 
 export interface ReplayDataSource {
-  readonly name?: string; readonly mode?: string; readonly wave?: number; readonly score?: number; readonly won?: boolean;
-  readonly kills?: number; readonly peak?: number; readonly time?: number;
+  readonly name?: string;
+  readonly mode?: string;
+  readonly wave?: number;
+  readonly score?: number;
+  readonly won?: boolean;
+  readonly kills?: number;
+  readonly peak?: number;
+  readonly time?: number;
   readonly loadout?: readonly Readonly<{ id: string; tier?: number; n?: number }>[];
   readonly finalLoadout?: readonly Readonly<{ id: string; tier?: number; n?: number }>[];
 }
-export interface ReplayPlaybackSource { readonly t: number; readonly playing: boolean; readonly speed: number }
-export interface ReplayChapterSource { readonly t: number; readonly boss?: boolean }
+export interface ReplayPlaybackSource {
+  readonly t: number;
+  readonly playing: boolean;
+  readonly speed: number;
+}
+export interface ReplayChapterSource {
+  readonly t: number;
+  readonly boss?: boolean;
+}
 export function buildReplayScreenSnapshot(input: {
-  readonly data: ReplayDataSource; readonly modeLabel: string; readonly playback?: ReplayPlaybackSource;
-  readonly duration: number; readonly progress: number; readonly stageName: string; readonly wave: number;
-  readonly chapters: readonly ReplayChapterSource[]; readonly infoVisible: boolean;
-  readonly upgrades: readonly UpgradePresentationSource[]; readonly categories: Readonly<Record<string, UpgradeCategoryPresentation>>;
-  readonly fallbackCategory: UpgradeCategoryPresentation; readonly specialColor: string; readonly formatTime: (seconds: number) => string;
+  readonly data: ReplayDataSource;
+  readonly modeLabel: string;
+  readonly playback?: ReplayPlaybackSource;
+  readonly duration: number;
+  readonly progress: number;
+  readonly stageName: string;
+  readonly wave: number;
+  readonly chapters: readonly ReplayChapterSource[];
+  readonly infoVisible: boolean;
+  readonly upgrades: readonly UpgradePresentationSource[];
+  readonly categories: Readonly<Record<string, UpgradeCategoryPresentation>>;
+  readonly fallbackCategory: UpgradeCategoryPresentation;
+  readonly specialColor: string;
+  readonly formatTime: (seconds: number) => string;
 }): ReplayScreenView {
   const data = input.data;
   const infoRows = [
@@ -34,22 +56,53 @@ export function buildReplayScreenSnapshot(input: {
   const finalItems = new Map<string, { id: string; tier: number; n: number }>();
   for (const item of data.finalLoadout ?? data.loadout ?? []) {
     const previous = finalItems.get(item.id);
-    finalItems.set(item.id, { id: item.id, tier: item.tier ?? previous?.tier ?? 1,
-      n: item.n ?? ((previous?.n ?? 0) + 1) });
+    finalItems.set(item.id, {
+      id: item.id,
+      tier: item.tier ?? previous?.tier ?? 1,
+      n: item.n ?? (previous?.n ?? 0) + 1,
+    });
   }
   const loadout = [...finalItems.values()].flatMap((item) => {
     const upgrade = input.upgrades.find((entry) => entry.id === item.id);
     if (upgrade === undefined) return [];
     const category = input.categories[upgrade.cat] ?? input.fallbackCategory;
-    return [{ id: item.id, label: upgrade.name, accent: upgrade.tiers !== undefined ? input.specialColor : category.color,
-      footer: upgrade.tiers !== undefined ? "TIER " + String(item.tier) : (upgrade.unique ? "UNIQUE" : "×" + String(item.n)) }];
+    return [
+      {
+        id: item.id,
+        label: upgrade.name,
+        accent: upgrade.tiers !== undefined ? input.specialColor : category.color,
+        footer:
+          upgrade.tiers !== undefined ? "TIER " + String(item.tier) : upgrade.unique ? "UNIQUE" : "×" + String(item.n),
+      },
+    ];
   });
   // The header states the run's final result; the right-hand readout is the wave on screen now.
-  return Object.freeze({ id: "replay", title: data.name ?? "Player",
-    detail: (input.modeLabel + " · reached wave " + String(data.wave ?? 0) + " · " + (data.score ?? 0).toLocaleString("en-US") + " pts").toUpperCase() + (data.won ? " · ★ VICTORY" : ""),
-    paused: input.playback?.playing !== true, speed: input.playback?.speed ?? 1,
-    elapsed: input.formatTime(input.playback?.t ?? 0), duration: input.formatTime(input.duration), progress: input.progress,
-    stage: input.stageName, score: "NOW · WAVE " + String(Math.max(1, input.wave)),
-    chapters: input.chapters.map((chapter) => ({ fraction: chapter.t / Math.max(input.duration, 0.001), boss: chapter.boss === true })),
-    wave: input.wave, infoVisible: input.infoVisible, infoRows, loadout });
+  return Object.freeze({
+    id: "replay",
+    title: data.name ?? "Player",
+    detail:
+      (
+        input.modeLabel +
+        " · reached wave " +
+        String(data.wave ?? 0) +
+        " · " +
+        (data.score ?? 0).toLocaleString("en-US") +
+        " pts"
+      ).toUpperCase() + (data.won ? " · ★ VICTORY" : ""),
+    paused: input.playback?.playing !== true,
+    speed: input.playback?.speed ?? 1,
+    elapsed: input.formatTime(input.playback?.t ?? 0),
+    duration: input.formatTime(input.duration),
+    progress: input.progress,
+    stage: input.stageName,
+    score: "NOW · WAVE " + String(Math.max(1, input.wave)),
+    chapters: input.chapters.map((chapter) => ({
+      fraction: chapter.t / Math.max(input.duration, 0.001),
+      boss: chapter.boss === true,
+    })),
+    wave: input.wave,
+    infoVisible: input.infoVisible,
+    infoRows,
+    loadout,
+  });
 }

@@ -151,7 +151,7 @@ function parseStoredSettings(serialized: string | null): Record<string, unknown>
   if (serialized === null) return {};
   try {
     const parsed: unknown = JSON.parse(serialized);
-    return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : {};
+    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
   } catch {
     return {};
   }
@@ -160,7 +160,9 @@ function parseStoredSettings(serialized: string | null): Record<string, unknown>
 export class SettingsController {
   readonly settings: GameSettings;
   readonly api = Object.freeze({
-    apply: (): void => { this.apply(); },
+    apply: (): void => {
+      this.apply();
+    },
     save: (): boolean => this.trySave(),
   });
   #shakeScale = 1;
@@ -190,8 +192,8 @@ export class SettingsController {
   apply(): void {
     const { accessibility, config, gamepad, graphics, input, navigator, audio } = this.dependencies;
     const settings = this.settings;
-    const sensitivity = typeof settings.sens === "number" && Number.isFinite(settings.sens)
-      ? settings.sens : this.#defaultAimSensitivity;
+    const sensitivity =
+      typeof settings.sens === "number" && Number.isFinite(settings.sens) ? settings.sens : this.#defaultAimSensitivity;
     settings.sens = clamp(sensitivity, 0.2, 3);
     config.blade.aimSensitivity = settings.sens;
     accessibility.flashScale = clamp(settings.flash, 0, 1);
@@ -199,14 +201,15 @@ export class SettingsController {
     accessibility.motionScale = settings.reducedMotion ? 0.18 : 1;
     accessibility.highContrast = settings.highContrast;
     this.#shakeScale = settings.shake * accessibility.motionScale;
-    const lowEnd = (navigator.hardwareConcurrency || 8) <= 4 || this.dependencies.matchMedia("(pointer: coarse)").matches;
+    const lowEnd =
+      (navigator.hardwareConcurrency || 8) <= 4 || this.dependencies.matchMedia("(pointer: coarse)").matches;
     graphics.low = settings.gfx === "low" || (settings.gfx === "auto" && lowEnd);
     input.forceMode = settings.controls;
     input.touchAimMode = settings.touchAim;
     settings.cinematics = sanitizeCinematicPreference(settings.cinematics);
     settings.padPreset = gamepad.setPreset(settings.padPreset);
-    config.pad.deadL = clamp(settings.padDeadL, 0.10, 0.40);
-    config.pad.deadR = clamp(settings.padDeadR, 0.08, 0.40);
+    config.pad.deadL = clamp(settings.padDeadL, 0.1, 0.4);
+    config.pad.deadR = clamp(settings.padDeadR, 0.08, 0.4);
     config.pad.aimSens = clamp(settings.padAimSens, 0.5, 2);
     config.pad.tetherMode = settings.tetherMode === "toggle" ? "toggle" : "hold";
     config.pad.doubleTapDash = settings.dashDoubleTap;
@@ -227,7 +230,12 @@ export class SettingsController {
   }
 
   trySave(): boolean {
-    try { this.save(); return true; } catch { return false; }
+    try {
+      this.save();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   reset(): void {
@@ -238,23 +246,47 @@ export class SettingsController {
   }
 
   step(key: string, direction: number): boolean {
-    const steps: Readonly<Record<string, number>> = { masterVolume: 0.1, musicVolume: 0.1, sfxVolume: 0.1, interfaceVolume: 0.1,
-      padDeadL: 0.02, padDeadR: 0.02, padAimSens: 0.1, sens: 0.1, flash: 0.25, shake: 0.25 };
-    const limits: Readonly<Record<string, readonly [number, number]>> = { masterVolume: [0, 1], musicVolume: [0, 1], sfxVolume: [0, 1], interfaceVolume: [0, 1],
-      padDeadL: [0.1, 0.4], padDeadR: [0.08, 0.4], padAimSens: [0.5, 2], sens: [0.2, 3], flash: [0, 1], shake: [0, 2] };
-    const step = steps[key], range = limits[key];
+    const steps: Readonly<Record<string, number>> = {
+      masterVolume: 0.1,
+      musicVolume: 0.1,
+      sfxVolume: 0.1,
+      interfaceVolume: 0.1,
+      padDeadL: 0.02,
+      padDeadR: 0.02,
+      padAimSens: 0.1,
+      sens: 0.1,
+      flash: 0.25,
+      shake: 0.25,
+    };
+    const limits: Readonly<Record<string, readonly [number, number]>> = {
+      masterVolume: [0, 1],
+      musicVolume: [0, 1],
+      sfxVolume: [0, 1],
+      interfaceVolume: [0, 1],
+      padDeadL: [0.1, 0.4],
+      padDeadR: [0.08, 0.4],
+      padAimSens: [0.5, 2],
+      sens: [0.2, 3],
+      flash: [0, 1],
+      shake: [0, 2],
+    };
+    const step = steps[key],
+      range = limits[key];
     if (step === undefined || range === undefined) return false;
     const current = this.settings[key];
     const numeric = typeof current === "number" ? current : 1;
     this.settings[key] = clamp(Number((numeric + step * direction).toFixed(2)), range[0], range[1]);
-    this.apply(); this.save();
+    this.apply();
+    this.save();
     return true;
   }
 
   toggle(key: string): boolean {
     const current = this.settings[key];
     if (typeof current !== "boolean") return false;
-    this.settings[key] = !current; this.apply(); this.save();
+    this.settings[key] = !current;
+    this.apply();
+    this.save();
     return true;
   }
 
@@ -263,7 +295,8 @@ export class SettingsController {
     const current = this.settings[key];
     const index = Math.max(0, values.indexOf(typeof current === "string" ? current : ""));
     this.settings[key] = values[(index + 1) % values.length] ?? values[0];
-    this.apply(); this.save();
+    this.apply();
+    this.save();
     return true;
   }
 }

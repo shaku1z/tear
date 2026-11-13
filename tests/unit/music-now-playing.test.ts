@@ -27,8 +27,12 @@ describe("Now Playing", () => {
   });
 
   it("uses Music in empty-state and detail accessibility labels", () => {
-    expect(nowPlayingLabel({ workId: "", title: "—", stationId: null, stationName: null, tier: 0 })).toBe("MUSIC — NO TRACK");
-    expect(nowPlayingDetail({ workId: "a", title: "A", stationId: null, stationName: null, tier: 0 })).toContain("MUSIC");
+    expect(nowPlayingLabel({ workId: "", title: "—", stationId: null, stationName: null, tier: 0 })).toBe(
+      "MUSIC — NO TRACK",
+    );
+    expect(nowPlayingDetail({ workId: "a", title: "A", stationId: null, stationName: null, tier: 0 })).toContain(
+      "MUSIC",
+    );
   });
 
   it("notifies listeners only when something actually changed", () => {

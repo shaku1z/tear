@@ -18,12 +18,8 @@ export type {
   GhostStudioRenderer as ReplayEditorRenderer,
 } from "./player-experiences";
 
-export {
-  createGhostStudioCutListFromTheater as createReplayEditorCutListFromTheater,
-} from "./studio-cut-list-theater";
-export type {
-  GhostStudioCutListTheaterProjection as ReplayEditorCutListTheaterProjection,
-} from "./studio-cut-list-theater";
+export { createGhostStudioCutListFromTheater as createReplayEditorCutListFromTheater } from "./studio-cut-list-theater";
+export type { GhostStudioCutListTheaterProjection as ReplayEditorCutListTheaterProjection } from "./studio-cut-list-theater";
 
 export const REPLAY_EDITOR_EDL_FORMAT = "ghost-studio-edl" as const;
 export const REPLAY_EDITOR_EDL_SCHEMA_VERSION = 1 as const;

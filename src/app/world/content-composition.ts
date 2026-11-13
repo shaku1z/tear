@@ -41,8 +41,12 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
     viewportHeight: options.height,
     groundY: d.CONFIG.world.groundY,
     reformWarn: d.CONFIG.bossArena.reformWarn,
-    ring: (x, y, radius, color) => { d.FX.ring(x, y, radius, color); },
-    burst: (x, y, dx, dy, count, color) => { d.FX.burst(x, y, dx, dy, count, color); },
+    ring: (x, y, radius, color) => {
+      d.FX.ring(x, y, radius, color);
+    },
+    burst: (x, y, dx, dy, count, color) => {
+      d.FX.burst(x, y, dx, dy, count, color);
+    },
     bossEvent: (owner, event, color, quiet) => {
       d.BOSSFX.event(owner, event, { color, quiet });
     },
@@ -66,7 +70,9 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
     stageIndex: () => options.stage.index,
     stageId: () => options.stage.current.id,
     platforms: () => options.stage.platforms,
-    setPlatforms: (value) => { options.stage.platforms = value; },
+    setPlatforms: (value) => {
+      options.stage.platforms = value;
+    },
     createGround: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
     createAir: (kind, x, y) => options.entities.createEnemy(kind, x, y, options.run()),
     createSupport: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
@@ -81,12 +87,19 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
       const placement = planBossPlacement(id, options.width, d.CONFIG);
       return options.entities.createEnemy(placement.factoryId, placement.x, placement.y, options.run());
     },
-    applyPreset: (enemy, preset) => { d.applyPreset(enemy, preset); },
-    rollVariant: (kind, wave, context) => context === undefined
-      ? d.rollVariant(kind, wave, options.worldServices.random.stream("spawn"))
-      : d.rollVariant(kind, context),
-    applyVariant: (enemy, variant) => { d.applyVariant(enemy, variant); },
-    rollAffixes: (enemy, wave) => { d.rollAffixes(enemy, wave, options.worldServices.random.stream("spawn")); },
+    applyPreset: (enemy, preset) => {
+      d.applyPreset(enemy, preset);
+    },
+    rollVariant: (kind, wave, context) =>
+      context === undefined
+        ? d.rollVariant(kind, wave, options.worldServices.random.stream("spawn"))
+        : d.rollVariant(kind, context),
+    applyVariant: (enemy, variant) => {
+      d.applyVariant(enemy, variant);
+    },
+    rollAffixes: (enemy, wave) => {
+      d.rollAffixes(enemy, wave, options.worldServices.random.stream("spawn"));
+    },
     arrivalEffect(enemy, boss) {
       d.FX.ring(enemy.x, enemy.y, 10, enemy.color);
       if (boss && !d.GFX.low) {
@@ -95,8 +108,13 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
       }
     },
     recordSpawn: publishSpawn,
-    install: (enemy) => { options.enemies().push(enemy); d.practiceEncounterPersistence?.trackSpawn(enemy, options.run()); },
-    startClipper: () => { d.Clipper?.start(); },
+    install: (enemy) => {
+      options.enemies().push(enemy);
+      d.practiceEncounterPersistence?.trackSpawn(enemy, options.run());
+    },
+    startClipper: () => {
+      d.Clipper?.start();
+    },
     bossIntroDuration: d.CONFIG.bossTheater.introDur,
     wipeRemainingSeconds: options.wipeRemainingSeconds,
     setBossIntro: options.setBossIntro,
@@ -104,5 +122,10 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
     clearBanners: options.clearBanner,
     bossArena: (id) => arena.create(id),
   });
-  return Object.freeze({ ...content, updateBossArenaPlatforms: (deltaSeconds: number) => { arena.updateLive(deltaSeconds); } });
+  return Object.freeze({
+    ...content,
+    updateBossArenaPlatforms: (deltaSeconds: number) => {
+      arena.updateLive(deltaSeconds);
+    },
+  });
 }

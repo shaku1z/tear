@@ -14,10 +14,17 @@ export interface ChapterMotionTokens {
 export interface CampaignControllerConfig {
   readonly presentation: { readonly dialogueDuck: number; readonly biomeRevealDuck: number };
   readonly finale: {
-    readonly anchorRadius: number; readonly worldZoom: number;
-    readonly silence: number; readonly wound: number; readonly relics: number;
-    readonly cutAutoAt: number; readonly cutAutoStep: number; readonly cutSpeed: number;
-    readonly restorationMin: number; readonly epilogueReveal: number; readonly rewardHold: number;
+    readonly anchorRadius: number;
+    readonly worldZoom: number;
+    readonly silence: number;
+    readonly wound: number;
+    readonly relics: number;
+    readonly cutAutoAt: number;
+    readonly cutAutoStep: number;
+    readonly cutSpeed: number;
+    readonly restorationMin: number;
+    readonly epilogueReveal: number;
+    readonly rewardHold: number;
   };
 }
 

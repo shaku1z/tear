@@ -1,7 +1,16 @@
-import type { LiveBlade as OpeningBlade, LiveEnemy as OpeningEnemy, LivePlayer as OpeningPlayer,
-  LiveRun as OpeningRun } from "../../gameplay/combat/live-opening-phase";
-import type { LiveBlade as CollisionBlade, LiveEnemy as CollisionEnemy, LivePlayer as CollisionPlayer,
-  LiveProjectile, LiveRun as CollisionRun } from "../../gameplay/combat/live-collision-phase";
+import type {
+  LiveBlade as OpeningBlade,
+  LiveEnemy as OpeningEnemy,
+  LivePlayer as OpeningPlayer,
+  LiveRun as OpeningRun,
+} from "../../gameplay/combat/live-opening-phase";
+import type {
+  LiveBlade as CollisionBlade,
+  LiveEnemy as CollisionEnemy,
+  LivePlayer as CollisionPlayer,
+  LiveProjectile,
+  LiveRun as CollisionRun,
+} from "../../gameplay/combat/live-collision-phase";
 import type { LiveWaveRun } from "../../gameplay/run/live-wave-controller";
 import type { RunSession } from "../../gameplay/run/session";
 import type { LiveCampaignRun } from "../campaign/campaign-runtime";
@@ -20,14 +29,21 @@ import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 export type GamePlayer = InstanceType<ReturnType<typeof createPlayer>> & OpeningPlayer & CollisionPlayer;
 export type GameBlade = InstanceType<ReturnType<typeof createBlade>> & OpeningBlade & CollisionBlade;
-export type GameEnemy = InstanceType<EnemyTypes["Enemy"]> & OpeningEnemy & CollisionEnemy & {
-  isVoidWisp?: boolean;
-  _gid?: number;
-};
+export type GameEnemy = InstanceType<EnemyTypes["Enemy"]> &
+  OpeningEnemy &
+  CollisionEnemy & {
+    isVoidWisp?: boolean;
+    _gid?: number;
+  };
 export type GameProjectile = InstanceType<ReturnType<typeof createProjectile>> & LiveProjectile;
 export type GameMods = ReturnType<typeof newMods>;
-export type GameRun = RunSession<GameMods> & OpeningRun & CollisionRun & LiveWaveRun & LiveCampaignRun &
-  LiveStyleRun & LiveWeaponRun<GameEnemy> & {
+export type GameRun = RunSession<GameMods> &
+  OpeningRun &
+  CollisionRun &
+  LiveWaveRun &
+  LiveCampaignRun &
+  LiveStyleRun &
+  LiveWeaponRun<GameEnemy> & {
     diffDmg: number;
     bossIdx: number;
     bossOrder: string[];
@@ -39,6 +55,26 @@ export type GameRun = RunSession<GameMods> & OpeningRun & CollisionRun & LiveWav
     _arenaBroken?: ArenaPlatform[] | null;
   };
 
-export interface GameFloater { x: number; y: number; text: string; life: number; big: boolean; col: string }
-export interface GameSlowZone { x: number; y: number; r: number; life: number }
-export interface GameTemporaryWall { x: number; y: number; w: number; h: number; wall: true; life: number; maxLife: number }
+export interface GameFloater {
+  x: number;
+  y: number;
+  text: string;
+  life: number;
+  big: boolean;
+  col: string;
+}
+export interface GameSlowZone {
+  x: number;
+  y: number;
+  r: number;
+  life: number;
+}
+export interface GameTemporaryWall {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  wall: true;
+  life: number;
+  maxLife: number;
+}

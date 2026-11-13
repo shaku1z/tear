@@ -8,26 +8,31 @@ async function assertVisibilityLifecycle(page, baseline) {
   // Tab occlusion is window-manager behavior and is not portable through Xvfb.
   // Drive the browser event deterministically and assert the application's
   // complete hidden/visible mute lifecycle instead.
-  const setSimulatedVisibility = async (hidden) => page.evaluate((nextHidden) => {
-    Object.defineProperties(document, {
-      hidden: { configurable: true, get: () => nextHidden },
-      visibilityState: { configurable: true, get: () => nextHidden ? "hidden" : "visible" },
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-  }, hidden);
+  const setSimulatedVisibility = async (hidden) =>
+    page.evaluate((nextHidden) => {
+      Object.defineProperties(document, {
+        hidden: { configurable: true, get: () => nextHidden },
+        visibilityState: { configurable: true, get: () => (nextHidden ? "hidden" : "visible") },
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    }, hidden);
   await setSimulatedVisibility(true);
   await page.waitForFunction(({ hidden }) => {
     const resources = window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources;
-    return document.visibilityState === "hidden"
-      && resources.visibilityTransitions.hidden > hidden
-      && resources.system.temporaryMuteReasons.includes("visibility");
+    return (
+      document.visibilityState === "hidden" &&
+      resources.visibilityTransitions.hidden > hidden &&
+      resources.system.temporaryMuteReasons.includes("visibility")
+    );
   }, baseline);
   await setSimulatedVisibility(false);
   await page.waitForFunction(({ visible }) => {
     const resources = window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources;
-    return document.visibilityState === "visible"
-      && resources.visibilityTransitions.visible > visible
-      && !resources.system.temporaryMuteReasons.includes("visibility");
+    return (
+      document.visibilityState === "visible" &&
+      resources.visibilityTransitions.visible > visible &&
+      !resources.system.temporaryMuteReasons.includes("visibility")
+    );
   }, baseline);
 }
 
@@ -43,7 +48,10 @@ async function assertVisibilityLifecycle(page, baseline) {
       response.writeHead(404).end();
       return;
     }
-    response.setHeader("Content-Type", file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream");
+    response.setHeader(
+      "Content-Type",
+      file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream",
+    );
     fs.createReadStream(file).pipe(response);
   });
   await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
@@ -112,7 +120,9 @@ async function assertVisibilityLifecycle(page, baseline) {
     // Modifier keys satisfy the browser activation gate without dispatching a
     // menu command into the canvas UI beneath the pointer.
     await page.keyboard.press("Shift");
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, { timeout: 20000 });
+    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, {
+      timeout: 20000,
+    });
     await page.keyboard.press("Shift");
     await page.keyboard.press("Control");
     const after = await page.evaluate(() => ({
@@ -121,14 +131,24 @@ async function assertVisibilityLifecycle(page, baseline) {
     }));
     assert.equal(after.contexts, 1);
     assert.equal(after.audio.backend, "tear-score@0.1.0-alpha.1");
-    assert.ok(musicVendorRequests.includes("/vendor/tear-music/adaptive-soundtrack.esm.js"),
-      "canonical Adaptive Soundtrack module was evaluated");
-    assert.ok(musicVendorRequests.includes("/vendor/tear-music/tone-host-14.9.17.esm.js"),
-      "canonical paired Tone host was loaded");
-    assert.equal(musicVendorRequests.some((request) => request.includes("/vendor/tear-score/")), false,
-      "canonical success does not invoke the legacy vendor fallback");
-    assert.equal(await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, "Tone")), false,
-      "canonical Tone bridge is restored after module evaluation");
+    assert.ok(
+      musicVendorRequests.includes("/vendor/tear-music/adaptive-soundtrack.esm.js"),
+      "canonical Adaptive Soundtrack module was evaluated",
+    );
+    assert.ok(
+      musicVendorRequests.includes("/vendor/tear-music/tone-host-14.9.17.esm.js"),
+      "canonical paired Tone host was loaded",
+    );
+    assert.equal(
+      musicVendorRequests.some((request) => request.includes("/vendor/tear-score/")),
+      false,
+      "canonical success does not invoke the legacy vendor fallback",
+    );
+    assert.equal(
+      await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, "Tone")),
+      false,
+      "canonical Tone bridge is restored after module evaluation",
+    );
     assert.equal(after.audio.resources.lifecycleInstalled, true);
     assert.equal(after.audio.resources.lifecycleListeners, 4);
     assert.deepEqual(after.audio.resources.system, {
@@ -170,20 +190,27 @@ async function assertVisibilityLifecycle(page, baseline) {
     }));
     const settledRepeatedHandle = await page.waitForFunction(() => {
       const snapshot = window.__TEAR_CATALOG_DEBUG__.audio.snapshot();
-      return snapshot.resources.activeVoices === 0 && snapshot.resources.activeVoiceGraphNodes === 0
-        ? snapshot
-        : false;
+      return snapshot.resources.activeVoices === 0 && snapshot.resources.activeVoiceGraphNodes === 0 ? snapshot : false;
     });
     const settledRepeated = await settledRepeatedHandle.jsonValue();
     await settledRepeatedHandle.dispose();
     assert.equal(repeated.contexts, 1, "repeated runs retain one host-owned AudioContext");
     assert.equal(settledRepeated.resources.activeVoiceGraphNodes, 0, "scheduled voice nodes are released");
-    assert.equal(settledRepeated.resources.lifecycleListeners, resourceBaseline.lifecycleListeners,
-      "repeated runs do not add lifecycle listeners");
-    assert.equal(settledRepeated.resources.legacySequencer.running, resourceBaseline.legacySequencer.running,
-      "repeated runs do not add owned timers");
-    assert.deepEqual(settledRepeated.resources.system, resourceBaseline.system,
-      "repeated runs do not add contexts, mixer nodes, or backend nodes");
+    assert.equal(
+      settledRepeated.resources.lifecycleListeners,
+      resourceBaseline.lifecycleListeners,
+      "repeated runs do not add lifecycle listeners",
+    );
+    assert.equal(
+      settledRepeated.resources.legacySequencer.running,
+      resourceBaseline.legacySequencer.running,
+      "repeated runs do not add owned timers",
+    );
+    assert.deepEqual(
+      settledRepeated.resources.system,
+      resourceBaseline.system,
+      "repeated runs do not add contexts, mixer nodes, or backend nodes",
+    );
     assert.deepEqual(pageErrors, []);
     assert.deepEqual(timingWarnings, [], "score transitions use Tone's scheduled callback time");
 
@@ -222,13 +249,27 @@ async function assertVisibilityLifecycle(page, baseline) {
     await fallback.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 20000 });
     await fallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.audio, undefined, { timeout: 20000 });
     await fallback.keyboard.press("Shift");
-    await fallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, { timeout: 20000 });
+    await fallback.waitForFunction(
+      () => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
+      undefined,
+      { timeout: 20000 },
+    );
     const fallbackAudio = await fallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
-    assert.equal(fallbackAudio.backend, "tear-score@0.1.0-alpha.1", "blocked canonical assets select the pinned TearScore fallback");
-    assert.equal(fallbackVendorRequests.includes("/vendor/tear-score/tear-score.esm.js"), true,
-      "legacy TearScore module was loaded after canonical failure");
-    assert.equal(fallbackVendorRequests.includes("/vendor/tear-score/tone-host-14.9.17.esm.js"), true,
-      "legacy paired Tone host was loaded after canonical failure");
+    assert.equal(
+      fallbackAudio.backend,
+      "tear-score@0.1.0-alpha.1",
+      "blocked canonical assets select the pinned TearScore fallback",
+    );
+    assert.equal(
+      fallbackVendorRequests.includes("/vendor/tear-score/tear-score.esm.js"),
+      true,
+      "legacy TearScore module was loaded after canonical failure",
+    );
+    assert.equal(
+      fallbackVendorRequests.includes("/vendor/tear-score/tone-host-14.9.17.esm.js"),
+      true,
+      "legacy paired Tone host was loaded after canonical failure",
+    );
     assert.equal(fallbackAudio.resources.legacySequencer.running, false);
     assert.equal(fallbackAudio.resources.system.effectsBackendNodes, 15);
     await fallback.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })));
@@ -252,21 +293,41 @@ async function assertVisibilityLifecycle(page, baseline) {
       // Keep the pre-existing final fallback evidence: both vendored music
       // generations and recorded cues are unavailable, so legacy synth is the
       // only backend allowed to initialize.
-      if (url.includes("/vendor/tear-music/") || url.includes("/vendor/tear-score/") || url.includes("/audio/cues/")) route.abort("failed");
+      if (url.includes("/vendor/tear-music/") || url.includes("/vendor/tear-score/") || url.includes("/audio/cues/"))
+        route.abort("failed");
       else if (url.startsWith(`${baseUrl}/`)) route.continue();
       else route.abort();
     });
-    await legacySynthFallback.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 20000 });
-    await legacySynthFallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.audio, undefined, { timeout: 20000 });
+    await legacySynthFallback.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, {
+      waitUntil: "domcontentloaded",
+      timeout: 20000,
+    });
+    await legacySynthFallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.audio, undefined, {
+      timeout: 20000,
+    });
     await legacySynthFallback.keyboard.press("Shift");
-    await legacySynthFallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, { timeout: 20000 });
+    await legacySynthFallback.waitForFunction(
+      () => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
+      undefined,
+      { timeout: 20000 },
+    );
     const legacySynthAudio = await legacySynthFallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
-    assert.equal(legacySynthAudio.backend, "legacy-synth", "blocked canonical and TearScore assets select the final legacy-synth fallback");
+    assert.equal(
+      legacySynthAudio.backend,
+      "legacy-synth",
+      "blocked canonical and TearScore assets select the final legacy-synth fallback",
+    );
     assert.equal(legacySynthAudio.resources.legacySequencer.running, true);
     assert.equal(legacySynthAudio.resources.system.effectsBackendNodes, 15);
-    await legacySynthFallback.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })));
-    await legacySynthFallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "disposed");
-    const legacySynthDisposed = await legacySynthFallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources);
+    await legacySynthFallback.evaluate(() =>
+      window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })),
+    );
+    await legacySynthFallback.waitForFunction(
+      () => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "disposed",
+    );
+    const legacySynthDisposed = await legacySynthFallback.evaluate(
+      () => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources,
+    );
     assert.equal(legacySynthDisposed.legacySequencer.running, false, "legacy synth interval is cleared");
     assert.equal(legacySynthDisposed.activeVoices, 0);
     assert.equal(legacySynthDisposed.activeVoiceGraphNodes, 0);

@@ -22,23 +22,26 @@ interface ProjectileIntercept {
   readonly distance: number;
 }
 
-function incomingProjectiles(
-  observation: TearAgentObservation,
-  horizon = 0.9,
-): readonly ProjectileIntercept[] {
+function incomingProjectiles(observation: TearAgentObservation, horizon = 0.9): readonly ProjectileIntercept[] {
   const player = observation.state.player;
-  return observation.state.entities.flatMap((entity) => {
-    if (entity.kind !== "projectile") return [];
-    const dx = player.x - entity.x, dy = player.y - entity.y;
-    const speedSquared = entity.vx * entity.vx + entity.vy * entity.vy;
-    if (speedSquared < 1) return [];
-    const time = (dx * entity.vx + dy * entity.vy) / speedSquared;
-    if (time < 0 || time > horizon) return [];
-    const missDistance = Math.hypot(entity.x + entity.vx * time - player.x,
-      entity.y + entity.vy * time - player.y);
-    return [{ entity, time, missDistance, distance: Math.hypot(dx, dy) }];
-  }).sort((left, right) => left.missDistance - right.missDistance
-    || left.time - right.time || left.entity.id.localeCompare(right.entity.id));
+  return observation.state.entities
+    .flatMap((entity) => {
+      if (entity.kind !== "projectile") return [];
+      const dx = player.x - entity.x,
+        dy = player.y - entity.y;
+      const speedSquared = entity.vx * entity.vx + entity.vy * entity.vy;
+      if (speedSquared < 1) return [];
+      const time = (dx * entity.vx + dy * entity.vy) / speedSquared;
+      if (time < 0 || time > horizon) return [];
+      const missDistance = Math.hypot(entity.x + entity.vx * time - player.x, entity.y + entity.vy * time - player.y);
+      return [{ entity, time, missDistance, distance: Math.hypot(dx, dy) }];
+    })
+    .sort(
+      (left, right) =>
+        left.missDistance - right.missDistance ||
+        left.time - right.time ||
+        left.entity.id.localeCompare(right.entity.id),
+    );
 }
 
 export class TacticalCombatModule implements TearAgentModule<TearAgentObservation, TearTargetDecision> {
@@ -49,20 +52,23 @@ export class TacticalCombatModule implements TearAgentModule<TearAgentObservatio
       .map((entity) => {
         const distance = Math.hypot(entity.x - player.x, entity.y - player.y);
         const execute = (1 - (entity.hpRatio ?? 1)) * 3_000;
-        const kindPriority = ["bomber", "ranged", "flyer", "wraith", "priest", "mender", "herald"]
-          .includes(entity.kind) ? 2_000 : 0;
+        const kindPriority = ["bomber", "ranged", "flyer", "wraith", "priest", "mender", "herald"].includes(entity.kind)
+          ? 2_000
+          : 0;
         const windup = /attack|charge|commit|wind|pounce|slam|stomp|strike|swing/u.test(entity.state ?? "") ? 2_500 : 0;
         const proximity = Math.max(0, 450 - distance) * 8;
         const immediate = distance < 260 ? 7_000 : distance < 400 ? 4_000 : 0;
-        const threat = (entity.threat ?? 1) * 6_000 + execute + kindPriority + windup
-          + proximity + immediate - distance;
+        const threat =
+          (entity.threat ?? 1) * 6_000 + execute + kindPriority + windup + proximity + immediate - distance;
         return { entity, threat };
       })
       .sort((left, right) => right.threat - left.threat || left.entity.id.localeCompare(right.entity.id));
     const preferred = ranked.find((entry) => entry.entity.id === preferredId);
-    const immediate = ranked.find((entry) =>
-      Math.hypot(entry.entity.x - player.x, entry.entity.y - player.y) < 120
-      && /attack|charge|commit|pounce|slam/u.test(entry.entity.state ?? ""));
+    const immediate = ranked.find(
+      (entry) =>
+        Math.hypot(entry.entity.x - player.x, entry.entity.y - player.y) < 120 &&
+        /attack|charge|commit|pounce|slam/u.test(entry.entity.state ?? ""),
+    );
     if (immediate !== undefined && immediate.entity.id !== preferred?.entity.id) {
       return { target: immediate.entity, threat: immediate.threat };
     }
@@ -75,11 +81,12 @@ export class TacticalCombatModule implements TearAgentModule<TearAgentObservatio
 function aimTurn(dx: number, dy: number): number {
   const radians = Math.atan2(dy, dx);
   const normalized = radians < 0 ? radians + Math.PI * 2 : radians;
-  return Math.min(AIM_TURN_SCALE - 1, Math.floor(normalized / (Math.PI * 2) * AIM_TURN_SCALE));
+  return Math.min(AIM_TURN_SCALE - 1, Math.floor((normalized / (Math.PI * 2)) * AIM_TURN_SCALE));
 }
 
 function swingTurn(dx: number, dy: number, tick: number): number {
-  const base = Math.atan2(dy, dx), phase = tick % 20;
+  const base = Math.atan2(dy, dx),
+    phase = tick % 20;
   const offset = phase < 12 ? -1.05 + 2.1 * (phase / 11) : 0;
   return aimTurn(Math.cos(base + offset), Math.sin(base + offset));
 }
@@ -102,9 +109,16 @@ export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeM
     const blade = input.observation.state.blade;
     const stocked = typeof blade.chambers === "number" && Number.isFinite(blade.chambers) && blade.chambers > 0;
     const ready = stocked && blade.fireCooldown === 0;
-    const requested = decision.actions.some((action) => action.type === "weapon" && action.intent === "primary" && action.phase === "pressed");
-    return { ...decision, actions: [...decision.actions.filter((action) => action.type !== "weapon" || action.intent !== "primary"),
-      { type: "weapon", intent: "primary", phase: ready && requested ? "pressed" : "released" }] };
+    const requested = decision.actions.some(
+      (action) => action.type === "weapon" && action.intent === "primary" && action.phase === "pressed",
+    );
+    return {
+      ...decision,
+      actions: [
+        ...decision.actions.filter((action) => action.type !== "weapon" || action.intent !== "primary"),
+        { type: "weapon", intent: "primary", phase: ready && requested ? "pressed" : "released" },
+      ],
+    };
   }
 
   #decide(input: BladeMotorInput): BladeMotorDecision {
@@ -131,35 +145,45 @@ export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeM
         ],
       };
     }
-    const incoming = incomingProjectiles(input.observation)
-      .find(({ entity, missDistance, distance }) =>
-        entity.state?.includes("groundShock") !== true && missDistance < 90 && distance < 430)?.entity;
+    const incoming = incomingProjectiles(input.observation).find(
+      ({ entity, missDistance, distance }) =>
+        entity.state?.includes("groundShock") !== true && missDistance < 90 && distance < 430,
+    )?.entity;
     if (incoming !== undefined) {
-      const leadSeconds = Math.min(0.18, Math.hypot(incoming.x - state.player.x,
-        incoming.y - state.player.y) / Math.max(1, Math.hypot(incoming.vx, incoming.vy)));
+      const leadSeconds = Math.min(
+        0.18,
+        Math.hypot(incoming.x - state.player.x, incoming.y - state.player.y) /
+          Math.max(1, Math.hypot(incoming.vx, incoming.vy)),
+      );
       return {
         maneuver: "parry",
         actions: [
-          { type: "aim", turn: swingTurn(incoming.x + incoming.vx * leadSeconds - state.blade.handX,
-            incoming.y + incoming.vy * leadSeconds - state.blade.handY, state.tick) },
+          {
+            type: "aim",
+            turn: swingTurn(
+              incoming.x + incoming.vx * leadSeconds - state.blade.handX,
+              incoming.y + incoming.vy * leadSeconds - state.blade.handY,
+              state.tick,
+            ),
+          },
           { type: "weapon", intent: "primary", phase: "pressed" },
         ],
       };
     }
     if (target === undefined) return { maneuver: "recover", actions: [] };
-    const dx = target.x - state.blade.handX, dy = target.y - state.blade.handY;
+    const dx = target.x - state.blade.handX,
+      dy = target.y - state.blade.handY;
     const distance = Math.hypot(dx, dy);
     const directAim: GameAction = { type: "aim", turn: aimTurn(dx, dy) };
     const swingAim: GameAction = { type: "aim", turn: swingTurn(dx, dy, state.tick) };
-    const nearbyHostile = state.entities.some((entity) =>
-      !["platform", "hazard", "projectile"].includes(entity.kind)
-      && Math.hypot(entity.x - state.player.x, entity.y - state.player.y) < 260);
-    const scheduledStyleThrow = (input.profile === "style" || input.profile === "chaos")
-      && state.tick % 120 < 2;
+    const nearbyHostile = state.entities.some(
+      (entity) =>
+        !["platform", "hazard", "projectile"].includes(entity.kind) &&
+        Math.hypot(entity.x - state.player.x, entity.y - state.player.y) < 260,
+    );
+    const scheduledStyleThrow = (input.profile === "style" || input.profile === "chaos") && state.tick % 120 < 2;
     const riftlockLaunch = state.run.weapon === "riftlock" && distance > 120;
-    if (target.kind === "wraith"
-      || riftlockLaunch
-      || (!nearbyHostile && distance > 420 && scheduledStyleThrow)) {
+    if (target.kind === "wraith" || riftlockLaunch || (!nearbyHostile && distance > 420 && scheduledStyleThrow)) {
       return { maneuver: "throw", actions: [directAim, { type: "weapon", intent: "throw", phase: "pressed" }] };
     }
     if (input.profile === "style" && state.tick % 180 < 2) {
@@ -181,19 +205,25 @@ export class RecoveryModule implements TearAgentModule<BladeMotorInput, Movement
   decide(input: BladeMotorInput): MovementDecision | null {
     const player = input.observation.state.player;
     const target = input.target;
-    const pressure = input.observation.state.entities.filter((entity) =>
-      !["platform", "hazard", "projectile"].includes(entity.kind)).length;
+    const pressure = input.observation.state.entities.filter(
+      (entity) => !["platform", "hazard", "projectile"].includes(entity.kind),
+    ).length;
     const healthRatio = player.hp / player.maxHp;
-    const threshold = input.profile === "survival" ? 0.65
-      : input.profile === "competent" || input.profile === "style" ? 0.52 : 0;
+    const threshold =
+      input.profile === "survival" ? 0.65 : input.profile === "competent" || input.profile === "style" ? 0.52 : 0;
     const lowHealth = healthRatio < threshold || (pressure >= 5 && healthRatio < threshold + 0.08);
     const recoveryRange = 400;
-    if (!lowHealth || target === undefined
-      || Math.hypot(target.x - player.x, target.y - player.y) > recoveryRange) return null;
+    if (!lowHealth || target === undefined || Math.hypot(target.x - player.x, target.y - player.y) > recoveryRange)
+      return null;
     const bounds = input.observation.state.diagnostics?.worldBounds;
-    const retreat = bounds !== undefined && player.x > bounds.maxX - 140 ? -INPUT_AXIS_SCALE
-      : bounds !== undefined && player.x < bounds.minX + 140 ? INPUT_AXIS_SCALE
-        : target.x >= player.x ? -INPUT_AXIS_SCALE : INPUT_AXIS_SCALE;
+    const retreat =
+      bounds !== undefined && player.x > bounds.maxX - 140
+        ? -INPUT_AXIS_SCALE
+        : bounds !== undefined && player.x < bounds.minX + 140
+          ? INPUT_AXIS_SCALE
+          : target.x >= player.x
+            ? -INPUT_AXIS_SCALE
+            : INPUT_AXIS_SCALE;
     return {
       actions: [
         { type: "move", x: retreat, y: 0 },
@@ -213,8 +243,10 @@ export class MovementModule implements TearAgentModule<BladeMotorInput, Movement
     const target = input.target;
     const blade = input.observation.state.blade;
     const riftlock = input.observation.state.run.weapon === "riftlock";
-    if (["embedded", "hooked"].includes(blade.state)
-      && Math.hypot(blade.handX - player.x, blade.handY - player.y) > 210) {
+    if (
+      ["embedded", "hooked"].includes(blade.state) &&
+      Math.hypot(blade.handX - player.x, blade.handY - player.y) > 210
+    ) {
       const x = blade.handX >= player.x ? INPUT_AXIS_SCALE : -INPUT_AXIS_SCALE;
       return {
         actions: [
@@ -225,22 +257,28 @@ export class MovementModule implements TearAgentModule<BladeMotorInput, Movement
         recovering: true,
       };
     }
-    const incoming = incomingProjectiles(input.observation)
-      .find(({ entity, missDistance }) =>
-        missDistance < (entity.state?.includes("groundShock") === true ? 95 : 70));
+    const incoming = incomingProjectiles(input.observation).find(
+      ({ entity, missDistance }) => missDistance < (entity.state?.includes("groundShock") === true ? 95 : 70),
+    );
     if (incoming !== undefined && incoming.distance < 430) {
       const projectile = incoming.entity;
       const jumpable = projectile.state?.includes("groundShock") === true;
       const bounds = input.observation.state.diagnostics?.worldBounds;
-      const away = bounds !== undefined && player.x > bounds.maxX - 140 ? -INPUT_AXIS_SCALE
-        : bounds !== undefined && player.x < bounds.minX + 140 ? INPUT_AXIS_SCALE
-          : projectile.x >= player.x ? -INPUT_AXIS_SCALE : INPUT_AXIS_SCALE;
+      const away =
+        bounds !== undefined && player.x > bounds.maxX - 140
+          ? -INPUT_AXIS_SCALE
+          : bounds !== undefined && player.x < bounds.minX + 140
+            ? INPUT_AXIS_SCALE
+            : projectile.x >= player.x
+              ? -INPUT_AXIS_SCALE
+              : INPUT_AXIS_SCALE;
       return {
         actions: [
           { type: "move", x: away, y: 0 },
           ...(jumpable && player.grounded ? [{ type: "jump", phase: "pressed" } as const] : []),
           ...(!jumpable && incoming.distance < 115 && player.dashCharges > 0
-            ? [{ type: "dash", x: away, y: 0 } as const] : []),
+            ? [{ type: "dash", x: away, y: 0 } as const]
+            : []),
         ],
         recovering: true,
       };
@@ -250,41 +288,56 @@ export class MovementModule implements TearAgentModule<BladeMotorInput, Movement
     if (target === undefined) return { actions: [{ type: "move", x: 0, y: 0 }], recovering: false };
     const dx = target.x - player.x;
     const distance = Math.hypot(dx, target.y - player.y);
-    const toward = dx > 0 ? INPUT_AXIS_SCALE : -INPUT_AXIS_SCALE, away = -toward;
+    const toward = dx > 0 ? INPUT_AXIS_SCALE : -INPUT_AXIS_SCALE,
+      away = -toward;
     const bounds = input.observation.state.diagnostics?.worldBounds;
     const atLeftEdge = bounds !== undefined && player.x < bounds.minX + 140;
     const atRightEdge = bounds !== undefined && player.x > bounds.maxX - 140;
     const orbit = Math.floor(input.observation.state.tick / 150) % 2 === 0 ? INPUT_AXIS_SCALE : -INPUT_AXIS_SCALE;
     const armoredTarget = target.kind === "armored" && distance < 280;
     const armoredFlank = armoredTarget && !player.grounded;
-    const danger = Math.hypot(target.vx, target.vy) > 320
-      || /attack|charge|commit|wind|pounce|slam|stomp|strike|swing/u.test(target.state ?? "");
+    const danger =
+      Math.hypot(target.vx, target.vy) > 320 ||
+      /attack|charge|commit|wind|pounce|slam|stomp|strike|swing/u.test(target.state ?? "");
     const evade = away;
-    const moveX = atLeftEdge ? INPUT_AXIS_SCALE : atRightEdge ? -INPUT_AXIS_SCALE
-      : danger ? evade : riftlock ? away : distance < 100 ? away : distance > 145 ? toward : orbit;
+    const moveX = atLeftEdge
+      ? INPUT_AXIS_SCALE
+      : atRightEdge
+        ? -INPUT_AXIS_SCALE
+        : danger
+          ? evade
+          : riftlock
+            ? away
+            : distance < 100
+              ? away
+              : distance > 145
+                ? toward
+                : orbit;
     const dropThrough = target.y > player.y + 100 && player.grounded;
-    const powerSlam = target.y > player.y + (armoredTarget ? 25 : 70)
-      && !player.grounded && distance < 300;
+    const powerSlam = target.y > player.y + (armoredTarget ? 25 : 70) && !player.grounded && distance < 300;
     const route = navigationDecision(input, moveX);
     const routedX = route.moveX ?? moveX;
-    const actions: GameAction[] = [{
-      type: "move",
-      x: routedX,
-      y: route.moveY ?? (dropThrough ? INPUT_AXIS_SCALE : 0),
-    }];
+    const actions: GameAction[] = [
+      {
+        type: "move",
+        x: routedX,
+        y: route.moveY ?? (dropThrough ? INPUT_AXIS_SCALE : 0),
+      },
+    ];
     if ((dropThrough && input.observation.state.tick % 45 < 2) || route.jump) {
       actions.push({ type: "jump", phase: "pressed" });
     }
-    if ((riftlock || danger || target.y < player.y - 70 || distance < 240)
-      && player.grounded && !dropThrough) actions.push({ type: "jump", phase: "pressed" });
+    if ((riftlock || danger || target.y < player.y - 70 || distance < 240) && player.grounded && !dropThrough)
+      actions.push({ type: "jump", phase: "pressed" });
     if (riftlock && player.dashCharges > 0 && (distance < 360 || atLeftEdge || atRightEdge)) {
       actions.push({ type: "dash", x: routedX, y: 0 });
     } else if (armoredTarget && player.grounded && distance < 180 && player.dashCharges > 0) {
       actions.push({ type: "dash", x: 0, y: -INPUT_AXIS_SCALE });
-    } else if ((powerSlam || armoredFlank || danger || distance < 100
-      || distance > 560 || atLeftEdge || atRightEdge) && player.dashCharges > 0) {
-      actions.push(powerSlam ? { type: "dash", x: 0, y: INPUT_AXIS_SCALE }
-        : { type: "dash", x: routedX, y: 0 });
+    } else if (
+      (powerSlam || armoredFlank || danger || distance < 100 || distance > 560 || atLeftEdge || atRightEdge) &&
+      player.dashCharges > 0
+    ) {
+      actions.push(powerSlam ? { type: "dash", x: 0, y: INPUT_AXIS_SCALE } : { type: "dash", x: routedX, y: 0 });
     }
     return { actions, recovering: false };
   }
@@ -294,8 +347,9 @@ export class DraftModule implements TearAgentModule<TearAgentObservation, readon
   decide(observation: TearAgentObservation): readonly GameAction[] {
     const choices = observation.ui?.choices;
     if (choices === undefined || choices.length === 0) return [];
-    const selected = [...choices].sort((left, right) =>
-      (right.score ?? 0) - (left.score ?? 0) || left.id.localeCompare(right.id))[0];
+    const selected = [...choices].sort(
+      (left, right) => (right.score ?? 0) - (left.score ?? 0) || left.id.localeCompare(right.id),
+    )[0];
     if (selected === undefined) return [];
     if (observation.ui?.screen === "tierup") return [{ type: "tier-up-choice", choiceId: selected.id }];
     if (observation.ui?.screen === "reserve") return [{ type: "reserve-choice", choiceId: selected.id }];
@@ -327,7 +381,8 @@ export class CriticModule implements TearAgentModule<TearAgentObservation, reado
     const notes: string[] = [];
     if (observation.state.player.hp <= 0) notes.push("player-defeated");
     if (observation.state.availableActions.length === 0) notes.push("no-actions-advertised");
-    if (observation.ui?.screen === "playing" && observation.state.entities.length === 0) notes.push("awaiting-wave-progress");
+    if (observation.ui?.screen === "playing" && observation.state.entities.length === 0)
+      notes.push("awaiting-wave-progress");
     return Object.freeze(notes);
   }
 }
@@ -335,9 +390,11 @@ export class CriticModule implements TearAgentModule<TearAgentObservation, reado
 export class InvariantSentinelModule implements TearAgentModule<TearAgentObservation, boolean> {
   decide(observation: TearAgentObservation): boolean {
     const { player, blade } = observation.state;
-    return [player.x, player.y, player.hp, blade.tipX, blade.tipY, blade.tipSpeed].every(Number.isFinite)
-      && player.hp >= 0
-      && player.hp <= player.maxHp;
+    return (
+      [player.x, player.y, player.hp, blade.tipX, blade.tipY, blade.tipSpeed].every(Number.isFinite) &&
+      player.hp >= 0 &&
+      player.hp <= player.maxHp
+    );
   }
 }
 
@@ -415,5 +472,11 @@ export class TearScriptedPolicy {
 export class TearAgentOrchestrator extends TearScriptedPolicy {}
 
 export const SCRIPTED_POLICY_PROFILES = Object.freeze([
-  "smoke", "competent", "style", "survival", "chaos", "menu", "transition-hunter",
+  "smoke",
+  "competent",
+  "style",
+  "survival",
+  "chaos",
+  "menu",
+  "transition-hunter",
 ] as const satisfies readonly TearAgentProfileId[]);

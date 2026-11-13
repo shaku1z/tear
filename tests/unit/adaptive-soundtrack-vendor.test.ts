@@ -88,10 +88,13 @@ describe("Adaptive Soundtrack canonical vendor", () => {
   it("preserves every legacy TearScore vendor file byte-for-byte", async () => {
     const expected = {
       "public/vendor/tear-score/tear-score.esm.js": "b4f304d85a1dfb8197abcb6c2e33ba1addc40e354c7689f717c22a1a7acd793c",
-      "public/vendor/tear-score/tear-score.provenance.json": "2f6641667ebb7e1609e667cbd68b615f9bae5e3f7981a4c64b3cf298e4614d34",
-      "public/vendor/tear-score/tone-host-14.9.17.esm.js": "5dd8825c21f50486eea7353b0abdf06119dd76409e4271e3fa54fe8545463446",
+      "public/vendor/tear-score/tear-score.provenance.json":
+        "2f6641667ebb7e1609e667cbd68b615f9bae5e3f7981a4c64b3cf298e4614d34",
+      "public/vendor/tear-score/tone-host-14.9.17.esm.js":
+        "5dd8825c21f50486eea7353b0abdf06119dd76409e4271e3fa54fe8545463446",
       "public/vendor/tear-score/TONE-LICENSE.md": "391ed5af60b7b5d1f74b31040c5fa645e6e238f3d9b4c971941a262a675bbdcd",
-      "public/vendor/tear-score/upstream-manifest.json": "59924111fded47e3cb57f54af407ae9a20d474c9acdb71024bde5a87dd77dca6",
+      "public/vendor/tear-score/upstream-manifest.json":
+        "59924111fded47e3cb57f54af407ae9a20d474c9acdb71024bde5a87dd77dca6",
     } as const;
     for (const [path, hash] of Object.entries(expected)) {
       expect(sha256(await bytes(path)), path).toBe(hash);

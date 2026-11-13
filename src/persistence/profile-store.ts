@@ -1,6 +1,22 @@
 import type { AcknowledgedStorage } from "../platform/contracts";
-import { achievementOutbox, isTutorialCourseId, mergeAchievementOutboxes, mergeTutorialLedgers, outboxCoins, outboxShards, tutorialCount, tutorialLedger, type AchievementGrant, type CompletionStatus } from "../domain/reward-receipts";
-import { PROFILE_ENVELOPE_VERSION, migrateProfileEnvelope, mutableProfileWorkingCopy, type ProfileEnvelopeV2 } from "./profile-envelope";
+import {
+  achievementOutbox,
+  isTutorialCourseId,
+  mergeAchievementOutboxes,
+  mergeTutorialLedgers,
+  outboxCoins,
+  outboxShards,
+  tutorialCount,
+  tutorialLedger,
+  type AchievementGrant,
+  type CompletionStatus,
+} from "../domain/reward-receipts";
+import {
+  PROFILE_ENVELOPE_VERSION,
+  migrateProfileEnvelope,
+  mutableProfileWorkingCopy,
+  type ProfileEnvelopeV2,
+} from "./profile-envelope";
 
 interface SyncStore {
   readonly acknowledged?: AcknowledgedStorage;
@@ -90,7 +106,7 @@ export interface ProfileStoreOptions {
 }
 
 function record(value: unknown): Tracker | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Tracker : null;
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Tracker) : null;
 }
 
 function finite(value: unknown): number {
@@ -111,13 +127,28 @@ function numberMap(value: unknown): Record<string, number> {
   return output;
 }
 
-const RECEIPT_OWNED_FIELDS = new Set(["tutorialCompletion", "achievementOutbox", "ach", "stats", "shards", "seen", "modes", "weaponsWon", "advDiffs"]);
+const RECEIPT_OWNED_FIELDS = new Set([
+  "tutorialCompletion",
+  "achievementOutbox",
+  "ach",
+  "stats",
+  "shards",
+  "seen",
+  "modes",
+  "weaponsWon",
+  "advDiffs",
+]);
 function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Tracker, root = true): void {
   for (const key of new Set([...Object.keys(baseline), ...Object.keys(current)])) {
     if (root && RECEIPT_OWNED_FIELDS.has(key)) continue;
     if (JSON.stringify(baseline[key]) === JSON.stringify(current[key])) continue;
-    if (!(key in current)) { Reflect.deleteProperty(target, key); continue; }
-    const before = record(baseline[key]), after = record(current[key]), destination = record(target[key]);
+    if (!(key in current)) {
+      Reflect.deleteProperty(target, key);
+      continue;
+    }
+    const before = record(baseline[key]),
+      after = record(current[key]),
+      destination = record(target[key]);
     if (before && after && destination) overlayNormalChanges(destination, before, after, false);
     else target[key] = structuredClone(current[key]);
   }
@@ -125,80 +156,113 @@ function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Track
 
 export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
   const countedBiomeNames = options.countedBiomeNames === undefined ? null : new Set(options.countedBiomeNames);
-  const countBiomes = (value: unknown): number => Object.keys(record(value) ?? {})
-    .filter((name) => countedBiomeNames === null || countedBiomeNames.has(name)).length;
+  const countBiomes = (value: unknown): number =>
+    Object.keys(record(value) ?? {}).filter((name) => countedBiomeNames === null || countedBiomeNames.has(name)).length;
   const now = options.now ?? Date.now;
   let envelope: ProfileEnvelopeV2 | null = null;
   let envelopeWritable = true;
   const fresh = (): ProfileData => ({
-    v: 1, shards: 0, ach: {}, stats: {}, seen: {}, modes: {}, created: now(), achCoinsRetrofit: false,
+    v: 1,
+    shards: 0,
+    ach: {},
+    stats: {},
+    seen: {},
+    modes: {},
+    created: now(),
+    achCoinsRetrofit: false,
   });
 
   let knownProfile = fresh();
   const mergeData = (target: ProfileData, remote: unknown): void => {
-      const source = record(remote);
-      if (!source) return;
-      target.shards = Math.max(target.shards, finite(source.shards));
-      const remoteStats = record(source.stats);
-      if (remoteStats) for (const [key, value] of Object.entries(remoteStats)) {
+    const source = record(remote);
+    if (!source) return;
+    target.shards = Math.max(target.shards, finite(source.shards));
+    const remoteStats = record(source.stats);
+    if (remoteStats)
+      for (const [key, value] of Object.entries(remoteStats)) {
         if (key.startsWith("_") && record(value)) {
           target.stats[key] = { ...(record(target.stats[key]) ?? {}), ...record(value) };
         } else target.stats[key] = Math.max(finite(target.stats[key]), finite(value));
       }
-      const remoteAchievements = numberMap(source.ach);
-      for (const [id, timestamp] of Object.entries(remoteAchievements)) {
-        const local = target.ach[id];
-        if (local === undefined || timestamp < local) target.ach[id] = timestamp;
-      }
-      if (typeof source.username === "string" && finite(source.usernameSetAt) > finite(target.usernameSetAt)) {
-        target.username = source.username;
-        target.usernameSetAt = finite(source.usernameSetAt);
-      }
-      Object.assign(target.modes, boolMap(source.modes));
-      Object.assign(target.seen, boolMap(source.seen));
-      const rewards = record(source.rewards);
-      if (rewards) target.rewards = { ...(target.rewards ?? {}), ...rewards };
-      const remoteFinale = record(source.pendingFinale);
-      if (remoteFinale && (!target.pendingFinale || finite(remoteFinale.savedAt) > finite(target.pendingFinale.savedAt))) {
-        target.pendingFinale = remoteFinale;
-      }
-      const mergeSet = (key: "weaponsWon" | "advDiffs") => {
-        const incoming = numberMap(source[key]);
-        if (Object.keys(incoming).length === 0) return;
-        const values = target[key] ?? {};
-        for (const id of Object.keys(incoming)) values[id] = 1;
-        target[key] = values;
-      };
-      mergeSet("weaponsWon");
-      mergeSet("advDiffs");
-      target.stats.biomesSeen = Math.max(finite(target.stats.biomesSeen), countBiomes(target.stats._biomes));
-      target.stats.modesPlayed = Math.max(finite(target.stats.modesPlayed), Object.keys(target.modes).length);
-      if (target.weaponsWon) target.stats.distinctWeaponsWon = Math.max(finite(target.stats.distinctWeaponsWon), Object.keys(target.weaponsWon).length);
-      if (target.advDiffs) target.stats.clearAdvAll = Math.max(finite(target.stats.clearAdvAll), Object.keys(target.advDiffs).length);
-      if (target.tutorialCompletion !== undefined || source.tutorialCompletion !== undefined) {
-        const left = tutorialLedger(target.tutorialCompletion), right = tutorialLedger(source.tutorialCompletion);
-        left.floor = Math.max(left.floor, finite(target.stats.tutorialDone)); right.floor = Math.max(right.floor, finite(remoteStats?.tutorialDone));
-        const ledger = mergeTutorialLedgers(left, right); target.tutorialCompletion = ledger; target.stats.tutorialDone = tutorialCount(ledger);
-      }
-      if (target.achievementOutbox !== undefined || source.achievementOutbox !== undefined) {
-        const left = achievementOutbox(target.achievementOutbox), right = achievementOutbox(source.achievementOutbox);
-        left.floorCoins = Math.max(left.floorCoins, finite(target.stats.coinsEarned)); right.floorCoins = Math.max(right.floorCoins, finite(remoteStats?.coinsEarned));
-        left.floorShards = Math.max(left.floorShards, target.shards); right.floorShards = Math.max(right.floorShards, finite(source.shards));
-        const ledger = mergeAchievementOutboxes(left, right); target.achievementOutbox = ledger;
-        target.shards = outboxShards(ledger); target.stats.coinsEarned = outboxCoins(ledger);
-      }
-      for (const [key, value] of Object.entries(source)) if (!(key in target)) target[key] = structuredClone(value);
+    const remoteAchievements = numberMap(source.ach);
+    for (const [id, timestamp] of Object.entries(remoteAchievements)) {
+      const local = target.ach[id];
+      if (local === undefined || timestamp < local) target.ach[id] = timestamp;
+    }
+    if (typeof source.username === "string" && finite(source.usernameSetAt) > finite(target.usernameSetAt)) {
+      target.username = source.username;
+      target.usernameSetAt = finite(source.usernameSetAt);
+    }
+    Object.assign(target.modes, boolMap(source.modes));
+    Object.assign(target.seen, boolMap(source.seen));
+    const rewards = record(source.rewards);
+    if (rewards) target.rewards = { ...(target.rewards ?? {}), ...rewards };
+    const remoteFinale = record(source.pendingFinale);
+    if (
+      remoteFinale &&
+      (!target.pendingFinale || finite(remoteFinale.savedAt) > finite(target.pendingFinale.savedAt))
+    ) {
+      target.pendingFinale = remoteFinale;
+    }
+    const mergeSet = (key: "weaponsWon" | "advDiffs") => {
+      const incoming = numberMap(source[key]);
+      if (Object.keys(incoming).length === 0) return;
+      const values = target[key] ?? {};
+      for (const id of Object.keys(incoming)) values[id] = 1;
+      target[key] = values;
+    };
+    mergeSet("weaponsWon");
+    mergeSet("advDiffs");
+    target.stats.biomesSeen = Math.max(finite(target.stats.biomesSeen), countBiomes(target.stats._biomes));
+    target.stats.modesPlayed = Math.max(finite(target.stats.modesPlayed), Object.keys(target.modes).length);
+    if (target.weaponsWon)
+      target.stats.distinctWeaponsWon = Math.max(
+        finite(target.stats.distinctWeaponsWon),
+        Object.keys(target.weaponsWon).length,
+      );
+    if (target.advDiffs)
+      target.stats.clearAdvAll = Math.max(finite(target.stats.clearAdvAll), Object.keys(target.advDiffs).length);
+    if (target.tutorialCompletion !== undefined || source.tutorialCompletion !== undefined) {
+      const left = tutorialLedger(target.tutorialCompletion),
+        right = tutorialLedger(source.tutorialCompletion);
+      left.floor = Math.max(left.floor, finite(target.stats.tutorialDone));
+      right.floor = Math.max(right.floor, finite(remoteStats?.tutorialDone));
+      const ledger = mergeTutorialLedgers(left, right);
+      target.tutorialCompletion = ledger;
+      target.stats.tutorialDone = tutorialCount(ledger);
+    }
+    if (target.achievementOutbox !== undefined || source.achievementOutbox !== undefined) {
+      const left = achievementOutbox(target.achievementOutbox),
+        right = achievementOutbox(source.achievementOutbox);
+      left.floorCoins = Math.max(left.floorCoins, finite(target.stats.coinsEarned));
+      right.floorCoins = Math.max(right.floorCoins, finite(remoteStats?.coinsEarned));
+      left.floorShards = Math.max(left.floorShards, target.shards);
+      right.floorShards = Math.max(right.floorShards, finite(source.shards));
+      const ledger = mergeAchievementOutboxes(left, right);
+      target.achievementOutbox = ledger;
+      target.shards = outboxShards(ledger);
+      target.stats.coinsEarned = outboxCoins(ledger);
+    }
+    for (const [key, value] of Object.entries(source)) if (!(key in target)) target[key] = structuredClone(value);
   };
   const unlockInto = (target: ProfileData, achievement: AchievementDefinition): boolean => {
     if (target.ach[achievement.id] !== undefined) return false;
     const outbox = achievementOutbox(target.achievementOutbox, finite(target.stats.coinsEarned), target.shards);
-    const grant: AchievementGrant = { coins: achievement.coins ?? options.getAchievements()?.coinsFor(achievement) ?? 0,
-      shards: achievement.shards ?? options.getAchievements()?.shardsFor?.(achievement) ?? 0, acknowledged: false };
-    outbox.baselineCoins = outboxCoins(outbox) - Object.values(outbox.grants).reduce((sum, entry) => sum + entry.coins, 0);
-    outbox.baselineShards = outboxShards(outbox) - Object.values(outbox.grants).reduce((sum, entry) => sum + entry.shards, 0);
+    const grant: AchievementGrant = {
+      coins: achievement.coins ?? options.getAchievements()?.coinsFor(achievement) ?? 0,
+      shards: achievement.shards ?? options.getAchievements()?.shardsFor?.(achievement) ?? 0,
+      acknowledged: false,
+    };
+    outbox.baselineCoins =
+      outboxCoins(outbox) - Object.values(outbox.grants).reduce((sum, entry) => sum + entry.coins, 0);
+    outbox.baselineShards =
+      outboxShards(outbox) - Object.values(outbox.grants).reduce((sum, entry) => sum + entry.shards, 0);
     outbox.grants[`achievement:${achievement.id}`] ??= grant;
-    target.ach[achievement.id] = now(); target.achievementOutbox = outbox;
-    target.shards = outboxShards(outbox); target.stats.coinsEarned = outboxCoins(outbox); return true;
+    target.ach[achievement.id] = now();
+    target.achievementOutbox = outbox;
+    target.shards = outboxShards(outbox);
+    target.stats.coinsEarned = outboxCoins(outbox);
+    return true;
   };
   const commit = async (change: (target: ProfileData) => void = () => undefined): Promise<CompletionStatus> => {
     if (!options.store.acknowledged) return "unavailable";
@@ -208,31 +272,52 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       const persisted = text === null ? null : migrateProfileEnvelope(JSON.parse(text) as unknown, now());
       if (persisted && !persisted.ok) throw new Error("Unsupported stored profile");
       atWrite = structuredClone(profile.data);
-      const candidate = persisted?.ok ? Object.assign(fresh(), mutableProfileWorkingCopy(persisted.value)) : structuredClone(atWrite);
-      mergeData(candidate, atWrite); overlayNormalChanges(candidate, knownProfile, atWrite);
+      const candidate = persisted?.ok
+        ? Object.assign(fresh(), mutableProfileWorkingCopy(persisted.value))
+        : structuredClone(atWrite);
+      mergeData(candidate, atWrite);
+      overlayNormalChanges(candidate, knownProfile, atWrite);
       change(candidate);
-      const migrated = migrateProfileEnvelope({ schema: "tear.profile", schemaVersion: PROFILE_ENVELOPE_VERSION,
-        revision: Math.max(envelope?.revision ?? 0, persisted?.ok ? persisted.value.revision : 0) + 1,
-        updatedAtMs: now(), writerId: options.writerId(), profile: candidate,
-        extensions: persisted?.ok ? persisted.value.extensions : envelope?.extensions ?? {} }, now());
-      if (!migrated.ok) throw new Error("Invalid candidate profile"); return JSON.stringify(migrated.value);
+      const migrated = migrateProfileEnvelope(
+        {
+          schema: "tear.profile",
+          schemaVersion: PROFILE_ENVELOPE_VERSION,
+          revision: Math.max(envelope?.revision ?? 0, persisted?.ok ? persisted.value.revision : 0) + 1,
+          updatedAtMs: now(),
+          writerId: options.writerId(),
+          profile: candidate,
+          extensions: persisted?.ok ? persisted.value.extensions : (envelope?.extensions ?? {}),
+        },
+        now(),
+      );
+      if (!migrated.ok) throw new Error("Invalid candidate profile");
+      return JSON.stringify(migrated.value);
     });
     if (result.status !== "committed") return result.status;
     const migrated = migrateProfileEnvelope(JSON.parse(result.value) as unknown, now());
     if (!migrated.ok) return "unknown";
     envelope = migrated.value;
-    const committed: ProfileData = Object.assign(fresh(), mutableProfileWorkingCopy(migrated.value)), current = profile.data;
+    const committed: ProfileData = Object.assign(fresh(), mutableProfileWorkingCopy(migrated.value)),
+      current = profile.data;
     const merged = structuredClone(committed);
     if (merged.achievementOutbox !== undefined && current.achievementOutbox === undefined) {
       const ledger = achievementOutbox(merged.achievementOutbox);
       ledger.baselineCoins += Math.max(0, finite(current.stats.coinsEarned) - finite(atWrite.stats.coinsEarned));
-      ledger.baselineShards += Math.max(0, current.shards - atWrite.shards); merged.achievementOutbox = ledger;
+      ledger.baselineShards += Math.max(0, current.shards - atWrite.shards);
+      merged.achievementOutbox = ledger;
     }
-    mergeData(merged, current); overlayNormalChanges(merged, atWrite, current);
-    profile.data = merged; knownProfile = structuredClone(committed);
+    mergeData(merged, current);
+    overlayNormalChanges(merged, atWrite, current);
+    profile.data = merged;
+    knownProfile = structuredClone(committed);
     // Compatibility mirror is not the acknowledged authority.
-    try { options.store.set("tear_profile", JSON.stringify(profile.data)); } catch { /* mirror is not authority */ }
-    options.onCommitted?.(); return "committed";
+    try {
+      options.store.set("tear_profile", JSON.stringify(profile.data));
+    } catch {
+      /* mirror is not authority */
+    }
+    options.onCommitted?.();
+    return "committed";
   };
   const profile: ProfileStore = {
     KEY: "tear_profile",
@@ -241,7 +326,11 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     flushAcknowledged: () => commit(),
     async issueTutorial(id) {
       if (!isTutorialCourseId(id)) return "unknown";
-      return commit((target) => { const ledger = tutorialLedger(target.tutorialCompletion, finite(target.stats.tutorialDone)); ledger.courses[id] ??= "issued"; target.tutorialCompletion = ledger; });
+      return commit((target) => {
+        const ledger = tutorialLedger(target.tutorialCompletion, finite(target.stats.tutorialDone));
+        ledger.courses[id] ??= "issued";
+        target.tutorialCompletion = ledger;
+      });
     },
     async completeTutorial(id) {
       if (!isTutorialCourseId(id)) return "unknown";
@@ -249,17 +338,35 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       const status = await commit((target) => {
         const ledger = tutorialLedger(target.tutorialCompletion, finite(target.stats.tutorialDone));
         if (ledger.courses[id] === undefined) return;
-        if (ledger.courses[id] === "completed") { outcome = "already"; return; }
-        ledger.baseline = tutorialCount(ledger) - Object.values(ledger.courses).filter((state) => state === "completed").length;
-        ledger.courses[id] = "completed"; target.tutorialCompletion = ledger; target.stats.tutorialDone = tutorialCount(ledger);
+        if (ledger.courses[id] === "completed") {
+          outcome = "already";
+          return;
+        }
+        ledger.baseline =
+          tutorialCount(ledger) - Object.values(ledger.courses).filter((state) => state === "completed").length;
+        ledger.courses[id] = "completed";
+        target.tutorialCompletion = ledger;
+        target.stats.tutorialDone = tutorialCount(ledger);
         const apprentice = options.getAchievements()?.byId("student");
-        if (apprentice) unlockInto(target, apprentice); else throw new Error("Apprentice definition unavailable");
+        if (apprentice) unlockInto(target, apprentice);
+        else throw new Error("Apprentice definition unavailable");
         outcome = "committed";
       });
       return status === "committed" ? outcome : status;
     },
-    pendingRewards() { return Object.entries(achievementOutbox(this.data.achievementOutbox).grants).filter(([, grant]) => !grant.acknowledged).map(([id, grant]) => ({ id, coins: grant.coins })); },
-    acknowledgeReward(id) { return commit((target) => { const outbox = achievementOutbox(target.achievementOutbox); const grant = outbox.grants[id]; if (grant) grant.acknowledged = true; target.achievementOutbox = outbox; }); },
+    pendingRewards() {
+      return Object.entries(achievementOutbox(this.data.achievementOutbox).grants)
+        .filter(([, grant]) => !grant.acknowledged)
+        .map(([id, grant]) => ({ id, coins: grant.coins }));
+    },
+    acknowledgeReward(id) {
+      return commit((target) => {
+        const outbox = achievementOutbox(target.achievementOutbox);
+        const grant = outbox.grants[id];
+        if (grant) grant.acknowledged = true;
+        target.achievementOutbox = outbox;
+      });
+    },
     load() {
       let raw: Tracker | null = null;
       envelopeWritable = true;
@@ -267,15 +374,27 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
         const text = options.store.get(this.ENVELOPE_KEY);
         if (text) {
           const migrated = migrateProfileEnvelope(JSON.parse(text) as unknown, now());
-          if (migrated.ok) { envelope = migrated.value; raw = mutableProfileWorkingCopy(migrated.value); }
-          else envelopeWritable = false;
+          if (migrated.ok) {
+            envelope = migrated.value;
+            raw = mutableProfileWorkingCopy(migrated.value);
+          } else envelopeWritable = false;
         }
-      } catch { envelope = null; envelopeWritable = false; }
+      } catch {
+        envelope = null;
+        envelopeWritable = false;
+      }
       if (!raw) {
         let legacy: unknown;
-        try { legacy = JSON.parse(options.store.get(this.KEY) ?? "{}") as unknown; } catch { legacy = {}; }
+        try {
+          legacy = JSON.parse(options.store.get(this.KEY) ?? "{}") as unknown;
+        } catch {
+          legacy = {};
+        }
         const migrated = migrateProfileEnvelope(legacy, now());
-        if (migrated.ok) { envelope = migrated.value; raw = mutableProfileWorkingCopy(migrated.value); }
+        if (migrated.ok) {
+          envelope = migrated.value;
+          raw = mutableProfileWorkingCopy(migrated.value);
+        }
       }
       const source = raw ?? {};
       this.data = Object.assign(fresh(), source, {
@@ -291,19 +410,31 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       return this.data;
     },
     save() {
-      if (options.store.acknowledged) { void commit(); return; }
+      if (options.store.acknowledged) {
+        void commit();
+        return;
+      }
       try {
-        const migrated = migrateProfileEnvelope({
-          schema: "tear.profile", schemaVersion: PROFILE_ENVELOPE_VERSION, revision: (envelope?.revision ?? 0) + 1,
-          updatedAtMs: now(), writerId: options.writerId(), profile: this.data,
-          extensions: envelope?.extensions ?? {},
-        }, now());
+        const migrated = migrateProfileEnvelope(
+          {
+            schema: "tear.profile",
+            schemaVersion: PROFILE_ENVELOPE_VERSION,
+            revision: (envelope?.revision ?? 0) + 1,
+            updatedAtMs: now(),
+            writerId: options.writerId(),
+            profile: this.data,
+            extensions: envelope?.extensions ?? {},
+          },
+          now(),
+        );
         if (migrated.ok && envelopeWritable) {
           envelope = migrated.value;
           options.store.set(this.ENVELOPE_KEY, JSON.stringify(migrated.value));
         }
         options.store.set(this.KEY, JSON.stringify(this.data));
-      } catch { /* local memory state remains valid */ }
+      } catch {
+        /* local memory state remains valid */
+      }
     },
     retrofitCoins() {
       const achievements = options.getAchievements();
@@ -322,16 +453,45 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       this.data.achCoinsRetrofit = true;
       this.save();
     },
-    username() { return typeof this.data.username === "string" ? this.data.username : ""; },
-    usernameSetAt() { return finite(this.data.usernameSetAt); },
-    setUsername(name) { this.data.username = name; this.data.usernameSetAt = now(); this.save(); },
-    shards() { return finite(this.data.shards); },
-    addShards(amount) { this.data.shards = finite(this.data.shards) + amount;
-      if (this.data.achievementOutbox !== undefined) { const ledger = achievementOutbox(this.data.achievementOutbox); ledger.baselineShards = outboxShards(ledger) - Object.values(ledger.grants).reduce((sum, entry) => sum + entry.shards, 0) + amount; this.data.achievementOutbox = ledger; } this.save(); },
-    stat(key) { return finite(this.data.stats[key]); },
-    addStat(key, amount = 1) { this.data.stats[key] = finite(this.data.stats[key]) + amount;
-      if (key === "coinsEarned" && this.data.achievementOutbox !== undefined) { const ledger = achievementOutbox(this.data.achievementOutbox); ledger.baselineCoins = outboxCoins(ledger) - Object.values(ledger.grants).reduce((sum, entry) => sum + entry.coins, 0) + amount; this.data.achievementOutbox = ledger; } },
-    maxStat(key, value) { if (value > finite(this.data.stats[key])) this.data.stats[key] = value; },
+    username() {
+      return typeof this.data.username === "string" ? this.data.username : "";
+    },
+    usernameSetAt() {
+      return finite(this.data.usernameSetAt);
+    },
+    setUsername(name) {
+      this.data.username = name;
+      this.data.usernameSetAt = now();
+      this.save();
+    },
+    shards() {
+      return finite(this.data.shards);
+    },
+    addShards(amount) {
+      this.data.shards = finite(this.data.shards) + amount;
+      if (this.data.achievementOutbox !== undefined) {
+        const ledger = achievementOutbox(this.data.achievementOutbox);
+        ledger.baselineShards =
+          outboxShards(ledger) - Object.values(ledger.grants).reduce((sum, entry) => sum + entry.shards, 0) + amount;
+        this.data.achievementOutbox = ledger;
+      }
+      this.save();
+    },
+    stat(key) {
+      return finite(this.data.stats[key]);
+    },
+    addStat(key, amount = 1) {
+      this.data.stats[key] = finite(this.data.stats[key]) + amount;
+      if (key === "coinsEarned" && this.data.achievementOutbox !== undefined) {
+        const ledger = achievementOutbox(this.data.achievementOutbox);
+        ledger.baselineCoins =
+          outboxCoins(ledger) - Object.values(ledger.grants).reduce((sum, entry) => sum + entry.coins, 0) + amount;
+        this.data.achievementOutbox = ledger;
+      }
+    },
+    maxStat(key, value) {
+      if (value > finite(this.data.stats[key])) this.data.stats[key] = value;
+    },
     markBiome(name) {
       const seen = record(this.data.stats._biomes) ?? {};
       seen[name] = 1;
@@ -339,24 +499,50 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       return countBiomes(seen);
     },
     markMode(id) {
-      if (!this.data.modes[id]) { this.data.modes[id] = true; this.addStat("modesPlayed", 1); }
+      if (!this.data.modes[id]) {
+        this.data.modes[id] = true;
+        this.addStat("modesPlayed", 1);
+      }
     },
-    modesPlayed() { return Object.keys(this.data.modes).length; },
-    pendingFinale() { return record(this.data.pendingFinale); },
-    setPendingFinale(payload = {}) { this.data.pendingFinale = { savedAt: now(), ...payload }; this.save(); },
-    clearPendingFinale() { delete this.data.pendingFinale; this.save(); },
-    unlocked(id) { return this.data.ach[id] !== undefined; },
+    modesPlayed() {
+      return Object.keys(this.data.modes).length;
+    },
+    pendingFinale() {
+      return record(this.data.pendingFinale);
+    },
+    setPendingFinale(payload = {}) {
+      this.data.pendingFinale = { savedAt: now(), ...payload };
+      this.save();
+    },
+    clearPendingFinale() {
+      delete this.data.pendingFinale;
+      this.save();
+    },
+    unlocked(id) {
+      return this.data.ach[id] !== undefined;
+    },
     unlock(achievement) {
-      if (options.store.acknowledged) { const unlocked = unlockInto(this.data, achievement); if (unlocked) this.save(); return unlocked; }
+      if (options.store.acknowledged) {
+        const unlocked = unlockInto(this.data, achievement);
+        if (unlocked) this.save();
+        return unlocked;
+      }
       if (this.unlocked(achievement.id)) return false;
       this.data.ach[achievement.id] = now();
       this.data.shards += achievement.shards ?? 0;
-      if (achievement.coins) { options.getMeta()?.addCoins(achievement.coins); this.addStat("coinsEarned", achievement.coins); }
+      if (achievement.coins) {
+        options.getMeta()?.addCoins(achievement.coins);
+        this.addStat("coinsEarned", achievement.coins);
+      }
       this.save();
       return true;
     },
-    unlockedCount() { return Object.keys(this.data.ach).length; },
-    merge(remote) { mergeData(this.data, remote); },
+    unlockedCount() {
+      return Object.keys(this.data.ach).length;
+    },
+    merge(remote) {
+      mergeData(this.data, remote);
+    },
   };
   return profile;
 }

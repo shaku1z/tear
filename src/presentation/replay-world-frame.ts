@@ -1,9 +1,15 @@
 export interface ReplayPose {
-  readonly x: number; readonly y: number; readonly face: number; readonly bx: number; readonly by: number;
+  readonly x: number;
+  readonly y: number;
+  readonly face: number;
+  readonly bx: number;
+  readonly by: number;
 }
 
 export interface ReplayPuppet {
-  x: number; y: number; readonly color?: string;
+  x: number;
+  y: number;
+  readonly color?: string;
   draw?(canvas: CanvasRenderingContext2D, player: unknown): void;
 }
 
@@ -96,13 +102,26 @@ export function renderReplayWorldFrame<Stage, Platform, SpawnInfo>(input: {
   input.effects.draw(canvas);
 
   if (pose !== undefined) {
-    canvas.save(); canvas.globalAlpha = 0.55;
-    canvas.fillStyle = input.themeInk; canvas.fillRect(pose.x - 13, pose.y - 24, 26, 48);
-    canvas.fillStyle = input.perfectColor; canvas.fillRect(pose.x + pose.face * 4 - 3, pose.y - 12, 7, 6);
-    canvas.globalAlpha = 0.6; canvas.strokeStyle = input.perfectColor; canvas.lineWidth = 4; canvas.lineCap = "round";
-    if (!input.lowGraphics) { canvas.shadowColor = input.perfectColor; canvas.shadowBlur = 12; }
-    canvas.beginPath(); canvas.moveTo(pose.x, pose.y - 6); canvas.lineTo(pose.bx, pose.by); canvas.stroke();
-    canvas.shadowBlur = 0; canvas.restore();
+    canvas.save();
+    canvas.globalAlpha = 0.55;
+    canvas.fillStyle = input.themeInk;
+    canvas.fillRect(pose.x - 13, pose.y - 24, 26, 48);
+    canvas.fillStyle = input.perfectColor;
+    canvas.fillRect(pose.x + pose.face * 4 - 3, pose.y - 12, 7, 6);
+    canvas.globalAlpha = 0.6;
+    canvas.strokeStyle = input.perfectColor;
+    canvas.lineWidth = 4;
+    canvas.lineCap = "round";
+    if (!input.lowGraphics) {
+      canvas.shadowColor = input.perfectColor;
+      canvas.shadowBlur = 12;
+    }
+    canvas.beginPath();
+    canvas.moveTo(pose.x, pose.y - 6);
+    canvas.lineTo(pose.bx, pose.by);
+    canvas.stroke();
+    canvas.shadowBlur = 0;
+    canvas.restore();
   }
   input.backdrop.post(canvas, stage);
 }

@@ -571,8 +571,30 @@
       "intentionalReplica": "none"
     },
     {
-      "taskId": "static.check-architecture",
+      "taskId": "static.format-check",
       "version": 1,
+      "runner": {
+        "kind": "node",
+        "executable": "node",
+        "args": [
+          "scripts/format.mjs",
+          "--check"
+        ]
+      },
+      "claimIds": [
+        "static",
+        "format"
+      ],
+      "dependencies": [],
+      "resourceClass": "static",
+      "resourceKeys": [],
+      "outputs": [],
+      "timeoutMs": 120000,
+      "intentionalReplica": "none"
+    },
+    {
+      "taskId": "static.check-architecture",
+      "version": 2,
       "runner": {
         "kind": "node",
         "executable": "node",
@@ -593,7 +615,7 @@
     },
     {
       "taskId": "static.check-code-budget",
-      "version": 1,
+      "version": 2,
       "runner": {
         "kind": "node",
         "executable": "node",
@@ -3907,6 +3929,7 @@
       "static.check-workspace",
       "static.typecheck",
       "static.lint",
+      "static.format-check",
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
@@ -3999,6 +4022,7 @@
       "static.check-workspace",
       "static.typecheck",
       "static.lint",
+      "static.format-check",
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
@@ -4089,6 +4113,7 @@
       "static.check-workspace",
       "static.typecheck",
       "static.lint",
+      "static.format-check",
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
@@ -4159,6 +4184,7 @@
       "static.requirements-check",
       "static.typecheck",
       "static.lint",
+      "static.format-check",
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-preservation-corpus",
@@ -4195,6 +4221,7 @@
       "static.check-workspace",
       "static.typecheck",
       "static.lint",
+      "static.format-check",
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
@@ -4285,6 +4312,7 @@
       "static.check-workspace",
       "static.typecheck",
       "static.lint",
+      "static.format-check",
       "static.check-architecture",
       "static.check-code-budget",
       "unit.test-code-budget",
@@ -4350,6 +4378,7 @@
       "static.requirements-check",
       "static.typecheck",
       "static.lint",
+      "static.format-check",
       "static.check-architecture",
       "static.check-code-budget"
     ],

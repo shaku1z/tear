@@ -9,7 +9,12 @@ import {
 } from "../../src/gameplay/progression/first-run-guidance";
 import { buildMenuSnapshot, buildSetupSnapshot } from "../../src/presentation/menu-setup-snapshots";
 import { buildGameoverSnapshot, buildWinSnapshot } from "../../src/presentation/run-screen-snapshots";
-import { CONTROL_HINT_RUN_LIMIT, CONTROL_HINT_SECONDS, domChromeVisibility, type DomChromeInput } from "../../src/presentation/dom-chrome-policy";
+import {
+  CONTROL_HINT_RUN_LIMIT,
+  CONTROL_HINT_SECONDS,
+  domChromeVisibility,
+  type DomChromeInput,
+} from "../../src/presentation/dom-chrome-policy";
 import { cinematicPromptForDevice } from "../../src/presentation/cinematic-prompts";
 import { shouldDrawCanvasCursor } from "../../src/presentation/cursor-contract";
 import { createLiveWorldSessionState } from "../../src/app/world/world-session-state";
@@ -22,7 +27,10 @@ const fresh = { tutorialDone: 0, runs: 0, modesPlayed: [] as string[] };
 describe("first-run guidance from existing profile facts", () => {
   it("derives facts from stats and the started-modes set without a new saved field", () => {
     const stats: Record<string, number> = { tutorialDone: 1, runs: 4 };
-    const facts = firstRunProfileFacts({ stat: (key) => stats[key] ?? 0, data: { modes: { campaign: true, tutorial: true } } });
+    const facts = firstRunProfileFacts({
+      stat: (key) => stats[key] ?? 0,
+      data: { modes: { campaign: true, tutorial: true } },
+    });
     expect(facts).toEqual({ tutorialDone: 1, runs: 4, modesPlayed: ["campaign", "tutorial"] });
   });
 
@@ -54,18 +62,48 @@ describe("first-run guidance from existing profile facts", () => {
   });
 
   it("labels PLAY and guides setup only while the nudge applies", () => {
-    const modes = [{ id: "tutorial", label: "Tutorial", blurb: "learn" }, { id: "endless", label: "Endless", blurb: "forever" }];
+    const modes = [
+      { id: "tutorial", label: "Tutorial", blurb: "learn" },
+      { id: "endless", label: "Endless", blurb: "forever" },
+    ];
     const difficulties = [{ id: "normal", label: "Normal", desc: "fair", mods: { score: 1, coin: 1 } }];
-    const menu = (firstRun: boolean, selectedMode: string) => buildMenuSnapshot({ username: "", campaignEmblem: false,
-      signedIn: false, coins: 18_150, shards: 0, unlocked: 0, selectedMode, selectedDifficulty: "normal", modes, difficulties,
-      biome: "", pendingFinale: false, surfaces: RELEASE, firstRun });
+    const menu = (firstRun: boolean, selectedMode: string) =>
+      buildMenuSnapshot({
+        username: "",
+        campaignEmblem: false,
+        signedIn: false,
+        coins: 18_150,
+        shards: 0,
+        unlocked: 0,
+        selectedMode,
+        selectedDifficulty: "normal",
+        modes,
+        difficulties,
+        biome: "",
+        pendingFinale: false,
+        surfaces: RELEASE,
+        firstRun,
+      });
     expect(menu(true, "tutorial").playSub).toBe(FIRST_RUN_PLAY_LABEL);
     expect(menu(true, "endless").playSub).toBeUndefined();
     expect(menu(false, "tutorial").playSub).toBeUndefined();
 
-    const setup = (firstRun: boolean, selectedMode: string) => buildSetupSnapshot({ selectedMode, selectedDifficulty: "normal",
-      selectedWeapon: "sword", selectedBoss: "shuffle", startGlyph: "", modes: CONFIG.modes, difficulties, weapons: [],
-      bosses: [], surfaces: RELEASE, best: { wave: 0, score: 0 }, formatTime: String, firstRun });
+    const setup = (firstRun: boolean, selectedMode: string) =>
+      buildSetupSnapshot({
+        selectedMode,
+        selectedDifficulty: "normal",
+        selectedWeapon: "sword",
+        selectedBoss: "shuffle",
+        startGlyph: "",
+        modes: CONFIG.modes,
+        difficulties,
+        weapons: [],
+        bosses: [],
+        surfaces: RELEASE,
+        best: { wave: 0, score: 0 },
+        formatTime: String,
+        firstRun,
+      });
     const guided = setup(true, "tutorial");
     expect(guided.guidance).toBe(FIRST_RUN_SETUP_GUIDANCE);
     expect(guided.modes.find((mode) => mode.selected)?.id).toBe("tutorial");
@@ -75,20 +113,47 @@ describe("first-run guidance from existing profile facts", () => {
 });
 
 describe("results correctness", () => {
-  const base = { wave: 1, time: 11, best: { wave: 1, score: 0 }, earned: 0, coins: 0, replayAvailable: false,
-    abilities: [], progress: [], log: [], formatTime: String } as const;
+  const base = {
+    wave: 1,
+    time: 11,
+    best: { wave: 1, score: 0 },
+    earned: 0,
+    coins: 0,
+    replayAvailable: false,
+    abilities: [],
+    progress: [],
+    log: [],
+    formatTime: String,
+  } as const;
   it("never celebrates a scoreless run as a new best", () => {
     expect(buildGameoverSnapshot({ ...base, score: 0, isNew: true }).isNew).toBe(false);
     expect(buildGameoverSnapshot({ ...base, score: 40, isNew: true }).isNew).toBe(true);
-    const win = { campaign: false, time: 1, earned: 0, coins: 0, difficulty: "normal", log: [], formatTime: String } as const;
+    const win = {
+      campaign: false,
+      time: 1,
+      earned: 0,
+      coins: 0,
+      difficulty: "normal",
+      log: [],
+      formatTime: String,
+    } as const;
     expect(buildWinSnapshot({ ...win, score: 0, isNew: true }).isNew).toBe(false);
     expect(buildWinSnapshot({ ...win, score: 9, isNew: true }).isNew).toBe(true);
   });
 });
 
 describe("DOM chrome over the canvas", () => {
-  const playing: DomChromeInput = { screen: "playing", uiIncluded: true, pointerLockIncluded: true, touch: false,
-    inputMode: "mouse", pointerLocked: true, runSeconds: 1, completedRuns: 0, presentationBusy: false };
+  const playing: DomChromeInput = {
+    screen: "playing",
+    uiIncluded: true,
+    pointerLockIncluded: true,
+    touch: false,
+    inputMode: "mouse",
+    pointerLocked: true,
+    runSeconds: 1,
+    completedRuns: 0,
+    presentationBusy: false,
+  };
 
   it("shows the control legend only in a newcomer's opening seconds on keyboard and mouse", () => {
     expect(domChromeVisibility(playing).controlHint).toBe(true);
@@ -130,14 +195,21 @@ describe("device-correct cinematic prompts", () => {
     expect(cinematicPromptForDevice(chapter, "gamepad", "✕")).toBe("✕ TO REVEAL  ·  HOLD ✕ TO SKIP CHAPTER");
     expect(cinematicPromptForDevice(chapter, "touch")).toBe("TAP TO REVEAL");
     expect(cinematicPromptForDevice("BRIEF SCENE  ·  HOLD TO SKIP", "touch")).toBe("BRIEF SCENE");
-    expect(cinematicPromptForDevice("TAP TO REVEAL  ·  TAP AGAIN TO CONTINUE", "mouse"))
-      .toBe("CLICK TO REVEAL  ·  CLICK AGAIN TO CONTINUE");
+    expect(cinematicPromptForDevice("TAP TO REVEAL  ·  TAP AGAIN TO CONTINUE", "mouse")).toBe(
+      "CLICK TO REVEAL  ·  CLICK AGAIN TO CONTINUE",
+    );
     expect(cinematicPromptForDevice("", "mouse")).toBe("");
     // The finale assist names the real key and is dropped where touch cannot hold it.
     const assist = "SWING THROUGH EACH ANCHOR  ·  HOLD CONFIRM OR WAIT FOR ASSIST";
-    expect(cinematicPromptForDevice(assist, "keyboard")).toBe("SWING THROUGH EACH ANCHOR  ·  HOLD SPACE OR WAIT FOR ASSIST");
-    expect(cinematicPromptForDevice(assist, "gamepad", "✕")).toBe("SWING THROUGH EACH ANCHOR  ·  HOLD ✕ OR WAIT FOR ASSIST");
+    expect(cinematicPromptForDevice(assist, "keyboard")).toBe(
+      "SWING THROUGH EACH ANCHOR  ·  HOLD SPACE OR WAIT FOR ASSIST",
+    );
+    expect(cinematicPromptForDevice(assist, "gamepad", "✕")).toBe(
+      "SWING THROUGH EACH ANCHOR  ·  HOLD ✕ OR WAIT FOR ASSIST",
+    );
     expect(cinematicPromptForDevice(assist, "touch")).toBe("SWING THROUGH EACH ANCHOR  ·  WAIT FOR ASSIST");
-    expect(cinematicPromptForDevice("MOVE THE BLADE  ·  CUT THE TEAR ANCHORS  ·  HOLD CONFIRM TO ASSIST", "touch")).toBe("MOVE THE BLADE  ·  CUT THE TEAR ANCHORS");
+    expect(
+      cinematicPromptForDevice("MOVE THE BLADE  ·  CUT THE TEAR ANCHORS  ·  HOLD CONFIRM TO ASSIST", "touch"),
+    ).toBe("MOVE THE BLADE  ·  CUT THE TEAR ANCHORS");
   });
 });

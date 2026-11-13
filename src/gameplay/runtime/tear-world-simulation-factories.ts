@@ -26,7 +26,11 @@ export interface TearWorldEntityPresentationPorts {
 /** Geometry and authored visual-feedback helpers used by the entity rules. */
 export interface TearWorldSimulationGeometry {
   readonly aabbOverlap: PlayerOptions["aabbOverlap"] & EnemyOptions["aabbOverlap"];
-  readonly clamp: BladeOptions["clamp"] & PlayerOptions["clamp"] & ProjectileOptions["clamp"] & EnemyOptions["clamp"] & MirrorOptions["clamp"];
+  readonly clamp: BladeOptions["clamp"] &
+    PlayerOptions["clamp"] &
+    ProjectileOptions["clamp"] &
+    EnemyOptions["clamp"] &
+    MirrorOptions["clamp"];
   readonly len: BladeOptions["len"] & PlayerOptions["len"] & ProjectileOptions["len"] & EnemyOptions["len"];
   readonly lerp: BladeOptions["lerp"] & ProjectileOptions["lerp"] & EnemyOptions["lerp"] & MirrorOptions["lerp"];
   readonly lerpAngle: BladeOptions["lerpAngle"] & MirrorOptions["lerpAngle"];
@@ -71,30 +75,79 @@ export type TearWorldSimulationFactories = Readonly<{
 export function createTearWorldSimulationFactories(
   options: TearWorldSimulationFactoryOptions,
 ): TearWorldSimulationFactories {
-  const { clock: CLOCK, config: CONFIG, graphics: GFX, effects: FX, sound: SFX, input: Input, presentation, geometry } = options;
+  const {
+    clock: CLOCK,
+    config: CONFIG,
+    graphics: GFX,
+    effects: FX,
+    sound: SFX,
+    input: Input,
+    presentation,
+    geometry,
+  } = options;
   const Blade = createBlade({
-    CLOCK, CONFIG, Input, presentation: presentation.blade,
-    clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp, lerpAngle: geometry.lerpAngle,
+    CLOCK,
+    CONFIG,
+    Input,
+    presentation: presentation.blade,
+    clamp: geometry.clamp,
+    len: geometry.len,
+    lerp: geometry.lerp,
+    lerpAngle: geometry.lerpAngle,
   });
   const Player = createPlayer({
-    CONFIG, FX, GFX, Input, presentation: presentation.player,
-    aabbOverlap: geometry.aabbOverlap, clamp: geometry.clamp, len: geometry.len,
+    CONFIG,
+    FX,
+    GFX,
+    Input,
+    presentation: presentation.player,
+    aabbOverlap: geometry.aabbOverlap,
+    clamp: geometry.clamp,
+    len: geometry.len,
   });
   const Projectile = createProjectile({
-    CLOCK, CONFIG, FX, SFX, presentation: presentation.projectile,
-    clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
+    CLOCK,
+    CONFIG,
+    FX,
+    SFX,
+    presentation: presentation.projectile,
+    clamp: geometry.clamp,
+    len: geometry.len,
+    lerp: geometry.lerp,
   });
   const enemyTypes = createEnemyTypes({
-    CLOCK, CONFIG, ...(options.clipper === undefined ? {} : { Clipper: options.clipper }),
-    FX, GAME_RANDOM: options.random.enemyAi, Projectile, SFX, presentation: presentation.enemy.port,
-    aabbOverlap: geometry.aabbOverlap, clamp: geometry.clamp, cosmeticRandom: options.cosmeticRandom,
-    len: geometry.len, lerp: geometry.lerp, segPointDist: geometry.segPointDist, segSegmentDist: geometry.segSegmentDist,
+    CLOCK,
+    CONFIG,
+    ...(options.clipper === undefined ? {} : { Clipper: options.clipper }),
+    FX,
+    GAME_RANDOM: options.random.enemyAi,
+    Projectile,
+    SFX,
+    presentation: presentation.enemy.port,
+    aabbOverlap: geometry.aabbOverlap,
+    clamp: geometry.clamp,
+    cosmeticRandom: options.cosmeticRandom,
+    len: geometry.len,
+    lerp: geometry.lerp,
+    segPointDist: geometry.segPointDist,
+    segSegmentDist: geometry.segSegmentDist,
   });
   presentation.enemy.install(enemyTypes);
   const mirrorTypes = createMirrorTypes({
-    Blade, CLOCK, CONFIG, Enemy: enemyTypes.Enemy, FX, GAME_RANDOM: options.random.boss,
-    Player, Projectile, SFX, presentation: presentation.mirror,
-    clamp: geometry.clamp, getWeapon: options.getWeapon ?? getWeapon, lerp: geometry.lerp, lerpAngle: geometry.lerpAngle,
+    Blade,
+    CLOCK,
+    CONFIG,
+    Enemy: enemyTypes.Enemy,
+    FX,
+    GAME_RANDOM: options.random.boss,
+    Player,
+    Projectile,
+    SFX,
+    presentation: presentation.mirror,
+    clamp: geometry.clamp,
+    getWeapon: options.getWeapon ?? getWeapon,
+    lerp: geometry.lerp,
+    lerpAngle: geometry.lerpAngle,
   });
   return Object.freeze({ Blade, Player, Projectile, enemyTypes, mirrorTypes });
 }

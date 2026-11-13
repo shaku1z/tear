@@ -41,23 +41,45 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
   const TUT = options.campaignTraining.training.tutorial;
   const { combatEntityRuntime: combatRuntime, simulation, simulationRuntime } = options.combat;
   const stateForgeRuntime = createLiveStateForgeRuntimeBridge({
-    tutorial: TUT, practiceCinema: options.campaignTraining.cinematic.runtime,
+    tutorial: TUT,
+    practiceCinema: options.campaignTraining.cinematic.runtime,
     practiceWorld: () => ({ run: liveRun(), actors: hostState.enemies(), platforms: stageRuntime.platforms }),
     captureBossIntro: () => hostState.bossIntro(),
     restoreBossIntro: (intro) => {
       hostState.setBossIntro(intro);
     },
     captureTransient: () => ({
-      hitStop: impact.hitStop, shake: impact.shake, timeScale: feel.timeScale, slowmo: impact.slowMotion, zoom: feel.zoom, flash: feel.flash,
-      bannerT: feel.bannerSeconds, dashGhostT: openingCarry.dashGhostTime, landingV: openingCarry.landingVelocity, wasDashing: openingCarry.wasDashing,
-      wasSwinging: openingCarry.wasSwinging, wasOnGround: openingCarry.wasOnGround, worldZoom: feel.worldZoom, worldZoomTarget: feel.worldZoomTarget,
-      throwCd: openingCarry.throwCooldown, rankPopT: feel.rankPopupSeconds, rankPopText: feel.rankPopupText,
+      hitStop: impact.hitStop,
+      shake: impact.shake,
+      timeScale: feel.timeScale,
+      slowmo: impact.slowMotion,
+      zoom: feel.zoom,
+      flash: feel.flash,
+      bannerT: feel.bannerSeconds,
+      dashGhostT: openingCarry.dashGhostTime,
+      landingV: openingCarry.landingVelocity,
+      wasDashing: openingCarry.wasDashing,
+      wasSwinging: openingCarry.wasSwinging,
+      wasOnGround: openingCarry.wasOnGround,
+      worldZoom: feel.worldZoom,
+      worldZoomTarget: feel.worldZoomTarget,
+      throwCd: openingCarry.throwCooldown,
+      rankPopT: feel.rankPopupSeconds,
+      rankPopText: feel.rankPopupText,
     }),
     restoreTransient: (snapshot) => {
-      transient.assignImpact({ hitStop: Number(snapshot.hitStop), slowMotion: Number(snapshot.slowmo), shake: Number(snapshot.shake) });
+      transient.assignImpact({
+        hitStop: Number(snapshot.hitStop),
+        slowMotion: Number(snapshot.slowmo),
+        shake: Number(snapshot.shake),
+      });
       transient.assignOpening({
-        throwCooldown: Number(snapshot.throwCd), dashGhostTime: Number(snapshot.dashGhostT), landingVelocity: Number(snapshot.landingV),
-        wasDashing: Boolean(snapshot.wasDashing), wasSwinging: Boolean(snapshot.wasSwinging), wasOnGround: Boolean(snapshot.wasOnGround),
+        throwCooldown: Number(snapshot.throwCd),
+        dashGhostTime: Number(snapshot.dashGhostT),
+        landingVelocity: Number(snapshot.landingV),
+        wasDashing: Boolean(snapshot.wasDashing),
+        wasSwinging: Boolean(snapshot.wasSwinging),
+        wasOnGround: Boolean(snapshot.wasOnGround),
       });
       feel.timeScale = Number(snapshot.timeScale);
       feel.zoom = Number(snapshot.zoom);
@@ -68,34 +90,46 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
       feel.rankPopupSeconds = Number(snapshot.rankPopT);
       feel.rankPopupText = String(snapshot.rankPopText);
     },
-    captureLifecycle: RUN_LIFECYCLE.snapshot.bind(RUN_LIFECYCLE), restoreLifecycle: RUN_LIFECYCLE.restore.bind(RUN_LIFECYCLE),
+    captureLifecycle: RUN_LIFECYCLE.snapshot.bind(RUN_LIFECYCLE),
+    restoreLifecycle: RUN_LIFECYCLE.restore.bind(RUN_LIFECYCLE),
     finale: {
-      capture: campaignRuntime.captureFinaleBinding, clear: campaignRuntime.clearFinaleBinding,
-      stage: (value, config) => campaignRuntime.stageFinaleBinding(value, new FinaleController(config ?? CONFIG.finale)),
+      capture: campaignRuntime.captureFinaleBinding,
+      clear: campaignRuntime.clearFinaleBinding,
+      stage: (value, config) =>
+        campaignRuntime.stageFinaleBinding(value, new FinaleController(config ?? CONFIG.finale)),
     },
-    captureChapterBinding: story.captureChapterBinding.bind(story), stageChapterBinding: campaignRuntime.stageChapterBinding,
+    captureChapterBinding: story.captureChapterBinding.bind(story),
+    stageChapterBinding: campaignRuntime.stageChapterBinding,
     installChapterBinding: campaignRuntime.installChapterBinding,
-    captureCinemaProtection: story.protection.bind(story), restoreCinemaProtection: story.applyProtection.bind(story),
+    captureCinemaProtection: story.protection.bind(story),
+    restoreCinemaProtection: story.applyProtection.bind(story),
     captureStageBanner: () => ({ name: stageRuntime.name, seconds: stageRuntime.bannerSeconds }),
-    restoreStageBanner: stageRuntime.restoreBanner.bind(stageRuntime), cinema: CINEMA,
+    restoreStageBanner: stageRuntime.restoreBanner.bind(stageRuntime),
+    cinema: CINEMA,
     clearEnvironmentRestore: () => {
       environment.clear("restore");
     },
   });
   return createLiveStateForgeAdapter({
-    dependencies, entities: worldEntities, worldServices: world.context.services, state: hostState,
+    dependencies,
+    entities: worldEntities,
+    worldServices: world.context.services,
+    state: hostState,
     actorId: (entity, prefix) => combatRuntime.id(entity, prefix),
     bindActorId: (entity, id) => {
       combatRuntime.bindId(entity, id);
     },
-    platforms: () => stageRuntime.platforms, stageIndex: () => stageRuntime.index,
+    platforms: () => stageRuntime.platforms,
+    stageIndex: () => stageRuntime.index,
     restoreStageIndex: (index) => {
       stageRuntime.restoreIndex(index);
     },
     replacePlatforms: (values) => {
       stageRuntime.platforms.splice(0, stageRuntime.platforms.length, ...values);
     },
-    slowZones: () => hostState.slowZones(), walls: () => hostState.temporaryWalls(), environment: () => environment,
+    slowZones: () => hostState.slowZones(),
+    walls: () => hostState.temporaryWalls(),
+    environment: () => environment,
     clearEnvironmentRestore: () => {
       environment.clear("restore");
     },
@@ -109,7 +143,8 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
       if (screen === "playing" && options.ghostPractice.active() !== null) return;
       navigation.setScreen(screen);
     },
-    focus: interaction.focus, setFocus: interaction.setFocus,
+    focus: interaction.focus,
+    setFocus: interaction.setFocus,
     tick: () => simulation.tick,
     setTick: (tick) => {
       simulationRuntime.reset(tick);
@@ -117,7 +152,9 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
     clearInputProjection: () => {
       options.input.clear();
     },
-    reward: options.reward.snapshot, restoreReward: options.reward.restore, captureGhost: () => GHOST.captureRuntimeState(),
+    reward: options.reward.snapshot,
+    restoreReward: options.reward.restore,
+    captureGhost: () => GHOST.captureRuntimeState(),
     restoreGhost: (snapshot) => {
       GHOST.restoreRuntimeState(snapshot);
     },
@@ -125,15 +162,20 @@ export function assembleLiveStateForge(options: LiveStateForgeAssemblyOptions) {
     restoreIdentityState: (snapshot) => {
       combatRuntime.restoreIdentityState(snapshot);
     },
-    runtimeState: stateForgeRuntime.capture, restoreRuntimeState: stateForgeRuntime.restore, hudPresentation: options.hudFeedback,
+    runtimeState: stateForgeRuntime.capture,
+    restoreRuntimeState: stateForgeRuntime.restore,
+    hudPresentation: options.hudFeedback,
     tutorialPresentation: {
       capture: () => TUT.capturePresentation(),
       restore: (value) => {
         TUT.restorePresentation(value);
       },
     },
-    particlesPresentation: createLiveParticlePresentationState(FX, () => ({ effects: CONFIG.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }),
-      dependencies.cosmeticEmissionRandom),
+    particlesPresentation: createLiveParticlePresentationState(
+      FX,
+      () => ({ effects: CONFIG.effects, lowGraphics: GFX.low, reducedMotion: A11Y.reducedMotion }),
+      dependencies.cosmeticEmissionRandom,
+    ),
     captureCinema: () => CINEMA.captureState(),
     validateCinema: stateForgeRuntime.validate,
   });

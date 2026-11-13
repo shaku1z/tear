@@ -7,10 +7,7 @@ import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import {
-  runParentLayoutCheck,
-  validateParentLayoutPolicy,
-} from "../scripts/check-parent-layout.mjs";
+import { runParentLayoutCheck, validateParentLayoutPolicy } from "../scripts/check-parent-layout.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const policyPath = path.join(repositoryRoot, "preservation", "workspace-parent-layout-policy.json");
@@ -30,8 +27,13 @@ function assertInvalid(policy, pattern) {
 
 function git(root, argumentsList, { allowFailure = false } = {}) {
   const result = spawnSync("git", argumentsList, { cwd: root, encoding: "utf8", stdio: "pipe", windowsHide: true });
-  if (!allowFailure) assert.equal(result.status, 0, `git ${argumentsList.join(" ")} failed: ${result.stderr || result.stdout}`);
-  return { status: result.status, stdout: String(result.stdout ?? "").trim(), stderr: String(result.stderr ?? "").trim() };
+  if (!allowFailure)
+    assert.equal(result.status, 0, `git ${argumentsList.join(" ")} failed: ${result.stderr || result.stdout}`);
+  return {
+    status: result.status,
+    stdout: String(result.stdout ?? "").trim(),
+    stderr: String(result.stderr ?? "").trim(),
+  };
 }
 
 function writeFixtureFile(root, relativePath, contents) {
@@ -42,12 +44,16 @@ function writeFixtureFile(root, relativePath, contents) {
 
 function createFixtureRepository(root, remote, { oracleCommit = false } = {}) {
   if (oracleCommit) {
-    const clone = spawnSync("git", ["clone", "--shared", "--no-tags", "--no-checkout", "--quiet", repositoryRoot, root], {
-      cwd: path.dirname(root),
-      encoding: "utf8",
-      stdio: "pipe",
-      windowsHide: true,
-    });
+    const clone = spawnSync(
+      "git",
+      ["clone", "--shared", "--no-tags", "--no-checkout", "--quiet", repositoryRoot, root],
+      {
+        cwd: path.dirname(root),
+        encoding: "utf8",
+        stdio: "pipe",
+        windowsHide: true,
+      },
+    );
     assert.equal(clone.status, 0, `fixture clone failed: ${clone.stderr || clone.stdout}`);
     git(root, ["remote", "set-url", "origin", remote]);
     git(root, ["checkout", "-q", "-B", "main", canonicalPolicy.canonical.oracle.lockedCommit]);
@@ -122,8 +128,16 @@ function createStrictFixture({ loose = false, forbidden = false, invalidPointer 
 }
 
 function cleanupStrictFixture(fixture) {
-  try { git(fixture.gameRoot, ["worktree", "unlock", fixture.oracleRoot], { allowFailure: true }); } catch { /* fixture cleanup */ }
-  try { git(fixture.gameRoot, ["worktree", "remove", "--force", fixture.oracleRoot], { allowFailure: true }); } catch { /* fixture cleanup */ }
+  try {
+    git(fixture.gameRoot, ["worktree", "unlock", fixture.oracleRoot], { allowFailure: true });
+  } catch {
+    /* fixture cleanup */
+  }
+  try {
+    git(fixture.gameRoot, ["worktree", "remove", "--force", fixture.oracleRoot], { allowFailure: true });
+  } catch {
+    /* fixture cleanup */
+  }
   fs.rmSync(fixture.base, { recursive: true, force: true });
 }
 
@@ -160,7 +174,9 @@ test("explicit policy paths remain bound to the workspace contract by default", 
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-parent-layout-contract-"));
   const contractPath = path.join(fixtureRoot, "workspace-contract.json");
   try {
-    const contract = JSON.parse(fs.readFileSync(path.join(repositoryRoot, "config", "workspace-contract.json"), "utf8"));
+    const contract = JSON.parse(
+      fs.readFileSync(path.join(repositoryRoot, "config", "workspace-contract.json"), "utf8"),
+    );
     contract.parentLayoutPolicy = "./preservation/other-policy.json";
     fs.writeFileSync(contractPath, `${JSON.stringify(contract, null, 2)}\n`, "utf8");
     const wrongContract = runParentLayoutCheck({ root: repositoryRoot, policyPath, contractPath });
@@ -187,19 +203,38 @@ test("strict inspection passes a clean fixture without descending archive payloa
     assert.equal(result.ok, true, result.errors.join("\n"));
     assert.equal(result.status, "pass");
     assert.equal(result.checks.deferredPair.status, "validated");
-    assert.equal(result.classifications.some((entry) => entry.name === "Tear-main-publication"), false, "archive payload must remain opaque");
-    assert.equal(result.classifications.some((entry) => entry.name === "Tear-hidden-behind-junction.txt"), false, "junction payload must remain opaque");
-    const cli = spawnSync(process.execPath, [
-      checkerPath,
-      "--strict",
-      "--root", fixture.gameRoot,
-      "--policy", policyPath,
-      "--contract", contractPath,
-      "--workspace-root", fixture.workspaceRoot,
-      "--temp-root", fixture.tempRoot,
-      "--archive-root", fixture.archiveRoot,
-      "--oracle-root", fixture.oracleRoot,
-    ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe", windowsHide: true });
+    assert.equal(
+      result.classifications.some((entry) => entry.name === "Tear-main-publication"),
+      false,
+      "archive payload must remain opaque",
+    );
+    assert.equal(
+      result.classifications.some((entry) => entry.name === "Tear-hidden-behind-junction.txt"),
+      false,
+      "junction payload must remain opaque",
+    );
+    const cli = spawnSync(
+      process.execPath,
+      [
+        checkerPath,
+        "--strict",
+        "--root",
+        fixture.gameRoot,
+        "--policy",
+        policyPath,
+        "--contract",
+        contractPath,
+        "--workspace-root",
+        fixture.workspaceRoot,
+        "--temp-root",
+        fixture.tempRoot,
+        "--archive-root",
+        fixture.archiveRoot,
+        "--oracle-root",
+        fixture.oracleRoot,
+      ],
+      { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe", windowsHide: true },
+    );
     assert.equal(cli.status, 0, cli.stderr || cli.stdout);
     assert.equal(JSON.parse(cli.stdout).status, "pass");
     assert.equal(result.noGo.length, 0);
@@ -226,7 +261,10 @@ test("strict inspection classifies the exact legacy comparison bundle without a 
     assert.equal(classification.retention.owner, "G5 release governance");
     assert.equal(classification.retention.retainThrough, "2027-03-31");
     assert.deepEqual(classification.retention.forbiddenUses, ["development", "deployment"]);
-    assert.equal(result.review.some((message) => /tear-crazygames-ee5\.zip/u.test(message)), false);
+    assert.equal(
+      result.review.some((message) => /tear-crazygames-ee5\.zip/u.test(message)),
+      false,
+    );
     const after = fs.statSync(bundle);
     assert.equal(after.size, before.size);
   } finally {
@@ -246,7 +284,10 @@ test("strict inspection treats a legacy comparison bundle kind mismatch as no-go
     assert.equal(result.ok, false);
     assert.equal(result.status, "no-go");
     assert.match(result.noGo.join("\n"), /tear-crazygames-ee5\.zip has kind directory, expected file/u);
-    assert.equal(result.review.some((message) => /tear-crazygames-ee5\.zip/u.test(message)), false);
+    assert.equal(
+      result.review.some((message) => /tear-crazygames-ee5\.zip/u.test(message)),
+      false,
+    );
   } finally {
     cleanupStrictFixture(fixture);
   }
@@ -298,13 +339,17 @@ test("strict Git subchecks report representative identity, branch, upstream, hea
     git(fixture.musicRoot, ["remote", "set-url", "origin", "git@github.com:wrong/music.git"]);
     git(fixture.wikiRoot, ["config", "branch.main.merge", "refs/heads/develop"]);
     git(fixture.gameRoot, ["checkout", "-q", "-b", "feature"]);
-    const parentHead = git(fixture.gameRoot, ["rev-parse", "HEAD^" ]).stdout;
+    const parentHead = git(fixture.gameRoot, ["rev-parse", "HEAD^"]).stdout;
     git(fixture.gameRoot, ["update-ref", "refs/remotes/origin/main", parentHead]);
     writeFixtureFile(fixture.gameRoot, "dirty.txt", "dirty\n");
     const result = strictResult(fixture);
     assert.equal(result.status, "no-go");
     assert.equal(result.checks.roots.oracle.status, "validated");
-    assert.equal(result.checks.deferredPair.status, "validated", "deferred status must not inherit unrelated Git failures");
+    assert.equal(
+      result.checks.deferredPair.status,
+      "validated",
+      "deferred status must not inherit unrelated Git failures",
+    );
     assert.match(result.noGo.join("\n"), /canonical music origin must identify/u);
     assert.match(result.noGo.join("\n"), /canonical wiki upstream must be origin\/main/u);
     assert.match(result.noGo.join("\n"), /canonical game branch must be main/u);
@@ -318,7 +363,8 @@ test("strict Git subchecks report representative identity, branch, upstream, hea
 test("strict inspection marks forbidden development/deployment names as no-go", (t) => {
   const fixture = createStrictFixture({ forbidden: true });
   try {
-    if (!fixture.junctionAvailable) t.diagnostic("directory junction unavailable; deferred pair also contributes a no-go");
+    if (!fixture.junctionAvailable)
+      t.diagnostic("directory junction unavailable; deferred pair also contributes a no-go");
     const result = strictResult(fixture);
     assert.equal(result.ok, false);
     assert.equal(result.status, "no-go");
@@ -361,7 +407,8 @@ test("strict inspection rejects extra, unlocked, and wrong-head oracle worktree 
 test("strict inspection rejects invalid .git pointers without descending into their payloads", (t) => {
   const fixture = createStrictFixture({ invalidPointer: true });
   try {
-    if (!fixture.junctionAvailable) t.diagnostic("directory junction unavailable; deferred pair also contributes a no-go");
+    if (!fixture.junctionAvailable)
+      t.diagnostic("directory junction unavailable; deferred pair also contributes a no-go");
     const result = strictResult(fixture);
     assert.equal(result.ok, false);
     assert.equal(result.status, "no-go");
@@ -382,7 +429,11 @@ test("strict inspection rejects extra immediate reparses but does not inspect ne
     assert.equal(result.ok, false);
     assert.equal(result.status, "no-go");
     assert.match(result.noGo.join("\n"), /Tear-extra-link.*immediate symlink or reparse/u);
-    assert.equal(result.noGo.some((error) => /Tear-main-publication/u.test(error)), false, "nested archive contents must not be inspected");
+    assert.equal(
+      result.noGo.some((error) => /Tear-main-publication/u.test(error)),
+      false,
+      "nested archive contents must not be inspected",
+    );
   } finally {
     cleanupStrictFixture(fixture);
   }

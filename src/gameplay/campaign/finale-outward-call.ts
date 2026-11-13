@@ -36,21 +36,31 @@ export interface FinaleMaximumFeelReceipt {
 export type FinaleOutwardCall =
   | Readonly<{ type: "world-zoom"; value: number; receipt: FinaleWorldZoomReceipt }>
   | Readonly<{
-    type: "ring"; x: number; y: number; radius: number; color: string;
-    receipt: FinaleParticleEmissionReceipt;
-  }>
+      type: "ring";
+      x: number;
+      y: number;
+      radius: number;
+      color: string;
+      receipt: FinaleParticleEmissionReceipt;
+    }>
   | Readonly<{
-    type: "burst"; x: number; y: number; dx: number; dy: number; count: number; color: string;
-    receipt: FinaleParticleEmissionReceipt;
-  }>
+      type: "burst";
+      x: number;
+      y: number;
+      dx: number;
+      dy: number;
+      count: number;
+      color: string;
+      receipt: FinaleParticleEmissionReceipt;
+    }>
   | Readonly<{ type: "flash"; amount: number; receipt: FinaleMaximumFeelReceipt }>
   | Readonly<{ type: "shake"; amount: number; receipt: FinaleMaximumFeelReceipt }>
   | Readonly<{ type: "vibrate"; pattern: readonly number[] }>
   | Readonly<{
-    type: "sound";
-    cue: "final-cut" | "final-relic" | "final-restore" | "final-silence";
-    index: number;
-  }>
+      type: "sound";
+      cue: "final-cut" | "final-relic" | "final-restore" | "final-silence";
+      index: number;
+    }>
   | Readonly<{ type: "void-mix"; amount: number; duration: number }>
   | Readonly<{ type: "music-duck"; amount: number; duration: number }>;
 

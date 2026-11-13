@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { SeededRandom } from "../../src/domain/random";
-import { BOSS_ROSTER, bossName, pickEnemyKind, pickMiniBoss, shuffledBossRoster } from "../../src/gameplay/run/content-director";
+import {
+  BOSS_ROSTER,
+  bossName,
+  pickEnemyKind,
+  pickMiniBoss,
+  shuffledBossRoster,
+} from "../../src/gameplay/run/content-director";
 
 describe("run content director", () => {
   it("shuffles bosses deterministically without loss or duplication", () => {

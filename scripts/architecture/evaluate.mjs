@@ -1,4 +1,5 @@
 import path from "node:path";
+import { lineEquivalents, measureSource } from "../check-code-budget.mjs";
 import { extractImports, resolveSpecifier } from "./source-graph.mjs";
 
 export function ruleApplies(rule, file, resolver) {
@@ -27,16 +28,34 @@ export function finding(rule, file, detail) {
 }
 
 function importFindings(rule, file, imports, context) {
-  const reported = new Set(), findings = [];
+  const reported = new Set(),
+    findings = [];
   for (const record of imports) {
     if (!edgeQualifies(rule, record)) continue;
     const resolution = resolveSpecifier(file, record.specifier, context.available);
-    if (resolution.external || reported.has(resolution.target) || !targetMatches(rule, resolution, context.resolver)) continue;
+    if (resolution.external || reported.has(resolution.target) || !targetMatches(rule, resolution, context.resolver))
+      continue;
     reported.add(resolution.target);
     const kind = record.typeOnly ? "type-only " : record.dynamic ? "dynamic " : "";
     findings.push(finding(rule, file, `${kind}import of ${resolution.target}`));
   }
   return findings;
+}
+
+/**
+ * Module size in line equivalents: the code budget's formatting-independent character measure
+ * (non-whitespace characters outside import wiring) scaled so that its ceiling is 700 lines.
+ * Physical lines are not used because they depend on formatting. A module over the limit passes
+ * only while config/code-budget-baseline.json records its size debt and it has not grown past it.
+ */
+function sizeFindings(rule, file, text, context) {
+  const { chars } = measureSource(file, text);
+  const size = lineEquivalents(chars);
+  if (size <= rule.max) return [];
+  const allowance = context.sizeAllowances?.get(file);
+  if (allowance !== undefined && chars <= allowance) return [];
+  const recorded = allowance === undefined ? "no recorded code-budget size debt" : `recorded ${String(allowance)}`;
+  return [finding(rule, file, `${String(size)} line equivalents: ${String(chars)} chars, ${recorded}`)];
 }
 
 /** Findings of one rule for one module; the module must already be in the rule's scope. */
@@ -46,17 +65,16 @@ export function evaluateRule(rule, file, module, context) {
     const match = rule.pattern.exec(module.text);
     return match === null ? [] : [finding(rule, file, `matched "${snippet(match[0])}"`)];
   }
-  if (rule.kind === "lines") {
-    const lines = module.text.split(/\r?\n/u).length;
-    return lines > rule.max ? [finding(rule, file, `${String(lines)} lines`)] : [];
-  }
+  if (rule.kind === "size") return sizeFindings(rule, file, module.text, context);
   return [];
 }
 
 /** Every rule finding for one module text, e.g. a planted fixture or a single file under --explain. */
 export function evaluateText(rules, file, text, context) {
   const module = { text, imports: extractImports(file, text) };
-  return rules.filter((rule) => ruleApplies(rule, file, context.resolver)).flatMap((rule) => evaluateRule(rule, file, module, context));
+  return rules
+    .filter((rule) => ruleApplies(rule, file, context.resolver))
+    .flatMap((rule) => evaluateRule(rule, file, module, context));
 }
 
 function chain(parents, node) {
@@ -94,17 +112,23 @@ export function transitiveFindings(rule, graph, resolver) {
 }
 
 /** All rule findings for the tree, sorted by file then rule. */
-export function evaluateTree(rules, tree, resolver) {
-  const context = { resolver, available: tree.available };
+export function evaluateTree(rules, tree, resolver, { sizeAllowances = new Map() } = {}) {
+  const context = { resolver, available: tree.available, sizeAllowances };
   const findings = [];
   for (const rule of rules.filter((candidate) => candidate.kind === "extension")) {
-    for (const file of tree.files) if (ruleApplies(rule, file, resolver)) findings.push(finding(rule, file, "file exists"));
+    for (const file of tree.files)
+      if (ruleApplies(rule, file, resolver)) findings.push(finding(rule, file, "file exists"));
   }
   for (const [file, module] of tree.modules) {
-    for (const rule of rules) if (rule.kind !== "extension" && ruleApplies(rule, file, resolver)) findings.push(...evaluateRule(rule, file, module, context));
+    for (const rule of rules)
+      if (rule.kind !== "extension" && ruleApplies(rule, file, resolver))
+        findings.push(...evaluateRule(rule, file, module, context));
   }
-  for (const rule of rules.filter((candidate) => candidate.transitive === true)) findings.push(...transitiveFindings(rule, tree.graph, resolver));
-  return findings.sort((left, right) => left.file.localeCompare(right.file, "en") || left.rule.localeCompare(right.rule, "en"));
+  for (const rule of rules.filter((candidate) => candidate.transitive === true))
+    findings.push(...transitiveFindings(rule, tree.graph, resolver));
+  return findings.sort(
+    (left, right) => left.file.localeCompare(right.file, "en") || left.rule.localeCompare(right.rule, "en"),
+  );
 }
 
 export function formatFinding({ file, message, detail, rule }) {
@@ -149,9 +173,14 @@ function fixtureFile(rule, fixture, files, resolver) {
  * pattern no longer fires, fails here instead of passing silently.
  */
 export function runRuleFixtures(rules, tree, resolver) {
-  const context = { resolver, available: tree.available }, files = [...tree.modules.keys()], errors = [];
+  const context = { resolver, available: tree.available },
+    files = [...tree.modules.keys()],
+    errors = [];
   for (const rule of rules) {
-    for (const [expectation, fixtures] of [["reject", rule.fixtures?.reject ?? []], ["accept", rule.fixtures?.accept ?? []]]) {
+    for (const [expectation, fixtures] of [
+      ["reject", rule.fixtures?.reject ?? []],
+      ["accept", rule.fixtures?.accept ?? []],
+    ]) {
       for (const fixture of fixtures) {
         const file = fixtureFile(rule, fixture, files, resolver);
         if (file === undefined || !ruleApplies(rule, file, resolver)) {
@@ -160,7 +189,8 @@ export function runRuleFixtures(rules, tree, resolver) {
         }
         const text = fixtureText(fixture, file, files, resolver);
         const count = evaluateRule(rule, file, { text, imports: extractImports(file, text) }, context).length;
-        if (count !== (expectation === "reject" ? 1 : 0)) errors.push(`rule ${rule.id}: ${expectation} fixture in ${file} produced ${String(count)} findings: ${text}`);
+        if (count !== (expectation === "reject" ? 1 : 0))
+          errors.push(`rule ${rule.id}: ${expectation} fixture in ${file} produced ${String(count)} findings: ${text}`);
       }
     }
   }

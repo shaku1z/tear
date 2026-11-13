@@ -32,9 +32,16 @@ export function createLiveRunAbandonment(options: LiveRunAbandonmentOptions): Li
     try {
       const run = options.run();
       options.events.emit({
-        kind: "run", transition: "abandoned", runId: snapshot.sessionId,
-        mode: run.mode, difficulty: run.diff, weaponId: run.weaponId, wave: run.wave, score: run.score,
-        runTimeSeconds: run.runTime, reason,
+        kind: "run",
+        transition: "abandoned",
+        runId: snapshot.sessionId,
+        mode: run.mode,
+        difficulty: run.diff,
+        weaponId: run.weaponId,
+        wave: run.wave,
+        score: run.score,
+        runTimeSeconds: run.runTime,
+        reason,
       });
       if (options.ghost.recording()) options.ghost.stopRec({ ...metadata, abandoned: reason });
     } finally {

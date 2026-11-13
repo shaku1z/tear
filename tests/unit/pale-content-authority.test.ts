@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
-import {
-  BOSS_DEFINITIONS,
-  BOSS_IDENTITY_IDS,
-  WHITE_HART_DEFINITION,
-} from "../../src/gameplay/run/boss-definitions";
+import { BOSS_DEFINITIONS, BOSS_IDENTITY_IDS, WHITE_HART_DEFINITION } from "../../src/gameplay/run/boss-definitions";
 import {
   AUTHORED_BOSS_ROSTER,
   BOSS_ROSTER,
@@ -38,21 +34,25 @@ describe("Pale Revision 3 content authority", () => {
   });
 
   it("keeps approved Pale canonical routes explicitly unpublished", () => {
-    const paleScenarios = scenarioCatalog.filter((scenario) =>
-      scenario.tags.includes("unpublished-preview"),
+    const paleScenarios = scenarioCatalog.filter((scenario) => scenario.tags.includes("unpublished-preview"));
+    expect(paleScenarios.map((scenario) => scenario.id)).toEqual(
+      expect.arrayContaining([
+        "pale-rimehound-aurora-interaction",
+        "pale-white-hart-phase-1",
+        "pale-white-hart-phase-2",
+        "pale-white-hart-phase-3",
+      ]),
     );
-    expect(paleScenarios.map((scenario) => scenario.id)).toEqual(expect.arrayContaining([
-      "pale-rimehound-aurora-interaction",
-      "pale-white-hart-phase-1",
-      "pale-white-hart-phase-2",
-      "pale-white-hart-phase-3",
-    ]));
-    expect(paleScenarios.every((scenario) =>
-      scenario.tags.includes("engineering-only")
-      && scenario.evidence.certification === "non-certifying",
-    )).toBe(true);
-    expect(paleScenarios.filter((scenario) => scenario.tags.includes("tc9")).every((scenario) =>
-      scenario.tags.includes("non-publishable"),
-    )).toBe(true);
+    expect(
+      paleScenarios.every(
+        (scenario) =>
+          scenario.tags.includes("engineering-only") && scenario.evidence.certification === "non-certifying",
+      ),
+    ).toBe(true);
+    expect(
+      paleScenarios
+        .filter((scenario) => scenario.tags.includes("tc9"))
+        .every((scenario) => scenario.tags.includes("non-publishable")),
+    ).toBe(true);
   });
 });

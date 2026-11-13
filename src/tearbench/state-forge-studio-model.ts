@@ -2,14 +2,7 @@ import type { TearSdlDocumentV1, TearSdlIssue, TearSdlResolved } from "./tearsdl
 import { parseTearSdl, resolveTearSdl } from "./tearsdl";
 
 export type StateForgeReportStatus =
-  | "valid"
-  | "invalid"
-  | "reachable"
-  | "unreachable"
-  | "plausible"
-  | "provisional"
-  | "implausible"
-  | "not-evaluated";
+  "valid" | "invalid" | "reachable" | "unreachable" | "plausible" | "provisional" | "implausible" | "not-evaluated";
 
 export interface StateForgeReport {
   readonly status: StateForgeReportStatus;
@@ -59,7 +52,7 @@ export function evaluateStateForgeSource(
       messages: Object.freeze(structuralMessages.length === 0 ? ["TearSDL structure is valid."] : structuralMessages),
     });
     const reachability = Object.freeze({
-      status: resolved.reachability.reachable ? "reachable" as const : "unreachable" as const,
+      status: resolved.reachability.reachable ? ("reachable" as const) : ("unreachable" as const),
       messages: Object.freeze(
         resolved.reachability.reasons.length === 0
           ? ["No reachability contradiction was found."]
@@ -67,8 +60,10 @@ export function evaluateStateForgeSource(
       ),
     });
     const plausibilityStatus = resolved.plausibility.provisional
-      ? "provisional" as const
-      : resolved.plausibility.plausible ? "plausible" as const : "implausible" as const;
+      ? ("provisional" as const)
+      : resolved.plausibility.plausible
+        ? ("plausible" as const)
+        : ("implausible" as const);
     const populationPlausibility = Object.freeze({
       status: plausibilityStatus,
       messages: Object.freeze(
@@ -100,12 +95,7 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function collectDiff(
-  before: unknown,
-  after: unknown,
-  path: string,
-  differences: StateForgeValueDiff[],
-): void {
+function collectDiff(before: unknown, after: unknown, path: string, differences: StateForgeValueDiff[]): void {
   if (Object.is(before, after)) return;
   if (isRecord(before) && isRecord(after)) {
     const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
@@ -113,11 +103,13 @@ function collectDiff(
     return;
   }
   if (JSON.stringify(before) === JSON.stringify(after)) return;
-  differences.push(Object.freeze({
-    path,
-    ...(before === undefined ? {} : { before: structuredClone(before) }),
-    ...(after === undefined ? {} : { after: structuredClone(after) }),
-  }));
+  differences.push(
+    Object.freeze({
+      path,
+      ...(before === undefined ? {} : { before: structuredClone(before) }),
+      ...(after === undefined ? {} : { after: structuredClone(after) }),
+    }),
+  );
 }
 
 export function diffStateForgeValues(before: unknown, after: unknown): readonly StateForgeValueDiff[] {

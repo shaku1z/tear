@@ -36,16 +36,23 @@ function issue(
 
 function object(value: unknown): Readonly<Record<string, unknown>> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value as Readonly<Record<string, unknown>>
+    ? (value as Readonly<Record<string, unknown>>)
     : undefined;
 }
 
-function commands(entries: readonly GhostCapsuleEntry[], issues: GhostCapsuleReplayIssue[]): readonly ReplayActionEnvelope[] {
+function commands(
+  entries: readonly GhostCapsuleEntry[],
+  issues: GhostCapsuleReplayIssue[],
+): readonly ReplayActionEnvelope[] {
   const parsed: ReplayActionEnvelope[] = [];
   for (const entry of entries) {
     const value = object(entry.value);
-    if (value?.kind !== "command" || !Number.isSafeInteger(value.id) || (value.id as number) < 1
-      || value.tick !== entry.tick) {
+    if (
+      value?.kind !== "command" ||
+      !Number.isSafeInteger(value.id) ||
+      (value.id as number) < 1 ||
+      value.tick !== entry.tick
+    ) {
       issue(issues, "commands", entry.tick, "entry is not an aligned canonical command envelope");
       continue;
     }
@@ -54,10 +61,13 @@ function commands(entries: readonly GhostCapsuleEntry[], issues: GhostCapsuleRep
       issue(issues, "commands", entry.tick, `invalid semantic action: ${normalized.reason}`);
       continue;
     }
-    parsed.push(Object.freeze({ kind: "command", id: value.id as number, tick: entry.tick, command: normalized.action }));
+    parsed.push(
+      Object.freeze({ kind: "command", id: value.id as number, tick: entry.tick, command: normalized.action }),
+    );
   }
   if (parsed.length !== entries.length || !hasMonotonicEnvelopes(parsed)) {
-    if (parsed.length === entries.length) issue(issues, "commands", entries.at(-1)?.tick ?? 0, "command IDs or ticks are not monotonic");
+    if (parsed.length === entries.length)
+      issue(issues, "commands", entries.at(-1)?.tick ?? 0, "command IDs or ticks are not monotonic");
     return Object.freeze([]);
   }
   return Object.freeze(parsed);
@@ -65,7 +75,8 @@ function commands(entries: readonly GhostCapsuleEntry[], issues: GhostCapsuleRep
 
 function recordedCanonicalSnapshot(value: unknown): TearSnapshotV1 | undefined {
   const contract = validateTearContract(value);
-  if (!contract.ok || contract.value.kind !== "snapshot" || contract.value.stateClass !== "recorded-canonical") return undefined;
+  if (!contract.ok || contract.value.kind !== "snapshot" || contract.value.stateClass !== "recorded-canonical")
+    return undefined;
   // Portable contract validation is the storage boundary. Full restoration is
   // deliberately performed only by GhostReplayWorld with its matching live
   // runtime factory; a generic empty world can reject valid host-owned state.
@@ -97,13 +108,15 @@ function issueText(issues: readonly TearCodecIssue[]): string {
  * entire state track unavailable rather than silently seeking through a
  * selectively trusted subset.
  */
-export function preflightGhostRecordedCanonicalSnapshot(snapshot: TearSnapshotV1):
-  | Readonly<{ ok: true; exactHash: string; semanticHash: string }>
-  | Readonly<{ ok: false; reason: string }> {
+export function preflightGhostRecordedCanonicalSnapshot(
+  snapshot: TearSnapshotV1,
+): Readonly<{ ok: true; exactHash: string; semanticHash: string }> | Readonly<{ ok: false; reason: string }> {
   const registry = createDefaultStateCodecRegistry();
   let staged: TearCodecWorld | undefined;
   const result = restoreSnapshotTransactionally(snapshot, registry, isolatedCodecFactory(), {
-    replace(world) { staged = world; },
+    replace(world) {
+      staged = world;
+    },
   });
   if (!result.ok) return Object.freeze({ ok: false, reason: `codec restore rejected: ${issueText(result.issues)}` });
   // `staged` is deliberately local. Keep this assertion explicit so future
@@ -113,12 +126,18 @@ export function preflightGhostRecordedCanonicalSnapshot(snapshot: TearSnapshotV1
     return Object.freeze({ ok: false, reason: "isolated codec exact hash does not match the declared keyframe hash" });
   }
   if (result.semanticHash !== snapshot.hashes.semantic) {
-    return Object.freeze({ ok: false, reason: "isolated codec semantic hash does not match the declared keyframe hash" });
+    return Object.freeze({
+      ok: false,
+      reason: "isolated codec semantic hash does not match the declared keyframe hash",
+    });
   }
   return Object.freeze({ ok: true, exactHash: result.exactHash, semanticHash: result.semanticHash });
 }
 
-function snapshots(entries: readonly GhostCapsuleEntry[], issues: GhostCapsuleReplayIssue[]): readonly TearSnapshotV1[] {
+function snapshots(
+  entries: readonly GhostCapsuleEntry[],
+  issues: GhostCapsuleReplayIssue[],
+): readonly TearSnapshotV1[] {
   const result: TearSnapshotV1[] = [];
   const ids = new Set<string>();
   let rejected = false;
@@ -136,17 +155,27 @@ function snapshots(entries: readonly GhostCapsuleEntry[], issues: GhostCapsuleRe
     }
     const preflight = preflightGhostRecordedCanonicalSnapshot(snapshot);
     if (!preflight.ok) {
-      issue(issues, "keyframes", entry.tick, `recorded-canonical keyframe failed isolated codec preflight: ${preflight.reason}`);
+      issue(
+        issues,
+        "keyframes",
+        entry.tick,
+        `recorded-canonical keyframe failed isolated codec preflight: ${preflight.reason}`,
+      );
       rejected = true;
       continue;
     }
     ids.add(snapshot.id);
     result.push(snapshot);
   }
-  return Object.freeze((rejected ? [] : result).sort((left, right) => left.tick - right.tick || left.id.localeCompare(right.id)));
+  return Object.freeze(
+    (rejected ? [] : result).sort((left, right) => left.tick - right.tick || left.id.localeCompare(right.id)),
+  );
 }
 
-function events(entries: readonly GhostCapsuleEntry[], issues: GhostCapsuleReplayIssue[]): readonly TearCausalEventV1[] {
+function events(
+  entries: readonly GhostCapsuleEntry[],
+  issues: GhostCapsuleReplayIssue[],
+): readonly TearCausalEventV1[] {
   const result: TearCausalEventV1[] = [];
   for (const entry of entries) {
     const contract = validateTearContract(entry.value);
@@ -170,8 +199,11 @@ function visualSamples(capsule: GhostReadCapsule): readonly Readonly<{ tick: num
     const contract = validateTearContract(entry.value);
     return !contract.ok || contract.value.kind !== "snapshot";
   });
-  return Object.freeze([...compactKeyframes, ...capsule.tracks.presentation, ...capsule.tracks.results]
-    .map((entry) => Object.freeze({ tick: entry.tick, value: entry.value })));
+  return Object.freeze(
+    [...compactKeyframes, ...capsule.tracks.presentation, ...capsule.tracks.results].map((entry) =>
+      Object.freeze({ tick: entry.tick, value: entry.value }),
+    ),
+  );
 }
 
 function rulesetVersion(snapshots: readonly TearSnapshotV1[]): string {
@@ -193,22 +225,39 @@ export function mapGhostCapsuleToReplayEnvelope(capsule: GhostReadCapsule): Ghos
   const visualTrack = visualSamples(capsule);
   const trident: GhostReplayTrident = Object.freeze({
     command: Object.freeze({
-      kind: "command", status: actionTrack.length > 0 ? "declared-unverified" : "absent", available: actionTrack.length > 0,
-      resumable: false, seekable: false,
-      reason: actionTrack.length > 0 ? "canonical V3 commands require compatible-runtime replay verification" : "no fully valid canonical command track",
+      kind: "command",
+      status: actionTrack.length > 0 ? "declared-unverified" : "absent",
+      available: actionTrack.length > 0,
+      resumable: false,
+      seekable: false,
+      reason:
+        actionTrack.length > 0
+          ? "canonical V3 commands require compatible-runtime replay verification"
+          : "no fully valid canonical command track",
     }),
     state: Object.freeze({
-      kind: "state", status: snapshotTrack.length > 0 ? "declared-unverified" : "absent", available: snapshotTrack.length > 0,
-      resumable: false, seekable: snapshotTrack.length > 0,
-      reason: snapshotTrack.length > 0 ? "recorded V3 keyframes passed isolated codec preflight and require compatible-runtime replay restoration and verification"
-        : issues.some((entry) => entry.track === "keyframes" && entry.reason.includes("isolated codec preflight"))
-          ? "recorded V3 state track is unavailable because at least one keyframe failed isolated codec preflight"
-          : "no recorded-canonical keyframe contract",
+      kind: "state",
+      status: snapshotTrack.length > 0 ? "declared-unverified" : "absent",
+      available: snapshotTrack.length > 0,
+      resumable: false,
+      seekable: snapshotTrack.length > 0,
+      reason:
+        snapshotTrack.length > 0
+          ? "recorded V3 keyframes passed isolated codec preflight and require compatible-runtime replay restoration and verification"
+          : issues.some((entry) => entry.track === "keyframes" && entry.reason.includes("isolated codec preflight"))
+            ? "recorded V3 state track is unavailable because at least one keyframe failed isolated codec preflight"
+            : "no recorded-canonical keyframe contract",
     }),
     visual: Object.freeze({
-      kind: "visual", status: visualTrack.length > 0 ? "declared-unverified" : "absent", available: visualTrack.length > 0,
-      resumable: false, seekable: visualTrack.length > 0,
-      reason: visualTrack.length > 0 ? "captured presentation is available only as unverified visual evidence" : "no presentation samples were recorded",
+      kind: "visual",
+      status: visualTrack.length > 0 ? "declared-unverified" : "absent",
+      available: visualTrack.length > 0,
+      resumable: false,
+      seekable: visualTrack.length > 0,
+      reason:
+        visualTrack.length > 0
+          ? "captured presentation is available only as unverified visual evidence"
+          : "no presentation samples were recorded",
     }),
   });
   const ghost = createGhostV3({
@@ -219,11 +268,18 @@ export function mapGhostCapsuleToReplayEnvelope(capsule: GhostReadCapsule): Ghos
     actions: actionTrack,
     snapshots: snapshotTrack,
     events: eventTrack,
-    ...(visualTrack.length === 0 ? {} : { visual: Object.freeze({ samples: visualTrack, capsuleResults: capsule.tracks.results }) }),
+    ...(visualTrack.length === 0
+      ? {}
+      : { visual: Object.freeze({ samples: visualTrack, capsuleResults: capsule.tracks.results }) }),
   });
   return Object.freeze({
     ghost,
     issues: Object.freeze(issues),
-    accepted: Object.freeze({ commands: actionTrack.length, events: eventTrack.length, snapshots: snapshotTrack.length, visualSamples: visualTrack.length }),
+    accepted: Object.freeze({
+      commands: actionTrack.length,
+      events: eventTrack.length,
+      snapshots: snapshotTrack.length,
+      visualSamples: visualTrack.length,
+    }),
   });
 }

@@ -8,7 +8,11 @@ export function readJson(file, description) {
 }
 
 export function parseBaseline(document) {
-  if (document?.format !== BASELINE_FORMAT || !Array.isArray(document.layerViolations) || !Array.isArray(document.cycles)) {
+  if (
+    document?.format !== BASELINE_FORMAT ||
+    !Array.isArray(document.layerViolations) ||
+    !Array.isArray(document.cycles)
+  ) {
     throw new Error(`the architecture baseline must be a ${BASELINE_FORMAT} document`);
   }
   for (const entry of document.layerViolations) {
@@ -32,15 +36,22 @@ export function serializeBaseline({ layerViolations, cycles }) {
 /** Maps a path through `--move` entries; an entry ending in `/` moves a directory prefix. */
 export function movePath(file, moves) {
   if (moves.has(file)) return moves.get(file);
-  for (const [from, to] of moves) if (from.endsWith("/") && file.startsWith(from)) return `${to}${file.slice(from.length)}`;
+  for (const [from, to] of moves)
+    if (from.endsWith("/") && file.startsWith(from)) return `${to}${file.slice(from.length)}`;
   return file;
 }
 
 export function applyMoves(baseline, moves) {
   if (moves.size === 0) return baseline;
   return {
-    layerViolations: baseline.layerViolations.map((entry) => ({ ...entry, from: movePath(entry.from, moves), to: movePath(entry.to, moves) })),
-    cycles: baseline.cycles.map((cycle) => cycle.map((file) => movePath(file, moves)).sort((left, right) => left.localeCompare(right, "en"))),
+    layerViolations: baseline.layerViolations.map((entry) => ({
+      ...entry,
+      from: movePath(entry.from, moves),
+      to: movePath(entry.to, moves),
+    })),
+    cycles: baseline.cycles.map((cycle) =>
+      cycle.map((file) => movePath(file, moves)).sort((left, right) => left.localeCompare(right, "en")),
+    ),
   };
 }
 
@@ -53,11 +64,15 @@ const KIND_RANK = Object.freeze({ type: 0, value: 1 });
  */
 export function updateArchitectureBaseline(violations, cycles, previous, allowIncrease = new Set()) {
   const recorded = new Map(previous.layerViolations.map((entry) => [`${entry.from} -> ${entry.to}`, entry]));
-  const refused = [], increased = [];
+  const refused = [],
+    increased = [];
   for (const edge of violations) {
     const entry = recorded.get(`${edge.from} -> ${edge.to}`);
     if (entry !== undefined && KIND_RANK[entry.kind] >= KIND_RANK[edge.kind]) continue;
-    (allowIncrease.has(edge.from) ? increased : refused).push({ kind: "edge", detail: `${edge.from} -> ${edge.to} (${edge.kind})` });
+    (allowIncrease.has(edge.from) ? increased : refused).push({
+      kind: "edge",
+      detail: `${edge.from} -> ${edge.to} (${edge.kind})`,
+    });
   }
   const recordedCycles = previous.cycles.map((cycle) => new Set(cycle));
   for (const cycle of cycles) {

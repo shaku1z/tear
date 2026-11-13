@@ -19,9 +19,29 @@ const RECEIPT_FILENAME = "game-reference.v1.receipt.json";
 const ARTIFACT_NAME_PREFIX = "tear-game-reference-v1-";
 const PUBLIC_BOSS_IDS = Object.freeze(["warden", "colossus", "aldric", "rootbound", "echo", "source"]);
 const PUBLIC_ENEMY_FAMILY_IDS = Object.freeze([
-  "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
+  "charger",
+  "ranged",
+  "flyer",
+  "bomber",
+  "armored",
+  "priest",
+  "mender",
+  "herald",
+  "anchor",
+  "wraith",
+  "chimera",
+  "rootbinder",
 ]);
-const PALE_ONLY_IDS = Object.freeze(["pale-traverse", "white-hart", "rimehound", "rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard"]);
+const PALE_ONLY_IDS = Object.freeze([
+  "pale-traverse",
+  "white-hart",
+  "rimehound",
+  "rime-runner",
+  "prism-seer",
+  "snowfall-kite",
+  "hailcaster",
+  "glacier-guard",
+]);
 
 function fullSha(value, label) {
   const normalized = typeof value === "string" ? value.toLowerCase() : "";
@@ -36,7 +56,8 @@ function digest(value, label) {
 }
 
 function exactKeys(value, expected, label) {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${label} must be an object`);
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError(`${label} must be an object`);
   const actual = Object.keys(value).sort();
   const sortedExpected = [...expected].sort();
   if (actual.length !== sortedExpected.length || actual.some((key, index) => key !== sortedExpected[index])) {
@@ -59,44 +80,87 @@ function git(rootPath, ...args) {
  * Validates the immutable identity used by the workflow before Vite or a game
  * module is started. The publication path is intentionally GitHub-SHA-only.
  */
-export function validatePublicationInputs({ sourceSha, headSha, status, repository, artifactName, validationEvent, validationRef, validationRunId }) {
+export function validatePublicationInputs({
+  sourceSha,
+  headSha,
+  status,
+  repository,
+  artifactName,
+  validationEvent,
+  validationRef,
+  validationRunId,
+}) {
   const expectedSha = fullSha(sourceSha, "GITHUB_SHA");
   if (fullSha(headSha, "HEAD") !== expectedSha) throw new Error("GITHUB_SHA must equal the checked-out HEAD");
-  if (typeof status !== "string" || status.length > 0) throw new Error("game-reference publication requires a clean worktree");
-  if (repository !== GAME_REFERENCE_REPOSITORY) throw new Error(`GITHUB_REPOSITORY must be ${GAME_REFERENCE_REPOSITORY}`);
-  if (validationEvent !== "push" || validationRef !== "refs/heads/main") throw new Error("game-reference publication requires a protected-main push Validate run");
-  if (typeof validationRunId !== "string" || !/^[1-9][0-9]*$/u.test(validationRunId)) throw new Error("GITHUB_RUN_ID must be a numeric validation run ID");
+  if (typeof status !== "string" || status.length > 0)
+    throw new Error("game-reference publication requires a clean worktree");
+  if (repository !== GAME_REFERENCE_REPOSITORY)
+    throw new Error(`GITHUB_REPOSITORY must be ${GAME_REFERENCE_REPOSITORY}`);
+  if (validationEvent !== "push" || validationRef !== "refs/heads/main")
+    throw new Error("game-reference publication requires a protected-main push Validate run");
+  if (typeof validationRunId !== "string" || !/^[1-9][0-9]*$/u.test(validationRunId))
+    throw new Error("GITHUB_RUN_ID must be a numeric validation run ID");
   const expectedArtifactName = `${ARTIFACT_NAME_PREFIX}${expectedSha}`;
   if (artifactName !== expectedArtifactName) throw new Error(`artifactName must be ${expectedArtifactName}`);
   return expectedSha;
 }
 
 /** The generated manifest is checked again before any artifact file is written. */
-export function validateManifestEnvelope(manifest, { sourceSha, repository = GAME_REFERENCE_REPOSITORY, repositoryRoot = root } = {}) {
+export function validateManifestEnvelope(
+  manifest,
+  { sourceSha, repository = GAME_REFERENCE_REPOSITORY, repositoryRoot = root } = {},
+) {
   const publicationPolicy = currentPublicationPolicy(repositoryRoot);
-  exactKeys(manifest, ["format", "schemaVersion", "source", "terminologyVersion", "roster", "collections"], "game-reference manifest");
+  exactKeys(
+    manifest,
+    ["format", "schemaVersion", "source", "terminologyVersion", "roster", "collections"],
+    "game-reference manifest",
+  );
   if (manifest.format !== GAME_REFERENCE_FORMAT || manifest.schemaVersion !== GAME_REFERENCE_SCHEMA_VERSION) {
     throw new TypeError("game-reference manifest format/schema is unsupported");
   }
   exactKeys(manifest.source, ["repository", "sha"], "game-reference manifest source");
-  if (manifest.source.repository !== repository) throw new TypeError("game-reference manifest repository is not canonical");
+  if (manifest.source.repository !== repository)
+    throw new TypeError("game-reference manifest repository is not canonical");
   const manifestSha = fullSha(manifest.source.sha, "game-reference manifest source.sha");
-  if (sourceSha !== undefined && manifestSha !== fullSha(sourceSha, "sourceSha")) throw new Error("game-reference manifest SHA is not the requested GITHUB_SHA");
-  if (manifest.terminologyVersion !== GAME_REFERENCE_TERMINOLOGY_VERSION) throw new TypeError("game-reference manifest terminology is unsupported");
-  exactKeys(manifest.roster, ["id", "schemaVersion", "activeWeaponIds", "retiredWeaponIds"], "game-reference manifest roster");
-  if (manifest.roster.id !== "final-five" || !Array.isArray(manifest.roster.activeWeaponIds) || !Array.isArray(manifest.roster.retiredWeaponIds)) {
+  if (sourceSha !== undefined && manifestSha !== fullSha(sourceSha, "sourceSha"))
+    throw new Error("game-reference manifest SHA is not the requested GITHUB_SHA");
+  if (manifest.terminologyVersion !== GAME_REFERENCE_TERMINOLOGY_VERSION)
+    throw new TypeError("game-reference manifest terminology is unsupported");
+  exactKeys(
+    manifest.roster,
+    ["id", "schemaVersion", "activeWeaponIds", "retiredWeaponIds"],
+    "game-reference manifest roster",
+  );
+  if (
+    manifest.roster.id !== "final-five" ||
+    !Array.isArray(manifest.roster.activeWeaponIds) ||
+    !Array.isArray(manifest.roster.retiredWeaponIds)
+  ) {
     throw new TypeError("game-reference manifest roster is incomplete");
   }
-  const collectionIds = ["achievements", "bosses", "enemies", "modes", "public-tuning", "stages", "upgrades", "weapons"];
+  const collectionIds = [
+    "achievements",
+    "bosses",
+    "enemies",
+    "modes",
+    "public-tuning",
+    "stages",
+    "upgrades",
+    "weapons",
+  ];
   exactKeys(manifest.collections, collectionIds, "game-reference manifest collections");
   for (const collectionId of collectionIds) {
     const collection = manifest.collections[collectionId];
     exactKeys(collection, ["status", "items"], `game-reference manifest collections.${collectionId}`);
-    if (collection.status !== "complete") throw new TypeError(`game-reference collection ${collectionId} is not complete`);
+    if (collection.status !== "complete")
+      throw new TypeError(`game-reference collection ${collectionId} is not complete`);
   }
   const stageIds = manifest.collections.stages.items.map((stage) => stage?.id);
-  if (stageIds.length !== publicationPolicy.activeStageIds.length
-    || stageIds.some((id, index) => id !== publicationPolicy.activeStageIds[index])) {
+  if (
+    stageIds.length !== publicationPolicy.activeStageIds.length ||
+    stageIds.some((id, index) => id !== publicationPolicy.activeStageIds[index])
+  ) {
     throw new Error("game-reference publication requires the exact six published stages");
   }
   const bossIds = manifest.collections.bosses.items.map((boss) => boss?.id);
@@ -105,38 +169,85 @@ export function validateManifestEnvelope(manifest, { sourceSha, repository = GAM
   }
   const enemyFamilies = manifest.collections.enemies.items?.families;
   const enemyFamilyIds = Array.isArray(enemyFamilies) ? enemyFamilies.map((family) => family?.id) : [];
-  if (enemyFamilyIds.length !== PUBLIC_ENEMY_FAMILY_IDS.length || enemyFamilyIds.some((id, index) => id !== PUBLIC_ENEMY_FAMILY_IDS[index])) {
+  if (
+    enemyFamilyIds.length !== PUBLIC_ENEMY_FAMILY_IDS.length ||
+    enemyFamilyIds.some((id, index) => id !== PUBLIC_ENEMY_FAMILY_IDS[index])
+  ) {
     throw new Error("game-reference publication requires the public enemy-family catalog");
   }
   const serializedCollections = JSON.stringify(manifest.collections);
   for (const leakedId of PALE_ONLY_IDS) {
-    if (serializedCollections.includes(leakedId)) throw new Error(`game-reference publication leaked Playground-only identity ${leakedId}`);
+    if (serializedCollections.includes(leakedId))
+      throw new Error(`game-reference publication leaked Playground-only identity ${leakedId}`);
   }
   return manifestSha;
 }
 
-export function validateReceipt(receipt, { sourceSha, repository = GAME_REFERENCE_REPOSITORY, artifactName, manifestSha256, validationEvent, validationRef, validationRunId } = {}) {
-  exactKeys(receipt, [
-    "format", "repository", "sourceSha", "gameReferenceFormat", "gameReferenceSchemaVersion",
-    "terminologyVersion", "artifactName", "manifestFilename", "manifestSha256", "receiptFilename",
-    "retentionDays", "generatedBy", "validationRunId", "validationEvent", "validationRef",
-  ], "game-reference artifact receipt");
+export function validateReceipt(
+  receipt,
+  {
+    sourceSha,
+    repository = GAME_REFERENCE_REPOSITORY,
+    artifactName,
+    manifestSha256,
+    validationEvent,
+    validationRef,
+    validationRunId,
+  } = {},
+) {
+  exactKeys(
+    receipt,
+    [
+      "format",
+      "repository",
+      "sourceSha",
+      "gameReferenceFormat",
+      "gameReferenceSchemaVersion",
+      "terminologyVersion",
+      "artifactName",
+      "manifestFilename",
+      "manifestSha256",
+      "receiptFilename",
+      "retentionDays",
+      "generatedBy",
+      "validationRunId",
+      "validationEvent",
+      "validationRef",
+    ],
+    "game-reference artifact receipt",
+  );
   if (receipt.format !== ARTIFACT_FORMAT) throw new TypeError("game-reference artifact receipt format is unsupported");
-  if (receipt.repository !== repository) throw new TypeError("game-reference artifact receipt repository is not canonical");
-  if (sourceSha !== undefined && receipt.sourceSha !== fullSha(sourceSha, "sourceSha")) throw new Error("receipt sourceSha is not the requested GITHUB_SHA");
+  if (receipt.repository !== repository)
+    throw new TypeError("game-reference artifact receipt repository is not canonical");
+  if (sourceSha !== undefined && receipt.sourceSha !== fullSha(sourceSha, "sourceSha"))
+    throw new Error("receipt sourceSha is not the requested GITHUB_SHA");
   fullSha(receipt.sourceSha, "receipt sourceSha");
-  if (receipt.gameReferenceFormat !== GAME_REFERENCE_FORMAT || receipt.gameReferenceSchemaVersion !== GAME_REFERENCE_SCHEMA_VERSION) {
+  if (
+    receipt.gameReferenceFormat !== GAME_REFERENCE_FORMAT ||
+    receipt.gameReferenceSchemaVersion !== GAME_REFERENCE_SCHEMA_VERSION
+  ) {
     throw new TypeError("receipt game-reference format/schema is unsupported");
   }
-  if (receipt.terminologyVersion !== GAME_REFERENCE_TERMINOLOGY_VERSION) throw new TypeError("receipt terminology is unsupported");
-  if (artifactName !== undefined && receipt.artifactName !== artifactName) throw new Error("receipt artifactName does not match the uploaded artifact");
-  if (receipt.manifestFilename !== MANIFEST_FILENAME || receipt.receiptFilename !== RECEIPT_FILENAME) throw new TypeError("receipt filenames are not canonical");
-  if (manifestSha256 !== undefined && receipt.manifestSha256 !== digest(manifestSha256, "manifestSha256")) throw new Error("receipt digest does not match the manifest");
+  if (receipt.terminologyVersion !== GAME_REFERENCE_TERMINOLOGY_VERSION)
+    throw new TypeError("receipt terminology is unsupported");
+  if (artifactName !== undefined && receipt.artifactName !== artifactName)
+    throw new Error("receipt artifactName does not match the uploaded artifact");
+  if (receipt.manifestFilename !== MANIFEST_FILENAME || receipt.receiptFilename !== RECEIPT_FILENAME)
+    throw new TypeError("receipt filenames are not canonical");
+  if (manifestSha256 !== undefined && receipt.manifestSha256 !== digest(manifestSha256, "manifestSha256"))
+    throw new Error("receipt digest does not match the manifest");
   digest(receipt.manifestSha256, "receipt manifestSha256");
-  if (validationEvent !== undefined && receipt.validationEvent !== validationEvent) throw new Error("receipt validationEvent does not match the workflow run");
-  if (validationRef !== undefined && receipt.validationRef !== validationRef) throw new Error("receipt validationRef does not match the workflow run");
-  if (validationRunId !== undefined && receipt.validationRunId !== validationRunId) throw new Error("receipt validationRunId does not match the workflow run");
-  if (receipt.validationEvent !== "push" || receipt.validationRef !== "refs/heads/main" || !/^[1-9][0-9]*$/u.test(receipt.validationRunId)) {
+  if (validationEvent !== undefined && receipt.validationEvent !== validationEvent)
+    throw new Error("receipt validationEvent does not match the workflow run");
+  if (validationRef !== undefined && receipt.validationRef !== validationRef)
+    throw new Error("receipt validationRef does not match the workflow run");
+  if (validationRunId !== undefined && receipt.validationRunId !== validationRunId)
+    throw new Error("receipt validationRunId does not match the workflow run");
+  if (
+    receipt.validationEvent !== "push" ||
+    receipt.validationRef !== "refs/heads/main" ||
+    !/^[1-9][0-9]*$/u.test(receipt.validationRunId)
+  ) {
     throw new TypeError("receipt validation provenance is not a protected-main push run");
   }
   if (receipt.retentionDays !== ARTIFACT_RETENTION_DAYS || receipt.generatedBy !== "pnpm publish:game-reference") {
@@ -172,24 +283,29 @@ function lstatIfPresent(target) {
 export function assertSafeArtifactDirectory(outputDirectory, repositoryRoot = root) {
   const resolvedRoot = path.resolve(repositoryRoot);
   const expected = path.resolve(resolvedRoot, "artifacts", "game-reference");
-  if (comparablePath(outputDirectory) !== comparablePath(expected)) throw new Error("game-reference artifact output must remain artifacts/game-reference");
+  if (comparablePath(outputDirectory) !== comparablePath(expected))
+    throw new Error("game-reference artifact output must remain artifacts/game-reference");
   const rootStat = lstatIfPresent(resolvedRoot);
-  if (rootStat === undefined || !rootStat.isDirectory() || rootStat.isSymbolicLink()) throw new Error("canonical repository root must be a real directory");
+  if (rootStat === undefined || !rootStat.isDirectory() || rootStat.isSymbolicLink())
+    throw new Error("canonical repository root must be a real directory");
   let canonicalRoot;
   try {
     canonicalRoot = path.resolve(fs.realpathSync.native(resolvedRoot));
   } catch (error) {
     throw new Error("canonical repository root realpath could not be verified", { cause: error });
   }
-  if (comparablePath(canonicalRoot) !== comparablePath(resolvedRoot)) throw new Error("canonical repository root is an alias");
+  if (comparablePath(canonicalRoot) !== comparablePath(resolvedRoot))
+    throw new Error("canonical repository root is an alias");
   const relative = path.relative(resolvedRoot, expected);
-  if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error("game-reference artifact path escapes the repository root");
+  if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
+    throw new Error("game-reference artifact path escapes the repository root");
   let current = resolvedRoot;
   for (const segment of relative.split(path.sep)) {
     current = path.join(current, segment);
     const stat = lstatIfPresent(current);
     if (stat === undefined) break;
-    if (stat.isSymbolicLink()) throw new Error(`game-reference artifact path contains a symlink, junction, or reparse point: ${current}`);
+    if (stat.isSymbolicLink())
+      throw new Error(`game-reference artifact path contains a symlink, junction, or reparse point: ${current}`);
     if (!stat.isDirectory()) throw new Error(`game-reference artifact path component is not a directory: ${current}`);
     let realCurrent;
     try {
@@ -197,8 +313,10 @@ export function assertSafeArtifactDirectory(outputDirectory, repositoryRoot = ro
     } catch (error) {
       throw new Error(`game-reference artifact path realpath could not be verified: ${current}`, { cause: error });
     }
-    if (!isWithinPath(canonicalRoot, realCurrent)) throw new Error(`game-reference artifact path escapes the repository root through an alias: ${current}`);
-    if (comparablePath(realCurrent) !== comparablePath(current)) throw new Error(`game-reference artifact path contains an alias: ${current}`);
+    if (!isWithinPath(canonicalRoot, realCurrent))
+      throw new Error(`game-reference artifact path escapes the repository root through an alias: ${current}`);
+    if (comparablePath(realCurrent) !== comparablePath(current))
+      throw new Error(`game-reference artifact path contains an alias: ${current}`);
   }
   return expected;
 }
@@ -209,7 +327,7 @@ export function validateArtifactFiles(entries) {
       throw new Error("game-reference artifact must contain regular files only");
     }
   }
-  const names = entries.map((entry) => typeof entry === "string" ? entry : entry.name).sort();
+  const names = entries.map((entry) => (typeof entry === "string" ? entry : entry.name)).sort();
   const expected = [MANIFEST_FILENAME, RECEIPT_FILENAME].sort();
   if (names.length !== expected.length || names.some((name, index) => name !== expected[index])) {
     throw new Error("game-reference artifact must contain exactly the manifest and receipt");
@@ -221,7 +339,14 @@ function canonicalJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-export function buildReceipt({ sourceSha, artifactName, manifestSha256, validationRunId, validationEvent, validationRef }) {
+export function buildReceipt({
+  sourceSha,
+  artifactName,
+  manifestSha256,
+  validationRunId,
+  validationEvent,
+  validationRef,
+}) {
   const sha = fullSha(sourceSha, "sourceSha");
   const receipt = {
     format: ARTIFACT_FORMAT,
@@ -252,32 +377,43 @@ export function buildReceipt({ sourceSha, artifactName, manifestSha256, validati
 }
 
 function runExporter(sourceSha, repositoryRoot = root) {
-  const result = spawnSync(process.execPath, [
-    path.join(repositoryRoot, "scripts", "export-game-reference.mjs"),
-    "--sha", sourceSha,
-    "--expected-sha", sourceSha,
-  ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(repositoryRoot, "scripts", "export-game-reference.mjs"),
+      "--sha",
+      sourceSha,
+      "--expected-sha",
+      sourceSha,
+    ],
+    { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" },
+  );
   if (result.status !== 0) throw new Error(`game-reference exporter failed: ${result.stderr || result.stdout}`);
-  if (typeof result.stdout !== "string" || result.stdout.length === 0) throw new Error("game-reference exporter produced no manifest");
+  if (typeof result.stdout !== "string" || result.stdout.length === 0)
+    throw new Error("game-reference exporter produced no manifest");
   return result.stdout;
 }
 
 function assertOutputDirectoryEmpty(outputDirectory) {
   const stat = fs.lstatSync(outputDirectory);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("game-reference artifact output must be a real directory");
+  if (!stat.isDirectory() || stat.isSymbolicLink())
+    throw new Error("game-reference artifact output must be a real directory");
   const entries = fs.readdirSync(outputDirectory, { withFileTypes: true });
   if (entries.length > 0) throw new Error("game-reference artifact output already contains files");
 }
 
-function publishGameReferenceArtifactInternal({
-  repositoryRoot = root,
-  sourceSha = process.env.GITHUB_SHA,
-  repository = process.env.GITHUB_REPOSITORY ?? GAME_REFERENCE_REPOSITORY,
-  artifactName = process.env.TEAR_GAME_REFERENCE_ARTIFACT_NAME,
-  validationEvent = process.env.GITHUB_EVENT_NAME,
-  validationRef = process.env.GITHUB_REF,
-  validationRunId = process.env.GITHUB_RUN_ID,
-} = {}, exporter = runExporter) {
+function publishGameReferenceArtifactInternal(
+  {
+    repositoryRoot = root,
+    sourceSha = process.env.GITHUB_SHA,
+    repository = process.env.GITHUB_REPOSITORY ?? GAME_REFERENCE_REPOSITORY,
+    artifactName = process.env.TEAR_GAME_REFERENCE_ARTIFACT_NAME,
+    validationEvent = process.env.GITHUB_EVENT_NAME,
+    validationRef = process.env.GITHUB_REF,
+    validationRunId = process.env.GITHUB_RUN_ID,
+  } = {},
+  exporter = runExporter,
+) {
   const resolvedRoot = path.resolve(repositoryRoot);
   const headSha = git(resolvedRoot, "rev-parse", "HEAD");
   const status = git(resolvedRoot, "status", "--porcelain=v1", "--untracked-files=all");
@@ -293,7 +429,10 @@ function publishGameReferenceArtifactInternal({
     validationRef,
     validationRunId,
   });
-  const outputDirectory = assertSafeArtifactDirectory(path.resolve(resolvedRoot, "artifacts", "game-reference"), resolvedRoot);
+  const outputDirectory = assertSafeArtifactDirectory(
+    path.resolve(resolvedRoot, "artifacts", "game-reference"),
+    resolvedRoot,
+  );
   if (lstatIfPresent(outputDirectory) !== undefined) assertOutputDirectoryEmpty(outputDirectory);
 
   const encoded = exporter(requestedSha, resolvedRoot);
@@ -301,7 +440,10 @@ function publishGameReferenceArtifactInternal({
   try {
     manifest = JSON.parse(encoded);
   } catch (error) {
-    throw new Error(`game-reference exporter produced invalid JSON: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+    throw new Error(
+      `game-reference exporter produced invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
   }
   validateManifestEnvelope(manifest, { sourceSha: requestedSha, repository, repositoryRoot: resolvedRoot });
   if (!encoded.endsWith("\n")) throw new Error("game-reference manifest must end with one newline");

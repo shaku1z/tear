@@ -80,34 +80,60 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
     planIntents: {
       beginWipe: options.beginWipe,
       loadStage: options.loadStage,
-      setStageBanner: (name, duration) => { options.stage.setBanner(name, duration); },
+      setStageBanner: (name, duration) => {
+        options.stage.setBanner(name, duration);
+      },
       beginCampaignChapter: options.beginCampaignChapter,
       recordWave: publishWave,
-      snapshotReplay: (slot) => { d.GHOST.snapshot(options.canvas, slot); },
+      snapshotReplay: (slot) => {
+        d.GHOST.snapshot(options.canvas, slot);
+      },
       prepareWave: (wave, boss, deferred) => {
         const weapon = d.WEAPONS.find((candidate) => candidate.id === options.run().weaponId);
         weapon?.onReset?.({ blade: options.blade() });
         options.lifecycle.prepareWave(wave, boss, deferred);
       },
-      activateWave: () => { options.lifecycle.activateWave(); },
-      showWaveBanner: () => { options.setBannerSeconds(d.CONFIG.juice.bannerTime); },
-      playWaveSound: () => { d.SFX.wave(); },
+      activateWave: () => {
+        options.lifecycle.activateWave();
+      },
+      showWaveBanner: () => {
+        options.setBannerSeconds(d.CONFIG.juice.bannerTime);
+      },
+      playWaveSound: () => {
+        d.SFX.wave();
+      },
     },
     clearIntents: {
-      clearWave: () => { options.lifecycle.clearWave(); },
-      bloom: (color, strength, duration) => { d.Backdrop.bloom(color, strength, duration); },
+      clearWave: () => {
+        options.lifecycle.clearWave();
+      },
+      bloom: (color, strength, duration) => {
+        d.Backdrop.bloom(color, strength, duration);
+      },
       recordWave: publishWave,
       profileMax: d.profileStatsPersistence.max,
       profileAdd: d.profileStatsPersistence.add,
-      dailyBump: (challenge, value, operation) => { d.DAILY.bump(challenge, value, operation); },
-      hordeCleared: (seconds) => { options.achievementTracker.hordeCleared(seconds); },
+      dailyBump: (challenge, value, operation) => {
+        d.DAILY.bump(challenge, value, operation);
+      },
+      hordeCleared: (seconds) => {
+        options.achievementTracker.hordeCleared(seconds);
+      },
       achievementCheck: options.achievementCheck,
-      stageDone: () => { options.achievementTracker.stageDone(); },
-      healPlayer: (amount) => { options.player().heal(amount); },
-      prepareReward: (reward) => { options.lifecycle.prepareReward(reward); },
+      stageDone: () => {
+        options.achievementTracker.stageDone();
+      },
+      healPlayer: (amount) => {
+        options.player().heal(amount);
+      },
+      prepareReward: (reward) => {
+        options.lifecycle.prepareReward(reward);
+      },
       startAdventureFinale: options.startAdventureFinale,
       winRun: options.winRun,
-      releasePointer: () => { document.exitPointerLock(); },
+      releasePointer: () => {
+        document.exitPointerLock();
+      },
       openTierUp: () => {
         const run = options.run();
         options.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier));
@@ -123,6 +149,8 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
       const run = options.run();
       return eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier).length;
     },
-    install: (controller) => { options.controllers.installWave(controller); },
+    install: (controller) => {
+      options.controllers.installWave(controller);
+    },
   });
 }

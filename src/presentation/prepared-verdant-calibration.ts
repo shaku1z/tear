@@ -1,4 +1,9 @@
-import { validateVerdantScenePackage, type VerdantAssetKey, type VerdantSceneAsset, type VerdantSceneLayer } from "./verdant-scene-package";
+import {
+  validateVerdantScenePackage,
+  type VerdantAssetKey,
+  type VerdantSceneAsset,
+  type VerdantSceneLayer,
+} from "./verdant-scene-package";
 import { VERDANT_FOREGROUND_CONTOURS } from "./verdant-foreground-occlusion";
 import { VERDANT_POOL_CONTOURS } from "./verdant-pool-receiver";
 import { createVerdantWaterFlow, drawVerdantInletFalls } from "./verdant-water-flow";
@@ -11,7 +16,11 @@ export interface CalibrationBitmap {
   readonly encodedBytes: number;
   readonly close: () => void;
 }
-export type CalibrationLoader = (url: string, signal: AbortSignal, asset: VerdantSceneAsset) => Promise<CalibrationBitmap>;
+export type CalibrationLoader = (
+  url: string,
+  signal: AbortSignal,
+  asset: VerdantSceneAsset,
+) => Promise<CalibrationBitmap>;
 export type VerdantSceneView = "composite" | "support-only" | "tail-only" | "foliage-only";
 export type VerdantMotionView = "live" | "neutral" | "minimum" | "maximum";
 /** Shared presentation phase; reset/seek has no retained animation state. */
@@ -21,8 +30,11 @@ export function verdantTailFrame(seconds: number): number {
 /** Source-space attachment profile shared by each bounded foliage strip. */
 export function verdantFoliageOffset(row: number, seconds: number, group: number, view: VerdantMotionView): number {
   const weight = Math.min(1, Math.max(0, (row - 80) / 400)) ** 2;
-  return view === "neutral" || weight === 0 ? 0 : 12 * weight * (view === "minimum" ? -1 : view === "maximum" ? 1
-    : Math.sin(seconds * Math.PI / 2 + group * 1.4));
+  return view === "neutral" || weight === 0
+    ? 0
+    : 12 *
+        weight *
+        (view === "minimum" ? -1 : view === "maximum" ? 1 : Math.sin((seconds * Math.PI) / 2 + group * 1.4));
 }
 function prepareSceneClip(contours: readonly (readonly (readonly [number, number])[])[]): Path2D {
   const path = new Path2D();
@@ -39,18 +51,33 @@ export interface PreparedVerdantCalibration {
   prepare(): Promise<void>;
   dispose(): void;
   status(): "idle" | "loading" | "ready" | "failed" | "disposed";
-  draw(context: CanvasRenderingContext2D, width: number, seconds?: number, motionAllowed?: boolean, flashScale?: number): boolean;
+  draw(
+    context: CanvasRenderingContext2D,
+    width: number,
+    seconds?: number,
+    motionAllowed?: boolean,
+    flashScale?: number,
+  ): boolean;
   setDiagnosticView(view: unknown): void;
   setDiagnosticMotion(view: unknown): void;
   report(): Readonly<{
-    packageId: string; status: ReturnType<PreparedVerdantCalibration["status"]>; fallbackActive: boolean;
-    view: VerdantSceneView; motionView: VerdantMotionView; decodedResources: number; decodedBytes: number; encodedBytes: number; failure: string | null;
+    packageId: string;
+    status: ReturnType<PreparedVerdantCalibration["status"]>;
+    fallbackActive: boolean;
+    view: VerdantSceneView;
+    motionView: VerdantMotionView;
+    decodedResources: number;
+    decodedBytes: number;
+    encodedBytes: number;
+    failure: string | null;
   }>;
 }
 
 /** App-scoped owner: no loading, allocation, or mutable game state during draw. */
 export function createPreparedVerdantCalibration(
-  input: unknown, urls: Readonly<Partial<Record<VerdantAssetKey, string>>>, load: CalibrationLoader,
+  input: unknown,
+  urls: Readonly<Partial<Record<VerdantAssetKey, string>>>,
+  load: CalibrationLoader,
 ): PreparedVerdantCalibration {
   const manifest = validateVerdantScenePackage(input);
   const requests = manifest.assets.map((asset) => {
@@ -107,8 +134,14 @@ export function createPreparedVerdantCalibration(
           state = "ready";
         } catch (error) {
           for (const tile of prepared) tile.close();
-          foregroundClip = undefined; poolClip = undefined; poolBitmap = undefined; waterFlow = undefined;
-          if (!abort.signal.aborted) { state = "failed"; failure = error instanceof Error ? error.message : "Scene preparation failed"; }
+          foregroundClip = undefined;
+          poolClip = undefined;
+          poolBitmap = undefined;
+          waterFlow = undefined;
+          if (!abort.signal.aborted) {
+            state = "failed";
+            failure = error instanceof Error ? error.message : "Scene preparation failed";
+          }
         }
       })();
       return pending;
@@ -130,7 +163,13 @@ export function createPreparedVerdantCalibration(
       const scale = width / 1672;
       const moving = motionAllowed && motionView !== "neutral";
       const flash = Number.isFinite(flashScale) ? Math.max(0, Math.min(1, flashScale)) : 0;
-      const frame = !moving ? 4 : motionView === "minimum" ? 0 : motionView === "maximum" ? 8 : verdantTailFrame(seconds);
+      const frame = !moving
+        ? 4
+        : motionView === "minimum"
+          ? 0
+          : motionView === "maximum"
+            ? 8
+            : verdantTailFrame(seconds);
       context.save();
       for (const { bitmap, layer } of layers) {
         if (diagnosticView === "support-only" && layer.purpose !== "support") continue;
@@ -147,9 +186,15 @@ export function createPreparedVerdantCalibration(
               const start = verdantFoliageOffset(row, seconds, group, motionView);
               const end = verdantFoliageOffset(row + height, seconds, group, motionView);
               context.save();
-              context.transform(scale, 0, (end - start) / height * scale, scale,
-                (x + group * w / 2 + start) * scale, (y + row) * scale);
-              context.drawImage(bitmap.image, group * w / 2, row, w / 2, height, 0, 0, w / 2, height);
+              context.transform(
+                scale,
+                0,
+                ((end - start) / height) * scale,
+                scale,
+                (x + (group * w) / 2 + start) * scale,
+                (y + row) * scale,
+              );
+              context.drawImage(bitmap.image, (group * w) / 2, row, w / 2, height, 0, 0, w / 2, height);
               context.restore();
             }
           }
@@ -158,11 +203,14 @@ export function createPreparedVerdantCalibration(
         } else context.drawImage(bitmap.image, x * scale, y * scale, w * scale, h * scale);
       }
       if (moving && flash > 0 && poolClip && poolBitmap && waterFlow && diagnosticView === "composite") {
-        context.save(); context.scale(scale, scale); context.clip(poolClip, "evenodd");
+        context.save();
+        context.scale(scale, scale);
+        context.clip(poolClip, "evenodd");
         waterFlow.draw(context, poolBitmap.image, seconds, motionView, flash);
         context.restore();
-        context.save(); context.scale(scale, scale);
-        drawVerdantInletFalls(context, motionView === "live" ? seconds : motionView === "minimum" ? .45 : 2.35, flash);
+        context.save();
+        context.scale(scale, scale);
+        drawVerdantInletFalls(context, motionView === "live" ? seconds : motionView === "minimum" ? 0.45 : 2.35, flash);
         context.restore();
       }
       if (foregroundClip && diagnosticView === "composite") {
@@ -180,18 +228,27 @@ export function createPreparedVerdantCalibration(
       // actors, dry ruin distortion, full-scene pulse, or persistent effect cache.
       if (moving && flash > 0 && diagnosticView === "composite" && manifest.water) {
         const water = manifest.water;
-        const phase = seconds * .55;
+        const phase = seconds * 0.55;
         const opacity = motionView === "live" ? Math.sin(phase) ** 2 : 1;
-        const shift = water.maxDisplacement * (motionView === "minimum" ? -1 : motionView === "maximum" ? 1 : Math.sin(phase));
-        context.save(); context.scale(scale, scale);
+        const shift =
+          water.maxDisplacement * (motionView === "minimum" ? -1 : motionView === "maximum" ? 1 : Math.sin(phase));
+        context.save();
+        context.scale(scale, scale);
         context.beginPath();
-        water.receiver.forEach(([x, y], index) => { if (index === 0) context.moveTo(x, y); else context.lineTo(x, y); });
-        context.closePath(); context.clip();
-        context.strokeStyle = "#c9e5b3"; context.lineWidth = 1;
+        water.receiver.forEach(([x, y], index) => {
+          if (index === 0) context.moveTo(x, y);
+          else context.lineTo(x, y);
+        });
+        context.closePath();
+        context.clip();
+        context.strokeStyle = "#c9e5b3";
+        context.lineWidth = 1;
         for (let index = 0; index < 3; index += 1) {
-          const x = 750 + index * 53 + shift, y = 809 + index * 8;
-          context.globalAlpha = water.maxOpacity * opacity * flash * (1 - index * .2);
-          context.beginPath(); context.moveTo(x, y);
+          const x = 750 + index * 53 + shift,
+            y = 809 + index * 8;
+          context.globalAlpha = water.maxOpacity * opacity * flash * (1 - index * 0.2);
+          context.beginPath();
+          context.moveTo(x, y);
           context.quadraticCurveTo(x + 18, y - 1, x + 39, y);
           context.stroke();
         }
@@ -201,21 +258,34 @@ export function createPreparedVerdantCalibration(
       return true;
     },
     setDiagnosticView(view) {
-      if (view !== "composite" && view !== "support-only" && view !== "tail-only" && view !== "foliage-only") throw new Error("Unknown scene diagnostic view");
+      if (view !== "composite" && view !== "support-only" && view !== "tail-only" && view !== "foliage-only")
+        throw new Error("Unknown scene diagnostic view");
       diagnosticView = view;
     },
     setDiagnosticMotion(view) {
-      if (view !== "live" && view !== "neutral" && view !== "minimum" && view !== "maximum") throw new Error("Unknown scene motion view");
+      if (view !== "live" && view !== "neutral" && view !== "minimum" && view !== "maximum")
+        throw new Error("Unknown scene motion view");
       motionView = view;
     },
-    report: () => Object.freeze({ packageId: manifest.id, status: state, fallbackActive: state !== "ready", view: diagnosticView, motionView,
-      decodedResources: tiles.length, decodedBytes: tiles.reduce((sum, tile) => sum + tile.width * tile.height * 4, 0),
-      encodedBytes: tiles.reduce((sum, tile) => sum + tile.encodedBytes, 0), failure }),
+    report: () =>
+      Object.freeze({
+        packageId: manifest.id,
+        status: state,
+        fallbackActive: state !== "ready",
+        view: diagnosticView,
+        motionView,
+        decodedResources: tiles.length,
+        decodedBytes: tiles.reduce((sum, tile) => sum + tile.width * tile.height * 4, 0),
+        encodedBytes: tiles.reduce((sum, tile) => sum + tile.encodedBytes, 0),
+        failure,
+      }),
   };
 }
 
 export async function loadVerifiedPresentationBitmap(
-  url: string, signal: AbortSignal, asset: Pick<VerdantSceneAsset, "sha256">,
+  url: string,
+  signal: AbortSignal,
+  asset: Pick<VerdantSceneAsset, "sha256">,
   resize?: Readonly<{ width: number; height: number }>,
 ): Promise<CalibrationBitmap> {
   const response = await fetch(url, { signal });
@@ -229,8 +299,19 @@ export async function loadVerifiedPresentationBitmap(
   const bitmap = resize
     ? await createImageBitmap(blob, { resizeWidth: resize.width, resizeHeight: resize.height, resizeQuality: "high" })
     : await createImageBitmap(blob);
-  if (signal.aborted) { bitmap.close(); throw new Error("Calibration decode cancelled"); }
-  return { image: bitmap, width: bitmap.width, height: bitmap.height, encodedBytes: blob.size, close: () => { bitmap.close(); } };
+  if (signal.aborted) {
+    bitmap.close();
+    throw new Error("Calibration decode cancelled");
+  }
+  return {
+    image: bitmap,
+    width: bitmap.width,
+    height: bitmap.height,
+    encodedBytes: blob.size,
+    close: () => {
+      bitmap.close();
+    },
+  };
 }
 
 /** Prototype material lighting is prepared once, never applied as a per-frame
@@ -248,9 +329,9 @@ export const loadCalibrationBitmap: CalibrationLoader = async (url, signal, asse
     context.drawImage(original.image, 0, 0);
     const shade = context.createLinearGradient(0, 0, original.width, 0);
     shade.addColorStop(0, "rgba(0,0,0,0.28)");
-    shade.addColorStop(.24, "rgba(0,0,0,0.24)");
-    shade.addColorStop(.5, "rgba(0,0,0,0.06)");
-    shade.addColorStop(.72, "rgba(0,0,0,0.18)");
+    shade.addColorStop(0.24, "rgba(0,0,0,0.24)");
+    shade.addColorStop(0.5, "rgba(0,0,0,0.06)");
+    shade.addColorStop(0.72, "rgba(0,0,0,0.18)");
     shade.addColorStop(1, "rgba(0,0,0,0.28)");
     context.globalCompositeOperation = "source-atop";
     context.fillStyle = shade;
@@ -258,13 +339,23 @@ export const loadCalibrationBitmap: CalibrationLoader = async (url, signal, asse
     shaded = surface.transferToImageBitmap();
     signal.throwIfAborted();
     const image = shaded;
-    return { image, width: original.width, height: original.height, encodedBytes: original.encodedBytes,
-      close: () => { image.close(); } };
+    return {
+      image,
+      width: original.width,
+      height: original.height,
+      encodedBytes: original.encodedBytes,
+      close: () => {
+        image.close();
+      },
+    };
   } catch (error) {
     shaded?.close();
     throw error;
   } finally {
     original.close();
-    if (surface) { surface.width = 1; surface.height = 1; }
+    if (surface) {
+      surface.width = 1;
+      surface.height = 1;
+    }
   }
 };

@@ -27,14 +27,11 @@ export function tierFromSnapshot(snapshot: MusicContextSnapshot): Tier {
   }
 
   const enemyPressure =
-    normalized(snapshot.liveEnemies ?? 0, 8) * 0.65 +
-    normalized(snapshot.queuedEnemies ?? 0, 8) * 0.35;
+    normalized(snapshot.liveEnemies ?? 0, 8) * 0.65 + normalized(snapshot.queuedEnemies ?? 0, 8) * 0.35;
   const projectilePressure = normalized(snapshot.projectileCount ?? 0, 12);
   const healthRisk = 1 - clamp01(snapshot.playerHealthRatio);
   const combo =
-    ({ NICE: 0.2, STYLISH: 0.4, BRUTAL: 0.6, SAVAGE: 0.8, "TEARING!": 1 } as Record<string, number>)[
-      rank
-    ] ?? 0;
+    ({ NICE: 0.2, STYLISH: 0.4, BRUTAL: 0.6, SAVAGE: 0.8, "TEARING!": 1 } as Record<string, number>)[rank] ?? 0;
 
   const intensity = clamp01(
     enemyPressure * 0.32 +
@@ -45,9 +42,7 @@ export function tierFromSnapshot(snapshot: MusicContextSnapshot): Tier {
       (boss ? 0.28 : 0),
   );
   const danger = clamp01(healthRisk * 0.54 + enemyPressure * 0.18 + projectilePressure * 0.14);
-  const tension = clamp01(
-    enemyPressure * 0.36 + projectilePressure * 0.24 + healthRisk * 0.18 + (boss ? 0.4 : 0),
-  );
+  const tension = clamp01(enemyPressure * 0.36 + projectilePressure * 0.24 + healthRisk * 0.18 + (boss ? 0.4 : 0));
 
   const score = Math.max(intensity, danger * 0.9, tension * 0.75);
   const enter = [0.12, 0.32, 0.58, 0.82] as const;

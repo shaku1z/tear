@@ -1,5 +1,13 @@
-import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, GameRun,
-  GameSlowZone, GameTemporaryWall } from "../shell/game-runtime-state";
+import type {
+  GameBlade,
+  GameEnemy,
+  GameFloater,
+  GamePlayer,
+  GameProjectile,
+  GameRun,
+  GameSlowZone,
+  GameTemporaryWall,
+} from "../shell/game-runtime-state";
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { TearWorldState } from "../../gameplay/runtime/tear-world-context";

@@ -9,14 +9,20 @@ import { fanoutContentAddressedBuild, materializeContentAddressedBuild } from ".
 const projectRoot = resolve(import.meta.dirname, "..");
 const mode = process.argv[2];
 const supportedModes = new Set(["standalone", "crazygames", "test-standalone", "test-crazygames"]);
-if (!supportedModes.has(mode)) throw new Error("usage: node scripts/build-target.mjs <standalone|crazygames|test-standalone|test-crazygames> [--out-dir path]");
+if (!supportedModes.has(mode))
+  throw new Error(
+    "usage: node scripts/build-target.mjs <standalone|crazygames|test-standalone|test-crazygames> [--out-dir path]",
+  );
 const target = mode.endsWith("crazygames") ? "crazygames" : "standalone";
 const outDirectoryIndex = process.argv.indexOf("--out-dir");
-const output = outDirectoryIndex >= 0
-  ? resolve(process.argv[outDirectoryIndex + 1])
-  : resolve(projectRoot, "dist", mode.startsWith("test-") ? `test-${target}` : target);
-const staging = outDirectoryIndex >= 0 ? output
-  : resolve(projectRoot, "artifacts/tearbench/generated/build-staging", `${mode}-${String(process.pid)}`);
+const output =
+  outDirectoryIndex >= 0
+    ? resolve(process.argv[outDirectoryIndex + 1])
+    : resolve(projectRoot, "dist", mode.startsWith("test-") ? `test-${target}` : target);
+const staging =
+  outDirectoryIndex >= 0
+    ? output
+    : resolve(projectRoot, "artifacts/tearbench/generated/build-staging", `${mode}-${String(process.pid)}`);
 
 function git(...args) {
   const result = spawnSync("git", args, { cwd: projectRoot, encoding: "utf8", stdio: "pipe" });
@@ -36,14 +42,25 @@ if (result.error !== undefined) throw result.error;
 if (result.status !== 0) process.exit(result.status ?? 1);
 if (target === "crazygames") {
   const pruned = await pruneCrazyGamesArtifact(staging);
-  console.log(`CrazyGames output: left out ${String(pruned.files.length)} unrequested file(s), ${String(pruned.bytes)} bytes`);
+  console.log(
+    `CrazyGames output: left out ${String(pruned.files.length)} unrequested file(s), ${String(pruned.bytes)} bytes`,
+  );
 }
 
-const metadata = await writeReleaseArtifactMetadata({ directory: staging, repository, sha, target, mode, sourceDirectory: projectRoot });
+const metadata = await writeReleaseArtifactMetadata({
+  directory: staging,
+  repository,
+  sha,
+  target,
+  mode,
+  sourceDirectory: projectRoot,
+});
 const stored = await materializeContentAddressedBuild({ workspaceRoot: projectRoot, directory: staging });
 if (outDirectoryIndex < 0) {
   await fanoutContentAddressedBuild({ workspaceRoot: projectRoot, record: stored.record, destination: output });
   await rm(staging, { recursive: true, force: true });
 }
 console.log(`PASS ${target} build attribution: ${metadata.sha} ${metadata.artifactHash}`);
-console.log(`PASS ${target} content-addressed build: ${stored.record.buildIdentityDigest} ${stored.record.contentAddressedPath}`);
+console.log(
+  `PASS ${target} content-addressed build: ${stored.record.buildIdentityDigest} ${stored.record.contentAddressedPath}`,
+);

@@ -1,18 +1,28 @@
 import { relative, resolve } from "node:path";
 
-function portableRelative(root, path) { return relative(root, path).replaceAll("\\", "/"); }
+function portableRelative(root, path) {
+  return relative(root, path).replaceAll("\\", "/");
+}
 
 export function expectedReproducibilitySide({ root, generated, side }) {
   if (["standalone-a", "standalone-b", "crazygames-a", "crazygames-b"].includes(side)) {
     const target = side.startsWith("standalone") ? "standalone" : "crazygames";
-    return Object.freeze({ kind: "build", target, mode: target,
-      payloadPath: portableRelative(root, resolve(generated, "payloads", side)) });
+    return Object.freeze({
+      kind: "build",
+      target,
+      mode: target,
+      payloadPath: portableRelative(root, resolve(generated, "payloads", side)),
+    });
   }
   if (["crazygames-package-a", "crazygames-package-b"].includes(side)) {
     const suffix = side.endsWith("-a") ? "a" : "b";
-    return Object.freeze({ kind: "package", target: "crazygames", mode: "crazygames",
+    return Object.freeze({
+      kind: "package",
+      target: "crazygames",
+      mode: "crazygames",
       inputPath: portableRelative(root, resolve(generated, "payloads", `crazygames-${suffix}`)),
-      outputPath: portableRelative(root, resolve(generated, "packages", `${side}.zip`)) });
+      outputPath: portableRelative(root, resolve(generated, "packages", `${side}.zip`)),
+    });
   }
   throw new RangeError(`unknown reproducibility side ${side}`);
 }

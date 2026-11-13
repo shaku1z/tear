@@ -64,24 +64,28 @@ export function rankForCombo(combo: number, tiers: readonly TrickTier[]): Readon
 }
 
 function trackedStyleIntents(kind: string): StyleIntent[] {
-  if (kind === "parry") return [
-    { type: "profile-add", stat: "parries", amount: 1 },
-    { type: "profile-add", stat: "deflects", amount: 1 },
-    { type: "daily-bump", stat: "parries", amount: 1 },
-    { type: "daily-bump", stat: "deflect", amount: 1 },
-  ];
-  if (kind === "deflect") return [
-    { type: "profile-add", stat: "deflects", amount: 1 },
-    { type: "daily-bump", stat: "deflect", amount: 1 },
-  ];
-  if (kind === "superslam") return [
-    { type: "profile-add", stat: "superslams", amount: 1 },
-    { type: "daily-bump", stat: "superslam", amount: 1 },
-  ];
-  if (kind === "updraft") return [
-    { type: "profile-add", stat: "updrafts", amount: 1 },
-    { type: "daily-bump", stat: "updraft", amount: 1 },
-  ];
+  if (kind === "parry")
+    return [
+      { type: "profile-add", stat: "parries", amount: 1 },
+      { type: "profile-add", stat: "deflects", amount: 1 },
+      { type: "daily-bump", stat: "parries", amount: 1 },
+      { type: "daily-bump", stat: "deflect", amount: 1 },
+    ];
+  if (kind === "deflect")
+    return [
+      { type: "profile-add", stat: "deflects", amount: 1 },
+      { type: "daily-bump", stat: "deflect", amount: 1 },
+    ];
+  if (kind === "superslam")
+    return [
+      { type: "profile-add", stat: "superslams", amount: 1 },
+      { type: "daily-bump", stat: "superslam", amount: 1 },
+    ];
+  if (kind === "updraft")
+    return [
+      { type: "profile-add", stat: "updrafts", amount: 1 },
+      { type: "daily-bump", stat: "updraft", amount: 1 },
+    ];
   if (kind === "throwHit") return [{ type: "profile-add", stat: "throwHits", amount: 1 }];
   return [];
 }

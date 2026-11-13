@@ -23,44 +23,95 @@ function createDetachedOpeningWorld(seed: string) {
     ],
   });
   const outward: string[] = [];
-  const note = (name: string) => () => { outward.push(name); };
+  const note = (name: string) => () => {
+    outward.push(name);
+  };
   const host = {
     config: configuration.value,
-    get player() { return world.state.player() as never; },
-    get blade() { return world.state.blade() as never; },
-    get run() { return world.state.run() as never; },
-    get enemies() { return world.state.enemies() as never; },
-    get projectiles() { return world.state.projectiles(); },
+    get player() {
+      return world.state.player() as never;
+    },
+    get blade() {
+      return world.state.blade() as never;
+    },
+    get run() {
+      return world.state.run() as never;
+    },
+    get enemies() {
+      return world.state.enemies() as never;
+    },
+    get projectiles() {
+      return world.state.projectiles();
+    },
     platforms: PLATFORMS,
     state: transient.opening,
     width: CONFIG.view.w,
-    blocking: false, playerMode: "play", protection: transient.protection,
-    lowGraphics: false, transformationBlocked: false,
-    overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
-    stepCinematic: () => undefined, flushClosingInput: note("flushClosingInput"),
-    updateWeaponAbilities: () => undefined, updateWorldHazards: () => undefined,
-    syncVoidSupport: () => undefined, activateThrowSecondary: note("activateThrowSecondary"),
-    linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); },
+    blocking: false,
+    playerMode: "play",
+    protection: transient.protection,
+    lowGraphics: false,
+    transformationBlocked: false,
+    overrunMovementMultiplier: () => 1,
+    runDamageMultiplier: () => 1,
+    stepCinematic: () => undefined,
+    flushClosingInput: note("flushClosingInput"),
+    updateWeaponAbilities: () => undefined,
+    updateWorldHazards: () => undefined,
+    syncVoidSupport: () => undefined,
+    activateThrowSecondary: note("activateThrowSecondary"),
+    linkBroken: (reason: string) => {
+      outward.push(`linkBroken:${reason}`);
+    },
     distance: (ax: number, ay: number, bx: number, by: number) => len(ax - bx, ay - by),
-    areaDamage: note("areaDamage"), ring: note("ring"), burst: note("burst"), floater: note("floater"),
-    shake: note("shake"), sound: (name: string) => { outward.push(`sound:${name}`); },
-    ghost: note("ghost"), ember: note("ember"), smoke: note("smoke"), drip: note("drip"),
-    overlap: (a: { x: number; y: number; hw: number; hh: number }, b: { x: number; y: number; hw: number; hh: number }) =>
-      Math.abs(a.x - b.x) <= a.hw + b.hw && Math.abs(a.y - b.y) <= a.hh + b.hh,
-    styleHit: note("styleHit"), onKill: (enemy: { dead?: boolean }) => { enemy.dead = true; outward.push("onKill"); },
-    fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
-    fireWeaponCatch: note("fireWeaponCatch"), fireThrowLaunch: note("fireThrowLaunch"),
-    logThrowLaunch: note("logThrowLaunch"), weaponWorldImpact: () => null,
-    lobExplode: note("lobExplode"), emitThrowResolve: note("emitThrowResolve"),
+    areaDamage: note("areaDamage"),
+    ring: note("ring"),
+    burst: note("burst"),
+    floater: note("floater"),
+    shake: note("shake"),
+    sound: (name: string) => {
+      outward.push(`sound:${name}`);
+    },
+    ghost: note("ghost"),
+    ember: note("ember"),
+    smoke: note("smoke"),
+    drip: note("drip"),
+    overlap: (
+      a: { x: number; y: number; hw: number; hh: number },
+      b: { x: number; y: number; hw: number; hh: number },
+    ) => Math.abs(a.x - b.x) <= a.hw + b.hw && Math.abs(a.y - b.y) <= a.hh + b.hh,
+    styleHit: note("styleHit"),
+    onKill: (enemy: { dead?: boolean }) => {
+      enemy.dead = true;
+      outward.push("onKill");
+    },
+    fireDashStart: note("fireDashStart"),
+    fireDashContact: note("fireDashContact"),
+    fireWeaponCatch: note("fireWeaponCatch"),
+    fireThrowLaunch: note("fireThrowLaunch"),
+    logThrowLaunch: note("logThrowLaunch"),
+    weaponWorldImpact: () => null,
+    lobExplode: note("lobExplode"),
+    emitThrowResolve: note("emitThrowResolve"),
     nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
-    updateFeedback: () => undefined, consumeThrow: () => input.consumeThrow(() => false),
-    updateWave: () => undefined, startTransformation: () => false, updateSupports: () => undefined,
-    armorBypass: note("armorBypass"), resolveBossZones: () => undefined,
-    updateBossArenaPlatforms: () => undefined, updateVoidScroll: () => undefined,
-    unlockWitness: note("unlockWitness"), startVoidDescent: () => false,
-    spawnBossAdds: () => [], spawnBossClone: () => undefined, removeBossClone: () => undefined,
-    dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
-    updateEffects: (dt: number) => { effects.update(dt); },
+    updateFeedback: () => undefined,
+    consumeThrow: () => input.consumeThrow(() => false),
+    updateWave: () => undefined,
+    startTransformation: () => false,
+    updateSupports: () => undefined,
+    armorBypass: note("armorBypass"),
+    resolveBossZones: () => undefined,
+    updateBossArenaPlatforms: () => undefined,
+    updateVoidScroll: () => undefined,
+    unlockWitness: note("unlockWitness"),
+    startVoidDescent: () => false,
+    spawnBossAdds: () => [],
+    spawnBossClone: () => undefined,
+    removeBossClone: () => undefined,
+    dramaticBeat: note("dramaticBeat"),
+    onBladeStolen: note("onBladeStolen"),
+    updateEffects: (dt: number) => {
+      effects.update(dt);
+    },
     random: () => world.context.services.random.stream("enemy-ai").next(),
   } as unknown as LiveOpeningPhaseHost;
   const runtime = new TearSimulationRuntime<Record<string, unknown>>({
@@ -73,7 +124,8 @@ function createDetachedOpeningWorld(seed: string) {
       const actor = world.state.player() as never as { x: number; y: number; vx: number; vy: number; hp: number };
       const blade = world.state.blade() as never as { x: number; y: number; state: string };
       return {
-        tick, clock: Math.round(clock.sim * 1e6) / 1e6,
+        tick,
+        clock: Math.round(clock.sim * 1e6) / 1e6,
         player: { x: actor.x, y: actor.y, vx: actor.vx, vy: actor.vy, hp: actor.hp },
         blade: { x: blade.x, y: blade.y, state: blade.state },
         enemies: world.state.enemies().map((enemy) => {

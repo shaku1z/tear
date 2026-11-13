@@ -1,8 +1,4 @@
-import type {
-  MusicRoutingContext,
-  MusicRoutingManifest,
-  MusicRoutingRule,
-} from "./music-routing-types";
+import type { MusicRoutingContext, MusicRoutingManifest, MusicRoutingRule } from "./music-routing-types";
 
 /**
  * Feature-branch safety net for stages whose reviewed soundtrack release has
@@ -39,11 +35,7 @@ function normalizeBiome(value: string): string {
 function matches(rule: MusicRoutingRule, context: MusicRoutingContext): boolean {
   const match = rule.match;
   if (match.scene !== undefined && match.scene !== context.scene) return false;
-  if (
-    match.biome !== undefined &&
-    normalizeBiome(match.biome) !== normalizeBiome(context.biomeId)
-  )
-    return false;
+  if (match.biome !== undefined && normalizeBiome(match.biome) !== normalizeBiome(context.biomeId)) return false;
   if (match.bossId !== undefined && match.bossId !== context.bossId) return false;
   if (match.bossRequired === true && !context.bossId) return false;
   return true;
@@ -51,10 +43,12 @@ function matches(rule: MusicRoutingRule, context: MusicRoutingContext): boolean 
 
 function specificity(rule: MusicRoutingRule): number {
   const match = rule.match;
-  return (match.scene === undefined ? 0 : 1)
-    + (match.biome === undefined ? 0 : 8)
-    + (match.bossRequired ? 16 : 0)
-    + (match.bossId === undefined ? 0 : 32);
+  return (
+    (match.scene === undefined ? 0 : 1) +
+    (match.biome === undefined ? 0 : 8) +
+    (match.bossRequired ? 16 : 0) +
+    (match.bossId === undefined ? 0 : 32)
+  );
 }
 
 function choosePool(
@@ -73,11 +67,7 @@ function choosePool(
 }
 
 /** Pure resolver: every caller gets the same result for the same context/seed. */
-export function resolveMusicRoute(
-  manifest: MusicRoutingManifest,
-  context: MusicRoutingContext,
-  seed = 1,
-): string {
+export function resolveMusicRoute(manifest: MusicRoutingManifest, context: MusicRoutingContext, seed = 1): string {
   let matchesForContext = manifest.rules.filter((rule) => matches(rule, context));
   // A boss or terminal moment with no dedicated route inherits its biome's
   // normal gameplay bed, exactly as the legacy map did.
@@ -85,8 +75,7 @@ export function resolveMusicRoute(
     matchesForContext = manifest.rules.filter((rule) => matches(rule, { ...context, scene: "gameplay" }));
   }
   if (matchesForContext.length === 0) {
-    return ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS[normalizeBiome(context.biomeId)]
-      ?? manifest.defaultWorkId;
+    return ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS[normalizeBiome(context.biomeId)] ?? manifest.defaultWorkId;
   }
   const maxSpecificity = Math.max(...matchesForContext.map(specificity));
   const scoped = matchesForContext.filter((rule) => specificity(rule) === maxSpecificity);
@@ -94,6 +83,6 @@ export function resolveMusicRoute(
   const ranked = scoped.filter((rule) => (rule.priority ?? 0) === maxPriority).sort((a, b) => a.id.localeCompare(b.id));
   const primary = ranked.find((rule) => rule.selection.type === "primary");
   if (primary?.selection.type === "primary") return primary.selection.workId;
-  const pool = ranked.flatMap((rule) => rule.selection.type === "weighted-pool" ? rule.selection.entries : []);
+  const pool = ranked.flatMap((rule) => (rule.selection.type === "weighted-pool" ? rule.selection.entries : []));
   return choosePool(pool, seed) ?? manifest.defaultWorkId;
 }

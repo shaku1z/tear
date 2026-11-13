@@ -116,24 +116,40 @@ describe("Training Operations compatibility facade", () => {
     expect(parseTrainingOperationsJob(JSON.parse(JSON.stringify(legacyJob)))).toEqual(parseTearFoundryJob(legacyJob));
 
     const legacySchedule = createTearFoundryJobSchedule({
-      id: "training-operations-compat-schedule", jobId: legacyJob.id, jobHash: legacyJob.jobHash,
-      intervalMs: 60_000, computeBudgetHash: hashes.compute, storageBudgetHash: hashes.storage,
-      stopConditionsHash: hashes.stop, state: "enabled", configuredAt: "2026-08-23T00:00:00.000Z",
+      id: "training-operations-compat-schedule",
+      jobId: legacyJob.id,
+      jobHash: legacyJob.jobHash,
+      intervalMs: 60_000,
+      computeBudgetHash: hashes.compute,
+      storageBudgetHash: hashes.storage,
+      stopConditionsHash: hashes.stop,
+      state: "enabled",
+      configuredAt: "2026-08-23T00:00:00.000Z",
     });
     const canonicalSchedule = createTrainingOperationsSchedule({
-      id: "training-operations-compat-schedule", jobId: canonicalJob.id, jobHash: canonicalJob.jobHash,
-      intervalMs: 60_000, computeBudgetHash: hashes.compute, storageBudgetHash: hashes.storage,
-      stopConditionsHash: hashes.stop, state: "enabled", configuredAt: "2026-08-23T00:00:00.000Z",
+      id: "training-operations-compat-schedule",
+      jobId: canonicalJob.id,
+      jobHash: canonicalJob.jobHash,
+      intervalMs: 60_000,
+      computeBudgetHash: hashes.compute,
+      storageBudgetHash: hashes.storage,
+      stopConditionsHash: hashes.stop,
+      state: "enabled",
+      configuredAt: "2026-08-23T00:00:00.000Z",
     });
     expect(canonicalSchedule).toEqual(legacySchedule);
     expect(JSON.stringify(canonicalSchedule)).toBe(JSON.stringify(legacySchedule));
     expect(canonicalSchedule.format).toBe("tear-foundry-job-schedule");
-    expect(parseTrainingOperationsSchedule(JSON.parse(JSON.stringify(legacySchedule)))).toEqual(parseTearFoundryJobSchedule(legacySchedule));
+    expect(parseTrainingOperationsSchedule(JSON.parse(JSON.stringify(legacySchedule)))).toEqual(
+      parseTearFoundryJobSchedule(legacySchedule),
+    );
 
     const backend = createMemoryGhostVaultBackend();
     await new TrainingOperationsJobVault(backend).persist(canonicalJob);
     await new TrainingOperationsScheduleVault(backend).persist(canonicalSchedule);
     await expect(backend.get("analysis", `foundry-job:v1:${canonicalJob.id}`)).resolves.toBe(JSON.stringify(legacyJob));
-    await expect(backend.get("analysis", `foundry-job-schedule:v1:${canonicalSchedule.id}`)).resolves.toBe(JSON.stringify(legacySchedule));
+    await expect(backend.get("analysis", `foundry-job-schedule:v1:${canonicalSchedule.id}`)).resolves.toBe(
+      JSON.stringify(legacySchedule),
+    );
   });
 });

@@ -11,9 +11,7 @@ import {
   translateMutableGeneratedDescriptions,
   validateRegistry,
 } from "../scripts/check-terminology.mjs";
-import {
-  runActiveRosterCheck,
-} from "../scripts/check-active-roster.mjs";
+import { runActiveRosterCheck } from "../scripts/check-active-roster.mjs";
 import { buildRequirements } from "../scripts/tearbench-requirements.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -78,13 +76,20 @@ test("terminology checker reports every unallowlisted repeated occurrence", () =
   withFixture((root) => {
     const registry = baseRegistry();
     writeRegistry(root, registry);
-    writeFixture(root, "src/presentation/screens/new-screen.ts", 'export const labels = "Ghost Lab Ghost Lab\nGhost Lab";\n');
+    writeFixture(
+      root,
+      "src/presentation/screens/new-screen.ts",
+      'export const labels = "Ghost Lab Ghost Lab\nGhost Lab";\n',
+    );
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
     const findings = result.findings.filter((finding) => finding.alias === "Ghost Lab");
     assert.equal(result.ok, false);
     assert.equal(findings.length, 3);
     assert.equal(result.errors.length, 3);
-    assert.deepEqual(findings.map((finding) => finding.line), [1, 1, 2]);
+    assert.deepEqual(
+      findings.map((finding) => finding.line),
+      [1, 1, 2],
+    );
     assert.ok(findings.every((finding) => finding.classification === "unallowlisted"));
   });
 });
@@ -109,14 +114,18 @@ test("Run Monitor vocabulary owners are scanned with only their exact historical
 
   withFixture((root) => {
     writeRegistry(root, registry);
-    writeFixture(root, "src/agents/panel-surface.ts",
-      'export const labels = "Watch Agent Watch Agent Watch Agent";\n');
+    writeFixture(root, "src/agents/panel-surface.ts", 'export const labels = "Watch Agent Watch Agent Watch Agent";\n');
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
     const findings = result.findings.filter((finding) => finding.alias === "Watch Agent");
     assert.equal(result.ok, true);
     assert.equal(findings.length, 3);
-    assert.ok(findings.every((finding) => finding.classification === "mutable-compatibility"
-      && finding.allowlistId === "compat-run-monitor-panel-surface"));
+    assert.ok(
+      findings.every(
+        (finding) =>
+          finding.classification === "mutable-compatibility" &&
+          finding.allowlistId === "compat-run-monitor-panel-surface",
+      ),
+    );
   });
 
   withFixture((root) => {
@@ -124,8 +133,9 @@ test("Run Monitor vocabulary owners are scanned with only their exact historical
     writeFixture(root, "src/app/engineering/player-watch-controller.ts", 'export const label = "Watch Agent";\n');
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
     assert.equal(result.ok, false);
-    assert.ok(result.findings.some((finding) => finding.alias === "Watch Agent"
-      && finding.classification === "unallowlisted"));
+    assert.ok(
+      result.findings.some((finding) => finding.alias === "Watch Agent" && finding.classification === "unallowlisted"),
+    );
   });
 });
 
@@ -133,14 +143,24 @@ test("terminology checker scans active evidence JSON without misclassifying pres
   withFixture((root) => {
     const registry = baseRegistry();
     writeRegistry(root, registry);
-    writeFixture(root, "docs/tearbench-ghost3-evidence-catalog.json",
-      '{"notes":"Foundry and Ghost Lab are retained source-era evidence labels."}\n');
+    writeFixture(
+      root,
+      "docs/tearbench-ghost3-evidence-catalog.json",
+      '{"notes":"Foundry and Ghost Lab are retained source-era evidence labels."}\n',
+    );
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
-    const findings = result.findings.filter((finding) => finding.relativePath === "docs/tearbench-ghost3-evidence-catalog.json");
+    const findings = result.findings.filter(
+      (finding) => finding.relativePath === "docs/tearbench-ghost3-evidence-catalog.json",
+    );
     assert.equal(result.ok, true);
     assert.deepEqual(findings.map((finding) => finding.alias).sort(), ["Foundry", "Ghost Lab"]);
-    assert.ok(findings.every((finding) => finding.classification === "mutable-compatibility"
-      && finding.allowlistId === "compat-current-generated-evidence-catalog"));
+    assert.ok(
+      findings.every(
+        (finding) =>
+          finding.classification === "mutable-compatibility" &&
+          finding.allowlistId === "compat-current-generated-evidence-catalog",
+      ),
+    );
   });
 });
 
@@ -148,20 +168,24 @@ test("terminology checker classifies every repeated compatibility and historical
   for (const [relativePath, classification, allowlistId] of [
     ["src/presentation/screens/menu-setup.ts", "mutable-compatibility", "compat-menu-setup-surfaces"],
     ["docs/TEARBENCH_GHOST3_TERMINOLOGY.md", "immutable-history", "history-ghost3-top-level-docs"],
-  ]) withFixture((root) => {
-    const registry = baseRegistry();
-    writeRegistry(root, registry);
-    const content = relativePath.endsWith(".ts")
-      ? 'export const labels = "Ghost Lab Ghost Lab\nGhost Lab";\n'
-      : "Ghost Lab Ghost Lab\nGhost Lab\n";
-    writeFixture(root, relativePath, content);
-    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
-    const findings = result.findings.filter((finding) => finding.alias === "Ghost Lab");
-    assert.equal(result.ok, true);
-    assert.deepEqual(findings.map((finding) => finding.line), [1, 1, 2]);
-    assert.ok(findings.every((finding) => finding.classification === classification));
-    assert.ok(findings.every((finding) => finding.allowlistId === allowlistId));
-  });
+  ])
+    withFixture((root) => {
+      const registry = baseRegistry();
+      writeRegistry(root, registry);
+      const content = relativePath.endsWith(".ts")
+        ? 'export const labels = "Ghost Lab Ghost Lab\nGhost Lab";\n'
+        : "Ghost Lab Ghost Lab\nGhost Lab\n";
+      writeFixture(root, relativePath, content);
+      const result = runTerminologyCheck({ root, registryPath: "registry.json" });
+      const findings = result.findings.filter((finding) => finding.alias === "Ghost Lab");
+      assert.equal(result.ok, true);
+      assert.deepEqual(
+        findings.map((finding) => finding.line),
+        [1, 1, 2],
+      );
+      assert.ok(findings.every((finding) => finding.classification === classification));
+      assert.ok(findings.every((finding) => finding.allowlistId === allowlistId));
+    });
 });
 
 test("generic Signal vocabulary is ignored outside the scoped player-music surfaces", () => {
@@ -175,8 +199,15 @@ test("generic Signal vocabulary is ignored outside the scoped player-music surfa
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
 
     assert.equal(result.ok, true);
-    assert.ok(result.findings.some((finding) => finding.relativePath === "src/presentation/settings-snapshots.ts" && finding.termId === "music"));
-    assert.equal(result.findings.some((finding) => finding.relativePath === "src/audio/unrelated-signal.ts"), false);
+    assert.ok(
+      result.findings.some(
+        (finding) => finding.relativePath === "src/presentation/settings-snapshots.ts" && finding.termId === "music",
+      ),
+    );
+    assert.equal(
+      result.findings.some((finding) => finding.relativePath === "src/audio/unrelated-signal.ts"),
+      false,
+    );
   });
 });
 
@@ -222,24 +253,28 @@ test("generated-description translation leaves source identity and hashes immuta
 });
 
 test("generated requirements apply mutable terminology at the generator boundary", () => {
-  const [requirement] = buildRequirements({
-    occurrences: [{
-      id: "SRC-example",
-      kind: "paragraph",
-      numberedSection: 1,
-      startLine: 1,
-      endLine: 1,
-      headingPath: ["Requirements"],
-      text: "State Forge is required.",
-      textHash: "SOURCE-HASH",
-    }],
-  }, new Map());
+  const [requirement] = buildRequirements(
+    {
+      occurrences: [
+        {
+          id: "SRC-example",
+          kind: "paragraph",
+          numberedSection: 1,
+          startLine: 1,
+          endLine: 1,
+          headingPath: ["Requirements"],
+          text: "State Forge is required.",
+          textHash: "SOURCE-HASH",
+        },
+      ],
+    },
+    new Map(),
+  );
   assert.ok(requirement);
   assert.equal(requirement.text, "Scenario Console is required.");
   assert.equal(requirement.sourceStatement, "State Forge is required.");
   assert.equal(requirement.sourceTextHash, "SOURCE-HASH");
-  assert.equal(requirement.atomicTextHash,
-    createHash("sha256").update("State Forge is required.").digest("hex"));
+  assert.equal(requirement.atomicTextHash, createHash("sha256").update("State Forge is required.").digest("hex"));
 });
 
 test("current-source checker rejects stale provisional definitions and checkpoint claims only on mutable paths", () => {
@@ -247,17 +282,21 @@ test("current-source checker rejects stale provisional definitions and checkpoin
     const registry = baseRegistry();
     registry.currentSourcePolicy.mutableScanPaths = ["src/gameplay/run/boss-definitions.ts", "docs/**/*.md"];
     writeRegistry(root, registry);
-    writeFixture(root, "src/gameplay/run/boss-definitions.ts",
-      "export const WHITE_HART_PROVISIONAL_DEFINITION = {};");
-    writeFixture(root, "docs/TEARBENCH_GHOST3_PROGRAM.md",
-      "Current checkpoint C24: provisional pending implementation.\n");
-    writeFixture(root, "docs/checkpoints/old-history.md",
-      "Current checkpoint C24: provisional historical wording.\n");
+    writeFixture(root, "src/gameplay/run/boss-definitions.ts", "export const WHITE_HART_PROVISIONAL_DEFINITION = {};");
+    writeFixture(
+      root,
+      "docs/TEARBENCH_GHOST3_PROGRAM.md",
+      "Current checkpoint C24: provisional pending implementation.\n",
+    );
+    writeFixture(root, "docs/checkpoints/old-history.md", "Current checkpoint C24: provisional historical wording.\n");
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((error) => /stale provisional definition symbol/u.test(error)));
     assert.ok(result.errors.some((error) => /stale current-facing checkpoint claim/u.test(error)));
-    assert.equal(result.errors.some((error) => error.includes("old-history.md")), false);
+    assert.equal(
+      result.errors.some((error) => error.includes("old-history.md")),
+      false,
+    );
   });
 });
 
@@ -300,11 +339,14 @@ test("active-roster checker reports every repeated retired ID at its actual sour
     const findings = result.findings.filter((finding) => finding.relativePath.endsWith("repeated.json"));
 
     assert.equal(result.ok, false);
-    assert.deepEqual(findings.map(({ retiredId, line }) => ({ retiredId, line })), [
-      { retiredId: "spear", line: 2 },
-      { retiredId: "spear", line: 3 },
-      { retiredId: "ringblade", line: 3 },
-    ]);
+    assert.deepEqual(
+      findings.map(({ retiredId, line }) => ({ retiredId, line })),
+      [
+        { retiredId: "spear", line: 2 },
+        { retiredId: "spear", line: 3 },
+        { retiredId: "ringblade", line: 3 },
+      ],
+    );
     assert.equal(result.errors.filter((error) => error.includes("repeated.json")).length, 3);
   });
 });

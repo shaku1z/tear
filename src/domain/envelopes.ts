@@ -19,7 +19,8 @@ export class EnvelopeSequencer {
 
   constructor(nextId = 1, lastTick = 0) {
     if (!Number.isSafeInteger(nextId) || nextId < 1) throw new RangeError("nextId must be a positive safe integer");
-    if (!Number.isSafeInteger(lastTick) || lastTick < 0) throw new RangeError("lastTick must be a non-negative safe integer");
+    if (!Number.isSafeInteger(lastTick) || lastTick < 0)
+      throw new RangeError("lastTick must be a non-negative safe integer");
     this.#nextId = nextId;
     this.#lastTick = lastTick;
   }
@@ -34,7 +35,8 @@ export class EnvelopeSequencer {
 
   reset(nextId = 1, lastTick = 0): void {
     if (!Number.isSafeInteger(nextId) || nextId < 1) throw new RangeError("nextId must be a positive safe integer");
-    if (!Number.isSafeInteger(lastTick) || lastTick < 0) throw new RangeError("lastTick must be a non-negative safe integer");
+    if (!Number.isSafeInteger(lastTick) || lastTick < 0)
+      throw new RangeError("lastTick must be a non-negative safe integer");
     this.#nextId = nextId;
     this.#lastTick = lastTick;
   }
@@ -45,13 +47,17 @@ export class EnvelopeSequencer {
   }
 
   event<TEvent>(tick: number, event: TEvent, causedByCommandId?: number): DomainEventEnvelope<TEvent> {
-    if (causedByCommandId !== undefined && (!Number.isSafeInteger(causedByCommandId) || causedByCommandId < 1 || causedByCommandId >= this.#nextId)) {
+    if (
+      causedByCommandId !== undefined &&
+      (!Number.isSafeInteger(causedByCommandId) || causedByCommandId < 1 || causedByCommandId >= this.#nextId)
+    ) {
       throw new RangeError("causedByCommandId must refer to an earlier envelope");
     }
     this.#acceptTick(tick);
-    const envelope: DomainEventEnvelope<TEvent> = causedByCommandId === undefined
-      ? { kind: "domain-event", id: this.#nextId++, tick, event }
-      : { kind: "domain-event", id: this.#nextId++, tick, causedByCommandId, event };
+    const envelope: DomainEventEnvelope<TEvent> =
+      causedByCommandId === undefined
+        ? { kind: "domain-event", id: this.#nextId++, tick, event }
+        : { kind: "domain-event", id: this.#nextId++, tick, causedByCommandId, event };
     return Object.freeze(envelope);
   }
 

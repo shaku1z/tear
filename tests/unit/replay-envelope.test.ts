@@ -22,7 +22,13 @@ function replayFixture(): ReplayEnvelopeV2 {
     schemaVersion: 2,
     rulesetVersion: "rules-2026.07",
     build: { version: "0.2.0", revision: "abc123", target: "standalone" },
-    run: { runId: "run-a", seed: "seed-a", ticksPerSecond: 60, weaponId: "sword", weaponSchemaVersion: "final-five-v1" },
+    run: {
+      runId: "run-a",
+      seed: "seed-a",
+      ticksPerSecond: 60,
+      weaponId: "sword",
+      weaponSchemaVersion: "final-five-v1",
+    },
     actions: [
       { kind: "command", id: 1, tick: 1, command: { type: "move", x: 1_000, y: 0 } },
       { kind: "command", id: 2, tick: 8, command: { type: "weapon", intent: "throw", phase: "pressed" } },
@@ -79,31 +85,45 @@ describe("replay envelope", () => {
 
   it("rejects a current replay that omits Final Five weapon provenance", () => {
     const replay = replayFixture();
-    const missingSchema = { ...replay, run: { runId: replay.run.runId, seed: replay.run.seed, ticksPerSecond: replay.run.ticksPerSecond } };
-    expect(validateReplayEnvelope(missingSchema)).toMatchObject({ ok: false, issues: [
-      expect.objectContaining({ path: "run" }),
-    ] });
+    const missingSchema = {
+      ...replay,
+      run: { runId: replay.run.runId, seed: replay.run.seed, ticksPerSecond: replay.run.ticksPerSecond },
+    };
+    expect(validateReplayEnvelope(missingSchema)).toMatchObject({
+      ok: false,
+      issues: [expect.objectContaining({ path: "run" })],
+    });
   });
 
   it("round-trips the engineering ruleset and rejects deterministic playback under a different ruleset", () => {
     const current = { ...replayFixture(), rulesetVersion: CURRENT_RULESET_VERSION };
     expect(parseReplayEnvelope(JSON.stringify(current), CURRENT_RULESET_VERSION)).toMatchObject({
-      ok: true, replay: { rulesetVersion: CURRENT_RULESET_VERSION },
+      ok: true,
+      replay: { rulesetVersion: CURRENT_RULESET_VERSION },
     });
     expect(parseReplayEnvelope({ ...current, rulesetVersion: PRE_VERDANT_RULESET_VERSION })).toMatchObject({
-      ok: true, replay: { rulesetVersion: PRE_VERDANT_RULESET_VERSION },
+      ok: true,
+      replay: { rulesetVersion: PRE_VERDANT_RULESET_VERSION },
     });
     expect(parseReplayEnvelope({ ...current, rulesetVersion: VERDANT_R3_ENGINEERING_RULESET_VERSION })).toMatchObject({
-      ok: true, replay: { rulesetVersion: VERDANT_R3_ENGINEERING_RULESET_VERSION },
+      ok: true,
+      replay: { rulesetVersion: VERDANT_R3_ENGINEERING_RULESET_VERSION },
     });
     expect(parseReplayEnvelope({ ...current, rulesetVersion: PALE_R3_ENGINEERING_RULESET_VERSION })).toMatchObject({
-      ok: true, replay: { rulesetVersion: PALE_R3_ENGINEERING_RULESET_VERSION },
+      ok: true,
+      replay: { rulesetVersion: PALE_R3_ENGINEERING_RULESET_VERSION },
     });
-    expect(parseReplayEnvelope({ ...current, rulesetVersion: PALE_R3_ENGINEERING_RULESET_VERSION }, CURRENT_RULESET_VERSION))
-      .toMatchObject({ ok: false, issues: [{ path: "rulesetVersion" }] });
-    expect(parseReplayEnvelope({ ...current, rulesetVersion: VERDANT_R3_ENGINEERING_RULESET_VERSION }, CURRENT_RULESET_VERSION))
-      .toMatchObject({ ok: false, issues: [{ path: "rulesetVersion" }] });
-    expect(parseReplayEnvelope({ ...current, rulesetVersion: PRE_VERDANT_RULESET_VERSION }, CURRENT_RULESET_VERSION))
-      .toMatchObject({ ok: false, issues: [{ path: "rulesetVersion" }] });
+    expect(
+      parseReplayEnvelope({ ...current, rulesetVersion: PALE_R3_ENGINEERING_RULESET_VERSION }, CURRENT_RULESET_VERSION),
+    ).toMatchObject({ ok: false, issues: [{ path: "rulesetVersion" }] });
+    expect(
+      parseReplayEnvelope(
+        { ...current, rulesetVersion: VERDANT_R3_ENGINEERING_RULESET_VERSION },
+        CURRENT_RULESET_VERSION,
+      ),
+    ).toMatchObject({ ok: false, issues: [{ path: "rulesetVersion" }] });
+    expect(
+      parseReplayEnvelope({ ...current, rulesetVersion: PRE_VERDANT_RULESET_VERSION }, CURRENT_RULESET_VERSION),
+    ).toMatchObject({ ok: false, issues: [{ path: "rulesetVersion" }] });
   });
 });

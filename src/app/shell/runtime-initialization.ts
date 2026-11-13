@@ -17,13 +17,20 @@ export class InstallPromptController {
     });
   }
 
-  get available(): boolean { return this.#pending !== null; }
+  get available(): boolean {
+    return this.#pending !== null;
+  }
 
   prompt(): boolean {
     const pending = this.#pending;
     this.#pending = null;
     if (pending === null) return false;
-    try { void pending.prompt(); return true; } catch { return false; }
+    try {
+      void pending.prompt();
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 
@@ -43,7 +50,9 @@ interface PlatformAudioPort {
   mute(muted: boolean, reason: "ad" | "cg"): void;
 }
 
-interface LoadablePort { load(): unknown }
+interface LoadablePort {
+  load(): unknown;
+}
 
 interface PlatformPortalPort {
   setHooks(adStarted: () => void, adFinished: () => void, portalMute: (muted: boolean) => void): void;
@@ -72,20 +81,29 @@ export function initializePlatformServices<User>(options: PlatformInitialization
   options.audio?.init();
   options.meta.load();
   options.profile.load();
-  try { options.backfillProgress(); } catch { /* Existing saves remain usable if backfill fails. */ }
+  try {
+    options.backfillProgress();
+  } catch {
+    /* Existing saves remain usable if backfill fails. */
+  }
   options.portal.setHooks(
     () => options.audio?.mute(true, "ad"),
     () => options.audio?.mute(false, "ad"),
     (muted) => options.audio?.mute(muted, "cg"),
   );
   options.portal.loadingStart();
-  void options.portal.init().then(() => {
-    options.meta.load();
-    options.profile.load();
-    options.settings.reload();
-    options.portal.loadingStop();
-    return options.cloud.init();
-  }).then(() => { options.cloud.onChange(options.onCloudChange); });
+  void options.portal
+    .init()
+    .then(() => {
+      options.meta.load();
+      options.profile.load();
+      options.settings.reload();
+      options.portal.loadingStop();
+      return options.cloud.init();
+    })
+    .then(() => {
+      options.cloud.onChange(options.onCloudChange);
+    });
 }
 
 export interface RenamePromptContext<User extends { readonly guest?: boolean }> {
@@ -99,8 +117,17 @@ export interface RenamePromptContext<User extends { readonly guest?: boolean }> 
   readonly renameActive: boolean;
 }
 
-export function shouldPromptForUsername<User extends { readonly guest?: boolean }>(context: RenamePromptContext<User>): boolean {
-  return context.state === "signedin" && context.provider === context.expectedProvider && context.user !== null
-    && !context.user.guest && context.username.length === 0 && !context.alreadyPrompted
-    && context.screen !== "rename" && !context.renameActive;
+export function shouldPromptForUsername<User extends { readonly guest?: boolean }>(
+  context: RenamePromptContext<User>,
+): boolean {
+  return (
+    context.state === "signedin" &&
+    context.provider === context.expectedProvider &&
+    context.user !== null &&
+    !context.user.guest &&
+    context.username.length === 0 &&
+    !context.alreadyPrompted &&
+    context.screen !== "rename" &&
+    !context.renameActive
+  );
 }

@@ -195,76 +195,86 @@ function finiteOrNull(value) {
 
 async function installAdapter(page, kind, fixture) {
   if (kind === "oracle") {
-    await page.evaluate(({ mode, difficulty, revision }) => {
-      window.__TEAR_PARITY_ADAPTER__ = Object.freeze({
-        source: { kind: "oracle", revision },
-        startRun: () => window.__TEAR_ORACLE_PARITY__.startRun(mode, difficulty),
-        prepareEnemyParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareEnemyParityScenario(),
-        prepareRangedParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareRangedParityScenario(),
-        prepareProjectileParryScenario: () => window.__TEAR_ORACLE_PARITY__.prepareProjectileParryScenario(),
-        prepareMirrorPursuitScenario: () => window.__TEAR_ORACLE_PARITY__.prepareMirrorPursuitScenario(),
-        prepareCombatParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareCombatParityScenario(),
-        screen: () => window.__TEAR_ORACLE_PARITY__.screen(),
-        snapshot: () => window.__TEAR_ORACLE_PARITY__.snapshot(),
-      });
-    }, { mode: fixture.mode, difficulty: fixture.difficulty, revision: ORACLE_REVISION });
+    await page.evaluate(
+      ({ mode, difficulty, revision }) => {
+        window.__TEAR_PARITY_ADAPTER__ = Object.freeze({
+          source: { kind: "oracle", revision },
+          startRun: () => window.__TEAR_ORACLE_PARITY__.startRun(mode, difficulty),
+          prepareEnemyParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareEnemyParityScenario(),
+          prepareRangedParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareRangedParityScenario(),
+          prepareProjectileParryScenario: () => window.__TEAR_ORACLE_PARITY__.prepareProjectileParryScenario(),
+          prepareMirrorPursuitScenario: () => window.__TEAR_ORACLE_PARITY__.prepareMirrorPursuitScenario(),
+          prepareCombatParityScenario: () => window.__TEAR_ORACLE_PARITY__.prepareCombatParityScenario(),
+          screen: () => window.__TEAR_ORACLE_PARITY__.screen(),
+          snapshot: () => window.__TEAR_ORACLE_PARITY__.snapshot(),
+        });
+      },
+      { mode: fixture.mode, difficulty: fixture.difficulty, revision: ORACLE_REVISION },
+    );
     return;
   }
 
-  await page.evaluate(({ mode, difficulty }) => {
-    window.__TEAR_PARITY_ADAPTER__ = Object.freeze({
-      source: { kind: "current", revision: "working-tree" },
-      startRun: () => window.__PANTHEON_TEST.startMode(mode, difficulty),
-      prepareEnemyParityScenario: () => window.__PANTHEON_TEST.prepareEnemyParityScenario(),
-      prepareRangedParityScenario: () => window.__PANTHEON_TEST.prepareRangedParityScenario(),
-      prepareProjectileParryScenario: () => window.__PANTHEON_TEST.prepareProjectileParryScenario(),
-      prepareMirrorPursuitScenario: () => window.__PANTHEON_TEST.prepareMirrorPursuitScenario(),
-      prepareCombatParityScenario: () => window.__PANTHEON_TEST.prepareCombatParityScenario(),
-      screen: () => window.__PANTHEON_TEST.state().game,
-      snapshot: () => {
-        const live = window.__PANTHEON_TEST.state();
-        const input = window.__TEAR_CATALOG_DEBUG__.input.snapshot();
-        const canvas = document.querySelector("canvas");
-        const hint = document.querySelector("#lockhint");
-        return {
-          screen: live.game,
-          simulationTick: live.simulationTick,
-          runTime: live.runTime ?? null,
-          input: {
-            mode: input.mode,
-            pointerLocked: input.pointerLocked,
-            pointerLockAllowed: input.pointerLockAllowed,
-            pointer: input.pointer,
-            tetherHeld: Boolean(input.tetherHeld),
-          },
-          cursor: {
-            bodyMode: document.body.dataset.imode ?? null,
-            canvas: canvas ? getComputedStyle(canvas).cursor : null,
-            drawn: live.game !== "playing" && input.mode === "mouse",
-            lockHintVisible: hint ? getComputedStyle(hint).display !== "none" : false,
-          },
-          player: live.playerTrace,
-          blade: live.bladeTrace,
-          enemies: live.enemyTrace,
-          projectiles: live.projectileTrace,
-          mirror: live.mirrorTrace,
-          combat: live.combatTrace,
-        };
-      },
-    });
-  }, { mode: fixture.mode, difficulty: fixture.difficulty });
+  await page.evaluate(
+    ({ mode, difficulty }) => {
+      window.__TEAR_PARITY_ADAPTER__ = Object.freeze({
+        source: { kind: "current", revision: "working-tree" },
+        startRun: () => window.__PANTHEON_TEST.startMode(mode, difficulty),
+        prepareEnemyParityScenario: () => window.__PANTHEON_TEST.prepareEnemyParityScenario(),
+        prepareRangedParityScenario: () => window.__PANTHEON_TEST.prepareRangedParityScenario(),
+        prepareProjectileParryScenario: () => window.__PANTHEON_TEST.prepareProjectileParryScenario(),
+        prepareMirrorPursuitScenario: () => window.__PANTHEON_TEST.prepareMirrorPursuitScenario(),
+        prepareCombatParityScenario: () => window.__PANTHEON_TEST.prepareCombatParityScenario(),
+        screen: () => window.__PANTHEON_TEST.state().game,
+        snapshot: () => {
+          const live = window.__PANTHEON_TEST.state();
+          const input = window.__TEAR_CATALOG_DEBUG__.input.snapshot();
+          const canvas = document.querySelector("canvas");
+          const hint = document.querySelector("#lockhint");
+          return {
+            screen: live.game,
+            simulationTick: live.simulationTick,
+            runTime: live.runTime ?? null,
+            input: {
+              mode: input.mode,
+              pointerLocked: input.pointerLocked,
+              pointerLockAllowed: input.pointerLockAllowed,
+              pointer: input.pointer,
+              tetherHeld: Boolean(input.tetherHeld),
+            },
+            cursor: {
+              bodyMode: document.body.dataset.imode ?? null,
+              canvas: canvas ? getComputedStyle(canvas).cursor : null,
+              drawn: live.game !== "playing" && input.mode === "mouse",
+              lockHintVisible: hint ? getComputedStyle(hint).display !== "none" : false,
+            },
+            player: live.playerTrace,
+            blade: live.bladeTrace,
+            enemies: live.enemyTrace,
+            projectiles: live.projectileTrace,
+            mirror: live.mirrorTrace,
+            combat: live.combatTrace,
+          };
+        },
+      });
+    },
+    { mode: fixture.mode, difficulty: fixture.difficulty },
+  );
 }
 
 async function settle(page, frames = 2) {
-  await page.evaluate((count) => new Promise((resolve) => {
-    let remaining = count;
-    const next = () => {
-      remaining -= 1;
-      if (remaining <= 0) resolve();
-      else requestAnimationFrame(next);
-    };
-    requestAnimationFrame(next);
-  }), frames);
+  await page.evaluate(
+    (count) =>
+      new Promise((resolve) => {
+        let remaining = count;
+        const next = () => {
+          remaining -= 1;
+          if (remaining <= 0) resolve();
+          else requestAnimationFrame(next);
+        };
+        requestAnimationFrame(next);
+      }),
+    frames,
+  );
 }
 
 async function installTickBridge(page) {
@@ -273,7 +283,10 @@ async function installTickBridge(page) {
       const canvas = document.querySelector("canvas");
       const prior = window.__TEAR_PARITY_MOUSE__ ?? { x: 800, y: 450 };
       const event = new MouseEvent("mousemove", {
-        bubbles: true, cancelable: true, clientX: x, clientY: y,
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
       });
       Object.defineProperties(event, {
         movementX: { value: x - prior.x },
@@ -286,10 +299,15 @@ async function installTickBridge(page) {
       const canvas = document.querySelector("canvas");
       const point = window.__TEAR_PARITY_MOUSE__ ?? { x: 800, y: 450 };
       const buttonIndex = action.button === "right" ? 2 : 0;
-      const dispatchKey = (type) => window.dispatchEvent(new KeyboardEvent(type, {
-        key: action.key ?? action.code, code: action.code ?? action.key,
-        bubbles: true, cancelable: true,
-      }));
+      const dispatchKey = (type) =>
+        window.dispatchEvent(
+          new KeyboardEvent(type, {
+            key: action.key ?? action.code,
+            code: action.code ?? action.key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
       if (action.type === "prepareEnemyScenario") {
         window.__TEAR_PARITY_ADAPTER__.prepareEnemyParityScenario();
       } else if (action.type === "prepareRangedScenario") {
@@ -304,23 +322,53 @@ async function installTickBridge(page) {
         moveMouse(action.x, action.y);
       } else if (action.type === "mouseClick") {
         moveMouse(action.x, action.y);
-        canvas.dispatchEvent(new MouseEvent("mousedown", {
-          bubbles: true, cancelable: true, clientX: action.x, clientY: action.y, button: buttonIndex,
-        }));
-        window.dispatchEvent(new MouseEvent("mouseup", {
-          bubbles: true, cancelable: true, clientX: action.x, clientY: action.y, button: buttonIndex,
-        }));
-        canvas.dispatchEvent(new MouseEvent("click", {
-          bubbles: true, cancelable: true, clientX: action.x, clientY: action.y, button: buttonIndex,
-        }));
+        canvas.dispatchEvent(
+          new MouseEvent("mousedown", {
+            bubbles: true,
+            cancelable: true,
+            clientX: action.x,
+            clientY: action.y,
+            button: buttonIndex,
+          }),
+        );
+        window.dispatchEvent(
+          new MouseEvent("mouseup", {
+            bubbles: true,
+            cancelable: true,
+            clientX: action.x,
+            clientY: action.y,
+            button: buttonIndex,
+          }),
+        );
+        canvas.dispatchEvent(
+          new MouseEvent("click", {
+            bubbles: true,
+            cancelable: true,
+            clientX: action.x,
+            clientY: action.y,
+            button: buttonIndex,
+          }),
+        );
       } else if (action.type === "mouseDown") {
-        canvas.dispatchEvent(new MouseEvent("mousedown", {
-          bubbles: true, cancelable: true, clientX: point.x, clientY: point.y, button: buttonIndex,
-        }));
+        canvas.dispatchEvent(
+          new MouseEvent("mousedown", {
+            bubbles: true,
+            cancelable: true,
+            clientX: point.x,
+            clientY: point.y,
+            button: buttonIndex,
+          }),
+        );
       } else if (action.type === "mouseUp") {
-        window.dispatchEvent(new MouseEvent("mouseup", {
-          bubbles: true, cancelable: true, clientX: point.x, clientY: point.y, button: buttonIndex,
-        }));
+        window.dispatchEvent(
+          new MouseEvent("mouseup", {
+            bubbles: true,
+            cancelable: true,
+            clientX: point.x,
+            clientY: point.y,
+            button: buttonIndex,
+          }),
+        );
       } else if (action.type === "keyPress") {
         if (action.key === "Escape") void document.exitPointerLock();
         dispatchKey("keydown");
@@ -362,11 +410,13 @@ async function installTickBridge(page) {
 
 async function queueTickJobs(page, jobs) {
   await page.evaluate((entries) => {
-    window.__TEAR_PARITY_TICK__.jobs.push(...entries.map((job) => ({
-      ...job,
-      dispatched: job.action === null,
-      captured: false,
-    })));
+    window.__TEAR_PARITY_TICK__.jobs.push(
+      ...entries.map((job) => ({
+        ...job,
+        dispatched: job.action === null,
+        captured: false,
+      })),
+    );
   }, jobs);
 }
 
@@ -388,8 +438,7 @@ async function readTickCapture(page, id) {
     const snapshot = window.__TEAR_PARITY_TICK__.captures[captureId];
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- the page-side capture map is keyed by job id; the consumed capture is removed.
     delete window.__TEAR_PARITY_TICK__.captures[captureId];
-    window.__TEAR_PARITY_TICK__.jobs = window.__TEAR_PARITY_TICK__.jobs
-      .filter((job) => job.id !== captureId);
+    window.__TEAR_PARITY_TICK__.jobs = window.__TEAR_PARITY_TICK__.jobs.filter((job) => job.id !== captureId);
     return snapshot;
   }, id);
 }
@@ -404,7 +453,10 @@ async function applyAction(page, action) {
         const canvas = document.querySelector("canvas");
         const prior = window.__TEAR_PARITY_MOUSE__ ?? { x: 800, y: 450 };
         const event = new MouseEvent("mousemove", {
-          bubbles: true, cancelable: true, clientX: x, clientY: y,
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y,
         });
         Object.defineProperties(event, {
           movementX: { value: x - prior.x },
@@ -415,53 +467,91 @@ async function applyAction(page, action) {
       }, action);
       break;
     case "mouseClick":
-      await page.evaluate(({ x, y, button }) => {
-        const canvas = document.querySelector("canvas");
-        const prior = window.__TEAR_PARITY_MOUSE__ ?? { x: 800, y: 450 };
-        const buttonIndex = button === "right" ? 2 : 0;
-        const move = new MouseEvent("mousemove", {
-          bubbles: true, cancelable: true, clientX: x, clientY: y,
-        });
-        Object.defineProperties(move, {
-          movementX: { value: x - prior.x },
-          movementY: { value: y - prior.y },
-        });
-        canvas.dispatchEvent(move);
-        canvas.dispatchEvent(new MouseEvent("mousedown", {
-          bubbles: true, cancelable: true, clientX: x, clientY: y, button: buttonIndex,
-        }));
-        window.dispatchEvent(new MouseEvent("mouseup", {
-          bubbles: true, cancelable: true, clientX: x, clientY: y, button: buttonIndex,
-        }));
-        canvas.dispatchEvent(new MouseEvent("click", {
-          bubbles: true, cancelable: true, clientX: x, clientY: y, button: buttonIndex,
-        }));
-        window.__TEAR_PARITY_MOUSE__ = { x, y };
-      }, { ...action, button: action.button ?? "left" });
+      await page.evaluate(
+        ({ x, y, button }) => {
+          const canvas = document.querySelector("canvas");
+          const prior = window.__TEAR_PARITY_MOUSE__ ?? { x: 800, y: 450 };
+          const buttonIndex = button === "right" ? 2 : 0;
+          const move = new MouseEvent("mousemove", {
+            bubbles: true,
+            cancelable: true,
+            clientX: x,
+            clientY: y,
+          });
+          Object.defineProperties(move, {
+            movementX: { value: x - prior.x },
+            movementY: { value: y - prior.y },
+          });
+          canvas.dispatchEvent(move);
+          canvas.dispatchEvent(
+            new MouseEvent("mousedown", {
+              bubbles: true,
+              cancelable: true,
+              clientX: x,
+              clientY: y,
+              button: buttonIndex,
+            }),
+          );
+          window.dispatchEvent(
+            new MouseEvent("mouseup", {
+              bubbles: true,
+              cancelable: true,
+              clientX: x,
+              clientY: y,
+              button: buttonIndex,
+            }),
+          );
+          canvas.dispatchEvent(
+            new MouseEvent("click", {
+              bubbles: true,
+              cancelable: true,
+              clientX: x,
+              clientY: y,
+              button: buttonIndex,
+            }),
+          );
+          window.__TEAR_PARITY_MOUSE__ = { x, y };
+        },
+        { ...action, button: action.button ?? "left" },
+      );
       break;
     case "mouseDown":
       await page.evaluate(({ button }) => {
         const canvas = document.querySelector("canvas");
         const point = window.__TEAR_PARITY_MOUSE__ ?? { x: 800, y: 450 };
-        canvas.dispatchEvent(new MouseEvent("mousedown", {
-          bubbles: true, cancelable: true, clientX: point.x, clientY: point.y,
-          button: button === "right" ? 2 : 0,
-        }));
+        canvas.dispatchEvent(
+          new MouseEvent("mousedown", {
+            bubbles: true,
+            cancelable: true,
+            clientX: point.x,
+            clientY: point.y,
+            button: button === "right" ? 2 : 0,
+          }),
+        );
       }, action);
       break;
     case "mouseUp":
       await page.evaluate(({ button }) => {
         const point = window.__TEAR_PARITY_MOUSE__ ?? { x: 800, y: 450 };
-        window.dispatchEvent(new MouseEvent("mouseup", {
-          bubbles: true, cancelable: true, clientX: point.x, clientY: point.y,
-          button: button === "right" ? 2 : 0,
-        }));
+        window.dispatchEvent(
+          new MouseEvent("mouseup", {
+            bubbles: true,
+            cancelable: true,
+            clientX: point.x,
+            clientY: point.y,
+            button: button === "right" ? 2 : 0,
+          }),
+        );
       }, action);
       break;
     case "keyPress":
       await page.evaluate((entry) => {
-        const options = { key: entry.key ?? entry.code, code: entry.code ?? entry.key,
-          bubbles: true, cancelable: true };
+        const options = {
+          key: entry.key ?? entry.code,
+          code: entry.code ?? entry.key,
+          bubbles: true,
+          cancelable: true,
+        };
         window.dispatchEvent(new KeyboardEvent("keydown", options));
         window.dispatchEvent(new KeyboardEvent("keyup", options));
       }, action);
@@ -469,10 +559,14 @@ async function applyAction(page, action) {
     case "keyDown":
     case "keyUp":
       await page.evaluate((entry) => {
-        window.dispatchEvent(new KeyboardEvent(entry.type === "keyDown" ? "keydown" : "keyup", {
-          key: entry.key ?? entry.code, code: entry.code ?? entry.key,
-          bubbles: true, cancelable: true,
-        }));
+        window.dispatchEvent(
+          new KeyboardEvent(entry.type === "keyDown" ? "keydown" : "keyup", {
+            key: entry.key ?? entry.code,
+            code: entry.code ?? entry.key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
       }, action);
       break;
     case "waitForPause":
@@ -505,12 +599,19 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
       assert.ok(source.lastIndexOf(marker) >= 0, "oracle game.js probe insertion marker is missing");
       const stepMarker = "  function stepPlaying(dt) {";
       const afterStepMarker = "\n  }\n\n  function onKill(e, cause) {";
-      assert.ok(source.includes(stepMarker) && source.includes(afterStepMarker),
-        "oracle fixed-step probe markers are missing");
+      assert.ok(
+        source.includes(stepMarker) && source.includes(afterStepMarker),
+        "oracle fixed-step probe markers are missing",
+      );
       const instrumented = source
-        .replace(stepMarker, `${stepMarker}\n    window.__TEAR_PARITY_TICK__?.before?.(Math.round(CLOCK.sim * 120) + 1);`)
-        .replace(afterStepMarker,
-          "\n    window.__TEAR_PARITY_TICK__?.after?.(Math.round(CLOCK.sim * 120));\n  }\n\n  function onKill(e, cause) {");
+        .replace(
+          stepMarker,
+          `${stepMarker}\n    window.__TEAR_PARITY_TICK__?.before?.(Math.round(CLOCK.sim * 120) + 1);`,
+        )
+        .replace(
+          afterStepMarker,
+          "\n    window.__TEAR_PARITY_TICK__?.after?.(Math.round(CLOCK.sim * 120));\n  }\n\n  function onKill(e, cause) {",
+        );
       const insertion = instrumented.lastIndexOf(marker);
       await route.fulfill({
         status: 200,
@@ -656,8 +757,10 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
     source: await page.evaluate(() => window.__TEAR_PARITY_ADAPTER__.source),
     viewport: fixture.viewport,
     checkpoints,
-    pointerEvents: (await page.evaluate(() => window.__TEAR_POINTER_EVENTS__))
-      .map((entry) => ({ ...entry, atMs: finiteOrNull(entry.atMs) })),
+    pointerEvents: (await page.evaluate(() => window.__TEAR_POINTER_EVENTS__)).map((entry) => ({
+      ...entry,
+      atMs: finiteOrNull(entry.atMs),
+    })),
     tickEvents: await page.evaluate(() => window.__TEAR_PARITY_TICK__.events),
     pageErrors,
   };
@@ -683,10 +786,14 @@ function assertCurrentLifecycle(trace) {
 
   assert.equal(captured.input.pointerLocked, true, "gameplay click captures the pointer");
   assert.equal(captured.cursor.lockHintVisible, false, "capture hides the pointer-lock hint");
-  assert.ok(shortDelta.blade.aimY > captured.blade.aimY + 2,
-    "a short locked delta steers the player-relative reticle in its raw movement direction");
-  assert.ok(longDelta.blade.aimX > shortDelta.blade.aimX + 10,
-    "a long locked delta steers the reticle in its raw movement direction");
+  assert.ok(
+    shortDelta.blade.aimY > captured.blade.aimY + 2,
+    "a short locked delta steers the player-relative reticle in its raw movement direction",
+  );
+  assert.ok(
+    longDelta.blade.aimX > shortDelta.blade.aimX + 10,
+    "a long locked delta steers the reticle in its raw movement direction",
+  );
   assert.equal(tether.input.tetherHeld, true, "holding primary engages the blade tether");
   assert.notEqual(flight.blade.state, "held", "right-click launches the blade");
   assert.equal(paused.screen, "paused", "capture loss pauses the live run");
@@ -694,8 +801,10 @@ function assertCurrentLifecycle(trace) {
   assert.equal(paused.input.pointerLockAllowed, false, "paused play cannot immediately recapture");
   assert.equal(fresh.screen, "playing", "a replacement run reaches live play");
   assert.equal(fresh.blade.state, "held", "a replacement run resets the blade lifecycle");
-  assert.ok(Number.isFinite(fresh.blade.tipX) && Number.isFinite(fresh.blade.tipY),
-    "fresh-run blade geometry remains finite");
+  assert.ok(
+    Number.isFinite(fresh.blade.tipX) && Number.isFinite(fresh.blade.tipY),
+    "fresh-run blade geometry remains finite",
+  );
 }
 
 function assertCurrentLocomotion(trace) {
@@ -708,12 +817,16 @@ function assertCurrentLocomotion(trace) {
   const landed = checkpoint(trace, "landed-reset");
 
   assert.equal(settled.player.onGround, true, "the fixture begins on stable ground");
-  assert.ok(accelerating.player.x > settled.player.x + 10 && accelerating.player.vx > 0,
-    "held right movement accelerates and advances the player");
+  assert.ok(
+    accelerating.player.x > settled.player.x + 10 && accelerating.player.vx > 0,
+    "held right movement accelerates and advances the player",
+  );
   assert.equal(airborne.player.onGround, false, "jump leaves the ground");
   assert.ok(airborne.player.vy < 0, "jump produces upward velocity");
-  assert.ok(dash.player.dashTimer > 0 && dash.player.vx > accelerating.player.vx,
-    "the airborne directional dash enters its authored burst");
+  assert.ok(
+    dash.player.dashTimer > 0 && dash.player.vx > accelerating.player.vx,
+    "the airborne directional dash enters its authored burst",
+  );
   assert.ok(reversed.player.vx < 0, "opposite input reverses horizontal motion");
   assert.equal(landed.player.onGround, true, "the player lands after the scripted arc");
   assert.ok(Math.abs(landed.player.vy) < 0.001, "landing resolves vertical velocity");
@@ -756,17 +869,27 @@ function assertCurrentRangedCycle(trace) {
   const late = checkpoint(trace, "telegraph-late");
   const fired = checkpoint(trace, "volley-fired");
   assert.equal(entered.enemies[0].aiState, "windup", "the shooter enters its authored telegraph");
-  assert.ok(entered.enemies[0].windTime > 0 && entered.enemies[0].windMax > 0,
-    "the telegraph owns a finite windup window");
-  assert.ok(late.enemies[0].windTime < entered.enemies[0].windTime,
-    "the telegraph counts down through production enemy updates");
+  assert.ok(
+    entered.enemies[0].windTime > 0 && entered.enemies[0].windMax > 0,
+    "the telegraph owns a finite windup window",
+  );
+  assert.ok(
+    late.enemies[0].windTime < entered.enemies[0].windTime,
+    "the telegraph counts down through production enemy updates",
+  );
   assert.equal(fired.enemies[0].aiState, "kite", "the shooter returns to kiting after firing");
   assert.ok(fired.enemies[0].aimTimer > 0, "the next-shot cooldown resets after the volley");
   assert.equal(fired.projectiles.length, 2, "the default Ranged attack emits its authored double tap");
-  assert.ok(fired.projectiles.every((projectile) => projectile.vx < 0),
-    "both hostile projectiles travel toward the player");
-  assert.ok(fired.projectiles.every((projectile) => projectile.family === "ordinaryProjectile"
-    && projectile.deflected === false), "the volley enters the ordinary hostile projectile family");
+  assert.ok(
+    fired.projectiles.every((projectile) => projectile.vx < 0),
+    "both hostile projectiles travel toward the player",
+  );
+  assert.ok(
+    fired.projectiles.every(
+      (projectile) => projectile.family === "ordinaryProjectile" && projectile.deflected === false,
+    ),
+    "the volley enters the ordinary hostile projectile family",
+  );
 }
 
 function assertCurrentProjectileParry(trace) {
@@ -777,13 +900,14 @@ function assertCurrentProjectileParry(trace) {
   assert.equal(resolved.projectiles[0].deflected, true, "the hostile projectile becomes player-deflected");
   assert.equal(resolved.projectiles[0].perfect, true, "the high-speed counter resolves as a perfect parry");
   assert.ok(resolved.projectiles[0].vx > 0, "the perfect parry homes the projectile toward its owner");
-  assert.ok(resolved.projectiles[0].deflectDamage > resolved.projectiles[0].damage,
-    "the reflected projectile receives its authored counter damage");
+  assert.ok(
+    resolved.projectiles[0].deflectDamage > resolved.projectiles[0].damage,
+    "the reflected projectile receives its authored counter damage",
+  );
   assert.equal(resolved.combat.perfectParries, 1, "the run records the perfect parry exactly once");
   assert.ok(resolved.player.guardTime > 0, "Riposte guard is granted by the full counter");
   assert.equal(impact.projectiles.length, 0, "the homing counter is consumed by its source");
-  assert.ok(impact.enemies[0].hp < impact.enemies[0].maxHp,
-    "the reflected projectile damages the enemy that fired it");
+  assert.ok(impact.enemies[0].hp < impact.enemies[0].maxHp, "the reflected projectile damages the enemy that fired it");
   assert.equal(impact.combat.perfectParries, 1, "source impact cannot double-credit the counter");
 }
 
@@ -798,42 +922,46 @@ function assertCurrentMirrorPursuit(trace) {
   assert.equal(attached.mirror.state, "approach", "neutral AI chooses approach at long range");
   assert.equal(attached.mirror.move, null, "the committed-move director remains gated during pursuit");
   assert.equal(attached.mirror.blade.state, "held", "the reflected blade remains live and attached");
-  assert.ok(pursuing.mirror.actor.x < attached.mirror.actor.x
-    && pursuing.mirror.actor.vx < 0, "the real player integrator drives the Echo toward the player");
-  assert.ok(closing.mirror.actor.x < pursuing.mirror.actor.x,
-    "the pursuit continues across later authoritative ticks");
-  const attachedReadError = Math.abs(attached.mirror.readDistance
-    - Math.abs(attached.mirror.actor.x - attached.player.x));
-  const closingReadError = Math.abs(closing.mirror.readDistance
-    - Math.abs(closing.mirror.actor.x - closing.player.x));
-  assert.ok(closingReadError < attachedReadError,
-    "the perception model converges on the live closing distance");
-  assert.ok(closing.mirror.sync > attached.mirror.sync,
-    "sync escalation advances while the boss remains active");
-  assert.ok(closing.mirror.moveCooldown < attached.mirror.moveCooldown,
-    "the committed-move clock advances without firing early");
-  assert.ok(Number.isFinite(closing.mirror.blade.tipX) && Number.isFinite(closing.mirror.blade.tipY),
-    "the Echo blade tracks finite geometry throughout pursuit");
+  assert.ok(
+    pursuing.mirror.actor.x < attached.mirror.actor.x && pursuing.mirror.actor.vx < 0,
+    "the real player integrator drives the Echo toward the player",
+  );
+  assert.ok(closing.mirror.actor.x < pursuing.mirror.actor.x, "the pursuit continues across later authoritative ticks");
+  const attachedReadError = Math.abs(
+    attached.mirror.readDistance - Math.abs(attached.mirror.actor.x - attached.player.x),
+  );
+  const closingReadError = Math.abs(closing.mirror.readDistance - Math.abs(closing.mirror.actor.x - closing.player.x));
+  assert.ok(closingReadError < attachedReadError, "the perception model converges on the live closing distance");
+  assert.ok(closing.mirror.sync > attached.mirror.sync, "sync escalation advances while the boss remains active");
+  assert.ok(
+    closing.mirror.moveCooldown < attached.mirror.moveCooldown,
+    "the committed-move clock advances without firing early",
+  );
+  assert.ok(
+    Number.isFinite(closing.mirror.blade.tipX) && Number.isFinite(closing.mirror.blade.tipY),
+    "the Echo blade tracks finite geometry throughout pursuit",
+  );
 }
 
 async function main() {
   const fixture = JSON.parse(fs.readFileSync(FIXTURE_FILE, "utf8"));
   const currentOnly = process.argv.includes("--current-only");
   const currentRoot = path.resolve(
-    process.env.TEAR_PARITY_CURRENT_ROOT
-      || path.join(REPOSITORY_ROOT, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone"),
+    process.env.TEAR_PARITY_CURRENT_ROOT ||
+      path.join(REPOSITORY_ROOT, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone"),
   );
-  const oracleRoot = path.resolve(
-    process.env.TEAR_ORACLE_ROOT || path.join(REPOSITORY_ROOT, "..", "Tear-oracle"),
+  const oracleRoot = path.resolve(process.env.TEAR_ORACLE_ROOT || path.join(REPOSITORY_ROOT, "..", "Tear-oracle"));
+  assert.ok(
+    fs.existsSync(path.join(currentRoot, "index.html")),
+    `${currentRoot} is missing; run pnpm build:test:standalone first`,
   );
-  assert.ok(fs.existsSync(path.join(currentRoot, "index.html")),
-    `${currentRoot} is missing; run pnpm build:test:standalone first`);
   if (!currentOnly) {
-    assert.ok(fs.existsSync(path.join(oracleRoot, "index.html")),
-      `${oracleRoot} is missing; set TEAR_ORACLE_ROOT to the ee5e931 worktree`);
+    assert.ok(
+      fs.existsSync(path.join(oracleRoot, "index.html")),
+      `${oracleRoot} is missing; set TEAR_ORACLE_ROOT to the ee5e931 worktree`,
+    );
     const oracleHead = execFileSync("git", ["-C", oracleRoot, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-    assert.equal(oracleHead, ORACLE_REVISION,
-      `oracle worktree is ${oracleHead}; expected ${ORACLE_REVISION}`);
+    assert.equal(oracleHead, ORACLE_REVISION, `oracle worktree is ${oracleHead}; expected ${ORACLE_REVISION}`);
   }
 
   const currentServer = createStaticServer(currentRoot, Number(process.env.TEAR_PARITY_CURRENT_PORT || 8134));
@@ -861,17 +989,24 @@ async function main() {
       const oracleTrace = await captureTrace(browser, "oracle", oracleServer.baseUrl, oracleRoot, fixture);
       const oracleFile = path.join(OUTPUT_ROOT, `${fixture.id}.oracle.json`);
       fs.writeFileSync(oracleFile, `${JSON.stringify(oracleTrace, null, 2)}\n`);
-      const { compareParityTraces } = await import(pathToFileURL(
-        path.join(REPOSITORY_ROOT, "scripts", "parity-diff.mjs"),
-      ).href);
+      const { compareParityTraces } = await import(
+        pathToFileURL(path.join(REPOSITORY_ROOT, "scripts", "parity-diff.mjs")).href
+      );
       const report = compareParityTraces(oracleTrace, currentTrace, fixture.comparison);
       const reportFile = path.join(OUTPUT_ROOT, `${fixture.id}.report.json`);
       fs.writeFileSync(reportFile, `${JSON.stringify(report, null, 2)}\n`);
-      console.log(`${fixture.id} parity trace captured: ${report.comparedCheckpoints} checkpoints, ${report.divergenceCount} divergences`);
-      if (report.firstDivergence) console.log(`first divergence: ${report.firstDivergence.label} / ${report.firstDivergence.field}`);
+      console.log(
+        `${fixture.id} parity trace captured: ${report.comparedCheckpoints} checkpoints, ${report.divergenceCount} divergences`,
+      );
+      if (report.firstDivergence)
+        console.log(`first divergence: ${report.firstDivergence.label} / ${report.firstDivergence.field}`);
       console.log(`report: ${reportFile}`);
-      if (process.env.TEAR_PARITY_STRICT === "1") assert.equal(report.passed, true,
-        `strict ${fixture.id} parity failed at ${report.firstDivergence?.label} / ${report.firstDivergence?.field}`);
+      if (process.env.TEAR_PARITY_STRICT === "1")
+        assert.equal(
+          report.passed,
+          true,
+          `strict ${fixture.id} parity failed at ${report.firstDivergence?.label} / ${report.firstDivergence?.field}`,
+        );
     } else {
       console.log(`current ${fixture.id} passed (${currentTrace.checkpoints.length} checkpoints)`);
     }

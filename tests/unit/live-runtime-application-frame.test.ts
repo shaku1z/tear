@@ -26,32 +26,75 @@ const SCENARIO = Object.freeze({
   tags: Object.freeze(["c27a", "cinematic"]),
 }) satisfies TearScenarioV1;
 
-function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOpeningEvents?: boolean;
-  nativePreviousRunAbandonment?: boolean }> = {}) {
+function contextFixture(
+  options: Readonly<{
+    terminateOnFrame?: boolean;
+    nativeOpeningEvents?: boolean;
+    nativePreviousRunAbandonment?: boolean;
+  }> = {},
+) {
   let tick = 0;
   let screen = "playing";
   const calls: string[] = [];
   const finaleOutwardCalls: FinaleOutwardCall[] = [];
   const audioDispatchReceipts: AudioDispatchReceipt[] = [];
   const gameplayListeners: ((event: TearGameplayEvent) => void)[] = [];
-  const enemies: { id: string; kind: "charger"; dead: boolean; isBoss: boolean; x: number; y: number;
-    vx: number; vy: number; hp: number; maxHp: number; contactDmg: number }[] = [];
+  const enemies: {
+    id: string;
+    kind: "charger";
+    dead: boolean;
+    isBoss: boolean;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    hp: number;
+    maxHp: number;
+    contactDmg: number;
+  }[] = [];
   const run = {
-    mode: "campaign", diff: "normal", weaponId: "sword", stage: 0,
-    wave: 1, score: 0, spawnQueue: [], runSeed: 1,
+    mode: "campaign",
+    diff: "normal",
+    weaponId: "sword",
+    stage: 0,
+    wave: 1,
+    score: 0,
+    spawnQueue: [],
+    runSeed: 1,
   };
   const player = {
-    x: 400, y: 700, vx: 0, vy: 0, hp: 100, maxHp: 100,
-    facing: 1, onGround: true, dashCharges: 1,
+    x: 400,
+    y: 700,
+    vx: 0,
+    vy: 0,
+    hp: 100,
+    maxHp: 100,
+    facing: 1,
+    onGround: true,
+    dashCharges: 1,
   };
   const blade = {
-    x: 420, y: 700, tipX: 450, tipY: 700,
-    vx: 0, vy: 0, tipSpeed: 0, state: "held",
+    x: 420,
+    y: 700,
+    tipX: 450,
+    tipY: 700,
+    vx: 0,
+    vy: 0,
+    tipSpeed: 0,
+    state: "held",
   };
   const capture = createLivePresentationCaptureController(() => ({
-    simulationTick: tick, presentationClockSeconds: tick / 120,
-    viewport: { logicalWidth: 1600, logicalHeight: 900, cssWidth: 1600, cssHeight: 900,
-      backingWidth: 1600, backingHeight: 900, deviceScaleFactor: 1 },
+    simulationTick: tick,
+    presentationClockSeconds: tick / 120,
+    viewport: {
+      logicalWidth: 1600,
+      logicalHeight: 900,
+      cssWidth: 1600,
+      cssHeight: 900,
+      backingWidth: 1600,
+      backingHeight: 900,
+      deviceScaleFactor: 1,
+    },
     settings: { gfx: "high", lowGraphics: false, reducedMotion: false, highContrast: false, flashScale: 1 },
     overlays: { debugAvailable: true, pointerLocked: false, pointerLockHintVisible: false },
   }));
@@ -73,23 +116,48 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
     progression: () => ({ wallet: 0, lifetimeEarned: 0, levels: {}, shop: [] }),
     outcome: () => null,
     screen: () => screen,
-    setScreen: (next: "playing" | "paused") => { screen = next; },
-    terminateRun: () => { screen = "gameover"; },
+    setScreen: (next: "playing" | "paused") => {
+      screen = next;
+    },
+    terminateRun: () => {
+      screen = "gameover";
+    },
     selectWeapon: () => undefined,
     selectBoss: () => undefined,
     setRunSeed: () => undefined,
     startRun: () => {
       if (options.nativeOpeningEvents !== true) return;
       if (options.nativePreviousRunAbandonment === true) {
-        const previous: TearGameplayEvent = { kind: "run", tick: 60, transition: "abandoned", runId: "previous-run",
-          mode: "campaign", difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 1 };
+        const previous: TearGameplayEvent = {
+          kind: "run",
+          tick: 60,
+          transition: "abandoned",
+          runId: "previous-run",
+          mode: "campaign",
+          difficulty: "normal",
+          weaponId: "sword",
+          wave: 1,
+          score: 0,
+          runTimeSeconds: 1,
+        };
         for (const listener of gameplayListeners) listener(previous);
       }
       for (const event of [
-        { kind: "run", tick: 0, transition: "started", runId: "native-run", mode: "campaign",
-          difficulty: "normal", weaponId: "sword", wave: 1, score: 0, runTimeSeconds: 0 },
+        {
+          kind: "run",
+          tick: 0,
+          transition: "started",
+          runId: "native-run",
+          mode: "campaign",
+          difficulty: "normal",
+          weaponId: "sword",
+          wave: 1,
+          score: 0,
+          runTimeSeconds: 0,
+        },
         { kind: "spawn", tick: 0, actorId: "enemy:1", actorKind: "charger", x: 30, y: 40 },
-      ] as const) for (const listener of gameplayListeners) listener(event);
+      ] as const)
+        for (const listener of gameplayListeners) listener(event);
     },
     stopFrameLoop: () => undefined,
     startFrameLoop: () => undefined,
@@ -97,10 +165,18 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
     pushAction: () => undefined,
     routeAction: () => false,
     activateControl: () => false,
-    skipCinematic: () => { calls.push("skip"); },
-    advanceStateForgeCinematicBeat: () => { calls.push("semantic-cinema"); return true; },
+    skipCinematic: () => {
+      calls.push("skip");
+    },
+    advanceStateForgeCinematicBeat: () => {
+      calls.push("semantic-cinema");
+      return true;
+    },
     resetSemanticInput: () => undefined,
-    advanceFixedTick: () => { tick += 1; return 1; },
+    advanceFixedTick: () => {
+      tick += 1;
+      return 1;
+    },
     advanceApplicationFrame: () => {
       calls.push("frame");
       tick += 2;
@@ -109,7 +185,12 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
     advanceRenderFrame: () => 0,
     authoritative: () => ({ tick, stateHash: `hash-${String(tick)}`, state: { tick } }),
     random: () => ({}),
-    ...capture.ports(() => { calls.push("render"); }, () => "data:image/png;base64,"),
+    ...capture.ports(
+      () => {
+        calls.push("render");
+      },
+      () => "data:image/png;base64,",
+    ),
     subscribeEngineEvent: (listener: (event: TearGameplayEvent) => void) => {
       gameplayListeners.push(listener);
       return () => undefined;
@@ -128,20 +209,36 @@ function contextFixture(options: Readonly<{ terminateOnFrame?: boolean; nativeOp
     finaleOutwardCalls: () => finaleOutwardCalls,
     audioDispatchReceipts: () => audioDispatchReceipts,
   } as unknown as LiveTearRuntimeEnvironmentContext;
-  return { context, calls, finaleOutwardCalls, audioDispatchReceipts, run, enemies,
-    publish: (event: TearGameplayEvent) => { for (const listener of gameplayListeners) listener(event); } };
+  return {
+    context,
+    calls,
+    finaleOutwardCalls,
+    audioDispatchReceipts,
+    run,
+    enemies,
+    publish: (event: TearGameplayEvent) => {
+      for (const listener of gameplayListeners) listener(event);
+    },
+  };
 }
 
 describe("Class-A live application-frame surface", () => {
   it("tracks actual progress and exposes independent lifecycle completion and real focus", () => {
     const fixture = contextFixture();
     let phase = "wave-active";
-    const context = { ...fixture.context, lifecycle: () => ({ phase }),
-      choiceIds: () => ["choice:first", "choice:second"], focusedControlId: () => "choice:second" };
+    const context = {
+      ...fixture.context,
+      lifecycle: () => ({ phase }),
+      choiceIds: () => ["choice:first", "choice:second"],
+      focusedControlId: () => "choice:second",
+    };
     const environment = createLiveTearRuntimeEnvironment(context, "A");
     const start = environment.reset(SCENARIO);
     expect(start.diagnostics?.progressTick).toBe(0);
-    expect(start.diagnostics?.ui).toEqual({ focusableIds: ["choice:first", "choice:second"], focusedId: "choice:second" });
+    expect(start.diagnostics?.ui).toEqual({
+      focusableIds: ["choice:first", "choice:second"],
+      focusedId: "choice:second",
+    });
     expect(start.diagnostics?.waveComplete).toBe(false);
     expect(environment.step([]).observation.diagnostics?.progressTick).toBe(0);
     const player = fixture.context.state.player();
@@ -159,7 +256,8 @@ describe("Class-A live application-frame surface", () => {
     const session = new TearBenchRunner(environment).createSession(SCENARIO);
     session.step();
     expect(session.result().events.map((event) => [event.type, event.source])).toEqual([
-      ["run.started", "engine"], ["enemy.spawned", "engine"],
+      ["run.started", "engine"],
+      ["enemy.spawned", "engine"],
     ]);
     session.step();
     expect(session.result().events).toHaveLength(2);
@@ -167,16 +265,35 @@ describe("Class-A live application-frame surface", () => {
 
   it("counts only source-owned current-wave actors while unrelated living actors remain visible", () => {
     const fixture = contextFixture({ nativeOpeningEvents: true });
-    const actor = (id: string, x: number) => ({ id, kind: "charger" as const, dead: false, isBoss: false,
-      x, y: 700, vx: 0, vy: 0, hp: 100, maxHp: 100, contactDmg: 10 });
-    const old = actor("enemy:old", 300), current = actor("enemy:current", 500);
+    const actor = (id: string, x: number) => ({
+      id,
+      kind: "charger" as const,
+      dead: false,
+      isBoss: false,
+      x,
+      y: 700,
+      vx: 0,
+      vy: 0,
+      hp: 100,
+      maxHp: 100,
+      contactDmg: 10,
+    });
+    const old = actor("enemy:old", 300),
+      current = actor("enemy:current", 500);
     fixture.enemies.push(old, current);
     const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");
     environment.reset(SCENARIO);
     fixture.publish({ kind: "spawn", tick: 0, actorId: old.id, actorKind: old.kind, x: old.x, y: old.y });
     fixture.run.wave = 2;
     fixture.publish({ kind: "wave", tick: 1, wave: 2, event: "start" });
-    fixture.publish({ kind: "spawn", tick: 1, actorId: current.id, actorKind: current.kind, x: current.x, y: current.y });
+    fixture.publish({
+      kind: "spawn",
+      tick: 1,
+      actorId: current.id,
+      actorKind: current.kind,
+      x: current.x,
+      y: current.y,
+    });
 
     const observation = environment.observe();
     expect(observation.entities.map((entry) => entry.id)).toEqual([old.id, current.id]);
@@ -188,8 +305,11 @@ describe("Class-A live application-frame surface", () => {
     const cleared = environment.observe();
     expect(cleared.entities.map((entry) => entry.id)).toEqual([old.id]);
     expect(cleared.diagnostics).toMatchObject({ waveOwnership: "source-events", livingWaveEnemies: 0 });
-    expect(runInvariantChecks({ ...cleared, diagnostics: { ...cleared.diagnostics, waveComplete: true } },
-      ["wave.valid-completion"])).toEqual([]);
+    expect(
+      runInvariantChecks({ ...cleared, diagnostics: { ...cleared.diagnostics, waveComplete: true } }, [
+        "wave.valid-completion",
+      ]),
+    ).toEqual([]);
   });
 
   it("excludes previous-run abandonment from a newly reset session while preserving its native opening facts", () => {
@@ -204,8 +324,9 @@ describe("Class-A live application-frame surface", () => {
     const environment = createLiveTearRuntimeEnvironment(contextFixture().context, "A");
     environment.reset(SCENARIO);
     const events = environment.step([]).events;
-    expect(events).toMatchObject([{ type: "run.started", source: "derived",
-      payload: { provenance: "runtime-bridge-synthetic" } }]);
+    expect(events).toMatchObject([
+      { type: "run.started", source: "derived", payload: { provenance: "runtime-bridge-synthetic" } },
+    ]);
     expect(environment.step([]).events).toEqual([]);
   });
 
@@ -246,8 +367,9 @@ describe("Class-A live application-frame surface", () => {
     fixture.calls.length = 0;
     const before = structured.metrics().screenshots;
 
-    expect(structured.screenshot({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" }))
-      .toBe("data:image/png;base64,");
+    expect(structured.screenshot({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" })).toBe(
+      "data:image/png;base64,",
+    );
 
     expect(structured.metrics().screenshots).toBe(before + 1);
     expect(fixture.calls).toEqual(["render"]);
@@ -267,8 +389,13 @@ describe("Class-A live application-frame surface", () => {
 
   it("projects only successful outward calls recorded after the current reset", () => {
     const fixture = contextFixture();
-    fixture.finaleOutwardCalls.push(Object.freeze({ type: "flash", amount: 0.1,
-      receipt: Object.freeze({ requested: 0.1, before: 0, after: 0.1, aggregation: "maximum" }) }));
+    fixture.finaleOutwardCalls.push(
+      Object.freeze({
+        type: "flash",
+        amount: 0.1,
+        receipt: Object.freeze({ requested: 0.1, before: 0, after: 0.1, aggregation: "maximum" }),
+      }),
+    );
     const environment = createLiveTearRuntimeEnvironment(fixture.context, "A");
     environment.reset(SCENARIO);
     fixture.finaleOutwardCalls.push(Object.freeze({ type: "sound", cue: "final-cut", index: 2 }));

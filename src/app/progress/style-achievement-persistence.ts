@@ -14,6 +14,9 @@ export function createLiveStyleAchievementPersistence(
   profile: Profile,
 ): StyleAchievementPersistence {
   return Object.freeze({
-    checkAndSave: () => { achievements.check(); profile.save(); },
+    checkAndSave: () => {
+      achievements.check();
+      profile.save();
+    },
   });
 }

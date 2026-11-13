@@ -8,14 +8,21 @@ import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
 import { GhostCapsuleReader, type GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope, type GhostCapsuleReplayMapping } from "./capsule-replay-envelope";
 import { assessGhostReplayAdmission, type GhostReplayAdmission } from "./replay-admission";
-import { verifyGhostCapsuleProductionReplay, type GhostProductionReplayVerification } from "./production-replay-verification";
+import {
+  verifyGhostCapsuleProductionReplay,
+  type GhostProductionReplayVerification,
+} from "./production-replay-verification";
 import { readGhostFinaleCompanion, finaleFrameWitnesses } from "./finale-companion";
 import { reopenGhostFinaleCompanion } from "./browser-finale-companion";
 import { createGhostFinalePlayback } from "./finale-playback";
 import { createGhostProductionReplaySession } from "./production-replay-session";
 import type { GhostPracticeChild, GhostPracticeMode } from "./replay-world";
 import { GhostDoctor, ghostDoctorManifestIndexWrite } from "./ghost-doctor";
-import { maintainGhostVault, type GhostVaultMaintenanceOptions, type GhostVaultMaintenanceReport } from "./vault-maintenance";
+import {
+  maintainGhostVault,
+  type GhostVaultMaintenanceOptions,
+  type GhostVaultMaintenanceReport,
+} from "./vault-maintenance";
 import { GhostVaultKnowledgeLibraries } from "./durable-knowledge-libraries";
 
 export interface BrowserGhostVaultCatalog {
@@ -36,7 +43,9 @@ async function openBrowserGhostVault(factory: IDBFactory): Promise<GhostLocalVau
 }
 
 /** Lists durable manifests without retaining or trusting a live recorder instance. */
-export async function listBrowserGhostCapsuleManifests(factory: IDBFactory | undefined): Promise<readonly TearGhostManifest[]> {
+export async function listBrowserGhostCapsuleManifests(
+  factory: IDBFactory | undefined,
+): Promise<readonly TearGhostManifest[]> {
   if (factory === undefined) return Object.freeze([]);
   const vault = await openBrowserGhostVault(factory);
   const ids = await vault.backend().keys("manifests");
@@ -61,28 +70,48 @@ export async function inspectBrowserGhostVault(
 }
 
 /** File operations inspect custody without quota eviction, index repair or maintenance receipts. */
-export async function inspectBrowserGhostVaultReadOnly(factory: IDBFactory | undefined): Promise<BrowserGhostVaultCatalog> {
+export async function inspectBrowserGhostVaultReadOnly(
+  factory: IDBFactory | undefined,
+): Promise<BrowserGhostVaultCatalog> {
   if (factory === undefined) throw new Error("Ghost Vault is unavailable in this browser");
-  const vault = await openBrowserGhostVault(factory), doctor = new GhostDoctor(vault);
+  const vault = await openBrowserGhostVault(factory),
+    doctor = new GhostDoctor(vault);
   const manifests = await listBrowserGhostCapsuleManifests(factory);
   const libraries = new GhostVaultKnowledgeLibraries(vault.backend());
   const reports = await Promise.all(manifests.map((manifest) => doctor.scan(manifest.id)));
-  const integrity = manifests.map((manifest, index) => Object.freeze({ id: manifest.id, healthy: reports[index]?.healthy === true }));
-  const repairMetadata = await Promise.all(manifests.map(async (manifest, index) => {
-    const report = reports[index];
-    let complete = false;
-    if (report !== undefined && !report.healthy) {
-      try {
-        const prepared = await libraries.prepareCorruptCapsuleRecord(manifest, report, manifest.createdAt);
-        const write = ghostDoctorManifestIndexWrite(manifest);
-        complete = prepared.write === undefined && await vault.backend().get(write.store, write.key) === write.value;
-      } catch { /* Conflicting metadata remains visible for explicit repair, never rewritten on inspection. */ }
-    }
-    return Object.freeze({ id: manifest.id, complete });
-  }));
-  return Object.freeze({ manifests, repairMetadata: Object.freeze(repairMetadata), maintenance: Object.freeze({ schemaVersion: 1, checkedAt: new Date().toISOString(), maximumBytes: 0,
-    evictedCapsuleIds: Object.freeze([]), integrity: Object.freeze(integrity), rebuiltIndexes: 0,
-    libraries: await libraries.inventory() }) });
+  const integrity = manifests.map((manifest, index) =>
+    Object.freeze({ id: manifest.id, healthy: reports[index]?.healthy === true }),
+  );
+  const repairMetadata = await Promise.all(
+    manifests.map(async (manifest, index) => {
+      const report = reports[index];
+      let complete = false;
+      if (report !== undefined && !report.healthy) {
+        try {
+          const prepared = await libraries.prepareCorruptCapsuleRecord(manifest, report, manifest.createdAt);
+          const write = ghostDoctorManifestIndexWrite(manifest);
+          complete =
+            prepared.write === undefined && (await vault.backend().get(write.store, write.key)) === write.value;
+        } catch {
+          /* Conflicting metadata remains visible for explicit repair, never rewritten on inspection. */
+        }
+      }
+      return Object.freeze({ id: manifest.id, complete });
+    }),
+  );
+  return Object.freeze({
+    manifests,
+    repairMetadata: Object.freeze(repairMetadata),
+    maintenance: Object.freeze({
+      schemaVersion: 1,
+      checkedAt: new Date().toISOString(),
+      maximumBytes: 0,
+      evictedCapsuleIds: Object.freeze([]),
+      integrity: Object.freeze(integrity),
+      rebuiltIndexes: 0,
+      libraries: await libraries.inventory(),
+    }),
+  });
 }
 
 /** Repairs an unhealthy source into a new child while retaining the source evidence. */
@@ -92,21 +121,33 @@ export async function repairBrowserGhostCapsule(
 ): Promise<BrowserGhostVaultRepairResult> {
   if (factory === undefined) throw new Error("Ghost Vault is unavailable in this browser");
   const vault = await openBrowserGhostVault(factory);
-  const doctor = new GhostDoctor(vault), backend = vault.backend();
+  const doctor = new GhostDoctor(vault),
+    backend = vault.backend();
   const sourceRaw = await backend.get("manifests", id);
   if (sourceRaw === undefined) throw new RangeError(`manifest does not exist: ${id}`);
   const source = parseGhostCapsuleManifest(JSON.parse(sourceRaw));
   if (source.id !== id) throw new TypeError("repair source identity conflicts with its storage key");
-  const chunkGuards = async (manifest: TearGhostManifest): Promise<GhostVaultGuard[]> => Promise.all(manifest.chunks.map(async (chunk) => {
-    const raw = await backend.get("chunks", chunk.id);
-    return { store: "chunks" as const, key: chunk.id, ...(raw === undefined ? {} : { expected: raw }) };
-  }));
+  const chunkGuards = async (manifest: TearGhostManifest): Promise<GhostVaultGuard[]> =>
+    Promise.all(
+      manifest.chunks.map(async (chunk) => {
+        const raw = await backend.get("chunks", chunk.id);
+        return { store: "chunks" as const, key: chunk.id, ...(raw === undefined ? {} : { expected: raw }) };
+      }),
+    );
   const sourceChunks = await chunkGuards(source);
   const report = await doctor.scan(id);
-  const membership = await new GhostVaultKnowledgeLibraries(backend).prepareCorruptCapsuleRecord(source, report, new Date().toISOString());
-  const indexWrite = ghostDoctorManifestIndexWrite(source), indexRaw = await backend.get(indexWrite.store, indexWrite.key);
-  const manifests = await Promise.all((await backend.keys("manifests")).map((manifestId) => vault.getManifest(manifestId)));
-  const children = manifests.filter((manifest): manifest is TearGhostManifest => manifest?.lineage?.parentId === id)
+  const membership = await new GhostVaultKnowledgeLibraries(backend).prepareCorruptCapsuleRecord(
+    source,
+    report,
+    new Date().toISOString(),
+  );
+  const indexWrite = ghostDoctorManifestIndexWrite(source),
+    indexRaw = await backend.get(indexWrite.store, indexWrite.key);
+  const manifests = await Promise.all(
+    (await backend.keys("manifests")).map((manifestId) => vault.getManifest(manifestId)),
+  );
+  const children = manifests
+    .filter((manifest): manifest is TearGhostManifest => manifest?.lineage?.parentId === id)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   let selected: Readonly<{ id: string; raw: string; chunks: readonly GhostVaultGuard[] }> | undefined;
   for (const child of children) {
@@ -117,32 +158,50 @@ export async function repairBrowserGhostCapsule(
       throw new TypeError("repair child custody changed before metadata commit");
     }
     const chunks = await chunkGuards(retained);
-    if ((await doctor.scan(child.id)).healthy) { selected = { id: child.id, raw, chunks }; break; }
+    if ((await doctor.scan(child.id)).healthy) {
+      selected = { id: child.id, raw, chunks };
+      break;
+    }
   }
   const reused = selected !== undefined;
   if (selected === undefined) {
     let sequence = children.length + 1;
     let childId = `${id}:repaired:${String(sequence)}`;
-    while (await vault.getManifest(childId) !== undefined) {
+    while ((await vault.getManifest(childId)) !== undefined) {
       sequence += 1;
       childId = `${id}:repaired:${String(sequence)}`;
     }
     await doctor.repairChild(id, childId);
     const raw = await backend.get("manifests", childId);
     if (raw === undefined) throw new RangeError("repair child disappeared before metadata commit");
-    const child = parseGhostCapsuleManifest(JSON.parse(raw)), chunks = await chunkGuards(child);
-    if (child.id !== childId || child.status !== "repaired" || child.lineage?.parentId !== id || !(await doctor.scan(childId)).healthy) {
+    const child = parseGhostCapsuleManifest(JSON.parse(raw)),
+      chunks = await chunkGuards(child);
+    if (
+      child.id !== childId ||
+      child.status !== "repaired" ||
+      child.lineage?.parentId !== id ||
+      !(await doctor.scan(childId)).healthy
+    ) {
       throw new TypeError("repair child custody changed before metadata commit");
     }
     selected = { id: childId, raw, chunks };
   }
   // This action never adopts source or metadata drift after validation. A child
   // already committed remains forensic evidence and can be reused on an explicit retry.
-  await backend.commitIfMatches([
-    { store: "manifests", key: id, expected: sourceRaw }, ...sourceChunks,
-    { store: "manifests", key: selected.id, expected: selected.raw }, ...selected.chunks,
-    { store: "indexes", key: indexWrite.key, ...(indexRaw === undefined ? {} : { expected: indexRaw }) }, membership.guard,
-  ], [ ...(indexRaw === indexWrite.value ? [] : [indexWrite]), ...(membership.write === undefined ? [] : [membership.write]) ]);
+  await backend.commitIfMatches(
+    [
+      { store: "manifests", key: id, expected: sourceRaw },
+      ...sourceChunks,
+      { store: "manifests", key: selected.id, expected: selected.raw },
+      ...selected.chunks,
+      { store: "indexes", key: indexWrite.key, ...(indexRaw === undefined ? {} : { expected: indexRaw }) },
+      membership.guard,
+    ],
+    [
+      ...(indexRaw === indexWrite.value ? [] : [indexWrite]),
+      ...(membership.write === undefined ? [] : [membership.write]),
+    ],
+  );
   return Object.freeze({ sourceId: id, childId: selected.id, reused });
 }
 
@@ -185,9 +244,25 @@ export async function verifyBrowserGhostCapsuleProductionReplay(
       const playback = createGhostFinalePlayback(capsule, lease.permit);
       const last = playback.seekFrame(playback.positions.length - 1);
       await lease.confirm();
-      return { status: "verified", mappingIssues: [], comparisons: finaleFrameWitnesses(capsule).map((witness) => ({ tick: witness.tick,
-        expectedHash: witness.stateHash, equal: true, ...(witness.cursor.ordinal === playback.positions.at(-1)?.ordinal ? { actualHash: last.result.semanticHash } : {}) })) };
-    } catch (error) { return { status: "mismatch", comparisons: [], mappingIssues: [error instanceof Error ? error.message : String(error)] }; }
+      return {
+        status: "verified",
+        mappingIssues: [],
+        comparisons: finaleFrameWitnesses(capsule).map((witness) => ({
+          tick: witness.tick,
+          expectedHash: witness.stateHash,
+          equal: true,
+          ...(witness.cursor.ordinal === playback.positions.at(-1)?.ordinal
+            ? { actualHash: last.result.semanticHash }
+            : {}),
+        })),
+      };
+    } catch (error) {
+      return {
+        status: "mismatch",
+        comparisons: [],
+        mappingIssues: [error instanceof Error ? error.message : String(error)],
+      };
+    }
   }
   return capsule === undefined ? undefined : verifyGhostCapsuleProductionReplay(capsule);
 }
@@ -204,7 +279,9 @@ export async function seekBrowserGhostCapsuleProductionReplay(
     const playback = createGhostFinalePlayback(capsule, lease.permit);
     const index = playback.positions.findIndex((position) => position.tick === tick);
     if (index < 0) throw new RangeError("Finale seek requires a captured frame position");
-    const selected = playback.seekFrame(index); await lease.confirm(); return selected.result;
+    const selected = playback.seekFrame(index);
+    await lease.confirm();
+    return selected.result;
   }
   return capsule === undefined ? undefined : createGhostProductionReplaySession(capsule).seek(tick);
 }

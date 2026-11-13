@@ -204,280 +204,876 @@ export interface RollUpgradeOptions {
 
 function newMods(): UpgradeMods {
   return {
-    onHit: [], onSwingHit: [], onKill: [], onParry: [], onPerfectParry: [], onSlam: [], onDashStart: [], onDashContact: [],
+    onHit: [],
+    onSwingHit: [],
+    onKill: [],
+    onParry: [],
+    onPerfectParry: [],
+    onSlam: [],
+    onDashStart: [],
+    onDashContact: [],
     // normalized combat-event hooks (Weapons WA1) — abilities subscribe here; weapons
     // and the combat loop emit. Kept as arrays so `fire()` works uniformly.
-    onThrowLaunch: [], onThrowResolve: [], onThrowSecondary: [], onReturnHit: [], onWeaponCatch: [],
-    onEnemyFirstDamaged: [], onEnemyDeath: [], onSkillKill: [], onReflectedHit: [],
-    owned: {}, ownedList: [],
+    onThrowLaunch: [],
+    onThrowResolve: [],
+    onThrowSecondary: [],
+    onReturnHit: [],
+    onWeaponCatch: [],
+    onEnemyFirstDamaged: [],
+    onEnemyDeath: [],
+    onSkillKill: [],
+    onReflectedHit: [],
+    owned: {},
+    ownedList: [],
     // unique-ability flags, read by the combat loop:
-    throwRamp: 0,         // per-pierce damage/speed ramp on a thrown blade
+    throwRamp: 0, // per-pierce damage/speed ramp on a thrown blade
     deflectPierce: false, // deflected shots pass through enemies
-    deflectSplit: false,  // deflected shots split into 3 bouncing shards
-    airBonus: 0,          // +damage fraction while airborne (Air Superiority)
-    tempest: false,       // empowered updraft launches nearby enemies too
-    stormRecall: false,   // legacy save flag backing Second Pass
-    phantomDash: 0,       // dash damages enemies you pass through (dmg amount)
-    berserk: false,       // +25% damage while below half HP
+    deflectSplit: false, // deflected shots split into 3 bouncing shards
+    airBonus: 0, // +damage fraction while airborne (Air Superiority)
+    tempest: false, // empowered updraft launches nearby enemies too
+    stormRecall: false, // legacy save flag backing Second Pass
+    phantomDash: 0, // dash damages enemies you pass through (dmg amount)
+    berserk: false, // +25% damage while below half HP
     // ---- resilience (healing rework): survivability earned through skill ----
-    lifesteal: 0,         // Vampiric Edge: HP per swing (capped per-swing in the loop)
-    parryGuard: false,    // Riposte: damage-reduction window after a perfect parry
-    flowGuard: false,     // Flow Guard: damage reduction while the trick rank is high
-    slamShield: false,    // Aegis: slam kills grant a one-hit absorb pip
-    bloodrite: false,     // Bloodrite: skill kills heal a little HP
+    lifesteal: 0, // Vampiric Edge: HP per swing (capped per-swing in the loop)
+    parryGuard: false, // Riposte: damage-reduction window after a perfect parry
+    flowGuard: false, // Flow Guard: damage reduction while the trick rank is high
+    slamShield: false, // Aegis: slam kills grant a one-hit absorb pip
+    bloodrite: false, // Bloodrite: skill kills heal a little HP
     // ---- skill-expression abilities ----
-    phaseStep: false,     // Phase Step: dashing through a shot deflects it
-    crater: false,        // Crater: empowered Power Slams erupt in a scaling shockwave
-    aerialRave: 0,        // Aerial Rave: swing damage grows the longer you stay airborne
+    phaseStep: false, // Phase Step: dashing through a shot deflects it
+    crater: false, // Crater: empowered Power Slams erupt in a scaling shockwave
+    aerialRave: 0, // Aerial Rave: swing damage grows the longer you stay airborne
     // ---- reworked throw / dash kit ----
-    ricochet: false,      // legacy save flag backing Redirect
-    vortexRecall: false,  // legacy save flag backing Collapse
-    slipstream: false,    // Slipstream: +damage briefly after a dash ends
+    ricochet: false, // legacy save flag backing Redirect
+    vortexRecall: false, // legacy save flag backing Collapse
+    slipstream: false, // Slipstream: +damage briefly after a dash ends
     // ---- ability tiers (evolved on boss kills) ----
-    tier: {},             // id -> current tier (1 when acquired, up to 3)
-    stormMult: 1.85,      // legacy multiplier mirrored by Second Pass tiers
-    killHeal: 0,          // Bloodrite T3: heal on any kill
-    bloodGuard: false,    // Bloodrite T2: skill kills also grant a brief DR window
-    flowRegen: false,     // Flow Guard T3: regenerate HP while the trick rank is high
-    aegisParry: false,    // Aegis T2: perfect-parry kills also grant a shield
-    shieldBurst: false,   // Aegis T3: an absorbed hit erupts in a shockwave
-    razorStun: false,     // Overdrive T3: direct targets briefly stun
-    stormBurst: false,    // Second Pass T3: catching the weapon releases a shockwave
+    tier: {}, // id -> current tier (1 when acquired, up to 3)
+    stormMult: 1.85, // legacy multiplier mirrored by Second Pass tiers
+    killHeal: 0, // Bloodrite T3: heal on any kill
+    bloodGuard: false, // Bloodrite T2: skill kills also grant a brief DR window
+    flowRegen: false, // Flow Guard T3: regenerate HP while the trick rank is high
+    aegisParry: false, // Aegis T2: perfect-parry kills also grant a shield
+    shieldBurst: false, // Aegis T3: an absorbed hit erupts in a shockwave
+    razorStun: false, // Overdrive T3: direct targets briefly stun
+    stormBurst: false, // Second Pass T3: catching the weapon releases a shockwave
     phantomRefund: false, // Phantom Dash T3: a phantom-dash kill refreshes your dash
     // ---- new Special abilities (status-effect kit) ----
-    bleedHit: 0,          // Rupture: bleed stacks applied per cut
+    bleedHit: 0, // Rupture: bleed stacks applied per cut
     bleedDetonate: false, // Rupture T2: a Power Slam detonates nearby bleed for a burst
-    bleedNova: false,     // Rupture T3: a bleeding enemy's death spreads bleed
-    sunderHit: false,     // Sunder: your hits MARK enemies (+30% damage taken)
+    bleedNova: false, // Rupture T3: a bleeding enemy's death spreads bleed
+    sunderHit: false, // Sunder: your hits MARK enemies (+30% damage taken)
     sunderShatter: false, // Sunder T2: marking an armored foe shatters its guard
-    sunderSpread: false,  // Sunder T3: hitting a marked enemy spreads the mark
-    impale: 0,            // legacy save field backing Capture bleed
-    impaleAll: false,     // Capture T2 control expansion
-    impaleRecall: false,  // Capture T3 secondary rupture
-    tempo: 0,             // Tempo: +damage per stack during the post-parry window
-    tempoMax: 1,          // Tempo T2: max stacks
-    tempoSurge: false,    // Tempo T3: a perfect parry also heals + extends slow-mo
-    backlash: 0,          // Backlash: counter-shock damage on a perfect parry (0 = off)
-    backlashMark: false,  // Backlash T2: the shock also MARKS
+    sunderSpread: false, // Sunder T3: hitting a marked enemy spreads the mark
+    impale: 0, // legacy save field backing Capture bleed
+    impaleAll: false, // Capture T2 control expansion
+    impaleRecall: false, // Capture T3 secondary rupture
+    tempo: 0, // Tempo: +damage per stack during the post-parry window
+    tempoMax: 1, // Tempo T2: max stacks
+    tempoSurge: false, // Tempo T3: a perfect parry also heals + extends slow-mo
+    backlash: 0, // Backlash: counter-shock damage on a perfect parry (0 = off)
+    backlashMark: false, // Backlash T2: the shock also MARKS
     backlashSurge: false, // Backlash T3: bigger shock + brief invulnerability
-    cinder: false,        // Cinder Trail: dashing ignites enemies you pass (BURN)
-    cinderSlow: false,    // Cinder T2: hotter burn that also slows
-    cinderNova: false,    // Cinder T3: a burning enemy's death erupts in fire
-    concussive: 0,        // Concussive Dash: shockwave damage when a dash ends (0 = off)
-    concStun: false,      // Concussive T2: the shockwave stuns
-    concRefund: false,    // Concussive T3: a dash that catches 2+ enemies refunds itself
-    parryStun: false,     // Backfire (parry unique): reflected shots stun what they strike
-    waveHeal: 0,          // Bulwark (resilience stack): extra HP healed on each wave clear
-    reservePick: false,   // shop: reserve an unchosen card for the next normal draft
-    draftRerolls: 0,      // shop: limited rerolls shared across the whole run
+    cinder: false, // Cinder Trail: dashing ignites enemies you pass (BURN)
+    cinderSlow: false, // Cinder T2: hotter burn that also slows
+    cinderNova: false, // Cinder T3: a burning enemy's death erupts in fire
+    concussive: 0, // Concussive Dash: shockwave damage when a dash ends (0 = off)
+    concStun: false, // Concussive T2: the shockwave stuns
+    concRefund: false, // Concussive T3: a dash that catches 2+ enemies refunds itself
+    parryStun: false, // Backfire (parry unique): reflected shots stun what they strike
+    waveHeal: 0, // Bulwark (resilience stack): extra HP healed on each wave clear
+    reservePick: false, // shop: reserve an unchosen card for the next normal draft
+    draftRerolls: 0, // shop: limited rerolls shared across the whole run
     expandedDraft: false, // shop: normal drafts contain four cards
-    overdrive: 0, secondPass: 0, remoteLink: false, redirect: false, capture: 0, collapse: false,
-    stormbank: 0, stormCharges: 0, stormEchoes: [],
-    overrun: 0, overrunStacks: 0, overrunHoldT: 0, overrunDecayT: 0, redlineT: 0,
-    sever: 0, severPulseLock: false,
+    overdrive: 0,
+    secondPass: 0,
+    remoteLink: false,
+    redirect: false,
+    capture: 0,
+    collapse: false,
+    stormbank: 0,
+    stormCharges: 0,
+    stormEchoes: [],
+    overrun: 0,
+    overrunStacks: 0,
+    overrunHoldT: 0,
+    overrunDecayT: 0,
+    redlineT: 0,
+    sever: 0,
+    severPulseLock: false,
   };
 }
 
 const UPGRADES: readonly UpgradeDefinition[] = [
   // ===== stackable upgrades =====
-  { id: "vitality", name: "Vitality", unique: false, cat: "resilience", desc: "+30 max HP, and heal 30.",
-    apply: ({ player }) => { player.maxHp += 30; player.heal(30); } },
-  { id: "keen_edge", name: "Keen Edge", unique: false, cat: "offense", desc: "+12% swing damage.",
-    apply: ({ config }) => { config.blade.damageScale *= 1.12; config.blade.maxDamage = Math.round(config.blade.maxDamage * 1.06); } },
-  { id: "fleet", name: "Fleet Foot", unique: false, cat: "mobility", desc: "+8% move speed, higher jump.",
-    apply: ({ config }) => { config.player.moveSpeed *= 1.08; config.player.jumpSpeed *= 1.03; } },
-  { id: "quick_recovery", name: "Quick Recovery", unique: false, cat: "mobility", desc: "-25% dash cooldown.",
-    apply: ({ config }) => { config.dash.cooldown *= 0.75; } },
-  { id: "long_reach", name: "Long Reach", unique: false, cat: "utility", desc: "+ blade reach and length.",
-    apply: ({ config }) => { config.blade.aimRadius += 18; config.blade.length += 8; config.blade.maxReach += 18; } },
-  { id: "heavy_swing", name: "Heavy Swing", unique: false, cat: "offense", desc: "+25% knockback, stronger launches.",
-    apply: ({ config }) => { config.enemy.knockbackTaken *= 1.25; config.ranged.knockbackTaken *= 1.25; config.blade.launchPower *= 1.10; } },
-  { id: "deadly_throw", name: "Deadly Throw", unique: false, cat: "throw", desc: "+20% thrown-blade damage, and it flies faster.",
-    apply: ({ blade }) => { blade.channelMods.throwPower *= 1.20; blade.channelMods.throwSpeed *= 1.08; } },
-  { id: "vampiric", name: "Vampiric Edge", unique: false, cat: "resilience", desc: "Swings trickle back a sliver of HP (once per swing).",
-    apply: ({ mods, config }) => { mods.lifesteal += config.resilience.lifestealPerSwing; } },
-  { id: "air_superiority", name: "Air Superiority", unique: false, cat: "offense", desc: "+15% damage while airborne.",
-    apply: ({ mods }) => { mods.airBonus += 0.15; } },
-  { id: "tough_hide", name: "Tough Hide", unique: false, cat: "resilience", desc: "Take 12% less damage.",
-    apply: ({ config }) => { config.player.dmgTakenMult *= 0.88; } },
-  { id: "air_dash", name: "Air Dash", unique: true, cat: "mobility",
+  {
+    id: "vitality",
+    name: "Vitality",
+    unique: false,
+    cat: "resilience",
+    desc: "+30 max HP, and heal 30.",
+    apply: ({ player }) => {
+      player.maxHp += 30;
+      player.heal(30);
+    },
+  },
+  {
+    id: "keen_edge",
+    name: "Keen Edge",
+    unique: false,
+    cat: "offense",
+    desc: "+12% swing damage.",
+    apply: ({ config }) => {
+      config.blade.damageScale *= 1.12;
+      config.blade.maxDamage = Math.round(config.blade.maxDamage * 1.06);
+    },
+  },
+  {
+    id: "fleet",
+    name: "Fleet Foot",
+    unique: false,
+    cat: "mobility",
+    desc: "+8% move speed, higher jump.",
+    apply: ({ config }) => {
+      config.player.moveSpeed *= 1.08;
+      config.player.jumpSpeed *= 1.03;
+    },
+  },
+  {
+    id: "quick_recovery",
+    name: "Quick Recovery",
+    unique: false,
+    cat: "mobility",
+    desc: "-25% dash cooldown.",
+    apply: ({ config }) => {
+      config.dash.cooldown *= 0.75;
+    },
+  },
+  {
+    id: "long_reach",
+    name: "Long Reach",
+    unique: false,
+    cat: "utility",
+    desc: "+ blade reach and length.",
+    apply: ({ config }) => {
+      config.blade.aimRadius += 18;
+      config.blade.length += 8;
+      config.blade.maxReach += 18;
+    },
+  },
+  {
+    id: "heavy_swing",
+    name: "Heavy Swing",
+    unique: false,
+    cat: "offense",
+    desc: "+25% knockback, stronger launches.",
+    apply: ({ config }) => {
+      config.enemy.knockbackTaken *= 1.25;
+      config.ranged.knockbackTaken *= 1.25;
+      config.blade.launchPower *= 1.1;
+    },
+  },
+  {
+    id: "deadly_throw",
+    name: "Deadly Throw",
+    unique: false,
+    cat: "throw",
+    desc: "+20% thrown-blade damage, and it flies faster.",
+    apply: ({ blade }) => {
+      blade.channelMods.throwPower *= 1.2;
+      blade.channelMods.throwSpeed *= 1.08;
+    },
+  },
+  {
+    id: "vampiric",
+    name: "Vampiric Edge",
+    unique: false,
+    cat: "resilience",
+    desc: "Swings trickle back a sliver of HP (once per swing).",
+    apply: ({ mods, config }) => {
+      mods.lifesteal += config.resilience.lifestealPerSwing;
+    },
+  },
+  {
+    id: "air_superiority",
+    name: "Air Superiority",
+    unique: false,
+    cat: "offense",
+    desc: "+15% damage while airborne.",
+    apply: ({ mods }) => {
+      mods.airBonus += 0.15;
+    },
+  },
+  {
+    id: "tough_hide",
+    name: "Tough Hide",
+    unique: false,
+    cat: "resilience",
+    desc: "Take 12% less damage.",
+    apply: ({ config }) => {
+      config.player.dmgTakenMult *= 0.88;
+    },
+  },
+  {
+    id: "air_dash",
+    name: "Air Dash",
+    unique: true,
+    cat: "mobility",
     desc: "Gain a second dash you can use in mid-air. Charges refill when you land.",
     // additive so it STACKS with Aether Step (meta shop) instead of both flat-capping at 2.
     // Safe as +=: unique (picked once per run) and applied to a fresh player (base 1).
-    apply: ({ player }) => { player.maxDashCharges += 1; player.dashCharges = player.maxDashCharges; } },
-  { id: "afterimage", name: "Afterimage", unique: true, cat: "mobility",
+    apply: ({ player }) => {
+      player.maxDashCharges += 1;
+      player.dashCharges = player.maxDashCharges;
+    },
+  },
+  {
+    id: "afterimage",
+    name: "Afterimage",
+    unique: true,
+    cat: "mobility",
     desc: "After a dash ends, gain +25% movement speed for 1 second.",
-    apply: ({ player }) => { player.afterimageDuration = 1; player.afterimageSpeedMult = 1.25; } },
-  { id: "hard_turn", name: "Hard Turn", unique: false, cat: "mobility",
+    apply: ({ player }) => {
+      player.afterimageDuration = 1;
+      player.afterimageSpeedMult = 1.25;
+    },
+  },
+  {
+    id: "hard_turn",
+    name: "Hard Turn",
+    unique: false,
+    cat: "mobility",
     desc: "+10% steering authority during the final third of a dash.",
-    apply: ({ player }) => { player.hardTurnStacks += 1; } },
-  { id: "bounty", name: "Bounty Hunter", unique: false, cat: "utility", desc: "+15% score from kills.",
-    apply: ({ config }) => { config.run.scoreMult *= 1.15; } },
-  { id: "glass_cannon", name: "Glass Cannon", unique: false, cat: "offense", desc: "+30% ALL damage (swing + throw), but you take +25% more.",
+    apply: ({ player }) => {
+      player.hardTurnStacks += 1;
+    },
+  },
+  {
+    id: "bounty",
+    name: "Bounty Hunter",
+    unique: false,
+    cat: "utility",
+    desc: "+15% score from kills.",
     apply: ({ config }) => {
-      config.blade.damageScale *= 1.30; config.blade.maxDamage = Math.round(config.blade.maxDamage * 1.20);
-      config.blade.throw.damage *= 1.30; config.blade.throw.damageFromSpeed *= 1.30;
+      config.run.scoreMult *= 1.15;
+    },
+  },
+  {
+    id: "glass_cannon",
+    name: "Glass Cannon",
+    unique: false,
+    cat: "offense",
+    desc: "+30% ALL damage (swing + throw), but you take +25% more.",
+    apply: ({ config }) => {
+      config.blade.damageScale *= 1.3;
+      config.blade.maxDamage = Math.round(config.blade.maxDamage * 1.2);
+      config.blade.throw.damage *= 1.3;
+      config.blade.throw.damageFromSpeed *= 1.3;
       config.player.dmgTakenMult *= 1.25;
-    } },
+    },
+  },
 
   // ===== unique abilities =====
   // ---- resilience: the healing rework's "earned survivability" set ----
-  { id: "bloodrite", name: "Bloodrite", unique: true, rare: true, cat: "resilience",
+  {
+    id: "bloodrite",
+    name: "Bloodrite",
+    unique: true,
+    rare: true,
+    cat: "resilience",
     desc: "Slam, spike (airborne foe into the floor) and perfect-parry kills restore HP.",
-    apply: ({ mods, config }) => { mods.bloodrite = true; bindUpgradeHook("bloodrite", { mods, config }); },
+    apply: ({ mods, config }) => {
+      mods.bloodrite = true;
+      bindUpgradeHook("bloodrite", { mods, config });
+    },
     tiers: [
-      { desc: "Slam, spike and perfect-parry kills restore much more HP and grant 1s of invincibility.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 16; mods.bloodGuard = true; } },
-      { desc: "Slam, spike and perfect-parry kills restore massive HP and grant 1s of invincibility; other kills trickle HP.", apply: ({ mods, config }) => { config.resilience.bloodriteHeal = 22; mods.killHeal = 4; } },
-    ] },
-  { id: "riposte", name: "Riposte", unique: true, cat: "parry",
+      {
+        desc: "Slam, spike and perfect-parry kills restore much more HP and grant 1s of invincibility.",
+        apply: ({ mods, config }) => {
+          config.resilience.bloodriteHeal = 16;
+          mods.bloodGuard = true;
+        },
+      },
+      {
+        desc: "Slam, spike and perfect-parry kills restore massive HP and grant 1s of invincibility; other kills trickle HP.",
+        apply: ({ mods, config }) => {
+          config.resilience.bloodriteHeal = 22;
+          mods.killHeal = 4;
+        },
+      },
+    ],
+  },
+  {
+    id: "riposte",
+    name: "Riposte",
+    unique: true,
+    cat: "parry",
     desc: "After a perfect parry, take 60% less damage for 1.2s.",
-    apply: ({ mods }) => { mods.parryGuard = true; },
+    apply: ({ mods }) => {
+      mods.parryGuard = true;
+    },
     tiers: [
-      { desc: "After a perfect parry, restore HP and take 75% less damage for 1.8s.", apply: ({ mods, config }) => { config.resilience.parryGuardTime = 1.8; config.resilience.parryGuardMult = 0.25; bindUpgradeHook("riposte:2", { mods, config }); } },
-      { desc: "After a perfect parry, restore HP and become completely INVINCIBLE for 2.3s.", apply: ({ config }) => { config.resilience.parryGuardTime = 2.3; config.resilience.parryGuardMult = 0.0; } },
-    ] },
-  { id: "flow_guard", name: "Flow Guard", unique: true, cat: "resilience",
+      {
+        desc: "After a perfect parry, restore HP and take 75% less damage for 1.8s.",
+        apply: ({ mods, config }) => {
+          config.resilience.parryGuardTime = 1.8;
+          config.resilience.parryGuardMult = 0.25;
+          bindUpgradeHook("riposte:2", { mods, config });
+        },
+      },
+      {
+        desc: "After a perfect parry, restore HP and become completely INVINCIBLE for 2.3s.",
+        apply: ({ config }) => {
+          config.resilience.parryGuardTime = 2.3;
+          config.resilience.parryGuardMult = 0.0;
+        },
+      },
+    ],
+  },
+  {
+    id: "flow_guard",
+    name: "Flow Guard",
+    unique: true,
+    cat: "resilience",
     desc: "Take 30% less damage while your multiplier is ×3 or higher.",
-    apply: ({ mods }) => { mods.flowGuard = true; },
+    apply: ({ mods }) => {
+      mods.flowGuard = true;
+    },
     tiers: [
-      { desc: "Take 50% less damage while your multiplier is ×3 or higher.", apply: ({ config }) => { config.resilience.flowGuardMult = 0.5; } },
-      { desc: "Take 50% less damage from a ×2 multiplier. At ×3 or higher you also regenerate HP fast.", apply: ({ mods, config }) => { config.resilience.flowGuardMult = 0.5; config.resilience.flowGuardTier = 2; mods.flowRegen = true; } },
-    ] },
-  { id: "aegis", name: "Aegis", unique: true, cat: "resilience",
+      {
+        desc: "Take 50% less damage while your multiplier is ×3 or higher.",
+        apply: ({ config }) => {
+          config.resilience.flowGuardMult = 0.5;
+        },
+      },
+      {
+        desc: "Take 50% less damage from a ×2 multiplier. At ×3 or higher you also regenerate HP fast.",
+        apply: ({ mods, config }) => {
+          config.resilience.flowGuardMult = 0.5;
+          config.resilience.flowGuardTier = 2;
+          mods.flowRegen = true;
+        },
+      },
+    ],
+  },
+  {
+    id: "aegis",
+    name: "Aegis",
+    unique: true,
+    cat: "resilience",
     desc: "Slam kills grant a shield that blocks the next hit (max 2 shields).",
-    apply: ({ player, mods, config }) => { mods.slamShield = true; player.maxShield = config.resilience.maxShield; },
+    apply: ({ player, mods, config }) => {
+      mods.slamShield = true;
+      player.maxShield = config.resilience.maxShield;
+    },
     tiers: [
-      { desc: "Slam and Perfect-Parry kills grant a shield that blocks the next hit (max 3).", apply: ({ player, mods, config }) => { config.resilience.maxShield = 3; player.maxShield = 3; mods.aegisParry = true; } },
-      { desc: "Slam and Perfect-Parry kills grant a blocking shield (max 4). When a shield breaks, it erupts in a damaging shockwave.", apply: ({ player, mods, config }) => { config.resilience.maxShield = 4; player.maxShield = 4; mods.shieldBurst = true; } },
-    ] },
+      {
+        desc: "Slam and Perfect-Parry kills grant a shield that blocks the next hit (max 3).",
+        apply: ({ player, mods, config }) => {
+          config.resilience.maxShield = 3;
+          player.maxShield = 3;
+          mods.aegisParry = true;
+        },
+      },
+      {
+        desc: "Slam and Perfect-Parry kills grant a blocking shield (max 4). When a shield breaks, it erupts in a damaging shockwave.",
+        apply: ({ player, mods, config }) => {
+          config.resilience.maxShield = 4;
+          player.maxShield = 4;
+          mods.shieldBurst = true;
+        },
+      },
+    ],
+  },
 
   // ---- skill-expression abilities ----
-  { id: "phase_step", name: "Phase Step", unique: true, cat: "parry",
+  {
+    id: "phase_step",
+    name: "Phase Step",
+    unique: true,
+    cat: "parry",
     desc: "Dash through an enemy shot to deflect it — turn defense into offense.",
-    apply: ({ mods }) => { mods.phaseStep = true; } },
-  { id: "backfire", name: "Backfire", unique: true, cat: "parry", desc: "Your reflected shots STUN the enemies they strike.",
-    apply: ({ mods }) => { mods.parryStun = true; } },
-  { id: "crater", name: "Crater", unique: true, cat: "offense",
+    apply: ({ mods }) => {
+      mods.phaseStep = true;
+    },
+  },
+  {
+    id: "backfire",
+    name: "Backfire",
+    unique: true,
+    cat: "parry",
+    desc: "Your reflected shots STUN the enemies they strike.",
+    apply: ({ mods }) => {
+      mods.parryStun = true;
+    },
+  },
+  {
+    id: "crater",
+    name: "Crater",
+    unique: true,
+    cat: "offense",
     desc: "Power Slams (slams from a fast fall) erupt in a shockwave that grows with fall speed.",
-    apply: ({ mods }) => { mods.crater = true; } },
-  { id: "aerial_rave", name: "Aerial Rave", unique: true, cat: "offense",
+    apply: ({ mods }) => {
+      mods.crater = true;
+    },
+  },
+  {
+    id: "aerial_rave",
+    name: "Aerial Rave",
+    unique: true,
+    cat: "offense",
     desc: "Staying airborne ramps up your swing damage over time (up to +50%).",
-    apply: ({ mods }) => { mods.aerialRave = 0.25; },
+    apply: ({ mods }) => {
+      mods.aerialRave = 0.25;
+    },
     tiers: [
-      { desc: "Staying airborne ramps up your swing damage much faster (up to +80%).", apply: ({ mods, config }) => { mods.aerialRave = 0.42; config.skill.aerialRaveCap = 0.8; } },
-      { desc: "Staying airborne ramps up your swing damage incredibly fast (up to +130%).", apply: ({ mods, config }) => { mods.aerialRave = 0.6; config.skill.aerialRaveCap = 1.3; } },
-    ] },
+      {
+        desc: "Staying airborne ramps up your swing damage much faster (up to +80%).",
+        apply: ({ mods, config }) => {
+          mods.aerialRave = 0.42;
+          config.skill.aerialRaveCap = 0.8;
+        },
+      },
+      {
+        desc: "Staying airborne ramps up your swing damage incredibly fast (up to +130%).",
+        apply: ({ mods, config }) => {
+          mods.aerialRave = 0.6;
+          config.skill.aerialRaveCap = 1.3;
+        },
+      },
+    ],
+  },
 
-  { id: "seismic_slam", name: "Seismic Slam", unique: true, cat: "offense", desc: "Slams blast nearby enemies for 22.",
-    apply: (ctx) => { bindUpgradeHook("seismic_slam", ctx); } },
-  { id: "detonate", name: "Detonate", unique: true, cat: "offense", desc: "Kills explode for 18 to nearby foes.",
-    apply: (ctx) => { bindUpgradeHook("detonate", ctx); } },
-  { id: "adrenaline", name: "Adrenaline", unique: true, cat: "mobility", desc: "Kills instantly refresh your dash.",
-    apply: (ctx) => { bindUpgradeHook("adrenaline", ctx); } },
+  {
+    id: "seismic_slam",
+    name: "Seismic Slam",
+    unique: true,
+    cat: "offense",
+    desc: "Slams blast nearby enemies for 22.",
+    apply: (ctx) => {
+      bindUpgradeHook("seismic_slam", ctx);
+    },
+  },
+  {
+    id: "detonate",
+    name: "Detonate",
+    unique: true,
+    cat: "offense",
+    desc: "Kills explode for 18 to nearby foes.",
+    apply: (ctx) => {
+      bindUpgradeHook("detonate", ctx);
+    },
+  },
+  {
+    id: "adrenaline",
+    name: "Adrenaline",
+    unique: true,
+    cat: "mobility",
+    desc: "Kills instantly refresh your dash.",
+    apply: (ctx) => {
+      bindUpgradeHook("adrenaline", ctx);
+    },
+  },
 
   // Overdrive interaction ramp, capped in the combat loop so it cannot snowball
-  { id: "throw_momentum", name: "Overdrive", unique: true, cat: "throw",
+  {
+    id: "throw_momentum",
+    name: "Overdrive",
+    unique: true,
+    cat: "throw",
     desc: "Successful throw interactions build speed and power during the active throw.",
-    apply: ({ mods }) => { mods.overdrive = 0.10; mods.throwRamp = 0.10; },
+    apply: ({ mods }) => {
+      mods.overdrive = 0.1;
+      mods.throwRamp = 0.1;
+    },
     tiers: [
-      { desc: "Throw interactions build speed and power much faster.", apply: ({ mods }) => { mods.overdrive = 0.18; mods.throwRamp = 0.18; } },
-      { desc: "Throw interactions heavily build speed and power, and briefly STUN direct targets.", apply: ({ mods }) => { mods.overdrive = 0.26; mods.throwRamp = 0.26; mods.razorStun = true; } },
-    ] },
-  { id: "throw_giant", name: "Greatblade", unique: true, cat: "throw",
+      {
+        desc: "Throw interactions build speed and power much faster.",
+        apply: ({ mods }) => {
+          mods.overdrive = 0.18;
+          mods.throwRamp = 0.18;
+        },
+      },
+      {
+        desc: "Throw interactions heavily build speed and power, and briefly STUN direct targets.",
+        apply: ({ mods }) => {
+          mods.overdrive = 0.26;
+          mods.throwRamp = 0.26;
+          mods.razorStun = true;
+        },
+      },
+    ],
+  },
+  {
+    id: "throw_giant",
+    name: "Greatblade",
+    unique: true,
+    cat: "throw",
     desc: "The blade becomes huge while thrown (normal size in hand).",
-    apply: ({ blade }) => { blade.throwSizeMult = 1.7; } },
-  { id: "parry_pierce", name: "Piercing Parry", unique: true, cat: "parry",
+    apply: ({ blade }) => {
+      blade.throwSizeMult = 1.7;
+    },
+  },
+  {
+    id: "parry_pierce",
+    name: "Piercing Parry",
+    unique: true,
+    cat: "parry",
     desc: "Parried projectiles pierce through every enemy.",
-    apply: ({ mods }) => { mods.deflectPierce = true; } },
-  { id: "parry_split", name: "Scatter Parry", unique: true, cat: "parry",
+    apply: ({ mods }) => {
+      mods.deflectPierce = true;
+    },
+  },
+  {
+    id: "parry_split",
+    name: "Scatter Parry",
+    unique: true,
+    cat: "parry",
     desc: "Parried projectiles split into 3 that ricochet up to 3 times.",
-    apply: ({ mods }) => { mods.deflectSplit = true; } },
+    apply: ({ mods }) => {
+      mods.deflectSplit = true;
+    },
+  },
 
-  { id: "tempest", name: "Tempest", unique: true, cat: "offense",
+  {
+    id: "tempest",
+    name: "Tempest",
+    unique: true,
+    cat: "offense",
     desc: "Rising updrafts also launch all nearby enemies skyward.",
-    apply: ({ mods }) => { mods.tempest = true; } },
-  { id: "storm_recall", name: "Second Pass", unique: true, cat: "throw",
+    apply: ({ mods }) => {
+      mods.tempest = true;
+    },
+  },
+  {
+    id: "storm_recall",
+    name: "Second Pass",
+    unique: true,
+    cat: "throw",
     desc: "Your throw follow-up (throw again while it is out) deals much more damage.",
-    apply: ({ mods }) => { mods.secondPass = 1.85; mods.stormRecall = true; },
+    apply: ({ mods }) => {
+      mods.secondPass = 1.85;
+      mods.stormRecall = true;
+    },
     tiers: [
-      { desc: "Your throw follow-up deals +140% damage and hits with more force.", apply: ({ mods }) => { mods.secondPass = 2.4; mods.stormMult = 2.4; } },
-      { desc: "Your throw follow-up deals +200% damage. Catching the weapon unleashes a shockwave.", apply: ({ mods }) => { mods.secondPass = 3.0; mods.stormMult = 3.0; mods.stormBurst = true; } },
-    ] },
-  { id: "phantom_dash", name: "Phantom Dash", unique: true, cat: "mobility",
+      {
+        desc: "Your throw follow-up deals +140% damage and hits with more force.",
+        apply: ({ mods }) => {
+          mods.secondPass = 2.4;
+          mods.stormMult = 2.4;
+        },
+      },
+      {
+        desc: "Your throw follow-up deals +200% damage. Catching the weapon unleashes a shockwave.",
+        apply: ({ mods }) => {
+          mods.secondPass = 3.0;
+          mods.stormMult = 3.0;
+          mods.stormBurst = true;
+        },
+      },
+    ],
+  },
+  {
+    id: "phantom_dash",
+    name: "Phantom Dash",
+    unique: true,
+    cat: "mobility",
     desc: "Dashing directly through enemies unleashes a damaging phase-slice.",
-    apply: ({ mods }) => { mods.phantomDash = 26; },
+    apply: ({ mods }) => {
+      mods.phantomDash = 26;
+    },
     tiers: [
-      { desc: "Dashing directly through enemies unleashes a much heavier phase-slice.", apply: ({ mods }) => { mods.phantomDash = 44; } },
-      { desc: "Dashing directly through enemies unleashes a devastating phase-slice. If the slice kills, your dash instantly REFUNDS.", apply: ({ mods }) => { mods.phantomDash = 64; mods.phantomRefund = true; } },
-    ] },
-  { id: "boomerang", name: "Remote Link", unique: true, cat: "throw",
+      {
+        desc: "Dashing directly through enemies unleashes a much heavier phase-slice.",
+        apply: ({ mods }) => {
+          mods.phantomDash = 44;
+        },
+      },
+      {
+        desc: "Dashing directly through enemies unleashes a devastating phase-slice. If the slice kills, your dash instantly REFUNDS.",
+        apply: ({ mods }) => {
+          mods.phantomDash = 64;
+          mods.phantomRefund = true;
+        },
+      },
+    ],
+  },
+  {
+    id: "boomerang",
+    name: "Remote Link",
+    unique: true,
+    cat: "throw",
     desc: "Control your weapon from greater distance and for longer.",
-    apply: ({ blade, mods }) => { blade.freeRecall = true; blade.channelMods.remoteRange *= 1.65; blade.channelMods.controlDuration *= 1.45; mods.remoteLink = true; } },
-  { id: "ricochet", name: "Redirect", unique: true, cat: "throw",
+    apply: ({ blade, mods }) => {
+      blade.freeRecall = true;
+      blade.channelMods.remoteRange *= 1.65;
+      blade.channelMods.controlDuration *= 1.45;
+      mods.remoteLink = true;
+    },
+  },
+  {
+    id: "ricochet",
+    name: "Redirect",
+    unique: true,
+    cat: "throw",
     desc: "Thrown attacks gain an additional route change toward another target.",
-    apply: ({ mods }) => { mods.redirect = true; mods.ricochet = true; } },
-  { id: "vortex_recall", name: "Collapse", unique: true, cat: "throw",
+    apply: ({ mods }) => {
+      mods.redirect = true;
+      mods.ricochet = true;
+    },
+  },
+  {
+    id: "vortex_recall",
+    name: "Collapse",
+    unique: true,
+    cat: "throw",
     desc: "Your weapon’s return action pulls nearby enemies into its path.",
-    apply: ({ mods }) => { mods.collapse = true; mods.vortexRecall = true; } },
-  { id: "slipstream", name: "Slipstream", unique: true, cat: "mobility",
+    apply: ({ mods }) => {
+      mods.collapse = true;
+      mods.vortexRecall = true;
+    },
+  },
+  {
+    id: "slipstream",
+    name: "Slipstream",
+    unique: true,
+    cat: "mobility",
     desc: "For a moment after a dash, your hits land for +35% — dash in, strike hard.",
-    apply: ({ mods }) => { mods.slipstream = true; } },
-  { id: "berserk", name: "Berserker", unique: true, cat: "offense",
+    apply: ({ mods }) => {
+      mods.slipstream = true;
+    },
+  },
+  {
+    id: "berserk",
+    name: "Berserker",
+    unique: true,
+    cat: "offense",
     desc: "+25% damage while below half HP.",
-    apply: ({ mods }) => { mods.berserk = true; } },
-  { id: "last_stand", name: "Last Stand", unique: true, rare: true, cat: "resilience",
+    apply: ({ mods }) => {
+      mods.berserk = true;
+    },
+  },
+  {
+    id: "last_stand",
+    name: "Last Stand",
+    unique: true,
+    rare: true,
+    cat: "resilience",
     desc: "Once per run, refuse to fall — rise from a killing blow with 40% HP.",
-    apply: ({ player }) => { player.abilityRevives += 1; } },
+    apply: ({ player }) => {
+      player.abilityRevives += 1;
+    },
+  },
 
   // ===== more stackable upgrades — keep every category at 4+ =====
-  { id: "whetstone", name: "Whetstone", unique: false, cat: "throw", desc: "Your throw follow-up (throw again while it is out) hits +25% harder.",
-    apply: ({ blade }) => { blade.channelMods.secondaryPower *= 1.25; } },
-  { id: "gyroblade", name: "Gyroblade", unique: false, cat: "throw", desc: "The thrown blade flies and returns 12% faster.",
-    apply: ({ blade }) => { blade.channelMods.throwSpeed *= 1.12; blade.channelMods.returnSpeed *= 1.12; } },
-  { id: "quickdraw", name: "Quickdraw", unique: false, cat: "throw", desc: "+ recall range, and the blade snaps back faster.",
-    apply: ({ blade }) => { blade.channelMods.remoteRange *= 1.20; blade.channelMods.returnSpeed *= 1.10; } },
-  { id: "steady_hand", name: "Steady Hand", unique: false, cat: "parry", desc: "Perfect parries land more easily — a more forgiving window.",
-    apply: ({ config }) => { config.blade.perfectSpeed *= 0.93; } },
-  { id: "wide_guard", name: "Wide Guard", unique: false, cat: "parry", desc: "Deflect shots even with slower swings.",
-    apply: ({ config }) => { config.blade.deflectMinSpeed *= 0.87; } },
-  { id: "counterforce", name: "Counterforce", unique: false, cat: "parry", desc: "Reflected shots fly faster and hit +18% harder.",
-    apply: ({ config }) => { config.blade.deflectBoost *= 1.10; config.blade.deflectDmgMult *= 1.18; } },
-  { id: "tailwind", name: "Tailwind", unique: false, cat: "mobility", desc: "Higher jump and sharper air control.",
-    apply: ({ config }) => { config.player.jumpSpeed *= 1.05; config.player.airAccel *= 1.16; } },
-  { id: "kinetic", name: "Kinetic Charge", unique: false, cat: "mobility", desc: "+9% dash distance, and longer dash i-frames.",
-    apply: ({ config }) => { config.dash.speed *= 1.09; config.dash.iframe *= 1.16; } },
-  { id: "bulwark", name: "Bulwark", unique: false, cat: "resilience", desc: "Recover an extra 10 HP each time you clear a wave.",
-    apply: ({ mods }) => { mods.waveHeal += 10; } },
-  { id: "showtime", name: "Showtime", unique: false, cat: "utility", desc: "Your trick meter lingers — it drains 25% slower.",
-    apply: ({ config }) => { config.trick.decay *= 1.3; config.trick.drainRate *= 0.8; } },
-  { id: "fortune", name: "Fortune", unique: false, maxStacks: 5, cat: "utility", desc: "+12% final coins. Milestone bonuses unlock at stacks 3 and 5.",
-    apply: () => undefined },
+  {
+    id: "whetstone",
+    name: "Whetstone",
+    unique: false,
+    cat: "throw",
+    desc: "Your throw follow-up (throw again while it is out) hits +25% harder.",
+    apply: ({ blade }) => {
+      blade.channelMods.secondaryPower *= 1.25;
+    },
+  },
+  {
+    id: "gyroblade",
+    name: "Gyroblade",
+    unique: false,
+    cat: "throw",
+    desc: "The thrown blade flies and returns 12% faster.",
+    apply: ({ blade }) => {
+      blade.channelMods.throwSpeed *= 1.12;
+      blade.channelMods.returnSpeed *= 1.12;
+    },
+  },
+  {
+    id: "quickdraw",
+    name: "Quickdraw",
+    unique: false,
+    cat: "throw",
+    desc: "+ recall range, and the blade snaps back faster.",
+    apply: ({ blade }) => {
+      blade.channelMods.remoteRange *= 1.2;
+      blade.channelMods.returnSpeed *= 1.1;
+    },
+  },
+  {
+    id: "steady_hand",
+    name: "Steady Hand",
+    unique: false,
+    cat: "parry",
+    desc: "Perfect parries land more easily — a more forgiving window.",
+    apply: ({ config }) => {
+      config.blade.perfectSpeed *= 0.93;
+    },
+  },
+  {
+    id: "wide_guard",
+    name: "Wide Guard",
+    unique: false,
+    cat: "parry",
+    desc: "Deflect shots even with slower swings.",
+    apply: ({ config }) => {
+      config.blade.deflectMinSpeed *= 0.87;
+    },
+  },
+  {
+    id: "counterforce",
+    name: "Counterforce",
+    unique: false,
+    cat: "parry",
+    desc: "Reflected shots fly faster and hit +18% harder.",
+    apply: ({ config }) => {
+      config.blade.deflectBoost *= 1.1;
+      config.blade.deflectDmgMult *= 1.18;
+    },
+  },
+  {
+    id: "tailwind",
+    name: "Tailwind",
+    unique: false,
+    cat: "mobility",
+    desc: "Higher jump and sharper air control.",
+    apply: ({ config }) => {
+      config.player.jumpSpeed *= 1.05;
+      config.player.airAccel *= 1.16;
+    },
+  },
+  {
+    id: "kinetic",
+    name: "Kinetic Charge",
+    unique: false,
+    cat: "mobility",
+    desc: "+9% dash distance, and longer dash i-frames.",
+    apply: ({ config }) => {
+      config.dash.speed *= 1.09;
+      config.dash.iframe *= 1.16;
+    },
+  },
+  {
+    id: "bulwark",
+    name: "Bulwark",
+    unique: false,
+    cat: "resilience",
+    desc: "Recover an extra 10 HP each time you clear a wave.",
+    apply: ({ mods }) => {
+      mods.waveHeal += 10;
+    },
+  },
+  {
+    id: "showtime",
+    name: "Showtime",
+    unique: false,
+    cat: "utility",
+    desc: "Your trick meter lingers — it drains 25% slower.",
+    apply: ({ config }) => {
+      config.trick.decay *= 1.3;
+      config.trick.drainRate *= 0.8;
+    },
+  },
+  {
+    id: "fortune",
+    name: "Fortune",
+    unique: false,
+    maxStacks: 5,
+    cat: "utility",
+    desc: "+12% final coins. Milestone bonuses unlock at stacks 3 and 5.",
+    apply: () => undefined,
+  },
 
   // ===== more SPECIAL abilities (tiered; keep every combat category at 3+) =====
   // --- OFFENSE ---
-  { id: "rupture", name: "Rupture", unique: true, cat: "offense",
+  {
+    id: "rupture",
+    name: "Rupture",
+    unique: true,
+    cat: "offense",
     desc: "Cuts inflict BLEED—a stacking wound that damages over time.",
-    apply: ({ mods, config }) => { mods.bleedHit = 1; bindUpgradeHook("rupture", { mods, config }); },
+    apply: ({ mods, config }) => {
+      mods.bleedHit = 1;
+      bindUpgradeHook("rupture", { mods, config });
+    },
     tiers: [
-      { desc: "Cuts inflict 2 BLEED stacks. Power Slams instantly DETONATE nearby bleed for a burst of damage.", apply: ({ mods }) => { mods.bleedHit = 2; mods.bleedDetonate = true; } },
-      { desc: "Cuts inflict 3 BLEED stacks. Slams DETONATE bleed, and dying bleeding enemies splash their stacks onto the nearby crowd.", apply: ({ mods }) => { mods.bleedHit = 3; mods.bleedNova = true; } },
-    ] },
-  { id: "sunder", name: "Sunder", unique: true, cat: "offense",
+      {
+        desc: "Cuts inflict 2 BLEED stacks. Power Slams instantly DETONATE nearby bleed for a burst of damage.",
+        apply: ({ mods }) => {
+          mods.bleedHit = 2;
+          mods.bleedDetonate = true;
+        },
+      },
+      {
+        desc: "Cuts inflict 3 BLEED stacks. Slams DETONATE bleed, and dying bleeding enemies splash their stacks onto the nearby crowd.",
+        apply: ({ mods }) => {
+          mods.bleedHit = 3;
+          mods.bleedNova = true;
+        },
+      },
+    ],
+  },
+  {
+    id: "sunder",
+    name: "Sunder",
+    unique: true,
+    cat: "offense",
     desc: "Hits MARK enemies, making them take +30% damage from all sources for 4s.",
-    apply: ({ mods, config }) => { mods.sunderHit = true; bindUpgradeHook("sunder", { mods, config }); },
+    apply: ({ mods, config }) => {
+      mods.sunderHit = true;
+      bindUpgradeHook("sunder", { mods, config });
+    },
     tiers: [
-      { desc: "MARKED enemies take +40% damage. Marking armored or shielded foes instantly SHATTERS their guard.", apply: ({ mods, config }) => { config.status.markMult = 1.40; mods.sunderShatter = true; } },
-      { desc: "MARKED enemies take +50% damage. Marks SHATTER guards, and striking a marked foe SPREADS the mark to nearby enemies.", apply: ({ mods, config }) => { config.status.markMult = 1.50; mods.sunderSpread = true; } },
-    ] },
+      {
+        desc: "MARKED enemies take +40% damage. Marking armored or shielded foes instantly SHATTERS their guard.",
+        apply: ({ mods, config }) => {
+          config.status.markMult = 1.4;
+          mods.sunderShatter = true;
+        },
+      },
+      {
+        desc: "MARKED enemies take +50% damage. Marks SHATTER guards, and striking a marked foe SPREADS the mark to nearby enemies.",
+        apply: ({ mods, config }) => {
+          config.status.markMult = 1.5;
+          mods.sunderSpread = true;
+        },
+      },
+    ],
+  },
   // --- THROW ---
-  { id: "impale", name: "Capture", unique: true, cat: "throw",
+  {
+    id: "impale",
+    name: "Capture",
+    unique: true,
+    cat: "throw",
     desc: "Direct throw hits restrict targets and create a weapon-specific control effect.",
-    apply: ({ mods }) => { mods.capture = 1; mods.impale = 3; },
+    apply: ({ mods }) => {
+      mods.capture = 1;
+      mods.impale = 3;
+    },
     tiers: [
-      { desc: "Direct throw hits apply stronger control and heavier BLEED.", apply: ({ mods }) => { mods.capture = 2; mods.impale = 4; mods.impaleAll = true; } },
-      { desc: "Direct hits apply maximum control and BLEED; secondary hits rupture captured wounds.", apply: ({ mods }) => { mods.capture = 3; mods.impale = 5; mods.impaleRecall = true; } },
-    ] },
-  { id: "stormbank", name: "Stormbank", unique: true, cat: "throw",
+      {
+        desc: "Direct throw hits apply stronger control and heavier BLEED.",
+        apply: ({ mods }) => {
+          mods.capture = 2;
+          mods.impale = 4;
+          mods.impaleAll = true;
+        },
+      },
+      {
+        desc: "Direct hits apply maximum control and BLEED; secondary hits rupture captured wounds.",
+        apply: ({ mods }) => {
+          mods.capture = 3;
+          mods.impale = 5;
+          mods.impaleRecall = true;
+        },
+      },
+    ],
+  },
+  {
+    id: "stormbank",
+    name: "Stormbank",
+    unique: true,
+    cat: "throw",
     desc: "Slam, spike and perfect-parry kills bank charge; your next landed throw releases chain lightning.",
     apply: ({ mods, config }) => {
       mods.stormbank = 1;
@@ -485,20 +1081,50 @@ const UPGRADES: readonly UpgradeDefinition[] = [
       bindUpgradeHook("stormbank:resolve", { mods, config });
     },
     tiers: [
-      { desc: "Bank up to 8 charges. Lightning reaches more targets and briefly STUNS them.", apply: ({ mods }) => { mods.stormbank = 2; } },
-      { desc: "Bank up to 10 charges. Discharge leaves a two-second Storm Echo at the impact.", apply: ({ mods }) => { mods.stormbank = 3; } },
-    ] },
-  { id: "overrun", name: "Overrun", unique: true, cat: "offense",
+      {
+        desc: "Bank up to 8 charges. Lightning reaches more targets and briefly STUNS them.",
+        apply: ({ mods }) => {
+          mods.stormbank = 2;
+        },
+      },
+      {
+        desc: "Bank up to 10 charges. Discharge leaves a two-second Storm Echo at the impact.",
+        apply: ({ mods }) => {
+          mods.stormbank = 3;
+        },
+      },
+    ],
+  },
+  {
+    id: "overrun",
+    name: "Overrun",
+    unique: true,
+    cat: "offense",
     desc: "Eliminate enemies quickly after first contact to build damage.",
     apply: ({ mods, config }) => {
       mods.overrun = 1;
       bindUpgradeHook("overrun", { mods, config });
     },
     tiers: [
-      { desc: "Build up to 6 stacks. Each stack also grants +3% movement speed.", apply: ({ mods }) => { mods.overrun = 2; } },
-      { desc: "At maximum stacks, enter REDLINE: stacks cannot decay for four seconds and clean eliminations refresh it.", apply: ({ mods }) => { mods.overrun = 3; } },
-    ] },
-  { id: "sever", name: "Sever", unique: true, cat: "parry",
+      {
+        desc: "Build up to 6 stacks. Each stack also grants +3% movement speed.",
+        apply: ({ mods }) => {
+          mods.overrun = 2;
+        },
+      },
+      {
+        desc: "At maximum stacks, enter REDLINE: stacks cannot decay for four seconds and clean eliminations refresh it.",
+        apply: ({ mods }) => {
+          mods.overrun = 3;
+        },
+      },
+    ],
+  },
+  {
+    id: "sever",
+    name: "Sever",
+    unique: true,
+    cat: "parry",
     desc: "Perfect parries Sever enemy power, reducing the damage they deal.",
     apply: ({ mods, config }) => {
       mods.sever = 1;
@@ -506,39 +1132,129 @@ const UPGRADES: readonly UpgradeDefinition[] = [
       bindUpgradeHook("sever:reflected", { mods, config });
     },
     tiers: [
-      { desc: "Sever is stronger, and enemies hit by reflected projectiles are also Severed.", apply: ({ mods }) => { mods.sever = 2; } },
-      { desc: "Sever reaches maximum strength. Severed deaths pulse the effect to nearby enemies.", apply: ({ mods }) => { mods.sever = 3; } },
-    ] },
+      {
+        desc: "Sever is stronger, and enemies hit by reflected projectiles are also Severed.",
+        apply: ({ mods }) => {
+          mods.sever = 2;
+        },
+      },
+      {
+        desc: "Sever reaches maximum strength. Severed deaths pulse the effect to nearby enemies.",
+        apply: ({ mods }) => {
+          mods.sever = 3;
+        },
+      },
+    ],
+  },
   // --- PARRY ---
-  { id: "tempo", name: "Tempo", unique: true, cat: "parry",
+  {
+    id: "tempo",
+    name: "Tempo",
+    unique: true,
+    cat: "parry",
     desc: "Perfect parries grant TEMPO (+25% damage, faster speed, refreshes dash) for 4s.",
-    apply: ({ mods, config }) => { mods.tempo = 0.25; bindUpgradeHook("tempo", { mods, config }); },
+    apply: ({ mods, config }) => {
+      mods.tempo = 0.25;
+      bindUpgradeHook("tempo", { mods, config });
+    },
     tiers: [
-      { desc: "Perfect parries grant TEMPO (+30% damage, faster speed, refreshes dash) for 6s. Stacks up to 2 times.", apply: ({ mods }) => { mods.tempo = 0.3; mods.tempoMax = 2; } },
-      { desc: "Perfect parries plunge the room into deep slow-mo and grant TEMPO (+34% damage per stack, max 2, faster speed, refreshes dash).", apply: ({ mods }) => { mods.tempo = 0.34; mods.tempoSurge = true; } },
-    ] },
-  { id: "backlash", name: "Backlash", unique: true, cat: "parry",
+      {
+        desc: "Perfect parries grant TEMPO (+30% damage, faster speed, refreshes dash) for 6s. Stacks up to 2 times.",
+        apply: ({ mods }) => {
+          mods.tempo = 0.3;
+          mods.tempoMax = 2;
+        },
+      },
+      {
+        desc: "Perfect parries plunge the room into deep slow-mo and grant TEMPO (+34% damage per stack, max 2, faster speed, refreshes dash).",
+        apply: ({ mods }) => {
+          mods.tempo = 0.34;
+          mods.tempoSurge = true;
+        },
+      },
+    ],
+  },
+  {
+    id: "backlash",
+    name: "Backlash",
+    unique: true,
+    cat: "parry",
     desc: "A perfect parry erupts a COUNTER-SHOCK, damaging and stunning nearby enemies.",
-    apply: ({ mods, config }) => { mods.backlash = 26; bindUpgradeHook("backlash", { mods, config }); },
+    apply: ({ mods, config }) => {
+      mods.backlash = 26;
+      bindUpgradeHook("backlash", { mods, config });
+    },
     tiers: [
-      { desc: "A perfect parry erupts a larger COUNTER-SHOCK, damaging, stunning, and MARKING nearby enemies.", apply: ({ mods }) => { mods.backlash = 44; mods.backlashMark = true; } },
-      { desc: "A perfect parry erupts a massive COUNTER-SHOCK (damages, stuns, marks), and leaves you completely INVINCIBLE for a beat.", apply: ({ mods }) => { mods.backlash = 70; mods.backlashSurge = true; } },
-    ] },
+      {
+        desc: "A perfect parry erupts a larger COUNTER-SHOCK, damaging, stunning, and MARKING nearby enemies.",
+        apply: ({ mods }) => {
+          mods.backlash = 44;
+          mods.backlashMark = true;
+        },
+      },
+      {
+        desc: "A perfect parry erupts a massive COUNTER-SHOCK (damages, stuns, marks), and leaves you completely INVINCIBLE for a beat.",
+        apply: ({ mods }) => {
+          mods.backlash = 70;
+          mods.backlashSurge = true;
+        },
+      },
+    ],
+  },
   // --- MOBILITY ---
-  { id: "cinder", name: "Cinder Trail", unique: true, cat: "mobility",
+  {
+    id: "cinder",
+    name: "Cinder Trail",
+    unique: true,
+    cat: "mobility",
     desc: "Dashing ignites enemies passed through, inflicting BURN damage over time.",
-    apply: ({ mods }) => { mods.cinder = true; },
+    apply: ({ mods }) => {
+      mods.cinder = true;
+    },
     tiers: [
-      { desc: "Dashing inflicts a hotter BURN that damages and SLOWS enemies over time.", apply: ({ mods, config }) => { config.status.burnDps = 30; config.status.burnDur = 3.4; mods.cinderSlow = true; } },
-      { desc: "Dashing inflicts a massive, slowing BURN. Dying burned enemies erupt, igniting everything nearby.", apply: ({ mods, config }) => { config.status.burnDps = 34; mods.cinderNova = true; } },
-    ] },
-  { id: "concussive", name: "Concussive Dash", unique: true, cat: "mobility",
+      {
+        desc: "Dashing inflicts a hotter BURN that damages and SLOWS enemies over time.",
+        apply: ({ mods, config }) => {
+          config.status.burnDps = 30;
+          config.status.burnDur = 3.4;
+          mods.cinderSlow = true;
+        },
+      },
+      {
+        desc: "Dashing inflicts a massive, slowing BURN. Dying burned enemies erupt, igniting everything nearby.",
+        apply: ({ mods, config }) => {
+          config.status.burnDps = 34;
+          mods.cinderNova = true;
+        },
+      },
+    ],
+  },
+  {
+    id: "concussive",
+    name: "Concussive Dash",
+    unique: true,
+    cat: "mobility",
     desc: "Ending a dash erupts a shockwave that deals damage and knockback.",
-    apply: ({ mods }) => { mods.concussive = 24; },
+    apply: ({ mods }) => {
+      mods.concussive = 24;
+    },
     tiers: [
-      { desc: "Ending a dash erupts a heavier shockwave that deals damage, knockback, and STUNS.", apply: ({ mods }) => { mods.concussive = 42; mods.concStun = true; } },
-      { desc: "Ending a dash erupts a massive stunning shockwave. Hitting 2+ enemies instantly REFUNDS your dash.", apply: ({ mods }) => { mods.concussive = 60; mods.concRefund = true; } },
-    ] },
+      {
+        desc: "Ending a dash erupts a heavier shockwave that deals damage, knockback, and STUNS.",
+        apply: ({ mods }) => {
+          mods.concussive = 42;
+          mods.concStun = true;
+        },
+      },
+      {
+        desc: "Ending a dash erupts a massive stunning shockwave. Hitting 2+ enemies instantly REFUNDS your dash.",
+        apply: ({ mods }) => {
+          mods.concussive = 60;
+          mods.concRefund = true;
+        },
+      },
+    ],
+  },
 ];
 
 /** Authored order is the stable progression catalog order used by exported references. */
@@ -578,18 +1294,22 @@ function rollUpgrades(n: number, mods: UpgradeMods | null | undefined, opts?: Ro
   if (!opts?.random) throw new TypeError("rollUpgrades requires a deterministic RandomSource");
   const owned = mods?.owned ?? {};
   const excluded = new Set(opts.excludeIds ?? []);
-  const pool = UPGRADES
-    .filter((u) => !excluded.has(u.id))
+  const pool = UPGRADES.filter((u) => !excluded.has(u.id))
     .filter((u) => !(u.unique && owned[u.id]))
     .filter((u) => !(u.maxStacks !== undefined && (owned[u.id] ?? 0) >= u.maxStacks))
     .map((u) => ({ u, w: upWeight(u) }));
   const out: UpgradeDefinition[] = [];
   while (out.length < n && pool.length) {
-    let total = 0; for (const e of pool) total += e.w;
-    let r = opts.random.next() * total, idx = 0;
+    let total = 0;
+    for (const e of pool) total += e.w;
+    let r = opts.random.next() * total,
+      idx = 0;
     for (let i = 0; i < pool.length; i++) {
       const entry = pool[i];
-      if (entry && (r -= entry.w) <= 0) { idx = i; break; }
+      if (entry && (r -= entry.w) <= 0) {
+        idx = i;
+        break;
+      }
     }
     const selected = pool.splice(idx, 1)[0];
     if (selected) out.push(selected.u);
@@ -598,7 +1318,7 @@ function rollUpgrades(n: number, mods: UpgradeMods | null | undefined, opts?: Ro
   if (opts.forceSpecial && !out.some((u) => u.tiers)) {
     const specials = UPGRADES.filter((u) => u.tiers && !owned[u.id] && !excluded.has(u.id) && !out.includes(u));
     if (specials.length) {
-      let ri = out.findIndex((u) => !u.tiers && !u.unique);   // replace a stack if possible
+      let ri = out.findIndex((u) => !u.tiers && !u.unique); // replace a stack if possible
       if (ri < 0) ri = out.findIndex((u) => !u.tiers);
       if (ri < 0) ri = out.length - 1;
       const special = specials[Math.floor(opts.random.next() * specials.length)];
@@ -612,7 +1332,7 @@ function applyUpgrade(up: UpgradeDefinition, ctx: UpgradeApplyContext): void {
   assertUpgradeContext(ctx);
   ctx.mods.owned[up.id] = (ctx.mods.owned[up.id] ?? 0) + 1;
   ctx.mods.ownedList.push(up.id);
-  ctx.mods.tier[up.id] ??= 1;   // acquired at tier 1
+  ctx.mods.tier[up.id] ??= 1; // acquired at tier 1
   up.apply(ctx);
 }
 
@@ -623,8 +1343,8 @@ function availableTierUps(mods: UpgradeMods): UpgradeDefinition[] {
   for (const id in mods.owned) {
     const up = UPGRADES.find((u) => u.id === id);
     if (!up?.tiers) continue;
-    const cur = mods.tier[id] ?? 1;       // current tier (1..3)
-    if (cur - 1 < up.tiers.length) out.push(up);   // a further tier exists
+    const cur = mods.tier[id] ?? 1; // current tier (1..3)
+    if (cur - 1 < up.tiers.length) out.push(up); // a further tier exists
   }
   return out;
 }

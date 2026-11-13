@@ -9,8 +9,13 @@ function fakeCanvas() {
   const log = { fonts: [] as string[], measured: 0 };
   let font = "initial";
   const ctx = {
-    get font() { return font; },
-    set font(value: string) { log.fonts.push(value); font = value; },
+    get font() {
+      return font;
+    },
+    set font(value: string) {
+      log.fonts.push(value);
+      font = value;
+    },
     measureText(text: string) {
       log.measured += 1;
       return { width: text.length * Number(/(\d+)px/u.exec(font)?.[1] ?? 0) * 0.6 };
@@ -20,7 +25,10 @@ function fakeCanvas() {
 }
 
 function fakeUi(brand: string): UiRuntime {
-  return { t: { font: { brand } }, font: (size: number, bold?: boolean) => `${bold ? "bold " : ""}${String(size)}px ${brand}` } as unknown as UiRuntime;
+  return {
+    t: { font: { brand } },
+    font: (size: number, bold?: boolean) => `${bold ? "bold " : ""}${String(size)}px ${brand}`,
+  } as unknown as UiRuntime;
 }
 
 describe("text layout cache", () => {
@@ -28,10 +36,15 @@ describe("text layout cache", () => {
     const options = { size: 20, floor: 13, maxLines: 2 };
     const reference = fakeCanvas();
     const ui = fakeUi("Mono");
-    const expected = fitTextLayout((value, size) => {
-      reference.ctx.font = ui.font(size, true);
-      return reference.ctx.measureText(value).width;
-    }, "TRAINING OPERATIONS CENTRE", 140, options);
+    const expected = fitTextLayout(
+      (value, size) => {
+        reference.ctx.font = ui.font(size, true);
+        return reference.ctx.measureText(value).width;
+      },
+      "TRAINING OPERATIONS CENTRE",
+      140,
+      options,
+    );
     const cache = new TextLayoutCache();
     const live = fakeCanvas();
     const first = cache.fit(ui, live.ctx, "TRAINING OPERATIONS CENTRE", 140, options, true);
@@ -68,7 +81,8 @@ describe("text layout cache", () => {
     const cache = new TextLayoutCache();
     const { ctx, log } = fakeCanvas();
     const ui = fakeUi("Mono");
-    for (let index = 0; index < 1_100; index += 1) cache.fit(ui, ctx, `label ${String(index)}`, 500, { size: 10 }, false);
+    for (let index = 0; index < 1_100; index += 1)
+      cache.fit(ui, ctx, `label ${String(index)}`, 500, { size: 10 }, false);
     const measured = log.measured;
     cache.fit(ui, ctx, "label 0", 500, { size: 10 }, false);
     expect(log.measured).toBe(measured + 1);

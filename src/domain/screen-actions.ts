@@ -62,7 +62,11 @@ export type ScreenAction =
   | { readonly type: "replay.challenge.start"; readonly id: string }
   | { readonly type: "replay.coach.open" }
   | { readonly type: "replay.coach.viewMoment"; readonly id: string }
-  | { readonly type: "replay.coach.control"; readonly command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section"; readonly delta: number }
+  | {
+      readonly type: "replay.coach.control";
+      readonly command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section";
+      readonly delta: number;
+    }
   | { readonly type: "replay.coach.selectBaseline"; readonly id: string }
   | { readonly type: "replay.coach.practice"; readonly findingId: string }
   | { readonly type: "replay.runDna.toggle" }
@@ -83,13 +87,26 @@ export type ScreenAction =
   | { readonly type: "training-archive.open" }
   | { readonly type: "training-archive.retry" }
   | { readonly type: "training-archive.dagger.advance"; readonly id: string }
-  | { readonly type: "training-archive.dagger.review"; readonly id: string; readonly correctionHash: string; readonly disposition: "accepted" | "rejected" }
+  | {
+      readonly type: "training-archive.dagger.review";
+      readonly id: string;
+      readonly correctionHash: string;
+      readonly disposition: "accepted" | "rejected";
+    }
   | { readonly type: "training-archive.record.withdrawModelTraining"; readonly candidateHash: string }
-  | { readonly type: "training-archive.humanCalibration.optIn"; readonly consent: "anonymous-improvement" | "public-training" }
+  | {
+      readonly type: "training-archive.humanCalibration.optIn";
+      readonly consent: "anonymous-improvement" | "public-training";
+    }
   | { readonly type: "training-archive.humanCalibration.revoke" }
   | { readonly type: "academy.retry" }
   | { readonly type: "academy.dagger.advance"; readonly id: string }
-  | { readonly type: "academy.dagger.review"; readonly id: string; readonly correctionHash: string; readonly disposition: "accepted" | "rejected" }
+  | {
+      readonly type: "academy.dagger.review";
+      readonly id: string;
+      readonly correctionHash: string;
+      readonly disposition: "accepted" | "rejected";
+    }
   | { readonly type: "academy.record.withdrawModelTraining"; readonly candidateHash: string }
   | { readonly type: "academy.humanCalibration.optIn"; readonly consent: "anonymous-improvement" | "public-training" }
   | { readonly type: "academy.humanCalibration.revoke" }
@@ -107,10 +124,32 @@ export type ScreenAction =
   | { readonly type: "game-agent.open" }
   | { readonly type: "run-monitor.open" }
   | { readonly type: "run-monitor.control"; readonly command: "start" | "pause" | "resume" | "stop" }
-  | { readonly type: "replay.hub.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career" }
+  | {
+      readonly type: "replay.hub.open";
+      readonly destination:
+        | "academy"
+        | "training-archive"
+        | "training-operations"
+        | "foundry"
+        | "vault"
+        | "watch"
+        | "botevidence"
+        | "career";
+    }
   | { readonly type: "replay.hub.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
-  | { readonly type: "ghostlab.open"; readonly destination: "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career" }
+  | {
+      readonly type: "ghostlab.open";
+      readonly destination:
+        | "academy"
+        | "training-archive"
+        | "training-operations"
+        | "foundry"
+        | "vault"
+        | "watch"
+        | "botevidence"
+        | "career";
+    }
   | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }
@@ -131,4 +170,24 @@ export type ScreenAction =
   | { readonly type: "results.watchReplay" }
   | { readonly type: "results.descendAgain" }
   | { readonly type: "playground.action"; readonly id: string }
-  | { readonly type: "tutorial.action"; readonly command: "open-practice" | "restart" | "select" | "help" | "demo" | "coach-rate" | "coach-compare" | "coach-diagnostic" | "skip" | "assist" | "annexes" | "select-annex" | "catalog" | "select-enemy" | "bosses" | "select-boss"; readonly lessonId?: string };
+  | {
+      readonly type: "tutorial.action";
+      readonly command:
+        | "open-practice"
+        | "restart"
+        | "select"
+        | "help"
+        | "demo"
+        | "coach-rate"
+        | "coach-compare"
+        | "coach-diagnostic"
+        | "skip"
+        | "assist"
+        | "annexes"
+        | "select-annex"
+        | "catalog"
+        | "select-enemy"
+        | "bosses"
+        | "select-boss";
+      readonly lessonId?: string;
+    };

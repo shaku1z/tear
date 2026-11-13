@@ -60,7 +60,11 @@ export interface SharedCloudService {
   submitScore(mode: string, difficulty: string, entry: ScoreEntry): Promise<boolean>;
   topScores(mode: string, difficulty: string, limit: number): Promise<readonly Record<string, unknown>[] | null>;
   logEvent(name: string, data: Record<string, unknown>): void;
-  publishReplay(recording: Record<string, unknown>, summary: Record<string, unknown> | null, fixedIdPrefix?: string): Promise<string | null>;
+  publishReplay(
+    recording: Record<string, unknown>,
+    summary: Record<string, unknown> | null,
+    fixedIdPrefix?: string,
+  ): Promise<string | null>;
   loadReplay(shareId: string): Promise<Record<string, unknown> | null>;
   replayFeed(limit: number): Promise<readonly Record<string, unknown>[] | null>;
   linkReplay(mode: string, difficulty: string, shareId: string): Promise<boolean>;
@@ -102,7 +106,11 @@ export interface LegacyCloudFacade {
   submitScore(mode: string, difficulty: string, entry: ScoreEntry): Promise<boolean>;
   topScores(mode: string, difficulty: string, limit: number): Promise<readonly Record<string, unknown>[] | null>;
   logEvent(name: string, data?: Record<string, unknown>): void;
-  publishReplay(recording: Record<string, unknown>, summary: Record<string, unknown> | null, fixedIdPrefix?: string): Promise<string | null>;
+  publishReplay(
+    recording: Record<string, unknown>,
+    summary: Record<string, unknown> | null,
+    fixedIdPrefix?: string,
+  ): Promise<string | null>;
   loadReplay(shareId: string): Promise<Record<string, unknown> | null>;
   replayFeed(limit: number): Promise<readonly Record<string, unknown>[] | null>;
   linkReplay(mode: string, difficulty: string, shareId: string): Promise<boolean>;
@@ -136,7 +144,10 @@ function toCloudUser(identity: Awaited<ReturnType<IdentityService["current"]>>):
 function createLocalProvider(): AccountProvider {
   return {
     kind: "local",
-    init(context) { context.setUser({ id: "local", name: "Guest", guest: true }, "guest"); return Promise.resolve(); },
+    init(context) {
+      context.setUser({ id: "local", name: "Guest", guest: true }, "guest");
+      return Promise.resolve();
+    },
   };
 }
 
@@ -168,10 +179,19 @@ function createCrazyProvider(getPlatform: () => PlatformServices): AccountProvid
       context.setUser(user, "signedin");
       return true;
     },
-    async signOut() { await identity()?.signOut(); },
-    load() { return Promise.resolve(null); },
-    save() { return Promise.resolve(); },
-    dispose() { unsubscribe?.(); unsubscribe = undefined; },
+    async signOut() {
+      await identity()?.signOut();
+    },
+    load() {
+      return Promise.resolve(null);
+    },
+    save() {
+      return Promise.resolve();
+    },
+    dispose() {
+      unsubscribe?.();
+      unsubscribe = undefined;
+    },
   };
 }
 
@@ -193,12 +213,16 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
       if (initialization) return initialization;
       initialization = (async () => {
         const platform = options.getPlatform();
-        const provider = options.target === "crazygames"
-          ? (platform.identity.available ? crazyProvider : localProvider)
-          : (options.firebaseAccount ?? localProvider);
+        const provider =
+          options.target === "crazygames"
+            ? platform.identity.available
+              ? crazyProvider
+              : localProvider
+            : (options.firebaseAccount ?? localProvider);
         this.provider = provider;
-        try { await provider.init(this); }
-        catch {
+        try {
+          await provider.init(this);
+        } catch {
           provider.dispose?.();
           this.provider = localProvider;
           await localProvider.init(this);
@@ -209,10 +233,16 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
       })();
       return initialization;
     },
-    onChange(listener) { listeners.add(listener); },
+    onChange(listener) {
+      listeners.add(listener);
+    },
     emit() {
       for (const listener of [...listeners]) {
-        try { listener(this.user, this.status); } catch { /* listener isolation */ }
+        try {
+          listener(this.user, this.status);
+        } catch {
+          /* listener isolation */
+        }
       }
     },
     setUser(user, status, silent = false) {
@@ -220,14 +250,18 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
       this.status = status;
       if (!silent) this.emit();
     },
-    loggedIn() { return this.status === "signedin"; },
+    loggedIn() {
+      return this.status === "signedin";
+    },
     displayName() {
       const custom = options.getProfile().username();
       if (custom) return custom;
       if (this.provider === crazyProvider) return this.user?.name ?? "Guest";
       return this.status === "signedin" ? "Player" : "Guest";
     },
-    hasCustomName() { return options.getProfile().username().length > 0; },
+    hasCustomName() {
+      return options.getProfile().username().length > 0;
+    },
     canRename() {
       if (!this.loggedIn()) return false;
       const at = options.getProfile().usernameSetAt();
@@ -237,20 +271,33 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
       const at = options.getProfile().usernameSetAt();
       return at === 0 ? 0 : Math.max(0, Math.ceil((7 * 24 * 60 * 60 * 1000 - (now() - at)) / (24 * 60 * 60 * 1000)));
     },
-    canSignIn() { return this.provider?.signIn !== undefined && !this.loggedIn(); },
-    signInLabel() { return this.provider?.signInLabel ?? "Sign In"; },
+    canSignIn() {
+      return this.provider?.signIn !== undefined && !this.loggedIn();
+    },
+    signInLabel() {
+      return this.provider?.signInLabel ?? "Sign In";
+    },
     async signIn() {
       if (!this.provider?.signIn) return false;
       try {
         const result = await this.provider.signIn(this);
-        if (typeof result === "object") { this.authRetryPrompt = true; return result; }
+        if (typeof result === "object") {
+          this.authRetryPrompt = true;
+          return result;
+        }
         this.authRetryPrompt = false;
         if (result) await this.sync();
         return result;
-      } catch { return false; }
+      } catch {
+        return false;
+      }
     },
     async signOut() {
-      try { await this.provider?.signOut?.(this); } catch { /* offline fallback remains usable */ }
+      try {
+        await this.provider?.signOut?.(this);
+      } catch {
+        /* offline fallback remains usable */
+      }
     },
     async setCustomUsername(name) {
       options.getProfile().setUsername(name);
@@ -269,7 +316,9 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
         }
         this.emit();
         await this.push();
-      } catch { /* merge failures never block local play */ }
+      } catch {
+        /* merge failures never block local play */
+      }
     },
     async push() {
       if (!this.provider?.save) return;
@@ -278,28 +327,72 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
           profile: options.getProfile().data,
           meta: options.getMeta().data,
         });
-      } catch { /* local save is already authoritative */ }
+      } catch {
+        /* local save is already authoritative */
+      }
     },
-    hasLeaderboards() { return options.shared.available; },
+    hasLeaderboards() {
+      return options.shared.available;
+    },
     async submitScore(mode, difficulty, entry) {
       entry.name = this.displayName();
-      try { return await options.shared.submitScore(mode, difficulty, entry); } catch { return false; }
+      try {
+        return await options.shared.submitScore(mode, difficulty, entry);
+      } catch {
+        return false;
+      }
     },
     async topScores(mode, difficulty, limit) {
-      try { return await options.shared.topScores(mode, difficulty, limit); } catch { return null; }
+      try {
+        return await options.shared.topScores(mode, difficulty, limit);
+      } catch {
+        return null;
+      }
     },
-    logEvent(name, data = {}) { try { options.shared.logEvent(name, data); } catch { /* optional telemetry */ } },
+    logEvent(name, data = {}) {
+      try {
+        options.shared.logEvent(name, data);
+      } catch {
+        /* optional telemetry */
+      }
+    },
     async publishReplay(recording, summary, fixedIdPrefix) {
-      try { return await options.shared.publishReplay(recording, summary, fixedIdPrefix); } catch { return null; }
+      try {
+        return await options.shared.publishReplay(recording, summary, fixedIdPrefix);
+      } catch {
+        return null;
+      }
     },
-    async loadReplay(shareId) { try { return await options.shared.loadReplay(shareId); } catch { return null; } },
-    async replayFeed(limit) { try { return await options.shared.replayFeed(limit); } catch { return null; } },
+    async loadReplay(shareId) {
+      try {
+        return await options.shared.loadReplay(shareId);
+      } catch {
+        return null;
+      }
+    },
+    async replayFeed(limit) {
+      try {
+        return await options.shared.replayFeed(limit);
+      } catch {
+        return null;
+      }
+    },
     async linkReplay(mode, difficulty, shareId) {
-      try { return await options.shared.linkReplay(mode, difficulty, shareId); } catch { return false; }
+      try {
+        return await options.shared.linkReplay(mode, difficulty, shareId);
+      } catch {
+        return false;
+      }
     },
-    submitGhost() { return Promise.resolve(false); },
+    submitGhost() {
+      return Promise.resolve(false);
+    },
     async loadGhost(mode, difficulty) {
-      try { return await options.shared.loadGhost(mode, difficulty); } catch { return null; }
+      try {
+        return await options.shared.loadGhost(mode, difficulty);
+      } catch {
+        return null;
+      }
     },
   };
 
@@ -309,10 +402,12 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
     CrazyProvider: crazyProvider,
     FirebaseProvider: firebaseProvider,
     Passport: options.shared,
-    ghostPublication: options.ghostPublication ?? createStandaloneGhostPublicationRuntime({
-      target: options.target,
-      endpoint: undefined,
-      loadBearer: () => Promise.reject(new Error("ghost publication is unavailable")),
-    }),
+    ghostPublication:
+      options.ghostPublication ??
+      createStandaloneGhostPublicationRuntime({
+        target: options.target,
+        endpoint: undefined,
+        loadBearer: () => Promise.reject(new Error("ghost publication is unavailable")),
+      }),
   });
 }

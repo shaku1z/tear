@@ -132,7 +132,13 @@ function integrityPayload(draft: BlackBoxAttemptArtifactDraft): BlackBoxAttemptA
 
 /** Creates a content-bound artifact. It does not grant a success outcome. */
 export function createBlackBoxAttemptArtifact(draft: BlackBoxAttemptArtifactDraft): BlackBoxAttemptArtifact {
-  const imported = importBlackBoxAttemptArtifact({ ...draft, integrity: { algorithm: BLACK_BOX_ARTIFACT_INTEGRITY_ALGORITHM, contentHash: stableVerificationHash(integrityPayload(draft)) } });
+  const imported = importBlackBoxAttemptArtifact({
+    ...draft,
+    integrity: {
+      algorithm: BLACK_BOX_ARTIFACT_INTEGRITY_ALGORITHM,
+      contentHash: stableVerificationHash(integrityPayload(draft)),
+    },
+  });
   if (!imported.accepted) throw new TypeError(`invalid Class-C attempt artifact: ${imported.reasons.join("; ")}`);
   return imported.artifact;
 }
@@ -144,19 +150,27 @@ export function createBlackBoxAttemptArtifact(draft: BlackBoxAttemptArtifactDraf
  */
 export function importBlackBoxAttemptArtifact(value: unknown): BlackBoxArtifactImport {
   const reasons: string[] = [];
-  if (!isRecord(value)) return Object.freeze({ accepted: false, reasons: Object.freeze(["artifact must be an object"]) });
-  if (value.format !== BLACK_BOX_ATTEMPT_ARTIFACT_FORMAT) reasons.push("artifact format is not a Class-C attempt artifact");
-  if (value.schemaVersion !== BLACK_BOX_ATTEMPT_ARTIFACT_SCHEMA_VERSION) reasons.push("artifact schemaVersion is not supported");
-  for (const key of ["id", "recordedAt", "buildId", "policyId"] as const) if (!nonEmpty(value[key])) reasons.push(`${key} must be non-empty`);
+  if (!isRecord(value))
+    return Object.freeze({ accepted: false, reasons: Object.freeze(["artifact must be an object"]) });
+  if (value.format !== BLACK_BOX_ATTEMPT_ARTIFACT_FORMAT)
+    reasons.push("artifact format is not a Class-C attempt artifact");
+  if (value.schemaVersion !== BLACK_BOX_ATTEMPT_ARTIFACT_SCHEMA_VERSION)
+    reasons.push("artifact schemaVersion is not supported");
+  for (const key of ["id", "recordedAt", "buildId", "policyId"] as const)
+    if (!nonEmpty(value[key])) reasons.push(`${key} must be non-empty`);
   if (value.executionClass !== "black-box") reasons.push("artifact must declare black-box execution");
   if (value.observationClass !== "pixel-only") reasons.push("artifact must declare pixel-only observation");
   if (!physicalInput(value.physicalInput)) reasons.push("artifact must declare a physical input kind");
   if (!artifactKind(value.kind)) reasons.push("artifact kind is not recognized");
   if (!terminal(value.terminal)) reasons.push("artifact terminal disposition is not recognized");
   const journeyValue = value.journey;
-  if (!isRecord(journeyValue)
-    || journeyValue.mode !== "adventure" || journeyValue.difficulty !== "normal"
-    || typeof journeyValue.startedAtMenu !== "boolean" || typeof journeyValue.returnedToMenu !== "boolean") {
+  if (
+    !isRecord(journeyValue) ||
+    journeyValue.mode !== "adventure" ||
+    journeyValue.difficulty !== "normal" ||
+    typeof journeyValue.startedAtMenu !== "boolean" ||
+    typeof journeyValue.returnedToMenu !== "boolean"
+  ) {
     reasons.push("artifact must declare a Normal Adventure menu-to-menu journey");
   }
   const artifactsValue = value.artifacts;
@@ -173,38 +187,73 @@ export function importBlackBoxAttemptArtifact(value: unknown): BlackBoxArtifactI
   if (integrityValue?.algorithm !== BLACK_BOX_ARTIFACT_INTEGRITY_ALGORITHM || !nonEmpty(integrityValue.contentHash)) {
     reasons.push("artifact integrity is missing or unsupported");
   }
-  if (reasons.length > 0 || inputTrace === undefined || observationTrace === undefined || finalScreenshot === undefined
-    || !isRecord(journeyValue) || !artifactKind(value.kind) || !terminal(value.terminal) || !physicalInput(value.physicalInput)) {
+  if (
+    reasons.length > 0 ||
+    inputTrace === undefined ||
+    observationTrace === undefined ||
+    finalScreenshot === undefined ||
+    !isRecord(journeyValue) ||
+    !artifactKind(value.kind) ||
+    !terminal(value.terminal) ||
+    !physicalInput(value.physicalInput)
+  ) {
     return Object.freeze({ accepted: false, reasons: Object.freeze(reasons) });
   }
   const draft: BlackBoxAttemptArtifactDraft = {
     format: BLACK_BOX_ATTEMPT_ARTIFACT_FORMAT,
     schemaVersion: BLACK_BOX_ATTEMPT_ARTIFACT_SCHEMA_VERSION,
-    id: value.id as string, recordedAt: value.recordedAt as string, buildId: value.buildId as string, policyId: value.policyId as string,
-    executionClass: "black-box", observationClass: "pixel-only", physicalInput: value.physicalInput,
-    kind: value.kind, terminal: value.terminal,
-    journey: Object.freeze({ mode: "adventure", difficulty: "normal", startedAtMenu: journeyValue.startedAtMenu as boolean, returnedToMenu: journeyValue.returnedToMenu as boolean }),
+    id: value.id as string,
+    recordedAt: value.recordedAt as string,
+    buildId: value.buildId as string,
+    policyId: value.policyId as string,
+    executionClass: "black-box",
+    observationClass: "pixel-only",
+    physicalInput: value.physicalInput,
+    kind: value.kind,
+    terminal: value.terminal,
+    journey: Object.freeze({
+      mode: "adventure",
+      difficulty: "normal",
+      startedAtMenu: journeyValue.startedAtMenu as boolean,
+      returnedToMenu: journeyValue.returnedToMenu as boolean,
+    }),
     artifacts: Object.freeze({ inputTrace, observationTrace, finalScreenshot }),
   };
   const expectedHash = stableVerificationHash(integrityPayload(draft));
   if (integrityValue?.contentHash !== expectedHash) {
-    return Object.freeze({ accepted: false, reasons: Object.freeze(["artifact integrity contentHash does not match its evidence payload"]) });
+    return Object.freeze({
+      accepted: false,
+      reasons: Object.freeze(["artifact integrity contentHash does not match its evidence payload"]),
+    });
   }
-  const completeTerminal = draft.kind === "terminal-trace"
-    && draft.terminal === "victory"
-    && draft.journey.startedAtMenu
-    && draft.journey.returnedToMenu;
+  const completeTerminal =
+    draft.kind === "terminal-trace" &&
+    draft.terminal === "victory" &&
+    draft.journey.startedAtMenu &&
+    draft.journey.returnedToMenu;
   // A smoke may exercise a failure-looking boundary, but it has not attempted
   // the declared menu-to-menu journey and therefore remains incomplete.
-  const outcome: BlackBoxAttemptOutcome = draft.kind === "partial-smoke" ? "incomplete"
-    : completeTerminal ? "success" : draft.terminal === "failure" ? "failure" : "incomplete";
+  const outcome: BlackBoxAttemptOutcome =
+    draft.kind === "partial-smoke"
+      ? "incomplete"
+      : completeTerminal
+        ? "success"
+        : draft.terminal === "failure"
+          ? "failure"
+          : "incomplete";
   const artifact = Object.freeze({
     ...integrityPayload(draft),
     integrity: Object.freeze({ algorithm: BLACK_BOX_ARTIFACT_INTEGRITY_ALGORITHM, contentHash: expectedHash }),
   });
   const attempt = createBlackBoxCertificationAttempt({
-    id: draft.id, recordedAt: draft.recordedAt, buildId: draft.buildId, policyId: draft.policyId,
-    executionClass: "black-box", observationClass: "pixel-only", physicalInput: draft.physicalInput, outcome,
+    id: draft.id,
+    recordedAt: draft.recordedAt,
+    buildId: draft.buildId,
+    policyId: draft.policyId,
+    executionClass: "black-box",
+    observationClass: "pixel-only",
+    physicalInput: draft.physicalInput,
+    outcome,
     artifacts: {
       inputTrace: `${draft.artifacts.inputTrace.path}#sha256=${draft.artifacts.inputTrace.sha256}`,
       observationTrace: `${draft.artifacts.observationTrace.path}#sha256=${draft.artifacts.observationTrace.sha256}`,
@@ -215,21 +264,39 @@ export function importBlackBoxAttemptArtifact(value: unknown): BlackBoxArtifactI
 }
 
 /** Collects artifact imports without allowing rejected evidence to alter the denominator. */
-export function createBlackBoxArtifactCertificationReport(input: Readonly<{
-  artifacts: readonly unknown[];
-  target?: BlackBoxCertificationTarget;
-}>): BlackBoxArtifactCertificationReport {
+export function createBlackBoxArtifactCertificationReport(
+  input: Readonly<{
+    artifacts: readonly unknown[];
+    target?: BlackBoxCertificationTarget;
+  }>,
+): BlackBoxArtifactCertificationReport {
   const imports = input.artifacts.map(importBlackBoxAttemptArtifact);
-  const acceptedAttempts = imports.filter((entry): entry is Extract<BlackBoxArtifactImport, { accepted: true }> => entry.accepted).map((entry) => entry.attempt);
-  const rejectedArtifacts = Object.freeze(imports.flatMap((entry, index) => entry.accepted ? [] : [Object.freeze({ index, reasons: entry.reasons })]));
-  const certification = createBlackBoxCertificationReport({ attempts: acceptedAttempts, ...(input.target === undefined ? {} : { target: input.target }) });
-  const artifactReportKind: BlackBoxArtifactReportKind = acceptedAttempts.length > 0 && acceptedAttempts.every((attempt) => attempt.outcome === "incomplete")
-    ? "all-attempts-incomplete"
-    : acceptedAttempts.every((attempt) => attempt.outcome === "success" || attempt.outcome === "failure")
-      ? "terminal-evidence" : "mixed-evidence";
-  const data = { artifactReportKind, acceptedAttempts: Object.freeze(acceptedAttempts), rejectedArtifacts, certification };
+  const acceptedAttempts = imports
+    .filter((entry): entry is Extract<BlackBoxArtifactImport, { accepted: true }> => entry.accepted)
+    .map((entry) => entry.attempt);
+  const rejectedArtifacts = Object.freeze(
+    imports.flatMap((entry, index) => (entry.accepted ? [] : [Object.freeze({ index, reasons: entry.reasons })])),
+  );
+  const certification = createBlackBoxCertificationReport({
+    attempts: acceptedAttempts,
+    ...(input.target === undefined ? {} : { target: input.target }),
+  });
+  const artifactReportKind: BlackBoxArtifactReportKind =
+    acceptedAttempts.length > 0 && acceptedAttempts.every((attempt) => attempt.outcome === "incomplete")
+      ? "all-attempts-incomplete"
+      : acceptedAttempts.every((attempt) => attempt.outcome === "success" || attempt.outcome === "failure")
+        ? "terminal-evidence"
+        : "mixed-evidence";
+  const data = {
+    artifactReportKind,
+    acceptedAttempts: Object.freeze(acceptedAttempts),
+    rejectedArtifacts,
+    certification,
+  };
   return Object.freeze({
-    format: "tearbench-black-box-artifact-certification-report", schemaVersion: 1,
-    ...data, evidenceHash: stableVerificationHash(data),
+    format: "tearbench-black-box-artifact-certification-report",
+    schemaVersion: 1,
+    ...data,
+    evidenceHash: stableVerificationHash(data),
   });
 }

@@ -18,14 +18,15 @@ export class GhostLensRegistry {
     this.#lenses.set(lens.id, lens);
   }
 
-  available(
-    ghost: GhostEnvelopeV3,
-    audience: GhostLensVisibility,
-  ): readonly GhostLens[] {
+  available(ghost: GhostEnvelopeV3, audience: GhostLensVisibility): readonly GhostLens[] {
     const rank = { public: 0, ranked: 1, developer: 2 } as const;
-    return Object.freeze([...this.#lenses.values()].filter((lens) =>
-      rank[lens.visibility] <= rank[audience]
-      && lens.requiredTracks.every((track) => ghost.trident[track].available)));
+    return Object.freeze(
+      [...this.#lenses.values()].filter(
+        (lens) =>
+          rank[lens.visibility] <= rank[audience] &&
+          lens.requiredTracks.every((track) => ghost.trident[track].available),
+      ),
+    );
   }
 }
 
@@ -46,7 +47,9 @@ export class GhostTheaterTransport {
   readonly #events: readonly TearCausalEventV1[];
 
   constructor(events: readonly TearCausalEventV1[], width = 1_600) {
-    this.#events = Object.freeze([...events].sort((left, right) => left.tick - right.tick || left.sequence - right.sequence));
+    this.#events = Object.freeze(
+      [...events].sort((left, right) => left.tick - right.tick || left.sequence - right.sequence),
+    );
     this.#state = Object.freeze({
       playing: false,
       tick: 0,
@@ -59,12 +62,24 @@ export class GhostTheaterTransport {
     });
   }
 
-  state(): GhostTheaterState { return this.#state; }
-  play(): void { this.#state = Object.freeze({ ...this.#state, playing: true }); }
-  pause(): void { this.#state = Object.freeze({ ...this.#state, playing: false }); }
-  seek(tick: number): void { this.#state = Object.freeze({ ...this.#state, tick: Math.max(0, Math.floor(tick)) }); }
-  speed(value: GhostTheaterState["speed"]): void { this.#state = Object.freeze({ ...this.#state, speed: value }); }
-  camera(value: GhostTheaterState["camera"]): void { this.#state = Object.freeze({ ...this.#state, camera: value }); }
+  state(): GhostTheaterState {
+    return this.#state;
+  }
+  play(): void {
+    this.#state = Object.freeze({ ...this.#state, playing: true });
+  }
+  pause(): void {
+    this.#state = Object.freeze({ ...this.#state, playing: false });
+  }
+  seek(tick: number): void {
+    this.#state = Object.freeze({ ...this.#state, tick: Math.max(0, Math.floor(tick)) });
+  }
+  speed(value: GhostTheaterState["speed"]): void {
+    this.#state = Object.freeze({ ...this.#state, speed: value });
+  }
+  camera(value: GhostTheaterState["camera"]): void {
+    this.#state = Object.freeze({ ...this.#state, camera: value });
+  }
   accessibility(reducedMotion: boolean, highContrast: boolean): void {
     this.#state = Object.freeze({ ...this.#state, reducedMotion, highContrast });
   }
@@ -74,7 +89,9 @@ export class GhostTheaterTransport {
     this.#state = Object.freeze({ ...this.#state, tick: event.tick, selectedEventId: event.id });
   }
   nextEvent(type?: TearCausalEventV1["type"]): TearCausalEventV1 | undefined {
-    const event = this.#events.find((candidate) => candidate.tick > this.#state.tick && (type === undefined || candidate.type === type));
+    const event = this.#events.find(
+      (candidate) => candidate.tick > this.#state.tick && (type === undefined || candidate.type === type),
+    );
     if (event !== undefined) this.selectEvent(event.id);
     return event;
   }
@@ -95,14 +112,17 @@ export function alignGhostsBySemanticEvent(
     events: ghost.events.filter((event) => event.type === type),
   }));
   const count = Math.max(0, ...sequences.map((sequence) => sequence.events.length));
-  return Object.freeze(Array.from({ length: count }, (_, occurrence) => Object.freeze({
-    type,
-    occurrence,
-    ticksByGhost: Object.freeze(Object.fromEntries(sequences.map((sequence) => [
-      sequence.id,
-      sequence.events[occurrence]?.tick ?? null,
-    ]))),
-  })));
+  return Object.freeze(
+    Array.from({ length: count }, (_, occurrence) =>
+      Object.freeze({
+        type,
+        occurrence,
+        ticksByGhost: Object.freeze(
+          Object.fromEntries(sequences.map((sequence) => [sequence.id, sequence.events[occurrence]?.tick ?? null])),
+        ),
+      }),
+    ),
+  );
 }
 
 export interface GhostTrajectoryPoint {
@@ -121,11 +141,17 @@ export function diffTrajectories(
   right: readonly GhostTrajectoryPoint[],
 ): readonly GhostTrajectoryDiff[] {
   const rightByTick = new Map(right.map((point) => [point.tick, point]));
-  return Object.freeze(left.flatMap((point) => {
-    const other = rightByTick.get(point.tick);
-    return other === undefined ? [] : [{
-      tick: point.tick,
-      distance: Math.hypot(point.x - other.x, point.y - other.y),
-    }];
-  }));
+  return Object.freeze(
+    left.flatMap((point) => {
+      const other = rightByTick.get(point.tick);
+      return other === undefined
+        ? []
+        : [
+            {
+              tick: point.tick,
+              distance: Math.hypot(point.x - other.x, point.y - other.y),
+            },
+          ];
+    }),
+  );
 }

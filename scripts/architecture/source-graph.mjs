@@ -6,7 +6,8 @@ import ts from "typescript";
 export function listSourceFiles(root, directory = "src") {
   const absolute = path.join(root, directory);
   if (!fs.existsSync(absolute)) return [];
-  return fs.readdirSync(absolute, { withFileTypes: true })
+  return fs
+    .readdirSync(absolute, { withFileTypes: true })
     .sort((left, right) => left.name.localeCompare(right.name, "en"))
     .flatMap((entry) => {
       const relative = `${directory}/${entry.name}`;
@@ -31,47 +32,97 @@ function bindingNames(clause) {
 function importDeclarationRecord(node) {
   const specifier = node.moduleSpecifier.text;
   const clause = node.importClause;
-  if (clause === undefined) return { specifier, typeOnly: false, dynamic: false, reexport: false, names: [], namespace: true };
+  if (clause === undefined)
+    return { specifier, typeOnly: false, dynamic: false, reexport: false, names: [], namespace: true };
   const { names, namespace } = bindingNames(clause);
-  const elements = clause.namedBindings !== undefined && ts.isNamedImports(clause.namedBindings) ? clause.namedBindings.elements : [];
-  const allTypeElements = elements.length > 0 && elements.every((element) => element.isTypeOnly) && clause.name === undefined;
-  return { specifier, typeOnly: clause.isTypeOnly || allTypeElements, dynamic: false, reexport: false, names, namespace };
+  const elements =
+    clause.namedBindings !== undefined && ts.isNamedImports(clause.namedBindings) ? clause.namedBindings.elements : [];
+  const allTypeElements =
+    elements.length > 0 && elements.every((element) => element.isTypeOnly) && clause.name === undefined;
+  return {
+    specifier,
+    typeOnly: clause.isTypeOnly || allTypeElements,
+    dynamic: false,
+    reexport: false,
+    names,
+    namespace,
+  };
 }
 
 function exportDeclarationRecord(node) {
   const specifier = node.moduleSpecifier.text;
   const clause = node.exportClause;
   if (clause === undefined || ts.isNamespaceExport(clause)) {
-    return { specifier, typeOnly: node.isTypeOnly, dynamic: false, reexport: true, names: [], namespace: !node.isTypeOnly };
+    return {
+      specifier,
+      typeOnly: node.isTypeOnly,
+      dynamic: false,
+      reexport: true,
+      names: [],
+      namespace: !node.isTypeOnly,
+    };
   }
   const values = clause.elements.filter((element) => !element.isTypeOnly);
   const names = values.map((element) => (element.propertyName ?? element.name).text);
-  return { specifier, typeOnly: node.isTypeOnly || values.length === 0, dynamic: false, reexport: true, names, namespace: false };
+  return {
+    specifier,
+    typeOnly: node.isTypeOnly || values.length === 0,
+    dynamic: false,
+    reexport: true,
+    names,
+    namespace: false,
+  };
 }
 
 function isDynamicImport(node) {
-  return ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
-    && node.arguments.length > 0 && ts.isStringLiteralLike(node.arguments[0]);
+  return (
+    ts.isCallExpression(node) &&
+    node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+    node.arguments.length > 0 &&
+    ts.isStringLiteralLike(node.arguments[0])
+  );
 }
 
 function importTypeRecord(node) {
   const argument = node.argument;
   if (!ts.isLiteralTypeNode(argument) || !ts.isStringLiteralLike(argument.literal)) return undefined;
-  return { specifier: argument.literal.text, typeOnly: true, dynamic: false, reexport: false, names: [], namespace: true };
+  return {
+    specifier: argument.literal.text,
+    typeOnly: true,
+    dynamic: false,
+    reexport: false,
+    names: [],
+    namespace: true,
+  };
 }
 
 function nodeRecord(node) {
-  if (ts.isImportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier)) return importDeclarationRecord(node);
-  if (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined && ts.isStringLiteralLike(node.moduleSpecifier)) {
+  if (ts.isImportDeclaration(node) && ts.isStringLiteralLike(node.moduleSpecifier))
+    return importDeclarationRecord(node);
+  if (
+    ts.isExportDeclaration(node) &&
+    node.moduleSpecifier !== undefined &&
+    ts.isStringLiteralLike(node.moduleSpecifier)
+  ) {
     return exportDeclarationRecord(node);
   }
-  if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)
-    && ts.isStringLiteralLike(node.moduleReference.expression)) {
+  if (
+    ts.isImportEqualsDeclaration(node) &&
+    ts.isExternalModuleReference(node.moduleReference) &&
+    ts.isStringLiteralLike(node.moduleReference.expression)
+  ) {
     const specifier = node.moduleReference.expression.text;
     return { specifier, typeOnly: node.isTypeOnly, dynamic: false, reexport: false, names: [], namespace: true };
   }
   if (isDynamicImport(node)) {
-    return { specifier: node.arguments[0].text, typeOnly: false, dynamic: true, reexport: false, names: [], namespace: true };
+    return {
+      specifier: node.arguments[0].text,
+      typeOnly: false,
+      dynamic: true,
+      reexport: false,
+      names: [],
+      namespace: true,
+    };
   }
   if (ts.isImportTypeNode(node)) return importTypeRecord(node);
   return undefined;
@@ -124,7 +175,12 @@ function mergeEdge(edges, record, resolution) {
   const kind = record.typeOnly ? "type" : "value";
   const existing = edges.get(resolution.target);
   if (existing === undefined) {
-    edges.set(resolution.target, { to: resolution.target, kind, staticValue: kind === "value" && !record.dynamic, resolved: resolution.resolved });
+    edges.set(resolution.target, {
+      to: resolution.target,
+      kind,
+      staticValue: kind === "value" && !record.dynamic,
+      resolved: resolution.resolved,
+    });
     return;
   }
   existing.kind = strongerKind(existing.kind, kind);
@@ -168,7 +224,9 @@ export function unresolvedEdges(root, graph) {
   for (const [from, edges] of graph) {
     for (const edge of edges) {
       if (edge.resolved) continue;
-      const outside = !edge.to.startsWith("src/") && RESOLUTION_SUFFIXES.some((suffix) => fs.existsSync(path.join(root, `${edge.to}${suffix}`)));
+      const outside =
+        !edge.to.startsWith("src/") &&
+        RESOLUTION_SUFFIXES.some((suffix) => fs.existsSync(path.join(root, `${edge.to}${suffix}`)));
       if (!outside) missing.push({ from, to: edge.to });
     }
   }

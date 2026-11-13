@@ -72,8 +72,21 @@ function codecWorld(tick = 0): TearCodecWorld {
   const components = new Map<TearCodecId, TearCodecValue>();
   components.set("tear.player.v1", { id: "player", x: 0, y: 0, hp: 100, maxHp: 100 });
   components.set("tear.blade.v1", { id: "blade", ownerId: "player", weaponId: "sword", x: 0, y: 0 });
-  components.set("tear.run.v1", { mode: "endless", stage: 0, tick, mods: {}, player: { $ref: "player" }, blade: { $ref: "blade" } });
-  components.set("tear.world.v1", { clock: tick, floaters: [], ghost: { recording: null }, identityState: {}, runtime: {} });
+  components.set("tear.run.v1", {
+    mode: "endless",
+    stage: 0,
+    tick,
+    mods: {},
+    player: { $ref: "player" },
+    blade: { $ref: "blade" },
+  });
+  components.set("tear.world.v1", {
+    clock: tick,
+    floaters: [],
+    ghost: { recording: null },
+    identityState: {},
+    runtime: {},
+  });
   components.set("tear.enemy.v1", []);
   components.set("tear.boss.v1", []);
   components.set("tear.projectile.v1", []);
@@ -97,8 +110,12 @@ const constructionPort: TearWorldConstructionPort<
 > = {
   createPlayer: (x, y) => ({ kind: "player", x, y, direction: 0, dash: false, primaryTicks: 0, currentTick: 0 }),
   createBlade: () => ({ kind: "blade", primary: false }),
-  createEnemy: () => { throw new Error("fixture should not construct enemies"); },
-  createProjectile: () => { throw new Error("fixture should not construct projectiles"); },
+  createEnemy: () => {
+    throw new Error("fixture should not construct enemies");
+  },
+  createProjectile: () => {
+    throw new Error("fixture should not construct projectiles");
+  },
   hydrateReward: () => null,
 };
 
@@ -150,49 +167,77 @@ function createRuntime(world: FixtureWorld): Readonly<{
   const eventTicks: number[] = [];
   let eventTick = world.tick;
   const events = new TearGameplayEventBus(() => eventTick);
-  events.subscribe((event) => { eventTicks.push(event.tick); });
-  const runtime = new TearHydratedWorldRuntime(world, {
-    applyCanonicalInput(current, input, tick) {
-      order.push(`apply:${String(tick)}`);
-      eventTick = tick;
-      current.player.direction = (input.right() ? 1 : 0) - (input.left() ? 1 : 0);
-      current.player.dash = input.dashPressed();
-      current.player.currentTick = tick;
-      current.blade.primary = input.primaryHeld;
+  events.subscribe((event) => {
+    eventTicks.push(event.tick);
+  });
+  const runtime = new TearHydratedWorldRuntime(
+    world,
+    {
+      applyCanonicalInput(current, input, tick) {
+        order.push(`apply:${String(tick)}`);
+        eventTick = tick;
+        current.player.direction = (input.right() ? 1 : 0) - (input.left() ? 1 : 0);
+        current.player.dash = input.dashPressed();
+        current.player.currentTick = tick;
+        current.blade.primary = input.primaryHeld;
+      },
+      step(current, seconds) {
+        order.push(`step:${String(current.player.currentTick)}`);
+        current.player.x += current.player.direction * 420 * seconds;
+        if (current.player.dash) current.player.x += 80;
+        if (current.blade.primary) current.player.primaryTicks += 1;
+        if (current.player.currentTick % 20 === 0) {
+          events.emit({ kind: "effect", effect: "fixture-beat", x: current.player.x, y: current.player.y });
+        }
+      },
+      snapshot(current, tick, input) {
+        order.push(`snapshot:${String(tick)}`);
+        return Object.freeze({
+          tick,
+          x: Math.round(current.player.x * 1_000),
+          primaryTicks: current.player.primaryTicks,
+          primaryHeld: input.primaryHeld,
+        });
+      },
     },
-    step(current, seconds) {
-      order.push(`step:${String(current.player.currentTick)}`);
-      current.player.x += current.player.direction * 420 * seconds;
-      if (current.player.dash) current.player.x += 80;
-      if (current.blade.primary) current.player.primaryTicks += 1;
-      if (current.player.currentTick % 20 === 0) {
-        events.emit({ kind: "effect", effect: "fixture-beat", x: current.player.x, y: current.player.y });
-      }
-    },
-    snapshot(current, tick, input) {
-      order.push(`snapshot:${String(tick)}`);
-      return Object.freeze({
-        tick,
-        x: Math.round(current.player.x * 1_000),
-        primaryTicks: current.player.primaryTicks,
-        primaryHeld: input.primaryHeld,
-      });
-    },
-  }, { ticksPerSecond: 60, events });
+    { ticksPerSecond: 60, events },
+  );
   return Object.freeze({ runtime, order, eventTicks });
 }
 
-function createRuntimeWithEnvironment(world: FixtureWorld): Readonly<{ runtime: TearHydratedWorldRuntime<FixtureWorld, FixtureSnapshot>; phases: string[]; environment: ReturnType<typeof createEnvironmentRuntime> }> {
+function createRuntimeWithEnvironment(world: FixtureWorld): Readonly<{
+  runtime: TearHydratedWorldRuntime<FixtureWorld, FixtureSnapshot>;
+  phases: string[];
+  environment: ReturnType<typeof createEnvironmentRuntime>;
+}> {
   const phases: string[] = [];
-  const environment = createEnvironmentRuntime({ stageId: "detached", worldId: "detached-test", hooks: {
-    preStep: () => { phases.push("pre-step"); }, activeFields: () => { phases.push("active-fields"); },
-    resolveCollisions: () => { phases.push("collision-resolution"); }, postCommit: () => { phases.push("post-commit"); },
-  } });
-  const runtime = new TearHydratedWorldRuntime(world, {
-    applyCanonicalInput: () => undefined,
-    step: () => phases.push("gameplay"),
-    snapshot: (_world, tick) => Object.freeze({ tick, x: 0, primaryTicks: 0, primaryHeld: false }),
-  }, { ticksPerSecond: 60, environment });
+  const environment = createEnvironmentRuntime({
+    stageId: "detached",
+    worldId: "detached-test",
+    hooks: {
+      preStep: () => {
+        phases.push("pre-step");
+      },
+      activeFields: () => {
+        phases.push("active-fields");
+      },
+      resolveCollisions: () => {
+        phases.push("collision-resolution");
+      },
+      postCommit: () => {
+        phases.push("post-commit");
+      },
+    },
+  });
+  const runtime = new TearHydratedWorldRuntime(
+    world,
+    {
+      applyCanonicalInput: () => undefined,
+      step: () => phases.push("gameplay"),
+      snapshot: (_world, tick) => Object.freeze({ tick, x: 0, primaryTicks: 0, primaryHeld: false }),
+    },
+    { ticksPerSecond: 60, environment },
+  );
   return Object.freeze({ runtime, phases, environment });
 }
 
@@ -209,8 +254,12 @@ function runAtRenderRate(renderRate: number): Readonly<{
   }
   const result = run.runtime.simulation.lastResult;
   if (result === null) throw new Error("fixture runtime did not advance");
-  return Object.freeze({ state: result.state, stateHash: result.stateHash,
-    eventTicks: Object.freeze([...run.eventTicks]), order: Object.freeze([...run.order]) });
+  return Object.freeze({
+    state: result.state,
+    stateHash: result.stateHash,
+    eventTicks: Object.freeze([...run.eventTicks]),
+    order: Object.freeze([...run.order]),
+  });
 }
 
 describe("detached hydrated-world runtime", () => {

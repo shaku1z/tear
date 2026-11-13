@@ -61,7 +61,12 @@ describe("C25 test-only visual parity isolation", () => {
     expect(parity).toEqual({
       name: "stale-structured-report",
       passed: false,
-      mismatches: ["semantic-ui.screen", "semantic-ui.controls", "structured-state.screen", "structured-state.controls"],
+      mismatches: [
+        "semantic-ui.screen",
+        "semantic-ui.controls",
+        "structured-state.screen",
+        "structured-state.controls",
+      ],
     });
     expect(engineering.records()).toHaveLength(2);
     expect(() => {

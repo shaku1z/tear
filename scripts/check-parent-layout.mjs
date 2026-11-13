@@ -19,8 +19,18 @@ const FULL_SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const EXPECTED_REPOSITORY = "shaku1z/tear";
 const EXPECTED_CANONICAL = Object.freeze({
   game: Object.freeze({ exactName: "Tear", repository: "shaku1z/tear", branch: "main", upstream: "origin/main" }),
-  music: Object.freeze({ exactName: "tear-score", repository: "shaku1z/tear-music", branch: "main", upstream: "origin/main" }),
-  wiki: Object.freeze({ exactName: "tear-wiki", repository: "shaku1z/tear-wiki", branch: "main", upstream: "origin/main" }),
+  music: Object.freeze({
+    exactName: "tear-score",
+    repository: "shaku1z/tear-music",
+    branch: "main",
+    upstream: "origin/main",
+  }),
+  wiki: Object.freeze({
+    exactName: "tear-wiki",
+    repository: "shaku1z/tear-wiki",
+    branch: "main",
+    upstream: "origin/main",
+  }),
   oracle: Object.freeze({
     exactName: "Tear-oracle",
     repository: "shaku1z/tear",
@@ -37,10 +47,7 @@ const EXPECTED_APPROVED_PATTERNS = Object.freeze([
   "^tear-g3-preservation-audit-",
   "^tear-g5-",
 ]);
-const EXPECTED_FORBIDDEN_PATTERNS = Object.freeze([
-  "^Tear-main-publication$",
-  "^Tear-g5-canonical-",
-]);
+const EXPECTED_FORBIDDEN_PATTERNS = Object.freeze(["^Tear-main-publication$", "^Tear-g5-canonical-"]);
 const EXPECTED_FORBIDDEN_FOR = Object.freeze(["development", "deployment"]);
 const EXPECTED_DEFERRED_RELATION = Object.freeze({
   status: "deferred",
@@ -95,13 +102,15 @@ function equalObjectValues(actual, expected, label, errors) {
 
 function isAbsolutePathString(value) {
   const text = String(value);
-  return path.posix.isAbsolute(text.replaceAll("\\", "/"))
-    || /^[A-Za-z]:[\\/]/u.test(text)
-    || /^\\\\/u.test(text)
-    || /^\\/u.test(text)
-    || /^file:\/\//iu.test(text)
-    || /(?:^|[\s("'])\\\\[^\\s]+/u.test(text)
-    || /(?:^|[\s("'])[A-Za-z]:[\\/]/u.test(text);
+  return (
+    path.posix.isAbsolute(text.replaceAll("\\", "/")) ||
+    /^[A-Za-z]:[\\/]/u.test(text) ||
+    /^\\\\/u.test(text) ||
+    /^\\/u.test(text) ||
+    /^file:\/\//iu.test(text) ||
+    /(?:^|[\s("'])\\\\[^\\s]+/u.test(text) ||
+    /(?:^|[\s("'])[A-Za-z]:[\\/]/u.test(text)
+  );
 }
 
 function findAbsolutePaths(value, label, errors, seen = new Set()) {
@@ -148,8 +157,10 @@ function patternMatchesSameName(left, right) {
 }
 
 function isAllowedOverride(approved, forbidden) {
-  return approved.toLocaleLowerCase("en-US") === ALLOWED_SPECIFIC_FORBIDDEN_OVERRIDE.approved
-    && forbidden.toLocaleLowerCase("en-US") === ALLOWED_SPECIFIC_FORBIDDEN_OVERRIDE.forbidden;
+  return (
+    approved.toLocaleLowerCase("en-US") === ALLOWED_SPECIFIC_FORBIDDEN_OVERRIDE.approved &&
+    forbidden.toLocaleLowerCase("en-US") === ALLOWED_SPECIFIC_FORBIDDEN_OVERRIDE.forbidden
+  );
 }
 
 function validatePatternList(patterns, label, expected, errors) {
@@ -157,7 +168,8 @@ function validatePatternList(patterns, label, expected, errors) {
     errors.push(`${label} must be an array`);
     return [];
   }
-  if (JSON.stringify(patterns) !== JSON.stringify(expected)) errors.push(`${label} must contain the exact mandated patterns`);
+  if (JSON.stringify(patterns) !== JSON.stringify(expected))
+    errors.push(`${label} must contain the exact mandated patterns`);
   const seen = new Set();
   const descriptors = [];
   for (const [index, pattern] of patterns.entries()) {
@@ -181,7 +193,9 @@ function validatePatternList(patterns, label, expected, errors) {
   for (let leftIndex = 0; leftIndex < descriptors.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < descriptors.length; rightIndex += 1) {
       if (patternMatchesSameName(descriptors[leftIndex], descriptors[rightIndex])) {
-        errors.push(`${label} contains ambiguous overlapping patterns: ${descriptors[leftIndex].pattern} and ${descriptors[rightIndex].pattern}`);
+        errors.push(
+          `${label} contains ambiguous overlapping patterns: ${descriptors[leftIndex].pattern} and ${descriptors[rightIndex].pattern}`,
+        );
       }
     }
   }
@@ -201,24 +215,58 @@ function validateCrossPatternOverlap(approvedDescriptors, forbiddenDescriptors, 
 function validateCanonical(policy, errors) {
   if (!exactKeys(policy?.canonical, ["game", "music", "wiki", "oracle"], "canonical", errors)) return;
   for (const key of ["game", "music", "wiki"]) {
-    if (exactKeys(policy.canonical[key], ["exactName", "repository", "branch", "upstream"], `canonical.${key}`, errors)) {
+    if (
+      exactKeys(policy.canonical[key], ["exactName", "repository", "branch", "upstream"], `canonical.${key}`, errors)
+    ) {
       equalObjectValues(policy.canonical[key], EXPECTED_CANONICAL[key], `canonical.${key}`, errors);
     }
   }
-  if (exactKeys(policy.canonical.oracle, ["exactName", "repository", "lockedCommit", "role", "requiredState", "requiredLockReason", "lockReason"], "canonical.oracle", errors)) {
+  if (
+    exactKeys(
+      policy.canonical.oracle,
+      ["exactName", "repository", "lockedCommit", "role", "requiredState", "requiredLockReason", "lockReason"],
+      "canonical.oracle",
+      errors,
+    )
+  ) {
     equalObjectValues(policy.canonical.oracle, EXPECTED_CANONICAL.oracle, "canonical.oracle", errors);
-    if (!FULL_SHA_PATTERN.test(String(policy.canonical.oracle.lockedCommit ?? ""))) errors.push("canonical.oracle.lockedCommit must be a full 40-character SHA-1");
+    if (!FULL_SHA_PATTERN.test(String(policy.canonical.oracle.lockedCommit ?? "")))
+      errors.push("canonical.oracle.lockedCommit must be a full 40-character SHA-1");
   }
 }
 
 function validateNames(policy, errors) {
-  if (!exactKeys(policy?.names, ["approvedArchiveRecoveryPatterns", "forbiddenPatterns", "forbiddenFor", "collisionPolicy"], "names", errors)) return;
-  const approved = validatePatternList(policy.names.approvedArchiveRecoveryPatterns, "names.approvedArchiveRecoveryPatterns", EXPECTED_APPROVED_PATTERNS, errors);
-  const forbidden = validatePatternList(policy.names.forbiddenPatterns, "names.forbiddenPatterns", EXPECTED_FORBIDDEN_PATTERNS, errors);
+  if (
+    !exactKeys(
+      policy?.names,
+      ["approvedArchiveRecoveryPatterns", "forbiddenPatterns", "forbiddenFor", "collisionPolicy"],
+      "names",
+      errors,
+    )
+  )
+    return;
+  const approved = validatePatternList(
+    policy.names.approvedArchiveRecoveryPatterns,
+    "names.approvedArchiveRecoveryPatterns",
+    EXPECTED_APPROVED_PATTERNS,
+    errors,
+  );
+  const forbidden = validatePatternList(
+    policy.names.forbiddenPatterns,
+    "names.forbiddenPatterns",
+    EXPECTED_FORBIDDEN_PATTERNS,
+    errors,
+  );
   validateCrossPatternOverlap(approved, forbidden, errors);
-  if (JSON.stringify(policy.names.forbiddenFor) !== JSON.stringify(EXPECTED_FORBIDDEN_FOR)) errors.push("names.forbiddenFor must be exactly development and deployment");
+  if (JSON.stringify(policy.names.forbiddenFor) !== JSON.stringify(EXPECTED_FORBIDDEN_FOR))
+    errors.push("names.forbiddenFor must be exactly development and deployment");
   if (exactKeys(policy.names.collisionPolicy, ["comparison", "onCollision"], "names.collisionPolicy", errors)) {
-    equalObjectValues(policy.names.collisionPolicy, { comparison: "case-insensitive", onCollision: "reject" }, "names.collisionPolicy", errors);
+    equalObjectValues(
+      policy.names.collisionPolicy,
+      { comparison: "case-insensitive", onCollision: "reject" },
+      "names.collisionPolicy",
+      errors,
+    );
   }
 }
 
@@ -226,28 +274,62 @@ function validateReparse(policy, errors) {
   if (!exactKeys(policy?.reparse, ["default", "deferredAuditRelation"], "reparse", errors)) return;
   if (policy.reparse.default !== "refuse") errors.push("reparse.default must be refuse");
   const relation = policy.reparse.deferredAuditRelation;
-  if (!exactKeys(relation, ["status", "operation", "auditVisible", "move", "kind", "source", "target"], "reparse.deferredAuditRelation", errors)) return;
-  equalObjectValues(relation, {
-    status: EXPECTED_DEFERRED_RELATION.status,
-    operation: EXPECTED_DEFERRED_RELATION.operation,
-    auditVisible: EXPECTED_DEFERRED_RELATION.auditVisible,
-    move: EXPECTED_DEFERRED_RELATION.move,
-    kind: EXPECTED_DEFERRED_RELATION.kind,
-  }, "reparse.deferredAuditRelation", errors);
+  if (
+    !exactKeys(
+      relation,
+      ["status", "operation", "auditVisible", "move", "kind", "source", "target"],
+      "reparse.deferredAuditRelation",
+      errors,
+    )
+  )
+    return;
+  equalObjectValues(
+    relation,
+    {
+      status: EXPECTED_DEFERRED_RELATION.status,
+      operation: EXPECTED_DEFERRED_RELATION.operation,
+      auditVisible: EXPECTED_DEFERRED_RELATION.auditVisible,
+      move: EXPECTED_DEFERRED_RELATION.move,
+      kind: EXPECTED_DEFERRED_RELATION.kind,
+    },
+    "reparse.deferredAuditRelation",
+    errors,
+  );
   for (const side of ["source", "target"]) {
     if (exactKeys(relation[side], ["exactName", "relativePath"], `reparse.deferredAuditRelation.${side}`, errors)) {
-      equalObjectValues(relation[side], EXPECTED_DEFERRED_RELATION[side], `reparse.deferredAuditRelation.${side}`, errors);
-      if (path.posix.isAbsolute(String(relation[side].relativePath ?? "").replaceAll("\\", "/"))) errors.push(`reparse.deferredAuditRelation.${side}.relativePath must be relative`);
-      if (String(relation[side].relativePath ?? "").split(/[\\/]/u).includes("..")) errors.push(`reparse.deferredAuditRelation.${side}.relativePath must not escape its root`);
+      equalObjectValues(
+        relation[side],
+        EXPECTED_DEFERRED_RELATION[side],
+        `reparse.deferredAuditRelation.${side}`,
+        errors,
+      );
+      if (path.posix.isAbsolute(String(relation[side].relativePath ?? "").replaceAll("\\", "/")))
+        errors.push(`reparse.deferredAuditRelation.${side}.relativePath must be relative`);
+      if (
+        String(relation[side].relativePath ?? "")
+          .split(/[\\/]/u)
+          .includes("..")
+      )
+        errors.push(`reparse.deferredAuditRelation.${side}.relativePath must not escape its root`);
     }
   }
-  if (relation?.source?.exactName?.toLocaleLowerCase("en-US") === relation?.target?.exactName?.toLocaleLowerCase("en-US")) {
+  if (
+    relation?.source?.exactName?.toLocaleLowerCase("en-US") === relation?.target?.exactName?.toLocaleLowerCase("en-US")
+  ) {
     errors.push("reparse deferred source and target names must be distinct case-insensitively");
   }
 }
 
 function validateLooseItems(policy, errors) {
-  if (!exactKeys(policy?.looseItems, ["mode", "autoMove", "autoDelete", "autoDeploy", "autoMerge", "explicitRetentions"], "looseItems", errors)) return;
+  if (
+    !exactKeys(
+      policy?.looseItems,
+      ["mode", "autoMove", "autoDelete", "autoDeploy", "autoMerge", "explicitRetentions"],
+      "looseItems",
+      errors,
+    )
+  )
+    return;
   if (policy.looseItems.mode !== "report-only") errors.push("looseItems.mode must be report-only");
   for (const field of ["autoMove", "autoDelete", "autoDeploy", "autoMerge"]) {
     if (policy.looseItems[field] !== false) errors.push(`looseItems.${field} must be false`);
@@ -258,10 +340,12 @@ function validateLooseItems(policy, errors) {
     return;
   }
   const retention = retentions[0];
-  if (!exactKeys(retention, Object.keys(EXPECTED_EXPLICIT_RETENTION), "looseItems.explicitRetentions[0]", errors)) return;
+  if (!exactKeys(retention, Object.keys(EXPECTED_EXPLICIT_RETENTION), "looseItems.explicitRetentions[0]", errors))
+    return;
   for (const [key, expectedValue] of Object.entries(EXPECTED_EXPLICIT_RETENTION)) {
     if (key === "forbiddenUses") continue;
-    if (retention[key] !== expectedValue) errors.push(`looseItems.explicitRetentions[0].${key} must be ${JSON.stringify(expectedValue)}`);
+    if (retention[key] !== expectedValue)
+      errors.push(`looseItems.explicitRetentions[0].${key} must be ${JSON.stringify(expectedValue)}`);
   }
   if (JSON.stringify(retention.forbiddenUses) !== JSON.stringify(EXPECTED_EXPLICIT_RETENTION.forbiddenUses)) {
     errors.push("looseItems.explicitRetentions[0].forbiddenUses must forbid development and deployment");
@@ -277,8 +361,17 @@ export function validateParentLayoutPolicy(policy) {
     return ["parent-layout policy must be a JSON object"];
   }
   findAbsolutePaths(policy, "policy", errors);
-  if (!exactKeys(policy, ["format", "schemaVersion", "repository", "canonical", "names", "reparse", "looseItems"], "policy", errors)) return errors;
-  if (policy.format !== PARENT_LAYOUT_POLICY_FORMAT) errors.push(`policy.format must be ${PARENT_LAYOUT_POLICY_FORMAT}`);
+  if (
+    !exactKeys(
+      policy,
+      ["format", "schemaVersion", "repository", "canonical", "names", "reparse", "looseItems"],
+      "policy",
+      errors,
+    )
+  )
+    return errors;
+  if (policy.format !== PARENT_LAYOUT_POLICY_FORMAT)
+    errors.push(`policy.format must be ${PARENT_LAYOUT_POLICY_FORMAT}`);
   if (policy.schemaVersion !== 1) errors.push("policy.schemaVersion must be 1");
   if (policy.repository !== EXPECTED_REPOSITORY) errors.push(`policy.repository must be ${EXPECTED_REPOSITORY}`);
   validateCanonical(policy, errors);
@@ -288,11 +381,13 @@ export function validateParentLayoutPolicy(policy) {
 
   const names = [];
   for (const [key, value] of Object.entries(policy.canonical ?? {})) {
-    if (typeof value?.exactName === "string") names.push({ value: value.exactName, label: `canonical.${key}.exactName` });
+    if (typeof value?.exactName === "string")
+      names.push({ value: value.exactName, label: `canonical.${key}.exactName` });
   }
   for (const side of ["source", "target"]) {
     const value = policy.reparse?.deferredAuditRelation?.[side];
-    if (typeof value?.exactName === "string") names.push({ value: value.exactName, label: `reparse.deferredAuditRelation.${side}.exactName` });
+    if (typeof value?.exactName === "string")
+      names.push({ value: value.exactName, label: `reparse.deferredAuditRelation.${side}.exactName` });
   }
   errors.push(...caseInsensitiveNameCollisions(names));
   return [...new Set(errors)];
@@ -306,7 +401,10 @@ function readJson(filePath) {
   try {
     return { value: JSON.parse(fs.readFileSync(filePath, "utf8")), errors: [] };
   } catch (error) {
-    return { value: null, errors: [`could not read parent-layout policy: ${error instanceof Error ? error.message : String(error)}`] };
+    return {
+      value: null,
+      errors: [`could not read parent-layout policy: ${error instanceof Error ? error.message : String(error)}`],
+    };
   }
 }
 
@@ -321,7 +419,10 @@ function readContractReference(contractPath) {
     const contract = JSON.parse(fs.readFileSync(contractPath, "utf8"));
     return { contract, errors: [] };
   } catch (error) {
-    return { contract: null, errors: [`could not read workspace contract: ${error instanceof Error ? error.message : String(error)}`] };
+    return {
+      contract: null,
+      errors: [`could not read workspace contract: ${error instanceof Error ? error.message : String(error)}`],
+    };
   }
 }
 
@@ -341,9 +442,7 @@ function samePath(left, right) {
 function pathInside(root, candidate, { allowEqual = false } = {}) {
   const relative = path.relative(path.resolve(root), path.resolve(candidate));
   if (relative === "") return allowEqual;
-  return relative !== ".."
-    && !relative.startsWith(`..${path.sep}`)
-    && !path.isAbsolute(relative);
+  return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
 function isReparsePoint(stats) {
@@ -456,11 +555,20 @@ function inspectGitPointer(root, label, noGo, { required = true } = {}) {
     recordNoGo(noGo, `${label} has an invalid .git pointer target (${error.code ?? error.message})`);
     return false;
   }
-  if (isReparsePoint(targetStats)) recordNoGo(noGo, `${label} .git pointer target must not be a symlink or reparse point`);
+  if (isReparsePoint(targetStats))
+    recordNoGo(noGo, `${label} .git pointer target must not be a symlink or reparse point`);
   return true;
 }
 
-function inspectGitRepository({ root, label, expectedRepository, expectedBranch, expectedUpstream, expectedHead, noGo }) {
+function inspectGitRepository({
+  root,
+  label,
+  expectedRepository,
+  expectedBranch,
+  expectedUpstream,
+  expectedHead,
+  noGo,
+}) {
   const initialNoGoCount = noGo.length;
   const result = { label, status: "no-go", branch: null, upstream: null, head: null, originMain: null };
   if (root === null) return result;
@@ -477,7 +585,8 @@ function inspectGitRepository({ root, label, expectedRepository, expectedBranch,
 
   const branch = strictGitValue(root, ["branch", "--show-current"]);
   result.branch = branch ?? null;
-  if (expectedBranch !== undefined && branch !== expectedBranch) recordNoGo(noGo, `${label} branch must be ${expectedBranch || "detached"}`);
+  if (expectedBranch !== undefined && branch !== expectedBranch)
+    recordNoGo(noGo, `${label} branch must be ${expectedBranch || "detached"}`);
 
   if (expectedUpstream !== undefined) {
     const upstream = strictGitValue(root, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
@@ -492,12 +601,18 @@ function inspectGitRepository({ root, label, expectedRepository, expectedBranch,
   const head = strictGitValue(root, ["rev-parse", "HEAD"]);
   result.head = head?.toLowerCase() ?? null;
   if (head === null) recordNoGo(noGo, `${label} HEAD could not be read`);
-  if (expectedHead !== undefined && result.head !== expectedHead.toLowerCase()) recordNoGo(noGo, `${label} HEAD must be ${expectedHead}`);
+  if (expectedHead !== undefined && result.head !== expectedHead.toLowerCase())
+    recordNoGo(noGo, `${label} HEAD must be ${expectedHead}`);
 
   const originMain = strictGitValue(root, ["rev-parse", "origin/main"]);
   result.originMain = originMain?.toLowerCase() ?? null;
   if (expectedUpstream !== undefined && originMain === null) recordNoGo(noGo, `${label} origin/main could not be read`);
-  if (expectedUpstream !== undefined && result.head !== null && result.originMain !== null && result.head !== result.originMain) {
+  if (
+    expectedUpstream !== undefined &&
+    result.head !== null &&
+    result.originMain !== null &&
+    result.head !== result.originMain
+  ) {
     recordNoGo(noGo, `${label} HEAD must equal origin/main`);
   }
   result.status = noGo.length === initialNoGoCount ? "validated" : "no-go";
@@ -511,7 +626,14 @@ function parseWorktreePorcelain(text) {
     if (line === "") continue;
     if (line.startsWith("worktree ")) {
       if (current !== null) entries.push(current);
-      current = { path: line.slice("worktree ".length), branch: null, detached: false, locked: false, lockReason: null, bare: false };
+      current = {
+        path: line.slice("worktree ".length),
+        branch: null,
+        detached: false,
+        locked: false,
+        lockReason: null,
+        bare: false,
+      };
     } else if (current === null) {
       continue;
     } else if (line === "bare") {
@@ -544,24 +666,31 @@ function checkExactWorktrees({ gameRoot, oracleRoot, oraclePolicy, noGo }) {
   }
   const entries = parseWorktreePorcelain(list.stdout);
   result.entries = entries.length;
-  if (entries.length !== 2) recordNoGo(noGo, `game worktree porcelain must contain exactly canonical game and locked oracle; found ${entries.length}`);
+  if (entries.length !== 2)
+    recordNoGo(
+      noGo,
+      `game worktree porcelain must contain exactly canonical game and locked oracle; found ${entries.length}`,
+    );
   const canonical = entries.find((entry) => samePath(entry.path, gameRoot));
   if (canonical === undefined) {
     recordNoGo(noGo, "game worktree porcelain is missing the canonical game root");
   } else {
-    if (canonical.bare || canonical.detached || canonical.branch !== "refs/heads/main") recordNoGo(noGo, "canonical game worktree porcelain must be branch main");
+    if (canonical.bare || canonical.detached || canonical.branch !== "refs/heads/main")
+      recordNoGo(noGo, "canonical game worktree porcelain must be branch main");
   }
   const oracle = entries.find((entry) => samePath(entry.path, oracleRoot));
   if (oracle === undefined) {
     recordNoGo(noGo, "game worktree porcelain is missing the canonical oracle root");
   } else {
-    if (oracle.bare || !oracle.detached || oracle.branch !== null) recordNoGo(noGo, "oracle worktree porcelain must be detached");
+    if (oracle.bare || !oracle.detached || oracle.branch !== null)
+      recordNoGo(noGo, "oracle worktree porcelain must be detached");
     if (!oracle.locked || !new RegExp(oraclePolicy.requiredLockReason, "iu").test(oracle.lockReason ?? "")) {
       recordNoGo(noGo, "oracle worktree must be locked with a comparison-only reason");
     }
   }
   for (const entry of entries) {
-    if (!samePath(entry.path, gameRoot) && !samePath(entry.path, oracleRoot)) recordNoGo(noGo, "an unapproved Git worktree is registered");
+    if (!samePath(entry.path, gameRoot) && !samePath(entry.path, oracleRoot))
+      recordNoGo(noGo, "an unapproved Git worktree is registered");
   }
   result.status = noGo.length === initialNoGoCount ? "validated" : "no-go";
   return result;
@@ -580,7 +709,8 @@ function immediateChildren(root, label, noGo, { inspectPointers = false, allowed
   const result = [];
   for (const entry of children) {
     const nameKey = entry.name.toLocaleLowerCase("en-US");
-    if (names.has(nameKey)) recordNoGo(noGo, `${label} has a case-insensitive name collision: ${names.get(nameKey)} and ${entry.name}`);
+    if (names.has(nameKey))
+      recordNoGo(noGo, `${label} has a case-insensitive name collision: ${names.get(nameKey)} and ${entry.name}`);
     else names.set(nameKey, entry.name);
     const candidate = path.join(root, entry.name);
     let stats;
@@ -591,9 +721,15 @@ function immediateChildren(root, label, noGo, { inspectPointers = false, allowed
       continue;
     }
     const reparse = isReparsePoint(stats);
-    if (reparse && !allowedReparse.has(entry.name.toLocaleLowerCase("en-US"))) recordNoGo(noGo, `${label} child ${entry.name} is an immediate symlink or reparse point`);
-    if (inspectPointers && !reparse && stats.isDirectory()) inspectGitPointer(candidate, `${label} child ${entry.name}`, noGo, { required: false });
-    result.push({ name: entry.name, kind: stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "other", reparse });
+    if (reparse && !allowedReparse.has(entry.name.toLocaleLowerCase("en-US")))
+      recordNoGo(noGo, `${label} child ${entry.name} is an immediate symlink or reparse point`);
+    if (inspectPointers && !reparse && stats.isDirectory())
+      inspectGitPointer(candidate, `${label} child ${entry.name}`, noGo, { required: false });
+    result.push({
+      name: entry.name,
+      kind: stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "other",
+      reparse,
+    });
   }
   return result;
 }
@@ -601,21 +737,36 @@ function immediateChildren(root, label, noGo, { inspectPointers = false, allowed
 function classifyChildren(children, location, policy, review, noGo) {
   const approved = policy.names.approvedArchiveRecoveryPatterns.map((pattern) => new RegExp(pattern, "iu"));
   const forbidden = policy.names.forbiddenPatterns.map((pattern) => new RegExp(pattern, "iu"));
-  const canonicalNames = new Set(Object.values(policy.canonical).map((value) => value.exactName.toLocaleLowerCase("en-US")));
-  const deferredNames = new Set([
-    policy.reparse.deferredAuditRelation.source.exactName,
-    policy.reparse.deferredAuditRelation.target.exactName,
-  ].map((value) => value.toLocaleLowerCase("en-US")));
-  const scope = location === "temporary root" ? "temporary-root" : location === "workspace root" ? "workspace-root" : location === "archive root" ? "archive-root" : null;
+  const canonicalNames = new Set(
+    Object.values(policy.canonical).map((value) => value.exactName.toLocaleLowerCase("en-US")),
+  );
+  const deferredNames = new Set(
+    [policy.reparse.deferredAuditRelation.source.exactName, policy.reparse.deferredAuditRelation.target.exactName].map(
+      (value) => value.toLocaleLowerCase("en-US"),
+    ),
+  );
+  const scope =
+    location === "temporary root"
+      ? "temporary-root"
+      : location === "workspace root"
+        ? "workspace-root"
+        : location === "archive root"
+          ? "archive-root"
+          : null;
   const explicitRetentions = policy.looseItems.explicitRetentions.filter((entry) => entry.scope === scope);
   const classifications = [];
   for (const child of children) {
     const nameKey = child.name.toLocaleLowerCase("en-US");
-    const explicitRetention = explicitRetentions.find((entry) => entry.exactName.toLocaleLowerCase("en-US") === nameKey);
+    const explicitRetention = explicitRetentions.find(
+      (entry) => entry.exactName.toLocaleLowerCase("en-US") === nameKey,
+    );
     let classification = "unrelated";
     if (explicitRetention !== undefined && child.kind !== explicitRetention.kind) {
       classification = "legacy-comparison-only-retention-kind-mismatch";
-      recordNoGo(noGo, `${location} explicit retention ${child.name} has kind ${child.kind}, expected ${explicitRetention.kind}`);
+      recordNoGo(
+        noGo,
+        `${location} explicit retention ${child.name} has kind ${child.kind}, expected ${explicitRetention.kind}`,
+      );
     } else if (explicitRetention !== undefined) {
       classification = explicitRetention.classification;
     } else if (forbidden.some((pattern) => pattern.test(child.name))) {
@@ -631,7 +782,13 @@ function classifyChildren(children, location, policy, review, noGo) {
       classification = "loose-tear-related-review";
       recordReview(review, `${location} contains loose Tear-related ${child.kind}: ${child.name}`);
     }
-    classifications.push({ location, name: child.name, kind: child.kind, classification, ...(explicitRetention === undefined ? {} : { retention: explicitRetention }) });
+    classifications.push({
+      location,
+      name: child.name,
+      kind: child.kind,
+      classification,
+      ...(explicitRetention === undefined ? {} : { retention: explicitRetention }),
+    });
   }
   return classifications;
 }
@@ -659,19 +816,26 @@ function checkDeferredPair({ tempRoot, policy, noGo, review }) {
   try {
     sourceStats = fs.lstatSync(sourceNode);
   } catch (error) {
-    recordNoGo(noGo, `deferred junction source ${relation.source.relativePath} is missing (${error.code ?? error.message})`);
+    recordNoGo(
+      noGo,
+      `deferred junction source ${relation.source.relativePath} is missing (${error.code ?? error.message})`,
+    );
   }
   try {
     targetStats = fs.lstatSync(targetNode);
   } catch (error) {
-    recordNoGo(noGo, `deferred junction target ${relation.target.relativePath} is missing (${error.code ?? error.message})`);
+    recordNoGo(
+      noGo,
+      `deferred junction target ${relation.target.relativePath} is missing (${error.code ?? error.message})`,
+    );
   }
   if (sourceStats !== undefined && !isReparsePoint(sourceStats)) {
     recordNoGo(noGo, "deferred junction source node_modules must be a directory junction");
   }
   if (sourceStats !== undefined && isReparsePoint(sourceStats)) {
     try {
-      if (!fs.statSync(sourceNode).isDirectory()) recordNoGo(noGo, "deferred junction source node_modules must resolve to a directory");
+      if (!fs.statSync(sourceNode).isDirectory())
+        recordNoGo(noGo, "deferred junction source node_modules must resolve to a directory");
     } catch (error) {
       recordNoGo(noGo, `deferred junction source node_modules cannot be inspected (${error.code ?? error.message})`);
     }
@@ -679,9 +843,15 @@ function checkDeferredPair({ tempRoot, policy, noGo, review }) {
   if (targetStats !== undefined && (isReparsePoint(targetStats) || !targetStats.isDirectory())) {
     recordNoGo(noGo, "deferred junction target node_modules must be a normal directory");
   }
-  if (sourceStats !== undefined && targetStats !== undefined && isReparsePoint(sourceStats) && !isReparsePoint(targetStats)) {
+  if (
+    sourceStats !== undefined &&
+    targetStats !== undefined &&
+    isReparsePoint(sourceStats) &&
+    !isReparsePoint(targetStats)
+  ) {
     try {
-      if (!samePath(fs.realpathSync.native(sourceNode), targetNode)) recordNoGo(noGo, "deferred junction source must resolve exactly to target node_modules");
+      if (!samePath(fs.realpathSync.native(sourceNode), targetNode))
+        recordNoGo(noGo, "deferred junction source must resolve exactly to target node_modules");
     } catch (error) {
       recordNoGo(noGo, `deferred junction source cannot be resolved (${error.code ?? error.message})`);
     }
@@ -691,7 +861,15 @@ function checkDeferredPair({ tempRoot, policy, noGo, review }) {
   return result;
 }
 
-function runStrictParentLayoutInspection({ root, workspaceRoot, tempRoot, archiveRoot, oracleRoot, policy, policyErrors }) {
+function runStrictParentLayoutInspection({
+  root,
+  workspaceRoot,
+  tempRoot,
+  archiveRoot,
+  oracleRoot,
+  policy,
+  policyErrors,
+}) {
   const noGo = [...policyErrors];
   const review = [];
   const classifications = [];
@@ -702,7 +880,12 @@ function runStrictParentLayoutInspection({ root, workspaceRoot, tempRoot, archiv
     ["archiveRoot", archiveRoot],
     ["oracleRoot", oracleRoot],
   ];
-  for (const [name, value] of requiredRoots) if (typeof value !== "string" || value.trim() === "") recordNoGo(noGo, `strict mode requires explicit --${name.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`);
+  for (const [name, value] of requiredRoots)
+    if (typeof value !== "string" || value.trim() === "")
+      recordNoGo(
+        noGo,
+        `strict mode requires explicit --${name.replace(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}`,
+      );
   if (policyErrors.length > 0 || noGo.length > policyErrors.length) {
     return {
       ok: false,
@@ -735,17 +918,44 @@ function runStrictParentLayoutInspection({ root, workspaceRoot, tempRoot, archiv
   const absoluteTempRoot = inspectRootDirectory(tempRoot, "temporary root", noGo);
   const absoluteArchiveRoot = inspectRootDirectory(archiveRoot, "archive root", noGo);
   const absoluteOracleRoot = inspectRootDirectory(oracleRoot, "oracle root", noGo);
-  const expectedGameRoot = absoluteWorkspaceRoot === null ? null : path.join(absoluteWorkspaceRoot, policy.canonical.game.exactName);
-  const expectedMusicRoot = absoluteWorkspaceRoot === null ? null : path.join(absoluteWorkspaceRoot, policy.canonical.music.exactName);
-  const expectedWikiRoot = absoluteWorkspaceRoot === null ? null : path.join(absoluteWorkspaceRoot, policy.canonical.wiki.exactName);
-  if (expectedGameRoot === null || !samePath(absoluteRoot, expectedGameRoot)) recordNoGo(noGo, "--root must be the canonical game directory directly under --workspace-root");
-  if (absoluteArchiveRoot !== null && absoluteWorkspaceRoot !== null && !samePath(absoluteArchiveRoot, path.join(absoluteWorkspaceRoot, "Tear-archives"))) recordNoGo(noGo, "--archive-root must be the Tear-archives directory under --workspace-root");
-  if (absoluteOracleRoot !== null && absoluteWorkspaceRoot !== null && !samePath(absoluteOracleRoot, path.join(absoluteWorkspaceRoot, policy.canonical.oracle.exactName))) recordNoGo(noGo, "--oracle-root must be the canonical oracle directory under --workspace-root");
-  if (absoluteWorkspaceRoot !== null && absoluteTempRoot !== null && (pathInside(absoluteWorkspaceRoot, absoluteTempRoot, { allowEqual: true }) || pathInside(absoluteTempRoot, absoluteWorkspaceRoot, { allowEqual: true }))) recordNoGo(noGo, "--temp-root must be separate from --workspace-root");
-  const explicitRoots = [absoluteRoot, absoluteWorkspaceRoot, absoluteTempRoot, absoluteArchiveRoot, absoluteOracleRoot].filter((value) => value !== null);
+  const expectedGameRoot =
+    absoluteWorkspaceRoot === null ? null : path.join(absoluteWorkspaceRoot, policy.canonical.game.exactName);
+  const expectedMusicRoot =
+    absoluteWorkspaceRoot === null ? null : path.join(absoluteWorkspaceRoot, policy.canonical.music.exactName);
+  const expectedWikiRoot =
+    absoluteWorkspaceRoot === null ? null : path.join(absoluteWorkspaceRoot, policy.canonical.wiki.exactName);
+  if (expectedGameRoot === null || !samePath(absoluteRoot, expectedGameRoot))
+    recordNoGo(noGo, "--root must be the canonical game directory directly under --workspace-root");
+  if (
+    absoluteArchiveRoot !== null &&
+    absoluteWorkspaceRoot !== null &&
+    !samePath(absoluteArchiveRoot, path.join(absoluteWorkspaceRoot, "Tear-archives"))
+  )
+    recordNoGo(noGo, "--archive-root must be the Tear-archives directory under --workspace-root");
+  if (
+    absoluteOracleRoot !== null &&
+    absoluteWorkspaceRoot !== null &&
+    !samePath(absoluteOracleRoot, path.join(absoluteWorkspaceRoot, policy.canonical.oracle.exactName))
+  )
+    recordNoGo(noGo, "--oracle-root must be the canonical oracle directory under --workspace-root");
+  if (
+    absoluteWorkspaceRoot !== null &&
+    absoluteTempRoot !== null &&
+    (pathInside(absoluteWorkspaceRoot, absoluteTempRoot, { allowEqual: true }) ||
+      pathInside(absoluteTempRoot, absoluteWorkspaceRoot, { allowEqual: true }))
+  )
+    recordNoGo(noGo, "--temp-root must be separate from --workspace-root");
+  const explicitRoots = [
+    absoluteRoot,
+    absoluteWorkspaceRoot,
+    absoluteTempRoot,
+    absoluteArchiveRoot,
+    absoluteOracleRoot,
+  ].filter((value) => value !== null);
   for (let leftIndex = 0; leftIndex < explicitRoots.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < explicitRoots.length; rightIndex += 1) {
-      if (samePath(explicitRoots[leftIndex], explicitRoots[rightIndex])) recordNoGo(noGo, "strict roots must be distinct directories");
+      if (samePath(explicitRoots[leftIndex], explicitRoots[rightIndex]))
+        recordNoGo(noGo, "strict roots must be distinct directories");
     }
   }
 
@@ -756,21 +966,51 @@ function runStrictParentLayoutInspection({ root, workspaceRoot, tempRoot, archiv
   ];
   for (const [key, candidate, spec] of canonicalSpecs) {
     const canonicalRoot = inspectRootDirectory(candidate, `canonical ${key} root`, noGo);
-    checks.roots[key] = canonicalRoot === null
-      ? { status: "no-go" }
-      : inspectGitRepository({ root: canonicalRoot, label: `canonical ${key}`, expectedRepository: spec.repository, expectedBranch: spec.branch, expectedUpstream: spec.upstream, noGo });
-    if (canonicalRoot !== null) immediateChildren(canonicalRoot, `canonical ${key} root`, noGo, { inspectPointers: false });
+    checks.roots[key] =
+      canonicalRoot === null
+        ? { status: "no-go" }
+        : inspectGitRepository({
+            root: canonicalRoot,
+            label: `canonical ${key}`,
+            expectedRepository: spec.repository,
+            expectedBranch: spec.branch,
+            expectedUpstream: spec.upstream,
+            noGo,
+          });
+    if (canonicalRoot !== null)
+      immediateChildren(canonicalRoot, `canonical ${key} root`, noGo, { inspectPointers: false });
   }
   if (absoluteOracleRoot !== null) {
-    checks.roots.oracle = inspectGitRepository({ root: absoluteOracleRoot, label: "oracle", expectedRepository: policy.canonical.oracle.repository, expectedBranch: "", expectedHead: policy.canonical.oracle.lockedCommit, noGo });
+    checks.roots.oracle = inspectGitRepository({
+      root: absoluteOracleRoot,
+      label: "oracle",
+      expectedRepository: policy.canonical.oracle.repository,
+      expectedBranch: "",
+      expectedHead: policy.canonical.oracle.lockedCommit,
+      noGo,
+    });
   }
-  if (absoluteRoot !== null && absoluteOracleRoot !== null) checks.worktrees = checkExactWorktrees({ gameRoot: absoluteRoot, oracleRoot: absoluteOracleRoot, oraclePolicy: policy.canonical.oracle, noGo });
+  if (absoluteRoot !== null && absoluteOracleRoot !== null)
+    checks.worktrees = checkExactWorktrees({
+      gameRoot: absoluteRoot,
+      oracleRoot: absoluteOracleRoot,
+      oraclePolicy: policy.canonical.oracle,
+      noGo,
+    });
 
   if (absoluteWorkspaceRoot !== null) {
     const children = immediateChildren(absoluteWorkspaceRoot, "workspace root", noGo, { inspectPointers: true });
     classifications.push(...classifyChildren(children, "workspace root", policy, review, noGo));
-    const expectedNames = [policy.canonical.game.exactName, policy.canonical.music.exactName, policy.canonical.wiki.exactName, policy.canonical.oracle.exactName, "Tear-archives"];
-    for (const expectedName of expectedNames) if (!children.some((child) => child.name === expectedName)) recordNoGo(noGo, `workspace root is missing exact child ${expectedName}`);
+    const expectedNames = [
+      policy.canonical.game.exactName,
+      policy.canonical.music.exactName,
+      policy.canonical.wiki.exactName,
+      policy.canonical.oracle.exactName,
+      "Tear-archives",
+    ];
+    for (const expectedName of expectedNames)
+      if (!children.some((child) => child.name === expectedName))
+        recordNoGo(noGo, `workspace root is missing exact child ${expectedName}`);
   }
   if (absoluteTempRoot !== null) {
     const children = immediateChildren(absoluteTempRoot, "temporary root", noGo, { inspectPointers: true });
@@ -782,7 +1022,8 @@ function runStrictParentLayoutInspection({ root, workspaceRoot, tempRoot, archiv
     const children = immediateChildren(absoluteArchiveRoot, "archive root", noGo, { inspectPointers: false });
     classifications.push(...classifyChildren(children, "archive root", policy, review, noGo));
   }
-  if (absoluteTempRoot !== null) checks.deferredPair = checkDeferredPair({ tempRoot: absoluteTempRoot, policy, noGo, review });
+  if (absoluteTempRoot !== null)
+    checks.deferredPair = checkDeferredPair({ tempRoot: absoluteTempRoot, policy, noGo, review });
 
   const uniqueNoGo = [...new Set(noGo)];
   const uniqueReview = [...new Set(review)];
@@ -812,24 +1053,39 @@ export function runParentLayoutCheck({
 } = {}) {
   const absoluteRoot = path.resolve(root);
   const errors = [];
-  let resolvedPolicyPath = policyPath === undefined
-    ? path.join(absoluteRoot, DEFAULT_PARENT_LAYOUT_POLICY_RELATIVE_PATH)
-    : path.resolve(policyPath);
+  let resolvedPolicyPath =
+    policyPath === undefined
+      ? path.join(absoluteRoot, DEFAULT_PARENT_LAYOUT_POLICY_RELATIVE_PATH)
+      : path.resolve(policyPath);
   if (checkContract) {
-    const loadedContract = readContractReference(contractPath ?? path.join(absoluteRoot, DEFAULT_WORKSPACE_CONTRACT_RELATIVE_PATH));
+    const loadedContract = readContractReference(
+      contractPath ?? path.join(absoluteRoot, DEFAULT_WORKSPACE_CONTRACT_RELATIVE_PATH),
+    );
     errors.push(...loadedContract.errors);
     if (loadedContract.contract?.parentLayoutPolicy !== `./${DEFAULT_PARENT_LAYOUT_POLICY_RELATIVE_PATH}`) {
       errors.push(`workspace contract parentLayoutPolicy must be ./${DEFAULT_PARENT_LAYOUT_POLICY_RELATIVE_PATH}`);
     }
-    if (loadedContract.contract?.repository !== EXPECTED_REPOSITORY) errors.push(`workspace contract repository must be ${EXPECTED_REPOSITORY}`);
-    if (policyPath === undefined && loadedContract.contract?.parentLayoutPolicy === "./preservation/workspace-parent-layout-policy.json") {
+    if (loadedContract.contract?.repository !== EXPECTED_REPOSITORY)
+      errors.push(`workspace contract repository must be ${EXPECTED_REPOSITORY}`);
+    if (
+      policyPath === undefined &&
+      loadedContract.contract?.parentLayoutPolicy === "./preservation/workspace-parent-layout-policy.json"
+    ) {
       resolvedPolicyPath = path.resolve(absoluteRoot, loadedContract.contract.parentLayoutPolicy);
     }
   }
   const loaded = readParentLayoutPolicy(resolvedPolicyPath);
   errors.push(...loaded.errors, ...validateParentLayoutPolicy(loaded.policy));
   if (strict) {
-    const result = runStrictParentLayoutInspection({ root: absoluteRoot, workspaceRoot, tempRoot, archiveRoot, oracleRoot, policy: loaded.policy, policyErrors: errors });
+    const result = runStrictParentLayoutInspection({
+      root: absoluteRoot,
+      workspaceRoot,
+      tempRoot,
+      archiveRoot,
+      oracleRoot,
+      policy: loaded.policy,
+      policyErrors: errors,
+    });
     return { ...result, policyRelativePath: path.relative(absoluteRoot, loaded.path).replaceAll(path.sep, "/") };
   }
   return {
@@ -849,14 +1105,28 @@ function parseArguments(argumentsList) {
   };
   for (let index = 0; index < argumentsList.length; index += 1) {
     const argument = argumentsList[index];
-    if (argument === "--root") { options.root = pathArgument(argument, index); index += 1; }
-    else if (argument === "--workspace-root") { options.workspaceRoot = pathArgument(argument, index); index += 1; }
-    else if (argument === "--temp-root") { options.tempRoot = pathArgument(argument, index); index += 1; }
-    else if (argument === "--archive-root") { options.archiveRoot = pathArgument(argument, index); index += 1; }
-    else if (argument === "--oracle-root") { options.oracleRoot = pathArgument(argument, index); index += 1; }
-    else if (argument === "--policy") { options.policyPath = pathArgument(argument, index); index += 1; }
-    else if (argument === "--contract") { options.contractPath = pathArgument(argument, index); index += 1; }
-    else if (argument === "--no-contract") options.checkContract = false;
+    if (argument === "--root") {
+      options.root = pathArgument(argument, index);
+      index += 1;
+    } else if (argument === "--workspace-root") {
+      options.workspaceRoot = pathArgument(argument, index);
+      index += 1;
+    } else if (argument === "--temp-root") {
+      options.tempRoot = pathArgument(argument, index);
+      index += 1;
+    } else if (argument === "--archive-root") {
+      options.archiveRoot = pathArgument(argument, index);
+      index += 1;
+    } else if (argument === "--oracle-root") {
+      options.oracleRoot = pathArgument(argument, index);
+      index += 1;
+    } else if (argument === "--policy") {
+      options.policyPath = pathArgument(argument, index);
+      index += 1;
+    } else if (argument === "--contract") {
+      options.contractPath = pathArgument(argument, index);
+      index += 1;
+    } else if (argument === "--no-contract") options.checkContract = false;
     else if (argument === "--strict") options.strict = true;
     else if (argument === "--help") options.help = true;
     else throw new Error(`Unknown argument: ${argument}`);
@@ -868,14 +1138,25 @@ function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
     if (options.help) {
-      console.log(JSON.stringify({ usage: "node scripts/check-parent-layout.mjs [--root <repo>] [--policy <path>] [--contract <path>] [--no-contract] [--strict --workspace-root <dir> --temp-root <dir> --archive-root <dir> --oracle-root <dir>]" }));
+      console.log(
+        JSON.stringify({
+          usage:
+            "node scripts/check-parent-layout.mjs [--root <repo>] [--policy <path>] [--contract <path>] [--no-contract] [--strict --workspace-root <dir> --temp-root <dir> --archive-root <dir> --oracle-root <dir>]",
+        }),
+      );
       return;
     }
     const result = runParentLayoutCheck(options);
     console.log(JSON.stringify(result, null, 2));
     if (!result.ok) process.exitCode = 1;
   } catch (error) {
-    console.log(JSON.stringify({ ok: false, status: "invalid", errors: [error instanceof Error ? error.message : String(error)] }, null, 2));
+    console.log(
+      JSON.stringify(
+        { ok: false, status: "invalid", errors: [error instanceof Error ? error.message : String(error)] },
+        null,
+        2,
+      ),
+    );
     process.exitCode = 1;
   }
 }

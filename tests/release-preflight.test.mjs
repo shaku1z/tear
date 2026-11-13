@@ -28,10 +28,18 @@ async function fixture() {
   git(seed, "config", "user.email", "release-test@invalid.example");
   await writeFile(join(seed, "tracked.txt"), "baseline\n", "utf8");
   await mkdir(join(seed, "config"));
-  await writeFile(join(seed, "config", "campaign-publication-boundary.json"), `${JSON.stringify({
-    format: "tear-campaign-publication-boundary", schemaVersion: 1, status: "public", rulesetVersion: "test-public",
-    activeStageIds: ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"], previewStageIds: ["pale-traverse"],
-  })}\n`, "utf8");
+  await writeFile(
+    join(seed, "config", "campaign-publication-boundary.json"),
+    `${JSON.stringify({
+      format: "tear-campaign-publication-boundary",
+      schemaVersion: 1,
+      status: "public",
+      rulesetVersion: "test-public",
+      activeStageIds: ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"],
+      previewStageIds: ["pale-traverse"],
+    })}\n`,
+    "utf8",
+  );
   git(seed, "add", "tracked.txt", "config/campaign-publication-boundary.json");
   git(seed, "commit", "-m", "baseline");
   git(seed, "remote", "add", "origin", remote);
@@ -42,15 +50,19 @@ async function fixture() {
   git(checkout, "config", "user.email", "release-test@invalid.example");
   const sha = git(checkout, "rev-parse", "HEAD");
   const evidencePath = join(root, "release-evidence.json");
-  await writeFile(evidencePath, `${JSON.stringify({
-    format: "tear-release-evidence",
-    schemaVersion: 1,
-    repository: "shaku1z/tear",
-    sha,
-    validationWorkflow: "Validate",
-    validationConclusion: "success",
-    validationRunId: "123",
-  })}\n`, "utf8");
+  await writeFile(
+    evidencePath,
+    `${JSON.stringify({
+      format: "tear-release-evidence",
+      schemaVersion: 1,
+      repository: "shaku1z/tear",
+      sha,
+      validationWorkflow: "Validate",
+      validationConclusion: "success",
+      validationRunId: "123",
+    })}\n`,
+    "utf8",
+  );
   return { root, remote, seed, checkout, sha, evidencePath };
 }
 
@@ -102,17 +114,34 @@ test("rejects main behind origin/main", async () => {
 test("rejects a validated clean main whose campaign policy is still engineering-only", async () => {
   const value = await fixture();
   const policyPath = join(value.checkout, "config", "campaign-publication-boundary.json");
-  await writeFile(policyPath, `${JSON.stringify({
-    format: "tear-campaign-publication-boundary", schemaVersion: 1, status: "engineering-only", rulesetVersion: "engineering",
-    activeStageIds: ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"], previewStageIds: ["pale-traverse"],
-  })}\n`, "utf8");
+  await writeFile(
+    policyPath,
+    `${JSON.stringify({
+      format: "tear-campaign-publication-boundary",
+      schemaVersion: 1,
+      status: "engineering-only",
+      rulesetVersion: "engineering",
+      activeStageIds: ["grounds", "undercroft", "crimson-fields", "verdant-sanctum", "voidspire", "tear"],
+      previewStageIds: ["pale-traverse"],
+    })}\n`,
+    "utf8",
+  );
   git(value.checkout, "add", "config/campaign-publication-boundary.json");
   git(value.checkout, "commit", "-m", "engineering policy");
   git(value.checkout, "push", "origin", "main");
   value.sha = git(value.checkout, "rev-parse", "HEAD");
-  await writeFile(value.evidencePath, `${JSON.stringify({
-    format: "tear-release-evidence", schemaVersion: 1, repository: "shaku1z/tear", sha: value.sha,
-    validationWorkflow: "Validate", validationConclusion: "success", validationRunId: "124",
-  })}\n`, "utf8");
+  await writeFile(
+    value.evidencePath,
+    `${JSON.stringify({
+      format: "tear-release-evidence",
+      schemaVersion: 1,
+      repository: "shaku1z/tear",
+      sha: value.sha,
+      validationWorkflow: "Validate",
+      validationConclusion: "success",
+      validationRunId: "124",
+    })}\n`,
+    "utf8",
+  );
   await assert.rejects(validate(value), /publication prohibited.*engineering-only/u);
 });

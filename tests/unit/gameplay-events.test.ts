@@ -23,7 +23,9 @@ describe("native gameplay event bus", () => {
 
   it("rejects invalid simulation ticks", () => {
     const bus = new TearGameplayEventBus();
-    expect(() => { bus.publish({ kind: "stage", tick: -1, stage: 0 }); }).toThrow(RangeError);
+    expect(() => {
+      bus.publish({ kind: "stage", tick: -1, stage: 0 });
+    }).toThrow(RangeError);
   });
 
   it("accepts legacy numeric stage facts and rejects mismatched stable stage identities", () => {
@@ -34,8 +36,9 @@ describe("native gameplay event bus", () => {
     bus.publish({ kind: "stage", tick: 2, stage: 3, stageId: "verdant-sanctum", transition: "entered" });
     bus.publish({ kind: "stage", tick: 3, stage: 6, stageId: "pale-traverse", transition: "entered" });
     expect(listener).toHaveBeenCalledTimes(3);
-    expect(() => { bus.publish({ kind: "stage", tick: 3, stage: 3, stageId: "grounds" }); })
-      .toThrow(/does not match index/u);
+    expect(() => {
+      bus.publish({ kind: "stage", tick: 3, stage: 3, stageId: "grounds" });
+    }).toThrow(/does not match index/u);
   });
 
   it("can bind native publishers to the shared simulation clock after composition", () => {
@@ -43,7 +46,9 @@ describe("native gameplay event bus", () => {
     let simulationTick = 0;
     const bus = new TearGameplayEventBus(() => provisionalInputTick);
     const observedTicks: number[] = [];
-    bus.subscribe((event) => { observedTicks.push(event.tick); });
+    bus.subscribe((event) => {
+      observedTicks.push(event.tick);
+    });
 
     bus.emit({ kind: "stage", stage: 1 });
     bus.setTickSource(() => simulationTick);
@@ -56,12 +61,44 @@ describe("native gameplay event bus", () => {
   });
 
   it("maps generic production weapon transport facts without inventing weapon-specific ontology", () => {
-    expect(mapGameplayEventToCausalEvent({ kind: "weapon", tick: 12, event: "throw-launch", weaponId: "chainblade", throwId: 7, x: 4, y: 8 }))
-      .toMatchObject({ type: "blade.thrown", phase: "player-and-blade", payload: { weaponId: "chainblade", throwId: 7 } });
-    expect(mapGameplayEventToCausalEvent({ kind: "weapon", tick: 13, event: "throw-resolved", weaponId: "chainblade", throwId: 7, x: 6, y: 8, damage: 12 }))
-      .toMatchObject({ type: "blade.throw-resolved", payload: { damage: 12 } });
-    expect(mapGameplayEventToCausalEvent({ kind: "weapon", tick: 14, event: "catch", weaponId: "chainblade", throwId: 7, x: 8, y: 8 }))
-      .toMatchObject({ type: "blade.caught" });
+    expect(
+      mapGameplayEventToCausalEvent({
+        kind: "weapon",
+        tick: 12,
+        event: "throw-launch",
+        weaponId: "chainblade",
+        throwId: 7,
+        x: 4,
+        y: 8,
+      }),
+    ).toMatchObject({
+      type: "blade.thrown",
+      phase: "player-and-blade",
+      payload: { weaponId: "chainblade", throwId: 7 },
+    });
+    expect(
+      mapGameplayEventToCausalEvent({
+        kind: "weapon",
+        tick: 13,
+        event: "throw-resolved",
+        weaponId: "chainblade",
+        throwId: 7,
+        x: 6,
+        y: 8,
+        damage: 12,
+      }),
+    ).toMatchObject({ type: "blade.throw-resolved", payload: { damage: 12 } });
+    expect(
+      mapGameplayEventToCausalEvent({
+        kind: "weapon",
+        tick: 14,
+        event: "catch",
+        weaponId: "chainblade",
+        throwId: 7,
+        x: 8,
+        y: 8,
+      }),
+    ).toMatchObject({ type: "blade.caught" });
   });
 
   it("lets the Ghost 2 adapter publish without owning Ghost 3 subscriptions", () => {
@@ -106,8 +143,15 @@ describe("native gameplay event bus", () => {
     ghost2.startRec({ runId: "native-events", seed: "seed" });
 
     gameplayEvents.emit({
-      kind: "run", transition: "started", runId: "native-events", mode: "endless", difficulty: "normal",
-      weaponId: "sword", wave: 0, score: 0, runTimeSeconds: 0,
+      kind: "run",
+      transition: "started",
+      runId: "native-events",
+      mode: "endless",
+      difficulty: "normal",
+      weaponId: "sword",
+      wave: 0,
+      score: 0,
+      runTimeSeconds: 0,
     });
     gameplayEvents.emit({ kind: "stage", stage: 2, stageId: "crimson-fields", transition: "entered" });
     gameplayEvents.emit({ kind: "stage", stage: 6, stageId: "pale-traverse", transition: "entered" });
@@ -120,7 +164,10 @@ describe("native gameplay event bus", () => {
     }
     const packet = ghost2.stopRec();
 
-    expect(packet?.stages).toEqual([{ t: 0, s: 2 }, { t: 0, s: 6 }]);
+    expect(packet?.stages).toEqual([
+      { t: 0, s: 2 },
+      { t: 0, s: 6 },
+    ]);
     expect(packet?.waves).toEqual([{ t: 0, w: 4, e: "start" }]);
     expect(packet?.events).toEqual([{ t: 0, k: "revive", x: 10, y: 20 }]);
     expect(packet?.loadout).toEqual([{ t: 0, id: "tempo", tier: 2, w: 4 }]);
@@ -147,21 +194,36 @@ describe("native gameplay event bus", () => {
     ghost2.startRec({ runId: "stable-actor", seed: "seed" });
 
     gameplayEvents.emit({
-      kind: "spawn", actorId: "enemy:42", actorKind: "charger", x: 12.2, y: 33.8,
-      variantName: "elite", bossId: "warden",
+      kind: "spawn",
+      actorId: "enemy:42",
+      actorKind: "charger",
+      x: 12.2,
+      y: 33.8,
+      variantName: "elite",
+      bossId: "warden",
     });
     for (let index = 0; index < 20; index += 1) {
-      ghost2.sample(0.1, { x: index, y: 400, facing: 1 }, null, [{
-        x: 20, y: 30, stableId: "enemy:42",
-      }]);
+      ghost2.sample(0.1, { x: index, y: 400, facing: 1 }, null, [
+        {
+          x: 20,
+          y: 30,
+          stableId: "enemy:42",
+        },
+      ]);
     }
     tick += 1;
     gameplayEvents.emit({ kind: "death", actorId: "enemy:42", cause: "combat" });
     const packet = ghost2.stopRec();
 
     expect(observed).toHaveBeenNthCalledWith(1, {
-      kind: "spawn", tick: 40, actorId: "enemy:42", actorKind: "charger", x: 12.2, y: 33.8,
-      variantName: "elite", bossId: "warden",
+      kind: "spawn",
+      tick: 40,
+      actorId: "enemy:42",
+      actorKind: "charger",
+      x: 12.2,
+      y: 33.8,
+      variantName: "elite",
+      bossId: "warden",
     });
     expect(observed).toHaveBeenNthCalledWith(2, { kind: "death", tick: 41, actorId: "enemy:42", cause: "combat" });
     expect(packet?.spawns).toEqual([{ t: 0, id: 1, k: "charger", x: 12, y: 34, vn: "elite", b: "warden" }]);

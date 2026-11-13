@@ -30,12 +30,18 @@ describe("live HUD feedback state", () => {
     expect(state.capture()).toEqual({ version: 1, clockSeconds: 0, lagHp: 1, multiplier: 1, multiplierPop: 0 });
   });
 
-  it.each([null, { version: 2 }, { version: 1, clockSeconds: -1, lagHp: 1, multiplier: 1, multiplierPop: 0 },
-    { version: 1, clockSeconds: 1, lagHp: 2, multiplier: 1, multiplierPop: 0 }])("rejects malformed feedback before replacing the owner", (invalid) => {
+  it.each([
+    null,
+    { version: 2 },
+    { version: 1, clockSeconds: -1, lagHp: 1, multiplier: 1, multiplierPop: 0 },
+    { version: 1, clockSeconds: 1, lagHp: 2, multiplier: 1, multiplierPop: 0 },
+  ])("rejects malformed feedback before replacing the owner", (invalid) => {
     const state = createLiveHudFeedbackState();
     state.set({ lagHp: 0.8, multiplier: 3, multiplierPop: 0.4 });
     const before = state.capture();
-    expect(() => { state.restore(invalid); }).toThrow();
+    expect(() => {
+      state.restore(invalid);
+    }).toThrow();
     expect(state.capture()).toEqual(before);
   });
 });

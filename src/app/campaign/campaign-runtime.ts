@@ -3,10 +3,7 @@ import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
 import type { CampaignCinematicChannel } from "./campaign-sequences";
 import { launchCampaignChapter } from "./campaign-sequences";
 import { chapterLaunchPolicy, type CinematicLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
-import {
-  dispatchChapterIntents,
-  type ChapterIntentPorts,
-} from "./campaign-intent-coordinator";
+import { dispatchChapterIntents, type ChapterIntentPorts } from "./campaign-intent-coordinator";
 import {
   createFinaleRuntime,
   type FinaleBladeSegment,
@@ -14,9 +11,12 @@ import {
 } from "../../gameplay/campaign/finale-runtime";
 import type { FinaleIntent } from "../../gameplay/campaign/finale-controller";
 import type { CampaignRuntimeState } from "./campaign-runtime-state";
-import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding,
-  type CampaignChapterBindingPort, type CampaignChapterBindingSpecV1 } from
-  "../../gameplay/campaign/chapter-cinematic-binding";
+import {
+  parseCampaignChapterBindingSpec,
+  stageCampaignChapterBinding,
+  type CampaignChapterBindingPort,
+  type CampaignChapterBindingSpecV1,
+} from "../../gameplay/campaign/chapter-cinematic-binding";
 import type { CinematicDirectorBinding } from "../../gameplay/runtime/cinematic-director";
 
 export interface LiveCampaignRun {
@@ -103,28 +103,42 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
     dispatchChapterIntents(intents, port.chapterIntents);
   };
   const finale = createFinaleRuntime({
-    runtime: port.runtime, cinema: port.cinema, run: port.run, player: port.player, blade: port.blade,
-    intents: port.finaleIntents, prepareVictory: port.prepareVictory, win: port.win,
-    formatTime: port.formatTime, viewport: port.viewport, perfectColor: port.perfectColor,
-    reducedMotion: port.reducedMotion, lowGraphics: port.lowGraphics,
+    runtime: port.runtime,
+    cinema: port.cinema,
+    run: port.run,
+    player: port.player,
+    blade: port.blade,
+    intents: port.finaleIntents,
+    prepareVictory: port.prepareVictory,
+    win: port.win,
+    formatTime: port.formatTime,
+    viewport: port.viewport,
+    perfectColor: port.perfectColor,
+    reducedMotion: port.reducedMotion,
+    lowGraphics: port.lowGraphics,
     ...(port.observeFinaleIntents === undefined ? {} : { observeIntents: port.observeFinaleIntents }),
   });
   const chapterBindingPort = (): CampaignChapterBindingPort => ({
     dispatch: dispatchChapter,
     preparedWave: port.preparedWave,
     activationDeferred: port.activationDeferred,
-    clear: () => { port.runtime.clearChapterBinding(); },
+    clear: () => {
+      port.runtime.clearChapterBinding();
+    },
   });
   const stageChapterBinding = (value: unknown): StagedLiveChapterBinding | null => {
     if (value === null || value === undefined) return null;
     const spec = parseCampaignChapterBindingSpec(value);
     const stage = port.stageAt(spec.stageIndex);
-    if (stage?.chapter === undefined) throw new RangeError(`campaign chapter stage ${String(spec.stageIndex)} is unavailable`);
+    if (stage?.chapter === undefined)
+      throw new RangeError(`campaign chapter stage ${String(spec.stageIndex)} is unavailable`);
     const staged = stageCampaignChapterBinding(spec, stage, chapterBindingPort());
     return Object.freeze({
       binding: staged.binding,
       spec: staged.spec,
-      install() { port.runtime.installChapterBinding(staged); },
+      install() {
+        port.runtime.installChapterBinding(staged);
+      },
     });
   };
   const api: LiveCampaignRuntimeApi = {
@@ -146,16 +160,25 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
       const policy = chapterPolicy(index);
       if (policy.play) playedChapters.add(index);
       launchCampaignChapter({
-        runtime: port.runtime, cinema: port.cinema, stageIndex: index, stage,
-        priorOutro, brief: policy.brief, play: policy.play, prologueShown: run._prologueShown === true,
-        preparedWave: port.preparedWave, activationDeferred: port.activationDeferred,
+        runtime: port.runtime,
+        cinema: port.cinema,
+        stageIndex: index,
+        stage,
+        priorOutro,
+        brief: policy.brief,
+        play: policy.play,
+        prologueShown: run._prologueShown === true,
+        preparedWave: port.preparedWave,
+        activationDeferred: port.activationDeferred,
         dispatch: dispatchChapter,
-        rememberPrologue: (shown) => { run._prologueShown = shown; },
+        rememberPrologue: (shown) => {
+          run._prologueShown = shown;
+        },
         clearBossBeat: port.clearBossBeat,
       });
     },
-    chapterGatesWave: (index) => port.run()?.mode === "campaign"
-      && port.stageAt(index)?.chapter !== undefined && chapterPolicy(index).play,
+    chapterGatesWave: (index) =>
+      port.run()?.mode === "campaign" && port.stageAt(index)?.chapter !== undefined && chapterPolicy(index).play,
     severFinaleAnchor: finale.severAnchor,
     beginFinaleRestoration: finale.beginRestoration,
     tryFinaleBladeCut: finale.tryBladeCut,
@@ -163,7 +186,10 @@ export function createLiveCampaignRuntime(port: LiveCampaignRuntimePort): LiveCa
     stageChapterBinding,
     installChapterBinding: (value) => {
       const staged = stageChapterBinding(value);
-      if (staged === null) { port.runtime.resetChapter(); return undefined; }
+      if (staged === null) {
+        port.runtime.resetChapter();
+        return undefined;
+      }
       staged.install();
       return staged.binding;
     },

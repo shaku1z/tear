@@ -10,9 +10,15 @@ export interface GhostDoctorReport {
 
 /** The Doctor's existing index schema, shared by selected repair and upkeep. */
 export function ghostDoctorManifestIndexWrite(manifest: TearGhostManifest) {
-  return Object.freeze({ store: "indexes" as const, key: `manifest:${manifest.id}`, value: JSON.stringify({
-    status: manifest.status, createdAt: manifest.createdAt, chunks: manifest.chunks.length,
-  }) });
+  return Object.freeze({
+    store: "indexes" as const,
+    key: `manifest:${manifest.id}`,
+    value: JSON.stringify({
+      status: manifest.status,
+      createdAt: manifest.createdAt,
+      chunks: manifest.chunks.length,
+    }),
+  });
 }
 
 export class GhostDoctor {
@@ -30,15 +36,16 @@ export class GhostDoctor {
     const corrupt: string[] = [];
     const missing: string[] = [];
     for (const entry of manifest.chunks) {
-      try { await this.#vault.readChunk(entry); }
-      catch (error) {
+      try {
+        await this.#vault.readChunk(entry);
+      } catch (error) {
         if (error instanceof RangeError) missing.push(entry.id);
         else corrupt.push(entry.id);
       }
     }
     return Object.freeze({
-      healthy: corrupt.length === 0 && missing.length === 0
-        && ghostRootIntegrity(manifest.chunks) === manifest.rootIntegrity,
+      healthy:
+        corrupt.length === 0 && missing.length === 0 && ghostRootIntegrity(manifest.chunks) === manifest.rootIntegrity,
       corruptChunkIds: Object.freeze(corrupt),
       missingChunkIds: Object.freeze(missing),
     });
@@ -49,7 +56,8 @@ export class GhostDoctor {
     if (manifest === undefined) throw new RangeError(`manifest does not exist: ${id}`);
     const report = await this.scan(id);
     if (report.healthy) throw new TypeError(`capsule does not need repair: ${id}`);
-    if (await this.#vault.getManifest(repairedId) !== undefined) throw new RangeError(`repair child already exists: ${repairedId}`);
+    if ((await this.#vault.getManifest(repairedId)) !== undefined)
+      throw new RangeError(`repair child already exists: ${repairedId}`);
     const excluded = new Set([...report.corruptChunkIds, ...report.missingChunkIds]);
     const repairedAt = this.#now();
     const chunks = Object.freeze(manifest.chunks.filter((chunk) => !excluded.has(chunk.id)));

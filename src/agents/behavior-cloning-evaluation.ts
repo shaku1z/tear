@@ -6,10 +6,7 @@ import {
   type TearBehaviorCloningSplit,
 } from "./academy-behavior-cloning-batches";
 import type { TearAcademyTrainingDatasetV1 } from "./academy-training-dataset";
-import {
-  predictTearBehaviorCloningClass,
-  type TearBehaviorCloningTrainingResultV1,
-} from "./behavior-cloning-trainer";
+import { predictTearBehaviorCloningClass, type TearBehaviorCloningTrainingResultV1 } from "./behavior-cloning-trainer";
 
 export type TearBehaviorCloningHeldoutSplit = Exclude<TearBehaviorCloningSplit, "training">;
 
@@ -38,22 +35,38 @@ const HASH = /^[a-f0-9]{16}$/u;
 function heldoutSplit(value: string): value is TearBehaviorCloningHeldoutSplit {
   return value === "validation" || value === "calibration" || value === "test";
 }
-function hash(value: unknown): value is string { return typeof value === "string" && HASH.test(value); }
-function integer(value: unknown, minimum: number): boolean { return Number.isSafeInteger(value) && Number(value) >= minimum; }
+function hash(value: unknown): value is string {
+  return typeof value === "string" && HASH.test(value);
+}
+function integer(value: unknown, minimum: number): boolean {
+  return Number.isSafeInteger(value) && Number(value) >= minimum;
+}
 
 function parseEvaluation(value: unknown): TearBehaviorCloningEvaluationV1 {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid behavior cloning evaluation record");
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new TypeError("invalid behavior cloning evaluation record");
   const report = value as Record<string, unknown>;
-  if (report.format !== "tear-behavior-cloning-evaluation" || report.schemaVersion !== 1
-    || !hash(report.trainingHash) || !hash(report.datasetHash) || !hash(report.normalizationHash) || !heldoutSplit(String(report.split))
-    || !integer(report.batchCount, 1) || !integer(report.examples, 1) || !integer(report.exactActionMatches, 0)
-    || Number(report.exactActionMatches) > Number(report.examples) || typeof report.actionConformance !== "number"
-    || report.actionConformance !== Number(report.exactActionMatches) / Number(report.examples) || !hash(report.reportHash)) {
+  if (
+    report.format !== "tear-behavior-cloning-evaluation" ||
+    report.schemaVersion !== 1 ||
+    !hash(report.trainingHash) ||
+    !hash(report.datasetHash) ||
+    !hash(report.normalizationHash) ||
+    !heldoutSplit(String(report.split)) ||
+    !integer(report.batchCount, 1) ||
+    !integer(report.examples, 1) ||
+    !integer(report.exactActionMatches, 0) ||
+    Number(report.exactActionMatches) > Number(report.examples) ||
+    typeof report.actionConformance !== "number" ||
+    report.actionConformance !== Number(report.exactActionMatches) / Number(report.examples) ||
+    !hash(report.reportHash)
+  ) {
     throw new TypeError("invalid behavior cloning evaluation record");
   }
   const typed = report as unknown as TearBehaviorCloningEvaluationV1;
   const { reportHash, ...draft } = typed;
-  if (reportHash !== stableVerificationHash(draft)) throw new TypeError("behavior cloning evaluation integrity mismatch");
+  if (reportHash !== stableVerificationHash(draft))
+    throw new TypeError("behavior cloning evaluation integrity mismatch");
   return Object.freeze(structuredClone(typed));
 }
 
@@ -68,12 +81,21 @@ export function evaluateTearBehaviorCloningPolicy(
   normalization: TearBehaviorCloningNormalizationV1,
   request: TearBehaviorCloningEvaluationRequestV1,
 ): TearBehaviorCloningEvaluationV1 {
-  if (!heldoutSplit(request.split) || !Number.isSafeInteger(request.batchSize) || request.batchSize < 1 || request.batchSize > 256) {
+  if (
+    !heldoutSplit(request.split) ||
+    !Number.isSafeInteger(request.batchSize) ||
+    request.batchSize < 1 ||
+    request.batchSize > 256
+  ) {
     throw new TypeError("behavior cloning evaluation requires a bounded held-out split");
   }
-  if (training.datasetHash !== dataset.datasetHash || training.normalizationHash !== normalization.normalizationHash
-    || training.model.featureSchemaHash !== normalization.featureSchemaHash
-    || training.model.mean.length !== normalization.mean.length || training.model.scale.length !== normalization.scale.length) {
+  if (
+    training.datasetHash !== dataset.datasetHash ||
+    training.normalizationHash !== normalization.normalizationHash ||
+    training.model.featureSchemaHash !== normalization.featureSchemaHash ||
+    training.model.mean.length !== normalization.mean.length ||
+    training.model.scale.length !== normalization.scale.length
+  ) {
     throw new RangeError("behavior cloning evaluation lineage does not match its fit");
   }
   const batches = createTearBehaviorCloningBatches(dataset, normalization, request);
@@ -81,7 +103,9 @@ export function evaluateTearBehaviorCloningPolicy(
   const exactActionMatches = examples.filter((example) => {
     const index = predictTearBehaviorCloningClass(training.model, example.features);
     const predicted = training.model.classes[index]?.actions;
-    return predicted !== undefined && stableVerificationHash(predicted) === stableVerificationHash(example.targetActions);
+    return (
+      predicted !== undefined && stableVerificationHash(predicted) === stableVerificationHash(example.targetActions)
+    );
   }).length;
   const draft = {
     format: "tear-behavior-cloning-evaluation" as const,
@@ -101,28 +125,49 @@ export function evaluateTearBehaviorCloningPolicy(
 /** Durable machine-local custody for immutable C33 held-out evaluation reports. */
 export class TearBehaviorCloningEvaluationVault {
   readonly #backend: GhostVaultBackend;
-  constructor(backend: GhostVaultBackend) { this.#backend = backend; }
+  constructor(backend: GhostVaultBackend) {
+    this.#backend = backend;
+  }
 
   async persist(input: TearBehaviorCloningEvaluationV1): Promise<TearBehaviorCloningEvaluationV1> {
-    const report = parseEvaluation(input), key = `${EVALUATION_KEY}${report.reportHash}`;
+    const report = parseEvaluation(input),
+      key = `${EVALUATION_KEY}${report.reportHash}`;
     const existing = await this.#backend.get("analysis", key);
     if (existing !== undefined) return parseEvaluation(JSON.parse(existing));
-    await this.#backend.commit(Object.freeze([
-      { store: "analysis", key, value: JSON.stringify(report) },
-      { store: "indexes", key: `behavior-cloning-evaluation:${report.trainingHash}:${report.reportHash}`,
-        value: JSON.stringify({ datasetHash: report.datasetHash, split: report.split }) },
-    ]));
+    await this.#backend.commit(
+      Object.freeze([
+        { store: "analysis", key, value: JSON.stringify(report) },
+        {
+          store: "indexes",
+          key: `behavior-cloning-evaluation:${report.trainingHash}:${report.reportHash}`,
+          value: JSON.stringify({ datasetHash: report.datasetHash, split: report.split }),
+        },
+      ]),
+    );
     return report;
   }
 
   async get(reportHash: string): Promise<TearBehaviorCloningEvaluationV1 | undefined> {
     if (!hash(reportHash)) throw new TypeError("behavior cloning evaluation hash is invalid");
-    const key = `${EVALUATION_KEY}${reportHash}`, raw = await this.#backend.get("analysis", key);
+    const key = `${EVALUATION_KEY}${reportHash}`,
+      raw = await this.#backend.get("analysis", key);
     if (raw === undefined) return undefined;
-    try { return parseEvaluation(JSON.parse(raw)); }
-    catch (error) {
-      await this.#backend.put("quarantine", key, JSON.stringify(Object.freeze({ format: "behavior-cloning-evaluation-quarantine", schemaVersion: 1,
-        key, raw, reason: error instanceof Error ? error.message : String(error) })));
+    try {
+      return parseEvaluation(JSON.parse(raw));
+    } catch (error) {
+      await this.#backend.put(
+        "quarantine",
+        key,
+        JSON.stringify(
+          Object.freeze({
+            format: "behavior-cloning-evaluation-quarantine",
+            schemaVersion: 1,
+            key,
+            raw,
+            reason: error instanceof Error ? error.message : String(error),
+          }),
+        ),
+      );
       return undefined;
     }
   }

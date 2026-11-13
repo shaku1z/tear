@@ -26,7 +26,12 @@ export interface RunLifecycleSnapshot {
 export type RunLifecycleEvent =
   | { readonly type: "start"; readonly sessionId: string }
   | { readonly type: "activate-training" }
-  | { readonly type: "prepare-wave"; readonly wave: number; readonly bossWave: boolean; readonly activationDeferred: boolean }
+  | {
+      readonly type: "prepare-wave";
+      readonly wave: number;
+      readonly bossWave: boolean;
+      readonly activationDeferred: boolean;
+    }
   | { readonly type: "activate-wave" }
   | { readonly type: "clear-wave" }
   | { readonly type: "prepare-reward"; readonly reward: RunRewardKind }
@@ -34,8 +39,15 @@ export type RunLifecycleEvent =
   | { readonly type: "terminate"; readonly outcome: RunOutcome };
 
 export const RUN_PHASES = Object.freeze([
-  "idle", "preparing", "training-active", "wave-prepared", "wave-active",
-  "wave-cleared", "reward-pending", "finale", "terminated",
+  "idle",
+  "preparing",
+  "training-active",
+  "wave-prepared",
+  "wave-active",
+  "wave-cleared",
+  "reward-pending",
+  "finale",
+  "terminated",
 ] as const satisfies readonly RunPhase[]);
 
 export const RUN_EVENTS_BY_PHASE: Readonly<Record<RunPhase, readonly RunLifecycleEvent["type"][]>> = Object.freeze({
@@ -51,7 +63,10 @@ export const RUN_EVENTS_BY_PHASE: Readonly<Record<RunPhase, readonly RunLifecycl
 });
 
 export class IllegalRunLifecycleTransitionError extends Error {
-  constructor(readonly phase: RunPhase, readonly event: RunLifecycleEvent["type"]) {
+  constructor(
+    readonly phase: RunPhase,
+    readonly event: RunLifecycleEvent["type"],
+  ) {
     super(`Illegal run lifecycle event: ${event} while ${phase}`);
     this.name = "IllegalRunLifecycleTransitionError";
   }
@@ -100,37 +115,49 @@ export function validateRunLifecycleSnapshot(value: unknown): RunLifecycleSnapsh
     throw new TypeError("run lifecycle revision is invalid");
   }
   const activeSession = typeof value.sessionId === "string";
-  const wavePhase = phase === "wave-prepared" || phase === "wave-active" || phase === "wave-cleared" ||
-    phase === "reward-pending";
-  if ((phase === "idle") !== !activeSession || (wavePhase && value.wave === null) ||
+  const wavePhase =
+    phase === "wave-prepared" || phase === "wave-active" || phase === "wave-cleared" || phase === "reward-pending";
+  if (
+    (phase === "idle") !== !activeSession ||
+    (wavePhase && value.wave === null) ||
     (phase !== "wave-prepared" && value.activationDeferred) ||
-    ((phase === "reward-pending") !== (value.reward !== null)) ||
-    ((phase === "terminated") !== (value.outcome !== null))) {
+    (phase === "reward-pending") !== (value.reward !== null) ||
+    (phase === "terminated") !== (value.outcome !== null)
+  ) {
     throw new TypeError("run lifecycle fields are inconsistent with its phase");
   }
   const wave = value.wave === null ? null : Number(value.wave);
-  return Object.freeze({ phase, sessionId: value.sessionId, wave,
-    bossWave: value.bossWave, activationDeferred: value.activationDeferred,
-    reward: value.reward, outcome: value.outcome,
-    revision: Number(value.revision) });
+  return Object.freeze({
+    phase,
+    sessionId: value.sessionId,
+    wave,
+    bossWave: value.bossWave,
+    activationDeferred: value.activationDeferred,
+    reward: value.reward,
+    outcome: value.outcome,
+    revision: Number(value.revision),
+  });
 }
 
 function assertPositiveWave(wave: number): void {
   if (!Number.isSafeInteger(wave) || wave < 1) throw new RangeError("wave must be a positive integer");
 }
 
-export function transitionRunLifecycle(
-  current: RunLifecycleSnapshot,
-  event: RunLifecycleEvent,
-): RunLifecycleSnapshot {
+export function transitionRunLifecycle(current: RunLifecycleSnapshot, event: RunLifecycleEvent): RunLifecycleSnapshot {
   if (!RUN_EVENTS_BY_PHASE[current.phase].includes(event.type)) {
     throw new IllegalRunLifecycleTransitionError(current.phase, event.type);
   }
   if (event.type === "start") {
     if (event.sessionId.length === 0) throw new TypeError("sessionId must not be empty");
     return Object.freeze({
-      phase: "preparing", sessionId: event.sessionId, wave: null, bossWave: false,
-      activationDeferred: false, reward: null, outcome: null, revision: current.revision + 1,
+      phase: "preparing",
+      sessionId: event.sessionId,
+      wave: null,
+      bossWave: false,
+      activationDeferred: false,
+      reward: null,
+      outcome: null,
+      revision: current.revision + 1,
     });
   }
   if (current.sessionId === null) throw new IllegalRunLifecycleTransitionError(current.phase, event.type);
@@ -151,7 +178,12 @@ export function transitionRunLifecycle(
     });
   }
   if (event.type === "activate-wave") {
-    return Object.freeze({ ...current, phase: "wave-active", activationDeferred: false, revision: current.revision + 1 });
+    return Object.freeze({
+      ...current,
+      phase: "wave-active",
+      activationDeferred: false,
+      revision: current.revision + 1,
+    });
   }
   if (event.type === "clear-wave") {
     return Object.freeze({ ...current, phase: "wave-cleared", revision: current.revision + 1 });
@@ -160,7 +192,13 @@ export function transitionRunLifecycle(
     return Object.freeze({ ...current, phase: "reward-pending", reward: event.reward, revision: current.revision + 1 });
   }
   if (event.type === "begin-finale") {
-    return Object.freeze({ ...current, phase: "finale", activationDeferred: false, reward: null, revision: current.revision + 1 });
+    return Object.freeze({
+      ...current,
+      phase: "finale",
+      activationDeferred: false,
+      reward: null,
+      revision: current.revision + 1,
+    });
   }
   return Object.freeze({
     ...current,
@@ -175,7 +213,9 @@ export function transitionRunLifecycle(
 export class RunLifecycleController {
   #snapshot = initialRunLifecycleSnapshot();
 
-  snapshot(): RunLifecycleSnapshot { return this.#snapshot; }
+  snapshot(): RunLifecycleSnapshot {
+    return this.#snapshot;
+  }
   /** Begins a distinct run with a fresh deterministic lifecycle revision namespace. */
   reset(): RunLifecycleSnapshot {
     this.#snapshot = initialRunLifecycleSnapshot();
@@ -184,25 +224,49 @@ export class RunLifecycleController {
   restore(snapshot: RunLifecycleSnapshot): void {
     this.#snapshot = validateRunLifecycleSnapshot(snapshot);
   }
-  get phase(): RunPhase { return this.#snapshot.phase; }
-  get isWaveActive(): boolean { return this.#snapshot.phase === "wave-active"; }
-  get hasPreparedWave(): boolean { return this.#snapshot.phase === "wave-prepared"; }
-  get activationDeferred(): boolean { return this.#snapshot.activationDeferred; }
-  get reward(): RunRewardKind | null { return this.#snapshot.reward; }
+  get phase(): RunPhase {
+    return this.#snapshot.phase;
+  }
+  get isWaveActive(): boolean {
+    return this.#snapshot.phase === "wave-active";
+  }
+  get hasPreparedWave(): boolean {
+    return this.#snapshot.phase === "wave-prepared";
+  }
+  get activationDeferred(): boolean {
+    return this.#snapshot.activationDeferred;
+  }
+  get reward(): RunRewardKind | null {
+    return this.#snapshot.reward;
+  }
 
   dispatch(event: RunLifecycleEvent): RunLifecycleSnapshot {
     this.#snapshot = transitionRunLifecycle(this.#snapshot, event);
     return this.#snapshot;
   }
 
-  start(sessionId: string): RunLifecycleSnapshot { return this.dispatch({ type: "start", sessionId }); }
-  activateTraining(): RunLifecycleSnapshot { return this.dispatch({ type: "activate-training" }); }
+  start(sessionId: string): RunLifecycleSnapshot {
+    return this.dispatch({ type: "start", sessionId });
+  }
+  activateTraining(): RunLifecycleSnapshot {
+    return this.dispatch({ type: "activate-training" });
+  }
   prepareWave(wave: number, bossWave: boolean, activationDeferred: boolean): RunLifecycleSnapshot {
     return this.dispatch({ type: "prepare-wave", wave, bossWave, activationDeferred });
   }
-  activateWave(): RunLifecycleSnapshot { return this.dispatch({ type: "activate-wave" }); }
-  clearWave(): RunLifecycleSnapshot { return this.dispatch({ type: "clear-wave" }); }
-  prepareReward(reward: RunRewardKind): RunLifecycleSnapshot { return this.dispatch({ type: "prepare-reward", reward }); }
-  beginFinale(): RunLifecycleSnapshot { return this.dispatch({ type: "begin-finale" }); }
-  terminate(outcome: RunOutcome): RunLifecycleSnapshot { return this.dispatch({ type: "terminate", outcome }); }
+  activateWave(): RunLifecycleSnapshot {
+    return this.dispatch({ type: "activate-wave" });
+  }
+  clearWave(): RunLifecycleSnapshot {
+    return this.dispatch({ type: "clear-wave" });
+  }
+  prepareReward(reward: RunRewardKind): RunLifecycleSnapshot {
+    return this.dispatch({ type: "prepare-reward", reward });
+  }
+  beginFinale(): RunLifecycleSnapshot {
+    return this.dispatch({ type: "begin-finale" });
+  }
+  terminate(outcome: RunOutcome): RunLifecycleSnapshot {
+    return this.dispatch({ type: "terminate", outcome });
+  }
 }

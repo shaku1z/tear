@@ -7,12 +7,19 @@ describe("RunReplacementGuard", () => {
     const events: string[] = [];
     const guard = new RunReplacementGuard({
       recording: () => recording,
-      stopInterruptedRecording: () => { events.push("seal"); recording = false; },
+      stopInterruptedRecording: () => {
+        events.push("seal");
+        recording = false;
+      },
     });
 
-    guard.resetAuthoritativeClocks(() => { events.push("reset-for-untracked"); });
+    guard.resetAuthoritativeClocks(() => {
+      events.push("reset-for-untracked");
+    });
     recording = true;
-    guard.resetAuthoritativeClocks(() => { events.push("reset-for-tracked"); });
+    guard.resetAuthoritativeClocks(() => {
+      events.push("reset-for-tracked");
+    });
 
     expect(events).toEqual(["seal", "reset-for-untracked", "seal", "reset-for-tracked"]);
   });
@@ -21,10 +28,14 @@ describe("RunReplacementGuard", () => {
     const events: string[] = [];
     const guard = new RunReplacementGuard({
       recording: () => false,
-      stopInterruptedRecording: () => { events.push("seal"); },
+      stopInterruptedRecording: () => {
+        events.push("seal");
+      },
     });
 
-    guard.resetAuthoritativeClocks(() => { events.push("reset"); });
+    guard.resetAuthoritativeClocks(() => {
+      events.push("reset");
+    });
 
     expect(events).toEqual(["reset"]);
   });

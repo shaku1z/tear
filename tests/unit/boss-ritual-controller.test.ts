@@ -9,9 +9,18 @@ import {
 
 function actor(): BossRitualActor {
   return {
-    color: "#fff", bossName: "Aldric", bossId: "warden", facing: 1,
-    x: 100, y: 50, vx: 4, vy: -3, cinematicT: 0,
-    cinematicPose: "aldricCrownfall", cinematicColor: "#0ff", cinematicRequest: { pending: true },
+    color: "#fff",
+    bossName: "Aldric",
+    bossId: "warden",
+    facing: 1,
+    x: 100,
+    y: 50,
+    vx: 4,
+    vy: -3,
+    cinematicT: 0,
+    cinematicPose: "aldricCrownfall",
+    cinematicColor: "#0ff",
+    cinematicRequest: { pending: true },
     crown: { x: 120, y: 80, rot: 0.25, vx: 8, vy: 4, state: "worn" },
   };
 }
@@ -24,15 +33,25 @@ describe("BossRitualController", () => {
   it("builds the authored timing sequence and initializes combat-safe state", () => {
     const controller = new BossRitualController();
     const owner = actor();
-    const started = controller.begin(owner, {
-      id: "aldric-crownfall", pose: "aldricCrownfall", crownFall: true,
-      sfx: "transform", line: "The crown decides.",
-    }, options());
+    const started = controller.begin(
+      owner,
+      {
+        id: "aldric-crownfall",
+        pose: "aldricCrownfall",
+        crownFall: true,
+        sfx: "transform",
+        line: "The crown decides.",
+      },
+      options(),
+    );
 
     expect(owner.cinematicRequest).toBeNull();
     expect(started.sequence.beats.map(({ id, duration }) => [id, duration])).toEqual([
-      ["anticipation", 0.34], ["reveal", 0.78], ["declaration", undefined],
-      ["resolve", 0.86], ["grace", 0.45],
+      ["anticipation", 0.34],
+      ["reveal", 0.78],
+      ["declaration", undefined],
+      ["resolve", 0.86],
+      ["grace", 0.45],
     ]);
     expect(controller.start(started.context, options())).toEqual([
       { type: "clear-boss-projectiles" },
@@ -48,9 +67,15 @@ describe("BossRitualController", () => {
     const owner = actor();
     const platform: BossRitualPlatform = { x: 80, y: 220, w: 160, floor: true, arenaPlatId: "center" };
     const configured = options([platform]);
-    const started = controller.begin(owner, {
-      id: "aldric-crownfall", pose: "aldricCrownfall", crownFall: true,
-    }, configured);
+    const started = controller.begin(
+      owner,
+      {
+        id: "aldric-crownfall",
+        pose: "aldricCrownfall",
+        crownFall: true,
+      },
+      configured,
+    );
 
     controller.start(started.context, configured);
     const impact = controller.updateBeat(started.context, "reveal", 0.78, 1, 0, false);
@@ -65,14 +90,22 @@ describe("BossRitualController", () => {
     const controller = new BossRitualController();
     const owner = actor();
     const configured = options();
-    const started = controller.begin(owner, {
-      id: "warden-break", pose: "wardenBreak", after: "throwShield", firstVertical: true,
-    }, configured);
+    const started = controller.begin(
+      owner,
+      {
+        id: "warden-break",
+        pose: "wardenBreak",
+        after: "throwShield",
+        firstVertical: true,
+      },
+      configured,
+    );
 
     controller.start(started.context, configured);
     expect(controller.enterBeat(started.context, "declaration")).toEqual([{ type: "sound", cue: "warden" }]);
     expect(controller.complete(started.context, false)).toEqual([
-      { type: "throw-shield" }, { type: "resolve-first-vertical" },
+      { type: "throw-shield" },
+      { type: "resolve-first-vertical" },
       { type: "store-seen", key: "tear.cinematic.warden-break" },
       { type: "music-duck", amount: 1, duration: 0.55 },
     ]);

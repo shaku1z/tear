@@ -1,26 +1,62 @@
 export interface TailEnemy {
-  dead: boolean; y: number; bleedStacks: number; burnT: number;
+  dead: boolean;
+  y: number;
+  bleedStacks: number;
+  burnT: number;
   /** Native defeat facts are published at cleanup, exactly once per actor. */
   nativeDefeatPublished?: boolean;
 }
-export interface TailProjectile { dead: boolean; update(dt: number): void }
-export interface TailFloater { y: number; life: number }
+export interface TailProjectile {
+  dead: boolean;
+  update(dt: number): void;
+}
+export interface TailFloater {
+  y: number;
+  life: number;
+}
 export interface TailPlayer {
-  x: number; y: number; vy: number; hp: number; maxHp: number; iframe: number; onGround: boolean; tookHit: boolean;
-  shopRevives: number; abilityRevives: number; oneHit: boolean;
+  x: number;
+  y: number;
+  vy: number;
+  hp: number;
+  maxHp: number;
+  iframe: number;
+  onGround: boolean;
+  tookHit: boolean;
+  shopRevives: number;
+  abilityRevives: number;
+  oneHit: boolean;
 }
 export interface TailRun {
-  mode: string; runTime: number; waveTime: number; adRevived?: boolean; _prevGround?: boolean; _airT?: number;
-  _updraftChain?: number; _achTick?: number; _dmgThisWave?: boolean; _dmgThisRun?: boolean; _dmgThisStage?: boolean;
+  mode: string;
+  runTime: number;
+  waveTime: number;
+  adRevived?: boolean;
+  _prevGround?: boolean;
+  _airT?: number;
+  _updraftChain?: number;
+  _achTick?: number;
+  _dmgThisWave?: boolean;
+  _dmgThisRun?: boolean;
+  _dmgThisStage?: boolean;
 }
 export interface CombatCleanupHooks {
   enemyDefeated(enemy: TailEnemy): void;
-  ghostRecording(): boolean; ghostSample(dt: number, enemies: readonly TailEnemy[]): void;
-  updateTrick(dt: number): void; breakStreak(): void; jumped(): void; achievementTick(dt: number): void;
-  maxStat(name: string, value: number): void; checkAchievements(): void; achievementsEnabled(): boolean;
+  ghostRecording(): boolean;
+  ghostSample(dt: number, enemies: readonly TailEnemy[]): void;
+  updateTrick(dt: number): void;
+  breakStreak(): void;
+  jumped(): void;
+  achievementTick(dt: number): void;
+  maxStat(name: string, value: number): void;
+  checkAchievements(): void;
+  achievementsEnabled(): boolean;
 }
 
-export interface TrainingTickHooks { updateTutorial(dt: number): void; updatePlayground(): void }
+export interface TrainingTickHooks {
+  updateTutorial(dt: number): void;
+  updatePlayground(): void;
+}
 
 /**
  * Runs the training-mode tick. This MUST happen after the caller has installed the
@@ -34,11 +70,22 @@ export function runTrainingTick(mode: string, dt: number, hooks: TrainingTickHoo
   else if (mode === "playground") hooks.updatePlayground();
 }
 export interface CombatCleanupInput {
-  dt: number; enemies: readonly TailEnemy[]; projectiles: readonly TailProjectile[]; floaters: readonly TailFloater[];
-  shake: number; shakeDecay: number; floaterMotionScale?: number; player: TailPlayer; run: TailRun; hooks: CombatCleanupHooks;
+  dt: number;
+  enemies: readonly TailEnemy[];
+  projectiles: readonly TailProjectile[];
+  floaters: readonly TailFloater[];
+  shake: number;
+  shakeDecay: number;
+  floaterMotionScale?: number;
+  player: TailPlayer;
+  run: TailRun;
+  hooks: CombatCleanupHooks;
 }
 export interface CombatCleanupResult {
-  enemies: TailEnemy[]; projectiles: TailProjectile[]; floaters: TailFloater[]; shake: number;
+  enemies: TailEnemy[];
+  projectiles: TailProjectile[];
+  floaters: TailFloater[];
+  shake: number;
 }
 
 export function markFallenEnemies(enemies: readonly TailEnemy[], worldBottom: number): void {
@@ -59,40 +106,90 @@ export function finalizeCombatTick(input: CombatCleanupInput): CombatCleanupResu
   const projectiles = input.projectiles.filter((projectile) => !projectile.dead);
   for (const projectile of projectiles) projectile.update(dt);
   const floaterMotionScale = input.floaterMotionScale ?? 1;
-  for (const floater of input.floaters) { floater.y -= 30 * dt * floaterMotionScale; floater.life -= dt; }
+  for (const floater of input.floaters) {
+    floater.y -= 30 * dt * floaterMotionScale;
+    floater.life -= dt;
+  }
   const floaters = input.floaters.filter((floater) => floater.life > 0);
   const shake = input.shake > 0 ? Math.max(0, input.shake - input.shakeDecay * dt) : input.shake;
-  run.runTime += dt; run.waveTime += dt; hooks.updateTrick(dt);
-  if (player.tookHit) { player.tookHit = false; run._dmgThisWave = true; run._dmgThisRun = true; run._dmgThisStage = true; hooks.breakStreak(); }
+  run.runTime += dt;
+  run.waveTime += dt;
+  hooks.updateTrick(dt);
+  if (player.tookHit) {
+    player.tookHit = false;
+    run._dmgThisWave = true;
+    run._dmgThisRun = true;
+    run._dmgThisStage = true;
+    hooks.breakStreak();
+  }
   if (hooks.ghostRecording()) hooks.ghostSample(dt, enemies);
   if (run._prevGround && !player.onGround && player.vy < -100) hooks.jumped();
   run._prevGround = player.onGround;
-  if (player.onGround) { run._airT = 0; run._updraftChain = 0; } else run._airT = (run._airT ?? 0) + dt;
+  if (player.onGround) {
+    run._airT = 0;
+    run._updraftChain = 0;
+  } else run._airT = (run._airT ?? 0) + dt;
   if (hooks.achievementsEnabled()) updateAchievements(dt, enemies, run, hooks);
   return { enemies, projectiles, floaters, shake };
 }
 
 function updateAchievements(dt: number, enemies: readonly TailEnemy[], run: TailRun, hooks: CombatCleanupHooks): void {
   hooks.maxStat("maxAirTime", Math.floor(run._airT ?? 0));
-  let maxBleed = 0, burning = 0;
-  for (const enemy of enemies) { if (enemy.dead) continue; if (enemy.bleedStacks > maxBleed) maxBleed = enemy.bleedStacks; if (enemy.burnT > 0) burning++; }
-  hooks.maxStat("maxBleedStacks", maxBleed); hooks.maxStat("maxConcurrentBurn", burning); hooks.achievementTick(dt);
+  let maxBleed = 0,
+    burning = 0;
+  for (const enemy of enemies) {
+    if (enemy.dead) continue;
+    if (enemy.bleedStacks > maxBleed) maxBleed = enemy.bleedStacks;
+    if (enemy.burnT > 0) burning++;
+  }
+  hooks.maxStat("maxBleedStacks", maxBleed);
+  hooks.maxStat("maxConcurrentBurn", burning);
+  hooks.achievementTick(dt);
   run._achTick = (run._achTick ?? 0) + dt;
-  if (run._achTick >= 0.5) { run._achTick = 0; hooks.checkAchievements(); }
+  if (run._achTick >= 0.5) {
+    run._achTick = 0;
+    hooks.checkAchievements();
+  }
 }
 
 export interface PlayerDeathHooks {
-  trainingReset(player: TailPlayer): void; shopRevive(player: TailPlayer): void; abilityRevive(player: TailPlayer): void;
-  adAvailable(): boolean; requestAdContinue(): void; endRun(): void;
+  trainingReset(player: TailPlayer): void;
+  shopRevive(player: TailPlayer): void;
+  abilityRevive(player: TailPlayer): void;
+  adAvailable(): boolean;
+  requestAdContinue(): void;
+  endRun(): void;
 }
-export type PlayerDeathResolution = "alive" | "training-reset" | "shop-revive" | "ability-revive" | "ad-continue" | "run-ended";
+export type PlayerDeathResolution =
+  "alive" | "training-reset" | "shop-revive" | "ability-revive" | "ad-continue" | "run-ended";
 
 /** Resolves the mutually exclusive death ladder in its canonical priority order. */
 export function resolvePlayerDeath(player: TailPlayer, run: TailRun, hooks: PlayerDeathHooks): PlayerDeathResolution {
   if (player.hp > 0) return "alive";
-  if (run.mode === "tutorial" || run.mode === "playground") { player.hp = player.maxHp; player.iframe = 2; hooks.trainingReset(player); return "training-reset"; }
-  if (player.shopRevives > 0 && !player.oneHit) { player.shopRevives--; player.hp = Math.round(player.maxHp * 0.35); player.iframe = 1.6; hooks.shopRevive(player); return "shop-revive"; }
-  if (player.abilityRevives > 0 && !player.oneHit) { player.abilityRevives--; player.hp = Math.round(player.maxHp * 0.4); player.iframe = 2; hooks.abilityRevive(player); return "ability-revive"; }
-  if (hooks.adAvailable() && !run.adRevived && !player.oneHit) { hooks.requestAdContinue(); return "ad-continue"; }
-  hooks.endRun(); return "run-ended";
+  if (run.mode === "tutorial" || run.mode === "playground") {
+    player.hp = player.maxHp;
+    player.iframe = 2;
+    hooks.trainingReset(player);
+    return "training-reset";
+  }
+  if (player.shopRevives > 0 && !player.oneHit) {
+    player.shopRevives--;
+    player.hp = Math.round(player.maxHp * 0.35);
+    player.iframe = 1.6;
+    hooks.shopRevive(player);
+    return "shop-revive";
+  }
+  if (player.abilityRevives > 0 && !player.oneHit) {
+    player.abilityRevives--;
+    player.hp = Math.round(player.maxHp * 0.4);
+    player.iframe = 2;
+    hooks.abilityRevive(player);
+    return "ability-revive";
+  }
+  if (hooks.adAvailable() && !run.adRevived && !player.oneHit) {
+    hooks.requestAdContinue();
+    return "ad-continue";
+  }
+  hooks.endRun();
+  return "run-ended";
 }

@@ -12,8 +12,14 @@ const path = require("node:path");
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     const rel = pathname === "/" ? "index.html" : pathname.slice(1);
     const file = path.resolve(root, rel);
-    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { response.writeHead(404).end(); return; }
-    response.setHeader("Content-Type", file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream");
+    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      response.writeHead(404).end();
+      return;
+    }
+    response.setHeader(
+      "Content-Type",
+      file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream",
+    );
     fs.createReadStream(file).pipe(response);
   });
   await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
@@ -32,7 +38,8 @@ const path = require("node:path");
   const browserLogs = [];
   page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
   page.on("console", (message) => {
-    if (message.type() === "warning" || message.type() === "error") browserLogs.push(`${message.type()}: ${message.text()}`);
+    if (message.type() === "warning" || message.type() === "error")
+      browserLogs.push(`${message.type()}: ${message.text()}`);
   });
   await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 30000 });
   try {
@@ -73,18 +80,25 @@ const path = require("node:path");
   }));
   assert.equal(keyboardDown.snapshot.mode, "keyboard");
   assert.ok(keyboardDown.snapshot.held.includes("KeyD"));
-  assert.deepEqual(keyboardDown.actions.map((entry) => entry.command), [{ type: "move", x: 1000, y: 0 }]);
+  assert.deepEqual(
+    keyboardDown.actions.map((entry) => entry.command),
+    [{ type: "move", x: 1000, y: 0 }],
+  );
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));
   const focusRelease = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.drain(2));
-  assert.deepEqual(focusRelease.map((entry) => entry.command), [{ type: "move", x: 0, y: 0 }]);
+  assert.deepEqual(
+    focusRelease.map((entry) => entry.command),
+    [{ type: "move", x: 0, y: 0 }],
+  );
   await page.keyboard.up("d");
   const keyboardUp = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.drain(3));
   assert.deepEqual(keyboardUp, []);
   await page.mouse.click(800, 450, { button: "right" });
   const pointerSecondary = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.drain(4));
-  assert.deepEqual(pointerSecondary.map((entry) => entry.command), [
-    { type: "weapon", intent: "throw", phase: "pressed" },
-  ]);
+  assert.deepEqual(
+    pointerSecondary.map((entry) => entry.command),
+    [{ type: "weapon", intent: "throw", phase: "pressed" }],
+  );
   await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.stopRecording());
 
   // Exercise the real shell controls, including the contextual Settings return.
@@ -108,16 +122,22 @@ const path = require("node:path");
   await page.mouse.click(800, 758); // BEGIN
   await waitForScreen("playing");
   try {
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().backend === "stem-cue:biome-routed");
+    await page.waitForFunction(
+      () => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().backend === "stem-cue:biome-routed",
+    );
   } catch (error) {
     const failedAudio = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
-    assert.fail(`Default biome-stem backend did not become active: ${JSON.stringify(failedAudio)}\n${browserLogs.join("\n") || error.message}`);
+    assert.fail(
+      `Default biome-stem backend did not become active: ${JSON.stringify(failedAudio)}\n${browserLogs.join("\n") || error.message}`,
+    );
   }
   try {
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().score.run?.runId);
   } catch (error) {
     const failedRun = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
-    assert.fail(`TearScore run did not start: ${JSON.stringify(failedRun)}\n${browserLogs.join("\n") || error.message}`);
+    assert.fail(
+      `TearScore run did not start: ${JSON.stringify(failedRun)}\n${browserLogs.join("\n") || error.message}`,
+    );
   }
   const firstMusicRun = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
   assert.equal(firstMusicRun.backend, "stem-cue:biome-routed");
@@ -143,7 +163,9 @@ const path = require("node:path");
   console.log("application state flow passed");
 
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("campaign"));
-  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG().lifecycle.phase === "wave-prepared");
+  await page.waitForFunction(
+    () => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG().lifecycle.phase === "wave-prepared",
+  );
   const campaignLifecycle = await page.evaluate(() => window.TEAR_WEAPON_DEBUG().lifecycle);
   assert.equal(campaignLifecycle.activationDeferred, true, "campaign opening lore defers prepared-wave activation");
 
@@ -182,10 +204,21 @@ const path = require("node:path");
     await page.mouse.click(800, 758);
     await page.waitForTimeout(500);
     const debug = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
-    assert.equal(debug && debug.weapon, weaponIds[i], `${weaponIds[i]} run starts cleanly; page errors: ${pageErrors.join(" | ")}`);
-    assert.equal(debug && debug.lifecycle.phase, "wave-active", `${weaponIds[i]} run lifecycle activates its prepared wave`);
+    assert.equal(
+      debug && debug.weapon,
+      weaponIds[i],
+      `${weaponIds[i]} run starts cleanly; page errors: ${pageErrors.join(" | ")}`,
+    );
+    assert.equal(
+      debug && debug.lifecycle.phase,
+      "wave-active",
+      `${weaponIds[i]} run lifecycle activates its prepared wave`,
+    );
     const thrown = await pulseThrowUntilLaunched(1);
-    assert.ok(thrown.stats.throws >= 1, `${weaponIds[i]} throw launches through shared input (${JSON.stringify({ blade: thrown.blade, input: thrown.input, pageErrors })})`);
+    assert.ok(
+      thrown.stats.throws >= 1,
+      `${weaponIds[i]} throw launches through shared input (${JSON.stringify({ blade: thrown.blade, input: thrown.input, pageErrors })})`,
+    );
     await page.mouse.click(800, 450, { button: "right" });
     await page.waitForTimeout(180);
     console.log(`${weaponIds[i]} start passed`);

@@ -10,15 +10,22 @@ export interface TutorialCompletionPersistence {
 
 /** The durable owners, rather than the rewound simulation, decide whether an effect is new. */
 export function createLiveTutorialCompletionPersistence(
-  profile: Pick<ProfileStore, "issueTutorial" | "completeTutorial" | "flushAcknowledged" | "pendingRewards" | "acknowledgeReward">,
+  profile: Pick<
+    ProfileStore,
+    "issueTutorial" | "completeTutorial" | "flushAcknowledged" | "pendingRewards" | "acknowledgeReward"
+  >,
   meta: Pick<MetaProgression, "grantReward" | "flushAcknowledged">,
   achievements: Readonly<{ check(): void }>,
   uuid: () => string = () => crypto.randomUUID(),
 ): TutorialCompletionPersistence {
-  let draining: Promise<CompletionStatus> | undefined; let dirty = false;
+  let draining: Promise<CompletionStatus> | undefined;
+  let dirty = false;
   const needsRetry = (): boolean => dirty || profile.pendingRewards().length > 0;
   const retry = (): Promise<CompletionStatus> => {
-    if (draining) { dirty = true; return draining; }
+    if (draining) {
+      dirty = true;
+      return draining;
+    }
     draining = (async (): Promise<CompletionStatus> => {
       try {
         do {
@@ -42,22 +49,37 @@ export function createLiveTutorialCompletionPersistence(
           }
         } while (needsRetry());
         return "committed";
-      } catch { return "unknown"; }
-    })().finally(() => { draining = undefined; });
+      } catch {
+        return "unknown";
+      }
+    })().finally(() => {
+      draining = undefined;
+    });
     return draining;
   };
   return Object.freeze({
     async issue(): Promise<Readonly<{ id: string; status: CompletionStatus }>> {
       let id: string;
-      try { id = uuid(); } catch { return { id: "unissued", status: "unavailable" }; }
-      try { return { id, status: await profile.issueTutorial(id) }; } catch { return { id, status: "unknown" }; }
+      try {
+        id = uuid();
+      } catch {
+        return { id: "unissued", status: "unavailable" };
+      }
+      try {
+        return { id, status: await profile.issueTutorial(id) };
+      } catch {
+        return { id, status: "unknown" };
+      }
     },
     async complete(id: string) {
       try {
         const status = await profile.completeTutorial(id);
         if (status !== "committed" && status !== "already") return status;
-        const drained = await retry(); return drained === "committed" ? status : drained;
-      } catch { return "unknown"; }
+        const drained = await retry();
+        return drained === "committed" ? status : drained;
+      } catch {
+        return "unknown";
+      }
     },
     retry,
   });

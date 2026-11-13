@@ -70,7 +70,9 @@ export class TearHydratedWorldRuntime<World extends TearHydratedWorld, State> {
           port.applyCanonicalInput(this.#world, input, tick);
         },
       },
-      step: (seconds) => { port.step(this.#world, seconds); },
+      step: (seconds) => {
+        port.step(this.#world, seconds);
+      },
       snapshot: (tick, input) => port.snapshot(this.#world, tick, input),
       ...(options.events === undefined ? {} : { events: options.events }),
       ...(options.ticksPerSecond === undefined ? {} : { ticksPerSecond: options.ticksPerSecond }),
@@ -80,7 +82,9 @@ export class TearHydratedWorldRuntime<World extends TearHydratedWorld, State> {
     this.simulation.reset(world.tick);
   }
 
-  world(): World { return this.#world; }
+  world(): World {
+    return this.#world;
+  }
 
   /** Atomically selects a fully staged world and clears input/step history. */
   replace(world: World): void {

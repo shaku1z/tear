@@ -1,12 +1,31 @@
-import { LiveRecordingController, type RecordedReplay, type StoredRecordingSummary } from "../../gameplay/run/live-recording-controller";
+import {
+  LiveRecordingController,
+  type RecordedReplay,
+  type StoredRecordingSummary,
+} from "../../gameplay/run/live-recording-controller";
 import { LiveRunOutcomeController } from "../../gameplay/run/live-outcome-controller";
 import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronology-journal";
-import type { OutcomeRunState, PreparedVictory, RecordingSummary, RunResultInfo, VictoryProgressionIntent } from "../../gameplay/run/outcome-planner";
+import type {
+  OutcomeRunState,
+  PreparedVictory,
+  RecordingSummary,
+  RunResultInfo,
+  VictoryProgressionIntent,
+} from "../../gameplay/run/outcome-planner";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
-import { LivePendingFinaleController, type PendingFinalePlayer, type PendingFinaleRecord,
-  type PendingFinaleResult, type PendingFinaleRun } from "../campaign/pending-finale-controller";
+import {
+  LivePendingFinaleController,
+  type PendingFinalePlayer,
+  type PendingFinaleRecord,
+  type PendingFinaleResult,
+  type PendingFinaleRun,
+} from "../campaign/pending-finale-controller";
 
-interface BestRecord { readonly wave: number; readonly score: number; readonly time: number }
+interface BestRecord {
+  readonly wave: number;
+  readonly score: number;
+  readonly time: number;
+}
 
 export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
@@ -19,8 +38,11 @@ export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly storeReplay: (recording: TReplay, summary: StoredRecordingSummary) => string | null;
   readonly setLastRecording: (recording: TReplay | null) => void;
   readonly setLastVaultId: (id: string | null) => void;
-  readonly submitScore: (mode: RunMode, difficulty: RunDifficulty,
-    score: Readonly<{ score: number; wave: number; time: number }>) => Promise<boolean>;
+  readonly submitScore: (
+    mode: RunMode,
+    difficulty: RunDifficulty,
+    score: Readonly<{ score: number; wave: number; time: number }>,
+  ) => Promise<boolean>;
   readonly publishReplay: (recording: TReplay, board: string) => Promise<string | null>;
   readonly linkReplay: (mode: RunMode, difficulty: RunDifficulty, shareId: string) => void;
   readonly attachShareId: (vaultId: string, shareId: string) => void;
@@ -141,7 +163,9 @@ export function createLiveRunOutcomeHost<TReplay extends RecordedReplay>(
     clearPending: context.clearPendingFinale,
     achievementTracking: context.achievementTracking,
     pushCloud: context.pushCloud,
-    terminateVictory: () => { context.terminate("victory"); },
+    terminateVictory: () => {
+      context.terminate("victory");
+    },
     presentClaimed: context.presentClaimed,
     launchFinale: context.launchFinale,
   });

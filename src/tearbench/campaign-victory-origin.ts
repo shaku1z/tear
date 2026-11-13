@@ -62,9 +62,12 @@ export function createCampaignVictoryOrigin(): CampaignVictoryOriginCertificate 
   const sourceEvents = synthesized.ledger.events;
   const terminalEvents = sourceEvents.filter((event) => event.type === "run.completed");
   const terminal = terminalEvents[0];
-  if (terminalEvents.length !== 1 || terminal?.type !== "run.completed"
-    || terminal.wave !== CAMPAIGN_VICTORY_ORIGIN_WAVE
-    || sourceEvents.at(-1) !== terminal) {
+  if (
+    terminalEvents.length !== 1 ||
+    terminal?.type !== "run.completed" ||
+    terminal.wave !== CAMPAIGN_VICTORY_ORIGIN_WAVE ||
+    sourceEvents.at(-1) !== terminal
+  ) {
     throw new TypeError("campaign victory origin requires exactly one final synthesized completion event");
   }
   const events = Object.freeze(sourceEvents.slice(0, -1));
@@ -77,12 +80,17 @@ export function createCampaignVictoryOrigin(): CampaignVictoryOriginCertificate 
   if (reconstructed.configurationHash !== synthesized.configurationHash) {
     throw new TypeError("campaign victory origin changed the synthesized configuration history");
   }
-  const finalOffer = [...events].reverse().find((event) =>
-    event.type === "draft.offered" && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE);
-  const finalSelection = [...events].reverse().find((event) =>
-    event.type === "draft.selected" && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE);
-  if (finalOffer?.type !== "draft.offered" || finalSelection?.type !== "draft.selected"
-    || !finalOffer.ids.includes(finalSelection.id)) {
+  const finalOffer = [...events]
+    .reverse()
+    .find((event) => event.type === "draft.offered" && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE);
+  const finalSelection = [...events]
+    .reverse()
+    .find((event) => event.type === "draft.selected" && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE);
+  if (
+    finalOffer?.type !== "draft.offered" ||
+    finalSelection?.type !== "draft.selected" ||
+    !finalOffer.ids.includes(finalSelection.id)
+  ) {
     throw new TypeError("campaign victory origin requires a selected wave-59 draft offer");
   }
   return Object.freeze({
@@ -124,22 +132,32 @@ function certifyFrontierInput(certificate: CampaignVictoryOriginCertificate): vo
   if (stableVerificationHash(certificate) !== stableVerificationHash(canonical)) {
     throw new TypeError("campaign reward frontier certificate is not the canonical wave-59 certificate");
   }
-  if (certificate.ledger.targetWave !== CAMPAIGN_VICTORY_ORIGIN_WAVE
-    || certificate.ledger.events.some((event) => event.type === "run.completed")) {
+  if (
+    certificate.ledger.targetWave !== CAMPAIGN_VICTORY_ORIGIN_WAVE ||
+    certificate.ledger.events.some((event) => event.type === "run.completed")
+  ) {
     throw new TypeError("campaign reward frontier certificate is terminal or targets the wrong wave");
   }
   const reconstructed = reconstructProgression(certificate.ledger);
-  if (reconstructed.configurationHash !== certificate.configurationHash
-    || stableVerificationHash(certificate.ledger.events) !== certificate.ledger.progressionHash) {
+  if (
+    reconstructed.configurationHash !== certificate.configurationHash ||
+    stableVerificationHash(certificate.ledger.events) !== certificate.ledger.progressionHash
+  ) {
     throw new TypeError("campaign reward frontier certificate integrity failed");
   }
-  const offer = certificate.ledger.events.find((event) => event.type === "draft.offered"
-    && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE);
-  const selected = certificate.ledger.events.find((event) => event.type === "draft.selected"
-    && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE);
-  if (offer?.type !== "draft.offered" || selected?.type !== "draft.selected"
-    || offer.ids.join("\0") !== certificate.finalReward.offeredIds.join("\0")
-    || selected.id !== certificate.finalReward.selectedId || !offer.ids.includes(selected.id)) {
+  const offer = certificate.ledger.events.find(
+    (event) => event.type === "draft.offered" && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE,
+  );
+  const selected = certificate.ledger.events.find(
+    (event) => event.type === "draft.selected" && event.wave === CAMPAIGN_VICTORY_ORIGIN_WAVE,
+  );
+  if (
+    offer?.type !== "draft.offered" ||
+    selected?.type !== "draft.selected" ||
+    offer.ids.join("\0") !== certificate.finalReward.offeredIds.join("\0") ||
+    selected.id !== certificate.finalReward.selectedId ||
+    !offer.ids.includes(selected.id)
+  ) {
     throw new TypeError("campaign reward frontier final reward provenance is invalid");
   }
 }
@@ -150,14 +168,19 @@ function historicalWaveLog(certificate: CampaignVictoryOriginCertificate) {
   const seconds = totalSeconds / count;
   const baseKills = Math.floor(certificate.statistics.kills / count);
   const extraKills = certificate.statistics.kills % count;
-  const bossWaves = new Set(certificate.ledger.events.flatMap((event) =>
-    event.type === "boss.defeated" ? [event.wave] : []));
-  return Object.freeze(Array.from({ length: count }, (_, index) => Object.freeze({
-    wave: bossWaves.has(index + 1) ? "BOSS" : index + 1,
-    time: index === count - 1 ? totalSeconds - seconds * (count - 1) : seconds,
-    kills: baseKills + (index < extraKills ? 1 : 0),
-    peak: certificate.statistics.style,
-  })));
+  const bossWaves = new Set(
+    certificate.ledger.events.flatMap((event) => (event.type === "boss.defeated" ? [event.wave] : [])),
+  );
+  return Object.freeze(
+    Array.from({ length: count }, (_, index) =>
+      Object.freeze({
+        wave: bossWaves.has(index + 1) ? "BOSS" : index + 1,
+        time: index === count - 1 ? totalSeconds - seconds * (count - 1) : seconds,
+        kills: baseKills + (index < extraKills ? 1 : 0),
+        peak: certificate.statistics.style,
+      }),
+    ),
+  );
 }
 
 function portableUpgradeChoice(id: string): Readonly<Record<string, unknown>> {
@@ -173,9 +196,11 @@ function portableUpgradeChoice(id: string): Readonly<Record<string, unknown>> {
     desc: choice.desc,
     ...(choice.rare === undefined ? {} : { rare: choice.rare }),
     ...(choice.maxStacks === undefined ? {} : { maxStacks: choice.maxStacks }),
-    ...(choice.tiers === undefined ? {} : {
-      tiers: Object.freeze(choice.tiers.map((tier) => Object.freeze({ desc: tier.desc }))),
-    }),
+    ...(choice.tiers === undefined
+      ? {}
+      : {
+          tiers: Object.freeze(choice.tiers.map((tier) => Object.freeze({ desc: tier.desc }))),
+        }),
   });
 }
 
@@ -238,21 +263,41 @@ export function createCampaignWave59RewardFrontier(
   const finalStageIndex = STAGES.length - 1;
   const stage = stageAt(finalStageIndex);
   Object.assign(run, {
-    mode: "campaign", difficulty: "normal", diff: "normal", weaponId: "sword",
-    wave: CAMPAIGN_VICTORY_ORIGIN_WAVE, stage: finalStageIndex, _biomeIdx: finalStageIndex,
-    tick: certificate.statistics.elapsedTicks, score: certificate.statistics.score,
+    mode: "campaign",
+    difficulty: "normal",
+    diff: "normal",
+    weaponId: "sword",
+    wave: CAMPAIGN_VICTORY_ORIGIN_WAVE,
+    stage: finalStageIndex,
+    _biomeIdx: finalStageIndex,
+    tick: certificate.statistics.elapsedTicks,
+    score: certificate.statistics.score,
     runTime: certificate.statistics.elapsedTicks / 120,
-    waveTime: finalWave.time, waveKills: finalWave.kills, wavePeak: finalWave.peak,
-    waveLog, mult: certificate.statistics.style,
-    spawnQueue: [], spawnTimer: 0, clearTimer: -1,
-    isBossWave: false, horde: false, miniBoss: null, waveTag: "", waveKinds: [],
+    waveTime: finalWave.time,
+    waveKills: finalWave.kills,
+    wavePeak: finalWave.peak,
+    waveLog,
+    mult: certificate.statistics.style,
+    spawnQueue: [],
+    spawnTimer: 0,
+    clearTimer: -1,
+    isBossWave: false,
+    horde: false,
+    miniBoss: null,
+    waveTag: "",
+    waveKinds: [],
     bossesBeaten: certificate.ledger.events.filter((event) => event.type === "boss.defeated").length,
-    bossIdx: finalStageIndex, curBoss: null, bossAdds: null, pendingBossOutro: null,
-    chapterState: "WAVE_LIVE", _prologueShown: true,
+    bossIdx: finalStageIndex,
+    curBoss: null,
+    bossAdds: null,
+    pendingBossOutro: null,
+    chapterState: "WAVE_LIVE",
+    _prologueShown: true,
   });
   Object.assign(world, { clock: certificate.statistics.elapsedTicks });
   Object.assign(runtime, {
-    lifecycle: lifecycle.snapshot(), chapterBinding: null,
+    lifecycle: lifecycle.snapshot(),
+    chapterBinding: null,
     stageBanner: { name: stage.name, seconds: 0 },
     cinemaProtection: { active: false, lastMode: null },
   });
@@ -269,10 +314,18 @@ export function createCampaignWave59RewardFrontier(
   }, 0);
   (forged.state as MutableRecord)["tear.reward.v1"] = Object.freeze({
     selection: Object.freeze({
-      phase: "complete", mode: "campaign", wave: CAMPAIGN_VICTORY_ORIGIN_WAVE,
-      choices: Object.freeze(choices), reserveChoices: Object.freeze([]), reservedChoice: null,
-      expandedDraft: false, reservePick: false, rerolls: 0,
-      specialBlock: 4, specialsOffered: specialCount, revision: 2,
+      phase: "complete",
+      mode: "campaign",
+      wave: CAMPAIGN_VICTORY_ORIGIN_WAVE,
+      choices: Object.freeze(choices),
+      reserveChoices: Object.freeze([]),
+      reservedChoice: null,
+      expandedDraft: false,
+      reservePick: false,
+      rerolls: 0,
+      specialBlock: 4,
+      specialsOffered: specialCount,
+      revision: 2,
     }),
   });
   (forged.state as MutableRecord)["tear.enemy.v1"] = Object.freeze([]);

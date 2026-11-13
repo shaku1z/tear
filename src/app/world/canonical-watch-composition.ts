@@ -20,12 +20,19 @@ export function createLiveCanonicalWatchComposition(input: LiveCanonicalWatchCom
   return Object.freeze({
     canonicalGameplayState: input.canonicalGameplayState,
     availableGameActions: () => {
-      const run = input.state.run(), screen = input.screen();
+      const run = input.state.run(),
+        screen = input.screen();
       if (run === null) return Object.freeze(["interact", "confirm", "cancel"] as const);
-      if (screen === "playing") return Object.freeze([
-        "move", "aim", "weapon", "jump", "dash",
-        ...(run.mode === "playground" ? ["ability" as const] : []), "pause",
-      ] as const);
+      if (screen === "playing")
+        return Object.freeze([
+          "move",
+          "aim",
+          "weapon",
+          "jump",
+          "dash",
+          ...(run.mode === "playground" ? ["ability" as const] : []),
+          "pause",
+        ] as const);
       if (screen === "draft") return Object.freeze(["draft-choice"] as const);
       if (screen === "reserve") return Object.freeze(["reserve-choice", "cancel"] as const);
       if (screen === "tierup") return Object.freeze(["tier-up-choice"] as const);

@@ -17,7 +17,9 @@ function snapshotPlayer(entry) {
 }
 
 withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page, waitScreen }) => {
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, { timeout: 15000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
+    timeout: 15000,
+  });
 
   // Class C deliberately has no structured observation or semantic stepping
   // surface.  This establishes that the journey below cannot inject a
@@ -33,7 +35,11 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
     };
   });
   assert.deepEqual(classCSurface, {
-    accessClass: "C", hasStep: false, hasRenderFrame: false, hasActionBatch: false, hasObservation: false,
+    accessClass: "C",
+    hasStep: false,
+    hasRenderFrame: false,
+    hasActionBatch: false,
+    hasObservation: false,
   });
 
   // Enter setup and the real run by the same physical pointer bridge used by
@@ -45,8 +51,10 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
   await physicalInput(page, { type: "pointer", x: 800, y: 755, button: 0, phase: "released" });
   await waitScreen("playing");
   const frameBeforeMovement = await page.screenshot({ type: "png" });
-  assert.ok(frameBeforeMovement.length > 1_000,
-    "the composed live canvas did not produce a meaningful pre-movement frame");
+  assert.ok(
+    frameBeforeMovement.length > 1_000,
+    "the composed live canvas did not produce a meaningful pre-movement frame",
+  );
 
   // Keep a normal physical movement key held long enough to force several
   // 60-tick recorder snapshots. The live requestAnimationFrame loop, rather
@@ -55,19 +63,29 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
   await page.waitForTimeout(2_100);
   await physicalInput(page, { type: "key", code: "KeyD", phase: "released" });
   const frameAfterMovement = await page.screenshot({ type: "png" });
-  assert.ok(frameAfterMovement.length > 1_000,
-    "the composed live canvas did not produce a meaningful post-movement frame");
-  assert.notDeepEqual(frameAfterMovement, frameBeforeMovement,
-    "the physical live run did not render a changed canvas frame after movement");
+  assert.ok(
+    frameAfterMovement.length > 1_000,
+    "the composed live canvas did not produce a meaningful post-movement frame",
+  );
+  assert.notDeepEqual(
+    frameAfterMovement,
+    frameBeforeMovement,
+    "the physical live run did not render a changed canvas frame after movement",
+  );
   if (process.env.TEAR_CAPTURE_BACKDROP_FRAME) {
     await page.screenshot({ path: process.env.TEAR_CAPTURE_BACKDROP_FRAME, type: "png" });
   }
 
   // This is lifecycle cleanup only: it neither injects an action nor advances
   // a fixed tick. It completes the passive recorder so the capsule can be read.
-  await page.evaluate(() => { window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").terminate(); });
-  await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null
-    || window.__TEAR_GHOST_V3__.failure() !== null, undefined, { timeout: 20000 });
+  await page.evaluate(() => {
+    window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").terminate();
+  });
+  await page.waitForFunction(
+    () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
+    undefined,
+    { timeout: 20000 },
+  );
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
 
   const capsule = await page.evaluate(async () => {
@@ -76,45 +94,72 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
   });
   const commands = capsule.tracks.commands.map((entry) => entry.value);
   assert.ok(commands.length > 0, "physical movement did not produce any Ghost V3 command envelopes");
-  assert.ok(commands.every((entry) => entry?.kind === "command"
-    && Number.isSafeInteger(entry.tick) && entry.tick > 0
-    && Number.isSafeInteger(entry.id) && entry.id > 0),
-  "physical input produced a non-canonical Ghost V3 command entry");
+  assert.ok(
+    commands.every(
+      (entry) =>
+        entry?.kind === "command" &&
+        Number.isSafeInteger(entry.tick) &&
+        entry.tick > 0 &&
+        Number.isSafeInteger(entry.id) &&
+        entry.id > 0,
+    ),
+    "physical input produced a non-canonical Ghost V3 command entry",
+  );
 
   const rightwardMoves = commands.filter((entry) => entry.command?.type === "move" && entry.command.x > 0);
-  assert.ok(rightwardMoves.length > 0,
-    "the physical KeyD press was not sealed as a positive canonical move action");
-  assert.ok(rightwardMoves.every((entry) => entry.command.x <= 1000 && entry.command.y >= -1000 && entry.command.y <= 1000),
-    "sealed physical movement fell outside the canonical input axis range");
+  assert.ok(rightwardMoves.length > 0, "the physical KeyD press was not sealed as a positive canonical move action");
+  assert.ok(
+    rightwardMoves.every((entry) => entry.command.x <= 1000 && entry.command.y >= -1000 && entry.command.y <= 1000),
+    "sealed physical movement fell outside the canonical input axis range",
+  );
 
   const snapshots = capsule.tracks.keyframes.map(snapshotPlayer).filter(Boolean);
-  assert.ok(snapshots.length >= 2,
-    "physical live play did not retain enough authoritative keyframes to prove a state transition");
-  assert.ok(snapshots.every((snapshot) => snapshot.tick === snapshot.runTick),
-    "recorded physical snapshots disagreed with the authoritative simulation tick");
-  assert.ok(snapshots.some((snapshot) => snapshot.tick > rightwardMoves[0].tick),
-    "no authoritative snapshot followed the sealed physical movement command");
+  assert.ok(
+    snapshots.length >= 2,
+    "physical live play did not retain enough authoritative keyframes to prove a state transition",
+  );
+  assert.ok(
+    snapshots.every((snapshot) => snapshot.tick === snapshot.runTick),
+    "recorded physical snapshots disagreed with the authoritative simulation tick",
+  );
+  assert.ok(
+    snapshots.some((snapshot) => snapshot.tick > rightwardMoves[0].tick),
+    "no authoritative snapshot followed the sealed physical movement command",
+  );
 
   const xValues = snapshots.map((snapshot) => snapshot.x);
   const displacement = Math.max(...xValues) - Math.min(...xValues);
-  assert.ok(displacement > 1,
-    `physical canonical movement left the authoritative player state idle: ${JSON.stringify(snapshots)}`);
-  assert.ok(snapshots.every((snapshot) => Number.isFinite(snapshot.x) && Number.isFinite(snapshot.y)),
-    "physical canonical movement produced a non-finite authoritative player state");
+  assert.ok(
+    displacement > 1,
+    `physical canonical movement left the authoritative player state idle: ${JSON.stringify(snapshots)}`,
+  );
+  assert.ok(
+    snapshots.every((snapshot) => Number.isFinite(snapshot.x) && Number.isFinite(snapshot.y)),
+    "physical canonical movement produced a non-finite authoritative player state",
+  );
 
-  assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), false,
-    "normal termination did not close the canonical device-input session");
+  assert.equal(
+    await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording),
+    false,
+    "normal termination did not close the canonical device-input session",
+  );
   // Tutorial runs do not qualify for Ghost 2 achievement recording. Use the
   // real asynchronous training preflight, then prove that input is still
   // owned by the run boundary rather than V3/IndexedDB availability.
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("tutorial", "normal"));
-  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing"
-    && window.__PANTHEON_TEST.tutorial().active, undefined, { timeout: 15_000 });
+  await page.waitForFunction(
+    () => window.__PANTHEON_TEST.state().game === "playing" && window.__PANTHEON_TEST.tutorial().active,
+    undefined,
+    { timeout: 15_000 },
+  );
   const tutorialLifecycle = await page.evaluate(() => {
     const active = window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording;
     window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").terminate();
     return { active, inactive: !window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording };
   });
-  assert.deepEqual(tutorialLifecycle, { active: true, inactive: true },
-    "untracked tutorial input lifecycle depended on Ghost 2/V3 recording availability");
+  assert.deepEqual(
+    tutorialLifecycle,
+    { active: true, inactive: true },
+    "untracked tutorial input lifecycle depended on Ghost 2/V3 recording availability",
+  );
 });

@@ -15,8 +15,13 @@ export function createTearSpawnFactPublisher<TEnemy extends Readonly<{ x: number
 ) {
   return (enemy: TEnemy, actorKind: string, detail: TearSpawnFactDetail): void => {
     events.emit({
-      kind: "spawn", actorId: actorId(enemy), actorKind, x: enemy.x, y: enemy.y,
-      variantName: detail.vn, bossId: detail.b,
+      kind: "spawn",
+      actorId: actorId(enemy),
+      actorKind,
+      x: enemy.x,
+      y: enemy.y,
+      variantName: detail.vn,
+      bossId: detail.b,
       ...(detail.vid === undefined ? {} : { variantId: detail.vid }),
     });
   };
@@ -30,31 +35,44 @@ export function createTearWaveFactPublisher(events: TearGameplayEventPort) {
 }
 
 /** Shared terminal fact mapping; lifecycle ownership supplies the active session ID. */
-export function createTearTerminalRunFactPublisher(
-  events: TearGameplayEventPort,
-  sessionId: () => string | null,
-) {
+export function createTearTerminalRunFactPublisher(events: TearGameplayEventPort, sessionId: () => string | null) {
   return (outcome: "defeat" | "victory", run: OutcomeRunState): void => {
     const runId = sessionId();
     if (runId === null) return;
     events.emit({
-      kind: "run", transition: outcome === "victory" ? "completed" : "defeated", runId,
-      mode: run.mode, difficulty: run.diff, weaponId: run.weaponId,
-      wave: run.wave, score: run.score, runTimeSeconds: run.runTime,
+      kind: "run",
+      transition: outcome === "victory" ? "completed" : "defeated",
+      runId,
+      mode: run.mode,
+      difficulty: run.diff,
+      weaponId: run.weaponId,
+      wave: run.wave,
+      score: run.score,
+      runTimeSeconds: run.runTime,
     });
   };
 }
 
 /** Native UI pause/resume facts retain the active run's exact lifecycle and clock. */
-export function createTearRunScreenFactPublisher(events: TearGameplayEventPort,
+export function createTearRunScreenFactPublisher(
+  events: TearGameplayEventPort,
   lifecycle: () => Pick<RunLifecycleSnapshot, "sessionId" | "phase">,
-  currentRun: () => Pick<OutcomeRunState, "mode" | "diff" | "weaponId" | "wave" | "score" | "runTime">) {
+  currentRun: () => Pick<OutcomeRunState, "mode" | "diff" | "weaponId" | "wave" | "score" | "runTime">,
+) {
   return (transition: "paused" | "resumed"): void => {
     const current = lifecycle();
     if (current.sessionId === null || current.phase === "terminated") return;
     const run = currentRun();
-    events.emit({ kind: "run", transition, runId: current.sessionId,
-      mode: run.mode, difficulty: run.diff, weaponId: run.weaponId, wave: run.wave, score: run.score,
-      runTimeSeconds: run.runTime });
+    events.emit({
+      kind: "run",
+      transition,
+      runId: current.sessionId,
+      mode: run.mode,
+      difficulty: run.diff,
+      weaponId: run.weaponId,
+      wave: run.wave,
+      score: run.score,
+      runTimeSeconds: run.runTime,
+    });
   };
 }

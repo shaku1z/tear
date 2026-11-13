@@ -1,13 +1,5 @@
-import type {
-  AudioContextFactory,
-} from "./audio-system";
-import type {
-  AudioContextState,
-  AudioGraphContext,
-  AudioNodePort,
-  GainNodePort,
-  GainParamPort,
-} from "./mixer";
+import type { AudioContextFactory } from "./audio-system";
+import type { AudioContextState, AudioGraphContext, AudioNodePort, GainNodePort, GainParamPort } from "./mixer";
 
 class BrowserGainParamPort implements GainParamPort {
   readonly #parameter: AudioParam;
@@ -96,7 +88,7 @@ export class BrowserAudioGraphContext implements AudioGraphContext {
   }
 }
 
-type AudioContextConstructor = new(contextOptions?: AudioContextOptions) => AudioContext;
+type AudioContextConstructor = new (contextOptions?: AudioContextOptions) => AudioContext;
 
 interface WebkitAudioWindow extends Window {
   readonly AudioContext?: AudioContextConstructor;

@@ -14,14 +14,7 @@
 export type LoopMode = "hard" | "crossfade" | "tail-overlap";
 
 /** Recommended role vocabulary; any string is accepted so cues can group freely. */
-export type StemRole =
-  | "bed"
-  | "bass"
-  | "rhythm"
-  | "motif"
-  | "apex"
-  | "texture"
-  | (string & {});
+export type StemRole = "bed" | "bass" | "rhythm" | "motif" | "apex" | "texture" | (string & {});
 
 export type Tier = 0 | 1 | 2 | 3 | 4;
 

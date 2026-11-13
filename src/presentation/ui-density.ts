@@ -8,10 +8,26 @@ export interface DensityProfile {
 }
 
 /** The touch profile's comfortable minimums on large touch screens (tablets, touch laptops). */
-const TOUCH_TYPE_BUMP: Readonly<Record<string, number>> = { micro: 3, caption: 3, label: 3, body: 3, lead: 3, title: 2, h2: 2, h1: 2 };
+const TOUCH_TYPE_BUMP: Readonly<Record<string, number>> = {
+  micro: 3,
+  caption: 3,
+  label: 3,
+  body: 3,
+  lead: 3,
+  title: 2,
+  h2: 2,
+  h1: 2,
+};
 const TOUCH_METRICS: Readonly<Record<string, number>> = {
-  btnH: 60, btnW: 320, chipH: 38, chipW: 116,
-  settingsRowH: 66, settingsControlW: 272, settingsControlH: 54, settingsStepperW: 60, minTarget: 48,
+  btnH: 60,
+  btnW: 320,
+  chipH: 38,
+  chipW: 116,
+  settingsRowH: 66,
+  settingsControlW: 272,
+  settingsControlH: 54,
+  settingsStepperW: 60,
+  minTarget: 48,
 };
 const TEXT_ROLES = ["micro", "caption", "label", "body", "lead", "title", "h2", "h1", "display"] as const;
 const TARGET_METRICS = ["btnH", "chipH", "settingsControlH", "settingsStepperW", "minTarget"] as const;
@@ -29,7 +45,8 @@ const TARGET_METRICS = ["btnH", "chipH", "settingsControlH", "settingsStepperW",
  * screen whose composition has not adopted the compact layout yet.
  */
 export function densityTokens(base: TokenSnapshot, profile: DensityProfile, floors = true): TokenSnapshot {
-  const type = { ...base.type }, metric = { ...base.metric };
+  const type = { ...base.type },
+    metric = { ...base.metric };
   if (!profile.touch) return { type, metric };
   if (!floors) {
     for (const role of TEXT_ROLES) type[role] = (base.type[role] ?? 0) + (TOUCH_TYPE_BUMP[role] ?? 0);
@@ -51,5 +68,7 @@ export function densityTokens(base: TokenSnapshot, profile: DensityProfile, floo
 /** True when the derived profile is tighter than the plain touch bump (a phone in landscape). */
 export function isCompactDensity(profile: DensityProfile): boolean {
   if (!profile.touch) return false;
-  return cssToLogical(INTERFACE_ACCESSIBILITY.minTouchTargetCssPx, profile.cssPerLogicalPixel) > (TOUCH_METRICS.btnH ?? 0);
+  return (
+    cssToLogical(INTERFACE_ACCESSIBILITY.minTouchTargetCssPx, profile.cssPerLogicalPixel) > (TOUCH_METRICS.btnH ?? 0)
+  );
 }

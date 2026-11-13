@@ -21,7 +21,7 @@ export interface TearAcademyCandidateCurationDecisionV1 {
   readonly rationale: string;
   readonly tags: readonly string[];
   /** Requested corrections are immutable instructions, never edits to source evidence. */
-  readonly corrections: readonly Readonly<{ kind: TearAcademyCandidateCorrectionKind; detail: string }> [];
+  readonly corrections: readonly Readonly<{ kind: TearAcademyCandidateCorrectionKind; detail: string }>[];
   readonly decisionHash: string;
 }
 
@@ -33,7 +33,7 @@ export interface TearAcademyCandidateCurationRequest {
   readonly reviewedAt: string;
   readonly rationale: string;
   readonly tags: readonly string[];
-  readonly corrections?: readonly Readonly<{ kind: TearAcademyCandidateCorrectionKind; detail: string }> [];
+  readonly corrections?: readonly Readonly<{ kind: TearAcademyCandidateCorrectionKind; detail: string }>[];
 }
 
 export interface TearAcademyCandidateCurationInventoryV1 {
@@ -54,25 +54,42 @@ function curationKey(candidateHash: string): string {
 }
 
 function validTags(value: unknown): value is readonly string[] {
-  return Array.isArray(value) && value.length <= 16 && value.every((tag) => nonEmpty(tag) && tag.length <= 96)
-    && new Set(value).size === value.length;
+  return (
+    Array.isArray(value) &&
+    value.length <= 16 &&
+    value.every((tag) => nonEmpty(tag) && tag.length <= 96) &&
+    new Set(value).size === value.length
+  );
 }
 
-function validCorrections(value: unknown): value is readonly Readonly<{ kind: TearAcademyCandidateCorrectionKind; detail: string }>[] {
-  return Array.isArray(value) && value.length <= 16 && value.every((correction) => correction !== null
-    && typeof correction === "object" && !Array.isArray(correction)
-    && ["metadata", "label", "quality"].includes(String((correction as Record<string, unknown>).kind))
-    && nonEmpty((correction as Record<string, unknown>).detail)
-    && String((correction as Record<string, unknown>).detail).length <= 1_024);
+function validCorrections(
+  value: unknown,
+): value is readonly Readonly<{ kind: TearAcademyCandidateCorrectionKind; detail: string }>[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= 16 &&
+    value.every(
+      (correction) =>
+        correction !== null &&
+        typeof correction === "object" &&
+        !Array.isArray(correction) &&
+        ["metadata", "label", "quality"].includes(String((correction as Record<string, unknown>).kind)) &&
+        nonEmpty((correction as Record<string, unknown>).detail) &&
+        String((correction as Record<string, unknown>).detail).length <= 1_024,
+    )
+  );
 }
 
 function decisionHash(value: Omit<TearAcademyCandidateCurationDecisionV1, "decisionHash">): string {
   return stableVerificationHash(value);
 }
 
-function freezeDecision(value: Omit<TearAcademyCandidateCurationDecisionV1, "decisionHash">): TearAcademyCandidateCurationDecisionV1 {
+function freezeDecision(
+  value: Omit<TearAcademyCandidateCurationDecisionV1, "decisionHash">,
+): TearAcademyCandidateCurationDecisionV1 {
   return Object.freeze({
-    ...value, tags: Object.freeze([...value.tags]),
+    ...value,
+    tags: Object.freeze([...value.tags]),
     corrections: Object.freeze(value.corrections.map((entry) => Object.freeze({ ...entry }))),
     decisionHash: decisionHash(value),
   });
@@ -80,17 +97,28 @@ function freezeDecision(value: Omit<TearAcademyCandidateCurationDecisionV1, "dec
 
 function parseDecision(value: string): TearAcademyCandidateCurationDecisionV1 {
   const source: unknown = JSON.parse(value);
-  if (source === null || typeof source !== "object" || Array.isArray(source)) throw new TypeError("invalid Academy curation decision");
+  if (source === null || typeof source !== "object" || Array.isArray(source))
+    throw new TypeError("invalid Academy curation decision");
   const entry = source as Record<string, unknown>;
-  if (entry.format !== "tear-academy-candidate-curation-decision" || entry.schemaVersion !== 1
-    || !/^[a-f0-9]{16}$/u.test(String(entry.candidateHash)) || !/^[a-f0-9]{16}$/u.test(String(entry.custodyRecordHash))
-    || !/^[a-f0-9]{16}$/u.test(String(entry.assessmentHash))
-    || !["curation-approved", "needs-correction", "rejected"].includes(String(entry.disposition))
-    || !nonEmpty(entry.reviewer) || !timestamp(entry.reviewedAt) || !nonEmpty(entry.rationale)
-    || !validTags(entry.tags) || !validCorrections(entry.corrections) || !nonEmpty(entry.decisionHash)) {
+  if (
+    entry.format !== "tear-academy-candidate-curation-decision" ||
+    entry.schemaVersion !== 1 ||
+    !/^[a-f0-9]{16}$/u.test(String(entry.candidateHash)) ||
+    !/^[a-f0-9]{16}$/u.test(String(entry.custodyRecordHash)) ||
+    !/^[a-f0-9]{16}$/u.test(String(entry.assessmentHash)) ||
+    !["curation-approved", "needs-correction", "rejected"].includes(String(entry.disposition)) ||
+    !nonEmpty(entry.reviewer) ||
+    !timestamp(entry.reviewedAt) ||
+    !nonEmpty(entry.rationale) ||
+    !validTags(entry.tags) ||
+    !validCorrections(entry.corrections) ||
+    !nonEmpty(entry.decisionHash)
+  ) {
     throw new TypeError("invalid Academy curation decision");
   }
-  const typed = entry as unknown as Omit<TearAcademyCandidateCurationDecisionV1, "decisionHash"> & { decisionHash: string };
+  const typed = entry as unknown as Omit<TearAcademyCandidateCurationDecisionV1, "decisionHash"> & {
+    decisionHash: string;
+  };
   if (typed.disposition === "needs-correction" && typed.corrections.length === 0) {
     throw new TypeError("C31 correction decision requires an immutable correction request");
   }
@@ -126,38 +154,58 @@ export class TearAcademyCandidateCurationStore {
   }
 
   /** Shared only with adjacent C31 split/manifests for the same local Vault boundary. */
-  backend(): GhostVaultBackend { return this.#backend; }
+  backend(): GhostVaultBackend {
+    return this.#backend;
+  }
 
   async decide(input: TearAcademyCandidateCurationRequest): Promise<TearAcademyCandidateCurationDecisionV1> {
-    if (!/^[a-f0-9]{16}$/u.test(input.candidateHash) || !/^[a-f0-9]{16}$/u.test(input.assessmentHash)
-      || !["curation-approved", "needs-correction", "rejected"].includes(input.disposition)
-      || !nonEmpty(input.reviewer) || !timestamp(input.reviewedAt) || !nonEmpty(input.rationale)
-      || !validTags(input.tags) || !validCorrections(input.corrections ?? [])) {
+    if (
+      !/^[a-f0-9]{16}$/u.test(input.candidateHash) ||
+      !/^[a-f0-9]{16}$/u.test(input.assessmentHash) ||
+      !["curation-approved", "needs-correction", "rejected"].includes(input.disposition) ||
+      !nonEmpty(input.reviewer) ||
+      !timestamp(input.reviewedAt) ||
+      !nonEmpty(input.rationale) ||
+      !validTags(input.tags) ||
+      !validCorrections(input.corrections ?? [])
+    ) {
       throw new TypeError("invalid C31 curation decision");
     }
     const corrections = input.corrections ?? [];
-    if ((input.disposition === "needs-correction") !== (corrections.length > 0)) {
+    if ((input.disposition === "needs-correction") !== corrections.length > 0) {
       throw new TypeError("C31 curation correction disposition does not match its correction requests");
     }
     const custody = await this.#custody.get(input.candidateHash);
     const assessment = await this.#quality.get(input.candidateHash);
-    if (custody?.status !== "held" || !custody.privacyRetention.authorizedActorIds.includes(input.reviewer)
-      || assessment?.disposition !== "review-required"
-      || assessment.assessmentHash !== input.assessmentHash || assessment.custodyRecordHash !== custody.recordHash
-      || !(await this.#custody.held(input.reviewedAt)).some((entry) => entry.candidateHash === input.candidateHash)) {
+    if (
+      custody?.status !== "held" ||
+      !custody.privacyRetention.authorizedActorIds.includes(input.reviewer) ||
+      assessment?.disposition !== "review-required" ||
+      assessment.assessmentHash !== input.assessmentHash ||
+      assessment.custodyRecordHash !== custody.recordHash ||
+      !(await this.#custody.held(input.reviewedAt)).some((entry) => entry.candidateHash === input.candidateHash)
+    ) {
       throw new RangeError("C31 curation requires an authorized review of exact held assessed custody");
     }
-    if (await this.#backend.get("analysis", curationKey(input.candidateHash)) !== undefined) {
+    if ((await this.#backend.get("analysis", curationKey(input.candidateHash))) !== undefined) {
       throw new TypeError(`Academy candidate curation already exists: ${input.candidateHash}`);
     }
     const decision = freezeDecision({
-      format: "tear-academy-candidate-curation-decision", schemaVersion: 1,
-      candidateHash: custody.candidateHash, custodyRecordHash: custody.recordHash, assessmentHash: assessment.assessmentHash,
-      disposition: input.disposition, reviewer: input.reviewer, reviewedAt: input.reviewedAt,
-      rationale: input.rationale, tags: Object.freeze([...input.tags]),
+      format: "tear-academy-candidate-curation-decision",
+      schemaVersion: 1,
+      candidateHash: custody.candidateHash,
+      custodyRecordHash: custody.recordHash,
+      assessmentHash: assessment.assessmentHash,
+      disposition: input.disposition,
+      reviewer: input.reviewer,
+      reviewedAt: input.reviewedAt,
+      rationale: input.rationale,
+      tags: Object.freeze([...input.tags]),
       corrections: Object.freeze(corrections.map((entry) => Object.freeze({ ...entry }))),
     });
-    await this.#backend.commit([Object.freeze({ store: "analysis", key: curationKey(decision.candidateHash), value: JSON.stringify(decision) })]);
+    await this.#backend.commit([
+      Object.freeze({ store: "analysis", key: curationKey(decision.candidateHash), value: JSON.stringify(decision) }),
+    ]);
     return decision;
   }
 
@@ -171,10 +219,12 @@ export class TearAcademyCandidateCurationStore {
     if (!timestamp(at)) throw new TypeError("C31 curation query requires a valid timestamp");
     const held = new Map((await this.#custody.held(at)).map((entry) => [entry.candidateHash, entry]));
     const inventory = await this.inventory();
-    return Object.freeze(inventory.decisions.filter((decision) => {
-      const custody = held.get(decision.candidateHash);
-      return custody?.recordHash === decision.custodyRecordHash;
-    }));
+    return Object.freeze(
+      inventory.decisions.filter((decision) => {
+        const custody = held.get(decision.candidateHash);
+        return custody?.recordHash === decision.custodyRecordHash;
+      }),
+    );
   }
 
   async inventory(): Promise<TearAcademyCandidateCurationInventoryV1> {
@@ -184,8 +234,11 @@ export class TearAcademyCandidateCurationStore {
       if (!key.startsWith(CURATION_KEY_PREFIX)) continue;
       const stored = await this.#backend.get("analysis", key);
       if (stored === undefined) continue;
-      try { decisions.push(parseDecision(stored)); }
-      catch { rejectedKeys.push(key); }
+      try {
+        decisions.push(parseDecision(stored));
+      } catch {
+        rejectedKeys.push(key);
+      }
     }
     return Object.freeze({
       decisions: Object.freeze(decisions.sort((left, right) => left.candidateHash.localeCompare(right.candidateHash))),

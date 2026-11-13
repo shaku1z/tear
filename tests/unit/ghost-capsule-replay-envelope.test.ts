@@ -18,7 +18,11 @@ import {
 } from "../../src/tearbench";
 
 function world(): TearCodecWorld {
-  const result: TearCodecWorld = { components: new Map(), references: new Map(), entityIds: new Set(["player", "blade"]) };
+  const result: TearCodecWorld = {
+    components: new Map(),
+    references: new Map(),
+    entityIds: new Set(["player", "blade"]),
+  };
   for (const id of CODEC_REGISTRY.ids) result.components.set(id, {});
   result.components.set("tear.player.v1", { id: "player", x: 5, y: 0 });
   result.components.set("tear.run.v1", { elapsedTicks: 5 });
@@ -30,22 +34,38 @@ function snapshot(): TearSnapshotV1 {
   const state = world();
   const captured = captureCodecState(state, createDefaultStateCodecRegistry());
   return {
-    format: "tear-contract", kind: "snapshot", schemaVersion: 1,
-    id: "capsule-keyframe-5", tick: 5, stateClass: "recorded-canonical", seed: "capsule-seed",
+    format: "tear-contract",
+    kind: "snapshot",
+    schemaVersion: 1,
+    id: "capsule-keyframe-5",
+    tick: 5,
+    stateClass: "recorded-canonical",
+    seed: "capsule-seed",
     hashes: {
-      exact: stableVerificationHash({ exact: true }), semantic: stableVerificationHash({ semantic: true }),
-      visual: stableVerificationHash({ visual: true }), progression: stableVerificationHash({ progression: true }),
+      exact: stableVerificationHash({ exact: true }),
+      semantic: stableVerificationHash({ semantic: true }),
+      visual: stableVerificationHash({ visual: true }),
+      progression: stableVerificationHash({ progression: true }),
       environment: stableVerificationHash({ environment: true }),
     },
     provenance: {
-      actor: "human", producer: "ghost-v3-live-recorder",
+      actor: "human",
+      producer: "ghost-v3-live-recorder",
       build: {
-        version: "0.1.0", revision: "unit", target: "test-standalone", rulesetVersion: "rules-unit",
-        contentHash: "content", configHash: "config",
+        version: "0.1.0",
+        revision: "unit",
+        target: "test-standalone",
+        rulesetVersion: "rules-unit",
+        contentHash: "content",
+        configHash: "config",
       },
-      executionClass: "engineering", observationClass: "structured-state", trainingConsent: "no-training",
+      executionClass: "engineering",
+      observationClass: "structured-state",
+      trainingConsent: "no-training",
     },
-    rng: {}, codecs: captured.codecs, state: captured.state,
+    rng: {},
+    codecs: captured.codecs,
+    state: captured.state,
   };
 }
 
@@ -53,16 +73,36 @@ describe("Ghost capsule replay mapping", () => {
   it("maps verified capsule bytes into strict unverified replay truth", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
-      sessionId: "capsule-replay", createdAt: "2026-07-28T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "capsule-replay",
+      createdAt: "2026-07-28T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await recorder.start();
-    await recorder.append({ kind: "commands", tick: 3, value: { kind: "command", id: 1, tick: 3, command: { type: "dash", x: 1_000, y: 0 } } });
+    await recorder.append({
+      kind: "commands",
+      tick: 3,
+      value: { kind: "command", id: 1, tick: 3, command: { type: "dash", x: 1_000, y: 0 } },
+    });
     await recorder.append({ kind: "keyframes", tick: 5, value: snapshot() });
     await recorder.append({ kind: "keyframes", tick: 5, value: { player: { x: 5, y: 0 }, blade: { state: "held" } } });
-    await recorder.append({ kind: "events", tick: 6, value: {
-      format: "tear-contract", kind: "event", schemaVersion: 1, id: "capsule-event", type: "boss.attack-started",
-      tick: 6, phase: "enemy-ai", sequence: 1, source: "engine", payload: {},
-    } });
+    await recorder.append({
+      kind: "events",
+      tick: 6,
+      value: {
+        format: "tear-contract",
+        kind: "event",
+        schemaVersion: 1,
+        id: "capsule-event",
+        type: "boss.attack-started",
+        tick: 6,
+        phase: "enemy-ai",
+        sequence: 1,
+        source: "engine",
+        payload: {},
+      },
+    });
     await recorder.append({ kind: "presentation", tick: 7, value: { camera: "player" } });
     await recorder.finalize("2026-07-28T00:01:00.000Z");
 
@@ -79,15 +119,23 @@ describe("Ghost capsule replay mapping", () => {
       visual: { status: "declared-unverified", available: true, seekable: true },
     });
     expect(mapped.ghost.snapshots).toEqual([]);
-    expect(mapped.issues.some((entry) => entry.track === "keyframes" && entry.reason.includes("isolated codec preflight"))).toBe(true);
+    expect(
+      mapped.issues.some((entry) => entry.track === "keyframes" && entry.reason.includes("isolated codec preflight")),
+    ).toBe(true);
   });
 
   it("fails closed for a malformed command track while retaining independently restorable state", () => {
     const valid = snapshot();
     const mapped = mapGhostCapsuleToReplayEnvelope({
       manifest: {
-        format: "tearghost-capsule", schemaVersion: 1, id: "malformed-command", status: "complete",
-        createdAt: "2026-07-28T00:00:00.000Z", recordingProfile: "coaching", chunks: [], rootIntegrity: "root",
+        format: "tearghost-capsule",
+        schemaVersion: 1,
+        id: "malformed-command",
+        status: "complete",
+        createdAt: "2026-07-28T00:00:00.000Z",
+        recordingProfile: "coaching",
+        chunks: [],
+        rootIntegrity: "root",
         fidelity: { presentation: "full", downgrades: [] },
       },
       tracks: {
@@ -95,7 +143,11 @@ describe("Ghost capsule replay mapping", () => {
           { kind: "commands", tick: 1, value: { kind: "command", id: 1, tick: 1, command: { type: "jump" } } },
           { kind: "commands", tick: 2, value: { kind: "command", id: 2, tick: 2, command: { type: "not-real" } } },
         ],
-        keyframes: [{ kind: "keyframes", tick: 5, value: valid }], rng: [], events: [], results: [], presentation: [],
+        keyframes: [{ kind: "keyframes", tick: 5, value: valid }],
+        rng: [],
+        events: [],
+        results: [],
+        presentation: [],
       },
       maxTick: 5,
     });

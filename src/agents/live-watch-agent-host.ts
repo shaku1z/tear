@@ -11,7 +11,10 @@ import type { TearPolicyDecisionJournal, TearPolicyDecisionJournalSnapshot } fro
 import type { TearActivePolicyRuntime, TearPolicyDecisionReceipt } from "./policy-runtime";
 import type { TearC32CanonicalActivePolicyRuntime } from "./c32-canonical-active-policy-runtime";
 import type { FactorizedRuntimeCheckpoint } from "./c34-factorized-policy-runtime";
-import { createTearFoundryV3PostPromotionTerminalReceipt, type TearFoundryV3PostPromotionMonitor } from "./foundry-job-v3-post-promotion-monitor";
+import {
+  createTearFoundryV3PostPromotionTerminalReceipt,
+  type TearFoundryV3PostPromotionMonitor,
+} from "./foundry-job-v3-post-promotion-monitor";
 import { stableVerificationHash } from "../replay/hash";
 import { buildWatchChoiceScore } from "./watch-build-choice";
 import { installLiveWatchAgentPanel } from "./live-watch-agent-panel";
@@ -72,13 +75,20 @@ export interface TearWatchAgentSnapshot {
   readonly mechanics: readonly string[];
   readonly bladeStates: readonly string[];
   readonly bladeStateTransitions: readonly Readonly<{
-    tick: number; state: string; hostile: boolean; stolen: boolean;
+    tick: number;
+    state: string;
+    hostile: boolean;
+    stolen: boolean;
   }>[];
   readonly bladeTether: Readonly<{ minimum: number; maximum: number; contracted: boolean }>;
   readonly engineEvents: readonly TearGameplayEvent[];
   readonly weaponEvents: readonly unknown[];
   readonly weaponStats?: Readonly<{
-    heldHits: number; reversals: number; throws: number; throwHits: number; perfectParries: number;
+    heldHits: number;
+    reversals: number;
+    throws: number;
+    throwHits: number;
+    perfectParries: number;
   }>;
   readonly draftPicks: readonly Readonly<{ tick: number; offered: readonly string[]; selected: string }>[];
   readonly lastTrace?: TearAgentIntentTrace;
@@ -106,7 +116,10 @@ export interface TearWatchAgentApi {
   resumePlayground(): TearWatchAgentSnapshot;
   snapshot(): TearWatchAgentSnapshot;
   capturePolicyContext(): FactorizedRuntimeCheckpoint | undefined;
-  restorePolicyContext(checkpoint: FactorizedRuntimeCheckpoint, authority: Readonly<{ expectedCheckpointHash: string; runId: string }>): void;
+  restorePolicyContext(
+    checkpoint: FactorizedRuntimeCheckpoint,
+    authority: Readonly<{ expectedCheckpointHash: string; runId: string }>,
+  ): void;
 }
 
 interface MutableState {
@@ -171,12 +184,20 @@ function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: Mu
   return Object.freeze({
     status: state.status,
     selection: Object.freeze({
-      profile: state.options.profile, mode: state.options.mode, difficulty: state.options.difficulty,
-      weapon: state.options.weapon, boss: state.options.boss, seed: state.options.seed,
+      profile: state.options.profile,
+      mode: state.options.mode,
+      difficulty: state.options.difficulty,
+      weapon: state.options.weapon,
+      boss: state.options.boss,
+      seed: state.options.seed,
       skipCinematics: state.options.skipCinematics,
-      ...(state.options.journey === "single-run" ? {} : {
-        journey: state.options.journey, maxEpisodes: state.options.maxEpisodes, maxSpend: state.options.maxSpend,
-      }),
+      ...(state.options.journey === "single-run"
+        ? {}
+        : {
+            journey: state.options.journey,
+            maxEpisodes: state.options.maxEpisodes,
+            maxSpend: state.options.maxSpend,
+          }),
     }),
     screen: context.screen(),
     tick,
@@ -192,16 +213,26 @@ function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: Mu
     bladeStateTransitions: Object.freeze(state.bladeStateTransitions.map((entry) => Object.freeze({ ...entry }))),
     bladeTether: Object.freeze({
       minimum: Number.isFinite(state.tetherMinimum) ? state.tetherMinimum : 1,
-      maximum: state.tetherMaximum, contracted: state.tetherMinimum < 0.9,
+      maximum: state.tetherMaximum,
+      contracted: state.tetherMinimum < 0.9,
     }),
     engineEvents: Object.freeze(state.engineEvents.map((event) => Object.freeze({ ...event }))),
-    weaponEvents: Object.freeze((run === null || run === undefined ? [] : run.weaponLog).map((event) =>
-      event && typeof event === "object" ? Object.freeze({ ...event }) : event)),
-    ...(run === null || run === undefined ? {} : { weaponStats: Object.freeze({
-      heldHits: run.weaponStats.heldHits, reversals: run.weaponStats.reversals ?? run.weaponStats.trueCuts,
-      throws: run.weaponStats.throws, throwHits: run.weaponStats.throwHits,
-      perfectParries: run.weaponStats.perfectParries,
-    }) }),
+    weaponEvents: Object.freeze(
+      (run === null || run === undefined ? [] : run.weaponLog).map((event) =>
+        event && typeof event === "object" ? Object.freeze({ ...event }) : event,
+      ),
+    ),
+    ...(run === null || run === undefined
+      ? {}
+      : {
+          weaponStats: Object.freeze({
+            heldHits: run.weaponStats.heldHits,
+            reversals: run.weaponStats.reversals ?? run.weaponStats.trueCuts,
+            throws: run.weaponStats.throws,
+            throwHits: run.weaponStats.throwHits,
+            perfectParries: run.weaponStats.perfectParries,
+          }),
+        }),
     draftPicks: Object.freeze(state.draftPicks.map((entry) => Object.freeze({ ...entry }))),
     ...(state.lastTrace === undefined ? {} : { lastTrace: state.lastTrace }),
     ...(state.structuredIntent === undefined ? {} : { structuredIntent: state.structuredIntent }),
@@ -210,9 +241,7 @@ function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: Mu
     watchdogs: Object.freeze({
       noProgressTicks: state.noProgressTicks,
       noProgressLimit: NO_PROGRESS_LIMIT,
-      active: Object.freeze([
-        ...(state.terminalReason?.includes("watchdog") === true ? [state.terminalReason] : []),
-      ]),
+      active: Object.freeze([...(state.terminalReason?.includes("watchdog") === true ? [state.terminalReason] : [])]),
     }),
     debugTransitions: 0 as const,
     executionClass: "engineering" as const,
@@ -223,11 +252,7 @@ function immutableSnapshot(context: LiveTearRuntimeEnvironmentContext, state: Mu
   });
 }
 
-function activateRequired(
-  context: LiveTearRuntimeEnvironmentContext,
-  action: ScreenAction,
-  label: string,
-): void {
+function activateRequired(context: LiveTearRuntimeEnvironmentContext, action: ScreenAction, label: string): void {
   if (!context.activateControl(action)) throw new Error(`Watch Agent could not activate ${label}`);
 }
 
@@ -241,24 +266,48 @@ export function createLiveWatchAgentHost(
   let decisionJournalRuns = 0;
   let generation = 0;
   let asyncOwner: Readonly<{ generation: number; cancelled: Promise<void>; cancel: () => void }> | undefined;
-  const invalidateAdvance = (): void => { generation++; asyncOwner?.cancel(); asyncOwner = undefined; };
+  const invalidateAdvance = (): void => {
+    generation++;
+    asyncOwner?.cancel();
+    asyncOwner = undefined;
+  };
   let state: MutableState = {
-    status: "idle", decisions: 0, fixedTicks: 0, transitions: [], mechanics: new Set(),
-    bladeStates: new Set(), bladeStateTransitions: [], tetherMinimum: Number.POSITIVE_INFINITY,
-    tetherMaximum: 0, engineEvents: [], draftPicks: [],
-    lastScreen: context.screen(), noProgressTicks: 0, progressSignature: "",
+    status: "idle",
+    decisions: 0,
+    fixedTicks: 0,
+    transitions: [],
+    mechanics: new Set(),
+    bladeStates: new Set(),
+    bladeStateTransitions: [],
+    tetherMinimum: Number.POSITIVE_INFINITY,
+    tetherMaximum: 0,
+    engineEvents: [],
+    draftPicks: [],
+    lastScreen: context.screen(),
+    noProgressTicks: 0,
+    progressSignature: "",
     setupStep: 0,
-    options: DEFAULTS, policy: new TearLiveHierarchicalPolicy(DEFAULTS.profile),
+    options: DEFAULTS,
+    policy: new TearLiveHierarchicalPolicy(DEFAULTS.profile),
     ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
     ...(canonicalRuntime === undefined ? {} : { canonicalRuntime }),
     ...(decisionJournal === undefined ? {} : { decisionJournal }),
     ...(postPromotionMonitor === undefined ? {} : { postPromotionMonitor }),
   };
-  let causalEvents: TearGameplayEvent[] = [], causalOverflow = false;
+  let causalEvents: TearGameplayEvent[] = [],
+    causalOverflow = false;
   context.subscribeEngineEvent((event) => {
-    if (state.canonicalRuntime?.requiresCausalContext === true && event.kind === "run" && event.transition === "started") {
-      state.canonicalRuntime.clearCausalContext(); delete state.causalStarted; delete state.causalPending;
-      causalEvents = []; causalOverflow = false; state.causalRunId = event.runId;
+    if (
+      state.canonicalRuntime?.requiresCausalContext === true &&
+      event.kind === "run" &&
+      event.transition === "started"
+    ) {
+      state.canonicalRuntime.clearCausalContext();
+      delete state.causalStarted;
+      delete state.causalPending;
+      causalEvents = [];
+      causalOverflow = false;
+      state.causalRunId = event.runId;
     }
     if (state.status === "running" && state.canonicalRuntime?.requiresCausalContext === true) {
       if (state.causalStarted === true) {
@@ -284,39 +333,83 @@ export function createLiveWatchAgentHost(
   };
   const advanceCausalCommit = (): boolean => {
     const from = state.causalPending;
-    if (!from || !state.causalRunId) { fail("canonical-policy-refused:missing-native-commit"); return false; }
+    if (!from || !state.causalRunId) {
+      fail("canonical-policy-refused:missing-native-commit");
+      return false;
+    }
     context.advanceApplicationFrame(1 / 120);
-    const to = context.canonicalOriginState?.() ?? context.canonicalGameplayState(), commands = context.drainConsumedActions();
+    const to = context.canonicalOriginState?.() ?? context.canonicalGameplayState(),
+      commands = context.drainConsumedActions();
     // Hit stop/accumulator can consume an application frame without a native commit.
     // The already queued action is not resubmitted and no causal clock advances.
     if (to?.tick === from.tick && commands.length === 0 && !causalOverflow) return true;
-    if (!to || causalOverflow || commands.some(command => command.tick !== to.tick)) { fail("canonical-policy-refused:missing-native-commit"); return false; }
-    try { state.canonicalRuntime?.observeCommitted({ from, to, actions: commands.map(command => command.command), events: causalEvents }, state.causalRunId); }
-    catch { fail("canonical-policy-refused:invalid-native-commit"); return false; }
-    state.fixedTicks += to.tick - from.tick; delete state.causalPending; causalEvents = []; causalOverflow = false; return true;
+    if (!to || causalOverflow || commands.some((command) => command.tick !== to.tick)) {
+      fail("canonical-policy-refused:missing-native-commit");
+      return false;
+    }
+    try {
+      state.canonicalRuntime?.observeCommitted(
+        { from, to, actions: commands.map((command) => command.command), events: causalEvents },
+        state.causalRunId,
+      );
+    } catch {
+      fail("canonical-policy-refused:invalid-native-commit");
+      return false;
+    }
+    state.fixedTicks += to.tick - from.tick;
+    delete state.causalPending;
+    causalEvents = [];
+    causalOverflow = false;
+    return true;
   };
   // This is an after-the-fact analysis handoff.  It is intentionally not
   // awaited by the simulation loop and any refusal remains observational.
   const retainTerminalMonitor = (): void => {
-    if (state.monitorTerminalQueued === true || state.postPromotionMonitor === undefined || state.decisionJournal === undefined || !["completed", "failed", "stopped"].includes(state.status)) return;
+    if (
+      state.monitorTerminalQueued === true ||
+      state.postPromotionMonitor === undefined ||
+      state.decisionJournal === undefined ||
+      !["completed", "failed", "stopped"].includes(state.status)
+    )
+      return;
     state.monitorTerminalQueued = true;
-    const journal = state.decisionJournal, terminal = Object.freeze({ status: state.status as "completed" | "failed" | "stopped", tick: context.authoritative()?.tick ?? state.fixedTicks, ...(state.terminalReason === undefined ? {} : { reasonHash: stableVerificationHash(state.terminalReason) }) });
-    void journal.flush().then(async () => {
-      const persisted = await journal.read(journal.snapshot().id); if (persisted === undefined) return;
-      await state.postPromotionMonitor?.retain(createTearFoundryV3PostPromotionTerminalReceipt({ journalId: persisted.id, journalHash: persisted.journalHash, terminal }), new Date().toISOString());
-    }).catch(() => undefined);
+    const journal = state.decisionJournal,
+      terminal = Object.freeze({
+        status: state.status as "completed" | "failed" | "stopped",
+        tick: context.authoritative()?.tick ?? state.fixedTicks,
+        ...(state.terminalReason === undefined ? {} : { reasonHash: stableVerificationHash(state.terminalReason) }),
+      });
+    void journal
+      .flush()
+      .then(async () => {
+        const persisted = await journal.read(journal.snapshot().id);
+        if (persisted === undefined) return;
+        await state.postPromotionMonitor?.retain(
+          createTearFoundryV3PostPromotionTerminalReceipt({
+            journalId: persisted.id,
+            journalHash: persisted.journalHash,
+            terminal,
+          }),
+          new Date().toISOString(),
+        );
+      })
+      .catch(() => undefined);
   };
   const captureBlade = (): void => {
     const blade = context.state.blade();
     if (blade === undefined) return;
-    const hostile = blade.hostile, stolen = Boolean(blade.stolenBy);
+    const hostile = blade.hostile,
+      stolen = Boolean(blade.stolenBy);
     state.tetherMinimum = Math.min(state.tetherMinimum, blade.tetherFactor);
     state.tetherMaximum = Math.max(state.tetherMaximum, blade.tetherFactor);
     const signature = `${blade.state}:${String(hostile)}:${String(stolen)}`;
     state.bladeStates.add(blade.state);
     if (signature !== state.lastBladeSignature) {
       state.bladeStateTransitions.push({
-        tick: context.authoritative()?.tick ?? state.fixedTicks, state: blade.state, hostile, stolen,
+        tick: context.authoritative()?.tick ?? state.fixedTicks,
+        state: blade.state,
+        hostile,
+        stolen,
       });
       state.lastBladeSignature = signature;
     }
@@ -324,24 +417,37 @@ export function createLiveWatchAgentHost(
   const start = (options: TearWatchAgentOptions = {}): TearWatchAgentSnapshot => {
     if (context.screen() !== "menu") throw new Error("Watch Agent must start from the real main menu");
     invalidateAdvance();
-    canonicalRuntime?.clearCausalContext(); causalEvents = []; causalOverflow = false;
+    canonicalRuntime?.clearCausalContext();
+    causalEvents = [];
+    causalOverflow = false;
     context.setSemanticInputAuthority(true);
     const resolved = { ...DEFAULTS, ...options };
-    const director = resolved.journey === "longitudinal-earned-profile"
-      ? new C24LongitudinalJourneyDirector(resolved.seed, context.progression(), {
-          ...C24_LONGITUDINAL_POLICY,
-          maxEpisodes: resolved.maxEpisodes,
-          maxSpend: resolved.maxSpend,
-        })
-      : undefined;
+    const director =
+      resolved.journey === "longitudinal-earned-profile"
+        ? new C24LongitudinalJourneyDirector(resolved.seed, context.progression(), {
+            ...C24_LONGITUDINAL_POLICY,
+            maxEpisodes: resolved.maxEpisodes,
+            maxSpend: resolved.maxSpend,
+          })
+        : undefined;
     state = {
-      status: "running", decisions: 0, fixedTicks: 0,
+      status: "running",
+      decisions: 0,
+      fixedTicks: 0,
       transitions: [{ screen: "menu", tick: context.authoritative()?.tick ?? 0 }],
-      mechanics: new Set(), bladeStates: new Set(), bladeStateTransitions: [],
-      tetherMinimum: Number.POSITIVE_INFINITY, tetherMaximum: 0, engineEvents: [], draftPicks: [],
-      lastScreen: "menu", noProgressTicks: 0, progressSignature: "",
+      mechanics: new Set(),
+      bladeStates: new Set(),
+      bladeStateTransitions: [],
+      tetherMinimum: Number.POSITIVE_INFINITY,
+      tetherMaximum: 0,
+      engineEvents: [],
+      draftPicks: [],
+      lastScreen: "menu",
+      noProgressTicks: 0,
+      progressSignature: "",
       setupStep: 0,
-      options: resolved, policy: new TearLiveHierarchicalPolicy(resolved.profile),
+      options: resolved,
+      policy: new TearLiveHierarchicalPolicy(resolved.profile),
       ...(artifactRuntime === undefined ? {} : { artifactRuntime }),
       ...(canonicalRuntime === undefined ? {} : { canonicalRuntime }),
       ...(decisionJournal === undefined ? {} : { decisionJournal }),
@@ -376,27 +482,44 @@ export function createLiveWatchAgentHost(
           break;
         }
         if (directive.type === "begin-episode") {
-          state.setupStep = 0; state.noProgressTicks = 0; state.progressSignature = "";
+          state.setupStep = 0;
+          state.noProgressTicks = 0;
+          state.progressSignature = "";
           state.policy = new TearLiveHierarchicalPolicy(state.options.profile);
           activateRequired(context, { type: "navigate", to: "setup" }, "longitudinal next episode");
           transition();
           continue;
         }
         if (directive.type === "complete") {
-          state.status = "completed"; context.setSemanticInputAuthority(false); break;
+          state.status = "completed";
+          context.setSemanticInputAuthority(false);
+          break;
         }
-        if (directive.type === "fail") { fail(directive.reason); break; }
+        if (directive.type === "fail") {
+          fail(directive.reason);
+          break;
+        }
       }
       if (screen === "setup") {
         const difficultyAction: readonly Readonly<{ action: ScreenAction; label: string }>[] =
           state.options.mode === "tutorial" || state.options.mode === "playground"
             ? []
-            : [{ action: { type: "setup.selectDifficulty", id: state.options.difficulty }, label: state.options.difficulty }];
+            : [
+                {
+                  action: { type: "setup.selectDifficulty", id: state.options.difficulty },
+                  label: state.options.difficulty,
+                },
+              ];
         const setupActions: readonly Readonly<{ action: ScreenAction; label: string }>[] = [
           { action: modeAction(state.options.mode), label: state.options.mode },
           ...difficultyAction,
           ...(state.options.mode === "bossonly"
-            ? [{ action: { type: "setup.selectBoss", id: state.options.boss } as ScreenAction, label: state.options.boss }]
+            ? [
+                {
+                  action: { type: "setup.selectBoss", id: state.options.boss } as ScreenAction,
+                  label: state.options.boss,
+                },
+              ]
             : []),
           { action: { type: "setup.selectWeapon", id: state.options.weapon }, label: state.options.weapon },
           { action: { type: "setup.start" }, label: "START" },
@@ -439,75 +562,130 @@ export function createLiveWatchAgentHost(
         continue;
       }
       if (state.options.skipCinematics) context.skipCinematic();
-      if (state.causalPending !== undefined) { if (!advanceCausalCommit()) break; captureBlade(); continue; }
+      if (state.causalPending !== undefined) {
+        if (!advanceCausalCommit()) break;
+        captureBlade();
+        continue;
+      }
       // A new production run has no post-step receipt until C30 advances its
       // first fixed tick.  Establish that receipt through the real empty-input
       // frame before asking a strict V3 policy for its first source action.
-      if (state.canonicalRuntime?.requiresCausalContext === true && state.causalStarted !== true && screen === "playing") {
+      if (
+        state.canonicalRuntime?.requiresCausalContext === true &&
+        state.causalStarted !== true &&
+        screen === "playing"
+      ) {
         const origin = context.canonicalOriginState?.();
-        if (origin === undefined || origin === null || state.causalRunId === undefined) { fail("canonical-policy-refused:missing-native-origin-or-context"); break; }
-        state.canonicalRuntime.beginCausalOrigin(origin, state.causalRunId); state.causalStarted = true; causalEvents = []; context.drainConsumedActions();
+        if (origin === undefined || origin === null || state.causalRunId === undefined) {
+          fail("canonical-policy-refused:missing-native-origin-or-context");
+          break;
+        }
+        state.canonicalRuntime.beginCausalOrigin(origin, state.causalRunId);
+        state.causalStarted = true;
+        causalEvents = [];
+        context.drainConsumedActions();
       }
-      if (state.canonicalRuntime !== undefined && !state.canonicalRuntime.requiresCausalContext && context.canonicalGameplayState() === null) {
+      if (
+        state.canonicalRuntime !== undefined &&
+        !state.canonicalRuntime.requiresCausalContext &&
+        context.canonicalGameplayState() === null
+      ) {
         const beforeTick = context.authoritative()?.tick ?? 0;
         context.advanceApplicationFrame(1 / 120);
         state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
         captureBlade();
       }
-      const observation = projectLiveTearObservation(
-        context,
-        context.authoritative()?.tick ?? state.fixedTicks,
-        "A",
-      );
+      const observation = projectLiveTearObservation(context, context.authoritative()?.tick ?? state.fixedTicks, "A");
       const agentObservation = {
         state: observation,
-        ui: { screen, choices: context.choiceIds().map((id) => ({
-          id, score: buildWatchChoiceScore(id, state.options.weapon),
-        })) },
+        ui: {
+          screen,
+          choices: context.choiceIds().map((id) => ({
+            id,
+            score: buildWatchChoiceScore(id, state.options.weapon),
+          })),
+        },
         ...(observation.diagnostics?.boss === undefined ? {} : { boss: observation.diagnostics.boss }),
       };
       const hierarchy = state.policy.decide(agentObservation);
       const artifact = state.artifactRuntime?.decide(agentObservation);
-      const sourceState = state.canonicalRuntime === undefined ? undefined : state.canonicalRuntime.requiresCausalContext
-        ? context.canonicalOriginState?.() ?? context.canonicalGameplayState() : context.canonicalGameplayState();
+      const sourceState =
+        state.canonicalRuntime === undefined
+          ? undefined
+          : state.canonicalRuntime.requiresCausalContext
+            ? (context.canonicalOriginState?.() ?? context.canonicalGameplayState())
+            : context.canonicalGameplayState();
       if (state.canonicalRuntime !== undefined && sourceState === null) {
-        state.policyReceipt = Object.freeze({ observationHash: "0000000000000000", source: "refused", reason: "canonical-source-unavailable" });
+        state.policyReceipt = Object.freeze({
+          observationHash: "0000000000000000",
+          source: "refused",
+          reason: "canonical-source-unavailable",
+        });
         fail("canonical-policy-refused:canonical-source-unavailable");
         break;
       }
-      const canonical = sourceState === undefined || sourceState === null
-        ? undefined : state.canonicalRuntime?.decide(sourceState, context.availableGameActions());
-      const canonicalReceipt: TearPolicyDecisionReceipt | undefined = canonical === undefined ? undefined : Object.freeze({
-        observationHash: canonical.stateHash, source: canonical.source,
-        ...(canonical.reason === undefined ? {} : { reason: canonical.reason }),
-        ...(canonical.artifactId === undefined ? {} : { artifactId: canonical.artifactId }),
-        ...(canonical.artifactHash === undefined ? {} : { artifactHash: canonical.artifactHash }),
-        ...(canonical.activationHash === undefined ? {} : { activationHash: canonical.activationHash }),
-        ...(canonical.support === undefined ? {} : { support: canonical.support }),
-        ...(canonical.factorizedSupport === undefined ? {} : { factorizedSupport: canonical.factorizedSupport }),
-        ...(canonical.factorizedVersion === undefined ? {} : { factorizedVersion: canonical.factorizedVersion }),
-        ...(canonical.decisionMilliseconds === undefined ? {} : { decisionMilliseconds: canonical.decisionMilliseconds }),
-      });
+      const canonical =
+        sourceState === undefined || sourceState === null
+          ? undefined
+          : state.canonicalRuntime?.decide(sourceState, context.availableGameActions());
+      const canonicalReceipt: TearPolicyDecisionReceipt | undefined =
+        canonical === undefined
+          ? undefined
+          : Object.freeze({
+              observationHash: canonical.stateHash,
+              source: canonical.source,
+              ...(canonical.reason === undefined ? {} : { reason: canonical.reason }),
+              ...(canonical.artifactId === undefined ? {} : { artifactId: canonical.artifactId }),
+              ...(canonical.artifactHash === undefined ? {} : { artifactHash: canonical.artifactHash }),
+              ...(canonical.activationHash === undefined ? {} : { activationHash: canonical.activationHash }),
+              ...(canonical.support === undefined ? {} : { support: canonical.support }),
+              ...(canonical.factorizedSupport === undefined ? {} : { factorizedSupport: canonical.factorizedSupport }),
+              ...(canonical.factorizedVersion === undefined ? {} : { factorizedVersion: canonical.factorizedVersion }),
+              ...(canonical.decisionMilliseconds === undefined
+                ? {}
+                : { decisionMilliseconds: canonical.decisionMilliseconds }),
+            });
       if (canonical?.source === "refused" || canonical?.source === "model-default") {
         if (canonicalReceipt !== undefined) {
           state.policyReceipt = canonicalReceipt;
-          if (state.decisionJournal !== undefined) state.decisionJournal.append({ tick: observation.tick, receipt: canonicalReceipt, actions: [], trace: hierarchy.trace });
+          if (state.decisionJournal !== undefined)
+            state.decisionJournal.append({
+              tick: observation.tick,
+              receipt: canonicalReceipt,
+              actions: [],
+              trace: hierarchy.trace,
+            });
         }
-        fail(`canonical-policy-refused:${canonical.source === "model-default" ? "model-default" : canonical.reason ?? "invalid-active-artifact"}`);
+        fail(
+          `canonical-policy-refused:${canonical.source === "model-default" ? "model-default" : (canonical.reason ?? "invalid-active-artifact")}`,
+        );
         break;
       }
-      const decision = canonical?.source === "artifact"
-        ? Object.freeze({ ...hierarchy, actions: canonical.actions, policyReceipt: canonicalReceipt })
-        : artifact?.receipt.source === "artifact"
-          ? Object.freeze({ ...hierarchy, actions: artifact.actions, policyReceipt: artifact.receipt })
-          : Object.freeze({ ...hierarchy, ...(canonicalReceipt === undefined ? (artifact === undefined ? {} : { policyReceipt: artifact.receipt }) : { policyReceipt: canonicalReceipt }) });
+      const decision =
+        canonical?.source === "artifact"
+          ? Object.freeze({ ...hierarchy, actions: canonical.actions, policyReceipt: canonicalReceipt })
+          : artifact?.receipt.source === "artifact"
+            ? Object.freeze({ ...hierarchy, actions: artifact.actions, policyReceipt: artifact.receipt })
+            : Object.freeze({
+                ...hierarchy,
+                ...(canonicalReceipt === undefined
+                  ? artifact === undefined
+                    ? {}
+                    : { policyReceipt: artifact.receipt }
+                  : { policyReceipt: canonicalReceipt }),
+              });
       state.decisions += 1;
       state.lastTrace = decision.trace;
       state.structuredIntent = decision.structuredIntent;
       if (decision.policyReceipt === undefined) delete state.policyReceipt;
       else state.policyReceipt = decision.policyReceipt;
       if (decision.policyReceipt !== undefined && state.decisionJournal !== undefined) {
-        state.decisionJournal.append({ tick: observation.tick, receipt: decision.policyReceipt, actions: decision.actions, trace: decision.trace });
+        state.decisionJournal.append({
+          tick: observation.tick,
+          receipt: decision.policyReceipt,
+          actions: decision.actions,
+          trace: decision.trace,
+        });
       }
       state.mechanics.add(decision.trace.maneuver);
       captureBlade();
@@ -520,13 +698,21 @@ export function createLiveWatchAgentHost(
         });
       }
       if (screen === "playing") {
-        causalEvents = []; causalOverflow = false;
+        causalEvents = [];
+        causalOverflow = false;
         for (const action of decision.actions) context.pushAction(action);
         const beforeTick = context.authoritative()?.tick ?? 0;
         if (state.canonicalRuntime?.requiresCausalContext === true) {
-          if (!sourceState) { fail("canonical-policy-refused:missing-native-commit"); break; }
-          state.causalPending = sourceState; if (!advanceCausalCommit()) break;
-        } else { context.advanceApplicationFrame(1 / 60); state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick); }
+          if (!sourceState) {
+            fail("canonical-policy-refused:missing-native-commit");
+            break;
+          }
+          state.causalPending = sourceState;
+          if (!advanceCausalCommit()) break;
+        } else {
+          context.advanceApplicationFrame(1 / 60);
+          state.fixedTicks += Math.max(0, (context.authoritative()?.tick ?? beforeTick) - beforeTick);
+        }
         captureBlade();
       } else {
         let routed = false;
@@ -560,11 +746,14 @@ export function createLiveWatchAgentHost(
     return advance(tickBudget);
   };
   const runAsync = async (tickBudget = 2_000): Promise<TearWatchAgentSnapshot> => {
-    if (!Number.isSafeInteger(tickBudget) || tickBudget < 1 || tickBudget > 20_000) throw new RangeError("Watch Agent tick budget must be an integer from 1 to 20000");
+    if (!Number.isSafeInteger(tickBudget) || tickBudget < 1 || tickBudget > 20_000)
+      throw new RangeError("Watch Agent tick budget must be an integer from 1 to 20000");
     if (asyncOwner !== undefined) throw new Error("Watch advancement is already in progress");
     if (state.status !== "running") return immutableSnapshot(context, state);
     let cancel = (): void => undefined;
-    const cancelled = new Promise<void>((resolve) => { cancel = resolve; });
+    const cancelled = new Promise<void>((resolve) => {
+      cancel = resolve;
+    });
     const owner = { generation, cancelled, cancel };
     asyncOwner = owner;
     const current = (): boolean => asyncOwner === owner && generation === owner.generation;
@@ -578,24 +767,45 @@ export function createLiveWatchAgentHost(
         // An idle/unavailable recorder can resolve in a microtask. Keep native
         // Pause/Stop events serviceable independently of actual storage latency.
         if ((index + 1) % 16 === 0 && current()) {
-          await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
+          await new Promise<void>((resolve) => {
+            setTimeout(resolve, 0);
+          });
           if (!current()) break;
         }
       }
     } catch (error) {
-      if (current()) { fail(`recording-failed:${error instanceof Error ? error.message : String(error)}`); retainTerminalMonitor(); }
-    } finally { if (asyncOwner === owner) asyncOwner = undefined; }
+      if (current()) {
+        fail(`recording-failed:${error instanceof Error ? error.message : String(error)}`);
+        retainTerminalMonitor();
+      }
+    } finally {
+      if (asyncOwner === owner) asyncOwner = undefined;
+    }
     return immutableSnapshot(context, state);
   };
   return Object.freeze({
     start,
     run,
     runAsync,
-    capturePolicyContext: () => { if (state.causalPending !== undefined) throw new TypeError("V4 context capture requires the pending native commit"); return state.canonicalRuntime?.captureCausalContext(); },
-    restorePolicyContext(checkpoint: FactorizedRuntimeCheckpoint, authority: Readonly<{ expectedCheckpointHash: string; runId: string }>) {
-      if (state.status === "running" || !state.canonicalRuntime?.requiresCausalContext) throw new TypeError("V4 recovery requires a stopped/paused matching runtime");
-      const current = context.canonicalGameplayState(); if (!current) throw new TypeError("native recovery frontier unavailable");
-      state.canonicalRuntime.restoreCausalContext(current, checkpoint, authority); state.causalStarted = true; state.causalRunId = authority.runId; delete state.causalPending; causalEvents = []; causalOverflow = false;
+    capturePolicyContext: () => {
+      if (state.causalPending !== undefined)
+        throw new TypeError("V4 context capture requires the pending native commit");
+      return state.canonicalRuntime?.captureCausalContext();
+    },
+    restorePolicyContext(
+      checkpoint: FactorizedRuntimeCheckpoint,
+      authority: Readonly<{ expectedCheckpointHash: string; runId: string }>,
+    ) {
+      if (state.status === "running" || !state.canonicalRuntime?.requiresCausalContext)
+        throw new TypeError("V4 recovery requires a stopped/paused matching runtime");
+      const current = context.canonicalGameplayState();
+      if (!current) throw new TypeError("native recovery frontier unavailable");
+      state.canonicalRuntime.restoreCausalContext(current, checkpoint, authority);
+      state.causalStarted = true;
+      state.causalRunId = authority.runId;
+      delete state.causalPending;
+      causalEvents = [];
+      causalOverflow = false;
     },
     pause() {
       invalidateAdvance();
@@ -643,16 +853,26 @@ export function installLiveWatchAgentHost(
   postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
   surface: AgentPanelSurface = LEGACY_WATCH_AGENT_PANEL,
 ): void {
-  const api = createLiveWatchAgentHost(context, artifactRuntime, decisionJournal, canonicalRuntime, postPromotionMonitor);
+  const api = createLiveWatchAgentHost(
+    context,
+    artifactRuntime,
+    decisionJournal,
+    canonicalRuntime,
+    postPromotionMonitor,
+  );
   Object.defineProperty(target, surface.globalId, {
-    configurable: false, writable: false, value: api,
+    configurable: false,
+    writable: false,
+    value: api,
   });
   // Canonical Run Monitor links remain readable by old C32 callers.  Both
   // globals reference the same host, so this does not create a second policy,
   // journal, or backend.
   if (surface.globalId !== LEGACY_WATCH_AGENT_PANEL.globalId && target.__TEAR_WATCH_AGENT__ === undefined) {
     Object.defineProperty(target, LEGACY_WATCH_AGENT_PANEL.globalId, {
-      configurable: false, writable: false, value: api,
+      configurable: false,
+      writable: false,
+      value: api,
     });
   }
   installLiveWatchAgentPanel(api, DEFAULTS, surface);

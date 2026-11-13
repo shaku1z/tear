@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { cleanupOrphanedEnvironmentCombatObjects, createEnvironmentCombatObjectRuntime, resolveEnvironmentCounterplay } from "../../src/gameplay/environment/combat-object-runtime";
+import {
+  cleanupOrphanedEnvironmentCombatObjects,
+  createEnvironmentCombatObjectRuntime,
+  resolveEnvironmentCounterplay,
+} from "../../src/gameplay/environment/combat-object-runtime";
 import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
 import type { EnvironmentCombatObjectState } from "../../src/gameplay/environment/environment-contracts";
 import { forgeEnvironmentCombatObjectState } from "../../src/tearbench/state-forge-factories";
@@ -7,24 +11,46 @@ import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 
 const object: EnvironmentCombatObjectState = {
-  id: "link-test", kind: "root-link", ownerId: "enemy:1", targetId: "player", geometry: { x: 0, y: 0, w: 10, h: 4 },
-  integrity: 5, maxIntegrity: 5, counterplayTags: ["cut"], procEligible: false, damageDedupeId: "link-test-hit",
-  state: "active", stateTick: 0, cleanupReason: null,
+  id: "link-test",
+  kind: "root-link",
+  ownerId: "enemy:1",
+  targetId: "player",
+  geometry: { x: 0, y: 0, w: 10, h: 4 },
+  integrity: 5,
+  maxIntegrity: 5,
+  counterplayTags: ["cut"],
+  procEligible: false,
+  damageDedupeId: "link-test-hit",
+  state: "active",
+  stateTick: 0,
+  cleanupReason: null,
 };
 
 describe("generic environment combat-object kernel", () => {
   it("resolves cut, break, and projectile-cut exactly from source-owned capability tags", () => {
-    const rootLink = createEnvironmentCombatObjectRuntime({ ...object, counterplayTags: ["cut", "break", "projectile-cut"] });
-    expect(["cut", "break", "projectile-cut"].map((capability) =>
-      rootLink.resolveCounterplay(capability as "cut" | "break" | "projectile-cut"))).toEqual([
+    const rootLink = createEnvironmentCombatObjectRuntime({
+      ...object,
+      counterplayTags: ["cut", "break", "projectile-cut"],
+    });
+    expect(
+      ["cut", "break", "projectile-cut"].map((capability) =>
+        rootLink.resolveCounterplay(capability as "cut" | "break" | "projectile-cut"),
+      ),
+    ).toEqual([
       { capability: "cut", accepted: true, matchedTag: "cut" },
       { capability: "break", accepted: true, matchedTag: "break" },
       { capability: "projectile-cut", accepted: true, matchedTag: "projectile-cut" },
     ]);
     const graftTags = ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"].counterplayTags;
-    expect(["cut", "break", "projectile-cut"].every((capability) =>
-      resolveEnvironmentCounterplay(graftTags, capability as "cut" | "break" | "projectile-cut").accepted)).toBe(true);
-    expect(() => resolveEnvironmentCounterplay(graftTags, "status" as never)).toThrow(/unknown environment counterplay capability/u);
+    expect(
+      ["cut", "break", "projectile-cut"].every(
+        (capability) =>
+          resolveEnvironmentCounterplay(graftTags, capability as "cut" | "break" | "projectile-cut").accepted,
+      ),
+    ).toBe(true);
+    expect(() => resolveEnvironmentCounterplay(graftTags, "status" as never)).toThrow(
+      /unknown environment counterplay capability/u,
+    );
   });
 
   it("uses source-owned counterplay metadata and keeps routes behavior-minimal", () => {
@@ -32,7 +58,11 @@ describe("generic environment combat-object kernel", () => {
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"].counterplayTags).toEqual(["cut", "break", "projectile-cut"]);
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["regrowth-link"].behavior).toBe("data-only-route");
     const base: TearSdlDocumentV1 = {
-      format: "tearsdl", schemaVersion: 1, id: "combat-forge", stateClass: "surgical-valid", seed: "combat-forge",
+      format: "tearsdl",
+      schemaVersion: 1,
+      id: "combat-forge",
+      stateClass: "surgical-valid",
+      seed: "combat-forge",
       start: { mode: "endless", difficulty: "normal", weapon: "sword" },
     };
     const forged = forgeEnvironmentCombatObjectState(base, object);
@@ -42,7 +72,11 @@ describe("generic environment combat-object kernel", () => {
 
   it("deduplicates attack IDs, destroys at zero integrity, and denies enemy rewards/procs", () => {
     const runtime = createEnvironmentCombatObjectRuntime(object);
-    expect(runtime.policy).toMatchObject({ countsAsOrdinaryEnemy: false, grantsEnemyReward: false, procEligible: false });
+    expect(runtime.policy).toMatchObject({
+      countsAsOrdinaryEnemy: false,
+      grantsEnemyReward: false,
+      procEligible: false,
+    });
     expect(runtime.damage(2, "attack-1")).toMatchObject({ accepted: true, integrity: 3, duplicate: false });
     expect(runtime.damage(2, "attack-1")).toMatchObject({ accepted: false, duplicate: true, integrity: 3 });
     expect(runtime.damage(3, "attack-2")).toMatchObject({ accepted: true, integrity: 0, destroyed: true });
@@ -52,8 +86,14 @@ describe("generic environment combat-object kernel", () => {
   it("publishes damage and destruction in stable within-tick order", () => {
     const events = new TearGameplayEventBus(() => 0);
     const names: string[] = [];
-    events.subscribe((event) => { if (event.kind === "environment") names.push(event.event); });
-    const runtime = createEnvironmentCombatObjectRuntime({ ...object, integrity: 1, maxIntegrity: 1 }, undefined, events);
+    events.subscribe((event) => {
+      if (event.kind === "environment") names.push(event.event);
+    });
+    const runtime = createEnvironmentCombatObjectRuntime(
+      { ...object, integrity: 1, maxIntegrity: 1 },
+      undefined,
+      events,
+    );
     runtime.damage(1, "attack-event", 7);
     expect(names).toEqual(["combat-object-damaged", "combat-object-destroyed"]);
   });

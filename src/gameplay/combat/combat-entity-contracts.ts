@@ -63,21 +63,74 @@ export type CombatEntityIntent =
   | Readonly<{ type: "set-player-slow"; multiplier: number }>
   | Readonly<{ type: "set-player-hazard-cooldown"; seconds: number }>
   | Readonly<{ type: "set-player-root"; seconds: number }>
-  | Readonly<{ type: "damage-player"; damage: number; sourceX: number; sourceId: EntityId | null; cause: DamageCause;
-      projectileId?: EntityId; acceptedProjectilePatch?: ProjectilePatch; onHit: readonly CombatEntityIntent[];
-      afterAttempt?: readonly CombatEntityIntent[]; onAbsorbed: readonly CombatEntityIntent[];
-      onRejected: readonly CombatEntityIntent[] }>
-  | Readonly<{ type: "damage-enemy"; enemyId: EntityId; damage: number; dx: number; dy: number;
-      cause: "reflected"; projectileId: EntityId; perfect: boolean; sourceId: EntityId | null;
-      parryStun: number; aegisParry: boolean; achievementTracking: boolean;
-      noteFirstPlayerDamage: true; emitReflectedHit: true }>
-  | Readonly<{ type: "weapon-projectile-hit"; enemyId: EntityId; projectileId: EntityId;
-      damage: number; dx: number; dy: number; weaponId: string; attackId: number; throwId: number;
-      remote: boolean; secondary: boolean }>
-  | Readonly<{ type: "damage-enemy-aoe"; x: number; y: number; radius: number; damage: number;
-      playerOwned: boolean; sourceId: EntityId | null; achievement: BombAchievementSpec | null }>
-  | Readonly<{ type: "deflect-projectile"; projectileId: EntityId; dx: number; dy: number; speed: number; perfect: false }>
-  | Readonly<{ type: "counter-sweeper"; projectileId: EntityId; method: "phaseStep"; dx: number; dy: number; speed: number }>
+  | Readonly<{
+      type: "damage-player";
+      damage: number;
+      sourceX: number;
+      sourceId: EntityId | null;
+      cause: DamageCause;
+      projectileId?: EntityId;
+      acceptedProjectilePatch?: ProjectilePatch;
+      onHit: readonly CombatEntityIntent[];
+      afterAttempt?: readonly CombatEntityIntent[];
+      onAbsorbed: readonly CombatEntityIntent[];
+      onRejected: readonly CombatEntityIntent[];
+    }>
+  | Readonly<{
+      type: "damage-enemy";
+      enemyId: EntityId;
+      damage: number;
+      dx: number;
+      dy: number;
+      cause: "reflected";
+      projectileId: EntityId;
+      perfect: boolean;
+      sourceId: EntityId | null;
+      parryStun: number;
+      aegisParry: boolean;
+      achievementTracking: boolean;
+      noteFirstPlayerDamage: true;
+      emitReflectedHit: true;
+    }>
+  | Readonly<{
+      type: "weapon-projectile-hit";
+      enemyId: EntityId;
+      projectileId: EntityId;
+      damage: number;
+      dx: number;
+      dy: number;
+      weaponId: string;
+      attackId: number;
+      throwId: number;
+      remote: boolean;
+      secondary: boolean;
+    }>
+  | Readonly<{
+      type: "damage-enemy-aoe";
+      x: number;
+      y: number;
+      radius: number;
+      damage: number;
+      playerOwned: boolean;
+      sourceId: EntityId | null;
+      achievement: BombAchievementSpec | null;
+    }>
+  | Readonly<{
+      type: "deflect-projectile";
+      projectileId: EntityId;
+      dx: number;
+      dy: number;
+      speed: number;
+      perfect: false;
+    }>
+  | Readonly<{
+      type: "counter-sweeper";
+      projectileId: EntityId;
+      method: "phaseStep";
+      dx: number;
+      dy: number;
+      speed: number;
+    }>
   | Readonly<{ type: "shatter-sweeper"; projectileId: EntityId; reason: "ownerReturn" | "playerHit" }>
   | Readonly<{ type: "sweeper-countered-callback"; projectileId: EntityId }>
   | Readonly<{ type: "projectile-patch"; projectileId: EntityId; patch: ProjectilePatch }>

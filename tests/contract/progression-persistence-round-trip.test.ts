@@ -9,8 +9,12 @@ function memoryStore() {
   const values = new Map<string, string>();
   return {
     values,
-    get(key: string) { return values.get(key) ?? null; },
-    set(key: string, value: string) { values.set(key, value); },
+    get(key: string) {
+      return values.get(key) ?? null;
+    },
+    set(key: string, value: string) {
+      values.set(key, value);
+    },
   };
 }
 

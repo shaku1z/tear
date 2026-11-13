@@ -9,9 +9,17 @@ export interface SyncStringStorage {
 export function createMemoryStorage(): KeyValueStorage {
   const values = new Map<string, string>();
   return {
-    get(key) { return Promise.resolve(values.get(key) ?? null); },
-    set(key, value) { values.set(key, value); return Promise.resolve(); },
-    remove(key) { values.delete(key); return Promise.resolve(); },
+    get(key) {
+      return Promise.resolve(values.get(key) ?? null);
+    },
+    set(key, value) {
+      values.set(key, value);
+      return Promise.resolve();
+    },
+    remove(key) {
+      values.delete(key);
+      return Promise.resolve();
+    },
   };
 }
 
@@ -23,18 +31,26 @@ export function createSafeStorage(storage?: SyncStringStorage, prefix = ""): Key
     async get(key) {
       try {
         const value = storage?.getItem(keyFor(key));
-        return value ?? await memory.get(key);
+        return value ?? (await memory.get(key));
       } catch {
         return memory.get(key);
       }
     },
     async set(key, value) {
       await memory.set(key, value);
-      try { storage?.setItem(keyFor(key), value); } catch { /* memory remains usable */ }
+      try {
+        storage?.setItem(keyFor(key), value);
+      } catch {
+        /* memory remains usable */
+      }
     },
     async remove(key) {
       await memory.remove(key);
-      try { storage?.removeItem(keyFor(key)); } catch { /* memory remains usable */ }
+      try {
+        storage?.removeItem(keyFor(key));
+      } catch {
+        /* memory remains usable */
+      }
     },
   };
 }

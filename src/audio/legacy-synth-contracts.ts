@@ -1,8 +1,4 @@
-import type {
-  MusicContextSnapshot,
-  MusicEvent,
-  MusicRunSessionMetadata,
-} from "./music-contracts";
+import type { MusicContextSnapshot, MusicEvent, MusicRunSessionMetadata } from "./music-contracts";
 import type { SfxRoute } from "./mixer";
 
 export interface LegacyEffectsGraph {

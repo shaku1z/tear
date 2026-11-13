@@ -17,8 +17,7 @@ function text(value: unknown): string {
 /** Validate an untrusted stem-cue manifest before it reaches the runtime. */
 export function validateStemCue(value: unknown): CueValidationResult {
   const errors: string[] = [];
-  if (!isRecord(value))
-    return { valid: false, errors: ["Cue must be an object."] };
+  if (!isRecord(value)) return { valid: false, errors: ["Cue must be an object."] };
   const cue = value;
 
   if (cue.format !== "tear-score-stem-cue") errors.push("Unsupported cue format.");
@@ -43,14 +42,10 @@ export function validateStemCue(value: unknown): CueValidationResult {
     if (!stemId.trim()) errors.push("A stem is missing an id.");
     else if (stemIds.has(stemId)) errors.push(`Duplicate stem id: ${stemId}.`);
     else stemIds.add(stemId);
-    if (stem.channels !== 1 && stem.channels !== 2)
-      errors.push(`Stem ${stemId} must be mono or stereo.`);
+    if (stem.channels !== 1 && stem.channels !== 2) errors.push(`Stem ${stemId} must be mono or stereo.`);
     if (
       stem.pan !== undefined &&
-      (typeof stem.pan !== "number" ||
-        !Number.isFinite(stem.pan) ||
-        stem.pan < -1 ||
-        stem.pan > 1)
+      (typeof stem.pan !== "number" || !Number.isFinite(stem.pan) || stem.pan < -1 || stem.pan > 1)
     )
       errors.push(`Stem ${stemId} pan must be between -1 and 1.`);
     if (
@@ -60,10 +55,7 @@ export function validateStemCue(value: unknown): CueValidationResult {
       stem.seamMode !== "tail-overlap"
     )
       errors.push(`Stem ${stemId} has an unsupported seam mode.`);
-    if (
-      stem.crossfadeFrames !== undefined &&
-      (!isFrame(stem.crossfadeFrames) || stem.crossfadeFrames === 0)
-    )
+    if (stem.crossfadeFrames !== undefined && (!isFrame(stem.crossfadeFrames) || stem.crossfadeFrames === 0))
       errors.push(`Stem ${stemId} crossfadeFrames must be a positive integer.`);
     if (!Array.isArray(stem.sources) || stem.sources.length === 0)
       errors.push(`Stem ${stemId} needs at least one codec source.`);
@@ -72,8 +64,7 @@ export function validateStemCue(value: unknown): CueValidationResult {
   const loop = isRecord(cue.loop) ? cue.loop : null;
   if (!loop || !isFrame(loop.startFrame) || !isFrame(loop.endFrame))
     errors.push("loop.startFrame and loop.endFrame must be non-negative integer frames.");
-  else if (loop.endFrame <= loop.startFrame)
-    errors.push("loop.endFrame must be greater than loop.startFrame.");
+  else if (loop.endFrame <= loop.startFrame) errors.push("loop.endFrame must be greater than loop.startFrame.");
   else if (
     loop.crossfadeFrames !== undefined &&
     (!isFrame(loop.crossfadeFrames) ||
@@ -87,14 +78,8 @@ export function validateStemCue(value: unknown): CueValidationResult {
     for (const candidate of stems) {
       if (!isRecord(candidate)) continue;
       const stem = candidate;
-      if (
-        stem.crossfadeFrames !== undefined &&
-        isFrame(stem.crossfadeFrames) &&
-        stem.crossfadeFrames * 2 >= loopFrames
-      )
-        errors.push(
-          `Stem ${text(stem.id)} crossfadeFrames must be shorter than half the loop.`,
-        );
+      if (stem.crossfadeFrames !== undefined && isFrame(stem.crossfadeFrames) && stem.crossfadeFrames * 2 >= loopFrames)
+        errors.push(`Stem ${text(stem.id)} crossfadeFrames must be shorter than half the loop.`);
     }
   }
 
@@ -113,9 +98,14 @@ export function validateStemCue(value: unknown): CueValidationResult {
     errors.push("intro.endFrame must equal loop.startFrame for a seamless hand-off.");
 
   const grid = isRecord(cue.grid) ? cue.grid : null;
-  if (!grid || !isFrame(grid.downbeatFrame)
-    || typeof grid.beatsPerBar !== "number" || grid.beatsPerBar <= 0
-    || typeof grid.barsPerLoop !== "number" || grid.barsPerLoop <= 0)
+  if (
+    !grid ||
+    !isFrame(grid.downbeatFrame) ||
+    typeof grid.beatsPerBar !== "number" ||
+    grid.beatsPerBar <= 0 ||
+    typeof grid.barsPerLoop !== "number" ||
+    grid.barsPerLoop <= 0
+  )
     errors.push("grid must define downbeatFrame, beatsPerBar, and barsPerLoop.");
 
   const tiers = isRecord(cue.tiers) ? cue.tiers : null;
@@ -126,8 +116,7 @@ export function validateStemCue(value: unknown): CueValidationResult {
       continue;
     }
     for (const stemId of Object.keys(mix))
-      if (!stemIds.has(stemId))
-        errors.push(`tiers[${String(tier)}] references unknown stem ${stemId}.`);
+      if (!stemIds.has(stemId)) errors.push(`tiers[${String(tier)}] references unknown stem ${stemId}.`);
   }
 
   const provenance = isRecord(cue.provenance) ? cue.provenance : null;
@@ -139,6 +128,5 @@ export function validateStemCue(value: unknown): CueValidationResult {
 
 export function assertValidStemCue(value: unknown): asserts value is StemCueManifest {
   const result = validateStemCue(value);
-  if (!result.valid)
-    throw new Error(`Invalid stem cue: ${result.errors.join(" ")}`);
+  if (!result.valid) throw new Error(`Invalid stem cue: ${result.errors.join(" ")}`);
 }

@@ -27,13 +27,15 @@ export function canonicalStringify(value: unknown): string {
 
 const FNV_PRIME_LOW = 0x1b3;
 
-interface CanonicalHashState { high: number; low: number; }
+interface CanonicalHashState {
+  high: number;
+  low: number;
+}
 
 function hashByte(state: CanonicalHashState, byte: number): void {
   const low = (state.low ^ byte) >>> 0;
   const product = low * FNV_PRIME_LOW;
-  state.high = (Math.imul(state.high, FNV_PRIME_LOW)
-    + Math.floor(product / 0x1_0000_0000) + ((low << 8) >>> 0)) >>> 0;
+  state.high = (Math.imul(state.high, FNV_PRIME_LOW) + Math.floor(product / 0x1_0000_0000) + ((low << 8) >>> 0)) >>> 0;
   state.low = product >>> 0;
 }
 
@@ -51,17 +53,30 @@ function hashJsonString(state: CanonicalHashState, value: string): void {
   for (let index = 0; index < value.length; index += 1) {
     const codeUnit = value.charCodeAt(index);
     if (codeUnit === 0x22 || codeUnit === 0x5c) {
-      hashCodeUnit(state, 0x5c); hashCodeUnit(state, codeUnit);
+      hashCodeUnit(state, 0x5c);
+      hashCodeUnit(state, codeUnit);
     } else if (codeUnit === 0x08) hashText(state, "\\b");
     else if (codeUnit === 0x09) hashText(state, "\\t");
     else if (codeUnit === 0x0a) hashText(state, "\\n");
     else if (codeUnit === 0x0c) hashText(state, "\\f");
     else if (codeUnit === 0x0d) hashText(state, "\\r");
-    else if (codeUnit < 0x20 || (codeUnit >= 0xd800 && codeUnit <= 0xdfff
-      && !(codeUnit <= 0xdbff && index + 1 < value.length
-        && value.charCodeAt(index + 1) >= 0xdc00 && value.charCodeAt(index + 1) <= 0xdfff)
-      && !(codeUnit >= 0xdc00 && index > 0
-        && value.charCodeAt(index - 1) >= 0xd800 && value.charCodeAt(index - 1) <= 0xdbff))) {
+    else if (
+      codeUnit < 0x20 ||
+      (codeUnit >= 0xd800 &&
+        codeUnit <= 0xdfff &&
+        !(
+          codeUnit <= 0xdbff &&
+          index + 1 < value.length &&
+          value.charCodeAt(index + 1) >= 0xdc00 &&
+          value.charCodeAt(index + 1) <= 0xdfff
+        ) &&
+        !(
+          codeUnit >= 0xdc00 &&
+          index > 0 &&
+          value.charCodeAt(index - 1) >= 0xd800 &&
+          value.charCodeAt(index - 1) <= 0xdbff
+        ))
+    ) {
       hashText(state, `\\u${codeUnit.toString(16).padStart(4, "0")}`);
     } else hashCodeUnit(state, codeUnit);
   }
@@ -77,9 +92,18 @@ function formatCanonicalPath(path: readonly CanonicalPathSegment[]): string {
 }
 
 function hashCanonicalValue(state: CanonicalHashState, value: unknown, path: CanonicalPathSegment[]): void {
-  if (value === null) { hashText(state, "null"); return; }
-  if (typeof value === "boolean") { hashText(state, value ? "true" : "false"); return; }
-  if (typeof value === "string") { hashJsonString(state, value); return; }
+  if (value === null) {
+    hashText(state, "null");
+    return;
+  }
+  if (typeof value === "boolean") {
+    hashText(state, value ? "true" : "false");
+    return;
+  }
+  if (typeof value === "string") {
+    hashJsonString(state, value);
+    return;
+  }
   if (typeof value === "number") {
     if (!Number.isFinite(value)) throw new TypeError(`${formatCanonicalPath(path)} contains a non-finite number`);
     hashText(state, Object.is(value, -0) ? "0" : JSON.stringify(value));
@@ -108,7 +132,8 @@ function hashCanonicalValue(state: CanonicalHashState, value: unknown, path: Can
       path.push(key);
       if (entry === undefined) throw new TypeError(`${formatCanonicalPath(path)} is undefined`);
       if (index > 0) hashCodeUnit(state, 0x2c);
-      hashJsonString(state, key); hashCodeUnit(state, 0x3a);
+      hashJsonString(state, key);
+      hashCodeUnit(state, 0x3a);
       hashCanonicalValue(state, entry, path);
       path.pop();
     }

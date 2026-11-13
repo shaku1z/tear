@@ -20,7 +20,11 @@ import type { LiveHudFeedbackState } from "./hud-feedback-state";
 import { createLiveInterfaceComposition } from "./interface-composition";
 import type { LiveInterfaceFrameState } from "./interface-frame-state";
 import type { LiveInterfaceInteractionState } from "./interface-interaction-state";
-import { createLiveScreenActions, type LiveEngineeringScreens, type LiveGhostLibraryScreens } from "./live-screen-actions";
+import {
+  createLiveScreenActions,
+  type LiveEngineeringScreens,
+  type LiveGhostLibraryScreens,
+} from "./live-screen-actions";
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 import { renderRegisteredScreen } from "./screen-registry";
 import { isMenuScreen } from "../../domain/screen-catalog";
@@ -58,11 +62,49 @@ export interface LiveInterfaceAssemblyOptions {
  * transition hooks that depend on it.
  */
 export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
-  const { dependencies, browser, world, session, services, campaignTraining, navigation, chase, run: liveRun, player: livePlayer } = options;
-  const { A11Y, Attract, Backdrop, GFX, Input, OVERSCAN, PAD, SAFE, SFX, THEME, UI, browserDocument, browserIndexedDb, browserWindow,
-    clamp, cosmeticRandom } = dependencies;
-  const { canvas, context: ctx, width: W, height: H, viewport, resizeCanvas, installPrompt, lockHint, hint: hintEl, fullscreenButton,
-    pantheonDebug: PANTHEON_DEBUG } = browser;
+  const {
+    dependencies,
+    browser,
+    world,
+    session,
+    services,
+    campaignTraining,
+    navigation,
+    chase,
+    run: liveRun,
+    player: livePlayer,
+  } = options;
+  const {
+    A11Y,
+    Attract,
+    Backdrop,
+    GFX,
+    Input,
+    OVERSCAN,
+    PAD,
+    SAFE,
+    SFX,
+    THEME,
+    UI,
+    browserDocument,
+    browserIndexedDb,
+    browserWindow,
+    clamp,
+    cosmeticRandom,
+  } = dependencies;
+  const {
+    canvas,
+    context: ctx,
+    width: W,
+    height: H,
+    viewport,
+    resizeCanvas,
+    installPrompt,
+    lockHint,
+    hint: hintEl,
+    fullscreenButton,
+    pantheonDebug: PANTHEON_DEBUG,
+  } = browser;
   const { state: hostState, environment } = world;
   const { impact, feel } = world.context.transient;
   const CINEMA = world.context.cinema;
@@ -79,172 +121,329 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const { addFloater } = campaignTraining;
   const { addShake, addFlash } = campaignTraining.weapon;
   const { color: trickColor, formatTime: fmtTime, check: achCheck } = campaignTraining.style;
-  const { vault: ghostVault, ownerRecovery, publication: ghostPublicationScreen, support: ghostSupportScreen } = options.ghostLibrary;
-  const { academy: academyScreen, foundry: foundryScreen, playerWatch, botEvidence, replayHub } = options.engineeringScreens;
+  const {
+    vault: ghostVault,
+    ownerRecovery,
+    publication: ghostPublicationScreen,
+    support: ghostSupportScreen,
+  } = options.ghostLibrary;
+  const {
+    academy: academyScreen,
+    foundry: foundryScreen,
+    playerWatch,
+    botEvidence,
+    replayHub,
+  } = options.engineeringScreens;
   const { simulation } = options.combat;
   const requestLock = browser.requestPointerLock;
   const screenRect = () => presentationHost.screenRectangle();
-  const biomeMode = () => ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(liveRun().mode);
+  const biomeMode = () =>
+    ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(liveRun().mode);
   const shopFeedback = createLiveShopFeedbackState();
   const actions = createLiveScreenActions({
-    dependencies, session, services, campaignTraining, navigation, interaction: interfaceInteraction, chase,
-    ghostLibrary: options.ghostLibrary, engineeringScreens: options.engineeringScreens, run: liveRun, requestPointerLock: requestLock,
+    dependencies,
+    session,
+    services,
+    campaignTraining,
+    navigation,
+    interaction: interfaceInteraction,
+    chase,
+    ghostLibrary: options.ghostLibrary,
+    engineeringScreens: options.engineeringScreens,
+    run: liveRun,
+    requestPointerLock: requestLock,
     presentation: () => interfaceComposition,
   });
-  const interfaceComposition = createLiveInterfaceComposition({
-    wipe: {
-      canvas, context: ctx, createCanvas: () => browserDocument.createElement("canvas"), reducedEffects: () => GFX.low,
-      flashScale: () => A11Y.flashScale, random: cosmeticRandom, ease: ez,
-    },
-    worldSurface: {
-      canvas: ctx, ui: UI, width: W, height: H,
-      get cssPerLogicalPixel() {
-        return viewport.cssPerLogicalPixel;
+  const interfaceComposition = createLiveInterfaceComposition(
+    {
+      wipe: {
+        canvas,
+        context: ctx,
+        createCanvas: () => browserDocument.createElement("canvas"),
+        reducedEffects: () => GFX.low,
+        flashScale: () => A11Y.flashScale,
+        random: cosmeticRandom,
+        ease: ez,
       },
-      get safe() {
-        return { top: SAFE.t, right: SAFE.r, bottom: SAFE.b, left: SAFE.l };
+      worldSurface: {
+        canvas: ctx,
+        ui: UI,
+        width: W,
+        height: H,
+        get cssPerLogicalPixel() {
+          return viewport.cssPerLogicalPixel;
+        },
+        get safe() {
+          return { top: SAFE.t, right: SAFE.r, bottom: SAFE.b, left: SAFE.l };
+        },
+        get ink() {
+          return THEME.ink;
+        },
+        get darkTheme() {
+          return THEME.dark;
+        },
+        get timeSeconds() {
+          return world.context.services.clock.seconds();
+        },
+        get lowGraphics() {
+          return GFX.low;
+        },
+        get reducedMotion() {
+          return A11Y.reducedMotion;
+        },
+        get highContrast() {
+          return A11Y.highContrast;
+        },
       },
-      get ink() {
-        return THEME.ink;
+      screens: {
+        surfaces: dependencies.surfaces,
+        renderer: {
+          canvas: ctx,
+          ui: UI,
+          width: W,
+          height: H,
+          screenRectangle: screenRect,
+          safeInsets: () => SAFE,
+          time: interfaceFrame.seconds,
+          enterAmount: interfaceFrame.enterAmount,
+          enterSeconds: interfaceFrame.enterSeconds,
+          deltaSeconds: interfaceFrame.deltaSeconds,
+          mouse: () => ({ x: Input.mouseX, y: Input.mouseY }),
+          scroll: interfaceInteraction.scroll,
+          focus: interfaceInteraction.focus,
+          touch: () => Input.touchActive(),
+          reducedMotion: () => A11Y.reducedMotion,
+          enqueue: interfaceInteraction.enqueue,
+        },
+        replay: {
+          dependencies,
+          canvas: ctx,
+          width: W,
+          height: H,
+          screenRectangle: screenRect,
+          time: interfaceFrame.seconds,
+          deltaSeconds: interfaceFrame.deltaSeconds,
+          fallbackPlayer: livePlayer,
+          bossById: options.orchestration.bossById,
+          setScreen: (next, context) => setScreen(next, context),
+          formatTime: fmtTime,
+          document: browserDocument,
+          browserIndexedDb,
+          launchGhostPractice: options.launchGhostPractice,
+        },
+        library: {
+          beat,
+          chase,
+          dependencies,
+          canvas: ctx,
+          height: H,
+          time: interfaceFrame.seconds,
+          enterSeconds: interfaceFrame.enterSeconds,
+          scroll: interfaceInteraction.scroll,
+          setScroll: interfaceInteraction.setScroll,
+          clamp,
+          ease: ez,
+          formatTime: fmtTime,
+          getBest,
+          ghostVault,
+          ownerRecovery,
+          career: options.career.port,
+        },
+        settings: {
+          dependencies,
+          document: browserDocument,
+          window: browserWindow,
+          canvas,
+          width: W,
+          overscan: () => OVERSCAN,
+          screen,
+          setScreen: (next, context) => setScreen(next, context),
+          settingsController,
+          settings,
+          scroll: interfaceInteraction.scroll,
+          setScroll: interfaceInteraction.setScroll,
+          clamp,
+          installPrompt,
+        },
+        actions,
+        runState: {
+          screen,
+          setScreen: (next) => {
+            setScreen(next);
+          },
+          run: liveRun,
+          player: livePlayer,
+          scroll: interfaceInteraction.scroll,
+          setScroll: interfaceInteraction.setScroll,
+          continueSeconds: reviveCountdown.seconds,
+          setContinueSeconds: reviveCountdown.setSeconds,
+          replayAvailable: () => session.lastRecording() !== null,
+          outcome: options.currentOutcome,
+        },
+        runServices: {
+          ghostChase: chase.snapshot,
+          dependencies,
+          reward: rewardRuntime,
+          formatTime: fmtTime,
+          clamp,
+          trickColor,
+          saveBest,
+          awardCoins,
+          cinema: CINEMA,
+          clearFinale: () => {
+            story.finale = null;
+          },
+          terminateRun: (reason) => {
+            options.abandonRun(reason);
+          },
+          addFloater,
+          addShake,
+          addFlash,
+          requestPointer: requestLock,
+          playerWatch: playerWatch.snapshot,
+          persistentEffects: options.persistentEffects,
+          tutorialSession: () =>
+            (liveRun().mode === "tutorial" ||
+              (liveRun().mode === "playground" && TUT.session().phase === "free-practice")) &&
+            TUT.session().phase !== "inactive"
+              ? TUT.session()
+              : undefined,
+        },
+        menuState: {
+          selection: () => session.selection(),
+          scroll: interfaceInteraction.scroll,
+          setScroll: interfaceInteraction.setScroll,
+          time: interfaceFrame.seconds,
+          shop: () => shopFeedback.snapshot(),
+          setShop: (value) => {
+            shopFeedback.set(value);
+          },
+        },
+        menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck },
+        playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
+        academy: academyScreen.snapshot,
+        foundry: foundryScreen.snapshot,
+        ghostLab: replayHub.snapshot,
+        botEvidence: botEvidence.snapshot,
+        ghostPublication: ghostPublicationScreen.snapshot,
+        ghostSupport: ghostSupportScreen.snapshot,
       },
-      get darkTheme() {
-        return THEME.dark;
-      },
-      get timeSeconds() {
-        return world.context.services.clock.seconds();
-      },
-      get lowGraphics() {
-        return GFX.low;
-      },
-      get reducedMotion() {
-        return A11Y.reducedMotion;
-      },
-      get highContrast() {
-        return A11Y.highContrast;
-      },
-    },
-    screens: {
-      surfaces: dependencies.surfaces,
-      renderer: {
-        canvas: ctx, ui: UI, width: W, height: H, screenRectangle: screenRect, safeInsets: () => SAFE, time: interfaceFrame.seconds,
-        enterAmount: interfaceFrame.enterAmount, enterSeconds: interfaceFrame.enterSeconds, deltaSeconds: interfaceFrame.deltaSeconds,
-        mouse: () => ({ x: Input.mouseX, y: Input.mouseY }), scroll: interfaceInteraction.scroll, focus: interfaceInteraction.focus,
-        touch: () => Input.touchActive(), reducedMotion: () => A11Y.reducedMotion, enqueue: interfaceInteraction.enqueue,
-      },
-      replay: {
-        dependencies, canvas: ctx, width: W, height: H, screenRectangle: screenRect, time: interfaceFrame.seconds,
-        deltaSeconds: interfaceFrame.deltaSeconds, fallbackPlayer: livePlayer, bossById: options.orchestration.bossById,
-        setScreen: (next, context) => setScreen(next, context), formatTime: fmtTime, document: browserDocument, browserIndexedDb,
-        launchGhostPractice: options.launchGhostPractice,
-      },
-      library: {
-        beat, chase, dependencies, canvas: ctx, height: H, time: interfaceFrame.seconds, enterSeconds: interfaceFrame.enterSeconds,
-        scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll, clamp, ease: ez, formatTime: fmtTime, getBest,
-        ghostVault, ownerRecovery, career: options.career.port,
-      },
-      settings: {
-        dependencies, document: browserDocument, window: browserWindow, canvas, width: W, overscan: () => OVERSCAN, screen,
-        setScreen: (next, context) => setScreen(next, context), settingsController, settings, scroll: interfaceInteraction.scroll,
-        setScroll: interfaceInteraction.setScroll, clamp, installPrompt,
-      },
-      actions,
-      runState: {
+      frameState: {
         screen,
-        setScreen: (next) => {
-          setScreen(next);
+        previousScreen: interfaceFrame.previousScreen,
+        setPreviousScreen: interfaceFrame.setPreviousScreen,
+        deltaSeconds: interfaceFrame.deltaSeconds,
+        enterSeconds: interfaceFrame.enterSeconds,
+        setEnterSeconds: interfaceFrame.setEnterSeconds,
+        enterAmount: interfaceFrame.enterAmount,
+        setEnterAmount: interfaceFrame.setEnterAmount,
+        scroll: interfaceInteraction.scroll,
+        setScroll: interfaceInteraction.setScroll,
+        focus: interfaceInteraction.focus,
+        setFocus: interfaceInteraction.setFocus,
+        controls: interfaceInteraction.buttons,
+        resetControls: interfaceInteraction.resetButtons,
+        biomeMode,
+        enemies: () => hostState.enemies(),
+        flash: () => feel.flash,
+        bossBeat: () => hostState.bossBeat(),
+        bossIntroActive: () => {
+          const intro = hostState.bossIntro();
+          return intro !== null && intro.delay <= 0;
         },
-        run: liveRun, player: livePlayer, scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll,
-        continueSeconds: reviveCountdown.seconds, setContinueSeconds: reviveCountdown.setSeconds,
-        replayAvailable: () => session.lastRecording() !== null, outcome: options.currentOutcome,
+        bannerSeconds: () => feel.bannerSeconds,
+        rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }),
+        timeSeconds: interfaceFrame.seconds,
       },
-      runServices: {
-        ghostChase: chase.snapshot, dependencies, reward: rewardRuntime, formatTime: fmtTime, clamp, trickColor, saveBest, awardCoins,
+      frameServices: {
+        canvas,
+        context: ctx,
+        width: W,
+        height: H,
+        overscan: () => OVERSCAN,
+        safeTop: () => SAFE.t,
+        resizeIfNeeded: resizeCanvas,
+        input: Input,
+        ui: UI,
+        stage: stageRuntime,
         cinema: CINEMA,
-        clearFinale: () => {
-          story.finale = null;
+        reducedMotion: () => A11Y.reducedMotion,
+        flashScale: () => A11Y.flashScale,
+        touchActive: () => Input.touchActive(),
+        controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }),
+        confirmGlyph: () => PAD.glyph(0),
+        pointerLocked: () => Input.locked,
+        lockHint,
+        inputHint: hintEl,
+        fullscreenButton,
+        controlHintContext: () => ({
+          runSeconds: screen() === "playing" ? liveRun().runTime : 0,
+          completedRuns: dependencies.PROFILE.stat("runs"),
+        }),
+        clamp,
+        ease: ez,
+        blendColor: blendCol,
+        setTheme: (background, playLike) => {
+          THEME.set(playLike && biomeMode() ? background : "#ffffff");
+          UI.ink = THEME.ink;
         },
-        terminateRun: (reason) => {
-          options.abandonRun(reason);
+        themeInk: () => THEME.ink,
+        backdropPost: (context, stage, camera) => {
+          Backdrop.post(context, stage, camera);
         },
-        addFloater, addShake, addFlash, requestPointer: requestLock, playerWatch: playerWatch.snapshot,
-        persistentEffects: options.persistentEffects,
-        tutorialSession: () => (liveRun().mode === "tutorial" || (liveRun().mode === "playground" && TUT.session().phase === "free-practice"))
-          && TUT.session().phase !== "inactive" ? TUT.session() : undefined,
-      },
-      menuState: {
-        selection: () => session.selection(), scroll: interfaceInteraction.scroll, setScroll: interfaceInteraction.setScroll,
-        time: interfaceFrame.seconds, shop: () => shopFeedback.snapshot(),
-        setShop: (value) => {
-          shopFeedback.set(value);
+        drawMenuAttract: () => {
+          Attract.draw(ctx);
         },
+        renderScreen: (next) => {
+          renderRegisteredScreen(next, interfaceComposition.screens.renderers);
+        },
+        isMenuScreen,
+        playInterfaceSound: () => {
+          SFX.ui();
+        },
+        hoverAnimation: interfaceInteraction.hoverAnimations(),
+        trickColor,
       },
-      menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck },
-      playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
-      academy: academyScreen.snapshot,
-      foundry: foundryScreen.snapshot,
-      ghostLab: replayHub.snapshot,
-      botEvidence: botEvidence.snapshot,
-      ghostPublication: ghostPublicationScreen.snapshot,
-      ghostSupport: ghostSupportScreen.snapshot,
+      worldState: {
+        run: liveRun,
+        player: livePlayer,
+        blade: options.blade,
+        enemies: () => hostState.enemies(),
+        projectiles: () => hostState.projectiles(),
+        floaters: () => hostState.floaters(),
+        slowZones: () => hostState.slowZones(),
+        temporaryWalls: () => hostState.temporaryWalls(),
+        environment: () => environment.snapshot(),
+        screen,
+        zoom: () => feel.zoom,
+        shake: () => impact.shake,
+        lastUiDelta: interfaceFrame.deltaSeconds,
+        bannerSeconds: () => feel.bannerSeconds,
+        bossIntro: () => hostState.bossIntro(),
+        hud: hudFeedback.snapshot,
+        hudClockSeconds: hudFeedback.clockSeconds,
+        advanceHud: hudFeedback.advance,
+      },
+      worldServices: {
+        chase,
+        dependencies,
+        canvas: ctx,
+        width: W,
+        height: H,
+        debug: PANTHEON_DEBUG,
+        stage: stageRuntime,
+        tutorial: TUT,
+        finale: () => story.finale,
+        formatTime: fmtTime,
+        trickColor,
+        ease: ez,
+      },
+      onBiomeTransition: (begin) => {
+        Attract.onBiomeChange = begin;
+      },
     },
-    frameState: {
-      screen, previousScreen: interfaceFrame.previousScreen, setPreviousScreen: interfaceFrame.setPreviousScreen,
-      deltaSeconds: interfaceFrame.deltaSeconds, enterSeconds: interfaceFrame.enterSeconds, setEnterSeconds: interfaceFrame.setEnterSeconds,
-      enterAmount: interfaceFrame.enterAmount, setEnterAmount: interfaceFrame.setEnterAmount, scroll: interfaceInteraction.scroll,
-      setScroll: interfaceInteraction.setScroll, focus: interfaceInteraction.focus, setFocus: interfaceInteraction.setFocus,
-      controls: interfaceInteraction.buttons, resetControls: interfaceInteraction.resetButtons, biomeMode, enemies: () => hostState.enemies(),
-      flash: () => feel.flash, bossBeat: () => hostState.bossBeat(),
-      bossIntroActive: () => {
-        const intro = hostState.bossIntro();
-        return intro !== null && intro.delay <= 0;
-      },
-      bannerSeconds: () => feel.bannerSeconds,
-      rankPopup: () => ({ seconds: feel.rankPopupSeconds, text: feel.rankPopupText, multiplier: liveRun().mult }),
-      timeSeconds: interfaceFrame.seconds,
-    },
-    frameServices: {
-      canvas, context: ctx, width: W, height: H, overscan: () => OVERSCAN, safeTop: () => SAFE.t, resizeIfNeeded: resizeCanvas, input: Input,
-      ui: UI, stage: stageRuntime, cinema: CINEMA, reducedMotion: () => A11Y.reducedMotion, flashScale: () => A11Y.flashScale,
-      touchActive: () => Input.touchActive(),
-      controller: () => ({ active: PAD.active, toastSeconds: PAD.toastT, toastText: PAD.toastText }), confirmGlyph: () => PAD.glyph(0),
-      pointerLocked: () => Input.locked, lockHint, inputHint: hintEl, fullscreenButton,
-      controlHintContext: () => ({ runSeconds: screen() === "playing" ? liveRun().runTime : 0, completedRuns: dependencies.PROFILE.stat("runs") }),
-      clamp, ease: ez, blendColor: blendCol,
-      setTheme: (background, playLike) => {
-        THEME.set(playLike && biomeMode() ? background : "#ffffff");
-        UI.ink = THEME.ink;
-      },
-      themeInk: () => THEME.ink,
-      backdropPost: (context, stage, camera) => {
-        Backdrop.post(context, stage, camera);
-      },
-      drawMenuAttract: () => {
-        Attract.draw(ctx);
-      },
-      renderScreen: (next) => {
-        renderRegisteredScreen(next, interfaceComposition.screens.renderers);
-      },
-      isMenuScreen,
-      playInterfaceSound: () => {
-        SFX.ui();
-      },
-      hoverAnimation: interfaceInteraction.hoverAnimations(), trickColor,
-    },
-    worldState: {
-      run: liveRun, player: livePlayer, blade: options.blade, enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(),
-      floaters: () => hostState.floaters(), slowZones: () => hostState.slowZones(), temporaryWalls: () => hostState.temporaryWalls(),
-      environment: () => environment.snapshot(), screen, zoom: () => feel.zoom, shake: () => impact.shake, lastUiDelta: interfaceFrame.deltaSeconds,
-      bannerSeconds: () => feel.bannerSeconds, bossIntro: () => hostState.bossIntro(), hud: hudFeedback.snapshot,
-      hudClockSeconds: hudFeedback.clockSeconds, advanceHud: hudFeedback.advance,
-    },
-    worldServices: {
-      chase, dependencies, canvas: ctx, width: W, height: H, debug: PANTHEON_DEBUG, stage: stageRuntime, tutorial: TUT,
-      finale: () => story.finale, formatTime: fmtTime, trickColor, ease: ez,
-    },
-    onBiomeTransition: (begin) => {
-      Attract.onBiomeChange = begin;
-    },
-  }, { simulationTick: () => simulation.tick, browserWindow, gfx: () => settings.gfx, debugAvailable: PANTHEON_DEBUG });
+    { simulationTick: () => simulation.tick, browserWindow, gfx: () => settings.gfx, debugAvailable: PANTHEON_DEBUG },
+  );
   const { frame: presentationHost, screens: screenComposition } = interfaceComposition;
   const { library: libraryAdapters, replay: replayAdapters } = screenComposition;
   const leaveCareer = () => {

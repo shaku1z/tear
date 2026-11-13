@@ -3,9 +3,21 @@ import type { LiveCollisionPhaseHost, LiveCollisionPhaseState } from "../../game
 import type { LiveOpeningPhaseHost, LiveOpeningState } from "../../gameplay/combat/live-opening-phase";
 import type { LiveKillHost } from "../../gameplay/combat/live-kill-runtime";
 
-type OpeningValues = Pick<LiveOpeningPhaseHost,
-  "player" | "blade" | "run" | "enemies" | "projectiles" | "platforms" | "width" | "blocking" |
-  "playerMode" | "protection" | "lowGraphics" | "transformationBlocked">;
+type OpeningValues = Pick<
+  LiveOpeningPhaseHost,
+  | "player"
+  | "blade"
+  | "run"
+  | "enemies"
+  | "projectiles"
+  | "platforms"
+  | "width"
+  | "blocking"
+  | "playerMode"
+  | "protection"
+  | "lowGraphics"
+  | "transformationBlocked"
+>;
 type OpeningActions = Omit<LiveOpeningPhaseHost, keyof OpeningValues | "state">;
 type CollisionValues = Pick<LiveCollisionPhaseHost, "player" | "blade" | "run" | "width">;
 type CollisionActions = Omit<LiveCollisionPhaseHost, keyof CollisionValues | "state" | "combat">;
@@ -39,9 +51,12 @@ export interface LiveCombatAdapters {
 }
 
 export interface LiveCollisionStatePort {
-  readonly hitStop: () => number; readonly setHitStop: (value: number) => void;
-  readonly slowMotion: () => number; readonly setSlowMotion: (value: number) => void;
-  readonly shake: () => number; readonly setShake: (value: number) => void;
+  readonly hitStop: () => number;
+  readonly setHitStop: (value: number) => void;
+  readonly slowMotion: () => number;
+  readonly setSlowMotion: (value: number) => void;
+  readonly shake: () => number;
+  readonly setShake: (value: number) => void;
   readonly enemies: () => LiveCollisionPhaseState["enemies"];
   readonly setEnemies: (value: LiveCollisionPhaseState["enemies"]) => void;
   readonly projectiles: () => LiveCollisionPhaseState["projectiles"];
@@ -70,33 +85,42 @@ export function createLiveCollisionStateView(port: LiveCollisionStatePort): Live
 export function createLiveCombatAdapters(context: LiveCombatAdapterContext): LiveCombatAdapters {
   let collisionOwner: CombatEntityRuntime | null = null;
   let collisionHost: LiveCollisionPhaseHost | null = null;
-  const opening = Object.defineProperties({ ...context.opening.actions, state: context.opening.state }, {
-    player: lazy(context.opening.values.player),
-    blade: lazy(context.opening.values.blade),
-    run: lazy(context.opening.values.run),
-    enemies: lazy(context.opening.values.enemies),
-    projectiles: lazy(context.opening.values.projectiles),
-    platforms: lazy(context.opening.values.platforms),
-    width: lazy(context.opening.values.width),
-    blocking: lazy(context.opening.values.blocking),
-    playerMode: lazy(context.opening.values.playerMode),
-    protection: lazy(context.opening.values.protection),
-    lowGraphics: lazy(context.opening.values.lowGraphics),
-    transformationBlocked: lazy(context.opening.values.transformationBlocked),
-  }) as LiveOpeningPhaseHost;
-  return Object.freeze({ entities: context.entities, opening,
+  const opening = Object.defineProperties(
+    { ...context.opening.actions, state: context.opening.state },
+    {
+      player: lazy(context.opening.values.player),
+      blade: lazy(context.opening.values.blade),
+      run: lazy(context.opening.values.run),
+      enemies: lazy(context.opening.values.enemies),
+      projectiles: lazy(context.opening.values.projectiles),
+      platforms: lazy(context.opening.values.platforms),
+      width: lazy(context.opening.values.width),
+      blocking: lazy(context.opening.values.blocking),
+      playerMode: lazy(context.opening.values.playerMode),
+      protection: lazy(context.opening.values.protection),
+      lowGraphics: lazy(context.opening.values.lowGraphics),
+      transformationBlocked: lazy(context.opening.values.transformationBlocked),
+    },
+  ) as LiveOpeningPhaseHost;
+  return Object.freeze({
+    entities: context.entities,
+    opening,
     collisionFor(combat: CombatEntityRuntime): LiveCollisionPhaseHost {
       if (collisionHost !== null && collisionOwner === combat) return collisionHost;
       collisionOwner = combat;
-      collisionHost = Object.defineProperties({ ...context.collision.actions, state: context.collision.state, combat }, {
-        player: lazy(context.collision.values.player),
-        blade: lazy(context.collision.values.blade),
-        run: lazy(context.collision.values.run),
-        width: lazy(context.collision.values.width),
-      }) as LiveCollisionPhaseHost;
+      collisionHost = Object.defineProperties(
+        { ...context.collision.actions, state: context.collision.state, combat },
+        {
+          player: lazy(context.collision.values.player),
+          blade: lazy(context.collision.values.blade),
+          run: lazy(context.collision.values.run),
+          width: lazy(context.collision.values.width),
+        },
+      ) as LiveCollisionPhaseHost;
       return collisionHost;
     },
-    kill: context.kill });
+    kill: context.kill,
+  });
 }
 
 function lazy(get: () => unknown): PropertyDescriptor {

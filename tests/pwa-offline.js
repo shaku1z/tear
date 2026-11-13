@@ -11,11 +11,16 @@ const path = require("node:path");
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);
     const file = path.resolve(root, relative);
     if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      response.writeHead(404).end(); return;
+      response.writeHead(404).end();
+      return;
     }
-    const contentType = file.endsWith(".js") ? "text/javascript"
-      : file.endsWith(".html") ? "text/html"
-        : file.endsWith(".json") ? "application/json" : "application/octet-stream";
+    const contentType = file.endsWith(".js")
+      ? "text/javascript"
+      : file.endsWith(".html")
+        ? "text/html"
+        : file.endsWith(".json")
+          ? "application/json"
+          : "application/octet-stream";
     response.setHeader("Content-Type", contentType);
     fs.createReadStream(file).pipe(response);
   });
@@ -52,4 +57,7 @@ const path = require("node:path");
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
   console.log("PWA offline smoke passed");
-})().catch((error) => { console.error(error); process.exit(1); });
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

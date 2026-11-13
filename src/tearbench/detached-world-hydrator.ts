@@ -2,8 +2,16 @@ import { rebindBossPracticeSource } from "../gameplay/training/boss-practice-sou
 import type { TearCodecValue, TearCodecWorld } from "./state-codecs";
 import type { TearWorldEntityConstructionPort } from "../gameplay/runtime/tear-world-entity-construction";
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
-import { parseUiTutorialPresentationCheckpoint, type UiTutorialPresentationCheckpoint, parseUiHudPresentationCheckpoint, type UiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
-import { parseParticlePresentationCheckpoint, type ParticlePresentationCheckpoint } from "./particle-presentation-checkpoint";
+import {
+  parseUiTutorialPresentationCheckpoint,
+  type UiTutorialPresentationCheckpoint,
+  parseUiHudPresentationCheckpoint,
+  type UiHudPresentationCheckpoint,
+} from "./ui-presentation-checkpoint";
+import {
+  parseParticlePresentationCheckpoint,
+  type ParticlePresentationCheckpoint,
+} from "./particle-presentation-checkpoint";
 import { parseTutorialSessionCheckpoint } from "../gameplay/training/tutorial-controller";
 
 /**
@@ -97,7 +105,8 @@ const transientInputProjectionKeys = new Set(["aiInput", "aimOverride", "lmbOver
 
 /** Recreates declarative codec data and its stable object references. */
 export function decodeTearCodecValue(value: TearCodecValue, identities: ReadonlyMap<string, object>): unknown {
-  if (Array.isArray(value)) return (value as readonly TearCodecValue[]).map((entry) => decodeTearCodecValue(entry, identities));
+  if (Array.isArray(value))
+    return (value as readonly TearCodecValue[]).map((entry) => decodeTearCodecValue(entry, identities));
   if (value === null || typeof value !== "object") return value;
   if ("$ref" in value && typeof value.$ref === "string") {
     const identity = identities.get(value.$ref);
@@ -105,14 +114,19 @@ export function decodeTearCodecValue(value: TearCodecValue, identities: Readonly
     return identity;
   }
   if ("$map" in value && Array.isArray(value.$map)) {
-    return new Map((value.$map as readonly (readonly TearCodecValue[])[]).map((pair) =>
-      [decodeTearCodecValue(pair[0] as TearCodecValue, identities),
-        decodeTearCodecValue(pair[1] as TearCodecValue, identities)]));
+    return new Map(
+      (value.$map as readonly (readonly TearCodecValue[])[]).map((pair) => [
+        decodeTearCodecValue(pair[0] as TearCodecValue, identities),
+        decodeTearCodecValue(pair[1] as TearCodecValue, identities),
+      ]),
+    );
   }
   if ("$set" in value && Array.isArray(value.$set)) {
     return new Set((value.$set as readonly TearCodecValue[]).map((entry) => decodeTearCodecValue(entry, identities)));
   }
-  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, decodeTearCodecValue(entry, identities)]));
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [key, decodeTearCodecValue(entry, identities)]),
+  );
 }
 
 /** Applies a codec object to a newly constructed instance without changing identity metadata. */
@@ -140,7 +154,10 @@ function component(world: TearCodecWorld, id: Parameters<TearCodecWorld["compone
   return value;
 }
 
-function arrayComponent(world: TearCodecWorld, id: Parameters<TearCodecWorld["components"]["get"]>[0]): readonly TearCodecValue[] {
+function arrayComponent(
+  world: TearCodecWorld,
+  id: Parameters<TearCodecWorld["components"]["get"]>[0],
+): readonly TearCodecValue[] {
   const value = component(world, id);
   if (!Array.isArray(value)) throw new TypeError(`live snapshot component must be an array: ${id}`);
   return value as readonly TearCodecValue[];
@@ -199,7 +216,21 @@ export function hydrateTearCodecWorld<
   port: TearWorldConstructionPort<Run, Player, Blade, Enemy, Projectile, Reward>,
   world: TearCodecWorld,
   context: TearWorldHydrationContext,
-): TearStagedWorld<Run, Player, Blade, Enemy, Projectile, Reward, Floater, SlowZone, Wall, Platform, Rng, IdentityState, Ghost> {
+): TearStagedWorld<
+  Run,
+  Player,
+  Blade,
+  Enemy,
+  Projectile,
+  Reward,
+  Floater,
+  SlowZone,
+  Wall,
+  Platform,
+  Rng,
+  IdentityState,
+  Ghost
+> {
   const playerPayload = component(world, "tear.player.v1");
   const bladePayload = component(world, "tear.blade.v1");
   const runPayload = component(world, "tear.run.v1");
@@ -209,17 +240,30 @@ export function hydrateTearCodecWorld<
   context.requireIdentity("blade");
   const player = port.createPlayer(numberField(playerPayload, "x"), numberField(playerPayload, "y"));
   const blade = port.createBlade();
-  const identities = new Map<string, object>([["player", player], ["blade", blade]]);
+  const identities = new Map<string, object>([
+    ["player", player],
+    ["blade", blade],
+  ]);
   // The real Echo constructor needs decoded run modifiers. Keep this temporary
   // construction view separate: the final run is decoded after entity payloads
   // have been restored, matching the historic live staging order exactly.
   const constructionRun = decodeTearCodecValue(runPayload, identities) as Run;
-  const enemies = enemyPayloads.map((payload) => port.createEnemy(
-    stringField(payload, "factoryId"), numberField(payload, "x"), numberField(payload, "y"), constructionRun,
-  ));
-  const projectiles = projectilePayloads.map((payload) => port.createProjectile(
-    numberField(payload, "x"), numberField(payload, "y"), numberField(payload, "vx"), numberField(payload, "vy"),
-  ));
+  const enemies = enemyPayloads.map((payload) =>
+    port.createEnemy(
+      stringField(payload, "factoryId"),
+      numberField(payload, "x"),
+      numberField(payload, "y"),
+      constructionRun,
+    ),
+  );
+  const projectiles = projectilePayloads.map((payload) =>
+    port.createProjectile(
+      numberField(payload, "x"),
+      numberField(payload, "y"),
+      numberField(payload, "vx"),
+      numberField(payload, "vy"),
+    ),
+  );
   const identityBindings: TearStagedIdentityBinding[] = [];
   enemyPayloads.forEach((payload, index) => {
     const id = stringField(payload, "id");
@@ -260,17 +304,38 @@ export function hydrateTearCodecWorld<
   const hazards = component(world, "tear.hazard.v1");
   const ui = component(world, "tear.ui.v1");
   const tutorialPresentation = parseUiTutorialPresentationCheckpoint(record(ui) ? ui.tutorialPresentation : undefined);
-  const runtime = decodeTearCodecValue(record(worldPayload) && record(worldPayload.runtime) ? worldPayload.runtime : {}, identities) as Readonly<Record<string, unknown>>;
+  const runtime = decodeTearCodecValue(
+    record(worldPayload) && record(worldPayload.runtime) ? worldPayload.runtime : {},
+    identities,
+  ) as Readonly<Record<string, unknown>>;
   const tutorialSession = parseTutorialSessionCheckpoint(runtime.tutorialSession);
   if (record(run) && run.mode === "tutorial" && tutorialSession === undefined) {
-    throw new RangeError("tutorial replay requires retained tutorial behavior; historical missing behavior is unsupported");
+    throw new RangeError(
+      "tutorial replay requires retained tutorial behavior; historical missing behavior is unsupported",
+    );
   }
-  if (record(run) && run.mode === "tutorial" && tutorialSession?.phase === "inactive"
-    && record(runtime.lifecycle) && runtime.lifecycle.phase !== "terminated") throw new RangeError("active tutorial run cannot restore inactive behavior");
-  if (tutorialSession?.active === true && (!record(run) || run.mode !== "tutorial")) throw new RangeError("active tutorial behavior requires tutorial mode");
+  if (
+    record(run) &&
+    run.mode === "tutorial" &&
+    tutorialSession?.phase === "inactive" &&
+    record(runtime.lifecycle) &&
+    runtime.lifecycle.phase !== "terminated"
+  )
+    throw new RangeError("active tutorial run cannot restore inactive behavior");
+  if (tutorialSession?.active === true && (!record(run) || run.mode !== "tutorial"))
+    throw new RangeError("active tutorial behavior requires tutorial mode");
   const platforms = decodeTearCodecValue(component(world, "tear.platform.v1"), identities) as Platform[];
-  if (tutorialSession?.version === 6 && tutorialSession.bossPractice.bossId === "source" && !tutorialSession.bossPractice.defeated) {
-    rebindBossPracticeSource({ run: run as Parameters<typeof rebindBossPracticeSource>[0]["run"], player, enemies, platforms: platforms as object[] });
+  if (
+    tutorialSession?.version === 6 &&
+    tutorialSession.bossPractice.bossId === "source" &&
+    !tutorialSession.bossPractice.defeated
+  ) {
+    rebindBossPracticeSource({
+      run: run as Parameters<typeof rebindBossPracticeSource>[0]["run"],
+      player,
+      enemies,
+      platforms: platforms as object[],
+    });
   }
   const hudPresentation = parseUiHudPresentationCheckpoint(record(ui) ? ui.hudPresentation : undefined);
   const particlesPresentation = parseParticlePresentationCheckpoint(record(ui) ? ui.particlesPresentation : undefined);
@@ -280,12 +345,18 @@ export function hydrateTearCodecWorld<
     blade,
     enemies,
     projectiles,
-    floaters: record(worldPayload) && Array.isArray(worldPayload.floaters)
-      ? decodeTearCodecValue(worldPayload.floaters, identities) as Floater[] : [],
-    slowZones: record(hazards) && Array.isArray(hazards.slowZones)
-      ? decodeTearCodecValue(hazards.slowZones, identities) as SlowZone[] : [],
-    walls: record(hazards) && Array.isArray(hazards.walls)
-      ? decodeTearCodecValue(hazards.walls, identities) as Wall[] : [],
+    floaters:
+      record(worldPayload) && Array.isArray(worldPayload.floaters)
+        ? (decodeTearCodecValue(worldPayload.floaters, identities) as Floater[])
+        : [],
+    slowZones:
+      record(hazards) && Array.isArray(hazards.slowZones)
+        ? (decodeTearCodecValue(hazards.slowZones, identities) as SlowZone[])
+        : [],
+    walls:
+      record(hazards) && Array.isArray(hazards.walls)
+        ? (decodeTearCodecValue(hazards.walls, identities) as Wall[])
+        : [],
     platforms,
     screen: stringField(ui, "screen"),
     focus: Number.parseInt(stringField(ui, "focusId"), 10),
@@ -294,7 +365,8 @@ export function hydrateTearCodecWorld<
     ...(particlesPresentation === undefined ? {} : { particlesPresentation }),
     tick: numberField(runPayload, "tick"),
     ...(record(worldPayload) && worldPayload.simulationSeconds !== undefined
-      ? { simulationSeconds: numberField(worldPayload, "simulationSeconds") } : {}),
+      ? { simulationSeconds: numberField(worldPayload, "simulationSeconds") }
+      : {}),
     stageIndex: numberField(runPayload, "stage"),
     rng: decodeTearCodecValue(component(world, "tear.rng.v1"), identities) as Rng,
     configuration: decodeTearCodecValue(component(world, "tear.configuration.v1"), identities) as TearCodecValue,
@@ -303,24 +375,37 @@ export function hydrateTearCodecWorld<
     ghost: (record(worldPayload) && record(worldPayload.ghost)
       ? decodeTearCodecValue(worldPayload.ghost, identities)
       : { recording: null }) as Ghost,
-    identityState: record(worldPayload) && record(worldPayload.identityState)
-      ? decodeTearCodecValue(worldPayload.identityState, identities) as IdentityState
-      : { nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] } as IdentityState,
+    identityState:
+      record(worldPayload) && record(worldPayload.identityState)
+        ? (decodeTearCodecValue(worldPayload.identityState, identities) as IdentityState)
+        : ({ nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: [] } as IdentityState),
     identityBindings: Object.freeze(identityBindings),
     runtime: Object.freeze({
       ...runtime,
       cinema: decodeTearCodecValue(component(world, "tear.cinematic.v1"), identities),
     }),
     environment: Object.freeze({
-      ...(record(hazards) && hazards.allocator !== undefined ? { allocator: decodeTearCodecValue(hazards.allocator, identities) as NonNullable<EnvironmentSnapshot["allocator"]> } : {}),
+      ...(record(hazards) && hazards.allocator !== undefined
+        ? {
+            allocator: decodeTearCodecValue(hazards.allocator, identities) as NonNullable<
+              EnvironmentSnapshot["allocator"]
+            >,
+          }
+        : {}),
       ...(record(hazards) && typeof hazards.worldId === "string" ? { worldId: hazards.worldId } : {}),
       stageId: record(hazards) && typeof hazards.stageId === "string" ? hazards.stageId : "unknown",
-      fields: record(hazards) && Array.isArray(hazards.fields)
-        ? decodeTearCodecValue(hazards.fields, identities) as EnvironmentSnapshot["fields"] : [],
-      combatObjects: record(hazards) && Array.isArray(hazards.combatObjects)
-        ? decodeTearCodecValue(hazards.combatObjects, identities) as EnvironmentSnapshot["combatObjects"] : [],
-      routes: record(hazards) && Array.isArray(hazards.routes)
-        ? decodeTearCodecValue(hazards.routes, identities) as EnvironmentSnapshot["routes"] : [],
+      fields:
+        record(hazards) && Array.isArray(hazards.fields)
+          ? (decodeTearCodecValue(hazards.fields, identities) as EnvironmentSnapshot["fields"])
+          : [],
+      combatObjects:
+        record(hazards) && Array.isArray(hazards.combatObjects)
+          ? (decodeTearCodecValue(hazards.combatObjects, identities) as EnvironmentSnapshot["combatObjects"])
+          : [],
+      routes:
+        record(hazards) && Array.isArray(hazards.routes)
+          ? (decodeTearCodecValue(hazards.routes, identities) as EnvironmentSnapshot["routes"])
+          : [],
     }),
   });
 }

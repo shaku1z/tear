@@ -15,10 +15,19 @@ function createConfiguration() {
 function createDependencies(config: GameRuntimeDependencies["CONFIG"]) {
   const random = createRunRandom();
   return {
-    CONFIG: config, CLOCK: createTearWorldClock(), GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams,
-    FX: createParticleSystem({ effects: { highBudget: 1, lowBudget: 1, cullMargin: 0 },
-      lowGraphics: () => false, reducedMotion: () => false, random: () => 0.5 }),
-    Backdrop: { resetFx: () => undefined }, Mirror: { active: false, host: null }, BOSSFX: { q: [] },
+    CONFIG: config,
+    CLOCK: createTearWorldClock(),
+    GAME_RANDOM: random.service,
+    GAME_RANDOM_STREAMS: random.streams,
+    FX: createParticleSystem({
+      effects: { highBudget: 1, lowBudget: 1, cullMargin: 0 },
+      lowGraphics: () => false,
+      reducedMotion: () => false,
+      random: () => 0.5,
+    }),
+    Backdrop: { resetFx: () => undefined },
+    Mirror: { active: false, host: null },
+    BOSSFX: { q: [] },
     Cinematics: CinematicTimeline,
   } as unknown as GameRuntimeDependencies;
 }
@@ -27,7 +36,8 @@ describe("live production world", () => {
   it("creates the live session and matching-config world as one immutable root", () => {
     const configuration = createConfiguration();
     const production = createLiveProductionWorld({
-      dependencies: createDependencies(configuration.value), configuration,
+      dependencies: createDependencies(configuration.value),
+      configuration,
     });
 
     production.session.setSelectedWeapon("hammer");
@@ -42,8 +52,14 @@ describe("live production world", () => {
   it("keeps each production root's session, world state, and configuration apart", () => {
     const firstConfig = createConfiguration();
     const secondConfig = createConfiguration();
-    const first = createLiveProductionWorld({ dependencies: createDependencies(firstConfig.value), configuration: firstConfig });
-    const second = createLiveProductionWorld({ dependencies: createDependencies(secondConfig.value), configuration: secondConfig });
+    const first = createLiveProductionWorld({
+      dependencies: createDependencies(firstConfig.value),
+      configuration: firstConfig,
+    });
+    const second = createLiveProductionWorld({
+      dependencies: createDependencies(secondConfig.value),
+      configuration: secondConfig,
+    });
 
     first.session.setSelectedWeapon("greatsword");
     first.world.context.transient.impact.shake = 4;
@@ -56,8 +72,11 @@ describe("live production world", () => {
   it("rejects split runtime and world configuration references before construction", () => {
     const configuration = createConfiguration();
 
-    expect(() => createLiveProductionWorld({
-      dependencies: createDependencies({} as GameRuntimeDependencies["CONFIG"]), configuration,
-    })).toThrow("dependencies.CONFIG");
+    expect(() =>
+      createLiveProductionWorld({
+        dependencies: createDependencies({} as GameRuntimeDependencies["CONFIG"]),
+        configuration,
+      }),
+    ).toThrow("dependencies.CONFIG");
   });
 });

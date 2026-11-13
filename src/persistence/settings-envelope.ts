@@ -3,7 +3,16 @@ import { asRecord, extensionFields, safeInteger, validateJsonObject, type JsonOb
 import { invalid, unsupportedVersion, type MigrationResult } from "./result";
 
 export const SETTINGS_ENVELOPE_VERSION = 2;
-const KNOWN_FIELDS = new Set(["schema", "schemaVersion", "revision", "updatedAtMs", "audio", "values", "data", "extensions"]);
+const KNOWN_FIELDS = new Set([
+  "schema",
+  "schemaVersion",
+  "revision",
+  "updatedAtMs",
+  "audio",
+  "values",
+  "data",
+  "extensions",
+]);
 
 export interface SettingsEnvelopeV2 {
   readonly schema: "tear.settings";

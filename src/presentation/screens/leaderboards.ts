@@ -25,11 +25,25 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
     const layout = page(context, { title: "LEADERBOARDS", hue: LEADERBOARD_HUE });
     tabs(context, view.tabs, (id) => ({ type: "leaderboards.selectTab", id }), 124);
     if (view.modes) {
-      ui.text(canvas, view.signInRequired ? "compete globally with an account" : "the world's finest runs",
-        width / 2, 184, ui.t.type.caption, "center", ui.t.alpha.muted);
+      ui.text(
+        canvas,
+        view.signInRequired ? "compete globally with an account" : "the world's finest runs",
+        width / 2,
+        184,
+        ui.t.type.caption,
+        "center",
+        ui.t.alpha.muted,
+      );
       chips(context, view.modes, (id) => ({ type: "leaderboards.selectBoard", id: `mode:${id}` }), 198, 190, 34);
       if (view.difficulties) {
-        chips(context, view.difficulties, (id) => ({ type: "leaderboards.selectBoard", id: `difficulty:${id}` }), 240, 150, 32);
+        chips(
+          context,
+          view.difficulties,
+          (id) => ({ type: "leaderboards.selectBoard", id: `difficulty:${id}` }),
+          240,
+          150,
+          32,
+        );
       }
       rankedBoard(view, layout.bodyBottom);
     } else {
@@ -58,14 +72,20 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
       empty: [
         feed ? "▶" : "★",
         feed ? "Nothing published yet" : "No runs on this board yet",
-        feed ? "Share a run from PROFILE ▸ REPLAYS and it appears here." : "Finish a run in this mode and difficulty to set the first record.",
+        feed
+          ? "Share a run from PROFILE ▸ REPLAYS and it appears here."
+          : "Finish a run in this mode and difficulty to set the first record.",
       ],
     } as const;
     const [glyph, line, detail] = copy[status];
     const ctaY = ui.emptyState(canvas, glyph, line, width / 2, centreY, detail || undefined, 720);
     if (status === "signin") {
       context.enqueue({
-        x: width / 2 - 160, y: ctaY, w: 320, h: 46, label: "SIGN IN VIA PROFILE",
+        x: width / 2 - 160,
+        y: ctaY,
+        w: 320,
+        h: 46,
+        label: "SIGN IN VIA PROFILE",
         action: { type: "navigate", to: "profile", tab: "bests" },
       });
     }
@@ -86,17 +106,31 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
     canvas.fillStyle = ui.readable(entry.color, 3);
     canvas.font = ui.font(box.numberSize, true);
     canvas.fillText(String(entry.rank), box.x + 18, box.y + box.h / 2 + box.numberSize * 0.36);
-    const textX = box.x + 24 + canvas.measureText(String(entry.rank)).width + 14, textWidth = box.x + box.w - 64 - textX;
-    const name = ui.fitText(canvas, entry.name + (entry.mine ? " (you)" : ""), textWidth, { size: ui.t.type.body, floor: ui.t.type.micro, bold: true });
+    const textX = box.x + 24 + canvas.measureText(String(entry.rank)).width + 14,
+      textWidth = box.x + box.w - 64 - textX;
+    const name = ui.fitText(canvas, entry.name + (entry.mine ? " (you)" : ""), textWidth, {
+      size: ui.t.type.body,
+      floor: ui.t.type.micro,
+      bold: true,
+    });
     canvas.fillStyle = entry.mine ? ui.readable(ui.t.color.accent) : ui.ink;
     canvas.font = ui.font(name.size, true);
     canvas.fillText(name.lines[0] ?? entry.name, textX, box.y + box.h / 2 - 8);
     canvas.restore();
-    ui.textBox(canvas, entry.detail, textX, box.y + box.h / 2 + 14, textWidth + 50, { size: ui.t.type.micro, alpha: ui.t.alpha.muted, maxLines: 1 });
+    ui.textBox(canvas, entry.detail, textX, box.y + box.h / 2 + 14, textWidth + 50, {
+      size: ui.t.type.micro,
+      alpha: ui.t.alpha.muted,
+      maxLines: 1,
+    });
     if (entry.replayId) {
       context.enqueue({
-        x: box.x + box.w - 58, y: box.y + box.h - 40, w: 48, h: 30,
-        label: "▶", size: ui.t.type.caption, action: { type: "leaderboards.watchReplay", id: entry.replayId },
+        x: box.x + box.w - 58,
+        y: box.y + box.h - 40,
+        w: 48,
+        h: 30,
+        label: "▶",
+        size: ui.t.type.caption,
+        action: { type: "leaderboards.watchReplay", id: entry.replayId },
       });
     }
   }
@@ -120,7 +154,14 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
   }
 
   /** One ranked table row; the watch button is only offered while the row is fully inside the list. */
-  function rankRow(row: RankRow, index: number, y: number, { listX, listWidth }: RankColumns, bodyTop: number, listBottom: number): void {
+  function rankRow(
+    row: RankRow,
+    index: number,
+    y: number,
+    { listX, listWidth }: RankColumns,
+    bodyTop: number,
+    listBottom: number,
+  ): void {
     const { canvas } = context;
     if (row.mine) {
       canvas.save();
@@ -138,7 +179,12 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
     canvas.fillText(row.title, listX + 70, y);
     if (row.available && y - 18 >= bodyTop - 22 && y + 8 <= listBottom) {
       context.enqueue({
-        x: listX + listWidth - 470, y: y - 18, w: 54, h: 26, label: "▶", size: ui.t.type.micro,
+        x: listX + listWidth - 470,
+        y: y - 18,
+        w: 54,
+        h: 26,
+        label: "▶",
+        size: ui.t.type.micro,
         action: { type: "leaderboards.watchReplay", id: row.id },
       });
     }
@@ -154,7 +200,8 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
 
   function rankedBoard(view: LeaderboardsScreenView, bodyBottom: number): void {
     const { canvas } = context;
-    const top = 300, columns: RankColumns = { listX: width / 2 - 460, listWidth: 920 };
+    const top = 300,
+      columns: RankColumns = { listX: width / 2 - 460, listWidth: 920 };
     if (boardState(view, top + 110, false)) return;
     if (!view.podium || view.podium.length === 0) return;
 
@@ -170,15 +217,21 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
 
     if (view.legacyGhostId) {
       context.enqueue({
-        x: width / 2 - 140, y: top + 140, w: 280, h: 30,
-        label: view.message?.length ? view.message : "▶  WATCH THE #1 RUN", size: ui.t.type.micro,
+        x: width / 2 - 140,
+        y: top + 140,
+        w: 280,
+        h: 30,
+        label: view.message?.length ? view.message : "▶  WATCH THE #1 RUN",
+        size: ui.t.type.micro,
         action: { type: "leaderboards.watchReplay", id: view.legacyGhostId },
       });
-    } else if (view.message) ui.text(canvas, view.message, width / 2, top + 158, ui.t.type.micro, "center", ui.t.alpha.muted);
+    } else if (view.message)
+      ui.text(canvas, view.message, width / 2, top + 158, ui.t.type.micro, "center", ui.t.alpha.muted);
 
     const headerY = top + 194;
     rankHeader(columns, headerY);
-    const bodyTop = headerY + 34, listBottom = bodyBottom - (view.ownRank ? 24 : 0);
+    const bodyTop = headerY + 34,
+      listBottom = bodyBottom - (view.ownRank ? 24 : 0);
     clipBody(context, bodyTop - 22, listBottom, () => {
       view.rows.forEach((row, index) => {
         const y = bodyTop + index * 34 - context.scroll;
@@ -187,14 +240,25 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
       });
     });
     canvas.textAlign = "left";
-    if (view.ownRank) ui.text(canvas, view.ownRank, width / 2, bodyBottom - 4, ui.t.type.micro, "center", ui.t.alpha.muted);
+    if (view.ownRank)
+      ui.text(canvas, view.ownRank, width / 2, bodyBottom - 4, ui.t.type.micro, "center", ui.t.alpha.muted);
   }
 
   function replayFeed(view: LeaderboardsScreenView, bodyBottom: number): void {
     const { canvas } = context;
-    ui.text(canvas, "published runs from every blade — share yours from PROFILE ▸ REPLAYS",
-      width / 2, 184, ui.t.type.caption, "center", ui.t.alpha.muted);
-    const listX = width / 2 - 560, listWidth = 1120, top = 210, rowHeight = 96;
+    ui.text(
+      canvas,
+      "published runs from every blade — share yours from PROFILE ▸ REPLAYS",
+      width / 2,
+      184,
+      ui.t.type.caption,
+      "center",
+      ui.t.alpha.muted,
+    );
+    const listX = width / 2 - 560,
+      listWidth = 1120,
+      top = 210,
+      rowHeight = 96;
     if (boardState(view, top + 170, true)) return;
     clipBody(context, top - 8, bodyBottom, () => {
       view.rows.forEach((row, index) => {
@@ -203,8 +267,13 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
         replayRow(context, row, listX, y, listWidth, row.badge ? LEADERBOARD_HUE : ui.t.color.accent, 170);
         if (y + 20 >= top - 8 && y + 60 <= bodyBottom) {
           context.enqueue({
-            x: listX + listWidth - 140, y: y + 20, w: 120, h: 40, label: "▶  WATCH",
-            enabled: row.available, action: { type: "leaderboards.watchReplay", id: row.id },
+            x: listX + listWidth - 140,
+            y: y + 20,
+            w: 120,
+            h: 40,
+            label: "▶  WATCH",
+            enabled: row.available,
+            action: { type: "leaderboards.watchReplay", id: row.id },
           });
         }
       });

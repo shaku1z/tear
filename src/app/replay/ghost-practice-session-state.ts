@@ -17,8 +17,15 @@ export function createLiveGhostPracticeSessionState(): LiveGhostPracticeSessionS
   let clearing: (() => void) | undefined;
   return Object.freeze({
     active: () => child,
-    activate: (value) => { child = value; },
-    clear: () => { clearing?.(); child = null; },
-    beforeClear: (callback) => { clearing = callback; },
+    activate: (value) => {
+      child = value;
+    },
+    clear: () => {
+      clearing?.();
+      child = null;
+    },
+    beforeClear: (callback) => {
+      clearing = callback;
+    },
   } satisfies LiveGhostPracticeSessionState);
 }

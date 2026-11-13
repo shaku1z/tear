@@ -3,11 +3,7 @@ import { CONFIG } from "../../src/config/game-config";
 import { SeededRandom } from "../../src/domain/random";
 import { PRESETS } from "../../src/gameplay/affixes";
 import { BOSS_ROSTER } from "../../src/gameplay/run/content-director";
-import {
-  LiveWaveController,
-  type LiveWavePort,
-  type LiveWaveRun,
-} from "../../src/gameplay/run/live-wave-controller";
+import { LiveWaveController, type LiveWavePort, type LiveWaveRun } from "../../src/gameplay/run/live-wave-controller";
 import { STAGES } from "../../src/gameplay/stages";
 import type { WavePlanIntent } from "../../src/gameplay/run/wave-planner";
 
@@ -39,7 +35,10 @@ function runState(overrides: Partial<LiveWaveRun> = {}): LiveWaveRun {
   };
 }
 
-function harness(initial: LiveWaveRun, options: Readonly<{ currentStageIndex?: number; chapterStageIndex?: number }> = {}) {
+function harness(
+  initial: LiveWaveRun,
+  options: Readonly<{ currentStageIndex?: number; chapterStageIndex?: number }> = {},
+) {
   const planIntents: string[] = [];
   const planIntentRecords: WavePlanIntent[] = [];
   const clearIntents: string[] = [];
@@ -67,7 +66,10 @@ function harness(initial: LiveWaveRun, options: Readonly<{ currentStageIndex?: n
       planIntentRecords.push(...intents);
     },
     executeClearIntents: (intents) => clearIntents.push(...intents.map((intent) => intent.type)),
-    spawn: (spec) => { spawns.push(spec.type); enemies += 1; },
+    spawn: (spec) => {
+      spawns.push(spec.type);
+      enemies += 1;
+    },
     enemyCount: () => enemies,
     loreBusy: () => false,
     achievementTracking: () => false,
@@ -80,8 +82,12 @@ function harness(initial: LiveWaveRun, options: Readonly<{ currentStageIndex?: n
     planIntentRecords,
     clearIntents,
     spawns,
-    setPrepared(value: boolean) { prepared = value; },
-    setActive(value: boolean) { active = value; },
+    setPrepared(value: boolean) {
+      prepared = value;
+    },
+    setActive(value: boolean) {
+      active = value;
+    },
   };
 }
 
@@ -139,7 +145,9 @@ describe("LiveWaveController", () => {
 
     expect(run).toMatchObject({ wave: 31, stage: 3, _biomeIdx: 3, pendingBossOutro: null });
     expect(run.spawnQueue.every((entry) => ["flyer", "ranged", "charger"].includes(entry.type))).toBe(true);
-    expect(run.spawnQueue.some((entry) => ["rootbinder", "mender", "anchor", "armored", "chimera"].includes(entry.type))).toBe(false);
+    expect(
+      run.spawnQueue.some((entry) => ["rootbinder", "mender", "anchor", "armored", "chimera"].includes(entry.type)),
+    ).toBe(false);
     expect(live.planIntentRecords).toEqual([
       { type: "begin-wipe" },
       { type: "load-stage", stageIndex: 3 },
@@ -158,9 +166,12 @@ describe("LiveWaveController", () => {
     live.controller.startNextWave();
     expect(run).toMatchObject({ wave: 41, stage: 4, _biomeIdx: 4, pendingBossOutro: null });
     expect(run.spawnQueue.every((entry) => ["wraith", "flyer", "ranged"].includes(entry.type))).toBe(true);
-    expect(run.spawnQueue.some((entry) => ["rimehound", "priest", "chimera", "mender"].includes(entry.type))).toBe(false);
+    expect(run.spawnQueue.some((entry) => ["rimehound", "priest", "chimera", "mender"].includes(entry.type))).toBe(
+      false,
+    );
     expect(live.planIntentRecords).toEqual([
-      { type: "begin-wipe" }, { type: "load-stage", stageIndex: 4 },
+      { type: "begin-wipe" },
+      { type: "load-stage", stageIndex: 4 },
       { type: "set-stage-banner", duration: 0, name: "The Voidspire" },
       { type: "begin-campaign-chapter", stageIndex: 4, priorBossOutro },
       { type: "ghost-wave", wave: 41, marker: "start" },

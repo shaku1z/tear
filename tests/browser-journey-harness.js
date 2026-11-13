@@ -18,12 +18,19 @@ function recordCanvasFrames() {
   const frame = { texts: [], rects: [] };
   let pending = { texts: [], rects: [] };
   const toCss = (context, x, y) => {
-    const m = context.getTransform(), bounds = context.canvas.getBoundingClientRect(), k = bounds.width / context.canvas.width;
-    return { x: bounds.left + (m.a * x + m.c * y + m.e) * k, y: bounds.top + (m.b * x + m.d * y + m.f) * k, k: k * Math.hypot(m.a, m.b) };
+    const m = context.getTransform(),
+      bounds = context.canvas.getBoundingClientRect(),
+      k = bounds.width / context.canvas.width;
+    return {
+      x: bounds.left + (m.a * x + m.c * y + m.e) * k,
+      y: bounds.top + (m.b * x + m.d * y + m.f) * k,
+      k: k * Math.hypot(m.a, m.b),
+    };
   };
   const fillText = CanvasRenderingContext2D.prototype.fillText;
   CanvasRenderingContext2D.prototype.fillText = function recordText(value, x, y, ...rest) {
-    if (this.canvas.id === "game") pending.texts.push({ text: String(value), baseline: this.textBaseline, ...toCss(this, x, y) });
+    if (this.canvas.id === "game")
+      pending.texts.push({ text: String(value), baseline: this.textBaseline, ...toCss(this, x, y) });
     return fillText.call(this, value, x, y, ...rest);
   };
   const strokeRect = CanvasRenderingContext2D.prototype.strokeRect;
@@ -35,21 +42,31 @@ function recordCanvasFrames() {
     return strokeRect.call(this, x, y, w, h);
   };
   const raf = window.requestAnimationFrame.bind(window);
-  window.requestAnimationFrame = (callback) => raf((time) => {
-    if (pending.texts.length > 0) { frame.texts = pending.texts; frame.rects = pending.rects; }
-    pending = { texts: [], rects: [] };
-    callback(time);
-  });
+  window.requestAnimationFrame = (callback) =>
+    raf((time) => {
+      if (pending.texts.length > 0) {
+        frame.texts = pending.texts;
+        frame.rects = pending.rects;
+      }
+      pending = { texts: [], rects: [] };
+      callback(time);
+    });
   window.__TEAR_JOURNEY_FRAME__ = frame;
 }
 
 async function withJourney(options, run) {
   const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
   const root = path.resolve(__dirname, "..", "dist", buildDirectory);
-  assert.ok(fs.existsSync(path.join(root, "index.html")), `dist/${buildDirectory} is missing; run pnpm build:test:standalone first`);
+  assert.ok(
+    fs.existsSync(path.join(root, "index.html")),
+    `dist/${buildDirectory} is missing; run pnpm build:test:standalone first`,
+  );
   const { calculateArtifactHash, readSourceIdentity } = await import("../scripts/release-artifact.mjs");
   const buildInfoPath = path.join(root, "build-info.json");
-  assert.ok(fs.existsSync(buildInfoPath), `dist/${buildDirectory}/build-info.json is missing; build attribution is required`);
+  assert.ok(
+    fs.existsSync(buildInfoPath),
+    `dist/${buildDirectory}/build-info.json is missing; build attribution is required`,
+  );
   const buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, "utf8"));
   const expectedTarget = buildDirectory.includes("crazygames") ? "crazygames" : "standalone";
   assert.equal(buildInfo.format, "tear-build-info", "served build-info format is unsupported");
@@ -58,8 +75,11 @@ async function withJourney(options, run) {
   assert.match(buildInfo.toolchain?.digest, /^[a-f0-9]{64}$/, "served build toolchain identity is required");
   assert.match(buildInfo.configuration?.digest, /^[a-f0-9]{64}$/, "served build configuration identity is required");
   assert.match(buildInfo.buildIdentityDigest, /^[a-f0-9]{64}$/, "served complete build identity is required");
-  assert.equal(buildInfo.contentAddressedPath, `artifacts/tearbench/builds/${buildInfo.buildIdentityDigest}/payload`,
-    "served content-addressed build path is stale");
+  assert.equal(
+    buildInfo.contentAddressedPath,
+    `artifacts/tearbench/builds/${buildInfo.buildIdentityDigest}/payload`,
+    "served content-addressed build path is stale",
+  );
   const artifact = await calculateArtifactHash(root);
   assert.equal(buildInfo.artifactHash, artifact.hash, "served build artifact hash is stale");
   assert.equal(buildInfo.artifactFiles, artifact.files, "served build artifact file count is stale");
@@ -80,8 +100,15 @@ async function withJourney(options, run) {
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);
     const file = path.resolve(root, relative);
     const containedPath = path.relative(root, file);
-    if (containedPath.startsWith("..") || path.isAbsolute(containedPath)
-      || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { response.writeHead(404).end(); return; }
+    if (
+      containedPath.startsWith("..") ||
+      path.isAbsolute(containedPath) ||
+      !fs.existsSync(file) ||
+      fs.statSync(file).isDirectory()
+    ) {
+      response.writeHead(404).end();
+      return;
+    }
     response.setHeader("Content-Type", contentType(file));
     fs.createReadStream(file).pipe(response);
   });
@@ -89,7 +116,10 @@ async function withJourney(options, run) {
   try {
     await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
     const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-    browser = await chromium.launch({ headless: true, ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}) });
+    browser = await chromium.launch({
+      headless: true,
+      ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
+    });
     // Journey suites repeatedly navigate the same instrumented page. Keep the
     // production service worker out of this harness so an activation/update
     // race cannot replace the exact test build between boots. PWA behavior has
@@ -102,8 +132,12 @@ async function withJourney(options, run) {
     if (options.settings) {
       await page.addInitScript((settings) => {
         window.__TEAR_TEST_STORAGE__ = {
-          tear_settings: JSON.stringify({ gfx: settings.gfx, reducedMotion: settings.reducedMotion,
-            highContrast: settings.highContrast, flash: settings.flashScale }),
+          tear_settings: JSON.stringify({
+            gfx: settings.gfx,
+            reducedMotion: settings.reducedMotion,
+            highContrast: settings.highContrast,
+            flash: settings.flashScale,
+          }),
         };
       }, options.settings);
     }
@@ -112,29 +146,64 @@ async function withJourney(options, run) {
     }
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.stack || error.message));
-    await page.route("**/*", (route) => route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort());
+    await page.route("**/*", (route) =>
+      route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
+    );
 
-    const initialQuery = { test: "1", ...(options.debugApi === false ? {} : { bossdebug: "1" }), ...(options.query || {}) };
+    const initialQuery = {
+      test: "1",
+      ...(options.debugApi === false ? {} : { bossdebug: "1" }),
+      ...(options.query || {}),
+    };
     async function boot(query = initialQuery) {
-      await page.goto(`${baseUrl}/index.html?${new URLSearchParams(query).toString()}`, { waitUntil: "domcontentloaded", timeout: 30000 });
+      await page.goto(`${baseUrl}/index.html?${new URLSearchParams(query).toString()}`, {
+        waitUntil: "domcontentloaded",
+        timeout: 30000,
+      });
       try {
         if (options.ordinaryWatch) {
-          await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__ && window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST
-            && [...document.querySelectorAll("canvas")].some((canvas) => canvas.width > 0 && canvas.height > 0
-              && canvas.getBoundingClientRect().width > 0 && canvas.getContext("2d")?.getImageData(0, 0, 1, 1).data[3] > 0), undefined, { timeout: 15000 });
-          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          await page.waitForFunction(
+            () =>
+              window.__TEAR_WATCH_AGENT__ &&
+              window.__TEAR_RUNTIME_ENVIRONMENT__ &&
+              window.__PANTHEON_TEST &&
+              [...document.querySelectorAll("canvas")].some(
+                (canvas) =>
+                  canvas.width > 0 &&
+                  canvas.height > 0 &&
+                  canvas.getBoundingClientRect().width > 0 &&
+                  canvas.getContext("2d")?.getImageData(0, 0, 1, 1).data[3] > 0,
+              ),
+            undefined,
+            { timeout: 15000 },
+          );
+          await page.evaluate(
+            () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+          );
         } else {
-          await page.waitForFunction((debugApi) => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_RUNTIME_ENVIRONMENT__
-            && (!debugApi || window.__PANTHEON_TEST), options.debugApi !== false, { timeout: 15000 });
-          await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, { timeout: 15000 });
+          await page.waitForFunction(
+            (debugApi) =>
+              window.__TEAR_CATALOG_DEBUG__ &&
+              window.__TEAR_RUNTIME_ENVIRONMENT__ &&
+              (!debugApi || window.__PANTHEON_TEST),
+            options.debugApi !== false,
+            { timeout: 15000 },
+          );
+          await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, {
+            timeout: 15000,
+          });
         }
       } catch (error) {
-        throw new Error(`Tear browser boot unavailable: ${errors.join("\n") || "no page error was emitted"}`, { cause: error });
+        throw new Error(`Tear browser boot unavailable: ${errors.join("\n") || "no page error was emitted"}`, {
+          cause: error,
+        });
       }
       await page.mouse.click(10, 10);
     }
     async function waitScreen(screen) {
-      await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, { timeout: 10000 });
+      await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, {
+        timeout: 10000,
+      });
       // A cold screen's state can become active before its lazy renderer chunk has
       // registered the canvas buttons. Wait for that static import to settle so
       // the next pointer action exercises the rendered screen, not a timing race.
@@ -152,25 +221,42 @@ async function withJourney(options, run) {
     /** Choice and results screens ignore input for UI_CONFIRM_SETTLE_SECONDS (0.35 s) after they open. */
     async function waitArmed(screen) {
       await waitScreen(screen);
-      await page.evaluate(() => new Promise((resolve) => {
-        const start = performance.now();
-        const tick = () => { if (performance.now() - start >= 450) resolve(); else requestAnimationFrame(tick); };
-        requestAnimationFrame(tick);
-      }));
+      await page.evaluate(
+        () =>
+          new Promise((resolve) => {
+            const start = performance.now();
+            const tick = () => {
+              if (performance.now() - start >= 450) resolve();
+              else requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+          }),
+      );
     }
     // Screens ease in when they open, so a control is located only once two consecutive
     // frames drew it in the same place: where a player sees it come to rest.
     /** The middle of a drawn control label (RETRY, SKIP RESERVE, a tab name). */
     async function labelPoint(label) {
       assert.ok(options.recordFrames, "labelPoint needs the recordFrames journey option");
-      await page.evaluate(() => { window.__TEAR_JOURNEY_LAST_POINT__ = null; });
-      const handle = await page.waitForFunction((text) => {
-        const entry = window.__TEAR_JOURNEY_FRAME__.texts.find((candidate) => candidate.text === text);
-        const point = entry ? { x: Math.round(entry.x), y: Math.round(entry.y - 4) } : null;
-        const previous = window.__TEAR_JOURNEY_LAST_POINT__;
-        window.__TEAR_JOURNEY_LAST_POINT__ = { key: `label:${text}`, point };
-        return point && previous?.key === `label:${text}` && previous.point?.x === point.x && previous.point.y === point.y ? point : null;
-      }, label, { timeout: 5000 });
+      await page.evaluate(() => {
+        window.__TEAR_JOURNEY_LAST_POINT__ = null;
+      });
+      const handle = await page.waitForFunction(
+        (text) => {
+          const entry = window.__TEAR_JOURNEY_FRAME__.texts.find((candidate) => candidate.text === text);
+          const point = entry ? { x: Math.round(entry.x), y: Math.round(entry.y - 4) } : null;
+          const previous = window.__TEAR_JOURNEY_LAST_POINT__;
+          window.__TEAR_JOURNEY_LAST_POINT__ = { key: `label:${text}`, point };
+          return point &&
+            previous?.key === `label:${text}` &&
+            previous.point?.x === point.x &&
+            previous.point.y === point.y
+            ? point
+            : null;
+        },
+        label,
+        { timeout: 5000 },
+      );
       return handle.jsonValue();
     }
     async function clickLabel(label, screen) {
@@ -180,20 +266,35 @@ async function withJourney(options, run) {
     /** Centre of the drawn card whose key badge reads `number`: the smallest outlined frame around the badge. */
     async function cardCentre(number) {
       assert.ok(options.recordFrames, "cardCentre needs the recordFrames journey option");
-      await page.evaluate(() => { window.__TEAR_JOURNEY_LAST_POINT__ = null; });
-      const handle = await page.waitForFunction((label) => {
-        const frame = window.__TEAR_JOURNEY_FRAME__;
-        const badge = frame.texts.find((entry) => entry.text === label && entry.baseline === "middle");
-        if (!badge) return null;
-        const cards = frame.rects.filter((rect) => rect.h > 150 && rect.w > 150
-          && badge.x > rect.x && badge.x < rect.x + rect.w && badge.y > rect.y && badge.y < rect.y + rect.h);
-        if (cards.length === 0) return null;
-        const card = cards.reduce((best, rect) => rect.w * rect.h < best.w * best.h ? rect : best);
-        const point = { x: Math.round(card.x + card.w / 2), y: Math.round(card.y + card.h / 2) };
-        const previous = window.__TEAR_JOURNEY_LAST_POINT__;
-        window.__TEAR_JOURNEY_LAST_POINT__ = { key: `card:${label}`, point };
-        return previous?.key === `card:${label}` && previous.point?.x === point.x && previous.point.y === point.y ? point : null;
-      }, String(number), { timeout: 5000 });
+      await page.evaluate(() => {
+        window.__TEAR_JOURNEY_LAST_POINT__ = null;
+      });
+      const handle = await page.waitForFunction(
+        (label) => {
+          const frame = window.__TEAR_JOURNEY_FRAME__;
+          const badge = frame.texts.find((entry) => entry.text === label && entry.baseline === "middle");
+          if (!badge) return null;
+          const cards = frame.rects.filter(
+            (rect) =>
+              rect.h > 150 &&
+              rect.w > 150 &&
+              badge.x > rect.x &&
+              badge.x < rect.x + rect.w &&
+              badge.y > rect.y &&
+              badge.y < rect.y + rect.h,
+          );
+          if (cards.length === 0) return null;
+          const card = cards.reduce((best, rect) => (rect.w * rect.h < best.w * best.h ? rect : best));
+          const point = { x: Math.round(card.x + card.w / 2), y: Math.round(card.y + card.h / 2) };
+          const previous = window.__TEAR_JOURNEY_LAST_POINT__;
+          window.__TEAR_JOURNEY_LAST_POINT__ = { key: `card:${label}`, point };
+          return previous?.key === `card:${label}` && previous.point?.x === point.x && previous.point.y === point.y
+            ? point
+            : null;
+        },
+        String(number),
+        { timeout: 5000 },
+      );
       return handle.jsonValue();
     }
     async function clickCard(number, screen) {
@@ -207,8 +308,20 @@ async function withJourney(options, run) {
     const served = await page.request.get(`${baseUrl}/build-info.json`);
     assert.ok(served.ok(), "served build-info.json is unavailable");
     assert.deepEqual(await served.json(), buildInfo, "served build metadata differs from the verified local artifact");
-    await run({ page, errors, baseUrl, boot, waitScreen, clickAndWait, buildInfo,
-      waitArmed, labelPoint, clickLabel, cardCentre, clickCard });
+    await run({
+      page,
+      errors,
+      baseUrl,
+      boot,
+      waitScreen,
+      clickAndWait,
+      buildInfo,
+      waitArmed,
+      labelPoint,
+      clickLabel,
+      cardCentre,
+      clickCard,
+    });
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser && options.browserCloseTimeoutMs) {
@@ -216,7 +329,9 @@ async function withJourney(options, run) {
       try {
         await Promise.race([
           browser.close(),
-          new Promise((resolve) => { timeout = setTimeout(resolve, options.browserCloseTimeoutMs); }),
+          new Promise((resolve) => {
+            timeout = setTimeout(resolve, options.browserCloseTimeoutMs);
+          }),
         ]);
       } finally {
         clearTimeout(timeout);
@@ -231,10 +346,14 @@ async function withJourney(options, run) {
 async function waitForBrowserValue(page, predicate, argument, { timeout = 20_000, polling = 50 } = {}) {
   assert.ok(Number.isFinite(timeout) && timeout > 0, "async browser wait requires a positive timeout");
   assert.ok(Number.isFinite(polling) && polling > 0, "async browser wait requires a positive polling interval");
-  let cancelled = false, timer;
+  let cancelled = false,
+    timer;
   const deadline = new Promise((resolve, reject) => {
     void resolve;
-    timer = setTimeout(() => reject(new Error(`async browser condition did not become truthy within ${timeout}ms`)), timeout);
+    timer = setTimeout(
+      () => reject(new Error(`async browser condition did not become truthy within ${timeout}ms`)),
+      timeout,
+    );
   });
   const poll = async () => {
     while (!cancelled) {
@@ -245,8 +364,12 @@ async function waitForBrowserValue(page, predicate, argument, { timeout = 20_000
     }
     return undefined;
   };
-  try { return await Promise.race([poll(), deadline]); }
-  finally { cancelled = true; clearTimeout(timer); }
+  try {
+    return await Promise.race([poll(), deadline]);
+  } finally {
+    cancelled = true;
+    clearTimeout(timer);
+  }
 }
 
 module.exports = { withJourney, waitForBrowserValue };

@@ -8,20 +8,34 @@ function paeth(left, above, upperLeft) {
   const leftDistance = Math.abs(estimate - left);
   const aboveDistance = Math.abs(estimate - above);
   const upperLeftDistance = Math.abs(estimate - upperLeft);
-  return leftDistance <= aboveDistance && leftDistance <= upperLeftDistance ? left : aboveDistance <= upperLeftDistance ? above : upperLeft;
+  return leftDistance <= aboveDistance && leftDistance <= upperLeftDistance
+    ? left
+    : aboveDistance <= upperLeftDistance
+      ? above
+      : upperLeft;
 }
 
 /** Decodes the non-interlaced 8-bit RGB/RGBA screenshots emitted by Playwright. */
 function decodePng(png, capturedAtMs = Date.now()) {
   assert.equal(png.subarray(0, 8).toString("hex"), PNG_SIGNATURE, "Class-C observation must be a PNG screenshot");
-  let cursor = 8, width = 0, height = 0, colorType = -1, bitDepth = -1;
+  let cursor = 8,
+    width = 0,
+    height = 0,
+    colorType = -1,
+    bitDepth = -1;
   const idat = [];
   while (cursor < png.length) {
-    const length = png.readUInt32BE(cursor); cursor += 4;
-    const type = png.subarray(cursor, cursor + 4).toString("ascii"); cursor += 4;
-    const payload = png.subarray(cursor, cursor + length); cursor += length + 4;
+    const length = png.readUInt32BE(cursor);
+    cursor += 4;
+    const type = png.subarray(cursor, cursor + 4).toString("ascii");
+    cursor += 4;
+    const payload = png.subarray(cursor, cursor + length);
+    cursor += length + 4;
     if (type === "IHDR") {
-      width = payload.readUInt32BE(0); height = payload.readUInt32BE(4); bitDepth = payload[8]; colorType = payload[9];
+      width = payload.readUInt32BE(0);
+      height = payload.readUInt32BE(4);
+      bitDepth = payload[8];
+      colorType = payload[9];
     } else if (type === "IDAT") idat.push(payload);
     else if (type === "IEND") break;
   }
@@ -37,14 +51,32 @@ function decodePng(png, capturedAtMs = Date.now()) {
     const row = raw.subarray(y * stride, (y + 1) * stride);
     const prior = y === 0 ? null : raw.subarray((y - 1) * stride, y * stride);
     for (let x = 0; x < stride; x += 1) {
-      const value = inflated[source++]; const left = x >= channels ? row[x - channels] : 0; const above = prior?.[x] ?? 0; const upperLeft = x >= channels ? prior?.[x - channels] ?? 0 : 0;
-      row[x] = filter === 0 ? value : filter === 1 ? (value + left) & 255 : filter === 2 ? (value + above) & 255
-        : filter === 3 ? (value + Math.floor((left + above) / 2)) & 255 : filter === 4 ? (value + paeth(left, above, upperLeft)) & 255 : (() => { throw new Error(`unsupported PNG filter ${String(filter)}`); })();
+      const value = inflated[source++];
+      const left = x >= channels ? row[x - channels] : 0;
+      const above = prior?.[x] ?? 0;
+      const upperLeft = x >= channels ? (prior?.[x - channels] ?? 0) : 0;
+      row[x] =
+        filter === 0
+          ? value
+          : filter === 1
+            ? (value + left) & 255
+            : filter === 2
+              ? (value + above) & 255
+              : filter === 3
+                ? (value + Math.floor((left + above) / 2)) & 255
+                : filter === 4
+                  ? (value + paeth(left, above, upperLeft)) & 255
+                  : (() => {
+                      throw new Error(`unsupported PNG filter ${String(filter)}`);
+                    })();
     }
   }
   const rgba = new Uint8Array(width * height * 4);
   for (let pixel = 0; pixel < width * height; pixel += 1) {
-    rgba[pixel * 4] = raw[pixel * channels]; rgba[pixel * 4 + 1] = raw[pixel * channels + 1]; rgba[pixel * 4 + 2] = raw[pixel * channels + 2]; rgba[pixel * 4 + 3] = channels === 4 ? raw[pixel * channels + 3] : 255;
+    rgba[pixel * 4] = raw[pixel * channels];
+    rgba[pixel * 4 + 1] = raw[pixel * channels + 1];
+    rgba[pixel * 4 + 2] = raw[pixel * channels + 2];
+    rgba[pixel * 4 + 3] = channels === 4 ? raw[pixel * channels + 3] : 255;
   }
   return { width, height, rgba, capturedAtMs };
 }

@@ -9,19 +9,27 @@ const pwaUpdate = new PwaUpdateController();
 void bootstrapTear("standalone", async ({ surfaces, engineeringQuery }) => {
   const { composeTearApplication } = await import("../app/shell/composition");
   const browserIndexedDb = await browserIndexedDbForTestStorage();
-  await composeTearApplication({ target: "standalone", createCloud: createStandaloneCloud, pwaUpdate, surfaces, engineeringQuery,
-    ...(browserIndexedDb === undefined ? {} : { browserIndexedDb }) });
+  await composeTearApplication({
+    target: "standalone",
+    createCloud: createStandaloneCloud,
+    pwaUpdate,
+    surfaces,
+    engineeringQuery,
+    ...(browserIndexedDb === undefined ? {} : { browserIndexedDb }),
+  });
 });
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
-  pwaUpdate.install(registerSW({
-    immediate: true,
-    onOfflineReady() {
-      document.documentElement.dataset.offlineReady = "true";
-    },
-    onNeedRefresh() {
-      document.documentElement.dataset.updateReady = "true";
-      pwaUpdate.markReady();
-    },
-  }));
+  pwaUpdate.install(
+    registerSW({
+      immediate: true,
+      onOfflineReady() {
+        document.documentElement.dataset.offlineReady = "true";
+      },
+      onNeedRefresh() {
+        document.documentElement.dataset.updateReady = "true";
+        pwaUpdate.markReady();
+      },
+    }),
+  );
 }

@@ -4,7 +4,9 @@ import {
   type FirebasePublicationAuth,
 } from "../../src/platform/firebase-publication-bearer";
 
-function auth(input: Readonly<{ readonly anonymous?: boolean; readonly token?: string; readonly fail?: boolean }> = {}): FirebasePublicationAuth {
+function auth(
+  input: Readonly<{ readonly anonymous?: boolean; readonly token?: string; readonly fail?: boolean }> = {},
+): FirebasePublicationAuth {
   return {
     currentUser: {
       isAnonymous: input.anonymous === true,

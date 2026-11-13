@@ -17,7 +17,10 @@ const catalog = JSON.parse(
 ) as MusicCatalog;
 
 const opts = (seed = 1) => ({
-  catalog, context: "gameplay" as const, stationState: createStationState(), seed,
+  catalog,
+  context: "gameplay" as const,
+  stationState: createStationState(),
+  seed,
   isLoaded: () => true,
 });
 
@@ -57,9 +60,15 @@ describe("advanced loadout", () => {
 
   it("picks deterministically from a weighted pool", () => {
     const loadout: AdvancedLoadout = {
-      slots: { gameplay: { type: "weighted-pool", entries: [
-        { workId: "beserker", weight: 3 }, { workId: "the-source", weight: 1 },
-      ] } },
+      slots: {
+        gameplay: {
+          type: "weighted-pool",
+          entries: [
+            { workId: "beserker", weight: 3 },
+            { workId: "the-source", weight: 1 },
+          ],
+        },
+      },
       vocals: "allow",
     };
     const a = resolveSlot(loadout, "gameplay", opts(99));
@@ -70,9 +79,15 @@ describe("advanced loadout", () => {
 
   it("ignores zero-weight pool entries", () => {
     const loadout: AdvancedLoadout = {
-      slots: { gameplay: { type: "weighted-pool", entries: [
-        { workId: "beserker", weight: 0 }, { workId: "the-source", weight: 1 },
-      ] } },
+      slots: {
+        gameplay: {
+          type: "weighted-pool",
+          entries: [
+            { workId: "beserker", weight: 0 },
+            { workId: "the-source", weight: 1 },
+          ],
+        },
+      },
       vocals: "allow",
     };
     for (const seed of [1, 2, 3, 7, 11]) {

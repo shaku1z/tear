@@ -69,40 +69,64 @@ export interface TearWorldTransientStateOptions {
 }
 
 const NEUTRAL_FEEL: Readonly<TearWorldFeelState> = Object.freeze({
-  timeScale: 1, zoom: 1, flash: 0, bannerSeconds: 0,
-  worldZoom: 1, worldZoomTarget: 1, rankPopupSeconds: 0, rankPopupText: "",
+  timeScale: 1,
+  zoom: 1,
+  flash: 0,
+  bannerSeconds: 0,
+  worldZoom: 1,
+  worldZoomTarget: 1,
+  rankPopupSeconds: 0,
+  rankPopupText: "",
 });
 
 const NEUTRAL_OPENING: Readonly<TearWorldOpeningState> = Object.freeze({
-  throwCooldown: 0, wasDashing: false, wasSwinging: false, wasOnGround: true,
-  dashGhostTime: 0, landingVelocity: 0,
+  throwCooldown: 0,
+  wasDashing: false,
+  wasSwinging: false,
+  wasOnGround: true,
+  dashGhostTime: 0,
+  landingVelocity: 0,
 });
 
 /** Creates one isolated set of transient records; nothing is shared between worlds. */
-export function createTearWorldTransientState(
-  options: TearWorldTransientStateOptions = {},
-): TearWorldTransientState {
+export function createTearWorldTransientState(options: TearWorldTransientStateOptions = {}): TearWorldTransientState {
   const protection: TearWorldOpeningProtection = { active: false, lastMode: null, ...options.protection };
   const opening: TearWorldOpeningState = { ...NEUTRAL_OPENING, ...options.opening };
   const impact: TearWorldImpactState = { hitStop: 0, slowMotion: 0, shake: 0, ...options.impact };
   const feel: TearWorldFeelState = { ...NEUTRAL_FEEL, ...options.feel };
   return Object.freeze({
-    protection, opening, impact, feel,
-    assignProtection(value) { protection.active = value.active; protection.lastMode = value.lastMode; },
+    protection,
+    opening,
+    impact,
+    feel,
+    assignProtection(value) {
+      protection.active = value.active;
+      protection.lastMode = value.lastMode;
+    },
     assignOpening(value) {
-      opening.throwCooldown = value.throwCooldown; opening.wasDashing = value.wasDashing;
-      opening.wasSwinging = value.wasSwinging; opening.wasOnGround = value.wasOnGround;
-      opening.dashGhostTime = value.dashGhostTime; opening.landingVelocity = value.landingVelocity;
+      opening.throwCooldown = value.throwCooldown;
+      opening.wasDashing = value.wasDashing;
+      opening.wasSwinging = value.wasSwinging;
+      opening.wasOnGround = value.wasOnGround;
+      opening.dashGhostTime = value.dashGhostTime;
+      opening.landingVelocity = value.landingVelocity;
     },
     assignImpact(value) {
-      impact.hitStop = value.hitStop; impact.slowMotion = value.slowMotion; impact.shake = value.shake;
+      impact.hitStop = value.hitStop;
+      impact.slowMotion = value.slowMotion;
+      impact.shake = value.shake;
     },
-    resetOpening() { Object.assign(opening, NEUTRAL_OPENING); },
+    resetOpening() {
+      Object.assign(opening, NEUTRAL_OPENING);
+    },
     // Run reset deliberately restores dilation and framing without clearing the
     // rank popup, matching the live host's prior reset boundary exactly.
     resetFeel() {
-      feel.timeScale = NEUTRAL_FEEL.timeScale; feel.zoom = NEUTRAL_FEEL.zoom; feel.flash = NEUTRAL_FEEL.flash;
-      feel.bannerSeconds = NEUTRAL_FEEL.bannerSeconds; feel.worldZoom = NEUTRAL_FEEL.worldZoom;
+      feel.timeScale = NEUTRAL_FEEL.timeScale;
+      feel.zoom = NEUTRAL_FEEL.zoom;
+      feel.flash = NEUTRAL_FEEL.flash;
+      feel.bannerSeconds = NEUTRAL_FEEL.bannerSeconds;
+      feel.worldZoom = NEUTRAL_FEEL.worldZoom;
       feel.worldZoomTarget = NEUTRAL_FEEL.worldZoomTarget;
     },
   } satisfies TearWorldTransientState);

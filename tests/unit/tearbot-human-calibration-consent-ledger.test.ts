@@ -13,7 +13,8 @@ describe("human calibration local consent ledger", () => {
   });
 
   it("does not treat malformed local bytes as consent", async () => {
-    const backend = createMemoryGhostVaultBackend(), ledger = new TearHumanCalibrationLocalConsentLedger(backend);
+    const backend = createMemoryGhostVaultBackend(),
+      ledger = new TearHumanCalibrationLocalConsentLedger(backend);
     await backend.put("analysis", "tearbot-human-calibration-consent:v1:signed-in-player", "not-json");
     expect(await ledger.read("signed-in-player")).toBeUndefined();
     expect(await ledger.current("signed-in-player")).toBeUndefined();

@@ -9,20 +9,62 @@ interface MappedGameplayEvent {
   readonly payload: Readonly<Record<string, unknown>>;
 }
 
-const NATIVE_WAVE_EVENTS = Object.freeze({ start: "wave.started", clear: "wave.cleared", cleared: "wave.cleared",
-  "spawn-completed": "wave.spawn-completed", boss: "boss.intro-started" }) satisfies Readonly<Record<string, TearEventId>>;
-const NATIVE_EFFECT_EVENTS = Object.freeze({ stolenBlade: "blade.stolen", revive: "player.revived", bossKill: "boss.defeated",
-  parry: "combat.perfect-parry", "perfect-parry": "combat.perfect-parry", deflect: "combat.deflect",
-  "blade-throw": "blade.thrown", "blade-recall": "blade.recalled", "blade-catch": "blade.caught",
-  "dash-start": "player.dash-started", superslam: "blade.power-slam", slam: "blade.slam",
-  updraft: "blade.launch", pickup: "system.checkpoint", tierup: "system.checkpoint" }) satisfies Readonly<Record<string, TearEventId>>;
+const NATIVE_WAVE_EVENTS = Object.freeze({
+  start: "wave.started",
+  clear: "wave.cleared",
+  cleared: "wave.cleared",
+  "spawn-completed": "wave.spawn-completed",
+  boss: "boss.intro-started",
+}) satisfies Readonly<Record<string, TearEventId>>;
+const NATIVE_EFFECT_EVENTS = Object.freeze({
+  stolenBlade: "blade.stolen",
+  revive: "player.revived",
+  bossKill: "boss.defeated",
+  parry: "combat.perfect-parry",
+  "perfect-parry": "combat.perfect-parry",
+  deflect: "combat.deflect",
+  "blade-throw": "blade.thrown",
+  "blade-recall": "blade.recalled",
+  "blade-catch": "blade.caught",
+  "dash-start": "player.dash-started",
+  superslam: "blade.power-slam",
+  slam: "blade.slam",
+  updraft: "blade.launch",
+  pickup: "system.checkpoint",
+  tierup: "system.checkpoint",
+}) satisfies Readonly<Record<string, TearEventId>>;
 const NATIVE_CAUSAL_EVENTS: ReadonlySet<TearEventId> = new Set([
-  "run.started", "run.paused", "run.resumed", "run.completed", "run.defeated", "run.abandoned", "stage.entered", "stage.exited",
-  "enemy.spawned", "enemy.defeated", "draft.selected", "tier.selected", "blade.thrown", "blade.caught",
-  "blade.throw-resolved", "projectile.spawned", "projectile.deflected", "projectile.owner-changed", "projectile.hit",
-  "projectile.expired", "world.void-rescue", ...Object.values(NATIVE_WAVE_EVENTS), ...Object.values(NATIVE_EFFECT_EVENTS),
-  "world.hazard-started", "world.hazard-resolved", "world.environment-field-started", "world.environment-field-resolved",
-  "world.environment-combat-object-link-created", "world.environment-combat-object-damaged", "world.environment-combat-object-destroyed", "world.environment-object-cleaned",
+  "run.started",
+  "run.paused",
+  "run.resumed",
+  "run.completed",
+  "run.defeated",
+  "run.abandoned",
+  "stage.entered",
+  "stage.exited",
+  "enemy.spawned",
+  "enemy.defeated",
+  "draft.selected",
+  "tier.selected",
+  "blade.thrown",
+  "blade.caught",
+  "blade.throw-resolved",
+  "projectile.spawned",
+  "projectile.deflected",
+  "projectile.owner-changed",
+  "projectile.hit",
+  "projectile.expired",
+  "world.void-rescue",
+  ...Object.values(NATIVE_WAVE_EVENTS),
+  ...Object.values(NATIVE_EFFECT_EVENTS),
+  "world.hazard-started",
+  "world.hazard-resolved",
+  "world.environment-field-started",
+  "world.environment-field-resolved",
+  "world.environment-combat-object-link-created",
+  "world.environment-combat-object-damaged",
+  "world.environment-combat-object-destroyed",
+  "world.environment-object-cleaned",
 ]);
 
 /** Keep historical IDs readable without advertising unsupported native gameplay facts. */
@@ -48,24 +90,43 @@ export type TearGameplayCausalEventSource = "engine" | "derived";
  */
 export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedGameplayEvent {
   switch (event.kind) {
-    case "run": return {
-      type: (() => {
-        // Widen before runtime validation so malformed untyped host payloads
-        // remain fail-closed even though the public port is discriminated.
-        const transition: string = event.transition;
-        return transition === "started" ? "run.started" : transition === "paused" ? "run.paused"
-          : transition === "resumed" ? "run.resumed" : transition === "completed" ? "run.completed"
-            : transition === "defeated" ? "run.defeated" : transition === "abandoned" ? "run.abandoned"
-              : (() => { throw new RangeError(`unrecognized native run transition: ${transition}`); })();
-      })(),
-      phase: event.transition === "started" || event.transition === "resumed"
-        ? "pre-simulation" : "post-simulation-commit",
-      payload: Object.freeze({
-        runId: event.runId, mode: event.mode, difficulty: event.difficulty, weapon: event.weaponId,
-        wave: event.wave, score: event.score, runTimeSeconds: event.runTimeSeconds,
-        ...(event.reason === undefined ? {} : { reason: event.reason }),
-      }),
-    };
+    case "run":
+      return {
+        type: (() => {
+          // Widen before runtime validation so malformed untyped host payloads
+          // remain fail-closed even though the public port is discriminated.
+          const transition: string = event.transition;
+          return transition === "started"
+            ? "run.started"
+            : transition === "paused"
+              ? "run.paused"
+              : transition === "resumed"
+                ? "run.resumed"
+                : transition === "completed"
+                  ? "run.completed"
+                  : transition === "defeated"
+                    ? "run.defeated"
+                    : transition === "abandoned"
+                      ? "run.abandoned"
+                      : (() => {
+                          throw new RangeError(`unrecognized native run transition: ${transition}`);
+                        })();
+        })(),
+        phase:
+          event.transition === "started" || event.transition === "resumed"
+            ? "pre-simulation"
+            : "post-simulation-commit",
+        payload: Object.freeze({
+          runId: event.runId,
+          mode: event.mode,
+          difficulty: event.difficulty,
+          weapon: event.weaponId,
+          wave: event.wave,
+          score: event.score,
+          runTimeSeconds: event.runTimeSeconds,
+          ...(event.reason === undefined ? {} : { reason: event.reason }),
+        }),
+      };
     case "stage": {
       // Numeric legacy stage facts predate the explicit transition field and
       // remain a supported compatibility form for stage entry.
@@ -74,66 +135,107 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
         throw new RangeError(`unrecognized native stage transition: ${transition}`);
       }
       return {
-      type: transition === "exited" ? "stage.exited" : "stage.entered", phase: "wave-draft-and-state-transitions",
-      payload: Object.freeze({ stage: event.stage, ...(event.stageId === undefined ? {} : { stageId: event.stageId }) }),
+        type: transition === "exited" ? "stage.exited" : "stage.entered",
+        phase: "wave-draft-and-state-transitions",
+        payload: Object.freeze({
+          stage: event.stage,
+          ...(event.stageId === undefined ? {} : { stageId: event.stageId }),
+        }),
       };
     }
     case "wave": {
       const type = (NATIVE_WAVE_EVENTS as Readonly<Record<string, TearEventId>>)[event.event];
       if (type === undefined) throw new RangeError(`unrecognized native wave marker: ${event.event}`);
-      return { type, phase: "wave-draft-and-state-transitions",
-        payload: Object.freeze({ wave: event.wave, marker: event.event }) };
+      return {
+        type,
+        phase: "wave-draft-and-state-transitions",
+        payload: Object.freeze({ wave: event.wave, marker: event.event }),
+      };
     }
-    case "spawn": return {
-      type: "enemy.spawned", phase: "wave-draft-and-state-transitions", actorId: event.actorId,
-      payload: Object.freeze({
-        actorKind: event.actorKind, x: event.x, y: event.y,
-        ...(event.variantName === undefined ? {} : { variantName: event.variantName }),
-        ...(event.variantId === undefined ? {} : { variantId: event.variantId }),
-        ...(event.bossId === undefined ? {} : { bossId: event.bossId }),
-      }),
-    };
-    case "death": return {
-      type: "enemy.defeated", phase: "deaths-and-rewards", actorId: event.actorId,
-      payload: Object.freeze({ cause: event.cause }),
-    };
-    case "loadout": return {
-      type: event.tier > 1 ? "tier.selected" : "draft.selected",
-      phase: "wave-draft-and-state-transitions",
-      payload: Object.freeze({ choiceId: event.choiceId, tier: event.tier, wave: event.wave }),
-    };
+    case "spawn":
+      return {
+        type: "enemy.spawned",
+        phase: "wave-draft-and-state-transitions",
+        actorId: event.actorId,
+        payload: Object.freeze({
+          actorKind: event.actorKind,
+          x: event.x,
+          y: event.y,
+          ...(event.variantName === undefined ? {} : { variantName: event.variantName }),
+          ...(event.variantId === undefined ? {} : { variantId: event.variantId }),
+          ...(event.bossId === undefined ? {} : { bossId: event.bossId }),
+        }),
+      };
+    case "death":
+      return {
+        type: "enemy.defeated",
+        phase: "deaths-and-rewards",
+        actorId: event.actorId,
+        payload: Object.freeze({ cause: event.cause }),
+      };
+    case "loadout":
+      return {
+        type: event.tier > 1 ? "tier.selected" : "draft.selected",
+        phase: "wave-draft-and-state-transitions",
+        payload: Object.freeze({ choiceId: event.choiceId, tier: event.tier, wave: event.wave }),
+      };
     case "weapon": {
       const nativeEvent: string = event.event;
-      const type = nativeEvent === "throw-launch" ? "blade.thrown"
-        : nativeEvent === "catch" ? "blade.caught" : nativeEvent === "throw-resolved" ? "blade.throw-resolved" : undefined;
+      const type =
+        nativeEvent === "throw-launch"
+          ? "blade.thrown"
+          : nativeEvent === "catch"
+            ? "blade.caught"
+            : nativeEvent === "throw-resolved"
+              ? "blade.throw-resolved"
+              : undefined;
       if (type === undefined) throw new RangeError(`unrecognized native weapon event: ${nativeEvent}`);
       return {
-      type,
-      phase: nativeEvent === "throw-launch" ? "player-and-blade" : "post-simulation-commit",
-      payload: Object.freeze({
-        weaponId: event.weaponId, throwId: event.throwId, x: event.x, y: event.y,
-        ...(event.damage === undefined ? {} : { damage: event.damage }),
-      }),
+        type,
+        phase: nativeEvent === "throw-launch" ? "player-and-blade" : "post-simulation-commit",
+        payload: Object.freeze({
+          weaponId: event.weaponId,
+          throwId: event.throwId,
+          x: event.x,
+          y: event.y,
+          ...(event.damage === undefined ? {} : { damage: event.damage }),
+        }),
       };
     }
     case "projectile": {
       const nativeEvent: string = event.event;
-      const type = nativeEvent === "spawned" ? "projectile.spawned"
-        : nativeEvent === "deflected" ? "projectile.deflected"
-          : nativeEvent === "owner-changed" ? "projectile.owner-changed"
-            : nativeEvent === "hit" ? "projectile.hit" : nativeEvent === "expired" ? "projectile.expired" : undefined;
+      const type =
+        nativeEvent === "spawned"
+          ? "projectile.spawned"
+          : nativeEvent === "deflected"
+            ? "projectile.deflected"
+            : nativeEvent === "owner-changed"
+              ? "projectile.owner-changed"
+              : nativeEvent === "hit"
+                ? "projectile.hit"
+                : nativeEvent === "expired"
+                  ? "projectile.expired"
+                  : undefined;
       if (type === undefined) throw new RangeError(`unrecognized native projectile event: ${nativeEvent}`);
       return {
-      type,
-      phase: nativeEvent === "spawned" ? "wave-draft-and-state-transitions"
-        : nativeEvent === "hit" || nativeEvent === "expired" ? "deaths-and-rewards" : "player-and-blade",
-      actorId: event.projectileId,
-      payload: Object.freeze({
-        x: event.x, y: event.y, vx: event.vx, vy: event.vy, owner: event.owner,
-        ...(event.sourceEnemyId === undefined ? {} : { sourceEnemyId: event.sourceEnemyId }),
-        ...(event.targetEnemyId === undefined ? {} : { targetEnemyId: event.targetEnemyId }),
-        ...(event.perfect === undefined ? {} : { perfect: event.perfect }),
-      }),
+        type,
+        phase:
+          nativeEvent === "spawned"
+            ? "wave-draft-and-state-transitions"
+            : nativeEvent === "hit" || nativeEvent === "expired"
+              ? "deaths-and-rewards"
+              : "player-and-blade",
+        actorId: event.projectileId,
+        payload: Object.freeze({
+          x: event.x,
+          y: event.y,
+          vx: event.vx,
+          vy: event.vy,
+          owner: event.owner,
+          ...(event.sourceEnemyId === undefined ? {} : { sourceEnemyId: event.sourceEnemyId }),
+          ...(event.targetEnemyId === undefined ? {} : { targetEnemyId: event.targetEnemyId }),
+          ...(event.perfect === undefined ? {} : { perfect: event.perfect }),
+        }),
       };
     }
     case "world": {
@@ -142,36 +244,70 @@ export function mapGameplayEventToCausalEvent(event: TearGameplayEvent): MappedG
         throw new RangeError(`unrecognized native world event: ${nativeEvent}`);
       }
       return {
-      type: "world.void-rescue", phase: "post-simulation-commit",
-      payload: Object.freeze({ x: event.x, y: event.y, lane: event.lane, hp: event.hp }),
+        type: "world.void-rescue",
+        phase: "post-simulation-commit",
+        payload: Object.freeze({ x: event.x, y: event.y, lane: event.lane, hp: event.hp }),
       };
     }
     case "environment": {
-      if (!["field-started", "field-resolved", "combat-object-link-created", "combat-object-damaged", "combat-object-destroyed", "object-cleaned"].includes(event.event)) {
+      if (
+        ![
+          "field-started",
+          "field-resolved",
+          "combat-object-link-created",
+          "combat-object-damaged",
+          "combat-object-destroyed",
+          "object-cleaned",
+        ].includes(event.event)
+      ) {
         throw new RangeError(`unrecognized native environment event: ${event.event}`);
       }
-      const type = event.event === "field-started" ? "world.environment-field-started"
-        : event.event === "field-resolved" ? "world.environment-field-resolved"
-          : event.event === "combat-object-link-created" ? "world.environment-combat-object-link-created"
-          : event.event === "combat-object-damaged" ? "world.environment-combat-object-damaged"
-            : event.event === "combat-object-destroyed" ? "world.environment-combat-object-destroyed" : "world.environment-object-cleaned";
+      const type =
+        event.event === "field-started"
+          ? "world.environment-field-started"
+          : event.event === "field-resolved"
+            ? "world.environment-field-resolved"
+            : event.event === "combat-object-link-created"
+              ? "world.environment-combat-object-link-created"
+              : event.event === "combat-object-damaged"
+                ? "world.environment-combat-object-damaged"
+                : event.event === "combat-object-destroyed"
+                  ? "world.environment-combat-object-destroyed"
+                  : "world.environment-object-cleaned";
       return {
-      type,
-      phase: event.event === "combat-object-damaged" || event.event === "combat-object-link-created" ? "collision-and-damage"
-        : event.event === "field-started" ? "projectiles-and-hazards"
-          : event.event === "object-cleaned" ? "post-simulation-commit" : "deaths-and-rewards",
-      actorId: event.objectId,
-      payload: Object.freeze({ event: event.event, category: event.category, objectKind: event.objectKind,
-        ...(event.integrity === undefined ? {} : { integrity: event.integrity }), ...(event.reason === undefined ? {} : { reason: event.reason }) }),
+        type,
+        phase:
+          event.event === "combat-object-damaged" || event.event === "combat-object-link-created"
+            ? "collision-and-damage"
+            : event.event === "field-started"
+              ? "projectiles-and-hazards"
+              : event.event === "object-cleaned"
+                ? "post-simulation-commit"
+                : "deaths-and-rewards",
+        actorId: event.objectId,
+        payload: Object.freeze({
+          event: event.event,
+          category: event.category,
+          objectKind: event.objectKind,
+          ...(event.integrity === undefined ? {} : { integrity: event.integrity }),
+          ...(event.reason === undefined ? {} : { reason: event.reason }),
+        }),
       };
     }
     case "effect": {
       const type = (NATIVE_EFFECT_EVENTS as Readonly<Record<string, TearEventId>>)[event.effect];
       if (type === undefined) throw new RangeError(`unrecognized native gameplay effect: ${event.effect}`);
-      return { type, phase: "post-simulation-commit",
+      return {
+        type,
+        phase: "post-simulation-commit",
         // Feedback contains no loadout identity. Only native loadout facts attest selections.
-        payload: Object.freeze({ ...(event.effect === "pickup" || event.effect === "tierup" ? { observation: "native-reward-feedback" } : {}),
-          effect: event.effect, x: event.x, y: event.y }) };
+        payload: Object.freeze({
+          ...(event.effect === "pickup" || event.effect === "tierup" ? { observation: "native-reward-feedback" } : {}),
+          effect: event.effect,
+          x: event.x,
+          y: event.y,
+        }),
+      };
     }
   }
 }
@@ -194,17 +330,22 @@ export function createGameplayCausalEvent(
   }
   const mapped = mapGameplayEventToCausalEvent(event);
   return Object.freeze({
-    format: "tear-contract", kind: "event", schemaVersion: 1,
-    id, type: mapped.type, tick: event.tick, phase: mapped.phase, sequence, source,
-    ...(mapped.actorId === undefined ? {} : { actorId: mapped.actorId }), payload: mapped.payload,
+    format: "tear-contract",
+    kind: "event",
+    schemaVersion: 1,
+    id,
+    type: mapped.type,
+    tick: event.tick,
+    phase: mapped.phase,
+    sequence,
+    source,
+    ...(mapped.actorId === undefined ? {} : { actorId: mapped.actorId }),
+    payload: mapped.payload,
   });
 }
 
 /** Host-independent native-event projection used only for live/detached equality evidence. */
-export function projectGameplayEventForParity(
-  event: TearGameplayEvent,
-  sequence: number,
-): TearSemanticEngineEventV1 {
+export function projectGameplayEventForParity(event: TearGameplayEvent, sequence: number): TearSemanticEngineEventV1 {
   if (!Number.isSafeInteger(sequence) || sequence < 0) {
     throw new RangeError("gameplay parity event sequence must be a non-negative safe integer");
   }
@@ -213,7 +354,11 @@ export function projectGameplayEventForParity(
   }
   const mapped = mapGameplayEventToCausalEvent(event);
   return Object.freeze({
-    tick: event.tick, sequence, type: mapped.type, phase: mapped.phase,
-    ...(mapped.actorId === undefined ? {} : { actorId: mapped.actorId }), payload: mapped.payload,
+    tick: event.tick,
+    sequence,
+    type: mapped.type,
+    phase: mapped.phase,
+    ...(mapped.actorId === undefined ? {} : { actorId: mapped.actorId }),
+    payload: mapped.payload,
   });
 }

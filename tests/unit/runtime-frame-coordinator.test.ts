@@ -17,66 +17,145 @@ function createHarness(initialState = "playing") {
   let now = 0;
   const events: string[] = [];
   const input: RuntimeFrameInputPort = {
-    held: new Set(), pressed: new Set(), btnHeld: {}, tJump: false,
-    allowLock: false, mode: "keyboard", locked: false, uiMode: false,
-    updateUI: () => { events.push("input"); },
+    held: new Set(),
+    pressed: new Set(),
+    btnHeld: {},
+    tJump: false,
+    allowLock: false,
+    mode: "keyboard",
+    locked: false,
+    uiMode: false,
+    updateUI: () => {
+      events.push("input");
+    },
     takeClick: () => null,
     touchActive: () => touch,
     pausePressed: () => pause,
     escapePressed: () => escape,
-    endFrame: () => { events.push("end-input"); },
+    endFrame: () => {
+      events.push("end-input");
+    },
   };
-  const pad = { connected: true, index: 0, poll: vi.fn(() => { events.push("pad"); }) };
+  const pad = {
+    connected: true,
+    index: 0,
+    poll: vi.fn(() => {
+      events.push("pad");
+    }),
+  };
   const options: RuntimeFrameCoordinatorOptions = {
     now: () => ++now,
     state: () => state,
-    setState: (next) => { events.push(`state:${next}`); state = next; },
-    input, pad,
+    setState: (next) => {
+      events.push(`state:${next}`);
+      state = next;
+    },
+    input,
+    pad,
     navigator: { getGamepads: () => [] },
-    document: { body: { dataset: {} }, exitPointerLock: () => { events.push("unlock"); } },
+    document: {
+      body: { dataset: {} },
+      exitPointerLock: () => {
+        events.push("unlock");
+      },
+    },
     canvas: { clientWidth: 1280, clientHeight: 720 },
     cinema: {
-      get active() { return cinemaActive; },
-      get playerMode() { return cinemaPlayerMode; },
-      update: () => { events.push("cinema"); },
+      get active() {
+        return cinemaActive;
+      },
+      get playerMode() {
+        return cinemaPlayerMode;
+      },
+      update: () => {
+        events.push("cinema");
+      },
     },
     clipper: null,
     autoPauseDisconnect: () => true,
-    advancePlayingPrelude: () => { events.push("prelude"); },
-    advancePlayingSimulation: () => { events.push("simulation"); return simulationSteps; },
-    resetSimulation: () => { events.push("reset"); },
-    requestPointerLock: () => { events.push("request-lock"); },
-    exitReplay: () => { events.push("exit-replay"); },
-    advanceClocks: () => { events.push("clocks"); },
-    advanceContinue: () => { events.push("continue"); },
-    updateAttract: (_delta, menu) => { events.push(`attract:${String(menu)}`); },
+    advancePlayingPrelude: () => {
+      events.push("prelude");
+    },
+    advancePlayingSimulation: () => {
+      events.push("simulation");
+      return simulationSteps;
+    },
+    resetSimulation: () => {
+      events.push("reset");
+    },
+    requestPointerLock: () => {
+      events.push("request-lock");
+    },
+    exitReplay: () => {
+      events.push("exit-replay");
+    },
+    advanceClocks: () => {
+      events.push("clocks");
+    },
+    advanceContinue: () => {
+      events.push("continue");
+    },
+    updateAttract: (_delta, menu) => {
+      events.push(`attract:${String(menu)}`);
+    },
     isMenuScreen: (current) => current === "menu",
-    gameplayStart: () => { events.push("gameplay-start"); },
-    gameplayStop: () => { events.push("gameplay-stop"); },
+    gameplayStart: () => {
+      events.push("gameplay-start");
+    },
+    gameplayStop: () => {
+      events.push("gameplay-stop");
+    },
     cssPerLogicalPixel: () => cssPerLogicalPixel,
-    setUiDensity: (density) => { events.push(`density:${density.touch ? "touch" : "desktop"}@${String(density.cssPerLogicalPixel)}`); },
-    syncMusic: () => { events.push("music"); },
-    render: () => { events.push("render"); },
-    handleUi: () => { events.push("ui"); },
+    setUiDensity: (density) => {
+      events.push(`density:${density.touch ? "touch" : "desktop"}@${String(density.cssPerLogicalPixel)}`);
+    },
+    syncMusic: () => {
+      events.push("music");
+    },
+    render: () => {
+      events.push("render");
+    },
+    handleUi: () => {
+      events.push("ui");
+    },
     diagnostics: {
-      record: (name) => { events.push(`record:${name}`); },
-      gauge: (name) => { events.push(`gauge:${name}`); },
+      record: (name) => {
+        events.push(`record:${name}`);
+      },
+      gauge: (name) => {
+        events.push(`gauge:${name}`);
+      },
     },
     entityCounts: () => ({ enemies: 2, projectiles: 3, effects: 4 }),
   };
   return {
-    coordinator: new RuntimeFrameCoordinator(options), events, input, pad,
+    coordinator: new RuntimeFrameCoordinator(options),
+    events,
+    input,
+    pad,
     state: () => state,
-    setTouch: (value: boolean) => { touch = value; },
-    setEscape: (value: boolean) => { escape = value; },
-    setPause: (value: boolean) => { pause = value; },
+    setTouch: (value: boolean) => {
+      touch = value;
+    },
+    setEscape: (value: boolean) => {
+      escape = value;
+    },
+    setPause: (value: boolean) => {
+      pause = value;
+    },
     setCinema: (active: boolean, playerMode?: string) => {
       cinemaActive = active;
       cinemaPlayerMode = playerMode;
     },
-    setCssPerLogicalPixel: (value: number) => { cssPerLogicalPixel = value; },
-    setSimulationSteps: (value: number) => { simulationSteps = value; },
-    advanceClock: (milliseconds: number) => { now += milliseconds; },
+    setCssPerLogicalPixel: (value: number) => {
+      cssPerLogicalPixel = value;
+    },
+    setSimulationSteps: (value: number) => {
+      simulationSteps = value;
+    },
+    advanceClock: (milliseconds: number) => {
+      now += milliseconds;
+    },
     options,
   };
 }
@@ -87,12 +166,28 @@ describe("RuntimeFrameCoordinator", () => {
     harness.coordinator.run(1 / 60);
 
     expect(harness.events.slice(0, 12)).toEqual([
-      "pad", "input", "prelude", "simulation", "clocks", "gameplay-start",
-      "continue", "attract:false", "music", "render", "ui", "end-input",
+      "pad",
+      "input",
+      "prelude",
+      "simulation",
+      "clocks",
+      "gameplay-start",
+      "continue",
+      "attract:false",
+      "music",
+      "render",
+      "ui",
+      "end-input",
     ]);
     expect(harness.events.slice(-8)).toEqual([
-      "record:simulation", "record:render", "record:frame", "record:frameInterval", "record:outsideFrameWork",
-      "gauge:enemies", "gauge:projectiles", "gauge:effects",
+      "record:simulation",
+      "record:render",
+      "record:frame",
+      "record:frameInterval",
+      "record:outsideFrameWork",
+      "gauge:enemies",
+      "gauge:projectiles",
+      "gauge:effects",
     ]);
     expect(harness.input.allowLock).toBe(true);
   });

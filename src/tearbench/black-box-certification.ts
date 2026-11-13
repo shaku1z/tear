@@ -108,8 +108,11 @@ function assertTarget(target: BlackBoxCertificationTarget): void {
   if (target.confidence !== BLACK_BOX_CERTIFICATION_CONFIDENCE) {
     throw new RangeError("only the declared one-sided 95% confidence interval is supported");
   }
-  if (!Number.isFinite(target.requiredWilsonLowerBound)
-    || target.requiredWilsonLowerBound <= 0 || target.requiredWilsonLowerBound > 1) {
+  if (
+    !Number.isFinite(target.requiredWilsonLowerBound) ||
+    target.requiredWilsonLowerBound <= 0 ||
+    target.requiredWilsonLowerBound > 1
+  ) {
     throw new RangeError("target requiredWilsonLowerBound must be within (0, 1]");
   }
 }
@@ -129,7 +132,10 @@ function immutableAttempt(input: BlackBoxCertificationAttemptInput): BlackBoxCer
   if (role === "primary" && input.diagnosticRetryOf !== undefined) {
     throw new TypeError("only diagnostic retries may declare diagnosticRetryOf");
   }
-  if (role === "diagnostic-retry" && (input.diagnosticRetryOf === undefined || input.diagnosticRetryOf.trim().length === 0)) {
+  if (
+    role === "diagnostic-retry" &&
+    (input.diagnosticRetryOf === undefined || input.diagnosticRetryOf.trim().length === 0)
+  ) {
     throw new TypeError("diagnostic retries must identify their original attempt");
   }
   const artifacts = Object.freeze({
@@ -160,23 +166,30 @@ function immutableAttempt(input: BlackBoxCertificationAttemptInput): BlackBoxCer
 }
 
 /** Creates a copied, frozen evidence object and rejects any Class A/B affordance. */
-export function createBlackBoxCertificationAttempt(input: BlackBoxCertificationAttemptInput): BlackBoxCertificationAttempt {
+export function createBlackBoxCertificationAttempt(
+  input: BlackBoxCertificationAttemptInput,
+): BlackBoxCertificationAttempt {
   return immutableAttempt(input);
 }
 
 /** One-sided lower Wilson confidence limit with the fixed 95% certification z-score. */
 export function oneSidedWilsonLowerBound95(successes: number, attempts: number): number {
-  if (!Number.isSafeInteger(successes) || !Number.isSafeInteger(attempts)
-    || attempts < 0 || successes < 0 || successes > attempts) {
+  if (
+    !Number.isSafeInteger(successes) ||
+    !Number.isSafeInteger(attempts) ||
+    attempts < 0 ||
+    successes < 0 ||
+    successes > attempts
+  ) {
     throw new RangeError("Wilson successes must be within a non-negative integer denominator");
   }
   if (attempts === 0) return 0;
   const proportion = successes / attempts;
   const zSquared = ONE_SIDED_95_WILSON_Z ** 2;
-  const numerator = proportion + zSquared / (2 * attempts)
-    - ONE_SIDED_95_WILSON_Z * Math.sqrt(
-      proportion * (1 - proportion) / attempts + zSquared / (4 * attempts ** 2),
-    );
+  const numerator =
+    proportion +
+    zSquared / (2 * attempts) -
+    ONE_SIDED_95_WILSON_Z * Math.sqrt((proportion * (1 - proportion)) / attempts + zSquared / (4 * attempts ** 2));
   return Math.max(0, numerator / (1 + zSquared / attempts));
 }
 
@@ -189,11 +202,13 @@ function copyAttempt(attempt: BlackBoxCertificationAttempt): BlackBoxCertificati
  * launch remains in `denominator`, including incomplete launches; a diagnostic
  * retry is retained separately and cannot replace, remove, or improve it.
  */
-export function createBlackBoxCertificationReport(input: Readonly<{
-  attempts: readonly BlackBoxCertificationAttempt[];
-  diagnosticRetries?: readonly BlackBoxCertificationAttempt[];
-  target?: BlackBoxCertificationTarget;
-}>): BlackBoxCertificationReport {
+export function createBlackBoxCertificationReport(
+  input: Readonly<{
+    attempts: readonly BlackBoxCertificationAttempt[];
+    diagnosticRetries?: readonly BlackBoxCertificationAttempt[];
+    target?: BlackBoxCertificationTarget;
+  }>,
+): BlackBoxCertificationReport {
   const target = input.target ?? NORMAL_ADVENTURE_BLACK_BOX_TARGET;
   assertTarget(target);
   const attempts = input.attempts.map(copyAttempt);
@@ -219,9 +234,12 @@ export function createBlackBoxCertificationReport(input: Readonly<{
   const denominator = attempts.length;
   const completionRate = denominator === 0 ? 0 : successes / denominator;
   const wilsonLowerBound = oneSidedWilsonLowerBound95(successes, denominator);
-  const disposition: BlackBoxCertificationDisposition = denominator < target.requiredAttempts
-    ? "incomplete"
-    : wilsonLowerBound >= target.requiredWilsonLowerBound ? "pass" : "fail";
+  const disposition: BlackBoxCertificationDisposition =
+    denominator < target.requiredAttempts
+      ? "incomplete"
+      : wilsonLowerBound >= target.requiredWilsonLowerBound
+        ? "pass"
+        : "fail";
   const data = {
     target: Object.freeze({ ...target }),
     attempts: Object.freeze(attempts),

@@ -6,13 +6,7 @@ import { WEAPONS, getWeapon } from "../../src/gameplay/weapons";
 
 describe("gameplay definition catalogues", () => {
   it("preserves every weapon and its distinct throw identity", () => {
-    expect(WEAPONS.map((weapon) => weapon.id)).toEqual([
-      "sword",
-      "hammer",
-      "greatsword",
-      "chainblade",
-      "riftlock",
-    ]);
+    expect(WEAPONS.map((weapon) => weapon.id)).toEqual(["sword", "hammer", "greatsword", "chainblade", "riftlock"]);
     expect(new Set(WEAPONS.map((weapon) => weapon.throwIdentity)).size).toBe(5);
     expect(getWeapon("missing").id).toBe("sword");
 

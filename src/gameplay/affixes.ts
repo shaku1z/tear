@@ -37,9 +37,14 @@ export interface EnemyPreset {
 }
 
 function blendHex(a: string, b: string, t: number): string {
-  const pa = parseInt(a.replace("#", ""), 16), pb = parseInt(b.replace("#", ""), 16);
-  const ar = (pa >> 16) & 255, ag = (pa >> 8) & 255, ab = pa & 255;
-  const br = (pb >> 16) & 255, bg = (pb >> 8) & 255, bb = pb & 255;
+  const pa = parseInt(a.replace("#", ""), 16),
+    pb = parseInt(b.replace("#", ""), 16);
+  const ar = (pa >> 16) & 255,
+    ag = (pa >> 8) & 255,
+    ab = pa & 255;
+  const br = (pb >> 16) & 255,
+    bg = (pb >> 8) & 255,
+    bb = pb & 255;
   const r = Math.round(ar + (br - ar) * t) & 255;
   const g = Math.round(ag + (bg - ag) * t) & 255;
   const bl = Math.round(ab + (bb - ab) * t) & 255;
@@ -48,20 +53,61 @@ function blendHex(a: string, b: string, t: number): string {
 
 const AFFIXES: readonly EnemyAffix[] = [
   // tankier / heavier
-  { id: "tank",  color: "#6b4a2a", appliesTo: () => true,
-    apply: (e) => { e.hp *= 1.8; e.maxHp *= 1.8; e.weight *= 1.7; } },
-  { id: "swift", color: "#2fa0f0", appliesTo: (e) => e.kind !== "armored",
-    apply: (e) => { e.speedMult *= 1.45; } },
+  {
+    id: "tank",
+    color: "#6b4a2a",
+    appliesTo: () => true,
+    apply: (e) => {
+      e.hp *= 1.8;
+      e.maxHp *= 1.8;
+      e.weight *= 1.7;
+    },
+  },
+  {
+    id: "swift",
+    color: "#2fa0f0",
+    appliesTo: (e) => e.kind !== "armored",
+    apply: (e) => {
+      e.speedMult *= 1.45;
+    },
+  },
   // more / faster shooting (ranged only)
-  { id: "rapid", color: "#ef5520", appliesTo: (e) => e.kind === "ranged",
-    apply: (e) => { e.fireRateMult *= 0.5; } },
-  { id: "volley", color: "#d65bd6", appliesTo: (e) => e.kind === "ranged",
-    apply: (e) => { e.volley = 3; } },
+  {
+    id: "rapid",
+    color: "#ef5520",
+    appliesTo: (e) => e.kind === "ranged",
+    apply: (e) => {
+      e.fireRateMult *= 0.5;
+    },
+  },
+  {
+    id: "volley",
+    color: "#d65bd6",
+    appliesTo: (e) => e.kind === "ranged",
+    apply: (e) => {
+      e.volley = 3;
+    },
+  },
   // armed & shielded
-  { id: "armed",  color: "#cc2030", appliesTo: (e) => e.kind === "charger",
-    apply: (e) => { e.contactReach = 24; e.contactDmg *= 1.3; e.hw *= 1.12; } },
-  { id: "warded", color: "#13c4d6", appliesTo: () => true,
-    apply: (e) => { e.shield = e.maxHp * 0.6; e.maxShield = e.shield; } },
+  {
+    id: "armed",
+    color: "#cc2030",
+    appliesTo: (e) => e.kind === "charger",
+    apply: (e) => {
+      e.contactReach = 24;
+      e.contactDmg *= 1.3;
+      e.hw *= 1.12;
+    },
+  },
+  {
+    id: "warded",
+    color: "#13c4d6",
+    appliesTo: () => true,
+    apply: (e) => {
+      e.shield = e.maxHp * 0.6;
+      e.maxShield = e.shield;
+    },
+  },
 ];
 
 function applyAffix(e: AffixEnemy, id: string): boolean {
@@ -76,7 +122,7 @@ function finalizeAffixes(e: AffixEnemy): void {
   e.affixCount = e.affixes.length;
   for (const id of e.affixes) {
     const a = AFFIXES.find((x) => x.id === id);
-    if (a) e.color = blendHex(e.color, a.color, 0.42);   // tint toward each affix
+    if (a) e.color = blendHex(e.color, a.color, 0.42); // tint toward each affix
   }
 }
 
@@ -98,9 +144,9 @@ function rollAffixes(e: AffixEnemy, wave: number, random: RandomSource): void {
 
 // authored sub-types: a base type + a fixed, coherent affix combo
 const PRESETS: readonly EnemyPreset[] = [
-  { type: "ranged",  affixes: ["rapid", "volley"] },   // Gunner
-  { type: "charger", affixes: ["tank", "armed"] },      // Brute
-  { type: "armored", affixes: ["warded", "tank"] },     // Sentinel
+  { type: "ranged", affixes: ["rapid", "volley"] }, // Gunner
+  { type: "charger", affixes: ["tank", "armed"] }, // Brute
+  { type: "armored", affixes: ["warded", "tank"] }, // Sentinel
 ];
 function applyPreset(e: AffixEnemy, preset: EnemyPreset): void {
   for (const id of preset.affixes) applyAffix(e, id);

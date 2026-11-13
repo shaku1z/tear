@@ -18,18 +18,24 @@ export function renderBloomWellPresentation(
   const active = facts.state === "active";
   const cooldown = facts.state === "cooldown";
   if (!warning && !active && !cooldown) return;
-  const pulse = facts.motionScale === 0 ? 1 : 1 - 0.18 * facts.flashScale + Math.sin(timeSeconds * 5) * 0.18 * facts.flashScale;
-  canvas.save(); canvas.lineCap = "round";
+  const pulse =
+    facts.motionScale === 0 ? 1 : 1 - 0.18 * facts.flashScale + Math.sin(timeSeconds * 5) * 0.18 * facts.flashScale;
+  canvas.save();
+  canvas.lineCap = "round";
   canvas.strokeStyle = facts.highContrast ? "#4b00d1" : "#e4c95a";
-  canvas.lineWidth = facts.highContrast ? 5 : (warning ? 3 : 2);
+  canvas.lineWidth = facts.highContrast ? 5 : warning ? 3 : 2;
   canvas.globalAlpha = cooldown ? 0.28 : pulse;
   canvas.setLineDash(warning ? [12, 8] : []);
-  canvas.beginPath(); canvas.ellipse(centerX, bottom, radius, Math.max(10, radius * 0.22), 0, 0, Math.PI * 2);
+  canvas.beginPath();
+  canvas.ellipse(centerX, bottom, radius, Math.max(10, radius * 0.22), 0, 0, Math.PI * 2);
   if (!facts.highContrast && !cooldown) {
     // Separate the existing boundary from bright water and moss without
     // widening the field or making an expired response look active.
-    canvas.strokeStyle = "#10251e"; canvas.lineWidth = warning ? 7 : 6; canvas.stroke();
-    canvas.strokeStyle = "#e4c95a"; canvas.lineWidth = warning ? 3 : 2;
+    canvas.strokeStyle = "#10251e";
+    canvas.lineWidth = warning ? 7 : 6;
+    canvas.stroke();
+    canvas.strokeStyle = "#e4c95a";
+    canvas.lineWidth = warning ? 3 : 2;
   }
   canvas.stroke();
   canvas.setLineDash([]);
@@ -38,7 +44,9 @@ export function renderBloomWellPresentation(
     column.addColorStop(0, "rgba(228,201,90,0)");
     column.addColorStop(0.55, facts.highContrast ? "rgba(75,0,209,0.20)" : "rgba(134,205,178,0.24)");
     column.addColorStop(1, facts.highContrast ? "rgba(75,0,209,0.34)" : "rgba(228,201,90,0.26)");
-    canvas.globalAlpha = 1; canvas.fillStyle = column; canvas.fillRect(centerX - radius, top, radius * 2, height);
+    canvas.globalAlpha = 1;
+    canvas.fillStyle = column;
+    canvas.fillRect(centerX - radius, top, radius * 2, height);
   }
   if (!facts.lowGraphics) {
     canvas.fillStyle = facts.highContrast ? "#4b00d1" : "#f2dc7c";
@@ -47,11 +55,16 @@ export function renderBloomWellPresentation(
       const phase = index * 1.047 + timeSeconds * facts.motionScale;
       const x = centerX + Math.cos(phase) * radius * (0.35 + index * 0.07);
       const y = bottom - 18 - (index / Math.max(1, petals - 1)) * height * 0.76;
-      canvas.save(); canvas.translate(x, y); canvas.rotate(phase * 0.5); canvas.fillRect(-4, -2, 8, 4); canvas.restore();
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(phase * 0.5);
+      canvas.fillRect(-4, -2, 8, 4);
+      canvas.restore();
     }
   }
   if (facts.highContrast) {
-    canvas.globalAlpha = 0.9; canvas.strokeRect(centerX - radius, top, radius * 2, height);
+    canvas.globalAlpha = 0.9;
+    canvas.strokeRect(centerX - radius, top, radius * 2, height);
   }
   canvas.restore();
 }

@@ -6,27 +6,12 @@ import { loadRegistry, translateMutableGeneratedDescriptions } from "./check-ter
 
 const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
-const SOURCE_PATH = resolve(
-  REPOSITORY_ROOT,
-  "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md",
-);
-const PLAN_PATH = resolve(
-  REPOSITORY_ROOT,
-  "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
-);
+const SOURCE_PATH = resolve(REPOSITORY_ROOT, "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md");
+const PLAN_PATH = resolve(REPOSITORY_ROOT, "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md");
 const JSON_PATH = resolve(REPOSITORY_ROOT, "docs/tearbench-ghost3-requirements.json");
-const MARKDOWN_PATH = resolve(
-  REPOSITORY_ROOT,
-  "docs/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md",
-);
-const EVIDENCE_CATALOG_PATH = resolve(
-  REPOSITORY_ROOT,
-  "docs/tearbench-ghost3-evidence-catalog.json",
-);
-const DASHBOARD_PATH = resolve(
-  REPOSITORY_ROOT,
-  "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md",
-);
+const MARKDOWN_PATH = resolve(REPOSITORY_ROOT, "docs/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md");
+const EVIDENCE_CATALOG_PATH = resolve(REPOSITORY_ROOT, "docs/tearbench-ghost3-evidence-catalog.json");
+const DASHBOARD_PATH = resolve(REPOSITORY_ROOT, "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md");
 const TERMINOLOGY_REGISTRY = loadRegistry(REPOSITORY_ROOT);
 
 const EXPECTED_SOURCE = Object.freeze({
@@ -240,10 +225,7 @@ function sourceSha256(value) {
 }
 
 function normalizeText(value) {
-  return value
-    .replaceAll(/\r?\n/g, " ")
-    .replaceAll(/\s+/g, " ")
-    .trim();
+  return value.replaceAll(/\r?\n/g, " ").replaceAll(/\s+/g, " ").trim();
 }
 
 function stableId(prefix, ...parts) {
@@ -294,24 +276,9 @@ function headingCounts(lines) {
   return counts;
 }
 
-function occurrence(
-  kind,
-  startLine,
-  endLine,
-  text,
-  headingPath,
-  numberedSection,
-  metadata = {},
-) {
+function occurrence(kind, startLine, endLine, text, headingPath, numberedSection, metadata = {}) {
   const normalized = normalizeText(text);
-  const id = stableId(
-    "SRC",
-    kind,
-    String(startLine),
-    String(endLine),
-    headingPath.join(" > "),
-    normalized,
-  );
+  const id = stableId("SRC", kind, String(startLine), String(endLine), headingPath.join(" > "), normalized);
   return {
     id,
     kind,
@@ -362,15 +329,10 @@ export function parseSource(sourceText) {
         const sectionMatch = title.match(/^(\d+)\.\s+/);
         if (sectionMatch !== null) numberedSection = Number(sectionMatch[1]);
       }
-      const item = occurrence(
-        "heading",
-        index + 1,
-        index + 1,
-        line,
-        headingStack.filter(Boolean),
-        numberedSection,
-        { level, title },
-      );
+      const item = occurrence("heading", index + 1, index + 1, line, headingStack.filter(Boolean), numberedSection, {
+        level,
+        title,
+      });
       occurrences.push(item);
       headings.push(item);
       index += 1;
@@ -382,31 +344,26 @@ export function parseSource(sourceText) {
       index += 1;
       while (index < lines.length && !/^\s*```/.test(lines[index])) index += 1;
       if (index < lines.length) index += 1;
-      occurrences.push(occurrence(
-        "code-block",
-        start + 1,
-        index,
-        lines.slice(start, index).join("\n"),
-        headingStack.filter(Boolean),
-        numberedSection,
-      ));
+      occurrences.push(
+        occurrence(
+          "code-block",
+          start + 1,
+          index,
+          lines.slice(start, index).join("\n"),
+          headingStack.filter(Boolean),
+          numberedSection,
+        ),
+      );
       continue;
     }
 
     if (/^\s*\|.*\|\s*$/.test(line)) {
       const kind = isTableSeparator(line)
         ? "table-separator"
-        : (index + 1 < lines.length && isTableSeparator(lines[index + 1])
+        : index + 1 < lines.length && isTableSeparator(lines[index + 1])
           ? "table-header"
-          : "table-row");
-      occurrences.push(occurrence(
-        kind,
-        index + 1,
-        index + 1,
-        line,
-        headingStack.filter(Boolean),
-        numberedSection,
-      ));
+          : "table-row";
+      occurrences.push(occurrence(kind, index + 1, index + 1, line, headingStack.filter(Boolean), numberedSection));
       index += 1;
       continue;
     }
@@ -415,48 +372,46 @@ export function parseSource(sourceText) {
       const start = index;
       index += 1;
       while (
-        index < lines.length
-        && lines[index].trim() !== ""
-        && !/^(?:#{1,6})\s+/.test(lines[index])
-        && !/^\s*```/.test(lines[index])
-        && !/^\s*\|.*\|\s*$/.test(lines[index])
-        && !/^\s*(?:[-+*]|\d+[.)])\s+/.test(lines[index])
+        index < lines.length &&
+        lines[index].trim() !== "" &&
+        !/^(?:#{1,6})\s+/.test(lines[index]) &&
+        !/^\s*```/.test(lines[index]) &&
+        !/^\s*\|.*\|\s*$/.test(lines[index]) &&
+        !/^\s*(?:[-+*]|\d+[.)])\s+/.test(lines[index])
       ) {
         index += 1;
       }
       const raw = lines.slice(start, index).join("\n");
-      occurrences.push(occurrence(
-        "list-item",
-        start + 1,
-        index,
-        raw,
-        headingStack.filter(Boolean),
-        numberedSection,
-        { indent: line.match(/^\s*/)[0].length },
-      ));
+      occurrences.push(
+        occurrence("list-item", start + 1, index, raw, headingStack.filter(Boolean), numberedSection, {
+          indent: line.match(/^\s*/)[0].length,
+        }),
+      );
       continue;
     }
 
     const start = index;
     index += 1;
     while (
-      index < lines.length
-      && lines[index].trim() !== ""
-      && !/^(?:#{1,6})\s+/.test(lines[index])
-      && !/^\s*```/.test(lines[index])
-      && !/^\s*\|.*\|\s*$/.test(lines[index])
-      && !/^\s*(?:[-+*]|\d+[.)])\s+/.test(lines[index])
+      index < lines.length &&
+      lines[index].trim() !== "" &&
+      !/^(?:#{1,6})\s+/.test(lines[index]) &&
+      !/^\s*```/.test(lines[index]) &&
+      !/^\s*\|.*\|\s*$/.test(lines[index]) &&
+      !/^\s*(?:[-+*]|\d+[.)])\s+/.test(lines[index])
     ) {
       index += 1;
     }
-    occurrences.push(occurrence(
-      "paragraph",
-      start + 1,
-      index,
-      lines.slice(start, index).join("\n"),
-      headingStack.filter(Boolean),
-      numberedSection,
-    ));
+    occurrences.push(
+      occurrence(
+        "paragraph",
+        start + 1,
+        index,
+        lines.slice(start, index).join("\n"),
+        headingStack.filter(Boolean),
+        numberedSection,
+      ),
+    );
   }
 
   return { lines, occurrences, headings };
@@ -505,8 +460,8 @@ function startsCoordinatedVerb(value) {
 function coordinatedAtomicStatements(statement) {
   const components = splitTopLevelCommas(statement);
   if (
-    components.length >= 3
-    && /^(?:first|second|third|fourth|finally|however|therefore|for example|in practice)$/i.test(components[0])
+    components.length >= 3 &&
+    /^(?:first|second|third|fourth|finally|however|therefore|for example|in practice)$/i.test(components[0])
   ) {
     components.splice(0, 2, `${components[0]}, ${components[1]}`);
   }
@@ -516,50 +471,41 @@ function coordinatedAtomicStatements(statement) {
   const laterVerbRatio = cleaned.slice(1).filter(startsCoordinatedVerb).length / (cleaned.length - 1);
   const modal = first.match(/^(.*?\b(?:must|should|shall|will|can|cannot|may)\b)\s+(.+)$/i);
   if (modal !== null && laterVerbRatio >= 0.5) {
-    const prepositionalAction = modal[2].match(/^(.*\b(?:of|for|across|including|into|with|from|between|through)\s+)([^,]+)$/i);
+    const prepositionalAction = modal[2].match(
+      /^(.*\b(?:of|for|across|including|into|with|from|between|through)\s+)([^,]+)$/i,
+    );
     if (prepositionalAction !== null && /^(?:be\s+(?:capable|able)|consist|remain)\b/i.test(modal[2])) {
       const prefix = `${modal[1]} ${prepositionalAction[1]}`;
-      return [
-        `${prefix}${prepositionalAction[2]}`,
-        ...cleaned.slice(1).map((component) => `${prefix}${component}`),
-      ];
+      return [`${prefix}${prepositionalAction[2]}`, ...cleaned.slice(1).map((component) => `${prefix}${component}`)];
     }
-    return [
-      `${modal[1]} ${modal[2]}`,
-      ...cleaned.slice(1),
-    ];
+    return [`${modal[1]} ${modal[2]}`, ...cleaned.slice(1)];
   }
   if (modal !== null && laterVerbRatio < 0.5) {
     const action = modal[2].match(/^([A-Za-z-]+)\s+(.+)$/);
     if (action !== null && COORDINATED_VERBS.has(action[1].toLowerCase())) {
       const prefix = `${modal[1]} ${action[1]} `;
-      return [
-        `${prefix}${action[2]}`,
-        ...cleaned.slice(1).map((component) => `${prefix}${component}`),
-      ];
+      return [`${prefix}${action[2]}`, ...cleaned.slice(1).map((component) => `${prefix}${component}`)];
     }
   }
 
-  const subjectAction = first.match(/^((?:The|This|That|A|An|Each|Every|TearBench|Ghost(?:\s+3\.0)?|It)\b.*?\s)([A-Za-z-]+)(\s+.*)$/);
+  const subjectAction = first.match(
+    /^((?:The|This|That|A|An|Each|Every|TearBench|Ghost(?:\s+3\.0)?|It)\b.*?\s)([A-Za-z-]+)(\s+.*)$/,
+  );
   if (subjectAction !== null && laterVerbRatio >= 0.5) {
     const prefix = subjectAction[1].trim();
-    return [
-      `${prefix} ${subjectAction[2]}${subjectAction[3]}`,
-      ...cleaned.slice(1),
-    ];
+    return [`${prefix} ${subjectAction[2]}${subjectAction[3]}`, ...cleaned.slice(1)];
   }
 
   const imperative = first.match(/^([A-Za-z-]+)\s+(.+)$/);
   if (imperative !== null) {
     const verb = imperative[1].toLowerCase();
     const remainder = imperative[2];
-    const preposition = remainder.match(/^(.*\b(?:of|for|across|including|into|with|from|between|through)\s+)([^,]+)$/i);
+    const preposition = remainder.match(
+      /^(.*\b(?:of|for|across|including|into|with|from|between|through)\s+)([^,]+)$/i,
+    );
     if (COORDINATED_VERBS.has(verb) && preposition !== null && laterVerbRatio < 0.5) {
       const prefix = `${imperative[1]} ${preposition[1]}`;
-      return [
-        `${prefix}${preposition[2]}`,
-        ...cleaned.slice(1).map((component) => `${prefix}${component}`),
-      ];
+      return [`${prefix}${preposition[2]}`, ...cleaned.slice(1).map((component) => `${prefix}${component}`)];
     }
     if (COORDINATED_VERBS.has(verb) && laterVerbRatio >= 0.5) {
       return [first, ...cleaned.slice(1)];
@@ -575,7 +521,9 @@ function splitAtomicStatements(value) {
   const result = [];
   for (const sentence of sentenceParts) {
     const clauses = sentence
-      .split(/;\s+(?=(?:and\s+|but\s+)?(?:[A-Z`*]|add\b|build\b|create\b|define\b|implement\b|preserve\b|record\b|support\b|use\b|verify\b))/i)
+      .split(
+        /;\s+(?=(?:and\s+|but\s+)?(?:[A-Z`*]|add\b|build\b|create\b|define\b|implement\b|preserve\b|record\b|support\b|use\b|verify\b))/i,
+      )
       .map((part) => part.trim())
       .filter(Boolean);
     for (const clause of clauses) {
@@ -594,12 +542,26 @@ function isNormativeStatement(statement, occurrenceValue) {
   if (occurrenceValue.kind === "code-block" || occurrenceValue.kind === "table-separator") return false;
   const text = statement.toLowerCase();
   const context = headingContext(occurrenceValue);
-  const referenceContext = /\b(changelog|research basis|current ghost 2\.0 baseline|why tear is already well positioned|direct assessment|example)\b/.test(context);
-  const modal = /\b(must|required?|shall|should|cannot|can't|never|do not|needs? to|non-negotiable|acceptance|exit gate|definition of done)\b/.test(text);
+  const referenceContext =
+    /\b(changelog|research basis|current ghost 2\.0 baseline|why tear is already well positioned|direct assessment|example)\b/.test(
+      context,
+    );
+  const modal =
+    /\b(must|required?|shall|should|cannot|can't|never|do not|needs? to|non-negotiable|acceptance|exit gate|definition of done)\b/.test(
+      text,
+    );
   const imperative = ACTION_VERBS.some((verb) => text.startsWith(`${verb} `) || text.startsWith(`${verb}:`));
-  const actionContext = /\b(deliverables?|requirements?|acceptance|exit gate|definition of (?:done|success)|roadmap|milestone|phase|contract|workflow|goals?|responsibilities|tools?|api|cli|test suite|checks?|policy|rules?|recommended|next steps)\b/.test(context);
+  const actionContext =
+    /\b(deliverables?|requirements?|acceptance|exit gate|definition of (?:done|success)|roadmap|milestone|phase|contract|workflow|goals?|responsibilities|tools?|api|cli|test suite|checks?|policy|rules?|recommended|next steps)\b/.test(
+      context,
+    );
   if (occurrenceValue.kind === "list-item") return !referenceContext || modal || imperative || actionContext;
-  if (occurrenceValue.kind === "table-row") return !/^\|\s*(?:field|dimension|metric|category|concept|layer|class|mode|level|phase|store|track|tool)\s*\|/i.test(occurrenceValue.text) || actionContext;
+  if (occurrenceValue.kind === "table-row")
+    return (
+      !/^\|\s*(?:field|dimension|metric|category|concept|layer|class|mode|level|phase|store|track|tool)\s*\|/i.test(
+        occurrenceValue.text,
+      ) || actionContext
+    );
   return modal || imperative;
 }
 
@@ -641,24 +603,26 @@ function evidenceFor(category, normative) {
 }
 
 function ownerFor(category) {
-  return {
-    accessibility: "presentation/input",
-    architecture: "app/domain contracts",
-    cloud: "platform/workers",
-    compatibility: "replay/persistence",
-    "data-schema": "tearbench/ghost contracts",
-    documentation: "program governance",
-    gameplay: "gameplay/simulation",
-    "ml-training": "agents/training tooling",
-    moderation: "platform/workers",
-    operations: "ci/tooling",
-    performance: "diagnostics/runtime",
-    preservation: "replay/preservation",
-    privacy: "platform/persistence",
-    research: "program governance",
-    security: "platform/validation",
-    "ui-ux": "presentation/app",
-  }[category] ?? "program governance";
+  return (
+    {
+      accessibility: "presentation/input",
+      architecture: "app/domain contracts",
+      cloud: "platform/workers",
+      compatibility: "replay/persistence",
+      "data-schema": "tearbench/ghost contracts",
+      documentation: "program governance",
+      gameplay: "gameplay/simulation",
+      "ml-training": "agents/training tooling",
+      moderation: "platform/workers",
+      operations: "ci/tooling",
+      performance: "diagnostics/runtime",
+      preservation: "replay/preservation",
+      privacy: "platform/persistence",
+      research: "program governance",
+      security: "platform/validation",
+      "ui-ux": "presentation/app",
+    }[category] ?? "program governance"
+  );
 }
 
 function userResultFor(category, statement) {
@@ -684,7 +648,9 @@ function selectPrimaryCheckpoint(checkpoints, statement, occurrenceValue, catego
   for (const checkpoint of checkpoints) {
     const pattern = CHECKPOINT_KEYWORDS[checkpoint];
     if (pattern === undefined) continue;
-    const matches = searchable.match(new RegExp(pattern.source, `${pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`}`));
+    const matches = searchable.match(
+      new RegExp(pattern.source, `${pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`}`),
+    );
     const score = matches?.length ?? 0;
     if (score > bestScore) {
       best = checkpoint;
@@ -694,12 +660,7 @@ function selectPrimaryCheckpoint(checkpoints, statement, occurrenceValue, catego
   return best;
 }
 
-function requirementFrom(
-  occurrenceValue,
-  atomic,
-  statementIndex,
-  checkpointMap,
-) {
+function requirementFrom(occurrenceValue, atomic, statementIndex, checkpointMap) {
   const statement = atomic.text;
   const sourceStatement = atomic.sourceStatement;
   const normative = isNormativeStatement(sourceStatement, occurrenceValue);
@@ -712,53 +673,51 @@ function requirementFrom(
     category,
   );
   const statementHash = sha256(normalizeText(statement));
-  const id = stableId(
-    "TG3",
-    occurrenceValue.id,
-    String(statementIndex),
-    statementHash,
-  );
+  const id = stableId("TG3", occurrenceValue.id, String(statementIndex), statementHash);
   const requirementDisposition = disposition(statement, occurrenceValue, normative);
-  return translateMutableGeneratedDescriptions({
-    id,
-    sourceOccurrenceId: occurrenceValue.id,
-    sourceVersion: "0.6",
-    sourceSection: occurrenceValue.numberedSection,
-    sourceStartLine: occurrenceValue.startLine,
-    sourceEndLine: occurrenceValue.endLine,
-    sourceHeadingPath: [...occurrenceValue.headingPath],
-    sourceTextHash: occurrenceValue.textHash,
-    atomicTextHash: statementHash,
-    text: statement,
-    sourceStatement,
-    normative,
-    category,
-    currentState: normative ? "unverified" : "reference",
-    auditStatus: normative ? "pending-repository-audit" : "not-applicable",
-    disposition: requirementDisposition,
-    primaryCheckpoint,
-    checkpoints,
-    dependencyIds: [],
-    owningSubsystem: ownerFor(category),
-    implementationDeliverable: normative
-      ? `Implement and document the atomic component "${statement}" from source statement "${sourceStatement}"`
-      : `Retain as source context: ${statement}`,
-    userVisibleResult: userResultFor(category, statement),
-    requiredEvidence: evidenceFor(category, normative),
-    acceptanceCondition: normative
-      ? `The implementation and required evidence independently establish "${statement}" within source statement "${sourceStatement}"`
-      : `The annex preserves this source context without presenting it as completed behavior.`,
-    artifactPath: normative ? `artifacts/tearbench/requirements/${id}.json` : null,
-    evidenceRefs: [],
-    duplicateGroup: stableId("DUP", normalizeText(statement).toLowerCase()),
-    duplicateOf: null,
-    flags: {
-      optional: requirementDisposition === "optional",
-      rejected: requirementDisposition === "rejected",
-      superseded: requirementDisposition === "superseded",
-      conflictCandidate: /\b(conflict|contradict|instead of|replace|supersed)\b/i.test(statement),
+  return translateMutableGeneratedDescriptions(
+    {
+      id,
+      sourceOccurrenceId: occurrenceValue.id,
+      sourceVersion: "0.6",
+      sourceSection: occurrenceValue.numberedSection,
+      sourceStartLine: occurrenceValue.startLine,
+      sourceEndLine: occurrenceValue.endLine,
+      sourceHeadingPath: [...occurrenceValue.headingPath],
+      sourceTextHash: occurrenceValue.textHash,
+      atomicTextHash: statementHash,
+      text: statement,
+      sourceStatement,
+      normative,
+      category,
+      currentState: normative ? "unverified" : "reference",
+      auditStatus: normative ? "pending-repository-audit" : "not-applicable",
+      disposition: requirementDisposition,
+      primaryCheckpoint,
+      checkpoints,
+      dependencyIds: [],
+      owningSubsystem: ownerFor(category),
+      implementationDeliverable: normative
+        ? `Implement and document the atomic component "${statement}" from source statement "${sourceStatement}"`
+        : `Retain as source context: ${statement}`,
+      userVisibleResult: userResultFor(category, statement),
+      requiredEvidence: evidenceFor(category, normative),
+      acceptanceCondition: normative
+        ? `The implementation and required evidence independently establish "${statement}" within source statement "${sourceStatement}"`
+        : `The annex preserves this source context without presenting it as completed behavior.`,
+      artifactPath: normative ? `artifacts/tearbench/requirements/${id}.json` : null,
+      evidenceRefs: [],
+      duplicateGroup: stableId("DUP", normalizeText(statement).toLowerCase()),
+      duplicateOf: null,
+      flags: {
+        optional: requirementDisposition === "optional",
+        rejected: requirementDisposition === "rejected",
+        superseded: requirementDisposition === "superseded",
+        conflictCandidate: /\b(conflict|contradict|instead of|replace|supersed)\b/i.test(statement),
+      },
     },
-  }, TERMINOLOGY_REGISTRY);
+    TERMINOLOGY_REGISTRY,
+  );
 }
 
 export function buildRequirements(parsed, checkpointMap) {
@@ -767,12 +726,7 @@ export function buildRequirements(parsed, checkpointMap) {
     if (["heading", "code-block", "table-header", "table-separator"].includes(sourceOccurrence.kind)) continue;
     const statements = splitAtomicStatements(sourceOccurrence.text);
     for (let index = 0; index < statements.length; index += 1) {
-      requirements.push(requirementFrom(
-        sourceOccurrence,
-        statements[index],
-        index,
-        checkpointMap,
-      ));
+      requirements.push(requirementFrom(sourceOccurrence, statements[index], index, checkpointMap));
     }
   }
 
@@ -821,21 +775,12 @@ export function buildRequirements(parsed, checkpointMap) {
 function ruleMatches(requirement, rule) {
   if (!requirement.normative) return false;
   if (Array.isArray(rule.requirementIds) && !rule.requirementIds.includes(requirement.id)) return false;
-  if (
-    Array.isArray(rule.sourceSections)
-    && !rule.sourceSections.includes(requirement.sourceSection)
-  ) {
+  if (Array.isArray(rule.sourceSections) && !rule.sourceSections.includes(requirement.sourceSection)) {
     return false;
   }
-  const searchable = [
-    requirement.text,
-    requirement.sourceStatement,
-  ].join(" ");
+  const searchable = [requirement.text, requirement.sourceStatement].join(" ");
   if (!new RegExp(rule.textRegex, "i").test(searchable)) return false;
-  if (
-    typeof rule.excludeTextRegex === "string"
-    && new RegExp(rule.excludeTextRegex, "i").test(searchable)
-  ) {
+  if (typeof rule.excludeTextRegex === "string" && new RegExp(rule.excludeTextRegex, "i").test(searchable)) {
     return false;
   }
   return true;
@@ -893,23 +838,22 @@ function reverseIndexes(requirements) {
     for (const checkpoint of requirement.checkpoints) addToIndex(indexes.byCheckpoint, checkpoint, requirement.id);
     addToIndex(indexes.byCategory, requirement.category, requirement.id);
     for (const evidence of requirement.requiredEvidence) addToIndex(indexes.byEvidenceClass, evidence, requirement.id);
-    addToIndex(indexes.bySourceSection, requirement.sourceSection === null ? "unsectioned" : String(requirement.sourceSection), requirement.id);
+    addToIndex(
+      indexes.bySourceSection,
+      requirement.sourceSection === null ? "unsectioned" : String(requirement.sourceSection),
+      requirement.id,
+    );
     addToIndex(indexes.byState, requirement.currentState, requirement.id);
     addToIndex(indexes.byDisposition, requirement.disposition, requirement.id);
   }
-  return Object.fromEntries(
-    Object.entries(indexes).map(([name, index]) => [name, sortedIndex(index)]),
-  );
+  return Object.fromEntries(Object.entries(indexes).map(([name, index]) => [name, sortedIndex(index)]));
 }
 
 function checkpointDependencies() {
   return Object.fromEntries(
     Array.from({ length: 20 }, (_, index) => {
       const checkpoint = index + 21;
-      return [
-        `C${String(checkpoint)}`,
-        checkpoint === 21 ? [] : [`C${String(checkpoint - 1)}`],
-      ];
+      return [`C${String(checkpoint)}`, checkpoint === 21 ? [] : [`C${String(checkpoint - 1)}`]];
     }),
   );
 }
@@ -1028,16 +972,20 @@ export function validateDocument(document, sourceText) {
   const expectedRawHeadings = EXPECTED_SOURCE.rawHeadingCounts;
   const expectedStructuralHeadings = EXPECTED_SOURCE.structuralHeadingCounts;
   if (document.source.sha256 !== EXPECTED_SOURCE.sha256) errors.push("source SHA-256 does not match reviewed v0.6");
-  if (document.source.lineCount !== EXPECTED_SOURCE.lineCount) errors.push("source line count does not match reviewed v0.6");
+  if (document.source.lineCount !== EXPECTED_SOURCE.lineCount)
+    errors.push("source line count does not match reviewed v0.6");
   for (const [name, expected] of Object.entries(expectedRawHeadings)) {
     if (document.source.rawHeadingCounts[name] !== expected) errors.push(`raw ${name} count mismatch`);
   }
   for (const [name, expected] of Object.entries(expectedStructuralHeadings)) {
     if (document.source.structuralHeadingCounts[name] !== expected) errors.push(`structural ${name} count mismatch`);
   }
-  if (document.source.numberedSectionCount !== EXPECTED_SOURCE.numberedSections) errors.push("numbered section count mismatch");
-  if (Object.keys(document.checkpointMap).length !== EXPECTED_SOURCE.numberedSections) errors.push("checkpoint map does not cover all numbered sections");
-  if (document.evidenceAudit.defaultNormativeState !== "missing") errors.push("evidence audit must default unproven requirements to missing");
+  if (document.source.numberedSectionCount !== EXPECTED_SOURCE.numberedSections)
+    errors.push("numbered section count mismatch");
+  if (Object.keys(document.checkpointMap).length !== EXPECTED_SOURCE.numberedSections)
+    errors.push("checkpoint map does not cover all numbered sections");
+  if (document.evidenceAudit.defaultNormativeState !== "missing")
+    errors.push("evidence audit must default unproven requirements to missing");
   for (const [checkpoint, dependencies] of Object.entries(document.checkpointDependencies)) {
     if (!/^C(?:2[1-9]|3\d|40)$/.test(checkpoint)) errors.push(`invalid checkpoint dependency node ${checkpoint}`);
     for (const dependency of dependencies) {
@@ -1075,25 +1023,30 @@ export function validateDocument(document, sourceText) {
     if (!occurrenceIds.has(item.sourceOccurrenceId)) errors.push(`${item.id} has unknown source occurrence`);
     if (item.sourceVersion !== document.source.version) errors.push(`${item.id} source version mismatch`);
     if (!/^C(?:2[1-9]|3\d|40)$/.test(item.primaryCheckpoint)) errors.push(`${item.id} has invalid primary checkpoint`);
-    if (item.checkpoints.length === 0 || !item.checkpoints.includes(item.primaryCheckpoint)) errors.push(`${item.id} checkpoint assignment is incomplete`);
+    if (item.checkpoints.length === 0 || !item.checkpoints.includes(item.primaryCheckpoint))
+      errors.push(`${item.id} checkpoint assignment is incomplete`);
     if (item.normative && item.acceptanceCondition.trim() === "") errors.push(`${item.id} has no acceptance condition`);
-    if (item.normative && item.implementationDeliverable.trim() === "") errors.push(`${item.id} has no implementation deliverable`);
+    if (item.normative && item.implementationDeliverable.trim() === "")
+      errors.push(`${item.id} has no implementation deliverable`);
     if (item.normative && item.requiredEvidence.length === 0) errors.push(`${item.id} has no required evidence`);
     if (item.normative && item.currentState === "unverified") errors.push(`${item.id} was not repository-audited`);
     if (["integrated", "visible", "certified"].includes(item.currentState) && item.evidenceRefs.length === 0) {
       errors.push(`${item.id} claims ${item.currentState} without evidence`);
     }
     for (const reference of [...(item.implementationRefs ?? []), ...item.evidenceRefs]) {
-      if (!existsSync(resolve(REPOSITORY_ROOT, reference))) errors.push(`${item.id} references missing evidence path ${reference}`);
+      if (!existsSync(resolve(REPOSITORY_ROOT, reference)))
+        errors.push(`${item.id} references missing evidence path ${reference}`);
     }
-    if (item.currentState === "certified" && item.artifactPath === null) errors.push(`${item.id} is certified without an artifact`);
+    if (item.currentState === "certified" && item.artifactPath === null)
+      errors.push(`${item.id} is certified without an artifact`);
     const list = requirementsByOccurrence.get(item.sourceOccurrenceId) ?? [];
     list.push(item);
     requirementsByOccurrence.set(item.sourceOccurrenceId, list);
   }
   for (const sourceOccurrence of document.occurrences) {
     if (["heading", "code-block", "table-header", "table-separator"].includes(sourceOccurrence.kind)) continue;
-    if (!requirementsByOccurrence.has(sourceOccurrence.id)) errors.push(`${sourceOccurrence.id} produced no atomic entries`);
+    if (!requirementsByOccurrence.has(sourceOccurrence.id))
+      errors.push(`${sourceOccurrence.id} produced no atomic entries`);
   }
   validateNoDependencyCycles(document.requirements, errors);
 
@@ -1146,7 +1099,9 @@ function renderMarkdown(document) {
     "|---:|---:|---:|---|---|",
   ];
   for (const heading of document.headings) {
-    lines.push(`| ${String(heading.startLine)} | ${String(heading.level)} | ${heading.numberedSection ?? ""} | \`${heading.id}\` | ${markdownCell(heading.title)} |`);
+    lines.push(
+      `| ${String(heading.startLine)} | ${String(heading.level)} | ${heading.numberedSection ?? ""} | \`${heading.id}\` | ${markdownCell(heading.title)} |`,
+    );
   }
 
   lines.push(
@@ -1175,13 +1130,7 @@ function renderMarkdown(document) {
     );
   }
 
-  lines.push(
-    "",
-    "## Reverse Index Summary",
-    "",
-    "| Index | Key | Requirement count |",
-    "|---|---|---:|",
-  );
+  lines.push("", "## Reverse Index Summary", "", "| Index | Key | Requirement count |", "|---|---|---:|");
   for (const [indexName, index] of Object.entries(document.reverseIndexes)) {
     for (const [key, ids] of Object.entries(index)) {
       lines.push(`| ${indexName} | ${markdownCell(key)} | ${String(ids.length)} |`);
@@ -1192,16 +1141,7 @@ function renderMarkdown(document) {
 }
 
 function renderDashboard(document) {
-  const states = [
-    "missing",
-    "contract",
-    "prototype",
-    "integrated",
-    "visible",
-    "certified",
-    "deferred",
-    "rejected",
-  ];
+  const states = ["missing", "contract", "prototype", "integrated", "visible", "certified", "deferred", "rejected"];
   const primaryCheckpointRows = [];
   for (let number = 21; number <= 40; number += 1) {
     const checkpoint = `C${String(number)}`;
@@ -1239,9 +1179,10 @@ function renderDashboard(document) {
     "",
     "| Checkpoint | Total | Missing | Contract | Prototype | Integrated | Visible | Certified |",
     "|---|---:|---:|---:|---:|---:|---:|---:|",
-    ...primaryCheckpointRows.map(({ checkpoint, total, counts }) => (
-      `| ${checkpoint} | ${String(total)} | ${String(counts.missing)} | ${String(counts.contract)} | ${String(counts.prototype)} | ${String(counts.integrated)} | ${String(counts.visible)} | ${String(counts.certified)} |`
-    )),
+    ...primaryCheckpointRows.map(
+      ({ checkpoint, total, counts }) =>
+        `| ${checkpoint} | ${String(total)} | ${String(counts.missing)} | ${String(counts.contract)} | ${String(counts.prototype)} | ${String(counts.integrated)} | ${String(counts.visible)} | ${String(counts.certified)} |`,
+    ),
     "",
     "## Evidence Catalog Matches",
     "",
@@ -1289,8 +1230,10 @@ function check() {
   const expectedMarkdown = renderMarkdown(document);
   const expectedDashboard = renderDashboard(document);
   if (readFileSync(JSON_PATH, "utf8") !== expectedJson) errors.push("JSON annex is stale; run requirements:generate");
-  if (readFileSync(MARKDOWN_PATH, "utf8") !== expectedMarkdown) errors.push("Markdown annex is stale; run requirements:generate");
-  if (readFileSync(DASHBOARD_PATH, "utf8") !== expectedDashboard) errors.push("capability dashboard is stale; run requirements:generate");
+  if (readFileSync(MARKDOWN_PATH, "utf8") !== expectedMarkdown)
+    errors.push("Markdown annex is stale; run requirements:generate");
+  if (readFileSync(DASHBOARD_PATH, "utf8") !== expectedDashboard)
+    errors.push("capability dashboard is stale; run requirements:generate");
   if (errors.length > 0) throw new Error(`requirements annex validation failed:\n- ${errors.join("\n- ")}`);
   return document;
 }

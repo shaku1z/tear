@@ -8,7 +8,8 @@ export function parseLayers(document) {
   if (document?.format !== LAYERS_FORMAT || typeof document.layers !== "object" || typeof document.allow !== "object") {
     throw new Error(`architecture layers must be a ${LAYERS_FORMAT} document`);
   }
-  const names = new Set(Object.keys(document.layers)), problems = [];
+  const names = new Set(Object.keys(document.layers)),
+    problems = [];
   for (const [name, globs] of Object.entries(document.layers)) {
     if (!Array.isArray(globs) || globs.length === 0) problems.push(`layer ${name} needs at least one glob`);
   }
@@ -26,15 +27,19 @@ export function parseLayers(document) {
 
 /** Every src file belongs to exactly one layer; anything else is an error, so a new directory must be placed. */
 export function assignLayers(files, layers) {
-  const assignment = new Map(), errors = [];
+  const assignment = new Map(),
+    errors = [];
   for (const file of files) {
-    const owners = Object.entries(layers).filter(([, globs]) => globs.some((glob) => matchesGlob(glob, file))).map(([name]) => name);
+    const owners = Object.entries(layers)
+      .filter(([, globs]) => globs.some((glob) => matchesGlob(glob, file)))
+      .map(([name]) => name);
     if (owners.length === 1) assignment.set(file, owners[0]);
     else if (owners.length === 0) errors.push(`${file}: belongs to no layer in config/architecture-layers.json`);
     else errors.push(`${file}: belongs to several layers (${owners.join(", ")})`);
   }
   for (const [name, globs] of Object.entries(layers)) {
-    for (const glob of globs) if (!files.some((file) => matchesGlob(glob, file))) errors.push(`layer ${name}: "${glob}" matches no file`);
+    for (const glob of globs)
+      if (!files.some((file) => matchesGlob(glob, file))) errors.push(`layer ${name}: "${glob}" matches no file`);
   }
   return { assignment, errors };
 }
@@ -56,7 +61,9 @@ export function layerViolations(graph, assignment, allow) {
       violations.push({ from, to: edge.to, kind: edge.kind, pair: `${fromLayer} -> ${toLayer}` });
     }
   }
-  return violations.sort((left, right) => left.from.localeCompare(right.from, "en") || left.to.localeCompare(right.to, "en"));
+  return violations.sort(
+    (left, right) => left.from.localeCompare(right.from, "en") || left.to.localeCompare(right.to, "en"),
+  );
 }
 
 const edgeKey = (edge) => `${edge.from} -> ${edge.to}`;
@@ -89,12 +96,17 @@ export function layerTwoCycles(graph, assignment) {
   const pairs = new Set();
   for (const [from, edges] of graph) {
     for (const edge of edges) {
-      const fromLayer = assignment.get(from), toLayer = assignment.get(edge.to);
-      if (edge.kind === "value" && fromLayer !== undefined && toLayer !== undefined && fromLayer !== toLayer) pairs.add(`${fromLayer}\n${toLayer}`);
+      const fromLayer = assignment.get(from),
+        toLayer = assignment.get(edge.to);
+      if (edge.kind === "value" && fromLayer !== undefined && toLayer !== undefined && fromLayer !== toLayer)
+        pairs.add(`${fromLayer}\n${toLayer}`);
     }
   }
-  return [...pairs].map((pair) => pair.split("\n")).filter(([from, to]) => from < to && pairs.has(`${to}\n${from}`))
-    .map(([from, to]) => `${from} <-> ${to}`).sort((left, right) => left.localeCompare(right, "en"));
+  return [...pairs]
+    .map((pair) => pair.split("\n"))
+    .filter(([from, to]) => from < to && pairs.has(`${to}\n${from}`))
+    .map(([from, to]) => `${from} <-> ${to}`)
+    .sort((left, right) => left.localeCompare(right, "en"));
 }
 
 /** Counts of edges by directory pair and kind, for the report. */

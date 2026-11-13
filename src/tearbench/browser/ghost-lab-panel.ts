@@ -8,14 +8,19 @@ export function installGhostLabPanel(factory: TearRuntimeBridgeFactory): void {
   if (!isReplayHubRequested(window.location.search)) return;
   const environment = factory.create("A");
   const scenario: TearScenarioV1 = Object.freeze({
-    format: TEAR_CONTRACT_FORMAT, kind: "scenario", schemaVersion: TEAR_CONTRACT_VERSION,
-    id: "ghost-lab.disposable-live-run", version: 1,
+    format: TEAR_CONTRACT_FORMAT,
+    kind: "scenario",
+    schemaVersion: TEAR_CONTRACT_VERSION,
+    id: "ghost-lab.disposable-live-run",
+    version: 1,
     description: "Ghost Lab disposable live runtime inspection",
-    stateClass: "recorded-canonical", executionClass: "engineering", seed: "ghost-lab",
+    stateClass: "recorded-canonical",
+    executionClass: "engineering",
+    seed: "ghost-lab",
     start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }),
-    maxTicks: 3_600, assertions: Object.freeze([
-      "runtime.finite-state", "player.finite-transform", "blade.finite-transform",
-    ] as const), tags: Object.freeze(["ghost-lab", "c22", "disposable"]),
+    maxTicks: 3_600,
+    assertions: Object.freeze(["runtime.finite-state", "player.finite-transform", "blade.finite-transform"] as const),
+    tags: Object.freeze(["ghost-lab", "c22", "disposable"]),
   });
   const panel = document.createElement("aside");
   panel.id = "tear-ghost-lab";
@@ -23,9 +28,15 @@ export function installGhostLabPanel(factory: TearRuntimeBridgeFactory): void {
   panel.dataset.legacySurface = "ghost-lab";
   panel.setAttribute("aria-label", "Replay Hub");
   Object.assign(panel.style, {
-    position: "fixed", inset: "12px 12px 12px auto", width: "min(460px, 42vw)",
-    zIndex: "2147483647", overflow: "auto", padding: "14px", color: "#e8f8ff",
-    background: "rgba(5, 10, 18, .96)", border: "1px solid #36d6ff",
+    position: "fixed",
+    inset: "12px 12px 12px auto",
+    width: "min(460px, 42vw)",
+    zIndex: "2147483647",
+    overflow: "auto",
+    padding: "14px",
+    color: "#e8f8ff",
+    background: "rgba(5, 10, 18, .96)",
+    border: "1px solid #36d6ff",
     font: "12px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace",
   });
   const title = document.createElement("h2");
@@ -46,35 +57,66 @@ export function installGhostLabPanel(factory: TearRuntimeBridgeFactory): void {
   };
   const refresh = (lastActions: readonly GameAction[] = []): void => {
     let observation: TearObservationV1 | null = null;
-    try { observation = environment.observe(); } catch { /* not launched yet */ }
-    output.textContent = JSON.stringify({
-      status: observation === null ? "ready" : "running",
-      observation,
-      actions: lastActions,
-      events: observation === null ? [] : environment.events().slice(-12),
-      rng: observation === null ? {} : environment.rng(),
-      invariants: observation === null ? [] : (() => {
-        const failures = new Map(runInvariantChecks(observation, scenario.assertions)
-          .map((failure) => [failure.id, failure]));
-        return scenario.assertions.map((id) => ({
-          id, status: failures.has(id) ? "failed" : "passed", message: failures.get(id)?.message,
-        }));
-      })(),
-      metrics: environment.metrics(),
-      stateHash: observation === null ? null : environment.stateHash(),
-    }, null, 2);
+    try {
+      observation = environment.observe();
+    } catch {
+      /* not launched yet */
+    }
+    output.textContent = JSON.stringify(
+      {
+        status: observation === null ? "ready" : "running",
+        observation,
+        actions: lastActions,
+        events: observation === null ? [] : environment.events().slice(-12),
+        rng: observation === null ? {} : environment.rng(),
+        invariants:
+          observation === null
+            ? []
+            : (() => {
+                const failures = new Map(
+                  runInvariantChecks(observation, scenario.assertions).map((failure) => [failure.id, failure]),
+                );
+                return scenario.assertions.map((id) => ({
+                  id,
+                  status: failures.has(id) ? "failed" : "passed",
+                  message: failures.get(id)?.message,
+                }));
+              })(),
+        metrics: environment.metrics(),
+        stateHash: observation === null ? null : environment.stateHash(),
+      },
+      null,
+      2,
+    );
   };
-  button("Launch disposable run", () => { environment.reset(scenario); refresh(); });
-  button("Step", () => { environment.step(); refresh(); });
+  button("Launch disposable run", () => {
+    environment.reset(scenario);
+    refresh();
+  });
+  button("Step", () => {
+    environment.step();
+    refresh();
+  });
   button("Move + step", () => {
     const action: GameAction = Object.freeze({ type: "move", x: 1_000, y: 0 });
-    environment.step([Object.freeze({
-      kind: "command", id: 1, tick: environment.observe().tick + 1, command: action,
-    })]);
+    environment.step([
+      Object.freeze({
+        kind: "command",
+        id: 1,
+        tick: environment.observe().tick + 1,
+        command: action,
+      }),
+    ]);
     refresh([action]);
   });
-  button("Pause", () => { environment.pause(); refresh(); });
-  button("Resume", () => { environment.resume(); refresh(); });
+  button("Pause", () => {
+    environment.pause();
+    refresh();
+  });
+  button("Resume", () => {
+    environment.resume();
+    refresh();
+  });
   panel.append(title, controls, output);
   document.body.append(panel);
   refresh();

@@ -1,8 +1,5 @@
 import { createTearWorldClock, type TearWorldClock } from "./tear-world-clock";
-import {
-  createTearWorldConfiguration,
-  type TearWorldConfiguration,
-} from "./tear-world-configuration";
+import { createTearWorldConfiguration, type TearWorldConfiguration } from "./tear-world-configuration";
 import { createRunRandom, type RunRandom } from "../../simulation/run-random";
 
 /**

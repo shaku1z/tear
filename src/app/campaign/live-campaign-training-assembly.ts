@@ -14,7 +14,10 @@ import { trainingRunRequiresPreflight } from "../training/training-host";
 import type { LiveTutorialPracticeStart } from "../training/tutorial-practice-start";
 import { createLiveTutorialSessionActions } from "../training/tutorial-session-actions";
 import type { LiveWorldComposition } from "../world/world-composition";
-import { createLiveCampaignTrainingComposition, type LiveCampaignTrainingOptions } from "./campaign-training-composition";
+import {
+  createLiveCampaignTrainingComposition,
+  type LiveCampaignTrainingOptions,
+} from "./campaign-training-composition";
 
 export interface LiveCampaignTrainingAssemblyOptions {
   readonly dependencies: GameRuntimeDependencies;
@@ -51,7 +54,8 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
   const { transient } = world.context;
   const { impact, feel } = transient;
   const trainingHandoff = createLiveTrainingHandoff({
-    run: () => hostState.run(), phase: () => TUT.session().phase,
+    run: () => hostState.run(),
+    phase: () => TUT.session().phase,
     pause: () => {
       navigation.setScreen("paused");
     },
@@ -68,11 +72,22 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
     },
   });
   const campaignTraining = createLiveCampaignTrainingComposition({
-    dependencies, entities: worldEntities, state: hostState, lifecycle: RUN_LIFECYCLE, observeStyle: options.observeStyle,
+    dependencies,
+    entities: worldEntities,
+    state: hostState,
+    lifecycle: RUN_LIFECYCLE,
+    observeStyle: options.observeStyle,
     persistentEffects: options.persistentEffects,
-    cinema: world.context.cinema, controllers: runControllers,
-    width: surface.width, height: surface.height, canvas: surface.canvas, context: surface.context,
-    run: liveRun, player: options.player, blade: options.blade, enemies: () => hostState.enemies(),
+    cinema: world.context.cinema,
+    controllers: runControllers,
+    width: surface.width,
+    height: surface.height,
+    canvas: surface.canvas,
+    context: surface.context,
+    run: liveRun,
+    player: options.player,
+    blade: options.blade,
+    enemies: () => hostState.enemies(),
     projectiles: () => hostState.projectiles(),
     spawn: (kind, hpScale) => {
       options.orchestration().spawn({ type: kind, hpScale });
@@ -88,8 +103,10 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
     resetScroll: () => {
       interaction.setScroll(0);
     },
-    scroll: interaction.scroll, setScroll: interaction.setScroll,
-    requestPointerLock: options.requestPointerLock, selectStage: loadStage,
+    scroll: interaction.scroll,
+    setScroll: interaction.setScroll,
+    requestPointerLock: options.requestPointerLock,
+    selectStage: loadStage,
     beginWipe: () => {
       options.presentation().wipe.begin();
     },
@@ -103,7 +120,8 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
       transient.resetOpening();
       impact.hitStop = 0;
     },
-    applySettingsCinematicPreference: () => settings.cinematics, shakeScale: () => settingsController.shakeScale,
+    applySettingsCinematicPreference: () => settings.cinematics,
+    shakeScale: () => settingsController.shakeScale,
     getShake: () => impact.shake,
     setShake: (value) => {
       impact.shake = value;
@@ -126,7 +144,12 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
       const before = Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget });
       feel.worldZoomTarget = value;
       if (immediate) feel.worldZoom = value;
-      return Object.freeze({ requested: value, immediate, before, after: Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }) });
+      return Object.freeze({
+        requested: value,
+        immediate,
+        before,
+        after: Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }),
+      });
     },
     renderMenu: (model) => {
       options.presentation().screens.modelRenderers.pgmenu(model);
@@ -138,7 +161,12 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
     emitMusicEvent: (name, detail) => {
       options.combat().frameRuntime.emitMusicEvent(name, detail);
     },
-    ...(__TEAR_TEST_BUILD__ ? { observeFinaleIntents: journals.observeFinaleIntents, observeFinaleOutwardCall: journals.observeFinaleOutwardCall } : {}),
+    ...(__TEAR_TEST_BUILD__
+      ? {
+          observeFinaleIntents: journals.observeFinaleIntents,
+          observeFinaleOutwardCall: journals.observeFinaleOutwardCall,
+        }
+      : {}),
     showRank: (rank) => {
       feel.rankPopupSeconds = 1;
       feel.rankPopupText = rank;
@@ -147,22 +175,27 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
   const { training: trainingHost, cinematic: cinematicHost } = campaignTraining;
   const startRunWithPreflight = (mode: RunMode, difficulty: RunDifficulty): void => {
     if (mode === "tutorial") {
-      void trainingHost.startTutorial(() => {
-        startRunImmediate(mode, difficulty);
-      }).catch((error: unknown) => {
-        console.warn("Tear training runtime failed to load", error);
-      });
+      void trainingHost
+        .startTutorial(() => {
+          startRunImmediate(mode, difficulty);
+        })
+        .catch((error: unknown) => {
+          console.warn("Tear training runtime failed to load", error);
+        });
       return;
     }
     if (!trainingRunRequiresPreflight(mode)) {
       startRunImmediate(mode, difficulty);
       return;
     }
-    void trainingHost.ensureLoaded().then(() => {
-      startRunImmediate(mode, difficulty);
-    }).catch((error: unknown) => {
-      console.warn("Tear training runtime failed to load", error);
-    });
+    void trainingHost
+      .ensureLoaded()
+      .then(() => {
+        startRunImmediate(mode, difficulty);
+      })
+      .catch((error: unknown) => {
+        console.warn("Tear training runtime failed to load", error);
+      });
   };
   const { tutorial: TUT, runtime: playgroundRuntime } = trainingHost;
   const interruptTutorialCoaching = () => {
@@ -172,7 +205,10 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
   options.browserWindow.addEventListener("blur", interruptTutorialCoaching);
   const { sourceRuntime: sourceVoidRuntime } = cinematicHost;
   const tutorialSessionActions = createLiveTutorialSessionActions({
-    training: trainingHost, tutorial: TUT, screen: () => navigation.screen(), mode: () => liveRun().mode,
+    training: trainingHost,
+    tutorial: TUT,
+    screen: () => navigation.screen(),
+    mode: () => liveRun().mode,
     selectPracticeWeapon: (id) => {
       hostState.setSelectedWeapon(id);
     },
@@ -203,7 +239,12 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
   };
   return Object.freeze({
     ...campaignTraining,
-    startRunWithPreflight, tutorialSessionActions, syncVoidPlayerSupport, updateVoidScroll, dispatchPlaygroundAction, stepPlayground,
+    startRunWithPreflight,
+    tutorialSessionActions,
+    syncVoidPlayerSupport,
+    updateVoidScroll,
+    dispatchPlaygroundAction,
+    stepPlayground,
   });
 }
 

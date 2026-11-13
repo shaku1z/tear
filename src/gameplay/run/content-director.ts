@@ -1,11 +1,14 @@
 import type { RandomSource } from "../../domain/random";
 import { BOSS_DEFINITIONS, type BOSS_IDENTITY_IDS, type BossDefinition } from "./boss-definitions";
-import { bossIdsAvailableOn, STAGE_CONTENT_AVAILABILITY, type ContentAvailabilitySurface, type StageId } from "../stages";
+import {
+  bossIdsAvailableOn,
+  STAGE_CONTENT_AVAILABILITY,
+  type ContentAvailabilitySurface,
+  type StageId,
+} from "../stages";
 
 type BossRosterProjection<T extends readonly BossDefinition[]> = {
-  readonly [K in keyof T]: T[K] extends BossDefinition
-    ? Readonly<{ id: T[K]["id"]; name: T[K]["name"] }>
-    : never;
+  readonly [K in keyof T]: T[K] extends BossDefinition ? Readonly<{ id: T[K]["id"]; name: T[K]["name"] }> : never;
 };
 
 function projectBossRoster<T extends readonly BossDefinition[]>(definitions: T): BossRosterProjection<T> {
@@ -14,29 +17,43 @@ function projectBossRoster<T extends readonly BossDefinition[]>(definitions: T):
 
 /** Ordinary production roster; preview bosses remain authored but require an explicit Playground path. */
 const PUBLISHED_BOSS_IDS = new Set(bossIdsAvailableOn("published"));
-type BossDefinitionById<TId extends BossDefinition["id"]> = Extract<typeof BOSS_DEFINITIONS[number], { readonly id: TId }>;
+type BossDefinitionById<TId extends BossDefinition["id"]> = Extract<
+  (typeof BOSS_DEFINITIONS)[number],
+  { readonly id: TId }
+>;
 type PublishedBossDefinitions = readonly [
-  BossDefinitionById<"warden">, BossDefinitionById<"colossus">, BossDefinitionById<"aldric">,
-  BossDefinitionById<"rootbound">, BossDefinitionById<"echo">, BossDefinitionById<"source">,
+  BossDefinitionById<"warden">,
+  BossDefinitionById<"colossus">,
+  BossDefinitionById<"aldric">,
+  BossDefinitionById<"rootbound">,
+  BossDefinitionById<"echo">,
+  BossDefinitionById<"source">,
 ];
 const publishedBossDefinitions = Object.freeze(
   BOSS_DEFINITIONS.filter(({ id }) => PUBLISHED_BOSS_IDS.has(id)),
 ) as unknown as PublishedBossDefinitions;
-export const BOSS_ROSTER = Object.freeze(projectBossRoster(
-  publishedBossDefinitions,
-));
+export const BOSS_ROSTER = Object.freeze(projectBossRoster(publishedBossDefinitions));
 export const AUTHORED_BOSS_ROSTER = Object.freeze(projectBossRoster(BOSS_DEFINITIONS));
 
-export type BossId = typeof BOSS_IDENTITY_IDS[number];
+export type BossId = (typeof BOSS_IDENTITY_IDS)[number];
 /** Campaign-only or factory-unavailable bosses cannot enter the mini-boss selector. */
 export type MiniBossId = Exclude<BossId, "source" | "rootbound" | "white-hart">;
 export const ENEMY_KIND_IDS = Object.freeze([
-  "charger", "ranged", "flyer", "bomber", "armored",
-  "priest", "mender", "herald", "anchor", "wraith", "chimera",
+  "charger",
+  "ranged",
+  "flyer",
+  "bomber",
+  "armored",
+  "priest",
+  "mender",
+  "herald",
+  "anchor",
+  "wraith",
+  "chimera",
 ] as const);
 export const ENEMY_IDENTITY_IDS = Object.freeze([...ENEMY_KIND_IDS, "rootbinder", "rimehound"] as const);
-export type ActiveEnemyKind = typeof ENEMY_KIND_IDS[number];
-export type EnemyKind = typeof ENEMY_IDENTITY_IDS[number];
+export type ActiveEnemyKind = (typeof ENEMY_KIND_IDS)[number];
+export type EnemyKind = (typeof ENEMY_IDENTITY_IDS)[number];
 
 /** Stage-native families inherit availability from their home; legacy families are universal. */
 export const ENEMY_HOME_STAGE = Object.freeze({
@@ -45,10 +62,12 @@ export const ENEMY_HOME_STAGE = Object.freeze({
 } as const satisfies Readonly<Partial<Record<EnemyKind, StageId>>>);
 
 export function enemyIdsAvailableOn(surface: ContentAvailabilitySurface): readonly EnemyKind[] {
-  return Object.freeze(ENEMY_IDENTITY_IDS.filter((id) => {
-    const home = (ENEMY_HOME_STAGE as Readonly<Partial<Record<EnemyKind, StageId>>>)[id];
-    return home === undefined || STAGE_CONTENT_AVAILABILITY[home][surface];
-  }));
+  return Object.freeze(
+    ENEMY_IDENTITY_IDS.filter((id) => {
+      const home = (ENEMY_HOME_STAGE as Readonly<Partial<Record<EnemyKind, StageId>>>)[id];
+      return home === undefined || STAGE_CONTENT_AVAILABILITY[home][surface];
+    }),
+  );
 }
 
 export const PUBLISHED_ENEMY_IDENTITY_IDS = enemyIdsAvailableOn("published");
@@ -107,7 +126,10 @@ export function pickEnemyKind(
     }
     const unlocked = campaignPool.filter((entry) => localWave >= entry.unlockWave);
     const candidates = unlocked.length > 0 ? unlocked : campaignPool;
-    return weightedPick(candidates.map((entry) => [entry.kind, entry.weight] as const), random);
+    return weightedPick(
+      candidates.map((entry) => [entry.kind, entry.weight] as const),
+      random,
+    );
   }
 
   const pool: (readonly [EnemyKind, number])[] = [["charger", 1]];

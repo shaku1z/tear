@@ -36,7 +36,10 @@ export class MusicDirector {
   #lastBossPhase: number | null = null;
   #lastRank = "";
 
-  constructor(private readonly port: MusicDirectorPort, private readonly intervalMs = 125) {}
+  constructor(
+    private readonly port: MusicDirectorPort,
+    private readonly intervalMs = 125,
+  ) {}
 
   get active(): boolean {
     return this.#active;
@@ -112,7 +115,10 @@ export class MusicDirector {
 }
 
 export function resolveMusicScene(state: string, hasActiveBoss: boolean): MusicScene {
-  if (["menu", "shop", "codex", "setup", "profile", "settings", "achievements", "leaderboards", "rename"].includes(state)) return "main-menu";
+  if (
+    ["menu", "shop", "codex", "setup", "profile", "settings", "achievements", "leaderboards", "rename"].includes(state)
+  )
+    return "main-menu";
   if (state === "win") return "victory";
   if (state === "gameover" || state === "continue") return "defeat";
   if (state === "paused" || state === "confirmquit") return "paused";
@@ -121,11 +127,7 @@ export function resolveMusicScene(state: string, hasActiveBoss: boolean): MusicS
   return state === "playing" ? "combat" : "preparation";
 }
 
-export function resolveMusicBossPhase(
-  health: number,
-  maximumHealth: number,
-  phaseMarks: readonly number[],
-): number {
+export function resolveMusicBossPhase(health: number, maximumHealth: number, phaseMarks: readonly number[]): number {
   const ratio = Math.max(0, Math.min(1, health / Math.max(1, maximumHealth)));
   return 1 + phaseMarks.filter((mark) => ratio <= mark).length;
 }

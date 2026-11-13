@@ -13,7 +13,11 @@ describe("live combat host factory", () => {
   it("wraps the portable combat core and starts only one browser frame loop", () => {
     let starts = 0;
     const host = createLiveCombatHost<{ readonly tick: number }>({
-      frameDriver: { start: () => { starts += 1; } } as unknown as RuntimeFrameDriver,
+      frameDriver: {
+        start: () => {
+          starts += 1;
+        },
+      } as unknown as RuntimeFrameDriver,
       combatEntities: {} as CombatEntityRuntimeHooks,
       kill: {} as LiveKillHost,
       createCombat: () => ({
@@ -27,8 +31,8 @@ describe("live combat host factory", () => {
         actionPort: { apply: () => undefined },
         snapshot: (tick) => Object.freeze({ tick }),
       },
-      createFrame: () => ({} as LiveFrameRuntimeOptions),
-      createCoordinator: () => ({} as RuntimeFrameCoordinatorOptions),
+      createFrame: () => ({}) as LiveFrameRuntimeOptions,
+      createCoordinator: () => ({}) as RuntimeFrameCoordinatorOptions,
     });
 
     expect(host.simulation).toBe(host.simulationRuntime.scheduler);

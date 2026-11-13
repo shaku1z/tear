@@ -1,4 +1,10 @@
-import type { EnemyDamageContext, EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
+import type {
+  EnemyDamageContext,
+  EnemyDependencies,
+  EnemyPlatform,
+  EnemyPlayerPort,
+  EnemyProjectile,
+} from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 
 export const RIMEHOUND_TUNING = Object.freeze({
@@ -36,13 +42,17 @@ export function coordinateRimehoundPack(enemies: readonly RimehoundPackMember[])
   // The owning world's enemy array is canonical spawn order and is restored in
   // that order. Do not derive group identity from position or a process global.
   pack.forEach((enemy, index) => {
-    if ((enemy.packLockT ?? 0) <= 0) enemy.lockPackAssignment?.(index === 0 ? "line" : "flank",
-      index === 0 ? -1 : index % 2 === 1 ? 1 : -1, RIMEHOUND_TUNING.packLockSeconds);
+    if ((enemy.packLockT ?? 0) <= 0)
+      enemy.lockPackAssignment?.(
+        index === 0 ? "line" : "flank",
+        index === 0 ? -1 : index % 2 === 1 ? 1 : -1,
+        RIMEHOUND_TUNING.packLockSeconds,
+      );
     enemy.packAttackAuthorized = false;
   });
   const committed = pack.find((enemy) => enemy.atk === "windup" || enemy.atk === "pounce");
-  const selected = committed ?? pack.find((enemy) => (enemy.spawnT ?? 0) <= 0
-    && enemy.atk === "flank" && (enemy.atkCd ?? 0) <= 0);
+  const selected =
+    committed ?? pack.find((enemy) => (enemy.spawnT ?? 0) <= 0 && enemy.atk === "flank" && (enemy.atkCd ?? 0) <= 0);
   if (selected !== undefined) selected.packAttackAuthorized = true;
 }
 
@@ -72,7 +82,8 @@ export function createRimehoundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     lockPackAssignment(role: "line" | "flank", flank: -1 | 1, duration: number): void {
-      if (!(duration > 0) || !Number.isFinite(duration)) throw new RangeError("Rimehound pack lock duration must be finite and positive");
+      if (!(duration > 0) || !Number.isFinite(duration))
+        throw new RangeError("Rimehound pack lock duration must be finite and positive");
       this.packRole = role;
       this.packFlank = flank;
       this.packLockT = duration;
@@ -87,7 +98,9 @@ export function createRimehoundType(dependencies: EnemyDependencies, Enemy: Enem
       }
     }
 
-    override contactDamageEnabled(): boolean { return this.atk === "pounce"; }
+    override contactDamageEnabled(): boolean {
+      return this.atk === "pounce";
+    }
     override contactDamageAmount(): number {
       return this.contactDmg * (this.atk === "pounce" ? RIMEHOUND_TUNING.pounceDamageMultiplier : 1);
     }
@@ -103,8 +116,11 @@ export function createRimehoundType(dependencies: EnemyDependencies, Enemy: Enem
       this.atkT = RIMEHOUND_TUNING.windupSeconds;
       this.atkMax = this.atkT;
       this.atkDir = Math.sign(player.x - this.x) || this.packFlank;
-      this.pounceTargetX = clamp(player.x + player.vx * RIMEHOUND_TUNING.predictionSeconds,
-        this.hw, CONFIG.view.w - this.hw);
+      this.pounceTargetX = clamp(
+        player.x + player.vx * RIMEHOUND_TUNING.predictionSeconds,
+        this.hw,
+        CONFIG.view.w - this.hw,
+      );
       this.pounceAirborne = false;
     }
 
@@ -133,7 +149,12 @@ export function createRimehoundType(dependencies: EnemyDependencies, Enemy: Enem
       this.pounceAirborne = false;
     }
 
-    update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
+    update(
+      dt: number,
+      platforms: readonly EnemyPlatform[],
+      player: EnemyPlayerPort,
+      projectiles: EnemyProjectile[],
+    ): void {
       void projectiles;
       this.tickTimers(dt);
       this.packLockT = Math.max(0, this.packLockT - dt);
@@ -141,14 +162,23 @@ export function createRimehoundType(dependencies: EnemyDependencies, Enemy: Enem
       if (this.auroraResponseT <= 0) this.auroraDirection = 0;
       if (this.atkCd > 0) this.atkCd = Math.max(0, this.atkCd - dt);
       const routeTarget = this.auroraDirection === 0 ? player.x : this.auroraDirection > 0 ? CONFIG.view.w : 0;
-      const targetX = clamp(routeTarget + (this.packRole === "line" ? 0 : this.packFlank * RIMEHOUND_TUNING.flankDistance),
-        this.hw, CONFIG.view.w - this.hw);
+      const targetX = clamp(
+        routeTarget + (this.packRole === "line" ? 0 : this.packFlank * RIMEHOUND_TUNING.flankDistance),
+        this.hw,
+        CONFIG.view.w - this.hw,
+      );
       const playerDistance = Math.abs(player.x - this.x);
       if (this.atk === "flank") {
         const direction = Math.sign(targetX - this.x);
         this.vx = lerp(this.vx, direction * this.speed, clamp(9 * dt, 0, 1));
-        if (this.packAttackAuthorized && this.onGround && this.atkCd <= 0 && playerDistance <= RIMEHOUND_TUNING.engageRange
-          && Math.abs(player.y - this.y) < 130) this.beginWindup(player);
+        if (
+          this.packAttackAuthorized &&
+          this.onGround &&
+          this.atkCd <= 0 &&
+          playerDistance <= RIMEHOUND_TUNING.engageRange &&
+          Math.abs(player.y - this.y) < 130
+        )
+          this.beginWindup(player);
       } else if (this.atk === "windup") {
         this.vx = lerp(this.vx, 0, clamp(14 * dt, 0, 1));
         this.atkT = Math.max(0, this.atkT - dt);
@@ -158,8 +188,11 @@ export function createRimehoundType(dependencies: EnemyDependencies, Enemy: Enem
         const steeringScale = clamp(this.atkT / RIMEHOUND_TUNING.pounceSeconds, 0, 1);
         const desiredDirection = Math.sign(this.pounceTargetX - this.x) || this.atkDir;
         const desiredVelocity = desiredDirection * Math.max(Math.abs(this.vx), RIMEHOUND_TUNING.pounceSpeed);
-        this.vx += clamp(desiredVelocity - this.vx, -RIMEHOUND_TUNING.pounceSpeed * 4 * steeringScale * dt,
-          RIMEHOUND_TUNING.pounceSpeed * 4 * steeringScale * dt);
+        this.vx += clamp(
+          desiredVelocity - this.vx,
+          -RIMEHOUND_TUNING.pounceSpeed * 4 * steeringScale * dt,
+          RIMEHOUND_TUNING.pounceSpeed * 4 * steeringScale * dt,
+        );
       } else if (this.atk === "skid") {
         this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1));
         this.atkT = Math.max(0, this.atkT - dt);

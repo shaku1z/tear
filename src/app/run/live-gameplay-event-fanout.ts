@@ -46,7 +46,10 @@ export function subscribeLiveGameplayEventFanOut(options: LiveGameplayEventFanOu
     career.observe(event);
     recorder?.record("events", event.tick, createLiveGhostCausalEvent(event, options.nextEventSequence()));
     if (options.recordsTelemetry()) {
-      executeEnvironmentTelemetryIntents([...verdantTelemetryIntents(event), ...paleTelemetryIntents(event)], options.profileStats);
+      executeEnvironmentTelemetryIntents(
+        [...verdantTelemetryIntents(event), ...paleTelemetryIntents(event)],
+        options.profileStats,
+      );
     }
   });
   return Object.freeze({

@@ -9,23 +9,38 @@ function createPacingAssessment({ label, scenario, frameInterval }) {
   if (cpuThrottleRate !== undefined && (!Number.isFinite(cpuThrottleRate) || cpuThrottleRate < 1)) {
     throw new TypeError("browser performance CPU throttle rate is invalid");
   }
-  if (typeof label !== "string" || label.length === 0
-    || !finiteNonNegative(frameInterval?.p99Ms) || !finiteNonNegative(frameInterval?.maxMs)
-    || !finiteNonNegative(scenario?.frameIntervalP99Ms) || !finiteNonNegative(scenario?.frameIntervalMaxMs)) {
+  if (
+    typeof label !== "string" ||
+    label.length === 0 ||
+    !finiteNonNegative(frameInterval?.p99Ms) ||
+    !finiteNonNegative(frameInterval?.maxMs) ||
+    !finiteNonNegative(scenario?.frameIntervalP99Ms) ||
+    !finiteNonNegative(scenario?.frameIntervalMaxMs)
+  ) {
     throw new TypeError("browser performance pacing evidence is invalid");
   }
-  const failures = [{ id: "frame-interval-p99", actual: frameInterval.p99Ms,
-    budget: scenario.frameIntervalP99Ms, label: `${label} frame-interval p99 ms` },
-  { id: "frame-interval-max", actual: frameInterval.maxMs,
-    budget: scenario.frameIntervalMaxMs, label: `${label} frame-interval max ms` }]
+  const failures = [
+    {
+      id: "frame-interval-p99",
+      actual: frameInterval.p99Ms,
+      budget: scenario.frameIntervalP99Ms,
+      label: `${label} frame-interval p99 ms`,
+    },
+    {
+      id: "frame-interval-max",
+      actual: frameInterval.maxMs,
+      budget: scenario.frameIntervalMaxMs,
+      label: `${label} frame-interval max ms`,
+    },
+  ]
     .filter(({ actual, budget }) => actual > budget)
-    .map(({ id, actual, budget, label: failureLabel }) => Object.freeze({ id, actual, budget,
-      assertion: `${failureLabel}: ${actual} exceeded budget ${budget}` }));
+    .map(({ id, actual, budget, label: failureLabel }) =>
+      Object.freeze({ id, actual, budget, assertion: `${failureLabel}: ${actual} exceeded budget ${budget}` }),
+    );
   return Object.freeze({
     format: "tear-browser-pacing-assessment",
     schemaVersion: 1,
-    enforcement: cpuThrottleRate !== undefined && cpuThrottleRate > 1
-      ? "diagnostic-under-cpu-throttle" : "required",
+    enforcement: cpuThrottleRate !== undefined && cpuThrottleRate > 1 ? "diagnostic-under-cpu-throttle" : "required",
     ...(cpuThrottleRate !== undefined && { cpuThrottleRate }),
     status: failures.length === 0 ? "within-budget" : "exceeded",
     failures: Object.freeze(failures),

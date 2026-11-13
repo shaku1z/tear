@@ -35,13 +35,13 @@ export interface SpawnScheduleResult {
   readonly eligible: boolean;
 }
 
-export function concurrentEnemyCap(state: Pick<SpawnScheduleState, "mode" | "wave" | "stageId" | "horde">, tuning: SpawnTuning): number {
+export function concurrentEnemyCap(
+  state: Pick<SpawnScheduleState, "mode" | "wave" | "stageId" | "horde">,
+  tuning: SpawnTuning,
+): number {
   if (state.mode === "campaign") {
     if (state.stageId === undefined) throw new RangeError("campaign spawn scheduling requires a StageId");
-    return Math.min(
-      tuning.maxConcurrentCap,
-      tuning.maxConcurrent + campaignStageCurve(state.stageId).concurrentAdd,
-    );
+    return Math.min(tuning.maxConcurrentCap, tuning.maxConcurrent + campaignStageCurve(state.stageId).concurrentAdd);
   }
   if (state.mode === "endless" || state.mode === "gauntlet") {
     return Math.min(
@@ -98,7 +98,5 @@ export function planGroundSpawn(
 }
 
 export function planSideSpawn(worldWidth: number, random: RandomSource): number {
-  return random.next() < 0.5
-    ? 180 + random.next() * 240
-    : worldWidth - 180 - random.next() * 240;
+  return random.next() < 0.5 ? 180 + random.next() * 240 : worldWidth - 180 - random.next() * 240;
 }

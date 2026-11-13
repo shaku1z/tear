@@ -50,11 +50,16 @@ export interface DodgeProjectile {
 }
 
 export type AchievementIntent =
-  | Readonly<{ type: "profile-max"; stat: string; value: number }>
-  | Readonly<{ type: "achievement-check" }>;
+  Readonly<{ type: "profile-max"; stat: string; value: number }> | Readonly<{ type: "achievement-check" }>;
 
 export function tracksAchievements(run: AchievementRunState | null | undefined): boolean {
-  return Boolean(run && run.beatThisRun === undefined && run.seedRace === undefined && run.mode !== "tutorial" && run.mode !== "playground");
+  return Boolean(
+    run &&
+    run.beatThisRun === undefined &&
+    run.seedRace === undefined &&
+    run.mode !== "tutorial" &&
+    run.mode !== "playground",
+  );
 }
 
 export function resetStageRestrictions(run: AchievementRunState | null | undefined): void {
@@ -82,11 +87,17 @@ export function bossKillIntents(
   const sources = boss.dmgSrc ?? new Set<string>();
   const only = (source: string): boolean => sources.has(source) && ![...sources].some((other) => other !== source);
   const intents: AchievementIntent[] = [];
-  if (boss.bossId === "warden" && only("deflect")) intents.push({ type: "profile-max", stat: "wardenDeflectOnly", value: 1 });
-  if (boss.bossId === "colossus" && sources.size > 0 && !sources.has("melee")) intents.push({ type: "profile-max", stat: "colossusThrowOnly", value: 1 });
-  if (boss.bossId === "echo" && boss._lastSrc === "deflect") intents.push({ type: "profile-max", stat: "echoReflectKill", value: 1 });
-  if (boss.bossId === "rootbound" && boss.regrowthState?.phase === "resolved"
-    && boss.regrowthState.interruptClassification === "full-interrupt") {
+  if (boss.bossId === "warden" && only("deflect"))
+    intents.push({ type: "profile-max", stat: "wardenDeflectOnly", value: 1 });
+  if (boss.bossId === "colossus" && sources.size > 0 && !sources.has("melee"))
+    intents.push({ type: "profile-max", stat: "colossusThrowOnly", value: 1 });
+  if (boss.bossId === "echo" && boss._lastSrc === "deflect")
+    intents.push({ type: "profile-max", stat: "echoReflectKill", value: 1 });
+  if (
+    boss.bossId === "rootbound" &&
+    boss.regrowthState?.phase === "resolved" &&
+    boss.regrowthState.interruptClassification === "full-interrupt"
+  ) {
     intents.push({ type: "profile-max", stat: "rootboundRegrowthFullInterrupt", value: 1 });
   }
   if (boss.bossId === "source" && run._bossFightT != null && run.runTime - run._bossFightT < 60) {

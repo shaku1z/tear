@@ -79,24 +79,19 @@ export class StemCuePlayer {
     if (this.#started) return;
 
     const { startSeconds, endSeconds } = loopSeconds(cue);
-    const introOffset =
-      options.fromIntro && cue.intro
-        ? cue.intro.startFrame / cue.sourceSampleRate
-        : startSeconds;
+    const introOffset = options.fromIntro && cue.intro ? cue.intro.startFrame / cue.sourceSampleRate : startSeconds;
 
     const at = backend.now() + (options.leadSeconds ?? 0.15);
     const gains = planTierGains(cue, this.#tier);
     for (const [id, voice] of this.#voices) {
       const asset = cue.stems.find((candidate) => candidate.id === id);
-      const crossfadeFrames =
-        asset?.crossfadeFrames ?? cue.loop.crossfadeFrames;
+      const crossfadeFrames = asset?.crossfadeFrames ?? cue.loop.crossfadeFrames;
       voice.configureLoop(startSeconds, endSeconds, {
         mode: asset?.seamMode ?? cue.loop.mode,
         ...(crossfadeFrames === undefined
           ? {}
           : {
-              crossfadeSeconds:
-                crossfadeFrames / cue.sourceSampleRate,
+              crossfadeSeconds: crossfadeFrames / cue.sourceSampleRate,
             }),
       });
       // Silent stems still start so their phase matches when they fade in later.

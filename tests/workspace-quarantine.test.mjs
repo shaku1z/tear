@@ -8,9 +8,7 @@ import process from "node:process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import {
-  runWorkspaceRecoveryReport,
-} from "../scripts/report-workspace-recovery.mjs";
+import { runWorkspaceRecoveryReport } from "../scripts/report-workspace-recovery.mjs";
 import {
   runWorkspaceQuarantinePreparation,
   WorkspaceQuarantineManifestError,
@@ -146,7 +144,9 @@ test("prepares a same-volume read-only plan without creating the destination", (
     assert.equal(manifest.evidence.externalRecoveryReport.sha256, evidence.reportSha256);
     assert.match(manifest.evidence.externalRecoveryReport.protectedGitStoreHashCoverage, /no preservation claim/u);
     assert.ok(manifest.summary.crossSourceHashClusters >= 1);
-    assert.ok(manifest.entries.every((entry) => entry.plannedPath.startsWith(`${manifest.destination.path}${path.sep}`)));
+    assert.ok(
+      manifest.entries.every((entry) => entry.plannedPath.startsWith(`${manifest.destination.path}${path.sep}`)),
+    );
     assert.ok(manifest.entries.every((entry) => entry.restoreRelativePath.startsWith(`${entry.sourceName}/`)));
     const reportEntry = evidence.report.sources[0].entries.find((entry) => entry.relativePath === "shared.txt");
     const manifestEntry = manifest.entries.find((entry) => entry.relativePath === "shared.txt");
@@ -154,7 +154,13 @@ test("prepares a same-volume read-only plan without creating the destination", (
     assert.equal(manifestEntry.reportDecision, reportEntry.decision);
     assert.deepEqual(manifestEntry.reportReasonCodes, reportEntry.reasonCodes);
     assert.equal(fs.existsSync(manifest.destination.path), false);
-    assert.deepEqual(fs.readdirSync(fixture.archiveGroup).filter((name) => name !== path.basename(outputPath)).sort(), before);
+    assert.deepEqual(
+      fs
+        .readdirSync(fixture.archiveGroup)
+        .filter((name) => name !== path.basename(outputPath))
+        .sort(),
+      before,
+    );
     assert.equal(JSON.parse(fs.readFileSync(outputPath, "utf8")).applyAuthorized, false);
   } finally {
     cleanup(fixture);
@@ -181,7 +187,10 @@ test("changed or missing evidence, policy/head mismatch, and existing destinatio
   try {
     const evidence = createReport(changed);
     addFile(changed.workspaceRoot, "gsm-one/shared.txt", "changed after report\n");
-    assert.throws(() => runWorkspaceQuarantinePreparation(options(changed, evidence)), WorkspaceQuarantineManifestError);
+    assert.throws(
+      () => runWorkspaceQuarantinePreparation(options(changed, evidence)),
+      WorkspaceQuarantineManifestError,
+    );
   } finally {
     cleanup(changed);
   }
@@ -222,10 +231,16 @@ test("changed or missing evidence, policy/head mismatch, and existing destinatio
     const altered = { ...evidence.report, policySha256: "0".repeat(64) };
     const alteredRaw = `${JSON.stringify(altered, null, 2)}\n`;
     fs.writeFileSync(evidence.reportPath, alteredRaw, "utf8");
-    assert.throws(() => runWorkspaceQuarantinePreparation(options(wrongPolicy, {
-      ...evidence,
-      reportSha256: createHash("sha256").update(alteredRaw, "utf8").digest("hex"),
-    })), /policy SHA-256/u);
+    assert.throws(
+      () =>
+        runWorkspaceQuarantinePreparation(
+          options(wrongPolicy, {
+            ...evidence,
+            reportSha256: createHash("sha256").update(alteredRaw, "utf8").digest("hex"),
+          }),
+        ),
+      /policy SHA-256/u,
+    );
   } finally {
     cleanup(wrongPolicy);
   }
@@ -236,14 +251,26 @@ test("output is new-only and forbidden apply flags are rejected", () => {
   try {
     const evidence = createReport(fixture);
     const outputPath = path.join(fixture.archiveGroup, "manifest.json");
-    assert.throws(() => runWorkspaceQuarantinePreparation(options(fixture, evidence, { reportSha256: "0".repeat(64) })), /report SHA-256/u);
+    assert.throws(
+      () => runWorkspaceQuarantinePreparation(options(fixture, evidence, { reportSha256: "0".repeat(64) })),
+      /report SHA-256/u,
+    );
     runWorkspaceQuarantinePreparation(options(fixture, evidence, { outputPath }));
-    assert.throws(() => runWorkspaceQuarantinePreparation(options(fixture, evidence, { outputPath })), /already exists/u);
+    assert.throws(
+      () => runWorkspaceQuarantinePreparation(options(fixture, evidence, { outputPath })),
+      /already exists/u,
+    );
     const otherGroup = path.join(fixture.archiveRoot, "2026-08-24-g5-other-recovery");
     fs.mkdirSync(otherGroup);
-    assert.throws(() => runWorkspaceQuarantinePreparation(options(fixture, evidence, {
-      outputPath: path.join(otherGroup, "manifest.json"),
-    })), /same dated g5 recovery group/u);
+    assert.throws(
+      () =>
+        runWorkspaceQuarantinePreparation(
+          options(fixture, evidence, {
+            outputPath: path.join(otherGroup, "manifest.json"),
+          }),
+        ),
+      /same dated g5 recovery group/u,
+    );
     const result = spawnSync(process.execPath, [preparerPath, "--apply"], { encoding: "utf8", stdio: "pipe" });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /read-only/u);
@@ -270,10 +297,16 @@ test("aggregate policy limits apply across all source roots", () => {
     };
     const alteredRaw = `${JSON.stringify(altered, null, 2)}\n`;
     fs.writeFileSync(evidence.reportPath, alteredRaw, "utf8");
-    assert.throws(() => runWorkspaceQuarantinePreparation(options(fixture, {
-      reportPath: evidence.reportPath,
-      reportSha256: createHash("sha256").update(alteredRaw, "utf8").digest("hex"),
-    })), /all sources exceed maxEntries/u);
+    assert.throws(
+      () =>
+        runWorkspaceQuarantinePreparation(
+          options(fixture, {
+            reportPath: evidence.reportPath,
+            reportSha256: createHash("sha256").update(alteredRaw, "utf8").digest("hex"),
+          }),
+        ),
+      /all sources exceed maxEntries/u,
+    );
   } finally {
     cleanup(fixture);
   }

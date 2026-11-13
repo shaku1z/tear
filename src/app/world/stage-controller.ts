@@ -65,8 +65,13 @@ export class LiveStageController<
       blade.state = "returning";
     }
     const stageName = this.#state.current.name;
-    if (run !== null && this.#port.achievementTracking()
-      && stageName !== undefined && stageName !== "" && this.#state.current.dark !== true) {
+    if (
+      run !== null &&
+      this.#port.achievementTracking() &&
+      stageName !== undefined &&
+      stageName !== "" &&
+      this.#state.current.dark !== true
+    ) {
       this.#port.rememberBiome(stageName);
     }
     if (run !== null) this.#port.resetStageAchievements();

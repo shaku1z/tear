@@ -35,8 +35,14 @@ import {
   type TearWorldConstructionPort,
 } from "../../tearbench/detached-world-hydrator";
 import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
-import type { UiTutorialPresentationCheckpoint, UiHudPresentationCheckpoint } from "../../tearbench/ui-presentation-checkpoint";
-import { parseParticlePresentationCheckpoint, validateParticlePresentationBinding } from "../../tearbench/particle-presentation-checkpoint";
+import type {
+  UiTutorialPresentationCheckpoint,
+  UiHudPresentationCheckpoint,
+} from "../../tearbench/ui-presentation-checkpoint";
+import {
+  parseParticlePresentationCheckpoint,
+  validateParticlePresentationBinding,
+} from "../../tearbench/particle-presentation-checkpoint";
 import type { LiveParticlePresentationState } from "../world/particle-presentation-state";
 import type { PreparedParticlePresentationRestore } from "../../tearbench/particle-presentation-checkpoint";
 
@@ -101,13 +107,25 @@ export interface LiveStateForgeAdapterOptions {
   readonly restoreIdentityState: (state: CombatEntityIdentityState) => void;
   readonly runtimeState: () => Readonly<Record<string, unknown>>;
   readonly restoreRuntimeState: (state: Readonly<Record<string, unknown>>) => void;
-  readonly tutorialPresentation?: Readonly<{ capture(): UiTutorialPresentationCheckpoint; restore(value: UiTutorialPresentationCheckpoint | undefined): void }>;
-  readonly hudPresentation?: Readonly<{ capture(): UiHudPresentationCheckpoint; restore(value: UiHudPresentationCheckpoint | undefined): void }>;
+  readonly tutorialPresentation?: Readonly<{
+    capture(): UiTutorialPresentationCheckpoint;
+    restore(value: UiTutorialPresentationCheckpoint | undefined): void;
+  }>;
+  readonly hudPresentation?: Readonly<{
+    capture(): UiHudPresentationCheckpoint;
+    restore(value: UiHudPresentationCheckpoint | undefined): void;
+  }>;
   readonly particlesPresentation?: LiveParticlePresentationState;
   readonly captureCinema: () => unknown;
   /** Validates the candidate's behavior-bearing cinematic binding before commit mutation. */
-  readonly validateCinema: (runtime: Readonly<Record<string, unknown>>, run: GameRun, stageIndex: number,
-    enemies: readonly GameEnemy[], platforms?: readonly object[], configuration?: unknown) => void;
+  readonly validateCinema: (
+    runtime: Readonly<Record<string, unknown>>,
+    run: GameRun,
+    stageIndex: number,
+    enemies: readonly GameEnemy[],
+    platforms?: readonly object[],
+    configuration?: unknown,
+  ) => void;
 }
 
 // Input projection is owned by the live frame lifecycle, not State Forge.
@@ -115,11 +133,7 @@ export interface LiveStateForgeAdapterOptions {
 // becoming codec nulls during a restore/rollback before another frame runs.
 const skippedKeys = new Set(["cfg", "weapon", "aiInput", "aimOverride", "lmbOverride", "presentation"]);
 
-function encode(
-  value: unknown,
-  identities: ReadonlyMap<object, string>,
-  stack = new WeakSet(),
-): TearCodecValue {
+function encode(value: unknown, identities: ReadonlyMap<object, string>, stack = new WeakSet()): TearCodecValue {
   if (value === null || typeof value === "string" || typeof value === "boolean") return value;
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   if (typeof value === "function") {
@@ -142,8 +156,13 @@ function encode(
   if (value instanceof Map) {
     // Without this a Map encodes as `{}`: its entries are lost and a restore
     // installs a plain object where gameplay expects Map methods.
-    const encoded = Object.freeze({ $map: Object.freeze([...value].map(([key, entry]) =>
-      Object.freeze([encode(key, identities, stack), encode(entry, identities, stack)]))) });
+    const encoded = Object.freeze({
+      $map: Object.freeze(
+        [...value].map(([key, entry]) =>
+          Object.freeze([encode(key, identities, stack), encode(entry, identities, stack)]),
+        ),
+      ),
+    });
     stack.delete(value);
     return encoded;
   }
@@ -163,8 +182,10 @@ function encode(
 }
 
 /** The ordinary reward codec's data-only projection; executable choices are rebound by catalog ID on restore. */
-export function captureLiveRewardSelection(selection: RewardSelectionSnapshot<UpgradeDefinition> | null,
-  identities: ReadonlyMap<object, string> = new Map()): TearCodecValue {
+export function captureLiveRewardSelection(
+  selection: RewardSelectionSnapshot<UpgradeDefinition> | null,
+  identities: ReadonlyMap<object, string> = new Map(),
+): TearCodecValue {
   return encode(selection, identities);
 }
 
@@ -181,73 +202,128 @@ function captureWorld(options: LiveStateForgeAdapterOptions): TearCodecWorld {
   const player = options.state.player();
   const blade = options.state.blade();
   const run = options.state.run();
-  if (player === undefined || blade === undefined || run === null) throw new Error("State Forge capture requires a live run");
+  if (player === undefined || blade === undefined || run === null)
+    throw new Error("State Forge capture requires a live run");
   const enemies = options.state.enemies();
   const projectiles = options.state.projectiles();
   const environment = options.environment().snapshot();
-  const identities = new Map<object, string>([[player, "player"], [blade, "blade"]]);
+  const identities = new Map<object, string>([
+    [player, "player"],
+    [blade, "blade"],
+  ]);
   for (const enemy of enemies) identities.set(enemy, options.actorId(enemy, "enemy"));
   for (const projectile of projectiles) identities.set(projectile, options.actorId(projectile, "projectile"));
   const entity = (value: object, id: string, extra: Readonly<Record<string, TearCodecValue>>): TearCodecValue =>
     Object.freeze({
-      ...Object.fromEntries(Object.entries(value)
-        .filter(([key, entry]) => !skippedKeys.has(key) && typeof entry !== "function")
-        .map(([key, entry]) => [key, encode(entry, identities)])),
+      ...Object.fromEntries(
+        Object.entries(value)
+          .filter(([key, entry]) => !skippedKeys.has(key) && typeof entry !== "function")
+          .map(([key, entry]) => [key, encode(entry, identities)]),
+      ),
       id,
       ...extra,
     });
   const components = new Map<Parameters<TearCodecWorld["components"]["set"]>[0], TearCodecValue>();
   components.set("tear.player.v1", entity(player, "player", {}));
-  components.set("tear.blade.v1", entity(blade, "blade", {
-    ownerId: "player", weaponId: run.weaponId,
-  }));
-  components.set("tear.run.v1", Object.freeze({
-    ...(encode(run, identities) as Readonly<Record<string, TearCodecValue>>),
-    // The canonical declaration contains a weapon ID, unlike excluded executable actor weapon ports.
-    ...(run.beatThisRun === undefined ? {} : { beatThisRun: readBeatRunBinding(run.beatThisRun) as unknown as TearCodecValue }),
-    ...(run.seedRace === undefined ? {} : { seedRace: readSeedRaceRun(run.seedRace) as unknown as TearCodecValue }),
-    mode: run.mode, difficulty: run.diff, stage: options.stageIndex(), wave: run.wave,
-    tick: options.tick(), score: run.score,
-  }));
-  components.set("tear.world.v1", Object.freeze({
-    clock: options.tick(), runtime: encode(options.runtimeState(), identities),
-    simulationSeconds: options.worldServices.clock.seconds(),
-    floaters: encode(options.state.floaters(), identities),
-    ghost: encode(options.captureGhost(), identities),
-    identityState: encode(options.captureIdentityState(), identities),
-  }));
-  const encodedEnemies = enemies.map((enemy) => entity(enemy, identities.get(enemy) ?? "", {
-    factoryId: factoryId(enemy),
-  }));
+  components.set(
+    "tear.blade.v1",
+    entity(blade, "blade", {
+      ownerId: "player",
+      weaponId: run.weaponId,
+    }),
+  );
+  components.set(
+    "tear.run.v1",
+    Object.freeze({
+      ...(encode(run, identities) as Readonly<Record<string, TearCodecValue>>),
+      // The canonical declaration contains a weapon ID, unlike excluded executable actor weapon ports.
+      ...(run.beatThisRun === undefined
+        ? {}
+        : { beatThisRun: readBeatRunBinding(run.beatThisRun) as unknown as TearCodecValue }),
+      ...(run.seedRace === undefined ? {} : { seedRace: readSeedRaceRun(run.seedRace) as unknown as TearCodecValue }),
+      mode: run.mode,
+      difficulty: run.diff,
+      stage: options.stageIndex(),
+      wave: run.wave,
+      tick: options.tick(),
+      score: run.score,
+    }),
+  );
+  components.set(
+    "tear.world.v1",
+    Object.freeze({
+      clock: options.tick(),
+      runtime: encode(options.runtimeState(), identities),
+      simulationSeconds: options.worldServices.clock.seconds(),
+      floaters: encode(options.state.floaters(), identities),
+      ghost: encode(options.captureGhost(), identities),
+      identityState: encode(options.captureIdentityState(), identities),
+    }),
+  );
+  const encodedEnemies = enemies.map((enemy) =>
+    entity(enemy, identities.get(enemy) ?? "", {
+      factoryId: factoryId(enemy),
+    }),
+  );
   components.set("tear.enemy.v1", Object.freeze(encodedEnemies.filter((_, index) => !enemies[index]?.isBoss)));
   components.set("tear.boss.v1", Object.freeze(encodedEnemies.filter((_, index) => enemies[index]?.isBoss)));
-  components.set("tear.projectile.v1", Object.freeze(projectiles.map((projectile) =>
-    entity(projectile, identities.get(projectile) ?? "", { factoryId: "projectile" }))));
+  components.set(
+    "tear.projectile.v1",
+    Object.freeze(
+      projectiles.map((projectile) =>
+        entity(projectile, identities.get(projectile) ?? "", { factoryId: "projectile" }),
+      ),
+    ),
+  );
   components.set("tear.platform.v1", encode(options.platforms(), identities));
-  components.set("tear.hazard.v1", Object.freeze({
-    ...(environment.allocator === undefined ? {} : { allocator: encode(environment.allocator, identities) }),
-    ...(environment.worldId === undefined ? {} : { worldId: environment.worldId }),
-    stageId: environment.stageId,
-    slowZones: encode(options.slowZones(), identities),
-    walls: encode(options.walls(), identities),
-    fields: encode(environment.fields, identities),
-    combatObjects: encode(environment.combatObjects, identities),
-    routes: encode(environment.routes, identities),
-  }));
-  components.set("tear.ui.v1", Object.freeze({ screen: options.screen(), focusId: String(options.focus()),
-    ...(options.tutorialPresentation ? { tutorialPresentation: options.tutorialPresentation.capture() } : {}),
-    ...(options.hudPresentation ? { hudPresentation: options.hudPresentation.capture() } : {}),
-    ...(options.particlesPresentation ? { particlesPresentation: encode(options.particlesPresentation.capture(), identities) } : {}) }));
-  const selection = options.reward();
-  components.set("tear.reward.v1", Object.freeze({ selection: captureLiveRewardSelection(selection, identities),
-    ...(run.seedRace === undefined ? {} : { raceLegality: seedRaceLegality(run.mods.owned, selection?.choices ?? [], selection?.reservedChoice ?? null) }) }));
-  components.set("tear.configuration.v1", Object.freeze({
-    rulesetVersion: "live", values: Object.freeze({
-      ...(encode(options.worldServices.configuration.value, identities) as Readonly<Record<string, TearCodecValue>>),
-      // Actor presentation ports stay excluded; canonical cinematic tuning is data owned by this configuration codec.
-      presentation: encode(options.worldServices.configuration.value.presentation, identities),
+  components.set(
+    "tear.hazard.v1",
+    Object.freeze({
+      ...(environment.allocator === undefined ? {} : { allocator: encode(environment.allocator, identities) }),
+      ...(environment.worldId === undefined ? {} : { worldId: environment.worldId }),
+      stageId: environment.stageId,
+      slowZones: encode(options.slowZones(), identities),
+      walls: encode(options.walls(), identities),
+      fields: encode(environment.fields, identities),
+      combatObjects: encode(environment.combatObjects, identities),
+      routes: encode(environment.routes, identities),
     }),
-  }));
+  );
+  components.set(
+    "tear.ui.v1",
+    Object.freeze({
+      screen: options.screen(),
+      focusId: String(options.focus()),
+      ...(options.tutorialPresentation ? { tutorialPresentation: options.tutorialPresentation.capture() } : {}),
+      ...(options.hudPresentation ? { hudPresentation: options.hudPresentation.capture() } : {}),
+      ...(options.particlesPresentation
+        ? { particlesPresentation: encode(options.particlesPresentation.capture(), identities) }
+        : {}),
+    }),
+  );
+  const selection = options.reward();
+  components.set(
+    "tear.reward.v1",
+    Object.freeze({
+      selection: captureLiveRewardSelection(selection, identities),
+      ...(run.seedRace === undefined
+        ? {}
+        : {
+            raceLegality: seedRaceLegality(run.mods.owned, selection?.choices ?? [], selection?.reservedChoice ?? null),
+          }),
+    }),
+  );
+  components.set(
+    "tear.configuration.v1",
+    Object.freeze({
+      rulesetVersion: "live",
+      values: Object.freeze({
+        ...(encode(options.worldServices.configuration.value, identities) as Readonly<Record<string, TearCodecValue>>),
+        // Actor presentation ports stay excluded; canonical cinematic tuning is data owned by this configuration codec.
+        presentation: encode(options.worldServices.configuration.value.presentation, identities),
+      }),
+    }),
+  );
   components.set("tear.rng.v1", encode(options.worldServices.random.snapshot(), identities));
   components.set("tear.cinematic.v1", encode(options.captureCinema(), identities));
   return { components, references: new Map(), entityIds: new Set() };
@@ -266,7 +342,8 @@ function createWorldConstructionPort(
 > {
   return Object.freeze({
     ...entities,
-    hydrateReward: (payload: TearCodecValue, run: GameRun) => hydrateRewardCodecPayload(dependencies.UPGRADES, payload, run),
+    hydrateReward: (payload: TearCodecValue, run: GameRun) =>
+      hydrateRewardCodecPayload(dependencies.UPGRADES, payload, run),
   });
 }
 
@@ -277,14 +354,22 @@ function stageWorld(
 ): Candidate {
   // Bind against the same base/weapon/configuration composition used by commit,
   // before constructing actors or consulting any outgoing presentation state.
-  const ui = world.components.get("tear.ui.v1"), blade = world.components.get("tear.blade.v1");
-  const uiRecord = ui !== null && typeof ui === "object" && !Array.isArray(ui) ? ui as Readonly<Record<string, TearCodecValue>> : undefined;
-  const bladeRecord = blade !== null && typeof blade === "object" && !Array.isArray(blade) ? blade as Readonly<Record<string, TearCodecValue>> : undefined;
+  const ui = world.components.get("tear.ui.v1"),
+    blade = world.components.get("tear.blade.v1");
+  const uiRecord =
+    ui !== null && typeof ui === "object" && !Array.isArray(ui)
+      ? (ui as Readonly<Record<string, TearCodecValue>>)
+      : undefined;
+  const bladeRecord =
+    blade !== null && typeof blade === "object" && !Array.isArray(blade)
+      ? (blade as Readonly<Record<string, TearCodecValue>>)
+      : undefined;
   const particles = parseParticlePresentationCheckpoint(uiRecord?.particlesPresentation);
   if (particles !== undefined) {
     if (options.particlesPresentation === undefined) throw new Error("particle presentation owner is not bound");
     const configuration = options.worldServices.configuration.baseSnapshot();
-    if (typeof bladeRecord?.weaponId === "string") options.dependencies.applyWeapon(configuration, bladeRecord.weaponId);
+    if (typeof bladeRecord?.weaponId === "string")
+      options.dependencies.applyWeapon(configuration, bladeRecord.weaponId);
     applyTearCodecConfiguration(configuration, world.components.get("tear.configuration.v1") ?? null, new Map());
     validateParticlePresentationBinding(particles, configuration.effects);
   }
@@ -305,14 +390,21 @@ function stageWorld(
     LegacyGhostRuntimeState
   >(createWorldConstructionPort(options.dependencies, options.entities), world, context);
   restoreUpgradeHooks({ mods: candidate.run.mods, config: options.worldServices.configuration.value });
-  return Object.freeze({ ...candidate, ...(options.particlesPresentation === undefined ? {} : {
-    particleRestore: options.particlesPresentation.prepare(candidate.particlesPresentation, candidate.run.runSeed, candidate.tick),
-  }) });
+  return Object.freeze({
+    ...candidate,
+    ...(options.particlesPresentation === undefined
+      ? {}
+      : {
+          particleRestore: options.particlesPresentation.prepare(
+            candidate.particlesPresentation,
+            candidate.run.runSeed,
+            candidate.tick,
+          ),
+        }),
+  });
 }
 
-export function createLiveStateForgeAdapter(
-  options: LiveStateForgeAdapterOptions,
-): TearLiveWorldAdapter<Candidate> {
+export function createLiveStateForgeAdapter(options: LiveStateForgeAdapterOptions): TearLiveWorldAdapter<Candidate> {
   const adapter: TearLiveWorldAdapter<Candidate> = {
     capture: () => captureWorld(options),
     stage: (world, context) => stageWorld(options, world, context),
@@ -322,28 +414,51 @@ export function createLiveStateForgeAdapter(
       // retaining bossonly semantics; campaign-mode candidates remain bound
       // to the published stage roster.
       const previewStageIndex = candidate.stageIndex >= options.dependencies.STAGES.length;
-      const availableStages = candidate.run.mode === "playground" || previewStageIndex
-        ? options.dependencies.PLAYGROUND_STAGES
-        : options.dependencies.STAGES;
+      const availableStages =
+        candidate.run.mode === "playground" || previewStageIndex
+          ? options.dependencies.PLAYGROUND_STAGES
+          : options.dependencies.STAGES;
       if (!(candidate.player.maxHp > 0) || candidate.player.hp < 0 || candidate.player.hp > candidate.player.maxHp) {
         issues.push("player health is outside legal bounds");
       }
       if (!Number.isSafeInteger(candidate.tick) || candidate.tick < 0) issues.push("simulation tick is invalid");
-      if (!Number.isSafeInteger(candidate.stageIndex) || candidate.stageIndex < 0 ||
-        candidate.stageIndex >= availableStages.length) issues.push("stage index is invalid for the restored run mode");
+      if (
+        !Number.isSafeInteger(candidate.stageIndex) ||
+        candidate.stageIndex < 0 ||
+        candidate.stageIndex >= availableStages.length
+      )
+        issues.push("stage index is invalid for the restored run mode");
       const stage = availableStages[candidate.stageIndex];
-      if (candidate.environment.stageId !== "unknown" && stage !== undefined && candidate.environment.stageId !== stage.id) {
+      if (
+        candidate.environment.stageId !== "unknown" &&
+        stage !== undefined &&
+        candidate.environment.stageId !== stage.id
+      ) {
         issues.push("environment snapshot stage does not match restored world stage");
       }
       const currentWorldId = options.environment().snapshot().worldId;
-      if (candidate.environment.worldId !== undefined && currentWorldId !== undefined && candidate.environment.worldId !== currentWorldId) {
+      if (
+        candidate.environment.worldId !== undefined &&
+        currentWorldId !== undefined &&
+        candidate.environment.worldId !== currentWorldId
+      ) {
         issues.push("environment snapshot belongs to another world");
       }
       if (candidate.enemies.some((enemy) => !Number.isFinite(enemy.x) || !Number.isFinite(enemy.y))) {
         issues.push("enemy transform is not finite");
       }
-      try { options.validateCinema(candidate.runtime, candidate.run, candidate.stageIndex, candidate.enemies, candidate.platforms, candidate.configuration); }
-      catch (error) { issues.push(error instanceof Error ? error.message : String(error)); }
+      try {
+        options.validateCinema(
+          candidate.runtime,
+          candidate.run,
+          candidate.stageIndex,
+          candidate.enemies,
+          candidate.platforms,
+          candidate.configuration,
+        );
+      } catch (error) {
+        issues.push(error instanceof Error ? error.message : String(error));
+      }
       return Object.freeze(issues);
     },
     commit(candidate) {
@@ -355,15 +470,20 @@ export function createLiveStateForgeAdapter(
       // Pale bossonly restores intentionally use a playground stage index,
       // while their run mode remains bossonly for the boss contract.
       const previewStageIndex = candidate.stageIndex >= options.dependencies.STAGES.length;
-      const availableStages = candidate.run.mode === "playground" || previewStageIndex
-        ? options.dependencies.PLAYGROUND_STAGES
-        : options.dependencies.STAGES;
+      const availableStages =
+        candidate.run.mode === "playground" || previewStageIndex
+          ? options.dependencies.PLAYGROUND_STAGES
+          : options.dependencies.STAGES;
       const restoredStage = availableStages[candidate.stageIndex];
       const currentWorldId = options.environment().snapshot().worldId;
       const environment = {
         ...candidate.environment,
-        ...(candidate.environment.stageId === "unknown" && restoredStage !== undefined ? { stageId: restoredStage.id } : {}),
-        ...(candidate.environment.worldId === undefined && currentWorldId !== undefined ? { worldId: currentWorldId } : {}),
+        ...(candidate.environment.stageId === "unknown" && restoredStage !== undefined
+          ? { stageId: restoredStage.id }
+          : {}),
+        ...(candidate.environment.worldId === undefined && currentWorldId !== undefined
+          ? { worldId: currentWorldId }
+          : {}),
       };
       options.clearEnvironmentRestore?.();
       options.restoreEnvironment(environment);

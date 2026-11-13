@@ -7,16 +7,25 @@ import {
 } from "../../src/gameplay/runtime/tear-world-context";
 import { createTearWorldTransientState } from "../../src/gameplay/runtime/tear-world-transient-state";
 
-interface Run { readonly id: string; }
-interface Actor { readonly id: string; }
-interface BossMarker { readonly id: string; }
+interface Run {
+  readonly id: string;
+}
+interface Actor {
+  readonly id: string;
+}
+interface BossMarker {
+  readonly id: string;
+}
 
 describe("Tear world context", () => {
   it("owns mutable per-world collections without crossing state between worlds", () => {
     const firstEnemy = { id: "first-enemy" };
     const initialEnemies = [firstEnemy];
     const first = createTearWorldState<Run, Actor, Actor, Actor, Actor, Actor, Actor, Actor, BossMarker, BossMarker>({
-      run: { id: "one" }, player: { id: "one-player" }, blade: { id: "one-blade" }, enemies: initialEnemies,
+      run: { id: "one" },
+      player: { id: "one-player" },
+      blade: { id: "one-blade" },
+      enemies: initialEnemies,
     });
     const second = createTearWorldState<Run, Actor, Actor, Actor, Actor, Actor, Actor, Actor, BossMarker, BossMarker>();
 
@@ -40,40 +49,90 @@ describe("Tear world context", () => {
     const state = createTearWorldState<Run, Actor, Actor, Actor, Actor, Actor, Actor, Actor, BossMarker, BossMarker>();
     const services: TearWorldServices<{ readonly seed: string }, "spawn", { readonly id: string }> = {
       configuration: Object.freeze({
-        value: {}, snapshot: () => ({}), baseSnapshot: () => ({}), restore: () => { calls.push("configuration.restore"); },
-        resetToBase: () => { calls.push("configuration"); },
+        value: {},
+        snapshot: () => ({}),
+        baseSnapshot: () => ({}),
+        restore: () => {
+          calls.push("configuration.restore");
+        },
+        resetToBase: () => {
+          calls.push("configuration");
+        },
       }),
       random: Object.freeze({
-        resetRun: (seed) => { calls.push(`reset:${String(seed)}`); },
+        resetRun: (seed) => {
+          calls.push(`reset:${String(seed)}`);
+        },
         stream: (name) => ({ id: `${name}-stream` }),
         snapshot: () => ({ seed: "before" }),
-        restore: (snapshot) => { calls.push(`restore:${snapshot.seed}`); },
+        restore: (snapshot) => {
+          calls.push(`restore:${snapshot.seed}`);
+        },
       }),
       clock: Object.freeze({
         seconds: () => 12,
-        set: (seconds) => { calls.push(`set:${String(seconds)}`); },
-        reset: () => { calls.push("clock"); },
-        advance: (seconds) => { calls.push(`advance:${String(seconds)}`); },
+        set: (seconds) => {
+          calls.push(`set:${String(seconds)}`);
+        },
+        reset: () => {
+          calls.push("clock");
+        },
+        advance: (seconds) => {
+          calls.push(`advance:${String(seconds)}`);
+        },
       }),
-      effects: Object.freeze({ resetWorld: () => { calls.push("effects"); }, count: () => 4 }),
-      mirror: Object.freeze({ reset: () => { calls.push("mirror"); } }),
-      bossFeedback: Object.freeze({ clear: () => { calls.push("boss-feedback"); } }),
+      effects: Object.freeze({
+        resetWorld: () => {
+          calls.push("effects");
+        },
+        count: () => 4,
+      }),
+      mirror: Object.freeze({
+        reset: () => {
+          calls.push("mirror");
+        },
+      }),
+      bossFeedback: Object.freeze({
+        clear: () => {
+          calls.push("boss-feedback");
+        },
+      }),
     };
     const cinema = Object.freeze({ active: false, id: undefined });
-    const context = createTearWorldContext(state, { create: "entities" }, { phase: "ready" }, services,
-      createTearWorldTransientState(), cinema);
+    const context = createTearWorldContext(
+      state,
+      { create: "entities" },
+      { phase: "ready" },
+      services,
+      createTearWorldTransientState(),
+      cinema,
+    );
 
     context.services.configuration.resetToBase();
     context.services.random.resetRun("seed");
     context.services.random.restore(context.services.random.snapshot());
-    context.services.clock.set(4); context.services.clock.advance(0.5); context.services.clock.reset();
-    context.services.effects.resetWorld(); context.services.mirror.reset(); context.services.bossFeedback.clear();
+    context.services.clock.set(4);
+    context.services.clock.advance(0.5);
+    context.services.clock.reset();
+    context.services.effects.resetWorld();
+    context.services.mirror.reset();
+    context.services.bossFeedback.clear();
 
     expect(context.services.random.stream("spawn")).toEqual({ id: "spawn-stream" });
     expect(context.services.clock.seconds()).toBe(12);
     expect(context.services.effects.count()).toBe(4);
     expect(context.cinema).toBe(cinema);
-    expect(calls).toEqual(["configuration", "reset:seed", "restore:before", "set:4", "advance:0.5", "clock", "effects", "mirror", "boss-feedback"]);
+    expect(calls).toEqual([
+      "configuration",
+      "reset:seed",
+      "restore:before",
+      "set:4",
+      "advance:0.5",
+      "clock",
+      "effects",
+      "mirror",
+      "boss-feedback",
+    ]);
     expect(context.transient.impact).toEqual({ hitStop: 0, slowMotion: 0, shake: 0 });
     expect(Object.isFrozen(context)).toBe(true);
   });

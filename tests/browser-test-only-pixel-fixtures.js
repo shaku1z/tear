@@ -16,8 +16,12 @@ const outputDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", 
 
 function recordObservation(name, png, observation) {
   const compactRegions = observation.brightRegions.slice(0, 12).map((region) => ({
-    x: Math.round(region.x), y: Math.round(region.y), width: Math.round(region.width), height: Math.round(region.height),
-    density: Number(region.density.toFixed(4)), confidence: Number(region.confidence.toFixed(4)),
+    x: Math.round(region.x),
+    y: Math.round(region.y),
+    width: Math.round(region.width),
+    height: Math.round(region.height),
+    density: Number(region.density.toFixed(4)),
+    confidence: Number(region.confidence.toFixed(4)),
   }));
   return {
     name,
@@ -80,15 +84,22 @@ async function main() {
     await observerServer.close();
   }
   assert.equal(report.screens.length, 6, "test fixture capture did not reach every requested visible screen");
-  assert.deepEqual(report.screens.map((screen) => [screen.name, screen.kind]), [
-    ["menu-initial", "menu-like"],
-    ["setup", "setup-like"],
-    ["draft", "draft-like"],
-    ["gameover", "terminal-like"],
-    ["win", "terminal-like"],
-    ["menu-return", "menu-like"],
-  ], "test-only PNG fixtures no longer map to their generic visual layouts");
+  assert.deepEqual(
+    report.screens.map((screen) => [screen.name, screen.kind]),
+    [
+      ["menu-initial", "menu-like"],
+      ["setup", "setup-like"],
+      ["draft", "draft-like"],
+      ["gameover", "terminal-like"],
+      ["win", "terminal-like"],
+      ["menu-return", "menu-like"],
+    ],
+    "test-only PNG fixtures no longer map to their generic visual layouts",
+  );
   console.log(JSON.stringify(report, null, 2));
 }
 
-main().catch((error) => { console.error(error); process.exit(1); });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -2,7 +2,10 @@ import type { BrowserGhostLiveRecorderOptions } from "../../ghost/live-recorder"
 import type { GhostRecordingProfileId } from "../../ghost/recording-profiles";
 
 /** Test-build-only fault hook used by browser evidence; production has no URL-controlled recorder behavior. */
-export function createGhostV3BrowserTestOptions(testMode: boolean, search: string): BrowserGhostLiveRecorderOptions | undefined {
+export function createGhostV3BrowserTestOptions(
+  testMode: boolean,
+  search: string,
+): BrowserGhostLiveRecorderOptions | undefined {
   if (!__TEAR_TEST_BUILD__ || !testMode) return undefined;
   const query = new URLSearchParams(search);
   const profile = query.get("ghost-v3-profile");

@@ -45,7 +45,10 @@ let cachedKeys: CachedKeys | undefined;
 
 function decodeBase64Url(value: string): Uint8Array {
   if (!/^[A-Za-z0-9_-]+$/u.test(value)) throw new FirebaseAuthenticationError();
-  const padded = value.replace(/-/gu, "+").replace(/_/gu, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const padded = value
+    .replace(/-/gu, "+")
+    .replace(/_/gu, "/")
+    .padEnd(Math.ceil(value.length / 4) * 4, "=");
   try {
     const binary = atob(padded);
     return Uint8Array.from(binary, (character) => character.charCodeAt(0));
@@ -62,7 +65,9 @@ function parseJson(bytes: Uint8Array): unknown {
   }
 }
 
-function parseJwt(token: string): Readonly<{ header: JwtHeader; claims: JwtClaims; signed: string; signature: Uint8Array }> {
+function parseJwt(
+  token: string,
+): Readonly<{ header: JwtHeader; claims: JwtClaims; signed: string; signature: Uint8Array }> {
   const pieces = token.split(".");
   if (pieces.length !== 3 || pieces.some((piece) => piece.length === 0)) throw new FirebaseAuthenticationError();
   const [headerPart, claimsPart, signaturePart] = pieces as [string, string, string];
@@ -71,18 +76,30 @@ function parseJwt(token: string): Readonly<{ header: JwtHeader; claims: JwtClaim
   if (header.alg !== "RS256" || typeof header.kid !== "string" || header.kid.length === 0 || header.kid.length > 256) {
     throw new FirebaseAuthenticationError();
   }
-  if (typeof claims.aud !== "string" || typeof claims.iss !== "string" || !Number.isFinite(claims.exp)
-    || typeof claims.sub !== "string" || claims.sub.length === 0 || claims.sub.length > 128) {
+  if (
+    typeof claims.aud !== "string" ||
+    typeof claims.iss !== "string" ||
+    !Number.isFinite(claims.exp) ||
+    typeof claims.sub !== "string" ||
+    claims.sub.length === 0 ||
+    claims.sub.length > 128
+  ) {
     throw new FirebaseAuthenticationError();
   }
-  return Object.freeze({ header, claims, signed: `${headerPart}.${claimsPart}`, signature: decodeBase64Url(signaturePart) });
+  return Object.freeze({
+    header,
+    claims,
+    signed: `${headerPart}.${claimsPart}`,
+    signature: decodeBase64Url(signaturePart),
+  });
 }
 
 function cacheLifetime(response: Response): number {
   const value = response.headers.get("cache-control")?.match(/max-age=(\d+)/u)?.[1];
   const seconds = value === undefined ? undefined : Number(value);
   return typeof seconds === "number" && Number.isSafeInteger(seconds) && seconds >= 0
-    ? Math.min(seconds * 1000, MAX_CACHE_MS) : DEFAULT_CACHE_MS;
+    ? Math.min(seconds * 1000, MAX_CACHE_MS)
+    : DEFAULT_CACHE_MS;
 }
 
 async function loadKeys(fetcher: typeof fetch): Promise<ReadonlyMap<string, JsonWebKey>> {
@@ -101,7 +118,8 @@ async function loadKeys(fetcher: typeof fetch): Promise<ReadonlyMap<string, Json
   } catch {
     throw new FirebaseAuthenticationError();
   }
-  if (body === null || typeof body !== "object" || !Array.isArray((body as Readonly<Record<string, unknown>>).keys)) throw new FirebaseAuthenticationError();
+  if (body === null || typeof body !== "object" || !Array.isArray((body as Readonly<Record<string, unknown>>).keys))
+    throw new FirebaseAuthenticationError();
   const keysValue = (body as Readonly<Record<string, unknown>>).keys as readonly unknown[];
   const keys = new Map<string, JsonWebKey>();
   for (const candidate of keysValue) {
@@ -117,7 +135,9 @@ async function loadKeys(fetcher: typeof fetch): Promise<ReadonlyMap<string, Json
   return keys;
 }
 
-export function createFirebaseIdTokenVerifier(options: Readonly<{ projectId: string; fetcher?: typeof fetch; nowSeconds?: () => number }>): FirebaseIdTokenVerifier {
+export function createFirebaseIdTokenVerifier(
+  options: Readonly<{ projectId: string; fetcher?: typeof fetch; nowSeconds?: () => number }>,
+): FirebaseIdTokenVerifier {
   const projectId = options.projectId;
   if (!/^[a-z][a-z0-9-]{4,62}$/u.test(projectId)) throw new TypeError("invalid Firebase project ID");
   const fetcher = options.fetcher ?? fetch;
@@ -126,12 +146,15 @@ export function createFirebaseIdTokenVerifier(options: Readonly<{ projectId: str
   return Object.freeze({
     async verifyIdToken(token: string): Promise<FirebaseIdentity> {
       const jwt = parseJwt(token);
-      if (jwt.claims.aud !== projectId || jwt.claims.iss !== issuer || jwt.claims.exp <= nowSeconds()) throw new FirebaseAuthenticationError();
+      if (jwt.claims.aud !== projectId || jwt.claims.iss !== issuer || jwt.claims.exp <= nowSeconds())
+        throw new FirebaseAuthenticationError();
       const key = (await loadKeys(fetcher)).get(jwt.header.kid);
       if (key === undefined) throw new FirebaseAuthenticationError();
       let publicKey: CryptoKey;
       try {
-        publicKey = await crypto.subtle.importKey("jwk", key, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+        publicKey = await crypto.subtle.importKey("jwk", key, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, [
+          "verify",
+        ]);
         const signature = Uint8Array.from(jwt.signature);
         const signed = new TextEncoder().encode(jwt.signed);
         const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", publicKey, signature, signed);
@@ -145,7 +168,10 @@ export function createFirebaseIdTokenVerifier(options: Readonly<{ projectId: str
   });
 }
 
-export async function authenticateFirebaseRequest(request: Request, verifier: FirebaseIdTokenVerifier): Promise<string> {
+export async function authenticateFirebaseRequest(
+  request: Request,
+  verifier: FirebaseIdTokenVerifier,
+): Promise<string> {
   const authorization = request.headers.get("authorization");
   const match = authorization?.match(/^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/u);
   if (match?.[1] === undefined) throw new FirebaseAuthenticationError();
