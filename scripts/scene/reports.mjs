@@ -1,7 +1,7 @@
 // Offline reports for `pnpm scene contrast` and `pnpm scene sheet`. Both work
 // from the package files alone (camera at rest: zoom 1, no shake, player at
 // the centre), so they run without a browser build.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import sharp from "sharp";
 import { coverageReport, inspectPackage, loadContract, REQUIRED_VIEWPORTS } from "./package-files.mjs";
@@ -40,6 +40,26 @@ export async function composeRest(directory, scene, window, platforms = []) {
   const fileOf = (imageId) => scene.images.find((image) => image.id === imageId)?.file;
   for (const layer of scene.layers.filter((item) => item.plane === "back"))
     await place(fileOf(layer.image), layer.rect);
+  // Readability shading, as the renderer draws it at rest.
+  const shades = scene.shading
+    .map((shade, index) => {
+      const [x, y, w, h] = shade.rect;
+      const solid =
+        shade.kind === "band"
+          ? Math.max(0, 1 - shade.feather / h)
+          : Math.max(0, 1 - shade.feather / (Math.min(w, h) / 2));
+      const stops = `<stop offset="0" stop-color="${shade.color}" stop-opacity="${shade.opacity}"/><stop offset="${solid}" stop-color="${shade.color}" stop-opacity="${shade.opacity}"/><stop offset="1" stop-color="${shade.color}" stop-opacity="0"/>`;
+      return shade.kind === "band"
+        ? `<linearGradient id="g${index}" x1="0" y1="0" x2="0" y2="1">${stops}</linearGradient><rect x="${x - wx}" y="${y - wy}" width="${w}" height="${h}" fill="url(#g${index})"/>`
+        : `<radialGradient id="g${index}" cx="0.5" cy="0.5" r="0.5">${stops}</radialGradient><ellipse cx="${x + w / 2 - wx}" cy="${y + h / 2 - wy}" rx="${w / 2}" ry="${h / 2}" fill="url(#g${index})"/>`;
+    })
+    .join("");
+  if (shades)
+    layers.push({
+      input: Buffer.from(`<svg width="${ww}" height="${wh}" xmlns="http://www.w3.org/2000/svg">${shades}</svg>`),
+      left: 0,
+      top: 0,
+    });
   // Platforms are game objects: shadows, then the material's surface strip in each collision rect.
   const binding = scene.platforms;
   const shadows = platforms
@@ -119,8 +139,31 @@ export function inkForPaper(paper) {
   return lum < 0.5 ? "#ecebf6" : "#0a0a0a";
 }
 
+/**
+ * `--with variant.json`: try a variation without rebuilding the images. The
+ * file may set `theme`, `shading` and `offset` ([dx, dy] world px applied to
+ * every back layer), and is validated like a package.
+ */
+export async function withVariant(scene, option) {
+  if (typeof option !== "string") return scene;
+  const variant = JSON.parse(readFileSync(option, "utf8"));
+  const [dx, dy] = variant.offset ?? [0, 0];
+  const { validateScenePackage } = await loadContract();
+  return validateScenePackage({
+    ...scene,
+    ...(variant.theme ? { theme: variant.theme } : {}),
+    ...(variant.shading ? { shading: variant.shading } : {}),
+    layers: scene.layers.map((layer) =>
+      layer.plane === "back"
+        ? { ...layer, rect: [layer.rect[0] + dx, layer.rect[1] + dy, layer.rect[2], layer.rect[3]] }
+        : layer,
+    ),
+  });
+}
+
 export async function contrastReport(directory, options) {
-  const { scene } = await inspectPackage(directory);
+  const inspected = await inspectPackage(directory);
+  const scene = inspected.scene === undefined ? undefined : await withVariant(inspected.scene, options.with);
   if (scene === undefined) throw new Error("package is invalid; run pnpm scene validate");
   const { width, height, groundY } = scene.world;
   const raster = await composeRest(directory, scene, [0, 0, width, height], parsePlatforms(options.platforms));
@@ -128,14 +171,20 @@ export async function contrastReport(directory, options) {
     "theme ink": inkForPaper(scene.theme.paper),
     "dark ink": "#0a0a0a",
     "light ink": "#ecebf6",
+    "enemy red": "#d32f35",
+    "telegraph gold": "#e4c95a",
     ...(typeof options.ink === "string" ? Object.fromEntries(options.ink.split(",").map((hex) => [hex, hex])) : {}),
   };
+  // Where the HUD actually draws at 16:9 (title and stats centred, status top left).
   const zones = {
+    "HUD title (600..1000, y < 115)": [600, 0, 400, 115],
+    "HUD status (20..460, y < 100)": [20, 0, 440, 100],
     "HUD band (y < 130)": [0, 0, width, 130],
     "play band (130..floor)": [0, 130, width, groundY - 130],
     "upper air (130..450)": [0, 130, width, 320],
     "lower air (450..floor)": [0, 450, width, groundY - 450],
   };
+  const results = { paper: scene.theme.paper, ink: inks["theme ink"], zones: {} };
   console.log(`${basename(directory)}: paper ${scene.theme.paper} -> theme ink ${inks["theme ink"]}`);
   for (const [zone, [zx, zy, zw, zh]] of Object.entries(zones)) {
     const values = [];
@@ -147,9 +196,11 @@ export async function contrastReport(directory, options) {
     }
     values.sort((a, b) => a - b);
     const pick = (q) => values[Math.min(values.length - 1, Math.floor(q * values.length))];
+    results.zones[zone] = {};
     const parts = Object.entries(inks).map(([label, hex]) => {
       const ink = hexLuminance(hex);
       const ok3 = values.filter((value) => contrast(value, ink) >= 3).length / values.length;
+      results.zones[zone][label] = ok3;
       return `${label} ${hex}: >=3:1 on ${(ok3 * 100).toFixed(0)}%`;
     });
     console.log(
@@ -175,10 +226,12 @@ export async function contrastReport(directory, options) {
       .toFile(file);
     console.log(`  wrote ${file} (magenta: theme ink below 3:1)`);
   }
+  return results;
 }
 
 export async function contactSheet(directory, out, options = {}) {
-  const { scene } = await inspectPackage(directory);
+  const inspected = await inspectPackage(directory);
+  const scene = inspected.scene === undefined ? undefined : await withVariant(inspected.scene, options.with);
   if (scene === undefined) throw new Error("package is invalid; run pnpm scene validate");
   mkdirSync(out, { recursive: true });
   const name = basename(directory);

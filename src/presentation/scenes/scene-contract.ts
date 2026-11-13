@@ -59,6 +59,23 @@ export interface SceneLayer {
 }
 
 /**
+ * Readability shading drawn over the back plane at runtime, so the painting
+ * itself stays untouched. A `band` darkens from its top edge and fades out over
+ * its last `feather` px (behind a HUD row); a `pool` is an ellipse filling its
+ * rect that fades out over `feather` px towards its edge (a soft local wash).
+ * Positioned in world px at `depth`, like a layer.
+ */
+export interface SceneShade {
+  readonly id: string;
+  readonly kind: "band" | "pool";
+  readonly rect: Rect;
+  readonly depth: number;
+  readonly color: string;
+  readonly opacity: number;
+  readonly feather: number;
+}
+
+/**
  * How the game draws this stage's platforms and floor. Platforms are never part
  * of the painted layers: the stage's platform material draws them from the real
  * collision geometry, above the back plane and below actors. The package only
@@ -105,6 +122,7 @@ export interface ScenePackage {
   readonly sources: readonly SceneSource[];
   readonly images: readonly SceneImage[];
   readonly layers: readonly SceneLayer[];
+  readonly shading: readonly SceneShade[];
   readonly platforms: ScenePlatformBinding;
   /** Decoded RGBA bytes the package may hold (width x height x 4, summed). */
   readonly decodedBudget: number;
@@ -235,6 +253,21 @@ function image(value: unknown, path: string, sources: ReadonlySet<string>): Scen
   });
 }
 
+function shade(value: unknown, path: string): SceneShade {
+  const raw = record(value, path);
+  if (raw.kind !== "band" && raw.kind !== "pool") fail(`${path}.kind`, 'expected "band" or "pool"');
+  const area = rect(raw.rect, `${path}.rect`);
+  return Object.freeze({
+    id: id(raw.id, `${path}.id`),
+    kind: raw.kind,
+    rect: area,
+    depth: finite(raw.depth, `${path}.depth`, 0, 1.5),
+    color: color(raw.color, `${path}.color`),
+    opacity: finite(raw.opacity, `${path}.opacity`, 0, 1),
+    feather: finite(raw.feather, `${path}.feather`, 0, Math.max(area[2], area[3])),
+  });
+}
+
 function layer(value: unknown, path: string, images: ReadonlyMap<string, SceneImage>): SceneLayer {
   const raw = record(value, path);
   const imageId = id(raw.image, `${path}.image`);
@@ -329,6 +362,12 @@ export function validateScenePackage(input: unknown): ScenePackage {
     sources,
     images,
     layers,
+    shading: unique(
+      (raw.shading === undefined ? [] : list(raw.shading, "package.shading")).map((item, index) =>
+        shade(item, `package.shading[${String(index)}]`),
+      ),
+      "package.shading",
+    ),
     platforms: platforms(raw.platforms, "package.platforms", imageMap),
     decodedBudget: integer(raw.decodedBudget, "package.decodedBudget", 1, 64 * 1024 * 1024),
   });

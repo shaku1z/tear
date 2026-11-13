@@ -125,6 +125,28 @@ describe("parallax camera", () => {
   });
 });
 
+describe("readability shading", () => {
+  it("keeps shading as package data drawn over the untouched painting", () => {
+    const scene = validateScenePackage(fixturePackage());
+    expect(scene.shading.map((shade) => shade.kind)).toEqual(["band"]);
+    expect(validateScenePackage(fixturePackage({ shading: undefined })).shading).toEqual([]);
+  });
+
+  it("rejects an unknown shade kind and a feather larger than the shade", () => {
+    const shade = {
+      id: "x",
+      kind: "band",
+      rect: [0, 0, 100, 100],
+      depth: 1,
+      color: "#000000",
+      opacity: 0.5,
+      feather: 10,
+    };
+    expect(() => validateScenePackage(fixturePackage({ shading: [{ ...shade, kind: "glow" }] }))).toThrow(/band/u);
+    expect(() => validateScenePackage(fixturePackage({ shading: [{ ...shade, feather: 500 }] }))).toThrow(/feather/u);
+  });
+});
+
 describe("platform binding", () => {
   it("binds a material and a texture, never platform art", () => {
     const scene = validateScenePackage(fixturePackage());

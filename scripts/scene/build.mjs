@@ -111,39 +111,6 @@ async function inpaintBlur(image, mask, sigma) {
   }
 }
 
-/** Colour grade, optionally limited to a feathered region of the image. */
-function grade(image, step) {
-  const { width, height, data } = image;
-  const [rx, ry, rw, rh] = step.region ?? [0, 0, width, height];
-  const feather = Math.max(1, step.feather ?? 1);
-  const exposure = step.exposure ?? 1,
-    contrast = step.contrast ?? 1,
-    saturation = step.saturation ?? 1,
-    pivot = step.pivot ?? 0.45;
-  const tint = step.tint ?? [1, 1, 1];
-  const lift = step.lift ?? 0,
-    hazeColor = step.haze ?? [0.6, 0.75, 0.68];
-  for (let y = 0; y < height; y += 1) {
-    const vy = clamp(Math.min(y - ry, ry + rh - y) / feather, 0, 1);
-    if (vy === 0) continue;
-    for (let x = 0; x < width; x += 1) {
-      const weight = vy * clamp(Math.min(x - rx, rx + rw - x) / feather, 0, 1);
-      if (weight === 0) continue;
-      const index = (y * width + x) * 4;
-      const rgb = [data[index] / 255, data[index + 1] / 255, data[index + 2] / 255];
-      const luma = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
-      for (let channel = 0; channel < 3; channel += 1) {
-        let value = luma + (rgb[channel] - luma) * saturation;
-        value = (value - pivot) * contrast + pivot;
-        value *= exposure * tint[channel];
-        // Aerial haze: lift shadows toward `haze` (an sRGB 0..1 colour) by `lift`.
-        if (lift > 0) value += (hazeColor[channel] - value) * lift * (1 - luma) ** 1.5;
-        data[index + channel] = clamp(rgb[channel] + (value - rgb[channel]) * weight, 0, 1) * 255;
-      }
-    }
-  }
-}
-
 /** Makes an image wrap horizontally by cross-fading its last columns onto its first. */
 function tileable(image, overlap) {
   const { width, height, data } = image;
@@ -212,9 +179,6 @@ async function runOutput(output, context) {
         break;
       case "inpaint-blur":
         await inpaintBlur(context.image, masks.get(step.mask), step.sigma);
-        break;
-      case "grade":
-        grade(context.image, step);
         break;
       case "alpha": {
         const mask = masks.get(step.mask);

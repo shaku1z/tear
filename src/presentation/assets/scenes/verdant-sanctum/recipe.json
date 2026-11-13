@@ -82,51 +82,6 @@
           "source": "overscan"
         },
         {
-          "op": "grade",
-          "region": [
-            384,
-            320,
-            1672,
-            772
-          ],
-          "feather": 150,
-          "exposure": 0.6,
-          "contrast": 0.92,
-          "pivot": 0.3,
-          "saturation": 0.95
-        },
-        {
-          "op": "grade",
-          "region": [
-            1000,
-            150,
-            440,
-            280
-          ],
-          "feather": 110,
-          "exposure": 0.5,
-          "saturation": 1.05
-        },
-        {
-          "op": "grade",
-          "region": [
-            930,
-            780,
-            1000,
-            240
-          ],
-          "feather": 70,
-          "contrast": 0.72,
-          "saturation": 0.85,
-          "lift": 0.18,
-          "haze": [
-            0.36,
-            0.5,
-            0.45
-          ],
-          "pivot": 0.3
-        },
-        {
           "op": "mask",
           "name": "frame",
           "canvas": [
@@ -174,32 +129,6 @@
         {
           "op": "load",
           "source": "overscan"
-        },
-        {
-          "op": "grade",
-          "region": [
-            384,
-            320,
-            1672,
-            772
-          ],
-          "feather": 150,
-          "exposure": 0.6,
-          "contrast": 0.92,
-          "pivot": 0.3,
-          "saturation": 0.95
-        },
-        {
-          "op": "grade",
-          "region": [
-            1000,
-            150,
-            440,
-            280
-          ],
-          "feather": 110,
-          "exposure": 0.5,
-          "saturation": 1.05
         },
         {
           "op": "mask",
@@ -254,32 +183,6 @@
           "source": "overscan"
         },
         {
-          "op": "grade",
-          "region": [
-            384,
-            320,
-            1672,
-            772
-          ],
-          "feather": 150,
-          "exposure": 0.6,
-          "contrast": 0.92,
-          "pivot": 0.3,
-          "saturation": 0.95
-        },
-        {
-          "op": "grade",
-          "region": [
-            1000,
-            150,
-            440,
-            280
-          ],
-          "feather": 110,
-          "exposure": 0.5,
-          "saturation": 1.05
-        },
-        {
           "op": "mask",
           "name": "frame",
           "canvas": [
@@ -332,32 +235,6 @@
           "source": "overscan"
         },
         {
-          "op": "grade",
-          "region": [
-            384,
-            320,
-            1672,
-            772
-          ],
-          "feather": 150,
-          "exposure": 0.6,
-          "contrast": 0.92,
-          "pivot": 0.3,
-          "saturation": 0.95
-        },
-        {
-          "op": "grade",
-          "region": [
-            1000,
-            150,
-            440,
-            280
-          ],
-          "feather": 110,
-          "exposure": 0.5,
-          "saturation": 1.05
-        },
-        {
           "op": "mask",
           "name": "frame",
           "canvas": [
@@ -408,32 +285,6 @@
         {
           "op": "load",
           "source": "overscan"
-        },
-        {
-          "op": "grade",
-          "region": [
-            384,
-            320,
-            1672,
-            772
-          ],
-          "feather": 150,
-          "exposure": 0.6,
-          "contrast": 0.92,
-          "pivot": 0.3,
-          "saturation": 0.95
-        },
-        {
-          "op": "grade",
-          "region": [
-            1000,
-            150,
-            440,
-            280
-          ],
-          "feather": 110,
-          "exposure": 0.5,
-          "saturation": 1.05
         },
         {
           "op": "mask",
@@ -490,32 +341,6 @@
         {
           "op": "load",
           "source": "overscan"
-        },
-        {
-          "op": "grade",
-          "region": [
-            384,
-            320,
-            1672,
-            772
-          ],
-          "feather": 150,
-          "exposure": 0.6,
-          "contrast": 0.92,
-          "pivot": 0.3,
-          "saturation": 0.95
-        },
-        {
-          "op": "grade",
-          "region": [
-            1000,
-            150,
-            440,
-            280
-          ],
-          "feather": 110,
-          "exposure": 0.5,
-          "saturation": 1.05
         },
         {
           "op": "mask",
@@ -661,6 +486,50 @@
         "opacity": 0.55,
         "length": 46
       }
-    }
+    },
+    "shading": [
+      {
+        "id": "centre-wash",
+        "kind": "pool",
+        "rect": [
+          -300,
+          -100,
+          2200,
+          1000
+        ],
+        "depth": 0.85,
+        "color": "#06140f",
+        "opacity": 0.22,
+        "feather": 420
+      },
+      {
+        "id": "hud-row",
+        "kind": "band",
+        "rect": [
+          -700,
+          -500,
+          3000,
+          660
+        ],
+        "depth": 0.85,
+        "color": "#06140f",
+        "opacity": 0.6,
+        "feather": 110
+      },
+      {
+        "id": "ruins-haze",
+        "kind": "pool",
+        "rect": [
+          500,
+          490,
+          560,
+          260
+        ],
+        "depth": 0.85,
+        "color": "#4f7468",
+        "opacity": 0.3,
+        "feather": 90
+      }
+    ]
   }
 }

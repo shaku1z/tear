@@ -66,6 +66,17 @@ export function fixturePackage(overrides: Record<string, unknown> = {}): Record<
       { id: "far", image: "far", rect: [-400, -300, 2400, 1500], depth: 0.8, plane: "back", covers: true },
       { id: "roots", image: "roots", rect: [-60, 830, 400, 100], depth: 1, plane: "front" },
     ],
+    shading: [
+      {
+        id: "hud-row",
+        kind: "band",
+        rect: [-400, -300, 2400, 420],
+        depth: 0.8,
+        color: "#06140f",
+        opacity: 0.5,
+        feather: 80,
+      },
+    ],
     platforms: {
       material: "fixture-stone",
       texture: "stone",

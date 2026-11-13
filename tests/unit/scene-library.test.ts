@@ -8,7 +8,8 @@ function recordingContext() {
     {},
     {
       get(_target, key) {
-        if (key === "createLinearGradient") return () => ({ addColorStop: () => undefined });
+        if (key === "createLinearGradient" || key === "createRadialGradient")
+          return () => ({ addColorStop: () => undefined });
         if (key === "createPattern") return () => ({ setTransform: () => undefined });
         return (...args: unknown[]) => {
           calls.push(`${String(key)}(${String(args.length)})`);

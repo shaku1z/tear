@@ -1,4 +1,11 @@
-import { layerTransform, type Rect, type SceneCamera, type SceneLayer, type ScenePackage } from "./scene-contract";
+import {
+  layerTransform,
+  type Rect,
+  type SceneCamera,
+  type SceneLayer,
+  type ScenePackage,
+  type SceneShade,
+} from "./scene-contract";
 
 /** A decoded image the renderer can draw; ImageBitmap and canvases qualify. */
 export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
@@ -71,6 +78,40 @@ function drawLayer(context: CanvasRenderingContext2D, loaded: LoadedScene, layer
   context.restore();
 }
 
+function drawShade(
+  context: CanvasRenderingContext2D,
+  shade: SceneShade,
+  camera: SceneCamera,
+  playerShift: number,
+  opacity: number,
+): void {
+  const [k, tx, ty] = layerTransform(camera, shade.depth, playerShift);
+  const [x, y, w, h] = shade.rect;
+  context.save();
+  context.translate(tx, ty);
+  context.scale(k, k);
+  context.globalAlpha = shade.opacity * opacity;
+  if (shade.kind === "band") {
+    const gradient = context.createLinearGradient(0, y, 0, y + h);
+    gradient.addColorStop(0, shade.color);
+    gradient.addColorStop(Math.max(0, 1 - shade.feather / h), shade.color);
+    gradient.addColorStop(1, `${shade.color}00`);
+    context.fillStyle = gradient;
+    context.fillRect(x, y, w, h);
+  } else {
+    // Unit circle scaled to the ellipse; the solid core ends `feather` px before the edge.
+    context.translate(x + w / 2, y + h / 2);
+    context.scale(w / 2, h / 2);
+    const gradient = context.createRadialGradient(0, 0, 0, 0, 0, 1);
+    gradient.addColorStop(0, shade.color);
+    gradient.addColorStop(Math.max(0, 1 - shade.feather / (Math.min(w, h) / 2)), shade.color);
+    gradient.addColorStop(1, `${shade.color}00`);
+    context.fillStyle = gradient;
+    context.fillRect(-1, -1, 2, 2);
+  }
+  context.restore();
+}
+
 /** Back plane: everything behind platforms and actors. Fills the whole view. */
 export function drawSceneBack(context: CanvasRenderingContext2D, loaded: LoadedScene, frame: SceneFrame): void {
   context.save();
@@ -86,6 +127,8 @@ export function drawSceneBack(context: CanvasRenderingContext2D, loaded: LoadedS
     );
   }
   for (const layer of loaded.scene.layers) if (layer.plane === "back") drawLayer(context, loaded, layer, frame);
+  for (const shade of loaded.scene.shading)
+    drawShade(context, shade, frame.camera, loaded.scene.camera.playerShift, frame.opacity);
   context.restore();
 }
 

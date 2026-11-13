@@ -115,6 +115,50 @@
       "length": 46
     }
   },
+  "shading": [
+    {
+      "id": "centre-wash",
+      "kind": "pool",
+      "rect": [
+        -300,
+        -100,
+        2200,
+        1000
+      ],
+      "depth": 0.85,
+      "color": "#06140f",
+      "opacity": 0.22,
+      "feather": 420
+    },
+    {
+      "id": "hud-row",
+      "kind": "band",
+      "rect": [
+        -700,
+        -500,
+        3000,
+        660
+      ],
+      "depth": 0.85,
+      "color": "#06140f",
+      "opacity": 0.6,
+      "feather": 110
+    },
+    {
+      "id": "ruins-haze",
+      "kind": "pool",
+      "rect": [
+        500,
+        490,
+        560,
+        260
+      ],
+      "depth": 0.85,
+      "color": "#4f7468",
+      "opacity": 0.3,
+      "feather": 90
+    }
+  ],
   "sources": [
     {
       "id": "painting",
@@ -173,8 +217,8 @@
       "width": 2440,
       "height": 1160,
       "alpha": false,
-      "bytes": 420566,
-      "sha256": "bddb7485c4f75e149c9c5503c9489d77cf271d1f7e8400386410bfcadc10269f",
+      "bytes": 540728,
+      "sha256": "3d42ca4a2cfd50022952995ff0079d0ba94ced787dbfa7a7aafeb2ac85355ad4",
       "sources": [
         "overscan",
         "frame-mask"
@@ -186,8 +230,8 @@
       "width": 2440,
       "height": 400,
       "alpha": true,
-      "bytes": 106990,
-      "sha256": "420f1b449c7373bdf754f0617e9e3c2700f509f5563d075cc4deb84967b21366",
+      "bytes": 108626,
+      "sha256": "64a3afc3d07cad93f08ddb6478ba7c8f23e8b7b34ba00359dfd6524ce5a95b86",
       "sources": [
         "overscan",
         "frame-mask"
@@ -199,8 +243,8 @@
       "width": 720,
       "height": 701,
       "alpha": true,
-      "bytes": 70960,
-      "sha256": "edc75a46b8b5bc0accff1a634508bf24adb55f060bef7f0a93762027ee14b014",
+      "bytes": 75164,
+      "sha256": "a327058bc96dca3a71dfe8e9dbbf74c9920ecb7c130c5aaad43e0fef575d7f56",
       "sources": [
         "overscan",
         "frame-mask"
@@ -212,8 +256,8 @@
       "width": 720,
       "height": 701,
       "alpha": true,
-      "bytes": 65638,
-      "sha256": "eb3a3dbe57b8aca0d535d2d1531401be8baa74a50bd258ad9ddfd71b7b77b3c6",
+      "bytes": 68344,
+      "sha256": "42c13ba762b2e71a087f15dbb1c116ce28281d1d279e67b65256ded805382984",
       "sources": [
         "overscan",
         "frame-mask"
