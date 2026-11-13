@@ -889,12 +889,12 @@
       },
       {
         "id": "compat-audio-public-catalog",
-        "pathPattern": "public/audio/catalog.json",
+        "pathPattern": "public/audio/music.json",
         "termIds": [
           "tear-music"
         ],
         "owner": "Audio catalog owner",
-        "reason": "The authored catalog note preserves TearScore provenance while this slice changes only the player-facing Signal surface and catalog wire discriminator.",
+        "reason": "The generated music index carries every cue manifest, whose wire format is still named tear-score-stem-cue, as each cue.json is.",
         "testEvidence": [
           "tests/unit/music-catalog.test.ts",
           "check:music"

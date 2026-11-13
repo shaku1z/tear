@@ -153,6 +153,9 @@ for (const file of filesUnder(audio)) {
   closeSync(fd);
   if (SOURCE_LABEL.test(head.subarray(0, n).toString("latin1")))
     fail(`source-tool tag in ${path.relative(root, file).replaceAll("\\", "/")}`);
+  // Shipped music files are public: they name people by handle, never by contact address.
+  if (file.endsWith(".json") && /[\w.+-]+@[\w-]+\.[a-z]{2,}/iu.test(readFileSync(file, "utf8")))
+    fail(`contact address in ${path.relative(root, file).replaceAll("\\", "/")}`);
 }
 
 if (errors.length) {
