@@ -47,14 +47,15 @@ const CASES = [
   resolved("rootbound-phase-3", bossStart, { boss: { hp: 625 } }),
 ];
 
-withJourney(
-  { name: "Verdant live/replay parity", port: 8293, query: { "ghost-v3-profile": "forensic-qa" } },
-  async ({ page }) => {
-    await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-      timeout: 15_000,
-    });
-    let previous = null;
-    for (const entry of CASES) {
+// Each case gets a fresh page and Ghost vault, so recordings cannot interact through vault retention.
+async function runCase(entry, port) {
+  await withJourney(
+    { name: `Verdant live/replay parity: ${entry.document.id}`, port, query: { "ghost-v3-profile": "forensic-qa" } },
+    async ({ page }) => {
+      await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
+        timeout: 15_000,
+      });
+      const previous = null;
       const id = entry.document.id;
       const played = await page.evaluate(async (scenario) => {
         const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -96,7 +97,6 @@ withJourney(
       );
       assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null, `${id}: recorder failed`);
       const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
-      previous = manifest.id;
       const verification = await page.evaluate((ghostId) => window.__TEAR_GHOST_V3__.verify(ghostId), manifest.id);
       assert.ok(verification.comparisons.length > 0, `${id}: no authoritative receipts were checked`);
       const diverged = verification.comparisons.filter((comparison) => comparison.equal !== true);
@@ -105,6 +105,10 @@ withJourney(
       console.log(
         `${id}: ${String(verification.comparisons.length)} receipts match (ended ${String(played.ended)} at tick ${String(played.tick)}, phases ${played.bossPhases.join(",") || "-"})`,
       );
-    }
-  },
-);
+    },
+  );
+}
+
+void (async () => {
+  for (const [index, entry] of CASES.entries()) await runCase(entry, 8293 + index);
+})();
