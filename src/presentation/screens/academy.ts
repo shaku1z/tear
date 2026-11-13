@@ -1,6 +1,6 @@
 import type { AcademyScreenView, ScreenRenderContext } from "./contracts";
 import { backControl } from "./screen-primitives";
-import { TRAINING_ARCHIVE_ACTIONS } from "../../agents/training-archive";
+import { TRAINING_ARCHIVE_ACTIONS } from "../../domain/engineering-actions";
 
 export function createAcademyRenderers(context: ScreenRenderContext) {
   return Object.freeze({
