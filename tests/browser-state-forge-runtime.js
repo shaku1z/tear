@@ -265,7 +265,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildIn
       try {
         source.step(tickActions);
       } catch (error) {
-        throw new Error(`source tick=${String(source.observe().tick)} actionTick=${String(tickActions[0]?.tick)}: ${String(error)}`);
+        throw new Error(`source tick=${String(source.observe().tick)} actionTick=${String(tickActions[0]?.tick)}: ${String(error)}`, { cause: error });
       }
       sourceHashes.push(source.stateHash());
       sourceTrace.push({ observation: source.observe(), rng: source.rng() });
@@ -287,7 +287,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildIn
       try {
         restored.step(tickActions);
       } catch (error) {
-        throw new Error(`restored tick=${String(restored.observe().tick)} actionTick=${String(tickActions[0]?.tick)} restore=${JSON.stringify(restoreResult)}: ${String(error)}`);
+        throw new Error(`restored tick=${String(restored.observe().tick)} actionTick=${String(tickActions[0]?.tick)} restore=${JSON.stringify(restoreResult)}: ${String(error)}`, { cause: error });
       }
       restoredHashes.push(restored.stateHash());
       const index = restoredHashes.length - 1;

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Shared browser harness runs directly under Node CommonJS. */
 const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Browser profiling runs directly under Node CommonJS. */
 /**
  * Report-only runtime cost profile (refactor plan step 15).
  *

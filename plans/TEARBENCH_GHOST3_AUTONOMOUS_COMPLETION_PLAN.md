@@ -46,8 +46,8 @@ or naturally played 50-wave campaign is claimed.
 | C21 | Passed | `b128b24` | Non-lossy requirements annex, generated registry, and zero-unmapped-lines gate |
 | C22 | Passed | `7ee49cd` | Deterministic live-runtime bridge and production isolation |
 | C23 | Passed | `e88b70b` | State Forge, progression truth, restore/fork, and live scenario evidence |
-| C24 | Passed | This checkpoint commit | Full `pnpm check:c24` exit 0 on 2026-07-26; 51 focused tests; real-simulation mechanic matrix; seed-117 Easy Adventure completion and exact repeatability; earned longitudinal progression; production isolation |
-| C26 | Passed | Pending checkpoint commit | Full `pnpm check:c26` exit 0 on 2026-07-28; a real browser-test-build planted dash regression is repeatedly reproduced and minimized across clean commits, stably bisected, fixed, retained, rerun from Graveyard evidence, and automatically selected by a later movement diff |
+| C24 | Passed | This checkpoint commit | Full `pnpm checkpoint check:c24` exit 0 on 2026-07-26; 51 focused tests; real-simulation mechanic matrix; seed-117 Easy Adventure completion and exact repeatability; earned longitudinal progression; production isolation |
+| C26 | Passed | Pending checkpoint commit | Full `pnpm checkpoint check:c26` exit 0 on 2026-07-28; a real browser-test-build planted dash regression is repeatedly reproduced and minimized across clean commits, stably bisected, fixed, retained, rerun from Graveyard evidence, and automatically selected by a later movement diff |
 
 C24 is intentionally classified as an engineering/Class A privileged diagnostic
 gate, not Class B or Class C certification. C25 physical-input and black-box
@@ -605,7 +605,7 @@ live-runtime internals into a second platform.
   receipts match exactly, including zoom before/after state and flash/shake
   maximum aggregation. This proves logical feel state rather than pixels,
   audible PCM/audio graph/device output, or physical vibration.
-- The complete `pnpm check:c27a` gate passes through Slice 40: foundation 36
+- The complete `pnpm checkpoint check:c27a` gate passes through Slice 40: foundation 36
   files / 128 tests, 13 browser scenarios / 5,732 ticks / 33 native facts, 40
   detached comparator tests, campaign victory 10 files / 36 tests, a
   1,176-transition real browser route, and one detached finale-parity test;

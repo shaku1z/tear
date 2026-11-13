@@ -2,7 +2,6 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 
 withJourney({ name: "C37 normal Replay Hub home", port: 8179, recordFrames: true }, async ({ page, clickLabel, labelPoint }) => {
-  const text = [];
   await page.evaluate(() => {
     const captured = [];
     const original = CanvasRenderingContext2D.prototype.fillText;

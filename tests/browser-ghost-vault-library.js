@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- direct Node browser evidence consumer. */
 const assert = require("node:assert/strict");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
 

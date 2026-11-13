@@ -225,12 +225,12 @@ the user — the approach is wrong, not the effort.
 | Requirements | `pnpm requirements:check` | nothing from the source was dropped — a guard, not a progress measure |
 | Boundaries | `pnpm check:architecture` | dependency direction, planted violations rejected |
 | Unit suite | `pnpm test` | whole-repo regression |
-| State Forge | `pnpm check:c23` | codecs, restore, Studio, exit matrix |
-| Scripted agent | `pnpm check:c24` | Class A autonomy |
-| Class C | `pnpm check:c25:foundation` | physical-input foundation (**not** the exit) |
-| Regression | `pnpm check:c26` | investigate/minimize/bisect/graveyard + planted regression |
-| Recorder | `pnpm check:c27:foundation` | V3 capsules + 7 browser proofs |
-| Shared world | `pnpm check:c27a:foundation` | parity matrix + Class-C browser proof |
+| State Forge | `pnpm checkpoint check:c23` | codecs, restore, Studio, exit matrix |
+| Scripted agent | `pnpm checkpoint check:c24` | Class A autonomy |
+| Class C | `pnpm checkpoint check:c25:foundation` | physical-input foundation (**not** the exit) |
+| Regression | `pnpm checkpoint check:c26` | investigate/minimize/bisect/graveyard + planted regression |
+| Recorder | `pnpm checkpoint check:c27:foundation` | V3 capsules + 7 browser proofs |
+| Shared world | `pnpm checkpoint check:c27a:foundation` | parity matrix + Class-C browser proof |
 | Release | `pnpm check` | the only gate that may support a release claim |
 
 ---
@@ -279,7 +279,7 @@ plan — they do not replace it.
   wave-49 frontier + production wave-50 transition + explicit one-hit Source
   State Forge child; not a claim of naturally playing all 50 waves)
 - [x] The named C27A portable core has zero `src/app`, DOM/Canvas, or Ghost 2
-  imports; `pnpm check:c27a:portable-core` proves the fence and planted
+  imports; `pnpm checkpoint check:c27a:portable-core` proves the fence and planted
   violation behavior.
 - [x] Affected C22–C27 evidence reran green from this worktree: C22 runtime;
   C23 State Forge; C24's exact unit/build/browser components (the aggregate
@@ -316,9 +316,9 @@ receipts: zoom's before/after current and target state, plus flash/shake
 before/after values under the real maximum aggregation rule. It proves logical
 feel state and transient restoration, not screen pixels, audio scheduling/PCM or
 audio graph/device output, physical haptics, or a complete
-outcome/progression/cloud-effect chronology. `pnpm check:c27a:slice37` passes
+outcome/progression/cloud-effect chronology. `pnpm checkpoint check:c27a:slice37` passes
 its 1 file / 5 tests; the focused campaign-victory unit portion currently passes
-10 files / 36 tests. The complete `pnpm check:c27a` gate also passed through
+10 files / 36 tests. The complete `pnpm checkpoint check:c27a` gate also passed through
 Slice 40: foundation 36 files / 128 tests, the 13-scenario / 5,732-tick /
 33-native-fact browser corpus, 40 detached comparator tests, a campaign-victory
 subgate covering 10 files / 36 tests, the 1,176-transition browser route, one
@@ -376,7 +376,7 @@ Forge captures that owned record and restores it through base reset, selected
 weapon, detached codec hydration, and stable restore. Weapons, upgrades, stage
 geometry, opening/collision/kill combat, cinematic timing, and tutorial ghost
 physics receive explicit config. The architecture gate rejects direct, mixed,
-or aliased global-config value imports in those modules. `pnpm check:c27a`
+or aliased global-config value imports in those modules. `pnpm checkpoint check:c27a`
 passed: foundation 36 files / 130 tests, the 13-scenario / 5,732-tick /
 33-native-fact browser corpus and 40 detached comparisons, campaign victory 10
 files / 36 tests and 1,176 transitions, and Slice 41 7 files / 53 tests.
@@ -390,7 +390,7 @@ Slice 42 supplies that prerequisite. `createParticleSystem(policy)` receives
 the constructed world's effect budgets and explicit graphics, accessibility,
 and cosmetic-entropy adapters; the particle module no longer imports process
 configuration or the cosmetic-random singleton. Live and detached composition
-supply their policy explicitly. `pnpm check:c27a:slice42` passed its 5 focused
+supply their policy explicitly. `pnpm checkpoint check:c27a:slice42` passed its 5 focused
 files / 20 tests and source-architecture gate, including two injected systems
 with independent budgets, dynamic low-graphics admission, and independent
 reduced-motion behavior. This is policy/data admission isolation only: it does
@@ -405,7 +405,7 @@ returns fresh configuration, clock, and named RNG services before either live
 or detached construction captures them. It imports no process configuration,
 app, presentation, or browser surface; both construction paths now use it, and
 the run lifecycle remains the authority that resets a seed. `pnpm
-check:c27a:slice43` passed 6 focused files / 19 tests plus architecture. Fresh
+checkpoint check:c27a:slice43` passed 6 focused files / 19 tests plus architecture. Fresh
 foundation and campaign-victory gates also passed. This does not isolate the
 process-global Backdrop, renderer/UI/input/audio/persistence, rendered output,
 or complete live worlds. Next, replace Backdrop's global clock binding with an
@@ -416,7 +416,7 @@ controller with its own cache and transient lighting, while receiving clock,
 world config, graphics/accessibility, overscan/theme, Canvas creation, and
 wall time explicitly. Neither Backdrop nor its biome art imports process
 configuration, and the architecture gate rejects global Backdrop/clock return
-paths. `pnpm check:c27a:slice44` passed 5 focused files / 17 tests plus
+paths. `pnpm checkpoint check:c27a:slice44` passed 5 focused files / 17 tests plus
 architecture; the physical browser proof now asserts meaningful changed Canvas
 frames after movement, and one captured frame was inspected for readability
 and viewport coverage. This proves controller ownership and rendering
@@ -432,7 +432,7 @@ when it draws dialogue. Live composition supplies the constructed world's
 presentation record, and the app dependency contract exposes the resulting
 `CinematicPresentationRuntime`. Source architecture rejects both a process
 configuration import and a global `Cinematics` runtime; focused two-factory
-evidence proves independent rendered advance timing. `pnpm check:c27a:slice45`
+evidence proves independent rendered advance timing. `pnpm checkpoint check:c27a:slice45`
 passed 5 focused files / 18 tests plus architecture, and fresh foundation and
 campaign-victory gates passed.
 
@@ -447,7 +447,7 @@ viewport, three palette roles, and overscan that Canvas UI chrome consumes;
 composition supplies it to `createUi`, and UI contracts/tokens import no process
 configuration even as types. Focused two-factory evidence proves distinct
 viewport, palette, and overscan behavior, while source architecture rejects a
-renewed config import. `pnpm check:c27a:slice46` passed 6 focused files / 21
+renewed config import. `pnpm checkpoint check:c27a:slice46` passed 6 focused files / 21
 tests plus architecture. The built navigation, progression, playground,
 terminal, and cinematic-preference journeys and the six-scenario responsive
 matrix passed; representative desktop and portrait captures were inspected.
@@ -463,7 +463,7 @@ dynamic graphics preference, and theme; composition supplies it and
 `attract-runtime` imports no process configuration, even as types. Focused
 two-controller evidence proves separate dimensions, ground/platform layout, and
 palette-driven effects, and architecture rejects a renewed import. `pnpm
-check:c27a:slice47` passed 7 focused files / 22 tests plus architecture. Built
+checkpoint check:c27a:slice47` passed 7 focused files / 22 tests plus architecture. Built
 navigation, progression, playground, terminal, and cinematic-preference journeys
 and the six-scenario responsive matrix passed; a desktop menu capture was
 inspected.
@@ -480,7 +480,7 @@ ports now receive only their required palette, ground geometry, and Blade trail
 tuning from the live presentation adapter; none imports process configuration,
 even as types. Direct Canvas-port evidence proves palette choices remain local
 to independent renderer sets, and architecture rejects renewed imports. `pnpm
-check:c27a:slice48` passed 8 focused files / 23 tests plus architecture. Built
+checkpoint check:c27a:slice48` passed 8 focused files / 23 tests plus architecture. Built
 journeys and the six-scenario responsive matrix passed; fresh foundation and
 campaign-victory gates passed.
 
@@ -494,7 +494,7 @@ contains only view/ground, rendered palette, and authored boss/telegraph values;
 the live adapter supplies it and no broad gameplay-config type remains in the
 presentation boundary. Direct two-runtime Colossus cinematic evidence proves
 isolated palette use, and source architecture rejects the old broad type. `pnpm
-check:c27a:slice49` passed 8 focused files / 24 tests plus architecture; built
+checkpoint check:c27a:slice49` passed 8 focused files / 24 tests plus architecture; built
 journeys, fresh foundation, and campaign-victory gates passed.
 
 This proves dependency ownership, not pixel parity, complete presentation
@@ -505,9 +505,9 @@ Slice 50 supplies that entropy policy. `AttractVisualPolicy.random` is supplied
 by composition with the existing cosmetic generator, and `attract-runtime` no
 longer imports the singleton. Direct two-controller evidence proves that
 separate injected streams produce separate initial foe populations; source
-architecture rejects a restored singleton import. `pnpm check:c27a:slice50`
+architecture rejects a restored singleton import. `pnpm checkpoint check:c27a:slice50`
 passed 8 focused files / 25 tests plus architecture; built journeys, fresh
-foundation, campaign-victory, and the aggregate `pnpm check:c27a` gate passed.
+foundation, campaign-victory, and the aggregate `pnpm checkpoint check:c27a` gate passed.
 
 This is cosmetic dependency ownership, not deterministic visual-sequence or
 pixel parity, complete audio/input/persistence isolation, concurrent full live
@@ -521,9 +521,9 @@ pending settings; it preserves browser-backed audio settings when test-only
 general storage is isolated. Architecture rejects an exported facade singleton,
 two-facade evidence proves local receipt identity, and the built browser audio
 contract proves persisted mixer values, one context, and lifecycle behavior.
-`pnpm check:c27a:slice51` passed 9 focused files / 26 tests plus architecture;
+`pnpm checkpoint check:c27a:slice51` passed 9 focused files / 26 tests plus architecture;
 built audio and journeys, fresh foundation, campaign-victory, and the aggregate
-`pnpm check:c27a` gate passed.
+`pnpm checkpoint check:c27a` gate passed.
 
 This is first-gesture facade ownership, not concrete audio-runtime/sequencer
 isolation, concurrent audio graphs, audibility/device parity, concurrent full
@@ -535,9 +535,9 @@ now creates the SFX proxy, synthesized voice/mixer state,
 `LegacyMusicSequencer`, and live-audio compatibility state used by the facade
 that loads it. Architecture rejects restored exported facade and concrete
 runtime singletons, and direct two-runtime evidence proves logical mixer target
-state remains local. `pnpm check:c27a:slice52` passed 9 focused files / 27 tests
+state remains local. `pnpm checkpoint check:c27a:slice52` passed 9 focused files / 27 tests
 plus architecture; built audio and journeys, fresh foundation,
-campaign-victory, and the aggregate `pnpm check:c27a` gate passed while the
+campaign-victory, and the aggregate `pnpm checkpoint check:c27a` gate passed while the
 browser contract retained exactly one context.
 
 This is logical concrete-runtime ownership, not concurrent active audio graphs,
@@ -552,9 +552,9 @@ option; the facade supplies only its captured-context function to the concrete
 live compatibility adapter. Captured state is private to each handoff, and
 direct two-handoff evidence proves releasing one leaves another untouched.
 Architecture rejects restored module-global captured state and a direct handoff
-import in the live adapter. `pnpm check:c27a:slice53` passed 10 focused files /
+import in the live adapter. `pnpm checkpoint check:c27a:slice53` passed 10 focused files /
 28 tests plus architecture; built audio and journeys, fresh foundation,
-campaign-victory, and the aggregate `pnpm check:c27a` gate passed while the
+campaign-victory, and the aggregate `pnpm checkpoint check:c27a` gate passed while the
 browser contract retained exactly one context.
 
 This is one composition's context-handoff ownership, not concurrent audio
@@ -567,10 +567,10 @@ supplies `browserNavigator` through `GameRuntimeDependencies`; frame
 coordination receives it for cinematic gamepad observation and session settings
 receives it for hardware capability checks. Source architecture rejects direct
 ambient navigator use in both paths, while legacy input/gamepad factories and
-the semantic buffer remain unchanged. `pnpm check:c27a:slice54` passed 8 focused
+the semantic buffer remain unchanged. `pnpm checkpoint check:c27a:slice54` passed 8 focused
 files / 30 tests plus architecture; built audio and journeys, canonical
 physical-input trace, fresh foundation, campaign-victory, and the aggregate
-`pnpm check:c27a` gate passed.
+`pnpm checkpoint check:c27a` gate passed.
 
 This is navigator-capability ownership only, not controller/haptic device
 parity, changed semantic input, concurrent complete worlds, or C27A completion.
@@ -581,10 +581,10 @@ Slice 55 supplies that document/window capability. App composition supplies
 `browserDocument` and `browserWindow`; the live browser host uses them for its
 viewport, pointer-lock, fullscreen, install, and query adapters, while frame
 and screen paths receive the supplied document. Source architecture rejects
-ambient document use in the migrated live paths. `pnpm check:c27a:slice55`
+ambient document use in the migrated live paths. `pnpm checkpoint check:c27a:slice55`
 passed 6 focused files / 23 tests plus architecture; built audio and journeys,
 canonical physical-input trace, fresh foundation, campaign-victory, and the
-aggregate `pnpm check:c27a` gate passed.
+aggregate `pnpm checkpoint check:c27a` gate passed.
 
 This is browser document/window ownership only, not changed pointer-lock/input
 behavior, physical-device parity, IndexedDB durability, concurrent complete
@@ -988,7 +988,7 @@ portability, concurrent complete worlds, or C27A completion.
   hash binds those declarations to the independently verified chunk root;
   supported v1 manifests remain readable and have a pure V1→V2 migration,
   extensions round-trip, and unsupported future schemas reject without writes.
-  `pnpm check:c27:foundation` passes, including real physical capture where
+  `pnpm checkpoint check:c27:foundation` passes, including real physical capture where
   every keyframe cites the UUID-bearing durable bootstrap event. This is an
   integrity linkage, not provenance authenticity or replay verification.
 - [ ] Measured real codecs and profiles against enforced storage/performance budgets
@@ -1006,25 +1006,25 @@ portability, concurrent complete worlds, or C27A completion.
 
 ### C28 — Vault, Doctor, knowledge
 
-- [x] `ghost/capsule-vault` reachable from the running app (not only `live-recorder` internals) — `GhostVaultLibraryController` reopens IndexedDB manifests through the browser Vault adapter; the normal Profile → Vault route shows immutable custody metadata. `pnpm check:c28:vault-reachable` passes.
+- [x] `ghost/capsule-vault` reachable from the running app (not only `live-recorder` internals) — `GhostVaultLibraryController` reopens IndexedDB manifests through the browser Vault adapter; the normal Profile → Vault route shows immutable custody metadata. `pnpm checkpoint check:c28:vault-reachable` passes.
 - [x] Indexing, retention, integrity checks run on real stored capsules — opening the player Vault runs `maintainGhostVault`: it applies the conservative 256 MiB retention policy, rebuilds manifest indexes, verifies every remaining capsule with `GhostDoctor.scan`, and persists `analysis:vault-maintenance:v1`. The browser gate deletes a real persisted index before the player route, then proves the index and healthy maintenance receipt were restored.
 - [x] `ghost/ghost-doctor` diagnoses and repairs a real corrupted capsule end to end — the C28 browser journey captures a V3 capsule, removes its persisted manifest index, tampers its actual IndexedDB chunk, then follows the normal Menu → Profile → Vault route. The rendered custody row says `NEEDS REPAIR`; the player clicks the semantic `REPAIR` control; and the browser reads the resulting child, durable lineage, forensic quarantine copy, and still-tampered source byte directly from IndexedDB.
 - [x] `ghost/knowledge-libraries` has a non-test consumer — version-2 browser Vault storage has a dedicated `libraries` store. The normal player Vault maintenance path validates its entries, automatically records a genuinely unhealthy capsule once in the durable Graveyard, returns the membership through the typed app controller, and renders it in the player’s custody row. Canon promotion, Frontier novelty triage, and consent/split/deduplicated Corpus ingestion are also durable policies; malformed or future library records are rejected without being trusted or overwritten.
 - [x] Browser journey proves a player reaches stored recordings — the C28 journey records a real V3 capsule, reloads, follows the normal menu/Profile/Vault controls, and observes the rendered custody row. Playback remains deliberately unavailable until C29.
 - [x] Hostile capsule imports are data-only and non-destructive — the Vault validates bounded plain-data provenance, rejects reserved prototype-shaped keys, checks all chunks before mutation, rejects a duplicate capsule identity or conflicting stored chunk ID, and atomically commits only validated new chunks with their manifest. The regression proves the pre-existing manifest and source chunk remain unchanged after every hostile attempt.
 - [x] Live capture IDs and stale writes cannot reopen a prior Vault journal — each live Ghost capture adds a cryptographic attempt UUID to its run identity, and `GhostLocalVault.beginSession` rejects an existing manifest ID before it can mutate custody evidence. Every chunk/finalization transaction must also match the active journal lease inside IndexedDB, so recovery removes the lease before a stale writer can revive a capsule. The browser interrupted-write journey reproduces that restart race and retains a terminal, journal-free original.
-- [x] C28 exit durability — records survive actual browser restart, schema migration, quota pressure, and interrupted writes. Browser evidence preserves a legacy record through version-1 → version-2 migration and a second boot, recovers a real interrupted journal/chunk into a terminal manifest with its journal removed and index rebuilt, and retains a completed source capsule in a strict 50 KiB browser Storage Bucket while a second normal capture receives Chromium's real `QuotaExceededError`. `pnpm check:c28:vault-reachable` passes all named C28 evidence.
+- [x] C28 exit durability — records survive actual browser restart, schema migration, quota pressure, and interrupted writes. Browser evidence preserves a legacy record through version-1 → version-2 migration and a second boot, recovers a real interrupted journal/chunk into a terminal manifest with its journal removed and index rebuilt, and retains a completed source capsule in a strict 50 KiB browser Storage Bucket while a second normal capture receives Chromium's real `QuotaExceededError`. `pnpm checkpoint check:c28:vault-reachable` passes all named C28 evidence.
 
 ### C29 — Replay world, Theater, comparison, practice
 
-- [x] Replay executes on the C27A production composition (no second runtime) - GhostProductionReplayWorld accepts and advances only the TearSimulationRuntime supplied by its composition. The C29 production test supplies the source-owned C27A production-world/combat composition, asserts runtime identity at tick 80, and repeats the seek with an equal semantic hash. `pnpm check:c29:production-replay` passes.
-- [x] Replay of a captured capsule reproduces its authoritative hashes — the normal test-standalone browser capture persists State Forge keyframes plus held-input authoritative receipts at ticks 0, 120, and 240; after the completed IndexedDB capsule is reopened, the source-owned production replay composition rehydrates each keyframe and matches every receipt. `pnpm check:c29:production-replay` passes. This does not yet cover active bound cinematics or pixel/device-output fidelity.
+- [x] Replay executes on the C27A production composition (no second runtime) - GhostProductionReplayWorld accepts and advances only the TearSimulationRuntime supplied by its composition. The C29 production test supplies the source-owned C27A production-world/combat composition, asserts runtime identity at tick 80, and repeats the seek with an equal semantic hash. `pnpm checkpoint check:c29:production-replay` passes.
+- [x] Replay of a captured capsule reproduces its authoritative hashes — the normal test-standalone browser capture persists State Forge keyframes plus held-input authoritative receipts at ticks 0, 120, and 240; after the completed IndexedDB capsule is reopened, the source-owned production replay composition rehydrates each keyframe and matches every receipt. `pnpm checkpoint check:c29:production-replay` passes. This does not yet cover active bound cinematics or pixel/device-output fidelity.
 - [x] Seek, fork, and player practice work from a replay — the normal Profile ->
   Vault -> Theater route reaches a verified tick-120 checkpoint, and the
   rendered `PRACTICE` control restores its child into real live play. The child
   is explicitly unranked/non-persistent, clears inherited recorder state, and
   blocks durable terminal profile/economy/cloud/replay effects; the durable
-  source capsule is byte-identical after launch. `pnpm check:c29:production-replay`
+  source capsule is byte-identical after launch. `pnpm checkpoint check:c29:production-replay`
   passes the built browser route and focused policy/launch tests.
 - [x] `ghost/theater` wired and player-visible â€” a normal Profile -> Vault
   row opens only a healthy completed V3 capsule through its verified
@@ -1049,7 +1049,7 @@ portability, concurrent complete worlds, or C27A completion.
   the complete C29 source composition, including its portable live wave/reward
   runtime; C27A's detached host delegates to the same runtime. The named C30
   gate and C27A retention gate pass. This does not claim C27A matrix parity.
-- [x] Headless↔live parity on the C27A matrix — `pnpm check:c30:foundation`
+- [x] Headless↔live parity on the C27A matrix — `pnpm checkpoint check:c30:foundation`
   rebuilds the standalone app, regenerates all 13 C27A browser traces, and
   runs the C30 source-matrix adapter against them. All 5,732 authoritative
   fixed-tick hashes, native streams, the natural draft route, and terminal

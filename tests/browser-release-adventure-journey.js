@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Browser journey scripts run directly under Node CommonJS. */
 // Release Adventure journey: the PRODUCTION build (dist/standalone, clean URL, no
 // test storage or debug hooks), a fresh profile and real mouse and keyboard only.
 // PLAY -> ADVENTURE -> EASY -> START, the chapter intro waits for input and advances,
@@ -218,7 +217,7 @@ async function main() {
       if (!on && held.has(code)) { held.delete(code); await page.keyboard.up(code); }
     };
     const releaseAll = async () => { for (const code of [...held]) await hold(code, false); };
-    let loops = 0, loopsFrom = Date.now(), sweep = 0, retries = 0, zeroLeftSince = null, lastLeft = null, lastText = 0, frameText = [], lastSeen = null;
+    let loops = 0, loopsFrom = Date.now(), sweep, retries = 0, zeroLeftSince = null, lastLeft = null, lastText = 0, frameText, lastSeen = null;
     // Real-time play depends on the runner: report the frame rate the game reached.
     const frameOf = () => page.evaluate(() => window.__RELEASE_JOURNEY__.frame);
     let fpsFrom = { at: Date.now(), frame: await frameOf() };
@@ -324,7 +323,7 @@ async function main() {
     await waitForText(/^PAUSED$/u, 5_000, "restart: pause screen"); await sleep(600);
     await clickLabel(/^RESTART$/u, "restart: RESTART");
     await sleep(700);
-    const confirm = (await texts()).find((entry) => /^(YES|CONFIRM|RESTART)/u.test(entry.t) && !/^RESTART$/u.test(entry.t));
+    const confirm = (await texts()).find((entry) => /^(YES|CONFIRM|RESTART)\b/u.test(entry.t) && !/^RESTART$/u.test(entry.t));
     if (confirm) await click(confirm);
     const restarted = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, 20_000, "restart: the restarted run");
     assert.equal(restarted.t, "WAVE 1", "a restart in the same session skips the chapter intro already seen");

@@ -107,7 +107,7 @@ operational boundary it proves.
   artifacts, and identical 32-hash repeat output; the 4,439-episodes/minute
   repeat also met the recorded budget. This is one developer-machine natural
   workload, not BC/DAgger/RL capacity or worker-scale certification.
-- [x] Bounded developer-host long-run observation. `pnpm measure:c30:long-run`
+- [x] Bounded developer-host long-run observation. `pnpm checkpoint measure:c30:long-run`
   runs five fresh four-root production-pool cycles of 32 natural 600-tick
   episodes (160 episodes / 96,000 fixed steps total), retaining only eight
   first-cycle terminal samples. The versioned
@@ -130,7 +130,7 @@ operational boundary it proves.
   `tearbench-production-training-capacity` artifact, and reports each observed
   budget verdict. It deliberately measures episode-fabric capacity only: it
   does not claim BC fitting, DAgger review, RL optimization, policy quality, or
-  checkpoint completion. `pnpm measure:c30:long-run -- --capacity-declaration
+  checkpoint completion. `pnpm checkpoint measure:c30:long-run -- --capacity-declaration
   <file>` is the only target-measurement route; the former bare `--target-id`
   / `--declared-by` pair now rejects rather than relabeling a developer budget.
 - [x] Bounded eight-worker production stress. The permanent dispatcher proof
@@ -322,7 +322,7 @@ operational boundary it proves.
   `tearbench-production-headless-terminal` artifact with its exact validated
   scenario, accepted command envelopes, fixed-tick disposition, and semantic
   hash. The committed `movement-jump` fixture is asserted against a fresh C30
-  production execution. `pnpm test:browser:production-headless-terminal`
+  production execution. `pnpm checkpoint test:browser:production-headless-terminal`
   builds the test standalone client, admits that artifact without caller
   overrides, and runs its exact three commands through the real Class-A browser
   runtime. On this worktree the 120-tick live rerun retained the source terminal
@@ -357,17 +357,17 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
 
 ## Evidence
 
-- `pnpm check:c30:foundation` passes: typecheck, full lint, C30 source
+- `pnpm checkpoint check:c30:foundation` passes: typecheck, full lint, C30 source
   architecture fences, seven focused Vitest files / 18 tests, six Node worker
   tests, standalone build, Class-A truncated and natural-failure terminal
   reruns, a fresh C27A 13-scenario browser capture, and the 14-test exact
   source-matrix comparison.
-- `pnpm check:c27a:foundation` passes 36 files / 138 tests after its detached
+- `pnpm checkpoint check:c27a:foundation` passes 36 files / 138 tests after its detached
   host adopts the shared source runtime; the rebuilt browser corpus and all 40
   detached comparisons retain C27A evidence. C30 separately proves the source
   matrix above through its own ordered gate.
 - `pnpm exec vitest run tests/unit/production-headless-benchmark.test.ts --disableConsoleIntercept` passes the developer observation plus target-declaration integrity and three-workload artifact tests. A declared target artifact remains an observation, not certification.
-- `pnpm measure:c30:long-run` invokes Node with `--expose-gc`, writes the
+- `pnpm checkpoint measure:c30:long-run` invokes Node with `--expose-gc`, writes the
   versioned bounded long-run artifact to
   `artifacts/tearbench/checkpoints/core/C30/production-headless/long-run.json`, and records the
   exact host classification rather than inferring target hardware. The current
@@ -392,7 +392,7 @@ C31-C36, C39, and C40 retain their respective evidence obligations.
   source-start/mid-run-cancel/fresh-PID matrix. Its cold-worker readiness
   allowance is separately bounded at 30 seconds (60 seconds for the explicit
   eight-worker stress) and never changes the asserted request deadline.
-- `pnpm build:test:standalone`, `pnpm test:browser:production-headless-terminal`, and `pnpm test:browser:production-headless-failure-terminal` pass. The browser materializer admits only versioned natural C30 terminal coordinates, proves exact action provenance plus a rendered screenshot, and checks that the live terminal tick/disposition match the failure artifact.
+- `pnpm build:test:standalone`, `pnpm checkpoint test:browser:production-headless-terminal`, and `pnpm checkpoint test:browser:production-headless-failure-terminal` pass. The browser materializer admits only versioned natural C30 terminal coordinates, proves exact action provenance plus a rendered screenshot, and checks that the live terminal tick/disposition match the failure artifact.
 - `pnpm check:architecture` passes, including planted C30 forbidden-edge and
   browser-global cases.
 

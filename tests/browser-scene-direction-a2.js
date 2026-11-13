@@ -131,7 +131,7 @@ withJourney({
   deviceScaleFactor,
   browserCloseTimeoutMs: 5_000,
   ...(imageNative ? { query: { sceneNative: imageNativeControl ? "control" : imageNativeLiving ? "living" : "1" } } : {}),
-}, async ({ page, buildInfo, boot, waitScreen, clickAndWait }) => {
+}, async ({ page, buildInfo }) => {
   const captures = [];
 
   async function materializeVerdant() {

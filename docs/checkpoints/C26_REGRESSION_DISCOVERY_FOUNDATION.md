@@ -2,7 +2,7 @@
 
 ## Status
 
-Passed on 2026-07-28 with `pnpm check:c26` (exit 0). This is Class A
+Passed on 2026-07-28 with `pnpm checkpoint check:c26` (exit 0). This is Class A
 test-standalone live-runtime evidence only; it does not alter C25's separate
 physical-controller or Class C certification status.
 

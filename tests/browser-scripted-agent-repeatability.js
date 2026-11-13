@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Browser journey scripts run directly under Node CommonJS. */
 const { createHash } = require("node:crypto");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");

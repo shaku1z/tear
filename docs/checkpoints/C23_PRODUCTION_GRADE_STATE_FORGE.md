@@ -53,7 +53,7 @@ platform, hazard, reward, UI, configuration, RNG, and world/identity state.
 | Canonical wave 99 | Visible Hard Endless Hammer launch with 99 earned/selected/mutated/rewarded picks, validation, snapshot, Ghost state, and metrics |
 | Exact launch matrix | All 15 boss/phase and 39 declared before/at/after boundaries launch from reset live runtimes |
 | Atomic failure | Both pre-commit validation failure and induced mid-commit failure preserve the previous exact world hash |
-| Repository integration | `pnpm check:c23`, production build/isolation, and requirements gates pass |
+| Repository integration | `pnpm checkpoint check:c23`, production build/isolation, and requirements gates pass |
 
 ## Deliberately unclaimed
 

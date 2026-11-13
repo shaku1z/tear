@@ -644,7 +644,7 @@ test("evidence receipts reject noncanonical current artifact filenames", () => {
 test("served build identity refuses stale revision and source fingerprint", async () => {
   const previousArgv = process.argv, previousLog = console.log;
   process.argv = [process.execPath, script, "identity-test-import"];
-  console.log = () => {};
+  console.log = () => undefined;
   let canReuseDiffCapabilityReport, formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution;
   try {
     ({ canReuseDiffCapabilityReport, formatFailedEvidenceExecution, validateServedBuildIdentity, verifyCurrentWeaponParityExecution } = await import(pathToFileURL(script).href));

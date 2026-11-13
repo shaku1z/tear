@@ -68,7 +68,7 @@ does not use C27's `beforeCommit` fault hook. The journey first completes and
 retains a source capsule, verifies it occupies the bucket, then runs a second
 normal live capture until Chromium raises `QuotaExceededError`. It proves the
 live simulation reaches all 1,200 requested ticks and that the completed source
-capsule remains complete. `pnpm check:c28:vault-reachable` passes this journey
+capsule remains complete. `pnpm checkpoint check:c28:vault-reachable` passes this journey
 with restart, migration, interrupted-recovery, repair, governance, hostile-
 import, source-architecture, type, lint, and focused-unit evidence.
 
@@ -128,13 +128,13 @@ proof without a C28 gate that exercises the durable Vault boundary.
 - `pnpm requirements:check` reports `unmappedSourceLines: 0`; that is a source-drop guard, not a progress count.
 - Recent completed C28 slices are `4be0b67`, `b6974a0`, `0b8c083`, `5aea113`, and `57a957f`; this migration slice is pending its green commit.
 - `pnpm test` passed 280 files and 1,090 tests on this worktree.
-- `pnpm check:c28:vault-reachable` passed, including the player Vault repair journey and the version-1 → version-2 migration/restart journey.
+- `pnpm checkpoint check:c28:vault-reachable` passed, including the player Vault repair journey and the version-1 → version-2 migration/restart journey.
 - At that time, the next exit-bound slice was physical quota pressure at the browser Vault boundary; interrupted-write recovery remained separate and could not be silently claimed.
 
 ## Historical pause record — after the ninth C28 slice
 
 - `pnpm requirements:check` reports `unmappedSourceLines: 0`; it remains a source-drop guard rather than a progress count.
-- `pnpm check:c28:vault-reachable` passed all 33 focused tests and the player repair, schema migration/restart, and interrupted-write browser journeys.
+- `pnpm checkpoint check:c28:vault-reachable` passed all 33 focused tests and the player repair, schema migration/restart, and interrupted-write browser journeys.
 - The C28 interrupted-write path now includes UUID capture IDs, duplicate-session rejection, atomic recovery terminalization, and transactionally fenced stale writes.
 - The `pnpm test` pause probe passed 279 files / 1,091 tests but failed unrelated `weapon-ability-conformance`; its immediate isolated rerun passed 1 / 1, so no C28 regression is claimed.
 - At that pause, physical browser quota pressure was the sole open C28 exit condition; the later named physical-quota journey closes it.

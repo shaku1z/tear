@@ -58,8 +58,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   const requestedMode = process.env.TEAR_JOURNEY_MODE;
   const modes = ["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]
     .filter((mode) => !requestedMode || mode === requestedMode);
-  for (let index = 0; index < modes.length; index++) {
-    const mode = modes[index];
+  for (const mode of modes) {
     const modeY = { campaign: 195, endless: 255, gauntlet: 315, playground: 375, tutorial: 435, bossonly: 509, sandbox: 549 }[mode];
     console.log(`navigation journey: starting ${mode}`);
     await boot();

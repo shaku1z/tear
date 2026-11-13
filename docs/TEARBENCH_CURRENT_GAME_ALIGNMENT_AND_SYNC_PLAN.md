@@ -271,7 +271,7 @@ These are implementation facts from the baseline audit, not assumptions or permi
 - [x] Preserve old persisted/internal navigation IDs where compatibility requires them; write current player-facing labels and actions canonically.
 - [x] Add the affected normal-player browser journey to the relevant change-selected path; a privileged global is not proof of player access.
 
-**Minimum proof:** Relevant controller/renderer tests, `pnpm build:test:standalone` once after a runtime/UI change, then the one applicable existing journey such as `pnpm test:browser:ghost-lab-home` or `pnpm test:browser:c37-player-watch`.
+**Minimum proof:** Relevant controller/renderer tests, `pnpm build:test:standalone` once after a runtime/UI change, then the one applicable existing journey such as `pnpm test:browser:ghost-lab-home` or `pnpm checkpoint test:browser:c37-player-watch`.
 
 **Exit:** A normal-player route, label, availability state, and selected evidence source agree with the feature that actually exists.
 

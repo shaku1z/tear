@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- direct Node browser fixture characterisation. */
 /**
  * TEST-ONLY visual fixture characterisation.
  *

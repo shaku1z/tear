@@ -382,10 +382,11 @@ async function readTickCapture(page, id) {
       jobs: window.__TEAR_PARITY_TICK__.jobs,
       captureIds: Object.keys(window.__TEAR_PARITY_TICK__.captures),
     }));
-    throw new Error(`${error.message}\nTick bridge diagnostics: ${JSON.stringify(diagnostics)}`);
+    throw new Error(`${error.message}\nTick bridge diagnostics: ${JSON.stringify(diagnostics)}`, { cause: error });
   }
   return page.evaluate((captureId) => {
     const snapshot = window.__TEAR_PARITY_TICK__.captures[captureId];
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- the page-side capture map is keyed by job id; the consumed capture is removed.
     delete window.__TEAR_PARITY_TICK__.captures[captureId];
     window.__TEAR_PARITY_TICK__.jobs = window.__TEAR_PARITY_TICK__.jobs
       .filter((job) => job.id !== captureId);

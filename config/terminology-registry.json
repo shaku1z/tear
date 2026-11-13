@@ -1617,7 +1617,7 @@
         "reason": "Headless intake format is a compatibility boundary for governed records.",
         "testEvidence": [
           "tests/unit/production-headless-academy-intake.test.ts",
-          "check:c30:foundation"
+          "checkpoint check:c30:foundation"
         ],
         "expiry": {
           "checkpoint": "G4-G-TRAINING-ARCHIVE",

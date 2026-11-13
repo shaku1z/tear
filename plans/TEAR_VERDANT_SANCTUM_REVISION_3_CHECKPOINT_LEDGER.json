@@ -1334,7 +1334,7 @@
         "pnpm exec vitest run tests/unit/stage-runtime-state.test.ts tests/unit/chapter-cinematic-binding.test.ts tests/unit/live-wave-controller.test.ts tests/unit/verdant-stage-catalog.test.ts",
         "pnpm build:test:standalone",
         "pnpm test:browser:current-gameplay-scenarios",
-        "pnpm test:browser:c29-active-campaign-cinematic"
+        "pnpm checkpoint test:browser:c29-active-campaign-cinematic"
       ],
       "exitConditions": [
         "Verdant stage data is typed and source-owned.",
@@ -1366,7 +1366,7 @@
         "pnpm exec vitest run tests/unit/stage-runtime-state.test.ts tests/unit/chapter-cinematic-binding.test.ts tests/unit/live-wave-controller.test.ts tests/unit/verdant-stage-catalog.test.ts tests/unit/verdant-stage-state-forge.test.ts",
         "pnpm build:test:standalone",
         "pnpm test:browser:current-gameplay-scenarios",
-        "pnpm test:browser:c29-active-campaign-cinematic",
+        "pnpm checkpoint test:browser:c29-active-campaign-cinematic",
         "pnpm test:game-reference-artifact",
         "node --test tests/release-preflight.test.mjs",
         "git diff --check"

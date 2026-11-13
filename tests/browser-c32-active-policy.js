@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports -- Node browser journey. */
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 

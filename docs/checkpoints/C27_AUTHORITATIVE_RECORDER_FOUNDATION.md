@@ -105,7 +105,7 @@ visual recorder and is not yet a completed, player-visible recorder.
   becoming complete, and a clean subsequent browser launch recovers it. This
   is deterministic fault-injection evidence, not a claim that a physical
   device has exhausted its actual quota or sustained long-run pressure.
-- `pnpm check:c27:foundation` is green from this worktree after the corrupt
+- `pnpm checkpoint check:c27:foundation` is green from this worktree after the corrupt
   recovery addition: requirements traceability, types, lint, source
   architecture, 69 focused unit tests, the standalone build, and all seven V3
   recorder/physical/recovery browser journeys pass. This is a C27 foundation
@@ -138,7 +138,7 @@ visual recorder and is not yet a completed, player-visible recorder.
   seam. Every physical and exact keyframe cites the bootstrap event made from
   that UUID-bearing ID, rather than a run-ID approximation, so a real reopened
   physical capture reaches the intended `unavailable` compatibility result
-  until a matching detached runtime is registered. `pnpm check:c27:foundation`
+  until a matching detached runtime is registered. `pnpm checkpoint check:c27:foundation`
   passes its requirements/type/lint/architecture checks, 14 focused suites / 74
   tests, test-standalone build, and seven V3 recorder/recovery browser paths.
 - A normal live V3 capture now additionally persists a versioned

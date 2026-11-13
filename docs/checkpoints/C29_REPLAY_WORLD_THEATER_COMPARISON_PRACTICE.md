@@ -149,7 +149,7 @@ remain C25/C39/C40 work.
 
 ## Evidence
 
-pnpm check:c29:production-replay is the named gate. It runs the source
+pnpm checkpoint check:c29:production-replay is the named gate. It runs the source
 traceability, type/lint/architecture, receipt/production-runtime tests, and a
 rebuilt browser V3 capture that reopens the completed IndexedDB capsule and
 compares all captured authoritative receipts through source-owned replay. That
