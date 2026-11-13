@@ -8,19 +8,19 @@ Change `config/position.json` in the pull request that changes an area, then run
 
 ## Production
 
-https://tearblade.com runs `9e7d6a70` (deployed 2026-08-30). Production still runs the 2026-08-30 build. Everything merged since then, including the release-readiness program, is on main but not deployed.
+https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the owner played it and said the build is good. The previous release was the 2026-08-30 build 9e7d6a70.
 
 ## Areas
 
 | Area | State | Next | Owner action |
 | --- | --- | --- | --- |
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
-| [Production deploy](#production-deploy) | Waiting for the owner's playtest | Deploy a green Validate run of main to production through the protected workflow. | Play the current main build (a preview deploy or a local build) and say whether it may go to players. |
+| [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | Its pull request, then the lead's review. | Judge the look: the owner's taste decides visual work. |
 | [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Its pull request, then the lead's review. | Playtest the reworked stage. |
 | [Tutorial and Playground experience](#training-ux) | In progress | Its pull request, then the lead's review. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
-| [Repository structure and workflow](#repository-structure) | In progress | One pull request per item, reviewed by the lead. | Decide whether the Git hooks and the owner-safe merge helper move into the repository (a proposal will be written; hook changes are reserved for the owner). |
+| [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
 
 <a id="release-readiness"></a>
@@ -37,10 +37,10 @@ https://tearblade.com runs `9e7d6a70` (deployed 2026-08-30). Production still ru
 
 ### Production deploy
 
-**Waiting for the owner's playtest.** main is green but not deployed. The lead holds the production deploy of the new visuals and UI until the owner has played them; preview deploys are allowed under the 2026-11-12 standing delegation.
+**Deployed 2026-11-13.** tearblade.com runs main commit 84761549; the owner played the build and said it is good (D-013). Preview deploys continue under the 2026-11-12 standing delegation.
 
-- Next: Deploy a green Validate run of main to production through the protected workflow.
-- Owner action: Play the current main build (a preview deploy or a local build) and say whether it may go to players.
+- Next: The next production deploy follows the Verdant, Tutorial and music work.
+- Owner action: none
 - Evidence: [docs/RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md), [DEPLOYMENT.md](../DEPLOYMENT.md)
 
 <a id="verdant-visuals"></a>
@@ -87,10 +87,10 @@ https://tearblade.com runs `9e7d6a70` (deployed 2026-08-30). Production still ru
 
 ### Repository structure and workflow
 
-**In progress.** Porting the structure patterns recommended by the comparison with the owner's OFFSLCT project: this generated position file, a decisions log and pitfalls table, a repository map with size caps, a pull request template, a tool catalogue, change-impact completeness and release compatibility fixtures.
+**In progress.** Porting the structure patterns recommended by the comparison with the owner's OFFSLCT project. Merged: this generated position file, decisions and pitfalls, the repository map with size caps, the pull request and task card templates, the tool catalogue with pnpm who, change-impact completeness and release compatibility fixtures. Open: the owner guard hooks and merge helper moving into scripts/governance/.
 
-- Next: One pull request per item, reviewed by the lead.
-- Owner action: Decide whether the Git hooks and the owner-safe merge helper move into the repository (a proposal will be written; hook changes are reserved for the owner).
+- Next: After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md).
+- Owner action: none
 - Evidence: [AGENTS.md](../AGENTS.md), [docs/README.md](README.md)
 
 <a id="tearbench-program"></a>

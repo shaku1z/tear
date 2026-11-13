@@ -4,9 +4,9 @@
   "about": "The one curated source for where the Tear program stands. docs/POSITION.md is rendered from this file by `pnpm position:render`, and `pnpm check:docs` fails when the rendered file is stale or was edited by hand. Each area records its state in a few words, what is true now, the next step, what only the owner can do, and evidence: repository paths that exist, or links to pull requests. Change this file in the same pull request that changes an area's state, update `curated` when you review the whole file, and re-render.",
   "production": {
     "site": "https://tearblade.com",
-    "commit": "9e7d6a701ca0b992c8d78cccc2af329d698778c0",
-    "since": "2026-08-30",
-    "note": "Production still runs the 2026-08-30 build. Everything merged since then, including the release-readiness program, is on main but not deployed."
+    "commit": "847615494f3b511b4e845da373a90a5277b807b7",
+    "since": "2026-11-13",
+    "note": "Deployed after the owner played it and said the build is good. The previous release was the 2026-08-30 build 9e7d6a70."
   },
   "areas": [
     {
@@ -25,10 +25,10 @@
     {
       "id": "production-deploy",
       "name": "Production deploy",
-      "state": "Waiting for the owner's playtest",
-      "summary": "main is green but not deployed. The lead holds the production deploy of the new visuals and UI until the owner has played them; preview deploys are allowed under the 2026-11-12 standing delegation.",
-      "next": "Deploy a green Validate run of main to production through the protected workflow.",
-      "owner_action": "Play the current main build (a preview deploy or a local build) and say whether it may go to players.",
+      "state": "Deployed 2026-11-13",
+      "summary": "tearblade.com runs main commit 84761549; the owner played the build and said it is good (D-013). Preview deploys continue under the 2026-11-12 standing delegation.",
+      "next": "The next production deploy follows the Verdant, Tutorial and music work.",
+      "owner_action": "",
       "evidence": [
         "docs/RELEASE_AUTHORITY.md",
         "DEPLOYMENT.md"
@@ -82,9 +82,9 @@
       "id": "repository-structure",
       "name": "Repository structure and workflow",
       "state": "In progress",
-      "summary": "Porting the structure patterns recommended by the comparison with the owner's OFFSLCT project: this generated position file, a decisions log and pitfalls table, a repository map with size caps, a pull request template, a tool catalogue, change-impact completeness and release compatibility fixtures.",
-      "next": "One pull request per item, reviewed by the lead.",
-      "owner_action": "Decide whether the Git hooks and the owner-safe merge helper move into the repository (a proposal will be written; hook changes are reserved for the owner).",
+      "summary": "Porting the structure patterns recommended by the comparison with the owner's OFFSLCT project. Merged: this generated position file, decisions and pitfalls, the repository map with size caps, the pull request and task card templates, the tool catalogue with pnpm who, change-impact completeness and release compatibility fixtures. Open: the owner guard hooks and merge helper moving into scripts/governance/.",
+      "next": "After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md).",
+      "owner_action": "",
       "evidence": [
         "AGENTS.md",
         "docs/README.md"
