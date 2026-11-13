@@ -345,7 +345,7 @@ test("Bloom Well selection reports the declared live-only backend and complete l
 });
 
 test("multi-backend scenarios materialize one backend-specific evidence command per declaration", () => {
-  const selection = select(["src/app/engineering/replay-hub.ts"]);
+  const selection = select(["src/app/replay/ghost-lab-home.ts"]);
   const boot = selection.evidenceCommands.filter((entry) => entry.id === "boot-start-run");
   assert.deepEqual(
     boot.map((entry) => entry.backend),
@@ -530,7 +530,6 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   assert.ok(event.scenarios.includes("source-void-low-hp-rescue-seek"));
   assert.ok(event.authorityCommands.includes("pnpm exec vitest run tests/unit/gameplay-causal-events.test.ts"));
   for (const file of [
-    "src/app/engineering/replay-hub.ts",
     "src/agents/run-monitor.ts",
     "src/app/replay/ghost-lab-home.ts",
     "src/presentation/screens/ghost-lab.ts",
@@ -807,7 +806,7 @@ test("unsafe evidence commands and unknown route references fail closed", () => 
   const catalog = mutatedCatalog("unsafe-command", (entries) => {
     entries.find((entry) => entry.id === "boot-start-run").evidence = { command: 'node -e "process.exit(0)"' };
   });
-  const unsafe = rejected(["src/app/engineering/replay-hub.ts"], { catalog });
+  const unsafe = rejected(["src/app/replay/ghost-lab-home.ts"], { catalog });
   assert.notEqual(unsafe.status, 0);
   assert.match(`${unsafe.stderr}\n${unsafe.stdout}`, /unsupported TearBench evidence command/u);
 
@@ -832,7 +831,7 @@ test("selected player journeys are actually dispatched through safe evidence exe
       entries.find((entry) => entry.id === id).evidence = { command: "node --check tests/browser-ghost-lab-home.js" };
     }
   });
-  const selection = select(["src/app/engineering/replay-hub.ts"], {
+  const selection = select(["src/app/replay/ghost-lab-home.ts"], {
     routes: routePath,
     catalog,
     executeEvidence: true,
