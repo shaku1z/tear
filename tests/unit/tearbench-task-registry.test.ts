@@ -43,7 +43,7 @@ describe("TearBench atomic task registry", () => {
   });
   it("runs canary parity, provider-clock and workflow contracts once per protected profile", () => {
     const value = canonical();
-    for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {
+    for (const profile of ["release", "pull-request", "protected-main"]) {
       expect(value.profiles[profile]?.filter((id) => id === "unit.tearbench-canary-contract")).toHaveLength(1);
     }
     expect(requiredTask("unit.tearbench-canary-contract").runner.args).toEqual([
@@ -57,32 +57,25 @@ describe("TearBench atomic task registry", () => {
       "tests/tearbench-simulation-boundary-report.test.mjs",
     ]);
     expect(requiredTask("unit.tearbench-canary-contract").version).toBe(4);
-    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(81);
   });
   it("runs resource lease regressions in functional and protected profiles without rewriting the compatibility baseline", () => {
     const value = canonical();
-    for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {
+    for (const profile of ["release", "pull-request", "protected-main"]) {
       expect(value.profiles[profile]).toContain("unit.tearbench-resource-leases");
     }
     expect(requiredTask("unit.tearbench-resource-leases").runner.args).toEqual([
       "--test",
       "tests/tearbench-resource-leases.test.mjs",
     ]);
-    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(81);
   });
-  it("preserves the exact VAP-0 inventory behind thin package aliases", () => {
+  it("leaves the gate to config/checks.json: pnpm check runs that list, not a registry profile", () => {
     const value = canonical();
-    expect(value.compatibilityInventory["check.functional"]?.expandedLeafCount).toBe(79);
-    expect(value.compatibilityInventory["check.performance"]?.expandedLeafCount).toBe(2);
-    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(81);
-    expect(value.profiles.check).toEqual([
-      ...(value.profiles["check.functional"] ?? []),
-      ...(value.profiles["check.performance"] ?? []),
-    ]);
+    for (const profile of ["check", "check.functional", "check.performance"])
+      expect(value.profiles[profile]).toBeUndefined();
+    expect(packageSource.scripts.check).toBe("node scripts/run-checks.mjs");
+    expect(packageSource.scripts["check:functional"]).toBe("node scripts/run-checks.mjs");
+    expect(packageSource.scripts["check:quick"]).toBe("node scripts/run-checks.mjs fast");
     expect(requiredTask("build.test-standalone").runner.kind).toBe("build-target");
-    expect(packageSource.scripts["check:functional"]).toBe("pnpm tearbench tasks run-profile check.functional");
-    expect(packageSource.scripts["check:performance"]).toBe("pnpm tearbench tasks run-profile check.performance");
-    expect(packageSource.scripts.check).toBe("pnpm tearbench tasks run-profile check");
   });
 
   it("lints exactly what pnpm lint lints: both run the one target list in scripts/lint.mjs", () => {
@@ -107,19 +100,22 @@ describe("TearBench atomic task registry", () => {
     expect(task.version).toBe(1);
     expect(packageSource.scripts["format:check"]).toBe(`node ${task.runner.args.join(" ")}`);
     expect(packageSource.scripts.format).toBe("node scripts/format.mjs --write");
-    expect(packageSource.scripts["check:quick"]).toContain("pnpm format:check");
+    const checks = JSON.parse(readFileSync(new URL("../../config/checks.json", import.meta.url), "utf8")) as {
+      groups: Record<string, { run: string }[]>;
+    };
+    expect(checks.groups.static?.map((check) => check.run)).toContain(packageSource.scripts["format:check"]);
     const value = canonical();
     for (const [profile, ids] of Object.entries(value.profiles)) {
       expect(ids.includes("static.format-check"), profile).toBe(ids.includes("static.lint"));
     }
-    for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {
+    for (const profile of ["release", "pull-request", "protected-main"]) {
       expect(value.profiles[profile]?.filter((id) => id === "static.format-check")).toHaveLength(1);
     }
   });
 
   it("requires executable evidence-client and receipt regressions in every protected functional profile", () => {
     const value = canonical();
-    for (const profile of ["check.functional", "check", "release", "pull-request", "protected-main"]) {
+    for (const profile of ["release", "pull-request", "protected-main"]) {
       expect(value.profiles[profile]?.filter((id) => id === "unit.tearbench-evidence-clients")).toHaveLength(1);
     }
     expect(requiredTask("unit.tearbench-evidence-clients").runner.args).toEqual([
@@ -130,7 +126,6 @@ describe("TearBench atomic task registry", () => {
       "tests/tearbench-task-execution.test.mjs",
       "tests/tearbench-task-receipts.test.mjs",
     ]);
-    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(81);
   });
 
   it("rejects duplicate IDs, unknown dependencies, cycles, and missing outputs", () => {

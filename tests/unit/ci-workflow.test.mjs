@@ -1,9 +1,10 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
+import { loadChecks, selectChecks } from "../../scripts/run-checks.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 const read = (path) => readFileSync(resolve(root, path), "utf8").replace(/\r\n/gu, "\n");
@@ -51,6 +52,34 @@ describe("Validate workflow", () => {
     expect(docsOnly(["config/checks.json"])).toBe(false);
     expect(docsOnly(["docsx/a.md"])).toBe(false);
     expect(docsOnly([])).toBe(false);
+  });
+
+  it("runs every gate group of config/checks.json, in the listed order, and nothing else", () => {
+    const config = loadChecks();
+    const groups = [...workflow.matchAll(/node scripts\/run-checks\.mjs (\w+)/gu)].map((match) => match[1]);
+    expect(groups).toEqual(config.gate);
+    expect(config.gate.slice(0, 1)).toEqual(["static"]);
+    // The cheap, likely-to-fail checks come first, so a failure shows within minutes.
+    expect(config.groups.static.slice(0, 4).map((check) => check.id)).toEqual([
+      "format",
+      "docs",
+      "terminology",
+      "repository-guards",
+    ]);
+    expect(workflow).not.toMatch(/check:functional|tearbench (?:ci|tasks)/u);
+  });
+
+  it("lists every check once, with a command that names a file that exists", () => {
+    const config = loadChecks();
+    for (const group of Object.keys(config.groups)) {
+      const ids = selectChecks(config, group).map((check) => check.id);
+      expect(new Set(ids).size, `duplicate id in ${group}`).toBe(ids.length);
+      for (const check of selectChecks(config, group)) {
+        const [command, file] = check.args;
+        expect(command, check.id).toBe("node");
+        if (!file.startsWith("--")) expect(existsSync(resolve(root, file)), `${group}.${check.id}: ${file}`).toBe(true);
+      }
+    }
   });
 
   it("gives no step a key twice (GitHub rejects such a file)", () => {

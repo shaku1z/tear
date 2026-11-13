@@ -158,7 +158,7 @@
       "duration": "seconds"
     },
     "check:quick": {
-      "purpose": "Cheap static gate: format check, typecheck, lint, architecture, code budget and docs",
+      "purpose": "Fast group of config/checks.json (changed-file format and lint, guards, typecheck); the pre-push tier",
       "effects": [
         "writes-artifacts"
       ],
@@ -1199,16 +1199,8 @@
       ],
       "duration": "long"
     },
-    "check:pr": {
-      "purpose": "TearBench CI selection for changed files, then the full release gate",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "long"
-    },
     "check:nightly": {
-      "purpose": "Nightly alias for the full release gate",
+      "purpose": "Nightly group of config/checks.json: performance, State Forge and Pale scenarios",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1216,14 +1208,14 @@
       "duration": "long"
     },
     "check:weekly": {
-      "purpose": "Weekly endurance tests plus ghost replay and vault suites",
+      "purpose": "Weekly group of config/checks.json: endurance plus ghost replay and vault suites",
       "effects": [
         "read-only"
       ],
       "duration": "long"
     },
     "check:functional": {
-      "purpose": "CI-required functional profile: static checks, unit tests, builds and browser suites via TearBench",
+      "purpose": "Alias of pnpm check, kept for notes and scripts that name it",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1231,7 +1223,7 @@
       "duration": "long"
     },
     "check:performance": {
-      "purpose": "TearBench performance profile: test build plus browser performance",
+      "purpose": "Browser frame-time measurement against an existing test build",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1239,7 +1231,7 @@
       "duration": "minutes"
     },
     "check": {
-      "purpose": "Full release gate (TearBench check profile); run once per release candidate",
+      "purpose": "Every gate group of config/checks.json in order: exactly what the required Validate check runs",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1650,6 +1642,21 @@
         "checkpoint"
       ]
     },
+    "scripts/run-checks.mjs": {
+      "purpose": "Runs config/checks.json groups in order, stops at the first failure, shares machine-wide slots and records a full pass",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "long",
+      "via": [
+        "check",
+        "check:functional",
+        "check:quick",
+        "check:nightly",
+        "check:weekly"
+      ]
+    },
     "scripts/run-current-live-detached-parity.mjs": {
       "purpose": "Runs the C27A live browser parity trace then the detached parity Vitest",
       "effects": [
@@ -1939,6 +1946,10 @@
       "scripts/release-preflight.mjs",
       "tests/campaign-publication-boundary.test.mjs",
       "tests/unit/verdant-publication-boundary.test.ts"
+    ],
+    "scripts/changed-files.mjs": [
+      "scripts/format.mjs",
+      "scripts/lint.mjs"
     ],
     "scripts/check-repository.mjs": [
       "scripts/check-docs.mjs",
