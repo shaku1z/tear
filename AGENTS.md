@@ -24,9 +24,18 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
   player's replay system with unfinished replay features.
 - Repository skills live in `.agents/skills/<name>/SKILL.md`. Use the smallest
   set whose description matches the task.
+- Where each workstream stands: [docs/POSITION.md](docs/POSITION.md), generated from
+  `config/position.json` (`pnpm position:render`). Edit the JSON in the pull request that
+  changes an area's state; `pnpm check:docs` fails on a stale or hand-edited render.
+- Every top-level folder and config file, what writes it and whether it is generated:
+  [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md). A new top-level entry needs a row there, and
+  tracked documents and evidence stay under the size cap in `config/size-caps.json`.
 - `docs/` holds authority documents (index: [docs/README.md](docs/README.md));
-  `plans/` holds plans; the current one is
+  `plans/` holds plans (open ones in `plans/active/`, closed ones in
+  `plans/completed/`); the current one is
   [plans/active/RELEASE_READINESS_PLAN.md](plans/active/RELEASE_READINESS_PLAN.md).
+  A task that spans pull requests or sessions gets a card from
+  [plans/TASK_CARD_TEMPLATE.md](plans/TASK_CARD_TEMPLATE.md).
 
 ## Inner loop: gameplay change
 
@@ -141,6 +150,9 @@ Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 
 ## Known traps
 
+Each trap below is also a row in [docs/PITFALLS.md](docs/PITFALLS.md) with the check that
+guards it; the decisions behind the hard rules are in [docs/DECISIONS.md](docs/DECISIONS.md).
+
 - **`pnpm deploy --help` runs the script.** pnpm 11 ignores `--help` after a
   script name and runs `deploy` (a build plus Wrangler dry run). Read
   `package.json` instead of passing `--help` to a script.
@@ -181,6 +193,8 @@ Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 ## Finishing
 
 Hand off with the governance skill's handoff block, listing commands and
-results. Remove your worktree (`git worktree remove`) and branch
+results. Pull request descriptions follow
+[.github/pull_request_template.md](.github/pull_request_template.md): checks
+run, checks that could not run, risks, and any position change. Remove your worktree (`git worktree remove`) and branch
 (`git branch -d`) only after the work is merged into `main` or the owner has
 archived it, and after checking the worktree for uncommitted work and junctions.

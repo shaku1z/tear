@@ -1,0 +1,28 @@
+{
+  "format": "tearbench-ghost3-requirements-digest",
+  "schemaVersion": 1,
+  "note": "Digest of the generated requirements registry and annex. Run `pnpm requirements:generate` to write both into artifacts/tearbench/requirements/ and refresh this file.",
+  "source": {
+    "sha256": "007BE22193F5369B8450AAB33B95C6D3080176E6B2F91A1D504B545CA7FC7DDE",
+    "lineCount": 13725
+  },
+  "counts": {
+    "occurrences": 7968,
+    "headings": 865,
+    "requirements": 8691,
+    "normativeRequirements": 6885,
+    "referenceEntries": 1806,
+    "normativeOccurrences": 5798,
+    "duplicateRequirements": 1200
+  },
+  "registry": {
+    "path": "artifacts/tearbench/requirements/tearbench-ghost3-requirements.json",
+    "bytes": 26942123,
+    "sha256": "b183bdc8e7cfc3795437a0a4cdf58075fe00d8e00ab9a6984a028aada7e09ab5"
+  },
+  "annex": {
+    "path": "artifacts/tearbench/requirements/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md",
+    "bytes": 2823375,
+    "sha256": "95fcbfd8b04f9a67be83e9d696a3290d63f69a7f5f6f126b545a6e4d3a64a2d0"
+  }
+}

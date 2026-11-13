@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadRegistry, translateMutableGeneratedDescriptions } from "./check-terminology.mjs";
@@ -8,8 +8,13 @@ const SCRIPT_DIRECTORY = dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = resolve(SCRIPT_DIRECTORY, "..");
 const SOURCE_PATH = resolve(REPOSITORY_ROOT, "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md");
 const PLAN_PATH = resolve(REPOSITORY_ROOT, "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md");
-const JSON_PATH = resolve(REPOSITORY_ROOT, "docs/tearbench-ghost3-requirements.json");
-const MARKDOWN_PATH = resolve(REPOSITORY_ROOT, "docs/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md");
+// The full registry (about 27 MB) and its Markdown view (about 3 MB) are generated into the ignored
+// artifacts/ folder; only their digest is tracked, so `check` still fails when an input changes
+// without a regenerate, and git history stops growing by megabytes per edit.
+const GENERATED_DIRECTORY = resolve(REPOSITORY_ROOT, "artifacts/tearbench/requirements");
+const JSON_PATH = resolve(GENERATED_DIRECTORY, "tearbench-ghost3-requirements.json");
+const MARKDOWN_PATH = resolve(GENERATED_DIRECTORY, "TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md");
+const DIGEST_PATH = resolve(REPOSITORY_ROOT, "docs/tearbench-ghost3-requirements.digest.json");
 const EVIDENCE_CATALOG_PATH = resolve(REPOSITORY_ROOT, "docs/tearbench-ghost3-evidence-catalog.json");
 const DASHBOARD_PATH = resolve(REPOSITORY_ROOT, "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md");
 const TERMINOLOGY_REGISTRY = loadRegistry(REPOSITORY_ROOT);
@@ -1060,7 +1065,7 @@ export function validateDocument(document, sourceText) {
   return errors;
 }
 
-function renderMarkdown(document) {
+export function renderMarkdown(document) {
   const requiredCount = document.requirements.filter((item) => item.disposition === "required").length;
   const optionalCount = document.requirements.filter((item) => item.disposition === "optional").length;
   const lines = [
@@ -1207,6 +1212,27 @@ function canonicalJson(document) {
   return `${JSON.stringify(document, null, 2)}\n`;
 }
 
+export function renderDigest(document, json, markdown) {
+  const digest = {
+    format: "tearbench-ghost3-requirements-digest",
+    schemaVersion: 1,
+    note: "Digest of the generated requirements registry and annex. Run `pnpm requirements:generate` to write both into artifacts/tearbench/requirements/ and refresh this file.",
+    source: { sha256: document.source.sha256, lineCount: document.source.lineCount },
+    counts: document.counts,
+    registry: {
+      path: "artifacts/tearbench/requirements/tearbench-ghost3-requirements.json",
+      bytes: Buffer.byteLength(json, "utf8"),
+      sha256: sha256(json),
+    },
+    annex: {
+      path: "artifacts/tearbench/requirements/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md",
+      bytes: Buffer.byteLength(markdown, "utf8"),
+      sha256: sha256(markdown),
+    },
+  };
+  return `${JSON.stringify(digest, null, 2)}\n`;
+}
+
 function generate() {
   const sourceText = readFileSync(SOURCE_PATH, "utf8");
   const planText = readFileSync(PLAN_PATH, "utf8");
@@ -1214,8 +1240,12 @@ function generate() {
   const document = buildDocument(sourceText, planText, evidenceCatalog);
   const errors = validateDocument(document, sourceText);
   if (errors.length > 0) throw new Error(`requirements annex validation failed:\n- ${errors.join("\n- ")}`);
-  writeFileSync(JSON_PATH, canonicalJson(document), "utf8");
-  writeFileSync(MARKDOWN_PATH, renderMarkdown(document), "utf8");
+  const json = canonicalJson(document);
+  const markdown = renderMarkdown(document);
+  mkdirSync(GENERATED_DIRECTORY, { recursive: true });
+  writeFileSync(JSON_PATH, json, "utf8");
+  writeFileSync(MARKDOWN_PATH, markdown, "utf8");
+  writeFileSync(DIGEST_PATH, renderDigest(document, json, markdown), "utf8");
   writeFileSync(DASHBOARD_PATH, renderDashboard(document), "utf8");
   return document;
 }
@@ -1229,9 +1259,14 @@ function check() {
   const expectedJson = canonicalJson(document);
   const expectedMarkdown = renderMarkdown(document);
   const expectedDashboard = renderDashboard(document);
-  if (readFileSync(JSON_PATH, "utf8") !== expectedJson) errors.push("JSON annex is stale; run requirements:generate");
-  if (readFileSync(MARKDOWN_PATH, "utf8") !== expectedMarkdown)
-    errors.push("Markdown annex is stale; run requirements:generate");
+  const expectedDigest = renderDigest(document, expectedJson, expectedMarkdown);
+  const digest = existsSync(DIGEST_PATH) ? readFileSync(DIGEST_PATH, "utf8").replaceAll("\r\n", "\n") : "";
+  if (digest !== expectedDigest) errors.push("requirements digest is stale; run requirements:generate");
+  // The generated files are optional local outputs; when present they must match too.
+  if (existsSync(JSON_PATH) && readFileSync(JSON_PATH, "utf8") !== expectedJson)
+    errors.push("local JSON annex is stale; run requirements:generate");
+  if (existsSync(MARKDOWN_PATH) && readFileSync(MARKDOWN_PATH, "utf8") !== expectedMarkdown)
+    errors.push("local Markdown annex is stale; run requirements:generate");
   if (readFileSync(DASHBOARD_PATH, "utf8") !== expectedDashboard)
     errors.push("capability dashboard is stale; run requirements:generate");
   if (errors.length > 0) throw new Error(`requirements annex validation failed:\n- ${errors.join("\n- ")}`);

@@ -3,6 +3,8 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { checkPosition } from "./position.mjs";
+import { checkRepository } from "./check-repository.mjs";
 
 const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
   "AGENTS.md": "current authority",
@@ -27,11 +29,11 @@ const CURRENT_PROGRAM_STATE_AUTHORITIES = Object.freeze([
 ]);
 
 export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
-  "plans/CONTROLLER_QA.md",
-  "plans/FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md",
-  "plans/PARITY_RESTORATION_PLAN.md",
-  "plans/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md",
-  "plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md",
+  "plans/active/CONTROLLER_QA.md",
+  "plans/active/FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md",
+  "plans/active/PARITY_RESTORATION_PLAN.md",
+  "plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md",
+  "plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md",
   "plans/TEARBENCH_C40_EXECUTION_GUIDE.md",
   "plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md",
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
@@ -71,8 +73,7 @@ const CURRENT_PROGRAM_RUN_ID = /^[0-9]+$/u;
 const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
   "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md",
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
-  "docs/tearbench-ghost3-requirements.json",
-  "docs/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md",
+  "docs/tearbench-ghost3-requirements.digest.json",
   "docs/tearbench-ghost3-evidence-catalog.json",
   "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md",
   "docs/tearbench-c40-weapon-roster-evidence-index.json",
@@ -750,6 +751,8 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
   const plansIndex = checkPlansAuthorityIndex(absoluteRoot);
   const activePlans = checkActivePlanMetadata(absoluteRoot, plansIndex);
   const currentProgram = checkCurrentProgramState(absoluteRoot);
+  const position = checkPosition(absoluteRoot);
+  const repository = checkRepository(absoluteRoot);
   const errors = [
     ...links.errors,
     ...policy.errors,
@@ -758,6 +761,8 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
     ...activePlans.errors,
     ...plansIndex.errors,
     ...currentProgram.errors,
+    ...position.errors,
+    ...repository.errors,
   ];
   return {
     ok: errors.length === 0,
@@ -769,6 +774,7 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
     pathBoundArtifacts: artifacts.artifacts.length,
     activePlans: activePlans.activePlanPaths.length,
     currentProgramState: currentProgram.state,
+    positionAreas: position.areas ?? 0,
   };
 }
 

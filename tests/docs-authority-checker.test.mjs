@@ -57,10 +57,11 @@ test("docs checker passes the canonical tracked documentation baseline", () => {
   const result = runDocsCheck({ root: repositoryRoot });
   assert.equal(result.ok, true, result.errors.join("\n"));
   assert.equal(result.rootMarkdownFiles, 6);
-  assert.equal(result.pathBoundArtifacts, 10);
+  assert.equal(result.pathBoundArtifacts, 9);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
-  assert.equal(result.currentAuthorities, 12);
+  assert.equal(result.currentAuthorities, 16);
+  assert.equal(result.positionAreas > 0, true);
   assert.equal(result.activePlans, ACTIVE_PLAN_METADATA_PATHS.length);
 });
 
@@ -144,7 +145,7 @@ test("current program-state checker accepts historical text while requiring curr
 test("current authority table has one local primary per unique topic", () => {
   const result = checkCurrentAuthorityTable(repositoryRoot);
   assert.deepEqual(result.errors, []);
-  assert.equal(result.rows.length, 12);
+  assert.equal(result.rows.length, 16);
 });
 
 test("current authority parser rejects duplicate topics, primary paths, and malformed multiple links", () => {
@@ -240,8 +241,8 @@ test("plan index and active-plan metadata must agree", () => {
       fs
         .readFileSync(indexPath, "utf8")
         .replace(
-          "| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | QA owner |",
-          "| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | Different owner |",
+          "| [CONTROLLER_QA.md](active/CONTROLLER_QA.md) | QA owner |",
+          "| [CONTROLLER_QA.md](active/CONTROLLER_QA.md) | Different owner |",
         ),
       "utf8",
     );

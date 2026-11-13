@@ -9,7 +9,7 @@
 > certified states and creates subsection-level traceability.
 >
 > C21 has now produced that authoritative trace in
-> `docs/tearbench-ghost3-requirements.json`. This historical ledger is retained
+> `artifacts/tearbench/requirements/tearbench-ghost3-requirements.json` (generated; digest in `docs/tearbench-ghost3-requirements.digest.json`). This historical ledger is retained
 > only to explain the earlier scaffold program.
 
 **Status vocabulary**

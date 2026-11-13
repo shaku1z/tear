@@ -134,6 +134,8 @@
     "check:tear-score": "node scripts/verify-tear-score-provenance.mjs",
     "check:adaptive-soundtrack": "node scripts/verify-adaptive-soundtrack-provenance.mjs",
     "check:docs": "node scripts/check-docs.mjs",
+    "position:render": "node scripts/position.mjs render",
+    "check:position": "node scripts/position.mjs check",
     "check:terminology": "node scripts/check-terminology.mjs",
     "check:active-roster": "node scripts/check-active-roster.mjs",
     "check:game-reference": "node scripts/check-game-reference.mjs",
