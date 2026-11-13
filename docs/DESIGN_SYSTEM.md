@@ -89,7 +89,6 @@ Opacity for de-emphasised text and for the content surfaces. Text roles are meas
 | `rail` / `railMid` | 0.90 / 0.60 | Main-menu rail fade: opacity at the screen edge and at the mid stop (then clear at `railFadeW`) |
 | `railControl` | 0.42 | Each dark-surface ghost control's own dark fill (rail rows, replay controls), so its label holds ≥ 4.5:1 over the open scene without a solid slab |
 | `modalDim` | 0.9 | Modal dim (Rename) |
-| `hudPlate` | 0.8 | In-run teaching card surface only (tutorial lesson, playground help); the HUD has no plates |
 
 ### Colour roles — `UI.t.color`
 Semantic roles. `accent`, `danger`, and `unique` pull from `CONFIG.colors` so the system and the game palette never drift apart.
@@ -132,9 +131,8 @@ Optional args are marked `?`. All draw to the passed `ctx`.
 | `UI.textBox` | `UI.textBox(ctx, text, x, y, maxW, opts?)` | Wrapped text in a box; `y` is the first baseline; **returns the height it used** so callers lay out below it |
 | `UI.readable` | `UI.readable(color, ratio?)` | A palette hue darkened to 4.5:1 when drawn on paper (passes through on dark surfaces) |
 | `UI.focusRing` | `UI.focusRing(ctx, box)` | Keyboard/controller focus ring outside a control (drawn by the button layer) |
-| `UI.hudPlate` | `UI.hudPlate(ctx, x, y, w, h)` | The in-run teaching card surface (tutorial lesson, playground help): the surface that contrasts with the live ink at `alpha.hudPlate`. Never behind HUD groups, banners or the boss header |
 | `UI.sheetFooter` | `UI.sheetFooter()` | The sheet's footer row `{ y, h, backX }`: single owner of the BACK row geometry (used by `pageLayout` and the toast) |
-| `UI.keycap` | `UI.keycap(ctx, key, x, y)` | Bordered key cap sized from `type.micro`; returns its width |
+| `UI.keycap` | `UI.keycap(ctx, key, x, y)` | Bordered key cap sized from `type.micro`; returns its width (`UI.keycapSize(ctx, key)` measures it) |
 | `UI.finalReward` | `UI.finalReward(ctx, { …, actions? })` | Campaign reward panel; with `actions: true` it reserves a footer row and returns `actionsY`, so buttons always sit inside the panel |
 | `UI.emptyState` | `UI.emptyState(ctx, glyph, line, cx, cy, detail?, width?)` | Designed empty / loading / offline state; returns the y for an optional CTA |
 | `UI.cursor` | `UI.cursor(ctx, x, y)` | Pointer/cursor glyph |
@@ -163,7 +161,7 @@ Draft, reserve and tier-up keep the established card composition on desktop and 
 
 - HUD groups anchor to the **visible screen rectangle plus safe insets** (`hudFrame`), not to the 16:9 frame, so ultrawide and 4:3 windows keep the HUD in the corners. Vitals sit top-left, wave and stats top-centre, the multiplier in a fixed slot under them, the boss header under that (`bossHudTop`), with the boss phase banner below the header.
 - The HUD never reads smaller than it does in a 1280×720 window (`minDesktopHudTextCssPx`, the authored `micro` at 0.8 scale): in a smaller desktop window such as 1024×768 `hudType` lifts the whole HUD ramp (vitals, run group, boss header, banners, the lesson card and playground help) by one factor; at 1280×720 and above, and on touch, it is the live ramp unchanged.
-- The HUD is **plain text directly on the scene**: no backing plate, box, outline, halo or shadow behind it. Legibility comes from the per-biome ink alone (`UI.ink`, set each frame from the stage background's luminance: near-black on the light biomes, light on the dark Tear stage), values at full opacity and secondary labels at `alpha.soft`. Bars keep their own frame and fill; the boss bar keeps its dark cinematic frame. Wave and stage banners and the first-touch coaching follow the same rule. If a biome's HUD band reads poorly, fix that biome's ink selection, never add decoration behind the text.
+- The HUD is **plain text directly on the scene**: no backing plate, box, outline, halo or shadow behind it. Legibility comes from the per-biome ink alone (`UI.ink`, set each frame from the stage background's luminance: near-black on the light biomes, light on the dark Tear stage), values at full opacity and secondary labels at `alpha.soft`. Bars keep their own frame and fill; the boss bar keeps its dark cinematic frame. Wave and stage banners, the first-touch coaching, the tutorial lesson card and coach marks follow the same rule. Coach marks (`src/presentation/coach/coach-marks.ts`, drawn by `world.coachMarks`) are data: text, device-worded keys from `src/domain/prompt-vocabulary.ts`, an anchor and a lifetime; a pure solver places each one clear of the player, the HUD groups, the touch controls and other marks. If a biome's HUD band reads poorly, fix that biome's ink selection, never add decoration behind the text.
 
 ### Main-menu rail
 
