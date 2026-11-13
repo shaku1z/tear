@@ -5,8 +5,9 @@
 //   - both manifests have their expected format;
 //   - the default work, every routed work and every playable catalog work has a cue;
 //   - every file a cue.json names exists, and nothing else is in public/audio/cues;
-//   - each cue stays inside its size budget.
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+//   - each cue stays inside its size budget;
+//   - no shipped audio file carries a source-tool tag.
+import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -106,6 +107,17 @@ if (existsSync(cuesDir)) {
   for (const file of filesUnder(cuesDir)) {
     if (!referenced.has(file)) fail(`unreferenced: ${path.relative(root, file).replaceAll("\\", "/")}`);
   }
+}
+
+/** Matches tear-music's SOURCE_LABEL; tags live in the first 64 KiB of an Ogg file. */
+const SOURCE_LABEL = /suno|made with|ai[- ]generated|udio\.com/iu;
+for (const file of filesUnder(audio)) {
+  const fd = openSync(file, "r");
+  const head = Buffer.alloc(65536);
+  const n = readSync(fd, head, 0, head.length, 0);
+  closeSync(fd);
+  if (SOURCE_LABEL.test(head.subarray(0, n).toString("latin1")))
+    fail(`source-tool tag in ${path.relative(root, file).replaceAll("\\", "/")}`);
 }
 
 if (errors.length) {
