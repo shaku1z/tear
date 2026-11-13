@@ -3747,29 +3747,6 @@
       "intentionalReplica": "none"
     },
     {
-      "taskId": "unit.test-game-reference-artifact",
-      "version": 1,
-      "runner": {
-        "kind": "node",
-        "executable": "node",
-        "args": [
-          "--test",
-          "tests/game-reference-artifact-publication.test.mjs",
-          "tests/dispatch-wiki-reference.test.mjs"
-        ]
-      },
-      "claimIds": [
-        "protected-validation",
-        "game-reference"
-      ],
-      "dependencies": [],
-      "resourceClass": "unit",
-      "resourceKeys": [],
-      "outputs": [],
-      "timeoutMs": 120000,
-      "intentionalReplica": "none"
-    },
-    {
       "taskId": "endurance.test-endurance",
       "version": 1,
       "runner": {
@@ -3812,25 +3789,6 @@
       "resourceKeys": [],
       "outputs": [],
       "timeoutMs": 300000,
-      "intentionalReplica": "none"
-    },
-    {
-      "taskId": "certify.game-reference-publication",
-      "version": 1,
-      "runner": {
-        "kind": "certifier",
-        "executable": "scripts/publish-game-reference-artifact.mjs",
-        "args": []
-      },
-      "claimIds": [
-        "protected-main",
-        "game-reference-publication"
-      ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
-      "outputs": [],
-      "timeoutMs": 120000,
       "intentionalReplica": "none"
     },
     {
@@ -4196,7 +4154,6 @@
       "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "unit.release-preflight-negative",
-      "unit.test-game-reference-artifact",
       "static.requirements-check",
       "static.check-docs",
       "unit.test-docs",
@@ -4287,7 +4244,6 @@
       "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "unit.release-preflight-negative",
-      "unit.test-game-reference-artifact",
       "static.requirements-check",
       "static.check-docs",
       "unit.test-docs",
@@ -4371,8 +4327,7 @@
       "browser.test-browser-platform",
       "browser.test-browser-platform.2",
       "browser.test-browser-crazygames-iframe",
-      "browser.test-pwa",
-      "certify.game-reference-publication"
+      "browser.test-pwa"
     ],
     "nightly": [
       "static.requirements-check",
