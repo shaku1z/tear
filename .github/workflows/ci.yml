@@ -62,6 +62,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -88,6 +90,8 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -116,6 +120,8 @@ jobs:
     name: unit ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -133,6 +139,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -175,6 +183,8 @@ jobs:
     name: browser ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -246,6 +256,8 @@ jobs:
       # This publication runs only after every job passed. A failed Validate
       # run cannot publish a reference.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           fetch-depth: 0
