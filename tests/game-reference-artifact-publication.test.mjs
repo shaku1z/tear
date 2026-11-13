@@ -121,11 +121,8 @@ test("Validate publishes the exact game-reference artifact only after functional
   assert.ok(uploadIndex > publishIndex, "upload must follow manifest generation");
   const releaseArtifact = workflow.slice(releaseUploadIndex, publishIndex);
   assert.match(releaseArtifact, /name:\s*tear-release-targets-\$\{\{\s*github\.sha\s*\}\}/u);
-  assert.match(
-    releaseArtifact,
-    /path:\s*\|\s*dist\s+artifacts\/packages\/tear-crazygames\.zip\s+artifacts\/tearbench/su,
-  );
-  assert.match(releaseArtifact, /retention-days:\s*14/u);
+  assert.match(releaseArtifact, /path:\s*\|\s*dist\/standalone\s+artifacts\/packages\/tear-crazygames\.zip\s/su);
+  assert.match(releaseArtifact, /retention-days:/u);
   const publication = workflow.slice(
     publishIndex,
     workflow.indexOf("- uses: actions/upload-artifact@v4", uploadIndex + 1),

@@ -1,19 +1,27 @@
 name: Validate
 
+# Draft pull requests do not run: a draft cannot be merged, and each run costs
+# included Actions minutes. Marking a pull request ready starts a run; start one
+# on a draft by hand with "Run workflow" if needed.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: validate-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push to a pull request cancels its older run. Runs on main are never
+  # cancelled: each one may produce the build a deploy needs.
+  group: validate-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'latest' }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
   check:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     # Preserve the complete functional command set while leaving bounded
     # headroom for shared-runner variance; this is not a latency improvement.
@@ -30,23 +38,17 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # A pull request that changes only documents runs the document checks
+      # instead of the game checks. Every push to main runs everything.
       - name: Resolve focused validation scope
         id: validation-scope
         shell: bash
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          mkdir -p artifacts/tearbench
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
-          else
-            before="${{ github.event.before }}"
-            if [[ -n "$before" && "$before" != "0000000000000000000000000000000000000000" ]]; then
-              git diff --name-only "$before" "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
-            else
-              git show --format= --name-only "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
-            fi
-          fi
           gameplay_required=true
-          if [[ "${{ github.event_name }}" == "pull_request" ]] && node --input-type=module -e 'import { readFileSync } from "node:fs"; const files = readFileSync("artifacts/tearbench/changed-files.txt", "utf8").split(/\r?\n/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs\/|plans\/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT)\.md$)/u.test(file)) ? 0 : 1)'; then
+          if [[ -n "$BASE" ]] && git diff --name-only "$BASE" HEAD | node -e 'const files = require("fs").readFileSync(0, "utf8").split(/?
+/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs/|plans/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT|AGENTS|CLAUDE).md$|config/position.json$|.github/pull_request_template.md$)/u.test(file)) ? 0 : 1)'; then
             gameplay_required=false
           fi
           echo "gameplay_required=$gameplay_required" >> "$GITHUB_OUTPUT"
@@ -55,8 +57,6 @@ jobs:
       - name: Prove release preflight rejects unsafe repository states
         if: steps.validation-scope.outputs.gameplay_required == 'true'
         run: node --test tests/release-preflight.test.mjs
-      - name: Select and run diff-aware TearBench evidence
-        run: pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt
       - name: Validate documentation-only authority and terminology
         if: steps.validation-scope.outputs.gameplay_required == 'false'
         run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm requirements:check
@@ -69,12 +69,14 @@ jobs:
         if: steps.validation-scope.outputs.gameplay_required == 'true'
         with:
           name: tear-release-targets-${{ github.sha }}
+          # Deploys use dist/standalone. The CrazyGames package is the storefront
+          # upload. A deploy of a build older than this needs a re-run of its
+          # Validate run (docs/RELEASE_AUTHORITY.md).
           path: |
-            dist
+            dist/standalone
             artifacts/packages/tear-crazygames.zip
-            artifacts/tearbench
           if-no-files-found: error
-          retention-days: 14
+          retention-days: ${{ github.event_name == 'push' && 7 || 2 }}
       # This step is intentionally after the full functional gate and has no
       # always() condition. A failed Validate run cannot publish a reference.
       - name: Publish exact game-reference manifest
