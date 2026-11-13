@@ -1,4 +1,4 @@
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import { RENAME_FIELD } from "../../presentation/rename-field";
 
 export interface RenameSnapshot { readonly active: boolean; readonly error: string; readonly firstRun: boolean;

@@ -1,7 +1,7 @@
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import { createGhostProductionReplayComparison, type GhostProductionReplayComparison } from "../../ghost/production-replay-comparison";
 import type { ReplayScreenView } from "../../presentation/screens/contracts";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 
 export interface GhostComparisonScreenServices {
   readonly render: (view: ReplayScreenView) => void;

@@ -7,6 +7,7 @@ import type { LiveGameHostState } from "./game-host-state";
 import type { LiveWorldEntityConstructionPort } from "./world-entity-factory";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
+import type { EnvironmentRuntime } from "../../gameplay/environment/environment-runtime";
 
 /** Narrow live adapter dependencies; this is deliberately not GameRuntimeDependencies. */
 export interface LiveWorldContextDependencies {
@@ -39,7 +40,8 @@ export type LiveWorldContext = TearWorldContext<
   RunLifecycleController,
   LiveWorldServices,
   TearWorldTransientState,
-  LiveWorldCinema
+  LiveWorldCinema,
+  EnvironmentRuntime
 >;
 
 export interface LiveWorldServicesOptions {

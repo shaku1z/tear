@@ -2,7 +2,8 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
-import type { AppScreen, AppTransitionContext } from "../interface/app-state-controller";
+import type { AppTransitionContext } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { BossId } from "../../gameplay/run/content-director";
 import type { UpgradeDefinition } from "../../gameplay/upgrades";

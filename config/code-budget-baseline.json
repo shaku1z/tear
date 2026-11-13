@@ -1257,7 +1257,7 @@
       "multiStatementLines": 3
     },
     "src/gameplay/training/live-tutorial-runtime.ts": {
-      "maxLineLength": 501,
+      "maxLineLength": 398,
       "multiStatementLines": 49
     },
     "src/gameplay/training/playground-controller.ts": {
@@ -1282,7 +1282,7 @@
       "multiStatementLines": 1
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 54378,
+      "chars": 52949,
       "maxLineLength": 387,
       "multiStatementLines": 74,
       "largestFunctionStatements": 170

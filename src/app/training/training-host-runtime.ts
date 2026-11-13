@@ -8,7 +8,7 @@ import { createLivePlaygroundPresentation } from "../../gameplay/training/live-p
 import type { PlaygroundScreenModel } from "../../gameplay/training/live-playground-presentation";
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import { createTutorialArena } from "../../gameplay/training/tutorial-arenas";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { TutorialGhostSnapshot } from "../../gameplay/training/tutorial-controller";
 import { AUTHORED_BOSS_ROSTER } from "../../gameplay/run/content-director";
 import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";

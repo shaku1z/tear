@@ -1,4 +1,5 @@
 import type { ScreenAction } from "./screen-actions";
+import { ENGINEERING_SCREENS, screenFacts, type EngineeringScreen } from "./screen-catalog";
 
 /**
  * Release/engineering surface availability.
@@ -12,10 +13,10 @@ import type { ScreenAction } from "./screen-actions";
 export type SurfaceChannel = "release" | "engineering";
 
 export type SurfaceId =
-  // Research and diagnostic screens, plus every route into them.
-  | "screen:academy" | "screen:foundry" | "screen:ghostlab" | "screen:botevidence"
-  // Unfinished Ghost V3 publication-service screens.
-  | "screen:ghostpublication" | "screen:ghostsupport"
+  // Engineering screens (research and diagnostic screens and the unfinished
+  // Ghost V3 publication-service screens), plus every route into them. Their
+  // channel is the screen catalog's (src/domain/screen-catalog.ts).
+  | `screen:${EngineeringScreen}`
   // AI-drives-the-run controls (Replay Hub and pause screen).
   | "control:run-monitor"
   // Boss Test boss picker on the setup screen.
@@ -28,14 +29,15 @@ export type SurfaceId =
   // Engineering window globals.
   | "global:weapon-debug" | "global:foundry-audio-preview";
 
-/** The sole source-owned classification. Promote a surface by changing its channel here. */
+const screenSurfaceId = (screen: EngineeringScreen): `screen:${EngineeringScreen}` => `screen:${screen}`;
+
+/**
+ * The sole source-owned classification. Promote a surface by changing its
+ * channel here, or a screen by changing its channel in the screen catalog.
+ */
 export const SURFACE_CHANNEL: Readonly<Record<SurfaceId, SurfaceChannel>> = Object.freeze({
-  "screen:academy": "engineering",
-  "screen:foundry": "engineering",
-  "screen:ghostlab": "engineering",
-  "screen:botevidence": "engineering",
-  "screen:ghostpublication": "engineering",
-  "screen:ghostsupport": "engineering",
+  ...Object.fromEntries(ENGINEERING_SCREENS.map((screen) => [screenSurfaceId(screen), "engineering"])) as
+    Record<`screen:${EngineeringScreen}`, SurfaceChannel>,
   "control:run-monitor": "engineering",
   "setup:boss-picker": "engineering",
   "feature:seed-race": "engineering",
@@ -73,14 +75,9 @@ export function createSurfaceAvailability(channel: SurfaceChannel): SurfaceAvail
   });
 }
 
-const SCREEN_SURFACES: Readonly<Partial<Record<string, SurfaceId>>> = Object.freeze({
-  academy: "screen:academy", foundry: "screen:foundry", ghostlab: "screen:ghostlab", botevidence: "screen:botevidence",
-  ghostpublication: "screen:ghostpublication", ghostsupport: "screen:ghostsupport",
-});
-
 /** The surface that owns an application screen, or undefined for an ordinary player screen. */
 export function screenSurface(screen: string): SurfaceId | undefined {
-  return SCREEN_SURFACES[screen];
+  return screenFacts(screen)?.channel === "engineering" ? screenSurfaceId(screen as EngineeringScreen) : undefined;
 }
 
 const CAREER_COMMAND_SURFACES: Readonly<Partial<Record<string, SurfaceId>>> = Object.freeze({

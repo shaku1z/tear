@@ -220,8 +220,8 @@
       "include": ["src/app/world/world-composition.ts"]
     },
     "app.world-construction-owners": {
-      "purpose": "The production-world root and the session/composition modules it constructs.",
-      "include": ["src/app/shell/production-world.ts", "src/app/world/world-composition.ts", "src/app/world/world-session-state.ts"]
+      "purpose": "The production-world roots (the live root and the detached TearBench replay world, which share the one world constructor) and the session/composition modules they construct.",
+      "include": ["src/app/shell/production-world.ts", "src/app/world/world-composition.ts", "src/app/world/world-session-state.ts", "src/tearbench/production-world-factory.ts"]
     },
     "progress.direct-profile-writers": {
       "purpose": "Modules that still write PROFILE directly instead of through a composition-owned persistence adapter. Ratchet target: empty (plan step 12).",

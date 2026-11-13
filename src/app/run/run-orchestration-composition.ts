@@ -8,7 +8,8 @@ import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
 import type { LiveWorldServices } from "../world/world-context";
-import type { AppScreen, AppTransitionContext } from "../interface/app-state-controller";
+import type { AppTransitionContext } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { LiveRunControllerRegistry } from "./run-controller-api";
 import type { createLiveCampaignHost } from "../campaign/campaign-host";
 import type { LiveTrainingHost } from "../training/training-host";

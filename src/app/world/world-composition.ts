@@ -61,17 +61,31 @@ export interface LiveWorldCompositionOptions {
   readonly configuration: TearWorldConfiguration<GameRuntimeDependencies["CONFIG"]>;
   readonly worldId?: string;
   readonly mirrors?: LiveWorldMirrors;
+  /**
+   * True when the environment publishes its facts on
+   * `dependencies.GAMEPLAY_EVENTS` (the live world). A detached replay world
+   * keeps its environment off the bus.
+   */
+  readonly publishEnvironmentEvents: boolean;
+  /**
+   * True when the world owns a music director over `dependencies.SFX` (the
+   * live world). A detached replay world has no music direction.
+   */
+  readonly musicDirection: boolean;
 }
 
-export interface LiveWorldComposition {
+export interface LiveWorldComposition<Music extends MusicDirector | null = MusicDirector> {
   readonly state: LiveGameHostState;
   readonly context: LiveWorldContext;
   readonly entities: LiveWorldEntityConstructionPort;
   readonly lifecycle: RunLifecycleController;
-  readonly music: MusicDirector;
+  readonly music: Music;
   readonly environment: EnvironmentRuntime;
   readonly dispose: () => void;
 }
+
+/** A world built without music direction, such as the detached TearBench replay world. */
+export type DetachedWorldComposition = LiveWorldComposition<null>;
 
 /** Builds the live host-shaped state around a session without constructing adapters. */
 export function createLiveWorldState(
@@ -104,35 +118,43 @@ export function createLiveWorldState(
 }
 
 /**
- * Builds one live world: its replaceable state, entity construction adapter,
- * run lifecycle, and world context (services plus transient records).
+ * The one production world constructor: a world's replaceable state, entity
+ * construction adapter, run lifecycle, environment, cinema and world context
+ * (services plus transient records). The live production-world root and the
+ * detached TearBench replay world (src/tearbench/production-world-factory.ts)
+ * both build their world here and differ only in the explicit options.
  *
  * This is deliberately world-only. The combat host, frame coordinator, input,
  * and presentation stay outward in the host that drives the world, so the same
- * composition can build a world the live host does not own.
+ * composition can build a world the live host does not own. Every constructor
+ * called here is pure (no random draw, id allocation or listener registration),
+ * so their relative order is not observable.
  */
-export function createLiveWorldComposition(options: LiveWorldCompositionOptions): LiveWorldComposition {
+export function createLiveWorldComposition(options: LiveWorldCompositionOptions & { readonly musicDirection: true }): LiveWorldComposition;
+export function createLiveWorldComposition(options: LiveWorldCompositionOptions & { readonly musicDirection: false }): DetachedWorldComposition;
+export function createLiveWorldComposition(options: LiveWorldCompositionOptions): LiveWorldComposition<MusicDirector | null>;
+export function createLiveWorldComposition(options: LiveWorldCompositionOptions): LiveWorldComposition<MusicDirector | null> {
   const { session, mirrors = {} } = options;
   const state = createLiveWorldState(session, mirrors);
   const entities = createLiveWorldEntityFactory(options.dependencies);
-  const music = new MusicDirector(options.dependencies.SFX);
+  const music = options.musicDirection ? new MusicDirector(options.dependencies.SFX) : null;
   const worldId = options.worldId ?? "live";
   const environment = createEnvironmentRuntime({
     stageId: "unknown",
     worldId,
-    events: options.dependencies.GAMEPLAY_EVENTS,
+    ...(options.publishEnvironmentEvents ? { events: options.dependencies.GAMEPLAY_EVENTS } : {}),
     features: [createVerdantEnvironmentFeature(), createPaleEnvironmentFeature()],
     validators: [BLOOM_WELL_VALIDATION, PALE_TRACK_VALIDATION],
   });
   // The world owns the simulation timeline. The live factory adds drawing;
-  // detached compositions may supply the gameplay-only implementation through
-  // the same dependency surface.
+  // detached compositions supply the gameplay-only implementation through the
+  // same dependency surface.
   const cinema = new options.dependencies.Cinematics.Director(options.configuration.value);
   const world = createTearWorldComposition({
     state, entities, cinema,
     services: createLiveWorldServices({
       dependencies: options.dependencies,
-    configuration: options.configuration,
+      configuration: options.configuration,
     }),
     environment, worldId,
   });

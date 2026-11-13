@@ -1,6 +1,5 @@
 import type { TearWipe } from "../../presentation/tear-wipe";
 import type { WorldRendererRegistry } from "../../presentation/world";
-import type { AppScreen } from "./app-state-controller";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import { createLivePresentationFrameHost, createLivePresentationSurface,
   type LivePresentationFrameServices, type LivePresentationFrameState } from "./presentation-composition";
@@ -12,7 +11,7 @@ import type { LivePresentationHost } from "./presentation-host";
 import { AchievementToastController } from "./achievement-toast-controller";
 import { TouchOnboardingController } from "../training/touch-onboarding-controller";
 import { createLiveInterfacePresentationCapture, type LivePresentationCaptureSource } from "./presentation-capture";
-import { isWorldScreen } from "../../presentation/render-pipeline";
+import { isWorldScreen, type AppScreen } from "../../domain/screen-catalog";
 
 // Research and diagnostic surface controllers are deliberately not re-exported
 // here: composition injects them only into engineering builds

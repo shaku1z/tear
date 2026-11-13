@@ -52,9 +52,9 @@ covers routine work. Replays of old milestone verification checkpoints (such as
 | Path | Contents |
 | --- | --- |
 | `src/entrypoints/` | The two small startup files, one per target. |
-| `src/app/` | Application composition, screens and their state, run flow, and the live runtime that ties everything together, by folder: `shell/` (composition root, the live runtime root `game-runtime.ts` that wires the owners below in order, production world, frame loop), `world/` (world composition, content and stage hosts; `world/biomes/` actor wiring), `combat/`, `run/` (run start, waves, outcomes, shop), `campaign/` (campaign, finale, cinematics, boss practice), `training/` (tutorial and training hosts), `interface/` (screen state, UI coordination, presentation hosts), `screens/` (menu, settings, rename), `library/` (Codex, Ghost Vault, Theater and Career screens), `progress/` (profile persistence ports), `replay/` (Ghost recording, practice, chase and publication), `engineering/` (research and diagnostic surfaces, the Scenario Console runtime, debug harness). |
+| `src/app/` | Application composition, screens and their state, run flow, and the live runtime that ties everything together, by folder: `shell/` (composition root, the live runtime root `game-runtime.ts` that wires the owners below in order, production world, frame loop), `world/` (the one world constructor, also used by the detached TearBench world, content and stage hosts; `world/biomes/` actor wiring), `combat/`, `run/` (run start, waves, outcomes, shop), `campaign/` (campaign, finale, cinematics, boss practice), `training/` (tutorial and training hosts), `interface/` (screen state, UI coordination, presentation hosts), `screens/` (menu, settings, rename), `library/` (Codex, Ghost Vault, Theater and Career screens), `progress/` (profile persistence ports), `replay/` (Ghost recording, practice, chase and publication), `engineering/` (research and diagnostic surfaces, the Scenario Console runtime, debug harness). |
 | `src/gameplay/` | Game rules and content: player, blade, weapons, enemies, bosses, stages, upgrades, tutorial. |
-| `src/simulation/`, `src/domain/` | The fixed-step clock, seeded randomness, and pure shared types and rules. |
+| `src/simulation/`, `src/domain/` | The fixed-step clock, seeded randomness, and pure shared types and rules, including the screen catalog (`screen-catalog.ts`). |
 | `src/presentation/` | Canvas drawing: world, HUD, menus, screens, shared UI components (`ui.ts`). |
 | `src/input/` | Keyboard, mouse, touch and gamepad turned into game actions. |
 | `src/audio/` | Sound effects, music and the mixer. |
@@ -75,7 +75,9 @@ Players get **release** builds: `pnpm build`, `pnpm build:standalone`,
 (`pnpm dev`) and the test builds (`pnpm build:test:*`). Engineering builds also
 show research screens, Boss Test, unfinished features, and engineering URL
 switches. `src/domain/surface-availability.ts` is the single list of what each
-channel shows; change a surface's channel there.
+channel shows; change a surface's channel there. A screen's channel, like every
+other per-screen fact, is its entry in the screen catalog
+`src/domain/screen-catalog.ts`.
 
 Test builds additionally read `?test=1` (isolated test storage and debug hooks
 for browser tests) and `?bossdebug=1` (a boss debug overlay). The dev server

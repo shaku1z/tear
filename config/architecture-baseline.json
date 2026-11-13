@@ -229,11 +229,6 @@
     },
     {
       "from": "src/ghost/replay-admission.ts",
-      "to": "src/app/interface/app-state-controller.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/replay-admission.ts",
       "to": "src/tearbench/contracts.ts",
       "kind": "type"
     },
@@ -420,16 +415,6 @@
     {
       "from": "src/tearbench/production-world-factory.ts",
       "to": "src/app/world/world-composition.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/world/world-context.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/world/world-entity-factory.ts",
       "kind": "value"
     },
     {

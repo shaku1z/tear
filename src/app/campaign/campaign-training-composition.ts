@@ -8,7 +8,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { LiveRunControllerRegistry } from "../run/run-controller-api";
 import { createLiveCampaignHost } from "./campaign-host";
 import { createLiveCinematicHost } from "./cinematic-host";

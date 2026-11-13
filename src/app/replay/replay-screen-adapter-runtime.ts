@@ -1,6 +1,6 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
-import type { AppScreen } from "../interface/app-state-controller";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { VisualRecordingV2, VisualSpawnEvent } from "../../replay/visual-replay";
 import type { ReplayPuppet } from "../../presentation/replay-world-frame";
 import type { ReplayPuppetSource } from "../../presentation/replay-puppet-factory";

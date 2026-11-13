@@ -3,7 +3,8 @@ import type { LiveCampaignTraining } from "../campaign/campaign-training-composi
 import type { LiveCanonicalCombatHost } from "../combat/live-canonical-state";
 import type { LiveHudFeedbackState } from "../interface/hud-feedback-state";
 import type { LiveInterfaceInteractionState } from "../interface/interface-interaction-state";
-import { isAppScreen, type LiveScreenNavigation } from "../interface/live-screen-navigation";
+import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
+import { isAppScreen } from "../../domain/screen-catalog";
 import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameRun } from "../shell/game-runtime-state";

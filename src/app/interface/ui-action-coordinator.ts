@@ -4,6 +4,7 @@ import {
   type FocusableRect,
   type NavigationDirection,
 } from "./ui-navigation";
+import { screenNeedsConfirmArming, screenNeedsPointerSettle } from "../../domain/screen-catalog";
 
 export interface UiActionButton extends FocusableRect {
   readonly label?: string;
@@ -17,18 +18,10 @@ export interface UiPoint { readonly x: number; readonly y: number }
  * number keys, mouse and touch). A screen that interrupts play ignores choices
  * until the player has let go of confirm since it opened and this long has
  * passed, so a jump or retry mash meant for the previous screen never picks.
+ * Which screens arm confirm and settle pointers is the screen catalog's
+ * (src/domain/screen-catalog.ts).
  */
 export const UI_CONFIRM_SETTLE_SECONDS = 0.35;
-
-/** Screens that interrupt play: keyboard, controller and number-key choices must be armed. */
-export const CONFIRM_ARMED_SCREENS: ReadonlySet<string> = new Set([
-  "draft", "reserve", "tierup", "gameover", "win", "continue", "paused", "confirmquit",
-]);
-
-/** Reward and results screens: a click aimed at the arena must not buy an upgrade or retry. */
-export const POINTER_SETTLE_SCREENS: ReadonlySet<string> = new Set([
-  "draft", "reserve", "tierup", "gameover", "win", "continue",
-]);
 
 export interface UiConfirmArmingState {
   readonly screen: string;
@@ -60,8 +53,8 @@ export interface UiConfirmGate {
 export function uiConfirmGate(screen: string, screenAgeSeconds: number, confirmReleasedSinceOpen: boolean): UiConfirmGate {
   const settled = screenAgeSeconds >= UI_CONFIRM_SETTLE_SECONDS;
   return Object.freeze({
-    confirm: !CONFIRM_ARMED_SCREENS.has(screen) || (settled && confirmReleasedSinceOpen),
-    pointer: !POINTER_SETTLE_SCREENS.has(screen) || settled,
+    confirm: !screenNeedsConfirmArming(screen) || (settled && confirmReleasedSinceOpen),
+    pointer: !screenNeedsPointerSettle(screen) || settled,
   });
 }
 

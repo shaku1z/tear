@@ -1,10 +1,5 @@
 import { screenSurface, type SurfaceAvailability } from "../../domain/surface-availability";
-
-export type AppScreen =
-  | "menu" | "setup" | "playing" | "paused" | "draft" | "reserve" | "tierup"
-  | "settings" | "continue" | "gameover" | "win" | "replay" | "confirmquit"
-  | "shop" | "codex" | "profile" | "achievements" | "leaderboards" | "rename"
-  | "pgmenu" | "pglab" | "academy" | "foundry" | "ghostlab" | "botevidence" | "ghostpublication" | "ghostsupport";
+import { isAppScreen, LEGAL_TRANSITIONS, type AppScreen } from "../../domain/screen-catalog";
 
 export interface AppStateSnapshot {
   readonly screen: AppScreen;
@@ -21,45 +16,6 @@ export interface AppTransitionContext {
   /** A verified Ghost Theater checkpoint may enter its explicitly unranked child. */
   readonly practiceLaunch?: boolean;
 }
-
-export const APP_SCREENS = Object.freeze([
-  "menu", "setup", "playing", "paused", "draft", "reserve", "tierup", "settings", "continue",
-  "gameover", "win", "replay", "confirmquit", "shop", "codex", "profile", "achievements",
-  "leaderboards", "rename", "pgmenu", "pglab", "academy", "foundry", "ghostlab", "botevidence", "ghostpublication", "ghostsupport",
-] as const satisfies readonly AppScreen[]);
-
-export const LEGAL_TRANSITIONS: Readonly<Record<AppScreen, readonly AppScreen[]>> = Object.freeze({
-  menu: ["setup", "playing", "profile", "shop", "achievements", "leaderboards", "codex", "settings", "rename", "replay", "academy", "foundry", "ghostlab"],
-  setup: ["menu", "playing", "rename"],
-  playing: ["menu", "paused", "draft", "reserve", "tierup", "continue", "gameover", "win", "pgmenu", "pglab", "rename"],
-  paused: ["playing", "settings", "confirmquit", "rename"],
-  draft: ["playing", "reserve", "rename"],
-  reserve: ["playing", "rename"],
-  tierup: ["playing", "rename"],
-  settings: ["menu", "paused", "codex", "rename"],
-  continue: ["playing", "gameover", "rename"],
-  gameover: ["menu", "playing", "replay", "rename"],
-  win: ["menu", "playing", "replay", "rename"],
-  replay: ["menu", "profile", "leaderboards", "gameover", "win", "playing", "rename"],
-  confirmquit: ["paused", "menu", "rename"],
-  shop: ["menu", "rename"],
-  codex: ["menu", "rename"],
-  profile: ["menu", "setup", "achievements", "replay", "rename", "ghostpublication", "ghostsupport"],
-  achievements: ["menu", "rename"],
-  leaderboards: ["menu", "profile", "replay", "rename"],
-  rename: APP_SCREENS.filter((screen) => screen !== "rename"),
-  pgmenu: ["playing", "pglab", "rename"],
-  pglab: ["playing", "pgmenu", "rename"],
-  academy: ["menu", "rename"],
-  foundry: ["menu", "rename"],
-  // A locally validated Player Watch starts a normal run directly from its
-  // dedicated home. The route remains local-only; this edge does not grant
-  // any Foundry, traffic, or operational transition.
-  ghostlab: ["menu", "playing", "academy", "foundry", "profile", "botevidence", "rename"],
-  botevidence: ["menu", "rename"],
-  ghostpublication: ["profile", "menu", "rename"],
-  ghostsupport: ["profile", "menu", "rename"],
-});
 
 export class IllegalLegacyAppTransitionError extends Error {
   constructor(readonly from: AppScreen, readonly to: AppScreen) {
@@ -78,7 +34,7 @@ export class UnavailableLegacyAppScreenError extends IllegalLegacyAppTransitionE
 }
 
 function ensureScreen(value: AppScreen, label: string): AppScreen {
-  if (!APP_SCREENS.includes(value)) throw new TypeError(`${label} is not a recognized application screen`);
+  if (!isAppScreen(value)) throw new TypeError(`${label} is not a recognized application screen`);
   return value;
 }
 

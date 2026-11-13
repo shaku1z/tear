@@ -1,9 +1,10 @@
 import type { CareerRow, CareerQuery, CareerUsage } from "../../ghost/career-archive";
 import type { GhostCoachHistoryView } from "../../ghost/coach-history";
-import type { ScreenId, ScreenAction } from "../../domain/screen-actions";
+import type { ScreenAction } from "../../domain/screen-actions";
+import type { AppScreen } from "../../domain/screen-catalog";
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
 import type { ScreenUiPort } from "./screen-ui-port";
-export type { ScreenId, ScreenAction } from "../../domain/screen-actions";
+export type { ScreenAction } from "../../domain/screen-actions";
 export type { ScreenUiPort, ScreenUiTokens } from "./screen-ui-port";
 
 export interface ScreenControl {
@@ -213,7 +214,7 @@ export interface SettingRowView {
 export interface SettingsScreenView {
   readonly id: "settings"; readonly tab: string; readonly tabs: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly rows: readonly SettingRowView[] }[];
-  readonly returnTo: ScreenId;
+  readonly returnTo: AppScreen;
   readonly canScrollUp?: boolean; readonly canScrollDown?: boolean;
 }
 export interface RenameScreenView {
@@ -344,7 +345,7 @@ export type ScreenView = MenuScreenView | SetupScreenView | PlayingScreenView | 
   | TierUpScreenView | PausedScreenView | ConfirmQuitScreenView | ContinueScreenView
   | GameoverScreenView | WinScreenView | PlaygroundScreenView | AcademyScreenView | FoundryScreenView | GhostLabScreenView | BotEvidenceScreenView | GhostPublicationScreenView | GhostSupportScreenView;
 
-export type ScreenViewById<Id extends ScreenId, View = ScreenView> =
+export type ScreenViewById<Id extends AppScreen, View = ScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? Id extends ViewId ? View : never : never;
-export type ScreenRenderer<Id extends ScreenId> = (view: ScreenViewById<Id>) => void;
-export type ScreenRendererTable = { readonly [Id in ScreenId]: ScreenRenderer<Id> };
+export type ScreenRenderer<Id extends AppScreen> = (view: ScreenViewById<Id>) => void;
+export type ScreenRendererTable = { readonly [Id in AppScreen]: ScreenRenderer<Id> };
