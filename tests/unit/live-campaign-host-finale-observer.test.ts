@@ -177,7 +177,7 @@ describe("live campaign host finale observation", () => {
   });
 
   it("installs the live collector only inside the test-build composition branch", () => {
-    const source = readFileSync("src/app/shell/game-runtime.ts", "utf8");
+    const source = readFileSync("src/app/campaign/live-campaign-training-assembly.ts", "utf8");
     const collectorLine = source.split(/\r?\n/u).find((line) => line.includes("observeFinaleOutwardCall:"));
     expect(collectorLine).toContain("__TEAR_TEST_BUILD__ ?");
     expect(source.match(/observeFinaleOutwardCall:/gu)).toHaveLength(1);

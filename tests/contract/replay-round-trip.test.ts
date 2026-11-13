@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EnvelopeSequencer } from "../../src/app/messages";
+import { EnvelopeSequencer } from "../../src/domain/envelopes";
 import type { GameAction } from "../../src/input/game-action";
 import { parseReplayEnvelope, type ReplayActionEnvelope, type ReplayEnvelopeV2 } from "../../src/replay/envelope";
 import { stableVerificationHash } from "../../src/replay/hash";

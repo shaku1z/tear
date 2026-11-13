@@ -194,3 +194,5 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
   });
   return Object.freeze({ campaign, training, cinematic, style, weapon, addFloater });
 }
+
+export type LiveCampaignTraining = ReturnType<typeof createLiveCampaignTrainingComposition>;

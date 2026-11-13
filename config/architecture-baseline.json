@@ -273,16 +273,6 @@
       "kind": "value"
     },
     {
-      "from": "src/input/browser-input-contracts.ts",
-      "to": "src/app/messages.ts",
-      "kind": "type"
-    },
-    {
-      "from": "src/input/semantic-buffer.ts",
-      "to": "src/app/messages.ts",
-      "kind": "value"
-    },
-    {
       "from": "src/persistence/audio-settings.ts",
       "to": "src/audio/mixer.ts",
       "kind": "value"
@@ -325,11 +315,6 @@
     {
       "from": "src/presentation/screens/pause-results.ts",
       "to": "src/agents/surface-route.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/replay/envelope.ts",
-      "to": "src/app/messages.ts",
       "kind": "value"
     },
     {

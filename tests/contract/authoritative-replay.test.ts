@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EnvelopeSequencer, type CommandEnvelope } from "../../src/app/messages";
+import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelopes";
 import type { GameAction } from "../../src/input/game-action";
 import { parseReplayEnvelope, type ReplayEnvelopeV2 } from "../../src/replay/envelope";
 import { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";

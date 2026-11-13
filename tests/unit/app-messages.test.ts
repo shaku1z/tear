@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EnvelopeSequencer, hasMonotonicEnvelopes } from "../../src/app/messages";
+import { EnvelopeSequencer, hasMonotonicEnvelopes } from "../../src/domain/envelopes";
 
 describe("EnvelopeSequencer", () => {
   it("assigns one monotonic id sequence to commands and their domain events", () => {

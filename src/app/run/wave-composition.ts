@@ -11,7 +11,7 @@ import type { createLiveContentComposition } from "../world/content-composition"
 import type { LiveRunControllerRegistry } from "./run-controller-api";
 import type { LiveWorldServices } from "../world/world-context";
 import { createLiveWaveHost } from "./wave-host";
-import type { WavePlanIntentPort } from "../live-wave-intent-coordinator";
+import type { WavePlanIntentPort } from "../../gameplay/run/wave-intent-dispatcher";
 
 type CampaignHost = ReturnType<typeof createLiveCampaignHost>;
 type Content = ReturnType<typeof createLiveContentComposition>;

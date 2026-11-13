@@ -1,5 +1,5 @@
-import type { CommandEnvelope } from "../app/messages";
-import { hasMonotonicEnvelopes } from "../app/messages";
+import type { CommandEnvelope } from "../domain/envelopes";
+import { hasMonotonicEnvelopes } from "../domain/envelopes";
 import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, isWeaponId, type WeaponId } from "../gameplay/weapon-selection";
 import type { GameAction } from "../input/game-action";
 import { normalizeGameAction } from "../input/game-action";
