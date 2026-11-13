@@ -36,6 +36,14 @@ When hardware-independent changes deliberately alter the representative workload
 
 Every pass repeats `TEAR_PROFILE_REPEATS` times (default 3) over a `TEAR_PROFILE_WINDOW_MS` window (default 4,000 ms) after a warm-up, and the report (`TEAR_PROFILE_OUTPUT`) keeps each run with the median, minimum and maximum. Sampled allocation is an estimate with a few per cent of sampling noise; counters are close to deterministic for a given workload.
 
+Findings fixed from this profile (allocation per canonical tick, median of three runs on a shared host; timings did not move outside noise):
+
+- **Environment entries are copied once.** `EnvironmentState` deep-copies and freezes what a caller admits, and remembers the graphs it produced; an update copies only the values it brings in and shares the unchanged, already frozen rest, and the presentation view shares those graphs instead of cloning them (`isEnvironmentOwnedData`). A snapshot assembled outside a state is still cloned. Verdant Rootbinder: environment freezes 26.5 to 10.6 per tick, presentation `structuredClone` 22.4 to 0 per tick, about 96 to 89 KB per tick; White Hart: 113.6 to 109.3 KB per tick.
+- **The tutorial coach reads a narrow selection.** The per-tick coach sync and the coach-frame gate used to build the whole session view and checkpoint to read five fields; they now use `TutorialController.coachSelection()`, as do the per-frame coach view and ghost display. Tutorial lesson: 59.9 to 37.4 KB per tick; the rest of the controller cost is the HUD reading the session view once per frame.
+- **The Chase arena hash is derived on demand.** It is compared only while a reference frame is selected, so a run without a Chase reference no longer hashes the platforms on every tick and frame. Platforms can change in place (Scenario Console restores, moving chunks), so there is no invalidation point that would allow caching it across ticks during a Chase.
+
+Remaining measured costs, not yet addressed: Pale track wiring (`src/app/world/biomes/aurora-track-wiring.ts`, about 39 KB per frame in White Hart), the Scenario Console state adapter encoding (`src/app/engineering/state-forge-adapter.ts`, 8 to 14 KB per frame in every combat scene), Verdant pattern and graft placement re-derivation each tick (`bloom-well.ts`, `rootbound.ts`), and the backdrop. Particles are 2 to 4% of allocated bytes in combat scenes, so pooling them is not worth the risk.
+
 Path to budgets: once several clean runs on the controlled release host agree, promote the deterministic metrics first (canonical projections per second outside recording, `measureText`, gradient and DOM writes per frame per scene) as ceilings about 10% above the measured median in `config/browser-performance-budgets.json`, then allocation bytes per frame. Wall-clock scene timings stay reported until the controlled host shows a stable spread.
 
 ## Download and startup budgets

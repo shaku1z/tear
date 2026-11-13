@@ -141,6 +141,10 @@ export class TutorialGhostCoach {
     if (demonstrate) this.play("diagnostic");
     this.previous = frame; this.commands = [];
   }
+  /** Whether a demonstration is on screen (`view().visible`). */
+  get showing(): boolean {
+    return this.visible;
+  }
   view(lab: boolean, reducedMotion: boolean): TutorialCoachView {
     return { available: !!this.reference, visible: this.visible, mode: this.mode, rate: this.rate, diagnosis: this.diagnosis,
       adaptive: this.failures.view(), canCompare: lab && !!this.best, reducedMotion, tick: Math.floor(this.cursor), fromTick: this.from, toTick: this.to };

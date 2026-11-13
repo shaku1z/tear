@@ -82,6 +82,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
   };
   const tutorial: LiveTutorialRuntime = {
     openPractice: (tutorialDone) => loaded?.tutorial.openPractice(tutorialDone) ?? false,
+    coachFrameEncounter: () => loaded?.tutorial.coachFrameEncounter(),
     session: () => loaded?.tutorial.session() ?? { phase: "inactive", lessonId: "move", courseCompleted: false, helpVisible: false, instruction: "", progress: [0, 0], lessons: [] },
     restart: () => loaded?.tutorial.restart() ?? false, selectLesson: (id) => loaded?.tutorial.selectLesson(id) ?? false,
     selectAnnex: (id) => loaded?.tutorial.selectAnnex(id) ?? false, showAnnexes: () => { loaded?.tutorial.showAnnexes(); },
