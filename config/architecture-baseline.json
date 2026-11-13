@@ -278,23 +278,8 @@
       "kind": "type"
     },
     {
-      "from": "src/presentation/screens/academy.ts",
-      "to": "src/agents/training-archive.ts",
-      "kind": "value"
-    },
-    {
       "from": "src/presentation/screens/career-archive.ts",
       "to": "src/ghost/career-archive.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/presentation/screens/foundry.ts",
-      "to": "src/agents/training-operations.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/presentation/screens/ghost-lab.ts",
-      "to": "src/agents/surface-route.ts",
       "kind": "value"
     },
     {
@@ -305,11 +290,6 @@
     {
       "from": "src/presentation/screens/leaderboards-replays.ts",
       "to": "src/replay/surface-route.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/presentation/screens/pause-results.ts",
-      "to": "src/agents/surface-route.ts",
       "kind": "value"
     },
     {
