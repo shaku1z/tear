@@ -1157,8 +1157,6 @@
   {
     "id": "current-player-surfaces",
     "prefixes": [
-      "src/app/engineering/replay-hub.ts",
-      "src/app/engineering/run-monitor.ts",
       "src/app/replay/replay-screen-adapter.ts",
       "src/app/library/replay-library-controller.ts",
       "src/app/engineering/replay-editor.ts",

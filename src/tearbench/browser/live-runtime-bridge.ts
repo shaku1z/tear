@@ -9,7 +9,7 @@ import type {
 } from "../live-runtime-contracts";
 import { createLiveTearRuntimeEnvironment } from "../live-runtime-environment";
 import { installReplayHubPanel } from "./replay-hub";
-import { installLiveScenarioConsole } from "./scenario-console";
+import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
 import { isAgentSurfaceRequested, isCanonicalAgentSurfaceRequested } from "../../agents/surface-route";
 import type { TearGhostManifest } from "../../ghost/capsule-vault";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
@@ -201,7 +201,7 @@ export function installLiveTearRuntimeBridge(
     value: factory,
   });
   installReplayHubPanel(factory);
-  installLiveScenarioConsole(factory);
+  installLiveStateForgeStudio(factory);
   const search = target.location.search;
   if (isAgentSurfaceRequested(search, "run-monitor")) {
     if (isCanonicalAgentSurfaceRequested(search, "run-monitor")) {
