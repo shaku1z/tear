@@ -2075,6 +2075,9 @@
       "tests/tutorial-gold-fingerprint.test.mjs",
       "tests/unit/tutorial-production-ghost.test.ts",
       "vite.config.ts"
+    ],
+    "scripts/wiki-data-export.mjs": [
+      "scripts/export-game-reference.mjs"
     ]
   },
   "declarations": [
