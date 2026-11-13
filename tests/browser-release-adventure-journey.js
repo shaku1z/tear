@@ -216,7 +216,13 @@ async function main() {
     let fpsFrom = { at: Date.now(), frame: await frameOf() };
     const fps = async () => { const now = { at: Date.now(), frame: await frameOf() };
       const value = +((now.frame - fpsFrom.frame) / Math.max(0.001, (now.at - fpsFrom.at) / 1000)).toFixed(1); fpsFrom = now; return value; };
+    // The first lost attempt prints two small mid-fight frames into the log, so a
+    // runner-only failure can be seen without artifacts.
+    const attemptStarted = Date.now(), evidenceFrames = [];
     for (;;) {
+      if (retries === 0 && evidenceFrames.length < 2 && Date.now() - attemptStarted > 4_000 * (evidenceFrames.length + 1)) {
+        evidenceFrames.push((await page.screenshot({ type: "jpeg", quality: 35 })).toString("base64"));
+      }
       if (Date.now() > combatDeadline) {
         await shot(`${leg}-budget-exhausted`);
         throw new Error(`${leg}: wave 1 was not cleared within ${String(COMBAT_BUDGET_MS)} ms (retries ${String(retries)}, enemies left ${String(lastLeft)}, ${String(await fps())} fps)`);
@@ -226,7 +232,8 @@ async function main() {
         if (has(frameText, /^TAKE ONE/u) || has(frameText, /^WAVE 1 CLEARED$/u)) break;
         if (has(frameText, /^DEFEATED$/u)) {
           await releaseAll(); retries += 1; note("defeated; retrying", { leg, retries, fps: await fps(), seen: lastSeen,
-            pointerLocked: await page.evaluate(() => document.pointerLockElement !== null) }); await shot(`${leg}-defeated-${String(retries)}`);
+            pointerLocked: await page.evaluate(() => document.pointerLockElement !== null) });
+          if (retries === 1) for (const frame of evidenceFrames) console.log(`FRAME ${frame}`); await shot(`${leg}-defeated-${String(retries)}`);
           await sleep(1_200); await clickLabel(/^RETRY$/u, "RETRY");
           const back = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, 20_000, `${leg}: the retried run`);
           assert.equal(back.t, "WAVE 1", "a retry skips the chapter intro already seen this session");
