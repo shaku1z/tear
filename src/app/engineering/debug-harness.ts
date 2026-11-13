@@ -1,4 +1,4 @@
-import { releasePointerLock } from "../../platform/browser-pointer-lock";
+import { releasePointerLock as unlockPointer } from "../../platform/browser-pointer-lock";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
@@ -895,7 +895,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
         run.mods.draftRerolls = Math.max(0, selected.rerolls | 0);
         run.mods.reservePick = selected.reserve;
         context.openDraft();
-        releasePointerLock(document);
+        unlockPointer(document);
       },
       openTierUp() {
         context.startRun("endless", "normal");
@@ -908,7 +908,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
         for (const upgrade of d.UPGRADES.filter((candidate) => candidate.tiers != null).slice(0, 4))
           context.applyUpgrade(upgrade);
         context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier));
-        releasePointerLock(document);
+        unlockPointer(document);
       },
       advanceAgentJourney(kind: "draft" | "tier") {
         const run = runOf(context.state);
@@ -929,7 +929,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
           }
           context.openTier(eligibleTierChoices(d.UPGRADES, run.mods.owned, run.mods.tier));
         }
-        releasePointerLock(document);
+        unlockPointer(document);
       },
       openTerminal(kind: "campaignWin" | "win" | "continue" | "gameover") {
         const campaign = kind === "campaignWin";
@@ -964,7 +964,7 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
           context.lifecycle.terminate(kind === "gameover" ? "defeat" : "victory");
           context.setScreen(kind === "gameover" ? "gameover" : "win");
         }
-        releasePointerLock(document);
+        unlockPointer(document);
       },
       openReplay() {
         const count = 96;
