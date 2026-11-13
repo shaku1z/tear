@@ -924,6 +924,15 @@
       ],
       "duration": "minutes"
     },
+    "scene": {
+      "purpose": "Painted stage backgrounds: validate, build, contrast, contact sheet and in-game preview of scene packages",
+      "effects": [
+        "writes-repo-files",
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
     "check:architecture": {
       "purpose": "Source architecture gate (roles, layer edges, cycles, module size); --update lowers the baseline",
       "effects": [
@@ -1661,6 +1670,18 @@
         "test:browser:current-live-detached-parity"
       ]
     },
+    "scripts/scene.mjs": {
+      "purpose": "The pnpm scene command; build rewrites a package's images and manifest, reports and previews write elsewhere",
+      "effects": [
+        "writes-repo-files",
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "scene"
+      ]
+    },
     "scripts/serve.py": {
       "purpose": "Loopback-only static server for local tools such as the oracle workbench",
       "effects": [
@@ -2007,6 +2028,23 @@
       "scripts/report-remaining-workspace-inventory.mjs",
       "scripts/report-workspace-recovery.mjs"
     ],
+    "scripts/scene/build.mjs": [
+      "scripts/scene.mjs"
+    ],
+    "scripts/scene/package-files.mjs": [
+      "scripts/scene.mjs",
+      "scripts/scene/build.mjs",
+      "scripts/scene/preview.mjs",
+      "scripts/scene/reports.mjs",
+      "tests/unit/scene-packages.test.ts"
+    ],
+    "scripts/scene/preview.mjs": [
+      "scripts/scene.mjs"
+    ],
+    "scripts/scene/reports.mjs": [
+      "scripts/scene.mjs",
+      "tests/unit/scene-packages.test.ts"
+    ],
     "scripts/tearbench-build-artifact.mjs": [
       "scripts/build-target.mjs",
       "scripts/record-build-provider-artifact.mjs",
@@ -2099,6 +2137,8 @@
   "declarations": [
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/release-artifact.d.mts",
+    "scripts/scene/package-files.d.mts",
+    "scripts/scene/reports.d.mts",
     "scripts/tutorial-gold-compatibility.d.mts"
   ]
 }
