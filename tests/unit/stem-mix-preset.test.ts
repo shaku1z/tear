@@ -17,7 +17,7 @@ describe("stem mix preset", () => {
     const plain = planTierGains(cue, 4);
     const mixed = planTierGains(cue, 4, { gainDb: { apex: 6 }, off: ["melody"] });
     expect(mixed.melody).toBe(0);
-    expect(mixed.apex).toBeCloseTo(plain.apex! * dbToGain(6), 9);
+    expect(mixed.apex).toBeCloseTo((plain.apex ?? Number.NaN) * dbToGain(6), 9);
     expect(mixed.rhythm).toBe(plain.rhythm);
     expect(mixed.foundation).toBe(plain.foundation);
   });

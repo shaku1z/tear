@@ -29,9 +29,7 @@ export function planTierGains(cue: StemCueManifest, tier: Tier, preset?: StemMix
   for (const stem of cue.stems) {
     const tierDb = mix[stem.id];
     out[stem.id] =
-      tierDb === undefined || off.has(stem.id)
-        ? 0
-        : dbToGain(tierDb + stem.gainDb + (preset?.gainDb?.[stem.id] ?? 0));
+      tierDb === undefined || off.has(stem.id) ? 0 : dbToGain(tierDb + stem.gainDb + (preset?.gainDb?.[stem.id] ?? 0));
   }
   return out;
 }

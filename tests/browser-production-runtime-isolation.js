@@ -119,8 +119,7 @@ function crazyGamesSdkStub() {
 
 // Engineering parameters that a production page must ignore: the test hook,
 // Watch Agent route, cue audition and Foundry audio preview.
-const engineeringQuery =
-  "?test=1&watchagent=1&stemcue=fillet";
+const engineeringQuery = "?test=1&watchagent=1&stemcue=fillet";
 // Canvas labels that only engineering builds may draw on the main menu and setup screen.
 const engineeringMenuLabels = ["TRAINING ARCHIVE", "TRAINING OPERATIONS", "REPLAY HUB", "LOCAL ROUTES"];
 const engineeringSetupLabels = ["DEV", "BOSS TEST", "ENEMY TEST", "CREATE SEED-LOCKED RACE"];

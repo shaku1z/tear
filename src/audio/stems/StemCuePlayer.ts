@@ -86,10 +86,10 @@ export class StemCuePlayer {
     this.#backend = backend;
     const generation = ++this.#generation;
     const first = new Set(options.first ?? cue.stems.map((asset) => asset.id));
-    // Every request starts now; only the `first` stems gate the return.
-    const requests = cue.stems.map((asset) => ({ asset, voice: backend.createVoice(asset) }));
-    const join = async ({ asset, voice }: (typeof requests)[number]): Promise<void> => {
-      const ready = await voice;
+    // The `first` stems are requested alone, so they do not share a slow connection with
+    // layers nobody can hear yet; the rest are requested the moment those have arrived.
+    const join = async (asset: StemAsset): Promise<void> => {
+      const ready = await backend.createVoice(asset);
       if (generation !== this.#generation) {
         ready.dispose();
         return;
@@ -97,16 +97,17 @@ export class StemCuePlayer {
       this.#voices.set(asset.id, ready);
       if (this.#started) this.#joinLate(asset.id, ready);
     };
+    await Promise.all(cue.stems.filter((asset) => first.has(asset.id)).map(join));
+    if (generation !== this.#generation) return;
     this.#rest = Promise.all(
-      requests
-        .filter((request) => !first.has(request.asset.id))
-        .map((request) =>
-          join(request).catch((error: unknown) => {
-            console.warn(`stem ${request.asset.id} unavailable; it stays silent`, error);
+      cue.stems
+        .filter((asset) => !first.has(asset.id))
+        .map((asset) =>
+          join(asset).catch((error: unknown) => {
+            console.warn(`stem ${asset.id} unavailable; it stays silent`, error);
           }),
         ),
     ).then(() => undefined);
-    await Promise.all(requests.filter((request) => first.has(request.asset.id)).map(join));
   }
 
   /** Resolves once every stem of the loaded cue has arrived (or failed). */

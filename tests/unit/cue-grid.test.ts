@@ -23,7 +23,7 @@ interface Cue {
     readonly approvedBpm: number;
     readonly barQuantizedCompatible: boolean;
   };
-  readonly analysis?: { readonly grid?: { readonly barErrorMs: number; readonly verdict: string } };
+  readonly analysis?: { readonly seamExcessDb?: number; readonly loopLufs?: number };
 }
 
 const ids = fs.existsSync(CUES)
@@ -34,7 +34,7 @@ const load = (id: string): Cue => JSON.parse(fs.readFileSync(path.join(CUES, id,
 
 describe("cue grid integrity", () => {
   it("ships the expected number of cues", () => {
-    expect(ids.length).toBe(11);
+    expect(ids.length).toBe(14);
   });
 
   it.each(ids)("%s: loop length is exactly barsPerLoop bars", (id) => {
@@ -57,14 +57,15 @@ describe("cue grid integrity", () => {
     expect(cue.tempo).toBeCloseTo(cue.grid.approvedBpm, 1);
   });
 
-  it.each(ids)("%s: bar error is within the gate it claims", (id) => {
+  it.each(ids)("%s: the loop is a whole number of bars and its seam and loudness were measured", (id) => {
     const cue = load(id);
-    const grid = cue.analysis?.grid;
-    expect(grid).toBeDefined();
-    if (!grid) throw new Error(`${id} is missing analyzed grid data`);
-    expect(Math.abs(grid.barErrorMs)).toBeLessThanOrEqual(5);
-    // A cue may only advertise bar-quantization if it passed review.
-    if (cue.grid.barQuantizedCompatible) expect(grid.verdict).not.toBe("needs-approval");
+    // The music tool derives the grid from the loop it cut, so a whole bar count is the
+    // claim to check; a fractional one means the manifest was edited by hand.
+    expect(Number.isInteger(cue.grid.barsPerLoop)).toBe(true);
+    // The tool's own gates: the loop point may be at most 3 dB louder than the music
+    // around it, and every cue sits at -16 LUFS within 1 LU.
+    expect(cue.analysis?.seamExcessDb).toBeLessThanOrEqual(3);
+    expect(Math.abs((cue.analysis?.loopLufs ?? Number.NaN) + 16)).toBeLessThanOrEqual(1);
   });
 
   it.each(ids)("%s: records a real tempo and key, never a placeholder", (id) => {

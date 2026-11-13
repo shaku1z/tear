@@ -126,7 +126,16 @@ async function assertVisibilityLifecycle(page, baseline) {
     }));
     assert.equal(after.contexts, 1);
     assert.equal(after.audio.backend, "stem-cue:biome-routed", "recorded stems are the music backend");
-    assert.ok(musicRequests.includes("/audio/cues/fillet/cue.json"), "the menu cue manifest was loaded");
+    assert.ok(musicRequests.includes("/audio/music.json"), "the one music index was loaded");
+    assert.equal(
+      musicRequests.some((request) => request.endsWith("/cue.json")),
+      false,
+      "cue manifests come from the index, not one request each",
+    );
+    assert.ok(
+      musicRequests.some((request) => request.startsWith("/audio/cues/fillet/opus/")),
+      "the menu cue's layers were requested",
+    );
     assert.equal(
       musicRequests.some((request) => request.startsWith("/vendor/")),
       false,

@@ -4325,7 +4325,7 @@
   },
   "compatibilityInventory": {
     "check.functional": {
-      "expandedLeafCount": 78,
+      "expandedLeafCount": 77,
       "taskIds": [
         "static.requirements-check",
         "static.check-docs",
@@ -4414,7 +4414,7 @@
       ]
     },
     "check": {
-      "expandedLeafCount": 80,
+      "expandedLeafCount": 79,
       "taskIds": [
         "static.requirements-check",
         "static.check-docs",

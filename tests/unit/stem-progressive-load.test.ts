@@ -16,7 +16,9 @@ class FakeVoice implements StemVoice {
   gain = -1;
   disposed = false;
   constructor(readonly id: string) {}
-  configureLoop(): void {}
+  configureLoop(): void {
+    /* nothing to configure in the fake */
+  }
   start(atTime: number, offsetSeconds: number): void {
     this.started = { at: atTime, offset: offsetSeconds };
   }
@@ -26,7 +28,9 @@ class FakeVoice implements StemVoice {
   setGain(value: number): void {
     this.gain = value;
   }
-  stop(): void {}
+  stop(): void {
+    /* nothing to stop in the fake */
+  }
   dispose(): void {
     this.disposed = true;
   }
@@ -43,62 +47,88 @@ class ControlledBackend implements StemAudioBackend {
   createVoice(asset: StemAsset): Promise<StemVoice> {
     const voice = new FakeVoice(asset.id);
     this.voices.set(asset.id, voice);
-    return new Promise((resolve) => this.#release.set(asset.id, () => resolve(voice)));
+    return new Promise((resolve) => {
+      this.#release.set(asset.id, () => {
+        resolve(voice);
+      });
+    });
   }
   release(id: string): void {
     this.#release.get(id)?.();
+  }
+  voice(id: string): FakeVoice {
+    const voice = this.voices.get(id);
+    if (!voice) throw new Error(`no voice ${id}`);
+    return voice;
   }
 }
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+function stemId(index: number): string {
+  const stem = cue.stems[index];
+  if (!stem) throw new Error(`fillet has no stem ${String(index)}`);
+  return stem.id;
+}
+
 describe("progressive stem loading", () => {
-  it("requests every stem at once and resolves when the first ones arrive", async () => {
+  it("requests the first stems alone, then the rest as soon as those arrive", async () => {
     const backend = new ControlledBackend();
     const player = new StemCuePlayer();
-    const first = cue.stems[0]!.id;
+    const first = stemId(0);
     let loaded = false;
     const loading = player.load(cue, backend, { first: [first] }).then(() => (loaded = true));
     await flush();
-    expect(backend.voices.size).toBe(cue.stems.length);
+    // Only the audible layer is on the wire, so it has a slow connection to itself.
+    expect([...backend.voices.keys()]).toEqual([first]);
     expect(loaded).toBe(false);
     backend.release(first);
     await loading;
     expect(loaded).toBe(true);
+    expect(backend.voices.size).toBe(cue.stems.length);
+  });
+
+  it("requests every stem at once when no first set is given", async () => {
+    const backend = new ControlledBackend();
+    const player = new StemCuePlayer();
+    void player.load(cue, backend);
+    await flush();
+    expect(backend.voices.size).toBe(cue.stems.length);
   });
 
   it("starts a late stem at the loop position the others have reached", async () => {
     const backend = new ControlledBackend();
     const player = new StemCuePlayer();
-    const [first, late] = [cue.stems[0]!.id, cue.stems[1]!.id];
+    const [first, late] = [stemId(0), stemId(1)];
     const loading = player.load(cue, backend, { first: [first] });
     backend.release(first);
     await loading;
     player.setTier(4);
     player.start({ leadSeconds: 0.1 });
-    const startAt = backend.voices.get(first)!.started!.at;
+    const startAt = backend.voice(first).started?.at ?? Number.NaN;
 
     const { startSeconds, lengthSeconds } = loopSeconds(cue);
     backend.time = startAt + lengthSeconds + 3; // more than one loop later
     backend.release(late);
     await flush();
-    const joined = backend.voices.get(late)!.started!;
+    const joined = backend.voice(late).started;
+    if (!joined) throw new Error("the late stem never started");
     const expected = startSeconds + ((joined.at - startAt) % lengthSeconds);
     expect(joined.offset).toBeCloseTo(expected, 9);
-    expect(backend.voices.get(late)!.gain).toBeGreaterThan(0);
+    expect(backend.voice(late).gain).toBeGreaterThan(0);
   });
 
   it("drops stems that arrive after the cue was unloaded", async () => {
     const backend = new ControlledBackend();
     const player = new StemCuePlayer();
-    const [first, late] = [cue.stems[0]!.id, cue.stems[1]!.id];
+    const [first, late] = [stemId(0), stemId(1)];
     const loading = player.load(cue, backend, { first: [first] });
     backend.release(first);
     await loading;
     player.unload();
     backend.release(late);
     await flush();
-    expect(backend.voices.get(late)!.disposed).toBe(true);
-    expect(backend.voices.get(late)!.started).toBeNull();
+    expect(backend.voice(late).disposed).toBe(true);
+    expect(backend.voice(late).started).toBeNull();
   });
 });
