@@ -77,15 +77,7 @@ export const LEGACY_TRAINING_OPERATIONS_QUERY_ALIASES = Object.freeze(["foundry"
 export const TRAINING_OPERATIONS_QUERY_VALUE = "1" as const;
 
 /** Canonical semantic actions; old Foundry action IDs remain readable. */
-export const TRAINING_OPERATIONS_ACTIONS = Object.freeze({
-  open: "training-operations.open",
-  refresh: "training-operations.refresh",
-  bootstrap: "training-operations.bootstrap",
-  scheduleEnable: "training-operations.schedule.enable",
-  scheduleDisable: "training-operations.schedule.disable",
-  promote: "training-operations.promote",
-  restoreBaseline: "training-operations.restoreBaseline",
-} as const);
+export { TRAINING_OPERATIONS_ACTIONS } from "../domain/engineering-actions";
 export const LEGACY_TRAINING_OPERATIONS_ACTIONS = Object.freeze({
   refresh: "foundry.refresh",
   bootstrap: "foundry.bootstrap",

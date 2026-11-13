@@ -28,10 +28,7 @@ export const LEGACY_GAME_AGENT_ACTIONS = Object.freeze({
 } as const);
 /** Historical action types that can open the Game Agent evidence destination. */
 export const LEGACY_GAME_AGENT_ACTION_ALIASES = Object.freeze(["replay.hub.open", "ghostlab.open"] as const);
-export const RUN_MONITOR_ACTIONS = Object.freeze({
-  open: "run-monitor.open",
-  control: "run-monitor.control",
-} as const);
+export { RUN_MONITOR_ACTIONS } from "../domain/engineering-actions";
 export const LEGACY_RUN_MONITOR_ACTIONS = Object.freeze({
   open: "ghostlab.open",
   control: "ghostlab.watch",

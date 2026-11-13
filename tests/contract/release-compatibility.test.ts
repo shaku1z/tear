@@ -57,9 +57,10 @@ const releases = readdirSync(RELEASES, { withFileTypes: true })
   .map((entry) => entry.name)
   .sort();
 
-describe("release compatibility fixtures", () => {
-  it("has at least the 2026-08-30 production release", () => {
+describe("release compatibility fixtures", { timeout: 60_000 }, () => {
+  it("has the previous and the current production release", () => {
     expect(releases).toContain("2026-08-30-9e7d6a70");
+    expect(releases).toContain("2026-11-13-84761549");
   });
 
   for (const release of releases) {

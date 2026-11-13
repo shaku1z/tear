@@ -1,6 +1,6 @@
 import type { FoundryScreenView, ScreenRenderContext } from "./contracts";
 import { backControl } from "./screen-primitives";
-import { TRAINING_OPERATIONS_ACTIONS } from "../../agents/training-operations";
+import { TRAINING_OPERATIONS_ACTIONS } from "../../domain/engineering-actions";
 
 /** C36 exposes only opaque launch-profile/bootstrap and persisted schedule commands. */
 export function createFoundryRenderers(context: ScreenRenderContext) {

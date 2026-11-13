@@ -7,7 +7,7 @@ import type {
 } from "./contracts";
 import { backControl } from "./screen-primitives";
 import { REPLAY_HUB_ACTIONS } from "../../replay/surface-route";
-import { RUN_MONITOR_ACTIONS } from "../../agents/surface-route";
+import { RUN_MONITOR_ACTIONS } from "../../domain/engineering-actions";
 
 /** Presentation-only normal Ghost Lab home. No diagnostic/test-only state crosses this boundary. */
 export function createGhostLabRenderers(context: ScreenRenderContext) {
