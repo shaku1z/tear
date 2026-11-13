@@ -192,7 +192,11 @@ async function main() {
     }
     await waitForText(/^WAVE 1$/u, 20_000, `${leg}: wave 1 after the chapter intro`);
     assert.ok(advances >= 2, `the chapter intro advanced by input (${String(advances)} clicks)`);
-    note("chapter intro advanced", { leg, clicks: advances, beats: [...beats].slice(0, 12) });
+    note("chapter intro advanced", { leg, clicks: advances, beats: [...beats].slice(0, 12),
+      device: await page.evaluate(() => ({ cores: navigator.hardwareConcurrency, touchPoints: navigator.maxTouchPoints,
+        coarse: matchMedia("(pointer: coarse)").matches, anyCoarse: matchMedia("(any-pointer: coarse)").matches,
+        hover: matchMedia("(hover: hover)").matches, touchEvents: "ontouchstart" in window })),
+      hints: opening.filter((entry) => /move|blade|throw|dash/iu.test(entry.t)).map((entry) => entry.t).slice(0, 6) });
     await shot(`${leg}-wave-1`);
   };
 
