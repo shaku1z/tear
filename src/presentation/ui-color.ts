@@ -59,3 +59,17 @@ function computeDarkened(color: string, background: string, ratio: number): stri
   }
   return "#000000";
 }
+
+/**
+ * Lifts a hue toward white (keeping its identity) until it reaches `ratio` against a
+ * dark `background`. Used for accent labels on the dark chapter fade.
+ */
+export function lightenToContrast(color: string, background: string, ratio = 4.5): string {
+  const rgb = parseHex(color);
+  if (rgb === undefined || contrastRatio(color, background) >= ratio) return color;
+  for (let mix = 0.05; mix < 1; mix += 0.05) {
+    const candidate = "#" + rgb.map((value) => Math.round(value + (255 - value) * mix).toString(16).padStart(2, "0")).join("");
+    if (contrastRatio(candidate, background) >= ratio) return candidate;
+  }
+  return "#ffffff";
+}

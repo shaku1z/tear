@@ -37,6 +37,9 @@ interface CinematicPresentationState {
   readonly active: boolean;
   readonly hideHud: boolean;
   readonly playerMode?: string;
+  /** The running script (a chapter is `kind: "chapter"`) and beat (`hud` returns the HUD early). */
+  readonly script?: Readonly<{ kind?: string }> | null;
+  readonly beat?: Readonly<{ hud?: boolean }> | undefined;
   draw(context: CanvasRenderingContext2D, ui: PresentationUi, rectangle: ScreenRectangle, reducedMotion: boolean,
     prompt?: (text: string) => string): void;
 }
@@ -138,7 +141,7 @@ export interface LivePresentationFrameServices<Screen extends string,
   readonly drawWaveBanner: () => void;
   readonly drawStageBanner: () => void;
   readonly drawReticle: () => void;
-  readonly drawAchievementToast: (deltaSeconds: number) => void;
+  readonly drawAchievementToast: (deltaSeconds: number, held: boolean) => void;
   readonly drawMenuAttract: (context: CanvasRenderingContext2D) => void;
   readonly screenHue: (screen: Screen) => string | undefined;
   readonly renderScreen: (screen: Screen) => void;
@@ -160,6 +163,7 @@ export function createLivePresentationFrameHost<Screen extends string,
 ): LivePresentationHost {
   const { context, ui } = services;
   const confirmArming = createUiConfirmArming();
+  const handoff = createChapterHandoff();
   return createLivePresentationHost<Screen>({
     dimensions: { width: services.width, height: services.height, overscan: services.overscan },
     framePorts: (host) => ({
@@ -184,7 +188,11 @@ export function createLivePresentationFrameHost<Screen extends string,
           context.fillRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h); context.restore();
         }
         // The HUD belongs to live play; run overlays (pause, draft, results) carry their own summary.
-        if (services.capturePolicy().ui === "include" && !services.cinema.hideHud && state.screen() === "playing") services.drawHud();
+        handoff.observe(services.cinema.active && services.cinema.script?.kind === "chapter", state.bannerSeconds());
+        // The HUD returns on a chapter's READY beat (before control) and stays out of
+        // the boss arrival card, whose letterbox would otherwise sit over it.
+        const hudBack = !services.cinema.active || !services.cinema.hideHud || services.cinema.beat?.hud === true;
+        if (services.capturePolicy().ui === "include" && hudBack && !state.bossIntroActive() && state.screen() === "playing") services.drawHud();
         const beat = state.bossBeat();
         if (services.capturePolicy().ui === "include" && beat !== null && state.screen() === "playing" && !state.bossIntroActive() && !services.cinema.active) {
           const progress = services.clamp(beat.t / beat.dur, 0, 1);
@@ -199,8 +207,9 @@ export function createLivePresentationFrameHost<Screen extends string,
           services.drawTouchControls();
         }
         // The stage banner owns the announcement band while it shows (no duplicate WAVE title).
+        // The chapter that hands off to a wave already announced it; its WAVE banner is not repeated.
         if (services.capturePolicy().ui === "include" && state.screen() === "playing" && state.bannerSeconds() > 0
-          && services.stage.bannerSeconds <= 0 && !services.cinema.active) services.drawWaveBanner();
+          && services.stage.bannerSeconds <= 0 && !services.cinema.active && !handoff.muted()) services.drawWaveBanner();
         if (services.capturePolicy().ui === "include" && state.screen() === "playing" && services.stage.bannerSeconds > 0 && !services.cinema.active) services.drawStageBanner();
         const rank = state.rankPopup();
         if (services.capturePolicy().ui === "include" && state.screen() === "playing" && rank.seconds > 0) {
@@ -235,7 +244,8 @@ export function createLivePresentationFrameHost<Screen extends string,
       },
       renderScreen: (screen) => { if (services.capturePolicy().ui === "include") services.renderScreen(screen); },
       drawButtons: () => { if (services.capturePolicy().ui === "include") host.drawButtons(); },
-      drawPostLayers: () => { if (services.capturePolicy().ui === "include") { services.wipe.draw(state.deltaSeconds()); services.drawAchievementToast(state.deltaSeconds()); } },
+      drawPostLayers: () => { if (services.capturePolicy().ui === "include") { services.wipe.draw(state.deltaSeconds()); services.drawAchievementToast(state.deltaSeconds(),
+        services.cinema.active || state.bossIntroActive()); } },
       drawCursor: () => { ui.cursor(context, services.input.mouseX, services.input.mouseY); },
       showCanvasCursor: () => services.capturePolicy().ui === "include" && shouldDrawCanvasCursor(state.screen(), services.input.mode)
         && services.input.pointerInside !== false,
@@ -271,5 +281,22 @@ export function createLivePresentationFrameHost<Screen extends string,
       pointerX: services.input.mouseX, pointerY: services.input.mouseY, deltaSeconds: state.deltaSeconds(),
       enterSeconds: state.enterSeconds(), hoverAnimation: services.hoverAnimation, ui,
       entranceEase: services.ease, focusVisible: services.input.mode === "keyboard" || services.input.mode === "gamepad" }),
+  });
+}
+
+/**
+ * Tracks the hand-off from a chapter cinematic to its first wave: the wave banner that
+ * activation raises in the same tick is muted until it has run out.
+ */
+function createChapterHandoff() {
+  let chapterActive = false;
+  let muted = false;
+  return Object.freeze({
+    observe(active: boolean, bannerSeconds: number): void {
+      if (chapterActive && !active) muted = bannerSeconds > 0;
+      else if (bannerSeconds <= 0) muted = false;
+      chapterActive = active;
+    },
+    muted: () => muted,
   });
 }

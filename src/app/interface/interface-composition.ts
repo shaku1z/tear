@@ -92,7 +92,7 @@ export function createLiveInterfaceComposition(
     drawWaveBanner: () => { worldAdapters.drawWaveBanner(); },
     drawStageBanner: () => { worldAdapters.drawStageBanner(); },
     drawReticle: () => { worldAdapters.drawReticle(); },
-    drawAchievementToast: (deltaSeconds) => { worldAdapters.drawAchievementToast(deltaSeconds); },
+    drawAchievementToast: (deltaSeconds, held) => { worldAdapters.drawAchievementToast(deltaSeconds, held); },
     chooseUpgrade: screens.chooseUpgrade, chooseReserve: screens.chooseReserve, chooseTier: screens.chooseTier, rerollDraft: screens.rerollDraft,
   });
   const worldAdapters = createLiveWorldPresentationAdapters(options.worldState, {

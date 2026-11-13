@@ -98,6 +98,14 @@ export interface CinematicBeat {
   onExit?: (context: CinematicContext, director: CinematicDirectorPort) => void;
   onUpdate?: (context: CinematicContext, director: CinematicDirectorPort, deltaSeconds: number) => void;
   minDuration?: number;
+  /** Reading dwell for a confirm-or-timeout page: overrides the spoken-line fallback. */
+  dwell?: number;
+  /** Presentation: the run HUD may return while this beat plays. */
+  hud?: boolean;
+  /** Presentation: the floor colour under a chapter prompt. */
+  ground?: string;
+  /** Presentation: the biome sky colour behind chapter text. */
+  sky?: string;
   playerMode?: string;
   speaker?: string;
   view?: string;
@@ -194,6 +202,7 @@ const CinematicTimeline = (() => {
     brief: boolean,
     presentation: CinematicPresentationConfiguration,
   ): number {
+    if (beat.dwell !== undefined) return beat.dwell;   // authored reading dwell (chapter pages)
     const p = presentation, words = wordCount(beat.line);
     if (brief) return Math.min(p.briefHoldMax, Math.max(p.briefHoldMin, p.briefHoldMin + words * p.briefHoldPerWord));
     return Math.min(p.bossAutoMax, Math.max(p.bossAutoMin, p.bossAutoBase + words / 3.2));

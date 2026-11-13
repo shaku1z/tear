@@ -89,7 +89,8 @@ export interface LiveWorldPresentationAdapters {
   readonly completeHudFrame: (deltaSeconds: number) => void;
   readonly renderWorld: () => WorldCamera;
   readonly drawHud: () => void;
-  readonly drawAchievementToast: (deltaSeconds: number) => void;
+  /** `held`: a cinematic owns the screen; achievements wait (queued, unseen) until it ends. */
+  readonly drawAchievementToast: (deltaSeconds: number, held?: boolean) => void;
   readonly drawTouchControls: () => void;
   readonly drawWaveBanner: () => void;
   readonly drawBossIntro: () => void;
@@ -279,8 +280,8 @@ export function createLiveWorldPresentationAdapters(
       const boss = state.enemies().find((enemy) => enemy.isBoss);
       if (boss && boss._phaseFlashT > 0) boss._phaseFlashT = Math.max(0, boss._phaseFlashT - deltaSeconds);
     },
-    drawAchievementToast(deltaSeconds: number): void {
-      const snapshot = services.achievementToast.step(deltaSeconds, { pending: d.ACH.pending, rarities: d.ACH.RARITY,
+    drawAchievementToast(deltaSeconds: number, held = false): void {
+      const snapshot = services.achievementToast.step(deltaSeconds, { held, pending: d.ACH.pending, rarities: d.ACH.RARITY,
         commonRarity: d.ACH.RARITY.common, categories: d.ACH.CATS,
         markSeen: d.achievementToastPersistence.markSeen, save: d.achievementToastPersistence.save,
         shardsFor: (achievement) => { const source = d.ACH.byId(achievement.id); return source ? d.ACH.shardsFor(source) : 0; },

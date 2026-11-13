@@ -238,7 +238,8 @@ describe("production replay composition", () => {
     const saved = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "explicit-frame");
     const restored = composition.create(JSON.parse(JSON.stringify(saved.snapshot)) as TearSnapshotV1);
     expect(restored.replay.world.context.cinema.captureState()).toEqual(cinema.captureState());
-    for (let frame = 0; frame < 105; frame += 1) {
+    // A page holds for its reading dwell (several seconds for the prologue) before it may play on.
+    for (let frame = 0; frame < 30; frame += 1) {
       source.advanceApplicationFrame(0.1); restored.advanceApplicationFrame(0.1);
     }
     expect(cinema.captureState()).toMatchObject({ beatId: "page-0" });

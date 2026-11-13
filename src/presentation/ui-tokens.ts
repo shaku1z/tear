@@ -36,15 +36,28 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
             // letter-spacing before recent specs) and line-height roles (multipliers).
             track: { label: 3.2, title: 0.5, body: 0.2 },
             lineH: { title: 1.02, body: 1.5 },
-            // Living-biome chapter layout (authored at 1600×900, scaled by the caller).
+            // Living-biome chapter composition (authored at 1600×900; see chapter-layout.ts).
+            // The text block lives in the upper sky of one side, above every stage's
+            // platforms, on the main-menu rail's soft dark fade (never a panel).
             chapter: {
                 safeMargin: 48, safeVW: 0.06, // max(48, 6vw)
-                bodyColW: 580, cpl: [45, 68], // body column + target chars/line
-                washDim: 0.26, // world loses ~26% (not 72%) — biome stays legible
-                washSpan: 0.52, // fraction of width the ink-wash covers on its side
-                washDark: "rgba(6,7,12,0.82)", washLight: "rgba(248,247,244,0.90)",
-                labelGap: 34, titleGap: 30, loreGap: 42, progressGap: 22, promptGap: 30,
-                fragStagger: 0.05, fragStaggerCap: 0.18,
+                bodyColW: 580, titleMaxW: 860, // ~50 mono chars per line; titles may run wider
+                labelY: 92, titleGap: 20, ruleGap: 12, captionGap: 34, bodyGap: 34,
+                bodyMaxLines: 4, // longer pages step the body size down to `bodyFloor`
+                floorY: 800, // the arena floor (CONFIG.world.groundY): the fade never paints below it
+                promptY: 855, // prompt baseline, centred in the floor band under the arena
+                ruleW: 72, tickW: 7, tickActiveW: 18, tickGap: 6, tickLead: 18,
+                // the sky haze: an ellipse from the upper corner whose radius puts the text's far
+                // edge (+ `fadeHold`) and `hazeDepth` at `hazeReach`; dense to `hazeCore`, clear at 1
+                fadeHold: 40, hazeDepth: 270, hazeReach: 0.78, hazeCore: 0.5,
+                fadeTail: 640, // the finale epilogue's rail fade clears this far past its text
+                skyInk: "#12131a", // chapter ink on a light sky (the biome ink of the light stages)
+                revealRest: 0.55, // how much fade remains once the biome name has resolved
+            },
+            // chapter type roles (logical px at desktop density; touch raises them to the floor)
+            chapterType: {
+                label: 15, title: 64, titleFloor: 44, caption: 14, body: 19, bodyFloor: 17, line: 17, prompt: 14,
+                bodyLineHeight: 1.55, titleLineHeight: 1.0,
             },
             // component metrics
             metric: {
@@ -62,7 +75,9 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 bossGuardH: 6, bossGuardGap: 10, bossGuardScale: 0.60,
                 bossShimmerW: 112, bossCrackJut: 10,
                 bossIntroBarH: 96, bossIntroAccentHalfW: 150, bossIntroAccentH: 3,
-                bossIntroTitleBottom: 34, bossIntroAccentBottom: 22, bossIntroEpithetBottom: 2, bossIntroOpeningBottom: 76,
+                // every line of the card sits inside its letterbox bar (96): the name and
+                // epithet in the lower bar, the spoken opening line in the upper bar
+                bossIntroTitleBottom: 48, bossIntroAccentBottom: 37, bossIntroEpithetBottom: 14, bossIntroOpeningTop: 58,
                 bossVignetteFocusY: 0.46, bossVignetteInner: 0.18, bossVignetteOuter: 0.72,
                 // phase banner centre (fraction of the view height): below the boss header, never over its bar
                 bossPhaseBannerW: 760, bossPhaseBannerH: 72, bossPhaseBannerY: 0.34,
@@ -94,7 +109,10 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 bossTrack: 0.20, bossGuardTrack: 0.16, bossNotch: 0.90, bossFlash: 0.85,
                 cinemaBar: 0.88, cinemaVignette: 0.30, cinemaSubtitle: 0.75,
                 bossPhasePanel: 0.82,
-                cinemaPanel: 0.90, cinemaHint: 0.58,
+                // cinematic prompts read at ≥ 7:1 on the cinema field (0.58 measured ~4.3:1)
+                cinemaPanel: 0.90, cinemaHint: 0.80,
+                // chapter text roles on the chapter fade: caption, intro line and prompt
+                chapterCaption: 0.72, chapterLine: 0.86, chapterPrompt: 0.86, chapterHaze: 0.6,
                 finalRewardDim: 0.78, finalRewardPanel: 0.96, finalRewardGhost: 0.18,
                 rallyBase: 0.72, rallyPulse: 0.18,
                 // In-run teaching card surface (tutorial lesson, playground help); the HUD
@@ -130,10 +148,11 @@ ink: "#000", // live foreground colour (flipped to light on dark biomes by the g
                 bossIntroAccentDelay: 0.15,
                 bossIntroAccentGrow: 0.5,
                 cinemaFrameIn: 0.45, cinemaDialogueIn: 0.22,
-                chapterIn: 0.22,
-                // Living-biome chapter timings (Pantheon VI P3)
-                chapterPageCross: 0.26, loreReveal: 0.32, loreExit: 0.36,
-                biomeRevealFull: 1.6, biomeRevealBrief: 1.0, readyFull: 0.9, readyBrief: 0.65,
+                chapterIn: 0.6, // the chapter header and its fade breathe in
+                // Living-biome chapter timings. Pages hold for a reading dwell computed
+                // from their words (chapter-controller.ts); these are the transitions.
+                chapterPageCross: 0.35, loreReveal: 0.6, loreExit: 0.45,
+                biomeRevealFull: 1.8, biomeRevealBrief: 1.1, readyFull: 1.5, readyBrief: 1.0,
                 finalRewardIn: 0.34,
                 rallyPulse: 9,
             },

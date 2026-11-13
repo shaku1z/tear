@@ -90,7 +90,7 @@ describe("Ghost production replay world", () => {
     const noDraw = () => undefined;
     const presentation = createBrowserGhostReplayPresentation(document, { font: () => "12px sans-serif", tag: noDraw,
       text: noDraw, title: noDraw, bossHud: noDraw, bossIntro: noDraw,
-      chapterHeader: noDraw, chapterProgress: noDraw, loreFragment: noDraw, chapterPrompt: noDraw, biomeReveal: noDraw,
+      chapterHeader: noDraw, loreFragment: noDraw, chapterPrompt: noDraw, biomeReveal: noDraw,
       cinematicFrame: noDraw, finaleFracture: noDraw, finalReward: noDraw, cinematicPrompt: noDraw, bossDeclaration: noDraw, dialogueCard: noDraw,
       ink: "#000", density: { touch: false, compact: false }, readable: (color: string) => color, hudPlate: noDraw, displayText: noDraw,
       fitText: (_canvas: unknown, text: string, _width: number, options: { size: number }) => ({ size: options.size, lines: [text], truncated: false }),

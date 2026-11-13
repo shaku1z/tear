@@ -33,7 +33,7 @@ describe("Verdant stage catalog", () => {
           text: "Healers. Soldiers. Children. Every name marks the day they entered the garden. None records the day they left. At the center: ‘I kept every promise except the one that mattered. I did not let them go.’",
         },
       },
-      chapterArt: { composition: "right", wash: "light" },
+      chapterArt: { composition: "left", wash: "light" },
       bg: "#dff2d6",
       plat: "#234a36",
       accent: "#e4c95a",

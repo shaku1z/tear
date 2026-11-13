@@ -14,7 +14,12 @@ export class AchievementToastController {
 
   constructor(ease: (value: number) => number) { this.#ease = ease; }
 
+  /**
+   * Advances the one visible toast. While `held` (a cinematic owns the screen) nothing
+   * is dequeued, marked seen or advanced, so achievements wait for the scene to end.
+   */
   step(deltaSeconds: number, input: {
+    readonly held?: boolean;
     readonly pending: AchievementToastSource[];
     readonly rarities: Readonly<Record<string, Readonly<{ name: string; color: string }>>>;
     readonly commonRarity: Readonly<{ name: string; color: string }>;
@@ -23,6 +28,7 @@ export class AchievementToastController {
     readonly shardsFor: (achievement: AchievementToastSource) => number;
     readonly coinsFor: (achievement: AchievementToastSource) => number;
   }): AchievementToastView | null {
+    if (input.held === true) return null;
     if (this.#active === null && input.pending.length > 0) {
       this.#active = input.pending.shift() ?? null;
       this.#elapsed = 0;

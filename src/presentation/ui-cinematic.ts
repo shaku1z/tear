@@ -189,8 +189,8 @@ rallyOverlay(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {
             ctx.textBaseline = "alphabetic";
             if (o.openingLine) {
                 ctx.globalAlpha = alpha * a.cinemaSubtitle;
-                ctx.font = this.font(t.type.caption, true);
-                ctx.fillText(o.openingLine, cx, vh - m.bossIntroOpeningBottom);
+                ctx.font = this.font(t.type.body, true);
+                ctx.fillText(o.openingLine, cx, m.bossIntroOpeningTop);
                 ctx.globalAlpha = alpha;
                 ctx.font = this.font(t.type.display, true);
             }

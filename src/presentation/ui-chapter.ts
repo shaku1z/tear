@@ -1,170 +1,188 @@
 import type { ChapterLayout, UiDependencies, UiOptions, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
-import { inkIsLight } from "./ui-color";
+import { darkenToContrast, inkIsLight, lightenToContrast } from "./ui-color";
+import { layoutChapterPage, type ChapterMeasure, type ChapterTextRole, type ChapterTypeSizes } from "./chapter-layout";
+import { cssToLogical, INTERFACE_ACCESSIBILITY } from "../domain/interface-accessibility";
+
+// Tracking (px) per chapter text role; the title is set solid.
+const CHAPTER_TRACK: Readonly<Record<ChapterTextRole, number>> = { label: 3.2, title: 0, caption: 2.4, body: 0.2, line: 1.2, prompt: 1.6 };
+const CHAPTER_DARK_INK = "#12131a";
 
 export function createUiChapter(dependencies: UiDependencies) {
   const { clamp, presentation: { overscan, view } } = dependencies;
+  const ease = (value: number) => {
+    const k = clamp(value, 0, 1);
+    return k * k * (3 - 2 * k);
+  };
   return {
-_chapterLayout(this: UiRuntime, o: UiOptions): ChapterLayout {
-            const t = this.t, vw = view.w, vh = view.h;
-            const scale = clamp(vh / 900, 0.78, 1.4);
-            const SM = Math.max(t.chapter.safeMargin, vw * t.chapter.safeVW);
-            const colW = Math.min(t.chapter.bodyColW * scale, vw - SM * 2);
-            const side = o.composition === "right" ? "right" : "left";
-            const x = side === "right" ? vw - SM - colW : SM; // left edge of the text column
-            const anchorX = side === "right" ? x + colW : x; // the text's alignment edge
-            return { scale, SM, colW, side, x, anchorX, vw, vh,
-                align: side === "right" ? "right" : "left",
-                labelSize: Math.round(15 * scale), titleSize: Math.round(60 * scale), loreSize: Math.round(19 * scale),
-                topY: vh * 0.30, loreY: vh * 0.52 };
+        // Chapter type roles at the live density: desktop keeps the authored sizes; touch
+        // raises every role to the physical touch-text floor so a phone can read the lore.
+        _chapterSizes(this: UiRuntime): ChapterTypeSizes {
+            const ct = this.t.chapterType;
+            const floor = this.density.touch ? cssToLogical(INTERFACE_ACCESSIBILITY.minTouchTextCssPx, this.density.cssPerLogicalPixel) : 0;
+            return { ...ct, label: Math.max(ct.label, floor), caption: Math.max(ct.caption, floor),
+                body: Math.max(ct.body, floor + 2), bodyFloor: Math.max(ct.bodyFloor, floor + 1), line: Math.max(ct.line, floor + 1),
+                prompt: Math.max(ct.prompt, floor), title: Math.max(ct.title, floor * 2), titleFloor: Math.max(ct.titleFloor, floor * 1.6) };
         },
-        _bladeMark(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, color: string, dir: number) {
-            ctx.save();
-            ctx.globalAlpha = 1;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2 * scale;
-            ctx.lineCap = "round";
-            const len = 30 * scale;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + dir * len, y - len * 0.36);
-            ctx.stroke(); // the blade
-            ctx.beginPath();
-            ctx.moveTo(x + dir * 7 * scale, y - 4 * scale);
-            ctx.lineTo(x + dir * 7 * scale, y + 6 * scale);
-            ctx.stroke(); // guard
-            ctx.restore();
+        _chapterFont(this: UiRuntime, role: ChapterTextRole, size: number): string {
+            if (role === "title")
+                return this.displayFont(size);
+            const medium = role === "label" || role === "prompt";
+            return this.bodyFont(size, medium ? this.t.font.bodyMediumWeight : undefined);
         },
-        // chapter label + condensed display title over the ink-wash. `morphTo`/`morphK`
-        // crossfade the title into the biome name in place (used by biomeReveal).
+        _chapterMeasure(this: UiRuntime, ctx: CanvasRenderingContext2D): ChapterMeasure {
+            return (text, role, size) => {
+                ctx.font = this._chapterFont(role, size);
+                return ctx.measureText(text).width + CHAPTER_TRACK[role] * Math.max(0, text.length - 1);
+            };
+        },
+        // The shared composition (chapter-layout.ts) for one page, reveal or epilogue.
+        _chapterLayout(this: UiRuntime, o: UiOptions, ctx?: CanvasRenderingContext2D): ChapterLayout {
+            const sizes = this._chapterSizes();
+            const measure: ChapterMeasure = ctx ? this._chapterMeasure(ctx) : (text, role, size) => text.length * size * (role === "title" ? 0.45 : 0.6);
+            const page = layoutChapterPage({ vw: view.w, side: truthyOr(o.composition, () => "left"), sizes,
+                title: truthyOr(o.title, () => ""), caption: o.caption, text: o.text, line: o.line }, this.t.chapter, measure);
+            return { ...page, vw: view.w, vh: view.h, sizes };
+        },
+        _chapterText(this: UiRuntime, ctx: CanvasRenderingContext2D, text: string, role: ChapterTextRole, size: number,
+            x: number, y: number, align: CanvasTextAlign) {
+            ctx.font = this._chapterFont(role, size);
+            if (role === "title") {
+                ctx.textAlign = align;
+                ctx.fillText(text, x, y);
+                return;
+            }
+            this.trackedText(ctx, text, x, y, CHAPTER_TRACK[role], align === "right" ? "right" : "left");
+        },
+        // Ink and accent for the chapter text: the biome ink on its own sky (dark on the
+        // light stages, light on the Tear) and the stage accent lifted to 4.5:1 against it.
+        _chapterTone(this: UiRuntime, o: UiOptions): Readonly<{ ink: string; accent: string }> {
+            const t = this.t, color = truthyOr(o.color, () => t.color.accent);
+            if (o.sky !== undefined && inkIsLight(o.sky))
+                return { ink: t.chapter.skyInk, accent: darkenToContrast(color, o.sky, 4.5) };
+            return { ink: t.color.cinemaInk, accent: lightenToContrast(color, truthyOr(o.sky, () => t.color.rail), 4.5) };
+        },
+        // Header: the sky haze (or the epilogue's dark fade), the chapter numeral (with page ticks beside it), the
+        // condensed title and its short accent rule. `morphTo`/`morphK` crossfade the
+        // title into the biome name in place. Returns the layout it drew.
         chapterHeader(this: UiRuntime, ctx: CanvasRenderingContext2D, o?: UiOptions) {
             o = truthyOr<UiOptions>(o, () => ({}));
-            const t = this.t, L = this._chapterLayout(o);
-            const k = clamp(o.amount ?? 1, 0, 1), color = truthyOr(o.color, () => t.color.accent);
-            const ink = this.chapterWash(ctx, L.side, truthyOr(o.wash, () => "dark"), k);
+            const t = this.t, L = this._chapterLayout(o, ctx);
+            const k = clamp(o.amount ?? 1, 0, 1), fadeK = clamp(o.fade ?? k, 0, 1);
+            this.chapterWash(ctx, L.side, fadeK, Math.max(L.reach, Number(o.reach) || 0), o.sky);
+            const { ink, accent } = this._chapterTone(o);
             ctx.save();
-            ctx.globalAlpha = k;
             ctx.textBaseline = "alphabetic";
-            ctx.fillStyle = color;
-            ctx.font = this.bodyFont(L.labelSize, t.font.bodyMediumWeight);
-            this.trackedText(ctx, truthyOr(o.label, () => ""), L.anchorX, L.topY, t.track.label, L.align);
-            const titleY = L.topY + t.chapter.titleGap + L.titleSize * 0.5;
-            ctx.font = this.displayFont(L.titleSize);
-            ctx.textAlign = L.align;
+            ctx.globalAlpha = k;
+            ctx.fillStyle = accent;
+            const labelW = this._chapterMeasure(ctx)(truthyOr(o.label, () => ""), "label", L.sizes.label);
+            this._chapterText(ctx, truthyOr(o.label, () => ""), "label", L.sizes.label, L.anchorX, L.labelY, L.align);
+            this._chapterTicks(ctx, L, labelW, accent, Number(o.count) || 0, o.index ?? -1, k);
             const mk = clamp(Number(o.morphK) || 0, 0, 1);
-            if (o.morphTo && mk > 0) {
-                ctx.globalAlpha = k * (1 - mk);
-                ctx.fillStyle = ink;
-                ctx.fillText(truthyOr(o.title, () => ""), L.anchorX, titleY);
-                ctx.globalAlpha = k * mk;
-                ctx.fillText(o.morphTo, L.anchorX, titleY);
-                ctx.globalAlpha = k;
+            ctx.fillStyle = ink;
+            ctx.globalAlpha = k * (o.morphTo ? 1 - ease(mk * 1.6) : 1);
+            L.titleLines.forEach((line, index) => {
+                this._chapterText(ctx, line, "title", L.titleSize, L.anchorX, L.titleY[index] ?? L.labelY, L.align);
+            });
+            if (o.morphTo) {
+                ctx.globalAlpha = k * ease((mk - 0.3) / 0.5);
+                this._chapterText(ctx, o.morphTo, "title", L.titleSize, L.anchorX, L.titleY[0] ?? L.labelY, L.align);
             }
-            else {
-                ctx.fillStyle = ink;
-                ctx.fillText(truthyOr(o.title, () => ""), L.anchorX, titleY);
-            }
-            const ruleW = (o.ruleW ?? Math.min(L.colW * 0.42, 240 * L.scale));
-            ctx.fillStyle = color;
-            ctx.fillRect(L.side === "right" ? L.anchorX - ruleW : L.anchorX, titleY + t.space.sm, ruleW, 2 * L.scale);
+            ctx.globalAlpha = k;
+            ctx.fillStyle = accent;
+            const ruleW = t.chapter.ruleW * (o.ruleW ?? 1);
+            ctx.fillRect(L.side === "right" ? L.anchorX - ruleW : L.anchorX, L.ruleY, ruleW, 2);
             ctx.restore();
+            return L;
         },
-        // one lore fragment as a mono column with phrase/line reveal (never per-char).
+        // small fracture ticks beside the numeral: a discreet "which page" marker.
+        _chapterTicks(this: UiRuntime, ctx: CanvasRenderingContext2D, L: ChapterLayout, labelW: number, color: string,
+            count: number, index: number, k: number) {
+            if (count <= 1)
+                return;
+            const c = this.t.chapter, y = L.labelY - L.sizes.label * 0.34;
+            const widths = Array.from({ length: count }, (_value, i) => (i === index ? c.tickActiveW : c.tickW));
+            const total = widths.reduce((sum, w) => sum + w, 0) + c.tickGap * (count - 1);
+            let x = L.side === "right" ? L.anchorX - labelW - c.tickLead - total : L.anchorX + labelW + c.tickLead;
+            widths.forEach((w, i) => {
+                ctx.globalAlpha = k * (i === index ? 1 : i < index ? this.t.alpha.muted : this.t.alpha.ghost * 1.6);
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, w, 2);
+                x += w + c.tickGap;
+            });
+            ctx.globalAlpha = k;
+        },
+        // One lore page: an optional tracked caption, then the mono column. The phrase
+        // reveal shows whole words in reading order (never per character).
         loreFragment(this: UiRuntime, ctx: CanvasRenderingContext2D, o?: UiOptions) {
             o = truthyOr<UiOptions>(o, () => ({}));
-            const t = this.t, L = this._chapterLayout(o);
-            const k = clamp(o.amount ?? 1, 0, 1), reveal = clamp(Number(o.reveal) || 0, 0, 1);
-            const ink = (o.wash === "light") ? "#12131a" : "#f1eff9";
+            const t = this.t, L = this._chapterLayout(o, ctx);
+            const k = clamp(o.amount ?? 1, 0, 1), reveal = clamp(o.reveal ?? 1, 0, 1);
+            const total = L.bodyLines.reduce((sum, line) => sum + line.split(" ").length, 0);
+            let budget = Math.ceil(total * reveal);
             ctx.save();
+            ctx.textBaseline = "alphabetic";
+            ctx.fillStyle = this._chapterTone(o).ink;
+            if (o.caption) {
+                ctx.globalAlpha = k * t.alpha.chapterCaption;
+                this._chapterText(ctx, o.caption, "caption", L.sizes.caption, L.anchorX, L.captionY, L.align);
+            }
             ctx.globalAlpha = k;
-            ctx.fillStyle = ink;
-            ctx.font = this.bodyFont(L.loreSize);
-            ctx.textAlign = L.align;
-            ctx.textBaseline = "alphabetic";
-            const words = truthyOr(o.text, () => "").split(/\s+/).filter(Boolean);
-            const shown = words.slice(0, Math.ceil(words.length * reveal));
-            const lineH = L.loreSize * t.lineH.body;
-            let line = "", yy = L.loreY;
-            const advance = (s: string) => ctx.measureText(s).width + t.track.body * s.length;
-            for (const w of shown) {
-                const next = line ? line + " " + w : w;
-                if (line && advance(next) > L.colW) {
-                    this.trackedText(ctx, line, L.anchorX, yy, t.track.body, L.align);
-                    yy += lineH;
-                    line = w;
-                }
-                else
-                    line = next;
-            }
-            if (line)
-                this.trackedText(ctx, line, L.anchorX, yy, t.track.body, L.align);
+            L.bodyLines.forEach((line, index) => {
+                const words = line.split(" ");
+                const shown = words.slice(0, Math.max(0, budget)).join(" ");
+                budget -= words.length;
+                if (shown)
+                    this._chapterText(ctx, shown, "body", L.bodySize, L.anchorX, L.bodyY + index * L.bodyLineHeight, L.align);
+            });
             ctx.restore();
         },
-        // small fracture ticks: a discreet "which page" marker, never an animated bar.
-        chapterProgress(this: UiRuntime, ctx: CanvasRenderingContext2D, o?: UiOptions) {
-            o = truthyOr<UiOptions>(o, () => ({}));
-            const t = this.t, L = this._chapterLayout(o);
-            const k = clamp(o.amount ?? 1, 0, 1), color = truthyOr(o.color, () => t.color.accent);
-            const count = Math.max(1, truthyOr(o.count, () => 1)), idx = clamp(truthyOr(o.index, () => 0), 0, count - 1);
-            const y = L.loreY - t.chapter.progressGap * L.scale, gap = 14 * L.scale, tickH = 2 * L.scale;
-            ctx.save();
-            ctx.textBaseline = "alphabetic";
-            for (let i = 0; i < count; i++) {
-                const w = (i === idx ? 16 : 7) * L.scale;
-                const cx = L.side === "right" ? L.anchorX - (count - 1 - i) * gap - w : L.anchorX + i * gap;
-                ctx.globalAlpha = k * (i === idx ? 1 : t.alpha.faint);
-                ctx.fillStyle = color;
-                ctx.fillRect(cx, y, w, tickH);
-            }
-            ctx.restore();
-        },
+        // The prompt sits in the floor band under the arena, inked against the floor.
+        // `hold` (0..1) draws the skip charge as a hairline that grows under the prompt.
         chapterPrompt(this: UiRuntime, ctx: CanvasRenderingContext2D, o?: UiOptions) {
             o = truthyOr<UiOptions>(o, () => ({}));
             if (!o.text)
                 return;
-            const t = this.t, L = this._chapterLayout(o);
-            const k = clamp(o.amount ?? 1, 0, 1), color = truthyOr(o.color, () => t.color.accent);
+            const t = this.t, L = this._chapterLayout(o, ctx);
+            const k = clamp(o.amount ?? 1, 0, 1), hold = clamp(Number(o.hold) || 0, 0, 1);
+            const ink = o.ground && inkIsLight(o.ground) ? CHAPTER_DARK_INK : t.color.cinemaInk;
+            const width = this._chapterMeasure(ctx)(o.text, "prompt", L.sizes.prompt);
             ctx.save();
-            ctx.globalAlpha = k * t.alpha.cinemaHint;
-            ctx.fillStyle = color;
-            ctx.font = this.bodyFont(Math.round(12 * L.scale), t.font.bodyMediumWeight);
             ctx.textBaseline = "alphabetic";
-            const y = L.vh - Math.max(t.chapter.safeMargin, L.vh * 0.06);
-            this.trackedText(ctx, o.text, L.anchorX, y, t.track.body, L.align);
+            ctx.globalAlpha = k * t.alpha.chapterPrompt;
+            ctx.fillStyle = ink;
+            this._chapterText(ctx, o.text, "prompt", L.sizes.prompt, L.anchorX, L.promptY, L.align);
+            if (hold > 0.01) {
+                ctx.globalAlpha = k;
+                ctx.fillStyle = o.ground && inkIsLight(o.ground) ? darkenToContrast(truthyOr(o.color, () => t.color.accent), o.ground, 3)
+                    : lightenToContrast(truthyOr(o.color, () => t.color.accent), truthyOr(o.ground, () => t.color.rail), 3);
+                ctx.fillRect(L.side === "right" ? L.anchorX - width * hold : L.anchorX, L.promptY + 8, width * hold, 2);
+            }
             ctx.restore();
         },
-        // The biome reveal is the same composition breathing open: the wash retreats as
-        // the world reaches full color, the title morphs to the biome name, the rule
-        // contracts into the name underline, and READY is a small blade mark.
+        // The biome reveal is the same composition breathing open: the fade retreats,
+        // the chapter title crossfades into the biome name and the intro line settles
+        // under the rule. On the READY beat (`ready`, `readyK` 0..1) the text and the
+        // last of the fade dissolve while the HUD returns, so nothing lingers at hand-off.
         biomeReveal(this: UiRuntime, ctx: CanvasRenderingContext2D, o?: UiOptions) {
             o = truthyOr<UiOptions>(o, () => ({}));
-            const t = this.t, L = this._chapterLayout(o);
-            const k = clamp(Number(o.amount) || 0, 0, 1), color = truthyOr(o.color, () => t.color.accent);
-            const washK = (1 - k) * 0.9 + (o.ready ? 0 : 0.06); // wash fades out as color returns
-            const ink = this.chapterWash(ctx, L.side, truthyOr(o.wash, () => "dark"), washK);
+            const t = this.t, k = clamp(Number(o.amount) || 0, 0, 1), readyK = o.ready ? clamp(Number(o.readyK) || 0, 0, 1) : 0;
+            const rest = t.chapter.revealRest;
+            const fade = o.ready ? rest * (1 - ease(readyK)) : 1 - (1 - rest) * ease(k);
+            const textK = o.ready ? 1 - ease(readyK / 0.6) : 1;
+            const art: UiOptions = { composition: truthyOr(o.composition, () => "left"), color: truthyOr(o.color, () => t.color.accent),
+                ...(o.sky === undefined ? {} : { sky: o.sky }) };
+            const title = truthyOr(o.title, () => ""), name = truthyOr(o.name, () => "");
+            const source = this._chapterLayout({ ...art, title }, ctx);
+            const L = this.chapterHeader(ctx, { ...art, label: `CHAPTER ${String(truthyOr(o.number, () => ""))}`,
+                title: o.ready ? name : title, ...(o.ready ? {} : { morphTo: name, morphK: k }), amount: textK, fade, reach: source.reach });
+            if (!o.line)
+                return;
             ctx.save();
             ctx.textBaseline = "alphabetic";
-            ctx.globalAlpha = 1;
-            ctx.fillStyle = color;
-            ctx.font = this.bodyFont(L.labelSize, t.font.bodyMediumWeight);
-            this.trackedText(ctx, `CHAPTER ${String(truthyOr(o.number, () => ""))}`, L.anchorX, L.topY, t.track.label, L.align);
-            const titleY = L.topY + t.chapter.titleGap + L.titleSize * 0.5;
-            ctx.fillStyle = ink;
-            ctx.font = this.displayFont(L.titleSize);
-            ctx.textAlign = L.align;
-            ctx.fillText(truthyOr(o.name, () => ""), L.anchorX, titleY);
-            const ruleW = Math.min(L.colW * 0.42, 240 * L.scale) * (1 - 0.42 * k);
-            ctx.fillStyle = color;
-            ctx.fillRect(L.side === "right" ? L.anchorX - ruleW : L.anchorX, titleY + t.space.sm, ruleW, 2 * L.scale);
-            if (o.line) {
-                ctx.globalAlpha = 0.82 * (1 - k * 0.4);
-                ctx.fillStyle = ink;
-                ctx.font = this.bodyFont(Math.round(15 * L.scale));
-                this.trackedText(ctx, o.line, L.anchorX, titleY + t.chapter.loreGap, t.track.body, L.align);
-                ctx.globalAlpha = 1;
-            }
-            if (o.ready)
-                this._bladeMark(ctx, L.anchorX, titleY + t.chapter.loreGap * 1.9, L.scale, color, L.side === "right" ? -1 : 1);
+            ctx.fillStyle = this._chapterTone(art).ink;
+            ctx.globalAlpha = textK * t.alpha.chapterLine * (o.ready ? 1 : ease((k - 0.45) / 0.4));
+            this._chapterText(ctx, o.line, "line", L.sizes.line, L.anchorX, L.lineY, L.align);
             ctx.restore();
         },
         cinematicPrompt(this: UiRuntime, ctx: CanvasRenderingContext2D, opts?: UiOptions) {

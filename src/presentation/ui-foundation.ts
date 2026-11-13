@@ -1,6 +1,7 @@
 import type { Align, ButtonSpec, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
 import { densityTokens, isCompactDensity, type DensityProfile } from "./ui-density";
+import { inkIsLight, withAlpha } from "./ui-color";
 
 export function createUiFoundation(dependencies: UiDependencies) {
   const { Input, presentation: { overscan, view } } = dependencies;
@@ -34,31 +35,48 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             ctx.textAlign = savedAlign;
             return cx;
         },
-        // A directional ink-wash: an opaque-toward-the-edge → transparent gradient on
-        // one side of the screen, replacing the old full-screen dim. `side` is where
-        // the text lives (and where the wash is densest).
-        chapterWash(this: UiRuntime, ctx: CanvasRenderingContext2D, side: string, washKind: string | undefined, amount: number) {
-            const t = this.t, vw = view.w, vh = view.h, k = Math.max(0, Math.min(amount, 1));
-            const dense = washKind === "light" ? t.chapter.washLight : t.chapter.washDark;
-            const span = vw * t.chapter.washSpan;
+        // The chapter field. With a `sky` colour (every Adventure chapter) it is a haze of
+        // the biome's own sky, densest in the upper corner on the text's side and clearing
+        // in an elliptical falloff: it quiets backdrop props behind the words without ever
+        // reading as a shape, and the text keeps the biome ink (as the HUD does). Without
+        // one (the finale epilogue, on the cinematic field) it is the main-menu rail's soft
+        // dark fade from the screen edge. Neither paints below the arena floor. Returns the
+        // ink that reads on it.
+        chapterWash(this: UiRuntime, ctx: CanvasRenderingContext2D, side: string, amount: number, reach: number, sky?: string) {
+            const t = this.t, c = t.chapter, vw = view.w, k = Math.max(0, Math.min(amount, 1));
+            const right = side === "right", ink = sky !== undefined && inkIsLight(sky) ? c.skyInk : t.color.cinemaInk;
+            if (k <= 0)
+                return ink;
             ctx.save();
-            // a whole-screen breath of dim first (only ~26%, biome stays legible)
-            ctx.globalAlpha = k * t.chapter.washDim;
-            ctx.fillStyle = washKind === "light" ? "#f8f7f4" : "#06070c";
-            ctx.fillRect(-overscan.x, -overscan.y, vw + overscan.x * 2, vh + overscan.y * 2);
             ctx.globalAlpha = k;
-            const g = side === "right"
-                ? ctx.createLinearGradient(vw, 0, vw - span, 0)
-                : ctx.createLinearGradient(0, 0, span, 0);
-            g.addColorStop(0, dense);
-            g.addColorStop(1, washKind === "light" ? "rgba(248,247,244,0)" : "rgba(6,7,12,0)");
+            if (sky === undefined) {
+                const edge = right ? vw + overscan.x : -overscan.x, hold = right ? vw - reach - c.fadeHold : reach + c.fadeHold;
+                const end = right ? hold - c.fadeTail : hold + c.fadeTail, span = Math.abs(end - edge), at = Math.abs(hold - edge) / span;
+                const g = ctx.createLinearGradient(edge, 0, end, 0);
+                g.addColorStop(0, withAlpha(t.color.rail, t.alpha.rail));
+                g.addColorStop(at, withAlpha(t.color.rail, t.alpha.rail * 0.96));
+                g.addColorStop(at + (1 - at) * 0.45, withAlpha(t.color.rail, t.alpha.railMid * 0.8));
+                g.addColorStop(1, withAlpha(t.color.rail, 0));
+                ctx.fillStyle = g;
+                ctx.fillRect(Math.min(edge, end), -overscan.y, span, c.floorY + overscan.y);
+                ctx.restore();
+                return ink;
+            }
+            // Centred on the logical corner, so extra aspect (ultrawide, 4:3) never stretches it over the arena.
+            const rx = (reach + c.fadeHold) / c.hazeReach, ry = c.hazeDepth / c.hazeReach;
+            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, ry);
+            g.addColorStop(0, withAlpha(sky, t.alpha.chapterHaze));
+            g.addColorStop(c.hazeCore, withAlpha(sky, t.alpha.chapterHaze * 0.92));
+            g.addColorStop(1, withAlpha(sky, 0));
+            ctx.beginPath();
+            ctx.rect(right ? vw - rx : -overscan.x, -overscan.y, rx + overscan.x, c.floorY + overscan.y);
+            ctx.clip();
+            ctx.translate(right ? vw : 0, 0);
+            ctx.scale(rx / ry, 1);
             ctx.fillStyle = g;
-            if (side === "right")
-                ctx.fillRect(vw - span, -overscan.y, span + overscan.x, vh + overscan.y * 2);
-            else
-                ctx.fillRect(-overscan.x, -overscan.y, span + overscan.x, vh + overscan.y * 2);
+            ctx.fillRect(-ry, -ry, ry * 2, ry * 2);
             ctx.restore();
-            return washKind === "light" ? "#12131a" : "#f1eff9"; // the ink color that reads on this wash
+            return ink;
         },
         // ---- TEXT ---------------------------------------------------------------
         // body / inline copy. size defaults to the `body` token.
