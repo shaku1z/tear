@@ -24,3 +24,6 @@ public/vendor/tear-music/*.json text eol=lf
 public/vendor/tear-music/*.md text eol=lf
 docs/tearbench-ghost3-requirements.digest.json text eol=lf
 docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md text eol=lf
+
+# Generated wiki pictures are binary and must never be line-ending converted.
+wiki/pictures/**/*.webp binary

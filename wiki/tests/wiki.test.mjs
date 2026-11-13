@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { build, buildPages, loadContent } from '../generator/build.mjs';
 import { loadGameData, sourceState } from '../generator/game-data.mjs';
-import { BUDGET } from '../generator/media.mjs';
+import { BUDGET, inputsHash, loadPictures } from '../generator/pictures.mjs';
 import { url } from '../generator/render.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -88,6 +88,12 @@ test('the site stays small', () => {
   assert.ok(size('search.json') < 200_000, 'search index over 200 KB');
   const total = fs.readdirSync(dist, { recursive: true }).map((f) => path.join(dist, f)).filter((f) => fs.statSync(f).isFile()).reduce((sum, f) => sum + fs.statSync(f).size, 0);
   assert.ok(total < 3_000_000, `site is ${total} bytes (budget 3 MB)`);
+});
+
+test('the committed pictures match the game source they were generated from', () => {
+  const pictures = loadPictures();
+  assert.ok(pictures, 'wiki/pictures/manifest.json is missing: run pnpm build:test:standalone && pnpm wiki:media');
+  assert.equal(pictures.inputsHash, inputsHash(), 'the game source that draws the pictures changed: run pnpm build:test:standalone && pnpm wiki:media, then commit wiki/pictures');
 });
 
 test('pictures stay inside the page-weight budget and every referenced picture exists', () => {

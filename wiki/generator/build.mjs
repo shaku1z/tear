@@ -6,7 +6,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { marked } from 'marked';
 import { loadGameData, sourceState } from './game-data.mjs';
-import { ensureMedia, loadManifest, mediaDir, mediaKey } from './media.mjs';
+import { inputsHash, loadPictures, picturesDir } from './pictures.mjs';
 import * as page from './render.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -138,21 +138,19 @@ function write(file, content) {
   fs.writeFileSync(file, content);
 }
 
-/**
- * `media: true` generates any missing pictures from the game (deploy builds);
- * otherwise cached pictures for this exact game source are used when present.
- */
-export async function build({ media = false } = {}) {
+/** Builds the site into wiki/dist from the game at this commit and the committed pictures. */
+export async function build() {
   const started = performance.now();
   const state = sourceState();
   const data = loadGameData(state);
-  const found = media ? await ensureMedia(data, state.key) : (() => { const key = mediaKey(state.key); const manifest = loadManifest(key); return manifest && { key, manifest, dir: mediaDir(key) }; })();
-  if (found) data.media = found.manifest;
+  const pictures = loadPictures();
+  if (pictures) data.media = pictures;
+  if (pictures && pictures.inputsHash !== inputsHash()) console.warn('wiki/pictures is stale: run pnpm build:test:standalone && pnpm wiki:media (wiki:test fails until then)');
   const content = loadContent();
   const pages = buildPages(data, content);
   fs.rmSync(dist, { recursive: true, force: true, maxRetries: 5 });
   fs.cpSync(path.join(root, 'site'), dist, { recursive: true });
-  if (found) fs.cpSync(found.dir, path.join(dist, 'media'), { recursive: true, filter: (f) => !f.endsWith('manifest.json') });
+  if (pictures) fs.cpSync(picturesDir, path.join(dist, 'media'), { recursive: true, filter: (f) => !f.endsWith('manifest.json') });
   // The game's own font files, so the wiki and the game cannot drift apart.
   for (const font of ['BarlowCondensed-SemiBold.woff2', 'IBMPlexMono-Medium.woff2', 'IBMPlexMono-Regular.woff2', 'OFL.txt']) fs.cpSync(path.join(root, '..', 'public', 'fonts', font), path.join(dist, 'fonts', font));
   for (const [route, p] of [...pages, ['/404', page.notFoundPage()]]) {
@@ -164,7 +162,7 @@ export async function build({ media = false } = {}) {
   write(path.join(dist, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages.map(([route]) => `<url><loc>https://wiki.tearblade.com${route}</loc></url>`).join('\n')}\n</urlset>\n`);
   write(path.join(dist, 'robots.txt'), 'User-agent: *\nAllow: /\nSitemap: https://wiki.tearblade.com/sitemap.xml\n');
   write(path.join(dist, 'version.json'), JSON.stringify({ game: data.source }) + '\n');
-  return { pages: pages.length, media: found ? Object.keys(found.manifest.figures).length : 0, ms: Math.round(performance.now() - started) };
+  return { pages: pages.length, media: pictures ? Object.keys(pictures.figures).length : 0, ms: Math.round(performance.now() - started) };
 }
 
 function serve(port = 4321) {
@@ -186,7 +184,7 @@ function serve(port = 4321) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
-  const result = await build({ media: process.argv.includes('--media') });
+  const result = await build();
   console.log(`Built ${result.pages} pages into dist/ in ${result.ms} ms${result.media ? ` with ${result.media} game figures` : ' without game pictures'}`);
   if (process.argv.includes('--serve')) serve(Number(process.env.PORT) || 4321);
 }

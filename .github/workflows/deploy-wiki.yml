@@ -33,7 +33,7 @@ jobs:
   wiki:
     name: Build and publish the wiki
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 15
     environment:
       name: ${{ inputs.target == 'production' && 'Production' || 'Preview' }}
       url: ${{ inputs.target == 'production' && 'https://wiki.tearblade.com' || '' }}
@@ -59,12 +59,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Wiki tests
         run: pnpm wiki:test
-      - name: Build the game's test build (source of the pictures)
-        run: pnpm build:test:standalone
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Build the wiki with pictures
-        run: pnpm wiki:build -- --media
+      - name: Build the wiki (pictures are committed; wiki:test fails if they are stale)
+        run: pnpm wiki:build
       - name: Publish
         if: inputs.publish
         env:
