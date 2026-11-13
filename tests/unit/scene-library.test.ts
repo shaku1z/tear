@@ -95,6 +95,38 @@ describe("scene library", () => {
     expect(calls.filter((call) => call.startsWith("fillRect"))).toHaveLength(1);
   });
 
+  it("bakes shading into its covering layer once at load, so frames draw no shading", async () => {
+    const baking = recordingContext();
+    const created: { width: number; height: number }[] = [];
+    const createCanvas = (width: number, height: number) => {
+      created.push({ width, height });
+      return { width, height, getContext: () => baking.context } as unknown as OffscreenCanvas;
+    };
+    const library = createSceneLibrary(ports({ createCanvas }));
+    library.prefetch("fixture-stage");
+    await vi.waitFor(() => {
+      expect(library.status("fixture-stage")).toBe("ready");
+    });
+    const manifest = fixturePackage() as { images: { id: string; width: number; height: number }[] };
+    const far = manifest.images.find((image) => image.id === "far");
+    expect(created).toEqual([{ width: far?.width, height: far?.height }]);
+    expect(baking.calls.filter((call) => call.startsWith("fillRect"))).toHaveLength(1);
+    expect(library.loaded("fixture-stage")?.shading).toEqual([]);
+    const { context, calls } = recordingContext();
+    library.drawBack(context, input);
+    // The edge fill and the feathered edges only; the shade band is in the bitmap.
+    const unbaked = recordingContext();
+    const plain = createSceneLibrary(ports());
+    plain.prefetch("fixture-stage");
+    await vi.waitFor(() => {
+      expect(plain.status("fixture-stage")).toBe("ready");
+    });
+    plain.drawBack(unbaked.context, input);
+    expect(calls.filter((call) => call.startsWith("fillRect")).length).toBe(
+      unbaked.calls.filter((call) => call.startsWith("fillRect")).length - 1,
+    );
+  });
+
   it("falls back for good when an image decodes at the wrong size", async () => {
     const onError = vi.fn();
     const library = createSceneLibrary(ports({ loadImage: () => Promise.resolve(sizedBitmap(3, 3)), onError }));

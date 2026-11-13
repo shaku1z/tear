@@ -72,7 +72,7 @@ export function fixturePackage(overrides: Record<string, unknown> = {}): Record<
         kind: "band",
         rect: [-400, -300, 2400, 420],
         depth: 0.8,
-        color: "#06140f",
+        color: "#e6f2df",
         opacity: 0.5,
         feather: 80,
       },

@@ -20,8 +20,11 @@ describe("scene packages", () => {
   for (const directory of directories) {
     const name = basename(directory);
     describe(name, () => {
+      // Hashing every file is slow; inspect each package once for all its tests.
+      let inspected: ReturnType<typeof inspectPackage> | undefined;
       const inspect = async () => {
-        const result = await inspectPackage(directory);
+        inspected ??= inspectPackage(directory);
+        const result = await inspected;
         expect(result.problems).toEqual([]);
         if (result.scene === undefined) throw new Error("invalid package");
         return result.scene;
@@ -45,6 +48,11 @@ describe("scene packages", () => {
         // material; the package may only choose that material's texture.
         expect(scene.platforms.material).toBe(stagePresentationDefinition(scene.stageId as never)?.platformMaterialId);
         expect(scene.images.some((image) => image.id === scene.platforms.texture)).toBe(true);
+      });
+
+      it("keeps the stage's own ink, so a painting never plays a stage inverted", async () => {
+        const scene = await inspect();
+        expect(scene.theme.paper).toBe(stageDefinition(scene.stageId as never).bg);
       });
 
       it("pins every source the recipe uses, with provenance", async () => {

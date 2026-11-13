@@ -45,7 +45,7 @@ import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
 import { createSceneLibrary } from "../../presentation/scenes/scene-library";
-import { loadSceneBitmap } from "../../presentation/scenes/scene-bitmap";
+import { createSceneCanvas, loadSceneBitmap } from "../../presentation/scenes/scene-bitmap";
 import { SCENE_PACKAGES } from "../../presentation/scenes/scene-registry";
 import { createCinematics } from "../../presentation/cinematics";
 import { cosmeticRandom } from "../../presentation/cosmetic-random";
@@ -156,6 +156,7 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   const Scenes = createSceneLibrary({
     packages: SCENE_PACKAGES,
     loadImage: loadSceneBitmap,
+    createCanvas: createSceneCanvas,
     now: () => performance.now(),
     lowGraphics: () => GFX.low,
     reducedMotion: () => A11Y.reducedMotion,

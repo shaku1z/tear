@@ -1,11 +1,13 @@
 import { validateScenePackage, type SceneCamera } from "./scene-contract";
 import {
+  bakeShading,
   drawSceneBack,
   drawSceneFront,
   drawPlatformShadows,
   drawPlatformTexture,
   type LoadedScene,
   type SceneBitmap,
+  type SceneCanvas,
   type SceneView,
   type SurfaceTarget,
 } from "./scene-renderer";
@@ -24,6 +26,8 @@ export type SceneStatus = "none" | "loading" | "ready" | "failed";
 export interface SceneLibraryPorts {
   readonly packages: ScenePackageLoaders;
   readonly loadImage: (url: string) => Promise<SceneBitmap>;
+  /** Canvas to bake shading into at load; without it shading draws per frame. */
+  readonly createCanvas?: (width: number, height: number) => SceneCanvas & SceneBitmap;
   readonly now: () => number;
   readonly lowGraphics: () => boolean;
   readonly reducedMotion: () => boolean;
@@ -109,7 +113,9 @@ async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): 
       return [image.id, bitmap] as const;
     }),
   );
-  return Object.freeze({ scene, images: new Map(decoded) });
+  const images = new Map(decoded);
+  if (ports.createCanvas !== undefined) return bakeShading(scene, images, ports.createCanvas);
+  return Object.freeze({ scene, images, shading: scene.shading });
 }
 
 export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {

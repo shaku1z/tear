@@ -15,8 +15,10 @@ line, never stage-specific renderer code.
    broken, reforming). A package only binds that material's texture and the
    contact shadows. Collision can change without repainting anything.
 3. **The painting stays untouched.** Readability shading (bands and pools of
-   colour) is package data drawn at runtime over the plate, never baked into
-   its pixels, so the owner can always compare against the original.
+   colour) is package data, never written into the image files, so the owner
+   can always compare against the original. At load the game shades its
+   decoded copy of the covering layer at the same depth once, so shading
+   costs nothing per frame.
 4. **Scenery must not look standable.** A painted ledge, arch top or root near
    a real platform is pushed back with a shading pool and listed for the owner.
 5. **No outlines, halos, shadows or plates on HUD text or actors.** Contrast
@@ -47,10 +49,10 @@ Source images are not in the repository. They live in a sources folder
 | `world` | The logical arena (1600x900, floor surface at y 800). Must equal the game's. |
 | `camera` | The camera range the art must survive: `playerShift`, `zoomMin`, `zoomMax`, `shake`. |
 | `layers` | `{ id, image, rect, depth, plane, opacity, covers }`. `rect` in world px; depth 1 moves with the world, below 1 is further away. `back` draws under platforms, `front` over them but never above the floor surface. One back layer must `covers` the screen. |
-| `shading` | `{ id, kind, rect, depth, color, opacity, feather }`. A `band` is solid from its top and fades over its last `feather` px (behind the HUD row); a `pool` is a soft ellipse (a local wash). |
+| `shading` | `{ id, kind, rect, depth, color, opacity, feather }`. A `band` is solid from its top and fades over its last `feather` px (behind the HUD row); a `pool` is a soft ellipse (a local wash). A shade at the depth of a covering back layer is applied to that layer's decoded copy at load; any other shade draws each frame. |
 | `platforms` | `{ material, texture, scale, fill, shadow }`. `material` must equal the stage's `platformMaterialId`. `texture` is a surface strip (lit edge at the top) anchored to each surface top and repeated along x from world x = 0; `fill` covers the floor below it. `shadow` is the soft shade each standing platform casts on the background. |
 | `edge` | Colour past a covering layer's edge at very wide screens, and its feather. |
-| `theme.paper` | The colour the HUD and actors take their ink from: below 0.5 luminance gives light ink. |
+| `theme.paper` | The colour the HUD and actors take their ink from. It must equal the stage's own background colour (`bg` in `src/gameplay/stages.ts`), so a painting never flips a stage to light ink; only the void stage plays inverted. |
 | `sources`, `images` | Provenance (origin, licence, SHA-256; tool and exact prompt for image-tool output) and each image's size, bytes, SHA-256 and sources. |
 | `decodedBudget` | Decoded bytes (width x height x 4, summed) the package may use. Files are capped at 2 MiB and 4096 px per edge. |
 
@@ -134,12 +136,13 @@ Give this to the artist or image tool with the stage layout overlaid:
   position.
 - **Keep the HUD rows calm:** in the top 15% of the frame, across the centre
   third (the wave title) and the left quarter (status), no sun, sky opening,
-  bright mist or light shafts. Relative luminance at most 0.24 there (sRGB
-  about 53% grey or darker) so light ink reaches 3:1.
-- **Keep the play space mid-dark:** between 15% and 89% of the height, median
-  relative luminance at most 0.12 and the 90th percentile at most 0.24.
-  Bright accents (sun, water glints, blossoms) are fine in small areas away
-  from platform positions.
+  deep shadow or dark trunks. The game draws the HUD and actors in dark ink
+  on every stage except the void, so relative luminance there should be at
+  least 0.2 (sRGB about 48% grey or lighter) for comfortable 3:1 contrast.
+- **Keep the play space mid-light:** between 15% and 89% of the height, the
+  10th percentile of relative luminance at least 0.11 (3:1 against dark ink).
+  Dark accents (trunk silhouettes, deep shade) are fine at the frame edges,
+  away from platform positions.
 - The floor surface sits at 89% of the height; everything below it is hidden
   by the game floor, so detail there is wasted.
 - Lighting direction and the main light source should sit high and to one
@@ -154,11 +157,14 @@ Give this to the artist or image tool with the stage layout overlaid:
   1.08) and two root corners in front of the floor.
 - Platforms: `verdant-rootstone` with the moss-stone strip and contact
   shadows; the arches standing in the water sit behind a haze pool.
-- Shading: a band behind the HUD row (0.6) and a light centre wash (0.22). At
-  rest the light ink then reaches 3:1 on 93% of the HUD title, 100% of the HUD
-  status and 81% of the play band. The painting's sun sits behind the wave
-  title, which is why the band is needed; a recomposed plate meeting the brief
-  above would remove it.
+- Ink: dark, as on every stage but the void (`theme.paper` is the stage's own
+  `#dff2d6`). An earlier draft used a dark paper, which played Verdant
+  inverted like the void; the owner rejected that.
+- Shading: a light haze band behind the HUD row (`#e6f2df` at 0.5) and a light
+  centre wash (0.35). At rest dark ink then reaches 3:1 on 100% of the HUD
+  title, 98% of the HUD status, 95% of the HUD band and 83% of the play band;
+  the misses are the near-black framing trunks at the sides. Untouched, the
+  HUD status corner reaches only 7%.
 
 ## History
 

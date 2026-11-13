@@ -20,7 +20,7 @@
     "feather": 72
   },
   "theme": {
-    "paper": "#24463c"
+    "paper": "#dff2d6"
   },
   "palette": {
     "sun": "#fff4b8",
@@ -126,8 +126,8 @@
         1000
       ],
       "depth": 0.85,
-      "color": "#06140f",
-      "opacity": 0.22,
+      "color": "#e6f2df",
+      "opacity": 0.35,
       "feather": 420
     },
     {
@@ -140,8 +140,8 @@
         660
       ],
       "depth": 0.85,
-      "color": "#06140f",
-      "opacity": 0.6,
+      "color": "#e6f2df",
+      "opacity": 0.5,
       "feather": 110
     },
     {
