@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "curated": "2026-11-13",
+  "about": "The one curated source for where the Tear program stands. docs/POSITION.md is rendered from this file by `pnpm position:render`, and `pnpm check:docs` fails when the rendered file is stale or was edited by hand. Each area records its state in a few words, what is true now, the next step, what only the owner can do, and evidence: repository paths that exist, or links to pull requests. Change this file in the same pull request that changes an area's state, update `curated` when you review the whole file, and re-render.",
+  "production": {
+    "site": "https://tearblade.com",
+    "commit": "9e7d6a701ca0b992c8d78cccc2af329d698778c0",
+    "since": "2026-08-30",
+    "note": "Production still runs the 2026-08-30 build. Everything merged since then, including the release-readiness program, is on main but not deployed."
+  },
+  "areas": [
+    {
+      "id": "release-readiness",
+      "name": "Release readiness",
+      "state": "Merged to main",
+      "summary": "Pull request 85 merged the release-readiness line on 2026-11-13 (developer surfaces gated out of release builds, menu UI rebuilt, startup payload 4.13 MB to 2.10 MB, offline cache 14.77 MB to 6.74 MB, new code-budget, determinism and architecture gates). Follow-ups 86, 87 and 89 to 92 merged the same day (runtime split, one world constructor, Prettier). The phase table in the plan still shows the pre-merge states.",
+      "next": "Production deploy, after the owner has played the build.",
+      "owner_action": "",
+      "evidence": [
+        "plans/active/RELEASE_READINESS_PLAN.md",
+        "https://github.com/shaku1z/tear/pull/85",
+        "https://github.com/shaku1z/tear/pull/91"
+      ]
+    },
+    {
+      "id": "production-deploy",
+      "name": "Production deploy",
+      "state": "Waiting for the owner's playtest",
+      "summary": "main is green but not deployed. The lead holds the production deploy of the new visuals and UI until the owner has played them; preview deploys are allowed under the 2026-11-12 standing delegation.",
+      "next": "Deploy a green Validate run of main to production through the protected workflow.",
+      "owner_action": "Play the current main build (a preview deploy or a local build) and say whether it may go to players.",
+      "evidence": [
+        "docs/RELEASE_AUTHORITY.md",
+        "DEPLOYMENT.md"
+      ]
+    },
+    {
+      "id": "verdant-visuals",
+      "name": "Verdant Sanctum visuals",
+      "state": "In progress",
+      "summary": "A session is building the Verdant living-stage background and a repeatable workflow for producing backgrounds of that quality for any biome.",
+      "next": "Its pull request, then the lead's review.",
+      "owner_action": "Judge the look: the owner's taste decides visual work.",
+      "evidence": [
+        "plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
+      ]
+    },
+    {
+      "id": "verdant-gameplay",
+      "name": "Verdant Sanctum gameplay",
+      "state": "In progress",
+      "summary": "A session is reworking the Verdant stage, its enemies and its boss, which the owner found broken and unfinished.",
+      "next": "Its pull request, then the lead's review.",
+      "owner_action": "Playtest the reworked stage.",
+      "evidence": [
+        "plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md"
+      ]
+    },
+    {
+      "id": "training-ux",
+      "name": "Tutorial and Playground experience",
+      "state": "In progress",
+      "summary": "A session is reworking the Tutorial and Playground popups, menus, flow, navigation and explanations.",
+      "next": "Its pull request, then the lead's review.",
+      "owner_action": "",
+      "evidence": [
+        "docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md"
+      ]
+    },
+    {
+      "id": "pale-traverse",
+      "name": "Pale Traverse rework",
+      "state": "Not started",
+      "summary": "Pale Traverse stays a Playground preview and is not published. The owner wants it reworked after Verdant. Its earlier migration work is on the unmerged branch codex/pale-traverse-r4.",
+      "next": "Start once the Verdant gameplay rework has landed.",
+      "owner_action": "",
+      "evidence": [
+        "plans/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md"
+      ]
+    },
+    {
+      "id": "repository-structure",
+      "name": "Repository structure and workflow",
+      "state": "In progress",
+      "summary": "Porting the structure patterns recommended by the comparison with the owner's OFFSLCT project: this generated position file, a decisions log and pitfalls table, a repository map with size caps, a pull request template, a tool catalogue, change-impact completeness and release compatibility fixtures.",
+      "next": "One pull request per item, reviewed by the lead.",
+      "owner_action": "Decide whether the Git hooks and the owner-safe merge helper move into the repository (a proposal will be written; hook changes are reserved for the owner).",
+      "evidence": [
+        "AGENTS.md",
+        "docs/README.md"
+      ]
+    },
+    {
+      "id": "tearbench-program",
+      "name": "TearBench C21 to C40 program",
+      "state": "Paused at the 2026-08-30 state",
+      "summary": "The TearBench certification program state is recorded for the production build and is still checked by check:docs. Pull request 84 (five-run canary qualification) is open; its commits are already in main.",
+      "next": "Land or close pull request 84.",
+      "owner_action": "",
+      "evidence": [
+        "config/tearbench-current-program-state.json",
+        "plans/TEARBENCH_MASTER_HANDOFF.md",
+        "https://github.com/shaku1z/tear/pull/84"
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { checkPosition } from "./position.mjs";
 
 const ROOT_MARKDOWN_CLASSIFICATIONS = Object.freeze({
   "AGENTS.md": "current authority",
@@ -750,6 +751,7 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
   const plansIndex = checkPlansAuthorityIndex(absoluteRoot);
   const activePlans = checkActivePlanMetadata(absoluteRoot, plansIndex);
   const currentProgram = checkCurrentProgramState(absoluteRoot);
+  const position = checkPosition(absoluteRoot);
   const errors = [
     ...links.errors,
     ...policy.errors,
@@ -758,6 +760,7 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
     ...activePlans.errors,
     ...plansIndex.errors,
     ...currentProgram.errors,
+    ...position.errors,
   ];
   return {
     ok: errors.length === 0,
@@ -769,6 +772,7 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
     pathBoundArtifacts: artifacts.artifacts.length,
     activePlans: activePlans.activePlanPaths.length,
     currentProgramState: currentProgram.state,
+    positionAreas: position.areas ?? 0,
   };
 }
 
