@@ -142,7 +142,9 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
   await page.evaluate(() => {
     for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
   });
-  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, { timeout: STATE_WAIT_CEILING_MS });
+  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, {
+    timeout: STATE_WAIT_CEILING_MS,
+  });
   const released = await bossSnapshot(page, bossId);
   assert.equal(released.cinematicT, 0, `${bossId} ritual presentation state must release`);
   return released;
@@ -236,7 +238,9 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await page.evaluate(() => {
     for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
   });
-  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, { timeout: STATE_WAIT_CEILING_MS });
+  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, {
+    timeout: STATE_WAIT_CEILING_MS,
+  });
   aldric = await waitForBossSimulationAdvance(page, "aldric", aldric.aliveT, 0.6);
   assert.equal(aldric.mode, "frenzy", "Aldric must rise into frenzy after the kneel");
 
@@ -244,7 +248,9 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   // the reflection and phase three dissolves it while the mirror brain stays live.
   await startReadyBoss(page, "echo");
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
-  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies.length > 1, undefined, { timeout: STATE_WAIT_CEILING_MS });
+  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies.length > 1, undefined, {
+    timeout: STATE_WAIT_CEILING_MS,
+  });
   let echo = await bossSnapshot(page, "echo");
   assert.equal(echo.phase, 2, "Echo must split at phase two");
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.2));
