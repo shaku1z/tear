@@ -2,7 +2,7 @@ import type {
   WorldRenderContext, PlaygroundHelpSnapshot, TouchControlsSnapshot, TutorialCardSnapshot,
 } from "./contracts";
 import { clamp } from "./primitives";
-import { bossHudTop, hudFrame } from "./hud";
+import { bossHudTop, hudFrame, hudType } from "./hud";
 
 export interface TutorialCardLayout {
   readonly x: number; readonly y: number; readonly width: number;
@@ -28,6 +28,8 @@ export function tutorialCardLayout(frame: Readonly<{ left: number; right: number
 export function createTrainingTouchRenderers(context: WorldRenderContext) {
   const canvas = context.canvas;
   const ui = context.ui;
+  /** This frame's lesson card (drawn with the HUD, before the touch controls), which the touch coaching keeps clear of. */
+  let lessonCard: Readonly<{ x: number; y: number; w: number; h: number }> | null = null;
 
   function practiceFooter(snapshot: TutorialCardSnapshot): string {
     if (snapshot.bossPractice) return "BOSS PRACTICE · BASELINE · NO REWARDS";
@@ -41,42 +43,43 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
    * progress bar, keys, lesson dots + block) so no row can overlap another.
    */
   function tutorialCard(snapshot: TutorialCardSnapshot): void {
-    const t = ui.t, pad = t.space.md, frame = hudFrame(context);
-    const minimumTop = Math.max(snapshot.bossPractice ? bossHudTop(context) + 3 * t.metric.bossHudH + t.type.label * 2 : 0, snapshot.clearTop ?? 0);
+    const t = ui.t, type = hudType(context), pad = t.space.md, frame = hudFrame(context);
+    const minimumTop = Math.max(snapshot.bossPractice ? bossHudTop(context) + 3 * t.metric.bossHudH + type.label * 2 : 0, snapshot.clearTop ?? 0);
     const { x, y, width } = tutorialCardLayout(frame, bossHudTop(context), minimumTop);
     const inner = width - pad * 2, left = x + pad;
     const progress = snapshot.final ? undefined : snapshot.progress;
     const countText = progress ? `${String(progress.current)} / ${String(progress.goal)}` : "";
-    canvas.font = ui.font(t.type.title, true);
+    canvas.font = ui.font(type.title, true);
     const countW = countText ? canvas.measureText(countText).width + t.space.md : 0;
-    const tagY = y + pad + t.type.micro, titleY = tagY + t.space.sm + t.type.title;
-    const description = ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + t.type.body, inner,
-      { size: t.type.body, measureOnly: true, maxLines: 4 });
+    const tagY = y + pad + type.micro, titleY = tagY + t.space.sm + type.title;
+    const description = ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner,
+      { size: type.body, measureOnly: true, maxLines: 4 });
     const barY = titleY + t.space.sm + description.height + t.space.xs;
-    const keysY = barY + (progress ? t.space.md : 0) + t.type.micro + t.space.sm;
-    const footerY = keysY + (snapshot.keys.length > 0 ? Math.round(t.type.micro * 1.7) + t.space.sm : 0);
+    const keysY = barY + (progress ? t.space.md : 0) + type.micro + t.space.sm;
+    const footerY = keysY + (snapshot.keys.length > 0 ? Math.round(type.micro * 1.7) + t.space.sm : 0);
     const height = footerY + pad - y;
+    lessonCard = { x, y, w: width, h: height };
     ui.hudPlate(canvas, x, y, width, height);
     canvas.fillStyle = t.color.accent;
     canvas.fillRect(x, y, 4, height);
     ui.tag(canvas, `${snapshot.arenaLabel ?? "TRAINING"}  /  ${(snapshot.teachingFocus ?? "movement").toUpperCase()}`,
-      left, tagY, ui.readable(t.color.accent), "left", t.type.micro);
-    if (snapshot.final) ui.text(canvas, "training summary · practice arena loading…", x + width - pad, tagY, t.type.micro, "right", t.alpha.muted);
-    const title = ui.fitText(canvas, snapshot.title, inner - countW, { size: t.type.title, floor: t.type.label, bold: true });
+      left, tagY, ui.readable(t.color.accent), "left", type.micro);
+    if (snapshot.final) ui.text(canvas, "training summary · practice arena loading…", x + width - pad, tagY, type.micro, "right", t.alpha.muted);
+    const title = ui.fitText(canvas, snapshot.title, inner - countW, { size: type.title, floor: type.label, bold: true });
     ui.displayText(canvas, title.lines[0] ?? snapshot.title, left, titleY, title.size);
     if (progress) {
       const done = progress.current >= progress.goal;
-      ui.tag(canvas, countText, x + width - pad, titleY, done ? ui.readable(t.color.accent) : ui.ink, "right", t.type.title);
+      ui.tag(canvas, countText, x + width - pad, titleY, done ? ui.readable(t.color.accent) : ui.ink, "right", type.title);
     }
-    ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + t.type.body, inner, { size: t.type.body, alpha: t.alpha.soft, maxLines: 4 });
+    ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner, { size: type.body, alpha: t.alpha.soft, maxLines: 4 });
     if (progress) progressBar(left, barY, inner, progress);
     let keyX = left;
     for (const key of snapshot.keys) keyX += ui.keycap(canvas, key, keyX, keysY) + t.space.sm;
-    lessonDots(snapshot, left, footerY - t.type.micro * 0.35);
-    ui.text(canvas, practiceFooter(snapshot), x + width - pad, footerY, t.type.micro, "right", t.alpha.muted);
+    lessonDots(snapshot, left, footerY - type.micro * 0.35);
+    ui.text(canvas, practiceFooter(snapshot), x + width - pad, footerY, type.micro, "right", t.alpha.muted);
     if (snapshot.completedBeat > 0) {
       const scale = 1 + (1 - Math.abs(snapshot.completedBeat - 0.9) / 0.9) * 0.4;
-      ui.tag(canvas, "✓", x + width - pad, keysY, ui.readable(t.color.accent), "right", Math.round(t.type.h2 * scale));
+      ui.tag(canvas, "✓", x + width - pad, keysY, ui.readable(t.color.accent), "right", Math.round(type.h2 * scale));
     }
     canvas.textAlign = "left";
   }
@@ -115,22 +118,22 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
    * multiplier lane so it never meets the combo meter.
    */
   function playgroundHelp(snapshot: PlaygroundHelpSnapshot): void {
-    const t = ui.t, pad = t.space.md, frame = hudFrame(context);
+    const t = ui.t, type = hudType(context), pad = t.space.md, frame = hudFrame(context);
     // Keyboard shortcuts only help a keyboard; touch keeps the live weapon stats.
     const lines = context.ui.density.touch ? []
       : ["TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss", "K clear   ·   H heal   ·   U ability lab   ·   P pause"];
     const stats = `${snapshot.weaponId.toUpperCase()}  ·  held ${String(snapshot.heldHits)}  ·  throws ${String(snapshot.throws)}/${String(snapshot.throwHits)}`
       + `  ·  parries ${String(snapshot.perfectParries)}  ·  breaks ${String(snapshot.breakTriggers)}`;
     const layout = tutorialCardLayout(frame, bossHudTop(context), snapshot.clearTop ?? 0);
-    const lineH = t.type.caption + t.space.sm, height = pad * 2 + t.type.micro + t.space.sm + (lines.length + 1) * lineH;
+    const lineH = type.caption + t.space.sm, height = pad * 2 + type.micro + t.space.sm + (lines.length + 1) * lineH;
     ui.hudPlate(canvas, layout.x, layout.y, layout.width, height);
     canvas.fillStyle = t.color.accent;
     canvas.fillRect(layout.x, layout.y, 4, height);
-    let lineY = layout.y + pad + t.type.micro;
-    ui.tag(canvas, "PLAYGROUND", layout.x + pad, lineY, ui.readable(t.color.accent), "left", t.type.micro);
+    let lineY = layout.y + pad + type.micro;
+    ui.tag(canvas, "PLAYGROUND", layout.x + pad, lineY, ui.readable(t.color.accent), "left", type.micro);
     for (const line of [...lines, stats]) {
       lineY += lineH;
-      const fit = ui.fitText(canvas, line, layout.width - pad * 2, { size: t.type.caption, floor: t.type.micro });
+      const fit = ui.fitText(canvas, line, layout.width - pad * 2, { size: type.caption, floor: type.micro });
       ui.text(canvas, fit.lines[0] ?? line, layout.x + pad, lineY, fit.size, "left", t.alpha.soft);
     }
   }
@@ -180,6 +183,19 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
     if (snapshot.onboardingAlpha > 0) onboarding(snapshot);
     canvas.restore();
     canvas.globalAlpha = 1;
+    lessonCard = null;
+  }
+
+  /** The coaching line's bottom, moved under this frame's lesson card when the two would meet. */
+  function clearOfLessonCard(line: Readonly<{ title: string; hint: string; x: number; bottom: number; align: CanvasTextAlign }>, height: number): number {
+    const card = lessonCard;
+    if (card === null) return line.bottom;
+    const t = ui.t;
+    canvas.font = ui.font(t.type.lead, true);
+    const width = Math.max(canvas.measureText(line.title).width, canvas.measureText(line.hint).width) + t.space.md;
+    const left = line.align === "left" ? line.x : line.x - width, right = line.align === "left" ? line.x + width : line.x;
+    const meets = left < card.x + card.w && right > card.x && line.bottom - height < card.y + card.h && line.bottom > card.y;
+    return meets ? card.y + card.h + t.space.md + height : line.bottom;
   }
 
   /**
@@ -194,11 +210,11 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
       { title: "DRAG TO AIM & SWING ↷", hint: "fast flicks = fast cuts · second finger = throw", x: pad.x + pad.r, bottom: pad.y - pad.r - t.space.md, align: "right" as const },
     ];
     for (const line of lines) {
-      const height = t.type.lead + t.type.label + t.space.sm * 3;
+      const height = t.type.lead + t.type.label + t.space.sm * 3, bottom = clearOfLessonCard(line, height);
       const textX = line.align === "left" ? line.x + t.space.md : line.x - t.space.md;
       canvas.globalAlpha = alpha;
-      ui.tag(canvas, line.title, textX, line.bottom - height + t.space.sm + t.type.lead, ui.ink, line.align, t.type.lead);
-      ui.text(canvas, line.hint, textX, line.bottom - t.space.sm, t.type.label, line.align, t.alpha.soft * alpha);
+      ui.tag(canvas, line.title, textX, bottom - height + t.space.sm + t.type.lead, ui.ink, line.align, t.type.lead);
+      ui.text(canvas, line.hint, textX, bottom - t.space.sm, t.type.label, line.align, t.alpha.soft * alpha);
     }
     canvas.globalAlpha = 1;
   }

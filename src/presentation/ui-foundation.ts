@@ -1,4 +1,4 @@
-import type { Align, ButtonSpec, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
+import type { Align, ButtonSpec, CompactLayoutMode, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
 import { wrapSpaceSeparated } from "./ui-text-fit";
 import { densityTokens, isCompactDensity, type DensityProfile } from "./ui-density";
@@ -189,28 +189,32 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // switch to their compact (fewer columns, scrolling) composition.
         _baseTokens: null as TokenSnapshot | null,
         _densityProfile: { touch: false, cssPerLogicalPixel: 1 } as DensityProfile,
-        _compactLayout: true,
-        density: { touch: false, compact: false, cssPerLogicalPixel: 1, textScale: 1 },
+        _compactMode: "always" as CompactLayoutMode,
+        density: { touch: false, compact: false, wideSheet: false, cssPerLogicalPixel: 1, textScale: 1 },
         setDensity(this: UiRuntime, profile: DensityProfile) {
             this._densityProfile = profile;
             this._applyDensity();
         },
         // Each frame the render pipeline says whether the current screen has a compact
         // composition; screens that have not adopted it keep the plain touch profile.
-        useCompactLayout(this: UiRuntime, ready: boolean) {
-            if (ready === this._compactLayout) return;
-            this._compactLayout = ready;
+        // `phoneOnly` screens adopt it at phone density only, so a tablet keeps exactly
+        // the plain touch profile (and the desktop composition) on them.
+        useCompactLayout(this: UiRuntime, ready: boolean, phoneOnly = false) {
+            const mode: CompactLayoutMode = ready ? "always" : phoneOnly ? "phone" : "never";
+            if (mode === this._compactMode) return;
+            this._compactMode = mode;
             this._applyDensity();
         },
         _applyDensity(this: UiRuntime) {
             this._baseTokens ??= { type: Object.assign({}, this.t.type), metric: Object.assign({}, this.t.metric) };
-            const profile = this._densityProfile, compact = this._compactLayout && isCompactDensity(profile);
-            const live = densityTokens(this._baseTokens, profile, this._compactLayout);
+            const profile = this._densityProfile, phone = isCompactDensity(profile);
+            const floors = this._compactMode === "always" || (this._compactMode === "phone" && phone);
+            const live = densityTokens(this._baseTokens, profile, floors);
             Object.assign(this.t.type, live.type);
             Object.assign(this.t.metric, live.metric);
             // textScale: live micro over authored micro, for text drawn outside the UI (world callouts).
-            this.density = { touch: profile.touch, compact, cssPerLogicalPixel: profile.cssPerLogicalPixel,
-                textScale: (live.type.micro ?? 1) / (this._baseTokens.type.micro ?? 1) };
+            this.density = { touch: profile.touch, compact: floors && phone, wideSheet: phone && this._compactMode === "phone",
+                cssPerLogicalPixel: profile.cssPerLogicalPixel, textScale: (live.type.micro ?? 1) / (this._baseTokens.type.micro ?? 1) };
         },
         // ---- BUTTON -------------------------------------------------------------
         // b: {x,y,w,h,label,enabled,size,sel} ; active = hovered | focused | selected
@@ -402,14 +406,17 @@ font(this: UiRuntime, size: number, bold?: boolean) {
         // A centred strip of labels over one hairline, with a sliding accent underline
         // marking the active view. `push` receives one hitbox per tab (b._tab = index).
         _tabAnim: {} as Record<string, number>,
-        tabs(this: UiRuntime, ctx: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number, push?: (button: ButtonSpec) => void, maxWidth = 1120) {
-            const t = this.t, cx = view.w / 2, h = 34;
+        // `frame` (compact pages) places the strip in an explicit span at a given height:
+        // the segments share the span equally, so each one is a full touch target.
+        tabs(this: UiRuntime, ctx: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number, push?: (button: ButtonSpec) => void,
+            maxWidth = 1120, frame?: Readonly<{ x: number; w: number; h: number }>) {
+            const t = this.t, cx = frame ? frame.x + frame.w / 2 : view.w / 2, h = frame?.h ?? 34;
             ctx.font = this.font(t.type.label, true);
             let segW = 150;
             for (const l of labels)
                 segW = Math.max(segW, ctx.measureText(l).width + 48);
             // the strip never grows wider than the content column it sits in
-            segW = Math.min(segW, maxWidth / Math.max(1, labels.length));
+            segW = frame ? frame.w / Math.max(1, labels.length) : Math.min(segW, maxWidth / Math.max(1, labels.length));
             const total = segW * labels.length, x0 = cx - total / 2;
             this.divider(ctx, x0, y + h, total, 0.18);
             // sliding accent underline eases toward the active segment
@@ -421,11 +428,16 @@ font(this: UiRuntime, size: number, bold?: boolean) {
                 const on = i === active;
                 ctx.fillStyle = this.ink;
                 ctx.globalAlpha = on ? 1 : t.alpha.muted;
-                const fit = this.fitText(ctx, label, segW - 16, { size: t.type.label, floor: t.type.micro, ellipsis: false, bold: true });
+                // A framed (compact) strip is tall enough to wrap a label onto two lines.
+                // It also keeps a wider inset, so neighbouring labels never read as one line.
+                const wrap = frame !== undefined && h >= Math.round(t.type.label * 1.12) * 2 + 10;
+                const room = frame ? segW - t.space.lg * 2 : segW - 16;
+                const fit = this.fitText(ctx, label, room, { size: t.type.label, floor: t.type.micro, ellipsis: false, bold: true, ...(wrap ? { maxLines: 2 } : {}) });
                 ctx.font = this.font(fit.size, true);
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillText(fit.lines[0] ?? label, x0 + i * segW + segW / 2, y + h / 2);
+                if (frame) this._drawLines(ctx, fit.lines, x0 + i * segW + segW / 2, y + h / 2, fit.size);
+                else ctx.fillText(fit.lines[0] ?? label, x0 + i * segW + segW / 2, y + h / 2);
                 ctx.globalAlpha = 1;
                 if (push)
                     push({ x: x0 + i * segW, y, w: segW, h, label: "", _hideBox: true, _tab: i });

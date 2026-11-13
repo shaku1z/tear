@@ -71,6 +71,8 @@ export function createLiveScreenPresentationComposition(
 ): LiveScreenPresentationComposition {
   const renderer = createLiveScreenRenderers({
     ...options.renderer,
+    // The shared UI scroll; a phone composition writes back the scroll it clamped to its own extent.
+    setScroll: options.library.setScroll,
     // Controls for unavailable surfaces are never enqueued, so they are not drawn and never take focus.
     enqueue: (button) => { if (screenActionAvailable(options.surfaces, button.semanticAction)) options.renderer.enqueue(button); },
     available: (action) => screenActionAvailable(options.surfaces, action),

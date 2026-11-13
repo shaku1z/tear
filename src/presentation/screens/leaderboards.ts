@@ -1,5 +1,6 @@
 import type { LeaderboardsScreenView, ScreenRenderContext } from "./contracts";
 import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
+import { createCompactLeaderboards } from "./compact-leaderboards";
 
 export const LEADERBOARD_HUE = "#e0a326";
 
@@ -12,8 +13,14 @@ type RankColumns = Readonly<{ listX: number; listWidth: number }>;
 /** LEADERBOARDS: the ranked board (podium + table) and the published replay feed. */
 export function createLeaderboardRenderers(context: ScreenRenderContext) {
   const { ui, width } = context;
+  // Phone landscape (compact density) composes the boards as a compact page.
+  const compact = createCompactLeaderboards(context);
 
   function leaderboards(view: LeaderboardsScreenView): void {
+    if (ui.density.compact) {
+      compact(view);
+      return;
+    }
     const { canvas } = context;
     const layout = page(context, { title: "LEADERBOARDS", hue: LEADERBOARD_HUE });
     tabs(context, view.tabs, (id) => ({ type: "leaderboards.selectTab", id }), 124);

@@ -51,11 +51,18 @@ const COMPACT_LAYOUT_SCREENS: ReadonlySet<string> = new Set([
   "playing", "paused", "draft", "reserve", "tierup", "confirmquit", "continue", "gameover", "win",
   "menu", "setup", "settings",
 ]);
+/**
+ * Screens with a phone-only composition (compact pages on the wide sheet). They take the
+ * compact floors at phone density only; a tablet keeps their plain touch profile exactly.
+ */
+const PHONE_LAYOUT_SCREENS: ReadonlySet<string> = new Set([
+  "shop", "codex", "profile", "achievements", "leaderboards", "pgmenu", "pglab",
+]);
 
 interface PresentationUi extends ButtonLayerUiPort, CinematicUiPort {
   ink: string;
   /** Applies the phone density floors only to screens with a compact composition. */
-  useCompactLayout(ready: boolean): void;
+  useCompactLayout(ready: boolean, phoneOnly?: boolean): void;
   readonly t: CinematicUiPort["t"] & Readonly<{ color: Readonly<{ paper: string; accent: string }> }>;
   font(size: number, bold?: boolean): string;
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
@@ -176,7 +183,7 @@ export function createLivePresentationFrameHost<Screen extends string,
       overscan: services.overscan, screen: state.screen, previousScreen: state.previousScreen,
       setPreviousScreen: state.setPreviousScreen, resizeIfNeeded: services.resizeIfNeeded,
       screenRectangle: host.screenRectangle, touchActive: services.touchActive, resetControls: state.resetControls,
-      applyScreenDensity: (screen) => { ui.useCompactLayout(COMPACT_LAYOUT_SCREENS.has(screen)); },
+      applyScreenDensity: (screen) => { ui.useCompactLayout(COMPACT_LAYOUT_SCREENS.has(screen), PHONE_LAYOUT_SCREENS.has(screen)); },
       background: (playLike) => {
         let color = playLike && state.biomeMode() ? services.stage.current.bg : "#fff";
         const flashing = playLike ? state.enemies().find((enemy) => (enemy.whiteFlash ?? 0) > 0) : undefined;

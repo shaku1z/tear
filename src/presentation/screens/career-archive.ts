@@ -1,20 +1,21 @@
 import { careerRowKey, type CareerEntry } from "../../ghost/career-archive";
+export { careerRowKey } from "../../ghost/career-archive";
 import type { ProfileScreenView, ScreenAction, ScreenRenderContext } from "./contracts";
 import { page, pageFooter } from "./screen-primitives";
 
-const labels: Readonly<Record<string, string>> = { history: "ALL RUNS", "personal-best": "PERSONAL BESTS", "first-clear": "FIRST CLEARS", "best-weapon": "BEST BY WEAPON", "boss-change": "BOSS CLEAR TIMES", "favorite-builds": "FAVORITE BUILDS", "near-miss": "BOSS NEAR MISSES", "style-milestones": "STYLE MILESTONES", "longest-survival": "LONGEST SURVIVAL", "dna-evolution": "RUN DNA HISTORY" };
+export const labels: Readonly<Record<string, string>> = { history: "ALL RUNS", "personal-best": "PERSONAL BESTS", "first-clear": "FIRST CLEARS", "best-weapon": "BEST BY WEAPON", "boss-change": "BOSS CLEAR TIMES", "favorite-builds": "FAVORITE BUILDS", "near-miss": "BOSS NEAR MISSES", "style-milestones": "STYLE MILESTONES", "longest-survival": "LONGEST SURVIVAL", "dna-evolution": "RUN DNA HISTORY" };
 const PROFILE_HUE = "#b06cff";
-const SOURCE_COMMANDS = Object.freeze([
+export const SOURCE_COMMANDS = Object.freeze([
   ["THEATER", "watch"], ["COACH", "coach"], ["CHALLENGE", "challenge"], ["DOWNLOAD", "download"],
   ["PUBLISH", "publish"], ["CHASE BEST", "chase"], ["RACE THIS REFERENCE", "race"],
 ] as const);
-const unknown = (value: string | number | null | undefined, fallback = "—"): string => value === null || value === undefined || value === "" ? fallback : String(value);
+export const unknown = (value: string | number | null | undefined, fallback = "—"): string => value === null || value === undefined || value === "" ? fallback : String(value);
 const clock = (seconds: number): string => `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
-const percent = (value: number): string => `${String(Math.round(value * 100))}%`;
-const title = (value: string | null): string => value === null ? "—" : value.replace(/[-_]+/g, " ").toUpperCase();
+export const percent = (value: number): string => `${String(Math.round(value * 100))}%`;
+export const title = (value: string | null): string => value === null ? "—" : value.replace(/[-_]+/g, " ").toUpperCase();
 
 /** A run's facts in player language: no ids, hashes, byte counts or custody terms. */
-function runFacts(entry: CareerEntry, detail: string | undefined, notes: Readonly<{ tags: readonly string[]; retention: string }>, chaseEligible: boolean): readonly string[] {
+export function runFacts(entry: CareerEntry, detail: string | undefined, notes: Readonly<{ tags: readonly string[]; retention: string }>, chaseEligible: boolean): readonly string[] {
   const facts: string[] = [];
   facts.push(detail ?? `${entry.kind === "legacy-visual" ? "OLDER RECORDING (WATCH ONLY) · " : ""}${title(entry.mode)} · ${title(entry.difficulty)} · ${title(entry.weapon)}`);
   facts.push(`${entry.date.slice(0, 10)} · ${title(entry.result)} · wave ${unknown(entry.wave)} · score ${entry.score === null ? "—" : entry.score.toLocaleString("en-US")}`);

@@ -31,7 +31,8 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
         cost: (item) => { const source = d.SHOP.find((entry) => entry.id === item.id); return source ? d.META.cost(source) : 0; },
         canBuy: (item) => { const source = d.SHOP.find((entry) => entry.id === item.id); return !!source && d.META.canBuy(source); } });
       state.setShop({ displayedCoins: result.displayedCoins, flash: current.flash });
-      state.setScroll(services.clamp(state.scroll(), 0, result.maximumScroll));
+      // A phone composition (compact density) measures and clamps its own scroll extent.
+      if (!d.UI.density.compact) state.setScroll(services.clamp(state.scroll(), 0, result.maximumScroll));
       renderers.shop(result.view);
     },
     buyShopItem(id: string): void {

@@ -122,6 +122,10 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     setLeaderboardMessage: (message) => { leaderboardMessage = message; } });
   const rowView = (row: LeaderboardRowSource, fallbackId?: string) =>
     buildLeaderboardRow(row, d.CONFIG.modes, d.Cloud.user?.id, services.formatTime, fallbackId);
+  /** Clamps the shared scroll to a snapshot's extent; a phone composition (compact density) measures and clamps its own. */
+  const clampScroll = (maximum: number): void => {
+    if (!d.UI.density.compact) services.setScroll(services.clamp(services.scroll(), 0, maximum));
+  };
 
   // ---- bestiary live instances (source bestiary(): one preview enemy per entry) ----
   const bestiaryPreview = createLiveBestiaryPreview(d);
@@ -142,7 +146,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       abilityFilters: [["all", "ALL"], ...ABILITY_CATEGORY_ORDER.map((id) => [id, categories[id]?.name ?? id] as const)],
       bestiaryCards: bestiary.cards, bestiaryFilters: bestiary.filters, bestiaryFilter,
       ...(guide === undefined ? {} : { guide }) });
-    services.setScroll(services.clamp(services.scroll(), 0, result.maximumScroll));
+    clampScroll(result.maximumScroll);
     services.renderers.codex(result.view);
   };
   const renderProfile = (): void => {
@@ -204,7 +208,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       difficultyAccent: (id) => difficultyHeat[id] ?? d.UI.t.color.danger });
     const ownerRecovery = profileTab === "vault" ? services.ownerRecovery?.snapshot() : undefined;
     const maximumScroll = ownerRecovery?.catalogVisible === true ? Math.max(0, ownerRecovery.entries.length * 96 - (services.height - 110 - 390)) : result.maximumScroll;
-    services.setScroll(services.clamp(services.scroll(), 0, maximumScroll));
+    clampScroll(maximumScroll);
     const beatMessage = services.beat?.snapshot().message;
     const chaseMessage = beatMessage !== undefined && beatMessage.length > 0 ? beatMessage : services.chase?.snapshot().message;
     services.renderers.profile({ ...result.view, ...(profileTab === "career" && career ? { career: { ...career.snapshot(), message: chaseMessage === undefined || chaseMessage.length === 0 ? career.snapshot().message : chaseMessage } } : {}), ...(ownerRecovery === undefined ? {} : { ownerRecovery }),
@@ -226,7 +230,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
         label: challenge.txt(challenge.goal), current: d.DAILY.progress(challenge), goal: challenge.goal,
         done: d.DAILY.isDone(challenge), reward: "◆ +" + String(challenge.shards) })), height: services.height,
       scroll: services.scroll(), time: services.time(), mutedColor: d.UI.t.color.muted });
-    services.setScroll(services.clamp(services.scroll(), 0, result.maximumScroll));
+    clampScroll(result.maximumScroll);
     services.renderers.achievements(result.view);
   };
   const renderLeaderboards = (): void => {
@@ -241,7 +245,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       const result = buildFeedLeaderboardSnapshot({ tabs: leaderboardTabs, tab: leaderboardTab, cloudAvailable: cloud,
         message: leaderboardMessage, loading: feedLoading, failed: feedFailed, height: services.height, scroll: services.scroll(),
         rows: (feedData ?? []).map((row) => rowView(row, row.shareId)) });
-      services.setScroll(services.clamp(services.scroll(), 0, result.maximumScroll)); services.renderers.leaderboards(result.view); return;
+      clampScroll(result.maximumScroll); services.renderers.leaderboards(result.view); return;
     }
     const modes = d.CONFIG.modes.filter((mode) => !mode.training && !mode.debug);
     if (!leaderboardMode || !modes.some((mode) => mode.id === leaderboardMode)) leaderboardMode = modes[0]?.id ?? "";
@@ -257,7 +261,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       data: leaderboardData ?? [], modes, difficulties: d.CONFIG.difficulties, mode: leaderboardMode,
       difficulty: leaderboardDifficulty, ...(d.Cloud.user === null ? {} : { currentUserId: d.Cloud.user.id }), localBest: services.getBest(leaderboardMode, leaderboardDifficulty),
       rowView: (row) => rowView(row) });
-    services.setScroll(services.clamp(services.scroll(), 0, result.maximumScroll)); services.renderers.leaderboards(result.view);
+    clampScroll(result.maximumScroll); services.renderers.leaderboards(result.view);
   };
   const adapters: LibraryScreenAdapters = { categories, fallbackCategory, categoryOrder: ABILITY_CATEGORY_ORDER, specialColor: SPECIAL_ABILITY_COLOR,
     abilityBadge: (upgrade) => abilityBadge(upgrade, d.UI.t.color.unique, d.UI.t.color.muted),

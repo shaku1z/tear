@@ -3,10 +3,16 @@ import type {
   StageBannerSnapshot, WaveBannerSnapshot,
 } from "./contracts";
 import { clamp } from "./primitives";
-import { bossHudTop, hudFrame } from "./hud";
+import { bossHudTop, hudFrame, hudType } from "./hud";
 
 /** Widest an achievement toast may grow; it never spans a title or a control column. */
 const TOAST_MAX_WIDTH = 360;
+/**
+ * The stage banner's accent label (ENTERING, STAGE n) sits on a tinted biome sky, not
+ * on paper: darkened to 6:1 against paper it still clears 4.5:1 on the darkest light
+ * sky (#dbe0e6) and on the warm sun glow behind the Grounds title.
+ */
+const BANNER_LABEL_CONTRAST = 6;
 
 export function createOverlayRenderers(context: WorldRenderContext) {
   const canvas = context.canvas;
@@ -77,16 +83,16 @@ export function createOverlayRenderers(context: WorldRenderContext) {
   }
 
   function waveBanner(snapshot: WaveBannerSnapshot): void {
-    const t = ui.t, alpha = clamp(Math.sin((1 - clamp(snapshot.remainingFraction)) * Math.PI));
-    const top = announcementTop(), size = t.type.display, titleY = top + t.space.md + Math.round(size * 0.8);
+    const t = ui.t, type = hudType(context), alpha = clamp(Math.sin((1 - clamp(snapshot.remainingFraction)) * Math.PI));
+    const top = announcementTop(), size = type.display, titleY = top + t.space.md + Math.round(size * 0.8);
     const title = snapshot.bossWave ? "BOSS" : `WAVE ${String(snapshot.wave)}`;
     canvas.save();
     canvas.globalAlpha = alpha;
     // Plain text over the scene in the biome ink, like the HUD.
     ui.tag(canvas, title, context.width / 2, titleY, ui.ink, "center", size);
     if (snapshot.waveTag) {
-      ui.tag(canvas, snapshot.waveTag, context.width / 2, titleY + t.space.sm + t.type.lead,
-        ui.readable(snapshot.horde ? snapshot.hordeColor : snapshot.normalColor), "center", t.type.lead);
+      ui.tag(canvas, snapshot.waveTag, context.width / 2, titleY + t.space.sm + type.lead,
+        ui.readable(snapshot.horde ? snapshot.hordeColor : snapshot.normalColor), "center", type.lead);
     }
     canvas.restore();
   }
@@ -97,18 +103,18 @@ export function createOverlayRenderers(context: WorldRenderContext) {
   }
 
   function stageBanner(snapshot: StageBannerSnapshot): void {
-    const t = ui.t, alpha = clamp(Math.min(snapshot.elapsed, 1) * Math.min((3 - snapshot.elapsed) * 2.5, 1));
+    const t = ui.t, type = hudType(context), alpha = clamp(Math.min(snapshot.elapsed, 1) * Math.min((3 - snapshot.elapsed) * 2.5, 1));
     const bossTest = snapshot.mode === "bossonly";
     const endlessLike = snapshot.mode === "endless" || snapshot.mode === "gauntlet";
     const label = bossTest ? "BOSS TEST" : (endlessLike ? "ENTERING" : `STAGE ${String(snapshot.stageIndex + 1)}`);
-    const top = announcementTop(), labelY = top + t.space.md + t.type.body;
-    const nameY = labelY + t.space.sm + Math.round(t.type.display * 0.8), blurbY = nameY + t.space.sm + t.type.body;
+    const top = announcementTop(), labelY = top + t.space.md + type.body;
+    const nameY = labelY + t.space.sm + Math.round(type.display * 0.8), blurbY = nameY + t.space.sm + type.body;
     canvas.save();
     canvas.globalAlpha = alpha;
     // Plain text over the scene in the biome ink, like the HUD.
-    ui.tag(canvas, label, context.width / 2, labelY, ui.readable(snapshot.accent), "center", t.type.body);
-    ui.tag(canvas, snapshot.stageName, context.width / 2, nameY, ui.ink, "center", t.type.display);
-    if (!bossTest) ui.text(canvas, snapshot.blurb, context.width / 2, blurbY, t.type.body, "center", t.alpha.soft * alpha);
+    ui.tag(canvas, label, context.width / 2, labelY, ui.readable(snapshot.accent, BANNER_LABEL_CONTRAST), "center", type.body);
+    ui.tag(canvas, snapshot.stageName, context.width / 2, nameY, ui.ink, "center", type.display);
+    if (!bossTest) ui.text(canvas, snapshot.blurb, context.width / 2, blurbY, type.body, "center", t.alpha.soft * alpha);
     canvas.restore();
   }
 

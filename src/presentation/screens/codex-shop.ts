@@ -2,14 +2,21 @@ import type { CodexScreenView, ScreenRenderContext, ShopScreenView } from "./con
 import { clipBody, page, pageFooter, tabs } from "./screen-primitives";
 import { BESTIARY_CARD_HEIGHT, BESTIARY_ROW_PITCH } from "../codex-snapshots";
 import { SHOP_LIST_TOP, SHOP_ROW_PITCH, SHOP_SECTION_GAP, SHOP_SECTION_HEAD } from "../shop-snapshot";
+import { createCompactCodexShop } from "./compact-codex-shop";
 
 type ShopItemView = ShopScreenView["sections"][number]["items"][number];
 const SHOP_GOLD = "#e0a326", SHOP_COLUMN_WIDTH = 550, SHOP_BUY_WIDTH = 96, SHOP_BUY_HEIGHT = 40;
 
 export function createCodexShopRenderers(context: ScreenRenderContext) {
   const { ui, width } = context;
+  // Phone landscape (compact density) composes these screens as compact pages.
+  const compact = createCompactCodexShop(context);
 
   function codex(view: CodexScreenView): void {
+    if (ui.density.compact) {
+      compact.codex(view);
+      return;
+    }
     const { canvas } = context;
     page(context, { title: "CODEX" });
     tabs(context, view.tabs, (id) => ({ type: "codex.selectTab", id }));
@@ -261,6 +268,10 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
   }
 
   function shop(view: ShopScreenView): void {
+    if (ui.density.compact) {
+      compact.shop(view);
+      return;
+    }
     const { canvas } = context;
     const gold = SHOP_GOLD, goldInk = ui.readable(gold);
     const layout = page(context, { title: "SHOP", subtitle: "permanent upgrades — applied at the start of every run", hue: gold,

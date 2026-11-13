@@ -138,7 +138,9 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     stageAccent: () => context.stage.current.accent, arenaName: () => runtime.arenaName(),
     selectedWeapon: context.selectedWeapon, upgrades: () => d.UPGRADES, abilityColors: context.abilityColors,
     labFilter: () => controller.state.labFilter, viewportHeight: context.height,
-    scroll: context.scroll, setScroll: context.setScroll, renderMenu: context.renderMenu, renderLab: context.renderLab,
+    // The Ability Lab's phone composition (compact density) measures and clamps its own scroll extent.
+    scroll: context.scroll, setScroll: (value) => { if (!d.UI.density.compact) context.setScroll(value); },
+    renderMenu: context.renderMenu, renderLab: context.renderLab,
   });
   return Object.freeze({ tutorial, controller, runtime, presentation });
 }

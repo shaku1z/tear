@@ -47,6 +47,8 @@ export interface LiveScreenRendererOptions {
   readonly deltaSeconds: () => number;
   readonly mouse: () => Readonly<{ x: number; y: number }>;
   readonly scroll: () => number;
+  /** Lets a phone composition clamp the shared scroll to the extent it measured. */
+  readonly setScroll?: (value: number) => void;
   readonly focus: () => number;
   readonly touch: () => boolean;
   readonly reducedMotion: () => boolean;
@@ -135,6 +137,7 @@ export function createLiveScreenRenderers(options: LiveScreenRendererOptions): S
     },
     get safeInsets() { return options.safeInsets?.() ?? { l: 0, r: 0, t: 0, b: 0 }; },
     enqueue(control: ScreenControl) { options.enqueue(toButton(control, options.dispatch)); },
+    setScroll: (value: number) => { options.setScroll?.(value); },
     available: (action: ScreenAction) => options.available?.(action) ?? true,
     renderPreview: options.renderPreview,
   };

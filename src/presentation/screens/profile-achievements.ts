@@ -1,6 +1,8 @@
 import { createCareerArchiveRenderer } from "./career-archive";
 import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } from "./contracts";
 import { clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
+import { createCompactCareer } from "./compact-career";
+import { createCompactProfile } from "./compact-profile";
 
 const PROFILE_HUE = "#b06cff";
 /** First y under the profile tab strip; the snapshot's scroll bounds use the same value. */
@@ -15,9 +17,19 @@ const ARCHIVE_STATUS: Readonly<Record<string, string>> = Object.freeze({
 export function createProfileAchievementRenderers(context: ScreenRenderContext) {
   const { ui } = context;
   const career = createCareerArchiveRenderer(context);
+  // Phone landscape (compact density) composes these screens as compact pages.
+  const compact = createCompactProfile(context), compactCareer = createCompactCareer(context);
 
   function profile(view: ProfileScreenView): void {
-    if (view.career) { career(view.career); return; }
+    if (view.career) {
+      if (ui.density.compact) compactCareer(view.career);
+      else career(view.career);
+      return;
+    }
+    if (ui.density.compact) {
+      compact.profile(view);
+      return;
+    }
     const { canvas } = context;
     const layout = page(context, { title: "PROFILE", hue: PROFILE_HUE });
     passport(view);
@@ -211,6 +223,10 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
   }
 
   function achievements(view: AchievementsScreenView): void {
+    if (ui.density.compact) {
+      compact.achievements(view);
+      return;
+    }
     const { canvas } = context;
     const gold = "#e0a326";
     const layout = page(context, { title: "ACHIEVEMENTS", subtitle: "master the blade · earn shards", hue: gold });

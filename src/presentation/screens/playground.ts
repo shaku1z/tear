@@ -1,14 +1,22 @@
 import type { PlaygroundScreenView, ScreenRenderContext } from "./contracts";
 import { backControl, scrollHint } from "./screen-primitives";
+import { createCompactPlayground } from "./compact-playground";
 
 export function createPlaygroundRenderers(context: ScreenRenderContext) {
   const { ui, width, height } = context;
+  // Phone landscape (compact density) composes both screens as compact pages.
+  const compact = createCompactPlayground(context);
 
   function render(view: PlaygroundScreenView): void {
     const { canvas } = context;
     // Source dim/header values (ee5e931): 0.88 over the frozen arena on the build
     // menu, 0.9 in the lab, and the default accent — not a forced purple hue.
     ui.dim(canvas, width, height, view.id === "pgmenu" ? 0.88 : 0.9);
+    if (ui.density.compact) {
+      if (view.id === "pgmenu") compact.buildMenu(view);
+      else compact.abilityLab(view);
+      return;
+    }
     ui.header(canvas, view.title, view.subtitle, context.enterAmount);
     if (view.id === "pgmenu") renderBuildMenu(view);
     else renderAbilityLab(view);

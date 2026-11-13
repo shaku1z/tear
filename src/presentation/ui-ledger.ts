@@ -1,13 +1,20 @@
 import type { Align, CardOptions, Rect, UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
 
+/** The wide compact sheet: inset from the safe frame's sides, and from its top and bottom. */
+const COMPACT_SHEET_INSET = 40, COMPACT_SHEET_TOP = 20;
+/** The authored key-cap height; the taller phone cap centres its label instead of keeping the authored baseline. */
+const KEYCAP_AUTHORED_H = 22;
+
 export function createUiLedger(dependencies: UiDependencies) {
   const { presentation: { view } } = dependencies;
   return {
 keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y: number) {
             ctx.font = this.font(this.t.type.micro, true);
             // The cap grows with the type token, so touch density never overfills it.
-            const h = Math.max(22, Math.round(this.t.type.micro * 1.7)), w = Math.max(h + 4, ctx.measureText(key).width + 14);
+            const h = Math.max(KEYCAP_AUTHORED_H, Math.round(this.t.type.micro * 1.7)), w = Math.max(h + 4, ctx.measureText(key).width + 14);
+            // The phone cap is twice the authored height: its label is centred rather than left on the authored baseline.
+            const lift = this.density.compact ? Math.round((h - KEYCAP_AUTHORED_H) / 2) : 0;
             ctx.globalAlpha = 0.9;
             ctx.fillStyle = this.t.color.paper;
             ctx.fillRect(x, y - h + 5, w, h);
@@ -19,7 +26,7 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
             ctx.fillRect(x, y + 3, w, 2); // key-cap "depth" lip
             ctx.textAlign = "center";
             ctx.textBaseline = "alphabetic";
-            ctx.fillText(key, x + w / 2, y);
+            ctx.fillText(key, x + w / 2, y - lift);
             ctx.textAlign = "left";
             return w;
         },
@@ -150,6 +157,8 @@ keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y
         // Standard geometry: UI.sheetRect() so every screen wraps identically.
         sheetRect(this: UiRuntime) {
             const vw = view.w, vh = view.h;
+            // A phone composition (compact density) spends the whole safe frame on its page.
+            if (this.density.wideSheet) return { x: COMPACT_SHEET_INSET, y: COMPACT_SHEET_TOP, w: vw - COMPACT_SHEET_INSET * 2, h: vh - COMPACT_SHEET_TOP * 2 };
             return { x: vw / 2 - 620, y: 44, w: 1240, h: vh - 80 };
         },
         // The sheet's footer row (BACK sits centred in it): the single owner of its geometry.

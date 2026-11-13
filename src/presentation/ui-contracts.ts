@@ -129,16 +129,22 @@ export interface TokenSnapshot {
     metric: Record<string, number>;
 }
 
+export type CompactLayoutMode = "always" | "phone" | "never";
+
 export interface UiRuntime {
   ink: string;
   t: UiTokens;
   _baseTokens: TokenSnapshot | null;
-  /** Live density: touch input owns the UI; compact = phone-sized touch composition. */
-  density: { touch: boolean; compact: boolean; cssPerLogicalPixel: number; textScale: number };
+  /**
+   * Live density: touch input owns the UI; compact = phone-sized touch composition;
+   * wideSheet = the current screen's phone composition uses the wide compact sheet.
+   */
+  density: { touch: boolean; compact: boolean; wideSheet: boolean; cssPerLogicalPixel: number; textScale: number };
   _densityProfile: { readonly touch: boolean; readonly cssPerLogicalPixel: number };
-  _compactLayout: boolean;
+  /** always: compact floors on every touch screen; phone: only at phone density; never: plain touch profile. */
+  _compactMode: CompactLayoutMode;
   _applyDensity(): void;
-  useCompactLayout(ready: boolean): void;
+  useCompactLayout(ready: boolean, phoneOnly?: boolean): void;
   _togAnim: Record<string, number>;
   _tabAnim: Record<string, number>;
   font(size: number, bold?: boolean): string;

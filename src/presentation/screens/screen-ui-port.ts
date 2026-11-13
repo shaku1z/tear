@@ -90,7 +90,8 @@ export interface ScreenUiPort {
   seal(context: CanvasRenderingContext2D, cx: number, cy: number, radius: number, color: string, glyph: string, muted?: boolean): void;
   pips(context: CanvasRenderingContext2D, rightX: number, y: number, count: number, filled: number, color?: string): void;
   tabs(context: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number,
-    push?: (button: Readonly<{ x: number; y: number; w: number; h: number; label: string; _tab?: number; _hideBox?: boolean }>) => void): void;
+    push?: (button: Readonly<{ x: number; y: number; w: number; h: number; label: string; _tab?: number; _hideBox?: boolean }>) => void,
+    maxWidth?: number, frame?: Readonly<{ x: number; w: number; h: number }>): void;
   keyBadge(context: CanvasRenderingContext2D, x: number, y: number, size: number, label: string | number, color?: string): void;
   tierPips(context: CanvasRenderingContext2D, cx: number, y: number, count: number, next: number, color: string): void;
   scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean, align?: CanvasTextAlign): void;

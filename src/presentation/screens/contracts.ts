@@ -36,6 +36,8 @@ export interface ScreenRenderContext {
   readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly safeInsets: Readonly<{ l: number; r: number; t: number; b: number }>;
   enqueue(control: ScreenControl): void;
+  /** A phone composition owns its scroll extent: it writes back the clamped scroll it measured. */
+  setScroll?(value: number): void;
   /** Whether an action's surface is available in this build (layout hint; unavailable controls are never enqueued). */
   available?(action: ScreenAction): boolean;
   renderPreview?(id: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>): void;
