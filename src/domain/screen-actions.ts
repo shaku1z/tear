@@ -163,7 +163,8 @@ export type ScreenAction =
   | { readonly type: "tierup.choose"; readonly index: number }
   | { readonly type: "run.resume" }
   | { readonly type: "run.restart" }
-  | { readonly type: "run.quit" }
+  /** `next: "setup"` leaves the run for the run setup (Adventure selected) instead of the main menu. */
+  | { readonly type: "run.quit"; readonly next?: "setup" }
   | { readonly type: "continue.revive" }
   | { readonly type: "continue.giveUp" }
   | { readonly type: "results.retry" }

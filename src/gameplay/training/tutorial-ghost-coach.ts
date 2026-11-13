@@ -160,7 +160,7 @@ export class TutorialGhostCoach {
   private from = 0;
   private to = 0;
   private visible = false;
-  private diagnosis = "No recorded attempt yet. Cause unknown.";
+  private diagnosis = "No attempt yet.";
   private current: Attempt | undefined;
   private best: Attempt | undefined;
   private previous: TutorialGoldFrame | undefined;
@@ -205,7 +205,7 @@ export class TutorialGhostCoach {
     this.cursor = 0;
     this.from = 0;
     this.to = 0;
-    this.diagnosis = "No recorded attempt yet. Cause unknown.";
+    this.diagnosis = "No attempt yet.";
     if (preserveFailures) this.failures.abort();
     else this.failures.restore();
   }
@@ -336,7 +336,7 @@ export class TutorialGhostCoach {
       if (tick > 20000) {
         this.current = undefined;
         this.completed = true;
-        this.diagnosis = "Attempt exceeds local comparison retention. Cause unknown.";
+        this.diagnosis = "That attempt was too long to compare.";
       } else {
         attempt.duration = tick;
         const contact = before !== undefined && tutorialGoldContactEdges(before, frame).length > 0;
@@ -367,17 +367,17 @@ export class TutorialGhostCoach {
           if (!this.best || tick <= this.best.duration) this.best = structuredClone(attempt);
           this.current = undefined;
           this.completed = true;
-          this.diagnosis = "Valid objective recorded. Personal timing is not a mastery grade.";
+          this.diagnosis = "Done. Try it again any time.";
         } else if (contact)
           this.diagnosis =
             attempt.groundedContact && ["updraft", "slam", "power-slam"].includes(this.reference.lessonId)
-              ? "Grounded contact recorded. Cause of incomplete objective unknown."
-              : "Contact recorded; objective incomplete. Cause unknown.";
+              ? "That hit was on the ground. Try it in the air."
+              : "Hit, but not the move this lesson needs.";
         else
           this.diagnosis =
             frame.blade.state !== "held"
-              ? "Blade is away. Cause of incomplete objective unknown."
-              : "No accepted contact recorded. Cause unknown.";
+              ? "Your blade is away. Recall it first."
+              : "Missed. Get closer and swing through the target.";
       }
     }
     if (demonstrate) this.play("diagnostic");
