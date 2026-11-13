@@ -34,12 +34,19 @@ export class TearWipe {
     this.durationSeconds = options.durationSeconds ?? 1.1;
     this.maxParticles = options.maxParticles ?? 256;
     if (!(this.durationSeconds > 0)) throw new RangeError("durationSeconds must be positive");
-    if (!Number.isSafeInteger(this.maxParticles) || this.maxParticles < 0) throw new RangeError("maxParticles must be a non-negative integer");
+    if (!Number.isSafeInteger(this.maxParticles) || this.maxParticles < 0)
+      throw new RangeError("maxParticles must be a non-negative integer");
   }
 
-  get active(): boolean { return this.#remainingSeconds > 0 && this.#snapshot !== null; }
-  get remainingSeconds(): number { return Math.max(0, this.#remainingSeconds); }
-  get particleCount(): number { return this.#particles.length; }
+  get active(): boolean {
+    return this.#remainingSeconds > 0 && this.#snapshot !== null;
+  }
+  get remainingSeconds(): number {
+    return Math.max(0, this.#remainingSeconds);
+  }
+  get particleCount(): number {
+    return this.#particles.length;
+  }
 
   begin(): void {
     try {
@@ -82,60 +89,103 @@ export class TearWipe {
       context.globalAlpha = Math.pow(1 - progress, 1.6) * 0.45;
       context.drawImage(snapshot, 0, 0);
       context.globalAlpha = 1;
-      context.save(); context.beginPath();
-      context.moveTo(x, 0); context.lineTo(x - slope, height); context.lineTo(width, height); context.lineTo(width, 0);
-      context.closePath(); context.clip(); context.drawImage(snapshot, 0, 0); context.restore();
+      context.save();
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x - slope, height);
+      context.lineTo(width, height);
+      context.lineTo(width, 0);
+      context.closePath();
+      context.clip();
+      context.drawImage(snapshot, 0, 0);
+      context.restore();
 
-      context.save(); context.beginPath();
-      context.moveTo(x, 0); context.lineTo(x - slope, height); context.lineTo(-width, height); context.lineTo(-width, 0);
-      context.closePath(); context.clip();
+      context.save();
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x - slope, height);
+      context.lineTo(-width, height);
+      context.lineTo(-width, 0);
+      context.closePath();
+      context.clip();
       const middleX = x - slope / 2;
       const middleY = height / 2;
       const bandWidth = width * 0.09;
-      const gradient = context.createLinearGradient(middleX, middleY, middleX + normalX * bandWidth, middleY + normalY * bandWidth);
-      gradient.addColorStop(0, "rgba(19,196,214,0.30)"); gradient.addColorStop(0.5, "rgba(19,196,214,0.08)"); gradient.addColorStop(1, "rgba(19,196,214,0)");
+      const gradient = context.createLinearGradient(
+        middleX,
+        middleY,
+        middleX + normalX * bandWidth,
+        middleY + normalY * bandWidth,
+      );
+      gradient.addColorStop(0, "rgba(19,196,214,0.30)");
+      gradient.addColorStop(0.5, "rgba(19,196,214,0.08)");
+      gradient.addColorStop(1, "rgba(19,196,214,0)");
       context.fillStyle = gradient;
       if (glow) context.globalCompositeOperation = "lighter";
       context.fillRect(0, 0, width, height);
       context.restore();
 
       context.lineCap = "round";
-      if (glow) { context.shadowColor = "#13c4d6"; context.shadowBlur = 26; }
-      context.strokeStyle = "rgba(19,196,214,0.85)"; context.lineWidth = Math.max(6, width * 0.006);
-      context.beginPath(); context.moveTo(x, -20); context.lineTo(x - slope, height + 20); context.stroke();
-      context.strokeStyle = "#eafcff"; context.lineWidth = Math.max(2, width * 0.002);
+      if (glow) {
+        context.shadowColor = "#13c4d6";
+        context.shadowBlur = 26;
+      }
+      context.strokeStyle = "rgba(19,196,214,0.85)";
+      context.lineWidth = Math.max(6, width * 0.006);
+      context.beginPath();
+      context.moveTo(x, -20);
+      context.lineTo(x - slope, height + 20);
+      context.stroke();
+      context.strokeStyle = "#eafcff";
+      context.lineWidth = Math.max(2, width * 0.002);
       if (glow) context.shadowBlur = 14;
-      context.beginPath(); context.moveTo(x, -20); context.lineTo(x - slope, height + 20); context.stroke();
+      context.beginPath();
+      context.moveTo(x, -20);
+      context.lineTo(x - slope, height + 20);
+      context.stroke();
       context.shadowBlur = 0;
 
       if (glow) {
         for (let index = 0; index < 3 && this.#particles.length < this.maxParticles; index += 1) {
           const point = random();
           this.#particles.push({
-            x: x - slope * point, y: height * point,
-            vx: normalX * (80 + random() * 220) - slope / directionLength * 40 * (random() - 0.5),
-            vy: normalY * (80 + random() * 220) + height / directionLength * 40 * (random() - 0.5),
-            life: 0.3 + random() * 0.35, max: 0.65, w: 1.5 + random() * 2.5,
+            x: x - slope * point,
+            y: height * point,
+            vx: normalX * (80 + random() * 220) - (slope / directionLength) * 40 * (random() - 0.5),
+            vy: normalY * (80 + random() * 220) + (height / directionLength) * 40 * (random() - 0.5),
+            life: 0.3 + random() * 0.35,
+            max: 0.65,
+            w: 1.5 + random() * 2.5,
           });
         }
       }
       if (progress < 0.16) {
         context.globalAlpha = (1 - progress / 0.16) * 0.22 * this.#options.flashScale();
-        context.fillStyle = "#eafcff"; context.fillRect(0, 0, width, height); context.globalAlpha = 1;
+        context.fillStyle = "#eafcff";
+        context.fillRect(0, 0, width, height);
+        context.globalAlpha = 1;
       }
     }
 
-    if (glow) { context.globalCompositeOperation = "lighter"; context.lineCap = "round"; }
+    if (glow) {
+      context.globalCompositeOperation = "lighter";
+      context.lineCap = "round";
+    }
     let write = 0;
     for (const particle of this.#particles) {
       particle.life -= elapsedSeconds;
       if (particle.life <= 0) continue;
-      particle.x += particle.vx * elapsedSeconds; particle.y += particle.vy * elapsedSeconds;
-      particle.vx *= 0.94; particle.vy *= 0.94;
+      particle.x += particle.vx * elapsedSeconds;
+      particle.y += particle.vy * elapsedSeconds;
+      particle.vx *= 0.94;
+      particle.vy *= 0.94;
       context.globalAlpha = Math.min(1, Math.max(0, particle.life / particle.max));
-      context.strokeStyle = random() < 0.4 ? "#eafcff" : "#13c4d6"; context.lineWidth = particle.w;
-      context.beginPath(); context.moveTo(particle.x, particle.y);
-      context.lineTo(particle.x - particle.vx * 0.03, particle.y - particle.vy * 0.03); context.stroke();
+      context.strokeStyle = random() < 0.4 ? "#eafcff" : "#13c4d6";
+      context.lineWidth = particle.w;
+      context.beginPath();
+      context.moveTo(particle.x, particle.y);
+      context.lineTo(particle.x - particle.vx * 0.03, particle.y - particle.vy * 0.03);
+      context.stroke();
       this.#particles[write] = particle;
       write += 1;
     }

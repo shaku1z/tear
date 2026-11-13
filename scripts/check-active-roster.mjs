@@ -39,9 +39,13 @@ function segmentsForFile(relativePath, text) {
 }
 
 function allowedRosterOccurrence(relativePath, retiredId, roster) {
-  const history = roster.historyAllowlist.find((entry) => entry.termIds.includes(retiredId) && matchesPathPattern(relativePath, entry.pathPattern));
+  const history = roster.historyAllowlist.find(
+    (entry) => entry.termIds.includes(retiredId) && matchesPathPattern(relativePath, entry.pathPattern),
+  );
   if (history) return { classification: "immutable-history", allowlistId: history.id };
-  const migration = roster.migrationAllowlist.find((entry) => entry.termIds.includes(retiredId) && matchesPathPattern(relativePath, entry.pathPattern));
+  const migration = roster.migrationAllowlist.find(
+    (entry) => entry.termIds.includes(retiredId) && matchesPathPattern(relativePath, entry.pathPattern),
+  );
   if (migration) return { classification: "mutable-compatibility", allowlistId: migration.id };
   return null;
 }
@@ -57,7 +61,9 @@ export function parseCanonicalWeaponIds(source) {
 }
 
 export function parseWeaponMigrationMap(source) {
-  const match = source.match(/WEAPON_SELECTION_MIGRATION\s*=\s*Object\.freeze\(\s*\{([\s\S]*?)\}\s*as const(?:\s+satisfies[^)]*)?\s*\)/u);
+  const match = source.match(
+    /WEAPON_SELECTION_MIGRATION\s*=\s*Object\.freeze\(\s*\{([\s\S]*?)\}\s*as const(?:\s+satisfies[^)]*)?\s*\)/u,
+  );
   if (!match) return null;
   const migration = {};
   for (const pair of match[1].matchAll(/([A-Za-z][A-Za-z0-9_]*)\s*:\s*["']([^"']+)["']/gu)) {
@@ -92,7 +98,9 @@ export function scanRetiredRosterCopy(root, registry) {
           };
           findings.push(finding);
           if (!allowance) {
-            errors.push(`${relativePath}:${finding.line} contains retired active-roster ID "${retiredId}" outside an exact migration/history allowance`);
+            errors.push(
+              `${relativePath}:${finding.line} contains retired active-roster ID "${retiredId}" outside an exact migration/history allowance`,
+            );
           }
         }
       }
@@ -104,7 +112,8 @@ export function scanRetiredRosterCopy(root, registry) {
 export function runActiveRosterCheck({ root = process.cwd(), registryPath = DEFAULT_REGISTRY_PATH } = {}) {
   const registry = loadRegistry(root, registryPath);
   const validationErrors = validateRegistry(registry);
-  if (validationErrors.length > 0) return { ok: false, errors: validationErrors, findings: [], scannedFiles: 0, registry };
+  if (validationErrors.length > 0)
+    return { ok: false, errors: validationErrors, findings: [], scannedFiles: 0, registry };
   const roster = registry.activeRoster;
   const sourcePath = path.join(root, roster.sourceOfTruth);
   const errors = [];
@@ -126,13 +135,17 @@ export function runActiveRosterCheck({ root = process.cwd(), registryPath = DEFA
   if (!actualIds) {
     errors.push(`unable to parse ${roster.sourceOfTruth}.${roster.sourceExpression}`);
   } else if (!equalArrays(actualIds, roster.canonicalIds)) {
-    errors.push(`active roster order/IDs differ: expected [${roster.canonicalIds.join(", ")}], found [${actualIds.join(", ")}]`);
+    errors.push(
+      `active roster order/IDs differ: expected [${roster.canonicalIds.join(", ")}], found [${actualIds.join(", ")}]`,
+    );
   }
   const actualMigration = parseWeaponMigrationMap(source);
   if (!actualMigration) {
     errors.push(`unable to parse active roster migration map in ${roster.sourceOfTruth}`);
   } else if (JSON.stringify(actualMigration) !== JSON.stringify(roster.migrationMap)) {
-    errors.push(`active roster migration map differs from registry: expected ${JSON.stringify(roster.migrationMap)}, found ${JSON.stringify(actualMigration)}`);
+    errors.push(
+      `active roster migration map differs from registry: expected ${JSON.stringify(roster.migrationMap)}, found ${JSON.stringify(actualMigration)}`,
+    );
   }
   const scanResult = scanRetiredRosterCopy(root, registry);
   errors.push(...scanResult.errors);
@@ -173,7 +186,9 @@ function main() {
       return;
     }
     const allowlisted = result.findings.filter((finding) => finding.classification !== "unallowlisted").length;
-    console.log(`active roster check passed (${result.actualIds.join(", ")}, ${result.scannedFiles} files scanned, ${allowlisted} allowlisted retired-ID occurrences)`);
+    console.log(
+      `active roster check passed (${result.actualIds.join(", ")}, ${result.scannedFiles} files scanned, ${allowlisted} allowlisted retired-ID occurrences)`,
+    );
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

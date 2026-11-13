@@ -8,7 +8,15 @@ function fixture(serialized: string | null = null) {
   if (serialized !== null) values.set("tear_settings", serialized);
   const config = {
     blade: { aimSensitivity: 0.9 },
-    pad: { deadL: 0, deadR: 0, aimSens: 0, tetherMode: "hold" as const, doubleTapDash: false, vibration: "medium" as const, glyphStyle: "auto" as const },
+    pad: {
+      deadL: 0,
+      deadR: 0,
+      aimSens: 0,
+      tetherMode: "hold" as const,
+      doubleTapDash: false,
+      vibration: "medium" as const,
+      glyphStyle: "auto" as const,
+    },
   };
   const audio = {
     migrateSettings: vi.fn((settings: Record<string, unknown>) => settings),
@@ -19,9 +27,12 @@ function fixture(serialized: string | null = null) {
     accessibility: { flashScale: 1, motionScale: 1, reducedMotion: false, highContrast: false },
     graphics: { low: false },
     input: { forceMode: "auto", touchAimMode: "stick" },
-    gamepad: { setPreset: vi.fn((value: string) => value === "known" ? value : "default") },
+    gamepad: { setPreset: vi.fn((value: string) => (value === "known" ? value : "default")) },
     audio,
-    store: { get: (key: string) => values.get(key) ?? null, set: (key: string, value: string) => values.set(key, value) },
+    store: {
+      get: (key: string) => values.get(key) ?? null,
+      set: (key: string, value: string) => values.set(key, value),
+    },
     navigator: { hardwareConcurrency: 8 },
     matchMedia: () => ({ matches: false }),
   };
@@ -42,7 +53,16 @@ describe("SettingsController", () => {
   });
 
   it("sanitizes controller tuning and applies automatic low-end quality", () => {
-    const test = fixture(JSON.stringify({ padDeadL: 0, padDeadR: 2, padAimSens: 4, gfx: "auto", vibration: "invalid", glyphStyle: "invalid" }));
+    const test = fixture(
+      JSON.stringify({
+        padDeadL: 0,
+        padDeadR: 2,
+        padAimSens: 4,
+        gfx: "auto",
+        vibration: "invalid",
+        glyphStyle: "invalid",
+      }),
+    );
     test.dependencies.navigator.hardwareConcurrency = 4;
     const controller = new SettingsController(test.dependencies);
 

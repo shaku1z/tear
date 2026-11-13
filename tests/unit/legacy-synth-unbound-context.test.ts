@@ -12,11 +12,20 @@ const runtime = vi.hoisted(() => {
     played.push(name);
   };
   return {
-    played, state,
+    played,
+    state,
     sfx: {
-      get ctx() { return state.ctx; },
-      init: vi.fn(), resume: vi.fn(), applySettings: vi.fn(), setVol: vi.fn(),
-      wave: requireContext("wave"), swing: requireContext("swing"), ui: requireContext("ui"), hurt: requireContext("hurt"),
+      get ctx() {
+        return state.ctx;
+      },
+      init: vi.fn(),
+      resume: vi.fn(),
+      applySettings: vi.fn(),
+      setVol: vi.fn(),
+      wave: requireContext("wave"),
+      swing: requireContext("swing"),
+      ui: requireContext("ui"),
+      hurt: requireContext("hurt"),
       debugSnapshot: () => ({ state: state.ctx === null ? "awaiting-user-activation" : "running" }),
     },
   };
@@ -26,10 +35,17 @@ vi.mock("../../src/audio/legacy-synth-runtime", () => ({ createLegacySynthRuntim
 
 function createFacade() {
   const target = new EventTarget() as unknown as Window;
-  return createLegacySynthFacade({ audioContextHandoff: createBrowserAudioContextHandoff(), browserWindow: target, readPersistedSettings: () => ({}) });
+  return createLegacySynthFacade({
+    audioContextHandoff: createBrowserAudioContextHandoff(),
+    browserWindow: target,
+    readPersistedSettings: () => ({}),
+  });
 }
 
-afterEach(() => { runtime.played.splice(0); runtime.state.ctx = null; });
+afterEach(() => {
+  runtime.played.splice(0);
+  runtime.state.ctx = null;
+});
 
 describe("legacy SFX before the audio context is bound", () => {
   it("drops cues instead of throwing into gameplay once the runtime is loaded", async () => {
@@ -37,7 +53,12 @@ describe("legacy SFX before the audio context is bound", () => {
     SFX.init();
     await vi.dynamicImportSettled();
 
-    expect(() => { SFX.wave(); SFX.swing(3000); SFX.hurt(); SFX.ui(); }).not.toThrow();
+    expect(() => {
+      SFX.wave();
+      SFX.swing(3000);
+      SFX.hurt();
+      SFX.ui();
+    }).not.toThrow();
     expect(runtime.played).toEqual([]);
 
     runtime.state.ctx = {};
@@ -48,7 +69,9 @@ describe("legacy SFX before the audio context is bound", () => {
   it("does not replay queued cues late, and an unbound context never fails the runtime load", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const SFX = createFacade();
-    SFX.wave(); SFX.swing(3000); SFX.setVol(0.4);
+    SFX.wave();
+    SFX.swing(3000);
+    SFX.setVol(0.4);
     SFX.init();
     await vi.dynamicImportSettled();
 

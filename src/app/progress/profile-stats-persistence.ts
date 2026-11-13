@@ -10,7 +10,11 @@ export interface ProfileStatsPersistence {
 
 export function createLiveProfileStatsPersistence(profile: Profile): ProfileStatsPersistence {
   return Object.freeze({
-    add: (stat: string, amount: number) => { profile.addStat(stat, amount); },
-    max: (stat: string, value: number) => { profile.maxStat(stat, value); },
+    add: (stat: string, amount: number) => {
+      profile.addStat(stat, amount);
+    },
+    max: (stat: string, value: number) => {
+      profile.maxStat(stat, value);
+    },
   });
 }

@@ -52,16 +52,25 @@ interface Sample {
 }
 
 function requireFrame(frame: TearPixelFrame): void {
-  if (!Number.isSafeInteger(frame.width) || frame.width < 1 || !Number.isSafeInteger(frame.height) || frame.height < 1) {
+  if (
+    !Number.isSafeInteger(frame.width) ||
+    frame.width < 1 ||
+    !Number.isSafeInteger(frame.height) ||
+    frame.height < 1
+  ) {
     throw new RangeError("visual comparison frame dimensions must be positive safe integers");
   }
-  if (frame.rgba.length !== frame.width * frame.height * 4) throw new RangeError("visual comparison frame must contain exactly RGBA pixels");
+  if (frame.rgba.length !== frame.width * frame.height * 4)
+    throw new RangeError("visual comparison frame must contain exactly RGBA pixels");
 }
 
-function clampUnit(value: number): number { return Math.max(0, Math.min(1, value)); }
+function clampUnit(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
 
 function finiteUnit(name: string, value: number): number {
-  if (!Number.isFinite(value) || value < 0 || value > 1) throw new RangeError(`${name} must be a finite normalized value`);
+  if (!Number.isFinite(value) || value < 0 || value > 1)
+    throw new RangeError(`${name} must be a finite normalized value`);
   return value;
 }
 
@@ -71,7 +80,8 @@ function validateRegion(region: TearVisualComparisonRegion): TearVisualCompariso
   const y = finiteUnit("visual comparison region y", region.y);
   const width = finiteUnit("visual comparison region width", region.width);
   const height = finiteUnit("visual comparison region height", region.height);
-  if (width === 0 || height === 0 || x + width > 1 || y + height > 1) throw new RangeError("visual comparison region must be non-empty and stay within normalized image bounds");
+  if (width === 0 || height === 0 || x + width > 1 || y + height > 1)
+    throw new RangeError("visual comparison region must be non-empty and stay within normalized image bounds");
   return Object.freeze({ name: region.name, x, y, width, height });
 }
 
@@ -88,13 +98,26 @@ function sample(frame: TearPixelFrame, normalizedX: number, normalizedY: number)
 }
 
 function average(samples: readonly Sample[]): Sample {
-  let red = 0, green = 0, blue = 0, luma = 0;
-  for (const value of samples) { red += value.red; green += value.green; blue += value.blue; luma += value.luma; }
+  let red = 0,
+    green = 0,
+    blue = 0,
+    luma = 0;
+  for (const value of samples) {
+    red += value.red;
+    green += value.green;
+    blue += value.blue;
+    luma += value.luma;
+  }
   const count = samples.length;
   return { red: red / count, green: green / count, blue: blue / count, luma: luma / count };
 }
 
-function compareRegion(expected: TearPixelFrame, actual: TearPixelFrame, region: TearVisualComparisonRegion | undefined, samplesPerAxis: number): TearVisualComparisonMetrics {
+function compareRegion(
+  expected: TearPixelFrame,
+  actual: TearPixelFrame,
+  region: TearVisualComparisonRegion | undefined,
+  samplesPerAxis: number,
+): TearVisualComparisonMetrics {
   const x = region?.x ?? 0;
   const y = region?.y ?? 0;
   const width = region?.width ?? 1;
@@ -111,18 +134,27 @@ function compareRegion(expected: TearPixelFrame, actual: TearPixelFrame, region:
   }
   const expectedMean = average(expectedSamples);
   const actualMean = average(actualSamples);
-  let luminance = 0, chroma = 0, structure = 0;
+  let luminance = 0,
+    chroma = 0,
+    structure = 0;
   for (let index = 0; index < expectedSamples.length; index += 1) {
     const reference = expectedSamples[index];
     const candidate = actualSamples[index];
-    if (reference === undefined || candidate === undefined) throw new Error("visual comparison sample sequence is incomplete");
+    if (reference === undefined || candidate === undefined)
+      throw new Error("visual comparison sample sequence is incomplete");
     // Mean-normalized luminance avoids treating a harmless uniform exposure
     // shift as a total visual regression.
-    luminance += Math.abs((reference.luma - expectedMean.luma) - (candidate.luma - actualMean.luma));
-    chroma += Math.hypot(reference.red - reference.luma - (candidate.red - candidate.luma), reference.green - reference.luma - (candidate.green - candidate.luma), reference.blue - reference.luma - (candidate.blue - candidate.luma)) / Math.sqrt(3);
+    luminance += Math.abs(reference.luma - expectedMean.luma - (candidate.luma - actualMean.luma));
+    chroma +=
+      Math.hypot(
+        reference.red - reference.luma - (candidate.red - candidate.luma),
+        reference.green - reference.luma - (candidate.green - candidate.luma),
+        reference.blue - reference.luma - (candidate.blue - candidate.luma),
+      ) / Math.sqrt(3);
     const next = expectedSamples[(index + 1) % expectedSamples.length];
     const nextCandidate = actualSamples[(index + 1) % actualSamples.length];
-    if (next === undefined || nextCandidate === undefined) throw new Error("visual comparison structure sample is incomplete");
+    if (next === undefined || nextCandidate === undefined)
+      throw new Error("visual comparison structure sample is incomplete");
     structure += Math.abs(Math.abs(reference.luma - next.luma) - Math.abs(candidate.luma - nextCandidate.luma));
   }
   const count = expectedSamples.length;
@@ -132,23 +164,42 @@ function compareRegion(expected: TearPixelFrame, actual: TearPixelFrame, region:
   // The global exposure difference is intentionally a small factor: UI QA
   // should concentrate on visible composition and local contrast.
   const exposureDifference = Math.abs(expectedMean.luma - actualMean.luma);
-  const perceptualSimilarity = clampUnit(1 - (luminanceDifference * 0.45 + chromaDifference * 0.2 + structureDifference * 0.25 + exposureDifference * 0.1));
-  return Object.freeze({ perceptualSimilarity, luminanceDifference, chromaDifference, structureDifference, samples: count });
+  const perceptualSimilarity = clampUnit(
+    1 - (luminanceDifference * 0.45 + chromaDifference * 0.2 + structureDifference * 0.25 + exposureDifference * 0.1),
+  );
+  return Object.freeze({
+    perceptualSimilarity,
+    luminanceDifference,
+    chromaDifference,
+    structureDifference,
+    samples: count,
+  });
 }
 
 /**
  * Compares two rendered pixel frames at normalized coordinates.  It never
  * requires equal dimensions and never consumes state, DOM, OCR, or UI IDs.
  */
-export function comparePixelVisuals(expected: TearPixelFrame, actual: TearPixelFrame, options: TearVisualComparisonOptions = {}): TearVisualComparison {
+export function comparePixelVisuals(
+  expected: TearPixelFrame,
+  actual: TearPixelFrame,
+  options: TearVisualComparisonOptions = {},
+): TearVisualComparison {
   requireFrame(expected);
   requireFrame(actual);
   const samplesPerAxis = options.samplesPerAxis ?? 24;
-  if (!Number.isSafeInteger(samplesPerAxis) || samplesPerAxis < 2 || samplesPerAxis > 512) throw new RangeError("samplesPerAxis must be an integer between 2 and 512");
+  if (!Number.isSafeInteger(samplesPerAxis) || samplesPerAxis < 2 || samplesPerAxis > 512)
+    throw new RangeError("samplesPerAxis must be an integer between 2 and 512");
   const wholeImage = compareRegion(expected, actual, undefined, samplesPerAxis);
-  const regions = Object.freeze((options.regions ?? []).map((region) => {
-    const validRegion = validateRegion(region);
-    return Object.freeze({ region: validRegion, ...compareRegion(expected, actual, validRegion, samplesPerAxis) });
-  }));
-  return Object.freeze({ ...wholeImage, dimensionsMatch: expected.width === actual.width && expected.height === actual.height, regions });
+  const regions = Object.freeze(
+    (options.regions ?? []).map((region) => {
+      const validRegion = validateRegion(region);
+      return Object.freeze({ region: validRegion, ...compareRegion(expected, actual, validRegion, samplesPerAxis) });
+    }),
+  );
+  return Object.freeze({
+    ...wholeImage,
+    dimensionsMatch: expected.width === actual.width && expected.height === actual.height,
+    regions,
+  });
 }

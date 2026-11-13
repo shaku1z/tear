@@ -2,8 +2,17 @@ import type { GameAction } from "../input/game-action";
 import type { TearExecutionClass, TearObservationClass } from "../tearbench/contracts";
 
 export type TearJourneyStage =
-  | "menu" | "setup" | "playing-wave-1" | "draft-1" | "playing-wave-2"
-  | "boss" | "evolution" | "result" | "replay" | "returned-menu" | "failed";
+  | "menu"
+  | "setup"
+  | "playing-wave-1"
+  | "draft-1"
+  | "playing-wave-2"
+  | "boss"
+  | "evolution"
+  | "result"
+  | "replay"
+  | "returned-menu"
+  | "failed";
 
 export interface TearJourneyObservation {
   readonly tick: number;
@@ -40,13 +49,55 @@ export interface TearJourneyContract {
 }
 
 export const JOURNEY_MODE_CONTRACTS = Object.freeze([
-  { id: "tutorial", mode: "tutorial", startScreen: "menu", playableScreens: ["playing"], terminalScreens: ["win", "gameover"] },
-  { id: "adventure", mode: "campaign", startScreen: "menu", playableScreens: ["playing", "draft", "tierup"], terminalScreens: ["win", "gameover"] },
-  { id: "endless", mode: "endless", startScreen: "menu", playableScreens: ["playing", "draft", "tierup"], terminalScreens: ["win", "gameover"] },
-  { id: "gauntlet", mode: "gauntlet", startScreen: "menu", playableScreens: ["playing", "draft", "tierup"], terminalScreens: ["win", "gameover"] },
-  { id: "playground", mode: "playground", startScreen: "menu", playableScreens: ["playing", "pgmenu", "pglab"], terminalScreens: ["menu"] },
-  { id: "boss-test", mode: "bossonly", startScreen: "menu", playableScreens: ["playing", "tierup"], terminalScreens: ["win", "gameover"] },
-  { id: "enemy-test", mode: "sandbox", startScreen: "menu", playableScreens: ["playing", "pgmenu", "pglab"], terminalScreens: ["menu"] },
+  {
+    id: "tutorial",
+    mode: "tutorial",
+    startScreen: "menu",
+    playableScreens: ["playing"],
+    terminalScreens: ["win", "gameover"],
+  },
+  {
+    id: "adventure",
+    mode: "campaign",
+    startScreen: "menu",
+    playableScreens: ["playing", "draft", "tierup"],
+    terminalScreens: ["win", "gameover"],
+  },
+  {
+    id: "endless",
+    mode: "endless",
+    startScreen: "menu",
+    playableScreens: ["playing", "draft", "tierup"],
+    terminalScreens: ["win", "gameover"],
+  },
+  {
+    id: "gauntlet",
+    mode: "gauntlet",
+    startScreen: "menu",
+    playableScreens: ["playing", "draft", "tierup"],
+    terminalScreens: ["win", "gameover"],
+  },
+  {
+    id: "playground",
+    mode: "playground",
+    startScreen: "menu",
+    playableScreens: ["playing", "pgmenu", "pglab"],
+    terminalScreens: ["menu"],
+  },
+  {
+    id: "boss-test",
+    mode: "bossonly",
+    startScreen: "menu",
+    playableScreens: ["playing", "tierup"],
+    terminalScreens: ["win", "gameover"],
+  },
+  {
+    id: "enemy-test",
+    mode: "sandbox",
+    startScreen: "menu",
+    playableScreens: ["playing", "pgmenu", "pglab"],
+    terminalScreens: ["menu"],
+  },
 ] as const satisfies readonly TearJourneyContract[]);
 
 export class TearJourneyDirector {
@@ -56,12 +107,17 @@ export class TearJourneyDirector {
   readonly #transitions: TearJourneyTransition[] = [];
 
   constructor(watchdogTicks = 3_600) {
-    if (!Number.isSafeInteger(watchdogTicks) || watchdogTicks < 1) throw new RangeError("watchdogTicks must be positive");
+    if (!Number.isSafeInteger(watchdogTicks) || watchdogTicks < 1)
+      throw new RangeError("watchdogTicks must be positive");
     this.#watchdogTicks = watchdogTicks;
   }
 
-  get stage(): TearJourneyStage { return this.#stage; }
-  get transitions(): readonly TearJourneyTransition[] { return Object.freeze([...this.#transitions]); }
+  get stage(): TearJourneyStage {
+    return this.#stage;
+  }
+  get transitions(): readonly TearJourneyTransition[] {
+    return Object.freeze([...this.#transitions]);
+  }
 
   decide(observation: TearJourneyObservation): TearJourneyDecision {
     const prior = this.#stage;
@@ -69,35 +125,48 @@ export class TearJourneyDirector {
     let reason = "";
     const actions: GameAction[] = [];
     if (prior === "menu" && observation.screen === "menu") actions.push({ type: "confirm" });
-    if (prior === "menu" && observation.screen === "setup") { next = "setup"; reason = "setup-opened"; }
+    if (prior === "menu" && observation.screen === "setup") {
+      next = "setup";
+      reason = "setup-opened";
+    }
     if (prior === "setup" && observation.screen === "setup") actions.push({ type: "confirm" });
     if ((prior === "setup" || prior === "menu") && observation.screen === "playing") {
-      next = "playing-wave-1"; reason = "run-started";
+      next = "playing-wave-1";
+      reason = "run-started";
     } else if (prior === "playing-wave-1" && observation.screen === "draft") {
-      next = "draft-1"; reason = "first-wave-cleared";
+      next = "draft-1";
+      reason = "first-wave-cleared";
       const choice = observation.choices?.[0];
       if (choice !== undefined) actions.push({ type: "draft-choice", choiceId: choice });
     } else if (prior === "draft-1" && observation.screen === "draft") {
       const choice = observation.choices?.[0];
       if (choice !== undefined) actions.push({ type: "draft-choice", choiceId: choice });
     } else if (prior === "draft-1" && observation.screen === "playing") {
-      next = "playing-wave-2"; reason = "draft-selected";
+      next = "playing-wave-2";
+      reason = "draft-selected";
     } else if ((prior === "playing-wave-2" || prior === "playing-wave-1") && observation.bossActive === true) {
-      next = "boss"; reason = "boss-entered";
+      next = "boss";
+      reason = "boss-entered";
     } else if (prior === "boss" && observation.screen === "tierup") {
-      next = "evolution"; reason = "boss-defeated";
+      next = "evolution";
+      reason = "boss-defeated";
       const choice = observation.choices?.[0];
       if (choice !== undefined) actions.push({ type: "tier-up-choice", choiceId: choice });
     } else if (prior === "evolution" && observation.screen === "tierup") {
       const choice = observation.choices?.[0];
       if (choice !== undefined) actions.push({ type: "tier-up-choice", choiceId: choice });
-    } else if (["playing-wave-2", "boss", "evolution"].includes(prior)
-      && (observation.screen === "win" || observation.screen === "gameover")) {
-      next = "result"; reason = "run-terminated";
+    } else if (
+      ["playing-wave-2", "boss", "evolution"].includes(prior) &&
+      (observation.screen === "win" || observation.screen === "gameover")
+    ) {
+      next = "result";
+      reason = "run-terminated";
     } else if (prior === "result" && observation.screen === "replay") {
-      next = "replay"; reason = "replay-opened";
+      next = "replay";
+      reason = "replay-opened";
     } else if ((prior === "result" || prior === "replay") && observation.screen === "menu") {
-      next = "returned-menu"; reason = "menu-returned";
+      next = "returned-menu";
+      reason = "menu-returned";
     }
     let transition: TearJourneyTransition | undefined;
     if (next !== prior) {
@@ -106,8 +175,9 @@ export class TearJourneyDirector {
       this.#stage = next;
       this.#lastTransitionTick = observation.tick;
     }
-    const timedOut = !["returned-menu", "failed"].includes(this.#stage)
-      && observation.tick - this.#lastTransitionTick > this.#watchdogTicks;
+    const timedOut =
+      !["returned-menu", "failed"].includes(this.#stage) &&
+      observation.tick - this.#lastTransitionTick > this.#watchdogTicks;
     if (timedOut) this.#stage = "failed";
     return Object.freeze({
       stage: this.#stage,
@@ -139,10 +209,11 @@ export function evaluateJourneyCertification(
 ): TearJourneyCertification {
   const successes = outcomes.filter(Boolean).length;
   const completionRate = outcomes.length === 0 ? 0 : successes / outcomes.length;
-  const certified = executionClass === "black-box"
-    && observationClass === "pixel-only"
-    && outcomes.length >= requiredAttempts
-    && completionRate >= requiredRate;
+  const certified =
+    executionClass === "black-box" &&
+    observationClass === "pixel-only" &&
+    outcomes.length >= requiredAttempts &&
+    completionRate >= requiredRate;
   return Object.freeze({
     executionClass,
     observationClass,

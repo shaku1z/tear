@@ -7,7 +7,15 @@ import type { LiveRunOrchestration } from "../run/run-orchestration-composition"
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
-import { isCombatPlatform, isDodgeProjectile, isEnemySample, isGameEnemy, isGameFloater, isRitualCue, isWeaponEffect } from "../shell/runtime-type-guards";
+import {
+  isCombatPlatform,
+  isDodgeProjectile,
+  isEnemySample,
+  isGameEnemy,
+  isGameFloater,
+  isRitualCue,
+  isWeaponEffect,
+} from "../shell/runtime-type-guards";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
 import type { LiveWorldComposition } from "../world/world-composition";
@@ -40,7 +48,16 @@ export interface LiveCombatActionPortsOptions {
  * combat action ports and the opening, collision and kill phase adapters.
  */
 export function createLiveCombatActionPorts(options: LiveCombatActionPortsOptions) {
-  const { dependencies, world, campaignTraining, orchestration, navigation, run: liveRun, player: livePlayer, blade: liveBlade } = options;
+  const {
+    dependencies,
+    world,
+    campaignTraining,
+    orchestration,
+    navigation,
+    run: liveRun,
+    player: livePlayer,
+    blade: liveBlade,
+  } = options;
   const { CONFIG, GAMEPLAY_EVENTS, GFX, GHOST, Input, SFX, weaponCapsuleIntersectsSegment } = dependencies;
   const { state: hostState, entities: worldEntities, environment } = world;
   const { transient } = world.context;
@@ -51,51 +68,91 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
   const TUT = campaignTraining.training.tutorial;
   const { startVoidDescent, startBossTransformation, step: stepCinematicPlaying } = campaignTraining.cinematic.runtime;
   const { addFloater, syncVoidPlayerSupport, updateVoidScroll, stepPlayground } = campaignTraining;
-  const { addShake, addZoom, addFlash, triggerSlowmo, nearestEnemy, damageMultiplier: runDamageMult,
-    log: logWeaponEvent, noteFirstDamage: noteFirstPlayerDamage, applySever, addOverrun: addOverrunStack,
-    updateAbilities: updateWeaponAbilities, emitThrowResolve,
-    activateThrowSecondary, hook: weaponHook, shieldAbsorb: onShieldAbsorb, dealArea: dealAoE,
-    addKillScore, fire, makeEvent: makeEv } = campaignTraining.weapon;
-  const { achievements: AT, addStyle, tracks: achTracks, check: achCheck, loseStyle, update: updateTrick,
-    splitProjectile: spawnSplitShards } = campaignTraining.style;
+  const {
+    addShake,
+    addZoom,
+    addFlash,
+    triggerSlowmo,
+    nearestEnemy,
+    damageMultiplier: runDamageMult,
+    log: logWeaponEvent,
+    noteFirstDamage: noteFirstPlayerDamage,
+    applySever,
+    addOverrun: addOverrunStack,
+    updateAbilities: updateWeaponAbilities,
+    emitThrowResolve,
+    activateThrowSecondary,
+    hook: weaponHook,
+    shieldAbsorb: onShieldAbsorb,
+    dealArea: dealAoE,
+    addKillScore,
+    fire,
+    makeEvent: makeEv,
+  } = campaignTraining.weapon;
+  const {
+    achievements: AT,
+    addStyle,
+    tracks: achTracks,
+    check: achCheck,
+    loseStyle,
+    update: updateTrick,
+    splitProjectile: spawnSplitShards,
+  } = campaignTraining.style;
   const { endRun, updateWave } = options.services.controllers.api;
   const { updateBossArenaPlatforms, lobExplode } = orchestration;
   const isGameProjectile = (value: unknown): value is GameProjectile => value instanceof dependencies.Projectile;
   const isSourceOwner = (value: unknown): value is GameEnemy & Parameters<typeof startVoidDescent>[0] =>
     isGameEnemy(value); // the descent derives its actor id from presentationId/bossId
-  const isRitualOwner = (value: unknown): value is GameEnemy & NonNullable<Parameters<typeof startBossTransformation>[0]> =>
-    isGameEnemy(value) && "bossName" in value && typeof value.bossName === "string" &&
-    "cinematicT" in value && typeof value.cinematicT === "number";
+  const isRitualOwner = (
+    value: unknown,
+  ): value is GameEnemy & NonNullable<Parameters<typeof startBossTransformation>[0]> =>
+    isGameEnemy(value) &&
+    "bossName" in value &&
+    typeof value.bossName === "string" &&
+    "cinematicT" in value &&
+    typeof value.cinematicT === "number";
   const enemyId = (enemy: object) => options.combat().combatEntityRuntime.id(enemy, "enemy");
-  const combatWorldState = createLiveCombatWorldState({
-    player: livePlayer, blade: liveBlade, run: liveRun,
-    enemies: () => hostState.enemies(),
-    setEnemies: (value) => {
-      hostState.setEnemies(value);
+  const combatWorldState = createLiveCombatWorldState(
+    {
+      player: livePlayer,
+      blade: liveBlade,
+      run: liveRun,
+      enemies: () => hostState.enemies(),
+      setEnemies: (value) => {
+        hostState.setEnemies(value);
+      },
+      projectiles: () => hostState.projectiles(),
+      setProjectiles: (value) => {
+        hostState.setProjectiles(value);
+      },
+      floaters: () => hostState.floaters(),
+      setFloaters: (value) => {
+        hostState.setFloaters(value);
+      },
+      slowZones: () => hostState.slowZones(),
+      setSlowZones: (value) => {
+        hostState.setSlowZones(value);
+      },
+      temporaryWalls: () => hostState.temporaryWalls(),
+      setTemporaryWalls: (value) => {
+        hostState.setTemporaryWalls(value);
+      },
     },
-    projectiles: () => hostState.projectiles(),
-    setProjectiles: (value) => {
-      hostState.setProjectiles(value);
-    },
-    floaters: () => hostState.floaters(),
-    setFloaters: (value) => {
-      hostState.setFloaters(value);
-    },
-    slowZones: () => hostState.slowZones(),
-    setSlowZones: (value) => {
-      hostState.setSlowZones(value);
-    },
-    temporaryWalls: () => hostState.temporaryWalls(),
-    setTemporaryWalls: (value) => {
-      hostState.setTemporaryWalls(value);
-    },
-  }, transient);
+    transient,
+  );
   const combatActions: ReturnType<typeof createLiveCombatActions> = createLiveCombatActions({
-    dependencies, canvas: options.surface.canvas, width: W, bossRosterSize: BOSS_ROSTER.length, environment,
+    dependencies,
+    canvas: options.surface.canvas,
+    width: W,
+    bossRosterSize: BOSS_ROSTER.length,
+    environment,
     attackPresentation: options.attackPresentation,
     live: combatWorldState,
     ports: {
-      stage: stageRuntime, story, cinema: CINEMA, tutorial: TUT,
+      stage: stageRuntime,
+      story,
+      cinema: CINEMA,
+      tutorial: TUT,
       achievement: {
         dashDodge: (projectile) => {
           if (isDodgeProjectile(projectile)) AT.dashDodge(projectile);
@@ -132,7 +189,13 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
         },
       },
       functions: {
-        addFloater, addShake, addZoom, addFlash, addStyle, loseStyle, onShieldAbsorb,
+        addFloater,
+        addShake,
+        addZoom,
+        addFlash,
+        addStyle,
+        loseStyle,
+        onShieldAbsorb,
         noteFirstDamage: (enemy, first) => {
           if (isGameEnemy(enemy)) noteFirstPlayerDamage(enemy, first);
         },
@@ -146,8 +209,13 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
           if (isGameEnemy(enemy)) options.combat().killRuntime.resolve(enemy, cause);
         },
         runDamageMultiplier: runDamageMult,
-        updateWeaponAbilities, stepCinematic: stepCinematicPlaying, syncVoidSupport: syncVoidPlayerSupport,
-        activateThrowSecondary, updateWave, updateBossArenaPlatforms, updateVoidScroll,
+        updateWeaponAbilities,
+        stepCinematic: stepCinematicPlaying,
+        syncVoidSupport: syncVoidPlayerSupport,
+        activateThrowSecondary,
+        updateWave,
+        updateBossArenaPlatforms,
+        updateVoidScroll,
         startVoidDescent: (boss) => isSourceOwner(boss) && startVoidDescent(boss),
         nearestEnemy: (x, y) => {
           const enemy = nearestEnemy(x, y);
@@ -171,12 +239,22 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
         },
         emitThrowResolve: (enemy, damage) => {
           const activeBlade = liveBlade();
-          GAMEPLAY_EVENTS.emit({ kind: "weapon", event: "throw-resolved", weaponId: liveRun().weaponId, throwId: activeBlade.throwId,
-            x: activeBlade.x, y: activeBlade.y, damage });
+          GAMEPLAY_EVENTS.emit({
+            kind: "weapon",
+            event: "throw-resolved",
+            weaponId: liveRun().weaponId,
+            throwId: activeBlade.throwId,
+            x: activeBlade.x,
+            y: activeBlade.y,
+            damage,
+          });
           emitThrowResolve(isGameEnemy(enemy) ? enemy : null, damage);
         },
-        updateTrick, updatePlayground: stepPlayground,
-        endRun, checkAchievements: achCheck, addKillScore,
+        updateTrick,
+        updatePlayground: stepPlayground,
+        endRun,
+        checkAchievements: achCheck,
+        addKillScore,
         applySever: (enemy, tier) => {
           if (isGameEnemy(enemy)) applySever(enemy, tier);
         },
@@ -186,14 +264,22 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
           const effect = weaponHook(name, { config: CONFIG, ...detail });
           return isWeaponEffect(effect) ? effect : null;
         },
-        modHook: (name) => liveRun().mods[name], fireMod: fire,
+        modHook: (name) => liveRun().mods[name],
+        fireMod: fire,
         logWeaponEvent,
         weaponWorldImpact: () => {
-          const effect = weaponHook("onWorldImpact",
-            { config: CONFIG, blade: liveBlade(), player: livePlayer(), platforms: stageRuntime.platforms, x: liveBlade().x, y: liveBlade().y });
+          const effect = weaponHook("onWorldImpact", {
+            config: CONFIG,
+            blade: liveBlade(),
+            player: livePlayer(),
+            platforms: stageRuntime.platforms,
+            x: liveBlade().x,
+            y: liveBlade().y,
+          });
           return isWeaponEffect(effect) ? effect : null;
         },
-        startTransformation: (enemy, request) => isRitualOwner(enemy) && isRitualCue(request) && !CINEMA.active && startBossTransformation(enemy, request),
+        startTransformation: (enemy, request) =>
+          isRitualOwner(enemy) && isRitualCue(request) && !CINEMA.active && startBossTransformation(enemy, request),
         achievementsEnabled: achTracks,
         setBossBanner: (text, color) => {
           hostState.setBossBeat({ text, color, t: 1.15, dur: 1.15 });
@@ -206,8 +292,15 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
         createReflection: (x, y) => worldEntities.createEnemy("reflection", x, y, liveRun()),
         recordBossSupportSpawn: (enemy, bossId) => {
           const variant: unknown = Reflect.get(enemy, "variantName");
-          GAMEPLAY_EVENTS.emit({ kind: "spawn",
-            actorId: enemyId(enemy), actorKind: enemy.kind, x: enemy.x, y: enemy.y, variantName: typeof variant === "string" ? variant : "", bossId });
+          GAMEPLAY_EVENTS.emit({
+            kind: "spawn",
+            actorId: enemyId(enemy),
+            actorKind: enemy.kind,
+            x: enemy.x,
+            y: enemy.y,
+            variantName: typeof variant === "string" ? variant : "",
+            bossId,
+          });
         },
         enemyDefeated: (enemy) => {
           if (isGameEnemy(enemy) && isEnemySample(enemy)) {
@@ -215,12 +308,21 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
           }
         },
         ghostSample: (seconds, living) => {
-          GHOST.sample(seconds, livePlayer(), liveBlade(),
-            living.filter(isGameEnemy).filter(isEnemySample).map((enemy) => ({
-              x: enemy.x, y: enemy.y, dead: enemy.dead,
-              stableId: enemyId(enemy),
-              ...(enemy._gid === undefined ? {} : { _gid: enemy._gid }),
-            })));
+          GHOST.sample(
+            seconds,
+            livePlayer(),
+            liveBlade(),
+            living
+              .filter(isGameEnemy)
+              .filter(isEnemySample)
+              .map((enemy) => ({
+                x: enemy.x,
+                y: enemy.y,
+                dead: enemy.dead,
+                stableId: enemyId(enemy),
+                ...(enemy._gid === undefined ? {} : { _gid: enemy._gid }),
+              })),
+          );
         },
         restorePlatforms: (platforms) => {
           stageRuntime.platforms = platforms.filter(isCombatPlatform);
@@ -286,15 +388,30 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
   const adapters: LiveCombatAdapterContext = {
     entities: combatActions.entities,
     opening: {
-      values: { player: () => combatWorldState.player(), blade: () => combatWorldState.blade(), run: () => combatWorldState.run(),
-        enemies: () => combatWorldState.enemies(), projectiles: () => combatWorldState.projectiles(), platforms: () => stageRuntime.platforms, width: () => W,
-        blocking: () => CINEMA.active && CINEMA.blocksCombat, playerMode: () => CINEMA.playerMode,
-        protection: () => combatWorldState.openingProtection(), lowGraphics: () => GFX.low, transformationBlocked: () => CINEMA.active && CINEMA.blocksCombat },
+      values: {
+        player: () => combatWorldState.player(),
+        blade: () => combatWorldState.blade(),
+        run: () => combatWorldState.run(),
+        enemies: () => combatWorldState.enemies(),
+        projectiles: () => combatWorldState.projectiles(),
+        platforms: () => stageRuntime.platforms,
+        width: () => W,
+        blocking: () => CINEMA.active && CINEMA.blocksCombat,
+        playerMode: () => CINEMA.playerMode,
+        protection: () => combatWorldState.openingProtection(),
+        lowGraphics: () => GFX.low,
+        transformationBlocked: () => CINEMA.active && CINEMA.blocksCombat,
+      },
       actions: combatActions.opening,
       state: openingCarry,
     },
     collision: {
-      values: { player: () => combatWorldState.player(), blade: () => combatWorldState.blade(), run: () => combatWorldState.run(), width: () => W },
+      values: {
+        player: () => combatWorldState.player(),
+        blade: () => combatWorldState.blade(),
+        run: () => combatWorldState.run(),
+        width: () => W,
+      },
       actions: combatActions.collision,
       state: collisionPhaseState,
     },

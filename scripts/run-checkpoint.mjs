@@ -30,8 +30,10 @@ export function loadCheckpoints(path = CHECKPOINTS_PATH) {
 /** Throws unless every entry is well formed and every nested checkpoint exists (no cycles). */
 export function validateCheckpoints(checkpoints) {
   for (const [name, entry] of Object.entries(checkpoints)) {
-    if (typeof entry?.description !== "string" || entry.description.trim() === "") throw new Error(`${name}: missing description`);
-    if (!Array.isArray(entry.steps) || entry.steps.length === 0) throw new Error(`${name}: steps must be a non-empty array`);
+    if (typeof entry?.description !== "string" || entry.description.trim() === "")
+      throw new Error(`${name}: missing description`);
+    if (!Array.isArray(entry.steps) || entry.steps.length === 0)
+      throw new Error(`${name}: steps must be a non-empty array`);
     for (const step of entry.steps) validateStep(name, step, checkpoints);
   }
   for (const name of Object.keys(checkpoints)) flattenCheckpoint(checkpoints, name);
@@ -39,7 +41,8 @@ export function validateCheckpoints(checkpoints) {
 
 function validateStep(name, step, checkpoints) {
   if (typeof step === "object" && step !== null && typeof step.checkpoint === "string") {
-    if (!Object.hasOwn(checkpoints, step.checkpoint)) throw new Error(`${name}: unknown nested checkpoint ${step.checkpoint}`);
+    if (!Object.hasOwn(checkpoints, step.checkpoint))
+      throw new Error(`${name}: unknown nested checkpoint ${step.checkpoint}`);
     return;
   }
   if (typeof step !== "string") throw new Error(`${name}: a step is a command string or { "checkpoint": "<name>" }`);
@@ -54,7 +57,9 @@ export function flattenCheckpoint(checkpoints, name, stack = []) {
   if (stack.includes(name)) throw new Error(`checkpoint cycle: ${[...stack, name].join(" -> ")}`);
   const entry = checkpoints[name];
   if (entry === undefined) throw new Error(`unknown checkpoint ${name}`);
-  return entry.steps.flatMap((step) => typeof step === "string" ? [step] : flattenCheckpoint(checkpoints, step.checkpoint, [...stack, name]));
+  return entry.steps.flatMap((step) =>
+    typeof step === "string" ? [step] : flattenCheckpoint(checkpoints, step.checkpoint, [...stack, name]),
+  );
 }
 
 /** Resolves a step to the executable and argv to spawn without a shell. */
@@ -84,7 +89,10 @@ export function runCheckpoint(checkpoints, name, extraArgs = [], env = process.e
   const stepEnv = { ...env, npm_lifecycle_event: name };
   for (const [index, step] of entry.steps.entries()) {
     const stepArgs = index === entry.steps.length - 1 ? extraArgs : [];
-    const status = typeof step === "string" ? runStep(step, stepArgs, stepEnv) : runCheckpoint(checkpoints, step.checkpoint, stepArgs, env);
+    const status =
+      typeof step === "string"
+        ? runStep(step, stepArgs, stepEnv)
+        : runCheckpoint(checkpoints, step.checkpoint, stepArgs, env);
     if (status !== 0) return status;
   }
   return 0;

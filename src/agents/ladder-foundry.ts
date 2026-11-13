@@ -37,8 +37,14 @@ export interface TearBotOrthogonalConfiguration {
 }
 
 const HUMAN_OBSERVATION_FIELDS = Object.freeze([
-  "player-position", "player-health-ratio", "blade-visible-state", "visible-entities",
-  "visible-projectiles", "screen", "visible-choices", "audio-cues",
+  "player-position",
+  "player-health-ratio",
+  "blade-visible-state",
+  "visible-entities",
+  "visible-projectiles",
+  "screen",
+  "visible-choices",
+  "audio-cues",
 ]);
 
 function normalized(value: number): number {
@@ -54,8 +60,13 @@ export function compileTearBotLevel(level: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | "
       privileged: true,
       provisional: true,
       astuteness: Object.freeze({
-        mechanicalExecution: 1, strategicPlanning: 1, perception: 1, adaptation: 1,
-        recovery: 1, styleControl: 1, interfaceFluency: 1,
+        mechanicalExecution: 1,
+        strategicPlanning: 1,
+        perception: 1,
+        adaptation: 1,
+        recovery: 1,
+        styleControl: 1,
+        interfaceFluency: 1,
       }),
       bounds: Object.freeze({
         reactionMilliseconds: 0,
@@ -99,7 +110,8 @@ export function validateHumanInformationFirewall(level: TearBotLevel): readonly 
   const issues: string[] = [];
   if (level.bounds.reactionMilliseconds < 100) issues.push("reaction time is below the public human-like minimum");
   const allowed = new Set(HUMAN_OBSERVATION_FIELDS);
-  for (const field of level.bounds.observationFields) if (!allowed.has(field)) issues.push(`privileged observation field: ${field}`);
+  for (const field of level.bounds.observationFields)
+    if (!allowed.has(field)) issues.push(`privileged observation field: ${field}`);
   if (level.bounds.planningHorizonTicks > 600) issues.push("planning horizon exceeds the public human-like limit");
   return Object.freeze(issues);
 }
@@ -118,7 +130,7 @@ export function itemResponseProbability(level: TearBotLevel, item: TearScenarioI
   const entries = Object.entries(item.discrimination) as [keyof TearAstutenessVector, number][];
   const weighted = entries.reduce((sum, [dimension, weight]) => sum + level.astuteness[dimension] * weight, 0);
   const scale = entries.reduce((sum, [, weight]) => sum + Math.abs(weight), 0) || 1;
-  const logit = weighted / scale * 6 - item.difficulty * 6;
+  const logit = (weighted / scale) * 6 - item.difficulty * 6;
   return 1 / (1 + Math.exp(-logit));
 }
 
@@ -153,24 +165,30 @@ function means(
     values.push(result.probability);
     groups.set(key, values);
   }
-  return Object.freeze(Object.fromEntries([...groups].map(([key, values]) => [
-    key, values.reduce((sum, value) => sum + value, 0) / values.length,
-  ])));
+  return Object.freeze(
+    Object.fromEntries(
+      [...groups].map(([key, values]) => [key, values.reduce((sum, value) => sum + value, 0) / values.length]),
+    ),
+  );
 }
 
 export function evaluateTearBotLadder(
   levels: readonly TearBotLevel[],
   items: readonly TearScenarioItem[],
 ): Readonly<{ evaluations: readonly TearLadderEvaluation[]; report: TearLadderReport }> {
-  const evaluations = Object.freeze(levels.flatMap((level) => items.map((item) => {
-    const probability = itemResponseProbability(level, item);
-    return Object.freeze({
-      levelId: level.id,
-      itemId: item.id,
-      probability,
-      passed: probability >= 0.5,
-    });
-  })));
+  const evaluations = Object.freeze(
+    levels.flatMap((level) =>
+      items.map((item) => {
+        const probability = itemResponseProbability(level, item);
+        return Object.freeze({
+          levelId: level.id,
+          itemId: item.id,
+          probability,
+          passed: probability >= 0.5,
+        });
+      }),
+    ),
+  );
   const levelMeans = levels.map((level) => {
     const values = evaluations.filter((entry) => entry.levelId === level.id).map((entry) => entry.probability);
     return values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length);
@@ -181,7 +199,9 @@ export function evaluateTearBotLadder(
     report: Object.freeze({
       monotonic: adjacentSeparation.every((value) => value > 0),
       adjacentSeparation,
-      humanLike: levels.filter((level) => level.public).every((level) => validateHumanInformationFirewall(level).length === 0),
+      humanLike: levels
+        .filter((level) => level.public)
+        .every((level) => validateHumanInformationFirewall(level).length === 0),
       byDomain: means(evaluations, items, "domain"),
       byWeapon: means(evaluations, items, "weapon"),
       byMode: means(evaluations, items, "mode"),
@@ -197,10 +217,7 @@ export interface TearHumanAnchor {
   readonly consent: "anonymous-improvement" | "public-training";
 }
 
-export function applyHumanAnchors(
-  level: TearBotLevel,
-  anchors: readonly TearHumanAnchor[],
-): TearBotLevel {
+export function applyHumanAnchors(level: TearBotLevel, anchors: readonly TearHumanAnchor[]): TearBotLevel {
   const astuteness = { ...level.astuteness };
   for (const anchor of anchors) {
     if (!["anonymous-improvement", "public-training"].includes(anchor.consent) || anchor.sampleCount < 30) {
@@ -248,31 +265,42 @@ export class TearAgentFoundry {
     });
   }
 
-  active(): TearFoundryPolicy { return this.#active; }
-  archive(): readonly TearFoundryPolicy[] { return Object.freeze([...this.#archive]); }
+  active(): TearFoundryPolicy {
+    return this.#active;
+  }
+  archive(): readonly TearFoundryPolicy[] {
+    return Object.freeze([...this.#archive]);
+  }
 
-  runCycle(input: Readonly<{
-    challenger: TearFoundryPolicy;
-    holdoutMinimums: Readonly<Record<string, number>>;
-    regressionTolerance: number;
-  }>): TearFoundryCycleResult {
-    const weakness = Object.entries(this.#active.scores).sort(([, left], [, right]) => left - right)[0]?.[0] ?? "unknown";
+  runCycle(
+    input: Readonly<{
+      challenger: TearFoundryPolicy;
+      holdoutMinimums: Readonly<Record<string, number>>;
+      regressionTolerance: number;
+    }>,
+  ): TearFoundryCycleResult {
+    const weakness =
+      Object.entries(this.#active.scores).sort(([, left], [, right]) => left - right)[0]?.[0] ?? "unknown";
     const curriculum = Object.freeze([`${weakness}:foundations`, `${weakness}:recovery`, `${weakness}:adversarial`]);
-    const teachers = [this.#active, ...this.#archive].sort((left, right) =>
-      (right.scores[weakness] ?? 0) - (left.scores[weakness] ?? 0) || left.id.localeCompare(right.id));
+    const teachers = [this.#active, ...this.#archive].sort(
+      (left, right) => (right.scores[weakness] ?? 0) - (left.scores[weakness] ?? 0) || left.id.localeCompare(right.id),
+    );
     const teacherId = teachers[0]?.id ?? this.#active.id;
-    const frozenMatches = input.challenger.rewardDefinitionHash === this.#frozen.rewardDefinitionHash
-      && input.challenger.invariantSetHash === this.#frozen.invariantSetHash
-      && input.challenger.releaseExamHash === this.#frozen.releaseExamHash;
+    const frozenMatches =
+      input.challenger.rewardDefinitionHash === this.#frozen.rewardDefinitionHash &&
+      input.challenger.invariantSetHash === this.#frozen.invariantSetHash &&
+      input.challenger.releaseExamHash === this.#frozen.releaseExamHash;
     const regressions = Object.entries(input.holdoutMinimums)
       .filter(([domain, minimum]) => (input.challenger.scores[domain] ?? -Infinity) < minimum)
       .map(([domain]) => domain);
-    const activeMean = Object.values(this.#active.scores).reduce((sum, value) => sum + value, 0)
-      / Math.max(1, Object.keys(this.#active.scores).length);
-    const challengerMean = Object.values(input.challenger.scores).reduce((sum, value) => sum + value, 0)
-      / Math.max(1, Object.keys(input.challenger.scores).length);
-    const promoted = frozenMatches && regressions.length === 0
-      && challengerMean >= activeMean + input.regressionTolerance;
+    const activeMean =
+      Object.values(this.#active.scores).reduce((sum, value) => sum + value, 0) /
+      Math.max(1, Object.keys(this.#active.scores).length);
+    const challengerMean =
+      Object.values(input.challenger.scores).reduce((sum, value) => sum + value, 0) /
+      Math.max(1, Object.keys(input.challenger.scores).length);
+    const promoted =
+      frozenMatches && regressions.length === 0 && challengerMean >= activeMean + input.regressionTolerance;
     if (promoted) {
       this.#archive.push(this.#active);
       this.#active = Object.freeze(structuredClone(input.challenger));

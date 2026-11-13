@@ -2,8 +2,7 @@ import { canonicalStringify } from "../replay/hash";
 
 export type GhostVisibility = "private" | "unlisted" | "public";
 export type GhostValidationStage =
-  | "structural" | "integrity" | "compatibility" | "simulation"
-  | "result" | "anomaly" | "moderation";
+  "structural" | "integrity" | "compatibility" | "simulation" | "result" | "anomaly" | "moderation";
 
 export interface GhostRunEligibilityInput {
   readonly resumed: boolean;
@@ -69,10 +68,15 @@ export interface GhostVerificationVerdict {
 
 export interface GhostHistoricalRuntime {
   readonly buildId: string;
-  verify(capsule: Uint8Array, manifest: GhostPublicationManifest): Promise<Readonly<{
-    resultHash: string;
-    anomalous: boolean;
-  }>>;
+  verify(
+    capsule: Uint8Array,
+    manifest: GhostPublicationManifest,
+  ): Promise<
+    Readonly<{
+      resultHash: string;
+      anomalous: boolean;
+    }>
+  >;
 }
 
 export interface GhostVerdictSigner {
@@ -171,21 +175,27 @@ export async function pseudonymizeGhostIdentity(identity: string, salt: string):
 }
 
 export function sanitizeGhostMetadata(manifest: GhostPublicationManifest): GhostPublicationManifest {
-  const clean = (value: string, maximum: number): string => value
-    .normalize("NFKC")
-    .split("")
-    .filter((character) => {
-      const code = character.charCodeAt(0);
-      return code > 31 && code !== 127;
-    })
-    .join("")
-    .replace(/(?:https?:\/\/|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})\S*/gu, "[redacted]")
-    .trim()
-    .slice(0, maximum);
+  const clean = (value: string, maximum: number): string =>
+    value
+      .normalize("NFKC")
+      .split("")
+      .filter((character) => {
+        const code = character.charCodeAt(0);
+        return code > 31 && code !== 127;
+      })
+      .join("")
+      .replace(/(?:https?:\/\/|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,})\S*/gu, "[redacted]")
+      .trim()
+      .slice(0, maximum);
   return Object.freeze({
     ...manifest,
     title: clean(manifest.title, 80),
-    tags: Object.freeze(manifest.tags.slice(0, 12).map((tag) => clean(tag, 24)).filter(Boolean)),
+    tags: Object.freeze(
+      manifest.tags
+        .slice(0, 12)
+        .map((tag) => clean(tag, 24))
+        .filter(Boolean),
+    ),
   });
 }
 
@@ -246,7 +256,11 @@ export class GhostCloudPublicationService {
     options: Readonly<{ visibility: GhostVisibility; trainingConsent: boolean }>,
   ): GhostUploadRecord {
     this.#rateLimit(ownerId);
-    if (!Number.isSafeInteger(manifest.byteLength) || manifest.byteLength <= 0 || manifest.byteLength > this.policy.maximumBytes) {
+    if (
+      !Number.isSafeInteger(manifest.byteLength) ||
+      manifest.byteLength <= 0 ||
+      manifest.byteLength > this.policy.maximumBytes
+    ) {
       throw new RangeError("capsule byte length is outside publication policy");
     }
     if (this.#records.has(manifest.capsuleId)) throw new Error("capsule already exists");
@@ -264,7 +278,12 @@ export class GhostCloudPublicationService {
     return record;
   }
 
-  async uploadPart(ownerId: string, capsuleId: string, partNumber: number, bytes: Uint8Array): Promise<GhostUploadPart> {
+  async uploadPart(
+    ownerId: string,
+    capsuleId: string,
+    partNumber: number,
+    bytes: Uint8Array,
+  ): Promise<GhostUploadPart> {
     this.#rateLimit(ownerId);
     const record = this.#ownedRecord(ownerId, capsuleId);
     if (record.status !== "uploading") throw new Error("upload is not accepting parts");
@@ -272,8 +291,9 @@ export class GhostCloudPublicationService {
       throw new RangeError("part number is outside publication policy");
     }
     const part = Object.freeze({ partNumber, bytes: bytes.slice(), hash: await ghostSha256(bytes) });
-    const parts = [...record.parts.filter((entry) => entry.partNumber !== partNumber), part]
-      .sort((left, right) => left.partNumber - right.partNumber);
+    const parts = [...record.parts.filter((entry) => entry.partNumber !== partNumber), part].sort(
+      (left, right) => left.partNumber - right.partNumber,
+    );
     this.#records.set(capsuleId, freezeRecord({ ...record, parts }));
     this.#log(ownerId, "upload.part", capsuleId, String(partNumber));
     return part;
@@ -288,13 +308,17 @@ export class GhostCloudPublicationService {
     stages.push({
       stage: "structural",
       status: capsule.byteLength === record.manifest.byteLength && record.parts.length > 0 ? "pass" : "fail",
-      reason: capsule.byteLength === record.manifest.byteLength ? "bounded parts are complete" : "declared byte length differs",
+      reason:
+        capsule.byteLength === record.manifest.byteLength
+          ? "bounded parts are complete"
+          : "declared byte length differs",
     });
     const actualHash = await ghostSha256(capsule);
     stages.push({
       stage: "integrity",
       status: actualHash === record.manifest.contentHash ? "pass" : "fail",
-      reason: actualHash === record.manifest.contentHash ? "SHA-256 content hash matches" : "SHA-256 content hash mismatch",
+      reason:
+        actualHash === record.manifest.contentHash ? "SHA-256 content hash matches" : "SHA-256 content hash mismatch",
     });
     const runtime = this.#runtimes.get(record.manifest.buildId);
     stages.push({
@@ -307,12 +331,18 @@ export class GhostCloudPublicationService {
       stages.push({
         stage: "simulation",
         status: simulation.resultHash === record.manifest.resultHash ? "pass" : "fail",
-        reason: simulation.resultHash === record.manifest.resultHash ? "trusted re-simulation matched" : "re-simulation diverged",
+        reason:
+          simulation.resultHash === record.manifest.resultHash
+            ? "trusted re-simulation matched"
+            : "re-simulation diverged",
       });
       stages.push({
         stage: "result",
         status: simulation.resultHash === record.manifest.resultHash ? "pass" : "fail",
-        reason: simulation.resultHash === record.manifest.resultHash ? "declared result is causal" : "declared result is not causal",
+        reason:
+          simulation.resultHash === record.manifest.resultHash
+            ? "declared result is causal"
+            : "declared result is not causal",
       });
       stages.push({
         stage: "anomaly",
@@ -320,9 +350,21 @@ export class GhostCloudPublicationService {
         reason: simulation.anomalous ? "runtime reported an anomaly" : "no anomaly detected",
       });
     } else {
-      stages.push({ stage: "simulation", status: runtime === undefined ? "unsupported" : "fail", reason: "simulation not attempted" });
-      stages.push({ stage: "result", status: runtime === undefined ? "unsupported" : "fail", reason: "result not established" });
-      stages.push({ stage: "anomaly", status: runtime === undefined ? "unsupported" : "fail", reason: "anomaly status not established" });
+      stages.push({
+        stage: "simulation",
+        status: runtime === undefined ? "unsupported" : "fail",
+        reason: "simulation not attempted",
+      });
+      stages.push({
+        stage: "result",
+        status: runtime === undefined ? "unsupported" : "fail",
+        reason: "result not established",
+      });
+      stages.push({
+        stage: "anomaly",
+        status: runtime === undefined ? "unsupported" : "fail",
+        reason: "anomaly status not established",
+      });
     }
     const moderation = await this.moderation.inspect(record.manifest);
     stages.push({
@@ -357,16 +399,18 @@ export class GhostCloudPublicationService {
     const output: GhostPublicMetadata[] = [];
     for (const record of this.#records.values()) {
       if (record.status !== "finalized" || record.visibility === "private" || record.verdict === undefined) continue;
-      output.push(Object.freeze({
-        capsuleId: record.manifest.capsuleId,
-        buildId: record.manifest.buildId,
-        title: record.manifest.title,
-        tags: record.manifest.tags,
-        pseudonym: await pseudonymizeGhostIdentity(record.ownerId, this.pseudonymSalt),
-        visibility: record.visibility,
-        eligibility: classifyRunEligibility(record.manifest.eligibility),
-        verification: record.verdict.status,
-      }));
+      output.push(
+        Object.freeze({
+          capsuleId: record.manifest.capsuleId,
+          buildId: record.manifest.buildId,
+          title: record.manifest.title,
+          tags: record.manifest.tags,
+          pseudonym: await pseudonymizeGhostIdentity(record.ownerId, this.pseudonymSalt),
+          visibility: record.visibility,
+          eligibility: classifyRunEligibility(record.manifest.eligibility),
+          verification: record.verdict.status,
+        }),
+      );
     }
     return Object.freeze(output);
   }
@@ -447,9 +491,11 @@ export class GhostCloudPublicationService {
   }
 
   relayFrames(capsuleId: string, viewerTick: number): readonly GhostRelayFrame[] {
-    return Object.freeze((this.#relay.get(capsuleId) ?? [])
-      .filter((frame) => frame.availableAtTick <= viewerTick)
-      .map((frame) => Object.freeze({ ...frame, payload: frame.payload.slice() })));
+    return Object.freeze(
+      (this.#relay.get(capsuleId) ?? [])
+        .filter((frame) => frame.availableAtTick <= viewerTick)
+        .map((frame) => Object.freeze({ ...frame, payload: frame.payload.slice() })),
+    );
   }
 
   auditLog(): readonly GhostAuditEntry[] {

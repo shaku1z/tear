@@ -45,16 +45,32 @@ function createCleanCloneFixture() {
 function createFileVerificationFixture() {
   const root = createCleanCloneFixture();
   const groupSpecifications = [
-    { id: "c24-mixed-age-build-assets", count: 90, bytes: 31_657_362, path: (index) => `artifacts/tearbench/c24/fixture-${String(index).padStart(3, "0")}.bin` },
-    { id: "c3-path-bound-scenarios", count: 8, bytes: 10_774, path: (index) => `artifacts/tearbench/c3-fixture-${String(index).padStart(3, "0")}.json` },
-    { id: "historical-provenance", count: 6, bytes: 15_178, path: (index) => [
-      "artifacts/tearbench/c20-ci-selection.json",
-      "artifacts/tearbench/c20-selection.json",
-      "artifacts/tearbench/c21-completion-plan-ci.json",
-      "artifacts/tearbench/c21-completion-plan-selection.json",
-      "artifacts/tearbench/c6-wave99.json",
-      "artifacts/tearbench/non-lossy-annex-plan-selection.json",
-    ][index] },
+    {
+      id: "c24-mixed-age-build-assets",
+      count: 90,
+      bytes: 31_657_362,
+      path: (index) => `artifacts/tearbench/c24/fixture-${String(index).padStart(3, "0")}.bin`,
+    },
+    {
+      id: "c3-path-bound-scenarios",
+      count: 8,
+      bytes: 10_774,
+      path: (index) => `artifacts/tearbench/c3-fixture-${String(index).padStart(3, "0")}.json`,
+    },
+    {
+      id: "historical-provenance",
+      count: 6,
+      bytes: 15_178,
+      path: (index) =>
+        [
+          "artifacts/tearbench/c20-ci-selection.json",
+          "artifacts/tearbench/c20-selection.json",
+          "artifacts/tearbench/c21-completion-plan-ci.json",
+          "artifacts/tearbench/c21-completion-plan-selection.json",
+          "artifacts/tearbench/c6-wave99.json",
+          "artifacts/tearbench/non-lossy-annex-plan-selection.json",
+        ][index],
+    },
   ];
   for (const specification of groupSpecifications) {
     for (let index = 0; index < specification.count; index += 1) {
@@ -102,7 +118,12 @@ test("explicit file verification binds the exact current files", () => {
   try {
     const loaded = readArtifactDisposition(fixture.dispositionPath);
     assert.deepEqual(validateArtifactDispositionShape(loaded.disposition), []);
-    const result = validateArtifactDisposition({ root: fixture.root, dispositionPath: fixture.dispositionPath, verifyFiles: true, now: evidenceTime });
+    const result = validateArtifactDisposition({
+      root: fixture.root,
+      dispositionPath: fixture.dispositionPath,
+      verifyFiles: true,
+      now: evidenceTime,
+    });
     assert.equal(result.ok, true, JSON.stringify(result, null, 2));
     assert.equal(result.status, "valid");
     assert.equal(result.current.summary.eligibleEntries, 104);
@@ -120,9 +141,17 @@ test("default validation passes for a clean clone with empty artifacts, while ve
     assert.equal(portable.ok, true, JSON.stringify(portable, null, 2));
     assert.equal(portable.current, undefined);
 
-    const fileVerification = validateArtifactDisposition({ root, dispositionPath, verifyFiles: true, now: evidenceTime });
+    const fileVerification = validateArtifactDisposition({
+      root,
+      dispositionPath,
+      verifyFiles: true,
+      now: evidenceTime,
+    });
     assert.equal(fileVerification.ok, false);
-    assert.match(fileVerification.errors.join("\n"), /disposed artifact\(s\) are missing|age-eligible artifact\(s\) are unreviewed/u);
+    assert.match(
+      fileVerification.errors.join("\n"),
+      /disposed artifact\(s\) are missing|age-eligible artifact\(s\) are unreviewed/u,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -165,7 +194,10 @@ test("a changed retained file fails its hash binding", () => {
   const comparison = compareArtifactDispositionEntries(loaded.disposition.entries, currentEntries);
   assert.equal(comparison.unreviewed.length, 0);
   assert.equal(comparison.missing.length, 0);
-  assert.deepEqual(comparison.changed.map((entry) => entry.path), [first.path]);
+  assert.deepEqual(
+    comparison.changed.map((entry) => entry.path),
+    [first.path],
+  );
 });
 
 test("malformed, missing, and non-string entry paths fail as validation errors", () => {
@@ -175,8 +207,13 @@ test("malformed, missing, and non-string entry paths fail as validation errors",
     if (malformedPath === undefined) delete disposition.entries[0].path;
     else disposition.entries[0].path = malformedPath;
     let errors;
-    assert.doesNotThrow(() => { errors = validateArtifactDispositionShape(disposition); });
-    assert.ok(errors.some((error) => error.includes("entries[0].path")), `missing path error for ${String(malformedPath)}`);
+    assert.doesNotThrow(() => {
+      errors = validateArtifactDispositionShape(disposition);
+    });
+    assert.ok(
+      errors.some((error) => error.includes("entries[0].path")),
+      `missing path error for ${String(malformedPath)}`,
+    );
   }
 });
 
@@ -239,7 +276,7 @@ test("verify-files succeeds on a canonical fixture and archive-root implies file
 
     const loaded = readArtifactDisposition(fixture.dispositionPath);
     const disposition = loaded.disposition;
-    const reportContents = Buffer.from("{\"format\":\"fixture\"}\n", "utf8");
+    const reportContents = Buffer.from('{"format":"fixture"}\n', "utf8");
     const reportPath = path.join(archiveRoot, "evidence", "report.json");
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, reportContents);
@@ -285,7 +322,7 @@ test("archived source report verification uses an explicit external root and exa
   const archiveRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-artifact-disposition-archive-"));
   try {
     const archivePath = path.join(archiveRoot, "evidence", "report.json");
-    const contents = Buffer.from("{\"format\":\"fixture\"}\n", "utf8");
+    const contents = Buffer.from('{"format":"fixture"}\n', "utf8");
     fs.mkdirSync(path.dirname(archivePath), { recursive: true });
     fs.writeFileSync(archivePath, contents, "utf8");
     const sourceReport = {
@@ -295,9 +332,23 @@ test("archived source report verification uses an explicit external root and exa
       sha256: createHash("sha256").update(contents).digest("hex"),
     };
     assert.equal(verifyArchivedSourceReport({ root, archiveRoot, sourceReport }).ok, true);
-    assert.equal(verifyArchivedSourceReport({ root, archiveRoot, sourceReport: { ...sourceReport, bytes: contents.byteLength + 1 } }).ok, false);
-    assert.equal(verifyArchivedSourceReport({ root, archiveRoot, sourceReport: { ...sourceReport, sha256: "0".repeat(64) } }).ok, false);
-    assert.equal(verifyArchivedSourceReport({ root, archiveRoot, sourceReport: { ...sourceReport, archivePath: "missing.json" } }).ok, false);
+    assert.equal(
+      verifyArchivedSourceReport({
+        root,
+        archiveRoot,
+        sourceReport: { ...sourceReport, bytes: contents.byteLength + 1 },
+      }).ok,
+      false,
+    );
+    assert.equal(
+      verifyArchivedSourceReport({ root, archiveRoot, sourceReport: { ...sourceReport, sha256: "0".repeat(64) } }).ok,
+      false,
+    );
+    assert.equal(
+      verifyArchivedSourceReport({ root, archiveRoot, sourceReport: { ...sourceReport, archivePath: "missing.json" } })
+        .ok,
+      false,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
     fs.rmSync(archiveRoot, { recursive: true, force: true });
@@ -310,7 +361,7 @@ test("external archive verification is opt-in and fail-closed when requested", (
   const archiveRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-g5-artifact-disposition-archive-"));
   try {
     const loaded = readArtifactDisposition(fixture.dispositionPath);
-    const reportContents = Buffer.from("{\"format\":\"fixture\"}\n", "utf8");
+    const reportContents = Buffer.from('{"format":"fixture"}\n', "utf8");
     const reportPath = path.join(archiveRoot, "evidence", "report.json");
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(reportPath, reportContents);
@@ -353,7 +404,10 @@ test("external archive verification is opt-in and fail-closed when requested", (
 
     const wrong = validateArtifactDisposition({
       root: fixture.root,
-      dispositionPath: writeDisposition("wrong-report.json", { ...sourceReport, archivePath: "evidence/wrong-report.json" }),
+      dispositionPath: writeDisposition("wrong-report.json", {
+        ...sourceReport,
+        archivePath: "evidence/wrong-report.json",
+      }),
       archiveRoot,
       now: evidenceTime,
     });

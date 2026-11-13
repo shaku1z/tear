@@ -1,5 +1,8 @@
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
-import { createGhostProductionReplayComparison, type GhostProductionReplayComparison } from "../../ghost/production-replay-comparison";
+import {
+  createGhostProductionReplayComparison,
+  type GhostProductionReplayComparison,
+} from "../../ghost/production-replay-comparison";
 import type { ReplayScreenView } from "../../presentation/screens/contracts";
 import type { AppScreen } from "../../domain/screen-catalog";
 
@@ -57,18 +60,41 @@ export function createGhostComparisonScreenAdapter(services: GhostComparisonScre
         return false;
       }
     },
-    render(): void { const snapshot = view(); if (snapshot !== undefined) services.render(snapshot); },
-    exit(): AppScreen | undefined { const from = context?.from; context = undefined; return from; },
+    render(): void {
+      const snapshot = view();
+      if (snapshot !== undefined) services.render(snapshot);
+    },
+    exit(): AppScreen | undefined {
+      const from = context?.from;
+      context = undefined;
+      return from;
+    },
     stepOccurrence(direction: -1 | 1): void {
       if (context === undefined) return;
-      context.occurrenceIndex = Math.max(0, Math.min(context.comparison.occurrences.length - 1, context.occurrenceIndex + direction));
+      context.occurrenceIndex = Math.max(
+        0,
+        Math.min(context.comparison.occurrences.length - 1, context.occurrenceIndex + direction),
+      );
     },
-    restart(): void { if (context !== undefined) context.occurrenceIndex = 0; },
-    status(): Readonly<{ paused: boolean; speed: number; infoVisible: boolean; progress: number; from: AppScreen }> | null {
+    restart(): void {
+      if (context !== undefined) context.occurrenceIndex = 0;
+    },
+    status(): Readonly<{
+      paused: boolean;
+      speed: number;
+      infoVisible: boolean;
+      progress: number;
+      from: AppScreen;
+    }> | null {
       if (context === undefined) return null;
       const total = context.comparison.occurrences.length;
-      return Object.freeze({ paused: true, speed: 1, infoVisible: false,
-        progress: total <= 1 ? 1 : context.occurrenceIndex / (total - 1), from: context.from });
+      return Object.freeze({
+        paused: true,
+        speed: 1,
+        infoVisible: false,
+        progress: total <= 1 ? 1 : context.occurrenceIndex / (total - 1),
+        from: context.from,
+      });
     },
   });
 }

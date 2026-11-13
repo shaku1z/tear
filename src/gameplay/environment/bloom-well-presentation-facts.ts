@@ -28,10 +28,15 @@ export function projectBloomWellPresentation(
   options: BloomWellPresentationOptions = {},
 ): BloomWellPresentationFacts {
   return Object.freeze({
-    id: state.id, state: state.state, geometry: state.geometry, boundaryVisible: true,
-    highContrast: options.highContrast === true, lowGraphics: options.lowGraphics === true,
+    id: state.id,
+    state: state.state,
+    geometry: state.geometry,
+    boundaryVisible: true,
+    highContrast: options.highContrast === true,
+    lowGraphics: options.lowGraphics === true,
     motionScale: options.reducedMotion === true ? 0 : 1,
-    audioIndependent: true, audioEnabled: options.audioEnabled !== false,
+    audioIndependent: true,
+    audioEnabled: options.audioEnabled !== false,
     flashScale: Math.max(0, Math.min(1, options.flashScale ?? 1)),
   });
 }

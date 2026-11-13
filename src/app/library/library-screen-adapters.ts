@@ -8,16 +8,50 @@ import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-rec
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import type { CareerPort } from "./ghost-career-controller";
 
-type Dependencies = Pick<GameRuntimeDependencies, "ACH" | "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
-  "Chimera" | "Colossus" | "Echo" | "Flyer" | "Ranged" | "Rootbinder" | "Rootbound" | "Source" | "Support" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant" |
-  "Cloud" | "CONFIG" | "DAILY" | "FirebaseProvider" |
-  "META" | "PROFILE" | "STAGES" | "UI" | "UPGRADES" | "VAULT"> & Readonly<{ PAD: BrowserGamepad }>;
+type Dependencies = Pick<
+  GameRuntimeDependencies,
+  | "ACH"
+  | "AFFIXES"
+  | "Aldric"
+  | "Armored"
+  | "Bomber"
+  | "Charger"
+  | "Chimera"
+  | "Colossus"
+  | "Echo"
+  | "Flyer"
+  | "Ranged"
+  | "Rootbinder"
+  | "Rootbound"
+  | "Source"
+  | "Support"
+  | "VARIANTS"
+  | "Warden"
+  | "Wraith"
+  | "applyVariant"
+  | "Cloud"
+  | "CONFIG"
+  | "DAILY"
+  | "FirebaseProvider"
+  | "META"
+  | "PROFILE"
+  | "STAGES"
+  | "UI"
+  | "UPGRADES"
+  | "VAULT"
+> &
+  Readonly<{ PAD: BrowserGamepad }>;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
   readonly beat?: Pick<ReturnType<typeof createLiveBeatThisRunController>, "action" | "snapshot" | "cancel">;
-  readonly chase?: Readonly<{ choose(id: string, expectedManifestHash?: string): Promise<void>; chooseRace?(id: string, expectedManifestHash?: string): Promise<void>; cancelPreparation(): void; snapshot(): Readonly<{ active: boolean; message: string }> }>;
+  readonly chase?: Readonly<{
+    choose(id: string, expectedManifestHash?: string): Promise<void>;
+    chooseRace?(id: string, expectedManifestHash?: string): Promise<void>;
+    cancelPreparation(): void;
+    snapshot(): Readonly<{ active: boolean; message: string }>;
+  }>;
   readonly career?: CareerPort;
   readonly enterCareerSource?: (id: string, command: string, expectedManifestHash?: string) => unknown;
   readonly dependencies: Dependencies;
@@ -46,13 +80,21 @@ export interface LibraryScreenAdapters {
   readonly fallbackCategory: Category;
   readonly categoryOrder: readonly string[];
   readonly specialColor: string;
-  readonly abilityBadge: (upgrade: GameRuntimeDependencies["UPGRADES"][number]) => Readonly<{ label: string; color: string }>;
+  readonly abilityBadge: (
+    upgrade: GameRuntimeDependencies["UPGRADES"][number],
+  ) => Readonly<{ label: string; color: string }>;
   readonly renderCodex: () => void;
   readonly renderProfile: () => void;
   readonly renderAchievements: () => void;
   readonly renderLeaderboards: () => void;
-  readonly drawReplayPreview: (source: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
-  readonly drawCreaturePreview: (name: string, bounds: Readonly<{ x: number; y: number; w: number; h: number }>) => void;
+  readonly drawReplayPreview: (
+    source: string,
+    bounds: Readonly<{ x: number; y: number; w: number; h: number }>,
+  ) => void;
+  readonly drawCreaturePreview: (
+    name: string,
+    bounds: Readonly<{ x: number; y: number; w: number; h: number }>,
+  ) => void;
   readonly selectCodexTab: (id: string) => void;
   readonly selectCodexFilter: (id: string) => void;
   readonly cycleCodexSort: () => void;
@@ -76,9 +118,12 @@ type DeferredAction = (adapters: LibraryScreenAdapters) => void;
 export function createLiveLibraryScreenAdapters(services: LibraryScreenServices): LibraryScreenAdapters {
   const colors = services.dependencies.CONFIG.colors;
   const categories: Readonly<Record<string, Category>> = Object.freeze({
-    offense: { name: "OFFENSE", color: colors.charger }, throw: { name: "THROW", color: colors.bomber },
-    parry: { name: "PARRY", color: colors.perfect }, mobility: { name: "MOBILITY", color: colors.ranged },
-    resilience: { name: "RESILIENCE", color: colors.deflected }, utility: { name: "UTILITY", color: colors.armored },
+    offense: { name: "OFFENSE", color: colors.charger },
+    throw: { name: "THROW", color: colors.bomber },
+    parry: { name: "PARRY", color: colors.perfect },
+    mobility: { name: "MOBILITY", color: colors.ranged },
+    resilience: { name: "RESILIENCE", color: colors.deflected },
+    utility: { name: "UTILITY", color: colors.armored },
   });
   const fallbackCategory = categories.utility ?? { name: "UTILITY", color: colors.armored };
   let runtime: LibraryScreenAdapters | undefined;
@@ -93,7 +138,10 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
   }
   function invoke(action: DeferredAction): void {
     if (runtime) action(runtime);
-    else { deferred.push(action); ensureLoaded(); }
+    else {
+      deferred.push(action);
+      ensureLoaded();
+    }
   }
   function render(renderNow: DeferredAction): void {
     if (runtime) renderNow(runtime);
@@ -101,30 +149,122 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
   }
 
   const adapters: LibraryScreenAdapters = {
-    careerAction: (command, id) => { invoke((value) => { value.careerAction(command, id); }); },
-    categories, fallbackCategory, categoryOrder: ABILITY_CATEGORY_ORDER, specialColor: SPECIAL_ABILITY_COLOR,
-    abilityBadge: (upgrade) => abilityBadge(upgrade, services.dependencies.UI.t.color.unique, services.dependencies.UI.t.color.muted),
-    renderCodex: () => { render((value) => { value.renderCodex(); }); },
-    renderProfile: () => { render((value) => { value.renderProfile(); }); },
-    renderAchievements: () => { render((value) => { value.renderAchievements(); }); },
-    renderLeaderboards: () => { render((value) => { value.renderLeaderboards(); }); },
-    drawReplayPreview: (source, bounds) => { render((value) => { value.drawReplayPreview(source, bounds); }); },
-    drawCreaturePreview: (name, bounds) => { render((value) => { value.drawCreaturePreview(name, bounds); }); },
-    selectCodexTab: (id) => { invoke((value) => { value.selectCodexTab(id); }); },
-    selectCodexFilter: (id) => { invoke((value) => { value.selectCodexFilter(id); }); },
-    cycleCodexSort: () => { invoke((value) => { value.cycleCodexSort(); }); },
-    inspectCodexAbility: (id) => { invoke((value) => { value.inspectCodexAbility(id); }); },
-    selectProfileTab: (id) => { invoke((value) => { value.selectProfileTab(id); }); },
-    setProfileMessage: (message) => { invoke((value) => { value.setProfileMessage(message); }); },
-    selectAchievementCategory: (id) => { invoke((value) => { value.selectAchievementCategory(id); }); },
-    selectLeaderboardTab: (id) => { invoke((value) => { value.selectLeaderboardTab(id); }); },
-    selectLeaderboardBoard: (id) => { invoke((value) => { value.selectLeaderboardBoard(id); }); },
-    watchReplay: (id, from) => { invoke((value) => { value.watchReplay(id, from); }); },
-    watchGhostCapsule: (id) => { invoke((value) => { value.watchGhostCapsule(id); }); },
-    compareGhostCapsule: (id) => { invoke((value) => { value.compareGhostCapsule(id); }); },
-    openGhostComparison: () => { invoke((value) => { value.openGhostComparison(); }); },
-    publishReplay: (id) => { invoke((value) => { value.publishReplay(id); }); },
-    repairGhostCapsule: (id) => { invoke((value) => { value.repairGhostCapsule(id); }); },
+    careerAction: (command, id) => {
+      invoke((value) => {
+        value.careerAction(command, id);
+      });
+    },
+    categories,
+    fallbackCategory,
+    categoryOrder: ABILITY_CATEGORY_ORDER,
+    specialColor: SPECIAL_ABILITY_COLOR,
+    abilityBadge: (upgrade) =>
+      abilityBadge(upgrade, services.dependencies.UI.t.color.unique, services.dependencies.UI.t.color.muted),
+    renderCodex: () => {
+      render((value) => {
+        value.renderCodex();
+      });
+    },
+    renderProfile: () => {
+      render((value) => {
+        value.renderProfile();
+      });
+    },
+    renderAchievements: () => {
+      render((value) => {
+        value.renderAchievements();
+      });
+    },
+    renderLeaderboards: () => {
+      render((value) => {
+        value.renderLeaderboards();
+      });
+    },
+    drawReplayPreview: (source, bounds) => {
+      render((value) => {
+        value.drawReplayPreview(source, bounds);
+      });
+    },
+    drawCreaturePreview: (name, bounds) => {
+      render((value) => {
+        value.drawCreaturePreview(name, bounds);
+      });
+    },
+    selectCodexTab: (id) => {
+      invoke((value) => {
+        value.selectCodexTab(id);
+      });
+    },
+    selectCodexFilter: (id) => {
+      invoke((value) => {
+        value.selectCodexFilter(id);
+      });
+    },
+    cycleCodexSort: () => {
+      invoke((value) => {
+        value.cycleCodexSort();
+      });
+    },
+    inspectCodexAbility: (id) => {
+      invoke((value) => {
+        value.inspectCodexAbility(id);
+      });
+    },
+    selectProfileTab: (id) => {
+      invoke((value) => {
+        value.selectProfileTab(id);
+      });
+    },
+    setProfileMessage: (message) => {
+      invoke((value) => {
+        value.setProfileMessage(message);
+      });
+    },
+    selectAchievementCategory: (id) => {
+      invoke((value) => {
+        value.selectAchievementCategory(id);
+      });
+    },
+    selectLeaderboardTab: (id) => {
+      invoke((value) => {
+        value.selectLeaderboardTab(id);
+      });
+    },
+    selectLeaderboardBoard: (id) => {
+      invoke((value) => {
+        value.selectLeaderboardBoard(id);
+      });
+    },
+    watchReplay: (id, from) => {
+      invoke((value) => {
+        value.watchReplay(id, from);
+      });
+    },
+    watchGhostCapsule: (id) => {
+      invoke((value) => {
+        value.watchGhostCapsule(id);
+      });
+    },
+    compareGhostCapsule: (id) => {
+      invoke((value) => {
+        value.compareGhostCapsule(id);
+      });
+    },
+    openGhostComparison: () => {
+      invoke((value) => {
+        value.openGhostComparison();
+      });
+    },
+    publishReplay: (id) => {
+      invoke((value) => {
+        value.publishReplay(id);
+      });
+    },
+    repairGhostCapsule: (id) => {
+      invoke((value) => {
+        value.repairGhostCapsule(id);
+      });
+    },
   };
   return Object.freeze(adapters);
 }

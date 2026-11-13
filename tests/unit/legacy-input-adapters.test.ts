@@ -53,8 +53,13 @@ function controllerFixture() {
   const buttons = Array.from({ length: 16 }, () => button());
   const axes = [0, 0, 0, 0];
   const activeGamepad = gamepad(buttons, axes);
-  const { PAD } = createBrowserGamepad({ config, input, window: windowTarget as Window,
-    navigator: { getGamepads: () => [activeGamepad] }, semantic: input.semantic });
+  const { PAD } = createBrowserGamepad({
+    config,
+    input,
+    window: windowTarget as Window,
+    navigator: { getGamepads: () => [activeGamepad] },
+    semantic: input.semantic,
+  });
   windowTarget.dispatchEvent(controllerEvent("gamepadconnected", activeGamepad));
   const settings = config.pad;
   if (settings === undefined) throw new Error("controller settings missing");
@@ -66,9 +71,16 @@ describe("legacy input adapter", () => {
     const windowTarget = new EventTarget();
     const documentTarget = new EventTarget() as Document;
     const semantic = new SemanticInputBuffer();
-    const input = createBrowserInput({ config: CONFIG, safeArea: { l: 0, r: 0, t: 0, b: 0 },
-      overscan: { x: 0, y: 0 }, window: windowTarget as Window, document: documentTarget,
-      navigator: { vibrate: () => true }, performance, semantic });
+    const input = createBrowserInput({
+      config: CONFIG,
+      safeArea: { l: 0, r: 0, t: 0, b: 0 },
+      overscan: { x: 0, y: 0 },
+      window: windowTarget as Window,
+      document: documentTarget,
+      navigator: { vibrate: () => true },
+      performance,
+      semantic,
+    });
     let lockRequests = 0;
     const canvas = new EventTarget() as HTMLCanvasElement;
     Object.defineProperties(canvas, {
@@ -76,7 +88,9 @@ describe("legacy input adapter", () => {
     });
     let pointerLockElement: Element | null = null;
     Object.defineProperty(documentTarget, "pointerLockElement", { get: () => pointerLockElement });
-    input.init(canvas, () => { lockRequests += 1; });
+    input.init(canvas, () => {
+      lockRequests += 1;
+    });
     const pointerEvent = (type: string, values: Readonly<Record<string, number>>): Event => {
       const event = new Event(type);
       for (const [key, value] of Object.entries(values)) Object.defineProperty(event, key, { value });
@@ -135,25 +149,28 @@ describe("legacy input adapter", () => {
 });
 
 describe("legacy gamepad adapter", () => {
-  it.each(["hold", "toggle"] as const)("requires a new tether press after switching presets through a menu in %s mode", (mode) => {
-    const { input, PAD, buttons, settings } = controllerFixture();
-    settings.tetherMode = mode;
-    buttons[7] = button(true);
-    PAD.poll(1 / 120, true);
-    input.endFrame();
-    PAD.setPreset("standard");
-    PAD.poll(1 / 120, true);
-    PAD.poll(1 / 120, true);
-    PAD.poll(1 / 120, false);
-    expect(input.padTether).toBe(false);
-    expect(input.tDash).toBe(false);
-    expect(input.rmb).toBe(false);
-    buttons[7] = button();
-    PAD.poll(1 / 120, false);
-    buttons[7] = button(true);
-    PAD.poll(1 / 120, false);
-    expect(input.padTether).toBe(true);
-  });
+  it.each(["hold", "toggle"] as const)(
+    "requires a new tether press after switching presets through a menu in %s mode",
+    (mode) => {
+      const { input, PAD, buttons, settings } = controllerFixture();
+      settings.tetherMode = mode;
+      buttons[7] = button(true);
+      PAD.poll(1 / 120, true);
+      input.endFrame();
+      PAD.setPreset("standard");
+      PAD.poll(1 / 120, true);
+      PAD.poll(1 / 120, true);
+      PAD.poll(1 / 120, false);
+      expect(input.padTether).toBe(false);
+      expect(input.tDash).toBe(false);
+      expect(input.rmb).toBe(false);
+      buttons[7] = button();
+      PAD.poll(1 / 120, false);
+      buttons[7] = button(true);
+      PAD.poll(1 / 120, false);
+      expect(input.padTether).toBe(true);
+    },
+  );
 
   it.each([false, true])("clears a toggled tether across blur with its button still held = %s", (stillHeld) => {
     const { input, PAD, buttons, windowTarget, settings } = controllerFixture();
@@ -161,7 +178,10 @@ describe("legacy gamepad adapter", () => {
     buttons[4] = button(true);
     PAD.poll(1 / 120, false);
     expect(input.padTether).toBe(true);
-    if (!stillHeld) { buttons[4] = button(); PAD.poll(1 / 120, false); }
+    if (!stillHeld) {
+      buttons[4] = button();
+      PAD.poll(1 / 120, false);
+    }
     input.lmb = true;
     expect(input.locked).toBe(false);
     windowTarget.dispatchEvent(new Event("blur"));
@@ -188,10 +208,13 @@ describe("legacy gamepad adapter", () => {
     windowTarget.dispatchEvent(new Event("blur"));
     PAD.poll(1 / 120, false);
     expect(input.padTether).toBe(false);
-    buttons[4] = button(); PAD.poll(1 / 120, false);
-    buttons[4] = button(true); PAD.poll(1 / 120, false);
+    buttons[4] = button();
+    PAD.poll(1 / 120, false);
+    buttons[4] = button(true);
+    PAD.poll(1 / 120, false);
     expect(input.padTether).toBe(true);
-    buttons[4] = button(); PAD.poll(1 / 120, false);
+    buttons[4] = button();
+    PAD.poll(1 / 120, false);
     expect(input.padTether).toBe(false);
   });
 
@@ -201,7 +224,8 @@ describe("legacy gamepad adapter", () => {
     PAD.poll(0.01, true);
     expect([...input.pressed]).toEqual(["ArrowRight"]);
     input.endFrame();
-    axes[0] = 0; axes[1] = 0.9;
+    axes[0] = 0;
+    axes[1] = 0.9;
     PAD.poll(0.01, true);
     expect([...input.pressed]).toEqual(["ArrowDown"]);
     input.endFrame();
@@ -210,12 +234,15 @@ describe("legacy gamepad adapter", () => {
     PAD.poll(settings.menuRepeat / 2 + 0.001, true);
     expect([...input.pressed]).toEqual(["ArrowDown"]);
     input.endFrame();
-    axes[1] = 0; PAD.poll(0.01, true);
-    axes[0] = 0.9; axes[1] = -0.7;
+    axes[1] = 0;
+    PAD.poll(0.01, true);
+    axes[0] = 0.9;
+    axes[1] = -0.7;
     PAD.poll(0.01, true);
     expect([...input.pressed]).toEqual(["ArrowRight"]);
     input.endFrame();
-    axes[0] = 0.7; axes[1] = -0.9;
+    axes[0] = 0.7;
+    axes[1] = -0.9;
     PAD.poll(0.01, true);
     expect([...input.pressed]).toEqual(["ArrowUp"]);
   });
@@ -288,17 +315,25 @@ describe("legacy gamepad adapter", () => {
     buttons[0] = button(true);
     const activeGamepad = gamepad(buttons, [0.8, 0, 0.7, 0]);
     const navigatorPort = { getGamepads: () => [activeGamepad] };
-    const { PAD } = createBrowserGamepad({ config: CONFIG, input, window: windowPort, navigator: navigatorPort, semantic });
+    const { PAD } = createBrowserGamepad({
+      config: CONFIG,
+      input,
+      window: windowPort,
+      navigator: navigatorPort,
+      semantic,
+    });
 
     listeners.get("gamepadconnected")?.(controllerEvent("gamepadconnected", activeGamepad));
     PAD.poll(1 / 60, false);
     expect(input.right()).toBe(true);
     expect(input.tJump).toBe(true);
     expect(input.stickAim?.x).toBeGreaterThan(0);
-    expect(semantic.drain(10).map((entry) => entry.command)).toEqual(expect.arrayContaining([
-      { type: "move", x: 1_000, y: 0 },
-      { type: "jump", phase: "pressed" },
-    ]));
+    expect(semantic.drain(10).map((entry) => entry.command)).toEqual(
+      expect.arrayContaining([
+        { type: "move", x: 1_000, y: 0 },
+        { type: "jump", phase: "pressed" },
+      ]),
+    );
 
     input.setPadTether(true);
     listeners.get("gamepaddisconnected")?.(controllerEvent("gamepaddisconnected", activeGamepad));
@@ -319,8 +354,11 @@ describe("legacy gamepad adapter", () => {
     buttons[2] = button(true);
     const activeGamepad = gamepad(buttons);
     const { PAD } = createBrowserGamepad({
-      config: CONFIG, input, window: windowPort,
-      navigator: { getGamepads: () => [activeGamepad] }, semantic: input.semantic,
+      config: CONFIG,
+      input,
+      window: windowPort,
+      navigator: { getGamepads: () => [activeGamepad] },
+      semantic: input.semantic,
     });
     listeners.get("gamepadconnected")?.(controllerEvent("gamepadconnected", activeGamepad));
 

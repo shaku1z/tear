@@ -1,7 +1,11 @@
 import { modeSurface } from "../../gameplay/run/mode-catalog";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
-import type { LiveAcademySurface, LiveBotEvidenceSurface, LiveFoundrySurface,
-  LivePlayerWatchSurface } from "../engineering/engineering-surfaces-contract";
+import type {
+  LiveAcademySurface,
+  LiveBotEvidenceSurface,
+  LiveFoundrySurface,
+  LivePlayerWatchSurface,
+} from "../engineering/engineering-surfaces-contract";
 import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
 import type { LiveGhostPublicationController } from "../replay/ghost-publication-controller";
@@ -12,8 +16,12 @@ import type { GameRun } from "../shell/game-runtime-state";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import { trainingRunRequiresPreflight } from "../training/training-host";
 import type { LiveWorldSessionState } from "../world/world-session-state";
-import { isRunDifficultySelection, isRunModeSelection, type LiveInterfaceComposition,
-  type LiveInterfaceCompositionOptions } from "./interface-composition";
+import {
+  isRunDifficultySelection,
+  isRunModeSelection,
+  type LiveInterfaceComposition,
+  type LiveInterfaceCompositionOptions,
+} from "./interface-composition";
 import type { LiveInterfaceInteractionState } from "./interface-interaction-state";
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 
@@ -37,7 +45,10 @@ export interface LiveScreenActionsOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly session: LiveWorldSessionState;
   readonly services: Pick<LiveSessionServices, "controllers" | "seedRace" | "settingsController">;
-  readonly campaignTraining: Pick<LiveCampaignTrainingAssembly, "training" | "startRunWithPreflight" | "dispatchPlaygroundAction" | "tutorialSessionActions">;
+  readonly campaignTraining: Pick<
+    LiveCampaignTrainingAssembly,
+    "training" | "startRunWithPreflight" | "dispatchPlaygroundAction" | "tutorialSessionActions"
+  >;
   readonly navigation: Pick<LiveScreenNavigation, "screen" | "setScreen">;
   readonly interaction: Pick<LiveInterfaceInteractionState, "setScroll">;
   readonly chase: Pick<LiveGhostChaseRuntime, "toggle" | "stop">;
@@ -51,15 +62,27 @@ export interface LiveScreenActionsOptions {
 }
 
 /** The semantic action table that menu, setup, profile and engineering screens dispatch into. */
-export function createLiveScreenActions(options: LiveScreenActionsOptions): LiveInterfaceCompositionOptions["screens"]["actions"] {
+export function createLiveScreenActions(
+  options: LiveScreenActionsOptions,
+): LiveInterfaceCompositionOptions["screens"]["actions"] {
   const { dependencies, session, navigation, chase, run: liveRun, requestPointerLock: requestLock } = options;
   const { Cloud, VAULT } = dependencies;
   const { setScreen } = navigation;
-  const { vault: ghostVault, ownerRecovery, publication: ghostPublicationScreen, support: ghostSupportScreen } = options.ghostLibrary;
+  const {
+    vault: ghostVault,
+    ownerRecovery,
+    publication: ghostPublicationScreen,
+    support: ghostSupportScreen,
+  } = options.ghostLibrary;
   const { academy: academyScreen, foundry: foundryScreen, playerWatch, botEvidence } = options.engineeringScreens;
   const { seedRace, settingsController } = options.services;
   const { resumeSavedFinale, claimSavedFinale, endRun, retryRun } = options.services.controllers.api;
-  const { training: trainingHost, startRunWithPreflight, dispatchPlaygroundAction, tutorialSessionActions } = options.campaignTraining;
+  const {
+    training: trainingHost,
+    startRunWithPreflight,
+    dispatchPlaygroundAction,
+    tutorialSessionActions,
+  } = options.campaignTraining;
   const render = () => {
     options.presentation().frame.render();
   };
@@ -157,12 +180,20 @@ export function createLiveScreenActions(options: LiveScreenActionsOptions): Live
     startRun: (mode, difficulty) => {
       if (isRunModeSelection(mode) && isRunDifficultySelection(difficulty)) startRunWithPreflight(mode, difficulty);
     },
-    currentRun: liveRun, resumeFinale: resumeSavedFinale, claimFinale: claimSavedFinale, requestPointer: requestLock, endRun, retryRun,
-    lastReplay: () => session.lastRecording(), campaignDifficulty: () => session.outcome()?.diff ?? "normal",
+    currentRun: liveRun,
+    resumeFinale: resumeSavedFinale,
+    claimFinale: claimSavedFinale,
+    requestPointer: requestLock,
+    endRun,
+    retryRun,
+    lastReplay: () => session.lastRecording(),
+    campaignDifficulty: () => session.outcome()?.diff ?? "normal",
     resetSettings: () => {
       settingsController.reset();
     },
-    refreshAcademy: academyScreen.refresh, advanceAcademyDagger: academyScreen.advance, reviewAcademyDagger: academyScreen.review,
+    refreshAcademy: academyScreen.refresh,
+    advanceAcademyDagger: academyScreen.advance,
+    reviewAcademyDagger: academyScreen.review,
     withdrawAcademyModelTraining: academyScreen.withdrawModelTraining,
     optInHumanCalibration: (consent) => {
       academyScreen.setHumanCalibrationConsent(consent);
@@ -170,8 +201,11 @@ export function createLiveScreenActions(options: LiveScreenActionsOptions): Live
     revokeHumanCalibration: () => {
       academyScreen.setHumanCalibrationConsent("revoked");
     },
-    refreshFoundry: foundryScreen.refresh, promoteFoundry: foundryScreen.promote, restoreFoundryBaseline: foundryScreen.restoreBaseline,
-    bootstrapFoundry: foundryScreen.bootstrap, setFoundryScheduleEnabled: foundryScreen.setScheduleEnabled,
+    refreshFoundry: foundryScreen.refresh,
+    promoteFoundry: foundryScreen.promote,
+    restoreFoundryBaseline: foundryScreen.restoreBaseline,
+    bootstrapFoundry: foundryScreen.bootstrap,
+    setFoundryScheduleEnabled: foundryScreen.setScheduleEnabled,
     signIn: () => {
       void Cloud.signIn();
     },

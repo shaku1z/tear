@@ -15,9 +15,15 @@ import { launchGhostPracticeChild } from "../../src/app/replay/ghost-practice-la
 
 function child(): GhostPracticeChild {
   return Object.freeze({
-    id: "source:practice:120:exact-practice", sourceGhostId: "source", sourceRootHash: "root", forkTick: 120,
-    mode: "exact-practice", snapshot: { tick: 120 } as GhostPracticeChild["snapshot"], inputLatchPolicy: "release-all",
-    rankedEligible: false, leaderboardEligible: false,
+    id: "source:practice:120:exact-practice",
+    sourceGhostId: "source",
+    sourceRootHash: "root",
+    forkTick: 120,
+    mode: "exact-practice",
+    snapshot: { tick: 120 } as GhostPracticeChild["snapshot"],
+    inputLatchPolicy: "release-all",
+    rankedEligible: false,
+    leaderboardEligible: false,
     lineage: Object.freeze({ relation: "forked-at", parentId: "source", parentRootHash: "root", forkTick: 120 }),
   });
 }
@@ -25,11 +31,17 @@ function child(): GhostPracticeChild {
 describe("Ghost player practice launch", () => {
   it("restores the child transactionally, clears inherited recording, and activates only the unranked disposition", () => {
     const committed = vi.fn();
-    captured.restore.mockImplementation((_snapshot: unknown, _registry: unknown, _factory: unknown,
-      stateForge: Readonly<{ commit: (candidate: unknown) => void }>) => {
-      stateForge.commit({ candidate: true });
-      return Object.freeze({ ok: true, exactHash: "exact", semanticHash: "semantic" });
-    });
+    captured.restore.mockImplementation(
+      (
+        _snapshot: unknown,
+        _registry: unknown,
+        _factory: unknown,
+        stateForge: Readonly<{ commit: (candidate: unknown) => void }>,
+      ) => {
+        stateForge.commit({ candidate: true });
+        return Object.freeze({ ok: true, exactHash: "exact", semanticHash: "semantic" });
+      },
+    );
     const practice = createLiveGhostPracticeSessionState();
     const clearRestoredRecording = vi.fn();
     const setPlaying = vi.fn();
@@ -41,7 +53,10 @@ describe("Ghost player practice launch", () => {
       registry: {} as never,
       stateForge: { capture: vi.fn(), stage: vi.fn(), validate: vi.fn(() => []), commit: committed },
       hasLiveWorld: () => false,
-      practice, clearRestoredRecording, setPlaying, requestPointer,
+      practice,
+      clearRestoredRecording,
+      setPlaying,
+      requestPointer,
     });
 
     expect(result).toEqual({ ok: true, child: source, semanticHash: "semantic" });
@@ -60,7 +75,10 @@ describe("Ghost player practice launch", () => {
       registry: {} as never,
       stateForge: {} as never,
       hasLiveWorld: () => false,
-      practice, clearRestoredRecording: vi.fn(), setPlaying: vi.fn(), requestPointer: vi.fn(),
+      practice,
+      clearRestoredRecording: vi.fn(),
+      setPlaying: vi.fn(),
+      requestPointer: vi.fn(),
     });
 
     expect(result).toEqual({ ok: false, message: "Practice child failed custody validation." });

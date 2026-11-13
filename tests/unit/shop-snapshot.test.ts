@@ -3,9 +3,20 @@ import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 
 describe("shop snapshot", () => {
   it("explains optional permanent coin purchases only before any purchase evidence", () => {
-    const input = { items: [{ id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" }],
-      realCoins: 75, displayedCoins: null, lifetimeEarned: 75, height: 900, scroll: 0, now: 0,
-      level: () => 0, cost: () => 325, canBuy: () => false, shopBuys: 0, lifetimeSpent: 0 };
+    const input = {
+      items: [{ id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" }],
+      realCoins: 75,
+      displayedCoins: null,
+      lifetimeEarned: 75,
+      height: 900,
+      scroll: 0,
+      now: 0,
+      level: () => 0,
+      cost: () => 325,
+      canBuy: () => false,
+      shopBuys: 0,
+      lifetimeSpent: 0,
+    };
     const fresh = buildShopSnapshot(input).view;
     expect(fresh.onboarding).toContain("permanent upgrades");
     expect(fresh.onboarding).toContain("Buying is optional");
@@ -16,8 +27,18 @@ describe("shop snapshot", () => {
   });
   it("eases the visible ledger and projects affordability", () => {
     const item = { id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" };
-    const result = buildShopSnapshot({ items: [item], realCoins: 100, displayedCoins: 0, lifetimeEarned: 200,
-      height: 900, scroll: 0, now: 1, level: () => 1, cost: () => 10, canBuy: () => true });
+    const result = buildShopSnapshot({
+      items: [item],
+      realCoins: 100,
+      displayedCoins: 0,
+      lifetimeEarned: 200,
+      height: 900,
+      scroll: 0,
+      now: 1,
+      level: () => 1,
+      cost: () => 10,
+      canBuy: () => true,
+    });
     expect(result.displayedCoins).toBe(18);
     expect(result.view.sections[0]?.items[0]).toMatchObject({ id: "hp", enabled: true, cost: "10c" });
   });

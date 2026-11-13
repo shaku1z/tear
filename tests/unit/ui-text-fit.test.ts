@@ -7,12 +7,20 @@ const mono = (text: string, size: number): number => text.length * size * 0.6;
 
 describe("shared text fitting rule", () => {
   it("keeps text that fits at its requested size on one line", () => {
-    expect(fitTextLayout(mono, "SHOP", 200, { size: 20 })).toEqual({ size: 20, lines: ["SHOP"], truncated: false, overflow: false });
+    expect(fitTextLayout(mono, "SHOP", 200, { size: 20 })).toEqual({
+      size: 20,
+      lines: ["SHOP"],
+      truncated: false,
+      overflow: false,
+    });
   });
 
   it("steps the size down to the floor before wrapping", () => {
     // 12 chars × 20 × 0.6 = 144 > 130; at 18 px it is 129.6 and fits.
-    expect(fitTextLayout(mono, "ACHIEVEMENTS", 130, { size: 20, floor: 13, maxLines: 2 })).toMatchObject({ size: 18, lines: ["ACHIEVEMENTS"] });
+    expect(fitTextLayout(mono, "ACHIEVEMENTS", 130, { size: 20, floor: 13, maxLines: 2 })).toMatchObject({
+      size: 18,
+      lines: ["ACHIEVEMENTS"],
+    });
   });
 
   it("wraps to two lines at the floor when shrinking alone is not enough", () => {
@@ -23,7 +31,10 @@ describe("shared text fitting rule", () => {
   });
 
   it("ellipsizes only as the last resort", () => {
-    const layout = fitTextLayout(mono, "a very long description that cannot possibly fit in two short lines", 120, { size: 13, maxLines: 2 });
+    const layout = fitTextLayout(mono, "a very long description that cannot possibly fit in two short lines", 120, {
+      size: 13,
+      maxLines: 2,
+    });
     expect(layout.lines).toHaveLength(2);
     expect(layout.truncated).toBe(true);
     expect(layout.lines[1]?.endsWith("…")).toBe(true);
@@ -38,7 +49,12 @@ describe("shared text fitting rule", () => {
   });
 
   it("wraps prose first when asked, keeping the requested size", () => {
-    const layout = fitTextLayout(mono, "Closes the gap and commits a telegraphed charge", 200, { size: 13, floor: 11, maxLines: 4, wrapFirst: true });
+    const layout = fitTextLayout(mono, "Closes the gap and commits a telegraphed charge", 200, {
+      size: 13,
+      floor: 11,
+      maxLines: 4,
+      wrapFirst: true,
+    });
     expect(layout.size).toBe(13);
     expect(layout.lines.length).toBeGreaterThan(1);
     for (const line of layout.lines) expect(mono(line, 13)).toBeLessThanOrEqual(200);

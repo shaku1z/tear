@@ -77,11 +77,15 @@ describe("Tear world configuration", () => {
 
     const beforeRejectedRestore = configuration.snapshot();
     const unclonable = { ...configuration.snapshot(), world: () => undefined } as never;
-    expect(() => { configuration.restore(unclonable); }).toThrow();
+    expect(() => {
+      configuration.restore(unclonable);
+    }).toThrow();
     expect(configuration.value).toEqual(beforeRejectedRestore);
 
     const missingWorldBranch = { ...configuration.snapshot(), world: {} } as never;
-    expect(() => { configuration.restore(missingWorldBranch); }).toThrow(/incompatible/u);
+    expect(() => {
+      configuration.restore(missingWorldBranch);
+    }).toThrow(/incompatible/u);
     expect(configuration.value).toEqual(beforeRejectedRestore);
 
     configuration.value.world.gravity = 1;
@@ -102,7 +106,9 @@ describe("Tear world configuration", () => {
       config,
       // Keen Edge mutates only configuration. The real upgrade dispatcher is
       // still exercised here, without duplicating that rule in the test.
-      player: {} as UpgradeApplyContext["player"], blade: {} as UpgradeApplyContext["blade"], mods: newMods(),
+      player: {} as UpgradeApplyContext["player"],
+      blade: {} as UpgradeApplyContext["blade"],
+      mods: newMods(),
     });
 
     applyWeapon(first.value, "hammer");

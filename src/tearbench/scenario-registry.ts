@@ -7,7 +7,9 @@ export class TearScenarioRegistry {
   register(scenario: TearScenarioV1): void {
     const validation = validateTearContract(scenario);
     if (!validation.ok || validation.value.kind !== "scenario") {
-      const details = validation.ok ? "contract is not a scenario" : validation.issues.map((entry) => `${entry.path}: ${entry.message}`).join("; ");
+      const details = validation.ok
+        ? "contract is not a scenario"
+        : validation.issues.map((entry) => `${entry.path}: ${entry.message}`).join("; ");
       throw new TypeError(`invalid Tear scenario: ${details}`);
     }
     const existing = this.#scenarios.get(scenario.id);

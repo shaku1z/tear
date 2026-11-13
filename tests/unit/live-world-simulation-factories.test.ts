@@ -17,8 +17,10 @@ function noOpPresentation(onInstall: () => void = () => undefined): TearWorldEnt
     projectile: { draw: () => undefined },
     enemy: Object.freeze({ port: { drawBossTransformationWorld: () => undefined }, install: onInstall }),
     mirror: {
-      drawMirror: () => undefined, drawHostFallback: () => undefined,
-      drawReflection: () => undefined, saberLockSparks: () => undefined,
+      drawMirror: () => undefined,
+      drawHostFallback: () => undefined,
+      drawReflection: () => undefined,
+      saberLockSparks: () => undefined,
     },
   });
 }
@@ -26,9 +28,18 @@ function noOpPresentation(onInstall: () => void = () => undefined): TearWorldEnt
 function createWorldServices(clockSeconds: number): { options: Options; effects: string[]; clock: { sim: number } } {
   const effects: string[] = [];
   const clock = { sim: clockSeconds };
-  const sink = new Proxy({}, { get: (_target, key) => () => { effects.push(String(key)); } });
+  const sink = new Proxy(
+    {},
+    {
+      get: (_target, key) => () => {
+        effects.push(String(key));
+      },
+    },
+  );
   const options = {
-    clock, config: CONFIG, graphics: GFX,
+    clock,
+    config: CONFIG,
+    graphics: GFX,
     effects: sink as Options["effects"],
     sound: sink as Options["sound"],
     input: { keys: {}, mouse: { x: 0, y: 0 }, semantic: sink } as unknown as Options["input"],
@@ -81,7 +92,12 @@ describe("live world simulation factories", () => {
   it("installs the caller-owned structural enemy presentation port once", () => {
     let installs = 0;
     const fixture = createWorldServices(0);
-    const options = { ...fixture.options, presentation: noOpPresentation(() => { installs++; }) } satisfies Options;
+    const options = {
+      ...fixture.options,
+      presentation: noOpPresentation(() => {
+        installs++;
+      }),
+    } satisfies Options;
 
     createTearWorldSimulationFactories(options);
 

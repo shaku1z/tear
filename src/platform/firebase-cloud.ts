@@ -1,12 +1,9 @@
-import type {
-  AccountProvider,
-  CloudSavePayload,
-  CloudUser,
-  SharedCloudService,
-  SignInResult,
-} from "./cloud";
+import type { AccountProvider, CloudSavePayload, CloudUser, SharedCloudService, SignInResult } from "./cloud";
 import type { FirebaseClientConfig } from "./firebase-config";
-import { createFirebaseGhostPublicationBearerPort, type GhostPublicationBearerPort } from "./firebase-publication-bearer";
+import {
+  createFirebaseGhostPublicationBearerPort,
+  type GhostPublicationBearerPort,
+} from "./firebase-publication-bearer";
 
 type DataRecord = Record<string, unknown>;
 
@@ -16,7 +13,9 @@ interface DocumentSnapshot {
   data(): unknown;
 }
 
-interface QuerySnapshot { readonly docs: readonly DocumentSnapshot[] }
+interface QuerySnapshot {
+  readonly docs: readonly DocumentSnapshot[];
+}
 
 interface QueryReference {
   limit(count: number): QueryReference;
@@ -48,7 +47,9 @@ interface AuthUser {
   linkWithPopup(provider: unknown): Promise<AuthResult>;
 }
 
-interface AuthResult { readonly user: AuthUser }
+interface AuthResult {
+  readonly user: AuthUser;
+}
 
 interface Auth {
   readonly currentUser: AuthUser | null;
@@ -58,7 +59,9 @@ interface Auth {
   signOut(): Promise<void>;
 }
 
-interface RemoteConfigValue { asNumber(): number }
+interface RemoteConfigValue {
+  asNumber(): number;
+}
 interface RemoteConfig {
   settings: DataRecord;
   defaultConfig: DataRecord;
@@ -100,15 +103,19 @@ export function createBrowserScriptLoader(documentLike: Document): (url: string)
     await new Promise<void>((resolve, reject) => {
       const script = documentLike.createElement("script");
       script.src = url;
-      script.onload = () => { resolve(); };
-      script.onerror = () => { reject(new Error(`Failed to load ${url}`)); };
+      script.onload = () => {
+        resolve();
+      };
+      script.onerror = () => {
+        reject(new Error(`Failed to load ${url}`));
+      };
       documentLike.head.appendChild(script);
     });
   };
 }
 
 function asRecord(value: unknown): DataRecord | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as DataRecord : null;
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as DataRecord) : null;
 }
 
 function number(value: unknown, fallback = 0): number {
@@ -150,21 +157,30 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
   let removeAuthListener: (() => void) | undefined;
   const ghostPublicationBearer = createFirebaseGhostPublicationBearerPort(() => {
     const user = auth?.currentUser;
-    if (!auth || !user || typeof (user as { readonly getIdToken?: unknown }).getIdToken !== "function") return auth ? { currentUser: null } : null;
+    if (!auth || !user || typeof (user as { readonly getIdToken?: unknown }).getIdToken !== "function")
+      return auth ? { currentUser: null } : null;
     const tokenUser = user as AuthUser & { getIdToken(): Promise<string> };
-    return Object.freeze({ currentUser: Object.freeze({ isAnonymous: tokenUser.isAnonymous, getIdToken: () => tokenUser.getIdToken() }) });
+    return Object.freeze({
+      currentUser: Object.freeze({ isAnonymous: tokenUser.isAnonymous, getIdToken: () => tokenUser.getIdToken() }),
+    });
   });
 
-  const race = async <T>(promise: Promise<T>, milliseconds = timeoutMs): Promise<T> => await new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => { reject(new Error("timeout")); }, milliseconds);
-    void promise.then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      (error: unknown) => {
-        clearTimeout(timer);
-        reject(error instanceof Error ? error : new Error("Cloud operation failed."));
-      },
-    );
-  });
+  const race = async <T>(promise: Promise<T>, milliseconds = timeoutMs): Promise<T> =>
+    await new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error("timeout"));
+      }, milliseconds);
+      void promise.then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error: unknown) => {
+          clearTimeout(timer);
+          reject(error instanceof Error ? error : new Error("Cloud operation failed."));
+        },
+      );
+    });
 
   const ensureSdk = (): Promise<FirebaseCompatSdk | null> => {
     if (sdkLoad) return sdkLoad;
@@ -176,9 +192,15 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         await options.loadScript(`${base}/firebase-app-compat.js`);
         await options.loadScript(`${base}/firebase-auth-compat.js`);
         await options.loadScript(`${base}/firebase-firestore-compat.js`);
-        try { await options.loadScript(`${base}/firebase-remote-config-compat.js`); } catch { /* optional */ }
+        try {
+          await options.loadScript(`${base}/firebase-remote-config-compat.js`);
+        } catch {
+          /* optional */
+        }
         return options.getSdk() ?? null;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     })();
     return sdkLoad;
   };
@@ -189,12 +211,24 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       const sdk = await ensureSdk();
       if (!sdk) return false;
       try {
-        try { sdk.initializeApp(options.config); } catch { /* another adapter may own the default app */ }
+        try {
+          sdk.initializeApp(options.config);
+        } catch {
+          /* another adapter may own the default app */
+        }
         auth = sdk.auth();
         db = sdk.firestore();
-        try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch { /* already configured */ }
+        try {
+          db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+        } catch {
+          /* already configured */
+        }
         return true;
-      } catch { auth = null; db = null; return false; }
+      } catch {
+        auth = null;
+        db = null;
+        return false;
+      }
     })();
     return initialized;
   };
@@ -211,7 +245,9 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         const value = remoteConfig.getValue(key).asNumber();
         if (Number.isFinite(value) && value > 0) options.remote[key] = value;
       }
-    } catch { /* defaults remain active */ }
+    } catch {
+      /* defaults remain active */
+    }
   };
 
   const account: AccountProvider = {
@@ -226,7 +262,10 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       removeAuthListener = auth.onAuthStateChanged(async (user) => {
         if (first) {
           first = false;
-          if (!user) { await auth?.signInAnonymously(); return; }
+          if (!user) {
+            await auth?.signInAnonymously();
+            return;
+          }
         }
         if (!user) return;
         authUid = user.uid;
@@ -242,8 +281,9 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         const current = auth.currentUser;
         let result: AuthResult;
         if (current?.isAnonymous && !retryMerge) {
-          try { result = await current.linkWithPopup(provider); }
-          catch (error) {
+          try {
+            result = await current.linkWithPopup(provider);
+          } catch (error) {
             const code = errorCode(error);
             if (code === "auth/credential-already-in-use") {
               retryMerge = true;
@@ -258,9 +298,17 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         authUid = result.user.uid;
         context.setUser(authUser(result.user), "signedin", true);
         return true;
-      } catch { return false; }
+      } catch {
+        return false;
+      }
     },
-    async signOut() { try { await auth?.signOut(); } catch { /* remain local */ } },
+    async signOut() {
+      try {
+        await auth?.signOut();
+      } catch {
+        /* remain local */
+      }
+    },
     async load(): Promise<CloudSavePayload | null> {
       if (!db || !authUid) return null;
       try {
@@ -269,15 +317,24 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         const profile = asRecord(data?.profile);
         const meta = asRecord(data?.meta);
         return profile && meta ? { profile, meta } : null;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
     async save(_context, payload) {
       if (!db || !authUid) return;
       try {
-        await race(db.collection("users").doc(authUid).set({ profile: payload.profile, meta: payload.meta }, { merge: true }));
-      } catch { /* retry on next save */ }
+        await race(
+          db.collection("users").doc(authUid).set({ profile: payload.profile, meta: payload.meta }, { merge: true }),
+        );
+      } catch {
+        /* retry on next save */
+      }
     },
-    dispose() { removeAuthListener?.(); removeAuthListener = undefined; },
+    dispose() {
+      removeAuthListener?.();
+      removeAuthListener = undefined;
+    },
   };
 
   const passport = async (): Promise<Readonly<{ db: Firestore; uid: string }> | null> => {
@@ -288,8 +345,12 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       if (!currentAuthUser(activeAuth)) {
         await new Promise<void>((resolve) => {
           let done = false;
-          let unsubscribe: () => void = () => { return; };
-          const timer = setTimeout(() => { finish(); }, 2_500);
+          let unsubscribe: () => void = () => {
+            return;
+          };
+          const timer = setTimeout(() => {
+            finish();
+          }, 2_500);
           const finish = () => {
             if (done) return;
             done = true;
@@ -303,7 +364,9 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       }
       const user = currentAuthUser(activeAuth);
       return user ? { db: activeDb, uid: user.uid } : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   };
 
   const shared: SharedCloudService = {
@@ -311,32 +374,59 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
     async submitScore(mode, difficulty, entry) {
       const session = await passport();
       if (!session) return false;
-      const ref = session.db.collection("leaderboards").doc(`${mode}_${difficulty}`).collection("scores").doc(session.uid);
+      const ref = session.db
+        .collection("leaderboards")
+        .doc(`${mode}_${difficulty}`)
+        .collection("scores")
+        .doc(session.uid);
       try {
         const current = await race(ref.get());
         const currentData = current.exists ? asRecord(current.data()) : null;
         if (number(currentData?.score) >= entry.score) return false;
-        await race(ref.set({
-          name: string(entry.name, "Player"), score: Math.trunc(entry.score), wave: Math.trunc(number(entry.wave)),
-          time: Math.round(number(entry.time)), uid: session.uid, ts: now(),
-        }, { merge: true }));
+        await race(
+          ref.set(
+            {
+              name: string(entry.name, "Player"),
+              score: Math.trunc(entry.score),
+              wave: Math.trunc(number(entry.wave)),
+              time: Math.round(number(entry.time)),
+              uid: session.uid,
+              ts: now(),
+            },
+            { merge: true },
+          ),
+        );
         return true;
-      } catch { return false; }
+      } catch {
+        return false;
+      }
     },
     async topScores(mode, difficulty, limit) {
       const session = await passport();
       if (!session) return null;
       try {
-        const snapshot = await race(session.db.collection("leaderboards").doc(`${mode}_${difficulty}`)
-          .collection("scores").orderBy("score", "desc").limit(limit || 25).get());
+        const snapshot = await race(
+          session.db
+            .collection("leaderboards")
+            .doc(`${mode}_${difficulty}`)
+            .collection("scores")
+            .orderBy("score", "desc")
+            .limit(limit || 25)
+            .get(),
+        );
         return snapshot.docs.map((document) => asRecord(document.data()) ?? {});
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
     logEvent(name, data) {
       void passport().then(async (session) => {
         if (!session) return;
-        try { await session.db.collection("telemetry").add({ event: name, uid: session.uid, ts: now(), ...data }); }
-        catch { /* optional telemetry */ }
+        try {
+          await session.db.collection("telemetry").add({ event: name, uid: session.uid, ts: now(), ...data });
+        } catch {
+          /* optional telemetry */
+        }
       });
     },
     async publishReplay(recording, summary, fixedIdPrefix) {
@@ -351,18 +441,37 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         const chunks: string[] = [];
         for (let offset = 0; offset < json.length; offset += 500_000) chunks.push(json.slice(offset, offset + 500_000));
         const replaySummary: DataRecord = {
-          ...(summary ?? {}), ownerUid: session.uid, createdAt: now(), chunkCount: chunks.length,
-          mode: recording.mode ?? "", diff: recording.diff ?? "", wave: number(recording.wave), score: number(recording.score),
-          time: number(recording.time), won: recording.won === true, kills: number(recording.kills), peak: number(recording.peak, 1),
-          name: string(recording.name, "Player"), thumb: recording.thumb ?? null, lb: fixedIdPrefix !== undefined,
+          ...(summary ?? {}),
+          ownerUid: session.uid,
+          createdAt: now(),
+          chunkCount: chunks.length,
+          mode: recording.mode ?? "",
+          diff: recording.diff ?? "",
+          wave: number(recording.wave),
+          score: number(recording.score),
+          time: number(recording.time),
+          won: recording.won === true,
+          kills: number(recording.kills),
+          peak: number(recording.peak, 1),
+          name: string(recording.name, "Player"),
+          thumb: recording.thumb ?? null,
+          lb: fixedIdPrefix !== undefined,
         };
         const ref = session.db.collection("replays").doc(shareId);
         await race(ref.set(replaySummary), 12_000);
         for (let index = 0; index < chunks.length; index += 1) {
-          await race(ref.collection("chunks").doc(String(index)).set({ d: chunks[index] ?? "" }), 15_000);
+          await race(
+            ref
+              .collection("chunks")
+              .doc(String(index))
+              .set({ d: chunks[index] ?? "" }),
+            15_000,
+          );
         }
         return shareId;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
     async loadReplay(shareId) {
       const session = await passport();
@@ -388,24 +497,42 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
         recording.name = string(summary.name, "Player");
         recording.won = summary.won === true;
         return recording;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
     async replayFeed(limit) {
       const session = await passport();
       if (!session) return null;
       try {
-        const snapshot = await race(session.db.collection("replays").orderBy("createdAt", "desc").limit(limit || 20).get());
+        const snapshot = await race(
+          session.db
+            .collection("replays")
+            .orderBy("createdAt", "desc")
+            .limit(limit || 20)
+            .get(),
+        );
         return snapshot.docs.map((document) => ({ shareId: document.id ?? "", ...(asRecord(document.data()) ?? {}) }));
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
     async linkReplay(mode, difficulty, shareId) {
       const session = await passport();
       if (!session) return false;
       try {
-        await race(session.db.collection("leaderboards").doc(`${mode}_${difficulty}`).collection("scores").doc(session.uid)
-          .set({ replayId: shareId }, { merge: true }));
+        await race(
+          session.db
+            .collection("leaderboards")
+            .doc(`${mode}_${difficulty}`)
+            .collection("scores")
+            .doc(session.uid)
+            .set({ replayId: shareId }, { merge: true }),
+        );
         return true;
-      } catch { return false; }
+      } catch {
+        return false;
+      }
     },
     async loadGhost(mode, difficulty) {
       const session = await passport();
@@ -413,7 +540,9 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
       try {
         const document = await race(session.db.collection("ghosts").doc(`${mode}_${difficulty}`).get());
         return document.exists ? asRecord(document.data()) : null;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
   };
 

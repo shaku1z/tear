@@ -1,4 +1,4 @@
-type AudioContextConstructor = new(contextOptions?: AudioContextOptions) => AudioContext;
+type AudioContextConstructor = new (contextOptions?: AudioContextOptions) => AudioContext;
 
 interface AudioWindow extends Window {
   readonly AudioContext?: AudioContextConstructor;
@@ -22,7 +22,7 @@ export interface BrowserAudioContextHandoff {
  */
 export function createBrowserAudioContextHandoff(browserWindow?: Window): BrowserAudioContextHandoff {
   let captured: AudioContext | null = null;
-  const usable = (): AudioContext | null => captured?.state === "closed" ? null : captured;
+  const usable = (): AudioContext | null => (captured?.state === "closed" ? null : captured);
 
   return Object.freeze({
     capture(): AudioContext | null {
@@ -34,7 +34,9 @@ export function createBrowserAudioContextHandoff(browserWindow?: Window): Browse
       if (shared === undefined && Constructor === undefined) return null;
       captured = shared ?? (Constructor === undefined ? null : new Constructor());
       if (captured === null) return null;
-      void captured.resume().catch(() => { /* The runtime reports activation failures. */ });
+      void captured.resume().catch(() => {
+        /* The runtime reports activation failures. */
+      });
       return captured;
     },
     captured: usable,

@@ -8,11 +8,7 @@ declare global {
 }
 
 import { installTearScoreMusicBackend } from "../audio/install-tear-score";
-import {
-  installBiomeStemBackend,
-  installStemCueMusicBackend,
-  requestedStemsMode,
-} from "../audio/install-stem-cue";
+import { installBiomeStemBackend, installStemCueMusicBackend, requestedStemsMode } from "../audio/install-stem-cue";
 import { warmChapterFonts } from "../presentation/font-loader";
 import { createEngineeringQuery, type EngineeringQuery } from "../app/shell/engineering-query";
 import { createSurfaceAvailability, type SurfaceAvailability } from "../domain/surface-availability";
@@ -49,8 +45,11 @@ export async function bootstrapTear(
   const stems = requestedStemsMode(engineeringQuery.search);
   let stemInstalled = false;
   if (stems.mode === "biome") stemInstalled = await installBiomeStemBackend();
-  else if (stems.mode === "single") stemInstalled = await installStemCueMusicBackend(stems.cueId,
-    surfaces.allows("global:foundry-audio-preview") ? engineeringQuery.search : "");
+  else if (stems.mode === "single")
+    stemInstalled = await installStemCueMusicBackend(
+      stems.cueId,
+      surfaces.allows("global:foundry-audio-preview") ? engineeringQuery.search : "",
+    );
   if (!stemInstalled) await installTearScoreMusicBackend();
   await compose(Object.freeze({ surfaces, engineeringQuery }));
 }

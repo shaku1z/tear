@@ -35,41 +35,68 @@ function planSweeperCollision(
   input: ProjectileCollisionInput,
 ): readonly CombatEntityIntent[] {
   const owner = input.actors.find((actor) => actor.id === projectile.ownerId);
-  if (projectile.sweeperState === "returned" && owner !== undefined && !owner.dead && !owner.dying &&
-      distance(projectile.x, projectile.y, owner.x, owner.y) <= projectile.r + owner.radius) {
+  if (
+    projectile.sweeperState === "returned" &&
+    owner !== undefined &&
+    !owner.dead &&
+    !owner.dying &&
+    distance(projectile.x, projectile.y, owner.x, owner.y) <= projectile.r + owner.radius
+  ) {
     return [
-      ...(projectile.hasCounteredCallback ? [{ type: "sweeper-countered-callback", projectileId: projectile.id } as const] : []),
+      ...(projectile.hasCounteredCallback
+        ? [{ type: "sweeper-countered-callback", projectileId: projectile.id } as const]
+        : []),
       { type: "shatter-sweeper", projectileId: projectile.id, reason: "ownerReturn" },
     ];
   }
-  if (projectile.sweeperState !== "hostile" || !aabbOverlap(
-    projectile.x, projectile.y, projectile.r, projectile.r,
-    input.player.x, input.player.y, input.player.hw, input.player.hh,
-  )) return [];
+  if (
+    projectile.sweeperState !== "hostile" ||
+    !aabbOverlap(
+      projectile.x,
+      projectile.y,
+      projectile.r,
+      projectile.r,
+      input.player.x,
+      input.player.y,
+      input.player.hw,
+      input.player.hh,
+    )
+  )
+    return [];
   if (input.tuning.phaseStep && input.player.dashTimer > 0) {
-    const speed = Math.max(Math.hypot(projectile.vx, projectile.vy), input.tuning.projectileSpeed) * input.tuning.deflectBoost;
+    const speed =
+      Math.max(Math.hypot(projectile.vx, projectile.vy), input.tuning.projectileSpeed) * input.tuning.deflectBoost;
     const dx = input.player.dashX || input.player.facing;
     const dy = input.player.dashY || 0;
     return [
       { type: "counter-sweeper", projectileId: projectile.id, method: "phaseStep", dx, dy, speed },
       { type: "fx-burst", x: projectile.x, y: projectile.y, dx, dy, count: 9, color: input.tuning.deflectedColor },
       { type: "fx-flash", x: projectile.x, y: projectile.y, radius: 38, color: input.tuning.deflectedColor },
-      { type: "floater", x: projectile.x, y: projectile.y - 18, text: "PHASE!", big: true, color: input.tuning.deflectedColor },
+      {
+        type: "floater",
+        x: projectile.x,
+        y: projectile.y - 18,
+        text: "PHASE!",
+        big: true,
+        color: input.tuning.deflectedColor,
+      },
       { type: "add-style", style: "deflect" },
     ];
   }
   const shatter: CombatEntityIntent = { type: "shatter-sweeper", projectileId: projectile.id, reason: "playerHit" };
-  return [{
-    type: "damage-player",
-    damage: projectile.dmg ?? input.tuning.projectileDamage,
-    sourceX: projectile.x,
-    sourceId: projectile.ownerId,
-    cause: "sweeper",
-    projectileId: projectile.id,
-    onHit: [shatter, { type: "lose-style" }, { type: "sound", sound: "hurt" }],
-    onAbsorbed: [shatter, { type: "shield-absorbed" }],
-    onRejected: input.player.dashTimer > 0 ? [{ type: "dash-dodge", projectileId: projectile.id }] : [],
-  }];
+  return [
+    {
+      type: "damage-player",
+      damage: projectile.dmg ?? input.tuning.projectileDamage,
+      sourceX: projectile.x,
+      sourceId: projectile.ownerId,
+      cause: "sweeper",
+      projectileId: projectile.id,
+      onHit: [shatter, { type: "lose-style" }, { type: "sound", sound: "hurt" }],
+      onAbsorbed: [shatter, { type: "shield-absorbed" }],
+      onRejected: input.player.dashTimer > 0 ? [{ type: "dash-dodge", projectileId: projectile.id }] : [],
+    },
+  ];
 }
 
 function planReflectedCollision(
@@ -99,8 +126,15 @@ function planReflectedCollision(
         noteFirstPlayerDamage: true,
         emitReflectedHit: true,
       },
-      { type: "fx-burst", x: projectile.x, y: projectile.y, dx: projectile.vx, dy: projectile.vy,
-        count: input.tuning.sparkCount, color: input.tuning.deflectedColor },
+      {
+        type: "fx-burst",
+        x: projectile.x,
+        y: projectile.y,
+        dx: projectile.vx,
+        dy: projectile.vy,
+        count: input.tuning.sparkCount,
+        color: input.tuning.deflectedColor,
+      },
       { type: "floater", x: actor.x, y: actor.y - 26, text: Math.round(damage).toString(), big: projectile.perfect },
       { type: "shake", amount: projectile.perfect ? input.tuning.shakeBig : input.tuning.shakeSmall },
     );
@@ -125,13 +159,27 @@ function planWeaponProjectileCollision(
     const damage = projectile.dmg ?? input.tuning.projectileDamage;
     return [
       {
-        type: "weapon-projectile-hit", enemyId: actor.id, projectileId: projectile.id,
-        damage, dx: projectile.vx, dy: projectile.vy,
-        weaponId: projectile.weaponId ?? "riftlock", attackId: projectile.attackId ?? 0,
-        throwId: projectile.throwId ?? 0, remote: !!projectile.remote, secondary: !!projectile.secondary,
+        type: "weapon-projectile-hit",
+        enemyId: actor.id,
+        projectileId: projectile.id,
+        damage,
+        dx: projectile.vx,
+        dy: projectile.vy,
+        weaponId: projectile.weaponId ?? "riftlock",
+        attackId: projectile.attackId ?? 0,
+        throwId: projectile.throwId ?? 0,
+        remote: !!projectile.remote,
+        secondary: !!projectile.secondary,
       },
-      { type: "fx-burst", x: projectile.x, y: projectile.y, dx: projectile.vx, dy: projectile.vy,
-        count: input.tuning.sparkCount, color: input.tuning.deflectedColor },
+      {
+        type: "fx-burst",
+        x: projectile.x,
+        y: projectile.y,
+        dx: projectile.vx,
+        dy: projectile.vy,
+        count: input.tuning.sparkCount,
+        color: input.tuning.deflectedColor,
+      },
       { type: "projectile-patch", projectileId: projectile.id, patch: { dead: true } },
     ];
   }
@@ -142,20 +190,44 @@ function planHostileCollision(
   projectile: ProjectileState,
   input: ProjectileCollisionInput,
 ): readonly CombatEntityIntent[] {
-  if (!aabbOverlap(
-    projectile.x, projectile.y, projectile.r, projectile.r,
-    input.player.x, input.player.y, input.player.hw, input.player.hh,
-  )) return [];
+  if (
+    !aabbOverlap(
+      projectile.x,
+      projectile.y,
+      projectile.r,
+      projectile.r,
+      input.player.x,
+      input.player.y,
+      input.player.hw,
+      input.player.hh,
+    )
+  )
+    return [];
   if (input.tuning.phaseStep && input.player.dashTimer > 0 && !projectile.unparryable) {
-    const speed = Math.max(Math.hypot(projectile.vx, projectile.vy), input.tuning.projectileSpeed) * input.tuning.deflectBoost;
+    const speed =
+      Math.max(Math.hypot(projectile.vx, projectile.vy), input.tuning.projectileSpeed) * input.tuning.deflectBoost;
     const dx = input.player.dashX || input.player.facing;
     const dy = input.player.dashY || 0;
     return [
       { type: "deflect-projectile", projectileId: projectile.id, dx, dy, speed, perfect: false },
-      { type: "fx-burst", x: projectile.x, y: projectile.y, dx: input.player.dashX, dy: input.player.dashY,
-        count: 8, color: input.tuning.deflectedColor },
+      {
+        type: "fx-burst",
+        x: projectile.x,
+        y: projectile.y,
+        dx: input.player.dashX,
+        dy: input.player.dashY,
+        count: 8,
+        color: input.tuning.deflectedColor,
+      },
       { type: "fx-flash", x: projectile.x, y: projectile.y, radius: 34, color: input.tuning.deflectedColor },
-      { type: "floater", x: projectile.x, y: projectile.y - 16, text: "PHASE!", big: true, color: input.tuning.deflectedColor },
+      {
+        type: "floater",
+        x: projectile.x,
+        y: projectile.y - 16,
+        text: "PHASE!",
+        big: true,
+        color: input.tuning.deflectedColor,
+      },
       { type: "add-style", style: "deflect" },
       { type: "sound", sound: "deflect" },
     ];
@@ -164,21 +236,30 @@ function planHostileCollision(
   if (projectile.root > 0) {
     onHit.push(
       { type: "set-player-root", seconds: projectile.root },
-      { type: "floater", x: input.player.x, y: input.player.y - 34, text: "ROOTED", big: true, color: input.tuning.rootColor },
+      {
+        type: "floater",
+        x: input.player.x,
+        y: input.player.y - 34,
+        text: "ROOTED",
+        big: true,
+        color: input.tuning.rootColor,
+      },
     );
   }
-  return [{
-    type: "damage-player",
-    damage: projectile.dmg ?? input.tuning.projectileDamage,
-    sourceX: projectile.x,
-    sourceId: projectile.ownerId,
-    cause: "projectile",
-    projectileId: projectile.id,
-    acceptedProjectilePatch: { dead: true },
-    onHit,
-    onAbsorbed: [{ type: "shield-absorbed" }],
-    onRejected: input.player.dashTimer > 0 ? [{ type: "dash-dodge", projectileId: projectile.id }] : [],
-  }];
+  return [
+    {
+      type: "damage-player",
+      damage: projectile.dmg ?? input.tuning.projectileDamage,
+      sourceX: projectile.x,
+      sourceId: projectile.ownerId,
+      cause: "projectile",
+      projectileId: projectile.id,
+      acceptedProjectilePatch: { dead: true },
+      onHit,
+      onAbsorbed: [{ type: "shield-absorbed" }],
+      onRejected: input.player.dashTimer > 0 ? [{ type: "dash-dodge", projectileId: projectile.id }] : [],
+    },
+  ];
 }
 
 export function planProjectileCollisions(input: ProjectileCollisionInput): readonly CombatEntityIntent[] {
@@ -188,8 +269,7 @@ export function planProjectileCollisions(input: ProjectileCollisionInput): reado
     if (projectile.family === "sweeper") intents.push(...planSweeperCollision(projectile, input));
     else if (projectile.playerOwned && projectile.family === "weaponProjectile") {
       intents.push(...planWeaponProjectileCollision(projectile, input));
-    }
-    else if (projectile.deflected) intents.push(...planReflectedCollision(projectile, input));
+    } else if (projectile.deflected) intents.push(...planReflectedCollision(projectile, input));
     else intents.push(...planHostileCollision(projectile, input));
   }
   return intents;
@@ -217,12 +297,17 @@ export function resolveProjectileCurves(input: CurveResolutionInput): readonly C
     const dx = input.player.x - projectile.x;
     const dy = input.player.y - projectile.y;
     const magnitude = Math.hypot(dx, dy) || 1;
-    const vx = dx / magnitude * speed;
-    const vy = dy / magnitude * speed;
-    intents.push(
-      projectilePatch(projectile.id, { curveT, vx, vy, curved: true }),
-      { type: "fx-burst", x: projectile.x, y: projectile.y, dx: vx, dy: vy, count: 4, color: input.enemyShotColor },
-    );
+    const vx = (dx / magnitude) * speed;
+    const vy = (dy / magnitude) * speed;
+    intents.push(projectilePatch(projectile.id, { curveT, vx, vy, curved: true }), {
+      type: "fx-burst",
+      x: projectile.x,
+      y: projectile.y,
+      dx: vx,
+      dy: vy,
+      count: 4,
+      color: input.enemyShotColor,
+    });
   }
   return intents;
 }
@@ -242,9 +327,20 @@ export interface SpecialProjectileResolution {
   readonly intents: readonly CombatEntityIntent[];
 }
 
-function explosionFeedback(tuning: SpecialProjectileTuning, deflected: boolean, x: number, y: number): CombatEntityIntent[] {
+function explosionFeedback(
+  tuning: SpecialProjectileTuning,
+  deflected: boolean,
+  x: number,
+  y: number,
+): CombatEntityIntent[] {
   return [
-    { type: "fx-explode", x, y, color: deflected ? tuning.perfectColor : tuning.bomberColor, scale: deflected ? 1.5 : 1.2 },
+    {
+      type: "fx-explode",
+      x,
+      y,
+      color: deflected ? tuning.perfectColor : tuning.bomberColor,
+      scale: deflected ? 1.5 : 1.2,
+    },
     { type: "shake", amount: tuning.shakeBig },
     { type: "flash", amount: tuning.flashParry * (deflected ? 0.9 : 0.6) },
     { type: "sound", sound: "boom" },
@@ -263,8 +359,12 @@ export function planBombExplosion(
 ): readonly CombatEntityIntent[] {
   const intents = explosionFeedback(tuning, deflected, x, y);
   if (deflected) {
-    const bomberIds = actors.filter((actor) => !actor.dead && actor.isBomber &&
-      distance(actor.x, actor.y, x, y) <= tuning.blastRadius + actor.radius).map((actor) => actor.id);
+    const bomberIds = actors
+      .filter(
+        (actor) =>
+          !actor.dead && actor.isBomber && distance(actor.x, actor.y, x, y) <= tuning.blastRadius + actor.radius,
+      )
+      .map((actor) => actor.id);
     intents.push({
       type: "damage-enemy-aoe",
       x,
@@ -335,16 +435,40 @@ export function resolveSpecialProjectiles(input: SpecialProjectileInput): Specia
     if (projectile.dead) continue;
     if (projectile.bomb) {
       const hitGround = projectile.y + projectile.r >= input.tuning.groundY;
-      const hitEnemy = projectile.deflected && input.actors.some((actor) => !actor.dead && actor.spawnT <= 0 &&
-        distance(projectile.x, projectile.y, actor.x, actor.y) <= projectile.r + actor.radius);
-      const hitPlayer = !projectile.deflected && aabbOverlap(
-        projectile.x, projectile.y, projectile.r, projectile.r,
-        input.player.x, input.player.y, input.player.hw, input.player.hh,
-      );
+      const hitEnemy =
+        projectile.deflected &&
+        input.actors.some(
+          (actor) =>
+            !actor.dead &&
+            actor.spawnT <= 0 &&
+            distance(projectile.x, projectile.y, actor.x, actor.y) <= projectile.r + actor.radius,
+        );
+      const hitPlayer =
+        !projectile.deflected &&
+        aabbOverlap(
+          projectile.x,
+          projectile.y,
+          projectile.r,
+          projectile.r,
+          input.player.x,
+          input.player.y,
+          input.player.hw,
+          input.player.hh,
+        );
       if (hitGround || hitEnemy || hitPlayer) {
         const y = Math.min(projectile.y, input.tuning.groundY - 2);
-        intents.push(...planBombExplosion(projectile.x, y, projectile.deflected, sourceId(projectile),
-          input.actors, input.player, input.tuning, input.achievementTracking));
+        intents.push(
+          ...planBombExplosion(
+            projectile.x,
+            y,
+            projectile.deflected,
+            sourceId(projectile),
+            input.actors,
+            input.player,
+            input.tuning,
+            input.achievementTracking,
+          ),
+        );
         intents.push(projectilePatch(projectile.id, { dead: true }));
       }
     } else if (projectile.mud) {
@@ -359,12 +483,29 @@ export function resolveSpecialProjectiles(input: SpecialProjectileInput): Specia
         nextSlowZoneSequence += 1;
         intents.push(
           { type: "add-slow-zone", zone },
-          { type: "fx-burst", x: projectile.x, y: input.tuning.groundY, dx: 0, dy: -1, count: 8, color: input.tuning.sludgeColor },
+          {
+            type: "fx-burst",
+            x: projectile.x,
+            y: input.tuning.groundY,
+            dx: 0,
+            dy: -1,
+            count: 8,
+            color: input.tuning.sludgeColor,
+          },
           projectilePatch(projectile.id, { dead: true }),
         );
       }
     } else if (projectile.mine) {
-      const patch: { x?: number; y?: number; vx?: number; vy?: number; armed?: boolean; armT?: number; life: number; dead?: boolean } = { life: 6 };
+      const patch: {
+        x?: number;
+        y?: number;
+        vx?: number;
+        vy?: number;
+        armed?: boolean;
+        armT?: number;
+        life: number;
+        dead?: boolean;
+      } = { life: 6 };
       if (projectile.y + projectile.r >= input.tuning.groundY) {
         patch.y = input.tuning.groundY - projectile.r;
         patch.vx = 0;
@@ -375,10 +516,23 @@ export function resolveSpecialProjectiles(input: SpecialProjectileInput): Specia
         if (patch.armT <= 0) patch.armed = true;
       }
       const resolvedY = patch.y ?? projectile.y;
-      if (projectile.armed && !projectile.deflected &&
-        distance(input.player.x, input.player.y, projectile.x, resolvedY) < projectile.r + input.tuning.mineTrigger) {
-        intents.push(...planBombExplosion(projectile.x, resolvedY, false, sourceId(projectile),
-          input.actors, input.player, input.tuning, input.achievementTracking));
+      if (
+        projectile.armed &&
+        !projectile.deflected &&
+        distance(input.player.x, input.player.y, projectile.x, resolvedY) < projectile.r + input.tuning.mineTrigger
+      ) {
+        intents.push(
+          ...planBombExplosion(
+            projectile.x,
+            resolvedY,
+            false,
+            sourceId(projectile),
+            input.actors,
+            input.player,
+            input.tuning,
+            input.achievementTracking,
+          ),
+        );
         patch.dead = true;
       }
       intents.push(projectilePatch(projectile.id, patch));

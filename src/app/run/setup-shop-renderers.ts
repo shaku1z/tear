@@ -9,27 +9,65 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
   return Object.freeze({
     renderSetup(): void {
       const selected = state.selection();
-      const bounties = selected.mode === "bossonly" ? undefined : d.DAILY.today().map((challenge) => {
-        const done = d.DAILY.isDone(challenge), progress = d.DAILY.progress(challenge);
-        return { label: challenge.txt(challenge.goal), detail: done ? "✓ DONE" :
-          `${String(progress)}/${String(challenge.goal)} · +${String(challenge.shards)}⬡`, done };
-      });
-      renderers.setup(buildSetupSnapshot({ selectedMode: selected.mode, selectedDifficulty: selected.difficulty,
-        tutorialDone: d.PROFILE.stat("tutorialDone"), firstRun: isFirstRunProfile(firstRunProfileFacts(d.PROFILE)),
-        // The Square/X shortcut glyph only means something while a controller owns input.
-        selectedWeapon: selected.weapon, selectedBoss: selected.boss, startGlyph: d.Input.mode === "gamepad" ? d.PAD.glyph(2) : "", modes: d.CONFIG.modes,
-        difficulties: d.CONFIG.difficulties, weapons: d.WEAPONS, bosses: BOSS_ROSTER,
-        ...(bounties === undefined ? {} : { bounties }), surfaces: d.surfaces,
-        best: services.getBest(selected.mode, selected.difficulty), formatTime: services.formatTime }));
+      const bounties =
+        selected.mode === "bossonly"
+          ? undefined
+          : d.DAILY.today().map((challenge) => {
+              const done = d.DAILY.isDone(challenge),
+                progress = d.DAILY.progress(challenge);
+              return {
+                label: challenge.txt(challenge.goal),
+                detail: done
+                  ? "✓ DONE"
+                  : `${String(progress)}/${String(challenge.goal)} · +${String(challenge.shards)}⬡`,
+                done,
+              };
+            });
+      renderers.setup(
+        buildSetupSnapshot({
+          selectedMode: selected.mode,
+          selectedDifficulty: selected.difficulty,
+          tutorialDone: d.PROFILE.stat("tutorialDone"),
+          firstRun: isFirstRunProfile(firstRunProfileFacts(d.PROFILE)),
+          // The Square/X shortcut glyph only means something while a controller owns input.
+          selectedWeapon: selected.weapon,
+          selectedBoss: selected.boss,
+          startGlyph: d.Input.mode === "gamepad" ? d.PAD.glyph(2) : "",
+          modes: d.CONFIG.modes,
+          difficulties: d.CONFIG.difficulties,
+          weapons: d.WEAPONS,
+          bosses: BOSS_ROSTER,
+          ...(bounties === undefined ? {} : { bounties }),
+          surfaces: d.surfaces,
+          best: services.getBest(selected.mode, selected.difficulty),
+          formatTime: services.formatTime,
+        }),
+      );
     },
     renderShop(): void {
-      const current = state.shop(), realCoins = d.META.coins();
-      const result = buildShopSnapshot({ items: d.SHOP, realCoins, displayedCoins: current.displayedCoins,
-        shopBuys: d.PROFILE.stat("shopBuys"), lifetimeSpent: d.META.data.lifetimeSpent,
-        lifetimeEarned: d.META.data.lifetimeEarned || 0, height: services.height, scroll: state.scroll(), now: state.time(),
-        ...(current.flash ? { flash: current.flash } : {}), level: (id) => d.META.level(id),
-        cost: (item) => { const source = d.SHOP.find((entry) => entry.id === item.id); return source ? d.META.cost(source) : 0; },
-        canBuy: (item) => { const source = d.SHOP.find((entry) => entry.id === item.id); return !!source && d.META.canBuy(source); } });
+      const current = state.shop(),
+        realCoins = d.META.coins();
+      const result = buildShopSnapshot({
+        items: d.SHOP,
+        realCoins,
+        displayedCoins: current.displayedCoins,
+        shopBuys: d.PROFILE.stat("shopBuys"),
+        lifetimeSpent: d.META.data.lifetimeSpent,
+        lifetimeEarned: d.META.data.lifetimeEarned || 0,
+        height: services.height,
+        scroll: state.scroll(),
+        now: state.time(),
+        ...(current.flash ? { flash: current.flash } : {}),
+        level: (id) => d.META.level(id),
+        cost: (item) => {
+          const source = d.SHOP.find((entry) => entry.id === item.id);
+          return source ? d.META.cost(source) : 0;
+        },
+        canBuy: (item) => {
+          const source = d.SHOP.find((entry) => entry.id === item.id);
+          return !!source && d.META.canBuy(source);
+        },
+      });
       state.setShop({ displayedCoins: result.displayedCoins, flash: current.flash });
       // A phone composition (compact density) measures and clamps its own scroll extent.
       if (!d.UI.density.compact) state.setScroll(services.clamp(state.scroll(), 0, result.maximumScroll));

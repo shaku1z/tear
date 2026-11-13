@@ -161,11 +161,17 @@ test("canonical main identity, cleanliness, and exact origin are required", () =
   const dirty = createFixture();
   const wrongBranch = createFixture();
   try {
-    assert.throws(() => runRemainingWorkspaceInventory(inventoryOptions(wrongOrigin)), /origin must identify shaku1z\/tear/u);
+    assert.throws(
+      () => runRemainingWorkspaceInventory(inventoryOptions(wrongOrigin)),
+      /origin must identify shaku1z\/tear/u,
+    );
     addFile(dirty.repoRoot, "untracked.txt", "dirty\n");
     assert.throws(() => runRemainingWorkspaceInventory(inventoryOptions(dirty)), /repo-root must be clean/u);
     git(wrongBranch.repoRoot, ["checkout", "-q", "-b", "feature"]);
-    assert.throws(() => runRemainingWorkspaceInventory(inventoryOptions(wrongBranch)), /clean main tracking origin\/main/u);
+    assert.throws(
+      () => runRemainingWorkspaceInventory(inventoryOptions(wrongBranch)),
+      /clean main tracking origin\/main/u,
+    );
   } finally {
     cleanup(wrongOrigin);
     cleanup(dirty);
@@ -202,8 +208,14 @@ test("companion repositories and the oracle fail closed when identity, cleanline
     assert.match(unlockedFinding.blockers.join("\n"), /not locked with a comparison-only reason/u);
 
     git(wrongOracle.repoRoot, ["worktree", "unlock", wrongOracle.oracleRoot]);
-    git(wrongOracle.oracleRoot, ["reset", "-q", "--hard", git(wrongOracle.repoRoot, ["rev-parse", "HEAD"]) ]);
-    git(wrongOracle.repoRoot, ["worktree", "lock", "--reason", "comparison-only wrong-head fixture", wrongOracle.oracleRoot]);
+    git(wrongOracle.oracleRoot, ["reset", "-q", "--hard", git(wrongOracle.repoRoot, ["rev-parse", "HEAD"])]);
+    git(wrongOracle.repoRoot, [
+      "worktree",
+      "lock",
+      "--reason",
+      "comparison-only wrong-head fixture",
+      wrongOracle.oracleRoot,
+    ]);
     const wrongOracleReport = runRemainingWorkspaceInventory(inventoryOptions(wrongOracle));
     const wrongOracleFinding = wrongOracleReport.findings.find((entry) => entry.name === "Tear-oracle");
     assert.equal(wrongOracleFinding.classification, "invalid-oracle");
@@ -257,8 +269,17 @@ test("default output is write-free and optional output is new-only inside an exi
     assert.equal(fs.existsSync(output), true);
     assert.equal(JSON.parse(fs.readFileSync(output, "utf8")).format, "tear-remaining-workspace-inventory");
     assert.equal(report.inputs.archiveRoot, fixture.archiveRoot);
-    assert.throws(() => runRemainingWorkspaceInventory(inventoryOptions(fixture, { outputPath: output })), /refusing overwrite/u);
-    assert.throws(() => runRemainingWorkspaceInventory(inventoryOptions(fixture, { outputPath: path.join(fixture.archiveRoot, "outside-group.json") })), /existing dated archive recovery group/u);
+    assert.throws(
+      () => runRemainingWorkspaceInventory(inventoryOptions(fixture, { outputPath: output })),
+      /refusing overwrite/u,
+    );
+    assert.throws(
+      () =>
+        runRemainingWorkspaceInventory(
+          inventoryOptions(fixture, { outputPath: path.join(fixture.archiveRoot, "outside-group.json") }),
+        ),
+      /existing dated archive recovery group/u,
+    );
   } finally {
     cleanup(fixture);
   }
@@ -267,17 +288,30 @@ test("default output is write-free and optional output is new-only inside an exi
 test("CLI requires all four explicit roots and rejects duplicate flags", () => {
   const fixture = createFixture();
   try {
-    const missing = spawnSync(process.execPath, [reporterPath, "--repo-root", fixture.repoRoot], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
+    const missing = spawnSync(process.execPath, [reporterPath, "--repo-root", fixture.repoRoot], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      stdio: "pipe",
+    });
     assert.notEqual(missing.status, 0);
     assert.match(missing.stderr, /workspaceRoot is required/u);
-    const duplicate = spawnSync(process.execPath, [
-      reporterPath,
-      "--repo-root", fixture.repoRoot,
-      "--repo-root", fixture.repoRoot,
-      "--workspace-root", fixture.workspaceRoot,
-      "--temp-root", fixture.tempRoot,
-      "--archive-root", fixture.archiveRoot,
-    ], { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" });
+    const duplicate = spawnSync(
+      process.execPath,
+      [
+        reporterPath,
+        "--repo-root",
+        fixture.repoRoot,
+        "--repo-root",
+        fixture.repoRoot,
+        "--workspace-root",
+        fixture.workspaceRoot,
+        "--temp-root",
+        fixture.tempRoot,
+        "--archive-root",
+        fixture.archiveRoot,
+      ],
+      { cwd: repositoryRoot, encoding: "utf8", stdio: "pipe" },
+    );
     assert.notEqual(duplicate.status, 0);
     assert.match(duplicate.stderr, /duplicate argument: --repo-root/u);
   } finally {

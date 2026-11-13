@@ -12,4 +12,6 @@ export const TUTORIAL_BASELINE_CONTRACT = Object.freeze({
   restoresPlayerBetweenBlocks: true,
 });
 
-export function tutorialUsesBaselineLoadout(mode: RunMode): boolean { return mode === "tutorial"; }
+export function tutorialUsesBaselineLoadout(mode: RunMode): boolean {
+  return mode === "tutorial";
+}

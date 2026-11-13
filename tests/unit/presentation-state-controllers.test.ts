@@ -4,10 +4,19 @@ import { TouchOnboardingController } from "../../src/app/training/touch-onboardi
 
 describe("presentation state controllers", () => {
   it("queues achievement toasts and records them as seen", () => {
-    const markSeen = vi.fn(), save = vi.fn(), pending = [{ id: "a", name: "A", desc: "done", rarity: "common", cat: "combat" }];
-    const snapshot = new AchievementToastController((value) => value).step(0.2, { pending,
-      rarities: {}, commonRarity: { name: "COMMON", color: "#fff" }, categories: { combat: { icon: "!" } },
-      markSeen, save, shardsFor: () => 2, coinsFor: () => 3 });
+    const markSeen = vi.fn(),
+      save = vi.fn(),
+      pending = [{ id: "a", name: "A", desc: "done", rarity: "common", cat: "combat" }];
+    const snapshot = new AchievementToastController((value) => value).step(0.2, {
+      pending,
+      rarities: {},
+      commonRarity: { name: "COMMON", color: "#fff" },
+      categories: { combat: { icon: "!" } },
+      markSeen,
+      save,
+      shardsFor: () => 2,
+      coinsFor: () => 3,
+    });
     expect(snapshot).toMatchObject({ name: "A", reveal: 0.5, shards: 2, coins: 3 });
     expect(markSeen).toHaveBeenCalledWith("a");
     expect(save).toHaveBeenCalledOnce();

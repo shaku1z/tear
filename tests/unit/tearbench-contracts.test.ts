@@ -12,29 +12,41 @@ import {
   type TearScenarioV1,
 } from "../../src/tearbench";
 
-const scenario = (): TearScenarioV1 => Object.freeze({
-  format: TEAR_CONTRACT_FORMAT,
-  kind: "scenario",
-  schemaVersion: TEAR_CONTRACT_VERSION,
-  id: "parry-basic",
-  version: 1,
-  description: "Deflect one projectile without player damage.",
-  stateClass: "surgical-valid",
-  executionClass: "engineering",
-  seed: "1001",
-  start: Object.freeze({ mode: "campaign", difficulty: "normal", weapon: "sword", stage: "grounds", wave: 1 }),
-  maxTicks: 720,
-  assertions: Object.freeze(["runtime.finite-state", "player.valid-health"] as const),
-  tags: Object.freeze(["parry", "projectile"] as const),
-});
+const scenario = (): TearScenarioV1 =>
+  Object.freeze({
+    format: TEAR_CONTRACT_FORMAT,
+    kind: "scenario",
+    schemaVersion: TEAR_CONTRACT_VERSION,
+    id: "parry-basic",
+    version: 1,
+    description: "Deflect one projectile without player damage.",
+    stateClass: "surgical-valid",
+    executionClass: "engineering",
+    seed: "1001",
+    start: Object.freeze({ mode: "campaign", difficulty: "normal", weapon: "sword", stage: "grounds", wave: 1 }),
+    maxTicks: 720,
+    assertions: Object.freeze(["runtime.finite-state", "player.valid-health"] as const),
+    tags: Object.freeze(["parry", "projectile"] as const),
+  });
 
 describe("TearBench shared contracts", () => {
   it("requires every optional causal actor identifier to be a bounded string", () => {
-    const event = { format: TEAR_CONTRACT_FORMAT, kind: "event", schemaVersion: 1,
-      id: "event-1", tick: 0, sequence: 0, type: "enemy.spawned", phase: "wave-draft-and-state-transitions", source: "engine", payload: {} };
+    const event = {
+      format: TEAR_CONTRACT_FORMAT,
+      kind: "event",
+      schemaVersion: 1,
+      id: "event-1",
+      tick: 0,
+      sequence: 0,
+      type: "enemy.spawned",
+      phase: "wave-draft-and-state-transitions",
+      source: "engine",
+      payload: {},
+    };
     expect(validateTearContract(event).ok).toBe(true);
     expect(validateTearContract({ ...event, actorId: "enemy:1" }).ok).toBe(true);
-    for (const actorId of [7, "", "x".repeat(10000), null, [], {}]) expect(validateTearContract({ ...event, actorId }).ok).toBe(false);
+    for (const actorId of [7, "", "x".repeat(10000), null, [], {}])
+      expect(validateTearContract({ ...event, actorId }).ok).toBe(false);
   });
   it("round-trips a valid scenario through hostile-input validation", () => {
     const parsed = validateTearContract(JSON.stringify(scenario()));
@@ -64,21 +76,36 @@ describe("TearBench shared contracts", () => {
       { ...start, boss: "warden", bossPhase: "01" },
       { ...start, boss: "warden", bossPhase: "4" },
       { ...start, mode: "tutorial", boss: "warden" },
-    ]) expect(validateTearContract({ ...scenario(), start: invalid }).ok).toBe(false);
+    ])
+      expect(validateTearContract({ ...scenario(), start: invalid }).ok).toBe(false);
 
-    expect(validateTearContract({
-      ...scenario(), start: { ...start, boss: "warden", bossPhase: "1" },
-    }).ok).toBe(true);
-    expect(validateTearContract({
-      ...scenario(), stateClass: "recorded-canonical", start: { ...start, boss: "warden" },
-    }).ok).toBe(false);
+    expect(
+      validateTearContract({
+        ...scenario(),
+        start: { ...start, boss: "warden", bossPhase: "1" },
+      }).ok,
+    ).toBe(true);
+    expect(
+      validateTearContract({
+        ...scenario(),
+        stateClass: "recorded-canonical",
+        start: { ...start, boss: "warden" },
+      }).ok,
+    ).toBe(false);
   });
 
   it("validates event registry identity and causal timing fields", () => {
     const event: TearCausalEventV1 = {
-      format: TEAR_CONTRACT_FORMAT, kind: "event", schemaVersion: 1,
-      id: "event-1", type: "combat.perfect-parry", tick: 42,
-      phase: "collision-and-damage", sequence: 3, source: "engine", payload: {},
+      format: TEAR_CONTRACT_FORMAT,
+      kind: "event",
+      schemaVersion: 1,
+      id: "event-1",
+      type: "combat.perfect-parry",
+      tick: 42,
+      phase: "collision-and-damage",
+      sequence: 3,
+      source: "engine",
+      payload: {},
     };
     expect(validateTearContract(event).ok).toBe(true);
     expect(validateTearContract({ ...event, type: "combat.imaginary" }).ok).toBe(false);
@@ -88,8 +115,14 @@ describe("TearBench shared contracts", () => {
 
   it("enforces coherent Ghost ranges", () => {
     const range: GhostRangeV1 = {
-      format: TEAR_CONTRACT_FORMAT, kind: "ghost-range", schemaVersion: 1,
-      ghostId: "ghost-1", fromTick: 100, toTick: 240, preRollTicks: 30, postRollTicks: 60,
+      format: TEAR_CONTRACT_FORMAT,
+      kind: "ghost-range",
+      schemaVersion: 1,
+      ghostId: "ghost-1",
+      fromTick: 100,
+      toTick: 240,
+      preRollTicks: 30,
+      postRollTicks: 60,
     };
     expect(validateTearContract(range).ok).toBe(true);
     expect(validateTearContract({ ...range, toTick: 99 }).ok).toBe(false);

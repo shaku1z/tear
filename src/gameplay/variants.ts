@@ -53,57 +53,310 @@ export interface EnemyVariant {
 
 const VARIANTS: Readonly<Record<string, readonly EnemyVariant[]>> = {
   charger: [
-    { id: "bull",        name: "Charger",     weight: 1.0,             apply: (e) => { e.behavior = "bull"; } },
-    { id: "brawler",     name: "Brawler",     weight: 0.8, minWave: 2, apply: (e) => { e.behavior = "brawler"; e.contactReach = Math.max(e.contactReach, 10); } },
-    { id: "stalker",     name: "Stalker",     weight: 0.7, minWave: 4, apply: (e) => { e.behavior = "stalker"; e.speedMult *= 1.3; e.hp *= 0.78; e.maxHp *= 0.78; } },
-    { id: "executioner", name: "Executioner", weight: 0.5, minWave: 6, apply: (e) => { e.behavior = "executioner"; e.hp *= 1.3; e.maxHp *= 1.3; e.speedMult *= 0.7; } },
-    { id: "gravedigger", name: "Gravedigger", weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "gravedigger"; e.hp *= 1.4; e.maxHp *= 1.4; e.speedMult *= 0.6; } },
-    { id: "duelist",     name: "Duelist",     weight: 0.5, minWave: 6, apply: (e) => { e.behavior = "duelist"; e.contactReach = Math.max(e.contactReach, 12); e.duelReady = true; } },
+    {
+      id: "bull",
+      name: "Charger",
+      weight: 1.0,
+      apply: (e) => {
+        e.behavior = "bull";
+      },
+    },
+    {
+      id: "brawler",
+      name: "Brawler",
+      weight: 0.8,
+      minWave: 2,
+      apply: (e) => {
+        e.behavior = "brawler";
+        e.contactReach = Math.max(e.contactReach, 10);
+      },
+    },
+    {
+      id: "stalker",
+      name: "Stalker",
+      weight: 0.7,
+      minWave: 4,
+      apply: (e) => {
+        e.behavior = "stalker";
+        e.speedMult *= 1.3;
+        e.hp *= 0.78;
+        e.maxHp *= 0.78;
+      },
+    },
+    {
+      id: "executioner",
+      name: "Executioner",
+      weight: 0.5,
+      minWave: 6,
+      apply: (e) => {
+        e.behavior = "executioner";
+        e.hp *= 1.3;
+        e.maxHp *= 1.3;
+        e.speedMult *= 0.7;
+      },
+    },
+    {
+      id: "gravedigger",
+      name: "Gravedigger",
+      weight: 0.5,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "gravedigger";
+        e.hp *= 1.4;
+        e.maxHp *= 1.4;
+        e.speedMult *= 0.6;
+      },
+    },
+    {
+      id: "duelist",
+      name: "Duelist",
+      weight: 0.5,
+      minWave: 6,
+      apply: (e) => {
+        e.behavior = "duelist";
+        e.contactReach = Math.max(e.contactReach, 12);
+        e.duelReady = true;
+      },
+    },
     // Verdant content reuses the authored Charger verbs; the gate below is
     // source-owned so it cannot leak into existing campaign stages.
-    { id: "briar-stalker", name: "Briar Stalker", weight: 0.55, minWave: 4, apply: (e) => { e.behavior = "briar-stalker"; e.speedMult *= 1.18; } },
-    { id: "rime-runner", name: "Rime Runner", weight: 0.7, minWave: 4, apply: (e) => { e.behavior = "rime-runner"; e.speedMult *= 1.08; } },
+    {
+      id: "briar-stalker",
+      name: "Briar Stalker",
+      weight: 0.55,
+      minWave: 4,
+      apply: (e) => {
+        e.behavior = "briar-stalker";
+        e.speedMult *= 1.18;
+      },
+    },
+    {
+      id: "rime-runner",
+      name: "Rime Runner",
+      weight: 0.7,
+      minWave: 4,
+      apply: (e) => {
+        e.behavior = "rime-runner";
+        e.speedMult *= 1.08;
+      },
+    },
   ],
   ranged: [
-    { id: "sentinel", name: "Sentinel", weight: 1.0,             apply: (e) => { e.behavior = "sentinel"; } },
-    { id: "rifleman", name: "Rifleman", weight: 0.8, minWave: 3, apply: (e) => { e.behavior = "rifleman"; } },
-    { id: "marksman", name: "Marksman", weight: 0.6, minWave: 5, apply: (e) => { e.behavior = "marksman"; e.hp *= 1.1; e.maxHp *= 1.1; } },
-    { id: "warlock",  name: "Warlock",  weight: 0.55, minWave: 6, apply: (e) => { e.behavior = "warlock"; } },
-    { id: "chain",    name: "Chain Caster", weight: 0.5, minWave: 7, apply: (e) => { e.behavior = "chain"; } },
-    { id: "seedcaster", name: "Seedcaster", weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "seedcaster"; e.speedMult *= 0.92; } },
-    { id: "prism-seer", name: "Prism Seer", weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "prism-seer"; e.speedMult *= 0.9; } },
+    {
+      id: "sentinel",
+      name: "Sentinel",
+      weight: 1.0,
+      apply: (e) => {
+        e.behavior = "sentinel";
+      },
+    },
+    {
+      id: "rifleman",
+      name: "Rifleman",
+      weight: 0.8,
+      minWave: 3,
+      apply: (e) => {
+        e.behavior = "rifleman";
+      },
+    },
+    {
+      id: "marksman",
+      name: "Marksman",
+      weight: 0.6,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "marksman";
+        e.hp *= 1.1;
+        e.maxHp *= 1.1;
+      },
+    },
+    {
+      id: "warlock",
+      name: "Warlock",
+      weight: 0.55,
+      minWave: 6,
+      apply: (e) => {
+        e.behavior = "warlock";
+      },
+    },
+    {
+      id: "chain",
+      name: "Chain Caster",
+      weight: 0.5,
+      minWave: 7,
+      apply: (e) => {
+        e.behavior = "chain";
+      },
+    },
+    {
+      id: "seedcaster",
+      name: "Seedcaster",
+      weight: 0.5,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "seedcaster";
+        e.speedMult *= 0.92;
+      },
+    },
+    {
+      id: "prism-seer",
+      name: "Prism Seer",
+      weight: 0.5,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "prism-seer";
+        e.speedMult *= 0.9;
+      },
+    },
   ],
   flyer: [
-    { id: "swooper",    name: "Flyer",       weight: 1.0,             apply: (e) => { e.behavior = "swoop"; } },
-    { id: "divebomber", name: "Dive Bomber", weight: 0.8, minWave: 3, apply: (e) => { e.behavior = "divebomb"; } },
-    { id: "highdiver",  name: "Swooper",     weight: 0.6, minWave: 5, apply: (e) => { e.behavior = "highdive"; } },
-    { id: "canopy-diver", name: "Canopy Diver", weight: 0.5, minWave: 4, apply: (e) => { e.behavior = "canopy-diver"; } },
-    { id: "snowfall-kite", name: "Snowfall Kite", weight: 0.5, minWave: 4, apply: (e) => { e.behavior = "snowfall-kite"; e.speedMult *= 0.94; } },
+    {
+      id: "swooper",
+      name: "Flyer",
+      weight: 1.0,
+      apply: (e) => {
+        e.behavior = "swoop";
+      },
+    },
+    {
+      id: "divebomber",
+      name: "Dive Bomber",
+      weight: 0.8,
+      minWave: 3,
+      apply: (e) => {
+        e.behavior = "divebomb";
+      },
+    },
+    {
+      id: "highdiver",
+      name: "Swooper",
+      weight: 0.6,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "highdive";
+      },
+    },
+    {
+      id: "canopy-diver",
+      name: "Canopy Diver",
+      weight: 0.5,
+      minWave: 4,
+      apply: (e) => {
+        e.behavior = "canopy-diver";
+      },
+    },
+    {
+      id: "snowfall-kite",
+      name: "Snowfall Kite",
+      weight: 0.5,
+      minWave: 4,
+      apply: (e) => {
+        e.behavior = "snowfall-kite";
+        e.speedMult *= 0.94;
+      },
+    },
   ],
   bomber: [
-    { id: "lobber",    name: "Bomber",    weight: 1.0,             apply: (e) => { e.behavior = "lob"; } },
-    { id: "juggler",   name: "Juggler",   weight: 0.7, minWave: 4, apply: (e) => { e.behavior = "juggle"; } },
-    { id: "trapper",   name: "Trapper",   weight: 0.6, minWave: 3, apply: (e) => { e.behavior = "trap"; } },
-    { id: "sludge",    name: "Sludge",    weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "sludge"; } },
-    { id: "geomancer", name: "Geomancer", weight: 0.45, minWave: 7, apply: (e) => { e.behavior = "geo"; e.hp *= 1.2; e.maxHp *= 1.2; } },
-    { id: "hailcaster", name: "Hailcaster", weight: 0.5, minWave: 5, apply: (e) => { e.behavior = "hailcaster"; e.speedMult *= 0.9; } },
+    {
+      id: "lobber",
+      name: "Bomber",
+      weight: 1.0,
+      apply: (e) => {
+        e.behavior = "lob";
+      },
+    },
+    {
+      id: "juggler",
+      name: "Juggler",
+      weight: 0.7,
+      minWave: 4,
+      apply: (e) => {
+        e.behavior = "juggle";
+      },
+    },
+    {
+      id: "trapper",
+      name: "Trapper",
+      weight: 0.6,
+      minWave: 3,
+      apply: (e) => {
+        e.behavior = "trap";
+      },
+    },
+    {
+      id: "sludge",
+      name: "Sludge",
+      weight: 0.5,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "sludge";
+      },
+    },
+    {
+      id: "geomancer",
+      name: "Geomancer",
+      weight: 0.45,
+      minWave: 7,
+      apply: (e) => {
+        e.behavior = "geo";
+        e.hp *= 1.2;
+        e.maxHp *= 1.2;
+      },
+    },
+    {
+      id: "hailcaster",
+      name: "Hailcaster",
+      weight: 0.5,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "hailcaster";
+        e.speedMult *= 0.9;
+      },
+    },
   ],
   // armored keeps its baseline (turn-to-face + enrage on shield break); an absent
   // list just means "no variant, use the family default". Bark Sentinel is
   // deliberately the same shielded Armored family, not a second hard-root
   // implementation.
   armored: [
-    { id: "bark-sentinel", name: "Bark Sentinel", weight: 0.45, minWave: 5, apply: (e) => { e.behavior = "bark-sentinel"; e.speedMult *= 0.82; if (e.weight !== undefined) e.weight *= 1.25; } },
-    { id: "glacier-guard", name: "Glacier Guard", weight: 0.45, minWave: 5, apply: (e) => { e.behavior = "glacier-guard"; e.speedMult *= 0.76; if (e.weight !== undefined) e.weight *= 1.35; } },
+    {
+      id: "bark-sentinel",
+      name: "Bark Sentinel",
+      weight: 0.45,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "bark-sentinel";
+        e.speedMult *= 0.82;
+        if (e.weight !== undefined) e.weight *= 1.25;
+      },
+    },
+    {
+      id: "glacier-guard",
+      name: "Glacier Guard",
+      weight: 0.45,
+      minWave: 5,
+      apply: (e) => {
+        e.behavior = "glacier-guard";
+        e.speedMult *= 0.76;
+        if (e.weight !== undefined) e.weight *= 1.35;
+      },
+    },
   ],
 };
 
 export const VERDANT_VARIANT_IDS = Object.freeze([
-  "briar-stalker", "seedcaster", "canopy-diver", "bark-sentinel",
+  "briar-stalker",
+  "seedcaster",
+  "canopy-diver",
+  "bark-sentinel",
 ] as const);
 const VERDANT_VARIANT_ID_SET: ReadonlySet<string> = new Set(VERDANT_VARIANT_IDS);
 export const PALE_VARIANT_IDS = Object.freeze([
-  "rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard",
+  "rime-runner",
+  "prism-seer",
+  "snowfall-kite",
+  "hailcaster",
+  "glacier-guard",
 ] as const);
 const PALE_VARIANT_ID_SET: ReadonlySet<string> = new Set(PALE_VARIANT_IDS);
 
@@ -148,12 +401,16 @@ export function variantHomeStage(id: string): StageId | null {
 
 /** Variant identities exposed on a surface, derived from their authored home stage. */
 export function variantIdsAvailableOn(surface: ContentAvailabilitySurface): readonly string[] {
-  return Object.freeze(Object.values(VARIANTS).flatMap((variants) => variants
-    .filter(({ id }) => {
-      const home = variantHomeStage(id);
-      return home === null || STAGE_CONTENT_AVAILABILITY[home][surface];
-    })
-    .map(({ id }) => id)));
+  return Object.freeze(
+    Object.values(VARIANTS).flatMap((variants) =>
+      variants
+        .filter(({ id }) => {
+          const home = variantHomeStage(id);
+          return home === null || STAGE_CONTENT_AVAILABILITY[home][surface];
+        })
+        .map(({ id }) => id),
+    ),
+  );
 }
 
 /**
@@ -181,8 +438,7 @@ export function selectVariant(kind: string, context: VariantSelectionContext): E
   assertWave(context.localWave, "localWave");
   assertWave(context.globalWave, "globalWave");
   const variants = VARIANTS[kind] ?? [];
-  if (context.explicitVariantId !== undefined
-    && (context.mode === "playground" || context.mode === "sandbox")) {
+  if (context.explicitVariantId !== undefined && (context.mode === "playground" || context.mode === "sandbox")) {
     const explicit = findVariant(kind, context.explicitVariantId);
     if (explicit === null) return null;
     const homeStage = variantHomeStage(explicit.id);
@@ -194,11 +450,18 @@ export function selectVariant(kind: string, context: VariantSelectionContext): E
   const eligible = variants.filter((variant) => {
     const homeStage = variantHomeStage(variant.id);
     if (homeStage !== null) {
-      if (context.mode === "campaign") return STAGE_CONTENT_AVAILABILITY[homeStage].adventure
-        && context.stageId === homeStage && context.localWave >= (variant.minWave ?? 1);
+      if (context.mode === "campaign")
+        return (
+          STAGE_CONTENT_AVAILABILITY[homeStage].adventure &&
+          context.stageId === homeStage &&
+          context.localWave >= (variant.minWave ?? 1)
+        );
       if (context.mode === "endless" || context.mode === "gauntlet") {
-        return STAGE_CONTENT_AVAILABILITY[homeStage][context.mode]
-          && discovered.has(variant.id) && context.localWave >= (variant.minWave ?? 1);
+        return (
+          STAGE_CONTENT_AVAILABILITY[homeStage][context.mode] &&
+          discovered.has(variant.id) &&
+          context.localWave >= (variant.minWave ?? 1)
+        );
       }
       return false;
     }
@@ -215,15 +478,24 @@ export function selectVariant(kind: string, context: VariantSelectionContext): E
 // New production code should pass the complete context overload.
 function rollVariant(kind: string, wave: number, random: RandomSource): EnemyVariant | null;
 function rollVariant(kind: string, context: VariantSelectionContext): EnemyVariant | null;
-function rollVariant(kind: string, waveOrContext: number | VariantSelectionContext, random?: RandomSource): EnemyVariant | null {
+function rollVariant(
+  kind: string,
+  waveOrContext: number | VariantSelectionContext,
+  random?: RandomSource,
+): EnemyVariant | null {
   if (typeof waveOrContext !== "number") return selectVariant(kind, waveOrContext);
   const wave = waveOrContext;
   if (random === undefined) throw new TypeError("legacy variant rolls require an injected random source");
-  const list = (VARIANTS[kind] ?? []).filter((v) => !isStageNativeVariant(v.id) && (v.minWave === undefined || wave >= v.minWave));
+  const list = (VARIANTS[kind] ?? []).filter(
+    (v) => !isStageNativeVariant(v.id) && (v.minWave === undefined || wave >= v.minWave),
+  );
   if (!list.length) return null;
-  let total = 0; for (const v of list) total += v.weight;
+  let total = 0;
+  for (const v of list) total += v.weight;
   let r = random.next() * total;
-  for (const v of list) { if ((r -= v.weight) <= 0) return v; }
+  for (const v of list) {
+    if ((r -= v.weight) <= 0) return v;
+  }
   return list[0] ?? null;
 }
 

@@ -1,7 +1,10 @@
 import type { CampaignChapterController, CampaignChapterFlow } from "../../gameplay/campaign/chapter-controller";
 import type { FinaleController, FinaleState } from "../../gameplay/campaign/finale-controller";
-import { captureCampaignChapterBindingSpec, type CampaignChapterBindingSpecV1,
-  type StagedCampaignChapterBinding } from "../../gameplay/campaign/chapter-cinematic-binding";
+import {
+  captureCampaignChapterBindingSpec,
+  type CampaignChapterBindingSpecV1,
+  type StagedCampaignChapterBinding,
+} from "../../gameplay/campaign/chapter-cinematic-binding";
 
 export interface CinematicProtectionState {
   active: boolean;

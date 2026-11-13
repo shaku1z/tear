@@ -69,22 +69,54 @@ export interface FinaleIntentPorts {
 export function dispatchFinaleIntents(intents: readonly FinaleIntent[], ports: FinaleIntentPorts): void {
   for (const intent of intents) {
     switch (intent.type) {
-      case "begin-finale-lifecycle": ports.beginLifecycle(); break;
-      case "clear-combat": ports.clearCombat(); break;
-      case "freeze-void": ports.freezeVoid(); break;
-      case "world-zoom": ports.worldZoom(intent.value); break;
-      case "final-blade": ports.finalBlade(intent.active, intent.restoredTrail === true); break;
-      case "ring": ports.ring(intent.x, intent.y, intent.radius, intent.color); break;
-      case "burst": ports.burst(intent.x, intent.y, intent.dx, intent.dy, intent.count, intent.color); break;
-      case "flash": ports.flash(intent.amount); break;
-      case "shake": ports.shake(intent.amount); break;
-      case "vibrate": ports.vibrate(intent.pattern); break;
-      case "sound": ports.sound(intent.cue, intent.index ?? 0); break;
-      case "restore-stage-zero": ports.restoreStageZero(); break;
-      case "set-player-restoration": ports.restorePlayer(intent.xMin, intent.xMax, intent.yMax, intent.vy); break;
-      case "void-mix": ports.voidMix(intent.amount, intent.duration); break;
-      case "music-duck": ports.musicDuck(intent.amount, intent.duration); break;
-      case "win-run": ports.win(intent.campaign); break;
+      case "begin-finale-lifecycle":
+        ports.beginLifecycle();
+        break;
+      case "clear-combat":
+        ports.clearCombat();
+        break;
+      case "freeze-void":
+        ports.freezeVoid();
+        break;
+      case "world-zoom":
+        ports.worldZoom(intent.value);
+        break;
+      case "final-blade":
+        ports.finalBlade(intent.active, intent.restoredTrail === true);
+        break;
+      case "ring":
+        ports.ring(intent.x, intent.y, intent.radius, intent.color);
+        break;
+      case "burst":
+        ports.burst(intent.x, intent.y, intent.dx, intent.dy, intent.count, intent.color);
+        break;
+      case "flash":
+        ports.flash(intent.amount);
+        break;
+      case "shake":
+        ports.shake(intent.amount);
+        break;
+      case "vibrate":
+        ports.vibrate(intent.pattern);
+        break;
+      case "sound":
+        ports.sound(intent.cue, intent.index ?? 0);
+        break;
+      case "restore-stage-zero":
+        ports.restoreStageZero();
+        break;
+      case "set-player-restoration":
+        ports.restorePlayer(intent.xMin, intent.xMax, intent.yMax, intent.vy);
+        break;
+      case "void-mix":
+        ports.voidMix(intent.amount, intent.duration);
+        break;
+      case "music-duck":
+        ports.musicDuck(intent.amount, intent.duration);
+        break;
+      case "win-run":
+        ports.win(intent.campaign);
+        break;
     }
   }
 }
@@ -126,16 +158,27 @@ function bindAdventureFinale(options: FinaleSequenceLaunchOptions, sequence: Fin
       options.dispatch(controller.updateBeat(detail.elapsed, detail.progress));
       options.runtime.syncFinale();
     },
-    waitUntil(_context, detail) { return controller.waitComplete(detail.elapsed); },
+    waitUntil(_context, detail) {
+      return controller.waitComplete(detail.elapsed);
+    },
   }));
   const script: FinaleCinematicScript<Record<string, unknown>> & FinaleSequence = {
     ...sequence,
     beats,
-    onStart() { options.dispatch(controller.onStart()); },
+    onStart() {
+      options.dispatch(controller.onStart());
+    },
     onSkip(_context, director) {
       while (controller.state && controller.state.severed < controller.state.anchors.length) {
-        options.dispatch(controller.sever(true, options.assistVelocity(), options.input.perfectColor,
-          options.input.reducedMotion === true, options.input.lowGraphics === true));
+        options.dispatch(
+          controller.sever(
+            true,
+            options.assistVelocity(),
+            options.input.perfectColor,
+            options.input.reducedMotion === true,
+            options.input.lowGraphics === true,
+          ),
+        );
       }
       director.skipTo("restoration");
     },
@@ -143,7 +186,9 @@ function bindAdventureFinale(options: FinaleSequenceLaunchOptions, sequence: Fin
       options.dispatch(controller.complete());
       options.runtime.finale = null;
     },
-    onCancel() { options.dispatch(controller.cancel()); },
+    onCancel() {
+      options.dispatch(controller.cancel());
+    },
   };
   void state;
   return { script, context: {} };
@@ -161,9 +206,15 @@ export interface FinaleCutOptions {
 /** Low-level cut operation retained for sequence-focused callers. */
 export function severNextFinaleAnchor(options: FinaleCutOptions, assisted: boolean): boolean {
   const before = options.runtime.finale?.severed ?? 0;
-  options.dispatch(options.runtime.finaleController.sever(
-    assisted, options.velocity, options.perfectColor, options.reducedMotion, options.lowGraphics,
-  ));
+  options.dispatch(
+    options.runtime.finaleController.sever(
+      assisted,
+      options.velocity,
+      options.perfectColor,
+      options.reducedMotion,
+      options.lowGraphics,
+    ),
+  );
   options.runtime.syncFinale();
   return (options.runtime.finale?.severed ?? 0) > before;
 }
@@ -228,7 +279,10 @@ export interface FinaleRuntimeOptions {
 export interface FinaleRuntimeApi {
   readonly clearBinding: () => void;
   readonly captureBinding: () => FinaleBindingV1 | null;
-  readonly stageBinding: (value: unknown, candidateController?: FinaleController) => { binding: ReturnType<typeof bindAdventureFinale>; install(): void } | undefined;
+  readonly stageBinding: (
+    value: unknown,
+    candidateController?: FinaleController,
+  ) => { binding: ReturnType<typeof bindAdventureFinale>; install(): void } | undefined;
   readonly severAnchor: (assisted: boolean) => boolean;
   readonly beginRestoration: () => void;
   readonly tryBladeCut: (segment: FinaleBladeSegment) => void;
@@ -265,34 +319,81 @@ export function createFinaleRuntime(options: FinaleRuntimeOptions): FinaleRuntim
   };
 
   const api: FinaleRuntimeApi = {
-    clearBinding: () => { options.runtime.resetFinale(); finaleInputs.delete(options.runtime); },
+    clearBinding: () => {
+      options.runtime.resetFinale();
+      finaleInputs.delete(options.runtime);
+    },
     captureBinding: () => {
-      const input = finaleInputs.get(options.runtime), state = options.runtime.finale;
+      const input = finaleInputs.get(options.runtime),
+        state = options.runtime.finale;
       return input === undefined || state === null ? null : structuredClone({ version: 1, input, state });
     },
     stageBinding: (value, candidateController) => {
       if (value === undefined || value === null) return undefined;
-      const saved = parseFinaleBinding(value), controller = candidateController ?? options.runtime.finaleController.fork();
+      const saved = parseFinaleBinding(value),
+        controller = candidateController ?? options.runtime.finaleController.fork();
       const started = controller.start(saved.input);
       if (started.sequence === null) throw new TypeError("Finale binding requires Campaign");
-      if (started.state === null || JSON.stringify(started.state.origin) !== JSON.stringify(saved.state.origin)
-        || started.state.anchors.some((anchor, index) => { const savedAnchor = saved.state.anchors[index]; return savedAnchor === undefined
-          || ["x", "y", "r", "depth"].some((key) => Reflect.get(anchor, key) !== Reflect.get(savedAnchor, key)); })) throw new TypeError("Finale anchors differ from source input/configuration");
+      if (
+        started.state === null ||
+        JSON.stringify(started.state.origin) !== JSON.stringify(saved.state.origin) ||
+        started.state.anchors.some((anchor, index) => {
+          const savedAnchor = saved.state.anchors[index];
+          return (
+            savedAnchor === undefined ||
+            ["x", "y", "r", "depth"].some((key) => Reflect.get(anchor, key) !== Reflect.get(savedAnchor, key))
+          );
+        })
+      )
+        throw new TypeError("Finale anchors differ from source input/configuration");
       controller.state = structuredClone(saved.state);
-      const staged: FinaleRuntimeState = { get finale() { return controller.state; }, set finale(value) { options.runtime.finale = value; }, finaleController: controller,
-        resetFinale: () => undefined, syncFinale: () => { options.runtime.finale = controller.state; return controller.state; } };
-      const binding = bindAdventureFinale({ runtime: staged, cinema: options.cinema, input: saved.input,
-        viewportWidth: options.viewport.width, dispatch, stopPlayer: () => undefined, assistVelocity: velocity }, started.sequence, controller.state);
-      return { binding, install() {
-        options.runtime.finaleController = controller; options.runtime.finale = controller.state;
-        finaleInputs.set(options.runtime, structuredClone(saved.input));
-      } };
+      const staged: FinaleRuntimeState = {
+        get finale() {
+          return controller.state;
+        },
+        set finale(value) {
+          options.runtime.finale = value;
+        },
+        finaleController: controller,
+        resetFinale: () => undefined,
+        syncFinale: () => {
+          options.runtime.finale = controller.state;
+          return controller.state;
+        },
+      };
+      const binding = bindAdventureFinale(
+        {
+          runtime: staged,
+          cinema: options.cinema,
+          input: saved.input,
+          viewportWidth: options.viewport.width,
+          dispatch,
+          stopPlayer: () => undefined,
+          assistVelocity: velocity,
+        },
+        started.sequence,
+        controller.state,
+      );
+      return {
+        binding,
+        install() {
+          options.runtime.finaleController = controller;
+          options.runtime.finale = controller.state;
+          finaleInputs.set(options.runtime, structuredClone(saved.input));
+        },
+      };
     },
     severAnchor: (assisted: boolean) => {
       const before = options.runtime.finale?.severed ?? 0;
-      dispatch(options.runtime.finaleController.sever(
-        assisted, velocity(), options.perfectColor(), options.reducedMotion(), options.lowGraphics(),
-      ));
+      dispatch(
+        options.runtime.finaleController.sever(
+          assisted,
+          velocity(),
+          options.perfectColor(),
+          options.reducedMotion(),
+          options.lowGraphics(),
+        ),
+      );
       options.runtime.syncFinale();
       return (options.runtime.finale?.severed ?? 0) > before;
     },
@@ -301,19 +402,26 @@ export function createFinaleRuntime(options: FinaleRuntimeOptions): FinaleRuntim
       options.runtime.syncFinale();
     },
     tryBladeCut: (segment: FinaleBladeSegment) => {
-      dispatch(options.runtime.finaleController.tryBladeCut(
-        segment, options.perfectColor(), options.reducedMotion(), options.lowGraphics(),
-      ));
+      dispatch(
+        options.runtime.finaleController.tryBladeCut(
+          segment,
+          options.perfectColor(),
+          options.reducedMotion(),
+          options.lowGraphics(),
+        ),
+      );
       options.runtime.syncFinale();
     },
     start: (death?: Readonly<{ x: number; y: number }>, recovered = false) => {
       const run = options.run();
       if (run === null) return;
-      if (run.mode !== "campaign") { options.win(false); return; }
+      if (run.mode !== "campaign") {
+        options.win(false);
+        return;
+      }
       options.runtime.resetFinale();
-      const prepared = recovered && run._victoryPrepared !== undefined
-        ? run._victoryPrepared
-        : options.prepareVictory(true, true);
+      const prepared =
+        recovered && run._victoryPrepared !== undefined ? run._victoryPrepared : options.prepareVictory(true, true);
       const player = options.player();
       launchAdventureFinale({
         runtime: options.runtime,
@@ -334,7 +442,11 @@ export function createFinaleRuntime(options: FinaleRuntimeOptions): FinaleRuntim
           reducedMotion: options.reducedMotion(),
           lowGraphics: options.lowGraphics(),
         },
-        stopPlayer: () => { player.vx = 0; player.vy = 0; player.onGround = false; },
+        stopPlayer: () => {
+          player.vx = 0;
+          player.vy = 0;
+          player.onGround = false;
+        },
         assistVelocity: velocity,
       });
     },

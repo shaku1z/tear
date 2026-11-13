@@ -58,8 +58,9 @@ export interface LiveCampaignHost {
 export function createLiveCampaignHost(services: CampaignHostServices): LiveCampaignHost {
   const { dependencies: d, state, lifecycle } = services;
   const cinema = services.cinema;
-  const stage = new StageRuntimeState<Stage, Platforms>(d.stageAt,
-    (index) => d.stagePlatforms(index, d.CONFIG).map((platform) => ({ ...platform })));
+  const stage = new StageRuntimeState<Stage, Platforms>(d.stageAt, (index) =>
+    d.stagePlatforms(index, d.CONFIG).map((platform) => ({ ...platform })),
+  );
   const run = () => required(state.run(), "run");
   const player = () => required(state.player(), "player");
   const blade = () => required(state.blade(), "blade");
@@ -67,46 +68,97 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
     () => createCampaignChapterController(d.UI.t.motion, d.CONFIG),
     () => createFinaleController(d.CONFIG),
   );
-  services.installStage(new LiveStageController(stage, {
-    cancelCinematic: () => { if (cinema.active) cinema.cancel("stage-change"); },
-    clearHazards: () => { state.setSlowZones([]); state.setTemporaryWalls([]); },
-    run: () => state.run(), blade: () => state.blade() ?? null,
-    achievementTracking: () => services.achievementsEnabled(),
-    rememberBiome: (name) => { services.rememberBiome(name); },
-    resetStageAchievements: () => { services.resetStageAchievements(); },
-    resetPlayerStagePassives: () => { state.player()?.resetStagePassives(); },
-    recordReplayStage: (index) => {
-      const stageId = stageIdAtRuntimeIndex(index);
-      d.GAMEPLAY_EVENTS.emit({ kind: "stage", stage: index, ...(stageId === null ? {} : { stageId }), transition: "entered" });
-    },
-  }));
-  const runtime = createLiveCampaignRuntime({ runtime: story,
+  services.installStage(
+    new LiveStageController(stage, {
+      cancelCinematic: () => {
+        if (cinema.active) cinema.cancel("stage-change");
+      },
+      clearHazards: () => {
+        state.setSlowZones([]);
+        state.setTemporaryWalls([]);
+      },
+      run: () => state.run(),
+      blade: () => state.blade() ?? null,
+      achievementTracking: () => services.achievementsEnabled(),
+      rememberBiome: (name) => {
+        services.rememberBiome(name);
+      },
+      resetStageAchievements: () => {
+        services.resetStageAchievements();
+      },
+      resetPlayerStagePassives: () => {
+        state.player()?.resetStagePassives();
+      },
+      recordReplayStage: (index) => {
+        const stageId = stageIdAtRuntimeIndex(index);
+        d.GAMEPLAY_EVENTS.emit({
+          kind: "stage",
+          stage: index,
+          ...(stageId === null ? {} : { stageId }),
+          transition: "entered",
+        });
+      },
+    }),
+  );
+  const runtime = createLiveCampaignRuntime({
+    runtime: story,
     cinema: {
-      start: (script, context) => { cinema.start(adaptCinematicScript(script, context), {}); },
-      startBinding: (binding) => { cinema.start(binding.script, binding.context); },
+      start: (script, context) => {
+        cinema.start(adaptCinematicScript(script, context), {});
+      },
+      startBinding: (binding) => {
+        cinema.start(binding.script, binding.context);
+      },
     },
-    run: () => state.run(), player, blade, stageAt: (index) => d.stageAt(index),
+    run: () => state.run(),
+    player,
+    blade,
+    stageAt: (index) => d.stageAt(index),
     preference: () => services.cinematicPreference(),
-    preparedWave: () => lifecycle.hasPreparedWave, activationDeferred: () => lifecycle.activationDeferred,
+    preparedWave: () => lifecycle.hasPreparedWave,
+    activationDeferred: () => lifecycle.activationDeferred,
     chapterIntents: {
       activatePreparedWave: services.activatePreparedWave,
       setChapterState(value, page) {
         run().chapterState = value;
-        if (story.chapterFlow) { story.chapterFlow.state = value; if (page != null) story.chapterFlow.page = page; }
+        if (story.chapterFlow) {
+          story.chapterFlow.state = value;
+          if (page != null) story.chapterFlow.page = page;
+        }
       },
-      clearProjectiles: () => { state.projectiles().length = 0; },
-      musicDuck: (amount, duration) => { d.SFX.setMusicDuck(amount, duration); },
-      resetStageBanner: () => { stage.resetBanner(); }, sound: () => { d.SFX.dialogueTone("chapter"); },
+      clearProjectiles: () => {
+        state.projectiles().length = 0;
+      },
+      musicDuck: (amount, duration) => {
+        d.SFX.setMusicDuck(amount, duration);
+      },
+      resetStageBanner: () => {
+        stage.resetBanner();
+      },
+      sound: () => {
+        d.SFX.dialogueTone("chapter");
+      },
     },
     finaleIntents: {
-      beginLifecycle: () => { lifecycle.beginFinale(); },
+      beginLifecycle: () => {
+        lifecycle.beginFinale();
+      },
       clearCombat() {
-        state.setEnemies([]); state.setProjectiles([]); state.setSlowZones([]); state.setTemporaryWalls([]);
-        state.setBossIntro(null); state.setBossBeat(null); run().spawnQueue.length = 0; run().chapterState = "WAVE_LIVE";
+        state.setEnemies([]);
+        state.setProjectiles([]);
+        state.setSlowZones([]);
+        state.setTemporaryWalls([]);
+        state.setBossIntro(null);
+        state.setBossBeat(null);
+        run().spawnQueue.length = 0;
+        run().chapterState = "WAVE_LIVE";
       },
       freezeVoid() {
         const activeRun = run();
-        if (activeRun.voidScroll) { activeRun.voidScroll.active = false; activeRun.voidScroll.frozen = true; }
+        if (activeRun.voidScroll) {
+          activeRun.voidScroll.active = false;
+          activeRun.voidScroll.frozen = true;
+        }
         activeRun.voidDescent = null;
       },
       worldZoom(value) {
@@ -115,10 +167,17 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
       },
       finalBlade(active, restoredTrail) {
         const weapon = blade();
-        weapon.finalFree = active; if (restoredTrail) weapon.restoredTrail = true;
+        weapon.finalFree = active;
+        if (restoredTrail) weapon.restoredTrail = true;
         if (!active) return;
-        weapon.hostile = false; weapon.stolenBy = null; weapon.state = "held";
-        const hand = weapon.handPos(player()); weapon.x = hand.x; weapon.y = hand.y; weapon.vx = 0; weapon.vy = 0;
+        weapon.hostile = false;
+        weapon.stolenBy = null;
+        weapon.state = "held";
+        const hand = weapon.handPos(player());
+        weapon.x = hand.x;
+        weapon.y = hand.y;
+        weapon.vx = 0;
+        weapon.vy = 0;
       },
       ring(x, y, radius, color) {
         const receipt = d.FX.ring(x, y, radius, color);
@@ -126,8 +185,16 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
       },
       burst(x, y, dx, dy, count, color) {
         const receipt = d.FX.burst(x, y, dx, dy, count, color);
-        observeFinaleOutwardCall(services.observeFinaleOutwardCall,
-          { type: "burst", x, y, dx, dy, count, color, receipt });
+        observeFinaleOutwardCall(services.observeFinaleOutwardCall, {
+          type: "burst",
+          x,
+          y,
+          dx,
+          dy,
+          count,
+          color,
+          receipt,
+        });
       },
       flash(amount) {
         const receipt = services.addFlash(amount);
@@ -144,13 +211,24 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
       sound(cue, index) {
         if (cue === "final-cut") d.SFX.finalCut(index);
         else if (cue === "final-relic") d.SFX.finalRelic(index);
-        else if (cue === "final-restore") d.SFX.finalRestore(); else d.SFX.finalSilence();
+        else if (cue === "final-restore") d.SFX.finalRestore();
+        else d.SFX.finalSilence();
         observeFinaleOutwardCall(services.observeFinaleOutwardCall, { type: "sound", cue, index });
       },
-      restoreStageZero() { stage.load(0); state.setSlowZones([]); state.setTemporaryWalls([]); state.setProjectiles([]); state.setEnemies([]); },
+      restoreStageZero() {
+        stage.load(0);
+        state.setSlowZones([]);
+        state.setTemporaryWalls([]);
+        state.setProjectiles([]);
+        state.setEnemies([]);
+      },
       restorePlayer(xMin, xMax, yMax, vy) {
-        const actor = player(); actor.x = d.clamp(actor.x, actor.hw + xMin, xMax - actor.hw);
-        actor.y = Math.min(actor.y, yMax); actor.vx = 0; actor.vy = vy; actor.onGround = false;
+        const actor = player();
+        actor.x = d.clamp(actor.x, actor.hw + xMin, xMax - actor.hw);
+        actor.y = Math.min(actor.y, yMax);
+        actor.vx = 0;
+        actor.vy = vy;
+        actor.onGround = false;
       },
       voidMix(amount, duration) {
         d.SFX.setVoidDescent(amount, duration);
@@ -162,9 +240,16 @@ export function createLiveCampaignHost(services: CampaignHostServices): LiveCamp
       },
       win: services.win,
     },
-    clearBossBeat: () => { state.setBossBeat(null); }, prepareVictory: services.prepareVictory, win: services.win,
-    formatTime: services.formatTime, viewport: { width: services.width, height: services.height },
-    perfectColor: () => d.CONFIG.colors.perfect, reducedMotion: () => d.A11Y.reducedMotion, lowGraphics: () => d.GFX.low,
+    clearBossBeat: () => {
+      state.setBossBeat(null);
+    },
+    prepareVictory: services.prepareVictory,
+    win: services.win,
+    formatTime: services.formatTime,
+    viewport: { width: services.width, height: services.height },
+    perfectColor: () => d.CONFIG.colors.perfect,
+    reducedMotion: () => d.A11Y.reducedMotion,
+    lowGraphics: () => d.GFX.low,
     ...(services.observeFinaleIntents === undefined ? {} : { observeFinaleIntents: services.observeFinaleIntents }),
   });
   return Object.freeze({ cinema, stage, story, runtime });
@@ -178,19 +263,58 @@ function required<T>(value: T | null | undefined, label: string): T {
 function adaptCinematicScript<Context>(script: CampaignCinematicScript<Context>, context: Context): CinematicScript {
   const wrapBeat = (beat: CampaignCinematicBeat<Context>): CinematicBeat => {
     const { onEnter, onUpdate, waitUntil, ...fields } = beat;
-    return { ...fields,
-      ...(onEnter ? { onEnter: (_ignored, value) => { onEnter(context, value); } } : {}),
-      ...(onUpdate ? { onUpdate: (_ignored, value) => { onUpdate(context, value); } } : {}),
+    return {
+      ...fields,
+      ...(onEnter
+        ? {
+            onEnter: (_ignored, value) => {
+              onEnter(context, value);
+            },
+          }
+        : {}),
+      ...(onUpdate
+        ? {
+            onUpdate: (_ignored, value) => {
+              onUpdate(context, value);
+            },
+          }
+        : {}),
       ...(waitUntil ? { waitUntil: (_ignored, value) => waitUntil(context, value) } : {}),
     };
   };
   const director = (value: CampaignCinematicDirector): CampaignCinematicDirector => value;
   const { onStart, onSkip, onComplete, onCancel, beats: _beats, ...fields } = script;
   void _beats;
-  return { ...fields, beats: script.beats.map(wrapBeat),
-    ...(onStart ? { onStart: (_ignored, value) => { onStart(context, director(value)); } } : {}),
-    ...(onSkip ? { onSkip: (_ignored, value) => { onSkip(context, director(value)); } } : {}),
-    ...(onComplete ? { onComplete: (_ignored, value) => { onComplete(context, director(value)); } } : {}),
-    ...(onCancel ? { onCancel: () => { onCancel(context); } } : {}),
+  return {
+    ...fields,
+    beats: script.beats.map(wrapBeat),
+    ...(onStart
+      ? {
+          onStart: (_ignored, value) => {
+            onStart(context, director(value));
+          },
+        }
+      : {}),
+    ...(onSkip
+      ? {
+          onSkip: (_ignored, value) => {
+            onSkip(context, director(value));
+          },
+        }
+      : {}),
+    ...(onComplete
+      ? {
+          onComplete: (_ignored, value) => {
+            onComplete(context, director(value));
+          },
+        }
+      : {}),
+    ...(onCancel
+      ? {
+          onCancel: () => {
+            onCancel(context);
+          },
+        }
+      : {}),
   };
 }

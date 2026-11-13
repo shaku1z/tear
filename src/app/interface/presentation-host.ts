@@ -1,6 +1,15 @@
 import { renderButtonLayer, type ButtonLayerOptions } from "../../presentation/screens/button-layer";
-import { renderPresentationFrame, type RenderPipelinePorts, type ScreenRectangle } from "../../presentation/render-pipeline";
-import { firstEnabledUiButton, handleUiRuntimeFrame, stepRuntimeTab, type UiRuntimePorts } from "./ui-runtime-controller";
+import {
+  renderPresentationFrame,
+  type RenderPipelinePorts,
+  type ScreenRectangle,
+} from "../../presentation/render-pipeline";
+import {
+  firstEnabledUiButton,
+  handleUiRuntimeFrame,
+  stepRuntimeTab,
+  type UiRuntimePorts,
+} from "./ui-runtime-controller";
 
 export interface PresentationDimensions {
   readonly width: number;
@@ -25,7 +34,7 @@ export interface LivePresentationHost {
   readonly drawButtons: () => void;
   readonly firstEnabledButton: () => number;
   readonly stepTab: <Key>(
-    tabs: readonly (readonly [Key, ...readonly unknown[]])[],
+    tabs: readonly (readonly [Key, ...(readonly unknown[])])[],
     current: Key,
     onChange?: (key: Key) => void,
   ) => Key;
@@ -57,11 +66,15 @@ export function createLivePresentationHost<Screen extends string>(
       framePorts ??= options.framePorts(host);
       renderPresentationFrame(framePorts);
     },
-    handleUi: () => { handleUiRuntimeFrame(ui()); },
-    drawButtons: () => { renderButtonLayer(options.buttonLayer()); },
+    handleUi: () => {
+      handleUiRuntimeFrame(ui());
+    },
+    drawButtons: () => {
+      renderButtonLayer(options.buttonLayer());
+    },
     firstEnabledButton: () => firstEnabledUiButton(ui().buttons()),
     stepTab: <Key>(
-      tabs: readonly (readonly [Key, ...readonly unknown[]])[],
+      tabs: readonly (readonly [Key, ...(readonly unknown[])])[],
       current: Key,
       onChange?: (key: Key) => void,
     ): Key => {

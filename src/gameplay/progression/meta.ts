@@ -1,5 +1,34 @@
-import { currencyEarned, currencyLedger, mergeCurrencyLedgers, type AcknowledgedStorage, type CompletionStatus } from "../../domain/reward-receipts";
-export const META_RANK_LIMITS = Object.freeze({ tough: 8, sharp: 8, swift: 6, recovery: 6, headstart: 1, greed: 5, reach: 5, throwarm: 6, thickskin: 6, warding: 2, aircharge: 1, lifeline: 4, phoenix: 1, momentum: 5, aerialbracing: 5, slinggrip: 5, recallwindow: 4, hazardboots: 5, secondbreath: 4, reserve: 1, reroll: 3, expanded: 1 } as const);
+import {
+  currencyEarned,
+  currencyLedger,
+  mergeCurrencyLedgers,
+  type AcknowledgedStorage,
+  type CompletionStatus,
+} from "../../domain/reward-receipts";
+export const META_RANK_LIMITS = Object.freeze({
+  tough: 8,
+  sharp: 8,
+  swift: 6,
+  recovery: 6,
+  headstart: 1,
+  greed: 5,
+  reach: 5,
+  throwarm: 6,
+  thickskin: 6,
+  warding: 2,
+  aircharge: 1,
+  lifeline: 4,
+  phoenix: 1,
+  momentum: 5,
+  aerialbracing: 5,
+  slinggrip: 5,
+  recallwindow: 4,
+  hazardboots: 5,
+  secondbreath: 4,
+  reserve: 1,
+  reroll: 3,
+  expanded: 1,
+} as const);
 export interface MetaStorePort {
   readonly acknowledged?: AcknowledgedStorage;
   get(key: string): string | null;
@@ -11,11 +40,17 @@ export interface MetaCloudPort {
   push(): Promise<void>;
 }
 
-export interface ProgressionRandomPort { next(): number }
+export interface ProgressionRandomPort {
+  next(): number;
+}
 
 export interface ProgressionConfigPort {
   readonly blade: {
-    damageScale: number; maxDamage: number; aimRadius: number; length: number; maxReach: number;
+    damageScale: number;
+    maxDamage: number;
+    aimRadius: number;
+    length: number;
+    maxReach: number;
     readonly throw: { damage: number; damageFromSpeed: number };
   };
   readonly player: { moveSpeed: number; dmgTakenMult: number };
@@ -23,15 +58,29 @@ export interface ProgressionConfigPort {
 }
 
 export interface ProgressionPlayer {
-  maxHp: number; hp: number; maxShield: number; shield: number; maxDashCharges: number; dashCharges: number;
-  shopRevives: number; dashMomentumMult: number; airborneDmgMult: number; secondBreathDuration: number;
+  maxHp: number;
+  hp: number;
+  maxShield: number;
+  shield: number;
+  maxDashCharges: number;
+  dashCharges: number;
+  shopRevives: number;
+  dashMomentumMult: number;
+  airborneDmgMult: number;
+  secondBreathDuration: number;
   hazardDmgMult: number;
 }
 
-export interface ProgressionBlade { throwCooldownMult: number; recallWindow: number }
+export interface ProgressionBlade {
+  throwCooldownMult: number;
+  recallWindow: number;
+}
 
 export interface ProgressionMods {
-  waveHeal: number; reservePick: boolean; draftRerolls: number; expandedDraft: boolean;
+  waveHeal: number;
+  reservePick: boolean;
+  draftRerolls: number;
+  expandedDraft: boolean;
 }
 
 export interface ProgressionApplyContext {
@@ -41,7 +90,9 @@ export interface ProgressionApplyContext {
   readonly [key: string]: unknown;
 }
 
-export interface UpgradeDefinition { readonly unique?: boolean }
+export interface UpgradeDefinition {
+  readonly unique?: boolean;
+}
 
 export type ShopCategory = "vit" | "blade" | "tempo" | "fortune";
 
@@ -95,7 +146,9 @@ export interface MetaProgressionDependencies<
 }
 
 function record(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : null;
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function amount(value: unknown): number {
@@ -110,7 +163,8 @@ export function migrateMetaData(value: unknown): MetaData {
   if (rawPurchases) {
     for (const [id, level] of Object.entries(rawPurchases)) purchases[id] = Math.floor(amount(level));
   }
-  const extensions = { ...source }; delete extensions.coins;
+  const extensions = { ...source };
+  delete extensions.coins;
   return {
     ...extensions,
     lifetimeEarned: source.lifetimeEarned === undefined ? legacyCoins : amount(source.lifetimeEarned),
@@ -120,14 +174,19 @@ export function migrateMetaData(value: unknown): MetaData {
 }
 
 export function mergeMetaData(local: MetaData, remote: unknown): MetaData {
-  const incoming = migrateMetaData(remote), merged: MetaData = { ...incoming, ...local, buy: { ...local.buy } };
+  const incoming = migrateMetaData(remote),
+    merged: MetaData = { ...incoming, ...local, buy: { ...local.buy } };
   merged.lifetimeEarned = Math.max(local.lifetimeEarned, incoming.lifetimeEarned);
   merged.lifetimeSpent = Math.max(local.lifetimeSpent, incoming.lifetimeSpent);
   for (const [id, level] of Object.entries(incoming.buy)) merged.buy[id] = Math.max(merged.buy[id] ?? 0, level);
   if (local.rewardReceipts !== undefined || incoming.rewardReceipts !== undefined) {
-    const left = currencyLedger(local.rewardReceipts), right = currencyLedger(incoming.rewardReceipts);
-    left.floor = Math.max(left.floor, local.lifetimeEarned); right.floor = Math.max(right.floor, incoming.lifetimeEarned);
-    const ledger = mergeCurrencyLedgers(left, right); merged.rewardReceipts = ledger; merged.lifetimeEarned = currencyEarned(ledger);
+    const left = currencyLedger(local.rewardReceipts),
+      right = currencyLedger(incoming.rewardReceipts);
+    left.floor = Math.max(left.floor, local.lifetimeEarned);
+    right.floor = Math.max(right.floor, incoming.lifetimeEarned);
+    const ledger = mergeCurrencyLedgers(left, right);
+    merged.rewardReceipts = ledger;
+    merged.lifetimeEarned = currencyEarned(ledger);
   }
   return merged;
 }
@@ -153,55 +212,101 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
       throw new TypeError("Meta progression context missing mods");
     }
   }
-  const commit = async (change: (candidate: MetaData) => void = () => undefined, newReceipt: () => boolean = () => false): Promise<CompletionStatus> => {
+  const commit = async (
+    change: (candidate: MetaData) => void = () => undefined,
+    newReceipt: () => boolean = () => false,
+  ): Promise<CompletionStatus> => {
     if (!dependencies.store.acknowledged) return "unavailable";
     const result = await dependencies.store.acknowledged.update("tear_meta", (text) => {
-      const candidate = mergeMetaData(structuredClone(meta.data), text === null ? {} : JSON.parse(text) as unknown);
-      change(candidate); return JSON.stringify(candidate);
+      const candidate = mergeMetaData(structuredClone(meta.data), text === null ? {} : (JSON.parse(text) as unknown));
+      change(candidate);
+      return JSON.stringify(candidate);
     });
     if (result.status !== "committed") return result.status;
     const committed = migrateMetaData(JSON.parse(result.value) as unknown);
-    if (newReceipt() && meta.data.rewardReceipts === undefined) meta.data.rewardReceipts = currencyLedger(undefined, meta.data.lifetimeEarned);
-    meta.data = mergeMetaData(meta.data, committed); return "committed";
+    if (newReceipt() && meta.data.rewardReceipts === undefined)
+      meta.data.rewardReceipts = currencyLedger(undefined, meta.data.lifetimeEarned);
+    meta.data = mergeMetaData(meta.data, committed);
+    return "committed";
   };
   const meta: MetaProgression<ApplyContext> = {
     data: migrateMetaData({}),
     load() {
       let parsed: unknown;
-      try { parsed = JSON.parse(dependencies.store.get("tear_meta") ?? "{}"); } catch { parsed = {}; }
+      try {
+        parsed = JSON.parse(dependencies.store.get("tear_meta") ?? "{}");
+      } catch {
+        parsed = {};
+      }
       const migrated = migrateMetaData(parsed);
       this.data = migrated;
       const source = record(parsed);
       if (source?.coins !== undefined && source.lifetimeEarned === undefined) this.save();
       return this.data;
     },
-    save() { if (dependencies.store.acknowledged) { void commit(); return; } try { dependencies.store.set("tear_meta", JSON.stringify(this.data)); } catch { /* offline memory remains playable */ } },
+    save() {
+      if (dependencies.store.acknowledged) {
+        void commit();
+        return;
+      }
+      try {
+        dependencies.store.set("tear_meta", JSON.stringify(this.data));
+      } catch {
+        /* offline memory remains playable */
+      }
+    },
     flushAcknowledged: () => commit(),
     async grantReward(id, coins) {
       if (!/^achievement:[a-z0-9_]+$/u.test(id) || !Number.isSafeInteger(coins) || coins < 0) return "unknown";
       let already = false;
       const receiptExists = (): boolean => already;
-      const status = await commit((candidate) => {
-        const ledger = currencyLedger(candidate.rewardReceipts, candidate.lifetimeEarned);
-        if (ledger.receipts[id] !== undefined && ledger.receipts[id] !== coins) throw new Error("Conflicting reward receipt");
-        already = ledger.receipts[id] !== undefined;
-        if (!already) ledger.baseline = currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, value) => sum + value, 0);
-        ledger.receipts[id] = coins;
-        candidate.rewardReceipts = ledger; candidate.lifetimeEarned = currencyEarned(ledger);
-      }, () => !already);
+      const status = await commit(
+        (candidate) => {
+          const ledger = currencyLedger(candidate.rewardReceipts, candidate.lifetimeEarned);
+          if (ledger.receipts[id] !== undefined && ledger.receipts[id] !== coins)
+            throw new Error("Conflicting reward receipt");
+          already = ledger.receipts[id] !== undefined;
+          if (!already)
+            ledger.baseline =
+              currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, value) => sum + value, 0);
+          ledger.receipts[id] = coins;
+          candidate.rewardReceipts = ledger;
+          candidate.lifetimeEarned = currencyEarned(ledger);
+        },
+        () => !already,
+      );
       return status === "committed" && receiptExists() ? "already" : status;
     },
-    coins() { return Math.max(0, this.data.lifetimeEarned - this.data.lifetimeSpent); },
-    level(id) { return this.data.buy[id] ?? 0; },
-    addCoins(value) { const added = amount(value); this.data.lifetimeEarned += added;
-      if (this.data.rewardReceipts !== undefined) { try { const ledger = currencyLedger(this.data.rewardReceipts); ledger.baseline = currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, coins) => sum + coins, 0) + added; this.data.rewardReceipts = ledger; } catch { /* unsupported ledger remains intact */ } } this.save(); },
+    coins() {
+      return Math.max(0, this.data.lifetimeEarned - this.data.lifetimeSpent);
+    },
+    level(id) {
+      return this.data.buy[id] ?? 0;
+    },
+    addCoins(value) {
+      const added = amount(value);
+      this.data.lifetimeEarned += added;
+      if (this.data.rewardReceipts !== undefined) {
+        try {
+          const ledger = currencyLedger(this.data.rewardReceipts);
+          ledger.baseline =
+            currencyEarned(ledger) - Object.values(ledger.receipts).reduce((sum, coins) => sum + coins, 0) + added;
+          this.data.rewardReceipts = ledger;
+        } catch {
+          /* unsupported ledger remains intact */
+        }
+      }
+      this.save();
+    },
     cost(item) {
       const level = this.level(item.id);
       if (item.costs) return item.costs[Math.min(level, item.costs.length - 1)] ?? 0;
       const base = item.baseCost ?? 0;
-      return Math.round(base * (1 + 0.28 * level + 0.09 * level * level) / 25) * 25;
+      return Math.round((base * (1 + 0.28 * level + 0.09 * level * level)) / 25) * 25;
     },
-    canBuy(item) { return this.level(item.id) < item.maxLevel && this.coins() >= this.cost(item); },
+    canBuy(item) {
+      return this.level(item.id) < item.maxLevel && this.coins() >= this.cost(item);
+    },
     buy(item) {
       if (!this.canBuy(item)) return false;
       this.data.lifetimeSpent += this.cost(item);
@@ -217,58 +322,307 @@ export function createMetaProgression<Upgrade extends UpgradeDefinition, ApplyCo
         if (level > 0) item.apply(level, context);
       }
     },
-    merge(remote) { this.data = mergeMetaData(this.data, remote); },
+    merge(remote) {
+      this.data = mergeMetaData(this.data, remote);
+    },
   };
 
   shop = [
-    { id: "tough", name: "Toughness", desc: "+12 starting max HP per level.", baseCost: 325, maxLevel: META_RANK_LIMITS.tough, cat: "vit", glyph: "❤",
-      now: (level) => `+${String(12 * level)} HP`, apply: (level, { player }) => { player.maxHp += 12 * level; player.hp = player.maxHp; } },
-    { id: "sharp", name: "Sharpness", desc: "+6% damage per level.", baseCost: 375, maxLevel: META_RANK_LIMITS.sharp, cat: "blade", glyph: "⚔",
-      now: (level) => `+${String(Math.round((1.06 ** level - 1) * 100))}% dmg`, apply: (level) => { config.blade.damageScale *= 1.06 ** level; config.blade.maxDamage = Math.round(config.blade.maxDamage * 1.05 ** level); } },
-    { id: "swift", name: "Swiftness", desc: "+4% move speed per level.", baseCost: 350, maxLevel: META_RANK_LIMITS.swift, cat: "tempo", glyph: "≫",
-      now: (level) => `+${String(Math.round((1.04 ** level - 1) * 100))}% speed`, apply: (level) => { config.player.moveSpeed *= 1.04 ** level; } },
-    { id: "recovery", name: "Conditioning", desc: "-6% dash cooldown per level.", baseCost: 375, maxLevel: META_RANK_LIMITS.recovery, cat: "tempo", glyph: "↯",
-      now: (level) => `−${String(Math.round((1 - 0.94 ** level) * 100))}% dash cd`, apply: (level) => { config.dash.cooldown *= 0.94 ** level; } },
-    { id: "headstart", name: "Head Start", desc: "Begin each run with a random upgrade.", baseCost: 3000, maxLevel: META_RANK_LIMITS.headstart, cat: "fortune", glyph: "✦",
-      now: () => "1 free upgrade", apply: (_level, context) => {
+    {
+      id: "tough",
+      name: "Toughness",
+      desc: "+12 starting max HP per level.",
+      baseCost: 325,
+      maxLevel: META_RANK_LIMITS.tough,
+      cat: "vit",
+      glyph: "❤",
+      now: (level) => `+${String(12 * level)} HP`,
+      apply: (level, { player }) => {
+        player.maxHp += 12 * level;
+        player.hp = player.maxHp;
+      },
+    },
+    {
+      id: "sharp",
+      name: "Sharpness",
+      desc: "+6% damage per level.",
+      baseCost: 375,
+      maxLevel: META_RANK_LIMITS.sharp,
+      cat: "blade",
+      glyph: "⚔",
+      now: (level) => `+${String(Math.round((1.06 ** level - 1) * 100))}% dmg`,
+      apply: (level) => {
+        config.blade.damageScale *= 1.06 ** level;
+        config.blade.maxDamage = Math.round(config.blade.maxDamage * 1.05 ** level);
+      },
+    },
+    {
+      id: "swift",
+      name: "Swiftness",
+      desc: "+4% move speed per level.",
+      baseCost: 350,
+      maxLevel: META_RANK_LIMITS.swift,
+      cat: "tempo",
+      glyph: "≫",
+      now: (level) => `+${String(Math.round((1.04 ** level - 1) * 100))}% speed`,
+      apply: (level) => {
+        config.player.moveSpeed *= 1.04 ** level;
+      },
+    },
+    {
+      id: "recovery",
+      name: "Conditioning",
+      desc: "-6% dash cooldown per level.",
+      baseCost: 375,
+      maxLevel: META_RANK_LIMITS.recovery,
+      cat: "tempo",
+      glyph: "↯",
+      now: (level) => `−${String(Math.round((1 - 0.94 ** level) * 100))}% dash cd`,
+      apply: (level) => {
+        config.dash.cooldown *= 0.94 ** level;
+      },
+    },
+    {
+      id: "headstart",
+      name: "Head Start",
+      desc: "Begin each run with a random upgrade.",
+      baseCost: 3000,
+      maxLevel: META_RANK_LIMITS.headstart,
+      cat: "fortune",
+      glyph: "✦",
+      now: () => "1 free upgrade",
+      apply: (_level, context) => {
         const pool = dependencies.upgrades.filter((upgrade) => !upgrade.unique);
         const upgrade = pool[Math.floor(random.next() * pool.length)];
         if (upgrade) dependencies.applyUpgrade(upgrade, { ...context, config });
-      } },
-    { id: "greed", name: "Coin Magnet", desc: "+8% score-derived coins per level.", baseCost: 650, maxLevel: META_RANK_LIMITS.greed, cat: "fortune", glyph: "◆",
-      now: (level) => `+${String(8 * level)}% score coins`, apply: () => { return; } },
-    { id: "reach", name: "Long Arm", desc: "+ blade reach & length per level.", baseCost: 425, maxLevel: META_RANK_LIMITS.reach, cat: "blade", glyph: "↔",
-      now: (level) => `+${String(12 * level)} reach`, apply: (level) => { config.blade.aimRadius += 12 * level; config.blade.length += 6 * level; config.blade.maxReach += 12 * level; } },
-    { id: "throwarm", name: "Throwing Arm", desc: "+8% thrown-blade damage per level.", baseCost: 400, maxLevel: META_RANK_LIMITS.throwarm, cat: "blade", glyph: "➹",
-      now: (level) => `+${String(Math.round((1.08 ** level - 1) * 100))}% throw dmg`, apply: (level) => { config.blade.throw.damage *= 1.08 ** level; config.blade.throw.damageFromSpeed *= 1.08 ** level; } },
-    { id: "thickskin", name: "Thick Skin", desc: "Take -4% damage per level.", baseCost: 475, maxLevel: META_RANK_LIMITS.thickskin, cat: "vit", glyph: "▣",
-      now: (level) => `−${String(Math.round((1 - 0.96 ** level) * 100))}% dmg taken`, apply: (level) => { config.player.dmgTakenMult *= 0.96 ** level; } },
-    { id: "warding", name: "Warding", desc: "Begin each run with a one-hit shield per level.", baseCost: 1100, maxLevel: META_RANK_LIMITS.warding, cat: "fortune", glyph: "⬡",
-      now: (level) => `${String(level)} shield${level > 1 ? "s" : ""}`, apply: (level, { player }) => { player.maxShield = Math.max(player.maxShield, level); player.shield = player.maxShield; } },
-    { id: "aircharge", name: "Aether Step", desc: "Start with an extra mid-air dash charge.", baseCost: 3500, maxLevel: META_RANK_LIMITS.aircharge, cat: "tempo", glyph: "⇈",
-      now: () => "+1 air dash", apply: (level, { player }) => { player.maxDashCharges += level; player.dashCharges = player.maxDashCharges; } },
-    { id: "lifeline", name: "Lifeline", desc: "Recover +5 HP on each wave clear per level.", baseCost: 550, maxLevel: META_RANK_LIMITS.lifeline, cat: "vit", glyph: "✚",
-      now: (level) => `+${String(5 * level)} HP / wave`, apply: (level, { mods }) => { mods.waveHeal += 5 * level; } },
-    { id: "phoenix", name: "Second Wind", desc: "Once per run, revive with 35% HP when you would fall.", baseCost: 6000, maxLevel: META_RANK_LIMITS.phoenix, cat: "vit", glyph: "❁",
-      now: () => "1 revive", apply: (level, { player }) => { player.shopRevives += level; } },
-    { id: "momentum", name: "Momentum Transfer", desc: "Retain 6% more horizontal momentum after a dash per level.", baseCost: 450, maxLevel: META_RANK_LIMITS.momentum, cat: "tempo", glyph: "↠",
-      now: (level) => `+${String(Math.round((1.06 ** level - 1) * 100))}% dash carry`, apply: (level, { player }) => { player.dashMomentumMult *= 1.06 ** level; } },
-    { id: "aerialbracing", name: "Aerial Bracing", desc: "Take 3% less damage while airborne per level.", baseCost: 500, maxLevel: META_RANK_LIMITS.aerialbracing, cat: "vit", glyph: "△",
-      now: (level) => `−${String(Math.round((1 - 0.97 ** level) * 100))}% air damage`, apply: (level, { player }) => { player.airborneDmgMult *= 0.97 ** level; } },
-    { id: "slinggrip", name: "Sling Grip", desc: "Thrown-blade release recovery is 4% shorter per level.", baseCost: 500, maxLevel: META_RANK_LIMITS.slinggrip, cat: "blade", glyph: "➶",
-      now: (level) => `−${String(Math.round((1 - 0.96 ** level) * 100))}% release recovery`, apply: (level, { blade }) => { blade.throwCooldownMult *= 0.96 ** level; } },
-    { id: "recallwindow", name: "Recall Window", desc: "Recall a distant blade 0.10s earlier per level.", baseCost: 550, maxLevel: META_RANK_LIMITS.recallwindow, cat: "blade", glyph: "↶",
-      now: (level) => `${(0.1 * level).toFixed(2)}s early recall`, apply: (level, { blade }) => { blade.recallWindow += 0.1 * level; } },
-    { id: "hazardboots", name: "Hazard Boots", desc: "Take 6% less floor and environmental hazard damage per level.", baseCost: 450, maxLevel: META_RANK_LIMITS.hazardboots, cat: "vit", glyph: "▱",
-      now: (level) => `−${String(Math.round((1 - 0.94 ** level) * 100))}% hazard damage`, apply: (level, { player }) => { player.hazardDmgMult *= 0.94 ** level; } },
-    { id: "secondbreath", name: "Second Breath", desc: "Once per stage below 30% HP, regenerate 1.25% max HP/s for 4s per level.", baseCost: 750, maxLevel: META_RANK_LIMITS.secondbreath, cat: "vit", glyph: "♨",
-      now: (level) => `${String(5 * level)}% HP over ${String(4 * level)}s`, apply: (level, { player }) => { player.secondBreathDuration = 4 * level; } },
-    { id: "reserve", name: "Reserve Pick", desc: "Reserve one unchosen card for your next normal draft.", baseCost: 6500, maxLevel: META_RANK_LIMITS.reserve, cat: "fortune", glyph: "▣",
-      now: () => "1 reserved draft card", apply: (level, { mods }) => { mods.reservePick = level > 0; } },
-    { id: "reroll", name: "Reroll", desc: "Gain one normal-draft reroll charge per level, shared across the run.", costs: [3000, 5500, 9000], maxLevel: META_RANK_LIMITS.reroll, cat: "fortune", glyph: "⟳",
-      now: (level) => `${String(level)} reroll${level === 1 ? "" : "s"} / run`, apply: (level, { mods }) => { mods.draftRerolls += level; } },
-    { id: "expanded", name: "Expanded Draft", desc: "Normal drafts offer four cards instead of three.", baseCost: 10000, maxLevel: META_RANK_LIMITS.expanded, cat: "fortune", glyph: "▥",
-      now: () => "4-card normal drafts", apply: (level, { mods }) => { mods.expandedDraft = level > 0; } },
+      },
+    },
+    {
+      id: "greed",
+      name: "Coin Magnet",
+      desc: "+8% score-derived coins per level.",
+      baseCost: 650,
+      maxLevel: META_RANK_LIMITS.greed,
+      cat: "fortune",
+      glyph: "◆",
+      now: (level) => `+${String(8 * level)}% score coins`,
+      apply: () => {
+        return;
+      },
+    },
+    {
+      id: "reach",
+      name: "Long Arm",
+      desc: "+ blade reach & length per level.",
+      baseCost: 425,
+      maxLevel: META_RANK_LIMITS.reach,
+      cat: "blade",
+      glyph: "↔",
+      now: (level) => `+${String(12 * level)} reach`,
+      apply: (level) => {
+        config.blade.aimRadius += 12 * level;
+        config.blade.length += 6 * level;
+        config.blade.maxReach += 12 * level;
+      },
+    },
+    {
+      id: "throwarm",
+      name: "Throwing Arm",
+      desc: "+8% thrown-blade damage per level.",
+      baseCost: 400,
+      maxLevel: META_RANK_LIMITS.throwarm,
+      cat: "blade",
+      glyph: "➹",
+      now: (level) => `+${String(Math.round((1.08 ** level - 1) * 100))}% throw dmg`,
+      apply: (level) => {
+        config.blade.throw.damage *= 1.08 ** level;
+        config.blade.throw.damageFromSpeed *= 1.08 ** level;
+      },
+    },
+    {
+      id: "thickskin",
+      name: "Thick Skin",
+      desc: "Take -4% damage per level.",
+      baseCost: 475,
+      maxLevel: META_RANK_LIMITS.thickskin,
+      cat: "vit",
+      glyph: "▣",
+      now: (level) => `−${String(Math.round((1 - 0.96 ** level) * 100))}% dmg taken`,
+      apply: (level) => {
+        config.player.dmgTakenMult *= 0.96 ** level;
+      },
+    },
+    {
+      id: "warding",
+      name: "Warding",
+      desc: "Begin each run with a one-hit shield per level.",
+      baseCost: 1100,
+      maxLevel: META_RANK_LIMITS.warding,
+      cat: "fortune",
+      glyph: "⬡",
+      now: (level) => `${String(level)} shield${level > 1 ? "s" : ""}`,
+      apply: (level, { player }) => {
+        player.maxShield = Math.max(player.maxShield, level);
+        player.shield = player.maxShield;
+      },
+    },
+    {
+      id: "aircharge",
+      name: "Aether Step",
+      desc: "Start with an extra mid-air dash charge.",
+      baseCost: 3500,
+      maxLevel: META_RANK_LIMITS.aircharge,
+      cat: "tempo",
+      glyph: "⇈",
+      now: () => "+1 air dash",
+      apply: (level, { player }) => {
+        player.maxDashCharges += level;
+        player.dashCharges = player.maxDashCharges;
+      },
+    },
+    {
+      id: "lifeline",
+      name: "Lifeline",
+      desc: "Recover +5 HP on each wave clear per level.",
+      baseCost: 550,
+      maxLevel: META_RANK_LIMITS.lifeline,
+      cat: "vit",
+      glyph: "✚",
+      now: (level) => `+${String(5 * level)} HP / wave`,
+      apply: (level, { mods }) => {
+        mods.waveHeal += 5 * level;
+      },
+    },
+    {
+      id: "phoenix",
+      name: "Second Wind",
+      desc: "Once per run, revive with 35% HP when you would fall.",
+      baseCost: 6000,
+      maxLevel: META_RANK_LIMITS.phoenix,
+      cat: "vit",
+      glyph: "❁",
+      now: () => "1 revive",
+      apply: (level, { player }) => {
+        player.shopRevives += level;
+      },
+    },
+    {
+      id: "momentum",
+      name: "Momentum Transfer",
+      desc: "Retain 6% more horizontal momentum after a dash per level.",
+      baseCost: 450,
+      maxLevel: META_RANK_LIMITS.momentum,
+      cat: "tempo",
+      glyph: "↠",
+      now: (level) => `+${String(Math.round((1.06 ** level - 1) * 100))}% dash carry`,
+      apply: (level, { player }) => {
+        player.dashMomentumMult *= 1.06 ** level;
+      },
+    },
+    {
+      id: "aerialbracing",
+      name: "Aerial Bracing",
+      desc: "Take 3% less damage while airborne per level.",
+      baseCost: 500,
+      maxLevel: META_RANK_LIMITS.aerialbracing,
+      cat: "vit",
+      glyph: "△",
+      now: (level) => `−${String(Math.round((1 - 0.97 ** level) * 100))}% air damage`,
+      apply: (level, { player }) => {
+        player.airborneDmgMult *= 0.97 ** level;
+      },
+    },
+    {
+      id: "slinggrip",
+      name: "Sling Grip",
+      desc: "Thrown-blade release recovery is 4% shorter per level.",
+      baseCost: 500,
+      maxLevel: META_RANK_LIMITS.slinggrip,
+      cat: "blade",
+      glyph: "➶",
+      now: (level) => `−${String(Math.round((1 - 0.96 ** level) * 100))}% release recovery`,
+      apply: (level, { blade }) => {
+        blade.throwCooldownMult *= 0.96 ** level;
+      },
+    },
+    {
+      id: "recallwindow",
+      name: "Recall Window",
+      desc: "Recall a distant blade 0.10s earlier per level.",
+      baseCost: 550,
+      maxLevel: META_RANK_LIMITS.recallwindow,
+      cat: "blade",
+      glyph: "↶",
+      now: (level) => `${(0.1 * level).toFixed(2)}s early recall`,
+      apply: (level, { blade }) => {
+        blade.recallWindow += 0.1 * level;
+      },
+    },
+    {
+      id: "hazardboots",
+      name: "Hazard Boots",
+      desc: "Take 6% less floor and environmental hazard damage per level.",
+      baseCost: 450,
+      maxLevel: META_RANK_LIMITS.hazardboots,
+      cat: "vit",
+      glyph: "▱",
+      now: (level) => `−${String(Math.round((1 - 0.94 ** level) * 100))}% hazard damage`,
+      apply: (level, { player }) => {
+        player.hazardDmgMult *= 0.94 ** level;
+      },
+    },
+    {
+      id: "secondbreath",
+      name: "Second Breath",
+      desc: "Once per stage below 30% HP, regenerate 1.25% max HP/s for 4s per level.",
+      baseCost: 750,
+      maxLevel: META_RANK_LIMITS.secondbreath,
+      cat: "vit",
+      glyph: "♨",
+      now: (level) => `${String(5 * level)}% HP over ${String(4 * level)}s`,
+      apply: (level, { player }) => {
+        player.secondBreathDuration = 4 * level;
+      },
+    },
+    {
+      id: "reserve",
+      name: "Reserve Pick",
+      desc: "Reserve one unchosen card for your next normal draft.",
+      baseCost: 6500,
+      maxLevel: META_RANK_LIMITS.reserve,
+      cat: "fortune",
+      glyph: "▣",
+      now: () => "1 reserved draft card",
+      apply: (level, { mods }) => {
+        mods.reservePick = level > 0;
+      },
+    },
+    {
+      id: "reroll",
+      name: "Reroll",
+      desc: "Gain one normal-draft reroll charge per level, shared across the run.",
+      costs: [3000, 5500, 9000],
+      maxLevel: META_RANK_LIMITS.reroll,
+      cat: "fortune",
+      glyph: "⟳",
+      now: (level) => `${String(level)} reroll${level === 1 ? "" : "s"} / run`,
+      apply: (level, { mods }) => {
+        mods.draftRerolls += level;
+      },
+    },
+    {
+      id: "expanded",
+      name: "Expanded Draft",
+      desc: "Normal drafts offer four cards instead of three.",
+      baseCost: 10000,
+      maxLevel: META_RANK_LIMITS.expanded,
+      cat: "fortune",
+      glyph: "▥",
+      now: () => "4-card normal drafts",
+      apply: (level, { mods }) => {
+        mods.expandedDraft = level > 0;
+      },
+    },
   ];
 
   return Object.freeze({ META: meta, SHOP: shop });

@@ -3,8 +3,7 @@ import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../tearbench/tearsdl";
 import type { GhostEnvelopeV3 } from "./truth-kernel";
 
-export type GhostCoachDomain =
-  | "movement" | "blade" | "defense" | "targeting" | "draft" | "boss" | "run-management";
+export type GhostCoachDomain = "movement" | "blade" | "defense" | "targeting" | "draft" | "boss" | "run-management";
 
 export type GhostCoachBaselineKind = "personal" | "peer-band" | "same-build" | "tearbot" | "expert";
 
@@ -53,13 +52,38 @@ interface AnalyzerRule {
 }
 
 const ANALYZER_RULES: readonly AnalyzerRule[] = Object.freeze([
-  { domain: "movement", metric: "movement.idleRatio", lowerIsBetter: true, drillTitle: "Keep moving through threat lanes" },
+  {
+    domain: "movement",
+    metric: "movement.idleRatio",
+    lowerIsBetter: true,
+    drillTitle: "Keep moving through threat lanes",
+  },
   { domain: "blade", metric: "blade.missRatio", lowerIsBetter: true, drillTitle: "Deliberate blade contact arcs" },
-  { domain: "defense", metric: "defense.damagePerMinute", lowerIsBetter: true, drillTitle: "Parry and disengage recovery" },
-  { domain: "targeting", metric: "targeting.badSwitchRatio", lowerIsBetter: true, drillTitle: "Threat-ranked target locks" },
+  {
+    domain: "defense",
+    metric: "defense.damagePerMinute",
+    lowerIsBetter: true,
+    drillTitle: "Parry and disengage recovery",
+  },
+  {
+    domain: "targeting",
+    metric: "targeting.badSwitchRatio",
+    lowerIsBetter: true,
+    drillTitle: "Threat-ranked target locks",
+  },
   { domain: "draft", metric: "draft.regret", lowerIsBetter: true, drillTitle: "Compare reachable draft branches" },
-  { domain: "boss", metric: "boss.missedPunishRatio", lowerIsBetter: true, drillTitle: "Boss punish-window repetitions" },
-  { domain: "run-management", metric: "run.resourceWasteRatio", lowerIsBetter: true, drillTitle: "Resource timing and route control" },
+  {
+    domain: "boss",
+    metric: "boss.missedPunishRatio",
+    lowerIsBetter: true,
+    drillTitle: "Boss punish-window repetitions",
+  },
+  {
+    domain: "run-management",
+    metric: "run.resourceWasteRatio",
+    lowerIsBetter: true,
+    drillTitle: "Resource timing and route control",
+  },
 ]);
 
 function eventsForDomain(events: readonly TearCausalEventV1[], domain: GhostCoachDomain): readonly TearCausalEventV1[] {
@@ -88,7 +112,8 @@ export function analyzeGhostCoaching(
   for (const rule of ANALYZER_RULES) {
     const actual = tracks.metrics[rule.metric];
     const baseline = baselines.find((entry) => entry.metric === rule.metric);
-    if (actual === undefined || baseline === undefined || !Number.isFinite(actual) || !Number.isFinite(baseline.value)) continue;
+    if (actual === undefined || baseline === undefined || !Number.isFinite(actual) || !Number.isFinite(baseline.value))
+      continue;
     const gap = rule.lowerIsBetter ? actual - baseline.value : baseline.value - actual;
     if (gap <= 0) continue;
     const events = eventsForDomain(tracks.ghost.events, rule.domain);
@@ -114,18 +139,20 @@ export function analyzeGhostCoaching(
       baseline,
       drill,
     };
-    findings.push(Object.freeze({
-      id: `finding-${stableVerificationHash(identity)}`,
-      domain: rule.domain,
-      range: Object.freeze({ fromTick, toTick }),
-      eventIds: Object.freeze(events.map((event) => event.id)),
-      metrics,
-      confidence,
-      impact,
-      baseline,
-      suggestedDrill: drill,
-      evidenceHash: stableVerificationHash(identity),
-    }));
+    findings.push(
+      Object.freeze({
+        id: `finding-${stableVerificationHash(identity)}`,
+        domain: rule.domain,
+        range: Object.freeze({ fromTick, toTick }),
+        eventIds: Object.freeze(events.map((event) => event.id)),
+        metrics,
+        confidence,
+        impact,
+        baseline,
+        suggestedDrill: drill,
+        evidenceHash: stableVerificationHash(identity),
+      }),
+    );
   }
   return Object.freeze(findings);
 }
@@ -151,8 +178,9 @@ export function calculateDraftRegret(
 ): GhostDraftRegret {
   const selected = counterfactuals.find((entry) => entry.choiceId === selectedChoiceId);
   if (selected === undefined) throw new TypeError("selected draft choice has no counterfactual rollout");
-  const best = [...counterfactuals].sort((left, right) =>
-    right.meanOutcome - left.meanOutcome || left.choiceId.localeCompare(right.choiceId))[0];
+  const best = [...counterfactuals].sort(
+    (left, right) => right.meanOutcome - left.meanOutcome || left.choiceId.localeCompare(right.choiceId),
+  )[0];
   if (best === undefined) throw new TypeError("draft regret requires counterfactual rollouts");
   const uncertainty95 = 1.96 * Math.hypot(selected.standardError, best.standardError);
   const estimatedRegret = Math.max(0, best.meanOutcome - selected.meanOutcome);
@@ -166,18 +194,17 @@ export function calculateDraftRegret(
 }
 
 export function selectOneFix(findings: readonly GhostCoachFinding[]): GhostCoachFinding | undefined {
-  return [...findings].sort((left, right) =>
-    right.confidence * right.impact - left.confidence * left.impact
-    || left.id.localeCompare(right.id))[0];
+  return [...findings].sort(
+    (left, right) => right.confidence * right.impact - left.confidence * left.impact || left.id.localeCompare(right.id),
+  )[0];
 }
 
-export function compileFindingToDrill(
-  finding: GhostCoachFinding,
-  snapshot: TearSnapshotV1,
-): TearSdlDocumentV1 {
+export function compileFindingToDrill(finding: GhostCoachFinding, snapshot: TearSnapshotV1): TearSdlDocumentV1 {
   const run = snapshot.state["tear.run.v1"];
-  const runRecord = typeof run === "object" && run !== null && !Array.isArray(run) ? run as Readonly<Record<string, unknown>> : {};
-  const text = (key: string, fallback: string): string => typeof runRecord[key] === "string" ? runRecord[key] : fallback;
+  const runRecord =
+    typeof run === "object" && run !== null && !Array.isArray(run) ? (run as Readonly<Record<string, unknown>>) : {};
+  const text = (key: string, fallback: string): string =>
+    typeof runRecord[key] === "string" ? runRecord[key] : fallback;
   const wave = runRecord.wave;
   const document: TearSdlDocumentV1 = Object.freeze({
     format: "tearsdl",
@@ -225,8 +252,11 @@ export class GhostLongitudinalSkillGraph {
   }
 
   history(domain: GhostCoachDomain): readonly GhostSkillMeasurement[] {
-    return Object.freeze(this.#measurements.filter((entry) => entry.domain === domain)
-      .sort((left, right) => left.at.localeCompare(right.at)));
+    return Object.freeze(
+      this.#measurements
+        .filter((entry) => entry.domain === domain)
+        .sort((left, right) => left.at.localeCompare(right.at)),
+    );
   }
 
   improvement(

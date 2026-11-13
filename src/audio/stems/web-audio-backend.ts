@@ -2,10 +2,7 @@ import type { StemAudioBackend, StemVoice } from "./StemCuePlayer";
 import type { StemAsset, StemSource } from "./types";
 
 /** Pick the first codec source the browser reports it can play. */
-export function pickSource(
-  sources: readonly StemSource[],
-  canPlay: (mime: string) => boolean,
-): StemSource | null {
+export function pickSource(sources: readonly StemSource[], canPlay: (mime: string) => boolean): StemSource | null {
   for (const source of sources) if (canPlay(source.mime)) return source;
   return sources[0] ?? null;
 }
@@ -26,10 +23,7 @@ function equalPowerCurve(direction: "in" | "out"): Float32Array {
   const curve = new Float32Array(points);
   for (let index = 0; index < points; index += 1) {
     const progress = index / (points - 1);
-    curve[index] =
-      direction === "in"
-        ? Math.sin((Math.PI / 2) * progress)
-        : Math.cos((Math.PI / 2) * progress);
+    curve[index] = direction === "in" ? Math.sin((Math.PI / 2) * progress) : Math.cos((Math.PI / 2) * progress);
   }
   return curve;
 }
@@ -86,49 +80,25 @@ class WebAudioStemVoice implements StemVoice {
     this.#loopEnd = Math.min(loopEndSeconds, this.buffer.duration);
     this.#seamMode = options?.mode ?? "hard";
     const duration = Math.max(0, this.#loopEnd - this.#loopStart);
-    this.#crossfadeSeconds = Math.min(
-      Math.max(0, options?.crossfadeSeconds ?? 0),
-      duration * 0.49,
-    );
+    this.#crossfadeSeconds = Math.min(Math.max(0, options?.crossfadeSeconds ?? 0), duration * 0.49);
   }
 
   #usesScheduledSeam(): boolean {
-    return (
-      (this.#seamMode === "crossfade" ||
-        this.#seamMode === "tail-overlap") &&
-      this.#crossfadeSeconds >= 0.005
-    );
+    return (this.#seamMode === "crossfade" || this.#seamMode === "tail-overlap") && this.#crossfadeSeconds >= 0.005;
   }
 
-  #scheduleSegment(
-    atTime: number,
-    offsetSeconds: number,
-    durationSeconds: number,
-    fadeIn: boolean,
-  ): void {
+  #scheduleSegment(atTime: number, offsetSeconds: number, durationSeconds: number, fadeIn: boolean): void {
     const source = this.context.createBufferSource();
     const segmentGain = this.context.createGain();
-    const fade = Math.min(
-      this.#crossfadeSeconds,
-      Math.max(0, durationSeconds / 2),
-    );
+    const fade = Math.min(this.#crossfadeSeconds, Math.max(0, durationSeconds / 2));
     source.buffer = this.buffer;
     source.connect(segmentGain);
     segmentGain.connect(this.#gain);
     segmentGain.gain.setValueAtTime(fadeIn ? 0 : 1, atTime);
-    if (fadeIn && fade > 0)
-      segmentGain.gain.setValueCurveAtTime(
-        equalPowerCurve("in"),
-        atTime,
-        fade,
-      );
+    if (fadeIn && fade > 0) segmentGain.gain.setValueCurveAtTime(equalPowerCurve("in"), atTime, fade);
     if (fade > 0) {
       segmentGain.gain.setValueAtTime(1, atTime + durationSeconds - fade);
-      segmentGain.gain.setValueCurveAtTime(
-        equalPowerCurve("out"),
-        atTime + durationSeconds - fade,
-        fade,
-      );
+      segmentGain.gain.setValueCurveAtTime(equalPowerCurve("out"), atTime + durationSeconds - fade, fade);
     }
     const segment = { source, gain: segmentGain };
     this.#segments.add(segment);
@@ -151,12 +121,7 @@ class WebAudioStemVoice implements StemVoice {
     if (loopDuration <= 0 || interval <= 0) return;
     const horizon = this.context.currentTime + 12;
     while (this.#nextSegmentAt < horizon) {
-      this.#scheduleSegment(
-        this.#nextSegmentAt,
-        this.#loopStart,
-        loopDuration,
-        true,
-      );
+      this.#scheduleSegment(this.#nextSegmentAt, this.#loopStart, loopDuration, true);
       this.#nextSegmentAt += interval;
     }
   }
@@ -175,14 +140,10 @@ class WebAudioStemVoice implements StemVoice {
       return;
     }
 
-    const initialOffset = Math.min(
-      Math.max(offsetSeconds, 0),
-      this.#loopEnd,
-    );
+    const initialOffset = Math.min(Math.max(offsetSeconds, 0), this.#loopEnd);
     const initialDuration = Math.max(0.005, this.#loopEnd - initialOffset);
     this.#scheduleSegment(atTime, initialOffset, initialDuration, false);
-    this.#nextSegmentAt =
-      atTime + initialDuration - this.#crossfadeSeconds;
+    this.#nextSegmentAt = atTime + initialDuration - this.#crossfadeSeconds;
     this.#scheduleAhead();
     this.#scheduler = globalThis.setInterval(() => {
       this.#scheduleAhead();
@@ -257,12 +218,6 @@ export class WebAudioStemBackend implements StemAudioBackend {
       return response.arrayBuffer();
     });
     const buffer = await this.context.decodeAudioData(bytes);
-    return new WebAudioStemVoice(
-      asset.id,
-      this.context,
-      buffer,
-      this.output,
-      asset.pan ?? 0,
-    );
+    return new WebAudioStemVoice(asset.id, this.context, buffer, this.output, asset.pan ?? 0);
   }
 }

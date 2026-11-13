@@ -19,22 +19,44 @@ export interface WavePlanIntentPort {
 export function dispatchWavePlanIntents(intents: readonly WavePlanIntent[], port: WavePlanIntentPort): void {
   for (const intent of intents) {
     switch (intent.type) {
-      case "begin-wipe": port.beginWipe(); break;
-      case "load-stage": port.loadStage(intent.stageIndex); break;
-      case "set-stage-banner": port.setStageBanner(intent.name, intent.duration); break;
-      case "begin-campaign-chapter": port.beginCampaignChapter(intent.stageIndex, intent.priorBossOutro); break;
-      case "ghost-wave": port.recordWave(intent.wave, intent.marker); break;
-      case "ghost-snapshot": port.snapshotReplay(intent.slot); break;
-      case "prepare-wave": port.prepareWave(intent.wave, intent.boss, intent.deferred); break;
-      case "activate-wave": port.activateWave(); break;
-      case "show-wave-banner": port.showWaveBanner(); break;
-      case "play-wave-sfx": port.playWaveSound(); break;
+      case "begin-wipe":
+        port.beginWipe();
+        break;
+      case "load-stage":
+        port.loadStage(intent.stageIndex);
+        break;
+      case "set-stage-banner":
+        port.setStageBanner(intent.name, intent.duration);
+        break;
+      case "begin-campaign-chapter":
+        port.beginCampaignChapter(intent.stageIndex, intent.priorBossOutro);
+        break;
+      case "ghost-wave":
+        port.recordWave(intent.wave, intent.marker);
+        break;
+      case "ghost-snapshot":
+        port.snapshotReplay(intent.slot);
+        break;
+      case "prepare-wave":
+        port.prepareWave(intent.wave, intent.boss, intent.deferred);
+        break;
+      case "activate-wave":
+        port.activateWave();
+        break;
+      case "show-wave-banner":
+        port.showWaveBanner();
+        break;
+      case "play-wave-sfx":
+        port.playWaveSound();
+        break;
     }
   }
 }
 
 export function bindWavePlanIntents(port: WavePlanIntentPort): (intents: readonly WavePlanIntent[]) => void {
-  return (intents) => { dispatchWavePlanIntents(intents, port); };
+  return (intents) => {
+    dispatchWavePlanIntents(intents, port);
+  };
 }
 
 /** Typed inward ports for applying wave-clear effects at a host boundary. */
@@ -61,26 +83,60 @@ export interface WaveClearIntentPort {
 export function dispatchWaveClearIntents(intents: readonly WaveClearIntent[], port: WaveClearIntentPort): void {
   for (const intent of intents) {
     switch (intent.type) {
-      case "clear-wave-lifecycle": port.clearWave(); break;
-      case "backdrop-bloom": port.bloom(intent.color, intent.strength, intent.duration); break;
-      case "ghost-wave": port.recordWave(intent.wave, intent.marker); break;
-      case "profile-max": port.profileMax(intent.stat, intent.value); break;
-      case "profile-add": port.profileAdd(intent.stat, intent.value); break;
-      case "daily-bump": port.dailyBump(intent.challenge, intent.value, intent.operation); break;
-      case "horde-cleared": port.hordeCleared(intent.waveTime); break;
-      case "achievement-check": port.achievementCheck(); break;
-      case "stage-done": port.stageDone(); break;
-      case "heal-player": port.healPlayer(intent.amount); break;
-      case "prepare-reward": port.prepareReward(intent.reward); break;
-      case "start-adventure-finale": port.startAdventureFinale(); break;
-      case "win-run": port.winRun(); break;
-      case "exit-pointer-lock": port.releasePointer(); break;
-      case "open-tier-up": port.openTierUp(); break;
-      case "open-draft": port.openDraft(); break;
+      case "clear-wave-lifecycle":
+        port.clearWave();
+        break;
+      case "backdrop-bloom":
+        port.bloom(intent.color, intent.strength, intent.duration);
+        break;
+      case "ghost-wave":
+        port.recordWave(intent.wave, intent.marker);
+        break;
+      case "profile-max":
+        port.profileMax(intent.stat, intent.value);
+        break;
+      case "profile-add":
+        port.profileAdd(intent.stat, intent.value);
+        break;
+      case "daily-bump":
+        port.dailyBump(intent.challenge, intent.value, intent.operation);
+        break;
+      case "horde-cleared":
+        port.hordeCleared(intent.waveTime);
+        break;
+      case "achievement-check":
+        port.achievementCheck();
+        break;
+      case "stage-done":
+        port.stageDone();
+        break;
+      case "heal-player":
+        port.healPlayer(intent.amount);
+        break;
+      case "prepare-reward":
+        port.prepareReward(intent.reward);
+        break;
+      case "start-adventure-finale":
+        port.startAdventureFinale();
+        break;
+      case "win-run":
+        port.winRun();
+        break;
+      case "exit-pointer-lock":
+        port.releasePointer();
+        break;
+      case "open-tier-up":
+        port.openTierUp();
+        break;
+      case "open-draft":
+        port.openDraft();
+        break;
     }
   }
 }
 
 export function bindWaveClearIntents(port: WaveClearIntentPort): (intents: readonly WaveClearIntent[]) => void {
-  return (intents) => { dispatchWaveClearIntents(intents, port); };
+  return (intents) => {
+    dispatchWaveClearIntents(intents, port);
+  };
 }

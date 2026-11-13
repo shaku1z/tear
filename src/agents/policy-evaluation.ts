@@ -50,22 +50,36 @@ export interface TearPolicyEvaluationReportV1 {
   readonly artifactId: string;
   readonly artifactHash: string;
   readonly results: readonly TearPolicyEvaluationCaseResultV1[];
-  readonly metrics: Readonly<{ decisions: number; artifactDecisions: number; fallbackDecisions: number; matchedDecisions: number }>;
+  readonly metrics: Readonly<{
+    decisions: number;
+    artifactDecisions: number;
+    fallbackDecisions: number;
+    matchedDecisions: number;
+  }>;
   readonly passed: boolean;
   readonly reportHash: string;
 }
 
-function text(value: string): boolean { return value.trim().length > 0; }
+function text(value: string): boolean {
+  return value.trim().length > 0;
+}
 function validExpectation(value: TearPolicyEvaluationExpectation): boolean {
   return HASH.test(value.actionHash);
 }
 
 function validateSuite(suite: TearPolicyEvaluationSuiteV1): void {
-  if (!text(suite.id) || suite.cases.length < 1 || suite.cases.length > MAX_CASES) throw new TypeError("invalid policy evaluation suite");
+  if (!text(suite.id) || suite.cases.length < 1 || suite.cases.length > MAX_CASES)
+    throw new TypeError("invalid policy evaluation suite");
   const ids = new Set<string>();
   for (const entry of suite.cases) {
-    if (!text(entry.id) || ids.has(entry.id) || entry.observations.length < 1 || entry.observations.length > MAX_OBSERVATIONS_PER_CASE
-      || entry.expected.length !== entry.observations.length || !entry.expected.every(validExpectation)) {
+    if (
+      !text(entry.id) ||
+      ids.has(entry.id) ||
+      entry.observations.length < 1 ||
+      entry.observations.length > MAX_OBSERVATIONS_PER_CASE ||
+      entry.expected.length !== entry.observations.length ||
+      !entry.expected.every(validExpectation)
+    ) {
       throw new TypeError("invalid policy evaluation case");
     }
     ids.add(entry.id);
@@ -92,13 +106,17 @@ export async function evaluateActiveTearPolicy(
   const runtime = new TearActivePolicyRuntime(registry);
   await runtime.reset();
   const results: TearPolicyEvaluationCaseResultV1[] = [];
-  let decisions = 0, artifactDecisions = 0, fallbackDecisions = 0, matchedDecisions = 0;
+  let decisions = 0,
+    artifactDecisions = 0,
+    fallbackDecisions = 0,
+    matchedDecisions = 0;
   for (const entry of suite.cases) {
     const entries: TearPolicyEvaluationDecisionV1[] = [];
     for (let index = 0; index < entry.observations.length; index += 1) {
       const observation = entry.observations[index];
       const expected = entry.expected[index];
-      if (observation === undefined || expected === undefined) throw new Error("validated policy evaluation case changed during execution");
+      if (observation === undefined || expected === undefined)
+        throw new Error("validated policy evaluation case changed during execution");
       const decision = runtime.decide(observation);
       const actionHash = stableVerificationHash(decision.actions);
       const matched = decision.receipt.source === expected.source && actionHash === expected.actionHash;
@@ -106,13 +124,34 @@ export async function evaluateActiveTearPolicy(
       if (decision.receipt.source === "artifact") artifactDecisions += 1;
       else fallbackDecisions += 1;
       if (matched) matchedDecisions += 1;
-      entries.push(Object.freeze({ observationHash: decision.receipt.observationHash, source: decision.receipt.source, actionHash, matched }));
+      entries.push(
+        Object.freeze({
+          observationHash: decision.receipt.observationHash,
+          source: decision.receipt.source,
+          actionHash,
+          matched,
+        }),
+      );
     }
-    results.push(Object.freeze({ id: entry.id, scenarioHash: stableVerificationHash(entry.scenario), decisions: Object.freeze(entries),
-      passed: entries.every((decision) => decision.matched) }));
+    results.push(
+      Object.freeze({
+        id: entry.id,
+        scenarioHash: stableVerificationHash(entry.scenario),
+        decisions: Object.freeze(entries),
+        passed: entries.every((decision) => decision.matched),
+      }),
+    );
   }
   const metrics = Object.freeze({ decisions, artifactDecisions, fallbackDecisions, matchedDecisions });
-  return freezeResult({ format: "tear-policy-evaluation-report", schemaVersion: 1, suiteId: suite.id,
-    suiteHash: stableVerificationHash(suite), artifactId: active.artifactId, artifactHash: active.artifactHash,
-    results: Object.freeze(results), metrics, passed: results.every((result) => result.passed) });
+  return freezeResult({
+    format: "tear-policy-evaluation-report",
+    schemaVersion: 1,
+    suiteId: suite.id,
+    suiteHash: stableVerificationHash(suite),
+    artifactId: active.artifactId,
+    artifactHash: active.artifactHash,
+    results: Object.freeze(results),
+    metrics,
+    passed: results.every((result) => result.passed),
+  });
 }

@@ -6,20 +6,35 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
   const { CONFIG, FX, GAME_RANDOM, Projectile, SFX, clamp, len, lerp } = dependencies;
   // ---- Melee family: Charger (bull-rush), Brawler (spacing + punch/feint), Stalker (reads your dash) ----
   class Charger extends Enemy {
-    duelCd: number; duelReady: boolean;
-    rimeRebounds = 0; rimeTrackExtended = false;
+    duelCd: number;
+    duelReady: boolean;
+    rimeRebounds = 0;
+    rimeTrackExtended = false;
     declare cfg: typeof CONFIG.enemy;
 
-    constructor(x: number, y: number) { super(x, y, CONFIG.enemy); this.color = CONFIG.colors.charger; this.kind = "charger"; this.behavior = "bull"; this.duelCd = 0; this.duelReady = false; }
+    constructor(x: number, y: number) {
+      super(x, y, CONFIG.enemy);
+      this.color = CONFIG.colors.charger;
+      this.kind = "charger";
+      this.behavior = "bull";
+      this.duelCd = 0;
+      this.duelReady = false;
+    }
 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);
       if (this.atkCd > 0) this.atkCd -= dt;
       this._animWeapon(dt);
       // a wound-up charge hits harder on contact (longer wind-up = more power)
-      this.chargeMult = ((this.behavior === "bull" || this.behavior === "rime-runner") && this.atk === "commit") ? (1 + this.chargePower) : 1;
+      this.chargeMult =
+        (this.behavior === "bull" || this.behavior === "rime-runner") && this.atk === "commit"
+          ? 1 + this.chargePower
+          : 1;
       // Duelist parry recharge
-      if (this.behavior === "duelist" && this.duelCd > 0) { this.duelCd -= dt; if (this.duelCd <= 0) this.duelReady = true; }
+      if (this.behavior === "duelist" && this.duelCd > 0) {
+        this.duelCd -= dt;
+        if (this.duelCd <= 0) this.duelReady = true;
+      }
 
       // pathfind up to a perched player (never interrupt an in-progress charge)
       if (this.canClimb && this.atk !== "commit" && this.atk !== "swing" && this.climbNav(player, platforms, dt)) {
@@ -30,7 +45,9 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
       }
 
       const E = CONFIG.enemy;
-      const dx = player.x - this.x, dist = Math.abs(dx), dir = Math.sign(dx) || 1;
+      const dx = player.x - this.x,
+        dist = Math.abs(dx),
+        dir = Math.sign(dx) || 1;
 
       if (this.behavior === "brawler" || this.behavior === "duelist") this._brawler(dt, player, dist, dir);
       else if (this.behavior === "briar-stalker") this._briarStalker(dt, player, dist, dir, E);
@@ -49,10 +66,14 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
         const atEdge = this.x <= this.hw + 1 || this.x >= CONFIG.view.w - this.hw - 1;
         if ((this.vx === 0 && Math.abs(preVx) > 200) || atEdge) {
           if (this.behavior === "rime-runner" && this.rimeRebounds === 0) {
-            this.rimeRebounds = 1; this.atkDir *= -1; this.vx = this.atkDir * E.chargeSpeed * 1.12;
+            this.rimeRebounds = 1;
+            this.atkDir *= -1;
+            this.vx = this.atkDir * E.chargeSpeed * 1.12;
             this.atkT = Math.max(this.atkT, 0.22);
           } else {
-            this.stun = E.chargeStun; this.atk = "recover"; this.atkCd = E.chargeCd;
+            this.stun = E.chargeStun;
+            this.atk = "recover";
+            this.atkCd = E.chargeCd;
           }
           FX.burst(this.x + this.atkDir * this.hw, this.y, this.atkDir, 0, 7, this.color);
         }
@@ -60,27 +81,37 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
     }
 
     onAuroraTrackInfluence(direction: -1 | 1, onTrack: boolean): void {
-      if (this.behavior !== "rime-runner" || !onTrack || this.atk !== "commit"
-        || direction !== this.atkDir || this.rimeTrackExtended) return;
-      this.atkT += 0.18; this.rimeTrackExtended = true;
+      if (
+        this.behavior !== "rime-runner" ||
+        !onTrack ||
+        this.atk !== "commit" ||
+        direction !== this.atkDir ||
+        this.rimeTrackExtended
+      )
+        return;
+      this.atkT += 0.18;
+      this.rimeTrackExtended = true;
     }
 
     _bull(dt: number, player: EnemyPlayerPort, dist: number, dir: number, E: typeof CONFIG.enemy) {
       switch (this.atk) {
         case "windup":
-          this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1));   // plant feet, telegraph
-          this.atkDir = dir;                                   // can still adjust before committing
+          this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1)); // plant feet, telegraph
+          this.atkDir = dir; // can still adjust before committing
           this.atkT -= dt;
           if (this.atkT <= 0) {
             this.atk = "commit";
-            this.atkT = E.chargeTime * (0.7 + this.chargePower);          // longer wind-up -> farther charge
+            this.atkT = E.chargeTime * (0.7 + this.chargePower); // longer wind-up -> farther charge
             this.vx = this.atkDir * E.chargeSpeed * (0.9 + this.chargePower * 0.4);
           }
           break;
         case "commit":
-          this.vx = this.atkDir * E.chargeSpeed * (0.9 + this.chargePower * 0.4);  // fixed line -> sidesteppable
+          this.vx = this.atkDir * E.chargeSpeed * (0.9 + this.chargePower * 0.4); // fixed line -> sidesteppable
           this.atkT -= dt;
-          if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = E.chargeCd / this.auraHaste; }   // Herald hastens
+          if (this.atkT <= 0) {
+            this.atk = "recover";
+            this.atkCd = E.chargeCd / this.auraHaste;
+          } // Herald hastens
           break;
         case "recover":
           this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1));
@@ -90,35 +121,56 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
           this.vx = lerp(this.vx, dir * this.speed, clamp(6 * dt, 0, 1));
           if (dist < E.chargeRange && this.atkCd <= 0 && Math.abs(player.y - this.y) < 150) {
             this.chargePower = GAME_RANDOM.next();
-            this.atk = "windup"; this.atkT = E.chargeWindup * (0.6 + this.chargePower); this.atkMax = this.atkT; this.atkDir = dir;
+            this.atk = "windup";
+            this.atkT = E.chargeWindup * (0.6 + this.chargePower);
+            this.atkMax = this.atkT;
+            this.atkDir = dir;
           }
       }
     }
 
     _brawler(dt: number, player: EnemyPlayerPort, dist: number, dir: number) {
-      const STAND = 130, LUNGE = 540;
+      const STAND = 130,
+        LUNGE = 540;
       switch (this.atk) {
         case "windup":
-          this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1)); this.atkT -= dt;
+          this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1));
+          this.atkT -= dt;
           if (this.atkT <= 0) {
-            if (this.feint) { this.atk = "recover"; this.atkCd = 0.7; this.vx = -this.atkDir * 280; } // bluff, hop back
-            else { this.atk = "commit"; this.atkT = 0.2; this.vx = this.atkDir * LUNGE; }              // committed punch
+            if (this.feint) {
+              this.atk = "recover";
+              this.atkCd = 0.7;
+              this.vx = -this.atkDir * 280;
+            } // bluff, hop back
+            else {
+              this.atk = "commit";
+              this.atkT = 0.2;
+              this.vx = this.atkDir * LUNGE;
+            } // committed punch
           }
           break;
         case "commit":
           this.atkT -= dt;
-          if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = 0.9; }
+          if (this.atkT <= 0) {
+            this.atk = "recover";
+            this.atkCd = 0.9;
+          }
           break;
         case "recover":
           this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1));
           if (this.atkCd <= 0) this.atk = "idle";
           break;
-        default: { // hold spacing, then telegraph a punch (sometimes a feint)
+        default: {
+          // hold spacing, then telegraph a punch (sometimes a feint)
           let move = 0;
-          if (dist > STAND + 30) move = dir; else if (dist < STAND - 40) move = -dir;
+          if (dist > STAND + 30) move = dir;
+          else if (dist < STAND - 40) move = -dir;
           this.vx = lerp(this.vx, move * this.speed * 1.1, clamp(6 * dt, 0, 1));
           if (dist < STAND + 60 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 110) {
-            this.atk = "windup"; this.atkT = 0.4; this.atkDir = dir; this.feint = GAME_RANDOM.next() < 0.3;
+            this.atk = "windup";
+            this.atkT = 0.4;
+            this.atkDir = dir;
+            this.feint = GAME_RANDOM.next() < 0.3;
           }
         }
       }
@@ -128,19 +180,33 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
       if (this.evadeCd > 0) this.evadeCd -= dt;
       // read the dash: if the player dashes toward us up close, sidestep through it
       if (player.dashTimer > 0 && Math.sign(player.dashX) === dir && dist < 240 && this.evadeCd <= 0 && this.onGround) {
-        this.vx = -dir * 740; this.vy = -560; this.evadeCd = 1.4; this.atk = "recover"; this.atkCd = 0.4;
+        this.vx = -dir * 740;
+        this.vy = -560;
+        this.evadeCd = 1.4;
+        this.atk = "recover";
+        this.atkCd = 0.4;
         FX.burst(this.x, this.y, -dir, -1, 5, this.color);
         return;
       }
       const FAST = E.chargeSpeed * 0.95;
       switch (this.atk) {
         case "windup":
-          this.vx = lerp(this.vx, 0, clamp(11 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
-          if (this.atkT <= 0) { this.atk = "commit"; this.atkT = 0.4; this.vx = this.atkDir * FAST; }
+          this.vx = lerp(this.vx, 0, clamp(11 * dt, 0, 1));
+          this.atkDir = dir;
+          this.atkT -= dt;
+          if (this.atkT <= 0) {
+            this.atk = "commit";
+            this.atkT = 0.4;
+            this.vx = this.atkDir * FAST;
+          }
           break;
         case "commit":
-          this.vx = this.atkDir * FAST; this.atkT -= dt;
-          if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = 0.85; }
+          this.vx = this.atkDir * FAST;
+          this.atkT -= dt;
+          if (this.atkT <= 0) {
+            this.atk = "recover";
+            this.atkCd = 0.85;
+          }
           break;
         case "recover":
           this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1));
@@ -148,33 +214,62 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
           break;
         default:
           this.vx = lerp(this.vx, dir * this.speed, clamp(8 * dt, 0, 1));
-          if (dist < 300 && this.atkCd <= 0) { this.atk = "windup"; this.atkT = 0.28; this.atkDir = dir; }
+          if (dist < 300 && this.atkCd <= 0) {
+            this.atk = "windup";
+            this.atkT = 0.28;
+            this.atkDir = dir;
+          }
       }
     }
 
     /** Verdant Charger verb: a shorter thorn feint, then a bounded dash. */
     _briarStalker(dt: number, player: EnemyPlayerPort, dist: number, dir: number, E: typeof CONFIG.enemy) {
       if (player.dashTimer > 0 && Math.sign(player.dashX) === dir && dist < 220 && this.evadeCd <= 0 && this.onGround) {
-        this.vx = -dir * 620; this.vy = -420; this.evadeCd = 1.2; this.atk = "recover"; this.atkCd = 0.45;
+        this.vx = -dir * 620;
+        this.vy = -420;
+        this.evadeCd = 1.2;
+        this.atk = "recover";
+        this.atkCd = 0.45;
         FX.burst(this.x, this.y, -dir, -1, 4, this.color);
         return;
       }
       if (this.atk === "reposition") {
-        this.vx = lerp(this.vx, -this.atkDir * this.speed * 1.45, clamp(10 * dt, 0, 1)); this.atkT -= dt;
-        if (this.atkT <= 0) { this.atk = "windup"; this.atkT = 0.34; this.atkMax = 0.34; }
+        this.vx = lerp(this.vx, -this.atkDir * this.speed * 1.45, clamp(10 * dt, 0, 1));
+        this.atkT -= dt;
+        if (this.atkT <= 0) {
+          this.atk = "windup";
+          this.atkT = 0.34;
+          this.atkMax = 0.34;
+        }
       } else if (this.atk === "windup") {
-        this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
-        if (this.atkT <= 0) { this.atk = "commit"; this.atkT = 0.3; this.vx = this.atkDir * E.chargeSpeed * 1.05; if (this.onGround) this.vy = -280; }
+        this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1));
+        this.atkDir = dir;
+        this.atkT -= dt;
+        if (this.atkT <= 0) {
+          this.atk = "commit";
+          this.atkT = 0.3;
+          this.vx = this.atkDir * E.chargeSpeed * 1.05;
+          if (this.onGround) this.vy = -280;
+        }
       } else if (this.atk === "commit") {
-        this.vx = this.atkDir * E.chargeSpeed * 1.05; this.atkT -= dt;
-        if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = 0.7; }
+        this.vx = this.atkDir * E.chargeSpeed * 1.05;
+        this.atkT -= dt;
+        if (this.atkT <= 0) {
+          this.atk = "recover";
+          this.atkCd = 0.7;
+        }
       } else if (this.atk === "recover") {
-        this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1)); if (this.atkCd <= 0) this.atk = "idle";
+        this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1));
+        if (this.atkCd <= 0) this.atk = "idle";
       } else {
         this.vx = lerp(this.vx, dir * this.speed * 1.08, clamp(8 * dt, 0, 1));
         if (dist < 270 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 140) {
-          this.atk = "reposition"; this.atkT = 0.16; this.atkMax = 0.16; this.atkDir = dir;
-          this.vx = -dir * this.speed * 1.45; if (this.onGround) this.vy = -160;
+          this.atk = "reposition";
+          this.atkT = 0.16;
+          this.atkMax = 0.16;
+          this.atkDir = dir;
+          this.vx = -dir * this.speed * 1.45;
+          if (this.onGround) this.vy = -160;
           FX.burst(this.x, this.y + this.hh, -dir, -0.2, 3, this.color);
         }
       }
@@ -183,23 +278,43 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
     /** Pale Charger verb: low long charge, one wall rebound, then a punishable slide. */
     _rimeRunner(dt: number, player: EnemyPlayerPort, dist: number, dir: number, E: typeof CONFIG.enemy) {
       if (this.atk === "windup") {
-        this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
+        this.vx = lerp(this.vx, 0, clamp(12 * dt, 0, 1));
+        this.atkDir = dir;
+        this.atkT -= dt;
         if (this.atkT <= 0) {
-          this.atk = "commit"; this.atkT = E.chargeTime * 1.35; this.atkMax = this.atkT;
-          this.rimeRebounds = 0; this.rimeTrackExtended = false; this.vx = this.atkDir * E.chargeSpeed * 1.12;
+          this.atk = "commit";
+          this.atkT = E.chargeTime * 1.35;
+          this.atkMax = this.atkT;
+          this.rimeRebounds = 0;
+          this.rimeTrackExtended = false;
+          this.vx = this.atkDir * E.chargeSpeed * 1.12;
         }
       } else if (this.atk === "commit") {
-        this.vx = this.atkDir * E.chargeSpeed * 1.12; this.atkT -= dt;
-        if (this.atkT <= 0) { this.atk = "slide"; this.atkT = 0.32; this.atkMax = this.atkT; }
+        this.vx = this.atkDir * E.chargeSpeed * 1.12;
+        this.atkT -= dt;
+        if (this.atkT <= 0) {
+          this.atk = "slide";
+          this.atkT = 0.32;
+          this.atkMax = this.atkT;
+        }
       } else if (this.atk === "slide") {
-        this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1)); this.atkT -= dt;
-        if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = 0.8; this.stun = Math.max(this.stun, 0.5); }
+        this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1));
+        this.atkT -= dt;
+        if (this.atkT <= 0) {
+          this.atk = "recover";
+          this.atkCd = 0.8;
+          this.stun = Math.max(this.stun, 0.5);
+        }
       } else if (this.atk === "recover") {
-        this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); if (this.atkCd <= 0) this.atk = "idle";
+        this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1));
+        if (this.atkCd <= 0) this.atk = "idle";
       } else {
         this.vx = lerp(this.vx, dir * this.speed, clamp(7 * dt, 0, 1));
         if (dist < E.chargeRange * 1.15 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 120) {
-          this.atk = "windup"; this.atkT = E.chargeWindup * 1.1; this.atkMax = this.atkT; this.atkDir = dir;
+          this.atk = "windup";
+          this.atkT = E.chargeWindup * 1.1;
+          this.atkMax = this.atkT;
+          this.atkDir = dir;
         }
       }
     }
@@ -208,19 +323,38 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
     _executioner(dt: number, player: EnemyPlayerPort, dist: number, dir: number, projectiles: EnemyProjectile[]) {
       const X = CONFIG.exotic;
       if (this.atk === "windup") {
-        this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
+        this.vx = lerp(this.vx, 0, clamp(8 * dt, 0, 1));
+        this.atkDir = dir;
+        this.atkT -= dt;
         if (this.atkT <= 0) {
           const footY = this.y + this.hh;
-          for (const d of [-1, 1]) { const p = this.ownProjectile(new Projectile(this.x + d * this.hw, footY - X.exShockR, d * X.exShockSpeed, 0)); p.setFamily("groundShock"); p.r = X.exShockR; p.dmg = X.exShockDmg; p.life = 1.6; projectiles.push(p); }
-          FX.ring(this.x, footY, 18, CONFIG.colors.slam); FX.burst(this.x, footY, 0, -1, 11, CONFIG.colors.charger);
+          for (const d of [-1, 1]) {
+            const p = this.ownProjectile(
+              new Projectile(this.x + d * this.hw, footY - X.exShockR, d * X.exShockSpeed, 0),
+            );
+            p.setFamily("groundShock");
+            p.r = X.exShockR;
+            p.dmg = X.exShockDmg;
+            p.life = 1.6;
+            projectiles.push(p);
+          }
+          FX.ring(this.x, footY, 18, CONFIG.colors.slam);
+          FX.burst(this.x, footY, 0, -1, 11, CONFIG.colors.charger);
           SFX.slam?.();
-          this.atk = "recover"; this.atkCd = 1.5;
+          this.atk = "recover";
+          this.atkCd = 1.5;
         }
       } else if (this.atk === "recover") {
-        this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1)); if (this.atkCd <= 0) this.atk = "idle";
+        this.vx = lerp(this.vx, 0, clamp(6 * dt, 0, 1));
+        if (this.atkCd <= 0) this.atk = "idle";
       } else {
         this.vx = lerp(this.vx, dir * this.speed, clamp(5 * dt, 0, 1));
-        if (dist < 360 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 130) { this.atk = "windup"; this.atkT = X.exWindup; this.atkMax = X.exWindup; this.atkDir = dir; }
+        if (dist < 360 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 130) {
+          this.atk = "windup";
+          this.atkT = X.exWindup;
+          this.atkMax = X.exWindup;
+          this.atkDir = dir;
+        }
       }
     }
 
@@ -229,29 +363,55 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
     _gravedigger(dt: number, player: EnemyPlayerPort, dist: number, dir: number, projectiles: EnemyProjectile[]) {
       const X = CONFIG.exotic;
       if (this.atk === "windup") {
-        this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1)); this.atkDir = dir; this.atkT -= dt;
+        this.vx = lerp(this.vx, 0, clamp(7 * dt, 0, 1));
+        this.atkDir = dir;
+        this.atkT -= dt;
         if (this.atkT <= 0) {
-          const footY = this.y + this.hh, sx = this.x + this.atkDir * X.gravReach;
+          const footY = this.y + this.hh,
+            sx = this.x + this.atkDir * X.gravReach;
           const p = new Projectile(sx, footY - X.gravShockR, this.atkDir * X.gravShockSpeed, 0);
-          this.ownProjectile(p); p.setFamily("groundShock"); p.r = X.gravShockR; p.dmg = X.gravDmg; p.life = 1.3; projectiles.push(p);
+          this.ownProjectile(p);
+          p.setFamily("groundShock");
+          p.r = X.gravShockR;
+          p.dmg = X.gravDmg;
+          p.life = 1.3;
+          projectiles.push(p);
           FX.burst(sx, footY, 0, -1, 9, CONFIG.colors.charger);
-          this.atk = "swing"; this.atkT = 0.25;
+          this.atk = "swing";
+          this.atkT = 0.25;
         }
       } else if (this.atk === "swing") {
-        this.atkT -= dt; if (this.atkT <= 0) { this.atk = "recover"; this.atkCd = 1.5; }
+        this.atkT -= dt;
+        if (this.atkT <= 0) {
+          this.atk = "recover";
+          this.atkCd = 1.5;
+        }
       } else if (this.atk === "recover") {
-        this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1)); if (this.atkCd <= 0) this.atk = "idle";
+        this.vx = lerp(this.vx, 0, clamp(5 * dt, 0, 1));
+        if (this.atkCd <= 0) this.atk = "idle";
       } else {
         this.vx = lerp(this.vx, dir * this.speed, clamp(4 * dt, 0, 1));
-        if (dist < 330 && dist > 80 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 120) { this.atk = "windup"; this.atkT = X.gravWindup; this.atkMax = X.gravWindup; this.atkDir = dir; }
+        if (dist < 330 && dist > 80 && this.atkCd <= 0 && Math.abs(player.y - this.y) < 120) {
+          this.atk = "windup";
+          this.atkT = X.gravWindup;
+          this.atkMax = X.gravWindup;
+          this.atkDir = dir;
+        }
       }
     }
 
     // swing the held weapon toward a target angle per attack state (cock back -> slam through)
     _animWeapon(dt: number) {
-      let wt = -0.5, k = 9;                                // idle: held at the ready
-      if (this.atk === "windup") { wt = -1.55; k = 11; }   // cock it back
-      else if (this.atk === "commit" || this.atk === "strike" || this.atk === "swing") { wt = 0.78; k = 26; }  // slam through
+      let wt = -0.5,
+        k = 9; // idle: held at the ready
+      if (this.atk === "windup") {
+        wt = -1.55;
+        k = 11;
+      } // cock it back
+      else if (this.atk === "commit" || this.atk === "strike" || this.atk === "swing") {
+        wt = 0.78;
+        k = 26;
+      } // slam through
       this.weaponPrevA = this.weaponA;
       this.weaponA = lerp(this.weaponA, wt, clamp(k * dt, 0, 1));
     }
@@ -259,7 +419,10 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
 
   // ---- Ranged: kites, telegraphs, fires ----
   class Ranged extends Enemy {
-    state: string; aimTimer: number; windT: number; windMax = 0;
+    state: string;
+    aimTimer: number;
+    windT: number;
+    windMax = 0;
     prismShots: EnemyProjectile[] = [];
     declare cfg: typeof CONFIG.ranged;
 
@@ -279,8 +442,11 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
         this.integrate(dt, platforms);
         return;
       }
-      const C = this.cfg, b = this.behavior;
-      const dx = player.x - this.x, dist = Math.abs(dx), away = (-Math.sign(dx)) || 1;
+      const C = this.cfg,
+        b = this.behavior;
+      const dx = player.x - this.x,
+        dist = Math.abs(dx),
+        away = -Math.sign(dx) || 1;
 
       if (this.state !== "windup") {
         // movement: Sentinel holds its ground; others kite to a preferred range
@@ -295,8 +461,9 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
         this.aimTimer -= dt;
         if (this.aimTimer <= 0) {
           this.state = "windup";
-          const base = b === "sentinel" ? C.windup * 1.5 : (b === "marksman" ? CONFIG.chargedShot.windup : C.windup);
-          this.windT = base * this.fireRateMult / this.auraHaste; this.windMax = this.windT;   // Herald hastens
+          const base = b === "sentinel" ? C.windup * 1.5 : b === "marksman" ? CONFIG.chargedShot.windup : C.windup;
+          this.windT = (base * this.fireRateMult) / this.auraHaste;
+          this.windMax = this.windT; // Herald hastens
         }
       } else {
         // aiming: Rifleman keeps strafing (so it leads you); others plant to fire
@@ -306,7 +473,7 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
         if (this.windT <= 0) {
           this._fire(player, projectiles, C);
           this.state = "kite";
-          this.aimTimer = C.aimInterval * this.fireRateMult * (b === "sentinel" ? 1.15 : 1) / this.auraHaste;
+          this.aimTimer = (C.aimInterval * this.fireRateMult * (b === "sentinel" ? 1.15 : 1)) / this.auraHaste;
         }
       }
       this.integrate(dt, platforms);
@@ -314,64 +481,131 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
 
     _fire(player: EnemyPlayerPort, projectiles: EnemyProjectile[], C: typeof CONFIG.ranged) {
       const b = this.behavior;
-      const dmg = CONFIG.proj.dmg * this.auraDmg;   // War Priest empowers shots
-      if (this.volley > 1) {                       // Volley affix: wide spread
+      const dmg = CONFIG.proj.dmg * this.auraDmg; // War Priest empowers shots
+      if (this.volley > 1) {
+        // Volley affix: wide spread
         const base = Math.atan2(player.y - this.y, player.x - this.x);
         for (let i = 0; i < this.volley; i++) {
           const a = base + (i - (this.volley - 1) / 2) * 0.22;
           const p = new Projectile(this.x, this.y, Math.cos(a) * C.projSpeed, Math.sin(a) * C.projSpeed);
-          this.ownProjectile(p); p.dmg = dmg; p.tint = this.color; projectiles.push(p);
+          this.ownProjectile(p);
+          p.dmg = dmg;
+          p.tint = this.color;
+          projectiles.push(p);
         }
         return;
       }
-      if (b === "marksman") {                       // a long charge -> the fastest bolt in the game
+      if (b === "marksman") {
+        // a long charge -> the fastest bolt in the game
         const CS = CONFIG.chargedShot;
-        const dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+        const dx = player.x - this.x,
+          dy = player.y - this.y,
+          m = len(dx, dy) || 1;
         const p = new Projectile(this.x, this.y, (dx / m) * CS.speed, (dy / m) * CS.speed);
-        this.ownProjectile(p); p.r = CS.r; p.dmg = CS.dmg * this.auraDmg; p.charged = true; p.tint = this.color;
+        this.ownProjectile(p);
+        p.r = CS.r;
+        p.dmg = CS.dmg * this.auraDmg;
+        p.charged = true;
+        p.tint = this.color;
         projectiles.push(p);
         return;
       }
-      if (b === "warlock") {                        // slow shot that curves once toward you
-        const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+      if (b === "warlock") {
+        // slow shot that curves once toward you
+        const X = CONFIG.exotic,
+          dx = player.x - this.x,
+          dy = player.y - this.y,
+          m = len(dx, dy) || 1;
         const p = new Projectile(this.x, this.y, (dx / m) * X.warlockSpeed, (dy / m) * X.warlockSpeed);
-        this.ownProjectile(p); p.dmg = X.warlockDmg * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt; p.r = 11; p.tint = this.color; p.kind = "orb";
-        projectiles.push(p); return;
+        this.ownProjectile(p);
+        p.dmg = X.warlockDmg * this.auraDmg;
+        p.curve = true;
+        p.curveT = X.warlockCurveAt;
+        p.r = 11;
+        p.tint = this.color;
+        p.kind = "orb";
+        projectiles.push(p);
+        return;
       }
-      if (b === "seedcaster") {                     // Verdant seed: a smaller, drifting orb
-        const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+      if (b === "seedcaster") {
+        // Verdant seed: a smaller, drifting orb
+        const X = CONFIG.exotic,
+          dx = player.x - this.x,
+          dy = player.y - this.y,
+          m = len(dx, dy) || 1;
         const p = new Projectile(this.x, this.y, (dx / m) * X.warlockSpeed * 0.82, (dy / m) * X.warlockSpeed * 0.82);
-        this.ownProjectile(p); p.dmg = X.warlockDmg * 0.82 * this.auraDmg; p.curve = true; p.curveT = X.warlockCurveAt * 0.7;
-        p.r = 8; p.tint = this.color; p.kind = "seed"; p.mine = true; p.armT = 0.45; p.life = 6; p.gravity = CONFIG.bomber.bombGravity; projectiles.push(p); return;
+        this.ownProjectile(p);
+        p.dmg = X.warlockDmg * 0.82 * this.auraDmg;
+        p.curve = true;
+        p.curveT = X.warlockCurveAt * 0.7;
+        p.r = 8;
+        p.tint = this.color;
+        p.kind = "seed";
+        p.mine = true;
+        p.armT = 0.45;
+        p.life = 6;
+        p.gravity = CONFIG.bomber.bombGravity;
+        projectiles.push(p);
+        return;
       }
-      if (b === "prism-seer") {                    // Pale prism: two readable, independently parryable shards
-        const dx = player.x - this.x, dy = player.y - this.y, base = Math.atan2(dy, dx);
+      if (b === "prism-seer") {
+        // Pale prism: two readable, independently parryable shards
+        const dx = player.x - this.x,
+          dy = player.y - this.y,
+          base = Math.atan2(dy, dx);
         const pair: EnemyProjectile[] = [];
         for (const offset of [-0.11, 0.11]) {
-          const p = new Projectile(this.x, this.y, Math.cos(base + offset) * C.projSpeed * 0.86,
-            Math.sin(base + offset) * C.projSpeed * 0.86);
-          this.ownProjectile(p); p.dmg = dmg * 0.62; p.r = 7; p.tint = "#b9f4ff"; p.kind = "prism-shard";
-          p.counterplay = "deflect/recombine"; pair.push(p); projectiles.push(p);
+          const p = new Projectile(
+            this.x,
+            this.y,
+            Math.cos(base + offset) * C.projSpeed * 0.86,
+            Math.sin(base + offset) * C.projSpeed * 0.86,
+          );
+          this.ownProjectile(p);
+          p.dmg = dmg * 0.62;
+          p.r = 7;
+          p.tint = "#b9f4ff";
+          p.kind = "prism-shard";
+          p.counterplay = "deflect/recombine";
+          pair.push(p);
+          projectiles.push(p);
         }
         this.prismShots = pair;
         return;
       }
-      if (b === "chain") {                          // a shot that roots you in place on hit
-        const X = CONFIG.exotic, dx = player.x - this.x, dy = player.y - this.y, m = len(dx, dy) || 1;
+      if (b === "chain") {
+        // a shot that roots you in place on hit
+        const X = CONFIG.exotic,
+          dx = player.x - this.x,
+          dy = player.y - this.y,
+          m = len(dx, dy) || 1;
         const p = new Projectile(this.x, this.y, (dx / m) * X.chainSpeed, (dy / m) * X.chainSpeed);
-        this.ownProjectile(p); p.dmg = X.chainDmg * this.auraDmg; p.root = X.chainRoot; p.r = X.chainR; p.tint = this.color;
-        projectiles.push(p); return;
+        this.ownProjectile(p);
+        p.dmg = X.chainDmg * this.auraDmg;
+        p.root = X.chainRoot;
+        p.r = X.chainR;
+        p.tint = this.color;
+        projectiles.push(p);
+        return;
       }
-      if (b === "sentinel") { this.fireAt(player, projectiles, C.projSpeed * 1.15); return; }  // single precise shot
+      if (b === "sentinel") {
+        this.fireAt(player, projectiles, C.projSpeed * 1.15);
+        return;
+      } // single precise shot
       // Rifleman leads your movement; default Ranged just double-taps where you are
       const lead = b === "rifleman" ? 0.2 : 0;
       const sp = C.projSpeed * (b === "rifleman" ? 1.1 : 1);
       for (let i = 0; i < 2; i++) {
-        const tx = player.x + player.vx * lead, ty = player.y + player.vy * lead * 0.5;
-        const dx = tx - this.x, dy = ty - this.y;
+        const tx = player.x + player.vx * lead,
+          ty = player.y + player.vy * lead * 0.5;
+        const dx = tx - this.x,
+          dy = ty - this.y;
         const a = Math.atan2(dy, dx) + (i - 0.5) * (b === "rifleman" ? 0.0 : 0.07);
         const p = new Projectile(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp);
-        this.ownProjectile(p); p.dmg = dmg; p.tint = this.color; projectiles.push(p);
+        this.ownProjectile(p);
+        p.dmg = dmg;
+        p.tint = this.color;
+        projectiles.push(p);
       }
     }
 
@@ -380,8 +614,10 @@ export function createGroundEnemyTypes(dependencies: EnemyDependencies, Enemy: E
       const returned = projectile as EnemyProjectile;
       const sibling = this.prismShots.find((shot) => shot !== returned && !shot.dead);
       if (sibling !== undefined) sibling.dead = true;
-      returned.kind = "prism-return"; returned.r = Math.max(returned.r, 11);
-      returned.deflectDmg = Math.round(returned.deflectDmg * 1.45); returned.counterplay = "recombined return";
+      returned.kind = "prism-return";
+      returned.r = Math.max(returned.r, 11);
+      returned.deflectDmg = Math.round(returned.deflectDmg * 1.45);
+      returned.counterplay = "recombined return";
       this.prismShots = [];
     }
   }

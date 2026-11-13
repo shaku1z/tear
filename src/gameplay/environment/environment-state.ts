@@ -12,7 +12,9 @@ import type {
 import { assertEnvironmentCombatCapabilities, assertEnvironmentObjectCategory } from "./environment-definitions";
 
 const DEFAULT_CONFIGURATION: EnvironmentRuntimeConfiguration = Object.freeze({
-  maxFields: 64, maxCombatObjects: 128, maxRoutes: 64,
+  maxFields: 64,
+  maxCombatObjects: 128,
+  maxRoutes: 64,
 });
 
 /**
@@ -46,7 +48,9 @@ function freezeData(value: unknown): unknown {
 }
 
 /** Clone/freeze every data-only authored extension without teaching the kernel biome vocabulary. */
-function copyState<T extends EnvironmentFieldState | EnvironmentCombatObjectState | EnvironmentRouteState>(value: T): T {
+function copyState<T extends EnvironmentFieldState | EnvironmentCombatObjectState | EnvironmentRouteState>(
+  value: T,
+): T {
   return freezeData(value) as T;
 }
 const copyField = (value: EnvironmentFieldState): EnvironmentFieldState => copyState(value);
@@ -62,7 +66,9 @@ function assertUnique(ids: readonly string[], category: string): void {
   }
 }
 
-function isReadonlyArray(value: unknown): value is readonly unknown[] { return Array.isArray(value); }
+function isReadonlyArray(value: unknown): value is readonly unknown[] {
+  return Array.isArray(value);
+}
 
 /** One isolated, data-only environment collection and deterministic ID allocator. */
 export class EnvironmentState implements EnvironmentRuntimeState {
@@ -80,11 +86,22 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   #lastClearReason: EnvironmentClearReason | null = null;
   readonly #validators: readonly EnvironmentObjectValidationPort[];
 
-  constructor(stageId: string, worldId: string, configuration: Partial<EnvironmentRuntimeConfiguration> = {}, validators: readonly EnvironmentObjectValidationPort[] = []) {
-    if (stageId.length === 0 || worldId.length === 0) throw new TypeError("environment stage and world IDs are required");
-    this.#stageId = stageId; this.worldId = worldId;
+  constructor(
+    stageId: string,
+    worldId: string,
+    configuration: Partial<EnvironmentRuntimeConfiguration> = {},
+    validators: readonly EnvironmentObjectValidationPort[] = [],
+  ) {
+    if (stageId.length === 0 || worldId.length === 0)
+      throw new TypeError("environment stage and world IDs are required");
+    this.#stageId = stageId;
+    this.worldId = worldId;
     const merged = { ...DEFAULT_CONFIGURATION, ...configuration };
-    if (![merged.maxFields, merged.maxCombatObjects, merged.maxRoutes].every((value) => Number.isSafeInteger(value) && value >= 0)) {
+    if (
+      ![merged.maxFields, merged.maxCombatObjects, merged.maxRoutes].every(
+        (value) => Number.isSafeInteger(value) && value >= 0,
+      )
+    ) {
       throw new RangeError("environment population limits must be non-negative safe integers");
     }
     this.configuration = Object.freeze(merged);
@@ -93,20 +110,40 @@ export class EnvironmentState implements EnvironmentRuntimeState {
     this.#validators = Object.freeze([...validators]);
   }
 
-  get stageId(): string { return this.#stageId; }
-  get revision(): number { return this.#revision; }
-  get lastClearReason(): EnvironmentClearReason | null { return this.#lastClearReason; }
-  fields(): readonly EnvironmentFieldState[] { return this.#fields; }
-  combatObjects(): readonly EnvironmentCombatObjectState[] { return this.#combatObjects; }
-  routes(): readonly EnvironmentRouteState[] { return this.#routes; }
+  get stageId(): string {
+    return this.#stageId;
+  }
+  get revision(): number {
+    return this.#revision;
+  }
+  get lastClearReason(): EnvironmentClearReason | null {
+    return this.#lastClearReason;
+  }
+  fields(): readonly EnvironmentFieldState[] {
+    return this.#fields;
+  }
+  combatObjects(): readonly EnvironmentCombatObjectState[] {
+    return this.#combatObjects;
+  }
+  routes(): readonly EnvironmentRouteState[] {
+    return this.#routes;
+  }
 
   snapshot(): EnvironmentSnapshot {
     if (this.#snapshotCache !== null && this.#snapshotRevision === this.#revision) return this.#snapshotCache;
     // Entries are copied and deeply frozen on admission/update. Snapshot only
     // needs new owning arrays: later updates replace entries, so older snapshots
     // retain their immutable objects without cloning every graph each revision.
-    const snapshot = Object.freeze({ ...(this.#allocatorKnown ? { allocator: Object.freeze({ version: 1 as const, nextSequence: this.#nextSequence }) } : {}), worldId: this.worldId, stageId: this.#stageId, fields: Object.freeze([...this.#fields]),
-      combatObjects: Object.freeze([...this.#combatObjects]), routes: Object.freeze([...this.#routes]) });
+    const snapshot = Object.freeze({
+      ...(this.#allocatorKnown
+        ? { allocator: Object.freeze({ version: 1 as const, nextSequence: this.#nextSequence }) }
+        : {}),
+      worldId: this.worldId,
+      stageId: this.#stageId,
+      fields: Object.freeze([...this.#fields]),
+      combatObjects: Object.freeze([...this.#combatObjects]),
+      routes: Object.freeze([...this.#routes]),
+    });
     this.#snapshotRevision = this.#revision;
     this.#snapshotCache = snapshot;
     return snapshot;
@@ -114,23 +151,45 @@ export class EnvironmentState implements EnvironmentRuntimeState {
 
   simulationView(): EnvironmentSimulationView {
     const snapshot = this.snapshot();
-    return Object.freeze({ ...snapshot, worldId: this.worldId, revision: this.#revision, lastClearReason: this.#lastClearReason });
+    return Object.freeze({
+      ...snapshot,
+      worldId: this.worldId,
+      revision: this.#revision,
+      lastClearReason: this.#lastClearReason,
+    });
   }
 
   replace(snapshot: EnvironmentSnapshot): void {
-    if (snapshot.stageId !== this.#stageId) throw new RangeError("environment snapshot stage does not match this world");
-    if (snapshot.worldId !== undefined && snapshot.worldId !== this.worldId) throw new RangeError("environment snapshot world does not match this world");
-    if (!isReadonlyArray(snapshot.fields)
-      || !isReadonlyArray(snapshot.combatObjects)
-      || !isReadonlyArray(snapshot.routes)) {
+    if (snapshot.stageId !== this.#stageId)
+      throw new RangeError("environment snapshot stage does not match this world");
+    if (snapshot.worldId !== undefined && snapshot.worldId !== this.worldId)
+      throw new RangeError("environment snapshot world does not match this world");
+    if (
+      !isReadonlyArray(snapshot.fields) ||
+      !isReadonlyArray(snapshot.combatObjects) ||
+      !isReadonlyArray(snapshot.routes)
+    ) {
       throw new TypeError("environment snapshot collections must be arrays");
     }
-    if (snapshot.fields.length > this.configuration.maxFields || snapshot.combatObjects.length > this.configuration.maxCombatObjects || snapshot.routes.length > this.configuration.maxRoutes) {
+    if (
+      snapshot.fields.length > this.configuration.maxFields ||
+      snapshot.combatObjects.length > this.configuration.maxCombatObjects ||
+      snapshot.routes.length > this.configuration.maxRoutes
+    ) {
       throw new RangeError("environment snapshot exceeds population bounds");
     }
-    assertUnique(snapshot.fields.map((item) => item.id), "field");
-    assertUnique(snapshot.combatObjects.map((item) => item.id), "combat-object");
-    assertUnique(snapshot.routes.map((item) => item.id), "route");
+    assertUnique(
+      snapshot.fields.map((item) => item.id),
+      "field",
+    );
+    assertUnique(
+      snapshot.combatObjects.map((item) => item.id),
+      "combat-object",
+    );
+    assertUnique(
+      snapshot.routes.map((item) => item.id),
+      "route",
+    );
     const all = [...snapshot.fields, ...snapshot.combatObjects, ...snapshot.routes].map((item) => item.id);
     assertUnique(all, "object");
     snapshot.fields.forEach((field) => {
@@ -146,12 +205,25 @@ export class EnvironmentState implements EnvironmentRuntimeState {
       for (const validator of this.#validators) validator.validateRoute?.(route);
     });
     const allocator: unknown = snapshot.allocator;
-    if (allocator !== undefined && (!allocator || typeof allocator !== "object" || Array.isArray(allocator) || (allocator as Record<string, unknown>).version !== 1 || !Number.isSafeInteger((allocator as Record<string, unknown>).nextSequence) || Number((allocator as Record<string, unknown>).nextSequence) < 1)) throw new TypeError("Invalid environment allocator continuation");
-    if (snapshot.allocator !== undefined) for (const id of all) {
-      const prefix = `${this.worldId}:`; if (!id.startsWith(prefix)) continue;
-      const suffix = id.slice(prefix.length); const match = /^(?:field|combat-object|route):(\d+)$/u.exec(suffix);
-      if (match && Number(match[1]) >= snapshot.allocator.nextSequence) throw new TypeError("Environment allocator precedes a retained object");
-    }
+    if (
+      allocator !== undefined &&
+      (!allocator ||
+        typeof allocator !== "object" ||
+        Array.isArray(allocator) ||
+        (allocator as Record<string, unknown>).version !== 1 ||
+        !Number.isSafeInteger((allocator as Record<string, unknown>).nextSequence) ||
+        Number((allocator as Record<string, unknown>).nextSequence) < 1)
+    )
+      throw new TypeError("Invalid environment allocator continuation");
+    if (snapshot.allocator !== undefined)
+      for (const id of all) {
+        const prefix = `${this.worldId}:`;
+        if (!id.startsWith(prefix)) continue;
+        const suffix = id.slice(prefix.length);
+        const match = /^(?:field|combat-object|route):(\d+)$/u.exec(suffix);
+        if (match && Number(match[1]) >= snapshot.allocator.nextSequence)
+          throw new TypeError("Environment allocator precedes a retained object");
+      }
     this.#allocatorKnown = snapshot.allocator !== undefined;
     this.#nextSequence = snapshot.allocator?.nextSequence ?? 1;
     this.#fields.splice(0, this.#fields.length, ...snapshot.fields.map(copyField));
@@ -161,70 +233,133 @@ export class EnvironmentState implements EnvironmentRuntimeState {
   }
 
   clear(reason: EnvironmentClearReason): void {
-    this.#fields.length = 0; this.#combatObjects.length = 0; this.#routes.length = 0;
-    this.#nextSequence = 1; this.#allocatorKnown = true; this.#lastClearReason = reason; this.#revision += 1;
+    this.#fields.length = 0;
+    this.#combatObjects.length = 0;
+    this.#routes.length = 0;
+    this.#nextSequence = 1;
+    this.#allocatorKnown = true;
+    this.#lastClearReason = reason;
+    this.#revision += 1;
   }
 
   setStage(stageId: string, reason: EnvironmentClearReason = "stage-transition"): void {
     if (stageId.length === 0) throw new TypeError("environment stage ID is required");
-    this.clear(reason); this.#stageId = stageId;
+    this.clear(reason);
+    this.#stageId = stageId;
   }
 
   #id(category: "field" | "combat-object" | "route"): string {
-    if (!this.#allocatorKnown) throw new TypeError("Historical environment snapshot lacks exact allocator continuation");
+    if (!this.#allocatorKnown)
+      throw new TypeError("Historical environment snapshot lacks exact allocator continuation");
     if (this.#nextSequence >= Number.MAX_SAFE_INTEGER) throw new RangeError("Environment allocator exhausted");
-    const id = `${this.worldId}:${category}:${String(this.#nextSequence)}`; this.#nextSequence += 1; return id;
+    const id = `${this.worldId}:${category}:${String(this.#nextSequence)}`;
+    this.#nextSequence += 1;
+    return id;
   }
   #claim(id: string | undefined, category: "field" | "combat-object" | "route"): string {
     const chosen = id ?? this.#id(category);
     if (typeof chosen !== "string" || chosen.length === 0) throw new TypeError("environment object ID is required");
-    if ([...this.#fields, ...this.#combatObjects, ...this.#routes].some((item) => item.id === chosen)) throw new TypeError(`duplicate environment object ID: ${chosen}`);
+    if ([...this.#fields, ...this.#combatObjects, ...this.#routes].some((item) => item.id === chosen))
+      throw new TypeError(`duplicate environment object ID: ${chosen}`);
     return chosen;
   }
 
-  addField<T extends object>(value: Omit<EnvironmentFieldState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string {
-    if (this.#fields.length >= this.configuration.maxFields) throw new RangeError("environment field population bound exceeded");
+  addField<T extends object>(
+    value: Omit<EnvironmentFieldState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string },
+  ): string {
+    if (this.#fields.length >= this.configuration.maxFields)
+      throw new RangeError("environment field population bound exceeded");
     assertEnvironmentObjectCategory("field", value.kind);
     const id = this.#claim(value.id, "field");
     const field: EnvironmentFieldState = { ...value, id };
     for (const validator of this.#validators) validator.validateField?.(field);
-    this.#fields.push(copyField(field)); this.#revision += 1; return id;
+    this.#fields.push(copyField(field));
+    this.#revision += 1;
+    return id;
   }
-  addCombatObject<T extends object>(value: Omit<EnvironmentCombatObjectState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string {
-    if (this.#combatObjects.length >= this.configuration.maxCombatObjects) throw new RangeError("environment combat-object population bound exceeded");
+  addCombatObject<T extends object>(
+    value: Omit<EnvironmentCombatObjectState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string },
+  ): string {
+    if (this.#combatObjects.length >= this.configuration.maxCombatObjects)
+      throw new RangeError("environment combat-object population bound exceeded");
     assertEnvironmentCombatCapabilities(value.kind, value.counterplayTags, value.procEligible);
     const id = this.#claim(value.id, "combat-object");
     const object: EnvironmentCombatObjectState = { ...value, id };
     for (const validator of this.#validators) validator.validateCombatObject?.(object);
-    this.#combatObjects.push(copyCombatObject(object)); this.#revision += 1; return id;
+    this.#combatObjects.push(copyCombatObject(object));
+    this.#revision += 1;
+    return id;
   }
-  addRoute<T extends object>(value: Omit<EnvironmentRouteState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string }): string {
-    if (this.#routes.length >= this.configuration.maxRoutes) throw new RangeError("environment route population bound exceeded");
+  addRoute<T extends object>(
+    value: Omit<EnvironmentRouteState, "id"> & T & Readonly<Partial<T>> & { readonly id?: string },
+  ): string {
+    if (this.#routes.length >= this.configuration.maxRoutes)
+      throw new RangeError("environment route population bound exceeded");
     assertEnvironmentObjectCategory("route", value.kind);
     const id = this.#claim(value.id, "route");
     const route: EnvironmentRouteState = { ...value, id };
     for (const validator of this.#validators) validator.validateRoute?.(route);
-    this.#routes.push(copyRoute(route)); this.#revision += 1; return id;
+    this.#routes.push(copyRoute(route));
+    this.#revision += 1;
+    return id;
   }
 
-  #update<T extends { readonly id: string }>(items: T[], id: string, patch: Partial<Omit<T, "id">>, copy: (value: T) => T): void {
-    const index = items.findIndex((item) => item.id === id); if (index < 0) throw new RangeError(`unknown environment object: ${id}`);
-    items[index] = copy({ ...items[index], ...patch, id } as T); this.#revision += 1;
+  #update<T extends { readonly id: string }>(
+    items: T[],
+    id: string,
+    patch: Partial<Omit<T, "id">>,
+    copy: (value: T) => T,
+  ): void {
+    const index = items.findIndex((item) => item.id === id);
+    if (index < 0) throw new RangeError(`unknown environment object: ${id}`);
+    items[index] = copy({ ...items[index], ...patch, id } as T);
+    this.#revision += 1;
   }
-  updateField<T extends object>(id: string, patch: Partial<Omit<EnvironmentFieldState, "id">> & T & Readonly<Partial<T>>): void { this.#update(this.#fields, id, patch, copyField); }
-  updateCombatObject<T extends object>(id: string, patch: Partial<Omit<EnvironmentCombatObjectState, "id">> & T & Readonly<Partial<T>>): void { this.#update(this.#combatObjects, id, patch, copyCombatObject); }
-  updateRoute<T extends object>(id: string, patch: Partial<Omit<EnvironmentRouteState, "id">> & T & Readonly<Partial<T>>): void { this.#update(this.#routes, id, patch, copyRoute); }
-  removeField(id: string): void { this.#remove(this.#fields, id); }
-  removeCombatObject(id: string): void { this.#remove(this.#combatObjects, id); }
-  removeRoute(id: string): void { this.#remove(this.#routes, id); }
+  updateField<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentFieldState, "id">> & T & Readonly<Partial<T>>,
+  ): void {
+    this.#update(this.#fields, id, patch, copyField);
+  }
+  updateCombatObject<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentCombatObjectState, "id">> & T & Readonly<Partial<T>>,
+  ): void {
+    this.#update(this.#combatObjects, id, patch, copyCombatObject);
+  }
+  updateRoute<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentRouteState, "id">> & T & Readonly<Partial<T>>,
+  ): void {
+    this.#update(this.#routes, id, patch, copyRoute);
+  }
+  removeField(id: string): void {
+    this.#remove(this.#fields, id);
+  }
+  removeCombatObject(id: string): void {
+    this.#remove(this.#combatObjects, id);
+  }
+  removeRoute(id: string): void {
+    this.#remove(this.#routes, id);
+  }
   #remove(items: { readonly id: string }[], id: string): void {
-    const index = items.findIndex((item) => item.id === id); if (index < 0) return; items.splice(index, 1); this.#revision += 1;
+    const index = items.findIndex((item) => item.id === id);
+    if (index < 0) return;
+    items.splice(index, 1);
+    this.#revision += 1;
   }
 
   /** Internal reset hook used when a world is disposed without exposing arrays. */
-  dispose(): void { this.clear("disposal"); }
+  dispose(): void {
+    this.clear("disposal");
+  }
 }
 
-export function createEnvironmentState(stageId: string, worldId: string, configuration?: Partial<EnvironmentRuntimeConfiguration>, validators?: readonly EnvironmentObjectValidationPort[]): EnvironmentState {
+export function createEnvironmentState(
+  stageId: string,
+  worldId: string,
+  configuration?: Partial<EnvironmentRuntimeConfiguration>,
+  validators?: readonly EnvironmentObjectValidationPort[],
+): EnvironmentState {
   return new EnvironmentState(stageId, worldId, configuration, validators);
 }

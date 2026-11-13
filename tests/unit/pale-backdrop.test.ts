@@ -16,26 +16,50 @@ function renderPale(
   options: { low?: boolean; reducedMotion?: boolean; highContrast?: boolean } = {},
   view = { left: -224, top: -126, right: 1_824, bottom: 1_026 },
 ): DrawCounts {
-  let fills = 0, strokes = 0, curves = 0, images = 0;
+  let fills = 0,
+    strokes = 0,
+    curves = 0,
+    images = 0;
   const fillRects: number[][] = [];
   const gradient = { addColorStop: () => undefined };
-  const context = new Proxy({}, {
-    get: (_target, key) => {
-      if (key === "fill") return () => { fills += 1; };
-      if (key === "fillRect") return (...args: number[]) => { fills += 1; fillRects.push(args); };
-      if (key === "stroke") return () => { strokes += 1; };
-      if (key === "bezierCurveTo") return () => { curves += 1; };
-      if (key === "drawImage") return () => { images += 1; };
-      if (key === "createRadialGradient" || key === "createLinearGradient") return () => gradient;
-      return () => undefined;
+  const context = new Proxy(
+    {},
+    {
+      get: (_target, key) => {
+        if (key === "fill")
+          return () => {
+            fills += 1;
+          };
+        if (key === "fillRect")
+          return (...args: number[]) => {
+            fills += 1;
+            fillRects.push(args);
+          };
+        if (key === "stroke")
+          return () => {
+            strokes += 1;
+          };
+        if (key === "bezierCurveTo")
+          return () => {
+            curves += 1;
+          };
+        if (key === "drawImage")
+          return () => {
+            images += 1;
+          };
+        if (key === "createRadialGradient" || key === "createLinearGradient") return () => gradient;
+        return () => undefined;
+      },
+      set: () => true,
     },
-    set: () => true,
-  }) as unknown as CanvasRenderingContext2D;
+  ) as unknown as CanvasRenderingContext2D;
   const canvas = { width: 0, height: 0, getContext: () => context } as unknown as HTMLCanvasElement;
   const policy: BackdropPolicy = {
     clock: { sim: 0 },
     config: {
-      view: { w: 1_600, h: 900 }, world: { groundY: 760 }, source: { voidCrumbleStand: 1 },
+      view: { w: 1_600, h: 900 },
+      world: { groundY: 760 },
+      source: { voidCrumbleStand: 1 },
       bossArena: { standBeforeWarn: 1, crackWarn: 1, brokenDuration: 1, reformWarn: 1 },
     },
     graphics: { low: options.low ?? false },
@@ -44,8 +68,10 @@ function renderPale(
       flashScale: 1,
       reducedMotion: options.reducedMotion ?? false,
     },
-    overscan: { x: 224, y: 126 }, theme: { dark: false },
-    createCanvas: () => canvas, performance: { now: () => 0 },
+    overscan: { x: 224, y: 126 },
+    theme: { dark: false },
+    createCanvas: () => canvas,
+    performance: { now: () => 0 },
   };
   const stage = stageDefinition("pale-traverse");
   createBackdrop(policy).draw(context, stage, 3, 800, view);
@@ -60,10 +86,13 @@ describe("Pale Traverse backdrop", () => {
   });
 
   it("reduces decorative budgets while preserving the landmark silhouette", () => {
-    const full = renderPale(), low = renderPale({ low: true });
+    const full = renderPale(),
+      low = renderPale({ low: true });
     const expectedStrokeReduction =
-      PALE_BACKDROP_LIMITS.auroraBands - PALE_BACKDROP_LIMITS.lowGraphicsAuroraBands
-      + PALE_BACKDROP_LIMITS.reflectionBands - PALE_BACKDROP_LIMITS.lowGraphicsReflectionBands;
+      PALE_BACKDROP_LIMITS.auroraBands -
+      PALE_BACKDROP_LIMITS.lowGraphicsAuroraBands +
+      PALE_BACKDROP_LIMITS.reflectionBands -
+      PALE_BACKDROP_LIMITS.lowGraphicsReflectionBands;
     expect(full.strokes - low.strokes).toBe(expectedStrokeReduction);
     expect(low.fills).toBeGreaterThanOrEqual(15);
   });

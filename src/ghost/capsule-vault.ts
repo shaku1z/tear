@@ -1,22 +1,37 @@
 import { stableVerificationHash } from "../replay/hash";
 import { decodeGhostChunkPayload } from "./capsule-codec";
-import { prepareForensicGhostImport, prepareGhostCapsuleImport, commitGhostCapsuleImport, ghostRootIntegrity, parseGhostCapsuleManifest, type GhostCapsuleImportPlan, type GhostImportBaseline } from "./capsule-import-plan";
+import {
+  prepareForensicGhostImport,
+  prepareGhostCapsuleImport,
+  commitGhostCapsuleImport,
+  ghostRootIntegrity,
+  parseGhostCapsuleManifest,
+  type GhostCapsuleImportPlan,
+  type GhostImportBaseline,
+} from "./capsule-import-plan";
 import { ghostPortableArchiveData, type PreparedGhostPortableArchive } from "./capsule-paired-archive";
 import { readGhostColdRestoreCompletion, type GhostColdRestoreCompletion } from "./cold-restore-job";
-import {
-  createGhostCapsuleManifestV2,
-  reviseGhostCapsuleManifest,
-  type TearGhostManifest,
-} from "./capsule-contract";
+import { createGhostCapsuleManifestV2, reviseGhostCapsuleManifest, type TearGhostManifest } from "./capsule-contract";
 import type { GhostRecordingProfileId } from "./recording-profiles";
-import { ghostCapsuleProtectionKey, parseGhostCapsuleProtection, prepareGhostCapsuleSourceGuards } from "./capsule-protection";
+import {
+  ghostCapsuleProtectionKey,
+  parseGhostCapsuleProtection,
+  prepareGhostCapsuleSourceGuards,
+} from "./capsule-protection";
 
 export * from "./capsule-contract";
 export * from "./capsule-protection";
 
 export * from "./capsule-vault-backend";
-import { createInlineGhostEncoderWorker, type GhostChunkKind, type TearGhostChunkIndexEntry,
-  type GhostEncoderWorkerPort, type GhostVaultBackend, type GhostVaultWrite, type GhostVaultGuard } from "./capsule-vault-backend";
+import {
+  createInlineGhostEncoderWorker,
+  type GhostChunkKind,
+  type TearGhostChunkIndexEntry,
+  type GhostEncoderWorkerPort,
+  type GhostVaultBackend,
+  type GhostVaultWrite,
+  type GhostVaultGuard,
+} from "./capsule-vault-backend";
 
 function dataRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -65,14 +80,28 @@ export class GhostLocalVault {
     this.#backend = backend;
   }
 
-  backend(): GhostVaultBackend { return this.#backend; }
+  backend(): GhostVaultBackend {
+    return this.#backend;
+  }
 
-  async prepareCapsuleImport(archive: PreparedGhostPortableArchive, baseline?: GhostImportBaseline): Promise<GhostCapsuleImportPlan> {
+  async prepareCapsuleImport(
+    archive: PreparedGhostPortableArchive,
+    baseline?: GhostImportBaseline,
+  ): Promise<GhostCapsuleImportPlan> {
     return prepareGhostCapsuleImport(this.#backend, this.#importOwner, ghostPortableArchiveData(archive), baseline);
   }
 
-  async commitCapsuleImport(plan: GhostCapsuleImportPlan, completion: GhostColdRestoreCompletion): Promise<"imported" | "existing-exact"> {
-    return commitGhostCapsuleImport(this.#backend, this.#importOwner, plan, readGhostColdRestoreCompletion(completion), (build) => this.#commitMutation(build, true));
+  async commitCapsuleImport(
+    plan: GhostCapsuleImportPlan,
+    completion: GhostColdRestoreCompletion,
+  ): Promise<"imported" | "existing-exact"> {
+    return commitGhostCapsuleImport(
+      this.#backend,
+      this.#importOwner,
+      plan,
+      readGhostColdRestoreCompletion(completion),
+      (build) => this.#commitMutation(build, true),
+    );
   }
 
   #manifestWrites(manifest: TearGhostManifest): readonly GhostVaultWrite[] {
@@ -82,9 +111,15 @@ export class GhostLocalVault {
     const durable = parseGhostCapsuleManifest(manifest);
     return Object.freeze([
       { store: "manifests", key: durable.id, value: JSON.stringify(durable) },
-      { store: "indexes", key: `manifest:${durable.id}`, value: JSON.stringify({
-        status: durable.status, createdAt: durable.createdAt, chunks: durable.chunks.length,
-      }) },
+      {
+        store: "indexes",
+        key: `manifest:${durable.id}`,
+        value: JSON.stringify({
+          status: durable.status,
+          createdAt: durable.createdAt,
+          chunks: durable.chunks.length,
+        }),
+      },
     ]);
   }
 
@@ -96,7 +131,11 @@ export class GhostLocalVault {
   }
 
   #epochGuard(epoch: GhostMutationEpoch): GhostVaultGuard {
-    return Object.freeze({ store: "indexes", key: GHOST_MANIFEST_MUTATION_EPOCH_KEY, ...(epoch.raw === undefined ? {} : { expected: epoch.raw }) });
+    return Object.freeze({
+      store: "indexes",
+      key: GHOST_MANIFEST_MUTATION_EPOCH_KEY,
+      ...(epoch.raw === undefined ? {} : { expected: epoch.raw }),
+    });
   }
 
   #epochWrite(epoch: GhostMutationEpoch): GhostVaultWrite {
@@ -111,7 +150,11 @@ export class GhostLocalVault {
    * recorder progress when unrelated mutations happen at the same time.
    */
   async #commitMutation(
-    build: (epoch: GhostMutationEpoch) => Promise<{ readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[] } | undefined>,
+    build: (
+      epoch: GhostMutationEpoch,
+    ) => Promise<
+      { readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[] } | undefined
+    >,
     rejectGuardDrift = false,
   ): Promise<boolean> {
     let lastConflict: unknown;
@@ -127,19 +170,22 @@ export class GhostLocalVault {
         return true;
       } catch (error) {
         if (!isOptimisticConflict(error)) throw error;
-        if (rejectGuardDrift) for (const guard of plan.guards) {
-          if (await this.#backend.get(guard.store, guard.key) !== guard.expected) throw error;
-        }
+        if (rejectGuardDrift)
+          for (const guard of plan.guards) {
+            if ((await this.#backend.get(guard.store, guard.key)) !== guard.expected) throw error;
+          }
         lastConflict = error;
       }
     }
-    throw (lastConflict instanceof Error ? lastConflict : new Error("Ghost manifest mutation remained contended"));
+    throw lastConflict instanceof Error ? lastConflict : new Error("Ghost manifest mutation remained contended");
   }
 
   async #commitRecordingMutation(
     sessionId: string,
     leaseId: string,
-    build: (epoch: GhostMutationEpoch) => Promise<{ readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[] }>,
+    build: (
+      epoch: GhostMutationEpoch,
+    ) => Promise<{ readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[] }>,
   ): Promise<void> {
     let lastConflict: unknown;
     for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -158,7 +204,7 @@ export class GhostLocalVault {
         lastConflict = error;
       }
     }
-    throw (lastConflict instanceof Error ? lastConflict : new Error("Ghost recording mutation remained contended"));
+    throw lastConflict instanceof Error ? lastConflict : new Error("Ghost recording mutation remained contended");
   }
 
   async putManifest(manifest: TearGhostManifest): Promise<void> {
@@ -175,7 +221,10 @@ export class GhostLocalVault {
         chunkGuards.push({ store: "chunks", key: chunk.id, expected: encoded });
       }
       return Object.freeze({
-        guards: Object.freeze([{ store: "manifests" as const, key: durable.id, ...(previous === undefined ? {} : { expected: previous }) }, ...chunkGuards]),
+        guards: Object.freeze([
+          { store: "manifests" as const, key: durable.id, ...(previous === undefined ? {} : { expected: previous }) },
+          ...chunkGuards,
+        ]),
         writes: this.#manifestWrites(durable),
       });
     });
@@ -204,14 +253,19 @@ export class GhostLocalVault {
       // Read the parent and child existence in the same epoch-guarded commit.
       // A parent removal that wins first advances the epoch; a child creation
       // that wins first makes the removal's reference scan fail its epoch CAS.
-      const quarantined = await Promise.all(corruptChunkIds.map(async (chunkId) => Object.freeze({
-        chunkId,
-        encoded: await this.#backend.get("chunks", chunkId),
-      })));
+      const quarantined = await Promise.all(
+        corruptChunkIds.map(async (chunkId) =>
+          Object.freeze({
+            chunkId,
+            encoded: await this.#backend.get("chunks", chunkId),
+          }),
+        ),
+      );
       const chunkGuards: GhostVaultGuard[] = [];
       for (const chunk of child.chunks) {
         const encoded = await this.#backend.get("chunks", chunk.id);
-        if (encoded === undefined || stableVerificationHash(encoded) !== chunk.checksum) throw new RangeError("repair source chunk changed");
+        if (encoded === undefined || stableVerificationHash(encoded) !== chunk.checksum)
+          throw new RangeError("repair source chunk changed");
         chunkGuards.push({ store: "chunks", key: chunk.id, expected: encoded });
       }
       return Object.freeze({
@@ -219,19 +273,44 @@ export class GhostLocalVault {
           { store: "manifests" as const, key: parentId, expected: parentRaw },
           { store: "manifests" as const, key: child.id },
           ...chunkGuards,
-          ...quarantined.map(({ chunkId, encoded }) => ({ store: "chunks" as const, key: chunkId, ...(encoded === undefined ? {} : { expected: encoded }) })),
+          ...quarantined.map(({ chunkId, encoded }) => ({
+            store: "chunks" as const,
+            key: chunkId,
+            ...(encoded === undefined ? {} : { expected: encoded }),
+          })),
         ]),
         writes: Object.freeze([
           ...this.#manifestWrites(child),
-          { store: "lineage" as const, key: `repair:${child.id}`, value: JSON.stringify({
-            format: "tearghost-lineage", schemaVersion: 1, id: `repair:${child.id}`,
-            parentId, childId: child.id, relation: "repair", createdAt: repairedAt,
-          }) },
-          ...quarantined.flatMap(({ chunkId, encoded }) => encoded === undefined ? [] : [{
-            store: "quarantine" as const, key: `repair:${child.id}:${chunkId}`, value: JSON.stringify({
-              parentId, childId: child.id, chunkId, encoded, quarantinedAt: repairedAt,
+          {
+            store: "lineage" as const,
+            key: `repair:${child.id}`,
+            value: JSON.stringify({
+              format: "tearghost-lineage",
+              schemaVersion: 1,
+              id: `repair:${child.id}`,
+              parentId,
+              childId: child.id,
+              relation: "repair",
+              createdAt: repairedAt,
             }),
-          }]),
+          },
+          ...quarantined.flatMap(({ chunkId, encoded }) =>
+            encoded === undefined
+              ? []
+              : [
+                  {
+                    store: "quarantine" as const,
+                    key: `repair:${child.id}:${chunkId}`,
+                    value: JSON.stringify({
+                      parentId,
+                      childId: child.id,
+                      chunkId,
+                      encoded,
+                      quarantinedAt: repairedAt,
+                    }),
+                  },
+                ],
+          ),
         ]),
       });
     });
@@ -247,8 +326,12 @@ export class GhostLocalVault {
    * durable tombstone to these writes, so source deletion and its authorization
    * record cannot diverge. Repair children prevent destructive parent removal.
    */
-  async prepareCapsuleRemoval(id: string, releasingOwner?: string): Promise<{
-    readonly guards: readonly GhostVaultGuard[]; readonly writes: readonly GhostVaultWrite[];
+  async prepareCapsuleRemoval(
+    id: string,
+    releasingOwner?: string,
+  ): Promise<{
+    readonly guards: readonly GhostVaultGuard[];
+    readonly writes: readonly GhostVaultWrite[];
   }> {
     // Capture the mutation epoch before reading any references.  A manifest
     // created during the scan must invalidate this plan rather than becoming
@@ -261,23 +344,39 @@ export class GhostLocalVault {
     const protectionRaw = await this.#backend.get("analysis", protectionKey);
     if (protectionRaw !== undefined) {
       const protection = parseGhostCapsuleProtection(protectionRaw, id);
-      if (protection.rootIntegrity !== manifest.rootIntegrity || releasingOwner === undefined
-        || protection.owners.length !== 1 || protection.owners[0] !== releasingOwner) {
+      if (
+        protection.rootIntegrity !== manifest.rootIntegrity ||
+        releasingOwner === undefined ||
+        protection.owners.length !== 1 ||
+        protection.owners[0] !== releasingOwner
+      ) {
         throw new RangeError("cannot remove a protected source capsule");
       }
     }
     const manifestKeys = await this.#backend.keys("manifests");
-    const manifestEntries = await Promise.all(manifestKeys.map(async (candidate) => Object.freeze({
-      id: candidate,
-      raw: await this.#backend.get("manifests", candidate),
-    })));
-    const manifests = manifestEntries.map(({ raw }) => raw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(raw)));
-    if (manifests.some((candidate) => candidate !== undefined && candidate.id !== id && candidate.lineage?.parentId === id)) {
+    const manifestEntries = await Promise.all(
+      manifestKeys.map(async (candidate) =>
+        Object.freeze({
+          id: candidate,
+          raw: await this.#backend.get("manifests", candidate),
+        }),
+      ),
+    );
+    const manifests = manifestEntries.map(({ raw }) =>
+      raw === undefined ? undefined : parseGhostCapsuleManifest(JSON.parse(raw)),
+    );
+    if (
+      manifests.some(
+        (candidate) => candidate !== undefined && candidate.id !== id && candidate.lineage?.parentId === id,
+      )
+    ) {
       throw new RangeError("cannot remove a capsule with retained repair children");
     }
-    const retainedChunkIds = new Set(manifests
-      .filter((candidate): candidate is TearGhostManifest => candidate !== undefined && candidate.id !== id)
-      .flatMap((candidate) => candidate.chunks.map((chunk) => chunk.id)));
+    const retainedChunkIds = new Set(
+      manifests
+        .filter((candidate): candidate is TearGhostManifest => candidate !== undefined && candidate.id !== id)
+        .flatMap((candidate) => candidate.chunks.map((chunk) => chunk.id)),
+    );
     const assetKeys = (await this.#backend.keys("assets")).filter((key) => key.startsWith(`${id}:`));
     const writes: readonly GhostVaultWrite[] = Object.freeze([
       ...manifest.chunks
@@ -290,14 +389,23 @@ export class GhostLocalVault {
       Object.freeze({ store: "analysis" as const, key: protectionKey }),
       this.#epochWrite(epoch),
     ]);
-    return Object.freeze({ guards: Object.freeze([
-      { store: "manifests" as const, key: id, expected: manifestRaw },
-      { store: "analysis" as const, key: protectionKey, ...(protectionRaw === undefined ? {} : { expected: protectionRaw }) },
-      this.#epochGuard(epoch),
-      ...manifestEntries
-        .filter(({ id: candidate }) => candidate !== id)
-        .flatMap(({ id: candidate, raw }) => raw === undefined ? [] : [{ store: "manifests" as const, key: candidate, expected: raw }]),
-    ]), writes });
+    return Object.freeze({
+      guards: Object.freeze([
+        { store: "manifests" as const, key: id, expected: manifestRaw },
+        {
+          store: "analysis" as const,
+          key: protectionKey,
+          ...(protectionRaw === undefined ? {} : { expected: protectionRaw }),
+        },
+        this.#epochGuard(epoch),
+        ...manifestEntries
+          .filter(({ id: candidate }) => candidate !== id)
+          .flatMap(({ id: candidate, raw }) =>
+            raw === undefined ? [] : [{ store: "manifests" as const, key: candidate, expected: raw }],
+          ),
+      ]),
+      writes,
+    });
   }
 
   async removeCapsule(id: string): Promise<void> {
@@ -312,7 +420,7 @@ export class GhostLocalVault {
         lastConflict = error;
       }
     }
-    throw (lastConflict instanceof Error ? lastConflict : new Error("Ghost capsule removal remained contended"));
+    throw lastConflict instanceof Error ? lastConflict : new Error("Ghost capsule removal remained contended");
   }
 
   /** Atomically exposes one newly encoded recording chunk and its recovery state. */
@@ -323,7 +431,8 @@ export class GhostLocalVault {
     leaseId: string,
     thumbnail?: string,
   ): Promise<void> {
-    if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
+    if (stableVerificationHash(encoded) !== entry.checksum)
+      throw new TypeError(`chunk checksum mismatch before commit: ${entry.id}`);
     if (!manifest.chunks.some((chunk) => chunk.id === entry.id && chunk.checksum === entry.checksum)) {
       throw new TypeError(`recording manifest does not include committed chunk: ${entry.id}`);
     }
@@ -331,18 +440,39 @@ export class GhostLocalVault {
       const previous = await this.#backend.get("manifests", manifest.id);
       if (previous === undefined) throw new RangeError(`manifest does not exist: ${manifest.id}`);
       const previousChunk = await this.#backend.get("chunks", entry.id);
-      if (previousChunk !== undefined && previousChunk !== encoded) throw new RangeError("recording chunk id conflicts with stored evidence");
+      if (previousChunk !== undefined && previousChunk !== encoded)
+        throw new RangeError("recording chunk id conflicts with stored evidence");
       return Object.freeze({
-        guards: Object.freeze([{ store: "manifests" as const, key: manifest.id, expected: previous }, { store: "chunks" as const, key: entry.id, ...(previousChunk === undefined ? {} : { expected: previousChunk }) }]),
+        guards: Object.freeze([
+          { store: "manifests" as const, key: manifest.id, expected: previous },
+          {
+            store: "chunks" as const,
+            key: entry.id,
+            ...(previousChunk === undefined ? {} : { expected: previousChunk }),
+          },
+        ]),
         writes: Object.freeze([
           { store: "chunks" as const, key: entry.id, value: encoded },
-          { store: "journals" as const, key: manifest.id, value: JSON.stringify({
-            sessionId: manifest.id, leaseId, lastChunkId: entry.id, committedSequence: entry.sequence,
-          }) },
+          {
+            store: "journals" as const,
+            key: manifest.id,
+            value: JSON.stringify({
+              sessionId: manifest.id,
+              leaseId,
+              lastChunkId: entry.id,
+              committedSequence: entry.sequence,
+            }),
+          },
           ...this.#manifestWrites(manifest),
-          ...(thumbnail === undefined ? [] : [{
-            store: "assets" as const, key: `${manifest.id}:thumbnail:${String(entry.sequence)}`, value: thumbnail,
-          }]),
+          ...(thumbnail === undefined
+            ? []
+            : [
+                {
+                  store: "assets" as const,
+                  key: `${manifest.id}:thumbnail:${String(entry.sequence)}`,
+                  value: thumbnail,
+                },
+              ]),
         ]),
       });
     });
@@ -363,7 +493,11 @@ export class GhostLocalVault {
         ]),
         writes: Object.freeze([
           ...this.#manifestWrites(manifest),
-          { store: "journals" as const, key: manifest.id, value: JSON.stringify({ sessionId: manifest.id, leaseId, committedSequence: -1 }) },
+          {
+            store: "journals" as const,
+            key: manifest.id,
+            value: JSON.stringify({ sessionId: manifest.id, leaseId, committedSequence: -1 }),
+          },
         ]),
       });
     });
@@ -383,10 +517,7 @@ export class GhostLocalVault {
       const sourceGuards = await prepareGhostCapsuleSourceGuards(this.#backend, manifest.id, manifest.rootIntegrity);
       return Object.freeze({
         guards: Object.freeze([{ store: "manifests" as const, key: manifest.id, expected: previous }, ...sourceGuards]),
-        writes: Object.freeze([
-          ...this.#manifestWrites(manifest),
-          { store: "journals" as const, key: manifest.id },
-        ]),
+        writes: Object.freeze([...this.#manifestWrites(manifest), { store: "journals" as const, key: manifest.id }]),
       });
     });
   }
@@ -394,7 +525,7 @@ export class GhostLocalVault {
   async recoverIncompleteSessions(): Promise<readonly TearGhostManifest[]> {
     const recovered: TearGhostManifest[] = [];
     for (const id of await this.#backend.keys("journals")) {
-      if (await this.#backend.get("manifests", id) === undefined) continue;
+      if ((await this.#backend.get("manifests", id)) === undefined) continue;
       const committed = await this.#commitMutation(async () => {
         const manifestRaw = await this.#backend.get("manifests", id);
         const journalRaw = await this.#backend.get("journals", id);
@@ -430,11 +561,19 @@ export class GhostLocalVault {
           ]),
           writes: Object.freeze([
             ...this.#manifestWrites(next),
-            ...(reason === undefined ? [] : [{ store: "quarantine" as const, key: `recovery:${id}`, value: JSON.stringify({
-              capsuleId: id,
-              reason,
-              recoveredAt: new Date().toISOString(),
-            }) }]),
+            ...(reason === undefined
+              ? []
+              : [
+                  {
+                    store: "quarantine" as const,
+                    key: `recovery:${id}`,
+                    value: JSON.stringify({
+                      capsuleId: id,
+                      reason,
+                      recoveredAt: new Date().toISOString(),
+                    }),
+                  },
+                ]),
             // A recovery attempt has reached a terminal durable state. Keeping
             // the journal would repeatedly mutate the same manifest on startup.
             { store: "journals" as const, key: id },
@@ -474,26 +613,38 @@ export class GhostLocalVault {
     if (!dataRecord(root.chunks)) throw new TypeError("capsule chunks must be an object");
     const chunks = root.chunks;
     if (manifest.chunks.length > limits.maxChunks) throw new RangeError("capsule exceeds chunk-count limit");
-    if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity) throw new TypeError("capsule root integrity mismatch");
+    if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity)
+      throw new TypeError("capsule root integrity mismatch");
     for (const entry of manifest.chunks) {
       const encoded = chunks[entry.id];
       if (typeof encoded !== "string") throw new TypeError(`capsule chunk is missing: ${entry.id}`);
-      if (entry.compressedBytes > limits.maxChunkBytes || entry.uncompressedBytes > limits.maxChunkBytes * limits.maxExpansionRatio) {
+      if (
+        entry.compressedBytes > limits.maxChunkBytes ||
+        entry.uncompressedBytes > limits.maxChunkBytes * limits.maxExpansionRatio
+      ) {
         throw new RangeError(`capsule chunk exceeds expansion limits: ${entry.id}`);
       }
       const ratio = entry.uncompressedBytes / Math.max(1, entry.compressedBytes);
-      if (ratio > limits.maxExpansionRatio) throw new RangeError(`capsule chunk expansion ratio is unsafe: ${entry.id}`);
-      if (stableVerificationHash(encoded) !== entry.checksum) throw new TypeError(`capsule chunk checksum mismatch: ${entry.id}`);
+      if (ratio > limits.maxExpansionRatio)
+        throw new RangeError(`capsule chunk expansion ratio is unsafe: ${entry.id}`);
+      if (stableVerificationHash(encoded) !== entry.checksum)
+        throw new TypeError(`capsule chunk checksum mismatch: ${entry.id}`);
       // Decode before committing untrusted bytes. The declared uncompressed
       // size is also the hard streaming ceiling, so dishonest metadata cannot
       // turn a small compressed import into an unbounded allocation.
       await decodeGhostChunkPayload(entry.encoding, encoded, entry.uncompressedBytes);
     }
-    await this.#commitMutation(() => prepareForensicGhostImport(this.#backend, manifest, chunks, this.#manifestWrites(manifest)), true);
+    await this.#commitMutation(
+      () => prepareForensicGhostImport(this.#backend, manifest, chunks, this.#manifestWrites(manifest)),
+      true,
+    );
     return manifest;
   }
 
-  async enforceQuota(maxBytes: number, retention: Readonly<Record<string, "pinned" | "standard" | "temporary">>): Promise<readonly string[]> {
+  async enforceQuota(
+    maxBytes: number,
+    retention: Readonly<Record<string, "pinned" | "standard" | "temporary">>,
+  ): Promise<readonly string[]> {
     const manifests = await this.#backend.keys("manifests");
     const candidates: Readonly<{ id: string; tier: string; createdAt: string }>[] = [];
     const chunkBytes = new Map<string, number>();
@@ -507,13 +658,15 @@ export class GhostLocalVault {
     }
     let total = [...chunkBytes.values()].reduce((sum, bytes) => sum + bytes, 0);
     const removed: string[] = [];
-    for (const candidate of [...candidates].sort((left, right) =>
-      (left.tier === "temporary" ? 0 : left.tier === "standard" ? 1 : 2)
-      - (right.tier === "temporary" ? 0 : right.tier === "standard" ? 1 : 2)
-      || left.createdAt.localeCompare(right.createdAt))) {
+    for (const candidate of [...candidates].sort(
+      (left, right) =>
+        (left.tier === "temporary" ? 0 : left.tier === "standard" ? 1 : 2) -
+          (right.tier === "temporary" ? 0 : right.tier === "standard" ? 1 : 2) ||
+        left.createdAt.localeCompare(right.createdAt),
+    )) {
       if (total <= maxBytes) break;
       if (candidate.tier === "pinned") continue;
-      if (await this.#backend.get("analysis", ghostCapsuleProtectionKey(candidate.id)) !== undefined) continue;
+      if ((await this.#backend.get("analysis", ghostCapsuleProtectionKey(candidate.id))) !== undefined) continue;
       let removedBytes = 0;
       let committed = false;
       for (let attempt = 0; attempt < 8 && !committed; attempt += 1) {
@@ -574,14 +727,20 @@ export class GhostStreamingRecorder {
   #presentation: "full" | "reduced" | "dropped" = "full";
 
   constructor(options: GhostRecorderOptions) {
-    if (!Number.isSafeInteger(options.chunkEntries) || options.chunkEntries < 1) throw new RangeError("chunkEntries must be positive");
+    if (!Number.isSafeInteger(options.chunkEntries) || options.chunkEntries < 1)
+      throw new RangeError("chunkEntries must be positive");
     this.#options = options;
-    this.#leaseId = options.leaseId ?? stableVerificationHash({ sessionId: options.sessionId, createdAt: options.createdAt });
+    this.#leaseId =
+      options.leaseId ?? stableVerificationHash({ sessionId: options.sessionId, createdAt: options.createdAt });
     this.#worker = options.worker ?? createInlineGhostEncoderWorker();
   }
 
-  get maxBufferedEntries(): number { return this.#maxBufferedEntries; }
-  get pendingWrites(): number { return this.#pendingWrites; }
+  get maxBufferedEntries(): number {
+    return this.#maxBufferedEntries;
+  }
+  get pendingWrites(): number {
+    return this.#pendingWrites;
+  }
 
   async start(): Promise<void> {
     const manifest = this.#manifest("recording");
@@ -611,9 +770,12 @@ export class GhostStreamingRecorder {
     const sequence = this.#chunks.length;
     this.#pendingWrites += 1;
     try {
-      const encoded = await this.#worker.encode(entries, entries.some((entry) => entry.kind === "presentation"));
+      const encoded = await this.#worker.encode(
+        entries,
+        entries.some((entry) => entry.kind === "presentation"),
+      );
       const kinds = new Set(entries.map((entry) => entry.kind));
-      const kind = kinds.size === 1 ? entries[0]?.kind ?? "events" : "events";
+      const kind = kinds.size === 1 ? (entries[0]?.kind ?? "events") : "events";
       const index: TearGhostChunkIndexEntry = Object.freeze({
         id: `${this.#options.sessionId}:chunk:${String(sequence)}`,
         kind,
@@ -627,7 +789,11 @@ export class GhostStreamingRecorder {
       });
       const nextChunks = Object.freeze([...this.#chunks, index]);
       await this.#options.vault.commitRecordingChunk(
-        this.#manifest("recording", undefined, nextChunks), index, encoded.encoded, this.#leaseId, encoded.thumbnail,
+        this.#manifest("recording", undefined, nextChunks),
+        index,
+        encoded.encoded,
+        this.#leaseId,
+        encoded.thumbnail,
       );
       this.#chunks.push(index);
     } finally {
@@ -643,8 +809,11 @@ export class GhostStreamingRecorder {
     return manifest;
   }
 
-  #manifest(status: TearGhostManifest["status"], completedAt?: string,
-    chunkOverride?: readonly TearGhostChunkIndexEntry[]): TearGhostManifest {
+  #manifest(
+    status: TearGhostManifest["status"],
+    completedAt?: string,
+    chunkOverride?: readonly TearGhostChunkIndexEntry[],
+  ): TearGhostManifest {
     const chunks = Object.freeze([...(chunkOverride ?? this.#chunks)]);
     return createGhostCapsuleManifestV2({
       id: this.#options.sessionId,

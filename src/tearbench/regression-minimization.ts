@@ -76,7 +76,10 @@ export interface TearRegressionMinimization {
     candidate: TearRegressionMinimizationRun;
     actionCount: number;
     maxTicks: number;
-    replayContext: Readonly<{ base: TearRegressionReplayContextEvidence; candidate: TearRegressionReplayContextEvidence }>;
+    replayContext: Readonly<{
+      base: TearRegressionReplayContextEvidence;
+      candidate: TearRegressionReplayContextEvidence;
+    }>;
   }>;
   /** A separately materialized replay pair, suitable for a Graveyard child. */
   readonly minimalChild: Readonly<{
@@ -87,7 +90,10 @@ export interface TearRegressionMinimization {
     acceptedReproductions: number;
     /** Explicitly preserves the original/minimal state and environment lineage. */
     lineage: Readonly<{ relation: "minimized-from"; parentEvidenceHash: string }>;
-    replayContext: Readonly<{ base: TearRegressionReplayContextEvidence; candidate: TearRegressionReplayContextEvidence }>;
+    replayContext: Readonly<{
+      base: TearRegressionReplayContextEvidence;
+      candidate: TearRegressionReplayContextEvidence;
+    }>;
     reducedDimensions: readonly ("actions" | "timeline" | "state" | "entities" | "rng" | "presentation" | "build")[];
   }>;
   readonly evidenceHash: string;
@@ -95,18 +101,32 @@ export interface TearRegressionMinimization {
 
 function artifactHash(artifact: TearBenchRunArtifactV1): string {
   return stableVerificationHash({
-    id: artifact.id, build: artifact.build, scenario: artifact.resolvedScenario,
-    seed: artifact.seed, actions: artifact.actions, ticks: artifact.ticks,
-    status: artifact.status, semantic: artifact.hashes.semantic,
+    id: artifact.id,
+    build: artifact.build,
+    scenario: artifact.resolvedScenario,
+    seed: artifact.seed,
+    actions: artifact.actions,
+    ticks: artifact.ticks,
+    status: artifact.status,
+    semantic: artifact.hashes.semantic,
     ...(artifact.replayContext === undefined ? {} : { replayContext: artifact.replayContext }),
-    observations: artifact.observations.map((entry) => ({ tick: entry.tick, player: entry.player, blade: entry.blade, entities: entry.entities, run: entry.run })),
+    observations: artifact.observations.map((entry) => ({
+      tick: entry.tick,
+      player: entry.player,
+      blade: entry.blade,
+      entities: entry.entities,
+      run: entry.run,
+    })),
   });
 }
 
 function runEvidence(artifact: TearBenchRunArtifactV1): TearRegressionMinimizationRun {
   return Object.freeze({
-    id: artifact.id, artifactHash: artifactHash(artifact), actionsHash: stableVerificationHash(artifact.actions),
-    ticks: artifact.ticks, status: artifact.status,
+    id: artifact.id,
+    artifactHash: artifactHash(artifact),
+    actionsHash: stableVerificationHash(artifact.actions),
+    ticks: artifact.ticks,
+    status: artifact.status,
   });
 }
 
@@ -122,10 +142,15 @@ function signature(investigation: TearRegressionInvestigation): TearRegressionMi
   });
 }
 
-function sameSignature(left: TearRegressionMinimization["signature"], right: TearRegressionMinimization["signature"]): boolean {
-  return left.firstDivergenceTick === right.firstDivergenceTick
-    && left.baseSemanticHash === right.baseSemanticHash
-    && left.candidateSemanticHash === right.candidateSemanticHash;
+function sameSignature(
+  left: TearRegressionMinimization["signature"],
+  right: TearRegressionMinimization["signature"],
+): boolean {
+  return (
+    left.firstDivergenceTick === right.firstDivergenceTick &&
+    left.baseSemanticHash === right.baseSemanticHash &&
+    left.candidateSemanticHash === right.candidateSemanticHash
+  );
 }
 
 function sameValue(left: unknown, right: unknown): boolean {
@@ -140,9 +165,11 @@ function contextFromArtifact(artifact: TearBenchRunArtifactV1): TearRegressionRe
   return Object.freeze({
     expectedBuild: structuredClone(artifact.build),
     ...(artifact.replayContext?.initialSnapshot === undefined
-      ? {} : { initialSnapshot: structuredClone(artifact.replayContext.initialSnapshot) }),
+      ? {}
+      : { initialSnapshot: structuredClone(artifact.replayContext.initialSnapshot) }),
     ...(artifact.replayContext?.presentation === undefined
-      ? {} : { presentation: structuredClone(artifact.replayContext.presentation) }),
+      ? {}
+      : { presentation: structuredClone(artifact.replayContext.presentation) }),
   });
 }
 
@@ -158,14 +185,20 @@ function contextEvidence(context: TearRegressionReplayContext): TearRegressionRe
 function assertComparableContexts(contexts: ReplayContextPair): void {
   const baseSnapshot = contexts.base.initialSnapshot;
   const candidateSnapshot = contexts.candidate.initialSnapshot;
-  if ((baseSnapshot === undefined) !== (candidateSnapshot === undefined)
-    || (baseSnapshot !== undefined && candidateSnapshot !== undefined && !sameValue(baseSnapshot, candidateSnapshot))) {
+  if (
+    (baseSnapshot === undefined) !== (candidateSnapshot === undefined) ||
+    (baseSnapshot !== undefined && candidateSnapshot !== undefined && !sameValue(baseSnapshot, candidateSnapshot))
+  ) {
     throw new TypeError("base and candidate must retain an identical persisted State Forge starting snapshot");
   }
   const basePresentation = contexts.base.presentation;
   const candidatePresentation = contexts.candidate.presentation;
-  if ((basePresentation === undefined) !== (candidatePresentation === undefined)
-    || (basePresentation !== undefined && candidatePresentation !== undefined && !sameValue(basePresentation, candidatePresentation))) {
+  if (
+    (basePresentation === undefined) !== (candidatePresentation === undefined) ||
+    (basePresentation !== undefined &&
+      candidatePresentation !== undefined &&
+      !sameValue(basePresentation, candidatePresentation))
+  ) {
     throw new TypeError("base and candidate must retain identical replay presentation inputs");
   }
 }
@@ -186,12 +219,18 @@ function assertRequestedReplay(
   if (!sameValue(artifact.build, context.expectedBuild)) {
     throw new TypeError(`${side} materializer did not execute the expected immutable build identity`);
   }
-  if (context.initialSnapshot !== undefined
-    && (artifact.replayContext?.initialSnapshot === undefined || !sameValue(artifact.replayContext.initialSnapshot, context.initialSnapshot))) {
+  if (
+    context.initialSnapshot !== undefined &&
+    (artifact.replayContext?.initialSnapshot === undefined ||
+      !sameValue(artifact.replayContext.initialSnapshot, context.initialSnapshot))
+  ) {
     throw new TypeError(`${side} materializer did not execute the requested persisted State Forge snapshot`);
   }
-  if (context.presentation !== undefined
-    && (artifact.replayContext?.presentation === undefined || !sameValue(artifact.replayContext.presentation, context.presentation))) {
+  if (
+    context.presentation !== undefined &&
+    (artifact.replayContext?.presentation === undefined ||
+      !sameValue(artifact.replayContext.presentation, context.presentation))
+  ) {
     throw new TypeError(`${side} materializer did not execute the requested presentation inputs`);
   }
 }
@@ -216,7 +255,8 @@ async function reproduce(
   assertRequestedReplay(base, actions, maxTicks, contexts.base, "base");
   assertRequestedReplay(candidate, actions, maxTicks, contexts.candidate, "candidate");
   return Object.freeze({
-    base, candidate,
+    base,
+    candidate,
     investigation: investigateRegressionRuns({ base, candidate, createdAt: new Date().toISOString() }),
   });
 }
@@ -233,7 +273,12 @@ function snapshotWith(
     progression: stableVerificationHash(state["tear.run.v1"] ?? null),
     environment: stableVerificationHash(projectEnvironmentHash(state["tear.hazard.v1"] ?? null)),
   });
-  return Object.freeze({ ...structuredClone(source), hashes, state: Object.freeze(structuredClone(state)), rng: Object.freeze(structuredClone(rng)) });
+  return Object.freeze({
+    ...structuredClone(source),
+    hashes,
+    state: Object.freeze(structuredClone(state)),
+    rng: Object.freeze(structuredClone(rng)),
+  });
 }
 
 function mapContexts(
@@ -247,13 +292,27 @@ function mapContexts(
   const candidatePresentation = contexts.candidate.presentation;
   const nextBaseSnapshot = baseSnapshot === undefined ? undefined : transform(baseSnapshot);
   const nextCandidateSnapshot = candidateSnapshot === undefined ? undefined : transform(candidateSnapshot);
-  const nextBasePresentation = presentationTransform === undefined || basePresentation === undefined ? basePresentation : presentationTransform(basePresentation);
-  const nextCandidatePresentation = presentationTransform === undefined || candidatePresentation === undefined ? candidatePresentation : presentationTransform(candidatePresentation);
+  const nextBasePresentation =
+    presentationTransform === undefined || basePresentation === undefined
+      ? basePresentation
+      : presentationTransform(basePresentation);
+  const nextCandidatePresentation =
+    presentationTransform === undefined || candidatePresentation === undefined
+      ? candidatePresentation
+      : presentationTransform(candidatePresentation);
   if (baseSnapshot !== undefined && nextBaseSnapshot === undefined) return undefined;
   if (candidateSnapshot !== undefined && nextCandidateSnapshot === undefined) return undefined;
   const next = Object.freeze({
-    base: Object.freeze({ ...contexts.base, ...(nextBaseSnapshot === undefined ? {} : { initialSnapshot: nextBaseSnapshot }), ...(nextBasePresentation === undefined ? {} : { presentation: nextBasePresentation }) }),
-    candidate: Object.freeze({ ...contexts.candidate, ...(nextCandidateSnapshot === undefined ? {} : { initialSnapshot: nextCandidateSnapshot }), ...(nextCandidatePresentation === undefined ? {} : { presentation: nextCandidatePresentation }) }),
+    base: Object.freeze({
+      ...contexts.base,
+      ...(nextBaseSnapshot === undefined ? {} : { initialSnapshot: nextBaseSnapshot }),
+      ...(nextBasePresentation === undefined ? {} : { presentation: nextBasePresentation }),
+    }),
+    candidate: Object.freeze({
+      ...contexts.candidate,
+      ...(nextCandidateSnapshot === undefined ? {} : { initialSnapshot: nextCandidateSnapshot }),
+      ...(nextCandidatePresentation === undefined ? {} : { presentation: nextCandidatePresentation }),
+    }),
   });
   assertComparableContexts(next);
   return next;
@@ -289,8 +348,12 @@ function removePresentationField(
   if (!(field in presentation)) return undefined;
   return Object.freeze({
     ...(field === "viewport" || presentation.viewport === undefined ? {} : { viewport: presentation.viewport }),
-    ...(field === "colorScheme" || presentation.colorScheme === undefined ? {} : { colorScheme: presentation.colorScheme }),
-    ...(field === "reducedMotion" || presentation.reducedMotion === undefined ? {} : { reducedMotion: presentation.reducedMotion }),
+    ...(field === "colorScheme" || presentation.colorScheme === undefined
+      ? {}
+      : { colorScheme: presentation.colorScheme }),
+    ...(field === "reducedMotion" || presentation.reducedMotion === undefined
+      ? {}
+      : { reducedMotion: presentation.reducedMotion }),
   });
 }
 
@@ -298,27 +361,35 @@ function comparableSnapshotKeys(contexts: ReplayContextPair): readonly string[] 
   const base = contexts.base.initialSnapshot;
   const candidate = contexts.candidate.initialSnapshot;
   if (base === undefined || candidate === undefined) return [];
-  return Object.keys(base.state).filter((key) => key in candidate.state).sort();
+  return Object.keys(base.state)
+    .filter((key) => key in candidate.state)
+    .sort();
 }
 
-function comparableEntityCoordinates(contexts: ReplayContextPair): readonly Readonly<{ codecId: string; index: number }>[] {
+function comparableEntityCoordinates(
+  contexts: ReplayContextPair,
+): readonly Readonly<{ codecId: string; index: number }>[] {
   const base = contexts.base.initialSnapshot;
   const candidate = contexts.candidate.initialSnapshot;
   if (base === undefined || candidate === undefined) return [];
   const entityCodecs = ["tear.enemy.v1", "tear.boss.v1", "tear.projectile.v1", "tear.platform.v1", "tear.hazard.v1"];
-  return Object.freeze(entityCodecs.flatMap((codecId) => {
-    const left = base.state[codecId];
-    const right = candidate.state[codecId];
-    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return [];
-    return left.map((_, index) => Object.freeze({ codecId, index }));
-  }));
+  return Object.freeze(
+    entityCodecs.flatMap((codecId) => {
+      const left = base.state[codecId];
+      const right = candidate.state[codecId];
+      if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return [];
+      return left.map((_, index) => Object.freeze({ codecId, index }));
+    }),
+  );
 }
 
 function comparableRngStreams(contexts: ReplayContextPair): readonly string[] {
   const base = contexts.base.initialSnapshot;
   const candidate = contexts.candidate.initialSnapshot;
   if (base === undefined || candidate === undefined) return [];
-  return Object.keys(base.rng).filter((key) => key in candidate.rng).sort();
+  return Object.keys(base.rng)
+    .filter((key) => key in candidate.rng)
+    .sort();
 }
 
 /**
@@ -328,18 +399,22 @@ function comparableRngStreams(contexts: ReplayContextPair): readonly string[] {
  * Build identity is included and revalidated on every materialization, but is
  * intentionally pinned rather than dropped: it identifies the two revisions.
  */
-export async function minimizeRegressionReplay(input: Readonly<{
-  originalBase: TearBenchRunArtifactV1;
-  originalCandidate: TearBenchRunArtifactV1;
-  executor: TearRegressionReplayExecutor;
-  createdAt: string;
-  repetitions?: number;
-  maxPairExecutions?: number;
-}>): Promise<TearRegressionMinimization> {
+export async function minimizeRegressionReplay(
+  input: Readonly<{
+    originalBase: TearBenchRunArtifactV1;
+    originalCandidate: TearBenchRunArtifactV1;
+    executor: TearRegressionReplayExecutor;
+    createdAt: string;
+    repetitions?: number;
+    maxPairExecutions?: number;
+  }>,
+): Promise<TearRegressionMinimization> {
   const repetitions = input.repetitions ?? 3;
   const maxPairExecutions = input.maxPairExecutions ?? 48;
-  if (!Number.isSafeInteger(repetitions) || repetitions < 2 || repetitions > 10) throw new RangeError("repetitions must be an integer from 2 through 10");
-  if (!Number.isSafeInteger(maxPairExecutions) || maxPairExecutions < repetitions || maxPairExecutions > 200) throw new RangeError("maxPairExecutions must be an integer from repetitions through 200");
+  if (!Number.isSafeInteger(repetitions) || repetitions < 2 || repetitions > 10)
+    throw new RangeError("repetitions must be an integer from 2 through 10");
+  if (!Number.isSafeInteger(maxPairExecutions) || maxPairExecutions < repetitions || maxPairExecutions > 200)
+    throw new RangeError("maxPairExecutions must be an integer from repetitions through 200");
   if (stableVerificationHash(input.originalBase.actions) !== stableVerificationHash(input.originalCandidate.actions)) {
     throw new TypeError("original base and candidate must retain an identical semantic action trace");
   }
@@ -347,11 +422,14 @@ export async function minimizeRegressionReplay(input: Readonly<{
     throw new TypeError("original base and candidate must retain an identical timeline bound");
   }
   const originalContexts: ReplayContextPair = Object.freeze({
-    base: contextFromArtifact(input.originalBase), candidate: contextFromArtifact(input.originalCandidate),
+    base: contextFromArtifact(input.originalBase),
+    candidate: contextFromArtifact(input.originalCandidate),
   });
   assertComparableContexts(originalContexts);
   const originalInvestigation = investigateRegressionRuns({
-    base: input.originalBase, candidate: input.originalCandidate, createdAt: input.createdAt,
+    base: input.originalBase,
+    candidate: input.originalCandidate,
+    createdAt: input.createdAt,
   });
   const expected = signature(originalInvestigation);
   const originalActions = input.originalCandidate.actions;
@@ -379,7 +457,11 @@ export async function minimizeRegressionReplay(input: Readonly<{
         // a reason to abandon the original stable regression investigation.
         return false;
       }
-      if (replay.investigation.status !== "diverged" || replay.investigation.comparison.firstMaterialDivergence === undefined) return false;
+      if (
+        replay.investigation.status !== "diverged" ||
+        replay.investigation.comparison.firstMaterialDivergence === undefined
+      )
+        return false;
       if (!sameSignature(signature(replay.investigation), expected)) return false;
       reproductions.push(replay);
     }
@@ -387,7 +469,7 @@ export async function minimizeRegressionReplay(input: Readonly<{
     return true;
   };
 
-  if (!await accepts(originalActions, originalMaxTicks, contexts)) {
+  if (!(await accepts(originalActions, originalMaxTicks, contexts))) {
     throw new TypeError("original replay does not reproduce the material divergence stably");
   }
 
@@ -413,7 +495,11 @@ export async function minimizeRegressionReplay(input: Readonly<{
   }
 
   const minimalMaxTicks = expected.firstDivergenceTick;
-  if (minimalMaxTicks < originalMaxTicks && executions + repetitions <= maxPairExecutions && await accepts(actions, minimalMaxTicks, contexts)) {
+  if (
+    minimalMaxTicks < originalMaxTicks &&
+    executions + repetitions <= maxPairExecutions &&
+    (await accepts(actions, minimalMaxTicks, contexts))
+  ) {
     reducedDimensions.add("timeline");
   } else if (lastAccepted === undefined) {
     throw new Error("no stable minimized replay was retained");
@@ -425,31 +511,56 @@ export async function minimizeRegressionReplay(input: Readonly<{
     proposed: ReplayContextPair | undefined,
   ): Promise<boolean> => {
     if (proposed === undefined || executions + repetitions > maxPairExecutions) return false;
-    if (!await accepts(actions, usedMaxTicks, proposed)) return false;
+    if (!(await accepts(actions, usedMaxTicks, proposed))) return false;
     contexts = proposed;
     reducedDimensions.add(dimension);
     return true;
   };
 
   for (const codecId of comparableSnapshotKeys(contexts)) {
-    await tryContextReduction("state", mapContexts(contexts, (snapshot) => removeStateCodec(snapshot, codecId)));
+    await tryContextReduction(
+      "state",
+      mapContexts(contexts, (snapshot) => removeStateCodec(snapshot, codecId)),
+    );
   }
   for (const coordinate of comparableEntityCoordinates(contexts)) {
-    await tryContextReduction("entities", mapContexts(contexts, (snapshot) => removeEntity(snapshot, coordinate.codecId, coordinate.index)));
+    await tryContextReduction(
+      "entities",
+      mapContexts(contexts, (snapshot) => removeEntity(snapshot, coordinate.codecId, coordinate.index)),
+    );
   }
   for (const stream of comparableRngStreams(contexts)) {
-    await tryContextReduction("rng", mapContexts(contexts, (snapshot) => removeRngStream(snapshot, stream)));
+    await tryContextReduction(
+      "rng",
+      mapContexts(contexts, (snapshot) => removeRngStream(snapshot, stream)),
+    );
   }
   for (const field of ["viewport", "colorScheme", "reducedMotion"] as const) {
-    await tryContextReduction("presentation", mapContexts(contexts, (snapshot) => snapshot, (presentation) => removePresentationField(presentation, field)));
+    await tryContextReduction(
+      "presentation",
+      mapContexts(
+        contexts,
+        (snapshot) => snapshot,
+        (presentation) => removePresentationField(presentation, field),
+      ),
+    );
   }
 
   const retained = lastAccepted;
   if (retained === undefined) throw new Error("no stable minimized replay was retained");
-  const originalContextEvidence = Object.freeze({ base: contextEvidence(originalContexts.base), candidate: contextEvidence(originalContexts.candidate) });
-  const minimalContextEvidence = Object.freeze({ base: contextEvidence(contexts.base), candidate: contextEvidence(contexts.candidate) });
+  const originalContextEvidence = Object.freeze({
+    base: contextEvidence(originalContexts.base),
+    candidate: contextEvidence(originalContexts.candidate),
+  });
+  const minimalContextEvidence = Object.freeze({
+    base: contextEvidence(contexts.base),
+    candidate: contextEvidence(contexts.candidate),
+  });
   const original = Object.freeze({
-    base: runEvidence(input.originalBase), candidate: runEvidence(input.originalCandidate), actionCount: originalActions.length, maxTicks: originalMaxTicks,
+    base: runEvidence(input.originalBase),
+    candidate: runEvidence(input.originalCandidate),
+    actionCount: originalActions.length,
+    maxTicks: originalMaxTicks,
     replayContext: originalContextEvidence,
   });
   const data = {
@@ -466,9 +577,15 @@ export async function minimizeRegressionReplay(input: Readonly<{
     signature: expected,
     original,
     minimalChild: Object.freeze({
-      base: runEvidence(retained.base), candidate: runEvidence(retained.candidate),
-      actions: Object.freeze([...actions]), maxTicks: retained.base.resolvedScenario.maxTicks, acceptedReproductions: repetitions,
-      lineage: Object.freeze({ relation: "minimized-from" as const, parentEvidenceHash: stableVerificationHash(original) }),
+      base: runEvidence(retained.base),
+      candidate: runEvidence(retained.candidate),
+      actions: Object.freeze([...actions]),
+      maxTicks: retained.base.resolvedScenario.maxTicks,
+      acceptedReproductions: repetitions,
+      lineage: Object.freeze({
+        relation: "minimized-from" as const,
+        parentEvidenceHash: stableVerificationHash(original),
+      }),
       replayContext: minimalContextEvidence,
       reducedDimensions: Object.freeze([...reducedDimensions].sort()),
     }),

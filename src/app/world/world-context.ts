@@ -59,23 +59,46 @@ export function createLiveWorldServices(options: LiveWorldServicesOptions): Live
   const services: LiveWorldServices = {
     configuration: options.configuration,
     random: Object.freeze({
-      resetRun: (seed) => { d.GAME_RANDOM.reset(seed); d.cosmeticEmissionRandom.resetRun(seed); },
+      resetRun: (seed) => {
+        d.GAME_RANDOM.reset(seed);
+        d.cosmeticEmissionRandom.resetRun(seed);
+      },
       stream: (name) => d.GAME_RANDOM_STREAMS.stream(name),
       snapshot: () => d.GAME_RANDOM_STREAMS.snapshot(),
-      restore: (snapshot) => { d.GAME_RANDOM_STREAMS.restore(snapshot); },
+      restore: (snapshot) => {
+        d.GAME_RANDOM_STREAMS.restore(snapshot);
+      },
     }),
     clock: Object.freeze({
       seconds: () => d.CLOCK.sim,
-      set: (seconds) => { d.CLOCK.sim = seconds; },
-      reset: () => { d.CLOCK.sim = 0; },
-      advance: (seconds) => { d.CLOCK.sim += seconds; },
+      set: (seconds) => {
+        d.CLOCK.sim = seconds;
+      },
+      reset: () => {
+        d.CLOCK.sim = 0;
+      },
+      advance: (seconds) => {
+        d.CLOCK.sim += seconds;
+      },
     }),
     effects: Object.freeze({
-      resetWorld: () => { d.FX.reset(); d.Backdrop.resetFx(); },
+      resetWorld: () => {
+        d.FX.reset();
+        d.Backdrop.resetFx();
+      },
       count: () => d.FX.list.length,
     }),
-    mirror: Object.freeze({ reset: () => { d.Mirror.active = false; d.Mirror.host = null; } }),
-    bossFeedback: Object.freeze({ clear: () => { d.BOSSFX.q.length = 0; } }),
+    mirror: Object.freeze({
+      reset: () => {
+        d.Mirror.active = false;
+        d.Mirror.host = null;
+      },
+    }),
+    bossFeedback: Object.freeze({
+      clear: () => {
+        d.BOSSFX.q.length = 0;
+      },
+    }),
   };
   return Object.freeze(services);
 }

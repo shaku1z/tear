@@ -1,12 +1,36 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { CampaignRuntimeState } from "../../src/app/campaign/campaign-runtime-state";
-import { createCampaignChapterController, createFinaleController } from "../../src/app/campaign/campaign-controller-factory";
+import {
+  createCampaignChapterController,
+  createFinaleController,
+} from "../../src/app/campaign/campaign-controller-factory";
 
-const motion = { loreReveal: 1, chapterIn: 1, loreExit: 1, biomeRevealBrief: 1, biomeRevealFull: 1, readyBrief: 1, readyFull: 1 };
-const config = { presentation: { dialogueDuck: 1, biomeRevealDuck: 1 }, finale: { anchorRadius: 10, worldZoom: 1,
-  silence: 1, wound: 1, relics: 1, cutAutoAt: 1, cutAutoStep: 1, cutSpeed: 1,
-  restorationMin: 1, epilogueReveal: 1, rewardHold: 1 } };
+const motion = {
+  loreReveal: 1,
+  chapterIn: 1,
+  loreExit: 1,
+  biomeRevealBrief: 1,
+  biomeRevealFull: 1,
+  readyBrief: 1,
+  readyFull: 1,
+};
+const config = {
+  presentation: { dialogueDuck: 1, biomeRevealDuck: 1 },
+  finale: {
+    anchorRadius: 10,
+    worldZoom: 1,
+    silence: 1,
+    wound: 1,
+    relics: 1,
+    cutAutoAt: 1,
+    cutAutoStep: 1,
+    cutSpeed: 1,
+    restorationMin: 1,
+    epilogueReveal: 1,
+    rewardHold: 1,
+  },
+};
 
 describe("campaign runtime state", () => {
   it("owns controller replacement, finale synchronization and cinematic protection", () => {

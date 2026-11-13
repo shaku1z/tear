@@ -26,11 +26,19 @@ export function createLiveGhostRecordingSessionState(
   let clockSessionId: string | undefined;
   return Object.freeze({
     recorder: () => recorder,
-    reset: () => { eventSequence = 0; replayContext = undefined; clockSessionId = undefined; },
+    reset: () => {
+      eventSequence = 0;
+      replayContext = undefined;
+      clockSessionId = undefined;
+    },
     clockSessionId: () => clockSessionId,
-    setClockSessionId: (value) => { clockSessionId = value; },
+    setClockSessionId: (value) => {
+      clockSessionId = value;
+    },
     nextEventSequence: () => ++eventSequence,
     replayContext: () => replayContext,
-    setReplayContext: (value) => { replayContext = value; },
+    setReplayContext: (value) => {
+      replayContext = value;
+    },
   } satisfies LiveGhostRecordingSessionState);
 }

@@ -32,11 +32,19 @@ export interface BrowserPlatformOptions {
 }
 
 function defaultWindow(): BrowserWindowLike | undefined {
-  try { return typeof window === "undefined" ? undefined : window; } catch { return undefined; }
+  try {
+    return typeof window === "undefined" ? undefined : window;
+  } catch {
+    return undefined;
+  }
 }
 
 function storageFrom(windowLike: BrowserWindowLike | undefined): SyncStringStorage | undefined {
-  try { return windowLike?.localStorage; } catch { return undefined; }
+  try {
+    return windowLike?.localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 function fullscreenCapability(documentLike?: BrowserDocumentLike) {
@@ -45,12 +53,24 @@ function fullscreenCapability(documentLike?: BrowserDocumentLike) {
     return unavailable<FullscreenService>("Fullscreen is not supported in this browser context.");
   }
   const service: FullscreenService = {
-    get active() { return documentLike.fullscreenElement != null; },
+    get active() {
+      return documentLike.fullscreenElement != null;
+    },
     async enter() {
-      try { await element.requestFullscreen?.(); return true; } catch { return false; }
+      try {
+        await element.requestFullscreen?.();
+        return true;
+      } catch {
+        return false;
+      }
     },
     async exit() {
-      try { await documentLike.exitFullscreen?.(); return true; } catch { return false; }
+      try {
+        await documentLike.exitFullscreen?.();
+        return true;
+      } catch {
+        return false;
+      }
     },
   };
   return available(service);
@@ -61,10 +81,17 @@ function overlayCapability(windowLike?: BrowserWindowLike) {
   return available<OverlayService>({
     open(url) {
       let parsed: URL;
-      try { parsed = new URL(url); } catch { return Promise.resolve(false); }
+      try {
+        parsed = new URL(url);
+      } catch {
+        return Promise.resolve(false);
+      }
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return Promise.resolve(false);
-      try { return Promise.resolve(windowLike.open?.(parsed.href, "_blank", "noopener,noreferrer") != null); }
-      catch { return Promise.resolve(false); }
+      try {
+        return Promise.resolve(windowLike.open?.(parsed.href, "_blank", "noopener,noreferrer") != null);
+      } catch {
+        return Promise.resolve(false);
+      }
     },
   });
 }
@@ -77,9 +104,15 @@ export function createBrowserPlatformServices(options: BrowserPlatformOptions = 
     focused: documentLike?.hasFocus?.() ?? true,
     visible: !(documentLike?.hidden ?? false),
   });
-  windowLike?.addEventListener?.("focus", () => { lifecycle.setFocused(true); });
-  windowLike?.addEventListener?.("blur", () => { lifecycle.setFocused(false); });
-  documentLike?.addEventListener?.("visibilitychange", () => { lifecycle.setVisible(!(documentLike.hidden ?? false)); });
+  windowLike?.addEventListener?.("focus", () => {
+    lifecycle.setFocused(true);
+  });
+  windowLike?.addEventListener?.("blur", () => {
+    lifecycle.setFocused(false);
+  });
+  documentLike?.addEventListener?.("visibilitychange", () => {
+    lifecycle.setVisible(!(documentLike.hidden ?? false));
+  });
 
   const storage = options.storage ?? storageFrom(windowLike);
   return Object.freeze({

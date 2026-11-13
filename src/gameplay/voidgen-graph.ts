@@ -1,10 +1,16 @@
 import type { VoidChunk, VoidGraph, VoidGraphEdge, VoidOptions, VoidPlatform } from "./voidgen-contracts";
 import { LANES } from "./voidgen-core";
 
-function jumpEdge(a: VoidPlatform, b: VoidPlatform, options: VoidOptions, scrollSpeed: number, allowDash: boolean): Omit<VoidGraphEdge, "id" | "from" | "to" | "kind"> {
+function jumpEdge(
+  a: VoidPlatform,
+  b: VoidPlatform,
+  options: VoidOptions,
+  scrollSpeed: number,
+  allowDash: boolean,
+): Omit<VoidGraphEdge, "id" | "from" | "to" | "kind"> {
   const p = options.physics;
   const rise = a.y - b.y;
-  const jumpHeight = p.jumpSpeed * p.jumpSpeed / (2 * p.gravity);
+  const jumpHeight = (p.jumpSpeed * p.jumpSpeed) / (2 * p.gravity);
   const dashDistance = p.dashSpeed * p.dashDuration;
   const maxRise = jumpHeight + (allowDash ? dashDistance * 0.72 : 0);
   if (rise > maxRise + 0.001) return { ok: false, reason: "vertical", rise };
@@ -38,18 +44,21 @@ export function buildGraph(chunks: readonly VoidChunk[], options: VoidOptions, s
   for (const lane of LANES) {
     const ordered = platforms.filter((p) => p.voidLane === lane).sort((a, b) => a.x - b.x || a.id.localeCompare(b.id));
     for (let i = 0; i + 1 < ordered.length; i++) {
-      const from = ordered[i], to = ordered[i + 1];
+      const from = ordered[i],
+        to = ordered[i + 1];
       if (from === undefined || to === undefined) continue;
       if (from.voidType === "cage" && from.chunkId === to.chunkId) continue;
       const reach = jumpEdge(from, to, options, scrollSpeed, true);
       if (reach.ok) edges.push({ from: from.id, to: to.id, kind: "lane", ...reach });
     }
   }
-  for (const chunk of chunks) for (const connector of chunk.connectors) {
-    const from = byId.get(connector.from), to = byId.get(connector.to);
-    if (!from || !to) continue;
-    const reach = jumpEdge(from, to, options, scrollSpeed, true);
-    edges.push({ ...connector, ...reach });
-  }
+  for (const chunk of chunks)
+    for (const connector of chunk.connectors) {
+      const from = byId.get(connector.from),
+        to = byId.get(connector.to);
+      if (!from || !to) continue;
+      const reach = jumpEdge(from, to, options, scrollSpeed, true);
+      edges.push({ ...connector, ...reach });
+    }
   return { platforms, byId, edges };
 }

@@ -56,7 +56,10 @@ function readContract(contractPath) {
     errors.push(`workspace contract repository must identify ${RELEASE_REPOSITORY}`);
   }
   for (const field of ["requiredTrackedDirectories", "optionalTrackedDirectories", "forbiddenTrackedDirectories"]) {
-    if (!Array.isArray(parsed?.[field]) || parsed[field].some((value) => typeof value !== "string" || value.includes("/"))) {
+    if (
+      !Array.isArray(parsed?.[field]) ||
+      parsed[field].some((value) => typeof value !== "string" || value.includes("/"))
+    ) {
       errors.push(`workspace contract ${field} must contain top-level directory names`);
     }
   }
@@ -118,10 +121,12 @@ export function readDeploymentAssets(root, relativePath) {
 
 function isUnsafeDeploymentPath(value) {
   const normalized = value.replaceAll("\\", "/");
-  return path.posix.isAbsolute(normalized)
-    || /^[A-Za-z]:\//u.test(normalized)
-    || normalized.startsWith("//")
-    || normalized.split("/").includes("..");
+  return (
+    path.posix.isAbsolute(normalized) ||
+    /^[A-Za-z]:\//u.test(normalized) ||
+    normalized.startsWith("//") ||
+    normalized.split("/").includes("..")
+  );
 }
 
 export function parseWorktreeList(text) {
@@ -131,7 +136,14 @@ export function parseWorktreeList(text) {
     if (line === "") continue;
     if (line.startsWith("worktree ")) {
       if (current !== null) entries.push(current);
-      current = { path: line.slice("worktree ".length), bare: false, head: null, branch: null, locked: false, lockReason: null };
+      current = {
+        path: line.slice("worktree ".length),
+        bare: false,
+        head: null,
+        branch: null,
+        locked: false,
+        lockReason: null,
+      };
     } else if (current !== null && line === "bare") {
       current.bare = true;
     } else if (current !== null && line.startsWith("HEAD ")) {
@@ -203,7 +215,10 @@ export function scanWorkspaceGitPointers(workspaceRoot, canonicalRoot) {
     if (!pointerStat.isFile()) continue;
     let pointer;
     try {
-      pointer = fs.readFileSync(pointerPath, "utf8").trim().match(/^gitdir:\s*(.+)$/imu)?.[1];
+      pointer = fs
+        .readFileSync(pointerPath, "utf8")
+        .trim()
+        .match(/^gitdir:\s*(.+)$/imu)?.[1];
     } catch (error) {
       findings.push(`could not read .git pointer ${pointerPath}: ${error.message}`);
       continue;
@@ -235,7 +250,9 @@ function checkIdentity(root, contract, env, errors) {
   const environmentRepository = String(env.GITHUB_REPOSITORY ?? "").trim();
   const sources = [
     origin === "" ? null : { label: "origin", value: normalizeRepositoryIdentifier(origin) },
-    environmentRepository === "" ? null : { label: "GITHUB_REPOSITORY", value: normalizeRepositoryIdentifier(environmentRepository) },
+    environmentRepository === ""
+      ? null
+      : { label: "GITHUB_REPOSITORY", value: normalizeRepositoryIdentifier(environmentRepository) },
   ].filter(Boolean);
   const expected = normalizeRepositoryIdentifier(contract.repository);
   if (sources.length === 0) {
@@ -250,8 +267,11 @@ function checkIdentity(root, contract, env, errors) {
       errors.push(`origin and GITHUB_REPOSITORY disagree: ${sources[0].value} != ${sources[1].value}`);
     }
   }
-  const expectedSha = String(env.GITHUB_SHA ?? "").trim().toLowerCase();
-  if (expectedSha !== "" && head !== expectedSha) errors.push(`HEAD ${head ?? "unknown"} does not equal GITHUB_SHA ${expectedSha}`);
+  const expectedSha = String(env.GITHUB_SHA ?? "")
+    .trim()
+    .toLowerCase();
+  if (expectedSha !== "" && head !== expectedSha)
+    errors.push(`HEAD ${head ?? "unknown"} does not equal GITHUB_SHA ${expectedSha}`);
   return { head, origin, environmentRepository };
 }
 
@@ -261,15 +281,20 @@ function checkTrackedStructure(root, contract, errors) {
     errors.push(commandError(result, "git ls-tree -d --name-only HEAD"));
     return [];
   }
-  const tracked = result.stdout.split(/\r?\n/u).map((entry) => entry.trim()).filter(Boolean);
+  const tracked = result.stdout
+    .split(/\r?\n/u)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
   const trackedSet = new Set(tracked);
   const required = new Set(contract.requiredTrackedDirectories);
   const optional = new Set(contract.optionalTrackedDirectories);
   const forbidden = new Set(contract.forbiddenTrackedDirectories);
-  for (const directory of required) if (!trackedSet.has(directory)) errors.push(`required tracked directory is missing: ${directory}`);
+  for (const directory of required)
+    if (!trackedSet.has(directory)) errors.push(`required tracked directory is missing: ${directory}`);
   for (const directory of trackedSet) {
     if (forbidden.has(directory)) errors.push(`forbidden generated/output directory is tracked: ${directory}`);
-    else if (!required.has(directory) && !optional.has(directory)) errors.push(`unexpected tracked top-level directory: ${directory}`);
+    else if (!required.has(directory) && !optional.has(directory))
+      errors.push(`unexpected tracked top-level directory: ${directory}`);
   }
   return tracked;
 }
@@ -294,10 +319,14 @@ function checkStrictGitState(root, errors) {
   else if (status.stdout.trim() !== "") errors.push(`strict workspace is dirty:\n${status.stdout.trim()}`);
 
   const branch = runGit(root, ["branch", "--show-current"]);
-  if (!branch.ok || branch.stdout.trim() !== "main") errors.push(`strict workspace must be on main, found ${branch.ok ? branch.stdout.trim() || "detached HEAD" : "unknown"}`);
+  if (!branch.ok || branch.stdout.trim() !== "main")
+    errors.push(
+      `strict workspace must be on main, found ${branch.ok ? branch.stdout.trim() || "detached HEAD" : "unknown"}`,
+    );
 
   const upstream = runGit(root, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
-  if (!upstream.ok || upstream.stdout.trim() !== "origin/main") errors.push(`strict main must track origin/main, found ${upstream.ok ? upstream.stdout.trim() || "none" : "none"}`);
+  if (!upstream.ok || upstream.stdout.trim() !== "origin/main")
+    errors.push(`strict main must track origin/main, found ${upstream.ok ? upstream.stdout.trim() || "none" : "none"}`);
 
   const remote = runGit(root, ["rev-parse", "origin/main"]);
   if (!remote.ok) {
@@ -306,7 +335,9 @@ function checkStrictGitState(root, errors) {
     const equality = runGit(root, ["rev-list", "--left-right", "--count", "HEAD...origin/main"]);
     const counts = equality.stdout.trim().split(/\s+/u);
     if (!equality.ok || counts.length !== 2 || counts.some((value) => value !== "0")) {
-      errors.push(`strict main must exactly equal origin/main (ahead=${counts[0] ?? "unknown"}, behind=${counts[1] ?? "unknown"})`);
+      errors.push(
+        `strict main must exactly equal origin/main (ahead=${counts[0] ?? "unknown"}, behind=${counts[1] ?? "unknown"})`,
+      );
     }
   }
 }
@@ -386,7 +417,10 @@ export function runWorkspaceCheck({
       trackedDirectories: [],
       head: null,
       oracle: { status: "skipped" },
-      artifactPolicy: { status: artifactPolicy.errors.length === 0 ? "validated" : "invalid", path: artifactPolicy.path },
+      artifactPolicy: {
+        status: artifactPolicy.errors.length === 0 ? "validated" : "invalid",
+        path: artifactPolicy.path,
+      },
     };
   }
   const identity = checkIdentity(absoluteRoot, contract, env, errors);
@@ -409,9 +443,10 @@ export function runWorkspaceCheck({
   }
 
   const resolvedOracleRoot = oracleRoot ?? (mode === "strict" ? env.TEAR_ORACLE_ROOT : undefined);
-  const oracle = mode === "strict"
-    ? checkOracle(resolvedOracleRoot, contract, errors, registeredEntries)
-    : { status: "skipped", root: null, head: null };
+  const oracle =
+    mode === "strict"
+      ? checkOracle(resolvedOracleRoot, contract, errors, registeredEntries)
+      : { status: "skipped", root: null, head: null };
   return {
     ok: errors.length === 0,
     mode,
@@ -428,18 +463,26 @@ function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
     if (options.help) {
-      console.log("Usage: node scripts/check-workspace.mjs [--ci|--strict] [--root <repo>] [--workspace-root <dir>] [--oracle-root <repo>] [--expected-sha <sha>]");
+      console.log(
+        "Usage: node scripts/check-workspace.mjs [--ci|--strict] [--root <repo>] [--workspace-root <dir>] [--oracle-root <repo>] [--expected-sha <sha>]",
+      );
       return;
     }
     const result = runWorkspaceCheck(options);
     if (!result.ok) {
-      console.error([`workspace ${result.mode} check failed:`, ...result.errors.map((error) => `- ${error}`)].join("\n"));
-      if (result.findings.length > 0) console.error(["workspace findings:", ...result.findings.map((finding) => `- ${finding}`)].join("\n"));
+      console.error(
+        [`workspace ${result.mode} check failed:`, ...result.errors.map((error) => `- ${error}`)].join("\n"),
+      );
+      if (result.findings.length > 0)
+        console.error(["workspace findings:", ...result.findings.map((finding) => `- ${finding}`)].join("\n"));
       process.exitCode = 1;
       return;
     }
-    console.log(`workspace ${result.mode} check passed (${result.head ?? "unknown"}, ${result.trackedDirectories.length} tracked top-level directories, oracle ${result.oracle.status})`);
-    if (result.findings.length > 0) console.log(["workspace findings:", ...result.findings.map((finding) => `- ${finding}`)].join("\n"));
+    console.log(
+      `workspace ${result.mode} check passed (${result.head ?? "unknown"}, ${result.trackedDirectories.length} tracked top-level directories, oracle ${result.oracle.status})`,
+    );
+    if (result.findings.length > 0)
+      console.log(["workspace findings:", ...result.findings.map((finding) => `- ${finding}`)].join("\n"));
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

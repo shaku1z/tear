@@ -13,7 +13,9 @@ describe("Tear combat simulation", () => {
     const order: string[] = [];
     const observed: TearGameplayEvent[] = [];
     const events = new TearGameplayEventBus();
-    events.subscribe((event) => { observed.push(event); });
+    events.subscribe((event) => {
+      observed.push(event);
+    });
     const opening = {
       config: CONFIG,
       player: { cinematicProtected: false },
@@ -44,9 +46,15 @@ describe("Tear combat simulation", () => {
           // A blocked opening must skip this phase. If it runs, its deliberately
           // incomplete host makes the accidental second route immediately fail.
           collision: {} as LiveCollisionPhaseHost,
-          advanceClock: () => { order.push("clock"); },
-          captureProtection: () => { order.push("capture-protection"); },
-          applyProtection: () => { order.push("apply-protection"); },
+          advanceClock: () => {
+            order.push("clock");
+          },
+          captureProtection: () => {
+            order.push("capture-protection");
+          },
+          applyProtection: () => {
+            order.push("apply-protection");
+          },
         };
       },
       authoritative: {
@@ -67,14 +75,7 @@ describe("Tear combat simulation", () => {
     const result = core.simulationRuntime.advanceOne([]);
 
     expect(result.state).toEqual({ tick: 1 });
-    expect(order).toEqual([
-      "actions:1",
-      "clock",
-      "capture-protection",
-      "opening",
-      "apply-protection",
-      "snapshot:1",
-    ]);
+    expect(order).toEqual(["actions:1", "clock", "capture-protection", "opening", "apply-protection", "snapshot:1"]);
     expect(observed).toEqual([{ kind: "effect", tick: 1, effect: "blocked-opening", x: 0, y: 0 }]);
     expect(core.simulation).toBe(core.simulationRuntime.scheduler);
     expect(core.authoritativeInput).toBe(core.simulationRuntime.input);

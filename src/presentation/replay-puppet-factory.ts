@@ -1,11 +1,17 @@
 import type { ReplayPuppet } from "./replay-world-frame";
 
 export interface ReplaySpawnSource {
-  readonly k: string; readonly b?: string; readonly vn?: string; readonly vid?: string;
+  readonly k: string;
+  readonly b?: string;
+  readonly vn?: string;
+  readonly vid?: string;
 }
 
 export interface ReplayPuppetSource extends ReplayPuppet {
-  readonly kind: string; hp: number; hpDisplay: number; spawnT: number;
+  readonly kind: string;
+  hp: number;
+  hpDisplay: number;
+  spawnT: number;
 }
 
 export interface ReplayPuppetFactories<Puppet extends ReplayPuppetSource = ReplayPuppetSource> {
@@ -21,18 +27,28 @@ export interface ReplayPuppetFactories<Puppet extends ReplayPuppetSource = Repla
 }
 
 export function createReplayPuppet<Puppet extends ReplayPuppetSource, Variant extends Readonly<{ name: string }>>(
-  input: ReplaySpawnSource, factories: ReplayPuppetFactories<Puppet>, variants: Readonly<Record<string, readonly Variant[]>>,
-  applyVariant: (puppet: Puppet, variant: Variant) => void): Puppet | null {
+  input: ReplaySpawnSource,
+  factories: ReplayPuppetFactories<Puppet>,
+  variants: Readonly<Record<string, readonly Variant[]>>,
+  applyVariant: (puppet: Puppet, variant: Variant) => void,
+): Puppet | null {
   try {
     const puppet = input.k === "boss" ? factories.boss(input.b ?? "warden") : createEnemy(input.k, factories);
-    const variant = input.vid === undefined
-      ? input.vn === undefined ? undefined : variants[puppet.kind]?.find((entry) => entry.name === input.vn)
-      : variants[puppet.kind]?.find((entry) => (entry as Readonly<{ id?: string }>).id === input.vid);
+    const variant =
+      input.vid === undefined
+        ? input.vn === undefined
+          ? undefined
+          : variants[puppet.kind]?.find((entry) => entry.name === input.vn)
+        : variants[puppet.kind]?.find((entry) => (entry as Readonly<{ id?: string }>).id === input.vid);
     // A recorded stable identity is authoritative. Never silently downgrade a
     // corrupt or cross-family identity to the base puppet.
     if (input.vid !== undefined && variant === undefined) return null;
     if (variant !== undefined) {
-      try { applyVariant(puppet, variant); } catch { /* corrupt legacy variant data should not block playback */ }
+      try {
+        applyVariant(puppet, variant);
+      } catch {
+        /* corrupt legacy variant data should not block playback */
+      }
     }
     puppet.spawnT = 0;
     puppet.hpDisplay = puppet.hp;
@@ -42,15 +58,29 @@ export function createReplayPuppet<Puppet extends ReplayPuppetSource, Variant ex
   }
 }
 
-function createEnemy<Puppet extends ReplayPuppetSource>(kind: string, factories: ReplayPuppetFactories<Puppet>): Puppet {
+function createEnemy<Puppet extends ReplayPuppetSource>(
+  kind: string,
+  factories: ReplayPuppetFactories<Puppet>,
+): Puppet {
   switch (kind) {
-    case "ranged": return factories.ranged();
-    case "flyer": return factories.flyer();
-    case "bomber": return factories.bomber();
-    case "armored": return factories.armored();
-    case "priest": case "herald": case "mender": case "anchor": return factories.support(kind);
-    case "wraith": return factories.wraith();
-    case "chimera": return factories.chimera();
-    default: return factories.charger();
+    case "ranged":
+      return factories.ranged();
+    case "flyer":
+      return factories.flyer();
+    case "bomber":
+      return factories.bomber();
+    case "armored":
+      return factories.armored();
+    case "priest":
+    case "herald":
+    case "mender":
+    case "anchor":
+      return factories.support(kind);
+    case "wraith":
+      return factories.wraith();
+    case "chimera":
+      return factories.chimera();
+    default:
+      return factories.charger();
   }
 }

@@ -31,7 +31,15 @@ describe("visible journey director", () => {
     expect(decisions[6]?.actions).toContainEqual({ type: "tier-up-choice", choiceId: "evolution" });
     expect(director.stage).toBe("returned-menu");
     expect(director.transitions.map((entry) => entry.to)).toEqual([
-      "setup", "playing-wave-1", "draft-1", "playing-wave-2", "boss", "evolution", "result", "replay", "returned-menu",
+      "setup",
+      "playing-wave-1",
+      "draft-1",
+      "playing-wave-2",
+      "boss",
+      "evolution",
+      "result",
+      "replay",
+      "returned-menu",
     ]);
   });
 
@@ -42,9 +50,17 @@ describe("visible journey director", () => {
   });
 
   it("keeps engineering evidence distinct from statistical black-box certification", () => {
-    const engineering = evaluateJourneyCertification("engineering", "structured-state", Array.from({ length: 40 }, () => true));
+    const engineering = evaluateJourneyCertification(
+      "engineering",
+      "structured-state",
+      Array.from({ length: 40 }, () => true),
+    );
     expect(engineering).toMatchObject({ completionRate: 1, certified: false, label: "engineering-evidence-only" });
-    const insufficient = evaluateJourneyCertification("black-box", "pixel-only", Array.from({ length: 20 }, () => true));
+    const insufficient = evaluateJourneyCertification(
+      "black-box",
+      "pixel-only",
+      Array.from({ length: 20 }, () => true),
+    );
     expect(insufficient.certified).toBe(false);
     const certified = evaluateJourneyCertification("black-box", "pixel-only", [
       ...Array.from({ length: 28 }, () => true),
@@ -56,10 +72,19 @@ describe("visible journey director", () => {
 
   it("defines all mode contracts and translates physical device actions", () => {
     expect(JOURNEY_MODE_CONTRACTS.map((entry) => entry.id)).toEqual([
-      "tutorial", "adventure", "endless", "gauntlet", "playground", "boss-test", "enemy-test",
+      "tutorial",
+      "adventure",
+      "endless",
+      "gauntlet",
+      "playground",
+      "boss-test",
+      "enemy-test",
     ]);
     const action = { type: "move", x: 1_000, y: 0 } as const;
-    expect(new KeyboardMouseAgentAdapter().translate(action)[0]).toMatchObject({ device: "keyboard-mouse", code: "KeyD" });
+    expect(new KeyboardMouseAgentAdapter().translate(action)[0]).toMatchObject({
+      device: "keyboard-mouse",
+      code: "KeyD",
+    });
     expect(new ControllerAgentAdapter().translate(action)[0]).toMatchObject({ device: "controller", value: 1 });
     expect(new TouchAgentAdapter().translate(action)[0]).toMatchObject({ device: "touch", value: 1 });
   });
@@ -68,7 +93,10 @@ describe("visible journey director", () => {
     const ui = { screen: "draft", focusedId: "power", actions: ["power", "guard"] };
     expect(compareUiObservations(ui, ui, ui)).toEqual({ equal: true, mismatches: [] });
     const overlay = createWatchOverlay(true, {
-      stage: "boss", objective: "defeat-boss", maneuver: "parry", confidence: 0.86,
+      stage: "boss",
+      objective: "defeat-boss",
+      maneuver: "parry",
+      confidence: 0.86,
     });
     expect(overlay).toMatchObject({ visible: true, title: "GAME AGENT · RUN MONITOR" });
     expect(overlay.lines).toContain("Confidence: 86%");

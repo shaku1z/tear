@@ -15,10 +15,24 @@ import {
 } from "../../src/tearbench";
 
 const observation: TearObservationV1 = {
-  format: "tear-contract", kind: "observation", schemaVersion: 1, tick: 0, observationClass: "structured-state",
+  format: "tear-contract",
+  kind: "observation",
+  schemaVersion: 1,
+  tick: 0,
+  observationClass: "structured-state",
   player: { x: 100, y: 600, vx: 0, vy: 0, hp: 100, maxHp: 100, facing: 1, grounded: true, dashCharges: 1 },
   blade: { handX: 120, handY: 580, tipX: 180, tipY: 560, vx: 0, vy: 0, tipSpeed: 0, state: "held" },
-  entities: [], run: { mode: "campaign", difficulty: "normal", weapon: "sword", stage: "grounds", wave: 1, score: 0, elapsedTicks: 0 }, availableActions: [],
+  entities: [],
+  run: {
+    mode: "campaign",
+    difficulty: "normal",
+    weapon: "sword",
+    stage: "grounds",
+    wave: 1,
+    score: 0,
+    elapsedTicks: 0,
+  },
+  availableActions: [],
 };
 
 function failedArtifact(id: string): TearFailureArtifactV1 {
@@ -30,14 +44,27 @@ function failedArtifact(id: string): TearFailureArtifactV1 {
     scenarioId: "dash-one-way-platform",
     scenarioVersion: 1,
     seed: "graveyard-seed",
-    build: { version: "0.1.0", revision: "bad", target: "test", rulesetVersion: "rules-1", contentHash: "content-1", configHash: "config-1" },
+    build: {
+      version: "0.1.0",
+      revision: "bad",
+      target: "test",
+      rulesetVersion: "rules-1",
+      contentHash: "content-1",
+      configHash: "config-1",
+    },
     firstFailureTick: 33,
     invariantId: "world.legal-bounds",
     severity: "error",
     message: "planted dash regression",
     actions: [],
     eventIds: [],
-    hashes: { semantic: "semantic", exact: "exact", visual: "visual", progression: "progression", environment: "environment" },
+    hashes: {
+      semantic: "semantic",
+      exact: "exact",
+      visual: "visual",
+      progression: "progression",
+      environment: "environment",
+    },
     attachments: {},
   };
 }
@@ -48,17 +75,46 @@ function fixedArtifact(): TearBenchRunArtifactV1 {
     schemaVersion: 1,
     id: "fixed-dash-run",
     createdAt: "2026-07-28T00:00:00.000Z",
-    build: { version: "0.1.0", revision: "f00dbad", target: "test", rulesetVersion: "rules-1", contentHash: "content-1", configHash: "config-1" },
+    build: {
+      version: "0.1.0",
+      revision: "f00dbad",
+      target: "test",
+      rulesetVersion: "rules-1",
+      contentHash: "content-1",
+      configHash: "config-1",
+    },
     resolvedScenario: {
-      format: "tear-contract", kind: "scenario", schemaVersion: 1,
-      id: "dash-one-way-platform", version: 1, description: "Dash", stateClass: "recorded-canonical", executionClass: "engineering",
-      seed: "graveyard-seed", start: { mode: "campaign", difficulty: "normal", weapon: "sword" }, maxTicks: 60, assertions: [], tags: [],
+      format: "tear-contract",
+      kind: "scenario",
+      schemaVersion: 1,
+      id: "dash-one-way-platform",
+      version: 1,
+      description: "Dash",
+      stateClass: "recorded-canonical",
+      executionClass: "engineering",
+      seed: "graveyard-seed",
+      start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+      maxTicks: 60,
+      assertions: [],
+      tags: [],
     },
     seed: "graveyard-seed",
     status: "truncated",
     ticks: 60,
-    actions: [], events: [], observations: [observation], metrics: {}, failures: [], console: [], hashes: { semantic: "fixed" }, attachments: {},
-    rerun: { scenarioId: "dash-one-way-platform", scenarioVersion: 1, seed: "graveyard-seed", actionTrace: "fixed.actions.json" },
+    actions: [],
+    events: [],
+    observations: [observation],
+    metrics: {},
+    failures: [],
+    console: [],
+    hashes: { semantic: "fixed" },
+    attachments: {},
+    rerun: {
+      scenarioId: "dash-one-way-platform",
+      scenarioVersion: 1,
+      seed: "graveyard-seed",
+      actionTrace: "fixed.actions.json",
+    },
   };
 }
 
@@ -86,7 +142,10 @@ function entryAndArtifacts() {
     signature: "sha256:dash-distance",
     original: createGraveyardArtifactReference(original, "artifacts/graveyard/full.json"),
     minimalChild: createGraveyardArtifactReference(matchedMinimal, "artifacts/graveyard/minimal.json"),
-    minimalReplay: { side: "candidate", artifact: createGraveyardArtifactReference(minimalReplay, "artifacts/graveyard/minimal-replay.json") },
+    minimalReplay: {
+      side: "candidate",
+      artifact: createGraveyardArtifactReference(minimalReplay, "artifacts/graveyard/minimal-replay.json"),
+    },
     invariantId: "world.legal-bounds",
     selectors: ["movement-boundary-history"],
     ownership: { owner: "gameplay", hints: ["dash resolution"] },
@@ -94,7 +153,10 @@ function entryAndArtifacts() {
       commit: "f00dbad",
       verification: {
         base: createGraveyardArtifactReference(verification, "artifacts/graveyard/fixed-base.json"),
-        candidate: createGraveyardArtifactReference({ ...verification, id: "fixed-dash-candidate", build: { ...verification.build, revision: "f00dbee" } }, "artifacts/graveyard/fixed-candidate.json"),
+        candidate: createGraveyardArtifactReference(
+          { ...verification, id: "fixed-dash-candidate", build: { ...verification.build, revision: "f00dbee" } },
+          "artifacts/graveyard/fixed-candidate.json",
+        ),
       },
       recordedAt: "2026-07-28T00:00:00.000Z",
     },
@@ -107,7 +169,11 @@ function entryAndArtifacts() {
       "artifacts/graveyard/minimal.json": matchedMinimal,
       "artifacts/graveyard/minimal-replay.json": minimalReplay,
       "artifacts/graveyard/fixed-base.json": verification,
-      "artifacts/graveyard/fixed-candidate.json": { ...verification, id: "fixed-dash-candidate", build: { ...verification.build, revision: "f00dbee" } },
+      "artifacts/graveyard/fixed-candidate.json": {
+        ...verification,
+        id: "fixed-dash-candidate",
+        build: { ...verification.build, revision: "f00dbee" },
+      },
     },
   };
 }
@@ -126,7 +192,13 @@ describe("persistent TearBench Graveyard", () => {
       ownership: { owner: "gameplay" },
       original: { id: "full-trace-failure", status: "failed" },
       minimalChild: { id: "dash-only-failure", status: "failed" },
-      fix: { commit: "f00dbad", verification: { base: { id: "fixed-dash-run", status: "truncated" }, candidate: { id: "fixed-dash-candidate", status: "truncated" } } },
+      fix: {
+        commit: "f00dbad",
+        verification: {
+          base: { id: "fixed-dash-run", status: "truncated" },
+          candidate: { id: "fixed-dash-candidate", status: "truncated" },
+        },
+      },
     });
     expect(() => validateGraveyardRegistry(registry, artifacts)).not.toThrow();
   });
@@ -135,10 +207,12 @@ describe("persistent TearBench Graveyard", () => {
     const { entry, artifacts } = entryAndArtifacts();
     const registry = buryGraveyardEntry(createGraveyardRegistry(), entry);
     expect(() => validateGraveyardRegistry(registry, {})).toThrow("artifact is missing");
-    expect(() => validateGraveyardRegistry(registry, {
-      ...artifacts,
-      "artifacts/graveyard/minimal.json": failedArtifact("substituted-minimal"),
-    })).toThrow("reference does not match");
+    expect(() =>
+      validateGraveyardRegistry(registry, {
+        ...artifacts,
+        "artifacts/graveyard/minimal.json": failedArtifact("substituted-minimal"),
+      }),
+    ).toThrow("reference does not match");
     const first = registry.entries.at(0);
     if (first === undefined) throw new Error("expected buried entry");
     const tampered = {
@@ -189,22 +263,28 @@ describe("persistent TearBench Graveyard", () => {
     const { evidenceHash: _evidenceHash, status: _status, ...entryInput } = entry;
     void _evidenceHash;
     void _status;
-    expect(() => createGraveyardEntry({
-      ...entryInput,
-      minimalChild: entry.original,
-    })).toThrow("distinct");
-    expect(() => createGraveyardEntry({
-      ...entryInput,
-      fix: { ...entry.fix, verification: { base: entry.original, candidate: entry.original } },
-    })).toThrow("fix verification");
+    expect(() =>
+      createGraveyardEntry({
+        ...entryInput,
+        minimalChild: entry.original,
+      }),
+    ).toThrow("distinct");
+    expect(() =>
+      createGraveyardEntry({
+        ...entryInput,
+        fix: { ...entry.fix, verification: { base: entry.original, candidate: entry.original } },
+      }),
+    ).toThrow("fix verification");
   });
 
   it("refuses a case whose separately retained replay does not preserve the minimized failure action trace", () => {
     const { entry, artifacts } = entryAndArtifacts();
     const registry = buryGraveyardEntry(createGraveyardRegistry(), entry);
-    expect(() => validateGraveyardRegistry(registry, {
-      ...artifacts,
-      "artifacts/graveyard/minimal-replay.json": fixedArtifact(),
-    })).toThrow("artifact reference does not match");
+    expect(() =>
+      validateGraveyardRegistry(registry, {
+        ...artifacts,
+        "artifacts/graveyard/minimal-replay.json": fixedArtifact(),
+      }),
+    ).toThrow("artifact reference does not match");
   });
 });

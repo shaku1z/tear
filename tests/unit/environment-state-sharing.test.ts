@@ -28,16 +28,37 @@ function expectDeepFrozen(value: unknown): void {
   for (const child of Object.values(value)) expectDeepFrozen(child);
 }
 
-const field = (): Omit<EnvironmentFieldState, "id"> & { authored: { points: { x: number; y: number }[]; tags: string[] } } => ({
-  kind: "rootline", geometry: { x: 1, y: 2, w: 3, h: 4 }, state: "warning", stateTick: 0, timer: 0, ownerId: "owner",
-  schedule: { startTick: 0, endTick: 90 }, eligibility: { player: true, enemies: false, bosses: false }, force: null, cleanupReason: null,
-  authored: { points: [{ x: 0, y: 0 }, { x: 5, y: 6 }], tags: ["a"] },
+const field = (): Omit<EnvironmentFieldState, "id"> & {
+  authored: { points: { x: number; y: number }[]; tags: string[] };
+} => ({
+  kind: "rootline",
+  geometry: { x: 1, y: 2, w: 3, h: 4 },
+  state: "warning",
+  stateTick: 0,
+  timer: 0,
+  ownerId: "owner",
+  schedule: { startTick: 0, endTick: 90 },
+  eligibility: { player: true, enemies: false, bosses: false },
+  force: null,
+  cleanupReason: null,
+  authored: {
+    points: [
+      { x: 0, y: 0 },
+      { x: 5, y: 6 },
+    ],
+    tags: ["a"],
+  },
 });
 
 describe("environment state admission copies once", () => {
   it("matches the eager per-update deep copy over a seeded update sequence, and callers keep no alias", () => {
     let seed = 0x5eed;
-    const random = { next: () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 2 ** 32; } };
+    const random = {
+      next: () => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        return seed / 2 ** 32;
+      },
+    };
     const state = createEnvironmentState("stage", "world");
     const id = state.addField(field());
     let eager = eagerFreeze({ ...field(), id }) as EnvironmentFieldState;
@@ -45,15 +66,23 @@ describe("environment state admission copies once", () => {
       const current = only(state.fields());
       const roll = random.next();
       // Patches mix fresh caller objects (which the caller then mutates) and whole spread entries, as the biomes do.
-      const patch: Record<string, unknown> = roll < 0.25
-        ? { geometry: { x: step, y: 2, w: 3, h: 4, points: [{ x: step, y: 1 }] } }
-        : roll < 0.5 ? { ...current, timer: step / 120 }
-          : roll < 0.75 ? { state: step % 2 === 0 ? "active" : "cooldown", stateTick: step, authored: { points: [{ x: step, y: step }], tags: ["b", "c"] } }
-            : { cleanupReason: null, extra: { nested: [step, { deep: [step] }] } };
+      const patch: Record<string, unknown> =
+        roll < 0.25
+          ? { geometry: { x: step, y: 2, w: 3, h: 4, points: [{ x: step, y: 1 }] } }
+          : roll < 0.5
+            ? { ...current, timer: step / 120 }
+            : roll < 0.75
+              ? {
+                  state: step % 2 === 0 ? "active" : "cooldown",
+                  stateTick: step,
+                  authored: { points: [{ x: step, y: step }], tags: ["b", "c"] },
+                }
+              : { cleanupReason: null, extra: { nested: [step, { deep: [step] }] } };
       state.updateField(id, patch);
       eager = eagerFreeze({ ...eager, ...patch, id }) as EnvironmentFieldState;
       for (const value of Object.values(patch)) {
-        if (typeof value === "object" && value !== null && !Object.isFrozen(value)) Object.assign(value, { x: -1, mutated: true });
+        if (typeof value === "object" && value !== null && !Object.isFrozen(value))
+          Object.assign(value, { x: -1, mutated: true });
       }
       const admitted = only(state.fields());
       expect(admitted).toEqual(eager);
@@ -89,24 +118,62 @@ describe("environment state admission copies once", () => {
 });
 
 describe("environment presentation shares admitted data", () => {
-  const structuredReference = (snapshot: EnvironmentSnapshot): unknown => JSON.parse(JSON.stringify(buildEnvironmentPresentationSnapshot(
-    structuredClone({ ...snapshot, fields: snapshot.fields.map((entry) => ({ ...entry })), combatObjects: [...snapshot.combatObjects], routes: [...snapshot.routes] }))));
+  const structuredReference = (snapshot: EnvironmentSnapshot): unknown =>
+    JSON.parse(
+      JSON.stringify(
+        buildEnvironmentPresentationSnapshot(
+          structuredClone({
+            ...snapshot,
+            fields: snapshot.fields.map((entry) => ({ ...entry })),
+            combatObjects: [...snapshot.combatObjects],
+            routes: [...snapshot.routes],
+          }),
+        ),
+      ),
+    );
 
   it("equals the cloned projection and is immutable all the way down", () => {
     const state = createEnvironmentState("stage", "world");
     state.addField(field());
-    state.addCombatObject({ kind: "root-link", ownerId: "owner", targetId: null, geometry: { x: 1, y: 2, points: [{ x: 1, y: 2 }, { x: 3, y: 4 }] }, state: "active", stateTick: 0,
-      integrity: 2, maxIntegrity: 4, counterplayTags: ["cut"], procEligible: false, damageDedupeId: "link", cleanupReason: null, links: [{ id: "x" }] } as never);
+    state.addCombatObject({
+      kind: "root-link",
+      ownerId: "owner",
+      targetId: null,
+      geometry: {
+        x: 1,
+        y: 2,
+        points: [
+          { x: 1, y: 2 },
+          { x: 3, y: 4 },
+        ],
+      },
+      state: "active",
+      stateTick: 0,
+      integrity: 2,
+      maxIntegrity: 4,
+      counterplayTags: ["cut"],
+      procEligible: false,
+      damageDedupeId: "link",
+      cleanupReason: null,
+      links: [{ id: "x" }],
+    } as never);
     const snapshot = state.snapshot();
     const view = buildEnvironmentPresentationSnapshot(snapshot);
     expect(JSON.parse(JSON.stringify(view))).toEqual(structuredReference(snapshot));
     expectDeepFrozen(view);
-    expect(view.fields[0]?.authored).toBe(snapshot.fields[0] && (snapshot.fields[0] as unknown as { authored: unknown }).authored);
+    expect(view.fields[0]?.authored).toBe(
+      snapshot.fields[0] && (snapshot.fields[0] as unknown as { authored: unknown }).authored,
+    );
   });
 
   it("clones authored details of a snapshot assembled outside a state, so the view never aliases caller data", () => {
     const authored = { points: [{ x: 0, y: 0 }], tags: ["a"] };
-    const view = buildEnvironmentPresentationSnapshot({ stageId: "stage", fields: [{ ...field(), id: "f", authored } as EnvironmentFieldState], combatObjects: [], routes: [] });
+    const view = buildEnvironmentPresentationSnapshot({
+      stageId: "stage",
+      fields: [{ ...field(), id: "f", authored } as EnvironmentFieldState],
+      combatObjects: [],
+      routes: [],
+    });
     only(authored.points).x = 99;
     expect(view.fields[0]?.authored).toEqual({ points: [{ x: 0, y: 0 }], tags: ["a"] });
   });

@@ -38,7 +38,8 @@ export function createSourceWaveOwnershipTracker() {
      * entity presence alone.
      */
     restoreEmptyWave(wave: number): void {
-      if (!Number.isSafeInteger(wave) || wave < 0) throw new RangeError("restored wave must be a non-negative safe integer");
+      if (!Number.isSafeInteger(wave) || wave < 0)
+        throw new RangeError("restored wave must be a non-negative safe integer");
       activeWave = wave;
       actorIds.clear();
     },
@@ -58,8 +59,8 @@ export function canonicalObservationStage(index: number): TearStageId {
 
 /** Resolves authored support subtypes, void wisps, and bosses identically in both backends. */
 export function canonicalObservationEnemyKind(
-  enemy: Pick<TearSimulationEnemyView, "kind"> & Partial<Pick<TearSimulationEnemyView,
-    "bossId" | "supportType" | "isVoidWisp">>,
+  enemy: Pick<TearSimulationEnemyView, "kind"> &
+    Partial<Pick<TearSimulationEnemyView, "bossId" | "supportType" | "isVoidWisp">>,
 ): TearEntityKindId {
   let raw = enemy.kind;
   if (typeof enemy.bossId === "string" && enemy.bossId.length > 0) raw = enemy.bossId;
@@ -74,10 +75,16 @@ export function canonicalObservationActions(
   runMode: string,
   supportsPause: boolean,
 ): readonly GameAction["type"][] {
-  if (screen === "playing") return Object.freeze([
-    "move", "aim", "weapon", "jump", "dash", ...(runMode === "playground" ? ["ability" as const] : []),
-    ...(supportsPause ? ["pause" as const] : []),
-  ]);
+  if (screen === "playing")
+    return Object.freeze([
+      "move",
+      "aim",
+      "weapon",
+      "jump",
+      "dash",
+      ...(runMode === "playground" ? ["ability" as const] : []),
+      ...(supportsPause ? ["pause" as const] : []),
+    ]);
   if (screen === "draft") return Object.freeze(["draft-choice"]);
   if (screen === "reserve") return Object.freeze(["reserve-choice", "cancel"]);
   if (screen === "tierup") return Object.freeze(["tier-up-choice"]);

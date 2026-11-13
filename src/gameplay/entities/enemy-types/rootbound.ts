@@ -3,16 +3,30 @@ import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile
 import type { EnemyBaseConstructor } from "./enemy-base";
 import { ROOTBOUND_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
-import { GRAFT_ANCHOR_TYPES, ROOTBOUND_NO_GRAFT_EFFECTS, type GraftAnchorPlacementRequest, type RootboundGraftEffects } from "../../environment/graft-anchor";
+import {
+  GRAFT_ANCHOR_TYPES,
+  ROOTBOUND_NO_GRAFT_EFFECTS,
+  type GraftAnchorPlacementRequest,
+  type RootboundGraftEffects,
+} from "../../environment/graft-anchor";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../environment/bloom-well";
 import type { RootCagePlacementRequest } from "../../environment/root-cage";
-import { advanceRootboundRegrowth, beginRootboundRegrowth, createRootboundRegrowthState, resolveRootboundRegrowthOutcome, type RootboundRegrowthState } from "../../environment/regrowth-link";
+import {
+  advanceRootboundRegrowth,
+  beginRootboundRegrowth,
+  createRootboundRegrowthState,
+  resolveRootboundRegrowthOutcome,
+  type RootboundRegrowthState,
+} from "../../environment/regrowth-link";
 import type { BossRuntime } from "./boss-runtime";
 
 export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
-  "vine-sweep", "seed-arc", "rootline", "canopy-step",
+  "vine-sweep",
+  "seed-arc",
+  "rootline",
+  "canopy-step",
 ] as const);
-export type RootboundPhaseOneAttack = typeof ROOTBOUND_PHASE_ONE_ATTACK_ORDER[number];
+export type RootboundPhaseOneAttack = (typeof ROOTBOUND_PHASE_ONE_ATTACK_ORDER)[number];
 export const ROOTBOUND_PHASE_ONE_CADENCE = Object.freeze({ openingDelay: 0.9, recovery: 0.55 });
 export const ROOTBOUND_VINE_SWEEP = Object.freeze({
   windup: 0.65,
@@ -33,7 +47,14 @@ export const ROOTBOUND_SEED_ARC = Object.freeze({
   radius: 12,
 });
 export type RootboundSeedArcStage = "windup" | "release";
-export const ROOTBOUND_ROOTLINE = Object.freeze({ windup: 0.7, active: 0.24, cleanup: 0.18, width: 430, height: 104, damage: 20 });
+export const ROOTBOUND_ROOTLINE = Object.freeze({
+  windup: 0.7,
+  active: 0.24,
+  cleanup: 0.18,
+  width: 430,
+  height: 104,
+  damage: 20,
+});
 export type RootboundRootlineStage = "warning" | "active" | "cleanup";
 export const ROOTBOUND_CANOPY_STEP = Object.freeze({ telegraph: 0.55, travel: 0.48, settle: 0.24 });
 export type RootboundCanopyStepStage = "telegraph" | "travel" | "settle";
@@ -53,7 +74,7 @@ export type RootboundMemoryChoirStage = "warning" | "active" | "afterimage";
 export const ROOTBOUND_LAST_SPRING = Object.freeze({ warning: 0.8, bloom: 1.5, commit: 0.35, punish: 0.9, damage: 24 });
 export type RootboundLastSpringStage = "warning" | "bloom" | "commit" | "punish" | "complete";
 export const ROOTBOUND_PHASE_TWO_ATTACK_ORDER = Object.freeze(["memory-choir", "root-cage", "bloom-shift"] as const);
-export type RootboundPhaseTwoAttack = typeof ROOTBOUND_PHASE_TWO_ATTACK_ORDER[number];
+export type RootboundPhaseTwoAttack = (typeof ROOTBOUND_PHASE_TWO_ATTACK_ORDER)[number];
 export const ROOTBOUND_PHASE_TWO_CADENCE = Object.freeze({ openingDelay: 0.85, recovery: 0.7 });
 export interface RootboundMemoryChoirManifestation {
   readonly id: string;
@@ -66,7 +87,11 @@ export interface RootboundMemoryChoirManifestation {
 }
 
 /** Factory-safe Rootbound shell. C11-C13 own the authored attack phases. */
-export function createRootboundType(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor, bossRuntime: BossRuntime) {
+export function createRootboundType(
+  dependencies: EnemyDependencies,
+  Enemy: EnemyBaseConstructor,
+  bossRuntime: BossRuntime,
+) {
   const { CONFIG, Projectile } = dependencies;
   const { bossTransformation } = bossRuntime;
   class Rootbound extends Enemy {
@@ -138,16 +163,41 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     /** Practice requests cross an authored threshold; normal update owns every transition effect. */
     requestPracticePhase(phase: 2 | 3): boolean {
       const entry = this.practicePhaseEntry();
-      if (!entry.ready || entry.targetPhase !== entry.phase || phase !== entry.phase + 1 || this.dead || this.dying || this.hp <= 0) return false;
+      if (
+        !entry.ready ||
+        entry.targetPhase !== entry.phase ||
+        phase !== entry.phase + 1 ||
+        this.dead ||
+        this.dying ||
+        this.hp <= 0
+      )
+        return false;
       this.hp = this.maxHp * practicePhaseEntryHealth(this.phaseMarks, phase);
       this.hpDisplay = this.hp;
       return true;
     }
     practicePhaseEntry(): BossPracticeActorEntry {
       const phase = this.phaseMarker === 3 ? 3 : this.phaseMarker === 2 ? 2 : 1;
-      return Object.freeze({ phase, targetPhase: this.phase === 3 ? 3 : this.phase === 2 ? 2 : 1,
-        ready: (phase !== 2 || GRAFT_ANCHOR_TYPES.every((type) => this.activeGraftTypes.includes(type))) && (phase !== 3 || this.regrowthState.phase !== "idle") && this.introT <= 0 && this.cinematicT <= 0 && this.cinematicRequest === null,
-        stage: this.introT > 0 ? "opening" : this.cinematicRequest !== null || this.cinematicT > 0 ? "transition" : phase === 3 ? "regrowth" : phase === 2 ? "graft-baseline" : "combat" });
+      return Object.freeze({
+        phase,
+        targetPhase: this.phase === 3 ? 3 : this.phase === 2 ? 2 : 1,
+        ready:
+          (phase !== 2 || GRAFT_ANCHOR_TYPES.every((type) => this.activeGraftTypes.includes(type))) &&
+          (phase !== 3 || this.regrowthState.phase !== "idle") &&
+          this.introT <= 0 &&
+          this.cinematicT <= 0 &&
+          this.cinematicRequest === null,
+        stage:
+          this.introT > 0
+            ? "opening"
+            : this.cinematicRequest !== null || this.cinematicT > 0
+              ? "transition"
+              : phase === 3
+                ? "regrowth"
+                : phase === 2
+                  ? "graft-baseline"
+                  : "combat",
+      });
     }
     get phase(): number {
       const fraction = this.maxHp > 0 ? this.hp / this.maxHp : 0;
@@ -174,7 +224,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     recoverGraftHealth(fraction: number): number {
-      if (!Number.isFinite(fraction) || fraction < 0) throw new RangeError("Rootbound Graft recovery must be finite and non-negative");
+      if (!Number.isFinite(fraction) || fraction < 0)
+        throw new RangeError("Rootbound Graft recovery must be finite and non-negative");
       if (this.dead || this.dying || this.hp <= 0 || this.maxHp <= 0) return 0;
       const before = this.hp;
       this.hp = Math.min(this.maxHp, this.hp + this.maxHp * fraction);
@@ -182,7 +233,14 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean {
-      if (this.phaseMarker !== 3 || this.phase !== 3 || this.attackCommitProtected() || this.cleanupReason !== null || this.regrowthState.useCount !== 0) return false;
+      if (
+        this.phaseMarker !== 3 ||
+        this.phase !== 3 ||
+        this.attackCommitProtected() ||
+        this.cleanupReason !== null ||
+        this.regrowthState.useCount !== 0
+      )
+        return false;
       this.regrowthState = beginRootboundRegrowth(this.regrowthState, startTick, connectionIds);
       this.state = "idle";
       this.stateT = 0;
@@ -190,7 +248,11 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       return true;
     }
 
-    advanceRegrowth(tick: number, activeConnectionIds: ReadonlySet<string>, bossChannelBroken = false): RootboundRegrowthState {
+    advanceRegrowth(
+      tick: number,
+      activeConnectionIds: ReadonlySet<string>,
+      bossChannelBroken = false,
+    ): RootboundRegrowthState {
       const next = advanceRootboundRegrowth(this.regrowthState, tick, activeConnectionIds, bossChannelBroken);
       this.regrowthState = next;
       if (next.phase === "channeling") this.atk = "regrowth:channeling";
@@ -209,8 +271,12 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     override contactDamageEnabled(): boolean {
-      return !this.attackCommitProtected() && this.state === "idle" && this.pendingAttack === null
-        && (this.lastSpringStage === null || this.lastSpringStage === "complete");
+      return (
+        !this.attackCommitProtected() &&
+        this.state === "idle" &&
+        this.pendingAttack === null &&
+        (this.lastSpringStage === null || this.lastSpringStage === "complete")
+      );
     }
 
     attackCommitProtected(): boolean {
@@ -218,7 +284,8 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     selectNextPhaseOneAttack(): RootboundPhaseOneAttack | null {
-      if (this.phase !== 1 || this.attackCommitProtected() || this.state !== "idle" || this.pendingAttack !== null) return null;
+      if (this.phase !== 1 || this.attackCommitProtected() || this.state !== "idle" || this.pendingAttack !== null)
+        return null;
       const selected = this.phaseOneAttackOrder[this.attackIndex % this.phaseOneAttackOrder.length];
       if (selected === undefined) throw new RangeError("Rootbound Phase I attack order is empty");
       this.attackIndex += 1;
@@ -237,7 +304,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
 
     vineSweepGeometry(): Readonly<{ x: number; y: number; hw: number; hh: number; facing: number }> {
       return Object.freeze({
-        x: this.x + this.vineSweepFacing * (this.hw + ROOTBOUND_VINE_SWEEP.reach) / 2,
+        x: this.x + (this.vineSweepFacing * (this.hw + ROOTBOUND_VINE_SWEEP.reach)) / 2,
         y: this.y + this.hh - ROOTBOUND_VINE_SWEEP.halfHeight,
         hw: (ROOTBOUND_VINE_SWEEP.reach - this.hw) / 2,
         hh: ROOTBOUND_VINE_SWEEP.halfHeight,
@@ -262,10 +329,20 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         this.atk = "vine-sweep:active";
       } else if (this.vineSweepStage === "active") {
         const geometry = this.vineSweepGeometry();
-        if (!this.vineSweepHitSpent && !player.invulnerable && dependencies.aabbOverlap(
-          geometry.x, geometry.y, geometry.hw, geometry.hh,
-          player.x, player.y, player.hw, player.hh,
-        )) {
+        if (
+          !this.vineSweepHitSpent &&
+          !player.invulnerable &&
+          dependencies.aabbOverlap(
+            geometry.x,
+            geometry.y,
+            geometry.hw,
+            geometry.hh,
+            player.x,
+            player.y,
+            player.hw,
+            player.hh,
+          )
+        ) {
           this.vineSweepHitSpent = true;
           player.takeDamage(ROOTBOUND_VINE_SWEEP.damage, this.x, this);
         }
@@ -287,7 +364,7 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     private releaseSeedArc(player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
-      const flightT = 2 * ROOTBOUND_SEED_ARC.launchSpeed / ROOTBOUND_SEED_ARC.gravity;
+      const flightT = (2 * ROOTBOUND_SEED_ARC.launchSpeed) / ROOTBOUND_SEED_ARC.gravity;
       for (const offset of [-ROOTBOUND_SEED_ARC.spread, 0, ROOTBOUND_SEED_ARC.spread]) {
         const startX = this.x + this.facing * this.hw * 0.45;
         const startY = this.y - this.hh * 0.62;
@@ -336,26 +413,38 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[] {
       if (this.phase !== 2) return Object.freeze([]);
       const y = CONFIG.world.groundY - ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height;
-      return Object.freeze(GRAFT_ANCHOR_TYPES.map((graftType, index) => Object.freeze({
-        graftType,
-        geometry: Object.freeze({
-          x: CONFIG.view.w * (0.2 + index * 0.3) - ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width / 2,
-          y,
-          w: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width,
-          h: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height,
-        }),
-      })));
+      return Object.freeze(
+        GRAFT_ANCHOR_TYPES.map((graftType, index) =>
+          Object.freeze({
+            graftType,
+            geometry: Object.freeze({
+              x: CONFIG.view.w * (0.2 + index * 0.3) - ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width / 2,
+              y,
+              w: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width,
+              h: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height,
+            }),
+          }),
+        ),
+      );
     }
 
     bossBloomPattern(): RootboundBloomPatternId | null {
-      if (this.phase === 3 && this.lastSpringStage !== null && this.lastSpringStage !== "complete") return "last-spring";
+      if (this.phase === 3 && this.lastSpringStage !== null && this.lastSpringStage !== "complete")
+        return "last-spring";
       if (this.phase !== 2) return null;
       return ROOTBOUND_BLOOM_PATTERN_IDS[this.bloomPatternIndex % ROOTBOUND_BLOOM_PATTERN_IDS.length] ?? null;
     }
 
     startLastSpring(): boolean {
-      if (this.phaseMarker !== 3 || this.regrowthState.phase !== "resolved" || this.lastSpringUseCount !== 0
-        || this.attackCommitProtected() || this.cleanupReason !== null || this.state !== "idle") return false;
+      if (
+        this.phaseMarker !== 3 ||
+        this.regrowthState.phase !== "resolved" ||
+        this.lastSpringUseCount !== 0 ||
+        this.attackCommitProtected() ||
+        this.cleanupReason !== null ||
+        this.state !== "idle"
+      )
+        return false;
       this.lastSpringUseCount = 1;
       this.lastSpringStage = "warning";
       this.lastSpringT = ROOTBOUND_LAST_SPRING.warning;
@@ -368,30 +457,61 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       if (this.lastSpringStage === null || this.lastSpringStage === "complete") return;
       this.lastSpringT = Math.max(0, this.lastSpringT - dt);
       if (this.lastSpringStage === "warning" && this.lastSpringT <= 0) {
-        const fracture = platforms.find((platform) => platform.oneway && platform.arenaPlatId !== undefined
-          && (platform.arenaState === "stable" || platform.arenaState === "stressed"));
-        if (fracture !== undefined) fracture.arenaFractureRequest = { reason: "rootbound-last-spring", color: "#e4c95a" };
-        this.lastSpringStage = "bloom"; this.lastSpringT = ROOTBOUND_LAST_SPRING.bloom; this.atk = "last-spring:bloom";
+        const fracture = platforms.find(
+          (platform) =>
+            platform.oneway &&
+            platform.arenaPlatId !== undefined &&
+            (platform.arenaState === "stable" || platform.arenaState === "stressed"),
+        );
+        if (fracture !== undefined)
+          fracture.arenaFractureRequest = { reason: "rootbound-last-spring", color: "#e4c95a" };
+        this.lastSpringStage = "bloom";
+        this.lastSpringT = ROOTBOUND_LAST_SPRING.bloom;
+        this.atk = "last-spring:bloom";
       } else if (this.lastSpringStage === "bloom" && this.lastSpringT <= 0) {
-        this.lastSpringStage = "commit"; this.lastSpringT = ROOTBOUND_LAST_SPRING.commit; this.atk = "last-spring:commit";
+        this.lastSpringStage = "commit";
+        this.lastSpringT = ROOTBOUND_LAST_SPRING.commit;
+        this.atk = "last-spring:commit";
       } else if (this.lastSpringStage === "commit") {
-        if (!this.lastSpringHitSpent && !player.invulnerable && dependencies.aabbOverlap(
-          CONFIG.view.w / 2, CONFIG.world.groundY - 65, CONFIG.view.w * 0.4, 65,
-          player.x, player.y, player.hw, player.hh,
-        )) {
+        if (
+          !this.lastSpringHitSpent &&
+          !player.invulnerable &&
+          dependencies.aabbOverlap(
+            CONFIG.view.w / 2,
+            CONFIG.world.groundY - 65,
+            CONFIG.view.w * 0.4,
+            65,
+            player.x,
+            player.y,
+            player.hw,
+            player.hh,
+          )
+        ) {
           this.lastSpringHitSpent = true;
           player.takeDamage(ROOTBOUND_LAST_SPRING.damage, this.x, this);
         }
         if (this.lastSpringT <= 0) {
-          this.lastSpringStage = "punish"; this.lastSpringT = ROOTBOUND_LAST_SPRING.punish; this.atk = "last-spring:punish";
+          this.lastSpringStage = "punish";
+          this.lastSpringT = ROOTBOUND_LAST_SPRING.punish;
+          this.atk = "last-spring:punish";
         }
       } else if (this.lastSpringStage === "punish" && this.lastSpringT <= 0) {
-        this.lastSpringStage = "complete"; this.lastSpringT = 0; this.state = "recover"; this.stateT = 0.6; this.atk = "unavailable";
+        this.lastSpringStage = "complete";
+        this.lastSpringT = 0;
+        this.state = "recover";
+        this.stateT = 0.6;
+        this.atk = "unavailable";
       }
     }
 
     selectNextPhaseTwoAttack(playerX: number): RootboundPhaseTwoAttack | null {
-      if (this.phase !== 2 || this.attackCommitProtected() || this.state !== "idle" || this.phaseTwoPendingAttack !== null) return null;
+      if (
+        this.phase !== 2 ||
+        this.attackCommitProtected() ||
+        this.state !== "idle" ||
+        this.phaseTwoPendingAttack !== null
+      )
+        return null;
       const selected = this.phaseTwoAttackOrder[this.phaseTwoAttackIndex % this.phaseTwoAttackOrder.length];
       if (selected === undefined) throw new RangeError("Rootbound Phase II attack order is empty");
       this.phaseTwoAttackIndex += 1;
@@ -415,7 +535,13 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
     }
 
     startRootCage(centerX: number): boolean {
-      if (this.phase !== 2 || this.attackCommitProtected() || this.rootCageRequest !== null || !Number.isFinite(centerX)) return false;
+      if (
+        this.phase !== 2 ||
+        this.attackCommitProtected() ||
+        this.rootCageRequest !== null ||
+        !Number.isFinite(centerX)
+      )
+        return false;
       this.rootCageSequence += 1;
       this.rootCageRequest = Object.freeze({
         sequence: this.rootCageSequence,
@@ -442,22 +568,29 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.memoryChoirStage = "warning";
       this.memoryChoirT = ROOTBOUND_MEMORY_CHOIR.warning;
       this.memoryChoirElapsed = 0;
-      this.memoryChoirManifestations = Object.freeze(Array.from({ length: ROOTBOUND_MEMORY_CHOIR.maxManifestations }, (_, index) => Object.freeze({
-        id: `memory-choir:${String(index + 1)}`,
-        x: CONFIG.view.w * (0.25 + index * 0.25) - ROOTBOUND_MEMORY_CHOIR.width / 2,
-        y: CONFIG.world.groundY - ROOTBOUND_MEMORY_CHOIR.height,
-        w: ROOTBOUND_MEMORY_CHOIR.width,
-        h: ROOTBOUND_MEMORY_CHOIR.height,
-        activationDelay: index * ROOTBOUND_MEMORY_CHOIR.echoStagger,
-        hitSpent: false,
-      })));
+      this.memoryChoirManifestations = Object.freeze(
+        Array.from({ length: ROOTBOUND_MEMORY_CHOIR.maxManifestations }, (_, index) =>
+          Object.freeze({
+            id: `memory-choir:${String(index + 1)}`,
+            x: CONFIG.view.w * (0.25 + index * 0.25) - ROOTBOUND_MEMORY_CHOIR.width / 2,
+            y: CONFIG.world.groundY - ROOTBOUND_MEMORY_CHOIR.height,
+            w: ROOTBOUND_MEMORY_CHOIR.width,
+            h: ROOTBOUND_MEMORY_CHOIR.height,
+            activationDelay: index * ROOTBOUND_MEMORY_CHOIR.echoStagger,
+            hitSpent: false,
+          }),
+        ),
+      );
       this.atk = "memory-choir:warning";
       return true;
     }
 
     memoryChoirManifestationActive(manifestation: RootboundMemoryChoirManifestation): boolean {
-      return this.memoryChoirStage === "active" && this.memoryChoirElapsed >= manifestation.activationDelay
-        && this.memoryChoirElapsed < manifestation.activationDelay + ROOTBOUND_MEMORY_CHOIR.active;
+      return (
+        this.memoryChoirStage === "active" &&
+        this.memoryChoirElapsed >= manifestation.activationDelay &&
+        this.memoryChoirElapsed < manifestation.activationDelay + ROOTBOUND_MEMORY_CHOIR.active
+      );
     }
 
     private cancelMemoryChoir(): void {
@@ -475,20 +608,37 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         if (this.memoryChoirT <= 0) {
           this.memoryChoirStage = "active";
           this.memoryChoirElapsed = 0;
-          this.memoryChoirT = ROOTBOUND_MEMORY_CHOIR.active + ROOTBOUND_MEMORY_CHOIR.echoStagger * (ROOTBOUND_MEMORY_CHOIR.maxManifestations - 1);
+          this.memoryChoirT =
+            ROOTBOUND_MEMORY_CHOIR.active +
+            ROOTBOUND_MEMORY_CHOIR.echoStagger * (ROOTBOUND_MEMORY_CHOIR.maxManifestations - 1);
           this.atk = "memory-choir:active";
         }
         return;
       }
       if (this.memoryChoirStage === "active") {
         this.memoryChoirElapsed += dt;
-        this.memoryChoirManifestations = Object.freeze(this.memoryChoirManifestations.map((manifestation) => {
-          if (manifestation.hitSpent || !this.memoryChoirManifestationActive(manifestation) || player.invulnerable
-            || !dependencies.aabbOverlap(manifestation.x + manifestation.w / 2, manifestation.y + manifestation.h / 2,
-              manifestation.w / 2, manifestation.h / 2, player.x, player.y, player.hw, player.hh)) return manifestation;
-          player.takeDamage(ROOTBOUND_MEMORY_CHOIR.damage, manifestation.x + manifestation.w / 2, this);
-          return Object.freeze({ ...manifestation, hitSpent: true });
-        }));
+        this.memoryChoirManifestations = Object.freeze(
+          this.memoryChoirManifestations.map((manifestation) => {
+            if (
+              manifestation.hitSpent ||
+              !this.memoryChoirManifestationActive(manifestation) ||
+              player.invulnerable ||
+              !dependencies.aabbOverlap(
+                manifestation.x + manifestation.w / 2,
+                manifestation.y + manifestation.h / 2,
+                manifestation.w / 2,
+                manifestation.h / 2,
+                player.x,
+                player.y,
+                player.hw,
+                player.hh,
+              )
+            )
+              return manifestation;
+            player.takeDamage(ROOTBOUND_MEMORY_CHOIR.damage, manifestation.x + manifestation.w / 2, this);
+            return Object.freeze({ ...manifestation, hitSpent: true });
+          }),
+        );
         if (this.memoryChoirT <= 0) {
           this.memoryChoirStage = "afterimage";
           this.memoryChoirT = ROOTBOUND_MEMORY_CHOIR.afterimage;
@@ -522,15 +672,31 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         this.rootlineT = ROOTBOUND_ROOTLINE.cleanup;
         this.atk = "rootline:cleanup";
       } else if (this.rootlineStage === "cleanup" && this.rootlineT <= 0) {
-        this.rootlineStage = null; this.rootlineCleanupReason = "natural-expiry";
+        this.rootlineStage = null;
+        this.rootlineCleanupReason = "natural-expiry";
         this.completePhaseOneAttack();
       }
     }
 
-    private selectCanopyDestination(platforms: readonly EnemyPlatform[]): Readonly<{ x: number; y: number; platformId: string }> | null {
-      const destinations = platforms.filter((platform) => platform.oneway && platform.arenaPlatId !== undefined
-        && platform.arenaState !== "broken" && platform.arenaState !== "warning" && platform.w >= this.hw * 2)
-        .map((platform) => Object.freeze({ x: platform.x + platform.w / 2, y: platform.y - this.hh, platformId: platform.arenaPlatId ?? "" }))
+    private selectCanopyDestination(
+      platforms: readonly EnemyPlatform[],
+    ): Readonly<{ x: number; y: number; platformId: string }> | null {
+      const destinations = platforms
+        .filter(
+          (platform) =>
+            platform.oneway &&
+            platform.arenaPlatId !== undefined &&
+            platform.arenaState !== "broken" &&
+            platform.arenaState !== "warning" &&
+            platform.w >= this.hw * 2,
+        )
+        .map((platform) =>
+          Object.freeze({
+            x: platform.x + platform.w / 2,
+            y: platform.y - this.hh,
+            platformId: platform.arenaPlatId ?? "",
+          }),
+        )
         .filter((destination) => Math.abs(destination.x - this.x) > this.hw || Math.abs(destination.y - this.y) > 8);
       if (destinations.length === 0) return null;
       const destination = destinations[this.canopyStepIndex % destinations.length];
@@ -540,7 +706,10 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
 
     private beginCanopyStep(platforms: readonly EnemyPlatform[]): void {
       this.canopyDestination = this.selectCanopyDestination(platforms);
-      if (this.canopyDestination === null) { this.completePhaseOneAttack(); return; }
+      if (this.canopyDestination === null) {
+        this.completePhaseOneAttack();
+        return;
+      }
       this.canopyStepStart = Object.freeze({ x: this.x, y: this.y });
       this.canopyStepStage = "telegraph";
       this.canopyStepT = ROOTBOUND_CANOPY_STEP.telegraph;
@@ -559,14 +728,24 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
         const progress = dependencies.clamp(1 - this.canopyStepT / ROOTBOUND_CANOPY_STEP.travel, 0, 1);
         const eased = progress * progress * (3 - 2 * progress);
         this.x = dependencies.lerp(this.canopyStepStart.x, this.canopyDestination.x, eased);
-        this.y = dependencies.lerp(this.canopyStepStart.y, this.canopyDestination.y, eased) - Math.sin(progress * Math.PI) * 64;
-        this.vx = 0; this.vy = 0; this.onGround = false;
+        this.y =
+          dependencies.lerp(this.canopyStepStart.y, this.canopyDestination.y, eased) -
+          Math.sin(progress * Math.PI) * 64;
+        this.vx = 0;
+        this.vy = 0;
+        this.onGround = false;
         if (this.canopyStepT <= 0) {
-          this.x = this.canopyDestination.x; this.y = this.canopyDestination.y; this.onGround = true;
-          this.canopyStepStage = "settle"; this.canopyStepT = ROOTBOUND_CANOPY_STEP.settle; this.atk = "canopy-step:settle";
+          this.x = this.canopyDestination.x;
+          this.y = this.canopyDestination.y;
+          this.onGround = true;
+          this.canopyStepStage = "settle";
+          this.canopyStepT = ROOTBOUND_CANOPY_STEP.settle;
+          this.atk = "canopy-step:settle";
         }
       } else if (this.canopyStepStage === "settle" && this.canopyStepT <= 0) {
-        this.canopyStepStage = null; this.canopyDestination = null; this.completePhaseOneAttack();
+        this.canopyStepStage = null;
+        this.canopyDestination = null;
+        this.completePhaseOneAttack();
       }
     }
 
@@ -574,18 +753,30 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       if (this.phaseOneExited) return;
       this.phaseOneExited = true;
       if (this.canopyDestination !== null && this.canopyStepStage === "travel") {
-        this.x = this.canopyDestination.x; this.y = this.canopyDestination.y; this.onGround = true;
+        this.x = this.canopyDestination.x;
+        this.y = this.canopyDestination.y;
+        this.onGround = true;
       }
       this.pendingAttack = null;
-      this.vineSweepStage = null; this.vineSweepT = 0; this.vineSweepHitSpent = false;
-      this.seedArcStage = null; this.seedArcT = 0;
+      this.vineSweepStage = null;
+      this.vineSweepT = 0;
+      this.vineSweepHitSpent = false;
+      this.seedArcStage = null;
+      this.seedArcT = 0;
       if (this.rootlineStage !== null) this.rootlineCleanupReason = "stage-transition";
-      this.rootlineStage = null; this.rootlineT = 0;
-      this.canopyStepStage = null; this.canopyStepT = 0; this.canopyDestination = null;
-      for (const projectile of projectiles) if (projectile.owner === this && projectile.bossAttack === "seed-arc" && !projectile.dead) {
-        projectile.dead = true; projectile.shatterReason = "phase-transition";
-      }
-      this.atk = "unavailable"; this.state = "recover"; this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.recovery;
+      this.rootlineStage = null;
+      this.rootlineT = 0;
+      this.canopyStepStage = null;
+      this.canopyStepT = 0;
+      this.canopyDestination = null;
+      for (const projectile of projectiles)
+        if (projectile.owner === this && projectile.bossAttack === "seed-arc" && !projectile.dead) {
+          projectile.dead = true;
+          projectile.shatterReason = "phase-transition";
+        }
+      this.atk = "unavailable";
+      this.state = "recover";
+      this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.recovery;
     }
 
     cleanupEncounter(reason: BossEncounterCleanupReason): void {
@@ -618,7 +809,12 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.completeRootCage();
       this.phaseTwoPendingAttack = null;
       if (this.regrowthState.phase === "channeling") {
-        const interrupted = advanceRootboundRegrowth(this.regrowthState, this.regrowthState.startTick ?? 0, new Set(), true);
+        const interrupted = advanceRootboundRegrowth(
+          this.regrowthState,
+          this.regrowthState.startTick ?? 0,
+          new Set(),
+          true,
+        );
         this.regrowthState = resolveRootboundRegrowthOutcome(interrupted, 0).state;
       }
       this.lastSpringStage = null;
@@ -626,20 +822,37 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
       this.lastSpringHitSpent = false;
     }
 
-    update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]): void {
+    update(
+      dt: number,
+      platforms: readonly EnemyPlatform[],
+      player: EnemyPlayerPort,
+      projectiles: EnemyProjectile[],
+    ): void {
       void projectiles;
       this.tickTimers(dt);
-      const nextPhase = this.maxHp > 0 && this.hp / this.maxHp > this.phaseMarks[0]
-        ? 1
-        : this.maxHp > 0 && this.hp / this.maxHp > this.phaseMarks[1] ? 2 : 3;
+      const nextPhase =
+        this.maxHp > 0 && this.hp / this.maxHp > this.phaseMarks[0]
+          ? 1
+          : this.maxHp > 0 && this.hp / this.maxHp > this.phaseMarks[1]
+            ? 2
+            : 3;
       if (nextPhase > this.phaseMarker) {
         if (this.phaseMarker === 1) this.exitPhaseOne(projectiles);
         else if (this.phaseMarker === 2) {
           this.finalPhaseTwoGraftTypes = Object.freeze([...this.activeGraftTypes]);
-          this.cancelMemoryChoir(); this.completeRootCage(); this.phaseTwoPendingAttack = null;
-          this.state = "recover"; this.stateT = ROOTBOUND_PHASE_TWO_CADENCE.recovery;
-          bossTransformation(this, { id: "rootbound-nothing-here-dies", title: "NOTHING HERE DIES", pose: "rootboundRegrowth",
-            line: "THE GARDEN WILL REMEMBER YOU.", color: this.color, sfx: "rootboundRegrowth" });
+          this.cancelMemoryChoir();
+          this.completeRootCage();
+          this.phaseTwoPendingAttack = null;
+          this.state = "recover";
+          this.stateT = ROOTBOUND_PHASE_TWO_CADENCE.recovery;
+          bossTransformation(this, {
+            id: "rootbound-nothing-here-dies",
+            title: "NOTHING HERE DIES",
+            pose: "rootboundRegrowth",
+            line: "THE GARDEN WILL REMEMBER YOU.",
+            color: this.color,
+            sfx: "rootboundRegrowth",
+          });
         }
         this.phaseMarker = nextPhase;
         this.phaseTag = nextPhase === 2 ? "THE GARDEN REMEMBERS" : "NOTHING HERE DIES";
@@ -679,10 +892,12 @@ export function createRootboundType(dependencies: EnemyDependencies, Enemy: Enem
             if (this.phase === 1) this.selectNextPhaseOneAttack();
             else if (this.phase === 2) this.selectNextPhaseTwoAttack(player.x);
             else if (this.phase === 3 && this.regrowthState.phase === "resolved") this.startLastSpring();
-          }
-          else {
+          } else {
             this.state = "idle";
-            this.stateT = (this.phase === 2 ? ROOTBOUND_PHASE_TWO_CADENCE.openingDelay / this.graftCadenceMultiplier : ROOTBOUND_PHASE_ONE_CADENCE.openingDelay);
+            this.stateT =
+              this.phase === 2
+                ? ROOTBOUND_PHASE_TWO_CADENCE.openingDelay / this.graftCadenceMultiplier
+                : ROOTBOUND_PHASE_ONE_CADENCE.openingDelay;
           }
         }
       }

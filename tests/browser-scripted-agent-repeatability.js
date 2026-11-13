@@ -46,21 +46,25 @@ function buildTreeIdentity() {
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value !== null && typeof value === "object") {
-    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalize(value[key])]));
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalize(value[key])]),
+    );
   }
   return value;
 }
 
 function stableHash(value) {
-  return createHash("sha256").update(JSON.stringify(canonicalize(value))).digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalize(value)))
+    .digest("hex");
 }
 
 function eventTypeCounts(events) {
   const counts = {};
   for (const event of events) {
-    const type = event !== null && typeof event === "object" && typeof event.type === "string"
-      ? event.type
-      : "unknown";
+    const type = event !== null && typeof event === "object" && typeof event.type === "string" ? event.type : "unknown";
     counts[type] = (counts[type] || 0) + 1;
   }
   return Object.fromEntries(Object.entries(counts).sort(([left], [right]) => left.localeCompare(right)));
@@ -82,15 +86,18 @@ function transcriptSample(snapshot) {
     mechanics: snapshot.mechanics,
     bladeStates: snapshot.bladeStates,
     weaponStats: snapshot.weaponStats ?? null,
-    intent: snapshot.structuredIntent === undefined ? null : {
-      objective: snapshot.structuredIntent.objective,
-      targetId: snapshot.structuredIntent.targetId ?? null,
-      maneuver: snapshot.structuredIntent.maneuver,
-      recovery: snapshot.structuredIntent.recovery,
-      confidence: snapshot.structuredIntent.confidence,
-      watchdog: snapshot.structuredIntent.watchdog,
-      invariantViolations: snapshot.structuredIntent.invariantViolations,
-    },
+    intent:
+      snapshot.structuredIntent === undefined
+        ? null
+        : {
+            objective: snapshot.structuredIntent.objective,
+            targetId: snapshot.structuredIntent.targetId ?? null,
+            maneuver: snapshot.structuredIntent.maneuver,
+            recovery: snapshot.structuredIntent.recovery,
+            confidence: snapshot.structuredIntent.confidence,
+            watchdog: snapshot.structuredIntent.watchdog,
+            invariantViolations: snapshot.structuredIntent.invariantViolations,
+          },
   };
 }
 
@@ -138,14 +145,12 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
     });
     await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15_000 });
     await page.waitForLoadState("networkidle", { timeout: 10_000 });
-    await page.evaluate(() => new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
     const buildMetadata = await page.evaluate(() => window.__TEAR_BUILD__ ?? null);
     let snapshot = await page.evaluate((options) => window.__TEAR_WATCH_AGENT__.start(options), scenario);
     await page.waitForLoadState("networkidle", { timeout: 10_000 });
-    await page.evaluate(() => new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const transcript = [transcriptSample(snapshot)];
     for (let sample = 0; sample < maxSamples && snapshot.status === "running"; sample += 1) {
       snapshot = await page.evaluate((budget) => window.__TEAR_WATCH_AGENT__.run(budget), sampleStepBudget);
@@ -156,10 +161,16 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
     assert.equal(snapshot.executionClass, "engineering");
     assert.equal(snapshot.observationClass, "privileged-diagnostic");
     assert.equal(snapshot.certified, false);
-    assert.equal(snapshot.status, "completed", `run ${String(runNumber)} did not complete: ${JSON.stringify(terminalSummary(snapshot))}`);
+    assert.equal(
+      snapshot.status,
+      "completed",
+      `run ${String(runNumber)} did not complete: ${JSON.stringify(terminalSummary(snapshot))}`,
+    );
     assert.equal(snapshot.screen, "menu", `run ${String(runNumber)} did not return to the menu`);
-    assert.ok(snapshot.transitions.some((entry) => entry.screen === "playing"),
-      `run ${String(runNumber)} never entered real gameplay`);
+    assert.ok(
+      snapshot.transitions.some((entry) => entry.screen === "playing"),
+      `run ${String(runNumber)} never entered real gameplay`,
+    );
     assert.deepEqual(errors, [], `run ${String(runNumber)} page errors: ${errors.join("\n")}`);
 
     return Object.freeze({
@@ -180,10 +191,14 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
 }
 
 withJourney({ name: "C24 same-seed scripted-agent repeatability", port: 8155 }, async ({ page, errors }) => {
-  assert.ok(Number.isSafeInteger(requestedSeed) && requestedSeed > 0,
-    "C24_REPEAT_SEED must be a positive safe integer");
-  assert.ok(Number.isSafeInteger(maxSamples) && maxSamples > 0,
-    "C24_REPEAT_MAX_SAMPLES must be a positive safe integer");
+  assert.ok(
+    Number.isSafeInteger(requestedSeed) && requestedSeed > 0,
+    "C24_REPEAT_SEED must be a positive safe integer",
+  );
+  assert.ok(
+    Number.isSafeInteger(maxSamples) && maxSamples > 0,
+    "C24_REPEAT_MAX_SAMPLES must be a positive safe integer",
+  );
   const browser = page.context().browser();
   assert.ok(browser, "repeatability journey requires a live browser");
   const baseUrl = new URL(page.url()).origin;
@@ -219,8 +234,7 @@ withJourney({ name: "C24 same-seed scripted-agent repeatability", port: 8155 }, 
   };
   const artifactDirectory = path.join(repositoryRoot, "artifacts", "tearbench", "c24");
   fs.mkdirSync(artifactDirectory, { recursive: true });
-  fs.writeFileSync(path.join(artifactDirectory, "easy-adventure-repeatability.json"),
-    JSON.stringify(report, null, 2));
+  fs.writeFileSync(path.join(artifactDirectory, "easy-adventure-repeatability.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
   console.log("C24 same-seed completed Adventure repeatability passed");
 });

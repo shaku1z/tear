@@ -45,14 +45,24 @@ export const CANONICAL_ACTIVE_PLAN_PATHS = Object.freeze([
 // this allowlist; it does not use this list as the source of active rows.
 export const ACTIVE_PLAN_METADATA_PATHS = CANONICAL_ACTIVE_PLAN_PATHS;
 
-export const TEMPORARY_ACTIVE_PLAN_PATHS = Object.freeze([
-  "plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md",
-]);
+export const TEMPORARY_ACTIVE_PLAN_PATHS = Object.freeze(["plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md"]);
 
 const CURRENT_PROGRAM_CHECKPOINTS = Object.freeze({
-  C25: "open", C27: "open", C28: "complete", C29: "narrow-complete", C30: "active", C31: "active",
-  C32: "foundation-only", C33: "active", C34: "active", C35: "active", C36: "open",
-  C37: "partial", C38: "bounded-partial", C39: "local-only", C40: "incomplete",
+  C25: "open",
+  C27: "open",
+  C28: "complete",
+  C29: "narrow-complete",
+  C30: "active",
+  C31: "active",
+  C32: "foundation-only",
+  C33: "active",
+  C34: "active",
+  C35: "active",
+  C36: "open",
+  C37: "partial",
+  C38: "bounded-partial",
+  C39: "local-only",
+  C40: "incomplete",
 });
 const CURRENT_PROGRAM_SOURCE_SHA = /^[0-9a-f]{40}$/u;
 const CURRENT_PROGRAM_HASH = /^[0-9a-f]{64}$/u;
@@ -78,7 +88,9 @@ function normalizeRepoPath(value) {
 function runGit(root, argumentsList) {
   const result = spawnSync("git", ["-C", root, ...argumentsList], { encoding: "utf8" });
   if (result.status !== 0) {
-    throw new Error(`could not enumerate tracked Markdown files: ${(result.stderr || result.stdout || "git failed").trim()}`);
+    throw new Error(
+      `could not enumerate tracked Markdown files: ${(result.stderr || result.stdout || "git failed").trim()}`,
+    );
   }
   return result.stdout;
 }
@@ -89,11 +101,7 @@ function isScopedMarkdownPath(relativePath) {
 
 export function collectTrackedMarkdownFiles(root) {
   const output = runGit(root, ["ls-files", "-z", "--cached", "--", "*.md"]);
-  return output.split("\0")
-    .filter(Boolean)
-    .map(normalizeRepoPath)
-    .filter(isScopedMarkdownPath)
-    .sort();
+  return output.split("\0").filter(Boolean).map(normalizeRepoPath).filter(isScopedMarkdownPath).sort();
 }
 
 function maskMarkdownFencedCode(markdown) {
@@ -151,9 +159,7 @@ function lineNumber(text, offset) {
 }
 
 function isAbsoluteLocalPath(destination) {
-  return path.posix.isAbsolute(destination)
-    || /^[A-Za-z]:[\\/]/u.test(destination)
-    || destination.startsWith("\\\\");
+  return path.posix.isAbsolute(destination) || /^[A-Za-z]:[\\/]/u.test(destination) || destination.startsWith("\\\\");
 }
 
 export function resolveLocalLink(root, sourceRelativePath, destination) {
@@ -188,10 +194,16 @@ export function resolveLocalLink(root, sourceRelativePath, destination) {
     const realTarget = fs.realpathSync(target);
     const realPrefix = `${realRoot}${path.sep}`;
     if (realTarget !== realRoot && !realTarget.startsWith(realPrefix)) {
-      return { ok: false, error: `${sourceRelativePath} resolves outside the repository through a link: ${destination}` };
+      return {
+        ok: false,
+        error: `${sourceRelativePath} resolves outside the repository through a link: ${destination}`,
+      };
     }
   } catch (error) {
-    return { ok: false, error: `${sourceRelativePath} local link cannot be inspected: ${destination} (${error.message})` };
+    return {
+      ok: false,
+      error: `${sourceRelativePath} local link cannot be inspected: ${destination} (${error.message})`,
+    };
   }
   return { ok: true, target };
 }
@@ -234,7 +246,10 @@ function parsePlanTableRows(section) {
   for (const line of section.split(/\r?\n/u)) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
-    const cells = trimmed.slice(1, -1).split("|").map((cell) => cell.trim());
+    const cells = trimmed
+      .slice(1, -1)
+      .split("|")
+      .map((cell) => cell.trim());
     if (cells.length === 0 || cells.every((cell) => /^:?-{3,}:?$/u.test(cell))) continue;
     rows.push(cells);
   }
@@ -281,7 +296,9 @@ export function parseCurrentAuthoritiesTable(indexText) {
       continue;
     }
     if (cells.length !== 3) {
-      errors.push(`${INDEX_PATH} current authorities row ${rowIndex + 1} must have Topic, Primary authority, and Supporting contract/evidence cells`);
+      errors.push(
+        `${INDEX_PATH} current authorities row ${rowIndex + 1} must have Topic, Primary authority, and Supporting contract/evidence cells`,
+      );
       continue;
     }
     const topic = cells[0].trim();
@@ -296,12 +313,15 @@ export function parseCurrentAuthoritiesTable(indexText) {
     const links = markdownLinkDestinations(cells[1]);
     const localLinks = links.filter(({ destination }) => {
       const normalized = destination.replaceAll("\\", "/");
-      return normalized !== ""
-        && !normalized.startsWith("#")
-        && !isExternalDestination(normalized)
-        && !isAbsoluteLocalPath(normalized);
+      return (
+        normalized !== "" &&
+        !normalized.startsWith("#") &&
+        !isExternalDestination(normalized) &&
+        !isAbsoluteLocalPath(normalized)
+      );
     });
-    let primaryDestination = localLinks.length === 1 ? destinationWithoutFragment(localLinks[0].destination).replaceAll("\\", "/") : "";
+    let primaryDestination =
+      localLinks.length === 1 ? destinationWithoutFragment(localLinks[0].destination).replaceAll("\\", "/") : "";
     if (links.length !== 1 || localLinks.length !== 1) {
       errors.push(`${INDEX_PATH} current authority topic ${topic} must have exactly one local Markdown primary link`);
     } else if (!primaryDestination.toLowerCase().endsWith(".md")) {
@@ -312,12 +332,16 @@ export function parseCurrentAuthoritiesTable(indexText) {
     let primaryPath = "";
     if (primaryDestination !== "") {
       primaryPath = normalizeRepoPath(path.posix.normalize(path.posix.join("docs", primaryDestination)));
-      if (seenPrimaryPaths.has(primaryPath)) errors.push(`${INDEX_PATH} current authorities reuses a primary authority path: ${primaryPath}`);
+      if (seenPrimaryPaths.has(primaryPath))
+        errors.push(`${INDEX_PATH} current authorities reuses a primary authority path: ${primaryPath}`);
       else seenPrimaryPaths.add(primaryPath);
     }
     rows.push({ topic, primaryDestination, primaryPath, supporting: cells[2] });
   }
-  if (!headerSeen) errors.push(`${INDEX_PATH} current authorities table must expose Topic, Primary authority, and Supporting contract/evidence columns`);
+  if (!headerSeen)
+    errors.push(
+      `${INDEX_PATH} current authorities table must expose Topic, Primary authority, and Supporting contract/evidence columns`,
+    );
   return { errors, rows };
 }
 
@@ -341,7 +365,8 @@ export function parsePlansAuthorityIndex(indexText) {
   const maskedIndexText = maskMarkdownFencedCode(indexText);
   const classificationSectionText = planSection(maskedIndexText, "## Plan classification");
   const activeSectionText = planSection(maskedIndexText, "## Active plans");
-  if (classificationSectionText === "") errors.push(`${PLANS_INDEX_PATH} is missing the ## Plan classification section`);
+  if (classificationSectionText === "")
+    errors.push(`${PLANS_INDEX_PATH} is missing the ## Plan classification section`);
   if (activeSectionText === "") errors.push(`${PLANS_INDEX_PATH} is missing the ## Active plans section`);
 
   const parseRows = (section, sectionName, activeSection) => {
@@ -370,7 +395,8 @@ export function parsePlansAuthorityIndex(indexText) {
       if (activeSection || /^active plan(?:\s|$)/iu.test(cells[1] ?? "")) {
         if (!nonemptyPlanCell(owner)) errors.push(`${PLANS_INDEX_PATH} has empty Owner metadata for ${relativePath}`);
         if (!nonemptyPlanCell(status)) errors.push(`${PLANS_INDEX_PATH} has empty Status metadata for ${relativePath}`);
-        if (!nonemptyPlanCell(closureCondition)) errors.push(`${PLANS_INDEX_PATH} has empty Closure condition metadata for ${relativePath}`);
+        if (!nonemptyPlanCell(closureCondition))
+          errors.push(`${PLANS_INDEX_PATH} has empty Closure condition metadata for ${relativePath}`);
       }
       rows.push({
         relativePath,
@@ -409,10 +435,13 @@ export function checkActivePlanMetadata(root, indexResult = undefined) {
     }
     if (metadata.Owner === "") errors.push(`${relativePath} must have nonempty Owner metadata`);
     if (metadata.Status !== "Active") errors.push(`${relativePath} must have Status: Active metadata`);
-    if (metadata["Closure condition"] === "") errors.push(`${relativePath} must have nonempty Closure condition metadata`);
+    if (metadata["Closure condition"] === "")
+      errors.push(`${relativePath} must have nonempty Closure condition metadata`);
     if (metadata.Owner !== row.owner) errors.push(`${relativePath} Owner metadata does not match ${PLANS_INDEX_PATH}`);
-    if (metadata.Status !== row.status) errors.push(`${relativePath} Status metadata does not match ${PLANS_INDEX_PATH}`);
-    if (metadata["Closure condition"] !== row.closureCondition) errors.push(`${relativePath} Closure condition metadata does not match ${PLANS_INDEX_PATH}`);
+    if (metadata.Status !== row.status)
+      errors.push(`${relativePath} Status metadata does not match ${PLANS_INDEX_PATH}`);
+    if (metadata["Closure condition"] !== row.closureCondition)
+      errors.push(`${relativePath} Closure condition metadata does not match ${PLANS_INDEX_PATH}`);
     if (TEMPORARY_ACTIVE_PLAN_PATHS.includes(relativePath)) {
       const documentRoles = metadataEntries(markdown, "Document role");
       const retirements = metadataEntries(markdown, "Retirement");
@@ -430,10 +459,22 @@ export function checkActivePlanMetadata(root, indexResult = undefined) {
 export function checkPlansAuthorityIndex(root) {
   const errors = [];
   const absolutePath = path.join(root, PLANS_INDEX_PATH);
-  if (!fs.existsSync(absolutePath)) return { errors: [`authority index is missing: ${PLANS_INDEX_PATH}`], rows: [], activeRows: [], activePlanPaths: [] };
+  if (!fs.existsSync(absolutePath))
+    return {
+      errors: [`authority index is missing: ${PLANS_INDEX_PATH}`],
+      rows: [],
+      activeRows: [],
+      activePlanPaths: [],
+    };
   const markdown = fs.readFileSync(absolutePath, "utf8");
-  if (!/\|\s*File\s*\|\s*Classification\s*\|\s*Owner\s*\|\s*Status\s*\|\s*Closure condition\s*\|\s*Role\s*\|/iu.test(maskMarkdownCode(markdown))) {
-    errors.push(`${PLANS_INDEX_PATH} must expose File, Classification, Owner, Status, Closure condition, and Role columns`);
+  if (
+    !/\|\s*File\s*\|\s*Classification\s*\|\s*Owner\s*\|\s*Status\s*\|\s*Closure condition\s*\|\s*Role\s*\|/iu.test(
+      maskMarkdownCode(markdown),
+    )
+  ) {
+    errors.push(
+      `${PLANS_INDEX_PATH} must expose File, Classification, Owner, Status, Closure condition, and Role columns`,
+    );
   }
   const parsed = parsePlansAuthorityIndex(markdown);
   errors.push(...parsed.errors);
@@ -441,13 +482,18 @@ export function checkPlansAuthorityIndex(root) {
   const actual = new Set(activeRows.map((row) => row.relativePath));
   const canonical = new Set(CANONICAL_ACTIVE_PLAN_PATHS);
   if (activeRows.length !== CANONICAL_ACTIVE_PLAN_PATHS.length || actual.size !== activeRows.length) {
-    errors.push(`${PLANS_INDEX_PATH} active plan set must contain exactly the canonical active plans; update the canonical allowlist intentionally when it changes`);
+    errors.push(
+      `${PLANS_INDEX_PATH} active plan set must contain exactly the canonical active plans; update the canonical allowlist intentionally when it changes`,
+    );
   }
   for (const relativePath of CANONICAL_ACTIVE_PLAN_PATHS) {
     if (!actual.has(relativePath)) errors.push(`${PLANS_INDEX_PATH} must list canonical active plan ${relativePath}`);
   }
   for (const relativePath of actual) {
-    if (!canonical.has(relativePath)) errors.push(`${PLANS_INDEX_PATH} contains an extra active plan; update the canonical allowlist intentionally: ${relativePath}`);
+    if (!canonical.has(relativePath))
+      errors.push(
+        `${PLANS_INDEX_PATH} contains an extra active plan; update the canonical allowlist intentionally: ${relativePath}`,
+      );
   }
   return { errors, rows: parsed.rows, activeRows, activePlanPaths: [...actual] };
 }
@@ -476,7 +522,8 @@ export function parseRootClassificationTable(indexText) {
     const classification = parseClassificationCell(match[2]);
     if (rows.has(file)) errors.push(`${INDEX_PATH} classifies root Markdown more than once: ${file}`);
     else rows.set(file, classification);
-    if (classification === null) errors.push(`${INDEX_PATH} has an unknown classification for ${file}: ${match[2].trim()}`);
+    if (classification === null)
+      errors.push(`${INDEX_PATH} has an unknown classification for ${file}: ${match[2].trim()}`);
   }
   return { rows, errors };
 }
@@ -485,8 +532,11 @@ export function checkRootDocumentationPolicy(root, trackedFiles = collectTracked
   const errors = [];
   const expectedFiles = Object.keys(ROOT_MARKDOWN_CLASSIFICATIONS).sort();
   const rootFiles = trackedFiles.filter((relativePath) => /^[^/]+\.md$/u.test(relativePath)).sort();
-  for (const file of rootFiles) if (!Object.hasOwn(ROOT_MARKDOWN_CLASSIFICATIONS, file)) errors.push(`unexpected tracked root Markdown file: ${file}`);
-  for (const file of expectedFiles) if (!rootFiles.includes(file)) errors.push(`expected tracked root Markdown file is missing: ${file}`);
+  for (const file of rootFiles)
+    if (!Object.hasOwn(ROOT_MARKDOWN_CLASSIFICATIONS, file))
+      errors.push(`unexpected tracked root Markdown file: ${file}`);
+  for (const file of expectedFiles)
+    if (!rootFiles.includes(file)) errors.push(`expected tracked root Markdown file is missing: ${file}`);
   const indexAbsolutePath = path.join(root, INDEX_PATH);
   if (!fs.existsSync(indexAbsolutePath)) {
     errors.push(`authority index is missing: ${INDEX_PATH}`);
@@ -497,11 +547,14 @@ export function checkRootDocumentationPolicy(root, trackedFiles = collectTracked
   for (const [file, expectedClassification] of Object.entries(ROOT_MARKDOWN_CLASSIFICATIONS)) {
     const actualClassification = parsed.rows.get(file);
     if (actualClassification !== expectedClassification) {
-      errors.push(`${INDEX_PATH} must classify ${file} as ${expectedClassification}; found ${actualClassification ?? "missing"}`);
+      errors.push(
+        `${INDEX_PATH} must classify ${file} as ${expectedClassification}; found ${actualClassification ?? "missing"}`,
+      );
     }
   }
   for (const file of parsed.rows.keys()) {
-    if (!Object.hasOwn(ROOT_MARKDOWN_CLASSIFICATIONS, file)) errors.push(`${INDEX_PATH} classifies an unallowlisted root Markdown file: ${file}`);
+    if (!Object.hasOwn(ROOT_MARKDOWN_CLASSIFICATIONS, file))
+      errors.push(`${INDEX_PATH} classifies an unallowlisted root Markdown file: ${file}`);
   }
   return { errors, rootFiles, rows: parsed.rows };
 }
@@ -515,7 +568,8 @@ export function checkPathBoundArtifacts(root) {
       continue;
     }
     try {
-      if (!fs.statSync(absolutePath).isFile()) errors.push(`path-bound TearBench artifact is not a regular file: ${relativePath}`);
+      if (!fs.statSync(absolutePath).isFile())
+        errors.push(`path-bound TearBench artifact is not a regular file: ${relativePath}`);
     } catch (error) {
       errors.push(`path-bound TearBench artifact cannot be inspected: ${relativePath} (${error.message})`);
     }
@@ -526,96 +580,162 @@ export function checkPathBoundArtifacts(root) {
 export function checkCurrentProgramState(root) {
   const errors = [];
   const absolutePath = path.join(root, CURRENT_PROGRAM_STATE_PATH);
-  if (!fs.existsSync(absolutePath)) return { errors: [`current program-state authority is missing: ${CURRENT_PROGRAM_STATE_PATH}`] };
+  if (!fs.existsSync(absolutePath))
+    return { errors: [`current program-state authority is missing: ${CURRENT_PROGRAM_STATE_PATH}`] };
   let state;
   try {
     state = JSON.parse(fs.readFileSync(absolutePath, "utf8"));
   } catch (error) {
     return { errors: [`current program-state authority is invalid JSON: ${error.message}`] };
   }
-  const expect = (condition, message) => { if (!condition) errors.push(message); };
-  expect(state.format === "tearbench-current-program-state" && state.schemaVersion === 1,
-    `${CURRENT_PROGRAM_STATE_PATH} must use the supported format and schema`);
-  expect(typeof state.stateId === "string" && /^[a-z0-9-]+$/u.test(state.stateId),
-    `${CURRENT_PROGRAM_STATE_PATH} stateId is invalid`);
+  const expect = (condition, message) => {
+    if (!condition) errors.push(message);
+  };
+  expect(
+    state.format === "tearbench-current-program-state" && state.schemaVersion === 1,
+    `${CURRENT_PROGRAM_STATE_PATH} must use the supported format and schema`,
+  );
+  expect(
+    typeof state.stateId === "string" && /^[a-z0-9-]+$/u.test(state.stateId),
+    `${CURRENT_PROGRAM_STATE_PATH} stateId is invalid`,
+  );
   const expectedMarker = `<!-- tearbench-current-program-state: ${state.stateId} -->`;
   expect(state.marker === expectedMarker, `${CURRENT_PROGRAM_STATE_PATH} marker does not match stateId`);
   const source = state.source ?? {};
   expect(source.repository === "shaku1z/tear", `${CURRENT_PROGRAM_STATE_PATH} source repository is invalid`);
-  expect(CURRENT_PROGRAM_SOURCE_SHA.test(source.revision ?? ""), `${CURRENT_PROGRAM_STATE_PATH} source revision must be a full SHA-1`);
+  expect(
+    CURRENT_PROGRAM_SOURCE_SHA.test(source.revision ?? ""),
+    `${CURRENT_PROGRAM_STATE_PATH} source revision must be a full SHA-1`,
+  );
   expect(source.state === "protected-clean", `${CURRENT_PROGRAM_STATE_PATH} source state must be protected-clean`);
-  expect(CURRENT_PROGRAM_HASH.test(source.fingerprint ?? ""), `${CURRENT_PROGRAM_STATE_PATH} source fingerprint must be a full SHA-256`);
+  expect(
+    CURRENT_PROGRAM_HASH.test(source.fingerprint ?? ""),
+    `${CURRENT_PROGRAM_STATE_PATH} source fingerprint must be a full SHA-256`,
+  );
 
   const receipts = state.receipts ?? {};
   const validateReceipt = (name, receipt, requireFingerprint = false) => {
     expect(receipt !== null && typeof receipt === "object", `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} is missing`);
-    expect(CURRENT_PROGRAM_RUN_ID.test(receipt?.runId ?? ""), `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} run ID is invalid`);
+    expect(
+      CURRENT_PROGRAM_RUN_ID.test(receipt?.runId ?? ""),
+      `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} run ID is invalid`,
+    );
     expect(receipt?.status === "success", `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} is not successful`);
     expect(receipt?.sourceSha === source.revision, `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} source SHA diverges`);
-    if (requireFingerprint) expect(receipt?.sourceFingerprint === source.fingerprint && CURRENT_PROGRAM_HASH.test(receipt?.sourceFingerprint ?? ""),
-      `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} source fingerprint diverges`);
+    if (requireFingerprint)
+      expect(
+        receipt?.sourceFingerprint === source.fingerprint &&
+          CURRENT_PROGRAM_HASH.test(receipt?.sourceFingerprint ?? ""),
+        `${CURRENT_PROGRAM_STATE_PATH} receipt ${name} source fingerprint diverges`,
+      );
   };
   validateReceipt("gameValidate", receipts.gameValidate);
   validateReceipt("gameProduction", receipts.gameProduction, true);
   validateReceipt("wikiSync", receipts.wikiSync);
   validateReceipt("wikiProduction", receipts.wikiProduction);
-  expect(CURRENT_PROGRAM_HASH.test(receipts.gameProduction?.artifactHash ?? ""), `${CURRENT_PROGRAM_STATE_PATH} artifact hash is invalid`);
-  expect(receipts.wikiSync?.validationRunId === receipts.gameValidate?.runId,
-    `${CURRENT_PROGRAM_STATE_PATH} wiki validation receipt diverges from game Validate`);
-  expect(CURRENT_PROGRAM_SOURCE_SHA.test(receipts.wikiSync?.wikiMainSha ?? ""), `${CURRENT_PROGRAM_STATE_PATH} wiki main SHA is invalid`);
-  expect(receipts.wikiProduction?.wikiMainSha === receipts.wikiSync?.wikiMainSha,
-    `${CURRENT_PROGRAM_STATE_PATH} wiki production SHA diverges from wiki sync`);
-  expect(CURRENT_PROGRAM_HASH.test(receipts.wikiSync?.manifestSha256 ?? ""), `${CURRENT_PROGRAM_STATE_PATH} manifest hash is invalid`);
+  expect(
+    CURRENT_PROGRAM_HASH.test(receipts.gameProduction?.artifactHash ?? ""),
+    `${CURRENT_PROGRAM_STATE_PATH} artifact hash is invalid`,
+  );
+  expect(
+    receipts.wikiSync?.validationRunId === receipts.gameValidate?.runId,
+    `${CURRENT_PROGRAM_STATE_PATH} wiki validation receipt diverges from game Validate`,
+  );
+  expect(
+    CURRENT_PROGRAM_SOURCE_SHA.test(receipts.wikiSync?.wikiMainSha ?? ""),
+    `${CURRENT_PROGRAM_STATE_PATH} wiki main SHA is invalid`,
+  );
+  expect(
+    receipts.wikiProduction?.wikiMainSha === receipts.wikiSync?.wikiMainSha,
+    `${CURRENT_PROGRAM_STATE_PATH} wiki production SHA diverges from wiki sync`,
+  );
+  expect(
+    CURRENT_PROGRAM_HASH.test(receipts.wikiSync?.manifestSha256 ?? ""),
+    `${CURRENT_PROGRAM_STATE_PATH} manifest hash is invalid`,
+  );
 
   for (const [checkpoint, status] of Object.entries(CURRENT_PROGRAM_CHECKPOINTS)) {
-    expect(state.checkpoints?.[checkpoint] === status, `${CURRENT_PROGRAM_STATE_PATH} ${checkpoint} state is not conservative`);
+    expect(
+      state.checkpoints?.[checkpoint] === status,
+      `${CURRENT_PROGRAM_STATE_PATH} ${checkpoint} state is not conservative`,
+    );
   }
-  expect(state.g7?.status === "open" && state.g7?.certificate === "absent" && state.g7?.production === "attributable",
-    `${CURRENT_PROGRAM_STATE_PATH} G7 state must remain open with no certificate and attributable production`);
-  expect(state.diffCapability?.path === "artifacts/tearbench/generated/diff-capability.json"
-    && state.diffCapability?.format === "tearbench-diff-capability"
-    && state.diffCapability?.status === "last-run" && state.diffCapability?.cumulative === false,
-  `${CURRENT_PROGRAM_STATE_PATH} diff capability must be last-run and non-cumulative`);
-  expect(state.dashboard?.certifiedCount === 0 && state.dashboard?.promote === false,
-    `${CURRENT_PROGRAM_STATE_PATH} dashboard promotion state is not conservative`);
+  expect(
+    state.g7?.status === "open" && state.g7?.certificate === "absent" && state.g7?.production === "attributable",
+    `${CURRENT_PROGRAM_STATE_PATH} G7 state must remain open with no certificate and attributable production`,
+  );
+  expect(
+    state.diffCapability?.path === "artifacts/tearbench/generated/diff-capability.json" &&
+      state.diffCapability?.format === "tearbench-diff-capability" &&
+      state.diffCapability?.status === "last-run" &&
+      state.diffCapability?.cumulative === false,
+    `${CURRENT_PROGRAM_STATE_PATH} diff capability must be last-run and non-cumulative`,
+  );
+  expect(
+    state.dashboard?.certifiedCount === 0 && state.dashboard?.promote === false,
+    `${CURRENT_PROGRAM_STATE_PATH} dashboard promotion state is not conservative`,
+  );
   const dashboardPath = path.join(root, "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md");
   if (fs.existsSync(dashboardPath)) {
     const dashboard = fs.readFileSync(dashboardPath, "utf8");
-    expect(/\|\s*certified\s*\|\s*0\s*\|/iu.test(dashboard),
-      "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md must retain certified count zero");
+    expect(
+      /\|\s*certified\s*\|\s*0\s*\|/iu.test(dashboard),
+      "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md must retain certified count zero",
+    );
   } else errors.push("docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md is missing");
   const catalogPath = path.join(root, "docs/tearbench-ghost3-evidence-catalog.json");
   if (fs.existsSync(catalogPath)) {
     try {
       const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
-      expect(catalog.defaultNormativeState === "missing" && Array.isArray(catalog.rules)
-        && !catalog.rules.some((rule) => rule?.state === "certified"),
-      "docs/tearbench-ghost3-evidence-catalog.json must remain unpromoted");
+      expect(
+        catalog.defaultNormativeState === "missing" &&
+          Array.isArray(catalog.rules) &&
+          !catalog.rules.some((rule) => rule?.state === "certified"),
+        "docs/tearbench-ghost3-evidence-catalog.json must remain unpromoted",
+      );
     } catch (error) {
       errors.push(`docs/tearbench-ghost3-evidence-catalog.json is invalid JSON: ${error.message}`);
     }
   } else errors.push("docs/tearbench-ghost3-evidence-catalog.json is missing");
-  expect(CURRENT_PROGRAM_SOURCE_SHA.test(state.historical?.oldBaselineSha ?? "")
-    && /historical/u.test(state.historical?.context ?? ""), `${CURRENT_PROGRAM_STATE_PATH} historical baseline context is invalid`);
+  expect(
+    CURRENT_PROGRAM_SOURCE_SHA.test(state.historical?.oldBaselineSha ?? "") &&
+      /historical/u.test(state.historical?.context ?? ""),
+    `${CURRENT_PROGRAM_STATE_PATH} historical baseline context is invalid`,
+  );
 
   for (const relativePath of CURRENT_PROGRAM_STATE_AUTHORITIES) {
     const documentPath = path.join(root, relativePath);
-    if (!fs.existsSync(documentPath)) { errors.push(`current program-state authority document is missing: ${relativePath}`); continue; }
+    if (!fs.existsSync(documentPath)) {
+      errors.push(`current program-state authority document is missing: ${relativePath}`);
+      continue;
+    }
     const markdown = fs.readFileSync(documentPath, "utf8");
     const markers = [...markdown.matchAll(/<!--\s*tearbench-current-program-state:\s*([^>]+?)\s*-->/gu)];
-    expect(markers.length === 1 && markers[0][0] === state.marker,
-      `${relativePath} must contain exactly the current program-state marker`);
+    expect(
+      markers.length === 1 && markers[0][0] === state.marker,
+      `${relativePath} must contain exactly the current program-state marker`,
+    );
     expect(markdown.includes(source.revision), `${relativePath} must state the current protected source revision`);
-    expect(markdown.includes("artifacts/tearbench/generated/diff-capability.json")
-      && /last-run/u.test(markdown) && /non-cumulative/u.test(markdown), `${relativePath} must state non-cumulative diff capability`);
+    expect(
+      markdown.includes("artifacts/tearbench/generated/diff-capability.json") &&
+        /last-run/u.test(markdown) &&
+        /non-cumulative/u.test(markdown),
+      `${relativePath} must state non-cumulative diff capability`,
+    );
     for (const [checkpoint, status] of Object.entries(CURRENT_PROGRAM_CHECKPOINTS)) {
-      expect(new RegExp(`${checkpoint}\\s+${status}`, "u").test(markdown),
-        `${relativePath} must state conservative ${checkpoint} status ${status}`);
+      expect(
+        new RegExp(`${checkpoint}\\s+${status}`, "u").test(markdown),
+        `${relativePath} must state conservative ${checkpoint} status ${status}`,
+      );
     }
-    expect(/G7 (?:eligible\/open|open)/u.test(markdown) && /certificate absent/u.test(markdown),
-      `${relativePath} must state open G7 and absent certificate`);
-    expect(/production (?:is )?attributable/u.test(markdown),
-      `${relativePath} must state attributable current production`);
+    expect(
+      /G7 (?:eligible\/open|open)/u.test(markdown) && /certificate absent/u.test(markdown),
+      `${relativePath} must state open G7 and absent certificate`,
+    );
+    expect(
+      /production (?:is )?attributable/u.test(markdown),
+      `${relativePath} must state attributable current production`,
+    );
   }
   return { errors, state };
 }
@@ -630,7 +750,15 @@ export function runDocsCheck({ root = process.cwd() } = {}) {
   const plansIndex = checkPlansAuthorityIndex(absoluteRoot);
   const activePlans = checkActivePlanMetadata(absoluteRoot, plansIndex);
   const currentProgram = checkCurrentProgramState(absoluteRoot);
-  const errors = [...links.errors, ...policy.errors, ...artifacts.errors, ...authorities.errors, ...activePlans.errors, ...plansIndex.errors, ...currentProgram.errors];
+  const errors = [
+    ...links.errors,
+    ...policy.errors,
+    ...artifacts.errors,
+    ...authorities.errors,
+    ...activePlans.errors,
+    ...plansIndex.errors,
+    ...currentProgram.errors,
+  ];
   return {
     ok: errors.length === 0,
     errors,
@@ -664,11 +792,15 @@ function main() {
     }
     const result = runDocsCheck(options);
     if (!result.ok) {
-      console.error(["documentation authority check failed:", ...result.errors.map((error) => `- ${error}`)].join("\n"));
+      console.error(
+        ["documentation authority check failed:", ...result.errors.map((error) => `- ${error}`)].join("\n"),
+      );
       process.exitCode = 1;
       return;
     }
-    console.log(`documentation authority check passed (${result.trackedMarkdownFiles} tracked Markdown files, ${result.localLinks} local links resolved, ${result.rootMarkdownFiles} root files classified, ${result.pathBoundArtifacts} path-bound TearBench artifacts present)`);
+    console.log(
+      `documentation authority check passed (${result.trackedMarkdownFiles} tracked Markdown files, ${result.localLinks} local links resolved, ${result.rootMarkdownFiles} root files classified, ${result.pathBoundArtifacts} path-bound TearBench artifacts present)`,
+    );
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

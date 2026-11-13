@@ -7,10 +7,7 @@ import {
   TEAR_SCORE_PROVENANCE,
   type TearScoreModuleApi,
 } from "../../src/audio/tear-score-module";
-import {
-  BrowserAudioGraphContext,
-  BrowserAudioNodePort,
-} from "../../src/audio/browser-audio";
+import { BrowserAudioGraphContext, BrowserAudioNodePort } from "../../src/audio/browser-audio";
 import type { MusicContextSnapshot } from "../../src/audio/music-contracts";
 
 function context(sequence: number): MusicContextSnapshot {
@@ -56,7 +53,9 @@ function fakeApi(updates: unknown[], observation: ApiObservation): TearScoreModu
       observation.starts += 1;
       return Promise.resolve();
     },
-    updateContext: (snapshot) => { updates.push(snapshot); },
+    updateContext: (snapshot) => {
+      updates.push(snapshot);
+    },
     setMuteReason: () => undefined,
     dispose: () => {
       observation.disposals += 1;
@@ -91,7 +90,13 @@ describe("pinned TearScore ESM adapter", () => {
     const api = createApi();
     const client = createPinnedModuleTearScoreClient(api, createApi);
     await client.initialize(fakeHost());
-    const first = { runId: "run-one", runSeed: "1", rulesetVersion: "rules", gameVersion: "game", scoreVersion: "score" };
+    const first = {
+      runId: "run-one",
+      runSeed: "1",
+      rulesetVersion: "rules",
+      gameVersion: "game",
+      scoreVersion: "score",
+    };
     await client.beginRun(first);
     client.updateContext(context(1));
     client.updateContext({ ...context(1), sequence: 2, timeMs: 124, scene: "main-menu" });
@@ -133,7 +138,9 @@ describe("pinned TearScore ESM adapter", () => {
     expect(createHash("sha256").update(tone).digest("hex")).toBe(TEAR_SCORE_PROVENANCE.toneSha256);
     expect(bundle.toString("utf8")).toContain("export{");
     expect(bundle.toString("utf8")).not.toContain("globalThis.Tone");
-    expect(bundle.toString("utf8")).toContain("this.scoreTransitionId=void 0,this.composer?.reset(),this.rack?.dispose()");
+    expect(bundle.toString("utf8")).toContain(
+      "this.scoreTransitionId=void 0,this.composer?.reset(),this.rack?.dispose()",
+    );
     expect(bundle.toString("utf8")).toContain("triangleBass");
     expect(bundle.toString("utf8")).toContain("bellLead");
     expect(bundle.toString("utf8")).toContain("breath");

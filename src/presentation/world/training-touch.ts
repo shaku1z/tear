@@ -1,11 +1,16 @@
 import type {
-  WorldRenderContext, PlaygroundHelpSnapshot, TouchControlsSnapshot, TutorialCardSnapshot,
+  WorldRenderContext,
+  PlaygroundHelpSnapshot,
+  TouchControlsSnapshot,
+  TutorialCardSnapshot,
 } from "./contracts";
 import { clamp } from "./primitives";
 import { bossHudTop, hudFrame, hudType } from "./hud";
 
 export interface TutorialCardLayout {
-  readonly x: number; readonly y: number; readonly width: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
 }
 
 /**
@@ -13,9 +18,13 @@ export interface TutorialCardLayout {
  * screen-edge frame. At narrow widths the card drops below that lane instead of
  * squeezing its copy. The card's height comes from its content.
  */
-export function tutorialCardLayout(frame: Readonly<{ left: number; right: number; top: number; centerX: number }>,
-  laneBottom: number, minimumTop = 0): TutorialCardLayout {
-  const meterRight = frame.centerX + 150, gap = 24;
+export function tutorialCardLayout(
+  frame: Readonly<{ left: number; right: number; top: number; centerX: number }>,
+  laneBottom: number,
+  minimumTop = 0,
+): TutorialCardLayout {
+  const meterRight = frame.centerX + 150,
+    gap = 24;
   const besideMeter = frame.right - (meterRight + gap);
   if (besideMeter >= 460) {
     const width = Math.min(700, besideMeter);
@@ -43,17 +52,28 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
    * progress bar, keys, lesson dots + block) so no row can overlap another.
    */
   function tutorialCard(snapshot: TutorialCardSnapshot): void {
-    const t = ui.t, type = hudType(context), pad = t.space.md, frame = hudFrame(context);
-    const minimumTop = Math.max(snapshot.bossPractice ? bossHudTop(context) + 3 * t.metric.bossHudH + type.label * 2 : 0, snapshot.clearTop ?? 0);
+    const t = ui.t,
+      type = hudType(context),
+      pad = t.space.md,
+      frame = hudFrame(context);
+    const minimumTop = Math.max(
+      snapshot.bossPractice ? bossHudTop(context) + 3 * t.metric.bossHudH + type.label * 2 : 0,
+      snapshot.clearTop ?? 0,
+    );
     const { x, y, width } = tutorialCardLayout(frame, bossHudTop(context), minimumTop);
-    const inner = width - pad * 2, left = x + pad;
+    const inner = width - pad * 2,
+      left = x + pad;
     const progress = snapshot.final ? undefined : snapshot.progress;
     const countText = progress ? `${String(progress.current)} / ${String(progress.goal)}` : "";
     canvas.font = ui.font(type.title, true);
     const countW = countText ? canvas.measureText(countText).width + t.space.md : 0;
-    const tagY = y + pad + type.micro, titleY = tagY + t.space.sm + type.title;
-    const description = ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner,
-      { size: type.body, measureOnly: true, maxLines: 4 });
+    const tagY = y + pad + type.micro,
+      titleY = tagY + t.space.sm + type.title;
+    const description = ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner, {
+      size: type.body,
+      measureOnly: true,
+      maxLines: 4,
+    });
     const barY = titleY + t.space.sm + description.height + t.space.xs;
     const keysY = barY + (progress ? t.space.md : 0) + type.micro + t.space.sm;
     const footerY = keysY + (snapshot.keys.length > 0 ? Math.round(type.micro * 1.7) + t.space.sm : 0);
@@ -62,16 +82,48 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
     ui.hudPlate(canvas, x, y, width, height);
     canvas.fillStyle = t.color.accent;
     canvas.fillRect(x, y, 4, height);
-    ui.tag(canvas, `${snapshot.arenaLabel ?? "TRAINING"}  /  ${(snapshot.teachingFocus ?? "movement").toUpperCase()}`,
-      left, tagY, ui.readable(t.color.accent), "left", type.micro);
-    if (snapshot.final) ui.text(canvas, "training summary · practice arena loading…", x + width - pad, tagY, type.micro, "right", t.alpha.muted);
-    const title = ui.fitText(canvas, snapshot.title, inner - countW, { size: type.title, floor: type.label, bold: true });
+    ui.tag(
+      canvas,
+      `${snapshot.arenaLabel ?? "TRAINING"}  /  ${(snapshot.teachingFocus ?? "movement").toUpperCase()}`,
+      left,
+      tagY,
+      ui.readable(t.color.accent),
+      "left",
+      type.micro,
+    );
+    if (snapshot.final)
+      ui.text(
+        canvas,
+        "training summary · practice arena loading…",
+        x + width - pad,
+        tagY,
+        type.micro,
+        "right",
+        t.alpha.muted,
+      );
+    const title = ui.fitText(canvas, snapshot.title, inner - countW, {
+      size: type.title,
+      floor: type.label,
+      bold: true,
+    });
     ui.displayText(canvas, title.lines[0] ?? snapshot.title, left, titleY, title.size);
     if (progress) {
       const done = progress.current >= progress.goal;
-      ui.tag(canvas, countText, x + width - pad, titleY, done ? ui.readable(t.color.accent) : ui.ink, "right", type.title);
+      ui.tag(
+        canvas,
+        countText,
+        x + width - pad,
+        titleY,
+        done ? ui.readable(t.color.accent) : ui.ink,
+        "right",
+        type.title,
+      );
     }
-    ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner, { size: type.body, alpha: t.alpha.soft, maxLines: 4 });
+    ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner, {
+      size: type.body,
+      alpha: t.alpha.soft,
+      maxLines: 4,
+    });
     if (progress) progressBar(left, barY, inner, progress);
     let keyX = left;
     for (const key of snapshot.keys) keyX += ui.keycap(canvas, key, keyX, keysY) + t.space.sm;
@@ -118,14 +170,23 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
    * multiplier lane so it never meets the combo meter.
    */
   function playgroundHelp(snapshot: PlaygroundHelpSnapshot): void {
-    const t = ui.t, type = hudType(context), pad = t.space.md, frame = hudFrame(context);
+    const t = ui.t,
+      type = hudType(context),
+      pad = t.space.md,
+      frame = hudFrame(context);
     // Keyboard shortcuts only help a keyboard; touch keeps the live weapon stats.
-    const lines = context.ui.density.touch ? []
-      : ["TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss", "K clear   ·   H heal   ·   U ability lab   ·   P pause"];
-    const stats = `${snapshot.weaponId.toUpperCase()}  ·  held ${String(snapshot.heldHits)}  ·  throws ${String(snapshot.throws)}/${String(snapshot.throwHits)}`
-      + `  ·  parries ${String(snapshot.perfectParries)}  ·  breaks ${String(snapshot.breakTriggers)}`;
+    const lines = context.ui.density.touch
+      ? []
+      : [
+          "TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss",
+          "K clear   ·   H heal   ·   U ability lab   ·   P pause",
+        ];
+    const stats =
+      `${snapshot.weaponId.toUpperCase()}  ·  held ${String(snapshot.heldHits)}  ·  throws ${String(snapshot.throws)}/${String(snapshot.throwHits)}` +
+      `  ·  parries ${String(snapshot.perfectParries)}  ·  breaks ${String(snapshot.breakTriggers)}`;
     const layout = tutorialCardLayout(frame, bossHudTop(context), snapshot.clearTop ?? 0);
-    const lineH = type.caption + t.space.sm, height = pad * 2 + type.micro + t.space.sm + (lines.length + 1) * lineH;
+    const lineH = type.caption + t.space.sm,
+      height = pad * 2 + type.micro + t.space.sm + (lines.length + 1) * lineH;
     ui.hudPlate(canvas, layout.x, layout.y, layout.width, height);
     canvas.fillStyle = t.color.accent;
     canvas.fillRect(layout.x, layout.y, 4, height);
@@ -143,7 +204,15 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
    * they use one theme-independent treatment: a dark disc, a light ring and a light
    * label (the scrim / scrimInk pair), readable on any backdrop.
    */
-  function disc(x: number, y: number, radius: number, fillAlpha: number, ring: string, ringAlpha: number, lineWidth: number): void {
+  function disc(
+    x: number,
+    y: number,
+    radius: number,
+    fillAlpha: number,
+    ring: string,
+    ringAlpha: number,
+    lineWidth: number,
+  ): void {
     canvas.globalAlpha = fillAlpha;
     canvas.fillStyle = ui.t.color.scrim;
     canvas.beginPath();
@@ -160,24 +229,56 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
 
   function touchButton(button: TouchControlsSnapshot["buttons"][number]): void {
     const t = ui.t;
-    disc(button.x, button.y, button.radius, button.held ? 0.62 : 0.4, button.held ? t.color.accent : t.color.scrimInk, button.held ? 0.95 : 0.7, button.held ? 4 : 3);
+    disc(
+      button.x,
+      button.y,
+      button.radius,
+      button.held ? 0.62 : 0.4,
+      button.held ? t.color.accent : t.color.scrimInk,
+      button.held ? 0.95 : 0.7,
+      button.held ? 4 : 3,
+    );
     const size = button.prominent ? t.type.label : t.type.micro;
     ui.tag(canvas, button.label, button.x, button.y + size * 0.36, t.color.scrimInk, "center", size);
   }
 
   /** On-screen controls: every circle comes from the input layer's single touch layout. */
   function touchControls(snapshot: TouchControlsSnapshot): void {
-    const joystick = snapshot.joystick, t = ui.t;
+    const joystick = snapshot.joystick,
+      t = ui.t;
     const magnitude = Math.hypot(joystick.dx, joystick.dy) || 1;
     const cap = Math.min(magnitude, 70);
     canvas.save();
-    disc(joystick.anchorX, joystick.anchorY, joystick.radius, joystick.active ? 0.3 : 0.18, t.color.scrimInk, joystick.active ? 0.7 : 0.45, 3);
-    disc(joystick.anchorX + (joystick.active ? joystick.dx / magnitude * cap : 0), joystick.anchorY + (joystick.active ? joystick.dy / magnitude * cap : 0),
-      joystick.radius * 0.46, joystick.active ? 0.6 : 0.4, t.color.scrimInk, 0.8, 2);
+    disc(
+      joystick.anchorX,
+      joystick.anchorY,
+      joystick.radius,
+      joystick.active ? 0.3 : 0.18,
+      t.color.scrimInk,
+      joystick.active ? 0.7 : 0.45,
+      3,
+    );
+    disc(
+      joystick.anchorX + (joystick.active ? (joystick.dx / magnitude) * cap : 0),
+      joystick.anchorY + (joystick.active ? (joystick.dy / magnitude) * cap : 0),
+      joystick.radius * 0.46,
+      joystick.active ? 0.6 : 0.4,
+      t.color.scrimInk,
+      0.8,
+      2,
+    );
     if (snapshot.aim) {
       const pad = snapshot.aimPad;
       disc(pad.x, pad.y, pad.r, 0.22, t.color.scrimInk, 0.5, 3);
-      disc(pad.x + snapshot.aim.x * pad.r * 0.8, pad.y + snapshot.aim.y * pad.r * 0.8, pad.r * 0.34, 0.55, t.color.scrimInk, 0.8, 2);
+      disc(
+        pad.x + snapshot.aim.x * pad.r * 0.8,
+        pad.y + snapshot.aim.y * pad.r * 0.8,
+        pad.r * 0.34,
+        0.55,
+        t.color.scrimInk,
+        0.8,
+        2,
+      );
     }
     for (const button of snapshot.buttons) touchButton(button);
     if (snapshot.onboardingAlpha > 0) onboarding(snapshot);
@@ -187,14 +288,19 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
   }
 
   /** The coaching line's bottom, moved under this frame's lesson card when the two would meet. */
-  function clearOfLessonCard(line: Readonly<{ title: string; hint: string; x: number; bottom: number; align: CanvasTextAlign }>, height: number): number {
+  function clearOfLessonCard(
+    line: Readonly<{ title: string; hint: string; x: number; bottom: number; align: CanvasTextAlign }>,
+    height: number,
+  ): number {
     const card = lessonCard;
     if (card === null) return line.bottom;
     const t = ui.t;
     canvas.font = ui.font(t.type.lead, true);
     const width = Math.max(canvas.measureText(line.title).width, canvas.measureText(line.hint).width) + t.space.md;
-    const left = line.align === "left" ? line.x : line.x - width, right = line.align === "left" ? line.x + width : line.x;
-    const meets = left < card.x + card.w && right > card.x && line.bottom - height < card.y + card.h && line.bottom > card.y;
+    const left = line.align === "left" ? line.x : line.x - width,
+      right = line.align === "left" ? line.x + width : line.x;
+    const meets =
+      left < card.x + card.w && right > card.x && line.bottom - height < card.y + card.h && line.bottom > card.y;
     return meets ? card.y + card.h + t.space.md + height : line.bottom;
   }
 
@@ -203,14 +309,29 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
    * above the aim pad (right-aligned to it), so neither line can leave the screen.
    */
   function onboarding(snapshot: TouchControlsSnapshot): void {
-    const t = ui.t, alpha = clamp(snapshot.onboardingAlpha), joystick = snapshot.joystick, pad = snapshot.aimPad;
+    const t = ui.t,
+      alpha = clamp(snapshot.onboardingAlpha),
+      joystick = snapshot.joystick,
+      pad = snapshot.aimPad;
     const lines = [
-      { title: "◉ MOVE", hint: "left thumb — anywhere on the left", x: joystick.homeX + joystick.radius + t.space.md,
-        bottom: joystick.homeY + (t.type.lead + t.type.label + t.space.sm * 3) / 2, align: "left" as const },
-      { title: "DRAG TO AIM & SWING ↷", hint: "fast flicks = fast cuts · second finger = throw", x: pad.x + pad.r, bottom: pad.y - pad.r - t.space.md, align: "right" as const },
+      {
+        title: "◉ MOVE",
+        hint: "left thumb — anywhere on the left",
+        x: joystick.homeX + joystick.radius + t.space.md,
+        bottom: joystick.homeY + (t.type.lead + t.type.label + t.space.sm * 3) / 2,
+        align: "left" as const,
+      },
+      {
+        title: "DRAG TO AIM & SWING ↷",
+        hint: "fast flicks = fast cuts · second finger = throw",
+        x: pad.x + pad.r,
+        bottom: pad.y - pad.r - t.space.md,
+        align: "right" as const,
+      },
     ];
     for (const line of lines) {
-      const height = t.type.lead + t.type.label + t.space.sm * 3, bottom = clearOfLessonCard(line, height);
+      const height = t.type.lead + t.type.label + t.space.sm * 3,
+        bottom = clearOfLessonCard(line, height);
       const textX = line.align === "left" ? line.x + t.space.md : line.x - t.space.md;
       canvas.globalAlpha = alpha;
       ui.tag(canvas, line.title, textX, bottom - height + t.space.sm + t.type.lead, ui.ink, line.align, t.type.lead);

@@ -31,23 +31,42 @@ export interface LiveCombatFrameContext extends FrameBase {
 type CoordinatorApiFields = "advancePlayingPrelude" | "advancePlayingSimulation" | "resetSimulation" | "syncMusic";
 export type LiveCombatCoordinatorContext = Omit<RuntimeFrameCoordinatorOptions, CoordinatorApiFields>;
 
-export function createLiveCombatFrameOptions<State>(context: LiveCombatFrameContext,
-  api: LiveCombatFrameApi<State>): LiveFrameRuntimeOptions {
-  return { ...context,
-    fixedSimulationInput: () => ({ state: context.state, simulation: api.simulationRuntime,
+export function createLiveCombatFrameOptions<State>(
+  context: LiveCombatFrameContext,
+  api: LiveCombatFrameApi<State>,
+): LiveFrameRuntimeOptions {
+  return {
+    ...context,
+    fixedSimulationInput: () => ({
+      state: context.state,
+      simulation: api.simulationRuntime,
       drainActions: context.drainActions,
       ...(context.recordSealedActions ? { recordSealedActions: context.recordSealedActions } : {}),
       ...(context.beforeSimulationStep ? { beforeStep: context.beforeSimulationStep } : {}),
       ...(context.afterSimulationStep ? { afterStep: context.afterSimulationStep } : {}),
-      clearSimulationInput: context.clearSimulationInput, gauge: context.gauge }),
-    musicInput: context.musicObservation };
+      clearSimulationInput: context.clearSimulationInput,
+      gauge: context.gauge,
+    }),
+    musicInput: context.musicObservation,
+  };
 }
 
-
-export function createLiveCombatCoordinatorOptions(context: LiveCombatCoordinatorContext,
-  simulation: FixedStepScheduler, frameRuntime: LiveFrameRuntime): RuntimeFrameCoordinatorOptions {
-  return { ...context,
-    advancePlayingPrelude: (seconds) => { frameRuntime.advancePrelude(seconds); },
+export function createLiveCombatCoordinatorOptions(
+  context: LiveCombatCoordinatorContext,
+  simulation: FixedStepScheduler,
+  frameRuntime: LiveFrameRuntime,
+): RuntimeFrameCoordinatorOptions {
+  return {
+    ...context,
+    advancePlayingPrelude: (seconds) => {
+      frameRuntime.advancePrelude(seconds);
+    },
     advancePlayingSimulation: (seconds) => frameRuntime.advanceSimulation(seconds),
-    resetSimulation: () => { simulation.reset(simulation.tick); }, syncMusic: () => { frameRuntime.syncMusic(); } };
+    resetSimulation: () => {
+      simulation.reset(simulation.tick);
+    },
+    syncMusic: () => {
+      frameRuntime.syncMusic();
+    },
+  };
 }

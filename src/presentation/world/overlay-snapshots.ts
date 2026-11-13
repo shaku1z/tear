@@ -10,86 +10,199 @@ import type {
 } from "./contracts";
 
 export interface TutorialLessonSource {
-  readonly t: string; readonly d: string; readonly keys?: readonly string[]; readonly final?: boolean;
-  readonly arenaLabel?: string; readonly teachingFocus?: string;
+  readonly t: string;
+  readonly d: string;
+  readonly keys?: readonly string[];
+  readonly final?: boolean;
+  readonly arenaLabel?: string;
+  readonly teachingFocus?: string;
   readonly prog?: () => readonly [number, number];
 }
-export function buildTutorialCardSnapshot(index: number, count: number, lesson: TutorialLessonSource, doneTime: number,
-  clearTop?: number): TutorialCardSnapshot {
+export function buildTutorialCardSnapshot(
+  index: number,
+  count: number,
+  lesson: TutorialLessonSource,
+  doneTime: number,
+  clearTop?: number,
+): TutorialCardSnapshot {
   const progress = lesson.prog !== undefined && lesson.final !== true ? lesson.prog() : undefined;
-  return Object.freeze({ lessonIndex: index, lessonCount: count, title: lesson.t, description: lesson.d,
+  return Object.freeze({
+    lessonIndex: index,
+    lessonCount: count,
+    title: lesson.t,
+    description: lesson.d,
     ...(lesson.t.endsWith(" ANNEX") ? { annex: true } : {}),
     ...(lesson.t.includes(" · PHASE ") ? { bossPractice: true } : {}),
     ...(lesson.t.endsWith(" ENCOUNTER") ? { enemyPractice: true } : {}),
-    keys: lesson.keys ?? [], final: lesson.final === true, completedBeat: doneTime,
-    arenaLabel: lesson.arenaLabel ?? "TRAINING", teachingFocus: lesson.teachingFocus ?? "movement",
+    keys: lesson.keys ?? [],
+    final: lesson.final === true,
+    completedBeat: doneTime,
+    arenaLabel: lesson.arenaLabel ?? "TRAINING",
+    teachingFocus: lesson.teachingFocus ?? "movement",
     progress: progress === undefined ? undefined : { current: progress[0], goal: progress[1] },
-    clearTop });
+    clearTop,
+  });
 }
 
 export interface WeaponStatsSource {
-  readonly heldHits: number; readonly throws: number; readonly throwHits: number;
-  readonly perfectParries: number; readonly breakTriggers: number;
+  readonly heldHits: number;
+  readonly throws: number;
+  readonly throwHits: number;
+  readonly perfectParries: number;
+  readonly breakTriggers: number;
 }
-export function buildPlaygroundHelpSnapshot(weaponId: string, stats: WeaponStatsSource, clearTop?: number): PlaygroundHelpSnapshot {
-  return Object.freeze({ weaponId, heldHits: stats.heldHits, throws: stats.throws, throwHits: stats.throwHits,
-    perfectParries: stats.perfectParries, breakTriggers: stats.breakTriggers, clearTop });
+export function buildPlaygroundHelpSnapshot(
+  weaponId: string,
+  stats: WeaponStatsSource,
+  clearTop?: number,
+): PlaygroundHelpSnapshot {
+  return Object.freeze({
+    weaponId,
+    heldHits: stats.heldHits,
+    throws: stats.throws,
+    throwHits: stats.throwHits,
+    perfectParries: stats.perfectParries,
+    breakTriggers: stats.breakTriggers,
+    clearTop,
+  });
 }
 
-export interface TouchCircleSource { readonly x: number; readonly y: number; readonly r: number }
-export interface TouchButtonSource extends TouchCircleSource { readonly label: string }
+export interface TouchCircleSource {
+  readonly x: number;
+  readonly y: number;
+  readonly r: number;
+}
+export interface TouchButtonSource extends TouchCircleSource {
+  readonly label: string;
+}
 /** The input layer's single touch layout (src/input/touch-control-layout.ts), passed through unchanged. */
 export interface TouchLayoutSource {
-  readonly jump: TouchButtonSource; readonly dash: TouchButtonSource;
-  readonly throwB: TouchButtonSource; readonly pause: TouchButtonSource;
-  readonly joystickHome: TouchCircleSource; readonly aimPad: TouchCircleSource;
+  readonly jump: TouchButtonSource;
+  readonly dash: TouchButtonSource;
+  readonly throwB: TouchButtonSource;
+  readonly pause: TouchButtonSource;
+  readonly joystickHome: TouchCircleSource;
+  readonly aimPad: TouchCircleSource;
 }
-export interface TouchJoystickSource { readonly active?: boolean; readonly ax: number; readonly ay: number; readonly dx: number; readonly dy: number }
+export interface TouchJoystickSource {
+  readonly active?: boolean;
+  readonly ax: number;
+  readonly ay: number;
+  readonly dx: number;
+  readonly dy: number;
+}
 export function buildTouchControlsSnapshot(input: {
-  readonly layout: TouchLayoutSource; readonly joystick: TouchJoystickSource; readonly held: Readonly<Record<string, boolean>>;
-  readonly aim?: Readonly<{ x: number; y: number }>; readonly onboardingAlpha: number;
+  readonly layout: TouchLayoutSource;
+  readonly joystick: TouchJoystickSource;
+  readonly held: Readonly<Record<string, boolean>>;
+  readonly aim?: Readonly<{ x: number; y: number }>;
+  readonly onboardingAlpha: number;
 }): TouchControlsSnapshot {
   const button = (source: TouchButtonSource, key: string, prominent: boolean) => ({
-    x: source.x, y: source.y, radius: source.r, label: source.label, held: input.held[key] === true, prominent,
+    x: source.x,
+    y: source.y,
+    radius: source.r,
+    label: source.label,
+    held: input.held[key] === true,
+    prominent,
   });
   const home = input.layout.joystickHome;
-  return Object.freeze({ joystick: { active: input.joystick.active === true,
-    anchorX: input.joystick.active ? input.joystick.ax : home.x,
-    anchorY: input.joystick.active ? input.joystick.ay : home.y,
-    dx: input.joystick.dx, dy: input.joystick.dy, radius: home.r, homeX: home.x, homeY: home.y }, aim: input.aim,
+  return Object.freeze({
+    joystick: {
+      active: input.joystick.active === true,
+      anchorX: input.joystick.active ? input.joystick.ax : home.x,
+      anchorY: input.joystick.active ? input.joystick.ay : home.y,
+      dx: input.joystick.dx,
+      dy: input.joystick.dy,
+      radius: home.r,
+      homeX: home.x,
+      homeY: home.y,
+    },
+    aim: input.aim,
     aimPad: { x: input.layout.aimPad.x, y: input.layout.aimPad.y, r: input.layout.aimPad.r },
-    buttons: [button(input.layout.jump, "jump", true), button(input.layout.dash, "dash", false),
-      button(input.layout.throwB, "throwB", false), button(input.layout.pause, "pause", false)],
-    onboardingAlpha: input.onboardingAlpha });
+    buttons: [
+      button(input.layout.jump, "jump", true),
+      button(input.layout.dash, "dash", false),
+      button(input.layout.throwB, "throwB", false),
+      button(input.layout.pause, "pause", false),
+    ],
+    onboardingAlpha: input.onboardingAlpha,
+  });
 }
 
-export function buildWaveBannerSnapshot(input: Omit<WaveBannerSnapshot, "remainingFraction"> & {
-  readonly remainingSeconds: number; readonly duration: number;
-}): WaveBannerSnapshot {
-  return Object.freeze({ remainingFraction: input.remainingSeconds / input.duration, bossWave: input.bossWave,
-    wave: input.wave, waveTag: input.waveTag, horde: input.horde, hordeColor: input.hordeColor, normalColor: input.normalColor });
+export function buildWaveBannerSnapshot(
+  input: Omit<WaveBannerSnapshot, "remainingFraction"> & {
+    readonly remainingSeconds: number;
+    readonly duration: number;
+  },
+): WaveBannerSnapshot {
+  return Object.freeze({
+    remainingFraction: input.remainingSeconds / input.duration,
+    bossWave: input.bossWave,
+    wave: input.wave,
+    waveTag: input.waveTag,
+    horde: input.horde,
+    hordeColor: input.hordeColor,
+    normalColor: input.normalColor,
+  });
 }
-export function buildBossIntroSnapshot(screen: WorldRect, boss: Readonly<{ bossName?: string; epithet?: string; openingLine?: string; color?: string }>,
-  elapsed: number, duration: number, fallbackColor: string): BossIntroSnapshot {
-  return Object.freeze({ screen, bossName: boss.bossName ?? "BOSS", epithet: boss.epithet ?? "", openingLine: boss.openingLine ?? "",
-    color: boss.color ?? fallbackColor, elapsed, duration });
+export function buildBossIntroSnapshot(
+  screen: WorldRect,
+  boss: Readonly<{ bossName?: string; epithet?: string; openingLine?: string; color?: string }>,
+  elapsed: number,
+  duration: number,
+  fallbackColor: string,
+): BossIntroSnapshot {
+  return Object.freeze({
+    screen,
+    bossName: boss.bossName ?? "BOSS",
+    epithet: boss.epithet ?? "",
+    openingLine: boss.openingLine ?? "",
+    color: boss.color ?? fallbackColor,
+    elapsed,
+    duration,
+  });
 }
-export function buildStageBannerSnapshot(input: StageBannerSnapshot): StageBannerSnapshot { return Object.freeze({ ...input }); }
+export function buildStageBannerSnapshot(input: StageBannerSnapshot): StageBannerSnapshot {
+  return Object.freeze({ ...input });
+}
 
 export interface ReticleBladeSource {
-  readonly reticleX: number; readonly reticleY: number; readonly state: string; readonly tipVY: number;
+  readonly reticleX: number;
+  readonly reticleY: number;
+  readonly state: string;
+  readonly tipVY: number;
 }
 export function buildReticleSnapshot(input: {
-  readonly blade: ReticleBladeSource; readonly airborne: boolean; readonly playerVerticalSpeed: number;
-  readonly slamMinDownSpeed: number; readonly slamPowerSpeed: number; readonly slamEmpowerAt: number;
-  readonly launchMinUpSpeed: number; readonly risingSpeedReference: number;
-  readonly slamColor: string; readonly updraftColor: string;
+  readonly blade: ReticleBladeSource;
+  readonly airborne: boolean;
+  readonly playerVerticalSpeed: number;
+  readonly slamMinDownSpeed: number;
+  readonly slamPowerSpeed: number;
+  readonly slamEmpowerAt: number;
+  readonly launchMinUpSpeed: number;
+  readonly risingSpeedReference: number;
+  readonly slamColor: string;
+  readonly updraftColor: string;
 }): ReticleSnapshot {
   let power: ReticleSnapshot["power"];
   if (input.airborne && input.blade.state === "held") {
-    if (input.blade.tipVY > input.slamMinDownSpeed * 0.7 && input.playerVerticalSpeed > input.slamPowerSpeed * input.slamEmpowerAt) power = "slam";
-    else if (input.blade.tipVY < -input.launchMinUpSpeed * 0.7 && -input.playerVerticalSpeed > input.risingSpeedReference * 0.45) power = "updraft";
+    if (
+      input.blade.tipVY > input.slamMinDownSpeed * 0.7 &&
+      input.playerVerticalSpeed > input.slamPowerSpeed * input.slamEmpowerAt
+    )
+      power = "slam";
+    else if (
+      input.blade.tipVY < -input.launchMinUpSpeed * 0.7 &&
+      -input.playerVerticalSpeed > input.risingSpeedReference * 0.45
+    )
+      power = "updraft";
   }
-  return Object.freeze({ x: input.blade.reticleX, y: input.blade.reticleY, power,
-    slamColor: input.slamColor, updraftColor: input.updraftColor });
+  return Object.freeze({
+    x: input.blade.reticleX,
+    y: input.blade.reticleY,
+    power,
+    slamColor: input.slamColor,
+    updraftColor: input.updraftColor,
+  });
 }

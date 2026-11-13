@@ -2,12 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MusicCatalog } from "../../src/audio/music/catalog";
-import {
-  createStationState,
-  pickNext,
-  remember,
-  toggleFavourite,
-} from "../../src/audio/music/station";
+import { createStationState, pickNext, remember, toggleFavourite } from "../../src/audio/music/station";
 
 const catalog = JSON.parse(
   readFileSync(resolve(import.meta.dirname, "../../public/audio/catalog.json"), "utf8"),

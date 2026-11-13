@@ -22,11 +22,7 @@ export type TearStateClass =
   | "plausible-population"
   | "surgical-valid"
   | "adversarial-impossible";
-export type TearObservationClass =
-  | "human-equivalent"
-  | "structured-state"
-  | "privileged-diagnostic"
-  | "pixel-only";
+export type TearObservationClass = "human-equivalent" | "structured-state" | "privileged-diagnostic" | "pixel-only";
 
 export interface TearBuildIdentityV1 {
   readonly version: string;
@@ -45,14 +41,21 @@ export interface TearProvenanceV1 {
   readonly observationClass: TearObservationClass;
   readonly policyId?: string;
   readonly sourceId?: string;
-  readonly trainingConsent: "no-training" | "private-personalization-only" | "anonymous-improvement" | "public-training";
+  readonly trainingConsent:
+    "no-training" | "private-personalization-only" | "anonymous-improvement" | "public-training";
 }
 
 export interface TearLineageV1 {
   readonly parentId: string;
   readonly relation:
-    | "migrated-from" | "repaired-from" | "clipped-from" | "forked-at"
-    | "corrected-by" | "minimized-from" | "scenario-from" | "recorded-from-scenario";
+    | "migrated-from"
+    | "repaired-from"
+    | "clipped-from"
+    | "forked-at"
+    | "corrected-by"
+    | "minimized-from"
+    | "scenario-from"
+    | "recorded-from-scenario";
   readonly parentRootHash: string;
   readonly forkTick?: number;
 }
@@ -174,15 +177,36 @@ export interface TearObservationV1 {
   readonly tick: number;
   readonly observationClass: TearObservationClass;
   readonly player: Readonly<{
-    x: number; y: number; vx: number; vy: number; hp: number; maxHp: number;
-    facing: -1 | 1; grounded: boolean; dashCharges: number;
-    halfWidth?: number; halfHeight?: number; dashTimer?: number; dashCooldown?: number;
-    iframe?: number; maxCharges?: number;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    hp: number;
+    maxHp: number;
+    facing: -1 | 1;
+    grounded: boolean;
+    dashCharges: number;
+    halfWidth?: number;
+    halfHeight?: number;
+    dashTimer?: number;
+    dashCooldown?: number;
+    iframe?: number;
+    maxCharges?: number;
   }>;
   readonly blade: Readonly<{
-    handX: number; handY: number; tipX: number; tipY: number;
-    vx: number; vy: number; tipSpeed: number; state: string;
-    chambers?: number; chamberCooldown?: number; fireCooldown?: number; wheelSpin?: number; reversalCount?: number;
+    handX: number;
+    handY: number;
+    tipX: number;
+    tipY: number;
+    vx: number;
+    vy: number;
+    tipSpeed: number;
+    state: string;
+    chambers?: number;
+    chamberCooldown?: number;
+    fireCooldown?: number;
+    wheelSpin?: number;
+    reversalCount?: number;
   }>;
   readonly entities: readonly TearObservedActorV1[];
   /** Structured world geometry available to Class A and Class B observers; never a Class C affordance. */
@@ -190,8 +214,13 @@ export interface TearObservationV1 {
   /** Additive gameplay environment facts; unavailable to Class-C pixel observers. */
   readonly environment?: TearEnvironmentObservationV1;
   readonly run: Readonly<{
-    mode: TearRunModeId; difficulty: TearDifficultyId; weapon: TearWeaponId;
-    stage: string; wave: number; score: number; elapsedTicks: number;
+    mode: TearRunModeId;
+    difficulty: TearDifficultyId;
+    weapon: TearWeaponId;
+    stage: string;
+    wave: number;
+    score: number;
+    elapsedTicks: number;
   }>;
   readonly diagnostics?: Readonly<{
     worldBounds?: Readonly<{ minX: number; maxX: number; minY: number; maxY: number }>;
@@ -320,12 +349,7 @@ export interface GhostRangeV1 {
 }
 
 export type TearPortableContractV1 =
-  | TearObservationV1
-  | TearCausalEventV1
-  | TearScenarioV1
-  | TearSnapshotV1
-  | TearFailureArtifactV1
-  | GhostRangeV1;
+  TearObservationV1 | TearCausalEventV1 | TearScenarioV1 | TearSnapshotV1 | TearFailureArtifactV1 | GhostRangeV1;
 
 export interface TearContractValidationIssue {
   readonly path: string;

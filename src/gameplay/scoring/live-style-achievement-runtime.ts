@@ -1,19 +1,41 @@
 import {
-  bossKillIntents, breakStaticParry, dashDodgeIntents, hordeClearIntents, killIntents,
-  markRevived, markStageRestriction, parryIntents, recordBossHit, resetStageRestrictions,
-  stageDoneIntents, tickAchievementRuntime, tracksAchievements,
-  type AchievementBoss, type AchievementEnemy, type AchievementPlayer, type AchievementRunState,
+  bossKillIntents,
+  breakStaticParry,
+  dashDodgeIntents,
+  hordeClearIntents,
+  killIntents,
+  markRevived,
+  markStageRestriction,
+  parryIntents,
+  recordBossHit,
+  resetStageRestrictions,
+  stageDoneIntents,
+  tickAchievementRuntime,
+  tracksAchievements,
+  type AchievementBoss,
+  type AchievementEnemy,
+  type AchievementPlayer,
+  type AchievementRunState,
   type DodgeProjectile,
 } from "../progression/achievement-runtime";
 import { addStyle, loseStyle, rankForCombo, trickColor, updateStyle, type TrickTuning } from "./style-runtime";
 import {
-  applyStyleSnapshot, executeAchievementIntents, executeStyleIntents, snapshotStyle, splitParryProjectile,
-  type MutableStyleRun, type SplitProjectile, type StyleIntentPorts,
+  applyStyleSnapshot,
+  executeAchievementIntents,
+  executeStyleIntents,
+  snapshotStyle,
+  splitParryProjectile,
+  type MutableStyleRun,
+  type SplitProjectile,
+  type StyleIntentPorts,
 } from "./style-runtime-coordinator";
 
 export interface LiveStyleRun extends AchievementRunState, MutableStyleRun {}
 
-export interface LiveStylePlayer extends AchievementPlayer { readonly x: number; readonly y: number }
+export interface LiveStylePlayer extends AchievementPlayer {
+  readonly x: number;
+  readonly y: number;
+}
 
 export interface LiveAchievementTracker {
   on(): boolean;
@@ -34,7 +56,12 @@ export interface LiveAchievementTracker {
 }
 
 export interface LiveStyleAchievementOptions<TProjectile extends SplitProjectile> {
-  readonly observeStyle?: (technique: string | undefined, before: ReturnType<typeof snapshotStyle>, after: ReturnType<typeof snapshotStyle>, tuning: TrickTuning) => void;
+  readonly observeStyle?: (
+    technique: string | undefined,
+    before: ReturnType<typeof snapshotStyle>,
+    after: ReturnType<typeof snapshotStyle>,
+    tuning: TrickTuning,
+  ) => void;
   readonly persistentEffects?: () => boolean;
   readonly run: () => LiveStyleRun | null;
   readonly player: () => LiveStylePlayer;
@@ -75,49 +102,112 @@ export function createLiveStyleAchievementRuntime<TProjectile extends SplitProje
   };
   const tracks = () => options.persistentEffects?.() !== false && tracksAchievements(options.run());
   const dispatch = (intents: Parameters<typeof executeAchievementIntents>[0]): void => {
-    if (options.persistentEffects?.() !== false) executeAchievementIntents(intents, options.profileMax, options.achievementCheck);
+    if (options.persistentEffects?.() !== false)
+      executeAchievementIntents(intents, options.profileMax, options.achievementCheck);
   };
   const achievements: LiveAchievementTracker = {
     on: tracks,
-    stageReset: () => { resetStageRestrictions(options.run()); },
-    swung: () => { markStageRestriction(options.run(), "swung"); },
-    thrown: () => { markStageRestriction(options.run(), "thrown"); },
-    jumped: () => { markStageRestriction(options.run(), "jumped"); },
-    bossHit: (enemy: AchievementBoss, source: string) => { recordBossHit(enemy, source); },
-    bossKill: (enemy: AchievementBoss) => { dispatch(bossKillIntents(options.run(), enemy)); },
-    stageDone: () => { dispatch(stageDoneIntents(options.run(), {
-      thickskin: options.metaLevel("thickskin"), warding: options.metaLevel("warding"), sharp: options.metaLevel("sharp"),
-    })); },
-    onKill: () => { dispatch(killIntents(options.run(), options.player())); },
-    parry: () => { dispatch(parryIntents(options.run())); },
-    breakStreak: () => { breakStaticParry(options.run()); },
-    dashDodge: (projectile: DodgeProjectile) => { dispatch(dashDodgeIntents(options.run(), projectile)); },
-    revived: () => { markRevived(options.run()); },
-    hordeCleared: (seconds: number) => { dispatch(hordeClearIntents(options.run(), seconds)); },
-    tick: (dt: number) => { dispatch(tickAchievementRuntime({ run: options.run(), player: options.player(),
-      enemies: options.enemies(), moving: options.moving(), dt })); },
+    stageReset: () => {
+      resetStageRestrictions(options.run());
+    },
+    swung: () => {
+      markStageRestriction(options.run(), "swung");
+    },
+    thrown: () => {
+      markStageRestriction(options.run(), "thrown");
+    },
+    jumped: () => {
+      markStageRestriction(options.run(), "jumped");
+    },
+    bossHit: (enemy: AchievementBoss, source: string) => {
+      recordBossHit(enemy, source);
+    },
+    bossKill: (enemy: AchievementBoss) => {
+      dispatch(bossKillIntents(options.run(), enemy));
+    },
+    stageDone: () => {
+      dispatch(
+        stageDoneIntents(options.run(), {
+          thickskin: options.metaLevel("thickskin"),
+          warding: options.metaLevel("warding"),
+          sharp: options.metaLevel("sharp"),
+        }),
+      );
+    },
+    onKill: () => {
+      dispatch(killIntents(options.run(), options.player()));
+    },
+    parry: () => {
+      dispatch(parryIntents(options.run()));
+    },
+    breakStreak: () => {
+      breakStaticParry(options.run());
+    },
+    dashDodge: (projectile: DodgeProjectile) => {
+      dispatch(dashDodgeIntents(options.run(), projectile));
+    },
+    revived: () => {
+      markRevived(options.run());
+    },
+    hordeCleared: (seconds: number) => {
+      dispatch(hordeClearIntents(options.run(), seconds));
+    },
+    tick: (dt: number) => {
+      dispatch(
+        tickAchievementRuntime({
+          run: options.run(),
+          player: options.player(),
+          enemies: options.enemies(),
+          moving: options.moving(),
+          dt,
+        }),
+      );
+    },
   };
   return Object.freeze({
     achievements,
     addStyle: (kind: string) => {
-      const current = run(), player = options.player();
-      const before = snapshotStyle(current), tuning = options.tuning();
-      const result = addStyle({ kind, state: before, tuning,
-        player: { x: player.x, y: player.y }, ghostRecording: options.ghostRecording(),
-        achievementTracking: tracksAchievements(current) });
-      applyStyleSnapshot(current, result.state); executeStyleIntents(result.intents, options.styleIntents);
+      const current = run(),
+        player = options.player();
+      const before = snapshotStyle(current),
+        tuning = options.tuning();
+      const result = addStyle({
+        kind,
+        state: before,
+        tuning,
+        player: { x: player.x, y: player.y },
+        ghostRecording: options.ghostRecording(),
+        achievementTracking: tracksAchievements(current),
+      });
+      applyStyleSnapshot(current, result.state);
+      executeStyleIntents(result.intents, options.styleIntents);
       options.observeStyle?.(kind, before, result.state, tuning);
     },
     tracks,
-    check: () => { if (options.persistentEffects?.() !== false) options.achievementCheck(); },
-    loseStyle: () => { const current = run(); applyStyleSnapshot(current, loseStyle(snapshotStyle(current), options.tuning())); },
-    recompute: () => { const current = run(), next = rankForCombo(current.combo, options.tuning().tiers);
-      const before = snapshotStyle(current); current.mult = next.mult; current.rank = next.rank;
-      options.observeStyle?.(undefined, before, snapshotStyle(current), options.tuning()); },
-    update: (dt: number) => { const current = run(); applyStyleSnapshot(current, updateStyle(snapshotStyle(current), options.tuning(), dt)); },
+    check: () => {
+      if (options.persistentEffects?.() !== false) options.achievementCheck();
+    },
+    loseStyle: () => {
+      const current = run();
+      applyStyleSnapshot(current, loseStyle(snapshotStyle(current), options.tuning()));
+    },
+    recompute: () => {
+      const current = run(),
+        next = rankForCombo(current.combo, options.tuning().tiers);
+      const before = snapshotStyle(current);
+      current.mult = next.mult;
+      current.rank = next.rank;
+      options.observeStyle?.(undefined, before, snapshotStyle(current), options.tuning());
+    },
+    update: (dt: number) => {
+      const current = run();
+      applyStyleSnapshot(current, updateStyle(snapshotStyle(current), options.tuning(), dt));
+    },
     color: (multiplier: number) => trickColor(multiplier, options.colors()),
-    splitProjectile: (projectile: TProjectile) => { splitParryProjectile(projectile, options.projectileSpeed(),
-      options.createProjectile, options.addProjectile); },
-    formatTime: (seconds: number) => `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`,
+    splitProjectile: (projectile: TProjectile) => {
+      splitParryProjectile(projectile, options.projectileSpeed(), options.createProjectile, options.addProjectile);
+    },
+    formatTime: (seconds: number) =>
+      `${String(Math.floor(seconds / 60))}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`,
   });
 }

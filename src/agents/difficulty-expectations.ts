@@ -1,11 +1,6 @@
 import type { RunDifficulty } from "../gameplay/run/session";
 
-export type TearDifficultyRiskPosture =
-  | "exploratory"
-  | "balanced"
-  | "disciplined"
-  | "high-discipline"
-  | "no-contact";
+export type TearDifficultyRiskPosture = "exploratory" | "balanced" | "disciplined" | "high-discipline" | "no-contact";
 
 export interface TearDifficultyExpectation {
   readonly difficulty: RunDifficulty;
@@ -36,21 +31,41 @@ function expectation(
 }
 
 export const TEAR_DIFFICULTY_EXPECTATIONS: readonly TearDifficultyExpectation[] = Object.freeze([
-  expectation("easy", 0, "exploratory",
+  expectation(
+    "easy",
+    0,
+    "exploratory",
     ["explore broadly", "use lower defensive urgency", "validate novice-readable routes"],
-    ["legibility", "mechanic-discovery", "general-synergy"]),
-  expectation("normal", 1, "balanced",
+    ["legibility", "mechanic-discovery", "general-synergy"],
+  ),
+  expectation(
+    "normal",
+    1,
+    "balanced",
     ["balance damage, defense, and recovery", "represent intended general play"],
-    ["build-coherence", "sustain", "damage"]),
-  expectation("hard", 2, "disciplined",
+    ["build-coherence", "sustain", "damage"],
+  ),
+  expectation(
+    "hard",
+    2,
+    "disciplined",
     ["rank threats strongly", "value sustain", "avoid unsupported greed"],
-    ["sustain", "crowd-control", "boss-readiness"]),
-  expectation("extreme", 3, "high-discipline",
+    ["sustain", "crowd-control", "boss-readiness"],
+  ),
+  expectation(
+    "extreme",
+    3,
+    "high-discipline",
     ["prioritize crowd control", "route efficiently", "use a low-greed risk budget"],
-    ["survivability", "crowd-control", "recovery", "boss-damage"]),
-  expectation("onehit", 4, "no-contact",
+    ["survivability", "crowd-control", "recovery", "boss-damage"],
+  ),
+  expectation(
+    "onehit",
+    4,
+    "no-contact",
     ["maintain defensive spacing", "respect every telegraph", "parry selectively", "avoid contact"],
-    ["no-contact-safety", "control", "mobility", "safe-boss-damage"]),
+    ["no-contact-safety", "control", "mobility", "safe-boss-damage"],
+  ),
 ]);
 
 export const TEAR_DIFFICULTY_FAIRNESS_METRICS = Object.freeze([

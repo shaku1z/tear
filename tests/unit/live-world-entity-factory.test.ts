@@ -16,26 +16,63 @@ interface ConstructorCall {
 }
 
 function fixtureDependencies(calls: ConstructorCall[]): LiveWorldEntityDependencies {
-  class FixturePlayer { constructor(readonly x: number, readonly y: number) {} }
-  class FixtureBlade { readonly kind = "blade"; }
-  class FixtureProjectile {
-    constructor(readonly x: number, readonly y: number, readonly vx: number, readonly vy: number) {}
+  class FixturePlayer {
+    constructor(
+      readonly x: number,
+      readonly y: number,
+    ) {}
   }
-  const enemy = (kind: string) => class {
-    readonly cfg = {};
-    readonly damageTakenMult = 1;
-    readonly kind = kind;
-    constructor(readonly x: number, readonly y: number, ...extra: unknown[]) {
-      calls.push({ kind, x, y, extra });
-    }
-    hit(): number { return 0; }
-  };
+  class FixtureBlade {
+    readonly kind = "blade";
+  }
+  class FixtureProjectile {
+    constructor(
+      readonly x: number,
+      readonly y: number,
+      readonly vx: number,
+      readonly vy: number,
+    ) {}
+  }
+  const enemy = (kind: string) =>
+    class {
+      readonly cfg = {};
+      readonly damageTakenMult = 1;
+      readonly kind = kind;
+      constructor(
+        readonly x: number,
+        readonly y: number,
+        ...extra: unknown[]
+      ) {
+        calls.push({ kind, x, y, extra });
+      }
+      hit(): number {
+        return 0;
+      }
+    };
   return {
-    Player: FixturePlayer, Blade: FixtureBlade, Projectile: FixtureProjectile,
-    Charger: enemy("charger"), Ranged: enemy("ranged"), Flyer: enemy("flyer"), Bomber: enemy("bomber"),
-    Armored: enemy("armored"), Wraith: enemy("wraith"), Chimera: enemy("chimera"), Warden: enemy("warden"),
-    Colossus: enemy("colossus"), Aldric: enemy("aldric"), Rootbound: enemy("rootbound"), WhiteHart: enemy("white-hart"), Rimehound: enemy("rimehound"), MirrorHost: enemy("echo"), Source: enemy("source"),
-    VoidWisp: enemy("void-wisp"), ReflectionEnemy: enemy("reflection"), Support: enemy("support"), Rootbinder: enemy("rootbinder"), Boss: enemy("boss"),
+    Player: FixturePlayer,
+    Blade: FixtureBlade,
+    Projectile: FixtureProjectile,
+    Charger: enemy("charger"),
+    Ranged: enemy("ranged"),
+    Flyer: enemy("flyer"),
+    Bomber: enemy("bomber"),
+    Armored: enemy("armored"),
+    Wraith: enemy("wraith"),
+    Chimera: enemy("chimera"),
+    Warden: enemy("warden"),
+    Colossus: enemy("colossus"),
+    Aldric: enemy("aldric"),
+    Rootbound: enemy("rootbound"),
+    WhiteHart: enemy("white-hart"),
+    Rimehound: enemy("rimehound"),
+    MirrorHost: enemy("echo"),
+    Source: enemy("source"),
+    VoidWisp: enemy("void-wisp"),
+    ReflectionEnemy: enemy("reflection"),
+    Support: enemy("support"),
+    Rootbinder: enemy("rootbinder"),
+    Boss: enemy("boss"),
   } as unknown as LiveWorldEntityDependencies;
 }
 
@@ -55,14 +92,38 @@ describe("live world entity factory", () => {
     factory.finalizeEnemy?.("echo", echo, restoredRun);
 
     expect(calls.map((call) => call.kind)).toEqual([
-      "charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera",
-      "warden", "colossus", "aldric", "rootbound", "white-hart", "echo", "source", "void-wisp", "reflection",
-      "support", "support", "support", "support", "rootbinder", "rimehound", "boss",
+      "charger",
+      "ranged",
+      "flyer",
+      "bomber",
+      "armored",
+      "wraith",
+      "chimera",
+      "warden",
+      "colossus",
+      "aldric",
+      "rootbound",
+      "white-hart",
+      "echo",
+      "source",
+      "void-wisp",
+      "reflection",
+      "support",
+      "support",
+      "support",
+      "support",
+      "rootbinder",
+      "rimehound",
+      "boss",
     ]);
     expect(calls.every((call) => call.x === 40 && call.y === 50)).toBe(true);
     expect(calls.find((call) => call.kind === "echo")?.extra).toEqual([initialRun.mods]);
-    expect(calls.filter((call) => call.kind === "support").map((call) => call.extra[0]))
-      .toEqual(["priest", "herald", "mender", "anchor"]);
+    expect(calls.filter((call) => call.kind === "support").map((call) => call.extra[0])).toEqual([
+      "priest",
+      "herald",
+      "mender",
+      "anchor",
+    ]);
     expect((echo as { _mods?: unknown })._mods).toBe(restoredRun.mods);
   });
 

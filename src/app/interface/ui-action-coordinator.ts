@@ -11,7 +11,10 @@ export interface UiActionButton extends FocusableRect {
   readonly confirm?: boolean;
 }
 
-export interface UiPoint { readonly x: number; readonly y: number }
+export interface UiPoint {
+  readonly x: number;
+  readonly y: number;
+}
 
 /**
  * The one settle window shared by every confirm path (keyboard, controller,
@@ -50,7 +53,11 @@ export interface UiConfirmGate {
   readonly pointer: boolean;
 }
 
-export function uiConfirmGate(screen: string, screenAgeSeconds: number, confirmReleasedSinceOpen: boolean): UiConfirmGate {
+export function uiConfirmGate(
+  screen: string,
+  screenAgeSeconds: number,
+  confirmReleasedSinceOpen: boolean,
+): UiConfirmGate {
   const settled = screenAgeSeconds >= UI_CONFIRM_SETTLE_SECONDS;
   return Object.freeze({
     confirm: !screenNeedsConfirmArming(screen) || (settled && confirmReleasedSinceOpen),
@@ -106,8 +113,12 @@ export interface UiPointerDecision {
 }
 
 export function pointInUiRect(rect: FocusableRect, point: UiPoint, padding = 0): boolean {
-  return point.x >= rect.x - padding && point.x <= rect.x + rect.w + padding &&
-    point.y >= rect.y - padding && point.y <= rect.y + rect.h + padding;
+  return (
+    point.x >= rect.x - padding &&
+    point.x <= rect.x + rect.w + padding &&
+    point.y >= rect.y - padding &&
+    point.y <= rect.y + rect.h + padding
+  );
 }
 
 export function uiScrollDelta(scrollY: number, pageUp: boolean, pageDown: boolean, pageSize = 620): number {
@@ -120,14 +131,17 @@ export interface UiTabDecision<Key> {
 }
 
 export function stepUiTab<Key>(
-  tabs: readonly (readonly [Key, ...readonly unknown[]])[],
+  tabs: readonly (readonly [Key, ...(readonly unknown[])])[],
   current: Key,
   tabPrevious: boolean,
   tabNext: boolean,
 ): UiTabDecision<Key> {
   const step = (tabNext ? 1 : 0) - (tabPrevious ? 1 : 0);
   if (step === 0) return Object.freeze({ key: current, changed: false });
-  const currentIndex = Math.max(0, tabs.findIndex((tab) => tab[0] === current));
+  const currentIndex = Math.max(
+    0,
+    tabs.findIndex((tab) => tab[0] === current),
+  );
   const next = tabs[currentIndex + step];
   return next === undefined
     ? Object.freeze({ key: current, changed: false })
@@ -167,14 +181,30 @@ function quickAction(
 
 export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
   if (input.screen === "playing") {
-    return Object.freeze({ focus: input.focus, scroll: input.scroll, action: null, consumeBack: false, pointer: "leave", playUiSound: false });
+    return Object.freeze({
+      focus: input.focus,
+      scroll: input.scroll,
+      action: null,
+      consumeBack: false,
+      pointer: "leave",
+      playUiSound: false,
+    });
   }
 
-  const scroll = Math.max(0, Math.min(6_000,
-    input.scroll + uiScrollDelta(input.scrollY, input.pageUp, input.pageDown)));
+  const scroll = Math.max(
+    0,
+    Math.min(6_000, input.scroll + uiScrollDelta(input.scrollY, input.pageUp, input.pageDown)),
+  );
   const enabled = enabledButtonIndexes(input.buttons);
   if (enabled.length === 0) {
-    return Object.freeze({ focus: input.focus, scroll, action: null, consumeBack: false, pointer: "consume", playUiSound: false });
+    return Object.freeze({
+      focus: input.focus,
+      scroll,
+      action: null,
+      consumeBack: false,
+      pointer: "consume",
+      playUiSound: false,
+    });
   }
 
   let focus = input.focus;
@@ -185,12 +215,18 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
   }
 
   let position = enabled.indexOf(focus);
-  if (position < 0) { position = 0; focus = enabled[0] ?? focus; }
+  if (position < 0) {
+    position = 0;
+    focus = enabled[0] ?? focus;
+  }
   let moved = false;
   for (const direction of ["left", "right", "up", "down"] as const) {
     if (moved || !input.directions[direction]) continue;
     const nextFocus = findDirectionalFocus(input.buttons, enabled, focus, direction);
-    if (nextFocus !== null) { focus = nextFocus; moved = true; }
+    if (nextFocus !== null) {
+      focus = nextFocus;
+      moved = true;
+    }
   }
   if (!moved) {
     if (input.previous) focus = enabled[(position - 1 + enabled.length) % enabled.length] ?? focus;
@@ -200,14 +236,19 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
   // Navigation above stays live through the settle window; choices wait for the gate.
   const gate = uiConfirmGate(input.screen, input.screenAgeSeconds, input.confirmReleasedSinceOpen);
   const shortcut = gate.confirm ? quickAction(input.screen, input.pressed, input.buttons, input.context1) : null;
-  if (shortcut) return Object.freeze({ focus, scroll, action: shortcut, consumeBack: false, pointer: "leave", playUiSound: false });
+  if (shortcut)
+    return Object.freeze({ focus, scroll, action: shortcut, consumeBack: false, pointer: "leave", playUiSound: false });
 
   if (input.back) {
     const index = input.buttons.findIndex((button) => button.enabled !== false && button.label?.includes("BACK"));
     if (index >= 0) {
       return Object.freeze({
-        focus, scroll, action: Object.freeze({ type: "activate-button", index, source: "back" }),
-        consumeBack: true, pointer: "leave", playUiSound: true,
+        focus,
+        scroll,
+        action: Object.freeze({ type: "activate-button", index, source: "back" }),
+        consumeBack: true,
+        pointer: "leave",
+        playUiSound: true,
       });
     }
   }
@@ -215,12 +256,21 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
   const focused = input.buttons[focus];
   if (gate.confirm && input.confirm && focused !== undefined && focused.enabled !== false) {
     return Object.freeze({
-      focus, scroll, action: Object.freeze({ type: "activate-button", index: focus, source: "confirm" }),
-      consumeBack: input.back, pointer: "leave", playUiSound: true,
+      focus,
+      scroll,
+      action: Object.freeze({ type: "activate-button", index: focus, source: "confirm" }),
+      consumeBack: input.back,
+      pointer: "leave",
+      playUiSound: true,
     });
   }
   return Object.freeze({
-    focus, scroll, action: null, consumeBack: input.back, pointer: gate.pointer ? "read" : "consume", playUiSound: false,
+    focus,
+    scroll,
+    action: null,
+    consumeBack: input.back,
+    pointer: gate.pointer ? "read" : "consume",
+    playUiSound: false,
   });
 }
 
@@ -239,7 +289,9 @@ export function coordinateUiPointer(
       return Object.freeze({ focus: index, action: null, playUiSound: true });
     }
     return Object.freeze({
-      focus, action: Object.freeze({ type: "activate-button", index, source: "pointer" }), playUiSound: true,
+      focus,
+      action: Object.freeze({ type: "activate-button", index, source: "pointer" }),
+      playUiSound: true,
     });
   }
   return Object.freeze({ focus, action: null, playUiSound: false });

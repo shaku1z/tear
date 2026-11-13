@@ -20,22 +20,32 @@ async function serveProductionBuild(directory) {
     const pathname = decodeURIComponent(new URL(request.url, "http://127.0.0.1").pathname);
     const candidate = path.resolve(directory, pathname === "/" ? "index.html" : pathname.slice(1));
     const escaped = path.relative(directory, candidate);
-    if (escaped.startsWith("..") || path.isAbsolute(escaped) || !fs.existsSync(candidate) || fs.statSync(candidate).isDirectory()) {
-      response.writeHead(404).end(); return;
+    if (
+      escaped.startsWith("..") ||
+      path.isAbsolute(escaped) ||
+      !fs.existsSync(candidate) ||
+      fs.statSync(candidate).isDirectory()
+    ) {
+      response.writeHead(404).end();
+      return;
     }
-    response.setHeader("Content-Type", contentType(candidate)); fs.createReadStream(candidate).pipe(response);
+    response.setHeader("Content-Type", contentType(candidate));
+    fs.createReadStream(candidate).pipe(response);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Class-C production server did not bind");
   return Object.freeze({
     origin: `http://127.0.0.1:${String(address.port)}`,
-    close: async () => { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); },
+    close: async () => {
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+    },
   });
 }
 
 function logicalPoint(logical, viewport) {
-  return { x: logical.x / 1600 * viewport.width, y: logical.y / 900 * viewport.height };
+  return { x: (logical.x / 1600) * viewport.width, y: (logical.y / 900) * viewport.height };
 }
 
 /**
@@ -56,7 +66,8 @@ function createClassCControls(page, viewport, record) {
     },
     key: async (code, phase) => {
       recordInput({ device: "keyboard", code, phase });
-      if (phase === "down") await page.keyboard.down(code); else await page.keyboard.up(code);
+      if (phase === "down") await page.keyboard.down(code);
+      else await page.keyboard.up(code);
     },
     pointer: async (logical, phase = "click", button = "left") => {
       const point = logicalPoint(logical, viewport);
@@ -71,10 +82,13 @@ function createClassCControls(page, viewport, record) {
       recordInput({ device: "touch", phase, identifier, logical, point });
       touchSession ??= await page.context().newCDPSession(page);
       const type = phase === "start" ? "touchStart" : phase === "end" ? "touchEnd" : "touchMove";
-      const points = phase === "end" ? [] : [{ x: point.x, y: point.y, id: identifier, radiusX: 8, radiusY: 8, force: 1 }];
+      const points =
+        phase === "end" ? [] : [{ x: point.x, y: point.y, id: identifier, radiusX: 8, radiusY: 8, force: 1 }];
       await touchSession.send("Input.dispatchTouchEvent", { type, touchPoints: points });
     },
-    wait: async (milliseconds) => { await page.waitForTimeout(milliseconds); },
+    wait: async (milliseconds) => {
+      await page.waitForTimeout(milliseconds);
+    },
   });
 }
 

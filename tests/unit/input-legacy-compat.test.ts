@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  createLegacyInputCompatibility,
-  type LegacyBrowserPorts,
-} from "../../src/input/legacy-compat";
+import { createLegacyInputCompatibility, type LegacyBrowserPorts } from "../../src/input/legacy-compat";
 
 describe("legacy input compatibility composition", () => {
   it("injects dependencies and preserves the callable lexical identifiers", () => {
@@ -24,7 +21,11 @@ describe("legacy input compatibility composition", () => {
     const compatibility = createLegacyInputCompatibility(ports, { createInput, createGamepad });
 
     expect(compatibility).toMatchObject({ Input, PAD, PAD_PRESETS });
-    expect(createInput).toHaveBeenCalledWith(expect.objectContaining({ config: ports.config, semantic: compatibility.semanticInput }));
-    expect(createGamepad).toHaveBeenCalledWith(expect.objectContaining({ input: Input, semantic: compatibility.semanticInput }));
+    expect(createInput).toHaveBeenCalledWith(
+      expect.objectContaining({ config: ports.config, semantic: compatibility.semanticInput }),
+    );
+    expect(createGamepad).toHaveBeenCalledWith(
+      expect.objectContaining({ input: Input, semantic: compatibility.semanticInput }),
+    );
   });
 });

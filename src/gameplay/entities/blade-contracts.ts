@@ -6,38 +6,85 @@
 //   is reclaimed by getting within tether range and recalling it.
 import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
 import type {
-  WeaponActionResult, WeaponBladeContext, WeaponDamageContext, WeaponPlayerContext,
-  WeaponQualityContext, WeaponUpdateContext,
+  WeaponActionResult,
+  WeaponBladeContext,
+  WeaponDamageContext,
+  WeaponPlayerContext,
+  WeaponQualityContext,
+  WeaponUpdateContext,
 } from "../weapons";
 import type { EnvironmentCounterplayTag } from "../environment/environment-definitions";
 
 export type GameConfig = typeof GAME_CONFIG;
 
-export interface BladePoint { x: number; y: number }
-export interface BladeThreadcutWaypoint extends BladePoint { target: BladeEnemyPort }
+export interface BladePoint {
+  x: number;
+  y: number;
+}
+export interface BladeThreadcutWaypoint extends BladePoint {
+  target: BladeEnemyPort;
+}
 export interface BladeWeaponProjectileEvent {
   readonly type: "razorRound" | "backblastRound";
-  readonly x: number; readonly y: number; readonly vx: number; readonly vy: number;
-  readonly damage: number; readonly attackId: number; readonly throwId: number; readonly remote: boolean;
+  readonly x: number;
+  readonly y: number;
+  readonly vx: number;
+  readonly vy: number;
+  readonly damage: number;
+  readonly attackId: number;
+  readonly throwId: number;
+  readonly remote: boolean;
   readonly secondary: boolean;
 }
 export interface BladeSlingReleaseEvent {
   readonly type: "slingRelease";
-  readonly sourceX: number; readonly sourceY: number; readonly x: number; readonly y: number;
-  readonly vx: number; readonly vy: number; readonly attackId: number; readonly throwId: number;
+  readonly sourceX: number;
+  readonly sourceY: number;
+  readonly x: number;
+  readonly y: number;
+  readonly vx: number;
+  readonly vy: number;
+  readonly attackId: number;
+  readonly throwId: number;
 }
 export type BladeWeaponEvent = BladeWeaponProjectileEvent | BladeSlingReleaseEvent;
 export type BladeActionResult = WeaponActionResult;
 export interface BladeChannels {
-  throwPower: number; throwSpeed: number; remoteRange: number;
-  secondaryPower: number; returnSpeed: number; controlDuration: number;
+  throwPower: number;
+  throwSpeed: number;
+  remoteRange: number;
+  secondaryPower: number;
+  returnSpeed: number;
+  controlDuration: number;
 }
-export interface BladePlatformPort { x: number; y: number; w: number; h: number; oneway?: boolean; floor?: boolean }
-export interface BladePlayerPort { x: number; y: number; vx: number; vy: number; facing: number }
+export interface BladePlatformPort {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  oneway?: boolean;
+  floor?: boolean;
+}
+export interface BladePlayerPort {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  facing: number;
+}
 export interface BladeEnemyPort {
   readonly hp: number;
-  x: number; y: number; vx: number; vy: number; radius: number; dead: boolean; dying?: boolean;
-  isBoss?: boolean; weight: number; anchored?: boolean; stun: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  dead: boolean;
+  dying?: boolean;
+  isBoss?: boolean;
+  weight: number;
+  anchored?: boolean;
+  stun: number;
   cfg?: { knockbackTaken?: number };
   applyBreak?: ((power: number) => void) | undefined;
   hit(damage: number, fromX: number, fromY: number): void;
@@ -95,22 +142,42 @@ export interface BladeDependencies {
 }
 
 export interface BladeEntity {
-  x: number; y: number; vx: number; vy: number; state: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  state: string;
 }
 
 export interface BladeRenderSnapshot {
-  readonly x: number; readonly y: number; readonly angle: number;
-  readonly tipX: number; readonly tipY: number; readonly glowV: number;
-  readonly state: string; readonly throwSizeMult: number; readonly model: string;
+  readonly x: number;
+  readonly y: number;
+  readonly angle: number;
+  readonly tipX: number;
+  readonly tipY: number;
+  readonly glowV: number;
+  readonly state: string;
+  readonly throwSizeMult: number;
+  readonly model: string;
   readonly trail: readonly Readonly<{ hx: number; hy: number; tx: number; ty: number }>[];
-  readonly trailColor?: string; readonly glowColor?: string; readonly restoredTrail?: boolean;
-  readonly tension: number; readonly riftChambers: number; readonly riftChamberCooldown: number;
+  readonly trailColor?: string;
+  readonly glowColor?: string;
+  readonly restoredTrail?: boolean;
+  readonly tension: number;
+  readonly riftChambers: number;
+  readonly riftChamberCooldown: number;
   readonly chainPoints: readonly BladePoint[];
   readonly reversals: readonly Readonly<{
-    x: number; y: number; directionX: number; directionY: number; exited: boolean;
+    x: number;
+    y: number;
+    directionX: number;
+    directionY: number;
+    exited: boolean;
   }>[];
   readonly finalFree?: boolean;
-  readonly hostile: boolean; readonly stolenBy: unknown; readonly hideThrowUI?: boolean;
+  readonly hostile: boolean;
+  readonly stolenBy: unknown;
+  readonly hideThrowUI?: boolean;
   handPos(player: BladePlayerPort): BladePoint;
   lastHand(): BladePoint | null;
   actionPoint(): BladePoint;

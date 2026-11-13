@@ -11,7 +11,7 @@ async function filesBelow(directory, prefix = "") {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const name = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
-    if (entry.isDirectory()) files.push(...await filesBelow(join(directory, entry.name), name));
+    if (entry.isDirectory()) files.push(...(await filesBelow(join(directory, entry.name), name)));
     else if (entry.isFile()) files.push(name);
   }
   return files.sort();
@@ -40,15 +40,21 @@ export async function unrequestedCrazyGamesFiles(directory) {
     for (const name of cueReferences(cueName, cue)) requested.add(name);
   }
   const cueDirectories = new Set(cueNames.map((name) => `${posix.dirname(name)}/`));
-  const cueAudio = (name) => !name.endsWith(".json")
-    && [...cueDirectories].some((cueDirectory) => name.startsWith(cueDirectory));
+  const cueAudio = (name) =>
+    !name.endsWith(".json") && [...cueDirectories].some((cueDirectory) => name.startsWith(cueDirectory));
   // Branding is requested by path from the page or a bundle; the CrazyGames page drops
   // the standalone PWA block, so its install icons are referenced by nothing.
-  const text = (await Promise.all(files.filter((name) => name === "index.html" || /^assets\/.+\.(?:js|css)$/u.test(name))
-    .map((name) => readFile(join(directory, ...name.split("/")), "utf8")))).join("\n");
+  const text = (
+    await Promise.all(
+      files
+        .filter((name) => name === "index.html" || /^assets\/.+\.(?:js|css)$/u.test(name))
+        .map((name) => readFile(join(directory, ...name.split("/")), "utf8")),
+    )
+  ).join("\n");
   const brandingRequested = (name) => text.includes(name);
-  return files.filter((name) => (cueAudio(name) && !requested.has(name))
-    || (name.startsWith("branding/") && !brandingRequested(name)));
+  return files.filter(
+    (name) => (cueAudio(name) && !requested.has(name)) || (name.startsWith("branding/") && !brandingRequested(name)),
+  );
 }
 
 /** Removes unrequested files from a CrazyGames build directory; returns what went. */

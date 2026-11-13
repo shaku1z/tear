@@ -14,6 +14,9 @@ export function createLiveShopFeedbackState(): LiveShopFeedbackState {
   let flash: Readonly<{ id: string; time: number }> | null = null;
   return Object.freeze({
     snapshot: (): LiveShopFeedbackSnapshot => Object.freeze({ displayedCoins, flash }),
-    set: (value: LiveShopFeedbackSnapshot): void => { displayedCoins = value.displayedCoins; flash = value.flash; },
+    set: (value: LiveShopFeedbackSnapshot): void => {
+      displayedCoins = value.displayedCoins;
+      flash = value.flash;
+    },
   });
 }

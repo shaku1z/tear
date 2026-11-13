@@ -20,7 +20,9 @@ function makeContext(): UpgradeApplyContext {
       tempoStk: 0,
       tempoT: 0,
       iframe: 0,
-      heal() { return; },
+      heal() {
+        return;
+      },
     },
     config: CONFIG,
     blade: {
@@ -60,9 +62,16 @@ describe("weapon-by-ability conformance", () => {
           Object.assign(CONFIG, structuredClone(baseline));
           applyWeapon(CONFIG, weapon.id);
           const context = makeContext();
-          expect(() => { applyUpgrade(upgrade, context); }, `${weapon.id} + ${upgrade.id}`).not.toThrow();
+          expect(() => {
+            applyUpgrade(upgrade, context);
+          }, `${weapon.id} + ${upgrade.id}`).not.toThrow();
           for (let tier = 0; tier < (upgrade.tiers?.length ?? 0); tier++) {
-            expect(() => { tierUp(upgrade.id, context); }, `${weapon.id} + ${upgrade.id} tier ${String(tier + 2)}`).not.toThrow();
+            expect(
+              () => {
+                tierUp(upgrade.id, context);
+              },
+              `${weapon.id} + ${upgrade.id} tier ${String(tier + 2)}`,
+            ).not.toThrow();
           }
           expect(context.mods.owned[upgrade.id], `${weapon.id} records ${upgrade.id}`).toBe(1);
           expectFiniteNumbers(context, `${weapon.id}.${upgrade.id}`);

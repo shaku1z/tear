@@ -14,7 +14,8 @@ const mirrorRoot = path.join(repositoryRoot, ".claude", "skills");
 
 function skillDirectories(root) {
   if (!fs.existsSync(root)) return [];
-  return fs.readdirSync(root, { withFileTypes: true })
+  return fs
+    .readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && fs.existsSync(path.join(root, entry.name, "SKILL.md")))
     .map((entry) => entry.name)
     .sort();
@@ -42,8 +43,15 @@ test("every repository skill has a Claude Code pointer with the same name and de
     const mirror = readFrontmatter(mirrorFile);
     assert.equal(source.fields.name, name, `.agents/skills/${name} frontmatter name must match its directory`);
     assert.equal(mirror.fields.name, source.fields.name, `${name}: pointer name differs from the source skill`);
-    assert.equal(mirror.fields.description, source.fields.description, `${name}: pointer description differs from the source skill`);
-    assert.ok(mirror.body.includes(`.agents/skills/${name}/SKILL.md`), `${name}: pointer must name the source skill path`);
+    assert.equal(
+      mirror.fields.description,
+      source.fields.description,
+      `${name}: pointer description differs from the source skill`,
+    );
+    assert.ok(
+      mirror.body.includes(`.agents/skills/${name}/SKILL.md`),
+      `${name}: pointer must name the source skill path`,
+    );
   }
 });
 

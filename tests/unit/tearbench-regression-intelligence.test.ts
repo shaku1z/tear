@@ -44,10 +44,14 @@ describe("TearBench regression intelligence", () => {
   it("reproduces and minimizes action, timeline, state, entity, build, and RNG evidence", () => {
     const original: Action[] = ["move", "jump", "dash", "aim", "move"];
     let verifications = 0;
-    const minimized = minimizeTimeline(original, (candidate) => {
-      verifications += 1;
-      return candidate.includes("dash");
-    }, 5);
+    const minimized = minimizeTimeline(
+      original,
+      (candidate) => {
+        verifications += 1;
+        return candidate.includes("dash");
+      },
+      5,
+    );
     expect(minimized).toEqual(["dash"]);
     expect(verifications).toBeGreaterThanOrEqual(5);
 
@@ -70,14 +74,42 @@ describe("TearBench regression intelligence", () => {
       { id: "other", signature: "sha256:other" },
     ]);
     expect(clusters.get(signature)).toHaveLength(2);
-    expect(adjudicateFailure([
-      { policyId: "competent", basePassed: true, candidatePassed: false, evidenceComplete: true, infrastructureHealthy: true },
-      { policyId: "smoke", basePassed: true, candidatePassed: false, evidenceComplete: true, infrastructureHealthy: true },
-    ])).toBe("product");
-    expect(adjudicateFailure([
-      { policyId: "competent", basePassed: true, candidatePassed: false, evidenceComplete: true, infrastructureHealthy: true },
-      { policyId: "smoke", basePassed: true, candidatePassed: true, evidenceComplete: true, infrastructureHealthy: true },
-    ])).toBe("policy");
+    expect(
+      adjudicateFailure([
+        {
+          policyId: "competent",
+          basePassed: true,
+          candidatePassed: false,
+          evidenceComplete: true,
+          infrastructureHealthy: true,
+        },
+        {
+          policyId: "smoke",
+          basePassed: true,
+          candidatePassed: false,
+          evidenceComplete: true,
+          infrastructureHealthy: true,
+        },
+      ]),
+    ).toBe("product");
+    expect(
+      adjudicateFailure([
+        {
+          policyId: "competent",
+          basePassed: true,
+          candidatePassed: false,
+          evidenceComplete: true,
+          infrastructureHealthy: true,
+        },
+        {
+          policyId: "smoke",
+          basePassed: true,
+          candidatePassed: true,
+          evidenceComplete: true,
+          infrastructureHealthy: true,
+        },
+      ]),
+    ).toBe("policy");
   });
 
   it("routes ownership, bisects a stable reproduction, and retains graveyard history", () => {

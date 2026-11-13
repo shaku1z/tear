@@ -1,23 +1,17 @@
 import { stableVerificationHash } from "../replay/hash";
 import type { TearSnapshotV1 } from "./contracts";
-import type {
-  TearProgressionEvent,
-  TearSynthesizedProgression,
-} from "./progression-ledger";
+import type { TearProgressionEvent, TearSynthesizedProgression } from "./progression-ledger";
 import { reconstructProgression, synthesizeProgression } from "./progression-ledger";
 import type { TearProgressionReplayResult } from "./progression-replay";
 import { BOSS_FACTORY_IDS, type TearBossId } from "./registries";
 import { bossPhaseAttackAvailable } from "../gameplay/run/boss-definitions";
 import { STAGES } from "../gameplay/stages";
-import {
-  DECLARED_ONE_FRAME_BOUNDARIES,
-  type TearOneFrameBoundaryDefinition,
-} from "./state-forge-factories";
+import { DECLARED_ONE_FRAME_BOUNDARIES, type TearOneFrameBoundaryDefinition } from "./state-forge-factories";
 
 type MutableRecord = Record<string, unknown>;
 
 export const TEAR_BOSS_PHASES = Object.freeze([1, 2, 3] as const);
-export type TearBossPhase = typeof TEAR_BOSS_PHASES[number];
+export type TearBossPhase = (typeof TEAR_BOSS_PHASES)[number];
 
 export interface StateForgeBossPhaseLaunch {
   readonly id: string;
@@ -46,8 +40,7 @@ export interface StateForgeBoundaryLaunch {
   readonly ticks: number;
 }
 
-export type StateForgeExitLaunch = StateForgeBossPhaseLaunch | StateForgeBossFinisherLaunch
-  | StateForgeBoundaryLaunch;
+export type StateForgeExitLaunch = StateForgeBossPhaseLaunch | StateForgeBossFinisherLaunch | StateForgeBoundaryLaunch;
 
 export interface Wave99HammerExitCertificate {
   readonly id: "hard-endless-wave-99-hammer";
@@ -96,16 +89,16 @@ export function certifyWave99HammerProgression(
     throw new TypeError("wave-99 progression must be reachable and target exactly wave 99");
   }
   reconstructProgression(progression.ledger);
-  const earnedPickCount = eventsOfType(progression, "draft.earned").length
-    + eventsOfType(progression, "tier.earned").length;
-  const selectedPickCount = eventsOfType(progression, "draft.selected").length
-    + eventsOfType(progression, "tier.selected").length;
+  const earnedPickCount =
+    eventsOfType(progression, "draft.earned").length + eventsOfType(progression, "tier.earned").length;
+  const selectedPickCount =
+    eventsOfType(progression, "draft.selected").length + eventsOfType(progression, "tier.selected").length;
   const mutationCount = eventsOfType(progression, "configuration.mutated").length;
   const rewardCount = eventsOfType(progression, "reward.granted").length;
   if ([earnedPickCount, selectedPickCount, mutationCount, rewardCount].some((count) => count !== 99)) {
     throw new TypeError(
-      `wave-99 ledger requires 99 earned/selected/mutated/rewarded picks; got `
-      + `${String(earnedPickCount)}/${String(selectedPickCount)}/${String(mutationCount)}/${String(rewardCount)}`,
+      `wave-99 ledger requires 99 earned/selected/mutated/rewarded picks; got ` +
+        `${String(earnedPickCount)}/${String(selectedPickCount)}/${String(mutationCount)}/${String(rewardCount)}`,
     );
   }
   if (snapshotId !== "wave99-start") throw new TypeError("canonical wave-99 snapshot id must be wave99-start");
@@ -154,16 +147,18 @@ export function createWave99HistoricalRunState(certificate: Wave99HammerExitCert
   const baseKills = Math.floor(certificate.metrics.kills / 99);
   let allocatedKills = 0;
   const waveSeconds = certificate.metrics.elapsedTicks / 120 / 99;
-  const waveLog = Object.freeze(Array.from({ length: completedWaves }, (_, index) => {
-    const kills = baseKills + (index < certificate.metrics.kills % 99 ? 1 : 0);
-    allocatedKills += kills;
-    return Object.freeze({
-      wave: index + 1,
-      time: waveSeconds,
-      kills,
-      peak: Math.min(10, 2 + Math.floor(index / 10)),
-    });
-  }));
+  const waveLog = Object.freeze(
+    Array.from({ length: completedWaves }, (_, index) => {
+      const kills = baseKills + (index < certificate.metrics.kills % 99 ? 1 : 0);
+      allocatedKills += kills;
+      return Object.freeze({
+        wave: index + 1,
+        time: waveSeconds,
+        kills,
+        peak: Math.min(10, 2 + Math.floor(index / 10)),
+      });
+    }),
+  );
   return Object.freeze({
     runTime: certificate.metrics.elapsedTicks / 120,
     waveLog,
@@ -172,25 +167,36 @@ export function createWave99HistoricalRunState(certificate: Wave99HammerExitCert
 }
 
 export function createBossPhaseLaunchMatrix(): readonly StateForgeBossPhaseLaunch[] {
-  return Object.freeze(BOSS_FACTORY_IDS.flatMap((boss) => TEAR_BOSS_PHASES.map((phase) => Object.freeze({
-    id: `boss-${boss}-phase-${String(phase)}`,
-    kind: "boss-phase" as const,
-    boss,
-    phase,
-    attack: bossPhaseAttackAvailable(boss, phase) ? "opening-commit" as const : "unavailable" as const,
-    attackFrame: 0 as const,
-  }))));
+  return Object.freeze(
+    BOSS_FACTORY_IDS.flatMap((boss) =>
+      TEAR_BOSS_PHASES.map((phase) =>
+        Object.freeze({
+          id: `boss-${boss}-phase-${String(phase)}`,
+          kind: "boss-phase" as const,
+          boss,
+          phase,
+          attack: bossPhaseAttackAvailable(boss, phase) ? ("opening-commit" as const) : ("unavailable" as const),
+          attackFrame: 0 as const,
+        }),
+      ),
+    ),
+  );
 }
 
 export function createOneFrameBoundaryLaunchMatrix(): readonly StateForgeBoundaryLaunch[] {
-  return Object.freeze(DECLARED_ONE_FRAME_BOUNDARIES.flatMap((boundary) =>
-    (["before", "at", "after"] as const).map((position) => Object.freeze({
-      id: `${boundary.id}-${position}`,
-      kind: "one-frame-boundary" as const,
-      boundary: boundary.id,
-      position,
-      ticks: boundary[position],
-    }))));
+  return Object.freeze(
+    DECLARED_ONE_FRAME_BOUNDARIES.flatMap((boundary) =>
+      (["before", "at", "after"] as const).map((position) =>
+        Object.freeze({
+          id: `${boundary.id}-${position}`,
+          kind: "one-frame-boundary" as const,
+          boundary: boundary.id,
+          position,
+          ticks: boundary[position],
+        }),
+      ),
+    ),
+  );
 }
 
 function patchBoss(snapshot: TearSnapshotV1, launch: StateForgeBossPhaseLaunch): void {
@@ -223,12 +229,16 @@ function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinis
   if (boss.factoryId !== launch.boss) {
     throw new TypeError(`${launch.id} source boss is ${String(boss.factoryId)}`);
   }
-  if (boss.dead === true || boss.dying === true || boss.mode === "downed"
-    || typeof boss.hp !== "number" || !(boss.hp > 0)) {
+  if (
+    boss.dead === true ||
+    boss.dying === true ||
+    boss.mode === "downed" ||
+    typeof boss.hp !== "number" ||
+    !(boss.hp > 0)
+  ) {
     throw new TypeError(`${launch.id} requires ${launch.boss} to be live`);
   }
-  if (typeof boss.maxHp !== "number" || !Number.isFinite(boss.maxHp)
-    || boss.maxHp < STATE_FORGE_BOSS_FINISHER_HP) {
+  if (typeof boss.maxHp !== "number" || !Number.isFinite(boss.maxHp) || boss.maxHp < STATE_FORGE_BOSS_FINISHER_HP) {
     throw new TypeError(`${launch.id} source boss maximum HP is invalid`);
   }
   const run = mutableRecord(snapshot.state["tear.run.v1"], "run codec");
@@ -237,14 +247,27 @@ function patchBossFinisher(snapshot: TearSnapshotV1, launch: StateForgeBossFinis
   const lifecycle = mutableRecord(runtime.lifecycle, "run lifecycle");
   const cinema = mutableRecord(snapshot.state["tear.cinematic.v1"], "cinematic codec");
   const ui = mutableRecord(snapshot.state["tear.ui.v1"], "ui codec");
-  if (lifecycle.phase !== "wave-active" || lifecycle.bossWave !== true || lifecycle.reward !== null
-    || ui.screen !== "playing" || cinema.active !== false
-    || !Array.isArray(run.spawnQueue) || run.spawnQueue.length !== 0) {
+  if (
+    lifecycle.phase !== "wave-active" ||
+    lifecycle.bossWave !== true ||
+    lifecycle.reward !== null ||
+    ui.screen !== "playing" ||
+    cinema.active !== false ||
+    !Array.isArray(run.spawnQueue) ||
+    run.spawnQueue.length !== 0
+  ) {
     throw new TypeError(`${launch.id} requires an active, unobstructed production boss frontier`);
   }
   const finalStageIndex = STAGES.length - 1;
-  if (launch.boss === "source" && (run.mode !== "campaign" || run.wave !== 60 || run.stage !== finalStageIndex
-    || run._biomeIdx !== finalStageIndex || run.chapterState !== "WAVE_LIVE" || lifecycle.wave !== 60)) {
+  if (
+    launch.boss === "source" &&
+    (run.mode !== "campaign" ||
+      run.wave !== 60 ||
+      run.stage !== finalStageIndex ||
+      run._biomeIdx !== finalStageIndex ||
+      run.chapterState !== "WAVE_LIVE" ||
+      lifecycle.wave !== 60)
+  ) {
     throw new TypeError(`${launch.id} requires the final campaign Source frontier`);
   }
   if (typeof boss.hpDisplay !== "number" || !Number.isFinite(boss.hpDisplay)) {
@@ -264,12 +287,30 @@ function patchBoundary(snapshot: TearSnapshotV1, launch: StateForgeBoundaryLaunc
   const enemies = snapshot.state["tear.enemy.v1"];
   const bosses = snapshot.state["tear.boss.v1"];
   switch (launch.boundary) {
-    case "hit-threshold": blade.vx = 240 + launch.ticks; blade.vy = 0; break;
-    case "perfect-parry": blade.vx = 780 + launch.ticks; blade.vy = 0; break;
-    case "deflect": blade.vx = 520 + launch.ticks; blade.vy = 0; break;
-    case "slam": blade.vx = 0; blade.vy = 620 + launch.ticks; break;
-    case "power-slam": blade.vx = 0; blade.vy = 1_050 + launch.ticks; break;
-    case "launch": blade.vx = 0; blade.vy = -520 - launch.ticks; break;
+    case "hit-threshold":
+      blade.vx = 240 + launch.ticks;
+      blade.vy = 0;
+      break;
+    case "perfect-parry":
+      blade.vx = 780 + launch.ticks;
+      blade.vy = 0;
+      break;
+    case "deflect":
+      blade.vx = 520 + launch.ticks;
+      blade.vy = 0;
+      break;
+    case "slam":
+      blade.vx = 0;
+      blade.vy = 620 + launch.ticks;
+      break;
+    case "power-slam":
+      blade.vx = 0;
+      blade.vy = 1_050 + launch.ticks;
+      break;
+    case "launch":
+      blade.vx = 0;
+      blade.vy = -520 - launch.ticks;
+      break;
     case "recall-distance":
       blade.state = "returning";
       blade.x = Number(player.x) + 180 + launch.ticks;
@@ -290,8 +331,12 @@ function patchBoundary(snapshot: TearSnapshotV1, launch: StateForgeBoundaryLaunc
       boss.hp = Number(boss.maxHp) * Number(phaseMarks[0] ?? 0.5) + launch.ticks;
       break;
     }
-    case "cooldown": player.dashCd = seconds; break;
-    case "iframe": player.iframe = seconds; break;
+    case "cooldown":
+      player.dashCd = seconds;
+      break;
+    case "iframe":
+      player.iframe = seconds;
+      break;
     case "shield":
       player.shield = Math.max(0, launch.ticks);
       player.stateForgeShieldBoundary = launch.position;
@@ -304,18 +349,21 @@ function patchBoundary(snapshot: TearSnapshotV1, launch: StateForgeBoundaryLaunc
 }
 
 /** Creates a detached, restore-ready snapshot; the captured input is untouched. */
-export function forgeExitLaunchSnapshot(
-  source: TearSnapshotV1,
-  launch: StateForgeExitLaunch,
-): TearSnapshotV1 {
+export function forgeExitLaunchSnapshot(source: TearSnapshotV1, launch: StateForgeExitLaunch): TearSnapshotV1 {
   const forged = structuredClone(source);
   (forged as { id: string }).id = launch.id;
   (forged as { stateClass: TearSnapshotV1["stateClass"] }).stateClass = "surgical-valid";
   (forged as { provenance: TearSnapshotV1["provenance"] }).provenance = Object.freeze({
-    ...source.provenance, actor: "state-forge", producer: "forgeExitLaunchSnapshot", sourceId: source.id,
+    ...source.provenance,
+    actor: "state-forge",
+    producer: "forgeExitLaunchSnapshot",
+    sourceId: source.id,
   });
   (forged as { lineage: NonNullable<TearSnapshotV1["lineage"]> }).lineage = Object.freeze({
-    parentId: source.id, relation: "forked-at", parentRootHash: source.hashes.exact, forkTick: source.tick,
+    parentId: source.id,
+    relation: "forked-at",
+    parentRootHash: source.hashes.exact,
+    forkTick: source.tick,
   });
   if (launch.kind === "boss-phase") patchBoss(forged, launch);
   else if (launch.kind === "boss-finisher") patchBossFinisher(forged, launch);

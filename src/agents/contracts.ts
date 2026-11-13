@@ -1,15 +1,20 @@
 import type { GameAction } from "../input/game-action";
 import type { TearObservationClass, TearObservationV1 } from "../tearbench/contracts";
 
-export type TearAgentProfileId =
-  | "smoke" | "competent" | "style" | "survival" | "chaos" | "menu" | "transition-hunter";
+export type TearAgentProfileId = "smoke" | "competent" | "style" | "survival" | "chaos" | "menu" | "transition-hunter";
 
 export type TearAgentObjective =
-  | "navigate-menu" | "start-run" | "survive" | "clear-wave" | "defeat-boss"
-  | "select-reward" | "recover" | "exercise-transition" | "return-to-menu";
+  | "navigate-menu"
+  | "start-run"
+  | "survive"
+  | "clear-wave"
+  | "defeat-boss"
+  | "select-reward"
+  | "recover"
+  | "exercise-transition"
+  | "return-to-menu";
 
-export type TearBladeManeuver =
-  | "track" | "slash" | "throw" | "recall" | "parry" | "secondary" | "recover";
+export type TearBladeManeuver = "track" | "slash" | "throw" | "recall" | "parry" | "secondary" | "recover";
 
 export interface TearAgentUiObservation {
   readonly screen: string;

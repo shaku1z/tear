@@ -10,17 +10,9 @@ import {
   type AdaptiveSoundtrackClient,
 } from "../../src/audio/adaptive-soundtrack";
 import type { AudioGraphContext, AudioNodePort } from "../../src/audio/mixer";
-import type {
-  MusicReplayMetadata,
-  MusicRunSessionMetadata,
-} from "../../src/audio/music-contracts";
-import {
-  BrowserAudioGraphContext,
-  BrowserAudioNodePort,
-} from "../../src/audio/browser-audio";
-import type {
-  TearScoreModuleApi,
-} from "../../src/audio/tear-score-module";
+import type { MusicReplayMetadata, MusicRunSessionMetadata } from "../../src/audio/music-contracts";
+import { BrowserAudioGraphContext, BrowserAudioNodePort } from "../../src/audio/browser-audio";
+import type { TearScoreModuleApi } from "../../src/audio/tear-score-module";
 
 const RUN: MusicRunSessionMetadata = {
   runId: "run-adaptive-1",
@@ -55,27 +47,32 @@ function createApi(observation: Observation): TearScoreModuleApi {
   };
 }
 
-function createModule(observation: Observation): { readonly api: TearScoreModuleApi; readonly AdaptiveSoundtrackAPI: new () => TearScoreModuleApi } {
+function createModule(observation: Observation): {
+  readonly api: TearScoreModuleApi;
+  readonly AdaptiveSoundtrackAPI: new () => TearScoreModuleApi;
+} {
   class AdaptiveSoundtrackAPI implements TearScoreModuleApi {
     readonly #api = createApi(observation);
     initialize(options: Parameters<TearScoreModuleApi["initialize"]>[0]): Promise<void> {
       return this.#api.initialize(options);
     }
-    start(): Promise<void> { return this.#api.start(); }
+    start(): Promise<void> {
+      return this.#api.start();
+    }
     updateContext(context: Parameters<TearScoreModuleApi["updateContext"]>[0]): void {
       this.#api.updateContext(context);
     }
     setMuteReason(reason: string, muted: boolean): void {
       this.#api.setMuteReason(reason, muted);
     }
-    dispose(): Promise<void> { return this.#api.dispose(); }
+    dispose(): Promise<void> {
+      return this.#api.dispose();
+    }
   }
   return { api: createApi(observation), AdaptiveSoundtrackAPI };
 }
 
-function fakeClient(observation: {
-  readonly calls: string[];
-}): AdaptiveSoundtrackClient {
+function fakeClient(observation: { readonly calls: string[] }): AdaptiveSoundtrackClient {
   const replay: MusicReplayMetadata = {
     enabled: true,
     engineVersion: "0.1.0-alpha.1",
@@ -191,9 +188,8 @@ describe("Adaptive Soundtrack compatibility facade", () => {
 
     try {
       delete runtime.Tone;
-      const result = await withPinnedToneHost(
-        { marker: "canonical-success" },
-        () => Promise.resolve().then(() => {
+      const result = await withPinnedToneHost({ marker: "canonical-success" }, () =>
+        Promise.resolve().then(() => {
           expect(Object.prototype.hasOwnProperty.call(runtime, "Tone")).toBe(true);
           expect(runtime.Tone).toEqual({ marker: "canonical-success" });
           return "loaded";
@@ -217,9 +213,8 @@ describe("Adaptive Soundtrack compatibility facade", () => {
     try {
       runtime.Tone = existingTone;
       await expect(
-        withPinnedToneHost(
-          { marker: "canonical-rejected" },
-          () => Promise.resolve().then(() => {
+        withPinnedToneHost({ marker: "canonical-rejected" }, () =>
+          Promise.resolve().then(() => {
             expect(runtime.Tone).toEqual({ marker: "canonical-rejected" });
             throw new Error("canonical import rejected");
           }),

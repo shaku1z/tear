@@ -18,15 +18,27 @@ import { getContext, setContext, start } from "tone/build/esm/core/Global.js";
  * ESM surface defers every global-context read until TearScore installs the
  * AudioSystem-owned context through setContext(). */
 const Transport = {
-  get position() { return getContext().transport.position; },
-  get ticks() { return getContext().transport.ticks; },
-  get bpm() { return getContext().transport.bpm; },
-  get state() { return getContext().transport.state; },
+  get position() {
+    return getContext().transport.position;
+  },
+  get ticks() {
+    return getContext().transport.ticks;
+  },
+  get bpm() {
+    return getContext().transport.bpm;
+  },
+  get state() {
+    return getContext().transport.state;
+  },
   start(time?: string | number, offset?: string | number): void {
     getContext().transport.start(time, offset);
   },
-  pause(time?: string | number): void { getContext().transport.pause(time); },
-  stop(time?: string | number): void { getContext().transport.stop(time); },
+  pause(time?: string | number): void {
+    getContext().transport.pause(time);
+  },
+  stop(time?: string | number): void {
+    getContext().transport.stop(time);
+  },
   schedule(callback: (time: number) => void, time: string | number): number {
     return getContext().transport.schedule(callback, time);
   },
@@ -36,13 +48,32 @@ const Transport = {
   scheduleRepeat(callback: (time: number) => void, interval: string | number): number {
     return getContext().transport.scheduleRepeat(callback, interval);
   },
-  clear(eventId: number): void { getContext().transport.clear(eventId); },
+  clear(eventId: number): void {
+    getContext().transport.clear(eventId);
+  },
 };
 
-function now(): number { return getContext().now(); }
+function now(): number {
+  return getContext().now();
+}
 
 export {
-  Context, Chorus, Distortion, FeedbackDelay, Filter, Gain, Limiter,
-  MembraneSynth, MetalSynth, MonoSynth, FMSynth, NoiseSynth, PolySynth, Synth,
-  Transport, now, setContext, start,
+  Context,
+  Chorus,
+  Distortion,
+  FeedbackDelay,
+  Filter,
+  Gain,
+  Limiter,
+  MembraneSynth,
+  MetalSynth,
+  MonoSynth,
+  FMSynth,
+  NoiseSynth,
+  PolySynth,
+  Synth,
+  Transport,
+  now,
+  setContext,
+  start,
 };

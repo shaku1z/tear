@@ -148,30 +148,60 @@ export interface CinematicScript {
   onCancel?: (context: CinematicContext, reason: string, director: CinematicDirectorPort) => void;
 }
 
-interface ConfirmSources { key?: boolean; touch?: boolean; pad?: boolean; mouse?: boolean; click?: boolean }
-interface LatchResult { reveal: boolean; skip: boolean }
+interface ConfirmSources {
+  key?: boolean;
+  touch?: boolean;
+  pad?: boolean;
+  mouse?: boolean;
+  click?: boolean;
+}
+interface LatchResult {
+  reveal: boolean;
+  skip: boolean;
+}
 
 export interface CinematicRecordedInputV1 {
-  readonly version: 1; readonly armed: boolean; readonly releasedSeconds: number; readonly holdSeconds: number;
+  readonly version: 1;
+  readonly armed: boolean;
+  readonly releasedSeconds: number;
+  readonly holdSeconds: number;
   readonly previous: Readonly<{ key: boolean; touch: boolean; pad: boolean }>;
 }
 function recordedInput(value: unknown): CinematicRecordedInputV1 {
-  if (typeof value !== "object" || value === null || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) throw new TypeError("Cinematic source input must be data");
-  const v = value as Record<string, unknown>, previous = v.previous;
-  if (Object.keys(v).sort().join() !== ["version", "armed", "releasedSeconds", "holdSeconds", "previous"].sort().join()
-    || Object.values(Object.getOwnPropertyDescriptors(v)).some((p) => !("value" in p)) || v.version !== 1 || typeof v.armed !== "boolean"
-    || [v.releasedSeconds, v.holdSeconds].some((n) => typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 86400)
-    || typeof previous !== "object" || previous === null || Array.isArray(previous) || Object.getPrototypeOf(previous) !== Object.prototype
-    || Object.keys(previous).sort().join() !== "key,pad,touch" || Object.values(Object.getOwnPropertyDescriptors(previous)).some((p) => !("value" in p))
-    || Object.values(previous).some((n) => typeof n !== "boolean")) throw new TypeError("Invalid/unsupported cinematic source input");
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  )
+    throw new TypeError("Cinematic source input must be data");
+  const v = value as Record<string, unknown>,
+    previous = v.previous;
+  if (
+    Object.keys(v).sort().join() !== ["version", "armed", "releasedSeconds", "holdSeconds", "previous"].sort().join() ||
+    Object.values(Object.getOwnPropertyDescriptors(v)).some((p) => !("value" in p)) ||
+    v.version !== 1 ||
+    typeof v.armed !== "boolean" ||
+    [v.releasedSeconds, v.holdSeconds].some(
+      (n) => typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 86400,
+    ) ||
+    typeof previous !== "object" ||
+    previous === null ||
+    Array.isArray(previous) ||
+    Object.getPrototypeOf(previous) !== Object.prototype ||
+    Object.keys(previous).sort().join() !== "key,pad,touch" ||
+    Object.values(Object.getOwnPropertyDescriptors(previous)).some((p) => !("value" in p)) ||
+    Object.values(previous).some((n) => typeof n !== "boolean")
+  )
+    throw new TypeError("Invalid/unsupported cinematic source input");
   return structuredClone(value) as CinematicRecordedInputV1;
 }
 
 const CinematicTimeline = (() => {
   "use strict";
 
-  const clamp01 = (value: number) => value < 0 ? 0 : value > 1 ? 1 : value;
-  const wordCount = (value?: string) => value ? value.trim().split(/\s+/).filter(Boolean).length : 0;
+  const clamp01 = (value: number) => (value < 0 ? 0 : value > 1 ? 1 : value);
+  const wordCount = (value?: string) => (value ? value.trim().split(/\s+/).filter(Boolean).length : 0);
 
   // Compute a human reveal duration for a dialogue line: a base character rate
   // plus natural pauses on punctuation. Chapter/lore uses a short phrase stagger.
@@ -180,13 +210,14 @@ const CinematicTimeline = (() => {
     brief: boolean,
     presentation: CinematicPresentationConfiguration,
   ): number {
-    if (brief) return 0;                                  // Brief shows the line immediately
+    if (brief) return 0; // Brief shows the line immediately
     const rv = beat.reveal;
     if (rv?.mode === "none") return 0;
     if (rv?.mode === "phrase") return rv.duration ?? 0.32;
     const line = beat.line;
     if (!line) return 0;
-    const p = presentation, cps = rv?.charsPerSecond ?? p.revealCharsPerSec;
+    const p = presentation,
+      cps = rv?.charsPerSecond ?? p.revealCharsPerSec;
     let d = line.length / cps;
     for (const ch of line) {
       if (ch === ",") d += p.revealCommaPause;
@@ -197,13 +228,10 @@ const CinematicTimeline = (() => {
   }
   // The auto-advance fallback for a spoken beat, measured from beat start. Full
   // mode is clamped never below 4s; Brief holds a shown line 2.2–3.2s by length.
-  function autoAfter(
-    beat: CinematicBeat,
-    brief: boolean,
-    presentation: CinematicPresentationConfiguration,
-  ): number {
-    if (beat.dwell !== undefined) return beat.dwell;   // authored reading dwell (chapter pages)
-    const p = presentation, words = wordCount(beat.line);
+  function autoAfter(beat: CinematicBeat, brief: boolean, presentation: CinematicPresentationConfiguration): number {
+    if (beat.dwell !== undefined) return beat.dwell; // authored reading dwell (chapter pages)
+    const p = presentation,
+      words = wordCount(beat.line);
     if (brief) return Math.min(p.briefHoldMax, Math.max(p.briefHoldMin, p.briefHoldMin + words * p.briefHoldPerWord));
     return Math.min(p.bossAutoMax, Math.max(p.bossAutoMin, p.bossAutoBase + words / 3.2));
   }
@@ -216,35 +244,62 @@ const CinematicTimeline = (() => {
     releasedT = 0;
     holdT = 0;
     prev: ConfirmSources = {};
-    constructor(private readonly presentation: CinematicPresentationConfiguration) { this.reset(); }
-    reset() { this.armed = false; this.releasedT = 0; this.holdT = 0; this.prev = {}; }
-    begin() { this.reset(); }   // scene start: nothing counts until release+arm
+    constructor(private readonly presentation: CinematicPresentationConfiguration) {
+      this.reset();
+    }
+    reset() {
+      this.armed = false;
+      this.releasedT = 0;
+      this.holdT = 0;
+      this.prev = {};
+    }
+    begin() {
+      this.reset();
+    } // scene start: nothing counts until release+arm
     // sources: { key, touch, pad, mouse } booleans of "currently held"; click = edge
     update(dt: number, sources: ConfirmSources = {}): LatchResult {
-      const s = sources, p = this.presentation;
-      const confirmDown = [s.key, s.touch, s.pad].some(Boolean);   // mouse excluded from arming + skip
+      const s = sources,
+        p = this.presentation;
+      const confirmDown = [s.key, s.touch, s.pad].some(Boolean); // mouse excluded from arming + skip
       if (!this.armed) {
         this.releasedT = confirmDown ? 0 : this.releasedT + dt;
         if (this.releasedT >= p.armAfterRelease) this.armed = true;
         this.prev = { key: !!s.key, touch: !!s.touch, pad: !!s.pad };
-        return { reveal: false, skip: false };            // pre-arm: inherited holds are ignored
+        return { reveal: false, skip: false }; // pre-arm: inherited holds are ignored
       }
-      const rising = (!!s.key && !this.prev.key) || (!!s.touch && !this.prev.touch) ||
-        (!!s.pad && !this.prev.pad) || !!s.click;   // blade mouse never drives cinema
-      this.holdT = confirmDown ? this.holdT + dt : 0;      // a hold begun after arming
-      const skip = this.holdT >= (p.skipHold || 0.80);
+      const rising =
+        (!!s.key && !this.prev.key) || (!!s.touch && !this.prev.touch) || (!!s.pad && !this.prev.pad) || !!s.click; // blade mouse never drives cinema
+      this.holdT = confirmDown ? this.holdT + dt : 0; // a hold begun after arming
+      const skip = this.holdT >= (p.skipHold || 0.8);
       this.prev = { key: !!s.key, touch: !!s.touch, pad: !!s.pad };
       return { reveal: rising, skip };
     }
   }
 
   class Director {
-    captureRecordedInput(): CinematicRecordedInputV1 { return { version: 1, armed: this._latch.armed,
-      releasedSeconds: this._latch.releasedT, holdSeconds: this._latch.holdT,
-      previous: { key: this._latch.prev.key === true, touch: this._latch.prev.touch === true, pad: this._latch.prev.pad === true } }; }
-    validateRecordedInput(value: unknown): void { recordedInput(value); }
-    restoreRecordedInput(value: unknown): void { const saved = recordedInput(value); this._latch.armed = saved.armed;
-      this._latch.releasedT = saved.releasedSeconds; this._latch.holdT = saved.holdSeconds; this._latch.prev = { ...saved.previous }; }
+    captureRecordedInput(): CinematicRecordedInputV1 {
+      return {
+        version: 1,
+        armed: this._latch.armed,
+        releasedSeconds: this._latch.releasedT,
+        holdSeconds: this._latch.holdT,
+        previous: {
+          key: this._latch.prev.key === true,
+          touch: this._latch.prev.touch === true,
+          pad: this._latch.prev.pad === true,
+        },
+      };
+    }
+    validateRecordedInput(value: unknown): void {
+      recordedInput(value);
+    }
+    restoreRecordedInput(value: unknown): void {
+      const saved = recordedInput(value);
+      this._latch.armed = saved.armed;
+      this._latch.releasedT = saved.releasedSeconds;
+      this._latch.holdT = saved.holdSeconds;
+      this._latch.prev = { ...saved.previous };
+    }
     private readonly _latch: InputLatch;
     script: CinematicScript | null = null;
     context: CinematicContext | null = null;
@@ -263,10 +318,18 @@ const CinematicTimeline = (() => {
       this.reset();
     }
     reset() {
-      this.script = null; this.context = null; this.index = -1;
-      this.elapsed = 0; this.revealElapsed = 0; this.fullyVisibleElapsed = 0;
-      this.totalElapsed = 0; this.skipping = false; this.finished = false; this.forceReveal = false;
-      this._revealDur = 0; this._autoAfter = 0;
+      this.script = null;
+      this.context = null;
+      this.index = -1;
+      this.elapsed = 0;
+      this.revealElapsed = 0;
+      this.fullyVisibleElapsed = 0;
+      this.totalElapsed = 0;
+      this.skipping = false;
+      this.finished = false;
+      this.forceReveal = false;
+      this._revealDur = 0;
+      this._autoAfter = 0;
       this._latch.reset();
     }
     captureState(): CinematicDirectorStateV1 {
@@ -307,8 +370,10 @@ const CinematicTimeline = (() => {
           throw new RangeError(`bound cinematic beat ${String(state.beatId)} is unavailable`);
         }
         const revealSeconds = revealDuration(beat, Boolean(script.brief), this.configuration.presentation);
-        if ((!state.fullyVisible && (revealSeconds <= 0 || state.revealElapsedSeconds >= revealSeconds)) ||
-          (!state.fullyVisible && state.fullyVisibleElapsedSeconds > 0)) {
+        if (
+          (!state.fullyVisible && (revealSeconds <= 0 || state.revealElapsedSeconds >= revealSeconds)) ||
+          (!state.fullyVisible && state.fullyVisibleElapsedSeconds > 0)
+        ) {
           throw new TypeError("cinematic director reveal visibility is inconsistent with its bound beat");
         }
       }
@@ -325,7 +390,10 @@ const CinematicTimeline = (() => {
       // Restoring state must not replay onStart/onEnter/onExit/onCancel. The
       // current script/context binding is retained only when its stable id and
       // beat identity match the validated snapshot.
-      if (!state.active) { this.script = null; this.context = null; }
+      if (!state.active) {
+        this.script = null;
+        this.context = null;
+      }
       this.index = state.beatIndex;
       this.elapsed = state.elapsedSeconds;
       this.revealElapsed = state.revealElapsedSeconds;
@@ -341,53 +409,83 @@ const CinematicTimeline = (() => {
       // restored scene must release and re-arm before accepting a fresh press.
       this._latch.reset();
     }
-    get active() { return !!this.script; }
-    get id(): string | undefined { return this.script?.id; }
-    get beat(): CinematicBeat | undefined { return this.script?.beats[this.index]; }
-    get beatId(): string | undefined { return this.beat?.id; }
-    get brief() { return !!(this.script?.brief); }
-    get blocksCombat() { return !!(this.script?.blocksCombat); }
-    get hideHud() { return !!(this.script?.hideHud); }
-    get playerMode() { return this.beat?.playerMode ?? "locked"; }
+    get active() {
+      return !!this.script;
+    }
+    get id(): string | undefined {
+      return this.script?.id;
+    }
+    get beat(): CinematicBeat | undefined {
+      return this.script?.beats[this.index];
+    }
+    get beatId(): string | undefined {
+      return this.beat?.id;
+    }
+    get brief() {
+      return !!this.script?.brief;
+    }
+    get blocksCombat() {
+      return !!this.script?.blocksCombat;
+    }
+    get hideHud() {
+      return !!this.script?.hideHud;
+    }
+    get playerMode() {
+      return this.beat?.playerMode ?? "locked";
+    }
     get progress() {
-      const b = this.beat, d = b && Number(b.duration);
+      const b = this.beat,
+        d = b && Number(b.duration);
       return b && d !== undefined && Number.isFinite(d) && d > 0 ? clamp01(this.elapsed / this._duration(b)) : 0;
     }
     get revealProgress() {
       if (this.forceReveal || !this._revealDur || this._revealDur <= 0) return 1;
       return clamp01(this.revealElapsed / this._revealDur);
     }
-    get fullyVisible() { return this.revealProgress >= 1; }
+    get fullyVisible() {
+      return this.revealProgress >= 1;
+    }
     // which timing/completion contract governs the current beat
     private _policy(beat: CinematicBeat): CompletionPolicy {
       if (beat.completion) return beat.completion;
       if (beat.waitUntil) return "condition";
-      if (beat.line) return "confirm-or-timeout";   // spoken lines never expire sub-second
+      if (beat.line) return "confirm-or-timeout"; // spoken lines never expire sub-second
       return "timed";
     }
     // is the AUTO fallback approaching (drives the AUTO glyph)
     /** Renderer-facing latch readouts; the latch itself stays private. */
-    get latchArmed(): boolean { return this._latch.armed; }
-    get latchHoldSeconds(): number { return this._latch.holdT; }
+    get latchArmed(): boolean {
+      return this._latch.armed;
+    }
+    get latchHoldSeconds(): number {
+      return this._latch.holdT;
+    }
     get autoImminent() {
-      const b = this.beat; if (!b || this._policy(b) !== "confirm-or-timeout") return false;
+      const b = this.beat;
+      if (!b || this._policy(b) !== "confirm-or-timeout") return false;
       return this._autoAfter - this.elapsed <= this.configuration.presentation.autoGlyphLead;
     }
     start(script: CinematicScript | null | undefined, context: CinematicContext = {}): this {
-      if (!script || !Array.isArray(script.beats) || !script.beats.length) throw new Error("Cinematics.start requires beats");
+      if (!script || !Array.isArray(script.beats) || !script.beats.length)
+        throw new Error("Cinematics.start requires beats");
       if (this.active) this.cancel("replaced");
       this.reset();
-      this.script = script; this.context = context;
+      this.script = script;
+      this.context = context;
       this._latch.begin();
       if (script.onStart) script.onStart(this.context, this);
-      this._advance(); return this;
+      this._advance();
+      return this;
     }
     private _duration(beat: CinematicBeat): number {
       const d = Math.max(0.001, Number(beat.duration) || 0.001);
       return this.skipping ? d * (beat.skipScale ?? 0.35) : d;
     }
     private _enter(): void {
-      this.elapsed = 0; this.revealElapsed = 0; this.fullyVisibleElapsed = 0; this.forceReveal = false;
+      this.elapsed = 0;
+      this.revealElapsed = 0;
+      this.fullyVisibleElapsed = 0;
+      this.forceReveal = false;
       const b = this.beat;
       this._revealDur = b ? revealDuration(b, this.brief, this.configuration.presentation) : 0;
       this._autoAfter = b ? autoAfter(b, this.brief, this.configuration.presentation) : 0;
@@ -396,16 +494,23 @@ const CinematicTimeline = (() => {
     private _advance(): void {
       if (this.beat?.onExit) this.beat.onExit(this.context ?? {}, this);
       this.index++;
-      if (!this.script || this.index >= this.script.beats.length) { this.complete(); return; }
+      if (!this.script || this.index >= this.script.beats.length) {
+        this.complete();
+        return;
+      }
       this._enter();
     }
-    advance(): void { this._advance(); }
+    advance(): void {
+      this._advance();
+    }
     skipTo(id: string): boolean {
       if (!this.script) return false;
       const idx = this.script.beats.findIndex((b) => b.id === id);
       if (idx < 0) return false;
       if (this.beat?.onExit) this.beat.onExit(this.context ?? {}, this);
-      this.index = idx; this._enter(); return true;
+      this.index = idx;
+      this._enter();
+      return true;
     }
     requestSkip() {
       const script = this.script;
@@ -417,29 +522,39 @@ const CinematicTimeline = (() => {
     private _canConfirmAdvance(beat: CinematicBeat): boolean {
       const policy = this._policy(beat);
       if (policy === "timed") return this.elapsed >= (beat.minDuration ?? 0.18);
-      if (policy === "condition") return false;                 // condition beats advance only on their condition
-      return this.revealProgress >= 1;                          // confirm / confirm-or-timeout
+      if (policy === "condition") return false; // condition beats advance only on their condition
+      return this.revealProgress >= 1; // confirm / confirm-or-timeout
     }
     update(dt: number, controls: ConfirmSources = {}): void {
       if (!this.active) return;
       this.totalElapsed += dt;
       const latch = this._latch.update(dt, controls);
       if (latch.skip) this.requestSkip();
-      const beat = this.beat; if (!beat) return;
+      const beat = this.beat;
+      if (!beat) return;
       this.elapsed += dt;
       if (this.revealProgress < 1 && !this.forceReveal) this.revealElapsed += dt;
       this.fullyVisibleElapsed = this.revealProgress >= 1 ? this.fullyVisibleElapsed + dt : 0;
       if (beat.onUpdate) beat.onUpdate(this.context ?? {}, this, dt);
       // a fresh (post-arm) press first completes an unfinished reveal, then advances
       if (latch.reveal) {
-        if (this.revealProgress < 1 && !this.forceReveal) { this.forceReveal = true; return; }
-        if (this._canConfirmAdvance(beat)) { this._advance(); return; }
+        if (this.revealProgress < 1 && !this.forceReveal) {
+          this.forceReveal = true;
+          return;
+        }
+        if (this._canConfirmAdvance(beat)) {
+          this._advance();
+          return;
+        }
       }
       // while SKIPPING, reading beats fast-forward but still run their callbacks
       if (this.skipping) {
         this.forceReveal = true;
         const policy = this._policy(beat);
-        if (policy === "condition") { if (beat.waitUntil?.(this.context ?? {}, this)) this._advance(); return; }
+        if (policy === "condition") {
+          if (beat.waitUntil?.(this.context ?? {}, this)) this._advance();
+          return;
+        }
         if (this.elapsed >= this._duration(beat)) this._advance();
         return;
       }
@@ -449,24 +564,36 @@ const CinematicTimeline = (() => {
           if (this.elapsed >= (beat.minDuration ?? 0) && beat.waitUntil?.(this.context ?? {}, this)) this._advance();
           return;
         case "confirm":
-          return;   // never auto-advances — waits for the player
+          return; // never auto-advances — waits for the player
         case "confirm-or-timeout":
-          if (this.revealProgress >= 1 && this.fullyVisibleElapsed >= this.configuration.presentation.minFullyVisible && this.elapsed >= this._autoAfter) this._advance();
+          if (
+            this.revealProgress >= 1 &&
+            this.fullyVisibleElapsed >= this.configuration.presentation.minFullyVisible &&
+            this.elapsed >= this._autoAfter
+          )
+            this._advance();
           return;
-        default:      // "timed"
+        default: // "timed"
           if (this.elapsed >= this._duration(beat)) this._advance();
       }
     }
     complete(): void {
       if (!this.script) return;
-      const script = this.script, context = this.context;
-      this.finished = true; this.script = null; this.context = null; this.index = -1;
+      const script = this.script,
+        context = this.context;
+      this.finished = true;
+      this.script = null;
+      this.context = null;
+      this.index = -1;
       if (script.onComplete) script.onComplete(context ?? {}, this);
     }
     cancel(reason: string): void {
       if (!this.script) return;
-      const script = this.script, context = this.context;
-      this.script = null; this.context = null; this.index = -1;
+      const script = this.script,
+        context = this.context;
+      this.script = null;
+      this.context = null;
+      this.index = -1;
       if (script.onCancel) script.onCancel(context ?? {}, reason, this);
     }
   }
@@ -509,8 +636,15 @@ function validateDirectorState(value: unknown): CinematicDirectorStateV1 {
   if (revealElapsedSeconds > elapsedSeconds || fullyVisibleElapsedSeconds > elapsedSeconds) {
     throw new TypeError("cinematic director reveal timing cannot exceed beat elapsedSeconds");
   }
-  if (!active && (elapsedSeconds !== 0 || revealElapsedSeconds !== 0 || fullyVisibleElapsedSeconds !== 0 ||
-    totalElapsedSeconds !== 0 || !fullyVisible || finished)) {
+  if (
+    !active &&
+    (elapsedSeconds !== 0 ||
+      revealElapsedSeconds !== 0 ||
+      fullyVisibleElapsedSeconds !== 0 ||
+      totalElapsedSeconds !== 0 ||
+      !fullyVisible ||
+      finished)
+  ) {
     throw new TypeError("inactive cinematic director state must use the canonical idle position");
   }
   return Object.freeze({
@@ -541,7 +675,8 @@ function booleanValue(value: unknown, label: string): boolean {
 }
 
 function nullableString(value: unknown, label: string): string | null {
-  if (value !== null && typeof value !== "string") throw new TypeError(`cinematic director ${label} must be string or null`);
+  if (value !== null && typeof value !== "string")
+    throw new TypeError(`cinematic director ${label} must be string or null`);
   return value;
 }
 

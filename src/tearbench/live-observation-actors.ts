@@ -10,15 +10,22 @@ export interface LiveBossObservation {
 }
 
 /** Projects boss identity, ordinals, and home stage only from production authorities. */
-export function projectLiveBossObservation(actor: Readonly<{
-  bossId?: unknown; kind?: unknown; phase?: unknown; state?: unknown;
-}>): LiveBossObservation | undefined {
+export function projectLiveBossObservation(
+  actor: Readonly<{
+    bossId?: unknown;
+    kind?: unknown;
+    phase?: unknown;
+    state?: unknown;
+  }>,
+): LiveBossObservation | undefined {
   const rawId = typeof actor.bossId === "string" ? actor.bossId : typeof actor.kind === "string" ? actor.kind : "";
   if (!isBossDefinitionId(rawId)) return undefined;
   const definition = bossDefinition(rawId);
-  const validPhases = Object.freeze(Array.from({ length: definition.phaseMarks.length + 1 }, (_, index) => String(index + 1)));
+  const validPhases = Object.freeze(
+    Array.from({ length: definition.phaseMarks.length + 1 }, (_, index) => String(index + 1)),
+  );
   const rawPhase = typeof actor.phase === "number" || typeof actor.phase === "string" ? String(actor.phase) : "";
-  const phase = validPhases.includes(rawPhase) ? rawPhase : validPhases[0] ?? "1";
+  const phase = validPhases.includes(rawPhase) ? rawPhase : (validPhases[0] ?? "1");
   const home = Object.entries(STAGE_BOSS_HOME).find(([, bossId]) => bossId === rawId)?.[0] as StageId | undefined;
   if (home === undefined) throw new RangeError(`boss ${rawId} has no source-owned home stage`);
   return Object.freeze({ id: rawId, phase, validPhases, homeStage: home });
@@ -35,20 +42,35 @@ export function projectLiveBehaviorMode(
 }
 
 export function projectLiveBladeMechanics(
-  blade: Readonly<{ riftChambers?: unknown; riftChamberCooldown?: unknown; riftFireCooldown?: unknown;
-    wheelSpin?: unknown; reversals?: unknown }>,
+  blade: Readonly<{
+    riftChambers?: unknown;
+    riftChamberCooldown?: unknown;
+    riftFireCooldown?: unknown;
+    wheelSpin?: unknown;
+    reversals?: unknown;
+  }>,
   accessClass: TearRuntimeAccessClass,
-): Readonly<{ chambers?: number; chamberCooldown?: number; fireCooldown?: number; wheelSpin?: number; reversalCount?: number }> {
+): Readonly<{
+  chambers?: number;
+  chamberCooldown?: number;
+  fireCooldown?: number;
+  wheelSpin?: number;
+  reversalCount?: number;
+}> {
   if (accessClass === "C") return Object.freeze({});
   return Object.freeze({
-    ...(typeof blade.riftChambers === "number" && Number.isFinite(blade.riftChambers) ? { chambers: blade.riftChambers } : {}),
-    ...(typeof blade.riftFireCooldown === "number" && Number.isFinite(blade.riftFireCooldown) && blade.riftFireCooldown >= 0
-      ? { fireCooldown: blade.riftFireCooldown } : {}),
+    ...(typeof blade.riftChambers === "number" && Number.isFinite(blade.riftChambers)
+      ? { chambers: blade.riftChambers }
+      : {}),
+    ...(typeof blade.riftFireCooldown === "number" &&
+    Number.isFinite(blade.riftFireCooldown) &&
+    blade.riftFireCooldown >= 0
+      ? { fireCooldown: blade.riftFireCooldown }
+      : {}),
     ...(typeof blade.riftChamberCooldown === "number" && Number.isFinite(blade.riftChamberCooldown)
       ? { chamberCooldown: blade.riftChamberCooldown }
       : {}),
-    ...(typeof blade.wheelSpin === "number" && Number.isFinite(blade.wheelSpin)
-      ? { wheelSpin: blade.wheelSpin } : {}),
+    ...(typeof blade.wheelSpin === "number" && Number.isFinite(blade.wheelSpin) ? { wheelSpin: blade.wheelSpin } : {}),
     ...(Array.isArray(blade.reversals) ? { reversalCount: blade.reversals.length } : {}),
   });
 }
@@ -59,13 +81,21 @@ function finiteNonnegative(value: unknown): value is number {
 
 export function projectLivePlayerMechanics(
   player: Readonly<{
-    hw?: unknown; hh?: unknown; dashTimer?: unknown; dashCd?: unknown;
-    iframe?: unknown; maxDashCharges?: unknown;
+    hw?: unknown;
+    hh?: unknown;
+    dashTimer?: unknown;
+    dashCd?: unknown;
+    iframe?: unknown;
+    maxDashCharges?: unknown;
   }>,
   accessClass: TearRuntimeAccessClass,
 ): Readonly<{
-  halfWidth?: number; halfHeight?: number; dashTimer?: number;
-  dashCooldown?: number; iframe?: number; maxCharges?: number;
+  halfWidth?: number;
+  halfHeight?: number;
+  dashTimer?: number;
+  dashCooldown?: number;
+  iframe?: number;
+  maxCharges?: number;
 }> {
   if (accessClass === "C") return Object.freeze({});
   return Object.freeze({
@@ -80,13 +110,27 @@ export function projectLivePlayerMechanics(
 
 export function projectLiveActorMechanics(
   actor: Readonly<{
-    hw?: unknown; hh?: unknown; contactReach?: unknown; contactDmg?: unknown;
-    chargeMult?: unknown; auraDmg?: unknown; contactEnabled?: unknown; stun?: unknown; boundT?: unknown;
+    hw?: unknown;
+    hh?: unknown;
+    contactReach?: unknown;
+    contactDmg?: unknown;
+    chargeMult?: unknown;
+    auraDmg?: unknown;
+    contactEnabled?: unknown;
+    stun?: unknown;
+    boundT?: unknown;
   }>,
   accessClass: TearRuntimeAccessClass,
 ): Readonly<{
-  halfWidth?: number; halfHeight?: number; contactReach?: number; contactDamage?: number;
-  chargeMult?: number; auraDmg?: number; contactEnabled?: boolean; stun?: number; bound?: number;
+  halfWidth?: number;
+  halfHeight?: number;
+  contactReach?: number;
+  contactDamage?: number;
+  chargeMult?: number;
+  auraDmg?: number;
+  contactEnabled?: boolean;
+  stun?: number;
+  bound?: number;
 }> {
   if (accessClass === "C") return Object.freeze({});
   return Object.freeze({
@@ -104,7 +148,10 @@ export function projectLiveActorMechanics(
 
 export function projectLiveProjectileMechanics(
   projectile: Readonly<{
-    r?: unknown; dmg?: unknown; counterplay?: unknown; unparryable?: unknown;
+    r?: unknown;
+    dmg?: unknown;
+    counterplay?: unknown;
+    unparryable?: unknown;
   }>,
   accessClass: TearRuntimeAccessClass,
 ): Readonly<{ radius?: number; damage?: number; counterplay?: string; unparryable?: boolean }> {
@@ -113,7 +160,8 @@ export function projectLiveProjectileMechanics(
     ...(finiteNonnegative(projectile.r) ? { radius: projectile.r } : {}),
     ...(finiteNonnegative(projectile.dmg) ? { damage: projectile.dmg } : {}),
     ...(typeof projectile.counterplay === "string" && projectile.counterplay.length > 0
-      ? { counterplay: projectile.counterplay } : {}),
+      ? { counterplay: projectile.counterplay }
+      : {}),
     ...(typeof projectile.unparryable === "boolean" ? { unparryable: projectile.unparryable } : {}),
   });
 }

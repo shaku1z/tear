@@ -1,22 +1,60 @@
 import { describe, expect, it, vi } from "vitest";
-import { finalizeCombatTick, resolvePlayerDeath, runTrainingTick, type CombatCleanupHooks, type TailPlayer, type TailRun } from "../../src/gameplay/combat/combat-tail-runtime";
+import {
+  finalizeCombatTick,
+  resolvePlayerDeath,
+  runTrainingTick,
+  type CombatCleanupHooks,
+  type TailPlayer,
+  type TailRun,
+} from "../../src/gameplay/combat/combat-tail-runtime";
 
-const player = (): TailPlayer => ({ x: 0, y: 0, vy: -200, hp: 10, maxHp: 100, iframe: 0, onGround: false,
-  tookHit: true, shopRevives: 0, abilityRevives: 0, oneHit: false });
+const player = (): TailPlayer => ({
+  x: 0,
+  y: 0,
+  vy: -200,
+  hp: 10,
+  maxHp: 100,
+  iframe: 0,
+  onGround: false,
+  tookHit: true,
+  shopRevives: 0,
+  abilityRevives: 0,
+  oneHit: false,
+});
 const run = (): TailRun => ({ mode: "campaign", runTime: 0, waveTime: 0, _prevGround: true });
 function cleanupHooks(): CombatCleanupHooks {
-  return { enemyDefeated: vi.fn(), ghostRecording: () => false, ghostSample: vi.fn(), updateTrick: vi.fn(),
-    breakStreak: vi.fn(), jumped: vi.fn(), achievementTick: vi.fn(), maxStat: vi.fn(), checkAchievements: vi.fn(),
-    achievementsEnabled: () => true };
+  return {
+    enemyDefeated: vi.fn(),
+    ghostRecording: () => false,
+    ghostSample: vi.fn(),
+    updateTrick: vi.fn(),
+    breakStreak: vi.fn(),
+    jumped: vi.fn(),
+    achievementTick: vi.fn(),
+    maxStat: vi.fn(),
+    checkAchievements: vi.fn(),
+    achievementsEnabled: () => true,
+  };
 }
 describe("combat tick tail", () => {
   it("publishes a native defeat once without Ghost 2 recording or a legacy visual id", () => {
     const dead = { dead: true, y: 0, bleedStacks: 0, burnT: 0 };
     const hooks = cleanupHooks();
-    const enemyDefeated = vi.fn(); const ghostSample = vi.fn();
-    hooks.enemyDefeated = enemyDefeated; hooks.ghostSample = ghostSample;
-    const input = { dt: 0.25, enemies: [dead], projectiles: [], floaters: [], shake: 0,
-      shakeDecay: 4, player: player(), run: run(), hooks };
+    const enemyDefeated = vi.fn();
+    const ghostSample = vi.fn();
+    hooks.enemyDefeated = enemyDefeated;
+    hooks.ghostSample = ghostSample;
+    const input = {
+      dt: 0.25,
+      enemies: [dead],
+      projectiles: [],
+      floaters: [],
+      shake: 0,
+      shakeDecay: 4,
+      player: player(),
+      run: run(),
+      hooks,
+    };
 
     finalizeCombatTick(input);
     finalizeCombatTick(input);
@@ -28,28 +66,64 @@ describe("combat tick tail", () => {
   it("samples living enemies only while Ghost 2 recording is active", () => {
     const alive = { dead: false, y: 0, bleedStacks: 0, burnT: 0 };
     const hooks = cleanupHooks();
-    const enemyDefeated = vi.fn(); const ghostSample = vi.fn();
-    hooks.enemyDefeated = enemyDefeated; hooks.ghostSample = ghostSample;
+    const enemyDefeated = vi.fn();
+    const ghostSample = vi.fn();
+    hooks.enemyDefeated = enemyDefeated;
+    hooks.ghostSample = ghostSample;
     hooks.ghostRecording = () => true;
 
-    finalizeCombatTick({ dt: 0.25, enemies: [alive], projectiles: [], floaters: [], shake: 0,
-      shakeDecay: 4, player: player(), run: run(), hooks });
+    finalizeCombatTick({
+      dt: 0.25,
+      enemies: [alive],
+      projectiles: [],
+      floaters: [],
+      shake: 0,
+      shakeDecay: 4,
+      player: player(),
+      run: run(),
+      hooks,
+    });
 
     expect(ghostSample).toHaveBeenCalledWith(0.25, [alive]);
     expect(enemyDefeated).not.toHaveBeenCalled();
   });
   it("filters before updating survivors and records hit/air achievement state", () => {
-    const alive = { dead: false, y: 0, bleedStacks: 3, burnT: 1 }; const dead = { dead: true, y: 0, bleedStacks: 9, burnT: 1 };
-    const update = vi.fn(); const p = player(); const r = run(); const hooks = cleanupHooks();
-    const result = finalizeCombatTick({ dt: 0.25, enemies: [alive, dead], projectiles: [{ dead: false, update }],
-      floaters: [{ y: 10, life: 1 }], shake: 5, shakeDecay: 4, player: p, run: r, hooks });
-    expect(result.enemies).toEqual([alive]); expect(update).toHaveBeenCalledWith(0.25); expect(result.shake).toBe(4);
+    const alive = { dead: false, y: 0, bleedStacks: 3, burnT: 1 };
+    const dead = { dead: true, y: 0, bleedStacks: 9, burnT: 1 };
+    const update = vi.fn();
+    const p = player();
+    const r = run();
+    const hooks = cleanupHooks();
+    const result = finalizeCombatTick({
+      dt: 0.25,
+      enemies: [alive, dead],
+      projectiles: [{ dead: false, update }],
+      floaters: [{ y: 10, life: 1 }],
+      shake: 5,
+      shakeDecay: 4,
+      player: p,
+      run: r,
+      hooks,
+    });
+    expect(result.enemies).toEqual([alive]);
+    expect(update).toHaveBeenCalledWith(0.25);
+    expect(result.shake).toBe(4);
     expect(r).toMatchObject({ runTime: 0.25, waveTime: 0.25, _dmgThisWave: true, _airT: 0.25 });
   });
   it("fades factual floaters in place when reduced motion disables displacement", () => {
     const floater = { y: 10, life: 0.8 };
-    const result = finalizeCombatTick({ dt: 0.25, enemies: [], projectiles: [], floaters: [floater], shake: 0,
-      shakeDecay: 4, floaterMotionScale: 0, player: player(), run: run(), hooks: cleanupHooks() });
+    const result = finalizeCombatTick({
+      dt: 0.25,
+      enemies: [],
+      projectiles: [],
+      floaters: [floater],
+      shake: 0,
+      shakeDecay: 4,
+      floaterMotionScale: 0,
+      player: player(),
+      run: run(),
+      hooks: cleanupHooks(),
+    });
     expect(result.floaters[0]).toMatchObject({ y: 10, life: 0.55 });
   });
   it("keeps the training tick out of the tail so late spawns survive", () => {
@@ -59,21 +133,47 @@ describe("combat tick tail", () => {
     expect(hooks.updatePlayground).toBeUndefined();
 
     // A playground spawn pushed onto the installed list must be preserved.
-    const live: { dead: boolean; y: number; bleedStacks: number; burnT: number }[] = [{ dead: true, y: 0, bleedStacks: 0, burnT: 0 }];
-    const r = run(); r.mode = "playground";
-    const result = finalizeCombatTick({ dt: 0.25, enemies: live, projectiles: [], floaters: [], shake: 0,
-      shakeDecay: 4, player: player(), run: r, hooks: cleanupHooks() });
-    const installed = result.enemies;   // what the caller installs as the live list
+    const live: { dead: boolean; y: number; bleedStacks: number; burnT: number }[] = [
+      { dead: true, y: 0, bleedStacks: 0, burnT: 0 },
+    ];
+    const r = run();
+    r.mode = "playground";
+    const result = finalizeCombatTick({
+      dt: 0.25,
+      enemies: live,
+      projectiles: [],
+      floaters: [],
+      shake: 0,
+      shakeDecay: 4,
+      player: player(),
+      run: r,
+      hooks: cleanupHooks(),
+    });
+    const installed = result.enemies; // what the caller installs as the live list
     runTrainingTick(r.mode, 0.25, {
       updateTutorial: vi.fn(),
-      updatePlayground: () => { installed.push({ dead: false, y: 0, bleedStacks: 0, burnT: 0 }); },
+      updatePlayground: () => {
+        installed.push({ dead: false, y: 0, bleedStacks: 0, burnT: 0 });
+      },
     });
     expect(installed).toHaveLength(1);
   });
   it("honors revive priority before the ad and terminal paths", () => {
-    const p = player(); p.hp = 0; p.shopRevives = 1; p.abilityRevives = 1; const r = run();
-    const hooks = { trainingReset: vi.fn(), shopRevive: vi.fn(), abilityRevive: vi.fn(), adAvailable: () => true,
-      requestAdContinue: vi.fn(), endRun: vi.fn() };
-    expect(resolvePlayerDeath(p, r, hooks)).toBe("shop-revive"); expect(p.shopRevives).toBe(0); expect(p.abilityRevives).toBe(1);
+    const p = player();
+    p.hp = 0;
+    p.shopRevives = 1;
+    p.abilityRevives = 1;
+    const r = run();
+    const hooks = {
+      trainingReset: vi.fn(),
+      shopRevive: vi.fn(),
+      abilityRevive: vi.fn(),
+      adAvailable: () => true,
+      requestAdContinue: vi.fn(),
+      endRun: vi.fn(),
+    };
+    expect(resolvePlayerDeath(p, r, hooks)).toBe("shop-revive");
+    expect(p.shopRevives).toBe(0);
+    expect(p.abilityRevives).toBe(1);
   });
 });

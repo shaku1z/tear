@@ -33,9 +33,12 @@ export function createLiveProductionWorld(options: LiveProductionWorldOptions): 
   const profile = options.dependencies.PROFILE;
   const session = createLiveWorldSessionState(() => defaultRunModeFor(firstRunProfileFacts(profile)));
   const world = createLiveWorldComposition({
-    dependencies: options.dependencies, configuration: options.configuration, session,
+    dependencies: options.dependencies,
+    configuration: options.configuration,
+    session,
     worldId: options.worldId ?? "live-production",
-    publishEnvironmentEvents: true, musicDirection: true,
+    publishEnvironmentEvents: true,
+    musicDirection: true,
     ...(options.mirrors === undefined ? {} : { mirrors: options.mirrors }),
   });
   return Object.freeze({ session, world });

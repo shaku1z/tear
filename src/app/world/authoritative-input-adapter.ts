@@ -5,7 +5,9 @@ import type { TearSimulationActionPort } from "../../gameplay/runtime/tear-simul
 import type { BladePlayerPort, BladePoint } from "../../gameplay/entities/blade-contracts";
 import type { PlayerInputPort } from "../../gameplay/entities/player";
 
-interface LiveInputPlayer extends BladePlayerPort { aiInput?: PlayerInputPort }
+interface LiveInputPlayer extends BladePlayerPort {
+  aiInput?: PlayerInputPort;
+}
 interface LiveInputBlade {
   lmbOverride?: boolean;
   aimOverride?: BladePoint;
@@ -32,8 +34,11 @@ export interface LiveAuthoritativeInputAdapterOptions {
 export function createLiveAuthoritativeInputAdapter(
   options: LiveAuthoritativeInputAdapterOptions,
 ): LiveAuthoritativeInputAdapter {
-  const apply = (input: AuthoritativeInputState, tick: number,
-    actions: readonly CommandEnvelope<GameAction>[]): void => {
+  const apply = (
+    input: AuthoritativeInputState,
+    tick: number,
+    actions: readonly CommandEnvelope<GameAction>[],
+  ): void => {
     input.beginTick(tick, actions);
     const player = options.player();
     const blade = options.blade();

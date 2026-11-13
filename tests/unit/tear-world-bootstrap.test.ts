@@ -21,8 +21,7 @@ describe("Tear world bootstrap", () => {
     expect(first.clock).not.toBe(second.clock);
     expect(second.clock.sim).toBe(0);
     expect(first.random).not.toBe(second.random);
-    expect(first.random.streams.stream("enemy-ai").next())
-      .toBe(second.random.streams.stream("enemy-ai").next());
+    expect(first.random.streams.stream("enemy-ai").next()).toBe(second.random.streams.stream("enemy-ai").next());
     expect(Object.isFrozen(first)).toBe(true);
   });
 

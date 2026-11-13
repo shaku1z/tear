@@ -14,20 +14,67 @@ export interface TearAcademyLesson {
 }
 
 export const CANONICAL_ACADEMY_LESSONS = Object.freeze([
-  { id: "movement-foundations", domain: "movement", objective: "navigate and recover footing", recoveryRequired: true, unseenSeeds: ["m-91", "m-92"], passThreshold: 0.8 },
-  { id: "blade-control", domain: "blade", objective: "slash, throw, and recall deliberately", recoveryRequired: true, unseenSeeds: ["b-91", "b-92"], passThreshold: 0.8 },
-  { id: "defense-parry", domain: "defense", objective: "avoid, deflect, and recover", recoveryRequired: true, unseenSeeds: ["d-91", "d-92"], passThreshold: 0.8 },
-  { id: "enemy-reading", domain: "enemies", objective: "rank threats and counter archetypes", recoveryRequired: false, unseenSeeds: ["e-91"], passThreshold: 0.75 },
-  { id: "boss-phases", domain: "bosses", objective: "respond to phase and attack boundaries", recoveryRequired: true, unseenSeeds: ["boss-91"], passThreshold: 0.75 },
-  { id: "run-strategy", domain: "strategy", objective: "select coherent rewards and routes", recoveryRequired: false, unseenSeeds: ["s-91"], passThreshold: 0.75 },
-  { id: "interface-journey", domain: "interface", objective: "complete valid menu and reward transitions", recoveryRequired: true, unseenSeeds: ["ui-91"], passThreshold: 0.8 },
+  {
+    id: "movement-foundations",
+    domain: "movement",
+    objective: "navigate and recover footing",
+    recoveryRequired: true,
+    unseenSeeds: ["m-91", "m-92"],
+    passThreshold: 0.8,
+  },
+  {
+    id: "blade-control",
+    domain: "blade",
+    objective: "slash, throw, and recall deliberately",
+    recoveryRequired: true,
+    unseenSeeds: ["b-91", "b-92"],
+    passThreshold: 0.8,
+  },
+  {
+    id: "defense-parry",
+    domain: "defense",
+    objective: "avoid, deflect, and recover",
+    recoveryRequired: true,
+    unseenSeeds: ["d-91", "d-92"],
+    passThreshold: 0.8,
+  },
+  {
+    id: "enemy-reading",
+    domain: "enemies",
+    objective: "rank threats and counter archetypes",
+    recoveryRequired: false,
+    unseenSeeds: ["e-91"],
+    passThreshold: 0.75,
+  },
+  {
+    id: "boss-phases",
+    domain: "bosses",
+    objective: "respond to phase and attack boundaries",
+    recoveryRequired: true,
+    unseenSeeds: ["boss-91"],
+    passThreshold: 0.75,
+  },
+  {
+    id: "run-strategy",
+    domain: "strategy",
+    objective: "select coherent rewards and routes",
+    recoveryRequired: false,
+    unseenSeeds: ["s-91"],
+    passThreshold: 0.75,
+  },
+  {
+    id: "interface-journey",
+    domain: "interface",
+    objective: "complete valid menu and reward transitions",
+    recoveryRequired: true,
+    unseenSeeds: ["ui-91"],
+    passThreshold: 0.8,
+  },
 ] as const satisfies readonly TearAcademyLesson[]);
 
-export type TearAcademyConsent =
-  | "private-personalization-only" | "anonymous-improvement" | "public-training";
+export type TearAcademyConsent = "private-personalization-only" | "anonymous-improvement" | "public-training";
 
-export type TearDemonstrationSegmentKind =
-  | "demonstration" | "recovery" | "human-takeover" | "policy-correction";
+export type TearDemonstrationSegmentKind = "demonstration" | "recovery" | "human-takeover" | "policy-correction";
 
 export interface TearAcademySample {
   readonly id: string;
@@ -108,8 +155,13 @@ function validateSample(sample: TearAcademySample): void {
   if (!CANONICAL_ACADEMY_LESSONS.some((lesson) => lesson.id === sample.lessonId)) {
     throw new TypeError(`unknown Academy lesson: ${sample.lessonId}`);
   }
-  if (sample.capsuleId.trim().length === 0 || !Number.isSafeInteger(sample.fromTick)
-    || !Number.isSafeInteger(sample.toTick) || sample.fromTick < 0 || sample.toTick < sample.fromTick) {
+  if (
+    sample.capsuleId.trim().length === 0 ||
+    !Number.isSafeInteger(sample.fromTick) ||
+    !Number.isSafeInteger(sample.toTick) ||
+    sample.fromTick < 0 ||
+    sample.toTick < sample.fromTick
+  ) {
     throw new TypeError("training sample must resolve to a valid capsule interval");
   }
   if (!["private-personalization-only", "anonymous-improvement", "public-training"].includes(sample.consent)) {
@@ -154,14 +206,18 @@ export class TearDemonstrationCorpus {
   }
 
   entries(includeHiddenReleaseExam = false): readonly TearDatasetEntry[] {
-    return Object.freeze(this.#entries.filter((entry) =>
-      includeHiddenReleaseExam || entry.split !== "hidden-release-exam"));
+    return Object.freeze(
+      this.#entries.filter((entry) => includeHiddenReleaseExam || entry.split !== "hidden-release-exam"),
+    );
   }
 
   export(id: string, createdAt: string, includeHiddenReleaseExam = false): TearBehaviorCloningManifest {
     const entries = this.entries(includeHiddenReleaseExam);
     const splitCounts: Record<TearDatasetSplit, number> = {
-      training: 0, validation: 0, calibration: 0, "hidden-release-exam": 0,
+      training: 0,
+      validation: 0,
+      calibration: 0,
+      "hidden-release-exam": 0,
     };
     for (const entry of entries) splitCounts[entry.split] += 1;
     const rootHash = stableVerificationHash(entries.map((entry) => entry.contentHash));
@@ -183,11 +239,18 @@ export function encodeBehaviorCloningManifest(manifest: TearBehaviorCloningManif
 
 export function decodeBehaviorCloningManifest(encoded: string): TearBehaviorCloningManifest {
   const parsed: unknown = JSON.parse(encoded);
-  if (typeof parsed !== "object" || parsed === null
-    || !("format" in parsed) || parsed.format !== "tear-behavior-cloning-dataset"
-    || !("schemaVersion" in parsed) || parsed.schemaVersion !== 1
-    || !("entries" in parsed) || !Array.isArray(parsed.entries)
-    || !("rootHash" in parsed) || typeof parsed.rootHash !== "string") {
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !("format" in parsed) ||
+    parsed.format !== "tear-behavior-cloning-dataset" ||
+    !("schemaVersion" in parsed) ||
+    parsed.schemaVersion !== 1 ||
+    !("entries" in parsed) ||
+    !Array.isArray(parsed.entries) ||
+    !("rootHash" in parsed) ||
+    typeof parsed.rootHash !== "string"
+  ) {
     throw new TypeError("invalid behavior-cloning manifest");
   }
   const entries = parsed.entries as unknown as TearDatasetEntry[];
@@ -234,8 +297,9 @@ export function trainBehaviorClonedPolicy(
   }
   const actionsByFeature = new Map<string, readonly GameAction[]>();
   for (const [featureId, featureVotes] of votes) {
-    const winner = [...featureVotes.entries()]
-      .sort(([leftKey, left], [rightKey, right]) => right.count - left.count || leftKey.localeCompare(rightKey))[0]?.[1];
+    const winner = [...featureVotes.entries()].sort(
+      ([leftKey, left], [rightKey, right]) => right.count - left.count || leftKey.localeCompare(rightKey),
+    )[0]?.[1];
     if (winner !== undefined) actionsByFeature.set(featureId, Object.freeze([...winner.actions]));
   }
   return new TearBehaviorClonedPolicy(actionsByFeature, feature);

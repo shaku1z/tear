@@ -40,11 +40,19 @@ export interface LegacyPlatformCompatibility {
 }
 
 function defaultStorage(): SyncStringStorage | undefined {
-  try { return typeof localStorage === "undefined" ? undefined : localStorage; } catch { return undefined; }
+  try {
+    return typeof localStorage === "undefined" ? undefined : localStorage;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Synchronous bridge retained only while classic callers cannot await the storage port. */
-function legacyStore(storage: SyncStringStorage | undefined, sdk: CrazyGamesSdkShape | undefined, isLive: () => boolean) {
+function legacyStore(
+  storage: SyncStringStorage | undefined,
+  sdk: CrazyGamesSdkShape | undefined,
+  isLive: () => boolean,
+) {
   const memory = new Map<string, string>();
   const tails = new Map<string, Promise<unknown>>();
   const readBacking = async (key: string, portal = isLive()): Promise<string | null> => {
@@ -63,23 +71,45 @@ function legacyStore(storage: SyncStringStorage | undefined, sdk: CrazyGamesSdkS
   const acknowledged: AcknowledgedStorage = {
     async read(key) {
       await tails.get(key);
-      try { return { status: "committed", value: await readBacking(key) }; }
-      catch { return { status: storage || (isLive() && sdk?.data) ? "unknown" : "unavailable", reason: "Backing storage could not be read" }; }
+      try {
+        return { status: "committed", value: await readBacking(key) };
+      } catch {
+        return {
+          status: storage || (isLive() && sdk?.data) ? "unknown" : "unavailable",
+          reason: "Backing storage could not be read",
+        };
+      }
     },
     update(key, change) {
-      const operation = (tails.get(key) ?? Promise.resolve()).then(async (): Promise<StorageAcknowledgement<string>> => {
-        const portal = isLive();
-        if (!storage && !(isLive() && sdk?.data)) return { status: "unavailable", reason: "Persistent storage is unavailable" };
-        let value: string;
-        try { value = change(await readBacking(key, portal)); }
-        catch { return { status: "unknown", reason: "Backing state could not be read or validated" }; }
-        try { await writeBacking(key, value, portal); return { status: "committed", value }; }
-        catch {
-          try { if (await readBacking(key, portal) === value) return { status: "committed", value }; } catch { /* retain uncertainty */ }
-          return { status: "unknown", reason: "Write acknowledgement is indeterminate" };
-        }
-      });
-      tails.set(key, operation.then(() => undefined)); return operation;
+      const operation = (tails.get(key) ?? Promise.resolve()).then(
+        async (): Promise<StorageAcknowledgement<string>> => {
+          const portal = isLive();
+          if (!storage && !(isLive() && sdk?.data))
+            return { status: "unavailable", reason: "Persistent storage is unavailable" };
+          let value: string;
+          try {
+            value = change(await readBacking(key, portal));
+          } catch {
+            return { status: "unknown", reason: "Backing state could not be read or validated" };
+          }
+          try {
+            await writeBacking(key, value, portal);
+            return { status: "committed", value };
+          } catch {
+            try {
+              if ((await readBacking(key, portal)) === value) return { status: "committed", value };
+            } catch {
+              /* retain uncertainty */
+            }
+            return { status: "unknown", reason: "Write acknowledgement is indeterminate" };
+          }
+        },
+      );
+      tails.set(
+        key,
+        operation.then(() => undefined),
+      );
+      return operation;
     },
   };
   return {
@@ -90,12 +120,16 @@ function legacyStore(storage: SyncStringStorage | undefined, sdk: CrazyGamesSdkS
           const value = sdk.data.getItem(key);
           if (typeof value === "string") return value;
           if (value instanceof Promise) void value.catch(() => undefined);
-        } catch { /* use local mirror */ }
+        } catch {
+          /* use local mirror */
+        }
       }
       try {
         const value = storage?.getItem(key);
         if (value !== null && value !== undefined) return value;
-      } catch { /* use memory mirror */ }
+      } catch {
+        /* use memory mirror */
+      }
       return memory.get(key) ?? null;
     },
     set(key: string, value: string): void {
@@ -104,20 +138,34 @@ function legacyStore(storage: SyncStringStorage | undefined, sdk: CrazyGamesSdkS
         try {
           const result = sdk.data.setItem(key, value);
           if (result instanceof Promise) void result.catch(() => undefined);
-        } catch { /* local mirror still receives the write */ }
+        } catch {
+          /* local mirror still receives the write */
+        }
       }
-      try { storage?.setItem(key, value); } catch { /* memory mirror still receives the write */ }
+      try {
+        storage?.setItem(key, value);
+      } catch {
+        /* memory mirror still receives the write */
+      }
     },
   };
 }
 
-export function createLegacyPlatformCompatibility(options: LegacyPlatformCompatibilityOptions): LegacyPlatformCompatibility {
+export function createLegacyPlatformCompatibility(
+  options: LegacyPlatformCompatibilityOptions,
+): LegacyPlatformCompatibility {
   const storage = options.storage ?? defaultStorage();
   let services = options.services ?? createBrowserPlatformServices(storage === undefined ? {} : { storage });
   let unsubscribe: Unsubscribe | undefined;
-  let suspendHook: () => void = () => { return; };
-  let resumeHook: () => void = () => { return; };
-  let muteHook: (muted: boolean) => void = () => { return; };
+  let suspendHook: () => void = () => {
+    return;
+  };
+  let resumeHook: () => void = () => {
+    return;
+  };
+  let muteHook: (muted: boolean) => void = () => {
+    return;
+  };
   let loadingRequested = false;
   const now = options.now ?? (() => performance.now());
   let lastAdMs = Number.NEGATIVE_INFINITY;
@@ -169,33 +217,56 @@ export function createLegacyPlatformCompatibility(options: LegacyPlatformCompati
       loadingRequested = false;
       if (this.on) services.lifecycle.loadingFinished();
     },
-    gameplayStart() { if (this.on) services.lifecycle.gameplayStarted(); },
-    gameplayStop() { if (this.on) services.lifecycle.gameplayFinished(); },
-    happytime() { if (this.on) services.lifecycle.happyMoment(); },
+    gameplayStart() {
+      if (this.on) services.lifecycle.gameplayStarted();
+    },
+    gameplayStop() {
+      if (this.on) services.lifecycle.gameplayFinished();
+    },
+    happytime() {
+      if (this.on) services.lifecycle.happyMoment();
+    },
     setHooks(suspend, resume, mute) {
       suspendHook = suspend;
       resumeHook = resume;
       muteHook = mute ?? muteHook;
     },
-    adsAvailable() { return services.ads.available; },
+    adsAvailable() {
+      return services.ads.available;
+    },
     midgame(onDone) {
-      if (!services.ads.available || now() - lastAdMs < 45_000) { onDone?.(); return; }
+      if (!services.ads.available || now() - lastAdMs < 45_000) {
+        onDone?.();
+        return;
+      }
       lastAdMs = now();
-      void services.ads.service.showInterstitial().finally(() => { onDone?.(); });
+      void services.ads.service.showInterstitial().finally(() => {
+        onDone?.();
+      });
     },
     rewarded(onReward, onDone) {
-      if (!services.ads.available) { onDone?.(false); return; }
-      void services.ads.service.showRewardedContinue().then((outcome) => {
-        const success = outcome === "completed";
-        if (success) onReward?.();
-        onDone?.(success);
-      }, () => { onDone?.(false); });
+      if (!services.ads.available) {
+        onDone?.(false);
+        return;
+      }
+      void services.ads.service.showRewardedContinue().then(
+        (outcome) => {
+          const success = outcome === "completed";
+          if (success) onReward?.();
+          onDone?.(success);
+        },
+        () => {
+          onDone?.(false);
+        },
+      );
     },
     store: legacyStore(storage, options.sdk, () => facade.live),
   };
 
   return {
     CG: facade,
-    get services() { return services; },
+    get services() {
+      return services;
+    },
   };
 }

@@ -7,7 +7,11 @@ import {
   bossPhaseAttackAvailable,
   ROOTBOUND_DEFINITION,
 } from "../../src/gameplay/run/boss-definitions";
-import { beginBossEncounter, cleanupBossEncounterActors, type BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
+import {
+  beginBossEncounter,
+  cleanupBossEncounterActors,
+  type BossEncounterCleanupReason,
+} from "../../src/gameplay/run/boss-encounter";
 import { STAGE_BOSS_HOME } from "../../src/gameplay/stages";
 import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { BossArenaRules, createBossArena, type ArenaPlatform } from "../../src/gameplay/training/arena-rules";
@@ -20,9 +24,14 @@ function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
   return new Proxy({} as CanvasRenderingContext2D, {
     get(_target, property): unknown {
       if (values.has(property)) return values.get(property);
-      return (): void => { calls.push(String(property)); };
+      return (): void => {
+        calls.push(String(property));
+      };
     },
-    set(_target, property, value): boolean { values.set(property, value); return true; },
+    set(_target, property, value): boolean {
+      values.set(property, value);
+      return true;
+    },
   });
 }
 
@@ -65,13 +74,22 @@ describe("Rootbound production foundation", () => {
   it("installs a distinct root-throne silhouette with an authored intro pose", () => {
     const harness = createEnemyHarness();
     createEnemyPresentation({
-      A11Y: { highContrast: false, reducedMotion: false }, CLOCK: { sim: 0 }, policy: CONFIG,
-      GFX: { low: false }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
+      A11Y: { highContrast: false, reducedMotion: false },
+      CLOCK: { sim: 0 },
+      policy: CONFIG,
+      GFX: { low: false },
+      THEME: { dark: false, ink: "#171219", rim: "#fff" },
       UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
-      clamp, len, lerp,
+      clamp,
+      len,
+      lerp,
     }).install(harness.types);
-    const boss = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as
-      InstanceType<typeof harness.types.Rootbound> & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
+    const boss = new harness.types.Rootbound(
+      CONFIG.view.w / 2,
+      CONFIG.world.groundY - CONFIG.boss.h / 2,
+    ) as InstanceType<typeof harness.types.Rootbound> & {
+      draw(canvas: CanvasRenderingContext2D, player: unknown): void;
+    };
     const calls: string[] = [];
     boss.introT = CONFIG.bossTheater.introDur / 2;
     boss.draw(recordingCanvas(calls), harness.player);
@@ -90,32 +108,49 @@ describe("Rootbound production foundation", () => {
     ]) {
       const harness = createEnemyHarness();
       createEnemyPresentation({
-        A11Y: { highContrast: profile.highContrast, reducedMotion: profile.reducedMotion }, CLOCK: { sim: 2 }, policy: CONFIG,
-        GFX: { low: profile.low }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
+        A11Y: { highContrast: profile.highContrast, reducedMotion: profile.reducedMotion },
+        CLOCK: { sim: 2 },
+        policy: CONFIG,
+        GFX: { low: profile.low },
+        THEME: { dark: false, ink: "#171219", rim: "#fff" },
         UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
-        clamp, len, lerp,
+        clamp,
+        len,
+        lerp,
       }).install(harness.types);
-      const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as
-        InstanceType<typeof harness.types.Rootbound> & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
-      boss.vineSweepStage = "windup"; boss.vineSweepT = 0.3; boss.vineSweepFacing = 1;
-      boss.canopyStepStage = "telegraph"; boss.canopyStepT = 0.3;
+      const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as InstanceType<
+        typeof harness.types.Rootbound
+      > & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
+      boss.vineSweepStage = "windup";
+      boss.vineSweepT = 0.3;
+      boss.vineSweepFacing = 1;
+      boss.canopyStepStage = "telegraph";
+      boss.canopyStepT = 0.3;
       boss.canopyDestination = Object.freeze({ x: 595, y: 396, platformId: "rootbound:2" });
       const calls: string[] = [];
       boss.draw(recordingCanvas(calls), harness.player);
-      expect(calls, JSON.stringify(profile)).toEqual(expect.arrayContaining(["bezierCurveTo", "ellipse", "setLineDash", "stroke"]));
+      expect(calls, JSON.stringify(profile)).toEqual(
+        expect.arrayContaining(["bezierCurveTo", "ellipse", "setLineDash", "stroke"]),
+      );
     }
   });
 
   it("keeps Memory Choir warning geometry visible in low-graphics reduced-motion rendering", () => {
     const harness = createEnemyHarness();
     createEnemyPresentation({
-      A11Y: { highContrast: true, reducedMotion: true }, CLOCK: { sim: 2 }, policy: CONFIG,
-      GFX: { low: true }, THEME: { dark: false, ink: "#171219", rim: "#fff" },
+      A11Y: { highContrast: true, reducedMotion: true },
+      CLOCK: { sim: 2 },
+      policy: CONFIG,
+      GFX: { low: true },
+      THEME: { dark: false, ink: "#171219", rim: "#fff" },
       UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
-      clamp, len, lerp,
+      clamp,
+      len,
+      lerp,
     }).install(harness.types);
-    const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as
-      InstanceType<typeof harness.types.Rootbound> & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
+    const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as InstanceType<
+      typeof harness.types.Rootbound
+    > & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
     boss.hp = boss.maxHp * 0.5;
     boss.update(1 / 120, harness.platforms, harness.player, []);
     expect(boss.startMemoryChoir()).toBe(true);
@@ -149,14 +184,13 @@ describe("Rootbound production foundation", () => {
 
     beginBossEncounter(run, boss, CONFIG.bossTheater.introDur, {
       platforms: () => platforms,
-      setPlatforms: (next) => { platforms = next; },
-      arenaFor: (id) => createBossArena(
-        id,
-        CONFIG.view.w,
-        CONFIG.view.h,
-        CONFIG.world.groundY,
-        CONFIG.bossArena.reformWarn,
-      )?.map((platform) => ({ ...platform })) ?? null,
+      setPlatforms: (next) => {
+        platforms = next;
+      },
+      arenaFor: (id) =>
+        createBossArena(id, CONFIG.view.w, CONFIG.view.h, CONFIG.world.groundY, CONFIG.bossArena.reformWarn)?.map(
+          (platform) => ({ ...platform }),
+        ) ?? null,
     });
 
     expect(run).toMatchObject({
@@ -180,7 +214,13 @@ describe("Rootbound production foundation", () => {
     rules.update({ platforms, broken: run._arenaBroken }, CONFIG.bossArena.crackWarn, null, [], true);
     expect(route.arenaState).toBe("broken");
     expect(run._arenaBroken).toContain(route);
-    rules.update({ platforms, broken: run._arenaBroken }, CONFIG.bossArena.brokenDuration + CONFIG.bossArena.reformWarn, null, [], true);
+    rules.update(
+      { platforms, broken: run._arenaBroken },
+      CONFIG.bossArena.brokenDuration + CONFIG.bossArena.reformWarn,
+      null,
+      [],
+      true,
+    );
     expect(route.arenaState).toBe("stable");
     expect(platforms).toContain(route);
     expect(run._arenaBroken).toEqual([]);
@@ -231,7 +271,11 @@ describe("Rootbound production foundation", () => {
     expect(boss.phase).toBe(2);
 
     boss.update(1, harness.platforms, harness.player, []);
-    expect(boss).toMatchObject({ state: "idle", atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"] });
+    expect(boss).toMatchObject({
+      state: "idle",
+      atk: "unavailable",
+      availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"],
+    });
     expect(boss.contactDamageEnabled()).toBe(true);
   });
 
@@ -240,12 +284,27 @@ describe("Rootbound production foundation", () => {
     for (const reason of reasons) {
       const harness = createEnemyHarness();
       const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2);
-      boss.introT = 0.8; boss.state = "idle"; boss.stateT = 0.7; boss.vx = 40; boss.vy = -20;
-      boss.cinematicPose = "test"; boss.cinematicT = 0.5;
+      boss.introT = 0.8;
+      boss.state = "idle";
+      boss.stateT = 0.7;
+      boss.vx = 40;
+      boss.vy = -20;
+      boss.cinematicPose = "test";
+      boss.cinematicT = 0.5;
       cleanupBossEncounterActors([boss], reason);
       cleanupBossEncounterActors([boss], reason === "death" ? "reset" : "death");
-      expect(boss).toMatchObject({ cleanupReason: reason, introT: 0, state: "recover", stateT: 0,
-        vx: 0, vy: 0, atk: "unavailable", cinematicPose: "", cinematicT: 0, cinematicRequest: null });
+      expect(boss).toMatchObject({
+        cleanupReason: reason,
+        introT: 0,
+        state: "recover",
+        stateT: 0,
+        vx: 0,
+        vy: 0,
+        atk: "unavailable",
+        cinematicPose: "",
+        cinematicT: 0,
+        cinematicRequest: null,
+      });
     }
   });
 });

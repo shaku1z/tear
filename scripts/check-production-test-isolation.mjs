@@ -27,13 +27,17 @@ const ENGINEERING_MARKERS = Object.freeze([
   ["Training Operations storage is unavailable in this runtime", "src/app/engineering/foundry-screen.ts"],
   ["Reading your local consent decision", "src/app/engineering/academy-screen.ts"],
   ["Local Run Monitor: at most 256 decisions", "src/app/engineering/player-watch-controller.ts"],
-  ["No exact retained Game Agent evaluation report is selected locally", "src/app/engineering/bot-evidence-controller.ts"],
+  [
+    "No exact retained Game Agent evaluation report is selected locally",
+    "src/app/engineering/bot-evidence-controller.ts",
+  ],
   ["Scenario controls remain test and engineering evidence only", "src/app/replay/ghost-lab-home.ts"],
   // Test-build-only Verdant calibration scene (`?sceneNative=`).
   ["tear-verdant-image-package", "src/presentation/assets/verdant-calibration/scene-package.json"],
 ]);
 // The calibration scene's large images are test-build assets only.
-const FORBIDDEN_ASSET = /(?:^|\/)(?:calibration-(?:top|bottom)|support-(?:top|bottom)|tail-motion|moss-stone|structure-(?:top|bottom)|exterior-(?:top|bottom)-(?:left|right))-[\w-]+\.(?:png|webp)$/u;
+const FORBIDDEN_ASSET =
+  /(?:^|\/)(?:calibration-(?:top|bottom)|support-(?:top|bottom)|tail-motion|moss-stone|structure-(?:top|bottom)|exterior-(?:top|bottom)-(?:left|right))-[\w-]+\.(?:png|webp)$/u;
 const failures = [];
 
 // A marker that no longer exists in its source module would pass vacuously.
@@ -75,4 +79,6 @@ if (failures.length > 0) {
   console.error(["Production test-isolation gate failed:", ...failures.map((failure) => `- ${failure}`)].join("\n"));
   process.exit(1);
 }
-console.log(`production test-isolation gate passed (${String(forbidden.length)} test globals, ${String(ENGINEERING_MARKERS.length)} engineering markers, calibration assets)`);
+console.log(
+  `production test-isolation gate passed (${String(forbidden.length)} test globals, ${String(ENGINEERING_MARKERS.length)} engineering markers, calibration assets)`,
+);

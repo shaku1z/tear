@@ -11,8 +11,11 @@ describe("C39 local Ghost preservation corpus", () => {
     const report = await runGhostPreservationCorpus(corpusFixture);
     expect(JSON.stringify(corpusFixture)).toBe(before);
     expect(report.results.map((entry) => [entry.id, entry.outcome])).toEqual([
-      ["v2-exact", "exact"], ["v1-migrated", "migrated"], ["v1-visual-only", "visual-only"],
-      ["future-unsupported", "unsupported"], ["corrupt-rejected", "rejected"],
+      ["v2-exact", "exact"],
+      ["v1-migrated", "migrated"],
+      ["v1-visual-only", "visual-only"],
+      ["future-unsupported", "unsupported"],
+      ["corrupt-rejected", "rejected"],
     ]);
     const exact = report.results[0]?.reader;
     expect(exact?.mappedCommands).toBe(1);
@@ -22,18 +25,26 @@ describe("C39 local Ghost preservation corpus", () => {
   });
 
   it("rejects fixture drift", async () => {
-    await expect(runGhostPreservationCorpus({
-      ...corpusFixture,
-      cases: corpusFixture.cases.map((entry) => entry.id === "v2-exact" ? { ...entry, expected: "rejected" } : entry),
-    })).rejects.toThrow(/unexpected expected outcome/u);
+    await expect(
+      runGhostPreservationCorpus({
+        ...corpusFixture,
+        cases: corpusFixture.cases.map((entry) =>
+          entry.id === "v2-exact" ? { ...entry, expected: "rejected" } : entry,
+        ),
+      }),
+    ).rejects.toThrow(/unexpected expected outcome/u);
   });
 
   it("fails closed on descriptor drift before it imports any source", async () => {
     const importCapsule = vi.spyOn(GhostLocalVault.prototype, "importCapsule");
-    await expect(runGhostPreservationCorpus({
-      ...corpusFixture,
-      cases: corpusFixture.cases.map((entry) => entry.id === "corrupt-rejected" ? { ...entry, source: { ...entry.source, hash: "0".repeat(16) } } : entry),
-    })).rejects.toThrow(/source descriptor drifted before Vault import/u);
+    await expect(
+      runGhostPreservationCorpus({
+        ...corpusFixture,
+        cases: corpusFixture.cases.map((entry) =>
+          entry.id === "corrupt-rejected" ? { ...entry, source: { ...entry.source, hash: "0".repeat(16) } } : entry,
+        ),
+      }),
+    ).rejects.toThrow(/source descriptor drifted before Vault import/u);
     expect(importCapsule).not.toHaveBeenCalled();
   });
 });

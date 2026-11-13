@@ -77,7 +77,9 @@ export class TearScoreMusicBackend implements MusicBackend {
     this.#client.setMuteReason(reason, muted);
   }
 
-  replayMetadata(): MusicReplayMetadata { return this.#client.replayMetadata(); }
+  replayMetadata(): MusicReplayMetadata {
+    return this.#client.replayMetadata();
+  }
 
   resume(): Promise<void> {
     return this.#client.resume();

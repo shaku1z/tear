@@ -9,11 +9,7 @@ import type {
   MusicRunSessionMetadata,
 } from "../music-contracts";
 import { applyMusicMode } from "../music-mode";
-import {
-  clearFoundryPreviewProbe,
-  createFoundryPreviewProbe,
-  type FoundryPreviewRequest,
-} from "../foundry-preview";
+import { clearFoundryPreviewProbe, createFoundryPreviewProbe, type FoundryPreviewRequest } from "../foundry-preview";
 import { StemCuePlayer } from "./StemCuePlayer";
 import { assertValidStemCue } from "./validate";
 import { tierFromSnapshot } from "./tier-from-snapshot";
@@ -21,12 +17,7 @@ import { WebAudioStemBackend } from "./web-audio-backend";
 import type { StemCueManifest, Tier } from "./types";
 
 type FoundryPreviewGainReason =
-  | "foundry-fixed-tier"
-  | "foundry-adaptive"
-  | "foundry-full"
-  | "foundry-calm"
-  | "foundry-dynamic"
-  | "foundry-pause";
+  "foundry-fixed-tier" | "foundry-adaptive" | "foundry-full" | "foundry-calm" | "foundry-dynamic" | "foundry-pause";
 
 /**
  * A `MusicBackend` that plays a recorded adaptive stem cue and drives its tier
@@ -42,31 +33,16 @@ export class StemCueMusicBackend implements MusicBackend {
   readonly #muteReasons = new Set<TemporaryMuteReason>();
   #master: GainNode | null = null;
   #publishPreview:
-    | ((
-        scene: MusicContextSnapshot["scene"],
-        tier?: Tier,
-        gainReason?: FoundryPreviewGainReason,
-      ) => void)
-    | null = null;
+    ((scene: MusicContextSnapshot["scene"], tier?: Tier, gainReason?: FoundryPreviewGainReason) => void) | null = null;
   /** Pre-gameplay (menu) plays the complete arrangement. */
   #tier: Tier = 4;
 
-  constructor(
-    cue: StemCueManifest,
-    baseUrl: string,
-    preview: FoundryPreviewRequest | null = null,
-  ) {
+  constructor(cue: StemCueManifest, baseUrl: string, preview: FoundryPreviewRequest | null = null) {
     assertValidStemCue(cue);
     this.#cue = cue;
     this.#baseUrl = baseUrl;
     this.#preview = preview;
-    if (preview)
-      this.#tier =
-        preview.mode === "full"
-          ? 4
-          : preview.mode === "calm"
-            ? 0
-            : preview.fixedTier;
+    if (preview) this.#tier = preview.mode === "full" ? 4 : preview.mode === "calm" ? 0 : preview.fixedTier;
     this.id = `stem-cue@${cue.id}`;
   }
 
@@ -86,17 +62,8 @@ export class StemCueMusicBackend implements MusicBackend {
     this.#player.start({ leadSeconds: 0.15 });
     if (this.#preview) {
       this.#player.setTier(this.#tier);
-      this.#publishPreview = createFoundryPreviewProbe(
-        this.#preview,
-        this.#cue,
-        context,
-        decodeLoadMs,
-      );
-      this.#publishPreview(
-        this.#preview.scenarioScene ?? "main-menu",
-        this.#tier,
-        this.#previewGainReason(),
-      );
+      this.#publishPreview = createFoundryPreviewProbe(this.#preview, this.#cue, context, decodeLoadMs);
+      this.#publishPreview(this.#preview.scenarioScene ?? "main-menu", this.#tier, this.#previewGainReason());
     }
   }
 
@@ -113,12 +80,8 @@ export class StemCueMusicBackend implements MusicBackend {
           ? {
               scene: this.#preview.scenarioScene,
               bossActive: this.#preview.scenarioScene === "boss",
-              bossId:
-                this.#preview.scenarioScene === "boss"
-                  ? snapshot.bossId ?? "foundry-preview"
-                  : snapshot.bossId,
-              bossPhase:
-                this.#preview.bossPhase ?? snapshot.bossPhase,
+              bossId: this.#preview.scenarioScene === "boss" ? (snapshot.bossId ?? "foundry-preview") : snapshot.bossId,
+              bossPhase: this.#preview.bossPhase ?? snapshot.bossPhase,
             }
           : {}),
       } as MusicContextSnapshot;
@@ -127,11 +90,7 @@ export class StemCueMusicBackend implements MusicBackend {
         this.#tier = tier;
         this.#player.setTier(tier, { transitionBars: 1 });
       }
-      this.#publishPreview?.(
-        effective.scene,
-        tier,
-        this.#previewGainReason(effective.scene),
-      );
+      this.#publishPreview?.(effective.scene, tier, this.#previewGainReason(effective.scene));
       return;
     }
     const requested = tierFromSnapshot(snapshot);
@@ -146,38 +105,37 @@ export class StemCueMusicBackend implements MusicBackend {
     const preview = this.#preview;
     if (!preview) return this.#tier;
     const scene = snapshot?.scene ?? preview.scenarioScene ?? "main-menu";
-    const effectiveSnapshot = snapshot ?? {
-      schemaVersion: 1,
-      sequence: 0,
-      timeMs: 0,
-      scene,
-      modeId: "foundry",
-      difficultyId: "foundry",
-      biomeId: "menu",
-      stageId: "foundry",
-      wave: 0,
-      totalWaves: 0,
-      bossActive: scene === "boss",
-      bossId: scene === "boss" ? "foundry-preview" : null,
-      bossPhase: preview.bossPhase ?? null,
-      playerHealthRatio: 1,
-      comboRankId: "NONE",
-      playerMoving: false,
-    } satisfies MusicContextSnapshot;
+    const effectiveSnapshot =
+      snapshot ??
+      ({
+        schemaVersion: 1,
+        sequence: 0,
+        timeMs: 0,
+        scene,
+        modeId: "foundry",
+        difficultyId: "foundry",
+        biomeId: "menu",
+        stageId: "foundry",
+        wave: 0,
+        totalWaves: 0,
+        bossActive: scene === "boss",
+        bossId: scene === "boss" ? "foundry-preview" : null,
+        bossPhase: preview.bossPhase ?? null,
+        playerHealthRatio: 1,
+        comboRankId: "NONE",
+        playerMoving: false,
+      } satisfies MusicContextSnapshot);
     // Pause deliberately follows the normal adaptive pause behavior regardless
     // of Full, Calm, or Fixed preview mode, matching player-facing settings.
     if (scene === "paused") return tierFromSnapshot(effectiveSnapshot);
     if (preview.mode === "full") return 4;
     if (preview.mode === "calm") return 0;
     if (preview.mode === "adaptive") return tierFromSnapshot(effectiveSnapshot);
-    if (preview.mode === "dynamic")
-      return applyMusicMode(tierFromSnapshot(effectiveSnapshot));
+    if (preview.mode === "dynamic") return applyMusicMode(tierFromSnapshot(effectiveSnapshot));
     return preview.fixedTier;
   }
 
-  #previewGainReason(
-    scene = this.#preview?.scenarioScene ?? "main-menu",
-  ): FoundryPreviewGainReason {
+  #previewGainReason(scene = this.#preview?.scenarioScene ?? "main-menu"): FoundryPreviewGainReason {
     if (scene === "paused") return "foundry-pause";
     switch (this.#preview?.mode) {
       case "adaptive":

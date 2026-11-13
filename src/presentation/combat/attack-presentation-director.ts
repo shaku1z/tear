@@ -15,16 +15,56 @@ export interface AttackPresentationProfile {
 }
 
 export const ATTACK_PRESENTATION_PROFILES: Readonly<Record<WeaponId, AttackPresentationProfile>> = Object.freeze({
-  sword: Object.freeze({ weaponId: "sword", motion: "precision", bodyColor: "#13c4d6", edgeColor: "#f2ffff",
-    inkColor: "#12333d", highParticleBudget: 6, lowParticleBudget: 3, trailPersistence: 0.09 }),
-  hammer: Object.freeze({ weaponId: "hammer", motion: "weight", bodyColor: "#b57a20", edgeColor: "#fff0bd",
-    inkColor: "#332614", highParticleBudget: 9, lowParticleBudget: 4, trailPersistence: 0.16 }),
-  greatsword: Object.freeze({ weaponId: "greatsword", motion: "cleave", bodyColor: "#8960a8", edgeColor: "#eee6f4",
-    inkColor: "#30283a", highParticleBudget: 8, lowParticleBudget: 4, trailPersistence: 0.14 }),
-  chainblade: Object.freeze({ weaponId: "chainblade", motion: "tether", bodyColor: "#39795d", edgeColor: "#e5fff1",
-    inkColor: "#1c3028", highParticleBudget: 7, lowParticleBudget: 3, trailPersistence: 0.11 }),
-  riftlock: Object.freeze({ weaponId: "riftlock", motion: "ballistic", bodyColor: "#4f94a3", edgeColor: "#f5ffff",
-    inkColor: "#263947", highParticleBudget: 5, lowParticleBudget: 2, trailPersistence: 0.06 }),
+  sword: Object.freeze({
+    weaponId: "sword",
+    motion: "precision",
+    bodyColor: "#13c4d6",
+    edgeColor: "#f2ffff",
+    inkColor: "#12333d",
+    highParticleBudget: 6,
+    lowParticleBudget: 3,
+    trailPersistence: 0.09,
+  }),
+  hammer: Object.freeze({
+    weaponId: "hammer",
+    motion: "weight",
+    bodyColor: "#b57a20",
+    edgeColor: "#fff0bd",
+    inkColor: "#332614",
+    highParticleBudget: 9,
+    lowParticleBudget: 4,
+    trailPersistence: 0.16,
+  }),
+  greatsword: Object.freeze({
+    weaponId: "greatsword",
+    motion: "cleave",
+    bodyColor: "#8960a8",
+    edgeColor: "#eee6f4",
+    inkColor: "#30283a",
+    highParticleBudget: 8,
+    lowParticleBudget: 4,
+    trailPersistence: 0.14,
+  }),
+  chainblade: Object.freeze({
+    weaponId: "chainblade",
+    motion: "tether",
+    bodyColor: "#39795d",
+    edgeColor: "#e5fff1",
+    inkColor: "#1c3028",
+    highParticleBudget: 7,
+    lowParticleBudget: 3,
+    trailPersistence: 0.11,
+  }),
+  riftlock: Object.freeze({
+    weaponId: "riftlock",
+    motion: "ballistic",
+    bodyColor: "#4f94a3",
+    edgeColor: "#f5ffff",
+    inkColor: "#263947",
+    highParticleBudget: 5,
+    lowParticleBudget: 2,
+    trailPersistence: 0.06,
+  }),
 });
 
 export interface AttackPresentationDirectorPorts {
@@ -34,10 +74,44 @@ export interface AttackPresentationDirectorPorts {
   readonly reducedMotion: () => boolean;
   readonly highContrast: () => boolean;
   readonly contrastColor: () => string;
-  readonly edgeTrace: (x1: number, y1: number, x2: number, y2: number, thickness: number, life: number, color: string) => void;
-  readonly contactMark: (x: number, y: number, tangentX: number, tangentY: number, length: number, thickness: number, life: number, color: string) => void;
-  readonly groundPulse: (x: number, y: number, normalX: number, normalY: number, halfWidth: number, life: number, color: string) => void;
-  readonly muzzleWedge: (x: number, y: number, directionX: number, directionY: number, length: number, halfWidth: number, life: number, color: string) => void;
+  readonly edgeTrace: (
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    thickness: number,
+    life: number,
+    color: string,
+  ) => void;
+  readonly contactMark: (
+    x: number,
+    y: number,
+    tangentX: number,
+    tangentY: number,
+    length: number,
+    thickness: number,
+    life: number,
+    color: string,
+  ) => void;
+  readonly groundPulse: (
+    x: number,
+    y: number,
+    normalX: number,
+    normalY: number,
+    halfWidth: number,
+    life: number,
+    color: string,
+  ) => void;
+  readonly muzzleWedge: (
+    x: number,
+    y: number,
+    directionX: number,
+    directionY: number,
+    length: number,
+    halfWidth: number,
+    life: number,
+    color: string,
+  ) => void;
   readonly burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => void;
   readonly record?: (cue: AttackPresentationCue) => void;
 }
@@ -54,7 +128,10 @@ export class AttackPresentationDirector implements AttackPresentationCueSink {
   #scope: unknown;
   #hasScope = false;
 
-  constructor(private readonly ports: AttackPresentationDirectorPorts, private readonly dedupeCapacity = 64) {}
+  constructor(
+    private readonly ports: AttackPresentationDirectorPorts,
+    private readonly dedupeCapacity = 64,
+  ) {}
 
   emit(cue: AttackPresentationCue): void {
     const scope = this.ports.scope();
@@ -67,7 +144,8 @@ export class AttackPresentationDirector implements AttackPresentationCueSink {
     const tick = this.ports.tick();
     const key = `${String(tick)}:${cue.weaponId}:${String(cue.attackId)}:${cue.phase}:${cue.variant}:${String(Math.round(cue.x))}:${String(Math.round(cue.y))}`;
     if (this.#seen.has(key)) return;
-    this.#seen.add(key); this.#order.push(key);
+    this.#seen.add(key);
+    this.#order.push(key);
     if (this.#order.length > this.dedupeCapacity) {
       const expired = this.#order.shift();
       if (expired !== undefined) this.#seen.delete(expired);
@@ -85,16 +163,15 @@ export class AttackPresentationDirector implements AttackPresentationCueSink {
     const inkColor = contrastColor ?? profile.inkColor;
     const [directionX, directionY] = normalized(cue.directionX, cue.directionY, 1, 0);
     const [normalX, normalY] = normalized(cue.normalX ?? -directionX, cue.normalY ?? -directionY, 0, -1);
-    const tangentX = -normalY, tangentY = normalX;
+    const tangentX = -normalY,
+      tangentY = normalX;
     const burst = (scale: number, color = edgeColor): void => {
       if (reducedMotion) return;
-      this.ports.burst(cue.x, cue.y, directionX, directionY,
-        Math.max(1, Math.round(particles * scale)), color);
+      this.ports.burst(cue.x, cue.y, directionX, directionY, Math.max(1, Math.round(particles * scale)), color);
     };
     const trace = (thickness: number, color = bodyColor): void => {
       if (reducedMotion || lowGraphics) return;
-      this.ports.edgeTrace(cue.sourceX, cue.sourceY, cue.x, cue.y, thickness,
-        profile.trailPersistence, color);
+      this.ports.edgeTrace(cue.sourceX, cue.sourceY, cue.x, cue.y, thickness, profile.trailPersistence, color);
     };
     const contact = (length: number, thickness: number, life: number, color = edgeColor): void => {
       this.ports.contactMark(cue.x, cue.y, tangentX, tangentY, length, thickness, life, color);
@@ -102,10 +179,14 @@ export class AttackPresentationDirector implements AttackPresentationCueSink {
 
     switch (cue.variant) {
       case "reversal":
-        trace(2, edgeColor); contact(14, 2, 0.07); burst(0.55 + intensity * 0.45);
+        trace(2, edgeColor);
+        contact(14, 2, 0.07);
+        burst(0.55 + intensity * 0.45);
         break;
       case "threadcut":
-        trace(2); contact(14, 2, 0.07); burst(0.6, bodyColor);
+        trace(2);
+        contact(14, 2, 0.07);
+        burst(0.6, bodyColor);
         break;
       case "break":
         if (reducedMotion) contact(18, 3, 0.09, inkColor);
@@ -118,18 +199,25 @@ export class AttackPresentationDirector implements AttackPresentationCueSink {
         burst(0.8 + intensity * 0.2, bodyColor);
         break;
       case "hammerReturn":
-        trace(4, edgeColor); contact(18, 3, 0.09); burst(0.5, bodyColor);
+        trace(4, edgeColor);
+        contact(18, 3, 0.09);
+        burst(0.5, bodyColor);
         break;
       case "cleave":
-        trace(5); contact(26, 4, 0.1); burst(0.6, bodyColor);
+        trace(5);
+        contact(26, 4, 0.1);
+        burst(0.6, bodyColor);
         break;
       case "wheelCut":
       case "wheelReturn":
-        trace(5); contact(26, 4, 0.1);
+        trace(5);
+        contact(26, 4, 0.1);
         burst(cue.variant === "wheelReturn" ? 0.7 : 0.6, bodyColor);
         break;
       case "lash":
-        trace(2); contact(12, 2, 0.08); burst(0.45, bodyColor);
+        trace(2);
+        contact(12, 2, 0.08);
+        burst(0.45, bodyColor);
         break;
       case "hook":
       case "sling":
@@ -153,16 +241,27 @@ export class AttackPresentationDirector implements AttackPresentationCueSink {
       case "razorRound":
       case "backblastRound":
         if (cue.phase === "start") {
-          this.ports.muzzleWedge(cue.sourceX, cue.sourceY, directionX, directionY,
-            cue.variant === "backblastRound" ? 28 : 20, cue.variant === "backblastRound" ? 7 : 5,
+          this.ports.muzzleWedge(
+            cue.sourceX,
+            cue.sourceY,
+            directionX,
+            directionY,
+            cue.variant === "backblastRound" ? 28 : 20,
+            cue.variant === "backblastRound" ? 7 : 5,
             cue.variant === "backblastRound" ? 0.07 : 0.055,
-            cue.variant === "backblastRound" ? edgeColor : bodyColor);
+            cue.variant === "backblastRound" ? edgeColor : bodyColor,
+          );
         } else {
-          contact(cue.variant === "backblastRound" ? 12 : 8, 2,
+          contact(
+            cue.variant === "backblastRound" ? 12 : 8,
+            2,
             cue.variant === "backblastRound" ? 0.08 : 0.06,
-            cue.variant === "backblastRound" ? edgeColor : bodyColor);
-          burst(cue.variant === "backblastRound" ? 0.8 : 0.65,
-            cue.variant === "backblastRound" ? edgeColor : bodyColor);
+            cue.variant === "backblastRound" ? edgeColor : bodyColor,
+          );
+          burst(
+            cue.variant === "backblastRound" ? 0.8 : 0.65,
+            cue.variant === "backblastRound" ? edgeColor : bodyColor,
+          );
         }
         break;
     }

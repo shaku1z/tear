@@ -7,9 +7,7 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
   const { A11Y, CONFIG, GFX, THEME, clamp, lerp } = runtime;
   Object.assign(types.Rootbound.prototype, {
     draw(this: RenderInstance<"Rootbound">, ctx: CanvasRenderingContext2D) {
-      const intro = this.introT > 0
-        ? clamp(1 - this.introT / Math.max(CONFIG.bossTheater.introDur, 0.001), 0, 1)
-        : 1;
+      const intro = this.introT > 0 ? clamp(1 - this.introT / Math.max(CONFIG.bossTheater.introDur, 0.001), 0, 1) : 1;
       const footY = this.y + this.hh;
       const gold = "#d7b84c";
       const root = THEME.dark ? "#253627" : "#304b31";
@@ -24,48 +22,66 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
         ctx.lineWidth = A11Y.highContrast ? 6 : 4;
         ctx.setLineDash(this.canopyStepStage === "telegraph" ? [14, 9] : []);
         const separateWarning = !A11Y.highContrast && this.canopyStepStage === "telegraph";
-        ctx.beginPath(); ctx.ellipse(destination.x, destination.y + this.hh, this.hw + 20, 18, 0, 0, Math.PI * 2);
+        ctx.beginPath();
+        ctx.ellipse(destination.x, destination.y + this.hh, this.hw + 20, 18, 0, 0, Math.PI * 2);
         if (separateWarning) {
           // Retain the authored marker geometry while separating it from moss.
-          ctx.strokeStyle = "#10251e"; ctx.lineWidth = 8; ctx.stroke();
-          ctx.strokeStyle = gold; ctx.lineWidth = 4;
+          ctx.strokeStyle = "#10251e";
+          ctx.lineWidth = 8;
+          ctx.stroke();
+          ctx.strokeStyle = gold;
+          ctx.lineWidth = 4;
         }
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.beginPath(); ctx.moveTo(destination.x, destination.y - 20); ctx.lineTo(destination.x - 14, destination.y + 4); ctx.lineTo(destination.x + 14, destination.y + 4); ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(destination.x, destination.y - 20);
+        ctx.lineTo(destination.x - 14, destination.y + 4);
+        ctx.lineTo(destination.x + 14, destination.y + 4);
+        ctx.closePath();
+        ctx.fill();
         if (separateWarning) {
-          ctx.strokeStyle = "#10251e"; ctx.lineWidth = 3; ctx.stroke();
+          ctx.strokeStyle = "#10251e";
+          ctx.lineWidth = 3;
+          ctx.stroke();
         }
         ctx.globalAlpha = 1;
       }
-      if (this.memoryChoirStage) for (const manifestation of this.memoryChoirManifestations) {
-        const active = this.memoryChoirManifestationActive(manifestation);
-        const centerX = manifestation.x + manifestation.w / 2;
-        const centerY = manifestation.y + manifestation.h / 2;
-        ctx.save();
-        ctx.globalAlpha = this.memoryChoirStage === "afterimage" ? 0.3 : active ? 0.82 : 0.58;
-        ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
-        ctx.fillStyle = A11Y.highContrast ? "#ffffff" : "#5d765e";
-        ctx.lineWidth = A11Y.highContrast ? 5 : 3;
-        ctx.setLineDash(this.memoryChoirStage === "warning" ? [12, 8] : []);
-        if (this.memoryChoirStage === "warning") {
-          // The warning bounds are actionable; the faint figures remain echoes.
-          // Use a dark backing independent of theme ink, retaining the same dash
-          // and authoritative rectangle rather than widening its danger area.
-          ctx.strokeStyle = "#10251e";
-          ctx.lineWidth += 4;
-          ctx.strokeRect(manifestation.x, manifestation.y, manifestation.w, manifestation.h);
+      if (this.memoryChoirStage)
+        for (const manifestation of this.memoryChoirManifestations) {
+          const active = this.memoryChoirManifestationActive(manifestation);
+          const centerX = manifestation.x + manifestation.w / 2;
+          const centerY = manifestation.y + manifestation.h / 2;
+          ctx.save();
+          ctx.globalAlpha = this.memoryChoirStage === "afterimage" ? 0.3 : active ? 0.82 : 0.58;
           ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
+          ctx.fillStyle = A11Y.highContrast ? "#ffffff" : "#5d765e";
           ctx.lineWidth = A11Y.highContrast ? 5 : 3;
+          ctx.setLineDash(this.memoryChoirStage === "warning" ? [12, 8] : []);
+          if (this.memoryChoirStage === "warning") {
+            // The warning bounds are actionable; the faint figures remain echoes.
+            // Use a dark backing independent of theme ink, retaining the same dash
+            // and authoritative rectangle rather than widening its danger area.
+            ctx.strokeStyle = "#10251e";
+            ctx.lineWidth += 4;
+            ctx.strokeRect(manifestation.x, manifestation.y, manifestation.w, manifestation.h);
+            ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
+            ctx.lineWidth = A11Y.highContrast ? 5 : 3;
+          }
+          ctx.strokeRect(manifestation.x, manifestation.y, manifestation.w, manifestation.h);
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.arc(centerX, centerY - manifestation.h * 0.22, 13, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillRect(centerX - 16, centerY - manifestation.h * 0.08, 32, manifestation.h * 0.42);
+          ctx.beginPath();
+          ctx.moveTo(centerX - 16, centerY);
+          ctx.lineTo(centerX - 42, centerY + manifestation.h * 0.24);
+          ctx.moveTo(centerX + 16, centerY);
+          ctx.lineTo(centerX + 42, centerY + manifestation.h * 0.24);
+          ctx.stroke();
+          ctx.restore();
         }
-        ctx.strokeRect(manifestation.x, manifestation.y, manifestation.w, manifestation.h);
-        ctx.setLineDash([]);
-        ctx.beginPath(); ctx.arc(centerX, centerY - manifestation.h * 0.22, 13, 0, Math.PI * 2); ctx.fill();
-        ctx.fillRect(centerX - 16, centerY - manifestation.h * 0.08, 32, manifestation.h * 0.42);
-        ctx.beginPath(); ctx.moveTo(centerX - 16, centerY); ctx.lineTo(centerX - 42, centerY + manifestation.h * 0.24);
-        ctx.moveTo(centerX + 16, centerY); ctx.lineTo(centerX + 42, centerY + manifestation.h * 0.24); ctx.stroke();
-        ctx.restore();
-      }
       ctx.translate(this.x, footY);
       if (this.dying) ctx.rotate(this.facing * this.deathP * 0.4);
 
@@ -84,9 +100,12 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
         ctx.beginPath();
         ctx.moveTo(sweepFacing * this.hw * 0.58, -this.hh * 1.08);
         ctx.bezierCurveTo(
-          sweepFacing * (this.hw + 72), -this.hh * (1.5 - windupK * 0.45),
-          reach * 0.72, -35 - windupK * 30,
-          reach, -18,
+          sweepFacing * (this.hw + 72),
+          -this.hh * (1.5 - windupK * 0.45),
+          reach * 0.72,
+          -35 - windupK * 30,
+          reach,
+          -18,
         );
         ctx.stroke();
         ctx.setLineDash([]);
@@ -136,35 +155,59 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       ctx.lineTo(0, this.hh * 0.18);
       ctx.lineTo(this.hw * 0.78, this.hh * 0.45);
       ctx.lineTo(this.hw * 1.15, this.hh * 1.9);
-      ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4; ctx.stroke();
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = THEME.ink;
+      ctx.lineWidth = 4;
+      ctx.stroke();
 
       ctx.fillStyle = this.flash > 0 ? "#fff" : this.color;
       ctx.fillRect(-this.hw * 0.48, this.hh * 0.12, this.hw * 0.96, this.hh * 1.24);
-      ctx.strokeStyle = THEME.ink; ctx.lineWidth = 4;
+      ctx.strokeStyle = THEME.ink;
+      ctx.lineWidth = 4;
       ctx.strokeRect(-this.hw * 0.48, this.hh * 0.12, this.hw * 0.96, this.hh * 1.24);
-      ctx.beginPath(); ctx.arc(0, -this.hh * 0.08, this.hw * 0.34, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -this.hh * 0.08, this.hw * 0.34, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
 
       // Long dormant limbs make the authored reach legible without implying an active tell.
-      ctx.strokeStyle = this.flash > 0 ? "#fff" : this.color; ctx.lineWidth = 15;
+      ctx.strokeStyle = this.flash > 0 ? "#fff" : this.color;
+      ctx.lineWidth = 15;
       for (const side of [-1, 1]) {
-        ctx.beginPath(); ctx.moveTo(side * this.hw * 0.38, this.hh * 0.38);
+        ctx.beginPath();
+        ctx.moveTo(side * this.hw * 0.38, this.hh * 0.38);
         ctx.lineTo(side * this.hw * 0.82, this.hh * 0.8);
-        ctx.lineTo(side * this.hw * 1.22, this.hh * 1.42); ctx.stroke();
+        ctx.lineTo(side * this.hw * 1.22, this.hh * 1.42);
+        ctx.stroke();
       }
 
       // A plural mask-ring surrounds the keeper's face; gold nodes expose the graft seams.
       ctx.fillStyle = THEME.ink;
       for (const x of [-32, 0, 32]) {
-        ctx.beginPath(); ctx.arc(x, -this.hh * 0.12 - Math.abs(x) * 0.18, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, -this.hh * 0.12 - Math.abs(x) * 0.18, 10, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.fillStyle = gold;
-      for (const [x, y, radius] of [[-24, 22, 5], [24, 22, 5], [-37, 68, 4], [37, 68, 4], [0, 88, 6]] as const) {
-        ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+      for (const [x, y, radius] of [
+        [-24, 22, 5],
+        [24, 22, 5],
+        [-37, 68, 4],
+        [37, 68, 4],
+        [0, 88, 6],
+      ] as const) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
       }
       if (!GFX.low) {
-        ctx.strokeStyle = gold; ctx.globalAlpha = 0.5; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 54, 46 + Math.sin(intro * Math.PI) * 4, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = gold;
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 54, 46 + Math.sin(intro * Math.PI) * 4, 0, Math.PI * 2);
+        ctx.stroke();
       }
       ctx.restore();
       this.drawHpBar(ctx);

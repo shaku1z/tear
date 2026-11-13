@@ -5,15 +5,9 @@
  * historical telemetry, replays, or profile statistics: those records describe
  * the ruleset that created them.
  */
-export const WEAPON_IDS = Object.freeze([
-  "sword",
-  "hammer",
-  "greatsword",
-  "chainblade",
-  "riftlock",
-] as const);
+export const WEAPON_IDS = Object.freeze(["sword", "hammer", "greatsword", "chainblade", "riftlock"] as const);
 
-export type WeaponId = typeof WEAPON_IDS[number];
+export type WeaponId = (typeof WEAPON_IDS)[number];
 
 /** Deterministic replay packets must name the weapon contract that produced them. */
 export const FINAL_FIVE_WEAPON_SCHEMA_VERSION = "final-five-v1";

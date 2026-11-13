@@ -1,19 +1,8 @@
-import {
-  unwrapBrowserAudioContext,
-  unwrapBrowserAudioNode,
-} from "./browser-audio";
+import { unwrapBrowserAudioContext, unwrapBrowserAudioNode } from "./browser-audio";
 import type { TemporaryMuteReason } from "./mixer";
-import type {
-  MusicContextSnapshot,
-  MusicEvent,
-  MusicReplayMetadata,
-  MusicRunSessionMetadata,
-} from "./music-contracts";
+import type { MusicContextSnapshot, MusicEvent, MusicReplayMetadata, MusicRunSessionMetadata } from "./music-contracts";
 import { isMusicShell } from "./music-contracts";
-import type {
-  TearScoreClient,
-  TearScoreInitializeOptions,
-} from "./tear-score-adapter";
+import type { TearScoreClient, TearScoreInitializeOptions } from "./tear-score-adapter";
 
 export const TEAR_SCORE_PROVENANCE = Object.freeze({
   engineRepository: "shaku1z/tear-score",
@@ -80,19 +69,32 @@ export type TearScoreModuleLoader = () => Promise<unknown>;
 function isTearScoreModule(value: unknown): value is TearScoreModule {
   if (typeof value !== "object" || value === null || !("api" in value) || !("TearScoreAPI" in value)) return false;
   const api = value.api;
-  return typeof api === "object" && api !== null && "initialize" in api
-    && typeof api.initialize === "function" && typeof value.TearScoreAPI === "function";
+  return (
+    typeof api === "object" &&
+    api !== null &&
+    "initialize" in api &&
+    typeof api.initialize === "function" &&
+    typeof value.TearScoreAPI === "function"
+  );
 }
 
 function toGameContext(snapshot: MusicContextSnapshot): TearScoreGameContext {
-  const screen = snapshot.scene === "main-menu"
-    ? (isMusicShell(snapshot.scene, snapshot.biomeId) ? "menu" : "paused")
-    : snapshot.scene === "preparation" ? "setup"
-      : snapshot.scene === "paused" ? "paused"
-        : snapshot.scene === "draft" ? "draft"
-          : snapshot.scene === "victory" ? "win"
-            : snapshot.scene === "defeat" ? "gameover"
-              : "playing";
+  const screen =
+    snapshot.scene === "main-menu"
+      ? isMusicShell(snapshot.scene, snapshot.biomeId)
+        ? "menu"
+        : "paused"
+      : snapshot.scene === "preparation"
+        ? "setup"
+        : snapshot.scene === "paused"
+          ? "paused"
+          : snapshot.scene === "draft"
+            ? "draft"
+            : snapshot.scene === "victory"
+              ? "win"
+              : snapshot.scene === "defeat"
+                ? "gameover"
+                : "playing";
   return {
     screen,
     mode: snapshot.modeId,
@@ -149,7 +151,9 @@ class PinnedModuleTearScoreClient implements TearScoreClient {
     });
   }
 
-  start(): Promise<void> { return this.#api.start(); }
+  start(): Promise<void> {
+    return this.#api.start();
+  }
 
   async beginRun(metadata: MusicRunSessionMetadata): Promise<void> {
     const host = this.#host;
@@ -181,28 +185,34 @@ class PinnedModuleTearScoreClient implements TearScoreClient {
     if (event.type === "victory" || event.type === "defeat") {
       this.#lastContext = { ...previous, screen: event.type === "victory" ? "win" : "gameover" };
     } else if (event.type === "scene-changed") {
-      this.#lastContext = { ...previous, screen: toGameContext({
-        schemaVersion: 1,
-        sequence: 0,
-        timeMs: event.timeMs,
-        scene: event.scene,
-        modeId: previous.mode ?? "",
-        difficultyId: previous.difficulty ?? "",
-        biomeId: previous.biome ?? "menu",
-        stageId: "",
-        wave: previous.wave ?? 0,
-        totalWaves: 0,
-        bossActive: previous.boss?.active ?? false,
-        bossId: previous.boss?.id ?? null,
-        bossPhase: previous.boss?.phase ?? null,
-        playerHealthRatio: previous.player?.healthRatio ?? 1,
-        comboRankId: previous.player?.comboRank ?? "",
-        playerMoving: previous.player?.movingFast ?? false,
-      }).screen };
+      this.#lastContext = {
+        ...previous,
+        screen: toGameContext({
+          schemaVersion: 1,
+          sequence: 0,
+          timeMs: event.timeMs,
+          scene: event.scene,
+          modeId: previous.mode ?? "",
+          difficultyId: previous.difficulty ?? "",
+          biomeId: previous.biome ?? "menu",
+          stageId: "",
+          wave: previous.wave ?? 0,
+          totalWaves: 0,
+          bossActive: previous.boss?.active ?? false,
+          bossId: previous.boss?.id ?? null,
+          bossPhase: previous.boss?.phase ?? null,
+          playerHealthRatio: previous.player?.healthRatio ?? 1,
+          comboRankId: previous.player?.comboRank ?? "",
+          playerMoving: previous.player?.movingFast ?? false,
+        }).screen,
+      };
     } else if (event.type === "boss-entered") {
       this.#lastContext = { ...previous, boss: { ...previous.boss, active: true, id: event.bossId } };
     } else if (event.type === "boss-phase-changed") {
-      this.#lastContext = { ...previous, boss: { ...previous.boss, active: true, id: event.bossId, phase: event.phase } };
+      this.#lastContext = {
+        ...previous,
+        boss: { ...previous.boss, active: true, id: event.bossId, phase: event.phase },
+      };
     } else if (event.type === "combo-rank-changed") {
       const player = previous.player ?? { healthRatio: 1, comboGauge: 0, comboMultiplier: 1, comboRank: "" };
       this.#lastContext = {
@@ -253,7 +263,9 @@ class PinnedModuleTearScoreClient implements TearScoreClient {
     return Promise.resolve();
   }
 
-  dispose(): Promise<void> { return this.#api.dispose(); }
+  dispose(): Promise<void> {
+    return this.#api.dispose();
+  }
 
   #appendJournal(value: string): void {
     for (let index = 0; index < value.length; index++) {

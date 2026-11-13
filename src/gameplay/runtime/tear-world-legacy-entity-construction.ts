@@ -64,16 +64,22 @@ export function createTearWorldLegacyEntityConstruction<
     createBlade: ports.createBlade,
     createProjectile: ports.createProjectile,
     enemyFactories: {
-      charger: { create: ports.enemy.charger }, ranged: { create: ports.enemy.ranged },
-      flyer: { create: ports.enemy.flyer }, bomber: { create: ports.enemy.bomber },
-      armored: { create: ports.enemy.armored }, wraith: { create: ports.enemy.wraith },
-      chimera: { create: ports.enemy.chimera }, warden: { create: ports.enemy.warden },
-      colossus: { create: ports.enemy.colossus }, aldric: { create: ports.enemy.aldric },
+      charger: { create: ports.enemy.charger },
+      ranged: { create: ports.enemy.ranged },
+      flyer: { create: ports.enemy.flyer },
+      bomber: { create: ports.enemy.bomber },
+      armored: { create: ports.enemy.armored },
+      wraith: { create: ports.enemy.wraith },
+      chimera: { create: ports.enemy.chimera },
+      warden: { create: ports.enemy.warden },
+      colossus: { create: ports.enemy.colossus },
+      aldric: { create: ports.enemy.aldric },
       rootbound: { create: ports.enemy.rootbound },
       "white-hart": { create: ports.enemy.whiteHart },
       rimehound: { create: ports.enemy.rimehound },
       echo: { create: (x, y, run) => ports.enemy.echo(x, y, ports.echoMods(run)) },
-      source: { create: ports.enemy.source }, "void-wisp": { create: ports.enemy.voidWisp },
+      source: { create: ports.enemy.source },
+      "void-wisp": { create: ports.enemy.voidWisp },
       reflection: { create: ports.enemy.reflection },
       priest: { create: (x, y) => ports.enemy.support(x, y, "priest") },
       herald: { create: (x, y) => ports.enemy.support(x, y, "herald") },
@@ -82,11 +88,13 @@ export function createTearWorldLegacyEntityConstruction<
       rootbinder: { create: (x, y) => ports.enemy.support(x, y, "rootbinder") },
       boss: { create: ports.enemy.boss },
     },
-    ...(ports.rebindEchoMods === undefined ? {} : {
-      finalizeEnemy: (factoryId, enemy, run) => {
-        if (factoryId === "echo") ports.rebindEchoMods?.(enemy, ports.echoMods(run));
-        ports.finalizeEnemy?.(factoryId, enemy, run);
-      },
-    }),
+    ...(ports.rebindEchoMods === undefined
+      ? {}
+      : {
+          finalizeEnemy: (factoryId, enemy, run) => {
+            if (factoryId === "echo") ports.rebindEchoMods?.(enemy, ports.echoMods(run));
+            ports.finalizeEnemy?.(factoryId, enemy, run);
+          },
+        }),
   });
 }

@@ -25,7 +25,9 @@ export class PwaUpdateController implements PwaUpdateCapability {
   subscribe(listener: PwaUpdateListener): () => void {
     this.#listeners.add(listener);
     listener(this.snapshot());
-    return () => { this.#listeners.delete(listener); };
+    return () => {
+      this.#listeners.delete(listener);
+    };
   }
 
   install(applyUpdate: (reloadPage?: boolean) => Promise<void>): void {
@@ -63,7 +65,9 @@ export const unavailablePwaUpdate: PwaUpdateCapability = Object.freeze({
   snapshot: () => unavailableSnapshot,
   subscribe(listener: PwaUpdateListener) {
     listener(unavailableSnapshot);
-    return () => { /* immutable capability has no retained listener */ };
+    return () => {
+      /* immutable capability has no retained listener */
+    };
   },
   apply: () => Promise.resolve(false),
 });

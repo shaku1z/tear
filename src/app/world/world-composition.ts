@@ -4,8 +4,16 @@ import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
 import { MusicDirector } from "../../audio/music-director";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GameFloater, GamePlayer, GameProjectile, GameRun,
-  GameSlowZone, GameTemporaryWall } from "../shell/game-runtime-state";
+import type {
+  GameBlade,
+  GameEnemy,
+  GameFloater,
+  GamePlayer,
+  GameProjectile,
+  GameRun,
+  GameSlowZone,
+  GameTemporaryWall,
+} from "../shell/game-runtime-state";
 import type { BossBeatState, BossIntroState, LiveGameHostState } from "./game-host-state";
 import { createLiveWorldServices, type LiveWorldContext } from "./world-context";
 import { createLiveWorldEntityFactory, type LiveWorldEntityConstructionPort } from "./world-entity-factory";
@@ -18,8 +26,16 @@ import { createPaleEnvironmentFeature } from "../../gameplay/environment/pale-en
 
 type WorldRun = GameRun & { voidDescent?: unknown };
 type PortableWorldState = TearWorldState<
-  WorldRun, GamePlayer, GameBlade, GameEnemy, GameProjectile, GameFloater,
-  GameSlowZone, GameTemporaryWall, BossIntroState, BossBeatState
+  WorldRun,
+  GamePlayer,
+  GameBlade,
+  GameEnemy,
+  GameProjectile,
+  GameFloater,
+  GameSlowZone,
+  GameTemporaryWall,
+  BossIntroState,
+  BossBeatState
 >;
 type ReplayPacket = ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>;
 
@@ -88,32 +104,98 @@ export interface LiveWorldComposition<Music extends MusicDirector | null = Music
 export type DetachedWorldComposition = LiveWorldComposition<null>;
 
 /** Builds the live host-shaped state around a session without constructing adapters. */
-export function createLiveWorldState(
-  session: LiveWorldSessionPort,
-  mirrors: LiveWorldMirrors = {},
-): LiveGameHostState {
+export function createLiveWorldState(session: LiveWorldSessionPort, mirrors: LiveWorldMirrors = {}): LiveGameHostState {
   const portable: PortableWorldState = createTearWorldState<
-    WorldRun, GamePlayer, GameBlade, GameEnemy, GameProjectile, GameFloater,
-    GameSlowZone, GameTemporaryWall, BossIntroState, BossBeatState
+    WorldRun,
+    GamePlayer,
+    GameBlade,
+    GameEnemy,
+    GameProjectile,
+    GameFloater,
+    GameSlowZone,
+    GameTemporaryWall,
+    BossIntroState,
+    BossBeatState
   >();
   return Object.freeze({
     // A null run or undefined actor would be a torn world, not a reset one;
     // the live application replaces them together at run start.
-    run: () => portable.run(), setRun: (value) => { if (value !== null) { portable.setRun(value); mirrors.run?.(value); } },
-    player: () => portable.player(), setPlayer: (value) => { if (value !== undefined) { portable.setPlayer(value); mirrors.player?.(value); } },
-    blade: () => portable.blade(), setBlade: (value) => { if (value !== undefined) { portable.setBlade(value); mirrors.blade?.(value); } },
-    enemies: () => portable.enemies(), setEnemies: (value) => { portable.setEnemies(value); mirrors.enemies?.(portable.enemies()); },
-    projectiles: () => portable.projectiles(), setProjectiles: (value) => { portable.setProjectiles(value); mirrors.projectiles?.(portable.projectiles()); },
-    floaters: () => portable.floaters(), setFloaters: (value) => { portable.setFloaters(value); mirrors.floaters?.(portable.floaters()); },
-    slowZones: () => portable.slowZones(), setSlowZones: (value) => { portable.setSlowZones(value); mirrors.slowZones?.(portable.slowZones()); },
-    temporaryWalls: () => portable.temporaryWalls(), setTemporaryWalls: (value) => { portable.setTemporaryWalls(value); mirrors.temporaryWalls?.(portable.temporaryWalls()); },
-    bossIntro: () => portable.bossIntro(), setBossIntro: (value) => { portable.setBossIntro(value); mirrors.bossIntro?.(value); },
-    bossBeat: () => portable.bossBeat(), setBossBeat: (value) => { portable.setBossBeat(value); mirrors.bossBeat?.(value); },
-    selectedWeapon: () => session.selectedWeapon(), setSelectedWeapon: (value) => { session.setSelectedWeapon(value); },
-    outcome: () => session.outcome(), setOutcome: (value) => { session.setOutcome(value); },
-    lastRecording: () => session.lastRecording(), setLastRecording: (value) => { session.setLastRecording(value); },
-    lastVaultId: () => session.lastVaultId(), setLastVaultId: (value) => { session.setLastVaultId(value); },
-    winSeconds: () => session.winSeconds(), setWinSeconds: (value) => { session.setWinSeconds(value); },
+    run: () => portable.run(),
+    setRun: (value) => {
+      if (value !== null) {
+        portable.setRun(value);
+        mirrors.run?.(value);
+      }
+    },
+    player: () => portable.player(),
+    setPlayer: (value) => {
+      if (value !== undefined) {
+        portable.setPlayer(value);
+        mirrors.player?.(value);
+      }
+    },
+    blade: () => portable.blade(),
+    setBlade: (value) => {
+      if (value !== undefined) {
+        portable.setBlade(value);
+        mirrors.blade?.(value);
+      }
+    },
+    enemies: () => portable.enemies(),
+    setEnemies: (value) => {
+      portable.setEnemies(value);
+      mirrors.enemies?.(portable.enemies());
+    },
+    projectiles: () => portable.projectiles(),
+    setProjectiles: (value) => {
+      portable.setProjectiles(value);
+      mirrors.projectiles?.(portable.projectiles());
+    },
+    floaters: () => portable.floaters(),
+    setFloaters: (value) => {
+      portable.setFloaters(value);
+      mirrors.floaters?.(portable.floaters());
+    },
+    slowZones: () => portable.slowZones(),
+    setSlowZones: (value) => {
+      portable.setSlowZones(value);
+      mirrors.slowZones?.(portable.slowZones());
+    },
+    temporaryWalls: () => portable.temporaryWalls(),
+    setTemporaryWalls: (value) => {
+      portable.setTemporaryWalls(value);
+      mirrors.temporaryWalls?.(portable.temporaryWalls());
+    },
+    bossIntro: () => portable.bossIntro(),
+    setBossIntro: (value) => {
+      portable.setBossIntro(value);
+      mirrors.bossIntro?.(value);
+    },
+    bossBeat: () => portable.bossBeat(),
+    setBossBeat: (value) => {
+      portable.setBossBeat(value);
+      mirrors.bossBeat?.(value);
+    },
+    selectedWeapon: () => session.selectedWeapon(),
+    setSelectedWeapon: (value) => {
+      session.setSelectedWeapon(value);
+    },
+    outcome: () => session.outcome(),
+    setOutcome: (value) => {
+      session.setOutcome(value);
+    },
+    lastRecording: () => session.lastRecording(),
+    setLastRecording: (value) => {
+      session.setLastRecording(value);
+    },
+    lastVaultId: () => session.lastVaultId(),
+    setLastVaultId: (value) => {
+      session.setLastVaultId(value);
+    },
+    winSeconds: () => session.winSeconds(),
+    setWinSeconds: (value) => {
+      session.setWinSeconds(value);
+    },
   } satisfies LiveGameHostState);
 }
 
@@ -130,10 +212,18 @@ export function createLiveWorldState(
  * called here is pure (no random draw, id allocation or listener registration),
  * so their relative order is not observable.
  */
-export function createLiveWorldComposition(options: LiveWorldCompositionOptions & { readonly musicDirection: true }): LiveWorldComposition;
-export function createLiveWorldComposition(options: LiveWorldCompositionOptions & { readonly musicDirection: false }): DetachedWorldComposition;
-export function createLiveWorldComposition(options: LiveWorldCompositionOptions): LiveWorldComposition<MusicDirector | null>;
-export function createLiveWorldComposition(options: LiveWorldCompositionOptions): LiveWorldComposition<MusicDirector | null> {
+export function createLiveWorldComposition(
+  options: LiveWorldCompositionOptions & { readonly musicDirection: true },
+): LiveWorldComposition;
+export function createLiveWorldComposition(
+  options: LiveWorldCompositionOptions & { readonly musicDirection: false },
+): DetachedWorldComposition;
+export function createLiveWorldComposition(
+  options: LiveWorldCompositionOptions,
+): LiveWorldComposition<MusicDirector | null>;
+export function createLiveWorldComposition(
+  options: LiveWorldCompositionOptions,
+): LiveWorldComposition<MusicDirector | null> {
   const { session, mirrors = {} } = options;
   const state = createLiveWorldState(session, mirrors);
   const entities = createLiveWorldEntityFactory(options.dependencies);
@@ -151,12 +241,23 @@ export function createLiveWorldComposition(options: LiveWorldCompositionOptions)
   // same dependency surface.
   const cinema = new options.dependencies.Cinematics.Director(options.configuration.value);
   const world = createTearWorldComposition({
-    state, entities, cinema,
+    state,
+    entities,
+    cinema,
     services: createLiveWorldServices({
       dependencies: options.dependencies,
       configuration: options.configuration,
     }),
-    environment, worldId,
+    environment,
+    worldId,
   });
-  return Object.freeze({ state, context: world.context, entities, lifecycle: world.lifecycle, music, environment, dispose: world.dispose });
+  return Object.freeze({
+    state,
+    context: world.context,
+    entities,
+    lifecycle: world.lifecycle,
+    music,
+    environment,
+    dispose: world.dispose,
+  });
 }

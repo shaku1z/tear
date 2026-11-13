@@ -1,4 +1,9 @@
-import { snapshotOutcomeRun, type PreparedVictory, type RunResultInfo, type VictoryProgressionIntent } from "../../gameplay/run/outcome-planner";
+import {
+  snapshotOutcomeRun,
+  type PreparedVictory,
+  type RunResultInfo,
+  type VictoryProgressionIntent,
+} from "../../gameplay/run/outcome-planner";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
@@ -15,7 +20,9 @@ import type { EnvironmentRuntimeState } from "../../gameplay/environment/environ
 type ReplayPacket = NonNullable<ReturnType<GameRuntimeDependencies["GHOST"]["stopRec"]>>;
 
 const recordingMetadata = (summary: RecordingSummary): Readonly<Record<string, unknown>> => ({ ...summary });
-const storedRecordingMetadata = (summary: StoredRecordingSummary): Readonly<Record<string, unknown>> => ({ ...summary });
+const storedRecordingMetadata = (summary: StoredRecordingSummary): Readonly<Record<string, unknown>> => ({
+  ...summary,
+});
 
 export interface LiveOutcomeCompositionOptions {
   readonly observeTerminal?: (outcome: "defeat" | "victory") => void;
@@ -61,43 +68,71 @@ export interface LiveOutcomeCompositionOptions {
 export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOptions): void {
   const d = options.dependencies;
   const active = options.run;
-  const practicing = () => options.practiceSession?.active() != null || active().beatThisRun !== undefined || active().seedRace !== undefined;
+  const practicing = () =>
+    options.practiceSession?.active() != null || active().beatThisRun !== undefined || active().seedRace !== undefined;
   const publishTerminal = createTearTerminalRunFactPublisher(
-    d.GAMEPLAY_EVENTS, () => options.lifecycle.snapshot().sessionId,
+    d.GAMEPLAY_EVENTS,
+    () => options.lifecycle.snapshot().sessionId,
   );
   createLiveRunOutcomeHost<ReplayPacket>({
     ...(options.observeTerminal === undefined ? {} : { observeTerminal: options.observeTerminal }),
     snapshot: () => snapshotOutcomeRun(active()),
     displayName: () => d.Cloud.displayName(),
     stageIndex: options.stageIndex,
-    loadout: () => d.UPGRADES.filter((ability) => Boolean(active().mods.owned[ability.id])).map((ability) => ({
-      id: ability.id, tier: active().mods.tier[ability.id] ?? 1, count: active().mods.owned[ability.id] ?? 1,
-    })),
+    loadout: () =>
+      d.UPGRADES.filter((ability) => Boolean(active().mods.owned[ability.id])).map((ability) => ({
+        id: ability.id,
+        tier: active().mods.tier[ability.id] ?? 1,
+        count: active().mods.owned[ability.id] ?? 1,
+      })),
     authoritativeResult: options.authoritativeResult,
     stopRecording: (summary) => {
-      try { return d.GHOST.stopRec(recordingMetadata(summary), { continueSemanticInput: summary.won && active().mode === "campaign" }); }
-      finally { if (!(summary.won && active().mode === "campaign")) d.Input.stopSemanticRecording(); }
+      try {
+        return d.GHOST.stopRec(recordingMetadata(summary), {
+          continueSemanticInput: summary.won && active().mode === "campaign",
+        });
+      } finally {
+        if (!(summary.won && active().mode === "campaign")) d.Input.stopSemanticRecording();
+      }
     },
     storeReplay: (recording, summary) => d.VAULT.add(recording, storedRecordingMetadata(summary)),
     setLastRecording: options.setLastRecording,
     setLastVaultId: options.setLastVaultId,
     submitScore: (mode, difficulty, score) => d.Cloud.submitScore(mode, difficulty, score),
     publishReplay: (recording, board) => d.Cloud.publishReplay(recording, null, board),
-    linkReplay: (mode, difficulty, shareId) => { void d.Cloud.linkReplay(mode, difficulty, shareId); },
-    attachShareId: (vaultId, shareId) => { d.VAULT.setShareId(vaultId, shareId); },
-    replaceWaveLog: (log) => { active().waveLog = log.slice(); },
+    linkReplay: (mode, difficulty, shareId) => {
+      void d.Cloud.linkReplay(mode, difficulty, shareId);
+    },
+    attachShareId: (vaultId, shareId) => {
+      d.VAULT.setShareId(vaultId, shareId);
+    },
+    replaceWaveLog: (log) => {
+      active().waveLog = log.slice();
+    },
     waveActive: () => options.lifecycle.isWaveActive,
     preparedVictory: () => active()._victoryPrepared ?? null,
-    storePreparedVictory: (prepared) => { active()._victoryPrepared = prepared; },
-    stopClipper: () => { d.Clipper?.stop(); },
+    storePreparedVictory: (prepared) => {
+      active()._victoryPrepared = prepared;
+    },
+    stopClipper: () => {
+      d.Clipper?.stop();
+    },
     terminate: (outcome) => {
-      try { options.cleanupBossActors(); options.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal"); options.lifecycle.terminate(outcome); }
-      finally { d.Input.stopSemanticRecording(); }
+      try {
+        options.cleanupBossActors();
+        options.environment.clear(outcome === "defeat" ? "defeat" : "boss-terminal");
+        options.lifecycle.terminate(outcome);
+      } finally {
+        d.Input.stopSemanticRecording();
+      }
     },
     publishTerminal,
-    saveBest: (run) => practicing() || run.ghostAssistance !== undefined ? false : options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
+    saveBest: (run) =>
+      practicing() || run.ghostAssistance !== undefined
+        ? false
+        : options.saveBest(run.mode, run.diff, run.wave, run.score, run.runTime),
     best: (run) => options.getBest(run.mode, run.diff),
-    awardCoins: (score) => practicing() ? 0 : options.awardCoins(score),
+    awardCoins: (score) => (practicing() ? 0 : options.awardCoins(score)),
     coins: () => d.META.coins(),
     achievementTracking: () => !practicing() && options.achievementTracking(),
     economyTelemetry: options.economyTelemetry,
@@ -107,38 +142,70 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
       d.DAILY.bump("runs", 1);
       options.achievementCheck();
       void d.Cloud.push();
-      d.Cloud.logEvent("run_end", { mode: run.mode, diff: run.diff, wave: run.wave, score: run.score,
-        time: Math.round(run.runTime), peak: run.wavePeak, died: true, ...options.economyTelemetry(earned) });
+      d.Cloud.logEvent("run_end", {
+        mode: run.mode,
+        diff: run.diff,
+        wave: run.wave,
+        score: run.score,
+        time: Math.round(run.runTime),
+        peak: run.wavePeak,
+        died: true,
+        ...options.economyTelemetry(earned),
+      });
       options.finishRecording(false);
     },
     finishRecording(won) {
       // Fork-practice/challenge recordings belong to their independent owner.
       if (options.practiceSession?.active() != null) return;
       const run = active();
-      if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined)) options.finishRecording(won);
+      if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined))
+        options.finishRecording(won);
     },
-    executeVictoryIntents: (intents) => { if (!practicing()) options.executeVictory(intents); },
-    persistPendingFinale: (record) => { if (!practicing()) d.pendingFinalePersistence.persist(record); },
-    saveProfile: () => { if (!practicing()) d.pendingFinalePersistence.saveProfile(); },
-    clearPendingFinale: () => { if (!practicing()) d.pendingFinalePersistence.clear(); },
-    pushCloud: () => { if (!practicing()) void d.Cloud.push(); },
+    executeVictoryIntents: (intents) => {
+      if (!practicing()) options.executeVictory(intents);
+    },
+    persistPendingFinale: (record) => {
+      if (!practicing()) d.pendingFinalePersistence.persist(record);
+    },
+    saveProfile: () => {
+      if (!practicing()) d.pendingFinalePersistence.saveProfile();
+    },
+    clearPendingFinale: () => {
+      if (!practicing()) d.pendingFinalePersistence.clear();
+    },
+    pushCloud: () => {
+      if (!practicing()) void d.Cloud.push();
+    },
     present(outcome, result) {
       options.setOutcome(result);
       options.setScreen(outcome === "victory" ? "win" : "gameover");
       document.exitPointerLock();
       options.emitMusicOutcome(outcome);
-      if (outcome === "victory") { d.SFX.wave(); d.CG.happytime(); } else d.SFX.gameover();
+      if (outcome === "victory") {
+        d.SFX.wave();
+        d.CG.happytime();
+      } else d.SFX.gameover();
     },
-    midgame: (callback) => { d.CG.midgame(callback); },
-    restartCurrentRun: () => { options.cleanupBossActors(); options.environment.clear("retry"); options.startRun(active().mode, active().diff); },
+    midgame: (callback) => {
+      d.CG.midgame(callback);
+    },
+    restartCurrentRun: () => {
+      options.cleanupBossActors();
+      options.environment.clear("retry");
+      options.startRun(active().mode, active().diff);
+    },
     ...(options.observeOutcomeChronology === undefined
       ? {}
       : { observeOutcomeChronology: options.observeOutcomeChronology }),
     pendingFinale: d.pendingFinalePersistence.pending,
     selectedWeapon: options.selectedWeapon,
     selectWeapon: options.selectWeapon,
-    startCampaign: (difficulty) => { options.startRun("campaign", difficulty); },
-    cancelCinematic: (reason) => { if (options.cinema.active) options.cinema.cancel(reason); },
+    startCampaign: (difficulty) => {
+      options.startRun("campaign", difficulty);
+    },
+    cancelCinematic: (reason) => {
+      if (options.cinema.active) options.cinema.cancel(reason);
+    },
     pendingRun: active,
     player: options.player,
     stageCount: () => d.STAGES.length,
@@ -148,13 +215,30 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     viewport: () => ({ width: options.width, height: options.height }),
     isRecording: () => d.GHOST.recording(),
     stopInterruptedRecording: (reason) => {
-      try { d.GHOST.stopRec({ [reason]: true }); }
-      finally { d.Input.stopSemanticRecording(); }
+      try {
+        d.GHOST.stopRec({ [reason]: true });
+      } finally {
+        d.Input.stopSemanticRecording();
+      }
     },
-    presentClaimed(result) { options.setOutcome(result); options.setScreen("win"); options.resetWinSeconds(); d.SFX.wave(); d.CG.happytime(); },
-    launchFinale: (death, recovered) => { options.startFinale(death, recovered); },
-    installRecording: (controller) => { options.controllers.installRecording(controller); },
-    installOutcome: (controller) => { options.controllers.installOutcome(controller); },
-    installPendingFinale: (controller) => { options.controllers.installPendingFinale(controller); },
+    presentClaimed(result) {
+      options.setOutcome(result);
+      options.setScreen("win");
+      options.resetWinSeconds();
+      d.SFX.wave();
+      d.CG.happytime();
+    },
+    launchFinale: (death, recovered) => {
+      options.startFinale(death, recovered);
+    },
+    installRecording: (controller) => {
+      options.controllers.installRecording(controller);
+    },
+    installOutcome: (controller) => {
+      options.controllers.installOutcome(controller);
+    },
+    installPendingFinale: (controller) => {
+      options.controllers.installPendingFinale(controller);
+    },
   });
 }

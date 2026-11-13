@@ -1,4 +1,18 @@
-import { TearAcademyCandidateCurationStore, TearAcademyCandidateCustodyStore, TearAcademyCandidateQualityStore, TearAcademyCandidateSplitStore, TearAcademyCorpusStore, TearAcademyReviewedSampleStore, TearAcademyTrainingDatasetLoader, TearFoundryJobScheduleVault, TearFoundryJobVault, TearFoundryScheduleController, TearFoundryScheduledExecution, type TearFoundryJobV1, type TearFoundryScheduleProjectionV1 } from "../../agents";
+import {
+  TearAcademyCandidateCurationStore,
+  TearAcademyCandidateCustodyStore,
+  TearAcademyCandidateQualityStore,
+  TearAcademyCandidateSplitStore,
+  TearAcademyCorpusStore,
+  TearAcademyReviewedSampleStore,
+  TearAcademyTrainingDatasetLoader,
+  TearFoundryJobScheduleVault,
+  TearFoundryJobVault,
+  TearFoundryScheduleController,
+  TearFoundryScheduledExecution,
+  type TearFoundryJobV1,
+  type TearFoundryScheduleProjectionV1,
+} from "../../agents";
 import type { GhostVaultBackend } from "../../ghost";
 
 export type LiveFoundryScheduleStatus = "disabled" | "configured" | "due" | "running" | "blocked" | "error";
@@ -25,10 +39,22 @@ export class LiveFoundryScheduler {
   #waking = false;
   #status = new Map<string, LiveFoundryScheduleStatus>();
 
-  constructor(ports: LiveFoundrySchedulerPorts) { this.#ports = ports; }
-  status(scheduleHash: string): LiveFoundryScheduleStatus | undefined { return this.#status.get(scheduleHash); }
-  start(): void { if (this.#started) return; this.#started = true; void this.wake(); }
-  stop(): void { this.#started = false; if (this.#timer !== undefined) this.#ports.cancel(this.#timer); this.#timer = undefined; }
+  constructor(ports: LiveFoundrySchedulerPorts) {
+    this.#ports = ports;
+  }
+  status(scheduleHash: string): LiveFoundryScheduleStatus | undefined {
+    return this.#status.get(scheduleHash);
+  }
+  start(): void {
+    if (this.#started) return;
+    this.#started = true;
+    void this.wake();
+  }
+  stop(): void {
+    this.#started = false;
+    if (this.#timer !== undefined) this.#ports.cancel(this.#timer);
+    this.#timer = undefined;
+  }
 
   async wake(): Promise<void> {
     if (!this.#started || this.#waking) return;
@@ -40,8 +66,12 @@ export class LiveFoundryScheduler {
       const due = schedules.find((schedule) => schedule.state === "enabled" && schedule.disposition === "due");
       if (due !== undefined) {
         this.#set(due.scheduleHash, "running");
-        try { await this.#ports.execute(due.scheduleHash, at, this.#ports.leaseId()); this.#set(due.scheduleHash, "configured"); }
-        catch { this.#set(due.scheduleHash, "error"); }
+        try {
+          await this.#ports.execute(due.scheduleHash, at, this.#ports.leaseId());
+          this.#set(due.scheduleHash, "configured");
+        } catch {
+          this.#set(due.scheduleHash, "error");
+        }
       }
     } finally {
       this.#waking = false;
@@ -57,22 +87,55 @@ export class LiveFoundryScheduler {
   }
   #set(scheduleHash: string, status: LiveFoundryScheduleStatus): void {
     if (this.#status.get(scheduleHash) === status) return;
-    this.#status.set(scheduleHash, status); this.#ports.onChange?.();
+    this.#status.set(scheduleHash, status);
+    this.#ports.onChange?.();
   }
-  #scheduleNext(): void { if (!this.#started) return; this.#timer = this.#ports.defer(() => { void this.wake(); }, 60_000); }
+  #scheduleNext(): void {
+    if (!this.#started) return;
+    this.#timer = this.#ports.defer(() => {
+      void this.wake();
+    }, 60_000);
+  }
 }
 
 /** Creates the local browser owner. It has no worker, network, cloud, artifact, or policy dependency. */
 export function createLiveFoundryScheduler(backend: GhostVaultBackend, onChange?: () => void): LiveFoundryScheduler {
-  const jobs = new TearFoundryJobVault(backend), schedules = new TearFoundryJobScheduleVault(backend), custody = new TearAcademyCandidateCustodyStore(backend);
+  const jobs = new TearFoundryJobVault(backend),
+    schedules = new TearFoundryJobScheduleVault(backend),
+    custody = new TearAcademyCandidateCustodyStore(backend);
   // The browser wake owner has the same governed read boundary as the launch
   // screen.  It may consume an already-published C31 trainer manifest, but it
   // cannot publish, curate, or alter the profile/binding that declared it.
-  const quality = new TearAcademyCandidateQualityStore(backend, custody), curation = new TearAcademyCandidateCurationStore(backend, custody, quality), splits = new TearAcademyCandidateSplitStore(backend, custody, quality, curation), samples = new TearAcademyReviewedSampleStore(backend, custody, quality, curation, splits), corpus = new TearAcademyCorpusStore(backend, custody, curation, splits, samples), loader = new TearAcademyTrainingDatasetLoader(corpus, samples);
-  const authority = { held: async (job: TearFoundryJobV1, at: string) => {
-    const held = await custody.held(at); return job.inputs.corpusRecordHashes.every((hash) => held.some((entry) => entry.recordHash === hash));
-  } };
+  const quality = new TearAcademyCandidateQualityStore(backend, custody),
+    curation = new TearAcademyCandidateCurationStore(backend, custody, quality),
+    splits = new TearAcademyCandidateSplitStore(backend, custody, quality, curation),
+    samples = new TearAcademyReviewedSampleStore(backend, custody, quality, curation, splits),
+    corpus = new TearAcademyCorpusStore(backend, custody, curation, splits, samples),
+    loader = new TearAcademyTrainingDatasetLoader(corpus, samples);
+  const authority = {
+    held: async (job: TearFoundryJobV1, at: string) => {
+      const held = await custody.held(at);
+      return job.inputs.corpusRecordHashes.every((hash) => held.some((entry) => entry.recordHash === hash));
+    },
+  };
   const controller = new TearFoundryScheduleController(jobs, schedules, authority);
-  const execution = new TearFoundryScheduledExecution(jobs, schedules, custody, corpus, loader, { custody, curation, corpus, loader });
-  return new LiveFoundryScheduler({ discover: (at) => controller.discoverDue(at), execute: (hash, at, lease) => execution.runScheduledOnce(hash, at, lease), now: () => new Date(), defer: (callback, ms) => { return setTimeout(callback, ms); }, cancel: (handle) => { clearTimeout(handle); }, leaseId: () => `browser-${crypto.randomUUID()}`, ...(onChange === undefined ? {} : { onChange }) });
+  const execution = new TearFoundryScheduledExecution(jobs, schedules, custody, corpus, loader, {
+    custody,
+    curation,
+    corpus,
+    loader,
+  });
+  return new LiveFoundryScheduler({
+    discover: (at) => controller.discoverDue(at),
+    execute: (hash, at, lease) => execution.runScheduledOnce(hash, at, lease),
+    now: () => new Date(),
+    defer: (callback, ms) => {
+      return setTimeout(callback, ms);
+    },
+    cancel: (handle) => {
+      clearTimeout(handle);
+    },
+    leaseId: () => `browser-${crypto.randomUUID()}`,
+    ...(onChange === undefined ? {} : { onChange }),
+  });
 }

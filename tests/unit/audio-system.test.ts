@@ -1,35 +1,37 @@
 import { describe, expect, it, vi } from "vitest";
 import { AudioSystem } from "../../src/audio/audio-system";
-import type {
-  AudioGraphContext,
-  AudioNodePort,
-  GainNodePort,
-  GainParamPort,
-} from "../../src/audio/mixer";
+import type { AudioGraphContext, AudioNodePort, GainNodePort, GainParamPort } from "../../src/audio/mixer";
 import type {
   MusicBackend,
   MusicContextSnapshot,
   MusicEvent,
   MusicRunSessionMetadata,
 } from "../../src/audio/music-contracts";
-import type {
-  AudioEffectsBackend,
-  AudioEffectsBackendHost,
-} from "../../src/audio/effects-contracts";
+import type { AudioEffectsBackend, AudioEffectsBackendHost } from "../../src/audio/effects-contracts";
 
 class FakeParam implements GainParamPort {
   value = 1;
-  cancelScheduledValues(): void { return undefined; }
-  setValueAtTime(value: number): void { this.value = value; }
-  linearRampToValueAtTime(value: number): void { this.value = value; }
+  cancelScheduledValues(): void {
+    return undefined;
+  }
+  setValueAtTime(value: number): void {
+    this.value = value;
+  }
+  linearRampToValueAtTime(value: number): void {
+    this.value = value;
+  }
 }
 
 class FakeNode implements GainNodePort {
   readonly gain = new FakeParam();
   readonly connections: AudioNodePort[] = [];
   disconnected = false;
-  connect(destination: AudioNodePort): void { this.connections.push(destination); }
-  disconnect(): void { this.disconnected = true; }
+  connect(destination: AudioNodePort): void {
+    this.connections.push(destination);
+  }
+  disconnect(): void {
+    this.disconnected = true;
+  }
 }
 
 class FakeContext implements AudioGraphContext {
@@ -37,9 +39,18 @@ class FakeContext implements AudioGraphContext {
   state: "suspended" | "running" | "closed" = "suspended";
   readonly destination = new FakeNode();
   readonly nodes = new Map<string, FakeNode>();
-  readonly resume = vi.fn(() => { this.state = "running"; return Promise.resolve(); });
-  readonly suspend = vi.fn(() => { this.state = "suspended"; return Promise.resolve(); });
-  readonly close = vi.fn(() => { this.state = "closed"; return Promise.resolve(); });
+  readonly resume = vi.fn(() => {
+    this.state = "running";
+    return Promise.resolve();
+  });
+  readonly suspend = vi.fn(() => {
+    this.state = "suspended";
+    return Promise.resolve();
+  });
+  readonly close = vi.fn(() => {
+    this.state = "closed";
+    return Promise.resolve();
+  });
   createGain(label: string): FakeNode {
     const node = new FakeNode();
     this.nodes.set(label, node);
@@ -61,16 +72,34 @@ class FakeBackend implements MusicBackend {
     this.calls.push("beginRun");
     return this.failRunStart ? Promise.reject(new Error(`${this.id} run failed`)) : Promise.resolve();
   }
-  updateContext(): void { this.calls.push("updateContext"); }
-  emitEvent(): void { this.calls.push("emitEvent"); }
-  endRun(): Promise<void> { this.calls.push("endRun"); return Promise.resolve(); }
+  updateContext(): void {
+    this.calls.push("updateContext");
+  }
+  emitEvent(): void {
+    this.calls.push("emitEvent");
+  }
+  endRun(): Promise<void> {
+    this.calls.push("endRun");
+    return Promise.resolve();
+  }
   setMuteReason(reason: string, muted: boolean): void {
     this.calls.push(`mute:${reason}:${String(muted)}`);
   }
-  replayMetadata() { return { enabled: false, reason: "fallback" } as const; }
-  resume(): Promise<void> { this.calls.push("resume"); return Promise.resolve(); }
-  suspend(): Promise<void> { this.calls.push("suspend"); return Promise.resolve(); }
-  dispose(): Promise<void> { this.calls.push("dispose"); return Promise.resolve(); }
+  replayMetadata() {
+    return { enabled: false, reason: "fallback" } as const;
+  }
+  resume(): Promise<void> {
+    this.calls.push("resume");
+    return Promise.resolve();
+  }
+  suspend(): Promise<void> {
+    this.calls.push("suspend");
+    return Promise.resolve();
+  }
+  dispose(): Promise<void> {
+    this.calls.push("dispose");
+    return Promise.resolve();
+  }
 }
 
 class FakeEffectsBackend implements AudioEffectsBackend {
@@ -127,7 +156,9 @@ function makeSystem(
   fallback: MusicBackend | null,
   effectsBackend?: AudioEffectsBackend,
 ) {
-  const create = vi.fn(() => { return context; });
+  const create = vi.fn(() => {
+    return context;
+  });
   return {
     create,
     system: new AudioSystem({
@@ -190,19 +221,15 @@ describe("AudioSystem", () => {
     const { system } = makeSystem(new FakeContext(), backend, null);
     await system.activateFromUserGesture();
 
-    expect(() => { system.updateMusicContext(SNAPSHOT); }).toThrow("No music run is active");
+    expect(() => {
+      system.updateMusicContext(SNAPSHOT);
+    }).toThrow("No music run is active");
     await system.beginMusicRun(RUN);
     system.updateMusicContext(SNAPSHOT);
     system.emitMusicEvent(EVENT);
     await system.endMusicRun();
 
-    expect(backend.calls).toEqual([
-      "initialize",
-      "beginRun",
-      "updateContext",
-      "emitEvent",
-      "endRun",
-    ]);
+    expect(backend.calls).toEqual(["initialize", "beginRun", "updateContext", "emitEvent", "endRun"]);
   });
 
   it("keeps mute reasons through activation and owns suspend, resume, and disposal", async () => {
@@ -215,13 +242,7 @@ describe("AudioSystem", () => {
     await system.resume();
     await Promise.all([system.dispose(), system.dispose()]);
 
-    expect(backend.calls).toEqual([
-      "initialize",
-      "mute:ad:true",
-      "suspend",
-      "resume",
-      "dispose",
-    ]);
+    expect(backend.calls).toEqual(["initialize", "mute:ad:true", "suspend", "resume", "dispose"]);
     expect(context.suspend).toHaveBeenCalledTimes(1);
     expect(context.close).toHaveBeenCalledTimes(1);
     expect(system.state).toBe("disposed");

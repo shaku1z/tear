@@ -106,8 +106,10 @@ function finiteNonNegative(value: number, label: string): number {
 export function createRunSession<TMods extends { weaponId?: string }>(
   options: CreateRunSessionOptions<TMods>,
 ): RunSession<TMods> {
-  if (!Number.isSafeInteger(options.runSeed) || options.runSeed < 1) throw new RangeError("runSeed must be a positive integer");
-  if (!Number.isSafeInteger(options.voidSeed) || options.voidSeed < 1) throw new RangeError("voidSeed must be a positive integer");
+  if (!Number.isSafeInteger(options.runSeed) || options.runSeed < 1)
+    throw new RangeError("runSeed must be a positive integer");
+  if (!Number.isSafeInteger(options.voidSeed) || options.voidSeed < 1)
+    throw new RangeError("voidSeed must be a positive integer");
   const weaponId = migrateWeaponSelection(options.weaponId);
   const mods = options.mods;
   mods.weaponId = weaponId;
@@ -143,7 +145,16 @@ export function createRunSession<TMods extends { weaponId?: string }>(
     _dmgThisStage: false,
     _achSnap: [...options.achievementSnapshot],
     weaponId,
-    weaponStats: { heldHits: 0, reversals: 0, trueCuts: 0, throws: 0, throwHits: 0, perfectParries: 0, breakTriggers: 0, distanceMoved: 0 },
+    weaponStats: {
+      heldHits: 0,
+      reversals: 0,
+      trueCuts: 0,
+      throws: 0,
+      throwHits: 0,
+      perfectParries: 0,
+      breakTriggers: 0,
+      distanceMoved: 0,
+    },
     weaponLog: [],
     biomeState: { swung: false, thrown: false, jumped: false },
     _staticParry: 0,

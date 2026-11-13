@@ -1,8 +1,6 @@
 export type Unsubscribe = () => void;
 
-export type Capability<T> =
-  | Readonly<{ available: true; service: T }>
-  | Readonly<{ available: false; reason: string }>;
+export type Capability<T> = Readonly<{ available: true; service: T }> | Readonly<{ available: false; reason: string }>;
 
 export const available = <T>(service: T): Capability<T> => Object.freeze({ available: true, service });
 export const unavailable = <T = never>(reason: string): Capability<T> => Object.freeze({ available: false, reason });

@@ -5,10 +5,7 @@ import { CombatEntityRuntime } from "../combat/combat-entity-runtime";
 import { LiveCombatRuntime, type LiveCombatRuntimeOptions } from "../combat/live-combat-runtime";
 import { LiveKillRuntime, type LiveKillHost } from "../combat/live-kill-runtime";
 import type { TearGameplayEventPort } from "./gameplay-events";
-import {
-  TearSimulationRuntime,
-  type TearSimulationActionPort,
-} from "./tear-simulation-runtime";
+import { TearSimulationRuntime, type TearSimulationActionPort } from "./tear-simulation-runtime";
 import type { EnvironmentStepPort } from "../environment/environment-runtime";
 
 type CombatRuntimeLifecycleOptions = Omit<LiveCombatRuntimeOptions, "opening" | "collision">;
@@ -32,10 +29,12 @@ export interface TearCombatSimulationOptions<State> {
   readonly environment?: EnvironmentStepPort;
   readonly combatEntities: ConstructorParameters<typeof CombatEntityRuntime>[0];
   readonly kill: LiveKillHost;
-  readonly createCombat: (api: Readonly<{
-    combatEntities: CombatEntityRuntime;
-    resolveKill(enemy: Parameters<LiveKillRuntime["resolve"]>[0], cause?: string): void;
-  }>) => Pick<LiveCombatRuntimeOptions, "opening" | "collision"> & CombatRuntimeLifecycleOptions;
+  readonly createCombat: (
+    api: Readonly<{
+      combatEntities: CombatEntityRuntime;
+      resolveKill(enemy: Parameters<LiveKillRuntime["resolve"]>[0], cause?: string): void;
+    }>,
+  ) => Pick<LiveCombatRuntimeOptions, "opening" | "collision"> & CombatRuntimeLifecycleOptions;
   readonly authoritative: Readonly<{
     readonly actionPort: TearSimulationActionPort;
     afterWorldStep?(tick: number, input: AuthoritativeInputState): void;
@@ -55,15 +54,23 @@ export function createTearCombatSimulation<State>(
   const killRuntime = new LiveKillRuntime(options.kill);
   const combatOptions = options.createCombat({
     combatEntities: combatEntityRuntime,
-    resolveKill: (enemy, cause) => { killRuntime.resolve(enemy, cause); },
+    resolveKill: (enemy, cause) => {
+      killRuntime.resolve(enemy, cause);
+    },
   });
   const combatRuntime = new LiveCombatRuntime(combatOptions);
   const simulationRuntime = new TearSimulationRuntime<State>({
     actionPort: options.authoritative.actionPort,
-    step: (seconds) => { combatRuntime.step(seconds); },
-    ...(options.authoritative.afterWorldStep === undefined ? {} : { afterWorldStep: (tick: number, input: AuthoritativeInputState) => {
-      options.authoritative.afterWorldStep?.(tick, input);
-    } }),
+    step: (seconds) => {
+      combatRuntime.step(seconds);
+    },
+    ...(options.authoritative.afterWorldStep === undefined
+      ? {}
+      : {
+          afterWorldStep: (tick: number, input: AuthoritativeInputState) => {
+            options.authoritative.afterWorldStep?.(tick, input);
+          },
+        }),
     snapshot: (tick, input) => options.authoritative.snapshot(tick, input),
     ...(options.gameplayEvents === undefined ? {} : { events: options.gameplayEvents }),
     ...(options.environment === undefined ? {} : { environment: options.environment }),

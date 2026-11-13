@@ -1,12 +1,34 @@
 import { describe, expect, it } from "vitest";
 
-import { createCampaignChapterController, createFinaleController } from "../../src/app/campaign/campaign-controller-factory";
+import {
+  createCampaignChapterController,
+  createFinaleController,
+} from "../../src/app/campaign/campaign-controller-factory";
 
-const motion = { loreReveal: 1, chapterIn: 2, loreExit: 3, biomeRevealBrief: 4, biomeRevealFull: 5, readyBrief: 6, readyFull: 7 };
+const motion = {
+  loreReveal: 1,
+  chapterIn: 2,
+  loreExit: 3,
+  biomeRevealBrief: 4,
+  biomeRevealFull: 5,
+  readyBrief: 6,
+  readyFull: 7,
+};
 const config = {
   presentation: { dialogueDuck: 0.5, biomeRevealDuck: 0.7 },
-  finale: { anchorRadius: 20, worldZoom: 0.8, silence: 1, wound: 1, relics: 1,
-    cutAutoAt: 1, cutAutoStep: 1, cutSpeed: 1, restorationMin: 1, epilogueReveal: 1, rewardHold: 1 },
+  finale: {
+    anchorRadius: 20,
+    worldZoom: 0.8,
+    silence: 1,
+    wound: 1,
+    relics: 1,
+    cutAutoAt: 1,
+    cutAutoStep: 1,
+    cutSpeed: 1,
+    restorationMin: 1,
+    epilogueReveal: 1,
+    rewardHold: 1,
+  },
 };
 
 describe("campaign controller factory", () => {

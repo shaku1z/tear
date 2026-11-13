@@ -15,7 +15,10 @@ import {
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { projectBloomWellPresentation } from "../../src/presentation/environment/bloom-well-presentation";
-import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench/production-replay-composition";
+import {
+  captureProductionReplayCheckpoint,
+  createProductionGhostReplayComposition,
+} from "../../src/tearbench/production-replay-composition";
 import { compileResolvedTearSdlSnapshot } from "../../src/tearbench/state-forge-live-compiler";
 import { forgeBloomWellCycleState } from "../../src/tearbench/state-forge-factories";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
@@ -48,7 +51,9 @@ describe("Bloom Well V1", () => {
     expect(active.state).toBe("active");
     expect(advanceBloomWell(active, BLOOM_WELL_TIMING.warningTicks + 1).stateTick).toBe(BLOOM_WELL_TIMING.warningTicks);
     expect(active.transitionTick).toBe(BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks);
-    expect(advanceBloomWell(active, BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks).state).toBe("cooldown");
+    expect(advanceBloomWell(active, BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks).state).toBe(
+      "cooldown",
+    );
     expect(advanceBloomWell(active, BLOOM_WELL_TIMING.totalTicks - 1).state).toBe("cooldown");
     expect(advanceBloomWell(active, BLOOM_WELL_TIMING.totalTicks).state).toBe("dormant");
   });
@@ -67,14 +72,24 @@ describe("Bloom Well V1", () => {
   });
 
   it("rejects a force vector that exceeds its declared bounded magnitude", () => {
-    expect(() => createBloomWellDefinition({ ...definition, force: { x: 0, y: -1e300, magnitude: 1 } }))
-      .toThrow(/force vector/u);
-    const runtime = createEnvironmentRuntime({ stageId: "stage", worldId: "force-restore", validators: [BLOOM_WELL_VALIDATION] });
+    expect(() => createBloomWellDefinition({ ...definition, force: { x: 0, y: -1e300, magnitude: 1 } })).toThrow(
+      /force vector/u,
+    );
+    const runtime = createEnvironmentRuntime({
+      stageId: "stage",
+      worldId: "force-restore",
+      validators: [BLOOM_WELL_VALIDATION],
+    });
     runtime.addField(createBloomWellState(definition));
     const before = runtime.snapshot();
-    const malformed = { ...before, fields: before.fields.map((field) => ({ ...field, force: { x: 0, y: -1e300, magnitude: 1 } })) };
+    const malformed = {
+      ...before,
+      fields: before.fields.map((field) => ({ ...field, force: { x: 0, y: -1e300, magnitude: 1 } })),
+    };
     expect(validateEnvironmentCodecPayload(malformed).some((entry) => entry.path.endsWith(".force"))).toBe(true);
-    expect(() => { runtime.replace(malformed); }).toThrow(/force vector/u);
+    expect(() => {
+      runtime.replace(malformed);
+    }).toThrow(/force vector/u);
     expect(runtime.snapshot()).toEqual(before);
   });
 
@@ -98,7 +113,9 @@ describe("Bloom Well V1", () => {
     let many = well;
     for (let tick = 1; tick <= BLOOM_WELL_TIMING.warningTicks + 1; tick += 1) many = advanceBloomWell(many, tick);
     expect(many).toEqual(one);
-    expect(BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks + BLOOM_WELL_TIMING.cooldownTicks).toBeLessThan(1_000);
+    expect(
+      BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks + BLOOM_WELL_TIMING.cooldownTicks,
+    ).toBeLessThan(1_000);
   });
 
   it("applies lift from the authoritative environment active-field phase", () => {
@@ -115,28 +132,57 @@ describe("Bloom Well V1", () => {
 
   it("keeps warning geometry readable without audio or motion effects", () => {
     const well = createBloomWellState(definition, 0);
-    expect(projectBloomWellPresentation(well, { highContrast: true, reducedMotion: true, lowGraphics: true, audioEnabled: false })).toMatchObject({
-      state: "warning", geometry: definition.geometry, boundaryVisible: true, audioIndependent: true, motionScale: 0,
+    expect(
+      projectBloomWellPresentation(well, {
+        highContrast: true,
+        reducedMotion: true,
+        lowGraphics: true,
+        audioEnabled: false,
+      }),
+    ).toMatchObject({
+      state: "warning",
+      geometry: definition.geometry,
+      boundaryVisible: true,
+      audioIndependent: true,
+      motionScale: 0,
     });
   });
 
   it("uses one definition class for stage and boss-owned variants and records cleanup", () => {
-    const bossDefinition = createBloomWellDefinition({ ...definition, id: "boss-well", variant: "boss", bossOwnerId: "boss-1" });
+    const bossDefinition = createBloomWellDefinition({
+      ...definition,
+      id: "boss-well",
+      variant: "boss",
+      bossOwnerId: "boss-1",
+    });
     const bossWell = createBloomWellState(bossDefinition, 120);
     expect(bossWell.variant).toBe("boss");
     expect(bossWell.bossOwnerId).toBe("boss-1");
-    expect(cleanupBloomWell(bossWell, "boss-terminal")).toMatchObject({ state: "dormant", cleanupReason: "boss-terminal" });
+    expect(cleanupBloomWell(bossWell, "boss-terminal")).toMatchObject({
+      state: "dormant",
+      cleanupReason: "boss-terminal",
+    });
   });
 
   it("cleans a boss-owned well when its production actor reference disappears", () => {
     const events = new TearGameplayEventBus(() => 0);
     const native: TearGameplayEvent[] = [];
-    events.subscribe((event) => { native.push(event); });
-    const runtime = createEnvironmentRuntime({ stageId: "stage", worldId: "boss-cleanup",
-      availableActorIds: () => new Set(["player"]), events });
+    events.subscribe((event) => {
+      native.push(event);
+    });
+    const runtime = createEnvironmentRuntime({
+      stageId: "stage",
+      worldId: "boss-cleanup",
+      availableActorIds: () => new Set(["player"]),
+      events,
+    });
     runtime.addField(createBloomWellState({ ...definition, id: "boss-well", variant: "boss", bossOwnerId: "boss-1" }));
     runtime.step(1, 1 / BLOOM_WELL_TIMING.ticksPerSecond, () => undefined);
-    expect(runtime.fields()[0]).toMatchObject({ state: "dormant", cleanupReason: "boss-terminal", bossOwnerId: "boss-1" });
+    expect(runtime.fields()[0]).toMatchObject({
+      state: "dormant",
+      cleanupReason: "boss-terminal",
+      bossOwnerId: "boss-1",
+    });
     expect(native.filter((event) => event.kind === "environment")).toEqual([
       expect.objectContaining({ event: "object-cleaned", reason: "boss-terminal", objectId: "boss-well" }),
     ]);
@@ -151,16 +197,37 @@ describe("Bloom Well V1", () => {
   });
 
   it("runs the same non-stage-inserted lifecycle on the supported detached production world", () => {
-    const source = createProductionGhostReplayComposition({ seed: "bloom-well-detached", mode: "campaign" }).create(undefined);
-    const checkpoint = captureProductionReplayCheckpoint(source.replay, source.combat, source.waveReward, "bloom-well-state-forge");
-    const base: TearSdlDocumentV1 = { format: "tearsdl", schemaVersion: 1, id: "bloom-well-detached", stateClass: "surgical-valid",
-      seed: "bloom-well-detached", start: { mode: "campaign", difficulty: "normal", weapon: "sword" } };
-    const forged = resolveTearSdl(forgeBloomWellCycleState(base, createBloomWellState({ ...definition, ownerId: "player" }, 0)));
+    const source = createProductionGhostReplayComposition({ seed: "bloom-well-detached", mode: "campaign" }).create(
+      undefined,
+    );
+    const checkpoint = captureProductionReplayCheckpoint(
+      source.replay,
+      source.combat,
+      source.waveReward,
+      "bloom-well-state-forge",
+    );
+    const base: TearSdlDocumentV1 = {
+      format: "tearsdl",
+      schemaVersion: 1,
+      id: "bloom-well-detached",
+      stateClass: "surgical-valid",
+      seed: "bloom-well-detached",
+      start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+    };
+    const forged = resolveTearSdl(
+      forgeBloomWellCycleState(base, createBloomWellState({ ...definition, ownerId: "player" }, 0)),
+    );
     const snapshot = compileResolvedTearSdlSnapshot(checkpoint.snapshot, forged);
-    const detached = createProductionGhostReplayComposition({ seed: "bloom-well-detached", mode: "campaign" }).create(snapshot);
+    const detached = createProductionGhostReplayComposition({ seed: "bloom-well-detached", mode: "campaign" }).create(
+      snapshot,
+    );
     const environment = detached.replay.world.context.environment;
     const states: string[] = [environment.fields()[0]?.state ?? "missing"];
-    for (const tick of [BLOOM_WELL_TIMING.warningTicks, BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks, BLOOM_WELL_TIMING.totalTicks]) {
+    for (const tick of [
+      BLOOM_WELL_TIMING.warningTicks,
+      BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks,
+      BLOOM_WELL_TIMING.totalTicks,
+    ]) {
       environment.step(tick, 1 / 120, () => undefined);
       states.push(environment.fields()[0]?.state ?? "missing");
     }
@@ -180,12 +247,25 @@ describe("Bloom Well V1", () => {
   it("authors all three bounded Rootbound arrangements through shared Bloom Well states", () => {
     const counts = [2, 1, 3];
     ROOTBOUND_BLOOM_PATTERN_IDS.forEach((patternId, index) => {
-      const fields = createRootboundBloomPattern({ patternId, bossOwnerId: "enemy:rootbound", stageOwnerId: "verdant-sanctum",
-        startTick: 240, arenaWidth: 1600, groundY: 800 });
+      const fields = createRootboundBloomPattern({
+        patternId,
+        bossOwnerId: "enemy:rootbound",
+        stageOwnerId: "verdant-sanctum",
+        startTick: 240,
+        arenaWidth: 1600,
+        groundY: 800,
+      });
       expect(fields).toHaveLength(counts[index] ?? 0);
-      for (const field of fields) expect(field).toMatchObject({ kind: "bloom-well", variant: "boss",
-        factoryId: "environment-field", bossOwnerId: "enemy:rootbound" });
-      expect(fields.every((field) => field.geometry.x >= 0 && field.geometry.x + (field.geometry.w ?? 0) <= 1600)).toBe(true);
+      for (const field of fields)
+        expect(field).toMatchObject({
+          kind: "bloom-well",
+          variant: "boss",
+          factoryId: "environment-field",
+          bossOwnerId: "enemy:rootbound",
+        });
+      expect(fields.every((field) => field.geometry.x >= 0 && field.geometry.x + (field.geometry.w ?? 0) <= 1600)).toBe(
+        true,
+      );
       expect([...fields].sort((left, right) => left.startTick - right.startTick)).toEqual(fields);
     });
   });
@@ -193,7 +273,13 @@ describe("Bloom Well V1", () => {
   it("installs a Rootbound pattern idempotently and advances it in the existing field runtime", () => {
     const runtime = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-bloom" });
     bindVerdantEnvironmentActors(runtime, "bloom-well", () => []);
-    const input = { patternId: "alternating-rise" as const, bossOwnerId: "enemy:rootbound", startTick: 240, arenaWidth: 1600, groundY: 800 };
+    const input = {
+      patternId: "alternating-rise" as const,
+      bossOwnerId: "enemy:rootbound",
+      startTick: 240,
+      arenaWidth: 1600,
+      groundY: 800,
+    };
     const first = installRootboundBloomPattern(runtime, input);
     const repeated = installRootboundBloomPattern(runtime, { ...input, startTick: 241 });
     expect(runtime.fields()).toHaveLength(2);

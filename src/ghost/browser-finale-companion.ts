@@ -9,16 +9,22 @@ import { stableVerificationHash } from "../replay/hash";
 export async function reopenGhostFinaleCompanion(factory: IDBFactory | undefined, capsule: GhostReadCapsule) {
   const declaration = readGhostFinaleCompanion(capsule.manifest.provenance);
   if (declaration === undefined || factory === undefined) throw new TypeError("Finale local storage unavailable");
-  const vault = new GhostLocalVault(await createIndexedDbGhostVaultBackend(factory)), backend = vault.backend();
+  const vault = new GhostLocalVault(await createIndexedDbGhostVaultBackend(factory)),
+    backend = vault.backend();
   const parent = await new GhostCapsuleReader(vault).read(declaration.parentId);
-  const guards = [...await prepareGhostCapsuleSourceGuards(backend, capsule.manifest.id, capsule.manifest.rootIntegrity),
-    ...await prepareGhostCapsuleSourceGuards(backend, parent.manifest.id, parent.manifest.rootIntegrity)];
+  const guards = [
+    ...(await prepareGhostCapsuleSourceGuards(backend, capsule.manifest.id, capsule.manifest.rootIntegrity)),
+    ...(await prepareGhostCapsuleSourceGuards(backend, parent.manifest.id, parent.manifest.rootIntegrity)),
+  ];
   for (const source of [capsule, parent]) {
     const raw = guards.find((guard) => guard.store === "manifests" && guard.key === source.manifest.id)?.expected;
-    if (raw === undefined || stableVerificationHash(JSON.parse(raw)) !== stableVerificationHash(source.manifest)) throw new TypeError("Finale source metadata changed");
+    if (raw === undefined || stableVerificationHash(JSON.parse(raw)) !== stableVerificationHash(source.manifest))
+      throw new TypeError("Finale source metadata changed");
   }
   const permit = admitGhostFinaleCompanion(capsule, parent);
-  const confirm = async () => { await backend.commitIfMatches(guards, []); };
+  const confirm = async () => {
+    await backend.commitIfMatches(guards, []);
+  };
   await confirm();
   return Object.freeze({ parent, permit, confirm });
 }

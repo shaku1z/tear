@@ -1,8 +1,7 @@
 import type { SfxRoute } from "./mixer";
 
 export type FinaleAudioOperation =
-  | "final-cut" | "final-relic" | "final-restore" | "final-silence"
-  | "void-mix" | "music-duck";
+  "final-cut" | "final-relic" | "final-restore" | "final-silence" | "void-mix" | "music-duck";
 
 export interface AudioDispatchRequest {
   readonly operation: FinaleAudioOperation;
@@ -34,7 +33,12 @@ export type AudioDispatchReceipt =
   | Readonly<{ requestId: number; request: AudioDispatchRequest; phase: "evicted"; queueDepth: number }>
   | Readonly<{ requestId: number; request: AudioDispatchRequest; phase: "executing" }>
   | Readonly<{ requestId: number; request: AudioDispatchRequest; phase: "load-failed" }>
-  | Readonly<{ requestId: number; request: AudioDispatchRequest; phase: "completed"; result: AudioDispatchExecutionResult }>
+  | Readonly<{
+      requestId: number;
+      request: AudioDispatchRequest;
+      phase: "completed";
+      result: AudioDispatchExecutionResult;
+    }>
   | Readonly<{ requestId: number; request: AudioDispatchRequest; phase: "execution-failed"; message: string }>;
 
 export type AudioDispatchReceiptObserver = (receipt: AudioDispatchReceipt) => void;
@@ -64,25 +68,45 @@ export function createAudioDispatchJournal(): AudioDispatchJournal {
   const observers = new Set<AudioDispatchReceiptObserver>();
   const publish = (receipt: AudioDispatchReceipt): void => {
     const snapshot = structuredClone(receipt);
-    Object.freeze(snapshot.request.arguments); Object.freeze(snapshot.request);
+    Object.freeze(snapshot.request.arguments);
+    Object.freeze(snapshot.request);
     if (snapshot.phase === "completed") Object.freeze(snapshot.result);
     Object.freeze(snapshot);
     for (const observer of observers) observer(snapshot);
   };
   const journal: AudioDispatchJournal = {
-    request(request) { return Object.freeze({ id: nextRequestId++, request: immutableRequest(request) }); },
-    queued(entry, queueDepth) { publish({ requestId: entry.id, request: entry.request, phase: "queued", queueDepth }); },
-    evicted(entry, queueDepth) { publish({ requestId: entry.id, request: entry.request, phase: "evicted", queueDepth }); },
-    executing(entry) { publish({ requestId: entry.id, request: entry.request, phase: "executing" }); },
+    request(request) {
+      return Object.freeze({ id: nextRequestId++, request: immutableRequest(request) });
+    },
+    queued(entry, queueDepth) {
+      publish({ requestId: entry.id, request: entry.request, phase: "queued", queueDepth });
+    },
+    evicted(entry, queueDepth) {
+      publish({ requestId: entry.id, request: entry.request, phase: "evicted", queueDepth });
+    },
+    executing(entry) {
+      publish({ requestId: entry.id, request: entry.request, phase: "executing" });
+    },
     completed(entry, result) {
       publish({ requestId: entry.id, request: entry.request, phase: "completed", result: immutableResult(result) });
     },
-    loadFailed(entry) { publish({ requestId: entry.id, request: entry.request, phase: "load-failed" }); },
-    executionFailed(entry, error) {
-      publish({ requestId: entry.id, request: entry.request, phase: "execution-failed",
-        message: error instanceof Error ? error.message : String(error) });
+    loadFailed(entry) {
+      publish({ requestId: entry.id, request: entry.request, phase: "load-failed" });
     },
-    observe(observer) { observers.add(observer); return () => { observers.delete(observer); }; },
+    executionFailed(entry, error) {
+      publish({
+        requestId: entry.id,
+        request: entry.request,
+        phase: "execution-failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    },
+    observe(observer) {
+      observers.add(observer);
+      return () => {
+        observers.delete(observer);
+      };
+    },
   };
   return Object.freeze(journal);
 }

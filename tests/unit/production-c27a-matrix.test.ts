@@ -18,7 +18,11 @@ function traceFromArtifact(value: unknown): ProductionC27ATrace {
   const origin = validateTearContract(raw.origin);
   if (!scenario.ok || scenario.value.kind !== "scenario") throw new TypeError("C27A trace scenario is not valid");
   if (!origin.ok || origin.value.kind !== "snapshot") throw new TypeError("C27A trace origin is not valid");
-  return { ...(value as Omit<ProductionC27ATrace, "scenario" | "origin">), scenario: scenario.value, origin: origin.value };
+  return {
+    ...(value as Omit<ProductionC27ATrace, "scenario" | "origin">),
+    scenario: scenario.value,
+    origin: origin.value,
+  };
 }
 
 function readTraces(): readonly ProductionC27ATrace[] {

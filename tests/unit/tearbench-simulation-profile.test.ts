@@ -16,7 +16,11 @@ describe("TearBench simulation profile", () => {
     expect(TEAR_SIMULATION_PROFILE.render.cadence).toBe("presentation-frame");
     expect(TEAR_CHECKPOINT_CADENCE_TICKS).toBe(120);
     expect(TEAR_SIMULATION_PROFILE.checkpoint.cadenceTicks).toBe(TEAR_CHECKPOINT_CADENCE_TICKS);
-    expect(() => { assertTearSimulationStepSeconds(1 / 120); }).not.toThrow();
-    expect(() => { assertTearSimulationStepSeconds(1 / 60); }).toThrow(/120 Hz/u);
+    expect(() => {
+      assertTearSimulationStepSeconds(1 / 120);
+    }).not.toThrow();
+    expect(() => {
+      assertTearSimulationStepSeconds(1 / 60);
+    }).toThrow(/120 Hz/u);
   });
 });

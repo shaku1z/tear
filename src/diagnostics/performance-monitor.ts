@@ -132,7 +132,9 @@ export class PerformanceMonitor {
       outsideFrameWork: this.#timings.outsideFrameWork.summary(),
       longTasks: this.#longTasks,
       gauges: Object.freeze(Object.fromEntries([...this.#gauges].sort(([left], [right]) => left.localeCompare(right)))),
-      counters: Object.freeze(Object.fromEntries([...this.#counters].sort(([left], [right]) => left.localeCompare(right)))),
+      counters: Object.freeze(
+        Object.fromEntries([...this.#counters].sort(([left], [right]) => left.localeCompare(right))),
+      ),
     });
   }
 }

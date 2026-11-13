@@ -28,7 +28,9 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
     return capability.available ? capability.service : null;
   };
   return {
-    get available() { return leaderboards() !== null; },
+    get available() {
+      return leaderboards() !== null;
+    },
     async submitScore(mode, difficulty, entry) {
       const service = leaderboards();
       if (!service) return false;
@@ -41,17 +43,20 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
       const service = leaderboards();
       if (!service) return null;
       const entries = await service.entries(board(mode, difficulty), limit);
-      return entries.map((entry, index) => scoreEntry(
-        { name: entry.displayName, score: entry.score }, entry.rank ?? index + 1, entry.replayId,
-      ));
+      return entries.map((entry, index) =>
+        scoreEntry({ name: entry.displayName, score: entry.score }, entry.rank ?? index + 1, entry.replayId),
+      );
     },
     logEvent(name, data) {
       const capability = getPlatform().analytics;
       if (!capability.available) return;
-      const properties = Object.fromEntries(Object.entries(data).flatMap(([key, value]) =>
-        typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null
-          ? [[key, value]]
-          : []));
+      const properties = Object.fromEntries(
+        Object.entries(data).flatMap(([key, value]) =>
+          typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null
+            ? [[key, value]]
+            : [],
+        ),
+      );
       capability.service.event(name, properties);
     },
     async publishReplay(recording) {
@@ -68,7 +73,9 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
       const parsed: unknown = JSON.parse(serialized);
       return isDataRecord(parsed) ? { ...parsed } : null;
     },
-    replayFeed() { return Promise.resolve(null); },
+    replayFeed() {
+      return Promise.resolve(null);
+    },
     async linkReplay(mode, difficulty, shareId) {
       const service = leaderboards();
       const boardId = board(mode, difficulty);
@@ -77,6 +84,8 @@ export function createPlatformSharedCloud(getPlatform: () => PlatformServices): 
       await service.submit(boardId, score, shareId);
       return true;
     },
-    loadGhost() { return Promise.resolve(null); },
+    loadGhost() {
+      return Promise.resolve(null);
+    },
   };
 }

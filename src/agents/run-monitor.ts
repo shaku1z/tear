@@ -4,11 +4,7 @@ import type { TearActivePolicyRuntime } from "./policy-runtime";
 import type { TearPolicyDecisionJournal } from "./policy-decision-journal";
 import type { TearC32CanonicalActivePolicyRuntime } from "./c32-canonical-active-policy-runtime";
 import type { TearFoundryV3PostPromotionMonitor } from "./foundry-job-v3-post-promotion-monitor";
-import {
-  createLiveWatchAgentHost,
-  installLiveWatchAgentHost,
-  type TearWatchAgentApi,
-} from "./live-watch-agent-host";
+import { createLiveWatchAgentHost, installLiveWatchAgentHost, type TearWatchAgentApi } from "./live-watch-agent-host";
 import { RUN_MONITOR_PANEL } from "./panel-surface";
 
 export {
@@ -48,5 +44,13 @@ export function installRunMonitor(
   canonicalRuntime?: TearC32CanonicalActivePolicyRuntime,
   postPromotionMonitor?: TearFoundryV3PostPromotionMonitor,
 ): void {
-  installLiveWatchAgentHost(context, target, artifactRuntime, decisionJournal, canonicalRuntime, postPromotionMonitor, RUN_MONITOR_PANEL);
+  installLiveWatchAgentHost(
+    context,
+    target,
+    artifactRuntime,
+    decisionJournal,
+    canonicalRuntime,
+    postPromotionMonitor,
+    RUN_MONITOR_PANEL,
+  );
 }

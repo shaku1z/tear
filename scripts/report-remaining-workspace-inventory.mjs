@@ -40,9 +40,7 @@ function samePath(left, right) {
 function isPathInside(root, candidate, { allowEqual = false } = {}) {
   const relative = path.relative(root, candidate);
   if (relative === "") return allowEqual;
-  return relative !== ".."
-    && !relative.startsWith(`..${path.sep}`)
-    && !path.isAbsolute(relative);
+  return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
 function timestampUtc(milliseconds) {
@@ -76,7 +74,8 @@ function inspectCanonicalDirectory(candidate, label) {
   } catch (error) {
     fail(`${label} is not canonical: ${absolute} (${error.code ?? error.message})`);
   }
-  if (!samePath(absolute, realPath) || !stats.isDirectory()) fail(`${label} must be a canonical directory: ${absolute}`);
+  if (!samePath(absolute, realPath) || !stats.isDirectory())
+    fail(`${label} must be a canonical directory: ${absolute}`);
   return { path: absolute, realPath, metadata: metadata(stats) };
 }
 
@@ -92,7 +91,8 @@ function inspectImmediateEntry(root, name) {
   if (stats.isSymbolicLink()) return { ...result, status: "refused", refusal: "symlink-or-reparse", git: null };
   try {
     const realPath = fs.realpathSync.native(absolute);
-    if (!samePath(absolute, realPath)) return { ...result, status: "refused", refusal: "symlink-or-reparse", git: null };
+    if (!samePath(absolute, realPath))
+      return { ...result, status: "refused", refusal: "symlink-or-reparse", git: null };
     result.realPath = realPath;
   } catch (error) {
     return { ...result, status: "refused", refusal: `unresolvable:${error.code ?? "unknown"}`, git: null };
@@ -122,7 +122,9 @@ function commandValue(root, argumentsList, maxOutputBytes) {
 }
 
 function redactRemote(value) {
-  return String(value).replace(/:\/\/[^/@\s]+@/u, "://<redacted>@").replace(/^[^@/\s]+@([^:]+):/u, "$1:");
+  return String(value)
+    .replace(/:\/\/[^/@\s]+@/u, "://<redacted>@")
+    .replace(/^[^@/\s]+@([^:]+):/u, "$1:");
 }
 
 function normalizedRemote(value) {
@@ -180,12 +182,17 @@ function inspectGit(root, policy) {
   const gitDirectory = commandValue(root, ["rev-parse", "--git-dir"], maxOutputBytes);
   const head = commandValue(root, ["rev-parse", "HEAD"], maxOutputBytes);
   const branch = commandValue(root, ["branch", "--show-current"], maxOutputBytes);
-  const upstream = commandValue(root, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], maxOutputBytes);
+  const upstream = commandValue(
+    root,
+    ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+    maxOutputBytes,
+  );
   const statusResult = runGit(root, ["status", "--porcelain=v1", "--untracked-files=all"], maxOutputBytes);
   const remotes = [];
   const remoteNames = commandValue(root, ["remote"], maxOutputBytes)?.split(/\r?\n/u).filter(Boolean) ?? [];
   for (const name of remoteNames) {
-    const urls = commandValue(root, ["remote", "get-url", "--all", name], maxOutputBytes)?.split(/\r?\n/u).filter(Boolean) ?? [];
+    const urls =
+      commandValue(root, ["remote", "get-url", "--all", name], maxOutputBytes)?.split(/\r?\n/u).filter(Boolean) ?? [];
     remotes.push({ name, identities: [...new Set(urls.map(normalizedRemote).filter(Boolean))] });
   }
   const origin = remotes.find((remote) => remote.name === "origin")?.identities[0] ?? null;
@@ -202,10 +209,17 @@ function inspectGit(root, policy) {
     branch: branch || null,
     upstream: upstream || null,
     status: statusResult.ok ? (statusResult.stdout.trim() === "" ? "clean" : "dirty") : "unreadable",
-    changedEntryCount: statusResult.ok ? (statusResult.stdout.trim() === "" ? 0 : statusResult.stdout.trim().split(/\r?\n/u).length) : null,
+    changedEntryCount: statusResult.ok
+      ? statusResult.stdout.trim() === ""
+        ? 0
+        : statusResult.stdout.trim().split(/\r?\n/u).length
+      : null,
     remotes,
     origin,
-    mergeBase: mergeBaseResult.ok && FULL_SHA_PATTERN.test(mergeBaseResult.stdout.trim()) ? mergeBaseResult.stdout.trim().toLowerCase() : null,
+    mergeBase:
+      mergeBaseResult.ok && FULL_SHA_PATTERN.test(mergeBaseResult.stdout.trim())
+        ? mergeBaseResult.stdout.trim().toLowerCase()
+        : null,
     mergeBaseStatus: mergeBaseResult.ok ? "available" : "unavailable",
     divergence: divergence?.length === 2 ? { ahead: divergence[0], behind: divergence[1] } : null,
   };
@@ -229,8 +243,19 @@ function readPolicy(policyPath) {
   if (policy?.format !== "tear-remaining-workspace-inventory-policy") errors.push("format is invalid");
   if (policy?.schemaVersion !== 1) errors.push("schemaVersion must be 1");
   if (policy?.repository !== RELEASE_REPOSITORY) errors.push(`repository must be ${RELEASE_REPOSITORY}`);
-  if (policy?.boundary?.fetch !== false || policy?.boundary?.mutation !== "report-only" || policy?.boundary?.recurseNonGit !== false || policy?.boundary?.hashPayloads !== false || policy?.boundary?.readGitMetadataOnly !== true) errors.push("boundary must remain read-only and metadata-only");
-  if (policy?.roots?.repoAndArchiveDirectChildrenOfWorkspace !== true || policy?.roots?.tempDisjointFromWorkspace !== true) errors.push("root layout boundaries are invalid");
+  if (
+    policy?.boundary?.fetch !== false ||
+    policy?.boundary?.mutation !== "report-only" ||
+    policy?.boundary?.recurseNonGit !== false ||
+    policy?.boundary?.hashPayloads !== false ||
+    policy?.boundary?.readGitMetadataOnly !== true
+  )
+    errors.push("boundary must remain read-only and metadata-only");
+  if (
+    policy?.roots?.repoAndArchiveDirectChildrenOfWorkspace !== true ||
+    policy?.roots?.tempDisjointFromWorkspace !== true
+  )
+    errors.push("root layout boundaries are invalid");
   const expectedCanonical = {
     game: { exactName: "Tear", repository: "shaku1z/tear", branch: "main", upstream: "origin/main" },
     music: { exactName: "tear-score", repository: "shaku1z/tear-music", branch: "main", upstream: "origin/main" },
@@ -242,20 +267,38 @@ function readPolicy(policyPath) {
       if (policy?.canonical?.[name]?.[field] !== value) errors.push(`canonical.${name}.${field} must be ${value}`);
     }
   }
-  if (!/^[0-9a-f]{7,40}$/iu.test(String(policy?.canonical?.oracle?.lockedCommit ?? ""))) errors.push("canonical.oracle.lockedCommit must be a hexadecimal commit prefix");
-  if (!Number.isSafeInteger(policy?.limits?.maxImmediateChildren) || policy.limits.maxImmediateChildren < 1) errors.push("limits.maxImmediateChildren is invalid");
-  if (!Number.isSafeInteger(policy?.limits?.maxGitOutputBytes) || policy.limits.maxGitOutputBytes < 4096) errors.push("limits.maxGitOutputBytes is invalid");
-  if (!Number.isSafeInteger(policy?.limits?.maxPointerBytes) || policy.limits.maxPointerBytes < 1) errors.push("limits.maxPointerBytes is invalid");
+  if (!/^[0-9a-f]{7,40}$/iu.test(String(policy?.canonical?.oracle?.lockedCommit ?? "")))
+    errors.push("canonical.oracle.lockedCommit must be a hexadecimal commit prefix");
+  if (!Number.isSafeInteger(policy?.limits?.maxImmediateChildren) || policy.limits.maxImmediateChildren < 1)
+    errors.push("limits.maxImmediateChildren is invalid");
+  if (!Number.isSafeInteger(policy?.limits?.maxGitOutputBytes) || policy.limits.maxGitOutputBytes < 4096)
+    errors.push("limits.maxGitOutputBytes is invalid");
+  if (!Number.isSafeInteger(policy?.limits?.maxPointerBytes) || policy.limits.maxPointerBytes < 1)
+    errors.push("limits.maxPointerBytes is invalid");
   for (const [category, patterns] of Object.entries(policy.classification ?? {})) {
     if (category === "tearRelated" || category === "archiveGroup") continue;
     if (!Array.isArray(patterns)) errors.push(`classification.${category} must be an array`);
-    else for (const pattern of patterns) {
-      try { new RegExp(pattern, "iu"); } catch (error) { errors.push(`classification.${category} contains invalid regex: ${error.message}`); }
-    }
+    else
+      for (const pattern of patterns) {
+        try {
+          new RegExp(pattern, "iu");
+        } catch (error) {
+          errors.push(`classification.${category} contains invalid regex: ${error.message}`);
+        }
+      }
   }
-  try { new RegExp(policy?.classification?.tearRelated, "iu"); } catch (error) { errors.push(`classification.tearRelated is invalid: ${error.message}`); }
-  try { new RegExp(policy?.classification?.archiveGroup, "iu"); } catch (error) { errors.push(`classification.archiveGroup is invalid: ${error.message}`); }
-  if (/([A-Za-z]:[\\/]|(?:^|[\\/])Users(?:[\\/]|$)|Desktop)/iu.test(raw)) errors.push("policy must not contain machine-specific absolute paths");
+  try {
+    new RegExp(policy?.classification?.tearRelated, "iu");
+  } catch (error) {
+    errors.push(`classification.tearRelated is invalid: ${error.message}`);
+  }
+  try {
+    new RegExp(policy?.classification?.archiveGroup, "iu");
+  } catch (error) {
+    errors.push(`classification.archiveGroup is invalid: ${error.message}`);
+  }
+  if (/([A-Za-z]:[\\/]|(?:^|[\\/])Users(?:[\\/]|$)|Desktop)/iu.test(raw))
+    errors.push("policy must not contain machine-specific absolute paths");
   if (errors.length > 0) fail(`remaining workspace inventory policy is invalid:\n- ${errors.join("\n- ")}`);
   return { policy, sha256: createHash("sha256").update(raw, "utf8").digest("hex"), path: absolute };
 }
@@ -268,14 +311,22 @@ function requireCanonicalPolicy(policyPath, repoRoot) {
 
 function verifyCanonicalGame(repoRoot, workspaceRoot, policy) {
   const root = inspectCanonicalDirectory(repoRoot, "repo-root");
-  if (!samePath(path.dirname(root.path), workspaceRoot) || path.basename(root.path) !== policy.canonical.game.exactName) fail("repo-root must be the canonical Tear direct child of workspace-root");
+  if (!samePath(path.dirname(root.path), workspaceRoot) || path.basename(root.path) !== policy.canonical.game.exactName)
+    fail("repo-root must be the canonical Tear direct child of workspace-root");
   const git = inspectGit(root.path, policy);
   if (git.kind !== "worktree" || git.mode !== "worktree") fail("repo-root must be a readable Git worktree");
-  if (normalizeRepositoryIdentifier(git.origin) !== normalizeRepositoryIdentifier(policy.canonical.game.repository)) fail(`repo-root origin must identify ${policy.canonical.game.repository}`);
+  if (normalizeRepositoryIdentifier(git.origin) !== normalizeRepositoryIdentifier(policy.canonical.game.repository))
+    fail(`repo-root origin must identify ${policy.canonical.game.repository}`);
   if (git.status !== "clean") fail("repo-root must be clean");
-  if (git.branch !== policy.canonical.game.branch || git.upstream !== policy.canonical.game.upstream) fail("repo-root must be clean main tracking origin/main");
-  if (!FULL_SHA_PATTERN.test(String(git.head)) || git.head !== commandValue(root.path, ["rev-parse", "origin/main"], policy.limits.maxGitOutputBytes)?.toLowerCase()) fail("repo-root main must exactly equal origin/main");
-  if (git.divergence === null || git.divergence.ahead !== "0" || git.divergence.behind !== "0") fail("repo-root main must have zero divergence from origin/main");
+  if (git.branch !== policy.canonical.game.branch || git.upstream !== policy.canonical.game.upstream)
+    fail("repo-root must be clean main tracking origin/main");
+  if (
+    !FULL_SHA_PATTERN.test(String(git.head)) ||
+    git.head !== commandValue(root.path, ["rev-parse", "origin/main"], policy.limits.maxGitOutputBytes)?.toLowerCase()
+  )
+    fail("repo-root main must exactly equal origin/main");
+  if (git.divergence === null || git.divergence.ahead !== "0" || git.divergence.behind !== "0")
+    fail("repo-root main must have zero divergence from origin/main");
   return { ...root, git };
 }
 
@@ -286,7 +337,14 @@ function parseWorktreeList(text) {
     if (line === "") continue;
     if (line.startsWith("worktree ")) {
       if (current !== null) entries.push(current);
-      current = { path: path.resolve(line.slice("worktree ".length)), bare: false, head: null, branch: null, locked: false, lockReason: null };
+      current = {
+        path: path.resolve(line.slice("worktree ".length)),
+        bare: false,
+        head: null,
+        branch: null,
+        locked: false,
+        lockReason: null,
+      };
     } else if (current !== null && line === "bare") {
       current.bare = true;
     } else if (current !== null && line.startsWith("HEAD ")) {
@@ -313,23 +371,35 @@ function inspectRegisteredWorktrees(repoRoot, policy) {
 
 function resolveCommitPrefix(repoRoot, prefix, policy) {
   if (!/^[0-9a-f]{7,40}$/iu.test(String(prefix))) return null;
-  const resolved = commandValue(repoRoot, ["rev-parse", "--verify", `${String(prefix)}^{commit}`], policy.limits.maxGitOutputBytes);
+  const resolved = commandValue(
+    repoRoot,
+    ["rev-parse", "--verify", `${String(prefix)}^{commit}`],
+    policy.limits.maxGitOutputBytes,
+  );
   return FULL_SHA_PATTERN.test(String(resolved)) ? resolved.toLowerCase() : null;
 }
 
 function verifyCanonicalGitRoot(root, spec, policy) {
   const blockers = [];
   const git = root.git;
-  if (root.status !== "available" || root.metadata?.kind !== "directory") blockers.push(`filesystem status is ${root.status}`);
+  if (root.status !== "available" || root.metadata?.kind !== "directory")
+    blockers.push(`filesystem status is ${root.status}`);
   if (git?.kind !== "worktree" || git.mode !== "worktree") blockers.push("root is not a readable Git worktree");
-  if (normalizeRepositoryIdentifier(git?.origin) !== normalizeRepositoryIdentifier(spec.repository)) blockers.push(`origin does not identify ${spec.repository}`);
+  if (normalizeRepositoryIdentifier(git?.origin) !== normalizeRepositoryIdentifier(spec.repository))
+    blockers.push(`origin does not identify ${spec.repository}`);
   if (git?.status !== "clean") blockers.push("worktree is not clean");
   if (git?.branch !== spec.branch) blockers.push(`branch is not ${spec.branch}`);
   if (git?.upstream !== spec.upstream) blockers.push(`upstream is not ${spec.upstream}`);
-  const originMain = git?.kind === "worktree" ? commandValue(root.path, ["rev-parse", "origin/main"], policy.limits.maxGitOutputBytes) : null;
-  if (!FULL_SHA_PATTERN.test(String(git?.head)) || git.head !== String(originMain ?? "").toLowerCase()) blockers.push("HEAD does not exactly equal origin/main");
-  if (git?.divergence === null || git.divergence?.ahead !== "0" || git.divergence?.behind !== "0") blockers.push("main has non-zero divergence from origin/main");
-  if (git?.mergeBaseStatus !== "available" || git.mergeBase !== git.head) blockers.push("merge-base evidence is unavailable or not the exact HEAD");
+  const originMain =
+    git?.kind === "worktree"
+      ? commandValue(root.path, ["rev-parse", "origin/main"], policy.limits.maxGitOutputBytes)
+      : null;
+  if (!FULL_SHA_PATTERN.test(String(git?.head)) || git.head !== String(originMain ?? "").toLowerCase())
+    blockers.push("HEAD does not exactly equal origin/main");
+  if (git?.divergence === null || git.divergence?.ahead !== "0" || git.divergence?.behind !== "0")
+    blockers.push("main has non-zero divergence from origin/main");
+  if (git?.mergeBaseStatus !== "available" || git.mergeBase !== git.head)
+    blockers.push("merge-base evidence is unavailable or not the exact HEAD");
   return {
     status: blockers.length === 0 ? "validated" : "review",
     blockers,
@@ -342,27 +412,38 @@ function verifyCanonicalOracle(root, canonicalGame, policy, registrations) {
   const blockers = [];
   const git = root.git;
   const registration = registrations.entries.find((entry) => !entry.bare && samePath(entry.path, root.path));
-  if (root.status !== "available" || root.metadata?.kind !== "directory") blockers.push(`filesystem status is ${root.status}`);
+  if (root.status !== "available" || root.metadata?.kind !== "directory")
+    blockers.push(`filesystem status is ${root.status}`);
   if (git?.kind !== "worktree" || git.mode !== "worktree") blockers.push("oracle is not a readable Git worktree");
   const commonOrigin = git?.origin ?? canonicalGame.git.origin;
-  if (normalizeRepositoryIdentifier(commonOrigin) !== normalizeRepositoryIdentifier(policy.canonical.oracle.repository)) blockers.push(`oracle origin does not identify ${policy.canonical.oracle.repository}`);
+  if (normalizeRepositoryIdentifier(commonOrigin) !== normalizeRepositoryIdentifier(policy.canonical.oracle.repository))
+    blockers.push(`oracle origin does not identify ${policy.canonical.oracle.repository}`);
   if (git?.status !== "clean") blockers.push("oracle worktree is not clean");
   if (git?.branch !== null) blockers.push("oracle must remain detached");
   if (registration === undefined) blockers.push("oracle is not a registered Git worktree");
   else {
     if (registration.branch !== null) blockers.push("registered oracle worktree is not detached");
-    if (!registration.locked || !/comparison-only/iu.test(registration.lockReason ?? "")) blockers.push("oracle worktree is not locked with a comparison-only reason");
-    if (!FULL_SHA_PATTERN.test(String(registration.head)) || registration.head !== git.head) blockers.push("registered oracle HEAD does not match the inspected worktree");
+    if (!registration.locked || !/comparison-only/iu.test(registration.lockReason ?? ""))
+      blockers.push("oracle worktree is not locked with a comparison-only reason");
+    if (!FULL_SHA_PATTERN.test(String(registration.head)) || registration.head !== git.head)
+      blockers.push("registered oracle HEAD does not match the inspected worktree");
   }
   const lockedCommit = resolveCommitPrefix(canonicalGame.path, policy.canonical.oracle.lockedCommit, policy);
-  if (lockedCommit === null) blockers.push(`oracle locked commit prefix ${policy.canonical.oracle.lockedCommit} cannot be resolved to one commit`);
+  if (lockedCommit === null)
+    blockers.push(
+      `oracle locked commit prefix ${policy.canonical.oracle.lockedCommit} cannot be resolved to one commit`,
+    );
   else if (git?.head !== lockedCommit) blockers.push(`oracle HEAD is not the locked comparison commit ${lockedCommit}`);
   return {
     status: blockers.length === 0 ? "validated" : "review",
     blockers,
     git,
     registration: registration ?? null,
-    expected: { repository: policy.canonical.oracle.repository, lockedCommitPrefix: policy.canonical.oracle.lockedCommit, role: policy.canonical.oracle.role },
+    expected: {
+      repository: policy.canonical.oracle.repository,
+      lockedCommitPrefix: policy.canonical.oracle.lockedCommit,
+      role: policy.canonical.oracle.role,
+    },
   };
 }
 
@@ -384,7 +465,9 @@ function applyCanonicalValidation(findings, policy, canonicalGame) {
       finding.blockers = validation.blockers;
     }
   }
-  const oracle = findings.find((entry) => entry.scope === "workspace-root" && entry.name === policy.canonical.oracle.exactName);
+  const oracle = findings.find(
+    (entry) => entry.scope === "workspace-root" && entry.name === policy.canonical.oracle.exactName,
+  );
   if (oracle !== undefined && oracle.classification !== "missing-canonical-root") {
     const validation = verifyCanonicalOracle(oracle, canonicalGame, policy, registrations);
     oracle.validation = validation;
@@ -404,15 +487,24 @@ function matchesAny(name, patterns) {
 
 function classifyName(name, scope, policy) {
   const canonical = policy.canonical;
-  if (scope === "workspace-root" && name === canonical.game.exactName) return { classification: "canonical-game", relevance: "canonical" };
-  if (scope === "workspace-root" && name === canonical.music.exactName) return { classification: "canonical-music", relevance: "canonical" };
-  if (scope === "workspace-root" && name === canonical.wiki.exactName) return { classification: "canonical-wiki", relevance: "canonical" };
-  if (scope === "workspace-root" && name === canonical.oracle.exactName) return { classification: "locked-comparison-only-oracle", relevance: "comparison-only" };
-  if (scope === "archive-root" && new RegExp(policy.classification.archiveGroup, "iu").test(name)) return { classification: "archive-recovery-keep", relevance: "protected" };
-  if (matchesAny(name, policy.classification.archiveRecoveryKeep)) return { classification: "archive-recovery-keep", relevance: "protected" };
-  if (matchesAny(name, policy.classification.evidenceRetentionHold)) return { classification: "evidence-retention-hold", relevance: "evidence" };
-  if (matchesAny(name, policy.classification.laterQuarantineCandidate)) return { classification: "later-quarantine-candidate", relevance: "candidate" };
-  if (new RegExp(policy.classification.tearRelated, "iu").test(name)) return { classification: "unknown-tear-related", relevance: "tear-related" };
+  if (scope === "workspace-root" && name === canonical.game.exactName)
+    return { classification: "canonical-game", relevance: "canonical" };
+  if (scope === "workspace-root" && name === canonical.music.exactName)
+    return { classification: "canonical-music", relevance: "canonical" };
+  if (scope === "workspace-root" && name === canonical.wiki.exactName)
+    return { classification: "canonical-wiki", relevance: "canonical" };
+  if (scope === "workspace-root" && name === canonical.oracle.exactName)
+    return { classification: "locked-comparison-only-oracle", relevance: "comparison-only" };
+  if (scope === "archive-root" && new RegExp(policy.classification.archiveGroup, "iu").test(name))
+    return { classification: "archive-recovery-keep", relevance: "protected" };
+  if (matchesAny(name, policy.classification.archiveRecoveryKeep))
+    return { classification: "archive-recovery-keep", relevance: "protected" };
+  if (matchesAny(name, policy.classification.evidenceRetentionHold))
+    return { classification: "evidence-retention-hold", relevance: "evidence" };
+  if (matchesAny(name, policy.classification.laterQuarantineCandidate))
+    return { classification: "later-quarantine-candidate", relevance: "candidate" };
+  if (new RegExp(policy.classification.tearRelated, "iu").test(name))
+    return { classification: "unknown-tear-related", relevance: "tear-related" };
   return { classification: "unrelated-root", relevance: "unrelated" };
 }
 
@@ -423,14 +515,24 @@ function inspectChildren(root, scope, policy) {
   } catch (error) {
     fail(`${scope} cannot be enumerated: ${error.message}`);
   }
-  if (children.length > policy.limits.maxImmediateChildren) fail(`${scope} exceeds maxImmediateChildren ${policy.limits.maxImmediateChildren}`);
+  if (children.length > policy.limits.maxImmediateChildren)
+    fail(`${scope} exceeds maxImmediateChildren ${policy.limits.maxImmediateChildren}`);
   return children.map((child) => {
     const entry = inspectImmediateEntry(root, child.name);
     const category = classifyName(child.name, scope, policy);
     const result = { scope, ...entry, ...category };
     if (entry.status === "refused") return { ...result, decision: "refused", git: null };
-    if (entry.metadata.kind === "directory") return { ...result, decision: category.classification === "unknown-tear-related" ? "review" : "recorded", git: inspectGit(entry.path, policy) };
-    return { ...result, decision: category.classification === "unknown-tear-related" ? "review" : "recorded", git: null };
+    if (entry.metadata.kind === "directory")
+      return {
+        ...result,
+        decision: category.classification === "unknown-tear-related" ? "review" : "recorded",
+        git: inspectGit(entry.path, policy),
+      };
+    return {
+      ...result,
+      decision: category.classification === "unknown-tear-related" ? "review" : "recorded",
+      git: null,
+    };
   });
 }
 
@@ -438,7 +540,15 @@ function addExpectedMissing(findings, workspaceRoot, policy) {
   const names = [policy.canonical.music.exactName, policy.canonical.wiki.exactName, policy.canonical.oracle.exactName];
   for (const name of names) {
     if (!findings.some((finding) => finding.scope === "workspace-root" && finding.name === name)) {
-      findings.push({ scope: "workspace-root", name, path: path.join(workspaceRoot, name), status: "missing", decision: "review", classification: "missing-canonical-root", relevance: "canonical" });
+      findings.push({
+        scope: "workspace-root",
+        name,
+        path: path.join(workspaceRoot, name),
+        status: "missing",
+        decision: "review",
+        classification: "missing-canonical-root",
+        relevance: "canonical",
+      });
     }
   }
 }
@@ -448,7 +558,8 @@ function outputPathSafe(outputPath, archiveRoot, policy) {
   if (!absolute.toLowerCase().endsWith(".json")) fail("output must end with .json");
   if (!isPathInside(archiveRoot, absolute)) fail("output must be inside archive-root");
   const relative = path.relative(archiveRoot, absolute).split(path.sep);
-  if (relative.length < 2 || !new RegExp(policy.classification.archiveGroup, "iu").test(relative[0])) fail("output must be under an existing dated archive recovery group");
+  if (relative.length < 2 || !new RegExp(policy.classification.archiveGroup, "iu").test(relative[0]))
+    fail("output must be under an existing dated archive recovery group");
   const group = inspectCanonicalDirectory(path.join(archiveRoot, relative[0]), "output recovery group");
   if (!isPathInside(group.path, absolute)) fail("output must remain inside its recovery group");
   let parent = path.dirname(absolute);
@@ -458,7 +569,8 @@ function outputPathSafe(outputPath, archiveRoot, policy) {
       const stats = fs.lstatSync(parent);
       if (stats.isSymbolicLink()) fail(`output parent is a symlink or reparse point: ${parent}`);
       const realPath = fs.realpathSync.native(parent);
-      if (!samePath(parent, realPath) || !stats.isDirectory()) fail(`output parent must be a canonical directory: ${parent}`);
+      if (!samePath(parent, realPath) || !stats.isDirectory())
+        fail(`output parent must be a canonical directory: ${parent}`);
     } catch (error) {
       if (error instanceof RemainingWorkspaceInventoryError) throw error;
       if (error.code !== "ENOENT") fail(`output parent could not be inspected: ${error.message}`);
@@ -477,20 +589,29 @@ function outputPathSafe(outputPath, archiveRoot, policy) {
 
 export function runRemainingWorkspaceInventory(options = {}) {
   for (const field of ["repoRoot", "workspaceRoot", "tempRoot", "archiveRoot"]) {
-    if (options[field] === undefined || options[field] === null || String(options[field]).trim() === "") fail(`${field} is required`);
+    if (options[field] === undefined || options[field] === null || String(options[field]).trim() === "")
+      fail(`${field} is required`);
   }
   const repoRoot = path.resolve(options.repoRoot);
   const workspaceRoot = path.resolve(options.workspaceRoot);
   const tempRoot = path.resolve(options.tempRoot);
   const archiveRoot = path.resolve(options.archiveRoot);
-  const loaded = requireCanonicalPolicy(options.policyPath ?? path.join(repoRoot, "preservation", "remaining-workspace-inventory-policy.json"), repoRoot);
+  const loaded = requireCanonicalPolicy(
+    options.policyPath ?? path.join(repoRoot, "preservation", "remaining-workspace-inventory-policy.json"),
+    repoRoot,
+  );
   const policy = loaded.policy;
   const repo = verifyCanonicalGame(repoRoot, workspaceRoot, policy);
   const workspace = inspectCanonicalDirectory(workspaceRoot, "workspace-root");
   const temp = inspectCanonicalDirectory(tempRoot, "temp-root");
   const archive = inspectCanonicalDirectory(archiveRoot, "archive-root");
-  if (!samePath(path.dirname(repo.path), workspace.path) || !samePath(path.dirname(archive.path), workspace.path)) fail("repo-root and archive-root must be direct workspace children");
-  if (isPathInside(workspace.path, temp.path, { allowEqual: true }) || isPathInside(temp.path, workspace.path, { allowEqual: true })) fail("temp-root must be disjoint from workspace-root");
+  if (!samePath(path.dirname(repo.path), workspace.path) || !samePath(path.dirname(archive.path), workspace.path))
+    fail("repo-root and archive-root must be direct workspace children");
+  if (
+    isPathInside(workspace.path, temp.path, { allowEqual: true }) ||
+    isPathInside(temp.path, workspace.path, { allowEqual: true })
+  )
+    fail("temp-root must be disjoint from workspace-root");
   const workspaceFindings = inspectChildren(workspace.path, "workspace-root", policy);
   const tempFindings = inspectChildren(temp.path, "temp-root", policy);
   const archiveFindings = inspectChildren(archive.path, "archive-root", policy);
@@ -505,22 +626,44 @@ export function runRemainingWorkspaceInventory(options = {}) {
     repository: RELEASE_REPOSITORY,
     policySha256: loaded.sha256,
     inputs: { repoRoot, workspaceRoot, tempRoot, archiveRoot },
-    mutation: { mode: "report-only", writes: false, fetch: false, recurseNonGit: false, hashPayloads: false, refsChanged: false },
+    mutation: {
+      mode: "report-only",
+      writes: false,
+      fetch: false,
+      recurseNonGit: false,
+      hashPayloads: false,
+      refsChanged: false,
+    },
     canonicalGame: { path: repo.path, git: repo.git },
     roots: [
-      { id: "workspace-root", path: workspace.path, metadata: workspace.metadata, immediateChildren: workspaceFindings.length },
+      {
+        id: "workspace-root",
+        path: workspace.path,
+        metadata: workspace.metadata,
+        immediateChildren: workspaceFindings.length,
+      },
       { id: "temp-root", path: temp.path, metadata: temp.metadata, immediateChildren: tempFindings.length },
       { id: "archive-root", path: archive.path, metadata: archive.metadata, immediateChildren: archiveFindings.length },
     ],
     findings,
     summary: {
-      status: findings.some((finding) => finding.status === "refused" || finding.decision === "review" || finding.classification === "unknown-tear-related" || finding.classification === "missing-canonical-root") ? "review" : "recorded",
+      status: findings.some(
+        (finding) =>
+          finding.status === "refused" ||
+          finding.decision === "review" ||
+          finding.classification === "unknown-tear-related" ||
+          finding.classification === "missing-canonical-root",
+      )
+        ? "review"
+        : "recorded",
       findingCount: findings.length,
-      gitRootCount: findings.filter((finding) => ["worktree", "bare", "git-output-limit"].includes(finding.git?.kind)).length,
+      gitRootCount: findings.filter((finding) => ["worktree", "bare", "git-output-limit"].includes(finding.git?.kind))
+        .length,
       nonGitRootCount: findings.filter((finding) => finding.git?.kind === "non-git").length,
       unknownTearRelatedCount: findings.filter((finding) => finding.classification === "unknown-tear-related").length,
       refusedCount: findings.filter((finding) => finding.status === "refused").length,
-      invalidCanonicalRootCount: findings.filter((finding) => finding.classification === "invalid-canonical-root").length,
+      invalidCanonicalRootCount: findings.filter((finding) => finding.classification === "invalid-canonical-root")
+        .length,
       invalidOracleCount: findings.filter((finding) => finding.classification === "invalid-oracle").length,
       payloadHashes: "none",
     },
@@ -594,7 +737,9 @@ function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
     if (options.help) {
-      console.log("Usage: node scripts/report-remaining-workspace-inventory.mjs --repo-root <repo> --workspace-root <workspace> --temp-root <temp> --archive-root <archive> [--policy <policy.json>] [--output <new-report.json>]");
+      console.log(
+        "Usage: node scripts/report-remaining-workspace-inventory.mjs --repo-root <repo> --workspace-root <workspace> --temp-root <temp> --archive-root <archive> [--policy <policy.json>] [--output <new-report.json>]",
+      );
       return;
     }
     console.log(JSON.stringify(runRemainingWorkspaceInventory(options), null, 2));

@@ -17,12 +17,17 @@ function legacyBuildDraft(
   options: { readonly expanded: boolean; readonly excludeIds?: readonly string[] },
 ): UpgradeDefinition[] {
   const block = Math.floor((wave - 1) / 10);
-  if (state.specialBlock !== block) { state.specialBlock = block; state.specialsOffered = 0; }
+  if (state.specialBlock !== block) {
+    state.specialBlock = block;
+    state.specialsOffered = 0;
+  }
   const localWave = ((wave - 1) % 10) + 1;
   const draftsLeft = Math.max(1, 10 - localWave);
   const needed = 2 - state.specialsOffered;
   const choices = rollUpgrades(options.expanded ? 4 : 3, mods, {
-    random, forceSpecial: needed > 0 && draftsLeft <= needed, excludeIds: options.excludeIds ?? [],
+    random,
+    forceSpecial: needed > 0 && draftsLeft <= needed,
+    excludeIds: options.excludeIds ?? [],
   });
   if (state.reservedUpgrade) {
     const reserved = state.reservedUpgrade;
@@ -39,7 +44,9 @@ function legacyBuildDraft(
   return choices;
 }
 
-function ids(choices: readonly UpgradeDefinition[]): string[] { return choices.map((choice) => choice.id); }
+function ids(choices: readonly UpgradeDefinition[]): string[] {
+  return choices.map((choice) => choice.id);
+}
 
 describe("legacy reward-selection conformance", () => {
   it("matches deterministic expanded draft, reserved replacement, special ledger, and reroll semantics", () => {
@@ -52,25 +59,45 @@ describe("legacy reward-selection conformance", () => {
     const legacyRandom = new SeededRandom("reward-conformance");
     const controllerRandom = new SeededRandom("reward-conformance");
     const controller = new RewardSelectionController<UpgradeDefinition>({
-      mode: "endless", expandedDraft: true, reservePick: true, rerolls: 2,
-      specialBlock: -1, specialsOffered: 0, reservedChoice: reserved,
+      mode: "endless",
+      expandedDraft: true,
+      reservePick: true,
+      rerolls: 2,
+      specialBlock: -1,
+      specialsOffered: 0,
+      reservedChoice: reserved,
     });
-    const roll = (request: DraftRollRequest) => rollUpgrades(request.count, controllerMods, {
-      random: controllerRandom, forceSpecial: request.forceSpecial, excludeIds: request.excludeIds,
-    });
+    const roll = (request: DraftRollRequest) =>
+      rollUpgrades(request.count, controllerMods, {
+        random: controllerRandom,
+        forceSpecial: request.forceSpecial,
+        excludeIds: request.excludeIds,
+      });
 
     const legacyFirst = legacyBuildDraft(legacyState, 8, legacyMods, legacyRandom, { expanded: true });
     const first = controller.openDraft(8, roll).snapshot;
     expect(ids(first.choices)).toEqual(ids(legacyFirst));
     expect(first).toMatchObject({
-      specialBlock: legacyState.specialBlock, specialsOffered: legacyState.specialsOffered, reservedChoice: legacyState.reservedUpgrade,
+      specialBlock: legacyState.specialBlock,
+      specialsOffered: legacyState.specialsOffered,
+      reservedChoice: legacyState.reservedUpgrade,
     });
 
-    legacyState.specialsOffered = Math.max(0, legacyState.specialsOffered - legacyFirst.filter((choice) => choice.tiers).length);
-    const legacySecond = legacyBuildDraft(legacyState, 8, legacyMods, legacyRandom, { expanded: true, excludeIds: ids(legacyFirst) });
+    legacyState.specialsOffered = Math.max(
+      0,
+      legacyState.specialsOffered - legacyFirst.filter((choice) => choice.tiers).length,
+    );
+    const legacySecond = legacyBuildDraft(legacyState, 8, legacyMods, legacyRandom, {
+      expanded: true,
+      excludeIds: ids(legacyFirst),
+    });
     const second = controller.reroll(roll).snapshot;
     expect(ids(second.choices)).toEqual(ids(legacySecond));
-    expect(second).toMatchObject({ rerolls: 1, specialBlock: legacyState.specialBlock, specialsOffered: legacyState.specialsOffered });
+    expect(second).toMatchObject({
+      rerolls: 1,
+      specialBlock: legacyState.specialBlock,
+      specialsOffered: legacyState.specialsOffered,
+    });
   });
 
   it("returns existing upgrade definitions by identity for the legacy mutation adapter", () => {

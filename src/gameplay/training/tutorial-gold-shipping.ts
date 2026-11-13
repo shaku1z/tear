@@ -20,7 +20,10 @@ export function shippingTutorialGold(): TutorialGoldCorpus | undefined {
   if (cached === undefined) {
     // The small binding file carries the fingerprint and ships with the code;
     // only the corpus itself is loaded on demand.
-    const expected = typeof __TEAR_TUTORIAL_GOLD_COMPATIBILITY__ === "undefined" ? binding.sourceHash : __TEAR_TUTORIAL_GOLD_COMPATIBILITY__;
+    const expected =
+      typeof __TEAR_TUTORIAL_GOLD_COMPATIBILITY__ === "undefined"
+        ? binding.sourceHash
+        : __TEAR_TUTORIAL_GOLD_COMPATIBILITY__;
     const loaded = loadTutorialGoldCorpus(source, binding, expected);
     cached = loaded.status === "ready" ? loaded.corpus : null;
   }
@@ -29,12 +32,15 @@ export function shippingTutorialGold(): TutorialGoldCorpus | undefined {
 
 /** Fetches the corpus once. Never rejects: a failed load leaves the coach without demonstrations. */
 export function loadShippingTutorialGold(): Promise<TutorialGoldCorpus | undefined> {
-  loading ??= import("./tutorial-gold-reference-data.json").then((module) => {
-    source = module.default;
-    return shippingTutorialGold();
-  }, () => {
-    loading = undefined;
-    return undefined;
-  });
+  loading ??= import("./tutorial-gold-reference-data.json").then(
+    (module) => {
+      source = module.default;
+      return shippingTutorialGold();
+    },
+    () => {
+      loading = undefined;
+      return undefined;
+    },
+  );
   return loading;
 }

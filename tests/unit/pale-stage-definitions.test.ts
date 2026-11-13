@@ -19,15 +19,24 @@ describe("Pale typed stage environment", () => {
 
   it("installs bounded directional Aurora Tracks and clears them on exit", () => {
     expect(stageEnvironmentDefinition("pale-traverse")).toMatchObject({
-      id: "pale-traverse-environment", maximumFields: 4, maximumCombatObjects: 8, maximumRoutes: 3,
+      id: "pale-traverse-environment",
+      maximumFields: 4,
+      maximumCombatObjects: 8,
+      maximumRoutes: 3,
       cleanup: "stage-owned",
     });
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "pale-stage-test" });
     activateStageEnvironment(environment, "pale-traverse", 4_800, "stage-transition");
     expect(environment.stageId).toBe("pale-traverse");
     expect(environment.fields()).toHaveLength(3);
-    expect(environment.fields().map((field) => ({ id: field.id, kind: field.kind,
-      direction: (field as { direction?: number }).direction, state: field.state }))).toEqual([
+    expect(
+      environment.fields().map((field) => ({
+        id: field.id,
+        kind: field.kind,
+        direction: (field as { direction?: number }).direction,
+        state: field.state,
+      })),
+    ).toEqual([
       { id: "pale-traverse:aurora-track:lower-east", kind: "aurora-track", direction: 1, state: "warning" },
       { id: "pale-traverse:aurora-track:crossing-west", kind: "aurora-track", direction: -1, state: "warning" },
       { id: "pale-traverse:aurora-track:upper-east", kind: "aurora-track", direction: 1, state: "warning" },

@@ -1,8 +1,4 @@
-import {
-  AIM_TURN_SCALE,
-  INPUT_AXIS_SCALE,
-  type GameAction,
-} from "../input/game-action";
+import { AIM_TURN_SCALE, INPUT_AXIS_SCALE, type GameAction } from "../input/game-action";
 import type {
   TearAgentDecision,
   TearAgentObservation,
@@ -103,13 +99,16 @@ function actionSignature(actions: readonly GameAction[]): string {
 }
 
 function progressToken(observation: TearHierarchicalObservation): string {
-  return observation.signals?.progressToken ?? [
-    observation.ui?.screen ?? "playing",
-    observation.state.run.wave,
-    observation.state.run.score,
-    observation.state.player.hp,
-    observation.state.entities.filter((entity) => (entity.hpRatio ?? 1) > 0).length,
-  ].join(":");
+  return (
+    observation.signals?.progressToken ??
+    [
+      observation.ui?.screen ?? "playing",
+      observation.state.run.wave,
+      observation.state.run.score,
+      observation.state.player.hp,
+      observation.state.entities.filter((entity) => (entity.hpRatio ?? 1) > 0).length,
+    ].join(":")
+  );
 }
 
 export class TearLongHorizonMemory {
@@ -187,8 +186,20 @@ export class TearInvariantSentinel {
   inspect(observation: TearHierarchicalObservation): readonly string[] {
     const { player, blade, run } = observation.state;
     const violations: string[] = [];
-    const finite = [player.x, player.y, player.vx, player.vy, player.hp, player.maxHp,
-      blade.tipX, blade.tipY, blade.vx, blade.vy, blade.tipSpeed, run.wave];
+    const finite = [
+      player.x,
+      player.y,
+      player.vx,
+      player.vy,
+      player.hp,
+      player.maxHp,
+      blade.tipX,
+      blade.tipY,
+      blade.vx,
+      blade.vy,
+      blade.tipSpeed,
+      run.wave,
+    ];
     if (!finite.every(Number.isFinite)) violations.push("non-finite-authoritative-state");
     if (player.maxHp <= 0 || player.hp < 0 || player.hp > player.maxHp) violations.push("invalid-player-health");
     if (!Number.isSafeInteger(observation.state.tick) || observation.state.tick < 0) violations.push("invalid-tick");
@@ -213,7 +224,11 @@ export class TearAgentWatchdog {
   ): readonly TearAgentWatchdogIncident[] {
     const tick = observation.state.tick;
     const incidents: TearAgentWatchdogIncident[] = [];
-    const add = (kind: TearAgentWatchdogKind, severity: TearAgentWatchdogIncident["severity"], detail: string): void => {
+    const add = (
+      kind: TearAgentWatchdogKind,
+      severity: TearAgentWatchdogIncident["severity"],
+      detail: string,
+    ): void => {
       incidents.push(Object.freeze({ kind, tick, severity, detail }));
     };
     if (observation.signals?.terminal === true) add("terminal", "notice", "runtime reported a terminal state");
@@ -222,12 +237,10 @@ export class TearAgentWatchdog {
       add("device-disconnected", "recoverable", "selected physical adapter is disconnected");
     }
     if (observation.state.diagnostics?.paused === true) add("paused", "recoverable", "simulation is paused");
-    if (memory.loadingEnteredTick !== undefined
-      && tick - memory.loadingEnteredTick > this.#contract.loadingTicks) {
+    if (memory.loadingEnteredTick !== undefined && tick - memory.loadingEnteredTick > this.#contract.loadingTicks) {
       add("loading-stall", "recoverable", "loading exceeded its tick budget");
     }
-    if (tick - memory.screenEnteredTick > this.#contract.transitionTicks
-      && observation.ui?.screen !== "playing") {
+    if (tick - memory.screenEnteredTick > this.#contract.transitionTicks && observation.ui?.screen !== "playing") {
       add("transition-stall", "recoverable", "UI transition exceeded its tick budget");
     }
     const softlockLimit = observation.state.diagnostics?.softlockLimitTicks ?? this.#contract.noProgressTicks;
@@ -291,11 +304,14 @@ export class TearTacticalCombat {
 function aimTurn(dx: number, dy: number): number {
   const radians = Math.atan2(dy, dx);
   const positive = radians < 0 ? radians + Math.PI * 2 : radians;
-  return Math.min(AIM_TURN_SCALE - 1, Math.floor(positive / (Math.PI * 2) * AIM_TURN_SCALE));
+  return Math.min(AIM_TURN_SCALE - 1, Math.floor((positive / (Math.PI * 2)) * AIM_TURN_SCALE));
 }
 
 export class TearBladeMotor {
-  decide(observation: TearHierarchicalObservation, target?: TearObservedActorV1): Readonly<{
+  decide(
+    observation: TearHierarchicalObservation,
+    target?: TearObservedActorV1,
+  ): Readonly<{
     maneuver: TearBladeManeuver;
     actions: readonly GameAction[];
   }> {
@@ -304,26 +320,30 @@ export class TearBladeMotor {
       return Object.freeze({ maneuver: "recover", actions: Object.freeze([{ type: "interact" } as const]) });
     }
     if (blade.state === "thrown" || blade.state === "embedded") {
-      return Object.freeze({ maneuver: "recall", actions: Object.freeze([
-        { type: "weapon", intent: "recall", phase: "pressed" } as const,
-      ]) });
+      return Object.freeze({
+        maneuver: "recall",
+        actions: Object.freeze([{ type: "weapon", intent: "recall", phase: "pressed" } as const]),
+      });
     }
-    const projectile = observation.state.entities.find((entity) =>
-      entity.kind === "projectile" && Math.hypot(entity.x - player.x, entity.y - player.y) <= 180);
+    const projectile = observation.state.entities.find(
+      (entity) => entity.kind === "projectile" && Math.hypot(entity.x - player.x, entity.y - player.y) <= 180,
+    );
     const selected = projectile ?? target;
     if (selected === undefined) return Object.freeze({ maneuver: "track", actions: Object.freeze([]) });
     const dx = selected.x - player.x;
     const dy = selected.y - player.y;
     const aim = { type: "aim", turn: aimTurn(dx, dy) } as const;
     if (projectile !== undefined) {
-      return Object.freeze({ maneuver: "parry", actions: Object.freeze([
-        aim, { type: "weapon", intent: "primary", phase: "pressed" } as const,
-      ]) });
+      return Object.freeze({
+        maneuver: "parry",
+        actions: Object.freeze([aim, { type: "weapon", intent: "primary", phase: "pressed" } as const]),
+      });
     }
     if (Math.hypot(dx, dy) > 340) {
-      return Object.freeze({ maneuver: "throw", actions: Object.freeze([
-        aim, { type: "weapon", intent: "throw", phase: "pressed" } as const,
-      ]) });
+      return Object.freeze({
+        maneuver: "throw",
+        actions: Object.freeze([aim, { type: "weapon", intent: "throw", phase: "pressed" } as const]),
+      });
     }
     const secondary = tick % 180 === 0;
     return Object.freeze({
@@ -360,10 +380,12 @@ export class TearMovementPlanner {
 export class TearDraftPlanner {
   decide(observation: TearHierarchicalObservation): readonly GameAction[] {
     const screen = observation.ui?.screen;
-    const choice = [...(observation.ui?.choices ?? [])].sort((left, right) =>
-      (right.score ?? 0) - (left.score ?? 0)
-      || Number(right.unique === true) - Number(left.unique === true)
-      || left.id.localeCompare(right.id))[0];
+    const choice = [...(observation.ui?.choices ?? [])].sort(
+      (left, right) =>
+        (right.score ?? 0) - (left.score ?? 0) ||
+        Number(right.unique === true) - Number(left.unique === true) ||
+        left.id.localeCompare(right.id),
+    )[0];
     if (choice === undefined) return Object.freeze([]);
     if (screen === "tierup") return Object.freeze([{ type: "tier-up-choice", choiceId: choice.id }]);
     if (screen === "reserve") return Object.freeze([{ type: "reserve-choice", choiceId: choice.id }]);
@@ -384,7 +406,10 @@ export class TearRecoveryPlanner {
     }
     if (kinds.has("focus-lost") || kinds.has("device-disconnected")) return Object.freeze([{ type: "pause" }]);
     if (kinds.has("no-progress") || kinds.has("repeated-input")) {
-      return Object.freeze([{ type: "move", x: 0, y: 0 }, { type: "jump", phase: "pressed" }]);
+      return Object.freeze([
+        { type: "move", x: 0, y: 0 },
+        { type: "jump", phase: "pressed" },
+      ]);
     }
     return Object.freeze([]);
   }
@@ -428,22 +453,18 @@ export class TearHierarchicalAgentOrchestrator {
     this.#watchdog = new TearAgentWatchdog(watchdog);
   }
 
-  get memory(): TearAgentMemorySnapshot { return this.#memory.snapshot(); }
+  get memory(): TearAgentMemorySnapshot {
+    return this.#memory.snapshot();
+  }
 
-  decide(
-    observation: TearHierarchicalObservation,
-    operational?: TearAgentDecision,
-  ): TearHierarchicalDecision {
+  decide(observation: TearHierarchicalObservation, operational?: TearAgentDecision): TearHierarchicalDecision {
     this.#memory.observe(observation);
     const before = this.#memory.snapshot();
     const violations = this.#sentinel.inspect(observation);
     const incidents = this.#watchdog.inspect(observation, before);
     const journeyObjective = this.#journey.decide(observation);
-    const fatalRecovery = violations.length > 0
-      || incidents.some((incident) => incident.severity === "fatal");
-    const objective = fatalRecovery
-      ? "recover-runtime"
-      : this.#strategy.decide(observation, journeyObjective);
+    const fatalRecovery = violations.length > 0 || incidents.some((incident) => incident.severity === "fatal");
+    const objective = fatalRecovery ? "recover-runtime" : this.#strategy.decide(observation, journeyObjective);
     const tactical = this.#tactical.decide(observation, before.targetId);
     const blade = this.#blade.decide(observation, tactical.target);
     const movementActions = this.#movement.decide(observation, tactical.target, objective);
@@ -466,10 +487,10 @@ export class TearHierarchicalAgentOrchestrator {
     ]);
     const operationalTrace = fatalRecovery ? undefined : operational?.trace;
     const targetId = operationalTrace === undefined ? tactical.target?.id : operationalTrace.targetId;
-    const maneuver = fatalRecovery ? "recover" : operationalTrace?.maneuver ?? blade.maneuver;
-    const confidence = fatalRecovery ? 0 : operationalTrace?.confidence ?? tactical.confidence;
-    const recovery = fatalRecovery || (operationalTrace?.recovery
-      ?? (objective === "recover-blade" || objective === "survive"));
+    const maneuver = fatalRecovery ? "recover" : (operationalTrace?.maneuver ?? blade.maneuver);
+    const confidence = fatalRecovery ? 0 : (operationalTrace?.confidence ?? tactical.confidence);
+    const recovery =
+      fatalRecovery || (operationalTrace?.recovery ?? (objective === "recover-blade" || objective === "survive"));
     const critic = this.#critic.review(observation, objective, actions, incidents);
     this.#memory.rememberDecision(actions, targetId, recovery);
     const memory = this.#memory.snapshot();

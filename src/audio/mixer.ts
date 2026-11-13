@@ -1,11 +1,6 @@
 export type AudioCategory = "master" | "music" | "sfx" | "interface";
 export type SfxRoute = "weapons" | "enemies" | "player" | "environment";
-export type TemporaryMuteReason =
-  | "ad"
-  | "portal"
-  | "visibility"
-  | "platform-suspend"
-  | "system";
+export type TemporaryMuteReason = "ad" | "portal" | "visibility" | "platform-suspend" | "system";
 
 export interface AudioMixerSettings {
   readonly masterVolume: number;
@@ -80,17 +75,13 @@ export function clampVolume(value: number): number {
   return Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
 }
 
-export function normalizeAudioMixerSettings(
-  candidate: Partial<AudioMixerSettings> | undefined,
-): AudioMixerSettings {
+export function normalizeAudioMixerSettings(candidate: Partial<AudioMixerSettings> | undefined): AudioMixerSettings {
   const value = candidate ?? {};
   return Object.freeze({
     masterVolume: clampVolume(value.masterVolume ?? DEFAULT_AUDIO_MIXER_SETTINGS.masterVolume),
     musicVolume: clampVolume(value.musicVolume ?? DEFAULT_AUDIO_MIXER_SETTINGS.musicVolume),
     sfxVolume: clampVolume(value.sfxVolume ?? DEFAULT_AUDIO_MIXER_SETTINGS.sfxVolume),
-    interfaceVolume: clampVolume(
-      value.interfaceVolume ?? DEFAULT_AUDIO_MIXER_SETTINGS.interfaceVolume,
-    ),
+    interfaceVolume: clampVolume(value.interfaceVolume ?? DEFAULT_AUDIO_MIXER_SETTINGS.interfaceVolume),
     masterMuted: value.masterMuted ?? DEFAULT_AUDIO_MIXER_SETTINGS.masterMuted,
     musicMuted: value.musicMuted ?? DEFAULT_AUDIO_MIXER_SETTINGS.musicMuted,
     sfxMuted: value.sfxMuted ?? DEFAULT_AUDIO_MIXER_SETTINGS.sfxMuted,
@@ -116,12 +107,7 @@ export function effectiveGain(
 }
 
 /** Schedules every audible gain change as a short ramp to avoid clicks and pops. */
-export function rampGain(
-  gain: GainParamPort,
-  target: number,
-  now: number,
-  durationSeconds: number,
-): void {
+export function rampGain(gain: GainParamPort, target: number, now: number, durationSeconds: number): void {
   const safeTarget = clampVolume(target);
   const safeDuration = Math.max(0.001, durationSeconds);
   gain.cancelScheduledValues(now);
@@ -228,26 +214,15 @@ export class HierarchicalAudioMixer {
 
   #applySettings(): void {
     this.#applyMaster();
-    this.#schedule(
-      this.#categoryBuses.music,
-      this.#settings.musicMuted ? 0 : this.#settings.musicVolume,
-    );
-    this.#schedule(
-      this.#categoryBuses.sfx,
-      this.#settings.sfxMuted ? 0 : this.#settings.sfxVolume,
-    );
-    this.#schedule(
-      this.#categoryBuses.interface,
-      this.#settings.interfaceMuted ? 0 : this.#settings.interfaceVolume,
-    );
+    this.#schedule(this.#categoryBuses.music, this.#settings.musicMuted ? 0 : this.#settings.musicVolume);
+    this.#schedule(this.#categoryBuses.sfx, this.#settings.sfxMuted ? 0 : this.#settings.sfxVolume);
+    this.#schedule(this.#categoryBuses.interface, this.#settings.interfaceMuted ? 0 : this.#settings.interfaceVolume);
   }
 
   #applyMaster(): void {
     this.#schedule(
       this.#categoryBuses.master,
-      this.#settings.masterMuted || this.#temporaryMuteReasons.size > 0
-        ? 0
-        : this.#settings.masterVolume,
+      this.#settings.masterMuted || this.#temporaryMuteReasons.size > 0 ? 0 : this.#settings.masterVolume,
     );
   }
 

@@ -41,17 +41,46 @@ const PALE_COMPOSITION = Object.freeze({
  */
 export const CAMPAIGN_STAGE_CURVES = Object.freeze({
   grounds: Object.freeze({ health: 1, damage: 1, countAdd: 0, concurrentAdd: 0, disposition: "authored-prototype" }),
-  undercroft: Object.freeze({ health: 1.28, damage: 1.12, countAdd: 2, concurrentAdd: 1, disposition: "authored-prototype" }),
-  "crimson-fields": Object.freeze({ health: 1.56, damage: 1.24, countAdd: 4, concurrentAdd: 2, disposition: "authored-prototype" }),
-  "verdant-sanctum": Object.freeze({ health: 1.82, damage: 1.34, countAdd: 5, concurrentAdd: 2, disposition: "authored-prototype", composition: VERDANT_COMPOSITION }),
-  voidspire: Object.freeze({ health: 2.36, damage: 1.56, countAdd: 8, concurrentAdd: 4, disposition: "authored-prototype" }),
+  undercroft: Object.freeze({
+    health: 1.28,
+    damage: 1.12,
+    countAdd: 2,
+    concurrentAdd: 1,
+    disposition: "authored-prototype",
+  }),
+  "crimson-fields": Object.freeze({
+    health: 1.56,
+    damage: 1.24,
+    countAdd: 4,
+    concurrentAdd: 2,
+    disposition: "authored-prototype",
+  }),
+  "verdant-sanctum": Object.freeze({
+    health: 1.82,
+    damage: 1.34,
+    countAdd: 5,
+    concurrentAdd: 2,
+    disposition: "authored-prototype",
+    composition: VERDANT_COMPOSITION,
+  }),
+  voidspire: Object.freeze({
+    health: 2.36,
+    damage: 1.56,
+    countAdd: 8,
+    concurrentAdd: 4,
+    disposition: "authored-prototype",
+  }),
   tear: Object.freeze({ health: 2.7, damage: 1.7, countAdd: 10, concurrentAdd: 4, disposition: "authored-prototype" }),
 } as const satisfies Readonly<Partial<Record<StageId, CampaignStageCurve>>>);
 
 /** Pale remains executable engineering content, but is not a campaign curve. */
 export const PALE_PREVIEW_STAGE_CURVE: CampaignStageCurve = Object.freeze({
-  health: 2.08, damage: 1.44, countAdd: 6, concurrentAdd: 3,
-  disposition: "authored-prototype", composition: PALE_COMPOSITION,
+  health: 2.08,
+  damage: 1.44,
+  countAdd: 6,
+  concurrentAdd: 3,
+  disposition: "authored-prototype",
+  composition: PALE_COMPOSITION,
 });
 
 export function campaignStageCurve(stageId: StageId): CampaignStageCurve {

@@ -1,12 +1,14 @@
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
-export interface JsonObject { readonly [key: string]: JsonValue }
+export interface JsonObject {
+  readonly [key: string]: JsonValue;
+}
 export type MutableJsonValue = JsonPrimitive | MutableJsonObject | MutableJsonValue[];
-export interface MutableJsonObject { [key: string]: MutableJsonValue }
+export interface MutableJsonObject {
+  [key: string]: MutableJsonValue;
+}
 
-export type ValidationResult<T> =
-  | Readonly<{ ok: true; value: T }>
-  | Readonly<{ ok: false; error: string }>;
+export type ValidationResult<T> = Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; error: string }>;
 
 const UNSAFE_KEYS = new Set(["__proto__", "prototype", "constructor"]);
 
@@ -29,7 +31,10 @@ export function validateJson(value: unknown, maxNodes = 20_000): ValidationResul
       const output: JsonValue[] = [];
       for (const entry of input) {
         const validated = visit(entry, depth + 1);
-        if (!validated.ok) { ancestors.delete(input); return validated; }
+        if (!validated.ok) {
+          ancestors.delete(input);
+          return validated;
+        }
         output.push(validated.value);
       }
       ancestors.delete(input);
@@ -39,7 +44,10 @@ export function validateJson(value: unknown, maxNodes = 20_000): ValidationResul
     for (const [key, entry] of Object.entries(input)) {
       if (UNSAFE_KEYS.has(key)) continue;
       const validated = visit(entry, depth + 1);
-      if (!validated.ok) { ancestors.delete(input); return validated; }
+      if (!validated.ok) {
+        ancestors.delete(input);
+        return validated;
+      }
       output[key] = validated.value;
     }
     ancestors.delete(input);
@@ -74,12 +82,16 @@ export function mutableJsonClone(value: JsonValue): MutableJsonValue {
 
 export function parseStoredJson(text: string, maxCharacters = 5_000_000): ValidationResult<JsonValue> {
   if (text.length > maxCharacters) return { ok: false, error: "Stored value exceeds the size limit." };
-  try { return validateJson(JSON.parse(text) as unknown); } catch { return { ok: false, error: "Stored value is not valid JSON." }; }
+  try {
+    return validateJson(JSON.parse(text) as unknown);
+  } catch {
+    return { ok: false, error: "Stored value is not valid JSON." };
+  }
 }
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
+    ? (value as Record<string, unknown>)
     : null;
 }
 
@@ -91,7 +103,10 @@ export function safeString(value: unknown, fallback: string): string {
   return typeof value === "string" && value.length > 0 ? value : fallback;
 }
 
-export function extensionFields(source: Record<string, unknown>, known: ReadonlySet<string>): ValidationResult<JsonObject> {
+export function extensionFields(
+  source: Record<string, unknown>,
+  known: ReadonlySet<string>,
+): ValidationResult<JsonObject> {
   const existing = source.extensions === undefined ? {} : asRecord(source.extensions);
   if (!existing) return { ok: false, error: "Envelope extensions must be an object." };
   return validateJsonObject({

@@ -76,7 +76,12 @@ describe("Game Agent and Run Monitor compatibility facades", () => {
     expect(RUN_MONITOR_ACTIONS).toEqual({ open: "run-monitor.open", control: "run-monitor.control" });
     expect(LEGACY_RUN_MONITOR_ACTIONS).toEqual({ open: "ghostlab.open", control: "ghostlab.watch" });
     expect(LEGACY_GAME_AGENT_ACTION_ALIASES).toEqual(["replay.hub.open", "ghostlab.open"]);
-    expect(LEGACY_RUN_MONITOR_ACTION_ALIASES).toEqual(["replay.hub.open", "replay.hub.watch", "ghostlab.open", "ghostlab.watch"]);
+    expect(LEGACY_RUN_MONITOR_ACTION_ALIASES).toEqual([
+      "replay.hub.open",
+      "replay.hub.watch",
+      "ghostlab.open",
+      "ghostlab.watch",
+    ]);
   });
 
   it("keeps canonical API and app facades on the exact legacy implementations", () => {
@@ -93,7 +98,13 @@ describe("Game Agent and Run Monitor compatibility facades", () => {
       id: "compatibility-plan",
       maxTicksPerCase: 3,
       cases: [{ id: "one", scenario, scenarioHash: stableVerificationHash(scenario) }],
-      levels: [{ level, policy: { kind: "scripted-profile" as const, profile: "competent" as const, lineageHash: "a".repeat(16) }, boundedRationality: { id: "bounded", reactionTicks: 0, actionErrorEvery: 0, observationFields: ["state"] } }],
+      levels: [
+        {
+          level,
+          policy: { kind: "scripted-profile" as const, profile: "competent" as const, lineageHash: "a".repeat(16) },
+          boundedRationality: { id: "bounded", reactionTicks: 0, actionErrorEvery: 0, observationFields: ["state"] },
+        },
+      ],
     };
     const legacyLadder = createTearBotLadderEvaluationPlan(ladderInput);
     const canonicalLadder = createGameAgentLadderEvaluationPlan(ladderInput);
@@ -103,7 +114,12 @@ describe("Game Agent and Run Monitor compatibility facades", () => {
 
     const v3Input = {
       id: "compatibility-v3-plan",
-      candidate: { approvalHash: "b".repeat(16), artifactId: "artifact", artifactHash: "c".repeat(16), activationHash: "d".repeat(16) },
+      candidate: {
+        approvalHash: "b".repeat(16),
+        artifactId: "artifact",
+        artifactHash: "c".repeat(16),
+        activationHash: "d".repeat(16),
+      },
       cases: [{ id: "one", scenario, scenarioHash: stableVerificationHash(scenario) }],
       maxTicksPerCase: 3,
     };

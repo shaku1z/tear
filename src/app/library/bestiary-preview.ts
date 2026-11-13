@@ -1,14 +1,47 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { BestiaryEntry } from "../../presentation/bestiary-catalog";
 
-export type BestiaryPreviewDependencies = Pick<GameRuntimeDependencies, "AFFIXES" | "Aldric" | "Armored" | "Bomber" | "Charger" |
-  "Chimera" | "Colossus" | "CONFIG" | "Echo" | "Flyer" | "PROFILE" | "Ranged" | "Rootbinder" | "Rootbound" | "Source" |
-  "Support" | "UI" | "VARIANTS" | "Warden" | "Wraith" | "applyVariant">;
+export type BestiaryPreviewDependencies = Pick<
+  GameRuntimeDependencies,
+  | "AFFIXES"
+  | "Aldric"
+  | "Armored"
+  | "Bomber"
+  | "Charger"
+  | "Chimera"
+  | "Colossus"
+  | "CONFIG"
+  | "Echo"
+  | "Flyer"
+  | "PROFILE"
+  | "Ranged"
+  | "Rootbinder"
+  | "Rootbound"
+  | "Source"
+  | "Support"
+  | "UI"
+  | "VARIANTS"
+  | "Warden"
+  | "Wraith"
+  | "applyVariant"
+>;
 
 /** The parts of a live enemy the Codex bestiary reads and draws. */
 export interface BestiaryInstance {
-  hw: number; hh: number; maxHp: number; contactDmg: number; speed?: number; kind?: string; bossId?: string;
-  x: number; y: number; facing: number; flash: number; stun: number; spawnT: number; _noBar?: boolean;
+  hw: number;
+  hh: number;
+  maxHp: number;
+  contactDmg: number;
+  speed?: number;
+  kind?: string;
+  bossId?: string;
+  x: number;
+  y: number;
+  facing: number;
+  flash: number;
+  stun: number;
+  spawnT: number;
+  _noBar?: boolean;
   draw(context: CanvasRenderingContext2D, player: unknown): void;
 }
 
@@ -59,14 +92,16 @@ export function createLiveBestiaryPreview(d: BestiaryPreviewDependencies) {
     return bestiaryInstances[id] ?? null;
   };
   const detail = (entry: BestiaryEntry) => {
-    const isBoss = entry.boss === true, inst = instance(entry.id);
+    const isBoss = entry.boss === true,
+      inst = instance(entry.id);
     if (inst === null) return undefined;
     const colors = d.CONFIG.colors as Record<string, string | undefined>;
     // Supports share kind "support"; colour and kill tallies use the canonical identity.
     const identity = entry.enemyKind ?? inst.kind;
     const kindColor = inst.kind !== undefined ? colors[inst.kind] : undefined;
-    const accent = (identity !== undefined ? colors[identity] ?? kindColor : undefined)
-      ?? (isBoss ? d.UI.t.color.danger : d.UI.t.color.accent);
+    const accent =
+      (identity !== undefined ? (colors[identity] ?? kindColor) : undefined) ??
+      (isBoss ? d.UI.t.color.danger : d.UI.t.color.accent);
     const stats = [
       { label: "HP", value: Math.round(inst.maxHp).toLocaleString("en-US") },
       { label: isBoss ? "TOUCH" : "DMG", value: String(Math.round(inst.contactDmg)) },
@@ -80,11 +115,31 @@ export function createLiveBestiaryPreview(d: BestiaryPreviewDependencies) {
       const stat = d.PROFILE.stat("kill_" + inst.kind);
       if (stat) felled = { label: "FELLED ×" + stat.toLocaleString("en-US"), color: accent };
     }
-    const affixes = isBoss ? undefined
-      : d.AFFIXES.filter((affix) => affix.appliesTo(inst as never)).map((affix) => ({ id: affix.id, color: affix.color }));
-    return { accent, stats, ...(felled === undefined ? {} : { felled }), ...(affixes === undefined ? {} : { affixes }) };
+    const affixes = isBoss
+      ? undefined
+      : d.AFFIXES.filter((affix) => affix.appliesTo(inst as never)).map((affix) => ({
+          id: affix.id,
+          color: affix.color,
+        }));
+    return {
+      accent,
+      stats,
+      ...(felled === undefined ? {} : { felled }),
+      ...(affixes === undefined ? {} : { affixes }),
+    };
   };
   // source PREVIEW_PLAYER: a still stand-in so enemy draw() has someone to face
-  const previewPlayer = { x: 360, y: 0, hw: 16, hh: 25, facing: 1, invulnerable: false, dashTimer: 0, vx: 0, vy: 0, onGround: true };
+  const previewPlayer = {
+    x: 360,
+    y: 0,
+    hw: 16,
+    hh: 25,
+    facing: 1,
+    invulnerable: false,
+    dashTimer: 0,
+    vx: 0,
+    vy: 0,
+    onGround: true,
+  };
   return Object.freeze({ instance, detail, previewPlayer });
 }

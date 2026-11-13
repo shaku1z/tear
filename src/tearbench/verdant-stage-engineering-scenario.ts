@@ -1,6 +1,11 @@
 import type { TearSdlDocumentV1 } from "./tearsdl";
 
-function verdantWaveScenario(wave: 31 | 35 | 39, profile: "early" | "middle" | "late", controlBudget: number, maxRootbinders: number): TearSdlDocumentV1 {
+function verdantWaveScenario(
+  wave: 31 | 35 | 39,
+  profile: "early" | "middle" | "late",
+  controlBudget: number,
+  maxRootbinders: number,
+): TearSdlDocumentV1 {
   return Object.freeze({
     format: "tearsdl",
     schemaVersion: 1,
@@ -8,21 +13,24 @@ function verdantWaveScenario(wave: 31 | 35 | 39, profile: "early" | "middle" | "
     stateClass: "reconstructed-reachable",
     seed: `verdant-stage-wave-${String(wave)}`,
     start: Object.freeze({
-      mode: "campaign", difficulty: "normal", weapon: "sword",
-      stage: "verdant-sanctum", wave,
+      mode: "campaign",
+      difficulty: "normal",
+      weapon: "sword",
+      stage: "verdant-sanctum",
+      wave,
     }),
     constraints: Object.freeze({
       legalProgression: true,
       verdantComposition: Object.freeze({ profile, localWave: wave - 30, controlBudget, maxRootbinders }),
     }),
     tags: Object.freeze([
-    "verdant-sanctum",
-    "stage",
-    "wave-composition",
-    "state-forge",
-    "engineering-only",
-    "non-publishable",
-    "c15",
+      "verdant-sanctum",
+      "stage",
+      "wave-composition",
+      "state-forge",
+      "engineering-only",
+      "non-publishable",
+      "c15",
     ]),
     maxTicks: 1_440,
   });

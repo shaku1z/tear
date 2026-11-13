@@ -5,16 +5,21 @@ const remote = { coinMult: 1.2, scoreMult: 1.5, enemyHpMult: 0.9, enemyDensityMu
 
 describe("run start plan", () => {
   it("derives an immutable per-run scaling plan without changing definitions", () => {
-    const definitions = [{
-      id: "hard" as const, oneHit: false,
-      mods: { dmg: 1.25, coin: 2, score: 3, hp: 1.4, count: 1.3 },
-    }];
+    const definitions = [
+      {
+        id: "hard" as const,
+        oneHit: false,
+        mods: { dmg: 1.25, coin: 2, score: 3, hp: 1.4, count: 1.3 },
+      },
+    ];
     const before = structuredClone(definitions);
 
     const plan = planRunStart("hard", definitions, remote);
 
     expect(plan).toEqual({
-      difficulty: "hard", oneHit: false, playerDamageMultiplier: 1.25,
+      difficulty: "hard",
+      oneHit: false,
+      playerDamageMultiplier: 1.25,
       scaling: { coin: 2.4, score: 4.5, enemyHp: 1.26, enemyCount: 1.4300000000000002 },
     });
     expect(definitions).toEqual(before);
@@ -24,7 +29,10 @@ describe("run start plan", () => {
 
   it("falls back to the first definition and neutral local modifiers", () => {
     const plan = planRunStart("extreme", [{ id: "normal", mods: {} }], {
-      coinMult: 1, scoreMult: 1, enemyHpMult: 1, enemyDensityMult: 1,
+      coinMult: 1,
+      scoreMult: 1,
+      enemyHpMult: 1,
+      enemyDensityMult: 1,
     });
     expect(plan).toMatchObject({ difficulty: "normal", oneHit: false, playerDamageMultiplier: 1 });
     expect(plan.scaling).toEqual({ coin: 1, score: 1, enemyHp: 1, enemyCount: 1 });

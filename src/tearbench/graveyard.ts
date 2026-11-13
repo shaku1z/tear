@@ -98,12 +98,14 @@ export interface TearGraveyardReplayRequestV1 {
 }
 
 function nonBlank(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.trim() === "") throw new TypeError(`graveyard ${label} must be a non-empty string`);
+  if (typeof value !== "string" || value.trim() === "")
+    throw new TypeError(`graveyard ${label} must be a non-empty string`);
   return value;
 }
 
 function positiveInteger(value: unknown, label: string): number {
-  if (!Number.isSafeInteger(value) || (value as number) < 1) throw new TypeError(`graveyard ${label} must be a positive integer`);
+  if (!Number.isSafeInteger(value) || (value as number) < 1)
+    throw new TypeError(`graveyard ${label} must be a positive integer`);
   return value as number;
 }
 
@@ -120,19 +122,27 @@ function freezeEntry(entry: TearGraveyardEntryFields): TearGraveyardEntryV1 {
     ...entry,
     original: freezeReference(entry.original),
     minimalChild: freezeReference(entry.minimalChild),
-    minimalReplay: Object.freeze({ side: entry.minimalReplay.side, artifact: freezeReference(entry.minimalReplay.artifact) }),
+    minimalReplay: Object.freeze({
+      side: entry.minimalReplay.side,
+      artifact: freezeReference(entry.minimalReplay.artifact),
+    }),
     selectors: Object.freeze([...entry.selectors]),
     ownership: Object.freeze({ owner: entry.ownership.owner, hints: Object.freeze([...entry.ownership.hints]) }),
-    fix: Object.freeze({ ...entry.fix, verification: Object.freeze({
-      base: freezeReference(entry.fix.verification.base),
-      candidate: freezeReference(entry.fix.verification.candidate),
-    }) }),
+    fix: Object.freeze({
+      ...entry.fix,
+      verification: Object.freeze({
+        base: freezeReference(entry.fix.verification.base),
+        candidate: freezeReference(entry.fix.verification.candidate),
+      }),
+    }),
     reopenHistory: Object.freeze(entry.reopenHistory.map((item) => Object.freeze({ ...item }))),
   };
   return Object.freeze({ ...data, evidenceHash: stableVerificationHash(data) });
 }
 
-function evidenceFields(artifact: TearGraveyardEvidenceArtifact): Omit<TearGraveyardArtifactReferenceV1, "path" | "contentHash"> {
+function evidenceFields(
+  artifact: TearGraveyardEvidenceArtifact,
+): Omit<TearGraveyardArtifactReferenceV1, "path" | "contentHash"> {
   if (artifact.format === "tearbench-run") {
     const firstFailure = artifact.failures[0];
     return {
@@ -173,8 +183,10 @@ function validateReference(reference: TearGraveyardArtifactReferenceV1, role: Te
   nonBlank(reference.path, `${role} path`);
   nonBlank(reference.id, `${role} id`);
   nonBlank(reference.contentHash, `${role} content hash`);
-  if (unchecked.kind !== "tearbench-run" && unchecked.kind !== "tear-failure") throw new TypeError(`graveyard ${role} has an unsupported artifact kind`);
-  if (unchecked.status !== "failed" && unchecked.status !== "passed" && unchecked.status !== "truncated") throw new TypeError(`graveyard ${role} has an unsupported artifact status`);
+  if (unchecked.kind !== "tearbench-run" && unchecked.kind !== "tear-failure")
+    throw new TypeError(`graveyard ${role} has an unsupported artifact kind`);
+  if (unchecked.status !== "failed" && unchecked.status !== "passed" && unchecked.status !== "truncated")
+    throw new TypeError(`graveyard ${role} has an unsupported artifact status`);
   nonBlank(reference.scenarioId, `${role} scenario id`);
   positiveInteger(reference.scenarioVersion, `${role} scenario version`);
   nonBlank(reference.seed, `${role} seed`);
@@ -182,7 +194,8 @@ function validateReference(reference: TearGraveyardArtifactReferenceV1, role: Te
 }
 
 function validateEntryShape(entry: TearGraveyardEntryV1): void {
-  if (!/^[a-z0-9][a-z0-9-]{1,95}$/u.test(entry.id)) throw new TypeError("graveyard entry id must be a lowercase stable slug");
+  if (!/^[a-z0-9][a-z0-9-]{1,95}$/u.test(entry.id))
+    throw new TypeError("graveyard entry id must be a lowercase stable slug");
   nonBlank(entry.signature, "entry signature");
   nonBlank(entry.invariantId, "entry invariant id");
   if (entry.selectors.length === 0 || entry.selectors.some((selector) => selector.trim() === "")) {
@@ -193,21 +206,34 @@ function validateEntryShape(entry: TearGraveyardEntryV1): void {
   validateReference(entry.minimalReplay.artifact, "minimal-replay");
   validateReference(entry.fix.verification.base, "fix-base");
   validateReference(entry.fix.verification.candidate, "fix-candidate");
-  if (entry.original.status !== "failed" || entry.minimalChild.status !== "failed") throw new TypeError("graveyard original and minimal child must retain failed evidence");
-  if (entry.fix.verification.base.kind !== "tearbench-run" || entry.fix.verification.candidate.kind !== "tearbench-run"
-    || entry.fix.verification.base.status === "failed" || entry.fix.verification.candidate.status === "failed") {
+  if (entry.original.status !== "failed" || entry.minimalChild.status !== "failed")
+    throw new TypeError("graveyard original and minimal child must retain failed evidence");
+  if (
+    entry.fix.verification.base.kind !== "tearbench-run" ||
+    entry.fix.verification.candidate.kind !== "tearbench-run" ||
+    entry.fix.verification.base.status === "failed" ||
+    entry.fix.verification.candidate.status === "failed"
+  ) {
     throw new TypeError("graveyard fix verification must retain an equivalent non-failed materialized run pair");
   }
-  if (entry.original.path === entry.minimalChild.path || entry.original.contentHash === entry.minimalChild.contentHash) throw new TypeError("graveyard minimal child must be distinct from the original evidence");
+  if (entry.original.path === entry.minimalChild.path || entry.original.contentHash === entry.minimalChild.contentHash)
+    throw new TypeError("graveyard minimal child must be distinct from the original evidence");
   for (const reference of [entry.minimalChild, entry.fix.verification.base, entry.fix.verification.candidate]) {
-    if (reference.scenarioId !== entry.original.scenarioId || reference.scenarioVersion !== entry.original.scenarioVersion || reference.seed !== entry.original.seed) {
+    if (
+      reference.scenarioId !== entry.original.scenarioId ||
+      reference.scenarioVersion !== entry.original.scenarioVersion ||
+      reference.seed !== entry.original.seed
+    ) {
       throw new TypeError("graveyard evidence references must share scenario coordinates and seed");
     }
   }
-  if (entry.minimalReplay.artifact.kind !== "tearbench-run") throw new TypeError("graveyard minimal replay must retain a materialized tearbench-run");
-  if (entry.minimalReplay.artifact.scenarioId !== entry.minimalChild.scenarioId
-    || entry.minimalReplay.artifact.scenarioVersion !== entry.minimalChild.scenarioVersion
-    || entry.minimalReplay.artifact.seed !== entry.minimalChild.seed) {
+  if (entry.minimalReplay.artifact.kind !== "tearbench-run")
+    throw new TypeError("graveyard minimal replay must retain a materialized tearbench-run");
+  if (
+    entry.minimalReplay.artifact.scenarioId !== entry.minimalChild.scenarioId ||
+    entry.minimalReplay.artifact.scenarioVersion !== entry.minimalChild.scenarioVersion ||
+    entry.minimalReplay.artifact.seed !== entry.minimalChild.seed
+  ) {
     throw new TypeError("graveyard minimal replay must share minimized failure coordinates");
   }
   if (entry.original.invariantId !== entry.invariantId || entry.minimalChild.invariantId !== entry.invariantId) {
@@ -216,7 +242,8 @@ function validateEntryShape(entry: TearGraveyardEntryV1): void {
   if (!/^[0-9a-f]{7,64}$/iu.test(entry.fix.commit)) throw new TypeError("graveyard fix commit must be a Git revision");
   timestamp(entry.fix.recordedAt, "fix recordedAt");
   nonBlank(entry.ownership.owner, "ownership owner");
-  if (entry.ownership.hints.length === 0 || entry.ownership.hints.some((hint) => hint.trim() === "")) throw new TypeError("graveyard ownership requires at least one hint");
+  if (entry.ownership.hints.length === 0 || entry.ownership.hints.some((hint) => hint.trim() === ""))
+    throw new TypeError("graveyard ownership requires at least one hint");
   for (const item of entry.reopenHistory) {
     timestamp(item.at, "reopen timestamp");
     nonBlank(item.reason, "reopen reason");
@@ -225,21 +252,27 @@ function validateEntryShape(entry: TearGraveyardEntryV1): void {
   if (entry.status !== expectedStatus) throw new TypeError("graveyard status must match reopen history");
   const { evidenceHash: _evidenceHash, ...data } = entry;
   void _evidenceHash;
-  if (entry.evidenceHash !== stableVerificationHash(data)) throw new TypeError("graveyard entry evidence hash does not match retained fields");
+  if (entry.evidenceHash !== stableVerificationHash(data))
+    throw new TypeError("graveyard entry evidence hash does not match retained fields");
 }
 
 function rerunnableMinimalArtifact(
   entry: TearGraveyardEntryV1,
   artifact: TearGraveyardEvidenceArtifact | undefined,
 ): TearBenchRunArtifactV1 {
-  if (artifact === undefined) throw new TypeError(`graveyard artifact is missing: ${entry.minimalReplay.artifact.path}`);
+  if (artifact === undefined)
+    throw new TypeError(`graveyard artifact is missing: ${entry.minimalReplay.artifact.path}`);
   if (artifact.format !== "tearbench-run") {
-    throw new TypeError("graveyard minimal replay must be a materialized tearbench-run so a clean process can replay it");
+    throw new TypeError(
+      "graveyard minimal replay must be a materialized tearbench-run so a clean process can replay it",
+    );
   }
-  if (artifact.resolvedScenario.id !== entry.minimalChild.scenarioId
-    || artifact.resolvedScenario.version !== entry.minimalChild.scenarioVersion
-    || artifact.resolvedScenario.seed !== entry.minimalChild.seed
-    || artifact.seed !== entry.minimalChild.seed) {
+  if (
+    artifact.resolvedScenario.id !== entry.minimalChild.scenarioId ||
+    artifact.resolvedScenario.version !== entry.minimalChild.scenarioVersion ||
+    artifact.resolvedScenario.seed !== entry.minimalChild.seed ||
+    artifact.seed !== entry.minimalChild.seed
+  ) {
     throw new TypeError("graveyard minimal child replay coordinates do not match retained evidence");
   }
   if (artifact.actions.some((action) => action.tick > artifact.resolvedScenario.maxTicks)) {
@@ -254,24 +287,32 @@ export function validateGraveyardRegistry(
   artifacts?: TearGraveyardArtifactStore,
 ): TearGraveyardRegistryV1 {
   const unchecked = registry as Readonly<{ format: unknown; schemaVersion: unknown }>;
-  if (unchecked.format !== TEAR_GRAVEYARD_FORMAT || unchecked.schemaVersion !== TEAR_GRAVEYARD_SCHEMA_VERSION) throw new TypeError("unsupported graveyard registry format");
+  if (unchecked.format !== TEAR_GRAVEYARD_FORMAT || unchecked.schemaVersion !== TEAR_GRAVEYARD_SCHEMA_VERSION)
+    throw new TypeError("unsupported graveyard registry format");
   const ids = new Set<string>();
   for (const entry of registry.entries) {
     validateEntryShape(entry);
     if (ids.has(entry.id)) throw new TypeError(`graveyard registry has duplicate entry: ${entry.id}`);
     ids.add(entry.id);
     if (artifacts !== undefined) {
-      for (const reference of [entry.original, entry.minimalChild, entry.fix.verification.base, entry.fix.verification.candidate]) {
+      for (const reference of [
+        entry.original,
+        entry.minimalChild,
+        entry.fix.verification.base,
+        entry.fix.verification.candidate,
+      ]) {
         const artifact = artifacts[reference.path];
         if (artifact === undefined) throw new TypeError(`graveyard artifact is missing: ${reference.path}`);
         const actual = createGraveyardArtifactReference(artifact, reference.path);
-        if (stableVerificationHash(actual) !== stableVerificationHash(reference)) throw new TypeError(`graveyard artifact reference does not match: ${reference.path}`);
+        if (stableVerificationHash(actual) !== stableVerificationHash(reference))
+          throw new TypeError(`graveyard artifact reference does not match: ${reference.path}`);
       }
       // A registry is only CI-runnable if the minimized evidence contains its
       // complete semantic replay.  Original failure evidence may remain a
       // compact failure contract, but the minimized child cannot.
       const replayArtifact = artifacts[entry.minimalReplay.artifact.path];
-      if (replayArtifact === undefined) throw new TypeError(`graveyard artifact is missing: ${entry.minimalReplay.artifact.path}`);
+      if (replayArtifact === undefined)
+        throw new TypeError(`graveyard artifact is missing: ${entry.minimalReplay.artifact.path}`);
       const actualReplay = createGraveyardArtifactReference(replayArtifact, entry.minimalReplay.artifact.path);
       if (stableVerificationHash(actualReplay) !== stableVerificationHash(entry.minimalReplay.artifact)) {
         throw new TypeError(`graveyard artifact reference does not match: ${entry.minimalReplay.artifact.path}`);
@@ -281,8 +322,10 @@ export function validateGraveyardRegistry(
         throw new TypeError("graveyard minimal child must retain a typed tear-failure artifact");
       }
       const replay = rerunnableMinimalArtifact(entry, replayArtifact);
-      if (stableVerificationHash(replay.actions) !== stableVerificationHash(minimalFailure.actions)
-        || replay.resolvedScenario.maxTicks < minimalFailure.firstFailureTick) {
+      if (
+        stableVerificationHash(replay.actions) !== stableVerificationHash(minimalFailure.actions) ||
+        replay.resolvedScenario.maxTicks < minimalFailure.firstFailureTick
+      ) {
         throw new TypeError("graveyard minimal replay does not retain the minimized failure action trace and horizon");
       }
       const fixedBase = artifacts[entry.fix.verification.base.path];
@@ -290,15 +333,20 @@ export function validateGraveyardRegistry(
       if (fixedBase?.format !== "tearbench-run" || fixedCandidate?.format !== "tearbench-run") {
         throw new TypeError("graveyard fix verification must retain materialized runs");
       }
-      if (fixedBase.status === "failed" || fixedCandidate.status === "failed"
-        || stableVerificationHash(fixedBase.actions) !== stableVerificationHash(fixedCandidate.actions)
-        || investigateRegressionRuns({ base: fixedBase, candidate: fixedCandidate, createdAt: entry.fix.recordedAt }).status !== "equivalent") {
+      if (
+        fixedBase.status === "failed" ||
+        fixedCandidate.status === "failed" ||
+        stableVerificationHash(fixedBase.actions) !== stableVerificationHash(fixedCandidate.actions) ||
+        investigateRegressionRuns({ base: fixedBase, candidate: fixedCandidate, createdAt: entry.fix.recordedAt })
+          .status !== "equivalent"
+      ) {
         throw new TypeError("graveyard fix verification must retain an equivalent non-failed run pair");
       }
     }
   }
   const data = { format: registry.format, schemaVersion: registry.schemaVersion, entries: registry.entries };
-  if (registry.registryHash !== stableVerificationHash(data)) throw new TypeError("graveyard registry hash does not match entries");
+  if (registry.registryHash !== stableVerificationHash(data))
+    throw new TypeError("graveyard registry hash does not match entries");
   return registry;
 }
 
@@ -333,30 +381,43 @@ export function selectGraveyardEntries(
   validateGraveyardRegistry(registry);
   const requested = new Set(selectors);
   const allShared = requested.has("all-shared-runtime-history");
-  return Object.freeze(registry.entries.filter((entry) => entry.status === "closed"
-    && (allShared || requested.has(entry.id) || entry.selectors.some((selector) => requested.has(selector)))));
+  return Object.freeze(
+    registry.entries.filter(
+      (entry) =>
+        entry.status === "closed" &&
+        (allShared || requested.has(entry.id) || entry.selectors.some((selector) => requested.has(selector))),
+    ),
+  );
 }
 
-export function createGraveyardEntry(input: Omit<TearGraveyardEntryV1, "evidenceHash" | "status"> & { readonly status?: never }): TearGraveyardEntryV1 {
+export function createGraveyardEntry(
+  input: Omit<TearGraveyardEntryV1, "evidenceHash" | "status"> & { readonly status?: never },
+): TearGraveyardEntryV1 {
   const entry = freezeEntry({ ...input, status: input.reopenHistory.length === 0 ? "closed" : "reopened" });
   validateEntryShape(entry);
   return entry;
 }
 
 export function createGraveyardRegistry(entries: readonly TearGraveyardEntryV1[] = []): TearGraveyardRegistryV1 {
-  const frozenEntries = Object.freeze(entries.map((entry) => {
-    const { evidenceHash: _evidenceHash, ...fields } = entry;
-    void _evidenceHash;
-    return freezeEntry(fields);
-  }));
+  const frozenEntries = Object.freeze(
+    entries.map((entry) => {
+      const { evidenceHash: _evidenceHash, ...fields } = entry;
+      void _evidenceHash;
+      return freezeEntry(fields);
+    }),
+  );
   const data = { format: TEAR_GRAVEYARD_FORMAT, schemaVersion: TEAR_GRAVEYARD_SCHEMA_VERSION, entries: frozenEntries };
   const registry = Object.freeze({ ...data, registryHash: stableVerificationHash(data) });
   return validateGraveyardRegistry(registry);
 }
 
-export function buryGraveyardEntry(registry: TearGraveyardRegistryV1, entry: TearGraveyardEntryV1): TearGraveyardRegistryV1 {
+export function buryGraveyardEntry(
+  registry: TearGraveyardRegistryV1,
+  entry: TearGraveyardEntryV1,
+): TearGraveyardRegistryV1 {
   validateGraveyardRegistry(registry);
-  if (registry.entries.some((item) => item.id === entry.id)) throw new TypeError(`graveyard entry already exists: ${entry.id}`);
+  if (registry.entries.some((item) => item.id === entry.id))
+    throw new TypeError(`graveyard entry already exists: ${entry.id}`);
   return createGraveyardRegistry([...registry.entries, entry]);
 }
 
@@ -380,5 +441,5 @@ export function reopenGraveyardEntry(
     fix: found.fix,
     reopenHistory: [...found.reopenHistory, reopen],
   });
-  return createGraveyardRegistry(registry.entries.map((entry) => entry.id === id ? next : entry));
+  return createGraveyardRegistry(registry.entries.map((entry) => (entry.id === id ? next : entry)));
 }

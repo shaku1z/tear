@@ -19,14 +19,7 @@ import type {
 import type { AudioEffectsBackend } from "./effects-contracts";
 
 export type AudioSystemState =
-  | "awaiting-user-activation"
-  | "starting"
-  | "running"
-  | "suspending"
-  | "suspended"
-  | "disposing"
-  | "disposed"
-  | "error";
+  "awaiting-user-activation" | "starting" | "running" | "suspending" | "suspended" | "disposing" | "disposed" | "error";
 
 export interface AudioContextFactory {
   create(): AudioGraphContext;
@@ -66,9 +59,7 @@ export class AudioSystem {
 
   constructor(options: AudioSystemOptions) {
     this.#options = options;
-    this.#settings = normalizeAudioMixerSettings(
-      options.settingsStore?.load() ?? options.initialSettings,
-    );
+    this.#settings = normalizeAudioMixerSettings(options.settingsStore?.load() ?? options.initialSettings);
   }
 
   get state(): AudioSystemState {
@@ -330,10 +321,9 @@ export class AudioSystem {
   async #selectMusicBackend(): Promise<void> {
     const context = this.#requireContext();
     const mixer = this.#requireMixer();
-    const candidates = [
-      this.#options.primaryMusicBackend,
-      this.#options.fallbackMusicBackend,
-    ].filter((backend): backend is MusicBackend => backend !== null);
+    const candidates = [this.#options.primaryMusicBackend, this.#options.fallbackMusicBackend].filter(
+      (backend): backend is MusicBackend => backend !== null,
+    );
 
     let lastError: unknown;
     for (const backend of candidates) {

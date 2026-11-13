@@ -41,7 +41,10 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   await page.mouse.click(1180, 196 + 3 * 60); // CHAINBLADE
   await settleInput();
   assert.deepEqual(await setupSnapshot(), {
-    mode: "gauntlet", difficulty: "hard", weapon: "chainblade", boss: "shuffle",
+    mode: "gauntlet",
+    difficulty: "hard",
+    weapon: "chainblade",
+    boss: "shuffle",
   });
   await clickAndWait(800, 850, "menu");
 
@@ -51,15 +54,27 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   await page.mouse.click(829, 683); // THE WARDEN (first boss after SHUFFLE in the six-boss published row)
   await settleInput();
   assert.deepEqual(await setupSnapshot(), {
-    mode: "bossonly", difficulty: "hard", weapon: "chainblade", boss: "warden",
+    mode: "bossonly",
+    difficulty: "hard",
+    weapon: "chainblade",
+    boss: "warden",
   });
   await clickAndWait(800, 850, "menu");
 
   const requestedMode = process.env.TEAR_JOURNEY_MODE;
-  const modes = ["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]
-    .filter((mode) => !requestedMode || mode === requestedMode);
+  const modes = ["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"].filter(
+    (mode) => !requestedMode || mode === requestedMode,
+  );
   for (const mode of modes) {
-    const modeY = { campaign: 195, endless: 255, gauntlet: 315, playground: 375, tutorial: 435, bossonly: 509, sandbox: 549 }[mode];
+    const modeY = {
+      campaign: 195,
+      endless: 255,
+      gauntlet: 315,
+      playground: 375,
+      tutorial: 435,
+      bossonly: 509,
+      sandbox: 549,
+    }[mode];
     console.log(`navigation journey: starting ${mode}`);
     await boot();
     await clickAndWait(260, 360, "setup");
@@ -67,25 +82,45 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
     await settleInput();
     await page.mouse.click(800, 758);
     try {
-      await page.waitForFunction((expected) => {
-        const state = window.__PANTHEON_TEST.state();
-        return state.game === "playing" && state.mode === expected;
-      }, mode, { timeout: 10000 });
+      await page.waitForFunction(
+        (expected) => {
+          const state = window.__PANTHEON_TEST.state();
+          return state.game === "playing" && state.mode === expected;
+        },
+        mode,
+        { timeout: 10000 },
+      );
     } catch (error) {
       const snapshot = await page.evaluate(() => window.__PANTHEON_TEST.state());
       assert.fail(`${mode} BEGIN did not start its selected mode: ${JSON.stringify(snapshot)} (${error.message})`);
     }
     if (mode === "tutorial") {
-      assert.deepEqual(await page.evaluate(() => {
-        const tutorial = window.__PANTHEON_TEST.tutorial();
-        return { active: tutorial.active, lesson: tutorial.lesson, lessonCount: tutorial.lessonCount, arena: tutorial.arena };
-      }), {
-        active: true, lesson: "MOVE", lessonCount: 14, arena: "runway",
-      }, "Tutorial must launch the Cutting Room curriculum, not only a generic tutorial mode");
+      assert.deepEqual(
+        await page.evaluate(() => {
+          const tutorial = window.__PANTHEON_TEST.tutorial();
+          return {
+            active: tutorial.active,
+            lesson: tutorial.lesson,
+            lessonCount: tutorial.lessonCount,
+            arena: tutorial.arena,
+          };
+        }),
+        {
+          active: true,
+          lesson: "MOVE",
+          lessonCount: 14,
+          arena: "runway",
+        },
+        "Tutorial must launch the Cutting Room curriculum, not only a generic tutorial mode",
+      );
     }
     await page.evaluate(() => window.__PANTHEON_TEST.skip());
     await page.waitForFunction(() => window.__PANTHEON_TEST.state().active === false, undefined, { timeout: 10000 });
-    assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().active), false, `${mode} opening is safely skippable`);
+    assert.equal(
+      await page.evaluate(() => window.__PANTHEON_TEST.state().active),
+      false,
+      `${mode} opening is safely skippable`,
+    );
     await page.keyboard.press("p");
     await waitScreen("paused");
     // Pause and confirm-quit use the shared overlay pattern: the action rail starts under
@@ -98,15 +133,25 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   }
 
   await boot();
-  await page.waitForFunction(() => window.__PANTHEON_TEST.state().attract?.ready === true, undefined, { timeout: 10000 });
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().attract?.ready === true, undefined, {
+    timeout: 10000,
+  });
   const initialAttract = await page.evaluate(() => window.__PANTHEON_TEST.state().attract || null);
   assert.ok(initialAttract, "built artifact must expose the read-only Attract summary in PANTHEON_DEBUG");
   assert.equal(initialAttract.ready, true, "attract mode is active on the menu");
   await clickAndWait(260, 360, "setup");
-  assert.equal((await page.evaluate(() => window.__PANTHEON_TEST.state().attract)).ready, true, "attract mode remains the live backdrop across menu screens");
+  assert.equal(
+    (await page.evaluate(() => window.__PANTHEON_TEST.state().attract)).ready,
+    true,
+    "attract mode remains the live backdrop across menu screens",
+  );
   await page.mouse.click(800, 758);
   await waitScreen("playing");
-  assert.equal((await page.evaluate(() => window.__PANTHEON_TEST.state().attract)).ready, false, "attract mode exits when a run begins");
+  assert.equal(
+    (await page.evaluate(() => window.__PANTHEON_TEST.state().attract)).ready,
+    false,
+    "attract mode exits when a run begins",
+  );
   await page.keyboard.press("p");
   await waitScreen("paused");
   // A fresh profile starts the Tutorial, whose pause lists its lesson actions before MAIN MENU.
@@ -114,5 +159,9 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
   await clickAndWait(200, tutorialPause ? 431 : 331, "confirmquit");
   await clickAndWait(644, 175, "menu");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().attract.ready);
-}).then(() => console.log("browser navigation journeys passed"))
-  .catch((error) => { console.error(error); process.exit(1); });
+})
+  .then(() => console.log("browser navigation journeys passed"))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

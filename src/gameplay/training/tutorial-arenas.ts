@@ -5,9 +5,20 @@ import type { ArenaPlatform } from "./arena-rules";
  * designed for a previous task (the old tutorial used the playground forever).
  */
 export type TutorialArenaId =
-  | "runway" | "vertical-gate" | "dash-lane" | "blade-range" | "launch-bay"
-  | "air-chain" | "drop-well" | "dive-channel" | "liftwell" | "throw-lane"
-  | "counterline" | "read-line" | "field-floor" | "ready-room";
+  | "runway"
+  | "vertical-gate"
+  | "dash-lane"
+  | "blade-range"
+  | "launch-bay"
+  | "air-chain"
+  | "drop-well"
+  | "dive-channel"
+  | "liftwell"
+  | "throw-lane"
+  | "counterline"
+  | "read-line"
+  | "field-floor"
+  | "ready-room";
 
 export interface TutorialArenaDefinition {
   readonly id: TutorialArenaId;
@@ -33,22 +44,47 @@ export const TUTORIAL_ARENAS: readonly TutorialArenaDefinition[] = Object.freeze
 ]);
 
 const definition = (id: TutorialArenaId): TutorialArenaDefinition =>
-  TUTORIAL_ARENAS.find((arena) => arena.id === id) ?? { id: "runway", label: "THE RUNWAY", purpose: "Build speed in both directions." };
+  TUTORIAL_ARENAS.find((arena) => arena.id === id) ?? {
+    id: "runway",
+    label: "THE RUNWAY",
+    purpose: "Build speed in both directions.",
+  };
 
 function surface(id: TutorialArenaId, index: number, x: number, y: number, w: number): ArenaPlatform {
-  return { x, y, w, h: 24, oneway: true, platformId: `tutorial:${id}:${String(index)}`,
-    material: "tutorial", arenaMaterial: `tutorial:${id}` };
+  return {
+    x,
+    y,
+    w,
+    h: 24,
+    oneway: true,
+    platformId: `tutorial:${id}:${String(index)}`,
+    material: "tutorial",
+    arenaMaterial: `tutorial:${id}`,
+  };
 }
 
 /** A fresh mutable platform list for the live collision system on every block transition. */
-export function createTutorialArena(id: TutorialArenaId, viewportWidth: number, viewportHeight: number, groundY: number): ArenaPlatform[] {
-  const floor: ArenaPlatform = { x: 0, y: groundY, w: viewportWidth, h: Math.max(100, viewportHeight - groundY), floor: true,
-    platformId: `tutorial:${id}:floor`, material: "tutorial", arenaMaterial: `tutorial:${id}:floor` };
+export function createTutorialArena(
+  id: TutorialArenaId,
+  viewportWidth: number,
+  viewportHeight: number,
+  groundY: number,
+): ArenaPlatform[] {
+  const floor: ArenaPlatform = {
+    x: 0,
+    y: groundY,
+    w: viewportWidth,
+    h: Math.max(100, viewportHeight - groundY),
+    floor: true,
+    platformId: `tutorial:${id}:floor`,
+    material: "tutorial",
+    arenaMaterial: `tutorial:${id}:floor`,
+  };
   const x = (ratio: number) => Math.round(viewportWidth * ratio);
   const y = (offset: number) => Math.round(groundY - offset);
   const layouts: Readonly<Record<TutorialArenaId, readonly ArenaPlatform[]>> = {
     runway: [],
-    "vertical-gate": [surface(id, 0, x(0.30), y(150), 230), surface(id, 1, x(0.55), y(300), 230)],
+    "vertical-gate": [surface(id, 0, x(0.3), y(150), 230), surface(id, 1, x(0.55), y(300), 230)],
     "dash-lane": [surface(id, 0, x(0.42), y(105), 300), surface(id, 1, x(0.72), y(205), 220)],
     "blade-range": [surface(id, 0, x(0.24), y(115), 240)],
     "launch-bay": [surface(id, 0, x(0.62), y(205), 240)],
@@ -56,13 +92,19 @@ export function createTutorialArena(id: TutorialArenaId, viewportWidth: number, 
     "drop-well": [surface(id, 0, x(0.42), y(300), 260)],
     "dive-channel": [surface(id, 0, x(0.27), y(280), 210), surface(id, 1, x(0.67), y(280), 210)],
     liftwell: [surface(id, 0, x(0.26), y(180), 220), surface(id, 1, x(0.62), y(300), 220)],
-    "throw-lane": [surface(id, 0, x(0.18), y(130), 190), surface(id, 1, x(0.70), y(130), 190)],
+    "throw-lane": [surface(id, 0, x(0.18), y(130), 190), surface(id, 1, x(0.7), y(130), 190)],
     counterline: [surface(id, 0, x(0.32), y(145), 210), surface(id, 1, x(0.62), y(145), 210)],
-    "read-line": [surface(id, 0, x(0.30), y(150), 220), surface(id, 1, x(0.67), y(150), 220)],
-    "field-floor": [surface(id, 0, x(0.22), y(120), 220), surface(id, 1, x(0.49), y(235), 240), surface(id, 2, x(0.76), y(120), 190)],
-    "ready-room": [surface(id, 0, x(0.30), y(170), 230), surface(id, 1, x(0.60), y(270), 230)],
+    "read-line": [surface(id, 0, x(0.3), y(150), 220), surface(id, 1, x(0.67), y(150), 220)],
+    "field-floor": [
+      surface(id, 0, x(0.22), y(120), 220),
+      surface(id, 1, x(0.49), y(235), 240),
+      surface(id, 2, x(0.76), y(120), 190),
+    ],
+    "ready-room": [surface(id, 0, x(0.3), y(170), 230), surface(id, 1, x(0.6), y(270), 230)],
   };
   return [floor, ...layouts[id]];
 }
 
-export function tutorialArenaDefinition(id: TutorialArenaId): TutorialArenaDefinition { return definition(id); }
+export function tutorialArenaDefinition(id: TutorialArenaId): TutorialArenaDefinition {
+  return definition(id);
+}

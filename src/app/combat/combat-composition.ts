@@ -1,15 +1,21 @@
 import type { LiveCombatRuntimeOptions } from "../../gameplay/combat/live-combat-runtime";
 import { createLiveCombatAdapters, type LiveCombatAdapterContext } from "./combat-adapter-context";
-import { createLiveCombatCoordinatorOptions, createLiveCombatFrameOptions,
-  type LiveCombatCoordinatorContext, type LiveCombatFrameContext } from "./combat-frame-context";
-import { createLiveCombatHost, type LiveCombatHostFactoryOptions,
-  type LiveCombatHostRuntimeApi } from "./combat-host-factory";
+import {
+  createLiveCombatCoordinatorOptions,
+  createLiveCombatFrameOptions,
+  type LiveCombatCoordinatorContext,
+  type LiveCombatFrameContext,
+} from "./combat-frame-context";
+import {
+  createLiveCombatHost,
+  type LiveCombatHostFactoryOptions,
+  type LiveCombatHostRuntimeApi,
+} from "./combat-host-factory";
 import type { RuntimeFrameDriver } from "../shell/runtime-frame-driver";
 import type { TearGameplayEventPort } from "../../gameplay/runtime/gameplay-events";
 import type { EnvironmentStepPort } from "../../gameplay/environment/environment-runtime";
 
-type CombatLifecycleOptions = Pick<LiveCombatRuntimeOptions,
-  "advanceClock" | "captureProtection" | "applyProtection">;
+type CombatLifecycleOptions = Pick<LiveCombatRuntimeOptions, "advanceClock" | "captureProtection" | "applyProtection">;
 
 export interface LiveCombatCompositionOptions<State> {
   readonly frameDriver: RuntimeFrameDriver;
@@ -40,7 +46,9 @@ export function createLiveCombatComposition<State>(
     kill: adapters.kill,
     createCombat: () => ({
       opening: adapters.opening,
-      get collision() { return adapters.collisionFor(host.combatEntityRuntime); },
+      get collision() {
+        return adapters.collisionFor(host.combatEntityRuntime);
+      },
       ...options.lifecycle,
     }),
     authoritative: options.authoritative,

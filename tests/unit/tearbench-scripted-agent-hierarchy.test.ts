@@ -26,23 +26,33 @@ function state(
     tick,
     observationClass: "structured-state",
     player: {
-      x: 100, y: 600, vx: 0, vy: 0, hp: 100, maxHp: 100,
-      facing: 1, grounded: true, dashCharges: 1, ...patch,
+      x: 100,
+      y: 600,
+      vx: 0,
+      vy: 0,
+      hp: 100,
+      maxHp: 100,
+      facing: 1,
+      grounded: true,
+      dashCharges: 1,
+      ...patch,
     },
     blade: { handX: 120, handY: 580, tipX: 180, tipY: 560, vx: 0, vy: 0, tipSpeed: 0, state: bladeState },
     entities,
     run: {
-      mode: "campaign", difficulty: "easy", weapon: "sword",
-      stage: "grounds", wave: 1, score: 0, elapsedTicks: tick,
+      mode: "campaign",
+      difficulty: "easy",
+      weapon: "sword",
+      stage: "grounds",
+      wave: 1,
+      score: 0,
+      elapsedTicks: tick,
     },
     availableActions: ["move", "jump", "dash", "aim", "weapon"],
   };
 }
 
-function observation(
-  tick: number,
-  patch: Partial<TearHierarchicalObservation> = {},
-): TearHierarchicalObservation {
+function observation(tick: number, patch: Partial<TearHierarchicalObservation> = {}): TearHierarchicalObservation {
   return { state: state(tick), ui: { screen: "playing" }, ...patch };
 }
 
@@ -83,9 +93,17 @@ describe("C24 hierarchical scripted agent core", () => {
 
   it("routes draft, stolen-blade, projectile parry, and survival decisions", () => {
     const policy = new TearHierarchicalAgentOrchestrator();
-    const draft = policy.decide(observation(1, {
-      ui: { screen: "draft", choices: [{ id: "guard", score: 1 }, { id: "power", score: 3 }] },
-    }));
+    const draft = policy.decide(
+      observation(1, {
+        ui: {
+          screen: "draft",
+          choices: [
+            { id: "guard", score: 1 },
+            { id: "power", score: 3 },
+          ],
+        },
+      }),
+    );
     expect(draft.intent.objective).toBe("select-build");
     expect(draft.actions).toEqual([{ type: "draft-choice", choiceId: "power" }]);
 
@@ -117,9 +135,12 @@ describe("C24 hierarchical scripted agent core", () => {
     expect(invalid.actions).toEqual([{ type: "pause" }]);
 
     const ordinaryActions = [{ type: "move", x: 321, y: 0 }] as const;
-    const focus = new TearHierarchicalAgentOrchestrator().decide(observation(2, {
-      signals: { focused: false, deviceConnected: false },
-    }), operational(ordinaryActions));
+    const focus = new TearHierarchicalAgentOrchestrator().decide(
+      observation(2, {
+        signals: { focused: false, deviceConnected: false },
+      }),
+      operational(ordinaryActions),
+    );
     expect(focus.intent.watchdog.map((entry) => entry.kind)).toEqual(["focus-lost", "device-disconnected"]);
     expect(focus.intent.objective).toBe("clear-wave");
     expect(focus.actions).toEqual(ordinaryActions);
@@ -145,9 +166,7 @@ describe("C24 hierarchical scripted agent core", () => {
       }),
     ];
     const decisions = shadowWouldChange.map((input) => policy.decide(input, operational(finalActions)));
-    expect(decisions.map((decision) => decision.actions)).toEqual([
-      finalActions, finalActions, finalActions,
-    ]);
+    expect(decisions.map((decision) => decision.actions)).toEqual([finalActions, finalActions, finalActions]);
     expect(decisions[2]?.intent.watchdog.map((entry) => entry.kind)).toContain("repeated-input");
     expect(decisions[2]?.intent.objective).toBe("clear-wave");
     expect(decisions[2]?.intent.memory.repeatedActions).toBe(3);
@@ -164,16 +183,22 @@ describe("C24 hierarchical scripted agent core", () => {
       loadingTicks: 100,
     });
     const finalActions = [{ type: "move", x: 321, y: 0 }] as const;
-    policy.decide(observation(0, {
-      signals: { progressToken: "stalled" },
-    }), operational(finalActions));
-    const fatal = policy.decide(observation(2, {
-      state: {
-        ...state(2),
-        diagnostics: { softlockLimitTicks: 1 },
-      },
-      signals: { progressToken: "stalled" },
-    }), operational(finalActions));
+    policy.decide(
+      observation(0, {
+        signals: { progressToken: "stalled" },
+      }),
+      operational(finalActions),
+    );
+    const fatal = policy.decide(
+      observation(2, {
+        state: {
+          ...state(2),
+          diagnostics: { softlockLimitTicks: 1 },
+        },
+        signals: { progressToken: "stalled" },
+      }),
+      operational(finalActions),
+    );
     expect(fatal.intent.watchdog.map((entry) => entry.kind)).toEqual(["no-progress", "softlock"]);
     expect(fatal.intent.objective).toBe("recover-runtime");
     expect(fatal.intent.maneuver).toBe("recover");
@@ -198,8 +223,13 @@ describe("C24 hierarchical scripted agent core", () => {
     memory.observe(stalled);
     const kinds = watchdog.inspect(stalled, memory.snapshot()).map((entry) => entry.kind);
     expect(kinds).toEqual([
-      "terminal", "paused", "loading-stall", "transition-stall",
-      "no-progress", "softlock", "repeated-input",
+      "terminal",
+      "paused",
+      "loading-stall",
+      "transition-stall",
+      "no-progress",
+      "softlock",
+      "repeated-input",
     ]);
   });
 

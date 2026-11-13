@@ -71,6 +71,10 @@ describe("versioned persistence envelopes", () => {
   it("keeps conflict selection deterministic and outside migrations", () => {
     const local = { revision: 4, updatedAtMs: 20, writerId: "local", value: "a" };
     const remote = { revision: 5, updatedAtMs: 10, writerId: "remote", value: "b" };
-    expect(resolveEnvelopeConflict(local, remote)).toMatchObject({ winner: remote, source: "remote", reason: "higher-revision" });
+    expect(resolveEnvelopeConflict(local, remote)).toMatchObject({
+      winner: remote,
+      source: "remote",
+      reason: "higher-revision",
+    });
   });
 });

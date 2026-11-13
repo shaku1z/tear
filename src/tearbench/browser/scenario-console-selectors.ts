@@ -26,10 +26,10 @@ export const SCENARIO_CONSOLE_DOM_SELECTORS = Object.freeze({
 } as const);
 
 export const LEGACY_STATE_FORGE_DOM_SELECTORS = Object.freeze({
-  root: '#tear-state-forge-studio',
-  editor: '#tear-state-forge-editor',
-  timeline: '#tear-state-forge-timeline',
-  comparison: '#tear-state-forge-comparison',
+  root: "#tear-state-forge-studio",
+  editor: "#tear-state-forge-editor",
+  timeline: "#tear-state-forge-timeline",
+  comparison: "#tear-state-forge-comparison",
 } as const);
 
 /** Select either the canonical surface or its preserved C23 root. */

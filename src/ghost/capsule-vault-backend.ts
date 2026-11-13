@@ -4,9 +4,19 @@ import { encodeGhostChunkPayload, type GhostChunkEncoding } from "./capsule-code
 export type GhostVaultGuard = Readonly<{ store: GhostVaultWrite["store"]; key: string; expected?: string }>;
 
 export const GHOST_VAULT_STORES = Object.freeze([
-  "manifests", "chunks", "assets", "indexes", "uploadJobs", "analysis", "lineage", "settings", "journals", "quarantine", "libraries",
+  "manifests",
+  "chunks",
+  "assets",
+  "indexes",
+  "uploadJobs",
+  "analysis",
+  "lineage",
+  "settings",
+  "journals",
+  "quarantine",
+  "libraries",
 ] as const);
-export type GhostVaultStore = typeof GHOST_VAULT_STORES[number];
+export type GhostVaultStore = (typeof GHOST_VAULT_STORES)[number];
 export const GHOST_VAULT_DATABASE_VERSION = 2;
 
 export type GhostChunkKind = "commands" | "rng" | "events" | "results" | "keyframes" | "presentation";
@@ -50,7 +60,9 @@ export function createInlineGhostEncoderWorker(): GhostEncoderWorkerPort {
         compressedBytes: encoded.compressedBytes,
         uncompressedBytes: encoded.uncompressedBytes,
         checksum: stableVerificationHash(encoded.encoded),
-        ...(prepareThumbnail ? { thumbnail: `data:application/x-tearghost-thumb,${stableVerificationHash(payload)}` } : {}),
+        ...(prepareThumbnail
+          ? { thumbnail: `data:application/x-tearghost-thumb,${stableVerificationHash(payload)}` }
+          : {}),
       });
     },
   };
@@ -70,32 +82,46 @@ export function createBrowserGhostEncoderWorker(): GhostEncoderWorkerPort | unde
   if (typeof Worker === "undefined") return undefined;
   const worker = new Worker(new URL("./capsule-encoder-worker.ts", import.meta.url), { type: "module" });
   let nextId = 0;
-  const pending = new Map<number, Readonly<{ resolve(value: GhostEncodedChunk): void; reject(reason: unknown): void }>>();
+  const pending = new Map<
+    number,
+    Readonly<{ resolve(value: GhostEncodedChunk): void; reject(reason: unknown): void }>
+  >();
   const rejectPending = (reason: unknown): void => {
     for (const entry of pending.values()) entry.reject(reason);
     pending.clear();
   };
-  worker.addEventListener("error", (event) => { rejectPending(event.error ?? new Error(event.message)); });
+  worker.addEventListener("error", (event) => {
+    rejectPending(event.error ?? new Error(event.message));
+  });
   worker.addEventListener("message", (event: MessageEvent<GhostEncoderWorkerResponse>) => {
     const response = event.data;
     const entry = pending.get(response.id);
     if (entry === undefined) return;
     pending.delete(response.id);
-    if (response.error !== undefined) { entry.reject(new Error(response.error)); return; }
-    if (!isGhostChunkEncoding(response.encoding)
-      || typeof response.encoded !== "string" || typeof response.compressedBytes !== "number"
-      || typeof response.uncompressedBytes !== "number" || typeof response.checksum !== "string") {
+    if (response.error !== undefined) {
+      entry.reject(new Error(response.error));
+      return;
+    }
+    if (
+      !isGhostChunkEncoding(response.encoding) ||
+      typeof response.encoded !== "string" ||
+      typeof response.compressedBytes !== "number" ||
+      typeof response.uncompressedBytes !== "number" ||
+      typeof response.checksum !== "string"
+    ) {
       entry.reject(new TypeError("Ghost encoder worker returned an invalid response"));
       return;
     }
-    entry.resolve(Object.freeze({
-      encoding: response.encoding,
-      encoded: response.encoded,
-      compressedBytes: response.compressedBytes,
-      uncompressedBytes: response.uncompressedBytes,
-      checksum: response.checksum,
-      ...(typeof response.thumbnail === "string" ? { thumbnail: response.thumbnail } : {}),
-    }));
+    entry.resolve(
+      Object.freeze({
+        encoding: response.encoding,
+        encoded: response.encoded,
+        compressedBytes: response.compressedBytes,
+        uncompressedBytes: response.uncompressedBytes,
+        checksum: response.checksum,
+        ...(typeof response.thumbnail === "string" ? { thumbnail: response.thumbnail } : {}),
+      }),
+    );
   });
   return Object.freeze({
     encode(payload: unknown, prepareThumbnail: boolean): Promise<GhostEncodedChunk> {
@@ -126,7 +152,12 @@ export interface GhostVaultBackend {
    * optimistic guards still match.  The optional guards let manifest
    * creation/update participate in the same transaction as chunk writes.
    */
-  commitWhileJournalMatches(sessionId: string, leaseId: string, operations: readonly GhostVaultWrite[], guards?: readonly GhostVaultGuard[]): Promise<void>;
+  commitWhileJournalMatches(
+    sessionId: string,
+    leaseId: string,
+    operations: readonly GhostVaultWrite[],
+    guards?: readonly GhostVaultGuard[],
+  ): Promise<void>;
 }
 
 /** A single durable write used for journals, chunks, manifests, and indexes. */
@@ -144,7 +175,9 @@ export function ghostVaultJournalLease(value: string | undefined): string | unde
   try {
     const parsed: unknown = value === undefined ? undefined : JSON.parse(value);
     return dataRecord(parsed) && typeof parsed.leaseId === "string" ? parsed.leaseId : undefined;
-  } catch { return undefined; }
+  } catch {
+    return undefined;
+  }
 }
 
 export function createMemoryGhostVaultBackend(
@@ -162,7 +195,10 @@ export function createMemoryGhostVaultBackend(
     const copies = new Map<GhostVaultStore, Map<string, string>>();
     const target = (name: GhostVaultStore): Map<string, string> => {
       let values = copies.get(name);
-      if (values === undefined) { values = new Map(store(name)); copies.set(name, values); }
+      if (values === undefined) {
+        values = new Map(store(name));
+        copies.set(name, values);
+      }
       return values;
     };
     for (const operation of operations) {
@@ -173,13 +209,24 @@ export function createMemoryGhostVaultBackend(
     return Promise.resolve();
   };
   return Object.freeze({
-    get(name, key) { return Promise.resolve(store(name).get(key)); },
-    put(name, key, value) { store(name).set(key, value); return Promise.resolve(); },
-    remove(name, key) { store(name).delete(key); return Promise.resolve(); },
-    keys(name) { return Promise.resolve(Object.freeze([...store(name).keys()].sort())); },
+    get(name, key) {
+      return Promise.resolve(store(name).get(key));
+    },
+    put(name, key, value) {
+      store(name).set(key, value);
+      return Promise.resolve();
+    },
+    remove(name, key) {
+      store(name).delete(key);
+      return Promise.resolve();
+    },
+    keys(name) {
+      return Promise.resolve(Object.freeze([...store(name).keys()].sort()));
+    },
     commit,
     commitIfMatches(guards, operations) {
-      if (guards.some((guard) => store(guard.store).get(guard.key) !== guard.expected)) return Promise.reject(new Error("Vault conditional write no longer matches"));
+      if (guards.some((guard) => store(guard.store).get(guard.key) !== guard.expected))
+        return Promise.reject(new Error("Vault conditional write no longer matches"));
       return commit(operations);
     },
     commitWhileJournalMatches(sessionId, leaseId, operations, guards = []) {

@@ -36,7 +36,9 @@ function createKernel(): KernelRun {
   const runtime = new TearSimulationRuntime<KernelState>({
     ticksPerSecond: 60,
     actionPort: {
-      apply(input, tick, actions): void { input.beginTick(tick, actions); },
+      apply(input, tick, actions): void {
+        input.beginTick(tick, actions);
+      },
     },
     step(seconds): void {
       const input = runtime.input;
@@ -47,11 +49,15 @@ function createKernel(): KernelRun {
     },
     snapshot: (tick) => Object.freeze({ tick, x: Math.round(x * 1_000), primaryTicks }),
   });
-  runtime.events.subscribe((event) => { events.push(event.tick); });
+  runtime.events.subscribe((event) => {
+    events.push(event.tick);
+  });
   return { runtime, events };
 }
 
-function runAtRenderRate(renderRate: number): Readonly<{ state: KernelState; stateHash: string; events: readonly number[] }> {
+function runAtRenderRate(
+  renderRate: number,
+): Readonly<{ state: KernelState; stateHash: string; events: readonly number[] }> {
   const run = createKernel();
   const grouped = actionsByTick();
   for (let frame = 0; frame < renderRate; frame += 1) {
@@ -90,12 +96,22 @@ describe("TearSimulationRuntime", () => {
   it("computes an authoritative hash once, only when a consumer requests it", () => {
     let reads = 0;
     const runtime = new TearSimulationRuntime<Readonly<{ tick: number; observed: number }>>({
-      actionPort: { apply(input, tick, actions): void { input.beginTick(tick, actions); } },
-      step(): void { /* The lazy-hash contract is independent of world mutation. */ },
-      snapshot: (tick) => Object.freeze({
-        tick,
-        get observed(): number { reads += 1; return 7; },
-      }),
+      actionPort: {
+        apply(input, tick, actions): void {
+          input.beginTick(tick, actions);
+        },
+      },
+      step(): void {
+        /* The lazy-hash contract is independent of world mutation. */
+      },
+      snapshot: (tick) =>
+        Object.freeze({
+          tick,
+          get observed(): number {
+            reads += 1;
+            return 7;
+          },
+        }),
     });
 
     const result = runtime.advanceOne([]);
@@ -109,20 +125,41 @@ describe("TearSimulationRuntime", () => {
   it("surrounds only executed live ticks without exposing a second step route", () => {
     const { runtime } = createKernel();
     const order: string[] = [];
-    runtime.advance(runtime.scheduler.stepMilliseconds * 3, (tick) => {
-      order.push(`actions:${String(tick)}`);
-      return [];
-    }, {
-      shouldStep: (tick) => { order.push(`should:${String(tick)}`); return tick !== 2; },
-      beforeStep: (tick) => { order.push(`before:${String(tick)}`); },
-      afterStep: (tick) => { order.push(`after:${String(tick)}`); },
-      cleanupStep: (tick) => { order.push(`cleanup:${String(tick)}`); },
-    });
+    runtime.advance(
+      runtime.scheduler.stepMilliseconds * 3,
+      (tick) => {
+        order.push(`actions:${String(tick)}`);
+        return [];
+      },
+      {
+        shouldStep: (tick) => {
+          order.push(`should:${String(tick)}`);
+          return tick !== 2;
+        },
+        beforeStep: (tick) => {
+          order.push(`before:${String(tick)}`);
+        },
+        afterStep: (tick) => {
+          order.push(`after:${String(tick)}`);
+        },
+        cleanupStep: (tick) => {
+          order.push(`cleanup:${String(tick)}`);
+        },
+      },
+    );
 
     expect(order).toEqual([
-      "should:1", "before:1", "actions:1", "after:1", "cleanup:1",
+      "should:1",
+      "before:1",
+      "actions:1",
+      "after:1",
+      "cleanup:1",
       "should:2",
-      "should:3", "before:3", "actions:3", "after:3", "cleanup:3",
+      "should:3",
+      "before:3",
+      "actions:3",
+      "after:3",
+      "cleanup:3",
     ]);
     expect(runtime.lastResult?.tick).toBe(3);
     expect(runtime.input.snapshot().tick).toBe(3);
@@ -131,14 +168,23 @@ describe("TearSimulationRuntime", () => {
   it("uses that same action/lifecycle path for one exact tooling tick", () => {
     const { runtime } = createKernel();
     const order: string[] = [];
-    const exact = runtime.advanceExact((tick) => {
-      order.push(`actions:${String(tick)}`);
-      return [];
-    }, {
-      beforeStep: (tick) => { order.push(`before:${String(tick)}`); },
-      afterStep: (tick) => { order.push(`after:${String(tick)}`); },
-      cleanupStep: (tick) => { order.push(`cleanup:${String(tick)}`); },
-    });
+    const exact = runtime.advanceExact(
+      (tick) => {
+        order.push(`actions:${String(tick)}`);
+        return [];
+      },
+      {
+        beforeStep: (tick) => {
+          order.push(`before:${String(tick)}`);
+        },
+        afterStep: (tick) => {
+          order.push(`after:${String(tick)}`);
+        },
+        cleanupStep: (tick) => {
+          order.push(`cleanup:${String(tick)}`);
+        },
+      },
+    );
 
     expect(exact).toMatchObject({ tick: 1, steps: 1, result: { tick: 1 } });
     expect(order).toEqual(["before:1", "actions:1", "after:1", "cleanup:1"]);

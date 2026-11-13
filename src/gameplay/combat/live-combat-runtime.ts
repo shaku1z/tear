@@ -14,17 +14,21 @@ export interface LiveCombatRuntimeOptions {
 export class LiveCombatRuntime {
   readonly #options: LiveCombatRuntimeOptions;
 
-  constructor(options: LiveCombatRuntimeOptions) { this.#options = options; }
+  constructor(options: LiveCombatRuntimeOptions) {
+    this.#options = options;
+  }
 
   step(dt: number): void {
     let completed = false;
     try {
-    this.#options.advanceClock(dt);
-    this.#options.captureProtection();
-    const opening = runLiveOpeningPhase(this.#options.opening, dt);
-    this.#options.applyProtection();
-    if (!opening.blocked) runLiveCollisionPhase(this.#options.collision, dt);
-    completed = true;
-    } finally { runDnaObserver(this.#options.opening.player)?.endCombat(completed); }
+      this.#options.advanceClock(dt);
+      this.#options.captureProtection();
+      const opening = runLiveOpeningPhase(this.#options.opening, dt);
+      this.#options.applyProtection();
+      if (!opening.blocked) runLiveCollisionPhase(this.#options.collision, dt);
+      completed = true;
+    } finally {
+      runDnaObserver(this.#options.opening.player)?.endCombat(completed);
+    }
   }
 }

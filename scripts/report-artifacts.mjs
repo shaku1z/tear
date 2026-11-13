@@ -40,13 +40,12 @@ function samePath(left, right) {
 function isPathInside(root, candidate, { allowEqual = false } = {}) {
   const relativePath = path.relative(root, candidate);
   if (relativePath === "") return allowEqual;
-  return relativePath !== ".."
-    && !relativePath.startsWith(`..${path.sep}`)
-    && !path.isAbsolute(relativePath);
+  return relativePath !== ".." && !relativePath.startsWith(`..${path.sep}`) && !path.isAbsolute(relativePath);
 }
 
 function normalizeRelativePath(value, label) {
-  if (typeof value !== "string" || value.trim() === "") throw new ArtifactReportError(`${label} must be a non-empty relative path`);
+  if (typeof value !== "string" || value.trim() === "")
+    throw new ArtifactReportError(`${label} must be a non-empty relative path`);
   const normalized = value.replaceAll("\\", "/");
   if (WINDOWS_ABSOLUTE_PATTERN.test(normalized) || normalized.split("/").includes("..")) {
     throw new ArtifactReportError(`${label} must remain inside the repository: ${value}`);
@@ -151,7 +150,8 @@ function validateRelativePrefix(value, label) {
 
 export function validateArtifactRetentionPolicy(policy) {
   const errors = [];
-  if (policy?.format !== ARTIFACT_RETENTION_POLICY_FORMAT) errors.push(`format must be ${ARTIFACT_RETENTION_POLICY_FORMAT}`);
+  if (policy?.format !== ARTIFACT_RETENTION_POLICY_FORMAT)
+    errors.push(`format must be ${ARTIFACT_RETENTION_POLICY_FORMAT}`);
   if (policy?.schemaVersion !== 1) errors.push("schemaVersion must be 1");
   if (policy?.repository !== RELEASE_REPOSITORY) errors.push(`repository must be ${RELEASE_REPOSITORY}`);
 
@@ -175,42 +175,55 @@ export function validateArtifactRetentionPolicy(policy) {
   }
 
   const destination = policy?.destination;
-  if (destination?.relativeParent !== ".artifact-quarantine") errors.push("destination.relativeParent must be .artifact-quarantine");
+  if (destination?.relativeParent !== ".artifact-quarantine")
+    errors.push("destination.relativeParent must be .artifact-quarantine");
   try {
     normalizeRelativePath(destination?.relativeParent, "destination.relativeParent");
   } catch (error) {
     errors.push(error.message);
   }
-  if (destination?.mustBeExistingEmptyDirectory !== true) errors.push("destination.mustBeExistingEmptyDirectory must be true");
+  if (destination?.mustBeExistingEmptyDirectory !== true)
+    errors.push("destination.mustBeExistingEmptyDirectory must be true");
   if (destination?.sameVolumeAsSource !== true) errors.push("destination.sameVolumeAsSource must be true");
 
   const age = policy?.age;
   if (age?.basis !== "mtimeUtc") errors.push("age.basis must be mtimeUtc");
-  if (!Number.isSafeInteger(age?.defaultMinAgeDays) || age.defaultMinAgeDays < 0) errors.push("age.defaultMinAgeDays must be a non-negative integer");
+  if (!Number.isSafeInteger(age?.defaultMinAgeDays) || age.defaultMinAgeDays < 0)
+    errors.push("age.defaultMinAgeDays must be a non-negative integer");
   if (age?.applyRequiresExplicitMinAgeDays !== true) errors.push("age.applyRequiresExplicitMinAgeDays must be true");
   if (age?.futureMtime !== "refuse") errors.push("age.futureMtime must be refuse");
 
   for (const field of ["maxEntries", "maxBytes", "maxDepth"]) {
-    if (!Number.isSafeInteger(policy?.limits?.[field]) || policy.limits[field] <= 0) errors.push(`limits.${field} must be a positive integer`);
+    if (!Number.isSafeInteger(policy?.limits?.[field]) || policy.limits[field] <= 0)
+      errors.push(`limits.${field} must be a positive integer`);
   }
 
   const protectedPolicy = policy?.protected;
   for (const field of ["activeOutputPrefixes", "preservedPrefixes"]) {
     if (!Array.isArray(protectedPolicy?.[field])) errors.push(`protected.${field} must be an array`);
-    else for (const [index, prefix] of protectedPolicy[field].entries()) {
-      const error = validateRelativePrefix(prefix, `protected.${field}[${index}]`);
-      if (error) errors.push(error);
-    }
+    else
+      for (const [index, prefix] of protectedPolicy[field].entries()) {
+        const error = validateRelativePrefix(prefix, `protected.${field}[${index}]`);
+        if (error) errors.push(error);
+      }
   }
   if (!Array.isArray(protectedPolicy?.forbiddenSegments) || !protectedPolicy.forbiddenSegments.includes(".git")) {
     errors.push("protected.forbiddenSegments must include .git");
   }
   for (const requiredPrefix of ["artifacts/tearbench/generated/", "artifacts/tearbench/receipts/"]) {
-    if (!protectedPolicy?.activeOutputPrefixes?.some((prefix) => prefix.toLowerCase().replace(/[\\/]$/u, "") === requiredPrefix.slice(0, -1))) {
+    if (
+      !protectedPolicy?.activeOutputPrefixes?.some(
+        (prefix) => prefix.toLowerCase().replace(/[\\/]$/u, "") === requiredPrefix.slice(0, -1),
+      )
+    ) {
       errors.push(`protected.activeOutputPrefixes must include ${requiredPrefix}`);
     }
   }
-  if (!protectedPolicy?.preservedPrefixes?.some((prefix) => prefix.toLowerCase().replace(/[\\/]$/u, "") === "artifacts/t26w")) {
+  if (
+    !protectedPolicy?.preservedPrefixes?.some(
+      (prefix) => prefix.toLowerCase().replace(/[\\/]$/u, "") === "artifacts/t26w",
+    )
+  ) {
     errors.push("protected.preservedPrefixes must include artifacts/t26w/");
   }
   if (!Array.isArray(protectedPolicy?.recoveryNamePatterns) || protectedPolicy.recoveryNamePatterns.length === 0) {
@@ -229,12 +242,17 @@ export function validateArtifactRetentionPolicy(policy) {
   if (policy?.hash?.algorithm !== "sha256") errors.push("hash.algorithm must be sha256");
   if (policy?.hash?.pathEncoding !== "relative-posix-v1") errors.push("hash.pathEncoding must be relative-posix-v1");
 
-  if (policy?.preserve?.operation !== "same-volume-rename-only") errors.push("preserve.operation must be same-volume-rename-only");
+  if (policy?.preserve?.operation !== "same-volume-rename-only")
+    errors.push("preserve.operation must be same-volume-rename-only");
   if (policy?.preserve?.relativePaths !== true) errors.push("preserve.relativePaths must be true");
-  if (!Array.isArray(policy?.preserve?.timestamps) || !["atimeUtc", "mtimeUtc", "birthtimeUtc"].every((field) => policy.preserve.timestamps.includes(field))) {
+  if (
+    !Array.isArray(policy?.preserve?.timestamps) ||
+    !["atimeUtc", "mtimeUtc", "birthtimeUtc"].every((field) => policy.preserve.timestamps.includes(field))
+  ) {
     errors.push("preserve.timestamps must include atimeUtc, mtimeUtc, and birthtimeUtc");
   }
-  if (policy?.preserve?.restoreInstructions !== "required") errors.push("preserve.restoreInstructions must be required");
+  if (policy?.preserve?.restoreInstructions !== "required")
+    errors.push("preserve.restoreInstructions must be required");
 
   for (const field of ["requiresCleanMain", "sameVolumeRenameOnly", "overwrite", "deleteSource"]) {
     if (typeof policy?.apply?.[field] !== "boolean") errors.push(`apply.${field} must be boolean`);
@@ -314,7 +332,11 @@ function makeEntry({ sourceRoot, repoRoot, candidate, stats, decision, reasonCod
 
 function reasonForProtectedPath(repoRelativePath, policy) {
   const segments = repoRelativePath.split("/");
-  if (segments.some((segment) => policy.protected.forbiddenSegments.some((forbidden) => segment.toLowerCase() === forbidden.toLowerCase()))) {
+  if (
+    segments.some((segment) =>
+      policy.protected.forbiddenSegments.some((forbidden) => segment.toLowerCase() === forbidden.toLowerCase()),
+    )
+  ) {
     return "nested-git";
   }
   for (const pattern of policy.protected.recoveryNamePatterns) {
@@ -330,7 +352,8 @@ function reasonForProtectedPath(repoRelativePath, policy) {
 }
 
 function assertAge(minAgeDays) {
-  if (!Number.isSafeInteger(minAgeDays) || minAgeDays < 0) throw new ArtifactReportError("minAgeDays must be a non-negative integer");
+  if (!Number.isSafeInteger(minAgeDays) || minAgeDays < 0)
+    throw new ArtifactReportError("minAgeDays must be a non-negative integer");
 }
 
 function resolveRepositoryRoot(root) {
@@ -354,10 +377,13 @@ function resolveRepositoryRoot(root) {
   const origin = runGit(absoluteRoot, ["config", "--get", "remote.origin.url"]);
   const originUrl = origin.ok ? origin.stdout.trim() : "";
   if (!origin.ok || normalizeRepositoryIdentifier(originUrl) !== normalizeRepositoryIdentifier(RELEASE_REPOSITORY)) {
-    throw new ArtifactReportError(`root remote.origin.url must identify ${RELEASE_REPOSITORY}; found ${originUrl || "missing"}`);
+    throw new ArtifactReportError(
+      `root remote.origin.url must identify ${RELEASE_REPOSITORY}; found ${originUrl || "missing"}`,
+    );
   }
   const head = runGit(absoluteRoot, ["rev-parse", "HEAD"]);
-  if (!head.ok || !SHA_PATTERN.test(head.stdout.trim().toLowerCase())) throw new ArtifactReportError(gitError(head, "git rev-parse HEAD"));
+  if (!head.ok || !SHA_PATTERN.test(head.stdout.trim().toLowerCase()))
+    throw new ArtifactReportError(gitError(head, "git rev-parse HEAD"));
   return { canonicalRoot, head: head.stdout.trim().toLowerCase() };
 }
 
@@ -366,7 +392,8 @@ function resolveSourceRoot({ root, policy, sourceId }) {
   if (source === undefined) throw new ArtifactReportError(`source is not allowlisted: ${sourceId}`);
   const relativeSource = normalizeRelativePath(source.relativePath, `source ${source.id}`);
   const sourceRoot = path.resolve(root, relativeSource);
-  if (!isPathInside(root, sourceRoot)) throw new ArtifactReportError(`source is outside the repository: ${source.relativePath}`);
+  if (!isPathInside(root, sourceRoot))
+    throw new ArtifactReportError(`source is outside the repository: ${source.relativePath}`);
   const inspection = inspectPath(sourceRoot, root);
   if (inspection.reason !== null || inspection.stats === null || !inspection.stats.isDirectory()) {
     throw new ArtifactReportError(`source must be a canonical directory: ${sourceRoot}`);
@@ -397,7 +424,16 @@ function createSummary(entries, observedBytes, scannedEntries) {
   return summary;
 }
 
-function reportEntry({ sourceRoot, repoRoot, candidate, inspection, decision, reasonCodes, sha256 = null, bytes = null }) {
+function reportEntry({
+  sourceRoot,
+  repoRoot,
+  candidate,
+  inspection,
+  decision,
+  reasonCodes,
+  sha256 = null,
+  bytes = null,
+}) {
   return makeEntry({
     sourceRoot,
     repoRoot,
@@ -410,19 +446,14 @@ function reportEntry({ sourceRoot, repoRoot, candidate, inspection, decision, re
   });
 }
 
-export function runArtifactReport({
-  root,
-  policyPath,
-  sourceId,
-  minAgeDays,
-  now = new Date(),
-} = {}) {
+export function runArtifactReport({ root, policyPath, sourceId, minAgeDays, now = new Date() } = {}) {
   if (root === undefined || policyPath === undefined || sourceId === undefined || minAgeDays === undefined) {
     throw new ArtifactReportError("root, policy, source, and minAgeDays are required");
   }
   assertAge(minAgeDays);
   const loaded = readArtifactRetentionPolicy(policyPath);
-  if (loaded.errors.length > 0) throw new ArtifactReportError(`artifact retention policy is invalid:\n- ${loaded.errors.join("\n- ")}`);
+  if (loaded.errors.length > 0)
+    throw new ArtifactReportError(`artifact retention policy is invalid:\n- ${loaded.errors.join("\n- ")}`);
   const { canonicalRoot, head } = resolveRepositoryRoot(root);
   const source = resolveSourceRoot({ root: canonicalRoot, policy: loaded.policy, sourceId });
   const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
@@ -435,51 +466,62 @@ export function runArtifactReport({
 
   function pushEntry(entry) {
     const manifestPathKey = entry.relativePath.toLowerCase();
-    if (manifestPathKeys.has(manifestPathKey)) throw new ArtifactReportError(`artifact report has a case-folded path collision: ${entry.relativePath}`);
+    if (manifestPathKeys.has(manifestPathKey))
+      throw new ArtifactReportError(`artifact report has a case-folded path collision: ${entry.relativePath}`);
     manifestPathKeys.add(manifestPathKey);
     entries.push(entry);
-    if (entries.length > loaded.policy.limits.maxEntries) throw new ArtifactReportError(`artifact report exceeds maxEntries ${loaded.policy.limits.maxEntries}`);
+    if (entries.length > loaded.policy.limits.maxEntries)
+      throw new ArtifactReportError(`artifact report exceeds maxEntries ${loaded.policy.limits.maxEntries}`);
   }
 
   function visit(directory, depth) {
-    if (depth > loaded.policy.limits.maxDepth) throw new ArtifactReportError(`artifact report exceeds maxDepth ${loaded.policy.limits.maxDepth}: ${directory}`);
-    const children = fs.readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name));
+    if (depth > loaded.policy.limits.maxDepth)
+      throw new ArtifactReportError(`artifact report exceeds maxDepth ${loaded.policy.limits.maxDepth}: ${directory}`);
+    const children = fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name));
     for (const child of children) {
       scannedEntries += 1;
-      if (scannedEntries > loaded.policy.limits.maxEntries) throw new ArtifactReportError(`artifact report exceeds maxEntries ${loaded.policy.limits.maxEntries}`);
+      if (scannedEntries > loaded.policy.limits.maxEntries)
+        throw new ArtifactReportError(`artifact report exceeds maxEntries ${loaded.policy.limits.maxEntries}`);
       const candidate = path.join(directory, child.name);
       const inspection = inspectPath(candidate, canonicalRoot);
       const repoRelativePath = normalizeManifestPath(path.relative(canonicalRoot, candidate).replaceAll("\\", "/"));
       if (repoRelativePath === null) throw new ArtifactReportError(`unsafe repository-relative path: ${candidate}`);
       if (inspection.reason !== null || inspection.stats === null) {
-        pushEntry(reportEntry({
-          sourceRoot: source.sourceRoot,
-          repoRoot: canonicalRoot,
-          candidate,
-          inspection,
-          decision: "refused",
-          reasonCodes: [inspection.reason ?? "unreadable"],
-          bytes: inspection.stats?.isFile() ? inspection.stats.size : null,
-        }));
+        pushEntry(
+          reportEntry({
+            sourceRoot: source.sourceRoot,
+            repoRoot: canonicalRoot,
+            candidate,
+            inspection,
+            decision: "refused",
+            reasonCodes: [inspection.reason ?? "unreadable"],
+            bytes: inspection.stats?.isFile() ? inspection.stats.size : null,
+          }),
+        );
         continue;
       }
 
       const protectedReason = reasonForProtectedPath(repoRelativePath, loaded.policy);
       if (protectedReason !== null) {
         const decision = ["nested-git", "recovery-archive"].includes(protectedReason) ? "refused" : "protected";
-        pushEntry(reportEntry({
-          sourceRoot: source.sourceRoot,
-          repoRoot: canonicalRoot,
-          candidate,
-          inspection,
-          decision,
-          reasonCodes: [protectedReason],
-          bytes: inspection.stats.isFile() ? inspection.stats.size : null,
-        }));
+        pushEntry(
+          reportEntry({
+            sourceRoot: source.sourceRoot,
+            repoRoot: canonicalRoot,
+            candidate,
+            inspection,
+            decision,
+            reasonCodes: [protectedReason],
+            bytes: inspection.stats.isFile() ? inspection.stats.size : null,
+          }),
+        );
         if (inspection.stats.isDirectory()) continue;
         if (inspection.stats.isFile()) {
           observedBytes += inspection.stats.size;
-          if (observedBytes > loaded.policy.limits.maxBytes) throw new ArtifactReportError(`artifact report exceeds maxBytes ${loaded.policy.limits.maxBytes}`);
+          if (observedBytes > loaded.policy.limits.maxBytes)
+            throw new ArtifactReportError(`artifact report exceeds maxBytes ${loaded.policy.limits.maxBytes}`);
         }
         continue;
       }
@@ -489,70 +531,86 @@ export function runArtifactReport({
         continue;
       }
       if (!inspection.stats.isFile()) {
-        pushEntry(reportEntry({
-          sourceRoot: source.sourceRoot,
-          repoRoot: canonicalRoot,
-          candidate,
-          inspection,
-          decision: "refused",
-          reasonCodes: ["unsupported-file-type"],
-        }));
+        pushEntry(
+          reportEntry({
+            sourceRoot: source.sourceRoot,
+            repoRoot: canonicalRoot,
+            candidate,
+            inspection,
+            decision: "refused",
+            reasonCodes: ["unsupported-file-type"],
+          }),
+        );
         continue;
       }
 
       observedBytes += inspection.stats.size;
-      if (observedBytes > loaded.policy.limits.maxBytes) throw new ArtifactReportError(`artifact report exceeds maxBytes ${loaded.policy.limits.maxBytes}`);
+      if (observedBytes > loaded.policy.limits.maxBytes)
+        throw new ArtifactReportError(`artifact report exceeds maxBytes ${loaded.policy.limits.maxBytes}`);
       const fileTimestamps = timestamps(inspection.stats);
       if (inspection.stats.mtimeMs > nowMs) {
-        pushEntry(reportEntry({
-          sourceRoot: source.sourceRoot,
-          repoRoot: canonicalRoot,
-          candidate,
-          inspection,
-          decision: "future",
-          reasonCodes: ["future-mtime"],
-          bytes: inspection.stats.size,
-        }));
+        pushEntry(
+          reportEntry({
+            sourceRoot: source.sourceRoot,
+            repoRoot: canonicalRoot,
+            candidate,
+            inspection,
+            decision: "future",
+            reasonCodes: ["future-mtime"],
+            bytes: inspection.stats.size,
+          }),
+        );
         continue;
       }
       if (inspection.stats.mtimeMs >= cutoffMs) {
-        pushEntry(reportEntry({
-          sourceRoot: source.sourceRoot,
-          repoRoot: canonicalRoot,
-          candidate,
-          inspection,
-          decision: "too-young",
-          reasonCodes: ["below-min-age"],
-          bytes: inspection.stats.size,
-        }));
+        pushEntry(
+          reportEntry({
+            sourceRoot: source.sourceRoot,
+            repoRoot: canonicalRoot,
+            candidate,
+            inspection,
+            decision: "too-young",
+            reasonCodes: ["below-min-age"],
+            bytes: inspection.stats.size,
+          }),
+        );
         continue;
       }
 
       const hash = sha256File(candidate);
       const afterHash = fs.lstatSync(candidate);
-      if (!afterHash.isFile() || afterHash.size !== inspection.stats.size || afterHash.mtimeMs !== inspection.stats.mtimeMs) {
-        pushEntry(reportEntry({
+      if (
+        !afterHash.isFile() ||
+        afterHash.size !== inspection.stats.size ||
+        afterHash.mtimeMs !== inspection.stats.mtimeMs
+      ) {
+        pushEntry(
+          reportEntry({
+            sourceRoot: source.sourceRoot,
+            repoRoot: canonicalRoot,
+            candidate,
+            inspection: { ...inspection, stats: afterHash },
+            decision: "refused",
+            reasonCodes: ["changed-during-read"],
+            bytes: afterHash.size,
+          }),
+        );
+        continue;
+      }
+      pushEntry(
+        reportEntry({
           sourceRoot: source.sourceRoot,
           repoRoot: canonicalRoot,
           candidate,
           inspection: { ...inspection, stats: afterHash },
-          decision: "refused",
-          reasonCodes: ["changed-during-read"],
-          bytes: afterHash.size,
-        }));
-        continue;
-      }
-      pushEntry(reportEntry({
-        sourceRoot: source.sourceRoot,
-        repoRoot: canonicalRoot,
-        candidate,
-        inspection: { ...inspection, stats: afterHash },
-        decision: "eligible",
-        reasonCodes: [],
-        sha256: hash.sha256,
-        bytes: hash.bytes,
-      }));
-      if (fileTimestamps.mtimeUtc !== timestamps(afterHash).mtimeUtc) throw new ArtifactReportError(`file timestamp changed while hashing: ${candidate}`);
+          decision: "eligible",
+          reasonCodes: [],
+          sha256: hash.sha256,
+          bytes: hash.bytes,
+        }),
+      );
+      if (fileTimestamps.mtimeUtc !== timestamps(afterHash).mtimeUtc)
+        throw new ArtifactReportError(`file timestamp changed while hashing: ${candidate}`);
     }
   }
 
@@ -595,8 +653,10 @@ export function runArtifactReport({
 
 function assertOutputPathSafe(outputPath, sourceRoot) {
   const absoluteOutput = path.resolve(outputPath);
-  if (isPathInside(sourceRoot, absoluteOutput, { allowEqual: true })) throw new ArtifactReportError("output must be outside the scanned source root");
-  if (fs.existsSync(absoluteOutput)) throw new ArtifactReportError(`output already exists; refusing overwrite: ${absoluteOutput}`);
+  if (isPathInside(sourceRoot, absoluteOutput, { allowEqual: true }))
+    throw new ArtifactReportError("output must be outside the scanned source root");
+  if (fs.existsSync(absoluteOutput))
+    throw new ArtifactReportError(`output already exists; refusing overwrite: ${absoluteOutput}`);
   const parent = path.dirname(absoluteOutput);
   if (!fs.existsSync(parent)) throw new ArtifactReportError(`output parent does not exist: ${parent}`);
   const parentInspection = inspectPath(parent, path.dirname(parent));
@@ -647,7 +707,10 @@ function parseArguments(argumentsList) {
   }
   if (options.help) return options;
   for (const field of ["root", "policyPath", "sourceId", "minAgeDays"]) {
-    if (options[field] === undefined) throw new ArtifactReportError(`--${field === "policyPath" ? "policy" : field === "sourceId" ? "source" : field === "minAgeDays" ? "min-age-days" : "root"} is required`);
+    if (options[field] === undefined)
+      throw new ArtifactReportError(
+        `--${field === "policyPath" ? "policy" : field === "sourceId" ? "source" : field === "minAgeDays" ? "min-age-days" : "root"} is required`,
+      );
   }
   assertAge(options.minAgeDays);
   if (options.outputPath !== undefined) options.outputPath = path.resolve(options.outputPath);
@@ -658,19 +721,21 @@ function main() {
   try {
     const options = parseArguments(process.argv.slice(2));
     if (options.help) {
-      console.log("Usage: node scripts/report-artifacts.mjs --root <repo> --policy <policy.json> --source <source-id> --min-age-days <days> [--summary-only] [--output <new-file.json>]");
+      console.log(
+        "Usage: node scripts/report-artifacts.mjs --root <repo> --policy <policy.json> --source <source-id> --min-age-days <days> [--summary-only] [--output <new-file.json>]",
+      );
       return;
     }
     const manifest = runArtifactReport(options);
     if (options.outputPath !== undefined) writeArtifactReport(options.outputPath, manifest);
     const output = options.summaryOnly
       ? {
-        format: manifest.format,
-        schemaVersion: manifest.schemaVersion,
-        sourceRoot: manifest.sourceRoot,
-        head: manifest.head,
-        summary: manifest.summary,
-      }
+          format: manifest.format,
+          schemaVersion: manifest.schemaVersion,
+          sourceRoot: manifest.sourceRoot,
+          head: manifest.head,
+          summary: manifest.summary,
+        }
       : manifest;
     process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   } catch (error) {

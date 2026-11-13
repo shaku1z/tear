@@ -20,7 +20,10 @@ export function describeWave(options: DescribeWaveOptions): WaveDescription {
   const { mode, wave } = options;
   if (!Number.isSafeInteger(wave) || wave < 1) throw new RangeError("wave must be a positive integer");
   const configuredWaves = options.configuredWaves ?? 0;
-  let bossWave = mode === "campaign" ? wave % 10 === 0 : Boolean(options.bossOnly) || (configuredWaves > 0 && wave > configuredWaves);
+  let bossWave =
+    mode === "campaign"
+      ? wave % 10 === 0
+      : Boolean(options.bossOnly) || (configuredWaves > 0 && wave > configuredWaves);
   if (mode === "gauntlet") bossWave = wave % 8 === 0;
   const endlessLike = mode === "endless" || mode === "gauntlet";
   const miniBossWave = mode === "endless" && wave > 1 && wave % 10 === 0;

@@ -64,8 +64,12 @@ async function serve(directory) {
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);
     const file = path.resolve(directory, relative);
     const escaped = path.relative(directory, file);
-    if (escaped.startsWith("..") || path.isAbsolute(escaped) ||
-        !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    if (
+      escaped.startsWith("..") ||
+      path.isAbsolute(escaped) ||
+      !fs.existsSync(file) ||
+      fs.statSync(file).isDirectory()
+    ) {
       response.writeHead(404).end();
       return;
     }
@@ -115,7 +119,8 @@ function crazyGamesSdkStub() {
 
 // Engineering parameters that a production page must ignore: the test hook,
 // Watch Agent route, cue audition and Foundry audio preview.
-const engineeringQuery = "?test=1&watchagent=1&stemcue=fillet&foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=3";
+const engineeringQuery =
+  "?test=1&watchagent=1&stemcue=fillet&foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=3";
 // Canvas labels that only engineering builds may draw on the main menu and setup screen.
 const engineeringMenuLabels = ["TRAINING ARCHIVE", "TRAINING OPERATIONS", "REPLAY HUB", "LOCAL ROUTES"];
 const engineeringSetupLabels = ["DEV", "BOSS TEST", "ENEMY TEST", "CREATE SEED-LOCKED RACE"];
@@ -134,30 +139,48 @@ function recordCanvasText() {
 
 /** Exact or fitted (ellipsized) canvas labels that belong to engineering controls. */
 function engineeringText(drawn, labels) {
-  return drawn.filter((text) => labels.some((label) => text === label
-    || (text.endsWith("…") && text.length > 4 && label.startsWith(text.slice(0, -1).trimEnd()))));
+  return drawn.filter((text) =>
+    labels.some(
+      (label) =>
+        text === label || (text.endsWith("…") && text.length > 4 && label.startsWith(text.slice(0, -1).trimEnd())),
+    ),
+  );
 }
 
 async function drawnTextAfterFrames(page, frames = 6) {
-  await page.evaluate(() => { window.__isolationDrawnText.length = 0; });
-  await page.evaluate((count) => new Promise((resolve) => {
-    let remaining = count;
-    const next = () => { remaining -= 1; if (remaining <= 0) resolve(); else requestAnimationFrame(next); };
-    requestAnimationFrame(next);
-  }), frames);
+  await page.evaluate(() => {
+    window.__isolationDrawnText.length = 0;
+  });
+  await page.evaluate(
+    (count) =>
+      new Promise((resolve) => {
+        let remaining = count;
+        const next = () => {
+          remaining -= 1;
+          if (remaining <= 0) resolve();
+          else requestAnimationFrame(next);
+        };
+        requestAnimationFrame(next);
+      }),
+    frames,
+  );
   return page.evaluate(() => [...new Set(window.__isolationDrawnText)]);
 }
 
 async function waitForDrawnText(page, text, description) {
-  await page.waitForFunction((expected) => window.__isolationDrawnText.includes(expected), text,
-    { timeout: 30_000 }).catch(() => { throw new Error(`${description}: canvas never drew ${text}`); });
+  await page
+    .waitForFunction((expected) => window.__isolationDrawnText.includes(expected), text, { timeout: 30_000 })
+    .catch(() => {
+      throw new Error(`${description}: canvas never drew ${text}`);
+    });
 }
 
 async function clickVirtual(page, x, y) {
   const box = await page.locator("#game").boundingBox();
   assert.ok(box, "game canvas has no layout box");
   const scale = Math.min(box.width / 1600, box.height / 900);
-  const left = box.x + (box.width - 1600 * scale) / 2, top = box.y + (box.height - 900 * scale) / 2;
+  const left = box.x + (box.width - 1600 * scale) / 2,
+    top = box.y + (box.height - 900 * scale) / 2;
   await page.mouse.move(left + x * scale, top + y * scale);
   await page.mouse.click(left + x * scale, top + y * scale);
 }
@@ -166,19 +189,33 @@ async function assertReleaseSurfaces(page, target) {
   await waitForDrawnText(page, "SETTINGS", `${target} main menu`);
   const menu = await drawnTextAfterFrames(page);
   assert.ok(menu.includes("PLAY"), `${target} main menu did not render PLAY`);
-  assert.deepEqual(engineeringText(menu, engineeringMenuLabels), [],
-    `${target} production main menu rendered engineering entries`);
+  assert.deepEqual(
+    engineeringText(menu, engineeringMenuLabels),
+    [],
+    `${target} production main menu rendered engineering entries`,
+  );
   await clickVirtual(page, 260, 361);
   await waitForDrawnText(page, "START", `${target} setup`);
   const setup = await drawnTextAfterFrames(page);
   assert.ok(setup.includes("ADVENTURE"), `${target} setup did not render its modes`);
-  assert.deepEqual(engineeringText(setup, engineeringSetupLabels), [],
-    `${target} production setup rendered engineering modes or controls`);
+  assert.deepEqual(
+    engineeringText(setup, engineeringSetupLabels),
+    [],
+    `${target} production setup rendered engineering modes or controls`,
+  );
   await clickVirtual(page, 800, 757);
-  await page.waitForFunction(() => {
-    const hint = document.getElementById("hint");
-    return hint !== null && hint.style.display === "block";
-  }, undefined, { timeout: 30_000 }).catch(() => { throw new Error(`${target} START did not enter a run`); });
+  await page
+    .waitForFunction(
+      () => {
+        const hint = document.getElementById("hint");
+        return hint !== null && hint.style.display === "block";
+      },
+      undefined,
+      { timeout: 30_000 },
+    )
+    .catch(() => {
+      throw new Error(`${target} START did not enter a run`);
+    });
   await drawnTextAfterFrames(page, 30);
   const globals = await page.evaluate(() => ({
     weaponDebug: typeof window.TEAR_WEAPON_DEBUG,
@@ -186,8 +223,11 @@ async function assertReleaseSurfaces(page, target) {
     foundryPreview: typeof window.__TEAR_FOUNDRY_AUDIO_PREVIEW__,
     foundryPreviewPresent: "__TEAR_FOUNDRY_AUDIO_PREVIEW__" in window,
   }));
-  assert.deepEqual(globals, { weaponDebug: "undefined", weaponDebugPresent: false, foundryPreview: "undefined", foundryPreviewPresent: false },
-    `${target} production run installed an engineering global`);
+  assert.deepEqual(
+    globals,
+    { weaponDebug: "undefined", weaponDebugPresent: false, foundryPreview: "undefined", foundryPreviewPresent: false },
+    `${target} production run installed an engineering global`,
+  );
 }
 
 async function assertRuntimeIsolation(browser, target, directory) {
@@ -210,16 +250,18 @@ async function assertRuntimeIsolation(browser, target, directory) {
 
   try {
     await page.goto(`${host.origin}/${engineeringQuery}`, {
-      waitUntil: "domcontentloaded", timeout: 30_000,
+      waitUntil: "domcontentloaded",
+      timeout: 30_000,
     });
-    await page.waitForFunction(
-      (expectedTarget) => window.__TEAR_BUILD__?.target === expectedTarget,
-      target,
-      { timeout: 30_000 },
+    await page.waitForFunction((expectedTarget) => window.__TEAR_BUILD__?.target === expectedTarget, target, {
+      timeout: 30_000,
+    });
+    await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }),
     );
-    await page.evaluate(() => new Promise((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(resolve));
-    }));
     const result = await page.evaluate(() => {
       const name = "__TEAR_RUNTIME_ENVIRONMENT__";
       const watchName = "__TEAR_WATCH_AGENT__";
@@ -234,8 +276,7 @@ async function assertRuntimeIsolation(browser, target, directory) {
         watchValueType: typeof globalThis[watchName],
         watchPanel: document.getElementById("tear-watch-agent") !== null,
         build: globalThis.__TEAR_BUILD__,
-        loadedScripts: performance.getEntriesByType("resource")
-          .filter((entry) => entry.name.includes(".js")).length,
+        loadedScripts: performance.getEntriesByType("resource").filter((entry) => entry.name.includes(".js")).length,
       };
     });
     assert.equal(result.build.target, target);
@@ -251,7 +292,11 @@ async function assertRuntimeIsolation(browser, target, directory) {
     assert.equal(result.watchPanel, false, `${target} rendered the test-only Watch Agent panel`);
     assert.deepEqual(pageErrors, [], `${target} production bundle raised a page error while booting`);
     await assertReleaseSurfaces(page, target);
-    assert.deepEqual(pageErrors, [], `${target} production bundle raised a page error during the release-surface journey`);
+    assert.deepEqual(
+      pageErrors,
+      [],
+      `${target} production bundle raised a page error during the release-surface journey`,
+    );
   } finally {
     await context.close();
     await host.close();
@@ -259,10 +304,7 @@ async function assertRuntimeIsolation(browser, target, directory) {
 }
 
 async function main() {
-  const directories = new Map(targets.map((target) => [
-    target,
-    path.join(repositoryRoot, "dist", target),
-  ]));
+  const directories = new Map(targets.map((target) => [target, path.join(repositoryRoot, "dist", target)]));
   for (const [target, directory] of directories) {
     assert.ok(fs.existsSync(directory), `dist/${target} is missing; run the production build first`);
     assertNoStaticBridge(target, directory);

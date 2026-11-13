@@ -11,12 +11,20 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
   assert.equal(await page.locator("#tear-watch-agent").count(), 1);
   const apiStart = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.snapshot());
   assert.equal(apiStart.screen, "menu");
-  assert.deepEqual(await page.getByLabel("Mode").locator("option").evaluateAll(
-    (options) => options.map((option) => option.value),
-  ), ["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"]);
-  assert.deepEqual(await page.getByLabel("Difficulty").locator("option").evaluateAll(
-    (options) => options.map((option) => option.value),
-  ), ["easy", "normal", "hard", "extreme", "onehit"]);
+  assert.deepEqual(
+    await page
+      .getByLabel("Mode")
+      .locator("option")
+      .evaluateAll((options) => options.map((option) => option.value)),
+    ["campaign", "endless", "gauntlet", "playground", "tutorial", "bossonly", "sandbox"],
+  );
+  assert.deepEqual(
+    await page
+      .getByLabel("Difficulty")
+      .locator("option")
+      .evaluateAll((options) => options.map((option) => option.value)),
+    ["easy", "normal", "hard", "extreme", "onehit"],
+  );
   await page.getByLabel("Profile").selectOption("competent");
   await page.getByLabel("Mode").selectOption("campaign");
   await page.getByLabel("Difficulty").selectOption("easy");
@@ -30,8 +38,13 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
 
   let result = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.snapshot());
   assert.deepEqual(result.selection, {
-    profile: "competent", mode: "campaign", difficulty: "easy",
-    weapon: "riftlock", boss: "shuffle", seed: 117, skipCinematics: true,
+    profile: "competent",
+    mode: "campaign",
+    difficulty: "easy",
+    weapon: "riftlock",
+    boss: "shuffle",
+    seed: 117,
+    skipCinematics: true,
   });
   assert.equal(result.executionClass, "engineering");
   assert.equal(result.observationLabel, "Class A - privileged diagnostic");
@@ -45,11 +58,12 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
   for (let batch = 0; batch < 4_000 && result.status === "running"; batch += 1) {
     result = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(200));
     if (batch % 10 === 0 || result.status !== "running") samples.push(result);
-    if (batch % 10 === 0 || result.status !== "running") console.log(
-      `C24 batch ${String(batch + 1)} status=${result.status} screen=${result.screen} `
-      + `tick=${String(result.tick)} wave=${String(result.wave ?? 0)} hp=${String(result.hp ?? 0)} `
-      + `enemies=${String(result.enemyCount)} reason=${String(result.terminalReason ?? "")}`,
-    );
+    if (batch % 10 === 0 || result.status !== "running")
+      console.log(
+        `C24 batch ${String(batch + 1)} status=${result.status} screen=${result.screen} ` +
+          `tick=${String(result.tick)} wave=${String(result.wave ?? 0)} hp=${String(result.hp ?? 0)} ` +
+          `enemies=${String(result.enemyCount)} reason=${String(result.terminalReason ?? "")}`,
+      );
     if (result.status !== "running") console.log("C24 diagnostic snapshot", JSON.stringify(result));
   }
   // Refresh the visible panel through its own control after direct batched API
@@ -69,8 +83,12 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
     observationClass: "privileged-diagnostic",
     certified: false,
     scenario: {
-      profile: "competent", mode: "campaign", difficulty: "easy",
-      weapon: "riftlock", boss: "shuffle", seed: 117,
+      profile: "competent",
+      mode: "campaign",
+      difficulty: "easy",
+      weapon: "riftlock",
+      boss: "shuffle",
+      seed: 117,
     },
     controls: {
       startSurface: "visible Watch Agent panel",
@@ -91,8 +109,7 @@ withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async
     browserErrors: errors,
   };
   await page.screenshot({ path: path.join(artifactDirectory, "watch-agent-result.png") });
-  fs.writeFileSync(path.join(artifactDirectory, "easy-adventure-menu-to-menu.json"),
-    JSON.stringify(artifact, null, 2));
+  fs.writeFileSync(path.join(artifactDirectory, "easy-adventure-menu-to-menu.json"), JSON.stringify(artifact, null, 2));
   assert.equal(result.debugTransitions, 0);
   assert.equal(result.certified, false);
   assert.equal(artifact.executionClass, "engineering");

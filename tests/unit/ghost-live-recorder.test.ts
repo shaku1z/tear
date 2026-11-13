@@ -16,32 +16,77 @@ import {
 
 describe("Ghost V3 live recorder sidecar", () => {
   it("binds pending drains to their original session and never adopts its late storage failure into a replacement", async () => {
-    const base = createMemoryGhostVaultBackend(); let release: (() => void) | undefined;
-    const vault = new GhostLocalVault({ ...base, async commitWhileJournalMatches(...args) {
-      if (args[0] === "original" && args[2].some((write) => write.store === "manifests" && write.value?.includes('"status":"complete"'))) {
-        await new Promise<void>((resolve) => { release = resolve; }); throw new Error("original terminal storage refused");
-      }
-      return base.commitWhileJournalMatches(...args);
-    } });
-    const recorder = new GhostLiveRecorder({ createVault: () => Promise.resolve(vault), now: () => "2026-10-19T00:00:01Z" });
+    const base = createMemoryGhostVaultBackend();
+    let release: (() => void) | undefined;
+    const vault = new GhostLocalVault({
+      ...base,
+      async commitWhileJournalMatches(...args) {
+        if (
+          args[0] === "original" &&
+          args[2].some((write) => write.store === "manifests" && write.value?.includes('"status":"complete"'))
+        ) {
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          throw new Error("original terminal storage refused");
+        }
+        return base.commitWhileJournalMatches(...args);
+      },
+    });
+    const recorder = new GhostLiveRecorder({
+      createVault: () => Promise.resolve(vault),
+      now: () => "2026-10-19T00:00:01Z",
+    });
     recorder.start({ sessionId: "original", createdAt: "2026-10-19T00:00:00Z", provenance: {} });
-    const finishing = recorder.finish(); await vi.waitFor(() => { expect(release).toBeTypeOf("function"); });
-    let oldFailure: unknown, newFailure: unknown, drained = false;
-    const oldDrain = recorder.drain().catch((error: unknown) => { oldFailure = error; });
+    const finishing = recorder.finish();
+    await vi.waitFor(() => {
+      expect(release).toBeTypeOf("function");
+    });
+    let oldFailure: unknown,
+      newFailure: unknown,
+      drained = false;
+    const oldDrain = recorder.drain().catch((error: unknown) => {
+      oldFailure = error;
+    });
     recorder.start({ sessionId: "replacement", createdAt: "2026-10-19T00:00:01Z", provenance: {} });
     recorder.record("commands", 1, { action: "retained-tail" });
-    const newDrain = recorder.drain().then(() => { drained = true; }).catch((error: unknown) => { newFailure = error; });
-    try { await vi.waitFor(() => { expect(drained).toBe(true); }); }
-    finally { release?.(); await finishing; await oldDrain; await newDrain; await recorder.finish(); }
-    expect(oldFailure).toBeInstanceOf(Error); expect(String(oldFailure)).toContain("original terminal storage refused"); expect(newFailure).toBeUndefined();
-    expect((await vault.getManifest("original"))?.status).toBe("recording"); expect(await base.get("journals", "original")).toEqual(expect.any(String));
-    expect((await vault.getManifest("replacement"))?.status).toBe("complete"); expect(recorder.failure).toBeNull();
+    const newDrain = recorder
+      .drain()
+      .then(() => {
+        drained = true;
+      })
+      .catch((error: unknown) => {
+        newFailure = error;
+      });
+    try {
+      await vi.waitFor(() => {
+        expect(drained).toBe(true);
+      });
+    } finally {
+      release?.();
+      await finishing;
+      await oldDrain;
+      await newDrain;
+      await recorder.finish();
+    }
+    expect(oldFailure).toBeInstanceOf(Error);
+    expect(String(oldFailure)).toContain("original terminal storage refused");
+    expect(newFailure).toBeUndefined();
+    expect((await vault.getManifest("original"))?.status).toBe("recording");
+    expect(await base.get("journals", "original")).toEqual(expect.any(String));
+    expect((await vault.getManifest("replacement"))?.status).toBe("complete");
+    expect(recorder.failure).toBeNull();
   });
   it("buffers live observations until durable storage opens, then finalizes an independent capsule", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     let release: (() => void) | undefined;
     const recorder = new GhostLiveRecorder({
-      createVault: async () => new Promise<GhostLocalVault>((resolve) => { release = () => { resolve(vault); }; }),
+      createVault: async () =>
+        new Promise<GhostLocalVault>((resolve) => {
+          release = () => {
+            resolve(vault);
+          };
+        }),
       now: () => "2026-07-28T00:00:01.000Z",
       chunkEntries: 1,
       maxPendingWrites: 1,
@@ -92,12 +137,23 @@ describe("Ghost V3 live recorder sidecar", () => {
   it("recovers a previous interrupted capsule before opening the next live sidecar", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const interrupted = new GhostStreamingRecorder({
-      sessionId: "interrupted-before-live", createdAt: "2026-07-28T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "interrupted-before-live",
+      createdAt: "2026-07-28T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await interrupted.start();
-    await interrupted.append({ kind: "commands", tick: 1, value: { kind: "command", id: 1, tick: 1, command: { type: "jump" } } });
+    await interrupted.append({
+      kind: "commands",
+      tick: 1,
+      value: { kind: "command", id: 1, tick: 1, command: { type: "jump" } },
+    });
 
-    const recorder = new GhostLiveRecorder({ createVault: () => Promise.resolve(vault), now: () => "2026-07-28T00:00:02.000Z" });
+    const recorder = new GhostLiveRecorder({
+      createVault: () => Promise.resolve(vault),
+      now: () => "2026-07-28T00:00:02.000Z",
+    });
     recorder.start({ sessionId: "live-after-recovery", createdAt: "2026-07-28T00:00:01.000Z", provenance: {} });
     const manifest = await recorder.finish({ outcome: "complete" });
 
@@ -108,7 +164,8 @@ describe("Ghost V3 live recorder sidecar", () => {
   it("derives real capture cadence and write pressure from the selected recording profile", () => {
     const recorder = new GhostLiveRecorder({
       createVault: () => Promise.resolve(new GhostLocalVault(createMemoryGhostVaultBackend())),
-      now: () => "2026-07-28T00:00:00.000Z", recordingProfile: "forensic-qa",
+      now: () => "2026-07-28T00:00:00.000Z",
+      recordingProfile: "forensic-qa",
     });
     expect(recorder.keyframeIntervalTicks).toBe(60);
     expect(recorder.maxStagingEntries).toBeGreaterThan(0);
@@ -118,8 +175,16 @@ describe("Ghost V3 live recorder sidecar", () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     let release: (() => void) | undefined;
     const recorder = new GhostLiveRecorder({
-      createVault: async () => new Promise<GhostLocalVault>((resolve) => { release = () => { resolve(vault); }; }),
-      now: () => "2026-07-30T00:00:01.000Z", chunkEntries: 1, maxPendingWrites: 1, maxStagingEntries: 2,
+      createVault: async () =>
+        new Promise<GhostLocalVault>((resolve) => {
+          release = () => {
+            resolve(vault);
+          };
+        }),
+      now: () => "2026-07-30T00:00:01.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      maxStagingEntries: 2,
     });
     recorder.start({ sessionId: "bounded-staging", createdAt: "2026-07-30T00:00:00.000Z", provenance: {} });
     recorder.record("commands", 1, { command: { type: "jump", phase: "pressed" } });
@@ -130,9 +195,7 @@ describe("Ghost V3 live recorder sidecar", () => {
     await expect(recorder.finish({ outcome: "interrupted" })).resolves.toBeNull();
     expect(recorder.failure).toContain("staging capacity exceeded");
     expect(await vault.getManifest("bounded-staging")).toMatchObject({ status: "recording" });
-    expect(await vault.recoverIncompleteSessions()).toMatchObject([
-      { id: "bounded-staging", status: "recovered" },
-    ]);
+    expect(await vault.recoverIncompleteSessions()).toMatchObject([{ id: "bounded-staging", status: "recovered" }]);
   });
 
   it("contains asynchronous worker failure, preserves the incomplete journal, and never returns a false completion", async () => {
@@ -151,9 +214,7 @@ describe("Ghost V3 live recorder sidecar", () => {
     expect(recorder.active).toBe(false);
     expect(recorder.failure).toContain("encoder unavailable");
     expect(await vault.getManifest("failed-sidecar")).toMatchObject({ status: "recording" });
-    expect(await vault.recoverIncompleteSessions()).toMatchObject([
-      { id: "failed-sidecar", status: "recovered" },
-    ]);
+    expect(await vault.recoverIncompleteSessions()).toMatchObject([{ id: "failed-sidecar", status: "recovered" }]);
   });
 
   it("contains storage quota failure and leaves the capsule explicitly recoverable instead of complete", async () => {
@@ -189,11 +250,13 @@ describe("Ghost V3 live recorder sidecar", () => {
     const quotaBackend: GhostVaultBackend = {
       ...memory,
       commit: async (operations) => {
-        if (operations.some((operation) => operation.store === "chunks")) throw new DOMException("", "QuotaExceededError");
+        if (operations.some((operation) => operation.store === "chunks"))
+          throw new DOMException("", "QuotaExceededError");
         await memory.commit(operations);
       },
       commitWhileJournalMatches: async (sessionId, leaseId, operations) => {
-        if (operations.some((operation) => operation.store === "chunks")) throw new DOMException("", "QuotaExceededError");
+        if (operations.some((operation) => operation.store === "chunks"))
+          throw new DOMException("", "QuotaExceededError");
         await memory.commitWhileJournalMatches(sessionId, leaseId, operations);
       },
     };
@@ -217,8 +280,8 @@ describe("Ghost V3 live recorder sidecar", () => {
       ...memory,
       commitWhileJournalMatches: async (sessionId, leaseId, operations, guards = []) => {
         if (operations.some((operation) => operation.store === "chunks")) {
-          sawGuards = guards.some((guard) => guard.store === "indexes")
-            && guards.some((guard) => guard.store === "manifests");
+          sawGuards =
+            guards.some((guard) => guard.store === "indexes") && guards.some((guard) => guard.store === "manifests");
           throw new Error("forced guarded recording rejection");
         }
         await memory.commitWhileJournalMatches(sessionId, leaseId, operations, guards);
@@ -226,13 +289,18 @@ describe("Ghost V3 live recorder sidecar", () => {
     };
     const vault = new GhostLocalVault(guardedBackend);
     const recorder = new GhostStreamingRecorder({
-      sessionId: "guarded-recording", createdAt: "2026-08-10T00:00:00.000Z", chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "guarded-recording",
+      createdAt: "2026-08-10T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await recorder.start();
     const before = await vault.getManifest("guarded-recording");
     const epochBefore = await memory.get("indexes", "ghost-manifest-mutation-epoch:v1");
-    await expect(recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } }))
-      .rejects.toThrow(/forced guarded recording rejection/u);
+    await expect(recorder.append({ kind: "commands", tick: 1, value: { action: "jump" } })).rejects.toThrow(
+      /forced guarded recording rejection/u,
+    );
     expect(sawGuards).toBe(true);
     expect(await vault.getManifest("guarded-recording")).toEqual(before);
     expect(await memory.get("indexes", "ghost-manifest-mutation-epoch:v1")).toBe(epochBefore);
@@ -263,7 +331,9 @@ describe("Ghost V3 live recorder sidecar", () => {
     expect(intercepted).toBeGreaterThan(0);
     expect(interceptionKinds[0]).toBe("open");
     expect(interceptionKinds).toContain("chunk");
-    expect(await new GhostLocalVault(memory).getManifest("browser-guard-success")).toMatchObject({ status: "complete" });
+    expect(await new GhostLocalVault(memory).getManifest("browser-guard-success")).toMatchObject({
+      status: "complete",
+    });
   });
 
   it("forwards guards through the browser adapter and retains durable state on injected rejection", async () => {
@@ -272,7 +342,9 @@ describe("Ghost V3 live recorder sidecar", () => {
     const seenGuardCounts: number[] = [];
     let rejectGuardedChunk = false;
     let signalBootstrap: (() => void) | undefined;
-    const bootstrapCommitted = new Promise<void>((resolve) => { signalBootstrap = resolve; });
+    const bootstrapCommitted = new Promise<void>((resolve) => {
+      signalBootstrap = resolve;
+    });
     const originalCommitWhile = memory.commitWhileJournalMatches.bind(memory);
     const guardedMemory: GhostVaultBackend = {
       ...memory,
@@ -283,7 +355,11 @@ describe("Ghost V3 live recorder sidecar", () => {
           if (guards.length > 0) return Promise.reject(new Error("Vault conditional write no longer matches"));
         }
         await originalCommitWhile(sessionId, leaseId, operations, guards);
-        if (operations.some((operation) => operation.store === "chunks" && operation.key === "browser-guard-failure:chunk:0")) {
+        if (
+          operations.some(
+            (operation) => operation.store === "chunks" && operation.key === "browser-guard-failure:chunk:0",
+          )
+        ) {
           signalBootstrap?.();
         }
       },

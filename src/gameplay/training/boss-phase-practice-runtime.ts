@@ -1,6 +1,6 @@
 import { BOSS_ROSTER } from "../run/content-director";
 
-export type PracticeBossId = typeof BOSS_ROSTER[number]["id"];
+export type PracticeBossId = (typeof BOSS_ROSTER)[number]["id"];
 export type PracticeBossPhase = 1 | 2 | 3;
 export interface BossPhasePracticeRequest {
   readonly bossId: PracticeBossId;
@@ -55,54 +55,114 @@ export interface BossPhasePracticeServices {
   cleanup(reason: "exit" | "reset" | "replacement"): void;
 }
 export type BossPhasePracticeResult =
-  | Readonly<{ status: "preparing" | "entering" | "active" | "cancelled"; state: BossPhasePracticeState; capture: "canonical-checkpoint" | "unavailable" }>
+  | Readonly<{
+      status: "preparing" | "entering" | "active" | "cancelled";
+      state: BossPhasePracticeState;
+      capture: "canonical-checkpoint" | "unavailable";
+    }>
   | Readonly<{ status: "refused"; reason: "invalid-request" | "world-mismatch" | "entry-refused" | "inactive" }>;
 
 export function practicePhaseEntryHealth(marks: readonly number[], phase: 2 | 3): number {
-  const first = marks[0], second = marks[1];
-  if (first === undefined || second === undefined || !(first > second && second > 0 && first < 1)) throw new RangeError("Invalid boss phase marks");
+  const first = marks[0],
+    second = marks[1];
+  if (first === undefined || second === undefined || !(first > second && second > 0 && first < 1))
+    throw new RangeError("Invalid boss phase marks");
   return phase === 2 ? (first + second) / 2 : second / 2;
 }
-function isPhase(value: unknown): value is PracticeBossPhase { return value === 1 || value === 2 || value === 3; }
+function isPhase(value: unknown): value is PracticeBossPhase {
+  return value === 1 || value === 2 || value === 3;
+}
 function validRequest(value: BossPhasePracticeRequest): boolean {
-  return BOSS_ROSTER.some(({ id }) => id === value.bossId) && isPhase(value.phase)
-    && typeof value.seed === "string" && value.seed.length > 0 && value.seed.length <= 128;
+  return (
+    BOSS_ROSTER.some(({ id }) => id === value.bossId) &&
+    isPhase(value.phase) &&
+    typeof value.seed === "string" &&
+    value.seed.length > 0 &&
+    value.seed.length <= 128
+  );
 }
 function identity(request: BossPhasePracticeRequest, generation: number): string {
   return `boss-practice:${String(generation)}:${request.bossId}:${String(request.phase)}:${request.seed}`;
 }
 function matches(state: BossPhasePracticeState, world: BossPhasePracticeWorld): boolean {
-  return world.encounterId === state.encounterId && world.generation === state.generation && world.seed === state.seed
-    && world.bossId === state.bossId && world.weaponId === "sword" && world.difficulty === "normal" && world.noProgression;
+  return (
+    world.encounterId === state.encounterId &&
+    world.generation === state.generation &&
+    world.seed === state.seed &&
+    world.bossId === state.bossId &&
+    world.weaponId === "sword" &&
+    world.difficulty === "normal" &&
+    world.noProgression
+  );
 }
 /** Validate BEFORE adopting a restored world. This never spawns, ticks or requests entry. */
 export function validateBossPhasePracticeState(value: unknown, world?: BossPhasePracticeWorld): BossPhasePracticeState {
-  if (value === null || typeof value !== "object" || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) throw new Error("Invalid boss practice state");
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  )
+    throw new Error("Invalid boss practice state");
   const descriptors = Object.getOwnPropertyDescriptors(value);
-  const keys = ["version", "bossId", "phase", "seed", "generation", "encounterId", "lifecycle", "setupStage", "enteredPhase", "entryStage", "pendingPhase"];
-  if (Reflect.ownKeys(value).length !== keys.length || keys.some((key) => !descriptors[key] || !("value" in descriptors[key]))) throw new Error("Invalid boss practice fields");
+  const keys = [
+    "version",
+    "bossId",
+    "phase",
+    "seed",
+    "generation",
+    "encounterId",
+    "lifecycle",
+    "setupStage",
+    "enteredPhase",
+    "entryStage",
+    "pendingPhase",
+  ];
+  if (
+    Reflect.ownKeys(value).length !== keys.length ||
+    keys.some((key) => !descriptors[key] || !("value" in descriptors[key]))
+  )
+    throw new Error("Invalid boss practice fields");
   const record = value as Readonly<Record<string, unknown>>;
   const state = value as BossPhasePracticeState;
-  if (record.version !== 1 || !validRequest(state) || !Number.isSafeInteger(state.generation) || state.generation < 1
-    || state.encounterId !== identity(state, state.generation)
-    || !["preparing", "entering", "active", "cancelled"].includes(state.lifecycle)
-    || !["opening", "phase-2", "phase-2-baseline", "phase-3", "target"].includes(state.setupStage)
-    || !isPhase(state.enteredPhase) || (state.lifecycle !== "active" && state.lifecycle !== "cancelled" && state.enteredPhase > state.phase)
-    || !["opening", "transition", "combat", "kneel", "regrowth", "void-descent", "graft-baseline"].includes(state.entryStage)
-    || !(record.pendingPhase === null || record.pendingPhase === 2 || record.pendingPhase === 3)
-    || (state.pendingPhase !== null && (state.pendingPhase !== state.enteredPhase + 1 || state.pendingPhase > state.phase))
-    || (state.lifecycle === "active" && (state.setupStage !== "target" || state.pendingPhase !== null || state.enteredPhase < state.phase))
-    || (state.pendingPhase !== null && state.setupStage !== `phase-${String(state.pendingPhase)}`)
-    || (state.setupStage === "opening" && (state.enteredPhase !== 1 || state.pendingPhase !== null))
-    || (state.setupStage === "phase-2-baseline" && (state.enteredPhase !== 2 || state.phase !== 3 || state.pendingPhase !== null))
-    || (state.lifecycle === "entering" && (state.pendingPhase ?? state.enteredPhase) !== state.phase)
-    || (state.setupStage === "target" && state.enteredPhase < state.phase)) throw new Error("Invalid boss practice lifecycle");
+  if (
+    record.version !== 1 ||
+    !validRequest(state) ||
+    !Number.isSafeInteger(state.generation) ||
+    state.generation < 1 ||
+    state.encounterId !== identity(state, state.generation) ||
+    !["preparing", "entering", "active", "cancelled"].includes(state.lifecycle) ||
+    !["opening", "phase-2", "phase-2-baseline", "phase-3", "target"].includes(state.setupStage) ||
+    !isPhase(state.enteredPhase) ||
+    (state.lifecycle !== "active" && state.lifecycle !== "cancelled" && state.enteredPhase > state.phase) ||
+    !["opening", "transition", "combat", "kneel", "regrowth", "void-descent", "graft-baseline"].includes(
+      state.entryStage,
+    ) ||
+    !(record.pendingPhase === null || record.pendingPhase === 2 || record.pendingPhase === 3) ||
+    (state.pendingPhase !== null &&
+      (state.pendingPhase !== state.enteredPhase + 1 || state.pendingPhase > state.phase)) ||
+    (state.lifecycle === "active" &&
+      (state.setupStage !== "target" || state.pendingPhase !== null || state.enteredPhase < state.phase)) ||
+    (state.pendingPhase !== null && state.setupStage !== `phase-${String(state.pendingPhase)}`) ||
+    (state.setupStage === "opening" && (state.enteredPhase !== 1 || state.pendingPhase !== null)) ||
+    (state.setupStage === "phase-2-baseline" &&
+      (state.enteredPhase !== 2 || state.phase !== 3 || state.pendingPhase !== null)) ||
+    (state.lifecycle === "entering" && (state.pendingPhase ?? state.enteredPhase) !== state.phase) ||
+    (state.setupStage === "target" && state.enteredPhase < state.phase)
+  )
+    throw new Error("Invalid boss practice lifecycle");
   if (world !== undefined) {
     const entry = world.actor.practicePhaseEntry();
-    if (state.lifecycle === "cancelled" || !matches(state, world) || !world.arenaReady || !world.checkpointReady
-      || (entry.phase !== state.enteredPhase && entry.phase !== state.pendingPhase)
-      || (state.pendingPhase !== null && entry.targetPhase !== state.pendingPhase)
-      || (state.pendingPhase === null && entry.stage !== state.entryStage)) throw new Error("Boss practice world mismatch");
+    if (
+      state.lifecycle === "cancelled" ||
+      !matches(state, world) ||
+      !world.arenaReady ||
+      !world.checkpointReady ||
+      (entry.phase !== state.enteredPhase && entry.phase !== state.pendingPhase) ||
+      (state.pendingPhase !== null && entry.targetPhase !== state.pendingPhase) ||
+      (state.pendingPhase === null && entry.stage !== state.entryStage)
+    )
+      throw new Error("Boss practice world mismatch");
   }
   return Object.freeze({ ...state });
 }
@@ -115,39 +175,62 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
     const world = services.observe();
     let capture: "canonical-checkpoint" | "unavailable" = "unavailable";
     if (current.lifecycle !== "cancelled" && world !== null) {
-      try { validateBossPhasePracticeState(current, world); capture = "canonical-checkpoint"; } catch { /* A half-installed world cannot be captured. */ }
+      try {
+        validateBossPhasePracticeState(current, world);
+        capture = "canonical-checkpoint";
+      } catch {
+        /* A half-installed world cannot be captured. */
+      }
     }
     return { status: current.lifecycle, state: current, capture };
   }
   function begin(request: BossPhasePracticeRequest): BossPhasePracticeResult {
-    if (!validRequest(request) || generation === Number.MAX_SAFE_INTEGER) return { status: "refused", reason: "invalid-request" };
+    if (!validRequest(request) || generation === Number.MAX_SAFE_INTEGER)
+      return { status: "refused", reason: "invalid-request" };
     if (current !== null && current.lifecycle !== "cancelled") services.cleanup("replacement");
     generation += 1;
     const encounterId = identity(request, generation);
-    current = Object.freeze({ version: 1, bossId: request.bossId, phase: request.phase, seed: request.seed,
-      generation, encounterId, lifecycle: "preparing", setupStage: "opening", enteredPhase: 1, entryStage: "opening", pendingPhase: null });
+    current = Object.freeze({
+      version: 1,
+      bossId: request.bossId,
+      phase: request.phase,
+      seed: request.seed,
+      generation,
+      encounterId,
+      lifecycle: "preparing",
+      setupStage: "opening",
+      enteredPhase: 1,
+      entryStage: "opening",
+      pendingPhase: null,
+    });
     services.createEncounter(request, generation, encounterId);
     return result();
   }
   function afterWorldStep(): BossPhasePracticeResult {
     if (current === null || current.lifecycle === "cancelled") return result();
     const world = services.observe();
-    if (world === null || !matches(current, world) || !world.arenaReady) return { status: "refused", reason: "world-mismatch" };
+    if (world === null || !matches(current, world) || !world.arenaReady)
+      return { status: "refused", reason: "world-mismatch" };
     const entry = world.actor.practicePhaseEntry();
     if (current.lifecycle === "active") {
       if (entry.phase < current.enteredPhase) return { status: "refused", reason: "world-mismatch" };
       current = Object.freeze({ ...current, enteredPhase: entry.phase, entryStage: entry.stage });
       return result();
     }
-    if (entry.phase < current.enteredPhase || entry.phase > (current.pendingPhase ?? current.enteredPhase)) return { status: "refused", reason: "world-mismatch" };
-    if (current.pendingPhase === entry.phase) current = Object.freeze({ ...current, enteredPhase: entry.phase, pendingPhase: null });
+    if (entry.phase < current.enteredPhase || entry.phase > (current.pendingPhase ?? current.enteredPhase))
+      return { status: "refused", reason: "world-mismatch" };
+    if (current.pendingPhase === entry.phase)
+      current = Object.freeze({ ...current, enteredPhase: entry.phase, pendingPhase: null });
     current = Object.freeze({ ...current, entryStage: entry.stage });
     if (current.pendingPhase !== null) {
       return entry.targetPhase === current.pendingPhase ? result() : { status: "refused", reason: "world-mismatch" };
     }
     if (entry.phase === current.phase) {
-      current = Object.freeze({ ...current, lifecycle: entry.ready && !world.cinematicActive && world.phaseWorldReady ? "active" : "entering",
-        setupStage: "target" });
+      current = Object.freeze({
+        ...current,
+        lifecycle: entry.ready && !world.cinematicActive && world.phaseWorldReady ? "active" : "entering",
+        setupStage: "target",
+      });
       return result();
     }
     if (!entry.ready || world.cinematicActive || !world.phaseWorldReady) {
@@ -156,28 +239,47 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
     }
     const next = entry.phase === 1 ? 2 : 3;
     if (!world.actor.requestPracticePhase(next)) return { status: "refused", reason: "entry-refused" };
-    current = Object.freeze({ ...current, lifecycle: next === current.phase ? "entering" : "preparing",
-      pendingPhase: next, setupStage: next === 2 ? "phase-2" : "phase-3" });
+    current = Object.freeze({
+      ...current,
+      lifecycle: next === current.phase ? "entering" : "preparing",
+      pendingPhase: next,
+      setupStage: next === 2 ? "phase-2" : "phase-3",
+    });
     return result();
   }
-  return Object.freeze({ begin, afterWorldStep,
-    restart(): BossPhasePracticeResult { return current === null ? { status: "refused", reason: "inactive" } : begin(current); },
+  return Object.freeze({
+    begin,
+    afterWorldStep,
+    restart(): BossPhasePracticeResult {
+      return current === null ? { status: "refused", reason: "inactive" } : begin(current);
+    },
     cancel(reason: "exit" | "reset" | "replacement"): void {
       if (current === null || current.lifecycle === "cancelled") return;
-      services.cleanup(reason); current = Object.freeze({ ...current, lifecycle: "cancelled" });
+      services.cleanup(reason);
+      current = Object.freeze({ ...current, lifecycle: "cancelled" });
     },
-    snapshot(): BossPhasePracticeState | null { return current; },
-    captureAvailability(): "canonical-checkpoint" | "unavailable" { const value = result(); return value.status === "refused" ? "unavailable" : value.capture; },
-    discardSelection(): void { current = null; generation = 0; },
+    snapshot(): BossPhasePracticeState | null {
+      return current;
+    },
+    captureAvailability(): "canonical-checkpoint" | "unavailable" {
+      const value = result();
+      return value.status === "refused" ? "unavailable" : value.capture;
+    },
+    discardSelection(): void {
+      current = null;
+      generation = 0;
+    },
     /** The outer v6 owner has already validated genuine terminal actor absence. No world is recreated. */
     restoreFinished(value: unknown): void {
       const state = validateBossPhasePracticeState(value);
       if (state.lifecycle !== "active") throw new Error("Finished boss practice requires a completed entry");
-      current = state; generation = state.generation;
+      current = state;
+      generation = state.generation;
     },
     restore(value: unknown, world: BossPhasePracticeWorld): void {
       const state = validateBossPhasePracticeState(value, world);
-      current = state; generation = state.generation;
+      current = state;
+      generation = state.generation;
     },
   });
 }

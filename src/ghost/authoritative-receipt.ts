@@ -20,8 +20,13 @@ export function createGhostAuthoritativeReceipt(
   applicationFrames?: GhostApplicationFrameReceipt,
 ): GhostAuthoritativeReceiptV1 {
   const receipt = validateReceipt(tick, stateHash, input);
-  return Object.freeze({ ...receipt, ...(applicationFrames === undefined ? {} : { applicationFrames: parseGhostApplicationFrameReceipt(applicationFrames) }), input: Object.freeze({ ...receipt.input,
-    aimMagnitude: receipt.input.aimMagnitude ?? AIM_MAGNITUDE_SCALE }) });
+  return Object.freeze({
+    ...receipt,
+    ...(applicationFrames === undefined
+      ? {}
+      : { applicationFrames: parseGhostApplicationFrameReceipt(applicationFrames) }),
+    input: Object.freeze({ ...receipt.input, aimMagnitude: receipt.input.aimMagnitude ?? AIM_MAGNITUDE_SCALE }),
+  });
 }
 
 /** Validation copies original input fields; it never enriches historical evidence. */
@@ -34,24 +39,49 @@ function validateReceipt(tick: number, stateHash: string, value: unknown): Ghost
     throw new TypeError("authoritative receipt requires its same-tick held-input snapshot");
   }
   const input = value as AuthoritativeInputSnapshot;
-  if (input.tick !== tick || !Number.isFinite(input.moveX) || !Number.isFinite(input.moveY)
-    || !Number.isFinite(input.aimTurn) || typeof input.primaryHeld !== "boolean"
-    || input.aimMagnitude !== undefined && (!Number.isSafeInteger(input.aimMagnitude)
-      || input.aimMagnitude < 0 || input.aimMagnitude > AIM_MAGNITUDE_SCALE)) {
+  if (
+    input.tick !== tick ||
+    !Number.isFinite(input.moveX) ||
+    !Number.isFinite(input.moveY) ||
+    !Number.isFinite(input.aimTurn) ||
+    typeof input.primaryHeld !== "boolean" ||
+    (input.aimMagnitude !== undefined &&
+      (!Number.isSafeInteger(input.aimMagnitude) || input.aimMagnitude < 0 || input.aimMagnitude > AIM_MAGNITUDE_SCALE))
+  ) {
     throw new TypeError("authoritative receipt requires its same-tick held-input snapshot");
   }
-  return Object.freeze({ format: "tearghost-authoritative-receipt", schemaVersion: 1, kind: "authoritative-hash", tick, stateHash,
-    input: Object.freeze({ ...input }) });
+  return Object.freeze({
+    format: "tearghost-authoritative-receipt",
+    schemaVersion: 1,
+    kind: "authoritative-hash",
+    tick,
+    stateHash,
+    input: Object.freeze({ ...input }),
+  });
 }
 
 /** Returns undefined for generic terminal results and untrusted/malformed bytes. */
 export function readGhostAuthoritativeReceipt(value: unknown): GhostAuthoritativeReceiptV1 | undefined {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
   const candidate = value as Readonly<Record<string, unknown>>;
-  if (candidate.format !== "tearghost-authoritative-receipt" || candidate.schemaVersion !== 1
-    || candidate.kind !== "authoritative-hash" || typeof candidate.tick !== "number"
-    || typeof candidate.stateHash !== "string" || typeof candidate.input !== "object" || candidate.input === null) return undefined;
-  try { return Object.freeze({ ...validateReceipt(candidate.tick, candidate.stateHash, candidate.input),
-    ...(candidate.applicationFrames === undefined ? {} : { applicationFrames: parseGhostApplicationFrameReceipt(candidate.applicationFrames) }) }); }
-  catch { return undefined; }
+  if (
+    candidate.format !== "tearghost-authoritative-receipt" ||
+    candidate.schemaVersion !== 1 ||
+    candidate.kind !== "authoritative-hash" ||
+    typeof candidate.tick !== "number" ||
+    typeof candidate.stateHash !== "string" ||
+    typeof candidate.input !== "object" ||
+    candidate.input === null
+  )
+    return undefined;
+  try {
+    return Object.freeze({
+      ...validateReceipt(candidate.tick, candidate.stateHash, candidate.input),
+      ...(candidate.applicationFrames === undefined
+        ? {}
+        : { applicationFrames: parseGhostApplicationFrameReceipt(candidate.applicationFrames) }),
+    });
+  } catch {
+    return undefined;
+  }
 }

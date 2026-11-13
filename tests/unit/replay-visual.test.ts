@@ -12,11 +12,28 @@ import {
 function visualFixture(samples = 20): VisualRecordingV2 {
   const positions = Array.from({ length: samples }, (_, index) => index * 10);
   return {
-    v: 2, dt: 0.1, edt: 0.25,
-    px: positions, py: positions.map(() => 400), tx: positions.map((x) => x + 30), ty: positions.map(() => 380),
-    fc: positions.map(() => 1), stages: [{ t: 0, s: 0 }, { t: 1, s: 1 }],
-    waves: [{ t: 0, w: 1, e: "start" }], spawns: [], esamp: [], deaths: [], events: [], loadout: [], thumb: null,
-    mode: "endless", diff: "normal", score: 100,
+    v: 2,
+    dt: 0.1,
+    edt: 0.25,
+    px: positions,
+    py: positions.map(() => 400),
+    tx: positions.map((x) => x + 30),
+    ty: positions.map(() => 380),
+    fc: positions.map(() => 1),
+    stages: [
+      { t: 0, s: 0 },
+      { t: 1, s: 1 },
+    ],
+    waves: [{ t: 0, w: 1, e: "start" }],
+    spawns: [],
+    esamp: [],
+    deaths: [],
+    events: [],
+    loadout: [],
+    thumb: null,
+    mode: "endless",
+    diff: "normal",
+    score: 100,
   };
 }
 
@@ -28,31 +45,58 @@ const provenance = {
   ticksPerSecond: 60,
   weaponId: "sword",
   weaponSchemaVersion: "final-five-v1",
-  tearScore: { enabled: true, engineVersion: "0.1", scoreVersion: "score-a", seed: "music-a", eventJournalHash: "journal-a" },
+  tearScore: {
+    enabled: true,
+    engineVersion: "0.1",
+    scoreVersion: "score-a",
+    seed: "music-a",
+    eventJournalHash: "journal-a",
+  },
 } as const;
 
 describe("visual replay migration", () => {
   it("closes the scored visual packet while retaining the same semantic sequencer only when explicitly requested", () => {
     for (const samples of [0, 20]) {
       const buffer = new SemanticInputBuffer();
-      const ghost = new LegacyGhostEngine({ store: { get: () => null, set: () => undefined }, document: {} as Document,
-        now: () => 1, random: () => 0.5, semanticInput: buffer,
-        defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 120, tearScore: () => provenance.tearScore } });
-      ghost.startRec(); buffer.push({ type: "confirm" });
+      const ghost = new LegacyGhostEngine({
+        store: { get: () => null, set: () => undefined },
+        document: {} as Document,
+        now: () => 1,
+        random: () => 0.5,
+        semanticInput: buffer,
+        defaults: {
+          rulesetVersion: provenance.rulesetVersion,
+          build: provenance.build,
+          ticksPerSecond: 120,
+          tearScore: () => provenance.tearScore,
+        },
+      });
+      ghost.startRec();
+      buffer.push({ type: "confirm" });
       expect(buffer.drain(120)[0]?.id).toBe(1);
       for (let index = 0; index < samples; index++) ghost.sample(0.1, { x: index, y: 400, facing: 1 }, null, []);
       expect(ghost.stopRec({}, { continueSemanticInput: true }) === null).toBe(samples === 0);
       expect(ghost.recording()).toBe(false);
-      buffer.setAimVector(0, 1); buffer.push({ type: "weapon", intent: "primary", phase: "pressed" });
+      buffer.setAimVector(0, 1);
+      buffer.push({ type: "weapon", intent: "primary", phase: "pressed" });
       const after = buffer.drain(Math.max(241, buffer.lastSealedTick + 1));
       expect(after.map((entry) => entry.id)).toEqual([2, 3]);
       expect(after.map((entry) => entry.command.type)).toEqual(["aim", "weapon"]);
-      ghost.stopRec(); buffer.push({ type: "confirm" });
+      ghost.stopRec();
+      buffer.push({ type: "confirm" });
       expect(buffer.drain(buffer.lastSealedTick + 1)).toEqual([]);
     }
   });
   it("upgrades hero-only v1 recordings without changing their path", () => {
-    const legacy = { v: 1, dt: 0.1, px: [0, 10, 20], py: [400, 400, 400], bx: [5, 15, 25], by: [380, 380, 380], stage: 3 };
+    const legacy = {
+      v: 1,
+      dt: 0.1,
+      px: [0, 10, 20],
+      py: [400, 400, 400],
+      bx: [5, 15, 25],
+      by: [380, 380, 380],
+      stage: 3,
+    };
     const migrated = migrateVisualRecording(legacy);
     expect(migrated.ok).toBe(true);
     if (migrated.ok) {
@@ -68,15 +112,23 @@ describe("visual replay migration", () => {
   });
 
   it("accepts the oracle's final-loadout summary shape used by published leaderboard ghosts", () => {
-    const fixture = { ...visualFixture(), loadout: [
-      { id: "tempo", tier: 3, n: 1 },
-      { id: "impale", tier: 1, n: 2 },
-    ] };
+    const fixture = {
+      ...visualFixture(),
+      loadout: [
+        { id: "tempo", tier: 3, n: 1 },
+        { id: "impale", tier: 1, n: 2 },
+      ],
+    };
     const migrated = migrateVisualRecording(JSON.parse(JSON.stringify(fixture)) as unknown);
-    expect(migrated).toMatchObject({ ok: true, recording: { loadout: [
-      { t: 0, id: "tempo", tier: 3, w: 0, n: 1 },
-      { t: 0, id: "impale", tier: 1, w: 0, n: 2 },
-    ] } });
+    expect(migrated).toMatchObject({
+      ok: true,
+      recording: {
+        loadout: [
+          { t: 0, id: "tempo", tier: 3, w: 0, n: 1 },
+          { t: 0, id: "impale", tier: 1, w: 0, n: 2 },
+        ],
+      },
+    });
   });
 
   it("does not loosen legacy loadout migration for malformed untrusted entries", () => {
@@ -94,7 +146,13 @@ describe("visual replay migration", () => {
       format: "tear-replay",
       schemaVersion: 2,
       rulesetVersion: "rules-a",
-      run: { runId: "run-a", seed: "seed-a", ticksPerSecond: 60, weaponId: "sword", weaponSchemaVersion: "final-five-v1" },
+      run: {
+        runId: "run-a",
+        seed: "seed-a",
+        ticksPerSecond: 60,
+        weaponId: "sword",
+        weaponSchemaVersion: "final-five-v1",
+      },
       build: provenance.build,
       tearScore: provenance.tearScore,
     });
@@ -116,27 +174,53 @@ describe("visual replay migration", () => {
 describe("LegacyGhostEngine", () => {
   it("records attack presentation separately from causal gameplay events", () => {
     const ghost = new LegacyGhostEngine({
-      store: { get: () => null, set: () => undefined }, document: {} as Document, now: () => 1, random: () => 0.5,
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 120,
-        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
+      store: { get: () => null, set: () => undefined },
+      document: {} as Document,
+      now: () => 1,
+      random: () => 0.5,
+      defaults: {
+        rulesetVersion: provenance.rulesetVersion,
+        build: provenance.build,
+        ticksPerSecond: 120,
+        weaponId: provenance.weaponId,
+        weaponSchemaVersion: provenance.weaponSchemaVersion,
+        tearScore: () => provenance.tearScore,
+      },
     });
     ghost.startRec({ runId: "presentation-run", seed: "presentation-seed" });
     ghost.presentationEvent("attack:v1:sword:held:contact:reversal:0:0:10:0:100", 10.2, 20.8);
     for (let index = 0; index < 20; index += 1) ghost.sample(0.1, { x: index, y: 0, facing: 1 }, null, []);
     const packet = ghost.stopRec();
-    expect(packet?.events).toEqual([expect.objectContaining({
-      k: "attack:v1:sword:held:contact:reversal:0:0:10:0:100", x: 10, y: 21,
-    })]);
+    expect(packet?.events).toEqual([
+      expect.objectContaining({
+        k: "attack:v1:sword:held:contact:reversal:0:0:10:0:100",
+        x: 10,
+        y: 21,
+      }),
+    ]);
   });
 
   it("notifies recorder sidecars with resolved, cloned Ghost 2 provenance", () => {
     const observed: VisualReplayProvenance[] = [];
     const suppliedBuild = { version: "observer-version", revision: "observer-revision", target: "observer-target" };
     const ghost = new LegacyGhostEngine({
-      store: { get: () => null, set: () => undefined }, document: {} as Document, now: () => 1, random: () => 0.5,
-      defaults: { rulesetVersion: "resolved-rules", build: provenance.build, ticksPerSecond: 120, tearScore: () => provenance.tearScore },
+      store: { get: () => null, set: () => undefined },
+      document: {} as Document,
+      now: () => 1,
+      random: () => 0.5,
+      defaults: {
+        rulesetVersion: "resolved-rules",
+        build: provenance.build,
+        ticksPerSecond: 120,
+        tearScore: () => provenance.tearScore,
+      },
     });
-    ghost.setRecordingObserver({ started: (entry) => { observed.push(entry); }, stopped: () => undefined });
+    ghost.setRecordingObserver({
+      started: (entry) => {
+        observed.push(entry);
+      },
+      stopped: () => undefined,
+    });
 
     ghost.startRec({ runId: "observer-run", seed: "observer-seed", build: suppliedBuild });
     suppliedBuild.version = "mutated-after-start";
@@ -145,7 +229,10 @@ describe("LegacyGhostEngine", () => {
     expect(entry).toBeDefined();
     if (entry === undefined) throw new Error("Ghost recorder observer did not receive start provenance");
     expect(entry).toMatchObject({
-      runId: "observer-run", seed: "observer-seed", rulesetVersion: "resolved-rules", ticksPerSecond: 120,
+      runId: "observer-run",
+      seed: "observer-seed",
+      rulesetVersion: "resolved-rules",
+      ticksPerSecond: 120,
       build: { version: "observer-version", revision: "observer-revision", target: "observer-target" },
     });
     expect(entry).not.toBe(ghost.rec?.provenance);
@@ -154,19 +241,40 @@ describe("LegacyGhostEngine", () => {
 
   it("keeps production visual recording passive when hybrid commands are disabled", () => {
     const values = new Map<string, string>();
-    const store: ReplayStore = { get: (key) => values.get(key) ?? null, set: (key, value) => { values.set(key, value); } };
+    const store: ReplayStore = {
+      get: (key) => values.get(key) ?? null,
+      set: (key, value) => {
+        values.set(key, value);
+      },
+    };
     const semantic = { starts: 0, drains: 0, stops: 0 };
     const ghost = new LegacyGhostEngine({
-      store, document: {} as Document, now: () => 1, random: () => 0.5,
+      store,
+      document: {} as Document,
+      now: () => 1,
+      random: () => 0.5,
       semanticInput: {
-        startRecording: () => { semantic.starts += 1; },
-        stopRecording: () => { semantic.stops += 1; },
-        drain: () => { semantic.drains += 1; return []; },
+        startRecording: () => {
+          semantic.starts += 1;
+        },
+        stopRecording: () => {
+          semantic.stops += 1;
+        },
+        drain: () => {
+          semantic.drains += 1;
+          return [];
+        },
         lastSealedTick: 0,
       },
       captureSemanticActions: false,
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60,
-        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
+      defaults: {
+        rulesetVersion: provenance.rulesetVersion,
+        build: provenance.build,
+        ticksPerSecond: 60,
+        weaponId: provenance.weaponId,
+        weaponSchemaVersion: provenance.weaponSchemaVersion,
+        tearScore: () => provenance.tearScore,
+      },
     });
 
     ghost.startRec({ runId: "visual-only", seed: "seed" });
@@ -185,26 +293,45 @@ describe("LegacyGhostEngine", () => {
     // recorder's elapsed clock is RELATIVE; the closing drain must clamp forward
     // instead of handing the sequencer a smaller tick (which froze the game).
     const values = new Map<string, string>();
-    const store: ReplayStore = { get: (key) => values.get(key) ?? null, set: (key, value) => { values.set(key, value); } };
+    const store: ReplayStore = {
+      get: (key) => values.get(key) ?? null,
+      set: (key, value) => {
+        values.set(key, value);
+      },
+    };
     const buffer = new SemanticInputBuffer();
     const ghost = new LegacyGhostEngine({
-      store, document: {} as Document, now: () => 1, random: () => 0.5, semanticInput: buffer,
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 120,
-        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
+      store,
+      document: {} as Document,
+      now: () => 1,
+      random: () => 0.5,
+      semanticInput: buffer,
+      defaults: {
+        rulesetVersion: provenance.rulesetVersion,
+        build: provenance.build,
+        ticksPerSecond: 120,
+        weaponId: provenance.weaponId,
+        weaponSchemaVersion: provenance.weaponSchemaVersion,
+        tearScore: () => provenance.tearScore,
+      },
     });
     ghost.startRec({ runId: "run-interrupted", seed: "seed" });
     buffer.push({ type: "confirm" });
-    buffer.drain(5_000);   // absolute simulation tick, far ahead of recorded elapsed time
+    buffer.drain(5_000); // absolute simulation tick, far ahead of recorded elapsed time
     for (let index = 0; index < 25; index += 1) {
       ghost.sample(1 / 120, { x: index, y: 400, facing: 1 }, { tipX: index + 20, tipY: 380 }, []);
     }
     expect(() => ghost.stopRec({ interruptedByNewRun: true })).not.toThrow();
   });
 
-
   it("records semantic commands into the canonical packet and preserves playback", () => {
     const values = new Map<string, string>();
-    const store: ReplayStore = { get: (key) => values.get(key) ?? null, set: (key, value) => { values.set(key, value); } };
+    const store: ReplayStore = {
+      get: (key) => values.get(key) ?? null,
+      set: (key, value) => {
+        values.set(key, value);
+      },
+    };
     let semanticTick = 0;
     const dependencies: LegacyReplayDependencies = {
       store,
@@ -214,11 +341,18 @@ describe("LegacyGhostEngine", () => {
       semanticInput: {
         startRecording: () => undefined,
         stopRecording: () => undefined,
-        drain: (tick) => tick > semanticTick ? [{ kind: "command", id: ++semanticTick, tick, command: { type: "confirm" } }] : [],
+        drain: (tick) =>
+          tick > semanticTick ? [{ kind: "command", id: ++semanticTick, tick, command: { type: "confirm" } }] : [],
         lastSealedTick: 0,
       },
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60,
-        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
+      defaults: {
+        rulesetVersion: provenance.rulesetVersion,
+        build: provenance.build,
+        ticksPerSecond: 60,
+        weaponId: provenance.weaponId,
+        weaponSchemaVersion: provenance.weaponSchemaVersion,
+        tearScore: () => provenance.tearScore,
+      },
     };
     const ghost = new LegacyGhostEngine(dependencies);
     ghost.startRec({ runId: "run-live", seed: "seed-live" });
@@ -240,9 +374,20 @@ describe("LegacyGhostEngine", () => {
 
   it("keeps a final-loadout summary beside the canonical timed loadout track", () => {
     const store: ReplayStore = { get: () => null, set: () => undefined };
-    const ghost = new LegacyGhostEngine({ store, document: {} as Document, now: () => 1, random: () => 0.5,
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60,
-        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore } });
+    const ghost = new LegacyGhostEngine({
+      store,
+      document: {} as Document,
+      now: () => 1,
+      random: () => 0.5,
+      defaults: {
+        rulesetVersion: provenance.rulesetVersion,
+        build: provenance.build,
+        ticksPerSecond: 60,
+        weaponId: provenance.weaponId,
+        weaponSchemaVersion: provenance.weaponSchemaVersion,
+        tearScore: () => provenance.tearScore,
+      },
+    });
     ghost.startRec();
     ghost.loadoutPick("tempo", 2, 5);
     for (let index = 0; index < 20; index += 1) ghost.sample(0.1, { x: index, y: 0, facing: 1 }, null, []);
@@ -254,10 +399,15 @@ describe("LegacyGhostEngine", () => {
 
   it("seals the final TearScore journal instead of the pre-activation placeholder", () => {
     const store: ReplayStore = { get: () => null, set: () => undefined };
-    let score: Readonly<{ enabled: false; reason: "not-recorded" }> | typeof provenance.tearScore =
-      { enabled: false, reason: "not-recorded" };
+    let score: Readonly<{ enabled: false; reason: "not-recorded" }> | typeof provenance.tearScore = {
+      enabled: false,
+      reason: "not-recorded",
+    };
     const ghost = new LegacyGhostEngine({
-      store, document: {} as Document, now: () => 1, random: () => 0.5,
+      store,
+      document: {} as Document,
+      now: () => 1,
+      random: () => 0.5,
       defaults: {
         rulesetVersion: provenance.rulesetVersion,
         build: provenance.build,
@@ -280,15 +430,27 @@ describe("LegacyGhostEngine", () => {
     const ticks: number[] = [];
     const store: ReplayStore = { get: () => null, set: () => undefined };
     const ghost = new LegacyGhostEngine({
-      store, document: {} as Document, now: () => 1, random: () => 0.5,
+      store,
+      document: {} as Document,
+      now: () => 1,
+      random: () => 0.5,
       semanticInput: {
         startRecording: () => undefined,
         stopRecording: () => undefined,
-        drain: (tick) => { ticks.push(tick); return []; },
+        drain: (tick) => {
+          ticks.push(tick);
+          return [];
+        },
         lastSealedTick: 0,
       },
-      defaults: { rulesetVersion: provenance.rulesetVersion, build: provenance.build, ticksPerSecond: 60,
-        weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion, tearScore: () => provenance.tearScore },
+      defaults: {
+        rulesetVersion: provenance.rulesetVersion,
+        build: provenance.build,
+        ticksPerSecond: 60,
+        weaponId: provenance.weaponId,
+        weaponSchemaVersion: provenance.weaponSchemaVersion,
+        tearScore: () => provenance.tearScore,
+      },
     });
     ghost.startRec();
     for (let index = 0; index < 9_010; index += 1) ghost.sample(0.1, { x: index, y: 0, facing: 1 }, null, []);

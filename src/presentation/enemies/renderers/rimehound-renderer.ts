@@ -8,15 +8,13 @@ export function installRimehoundRenderer(types: EnemyTypes, runtime: EnemyRender
   Object.assign(types.Rimehound.prototype, {
     draw(this: RenderInstance<"Rimehound">, ctx: CanvasRenderingContext2D) {
       const direction = Math.sign(this.vx) || this.atkDir || 1;
-      const windup = this.atk === "windup"
-        ? 1 - clamp(this.atkT / (this.atkMax || 1), 0, 1) : 0;
+      const windup = this.atk === "windup" ? 1 - clamp(this.atkT / (this.atkMax || 1), 0, 1) : 0;
       if (this.atk === "windup") {
         const routeY = this.y - 5;
         ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : "#3f718d";
         ctx.fillStyle = ctx.strokeStyle;
         ctx.globalAlpha = A11Y.highContrast ? 0.2 : 0.12 + windup * 0.08;
-        ctx.fillRect(Math.min(this.x, this.pounceTargetX), routeY - 6,
-          Math.abs(this.pounceTargetX - this.x), 12);
+        ctx.fillRect(Math.min(this.x, this.pounceTargetX), routeY - 6, Math.abs(this.pounceTargetX - this.x), 12);
         ctx.globalAlpha = A11Y.highContrast ? 0.95 : 0.65 + windup * 0.3;
         ctx.lineWidth = (A11Y.highContrast ? 4 : 3) + windup * 2;
         ctx.setLineDash([7, 5]);
@@ -43,13 +41,16 @@ export function installRimehoundRenderer(types: EnemyTypes, runtime: EnemyRender
       ctx.lineWidth = A11Y.highContrast ? 4 : 2.5;
       ctx.beginPath();
       ctx.ellipse(-4, crouch, this.hw * 0.72, this.hh * 0.62, 0, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
+      ctx.fill();
+      ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(this.hw * 0.35, -this.hh * 0.25 + crouch);
       ctx.lineTo(this.hw * 0.95, -this.hh * 0.08 + crouch);
       ctx.lineTo(this.hw * 0.72, this.hh * 0.42 + crouch);
       ctx.lineTo(this.hw * 0.25, this.hh * 0.28 + crouch);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
       ctx.fillStyle = THEME.ink;
       ctx.beginPath();
       ctx.moveTo(this.hw * 0.42, -this.hh * 0.35 + crouch);

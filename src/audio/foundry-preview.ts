@@ -38,12 +38,7 @@ export interface FoundryAudioPreviewProbe {
   readonly updates: number;
   readonly effectiveGainsDb: Readonly<Record<string, number>>;
   readonly gainReason:
-    | "foundry-fixed-tier"
-    | "foundry-adaptive"
-    | "foundry-full"
-    | "foundry-calm"
-    | "foundry-dynamic"
-    | "foundry-pause";
+    "foundry-fixed-tier" | "foundry-adaptive" | "foundry-full" | "foundry-calm" | "foundry-dynamic" | "foundry-pause";
   readonly decodeLoadMs: number;
   readonly scheduledTransition: null;
   readonly activeStingers: readonly string[];
@@ -59,9 +54,7 @@ declare global {
   }
 }
 
-export function requestedFoundryPreview(
-  search: string,
-): FoundryPreviewRequest | null {
+export function requestedFoundryPreview(search: string): FoundryPreviewRequest | null {
   try {
     const query = new URLSearchParams(search);
     const sessionId = query.get("foundryPreview");
@@ -69,42 +62,22 @@ export function requestedFoundryPreview(
     if (!sessionId || !/^[a-f0-9]{32}$/u.test(sessionId)) return null;
     if (![0, 1, 2, 3, 4].includes(tier)) return null;
     const rawMode = query.get("foundryPreviewMode");
-    if (
-      rawMode !== null &&
-      !["fixed", "adaptive", "full", "calm", "dynamic"].includes(rawMode)
-    )
-      return null;
+    if (rawMode !== null && !["fixed", "adaptive", "full", "calm", "dynamic"].includes(rawMode)) return null;
     const rawScene = query.get("foundryPreviewScene");
     if (
       rawScene !== null &&
-      ![
-        "main-menu",
-        "preparation",
-        "combat",
-        "boss",
-        "draft",
-        "paused",
-        "victory",
-        "defeat",
-      ].includes(rawScene)
+      !["main-menu", "preparation", "combat", "boss", "draft", "paused", "victory", "defeat"].includes(rawScene)
     )
       return null;
     const rawBossPhase = query.get("foundryBossPhase");
     const bossPhase = rawBossPhase === null ? undefined : Number(rawBossPhase);
-    if (
-      bossPhase !== undefined &&
-      (!Number.isInteger(bossPhase) || bossPhase < 1 || bossPhase > 9)
-    )
-      return null;
+    if (bossPhase !== undefined && (!Number.isInteger(bossPhase) || bossPhase < 1 || bossPhase > 9)) return null;
     const telemetryUrl = query.get("foundryTelemetry");
     const telemetryToken = query.get("foundryTelemetryToken");
     let safeTelemetryUrl: string | undefined;
     if (telemetryUrl && telemetryToken && telemetryToken.length >= 20) {
       const parsed = new URL(telemetryUrl);
-      if (
-        parsed.protocol === "http:" &&
-        (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost")
-      )
+      if (parsed.protocol === "http:" && (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost"))
         safeTelemetryUrl = parsed.href;
     }
     return {
@@ -112,21 +85,12 @@ export function requestedFoundryPreview(
       fixedTier: tier as Tier,
       ...(rawMode
         ? {
-            mode: rawMode as
-              | "fixed"
-              | "adaptive"
-              | "full"
-              | "calm"
-              | "dynamic",
+            mode: rawMode as "fixed" | "adaptive" | "full" | "calm" | "dynamic",
           }
         : {}),
-      ...(rawScene
-        ? { scenarioScene: rawScene as MusicScene }
-        : {}),
+      ...(rawScene ? { scenarioScene: rawScene as MusicScene } : {}),
       ...(bossPhase === undefined ? {} : { bossPhase }),
-      ...(safeTelemetryUrl && telemetryToken
-        ? { telemetryUrl: safeTelemetryUrl, telemetryToken }
-        : {}),
+      ...(safeTelemetryUrl && telemetryToken ? { telemetryUrl: safeTelemetryUrl, telemetryToken } : {}),
     };
   } catch {
     return null;
@@ -138,11 +102,7 @@ export function createFoundryPreviewProbe(
   cue: StemCueManifest,
   context: Pick<AudioContext, "sampleRate" | "currentTime" | "state">,
   decodeLoadMs = 0,
-): (
-  scene: MusicScene,
-  tier?: Tier,
-  gainReason?: FoundryAudioPreviewProbe["gainReason"],
-) => void {
+): (scene: MusicScene, tier?: Tier, gainReason?: FoundryAudioPreviewProbe["gainReason"]) => void {
   const loopFrames = cue.loop.endFrame - cue.loop.startFrame;
   const channels = cue.stems.reduce((sum, stem) => sum + stem.channels, 0);
   const startedAt = new Date().toISOString();
@@ -150,23 +110,15 @@ export function createFoundryPreviewProbe(
   let updates = 0;
   let lastPostedAt = 0;
   let lastScene: MusicScene | null = null;
-  return (
-    scene: MusicScene,
-    tier = request.fixedTier,
-    gainReason = "foundry-fixed-tier",
-  ): void => {
+  return (scene: MusicScene, tier = request.fixedTier, gainReason = "foundry-fixed-tier"): void => {
     updates += 1;
     const elapsed = Math.max(0, context.currentTime - startedAtContext);
     const loopSeconds = loopFrames / cue.sourceSampleRate;
     const loopPosition = loopSeconds > 0 ? elapsed % loopSeconds : 0;
-    const sourceFrame =
-      cue.loop.startFrame +
-      Math.min(loopFrames - 1, Math.floor(loopPosition * cue.sourceSampleRate));
-    const secondsPerBar =
-      cue.grid.barsPerLoop > 0 ? loopSeconds / cue.grid.barsPerLoop : loopSeconds;
+    const sourceFrame = cue.loop.startFrame + Math.min(loopFrames - 1, Math.floor(loopPosition * cue.sourceSampleRate));
+    const secondsPerBar = cue.grid.barsPerLoop > 0 ? loopSeconds / cue.grid.barsPerLoop : loopSeconds;
     const barPosition = secondsPerBar > 0 ? loopPosition / secondsPerBar : 0;
-    const duplicateIds =
-      new Set(cue.stems.map((stem) => stem.id)).size !== cue.stems.length;
+    const duplicateIds = new Set(cue.stems.map((stem) => stem.id)).size !== cue.stems.length;
     const probe: FoundryAudioPreviewProbe = {
       format: "tear-foundry-audio-preview-probe",
       version: 1,
@@ -174,12 +126,8 @@ export function createFoundryPreviewProbe(
       cueId: cue.id,
       tier,
       previewMode: request.mode ?? "fixed",
-      ...(request.scenarioScene
-        ? { scenarioScene: request.scenarioScene }
-        : {}),
-      ...(request.bossPhase === undefined
-        ? {}
-        : { bossPhase: request.bossPhase }),
+      ...(request.scenarioScene ? { scenarioScene: request.scenarioScene } : {}),
+      ...(request.bossPhase === undefined ? {} : { bossPhase: request.bossPhase }),
       activeStemIds: Object.keys(cue.tiers[tier]),
       allStemIds: cue.stems.map((stem) => stem.id),
       sourceSampleRate: cue.sourceSampleRate,
@@ -190,14 +138,8 @@ export function createFoundryPreviewProbe(
       loopIteration: loopSeconds > 0 ? Math.floor(elapsed / loopSeconds) : 0,
       sourceFrame,
       bar: Math.floor(barPosition) + 1,
-      beat:
-        Math.floor(
-          (barPosition - Math.floor(barPosition)) * cue.grid.beatsPerBar,
-        ) + 1,
-      decodedMemoryMiB: +(
-        (loopFrames * channels * 4) /
-        1024 ** 2
-      ).toFixed(2),
+      beat: Math.floor((barPosition - Math.floor(barPosition)) * cue.grid.beatsPerBar) + 1,
+      decodedMemoryMiB: +((loopFrames * channels * 4) / 1024 ** 2).toFixed(2),
       barQuantized: cue.grid.barQuantizedCompatible !== false,
       scene,
       paused: scene === "paused",
@@ -214,11 +156,7 @@ export function createFoundryPreviewProbe(
     };
     window.__TEAR_FOUNDRY_AUDIO_PREVIEW__ = probe;
     const now = Date.now();
-    if (
-      request.telemetryUrl &&
-      request.telemetryToken &&
-      (scene !== lastScene || now - lastPostedAt >= 1_000)
-    ) {
+    if (request.telemetryUrl && request.telemetryToken && (scene !== lastScene || now - lastPostedAt >= 1_000)) {
       lastPostedAt = now;
       lastScene = scene;
       void fetch(request.telemetryUrl, {

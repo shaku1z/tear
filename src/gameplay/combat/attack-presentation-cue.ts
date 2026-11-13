@@ -1,6 +1,7 @@
 import type { WeaponId } from "../weapon-selection";
 
-export type AttackPresentationAction = "held" | "throw" | "projectile" | "secondary" | "parry" | "impact" | "catch" | "kill";
+export type AttackPresentationAction =
+  "held" | "throw" | "projectile" | "secondary" | "parry" | "impact" | "catch" | "kill";
 export type AttackPresentationPhase = "start" | "contact" | "impact" | "resolve" | "return" | "parry" | "kill";
 export type AttackPresentationMaterial = "flesh" | "metal" | "stone" | "air";
 

@@ -16,7 +16,9 @@ export class CanvasViewport {
   #cssPerLogicalPixel = 1;
   #resizePending = false;
   #resizeObserver: ResizeObserver | null = null;
-  readonly #resizeListener = () => { this.#resizePending = true; };
+  readonly #resizeListener = () => {
+    this.#resizePending = true;
+  };
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -37,9 +39,11 @@ export class CanvasViewport {
     this.#started = true;
     this.browserWindow.addEventListener("resize", this.#resizeListener);
     this.browserDocument.addEventListener("fullscreenchange", this.#resizeListener);
-    const resizeObserverConstructor = (this.browserWindow as unknown as {
-      readonly ResizeObserver?: typeof ResizeObserver;
-    }).ResizeObserver;
+    const resizeObserverConstructor = (
+      this.browserWindow as unknown as {
+        readonly ResizeObserver?: typeof ResizeObserver;
+      }
+    ).ResizeObserver;
     if (typeof resizeObserverConstructor === "function") {
       const observer = new resizeObserverConstructor(this.#resizeListener);
       observer.observe(this.canvas);

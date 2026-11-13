@@ -1,8 +1,5 @@
 import type { TearDifficultyId, TearRunModeId, TearWeaponId } from "./registries";
-import {
-  reconstructProgression,
-  type TearProgressionLedger,
-} from "./progression-ledger";
+import { reconstructProgression, type TearProgressionLedger } from "./progression-ledger";
 
 export interface TearProgressionReplayPorts {
   resetConfiguration(revision: string): void;
@@ -30,9 +27,7 @@ export function replayProgressionConfiguration(
   ports: TearProgressionReplayPorts,
 ): TearProgressionReplayResult {
   const reconstruction = reconstructProgression(ledger);
-  let pending:
-    | Readonly<{ source: "draft" | "tier"; id: string; tier: number }>
-    | undefined;
+  let pending: Readonly<{ source: "draft" | "tier"; id: string; tier: number }> | undefined;
   let appliedMutationCount = 0;
   let earnedPickCount = 0;
   for (const event of ledger.events) {
@@ -60,8 +55,7 @@ export function replayProgressionConfiguration(
         pending = Object.freeze({ source: "tier", id: event.id, tier: event.tier });
         break;
       case "configuration.mutated":
-        if (pending?.source !== event.source || pending.id !== event.id
-          || pending.tier !== event.tier) {
+        if (pending?.source !== event.source || pending.id !== event.id || pending.tier !== event.tier) {
           throw new TypeError(`configuration mutation ${event.id} is not paired with its selected reward`);
         }
         if (event.source === "draft") ports.applyDraft(event.id, event.occurrence);

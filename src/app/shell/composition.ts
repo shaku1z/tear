@@ -3,7 +3,16 @@ import { createLivePracticeEncounterPersistence } from "../progress/practice-enc
 import { createLegacySynthFacade } from "../../audio/legacy-synth";
 import { createBrowserAudioContextHandoff } from "../../audio/audio-context-handoff";
 import { A11Y, CONFIG, GFX, OVERSCAN, REMOTE, SAFE, THEME } from "../../config/game-config";
-import { aabbOverlap, clamp, len, lerp, lerpAngle, segCircle, segPointDist, segSegmentDist } from "../../domain/geometry";
+import {
+  aabbOverlap,
+  clamp,
+  len,
+  lerp,
+  lerpAngle,
+  segCircle,
+  segPointDist,
+  segSegmentDist,
+} from "../../domain/geometry";
 import { AFFIXES, PRESETS, applyPreset, rollAffixes } from "../../gameplay/affixes";
 import { createAchievements } from "../../gameplay/progression/achievements";
 import { createDailyChallenges, localCalendarClock } from "../../gameplay/progression/challenges";
@@ -12,8 +21,14 @@ import { createTearWorldBootstrap } from "../../gameplay/runtime/tear-world-boot
 import { createMetaProgression, type ProgressionApplyContext } from "../../gameplay/progression/meta";
 import { PLAYGROUND_STAGES, STAGES, stageAt, stagePlatforms } from "../../gameplay/stages";
 import {
-  UPGRADES, applyUpgrade, newMods, nextTierDesc, rollUpgrades, tierUp,
-  type UpgradeApplyContext, type UpgradeDefinition,
+  UPGRADES,
+  applyUpgrade,
+  newMods,
+  nextTierDesc,
+  rollUpgrades,
+  tierUp,
+  type UpgradeApplyContext,
+  type UpgradeDefinition,
 } from "../../gameplay/upgrades";
 import { VARIANTS, applyVariant, rollVariant } from "../../gameplay/variants";
 import { VoidGen } from "../../gameplay/voidgen";
@@ -88,26 +103,42 @@ interface CompositionWindow extends Window {
  * and the Verdant calibration scene (`__TEAR_TEST_BUILD__`).
  */
 export async function composeTearApplication(options: TearCompositionOptions): Promise<void> {
-  const { target, sdk, createCrazyGamesServices, createCloud, pwaUpdate, browserIndexedDb = window.indexedDB, surfaces, engineeringQuery } = options;
+  const {
+    target,
+    sdk,
+    createCrazyGamesServices,
+    createCloud,
+    pwaUpdate,
+    browserIndexedDb = window.indexedDB,
+    surfaces,
+    engineeringQuery,
+  } = options;
   const compositionWindow = window as CompositionWindow;
   // Test storage seeding stays test-build-only even where `vite dev` admits engineering surfaces.
   const tearTestMode = __TEAR_TEST_BUILD__ && engineeringQuery.get("test") === "1";
   // Test pages may seed the isolated adapter before composition. Production never
   // reads this value and continues to use the platform's real storage adapter.
-  const disposableValues = new Map<string, string>(tearTestMode
-    ? Object.entries(compositionWindow.__TEAR_TEST_STORAGE__ ?? {})
-    : []);
+  const disposableValues = new Map<string, string>(
+    tearTestMode ? Object.entries(compositionWindow.__TEAR_TEST_STORAGE__ ?? {}) : [],
+  );
   const tearTestEnvironment = tearTestMode ? createTearTestEnvironment("live-test-composition") : undefined;
-  const disposableStorage = tearTestMode ? {
-    getItem: (key: string) => disposableValues.get(key) ?? null,
-    setItem: (key: string, value: string) => { disposableValues.set(key, value); },
-    removeItem: (key: string) => { disposableValues.delete(key); },
-  } : undefined;
+  const disposableStorage = tearTestMode
+    ? {
+        getItem: (key: string) => disposableValues.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          disposableValues.set(key, value);
+        },
+        removeItem: (key: string) => {
+          disposableValues.delete(key);
+        },
+      }
+    : undefined;
   // Optional capture tooling is a development adapter, never a production
   // gameplay dependency or shared writable global.
   const clipper = import.meta.env.DEV ? compositionWindow.Clipper : undefined;
   const engineeringSurfaces: LiveEngineeringSurfaceFactory | undefined = __TEAR_ENGINEERING_SURFACES__
-    ? (await import("../engineering/engineering-surfaces")).LIVE_ENGINEERING_SURFACES : undefined;
+    ? (await import("../engineering/engineering-surfaces")).LIVE_ENGINEERING_SURFACES
+    : undefined;
   // These data-only services are created before any world constructor captures
   // them. The bootstrap deliberately leaves all presentation adapters outside.
   const { configuration: worldConfiguration, clock: CLOCK, random } = createTearWorldBootstrap(CONFIG);
@@ -125,16 +156,31 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   // as a same-build control; only the selected package is fetched/decoded.
   // All consumers share this app owner; no world owns its lifetime.
   const requestedScene = tearTestMode ? engineeringQuery.get("sceneNative") : null;
-  const sceneNative: VerdantSceneNativeSelection | undefined = requestedScene === "1" || requestedScene === "control"
-    || requestedScene === "layers" || requestedScene === "living" ? requestedScene : undefined;
-  const verdant = __TEAR_TEST_BUILD__ ? sceneNative === undefined ? undefined
-    : (await import("../engineering/verdant-calibration-composition")).createVerdantCalibrationComposition(sceneNative, window) : undefined;
-  const verdantCalibration = verdant?.calibration, verdantMaterial = verdant?.material;
+  const sceneNative: VerdantSceneNativeSelection | undefined =
+    requestedScene === "1" || requestedScene === "control" || requestedScene === "layers" || requestedScene === "living"
+      ? requestedScene
+      : undefined;
+  const verdant = __TEAR_TEST_BUILD__
+    ? sceneNative === undefined
+      ? undefined
+      : (await import("../engineering/verdant-calibration-composition")).createVerdantCalibrationComposition(
+          sceneNative,
+          window,
+        )
+    : undefined;
+  const verdantCalibration = verdant?.calibration,
+    verdantMaterial = verdant?.material;
   const Backdrop = createBackdrop({
     ...(verdantCalibration ? { verdantCalibration } : {}),
     ...(verdantMaterial ? { verdantMaterial } : {}),
-    clock: CLOCK, config: worldConfig, graphics: GFX, accessibility: A11Y,
-    overscan: OVERSCAN, theme: THEME, createCanvas: () => document.createElement("canvas"), performance,
+    clock: CLOCK,
+    config: worldConfig,
+    graphics: GFX,
+    accessibility: A11Y,
+    overscan: OVERSCAN,
+    theme: THEME,
+    createCanvas: () => document.createElement("canvas"),
+    performance,
   });
   const Cinematics = createCinematics({ presentation: worldConfig.presentation });
   const { streams: GAME_RANDOM_STREAMS, service: GAME_RANDOM } = random;
@@ -142,8 +188,13 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     { config: worldConfig, safeArea: SAFE, overscan: OVERSCAN, window, document, navigator, performance },
     { createInput: createBrowserInput, createGamepad: createBrowserGamepad },
   );
-  const UI = createUi({ CLOCK, presentation: { view: worldConfig.view, colors: worldConfig.colors, overscan: OVERSCAN }, Input, clamp,
-    controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
+  const UI = createUi({
+    CLOCK,
+    presentation: { view: worldConfig.view, colors: worldConfig.colors, overscan: OVERSCAN },
+    Input,
+    clamp,
+    controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex),
+  });
   // Remembered text layouts were measured with the faces loaded at the time.
   document.fonts.addEventListener("loadingdone", () => {
     UI.clearTextLayouts();
@@ -152,29 +203,81 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   // services explicitly, so a second world can be built without a second
   // composition root; the live application still builds exactly one.
   const presentation = createLiveWorldSimulationPresentationAdapter({
-    clock: CLOCK, effects: FX, ui: UI,
+    clock: CLOCK,
+    effects: FX,
+    ui: UI,
     configuration: { accessibility: A11Y, config: worldConfig, graphics: GFX, theme: THEME },
-    geometry: { clamp, len, lerp }, cosmeticRandom: cosmeticEmissionRandom.next,
+    geometry: { clamp, len, lerp },
+    cosmeticRandom: cosmeticEmissionRandom.next,
   });
   const { Blade, Player, Projectile, enemyTypes, mirrorTypes } = createTearWorldSimulationFactories({
-    clock: CLOCK, config: worldConfig, graphics: GFX, effects: FX, sound: SFX, input: Input,
+    clock: CLOCK,
+    config: worldConfig,
+    graphics: GFX,
+    effects: FX,
+    sound: SFX,
+    input: Input,
     random: { enemyAi: GAME_RANDOM_STREAMS.stream("enemy-ai"), boss: GAME_RANDOM_STREAMS.stream("boss") },
-    presentation, geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
-    cosmeticRandom: cosmeticEmissionRandom.next, getWeapon,
+    presentation,
+    geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
+    cosmeticRandom: cosmeticEmissionRandom.next,
+    getWeapon,
     ...(clipper === undefined ? {} : { clipper }),
   });
   const {
-    Aldric, Armored, BOSSFX, Bomber, Boss, Charger, Chimera, Colossus, Echo,
-    Flyer, Ranged, Rimehound, Rootbinder, Rootbound, Source, Support, VoidWisp, Warden, WhiteHart, Wraith,
-    drawBossTransformationWorld, weaponCapsuleIntersectsSegment,
+    Aldric,
+    Armored,
+    BOSSFX,
+    Bomber,
+    Boss,
+    Charger,
+    Chimera,
+    Colossus,
+    Echo,
+    Flyer,
+    Ranged,
+    Rimehound,
+    Rootbinder,
+    Rootbound,
+    Source,
+    Support,
+    VoidWisp,
+    Warden,
+    WhiteHart,
+    Wraith,
+    drawBossTransformationWorld,
+    weaponCapsuleIntersectsSegment,
   } = enemyTypes;
   const { Mirror, MirrorHost, ReflectionEnemy } = mirrorTypes;
-  const menuFeedback = createLiveAttractFeedback({ CONFIG: worldConfig, GFX, Input, presentation: presentation.player,
-    aabbOverlap, clamp, len, random: cosmeticRandom, reducedMotion: () => A11Y.reducedMotion });
-  const Attract = createAttract({ Backdrop, Blade, FX: menuFeedback.FX, Player: menuFeedback.Player, STAGES, clamp, policy: {
-    view: worldConfig.view, world: worldConfig.world, blade: worldConfig.blade,
-    colors: worldConfig.colors, overscan: OVERSCAN, lowGraphics: () => GFX.low, random: cosmeticRandom, theme: THEME,
-  } });
+  const menuFeedback = createLiveAttractFeedback({
+    CONFIG: worldConfig,
+    GFX,
+    Input,
+    presentation: presentation.player,
+    aabbOverlap,
+    clamp,
+    len,
+    random: cosmeticRandom,
+    reducedMotion: () => A11Y.reducedMotion,
+  });
+  const Attract = createAttract({
+    Backdrop,
+    Blade,
+    FX: menuFeedback.FX,
+    Player: menuFeedback.Player,
+    STAGES,
+    clamp,
+    policy: {
+      view: worldConfig.view,
+      world: worldConfig.world,
+      blade: worldConfig.blade,
+      colors: worldConfig.colors,
+      overscan: OVERSCAN,
+      lowGraphics: () => GFX.low,
+      random: cosmeticRandom,
+      theme: THEME,
+    },
+  });
   const platform = createLegacyPlatformCompatibility({
     target,
     ...(sdk === undefined ? {} : { sdk }),
@@ -186,13 +289,19 @@ export async function composeTearApplication(options: TearCompositionOptions): P
 
   const PROFILE = createProfileStore({
     store: CG.store,
-    onCommitted: () => { if (PROFILE.pendingRewards().length > 0) void tutorialCompletionPersistence.retry(); },
-    onLoaded: () => { void tutorialCompletionPersistence.retry(); },
+    onCommitted: () => {
+      if (PROFILE.pendingRewards().length > 0) void tutorialCompletionPersistence.retry();
+    },
+    onLoaded: () => {
+      void tutorialCompletionPersistence.retry();
+    },
     getAchievements: () => ACH,
     getMeta: () => META,
-    writerId: () => CG.live ? "crazygames" : "browser",
+    writerId: () => (CG.live ? "crazygames" : "browser"),
     countedBiomeNames: STAGES.map(({ name }) => name),
-    log: (message) => { console.log(message); },
+    log: (message) => {
+      console.log(message);
+    },
   });
   const GAMEPLAY_EVENTS = new TearGameplayEventBus(() => Input.semantic.lastSealedTick);
   const { GHOST, VAULT } = createLegacyReplayCompatibility({
@@ -221,8 +330,14 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     getMeta: () => META,
   });
   const { META, SHOP } = createMetaProgression<UpgradeDefinition, UpgradeApplyContext & ProgressionApplyContext>({
-    store: CG.store, config: worldConfig, cloud: Cloud, random: GAME_RANDOM_STREAMS.stream("draft"), upgrades: UPGRADES,
-    applyUpgrade: (upgrade, context) => { applyUpgrade(upgrade, context); },
+    store: CG.store,
+    config: worldConfig,
+    cloud: Cloud,
+    random: GAME_RANDOM_STREAMS.stream("draft"),
+    upgrades: UPGRADES,
+    applyUpgrade: (upgrade, context) => {
+      applyUpgrade(upgrade, context);
+    },
   });
   const ACH = createAchievements({ meta: META, profile: PROFILE, audio: SFX, shop: SHOP, clamp });
   const tutorialCompletionPersistence = createLiveTutorialCompletionPersistence(PROFILE, META, ACH);
@@ -235,30 +350,135 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   const outcomeDefeatProgressPersistence = createLiveOutcomeDefeatProgressPersistence(PROFILE);
   const pendingFinalePersistence = createLivePendingFinalePersistence(PROFILE);
   const profileStatsPersistence = createLiveProfileStatsPersistence(PROFILE);
-  const victoryProfileProgressPersistence = createLiveVictoryProfileProgressPersistence(PROFILE, profileStatsPersistence);
+  const victoryProfileProgressPersistence = createLiveVictoryProfileProgressPersistence(
+    PROFILE,
+    profileStatsPersistence,
+  );
   const styleAchievementPersistence = createLiveStyleAchievementPersistence(ACH, PROFILE);
-  const platformBootstrapPersistence = createLivePlatformBootstrapPersistence(ACH, PROFILE, META, SHOP, () => tutorialCompletionPersistence.retry());
+  const platformBootstrapPersistence = createLivePlatformBootstrapPersistence(ACH, PROFILE, META, SHOP, () =>
+    tutorialCompletionPersistence.retry(),
+  );
   const shopPurchaseProgressPersistence = createLiveShopPurchaseProgressPersistence(PROFILE, META, SHOP);
 
   const gameRuntimeDependencies = {
-    A11Y, ACH, AFFIXES, APP, Aldric, Armored, Attract, BOSSFX, Backdrop, Blade, biomeProgressPersistence, Bomber, Boss, achievementToastPersistence,
-    surfaces, engineeringQuery, ...(engineeringSurfaces === undefined ? {} : { engineeringSurfaces }),
-    browserDocument: document, browserIndexedDb, browserNavigator: navigator, browserStorage: window.localStorage, browserWindow: window,
-    CG, CLOCK, CONFIG: worldConfig, Charger, Chimera, Cinematics, Clipper: clipper, Cloud, Colossus, ghostPublication, DAILY, DIAG, Echo,
-    FX, FirebaseProvider, Flyer, GAMEPLAY_EVENTS, GAME_RANDOM, GAME_RANDOM_STREAMS, GFX, GHOST, Input, META, Mirror,
-    MirrorHost, OVERSCAN, PAD, PRESETS, outcomeDefeatProgressPersistence, pendingFinalePersistence, platformBootstrapPersistence, tutorialCompletionPersistence, practiceEncounterPersistence, profileStatsPersistence, PROFILE, Player, Projectile, PwaUpdate: pwaUpdate, REMOTE,
-    Ranged, ReflectionEnemy, Rimehound, Rootbinder, Rootbound, SAFE, SFX, SHOP, STAGES, PLAYGROUND_STAGES, Source, shopPurchaseProgressPersistence, styleAchievementPersistence, Support, THEME, UI, UPGRADES, victoryProfileProgressPersistence,
-    VAULT, VARIANTS, VoidGen, VoidWisp, WEAPONS, Warden, WhiteHart, Wraith,
-    aabbOverlap, applyPreset, applyUpgrade, applyVariant, applyWeapon,
-    clamp, cosmeticRandom, cosmeticEmissionRandom, createRunSeed, drawBossTransformationWorld, len, lerp,
-    newMods, nextTierDesc, rollAffixes, rollUpgrades, rollVariant, segCircle,
-    segPointDist, stageAt, stagePlatforms, tierUp, weaponCapsuleIntersectsSegment,
+    A11Y,
+    ACH,
+    AFFIXES,
+    APP,
+    Aldric,
+    Armored,
+    Attract,
+    BOSSFX,
+    Backdrop,
+    Blade,
+    biomeProgressPersistence,
+    Bomber,
+    Boss,
+    achievementToastPersistence,
+    surfaces,
+    engineeringQuery,
+    ...(engineeringSurfaces === undefined ? {} : { engineeringSurfaces }),
+    browserDocument: document,
+    browserIndexedDb,
+    browserNavigator: navigator,
+    browserStorage: window.localStorage,
+    browserWindow: window,
+    CG,
+    CLOCK,
+    CONFIG: worldConfig,
+    Charger,
+    Chimera,
+    Cinematics,
+    Clipper: clipper,
+    Cloud,
+    Colossus,
+    ghostPublication,
+    DAILY,
+    DIAG,
+    Echo,
+    FX,
+    FirebaseProvider,
+    Flyer,
+    GAMEPLAY_EVENTS,
+    GAME_RANDOM,
+    GAME_RANDOM_STREAMS,
+    GFX,
+    GHOST,
+    Input,
+    META,
+    Mirror,
+    MirrorHost,
+    OVERSCAN,
+    PAD,
+    PRESETS,
+    outcomeDefeatProgressPersistence,
+    pendingFinalePersistence,
+    platformBootstrapPersistence,
+    tutorialCompletionPersistence,
+    practiceEncounterPersistence,
+    profileStatsPersistence,
+    PROFILE,
+    Player,
+    Projectile,
+    PwaUpdate: pwaUpdate,
+    REMOTE,
+    Ranged,
+    ReflectionEnemy,
+    Rimehound,
+    Rootbinder,
+    Rootbound,
+    SAFE,
+    SFX,
+    SHOP,
+    STAGES,
+    PLAYGROUND_STAGES,
+    Source,
+    shopPurchaseProgressPersistence,
+    styleAchievementPersistence,
+    Support,
+    THEME,
+    UI,
+    UPGRADES,
+    victoryProfileProgressPersistence,
+    VAULT,
+    VARIANTS,
+    VoidGen,
+    VoidWisp,
+    WEAPONS,
+    Warden,
+    WhiteHart,
+    Wraith,
+    aabbOverlap,
+    applyPreset,
+    applyUpgrade,
+    applyVariant,
+    applyWeapon,
+    clamp,
+    cosmeticRandom,
+    cosmeticEmissionRandom,
+    createRunSeed,
+    drawBossTransformationWorld,
+    len,
+    lerp,
+    newMods,
+    nextTierDesc,
+    rollAffixes,
+    rollUpgrades,
+    rollVariant,
+    segCircle,
+    segPointDist,
+    stageAt,
+    stagePlatforms,
+    tierUp,
+    weaponCapsuleIntersectsSegment,
   } satisfies GameRuntimeDependencies;
   startLiveGame(gameRuntimeDependencies, worldConfiguration);
 
   if (tearTestMode) {
     const observedSemanticActions: ReturnType<typeof Input.drainSemanticActions>[number][] = [];
-    Input.semantic.subscribe((entry) => { observedSemanticActions.push(entry); });
+    Input.semantic.subscribe((entry) => {
+      observedSemanticActions.push(entry);
+    });
     Object.defineProperty(window, "__TEAR_PLATFORM_SERVICES__", {
       configurable: true,
       get: () => platform.services,
@@ -267,21 +487,40 @@ export async function composeTearApplication(options: TearCompositionOptions): P
       configurable: true,
       value: Object.freeze({
         snapshot: () => DIAG.snapshot(),
-        resetTimingSamples: () => { DIAG.resetTimingSamples(); },
-        resetCounters: () => { DIAG.resetCounters(); },
+        resetTimingSamples: () => {
+          DIAG.resetTimingSamples();
+        },
+        resetCounters: () => {
+          DIAG.resetCounters();
+        },
       }),
     });
     compositionWindow.__TEAR_CATALOG_DEBUG__ = Object.freeze({
-      verdantCalibration: Object.freeze({ status: () => verdantCalibration?.status() ?? "disabled",
+      verdantCalibration: Object.freeze({
+        status: () => verdantCalibration?.status() ?? "disabled",
         report: () => verdantCalibration?.report() ?? null,
-        setView: (view: "composite" | "support-only" | "tail-only") => { verdantCalibration?.setDiagnosticView(view); },
-        setMotion: (view: "live" | "neutral" | "minimum" | "maximum") => { verdantCalibration?.setDiagnosticMotion(view); },
+        setView: (view: "composite" | "support-only" | "tail-only") => {
+          verdantCalibration?.setDiagnosticView(view);
+        },
+        setMotion: (view: "live" | "neutral" | "minimum" | "maximum") => {
+          verdantCalibration?.setDiagnosticMotion(view);
+        },
       }),
-      weapons: WEAPONS.map((weapon) => ({ id: weapon.id, throwIdentity: weapon.throwIdentity, ratings: weapon.ratings })),
-      abilities: UPGRADES.filter((upgrade) => ["stormbank", "overrun", "sever"].includes(upgrade.id)).map((upgrade) => upgrade.name),
+      weapons: WEAPONS.map((weapon) => ({
+        id: weapon.id,
+        throwIdentity: weapon.throwIdentity,
+        ratings: weapon.ratings,
+      })),
+      abilities: UPGRADES.filter((upgrade) => ["stormbank", "overrun", "sever"].includes(upgrade.id)).map(
+        (upgrade) => upgrade.name,
+      ),
       input: Object.freeze({
-        startRecording: () => { Input.startSemanticRecording(); },
-        stopRecording: () => { Input.stopSemanticRecording(); },
+        startRecording: () => {
+          Input.startSemanticRecording();
+        },
+        stopRecording: () => {
+          Input.stopSemanticRecording();
+        },
         drain: (tick: number) => Input.drainSemanticActions(tick),
         drainObserved: () => observedSemanticActions.splice(0, observedSemanticActions.length),
         snapshot: () => ({
@@ -306,18 +545,20 @@ export async function composeTearApplication(options: TearCompositionOptions): P
         },
       }),
       app: Object.freeze({ snapshot: () => APP.snapshot() }),
-      viewport: Object.freeze({ snapshot: () => {
-        const canvas = document.querySelector<HTMLCanvasElement>("#game");
-        const rect = canvas?.getBoundingClientRect();
-        return {
-          logical: { width: worldConfig.view.w, height: worldConfig.view.h },
-          css: { width: rect?.width ?? 0, height: rect?.height ?? 0 },
-          backing: { width: canvas?.width ?? 0, height: canvas?.height ?? 0 },
-          overscan: { x: OVERSCAN.x, y: OVERSCAN.y },
-          safeArea: { top: SAFE.t, right: SAFE.r, bottom: SAFE.b, left: SAFE.l },
-          devicePixelRatio: window.devicePixelRatio,
-        };
-      } }),
+      viewport: Object.freeze({
+        snapshot: () => {
+          const canvas = document.querySelector<HTMLCanvasElement>("#game");
+          const rect = canvas?.getBoundingClientRect();
+          return {
+            logical: { width: worldConfig.view.w, height: worldConfig.view.h },
+            css: { width: rect?.width ?? 0, height: rect?.height ?? 0 },
+            backing: { width: canvas?.width ?? 0, height: canvas?.height ?? 0 },
+            overscan: { x: OVERSCAN.x, y: OVERSCAN.y },
+            safeArea: { top: SAFE.t, right: SAFE.r, bottom: SAFE.b, left: SAFE.l },
+            devicePixelRatio: window.devicePixelRatio,
+          };
+        },
+      }),
     });
   } else if (import.meta.env.DEV) {
     Object.defineProperty(window, "__TEAR_DIAGNOSTICS__", {

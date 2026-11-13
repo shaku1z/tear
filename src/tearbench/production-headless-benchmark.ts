@@ -12,10 +12,7 @@ export {
   createC30TrainingCapacityDeclaration,
   parseC30TrainingCapacityDeclaration,
 } from "./production-headless-capacity-declaration";
-import {
-  createProductionHeadlessEpisodePool,
-  type ProductionHeadlessJob,
-} from "./production-headless-environment";
+import { createProductionHeadlessEpisodePool, type ProductionHeadlessJob } from "./production-headless-environment";
 import {
   ProductionHeadlessAcademyIntake,
   type ProductionHeadlessAcademyIntakeSnapshot,
@@ -213,25 +210,33 @@ interface ProductionHeadlessWorkload {
 
 function jobs(profile: ProductionHeadlessWorkload, cycle?: number): readonly ProductionHeadlessJob[] {
   const cycleSuffix = cycle === undefined ? "" : `-cycle-${String(cycle).padStart(2, "0")}`;
-  return Object.freeze(Array.from({ length: profile.episodes }, (_, index) =>
-    Object.freeze({
-      id: `${profile.id}${cycleSuffix}-${String(index + 1).padStart(2, "0")}`,
-      scenario: Object.freeze({
-        format: "tear-contract", kind: "scenario", schemaVersion: 1,
-        id: `${profile.id}${cycleSuffix}-${String(index + 1).padStart(2, "0")}`, version: 1,
-        description: "C30 natural production benchmark episode",
-        stateClass: "recorded-canonical", executionClass: "training",
-        // Cycle identifiers keep artifacts distinct; identical source seeds make
-        // repeat hashes a real determinism check rather than a new workload.
-        seed: `${profile.id}-seed-${String(index + 1)}`,
-        start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }),
-        maxTicks: profile.maxTicks,
-        assertions: Object.freeze(["runtime.finite-state"] as const),
-        tags: Object.freeze(["c30", "benchmark", "natural-opening", profile.id] as const),
-      }),
-      maxTicks: profile.maxTicks,
-    }) satisfies ProductionHeadlessJob,
-  ));
+  return Object.freeze(
+    Array.from(
+      { length: profile.episodes },
+      (_, index) =>
+        Object.freeze({
+          id: `${profile.id}${cycleSuffix}-${String(index + 1).padStart(2, "0")}`,
+          scenario: Object.freeze({
+            format: "tear-contract",
+            kind: "scenario",
+            schemaVersion: 1,
+            id: `${profile.id}${cycleSuffix}-${String(index + 1).padStart(2, "0")}`,
+            version: 1,
+            description: "C30 natural production benchmark episode",
+            stateClass: "recorded-canonical",
+            executionClass: "training",
+            // Cycle identifiers keep artifacts distinct; identical source seeds make
+            // repeat hashes a real determinism check rather than a new workload.
+            seed: `${profile.id}-seed-${String(index + 1)}`,
+            start: Object.freeze({ mode: "endless", difficulty: "normal", weapon: "sword" }),
+            maxTicks: profile.maxTicks,
+            assertions: Object.freeze(["runtime.finite-state"] as const),
+            tags: Object.freeze(["c30", "benchmark", "natural-opening", profile.id] as const),
+          }),
+          maxTicks: profile.maxTicks,
+        }) satisfies ProductionHeadlessJob,
+    ),
+  );
 }
 
 function policyForEpisode(profile: Pick<ProductionHeadlessWorkload, "batchSize">): Readonly<{
@@ -239,13 +244,16 @@ function policyForEpisode(profile: Pick<ProductionHeadlessWorkload, "batchSize">
 }> {
   let tick = 0;
   return Object.freeze({
-    decide: () => Object.freeze(Array.from({ length: profile.batchSize }, () => {
-      tick += 1;
-      if (tick === 1) return Object.freeze([{ type: "move" as const, x: 1_000, y: 0 }]);
-      if (tick === 24) return Object.freeze([{ type: "jump" as const, phase: "pressed" as const }]);
-      if (tick === 48) return Object.freeze([{ type: "dash" as const, x: 1_000, y: 0 }]);
-      return Object.freeze([]);
-    })),
+    decide: () =>
+      Object.freeze(
+        Array.from({ length: profile.batchSize }, () => {
+          tick += 1;
+          if (tick === 1) return Object.freeze([{ type: "move" as const, x: 1_000, y: 0 }]);
+          if (tick === 24) return Object.freeze([{ type: "jump" as const, phase: "pressed" as const }]);
+          if (tick === 48) return Object.freeze([{ type: "dash" as const, x: 1_000, y: 0 }]);
+          return Object.freeze([]);
+        }),
+      ),
   });
 }
 
@@ -260,7 +268,7 @@ function summarize(
     episodes: episodes.length,
     completed: episodes.filter((episode) => episode.outcome === "terminated" || episode.outcome === "truncated").length,
     elapsedMilliseconds,
-    episodesPerMinute: episodes.length / elapsed * 60_000,
+    episodesPerMinute: (episodes.length / elapsed) * 60_000,
     p95EpisodeMilliseconds: percentile(latencies, 0.95),
     maxEpisodeMilliseconds: Math.max(0, ...latencies),
     semanticHashes: Object.freeze(episodes.map((episode) => episode.semanticHash)),
@@ -286,7 +294,9 @@ async function runProductionWorkload(
       batchSize: profile.batchSize,
       now,
       ...(retainArtifacts ? { artifactSampler: sampler } : {}),
-      artifactConsumer: (sample) => { academyIntake.offer(sample); },
+      artifactConsumer: (sample) => {
+        academyIntake.offer(sample);
+      },
       onCompleted: (_job, _episode, elapsedMilliseconds) => {
         latencies.push(elapsedMilliseconds);
         sampleMemory();
@@ -301,11 +311,15 @@ async function runProductionWorkload(
 
 function hardwareProfile(value: ProductionHeadlessHardwareProfile): ProductionHeadlessHardwareProfile {
   const classifications: ReadonlySet<string> = new Set(["developer", "target"]);
-  if (!/^[a-z0-9][a-z0-9._-]{0,127}$/u.test(value.id)
-    || !classifications.has(value.classification)
-    || value.declaredBy.trim().length === 0 || value.operatingSystem.trim().length === 0
-    || value.processor.trim().length === 0 || !Number.isSafeInteger(value.physicalMemoryBytes)
-    || value.physicalMemoryBytes < 1) {
+  if (
+    !/^[a-z0-9][a-z0-9._-]{0,127}$/u.test(value.id) ||
+    !classifications.has(value.classification) ||
+    value.declaredBy.trim().length === 0 ||
+    value.operatingSystem.trim().length === 0 ||
+    value.processor.trim().length === 0 ||
+    !Number.isSafeInteger(value.physicalMemoryBytes) ||
+    value.physicalMemoryBytes < 1
+  ) {
     throw new TypeError("production headless hardware profile is invalid");
   }
   return Object.freeze({ ...value });
@@ -322,19 +336,25 @@ export async function measureProductionHeadlessEpisodes(
     if (value !== undefined && Number.isFinite(value) && value >= 0) memorySamples.push(value);
   };
   sampleMemory();
-  const execute = (retainArtifacts: boolean) => runProductionWorkload(
-    C30_NATURAL_EPISODE_BENCHMARK_PROFILE, now, sampleMemory, retainArtifacts,
-    new ProductionHeadlessAcademyIntake(C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit),
-  );
+  const execute = (retainArtifacts: boolean) =>
+    runProductionWorkload(
+      C30_NATURAL_EPISODE_BENCHMARK_PROFILE,
+      now,
+      sampleMemory,
+      retainArtifacts,
+      new ProductionHeadlessAcademyIntake(C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit),
+    );
   const firstPass = await execute(true);
   const repeat = await execute(false);
   sampleMemory();
   const beforeBytes = memorySamples[0];
   const afterBytes = memorySamples.at(-1);
   const peakBytes = memorySamples.length === 0 ? undefined : Math.max(...memorySamples);
-  const retainedDeltaBytes = beforeBytes === undefined || afterBytes === undefined ? undefined : afterBytes - beforeBytes;
+  const retainedDeltaBytes =
+    beforeBytes === undefined || afterBytes === undefined ? undefined : afterBytes - beforeBytes;
   return Object.freeze({
-    format: "tearbench-production-headless-benchmark", schemaVersion: 1,
+    format: "tearbench-production-headless-benchmark",
+    schemaVersion: 1,
     profile: C30_NATURAL_EPISODE_BENCHMARK_PROFILE,
     firstPass,
     repeat: Object.freeze({
@@ -345,12 +365,22 @@ export async function measureProductionHeadlessEpisodes(
     }),
     deterministic: firstPass.semanticHashes.every((hash, index) => hash === repeat.semanticHashes[index]),
     budget: Object.freeze({
-      episodesPerMinute: firstPass.episodesPerMinute >= C30_NATURAL_EPISODE_BENCHMARK_PROFILE.developerHardwareBudget.minimumEpisodesPerMinute
-        ? "met" : "below",
-      p95EpisodeLatency: firstPass.p95EpisodeMilliseconds <= C30_NATURAL_EPISODE_BENCHMARK_PROFILE.developerHardwareBudget.maximumP95EpisodeMilliseconds
-        ? "met" : "above",
-      retainedHeap: retainedDeltaBytes === undefined ? "not-measured"
-        : retainedDeltaBytes <= C30_NATURAL_EPISODE_BENCHMARK_PROFILE.developerHardwareBudget.maximumRetainedHeapBytes ? "met" : "above",
+      episodesPerMinute:
+        firstPass.episodesPerMinute >=
+        C30_NATURAL_EPISODE_BENCHMARK_PROFILE.developerHardwareBudget.minimumEpisodesPerMinute
+          ? "met"
+          : "below",
+      p95EpisodeLatency:
+        firstPass.p95EpisodeMilliseconds <=
+        C30_NATURAL_EPISODE_BENCHMARK_PROFILE.developerHardwareBudget.maximumP95EpisodeMilliseconds
+          ? "met"
+          : "above",
+      retainedHeap:
+        retainedDeltaBytes === undefined
+          ? "not-measured"
+          : retainedDeltaBytes <= C30_NATURAL_EPISODE_BENCHMARK_PROFILE.developerHardwareBudget.maximumRetainedHeapBytes
+            ? "met"
+            : "above",
     }),
     heap: Object.freeze({
       ...(beforeBytes === undefined ? {} : { beforeBytes }),
@@ -388,16 +418,23 @@ export async function measureProductionHeadlessLongRun(
   });
   const cycles = [] as Awaited<ReturnType<typeof runProductionWorkload>>[];
   for (let index = 1; index <= C30_LONG_RUN_LEAK_PROFILE.cycles; index += 1) {
-    cycles.push(await runProductionWorkload(
-      workload, now, sampleMemory, index === 1,
-      new ProductionHeadlessAcademyIntake(C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit), index,
-    ));
+    cycles.push(
+      await runProductionWorkload(
+        workload,
+        now,
+        sampleMemory,
+        index === 1,
+        new ProductionHeadlessAcademyIntake(C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit),
+        index,
+      ),
+    );
     options.collectGarbage?.();
     sampleMemory();
   }
   const first = cycles[0];
-  const deterministic = first !== undefined && cycles.every((cycle) =>
-    cycle.semanticHashes.every((hash, index) => hash === first.semanticHashes[index]));
+  const deterministic =
+    first !== undefined &&
+    cycles.every((cycle) => cycle.semanticHashes.every((hash, index) => hash === first.semanticHashes[index]));
   const elapsedMilliseconds = cycles.reduce((total, cycle) => total + cycle.elapsedMilliseconds, 0);
   const episodes = cycles.reduce((total, cycle) => total + cycle.episodes, 0);
   const completed = cycles.reduce((total, cycle) => total + cycle.completed, 0);
@@ -405,16 +442,21 @@ export async function measureProductionHeadlessLongRun(
   const beforeBytes = memorySamples[0];
   const afterBytes = memorySamples.at(-1);
   const peakBytes = memorySamples.length === 0 ? undefined : Math.max(...memorySamples);
-  const retainedDeltaBytes = beforeBytes === undefined || afterBytes === undefined ? undefined : afterBytes - beforeBytes;
+  const retainedDeltaBytes =
+    beforeBytes === undefined || afterBytes === undefined ? undefined : afterBytes - beforeBytes;
   const budget = C30_LONG_RUN_LEAK_PROFILE.developerHardwareBudget;
   return Object.freeze({
-    format: "tearbench-production-headless-long-run", schemaVersion: 1,
-    profile: C30_LONG_RUN_LEAK_PROFILE, hardware,
+    format: "tearbench-production-headless-long-run",
+    schemaVersion: 1,
+    profile: C30_LONG_RUN_LEAK_PROFILE,
+    hardware,
     cycles: Object.freeze(cycles.map((cycle, index) => Object.freeze({ index: index + 1, ...cycle }))),
     deterministic,
     aggregate: Object.freeze({
-      episodes, completed, elapsedMilliseconds,
-      episodesPerMinute: episodes / Math.max(0.001, elapsedMilliseconds) * 60_000,
+      episodes,
+      completed,
+      elapsedMilliseconds,
+      episodesPerMinute: (episodes / Math.max(0.001, elapsedMilliseconds)) * 60_000,
       p95EpisodeMilliseconds: percentile(latencies, 0.95),
       maxEpisodeMilliseconds: Math.max(0, ...latencies),
       sampledArtifacts: cycles.reduce((total, cycle) => total + cycle.sampledArtifacts, 0),
@@ -426,11 +468,15 @@ export async function measureProductionHeadlessLongRun(
       }),
     }),
     budget: Object.freeze({
-      episodesPerMinute: episodes / Math.max(0.001, elapsedMilliseconds) * 60_000 >= budget.minimumEpisodesPerMinute
-        ? "met" : "below",
+      episodesPerMinute:
+        (episodes / Math.max(0.001, elapsedMilliseconds)) * 60_000 >= budget.minimumEpisodesPerMinute ? "met" : "below",
       p95EpisodeLatency: percentile(latencies, 0.95) <= budget.maximumP95EpisodeMilliseconds ? "met" : "above",
-      retainedHeap: options.collectGarbage === undefined || retainedDeltaBytes === undefined ? "not-measured"
-        : retainedDeltaBytes <= budget.maximumRetainedHeapBytes ? "met" : "above",
+      retainedHeap:
+        options.collectGarbage === undefined || retainedDeltaBytes === undefined
+          ? "not-measured"
+          : retainedDeltaBytes <= budget.maximumRetainedHeapBytes
+            ? "met"
+            : "above",
     }),
     heap: Object.freeze({
       ...(beforeBytes === undefined ? {} : { beforeBytes }),
@@ -462,10 +508,16 @@ function capacityBudget(
   heapMeasured: boolean,
 ) {
   return Object.freeze({
-    episodesPerMinute: firstPass.episodesPerMinute >= budget.minimumEpisodesPerMinute ? "met" as const : "below" as const,
-    p95EpisodeLatency: firstPass.p95EpisodeMilliseconds <= budget.maximumP95EpisodeMilliseconds ? "met" as const : "above" as const,
-    retainedHeap: !heapMeasured || retainedDeltaBytes === undefined ? "not-measured" as const
-      : retainedDeltaBytes <= budget.maximumRetainedHeapBytes ? "met" as const : "above" as const,
+    episodesPerMinute:
+      firstPass.episodesPerMinute >= budget.minimumEpisodesPerMinute ? ("met" as const) : ("below" as const),
+    p95EpisodeLatency:
+      firstPass.p95EpisodeMilliseconds <= budget.maximumP95EpisodeMilliseconds ? ("met" as const) : ("above" as const),
+    retainedHeap:
+      !heapMeasured || retainedDeltaBytes === undefined
+        ? ("not-measured" as const)
+        : retainedDeltaBytes <= budget.maximumRetainedHeapBytes
+          ? ("met" as const)
+          : ("above" as const),
   });
 }
 
@@ -491,11 +543,17 @@ export async function measureProductionHeadlessTrainingCapacity(
     sampleMemory();
     const profile = declaredWorkloadProfile(declaration, workload);
     const firstPass = await runProductionWorkload(
-      profile, now, sampleMemory, true,
+      profile,
+      now,
+      sampleMemory,
+      true,
       new ProductionHeadlessAcademyIntake(workload.artifactSampleLimit),
     );
     const repeat = await runProductionWorkload(
-      profile, now, sampleMemory, false,
+      profile,
+      now,
+      sampleMemory,
+      false,
       new ProductionHeadlessAcademyIntake(workload.artifactSampleLimit),
     );
     options.collectGarbage?.();
@@ -503,35 +561,45 @@ export async function measureProductionHeadlessTrainingCapacity(
     const beforeBytes = samples[0];
     const afterBytes = samples.at(-1);
     const peakBytes = samples.length === 0 ? undefined : Math.max(...samples);
-    const retainedDeltaBytes = beforeBytes === undefined || afterBytes === undefined
-      ? undefined : afterBytes - beforeBytes;
+    const retainedDeltaBytes =
+      beforeBytes === undefined || afterBytes === undefined ? undefined : afterBytes - beforeBytes;
     const deterministic = firstPass.semanticHashes.every((hash, index) => hash === repeat.semanticHashes[index]);
-    results.push(Object.freeze({
-      kind: workload.kind, workload, firstPass,
-      repeat: Object.freeze({
-        elapsedMilliseconds: repeat.elapsedMilliseconds,
-        episodesPerMinute: repeat.episodesPerMinute,
-        semanticHashes: repeat.semanticHashes,
-        academyIntake: repeat.academyIntake,
+    results.push(
+      Object.freeze({
+        kind: workload.kind,
+        workload,
+        firstPass,
+        repeat: Object.freeze({
+          elapsedMilliseconds: repeat.elapsedMilliseconds,
+          episodesPerMinute: repeat.episodesPerMinute,
+          semanticHashes: repeat.semanticHashes,
+          academyIntake: repeat.academyIntake,
+        }),
+        deterministic,
+        budget: capacityBudget(firstPass, workload.budget, retainedDeltaBytes, options.collectGarbage !== undefined),
+        heap: Object.freeze({
+          ...(beforeBytes === undefined ? {} : { beforeBytes }),
+          ...(afterBytes === undefined ? {} : { afterBytes }),
+          ...(peakBytes === undefined ? {} : { peakBytes }),
+          ...(retainedDeltaBytes === undefined ? {} : { retainedDeltaBytes }),
+        }),
       }),
-      deterministic,
-      budget: capacityBudget(firstPass, workload.budget, retainedDeltaBytes, options.collectGarbage !== undefined),
-      heap: Object.freeze({
-        ...(beforeBytes === undefined ? {} : { beforeBytes }),
-        ...(afterBytes === undefined ? {} : { afterBytes }),
-        ...(peakBytes === undefined ? {} : { peakBytes }),
-        ...(retainedDeltaBytes === undefined ? {} : { retainedDeltaBytes }),
-      }),
-    }));
+    );
   }
   const frozenResults = Object.freeze(results);
   return Object.freeze({
-    format: "tearbench-production-training-capacity", schemaVersion: 1,
-    observation: "declared-target-episode-fabric", declaration, workloads: frozenResults,
-    allDeclaredBudgetsMet: frozenResults.every((result) => result.deterministic
-      && result.firstPass.completed === result.firstPass.episodes
-      && result.budget.episodesPerMinute === "met"
-      && result.budget.p95EpisodeLatency === "met"
-      && result.budget.retainedHeap === "met"),
+    format: "tearbench-production-training-capacity",
+    schemaVersion: 1,
+    observation: "declared-target-episode-fabric",
+    declaration,
+    workloads: frozenResults,
+    allDeclaredBudgetsMet: frozenResults.every(
+      (result) =>
+        result.deterministic &&
+        result.firstPass.completed === result.firstPass.episodes &&
+        result.budget.episodesPerMinute === "met" &&
+        result.budget.p95EpisodeLatency === "met" &&
+        result.budget.retainedHeap === "met",
+    ),
   });
 }

@@ -38,9 +38,16 @@ export interface EnvironmentWeaponProjectileContactInput {
     environmentCounterplay?: Readonly<{ projectile?: EnvironmentCounterplayTag }>;
   }>;
   readonly projectiles: readonly {
-    x: number; y: number; r?: number; dead: boolean; dmg?: number | null;
-    family?: string; playerOwned?: boolean; weaponId?: string | null;
-    attackId?: number; secondary?: boolean;
+    x: number;
+    y: number;
+    r?: number;
+    dead: boolean;
+    dmg?: number | null;
+    family?: string;
+    playerOwned?: boolean;
+    weaponId?: string | null;
+    attackId?: number;
+    secondary?: boolean;
   }[];
   readonly tick?: number;
 }
@@ -56,10 +63,14 @@ export function resolveHeldEnvironmentWeaponContacts(
   const capability = input.blade.weapon?.environmentCounterplay?.held;
   const damage = input.blade.damageAt();
   if (input.blade.state !== "held" || capability === undefined || !(damage > 0)) return emptyResult();
-  let considered = 0, accepted = 0, damaged = 0, destroyed = 0;
+  let considered = 0,
+    accepted = 0,
+    damaged = 0,
+    destroyed = 0;
   const attackId = `${input.blade.weapon?.id ?? "unknown"}:held:swing:${String(input.blade.swingId)}`;
   for (const object of input.environment.combatObjects()) {
-    if (object.state === "destroyed" || object.state === "expired" || !intersects(input.segment, object.geometry)) continue;
+    if (object.state === "destroyed" || object.state === "expired" || !intersects(input.segment, object.geometry))
+      continue;
     considered += 1;
     if (!input.environment.resolveCombatObjectCounterplay(object.id, capability).accepted) continue;
     accepted += 1;
@@ -76,15 +87,28 @@ export function resolveEnvironmentWeaponProjectileContacts(
 ): EnvironmentWeaponContactResult {
   const capability = input.weapon.environmentCounterplay?.projectile;
   if (capability === undefined) return emptyResult();
-  let considered = 0, accepted = 0, damaged = 0, destroyed = 0;
+  let considered = 0,
+    accepted = 0,
+    damaged = 0,
+    destroyed = 0;
   for (const projectile of input.projectiles) {
-    if (projectile.dead || projectile.family !== "weaponProjectile" || projectile.playerOwned !== true
-      || projectile.weaponId !== input.weapon.id || projectile.secondary === true) continue;
+    if (
+      projectile.dead ||
+      projectile.family !== "weaponProjectile" ||
+      projectile.playerOwned !== true ||
+      projectile.weaponId !== input.weapon.id ||
+      projectile.secondary === true
+    )
+      continue;
     const damage = projectile.dmg ?? 0;
     if (!(damage > 0) || !Number.isSafeInteger(projectile.attackId) || (projectile.attackId ?? 0) < 1) continue;
     for (const object of input.environment.combatObjects()) {
-      if (object.state === "destroyed" || object.state === "expired"
-        || !intersectsCircle(projectile.x, projectile.y, projectile.r ?? 0, object.geometry)) continue;
+      if (
+        object.state === "destroyed" ||
+        object.state === "expired" ||
+        !intersectsCircle(projectile.x, projectile.y, projectile.r ?? 0, object.geometry)
+      )
+        continue;
       considered += 1;
       if (!input.environment.resolveCombatObjectCounterplay(object.id, capability).accepted) continue;
       accepted += 1;
@@ -107,39 +131,65 @@ function intersects(segment: HeldEnvironmentWeaponContactInput["segment"], geome
   const points = geometry.points;
   if (points !== undefined && points.length > 1) {
     for (let index = 1; index < points.length; index += 1) {
-      const previous = points[index - 1], current = points[index];
-      if (previous !== undefined && current !== undefined
-        && segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2,
-          previous.x, previous.y, current.x, current.y) <= segment.pad) return true;
+      const previous = points[index - 1],
+        current = points[index];
+      if (
+        previous !== undefined &&
+        current !== undefined &&
+        segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, previous.x, previous.y, current.x, current.y) <=
+          segment.pad
+      )
+        return true;
     }
   }
   if (geometry.radius !== undefined) {
-    return segCircle(segment.x1, segment.y1, segment.x2, segment.y2,
-      geometry.x, geometry.y, geometry.radius + segment.pad);
+    return segCircle(
+      segment.x1,
+      segment.y1,
+      segment.x2,
+      segment.y2,
+      geometry.x,
+      geometry.y,
+      geometry.radius + segment.pad,
+    );
   }
-  const width = geometry.w ?? 0, height = geometry.h ?? 0;
+  const width = geometry.w ?? 0,
+    height = geometry.h ?? 0;
   if (!(width > 0) || !(height > 0)) return false;
-  const left = geometry.x - segment.pad, top = geometry.y - segment.pad;
-  const right = geometry.x + width + segment.pad, bottom = geometry.y + height + segment.pad;
-  if (inside(segment.x1, segment.y1, left, top, right, bottom)
-    || inside(segment.x2, segment.y2, left, top, right, bottom)) return true;
-  return segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, left, top, right, top) === 0
-    || segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, right, top, right, bottom) === 0
-    || segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, right, bottom, left, bottom) === 0
-    || segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, left, bottom, left, top) === 0;
+  const left = geometry.x - segment.pad,
+    top = geometry.y - segment.pad;
+  const right = geometry.x + width + segment.pad,
+    bottom = geometry.y + height + segment.pad;
+  if (
+    inside(segment.x1, segment.y1, left, top, right, bottom) ||
+    inside(segment.x2, segment.y2, left, top, right, bottom)
+  )
+    return true;
+  return (
+    segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, left, top, right, top) === 0 ||
+    segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, right, top, right, bottom) === 0 ||
+    segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, right, bottom, left, bottom) === 0 ||
+    segSegmentDist(segment.x1, segment.y1, segment.x2, segment.y2, left, bottom, left, top) === 0
+  );
 }
 
 function intersectsCircle(x: number, y: number, radius: number, geometry: EnvironmentGeometry): boolean {
   const points = geometry.points;
   if (points !== undefined && points.length > 1) {
     for (let index = 1; index < points.length; index += 1) {
-      const previous = points[index - 1], current = points[index];
-      if (previous !== undefined && current !== undefined
-        && segPointDist(previous.x, previous.y, current.x, current.y, x, y).dist <= radius) return true;
+      const previous = points[index - 1],
+        current = points[index];
+      if (
+        previous !== undefined &&
+        current !== undefined &&
+        segPointDist(previous.x, previous.y, current.x, current.y, x, y).dist <= radius
+      )
+        return true;
     }
   }
   if (geometry.radius !== undefined) return Math.hypot(x - geometry.x, y - geometry.y) <= radius + geometry.radius;
-  const width = geometry.w ?? 0, height = geometry.h ?? 0;
+  const width = geometry.w ?? 0,
+    height = geometry.h ?? 0;
   if (!(width > 0) || !(height > 0)) return false;
   const closestX = Math.max(geometry.x, Math.min(x, geometry.x + width));
   const closestY = Math.max(geometry.y, Math.min(y, geometry.y + height));

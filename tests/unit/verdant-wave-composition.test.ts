@@ -20,9 +20,17 @@ const stages: readonly WaveStage[] = STAGES.map((stage) => ({
 function verdantPlan(localWave: number, seed: string, scaling = { enemyHealth: 1, enemyCount: 1 }) {
   return planNextWave({
     state: {
-      mode: "campaign", wave: 29 + localWave, diffHp: scaling.enemyHealth, diffCount: scaling.enemyCount,
-      bossOrder: BOSS_ROSTER.map((boss) => boss.id), bossIdx: 0, bossesBeaten: 0,
-      curBoss: null, currentStageIndex: 3, biomeIdx: 3, pendingBossOutro: null,
+      mode: "campaign",
+      wave: 29 + localWave,
+      diffHp: scaling.enemyHealth,
+      diffCount: scaling.enemyCount,
+      bossOrder: BOSS_ROSTER.map((boss) => boss.id),
+      bossIdx: 0,
+      bossesBeaten: 0,
+      curBoss: null,
+      currentStageIndex: 3,
+      biomeIdx: 3,
+      pendingBossOutro: null,
     },
     tuning: CONFIG.run,
     stages,
@@ -47,25 +55,40 @@ describe("Verdant wave composition budget", () => {
         const spent = queue.reduce((total, spawn) => total + compositionCost(composition, spawn.type as EnemyKind), 0);
         const rootbinders = queue.filter((spawn) => spawn.type === "rootbinder").length;
         expect(spent).toBeLessThanOrEqual(composition.localWaveBudgets[localWave - 1] ?? -1);
-        expect(rootbinders).toBeLessThanOrEqual((composition.maximumPerWave.rootbinder?.[localWave - 1]) ?? -1);
+        expect(rootbinders).toBeLessThanOrEqual(composition.maximumPerWave.rootbinder?.[localWave - 1] ?? -1);
       }
     }
   });
 
   it("fails closed for an impossible support-only budget instead of creating a stalled queue", () => {
-    const impossibleStages = stages.map((stage) => stage.id === "verdant-sanctum"
-      ? { ...stage, pool: [{ kind: "rootbinder" as const, weight: 1, unlockWave: 1 }] }
-      : stage);
-    expect(() => planNextWave({
-      state: {
-        mode: "campaign", wave: 30, diffHp: 1, diffCount: 1,
-        bossOrder: BOSS_ROSTER.map((boss) => boss.id), bossIdx: 0, bossesBeaten: 0,
-        curBoss: null, currentStageIndex: 3, biomeIdx: 3, pendingBossOutro: null,
-      },
-      tuning: CONFIG.run, stages: impossibleStages, presets: PRESETS,
-      random: new SeededRandom("impossible-support-budget"),
-      startDelay: CONFIG.run.startDelay, currentMultiplier: 1,
-    })).toThrow(/composition budget excludes every available enemy/u);
+    const impossibleStages = stages.map((stage) =>
+      stage.id === "verdant-sanctum"
+        ? { ...stage, pool: [{ kind: "rootbinder" as const, weight: 1, unlockWave: 1 }] }
+        : stage,
+    );
+    expect(() =>
+      planNextWave({
+        state: {
+          mode: "campaign",
+          wave: 30,
+          diffHp: 1,
+          diffCount: 1,
+          bossOrder: BOSS_ROSTER.map((boss) => boss.id),
+          bossIdx: 0,
+          bossesBeaten: 0,
+          curBoss: null,
+          currentStageIndex: 3,
+          biomeIdx: 3,
+          pendingBossOutro: null,
+        },
+        tuning: CONFIG.run,
+        stages: impossibleStages,
+        presets: PRESETS,
+        random: new SeededRandom("impossible-support-budget"),
+        startDelay: CONFIG.run.startDelay,
+        currentMultiplier: 1,
+      }),
+    ).toThrow(/composition budget excludes every available enemy/u);
   });
 
   it("keeps the opening wave free of support/control cost", () => {
@@ -102,9 +125,15 @@ describe("Verdant wave composition budget", () => {
       expect(planned.state.spawnQueue[0]?.hpScale).toBeCloseTo(1.82 * difficulty.modifiers.enemyHealth);
       expect(planned.state.spawnQueue[0]?.dmgScale).toBeCloseTo(1.34);
 
-      const replay = createProductionReplayWorld({ seed: `verdant-${difficulty.id}`, mode: "campaign", difficulty: difficulty.id });
+      const replay = createProductionReplayWorld({
+        seed: `verdant-${difficulty.id}`,
+        mode: "campaign",
+        difficulty: difficulty.id,
+      });
       const player = replay.world.state.player() as never as {
-        hp: number; maxHp: number; oneHit: boolean;
+        hp: number;
+        maxHp: number;
+        oneHit: boolean;
         takeDamage(damage: number, sourceX: number): string;
       };
       expect(replay.dependencies.CONFIG.player.dmgTakenMult).toBeCloseTo(difficulty.modifiers.playerDamageTaken);

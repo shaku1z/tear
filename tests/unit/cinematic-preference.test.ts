@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { chapterLaunchPolicy, cinematicLaunchPolicy, sanitizeCinematicPreference } from "../../src/app/campaign/cinematic-preference";
+import {
+  chapterLaunchPolicy,
+  cinematicLaunchPolicy,
+  sanitizeCinematicPreference,
+} from "../../src/app/campaign/cinematic-preference";
 
 describe("cinematic preference policy", () => {
   it.each([

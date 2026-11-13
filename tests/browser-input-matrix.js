@@ -5,20 +5,23 @@ const http = require("node:http");
 const path = require("node:path");
 
 async function moveCapturedPointer(page, from, to) {
-  await page.evaluate(({ previous, next }) => {
-    const canvas = document.querySelector("canvas");
-    const event = new MouseEvent("mousemove", {
-      bubbles: true,
-      cancelable: true,
-      clientX: next.x,
-      clientY: next.y,
-    });
-    Object.defineProperties(event, {
-      movementX: { value: next.x - previous.x },
-      movementY: { value: next.y - previous.y },
-    });
-    canvas.dispatchEvent(event);
-  }, { previous: from, next: to });
+  await page.evaluate(
+    ({ previous, next }) => {
+      const canvas = document.querySelector("canvas");
+      const event = new MouseEvent("mousemove", {
+        bubbles: true,
+        cancelable: true,
+        clientX: next.x,
+        clientY: next.y,
+      });
+      Object.defineProperties(event, {
+        movementX: { value: next.x - previous.x },
+        movementY: { value: next.y - previous.y },
+      });
+      canvas.dispatchEvent(event);
+    },
+    { previous: from, next: to },
+  );
 }
 
 async function main() {
@@ -28,15 +31,23 @@ async function main() {
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, baseUrl).pathname;
     const file = path.resolve(root, pathname === "/" ? "index.html" : pathname.slice(1));
-    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { response.writeHead(404).end(); return; }
-    response.setHeader("Content-Type", file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream");
+    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+      response.writeHead(404).end();
+      return;
+    }
+    response.setHeader(
+      "Content-Type",
+      file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream",
+    );
     fs.createReadStream(file).pipe(response);
   });
   await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
   const browser = await chromium.launch({ headless: true });
 
   async function configure(page) {
-    await page.route("**/*", (route) => route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort());
+    await page.route("**/*", (route) =>
+      route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
+    );
     await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__PANTHEON_TEST);
   }
@@ -45,15 +56,35 @@ async function main() {
   await configure(touch);
   await touch.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
   await touch.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
-  assert.equal(await touch.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), true,
-    "playground uses the normal shared canonical input session");
+  assert.equal(
+    await touch.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording),
+    true,
+    "playground uses the normal shared canonical input session",
+  );
   const touchStartX = await touch.evaluate(() => window.__PANTHEON_TEST.state().playerTrace?.x);
   assert.equal(typeof touchStartX, "number", "touch journey requires a live player position");
   await touch.evaluate(() => {
     const canvas = document.querySelector("canvas");
     const send = (type, x, y) => {
-      const point = new Touch({ identifier: 17, target: canvas, clientX: x, clientY: y, pageX: x, pageY: y, radiusX: 8, radiusY: 8, force: 1 });
-      canvas.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true, touches: type === "touchend" ? [] : [point], changedTouches: [point] }));
+      const point = new Touch({
+        identifier: 17,
+        target: canvas,
+        clientX: x,
+        clientY: y,
+        pageX: x,
+        pageY: y,
+        radiusX: 8,
+        radiusY: 8,
+        force: 1,
+      });
+      canvas.dispatchEvent(
+        new TouchEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          touches: type === "touchend" ? [] : [point],
+          changedTouches: [point],
+        }),
+      );
     };
     send("touchstart", 200, 450);
     send("touchmove", 290, 450);
@@ -74,12 +105,18 @@ async function main() {
   await touch.evaluate(() => {
     const canvas = document.querySelector("canvas");
     const point = new Touch({ identifier: 17, target: canvas, clientX: 290, clientY: 450, pageX: 290, pageY: 450 });
-    canvas.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [point] }));
+    canvas.dispatchEvent(
+      new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [point] }),
+    );
   });
-  await touch.waitForFunction(() => {
-    const trace = window.__PANTHEON_TEST.state().playerTrace;
-    return trace && Math.abs(trace.vx) < 1;
-  }, undefined, { timeout: 5_000 });
+  await touch.waitForFunction(
+    () => {
+      const trace = window.__PANTHEON_TEST.state().playerTrace;
+      return trace && Math.abs(trace.vx) < 1;
+    },
+    undefined,
+    { timeout: 5_000 },
+  );
   await touch.close();
 
   const ultrawide = await browser.newPage({ viewport: { width: 1920, height: 800 } });
@@ -105,17 +142,30 @@ async function main() {
   const controller = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   await controller.addInitScript(() => {
     window.__testGamepad = null;
-    Object.defineProperty(navigator, "getGamepads", { configurable: true, value: () => window.__testGamepad ? [window.__testGamepad] : [] });
+    Object.defineProperty(navigator, "getGamepads", {
+      configurable: true,
+      value: () => (window.__testGamepad ? [window.__testGamepad] : []),
+    });
   });
   await configure(controller);
   await controller.evaluate(() => {
     const buttons = Array.from({ length: 16 }, () => ({ pressed: false, touched: false, value: 0 }));
-    window.__testGamepad = { axes: [0, 0, 0, 0], buttons, connected: true, id: "PlayStation Browser Matrix", index: 0, mapping: "standard", timestamp: 1 };
+    window.__testGamepad = {
+      axes: [0, 0, 0, 0],
+      buttons,
+      connected: true,
+      id: "PlayStation Browser Matrix",
+      index: 0,
+      mapping: "standard",
+      timestamp: 1,
+    };
     const event = new Event("gamepadconnected");
     Object.defineProperty(event, "gamepad", { value: window.__testGamepad });
     window.dispatchEvent(event);
   });
-  await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await controller.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
   await controller.mouse.click(260, 360);
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup");
   // A fresh profile is preselected onto the Tutorial; pick Endless the way a player would.
@@ -125,12 +175,16 @@ async function main() {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
     window.__testGamepad.timestamp = 2;
   });
-  await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await controller.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
   await controller.evaluate(() => {
     window.__testGamepad.buttons[2] = { pressed: false, touched: false, value: 0 };
     window.__testGamepad.timestamp = 3;
   });
-  await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await controller.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
   await controller.evaluate(() => {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
     window.__testGamepad.timestamp = 4;
@@ -140,9 +194,16 @@ async function main() {
     game: window.__PANTHEON_TEST.state().game,
     input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
   }));
-  assert.equal(squareState.game, "playing", `Square shortcut did not start the run: ${JSON.stringify(squareState.input)}`);
-  assert.equal((await controller.evaluate(() => window.__PANTHEON_TEST.state().setup)).mode, "endless",
-    "Square starts the selected setup directly without moving focus to START");
+  assert.equal(
+    squareState.game,
+    "playing",
+    `Square shortcut did not start the run: ${JSON.stringify(squareState.input)}`,
+  );
+  assert.equal(
+    (await controller.evaluate(() => window.__PANTHEON_TEST.state().setup)).mode,
+    "endless",
+    "Square starts the selected setup directly without moving focus to START",
+  );
   await configure(controller);
   await controller.locator("#fs").click();
   await controller.waitForFunction(() => document.fullscreenElement?.id === "wrap");
@@ -166,20 +227,27 @@ async function main() {
   await controller.mouse.click(800, 450);
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
   assert.equal(await controller.locator("#lockhint").evaluate((hint) => getComputedStyle(hint).display), "none");
-  assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), true,
-    "every live run owns one shared canonical device-input session independently of Ghost 2");
+  assert.equal(
+    await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording),
+    true,
+    "every live run owns one shared canonical device-input session independently of Ghost 2",
+  );
   for (const mode of ["campaign", "endless", "gauntlet", "bossonly", "sandbox"]) {
     await controller.evaluate((selectedMode) => window.__PANTHEON_TEST.startMode(selectedMode), mode);
     await controller.waitForFunction((selectedMode) => {
       const state = window.__PANTHEON_TEST.state();
       return state.game === "playing" && state.mode === selectedMode;
     }, mode);
-    assert.equal(await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording), true,
-      `${mode} must keep the shared canonical device-input session active`);
+    assert.equal(
+      await controller.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording),
+      true,
+      `${mode} must keep the shared canonical device-input session active`,
+    );
   }
   await controller.evaluate(() => window.__PANTHEON_TEST.startMode("endless"));
-  await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing"
-    && window.__PANTHEON_TEST.state().mode === "endless");
+  await controller.waitForFunction(
+    () => window.__PANTHEON_TEST.state().game === "playing" && window.__PANTHEON_TEST.state().mode === "endless",
+  );
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLockAllowed);
   await controller.mouse.click(800, 450);
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
@@ -187,19 +255,29 @@ async function main() {
   assert.ok(aimBeforeMove, "recorded live play exposes the physical blade aim");
   const reachBeforeMove = Math.hypot(aimBeforeMove.x, aimBeforeMove.y);
   await moveCapturedPointer(controller, { x: 800, y: 450 }, { x: 800, y: 475 });
-  const aimAfterShortMoveHandle = await controller.waitForFunction((before) => {
-    const after = window.__PANTHEON_TEST.state().bladeAim;
-    return after && Math.hypot(after.x, after.y) < before - 8 ? { x: after.x, y: after.y } : false;
-  }, reachBeforeMove, { timeout: 10_000 });
+  const aimAfterShortMoveHandle = await controller.waitForFunction(
+    (before) => {
+      const after = window.__PANTHEON_TEST.state().bladeAim;
+      return after && Math.hypot(after.x, after.y) < before - 8 ? { x: after.x, y: after.y } : false;
+    },
+    reachBeforeMove,
+    { timeout: 10_000 },
+  );
   const aimAfterShortMove = await aimAfterShortMoveHandle.jsonValue();
   await aimAfterShortMoveHandle.dispose();
-  assert.ok(aimAfterShortMove && Math.hypot(aimAfterShortMove.x, aimAfterShortMove.y) < reachBeforeMove - 8,
-    "a short captured movement preserves the source reticle distance instead of expanding to full reach");
+  assert.ok(
+    aimAfterShortMove && Math.hypot(aimAfterShortMove.x, aimAfterShortMove.y) < reachBeforeMove - 8,
+    "a short captured movement preserves the source reticle distance instead of expanding to full reach",
+  );
   await moveCapturedPointer(controller, { x: 800, y: 475 }, { x: 1_050, y: 475 });
-  await controller.waitForFunction((before) => {
-    const after = window.__PANTHEON_TEST.state().bladeAim;
-    return after && after.x > before.x + 10;
-  }, aimBeforeMove, { timeout: 10_000 });
+  await controller.waitForFunction(
+    (before) => {
+      const after = window.__PANTHEON_TEST.state().bladeAim;
+      return after && after.x > before.x + 10;
+    },
+    aimBeforeMove,
+    { timeout: 10_000 },
+  );
   await controller.keyboard.press("Escape");
   await controller.waitForFunction(() => !window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
@@ -221,7 +299,15 @@ async function main() {
   await controller.waitForFunction(() => window.__PANTHEON_TEST.state().mode === "playground");
   await controller.evaluate(() => {
     const buttons = Array.from({ length: 16 }, () => ({ pressed: false, touched: false, value: 0 }));
-    window.__testGamepad = { axes: [0, 0, 0, 0], buttons, connected: true, id: "Xbox Browser Matrix", index: 0, mapping: "standard", timestamp: 1 };
+    window.__testGamepad = {
+      axes: [0, 0, 0, 0],
+      buttons,
+      connected: true,
+      id: "Xbox Browser Matrix",
+      index: 0,
+      mapping: "standard",
+      timestamp: 1,
+    };
     const event = new Event("gamepadconnected");
     Object.defineProperty(event, "gamepad", { value: window.__testGamepad });
     window.dispatchEvent(event);
@@ -229,7 +315,9 @@ async function main() {
   // Let the controller resynchronise against a neutral physical state before
   // introducing activity. A gamepad that is already holding A at connection
   // time must not synthesize a gameplay edge.
-  await controller.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await controller.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
   const gamepadStart = await controller.evaluate(() => window.__PANTHEON_TEST.state().playerTrace);
   await controller.evaluate(() => {
     window.__testGamepad.axes = [0.8, 0, 0.7, 0];
@@ -259,4 +347,7 @@ async function main() {
   console.log("browser touch/controller input matrix passed");
 }
 
-main().catch((error) => { console.error(error); process.exit(1); });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

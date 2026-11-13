@@ -59,7 +59,10 @@ export interface LiveRunOrchestrationOptions {
   readonly setEnemies: (value: GameEnemy[]) => void;
   readonly setProjectiles: (value: GameProjectile[]) => void;
   readonly selectedBoss: () => string;
-  readonly worldServices: Pick<LiveWorldServices, "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback">;
+  readonly worldServices: Pick<
+    LiveWorldServices,
+    "configuration" | "random" | "clock" | "effects" | "mirror" | "bossFeedback"
+  >;
   readonly environment: EnvironmentRuntimeState;
   readonly attackPresentation: AttackPresentationCueSink;
   readonly applySettings: () => void;
@@ -68,7 +71,12 @@ export interface LiveRunOrchestrationOptions {
   readonly finishWorldReset: () => void;
   readonly resetAuthoritativeClocks: () => void;
   readonly resetCombatIdentity: () => void;
-  readonly race?: Readonly<{ active(): boolean; apply(): boolean; finalize(): void; discovery(ordinary: readonly string[]): readonly string[] }>;
+  readonly race?: Readonly<{
+    active(): boolean;
+    apply(): boolean;
+    finalize(): void;
+    discovery(ordinary: readonly string[]): readonly string[];
+  }>;
   readonly createRunSeed?: () => number;
   readonly withOpeningCapture?: (boundary: LiveOpeningCaptureBoundary, record: () => void) => void;
   readonly openingExposed?: (runId: string) => void;
@@ -105,8 +113,12 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
   const d = options.dependencies;
   const { stage, story, runtime: campaignRuntime, cinema } = options.campaign;
   const { tutorial, runtime: playgroundRuntime } = options.training;
-  const addShake = (amount: number): void => { options.weapon.addShake(amount); };
-  const addZoom = (amount: number): void => { options.weapon.addZoom(amount); };
+  const addShake = (amount: number): void => {
+    options.weapon.addShake(amount);
+  };
+  const addZoom = (amount: number): void => {
+    options.weapon.addZoom(amount);
+  };
   const dealArea: LiveRunOrchestrationOptions["weapon"]["dealArea"] = (...args) => options.weapon.dealArea(...args);
   const setEnvironmentStage = (index: number, reason: "new-run" | "stage-transition"): void => {
     const stageId = stageIdAtRuntimeIndex(index);
@@ -119,91 +131,202 @@ export function createLiveRunOrchestration(options: LiveRunOrchestrationOptions)
     setEnvironmentStage(index, "stage-transition");
   };
   const content = createLiveContentComposition({
-    dependencies: d, entities: options.entities, state: options.state, worldServices: options.worldServices, stage, width: options.width, height: options.height,
-    run: options.run, player: options.player, enemies: options.enemies, actorId: options.actorId,
+    dependencies: d,
+    entities: options.entities,
+    state: options.state,
+    worldServices: options.worldServices,
+    stage,
+    width: options.width,
+    height: options.height,
+    run: options.run,
+    player: options.player,
+    enemies: options.enemies,
+    actorId: options.actorId,
     wipeRemainingSeconds: options.wipeRemainingSeconds,
-    setBossIntro: (enemy, duration, delay) => { options.state.setBossIntro({ boss: enemy, t: 0, dur: duration, delay }); options.observeBossIntro?.(options.actorId(enemy), duration, delay); },
-    clearBossBeat: () => { options.state.setBossBeat(null); },
-    clearBanner: () => { options.setBannerSeconds(0); stage.resetBanner(); },
+    setBossIntro: (enemy, duration, delay) => {
+      options.state.setBossIntro({ boss: enemy, t: 0, dur: duration, delay });
+      options.observeBossIntro?.(options.actorId(enemy), duration, delay);
+    },
+    clearBossBeat: () => {
+      options.state.setBossBeat(null);
+    },
+    clearBanner: () => {
+      options.setBannerSeconds(0);
+      stage.resetBanner();
+    },
   });
 
   createLiveRunStartHost({
     ...(options.runInstalled === undefined ? {} : { runInstalled: options.runInstalled }),
     ...(options.race === undefined ? {} : { race: options.race }),
-    dependencies: d, state: options.state, width: options.width, services: options.worldServices,
-    prepareWorld: options.prepareWorld, applySettings: options.applySettings,
+    dependencies: d,
+    state: options.state,
+    width: options.width,
+    services: options.worldServices,
+    prepareWorld: options.prepareWorld,
+    applySettings: options.applySettings,
     configureBlade: (blade, weaponId) => {
-      const weapon = d.applyWeapon(d.CONFIG, weaponId); blade.weapon = weapon; blade.model = weapon.model;
+      const weapon = d.applyWeapon(d.CONFIG, weaponId);
+      blade.weapon = weapon;
+      blade.model = weapon.model;
     },
-    createPlayer: (x, y) => options.entities.createPlayer(x, y), createBlade: () => options.entities.createBlade(),
-    installRun: (session) => { options.state.setRun(session); },
+    createPlayer: (x, y) => options.entities.createPlayer(x, y),
+    createBlade: () => options.entities.createBlade(),
+    installRun: (session) => {
+      options.state.setRun(session);
+    },
     world: { resetTransient: options.resetTransientWorld, finishReset: options.finishWorldReset },
-    resetAuthoritativeClocks: options.resetAuthoritativeClocks, environment: options.environment,
+    resetAuthoritativeClocks: options.resetAuthoritativeClocks,
+    environment: options.environment,
     resetCombatIdentity: options.resetCombatIdentity,
     ...(options.createRunSeed === undefined ? {} : { createRunSeed: options.createRunSeed }),
     ...(options.withOpeningCapture === undefined ? {} : { withOpeningCapture: options.withOpeningCapture }),
     ...(options.openingExposed === undefined ? {} : { openingExposed: options.openingExposed }),
     ...(options.discardOpeningCapture === undefined ? {} : { discardOpeningCapture: options.discardOpeningCapture }),
-    loadStage: (index) => { options.controllers.api.loadStage(index); setEnvironmentStage(index, "new-run"); }, stage, story, lifecycle: options.lifecycle,
-    install: (controller) => { options.controllers.installRunStart(controller); },
-    setScreen: (screen, detail) => { options.setScreen(screen, detail); },
-    selectedBoss: options.selectedBoss, shuffledRoster: content.shuffledRoster, bossBiome: content.bossBiome,
-    trainingPlatforms: () => playgroundRuntime.homePlatforms(), playground: playgroundRuntime, tutorial,
+    loadStage: (index) => {
+      options.controllers.api.loadStage(index);
+      setEnvironmentStage(index, "new-run");
+    },
+    stage,
+    story,
+    lifecycle: options.lifecycle,
+    install: (controller) => {
+      options.controllers.installRunStart(controller);
+    },
+    setScreen: (screen, detail) => {
+      options.setScreen(screen, detail);
+    },
+    selectedBoss: options.selectedBoss,
+    shuffledRoster: content.shuffledRoster,
+    bossBiome: content.bossBiome,
+    trainingPlatforms: () => playgroundRuntime.homePlatforms(),
+    playground: playgroundRuntime,
+    tutorial,
     ...(options.baselinePractice === undefined ? {} : { baselinePractice: options.baselinePractice }),
     startNextWave: options.controllers.api.startNextWave,
-    achievementTracking: options.achievementTracking, achievementCheck: options.achievementCheck,
+    achievementTracking: options.achievementTracking,
+    achievementCheck: options.achievementCheck,
     ...(options.practiceSession === undefined ? {} : { clearPracticeSession: options.practiceSession.clear }),
-    resetRewards: options.resetRewards, music: options.music,
-    requestPointerLock: options.requestPointerLock, testMode: options.testMode, window,
+    resetRewards: options.resetRewards,
+    music: options.music,
+    requestPointerLock: options.requestPointerLock,
+    testMode: options.testMode,
+    window,
   });
 
   const lobExplode = bindLiveHammerMeteor({
-    blade: options.blade, enemies: options.enemies, tuning: () => d.CONFIG.weapons.hammer,
-    maximumThrowSpeed: () => d.CONFIG.blade.throw.maxSpeed, redirect: () => options.run().mods.redirect,
-    slamColor: () => d.CONFIG.colors.slam, bigShake: () => d.CONFIG.juice.shakeBig,
-    bigZoom: () => d.CONFIG.juice.zoomBig, distance: d.len, clamp: d.clamp,
-    explode: (...args) => { d.FX.explode(...args); }, ribbon: (...args) => { d.FX.ribbon(...args); },
-    shake: addShake, zoom: addZoom, boom: () => { d.SFX.boom(); }, areaDamage: dealArea,
-    presentAttack: (cue) => { options.attackPresentation.emit(cue); },
+    blade: options.blade,
+    enemies: options.enemies,
+    tuning: () => d.CONFIG.weapons.hammer,
+    maximumThrowSpeed: () => d.CONFIG.blade.throw.maxSpeed,
+    redirect: () => options.run().mods.redirect,
+    slamColor: () => d.CONFIG.colors.slam,
+    bigShake: () => d.CONFIG.juice.shakeBig,
+    bigZoom: () => d.CONFIG.juice.zoomBig,
+    distance: d.len,
+    clamp: d.clamp,
+    explode: (...args) => {
+      d.FX.explode(...args);
+    },
+    ribbon: (...args) => {
+      d.FX.ribbon(...args);
+    },
+    shake: addShake,
+    zoom: addZoom,
+    boom: () => {
+      d.SFX.boom();
+    },
+    areaDamage: dealArea,
+    presentAttack: (cue) => {
+      options.attackPresentation.emit(cue);
+    },
   });
 
   createLiveWaveComposition({
-    dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
-    stage, story, worldServices: options.worldServices, run: options.run, player: options.player, blade: options.blade, enemies: options.enemies, spawn: content.spawn,
-    loreBusy: campaignRuntime.loreBusy, achievementTracking: options.achievementTracking,
-    achievementCheck: options.achievementCheck, achievementTracker: options.achievementTracker,
-    beginWipe: options.beginWipe, loadStage: loadTransitionStage,
-    beginCampaignChapter: campaignRuntime.beginChapter, campaignChapterGatesWave: campaignRuntime.chapterGatesWave,
+    dependencies: d,
+    lifecycle: options.lifecycle,
+    controllers: options.controllers,
+    stage,
+    story,
+    worldServices: options.worldServices,
+    run: options.run,
+    player: options.player,
+    blade: options.blade,
+    enemies: options.enemies,
+    spawn: content.spawn,
+    loreBusy: campaignRuntime.loreBusy,
+    achievementTracking: options.achievementTracking,
+    achievementCheck: options.achievementCheck,
+    achievementTracker: options.achievementTracker,
+    beginWipe: options.beginWipe,
+    loadStage: loadTransitionStage,
+    beginCampaignChapter: campaignRuntime.beginChapter,
+    campaignChapterGatesWave: campaignRuntime.chapterGatesWave,
     setBannerSeconds: options.setBannerSeconds,
-    startAdventureFinale: () => { campaignRuntime.startAdventureFinale(options.run().finalBossDeath); },
-    winRun: () => { options.controllers.api.winRun(); }, openTier: options.openTier,
-    openDraft: options.openDraft, canvas: options.canvas,
+    startAdventureFinale: () => {
+      campaignRuntime.startAdventureFinale(options.run().finalBossDeath);
+    },
+    winRun: () => {
+      options.controllers.api.winRun();
+    },
+    openTier: options.openTier,
+    openDraft: options.openDraft,
+    canvas: options.canvas,
   });
 
-  const executeVictory = createLiveVictoryProgressionExecutor(
-    d, options.achievementCheck, (won) => { options.controllers.api.finishRecording(won); },
-  );
+  const executeVictory = createLiveVictoryProgressionExecutor(d, options.achievementCheck, (won) => {
+    options.controllers.api.finishRecording(won);
+  });
   createLiveOutcomeComposition({
     ...(options.observeTerminal === undefined ? {} : { observeTerminal: options.observeTerminal }),
-    dependencies: d, lifecycle: options.lifecycle, controllers: options.controllers,
+    dependencies: d,
+    lifecycle: options.lifecycle,
+    controllers: options.controllers,
     environment: options.environment,
-    run: options.run, player: options.player, stageIndex: () => stage.index,
-    loadStage: (index) => { cleanupBossEncounterActors(options.enemies(), "stage-transition"); stage.load(index); setEnvironmentStage(index, "stage-transition"); }, authoritativeResult: options.authoritativeResult,
-    setLastRecording: options.setLastRecording, setLastVaultId: options.setLastVaultId,
-    setOutcome: options.setOutcome, selectedWeapon: () => options.state.selectedWeapon(),
-    selectWeapon: (weapon) => { options.state.setSelectedWeapon(weapon); },
-    clearCombat: () => { options.setEnemies([]); options.setProjectiles([]); },
+    run: options.run,
+    player: options.player,
+    stageIndex: () => stage.index,
+    loadStage: (index) => {
+      cleanupBossEncounterActors(options.enemies(), "stage-transition");
+      stage.load(index);
+      setEnvironmentStage(index, "stage-transition");
+    },
+    authoritativeResult: options.authoritativeResult,
+    setLastRecording: options.setLastRecording,
+    setLastVaultId: options.setLastVaultId,
+    setOutcome: options.setOutcome,
+    selectedWeapon: () => options.state.selectedWeapon(),
+    selectWeapon: (weapon) => {
+      options.state.setSelectedWeapon(weapon);
+    },
+    clearCombat: () => {
+      options.setEnemies([]);
+      options.setProjectiles([]);
+    },
     resetWinSeconds: options.resetWinSeconds,
-    setScreen: (screen) => { options.setScreen(screen); }, saveBest: options.saveBest, getBest: options.getBest,
-    awardCoins: options.awardCoins, economyTelemetry: options.economyTelemetry,
-    achievementTracking: options.achievementTracking, achievementCheck: options.achievementCheck,
+    setScreen: (screen) => {
+      options.setScreen(screen);
+    },
+    saveBest: options.saveBest,
+    getBest: options.getBest,
+    awardCoins: options.awardCoins,
+    economyTelemetry: options.economyTelemetry,
+    achievementTracking: options.achievementTracking,
+    achievementCheck: options.achievementCheck,
     ...(options.practiceSession === undefined ? {} : { practiceSession: options.practiceSession }),
     finishRecording: options.controllers.api.finishRecording,
-    executeVictory, emitMusicOutcome: options.emitMusicOutcome,
+    executeVictory,
+    emitMusicOutcome: options.emitMusicOutcome,
     startRun: options.startRun,
-    cleanupBossActors: () => { cleanupBossEncounterActors(options.enemies(), "retry"); },
-    startFinale: (witnessed) => { campaignRuntime.startAdventureFinale(witnessed); }, cinema,
-    width: options.width, height: options.height,
+    cleanupBossActors: () => {
+      cleanupBossEncounterActors(options.enemies(), "retry");
+    },
+    startFinale: (witnessed) => {
+      campaignRuntime.startAdventureFinale(witnessed);
+    },
+    cinema,
+    width: options.width,
+    height: options.height,
     ...(options.observeOutcomeChronology === undefined
       ? {}
       : { observeOutcomeChronology: options.observeOutcomeChronology }),

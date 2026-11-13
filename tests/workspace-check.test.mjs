@@ -6,15 +6,16 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import {
-  normalizeRepositoryIdentifier,
-  parseWorktreeList,
-  runWorkspaceCheck,
-} from "../scripts/check-workspace.mjs";
+import { normalizeRepositoryIdentifier, parseWorktreeList, runWorkspaceCheck } from "../scripts/check-workspace.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contract = JSON.parse(fs.readFileSync(path.join(repositoryRoot, "config", "workspace-contract.json"), "utf8"));
-const emptyEnvironment = { GITHUB_REPOSITORY: undefined, GITHUB_SHA: undefined, TEAR_ORACLE_ROOT: undefined, TEAR_WORKSPACE_ROOT: undefined };
+const emptyEnvironment = {
+  GITHUB_REPOSITORY: undefined,
+  GITHUB_SHA: undefined,
+  TEAR_ORACLE_ROOT: undefined,
+  TEAR_WORKSPACE_ROOT: undefined,
+};
 
 function git(root, argumentsList) {
   const result = spawnSync("git", argumentsList, { cwd: root, encoding: "utf8", stdio: "pipe" });
@@ -39,7 +40,10 @@ function createFixture({
     fs.mkdirSync(path.join(root, directory), { recursive: true });
     fs.writeFileSync(path.join(root, directory, ".keep"), "fixture\n", "utf8");
   }
-  fs.copyFileSync(path.join(repositoryRoot, "config", "workspace-contract.json"), path.join(root, "config", "workspace-contract.json"));
+  fs.copyFileSync(
+    path.join(repositoryRoot, "config", "workspace-contract.json"),
+    path.join(root, "config", "workspace-contract.json"),
+  );
   fs.copyFileSync(path.join(repositoryRoot, "wrangler.preview.jsonc"), path.join(root, "wrangler.preview.jsonc"));
   if (unsafeDeployment) {
     writeJsonc(root, "wrangler.jsonc", '{"assets":{"directory":"../outside"}}\n');
@@ -85,16 +89,18 @@ test("repository identity normalizes supported remote forms", () => {
 });
 
 test("worktree porcelain parser preserves locked comparison-only reasons", () => {
-  const entries = parseWorktreeList([
-    "worktree fixture/canonical",
-    "HEAD 1111111111111111111111111111111111111111",
-    "branch refs/heads/main",
-    "",
-    "worktree fixture/oracle",
-    "HEAD 2222222222222222222222222222222222222222",
-    "detached",
-    "locked Legacy oracle: comparison-only; never merge or develop here",
-  ].join("\n"));
+  const entries = parseWorktreeList(
+    [
+      "worktree fixture/canonical",
+      "HEAD 1111111111111111111111111111111111111111",
+      "branch refs/heads/main",
+      "",
+      "worktree fixture/oracle",
+      "HEAD 2222222222222222222222222222222222222222",
+      "detached",
+      "locked Legacy oracle: comparison-only; never merge or develop here",
+    ].join("\n"),
+  );
   assert.equal(entries.length, 2);
   assert.equal(entries[0].locked, false);
   assert.equal(entries[1].locked, true);
@@ -104,7 +110,11 @@ test("worktree porcelain parser preserves locked comparison-only reasons", () =>
 test("CI mode accepts detached HEAD and falls back to GITHUB_REPOSITORY", () => {
   const root = createFixture({ detached: true, remote: null });
   try {
-    const result = runWorkspaceCheck({ root, mode: "ci", env: { ...emptyEnvironment, GITHUB_REPOSITORY: "shaku1z/tear" } });
+    const result = runWorkspaceCheck({
+      root,
+      mode: "ci",
+      env: { ...emptyEnvironment, GITHUB_REPOSITORY: "shaku1z/tear" },
+    });
     assert.equal(result.ok, true, result.errors.join("\n"));
   } finally {
     cleanup(root);
@@ -216,16 +226,24 @@ test("strict mode skips an absent optional oracle but rejects a supplied wrong o
   }
 });
 
-test("strict mode accepts the locked oracle when the local comparison checkout exists", { skip: !fs.existsSync(path.resolve(repositoryRoot, "..", "Tear-oracle")) }, () => {
-  const result = runWorkspaceCheck({
-    root: repositoryRoot,
-    mode: "strict",
-    oracleRoot: path.resolve(repositoryRoot, "..", "Tear-oracle"),
-    env: emptyEnvironment,
-  });
-  assert.equal(result.oracle.status, "validated", result.errors.join("\n"));
-  assert.equal(result.errors.some((error) => error.startsWith("oracle ")), false, result.errors.join("\n"));
-});
+test(
+  "strict mode accepts the locked oracle when the local comparison checkout exists",
+  { skip: !fs.existsSync(path.resolve(repositoryRoot, "..", "Tear-oracle")) },
+  () => {
+    const result = runWorkspaceCheck({
+      root: repositoryRoot,
+      mode: "strict",
+      oracleRoot: path.resolve(repositoryRoot, "..", "Tear-oracle"),
+      env: emptyEnvironment,
+    });
+    assert.equal(result.oracle.status, "validated", result.errors.join("\n"));
+    assert.equal(
+      result.errors.some((error) => error.startsWith("oracle ")),
+      false,
+      result.errors.join("\n"),
+    );
+  },
+);
 
 test("CI mode rejects an unsafe production deployment root", () => {
   const root = createFixture({ unsafeDeployment: true });

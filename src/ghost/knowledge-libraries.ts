@@ -19,8 +19,12 @@ export class GovernedGhostLibrary {
   readonly #kind: GhostLibraryKind;
   readonly #entries = new Map<string, GhostLibraryEntry>();
 
-  constructor(kind: GhostLibraryKind) { this.#kind = kind; }
-  get kind(): GhostLibraryKind { return this.#kind; }
+  constructor(kind: GhostLibraryKind) {
+    this.#kind = kind;
+  }
+  get kind(): GhostLibraryKind {
+    return this.#kind;
+  }
 
   add(entry: GhostLibraryEntry): void {
     if (entry.library !== this.#kind) throw new TypeError(`cannot add ${entry.library} entry to ${this.#kind}`);
@@ -40,8 +44,16 @@ export class GovernedGhostLibrary {
 }
 
 export type GhostLineageRelation =
-  | "migration" | "repair" | "clip" | "fork" | "challenge" | "correction"
-  | "scenario" | "minimization" | "training" | "promotion";
+  | "migration"
+  | "repair"
+  | "clip"
+  | "fork"
+  | "challenge"
+  | "correction"
+  | "scenario"
+  | "minimization"
+  | "training"
+  | "promotion";
 
 export interface GhostLineageNode {
   readonly id: string;
@@ -85,11 +97,20 @@ export class GhostLineageGraph {
 }
 
 const privateKeys = new Set([
-  "playerName", "displayName", "email", "accountId", "userId", "ip", "deviceId", "authToken",
+  "playerName",
+  "displayName",
+  "email",
+  "accountId",
+  "userId",
+  "ip",
+  "deviceId",
+  "authToken",
 ]);
 
 function recordValue(value: unknown): Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Readonly<Record<string, unknown>> : {};
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : {};
 }
 
 function stringField(record: Readonly<Record<string, unknown>>, key: string, fallback: string): string {
@@ -100,9 +121,13 @@ function stringField(record: Readonly<Record<string, unknown>>, key: string, fal
 function sanitizePrivateData(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sanitizePrivateData);
   if (typeof value !== "object" || value === null) return value;
-  return Object.freeze(Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !privateKeys.has(key))
-    .map(([key, entry]) => [key, sanitizePrivateData(entry)])));
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !privateKeys.has(key))
+        .map(([key, entry]) => [key, sanitizePrivateData(entry)]),
+    ),
+  );
 }
 
 function ancestorsForRange(
@@ -121,7 +146,9 @@ function ancestorsForRange(
     }
   };
   for (const event of selected) visit(event);
-  return Object.freeze([...included.values()].sort((left, right) => left.tick - right.tick || left.sequence - right.sequence));
+  return Object.freeze(
+    [...included.values()].sort((left, right) => left.tick - right.tick || left.sequence - right.sequence),
+  );
 }
 
 export interface GhostScenarioBridgeResult {
@@ -232,7 +259,8 @@ export function promoteReviewedGhostToCanon(
   review: Readonly<{ approved: boolean; reviewer: string; at: string }>,
 ): GhostLibraryEntry {
   if (canon.kind !== "canon") throw new TypeError("promotion target must be Ghost Canon");
-  if (!review.approved || review.reviewer.trim().length === 0) throw new TypeError("Canon promotion requires an identified approval");
+  if (!review.approved || review.reviewer.trim().length === 0)
+    throw new TypeError("Canon promotion requires an identified approval");
   const entry: GhostLibraryEntry = Object.freeze({
     id: `canon:${ghost.id}`,
     library: "canon",
@@ -278,13 +306,15 @@ export class GhostCorpus {
   readonly #entries = new Map<string, GhostCorpusEntry>();
   readonly #hashes = new Set<string>();
 
-  ingest(input: Readonly<{
-    ghost: GhostEnvelopeV3;
-    consent: GhostCorpusEntry["consent"];
-    split: GhostCorpusSplit;
-    createdAt: string;
-    producer: string;
-  }>): GhostCorpusEntry {
+  ingest(
+    input: Readonly<{
+      ghost: GhostEnvelopeV3;
+      consent: GhostCorpusEntry["consent"];
+      split: GhostCorpusSplit;
+      createdAt: string;
+      producer: string;
+    }>,
+  ): GhostCorpusEntry {
     if (!["private-personalization-only", "anonymous-improvement", "public-training"].includes(input.consent)) {
       throw new TypeError("Corpus ingestion requires explicit training consent");
     }
@@ -315,8 +345,10 @@ export class GhostCorpus {
   }
 
   list(includeHiddenHoldout = false): readonly GhostCorpusEntry[] {
-    return Object.freeze([...this.#entries.values()]
-      .filter((entry) => includeHiddenHoldout || entry.split !== "hidden-holdout")
-      .sort((left, right) => left.id.localeCompare(right.id)));
+    return Object.freeze(
+      [...this.#entries.values()]
+        .filter((entry) => includeHiddenHoldout || entry.split !== "hidden-holdout")
+        .sort((left, right) => left.id.localeCompare(right.id)),
+    );
   }
 }

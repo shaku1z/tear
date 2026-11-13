@@ -6,7 +6,14 @@ import {
   type TearGameplayEvent,
   type UntickedTearGameplayEvent,
 } from "../gameplay/runtime/gameplay-events";
-import { acceptedRecording, arrayValue, isRecord, numberValue, stringValue, tearScoreMetadata } from "./legacy-compat-validation";
+import {
+  acceptedRecording,
+  arrayValue,
+  isRecord,
+  numberValue,
+  stringValue,
+  tearScoreMetadata,
+} from "./legacy-compat-validation";
 import {
   buildVisualReplayPacket,
   migrateVisualRecording,
@@ -103,11 +110,26 @@ export interface MutableRecording {
   provenance: VisualReplayProvenance;
 }
 
-export interface LegacyGhostRuntimeState { readonly recording: MutableRecording | null }
+export interface LegacyGhostRuntimeState {
+  readonly recording: MutableRecording | null;
+}
 
-interface PlayerSample { readonly x: number; readonly y: number; readonly facing: number }
-interface BladeSample { readonly tipX: number; readonly tipY: number }
-interface EnemySample { x: number; y: number; dead?: boolean; _gid?: number; stableId?: string }
+interface PlayerSample {
+  readonly x: number;
+  readonly y: number;
+  readonly facing: number;
+}
+interface BladeSample {
+  readonly tipX: number;
+  readonly tipY: number;
+}
+interface EnemySample {
+  x: number;
+  y: number;
+  dead?: boolean;
+  _gid?: number;
+  stableId?: string;
+}
 
 export interface ReplayPlayback {
   readonly d: VisualRecordingV2;
@@ -133,7 +155,9 @@ export class LegacyGhostEngine {
   constructor(dependencies: LegacyReplayDependencies) {
     this.#dependencies = dependencies;
     this.#gameplayEvents = dependencies.gameplayEvents ?? new TearGameplayEventBus();
-    this.#gameplayEvents.subscribe((event) => { this.#recordGameplayEvent(event); });
+    this.#gameplayEvents.subscribe((event) => {
+      this.#recordGameplayEvent(event);
+    });
   }
 
   #semanticInput(): SemanticReplayInput | undefined {
@@ -143,10 +167,27 @@ export class LegacyGhostEngine {
   startRec(context: RunReplayContext = {}): void {
     const fallbackId = `run-${String(this.#dependencies.now())}`;
     this.rec = {
-      t: 0, elapsed: 0, acc: 0, eacc: 0, gid: 0,
-      px: [], py: [], tx: [], ty: [], fc: [],
-      stages: [], waves: [], spawns: [], esamp: [], deaths: [], events: [], loadout: [],
-      thumb: null, thumbPri: -1, thumbAt: -1e9, actions: [],
+      t: 0,
+      elapsed: 0,
+      acc: 0,
+      eacc: 0,
+      gid: 0,
+      px: [],
+      py: [],
+      tx: [],
+      ty: [],
+      fc: [],
+      stages: [],
+      waves: [],
+      spawns: [],
+      esamp: [],
+      deaths: [],
+      events: [],
+      loadout: [],
+      thumb: null,
+      thumbPri: -1,
+      thumbAt: -1e9,
+      actions: [],
       provenance: {
         rulesetVersion: context.rulesetVersion ?? this.#dependencies.defaults.rulesetVersion,
         build: context.build ?? this.#dependencies.defaults.build,
@@ -154,7 +195,10 @@ export class LegacyGhostEngine {
         seed: context.seed ?? fallbackId,
         ticksPerSecond: this.#dependencies.defaults.ticksPerSecond,
         weaponId: context.weaponId ?? this.#dependencies.defaults.weaponId ?? "sword",
-        weaponSchemaVersion: context.weaponSchemaVersion ?? this.#dependencies.defaults.weaponSchemaVersion ?? FINAL_FIVE_WEAPON_SCHEMA_VERSION,
+        weaponSchemaVersion:
+          context.weaponSchemaVersion ??
+          this.#dependencies.defaults.weaponSchemaVersion ??
+          FINAL_FIVE_WEAPON_SCHEMA_VERSION,
         tearScore: tearScoreMetadata(context.tearScore ?? this.#dependencies.defaults.tearScore()),
       },
     };
@@ -164,11 +208,19 @@ export class LegacyGhostEngine {
     this.#recordingObserver?.started(Object.freeze(structuredClone(this.rec.provenance)));
   }
 
-  recording(): boolean { return this.rec !== null; }
-  setRecordingObserver(observer: LegacyGhostRecordingObserver | null): void { this.#recordingObserver = observer; }
+  recording(): boolean {
+    return this.rec !== null;
+  }
+  setRecordingObserver(observer: LegacyGhostRecordingObserver | null): void {
+    this.#recordingObserver = observer;
+  }
 
-  captureRuntimeState(): LegacyGhostRuntimeState { return Object.freeze({ recording: this.rec === null ? null : structuredClone(this.rec) }); }
-  restoreRuntimeState(state: LegacyGhostRuntimeState): void { this.rec = state.recording === null ? null : structuredClone(state.recording); }
+  captureRuntimeState(): LegacyGhostRuntimeState {
+    return Object.freeze({ recording: this.rec === null ? null : structuredClone(this.rec) });
+  }
+  restoreRuntimeState(state: LegacyGhostRuntimeState): void {
+    this.rec = state.recording === null ? null : structuredClone(state.recording);
+  }
 
   subscribe(listener: (event: TearGameplayEvent) => void): () => void {
     return this.#gameplayEvents.subscribe(listener);
@@ -198,11 +250,17 @@ export class LegacyGhostEngine {
       this.rec?.waves.push({ t: this.#time(), w: event.wave, e: event.event });
     } else if (event.kind === "effect") {
       this.rec?.events.push({
-        t: this.#time(), k: event.effect, x: Math.round(event.x), y: Math.round(event.y),
+        t: this.#time(),
+        k: event.effect,
+        x: Math.round(event.x),
+        y: Math.round(event.y),
       });
     } else if (event.kind === "loadout") {
       this.rec?.loadout.push({
-        t: this.#time(), id: event.choiceId, tier: event.tier, w: event.wave,
+        t: this.#time(),
+        id: event.choiceId,
+        tier: event.tier,
+        w: event.wave,
       });
     } else if (event.kind === "spawn") {
       const recording = this.rec;
@@ -210,12 +268,23 @@ export class LegacyGhostEngine {
       const visualId = ++recording.gid;
       this.#visualIds.set(event.actorId, visualId);
       this.#actorIdsByVisualId.set(visualId, event.actorId);
-      const base = { t: this.#time(), id: visualId, k: event.actorKind, x: Math.round(event.x), y: Math.round(event.y) };
-      recording.spawns.push(event.variantName === undefined && event.variantId === undefined && event.bossId === undefined
-        ? base
-        : { ...base, ...(event.variantName === undefined ? {} : { vn: event.variantName }),
-          ...(event.variantId === undefined ? {} : { vid: event.variantId }),
-          ...(event.bossId === undefined ? {} : { b: event.bossId }) });
+      const base = {
+        t: this.#time(),
+        id: visualId,
+        k: event.actorKind,
+        x: Math.round(event.x),
+        y: Math.round(event.y),
+      };
+      recording.spawns.push(
+        event.variantName === undefined && event.variantId === undefined && event.bossId === undefined
+          ? base
+          : {
+              ...base,
+              ...(event.variantName === undefined ? {} : { vn: event.variantName }),
+              ...(event.variantId === undefined ? {} : { vid: event.variantId }),
+              ...(event.bossId === undefined ? {} : { b: event.bossId }),
+            },
+      );
     } else if (event.kind === "death") {
       const visualId = this.#visualIds.get(event.actorId);
       if (visualId !== undefined) this.rec?.deaths.push({ t: this.#time(), id: visualId, c: event.cause });
@@ -229,7 +298,12 @@ export class LegacyGhostEngine {
     return actions;
   }
 
-  sample(dt: number, player: PlayerSample | null, blade: BladeSample | null, enemies: readonly EnemySample[] | null): void {
+  sample(
+    dt: number,
+    player: PlayerSample | null,
+    blade: BladeSample | null,
+    enemies: readonly EnemySample[] | null,
+  ): void {
     const recording = this.rec;
     if (recording === null || player === null) return;
     recording.t += dt;
@@ -238,8 +312,10 @@ export class LegacyGhostEngine {
     recording.eacc += dt;
     if (recording.acc >= this.RATE) {
       recording.acc -= this.RATE;
-      recording.px.push(Math.round(player.x)); recording.py.push(Math.round(player.y));
-      recording.tx.push(Math.round(blade?.tipX ?? player.x)); recording.ty.push(Math.round(blade?.tipY ?? player.y));
+      recording.px.push(Math.round(player.x));
+      recording.py.push(Math.round(player.y));
+      recording.tx.push(Math.round(blade?.tipX ?? player.x));
+      recording.ty.push(Math.round(blade?.tipY ?? player.y));
       recording.fc.push(player.facing >= 0 ? 1 : 0);
       if (recording.px.length > 9_000) this.#trim(recording);
     }
@@ -257,21 +333,34 @@ export class LegacyGhostEngine {
   #trim(recording: MutableRecording): void {
     const cut = Math.floor(recording.px.length / 4);
     const cutTime = cut * this.RATE;
-    recording.px = recording.px.slice(cut); recording.py = recording.py.slice(cut);
-    recording.tx = recording.tx.slice(cut); recording.ty = recording.ty.slice(cut); recording.fc = recording.fc.slice(cut);
-    const shift = <T extends { readonly t: number }>(values: readonly T[]): T[] => values
-      .filter((entry) => entry.t >= cutTime)
-      .map((entry) => ({ ...entry, t: Number((entry.t - cutTime).toFixed(1)) }));
-    recording.stages = shift(recording.stages); recording.waves = shift(recording.waves);
-    recording.spawns = shift(recording.spawns); recording.deaths = shift(recording.deaths);
-    recording.events = shift(recording.events); recording.loadout = shift(recording.loadout);
-    recording.esamp = recording.esamp.filter((sample) => numberValue(sample[0]) / 10 >= cutTime).map((sample) => {
-      const shifted = [...sample]; shifted[0] = Math.round(numberValue(shifted[0]) - cutTime * 10); return shifted;
-    });
+    recording.px = recording.px.slice(cut);
+    recording.py = recording.py.slice(cut);
+    recording.tx = recording.tx.slice(cut);
+    recording.ty = recording.ty.slice(cut);
+    recording.fc = recording.fc.slice(cut);
+    const shift = <T extends { readonly t: number }>(values: readonly T[]): T[] =>
+      values
+        .filter((entry) => entry.t >= cutTime)
+        .map((entry) => ({ ...entry, t: Number((entry.t - cutTime).toFixed(1)) }));
+    recording.stages = shift(recording.stages);
+    recording.waves = shift(recording.waves);
+    recording.spawns = shift(recording.spawns);
+    recording.deaths = shift(recording.deaths);
+    recording.events = shift(recording.events);
+    recording.loadout = shift(recording.loadout);
+    recording.esamp = recording.esamp
+      .filter((sample) => numberValue(sample[0]) / 10 >= cutTime)
+      .map((sample) => {
+        const shifted = [...sample];
+        shifted[0] = Math.round(numberValue(shifted[0]) - cutTime * 10);
+        return shifted;
+      });
     recording.t -= cutTime;
   }
 
-  #time(): number { return this.rec === null ? 0 : Number(this.rec.t.toFixed(1)); }
+  #time(): number {
+    return this.rec === null ? 0 : Number(this.rec.t.toFixed(1));
+  }
   stage(index: number): void {
     this.#emit({ kind: "stage", stage: index });
   }
@@ -283,7 +372,11 @@ export class LegacyGhostEngine {
     if (this.rec === null || enemy === null) return;
     const actorId = `legacy-ghost:${String(this.rec.gid + 1)}`;
     this.#emit({
-      kind: "spawn", actorId, actorKind: kind, x: enemy.x, y: enemy.y,
+      kind: "spawn",
+      actorId,
+      actorKind: kind,
+      x: enemy.x,
+      y: enemy.y,
       ...(extra?.vn === undefined ? {} : { variantName: extra.vn }),
       ...(extra?.b === undefined ? {} : { bossId: extra.b }),
     });
@@ -313,19 +406,25 @@ export class LegacyGhostEngine {
 
   snapshot(canvas: HTMLCanvasElement | null, priority: number): void {
     const recording = this.rec;
-    if (recording === null || canvas === null || priority <= recording.thumbPri || recording.t - recording.thumbAt < 4) return;
+    if (recording === null || canvas === null || priority <= recording.thumbPri || recording.t - recording.thumbAt < 4)
+      return;
     try {
       const thumbnail = this.#dependencies.document.createElement("canvas");
-      thumbnail.width = 160; thumbnail.height = 90;
+      thumbnail.width = 160;
+      thumbnail.height = 90;
       thumbnail.getContext("2d")?.drawImage(canvas, 0, 0, 160, 90);
       recording.thumb = thumbnail.toDataURL("image/jpeg", 0.55);
-      recording.thumbPri = priority; recording.thumbAt = recording.t;
+      recording.thumbPri = priority;
+      recording.thumbAt = recording.t;
     } catch {
       // Canvas export can be blocked by a tainted source; the replay remains valid without a thumbnail.
     }
   }
 
-  stopRec(meta: Readonly<Record<string, unknown>> = {}, options: Readonly<{ continueSemanticInput?: boolean }> = {}): VisualReplayPacket | null {
+  stopRec(
+    meta: Readonly<Record<string, unknown>> = {},
+    options: Readonly<{ continueSemanticInput?: boolean }> = {},
+  ): VisualReplayPacket | null {
     const recording = this.rec;
     this.rec = null;
     if (recording === null || recording.px.length < 20) {
@@ -336,8 +435,11 @@ export class LegacyGhostEngine {
     // The recorder's elapsed clock is relative to the recording start while mid-run
     // drains seal at the absolute simulation tick; clamp so the closing drain can
     // never move the sequencer backwards (a throw here would kill the frame loop).
-    const finalTick = Math.max(0, Math.round(recording.elapsed * recording.provenance.ticksPerSecond),
-      this.#semanticInput()?.lastSealedTick ?? 0);
+    const finalTick = Math.max(
+      0,
+      Math.round(recording.elapsed * recording.provenance.ticksPerSecond),
+      this.#semanticInput()?.lastSealedTick ?? 0,
+    );
     recording.actions.push(...(this.#semanticInput()?.drain(finalTick) ?? []));
     if (options.continueSemanticInput !== true) this.#semanticInput()?.stopRecording();
     recording.provenance = {
@@ -347,10 +449,22 @@ export class LegacyGhostEngine {
     const finalLoadout = Array.isArray(meta.loadout) ? meta.loadout : undefined;
     const raw: VisualRecordingV2 = {
       ...meta,
-      v: 2, dt: this.RATE, edt: this.ERATE,
-      px: recording.px, py: recording.py, tx: recording.tx, ty: recording.ty, fc: recording.fc,
-      stages: recording.stages, waves: recording.waves, spawns: recording.spawns, esamp: recording.esamp,
-      deaths: recording.deaths, events: recording.events, loadout: recording.loadout, thumb: recording.thumb,
+      v: 2,
+      dt: this.RATE,
+      edt: this.ERATE,
+      px: recording.px,
+      py: recording.py,
+      tx: recording.tx,
+      ty: recording.ty,
+      fc: recording.fc,
+      stages: recording.stages,
+      waves: recording.waves,
+      spawns: recording.spawns,
+      esamp: recording.esamp,
+      deaths: recording.deaths,
+      events: recording.events,
+      loadout: recording.loadout,
+      thumb: recording.thumb,
       ...(finalLoadout === undefined ? {} : { finalLoadout }),
     };
     const packet = buildVisualReplayPacket(raw, recording.provenance, recording.actions);
@@ -370,65 +484,121 @@ export class LegacyGhostEngine {
     return migrated.ok ? migrated.recording : null;
   }
 
-  end(): void { this.play = null; }
-  active(): boolean { return this.play !== null; }
-  duration(): number { return this.play === null ? 0 : (this.play.d.px.length - 1) * this.play.d.dt; }
+  end(): void {
+    this.play = null;
+  }
+  active(): boolean {
+    return this.play !== null;
+  }
+  duration(): number {
+    return this.play === null ? 0 : (this.play.d.px.length - 1) * this.play.d.dt;
+  }
   update(dt: number): void {
-    const playback = this.play; if (!playback?.playing) return;
+    const playback = this.play;
+    if (!playback?.playing) return;
     playback.t += dt * playback.speed;
-    if (playback.t >= this.duration()) { playback.t = this.duration(); playback.playing = false; }
+    if (playback.t >= this.duration()) {
+      playback.t = this.duration();
+      playback.playing = false;
+    }
   }
   seek(time: number): void {
-    const playback = this.play; if (playback === null) return;
-    playback.t = Math.max(0, Math.min(time, this.duration())); playback.evPtr = 0; playback.dePtr = 0; playback._skipFx = true;
+    const playback = this.play;
+    if (playback === null) return;
+    playback.t = Math.max(0, Math.min(time, this.duration()));
+    playback.evPtr = 0;
+    playback.dePtr = 0;
+    playback._skipFx = true;
   }
   toggle(): void {
-    const playback = this.play; if (playback === null) return;
+    const playback = this.play;
+    if (playback === null) return;
     if (!playback.playing && playback.t >= this.duration()) playback.t = 0;
     playback.playing = !playback.playing;
   }
   cycleSpeed(): void {
-    const playback = this.play; if (playback === null) return;
-    const speeds = [0.5, 1, 2, 4]; playback.speed = arrayValue(speeds, (speeds.indexOf(playback.speed) + 1) % speeds.length);
+    const playback = this.play;
+    if (playback === null) return;
+    const speeds = [0.5, 1, 2, 4];
+    playback.speed = arrayValue(speeds, (speeds.indexOf(playback.speed) + 1) % speeds.length);
   }
-  progress(): number { const duration = this.duration(); return this.play !== null && duration > 0 ? this.play.t / duration : 0; }
+  progress(): number {
+    const duration = this.duration();
+    return this.play !== null && duration > 0 ? this.play.t / duration : 0;
+  }
 
   pose(): Readonly<{ x: number; y: number; bx: number; by: number; face: number }> | null {
-    const playback = this.play; if (playback === null) return null;
-    const data = playback.d; const count = data.px.length; const frame = playback.t / data.dt;
-    let index = Math.floor(frame); if (index >= count - 1) index = count - 2; if (index < 0) index = 0;
+    const playback = this.play;
+    if (playback === null) return null;
+    const data = playback.d;
+    const count = data.px.length;
+    const frame = playback.t / data.dt;
+    let index = Math.floor(frame);
+    if (index >= count - 1) index = count - 2;
+    if (index < 0) index = 0;
     const alpha = Math.max(0, Math.min(1, frame - index));
     const interpolate = (track: readonly number[]): number => {
-      const left = arrayValue(track, index); return left + (arrayValue(track, index + 1) - left) * alpha;
+      const left = arrayValue(track, index);
+      return left + (arrayValue(track, index + 1) - left) * alpha;
     };
-    const face = data.fc !== null
-      ? (arrayValue(data.fc, index) ? 1 : -1)
-      : (arrayValue(data.px, index + 1) >= arrayValue(data.px, index) ? 1 : -1);
-    return { x: interpolate(data.px), y: interpolate(data.py), bx: interpolate(data.tx), by: interpolate(data.ty), face };
+    const face =
+      data.fc !== null
+        ? arrayValue(data.fc, index)
+          ? 1
+          : -1
+        : arrayValue(data.px, index + 1) >= arrayValue(data.px, index)
+          ? 1
+          : -1;
+    return {
+      x: interpolate(data.px),
+      y: interpolate(data.py),
+      bx: interpolate(data.tx),
+      by: interpolate(data.ty),
+      face,
+    };
   }
 
   enemiesAt(): readonly Readonly<{ id: number; x: number; y: number }>[] {
-    const playback = this.play; if (playback === null || playback.d.esamp.length === 0) return [];
-    const samples = playback.d.esamp; const targetTick = playback.t * 10;
-    let low = 0; let high = samples.length - 1;
+    const playback = this.play;
+    if (playback === null || playback.d.esamp.length === 0) return [];
+    const samples = playback.d.esamp;
+    const targetTick = playback.t * 10;
+    let low = 0;
+    let high = samples.length - 1;
     while (low < high) {
       const middle = (low + high + 1) >> 1;
-      if (numberValue(arrayValue(samples, middle)[0]) <= targetTick) low = middle; else high = middle - 1;
+      if (numberValue(arrayValue(samples, middle)[0]) <= targetTick) low = middle;
+      else high = middle - 1;
     }
-    const current = arrayValue(samples, low); const next = samples[low + 1];
-    const alpha = next === undefined ? 0 : Math.max(0, Math.min(1,
-      (targetTick - numberValue(current[0])) / Math.max(1, numberValue(next[0]) - numberValue(current[0])),
-    ));
+    const current = arrayValue(samples, low);
+    const next = samples[low + 1];
+    const alpha =
+      next === undefined
+        ? 0
+        : Math.max(
+            0,
+            Math.min(
+              1,
+              (targetTick - numberValue(current[0])) / Math.max(1, numberValue(next[0]) - numberValue(current[0])),
+            ),
+          );
     const nextPositions = new Map<number, Readonly<{ x: number; y: number }>>();
-    if (next !== undefined) for (let index = 1; index < next.length; index += 3) {
-      nextPositions.set(numberValue(next[index]), { x: numberValue(next[index + 1]), y: numberValue(next[index + 2]) });
-    }
+    if (next !== undefined)
+      for (let index = 1; index < next.length; index += 3) {
+        nextPositions.set(numberValue(next[index]), {
+          x: numberValue(next[index + 1]),
+          y: numberValue(next[index + 2]),
+        });
+      }
     const output: Readonly<{ id: number; x: number; y: number }>[] = [];
     for (let index = 1; index < current.length; index += 3) {
-      const id = numberValue(current[index]); let x = numberValue(current[index + 1]); let y = numberValue(current[index + 2]);
+      const id = numberValue(current[index]);
+      let x = numberValue(current[index + 1]);
+      let y = numberValue(current[index + 2]);
       const following = nextPositions.get(id);
       if (following !== undefined && Math.abs(following.x - x) < 400 && Math.abs(following.y - y) < 400) {
-        x += (following.x - x) * alpha; y += (following.y - y) * alpha;
+        x += (following.x - x) * alpha;
+        y += (following.y - y) * alpha;
       }
       output.push({ id, x, y });
     }
@@ -439,46 +609,75 @@ export class LegacyGhostEngine {
     return this.play?.d.spawns.find((spawn) => spawn.id === id) ?? null;
   }
   stageAt(): number {
-    const playback = this.play; if (playback === null) return 0;
+    const playback = this.play;
+    if (playback === null) return 0;
     let stage = numberValue(playback.d.stage);
-    for (const event of playback.d.stages) { if (event.t <= playback.t) stage = event.s; else break; }
+    for (const event of playback.d.stages) {
+      if (event.t <= playback.t) stage = event.s;
+      else break;
+    }
     return stage;
   }
   waveAt(): number {
-    const playback = this.play; if (playback === null) return 0;
-    let wave = 0; for (const event of playback.d.waves) { if (event.t <= playback.t) wave = event.w; else break; } return wave;
+    const playback = this.play;
+    if (playback === null) return 0;
+    let wave = 0;
+    for (const event of playback.d.waves) {
+      if (event.t <= playback.t) wave = event.w;
+      else break;
+    }
+    return wave;
   }
   chapters(): readonly Readonly<{ t: number; label: string; boss: boolean }>[] {
     if (this.play === null) return [];
-    return this.play.d.waves.filter((event) => event.e === "start" || event.e === "boss")
-      .map((event) => ({ t: event.t, label: event.e === "boss" ? "BOSS" : `W${String(event.w)}`, boss: event.e === "boss" }));
+    return this.play.d.waves
+      .filter((event) => event.e === "start" || event.e === "boss")
+      .map((event) => ({
+        t: event.t,
+        label: event.e === "boss" ? "BOSS" : `W${String(event.w)}`,
+        boss: event.e === "boss",
+      }));
   }
   jumpChapter(direction: number): void {
-    const playback = this.play; if (playback === null) return; const chapters = this.chapters(); if (chapters.length === 0) return;
+    const playback = this.play;
+    if (playback === null) return;
+    const chapters = this.chapters();
+    if (chapters.length === 0) return;
     if (direction > 0) this.seek(chapters.find((chapter) => chapter.t > playback.t + 0.2)?.t ?? this.duration());
     else this.seek([...chapters].reverse().find((chapter) => chapter.t < playback.t - 0.5)?.t ?? 0);
   }
   crossed(): Readonly<{ events: readonly VisualEffectEvent[]; deaths: readonly VisualDeathEvent[] }> {
-    const playback = this.play; if (playback === null) return { events: [], deaths: [] };
+    const playback = this.play;
+    if (playback === null) return { events: [], deaths: [] };
     if (playback._skipFx) {
-      while (playback.evPtr < playback.d.events.length && arrayValue(playback.d.events, playback.evPtr).t <= playback.t) playback.evPtr += 1;
-      while (playback.dePtr < playback.d.deaths.length && arrayValue(playback.d.deaths, playback.dePtr).t <= playback.t) playback.dePtr += 1;
-      playback._skipFx = false; return { events: [], deaths: [] };
+      while (playback.evPtr < playback.d.events.length && arrayValue(playback.d.events, playback.evPtr).t <= playback.t)
+        playback.evPtr += 1;
+      while (playback.dePtr < playback.d.deaths.length && arrayValue(playback.d.deaths, playback.dePtr).t <= playback.t)
+        playback.dePtr += 1;
+      playback._skipFx = false;
+      return { events: [], deaths: [] };
     }
-    const events: VisualEffectEvent[] = []; const deaths: VisualDeathEvent[] = [];
+    const events: VisualEffectEvent[] = [];
+    const deaths: VisualDeathEvent[] = [];
     while (playback.evPtr < playback.d.events.length && arrayValue(playback.d.events, playback.evPtr).t <= playback.t) {
-      events.push(arrayValue(playback.d.events, playback.evPtr)); playback.evPtr += 1;
+      events.push(arrayValue(playback.d.events, playback.evPtr));
+      playback.evPtr += 1;
     }
     while (playback.dePtr < playback.d.deaths.length && arrayValue(playback.d.deaths, playback.dePtr).t <= playback.t) {
-      deaths.push(arrayValue(playback.d.deaths, playback.dePtr)); playback.dePtr += 1;
+      deaths.push(arrayValue(playback.d.deaths, playback.dePtr));
+      playback.dePtr += 1;
     }
     return { events, deaths };
   }
 
-  #key(mode: string, difficulty: string): string { return `tear_ghost_${mode}_${difficulty}`; }
+  #key(mode: string, difficulty: string): string {
+    return `tear_ghost_${mode}_${difficulty}`;
+  }
   saveLocal(value: unknown): void {
-    const recording = acceptedRecording(value); if (recording === null) return;
-    const mode = stringValue(recording.mode); const difficulty = stringValue(recording.diff);
+    const recording = acceptedRecording(value);
+    if (recording === null) return;
+    const mode = stringValue(recording.mode);
+    const difficulty = stringValue(recording.diff);
     try {
       const previous = this.loadLocal(mode, difficulty);
       if (previous === null || numberValue(recording.score) >= numberValue(previous.score)) {
@@ -489,8 +688,13 @@ export class LegacyGhostEngine {
     }
   }
   loadLocal(mode: string, difficulty: string): VisualRecordingV2 | null {
-    try { return acceptedRecording(JSON.parse(this.#dependencies.store.get(this.#key(mode, difficulty)) ?? "null") as unknown); }
-    catch { return null; }
+    try {
+      return acceptedRecording(
+        JSON.parse(this.#dependencies.store.get(this.#key(mode, difficulty)) ?? "null") as unknown,
+      );
+    } catch {
+      return null;
+    }
   }
 }
 
@@ -522,54 +726,87 @@ export class LegacyReplayVault {
   readonly #random: () => number;
 
   constructor(store: ReplayStore, now: () => number, random: () => number) {
-    this.#store = store; this.#now = now; this.#random = random;
+    this.#store = store;
+    this.#now = now;
+    this.#random = random;
   }
 
   index(): VaultEntry[] {
     if (this._index !== null) return this._index;
     try {
       const parsed = JSON.parse(this.#store.get("tear_vault_index") ?? "[]") as unknown;
-      this._index = Array.isArray(parsed) ? parsed.map(vaultEntry).filter((entry): entry is VaultEntry => entry !== null) : [];
-    } catch { this._index = []; }
+      this._index = Array.isArray(parsed)
+        ? parsed.map(vaultEntry).filter((entry): entry is VaultEntry => entry !== null)
+        : [];
+    } catch {
+      this._index = [];
+    }
     return this._index;
   }
   #saveIndex(): boolean {
-    try { this.#store.set("tear_vault_index", JSON.stringify(this._index ?? [])); return true; }
-    catch { return false; }
+    try {
+      this.#store.set("tear_vault_index", JSON.stringify(this._index ?? []));
+      return true;
+    } catch {
+      return false;
+    }
   }
   add(value: unknown, summary: Readonly<Record<string, unknown>> = {}): string | null {
-    const recording = acceptedRecording(value); if (recording === null) return null;
+    const recording = acceptedRecording(value);
+    if (recording === null) return null;
     let id = `v${this.#now().toString(36)}${this.#random().toString(36).slice(2, 6)}`;
     while (this.index().some((entry) => entry.id === id)) id = `${id}x`;
-    try { this.#store.set(`tear_vault_${id}`, JSON.stringify(recording)); }
-    catch { return null; }
+    try {
+      this.#store.set(`tear_vault_${id}`, JSON.stringify(recording));
+    } catch {
+      return null;
+    }
     const entry: VaultEntry = { id, ts: this.#now(), pin: false, shareId: null, sum: summary };
     this.index().unshift(entry);
     const unpinned = this.index().filter((candidate) => !candidate.pin);
     for (let index = unpinned.length - 1; index >= this.MAX_UNPINNED; index -= 1) this.#drop(unpinned[index]?.id ?? "");
-    if (!this.#saveIndex()) { this.#drop(id); return null; }
+    if (!this.#saveIndex()) {
+      this.#drop(id);
+      return null;
+    }
     return id;
   }
   #drop(id: string): void {
     if (id.length === 0) return;
     this._index = this.index().filter((entry) => entry.id !== id);
-    try { this.#store.set(`tear_vault_${id}`, ""); } catch { /* best effort cleanup */ }
+    try {
+      this.#store.set(`tear_vault_${id}`, "");
+    } catch {
+      /* best effort cleanup */
+    }
   }
   get(id: string): VisualRecordingV2 | null {
-    try { return acceptedRecording(JSON.parse(this.#store.get(`tear_vault_${id}`) ?? "null") as unknown); }
-    catch { return null; }
+    try {
+      return acceptedRecording(JSON.parse(this.#store.get(`tear_vault_${id}`) ?? "null") as unknown);
+    } catch {
+      return null;
+    }
   }
-  remove(id: string): void { this.#drop(id); this.#saveIndex(); }
+  remove(id: string): void {
+    this.#drop(id);
+    this.#saveIndex();
+  }
   pin(id: string, on: boolean): boolean {
-    const entry = this.index().find((candidate) => candidate.id === id); if (entry === undefined) return false;
+    const entry = this.index().find((candidate) => candidate.id === id);
+    if (entry === undefined) return false;
     if (on && !entry.pin && this.index().filter((candidate) => candidate.pin).length >= this.MAX_PINNED) return false;
-    const previous = entry.pin; entry.pin = on;
+    const previous = entry.pin;
+    entry.pin = on;
     if (this.#saveIndex()) return true;
-    entry.pin = previous; return false;
+    entry.pin = previous;
+    return false;
   }
   setShareId(id: string, shareId: string): void {
     const entry = this.index().find((candidate) => candidate.id === id);
-    if (entry !== undefined) { entry.shareId = shareId; this.#saveIndex(); }
+    if (entry !== undefined) {
+      entry.shareId = shareId;
+      this.#saveIndex();
+    }
   }
 }
 

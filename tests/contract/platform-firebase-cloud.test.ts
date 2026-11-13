@@ -1,20 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  createFirebaseCloudCompatibility,
-  type FirebaseCompatSdk,
-} from "../../src/platform/firebase-cloud";
+import { createFirebaseCloudCompatibility, type FirebaseCompatSdk } from "../../src/platform/firebase-cloud";
 import { FIREBASE_CONFIG } from "../../src/platform/firebase-config";
 import type { AccountContext } from "../../src/platform/cloud";
 
 function corruptReplaySdk(): FirebaseCompatSdk {
   const user = {
-    uid: "u1", isAnonymous: true, displayName: null, photoURL: null,
+    uid: "u1",
+    isAnonymous: true,
+    displayName: null,
+    photoURL: null,
     linkWithPopup: () => Promise.reject(new Error("not used")),
   };
   const document = {
     exists: true,
     data: () => ({ chunkCount: 99 }),
-    get() { return Promise.resolve(this); },
+    get() {
+      return Promise.resolve(this);
+    },
     set: () => Promise.resolve(),
     collection: () => ({ doc: () => document, add: () => Promise.resolve(), orderBy: () => query }),
   };
@@ -22,17 +24,27 @@ function corruptReplaySdk(): FirebaseCompatSdk {
   const collection = { doc: () => document, add: () => Promise.resolve(), orderBy: () => query };
   const auth = {
     currentUser: user,
-    onAuthStateChanged: (listener: (next: typeof user) => void) => { listener(user); return () => undefined; },
+    onAuthStateChanged: (listener: (next: typeof user) => void) => {
+      listener(user);
+      return () => undefined;
+    },
     signInAnonymously: () => Promise.resolve({ user }),
     signInWithPopup: () => Promise.resolve({ user }),
     signOut: () => Promise.resolve(),
   };
-  class GoogleProvider { readonly kind = "google"; }
+  class GoogleProvider {
+    readonly kind = "google";
+  }
   const authFactory = Object.assign(() => auth, { GoogleAuthProvider: GoogleProvider });
   return {
     initializeApp: () => ({}),
     auth: authFactory,
-    firestore: () => ({ collection: () => collection, settings() { return; } }),
+    firestore: () => ({
+      collection: () => collection,
+      settings() {
+        return;
+      },
+    }),
   };
 }
 
@@ -68,7 +80,12 @@ describe("Firebase cloud adapter", () => {
       loadScript: () => Promise.resolve(),
       remote: {},
     });
-    const context: AccountContext = { setUser() { return; }, sync: () => Promise.resolve() };
+    const context: AccountContext = {
+      setUser() {
+        return;
+      },
+      sync: () => Promise.resolve(),
+    };
     await compatibility.account.init(context);
     await expect(compatibility.account.load?.(context)).resolves.toBeNull();
   });

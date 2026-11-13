@@ -9,7 +9,13 @@ import type { EnvironmentClearReason, EnvironmentRuntimeState } from "../environ
  * select state, entities, services, and cinematics before this joins them;
  * this module owns the lifecycle and transient records they must all share.
  */
-export interface TearWorldComposition<State, Entities, Services, Cinema, Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState> {
+export interface TearWorldComposition<
+  State,
+  Entities,
+  Services,
+  Cinema,
+  Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState,
+> {
   readonly state: State;
   readonly entities: Entities;
   readonly lifecycle: RunLifecycleController;
@@ -38,18 +44,39 @@ export interface TearWorldCompositionOptions<State, Entities, Services, Cinema> 
 }
 
 /** Creates one lifecycle and one transient record for a fully assembled world. */
-export function createTearWorldComposition<State, Entities, Services, Cinema, Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState>(
+export function createTearWorldComposition<
+  State,
+  Entities,
+  Services,
+  Cinema,
+  Environment extends EnvironmentRuntimeState = EnvironmentRuntimeState,
+>(
   options: TearWorldCompositionOptions<State, Entities, Services, Cinema> & { readonly environment?: Environment },
 ): TearWorldComposition<State, Entities, Services, Cinema, Environment> {
   const lifecycle = new RunLifecycleController();
   const transient = createTearWorldTransientState();
   const environment = options.environment ?? createEnvironmentRuntime({ stageId: "unknown", worldId: options.worldId });
   const context = createTearWorldContext(
-    options.state, options.entities, lifecycle, options.services, transient, options.cinema, environment,
+    options.state,
+    options.entities,
+    lifecycle,
+    options.services,
+    transient,
+    options.cinema,
+    environment,
   );
-  const resetEnvironment = (reason: EnvironmentClearReason): void => { environment.clear(reason); };
-  return Object.freeze({ state: options.state, entities: options.entities, lifecycle, environment, context,
+  const resetEnvironment = (reason: EnvironmentClearReason): void => {
+    environment.clear(reason);
+  };
+  return Object.freeze({
+    state: options.state,
+    entities: options.entities,
+    lifecycle,
+    environment,
+    context,
     resetEnvironment,
-    dispose: () => { environment.clear("disposal"); },
+    dispose: () => {
+      environment.clear("disposal");
+    },
   }) as TearWorldComposition<State, Entities, Services, Cinema, Environment>;
 }

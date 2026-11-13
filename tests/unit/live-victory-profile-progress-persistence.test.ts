@@ -13,7 +13,9 @@ describe("live victory profile progress persistence", () => {
     persistence.markAdventureDifficulty("hard");
 
     expect(profile.data).toEqual({
-      weaponsWon: { hammer: 1 }, rewards: { restoredBladeTrail: true }, advDiffs: { hard: 1 },
+      weaponsWon: { hammer: 1 },
+      rewards: { restoredBladeTrail: true },
+      advDiffs: { hard: 1 },
     });
     expect(max).toHaveBeenNthCalledWith(1, "distinctWeaponsWon", 1);
     expect(max).toHaveBeenNthCalledWith(2, "clearAdvAll", 1);

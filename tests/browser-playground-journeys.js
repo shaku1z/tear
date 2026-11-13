@@ -8,14 +8,19 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     for (let attempt = 0; attempt < 12; attempt++) {
       await page.keyboard.press(key);
       try {
-        await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, { timeout: 500 });
+        await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, {
+          timeout: 500,
+        });
         await waitScreen(screen);
         return;
       } catch (error) {
         if (error?.name !== "TimeoutError") throw error;
       }
     }
-    const snapshot = await page.evaluate(() => ({ state: window.__PANTHEON_TEST.state(), input: window.__TEAR_CATALOG_DEBUG__.input.snapshot() }));
+    const snapshot = await page.evaluate(() => ({
+      state: window.__PANTHEON_TEST.state(),
+      input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
+    }));
     assert.fail(`${key} did not reach ${screen}: ${JSON.stringify(snapshot)}`);
   }
 
@@ -24,10 +29,32 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     // lesson, restart and leave uses normal rendered controls. No course played.
     await page.addInitScript(() => {
       const fixture = {
-        tear_profile_v2: JSON.stringify({ schema: "tear.profile", schemaVersion: 3, revision: 1,
-        updatedAtMs: 1, writerId: "practice-lab-ui-fixture", extensions: {}, profile: { v: 1, created: 1,
-          shards: 10, ach: { student: 1, first_buy: 1, boss_colossus: 1 }, achCoinsRetrofit: true, modes: {}, seen: {},
-          stats: { tutorialDone: 1, coinsEarned: 1000, shopBuys: 1, kill_charger: 1, kill_support: 1, killColossus: 1, "encounterBoss:warden:2": 1 } } }),
+        tear_profile_v2: JSON.stringify({
+          schema: "tear.profile",
+          schemaVersion: 3,
+          revision: 1,
+          updatedAtMs: 1,
+          writerId: "practice-lab-ui-fixture",
+          extensions: {},
+          profile: {
+            v: 1,
+            created: 1,
+            shards: 10,
+            ach: { student: 1, first_buy: 1, boss_colossus: 1 },
+            achCoinsRetrofit: true,
+            modes: {},
+            seen: {},
+            stats: {
+              tutorialDone: 1,
+              coinsEarned: 1000,
+              shopBuys: 1,
+              kill_charger: 1,
+              kill_support: 1,
+              killColossus: 1,
+              "encounterBoss:warden:2": 1,
+            },
+          },
+        }),
         tear_meta: JSON.stringify({ lifetimeEarned: 1000, lifetimeSpent: 375, buy: { sharp: 1 } }),
       };
       // test=1 uses composition's isolated storage, never localStorage. Carry
@@ -53,7 +80,8 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
           }
         },
       });
-      const captured = [], original = CanvasRenderingContext2D.prototype.fillText;
+      const captured = [],
+        original = CanvasRenderingContext2D.prototype.fillText;
       CanvasRenderingContext2D.prototype.fillText = function practiceLabText(value, x, y, ...rest) {
         captured.push({ text: String(value), x, y });
         if (captured.length > 1000) captured.splice(0, 500);
@@ -65,54 +93,97 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     if (directory) fs.mkdirSync(path.resolve(directory), { recursive: true });
     const clickLabel = async (label) => {
       try {
-        await page.waitForFunction((expected) => window.__TEAR_PRACTICE_LAB_TEXT__?.some((entry) => entry.text === expected), label);
+        await page.waitForFunction(
+          (expected) => window.__TEAR_PRACTICE_LAB_TEXT__?.some((entry) => entry.text === expected),
+          label,
+        );
       } catch (error) {
-        const context = await page.evaluate(() => ({ state: window.__PANTHEON_TEST.state(),
-          storage: [...(window.__TEAR_PRACTICE_LAB_STORAGE__ ?? [])], text: window.__TEAR_PRACTICE_LAB_TEXT__ }));
+        const context = await page.evaluate(() => ({
+          state: window.__PANTHEON_TEST.state(),
+          storage: [...(window.__TEAR_PRACTICE_LAB_STORAGE__ ?? [])],
+          text: window.__TEAR_PRACTICE_LAB_TEXT__,
+        }));
         console.error(`Practice Lab missing rendered label ${label}: ${JSON.stringify(context)}`);
         if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-failure.png") });
         throw error;
       }
-      const point = await page.evaluate((expected) => window.__TEAR_PRACTICE_LAB_TEXT__.findLast((entry) => entry.text === expected), label);
+      const point = await page.evaluate(
+        (expected) => window.__TEAR_PRACTICE_LAB_TEXT__.findLast((entry) => entry.text === expected),
+        label,
+      );
       await page.mouse.click(point.x, point.y);
     };
-    const savedEffects = () => page.evaluate(() => {
-      const storage = window.__TEAR_PRACTICE_LAB_STORAGE__;
-      if (!storage) throw new Error("Practice Lab fixture did not observe the isolated storage adapter");
-      const profile = JSON.parse(storage.get("tear_profile_v2")).profile;
-      const meta = JSON.parse(storage.get("tear_meta"));
-      const cinematicSeen = { browser: Object.fromEntries(Object.entries(localStorage).filter(([key]) => key.startsWith("tear.cinematic."))),
-        adapter: Object.fromEntries([...storage].filter(([key]) => key.startsWith("tear.cinematic."))) };
-      return { stats: profile.stats, tutorialDone: profile.stats.tutorialDone, achievements: profile.ach, earned: meta.lifetimeEarned, spent: meta.lifetimeSpent, buy: meta.buy, cinematicSeen };
-    });
+    const savedEffects = () =>
+      page.evaluate(() => {
+        const storage = window.__TEAR_PRACTICE_LAB_STORAGE__;
+        if (!storage) throw new Error("Practice Lab fixture did not observe the isolated storage adapter");
+        const profile = JSON.parse(storage.get("tear_profile_v2")).profile;
+        const meta = JSON.parse(storage.get("tear_meta"));
+        const cinematicSeen = {
+          browser: Object.fromEntries(
+            Object.entries(localStorage).filter(([key]) => key.startsWith("tear.cinematic.")),
+          ),
+          adapter: Object.fromEntries([...storage].filter(([key]) => key.startsWith("tear.cinematic."))),
+        };
+        return {
+          stats: profile.stats,
+          tutorialDone: profile.stats.tutorialDone,
+          achievements: profile.ach,
+          earned: meta.lifetimeEarned,
+          spent: meta.lifetimeSpent,
+          buy: meta.buy,
+          cinematicSeen,
+        };
+      });
     await boot();
     const before = await savedEffects();
     assert.equal(before.tutorialDone, 1, "the real isolated adapter must contain the completed-profile fixture");
-    assert.equal(before.earned, 1000); assert.equal(before.spent, 375); assert.equal(before.buy.sharp, 1);
-    await clickLabel("PRACTICE LAB"); await waitScreen("paused");
+    assert.equal(before.earned, 1000);
+    assert.equal(before.spent, 375);
+    assert.equal(before.buy.sharp, 1);
+    await clickLabel("PRACTICE LAB");
+    await waitScreen("paused");
     let session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
-    assert.equal(session.practiceOnly, true); assert.equal(session.courseCompleted, false);
+    assert.equal(session.practiceOnly, true);
+    assert.equal(session.courseCompleted, false);
     assert.equal(session.lessons.filter((lesson) => lesson.canPractice).length, 13);
-    assert.ok(session.lessons.every((lesson) => !lesson.completed), "historical lesson history must remain unknown");
+    assert.ok(
+      session.lessons.every((lesson) => !lesson.completed),
+      "historical lesson history must remain unknown",
+    );
     if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-selector.png") });
-    await clickLabel("LAUNCH"); await waitScreen("playing");
+    await clickLabel("LAUNCH");
+    await waitScreen("playing");
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().lessonIndex), 4);
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().weapon), "sword");
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().difficulty), "normal");
-    await pressUntilScreen("p", "paused"); await clickLabel("RESTART LESSON"); await waitScreen("playing");
+    await pressUntilScreen("p", "paused");
+    await clickLabel("RESTART LESSON");
+    await waitScreen("playing");
     assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().counters.launch ?? 0), 0);
-    await pressUntilScreen("p", "paused"); await clickLabel("WEAPON ANNEXES");
-    if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-weapon-annexes.png") });
+    await pressUntilScreen("p", "paused");
+    await clickLabel("WEAPON ANNEXES");
+    if (directory)
+      await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-weapon-annexes.png") });
     for (const weapon of ["sword", "hammer", "greatsword", "chainblade", "riftlock"]) {
-      await clickLabel(weapon.toUpperCase()); await waitScreen("playing");
-      const attempt = await page.evaluate(() => ({ state: window.__PANTHEON_TEST.state(),
+      await clickLabel(weapon.toUpperCase());
+      await waitScreen("playing");
+      const attempt = await page.evaluate(() => ({
+        state: window.__PANTHEON_TEST.state(),
         tutorial: window.__PANTHEON_TEST.tutorial().session,
-        run: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").captureSnapshot("annex-baseline", "recorded-canonical").state["tear.run.v1"] }));
-      assert.equal(attempt.state.weapon, weapon); assert.equal(attempt.state.difficulty, "normal");
-      assert.equal(attempt.tutorial.practiceOnly, true); assert.equal(attempt.tutorial.courseCompleted, false);
-      assert.equal(attempt.tutorial.annex.id, weapon); assert.equal(attempt.tutorial.annex.progress, 0);
+        run: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").captureSnapshot("annex-baseline", "recorded-canonical")
+          .state["tear.run.v1"],
+      }));
+      assert.equal(attempt.state.weapon, weapon);
+      assert.equal(attempt.state.difficulty, "normal");
+      assert.equal(attempt.tutorial.practiceOnly, true);
+      assert.equal(attempt.tutorial.courseCompleted, false);
+      assert.equal(attempt.tutorial.annex.id, weapon);
+      assert.equal(attempt.tutorial.annex.progress, 0);
       assert.deepEqual(attempt.run.mods.owned, {}, "annexes must start without run upgrades");
-      await pressUntilScreen("p", "paused"); await clickLabel("RESTART LESSON"); await waitScreen("playing");
+      await pressUntilScreen("p", "paused");
+      await clickLabel("RESTART LESSON");
+      await waitScreen("playing");
       assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session.annex.progress), 0);
       assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().weapon), weapon);
       await pressUntilScreen("p", "paused");
@@ -120,21 +191,38 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     await clickLabel("ENEMY CATALOG");
     session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
     assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
-    assert.equal(session.enemyCatalog.find((entry) => entry.id === "mender").knowledge, "unknown", "aggregate old support kills must not invent subtype history");
-    await page.waitForFunction(() => window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "HISTORY NOT RECORDED"));
-    if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-enemy-catalog.png") });
-    await clickLabel("CHARGER"); await waitScreen("playing");
+    assert.equal(
+      session.enemyCatalog.find((entry) => entry.id === "mender").knowledge,
+      "unknown",
+      "aggregate old support kills must not invent subtype history",
+    );
+    await page.waitForFunction(() =>
+      window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "HISTORY NOT RECORDED"),
+    );
+    if (directory)
+      await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-enemy-catalog.png") });
+    await clickLabel("CHARGER");
+    await waitScreen("playing");
     await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 1);
-    const opponentAttempt = () => page.evaluate(() => ({ session: window.__PANTHEON_TEST.tutorial().session,
-      state: window.__PANTHEON_TEST.state(), snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").captureSnapshot("enemy-practice", "recorded-canonical") }));
+    const opponentAttempt = () =>
+      page.evaluate(() => ({
+        session: window.__PANTHEON_TEST.tutorial().session,
+        state: window.__PANTHEON_TEST.state(),
+        snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__
+          .create("A")
+          .captureSnapshot("enemy-practice", "recorded-canonical"),
+      }));
     let opponent = await opponentAttempt();
-    assert.equal(opponent.state.weapon, "sword"); assert.equal(opponent.state.difficulty, "normal");
+    assert.equal(opponent.state.weapon, "sword");
+    assert.equal(opponent.state.difficulty, "normal");
     assert.deepEqual(opponent.snapshot.state["tear.run.v1"].mods.owned, {});
     assert.equal(opponent.session.enemyPractice.id, "charger");
     assert.equal(opponent.snapshot.state["tear.enemy.v1"].length, 1);
     assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].kind, "charger");
     assert.notEqual(opponent.snapshot.state["tear.enemy.v1"][0].tutDummy, true);
-    await pressUntilScreen("p", "paused"); await clickLabel("RESTART LESSON"); await waitScreen("playing");
+    await pressUntilScreen("p", "paused");
+    await clickLabel("RESTART LESSON");
+    await waitScreen("playing");
     await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 1);
     opponent = await opponentAttempt();
     assert.equal(opponent.session.enemyPractice.defeated, false);
@@ -149,38 +237,74 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:3").canPractice, false);
     if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-boss-phases.png") });
     await page.setViewportSize({ width: 800, height: 360 });
-    await page.evaluate(() => { window.__TEAR_PRACTICE_LAB_TEXT__.length = 0; });
+    await page.evaluate(() => {
+      window.__TEAR_PRACTICE_LAB_TEXT__.length = 0;
+    });
     await page.mouse.wheel(0, 144);
-    await page.waitForFunction(() => window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "THE SOURCE · P3"));
-    if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-boss-phases-landscape.png") });
+    await page.waitForFunction(() =>
+      window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "THE SOURCE · P3"),
+    );
+    if (directory)
+      await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-boss-phases-landscape.png") });
     await page.mouse.wheel(0, -144);
-    await page.setViewportSize({ width: 1600, height: 900 }); await page.waitForTimeout(100);
-    await clickLabel("IRON COLOSSUS · P1"); await waitScreen("playing");
-    await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active");
-    let bossAttempt = await page.evaluate(() => ({ tutorial: window.__PANTHEON_TEST.tutorial().session,
-      state: window.__PANTHEON_TEST.state(), snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").captureSnapshot("boss-practice", "recorded-canonical") }));
-    assert.equal(bossAttempt.tutorial.bossPractice.bossId, "colossus"); assert.equal(bossAttempt.tutorial.bossPractice.phase, 1);
-    assert.equal(bossAttempt.state.weapon, "sword"); assert.equal(bossAttempt.state.difficulty, "normal");
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await page.waitForTimeout(100);
+    await clickLabel("IRON COLOSSUS · P1");
+    await waitScreen("playing");
+    await page.waitForFunction(
+      () => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active",
+    );
+    let bossAttempt = await page.evaluate(() => ({
+      tutorial: window.__PANTHEON_TEST.tutorial().session,
+      state: window.__PANTHEON_TEST.state(),
+      snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").captureSnapshot("boss-practice", "recorded-canonical"),
+    }));
+    assert.equal(bossAttempt.tutorial.bossPractice.bossId, "colossus");
+    assert.equal(bossAttempt.tutorial.bossPractice.phase, 1);
+    assert.equal(bossAttempt.state.weapon, "sword");
+    assert.equal(bossAttempt.state.difficulty, "normal");
     assert.deepEqual(bossAttempt.snapshot.state["tear.run.v1"].mods.owned, {});
     assert.equal(bossAttempt.snapshot.state["tear.boss.v1"][0].bossId, "colossus");
-    await pressUntilScreen("p", "paused"); await clickLabel("RESTART LESSON"); await waitScreen("playing");
-    await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active");
+    await pressUntilScreen("p", "paused");
+    await clickLabel("RESTART LESSON");
+    await waitScreen("playing");
+    await page.waitForFunction(
+      () => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active",
+    );
     await pressUntilScreen("p", "paused");
     // Saved phase fixture, not claimed natural phase discovery.
-    await clickLabel("THE WARDEN · P2"); await waitScreen("playing");
-    await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active", undefined, { timeout: 20000 });
+    await clickLabel("THE WARDEN · P2");
+    await waitScreen("playing");
+    await page.waitForFunction(
+      () => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active",
+      undefined,
+      { timeout: 20000 },
+    );
     await pressUntilScreen("p", "paused");
-    await clickLabel("MAIN MENU"); await waitScreen("confirmquit");
-    await clickLabel("QUIT"); await waitScreen("menu");
-    assert.deepEqual(await savedEffects(), before, "practice must leave actual adapter completion/reward state unchanged before reload");
-    await page.evaluate(() => sessionStorage.setItem("practice-lab-fixture-storage",
-      JSON.stringify(Object.fromEntries(window.__TEAR_PRACTICE_LAB_STORAGE__))));
+    await clickLabel("MAIN MENU");
+    await waitScreen("confirmquit");
+    await clickLabel("QUIT");
+    await waitScreen("menu");
+    assert.deepEqual(
+      await savedEffects(),
+      before,
+      "practice must leave actual adapter completion/reward state unchanged before reload",
+    );
+    await page.evaluate(() =>
+      sessionStorage.setItem(
+        "practice-lab-fixture-storage",
+        JSON.stringify(Object.fromEntries(window.__TEAR_PRACTICE_LAB_STORAGE__)),
+      ),
+    );
     await boot();
     // Re-enter through the ordinary setup screen after a full page reload.
-    await clickLabel("PLAY"); await waitScreen("setup");
-    await clickLabel("PRACTICE LAB"); await waitScreen("paused");
+    await clickLabel("PLAY");
+    await waitScreen("setup");
+    await clickLabel("PRACTICE LAB");
+    await waitScreen("paused");
     session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
-    assert.equal(session.practiceOnly, true); assert.equal(session.phase, "free-practice");
+    assert.equal(session.practiceOnly, true);
+    assert.equal(session.phase, "free-practice");
     await clickLabel("ENEMY CATALOG");
     session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
     assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
@@ -189,8 +313,14 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
     assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:2").canPractice, true);
     assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:3").canPractice, false);
-    assert.deepEqual(await savedEffects(), before, "opening/restarting practice must not add completion, achievements, coins or purchases");
-    console.log("Practice Lab UI fixture passed: completed-profile adapter bytes reconstructed after reload, normal menu/setup entry, lesson, five weapon annexes and known real-opponent and six-boss phase catalog selection/reset; unknown subtype history preserved, no discovery or reward grant");
+    assert.deepEqual(
+      await savedEffects(),
+      before,
+      "opening/restarting practice must not add completion, achievements, coins or purchases",
+    );
+    console.log(
+      "Practice Lab UI fixture passed: completed-profile adapter bytes reconstructed after reload, normal menu/setup entry, lesson, five weapon annexes and known real-opponent and six-boss phase catalog selection/reset; unknown subtype history preserved, no discovery or reward grant",
+    );
     return;
   }
 
@@ -204,7 +334,9 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
     const before = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
     await page.keyboard.press(key);
     try {
-      await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, { timeout: 5000 });
+      await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, {
+        timeout: 5000,
+      });
     } catch (error) {
       if (error?.name !== "TimeoutError") throw error;
       const snapshot = await page.evaluate(() => ({
@@ -223,7 +355,9 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
   console.log("playground journey: build menu open");
   const enemiesBefore = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
   await page.mouse.click(278, 229); // spawn the first enemy kind
-  await page.waitForFunction((before) => window.__PANTHEON_TEST.state().enemyCount > before, enemiesBefore, { timeout: 10000 });
+  await page.waitForFunction((before) => window.__PANTHEON_TEST.state().enemyCount > before, enemiesBefore, {
+    timeout: 10000,
+  });
   console.log("playground journey: enemy spawned");
 
   await page.mouse.click(330, 721); // ABILITY LAB
@@ -243,5 +377,9 @@ withJourney({ name: "playground journeys", port: 8144 }, async ({ page, boot, wa
   await pressUntilScreen("Tab", "pgmenu");
   await pressUntilScreen("Tab", "playing");
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().mode), "playground");
-}).then(() => console.log("browser playground journeys passed"))
-  .catch((error) => { console.error(error); process.exit(1); });
+})
+  .then(() => console.log("browser playground journeys passed"))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

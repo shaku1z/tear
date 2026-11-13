@@ -9,7 +9,9 @@ function contextStub(): CanvasRenderingContext2D {
       const current = Reflect.get(target, key) as unknown;
       return current ?? (() => undefined);
     },
-    set(target, key, value) { return Reflect.set(target, key, value); },
+    set(target, key, value) {
+      return Reflect.set(target, key, value);
+    },
   });
 }
 
@@ -21,10 +23,13 @@ describe("TearWipe", () => {
   it("captures a frame and bounds transition particles", () => {
     const context = contextStub();
     const wipe = new TearWipe({
-      canvas: canvasStub(context), context,
+      canvas: canvasStub(context),
+      context,
       createCanvas: () => canvasStub(context),
-      reducedEffects: () => false, flashScale: () => 1,
-      random: () => 0.5, ease: (value) => value,
+      reducedEffects: () => false,
+      flashScale: () => 1,
+      random: () => 0.5,
+      ease: (value) => value,
       maxParticles: 8,
     });
     wipe.begin();
@@ -37,10 +42,13 @@ describe("TearWipe", () => {
   it("does not allocate sparks in reduced-effects mode", () => {
     const context = contextStub();
     const wipe = new TearWipe({
-      canvas: canvasStub(context), context,
+      canvas: canvasStub(context),
+      context,
       createCanvas: () => canvasStub(context),
-      reducedEffects: () => true, flashScale: () => 0,
-      random: () => 0.5, ease: (value) => value,
+      reducedEffects: () => true,
+      flashScale: () => 0,
+      random: () => 0.5,
+      ease: (value) => value,
     });
     wipe.begin();
     wipe.draw(0.25);

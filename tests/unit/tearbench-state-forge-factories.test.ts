@@ -57,12 +57,22 @@ describe("State Forge validity and exact factories", () => {
       state: { boss: { attack: "mortar", frame: 37 } },
     });
 
-    const blade = forgeBladeAbilityState(boss, { state: "returning", x: 400, y: 220 }, {
-      slam: { active: false, cooldownTicks: 1 },
-    });
-    const ui = forgeUiDeviceState(blade, { screen: "paused", focusedId: "resume" }, {
-      kind: "gamepad", width: 1280, height: 720,
-    });
+    const blade = forgeBladeAbilityState(
+      boss,
+      { state: "returning", x: 400, y: 220 },
+      {
+        slam: { active: false, cooldownTicks: 1 },
+      },
+    );
+    const ui = forgeUiDeviceState(
+      blade,
+      { screen: "paused", focusedId: "resume" },
+      {
+        kind: "gamepad",
+        width: 1280,
+        height: 720,
+      },
+    );
     expect(ui.state).toMatchObject({
       blade: { state: "returning" },
       abilities: { slam: { cooldownTicks: 1 } },
@@ -72,15 +82,17 @@ describe("State Forge validity and exact factories", () => {
   });
 
   it("materializes every declared one-frame boundary as before/at/after states", () => {
-    const states = DECLARED_ONE_FRAME_BOUNDARIES.flatMap((boundary) =>
-      forgeOneFrameBoundaryStates(base, boundary));
+    const states = DECLARED_ONE_FRAME_BOUNDARIES.flatMap((boundary) => forgeOneFrameBoundaryStates(base, boundary));
     expect(states).toHaveLength(DECLARED_ONE_FRAME_BOUNDARIES.length * 3);
     expect(new Set(states.map((entry) => entry.id)).size).toBe(states.length);
-    for (const state of states) expect(evaluateTearStateValidity({
-      stateClass: state.stateClass,
-      start: state.start,
-      ...(state.state === undefined ? {} : { state: state.state }),
-      ...(state.constraints === undefined ? {} : { constraints: state.constraints }),
-    }).structural.valid).toBe(true);
+    for (const state of states)
+      expect(
+        evaluateTearStateValidity({
+          stateClass: state.stateClass,
+          start: state.start,
+          ...(state.state === undefined ? {} : { state: state.state }),
+          ...(state.constraints === undefined ? {} : { constraints: state.constraints }),
+        }).structural.valid,
+      ).toBe(true);
   });
 });

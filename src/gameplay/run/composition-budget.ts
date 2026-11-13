@@ -37,7 +37,9 @@ export function eligibleCompositionPool(
   return pool.filter((entry) => {
     if (state.spent + compositionCost(definition, entry.kind) > budget) return false;
     const maximum = definition.maximumPerWave[entry.kind];
-    return maximum === undefined || (state.counts[entry.kind] ?? 0) < localValue(maximum, localWave, `${entry.kind} cap`);
+    return (
+      maximum === undefined || (state.counts[entry.kind] ?? 0) < localValue(maximum, localWave, `${entry.kind} cap`)
+    );
   });
 }
 

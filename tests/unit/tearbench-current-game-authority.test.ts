@@ -20,14 +20,19 @@ import { CANONICAL_UPGRADE_IDS as GAME_UPGRADE_IDS } from "../../src/gameplay/up
 import { isRetiredWeaponSelection, WEAPON_IDS as GAME_WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { getWeapon } from "../../src/gameplay/weapons";
 import { BLOOM_WELL_TIMING } from "../../src/gameplay/environment/bloom-well";
-import { canonicalObservationActions, canonicalObservationEnemyKind, canonicalObservationStage } from
-  "../../src/tearbench/observation-identity";
+import {
+  canonicalObservationActions,
+  canonicalObservationEnemyKind,
+  canonicalObservationStage,
+} from "../../src/tearbench/observation-identity";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import type { TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { CANONICAL_ENGINEERING_SCENARIOS, materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
 import { ENVIRONMENT_REQUIRED_INVARIANT_IDS } from "../../src/tearbench/invariants";
-import { createProductionHeadlessEnvironment, type ProductionHeadlessEnvironment } from
-  "../../src/tearbench/production-headless-environment";
+import {
+  createProductionHeadlessEnvironment,
+  type ProductionHeadlessEnvironment,
+} from "../../src/tearbench/production-headless-environment";
 import { PRODUCTION_UPGRADE_BY_ID } from "../../src/tearbench/progression-synthesis-policy";
 import { validateTearContract } from "../../src/tearbench/validation";
 import {
@@ -73,7 +78,9 @@ function assertProductionOwnerCoverage(label: string, source: readonly string[],
   const missing = source.filter((id) => !covered.includes(id));
   const retired = covered.filter((id) => !source.includes(id));
   if (missing.length > 0 || retired.length > 0) {
-    throw new RangeError(`${label} coverage drift: missing ${missing.join(",") || "none"}; retired ${retired.join(",") || "none"}`);
+    throw new RangeError(
+      `${label} coverage drift: missing ${missing.join(",") || "none"}; retired ${retired.join(",") || "none"}`,
+    );
   }
 }
 
@@ -81,8 +88,11 @@ function assertCurrentScenarioMetadata(scenario: TearScenarioV1, entry: CurrentC
   if (scenario.subject?.kind !== entry.subject.kind || scenario.subject.id !== entry.subject.id) {
     throw new RangeError(`current canonical scenario ${entry.id} lost its authoritative subject`);
   }
-  if (!Array.isArray(scenario.backends) || scenario.backends.length !== entry.backends.length
-    || scenario.backends.some((backend, index) => backend !== entry.backends[index])) {
+  if (
+    !Array.isArray(scenario.backends) ||
+    scenario.backends.length !== entry.backends.length ||
+    scenario.backends.some((backend, index) => backend !== entry.backends[index])
+  ) {
     throw new RangeError(`current canonical scenario ${entry.id} lost its authoritative backends`);
   }
 }
@@ -140,43 +150,93 @@ describe("TearBench current-game catalog authority", () => {
   });
 
   it("retains numeric stage compatibility while accepting stable authored stage identity", () => {
-    const event: TearGameplayEvent = { kind: "stage", tick: 12, stage: 6, stageId: "pale-traverse", transition: "entered" };
+    const event: TearGameplayEvent = {
+      kind: "stage",
+      tick: 12,
+      stage: 6,
+      stageId: "pale-traverse",
+      transition: "entered",
+    };
     expect(event).toMatchObject({ stage: 6, stageId: "pale-traverse", transition: "entered" });
   });
 
   it("covers every production stage, authored boss, upgrade, and native event family", () => {
-    assertProductionOwnerCoverage("stage", PUBLISHED_STAGE_IDS, STAGES.map((stage) => stage.id));
-    assertProductionOwnerCoverage("boss", PUBLISHED_BOSS_IDS, STAGES.map((stage) => stage.boss));
-    assertProductionOwnerCoverage("enemy", PRODUCTION_IDENTITY_COVERAGE.enemies,
-      ENTITY_KIND_REGISTRY.ids.filter((id) => PUBLISHED_ENEMY_IDENTITY_IDS.includes(
-        id as typeof PUBLISHED_ENEMY_IDENTITY_IDS[number],
-      )));
-    assertProductionOwnerCoverage("environment object kind", PRODUCTION_IDENTITY_COVERAGE.environmentObjectKinds,
-      ENVIRONMENT_OBJECT_KIND_REGISTRY.ids);
+    assertProductionOwnerCoverage(
+      "stage",
+      PUBLISHED_STAGE_IDS,
+      STAGES.map((stage) => stage.id),
+    );
+    assertProductionOwnerCoverage(
+      "boss",
+      PUBLISHED_BOSS_IDS,
+      STAGES.map((stage) => stage.boss),
+    );
+    assertProductionOwnerCoverage(
+      "enemy",
+      PRODUCTION_IDENTITY_COVERAGE.enemies,
+      ENTITY_KIND_REGISTRY.ids.filter((id) =>
+        PUBLISHED_ENEMY_IDENTITY_IDS.includes(id as (typeof PUBLISHED_ENEMY_IDENTITY_IDS)[number]),
+      ),
+    );
+    assertProductionOwnerCoverage(
+      "environment object kind",
+      PRODUCTION_IDENTITY_COVERAGE.environmentObjectKinds,
+      ENVIRONMENT_OBJECT_KIND_REGISTRY.ids,
+    );
     assertProductionOwnerCoverage("upgrade", GAME_UPGRADE_IDS, [...PRODUCTION_UPGRADE_BY_ID.keys()]);
-    assertProductionOwnerCoverage("native gameplay event", GAME_EVENT_KIND_IDS, NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY.ids);
+    assertProductionOwnerCoverage(
+      "native gameplay event",
+      GAME_EVENT_KIND_IDS,
+      NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY.ids,
+    );
 
-    expect(() => { assertProductionOwnerCoverage("boss", [...BOSS_IDS, "future-boss"], Object.values(STAGE_BOSS_HOME)); })
-      .toThrow(/missing future-boss/u);
-    expect(() => { assertProductionOwnerCoverage("stage", [...GAME_STAGE_IDS, "future-stage"], Object.keys(STAGE_BOSS_HOME)); })
-      .toThrow(/missing future-stage/u);
-    expect(() => { assertProductionOwnerCoverage("upgrade", [...GAME_UPGRADE_IDS, "future_upgrade"], [...PRODUCTION_UPGRADE_BY_ID.keys()]); })
-      .toThrow(/missing future_upgrade/u);
-    expect(() => { assertProductionOwnerCoverage("native gameplay event", [...GAME_EVENT_KIND_IDS, "future-event"],
-      NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY.ids); }).toThrow(/missing future-event/u);
-    expect(() => { assertProductionOwnerCoverage("environment object kind",
-      [...GAME_ENVIRONMENT_OBJECT_KIND_IDS, "future-object-kind"], ENVIRONMENT_OBJECT_KIND_REGISTRY.ids); })
-      .toThrow(/missing future-object-kind/u);
-    expect(() => { assertProductionOwnerCoverage("enemy", [...GAME_ENEMY_IDENTITY_IDS, "future-enemy"],
-      ENTITY_KIND_REGISTRY.ids.filter((id) => GAME_ENEMY_IDENTITY_IDS.includes(id as typeof GAME_ENEMY_IDENTITY_IDS[number]))); })
-      .toThrow(/missing future-enemy/u);
+    expect(() => {
+      assertProductionOwnerCoverage("boss", [...BOSS_IDS, "future-boss"], Object.values(STAGE_BOSS_HOME));
+    }).toThrow(/missing future-boss/u);
+    expect(() => {
+      assertProductionOwnerCoverage("stage", [...GAME_STAGE_IDS, "future-stage"], Object.keys(STAGE_BOSS_HOME));
+    }).toThrow(/missing future-stage/u);
+    expect(() => {
+      assertProductionOwnerCoverage(
+        "upgrade",
+        [...GAME_UPGRADE_IDS, "future_upgrade"],
+        [...PRODUCTION_UPGRADE_BY_ID.keys()],
+      );
+    }).toThrow(/missing future_upgrade/u);
+    expect(() => {
+      assertProductionOwnerCoverage(
+        "native gameplay event",
+        [...GAME_EVENT_KIND_IDS, "future-event"],
+        NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY.ids,
+      );
+    }).toThrow(/missing future-event/u);
+    expect(() => {
+      assertProductionOwnerCoverage(
+        "environment object kind",
+        [...GAME_ENVIRONMENT_OBJECT_KIND_IDS, "future-object-kind"],
+        ENVIRONMENT_OBJECT_KIND_REGISTRY.ids,
+      );
+    }).toThrow(/missing future-object-kind/u);
+    expect(() => {
+      assertProductionOwnerCoverage(
+        "enemy",
+        [...GAME_ENEMY_IDENTITY_IDS, "future-enemy"],
+        ENTITY_KIND_REGISTRY.ids.filter((id) =>
+          GAME_ENEMY_IDENTITY_IDS.includes(id as (typeof GAME_ENEMY_IDENTITY_IDS)[number]),
+        ),
+      );
+    }).toThrow(/missing future-enemy/u);
   });
 
   it("maps every executable authored boss to one live scenario in its production home stage", () => {
     const encounters = currentCatalog.filter((entry) => entry.subject.kind === "boss");
     const publishedEncounters = encounters.filter((entry) => !entry.tags.includes("unpublished-preview"));
     const executableBossIds = PUBLISHED_BOSS_IDS;
-    assertProductionOwnerCoverage("boss scenario", executableBossIds, publishedEncounters.map((entry) => entry.subject.id));
+    assertProductionOwnerCoverage(
+      "boss scenario",
+      executableBossIds,
+      publishedEncounters.map((entry) => entry.subject.id),
+    );
     for (const stage of STAGES) {
       const matching = encounters.filter((entry) => entry.subject.id === stage.boss && entry.tags.includes(stage.id));
       expect(matching, `${stage.id} must own exactly one executable ${stage.boss} encounter`).toHaveLength(1);
@@ -184,20 +244,27 @@ describe("TearBench current-game catalog authority", () => {
       expect(matching[0]?.backends, stage.id).toEqual(["live"]);
     }
 
-    expect(() => { assertProductionOwnerCoverage("boss scenario", executableBossIds,
-      publishedEncounters.filter((entry) => entry.subject.id !== "warden").map((entry) => entry.subject.id)); })
-      .toThrow(/missing warden/u);
+    expect(() => {
+      assertProductionOwnerCoverage(
+        "boss scenario",
+        executableBossIds,
+        publishedEncounters.filter((entry) => entry.subject.id !== "warden").map((entry) => entry.subject.id),
+      );
+    }).toThrow(/missing warden/u);
     expect(encounters.filter((entry) => entry.subject.id === "rootbound")).toHaveLength(1);
     expect(encounters.filter((entry) => entry.subject.id === "white-hart")).toHaveLength(1);
-    expect(encounters.find((entry) => entry.subject.id === "white-hart")?.tags)
-      .toEqual(expect.arrayContaining(["unpublished-preview", "engineering-only"]));
-    expect(encounters.filter((entry) => entry.subject.id === "warden" && entry.tags.includes("undercroft")))
-      .toHaveLength(0);
+    expect(encounters.find((entry) => entry.subject.id === "white-hart")?.tags).toEqual(
+      expect.arrayContaining(["unpublished-preview", "engineering-only"]),
+    );
+    expect(
+      encounters.filter((entry) => entry.subject.id === "warden" && entry.tags.includes("undercroft")),
+    ).toHaveLength(0);
   });
 
   it("validates every canonical entry against its current source-owned subject and backend", () => {
-    expect(CANONICAL_ENGINEERING_SCENARIOS.map((scenario) => scenario.id))
-      .toEqual(currentCatalog.map((entry) => entry.id));
+    expect(CANONICAL_ENGINEERING_SCENARIOS.map((scenario) => scenario.id)).toEqual(
+      currentCatalog.map((entry) => entry.id),
+    );
     for (const entry of currentCatalog) {
       const materialized = CANONICAL_ENGINEERING_SCENARIOS.find((scenario) => scenario.id === entry.id);
       expect(materialized?.subject, entry.id).toEqual(entry.subject);
@@ -206,7 +273,9 @@ describe("TearBench current-game catalog authority", () => {
       expect(materializeCurrentScenario(entry).backends, entry.id).toEqual(entry.backends);
       expect(validateTearContract(materializeCurrentScenario(entry)).ok, entry.id).toBe(true);
       if (entry.subject.kind === "environment-field" || entry.subject.kind === "environment-combat-object") {
-        expect(materialized?.assertions, entry.id).toEqual(expect.arrayContaining([...ENVIRONMENT_REQUIRED_INVARIANT_IDS]));
+        expect(materialized?.assertions, entry.id).toEqual(
+          expect.arrayContaining([...ENVIRONMENT_REQUIRED_INVARIANT_IDS]),
+        );
       }
       expect(entry.tags, entry.id).toContain(entry.subject.id);
       expect(RUN_MODE_REGISTRY.has(entry.start.mode), entry.id).toBe(true);
@@ -219,7 +288,10 @@ describe("TearBench current-game catalog authority", () => {
         const production = getWeapon(entry.subject.id);
         const expected = production.throwIdentity.toLowerCase().replace(/[^a-z0-9]/gu, "");
         const declared = `${entry.id} ${entry.tags.join(" ")}`.toLowerCase().replace(/[^a-z0-9]/gu, "");
-        expect(declared, `${entry.id} must name the current production ${production.name} ${production.throwIdentity}`).toContain(expected);
+        expect(
+          declared,
+          `${entry.id} must name the current production ${production.name} ${production.throwIdentity}`,
+        ).toContain(expected);
       }
       if (entry.subject.kind === "boss") {
         expect(entry.start.boss, entry.id).toBe(entry.subject.id);
@@ -245,8 +317,11 @@ describe("TearBench current-game catalog authority", () => {
     expect(validateTearContract({ ...sword, backends: ["headless", "retired-backend"] }).ok).toBe(false);
     const movement = CANONICAL_ENGINEERING_SCENARIOS.find((scenario) => scenario.subject.id === "movement");
     const parry = CANONICAL_ENGINEERING_SCENARIOS.find((scenario) => scenario.subject.id === "parry");
-    if (movement === undefined || parry === undefined) throw new Error("current generic gameplay authority is incomplete");
-    expect(validateTearContract({ ...movement, subject: { kind: "gameplay", id: "invented-gameplay" } }).ok).toBe(false);
+    if (movement === undefined || parry === undefined)
+      throw new Error("current generic gameplay authority is incomplete");
+    expect(validateTearContract({ ...movement, subject: { kind: "gameplay", id: "invented-gameplay" } }).ok).toBe(
+      false,
+    );
     expect(validateTearContract({ ...parry, backends: ["live", "headless"] }).ok).toBe(false);
     const swordEntry = currentCatalog.find((entry) => entry.id === sword.id);
     if (swordEntry === undefined) throw new Error("the source-owned Sword catalog entry is missing");
@@ -254,12 +329,19 @@ describe("TearBench current-game catalog authority", () => {
     const { backends: droppedBackends, ...withoutBackends } = sword;
     expect(droppedSubject.id).toBe("sword");
     expect(droppedBackends).toContain("headless");
-    expect(() => { assertCurrentScenarioMetadata(withoutSubject, swordEntry); })
-      .toThrow(/lost its authoritative subject/u);
-    expect(() => { assertCurrentScenarioMetadata(withoutBackends, swordEntry); })
-      .toThrow(/lost its authoritative backends/u);
-    expect(validateTearContract({ ...sourceBoss, subject: { kind: "gameplay", id: "boss-disguise" },
-      backends: ["live", "headless"] }).ok).toBe(false);
+    expect(() => {
+      assertCurrentScenarioMetadata(withoutSubject, swordEntry);
+    }).toThrow(/lost its authoritative subject/u);
+    expect(() => {
+      assertCurrentScenarioMetadata(withoutBackends, swordEntry);
+    }).toThrow(/lost its authoritative backends/u);
+    expect(
+      validateTearContract({
+        ...sourceBoss,
+        subject: { kind: "gameplay", id: "boss-disguise" },
+        backends: ["live", "headless"],
+      }).ok,
+    ).toBe(false);
 
     const environment = createProductionHeadlessEnvironment();
     expect(() => environment.reset({ ...sword, backends: ["live"] })).toThrow(/does not support headless/u);
@@ -269,24 +351,37 @@ describe("TearBench current-game catalog authority", () => {
   it("rejects exact start metadata instead of silently materializing a different natural scenario", () => {
     const entry = scenarioCatalog.find((candidate) => candidate.id === "movement-jump");
     if (entry === undefined) throw new Error("the current movement scenario is unavailable");
-    for (const [field, value] of [["stage", "grounds"], ["wave", 3], ["bossPhase", "2"]] as const) {
+    for (const [field, value] of [
+      ["stage", "grounds"],
+      ["wave", 3],
+      ["bossPhase", "2"],
+    ] as const) {
       const surgical = { ...entry, start: { ...entry.start, [field]: value } } as typeof entry;
-      expect(() => { materializeCanonicalScenario(surgical); }, field).toThrow(/exact .* state; use State Forge/u);
+      expect(() => {
+        materializeCanonicalScenario(surgical);
+      }, field).toThrow(/exact .* state; use State Forge/u);
     }
     const unknown = { ...entry, start: { ...entry.start, retiredStartField: true } } as unknown as typeof entry;
-    expect(() => { materializeCanonicalScenario(unknown); }).toThrow(/unsupported start metadata/u);
+    expect(() => {
+      materializeCanonicalScenario(unknown);
+    }).toThrow(/unsupported start metadata/u);
     const unknownSubject = { ...entry, subject: { kind: "gameplay", id: "invented-gameplay" } };
-    expect(() => { materializeCanonicalScenario(unknownSubject); }).toThrow(/unknown gameplay scenario subject/u);
+    expect(() => {
+      materializeCanonicalScenario(unknownSubject);
+    }).toThrow(/unknown gameplay scenario subject/u);
     const unsupported = scenarioCatalog.find((candidate) => candidate.subject.id === "parry");
     if (unsupported === undefined) throw new Error("current live-only parry scenario is unavailable");
-    expect(() => { materializeCanonicalScenario({ ...unsupported, backends: ["live", "headless"] }); })
-      .toThrow(/no supported headless subject transition/u);
+    expect(() => {
+      materializeCanonicalScenario({ ...unsupported, backends: ["live", "headless"] });
+    }).toThrow(/no supported headless subject transition/u);
     const bloom = scenarioCatalog.find((candidate) => candidate.id === "verdant-bloom-well-cycle");
     if (bloom === undefined) throw new Error("current live-only Bloom Well scenario is unavailable");
-    expect(() => materializeCanonicalScenario({ ...bloom, backends: ["live", "headless"] }))
-      .toThrow(/Bloom Well evidence is live-only/u);
-    expect(() => materializeCanonicalScenario({ ...bloom, maxTicks: BLOOM_WELL_TIMING.totalTicks - 1 }))
-      .toThrow(/Bloom Well lifecycle horizon/u);
+    expect(() => materializeCanonicalScenario({ ...bloom, backends: ["live", "headless"] })).toThrow(
+      /Bloom Well evidence is live-only/u,
+    );
+    expect(() => materializeCanonicalScenario({ ...bloom, maxTicks: BLOOM_WELL_TIMING.totalTicks - 1 })).toThrow(
+      /Bloom Well lifecycle horizon/u,
+    );
   });
 
   /**
@@ -296,7 +391,8 @@ describe("TearBench current-game catalog authority", () => {
    * then HOLD TO SKIP CHAPTER) through real application frames, at tick zero.
    */
   function skipOpeningChapter(environment: ProductionHeadlessEnvironment, id: string): void {
-    const chapter = () => (environment.captureCheckpoint().snapshot.state["tear.run.v1"] as { chapterState?: unknown }).chapterState;
+    const chapter = () =>
+      (environment.captureCheckpoint().snapshot.state["tear.run.v1"] as { chapterState?: unknown }).chapterState;
     expect(chapter(), id).toBe("LORE_ENTER");
     // Checkpoint capture is the probe, so sample it every eight frames.
     for (let frame = 0; frame < 600 && (frame % 8 !== 0 || chapter() !== "WAVE_LIVE"); frame += 1) {
@@ -312,8 +408,12 @@ describe("TearBench current-game catalog authority", () => {
       try {
         const opening = environment.reset(materializeCurrentScenario(entry));
         const observed = environment.policyObservation();
-        expect(observed.run, entry.id).toMatchObject({ mode: entry.start.mode,
-          difficulty: entry.start.difficulty, weapon: entry.start.weapon, stage: "grounds" });
+        expect(observed.run, entry.id).toMatchObject({
+          mode: entry.start.mode,
+          difficulty: entry.start.difficulty,
+          weapon: entry.start.weapon,
+          stage: "grounds",
+        });
         if (entry.start.mode === "campaign") skipOpeningChapter(environment, entry.id);
         const advanced = environment.step([{ type: "move", x: 1_000, y: 0 }]);
         expect(advanced.observation.tick, entry.id).toBe(1);
@@ -321,7 +421,9 @@ describe("TearBench current-game catalog authority", () => {
           throw new Error(`canonical scenario ${entry.id} lost its source-owned player`);
         }
         expect(advanced.observation.player.x, entry.id).not.toBe(opening.player.x);
-      } finally { environment.dispose(); }
+      } finally {
+        environment.dispose();
+      }
     }
   });
 
@@ -342,7 +444,9 @@ describe("TearBench current-game catalog authority", () => {
     expect(() => BOSS_REGISTRY.assert("retired-boss")).toThrow(/unknown boss id/u);
     expect(() => STAGE_REGISTRY.assert("retired-stage")).toThrow(/unknown stage id/u);
     expect(() => UPGRADE_REGISTRY.assert("retired_upgrade")).toThrow(/unknown upgrade id/u);
-    expect(() => NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY.assert("retired-event")).toThrow(/unknown native gameplay event id/u);
+    expect(() => NATIVE_GAMEPLAY_EVENT_KIND_REGISTRY.assert("retired-event")).toThrow(
+      /unknown native gameplay event id/u,
+    );
     expect(() => RUN_MODE_REGISTRY.assert("debug")).toThrow(/unknown run mode id/u);
     expect(() => DIFFICULTY_REGISTRY.assert("legacy")).toThrow(/unknown difficulty id/u);
     expect(STAGE_REGISTRY.has("pale-traverse")).toBe(true);

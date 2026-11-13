@@ -11,7 +11,19 @@ import type { LiveWorldSessionState } from "../world/world-session-state";
 import { createLiveGhostChase } from "./ghost-chase-composition";
 
 /** Screens on which a running chase continues; every other screen stops it. */
-const CHASE_SCREENS = ["profile", "playing", "paused", "draft", "reserve", "tierup", "settings", "confirmquit", "continue", "gameover", "win"];
+const CHASE_SCREENS = [
+  "profile",
+  "playing",
+  "paused",
+  "draft",
+  "reserve",
+  "tierup",
+  "settings",
+  "confirmquit",
+  "continue",
+  "gameover",
+  "win",
+];
 
 export interface LiveGhostChaseRuntimeOptions {
   readonly indexedDb: IDBFactory | undefined;
@@ -35,17 +47,27 @@ export function createLiveGhostChaseRuntime(options: LiveGhostChaseRuntimeOption
   const hostState = options.world.state;
   const CINEMA = options.world.context.cinema;
   const chase = createLiveGhostChase({
-    beat: beat.snapshot, factory: options.indexedDb, ui: options.ui, run: options.run, player: options.player,
-    stage: () => stageRuntime.index, platforms: () => stageRuntime.platforms,
+    beat: beat.snapshot,
+    factory: options.indexedDb,
+    ui: options.ui,
+    run: options.run,
+    player: options.player,
+    stage: () => stageRuntime.index,
+    platforms: () => stageRuntime.platforms,
     blocked: () => navigation.screen() !== "playing" || CINEMA.active || hostState.bossIntro() !== null,
     prepareStart: (reference) => {
-      if (navigation.screen() !== "profile" || !isRunModeSelection(reference.mode) || !isRunDifficultySelection(reference.difficulty)) {
+      if (
+        navigation.screen() !== "profile" ||
+        !isRunModeSelection(reference.mode) ||
+        !isRunDifficultySelection(reference.difficulty)
+      ) {
         throw new Error("Chase launch is no longer owned by Profile.");
       }
       navigation.setScreen("setup");
     },
     start: (reference, racing) => {
-      if (!isRunModeSelection(reference.mode) || !isRunDifficultySelection(reference.difficulty)) throw new Error("Reference category unsupported.");
+      if (!isRunModeSelection(reference.mode) || !isRunDifficultySelection(reference.difficulty))
+        throw new Error("Reference category unsupported.");
       session.takeRunSeed();
       session.setSelectedWeapon(reference.weapon);
       session.setSelectedMode(reference.mode);

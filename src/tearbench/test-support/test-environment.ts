@@ -45,11 +45,15 @@ export function createTearTestEnvironment(seed: number | string = 1): TearTestEn
   return Object.freeze({
     platform,
     random,
-    get writes() { return Object.freeze([...writes]); },
+    get writes() {
+      return Object.freeze([...writes]);
+    },
     reset(nextSeed: number | string) {
       random.reset(nextSeed);
       writes.length = 0;
     },
-    stream(name: RunRandomStreamName) { return random.stream(name); },
+    stream(name: RunRandomStreamName) {
+      return random.stream(name);
+    },
   });
 }

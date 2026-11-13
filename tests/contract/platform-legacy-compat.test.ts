@@ -7,8 +7,12 @@ function memoryStorage() {
   const values = new Map<string, string>();
   const storage: SyncStringStorage = {
     getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => { values.set(key, value); },
-    removeItem: (key) => { values.delete(key); },
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+    removeItem: (key) => {
+      values.delete(key);
+    },
   };
   return { storage, values };
 }
@@ -37,13 +41,22 @@ describe("legacy platform compatibility", () => {
       game: { settings: { muteAudio: true }, gameplayStart },
       data: {
         getItem: (key) => remote.get(key) ?? null,
-        setItem: (key, value) => { remote.set(key, value); },
+        setItem: (key, value) => {
+          remote.set(key, value);
+        },
       },
     };
     const compatibility = createLegacyPlatformCompatibility({
-      target: "crazygames", sdk, storage: local.storage, createCrazyGamesServices: createCrazyGamesPlatformServices,
+      target: "crazygames",
+      sdk,
+      storage: local.storage,
+      createCrazyGamesServices: createCrazyGamesPlatformServices,
     });
-    compatibility.CG.setHooks(() => undefined, () => undefined, mute);
+    compatibility.CG.setHooks(
+      () => undefined,
+      () => undefined,
+      mute,
+    );
     compatibility.CG.gameplayStart();
     expect(gameplayStart).not.toHaveBeenCalled();
 
@@ -74,12 +87,16 @@ describe("legacy platform compatibility", () => {
       },
     };
     const compatibility = createLegacyPlatformCompatibility({
-      target: "crazygames", sdk, createCrazyGamesServices: createCrazyGamesPlatformServices,
+      target: "crazygames",
+      sdk,
+      createCrazyGamesServices: createCrazyGamesPlatformServices,
     });
     compatibility.CG.setHooks(suspend, resume);
     await compatibility.CG.init();
     compatibility.CG.rewarded(reward, done);
-    await vi.waitFor(() => { expect(done).toHaveBeenCalledWith(true); });
+    await vi.waitFor(() => {
+      expect(done).toHaveBeenCalledWith(true);
+    });
 
     expect(suspend).toHaveBeenCalledOnce();
     expect(resume).toHaveBeenCalledOnce();
@@ -90,15 +107,24 @@ describe("legacy platform compatibility", () => {
     const calls: string[] = [];
     let finishInit: (() => void) | undefined;
     const sdk: CrazyGamesSdkShape = {
-      init: () => new Promise<void>((resolve) => { finishInit = resolve; }),
+      init: () =>
+        new Promise<void>((resolve) => {
+          finishInit = resolve;
+        }),
       environment: "crazygames",
       game: {
-        loadingStart: () => { calls.push("loading-start"); },
-        loadingStop: () => { calls.push("loading-stop"); },
+        loadingStart: () => {
+          calls.push("loading-start");
+        },
+        loadingStop: () => {
+          calls.push("loading-stop");
+        },
       },
     };
     const compatibility = createLegacyPlatformCompatibility({
-      target: "crazygames", sdk, createCrazyGamesServices: createCrazyGamesPlatformServices,
+      target: "crazygames",
+      sdk,
+      createCrazyGamesServices: createCrazyGamesPlatformServices,
     });
 
     compatibility.CG.loadingStart();
@@ -117,7 +143,9 @@ describe("legacy platform compatibility", () => {
       environment: "crazygames",
     };
     const compatibility = createLegacyPlatformCompatibility({
-      target: "crazygames", sdk, createCrazyGamesServices: createCrazyGamesPlatformServices,
+      target: "crazygames",
+      sdk,
+      createCrazyGamesServices: createCrazyGamesPlatformServices,
     });
     await expect(compatibility.CG.init()).resolves.toBe(false);
     expect(compatibility.CG.live).toBe(false);

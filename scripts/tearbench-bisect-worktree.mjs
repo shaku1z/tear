@@ -52,7 +52,10 @@ function git(args, cwd = root) {
 
 function gitOutput(args, cwd = root) {
   const result = git(args, cwd);
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${(result.stderr || result.stdout || result.error || "unknown error").trim()}`);
+  if (result.status !== 0)
+    throw new Error(
+      `git ${args.join(" ")} failed: ${(result.stderr || result.stdout || result.error || "unknown error").trim()}`,
+    );
   return result.stdout.trim();
 }
 
@@ -62,7 +65,8 @@ function isWithin(parent, target) {
 }
 
 function assertSafeTempWorktree(path) {
-  if (!isWithin(tempRoot, path)) throw new TypeError("refusing to operate on a worktree outside artifacts/tearbench/bisect-worktrees");
+  if (!isWithin(tempRoot, path))
+    throw new TypeError("refusing to operate on a worktree outside artifacts/tearbench/bisect-worktrees");
 }
 
 function revisionDirectoryName(revision) {
@@ -80,7 +84,9 @@ function pnpmEntryPath() {
 function currentSourceMustBeClean() {
   const status = gitOutput(["status", "--porcelain", "--untracked-files=all"]);
   if (status !== "") {
-    throw new Error("refusing local bisection from a dirty source checkout; commit, stash, or discard unrelated changes first");
+    throw new Error(
+      "refusing local bisection from a dirty source checkout; commit, stash, or discard unrelated changes first",
+    );
   }
 }
 
@@ -92,10 +98,17 @@ function verifyCommitRange(good, bad, maxRevisions) {
   if (git(["merge-base", "--is-ancestor", good, bad]).status !== 0) {
     throw new Error("refusing bisection: --good must be an ancestor of --bad");
   }
-  const candidates = [good, ...gitOutput(["rev-list", "--reverse", `${good}..${bad}`]).split(/\r?\n/u).filter(Boolean)];
+  const candidates = [
+    good,
+    ...gitOutput(["rev-list", "--reverse", `${good}..${bad}`])
+      .split(/\r?\n/u)
+      .filter(Boolean),
+  ];
   if (candidates.length < 2) throw new Error("refusing bisection: --good and --bad resolve to the same revision");
   if (candidates.length > maxRevisions) {
-    throw new Error(`refusing bisection: ${String(candidates.length)} revisions exceed --max-revisions ${String(maxRevisions)}`);
+    throw new Error(
+      `refusing bisection: ${String(candidates.length)} revisions exceed --max-revisions ${String(maxRevisions)}`,
+    );
   }
   return candidates;
 }
@@ -115,17 +128,34 @@ async function withTearbenchModules(callback) {
 
 async function readRun(path) {
   const parsed = JSON.parse(await readFile(path, "utf8"));
-  if (parsed?.format !== "tearbench-run") throw new TypeError(`materializer did not write a tearbench-run artifact: ${path}`);
+  if (parsed?.format !== "tearbench-run")
+    throw new TypeError(`materializer did not write a tearbench-run artifact: ${path}`);
   return parsed;
 }
 
 function runMaterializer(worktree, scenario, seed, actionTrace, artifactPath, spawnTask) {
-  const result = spawnTask(process.execPath, [
-    resolve(worktree, "scripts", "tearbench.mjs"), "run", scenario, "--seed", seed, "--repeat", "1", "--artifact", artifactPath,
-    ...(actionTrace === undefined ? [] : ["--actions", actionTrace]),
-  ], { cwd: worktree, encoding: "utf8", windowsHide: true,
-    env: { ...process.env, npm_execpath: pnpmEntryPath() } });
-  return { status: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "", error: result.error?.message };
+  const result = spawnTask(
+    process.execPath,
+    [
+      resolve(worktree, "scripts", "tearbench.mjs"),
+      "run",
+      scenario,
+      "--seed",
+      seed,
+      "--repeat",
+      "1",
+      "--artifact",
+      artifactPath,
+      ...(actionTrace === undefined ? [] : ["--actions", actionTrace]),
+    ],
+    { cwd: worktree, encoding: "utf8", windowsHide: true, env: { ...process.env, npm_execpath: pnpmEntryPath() } },
+  );
+  return {
+    status: result.status ?? 1,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    error: result.error?.message,
+  };
 }
 
 async function cleanupWorktree(path, created) {
@@ -141,31 +171,63 @@ function attemptError(attempt, error) {
   return Object.freeze({ attempt, outcome: "execution-error", error: error.slice(0, 2_000) });
 }
 
-async function executeRevision({ worktree, revision, scenario, seed, repetitions, baseArtifacts, actionTrace, modules, runRoot, spawnTask }) {
+async function executeRevision({
+  worktree,
+  revision,
+  scenario,
+  seed,
+  repetitions,
+  baseArtifacts,
+  actionTrace,
+  modules,
+  runRoot,
+  spawnTask,
+}) {
   const checkout = git(["checkout", "--detach", revision], worktree);
   if (checkout.status !== 0) {
     return {
-      record: modules.bisection.createBisectRevisionRecord(revision, Array.from({ length: repetitions }, (_, index) =>
-        attemptError(index + 1, `clean detached checkout failed: ${(checkout.stderr || checkout.stdout || checkout.error || "unknown error").trim()}`))),
+      record: modules.bisection.createBisectRevisionRecord(
+        revision,
+        Array.from({ length: repetitions }, (_, index) =>
+          attemptError(
+            index + 1,
+            `clean detached checkout failed: ${(checkout.stderr || checkout.stdout || checkout.error || "unknown error").trim()}`,
+          ),
+        ),
+      ),
     };
   }
   const status = git(["status", "--porcelain", "--untracked-files=all"], worktree);
   if (status.status !== 0 || status.stdout.trim() !== "") {
     return {
-      record: modules.bisection.createBisectRevisionRecord(revision, Array.from({ length: repetitions }, (_, index) =>
-        attemptError(index + 1, "worktree was not clean before materialization"))),
+      record: modules.bisection.createBisectRevisionRecord(
+        revision,
+        Array.from({ length: repetitions }, (_, index) =>
+          attemptError(index + 1, "worktree was not clean before materialization"),
+        ),
+      ),
     };
   }
   // Each historical revision owns its package graph. A fresh Git worktree has
   // no node_modules, and borrowing the invoking checkout's graph would silently
   // test the wrong toolchain when the lockfile changes across revisions.
   const install = spawnTask(process.execPath, [pnpmEntryPath(), "install", "--frozen-lockfile"], {
-    cwd: worktree, encoding: "utf8", windowsHide: true, maxBuffer: 10 * 1024 * 1024,
+    cwd: worktree,
+    encoding: "utf8",
+    windowsHide: true,
+    maxBuffer: 10 * 1024 * 1024,
   });
   if (install.status !== 0) {
     return {
-      record: modules.bisection.createBisectRevisionRecord(revision, Array.from({ length: repetitions }, (_, index) =>
-        attemptError(index + 1, `revision dependency setup failed: ${(install.stderr || install.stdout || install.error?.message || "unknown error").trim()}`))),
+      record: modules.bisection.createBisectRevisionRecord(
+        revision,
+        Array.from({ length: repetitions }, (_, index) =>
+          attemptError(
+            index + 1,
+            `revision dependency setup failed: ${(install.stderr || install.stdout || install.error?.message || "unknown error").trim()}`,
+          ),
+        ),
+      ),
     };
   }
   const attempts = [];
@@ -176,7 +238,12 @@ async function executeRevision({ worktree, revision, scenario, seed, repetitions
     await mkdir(dirname(artifactPath), { recursive: true });
     const result = runMaterializer(worktree, scenario, seed, actionTrace, artifactPath, spawnTask);
     if (result.status !== 0) {
-      attempts.push(attemptError(attempt, `materializer failed: ${(result.stderr || result.stdout || result.error || "unknown error").trim()}`));
+      attempts.push(
+        attemptError(
+          attempt,
+          `materializer failed: ${(result.stderr || result.stdout || result.error || "unknown error").trim()}`,
+        ),
+      );
       continue;
     }
     try {
@@ -184,17 +251,25 @@ async function executeRevision({ worktree, revision, scenario, seed, repetitions
       const priorAttemptPath = attempts[0]?.artifactPath;
       const basePath = baseArtifacts[index] ?? priorAttemptPath;
       const base = basePath === undefined ? candidate : await readRun(basePath);
-      const investigation = modules.intelligence.investigateRegressionRuns({ base, candidate, createdAt: new Date().toISOString() });
+      const investigation = modules.intelligence.investigateRegressionRuns({
+        base,
+        candidate,
+        createdAt: new Date().toISOString(),
+      });
       const investigationPath = artifactPath.replace(/\.json$/u, ".investigation.json");
       await writeFile(investigationPath, `${JSON.stringify(investigation, null, 2)}\n`, "utf8");
       if (firstInvestigation === undefined && !investigation.comparison.equivalent) firstInvestigation = investigation;
-      attempts.push(Object.freeze({
-        attempt,
-        outcome: investigation.comparison.equivalent ? "does-not-reproduce" : "reproduces",
-        artifactPath,
-        investigationPath,
-        ...(investigation.comparison.firstMaterialDivergence === undefined ? {} : { firstMaterialDivergenceTick: investigation.comparison.firstMaterialDivergence.tick }),
-      }));
+      attempts.push(
+        Object.freeze({
+          attempt,
+          outcome: investigation.comparison.equivalent ? "does-not-reproduce" : "reproduces",
+          artifactPath,
+          investigationPath,
+          ...(investigation.comparison.firstMaterialDivergence === undefined
+            ? {}
+            : { firstMaterialDivergenceTick: investigation.comparison.firstMaterialDivergence.tick }),
+        }),
+      );
     } catch (error) {
       attempts.push(attemptError(attempt, error instanceof Error ? error.message : String(error)));
     }
@@ -204,7 +279,12 @@ async function executeRevision({ worktree, revision, scenario, seed, repetitions
 
 function changedPathsForCommit(revision) {
   const result = git(["diff-tree", "--no-commit-id", "--name-only", "-r", revision]);
-  return result.status === 0 ? result.stdout.split(/\r?\n/u).map((path) => path.trim()).filter(Boolean) : [];
+  return result.status === 0
+    ? result.stdout
+        .split(/\r?\n/u)
+        .map((path) => path.trim())
+        .filter(Boolean)
+    : [];
 }
 
 function usage() {
@@ -212,7 +292,9 @@ function usage() {
 }
 
 export async function main() {
-  return await withResourceLeases(["resources/browser", "resources/build"], (spawnTask) => executeLeasedBisection(spawnTask));
+  return await withResourceLeases(["resources/browser", "resources/build"], (spawnTask) =>
+    executeLeasedBisection(spawnTask),
+  );
 }
 
 async function executeLeasedBisection(spawnTask) {
@@ -227,7 +309,12 @@ async function executeLeasedBisection(spawnTask) {
   if (!isWithin(root, artifactPath)) throw new TypeError("bisection artifact must remain inside the workspace");
 
   return withTearbenchModules(async (modules) => {
-    const request = modules.bisection.validateBisectRequest({ goodRevision: goodInput, badRevision: badInput, repetitions, maxRevisions });
+    const request = modules.bisection.validateBisectRequest({
+      goodRevision: goodInput,
+      badRevision: badInput,
+      repetitions,
+      maxRevisions,
+    });
     currentSourceMustBeClean();
     const good = resolveCommit(goodInput);
     const bad = resolveCommit(badInput);
@@ -243,11 +330,27 @@ async function executeLeasedBisection(spawnTask) {
     try {
       await mkdir(tempRoot, { recursive: true });
       const add = git(["worktree", "add", "--detach", tempWorktree, good]);
-      if (add.status !== 0) throw new Error(`clean worktree creation failed: ${(add.stderr || add.stdout || add.error || "unknown error").trim()}`);
+      if (add.status !== 0)
+        throw new Error(
+          `clean worktree creation failed: ${(add.stderr || add.stdout || add.error || "unknown error").trim()}`,
+        );
       created = true;
-      const baseline = await executeRevision({ worktree: tempWorktree, revision: good, scenario, seed, repetitions, baseArtifacts: [], actionTrace, modules, runRoot, spawnTask });
+      const baseline = await executeRevision({
+        worktree: tempWorktree,
+        revision: good,
+        scenario,
+        seed,
+        repetitions,
+        baseArtifacts: [],
+        actionTrace,
+        modules,
+        runRoot,
+        spawnTask,
+      });
       records.set(good, baseline.record);
-      baselineArtifacts = baseline.record.attempts.flatMap((attempt) => attempt.artifactPath === undefined ? [] : [attempt.artifactPath]);
+      baselineArtifacts = baseline.record.attempts.flatMap((attempt) =>
+        attempt.artifactPath === undefined ? [] : [attempt.artifactPath],
+      );
       if (baseline.record.stability !== "does-not-reproduce" || baselineArtifacts.length !== repetitions) {
         reason = "the declared good revision was unavailable, unstable, or reproduced the regression";
       } else {
@@ -257,7 +360,18 @@ async function executeLeasedBisection(spawnTask) {
           const middle = Math.floor((low + high) / 2);
           const revision = candidates[middle];
           if (revision === undefined) throw new Error("bisection selected an invalid revision");
-          const execution = await executeRevision({ worktree: tempWorktree, revision, scenario, seed, repetitions, baseArtifacts: baselineArtifacts, actionTrace, modules, runRoot, spawnTask });
+          const execution = await executeRevision({
+            worktree: tempWorktree,
+            revision,
+            scenario,
+            seed,
+            repetitions,
+            baseArtifacts: baselineArtifacts,
+            actionTrace,
+            modules,
+            runRoot,
+            spawnTask,
+          });
           records.set(revision, execution.record);
           if (execution.firstInvestigation !== undefined) currentInvestigation = execution.firstInvestigation;
           if (execution.record.stability === "does-not-reproduce") low = middle;
@@ -268,13 +382,26 @@ async function executeLeasedBisection(spawnTask) {
           const revision = candidates[high];
           if (revision === undefined) throw new Error("bisection selected an invalid known-bad revision");
           if (!records.has(revision)) {
-            const execution = await executeRevision({ worktree: tempWorktree, revision, scenario, seed, repetitions, baseArtifacts: baselineArtifacts, actionTrace, modules, runRoot, spawnTask });
+            const execution = await executeRevision({
+              worktree: tempWorktree,
+              revision,
+              scenario,
+              seed,
+              repetitions,
+              baseArtifacts: baselineArtifacts,
+              actionTrace,
+              modules,
+              runRoot,
+              spawnTask,
+            });
             records.set(revision, execution.record);
             if (execution.firstInvestigation !== undefined) currentInvestigation = execution.firstInvestigation;
           }
         }
       }
-      const ordered = [...records.values()].sort((left, right) => candidates.indexOf(left.revision) - candidates.indexOf(right.revision));
+      const ordered = [...records.values()].sort(
+        (left, right) => candidates.indexOf(left.revision) - candidates.indexOf(right.revision),
+      );
       const selected = reason === undefined ? modules.bisection.selectFirstStableBadRevision(ordered) : { reason };
       const firstBadRevision = selected.firstBadRevision;
       const ownership = modules.bisection.deriveBisectOwnershipHints({
@@ -283,17 +410,23 @@ async function executeLeasedBisection(spawnTask) {
         firstBadRevision,
       });
       const output = {
-        format: "tearbench-local-bisection", schemaVersion: 1, createdAt: new Date().toISOString(), request,
+        format: "tearbench-local-bisection",
+        schemaVersion: 1,
+        createdAt: new Date().toISOString(),
+        request,
         scenario: { id: scenario, seed, ...(actionTrace === undefined ? {} : { actionTrace }) },
         revisions: ordered,
-        result: firstBadRevision === undefined
-          ? { status: "inconclusive", reason: selected.reason ?? "no stable first-bad revision was established" }
-          : { status: "first-bad-found", firstBadRevision },
+        result:
+          firstBadRevision === undefined
+            ? { status: "inconclusive", reason: selected.reason ?? "no stable first-bad revision was established" }
+            : { status: "first-bad-found", firstBadRevision },
         ownership,
       };
       await mkdir(dirname(artifactPath), { recursive: true });
       await writeFile(artifactPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
-      console.log(`${output.result.status.toUpperCase()}${firstBadRevision === undefined ? "" : ` ${firstBadRevision}`}`);
+      console.log(
+        `${output.result.status.toUpperCase()}${firstBadRevision === undefined ? "" : ` ${firstBadRevision}`}`,
+      );
       console.log(`artifact: ${artifactPath}`);
       return output;
     } finally {

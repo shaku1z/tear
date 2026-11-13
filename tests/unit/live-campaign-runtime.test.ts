@@ -15,12 +15,32 @@ import { STAGES } from "../../src/gameplay/stages";
 
 function story(): CampaignRuntimeState {
   return new CampaignRuntimeState(
-    () => new CampaignChapterController({ loreReveal: 0.1, chapterIn: 0.1, loreExit: 0.1,
-      biomeRevealBrief: 0.1, biomeRevealFull: 0.2, readyBrief: 0.1, readyFull: 0.2,
-      dialogueDuck: 0.4, biomeRevealDuck: 0.5 }),
-    () => new FinaleController({ anchorRadius: 20, worldZoom: 0.8, silence: 0.1, wound: 0.1,
-      relics: 0.1, cutAutoAt: 0.2, cutAutoStep: 0.1, cutSpeed: 10, restorationMin: 0.1,
-      epilogueReveal: 0.1, rewardHold: 0.1 }),
+    () =>
+      new CampaignChapterController({
+        loreReveal: 0.1,
+        chapterIn: 0.1,
+        loreExit: 0.1,
+        biomeRevealBrief: 0.1,
+        biomeRevealFull: 0.2,
+        readyBrief: 0.1,
+        readyFull: 0.2,
+        dialogueDuck: 0.4,
+        biomeRevealDuck: 0.5,
+      }),
+    () =>
+      new FinaleController({
+        anchorRadius: 20,
+        worldZoom: 0.8,
+        silence: 0.1,
+        wound: 0.1,
+        relics: 0.1,
+        cutAutoAt: 0.2,
+        cutAutoStep: 0.1,
+        cutSpeed: 10,
+        restorationMin: 0.1,
+        epilogueReveal: 0.1,
+        rewardHold: 0.1,
+      }),
   );
 }
 
@@ -30,23 +50,58 @@ describe("live campaign runtime", () => {
     const activatePreparedWave = vi.fn();
     const chapterStates: string[] = [];
     const runtime = createLiveCampaignRuntime({
-      runtime: story(), cinema: { start: vi.fn(), startBinding: vi.fn() }, run: () => run,
-      player: () => ({ x: 0, y: 0, vx: 0, vy: 0, onGround: true }), blade: () => ({}),
-      stageAt: () => ({ name: "Ash", blurb: "Descend", accent: "#f00", dark: false,
-        chapter: { number: 1, symbol: "I", title: "Embers", intro: "Enter", pages: [] } }),
-      preference: () => "off", preparedWave: () => true, activationDeferred: () => true,
+      runtime: story(),
+      cinema: { start: vi.fn(), startBinding: vi.fn() },
+      run: () => run,
+      player: () => ({ x: 0, y: 0, vx: 0, vy: 0, onGround: true }),
+      blade: () => ({}),
+      stageAt: () => ({
+        name: "Ash",
+        blurb: "Descend",
+        accent: "#f00",
+        dark: false,
+        chapter: { number: 1, symbol: "I", title: "Embers", intro: "Enter", pages: [] },
+      }),
+      preference: () => "off",
+      preparedWave: () => true,
+      activationDeferred: () => true,
       chapterIntents: {
-        activatePreparedWave, setChapterState: (state) => { run.chapterState = state; chapterStates.push(state); },
-        clearProjectiles: vi.fn(), musicDuck: vi.fn(), resetStageBanner: vi.fn(), sound: vi.fn(),
+        activatePreparedWave,
+        setChapterState: (state) => {
+          run.chapterState = state;
+          chapterStates.push(state);
+        },
+        clearProjectiles: vi.fn(),
+        musicDuck: vi.fn(),
+        resetStageBanner: vi.fn(),
+        sound: vi.fn(),
       },
       finaleIntents: {
-        beginLifecycle: vi.fn(), clearCombat: vi.fn(), freezeVoid: vi.fn(), worldZoom: vi.fn(), finalBlade: vi.fn(),
-        ring: vi.fn(), burst: vi.fn(), flash: vi.fn(), shake: vi.fn(), vibrate: vi.fn(), sound: vi.fn(),
-        restoreStageZero: vi.fn(), restorePlayer: vi.fn(), voidMix: vi.fn(), musicDuck: vi.fn(), win: vi.fn(),
+        beginLifecycle: vi.fn(),
+        clearCombat: vi.fn(),
+        freezeVoid: vi.fn(),
+        worldZoom: vi.fn(),
+        finalBlade: vi.fn(),
+        ring: vi.fn(),
+        burst: vi.fn(),
+        flash: vi.fn(),
+        shake: vi.fn(),
+        vibrate: vi.fn(),
+        sound: vi.fn(),
+        restoreStageZero: vi.fn(),
+        restorePlayer: vi.fn(),
+        voidMix: vi.fn(),
+        musicDuck: vi.fn(),
+        win: vi.fn(),
       },
-      clearBossBeat: vi.fn(), prepareVictory: vi.fn(() => ({ isNew: false, earned: 0, coins: 0 })),
-      win: vi.fn(), formatTime: () => "0:00", viewport: { width: 1600, height: 900 },
-      perfectColor: () => "#fff", reducedMotion: () => false, lowGraphics: () => false,
+      clearBossBeat: vi.fn(),
+      prepareVictory: vi.fn(() => ({ isNew: false, earned: 0, coins: 0 })),
+      win: vi.fn(),
+      formatTime: () => "0:00",
+      viewport: { width: 1600, height: 900 },
+      perfectColor: () => "#fff",
+      reducedMotion: () => false,
+      lowGraphics: () => false,
     });
     expect(runtime.loreBusy()).toBe(true);
     runtime.beginChapter(0);
@@ -63,27 +118,67 @@ describe("live campaign runtime", () => {
       const startBinding = vi.fn();
       const resetStageBanner = vi.fn();
       const runtime = createLiveCampaignRuntime({
-        runtime: story(), cinema: { start: vi.fn(), startBinding }, run: () => run,
-        player: () => ({ x: 0, y: 0, vx: 0, vy: 0, onGround: true }), blade: () => ({}),
-        stageAt: () => ({ name: "Ash", blurb: "Descend", accent: "#f00", dark: false,
-          chapter: { number: 1, symbol: "I", title: "Embers", intro: "Enter", pages: [{ label: "A", text: "B" }] } }),
+        runtime: story(),
+        cinema: { start: vi.fn(), startBinding },
+        run: () => run,
+        player: () => ({ x: 0, y: 0, vx: 0, vy: 0, onGround: true }),
+        blade: () => ({}),
+        stageAt: () => ({
+          name: "Ash",
+          blurb: "Descend",
+          accent: "#f00",
+          dark: false,
+          chapter: { number: 1, symbol: "I", title: "Embers", intro: "Enter", pages: [{ label: "A", text: "B" }] },
+        }),
         preference: () => "full",
-        preparedWave: () => true, activationDeferred: () => true,
+        preparedWave: () => true,
+        activationDeferred: () => true,
         chapterIntents: {
-          activatePreparedWave: vi.fn(), setChapterState: (state) => { run.chapterState = state; },
-          clearProjectiles: vi.fn(), musicDuck: vi.fn(), resetStageBanner, sound: vi.fn(),
+          activatePreparedWave: vi.fn(),
+          setChapterState: (state) => {
+            run.chapterState = state;
+          },
+          clearProjectiles: vi.fn(),
+          musicDuck: vi.fn(),
+          resetStageBanner,
+          sound: vi.fn(),
         },
         finaleIntents: {
-          beginLifecycle: vi.fn(), clearCombat: vi.fn(), freezeVoid: vi.fn(), worldZoom: vi.fn(), finalBlade: vi.fn(),
-          ring: vi.fn(), burst: vi.fn(), flash: vi.fn(), shake: vi.fn(), vibrate: vi.fn(), sound: vi.fn(),
-          restoreStageZero: vi.fn(), restorePlayer: vi.fn(), voidMix: vi.fn(), musicDuck: vi.fn(), win: vi.fn(),
+          beginLifecycle: vi.fn(),
+          clearCombat: vi.fn(),
+          freezeVoid: vi.fn(),
+          worldZoom: vi.fn(),
+          finalBlade: vi.fn(),
+          ring: vi.fn(),
+          burst: vi.fn(),
+          flash: vi.fn(),
+          shake: vi.fn(),
+          vibrate: vi.fn(),
+          sound: vi.fn(),
+          restoreStageZero: vi.fn(),
+          restorePlayer: vi.fn(),
+          voidMix: vi.fn(),
+          musicDuck: vi.fn(),
+          win: vi.fn(),
         },
-        clearBossBeat: vi.fn(), prepareVictory: vi.fn(() => ({ isNew: false, earned: 0, coins: 0 })),
-        win: vi.fn(), formatTime: () => "0:00", viewport: { width: 1600, height: 900 },
-        perfectColor: () => "#fff", reducedMotion: () => false, lowGraphics: () => false,
+        clearBossBeat: vi.fn(),
+        prepareVictory: vi.fn(() => ({ isNew: false, earned: 0, coins: 0 })),
+        win: vi.fn(),
+        formatTime: () => "0:00",
+        viewport: { width: 1600, height: 900 },
+        perfectColor: () => "#fff",
+        reducedMotion: () => false,
+        lowGraphics: () => false,
       });
-      return { runtime, startBinding, resetStageBanner, run: () => run,
-        retry: () => { run = { mode: "campaign", chapterState: "LORE_ENTER", score: 0, runTime: 0 }; } };
+      return {
+        runtime,
+        startBinding,
+        resetStageBanner,
+        run: () => run,
+        retry: () => {
+          run = { mode: "campaign", chapterState: "LORE_ENTER", score: 0, runTime: 0 };
+        },
+      };
     };
 
     const fresh = launch();
@@ -116,28 +211,56 @@ describe("live campaign runtime", () => {
       preparedWave: () => false,
       activationDeferred: () => false,
       chapterIntents: {
-        activatePreparedWave: vi.fn(), setChapterState: vi.fn(), clearProjectiles: vi.fn(),
-        musicDuck: vi.fn(), resetStageBanner: vi.fn(), sound: vi.fn(),
+        activatePreparedWave: vi.fn(),
+        setChapterState: vi.fn(),
+        clearProjectiles: vi.fn(),
+        musicDuck: vi.fn(),
+        resetStageBanner: vi.fn(),
+        sound: vi.fn(),
       },
       finaleIntents: {
-        beginLifecycle: () => { order.push("adapter"); },
-        clearCombat: vi.fn(), freezeVoid: vi.fn(), worldZoom: vi.fn(), finalBlade: vi.fn(),
-        ring: vi.fn(), burst: vi.fn(), flash: vi.fn(), shake: vi.fn(), vibrate: vi.fn(), sound: vi.fn(),
-        restoreStageZero: vi.fn(), restorePlayer: vi.fn(), voidMix: vi.fn(), musicDuck: vi.fn(), win: vi.fn(),
+        beginLifecycle: () => {
+          order.push("adapter");
+        },
+        clearCombat: vi.fn(),
+        freezeVoid: vi.fn(),
+        worldZoom: vi.fn(),
+        finalBlade: vi.fn(),
+        ring: vi.fn(),
+        burst: vi.fn(),
+        flash: vi.fn(),
+        shake: vi.fn(),
+        vibrate: vi.fn(),
+        sound: vi.fn(),
+        restoreStageZero: vi.fn(),
+        restorePlayer: vi.fn(),
+        voidMix: vi.fn(),
+        musicDuck: vi.fn(),
+        win: vi.fn(),
       },
-      observeFinaleIntents: (batch) => { observed.push(batch); order.push("observer"); },
+      observeFinaleIntents: (batch) => {
+        observed.push(batch);
+        order.push("observer");
+      },
       clearBossBeat: vi.fn(),
       prepareVictory: () => ({ isNew: false, earned: 0, coins: 0 }),
-      win: vi.fn(), formatTime: () => "0:03", viewport: { width: 1600, height: 900 },
-      perfectColor: () => "#fff", reducedMotion: () => false, lowGraphics: () => false,
+      win: vi.fn(),
+      formatTime: () => "0:03",
+      viewport: { width: 1600, height: 900 },
+      perfectColor: () => "#fff",
+      reducedMotion: () => false,
+      lowGraphics: () => false,
     });
 
     runtime.startAdventureFinale({ x: 30, y: 40 });
 
     expect(order.slice(0, 2)).toEqual(["observer", "adapter"]);
     expect(observed[0]).toEqual([
-      { type: "begin-finale-lifecycle" }, { type: "clear-combat" }, { type: "freeze-void" },
-      { type: "world-zoom", value: 0.8 }, { type: "final-blade", active: true, restoredTrail: true },
+      { type: "begin-finale-lifecycle" },
+      { type: "clear-combat" },
+      { type: "freeze-void" },
+      { type: "world-zoom", value: 0.8 },
+      { type: "final-blade", active: true, restoredTrail: true },
     ]);
     expect(Object.isFrozen(observed[0])).toBe(true);
     expect((observed[0] as readonly unknown[]).every(Object.isFrozen)).toBe(true);
@@ -155,37 +278,90 @@ describe("live campaign chapter gate and the wave it holds", () => {
     const openDraft = vi.fn();
     let enemies = 0;
     const newRun = () => ({
-      mode: "campaign" as const, diff: "normal" as const, wave: 0, diffHp: 1, diffCount: 1,
-      bossOrder: BOSS_ROSTER.map((boss) => boss.id), bossIdx: 0, bossesBeaten: 0, curBoss: null,
-      stage: null as number | null, spawnQueue: [] as LiveWaveRun["spawnQueue"], spawnTimer: 0,
-      pendingBossOutro: null, waveTime: 0, waveKills: 0, wavePeak: 1, mult: 1, runTime: 0, clearTimer: -1,
-      waveLog: [] as LiveWaveRun["waveLog"], _dmgThisWave: false, _dmgThisStage: false, mods: { owned: {} },
-      chapterState: "LORE_ENTER", score: 0,
+      mode: "campaign" as const,
+      diff: "normal" as const,
+      wave: 0,
+      diffHp: 1,
+      diffCount: 1,
+      bossOrder: BOSS_ROSTER.map((boss) => boss.id),
+      bossIdx: 0,
+      bossesBeaten: 0,
+      curBoss: null,
+      stage: null as number | null,
+      spawnQueue: [] as LiveWaveRun["spawnQueue"],
+      spawnTimer: 0,
+      pendingBossOutro: null,
+      waveTime: 0,
+      waveKills: 0,
+      wavePeak: 1,
+      mult: 1,
+      runTime: 0,
+      clearTimer: -1,
+      waveLog: [] as LiveWaveRun["waveLog"],
+      _dmgThisWave: false,
+      _dmgThisStage: false,
+      mods: { owned: {} },
+      chapterState: "LORE_ENTER",
+      score: 0,
     });
     let run = newRun();
     let controller: LiveWaveController | null = null;
     const campaign = createLiveCampaignRuntime({
-      runtime: chapters, cinema: { start: vi.fn(), startBinding }, run: () => run,
-      player: () => ({ x: 0, y: 0, vx: 0, vy: 0, onGround: true }), blade: () => ({}),
-      stageAt: (index) => STAGES[index] ?? null, preference: () => preference,
-      preparedWave: () => lifecycle.hasPreparedWave, activationDeferred: () => lifecycle.activationDeferred,
+      runtime: chapters,
+      cinema: { start: vi.fn(), startBinding },
+      run: () => run,
+      player: () => ({ x: 0, y: 0, vx: 0, vy: 0, onGround: true }),
+      blade: () => ({}),
+      stageAt: (index) => STAGES[index] ?? null,
+      preference: () => preference,
+      preparedWave: () => lifecycle.hasPreparedWave,
+      activationDeferred: () => lifecycle.activationDeferred,
       chapterIntents: {
-        activatePreparedWave: () => { controller?.activatePreparedWave(); },
-        setChapterState: (state) => { run.chapterState = state; },
-        clearProjectiles: vi.fn(), musicDuck: vi.fn(), resetStageBanner: vi.fn(), sound: vi.fn(),
+        activatePreparedWave: () => {
+          controller?.activatePreparedWave();
+        },
+        setChapterState: (state) => {
+          run.chapterState = state;
+        },
+        clearProjectiles: vi.fn(),
+        musicDuck: vi.fn(),
+        resetStageBanner: vi.fn(),
+        sound: vi.fn(),
       },
       finaleIntents: {
-        beginLifecycle: vi.fn(), clearCombat: vi.fn(), freezeVoid: vi.fn(), worldZoom: vi.fn(), finalBlade: vi.fn(),
-        ring: vi.fn(), burst: vi.fn(), flash: vi.fn(), shake: vi.fn(), vibrate: vi.fn(), sound: vi.fn(),
-        restoreStageZero: vi.fn(), restorePlayer: vi.fn(), voidMix: vi.fn(), musicDuck: vi.fn(), win: vi.fn(),
+        beginLifecycle: vi.fn(),
+        clearCombat: vi.fn(),
+        freezeVoid: vi.fn(),
+        worldZoom: vi.fn(),
+        finalBlade: vi.fn(),
+        ring: vi.fn(),
+        burst: vi.fn(),
+        flash: vi.fn(),
+        shake: vi.fn(),
+        vibrate: vi.fn(),
+        sound: vi.fn(),
+        restoreStageZero: vi.fn(),
+        restorePlayer: vi.fn(),
+        voidMix: vi.fn(),
+        musicDuck: vi.fn(),
+        win: vi.fn(),
       },
-      clearBossBeat: vi.fn(), prepareVictory: vi.fn(() => ({ isNew: false, earned: 0, coins: 0 })),
-      win: vi.fn(), formatTime: () => "0:00", viewport: { width: 1600, height: 900 },
-      perfectColor: () => "#fff", reducedMotion: () => false, lowGraphics: () => false,
+      clearBossBeat: vi.fn(),
+      prepareVictory: vi.fn(() => ({ isNew: false, earned: 0, coins: 0 })),
+      win: vi.fn(),
+      formatTime: () => "0:00",
+      viewport: { width: 1600, height: 900 },
+      perfectColor: () => "#fff",
+      reducedMotion: () => false,
+      lowGraphics: () => false,
     });
     const wave = createLiveWaveHost({
-      run: () => run, tuning: () => CONFIG.run, stages: STAGES, presets: PRESETS,
-      random: new SeededRandom("chapter-gate"), modeDefinition: () => ({}),
+      run: () => run,
+      tuning: () => CONFIG.run,
+      stages: STAGES,
+      presets: PRESETS,
+      random: new SeededRandom("chapter-gate"),
+      modeDefinition: () => ({}),
       currentStage: () => ({ index: run.stage ?? 0, accent: "#fff" }),
       stageHasChapter: campaign.chapterGatesWave,
       chapterFlowActive: () => chapters.chapterFlow !== null,
@@ -195,34 +371,76 @@ describe("live campaign chapter gate and the wave it holds", () => {
         pendingReward: () => lifecycle.reward,
       },
       planIntents: {
-        beginWipe: vi.fn(), loadStage: vi.fn(), setStageBanner: vi.fn(),
-        beginCampaignChapter: (index, outro) => { campaign.beginChapter(index, outro as ChapterPage | null); },
-        recordWave: vi.fn(), snapshotReplay: vi.fn(),
-        prepareWave: (index, boss, deferred) => { lifecycle.prepareWave(index, boss, deferred); },
-        activateWave: () => { lifecycle.activateWave(); }, showWaveBanner: vi.fn(), playWaveSound: vi.fn(),
+        beginWipe: vi.fn(),
+        loadStage: vi.fn(),
+        setStageBanner: vi.fn(),
+        beginCampaignChapter: (index, outro) => {
+          campaign.beginChapter(index, outro as ChapterPage | null);
+        },
+        recordWave: vi.fn(),
+        snapshotReplay: vi.fn(),
+        prepareWave: (index, boss, deferred) => {
+          lifecycle.prepareWave(index, boss, deferred);
+        },
+        activateWave: () => {
+          lifecycle.activateWave();
+        },
+        showWaveBanner: vi.fn(),
+        playWaveSound: vi.fn(),
       },
       clearIntents: {
-        clearWave: () => { lifecycle.clearWave(); }, bloom: vi.fn(), recordWave: vi.fn(), profileMax: vi.fn(),
-        profileAdd: vi.fn(), dailyBump: vi.fn(), hordeCleared: vi.fn(), achievementCheck: vi.fn(), stageDone: vi.fn(),
-        healPlayer: vi.fn(), prepareReward: (reward) => { lifecycle.prepareReward(reward); },
-        startAdventureFinale: vi.fn(), winRun: vi.fn(), releasePointer: vi.fn(), openTierUp: vi.fn(), openDraft,
+        clearWave: () => {
+          lifecycle.clearWave();
+        },
+        bloom: vi.fn(),
+        recordWave: vi.fn(),
+        profileMax: vi.fn(),
+        profileAdd: vi.fn(),
+        dailyBump: vi.fn(),
+        hordeCleared: vi.fn(),
+        achievementCheck: vi.fn(),
+        stageDone: vi.fn(),
+        healPlayer: vi.fn(),
+        prepareReward: (reward) => {
+          lifecycle.prepareReward(reward);
+        },
+        startAdventureFinale: vi.fn(),
+        winRun: vi.fn(),
+        releasePointer: vi.fn(),
+        openTierUp: vi.fn(),
+        openDraft,
       },
-      spawn: () => { enemies += 1; }, enemyCount: () => enemies, loreBusy: campaign.loreBusy,
-      achievementTracking: () => false, playerOneHit: () => false, availableTierUpCount: () => 0,
+      spawn: () => {
+        enemies += 1;
+      },
+      enemyCount: () => enemies,
+      loreBusy: campaign.loreBusy,
+      achievementTracking: () => false,
+      playerOneHit: () => false,
+      availableTierUpCount: () => 0,
       install: vi.fn(),
     });
     controller = wave;
     return {
-      lifecycle, startBinding, openDraft, chapters,
+      lifecycle,
+      startBinding,
+      openDraft,
+      chapters,
       /** A new run of the same session: the menu START or the results RETRY. */
       start(sessionId: string) {
-        run = newRun(); enemies = 0; lifecycle.reset(); chapters.reset(); lifecycle.start(sessionId);
+        run = newRun();
+        enemies = 0;
+        lifecycle.reset();
+        chapters.reset();
+        lifecycle.start(sessionId);
         wave.startNextWave();
       },
       /** Every enemy of the wave dies, then the clear pause elapses. */
       clearWave() {
         for (let tick = 0; tick < 1_200 && openDraft.mock.calls.length === 0; tick += 1) {
-          run.spawnQueue = []; enemies = 0; wave.update(1 / 120);
+          run.spawnQueue = [];
+          enemies = 0;
+          wave.update(1 / 120);
         }
       },
     };

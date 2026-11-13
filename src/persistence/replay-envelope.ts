@@ -3,8 +3,16 @@ import { invalid, unsupportedVersion, type MigrationResult } from "./result";
 
 export const REPLAY_ENVELOPE_VERSION = 3;
 const KNOWN_FIELDS = new Set([
-  "schema", "schemaVersion", "createdAtMs", "rulesetVersion", "engineVersion", "scoreEngineVersion",
-  "seed", "recording", "data", "extensions",
+  "schema",
+  "schemaVersion",
+  "createdAtMs",
+  "rulesetVersion",
+  "engineVersion",
+  "scoreEngineVersion",
+  "seed",
+  "recording",
+  "data",
+  "extensions",
 ]);
 
 export interface ReplayEnvelopeV3 {

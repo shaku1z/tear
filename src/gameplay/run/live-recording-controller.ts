@@ -61,20 +61,27 @@ export class LiveRecordingController<TReplay extends RecordedReplay> {
     }
 
     // Validate the captured run, not current visibility or a later replacement.
-    if (run.beatThisRun !== undefined || run.seedRace !== undefined || readGhostRunAssistance(run.ghostAssistance) !== undefined) return replay;
+    if (
+      run.beatThisRun !== undefined ||
+      run.seedRace !== undefined ||
+      readGhostRunAssistance(run.ghostAssistance) !== undefined
+    )
+      return replay;
     const board = `lb_${run.mode}_${run.diff}`;
-    void this.#port.submitScore(run.mode, run.diff, {
-      score: run.score,
-      wave: run.wave,
-      time: run.runTime,
-    }).then((accepted) => {
-      if (!accepted || replay === null) return;
-      void this.#port.publishReplay(replay, board).then((shareId) => {
-        if (shareId === null || shareId === "") return;
-        this.#port.linkReplay(run.mode, run.diff, shareId);
-        if (vaultId !== null && vaultId !== "") this.#port.attachShareId(vaultId, shareId);
+    void this.#port
+      .submitScore(run.mode, run.diff, {
+        score: run.score,
+        wave: run.wave,
+        time: run.runTime,
+      })
+      .then((accepted) => {
+        if (!accepted || replay === null) return;
+        void this.#port.publishReplay(replay, board).then((shareId) => {
+          if (shareId === null || shareId === "") return;
+          this.#port.linkReplay(run.mode, run.diff, shareId);
+          if (vaultId !== null && vaultId !== "") this.#port.attachShareId(vaultId, shareId);
+        });
       });
-    });
     return replay;
   }
 }

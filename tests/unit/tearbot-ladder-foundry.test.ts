@@ -13,9 +13,9 @@ import {
 
 const items: TearScenarioItem[] = Array.from({ length: 100 }, (_, index) => ({
   id: `hidden-${String(index)}`,
-  difficulty: 0.2 + index % 10 * 0.065,
+  difficulty: 0.2 + (index % 10) * 0.065,
   discrimination: {
-    mechanicalExecution: 0.4 + index % 3 * 0.1,
+    mechanicalExecution: 0.4 + (index % 3) * 0.1,
     strategicPlanning: 0.3,
     recovery: 0.2,
     perception: 0.25,
@@ -32,7 +32,11 @@ const frozen = {
   releaseExamHash: "exam-v1",
 };
 
-function policy(id: string, scores: Readonly<Record<string, number>>, patch: Partial<TearFoundryPolicy> = {}): TearFoundryPolicy {
+function policy(
+  id: string,
+  scores: Readonly<Record<string, number>>,
+  patch: Partial<TearFoundryPolicy> = {},
+): TearFoundryPolicy {
   return { id, scores, ...frozen, ...patch };
 }
 
@@ -57,7 +61,9 @@ describe("TearBot Ladder and Agent Foundry", () => {
 
     const omega = compileTearBotLevel("omega");
     expect(omega).toMatchObject({
-      id: "level-omega", public: false, privileged: true,
+      id: "level-omega",
+      public: false,
+      privileged: true,
       label: "OMEGA — PRIVILEGED / NON-HUMAN",
     });
     expect(omega.bounds.observationFields).toContain("exact-rng-state");
@@ -78,12 +84,24 @@ describe("TearBot Ladder and Agent Foundry", () => {
 
   it("applies human anchors only with separately consented adequate populations", () => {
     const level = compileTearBotLevel(5);
-    expect(() => applyHumanAnchors(level, [{
-      dimension: "recovery", value: 0.6, sampleCount: 10, consent: "anonymous-improvement",
-    }])).toThrow(/at least 30/u);
-    const anchored = applyHumanAnchors(level, [{
-      dimension: "recovery", value: 0.6, sampleCount: 30, consent: "public-training",
-    }]);
+    expect(() =>
+      applyHumanAnchors(level, [
+        {
+          dimension: "recovery",
+          value: 0.6,
+          sampleCount: 10,
+          consent: "anonymous-improvement",
+        },
+      ]),
+    ).toThrow(/at least 30/u);
+    const anchored = applyHumanAnchors(level, [
+      {
+        dimension: "recovery",
+        value: 0.6,
+        sampleCount: 30,
+        consent: "public-training",
+      },
+    ]);
     expect(anchored).toMatchObject({ provisional: false, astuteness: { recovery: 0.6 } });
   });
 

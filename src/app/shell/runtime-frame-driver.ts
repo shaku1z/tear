@@ -26,7 +26,9 @@ export class RuntimeFrameDriver {
     this.#maximumDeltaSeconds = maximumDeltaSeconds;
   }
 
-  get running(): boolean { return this.#handle !== null; }
+  get running(): boolean {
+    return this.#handle !== null;
+  }
 
   start(callback: RuntimeFrameCallback): void {
     if (this.running) return;
@@ -34,11 +36,13 @@ export class RuntimeFrameDriver {
       const previous = this.#previousTimestamp;
       this.#previousTimestamp = timestampMs;
       const rawDelta = previous === null ? 0 : Math.max(0, (timestampMs - previous) / 1_000);
-      callback(Object.freeze({
-        timestampMs,
-        deltaSeconds: Math.min(rawDelta, this.#maximumDeltaSeconds),
-        intervalSeconds: rawDelta,
-      }));
+      callback(
+        Object.freeze({
+          timestampMs,
+          deltaSeconds: Math.min(rawDelta, this.#maximumDeltaSeconds),
+          intervalSeconds: rawDelta,
+        }),
+      );
       if (this.#handle !== null) this.#handle = this.#source.requestAnimationFrame(step);
     };
     this.#handle = this.#source.requestAnimationFrame(step);

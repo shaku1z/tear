@@ -18,10 +18,11 @@ export interface LiveWorldSimulationPresentationAdapterOptions {
   readonly ui: EnemyPresentationOptions["UI"];
   readonly configuration: Readonly<{
     accessibility: EnemyPresentationOptions["A11Y"];
-    config: EnemyPresentationOptions["policy"] & Readonly<{
-      juice: Readonly<{ trailAlpha: number }>;
-      weapons: Readonly<{ chainblade: Readonly<{ linkSegments: number }>; riftlock: Readonly<{ chambers: number }> }>;
-    }>;
+    config: EnemyPresentationOptions["policy"] &
+      Readonly<{
+        juice: Readonly<{ trailAlpha: number }>;
+        weapons: Readonly<{ chainblade: Readonly<{ linkSegments: number }>; riftlock: Readonly<{ chambers: number }> }>;
+      }>;
     graphics: EnemyPresentationOptions["GFX"];
     theme: EnemyPresentationOptions["THEME"];
   }>;
@@ -51,18 +52,46 @@ export function createLiveWorldSimulationPresentationAdapter(
   const { aldric, bossTheater, chargedShot, colors, exotic, juice, source, warden, world, view } = config;
   const playerPresentation = createPlayerRenderer({ colors: config.colors, graphics, theme, clamp: geometry.clamp });
   const bladePresentation = createBladeRenderer({
-    clock, policy: { colors, juice, chainSegments: config.weapons.chainblade.linkSegments, chamberCount: config.weapons.riftlock.chambers },
-    graphics, theme, clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
+    clock,
+    policy: {
+      colors,
+      juice,
+      chainSegments: config.weapons.chainblade.linkSegments,
+      chamberCount: config.weapons.riftlock.chambers,
+    },
+    graphics,
+    theme,
+    clamp: geometry.clamp,
+    len: geometry.len,
+    lerp: geometry.lerp,
   });
   const projectilePresentation = createProjectileRenderer({
-    clock, policy: { colors, world }, graphics, theme, clamp: geometry.clamp, accessibility,
+    clock,
+    policy: { colors, world },
+    graphics,
+    theme,
+    clamp: geometry.clamp,
+    accessibility,
   });
   const mirrorPresentation = createMirrorRenderer({
-    clock, policy: { colors, world }, effects, graphics, theme, clamp: geometry.clamp, cosmeticRandom,
+    clock,
+    policy: { colors, world },
+    effects,
+    graphics,
+    theme,
+    clamp: geometry.clamp,
+    cosmeticRandom,
   });
   const enemyPresentation = createEnemyPresentation({
-    A11Y: accessibility, CLOCK: clock, policy: { aldric, bossTheater, chargedShot, colors, exotic, source, warden, world, view }, GFX: graphics, THEME: theme, UI: ui,
-    clamp: geometry.clamp, len: geometry.len, lerp: geometry.lerp,
+    A11Y: accessibility,
+    CLOCK: clock,
+    policy: { aldric, bossTheater, chargedShot, colors, exotic, source, warden, world, view },
+    GFX: graphics,
+    THEME: theme,
+    UI: ui,
+    clamp: geometry.clamp,
+    len: geometry.len,
+    lerp: geometry.lerp,
   });
   return Object.freeze({
     blade: bladePresentation,

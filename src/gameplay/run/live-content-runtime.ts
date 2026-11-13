@@ -1,12 +1,28 @@
 import type { RandomSource } from "../../domain/random";
 import { shuffledBossRoster, type BossId } from "./content-director";
-import { completeEnemySpawn, constructLiveEnemy, type LiveEnemyConstructionPort,
-  type LiveEnemySpawnPort, type LiveSpawnEnemy, type LiveWaveSpawnSpec } from "./live-enemy-spawn";
+import {
+  completeEnemySpawn,
+  constructLiveEnemy,
+  type LiveEnemyConstructionPort,
+  type LiveEnemySpawnPort,
+  type LiveSpawnEnemy,
+  type LiveWaveSpawnSpec,
+} from "./live-enemy-spawn";
 import { planGroundSpawn, planSideSpawn, type GroundPlatform } from "./spawn-scheduler";
 
-export interface ContentMode { readonly id: string; readonly waves?: number }
-export interface ContentStage { readonly boss?: string }
-export interface ContentRun { readonly mode: string; readonly wave: number; readonly curBoss?: string; readonly variantDiscovery?: readonly string[] }
+export interface ContentMode {
+  readonly id: string;
+  readonly waves?: number;
+}
+export interface ContentStage {
+  readonly boss?: string;
+}
+export interface ContentRun {
+  readonly mode: string;
+  readonly wave: number;
+  readonly curBoss?: string;
+  readonly variantDiscovery?: readonly string[];
+}
 
 export interface LiveContentRuntimeOptions<TEnemy extends LiveSpawnEnemy> {
   readonly width: number;
@@ -48,28 +64,44 @@ export function createLiveContentRuntime<TEnemy extends LiveSpawnEnemy>(
   const makeBoss = (): TEnemy => {
     const run = options.run();
     if (run === null) throw new Error("boss creation requires an active run");
-    const id = run.mode === "campaign"
-      ? options.stages[Math.max(0, options.spawning.campaignStage())]?.boss ?? "warden"
-      : ["bossonly", "gauntlet", "playground"].includes(run.mode) ? run.curBoss ?? "warden" : "warden";
-    const enemy = bossById(id); enemy.bossId = id; return enemy;
+    const id =
+      run.mode === "campaign"
+        ? (options.stages[Math.max(0, options.spawning.campaignStage())]?.boss ?? "warden")
+        : ["bossonly", "gauntlet", "playground"].includes(run.mode)
+          ? (run.curBoss ?? "warden")
+          : "warden";
+    const enemy = bossById(id);
+    enemy.bossId = id;
+    return enemy;
   };
   const api: LiveContentRuntimeApi<TEnemy> = {
     shuffledRoster: () => shuffledBossRoster(options.random),
     modeWaves: (mode: string) => options.modes().find((candidate) => candidate.id === mode)?.waves ?? 0,
-    contentWave: () => { const run = options.run(); return run?.mode === "sandbox" ? 99 : run?.wave ?? 0; },
+    contentWave: () => {
+      const run = options.run();
+      return run?.mode === "sandbox" ? 99 : (run?.wave ?? 0);
+    },
     sideSpawn: () => planSideSpawn(options.width, options.random),
-    groundSpawn: (halfHeight: number) => planGroundSpawn(
-      halfHeight, options.platforms(), options.groundY(), options.width, options.random,
-    ),
+    groundSpawn: (halfHeight: number) =>
+      planGroundSpawn(halfHeight, options.platforms(), options.groundY(), options.width, options.random),
     bossById,
-    bossBiome: (id: string) => Math.max(0, (options.bossBiomeStages ?? options.stages)
-      .findIndex((stage) => stage.boss === id)),
+    bossBiome: (id: string) =>
+      Math.max(
+        0,
+        (options.bossBiomeStages ?? options.stages).findIndex((stage) => stage.boss === id),
+      ),
     makeBoss,
-    spawn: (spec: LiveWaveSpawnSpec) => { completeEnemySpawn(
-      constructLiveEnemy(spec, { ...options.construction, sideSpawn: api.sideSpawn,
-        createBoss: (id?: string) => id === undefined ? makeBoss() : bossById(id) }),
-      spec, { ...options.spawning, contentWave: api.contentWave, groundSpawn: api.groundSpawn },
-    ); },
+    spawn: (spec: LiveWaveSpawnSpec) => {
+      completeEnemySpawn(
+        constructLiveEnemy(spec, {
+          ...options.construction,
+          sideSpawn: api.sideSpawn,
+          createBoss: (id?: string) => (id === undefined ? makeBoss() : bossById(id)),
+        }),
+        spec,
+        { ...options.spawning, contentWave: api.contentWave, groundSpawn: api.groundSpawn },
+      );
+    },
   };
   return Object.freeze(api);
 }

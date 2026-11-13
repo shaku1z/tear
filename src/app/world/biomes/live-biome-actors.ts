@@ -23,12 +23,23 @@ export function bindLiveBiomeActors(sources: LiveBiomeActorSources): void {
   const { environment, config, player, enemies, entityId } = sources;
   const enemyId = (enemy: object) => entityId(enemy, "enemy");
   bindLiveBloomWellActors(environment, player, enemies, enemyId);
-  bindLiveAuroraTrackActors(environment, player, sources.blade, enemies, sources.projectiles, enemyId,
-    (projectile) => entityId(projectile, "projectile"), {
-      playerAcceleration: config.player.groundAccel, playerMaximumSpeed: config.player.moveSpeed,
-      bladeAcceleration: config.blade.throw.speed, bladeMaximumSpeed: config.blade.throw.maxSpeed,
-      projectileAcceleration: config.proj.speed, projectileMaximumSpeed: config.chargedShot.speed,
-    });
+  bindLiveAuroraTrackActors(
+    environment,
+    player,
+    sources.blade,
+    enemies,
+    sources.projectiles,
+    enemyId,
+    (projectile) => entityId(projectile, "projectile"),
+    {
+      playerAcceleration: config.player.groundAccel,
+      playerMaximumSpeed: config.player.moveSpeed,
+      bladeAcceleration: config.blade.throw.speed,
+      bladeMaximumSpeed: config.blade.throw.maxSpeed,
+      projectileAcceleration: config.proj.speed,
+      projectileMaximumSpeed: config.chargedShot.speed,
+    },
+  );
   bindLiveRootbinderActors(environment, player, enemies, enemyId);
   bindLiveRootboundActors(environment, player, enemies, enemyId);
   bindLiveWhiteHartActors(environment, player, enemies, enemyId);

@@ -10,25 +10,58 @@ import type { TearCodecValue, TearCodecWorld } from "../../src/tearbench/state-c
 function sourceWorld(): TearCodecWorld {
   const components = new Map<TearCodecId, TearCodecValue>();
   components.set("tear.player.v1", {
-    id: "player", x: 400, y: 700, vx: 0, vy: 0, hp: 100, maxHp: 100,
-    facing: 1, onGround: true, dashCharges: 1,
+    id: "player",
+    x: 400,
+    y: 700,
+    vx: 0,
+    vy: 0,
+    hp: 100,
+    maxHp: 100,
+    facing: 1,
+    onGround: true,
+    dashCharges: 1,
   });
   components.set("tear.blade.v1", {
-    id: "blade", ownerId: "player", weaponId: "sword", x: 420, y: 700,
-    tipX: 450, tipY: 700, vx: 0, vy: 0, tipSpeed: 0, state: "held",
+    id: "blade",
+    ownerId: "player",
+    weaponId: "sword",
+    x: 420,
+    y: 700,
+    tipX: 450,
+    tipY: 700,
+    vx: 0,
+    vy: 0,
+    tipSpeed: 0,
+    state: "held",
   });
   components.set("tear.run.v1", {
-    mode: "campaign", difficulty: "normal", diff: "normal", weaponId: "sword",
-    stage: 0, _biomeIdx: 0, wave: 1, tick: 0, score: 0, runSeed: 1,
-    spawnQueue: [], mods: { owned: {}, tier: {} },
+    mode: "campaign",
+    difficulty: "normal",
+    diff: "normal",
+    weaponId: "sword",
+    stage: 0,
+    _biomeIdx: 0,
+    wave: 1,
+    tick: 0,
+    score: 0,
+    runSeed: 1,
+    spawnQueue: [],
+    mods: { owned: {}, tier: {} },
   });
   components.set("tear.world.v1", {
-    clock: 0, floaters: [], ghost: { recording: null },
+    clock: 0,
+    floaters: [],
+    ghost: { recording: null },
     identityState: { nextEntityId: 1, claimedIds: [] },
     runtime: {
       lifecycle: {
-        phase: "wave-active", sessionId: "campaign-victory-unit", wave: 1,
-        bossWave: false, horde: false, reward: null, outcome: null,
+        phase: "wave-active",
+        sessionId: "campaign-victory-unit",
+        wave: 1,
+        bossWave: false,
+        horde: false,
+        reward: null,
+        outcome: null,
       },
       chapterBinding: null,
     },
@@ -51,11 +84,13 @@ function runWithoutProgressionRuntime(value: TearCodecValue | undefined): Record
   return structuredClone(Object.fromEntries(Object.entries(run).filter(([key]) => key !== "mods")));
 }
 
-function fixture(options: Readonly<{
-  rejectFrontier?: boolean;
-  mutateDuringLoadStage?: boolean;
-  bossFinisherMismatch?: boolean;
-}> = {}) {
+function fixture(
+  options: Readonly<{
+    rejectFrontier?: boolean;
+    mutateDuringLoadStage?: boolean;
+    bossFinisherMismatch?: boolean;
+  }> = {},
+) {
   let active = sourceWorld();
   const sentinelHook = () => "sentinel-upgrade-hook";
   const sentinelMods = { owned: { damage: 3 }, tier: { orbit: 2 }, onHeldHit: sentinelHook };
@@ -64,18 +99,35 @@ function fixture(options: Readonly<{
   let stageIndex = options.bossFinisherMismatch === true ? 5 : 0;
   if (options.bossFinisherMismatch === true) {
     Object.assign(active.components.get("tear.run.v1") as Record<string, unknown>, {
-      wave: 60, stage: 5, _biomeIdx: 5, chapterState: "WAVE_LIVE", spawnQueue: [],
+      wave: 60,
+      stage: 5,
+      _biomeIdx: 5,
+      chapterState: "WAVE_LIVE",
+      spawnQueue: [],
     });
     const world = active.components.get("tear.world.v1") as {
       runtime: { lifecycle: Record<string, unknown> };
     };
     Object.assign(world.runtime.lifecycle, {
-      phase: "wave-active", wave: 60, bossWave: true, reward: null,
+      phase: "wave-active",
+      wave: 60,
+      bossWave: true,
+      reward: null,
     });
-    active.components.set("tear.boss.v1", [{
-      id: "enemy:source", factoryId: "source", x: 800, y: 360,
-      hp: 900, hpDisplay: 880, maxHp: 1_200, dead: false, dying: false, phase: 3,
-    }]);
+    active.components.set("tear.boss.v1", [
+      {
+        id: "enemy:source",
+        factoryId: "source",
+        x: 800,
+        y: 360,
+        hp: 900,
+        hpDisplay: 880,
+        maxHp: 1_200,
+        dead: false,
+        dying: false,
+        phase: 3,
+      },
+    ]);
     (active.components.get("tear.ui.v1") as Record<string, unknown>).screen = "playing";
   }
   const calls: string[] = [];
@@ -110,7 +162,10 @@ function fixture(options: Readonly<{
     progression: () => ({ wallet: 0, lifetimeEarned: 0, levels: {}, shop: [] }),
     outcome: () => null,
     screen: () => screen,
-    setScreen: (next: "playing" | "paused") => { calls.push(`screen:${next}`); screen = next; },
+    setScreen: (next: "playing" | "paused") => {
+      calls.push(`screen:${next}`);
+      screen = next;
+    },
     terminateRun: () => undefined,
     selectWeapon: () => undefined,
     selectBoss: () => undefined,
@@ -211,7 +266,9 @@ function fixture(options: Readonly<{
       const reward = component("tear.reward.v1") as Record<string, unknown>;
       const world = component("tear.world.v1") as { runtime: { lifecycle: Record<string, unknown> } };
       productionBoundary = Object.freeze({
-        wave: run.wave, stage: run.stage, screen,
+        wave: run.wave,
+        stage: run.stage,
+        screen,
         reward: structuredClone(reward.selection),
         lifecycle: structuredClone(world.runtime.lifecycle),
         evidence: structuredClone(run.stateForgeEvidence),
@@ -224,9 +281,15 @@ function fixture(options: Readonly<{
     finaleOutwardCalls: () => [],
   } as unknown as LiveTearRuntimeEnvironmentContext;
   return {
-    context, calls, replayed, sentinelMods,
-    restoredRuntime: () => restoredProgressionRuntime, stageIndex: () => stageIndex,
-    active: () => active, boundary: () => productionBoundary, screen: () => screen,
+    context,
+    calls,
+    replayed,
+    sentinelMods,
+    restoredRuntime: () => restoredProgressionRuntime,
+    stageIndex: () => stageIndex,
+    active: () => active,
+    boundary: () => productionBoundary,
+    screen: () => screen,
   };
 }
 
@@ -242,12 +305,27 @@ describe("live runtime campaign victory State Forge origin", () => {
     expect(unit.replayed[0]).toMatchObject({ targetWave: 59 });
     expect(unit.replayed[0]?.events.some((event) => event.type === "run.completed")).toBe(false);
     expect(unit.replayed[0]?.events.at(-1)).toMatchObject({ type: "reward.granted", wave: 59 });
-    expect(unit.calls.filter((call) => [
-      "replay", "loadStage:5", "captureProgressionRuntime", "restore:59",
-      "restoreProgressionRuntime", "startNextWave", "screen:playing",
-    ].includes(call))).toEqual([
-      "captureProgressionRuntime", "replay", "loadStage:5", "captureProgressionRuntime", "restore:59",
-      "restoreProgressionRuntime", "startNextWave", "screen:playing",
+    expect(
+      unit.calls.filter((call) =>
+        [
+          "replay",
+          "loadStage:5",
+          "captureProgressionRuntime",
+          "restore:59",
+          "restoreProgressionRuntime",
+          "startNextWave",
+          "screen:playing",
+        ].includes(call),
+      ),
+    ).toEqual([
+      "captureProgressionRuntime",
+      "replay",
+      "loadStage:5",
+      "captureProgressionRuntime",
+      "restore:59",
+      "restoreProgressionRuntime",
+      "startNextWave",
+      "screen:playing",
     ]);
     expect(unit.boundary()).toMatchObject({
       wave: 59,
@@ -276,8 +354,13 @@ describe("live runtime campaign victory State Forge origin", () => {
 
     expect(result).toMatchObject({ ok: false, phase: "validate", rolledBack: true });
     expect(unit.calls).toEqual([
-      "captureProgressionRuntime", "replay", "loadStage:5", "captureProgressionRuntime",
-      "restoreProgressionRuntime", "restore:1", "restoreProgressionRuntime",
+      "captureProgressionRuntime",
+      "replay",
+      "loadStage:5",
+      "captureProgressionRuntime",
+      "restoreProgressionRuntime",
+      "restore:1",
+      "restoreProgressionRuntime",
     ]);
     expect(unit.restoredRuntime()).toBe(unit.sentinelMods);
     expect((unit.active().components.get("tear.run.v1") as { mods: unknown }).mods).toBe(unit.sentinelMods);
@@ -295,18 +378,24 @@ describe("live runtime campaign victory State Forge origin", () => {
     const originalBosses = structuredClone(unit.active().components.get("tear.boss.v1"));
     const originalConfiguration = structuredClone(unit.active().components.get("tear.configuration.v1"));
 
-    expect(() => createLiveTearRuntimeEnvironment(unit.context, "A").forgeExitLaunch({
-      id: "source-finisher-mismatch", kind: "boss-finisher", boss: "source", remainingHp: 1,
-    })).toThrow(/changed fields outside its declared health pair/u);
+    expect(() =>
+      createLiveTearRuntimeEnvironment(unit.context, "A").forgeExitLaunch({
+        id: "source-finisher-mismatch",
+        kind: "boss-finisher",
+        boss: "source",
+        remainingHp: 1,
+      }),
+    ).toThrow(/changed fields outside its declared health pair/u);
 
-    expect(unit.calls).toEqual([
-      "captureProgressionRuntime", "restore:60", "restoreProgressionRuntime",
-    ]);
+    expect(unit.calls).toEqual(["captureProgressionRuntime", "restore:60", "restoreProgressionRuntime"]);
     expect(unit.active().components.get("tear.boss.v1")).toEqual(originalBosses);
     expect(unit.active().components.get("tear.configuration.v1")).toEqual(originalConfiguration);
-    expect(unit.active().components.get("tear.boss.v1")).toMatchObject([{
-      hp: 900, hpDisplay: 880,
-    }]);
+    expect(unit.active().components.get("tear.boss.v1")).toMatchObject([
+      {
+        hp: 900,
+        hpDisplay: 880,
+      },
+    ]);
     expect(unit.restoredRuntime()).toBe(unit.sentinelMods);
     expect((unit.active().components.get("tear.run.v1") as { mods: unknown }).mods).toBe(unit.sentinelMods);
   });

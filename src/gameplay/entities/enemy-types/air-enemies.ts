@@ -1,4 +1,10 @@
-import type { EnemyDamageContext, EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
+import type {
+  EnemyDamageContext,
+  EnemyDependencies,
+  EnemyPlatform,
+  EnemyPlayerPort,
+  EnemyProjectile,
+} from "../enemy-contracts";
 import type { ProjectileEntity } from "../projectile";
 import type { EnemyBaseConstructor } from "./enemy-base";
 
@@ -6,7 +12,11 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
   const { CONFIG, FX, GAME_RANDOM, Projectile, SFX, clamp, len, lerp } = dependencies;
   // ---- Aerial family: Flyer (angled swoop), Dive Bomber (telegraphed drop), Swooper (high dive) ----
   class Flyer extends Enemy {
-    state: string; aimTimer: number; swoopT: number; warnT: number; diveX: number | null;
+    state: string;
+    aimTimer: number;
+    swoopT: number;
+    warnT: number;
+    diveX: number | null;
     snowWakeT = 0;
     declare cfg: typeof CONFIG.flyer;
 
@@ -37,30 +47,42 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
 
     _swoop(dt: number, player: EnemyPlayerPort, C: typeof CONFIG.flyer) {
       if (this.state === "swoop") {
-        this.swoopT -= dt; this.x += this.vx * dt; this.y += this.vy * dt;
+        this.swoopT -= dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         if (this.swoopT <= 0) this.state = "recover";
       } else if (this.state === "recover") {
         // every dive ends by dropping to the ground for a brief, vulnerable stun
         this.vx = lerp(this.vx, 0, clamp(4 * dt, 0, 1));
         this.vy = lerp(this.vy, 560, clamp(5 * dt, 0, 1));
-        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         if (this.y >= CONFIG.world.groundY - this.hh - 2) {
-          this.y = CONFIG.world.groundY - this.hh; this.stun = 0.7; this.state = "hover";
-          this.aimTimer = C.swoopInterval; FX.burst(this.x, this.y + this.hh, 0, -1, 5, this.color);
+          this.y = CONFIG.world.groundY - this.hh;
+          this.stun = 0.7;
+          this.state = "hover";
+          this.aimTimer = C.swoopInterval;
+          FX.burst(this.x, this.y + this.hh, 0, -1, 5, this.color);
         }
       } else {
         // hover to one side of the player so the dive comes in at an angle
-        const tx = player.x + (this.x < player.x ? -130 : 130), ty = player.y - C.hoverY;
-        const dx = tx - this.x, dy = ty - this.y, d = len(dx, dy) || 1;
+        const tx = player.x + (this.x < player.x ? -130 : 130),
+          ty = player.y - C.hoverY;
+        const dx = tx - this.x,
+          dy = ty - this.y,
+          d = len(dx, dy) || 1;
         this.vx = lerp(this.vx, (dx / d) * this.speed, clamp(3 * dt, 0, 1));
         this.vy = lerp(this.vy, (dy / d) * this.speed, clamp(3 * dt, 0, 1));
-        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         this.aimTimer -= dt;
         if (this.aimTimer <= 0 && Math.abs(player.x - this.x) < 520) {
-          this.state = "swoop"; this.swoopT = 0.45; this.aimTimer = C.swoopInterval;
+          this.state = "swoop";
+          this.swoopT = 0.45;
+          this.aimTimer = C.swoopInterval;
           const m = len(player.x - this.x, player.y - this.y) || 1;
-          this.vx = (player.x - this.x) / m * C.swoopSpeed;
-          this.vy = (player.y - this.y) / m * C.swoopSpeed;
+          this.vx = ((player.x - this.x) / m) * C.swoopSpeed;
+          this.vy = ((player.y - this.y) / m) * C.swoopSpeed;
         }
       }
     }
@@ -69,27 +91,47 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       if (this.state === "warn") {
         this.diveX = this.diveX == null ? player.x : lerp(this.diveX, player.x, clamp(1.5 * dt, 0, 1));
         const ty = Math.max(120, player.y - 240);
-        const dx = this.diveX - this.x, dy = ty - this.y, d = len(dx, dy) || 1;
+        const dx = this.diveX - this.x,
+          dy = ty - this.y,
+          d = len(dx, dy) || 1;
         this.vx = lerp(this.vx, (dx / d) * this.speed * 1.2, clamp(4 * dt, 0, 1));
         this.vy = lerp(this.vy, (dy / d) * this.speed * 1.2, clamp(4 * dt, 0, 1));
-        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         this.warnT -= dt;
-        if (this.warnT <= 0) { this.state = "dive"; this.vx = 0; this.vy = C.swoopSpeed * 1.55; }
+        if (this.warnT <= 0) {
+          this.state = "dive";
+          this.vx = 0;
+          this.vy = C.swoopSpeed * 1.55;
+        }
       } else if (this.state === "dive") {
-        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         if (this.y >= CONFIG.world.groundY - this.hh - 2) {
-          this.y = CONFIG.world.groundY - this.hh; this.stun = 0.85; this.state = "hover";
-          this.aimTimer = C.swoopInterval * 1.2; this.diveX = null;
-          FX.ring(this.x, this.y + this.hh, 13, CONFIG.colors.slam); FX.burst(this.x, this.y + this.hh, 0, -1, 7, this.color);
+          this.y = CONFIG.world.groundY - this.hh;
+          this.stun = 0.85;
+          this.state = "hover";
+          this.aimTimer = C.swoopInterval * 1.2;
+          this.diveX = null;
+          FX.ring(this.x, this.y + this.hh, 13, CONFIG.colors.slam);
+          FX.burst(this.x, this.y + this.hh, 0, -1, 7, this.color);
         }
       } else {
-        const tx = player.x, ty = player.y - C.hoverY - 40;
-        const dx = tx - this.x, dy = ty - this.y, d = len(dx, dy) || 1;
+        const tx = player.x,
+          ty = player.y - C.hoverY - 40;
+        const dx = tx - this.x,
+          dy = ty - this.y,
+          d = len(dx, dy) || 1;
         this.vx = lerp(this.vx, (dx / d) * this.speed, clamp(3 * dt, 0, 1));
         this.vy = lerp(this.vy, (dy / d) * this.speed, clamp(3 * dt, 0, 1));
-        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         this.aimTimer -= dt;
-        if (this.aimTimer <= 0) { this.state = "warn"; this.warnT = 1.1; this.diveX = player.x; }
+        if (this.aimTimer <= 0) {
+          this.state = "warn";
+          this.warnT = 1.1;
+          this.diveX = player.x;
+        }
       }
     }
 
@@ -98,20 +140,36 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       if (this.state === "warn") {
         this.diveX = this.diveX == null ? player.x : lerp(this.diveX, player.x, clamp(1.1 * dt, 0, 1));
         this.vx = lerp(this.vx, (this.diveX - this.x) * 0.8, clamp(3 * dt, 0, 1));
-        this.vy = lerp(this.vy, 0, clamp(3 * dt, 0, 1)); this.x += this.vx * dt; this.y += this.vy * dt;
+        this.vy = lerp(this.vy, 0, clamp(3 * dt, 0, 1));
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         this.warnT -= dt;
-        if (this.warnT <= 0) { this.state = "dive"; this.vx = 0; this.vy = C.swoopSpeed * 1.7; }
+        if (this.warnT <= 0) {
+          this.state = "dive";
+          this.vx = 0;
+          this.vy = C.swoopSpeed * 1.7;
+        }
       } else if (this.state === "dive") {
-        this.y += this.vy * dt; this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.x += this.vx * dt;
         if (this.y >= CONFIG.world.groundY - this.hh - 2) {
-          this.y = CONFIG.world.groundY - this.hh; this.stun = 0.65; this.state = "hover"; this.aimTimer = C.swoopInterval * 1.35; this.diveX = null;
+          this.y = CONFIG.world.groundY - this.hh;
+          this.stun = 0.65;
+          this.state = "hover";
+          this.aimTimer = C.swoopInterval * 1.35;
+          this.diveX = null;
           FX.ring(this.x, this.y + this.hh, 11, this.color);
         }
       } else {
         this.y = lerp(this.y, 96, clamp(2.5 * dt, 0, 1));
-        this.vx = lerp(this.vx, (player.x - this.x) * 0.45, clamp(2 * dt, 0, 1)); this.x += this.vx * dt;
+        this.vx = lerp(this.vx, (player.x - this.x) * 0.45, clamp(2 * dt, 0, 1));
+        this.x += this.vx * dt;
         this.aimTimer -= dt;
-        if (this.aimTimer <= 0 && Math.abs(player.x - this.x) < 620) { this.state = "warn"; this.warnT = 0.75; this.diveX = player.x; }
+        if (this.aimTimer <= 0 && Math.abs(player.x - this.x) < 620) {
+          this.state = "warn";
+          this.warnT = 0.75;
+          this.diveX = player.x;
+        }
       }
     }
 
@@ -121,14 +179,25 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       if (this.state === "warn") {
         this.diveX = this.diveX == null ? player.x : lerp(this.diveX, player.x, clamp(0.9 * dt, 0, 1));
         this.vx = lerp(this.vx, (this.diveX - this.x) * 0.72, clamp(3 * dt, 0, 1));
-        this.vy = lerp(this.vy, 0, clamp(4 * dt, 0, 1)); this.x += this.vx * dt; this.y += this.vy * dt;
+        this.vy = lerp(this.vy, 0, clamp(4 * dt, 0, 1));
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         this.warnT -= dt;
-        if (this.warnT <= 0) { this.state = "dive"; this.vx = 0; this.vy = C.swoopSpeed * 1.58; }
+        if (this.warnT <= 0) {
+          this.state = "dive";
+          this.vx = 0;
+          this.vy = C.swoopSpeed * 1.58;
+        }
       } else if (this.state === "dive") {
-        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         if (this.y >= CONFIG.world.groundY - this.hh - 2) {
-          this.y = CONFIG.world.groundY - this.hh; this.state = "recover"; this.stun = 0.78;
-          this.snowWakeT = 0.7; this.aimTimer = C.swoopInterval * 1.25; this.diveX = null;
+          this.y = CONFIG.world.groundY - this.hh;
+          this.state = "recover";
+          this.stun = 0.78;
+          this.snowWakeT = 0.7;
+          this.aimTimer = C.swoopInterval * 1.25;
+          this.diveX = null;
           FX.ring(this.x, this.y + this.hh, 13, "#b9f4ff");
         }
       } else if (this.state === "recover") {
@@ -136,24 +205,34 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
         if (this.stun <= 0) this.state = "hover";
       } else {
         this.y = lerp(this.y, 72, clamp(2.4 * dt, 0, 1));
-        this.vx = lerp(this.vx, (player.x - this.x) * 0.38, clamp(2 * dt, 0, 1)); this.x += this.vx * dt;
+        this.vx = lerp(this.vx, (player.x - this.x) * 0.38, clamp(2 * dt, 0, 1));
+        this.x += this.vx * dt;
         this.aimTimer -= dt;
         if (this.aimTimer <= 0 && Math.abs(player.x - this.x) < 640) {
-          this.state = "warn"; this.warnT = 0.82; this.diveX = player.x;
+          this.state = "warn";
+          this.warnT = 0.82;
+          this.diveX = player.x;
         }
       }
     }
 
     _highdive(dt: number, player: EnemyPlayerPort, C: typeof CONFIG.flyer) {
       if (this.state === "dive") {
-        this.x += this.vx * dt; this.y += this.vy * dt;
-        if (this.y >= CONFIG.world.groundY - this.hh - 2 || this.x <= this.hw + 1 || this.x >= CONFIG.view.w - this.hw - 1) {
-          this.state = "climb"; this.aimTimer = C.swoopInterval;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        if (
+          this.y >= CONFIG.world.groundY - this.hh - 2 ||
+          this.x <= this.hw + 1 ||
+          this.x >= CONFIG.view.w - this.hw - 1
+        ) {
+          this.state = "climb";
+          this.aimTimer = C.swoopInterval;
         }
       } else if (this.state === "climb") {
         this.vy = lerp(this.vy, -this.speed * 2.4, clamp(4 * dt, 0, 1));
         this.vx = lerp(this.vx, (player.x > this.x ? 1 : -1) * this.speed, clamp(2 * dt, 0, 1));
-        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
         if (this.y <= 70) this.state = "hover";
       } else {
         this.y = lerp(this.y, 78, clamp(2 * dt, 0, 1));
@@ -163,8 +242,8 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
         if (this.aimTimer <= 0 && Math.abs(player.x - this.x) < 720) {
           this.state = "dive";
           const m = len(player.x - this.x, player.y - this.y) || 1;
-          this.vx = (player.x - this.x) / m * C.swoopSpeed * 1.6;
-          this.vy = (player.y - this.y) / m * C.swoopSpeed * 1.6;
+          this.vx = ((player.x - this.x) / m) * C.swoopSpeed * 1.6;
+          this.vy = ((player.y - this.y) / m) * C.swoopSpeed * 1.6;
         }
       }
     }
@@ -172,8 +251,12 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
 
   // ---- Hazard family: Bomber (arcing deflectable bombs), Juggler (3-bomb burst), Trapper (mines) ----
   class Bomber extends Enemy {
-    lobTimer: number; mineTimer: number; bombsLeft: number; burstT: number;
-    geoX = 0; wallRequest: { x: number } | null = null;
+    lobTimer: number;
+    mineTimer: number;
+    bombsLeft: number;
+    burstT: number;
+    geoX = 0;
+    wallRequest: { x: number } | null = null;
     hailBursts: { x: number; y: number; deflected: boolean; perfect: boolean }[] = [];
     declare cfg: typeof CONFIG.bomber;
 
@@ -192,16 +275,23 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this.tickTimers(dt);
       for (const burst of this.hailBursts.splice(0)) {
         for (let index = 0; index < 6; index += 1) {
-          const angle = index / 6 * Math.PI * 2;
+          const angle = (index / 6) * Math.PI * 2;
           const shard = new Projectile(burst.x, burst.y, Math.cos(angle) * 340, Math.sin(angle) * 340 - 80);
-          this.ownProjectile(shard); shard.r = 5; shard.dmg = CONFIG.proj.dmg * 0.38; shard.life = 1.4;
-          shard.tint = "#b9f4ff"; shard.kind = "hail-shard"; shard.deflected = burst.deflected;
-          shard.perfect = burst.perfect; if (burst.deflected) shard.deflectDmg = Math.round(CONFIG.proj.dmg * 0.8);
+          this.ownProjectile(shard);
+          shard.r = 5;
+          shard.dmg = CONFIG.proj.dmg * 0.38;
+          shard.life = 1.4;
+          shard.tint = "#b9f4ff";
+          shard.kind = "hail-shard";
+          shard.deflected = burst.deflected;
+          shard.perfect = burst.perfect;
+          if (burst.deflected) shard.deflectDmg = Math.round(CONFIG.proj.dmg * 0.8);
           projectiles.push(shard);
         }
       }
       const C = this.cfg;
-      if (this.canClimb && this.atk !== "channel" && this.climbNav(player, platforms, dt)) {   // reposition up to a perched player — but never abandon a Geomancer wall-channel mid-cast (its timer would pause and the half-wall linger, then teleport-resume); matches Charger/Ranged holding position during a committed attack
+      if (this.canClimb && this.atk !== "channel" && this.climbNav(player, platforms, dt)) {
+        // reposition up to a perched player — but never abandon a Geomancer wall-channel mid-cast (its timer would pause and the half-wall linger, then teleport-resume); matches Charger/Ranged holding position during a committed attack
         if (this.onGround) this.vx = lerp(this.vx, this.navDir * this.speed, clamp(7 * dt, 0, 1));
         this.integrate(dt, platforms);
         return;
@@ -218,9 +308,13 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this._kite(dt, player, C.standoff);
       this.lobTimer -= dt;
       if (this.lobTimer <= 0 && Math.abs(player.x - this.x) < 780) {
-        const X = CONFIG.exotic, vx = clamp(player.x - this.x, -X.sludgeSpeed, X.sludgeSpeed);
+        const X = CONFIG.exotic,
+          vx = clamp(player.x - this.x, -X.sludgeSpeed, X.sludgeSpeed);
         const p = new Projectile(this.x, this.y - this.hh, vx, -X.sludgeArc);
-        this.ownProjectile(p); p.gravity = X.sludgeGravity; p.mud = true; p.r = X.sludgeR;
+        this.ownProjectile(p);
+        p.gravity = X.sludgeGravity;
+        p.mud = true;
+        p.r = X.sludgeR;
         projectiles.push(p);
         this.lobTimer = X.sludgeInterval / this.auraHaste;
       }
@@ -231,22 +325,31 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
     _geo(dt: number, player: EnemyPlayerPort, _projectiles: EnemyProjectile[], C: typeof CONFIG.bomber) {
       const X = CONFIG.exotic;
       if (this.atk === "channel") {
-        this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1)); this.atkT -= dt;
-        if (this.atkT <= 0) { this.wallRequest = { x: this.geoX }; this.atk = "idle"; this.lobTimer = X.geoInterval; }
+        this.vx = lerp(this.vx, 0, clamp(9 * dt, 0, 1));
+        this.atkT -= dt;
+        if (this.atkT <= 0) {
+          this.wallRequest = { x: this.geoX };
+          this.atk = "idle";
+          this.lobTimer = X.geoInterval;
+        }
       } else {
         this._kite(dt, player, C.standoff);
         this.lobTimer -= dt;
         if (this.lobTimer <= 0 && Math.abs(player.x - this.x) < X.geoRange && this.onGround) {
           const dir = Math.sign(player.x - this.x) || 1;
           this.geoX = clamp(this.x + dir * 160, 60, CONFIG.view.w - 60);
-          this.atk = "channel"; this.atkT = X.geoChannel; this.atkMax = X.geoChannel;
+          this.atk = "channel";
+          this.atkT = X.geoChannel;
+          this.atkMax = X.geoChannel;
         }
       }
     }
 
     // hold a throwing distance from the player
     _kite(dt: number, player: EnemyPlayerPort, standoff: number) {
-      const dx = player.x - this.x, dist = Math.abs(dx), away = (-Math.sign(dx)) || 1;
+      const dx = player.x - this.x,
+        dist = Math.abs(dx),
+        away = -Math.sign(dx) || 1;
       let move = 0;
       if (dist < standoff * 0.7) move = away;
       else if (dist > standoff * 1.25) move = -away;
@@ -258,10 +361,19 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       const dx = player.x - this.x;
       const vx = clamp(dx * 1.05, -C.bombSpeed, C.bombSpeed) + (spread || 0);
       const p = new Projectile(this.x, this.y - this.hh, vx, -C.bombArc);
-      this.ownProjectile(p); p.gravity = C.bombGravity; p.bomb = true; p.r = 12; p.dmg = C.blastDmg;
+      this.ownProjectile(p);
+      p.gravity = C.bombGravity;
+      p.bomb = true;
+      p.r = 12;
+      p.dmg = C.blastDmg;
       if (this.behavior === "hailcaster") {
-        p.r = 15; p.dmg = C.blastDmg * 0.82; p.tint = "#b9f4ff"; p.kind = "hail-orb";
-        p.counterplay = "deflect/detonate or ground shatter"; p.groundImpact = true; p.landingY = CONFIG.world.groundY;
+        p.r = 15;
+        p.dmg = C.blastDmg * 0.82;
+        p.tint = "#b9f4ff";
+        p.kind = "hail-orb";
+        p.counterplay = "deflect/detonate or ground shatter";
+        p.groundImpact = true;
+        p.landingY = CONFIG.world.groundY;
       }
       projectiles.push(p);
     }
@@ -274,16 +386,26 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
 
     _lob(dt: number, player: EnemyPlayerPort, projectiles: EnemyProjectile[], C: typeof CONFIG.bomber) {
       this._kite(dt, player, C.standoff);
-      if (this.bombsLeft > 0) {                       // Juggler: rapid 3-bomb burst
+      if (this.bombsLeft > 0) {
+        // Juggler: rapid 3-bomb burst
         this.burstT -= dt;
-        if (this.burstT <= 0) { this._lobBomb(player, projectiles, (this.bombsLeft - 2) * 60); this.bombsLeft--; this.burstT = 0.18; }
+        if (this.burstT <= 0) {
+          this._lobBomb(player, projectiles, (this.bombsLeft - 2) * 60);
+          this.bombsLeft--;
+          this.burstT = 0.18;
+        }
         if (this.bombsLeft === 0) this.lobTimer = C.lobInterval / this.auraHaste;
         return;
       }
       this.lobTimer -= dt;
       if (this.lobTimer <= 0 && Math.abs(player.x - this.x) < 760) {
-        if (this.behavior === "juggle") { this.bombsLeft = 3; this.burstT = 0; }
-        else { this._lobBomb(player, projectiles, 0); this.lobTimer = C.lobInterval / this.auraHaste; }
+        if (this.behavior === "juggle") {
+          this.bombsLeft = 3;
+          this.burstT = 0;
+        } else {
+          this._lobBomb(player, projectiles, 0);
+          this.lobTimer = C.lobInterval / this.auraHaste;
+        }
       }
     }
 
@@ -292,7 +414,11 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       this.mineTimer -= dt;
       if (this.mineTimer <= 0 && this.onGround) {
         const m = new Projectile(this.x, this.y, 0, 0);
-        this.ownProjectile(m); m.mine = true; m.gravity = C.bombGravity; m.r = 11; m.armT = C.mineArm;
+        this.ownProjectile(m);
+        m.mine = true;
+        m.gravity = C.bombGravity;
+        m.r = 11;
+        m.armT = C.mineArm;
         projectiles.push(m);
         this.mineTimer = C.mineInterval / this.auraHaste;
       }
@@ -301,11 +427,18 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
 
   // ---- Armored: shielded on the side it faces; needs a fast hit or a flank ----
   class Armored extends Enemy {
-    guardSide: number; stompCd: number;
+    guardSide: number;
+    stompCd: number;
     glacierCracked = false;
     declare cfg: typeof CONFIG.armored;
 
-    constructor(x: number, y: number) { super(x, y, CONFIG.armored); this.guardSide = 1; this.color = CONFIG.colors.armored; this.kind = "armored"; this.stompCd = CONFIG.armored.stompCd * 0.6; }
+    constructor(x: number, y: number) {
+      super(x, y, CONFIG.armored);
+      this.guardSide = 1;
+      this.color = CONFIG.colors.armored;
+      this.kind = "armored";
+      this.stompCd = CONFIG.armored.stompCd * 0.6;
+    }
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);
       this.guardSide = Math.sign(player.x - this.x) || 1;
@@ -320,26 +453,49 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
       // shielded STOMP: a telegraphed ground pound sends shockwaves you must jump over
       if (!this.enraged && this.stun <= 0) {
         if (this.atk === "stompwind") {
-          this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1)); this.atkT -= dt;
-          if (this.atkT <= 0) { this._stomp(projectiles, C); this.atk = "idle"; this.stompCd = C.stompCd; }
-          this.integrate(dt, platforms); return;
+          this.vx = lerp(this.vx, 0, clamp(10 * dt, 0, 1));
+          this.atkT -= dt;
+          if (this.atkT <= 0) {
+            this._stomp(projectiles, C);
+            this.atk = "idle";
+            this.stompCd = C.stompCd;
+          }
+          this.integrate(dt, platforms);
+          return;
         }
-        if (this.onGround && this.stompCd <= 0 && Math.abs(player.x - this.x) < C.stompRange && Math.abs(player.y - this.y) < 130) {
-          this.atk = "stompwind"; this.atkT = C.stompWindup; this.atkMax = C.stompWindup;
-          this.integrate(dt, platforms); return;
+        if (
+          this.onGround &&
+          this.stompCd <= 0 &&
+          Math.abs(player.x - this.x) < C.stompRange &&
+          Math.abs(player.y - this.y) < 130
+        ) {
+          this.atk = "stompwind";
+          this.atkT = C.stompWindup;
+          this.atkMax = C.stompWindup;
+          this.integrate(dt, platforms);
+          return;
         }
       }
-      const guardedSpeed = this.behavior === "bark-sentinel" ? this.speed * 0.82
-        : this.behavior === "glacier-guard" ? this.speed * 0.68 : this.speed;
-      const sp = this.stun > 0 ? 0 : (this.enraged ? this.speed * (this.behavior === "glacier-guard" ? 2.05 : 1.8) : guardedSpeed);
+      const guardedSpeed =
+        this.behavior === "bark-sentinel"
+          ? this.speed * 0.82
+          : this.behavior === "glacier-guard"
+            ? this.speed * 0.68
+            : this.speed;
+      const sp =
+        this.stun > 0 ? 0 : this.enraged ? this.speed * (this.behavior === "glacier-guard" ? 2.05 : 1.8) : guardedSpeed;
       this.vx = lerp(this.vx, this.guardSide * sp, clamp((this.enraged ? 8 : 5) * dt, 0, 1));
       this.integrate(dt, platforms);
     }
     _stomp(projectiles: EnemyProjectile[], C: typeof CONFIG.armored) {
-      const footY = this.y + this.hh;   // shock travels along whatever surface it's standing on
+      const footY = this.y + this.hh; // shock travels along whatever surface it's standing on
       for (const d of [-1, 1]) {
         const p = new Projectile(this.x + d * this.hw, footY - C.shockR, d * C.shockSpeed, 0);
-        this.ownProjectile(p); p.setFamily("groundShock"); p.r = C.shockR; p.dmg = C.shockDmg; p.life = 1.6;
+        this.ownProjectile(p);
+        p.setFamily("groundShock");
+        p.r = C.shockR;
+        p.dmg = C.shockDmg;
+        p.life = 1.6;
         projectiles.push(p);
       }
       FX.ring(this.x, footY, 14, CONFIG.colors.slam);
@@ -356,7 +512,9 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
     override applyBreak(amount: number) {
       const broken = super.applyBreak(amount);
       if (broken && this.behavior === "glacier-guard") {
-        this.enraged = true; this.glacierCracked = true; this.shield = 0;
+        this.enraged = true;
+        this.glacierCracked = true;
+        this.shield = 0;
         FX.burst(this.x, this.y, 0, -1, 10, "#d9fbff");
       }
       return broken;
@@ -370,7 +528,7 @@ export function createAirEnemyTypes(dependencies: EnemyDependencies, Enemy: Enem
         if (this.enraged) return 1.35;
         return this.onGround ? (this.glacierCracked ? 0.5 : 0.28) : 0.72;
       }
-      return this.enraged ? 1.15 : (this.onGround ? CONFIG.armored.groundDR : CONFIG.armored.airDR);
+      return this.enraged ? 1.15 : this.onGround ? CONFIG.armored.groundDR : CONFIG.armored.airDR;
     }
   }
 

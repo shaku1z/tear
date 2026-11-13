@@ -1,7 +1,10 @@
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
-import { createGhostProductionReplaySession, type GhostVerifiedProductionReplaySession } from "./production-replay-session";
+import {
+  createGhostProductionReplaySession,
+  type GhostVerifiedProductionReplaySession,
+} from "./production-replay-session";
 import { alignGhostsBySemanticEvent } from "./theater";
 import { parseGhostApplicationClockEvent } from "./application-frame-events";
 
@@ -45,30 +48,53 @@ export function createGhostProductionReplayComparison(
   capsules: readonly GhostReadCapsule[],
 ): GhostProductionReplayComparison {
   if (capsules.length < MIN_GHOST_COMPARISON_RUNS || capsules.length > MAX_GHOST_COMPARISON_RUNS) {
-    throw new RangeError(`Ghost comparison requires ${String(MIN_GHOST_COMPARISON_RUNS)}-${String(MAX_GHOST_COMPARISON_RUNS)} verified capsules`);
+    throw new RangeError(
+      `Ghost comparison requires ${String(MIN_GHOST_COMPARISON_RUNS)}-${String(MAX_GHOST_COMPARISON_RUNS)} verified capsules`,
+    );
   }
-  const sources: readonly ComparisonSource[] = Object.freeze(capsules.map((capsule) => Object.freeze({
-    session: createGhostProductionReplaySession(capsule), envelope: mapGhostCapsuleToReplayEnvelope(capsule),
-  })));
+  const sources: readonly ComparisonSource[] = Object.freeze(
+    capsules.map((capsule) =>
+      Object.freeze({
+        session: createGhostProductionReplaySession(capsule),
+        envelope: mapGhostCapsuleToReplayEnvelope(capsule),
+      }),
+    ),
+  );
   const ids = sources.map((source) => source.session.sourceId);
   if (new Set(ids).size !== ids.length) throw new TypeError("Ghost comparison requires distinct source capsules");
-  const runs = Object.freeze(sources.map((source) => Object.freeze({
-    sourceId: source.session.sourceId, sourceRootHash: source.session.sourceRootHash,
-  })));
-  const semanticGhosts = sources.map((source) => ({ ...source.envelope.ghost,
-    events: source.envelope.ghost.events.filter((event) => parseGhostApplicationClockEvent(event) === undefined) }));
+  const runs = Object.freeze(
+    sources.map((source) =>
+      Object.freeze({
+        sourceId: source.session.sourceId,
+        sourceRootHash: source.session.sourceRootHash,
+      }),
+    ),
+  );
+  const semanticGhosts = sources.map((source) => ({
+    ...source.envelope.ghost,
+    events: source.envelope.ghost.events.filter((event) => parseGhostApplicationClockEvent(event) === undefined),
+  }));
   const eventTypes = [...new Set(semanticGhosts.flatMap((ghost) => ghost.events.map((event) => event.type)))].sort();
-  const occurrences = Object.freeze(eventTypes.flatMap((eventType) => alignGhostsBySemanticEvent(
-    semanticGhosts, eventType,
-  ).map((alignment) => Object.freeze({
-    eventType,
-    occurrence: alignment.occurrence,
-    runs: Object.freeze(sources.map((source) => {
-      const tick = alignment.ticksByGhost[source.session.sourceId] ?? null;
-      return Object.freeze({ sourceId: source.session.sourceId, tick,
-        semanticHash: tick === null ? null : source.session.seek(tick).semanticHash });
-    })),
-  }))));
+  const occurrences = Object.freeze(
+    eventTypes.flatMap((eventType) =>
+      alignGhostsBySemanticEvent(semanticGhosts, eventType).map((alignment) =>
+        Object.freeze({
+          eventType,
+          occurrence: alignment.occurrence,
+          runs: Object.freeze(
+            sources.map((source) => {
+              const tick = alignment.ticksByGhost[source.session.sourceId] ?? null;
+              return Object.freeze({
+                sourceId: source.session.sourceId,
+                tick,
+                semanticHash: tick === null ? null : source.session.seek(tick).semanticHash,
+              });
+            }),
+          ),
+        }),
+      ),
+    ),
+  );
   if (occurrences.length === 0) throw new RangeError("Ghost comparison requires recorded semantic events");
   return Object.freeze({ runs, occurrences });
 }

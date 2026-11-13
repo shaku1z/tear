@@ -1,8 +1,5 @@
 import { installPrimaryMusicBackend } from "./music-backend-registry";
-import {
-  AdaptiveSoundtrackMusicBackend,
-  preparePinnedAdaptiveSoundtrackClient,
-} from "./adaptive-soundtrack";
+import { AdaptiveSoundtrackMusicBackend, preparePinnedAdaptiveSoundtrackClient } from "./adaptive-soundtrack";
 
 /** A failed optional load leaves AudioSystem's legacy music fallback in place. */
 export async function installTearScoreMusicBackend(): Promise<boolean> {

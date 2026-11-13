@@ -3,8 +3,15 @@ import { CURRENT_REPLAY_SCHEMA_VERSION, REPLAY_FORMAT, validateReplayEnvelope } 
 import type { FINAL_FIVE_WEAPON_SCHEMA_VERSION, WeaponId } from "../gameplay/weapon-selection";
 import { stableVerificationHash } from "./hash";
 
-export interface VisualStageEvent { readonly t: number; readonly s: number }
-export interface VisualWaveEvent { readonly t: number; readonly w: number; readonly e: string }
+export interface VisualStageEvent {
+  readonly t: number;
+  readonly s: number;
+}
+export interface VisualWaveEvent {
+  readonly t: number;
+  readonly w: number;
+  readonly e: string;
+}
 export interface VisualSpawnEvent {
   readonly t: number;
   readonly id: number;
@@ -16,8 +23,17 @@ export interface VisualSpawnEvent {
   readonly vid?: string;
   readonly b?: string;
 }
-export interface VisualDeathEvent { readonly t: number; readonly id: number; readonly c: string }
-export interface VisualEffectEvent { readonly t: number; readonly k: string; readonly x: number; readonly y: number }
+export interface VisualDeathEvent {
+  readonly t: number;
+  readonly id: number;
+  readonly c: string;
+}
+export interface VisualEffectEvent {
+  readonly t: number;
+  readonly k: string;
+  readonly x: number;
+  readonly y: number;
+}
 export interface VisualLoadoutEvent {
   readonly t: number;
   readonly id: string;
@@ -61,8 +77,7 @@ export interface VisualReplayProvenance {
 }
 
 export type VisualReplayResult =
-  | Readonly<{ ok: true; recording: VisualRecordingV2 }>
-  | Readonly<{ ok: false; error: string }>;
+  Readonly<{ ok: true; recording: VisualRecordingV2 }> | Readonly<{ ok: false; error: string }>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -77,31 +92,73 @@ function numberArray(value: unknown): value is readonly number[] {
 }
 
 function stageEvents(value: unknown): value is readonly VisualStageEvent[] {
-  return Array.isArray(value) && value.every((entry: unknown) =>
-    isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0 && finiteNumber(entry.s));
+  return (
+    Array.isArray(value) &&
+    value.every((entry: unknown) => isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0 && finiteNumber(entry.s))
+  );
 }
 function waveEvents(value: unknown): value is readonly VisualWaveEvent[] {
-  return Array.isArray(value) && value.every((entry: unknown) =>
-    isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0 && finiteNumber(entry.w) && typeof entry.e === "string");
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry: unknown) =>
+        isRecord(entry) &&
+        finiteNumber(entry.t) &&
+        entry.t >= 0 &&
+        finiteNumber(entry.w) &&
+        typeof entry.e === "string",
+    )
+  );
 }
 function spawnEvents(value: unknown): value is readonly VisualSpawnEvent[] {
-  return Array.isArray(value) && value.every((entry: unknown) => isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0
-    && finiteNumber(entry.id) && typeof entry.k === "string" && finiteNumber(entry.x) && finiteNumber(entry.y)
-    && (entry.vid === undefined || (typeof entry.vid === "string" && entry.vid.length > 0 && entry.vid.length <= 80)));
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry: unknown) =>
+        isRecord(entry) &&
+        finiteNumber(entry.t) &&
+        entry.t >= 0 &&
+        finiteNumber(entry.id) &&
+        typeof entry.k === "string" &&
+        finiteNumber(entry.x) &&
+        finiteNumber(entry.y) &&
+        (entry.vid === undefined || (typeof entry.vid === "string" && entry.vid.length > 0 && entry.vid.length <= 80)),
+    )
+  );
 }
 function deathEvents(value: unknown): value is readonly VisualDeathEvent[] {
-  return Array.isArray(value) && value.every((entry: unknown) =>
-    isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0 && finiteNumber(entry.id) && typeof entry.c === "string");
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry: unknown) =>
+        isRecord(entry) &&
+        finiteNumber(entry.t) &&
+        entry.t >= 0 &&
+        finiteNumber(entry.id) &&
+        typeof entry.c === "string",
+    )
+  );
 }
 function effectEvents(value: unknown): value is readonly VisualEffectEvent[] {
-  return Array.isArray(value) && value.every((entry: unknown) => isRecord(entry) && finiteNumber(entry.t) && entry.t >= 0
-    && typeof entry.k === "string" && finiteNumber(entry.x) && finiteNumber(entry.y));
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry: unknown) =>
+        isRecord(entry) &&
+        finiteNumber(entry.t) &&
+        entry.t >= 0 &&
+        typeof entry.k === "string" &&
+        finiteNumber(entry.x) &&
+        finiteNumber(entry.y),
+    )
+  );
 }
 function normalizeLoadoutEvents(value: unknown): readonly VisualLoadoutEvent[] | null {
   if (!Array.isArray(value)) return null;
   const normalized: VisualLoadoutEvent[] = [];
   for (const entry of value) {
-    if (!isRecord(entry) || typeof entry.id !== "string" || entry.id.length === 0 || !finiteNumber(entry.tier)) return null;
+    if (!isRecord(entry) || typeof entry.id !== "string" || entry.id.length === 0 || !finiteNumber(entry.tier))
+      return null;
     if (finiteNumber(entry.t) && entry.t >= 0 && finiteNumber(entry.w)) {
       normalized.push(entry as unknown as VisualLoadoutEvent);
       continue;
@@ -131,7 +188,12 @@ function optionalString(value: unknown): string | undefined {
 export function migrateVisualRecording(value: unknown): VisualReplayResult {
   const source = sourceRecording(value);
   if (source === undefined) return Object.freeze({ ok: false, error: "Replay recording must be an object." });
-  if (!numberArray(source.px) || !numberArray(source.py) || source.px.length < 2 || source.py.length !== source.px.length) {
+  if (
+    !numberArray(source.px) ||
+    !numberArray(source.py) ||
+    source.px.length < 2 ||
+    source.py.length !== source.px.length
+  ) {
     return Object.freeze({ ok: false, error: "Replay player tracks are missing or inconsistent." });
   }
   const isV2 = source.v === 2;
@@ -153,11 +215,20 @@ export function migrateVisualRecording(value: unknown): VisualReplayResult {
   const deaths = isV2 ? source.deaths : [];
   const events = isV2 ? source.events : [];
   const loadout = isV2 ? normalizeLoadoutEvents(source.loadout) : [];
-  if (!stageEvents(stages) || !waveEvents(waves) || !spawnEvents(spawns)
-    || !deathEvents(deaths) || !effectEvents(events) || loadout === null) {
+  if (
+    !stageEvents(stages) ||
+    !waveEvents(waves) ||
+    !spawnEvents(spawns) ||
+    !deathEvents(deaths) ||
+    !effectEvents(events) ||
+    loadout === null
+  ) {
     return Object.freeze({ ok: false, error: "Replay event tracks are malformed." });
   }
-  if (!Array.isArray(esamp) || !esamp.every((sample) => numberArray(sample) && sample.length >= 1 && sample.length % 3 === 1)) {
+  if (
+    !Array.isArray(esamp) ||
+    !esamp.every((sample) => numberArray(sample) && sample.length >= 1 && sample.length % 3 === 1)
+  ) {
     return Object.freeze({ ok: false, error: "Replay enemy samples are malformed." });
   }
   const recording: VisualRecordingV2 = {
@@ -212,17 +283,29 @@ export function buildVisualReplayPacket(
   actions: readonly ReplayActionEnvelope[],
 ): VisualReplayPacket {
   const lastActionTick = actions.at(-1)?.tick ?? 0;
-  const finalTick = Math.max(0, lastActionTick, Math.round((recording.px.length - 1) * recording.dt * provenance.ticksPerSecond));
+  const finalTick = Math.max(
+    0,
+    lastActionTick,
+    Math.round((recording.px.length - 1) * recording.dt * provenance.ticksPerSecond),
+  );
   const packet: VisualReplayPacket = {
     ...recording,
     format: REPLAY_FORMAT,
     schemaVersion: CURRENT_REPLAY_SCHEMA_VERSION,
     rulesetVersion: provenance.rulesetVersion,
     build: Object.freeze({ ...provenance.build }),
-    run: Object.freeze({ runId: provenance.runId, seed: provenance.seed, ticksPerSecond: provenance.ticksPerSecond,
-      weaponId: provenance.weaponId, weaponSchemaVersion: provenance.weaponSchemaVersion }),
+    run: Object.freeze({
+      runId: provenance.runId,
+      seed: provenance.seed,
+      ticksPerSecond: provenance.ticksPerSecond,
+      weaponId: provenance.weaponId,
+      weaponSchemaVersion: provenance.weaponSchemaVersion,
+    }),
     actions: Object.freeze([...actions]),
-    final: Object.freeze({ tick: finalTick, stateHash: stableVerificationHash(visualVerificationState(recording, actions)) }),
+    final: Object.freeze({
+      tick: finalTick,
+      stateHash: stableVerificationHash(visualVerificationState(recording, actions)),
+    }),
     tearScore: Object.freeze({ ...provenance.tearScore }),
   };
   const validated = validateReplayEnvelope(packet);
@@ -233,6 +316,10 @@ export function buildVisualReplayPacket(
 export function verifyVisualReplayPacket(value: unknown): boolean {
   const canonical = validateReplayEnvelope(value);
   const visual = migrateVisualRecording(value);
-  return canonical.ok && visual.ok
-    && canonical.replay.final.stateHash === stableVerificationHash(visualVerificationState(visual.recording, canonical.replay.actions));
+  return (
+    canonical.ok &&
+    visual.ok &&
+    canonical.replay.final.stateHash ===
+      stableVerificationHash(visualVerificationState(visual.recording, canonical.replay.actions))
+  );
 }

@@ -3,9 +3,9 @@ import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { normalizeGameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
-import type { RunRandomStreamsSnapshot } from "../simulation/run-random"; import { STAGES } from "../gameplay/stages";
-import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1,
-  TearStateClass } from "./contracts";
+import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
+import { STAGES } from "../gameplay/stages";
+import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1, TearStateClass } from "./contracts";
 import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION } from "./contracts";
 import { DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import {
@@ -17,25 +17,50 @@ import {
 import type { TearScenarioTransition } from "./runner";
 import { validateTearContract } from "./validation";
 import { createLiveCameraEffectsFixture } from "./live-camera-fixture";
-import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots"; import { projectLiveNavigationObservation } from "./live-observation-navigation";
-import { projectLiveProjectiles } from "./live-observation-projectiles"; import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
-import { projectLiveActorMechanics, projectLiveBehaviorMode, projectLiveBladeMechanics, projectLiveBossObservation, projectLivePlayerMechanics } from "./live-observation-actors";
-import { certifyWave99HammerProgression, createCanonicalWave99HammerProgression, createWave99HistoricalRunState,
-  forgeExitLaunchSnapshot } from "./state-forge-exit-gate";
+import { createLiveRuntimeSnapshotController } from "./live-runtime-snapshots";
+import { projectLiveNavigationObservation } from "./live-observation-navigation";
+import { projectLiveProjectiles } from "./live-observation-projectiles";
+import { launchResolvedLiveState } from "./live-state-forge-scenario-launch";
+import {
+  projectLiveActorMechanics,
+  projectLiveBehaviorMode,
+  projectLiveBladeMechanics,
+  projectLiveBossObservation,
+  projectLivePlayerMechanics,
+} from "./live-observation-actors";
+import {
+  certifyWave99HammerProgression,
+  createCanonicalWave99HammerProgression,
+  createWave99HistoricalRunState,
+  forgeExitLaunchSnapshot,
+} from "./state-forge-exit-gate";
 import { createCampaignVictoryOrigin, createCampaignWave59RewardFrontier } from "./campaign-victory-origin";
 import { createGameplayCausalEvent, projectGameplayEventForParity } from "./gameplay-causal-events";
 import { environmentSnapshotToObservation } from "./environment-codec";
-import { forgeBloomWellCycleState, forgeEnvironmentCombatObjectState, forgeEnvironmentFieldState } from "./state-forge-factories";
+import {
+  forgeBloomWellCycleState,
+  forgeEnvironmentCombatObjectState,
+  forgeEnvironmentFieldState,
+} from "./state-forge-factories";
 import { forgeRootbinderNetworkEnvironment } from "./rootbinder-network-forge";
 import { forgeRootboundGraftAnchorEnvironment } from "./rootbound-graft-anchor-forge";
 import { createBloomWellState, isBloomWellState } from "../gameplay/environment/bloom-well";
-import { projectBloomWellPresentation, type BloomWellPresentationOptions } from "../gameplay/environment/bloom-well-presentation-facts";
+import {
+  projectBloomWellPresentation,
+  type BloomWellPresentationOptions,
+} from "../gameplay/environment/bloom-well-presentation-facts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "./tearsdl";
 import type { TearLiveRestoreResult } from "./live-state-snapshot";
 import type { StateForgeExitLaunch } from "./state-forge-exit-gate";
-import type { LiveTearRuntimeEnvironmentContext, TearClassARuntimeEnvironment,
-  TearCaptureLayerPolicyV1, TearClassBRuntimeEnvironment, TearRuntimeAccessClass, TearRuntimeEnvironmentMetrics,
-  TearStructuredRuntimeEnvironment } from "./live-runtime-contracts";
+import type {
+  LiveTearRuntimeEnvironmentContext,
+  TearClassARuntimeEnvironment,
+  TearCaptureLayerPolicyV1,
+  TearClassBRuntimeEnvironment,
+  TearRuntimeAccessClass,
+  TearRuntimeEnvironmentMetrics,
+  TearStructuredRuntimeEnvironment,
+} from "./live-runtime-contracts";
 export type * from "./live-runtime-contracts";
 function numericSeed(seed: string): number {
   let hash = 0x811c9dc5;
@@ -43,7 +68,7 @@ function numericSeed(seed: string): number {
     hash ^= seed.charCodeAt(index);
     hash = Math.imul(hash, 0x01000193);
   }
-  return (hash >>> 0) || 1;
+  return hash >>> 0 || 1;
 }
 function genericEnvironmentForge(
   kind: "field" | "combat-object",
@@ -52,21 +77,45 @@ function genericEnvironmentForge(
   context: LiveTearRuntimeEnvironmentContext,
 ): TearLiveRestoreResult {
   const base: TearSdlDocumentV1 = {
-    format: "tearsdl", schemaVersion: 1, id: `generic-environment-${kind}`, stateClass: "surgical-valid",
-    seed: `generic-environment-${kind}`, start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+    format: "tearsdl",
+    schemaVersion: 1,
+    id: `generic-environment-${kind}`,
+    stateClass: "surgical-valid",
+    seed: `generic-environment-${kind}`,
+    start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
   };
   const field = {
-    id: "generic-field-state", factoryId: "environment-field", kind: "bloom-well" as const,
-    geometry: { x: 40, y: 40, radius: 12 }, state: "scheduled" as const, stateTick: 0, timer: 0, ownerId: null,
-    schedule: { startTick: 1, endTick: 3 }, eligibility: { player: true, enemies: false, bosses: false }, force: null, cleanupReason: null,
+    id: "generic-field-state",
+    factoryId: "environment-field",
+    kind: "bloom-well" as const,
+    geometry: { x: 40, y: 40, radius: 12 },
+    state: "scheduled" as const,
+    stateTick: 0,
+    timer: 0,
+    ownerId: null,
+    schedule: { startTick: 1, endTick: 3 },
+    eligibility: { player: true, enemies: false, bosses: false },
+    force: null,
+    cleanupReason: null,
   };
   const combatObject = {
-    id: "generic-combat-object-state", factoryId: "environment-combat-object", kind: "root-link" as const,
-    ownerId: null, targetId: "player", geometry: { x: 50, y: 50, w: 8, h: 8 }, integrity: 2, maxIntegrity: 2,
-    counterplayTags: ["cut", "break"], procEligible: false, damageDedupeId: "generic-combat-object-state-hit",
-    state: "active" as const, stateTick: 0, cleanupReason: null,
+    id: "generic-combat-object-state",
+    factoryId: "environment-combat-object",
+    kind: "root-link" as const,
+    ownerId: null,
+    targetId: "player",
+    geometry: { x: 50, y: 50, w: 8, h: 8 },
+    integrity: 2,
+    maxIntegrity: 2,
+    counterplayTags: ["cut", "break"],
+    procEligible: false,
+    damageDedupeId: "generic-combat-object-state-hit",
+    state: "active" as const,
+    stateTick: 0,
+    cleanupReason: null,
   };
-  const forged = kind === "field" ? forgeEnvironmentFieldState(base, field) : forgeEnvironmentCombatObjectState(base, combatObject);
+  const forged =
+    kind === "field" ? forgeEnvironmentFieldState(base, field) : forgeEnvironmentCombatObjectState(base, combatObject);
   return launchResolvedLiveState(resolveTearSdl(forged), environment, snapshots, context);
 }
 function bloomWellEnvironmentForge(
@@ -75,27 +124,59 @@ function bloomWellEnvironmentForge(
   context: LiveTearRuntimeEnvironmentContext,
 ): TearLiveRestoreResult {
   const base: TearSdlDocumentV1 = {
-    format: "tearsdl", schemaVersion: 1, id: "verdant-bloom-well-cycle", stateClass: "surgical-valid",
-    seed: "verdant-bloom-well-cycle", start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+    format: "tearsdl",
+    schemaVersion: 1,
+    id: "verdant-bloom-well-cycle",
+    stateClass: "surgical-valid",
+    seed: "verdant-bloom-well-cycle",
+    start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
   };
-  const field = createBloomWellState({ id: "verdant-bloom-well", ownerId: "player", variant: "stage",
-    geometry: { x: 40, y: 40, radius: 32 }, patternId: "cycle" }, 0);
-  return launchResolvedLiveState(resolveTearSdl(forgeBloomWellCycleState(base, field)), environment, snapshots, context);
+  const field = createBloomWellState(
+    {
+      id: "verdant-bloom-well",
+      ownerId: "player",
+      variant: "stage",
+      geometry: { x: 40, y: 40, radius: 32 },
+      patternId: "cycle",
+    },
+    0,
+  );
+  return launchResolvedLiveState(
+    resolveTearSdl(forgeBloomWellCycleState(base, field)),
+    environment,
+    snapshots,
+    context,
+  );
 }
 
-function bloomWellPresentation(
-  environment: TearStructuredRuntimeEnvironment,
-  options?: BloomWellPresentationOptions,
-) {
-  return Object.freeze(environment.environment().fields().filter(isBloomWellState)
-    .map((field) => projectBloomWellPresentation(field, options)));
+function bloomWellPresentation(environment: TearStructuredRuntimeEnvironment, options?: BloomWellPresentationOptions) {
+  return Object.freeze(
+    environment
+      .environment()
+      .fields()
+      .filter(isBloomWellState)
+      .map((field) => projectBloomWellPresentation(field, options)),
+  );
 }
 
 /** Canonical live projection over the same host-owned actors consumed by gameplay;
  * callers cannot supply transition fixtures. */
 export function projectLiveTearObservation(
-  context: Pick<LiveTearRuntimeEnvironmentContext, "state" | "stage" | "lifecycle" | "screen" |
-    "width" | "height" | "actorId" | "choiceIds" | "platforms" | "availableGameActions" | "focusedControlId" | "environment">,
+  context: Pick<
+    LiveTearRuntimeEnvironmentContext,
+    | "state"
+    | "stage"
+    | "lifecycle"
+    | "screen"
+    | "width"
+    | "height"
+    | "actorId"
+    | "choiceIds"
+    | "platforms"
+    | "availableGameActions"
+    | "focusedControlId"
+    | "environment"
+  >,
   tick: number,
   accessClass: Exclude<TearRuntimeAccessClass, "C">,
   lastProgressTick?: number,
@@ -120,72 +201,122 @@ export function projectLiveTearObservation(
     tick,
     observationClass: accessClass === "A" ? "privileged-diagnostic" : "structured-state",
     player: Object.freeze({
-      x: player.x, y: player.y, vx: player.vx, vy: player.vy,
-      hp: player.hp, maxHp: player.maxHp, facing: player.facing >= 0 ? 1 : -1,
-      grounded: player.onGround, dashCharges: player.dashCharges, ...projectLivePlayerMechanics(player, accessClass),
+      x: player.x,
+      y: player.y,
+      vx: player.vx,
+      vy: player.vy,
+      hp: player.hp,
+      maxHp: player.maxHp,
+      facing: player.facing >= 0 ? 1 : -1,
+      grounded: player.onGround,
+      dashCharges: player.dashCharges,
+      ...projectLivePlayerMechanics(player, accessClass),
     }),
     blade: Object.freeze({
-      handX: blade.x, handY: blade.y, tipX: blade.tipX, tipY: blade.tipY,
-      vx: blade.vx, vy: blade.vy, tipSpeed: blade.tipSpeed, state: blade.state,
+      handX: blade.x,
+      handY: blade.y,
+      tipX: blade.tipX,
+      tipY: blade.tipY,
+      vx: blade.vx,
+      vy: blade.vy,
+      tipSpeed: blade.tipSpeed,
+      state: blade.state,
       ...projectLiveBladeMechanics(blade, accessClass),
     }),
-    entities: Object.freeze([...livingEnemies.map((enemy) => {
-      const authoredState = "state" in enemy && typeof enemy.state === "string" ? enemy.state : undefined,
-        attackState = typeof enemy.atk === "string" && enemy.atk.length > 0 ? enemy.atk : undefined,
-        behaviorState = typeof enemy.behavior === "string" && enemy.behavior.length > 0 ? enemy.behavior : undefined,
-        behaviorMode = projectLiveBehaviorMode(enemy, accessClass);
-      return Object.freeze({
-        id: context.actorId(enemy), kind: canonicalObservationEnemyKind(enemy), x: enemy.x, y: enemy.y,
-        vx: enemy.vx, vy: enemy.vy, hpRatio: enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0,
-        state: authoredState ?? attackState ?? behaviorState ?? "idle",
-        ...(typeof enemy.variant === "string" && enemy.variant.length > 0 ? { variantId: enemy.variant } : {}), ...(typeof enemy.variantName === "string" && enemy.variantName.length > 0 ? { variantName: enemy.variantName } : {}),
-        ...(behaviorMode === undefined ? {} : { behaviorMode }), ...projectLiveActorMechanics(enemy, accessClass),
-        threat: enemy.isBoss ? 1 : Math.min(1, Math.max(0, enemy.contactDmg / Math.max(1, player.maxHp))),
-      });
-    }), ...projectLiveProjectiles(context.state.projectiles(), player, accessClass, (projectile) => {
-      const candidate = projectile.sourceEnemyId ?? projectile.ownerId;
-      if (typeof candidate === "string" && livingEnemies.some((enemy) => context.actorId(enemy) === candidate)) return candidate;
-      const identity = projectile as { readonly sourceEnemy?: unknown; readonly owner?: unknown };
-      const owner = identity.sourceEnemy ?? identity.owner;
-      const source = livingEnemies.find((enemy) => enemy === owner);
-      return source === undefined ? undefined : context.actorId(source);
-    })]),
+    entities: Object.freeze([
+      ...livingEnemies.map((enemy) => {
+        const authoredState = "state" in enemy && typeof enemy.state === "string" ? enemy.state : undefined,
+          attackState = typeof enemy.atk === "string" && enemy.atk.length > 0 ? enemy.atk : undefined,
+          behaviorState = typeof enemy.behavior === "string" && enemy.behavior.length > 0 ? enemy.behavior : undefined,
+          behaviorMode = projectLiveBehaviorMode(enemy, accessClass);
+        return Object.freeze({
+          id: context.actorId(enemy),
+          kind: canonicalObservationEnemyKind(enemy),
+          x: enemy.x,
+          y: enemy.y,
+          vx: enemy.vx,
+          vy: enemy.vy,
+          hpRatio: enemy.maxHp > 0 ? enemy.hp / enemy.maxHp : 0,
+          state: authoredState ?? attackState ?? behaviorState ?? "idle",
+          ...(typeof enemy.variant === "string" && enemy.variant.length > 0 ? { variantId: enemy.variant } : {}),
+          ...(typeof enemy.variantName === "string" && enemy.variantName.length > 0
+            ? { variantName: enemy.variantName }
+            : {}),
+          ...(behaviorMode === undefined ? {} : { behaviorMode }),
+          ...projectLiveActorMechanics(enemy, accessClass),
+          threat: enemy.isBoss ? 1 : Math.min(1, Math.max(0, enemy.contactDmg / Math.max(1, player.maxHp))),
+        });
+      }),
+      ...projectLiveProjectiles(context.state.projectiles(), player, accessClass, (projectile) => {
+        const candidate = projectile.sourceEnemyId ?? projectile.ownerId;
+        if (typeof candidate === "string" && livingEnemies.some((enemy) => context.actorId(enemy) === candidate))
+          return candidate;
+        const identity = projectile as { readonly sourceEnemy?: unknown; readonly owner?: unknown };
+        const owner = identity.sourceEnemy ?? identity.owner;
+        const source = livingEnemies.find((enemy) => enemy === owner);
+        return source === undefined ? undefined : context.actorId(source);
+      }),
+    ]),
     navigation: projectLiveNavigationObservation(context.platforms(), stage),
-    ...(context.environment === undefined ? {} : { environment: environmentSnapshotToObservation(context.environment().snapshot()) }),
+    ...(context.environment === undefined
+      ? {}
+      : { environment: environmentSnapshotToObservation(context.environment().snapshot()) }),
     run: Object.freeze({
       mode: RUN_MODE_REGISTRY.assert(run.mode),
       difficulty: DIFFICULTY_REGISTRY.assert(run.diff),
       weapon: WEAPON_REGISTRY.assert(run.weaponId),
-      stage, wave: run.wave, score: run.score, elapsedTicks: tick,
+      stage,
+      wave: run.wave,
+      score: run.score,
+      elapsedTicks: tick,
     }),
-    ...(accessClass === "A" ? {
-      diagnostics: Object.freeze({
-        worldBounds: Object.freeze({ minX: 0, maxX: context.width, minY: 0, maxY: context.height }),
-        waveComplete: lifecycle.phase === "wave-cleared" || lifecycle.phase === "reward-pending",
-        ...(waveActorIds === undefined
-          ? { waveOwnership: "unavailable" as const }
-          : { waveOwnership: "source-events" as const,
-            livingWaveEnemies: livingEnemies.filter((enemy) => waveActorIds.has(context.actorId(enemy))).length }),
-        ...(bossObservation === undefined ? {} : { boss: bossObservation }),
-        paused: context.screen() === "paused",
-        ui: Object.freeze({ focusableIds: Object.freeze([...context.choiceIds()]),
-          ...(focusedId === undefined ? {} : { focusedId }) }),
-        ...(lastProgressTick === undefined ? {} : { progressTick: lastProgressTick, softlockLimitTicks: 120 * 30 }),
-        lifecyclePhase: lifecycle.phase,
-      }),
-    } : {}),
-    availableActions: typeof context.availableGameActions === "function"
-      ? context.availableGameActions()
-      : canonicalObservationActions(context.screen(), run.mode, true),
+    ...(accessClass === "A"
+      ? {
+          diagnostics: Object.freeze({
+            worldBounds: Object.freeze({ minX: 0, maxX: context.width, minY: 0, maxY: context.height }),
+            waveComplete: lifecycle.phase === "wave-cleared" || lifecycle.phase === "reward-pending",
+            ...(waveActorIds === undefined
+              ? { waveOwnership: "unavailable" as const }
+              : {
+                  waveOwnership: "source-events" as const,
+                  livingWaveEnemies: livingEnemies.filter((enemy) => waveActorIds.has(context.actorId(enemy))).length,
+                }),
+            ...(bossObservation === undefined ? {} : { boss: bossObservation }),
+            paused: context.screen() === "paused",
+            ui: Object.freeze({
+              focusableIds: Object.freeze([...context.choiceIds()]),
+              ...(focusedId === undefined ? {} : { focusedId }),
+            }),
+            ...(lastProgressTick === undefined ? {} : { progressTick: lastProgressTick, softlockLimitTicks: 120 * 30 }),
+            lifecyclePhase: lifecycle.phase,
+          }),
+        }
+      : {}),
+    availableActions:
+      typeof context.availableGameActions === "function"
+        ? context.availableGameActions()
+        : canonicalObservationActions(context.screen(), run.mode, true),
   });
 }
 
-function createEvent(id: number, tick: number, type: TearCausalEventV1["type"],
-  payload: Readonly<Record<string, unknown>>, source: TearCausalEventV1["source"] = "derived"): TearCausalEventV1 {
+function createEvent(
+  id: number,
+  tick: number,
+  type: TearCausalEventV1["type"],
+  payload: Readonly<Record<string, unknown>>,
+  source: TearCausalEventV1["source"] = "derived",
+): TearCausalEventV1 {
   const event: TearCausalEventV1 = {
-    format: TEAR_CONTRACT_FORMAT, kind: "event", schemaVersion: TEAR_CONTRACT_VERSION,
-    id: `live:${String(tick)}:${String(id)}`, type, tick, phase: "post-simulation-commit",
-    sequence: id, source, payload: Object.freeze(payload),
+    format: TEAR_CONTRACT_FORMAT,
+    kind: "event",
+    schemaVersion: TEAR_CONTRACT_VERSION,
+    id: `live:${String(tick)}:${String(id)}`,
+    type,
+    tick,
+    phase: "post-simulation-commit",
+    sequence: id,
+    source,
+    payload: Object.freeze(payload),
   };
   return Object.freeze(event);
 }
@@ -235,7 +366,9 @@ export function createLiveTearRuntimeEnvironment(
     if (startingRun && event.kind === "run" && event.transition === "abandoned") return;
     waveOwnership.consume(event);
     nativeEventLog.push(event);
-    eventLog.push(createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`, "engine"));
+    eventLog.push(
+      createGameplayCausalEvent(event, sequence, `live:${String(event.tick)}:${String(sequence++)}`, "engine"),
+    );
   });
 
   const projectObservation = (tick: number): TearObservationV1 => {
@@ -245,16 +378,32 @@ export function createLiveTearRuntimeEnvironment(
     const lifecycle = context.lifecycle();
     const enemies = context.state.enemies().filter((enemy) => !enemy.dead);
     const projectiles = context.state.projectiles().filter((projectile) => !projectile.dead);
-    const signature = [lifecycle.phase, lifecycle.revision, run?.wave, run?.score, run?.spawnQueue.length,
-      player?.x, player?.y, player?.hp, blade?.x, blade?.y, blade?.state,
+    const signature = [
+      lifecycle.phase,
+      lifecycle.revision,
+      run?.wave,
+      run?.score,
+      run?.spawnQueue.length,
+      player?.x,
+      player?.y,
+      player?.hp,
+      blade?.x,
+      blade?.y,
+      blade?.state,
       ...enemies.flatMap((enemy) => [enemy.x, enemy.y, enemy.hp]),
-      ...projectiles.flatMap((projectile) => [projectile.x, projectile.y])].join("|");
+      ...projectiles.flatMap((projectile) => [projectile.x, projectile.y]),
+    ].join("|");
     if (signature !== lastProgressSignature) {
       lastProgressSignature = signature;
       lastProgressTick = tick;
     }
-    return projectLiveTearObservation(context, tick, accessClass, lastProgressTick,
-      run === null ? undefined : waveOwnership.actors(run.wave));
+    return projectLiveTearObservation(
+      context,
+      tick,
+      accessClass,
+      lastProgressTick,
+      run === null ? undefined : waveOwnership.actors(run.wave),
+    );
   };
 
   const observe = (): TearObservationV1 => {
@@ -263,9 +412,14 @@ export function createLiveTearRuntimeEnvironment(
     observation = projectObservation(context.authoritative()?.tick ?? observation.tick);
     return observation;
   };
-  const metrics = (): TearRuntimeEnvironmentMetrics => Object.freeze({
-    resets, fixedTicks, acceptedActions, emittedEvents: eventLog.length, screenshots: screenshotCount,
-  });
+  const metrics = (): TearRuntimeEnvironmentMetrics =>
+    Object.freeze({
+      resets,
+      fixedTicks,
+      acceptedActions,
+      emittedEvents: eventLog.length,
+      screenshots: screenshotCount,
+    });
   const snapshots = createLiveRuntimeSnapshotController(context, accessClass, (snapshot, result) => {
     waveOwnership.invalidate();
     const restoredRun = context.state.run();
@@ -276,9 +430,19 @@ export function createLiveTearRuntimeEnvironment(
     context.resetSemanticInput();
     context.drainConsumedActions();
     observation = projectObservation(snapshot.tick);
-    eventLog.push(createEvent(sequence++, snapshot.tick, "system.checkpoint", {
-      snapshotId: snapshot.id, operation: "restored", exactHash: result.exactHash,
-    }, "developer"));
+    eventLog.push(
+      createEvent(
+        sequence++,
+        snapshot.tick,
+        "system.checkpoint",
+        {
+          snapshotId: snapshot.id,
+          operation: "restored",
+          exactHash: result.exactHash,
+        },
+        "developer",
+      ),
+    );
   });
 
   const environment: TearStructuredRuntimeEnvironment & Readonly<{ rng(): RunRandomStreamsSnapshot }> = {
@@ -287,8 +451,13 @@ export function createLiveTearRuntimeEnvironment(
       requireStructured(accessClass, "programmatic reset");
       const validation = validateTearContract(nextScenario);
       if (!validation.ok || validation.value.kind !== "scenario") {
-        throw new TypeError(`invalid Tear scenario: ${validation.ok ? "wrong contract kind"
-          : validation.issues.map((issue) => `${issue.path} ${issue.message}`).join("; ")}`);
+        throw new TypeError(
+          `invalid Tear scenario: ${
+            validation.ok
+              ? "wrong contract kind"
+              : validation.issues.map((issue) => `${issue.path} ${issue.message}`).join("; ")
+          }`,
+        );
       }
       if (nextScenario.backends !== undefined && !nextScenario.backends.includes("live")) {
         throw new RangeError(`scenario ${nextScenario.id} does not support live execution`);
@@ -297,7 +466,8 @@ export function createLiveTearRuntimeEnvironment(
       if (nextScenario.stateClass !== "recorded-canonical") {
         throw new RangeError(`live reset does not forge ${nextScenario.stateClass} state; use State Forge`);
       }
-      if (nextScenario.start.stage !== undefined) throw new RangeError("live reset stage selection requires State Forge");
+      if (nextScenario.start.stage !== undefined)
+        throw new RangeError("live reset stage selection requires State Forge");
       if (nextScenario.start.wave !== undefined && nextScenario.start.wave !== 1) {
         throw new RangeError("live reset supports only the natural opening wave; use State Forge for exact waves");
       }
@@ -327,8 +497,11 @@ export function createLiveTearRuntimeEnvironment(
       lastProgressSignature = "";
       waveOwnership.invalidate();
       startingRun = true;
-      try { context.startRun(nextScenario.start.mode, nextScenario.start.difficulty); }
-      finally { startingRun = false; }
+      try {
+        context.startRun(nextScenario.start.mode, nextScenario.start.difficulty);
+      } finally {
+        startingRun = false;
+      }
       context.resetSemanticInput();
       context.drainConsumedActions();
       finaleIntentStart = context.finaleIntents().length;
@@ -338,10 +511,20 @@ export function createLiveTearRuntimeEnvironment(
       resets += 1;
       observation = projectObservation(0);
       if (!eventLog.some((event) => event.type === "run.started")) {
-        eventLog.push(createEvent(sequence++, 0, "run.started", {
-          scenarioId: nextScenario.id, seed: nextScenario.seed, runSeed: context.state.run()?.runSeed,
-          provenance: "runtime-bridge-synthetic",
-        }, "derived"));
+        eventLog.push(
+          createEvent(
+            sequence++,
+            0,
+            "run.started",
+            {
+              scenarioId: nextScenario.id,
+              seed: nextScenario.seed,
+              runSeed: context.state.run()?.runSeed,
+              provenance: "runtime-bridge-synthetic",
+            },
+            "derived",
+          ),
+        );
       }
       context.render();
       return observation;
@@ -352,15 +535,22 @@ export function createLiveTearRuntimeEnvironment(
       if (scenario === null || observation === null) throw new Error("Tear runtime must be reset before stepping");
       const currentObservation = observation;
       if (paused) {
-        return Object.freeze({ observation, events: Object.freeze([]), actions: Object.freeze([]),
-          terminated: false, truncated: false, info: Object.freeze({ paused: true, stateHash: this.stateHash() }) });
+        return Object.freeze({
+          observation,
+          events: Object.freeze([]),
+          actions: Object.freeze([]),
+          terminated: false,
+          truncated: false,
+          info: Object.freeze({ paused: true, stateHash: this.stateHash() }),
+        });
       }
       if (terminated) throw new Error("cannot step a terminated Tear runtime");
       const normalizedActions = actions.map((entry) => {
         if (!Number.isSafeInteger(entry.id) || entry.id <= lastCallerEnvelopeId) {
           throw new RangeError("action envelope IDs must be strictly increasing positive command IDs");
         }
-        if (entry.tick !== currentObservation.tick + 1) throw new RangeError("action envelope tick must target the next fixed tick");
+        if (entry.tick !== currentObservation.tick + 1)
+          throw new RangeError("action envelope tick must target the next fixed tick");
         lastCallerEnvelopeId = entry.id;
         const normalized = normalizeGameAction(entry.command);
         if (!normalized.ok) throw new TypeError(normalized.reason);
@@ -369,8 +559,19 @@ export function createLiveTearRuntimeEnvironment(
       const routedActions: GameAction[] = [];
       const simulationActions: typeof normalizedActions = [];
       for (const entry of normalizedActions) {
-        if (["ability", "interact", "pause", "confirm", "cancel", "draft-choice",
-          "reserve-choice", "tier-up-choice"].includes(entry.command.type)) routedActions.push(entry.command);
+        if (
+          [
+            "ability",
+            "interact",
+            "pause",
+            "confirm",
+            "cancel",
+            "draft-choice",
+            "reserve-choice",
+            "tier-up-choice",
+          ].includes(entry.command.type)
+        )
+          routedActions.push(entry.command);
         else {
           context.pushAction(entry.command);
           simulationActions.push(entry);
@@ -379,23 +580,36 @@ export function createLiveTearRuntimeEnvironment(
       acceptedActions += normalizedActions.length;
       if (simulationActions.length === 0 && routedActions.length > 0 && context.screen() !== "playing") {
         for (const action of routedActions) {
-          if (!context.routeAction(action)) throw new Error(`live runtime could not consume ${action.type} in ${context.screen()}`);
+          if (!context.routeAction(action))
+            throw new Error(`live runtime could not consume ${action.type} in ${context.screen()}`);
         }
         observation = projectObservation(observation.tick);
-        const routedEvent = createEvent(sequence++, observation.tick, "ui.action-confirmed", {
-          actions: routedActions.map((action) => action.type),
-        }, "agent");
+        const routedEvent = createEvent(
+          sequence++,
+          observation.tick,
+          "ui.action-confirmed",
+          {
+            actions: routedActions.map((action) => action.type),
+          },
+          "agent",
+        );
         eventLog.push(routedEvent);
         const undeliveredEvents = Object.freeze(eventLog.slice(deliveredEventCount));
         deliveredEventCount = eventLog.length;
         context.render();
         return Object.freeze({
-          observation, events: undeliveredEvents, actions: Object.freeze(normalizedActions),
-          terminated, truncated: false,
+          observation,
+          events: undeliveredEvents,
+          actions: Object.freeze(normalizedActions),
+          terminated,
+          truncated: false,
           info: Object.freeze({
-            stateHash: this.stateHash(), canonicalStateHash: context.authoritative()?.stateHash ?? "",
-            lifecycle: context.lifecycle().phase, screen: context.screen(),
-            simulationActions: 0, routedActions: routedActions.length,
+            stateHash: this.stateHash(),
+            canonicalStateHash: context.authoritative()?.stateHash ?? "",
+            lifecycle: context.lifecycle().phase,
+            screen: context.screen(),
+            simulationActions: 0,
+            routedActions: routedActions.length,
           }),
         });
       }
@@ -403,17 +617,31 @@ export function createLiveTearRuntimeEnvironment(
       const steps = context.advanceFixedTick();
       if (steps !== 1) throw new Error(`live fixed-tick bridge advanced ${String(steps)} ticks instead of exactly one`);
       for (const action of routedActions) {
-        if (!context.routeAction(action)) throw new Error(`live runtime could not consume ${action.type} in ${context.screen()}`);
+        if (!context.routeAction(action))
+          throw new Error(`live runtime could not consume ${action.type} in ${context.screen()}`);
       }
       fixedTicks += 1;
       const consumedActions = context.drainConsumedActions();
       observation = projectObservation(context.authoritative()?.tick ?? fixedTicks);
       const tickEvents: TearCausalEventV1[] = [];
-      if (normalizedActions.length > 0) tickEvents.push(createEvent(sequence++, observation.tick, "system.checkpoint", {
-        acceptedActions: normalizedActions.map((entry) => entry.command.type),
-      }, "agent"));
-      if (observation.player.hp < prior.player.hp) tickEvents.push(createEvent(sequence++, observation.tick,
-        "player.damaged", { amount: prior.player.hp - observation.player.hp }));
+      if (normalizedActions.length > 0)
+        tickEvents.push(
+          createEvent(
+            sequence++,
+            observation.tick,
+            "system.checkpoint",
+            {
+              acceptedActions: normalizedActions.map((entry) => entry.command.type),
+            },
+            "agent",
+          ),
+        );
+      if (observation.player.hp < prior.player.hp)
+        tickEvents.push(
+          createEvent(sequence++, observation.tick, "player.damaged", {
+            amount: prior.player.hp - observation.player.hp,
+          }),
+        );
       eventLog.push(...tickEvents);
       const undeliveredEvents = Object.freeze(eventLog.slice(deliveredEventCount));
       deliveredEventCount = eventLog.length;
@@ -421,14 +649,22 @@ export function createLiveTearRuntimeEnvironment(
       const run = context.state.run();
       const runEnded = context.screen() === "gameover" || context.screen() === "win";
       return Object.freeze({
-        observation, events: undeliveredEvents,
-        actions: Object.freeze([...consumedActions, ...normalizedActions.filter((entry) =>
-          routedActions.includes(entry.command))]),
-        terminated: runEnded, truncated: observation.tick >= scenario.maxTicks,
+        observation,
+        events: undeliveredEvents,
+        actions: Object.freeze([
+          ...consumedActions,
+          ...normalizedActions.filter((entry) => routedActions.includes(entry.command)),
+        ]),
+        terminated: runEnded,
+        truncated: observation.tick >= scenario.maxTicks,
         info: Object.freeze({
-          stateHash: this.stateHash(), canonicalStateHash: context.authoritative()?.stateHash ?? "",
-          lifecycle: context.lifecycle().phase, screen: context.screen(), score: run?.score ?? 0,
-          simulationActions: simulationActions.length, routedActions: routedActions.length,
+          stateHash: this.stateHash(),
+          canonicalStateHash: context.authoritative()?.stateHash ?? "",
+          lifecycle: context.lifecycle().phase,
+          screen: context.screen(),
+          score: run?.score ?? 0,
+          simulationActions: simulationActions.length,
+          routedActions: routedActions.length,
         }),
       });
     },
@@ -446,8 +682,18 @@ export function createLiveTearRuntimeEnvironment(
         lastCallerEnvelopeId = entry.id;
         const normalized = normalizeGameAction(entry.command);
         if (!normalized.ok) throw new TypeError(normalized.reason);
-        if (["ability", "interact", "pause", "confirm", "cancel", "draft-choice",
-          "reserve-choice", "tier-up-choice"].includes(normalized.action.type)) {
+        if (
+          [
+            "ability",
+            "interact",
+            "pause",
+            "confirm",
+            "cancel",
+            "draft-choice",
+            "reserve-choice",
+            "tier-up-choice",
+          ].includes(normalized.action.type)
+        ) {
           throw new TypeError("render-profile stepping accepts simulation actions only");
         }
         return Object.freeze({ ...entry, command: normalized.action });
@@ -460,20 +706,26 @@ export function createLiveTearRuntimeEnvironment(
       observation = projectObservation(context.authoritative()?.tick ?? fixedTicks);
       context.render();
       return Object.freeze({
-        observation, events: Object.freeze([]), actions: Object.freeze(consumedActions),
+        observation,
+        events: Object.freeze([]),
+        actions: Object.freeze(consumedActions),
         terminated: context.screen() === "gameover" || context.screen() === "win",
         truncated: observation.tick >= scenario.maxTicks,
         info: Object.freeze({
-          renderDeltaSeconds: deltaSeconds, simulationSteps: steps,
-          stateHash: this.stateHash(), canonicalStateHash: context.authoritative()?.stateHash ?? "",
+          renderDeltaSeconds: deltaSeconds,
+          simulationSteps: steps,
+          stateHash: this.stateHash(),
+          canonicalStateHash: context.authoritative()?.stateHash ?? "",
         }),
       });
     },
     actionBatch(entries) {
       const transitions: TearScenarioTransition[] = [];
       for (const entry of entries) {
-        if (!Number.isSafeInteger(entry.ticks) || entry.ticks < 1) throw new RangeError("batch ticks must be a positive integer");
-        for (let index = 0; index < entry.ticks; index += 1) transitions.push(this.step(index === 0 ? entry.actions : []));
+        if (!Number.isSafeInteger(entry.ticks) || entry.ticks < 1)
+          throw new RangeError("batch ticks must be a positive integer");
+        for (let index = 0; index < entry.ticks; index += 1)
+          transitions.push(this.step(index === 0 ? entry.actions : []));
       }
       return Object.freeze(transitions);
     },
@@ -516,7 +768,11 @@ export function createLiveTearRuntimeEnvironment(
       if (canonical !== undefined) return canonical;
       const value = observe();
       return stableVerificationHash({
-        tick: value.tick, player: value.player, blade: value.blade, entities: value.entities, run: value.run,
+        tick: value.tick,
+        player: value.player,
+        blade: value.blade,
+        entities: value.entities,
+        run: value.run,
         ...(value.environment === undefined ? {} : { environment: value.environment }),
       });
     },
@@ -528,147 +784,181 @@ export function createLiveTearRuntimeEnvironment(
     bloomWellPresentation(options?: BloomWellPresentationOptions) {
       return bloomWellPresentation(environment, options);
     },
-    presentation() { return context.presentation(); },
-    screenshot(policy?: TearCaptureLayerPolicyV1) { screenshotCount += 1; return context.captureScreenshot(policy); },
+    presentation() {
+      return context.presentation();
+    },
+    screenshot(policy?: TearCaptureLayerPolicyV1) {
+      screenshotCount += 1;
+      return context.captureScreenshot(policy);
+    },
   };
-  if (accessClass === "A") return Object.freeze({
-    ...environment,
-    accessClass: "A" as const,
-    rng: () => context.random(),
-    advanceApplicationFrame: (
-      deltaSeconds: number,
-      options: Readonly<{ skipCinematic?: boolean }> = {},
-    ) => {
-      if (!(deltaSeconds > 0) || !Number.isFinite(deltaSeconds)) {
-        throw new RangeError("application-frame delta must be finite and positive");
-      }
-      if (scenario === null || observation === null) {
-        throw new Error("Tear runtime must be reset before stepping");
-      }
-      if (paused || terminated) throw new Error("application-frame stepping requires a running Tear runtime");
-      const beforeTick = context.authoritative()?.tick ?? observation.tick;
-      if (options.skipCinematic === true) context.skipCinematic();
-      context.advanceApplicationFrame(deltaSeconds);
-      const afterTick = context.authoritative()?.tick ?? beforeTick;
-      if (!Number.isSafeInteger(beforeTick) || !Number.isSafeInteger(afterTick) || afterTick < beforeTick) {
-        throw new Error("application frame produced an invalid authoritative tick delta");
-      }
-      const fixedTickDelta = afterTick - beforeTick;
-      fixedTicks += fixedTickDelta;
-      observation = projectObservation(afterTick);
-      terminated = context.screen() === "gameover" || context.screen() === "win";
-      context.render();
-      return Object.freeze({ beforeTick, afterTick, fixedTickDelta });
-    },
-    advanceStateForgeCinematicBeat: () => {
-      if (scenario === null || observation === null) {
-        throw new Error("Tear runtime must be reset before cinematic advancement");
-      }
-      if (paused || terminated) {
-        throw new Error("cinematic advancement requires a running Tear runtime");
-      }
-      const advanced = context.advanceStateForgeCinematicBeat();
-      const tick = context.authoritative()?.tick ?? observation.tick;
-      if (!Number.isSafeInteger(tick) || tick < observation.tick) {
-        throw new Error("cinematic advancement produced an invalid authoritative tick");
-      }
-      observation = projectObservation(tick);
-      context.render();
-      return Object.freeze({ advanced, tick });
-    },
-    canonicalState: () => context.authoritative()?.state ?? null,
-    engineEventProjection: () => Object.freeze(nativeEventLog.map(projectGameplayEventForParity)),
-    finaleIntentProjection: () => Object.freeze(context.finaleIntents().slice(finaleIntentStart)),
-    finaleOutwardProjection: () => Object.freeze(context.finaleOutwardCalls().slice(finaleOutwardStart)),
-    audioDispatchProjection: () => Object.freeze((context.audioDispatchReceipts?.() ?? []).slice(audioDispatchStart)),
-    outcomeChronologyProjection: () => Object.freeze((context.outcomeChronology?.() ?? []).slice(outcomeChronologyStart)),
-    setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
-      context.setTimeEffectsForTest(effects);
-    },
-    setCameraEffectsForTest: createLiveCameraEffectsFixture(context.setCameraEffectsForTest),
-    captureSnapshot: (id: string, stateClass?: TearStateClass, seed?: string) => snapshots.capture(id, stateClass, seed),
-    restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
-    forgeExitLaunch: (launch: StateForgeExitLaunch) => {
-      if (launch.kind === "boss-finisher" && context.bossIntroActive()) {
-        throw new Error("boss-finisher origin requires the production boss introduction to be complete");
-      }
-      const original = snapshots.capture(`source-${launch.id}`);
-      const forged = forgeExitLaunchSnapshot(original, launch);
-      if (launch.kind !== "boss-finisher") return snapshots.restore(forged);
-      const progressionRuntime = context.captureProgressionRuntime();
-      try {
-        context.applyBossFinisher(launch.boss, launch.remainingHp);
-        const committed = snapshots.capture(launch.id, "surgical-valid");
-        if (committed.hashes.exact !== forged.hashes.exact) {
-          throw new Error("boss-finisher surgical commit changed fields outside its declared health pair");
+  if (accessClass === "A")
+    return Object.freeze({
+      ...environment,
+      accessClass: "A" as const,
+      rng: () => context.random(),
+      advanceApplicationFrame: (deltaSeconds: number, options: Readonly<{ skipCinematic?: boolean }> = {}) => {
+        if (!(deltaSeconds > 0) || !Number.isFinite(deltaSeconds)) {
+          throw new RangeError("application-frame delta must be finite and positive");
         }
-        return Object.freeze({ ok: true as const, exactHash: committed.hashes.exact,
-          semanticHash: committed.hashes.semantic });
-      } catch (error) {
-        const rollback = snapshots.restore(original);
-        context.restoreProgressionRuntime(progressionRuntime);
-        if (!rollback.ok) throw new Error("boss-finisher rollback failed", { cause: error });
-        throw error;
-      }
-    },
-    forgeWave99Hammer: () => {
-      const progression = createCanonicalWave99HammerProgression();
-      const replay = context.replayProgression(progression.ledger);
-      const certificate = certifyWave99HammerProgression(progression), history = createWave99HistoricalRunState(certificate);
-      const run = context.state.run(), player = context.state.player();
-      if (run === null || player === undefined) throw new Error("wave-99 forge requires an active live run");
-      run.wave = 99; run.score = certificate.metrics.score; run.waveKills = history.currentWaveKills; run.runTime = history.runTime; run.waveLog = [...history.waveLog];
-      run.mult = certificate.metrics.style; player.maxHp = certificate.metrics.maxHp; player.hp = certificate.metrics.hp;
-      Reflect.set(run, "stateForgeEvidence", { ...certificate, liveReplay: replay, ledger: progression.ledger });
-      const forged = snapshots.capture("wave99-start", "reconstructed-reachable");
-      return Object.freeze({ ok: true as const, exactHash: forged.hashes.exact, semanticHash: forged.hashes.semantic });
-    },
-    forgeCampaignFinalWave: () => {
-      const certificate = createCampaignVictoryOrigin();
-      const original = snapshots.capture("campaign-wave-59-original");
-      const originalProgressionRuntime = context.captureProgressionRuntime();
-      try {
-        const replay = context.replayProgression(certificate.ledger);
-        context.loadStage(STAGES.length - 1);
-        const frontier = createCampaignWave59RewardFrontier(
-          snapshots.capture("campaign-wave-59-source", "reconstructed-reachable"), certificate,
-          context.platformsForStage,
-        );
+        if (scenario === null || observation === null) {
+          throw new Error("Tear runtime must be reset before stepping");
+        }
+        if (paused || terminated) throw new Error("application-frame stepping requires a running Tear runtime");
+        const beforeTick = context.authoritative()?.tick ?? observation.tick;
+        if (options.skipCinematic === true) context.skipCinematic();
+        context.advanceApplicationFrame(deltaSeconds);
+        const afterTick = context.authoritative()?.tick ?? beforeTick;
+        if (!Number.isSafeInteger(beforeTick) || !Number.isSafeInteger(afterTick) || afterTick < beforeTick) {
+          throw new Error("application frame produced an invalid authoritative tick delta");
+        }
+        const fixedTickDelta = afterTick - beforeTick;
+        fixedTicks += fixedTickDelta;
+        observation = projectObservation(afterTick);
+        terminated = context.screen() === "gameover" || context.screen() === "win";
+        context.render();
+        return Object.freeze({ beforeTick, afterTick, fixedTickDelta });
+      },
+      advanceStateForgeCinematicBeat: () => {
+        if (scenario === null || observation === null) {
+          throw new Error("Tear runtime must be reset before cinematic advancement");
+        }
+        if (paused || terminated) {
+          throw new Error("cinematic advancement requires a running Tear runtime");
+        }
+        const advanced = context.advanceStateForgeCinematicBeat();
+        const tick = context.authoritative()?.tick ?? observation.tick;
+        if (!Number.isSafeInteger(tick) || tick < observation.tick) {
+          throw new Error("cinematic advancement produced an invalid authoritative tick");
+        }
+        observation = projectObservation(tick);
+        context.render();
+        return Object.freeze({ advanced, tick });
+      },
+      canonicalState: () => context.authoritative()?.state ?? null,
+      engineEventProjection: () => Object.freeze(nativeEventLog.map(projectGameplayEventForParity)),
+      finaleIntentProjection: () => Object.freeze(context.finaleIntents().slice(finaleIntentStart)),
+      finaleOutwardProjection: () => Object.freeze(context.finaleOutwardCalls().slice(finaleOutwardStart)),
+      audioDispatchProjection: () => Object.freeze((context.audioDispatchReceipts?.() ?? []).slice(audioDispatchStart)),
+      outcomeChronologyProjection: () =>
+        Object.freeze((context.outcomeChronology?.() ?? []).slice(outcomeChronologyStart)),
+      setTimeEffectsForTest: (effects: Readonly<{ hitStop?: number; slowMotion?: number; timeScale?: number }>) => {
+        context.setTimeEffectsForTest(effects);
+      },
+      setCameraEffectsForTest: createLiveCameraEffectsFixture(context.setCameraEffectsForTest),
+      captureSnapshot: (id: string, stateClass?: TearStateClass, seed?: string) =>
+        snapshots.capture(id, stateClass, seed),
+      restoreSnapshot: (snapshot: TearSnapshotV1) => snapshots.restore(snapshot),
+      forgeExitLaunch: (launch: StateForgeExitLaunch) => {
+        if (launch.kind === "boss-finisher" && context.bossIntroActive()) {
+          throw new Error("boss-finisher origin requires the production boss introduction to be complete");
+        }
+        const original = snapshots.capture(`source-${launch.id}`);
+        const forged = forgeExitLaunchSnapshot(original, launch);
+        if (launch.kind !== "boss-finisher") return snapshots.restore(forged);
         const progressionRuntime = context.captureProgressionRuntime();
-        const restored = snapshots.restore(frontier);
-        context.restoreProgressionRuntime(progressionRuntime);
-        if (!restored.ok) {
+        try {
+          context.applyBossFinisher(launch.boss, launch.remainingHp);
+          const committed = snapshots.capture(launch.id, "surgical-valid");
+          if (committed.hashes.exact !== forged.hashes.exact) {
+            throw new Error("boss-finisher surgical commit changed fields outside its declared health pair");
+          }
+          return Object.freeze({
+            ok: true as const,
+            exactHash: committed.hashes.exact,
+            semanticHash: committed.hashes.semantic,
+          });
+        } catch (error) {
+          const rollback = snapshots.restore(original);
+          context.restoreProgressionRuntime(progressionRuntime);
+          if (!rollback.ok) throw new Error("boss-finisher rollback failed", { cause: error });
+          throw error;
+        }
+      },
+      forgeWave99Hammer: () => {
+        const progression = createCanonicalWave99HammerProgression();
+        const replay = context.replayProgression(progression.ledger);
+        const certificate = certifyWave99HammerProgression(progression),
+          history = createWave99HistoricalRunState(certificate);
+        const run = context.state.run(),
+          player = context.state.player();
+        if (run === null || player === undefined) throw new Error("wave-99 forge requires an active live run");
+        run.wave = 99;
+        run.score = certificate.metrics.score;
+        run.waveKills = history.currentWaveKills;
+        run.runTime = history.runTime;
+        run.waveLog = [...history.waveLog];
+        run.mult = certificate.metrics.style;
+        player.maxHp = certificate.metrics.maxHp;
+        player.hp = certificate.metrics.hp;
+        Reflect.set(run, "stateForgeEvidence", { ...certificate, liveReplay: replay, ledger: progression.ledger });
+        const forged = snapshots.capture("wave99-start", "reconstructed-reachable");
+        return Object.freeze({
+          ok: true as const,
+          exactHash: forged.hashes.exact,
+          semanticHash: forged.hashes.semantic,
+        });
+      },
+      forgeCampaignFinalWave: () => {
+        const certificate = createCampaignVictoryOrigin();
+        const original = snapshots.capture("campaign-wave-59-original");
+        const originalProgressionRuntime = context.captureProgressionRuntime();
+        try {
+          const replay = context.replayProgression(certificate.ledger);
+          context.loadStage(STAGES.length - 1);
+          const frontier = createCampaignWave59RewardFrontier(
+            snapshots.capture("campaign-wave-59-source", "reconstructed-reachable"),
+            certificate,
+            context.platformsForStage,
+          );
+          const progressionRuntime = context.captureProgressionRuntime();
+          const restored = snapshots.restore(frontier);
+          context.restoreProgressionRuntime(progressionRuntime);
+          if (!restored.ok) {
+            const rollback = snapshots.restore(original);
+            context.restoreProgressionRuntime(originalProgressionRuntime);
+            if (!rollback.ok) throw new Error("campaign final-wave rollback failed");
+            return Object.freeze({ ...restored, rolledBack: true });
+          }
+          const run = context.state.run();
+          if (run === null) throw new Error("campaign final-wave forge requires an active live run");
+          Reflect.set(
+            run,
+            "stateForgeEvidence",
+            Object.freeze({
+              certificateId: certificate.id,
+              currentWave: certificate.currentWave,
+              nextWave: certificate.nextWave,
+              terminal: certificate.terminal,
+              progressionHash: certificate.ledger.progressionHash,
+              configurationHash: certificate.configurationHash,
+              provenanceKind: certificate.provenance.kind,
+              liveReplay: replay,
+            }),
+          );
+          context.startNextWave();
+          context.setScreen("playing");
+          const started = snapshots.capture("campaign-wave-60-start", "reconstructed-reachable");
+          return Object.freeze({
+            ok: true as const,
+            exactHash: started.hashes.exact,
+            semanticHash: started.hashes.semantic,
+          });
+        } catch (error) {
           const rollback = snapshots.restore(original);
           context.restoreProgressionRuntime(originalProgressionRuntime);
-          if (!rollback.ok) throw new Error("campaign final-wave rollback failed");
-          return Object.freeze({ ...restored, rolledBack: true });
+          if (!rollback.ok) throw new Error("campaign final-wave rollback failed", { cause: error });
+          throw error;
         }
-        const run = context.state.run();
-        if (run === null) throw new Error("campaign final-wave forge requires an active live run");
-        Reflect.set(run, "stateForgeEvidence", Object.freeze({
-          certificateId: certificate.id, currentWave: certificate.currentWave, nextWave: certificate.nextWave,
-          terminal: certificate.terminal, progressionHash: certificate.ledger.progressionHash,
-          configurationHash: certificate.configurationHash, provenanceKind: certificate.provenance.kind,
-          liveReplay: replay,
-        }));
-        context.startNextWave();
-        context.setScreen("playing");
-        const started = snapshots.capture("campaign-wave-60-start", "reconstructed-reachable");
-        return Object.freeze({ ok: true as const, exactHash: started.hashes.exact, semanticHash: started.hashes.semantic });
-      } catch (error) {
-        const rollback = snapshots.restore(original);
-        context.restoreProgressionRuntime(originalProgressionRuntime);
-        if (!rollback.ok) throw new Error("campaign final-wave rollback failed", { cause: error });
-        throw error;
-      }
-    },
-    forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) => launchResolvedLiveState(resolved, environment, snapshots, context),
-    forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
-    forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
-    forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
-    forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
-    forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
-  });
+      },
+      forgeResolvedScenario: (resolved: Parameters<TearClassARuntimeEnvironment["forgeResolvedScenario"]>[0]) =>
+        launchResolvedLiveState(resolved, environment, snapshots, context),
+      forgeEnvironmentField: () => genericEnvironmentForge("field", environment, snapshots, context),
+      forgeEnvironmentCombatObject: () => genericEnvironmentForge("combat-object", environment, snapshots, context),
+      forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
+      forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
+      forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
+    });
   return Object.freeze({
     accessClass: "B" as const,
     reset: (scenarioInput: TearScenarioV1) => environment.reset(scenarioInput),
@@ -676,13 +966,21 @@ export function createLiveTearRuntimeEnvironment(
     step: (actions?: readonly CommandEnvelope<GameAction>[]) => environment.step(actions),
     renderFrame: (deltaSeconds: number, actions?: readonly CommandEnvelope<GameAction>[]) =>
       environment.renderFrame(deltaSeconds, actions),
-    actionBatch: (entries: readonly Readonly<{
-      actions: readonly CommandEnvelope<GameAction>[];
-      ticks: number;
-    }>[]) => environment.actionBatch(entries),
-    pause: () => { environment.pause(); },
-    resume: () => { environment.resume(); },
-    terminate: () => { environment.terminate(); },
+    actionBatch: (
+      entries: readonly Readonly<{
+        actions: readonly CommandEnvelope<GameAction>[];
+        ticks: number;
+      }>[],
+    ) => environment.actionBatch(entries),
+    pause: () => {
+      environment.pause();
+    },
+    resume: () => {
+      environment.resume();
+    },
+    terminate: () => {
+      environment.terminate();
+    },
     metrics: () => environment.metrics(),
     events: () => environment.events(),
     stateHash: () => environment.stateHash(),
@@ -693,6 +991,7 @@ export function createLiveTearRuntimeEnvironment(
     forgeBloomWellCycle: () => bloomWellEnvironmentForge(environment, snapshots, context),
     forgeRootbinderNetwork: () => forgeRootbinderNetworkEnvironment(environment, snapshots, context),
     forgeRootboundGraftAnchor: () => forgeRootboundGraftAnchorEnvironment(environment, snapshots, context),
-    presentation: () => context.presentation(), screenshot: (policy?: TearCaptureLayerPolicyV1) => environment.screenshot(policy),
+    presentation: () => context.presentation(),
+    screenshot: (policy?: TearCaptureLayerPolicyV1) => environment.screenshot(policy),
   });
 }

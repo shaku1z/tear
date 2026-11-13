@@ -49,15 +49,38 @@ function source(): string {
 
 function snapshot(): TearSnapshotV1 {
   return {
-    format: "tear-contract", kind: "snapshot", schemaVersion: 1,
-    id: "scenario-console-root", tick: 10, stateClass: "recorded-canonical", seed: "compat",
-    hashes: { exact: "exact", semantic: "semantic", visual: "visual", progression: "progression", environment: "environment" },
-    provenance: {
-      actor: "developer", producer: "scenario-console-compat", executionClass: "engineering",
-      observationClass: "structured-state", trainingConsent: "no-training",
-      build: { version: "0.1.0", revision: "compat", target: "test", rulesetVersion: "compat", contentHash: "content", configHash: "config" },
+    format: "tear-contract",
+    kind: "snapshot",
+    schemaVersion: 1,
+    id: "scenario-console-root",
+    tick: 10,
+    stateClass: "recorded-canonical",
+    seed: "compat",
+    hashes: {
+      exact: "exact",
+      semantic: "semantic",
+      visual: "visual",
+      progression: "progression",
+      environment: "environment",
     },
-    rng: {}, codecs: {}, state: { player: { hp: 80 }, run: { score: 40 } },
+    provenance: {
+      actor: "developer",
+      producer: "scenario-console-compat",
+      executionClass: "engineering",
+      observationClass: "structured-state",
+      trainingConsent: "no-training",
+      build: {
+        version: "0.1.0",
+        revision: "compat",
+        target: "test",
+        rulesetVersion: "compat",
+        contentHash: "content",
+        configHash: "config",
+      },
+    },
+    rng: {},
+    codecs: {},
+    state: { player: { hp: 80 }, run: { score: 40 } },
   };
 }
 
@@ -89,22 +112,38 @@ describe("Scenario Console compatibility boundaries", () => {
 
     const legacyTimeline = new TearStateTimeline(60);
     legacyTimeline.checkpoint(snapshot());
-    legacyTimeline.delta({ id: "timeline-fork", parentId: "scenario-console-root", tick: 11, statePatch: { player: { hp: 1 } }, actions: [], events: [] });
+    legacyTimeline.delta({
+      id: "timeline-fork",
+      parentId: "scenario-console-root",
+      tick: 11,
+      statePatch: { player: { hp: 1 } },
+      actions: [],
+      events: [],
+    });
     const timelineArchive = legacyTimeline.export();
     const canonicalTimeline = new ScenarioConsoleStateTimeline(60);
     canonicalTimeline.import(timelineArchive);
     expect(canonicalTimeline.export()).toEqual(timelineArchive);
-    expect(migrateScenarioConsoleTimeline(checkpointArchive, 60)).toEqual(migrateTimelineArchive(checkpointArchive, 60));
+    expect(migrateScenarioConsoleTimeline(checkpointArchive, 60)).toEqual(
+      migrateTimelineArchive(checkpointArchive, 60),
+    );
   });
 
   it("reads one capsule and maps one replay identically through legacy and canonical aliases", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostStreamingRecorder({
-      sessionId: "scenario-console-capsule", createdAt: "2026-08-01T00:00:00.000Z",
-      chunkEntries: 1, maxPendingWrites: 1, vault,
+      sessionId: "scenario-console-capsule",
+      createdAt: "2026-08-01T00:00:00.000Z",
+      chunkEntries: 1,
+      maxPendingWrites: 1,
+      vault,
     });
     await recorder.start();
-    await recorder.append({ kind: "commands", tick: 3, value: { kind: "command", id: 1, tick: 3, command: { type: "dash", x: 1, y: 0 } } });
+    await recorder.append({
+      kind: "commands",
+      tick: 3,
+      value: { kind: "command", id: 1, tick: 3, command: { type: "dash", x: 1, y: 0 } },
+    });
     await recorder.finalize("2026-08-01T00:01:00.000Z");
 
     const legacyCapsule = await new GhostCapsuleReader(vault).read("scenario-console-capsule");
@@ -117,11 +156,17 @@ describe("Scenario Console compatibility boundaries", () => {
   });
 
   it("selects identical evidence from the canonical and legacy release readers", () => {
-    const routes: readonly EvidenceRoute[] = [{
-      id: "shared-runtime", prefixes: ["src/tearbench/"], scenarios: ["boot-start-run"],
-      graveyardCases: ["all-shared-runtime-history"], journeyCheckpoint: "menu-to-menu-smoke",
-      baseComparison: "main-base", interactionMatrices: ["browser", "frame-rate"],
-    }];
+    const routes: readonly EvidenceRoute[] = [
+      {
+        id: "shared-runtime",
+        prefixes: ["src/tearbench/"],
+        scenarios: ["boot-start-run"],
+        graveyardCases: ["all-shared-runtime-history"],
+        journeyCheckpoint: "menu-to-menu-smoke",
+        baseComparison: "main-base",
+        interactionMatrices: ["browser", "frame-rate"],
+      },
+    ];
     const changedFiles = ["src/tearbench/browser/scenario-console.ts"];
     const legacy = selectDiffAwareEvidence(changedFiles, routes);
     const canonical = selectScenarioConsoleEvidence(changedFiles, routes);

@@ -57,38 +57,77 @@ export interface LiveDebugCompositionOptions {
 export function installLiveGameDebug(options: LiveDebugCompositionOptions): void {
   const d = options.dependencies;
   installLiveDebugHarness({
-    enabled: options.enabled, dependencies: d, entities: options.entities, state: options.state, lifecycle: options.lifecycle,
-    cinema: options.cinema, stage: options.stage, environment: options.environment,
-    width: options.width, height: options.height,
+    enabled: options.enabled,
+    dependencies: d,
+    entities: options.entities,
+    state: options.state,
+    lifecycle: options.lifecycle,
+    cinema: options.cinema,
+    stage: options.stage,
+    environment: options.environment,
+    width: options.width,
+    height: options.height,
     ...(options.spawnExplicitVariant === undefined ? {} : { spawnExplicitVariant: options.spawnExplicitVariant }),
     ...(options.startNextWave === undefined ? {} : { startNextWave: options.startNextWave }),
-    startRun: options.startRun, selectBoss: options.selectBoss, setScreen: options.setScreen, screen: options.screen,
-    setContinueSeconds: options.setContinueSeconds, openDraft: options.openDraft, openTier: options.openTier,
-    applyUpgrade: (upgrade) => { options.applyUpgrade(upgrade, { config: options.dependencies.CONFIG,
-      player: options.player(), blade: options.blade(), mods: options.run().mods,
-    }); },
-    enterReplay: options.enterReplay, beginRename: options.beginRename, applyOptions: options.applyOptions,
-    startFinale: options.startFinale, severFinale: options.severFinale,
+    startRun: options.startRun,
+    selectBoss: options.selectBoss,
+    setScreen: options.setScreen,
+    screen: options.screen,
+    setContinueSeconds: options.setContinueSeconds,
+    openDraft: options.openDraft,
+    openTier: options.openTier,
+    applyUpgrade: (upgrade) => {
+      options.applyUpgrade(upgrade, {
+        config: options.dependencies.CONFIG,
+        player: options.player(),
+        blade: options.blade(),
+        mods: options.run().mods,
+      });
+    },
+    enterReplay: options.enterReplay,
+    beginRename: options.beginRename,
+    applyOptions: options.applyOptions,
+    startFinale: options.startFinale,
+    severFinale: options.severFinale,
     selectSettingsTab: options.selectSettingsTab,
     stopRecording: () => {
-      try { if (d.GHOST.recording()) d.GHOST.stopRec({ debugFinale: true }); }
-      finally { d.Input.stopSemanticRecording(); }
+      try {
+        if (d.GHOST.recording()) d.GHOST.stopRec({ debugFinale: true });
+      } finally {
+        d.Input.stopSemanticRecording();
+      }
     },
-    install: (api) => { Object.defineProperty(window, "__PANTHEON_TEST", { configurable: true, value: api }); },
+    install: (api) => {
+      Object.defineProperty(window, "__PANTHEON_TEST", { configurable: true, value: api });
+    },
     auditEffects: () => auditLiveEffects(d, options.width, options.height),
     tutorialSnapshot: options.tutorialSnapshot,
-    snapshot: () => createLiveDebugSnapshot({
-      dependencies: d, state: options.state, width: options.width, height: options.height,
-      screen: options.screen(), cinema: options.cinema, settings: {
-        cinematics: options.settings.cinematics,
-        masterVolume: options.settings.masterVolume, musicVolume: options.settings.musicVolume,
-        sfxVolume: options.settings.sfxVolume, interfaceVolume: options.settings.interfaceVolume,
-        masterMuted: options.settings.masterMuted, musicMuted: options.settings.musicMuted,
-        sfxMuted: options.settings.sfxMuted, interfaceMuted: options.settings.interfaceMuted,
-      },
-      selected: options.selected(), chapterBrief: options.chapterBrief(), finale: options.finale(),
-      reward: options.rewardSnapshot(), rename: options.renameSnapshot(),
-      replay: options.replayStatus(), authoritative: options.authoritative(),
-    }),
+    snapshot: () =>
+      createLiveDebugSnapshot({
+        dependencies: d,
+        state: options.state,
+        width: options.width,
+        height: options.height,
+        screen: options.screen(),
+        cinema: options.cinema,
+        settings: {
+          cinematics: options.settings.cinematics,
+          masterVolume: options.settings.masterVolume,
+          musicVolume: options.settings.musicVolume,
+          sfxVolume: options.settings.sfxVolume,
+          interfaceVolume: options.settings.interfaceVolume,
+          masterMuted: options.settings.masterMuted,
+          musicMuted: options.settings.musicMuted,
+          sfxMuted: options.settings.sfxMuted,
+          interfaceMuted: options.settings.interfaceMuted,
+        },
+        selected: options.selected(),
+        chapterBrief: options.chapterBrief(),
+        finale: options.finale(),
+        reward: options.rewardSnapshot(),
+        rename: options.renameSnapshot(),
+        replay: options.replayStatus(),
+        authoritative: options.authoritative(),
+      }),
   });
 }

@@ -76,9 +76,7 @@ export function classifyBisectAttempts(attempts: readonly TearBisectAttemptV1[])
   if (attempts.length < 2) throw new RangeError("bisection requires at least two reproduction attempts");
   if (attempts.some((attempt) => attempt.outcome === "execution-error")) return "unavailable";
   const reproduced = attempts.filter((attempt) => attempt.outcome === "reproduces").length;
-  return reproduced === attempts.length ? "reproduces"
-    : reproduced === 0 ? "does-not-reproduce"
-      : "unstable";
+  return reproduced === attempts.length ? "reproduces" : reproduced === 0 ? "does-not-reproduce" : "unstable";
 }
 
 export function createBisectRevisionRecord(
@@ -112,8 +110,10 @@ export function selectFirstStableBadRevision(records: readonly TearBisectRevisio
   if (records.some((record) => record.stability === "unstable" || record.stability === "unavailable")) {
     return Object.freeze({ reason: "a sampled revision was unstable or unavailable" });
   }
-  if (records[0]?.stability !== "does-not-reproduce") return Object.freeze({ reason: "the declared good revision reproduces" });
-  if (records.at(-1)?.stability !== "reproduces") return Object.freeze({ reason: "the declared bad revision does not reproduce" });
+  if (records[0]?.stability !== "does-not-reproduce")
+    return Object.freeze({ reason: "the declared good revision reproduces" });
+  if (records.at(-1)?.stability !== "reproduces")
+    return Object.freeze({ reason: "the declared bad revision does not reproduce" });
   const firstBad = records.findIndex((record) => record.stability === "reproduces");
   if (firstBad < 1) return Object.freeze({ reason: "no candidate first-bad revision was observed" });
   if (records.slice(firstBad).some((record) => record.stability !== "reproduces")) {
@@ -130,11 +130,13 @@ export function selectFirstStableBadRevision(records: readonly TearBisectRevisio
  * not assert causality: the changed paths narrow the review surface while the
  * first divergence identifies the causal observation boundary.
  */
-export function deriveBisectOwnershipHints(input: Readonly<{
-  changedPaths: readonly string[];
-  investigation?: TearRegressionInvestigation;
-  firstBadRevision?: string;
-}>): TearBisectOwnershipHintsV1 {
+export function deriveBisectOwnershipHints(
+  input: Readonly<{
+    changedPaths: readonly string[];
+    investigation?: TearRegressionInvestigation;
+    firstBadRevision?: string;
+  }>,
+): TearBisectOwnershipHintsV1 {
   const route = routeRegressionOwnership(input.changedPaths);
   const hints = [
     ...route.hints,

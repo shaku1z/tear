@@ -36,8 +36,14 @@ export function domChromeVisibility(input: DomChromeInput): DomChromeVisibility 
   const keyboardAndMouse = input.inputMode === "mouse" || input.inputMode === "keyboard";
   return Object.freeze({
     lockHint: input.pointerLockIncluded && playing && !input.pointerLocked && !input.touch,
-    controlHint: input.uiIncluded && playing && !input.touch && keyboardAndMouse && !input.presentationBusy
-      && input.completedRuns < CONTROL_HINT_RUN_LIMIT && input.runSeconds < CONTROL_HINT_SECONDS,
+    controlHint:
+      input.uiIncluded &&
+      playing &&
+      !input.touch &&
+      keyboardAndMouse &&
+      !input.presentationBusy &&
+      input.completedRuns < CONTROL_HINT_RUN_LIMIT &&
+      input.runSeconds < CONTROL_HINT_SECONDS,
     // Fullscreen lives on menus only; touch devices use the platform's own controls.
     fullscreen: input.uiIncluded && !playing && !input.touch,
   });

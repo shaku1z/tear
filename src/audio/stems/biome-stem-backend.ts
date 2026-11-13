@@ -142,11 +142,7 @@ export class BiomeStemBackend implements MusicBackend {
     if (cueId !== this.#active?.cueId) {
       // Entering or leaving the menu is a UI swap; keep it snappy.
       const menuSwap = this.#onShell || this.#active?.cueId === this.#shellCueId();
-      void this.#activate(
-        cueId,
-        menuSwap ? MENU_CROSSFADE_SECONDS : CROSSFADE_SECONDS,
-        menuSwap ? 0 : QUANTIZE_BARS,
-      );
+      void this.#activate(cueId, menuSwap ? MENU_CROSSFADE_SECONDS : CROSSFADE_SECONDS, menuSwap ? 0 : QUANTIZE_BARS);
     }
 
     // Pause always uses the plain adaptive reading, whatever the music mode is,
@@ -260,16 +256,17 @@ export class BiomeStemBackend implements MusicBackend {
   /** Canonical (biome/menu) routing, ignoring any station. */
   #canonicalCueId(biomeId: string, scene: MusicScene): string {
     if (isMusicShell(scene, biomeId)) return this.#shellCueId();
-    const routeScene: RoutingScene = scene === "boss"
-      ? "boss"
-      : scene === "victory" || scene === "defeat"
-        ? scene
-        : "gameplay";
-    const routed = resolveMusicRoute(this.#routing, {
-      biomeId,
-      scene: routeScene,
-      bossId: this.#lastBossId,
-    }, this.#stationSeed);
+    const routeScene: RoutingScene =
+      scene === "boss" ? "boss" : scene === "victory" || scene === "defeat" ? scene : "gameplay";
+    const routed = resolveMusicRoute(
+      this.#routing,
+      {
+        biomeId,
+        scene: routeScene,
+        bossId: this.#lastBossId,
+      },
+      this.#stationSeed,
+    );
     return this.#cues.has(routed) ? routed : this.#defaultCueId;
   }
 

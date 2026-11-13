@@ -9,20 +9,42 @@ import { createEnemyTypes } from "../../src/gameplay/entities/enemies";
 import { createProjectile } from "../../src/gameplay/entities/projectile";
 
 const FX = {
-  burst() { return; },
-  ember() { return; },
-  explode() { return; },
-  ghost() { return; },
-  ring() { return; },
-  shockwave() { return; },
+  burst() {
+    return;
+  },
+  ember() {
+    return;
+  },
+  explode() {
+    return;
+  },
+  ghost() {
+    return;
+  },
+  ring() {
+    return;
+  },
+  shockwave() {
+    return;
+  },
 };
 
 const SFX = {
-  sweeperBat() { return; },
-  rankup() { return; },
-  crescent() { return; },
-  sourceDepthPrepare() { return; },
-  sourceDepthSnap() { return; },
+  sweeperBat() {
+    return;
+  },
+  rankup() {
+    return;
+  },
+  crescent() {
+    return;
+  },
+  sourceDepthPrepare() {
+    return;
+  },
+  sourceDepthSnap() {
+    return;
+  },
 };
 
 function createTestEnemyTypes() {
@@ -30,7 +52,11 @@ function createTestEnemyTypes() {
     CLOCK,
     CONFIG,
     FX,
-    presentation: { draw() { return; } },
+    presentation: {
+      draw() {
+        return;
+      },
+    },
     SFX,
     clamp,
     len,
@@ -57,19 +83,45 @@ describe("enemy factory", () => {
   it("keeps the complete compatibility roster frozen", () => {
     const types = createTestEnemyTypes();
     expect(Object.isFrozen(types)).toBe(true);
-    expect(Object.keys(types).sort()).toEqual([
-      "Aldric", "Armored", "BOSSFX", "Bomber", "Boss", "Charger", "Chimera",
-      "Colossus", "Echo", "Enemy", "Flyer", "Ranged", "Rimehound", "Rootbinder", "Rootbound", "Source", "Support",
-      "VoidWisp", "Warden", "WhiteHart", "Wraith", "drawBossTransformationWorld",
-      "weaponCapsuleIntersectsSegment",
-    ].sort());
+    expect(Object.keys(types).sort()).toEqual(
+      [
+        "Aldric",
+        "Armored",
+        "BOSSFX",
+        "Bomber",
+        "Boss",
+        "Charger",
+        "Chimera",
+        "Colossus",
+        "Echo",
+        "Enemy",
+        "Flyer",
+        "Ranged",
+        "Rimehound",
+        "Rootbinder",
+        "Rootbound",
+        "Source",
+        "Support",
+        "VoidWisp",
+        "Warden",
+        "WhiteHart",
+        "Wraith",
+        "drawBossTransformationWorld",
+        "weaponCapsuleIntersectsSegment",
+      ].sort(),
+    );
   });
 
   it("preserves capsule crossing and miss behavior", () => {
     const { weaponCapsuleIntersectsSegment } = createTestEnemyTypes();
     const capsule = {
-      a: { x: 0, y: 0 }, b: { x: 10, y: 0 },
-      x1: 0, y1: 0, x2: 10, y2: 0, radius: 2,
+      a: { x: 0, y: 0 },
+      b: { x: 10, y: 0 },
+      x1: 0,
+      y1: 0,
+      x2: 10,
+      y2: 0,
+      radius: 2,
     };
     expect(weaponCapsuleIntersectsSegment(capsule, 5, -5, 5, 5)).toBe(true);
     expect(weaponCapsuleIntersectsSegment(capsule, 20, -5, 20, 5)).toBe(false);

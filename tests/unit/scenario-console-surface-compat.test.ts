@@ -14,24 +14,26 @@ import {
   createScenarioConsoleForkSource,
   evaluateScenarioConsoleSource,
 } from "../../src/tearbench/browser/scenario-console";
-import {
-  createStateForgeForkSource,
-  evaluateStateForgeSource,
-} from "../../src/tearbench/state-forge-studio-model";
+import { createStateForgeForkSource, evaluateStateForgeSource } from "../../src/tearbench/state-forge-studio-model";
 import { stableVerificationHash } from "../../src/replay/hash";
 
-const source = JSON.stringify({
-  format: "tearsdl",
-  schemaVersion: 1,
-  id: "state-forge.live-sandbox",
-  stateClass: "recorded-canonical",
-  seed: "scenario-console-compat",
-  start: { mode: "endless", difficulty: "normal", weapon: "greatsword", wave: 4 },
-  state: { player: { hp: 80 }, run: { score: 40 } },
-  constraints: { legalProgression: true },
-  tags: ["state-forge", "developer", "disposable"],
-  maxTicks: 3_600,
-}, null, 2) + "\n";
+const source =
+  JSON.stringify(
+    {
+      format: "tearsdl",
+      schemaVersion: 1,
+      id: "state-forge.live-sandbox",
+      stateClass: "recorded-canonical",
+      seed: "scenario-console-compat",
+      start: { mode: "endless", difficulty: "normal", weapon: "greatsword", wave: 4 },
+      state: { player: { hp: 80 }, run: { score: 40 } },
+      constraints: { legalProgression: true },
+      tags: ["state-forge", "developer", "disposable"],
+      maxTicks: 3_600,
+    },
+    null,
+    2,
+  ) + "\n";
 
 describe("Scenario Console surface compatibility", () => {
   it("accepts canonical and legacy deep links and writes one canonical query", () => {

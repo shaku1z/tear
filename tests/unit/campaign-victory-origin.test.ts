@@ -20,18 +20,37 @@ function sourceSnapshot(): TearSnapshotV1 {
     "tear.player.v1": { id: "player", x: 800, y: 700, hp: 100, maxHp: 100 },
     "tear.blade.v1": { id: "blade", ownerId: "player", weaponId: "sword", x: 800, y: 700 },
     "tear.run.v1": {
-      mode: "campaign", difficulty: "normal", diff: "normal", weaponId: "sword",
-      wave: 1, stage: 0, _biomeIdx: 0, tick: 12, score: 0,
-      mods: { owned: {}, tiers: {}, ownedOrder: [] }, spawnQueue: [{ kind: "charger" }],
+      mode: "campaign",
+      difficulty: "normal",
+      diff: "normal",
+      weaponId: "sword",
+      wave: 1,
+      stage: 0,
+      _biomeIdx: 0,
+      tick: 12,
+      score: 0,
+      mods: { owned: {}, tiers: {}, ownedOrder: [] },
+      spawnQueue: [{ kind: "charger" }],
     },
     "tear.world.v1": {
-      clock: 12, floaters: [], identityState: {
-        nextEntityId: 9, nextWallSequence: 2, nextSlowZoneSequence: 3, claimedIds: ["enemy:8"],
+      clock: 12,
+      floaters: [],
+      identityState: {
+        nextEntityId: 9,
+        nextWallSequence: 2,
+        nextSlowZoneSequence: 3,
+        claimedIds: ["enemy:8"],
       },
       runtime: {
         lifecycle: {
-          phase: "wave-prepared", sessionId: "campaign-session", wave: 1, bossWave: false,
-          activationDeferred: true, reward: null, outcome: null, revision: 2,
+          phase: "wave-prepared",
+          sessionId: "campaign-session",
+          wave: 1,
+          bossWave: false,
+          activationDeferred: true,
+          reward: null,
+          outcome: null,
+          revision: 2,
         },
         chapterBinding: { stageIndex: 0 },
         stageBanner: { name: "The Grounds", seconds: 2 },
@@ -50,34 +69,54 @@ function sourceSnapshot(): TearSnapshotV1 {
     "tear.cinematic.v1": INACTIVE_CINEMATIC_DIRECTOR_STATE_V1,
   };
   return {
-    format: "tear-contract", kind: "snapshot", schemaVersion: 1,
-    id: "campaign-source", tick: 12, stateClass: "recorded-canonical", seed: "campaign-frontier-unit",
+    format: "tear-contract",
+    kind: "snapshot",
+    schemaVersion: 1,
+    id: "campaign-source",
+    tick: 12,
+    stateClass: "recorded-canonical",
+    seed: "campaign-frontier-unit",
     hashes: {
-      exact: stableVerificationHash(state), semantic: "semantic", visual: "visual",
-      progression: "source-progression", environment: stableVerificationHash(state["tear.world.v1"]),
+      exact: stableVerificationHash(state),
+      semantic: "semantic",
+      visual: "visual",
+      progression: "source-progression",
+      environment: stableVerificationHash(state["tear.world.v1"]),
     },
     provenance: {
-      actor: "scripted-bot", producer: "unit", executionClass: "engineering",
-      observationClass: "privileged-diagnostic", trainingConsent: "no-training",
+      actor: "scripted-bot",
+      producer: "unit",
+      executionClass: "engineering",
+      observationClass: "privileged-diagnostic",
+      trainingConsent: "no-training",
       build: {
-        version: "unit", revision: "unit", target: "test-standalone", rulesetVersion: "production",
-        contentHash: "content", configHash: "config",
+        version: "unit",
+        revision: "unit",
+        target: "test-standalone",
+        rulesetVersion: "production",
+        contentHash: "content",
+        configHash: "config",
       },
     },
-    rng: {}, codecs: {}, state,
+    rng: {},
+    codecs: {},
+    state,
   };
 }
 
 function codec(snapshot: TearSnapshotV1, id: string): Record<string, unknown> {
   const value = snapshot.state[id];
-  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError(`${id} is not an object`);
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new TypeError(`${id} is not an object`);
   return value as Record<string, unknown>;
 }
 
 describe("campaign victory State Forge origin", () => {
   it("retains the six-stage wave-59 history and removes only the false terminal event", () => {
     const source = synthesizeProgression({
-      mode: "campaign", difficulty: "normal", weapon: "sword",
+      mode: "campaign",
+      difficulty: "normal",
+      weapon: "sword",
       targetWave: CAMPAIGN_VICTORY_ORIGIN_WAVE,
       configuredCampaignWaves: CAMPAIGN_VICTORY_FINAL_WAVE,
       policy: "coverage-seeking",
@@ -85,8 +124,11 @@ describe("campaign victory State Forge origin", () => {
     const origin = createCampaignVictoryOrigin();
 
     expect(origin).toMatchObject({
-      id: "campaign-wave-59-victory-origin", legal: true, terminal: false,
-      currentWave: 59, nextWave: 60,
+      id: "campaign-wave-59-victory-origin",
+      legal: true,
+      terminal: false,
+      currentWave: 59,
+      nextWave: 60,
       provenance: {
         kind: "canonical-nonterminal-progression-prefix",
         producer: "synthesizeProgression",
@@ -134,18 +176,31 @@ describe("campaign victory State Forge origin", () => {
       tick: certificate.statistics.elapsedTicks,
       stateClass: "reconstructed-reachable",
       lineage: {
-        parentId: source.id, relation: "forked-at", parentRootHash: source.hashes.exact, forkTick: source.tick,
+        parentId: source.id,
+        relation: "forked-at",
+        parentRootHash: source.hashes.exact,
+        forkTick: source.tick,
       },
       provenance: { actor: "state-forge", producer: "campaign-victory-origin", sourceId: source.id },
     });
     expect(run).toMatchObject({
-      mode: "campaign", difficulty: "normal", diff: "normal", weaponId: "sword",
-      wave: 59, stage: 5, _biomeIdx: 5, spawnQueue: [], chapterState: "WAVE_LIVE",
+      mode: "campaign",
+      difficulty: "normal",
+      diff: "normal",
+      weaponId: "sword",
+      wave: 59,
+      stage: 5,
+      _biomeIdx: 5,
+      spawnQueue: [],
+      chapterState: "WAVE_LIVE",
       score: certificate.statistics.score,
     });
     expect(waveLog).toHaveLength(59);
     expect(waveLog.reduce((sum, entry) => sum + entry.kills, 0)).toBe(certificate.statistics.kills);
-    expect(waveLog.reduce((sum, entry) => sum + entry.time, 0)).toBeCloseTo(certificate.statistics.elapsedTicks / 120, 10);
+    expect(waveLog.reduce((sum, entry) => sum + entry.time, 0)).toBeCloseTo(
+      certificate.statistics.elapsedTicks / 120,
+      10,
+    );
     expect(waveLog.filter((entry) => entry.wave === "BOSS")).toHaveLength(
       certificate.ledger.events.filter((event) => event.type === "boss.defeated").length,
     );
@@ -155,14 +210,22 @@ describe("campaign victory State Forge origin", () => {
     expect(frontier.state["tear.platform.v1"]).toEqual(stagePlatforms(5, CONFIG));
     expect(frontier.state["tear.cinematic.v1"]).toEqual(INACTIVE_CINEMATIC_DIRECTOR_STATE_V1);
     expect(codec(frontier, "tear.player.v1")).toMatchObject({
-      cinematicProtected: false, cinematicGraceT: 0,
+      cinematicProtected: false,
+      cinematicGraceT: 0,
     });
     expect(runtime).toMatchObject({
       lifecycle: {
-        phase: "reward-pending", sessionId: "campaign-session", wave: 59, bossWave: false,
-        activationDeferred: false, reward: "draft", outcome: null, revision: 237,
+        phase: "reward-pending",
+        sessionId: "campaign-session",
+        wave: 59,
+        bossWave: false,
+        activationDeferred: false,
+        reward: "draft",
+        outcome: null,
+        revision: 237,
       },
-      chapterBinding: null, stageBanner: { name: "The Tear", seconds: 0 },
+      chapterBinding: null,
+      stageBanner: { name: "The Tear", seconds: 0 },
       cinemaProtection: { active: false, lastMode: null },
     });
     expect(codec(frontier, "tear.ui.v1").screen).toBe("draft");
@@ -172,7 +235,10 @@ describe("campaign victory State Forge origin", () => {
     const selectedChoice = choices.find((choice) => choice.id === certificate.finalReward.selectedId);
     const catalogChoice = UPGRADES.find((choice) => choice.id === certificate.finalReward.selectedId);
     expect(selectedChoice).toMatchObject({
-      id: catalogChoice?.id, name: catalogChoice?.name, cat: catalogChoice?.cat, desc: catalogChoice?.desc,
+      id: catalogChoice?.id,
+      name: catalogChoice?.name,
+      cat: catalogChoice?.cat,
+      desc: catalogChoice?.desc,
     });
     expect(selectedChoice).not.toHaveProperty("apply");
     expect(certificate.ledger.events.some((event) => event.type === "run.completed")).toBe(false);
@@ -188,14 +254,20 @@ describe("campaign victory State Forge origin", () => {
     const wrongMode = structuredClone(sourceSnapshot());
     (wrongMode.state["tear.run.v1"] as { mode: string }).mode = "endless";
     (wrongMode.hashes as { exact: string }).exact = stableVerificationHash(wrongMode.state);
-    expect(() => createCampaignWave59RewardFrontier(wrongMode, certificate, (index) => stagePlatforms(index, CONFIG))).toThrow(/Campaign Normal Sword/u);
+    expect(() =>
+      createCampaignWave59RewardFrontier(wrongMode, certificate, (index) => stagePlatforms(index, CONFIG)),
+    ).toThrow(/Campaign Normal Sword/u);
 
     const corrupt = structuredClone(sourceSnapshot());
     (corrupt.state["tear.run.v1"] as { score: number }).score = 99;
-    expect(() => createCampaignWave59RewardFrontier(corrupt, certificate, (index) => stagePlatforms(index, CONFIG))).toThrow(/source exact hash/u);
+    expect(() =>
+      createCampaignWave59RewardFrontier(corrupt, certificate, (index) => stagePlatforms(index, CONFIG)),
+    ).toThrow(/source exact hash/u);
 
     const altered = structuredClone(certificate);
     (altered.finalReward as { selectedId: string }).selectedId = "not-the-certified-choice";
-    expect(() => createCampaignWave59RewardFrontier(sourceSnapshot(), altered, (index) => stagePlatforms(index, CONFIG))).toThrow(/canonical wave-59 certificate/u);
+    expect(() =>
+      createCampaignWave59RewardFrontier(sourceSnapshot(), altered, (index) => stagePlatforms(index, CONFIG)),
+    ).toThrow(/canonical wave-59 certificate/u);
   });
 });

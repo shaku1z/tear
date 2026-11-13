@@ -17,9 +17,17 @@ const maxPngBytes = 8 * 1024 * 1024;
 let nameCounter = 0;
 
 function findPython() {
-  const candidates = process.platform === "win32"
-    ? [["py", ["-3"]], ["python", []], ["python3", []]]
-    : [["python3", []], ["python", []]];
+  const candidates =
+    process.platform === "win32"
+      ? [
+          ["py", ["-3"]],
+          ["python", []],
+          ["python3", []],
+        ]
+      : [
+          ["python3", []],
+          ["python", []],
+        ];
   for (const [command, prefix] of candidates) {
     const result = spawnSync(command, [...prefix, "--version"], { stdio: "ignore" });
     if (result.status === 0) return { command, prefix };
@@ -39,19 +47,25 @@ function request(server, { method = "GET", pathname = "/", body, headers = {} } 
     const requestBody = body === undefined ? undefined : Buffer.from(body, "utf8");
     const requestHeaders = { ...headers };
     if (requestBody !== undefined) requestHeaders["Content-Length"] = String(requestBody.length);
-    const client = http.request(new URL(pathname, server.origin), {
-      method,
-      headers: requestHeaders,
-    }, (response) => {
-      const chunks = [];
-      response.on("data", (chunk) => chunks.push(chunk));
-      response.on("end", () => resolve({
-        status: response.statusCode,
-        headers: response.headers,
-        body: Buffer.concat(chunks),
-        text: Buffer.concat(chunks).toString("utf8"),
-      }));
-    });
+    const client = http.request(
+      new URL(pathname, server.origin),
+      {
+        method,
+        headers: requestHeaders,
+      },
+      (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("end", () =>
+          resolve({
+            status: response.statusCode,
+            headers: response.headers,
+            body: Buffer.concat(chunks),
+            text: Buffer.concat(chunks).toString("utf8"),
+          }),
+        );
+      },
+    );
     client.on("error", reject);
     if (requestBody !== undefined) client.write(requestBody);
     client.end();
@@ -59,9 +73,7 @@ function request(server, { method = "GET", pathname = "/", body, headers = {} } 
 }
 
 function postSave(server, name, data, { headers = {}, payload = {}, pathname = "/save" } = {}) {
-  const dataURL = typeof data === "string"
-    ? data
-    : `data:image/png;base64,${Buffer.from(data).toString("base64")}`;
+  const dataURL = typeof data === "string" ? data : `data:image/png;base64,${Buffer.from(data).toString("base64")}`;
   return request(server, {
     method: "POST",
     pathname,
@@ -91,7 +103,9 @@ function startServer({ allowOverwrite = false } = {}) {
   let stderr = "";
   let resolved = false;
   let resolveExit;
-  const exit = new Promise((resolve) => { resolveExit = resolve; });
+  const exit = new Promise((resolve) => {
+    resolveExit = resolve;
+  });
   child.once("exit", (code, signal) => resolveExit({ code, signal }));
   const ready = new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`serve.py did not bind in time\n${stdout}\n${stderr}`)), 10000);
@@ -104,7 +118,9 @@ function startServer({ allowOverwrite = false } = {}) {
         resolve({ origin: `http://${match[1]}:${match[2]}`, cwd, child, exit });
       }
     });
-    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
     child.once("error", (error) => {
       clearTimeout(timer);
       reject(error);
@@ -125,10 +141,7 @@ function startServer({ allowOverwrite = false } = {}) {
 
 async function stopProcess(child, exit) {
   if (child.exitCode === null && child.signalCode === null) child.kill();
-  await Promise.race([
-    exit,
-    new Promise((resolve) => setTimeout(resolve, 2000)),
-  ]);
+  await Promise.race([exit, new Promise((resolve) => setTimeout(resolve, 2000))]);
   if (child.exitCode === null && process.platform === "win32") {
     spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
   }

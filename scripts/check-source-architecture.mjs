@@ -2,7 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_PATHS, analyzeTree, gateErrors, loadConfiguration, structuralErrors } from "./architecture/analyze.mjs";
+import {
+  DEFAULT_PATHS,
+  analyzeTree,
+  gateErrors,
+  loadConfiguration,
+  structuralErrors,
+} from "./architecture/analyze.mjs";
 import { serializeBaseline, updateArchitectureBaseline } from "./architecture/baseline.mjs";
 import { cycleSummary } from "./architecture/cycles.mjs";
 import { explainFile } from "./architecture/explain.mjs";
@@ -11,12 +17,14 @@ import { readSourceTree } from "./architecture/source-graph.mjs";
 
 export { analyzeTree, gateErrors, loadConfiguration } from "./architecture/analyze.mjs";
 
-const USAGE = "Usage: node scripts/check-source-architecture.mjs [--explain <file>]"
-  + " [--update [--allow-increase <file>]... [--move <old>=<new>]... [--moves-file <json>] | --initialize] [--root <repo>]";
+const USAGE =
+  "Usage: node scripts/check-source-architecture.mjs [--explain <file>]" +
+  " [--update [--allow-increase <file>]... [--move <old>=<new>]... [--moves-file <json>] | --initialize] [--root <repo>]";
 
 function readMovesFile(file) {
   const document = JSON.parse(fs.readFileSync(file, "utf8"));
-  if (document === null || typeof document !== "object" || Array.isArray(document)) throw new Error(`${file} must map old paths to new paths`);
+  if (document === null || typeof document !== "object" || Array.isArray(document))
+    throw new Error(`${file} must map old paths to new paths`);
   return Object.entries(document);
 }
 
@@ -26,13 +34,22 @@ function addMove(options, from, to) {
 }
 
 export function parseArguments(argumentsList) {
-  const options = { root: process.cwd(), explain: undefined, update: false, initialize: false, allowIncrease: new Set(), moves: new Map(), help: false };
+  const options = {
+    root: process.cwd(),
+    explain: undefined,
+    update: false,
+    initialize: false,
+    allowIncrease: new Set(),
+    moves: new Map(),
+    help: false,
+  };
   for (let index = 0; index < argumentsList.length; index += 1) {
-    const argument = argumentsList[index], value = () => {
-      const next = argumentsList[++index];
-      if (next === undefined) throw new Error(`${argument} requires a value`);
-      return next.replaceAll("\\", "/");
-    };
+    const argument = argumentsList[index],
+      value = () => {
+        const next = argumentsList[++index];
+        if (next === undefined) throw new Error(`${argument} requires a value`);
+        return next.replaceAll("\\", "/");
+      };
     if (argument === "--update") options.update = true;
     else if (argument === "--initialize") options.initialize = true;
     else if (argument === "--explain") options.explain = value().replace(/^\.\//u, "");
@@ -46,7 +63,8 @@ export function parseArguments(argumentsList) {
     else if (argument === "--help") options.help = true;
     else throw new Error(`Unknown argument: ${argument}`);
   }
-  if (!options.update && (options.allowIncrease.size > 0 || options.moves.size > 0)) throw new Error("--allow-increase, --move and --moves-file require --update");
+  if (!options.update && (options.allowIncrease.size > 0 || options.moves.size > 0))
+    throw new Error("--allow-increase, --move and --moves-file require --update");
   if (options.initialize && options.update) throw new Error("--initialize and --update are exclusive");
   return options;
 }
@@ -55,20 +73,28 @@ export function parseArguments(argumentsList) {
 export function formatSummary(analysis) {
   const { configuration, tree, layers, cycles } = analysis;
   const layerOf = (file) => analysis.assignment.get(file) ?? "?";
-  const recorded = configuration.baseline.layerViolations.map((entry) => ({ ...entry, pair: `${layerOf(entry.from)} -> ${layerOf(entry.to)}` }));
+  const recorded = configuration.baseline.layerViolations.map((entry) => ({
+    ...entry,
+    pair: `${layerOf(entry.from)} -> ${layerOf(entry.to)}`,
+  }));
   const value = recorded.filter((entry) => entry.kind === "value").length;
   const roleCount = Object.keys(configuration.roles).length;
   const lines = [
     `architecture rules: ${String(configuration.rules.length)} rules over ${String(tree.modules.size)} modules, ${String(roleCount)} roles`,
-    `layer allowlist: ${String(recorded.length)} recorded violating edges (${String(value)} value, ${String(recorded.length - value)} type-only); `
-      + `current ${String(layers.violations.length)}`,
+    `layer allowlist: ${String(recorded.length)} recorded violating edges (${String(value)} value, ${String(recorded.length - value)} type-only); ` +
+      `current ${String(layers.violations.length)}`,
   ];
-  for (const [pair, counts] of summarizeByPair(recorded)) lines.push(`  ${pair}: ${String(counts.value)} value, ${String(counts.type)} type-only`);
+  for (const [pair, counts] of summarizeByPair(recorded))
+    lines.push(`  ${pair}: ${String(counts.value)} value, ${String(counts.type)} type-only`);
   const twoCycles = layerTwoCycles(tree.graph, analysis.assignment);
-  lines.push(`directory two-way value dependencies: ${String(twoCycles.length)}${twoCycles.length > 0 ? ` (${twoCycles.join(", ")})` : ""}`);
+  lines.push(
+    `directory two-way value dependencies: ${String(twoCycles.length)}${twoCycles.length > 0 ? ` (${twoCycles.join(", ")})` : ""}`,
+  );
   const summary = cycleSummary(cycles.current);
-  lines.push(`file import cycles (static value imports): ${String(summary.count)} cycles over ${String(summary.files)} files; `
-    + `largest ${String(summary.largest)} files`);
+  lines.push(
+    `file import cycles (static value imports): ${String(summary.count)} cycles over ${String(summary.files)} files; ` +
+      `largest ${String(summary.largest)} files`,
+  );
   if (cycles.current.length > 0) lines.push(`  largest: ${cycles.current[0].join(", ")}`);
   return lines.join("\n");
 }
@@ -76,26 +102,43 @@ export function formatSummary(analysis) {
 function runUpdate(options, analysis, baselinePath) {
   const { configuration, layers, cycles } = analysis;
   const previous = configuration.baseline;
-  const result = updateArchitectureBaseline(layers.violations, cycles.current, analysis.baseline, options.allowIncrease);
+  const result = updateArchitectureBaseline(
+    layers.violations,
+    cycles.current,
+    analysis.baseline,
+    options.allowIncrease,
+  );
   if (result.refused.length > 0) {
-    console.error(["Refusing to grow the architecture baseline (pass --allow-increase <file> only for a reviewed, deliberate exception):",
-      ...result.refused.map((entry) => `- ${entry.kind}: ${entry.detail}`)].join("\n"));
+    console.error(
+      [
+        "Refusing to grow the architecture baseline (pass --allow-increase <file> only for a reviewed, deliberate exception):",
+        ...result.refused.map((entry) => `- ${entry.kind}: ${entry.detail}`),
+      ].join("\n"),
+    );
     return 1;
   }
-  for (const entry of result.increased) console.warn(`!!! ARCHITECTURE BASELINE RAISED: ${entry.kind} ${entry.detail} !!!`);
+  for (const entry of result.increased)
+    console.warn(`!!! ARCHITECTURE BASELINE RAISED: ${entry.kind} ${entry.detail} !!!`);
   fs.writeFileSync(baselinePath, serializeBaseline(result.baseline));
-  console.log(`architecture baseline written: ${String(result.baseline.layerViolations.length)} edges (was ${String(previous.layerViolations.length)}), `
-    + `${String(result.baseline.cycles.length)} cycles (was ${String(previous.cycles.length)})`);
+  console.log(
+    `architecture baseline written: ${String(result.baseline.layerViolations.length)} edges (was ${String(previous.layerViolations.length)}), ` +
+      `${String(result.baseline.cycles.length)} cycles (was ${String(previous.cycles.length)})`,
+  );
   return 0;
 }
 
 function runInitialize(analysis, baselinePath) {
   if (fs.existsSync(baselinePath)) throw new Error(`${baselinePath} already exists; use --update to lower it`);
   const structural = structuralErrors(analysis);
-  if (structural.length > 0) throw new Error(["Fix these before initializing the baseline:", ...structural.map((error) => `- ${error}`)].join("\n"));
+  if (structural.length > 0)
+    throw new Error(
+      ["Fix these before initializing the baseline:", ...structural.map((error) => `- ${error}`)].join("\n"),
+    );
   const baseline = { layerViolations: analysis.layers.violations, cycles: analysis.cycles.current };
   fs.writeFileSync(baselinePath, serializeBaseline(baseline));
-  console.warn(`!!! ARCHITECTURE BASELINE INITIALIZED with ${String(baseline.layerViolations.length)} edges and ${String(baseline.cycles.length)} cycles !!!`);
+  console.warn(
+    `!!! ARCHITECTURE BASELINE INITIALIZED with ${String(baseline.layerViolations.length)} edges and ${String(baseline.cycles.length)} cycles !!!`,
+  );
   return 0;
 }
 
@@ -107,7 +150,10 @@ function main() {
     return 0;
   }
   const baselinePath = path.resolve(options.root, DEFAULT_PATHS.baseline);
-  const configuration = loadConfiguration(options.root, { ...DEFAULT_PATHS, baseline: options.initialize ? null : DEFAULT_PATHS.baseline });
+  const configuration = loadConfiguration(options.root, {
+    ...DEFAULT_PATHS,
+    baseline: options.initialize ? null : DEFAULT_PATHS.baseline,
+  });
   const analysis = analyzeTree(readSourceTree(options.root), configuration, { moves: options.moves });
   if (options.explain !== undefined) {
     console.log(explainFile(options.explain, analysis));

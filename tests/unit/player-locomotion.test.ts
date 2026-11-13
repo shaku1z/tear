@@ -15,12 +15,28 @@ function fixture(x = 400, y = CONFIG.world.groundY - CONFIG.player.h / 2) {
     held: new Set(),
     dashEdge: false,
     jumpEdge: false,
-    right() { return this.held.has("right"); },
-    left() { return this.held.has("left"); },
-    up() { return this.held.has("up"); },
-    down() { return this.held.has("down"); },
-    dashPressed() { const value = this.dashEdge; this.dashEdge = false; return value; },
-    jumpPressed() { const value = this.jumpEdge; this.jumpEdge = false; return value; },
+    right() {
+      return this.held.has("right");
+    },
+    left() {
+      return this.held.has("left");
+    },
+    up() {
+      return this.held.has("up");
+    },
+    down() {
+      return this.held.has("down");
+    },
+    dashPressed() {
+      const value = this.dashEdge;
+      this.dashEdge = false;
+      return value;
+    },
+    jumpPressed() {
+      const value = this.jumpEdge;
+      this.jumpEdge = false;
+      return value;
+    },
   };
   const Player = createPlayer({
     CONFIG,

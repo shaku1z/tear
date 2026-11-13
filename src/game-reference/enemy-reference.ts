@@ -44,9 +44,19 @@ export interface EnemyReferenceProjectionInput {
 
 /** Explicit contract signatures keep source reordering fail-closed. */
 export const CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze([
-  "charger", "ranged", "flyer", "bomber", "armored",
-  "priest", "mender", "herald", "anchor", "wraith", "chimera",
-  "rootbinder", "rimehound",
+  "charger",
+  "ranged",
+  "flyer",
+  "bomber",
+  "armored",
+  "priest",
+  "mender",
+  "herald",
+  "anchor",
+  "wraith",
+  "chimera",
+  "rootbinder",
+  "rimehound",
 ] as const);
 
 /** Public game-reference authority excludes the Playground-only Pale family. */
@@ -55,7 +65,16 @@ export const PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS = Object.freeze(
 );
 
 export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze({
-  charger: Object.freeze(["bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker", "rime-runner"]),
+  charger: Object.freeze([
+    "bull",
+    "brawler",
+    "stalker",
+    "executioner",
+    "gravedigger",
+    "duelist",
+    "briar-stalker",
+    "rime-runner",
+  ]),
   ranged: Object.freeze(["sentinel", "rifleman", "marksman", "warlock", "chain", "seedcaster", "prism-seer"]),
   flyer: Object.freeze(["swooper", "divebomber", "highdiver", "canopy-diver", "snowfall-kite"]),
   bomber: Object.freeze(["lobber", "juggler", "trapper", "sludge", "geomancer", "hailcaster"]),
@@ -71,13 +90,21 @@ export const CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly st
 });
 const PUBLISHED_VARIANT_ID_SET: ReadonlySet<string> = new Set(variantIdsAvailableOn("published"));
 export const PUBLIC_CANONICAL_ENEMY_VARIANT_IDS: Readonly<Record<EnemyKind, readonly string[]>> = Object.freeze(
-  Object.fromEntries(Object.entries(CANONICAL_ENEMY_VARIANT_IDS).map(([id, variants]) => [
-    id, Object.freeze(variants.filter((variant) => PUBLISHED_VARIANT_ID_SET.has(variant))),
-  ])) as Record<EnemyKind, readonly string[]>,
+  Object.fromEntries(
+    Object.entries(CANONICAL_ENEMY_VARIANT_IDS).map(([id, variants]) => [
+      id,
+      Object.freeze(variants.filter((variant) => PUBLISHED_VARIANT_ID_SET.has(variant))),
+    ]),
+  ) as Record<EnemyKind, readonly string[]>,
 );
 
 export const CANONICAL_ENEMY_AFFIX_IDS = Object.freeze([
-  "tank", "swift", "rapid", "volley", "armed", "warded",
+  "tank",
+  "swift",
+  "rapid",
+  "volley",
+  "armed",
+  "warded",
 ] as const);
 
 export interface EnemyPresetSignatureV1 {
@@ -92,7 +119,8 @@ export const CANONICAL_ENEMY_PRESETS: readonly EnemyPresetSignatureV1[] = Object
 ]);
 
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${path} must be an object`);
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError(`${path} must be an object`);
   return value as Record<string, unknown>;
 }
 
@@ -104,7 +132,8 @@ function text(value: unknown, path: string): string {
 function exactKeys(value: Record<string, unknown>, path: string, expected: readonly string[]): void {
   const actual = Object.keys(value).sort();
   const allowed = [...expected].sort();
-  if (actual.length !== allowed.length || actual.some((key, index) => key !== allowed[index])) throw new TypeError(`${path} has unexpected or missing fields`);
+  if (actual.length !== allowed.length || actual.some((key, index) => key !== allowed[index]))
+    throw new TypeError(`${path} has unexpected or missing fields`);
 }
 
 function finite(value: unknown, path: string): number {
@@ -166,13 +195,22 @@ function validateProjectedVariant(value: unknown, expectedId: string, path: stri
   const id = text(source.id, `${path}.id`);
   if (id !== expectedId) throw new TypeError(`${path}.id must use the exact canonical variant order`);
   const minWave = source.minWave === null ? null : safePositiveInteger(source.minWave, `${path}.minWave`);
-  return Object.freeze({ id, name: text(source.name, `${path}.name`), weight: positive(source.weight, `${path}.weight`), minWave });
+  return Object.freeze({
+    id,
+    name: text(source.name, `${path}.name`),
+    weight: positive(source.weight, `${path}.weight`),
+    minWave,
+  });
 }
 
 function validateSourceVariant(value: unknown, expectedId: string, path: string): GameReferenceEnemyVariantV1 {
   const source = record(value, path);
   const hasMinWave = source.minWave !== undefined;
-  exactKeys(source, path, hasMinWave ? ["id", "name", "weight", "minWave", "apply"] : ["id", "name", "weight", "apply"]);
+  exactKeys(
+    source,
+    path,
+    hasMinWave ? ["id", "name", "weight", "minWave", "apply"] : ["id", "name", "weight", "apply"],
+  );
   const id = text(source.id, `${path}.id`);
   if (id !== expectedId) throw new TypeError(`${path}.id must use the exact canonical variant order`);
   booleanFunction(source.apply, `${path}.apply`);
@@ -187,10 +225,22 @@ function projectFamily(sourceValue: unknown, expectedId: EnemyKind, path: string
   if (id !== expectedId) throw new TypeError(`${path}.id must use the exact canonical enemy-family order`);
   if (!Array.isArray(source.variants)) throw new TypeError(`${path}.variants must be an array`);
   const expectedVariantIds = PUBLIC_CANONICAL_ENEMY_VARIANT_IDS[expectedId];
-  const publicVariants = source.variants.filter((variant) => PUBLISHED_VARIANT_ID_SET.has(text(record(variant, `${path}.variants`).id, `${path}.variants.id`)));
-  const publicVariantIds = publicVariants.map((variant, index) => text(record(variant, `${path}.variants[${String(index)}]`).id, `${path}.variants[${String(index)}].id`));
+  const publicVariants = source.variants.filter((variant) =>
+    PUBLISHED_VARIANT_ID_SET.has(text(record(variant, `${path}.variants`).id, `${path}.variants.id`)),
+  );
+  const publicVariantIds = publicVariants.map((variant, index) =>
+    text(record(variant, `${path}.variants[${String(index)}]`).id, `${path}.variants[${String(index)}].id`),
+  );
   assertCanonicalOrderedIds(publicVariantIds, expectedVariantIds, `${path}.variants.public`);
-  const variants = Object.freeze(publicVariants.map((variant, index) => validateSourceVariant(variant, expectedAt(expectedVariantIds, index, `${path}.variants.public`), `${path}.variants[${String(index)}]`)));
+  const variants = Object.freeze(
+    publicVariants.map((variant, index) =>
+      validateSourceVariant(
+        variant,
+        expectedAt(expectedVariantIds, index, `${path}.variants.public`),
+        `${path}.variants[${String(index)}]`,
+      ),
+    ),
+  );
   return Object.freeze({ id: expectedId, variants });
 }
 
@@ -204,7 +254,11 @@ function projectAffix(sourceValue: unknown, expectedId: string, path: string): G
   return Object.freeze({ id, color: hexColor(source.color, `${path}.color`) });
 }
 
-function projectPreset(sourceValue: unknown, expected: EnemyPresetSignatureV1, path: string): GameReferenceEnemyPresetV1 {
+function projectPreset(
+  sourceValue: unknown,
+  expected: EnemyPresetSignatureV1,
+  path: string,
+): GameReferenceEnemyPresetV1 {
   const source = record(sourceValue, path);
   exactKeys(source, path, ["type", "affixes"]);
   const familyId = text(source.type, `${path}.type`);
@@ -218,24 +272,52 @@ function projectPreset(sourceValue: unknown, expected: EnemyPresetSignatureV1, p
 export function projectEnemyReference(input: EnemyReferenceProjectionInput): GameReferenceEnemiesV1 {
   assertEnemyKindContract();
   if (!Array.isArray(input.enemyFamilies)) throw new TypeError("enemyFamilies must be an array");
-  const familyIds = input.enemyFamilies.map((family, index) => text(record(family, `enemyFamilies[${String(index)}]`).id, `enemyFamilies[${String(index)}].id`));
+  const familyIds = input.enemyFamilies.map((family, index) =>
+    text(record(family, `enemyFamilies[${String(index)}]`).id, `enemyFamilies[${String(index)}].id`),
+  );
   assertCanonicalOrderedIds(familyIds, CANONICAL_ENEMY_IDENTITY_IDS, "enemyFamilies");
-  const families = Object.freeze(PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS.map((id) => {
-    const index = familyIds.indexOf(id);
-    const family = input.enemyFamilies[index];
-    if (family === undefined) throw new TypeError(`enemyFamilies is missing public family ${id}`);
-    return projectFamily(family, id, `enemyFamilies[${String(index)}]`);
-  }));
+  const families = Object.freeze(
+    PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS.map((id) => {
+      const index = familyIds.indexOf(id);
+      const family = input.enemyFamilies[index];
+      if (family === undefined) throw new TypeError(`enemyFamilies is missing public family ${id}`);
+      return projectFamily(family, id, `enemyFamilies[${String(index)}]`);
+    }),
+  );
 
   if (!Array.isArray(input.enemyAffixes)) throw new TypeError("enemyAffixes must be an array");
-  const affixIds = input.enemyAffixes.map((affix, index) => text(record(affix, `enemyAffixes[${String(index)}]`).id, `enemyAffixes[${String(index)}].id`));
+  const affixIds = input.enemyAffixes.map((affix, index) =>
+    text(record(affix, `enemyAffixes[${String(index)}]`).id, `enemyAffixes[${String(index)}].id`),
+  );
   assertCanonicalOrderedIds(affixIds, CANONICAL_ENEMY_AFFIX_IDS, "enemyAffixes");
-  const affixes = Object.freeze(input.enemyAffixes.map((affix, index) => projectAffix(affix, expectedAt(CANONICAL_ENEMY_AFFIX_IDS, index, "enemyAffixes"), `enemyAffixes[${String(index)}]`)));
+  const affixes = Object.freeze(
+    input.enemyAffixes.map((affix, index) =>
+      projectAffix(
+        affix,
+        expectedAt(CANONICAL_ENEMY_AFFIX_IDS, index, "enemyAffixes"),
+        `enemyAffixes[${String(index)}]`,
+      ),
+    ),
+  );
 
   if (!Array.isArray(input.enemyPresets)) throw new TypeError("enemyPresets must be an array");
-  const presetFamilies = input.enemyPresets.map((preset, index) => text(record(preset, `enemyPresets[${String(index)}]`).type, `enemyPresets[${String(index)}].type`));
-  assertCanonicalOrderedIds(presetFamilies, CANONICAL_ENEMY_PRESETS.map((preset) => preset.familyId), "enemyPresets");
-  const presets = Object.freeze(input.enemyPresets.map((preset, index) => projectPreset(preset, expectedAt(CANONICAL_ENEMY_PRESETS, index, "enemyPresets"), `enemyPresets[${String(index)}]`)));
+  const presetFamilies = input.enemyPresets.map((preset, index) =>
+    text(record(preset, `enemyPresets[${String(index)}]`).type, `enemyPresets[${String(index)}].type`),
+  );
+  assertCanonicalOrderedIds(
+    presetFamilies,
+    CANONICAL_ENEMY_PRESETS.map((preset) => preset.familyId),
+    "enemyPresets",
+  );
+  const presets = Object.freeze(
+    input.enemyPresets.map((preset, index) =>
+      projectPreset(
+        preset,
+        expectedAt(CANONICAL_ENEMY_PRESETS, index, "enemyPresets"),
+        `enemyPresets[${String(index)}]`,
+      ),
+    ),
+  );
 
   return validateProjectedEnemies({ families, affixes, presets }, "gameReference.collections.enemies.items");
 }
@@ -246,41 +328,70 @@ export function validateProjectedEnemies(value: unknown, path: string): GameRefe
   exactKeys(source, path, ["families", "affixes", "presets"]);
 
   if (!Array.isArray(source.families)) throw new TypeError(`${path}.families must be an array`);
-  const familyIds = source.families.map((family, index) => text(record(family, `${path}.families[${String(index)}]`).id, `${path}.families[${String(index)}].id`));
+  const familyIds = source.families.map((family, index) =>
+    text(record(family, `${path}.families[${String(index)}]`).id, `${path}.families[${String(index)}].id`),
+  );
   assertCanonicalOrderedIds(familyIds, PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS, `${path}.families`);
-  const families = Object.freeze(source.families.map((family, index) => {
-    const item = record(family, `${path}.families[${String(index)}]`);
-    exactKeys(item, `${path}.families[${String(index)}]`, ["id", "variants"]);
-    const id = expectedAt(PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS, index, `${path}.families`);
-    if (!Array.isArray(item.variants)) throw new TypeError(`${path}.families[${String(index)}].variants must be an array`);
-    const expectedVariantIds = PUBLIC_CANONICAL_ENEMY_VARIANT_IDS[id];
-    const variantIds = item.variants.map((variant, variantIndex) => text(record(variant, `${path}.families[${String(index)}].variants[${String(variantIndex)}]`).id, `${path}.families[${String(index)}].variants[${String(variantIndex)}].id`));
-    assertCanonicalOrderedIds(variantIds, expectedVariantIds, `${path}.families[${String(index)}].variants`);
-    const variants = Object.freeze(item.variants.map((variant, variantIndex) => validateProjectedVariant(variant, expectedAt(expectedVariantIds, variantIndex, `${path}.families[${String(index)}].variants`), `${path}.families[${String(index)}].variants[${String(variantIndex)}]`)));
-    return Object.freeze({ id, variants });
-  }));
+  const families = Object.freeze(
+    source.families.map((family, index) => {
+      const item = record(family, `${path}.families[${String(index)}]`);
+      exactKeys(item, `${path}.families[${String(index)}]`, ["id", "variants"]);
+      const id = expectedAt(PUBLIC_CANONICAL_ENEMY_IDENTITY_IDS, index, `${path}.families`);
+      if (!Array.isArray(item.variants))
+        throw new TypeError(`${path}.families[${String(index)}].variants must be an array`);
+      const expectedVariantIds = PUBLIC_CANONICAL_ENEMY_VARIANT_IDS[id];
+      const variantIds = item.variants.map((variant, variantIndex) =>
+        text(
+          record(variant, `${path}.families[${String(index)}].variants[${String(variantIndex)}]`).id,
+          `${path}.families[${String(index)}].variants[${String(variantIndex)}].id`,
+        ),
+      );
+      assertCanonicalOrderedIds(variantIds, expectedVariantIds, `${path}.families[${String(index)}].variants`);
+      const variants = Object.freeze(
+        item.variants.map((variant, variantIndex) =>
+          validateProjectedVariant(
+            variant,
+            expectedAt(expectedVariantIds, variantIndex, `${path}.families[${String(index)}].variants`),
+            `${path}.families[${String(index)}].variants[${String(variantIndex)}]`,
+          ),
+        ),
+      );
+      return Object.freeze({ id, variants });
+    }),
+  );
 
   if (!Array.isArray(source.affixes)) throw new TypeError(`${path}.affixes must be an array`);
-  const affixIds = source.affixes.map((affix, index) => text(record(affix, `${path}.affixes[${String(index)}]`).id, `${path}.affixes[${String(index)}].id`));
+  const affixIds = source.affixes.map((affix, index) =>
+    text(record(affix, `${path}.affixes[${String(index)}]`).id, `${path}.affixes[${String(index)}].id`),
+  );
   assertCanonicalOrderedIds(affixIds, CANONICAL_ENEMY_AFFIX_IDS, `${path}.affixes`);
-  const affixes = Object.freeze(source.affixes.map((affix, index) => {
-    const item = record(affix, `${path}.affixes[${String(index)}]`);
-    exactKeys(item, `${path}.affixes[${String(index)}]`, ["id", "color"]);
-    return Object.freeze({ id: expectedAt(CANONICAL_ENEMY_AFFIX_IDS, index, `${path}.affixes`), color: hexColor(item.color, `${path}.affixes[${String(index)}].color`) });
-  }));
+  const affixes = Object.freeze(
+    source.affixes.map((affix, index) => {
+      const item = record(affix, `${path}.affixes[${String(index)}]`);
+      exactKeys(item, `${path}.affixes[${String(index)}]`, ["id", "color"]);
+      return Object.freeze({
+        id: expectedAt(CANONICAL_ENEMY_AFFIX_IDS, index, `${path}.affixes`),
+        color: hexColor(item.color, `${path}.affixes[${String(index)}].color`),
+      });
+    }),
+  );
 
   if (!Array.isArray(source.presets)) throw new TypeError(`${path}.presets must be an array`);
-  const presetFamilies = source.presets.map((preset, index) => text(record(preset, `${path}.presets[${String(index)}]`).familyId, `${path}.presets[${String(index)}].familyId`));
+  const presetFamilies = source.presets.map((preset, index) =>
+    text(record(preset, `${path}.presets[${String(index)}]`).familyId, `${path}.presets[${String(index)}].familyId`),
+  );
   const expectedPresetFamilies = CANONICAL_ENEMY_PRESETS.map((preset) => preset.familyId);
   assertCanonicalOrderedIds(presetFamilies, expectedPresetFamilies, `${path}.presets`);
-  const presets = Object.freeze(source.presets.map((preset, index) => {
-    const item = record(preset, `${path}.presets[${String(index)}]`);
-    exactKeys(item, `${path}.presets[${String(index)}]`, ["familyId", "affixIds"]);
-    const expected = expectedAt(CANONICAL_ENEMY_PRESETS, index, `${path}.presets`);
-    const ids = stringIds(item.affixIds, `${path}.presets[${String(index)}].affixIds`);
-    assertCanonicalOrderedIds(ids, expected.affixIds, `${path}.presets[${String(index)}].affixIds`);
-    return Object.freeze({ familyId: expected.familyId, affixIds: ids });
-  }));
+  const presets = Object.freeze(
+    source.presets.map((preset, index) => {
+      const item = record(preset, `${path}.presets[${String(index)}]`);
+      exactKeys(item, `${path}.presets[${String(index)}]`, ["familyId", "affixIds"]);
+      const expected = expectedAt(CANONICAL_ENEMY_PRESETS, index, `${path}.presets`);
+      const ids = stringIds(item.affixIds, `${path}.presets[${String(index)}].affixIds`);
+      assertCanonicalOrderedIds(ids, expected.affixIds, `${path}.presets[${String(index)}].affixIds`);
+      return Object.freeze({ familyId: expected.familyId, affixIds: ids });
+    }),
+  );
 
   return Object.freeze({ families, affixes, presets });
 }

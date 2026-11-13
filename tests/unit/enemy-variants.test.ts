@@ -11,8 +11,16 @@ describe("enemy variant selector compatibility", () => {
   it("accepts the typed context overload without touching global randomness", () => {
     let draws = 0;
     const variant = selectVariant("charger", {
-      stageId: "verdant-sanctum", localWave: 4, globalWave: 44, mode: "campaign",
-      random: { next: () => { draws += 1; return 0.999; } },
+      stageId: "verdant-sanctum",
+      localWave: 4,
+      globalWave: 44,
+      mode: "campaign",
+      random: {
+        next: () => {
+          draws += 1;
+          return 0.999;
+        },
+      },
     });
     expect(variant?.id).toBe("briar-stalker");
     expect(draws).toBe(1);

@@ -1,20 +1,8 @@
-import type {
-  AudioGraphContext,
-  AudioNodePort,
-  TemporaryMuteReason,
-} from "./mixer";
+import type { AudioGraphContext, AudioNodePort, TemporaryMuteReason } from "./mixer";
 
 export const MUSIC_CONTEXT_SCHEMA_VERSION = 1 as const;
 
-export type MusicScene =
-  | "main-menu"
-  | "preparation"
-  | "combat"
-  | "boss"
-  | "draft"
-  | "paused"
-  | "victory"
-  | "defeat";
+export type MusicScene = "main-menu" | "preparation" | "combat" | "boss" | "draft" | "paused" | "victory" | "defeat";
 
 /** Only the real menu owns shell music; menu-shaped overlays during a run do not. */
 export function isMusicShell(scene: MusicScene, biomeId: string): boolean {
@@ -31,12 +19,12 @@ export interface MusicRunSessionMetadata {
 
 export type MusicReplayMetadata =
   | Readonly<{
-    enabled: true;
-    engineVersion: string;
-    scoreVersion: string;
-    seed: string;
-    eventJournalHash: string;
-  }>
+      enabled: true;
+      engineVersion: string;
+      scoreVersion: string;
+      seed: string;
+      eventJournalHash: string;
+    }>
   | Readonly<{ enabled: false; reason: "disabled" | "fallback" | "not-recorded" }>;
 
 export interface MusicContextSnapshot {

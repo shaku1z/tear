@@ -29,8 +29,13 @@ describe("runtime mode configuration projection", () => {
       ["id", "label", "blurb", "enabled", "bossOnly", "debug"],
       ["id", "label", "blurb", "enabled", "sandbox", "debug"],
     ]);
-    expect(CONFIG.modes.every((mode) => !("order" in mode) && !("classification" in mode) && !("surface" in mode))).toBe(true);
-    expect(MODE_CATALOG.filter((mode) => mode.surface === "engineering").map((mode) => mode.id)).toEqual(["bossonly", "sandbox"]);
+    expect(
+      CONFIG.modes.every((mode) => !("order" in mode) && !("classification" in mode) && !("surface" in mode)),
+    ).toBe(true);
+    expect(MODE_CATALOG.filter((mode) => mode.surface === "engineering").map((mode) => mode.id)).toEqual([
+      "bossonly",
+      "sandbox",
+    ]);
     expect(stableVerificationHash(CONFIG.modes)).toBe("d8ff7113c5aa6bac");
   });
 });

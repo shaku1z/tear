@@ -7,8 +7,9 @@ import {
 
 describe("live presentation capture", () => {
   it("keeps raw snapshot readback free of rendering", () => {
-    const render = vi.fn(), readback = vi.fn(() => "raw");
-    const controller = createLivePresentationCaptureController(() => ({ simulationTick: 0 } as never));
+    const render = vi.fn(),
+      readback = vi.fn(() => "raw");
+    const controller = createLivePresentationCaptureController(() => ({ simulationTick: 0 }) as never);
     const ports = controller.ports(render, readback);
     expect(ports.screenshot()).toBe("raw");
     expect(render).not.toHaveBeenCalled();
@@ -16,11 +17,18 @@ describe("live presentation capture", () => {
   });
   it("normalizes omitted and partial layer policies without mutating the default", () => {
     expect(normalizeLiveCapturePolicy()).toEqual({
-      ui: "include", debug: "include", pointerLock: "include", actors: "include",
+      ui: "include",
+      debug: "include",
+      pointerLock: "include",
+      actors: "include",
     });
-    expect(normalizeLiveCapturePolicy({
-      ui: "exclude", debug: "exclude", pointerLock: "exclude",
-    })).toEqual({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "include" });
+    expect(
+      normalizeLiveCapturePolicy({
+        ui: "exclude",
+        debug: "exclude",
+        pointerLock: "exclude",
+      }),
+    ).toEqual({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "include" });
   });
 
   it("projects the exact source-owned clock, viewport, settings, and observed overlays", () => {
@@ -51,36 +59,58 @@ describe("live presentation capture", () => {
       simulationTick: 317,
       presentationClockSeconds: 1 / 120,
       viewport: {
-        logicalWidth: 1600, logicalHeight: 900, cssWidth: 1600, cssHeight: 900,
-        backingWidth: 3200, backingHeight: 1800, deviceScaleFactor: 2,
+        logicalWidth: 1600,
+        logicalHeight: 900,
+        cssWidth: 1600,
+        cssHeight: 900,
+        backingWidth: 3200,
+        backingHeight: 1800,
+        deviceScaleFactor: 2,
       },
       settings: {
-        gfx: "high", lowGraphics: false, reducedMotion: true, highContrast: true, flashScale: 0,
+        gfx: "high",
+        lowGraphics: false,
+        reducedMotion: true,
+        highContrast: true,
+        flashScale: 0,
       },
       overlays: { debugAvailable: true, pointerLocked: false, pointerLockHintVisible: false },
     });
-    expect(projectLivePresentationState({ ...input, pointerLockHint: null }).overlays.pointerLockHintVisible).toBe(false);
-    expect(projectLivePresentationState({ ...input, pointerLockHint: { style: { display: "block" } } as HTMLElement })
-      .overlays.pointerLockHintVisible).toBe(true);
+    expect(projectLivePresentationState({ ...input, pointerLockHint: null }).overlays.pointerLockHintVisible).toBe(
+      false,
+    );
+    expect(
+      projectLivePresentationState({ ...input, pointerLockHint: { style: { display: "block" } } as HTMLElement })
+        .overlays.pointerLockHintVisible,
+    ).toBe(true);
   });
 
   it("applies a capture policy for one render and restores it after success or failure", () => {
-    const state = vi.fn(() => ({ simulationTick: 0 } as never));
+    const state = vi.fn(() => ({ simulationTick: 0 }) as never);
     const controller = createLivePresentationCaptureController(state);
     const observed: unknown[] = [];
     const ports = controller.ports(
-      () => { observed.push(controller.policy()); },
+      () => {
+        observed.push(controller.policy());
+      },
       () => "frame",
     );
 
-    expect(ports.captureScreenshot({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" }))
-      .toBe("frame");
+    expect(
+      ports.captureScreenshot({ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" }),
+    ).toBe("frame");
     expect(observed).toEqual([{ ui: "exclude", debug: "exclude", pointerLock: "exclude", actors: "exclude" }]);
     expect(controller.policy()).toEqual({ ui: "include", debug: "include", pointerLock: "include", actors: "include" });
 
-    const failing = controller.ports(() => undefined, () => { throw new Error("capture failed"); });
-    expect(() => failing.captureScreenshot({ ui: "exclude", debug: "include", pointerLock: "include" }))
-      .toThrow("capture failed");
+    const failing = controller.ports(
+      () => undefined,
+      () => {
+        throw new Error("capture failed");
+      },
+    );
+    expect(() => failing.captureScreenshot({ ui: "exclude", debug: "include", pointerLock: "include" })).toThrow(
+      "capture failed",
+    );
     expect(controller.policy()).toEqual({ ui: "include", debug: "include", pointerLock: "include", actors: "include" });
   });
 });

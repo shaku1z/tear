@@ -67,7 +67,12 @@ function fixture() {
   ];
   for (const [root, relativePath, contents] of files) fs.writeFileSync(path.join(root, relativePath), contents, "utf8");
   const destination = path.join(archiveGroupRoot, "payload");
-  const source = (sourceId, sourceName, sourceRoot, rootArgument) => ({ id: sourceId, name: sourceName, path: sourceRoot, rootArgument });
+  const source = (sourceId, sourceName, sourceRoot, rootArgument) => ({
+    id: sourceId,
+    name: sourceName,
+    path: sourceRoot,
+    rootArgument,
+  });
   const entry = (sourceId, sourceName, sourceRoot, relativePath, bytes, sha256Value) => ({
     sourceId,
     sourceName,
@@ -86,8 +91,18 @@ function fixture() {
   const manifestEntries = [
     entry(publicationId, "Tear-main-publication", publicationSourceRoot, "same.txt", 5, sha256("same\n")),
     entry(publicationId, "Tear-main-publication", publicationSourceRoot, "unique.txt", 7, sha256("unique\n")),
-    entry(publicationId, "Tear-main-publication", publicationSourceRoot, "conflict.txt", 21, sha256("publication conflict\n")),
-    { ...entry(publicationId, "Tear-main-publication", publicationSourceRoot, "protected.dat", 10, null), reportReasonCodes: ["protected-name-pattern"] },
+    entry(
+      publicationId,
+      "Tear-main-publication",
+      publicationSourceRoot,
+      "conflict.txt",
+      21,
+      sha256("publication conflict\n"),
+    ),
+    {
+      ...entry(publicationId, "Tear-main-publication", publicationSourceRoot, "protected.dat", 10, null),
+      reportReasonCodes: ["protected-name-pattern"],
+    },
     entry(receiptId, "Tear-receipt-clean", receiptSourceRoot, "same.txt", 5, sha256("same\n")),
     entry(receiptId, "Tear-receipt-clean", receiptSourceRoot, "peer.txt", 7, sha256("unique\n")),
     entry(receiptId, "Tear-receipt-clean", receiptSourceRoot, "receipt-conflict.txt", 16, sha256("receipt conflict\n")),
@@ -110,7 +125,15 @@ function fixture() {
     entries: manifestEntries,
   };
   const manifestPath = path.join(archiveGroupRoot, "manifest.json");
-  const value = { base, repoRoot, payloadRoot, archiveGroupRoot, manifestPath, manifest, expectedHead: git(repoRoot, ["rev-parse", "HEAD"]) };
+  const value = {
+    base,
+    repoRoot,
+    payloadRoot,
+    archiveGroupRoot,
+    manifestPath,
+    manifest,
+    expectedHead: git(repoRoot, ["rev-parse", "HEAD"]),
+  };
   const written = writeFixtureManifest(value);
   value.expectedManifestSha256 = written.expectedSha256;
   return value;
@@ -140,7 +163,10 @@ test("compares preserved copies and treats path-conflict-only content as unmatch
     assert.equal(publication.summary.canonicalExactPath, 1);
     assert.equal(publication.summary.unmatchedContent, 1);
     assert.equal(publication.summary.protectedUnhashedEntries, 1);
-    assert.equal(publication.entries.find((entry) => entry.relativePath === "conflict.txt").status, "canonical-path-conflict");
+    assert.equal(
+      publication.entries.find((entry) => entry.relativePath === "conflict.txt").status,
+      "canonical-path-conflict",
+    );
     assert.equal(receipt.summary.canonicalExactPath, 1);
     assert.equal(receipt.summary.preservationContentDuplicates, 1);
     assert.equal(receipt.summary.unmatchedContent, 1);
@@ -152,8 +178,21 @@ test("compares preserved copies and treats path-conflict-only content as unmatch
 test("requires a matching expected SHA-256 for every supplied manifest", () => {
   const value = fixture();
   try {
-    assert.throws(() => comparePreservedCopies({ repoRoot: value.repoRoot, payloadRoot: value.payloadRoot, archiveGroupRoot: value.archiveGroupRoot, manifestPaths: [value.manifestPath], expectedHead: value.expectedHead }), /one SHA-256 for every supplied manifest/u);
-    assert.throws(() => compare(value, { expectedManifestSha256: ["0".repeat(64)] }), /manifest SHA-256 does not match/u);
+    assert.throws(
+      () =>
+        comparePreservedCopies({
+          repoRoot: value.repoRoot,
+          payloadRoot: value.payloadRoot,
+          archiveGroupRoot: value.archiveGroupRoot,
+          manifestPaths: [value.manifestPath],
+          expectedHead: value.expectedHead,
+        }),
+      /one SHA-256 for every supplied manifest/u,
+    );
+    assert.throws(
+      () => compare(value, { expectedManifestSha256: ["0".repeat(64)] }),
+      /manifest SHA-256 does not match/u,
+    );
   } finally {
     fs.rmSync(value.base, { recursive: true, force: true });
   }
@@ -166,9 +205,15 @@ test("rejects wrong origin, expected head, duplicate entries, and source mapping
     assert.throws(() => compare(value), /origin must normalize exactly/u);
     git(value.repoRoot, ["remote", "set-url", "origin", "https://github.com/shaku1z/tear.git"]);
     assert.throws(() => compare(value, { expectedHead: "0".repeat(40) }), /expected-head/u);
-    writeFixtureManifest(value, (manifest) => { manifest.entries.push({ ...manifest.entries[0] }); return manifest; });
+    writeFixtureManifest(value, (manifest) => {
+      manifest.entries.push({ ...manifest.entries[0] });
+      return manifest;
+    });
     assert.throws(() => compare(value), /duplicate preservation entry/u);
-    writeFixtureManifest(value, (manifest) => { manifest.entries[0].sourceId = "wrong-source"; return manifest; });
+    writeFixtureManifest(value, (manifest) => {
+      manifest.entries[0].sourceId = "wrong-source";
+      return manifest;
+    });
     assert.throws(() => compare(value), /selected source identity is not exact/u);
   } finally {
     fs.rmSync(value.base, { recursive: true, force: true });
@@ -198,7 +243,10 @@ test("fails closed when a target copy is absent", () => {
 test("requires an existing archive group at the comparison boundary", () => {
   const value = fixture();
   try {
-    assert.throws(() => compare(value, { archiveGroupRoot: path.join(value.base, "missing") }), /archive-group-root must be an existing directory/u);
+    assert.throws(
+      () => compare(value, { archiveGroupRoot: path.join(value.base, "missing") }),
+      /archive-group-root must be an existing directory/u,
+    );
   } finally {
     fs.rmSync(value.base, { recursive: true, force: true });
   }
@@ -209,7 +257,10 @@ test("exclusive report creation refuses a competing or pre-existing writer", () 
   try {
     const output = path.join(value.archiveGroupRoot, "exclusive-output.json");
     writeExclusiveReport(output, { writer: "first" });
-    assert.throws(() => writeExclusiveReport(output, { writer: "second" }), /new-only and was created concurrently or already exists/u);
+    assert.throws(
+      () => writeExclusiveReport(output, { writer: "second" }),
+      /new-only and was created concurrently or already exists/u,
+    );
     assert.deepEqual(JSON.parse(fs.readFileSync(output, "utf8")), { writer: "first" });
   } finally {
     fs.rmSync(value.base, { recursive: true, force: true });

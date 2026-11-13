@@ -19,10 +19,7 @@ export interface FirebasePublicationAuth {
 }
 
 export type GhostPublicationBearerFailure =
-  | "firebase-auth-unavailable"
-  | "firebase-user-unavailable"
-  | "firebase-anonymous-user"
-  | "firebase-token-unavailable";
+  "firebase-auth-unavailable" | "firebase-user-unavailable" | "firebase-anonymous-user" | "firebase-token-unavailable";
 
 export class GhostPublicationBearerError extends Error {
   readonly code: GhostPublicationBearerFailure;

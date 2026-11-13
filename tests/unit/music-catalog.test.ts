@@ -132,7 +132,8 @@ describe("Music catalog", () => {
     const legacy = parseMusicCatalog({ ...authoredCatalog, format: "tear-signal-catalog" });
     expect(legacy).toEqual(catalog);
     expect(musicCatalogSemanticProjection(legacy)).toEqual(musicCatalogSemanticProjection(catalog));
-    expect(legacy.works.flatMap((work) => Object.values(work.versions).map((version) => version.cue)))
-      .toEqual(catalog.works.flatMap((work) => Object.values(work.versions).map((version) => version.cue)));
+    expect(legacy.works.flatMap((work) => Object.values(work.versions).map((version) => version.cue))).toEqual(
+      catalog.works.flatMap((work) => Object.values(work.versions).map((version) => version.cue)),
+    );
   });
 });

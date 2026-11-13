@@ -7,15 +7,16 @@ import {
   type TearSdlDocumentV1,
 } from "../../src/tearbench";
 
-const source = (stateClass = "surgical-valid"): string => JSON.stringify({
-  format: "tearsdl",
-  schemaVersion: 1,
-  id: "studio-scenario",
-  stateClass,
-  seed: "42",
-  start: { mode: "campaign", difficulty: "normal", weapon: "sword", wave: 2 },
-  state: { player: { hp: 80 }, run: { score: 40 } },
-});
+const source = (stateClass = "surgical-valid"): string =>
+  JSON.stringify({
+    format: "tearsdl",
+    schemaVersion: 1,
+    id: "studio-scenario",
+    stateClass,
+    seed: "42",
+    start: { mode: "campaign", difficulty: "normal", weapon: "sword", wave: 2 },
+    state: { player: { hp: 80 }, run: { score: 40 } },
+  });
 
 describe("State Forge Studio model", () => {
   it("keeps structural, reachability, and population plausibility reports distinct", () => {
@@ -67,10 +68,9 @@ describe("State Forge Studio model", () => {
   });
 
   it("produces deterministic deep diffs for checkpoint inspection", () => {
-    expect(diffStateForgeValues(
-      { player: { hp: 100, x: 20 }, wave: 3 },
-      { player: { hp: 70, x: 20 }, wave: 4 },
-    )).toEqual([
+    expect(
+      diffStateForgeValues({ player: { hp: 100, x: 20 }, wave: 3 }, { player: { hp: 70, x: 20 }, wave: 4 }),
+    ).toEqual([
       { path: "$.player.hp", before: 100, after: 70 },
       { path: "$.wave", before: 3, after: 4 },
     ]);
@@ -79,7 +79,9 @@ describe("State Forge Studio model", () => {
   it("creates an editable child source without mutating the imported document", () => {
     const original = source();
     const fork = JSON.parse(createStateForgeForkSource(original, "studio-fork", { player: { hp: 1 } })) as {
-      id: string; extends: string; state: unknown;
+      id: string;
+      extends: string;
+      state: unknown;
     };
     expect(fork).toMatchObject({
       id: "studio-fork",

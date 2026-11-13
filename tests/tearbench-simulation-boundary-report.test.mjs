@@ -6,13 +6,24 @@ import test from "node:test";
 import { createSimulationBoundaryReport } from "../scripts/tearbench-simulation-boundary-report.mjs";
 
 const revision = "a".repeat(40);
-const browserVersion = "152.0.7977.64", browserArchiveSha256 = "b".repeat(64);
+const browserVersion = "152.0.7977.64",
+  browserArchiveSha256 = "b".repeat(64);
 
 function build() {
-  return { format: "tear-build-info", schemaVersion: 1, target: "standalone", mode: "test-standalone",
-    sha: revision, sourceRevision: revision, sourceState: "clean", sourceFingerprint: "c".repeat(64),
-    artifactHash: "d".repeat(64), buildIdentityDigest: "e".repeat(64),
-    toolchain: { digest: "f".repeat(64) }, configuration: { digest: "1".repeat(64) } };
+  return {
+    format: "tear-build-info",
+    schemaVersion: 1,
+    target: "standalone",
+    mode: "test-standalone",
+    sha: revision,
+    sourceRevision: revision,
+    sourceState: "clean",
+    sourceFingerprint: "c".repeat(64),
+    artifactHash: "d".repeat(64),
+    buildIdentityDigest: "e".repeat(64),
+    toolchain: { digest: "f".repeat(64) },
+    configuration: { digest: "1".repeat(64) },
+  };
 }
 
 async function fixture({ aggregateP95Ms, tickP95Ms }, callback) {
@@ -31,110 +42,192 @@ async function fixture({ aggregateP95Ms, tickP95Ms }, callback) {
       peakGauges: { enemies: 8, projectiles: 2, effects: 4 },
     };
     const stdout = [
-      JSON.stringify({ performanceBuild: { sourceRevision: identity.sourceRevision,
-        sourceFingerprint: identity.sourceFingerprint, artifactHash: identity.artifactHash,
-        buildIdentityDigest: identity.buildIdentityDigest } }),
+      JSON.stringify({
+        performanceBuild: {
+          sourceRevision: identity.sourceRevision,
+          sourceFingerprint: identity.sourceFingerprint,
+          artifactHash: identity.artifactHash,
+          buildIdentityDigest: identity.buildIdentityDigest,
+        },
+      }),
       JSON.stringify({ browserRuntime: { version: browserVersion, archiveSha256: browserArchiveSha256 } }),
       JSON.stringify({ scenario: "4x constrained gameplay", measurements: measurement }),
       ...(aggregateP95Ms > 10
-        ? [`AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: ${aggregateP95Ms} exceeded budget 10`] : []),
+        ? [
+            `AssertionError [ERR_ASSERTION]: 4x constrained gameplay simulation p95 ms: ${aggregateP95Ms} exceeded budget 10`,
+          ]
+        : []),
     ].join("\n");
     await Promise.all([
       writeFile(resolve(directory, "candidate-build-info.json"), JSON.stringify(identity)),
-      writeFile(resolve(directory, "candidate-browser-performance-budgets.json"), JSON.stringify({
-        referenceProfile: { sampleCapacity: 600 },
-        constrainedGameplay: { cpuThrottleRate: 4, simulationP95Ms: 10, renderP95Ms: 14, frameP95Ms: 20,
-          frameIntervalP99Ms: 50, frameIntervalMaxMs: 75, newLongTasksMax: 0, minimumSamples: 300 },
-      })),
+      writeFile(
+        resolve(directory, "candidate-browser-performance-budgets.json"),
+        JSON.stringify({
+          referenceProfile: { sampleCapacity: 600 },
+          constrainedGameplay: {
+            cpuThrottleRate: 4,
+            simulationP95Ms: 10,
+            renderP95Ms: 14,
+            frameP95Ms: 20,
+            frameIntervalP99Ms: 50,
+            frameIntervalMaxMs: 75,
+            newLongTasksMax: 0,
+            minimumSamples: 300,
+          },
+        }),
+      ),
       writeFile(resolve(directory, "candidate.stdout"), stdout),
       writeFile(resolve(directory, "candidate.stderr"), ""),
       writeFile(resolve(directory, "candidate.status"), aggregateP95Ms > 10 ? "1\n" : "0\n"),
     ]);
     await callback(directory);
-  } finally { await rm(directory, { recursive: true, force: true }); }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 }
 
-const input = (directory, overrides = {}) => ({ directory, revision, browserVersion, browserArchiveSha256,
-  legacyPacingRequired: true, ...overrides });
+const input = (directory, overrides = {}) => ({
+  directory,
+  revision,
+  browserVersion,
+  browserArchiveSha256,
+  legacyPacingRequired: true,
+  ...overrides,
+});
 
-test("simulation boundary report requires an explicit legacy pacing compatibility path", async () => fixture({
-  aggregateP95Ms: 9.8, tickP95Ms: 1.8,
-}, async (directory) => {
-  assert.throws(() => createSimulationBoundaryReport(input(directory, { legacyPacingRequired: false })),
-    /missing its pacing assessment/u);
-  const report = createSimulationBoundaryReport(input(directory));
-  assert.equal(report.canonicalReleaseAuthority, false);
-  assert.equal(report.pacingEvidence.mode, "legacy-required");
-}));
+test("simulation boundary report requires an explicit legacy pacing compatibility path", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 9.8,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      assert.throws(
+        () => createSimulationBoundaryReport(input(directory, { legacyPacingRequired: false })),
+        /missing its pacing assessment/u,
+      );
+      const report = createSimulationBoundaryReport(input(directory));
+      assert.equal(report.canonicalReleaseAuthority, false);
+      assert.equal(report.pacingEvidence.mode, "legacy-required");
+    },
+  ));
 
 test("simulation boundary report distinguishes aggregate, tick, and reproduced-budget outcomes", async () => {
   for (const [values, outcome] of [
     [{ aggregateP95Ms: 11.4, tickP95Ms: 1.8 }, "aggregate-boundary-miss"],
     [{ aggregateP95Ms: 12, tickP95Ms: 10.5 }, "canonical-tick-miss"],
     [{ aggregateP95Ms: 9.8, tickP95Ms: 1.7 }, "aggregate-within-budget"],
-  ]) await fixture(values, async (directory) => {
-    const report = createSimulationBoundaryReport(input(directory));
-    assert.equal(report.outcome, outcome);
-    assert.equal(report.measurements.simulation.p95Ms, values.aggregateP95Ms);
-    assert.equal(report.measurements.canonicalTick.p95Ms, values.tickP95Ms);
-    assert.match(report.reportDigest, /^[0-9a-f]{64}$/u);
-  });
+  ])
+    await fixture(values, async (directory) => {
+      const report = createSimulationBoundaryReport(input(directory));
+      assert.equal(report.outcome, outcome);
+      assert.equal(report.measurements.simulation.p95Ms, values.aggregateP95Ms);
+      assert.equal(report.measurements.canonicalTick.p95Ms, values.tickP95Ms);
+      assert.match(report.reportDigest, /^[0-9a-f]{64}$/u);
+    });
 });
 
-test("simulation boundary report rejects a stale aggregate assertion", async () => fixture({
-  aggregateP95Ms: 11.4, tickP95Ms: 1.8,
-}, async (directory) => {
-  const path = resolve(directory, "candidate.stdout");
-  const stdout = await readFile(path, "utf8");
-  await writeFile(path, stdout.replace("simulation p95 ms: 11.4 exceeded budget 10",
-    "simulation p95 ms: 99 exceeded budget 10"));
-  assert.throws(() => createSimulationBoundaryReport(input(directory)), /exact first measured constrained assertion/u);
-}));
+test("simulation boundary report rejects a stale aggregate assertion", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 11.4,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      const path = resolve(directory, "candidate.stdout");
+      const stdout = await readFile(path, "utf8");
+      await writeFile(
+        path,
+        stdout.replace("simulation p95 ms: 11.4 exceeded budget 10", "simulation p95 ms: 99 exceeded budget 10"),
+      );
+      assert.throws(
+        () => createSimulationBoundaryReport(input(directory)),
+        /exact first measured constrained assertion/u,
+      );
+    },
+  ));
 
-test("simulation boundary report rejects incomplete step evidence", async () => fixture({
-  aggregateP95Ms: 11.4, tickP95Ms: 1.8,
-}, async (directory) => {
-  const path = resolve(directory, "candidate.stdout");
-  const lines = (await readFile(path, "utf8")).split("\n");
-  const measured = JSON.parse(lines[2]);
-  measured.measurements.simulationStepPoll = { observations: 0, histogram: {} };
-  lines[2] = JSON.stringify(measured);
-  await writeFile(path, lines.join("\n"));
-  assert.throws(() => createSimulationBoundaryReport(input(directory)), /step poll is incomplete/u);
-}));
+test("simulation boundary report rejects incomplete step evidence", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 11.4,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      const path = resolve(directory, "candidate.stdout");
+      const lines = (await readFile(path, "utf8")).split("\n");
+      const measured = JSON.parse(lines[2]);
+      measured.measurements.simulationStepPoll = { observations: 0, histogram: {} };
+      lines[2] = JSON.stringify(measured);
+      await writeFile(path, lines.join("\n"));
+      assert.throws(() => createSimulationBoundaryReport(input(directory)), /step poll is incomplete/u);
+    },
+  ));
 
-test("simulation boundary report rejects evidence from a different build", async () => fixture({
-  aggregateP95Ms: 11.4, tickP95Ms: 1.8,
-}, async (directory) => {
-  const path = resolve(directory, "candidate.stdout");
-  const lines = (await readFile(path, "utf8")).split("\n");
-  const emitted = JSON.parse(lines[0]);
-  emitted.performanceBuild.sourceFingerprint = "9".repeat(64);
-  lines[0] = JSON.stringify(emitted);
-  await writeFile(path, lines.join("\n"));
-  assert.throws(() => createSimulationBoundaryReport(input(directory)), /validated build identity/u);
-}));
+test("simulation boundary report rejects evidence from a different build", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 11.4,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      const path = resolve(directory, "candidate.stdout");
+      const lines = (await readFile(path, "utf8")).split("\n");
+      const emitted = JSON.parse(lines[0]);
+      emitted.performanceBuild.sourceFingerprint = "9".repeat(64);
+      lines[0] = JSON.stringify(emitted);
+      await writeFile(path, lines.join("\n"));
+      assert.throws(() => createSimulationBoundaryReport(input(directory)), /validated build identity/u);
+    },
+  ));
 
-test("simulation boundary report rejects candidate budget drift", async () => fixture({
-  aggregateP95Ms: 11.4, tickP95Ms: 1.8,
-}, async (directory) => {
-  await writeFile(resolve(directory, "candidate-browser-performance-budgets.json"), JSON.stringify({
-    referenceProfile: { sampleCapacity: 600 },
-    constrainedGameplay: { cpuThrottleRate: 4, simulationP95Ms: 12, renderP95Ms: 14, frameP95Ms: 20,
-      frameIntervalP99Ms: 50, frameIntervalMaxMs: 75, newLongTasksMax: 0, minimumSamples: 300 },
-  }));
-  assert.throws(() => createSimulationBoundaryReport(input(directory)), /unchanged candidate and reporter measurement contract/u);
-}));
+test("simulation boundary report rejects candidate budget drift", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 11.4,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      await writeFile(
+        resolve(directory, "candidate-browser-performance-budgets.json"),
+        JSON.stringify({
+          referenceProfile: { sampleCapacity: 600 },
+          constrainedGameplay: {
+            cpuThrottleRate: 4,
+            simulationP95Ms: 12,
+            renderP95Ms: 14,
+            frameP95Ms: 20,
+            frameIntervalP99Ms: 50,
+            frameIntervalMaxMs: 75,
+            newLongTasksMax: 0,
+            minimumSamples: 300,
+          },
+        }),
+      );
+      assert.throws(
+        () => createSimulationBoundaryReport(input(directory)),
+        /unchanged candidate and reporter measurement contract/u,
+      );
+    },
+  ));
 
-test("simulation boundary report rejects drift in a later constrained budget", async () => fixture({
-  aggregateP95Ms: 9.8, tickP95Ms: 1.8,
-}, async (directory) => {
-  const path = resolve(directory, "candidate-browser-performance-budgets.json");
-  const candidateBudgets = JSON.parse(await readFile(path, "utf8"));
-  candidateBudgets.constrainedGameplay.frameIntervalP99Ms = 60;
-  await writeFile(path, JSON.stringify(candidateBudgets));
-  assert.throws(() => createSimulationBoundaryReport(input(directory)), /unchanged candidate and reporter measurement contract/u);
-}));
+test("simulation boundary report rejects drift in a later constrained budget", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 9.8,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      const path = resolve(directory, "candidate-browser-performance-budgets.json");
+      const candidateBudgets = JSON.parse(await readFile(path, "utf8"));
+      candidateBudgets.constrainedGameplay.frameIntervalP99Ms = 60;
+      await writeFile(path, JSON.stringify(candidateBudgets));
+      assert.throws(
+        () => createSimulationBoundaryReport(input(directory)),
+        /unchanged candidate and reporter measurement contract/u,
+      );
+    },
+  ));
 
 test("simulation boundary report rejects empty status and incomplete timing coverage", async () => {
   await fixture({ aggregateP95Ms: 9.8, tickP95Ms: 1.8 }, async (directory) => {
@@ -161,72 +254,109 @@ test("simulation boundary report rejects empty status and incomplete timing cove
   });
 });
 
-test("simulation boundary report rejects a conflicting failure headline", async () => fixture({
-  aggregateP95Ms: 11.4, tickP95Ms: 1.8,
-}, async (directory) => {
-  const path = resolve(directory, "candidate.stderr");
-  await writeFile(path, "Error: unrelated browser failure\n");
-  assert.throws(() => createSimulationBoundaryReport(input(directory)), /exact first measured constrained assertion/u);
-}));
+test("simulation boundary report rejects a conflicting failure headline", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 11.4,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      const path = resolve(directory, "candidate.stderr");
+      await writeFile(path, "Error: unrelated browser failure\n");
+      assert.throws(
+        () => createSimulationBoundaryReport(input(directory)),
+        /exact first measured constrained assertion/u,
+      );
+    },
+  ));
 
-test("simulation boundary report separates a later constrained failure from its aggregate outcome", async () => fixture({
-  aggregateP95Ms: 9.8, tickP95Ms: 1.8,
-}, async (directory) => {
-  const path = resolve(directory, "candidate.stdout");
-  const lines = (await readFile(path, "utf8")).split("\n");
-  const measured = JSON.parse(lines[2]);
-  measured.measurements.frameInterval.p99Ms = 100;
-  measured.measurements.frameInterval.maxMs = 100.1;
-  lines[2] = JSON.stringify(measured);
-  lines.push("AssertionError [ERR_ASSERTION]: 4x constrained gameplay frame-interval p99 ms: 100 exceeded budget 50");
-  await Promise.all([
-    writeFile(path, lines.join("\n")),
-    writeFile(resolve(directory, "candidate.status"), "1\n"),
-  ]);
-  const report = createSimulationBoundaryReport(input(directory));
-  assert.equal(report.outcome, "aggregate-within-budget");
-  assert.deepEqual(report.sampleAssessment, { status: "failed", failures: [{
-    id: "frame-interval-p99", label: "4x constrained gameplay frame-interval p99 ms",
-    actual: 100, budget: 50,
-    assertion: "4x constrained gameplay frame-interval p99 ms: 100 exceeded budget 50",
-  }, {
-    id: "frame-interval-max", label: "4x constrained gameplay frame-interval max ms",
-    actual: 100.1, budget: 75,
-    assertion: "4x constrained gameplay frame-interval max ms: 100.1 exceeded budget 75",
-  }] });
-}));
+test("simulation boundary report separates a later constrained failure from its aggregate outcome", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 9.8,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      const path = resolve(directory, "candidate.stdout");
+      const lines = (await readFile(path, "utf8")).split("\n");
+      const measured = JSON.parse(lines[2]);
+      measured.measurements.frameInterval.p99Ms = 100;
+      measured.measurements.frameInterval.maxMs = 100.1;
+      lines[2] = JSON.stringify(measured);
+      lines.push(
+        "AssertionError [ERR_ASSERTION]: 4x constrained gameplay frame-interval p99 ms: 100 exceeded budget 50",
+      );
+      await Promise.all([writeFile(path, lines.join("\n")), writeFile(resolve(directory, "candidate.status"), "1\n")]);
+      const report = createSimulationBoundaryReport(input(directory));
+      assert.equal(report.outcome, "aggregate-within-budget");
+      assert.deepEqual(report.sampleAssessment, {
+        status: "failed",
+        failures: [
+          {
+            id: "frame-interval-p99",
+            label: "4x constrained gameplay frame-interval p99 ms",
+            actual: 100,
+            budget: 50,
+            assertion: "4x constrained gameplay frame-interval p99 ms: 100 exceeded budget 50",
+          },
+          {
+            id: "frame-interval-max",
+            label: "4x constrained gameplay frame-interval max ms",
+            actual: 100.1,
+            budget: 75,
+            assertion: "4x constrained gameplay frame-interval max ms: 100.1 exceeded budget 75",
+          },
+        ],
+      });
+    },
+  ));
 
-test("simulation boundary report validates a new diagnostic pacing assessment without requiring a pacing exit", async () => fixture({
-  aggregateP95Ms: 9.8, tickP95Ms: 1.8,
-}, async (directory) => {
-  const path = resolve(directory, "candidate.stdout");
-  const lines = (await readFile(path, "utf8")).split("\n");
-  const measured = JSON.parse(lines[2]);
-  measured.measurements.frameInterval.p99Ms = 100;
-  measured.measurements.frameInterval.maxMs = 100.1;
-  measured.measurements.pacingAssessment = {
-    format: "tear-browser-pacing-assessment", schemaVersion: 1,
-    enforcement: "diagnostic-under-cpu-throttle", cpuThrottleRate: 4,
-    status: "exceeded", failures: [{
-      id: "frame-interval-p99", actual: 100, budget: 50,
-      assertion: "4x constrained gameplay frame-interval p99 ms: 100 exceeded budget 50",
-    }, {
-      id: "frame-interval-max", actual: 100.1, budget: 75,
-      assertion: "4x constrained gameplay frame-interval max ms: 100.1 exceeded budget 75",
-    }],
-  };
-  lines[2] = JSON.stringify(measured);
-  await writeFile(path, lines.join("\n"));
-  const report = createSimulationBoundaryReport(input(directory));
-  assert.equal(report.exitCode, 0);
-  assert.equal(report.outcome, "aggregate-within-budget");
-  assert.equal(report.sampleAssessment.status, "failed");
+test("simulation boundary report validates a new diagnostic pacing assessment without requiring a pacing exit", async () =>
+  fixture(
+    {
+      aggregateP95Ms: 9.8,
+      tickP95Ms: 1.8,
+    },
+    async (directory) => {
+      const path = resolve(directory, "candidate.stdout");
+      const lines = (await readFile(path, "utf8")).split("\n");
+      const measured = JSON.parse(lines[2]);
+      measured.measurements.frameInterval.p99Ms = 100;
+      measured.measurements.frameInterval.maxMs = 100.1;
+      measured.measurements.pacingAssessment = {
+        format: "tear-browser-pacing-assessment",
+        schemaVersion: 1,
+        enforcement: "diagnostic-under-cpu-throttle",
+        cpuThrottleRate: 4,
+        status: "exceeded",
+        failures: [
+          {
+            id: "frame-interval-p99",
+            actual: 100,
+            budget: 50,
+            assertion: "4x constrained gameplay frame-interval p99 ms: 100 exceeded budget 50",
+          },
+          {
+            id: "frame-interval-max",
+            actual: 100.1,
+            budget: 75,
+            assertion: "4x constrained gameplay frame-interval max ms: 100.1 exceeded budget 75",
+          },
+        ],
+      };
+      lines[2] = JSON.stringify(measured);
+      await writeFile(path, lines.join("\n"));
+      const report = createSimulationBoundaryReport(input(directory));
+      assert.equal(report.exitCode, 0);
+      assert.equal(report.outcome, "aggregate-within-budget");
+      assert.equal(report.sampleAssessment.status, "failed");
 
-  measured.measurements.pacingAssessment.failures[0].actual = 99;
-  lines[2] = JSON.stringify(measured);
-  await writeFile(path, lines.join("\n"));
-  assert.throws(() => createSimulationBoundaryReport(input(directory)), /pacing assessment does not match/u);
-}));
+      measured.measurements.pacingAssessment.failures[0].actual = 99;
+      lines[2] = JSON.stringify(measured);
+      await writeFile(path, lines.join("\n"));
+      assert.throws(() => createSimulationBoundaryReport(input(directory)), /pacing assessment does not match/u);
+    },
+  ));
 
 test("simulation boundary report rejects duplicate or malformed measurements", async () => {
   await fixture({ aggregateP95Ms: 11.4, tickP95Ms: 1.8 }, async (directory) => {

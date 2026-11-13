@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
-import { BOSS_DEFINITIONS, BOSS_DISPLAY_NAMES, assertBossDisplayProjection, bossPhaseMarks } from "../../src/gameplay/run/boss-definitions";
+import {
+  BOSS_DEFINITIONS,
+  BOSS_DISPLAY_NAMES,
+  assertBossDisplayProjection,
+  bossPhaseMarks,
+} from "../../src/gameplay/run/boss-definitions";
 import { CANONICAL_CONTENT_AUTHORITY, materializeCanonicalScenario } from "../../src/tearbench/canonical-scenarios";
 import scenarioCatalog from "../../src/tearbench/canonical-scenarios.json";
 import { createEnemyHarness, type BehaviorActor } from "./enemy-test-harness";
@@ -29,20 +34,38 @@ function liveBossRuntime() {
   const run = { mode: "campaign" as const, wave: 1 };
   const noop = () => undefined;
   const runtime = createLiveContentRuntime({
-    width: CONFIG.view.w, random, run: () => run, modes: () => [], stages: [{ boss: "warden" }],
+    width: CONFIG.view.w,
+    random,
+    run: () => run,
+    modes: () => [],
+    stages: [{ boss: "warden" }],
     bossBiomeStages: [{ boss: "warden" }, { boss: "white-hart" }],
-    platforms: () => harness.platforms, groundY: () => CONFIG.world.groundY, createBoss,
+    platforms: () => harness.platforms,
+    groundY: () => CONFIG.world.groundY,
+    createBoss,
     construction: {
       sideSpawn: () => 0,
-      createGround: () => createBoss("warden"), createAir: () => createBoss("warden"),
-      createSupport: () => createBoss("warden"), createBoss,
+      createGround: () => createBoss("warden"),
+      createAir: () => createBoss("warden"),
+      createSupport: () => createBoss("warden"),
+      createBoss,
       beginBossPresentation: noop,
     },
     spawning: {
-      random, run: () => run, campaignStage: () => 0, contentWave: () => 1,
+      random,
+      run: () => run,
+      campaignStage: () => 0,
+      contentWave: () => 1,
       groundSpawn: () => ({ x: CONFIG.view.w / 2, y: CONFIG.world.groundY - 180 }),
-      applyPreset: noop, rollVariant: () => null, applyVariant: noop, rollAffixes: noop,
-      arrivalEffect: noop, recordSpawn: noop, install: (enemy) => { installed.push(enemy); },
+      applyPreset: noop,
+      rollVariant: () => null,
+      applyVariant: noop,
+      rollAffixes: noop,
+      arrivalEffect: noop,
+      recordSpawn: noop,
+      install: (enemy) => {
+        installed.push(enemy);
+      },
     },
   });
   return { runtime, installed };
@@ -66,7 +89,9 @@ describe("current boss observation authority", () => {
   it("exposes Aldric's authored ordinal phases across fire, kneel, and frenzy", () => {
     const harness = createEnemyHarness([0.25, 0.75, 0.4]);
     const boss = new harness.types.Aldric(CONFIG.view.w / 2, CONFIG.world.groundY - 180) as BehaviorActor & {
-      phase: number; mode: string; revive(witnessed: boolean): void;
+      phase: number;
+      mode: string;
+      revive(witnessed: boolean): void;
     };
     const [fireTier, fakeTier] = bossPhaseMarks("aldric");
     expect(boss.phase).toBe(1);
@@ -86,7 +111,10 @@ describe("current boss observation authority", () => {
     const harness = createEnemyHarness();
     const boss = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2);
     expect(projectLiveBossObservation(boss)).toEqual({
-      id: "rootbound", phase: "1", validPhases: ["1", "2", "3"], homeStage: "verdant-sanctum",
+      id: "rootbound",
+      phase: "1",
+      validPhases: ["1", "2", "3"],
+      homeStage: "verdant-sanctum",
     });
     boss.hp = boss.maxHp * 0.5;
     expect(projectLiveBossObservation(boss)?.phase).toBe("2");
@@ -97,8 +125,11 @@ describe("current boss observation authority", () => {
   it("rejects canonical scenario subject or specialized mechanic drift", () => {
     const rootbound = scenarioCatalog.find((entry) => entry.id === "rootbound-graft-anchor-destruction");
     const bloom = scenarioCatalog.find((entry) => entry.id === "verdant-bloom-well-cycle");
-    if (rootbound === undefined || bloom === undefined) throw new Error("canonical environment scenarios are incomplete");
-    expect(CANONICAL_CONTENT_AUTHORITY.scenarios.find(({ id }) => id === rootbound.id)?.subject).toEqual(rootbound.subject);
+    if (rootbound === undefined || bloom === undefined)
+      throw new Error("canonical environment scenarios are incomplete");
+    expect(CANONICAL_CONTENT_AUTHORITY.scenarios.find(({ id }) => id === rootbound.id)?.subject).toEqual(
+      rootbound.subject,
+    );
     expect(() => {
       const altered = { ...rootbound, subject: { kind: "environment-combat-object", id: "invented-mechanic" } };
       // The canonical materializer is the source-derived boundary for subjects.
@@ -110,7 +141,8 @@ describe("current boss observation authority", () => {
     }).toThrow(/source-owned field mechanic/u);
     const genericField = scenarioCatalog.find((entry) => entry.subject.id === "generic-field");
     const genericCombatObject = scenarioCatalog.find((entry) => entry.subject.id === "generic-combat-object");
-    if (genericField === undefined || genericCombatObject === undefined) throw new Error("generic environment scenarios are incomplete");
+    if (genericField === undefined || genericCombatObject === undefined)
+      throw new Error("generic environment scenarios are incomplete");
     expect(() => {
       materializeCanonicalScenario({ ...genericField, tags: [...genericField.tags, "bloom-well"] });
     }).toThrow(/generic environment scenario.*specialized mechanic/u);
@@ -124,13 +156,16 @@ describe("current boss observation authority", () => {
     expect(stageDefinition("tear").boss).toBe("source");
     expect(CANONICAL_CONTENT_AUTHORITY.stageDisplayNames.tear).toBe("The Tear");
     expect(CANONICAL_CONTENT_AUTHORITY.bosses.find(({ id }) => id === "source")).toMatchObject({
-      displayName: "The Source", homeStage: "tear",
+      displayName: "The Source",
+      homeStage: "tear",
     });
     expect(CANONICAL_CONTENT_AUTHORITY.bosses.find(({ id }) => id === "rootbound")).toMatchObject({
-      displayName: "The Rootbound", homeStage: "verdant-sanctum",
+      displayName: "The Rootbound",
+      homeStage: "verdant-sanctum",
     });
     expect(CANONICAL_CONTENT_AUTHORITY.bosses.find(({ id }) => id === "white-hart")).toMatchObject({
-      displayName: "The White Hart", homeStage: "pale-traverse",
+      displayName: "The White Hart",
+      homeStage: "pale-traverse",
     });
     expect(STAGE_PUBLICATION_STATE["verdant-sanctum"]).toBe("published");
     expect(STAGE_PUBLICATION_STATE["pale-traverse"]).toBe("preview");
@@ -139,7 +174,9 @@ describe("current boss observation authority", () => {
 
   it("rejects an injected boss-name projection that drifts from the production owner", () => {
     const staleNames = { ...BOSS_DISPLAY_NAMES, rootbound: "Rootbinder" };
-    expect(() => { assertBossDisplayProjection(staleNames); }).toThrow(/boss display drift/u);
+    expect(() => {
+      assertBossDisplayProjection(staleNames);
+    }).toThrow(/boss display drift/u);
     expect(BOSS_DEFINITIONS.find(({ id }) => id === "rootbound")?.name).toBe("The Rootbound");
   });
 });

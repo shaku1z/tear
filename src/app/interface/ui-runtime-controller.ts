@@ -91,20 +91,34 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
   const wheel = input.takeUIScroll();
   const touch = input.touchActive();
   const decision = coordinateUiFrame({
-    screen, screenAgeSeconds: now - arming.openedAtSeconds, confirmReleasedSinceOpen: arming.releasedSinceOpen,
-    buttons: ports.buttons(), focus: ports.focus(), scroll: ports.scroll(),
-    scrollY: wheel.y, pageUp: input.ui.pageUp, pageDown: input.ui.pageDown,
-    pointer: { x: input.mouseX, y: input.mouseY }, touch,
+    screen,
+    screenAgeSeconds: now - arming.openedAtSeconds,
+    confirmReleasedSinceOpen: arming.releasedSinceOpen,
+    buttons: ports.buttons(),
+    focus: ports.focus(),
+    scroll: ports.scroll(),
+    scrollY: wheel.y,
+    pageUp: input.ui.pageUp,
+    pageDown: input.ui.pageDown,
+    pointer: { x: input.mouseX, y: input.mouseY },
+    touch,
     directions: { left: input.menuLeft(), right: input.menuRight(), up: input.menuUp(), down: input.menuDown() },
-    previous: input.menuPrev(), next: input.menuNext(), pressed: input.pressed,
-    back: input.backPressed(), confirm: input.confirmPressed(), context1: input.ui.context1 ?? false,
+    previous: input.menuPrev(),
+    next: input.menuNext(),
+    pressed: input.pressed,
+    back: input.backPressed(),
+    confirm: input.confirmPressed(),
+    context1: input.ui.context1 ?? false,
   });
   ports.setFocus(decision.focus);
   ports.setScroll(decision.scroll);
   if (decision.consumeBack) input.padBack = false;
   if (decision.playUiSound) ports.playInterfaceSound();
   if (activateSemanticAction(ports, decision.action)) return;
-  if (decision.pointer === "consume") { input.takeClick(); return; }
+  if (decision.pointer === "consume") {
+    input.takeClick();
+    return;
+  }
   if (decision.pointer !== "read") return;
   const pointer = coordinateUiPointer(ports.buttons(), ports.focus(), input.takeClick(), touch);
   ports.setFocus(pointer.focus);
@@ -113,7 +127,7 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
 }
 
 export function stepRuntimeTab<Key>(
-  tabs: readonly (readonly [Key, ...readonly unknown[]])[],
+  tabs: readonly (readonly [Key, ...(readonly unknown[])])[],
   current: Key,
   input: Pick<UiRuntimeInput, "ui">,
   playInterfaceSound: () => void,

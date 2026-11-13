@@ -21,10 +21,7 @@ export function gainToDb(gain: number): number {
  * This is the heart of "tiers via gain, not restart": the player only ramps
  * these values; it never stops or re-seeks a voice.
  */
-export function planTierGains(
-  cue: StemCueManifest,
-  tier: Tier,
-): Record<string, number> {
+export function planTierGains(cue: StemCueManifest, tier: Tier): Record<string, number> {
   const mix = cue.tiers[tier];
   const out: Record<string, number> = {};
   for (const stem of cue.stems) {

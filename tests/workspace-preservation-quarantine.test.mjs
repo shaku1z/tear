@@ -10,9 +10,7 @@ import { fileURLToPath } from "node:url";
 
 import { runWorkspaceRecoveryReport } from "../scripts/report-workspace-recovery.mjs";
 import { runWorkspaceQuarantinePreparation } from "../scripts/prepare-workspace-quarantine.mjs";
-import {
-  runWorkspacePreservationQuarantine,
-} from "../scripts/apply-workspace-quarantine.mjs";
+import { runWorkspacePreservationQuarantine } from "../scripts/apply-workspace-quarantine.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const policySource = path.join(repositoryRoot, "preservation", "workspace-recovery-policy.json");
@@ -169,7 +167,10 @@ test("applies whole-root preservation, moves protected content intact, and write
     assert.equal(receipt.sourceCount, 2);
     assert.match(receipt.eventsSha256, /^[0-9a-f]{64}$/u);
     assert.equal(fs.existsSync(path.join(fixture.workspaceRoot, "gsm-one")), false);
-    assert.equal(fs.readFileSync(path.join(evidence.destination, "gsm-one", ".env"), "utf8"), "SECRET=protected fixture\n");
+    assert.equal(
+      fs.readFileSync(path.join(evidence.destination, "gsm-one", ".env"), "utf8"),
+      "SECRET=protected fixture\n",
+    );
     const receiptPath = path.join(evidence.journalPath, "completion-receipt.json");
     assert.equal(JSON.parse(fs.readFileSync(receiptPath, "utf8")).eventCount > 0, true);
     assert.equal(fs.readdirSync(evidence.journalPath).filter((name) => name.endsWith(".json")).length > 2, true);
@@ -188,7 +189,10 @@ test("requires exact acknowledgements and refuses changed evidence", () => {
       assert.throws(() => runWorkspacePreservationQuarantine(missing), /exact .*acknowledgements/u);
     }
     addFile(fixture.workspaceRoot, "gsm-one/payload.txt", "changed after manifest\n");
-    assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence)), /stable evidence|hash changed|metadata changed/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(fixture, evidence)),
+      /stable evidence|hash changed|metadata changed/u,
+    );
     assert.equal(fs.existsSync(evidence.destination), false);
   } finally {
     cleanup(fixture);
@@ -217,7 +221,10 @@ test("rejects first-wave partition provenance in report and both manifest locati
           manifest.evidence.partition = partition;
         });
       }
-      assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence)), /first-wave evidence must not carry second-wave partition provenance/u);
+      assert.throws(
+        () => runWorkspacePreservationQuarantine(options(fixture, evidence)),
+        /first-wave evidence must not carry second-wave partition provenance/u,
+      );
       assert.equal(fs.existsSync(evidence.destination), false);
       assert.equal(fs.existsSync(path.join(fixture.workspaceRoot, "gsm-one")), true);
     } finally {
@@ -230,7 +237,10 @@ test("resumes an injected partial rename only after validating moved destination
   const fixture = createFixture();
   try {
     const evidence = createEvidence(fixture);
-    assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence, { interruptAfterMoves: 1 })), /injected interruption/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(fixture, evidence, { interruptAfterMoves: 1 })),
+      /injected interruption/u,
+    );
     assert.equal(fs.existsSync(path.join(evidence.destination, "gsm-one")), true);
     assert.equal(fs.existsSync(path.join(fixture.workspaceRoot, "gsm-one")), false);
     assert.equal(fs.existsSync(path.join(evidence.journalPath, "completion-receipt.json")), false);
@@ -275,7 +285,10 @@ test("refuses collisions and both-present or both-missing source pairs", () => {
     const evidence = createEvidence(collision);
     fs.mkdirSync(evidence.destination, { recursive: true });
     addFile(evidence.destination, "unexpected.txt", "collision\n");
-    assert.throws(() => runWorkspacePreservationQuarantine(options(collision, evidence)), /destination must be absent/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(collision, evidence)),
+      /destination must be absent/u,
+    );
   } finally {
     cleanup(collision);
   }
@@ -283,11 +296,17 @@ test("refuses collisions and both-present or both-missing source pairs", () => {
   const bothPresent = createFixture();
   try {
     const evidence = createEvidence(bothPresent);
-    assert.throws(() => runWorkspacePreservationQuarantine(options(bothPresent, evidence, { interruptAfterMoves: 1 })), /injected interruption/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(bothPresent, evidence, { interruptAfterMoves: 1 })),
+      /injected interruption/u,
+    );
     const original = path.join(bothPresent.workspaceRoot, "gsm-one");
     fs.mkdirSync(original, { recursive: true });
     addFile(original, "payload.txt", "recreated\n");
-    assert.throws(() => runWorkspacePreservationQuarantine(options(bothPresent, evidence, { resume: true })), /both-present/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(bothPresent, evidence, { resume: true })),
+      /both-present/u,
+    );
   } finally {
     cleanup(bothPresent);
   }
@@ -295,9 +314,15 @@ test("refuses collisions and both-present or both-missing source pairs", () => {
   const bothMissing = createFixture();
   try {
     const evidence = createEvidence(bothMissing);
-    assert.throws(() => runWorkspacePreservationQuarantine(options(bothMissing, evidence, { interruptAfterMoves: 1 })), /injected interruption/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(bothMissing, evidence, { interruptAfterMoves: 1 })),
+      /injected interruption/u,
+    );
     fs.rmSync(path.join(evidence.destination, "gsm-one"), { recursive: true, force: true });
-    assert.throws(() => runWorkspacePreservationQuarantine(options(bothMissing, evidence, { resume: true })), /both-missing/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(bothMissing, evidence, { resume: true })),
+      /both-missing/u,
+    );
   } finally {
     cleanup(bothMissing);
   }
@@ -310,7 +335,10 @@ test("rejects case-insensitive duplicate source and destination mappings before 
     rewriteManifest(evidence, (manifest) => {
       manifest.roots.sourceRoots[1].name = manifest.roots.sourceRoots[0].name.toUpperCase();
     });
-    assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence)), /case-insensitive duplicate destination child mappings/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(fixture, evidence)),
+      /case-insensitive duplicate destination child mappings/u,
+    );
     assert.equal(fs.existsSync(evidence.destination), false);
     assert.equal(fs.existsSync(path.join(fixture.workspaceRoot, "gsm-one")), true);
   } finally {
@@ -322,14 +350,20 @@ test("rejects fabricated journal event identity and tampered completion receipt"
   const interrupted = createFixture();
   try {
     const evidence = createEvidence(interrupted);
-    assert.throws(() => runWorkspacePreservationQuarantine(options(interrupted, evidence, { interruptAfterMoves: 1 })), /injected interruption/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(interrupted, evidence, { interruptAfterMoves: 1 })),
+      /injected interruption/u,
+    );
     const moveStartName = fs.readdirSync(evidence.journalPath).find((name) => name.includes("move-start"));
     assert.notEqual(moveStartName, undefined);
     const moveStartPath = path.join(evidence.journalPath, moveStartName);
     const moveStart = JSON.parse(fs.readFileSync(moveStartPath, "utf8"));
     moveStart.destinationPath = path.join(evidence.destination, "fabricated-source");
     fs.writeFileSync(moveStartPath, `${JSON.stringify(moveStart, null, 2)}\n`, "utf8");
-    assert.throws(() => runWorkspacePreservationQuarantine(options(interrupted, evidence, { resume: true })), /journal .*identity|journal .*invalid/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(interrupted, evidence, { resume: true })),
+      /journal .*identity|journal .*invalid/u,
+    );
   } finally {
     cleanup(interrupted);
   }
@@ -342,7 +376,10 @@ test("rejects fabricated journal event identity and tampered completion receipt"
     const receipt = JSON.parse(fs.readFileSync(receiptPath, "utf8"));
     receipt.eventsSha256 = "0".repeat(64);
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-    assert.throws(() => runWorkspacePreservationQuarantine(options(completed, evidence, { resume: true })), /completion receipt event hash or count/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(completed, evidence, { resume: true })),
+      /completion receipt event hash or count/u,
+    );
   } finally {
     cleanup(completed);
   }
@@ -359,7 +396,8 @@ test("requires exactly one authenticated apply-complete event before accepting a
     });
     assert.notEqual(applyCompleteName, undefined);
     fs.rmSync(path.join(evidence.journalPath, applyCompleteName));
-    const eventNames = fs.readdirSync(evidence.journalPath)
+    const eventNames = fs
+      .readdirSync(evidence.journalPath)
       .filter((name) => /^\d{6}-[a-z0-9-]+\.json$/u.test(name))
       .sort();
     const eventsHash = createHash("sha256");
@@ -369,7 +407,10 @@ test("requires exactly one authenticated apply-complete event before accepting a
     receipt.eventCount = eventNames.length;
     receipt.eventsSha256 = eventsHash.digest("hex");
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, "utf8");
-    assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence, { resume: true })), /exactly one apply-complete/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(options(fixture, evidence, { resume: true })),
+      /exactly one apply-complete/u,
+    );
   } finally {
     cleanup(fixture);
   }
@@ -380,13 +421,20 @@ test("final destination verification blocks certification after a post-last-move
   try {
     const evidence = createEvidence(fixture);
     const concurrentMutation = path.join(evidence.destination, "gsm-one", "post-last-move-mutation.txt");
-    assert.throws(() => runWorkspacePreservationQuarantine(options(fixture, evidence, {
-      beforeFinalCompletionVerification: () => {
-        fs.writeFileSync(concurrentMutation, "concurrent mutation\n", "utf8");
-      },
-    })), /whole-root evidence was added/u);
+    assert.throws(
+      () =>
+        runWorkspacePreservationQuarantine(
+          options(fixture, evidence, {
+            beforeFinalCompletionVerification: () => {
+              fs.writeFileSync(concurrentMutation, "concurrent mutation\n", "utf8");
+            },
+          }),
+        ),
+      /whole-root evidence was added/u,
+    );
     assert.equal(fs.existsSync(path.join(evidence.journalPath, "completion-receipt.json")), false);
-    const eventTypes = fs.readdirSync(evidence.journalPath)
+    const eventTypes = fs
+      .readdirSync(evidence.journalPath)
       .filter((name) => /^\d{6}-[a-z0-9-]+\.json$/u.test(name))
       .map((name) => JSON.parse(fs.readFileSync(path.join(evidence.journalPath, name), "utf8")).type);
     assert.equal(eventTypes.includes("apply-complete"), false);

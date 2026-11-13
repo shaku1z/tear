@@ -29,43 +29,78 @@ export function createProductionCombatSimulation<State>(
     combatEntities: phases.combatEntities,
     kill: phases.kill,
     createCombat: ({ combatEntities, resolveKill }) => {
-      phases.installCombat(combatEntities, resolveKill as never,
-        (enemy) => combatEntities.id(enemy, "enemy"));
+      phases.installCombat(combatEntities, resolveKill as never, (enemy) => combatEntities.id(enemy, "enemy"));
       return {
         opening: phases.opening,
         collision: phases.collision,
-        advanceClock: (seconds) => { replay.clock.sim += seconds; },
+        advanceClock: (seconds) => {
+          replay.clock.sim += seconds;
+        },
         captureProtection: () => undefined,
         applyProtection: () => undefined,
       };
     },
     authoritative: {
-      actionPort: { apply(input, tick, actions) { replay.tutorial.captureCoachCommands(actions.map((entry) => entry.command)); replay.input.actionPort.apply(input, tick, actions); } },
+      actionPort: {
+        apply(input, tick, actions) {
+          replay.tutorial.captureCoachCommands(actions.map((entry) => entry.command));
+          replay.input.actionPort.apply(input, tick, actions);
+        },
+      },
       afterWorldStep: (tick, input) => {
-        replay.tutorial.afterWorldStep(liveTutorialCoachFrame(replay.tutorial, tick, replay.world.state, core.combatEntityRuntime, replay.stage.index), input.snapshot());
+        replay.tutorial.afterWorldStep(
+          liveTutorialCoachFrame(
+            replay.tutorial,
+            tick,
+            replay.world.state,
+            core.combatEntityRuntime,
+            replay.stage.index,
+          ),
+          input.snapshot(),
+        );
       },
       snapshot: (tick, input) => options.snapshot(tick, input),
     },
   });
   const config = replay.configuration.value;
-  bindLiveAuroraTrackActors(replay.world.context.environment,
-    () => replay.world.state.player() as never, () => replay.world.state.blade() as never,
-    () => replay.world.state.enemies(), () => replay.world.state.projectiles(),
+  bindLiveAuroraTrackActors(
+    replay.world.context.environment,
+    () => replay.world.state.player() as never,
+    () => replay.world.state.blade() as never,
+    () => replay.world.state.enemies(),
+    () => replay.world.state.projectiles(),
     (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
     (projectile) => core.combatEntityRuntime.id(projectile, "projectile"),
-    { playerAcceleration: config.player.groundAccel, playerMaximumSpeed: config.player.moveSpeed,
-      bladeAcceleration: config.blade.throw.speed, bladeMaximumSpeed: config.blade.throw.maxSpeed,
-      projectileAcceleration: config.proj.speed, projectileMaximumSpeed: config.chargedShot.speed });
-  bindLiveWhiteHartActors(replay.world.context.environment,
+    {
+      playerAcceleration: config.player.groundAccel,
+      playerMaximumSpeed: config.player.moveSpeed,
+      bladeAcceleration: config.blade.throw.speed,
+      bladeMaximumSpeed: config.blade.throw.maxSpeed,
+      projectileAcceleration: config.proj.speed,
+      projectileMaximumSpeed: config.chargedShot.speed,
+    },
+  );
+  bindLiveWhiteHartActors(
+    replay.world.context.environment,
     () => replay.world.state.player() as never,
     () => replay.world.state.enemies(),
-    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"));
-  bindLiveRootboundActors(replay.world.context.environment,
+    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+  );
+  bindLiveRootboundActors(
+    replay.world.context.environment,
     () => replay.world.state.player() as never,
     () => replay.world.state.enemies(),
-    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"), config);
-  replay.world.context.environment.setAvailableActorIdsSource(() => new Set(["player", "blade",
-    ...replay.world.state.enemies().map((enemy) => core.combatEntityRuntime.id(enemy, "enemy")),
-    ...replay.world.state.projectiles().map((projectile) => core.combatEntityRuntime.id(projectile, "projectile"))]));
+    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+    config,
+  );
+  replay.world.context.environment.setAvailableActorIdsSource(
+    () =>
+      new Set([
+        "player",
+        "blade",
+        ...replay.world.state.enemies().map((enemy) => core.combatEntityRuntime.id(enemy, "enemy")),
+        ...replay.world.state.projectiles().map((projectile) => core.combatEntityRuntime.id(projectile, "projectile")),
+      ]),
+  );
   return Object.freeze({ ...core, outward: phases.outward, opening: phases.opening, collision: phases.collision });
 }

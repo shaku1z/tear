@@ -4,10 +4,18 @@ import type { TearPixelTemporalObservation } from "./pixel-observation";
  * carry GameAction, ScreenAction, entity IDs, choice IDs, or any hidden state. */
 export type TearClassCPhysicalIntent =
   | Readonly<{ device: "keyboard-mouse"; type: "key"; code: string; phase: "down" | "up" }>
-  | Readonly<{ device: "keyboard-mouse"; type: "pointer"; x: number; y: number; button: 0 | 1 | 2; phase: "move" | "down" | "up" }>
+  | Readonly<{
+      device: "keyboard-mouse";
+      type: "pointer";
+      x: number;
+      y: number;
+      button: 0 | 1 | 2;
+      phase: "move" | "down" | "up";
+    }>
   | Readonly<{ device: "touch"; type: "touch"; x: number; y: number; phase: "start" | "end"; identifier: number }>;
 
-export type TearClassCPolicyStage = "boot" | "opening-menu" | "configuring-run" | "playing" | "selecting-reward" | "returning-menu" | "failed";
+export type TearClassCPolicyStage =
+  "boot" | "opening-menu" | "configuring-run" | "playing" | "selecting-reward" | "returning-menu" | "failed";
 
 export interface TearClassCPolicyDecision {
   readonly stage: TearClassCPolicyStage;
@@ -18,16 +26,18 @@ export interface TearClassCPolicyDecision {
 
 export type TearClassCPhysicalInputProfile = "keyboard-mouse" | "touch";
 
-const pointerClick = (x: number, y: number): readonly TearClassCPhysicalIntent[] => Object.freeze([
-  { device: "keyboard-mouse", type: "pointer", x, y, button: 0, phase: "move" },
-  { device: "keyboard-mouse", type: "pointer", x, y, button: 0, phase: "down" },
-  { device: "keyboard-mouse", type: "pointer", x, y, button: 0, phase: "up" },
-]);
+const pointerClick = (x: number, y: number): readonly TearClassCPhysicalIntent[] =>
+  Object.freeze([
+    { device: "keyboard-mouse", type: "pointer", x, y, button: 0, phase: "move" },
+    { device: "keyboard-mouse", type: "pointer", x, y, button: 0, phase: "down" },
+    { device: "keyboard-mouse", type: "pointer", x, y, button: 0, phase: "up" },
+  ]);
 
-const touchTap = (x: number, y: number): readonly TearClassCPhysicalIntent[] => Object.freeze([
-  { device: "touch", type: "touch", x, y, identifier: 1, phase: "start" },
-  { device: "touch", type: "touch", x, y, identifier: 1, phase: "end" },
-]);
+const touchTap = (x: number, y: number): readonly TearClassCPhysicalIntent[] =>
+  Object.freeze([
+    { device: "touch", type: "touch", x, y, identifier: 1, phase: "start" },
+    { device: "touch", type: "touch", x, y, identifier: 1, phase: "end" },
+  ]);
 
 /**
  * A deliberately small, auditable pixel-only bootstrap policy.  It can operate
@@ -44,11 +54,18 @@ export class TearClassCVisualPolicy {
     this.#inputProfile = inputProfile;
   }
 
-  get stage(): TearClassCPolicyStage { return this.#stage; }
+  get stage(): TearClassCPolicyStage {
+    return this.#stage;
+  }
 
   decide(input: TearPixelTemporalObservation): TearClassCPolicyDecision {
     if (input.occluded || input.observation.confidence < 0.5) {
-      return Object.freeze({ stage: this.#stage, confidence: input.observation.confidence, reason: "visual-surface-occluded-or-low-confidence", intents: Object.freeze([]) });
+      return Object.freeze({
+        stage: this.#stage,
+        confidence: input.observation.confidence,
+        reason: "visual-surface-occluded-or-low-confidence",
+        intents: Object.freeze([]),
+      });
     }
     const screen = input.observation.kind;
     if ((this.#stage === "boot" || this.#stage === "opening-menu") && screen === "menu-like") {
@@ -56,19 +73,42 @@ export class TearClassCVisualPolicy {
       // so. This lets touch's legitimate focus-then-activate interaction
       // issue a second normal tap while keeping keyboard/mouse equally honest.
       this.#stage = "opening-menu";
-      return Object.freeze({ stage: this.#stage, confidence: input.observation.confidence, reason: "visible-menu-primary-affordance", intents: this.#tap(260, 360) });
+      return Object.freeze({
+        stage: this.#stage,
+        confidence: input.observation.confidence,
+        reason: "visible-menu-primary-affordance",
+        intents: this.#tap(260, 360),
+      });
     }
     if ((this.#stage === "opening-menu" || this.#stage === "configuring-run") && screen === "setup-like") {
       this.#stage = "configuring-run";
-      const targets = [[430, 195], [820, 197], [1180, 203], [800, 758]] as const;
+      const targets = [
+        [430, 195],
+        [820, 197],
+        [1180, 203],
+        [800, 758],
+      ] as const;
       const target = targets[this.#setupStep++];
       if (target === undefined) {
         this.#stage = "playing";
-        return Object.freeze({ stage: this.#stage, confidence: input.observation.confidence, reason: "visible-run-configuration-complete", intents: Object.freeze([]) });
+        return Object.freeze({
+          stage: this.#stage,
+          confidence: input.observation.confidence,
+          reason: "visible-run-configuration-complete",
+          intents: Object.freeze([]),
+        });
       }
-      return Object.freeze({ stage: this.#stage, confidence: input.observation.confidence, reason: "visible-setup-affordance", intents: this.#tap(target[0], target[1]) });
+      return Object.freeze({
+        stage: this.#stage,
+        confidence: input.observation.confidence,
+        reason: "visible-setup-affordance",
+        intents: this.#tap(target[0], target[1]),
+      });
     }
-    if ((this.#stage === "opening-menu" || this.#stage === "configuring-run" || this.#stage === "playing") && screen === "playing-like") {
+    if (
+      (this.#stage === "opening-menu" || this.#stage === "configuring-run" || this.#stage === "playing") &&
+      screen === "playing-like"
+    ) {
       this.#stage = "playing";
       const aim = this.#combatAim(input);
       const intents: readonly TearClassCPhysicalIntent[] = Object.freeze([
@@ -80,38 +120,55 @@ export class TearClassCVisualPolicy {
         { device: "keyboard-mouse", type: "pointer", x: aim.x, y: aim.y, button: 0, phase: "up" },
       ] as const);
       return Object.freeze({
-        stage: this.#stage, confidence: input.observation.confidence, reason: "visible-combat-pulse",
+        stage: this.#stage,
+        confidence: input.observation.confidence,
+        reason: "visible-combat-pulse",
         intents,
       });
     }
     if (this.#stage === "playing" && (screen === "overlay-like" || screen === "draft-like")) {
       this.#stage = "selecting-reward";
       const target = screen === "draft-like" ? this.#draftCardTarget(input) : Object.freeze({ x: 314, y: 300 });
-      const intents = screen === "draft-like" && this.#inputProfile === "keyboard-mouse"
-        // The rendered card row visibly advertises 1/2/3/4. Selecting its
-        // left-most card with Digit1 is a normal player key, not a reward ID.
-        ? Object.freeze([
-          { device: "keyboard-mouse" as const, type: "key" as const, code: "Digit1", phase: "down" as const },
-          { device: "keyboard-mouse" as const, type: "key" as const, code: "Digit1", phase: "up" as const },
-        ])
-        : this.#tap(target.x, target.y);
-      return Object.freeze({ stage: this.#stage, confidence: input.observation.confidence, reason: `visible-${screen}-affordance`, intents });
+      const intents =
+        screen === "draft-like" && this.#inputProfile === "keyboard-mouse"
+          ? // The rendered card row visibly advertises 1/2/3/4. Selecting its
+            // left-most card with Digit1 is a normal player key, not a reward ID.
+            Object.freeze([
+              { device: "keyboard-mouse" as const, type: "key" as const, code: "Digit1", phase: "down" as const },
+              { device: "keyboard-mouse" as const, type: "key" as const, code: "Digit1", phase: "up" as const },
+            ])
+          : this.#tap(target.x, target.y);
+      return Object.freeze({
+        stage: this.#stage,
+        confidence: input.observation.confidence,
+        reason: `visible-${screen}-affordance`,
+        intents,
+      });
     }
     if (this.#stage !== "boot" && screen === "terminal-like") {
       if (this.#inputProfile === "touch") {
         const target = this.#terminalMenuTarget(input);
         if (target === undefined) {
-          return Object.freeze({ stage: this.#stage, confidence: input.observation.confidence, reason: "visible-terminal-awaiting-touch-return-affordance", intents: Object.freeze([]) });
+          return Object.freeze({
+            stage: this.#stage,
+            confidence: input.observation.confidence,
+            reason: "visible-terminal-awaiting-touch-return-affordance",
+            intents: Object.freeze([]),
+          });
         }
         this.#stage = "returning-menu";
         return Object.freeze({
-          stage: this.#stage, confidence: input.observation.confidence, reason: "visible-terminal-touch-menu-affordance",
+          stage: this.#stage,
+          confidence: input.observation.confidence,
+          reason: "visible-terminal-touch-menu-affordance",
           intents: this.#tap(target.x, target.y),
         });
       }
       this.#stage = "returning-menu";
       return Object.freeze({
-        stage: this.#stage, confidence: input.observation.confidence, reason: "visible-terminal-keyboard-menu-navigation",
+        stage: this.#stage,
+        confidence: input.observation.confidence,
+        reason: "visible-terminal-keyboard-menu-navigation",
         intents: Object.freeze([
           { device: "keyboard-mouse", type: "key", code: "ArrowDown", phase: "down" },
           { device: "keyboard-mouse", type: "key", code: "ArrowDown", phase: "up" },
@@ -122,10 +179,20 @@ export class TearClassCVisualPolicy {
     }
     if (this.#stage === "returning-menu" && screen === "menu-like") {
       this.#stage = "boot";
-      return Object.freeze({ stage: this.#stage, confidence: input.observation.confidence, reason: "visible-menu-return-complete", intents: Object.freeze([]) });
+      return Object.freeze({
+        stage: this.#stage,
+        confidence: input.observation.confidence,
+        reason: "visible-menu-return-complete",
+        intents: Object.freeze([]),
+      });
     }
     // This explicit no-op is safer than inferring an unseen state from timing.
-    return Object.freeze({ stage: this.#stage, confidence: input.observation.confidence, reason: `awaiting-visible-${screen}`, intents: Object.freeze([]) });
+    return Object.freeze({
+      stage: this.#stage,
+      confidence: input.observation.confidence,
+      reason: `awaiting-visible-${screen}`,
+      intents: Object.freeze([]),
+    });
   }
 
   #tap(x: number, y: number): readonly TearClassCPhysicalIntent[] {
@@ -158,10 +225,17 @@ export class TearClassCVisualPolicy {
     const { bounds, scaleX, scaleY } = input.observation.calibration;
     const candidate = input.observation.brightRegions
       .filter((region) => {
-        const relativeWidth = region.width / bounds.width, relativeHeight = region.height / bounds.height;
+        const relativeWidth = region.width / bounds.width,
+          relativeHeight = region.height / bounds.height;
         const relativeY = (region.y + region.height / 2 - bounds.y) / bounds.height;
-        return relativeWidth >= 0.08 && relativeWidth <= 0.28 && relativeHeight >= 0.2 && relativeHeight <= 0.65
-          && relativeY >= 0.2 && relativeY <= 0.8;
+        return (
+          relativeWidth >= 0.08 &&
+          relativeWidth <= 0.28 &&
+          relativeHeight >= 0.2 &&
+          relativeHeight <= 0.65 &&
+          relativeY >= 0.2 &&
+          relativeY <= 0.8
+        );
       })
       .sort((left, right) => left.x - right.x)[0];
     if (candidate !== undefined) {
@@ -185,9 +259,12 @@ export class TearClassCVisualPolicy {
     const { bounds, scaleX, scaleY } = input.observation.calibration;
     const action = input.observation.brightRegions
       .filter((region) => {
-        const width = region.width / bounds.width, height = region.height / bounds.height;
+        const width = region.width / bounds.width,
+          height = region.height / bounds.height;
         const relativeY = (region.y + region.height / 2 - bounds.y) / bounds.height;
-        return width >= 0.12 && width <= 0.4 && height >= 0.035 && height <= 0.12 && relativeY >= 0.25 && relativeY <= 0.8;
+        return (
+          width >= 0.12 && width <= 0.4 && height >= 0.035 && height <= 0.12 && relativeY >= 0.25 && relativeY <= 0.8
+        );
       })
       .sort((left, right) => left.y - right.y)[0];
     if (action === undefined) return undefined;

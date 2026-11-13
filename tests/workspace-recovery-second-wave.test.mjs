@@ -102,7 +102,16 @@ function secondWaveEvidence(fixture, partitionId = "second-wave-partition-1") {
   });
   const manifestPath = path.join(fixture.archiveGroup, "second-wave-manifest.json");
   const manifestSha256 = writeJson(manifestPath, manifest);
-  return { report, manifest, reportPath, reportSha256, manifestPath, manifestSha256, destination, journalPath: path.join(fixture.archiveGroup, "second-wave-journal") };
+  return {
+    report,
+    manifest,
+    reportPath,
+    reportSha256,
+    manifestPath,
+    manifestSha256,
+    destination,
+    journalPath: path.join(fixture.archiveGroup, "second-wave-journal"),
+  };
 }
 
 function applyOptions(fixture, evidence, extra = {}) {
@@ -143,20 +152,32 @@ test("requires five exhaustive ordinary partitions plus the coordinated deferred
   assert.equal(policy.dependencyGroup.junctionSourceId, "second-wave-tear-budget-architecture");
   assert.equal(policy.dependencyGroup.targetSourceId, "second-wave-tear-tearscore-normalization");
   assert.equal(policy.dependencyGroup.auditedObservedBytes, 34793487);
-  assert.equal(policy.partitions.reduce((total, partition) => total + partition.auditedObservedBytes, 0), 5718968788);
+  assert.equal(
+    policy.partitions.reduce((total, partition) => total + partition.auditedObservedBytes, 0),
+    5718968788,
+  );
   assert.equal(policy.partitionAudit.totalObservedBytes, 5753762275);
-  assert.equal(policy.partitionAudit.ordinaryPartitionObservedBytes + policy.partitionAudit.deferredObservedBytes, 5753762275);
+  assert.equal(
+    policy.partitionAudit.ordinaryPartitionObservedBytes + policy.partitionAudit.deferredObservedBytes,
+    5753762275,
+  );
   assert.ok(policy.partitions.every((partition) => partition.auditedObservedBytes < 2147483648));
 });
 
 test("rejects putting either dependency source into an ordinary partition or breaking its target relationship", () => {
   const policy = JSON.parse(fs.readFileSync(secondWavePolicySource, "utf8"));
   policy.partitions[2].sourceIds.push("second-wave-tear-tearscore-normalization");
-  assert.match(validateWorkspaceRecoverySecondWavePolicy(policy).join("\n"), /deferred source cannot be included|partition auditedObservedBytes/u);
+  assert.match(
+    validateWorkspaceRecoverySecondWavePolicy(policy).join("\n"),
+    /deferred source cannot be included|partition auditedObservedBytes/u,
+  );
 
   const targetBroken = JSON.parse(fs.readFileSync(secondWavePolicySource, "utf8"));
   targetBroken.dependencyGroup.targetSourceId = "second-wave-tear-score-g2-final-3ff4b72";
-  assert.match(validateWorkspaceRecoverySecondWavePolicy(targetBroken).join("\n"), /dependencyGroup.targetSourceId is invalid|dependencyGroup sources/u);
+  assert.match(
+    validateWorkspaceRecoverySecondWavePolicy(targetBroken).join("\n"),
+    /dependencyGroup.targetSourceId is invalid|dependencyGroup sources/u,
+  );
 });
 
 test("binds both deferred dependency records to exact sourceRoots names and root arguments", () => {
@@ -171,22 +192,36 @@ test("binds both deferred dependency records to exact sourceRoots names and root
     const sourceRootNameMutation = JSON.parse(JSON.stringify(baseline));
     const sourceRootForName = sourceRootNameMutation.sourceRoots.find((source) => source.id === deferred.id);
     sourceRootForName.name = `${sourceRootForName.name}-mismatch`;
-    assert.match(validateWorkspaceRecoverySecondWavePolicy(sourceRootNameMutation).join("\n"), /deferred source name must match sourceRoots entry/u);
+    assert.match(
+      validateWorkspaceRecoverySecondWavePolicy(sourceRootNameMutation).join("\n"),
+      /deferred source name must match sourceRoots entry/u,
+    );
 
     const sourceRootArgumentMutation = JSON.parse(JSON.stringify(baseline));
     const sourceRootForArgument = sourceRootArgumentMutation.sourceRoots.find((source) => source.id === deferred.id);
-    sourceRootForArgument.rootArgument = sourceRootForArgument.rootArgument === "temp-root" ? "workspace-root" : "temp-root";
-    assert.match(validateWorkspaceRecoverySecondWavePolicy(sourceRootArgumentMutation).join("\n"), /deferred source rootArgument must match sourceRoots entry/u);
+    sourceRootForArgument.rootArgument =
+      sourceRootForArgument.rootArgument === "temp-root" ? "workspace-root" : "temp-root";
+    assert.match(
+      validateWorkspaceRecoverySecondWavePolicy(sourceRootArgumentMutation).join("\n"),
+      /deferred source rootArgument must match sourceRoots entry/u,
+    );
 
     const deferredNameMutation = JSON.parse(JSON.stringify(baseline));
     const deferredForName = deferredNameMutation.deferredSources.find((source) => source.id === deferred.id);
     deferredForName.name = `${deferredForName.name}-mismatch`;
-    assert.match(validateWorkspaceRecoverySecondWavePolicy(deferredNameMutation).join("\n"), /deferred source name must match sourceRoots entry|deferredSources\[\d+\]\.name must be/u);
+    assert.match(
+      validateWorkspaceRecoverySecondWavePolicy(deferredNameMutation).join("\n"),
+      /deferred source name must match sourceRoots entry|deferredSources\[\d+\]\.name must be/u,
+    );
 
     const deferredArgumentMutation = JSON.parse(JSON.stringify(baseline));
     const deferredForArgument = deferredArgumentMutation.deferredSources.find((source) => source.id === deferred.id);
-    deferredForArgument.rootArgument = deferredForArgument.rootArgument === "temp-root" ? "workspace-root" : "temp-root";
-    assert.match(validateWorkspaceRecoverySecondWavePolicy(deferredArgumentMutation).join("\n"), /deferred source rootArgument must match sourceRoots entry|deferredSources\[\d+\]\.rootArgument must be/u);
+    deferredForArgument.rootArgument =
+      deferredForArgument.rootArgument === "temp-root" ? "workspace-root" : "temp-root";
+    assert.match(
+      validateWorkspaceRecoverySecondWavePolicy(deferredArgumentMutation).join("\n"),
+      /deferred source rootArgument must match sourceRoots entry|deferredSources\[\d+\]\.rootArgument must be/u,
+    );
   }
 });
 
@@ -204,8 +239,19 @@ test("rejects partition omission, unknown IDs, and partition arguments for first
       now,
     };
     assert.throws(() => runWorkspaceRecoveryReport(baseOptions), /partition is required/u);
-    assert.throws(() => runWorkspaceRecoveryReport({ ...baseOptions, partition: "second-wave-partition-unknown" }), /unknown second-wave partition/u);
-    assert.throws(() => runWorkspaceRecoveryReport({ ...baseOptions, policyPath: path.join(fixture.repoRoot, "preservation", "workspace-recovery-policy.json"), partition: "second-wave-partition-1" }), /first-wave policy does not accept/u);
+    assert.throws(
+      () => runWorkspaceRecoveryReport({ ...baseOptions, partition: "second-wave-partition-unknown" }),
+      /unknown second-wave partition/u,
+    );
+    assert.throws(
+      () =>
+        runWorkspaceRecoveryReport({
+          ...baseOptions,
+          policyPath: path.join(fixture.repoRoot, "preservation", "workspace-recovery-policy.json"),
+          partition: "second-wave-partition-1",
+        }),
+      /first-wave policy does not accept/u,
+    );
   } finally {
     cleanup(fixture);
   }
@@ -230,7 +276,10 @@ test("selects every partition exactly and never selects either deferred dependen
       assert.deepEqual(report.inputs.partition.sourceIds, partition.sourceIds);
       assert.equal(report.inputs.partition.auditedObservedBytes, partition.auditedObservedBytes);
       assert.deepEqual(new Set(report.sources.map((source) => source.id)), new Set(partition.sourceIds));
-      assert.equal(report.sources.some((source) => deferredIds.has(source.id)), false);
+      assert.equal(
+        report.sources.some((source) => deferredIds.has(source.id)),
+        false,
+      );
     }
   } finally {
     cleanup(fixture);
@@ -241,18 +290,31 @@ test("CLI accepts --policy and binds second-wave allowlist provenance without mo
   const fixture = createFixture();
   try {
     const outputPath = path.join(fixture.archiveGroup, "cli-second-wave-report.json");
-    const result = spawnSync(process.execPath, [
-      reporterPath,
-      "--repo-root", fixture.repoRoot,
-      "--workspace-root", fixture.workspaceRoot,
-      "--temp-root", fixture.tempRoot,
-      "--archive-root", fixture.archiveRoot,
-      "--owner", "g5-second-wave-cli-owner",
-      "--retain-until", retainUntil,
-      "--policy", fixture.policyPath,
-      "--partition", "second-wave-partition-1",
-      "--output", outputPath,
-    ], { encoding: "utf8", stdio: "pipe" });
+    const result = spawnSync(
+      process.execPath,
+      [
+        reporterPath,
+        "--repo-root",
+        fixture.repoRoot,
+        "--workspace-root",
+        fixture.workspaceRoot,
+        "--temp-root",
+        fixture.tempRoot,
+        "--archive-root",
+        fixture.archiveRoot,
+        "--owner",
+        "g5-second-wave-cli-owner",
+        "--retain-until",
+        retainUntil,
+        "--policy",
+        fixture.policyPath,
+        "--partition",
+        "second-wave-partition-1",
+        "--output",
+        outputPath,
+      ],
+      { encoding: "utf8", stdio: "pipe" },
+    );
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(fs.readFileSync(outputPath, "utf8"));
     assert.equal(report.inputs.allowlist.format, "tear-workspace-recovery-second-wave-policy");
@@ -276,7 +338,11 @@ test("selects exactly the reviewed second-wave directories and propagates root a
     const selectedPartition = fixture.policy.partitions[0];
     assert.equal(evidence.report.sources.length, selectedPartition.sourceIds.length);
     assert.deepEqual(new Set(evidence.report.sources.map((source) => source.id)), new Set(selectedPartition.sourceIds));
-    assert.ok(evidence.report.sources.every((source) => source.rootArgument === "workspace-root" || source.rootArgument === "temp-root"));
+    assert.ok(
+      evidence.report.sources.every(
+        (source) => source.rootArgument === "workspace-root" || source.rootArgument === "temp-root",
+      ),
+    );
     assert.deepEqual(evidence.report.inputs.rootArguments, {
       "workspace-root": fixture.workspaceRoot,
       "temp-root": fixture.tempRoot,
@@ -284,7 +350,11 @@ test("selects exactly the reviewed second-wave directories and propagates root a
     });
     assert.equal(evidence.report.inputs.allowlist.sha256, hashFile(fixture.policyPath));
     assert.equal(evidence.manifest.roots.sourceRoots.length, selectedPartition.sourceIds.length);
-    assert.ok(evidence.manifest.roots.sourceRoots.every((source) => source.rootArgument === "workspace-root" || source.rootArgument === "temp-root"));
+    assert.ok(
+      evidence.manifest.roots.sourceRoots.every(
+        (source) => source.rootArgument === "workspace-root" || source.rootArgument === "temp-root",
+      ),
+    );
     assert.equal(evidence.manifest.evidence.allowlist.sha256, hashFile(fixture.policyPath));
     assert.equal(evidence.manifest.roots.partition.id, selectedPartition.id);
     assert.deepEqual(evidence.manifest.roots.partition.sourceIds, selectedPartition.sourceIds);
@@ -308,19 +378,25 @@ test("rejects canonical and wrong-parent second-wave report substitutions before
     wrongReport.inputs.candidateRoots[sourceIndex] = wrongParentPath;
     writeJson(evidence.reportPath, wrongReport);
     evidence.reportSha256 = hashFile(evidence.reportPath);
-    assert.throws(() => runWorkspaceQuarantinePreparation({
-      reportPath: evidence.reportPath,
-      reportSha256: evidence.reportSha256,
-      policyPath: fixture.policyPath,
-      repoRoot: fixture.repoRoot,
-      owner: "g5-second-wave-owner",
-      retainUntil,
-      destination: evidence.destination,
-      now,
-    }), /exact-name or parent|allowlist/u);
+    assert.throws(
+      () =>
+        runWorkspaceQuarantinePreparation({
+          reportPath: evidence.reportPath,
+          reportSha256: evidence.reportSha256,
+          policyPath: fixture.policyPath,
+          repoRoot: fixture.repoRoot,
+          owner: "g5-second-wave-owner",
+          retainUntil,
+          destination: evidence.destination,
+          now,
+        }),
+      /exact-name or parent|allowlist/u,
+    );
     assert.equal(fs.existsSync(evidence.destination), false);
 
-    const canonicalReport = JSON.parse(fs.readFileSync(path.join(fixture.archiveGroup, "second-wave-report.json"), "utf8"));
+    const canonicalReport = JSON.parse(
+      fs.readFileSync(path.join(fixture.archiveGroup, "second-wave-report.json"), "utf8"),
+    );
     const canonicalIndex = canonicalReport.sources.findIndex((source) => source.name === wrongParent.name);
     canonicalReport.sources[canonicalIndex].name = "Tear";
     canonicalReport.sources[canonicalIndex].id = "second-wave-canonical";
@@ -328,16 +404,20 @@ test("rejects canonical and wrong-parent second-wave report substitutions before
     canonicalReport.inputs.candidateRoots[canonicalIndex] = fixture.repoRoot;
     const canonicalReportPath = path.join(fixture.archiveGroup, "canonical-substitution-report.json");
     const canonicalReportSha256 = writeJson(canonicalReportPath, canonicalReport);
-    assert.throws(() => runWorkspaceQuarantinePreparation({
-      reportPath: canonicalReportPath,
-      reportSha256: canonicalReportSha256,
-      policyPath: fixture.policyPath,
-      repoRoot: fixture.repoRoot,
-      owner: "g5-second-wave-owner",
-      retainUntil,
-      destination: path.join(fixture.archiveGroup, "canonical-substitution-payload"),
-      now,
-    }), /allowlist|protected root|exact-name|source set/u);
+    assert.throws(
+      () =>
+        runWorkspaceQuarantinePreparation({
+          reportPath: canonicalReportPath,
+          reportSha256: canonicalReportSha256,
+          policyPath: fixture.policyPath,
+          repoRoot: fixture.repoRoot,
+          owner: "g5-second-wave-owner",
+          retainUntil,
+          destination: path.join(fixture.archiveGroup, "canonical-substitution-payload"),
+          now,
+        }),
+      /allowlist|protected root|exact-name|source set/u,
+    );
   } finally {
     cleanup(fixture);
   }
@@ -361,16 +441,20 @@ test("rejects deferred-source substitution and cross-partition evidence before d
       deferredReport.inputs.candidateRoots[substitutedIndex] = deferredPath;
       const deferredReportPath = path.join(fixture.archiveGroup, `deferred-substitution-report-${deferredIndex}.json`);
       const deferredReportSha256 = writeJson(deferredReportPath, deferredReport);
-      assert.throws(() => runWorkspaceQuarantinePreparation({
-        reportPath: deferredReportPath,
-        reportSha256: deferredReportSha256,
-        policyPath: fixture.policyPath,
-        repoRoot: fixture.repoRoot,
-        owner: "g5-second-wave-owner",
-        retainUntil,
-        destination: path.join(fixture.archiveGroup, `deferred-substitution-payload-${deferredIndex}`),
-        now,
-      }), /partition|source set|allowlist/u);
+      assert.throws(
+        () =>
+          runWorkspaceQuarantinePreparation({
+            reportPath: deferredReportPath,
+            reportSha256: deferredReportSha256,
+            policyPath: fixture.policyPath,
+            repoRoot: fixture.repoRoot,
+            owner: "g5-second-wave-owner",
+            retainUntil,
+            destination: path.join(fixture.archiveGroup, `deferred-substitution-payload-${deferredIndex}`),
+            now,
+          }),
+        /partition|source set|allowlist/u,
+      );
     }
 
     const crossReport = JSON.parse(fs.readFileSync(evidence.reportPath, "utf8"));
@@ -382,16 +466,20 @@ test("rejects deferred-source substitution and cross-partition evidence before d
     };
     const crossReportPath = path.join(fixture.archiveGroup, "cross-partition-report.json");
     const crossReportSha256 = writeJson(crossReportPath, crossReport);
-    assert.throws(() => runWorkspaceQuarantinePreparation({
-      reportPath: crossReportPath,
-      reportSha256: crossReportSha256,
-      policyPath: fixture.policyPath,
-      repoRoot: fixture.repoRoot,
-      owner: "g5-second-wave-owner",
-      retainUntil,
-      destination: path.join(fixture.archiveGroup, "cross-partition-report-payload"),
-      now,
-    }), /partition|source set/u);
+    assert.throws(
+      () =>
+        runWorkspaceQuarantinePreparation({
+          reportPath: crossReportPath,
+          reportSha256: crossReportSha256,
+          policyPath: fixture.policyPath,
+          repoRoot: fixture.repoRoot,
+          owner: "g5-second-wave-owner",
+          retainUntil,
+          destination: path.join(fixture.archiveGroup, "cross-partition-report-payload"),
+          now,
+        }),
+      /partition|source set/u,
+    );
 
     const crossManifest = JSON.parse(fs.readFileSync(evidence.manifestPath, "utf8"));
     crossManifest.roots.partition = {
@@ -402,15 +490,21 @@ test("rejects deferred-source substitution and cross-partition evidence before d
     };
     const crossManifestPath = path.join(fixture.archiveGroup, "cross-partition-manifest.json");
     const crossManifestSha256 = writeJson(crossManifestPath, crossManifest);
-    assert.throws(() => runWorkspacePreservationQuarantine(applyOptions(fixture, {
-      ...evidence,
-      reportPath: evidence.reportPath,
-      reportSha256: evidence.reportSha256,
-      manifestPath: crossManifestPath,
-      manifestSha256: crossManifestSha256,
-      destination: path.join(fixture.archiveGroup, "cross-partition-manifest-payload"),
-      journalPath: path.join(fixture.archiveGroup, "cross-partition-manifest-journal"),
-    })), /partition provenance|partition|source set/u);
+    assert.throws(
+      () =>
+        runWorkspacePreservationQuarantine(
+          applyOptions(fixture, {
+            ...evidence,
+            reportPath: evidence.reportPath,
+            reportSha256: evidence.reportSha256,
+            manifestPath: crossManifestPath,
+            manifestSha256: crossManifestSha256,
+            destination: path.join(fixture.archiveGroup, "cross-partition-manifest-payload"),
+            journalPath: path.join(fixture.archiveGroup, "cross-partition-manifest-journal"),
+          }),
+        ),
+      /partition provenance|partition|source set/u,
+    );
     assert.equal(fs.existsSync(path.join(fixture.archiveGroup, "cross-partition-manifest-payload")), false);
   } finally {
     cleanup(fixture);
@@ -422,9 +516,13 @@ test("rejects report/manifest root-argument mismatch before destination creation
   try {
     const evidence = secondWaveEvidence(fixture);
     const manifest = JSON.parse(fs.readFileSync(evidence.manifestPath, "utf8"));
-    manifest.roots.sourceRoots[0].rootArgument = manifest.roots.sourceRoots[0].rootArgument === "temp-root" ? "workspace-root" : "temp-root";
+    manifest.roots.sourceRoots[0].rootArgument =
+      manifest.roots.sourceRoots[0].rootArgument === "temp-root" ? "workspace-root" : "temp-root";
     evidence.manifestSha256 = writeJson(evidence.manifestPath, manifest);
-    assert.throws(() => runWorkspacePreservationQuarantine(applyOptions(fixture, evidence)), /rootArgument mismatch|allowlist/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(applyOptions(fixture, evidence)),
+      /rootArgument mismatch|allowlist/u,
+    );
     assert.equal(fs.existsSync(evidence.destination), false);
   } finally {
     cleanup(fixture);
@@ -440,7 +538,12 @@ test("preserves the v1 fallback when rootArgument fields are absent", () => {
     delete report.inputs.allowlist;
     delete report.inputs.partition;
     report.policySha256 = hashFile(basePolicySource);
-    report.sources = report.sources.slice(0, 1).map((source) => ({ ...source, id: "invalid-gsm-worktrees", name: "gsm-v1-fallback", absolutePath: path.join(fixture.workspaceRoot, "gsm-v1-fallback") }));
+    report.sources = report.sources.slice(0, 1).map((source) => ({
+      ...source,
+      id: "invalid-gsm-worktrees",
+      name: "gsm-v1-fallback",
+      absolutePath: path.join(fixture.workspaceRoot, "gsm-v1-fallback"),
+    }));
     delete report.sources[0].rootArgument;
     report.inputs.candidateRoots = [report.sources[0].absolutePath];
     fs.mkdirSync(report.sources[0].absolutePath);
@@ -462,7 +565,14 @@ test("preserves the v1 fallback when rootArgument fields are absent", () => {
     for (const entry of [...manifest.entries, ...manifest.emptyDirectories]) delete entry.rootArgument;
     const manifestPath = path.join(fixture.archiveGroup, "v1-fallback-manifest.json");
     const manifestSha256 = writeJson(manifestPath, manifest);
-    const fallbackEvidence = { reportPath, reportSha256, manifestPath, manifestSha256, destination: path.join(fixture.archiveGroup, "v1-fallback-payload"), journalPath: path.join(fixture.archiveGroup, "v1-fallback-journal") };
+    const fallbackEvidence = {
+      reportPath,
+      reportSha256,
+      manifestPath,
+      manifestSha256,
+      destination: path.join(fixture.archiveGroup, "v1-fallback-payload"),
+      journalPath: path.join(fixture.archiveGroup, "v1-fallback-journal"),
+    };
     const receipt = runWorkspacePreservationQuarantine({
       ...applyOptions(fixture, fallbackEvidence),
       policyPath: path.join(fixture.repoRoot, "preservation", "workspace-recovery-policy.json"),
@@ -519,11 +629,21 @@ test("legacy v1 publication-copy entries retain their temp-root during stable co
     const manifestPath = path.join(fixture.archiveGroup, "legacy-publication-manifest.json");
     const manifestSha256 = writeJson(manifestPath, manifest);
     const receipt = runWorkspacePreservationQuarantine({
-      ...applyOptions(fixture, { reportPath, reportSha256, manifestPath, manifestSha256, journalPath: path.join(fixture.archiveGroup, "legacy-publication-journal"), destination }),
+      ...applyOptions(fixture, {
+        reportPath,
+        reportSha256,
+        manifestPath,
+        manifestSha256,
+        journalPath: path.join(fixture.archiveGroup, "legacy-publication-journal"),
+        destination,
+      }),
       policyPath,
     });
     assert.equal(receipt.status, "complete");
-    assert.equal(fs.readFileSync(path.join(destination, "Tear-main-publication", "publication.txt"), "utf8"), "legacy publication\n");
+    assert.equal(
+      fs.readFileSync(path.join(destination, "Tear-main-publication", "publication.txt"), "utf8"),
+      "legacy publication\n",
+    );
   } finally {
     cleanup(fixture);
   }
@@ -533,7 +653,10 @@ test("a completed receipt verifies after clean-main advances only along an ances
   const descendant = createFixture();
   try {
     const evidence = secondWaveEvidence(descendant);
-    assert.throws(() => runWorkspacePreservationQuarantine(applyOptions(descendant, evidence, { interruptAfterMoves: 1 })), /injected interruption/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(applyOptions(descendant, evidence, { interruptAfterMoves: 1 })),
+      /injected interruption/u,
+    );
     runWorkspacePreservationQuarantine(applyOptions(descendant, evidence, { resume: true }));
     const receipt = JSON.parse(fs.readFileSync(path.join(evidence.journalPath, "completion-receipt.json"), "utf8"));
     const evidenceHead = receipt.head;
@@ -559,7 +682,10 @@ test("a completed receipt rejects a divergent clean-main head", () => {
     git(fixture.repoRoot, ["update-ref", "refs/heads/main", divergentHead]);
     git(fixture.repoRoot, ["checkout", "-q", "main"]);
     git(fixture.repoRoot, ["update-ref", "refs/remotes/origin/main", divergentHead]);
-    assert.throws(() => runWorkspacePreservationQuarantine(applyOptions(fixture, evidence, { resume: true })), /not an ancestor|head does not match/u);
+    assert.throws(
+      () => runWorkspacePreservationQuarantine(applyOptions(fixture, evidence, { resume: true })),
+      /not an ancestor|head does not match/u,
+    );
   } finally {
     cleanup(fixture);
   }

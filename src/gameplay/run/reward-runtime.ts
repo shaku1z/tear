@@ -1,5 +1,6 @@
 import {
-  RewardSelectionController, transitionRewardSelection,
+  RewardSelectionController,
+  transitionRewardSelection,
   type DraftRoller,
   type RewardChoice,
   type RewardSelectionIntent,
@@ -55,20 +56,39 @@ export function executeRewardTransition<TChoice extends RewardChoice>(
   run.reservedUpgrade = snapshot.reservedChoice;
   for (const intent of transition.intents) {
     switch (intent.type) {
-      case "apply-upgrade": ports.applyUpgrade(intent.choice); break;
-      case "tier-up": ports.tierUp(intent.choice); break;
-      case "ghost-loadout": ports.ghostLoadout(intent.choiceId, run.mods.tier[intent.choiceId] ?? 1, run.wave); break;
-      case "ghost-event": ports.ghostEvent(intent.event); break;
-      case "consume-input": ports.consumeInput(); break;
-      case "reset-ui": ports.resetUi(intent); break;
-      case "set-screen": ports.setScreen(intent.screen); break;
-      case "start-next-wave": ports.startNextWave(); break;
-      case "request-pointer": ports.requestPointer(); break;
+      case "apply-upgrade":
+        ports.applyUpgrade(intent.choice);
+        break;
+      case "tier-up":
+        ports.tierUp(intent.choice);
+        break;
+      case "ghost-loadout":
+        ports.ghostLoadout(intent.choiceId, run.mods.tier[intent.choiceId] ?? 1, run.wave);
+        break;
+      case "ghost-event":
+        ports.ghostEvent(intent.event);
+        break;
+      case "consume-input":
+        ports.consumeInput();
+        break;
+      case "reset-ui":
+        ports.resetUi(intent);
+        break;
+      case "set-screen":
+        ports.setScreen(intent.screen);
+        break;
+      case "start-next-wave":
+        ports.startNextWave();
+        break;
+      case "request-pointer":
+        ports.requestPointer();
+        break;
     }
   }
 }
 
-export type RewardDecision = Readonly<{ kind: "draft" | "reserve" | "tier"; index: number }> | Readonly<{ kind: "reroll" }>;
+export type RewardDecision =
+  Readonly<{ kind: "draft" | "reserve" | "tier"; index: number }> | Readonly<{ kind: "reroll" }>;
 
 export interface RewardRuntime<TChoice extends RewardChoice> {
   readonly decide: (decision: RewardDecision, recordedSequence?: number) => void;
@@ -96,17 +116,22 @@ export interface RewardRuntimeOptions<TChoice extends RewardChoice> {
 export function createRewardRuntime<TChoice extends RewardChoice>(
   options: RewardRuntimeOptions<TChoice>,
 ): RewardRuntime<TChoice> {
-  let selection: RewardSelectionController<TChoice> | null = null, decisionSequence = 0;
+  let selection: RewardSelectionController<TChoice> | null = null,
+    decisionSequence = 0;
   const create = (): RewardSelectionController<TChoice> => {
     const run = options.run();
     const controller = new RewardSelectionController<TChoice>({
       ...(run.seedRace === undefined ? {} : { seedLocked: run.seedRace.shared.draft }),
-      mode: run.mode, expandedDraft: run.mods.expandedDraft === true,
-      reservePick: run.mods.reservePick === true, rerolls: run.mods.draftRerolls,
-      specialBlock: run.specialBlock, specialsOffered: run.specialsOffered,
+      mode: run.mode,
+      expandedDraft: run.mods.expandedDraft === true,
+      reservePick: run.mods.reservePick === true,
+      rerolls: run.mods.draftRerolls,
+      specialBlock: run.specialBlock,
+      specialsOffered: run.specialsOffered,
       reservedChoice: run.reservedUpgrade,
     });
-    if (run.seedRace !== undefined || run.beatThisRun !== undefined) controller.restore({ ...controller.snapshot(), decisionSequence });
+    if (run.seedRace !== undefined || run.beatThisRun !== undefined)
+      controller.restore({ ...controller.snapshot(), decisionSequence });
     return controller;
   };
   const execute = (transition: ReturnType<RewardSelectionController<TChoice>["dispatch"]>): void => {
@@ -115,34 +140,72 @@ export function createRewardRuntime<TChoice extends RewardChoice>(
   const decide = (decision: RewardDecision, recordedSequence?: number): void => {
     if (selection === null) return;
     const before = selection.snapshot();
-    const event = decision.kind === "reroll" ? { type: "reroll" as const, roll: options.roll }
-      : decision.kind === "draft" ? { type: "select-draft" as const, index: decision.index, legal: (choice: TChoice) => legalSeedRaceUpgrade(choice, options.run().mods.owned) }
-      : decision.kind === "reserve" ? { type: "select-reserve" as const, index: decision.index } : { type: "select-tier-up" as const, index: decision.index };
+    const event =
+      decision.kind === "reroll"
+        ? { type: "reroll" as const, roll: options.roll }
+        : decision.kind === "draft"
+          ? {
+              type: "select-draft" as const,
+              index: decision.index,
+              legal: (choice: TChoice) => legalSeedRaceUpgrade(choice, options.run().mods.owned),
+            }
+          : decision.kind === "reserve"
+            ? { type: "select-reserve" as const, index: decision.index }
+            : { type: "select-tier-up" as const, index: decision.index };
     const result = transitionRewardSelection(before, event);
     if (result.snapshot === before) return;
     if (before.seedLocked !== undefined || options.run().beatThisRun !== undefined) {
       const next = recordedSequence ?? options.beforeDecision?.(decision, before) ?? decisionSequence + 1;
-      if (!Number.isSafeInteger(next) || next <= decisionSequence) throw new TypeError("Race decision frontier must advance");
+      if (!Number.isSafeInteger(next) || next <= decisionSequence)
+        throw new TypeError("Race decision frontier must advance");
       decisionSequence = next;
       const snapshot = Object.freeze({ ...result.snapshot, decisionSequence });
-      selection.restore(snapshot); execute({ ...result, snapshot });
-    } else { selection.restore(result.snapshot); execute(result); }
+      selection.restore(snapshot);
+      execute({ ...result, snapshot });
+    } else {
+      selection.restore(result.snapshot);
+      execute(result);
+    }
   };
   return {
     decide,
     legal: (choice) => options.run().seedRace === undefined || legalSeedRaceUpgrade(choice, options.run().mods.owned),
-    get selection() { return selection; },
+    get selection() {
+      return selection;
+    },
     snapshot: () => selection?.snapshot() ?? null,
     restore: (snapshot) => {
-      if (snapshot === null) { selection = null; return; }
-      decisionSequence = snapshot.decisionSequence ?? 0; selection = create(); selection.restore(snapshot);
+      if (snapshot === null) {
+        selection = null;
+        return;
+      }
+      decisionSequence = snapshot.decisionSequence ?? 0;
+      selection = create();
+      selection.restore(snapshot);
     },
-    reset: () => { decisionSequence = 0; selection = create(); },
-    openDraft: () => { selection = create(); execute(selection.openDraft(options.run().wave, options.roll)); },
-    openTier: (choices) => { selection = create(); execute(selection.openTierUp(choices)); },
-    reroll: () => { decide({ kind: "reroll" }); },
-    selectDraft: (index) => { decide({ kind: "draft", index }); },
-    selectReserve: (index) => { decide({ kind: "reserve", index }); },
-    selectTier: (index) => { decide({ kind: "tier", index }); },
+    reset: () => {
+      decisionSequence = 0;
+      selection = create();
+    },
+    openDraft: () => {
+      selection = create();
+      execute(selection.openDraft(options.run().wave, options.roll));
+    },
+    openTier: (choices) => {
+      selection = create();
+      execute(selection.openTierUp(choices));
+    },
+    reroll: () => {
+      decide({ kind: "reroll" });
+    },
+    selectDraft: (index) => {
+      decide({ kind: "draft", index });
+    },
+    selectReserve: (index) => {
+      decide({ kind: "reserve", index });
+    },
+    selectTier: (index) => {
+      decide({ kind: "tier", index });
+    },
   };
 }

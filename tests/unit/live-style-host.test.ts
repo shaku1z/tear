@@ -21,8 +21,13 @@ describe("live style host persistence adapter", () => {
         styleAchievementPersistence: { checkAndSave },
         profileStatsPersistence: { add: vi.fn(), max: vi.fn() },
       } as never,
-      entities: {} as never, state: {} as never, tutorial: {} as never,
-      captureGhost: vi.fn(), rankUp: vi.fn(), musicRankChanged: vi.fn(), addProjectile: vi.fn(),
+      entities: {} as never,
+      state: {} as never,
+      tutorial: {} as never,
+      captureGhost: vi.fn(),
+      rankUp: vi.fn(),
+      musicRankChanged: vi.fn(),
+      addProjectile: vi.fn(),
     });
 
     expect(checkAndSave).toHaveBeenCalledOnce();
@@ -36,8 +41,13 @@ describe("live style host persistence adapter", () => {
         styleAchievementPersistence: { checkAndSave: vi.fn() },
         profileStatsPersistence: { add, max },
       } as never,
-      entities: {} as never, state: {} as never, tutorial: {} as never,
-      captureGhost: vi.fn(), rankUp: vi.fn(), musicRankChanged: vi.fn(), addProjectile: vi.fn(),
+      entities: {} as never,
+      state: {} as never,
+      tutorial: {} as never,
+      captureGhost: vi.fn(),
+      rankUp: vi.fn(),
+      musicRankChanged: vi.fn(),
+      addProjectile: vi.fn(),
     });
 
     const runtime = captured.styleRuntime as {
@@ -56,27 +66,90 @@ describe("live style host persistence adapter", () => {
     expect(max).toHaveBeenNthCalledWith(2, "bestRank", 3);
   });
   it("keeps restored-mode Coach practice style math while refusing all outward persistence", async () => {
-    const actual = await vi.importActual<typeof StyleAchievementModule>("../../src/gameplay/scoring/live-style-achievement-runtime");
-    const writes: string[] = []; const observed = vi.fn(); let practice = true;
-    const run = { mode: "campaign", runTime: 12, clearTimer: 0, combo: 0, comboTimer: 0, lastTrick: "", mult: 1, rank: "", wavePeak: 1 };
+    const actual = await vi.importActual<typeof StyleAchievementModule>(
+      "../../src/gameplay/scoring/live-style-achievement-runtime",
+    );
+    const writes: string[] = [];
+    const observed = vi.fn();
+    let practice = true;
+    const run = {
+      mode: "campaign",
+      runTime: 12,
+      clearTimer: 0,
+      combo: 0,
+      comboTimer: 0,
+      lastTrick: "",
+      mult: 1,
+      rank: "",
+      wavePeak: 1,
+    };
     const player = { x: 30, y: 40, onGround: false };
-    createLiveStyleHost({ persistentEffects: () => !practice, observeStyle: observed,
-      dependencies: { CONFIG: { trick: { pts: { parry: 15 }, variety: 1.5, decay: 4, drainRate: 10, hitLoss: .3, tiers: [] }, colors: {} },
-        Input: { left: () => false, right: () => false, buzz: () => undefined }, GHOST: { recording: () => false },
-        META: { level: () => 0 }, DAILY: { bump: () => { writes.push("daily"); } },
-        styleAchievementPersistence: { checkAndSave: () => { writes.push("check/save"); } },
-        profileStatsPersistence: { add: () => { writes.push("profile-add"); }, max: () => { writes.push("profile-max"); } } } as never,
-      state: { player: () => player, run: () => run, enemies: () => [] } as never, entities: {} as never,
-      tutorial: { mark: () => undefined } as never, captureGhost: vi.fn(), rankUp: vi.fn(), musicRankChanged: vi.fn(), addProjectile: vi.fn(),
+    createLiveStyleHost({
+      persistentEffects: () => !practice,
+      observeStyle: observed,
+      dependencies: {
+        CONFIG: {
+          trick: { pts: { parry: 15 }, variety: 1.5, decay: 4, drainRate: 10, hitLoss: 0.3, tiers: [] },
+          colors: {},
+        },
+        Input: { left: () => false, right: () => false, buzz: () => undefined },
+        GHOST: { recording: () => false },
+        META: { level: () => 0 },
+        DAILY: {
+          bump: () => {
+            writes.push("daily");
+          },
+        },
+        styleAchievementPersistence: {
+          checkAndSave: () => {
+            writes.push("check/save");
+          },
+        },
+        profileStatsPersistence: {
+          add: () => {
+            writes.push("profile-add");
+          },
+          max: () => {
+            writes.push("profile-max");
+          },
+        },
+      } as never,
+      state: { player: () => player, run: () => run, enemies: () => [] } as never,
+      entities: {} as never,
+      tutorial: { mark: () => undefined } as never,
+      captureGhost: vi.fn(),
+      rankUp: vi.fn(),
+      musicRankChanged: vi.fn(),
+      addProjectile: vi.fn(),
     });
-    const runtime = actual.createLiveStyleAchievementRuntime(captured.styleRuntime as Parameters<typeof actual.createLiveStyleAchievementRuntime>[0]);
+    const runtime = actual.createLiveStyleAchievementRuntime(
+      captured.styleRuntime as Parameters<typeof actual.createLiveStyleAchievementRuntime>[0],
+    );
     writes.length = 0;
-    runtime.addStyle("parry"); runtime.achievements.parry(); runtime.achievements.onKill(); runtime.achievements.stageDone(); runtime.check();
-    expect(run.combo).toBe(22.5); expect(run.mode).toBe("campaign"); expect(writes).toEqual([]); expect(runtime.tracks()).toBe(false);
-    practice = false; runtime.addStyle("parry"); runtime.achievements.parry(); runtime.check();
-    expect(observed).toHaveBeenCalledWith("parry", expect.objectContaining({ combo: 22.5 }), expect.objectContaining({ combo: 37.5 }), expect.objectContaining({ pts: { parry: 15 } }));
-    expect(run.combo).toBe(37.5); expect(runtime.tracks()).toBe(true);
-    expect(writes).toContain("profile-add"); expect(writes).toContain("profile-max"); expect(writes).toContain("daily"); expect(writes).toContain("check/save");
+    runtime.addStyle("parry");
+    runtime.achievements.parry();
+    runtime.achievements.onKill();
+    runtime.achievements.stageDone();
+    runtime.check();
+    expect(run.combo).toBe(22.5);
+    expect(run.mode).toBe("campaign");
+    expect(writes).toEqual([]);
+    expect(runtime.tracks()).toBe(false);
+    practice = false;
+    runtime.addStyle("parry");
+    runtime.achievements.parry();
+    runtime.check();
+    expect(observed).toHaveBeenCalledWith(
+      "parry",
+      expect.objectContaining({ combo: 22.5 }),
+      expect.objectContaining({ combo: 37.5 }),
+      expect.objectContaining({ pts: { parry: 15 } }),
+    );
+    expect(run.combo).toBe(37.5);
+    expect(runtime.tracks()).toBe(true);
+    expect(writes).toContain("profile-add");
+    expect(writes).toContain("profile-max");
+    expect(writes).toContain("daily");
+    expect(writes).toContain("check/save");
   });
-
 });

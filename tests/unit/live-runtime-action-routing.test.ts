@@ -17,7 +17,10 @@ function routingFixture(initialScreen = "draft") {
   ];
   const routing: TearBenchActionRouting = {
     screen: () => screen,
-    setScreen: (next) => { screen = next; calls.push(`screen:${next}`); },
+    setScreen: (next) => {
+      screen = next;
+      calls.push(`screen:${next}`);
+    },
     runMode: () => mode,
     reward: () => ({ choices: [{ id: "draft-a" }, { id: "draft-b" }], reserveChoices: [{ id: "reserve-a" }] }),
     chooseUpgrade: (index) => calls.push(`draft:${String(index)}`),
@@ -31,9 +34,15 @@ function routingFixture(initialScreen = "draft") {
   return {
     routing,
     calls,
-    setScreen: (next: string) => { screen = next; },
-    setMode: (next: string) => { mode = next; },
-    setFocus: (next: number) => { focus = next; },
+    setScreen: (next: string) => {
+      screen = next;
+    },
+    setMode: (next: string) => {
+      mode = next;
+    },
+    setFocus: (next: number) => {
+      focus = next;
+    },
   };
 }
 
@@ -63,15 +72,27 @@ describe("live runtime action routing", () => {
     const fixture = routingFixture("playing");
     expect(routeLiveTearBenchAction(fixture.routing, { type: "pause" })).toBe(true);
     expect(routeLiveTearBenchAction(fixture.routing, { type: "pause" })).toBe(true);
-    expect(routeLiveTearBenchAction(fixture.routing, { type: "ability", abilityId: "pulse", phase: "pressed" })).toBe(false);
+    expect(routeLiveTearBenchAction(fixture.routing, { type: "ability", abilityId: "pulse", phase: "pressed" })).toBe(
+      false,
+    );
     fixture.setMode("playground");
-    expect(routeLiveTearBenchAction(fixture.routing, { type: "ability", abilityId: "pulse", phase: "released" })).toBe(true);
-    expect(routeLiveTearBenchAction(fixture.routing, { type: "ability", abilityId: "pulse", phase: "pressed" })).toBe(true);
+    expect(routeLiveTearBenchAction(fixture.routing, { type: "ability", abilityId: "pulse", phase: "released" })).toBe(
+      true,
+    );
+    expect(routeLiveTearBenchAction(fixture.routing, { type: "ability", abilityId: "pulse", phase: "pressed" })).toBe(
+      true,
+    );
     fixture.setFocus(-1);
     expect(routeLiveTearBenchAction(fixture.routing, { type: "confirm" })).toBe(true);
     expect(routeLiveTearBenchAction(fixture.routing, { type: "cancel" })).toBe(true);
     expect(fixture.calls).toEqual([
-      "screen:paused", "screen:playing", "ability:pulse", "render", "resume", "render", "resume",
+      "screen:paused",
+      "screen:playing",
+      "ability:pulse",
+      "render",
+      "resume",
+      "render",
+      "resume",
     ]);
   });
 });

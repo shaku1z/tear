@@ -83,10 +83,19 @@ function nonEmptyString(value) {
 }
 
 const DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS = Object.freeze([
-  "description", "artifact", "text", "implementationDeliverable", "userVisibleResult", "acceptanceCondition",
+  "description",
+  "artifact",
+  "text",
+  "implementationDeliverable",
+  "userVisibleResult",
+  "acceptanceCondition",
 ]);
 const DEFAULT_IMMUTABLE_SOURCE_FIELDS = Object.freeze([
-  "id", "sourceStatement", "sourceTextHash", "atomicTextHash", "sourceVersion",
+  "id",
+  "sourceStatement",
+  "sourceTextHash",
+  "atomicTextHash",
+  "sourceVersion",
 ]);
 
 function uniqueNormalized(values) {
@@ -131,7 +140,11 @@ function validateAllowlistEntries(entries, label, termIds, options = {}) {
         if (!termIds.has(termId)) errors.push(`${prefix}.termIds contains unknown ID: ${termId}`);
       }
     }
-    if (!Array.isArray(entry.testEvidence) || entry.testEvidence.length === 0 || entry.testEvidence.some((value) => !nonEmptyString(value))) {
+    if (
+      !Array.isArray(entry.testEvidence) ||
+      entry.testEvidence.length === 0 ||
+      entry.testEvidence.some((value) => !nonEmptyString(value))
+    ) {
       errors.push(`${prefix}.testEvidence must contain at least one evidence reference`);
     }
     validateExpiry(entry.expiry, prefix, errors);
@@ -146,7 +159,17 @@ function validateAllowlistEntries(entries, label, termIds, options = {}) {
       errors.push(`${prefix}.pathPattern has too many wildcards for mutable compatibility: ${pattern}`);
     }
     if (options.history) {
-      const allowedHistoryRoots = ["plans/", "docs/checkpoints/", "docs/ghost3/", "docs/source/", "docs/TEARBENCH_GHOST3_", "docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md", "docs/TEARBENCH_C40_WEAPON_ROSTER_EVIDENCE_INDEX.md", "public/vendor/tear-score/", "src/tearbench/evidence-routes.json"];
+      const allowedHistoryRoots = [
+        "plans/",
+        "docs/checkpoints/",
+        "docs/ghost3/",
+        "docs/source/",
+        "docs/TEARBENCH_GHOST3_",
+        "docs/TEARBENCH_RUNTIME_ARCHITECTURE_ALIGNMENT.md",
+        "docs/TEARBENCH_C40_WEAPON_ROSTER_EVIDENCE_INDEX.md",
+        "public/vendor/tear-score/",
+        "src/tearbench/evidence-routes.json",
+      ];
       if (!allowedHistoryRoots.some((root) => pattern === root || pattern.startsWith(root))) {
         errors.push(`${prefix}.pathPattern is outside an approved immutable-history root: ${pattern}`);
       }
@@ -165,18 +188,37 @@ export function validateRegistry(registry) {
     errors.push("sourceAuthority must be an object");
   } else {
     const owners = authority.productionOwners;
-    const requiredOwners = ["stages", "bosses", "environmentMechanics", "stageEnvironment", "publication", "canonicalScenarios"];
+    const requiredOwners = [
+      "stages",
+      "bosses",
+      "environmentMechanics",
+      "stageEnvironment",
+      "publication",
+      "canonicalScenarios",
+    ];
     if (!owners || typeof owners !== "object") errors.push("sourceAuthority.productionOwners must be an object");
-    else for (const key of requiredOwners) if (!nonEmptyString(owners[key])) errors.push(`sourceAuthority.productionOwners.${key} must be a repository path`);
-    if (!nonEmptyString(authority.projectionRule)) errors.push("sourceAuthority.projectionRule must be a non-empty policy");
-    if (!nonEmptyString(authority.specializedMechanicsRule)) errors.push("sourceAuthority.specializedMechanicsRule must be a non-empty policy");
+    else
+      for (const key of requiredOwners)
+        if (!nonEmptyString(owners[key]))
+          errors.push(`sourceAuthority.productionOwners.${key} must be a repository path`);
+    if (!nonEmptyString(authority.projectionRule))
+      errors.push("sourceAuthority.projectionRule must be a non-empty policy");
+    if (!nonEmptyString(authority.specializedMechanicsRule))
+      errors.push("sourceAuthority.specializedMechanicsRule must be a non-empty policy");
   }
   const projection = registry.mutableProjectionPolicy;
   if (!projection || typeof projection !== "object") {
     errors.push("mutableProjectionPolicy must be an object");
   } else {
-    for (const [key, fallback] of [["mutableGeneratedTextFields", DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS], ["immutableSourceFields", DEFAULT_IMMUTABLE_SOURCE_FIELDS]]) {
-      if (!Array.isArray(projection[key]) || projection[key].length === 0 || projection[key].some((field) => !nonEmptyString(field))) {
+    for (const [key, fallback] of [
+      ["mutableGeneratedTextFields", DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS],
+      ["immutableSourceFields", DEFAULT_IMMUTABLE_SOURCE_FIELDS],
+    ]) {
+      if (
+        !Array.isArray(projection[key]) ||
+        projection[key].length === 0 ||
+        projection[key].some((field) => !nonEmptyString(field))
+      ) {
         errors.push(`mutableProjectionPolicy.${key} must contain non-empty field names`);
       } else if (new Set(projection[key]).size !== projection[key].length) {
         errors.push(`mutableProjectionPolicy.${key} must not contain duplicate fields`);
@@ -185,34 +227,54 @@ export function validateRegistry(registry) {
       }
     }
     for (const key of ["mutablePaths", "immutablePaths"]) {
-      if (!Array.isArray(projection[key]) || projection[key].length === 0 || projection[key].some((value) => !nonEmptyString(value))) {
+      if (
+        !Array.isArray(projection[key]) ||
+        projection[key].length === 0 ||
+        projection[key].some((value) => !nonEmptyString(value))
+      ) {
         errors.push(`mutableProjectionPolicy.${key} must contain repository paths`);
       }
     }
     const mutableFields = new Set(projection.mutableGeneratedTextFields ?? []);
     for (const field of projection.immutableSourceFields ?? []) {
-      if (mutableFields.has(field)) errors.push(`mutableProjectionPolicy field cannot be both mutable and immutable: ${field}`);
+      if (mutableFields.has(field))
+        errors.push(`mutableProjectionPolicy field cannot be both mutable and immutable: ${field}`);
     }
   }
   const currentSource = registry.currentSourcePolicy;
   if (!currentSource || typeof currentSource !== "object") {
     errors.push("currentSourcePolicy must be an object");
   } else {
-    for (const key of ["mutableScanPaths", "immutableHistoryPaths", "staleDefinitionPatterns", "staleCheckpointCommentPatterns"]) {
-      if (!Array.isArray(currentSource[key]) || currentSource[key].length === 0
-        || currentSource[key].some((value) => !nonEmptyString(value))) {
+    for (const key of [
+      "mutableScanPaths",
+      "immutableHistoryPaths",
+      "staleDefinitionPatterns",
+      "staleCheckpointCommentPatterns",
+    ]) {
+      if (
+        !Array.isArray(currentSource[key]) ||
+        currentSource[key].length === 0 ||
+        currentSource[key].some((value) => !nonEmptyString(value))
+      ) {
         errors.push(`currentSourcePolicy.${key} must contain non-empty values`);
       }
     }
     const mutablePaths = currentSource.mutableScanPaths ?? [];
     const immutablePaths = currentSource.immutableHistoryPaths ?? [];
     for (const mutablePath of mutablePaths) {
-      if (immutablePaths.some((immutablePath) => matchesPathPattern(mutablePath, immutablePath)
-        || matchesPathPattern(immutablePath, mutablePath))) {
+      if (
+        immutablePaths.some(
+          (immutablePath) =>
+            matchesPathPattern(mutablePath, immutablePath) || matchesPathPattern(immutablePath, mutablePath),
+        )
+      ) {
         errors.push(`currentSourcePolicy mutable path overlaps immutable history: ${mutablePath}`);
       }
     }
-    for (const [key, patterns] of [["staleDefinitionPatterns", currentSource.staleDefinitionPatterns], ["staleCheckpointCommentPatterns", currentSource.staleCheckpointCommentPatterns]]) {
+    for (const [key, patterns] of [
+      ["staleDefinitionPatterns", currentSource.staleDefinitionPatterns],
+      ["staleCheckpointCommentPatterns", currentSource.staleCheckpointCommentPatterns],
+    ]) {
       for (const pattern of patterns ?? []) {
         try {
           new RegExp(pattern, "imu");
@@ -253,24 +315,36 @@ export function validateRegistry(registry) {
       aliases.push(alias);
     }
     for (const alias of copyAliases) {
-      if (!termAliases.includes(alias)) errors.push(`${prefix}.deprecatedCopyAliases contains alias not in deprecatedAliases: ${alias}`);
+      if (!termAliases.includes(alias))
+        errors.push(`${prefix}.deprecatedCopyAliases contains alias not in deprecatedAliases: ${alias}`);
     }
     if (term.deprecatedCopyAliasPathPatterns !== undefined) {
       if (!term.deprecatedCopyAliasPathPatterns || typeof term.deprecatedCopyAliasPathPatterns !== "object") {
         errors.push(`${prefix}.deprecatedCopyAliasPathPatterns must be an object`);
       } else {
         for (const [alias, patterns] of Object.entries(term.deprecatedCopyAliasPathPatterns)) {
-          if (!copyAliases.includes(alias)) errors.push(`${prefix}.deprecatedCopyAliasPathPatterns contains an unregistered copy alias: ${alias}`);
-          if (!Array.isArray(patterns) || patterns.length === 0 || patterns.some((pattern) => !nonEmptyString(pattern) || pattern.includes("**"))) {
-            errors.push(`${prefix}.deprecatedCopyAliasPathPatterns.${alias} must contain narrow repository-relative patterns`);
+          if (!copyAliases.includes(alias))
+            errors.push(`${prefix}.deprecatedCopyAliasPathPatterns contains an unregistered copy alias: ${alias}`);
+          if (
+            !Array.isArray(patterns) ||
+            patterns.length === 0 ||
+            patterns.some((pattern) => !nonEmptyString(pattern) || pattern.includes("**"))
+          ) {
+            errors.push(
+              `${prefix}.deprecatedCopyAliasPathPatterns.${alias} must contain narrow repository-relative patterns`,
+            );
           }
         }
       }
     }
-    if (!term.persistenceImpact || typeof term.persistenceImpact !== "object") errors.push(`${prefix}.persistenceImpact must be an object`);
+    if (!term.persistenceImpact || typeof term.persistenceImpact !== "object")
+      errors.push(`${prefix}.persistenceImpact must be an object`);
     validateExpiry(term.removalCheckpoint, `${prefix}.removalCheckpoint`, errors);
   }
-  for (const [label, names] of [["display name", canonicalDisplayNames], ["code ID", canonicalCodeIds]]) {
+  for (const [label, names] of [
+    ["display name", canonicalDisplayNames],
+    ["code ID", canonicalCodeIds],
+  ]) {
     for (const duplicate of uniqueNormalized(names.filter(nonEmptyString))) {
       errors.push(`canonical ${label} is duplicated: ${duplicate}`);
     }
@@ -278,7 +352,11 @@ export function validateRegistry(registry) {
   for (const duplicate of uniqueNormalized(aliases.filter(nonEmptyString))) {
     errors.push(`deprecated alias is duplicated: ${duplicate}`);
   }
-  const canonicalNormalized = new Set([...canonicalDisplayNames, ...canonicalCodeIds].filter(nonEmptyString).map((value) => value.toLocaleLowerCase("en-US")));
+  const canonicalNormalized = new Set(
+    [...canonicalDisplayNames, ...canonicalCodeIds]
+      .filter(nonEmptyString)
+      .map((value) => value.toLocaleLowerCase("en-US")),
+  );
   for (const alias of aliases.filter(nonEmptyString)) {
     if (canonicalNormalized.has(alias.toLocaleLowerCase("en-US"))) {
       errors.push(`deprecated alias is also a canonical name: ${alias}`);
@@ -300,8 +378,14 @@ export function validateRegistry(registry) {
   if (!allowlists || typeof allowlists !== "object") {
     errors.push("registry.allowlists must be an object");
   } else {
-    errors.push(...validateAllowlistEntries(allowlists.immutableHistory, "allowlists.immutableHistory", termIds, { history: true }));
-    errors.push(...validateAllowlistEntries(allowlists.mutableCompatibility, "allowlists.mutableCompatibility", termIds));
+    errors.push(
+      ...validateAllowlistEntries(allowlists.immutableHistory, "allowlists.immutableHistory", termIds, {
+        history: true,
+      }),
+    );
+    errors.push(
+      ...validateAllowlistEntries(allowlists.mutableCompatibility, "allowlists.mutableCompatibility", termIds),
+    );
   }
 
   const roster = registry.activeRoster;
@@ -309,12 +393,19 @@ export function validateRegistry(registry) {
     errors.push("registry.activeRoster must be an object");
   } else {
     if (!nonEmptyString(roster.sourceOfTruth)) errors.push("activeRoster.sourceOfTruth must be a repository path");
-    if (!Array.isArray(roster.canonicalIds) || roster.canonicalIds.length !== 5) errors.push("activeRoster.canonicalIds must contain exactly five IDs");
-    if (!Array.isArray(roster.canonicalDisplayNames) || roster.canonicalDisplayNames.length !== 5) errors.push("activeRoster.canonicalDisplayNames must contain exactly five names");
-    if (!Array.isArray(roster.retiredIds) || roster.retiredIds.length !== 2) errors.push("activeRoster.retiredIds must contain exactly two IDs");
+    if (!Array.isArray(roster.canonicalIds) || roster.canonicalIds.length !== 5)
+      errors.push("activeRoster.canonicalIds must contain exactly five IDs");
+    if (!Array.isArray(roster.canonicalDisplayNames) || roster.canonicalDisplayNames.length !== 5)
+      errors.push("activeRoster.canonicalDisplayNames must contain exactly five names");
+    if (!Array.isArray(roster.retiredIds) || roster.retiredIds.length !== 2)
+      errors.push("activeRoster.retiredIds must contain exactly two IDs");
     const rosterIds = new Set([...(roster.retiredIds ?? []), ...(roster.canonicalIds ?? [])]);
     errors.push(...validateAllowlistEntries(roster.migrationAllowlist, "activeRoster.migrationAllowlist", rosterIds));
-    errors.push(...validateAllowlistEntries(roster.historyAllowlist, "activeRoster.historyAllowlist", rosterIds, { history: true }));
+    errors.push(
+      ...validateAllowlistEntries(roster.historyAllowlist, "activeRoster.historyAllowlist", rosterIds, {
+        history: true,
+      }),
+    );
   }
   return errors;
 }
@@ -335,16 +426,19 @@ function replaceDeprecatedCopyAliases(value, registry) {
  * hash-bound fields are copied byte-for-byte and never pass through aliases.
  */
 export function translateMutableGeneratedDescriptions(value, registry) {
-  const mutableFields = new Set(registry.mutableProjectionPolicy?.mutableGeneratedTextFields ?? DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS);
+  const mutableFields = new Set(
+    registry.mutableProjectionPolicy?.mutableGeneratedTextFields ?? DEFAULT_MUTABLE_GENERATED_TEXT_FIELDS,
+  );
   if (Array.isArray(value)) return value.map((entry) => translateMutableGeneratedDescriptions(entry, registry));
   if (!value || typeof value !== "object") return value;
   const result = {};
   for (const [key, entry] of Object.entries(value)) {
-    result[key] = mutableFields.has(key) && typeof entry === "string"
-      ? replaceDeprecatedCopyAliases(entry, registry)
-      : (Array.isArray(entry) || (entry && typeof entry === "object"))
-        ? translateMutableGeneratedDescriptions(entry, registry)
-        : entry;
+    result[key] =
+      mutableFields.has(key) && typeof entry === "string"
+        ? replaceDeprecatedCopyAliases(entry, registry)
+        : Array.isArray(entry) || (entry && typeof entry === "object")
+          ? translateMutableGeneratedDescriptions(entry, registry)
+          : entry;
   }
   return result;
 }
@@ -364,8 +458,9 @@ export function scanStaleCurrentClaims(root, registry) {
   const policy = registry.currentSourcePolicy;
   const findings = [];
   const errors = [];
-  const files = collectMatchingFiles(root, policy.mutableScanPaths)
-    .filter((relativePath) => !pathMatchesAny(relativePath, policy.immutableHistoryPaths));
+  const files = collectMatchingFiles(root, policy.mutableScanPaths).filter(
+    (relativePath) => !pathMatchesAny(relativePath, policy.immutableHistoryPaths),
+  );
   for (const relativePath of files) {
     const text = fs.readFileSync(path.join(root, relativePath), "utf8");
     for (const { pattern, index, text: matchText } of scanPatternMatches(text, policy.staleDefinitionPatterns)) {
@@ -439,9 +534,13 @@ function isCodeToken(segmentText, alias) {
 }
 
 function allowedOccurrence(relativePath, termId, registry) {
-  const history = registry.allowlists.immutableHistory.find((entry) => entry.termIds.includes(termId) && matchesPathPattern(relativePath, entry.pathPattern));
+  const history = registry.allowlists.immutableHistory.find(
+    (entry) => entry.termIds.includes(termId) && matchesPathPattern(relativePath, entry.pathPattern),
+  );
   if (history) return { classification: "immutable-history", allowlistId: history.id };
-  const compatibility = registry.allowlists.mutableCompatibility.find((entry) => entry.termIds.includes(termId) && matchesPathPattern(relativePath, entry.pathPattern));
+  const compatibility = registry.allowlists.mutableCompatibility.find(
+    (entry) => entry.termIds.includes(termId) && matchesPathPattern(relativePath, entry.pathPattern),
+  );
   if (compatibility) return { classification: "mutable-compatibility", allowlistId: compatibility.id };
   return null;
 }
@@ -451,11 +550,13 @@ export function scanDeprecatedUserFacingCopy(root, registry) {
   const findings = [];
   const scan = registry.userFacingCopyScan;
   const files = collectMatchingFiles(root, scan.pathPatterns);
-  const termAliases = registry.terms.flatMap((term) => (term.deprecatedCopyAliases ?? []).map((alias) => ({
-    termId: term.id,
-    alias,
-    pathPatterns: term.deprecatedCopyAliasPathPatterns?.[alias] ?? null,
-  })));
+  const termAliases = registry.terms.flatMap((term) =>
+    (term.deprecatedCopyAliases ?? []).map((alias) => ({
+      termId: term.id,
+      alias,
+      pathPatterns: term.deprecatedCopyAliasPathPatterns?.[alias] ?? null,
+    })),
+  );
   for (const relativePath of files) {
     if (pathMatchesAny(relativePath, scan.ignoredPathPatterns ?? [])) continue;
     const absolutePath = path.join(root, relativePath);
@@ -476,7 +577,10 @@ export function scanDeprecatedUserFacingCopy(root, registry) {
             allowlistId: allowance?.allowlistId ?? null,
           };
           findings.push(finding);
-          if (!allowance) errors.push(`${relativePath}:${finding.line} contains deprecated user-facing alias "${alias}" for ${termId} without an explicit compatibility/history allowlist`);
+          if (!allowance)
+            errors.push(
+              `${relativePath}:${finding.line} contains deprecated user-facing alias "${alias}" for ${termId} without an explicit compatibility/history allowlist`,
+            );
         }
       }
     }
@@ -487,7 +591,8 @@ export function scanDeprecatedUserFacingCopy(root, registry) {
 export function runTerminologyCheck({ root = process.cwd(), registryPath = DEFAULT_REGISTRY_PATH } = {}) {
   const registry = loadRegistry(root, registryPath);
   const validationErrors = validateRegistry(registry);
-  if (validationErrors.length > 0) return { ok: false, errors: validationErrors, findings: [], scannedFiles: 0, registry };
+  if (validationErrors.length > 0)
+    return { ok: false, errors: validationErrors, findings: [], scannedFiles: 0, registry };
   const scanResult = scanDeprecatedUserFacingCopy(root, registry);
   const staleResult = scanStaleCurrentClaims(root, registry);
   return {
@@ -526,7 +631,9 @@ function main() {
       return;
     }
     const allowlisted = result.findings.filter((finding) => finding.classification !== "unallowlisted").length;
-    console.log(`terminology check passed (${result.registry.terms.length} terms, ${result.scannedFiles} files scanned, ${allowlisted} allowlisted deprecated-copy occurrences)`);
+    console.log(
+      `terminology check passed (${result.registry.terms.length} terms, ${result.scannedFiles} files scanned, ${allowlisted} allowlisted deprecated-copy occurrences)`,
+    );
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

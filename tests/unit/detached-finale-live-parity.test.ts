@@ -9,17 +9,14 @@ import type {
   OutcomeChronologyEffect,
   OutcomeChronologyEntry,
 } from "../../src/gameplay/run/outcome-chronology-journal";
-import { TearGameplayEventBus, type TearGameplayEvent } from
-  "../../src/gameplay/runtime/gameplay-events";
+import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import type { GameAction } from "../../src/input/game-action";
+import { applyTearCodecConfiguration, hydrateTearCodecWorld, type TearCodecValue } from "../../src/tearbench";
 import {
-  applyTearCodecConfiguration,
-  hydrateTearCodecWorld,
-  type TearCodecValue,
-} from "../../src/tearbench";
-import { projectGameplayEventForParity, type TearSemanticEngineEventV1 } from
-  "../../src/tearbench/gameplay-causal-events";
+  projectGameplayEventForParity,
+  type TearSemanticEngineEventV1,
+} from "../../src/tearbench/gameplay-causal-events";
 import {
   createDetachedCombatSimulation,
   createDetachedFinaleComposition,
@@ -55,11 +52,13 @@ interface CampaignVictoryArtifact {
 function readArtifact(): CampaignVictoryArtifact | null {
   if (!existsSync(ARTIFACT)) return null;
   const parsed = JSON.parse(readFileSync(ARTIFACT, "utf8")) as Partial<CampaignVictoryArtifact>;
-  return parsed.preFinale === undefined || parsed.preFinaleHeldActions === undefined
-    || parsed.finaleIntents === undefined || parsed.finaleOutward === undefined
-    || parsed.outcomeChronology === undefined
+  return parsed.preFinale === undefined ||
+    parsed.preFinaleHeldActions === undefined ||
+    parsed.finaleIntents === undefined ||
+    parsed.finaleOutward === undefined ||
+    parsed.outcomeChronology === undefined
     ? null
-    : parsed as CampaignVictoryArtifact;
+    : (parsed as CampaignVictoryArtifact);
 }
 
 function effectsOf<Type extends OutcomeChronologyEffect["type"]>(
@@ -132,11 +131,9 @@ function restorePreFinale(artifact: CampaignVictoryArtifact) {
     references: new Map<string, string>(),
     entityIds: new Set<string>(),
   } as never;
-  const staged = hydrateTearCodecWorld(
-    { ...detached.world.entities, hydrateReward: () => null },
-    codecWorld,
-    { requireIdentity: (id: string) => id },
-  );
+  const staged = hydrateTearCodecWorld({ ...detached.world.entities, hydrateReward: () => null }, codecWorld, {
+    requireIdentity: (id: string) => id,
+  });
   const { world } = detached;
   world.state.setRun(staged.run);
   world.state.setPlayer(staged.player);
@@ -177,7 +174,9 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
     const { detached, staged } = restorePreFinale(artifact);
     const native: TearGameplayEvent[] = [];
     const events = new TearGameplayEventBus(() => artifact.preFinale.tick);
-    events.subscribe((event) => { native.push(event); });
+    events.subscribe((event) => {
+      native.push(event);
+    });
     const capturedOutcomeInputs = deriveCapturedSynchronousOutcomeInputs(artifact.outcomeChronology);
     const outcome = createDetachedRunOutcomeController(detached, events, { capturedInputs: capturedOutcomeInputs });
     const finale = createDetachedFinaleComposition(detached, events, outcome);
@@ -185,7 +184,9 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
     const core = createDetachedCombatSimulation(detached, {
       platforms: detached.stage.platforms,
       gameplayEvents: events,
-      updateWave: (seconds) => { updateWave(seconds); },
+      updateWave: (seconds) => {
+        updateWave(seconds);
+      },
       finale: {
         snapshot: finale.snapshot,
         markLanded: finale.markLanded,
@@ -212,7 +213,10 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
     core.authoritativeInput.beginTick(
       artifact.preFinale.tick,
       artifact.preFinaleHeldActions.map((command, index): CommandEnvelope<GameAction> => ({
-        kind: "command", tick: artifact.preFinale.tick, id: index + 1, command,
+        kind: "command",
+        tick: artifact.preFinale.tick,
+        id: index + 1,
+        command,
       })),
     );
     events.setTickSource(() => core.simulationRuntime.scheduler.tick);
@@ -229,10 +233,7 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
     let frames = 0;
     while (detached.world.lifecycle.phase !== "terminated" && frames < 900) {
       if (frames === 0) detached.world.context.cinema.requestSkip();
-      finale.advanceApplicationFrame(
-        1 / 60,
-        (seconds) => core.simulationRuntime.advance(seconds * 1_000, () => []),
-      );
+      finale.advanceApplicationFrame(1 / 60, (seconds) => core.simulationRuntime.advance(seconds * 1_000, () => []));
       frames += 1;
     }
 
@@ -241,41 +242,62 @@ describe.skipIf(artifact === null)("detached finale against the live campaign vi
     expect(finale.intentBatches).toEqual(artifact.finaleIntents);
     expect(finale.outwardCalls).toEqual(artifact.finaleOutward);
     expect(finale.outcomeChronology).toEqual(artifact.outcomeChronology);
-    expect(finale.outwardCalls
-      .filter((call) => call.type === "world-zoom" || call.type === "flash" || call.type === "shake")
-      .map((call) => ({ type: call.type, receipt: call.receipt })))
-      .toEqual([
-        { type: "world-zoom", receipt: { requested: 0.84, immediate: true,
-          before: { current: 0.8100000020438322, target: 1 }, after: { current: 0.84, target: 0.84 } } },
-        { type: "flash", receipt: { requested: 0.135, before: 0, after: 0.135, aggregation: "maximum" } },
-        { type: "shake", receipt: { requested: 5, before: 16.125, after: 16.125, aggregation: "maximum" } },
-        { type: "flash", receipt: { requested: 0.17, before: 0.135, after: 0.17, aggregation: "maximum" } },
-        { type: "shake", receipt: { requested: 7, before: 16.125, after: 16.125, aggregation: "maximum" } },
-        { type: "flash", receipt: { requested: 0.20500000000000002, before: 0.17,
-          after: 0.20500000000000002, aggregation: "maximum" } },
-        { type: "shake", receipt: { requested: 9, before: 16.125, after: 16.125, aggregation: "maximum" } },
-        { type: "world-zoom", receipt: { requested: 1, immediate: true,
-          before: { current: 0.84, target: 0.84 }, after: { current: 1, target: 1 } } },
-      ]);
-    expect(finale.outwardCalls
-      .filter((call) => call.type === "ring" || call.type === "burst")
-      .map((call) => call.receipt))
-      .toEqual([
-        { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
-        { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
-        { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
-        { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
-        { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
-        { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
-      ]);
+    expect(
+      finale.outwardCalls
+        .filter((call) => call.type === "world-zoom" || call.type === "flash" || call.type === "shake")
+        .map((call) => ({ type: call.type, receipt: call.receipt })),
+    ).toEqual([
+      {
+        type: "world-zoom",
+        receipt: {
+          requested: 0.84,
+          immediate: true,
+          before: { current: 0.8100000020438322, target: 1 },
+          after: { current: 0.84, target: 0.84 },
+        },
+      },
+      { type: "flash", receipt: { requested: 0.135, before: 0, after: 0.135, aggregation: "maximum" } },
+      { type: "shake", receipt: { requested: 5, before: 16.125, after: 16.125, aggregation: "maximum" } },
+      { type: "flash", receipt: { requested: 0.17, before: 0.135, after: 0.17, aggregation: "maximum" } },
+      { type: "shake", receipt: { requested: 7, before: 16.125, after: 16.125, aggregation: "maximum" } },
+      {
+        type: "flash",
+        receipt: { requested: 0.20500000000000002, before: 0.17, after: 0.20500000000000002, aggregation: "maximum" },
+      },
+      { type: "shake", receipt: { requested: 9, before: 16.125, after: 16.125, aggregation: "maximum" } },
+      {
+        type: "world-zoom",
+        receipt: {
+          requested: 1,
+          immediate: true,
+          before: { current: 0.84, target: 0.84 },
+          after: { current: 1, target: 1 },
+        },
+      },
+    ]);
+    expect(
+      finale.outwardCalls.filter((call) => call.type === "ring" || call.type === "burst").map((call) => call.receipt),
+    ).toEqual([
+      { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+      { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+      { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+      { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+      { accepted: true, requested: 1, emitted: 1, rejected: { culled: 0, budget: 0 }, listDelta: 1 },
+      { accepted: true, requested: 14, emitted: 14, rejected: { culled: 0, budget: 0 }, listDelta: 14 },
+    ]);
     const liveAfterBoundary = artifact.events
       .filter((event) => event.tick > artifact.preFinale.tick)
       .map(withoutSequence);
-    expect(native.map((event, sequence) => withoutSequence(projectGameplayEventForParity(event, sequence))))
-      .toEqual(liveAfterBoundary);
+    expect(native.map((event, sequence) => withoutSequence(projectGameplayEventForParity(event, sequence)))).toEqual(
+      liveAfterBoundary,
+    );
 
     const run = detached.world.state.run() as never as Record<string, unknown>;
-    expect(detached.world.lifecycle.snapshot()).toMatchObject({ phase: "terminated", outcome: "victory", wave: artifact.terminalRun.wave });
+    expect(detached.world.lifecycle.snapshot()).toMatchObject({
+      phase: "terminated",
+      outcome: "victory",
+      wave: artifact.terminalRun.wave,
+    });
     expect(detached.world.context.cinema.active).toBe(false);
     expect(finale.snapshot()).toBeNull();
     expect(finale.outcome.pendingFinale()).toBeNull();

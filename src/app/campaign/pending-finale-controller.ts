@@ -75,7 +75,9 @@ export interface PendingFinalePort {
 export class LivePendingFinaleController {
   readonly #port: PendingFinalePort;
 
-  constructor(port: PendingFinalePort) { this.#port = port; }
+  constructor(port: PendingFinalePort) {
+    this.#port = port;
+  }
 
   claim(): boolean {
     const pending = this.#port.pending();

@@ -16,7 +16,9 @@ import type { LiveInputAuthorityState } from "../world/input-authority-state";
 import type { LiveWorldComposition } from "../world/world-composition";
 import type { LiveCombatFrameContext } from "./combat-frame-context";
 
-type BrowserParityTickWindow = Window & { __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void } };
+type BrowserParityTickWindow = Window & {
+  __TEAR_PARITY_TICK__?: { before?(tick: number): void; after?(tick: number): void };
+};
 
 export interface LiveCombatFramePortsOptions {
   readonly dependencies: GameRuntimeDependencies;
@@ -44,7 +46,15 @@ export interface LiveCombatFramePortsOptions {
  * TearScore updates are snapshot-driven at 8 Hz; semantic events are emitted immediately.
  */
 export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions): LiveCombatFrameContext {
-  const { dependencies, world, navigation, inputAuthority, run: liveRun, player: livePlayer, blade: liveBlade } = options;
+  const {
+    dependencies,
+    world,
+    navigation,
+    inputAuthority,
+    run: liveRun,
+    player: livePlayer,
+    blade: liveBlade,
+  } = options;
   const { Attract, CONFIG, DIAG, Input, SFX, browserWindow, clamp, lerp } = dependencies;
   const { state: hostState, lifecycle: RUN_LIFECYCLE, music: musicDirector } = world;
   const { impact, feel } = world.context.transient;
@@ -54,25 +64,57 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
   const { recorder: ghostV3, dna: ghostDna } = options.ghostRecording;
   const { width: W, height: H } = options.surface;
   let canonicalTickStartedAt: number | null = null;
-  const musicObservation = createLiveMusicObservation({ director: musicDirector, appState: () => navigation.screen(),
-    run: () => hostState.run(), player: () => hostState.player(), enemies: () => hostState.enemies(), projectiles: () => hostState.projectiles(),
-    bossIntro: () => hostState.bossIntro(), stageName: () => stageRuntime.current.name, stageIndex: () => stageRuntime.index,
-    totalWaves: options.orchestration.modeWaves, waveActive: () => RUN_LIFECYCLE.isWaveActive, runPhase: () => RUN_LIFECYCLE.phase,
-    topComboThreshold: () => CONFIG.trick.tiers.at(-1)?.at ?? 1 });
+  const musicObservation = createLiveMusicObservation({
+    director: musicDirector,
+    appState: () => navigation.screen(),
+    run: () => hostState.run(),
+    player: () => hostState.player(),
+    enemies: () => hostState.enemies(),
+    projectiles: () => hostState.projectiles(),
+    bossIntro: () => hostState.bossIntro(),
+    stageName: () => stageRuntime.current.name,
+    stageIndex: () => stageRuntime.index,
+    totalWaves: options.orchestration.modeWaves,
+    waveActive: () => RUN_LIFECYCLE.isWaveActive,
+    runPhase: () => RUN_LIFECYCLE.phase,
+    topComboThreshold: () => CONFIG.trick.tiers.at(-1)?.at ?? 1,
+  });
   return {
-    director: musicDirector, getRun: () => projectLiveMusicRun(hostState.run()),
+    director: musicDirector,
+    getRun: () => projectLiveMusicRun(hostState.run()),
     readPreludeState: () => {
-      const bossIntro = hostState.bossIntro(), bossBeat = hostState.bossBeat();
-      return { slowMotion: impact.slowMotion, timeScale: feel.timeScale, worldZoom: feel.worldZoom,
-        worldZoomTarget: feel.worldZoomTarget, zoom: feel.zoom, flash: feel.flash,
-        bannerTime: feel.bannerSeconds, stageBannerSeconds: stageRuntime.bannerSeconds, rankPopTime: feel.rankPopupSeconds,
-        bossIntro: bossIntro === null ? null : { delay: bossIntro.delay, t: bossIntro.t, dur: bossIntro.dur,
-          boss: { introT: bossIntro.boss.introT ?? 0, dead: bossIntro.boss.dead, dying: bossIntro.boss.dying,
-            hp: bossIntro.boss.hp, maxHp: bossIntro.boss.maxHp,
-            ...(bossIntro.boss.isBoss === undefined ? {} : { isBoss: bossIntro.boss.isBoss }),
-            ...(typeof bossIntro.boss.bossId === "string" ? { bossId: bossIntro.boss.bossId } : {}),
-            phaseMarks: bossIntro.boss.phaseMarks } },
-        bossBeat: bossBeat === null ? null : { t: bossBeat.t } };
+      const bossIntro = hostState.bossIntro(),
+        bossBeat = hostState.bossBeat();
+      return {
+        slowMotion: impact.slowMotion,
+        timeScale: feel.timeScale,
+        worldZoom: feel.worldZoom,
+        worldZoomTarget: feel.worldZoomTarget,
+        zoom: feel.zoom,
+        flash: feel.flash,
+        bannerTime: feel.bannerSeconds,
+        stageBannerSeconds: stageRuntime.bannerSeconds,
+        rankPopTime: feel.rankPopupSeconds,
+        bossIntro:
+          bossIntro === null
+            ? null
+            : {
+                delay: bossIntro.delay,
+                t: bossIntro.t,
+                dur: bossIntro.dur,
+                boss: {
+                  introT: bossIntro.boss.introT ?? 0,
+                  dead: bossIntro.boss.dead,
+                  dying: bossIntro.boss.dying,
+                  hp: bossIntro.boss.hp,
+                  maxHp: bossIntro.boss.maxHp,
+                  ...(bossIntro.boss.isBoss === undefined ? {} : { isBoss: bossIntro.boss.isBoss }),
+                  ...(typeof bossIntro.boss.bossId === "string" ? { bossId: bossIntro.boss.bossId } : {}),
+                  phaseMarks: bossIntro.boss.phaseMarks,
+                },
+              },
+        bossBeat: bossBeat === null ? null : { t: bossBeat.t },
+      };
     },
     writePreludeState(frameState) {
       impact.slowMotion = frameState.slowMotion;
@@ -83,14 +125,20 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
       feel.bannerSeconds = frameState.bannerTime;
       stageRuntime.bannerSeconds = frameState.stageBannerSeconds;
       feel.rankPopupSeconds = frameState.rankPopTime;
-      const bossIntro = hostState.bossIntro(), bossBeat = hostState.bossBeat();
+      const bossIntro = hostState.bossIntro(),
+        bossBeat = hostState.bossBeat();
       hostState.setBossIntro(commitBossIntroSnapshot(bossIntro, frameState.bossIntro));
       if (frameState.bossBeat === null) hostState.setBossBeat(null);
       else if (bossBeat !== null) hostState.setBossBeat({ ...bossBeat, t: frameState.bossBeat.t });
     },
-    parrySlowScale: CONFIG.juice.parrySlowScale, cinemaActive: () => CINEMA.active,
-    playgroundSlow: () => liveRun().pg.slow === true, introScale: CONFIG.bossTheater.introScale, lerp, clamp,
-    timeScale: () => feel.timeScale, hitStop: () => impact.hitStop,
+    parrySlowScale: CONFIG.juice.parrySlowScale,
+    cinemaActive: () => CINEMA.active,
+    playgroundSlow: () => liveRun().pg.slow === true,
+    introScale: CONFIG.bossTheater.introScale,
+    lerp,
+    clamp,
+    timeScale: () => feel.timeScale,
+    hitStop: () => impact.hitStop,
     setHitStop: (value) => {
       impact.hitStop = value;
     },
@@ -114,12 +162,14 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
       for (const action of actions) ghostV3?.record("commands", action.tick, action);
       if (__TEAR_TEST_BUILD__) canonicalTickStartedAt = performance.now();
     },
-    ...(__TEAR_TEST_BUILD__ ? {
-      beforeSimulationStep: (tick: number) => {
-        const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;
-        hook?.before?.(tick);
-      },
-    } : {}),
+    ...(__TEAR_TEST_BUILD__
+      ? {
+          beforeSimulationStep: (tick: number) => {
+            const hook = (browserWindow as BrowserParityTickWindow).__TEAR_PARITY_TICK__;
+            hook?.before?.(tick);
+          },
+        }
+      : {}),
     afterSimulationStep: (tick: number) => {
       if (__TEAR_TEST_BUILD__ && canonicalTickStartedAt !== null) {
         DIAG.record("canonicalTick", performance.now() - canonicalTickStartedAt);
@@ -130,11 +180,22 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
       ghostDna.afterTick(tick);
       options.challenge().afterStep(tick);
       options.chase.observe();
-      void dependencies.practiceEncounterPersistence?.observe({ run: liveRun(), actors: hostState.enemies(), tick, playing: navigation.screen() === "playing",
-        waveActive: RUN_LIFECYCLE.isWaveActive, blockingCinema: CINEMA.active && CINEMA.blocksCombat, ghostPractice: options.ghostPractice.active() !== null,
-        width: W, height: H })?.then((status) => {
-        if (status !== "committed") addFloater(livePlayer().x, livePlayer().y - 70, "ENCOUNTER SAVE NOT CONFIRMED", true, "#e0a326");
-      });
+      void dependencies.practiceEncounterPersistence
+        ?.observe({
+          run: liveRun(),
+          actors: hostState.enemies(),
+          tick,
+          playing: navigation.screen() === "playing",
+          waveActive: RUN_LIFECYCLE.isWaveActive,
+          blockingCinema: CINEMA.active && CINEMA.blocksCombat,
+          ghostPractice: options.ghostPractice.active() !== null,
+          width: W,
+          height: H,
+        })
+        ?.then((status) => {
+          if (status !== "committed")
+            addFloater(livePlayer().x, livePlayer().y - 70, "ENCOUNTER SAVE NOT CONFIRMED", true, "#e0a326");
+        });
       options.ghostCapture().recordKeyframe(tick);
       options.ghostCapture().finale.afterTick();
       if (__TEAR_TEST_BUILD__) {
@@ -150,8 +211,14 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
     },
     musicObservation,
     musicThemePort: () => SFX,
-    musicThemeInput: () => ({ menu: isMenuScreen(navigation.screen()), attractReady: Attract.ready,
-      attractStage: Attract.ready ? Attract.stage().name : "menu", runMode: hostState.run()?.mode ?? "endless",
-      stageName: stageRuntime.current.name, bossWave: hostState.run()?.isBossWave === true, appState: navigation.screen() }),
+    musicThemeInput: () => ({
+      menu: isMenuScreen(navigation.screen()),
+      attractReady: Attract.ready,
+      attractStage: Attract.ready ? Attract.stage().name : "menu",
+      runMode: hostState.run()?.mode ?? "endless",
+      stageName: stageRuntime.current.name,
+      bossWave: hostState.run()?.isBossWave === true,
+      appState: navigation.screen(),
+    }),
   };
 }

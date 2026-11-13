@@ -1,17 +1,7 @@
 import { AudioSystem } from "./audio-system";
-import {
-  createBrowserAudioContextFactory,
-  unwrapBrowserAudioContext,
-  unwrapBrowserAudioNode,
-} from "./browser-audio";
+import { createBrowserAudioContextFactory, unwrapBrowserAudioContext, unwrapBrowserAudioNode } from "./browser-audio";
 import type { AudioEffectsBackend, AudioEffectsBackendHost } from "./effects-contracts";
-import type {
-  AudioCategory,
-  AudioMixerSettings,
-  AudioSettingsStore,
-  SfxRoute,
-  TemporaryMuteReason,
-} from "./mixer";
+import type { AudioCategory, AudioMixerSettings, AudioSettingsStore, SfxRoute, TemporaryMuteReason } from "./mixer";
 import type {
   MusicBackend,
   MusicBackendHost,
@@ -27,7 +17,7 @@ import type { LegacySynthContract } from "./legacy-synth-contracts";
 const LEGACY_SETTINGS_KEY = "tear_settings";
 
 function objectRecord(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
 }
 
 function readLocalSettings(storage: Storage): Record<string, unknown> {
@@ -41,12 +31,24 @@ function readLocalSettings(storage: Storage): Record<string, unknown> {
 
 class VolatileStorage implements Storage {
   readonly #values = new Map<string, string>();
-  get length(): number { return this.#values.size; }
-  clear(): void { this.#values.clear(); }
-  getItem(key: string): string | null { return this.#values.get(key) ?? null; }
-  key(index: number): string | null { return [...this.#values.keys()][index] ?? null; }
-  removeItem(key: string): void { this.#values.delete(key); }
-  setItem(key: string, value: string): void { this.#values.set(key, value); }
+  get length(): number {
+    return this.#values.size;
+  }
+  clear(): void {
+    this.#values.clear();
+  }
+  getItem(key: string): string | null {
+    return this.#values.get(key) ?? null;
+  }
+  key(index: number): string | null {
+    return [...this.#values.keys()][index] ?? null;
+  }
+  removeItem(key: string): void {
+    this.#values.delete(key);
+  }
+  setItem(key: string, value: string): void {
+    this.#values.set(key, value);
+  }
 }
 
 function resolveStorage(browserWindow: Window): Storage {
@@ -173,18 +175,35 @@ class LegacySynthMusicBackend implements MusicBackend {
     return Promise.resolve();
   }
 
-  beginRun(metadata: MusicRunSessionMetadata): Promise<void> { void metadata; return Promise.resolve(); }
-  updateContext(snapshot: MusicContextSnapshot): void { void snapshot; return undefined; }
-  emitEvent(event: MusicEvent): void { void event; return undefined; }
-  endRun(): Promise<void> { return Promise.resolve(); }
+  beginRun(metadata: MusicRunSessionMetadata): Promise<void> {
+    void metadata;
+    return Promise.resolve();
+  }
+  updateContext(snapshot: MusicContextSnapshot): void {
+    void snapshot;
+    return undefined;
+  }
+  emitEvent(event: MusicEvent): void {
+    void event;
+    return undefined;
+  }
+  endRun(): Promise<void> {
+    return Promise.resolve();
+  }
   setMuteReason(reason: TemporaryMuteReason, muted: boolean): void {
     void reason;
     void muted;
     return undefined;
   }
-  replayMetadata(): MusicReplayMetadata { return { enabled: false, reason: "fallback" }; }
-  resume(): Promise<void> { return Promise.resolve(); }
-  suspend(): Promise<void> { return Promise.resolve(); }
+  replayMetadata(): MusicReplayMetadata {
+    return { enabled: false, reason: "fallback" };
+  }
+  resume(): Promise<void> {
+    return Promise.resolve();
+  }
+  suspend(): Promise<void> {
+    return Promise.resolve();
+  }
 
   dispose(): Promise<void> {
     this.#synth._stopMusic();
@@ -198,10 +217,7 @@ export interface LegacyAudioCompatibility {
   readonly system: AudioSystem;
   activate(): void;
   dispose(): void;
-  migrateSettings(
-    settings: Record<string, unknown>,
-    audioSource?: Record<string, unknown>,
-  ): Record<string, unknown>;
+  migrateSettings(settings: Record<string, unknown>, audioSource?: Record<string, unknown>): Record<string, unknown>;
   applySettings(settings: Record<string, unknown>): void;
   setVolume(category: AudioCategory, value: number): void;
   setMuted(category: AudioCategory, muted: boolean): void;
@@ -257,35 +273,38 @@ export function createLegacyAudioCompatibility(
       flushScheduled = false;
       return;
     }
-    void ready.then(async () => {
-      if (disposed || pendingRun === null || system.state !== "running") return;
-      if (!runStarted) {
-        const startingRun = pendingRun;
-        await system.beginMusicRun(startingRun);
-        if (pendingRun !== startingRun) return;
-        runStarted = true;
-      }
-      if (pendingSnapshot !== null) {
-        const snapshot = pendingSnapshot;
-        pendingSnapshot = null;
-        system.updateMusicContext(snapshot);
-      }
-      while (pendingEvents.length > 0) {
-        const event = pendingEvents.shift();
-        if (event !== undefined) system.emitMusicEvent(event);
-      }
-      if (endRequested) {
-        await system.endMusicRun();
-        pendingRun = null;
-        runStarted = false;
-        endRequested = false;
-      }
-    }).catch(report).finally(() => {
-      flushScheduled = false;
-      if (!disposed && pendingRun !== null && (pendingSnapshot !== null || pendingEvents.length > 0)) {
-        scheduleFlush();
-      }
-    });
+    void ready
+      .then(async () => {
+        if (disposed || pendingRun === null || system.state !== "running") return;
+        if (!runStarted) {
+          const startingRun = pendingRun;
+          await system.beginMusicRun(startingRun);
+          if (pendingRun !== startingRun) return;
+          runStarted = true;
+        }
+        if (pendingSnapshot !== null) {
+          const snapshot = pendingSnapshot;
+          pendingSnapshot = null;
+          system.updateMusicContext(snapshot);
+        }
+        while (pendingEvents.length > 0) {
+          const event = pendingEvents.shift();
+          if (event !== undefined) system.emitMusicEvent(event);
+        }
+        if (endRequested) {
+          await system.endMusicRun();
+          pendingRun = null;
+          runStarted = false;
+          endRequested = false;
+        }
+      })
+      .catch(report)
+      .finally(() => {
+        flushScheduled = false;
+        if (!disposed && pendingRun !== null && (pendingSnapshot !== null || pendingEvents.length > 0)) {
+          scheduleFlush();
+        }
+      });
   };
 
   return {
@@ -307,7 +326,7 @@ export function createLegacyAudioCompatibility(
       });
     },
     migrateSettings(settings, audioSource = settings) {
-      const source = audioSource === settings ? settings : audioSource.audio ?? audioSource;
+      const source = audioSource === settings ? settings : (audioSource.audio ?? audioSource);
       const audio = migrateAudioSettings(source);
       return Object.assign(settings, audio, {
         vol: audio.masterVolume,
@@ -372,7 +391,11 @@ export function createLegacyAudioCompatibility(
       endRequested = true;
       scheduleFlush();
     },
-    musicReplayMetadata() { return system.musicReplayMetadata(); },
-    activeMusicRun() { return pendingRun; },
+    musicReplayMetadata() {
+      return system.musicReplayMetadata();
+    },
+    activeMusicRun() {
+      return pendingRun;
+    },
   };
 }

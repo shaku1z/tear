@@ -17,9 +17,12 @@ export function assertCanonicalStructuredObservations(
     const kind = assertion.slice(0, separator);
     const expected = assertion.slice(separator + 1);
     const matched = observations.some((observation) => {
-      if (kind === "environment.field.kind") return observation.environment?.fields.some((field) => field.kind === expected) ?? false;
-      if (kind === "environment.field.id") return observation.environment?.fields.some((field) => field.id === expected) ?? false;
-      if (kind === "environment.field.state") return observation.environment?.fields.some((field) => field.state === expected) ?? false;
+      if (kind === "environment.field.kind")
+        return observation.environment?.fields.some((field) => field.kind === expected) ?? false;
+      if (kind === "environment.field.id")
+        return observation.environment?.fields.some((field) => field.id === expected) ?? false;
+      if (kind === "environment.field.state")
+        return observation.environment?.fields.some((field) => field.state === expected) ?? false;
       if (kind === "entity.kind") return observation.entities.some((entity) => entity.kind === expected);
       if (kind === "entity.variantId") return observation.entities.some((entity) => entity.variantId === expected);
       if (kind === "boss.phase") return observation.diagnostics?.boss?.phase === expected;

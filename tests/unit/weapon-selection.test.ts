@@ -13,8 +13,14 @@ describe("weapon selection migration", () => {
 
   it("stores a canonical selection in a newly started run", () => {
     const run = createRunSession({
-      mode: "endless", difficulty: "normal", weaponId: "spear", runSeed: 7, voidSeed: 9,
-      mods: {}, scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 }, achievementSnapshot: [],
+      mode: "endless",
+      difficulty: "normal",
+      weaponId: "spear",
+      runSeed: 7,
+      voidSeed: 9,
+      mods: {},
+      scaling: { coin: 1, score: 1, enemyHp: 1, enemyCount: 1 },
+      achievementSnapshot: [],
     });
     expect(run.weaponId).toBe("greatsword");
     expect(run.mods.weaponId).toBe("greatsword");

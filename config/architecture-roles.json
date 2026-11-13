@@ -232,7 +232,7 @@
       "include": ["src/app/engineering/engineering-surfaces.ts", "src/app/engineering/verdant-calibration-composition.ts"]
     },
     "size.authored-data-exceptions": {
-      "purpose": "Authored data tables exempt from the 700-line module limit.",
+      "purpose": "Authored data tables exempt from the 700-line (line-equivalent) module limit.",
       "include": ["src/config/game-config.ts", "src/gameplay/upgrades.ts"]
     }
   }

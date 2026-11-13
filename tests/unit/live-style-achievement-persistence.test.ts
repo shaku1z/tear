@@ -5,8 +5,18 @@ import { createLiveStyleAchievementPersistence } from "../../src/app/progress/st
 describe("live style achievement persistence adapter", () => {
   it("checks achievements before saving the profile through the explicit adapter", () => {
     const calls: string[] = [];
-    const persistence = createLiveStyleAchievementPersistence({ check: () => { calls.push("check"); } },
-      { save: () => { calls.push("save"); } });
+    const persistence = createLiveStyleAchievementPersistence(
+      {
+        check: () => {
+          calls.push("check");
+        },
+      },
+      {
+        save: () => {
+          calls.push("save");
+        },
+      },
+    );
 
     persistence.checkAndSave();
 

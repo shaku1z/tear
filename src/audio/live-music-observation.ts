@@ -70,7 +70,7 @@ export function buildLiveMusicObservation(input: LiveMusicObservationInput): Mus
     difficultyId: run.diff,
     // The stage object deliberately survives run teardown for attract-mode
     // rendering, so app state—not stale stage presence—identifies the real shell.
-    biomeId: input.appState === "menu" ? "menu" : input.stageName ?? "menu",
+    biomeId: input.appState === "menu" ? "menu" : (input.stageName ?? "menu"),
     stageId: String(input.stageIndex),
     wave: run.wave ?? 0,
     totalWaves: input.totalWaves,

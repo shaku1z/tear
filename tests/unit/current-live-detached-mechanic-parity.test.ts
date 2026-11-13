@@ -35,18 +35,26 @@ function readTrace(): ProductionC27ATrace {
   if (!origin.ok || origin.value.kind !== "snapshot") throw new TypeError("C27A parity origin is invalid");
   const identity = value as TraceIdentity;
   const current = readSourceIdentitySync(resolve("."));
-  if (identity.sourceIdentity?.revision !== current.revision
-    || identity.sourceIdentity.state !== "clean"
-    || identity.sourceIdentity.fingerprint !== current.fingerprint) {
+  if (
+    identity.sourceIdentity?.revision !== current.revision ||
+    identity.sourceIdentity.state !== "clean" ||
+    identity.sourceIdentity.fingerprint !== current.fingerprint
+  ) {
     throw new Error("C27A parity artifact source identity is stale or not clean");
   }
-  if (identity.buildIdentity?.sha !== current.revision
-    || identity.buildIdentity.target !== "standalone"
-    || typeof identity.buildIdentity.artifactHash !== "string"
-    || identity.buildIdentity.artifactHash.length !== 64) {
+  if (
+    identity.buildIdentity?.sha !== current.revision ||
+    identity.buildIdentity.target !== "standalone" ||
+    typeof identity.buildIdentity.artifactHash !== "string" ||
+    identity.buildIdentity.artifactHash.length !== 64
+  ) {
     throw new Error("C27A parity artifact build identity is stale or invalid");
   }
-  return { ...(value as Omit<ProductionC27ATrace, "scenario" | "origin">), scenario: scenario.value, origin: origin.value };
+  return {
+    ...(value as Omit<ProductionC27ATrace, "scenario" | "origin">),
+    scenario: scenario.value,
+    origin: origin.value,
+  };
 }
 
 describe.skipIf(!parityRequired)("current live/detached mechanic parity", () => {
@@ -70,15 +78,20 @@ describe.skipIf(!parityRequired)("current live/detached mechanic parity", () => 
     expect(new Set(players.map((player) => `${String(player.x)}:${String(player.y)}`)).size).toBeGreaterThan(1);
     const blades = states.map(({ blade }) => blade).filter((blade) => blade !== null);
     expect(blades.length).toBe(trace.hashes.length);
-    expect(new Set(blades.map((blade) => `${blade.state}:${String(blade.x)}:${String(blade.y)}`)).size).toBeGreaterThan(1);
+    expect(new Set(blades.map((blade) => `${blade.state}:${String(blade.x)}:${String(blade.y)}`)).size).toBeGreaterThan(
+      1,
+    );
     const bladeStates = new Set(blades.map(({ state }) => state));
     expect(bladeStates.has("held")).toBe(true);
     expect(bladeStates.has("flying")).toBe(true);
-    const commands = Object.values(trace.schedule).flat().map((entry) => entry.command);
+    const commands = Object.values(trace.schedule)
+      .flat()
+      .map((entry) => entry.command);
     expect(commands.some((command) => command.type === "weapon" && command.intent === "throw")).toBe(true);
     expect(commands.some((command) => command.type === "weapon" && command.intent === "recall")).toBe(true);
-    const swordTransport = trace.engineEventProjection.events.filter((event) =>
-      event.type === "blade.thrown" || event.type === "blade.caught");
+    const swordTransport = trace.engineEventProjection.events.filter(
+      (event) => event.type === "blade.thrown" || event.type === "blade.caught",
+    );
     expect(swordTransport.map(({ type }) => type)).toEqual(["blade.thrown", "blade.caught"]);
     expect(swordTransport.every((event) => event.payload.weaponId === "sword")).toBe(true);
   });

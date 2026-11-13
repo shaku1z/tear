@@ -11,7 +11,16 @@ import {
   type TearWorldSimulationFactoryOptions,
 } from "../../src/gameplay/runtime/tear-world-simulation-factories";
 import type { GameRuntimeDependencies } from "../../src/app/shell/game-runtime-dependencies";
-import { aabbOverlap, clamp, len, lerp, lerpAngle, segCircle, segPointDist, segSegmentDist } from "../../src/domain/geometry";
+import {
+  aabbOverlap,
+  clamp,
+  len,
+  lerp,
+  lerpAngle,
+  segCircle,
+  segPointDist,
+  segSegmentDist,
+} from "../../src/domain/geometry";
 import { CombatEntityRuntime, type CombatEntityRuntimeHooks } from "../../src/gameplay/combat/combat-entity-runtime";
 import type { LiveKillHost } from "../../src/gameplay/combat/live-kill-runtime";
 import { runLiveCollisionPhase, type LiveCollisionPhaseHost } from "../../src/gameplay/combat/live-collision-phase";
@@ -22,8 +31,10 @@ import { cosmeticRandom } from "../../src/presentation/cosmetic-random";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 import { PRESETS, applyPreset, rollAffixes } from "../../src/gameplay/affixes";
 import { createLiveContentRuntime } from "../../src/gameplay/run/live-content-runtime";
-import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from
-  "../../src/gameplay/run/live-outcome-controller";
+import {
+  LiveRunOutcomeController,
+  type LiveOutcomeControllerPort,
+} from "../../src/gameplay/run/live-outcome-controller";
 import {
   snapshotOutcomeRun,
   type OutcomeRunState,
@@ -40,31 +51,34 @@ import { planBossPlacement } from "../../src/gameplay/run/boss-placement";
 import { beginBossEncounter } from "../../src/gameplay/run/boss-encounter";
 import { createBossArena } from "../../src/gameplay/training/arena-rules";
 import { applyWeapon } from "../../src/gameplay/weapons";
-import { newMods, UPGRADES, type UpgradeDefinition } from
-  "../../src/gameplay/upgrades";
+import { newMods, UPGRADES, type UpgradeDefinition } from "../../src/gameplay/upgrades";
 import { eligibleTierChoices } from "../../src/gameplay/run/reward-selection";
 import { createProductionWaveRewardRuntime } from "../../src/tearbench/production-wave-reward-runtime";
 import type { ProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { createLiveStyleAchievementRuntime } from "../../src/gameplay/scoring/live-style-achievement-runtime";
 import { tracksAchievements } from "../../src/gameplay/progression/achievement-runtime";
 import { CinematicTimeline } from "../../src/gameplay/runtime/cinematic-director";
-import { parseCampaignChapterBindingSpec, stageCampaignChapterBinding } from
-  "../../src/gameplay/campaign/chapter-cinematic-binding";
+import {
+  parseCampaignChapterBindingSpec,
+  stageCampaignChapterBinding,
+} from "../../src/gameplay/campaign/chapter-cinematic-binding";
 import type { ChapterIntent } from "../../src/gameplay/campaign/chapter-controller";
 import { stepCinematicPlayer } from "../../src/gameplay/campaign/cinematic-player-runtime";
 import { FinaleController, type FinaleIntent, type FinaleState } from "../../src/gameplay/campaign/finale-controller";
-import {
-  observeFinaleOutwardCall,
-  type FinaleOutwardCall,
-} from "../../src/gameplay/campaign/finale-outward-call";
+import { observeFinaleOutwardCall, type FinaleOutwardCall } from "../../src/gameplay/campaign/finale-outward-call";
 import { createFinaleRuntime, type FinaleRuntimeState } from "../../src/gameplay/campaign/finale-runtime";
-import { createOutcomeChronologyJournal, type OutcomeChronologyJournal } from
-  "../../src/gameplay/run/outcome-chronology-journal";
+import {
+  createOutcomeChronologyJournal,
+  type OutcomeChronologyJournal,
+} from "../../src/gameplay/run/outcome-chronology-journal";
 import { createTearCombatSimulation } from "../../src/gameplay/runtime/tear-combat-simulation";
 import type { AuthoritativeInputState } from "../../src/gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../../src/gameplay/runtime/gameplay-events";
-import { createTearSpawnFactPublisher, createTearTerminalRunFactPublisher, createTearWaveFactPublisher } from
-  "../../src/gameplay/runtime/gameplay-event-publishers";
+import {
+  createTearSpawnFactPublisher,
+  createTearTerminalRunFactPublisher,
+  createTearWaveFactPublisher,
+} from "../../src/gameplay/runtime/gameplay-event-publishers";
 import { createParticleSystem } from "../../src/presentation/particles";
 import type { RunLifecycleSnapshot } from "../../src/gameplay/run/lifecycle";
 
@@ -99,8 +113,10 @@ function detachedPresentation(): TearWorldEntityPresentationPorts {
       install: () => undefined,
     }),
     mirror: {
-      drawMirror: () => undefined, drawHostFallback: () => undefined,
-      drawReflection: () => undefined, saberLockSparks: () => undefined,
+      drawMirror: () => undefined,
+      drawHostFallback: () => undefined,
+      drawReflection: () => undefined,
+      saberLockSparks: () => undefined,
     },
   });
 }
@@ -108,9 +124,19 @@ function detachedPresentation(): TearWorldEntityPresentationPorts {
 /** A legal minimal run: real upgrade mods, weapon stats, and boss/void fields. */
 export function detachedRun(mode = "endless") {
   return {
-    mode, mods: newMods(), mult: 1, lifestealCd: 0, weaponId: "sword", wave: 1, score: 0, waveKills: 0, runTime: 0,
+    mode,
+    mods: newMods(),
+    mult: 1,
+    lifestealCd: 0,
+    weaponId: "sword",
+    wave: 1,
+    score: 0,
+    waveKills: 0,
+    runTime: 0,
     weaponStats: { distanceMoved: 0, throws: 0 },
-    voidScroll: null, bossAdds: [], echoClones: null,
+    voidScroll: null,
+    bossAdds: [],
+    echoClones: null,
   };
 }
 
@@ -141,37 +167,67 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   });
   random.streams.reset(options.seed);
   const factories = createTearWorldSimulationFactories({
-    clock, config, graphics: GFX, effects, sound: sink() as Options["sound"],
-    input: idleInput() as Options["input"], presentation: detachedPresentation(),
+    clock,
+    config,
+    graphics: GFX,
+    effects,
+    sound: sink() as Options["sound"],
+    input: idleInput() as Options["input"],
+    presentation: detachedPresentation(),
     random: { enemyAi: random.streams.stream("enemy-ai"), boss: random.streams.stream("boss") },
     geometry: { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist },
     cosmeticRandom: cosmeticEmissionRandom.next,
   });
   const dependencies = {
-    CLOCK: clock, CONFIG: config, GAME_RANDOM: random.service, GAME_RANDOM_STREAMS: random.streams, FX: effects,
-    cosmeticRandom, cosmeticEmissionRandom,
-    Backdrop: { resetFx: () => undefined }, Mirror: factories.mirrorTypes.Mirror, BOSSFX: factories.enemyTypes.BOSSFX,
+    CLOCK: clock,
+    CONFIG: config,
+    GAME_RANDOM: random.service,
+    GAME_RANDOM_STREAMS: random.streams,
+    FX: effects,
+    cosmeticRandom,
+    cosmeticEmissionRandom,
+    Backdrop: { resetFx: () => undefined },
+    Mirror: factories.mirrorTypes.Mirror,
+    BOSSFX: factories.enemyTypes.BOSSFX,
     Cinematics: CinematicTimeline,
-    Player: factories.Player, Blade: factories.Blade, Projectile: factories.Projectile,
-    Charger: factories.enemyTypes.Charger, Ranged: factories.enemyTypes.Ranged, Flyer: factories.enemyTypes.Flyer,
-    Bomber: factories.enemyTypes.Bomber, Armored: factories.enemyTypes.Armored, Wraith: factories.enemyTypes.Wraith,
-    Chimera: factories.enemyTypes.Chimera, Warden: factories.enemyTypes.Warden, Colossus: factories.enemyTypes.Colossus,
-    Aldric: factories.enemyTypes.Aldric, Rimehound: factories.enemyTypes.Rimehound,
-    Source: factories.enemyTypes.Source, Support: factories.enemyTypes.Support,
-    VoidWisp: factories.enemyTypes.VoidWisp, Boss: factories.enemyTypes.Boss,
-    MirrorHost: factories.mirrorTypes.MirrorHost, ReflectionEnemy: factories.mirrorTypes.ReflectionEnemy,
+    Player: factories.Player,
+    Blade: factories.Blade,
+    Projectile: factories.Projectile,
+    Charger: factories.enemyTypes.Charger,
+    Ranged: factories.enemyTypes.Ranged,
+    Flyer: factories.enemyTypes.Flyer,
+    Bomber: factories.enemyTypes.Bomber,
+    Armored: factories.enemyTypes.Armored,
+    Wraith: factories.enemyTypes.Wraith,
+    Chimera: factories.enemyTypes.Chimera,
+    Warden: factories.enemyTypes.Warden,
+    Colossus: factories.enemyTypes.Colossus,
+    Aldric: factories.enemyTypes.Aldric,
+    Rimehound: factories.enemyTypes.Rimehound,
+    Source: factories.enemyTypes.Source,
+    Support: factories.enemyTypes.Support,
+    VoidWisp: factories.enemyTypes.VoidWisp,
+    Boss: factories.enemyTypes.Boss,
+    MirrorHost: factories.mirrorTypes.MirrorHost,
+    ReflectionEnemy: factories.mirrorTypes.ReflectionEnemy,
   } as unknown as GameRuntimeDependencies;
   const session: LiveWorldSessionPort = {
-    selectedWeapon: () => "sword", setSelectedWeapon: () => undefined,
-    outcome: () => null, setOutcome: () => undefined,
-    lastRecording: () => null, setLastRecording: () => undefined,
-    lastVaultId: () => null, setLastVaultId: () => undefined,
-    winSeconds: () => 0, setWinSeconds: () => undefined,
+    selectedWeapon: () => "sword",
+    setSelectedWeapon: () => undefined,
+    outcome: () => null,
+    setOutcome: () => undefined,
+    lastRecording: () => null,
+    setLastRecording: () => undefined,
+    lastVaultId: () => null,
+    setLastVaultId: () => undefined,
+    winSeconds: () => 0,
+    setWinSeconds: () => undefined,
   };
   const state = createLiveWorldState(session);
   const entities = createLiveWorldEntityFactory(dependencies);
   const world = createTearWorldComposition({
-    state, entities,
+    state,
+    entities,
     services: createLiveWorldServices({ dependencies, configuration }),
     cinema: new CinematicTimeline.Director(config),
     worldId: options.worldId ?? `detached:${options.seed}:${options.mode ?? "endless"}`,
@@ -192,8 +248,9 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   blade.weapon = weapon;
   blade.model = weapon.model;
   world.state.setBlade(blade as never);
-  world.state.setEnemies((options.enemies ?? []).map((spawn) =>
-    world.entities.createEnemy(spawn.id, spawn.x, spawn.y, run as never)));
+  world.state.setEnemies(
+    (options.enemies ?? []).map((spawn) => world.entities.createEnemy(spawn.id, spawn.x, spawn.y, run as never)),
+  );
   const input = createLiveAuthoritativeInputAdapter({
     player: () => world.state.player() as never,
     blade: () => world.state.blade() as never,
@@ -202,7 +259,19 @@ export function createDetachedWorld(options: DetachedWorldOptions) {
   // Platforms are mutable world state: a boss encounter swaps in its arena,
   // and both the wave runtime and the combat phases must see the same array.
   const stage: { index: number; platforms: unknown[] } = { index: 0, platforms: stagePlatforms(0, config) };
-  return { world, configuration, clock, effects, random, cosmeticEmissionRandom, factories, transient, input, run, stage };
+  return {
+    world,
+    configuration,
+    clock,
+    effects,
+    random,
+    cosmeticEmissionRandom,
+    factories,
+    transient,
+    input,
+    run,
+    stage,
+  };
 }
 
 export type DetachedWorld = ReturnType<typeof createDetachedWorld>;
@@ -214,22 +283,33 @@ export function restoreDetachedTransientRuntime(
 ): void {
   const transient = detached.world.context.transient;
   transient.assignImpact({
-    hitStop: Number(runtime.hitStop), slowMotion: Number(runtime.slowmo), shake: Number(runtime.shake),
+    hitStop: Number(runtime.hitStop),
+    slowMotion: Number(runtime.slowmo),
+    shake: Number(runtime.shake),
   });
   transient.assignOpening({
-    throwCooldown: Number(runtime.throwCd), dashGhostTime: Number(runtime.dashGhostT),
-    landingVelocity: Number(runtime.landingV), wasDashing: Boolean(runtime.wasDashing),
-    wasSwinging: Boolean(runtime.wasSwinging), wasOnGround: Boolean(runtime.wasOnGround),
+    throwCooldown: Number(runtime.throwCd),
+    dashGhostTime: Number(runtime.dashGhostT),
+    landingVelocity: Number(runtime.landingV),
+    wasDashing: Boolean(runtime.wasDashing),
+    wasSwinging: Boolean(runtime.wasSwinging),
+    wasOnGround: Boolean(runtime.wasOnGround),
   });
   Object.assign(transient.feel, {
-    timeScale: Number(runtime.timeScale), zoom: Number(runtime.zoom), flash: Number(runtime.flash),
-    bannerSeconds: Number(runtime.bannerT), worldZoom: Number(runtime.worldZoom),
-    worldZoomTarget: Number(runtime.worldZoomTarget), rankPopupSeconds: Number(runtime.rankPopT),
+    timeScale: Number(runtime.timeScale),
+    zoom: Number(runtime.zoom),
+    flash: Number(runtime.flash),
+    bannerSeconds: Number(runtime.bannerT),
+    worldZoom: Number(runtime.worldZoom),
+    worldZoomTarget: Number(runtime.worldZoomTarget),
+    rankPopupSeconds: Number(runtime.rankPopT),
     rankPopupText: String(runtime.rankPopText),
   });
   const protection = runtime.cinemaProtection as Readonly<{ active?: unknown; lastMode?: unknown }> | undefined;
-  transient.assignProtection({ active: Boolean(protection?.active),
-    lastMode: typeof protection?.lastMode === "string" ? protection.lastMode : null });
+  transient.assignProtection({
+    active: Boolean(protection?.active),
+    lastMode: typeof protection?.lastMode === "string" ? protection.lastMode : null,
+  });
 }
 
 /** Rebuilds an active chapter from data only; exact Class-A ticks do not advance RAF cinema time. */
@@ -296,16 +376,15 @@ export interface DetachedCombatSimulationOptions<State> extends DetachedCombatPh
  * returned `step` runs the same two phases in the same order as the live
  * combat host, including its skip when the opening half blocks the tick.
  */
-export function createDetachedCombatPhases(
-  detached: DetachedWorld,
-  options: DetachedCombatPhaseOptions = {},
-) {
+export function createDetachedCombatPhases(detached: DetachedWorld, options: DetachedCombatPhaseOptions = {}) {
   const { world, effects, transient, input, stage } = detached;
   const config = detached.configuration.value;
   if (options.platforms !== undefined) stage.platforms = [...options.platforms];
   const platforms = () => stage.platforms as unknown as LiveOpeningPhaseHost["platforms"];
   const outward: string[] = [];
-  const note = (name: string) => () => { outward.push(name); };
+  const note = (name: string) => () => {
+    outward.push(name);
+  };
   const player = () => world.state.player() as never;
   const blade = () => world.state.blade() as never;
   const style = createLiveStyleAchievementRuntime({
@@ -322,94 +401,205 @@ export function createDetachedCombatPhases(
     // its gameplay-event port is the detached host's equivalent capability.
     ghostRecording: () => options.gameplayEvents !== undefined,
     styleIntents: {
-      tutorialMark: (kind) => { outward.push(`tutorial:${kind}`); },
-      ghostCapture: (kind, x, y) => { options.gameplayEvents?.emit({ kind: "effect", effect: kind, x, y }); },
+      tutorialMark: (kind) => {
+        outward.push(`tutorial:${kind}`);
+      },
+      ghostCapture: (kind, x, y) => {
+        options.gameplayEvents?.emit({ kind: "effect", effect: kind, x, y });
+      },
       playerTrick: (kind, at) => {
         const activePlayer = player() as { lastTrickKind?: string; lastTrickT?: number };
-        activePlayer.lastTrickKind = kind; activePlayer.lastTrickT = at;
+        activePlayer.lastTrickKind = kind;
+        activePlayer.lastTrickT = at;
       },
-      rankUp: (rank) => { outward.push(`rankUp:${rank}`); },
-      musicRankChanged: (rank) => { outward.push(`musicRank:${rank}`); },
-      haptic: note("haptic"), profileAdd: note("profileAdd"), dailyBump: note("dailyBump"),
-      profileMax: note("profileMax"), achievementCheck: note("achievementCheck"),
+      rankUp: (rank) => {
+        outward.push(`rankUp:${rank}`);
+      },
+      musicRankChanged: (rank) => {
+        outward.push(`musicRank:${rank}`);
+      },
+      haptic: note("haptic"),
+      profileAdd: note("profileAdd"),
+      dailyBump: note("dailyBump"),
+      profileMax: note("profileMax"),
+      achievementCheck: note("achievementCheck"),
     },
-    profileMax: note("profileMax"), achievementCheck: note("achievementCheck"),
+    profileMax: note("profileMax"),
+    achievementCheck: note("achievementCheck"),
     metaLevel: () => 0,
     projectileSpeed: () => config.proj.speed,
     createProjectile: (x, y, vx, vy) => world.entities.createProjectile(x, y, vx, vy) as never,
-    addProjectile: (projectile) => { world.state.setProjectiles([...world.state.projectiles(), projectile]); },
+    addProjectile: (projectile) => {
+      world.state.setProjectiles([...world.state.projectiles(), projectile]);
+    },
   });
 
   let resolveKill: (enemy: { dead?: boolean }, cause?: string) => void = (enemy) => {
-    enemy.dead = true; outward.push("onKill");
+    enemy.dead = true;
+    outward.push("onKill");
   };
   let actorId: ((enemy: object & { id?: string }) => string) | null = null;
-  const nativeTracking = () => options.gameplayEvents !== undefined
-    && tracksAchievements(world.state.run());
+  const nativeTracking = () => options.gameplayEvents !== undefined && tracksAchievements(world.state.run());
   const entityHooks = {
-    actors: () => world.state.enemies(), projectiles: () => world.state.projectiles(),
+    actors: () => world.state.enemies(),
+    projectiles: () => world.state.projectiles(),
     player: () => world.state.player(),
-    slowZones: () => world.state.slowZones(), setSlowZones: (zones: never[]) => { world.state.setSlowZones(zones); },
-    walls: () => world.state.temporaryWalls(), setWalls: (walls: never[]) => { world.state.setTemporaryWalls(walls); },
+    slowZones: () => world.state.slowZones(),
+    setSlowZones: (zones: never[]) => {
+      world.state.setSlowZones(zones);
+    },
+    walls: () => world.state.temporaryWalls(),
+    setWalls: (walls: never[]) => {
+      world.state.setTemporaryWalls(walls);
+    },
     platforms: () => [...stage.platforms],
-    ring: (x: number, y: number, radius: number, color: string) => { effects.ring(x, y, radius, color); },
-    burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => { effects.burst(x, y, dx, dy, count, color); },
-    explode: (x: number, y: number, color: string, scale: number) => { effects.explode(x, y, color, scale); },
-    fxFlash: (x: number, y: number, radius: number, color: string) => { effects.flash(x, y, radius, color); },
-    floater: note("floater"), shake: note("shake"), flash: note("flash"),
-    sound: (cue: string) => { outward.push(`sound:${cue}`); },
-    loseStyle: () => { style.loseStyle(); }, shieldAbsorbed: note("shieldAbsorbed"),
-    addStyle: (kind: string) => { style.addStyle(kind); },
-    dashDodge: (projectile: unknown) => { style.achievements.dashDodge(projectile as never); },
-    maxStat: note("maxStat"), checkAchievements: () => { style.check(); },
-    noteFirstDamage: note("noteFirstDamage"), reflectedHit: note("reflectedHit"), bossHit: note("bossHit"),
-    onKill: (enemy: { dead?: boolean }, cause: string) => { resolveKill(enemy, cause); },
+    ring: (x: number, y: number, radius: number, color: string) => {
+      effects.ring(x, y, radius, color);
+    },
+    burst: (x: number, y: number, dx: number, dy: number, count: number, color: string) => {
+      effects.burst(x, y, dx, dy, count, color);
+    },
+    explode: (x: number, y: number, color: string, scale: number) => {
+      effects.explode(x, y, color, scale);
+    },
+    fxFlash: (x: number, y: number, radius: number, color: string) => {
+      effects.flash(x, y, radius, color);
+    },
+    floater: note("floater"),
+    shake: note("shake"),
+    flash: note("flash"),
+    sound: (cue: string) => {
+      outward.push(`sound:${cue}`);
+    },
+    loseStyle: () => {
+      style.loseStyle();
+    },
+    shieldAbsorbed: note("shieldAbsorbed"),
+    addStyle: (kind: string) => {
+      style.addStyle(kind);
+    },
+    dashDodge: (projectile: unknown) => {
+      style.achievements.dashDodge(projectile as never);
+    },
+    maxStat: note("maxStat"),
+    checkAchievements: () => {
+      style.check();
+    },
+    noteFirstDamage: note("noteFirstDamage"),
+    reflectedHit: note("reflectedHit"),
+    bossHit: note("bossHit"),
+    onKill: (enemy: { dead?: boolean }, cause: string) => {
+      resolveKill(enemy, cause);
+    },
     areaDamage: () => 0,
   } as unknown as CombatEntityRuntimeHooks;
   let combat = options.deferCombatRuntime === true ? null : new CombatEntityRuntime(entityHooks);
 
   const opening = {
     config,
-    get player() { return player(); }, get blade() { return blade(); },
-    get run() { return world.state.run() as never; },
-    get enemies() { return world.state.enemies() as never; },
-    get projectiles() { return world.state.projectiles(); },
-    get platforms() { return platforms(); }, state: transient.opening, width: config.view.w,
-    get blocking() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
-    get playerMode() { return world.context.cinema.playerMode; }, protection: transient.protection,
+    get player() {
+      return player();
+    },
+    get blade() {
+      return blade();
+    },
+    get run() {
+      return world.state.run() as never;
+    },
+    get enemies() {
+      return world.state.enemies() as never;
+    },
+    get projectiles() {
+      return world.state.projectiles();
+    },
+    get platforms() {
+      return platforms();
+    },
+    state: transient.opening,
+    width: config.view.w,
+    get blocking() {
+      return world.context.cinema.active && world.context.cinema.blocksCombat;
+    },
+    get playerMode() {
+      return world.context.cinema.playerMode;
+    },
+    protection: transient.protection,
     lowGraphics: false,
-    get transformationBlocked() { return world.context.cinema.active && world.context.cinema.blocksCombat; },
-    overrunMovementMultiplier: () => 1, runDamageMultiplier: () => 1,
+    get transformationBlocked() {
+      return world.context.cinema.active && world.context.cinema.blocksCombat;
+    },
+    overrunMovementMultiplier: () => 1,
+    runDamageMultiplier: () => 1,
     stepCinematic: (dt: number) => {
-      stepCinematicPlayer({ dt, mode: world.context.cinema.playerMode, player: player(), blade: blade(),
-        platforms: platforms(), gravity: config.world.gravity, maxFall: config.player.maxFall,
-        descentLiftVelocity: config.source.descentLiftV, viewportWidth: config.view.w,
-        finale: options.finale?.snapshot() ?? null, lerp, clamp,
-        onFinaleLanded: () => { options.finale?.markLanded(); },
-        onFinaleBladeCut: (segment) => { options.finale?.tryBladeCut(segment); }, onLanding: () => undefined });
-    }, flushClosingInput: note("flushClosingInput"),
-    updateWeaponAbilities: () => undefined, updateWorldHazards: () => undefined,
-    syncVoidSupport: () => undefined, activateThrowSecondary: note("activateThrowSecondary"),
-    linkBroken: (reason: string) => { outward.push(`linkBroken:${reason}`); },
+      stepCinematicPlayer({
+        dt,
+        mode: world.context.cinema.playerMode,
+        player: player(),
+        blade: blade(),
+        platforms: platforms(),
+        gravity: config.world.gravity,
+        maxFall: config.player.maxFall,
+        descentLiftVelocity: config.source.descentLiftV,
+        viewportWidth: config.view.w,
+        finale: options.finale?.snapshot() ?? null,
+        lerp,
+        clamp,
+        onFinaleLanded: () => {
+          options.finale?.markLanded();
+        },
+        onFinaleBladeCut: (segment) => {
+          options.finale?.tryBladeCut(segment);
+        },
+        onLanding: () => undefined,
+      });
+    },
+    flushClosingInput: note("flushClosingInput"),
+    updateWeaponAbilities: () => undefined,
+    updateWorldHazards: () => undefined,
+    syncVoidSupport: () => undefined,
+    activateThrowSecondary: note("activateThrowSecondary"),
+    linkBroken: (reason: string) => {
+      outward.push(`linkBroken:${reason}`);
+    },
     distance: (ax: number, ay: number, bx: number, by: number) => len(ax - bx, ay - by),
-    areaDamage: note("areaDamage"), ring: note("ring"), burst: note("burst"), floater: note("floater"),
-    shake: note("shake"), sound: (name: string) => { outward.push(`sound:${name}`); },
-    ghost: note("ghost"), ember: note("ember"), smoke: note("smoke"), drip: note("drip"),
-    overlap: (a: { x: number; y: number; hw: number; hh: number }, b: { x: number; y: number; hw: number; hh: number }) =>
-      aabbOverlap(a.x, a.y, a.hw, a.hh, b.x, b.y, b.hw, b.hh),
-    styleHit: () => { style.addStyle("hit"); },
-    onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
-    fireDashStart: note("fireDashStart"), fireDashContact: note("fireDashContact"),
-    fireWeaponCatch: note("fireWeaponCatch"), fireThrowLaunch: note("fireThrowLaunch"),
-    logThrowLaunch: note("logThrowLaunch"), weaponWorldImpact: () => null,
-    lobExplode: note("lobExplode"), emitThrowResolve: note("emitThrowResolve"),
+    areaDamage: note("areaDamage"),
+    ring: note("ring"),
+    burst: note("burst"),
+    floater: note("floater"),
+    shake: note("shake"),
+    sound: (name: string) => {
+      outward.push(`sound:${name}`);
+    },
+    ghost: note("ghost"),
+    ember: note("ember"),
+    smoke: note("smoke"),
+    drip: note("drip"),
+    overlap: (
+      a: { x: number; y: number; hw: number; hh: number },
+      b: { x: number; y: number; hw: number; hh: number },
+    ) => aabbOverlap(a.x, a.y, a.hw, a.hh, b.x, b.y, b.hw, b.hh),
+    styleHit: () => {
+      style.addStyle("hit");
+    },
+    onKill: (enemy: { dead?: boolean }, cause?: string) => {
+      resolveKill(enemy, cause);
+    },
+    fireDashStart: note("fireDashStart"),
+    fireDashContact: note("fireDashContact"),
+    fireWeaponCatch: note("fireWeaponCatch"),
+    fireThrowLaunch: note("fireThrowLaunch"),
+    logThrowLaunch: note("logThrowLaunch"),
+    weaponWorldImpact: () => null,
+    lobExplode: note("lobExplode"),
+    emitThrowResolve: note("emitThrowResolve"),
     nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
     updateFeedback: (dt: number) => {
       // The Echo reads the player every tick through this call; without it the
       // Mirror boss stands inert. The queued effects are drained like the live
       // host drains them, but recorded instead of rendered.
-      const mirror = detached.factories.mirrorTypes.Mirror as unknown as
-        Parameters<typeof updateMirrorCombat>[0] & { fxq?: unknown[] };
+      const mirror = detached.factories.mirrorTypes.Mirror as unknown as Parameters<typeof updateMirrorCombat>[0] & {
+        fxq?: unknown[];
+      };
       if (updateMirrorCombat(mirror, dt, player(), blade())) outward.push("mirrorShattered");
       if (mirror.fxq !== undefined && mirror.fxq.length > 0) {
         outward.push(`mirrorFx:${String(mirror.fxq.splice(0).length)}`);
@@ -418,13 +608,25 @@ export function createDetachedCombatPhases(
       if (drained.length > 0) outward.push(`bossFx:${String(drained.length)}`);
     },
     consumeThrow: () => input.consumeThrow(() => false),
-    updateWave: (dt: number) => { options.updateWave?.(dt); }, startTransformation: () => false, updateSupports: () => undefined,
-    armorBypass: note("armorBypass"), resolveBossZones: () => undefined,
-    updateBossArenaPlatforms: () => undefined, updateVoidScroll: () => undefined,
-    unlockWitness: note("unlockWitness"), startVoidDescent: () => false,
-    spawnBossAdds: () => [], spawnBossClone: () => undefined, removeBossClone: () => undefined,
-    dramaticBeat: note("dramaticBeat"), onBladeStolen: note("onBladeStolen"),
-    updateEffects: (dt: number) => { effects.update(dt); },
+    updateWave: (dt: number) => {
+      options.updateWave?.(dt);
+    },
+    startTransformation: () => false,
+    updateSupports: () => undefined,
+    armorBypass: note("armorBypass"),
+    resolveBossZones: () => undefined,
+    updateBossArenaPlatforms: () => undefined,
+    updateVoidScroll: () => undefined,
+    unlockWitness: note("unlockWitness"),
+    startVoidDescent: () => false,
+    spawnBossAdds: () => [],
+    spawnBossClone: () => undefined,
+    removeBossClone: () => undefined,
+    dramaticBeat: note("dramaticBeat"),
+    onBladeStolen: note("onBladeStolen"),
+    updateEffects: (dt: number) => {
+      effects.update(dt);
+    },
     // The live opening host passes the per-world cosmetic emission stream
     // here (52817956): this entropy is render-only. Drawing from a seeded rules
     // stream instead would desynchronise enemy AI.
@@ -434,73 +636,184 @@ export function createDetachedCombatPhases(
   // The collision phase mutates its state object in place, so it reads the
   // world's impact record and its live collections and writes both back.
   const collisionState = {
-    get hitStop() { return transient.impact.hitStop; }, set hitStop(value: number) { transient.impact.hitStop = value; },
-    get slowMotion() { return transient.impact.slowMotion; }, set slowMotion(value: number) { transient.impact.slowMotion = value; },
-    get shake() { return transient.impact.shake; }, set shake(value: number) { transient.impact.shake = value; },
-    get enemies() { return world.state.enemies(); }, set enemies(value: unknown[]) { world.state.setEnemies(value as never[]); },
-    get projectiles() { return world.state.projectiles(); }, set projectiles(value: unknown[]) { world.state.setProjectiles(value as never[]); },
-    get floaters() { return world.state.floaters(); }, set floaters(value: unknown[]) { world.state.setFloaters(value as never[]); },
+    get hitStop() {
+      return transient.impact.hitStop;
+    },
+    set hitStop(value: number) {
+      transient.impact.hitStop = value;
+    },
+    get slowMotion() {
+      return transient.impact.slowMotion;
+    },
+    set slowMotion(value: number) {
+      transient.impact.slowMotion = value;
+    },
+    get shake() {
+      return transient.impact.shake;
+    },
+    set shake(value: number) {
+      transient.impact.shake = value;
+    },
+    get enemies() {
+      return world.state.enemies();
+    },
+    set enemies(value: unknown[]) {
+      world.state.setEnemies(value as never[]);
+    },
+    get projectiles() {
+      return world.state.projectiles();
+    },
+    set projectiles(value: unknown[]) {
+      world.state.setProjectiles(value as never[]);
+    },
+    get floaters() {
+      return world.state.floaters();
+    },
+    set floaters(value: unknown[]) {
+      world.state.setFloaters(value as never[]);
+    },
   } as unknown as LiveCollisionPhaseHost["state"];
   const collisionEffects = {
-    burst: note("fx:burst"), ring: note("fx:ring"), flash: note("fx:flash"), ribbon: note("fx:ribbon"),
-    explode: note("fx:explode"), floater: note("fx:floater"), shake: note("fx:shake"), zoom: note("fx:zoom"),
-    buzz: note("fx:buzz"), sound: (name: string) => { outward.push(`hit:${name}`); },
-    style: (kind: string) => { style.addStyle(kind); }, tutorial: note("fx:tutorial"),
+    burst: note("fx:burst"),
+    ring: note("fx:ring"),
+    flash: note("fx:flash"),
+    ribbon: note("fx:ribbon"),
+    explode: note("fx:explode"),
+    floater: note("fx:floater"),
+    shake: note("fx:shake"),
+    zoom: note("fx:zoom"),
+    buzz: note("fx:buzz"),
+    sound: (name: string) => {
+      outward.push(`hit:${name}`);
+    },
+    style: (kind: string) => {
+      style.addStyle(kind);
+    },
+    tutorial: note("fx:tutorial"),
   };
   const collision = {
     config,
-    get player() { return player(); }, get blade() { return blade(); },
-    get run() { return world.state.run() as never; },
+    get player() {
+      return player();
+    },
+    get blade() {
+      return blade();
+    },
+    get run() {
+      return world.state.run() as never;
+    },
     get combat() {
       if (combat === null) throw new Error("detached combat runtime has not been composed");
       return combat;
-    }, width: config.view.w, state: collisionState,
+    },
+    width: config.view.w,
+    state: collisionState,
     // The production weapon hook, exactly as the live combat adapter calls it.
     // A hand-rolled damage rule here would silently diverge from the live world.
-    weaponHit: (enemy: unknown, quality: number, damage: number, slam: boolean, launch: boolean, empowered: boolean) => {
+    weaponHit: (
+      enemy: unknown,
+      quality: number,
+      damage: number,
+      slam: boolean,
+      launch: boolean,
+      empowered: boolean,
+    ) => {
       outward.push("weaponHit");
-      return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onHeldHit",
-        { config, blade: blade(), player: player(), enemy, quality, damage, isSlam: slam, isLaunch: launch, empowered }) as never;
+      return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onHeldHit", {
+        config,
+        blade: blade(),
+        player: player(),
+        enemy,
+        quality,
+        damage,
+        isSlam: slam,
+        isLaunch: launch,
+        empowered,
+      }) as never;
     },
     throwHit: (enemy: unknown, secondary: boolean, throwId: number) => {
       outward.push("throwHit");
-      return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onThrowHit",
-        { config, blade: blade(), player: player(), enemy, secondary, throwId }) as never;
+      return invokeWeaponHook((blade() as { weapon?: object | null }).weapon, "onThrowHit", {
+        config,
+        blade: blade(),
+        player: player(),
+        enemy,
+        secondary,
+        throwId,
+      }) as never;
     },
-    runDamageMultiplier: () => 1, noteFirstDamage: note("noteFirstDamage"),
-    logWeapon: (type: string) => { outward.push(`logWeapon:${type}`); },
+    runDamageMultiplier: () => 1,
+    noteFirstDamage: note("noteFirstDamage"),
+    logWeapon: (type: string) => {
+      outward.push(`logWeapon:${type}`);
+    },
     emitThrowResolve: note("emitThrowResolve"),
-    onKill: (enemy: { dead?: boolean }, cause?: string) => { resolveKill(enemy, cause); },
-    addFloater: note("addFloater"), effects: collisionEffects,
-    sound: (cue: string) => { outward.push(`sound:${cue}`); }, flare: note("flare"),
-    addShake: note("addShake"), addZoom: note("addZoom"), addFlash: note("addFlash"),
-    addStyle: (kind: string) => { style.addStyle(kind); },
+    onKill: (enemy: { dead?: boolean }, cause?: string) => {
+      resolveKill(enemy, cause);
+    },
+    addFloater: note("addFloater"),
+    effects: collisionEffects,
+    sound: (cue: string) => {
+      outward.push(`sound:${cue}`);
+    },
+    flare: note("flare"),
+    addShake: note("addShake"),
+    addZoom: note("addZoom"),
+    addFlash: note("addFlash"),
+    addStyle: (kind: string) => {
+      style.addStyle(kind);
+    },
     segmentCircle: (x1: number, y1: number, x2: number, y2: number, x: number, y: number, radius: number) =>
       segCircle(x1, y1, x2, y2, x, y, radius),
     segmentPointDistance: (x1: number, y1: number, x2: number, y2: number, x: number, y: number) =>
       segPointDist(x1, y1, x2, y2, x, y),
     weaponSegmentContact: () => false,
-    distance: (x: number, y: number) => len(x, y), clamp, lerp,
+    distance: (x: number, y: number) => len(x, y),
+    clamp,
+    lerp,
     nearestEnemy: () => (world.state.enemies()[0] ?? null) as never,
-    areaDamage: () => 0, lobExplode: note("lobExplode"),
-    splitProjectile: (projectile: never) => { style.splitProjectile(projectile); },
-    triggerSlowMotion: note("triggerSlowMotion"), emitPerfectParry: note("emitPerfectParry"),
-    makeHitEvent: note("makeHitEvent"), makeSwingEvent: note("makeSwingEvent"), makeSlamEvent: note("makeSlamEvent"),
-    makeReturnEvent: note("makeReturnEvent"), makePerfectParryEvent: note("makePerfectParryEvent"),
-    profileAdd: () => undefined, profileMax: () => undefined, dailyBump: () => undefined,
-    achievementsEnabled: nativeTracking, achievement: note("achievement"), checkAchievements: () => undefined,
+    areaDamage: () => 0,
+    lobExplode: note("lobExplode"),
+    splitProjectile: (projectile: never) => {
+      style.splitProjectile(projectile);
+    },
+    triggerSlowMotion: note("triggerSlowMotion"),
+    emitPerfectParry: note("emitPerfectParry"),
+    makeHitEvent: note("makeHitEvent"),
+    makeSwingEvent: note("makeSwingEvent"),
+    makeSlamEvent: note("makeSlamEvent"),
+    makeReturnEvent: note("makeReturnEvent"),
+    makePerfectParryEvent: note("makePerfectParryEvent"),
+    profileAdd: () => undefined,
+    profileMax: () => undefined,
+    dailyBump: () => undefined,
+    achievementsEnabled: nativeTracking,
+    achievement: note("achievement"),
+    checkAchievements: () => undefined,
     tutorialMark: () => undefined,
     enemyDefeated: (enemy: object & { id?: string }) => {
       if (options.gameplayEvents === undefined || actorId === null) return;
       options.gameplayEvents.emit({ kind: "death", actorId: actorId(enemy), cause: "combat" });
     },
     ghostRecording: () => nativeTracking() && actorId !== null,
-    ghostSample: () => undefined, ghostRevive: note("ghostRevive"),
-    updateTrick: (seconds: number) => { style.update(seconds); },
-    achievementTick: (seconds: number) => { style.achievements.tick(seconds); }, updateTutorial: () => undefined,
-    updatePlayground: () => undefined, overlap: aabbOverlap,
-    onShieldAbsorb: note("onShieldAbsorb"), loseStyle: () => { style.loseStyle(); }, buzz: () => undefined,
-    requestAdContinue: note("requestAdContinue"), adAvailable: () => false,
+    ghostSample: () => undefined,
+    ghostRevive: note("ghostRevive"),
+    updateTrick: (seconds: number) => {
+      style.update(seconds);
+    },
+    achievementTick: (seconds: number) => {
+      style.achievements.tick(seconds);
+    },
+    updateTutorial: () => undefined,
+    updatePlayground: () => undefined,
+    overlap: aabbOverlap,
+    onShieldAbsorb: note("onShieldAbsorb"),
+    loseStyle: () => {
+      style.loseStyle();
+    },
+    buzz: () => undefined,
+    requestAdContinue: note("requestAdContinue"),
+    adAvailable: () => false,
     endRun: options.endRun ?? note("endRun"),
   } as unknown as LiveCollisionPhaseHost;
 
@@ -518,15 +831,21 @@ export function createDetachedCombatPhases(
     hasStageChapter: () => true,
     bossRosterSize: BOSS_ROSTER.length,
     achievementsEnabled: nativeTracking,
-    addKillScore: () => { addKillScore(world.state.run() as never, config.run.scorePerKill, config.run.scoreMult); },
-    addStat: () => undefined, maxStat: () => undefined, bumpDaily: () => undefined,
-    bossKillAchievement: note("bossKillAchievement"), killAchievement: note("killAchievement"),
+    addKillScore: () => {
+      addKillScore(world.state.run() as never, config.run.scorePerKill, config.run.scoreMult);
+    },
+    addStat: () => undefined,
+    maxStat: () => undefined,
+    bumpDaily: () => undefined,
+    bossKillAchievement: note("bossKillAchievement"),
+    killAchievement: note("killAchievement"),
     checkAchievements: () => undefined,
     bossGhostMoment: (enemy: Readonly<{ x: number; y: number }>) => {
       outward.push("bossGhostMoment");
       options.gameplayEvents?.emit({ kind: "effect", effect: "bossKill", x: enemy.x, y: enemy.y });
     },
-    deathEffect: note("deathEffect"), deathSound: note("deathSound"),
+    deathEffect: note("deathEffect"),
+    deathSound: note("deathSound"),
     makeDeathEvent: (enemy: unknown, cause: string | undefined, cleanElimination: boolean) =>
       Object.freeze({ enemy, cause, cleanElimination }),
     fire: (hooks: unknown, event: unknown) => {
@@ -534,24 +853,44 @@ export function createDetachedCombatPhases(
         for (const hook of hooks) if (typeof hook === "function") (hook as (value: unknown) => void)(event);
       }
     },
-    applySever: (enemy: { applySever?: (tier: number) => void }, tier: number) => { enemy.applySever?.(tier); },
+    applySever: (enemy: { applySever?: (tier: number) => void }, tier: number) => {
+      enemy.applySever?.(tier);
+    },
     ring: note("killRing"),
-    restorePlatforms: (value: unknown[]) => { stage.platforms = [...value]; },
-    releaseCamera: note("releaseCamera"), happyTime: note("happyTime"), bossPresentation: note("bossPresentation"),
+    restorePlatforms: (value: unknown[]) => {
+      stage.platforms = [...value];
+    },
+    releaseCamera: note("releaseCamera"),
+    happyTime: note("happyTime"),
+    bossPresentation: note("bossPresentation"),
     releaseStolenBlade: (enemy: unknown) => {
       const weapon = blade() as { hostile?: boolean; stolenBy?: unknown; state?: string };
-      if (weapon.stolenBy === enemy) { weapon.hostile = false; weapon.stolenBy = null; weapon.state = "returning"; }
+      if (weapon.stolenBy === enemy) {
+        weapon.hostile = false;
+        weapon.stolenBy = null;
+        weapon.state = "returning";
+      }
     },
   } as unknown as LiveKillHost;
 
   return Object.freeze({
-    outward, get combat() {
+    outward,
+    get combat() {
       if (combat === null) throw new Error("detached combat runtime has not been composed");
       return combat;
-    }, opening, collision, combatEntities: entityHooks, kill,
-    installCombat(runtime: CombatEntityRuntime, killResolver: typeof resolveKill,
-      identify?: (enemy: object & { id?: string }) => string): void {
-      combat = runtime; resolveKill = killResolver; actorId = identify ?? null;
+    },
+    opening,
+    collision,
+    combatEntities: entityHooks,
+    kill,
+    installCombat(
+      runtime: CombatEntityRuntime,
+      killResolver: typeof resolveKill,
+      identify?: (enemy: object & { id?: string }) => string,
+    ): void {
+      combat = runtime;
+      resolveKill = killResolver;
+      actorId = identify ?? null;
     },
     step(seconds: number): void {
       if (runLiveOpeningPhase(opening, seconds).blocked) return;
@@ -592,7 +931,10 @@ function stableOutcomeValue(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableOutcomeValue).join(",")}]`;
   const record = value as Readonly<Record<string, unknown>>;
-  return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableOutcomeValue(record[key])}`).join(",")}}`;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableOutcomeValue(record[key])}`)
+    .join(",")}}`;
 }
 
 function requireCapturedOutcomeMatch(label: string, actual: unknown, expected: unknown): void {
@@ -610,8 +952,15 @@ export function createDetachedRunOutcomeController(
   const chronology = options.chronology ?? createOutcomeChronologyJournal();
   const captured = options.capturedInputs;
   const used = {
-    score: false, coins: false, wallet: false, policy: false, economy: false,
-    intents: false, best: false, pendingFinale: false, presentation: false,
+    score: false,
+    coins: false,
+    wallet: false,
+    policy: false,
+    economy: false,
+    intents: false,
+    best: false,
+    pendingFinale: false,
+    presentation: false,
   };
   const outward: string[] = [];
   let pendingFinale: unknown = null;
@@ -621,26 +970,35 @@ export function createDetachedRunOutcomeController(
     if (captured !== undefined) requireCapturedOutcomeMatch(label, run, captured.run);
   };
   const publishTerminal = createTearTerminalRunFactPublisher(
-    events, () => detached.world.lifecycle.snapshot().sessionId,
+    events,
+    () => detached.world.lifecycle.snapshot().sessionId,
   );
   const port: LiveOutcomeControllerPort = {
     snapshot: () => snapshotOutcomeRun(active() as never),
-    replaceWaveLog: (log) => { active().waveLog = [...log]; },
+    replaceWaveLog: (log) => {
+      active().waveLog = [...log];
+    },
     waveActive: () => detached.world.lifecycle.isWaveActive,
     preparedVictory: () => (active()._victoryPrepared as PreparedVictory | null | undefined) ?? null,
     storePreparedVictory: (prepared) => {
       if (captured !== undefined) requireCapturedOutcomeMatch("store prepared", prepared, captured.prepared);
       active()._victoryPrepared = prepared;
     },
-    stopClipper: () => { outward.push("stopClipper"); },
-    terminate: (outcome) => { detached.world.lifecycle.terminate(outcome); },
+    stopClipper: () => {
+      outward.push("stopClipper");
+    },
+    terminate: (outcome) => {
+      detached.world.lifecycle.terminate(outcome);
+    },
     publishTerminal,
     saveBest: (run) => {
-      validateRun("save best", run); used.score = true;
+      validateRun("save best", run);
+      used.score = true;
       return captured?.prepared.isNew ?? false;
     },
     best: (run) => {
-      validateRun("best read", run); used.best = true;
+      validateRun("best read", run);
+      used.best = true;
       return captured?.best ?? { wave: run.wave, score: run.score, time: run.runTime };
     },
     awardCoins: (score) => {
@@ -650,8 +1008,14 @@ export function createDetachedRunOutcomeController(
       used.coins = true;
       return captured?.prepared.earned ?? 0;
     },
-    coins: () => { used.wallet = true; return captured?.prepared.coins ?? 0; },
-    achievementTracking: () => { used.policy = true; return captured?.achievementTracking ?? false; },
+    coins: () => {
+      used.wallet = true;
+      return captured?.prepared.coins ?? 0;
+    },
+    achievementTracking: () => {
+      used.policy = true;
+      return captured?.achievementTracking ?? false;
+    },
     economyTelemetry: (earned) => {
       if (captured !== undefined && earned !== captured.prepared.earned) {
         throw new Error("captured outcome transcript mismatch at economy telemetry earned value");
@@ -660,34 +1024,59 @@ export function createDetachedRunOutcomeController(
       return captured?.economyTelemetry ?? Object.freeze({});
     },
     recordDefeatProgress: () => undefined,
-    finishRecording: (won) => { outward.push(`finishRecording:${String(won)}`); },
+    finishRecording: (won) => {
+      outward.push(`finishRecording:${String(won)}`);
+    },
     executeVictoryIntents: (intents) => {
       if (captured !== undefined) requireCapturedOutcomeMatch("victory intents", intents, captured.victoryIntents);
-      used.intents = true; outward.push(...intents.map((intent) => `victory:${intent.type}`));
+      used.intents = true;
+      outward.push(...intents.map((intent) => `victory:${intent.type}`));
     },
     persistPendingFinale: (record) => {
       if (captured !== undefined) requireCapturedOutcomeMatch("pending finale request", record, captured.pendingFinale);
-      used.pendingFinale = true; pendingFinale = structuredClone(record); outward.push("persistFinale");
+      used.pendingFinale = true;
+      pendingFinale = structuredClone(record);
+      outward.push("persistFinale");
     },
-    saveProfile: () => { outward.push("saveProfile"); },
-    clearPendingFinale: () => { pendingFinale = null; outward.push("clearFinale"); },
-    pushCloud: () => { outward.push("pushCloud"); },
+    saveProfile: () => {
+      outward.push("saveProfile");
+    },
+    clearPendingFinale: () => {
+      pendingFinale = null;
+      outward.push("clearFinale");
+    },
+    pushCloud: () => {
+      outward.push("pushCloud");
+    },
     present: (outcome, result) => {
       if (captured !== undefined) {
         requireCapturedOutcomeMatch("presentation", { outcome, result }, captured.presentation);
       }
-      used.presentation = true; presented = Object.freeze({ outcome, result }); outward.push(`present:${outcome}`);
+      used.presentation = true;
+      presented = Object.freeze({ outcome, result });
+      outward.push(`present:${outcome}`);
     },
-    midgame: (callback) => { callback(); }, restartCurrentRun: () => undefined,
+    midgame: (callback) => {
+      callback();
+    },
+    restartCurrentRun: () => undefined,
     observeOutcomeChronology: chronology.record,
   };
   const assertCapturedInputsConsumed = (): void => {
     if (captured === undefined) return;
-    const missing = Object.entries(used).filter(([, consumed]) => !consumed).map(([name]) => name);
+    const missing = Object.entries(used)
+      .filter(([, consumed]) => !consumed)
+      .map(([name]) => name);
     if (missing.length > 0) throw new Error(`captured outcome transcript did not consume: ${missing.join(", ")}`);
   };
-  return Object.freeze({ controller: new LiveRunOutcomeController(port), outward,
-    chronology, pendingFinale: () => pendingFinale, presented: () => presented, assertCapturedInputsConsumed });
+  return Object.freeze({
+    controller: new LiveRunOutcomeController(port),
+    outward,
+    chronology,
+    pendingFinale: () => pendingFinale,
+    presented: () => presented,
+    assertCapturedInputsConsumed,
+  });
 }
 
 /**
@@ -724,14 +1113,30 @@ export function createDetachedFinaleComposition(
     },
   };
   const run = () => world.state.run() as never as Record<string, unknown>;
-  const player = () => world.state.player() as never as {
-    x: number; y: number; vx: number; vy: number; hw: number; onGround: boolean;
-  };
-  const blade = () => world.state.blade() as never as {
-    x: number; y: number; vx: number; vy: number; tipVX?: number; tipVY?: number;
-    finalFree?: boolean; restoredTrail?: boolean; hostile?: boolean; stolenBy?: unknown; state?: string;
-    handPos?(actor: ReturnType<typeof player>): Readonly<{ x: number; y: number }>;
-  };
+  const player = () =>
+    world.state.player() as never as {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      hw: number;
+      onGround: boolean;
+    };
+  const blade = () =>
+    world.state.blade() as never as {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      tipVX?: number;
+      tipVY?: number;
+      finalFree?: boolean;
+      restoredTrail?: boolean;
+      hostile?: boolean;
+      stolenBy?: unknown;
+      state?: string;
+      handPos?(actor: ReturnType<typeof player>): Readonly<{ x: number; y: number }>;
+    };
   const finale = createFinaleRuntime({
     runtime,
     cinema: {
@@ -745,19 +1150,28 @@ export function createDetachedFinaleComposition(
     player,
     blade,
     prepareVictory: (campaign, persistFinale) => outcome.controller.prepareVictory(campaign, persistFinale),
-    win: (campaign) => { outcome.controller.victory(campaign); },
+    win: (campaign) => {
+      outcome.controller.victory(campaign);
+    },
     formatTime: (seconds) => seconds.toFixed(2),
     viewport: { width: config.view.w, height: config.view.h },
     perfectColor: () => config.colors.perfect,
-    observeIntents: (intents) => { intentBatches.push(intents); },
+    observeIntents: (intents) => {
+      intentBatches.push(intents);
+    },
     reducedMotion: () => false,
     lowGraphics: () => false,
     intents: {
-      beginLifecycle: () => { world.lifecycle.beginFinale(); },
+      beginLifecycle: () => {
+        world.lifecycle.beginFinale();
+      },
       clearCombat: () => {
-        world.state.setEnemies([]); world.state.setProjectiles([]);
-        world.state.setSlowZones([]); world.state.setTemporaryWalls([]);
-        world.state.setBossIntro(null); world.state.setBossBeat(null);
+        world.state.setEnemies([]);
+        world.state.setProjectiles([]);
+        world.state.setSlowZones([]);
+        world.state.setTemporaryWalls([]);
+        world.state.setBossIntro(null);
+        world.state.setBossBeat(null);
         const active = run();
         if (Array.isArray(active.spawnQueue)) active.spawnQueue.length = 0;
         active.chapterState = "WAVE_LIVE";
@@ -775,9 +1189,14 @@ export function createDetachedFinaleComposition(
         outward.push(`worldZoom:${String(value)}`);
         const feel = world.context.transient.feel;
         const before = Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget });
-        feel.worldZoomTarget = value; feel.worldZoom = value;
-        const receipt = Object.freeze({ requested: value, immediate: true, before,
-          after: Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }) });
+        feel.worldZoomTarget = value;
+        feel.worldZoom = value;
+        const receipt = Object.freeze({
+          requested: value,
+          immediate: true,
+          before,
+          after: Object.freeze({ current: feel.worldZoom, target: feel.worldZoomTarget }),
+        });
         recordOutward({ type: "world-zoom", value, receipt });
       },
       finalBlade: (active, restoredTrail) => {
@@ -785,10 +1204,16 @@ export function createDetachedFinaleComposition(
         weapon.finalFree = active;
         if (restoredTrail) weapon.restoredTrail = true;
         if (!active) return;
-        weapon.hostile = false; weapon.stolenBy = null; weapon.state = "held";
+        weapon.hostile = false;
+        weapon.stolenBy = null;
+        weapon.state = "held";
         const hand = weapon.handPos?.(player());
-        if (hand !== undefined) { weapon.x = hand.x; weapon.y = hand.y; }
-        weapon.vx = 0; weapon.vy = 0;
+        if (hand !== undefined) {
+          weapon.x = hand.x;
+          weapon.y = hand.y;
+        }
+        weapon.vx = 0;
+        weapon.vy = 0;
       },
       ring: (x, y, radius, color) => {
         const receipt = effects.ring(x, y, radius, color);
@@ -802,16 +1227,24 @@ export function createDetachedFinaleComposition(
         outward.push(`flash:${String(amount)}`);
         const before = world.context.transient.feel.flash;
         world.context.transient.feel.flash = Math.max(before, amount);
-        const receipt = Object.freeze({ requested: amount, before, after: world.context.transient.feel.flash,
-          aggregation: "maximum" as const });
+        const receipt = Object.freeze({
+          requested: amount,
+          before,
+          after: world.context.transient.feel.flash,
+          aggregation: "maximum" as const,
+        });
         recordOutward({ type: "flash", amount, receipt });
       },
       shake: (amount) => {
         outward.push(`shake:${String(amount)}`);
         const before = world.context.transient.impact.shake;
         world.context.transient.impact.shake = Math.max(before, amount);
-        const receipt = Object.freeze({ requested: amount, before, after: world.context.transient.impact.shake,
-          aggregation: "maximum" as const });
+        const receipt = Object.freeze({
+          requested: amount,
+          before,
+          after: world.context.transient.impact.shake,
+          aggregation: "maximum" as const,
+        });
         recordOutward({ type: "shake", amount, receipt });
       },
       vibrate: (pattern) => {
@@ -823,14 +1256,20 @@ export function createDetachedFinaleComposition(
         recordOutward({ type: "sound", cue, index });
       },
       restoreStageZero: () => {
-        stage.index = 0; stage.platforms = stagePlatforms(0, detached.configuration.value);
-        world.state.setSlowZones([]); world.state.setTemporaryWalls([]);
-        world.state.setProjectiles([]); world.state.setEnemies([]);
+        stage.index = 0;
+        stage.platforms = stagePlatforms(0, detached.configuration.value);
+        world.state.setSlowZones([]);
+        world.state.setTemporaryWalls([]);
+        world.state.setProjectiles([]);
+        world.state.setEnemies([]);
       },
       restorePlayer: (xMin, xMax, yMax, vy) => {
         const actor = player();
         actor.x = clamp(actor.x, actor.hw + xMin, xMax - actor.hw);
-        actor.y = Math.min(actor.y, yMax); actor.vx = 0; actor.vy = vy; actor.onGround = false;
+        actor.y = Math.min(actor.y, yMax);
+        actor.vx = 0;
+        actor.vy = vy;
+        actor.onGround = false;
       },
       voidMix: (amount, duration) => {
         outward.push(`voidMix:${String(amount)}:${String(duration)}`);
@@ -840,7 +1279,9 @@ export function createDetachedFinaleComposition(
         outward.push(`musicDuck:${String(amount)}:${String(duration)}`);
         recordOutward({ type: "music-duck", amount, duration });
       },
-      win: (campaign) => { outcome.controller.victory(campaign); },
+      win: (campaign) => {
+        outcome.controller.victory(campaign);
+      },
     },
   });
   const api = {
@@ -848,20 +1289,32 @@ export function createDetachedFinaleComposition(
     severAnchor: finale.severAnchor,
     beginRestoration: finale.beginRestoration,
     snapshot: (): FinaleState | null => runtime.finale,
-    markLanded: () => { runtime.finaleController.markLanded(); runtime.syncFinale(); },
+    markLanded: () => {
+      runtime.finaleController.markLanded();
+      runtime.syncFinale();
+    },
     tryBladeCut: finale.tryBladeCut,
     outcome,
-    get intentBatches() { return Object.freeze([...intentBatches]); },
-    get outwardCalls() { return Object.freeze([...outwardCalls]); },
-    get outcomeChronology() { return outcome.chronology.entries(); },
-    get outward() { return Object.freeze([...outcome.outward, ...outward]); },
+    get intentBatches() {
+      return Object.freeze([...intentBatches]);
+    },
+    get outwardCalls() {
+      return Object.freeze([...outwardCalls]);
+    },
+    get outcomeChronology() {
+      return outcome.chronology.entries();
+    },
+    get outward() {
+      return Object.freeze([...outcome.outward, ...outward]);
+    },
     /** Director time is live-frame time; the supplied callback remains the one real simulation application frame. */
     advanceApplicationFrame<Result>(
       seconds: number,
       advanceSimulationApplicationFrame: (seconds: number) => Result,
       controls: Readonly<{ key?: boolean; touch?: boolean; pad?: boolean; click?: boolean }> = {},
     ): Result {
-      if (!Number.isFinite(seconds) || seconds < 0) throw new RangeError("application frame seconds must be finite and non-negative");
+      if (!Number.isFinite(seconds) || seconds < 0)
+        throw new RangeError("application frame seconds must be finite and non-negative");
       world.context.cinema.update(seconds, controls);
       return advanceSimulationApplicationFrame(seconds);
     },
@@ -880,18 +1333,18 @@ export function createDetachedCombatSimulation<State>(
     combatEntities: phases.combatEntities,
     kill: phases.kill,
     createCombat: ({ combatEntities, resolveKill: coreResolveKill }) => {
-      phases.installCombat(combatEntities, coreResolveKill as never,
-        (enemy) => combatEntities.id(enemy, "enemy"));
+      phases.installCombat(combatEntities, coreResolveKill as never, (enemy) => combatEntities.id(enemy, "enemy"));
       return {
         opening: phases.opening,
         collision: phases.collision,
-        advanceClock: (seconds) => { detached.clock.sim += seconds; },
+        advanceClock: (seconds) => {
+          detached.clock.sim += seconds;
+        },
         captureProtection: () => undefined,
         applyProtection: () => undefined,
       };
     },
-    authoritative: { actionPort: detached.input.actionPort,
-      snapshot: (tick, input) => options.snapshot(tick, input) },
+    authoritative: { actionPort: detached.input.actionPort, snapshot: (tick, input) => options.snapshot(tick, input) },
   });
   return Object.freeze({ ...core, outward: phases.outward, opening: phases.opening, collision: phases.collision });
 }
@@ -921,13 +1374,18 @@ export function createDetachedWaveRuntime(
   const config = detached.configuration.value;
   if (platforms !== undefined) stage.platforms = [...platforms];
   const outward: string[] = [];
-  const note = (name: string) => () => { outward.push(name); };
-  const publishSpawn = nativeFacts === undefined ? note("recordSpawn")
-    : createTearSpawnFactPublisher(nativeFacts.events, nativeFacts.actorId);
-  const publishWave = nativeFacts === undefined ? note("recordWave")
-    : createTearWaveFactPublisher(nativeFacts.events);
+  const note = (name: string) => () => {
+    outward.push(name);
+  };
+  const publishSpawn =
+    nativeFacts === undefined
+      ? note("recordSpawn")
+      : createTearSpawnFactPublisher(nativeFacts.events, nativeFacts.actorId);
+  const publishWave = nativeFacts === undefined ? note("recordWave") : createTearWaveFactPublisher(nativeFacts.events);
   const run = () => world.state.run() as never as Record<string, unknown>;
-  const install = (enemy: unknown) => { world.state.setEnemies([...world.state.enemies(), enemy as never]); };
+  const install = (enemy: unknown) => {
+    world.state.setEnemies([...world.state.enemies(), enemy as never]);
+  };
   // The same shared placement the live content composition uses; a restated
   // copy here is exactly how a detached world silently diverges.
   const makeBoss = (id: string) => {
@@ -939,8 +1397,11 @@ export function createDetachedWaveRuntime(
     random: random.streams.stream("spawn"),
     run: () => {
       const active = run() as unknown as { mode: string; wave: number; curBoss?: string };
-      return { mode: active.mode, wave: active.wave,
-        ...(active.curBoss === undefined ? {} : { curBoss: active.curBoss }) };
+      return {
+        mode: active.mode,
+        wave: active.wave,
+        ...(active.curBoss === undefined ? {} : { curBoss: active.curBoss }),
+      };
     },
     modes: () => config.modes as never,
     stages: STAGES,
@@ -949,7 +1410,8 @@ export function createDetachedWaveRuntime(
     construction: {
       sideSpawn: () => 0,
       createGround: (kind: string) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
-      createAir: (kind: string, x: number, y: number) => world.entities.createEnemy(kind, x, y, run() as never) as never,
+      createAir: (kind: string, x: number, y: number) =>
+        world.entities.createEnemy(kind, x, y, run() as never) as never,
       createSupport: (kind: string) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
       createBoss: (id?: string) => makeBoss(id ?? ""),
       // The canonical half of a boss encounter — intro freeze, fight clock,
@@ -958,9 +1420,17 @@ export function createDetachedWaveRuntime(
       beginBossPresentation: (enemy: unknown) => {
         beginBossEncounter(run() as never, enemy as never, config.bossTheater.introDur, {
           platforms: () => stage.platforms as never[],
-          setPlatforms: (value: never[]) => { stage.platforms = value; },
-          arenaFor: (bossId: string) => createBossArena(bossId, config.view.w, config.view.h,
-            config.world.groundY, config.bossArena.reformWarn)?.map((platform) => ({ ...platform })) as never[] | null ?? null,
+          setPlatforms: (value: never[]) => {
+            stage.platforms = value;
+          },
+          arenaFor: (bossId: string) =>
+            (createBossArena(
+              bossId,
+              config.view.w,
+              config.view.h,
+              config.world.groundY,
+              config.bossArena.reformWarn,
+            )?.map((platform) => ({ ...platform })) as never[] | null) ?? null,
         });
         note("bossPresentation")();
       },
@@ -971,10 +1441,16 @@ export function createDetachedWaveRuntime(
       campaignStage: () => stage.index,
       contentWave: () => 0,
       groundSpawn: () => ({ x: 0, y: 0 }),
-      applyPreset: (enemy: unknown, preset: unknown) => { applyPreset(enemy as never, preset as never); },
+      applyPreset: (enemy: unknown, preset: unknown) => {
+        applyPreset(enemy as never, preset as never);
+      },
       rollVariant: (kind: string, wave: number) => rollVariant(kind as never, wave, random.streams.stream("spawn")),
-      applyVariant: (enemy: unknown, variant: unknown) => { applyVariant(enemy as never, variant as never); },
-      rollAffixes: (enemy: unknown, wave: number) => { rollAffixes(enemy as never, wave, random.streams.stream("spawn")); },
+      applyVariant: (enemy: unknown, variant: unknown) => {
+        applyVariant(enemy as never, variant as never);
+      },
+      rollAffixes: (enemy: unknown, wave: number) => {
+        rollAffixes(enemy as never, wave, random.streams.stream("spawn"));
+      },
       arrivalEffect: note("arrivalEffect"),
       recordSpawn: publishSpawn,
       install,
@@ -997,43 +1473,75 @@ export function createDetachedWaveRuntime(
       pendingReward: () => world.lifecycle.reward,
     },
     planIntents: {
-      beginWipe: note("beginWipe"), loadStage: note("loadStage"), setStageBanner: note("setStageBanner"),
-      beginCampaignChapter: () => false, recordWave: publishWave, snapshotReplay: note("snapshotReplay"),
-      prepareWave: (wave: number, boss: boolean, deferred: boolean) => { world.lifecycle.prepareWave(wave, boss, deferred); },
-      activateWave: () => { world.lifecycle.activateWave(); },
-      showWaveBanner: note("showWaveBanner"), playWaveSound: note("playWaveSound"),
+      beginWipe: note("beginWipe"),
+      loadStage: note("loadStage"),
+      setStageBanner: note("setStageBanner"),
+      beginCampaignChapter: () => false,
+      recordWave: publishWave,
+      snapshotReplay: note("snapshotReplay"),
+      prepareWave: (wave: number, boss: boolean, deferred: boolean) => {
+        world.lifecycle.prepareWave(wave, boss, deferred);
+      },
+      activateWave: () => {
+        world.lifecycle.activateWave();
+      },
+      showWaveBanner: note("showWaveBanner"),
+      playWaveSound: note("playWaveSound"),
     },
     clearIntents: {
-      clearWave: () => { world.lifecycle.clearWave(); },
-      bloom: note("bloom"), recordWave: publishWave, profileMax: note("profileMax"),
-      profileAdd: note("profileAdd"), dailyBump: note("dailyBump"), hordeCleared: note("hordeCleared"),
-      achievementCheck: note("achievementCheck"), stageDone: note("stageDone"),
-      healPlayer: (amount: number) => { (world.state.player() as never as { heal(value: number): void }).heal(amount); },
-      prepareReward: (reward: unknown) => { world.lifecycle.prepareReward(reward as never); },
+      clearWave: () => {
+        world.lifecycle.clearWave();
+      },
+      bloom: note("bloom"),
+      recordWave: publishWave,
+      profileMax: note("profileMax"),
+      profileAdd: note("profileAdd"),
+      dailyBump: note("dailyBump"),
+      hordeCleared: note("hordeCleared"),
+      achievementCheck: note("achievementCheck"),
+      stageDone: note("stageDone"),
+      healPlayer: (amount: number) => {
+        (world.state.player() as never as { heal(value: number): void }).heal(amount);
+      },
+      prepareReward: (reward: unknown) => {
+        world.lifecycle.prepareReward(reward as never);
+      },
       startAdventureFinale: progression?.startAdventureFinale ?? note("startAdventureFinale"),
-      winRun: progression?.winRun ?? note("winRun"), releasePointer: note("releasePointer"),
+      winRun: progression?.winRun ?? note("winRun"),
+      releasePointer: note("releasePointer"),
       openTierUp: () => {
-        const current = run() as unknown as { mods: { owned: Readonly<Record<string, number>>;
-          tier: Readonly<Record<string, number>> } };
+        const current = run() as unknown as {
+          mods: { owned: Readonly<Record<string, number>>; tier: Readonly<Record<string, number>> };
+        };
         progression?.openTier(eligibleTierChoices(UPGRADES, current.mods.owned, current.mods.tier));
         if (progression === undefined) note("openTierUp")();
       },
       openDraft: progression?.openDraft ?? note("openDraft"),
     },
-    spawn: (spec: unknown) => { content.spawn(spec as never); },
+    spawn: (spec: unknown) => {
+      content.spawn(spec as never);
+    },
     enemyCount: () => world.state.enemies().length,
     loreBusy: () => false,
     achievementTracking: () => false,
     playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
     availableTierUpCount: () => {
-      const current = run() as unknown as { mods: { owned: Readonly<Record<string, number>>;
-        tier: Readonly<Record<string, number>> } };
+      const current = run() as unknown as {
+        mods: { owned: Readonly<Record<string, number>>; tier: Readonly<Record<string, number>> };
+      };
       return eligibleTierChoices(UPGRADES, current.mods.owned, current.mods.tier).length;
     },
     install: () => undefined,
   });
   void factories;
-  return Object.freeze({ content, waves, outward, update: (dt: number) => { waves.update(dt); } });
+  return Object.freeze({
+    content,
+    waves,
+    outward,
+    update: (dt: number) => {
+      waves.update(dt);
+    },
+  });
 }
 
 /** One portable wave/reward/action composition for detached replay and headless evidence. */
@@ -1048,7 +1556,9 @@ export function createDetachedWaveRewardRuntime(
   const shared = createProductionWaveRewardRuntime(detached as unknown as ProductionReplayWorld, {
     gameplayEvents: events,
     actorId: actorId as (enemy: object & { id?: string }) => string,
-    startAdventureFinale: () => { finale.start(); },
+    startAdventureFinale: () => {
+      finale.start();
+    },
   });
   return Object.freeze({ ...shared, finale });
 }

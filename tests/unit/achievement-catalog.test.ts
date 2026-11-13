@@ -7,11 +7,14 @@ import { PUBLISHED_STAGE_IDS } from "../../src/gameplay/stages";
 describe("achievement catalog", () => {
   it("owns stable Rootbound clear and Regrowth mastery entries", () => {
     expect(ACHIEVEMENT_CATALOG.find((entry) => entry.id === "boss_rootbound")).toMatchObject({
-      cat: "boss", name: "The Rootbound", desc: "Defeat The Rootbound.",
+      cat: "boss",
+      name: "The Rootbound",
+      desc: "Defeat The Rootbound.",
       rule: { kind: "stat-threshold", stat: "killRootbound", goal: 1 },
     });
     expect(ACHIEVEMENT_CATALOG.find((entry) => entry.id === "rootbound_regrowth")).toMatchObject({
-      cat: "boss", name: "Regrowth Interrupted",
+      cat: "boss",
+      name: "Regrowth Interrupted",
       desc: "Defeat The Rootbound after fully interrupting Regrowth.",
       rule: { kind: "stat-threshold", stat: "rootboundRegrowthFullInterrupt", goal: 1 },
     });

@@ -10,14 +10,20 @@ async function main() {
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     if (pathname === "/harness") {
       response.setHeader("Content-Type", "text/html");
-      response.end("<!doctype html><html><body style='margin:0'><iframe id='game' allow='autoplay; fullscreen; gamepad' style='border:0;width:960px;height:540px' src='/?test=1&bossdebug=1'></iframe></body></html>");
+      response.end(
+        "<!doctype html><html><body style='margin:0'><iframe id='game' allow='autoplay; fullscreen; gamepad' style='border:0;width:960px;height:540px' src='/?test=1&bossdebug=1'></iframe></body></html>",
+      );
       return;
     }
     const file = path.resolve(root, pathname === "/" ? "index.html" : pathname.slice(1));
     if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      response.writeHead(404).end(); return;
+      response.writeHead(404).end();
+      return;
     }
-    response.setHeader("Content-Type", file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream");
+    response.setHeader(
+      "Content-Type",
+      file.endsWith(".js") ? "text/javascript" : file.endsWith(".html") ? "text/html" : "application/octet-stream",
+    );
     fs.createReadStream(file).pipe(response);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -60,17 +66,24 @@ async function main() {
     const iframe = await page.waitForSelector("#game");
     const frame = await iframe.contentFrame();
     if (!frame) throw new Error("CrazyGames game iframe did not load");
-    await frame.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_PLATFORM_SERVICES__, undefined, { timeout: 20_000 });
+    await frame.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_PLATFORM_SERVICES__, undefined, {
+      timeout: 20_000,
+    });
     // A trusted pointer event inside the embedded document activates Web Audio;
     // the canvas center is intentionally outside the menu's interactive rails.
     await iframe.click({ position: { x: 480, y: 270 } });
-    await frame.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, { timeout: 20_000 });
+    await frame.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, {
+      timeout: 20_000,
+    });
 
     const boot = await frame.evaluate(async () => ({
       platform: window.__TEAR_PLATFORM_SERVICES__.id,
       calls: window.__crazyCalls.slice(),
       serviceWorkers: "serviceWorker" in navigator ? (await navigator.serviceWorker.getRegistrations()).length : 0,
-      canvas: (() => { const rect = document.querySelector("canvas").getBoundingClientRect(); return { width: rect.width, height: rect.height }; })(),
+      canvas: (() => {
+        const rect = document.querySelector("canvas").getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      })(),
     }));
     // `?test=1` intentionally replaces the runtime services with TearBench.
     // The iframe, SDK façade, relative assets, responsive resize, and local
@@ -93,7 +106,12 @@ async function main() {
     });
     const mobileEmbed = await frame.evaluate(() => {
       const rect = document.querySelector("canvas").getBoundingClientRect();
-      return { width: rect.width, height: rect.height, scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight };
+      return {
+        width: rect.width,
+        height: rect.height,
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+      };
     });
     assert.deepEqual(mobileEmbed, { width: 390, height: 700, scrollWidth: 390, scrollHeight: 700 });
     await page.evaluate(() => {
@@ -104,11 +122,15 @@ async function main() {
     await frame.waitForFunction(() => document.querySelector("canvas").getBoundingClientRect().width === 960);
 
     await frame.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
-    await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, { timeout: 20_000 });
+    await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
+      timeout: 20_000,
+    });
     await frame.evaluate(() => window.__PANTHEON_TEST.pause());
     await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused", undefined, { timeout: 20_000 });
     await frame.evaluate(() => window.__PANTHEON_TEST.resume());
-    await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, { timeout: 20_000 });
+    await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
+      timeout: 20_000,
+    });
     const calls = await frame.evaluate(() => window.__crazyCalls.slice());
     const gameplayCalls = calls.filter((call) => call.startsWith("gameplay-"));
     assert.deepEqual(gameplayCalls, [], "TearBench test services must not dispatch portal gameplay lifecycle calls");
@@ -121,4 +143,7 @@ async function main() {
   console.log("CrazyGames iframe lifecycle matrix passed");
 }
 
-main().catch((error) => { console.error(error); process.exit(1); });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

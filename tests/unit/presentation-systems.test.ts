@@ -42,19 +42,33 @@ describe("presentation system boundaries", () => {
     const first = createCinematics({ presentation: { minFullyVisible: 4, skipHold: 1 } });
     const second = createCinematics({ presentation: { minFullyVisible: 0.5, skipHold: 1 } });
     const script = {
-      id: "renderer-policy", beats: [{ id: "line", line: "One visible line.", reveal: { mode: "none" }, completion: "confirm" }],
+      id: "renderer-policy",
+      beats: [{ id: "line", line: "One visible line.", reveal: { mode: "none" }, completion: "confirm" }],
     } satisfies CinematicScript;
-    const dialogue = (values: Record<string, unknown>[]) => ({
-      t: { motion: { finalRewardIn: 1 } },
-      chapterHeader: () => undefined, loreFragment: () => undefined,
-      chapterPrompt: () => undefined, biomeReveal: () => undefined, cinematicFrame: () => undefined,
-      finaleFracture: () => undefined, finalReward: () => undefined, cinematicPrompt: () => undefined,
-      bossDeclaration: () => undefined, dialogueCard: (_context: CanvasRenderingContext2D, options: Record<string, unknown>) => { values.push(options); },
-    }) satisfies CinematicUiPort;
-    const firstDirector = new first.Director(CONFIG), secondDirector = new second.Director(CONFIG);
-    firstDirector.start(script); secondDirector.start(script);
-    firstDirector.update(1, {}); secondDirector.update(1, {});
-    const firstCalls: Record<string, unknown>[] = [], secondCalls: Record<string, unknown>[] = [];
+    const dialogue = (values: Record<string, unknown>[]) =>
+      ({
+        t: { motion: { finalRewardIn: 1 } },
+        chapterHeader: () => undefined,
+        loreFragment: () => undefined,
+        chapterPrompt: () => undefined,
+        biomeReveal: () => undefined,
+        cinematicFrame: () => undefined,
+        finaleFracture: () => undefined,
+        finalReward: () => undefined,
+        cinematicPrompt: () => undefined,
+        bossDeclaration: () => undefined,
+        dialogueCard: (_context: CanvasRenderingContext2D, options: Record<string, unknown>) => {
+          values.push(options);
+        },
+      }) satisfies CinematicUiPort;
+    const firstDirector = new first.Director(CONFIG),
+      secondDirector = new second.Director(CONFIG);
+    firstDirector.start(script);
+    secondDirector.start(script);
+    firstDirector.update(1, {});
+    secondDirector.update(1, {});
+    const firstCalls: Record<string, unknown>[] = [],
+      secondCalls: Record<string, unknown>[] = [];
 
     firstDirector.draw({} as CanvasRenderingContext2D, dialogue(firstCalls), {});
     secondDirector.draw({} as CanvasRenderingContext2D, dialogue(secondCalls), {});
@@ -86,7 +100,16 @@ describe("presentation system boundaries", () => {
       expect.objectContaining({ type: "edgeTrace", x: 10, y: 20, x1: 80, y1: 40, thickness: 2, max: 0.09 }),
       expect.objectContaining({ type: "contactMark", x: 80, y: 40, tx: 0, ty: 1, length: 14, max: 0.07 }),
       expect.objectContaining({ type: "groundPulse", x: 100, y: 100, nx: 0, ny: -1, halfWidth: 34, max: 0.16 }),
-      expect.objectContaining({ type: "muzzleWedge", x: 20, y: 30, dx: 1, dy: 0, length: 20, halfWidth: 5, max: 0.055 }),
+      expect.objectContaining({
+        type: "muzzleWedge",
+        x: 20,
+        y: 30,
+        dx: 1,
+        dy: 0,
+        length: 20,
+        halfWidth: 5,
+        max: 0.055,
+      }),
     ]);
 
     effects.update(0.17);
@@ -99,9 +122,12 @@ describe("presentation system boundaries", () => {
   it("admits combat silhouettes over cosmetic saturation without evicting combat peers", () => {
     const effects = createParticleSystem({
       effects: { highBudget: 2, lowBudget: 2, cullMargin: 0 },
-      lowGraphics: () => false, reducedMotion: () => false, random: () => 0.5,
+      lowGraphics: () => false,
+      reducedMotion: () => false,
+      random: () => 0.5,
     });
-    effects.ring(10, 10); effects.ring(20, 20);
+    effects.ring(10, 10);
+    effects.ring(20, 20);
     effects.contactMark(30, 30, 1, 0, 12, 2, 0.08, "#fff");
     expect(effects.list).toHaveLength(2);
     expect(effects.list.some((particle) => particle.type === "contactMark")).toBe(true);
@@ -121,12 +147,18 @@ describe("presentation system boundaries", () => {
     const burst = effects.burst(100, 100, 1, -1, 3, "#def");
 
     expect(ring).toEqual({
-      accepted: true, requested: 1, emitted: 1,
-      rejected: { culled: 0, budget: 0 }, listDelta: 1,
+      accepted: true,
+      requested: 1,
+      emitted: 1,
+      rejected: { culled: 0, budget: 0 },
+      listDelta: 1,
     });
     expect(burst).toEqual({
-      accepted: true, requested: 3, emitted: 3,
-      rejected: { culled: 0, budget: 0 }, listDelta: 3,
+      accepted: true,
+      requested: 3,
+      emitted: 3,
+      rejected: { culled: 0, budget: 0 },
+      listDelta: 3,
     });
     expect(Object.isFrozen(ring)).toBe(true);
     expect(Object.isFrozen(ring.rejected)).toBe(true);
@@ -142,23 +174,35 @@ describe("presentation system boundaries", () => {
       const culled = createParticleSystem(particlePolicy());
       culled.setViewRect({ left: 0, top: 0, right: 100, bottom: 100 });
       expect(culled.ring(1000, 1000)).toEqual({
-        accepted: false, requested: 1, emitted: 0,
-        rejected: { culled: 1, budget: 0 }, listDelta: 0,
+        accepted: false,
+        requested: 1,
+        emitted: 0,
+        rejected: { culled: 1, budget: 0 },
+        listDelta: 0,
       });
       expect(culled.burst(1000, 1000, 1, 0, 3)).toEqual({
-        accepted: false, requested: 3, emitted: 0,
-        rejected: { culled: 3, budget: 0 }, listDelta: 0,
+        accepted: false,
+        requested: 3,
+        emitted: 0,
+        rejected: { culled: 3, budget: 0 },
+        listDelta: 0,
       });
 
       const budgeted = createParticleSystem(particlePolicy());
       for (let index = 0; index < CONFIG.effects.highBudget - 2; index++) budgeted.ring(10, 10);
       expect(budgeted.burst(10, 10, 1, 0, 4)).toEqual({
-        accepted: true, requested: 4, emitted: 2,
-        rejected: { culled: 0, budget: 2 }, listDelta: 2,
+        accepted: true,
+        requested: 4,
+        emitted: 2,
+        rejected: { culled: 0, budget: 2 },
+        listDelta: 2,
       });
       expect(budgeted.ring(10, 10)).toEqual({
-        accepted: false, requested: 1, emitted: 0,
-        rejected: { culled: 0, budget: 1 }, listDelta: 0,
+        accepted: false,
+        requested: 1,
+        emitted: 0,
+        rejected: { culled: 0, budget: 1 },
+        listDelta: 0,
       });
     } finally {
       GFX.low = priorLow;
@@ -179,39 +223,58 @@ describe("presentation system boundaries", () => {
     let firstLowGraphics = false;
     const first = createParticleSystem({
       effects: { highBudget: 3, lowBudget: 1, cullMargin: 0 },
-      lowGraphics: () => firstLowGraphics, reducedMotion: () => false, random: () => 0.5,
+      lowGraphics: () => firstLowGraphics,
+      reducedMotion: () => false,
+      random: () => 0.5,
     });
     const second = createParticleSystem({
       effects: { highBudget: 3, lowBudget: 1, cullMargin: 0 },
-      lowGraphics: () => false, reducedMotion: () => true, random: () => 0.5,
+      lowGraphics: () => false,
+      reducedMotion: () => true,
+      random: () => 0.5,
     });
 
     expect(first.burst(10, 10, 1, 0, 3)).toEqual({
-      accepted: true, requested: 3, emitted: 3,
-      rejected: { culled: 0, budget: 0 }, listDelta: 3,
+      accepted: true,
+      requested: 3,
+      emitted: 3,
+      rejected: { culled: 0, budget: 0 },
+      listDelta: 3,
     });
     expect(second.burst(10, 10, 1, 0, 3)).toEqual({
-      accepted: true, requested: 3, emitted: 3,
-      rejected: { culled: 0, budget: 0 }, listDelta: 3,
+      accepted: true,
+      requested: 3,
+      emitted: 3,
+      rejected: { culled: 0, budget: 0 },
+      listDelta: 3,
     });
     first.reset();
     expect(second.list).toHaveLength(3);
     firstLowGraphics = true;
     expect(first.burst(10, 10, 1, 0, 3)).toEqual({
-      accepted: true, requested: 3, emitted: 1,
-      rejected: { culled: 0, budget: 2 }, listDelta: 1,
+      accepted: true,
+      requested: 3,
+      emitted: 1,
+      rejected: { culled: 0, budget: 2 },
+      listDelta: 1,
     });
 
     const firstRing = createParticleSystem({
       effects: { highBudget: 2, lowBudget: 2, cullMargin: 0 },
-      lowGraphics: () => false, reducedMotion: () => false, random: () => 0.5,
+      lowGraphics: () => false,
+      reducedMotion: () => false,
+      random: () => 0.5,
     });
     const secondRing = createParticleSystem({
       effects: { highBudget: 2, lowBudget: 2, cullMargin: 0 },
-      lowGraphics: () => false, reducedMotion: () => true, random: () => 0.5,
+      lowGraphics: () => false,
+      reducedMotion: () => true,
+      random: () => 0.5,
     });
-    firstRing.ring(10, 10, 10); secondRing.ring(10, 10, 10);
-    firstRing.update(0.1); secondRing.update(0.1);
+    firstRing.ring(10, 10, 10);
+    secondRing.ring(10, 10, 10);
+    firstRing.update(0.1);
+    secondRing.update(0.1);
     expect(firstRing.list[0]).toMatchObject({ type: "ring", r: 92 });
     expect(secondRing.list[0]).toMatchObject({ type: "ring", r: 30.5 });
   });

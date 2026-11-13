@@ -12,19 +12,23 @@ function trace(source, checkpoints) {
 }
 
 test("parity differ accepts fields inside their documented tolerance", () => {
-  const oracle = trace("oracle", [{
-    label: "aim",
-    screen: "playing",
-    input: { mode: "mouse", pointerLocked: true, pointerLockAllowed: true },
-    cursor: { canvas: "none", lockHintVisible: false },
-    player: { x: 100, y: 200, vx: 0, vy: 0 },
-    blade: { state: "held", aimX: 40, aimY: -20, reticleX: 140, reticleY: 180 },
-  }]);
-  const current = trace("current", [{
-    ...oracle.checkpoints[0],
-    player: { x: 104, y: 204, vx: 20, vy: -20 },
-    blade: { state: "held", aimX: 43, aimY: -23, reticleX: 147, reticleY: 187 },
-  }]);
+  const oracle = trace("oracle", [
+    {
+      label: "aim",
+      screen: "playing",
+      input: { mode: "mouse", pointerLocked: true, pointerLockAllowed: true },
+      cursor: { canvas: "none", lockHintVisible: false },
+      player: { x: 100, y: 200, vx: 0, vy: 0 },
+      blade: { state: "held", aimX: 40, aimY: -20, reticleX: 140, reticleY: 180 },
+    },
+  ]);
+  const current = trace("current", [
+    {
+      ...oracle.checkpoints[0],
+      player: { x: 104, y: 204, vx: 20, vy: -20 },
+      blade: { state: "held", aimX: 43, aimY: -23, reticleX: 147, reticleY: 187 },
+    },
+  ]);
   assert.equal(compareParityTraces(oracle, current).passed, true);
 });
 
@@ -43,7 +47,17 @@ test("parity differ supports a narrow contract without comparing unrelated world
     enemies: [{ kind: "charger", x: 900 }],
   };
   const report = compareParityTraces(trace("oracle", [base]), trace("current", [current]), {
-    paths: ["screen", "input.pointerLocked", "input.pointer.x", "input.pointer.y", "blade.state", "blade.aimX", "blade.aimY", "blade.reticleX", "blade.reticleY"],
+    paths: [
+      "screen",
+      "input.pointerLocked",
+      "input.pointer.x",
+      "input.pointer.y",
+      "blade.state",
+      "blade.aimX",
+      "blade.aimY",
+      "blade.reticleX",
+      "blade.reticleY",
+    ],
   });
   assert.equal(report.passed, true);
 });
@@ -95,14 +109,22 @@ test("parity differ treats grounded state as strict and movement timers as toler
     simulationTick: 80,
     input: { mode: "keyboard", pointerLocked: true, pointerLockAllowed: true },
     cursor: { drawn: false, lockHintVisible: false },
-    player: { x: 100, y: 200, vx: 0, vy: 0, onGround: true, coyote: 0.1,
-      jumpBuffer: 0, dashTimer: 0.05, dashCooldown: 0.4 },
+    player: {
+      x: 100,
+      y: 200,
+      vx: 0,
+      vy: 0,
+      onGround: true,
+      coyote: 0.1,
+      jumpBuffer: 0,
+      dashTimer: 0.05,
+      dashCooldown: 0.4,
+    },
     blade: { state: "held" },
   };
   const tolerated = compareParityTraces(
     trace("oracle", [base]),
-    trace("current", [{ ...base, player: { ...base.player, coyote: 0.11,
-      dashTimer: 0.04, dashCooldown: 0.39 } }]),
+    trace("current", [{ ...base, player: { ...base.player, coyote: 0.11, dashTimer: 0.04, dashCooldown: 0.39 } }]),
   );
   assert.equal(tolerated.passed, true);
 
@@ -122,28 +144,46 @@ test("parity differ locks enemy attack phases while tolerating sub-frame motion 
     cursor: { drawn: false, lockHintVisible: false },
     player: { onGround: true },
     blade: { state: "held" },
-    enemies: [{
-      kind: "charger", behavior: "bull", attack: "commit", onGround: true,
-      x: 900, y: 700, vx: -800, vy: 0, hp: 100, stun: 0,
-      spawnT: 0, aliveT: 0.5, attackTime: 0.4, attackCooldown: 0,
-      attackDirection: -1, chargePower: 0.5,
-    }],
+    enemies: [
+      {
+        kind: "charger",
+        behavior: "bull",
+        attack: "commit",
+        onGround: true,
+        x: 900,
+        y: 700,
+        vx: -800,
+        vy: 0,
+        hp: 100,
+        stun: 0,
+        spawnT: 0,
+        aliveT: 0.5,
+        attackTime: 0.4,
+        attackCooldown: 0,
+        attackDirection: -1,
+        chargePower: 0.5,
+      },
+    ],
   };
   const tolerated = compareParityTraces(
     trace("oracle", [base]),
-    trace("current", [{
-      ...base,
-      enemies: [{ ...base.enemies[0], x: 907, vx: -760, attackTime: 0.415 }],
-    }]),
+    trace("current", [
+      {
+        ...base,
+        enemies: [{ ...base.enemies[0], x: 907, vx: -760, attackTime: 0.415 }],
+      },
+    ]),
   );
   assert.equal(tolerated.passed, true);
 
   const wrongPhase = compareParityTraces(
     trace("oracle", [base]),
-    trace("current", [{
-      ...base,
-      enemies: [{ ...base.enemies[0], attack: "recover" }],
-    }]),
+    trace("current", [
+      {
+        ...base,
+        enemies: [{ ...base.enemies[0], attack: "recover" }],
+      },
+    ]),
   );
   assert.equal(wrongPhase.firstDivergence.field, "enemies.0.attack");
 });
@@ -157,10 +197,23 @@ test("parity differ locks ranged AI and projectile family while tolerating fligh
     cursor: { drawn: false, lockHintVisible: false },
     player: { onGround: true },
     blade: { state: "held" },
-    enemies: [{ kind: "ranged", behavior: "", aiState: "kite", onGround: true,
-      aimTimer: 2.3, windTime: -0.01, windMax: 0.7 }],
-    projectiles: [{ family: "ordinaryProjectile", kind: "dart", deflected: false,
-      perfect: false, charged: false, x: 900, y: 700, vx: -800, vy: 20, life: 5.9 }],
+    enemies: [
+      { kind: "ranged", behavior: "", aiState: "kite", onGround: true, aimTimer: 2.3, windTime: -0.01, windMax: 0.7 },
+    ],
+    projectiles: [
+      {
+        family: "ordinaryProjectile",
+        kind: "dart",
+        deflected: false,
+        perfect: false,
+        charged: false,
+        x: 900,
+        y: 700,
+        vx: -800,
+        vy: 20,
+        life: 5.9,
+      },
+    ],
   };
   const tolerated = compareParityTraces(
     trace("oracle", [base]),
@@ -191,8 +244,16 @@ test("parity differ locks Mirror ownership and state while tolerating pursuit mo
     player: { onGround: true },
     blade: { state: "held" },
     mirror: {
-      active: true, attached: true, phase: 1, sync: 0.36, state: "approach",
-      stateTime: 0, decisionTime: 0.2, moveCooldown: 1.8, move: null, facing: -1,
+      active: true,
+      attached: true,
+      phase: 1,
+      sync: 0.36,
+      state: "approach",
+      stateTime: 0,
+      decisionTime: 0.2,
+      moveCooldown: 1.8,
+      move: null,
+      facing: -1,
       readDistance: 500,
       actor: { x: 900, y: 775, vx: -430, vy: 0, onGround: true, dashTimer: 0 },
       blade: { state: "held", x: 900, y: 700, tipX: 900, tipY: 605, tipVX: 0, tipVY: 0 },
@@ -200,9 +261,16 @@ test("parity differ locks Mirror ownership and state while tolerating pursuit mo
   };
   const tolerated = compareParityTraces(
     trace("oracle", [base]),
-    trace("current", [{ ...base, mirror: { ...base.mirror,
-      actor: { ...base.mirror.actor, x: 907, vx: -390 },
-      blade: { ...base.mirror.blade, tipX: 913 } } }]),
+    trace("current", [
+      {
+        ...base,
+        mirror: {
+          ...base.mirror,
+          actor: { ...base.mirror.actor, x: 907, vx: -390 },
+          blade: { ...base.mirror.blade, tipX: 913 },
+        },
+      },
+    ]),
   );
   assert.equal(tolerated.passed, true);
 

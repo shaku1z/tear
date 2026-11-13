@@ -64,9 +64,7 @@ function freezeDeep<T>(value: T): T {
  * One in-memory, monotonic journal shared by finale and terminal-outcome
  * adapters. The caller owns its lifetime; this module performs no persistence.
  */
-export function createOutcomeChronologyJournal(
-  observer?: OutcomeChronologyObserver,
-): OutcomeChronologyJournal {
+export function createOutcomeChronologyJournal(observer?: OutcomeChronologyObserver): OutcomeChronologyJournal {
   const entries: OutcomeChronologyEntry[] = [];
   const record = (effect: OutcomeChronologyEffect): void => {
     const snapshot = freezeDeep(structuredClone(effect));

@@ -3,20 +3,14 @@ import {
   type TearHierarchicalObservation,
   type TearStructuredAgentIntent,
 } from "../tearbench/scripted-agent-hierarchy";
-import type {
-  TearAgentDecision,
-  TearAgentObservation,
-  TearAgentProfileId,
-} from "./contracts";
+import type { TearAgentDecision, TearAgentObservation, TearAgentProfileId } from "./contracts";
 import { TearAgentOrchestrator } from "./scripted-policy";
 
 export interface TearLiveHierarchicalDecision extends TearAgentDecision {
   readonly structuredIntent: TearStructuredAgentIntent;
 }
 
-function operationalObservation(
-  observation: TearAgentObservation,
-): TearHierarchicalObservation {
+function operationalObservation(observation: TearAgentObservation): TearHierarchicalObservation {
   const screen = observation.ui?.screen ?? "playing";
   return Object.freeze({
     ...observation,

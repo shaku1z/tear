@@ -1,11 +1,33 @@
 import { normalizeGameAction, type GameAction } from "../input/game-action";
 import { stableVerificationHash } from "../replay/hash";
 import type { TearAgentDecision, TearAgentObservation, TearAgentProfileId } from "./contracts";
-import { parseTearPolicyArtifact, type TearPolicyArtifactRegistry, type TearPolicyArtifactV1 } from "./policy-artifact-registry";
-import { TEAR_POLICY_FEATURE_SCHEMA_HASH_V1, isTearPolicyFeatureSchema, tearPolicyFeatureWidth, projectStructuredPolicyFeatures } from "./policy-feature-vector";
-import { TEAR_POLICY_CONDITION_SCHEMA_HASH_V1, TEAR_POLICY_CONDITION_SCHEMA_HASH_V2, TEAR_POLICY_CONDITION_WIDTH_V1, TEAR_POLICY_CONDITION_WIDTH_V2, createTearPolicyConditioningV2, projectStructuredPolicyCondition, projectStructuredPolicyConditionV2, type TearPolicyConditioningV2 } from "./policy-condition-vector";
+import {
+  parseTearPolicyArtifact,
+  type TearPolicyArtifactRegistry,
+  type TearPolicyArtifactV1,
+} from "./policy-artifact-registry";
+import {
+  TEAR_POLICY_FEATURE_SCHEMA_HASH_V1,
+  isTearPolicyFeatureSchema,
+  tearPolicyFeatureWidth,
+  projectStructuredPolicyFeatures,
+} from "./policy-feature-vector";
+import {
+  TEAR_POLICY_CONDITION_SCHEMA_HASH_V1,
+  TEAR_POLICY_CONDITION_SCHEMA_HASH_V2,
+  TEAR_POLICY_CONDITION_WIDTH_V1,
+  TEAR_POLICY_CONDITION_WIDTH_V2,
+  createTearPolicyConditioningV2,
+  projectStructuredPolicyCondition,
+  projectStructuredPolicyConditionV2,
+  type TearPolicyConditioningV2,
+} from "./policy-condition-vector";
 import { TearAgentOrchestrator } from "./scripted-policy";
-import { parseTearPolicyModelWeights, reduceTearPolicyWeightRow, type TearPolicyModelWeights } from "./policy-model-weights";
+import {
+  parseTearPolicyModelWeights,
+  reduceTearPolicyWeightRow,
+  type TearPolicyModelWeights,
+} from "./policy-model-weights";
 
 interface TablePolicyModel {
   readonly format: "tear-table-policy-model";
@@ -19,7 +41,7 @@ interface LinearPolicyModel {
   readonly featureSchemaHash: string;
   readonly mean: readonly number[];
   readonly scale: readonly number[];
-  readonly classes: readonly Readonly<{ actions: readonly unknown[] }> [];
+  readonly classes: readonly Readonly<{ actions: readonly unknown[] }>[];
   readonly weights: TearPolicyModelWeights;
   readonly biases: readonly number[];
 }
@@ -64,13 +86,26 @@ export interface TearPolicyDecisionReceipt {
   readonly artifactHash?: string;
   readonly observationHash: string;
   readonly source: "artifact" | "model-default" | "scripted-fallback" | "refused";
-  readonly reason?: "no-active-artifact" | "invalid-model" | "missing-decision" | "invalid-action" | "decision-budget-exceeded" | "invalid-active-artifact" | "canonical-source-unavailable" | "no-legal-action";
+  readonly reason?:
+    | "no-active-artifact"
+    | "invalid-model"
+    | "missing-decision"
+    | "invalid-action"
+    | "decision-budget-exceeded"
+    | "invalid-active-artifact"
+    | "canonical-source-unavailable"
+    | "no-legal-action";
   /** V3 activation lineage is retained when canonical execution is selected. */
   readonly activationHash?: string;
   /** Explicit return.v2 lookup support; absent on historical receipts. */
   readonly support?: Readonly<{ entryPresent: boolean; value: number; stateKey: string; semanticActionHash: string }>;
   /** V4 factor response is not a tabular entry or a quality verdict. */
-  readonly factorizedSupport?: Readonly<{ kind: "observed-motor" | "generalized" | "unknown"; motorResponse: number; threatResponse: number; headUpdates: number }>;
+  readonly factorizedSupport?: Readonly<{
+    kind: "observed-motor" | "generalized" | "unknown";
+    motorResponse: number;
+    threatResponse: number;
+    headUpdates: number;
+  }>;
   readonly factorizedVersion?: 4;
   readonly decisionMilliseconds?: number;
 }
@@ -87,112 +122,290 @@ function record(value: unknown): value is Record<string, unknown> {
 export function encodeTearPolicyObservation(observation: TearAgentObservation): string {
   const state = observation.state;
   return stableVerificationHash({
-    observationClass: state.observationClass, screen: observation.ui?.screen ?? "playing", tick: state.tick,
-    player: { x: Math.round(state.player.x), y: Math.round(state.player.y), hp: Math.round(state.player.hp), maxHp: Math.round(state.player.maxHp), grounded: state.player.grounded, dashCharges: state.player.dashCharges },
+    observationClass: state.observationClass,
+    screen: observation.ui?.screen ?? "playing",
+    tick: state.tick,
+    player: {
+      x: Math.round(state.player.x),
+      y: Math.round(state.player.y),
+      hp: Math.round(state.player.hp),
+      maxHp: Math.round(state.player.maxHp),
+      grounded: state.player.grounded,
+      dashCharges: state.player.dashCharges,
+    },
     blade: { state: state.blade.state, tipSpeed: Math.round(state.blade.tipSpeed) },
     run: { mode: state.run.mode, difficulty: state.run.difficulty, weapon: state.run.weapon, wave: state.run.wave },
-    entities: state.entities.map((entity) => ({ kind: entity.kind, state: entity.state ?? "", ...(entity.hpRatio === undefined ? {} : { hpRatio: Math.round(entity.hpRatio * 100) }) })).sort((left, right) => `${left.kind}:${left.state}`.localeCompare(`${right.kind}:${right.state}`)),
-    availableActions: [...state.availableActions].sort(), ...(observation.boss === undefined ? {} : { boss: observation.boss }),
+    entities: state.entities
+      .map((entity) => ({
+        kind: entity.kind,
+        state: entity.state ?? "",
+        ...(entity.hpRatio === undefined ? {} : { hpRatio: Math.round(entity.hpRatio * 100) }),
+      }))
+      .sort((left, right) => `${left.kind}:${left.state}`.localeCompare(`${right.kind}:${right.state}`)),
+    availableActions: [...state.availableActions].sort(),
+    ...(observation.boss === undefined ? {} : { boss: observation.boss }),
   });
 }
 
-function validLimit(value: number): boolean { return Number.isFinite(value) && value >= 0; }
+function validLimit(value: number): boolean {
+  return Number.isFinite(value) && value >= 0;
+}
 
 function limits(options: TearPolicyRuntimeOptions): TearPolicyRuntimeLimits {
   const value = { ...DEFAULT_TEAR_POLICY_RUNTIME_LIMITS, ...options.limits };
-  if (!Number.isSafeInteger(value.maxPayloadBytes) || value.maxPayloadBytes < 1
-    || !Number.isSafeInteger(value.maxTableEntries) || value.maxTableEntries < 1
-    || !Number.isSafeInteger(value.maxActionsPerDecision) || value.maxActionsPerDecision < 1
-    || !validLimit(value.maxDecisionMilliseconds)) throw new TypeError("invalid policy runtime limits");
+  if (
+    !Number.isSafeInteger(value.maxPayloadBytes) ||
+    value.maxPayloadBytes < 1 ||
+    !Number.isSafeInteger(value.maxTableEntries) ||
+    value.maxTableEntries < 1 ||
+    !Number.isSafeInteger(value.maxActionsPerDecision) ||
+    value.maxActionsPerDecision < 1 ||
+    !validLimit(value.maxDecisionMilliseconds)
+  )
+    throw new TypeError("invalid policy runtime limits");
   return Object.freeze(value);
 }
 
-function parseTableModel(artifact: TearPolicyArtifactV1, runtimeLimits: TearPolicyRuntimeLimits): TablePolicyModel | undefined {
+function parseTableModel(
+  artifact: TearPolicyArtifactV1,
+  runtimeLimits: TearPolicyRuntimeLimits,
+): TablePolicyModel | undefined {
   if (artifact.model.format !== "table-policy-v1") return undefined;
   if (new TextEncoder().encode(artifact.model.payload).byteLength > runtimeLimits.maxPayloadBytes) return undefined;
   try {
     const parsed: unknown = JSON.parse(artifact.model.payload);
-    if (!record(parsed) || parsed.format !== "tear-table-policy-model" || parsed.schemaVersion !== 1 || !record(parsed.actionsByObservationHash)
-      || Object.keys(parsed.actionsByObservationHash).length > runtimeLimits.maxTableEntries
-      || !Object.values(parsed.actionsByObservationHash).every(Array.isArray)) return undefined;
-    return Object.freeze({ format: "tear-table-policy-model", schemaVersion: 1,
-      actionsByObservationHash: Object.freeze(Object.fromEntries(Object.entries(parsed.actionsByObservationHash).map(([key, value]) => [key, Object.freeze(Array.isArray(value) ? Array.from(value, (entry): unknown => entry) : [])]))),
+    if (
+      !record(parsed) ||
+      parsed.format !== "tear-table-policy-model" ||
+      parsed.schemaVersion !== 1 ||
+      !record(parsed.actionsByObservationHash) ||
+      Object.keys(parsed.actionsByObservationHash).length > runtimeLimits.maxTableEntries ||
+      !Object.values(parsed.actionsByObservationHash).every(Array.isArray)
+    )
+      return undefined;
+    return Object.freeze({
+      format: "tear-table-policy-model",
+      schemaVersion: 1,
+      actionsByObservationHash: Object.freeze(
+        Object.fromEntries(
+          Object.entries(parsed.actionsByObservationHash).map(([key, value]) => [
+            key,
+            Object.freeze(Array.isArray(value) ? Array.from(value, (entry): unknown => entry) : []),
+          ]),
+        ),
+      ),
     });
-  } catch { return undefined; }
+  } catch {
+    return undefined;
+  }
 }
 
 function finiteNumbers(value: unknown, length: number): value is readonly number[] {
-  return Array.isArray(value) && value.length === length && value.every((entry) => typeof entry === "number" && Number.isFinite(entry));
+  return (
+    Array.isArray(value) &&
+    value.length === length &&
+    value.every((entry) => typeof entry === "number" && Number.isFinite(entry))
+  );
 }
-function parseLinearModel(artifact: TearPolicyArtifactV1, runtimeLimits: TearPolicyRuntimeLimits): LinearPolicyModel | undefined {
-  if (artifact.model.format !== "linear-policy-v1" || new TextEncoder().encode(artifact.model.payload).byteLength > runtimeLimits.maxPayloadBytes) return undefined;
+function parseLinearModel(
+  artifact: TearPolicyArtifactV1,
+  runtimeLimits: TearPolicyRuntimeLimits,
+): LinearPolicyModel | undefined {
+  if (
+    artifact.model.format !== "linear-policy-v1" ||
+    new TextEncoder().encode(artifact.model.payload).byteLength > runtimeLimits.maxPayloadBytes
+  )
+    return undefined;
   try {
     const parsed: unknown = JSON.parse(artifact.model.payload);
-    const width = record(parsed) && isTearPolicyFeatureSchema(parsed.featureSchemaHash) ? tearPolicyFeatureWidth(parsed.featureSchemaHash) : 0;
-    if (!record(parsed) || parsed.format !== "tear-linear-policy-model" || parsed.schemaVersion !== 1 || !isTearPolicyFeatureSchema(parsed.featureSchemaHash)
-      || !finiteNumbers(parsed.mean, width) || !finiteNumbers(parsed.scale, width) || parsed.scale.some((entry) => entry <= 0)
-      || !Array.isArray(parsed.classes) || parsed.classes.length < 1 || parsed.classes.length > runtimeLimits.maxTableEntries
-      || !parsed.classes.every((entry) => record(entry) && Array.isArray(entry.actions))
-      || !finiteNumbers(parsed.biases, parsed.classes.length)) return undefined;
-    const weights = parseTearPolicyModelWeights(parsed.weights, parsed.classes.length, width, runtimeLimits.maxPayloadBytes);
+    const width =
+      record(parsed) && isTearPolicyFeatureSchema(parsed.featureSchemaHash)
+        ? tearPolicyFeatureWidth(parsed.featureSchemaHash)
+        : 0;
+    if (
+      !record(parsed) ||
+      parsed.format !== "tear-linear-policy-model" ||
+      parsed.schemaVersion !== 1 ||
+      !isTearPolicyFeatureSchema(parsed.featureSchemaHash) ||
+      !finiteNumbers(parsed.mean, width) ||
+      !finiteNumbers(parsed.scale, width) ||
+      parsed.scale.some((entry) => entry <= 0) ||
+      !Array.isArray(parsed.classes) ||
+      parsed.classes.length < 1 ||
+      parsed.classes.length > runtimeLimits.maxTableEntries ||
+      !parsed.classes.every((entry) => record(entry) && Array.isArray(entry.actions)) ||
+      !finiteNumbers(parsed.biases, parsed.classes.length)
+    )
+      return undefined;
+    const weights = parseTearPolicyModelWeights(
+      parsed.weights,
+      parsed.classes.length,
+      width,
+      runtimeLimits.maxPayloadBytes,
+    );
     if (weights === undefined) return undefined;
-    return Object.freeze({ format: "tear-linear-policy-model", schemaVersion: 1, featureSchemaHash: parsed.featureSchemaHash,
-      mean: Object.freeze([...parsed.mean]), scale: Object.freeze([...parsed.scale]),
-      classes: Object.freeze(parsed.classes.map((entry) => Object.freeze({ actions: Object.freeze([...(entry as { actions: unknown[] }).actions]) }))),
-      weights, biases: Object.freeze([...parsed.biases]) });
-  } catch { return undefined; }
+    return Object.freeze({
+      format: "tear-linear-policy-model",
+      schemaVersion: 1,
+      featureSchemaHash: parsed.featureSchemaHash,
+      mean: Object.freeze([...parsed.mean]),
+      scale: Object.freeze([...parsed.scale]),
+      classes: Object.freeze(
+        parsed.classes.map((entry) =>
+          Object.freeze({ actions: Object.freeze([...(entry as { actions: unknown[] }).actions]) }),
+        ),
+      ),
+      weights,
+      biases: Object.freeze([...parsed.biases]),
+    });
+  } catch {
+    return undefined;
+  }
 }
-function parseTemporalWindowLinearModel(artifact: TearPolicyArtifactV1, runtimeLimits: TearPolicyRuntimeLimits): TemporalWindowLinearPolicyModel | undefined {
-  if (artifact.model.format !== "temporal-window-linear-policy-v1" || new TextEncoder().encode(artifact.model.payload).byteLength > runtimeLimits.maxPayloadBytes) return undefined;
+function parseTemporalWindowLinearModel(
+  artifact: TearPolicyArtifactV1,
+  runtimeLimits: TearPolicyRuntimeLimits,
+): TemporalWindowLinearPolicyModel | undefined {
+  if (
+    artifact.model.format !== "temporal-window-linear-policy-v1" ||
+    new TextEncoder().encode(artifact.model.payload).byteLength > runtimeLimits.maxPayloadBytes
+  )
+    return undefined;
   try {
     const parsed: unknown = JSON.parse(artifact.model.payload);
-    const width = record(parsed) && isTearPolicyFeatureSchema(parsed.featureSchemaHash) ? tearPolicyFeatureWidth(parsed.featureSchemaHash) : 0;
+    const width =
+      record(parsed) && isTearPolicyFeatureSchema(parsed.featureSchemaHash)
+        ? tearPolicyFeatureWidth(parsed.featureSchemaHash)
+        : 0;
     if (!record(parsed)) return undefined;
     const candidateWindow = parsed.window;
-    const v1 = parsed.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V1 && parsed.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V1;
-    const v2 = parsed.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V2 && parsed.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V2;
-    if (parsed.format !== "tear-temporal-window-linear-policy-model" || parsed.schemaVersion !== 1 || !isTearPolicyFeatureSchema(parsed.featureSchemaHash)
-      || typeof candidateWindow !== "number" || !Number.isSafeInteger(candidateWindow) || candidateWindow < 1 || candidateWindow > 64 || (!v1 && !v2) || !finiteNumbers(parsed.mean, width) || !finiteNumbers(parsed.scale, width) || parsed.scale.some((entry) => entry <= 0)
-      || !Array.isArray(parsed.classes) || parsed.classes.length < 1 || parsed.classes.length > runtimeLimits.maxTableEntries || !parsed.classes.every((entry) => record(entry) && Array.isArray(entry.actions))
-      || !finiteNumbers(parsed.biases, parsed.classes.length)) return undefined;
-    const weights = parseTearPolicyModelWeights(parsed.weights, parsed.classes.length, candidateWindow * width + Number(parsed.conditionWidth), runtimeLimits.maxPayloadBytes);
+    const v1 =
+      parsed.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V1 &&
+      parsed.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V1;
+    const v2 =
+      parsed.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V2 &&
+      parsed.conditionWidth === TEAR_POLICY_CONDITION_WIDTH_V2;
+    if (
+      parsed.format !== "tear-temporal-window-linear-policy-model" ||
+      parsed.schemaVersion !== 1 ||
+      !isTearPolicyFeatureSchema(parsed.featureSchemaHash) ||
+      typeof candidateWindow !== "number" ||
+      !Number.isSafeInteger(candidateWindow) ||
+      candidateWindow < 1 ||
+      candidateWindow > 64 ||
+      (!v1 && !v2) ||
+      !finiteNumbers(parsed.mean, width) ||
+      !finiteNumbers(parsed.scale, width) ||
+      parsed.scale.some((entry) => entry <= 0) ||
+      !Array.isArray(parsed.classes) ||
+      parsed.classes.length < 1 ||
+      parsed.classes.length > runtimeLimits.maxTableEntries ||
+      !parsed.classes.every((entry) => record(entry) && Array.isArray(entry.actions)) ||
+      !finiteNumbers(parsed.biases, parsed.classes.length)
+    )
+      return undefined;
+    const weights = parseTearPolicyModelWeights(
+      parsed.weights,
+      parsed.classes.length,
+      candidateWindow * width + Number(parsed.conditionWidth),
+      runtimeLimits.maxPayloadBytes,
+    );
     if (weights === undefined) return undefined;
     const window = candidateWindow;
-    return Object.freeze({ format: "tear-temporal-window-linear-policy-model", schemaVersion: 1, featureSchemaHash: parsed.featureSchemaHash, window, conditionSchemaHash: parsed.conditionSchemaHash as string, conditionWidth: Number(parsed.conditionWidth),
-      mean: Object.freeze([...parsed.mean]), scale: Object.freeze([...parsed.scale]), classes: Object.freeze(parsed.classes.map((entry) => Object.freeze({ actions: Object.freeze([...(entry as { actions: unknown[] }).actions]) }))),
-      weights, biases: Object.freeze([...parsed.biases]) });
-  } catch { return undefined; }
+    return Object.freeze({
+      format: "tear-temporal-window-linear-policy-model",
+      schemaVersion: 1,
+      featureSchemaHash: parsed.featureSchemaHash,
+      window,
+      conditionSchemaHash: parsed.conditionSchemaHash as string,
+      conditionWidth: Number(parsed.conditionWidth),
+      mean: Object.freeze([...parsed.mean]),
+      scale: Object.freeze([...parsed.scale]),
+      classes: Object.freeze(
+        parsed.classes.map((entry) =>
+          Object.freeze({ actions: Object.freeze([...(entry as { actions: unknown[] }).actions]) }),
+        ),
+      ),
+      weights,
+      biases: Object.freeze([...parsed.biases]),
+    });
+  } catch {
+    return undefined;
+  }
 }
-function parseModel(artifact: TearPolicyArtifactV1, runtimeLimits: TearPolicyRuntimeLimits): RuntimePolicyModel | undefined {
-  return parseTableModel(artifact, runtimeLimits) ?? parseLinearModel(artifact, runtimeLimits) ?? parseTemporalWindowLinearModel(artifact, runtimeLimits);
+function parseModel(
+  artifact: TearPolicyArtifactV1,
+  runtimeLimits: TearPolicyRuntimeLimits,
+): RuntimePolicyModel | undefined {
+  return (
+    parseTableModel(artifact, runtimeLimits) ??
+    parseLinearModel(artifact, runtimeLimits) ??
+    parseTemporalWindowLinearModel(artifact, runtimeLimits)
+  );
 }
 function linearActions(model: LinearPolicyModel, features: readonly number[]): readonly unknown[] {
-  let selected = 0, best = Number.NEGATIVE_INFINITY;
+  let selected = 0,
+    best = Number.NEGATIVE_INFINITY;
   for (let index = 0; index < model.classes.length; index += 1) {
     const bias = model.biases[index];
     if (bias === undefined) throw new Error("validated linear policy changed during decision");
-    const score = reduceTearPolicyWeightRow(model.weights, index, (total, weight, featureIndex) => total + weight * ((features[featureIndex] ?? 0) - (model.mean[featureIndex] ?? 0)) / (model.scale[featureIndex] ?? 1), bias);
-    if (score > best) { best = score; selected = index; }
+    const score = reduceTearPolicyWeightRow(
+      model.weights,
+      index,
+      (total, weight, featureIndex) =>
+        total +
+        (weight * ((features[featureIndex] ?? 0) - (model.mean[featureIndex] ?? 0))) / (model.scale[featureIndex] ?? 1),
+      bias,
+    );
+    if (score > best) {
+      best = score;
+      selected = index;
+    }
   }
   return model.classes[selected]?.actions ?? [];
 }
-function temporalWindowFeatures(model: TemporalWindowLinearPolicyModel, observation: TearAgentObservation, history: readonly (readonly number[])[], conditioning: TearPolicyConditioningV2): readonly number[] {
-  const normalized = projectStructuredPolicyFeatures(observation, model.featureSchemaHash).map((value, index) => (value - (model.mean[index] ?? 0)) / (model.scale[index] ?? 1));
-  const prior = model.featureSchemaHash === TEAR_POLICY_FEATURE_SCHEMA_HASH_V1 ? history : history.map((frame) => frame.map((value, index) => (value - (model.mean[index] ?? 0)) / (model.scale[index] ?? 1)));
+function temporalWindowFeatures(
+  model: TemporalWindowLinearPolicyModel,
+  observation: TearAgentObservation,
+  history: readonly (readonly number[])[],
+  conditioning: TearPolicyConditioningV2,
+): readonly number[] {
+  const normalized = projectStructuredPolicyFeatures(observation, model.featureSchemaHash).map(
+    (value, index) => (value - (model.mean[index] ?? 0)) / (model.scale[index] ?? 1),
+  );
+  const prior =
+    model.featureSchemaHash === TEAR_POLICY_FEATURE_SCHEMA_HASH_V1
+      ? history
+      : history.map((frame) =>
+          frame.map((value, index) => (value - (model.mean[index] ?? 0)) / (model.scale[index] ?? 1)),
+        );
   const frames = [...prior, normalized].slice(-model.window);
   const features: number[] = [];
-  for (let index = 0; index < model.window - frames.length; index += 1) features.push(...Array<number>(tearPolicyFeatureWidth(model.featureSchemaHash)).fill(0));
+  for (let index = 0; index < model.window - frames.length; index += 1)
+    features.push(...Array<number>(tearPolicyFeatureWidth(model.featureSchemaHash)).fill(0));
   for (const frame of frames) features.push(...frame);
-  const condition = model.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V1 ? projectStructuredPolicyCondition(observation) : projectStructuredPolicyConditionV2(observation, conditioning);
+  const condition =
+    model.conditionSchemaHash === TEAR_POLICY_CONDITION_SCHEMA_HASH_V1
+      ? projectStructuredPolicyCondition(observation)
+      : projectStructuredPolicyConditionV2(observation, conditioning);
   return Object.freeze([...features, ...condition]);
 }
 function temporalActions(model: TemporalWindowLinearPolicyModel, features: readonly number[]): readonly unknown[] {
-  let selected = 0, best = Number.NEGATIVE_INFINITY;
+  let selected = 0,
+    best = Number.NEGATIVE_INFINITY;
   for (let index = 0; index < model.classes.length; index += 1) {
     const bias = model.biases[index];
     if (bias === undefined) throw new Error("validated temporal policy changed during decision");
-    const score = reduceTearPolicyWeightRow(model.weights, index, (total, weight, featureIndex) => total + weight * (features[featureIndex] ?? 0), bias);
-    if (score > best) { best = score; selected = index; }
+    const score = reduceTearPolicyWeightRow(
+      model.weights,
+      index,
+      (total, weight, featureIndex) => total + weight * (features[featureIndex] ?? 0),
+      bias,
+    );
+    if (score > best) {
+      best = score;
+      selected = index;
+    }
   }
   return model.classes[selected]?.actions ?? [];
 }
@@ -216,18 +429,27 @@ export class TearActivePolicyRuntime {
   /**
    * A direct artifact is evaluation-only: it is parsed locally and never
    * registered or activated. Normal live callers continue to supply a registry.
-  */
-  constructor(registry: TearPolicyArtifactRegistry | TearPolicyArtifactV1, profile: TearAgentProfileId = "competent", options: TearPolicyRuntimeOptions = {}) {
+   */
+  constructor(
+    registry: TearPolicyArtifactRegistry | TearPolicyArtifactV1,
+    profile: TearAgentProfileId = "competent",
+    options: TearPolicyRuntimeOptions = {},
+  ) {
     this.#directArtifact = "artifactHash" in registry ? parseTearPolicyArtifact(registry) : undefined;
-    this.#registry = this.#directArtifact === undefined ? registry as TearPolicyArtifactRegistry : undefined;
-    this.#fallback = new TearAgentOrchestrator(profile); this.#limits = limits(options);
-    this.#now = options.now ?? (() => performance.now()); this.#conditioning = createTearPolicyConditioningV2(options.conditioning ?? { personaId: profile });
+    this.#registry = this.#directArtifact === undefined ? (registry as TearPolicyArtifactRegistry) : undefined;
+    this.#fallback = new TearAgentOrchestrator(profile);
+    this.#limits = limits(options);
+    this.#now = options.now ?? (() => performance.now());
+    this.#conditioning = createTearPolicyConditioningV2(options.conditioning ?? { personaId: profile });
   }
 
   async reset(): Promise<void> {
-    this.#artifact = undefined; this.#model = undefined; this.#temporalHistory = Object.freeze([]);
+    this.#artifact = undefined;
+    this.#model = undefined;
+    this.#temporalHistory = Object.freeze([]);
     if (this.#directArtifact !== undefined) {
-      this.#artifact = this.#directArtifact; this.#model = parseModel(this.#directArtifact, this.#limits);
+      this.#artifact = this.#directArtifact;
+      this.#model = parseModel(this.#directArtifact, this.#limits);
       return;
     }
     if (this.#registry === undefined) return;
@@ -235,7 +457,8 @@ export class TearActivePolicyRuntime {
     if (active === undefined) return;
     const artifact = await this.#registry.get(active.artifactId);
     if (artifact?.artifactHash !== active.artifactHash) return;
-    this.#artifact = artifact; this.#model = parseModel(artifact, this.#limits);
+    this.#artifact = artifact;
+    this.#model = parseModel(artifact, this.#limits);
   }
 
   /** Changes only caller-owned V2 execution context and clears temporal history. */
@@ -249,18 +472,36 @@ export class TearActivePolicyRuntime {
     const observationHash = encodeTearPolicyObservation(observation);
     const fallback = (reason: NonNullable<TearPolicyDecisionReceipt["reason"]>): TearActivePolicyDecision => {
       const decision = this.#fallback.decide(observation);
-      return Object.freeze({ ...decision, receipt: Object.freeze({ observationHash, source: "scripted-fallback", reason,
-        ...(this.#artifact === undefined ? {} : { artifactId: this.#artifact.id, artifactHash: this.#artifact.artifactHash }) }) });
+      return Object.freeze({
+        ...decision,
+        receipt: Object.freeze({
+          observationHash,
+          source: "scripted-fallback",
+          reason,
+          ...(this.#artifact === undefined
+            ? {}
+            : { artifactId: this.#artifact.id, artifactHash: this.#artifact.artifactHash }),
+        }),
+      });
     };
     if (this.#artifact === undefined) return fallback("no-active-artifact");
     if (this.#model === undefined) return fallback("invalid-model");
-    const candidate = this.#model.format === "tear-table-policy-model"
-      ? this.#model.actionsByObservationHash[observationHash] ?? this.#model.actionsByObservationHash["*"]
-      : this.#model.format === "tear-temporal-window-linear-policy-model"
-        ? temporalActions(this.#model, temporalWindowFeatures(this.#model, observation, this.#temporalHistory, this.#conditioning))
-        : linearActions(this.#model, projectStructuredPolicyFeatures(observation, this.#model.featureSchemaHash));
+    const candidate =
+      this.#model.format === "tear-table-policy-model"
+        ? (this.#model.actionsByObservationHash[observationHash] ?? this.#model.actionsByObservationHash["*"])
+        : this.#model.format === "tear-temporal-window-linear-policy-model"
+          ? temporalActions(
+              this.#model,
+              temporalWindowFeatures(this.#model, observation, this.#temporalHistory, this.#conditioning),
+            )
+          : linearActions(this.#model, projectStructuredPolicyFeatures(observation, this.#model.featureSchemaHash));
     if (this.#model.format === "tear-temporal-window-linear-policy-model") {
-      this.#temporalHistory = Object.freeze([...this.#temporalHistory, Object.freeze([...projectStructuredPolicyFeatures(observation, this.#model.featureSchemaHash)])].slice(-this.#model.window));
+      this.#temporalHistory = Object.freeze(
+        [
+          ...this.#temporalHistory,
+          Object.freeze([...projectStructuredPolicyFeatures(observation, this.#model.featureSchemaHash)]),
+        ].slice(-this.#model.window),
+      );
     }
     if (candidate === undefined) return fallback("missing-decision");
     if (candidate.length > this.#limits.maxActionsPerDecision) return fallback("invalid-action");
@@ -272,7 +513,15 @@ export class TearActivePolicyRuntime {
     }
     if (this.#now() - startedAt > this.#limits.maxDecisionMilliseconds) return fallback("decision-budget-exceeded");
     const fallbackTrace = this.#fallback.decide(observation).trace;
-    return Object.freeze({ actions: Object.freeze(actions), trace: fallbackTrace,
-      receipt: Object.freeze({ artifactId: this.#artifact.id, artifactHash: this.#artifact.artifactHash, observationHash, source: "artifact" }) });
+    return Object.freeze({
+      actions: Object.freeze(actions),
+      trace: fallbackTrace,
+      receipt: Object.freeze({
+        artifactId: this.#artifact.id,
+        artifactHash: this.#artifact.artifactHash,
+        observationHash,
+        source: "artifact",
+      }),
+    });
   }
 }

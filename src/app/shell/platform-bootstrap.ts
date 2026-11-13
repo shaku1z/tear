@@ -2,8 +2,10 @@ import { initializePlatformServices, shouldPromptForUsername } from "./runtime-i
 import type { SettingsController } from "../screens/settings-controller";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
-type Dependencies = Pick<GameRuntimeDependencies,
-  "ACH" | "CG" | "Cloud" | "FirebaseProvider" | "META" | "platformBootstrapPersistence" | "PROFILE" | "SFX">;
+type Dependencies = Pick<
+  GameRuntimeDependencies,
+  "ACH" | "CG" | "Cloud" | "FirebaseProvider" | "META" | "platformBootstrapPersistence" | "PROFILE" | "SFX"
+>;
 
 export interface PlatformRenamePort {
   readonly screen: () => string;
@@ -18,17 +20,37 @@ export function initializeLivePlatformBootstrap(
   settings: SettingsController,
   rename: PlatformRenamePort,
 ): void {
-  initializePlatformServices({ audio: d.SFX, meta: d.META, profile: d.PROFILE, settings,
-    portal: d.CG, cloud: d.Cloud,
+  initializePlatformServices({
+    audio: d.SFX,
+    meta: d.META,
+    profile: d.PROFILE,
+    settings,
+    portal: d.CG,
+    cloud: d.Cloud,
     backfillProgress() {
       d.platformBootstrapPersistence.backfillShopProgress();
     },
     onCloudChange(user, state) {
-      try { d.ACH.check(); } catch { /* optional achievement migration */ }
-      if (!shouldPromptForUsername({ state, user, provider: d.Cloud.provider,
-        expectedProvider: d.FirebaseProvider, username: d.PROFILE.username(),
-        alreadyPrompted: rename.prompted(), screen: rename.screen(), renameActive: rename.active() })) return;
-      rename.markPrompted(); rename.begin(true);
+      try {
+        d.ACH.check();
+      } catch {
+        /* optional achievement migration */
+      }
+      if (
+        !shouldPromptForUsername({
+          state,
+          user,
+          provider: d.Cloud.provider,
+          expectedProvider: d.FirebaseProvider,
+          username: d.PROFILE.username(),
+          alreadyPrompted: rename.prompted(),
+          screen: rename.screen(),
+          renameActive: rename.active(),
+        })
+      )
+        return;
+      rename.markPrompted();
+      rename.begin(true);
     },
   });
 }

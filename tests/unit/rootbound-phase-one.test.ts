@@ -25,10 +25,10 @@ type PhaseOneBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"][
 
 function boss() {
   const harness = createEnemyHarness();
-  return { harness, actor: new harness.types.Rootbound(
-    CONFIG.view.w / 2,
-    CONFIG.world.groundY - CONFIG.boss.h / 2,
-  ) as PhaseOneBoss };
+  return {
+    harness,
+    actor: new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseOneBoss,
+  };
 }
 
 describe("Rootbound Phase I cadence", () => {
@@ -42,9 +42,18 @@ describe("Rootbound Phase I cadence", () => {
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, entry.harness.platforms, entry.harness.player, []);
         const target = entry === first ? selected : mirrored;
         if (entry.actor.pendingAttack !== null) target.push(entry.actor.pendingAttack);
-        expect(entry.actor).toMatchObject({ state: "idle", stateT: 0, atk: "unavailable", availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"] });
+        expect(entry.actor).toMatchObject({
+          state: "idle",
+          stateT: 0,
+          atk: "unavailable",
+          availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"],
+        });
         entry.actor.completePhaseOneAttack();
-        expect(entry.actor).toMatchObject({ state: "recover", stateT: ROOTBOUND_PHASE_ONE_CADENCE.recovery, pendingAttack: null });
+        expect(entry.actor).toMatchObject({
+          state: "recover",
+          stateT: ROOTBOUND_PHASE_ONE_CADENCE.recovery,
+          pendingAttack: null,
+        });
         entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.recovery, entry.harness.platforms, entry.harness.player, []);
       }
     }
@@ -133,19 +142,20 @@ describe("Rootbound Phase I cadence", () => {
       harness.player.x,
       harness.player.x + ROOTBOUND_SEED_ARC.spread,
     ]);
-    for (const shot of shots) expect(shot).toMatchObject({
-      family: "ordinaryProjectile",
-      counterplay: "deflect",
-      unparryable: false,
-      bossAttack: "seed-arc",
-      owner: actor,
-      sourceEnemy: actor,
-      landingY: CONFIG.world.groundY,
-      groundImpact: true,
-      mud: false,
-      root: 0,
-      dmg: ROOTBOUND_SEED_ARC.damage,
-    });
+    for (const shot of shots)
+      expect(shot).toMatchObject({
+        family: "ordinaryProjectile",
+        counterplay: "deflect",
+        unparryable: false,
+        bossAttack: "seed-arc",
+        owner: actor,
+        sourceEnemy: actor,
+        landingY: CONFIG.world.groundY,
+        groundImpact: true,
+        mud: false,
+        root: 0,
+        dmg: ROOTBOUND_SEED_ARC.damage,
+      });
     expect(Math.max(...shots.map((shot) => shot.life))).toBeLessThan(2);
 
     actor.update(ROOTBOUND_SEED_ARC.release, harness.platforms, harness.player, shots);
@@ -157,24 +167,42 @@ describe("Rootbound Phase I cadence", () => {
     const player = harness.player;
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootline-test" });
     player.x = actor.x + 180;
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [Object.freeze({
-      id: "rootbound:test",
-      source: actor,
-      state: Object.freeze({ stage: actor.rootlineStage, geometry: actor.rootlineGeometry(), damage: ROOTBOUND_ROOTLINE.damage, cleanupReason: actor.rootlineCleanupReason }),
-      player: Object.freeze({
-        x: player.x, y: player.y, hw: player.hw, hh: player.hh, invulnerable: Boolean(player.invulnerable),
-        hazardDamageMultiplier: 1,
-        takeDamage: (damage: number, sourceX: number, source: unknown) => { player.takeDamage(damage, sourceX, source as never); },
+    bindVerdantEnvironmentActors(environment, "rootbound", () => [
+      Object.freeze({
+        id: "rootbound:test",
+        source: actor,
+        state: Object.freeze({
+          stage: actor.rootlineStage,
+          geometry: actor.rootlineGeometry(),
+          damage: ROOTBOUND_ROOTLINE.damage,
+          cleanupReason: actor.rootlineCleanupReason,
+        }),
+        player: Object.freeze({
+          x: player.x,
+          y: player.y,
+          hw: player.hw,
+          hh: player.hh,
+          invulnerable: Boolean(player.invulnerable),
+          hazardDamageMultiplier: 1,
+          takeDamage: (damage: number, sourceX: number, source: unknown) => {
+            player.takeDamage(damage, sourceX, source as never);
+          },
+        }),
       }),
-    })]);
+    ]);
     actor.pendingAttack = "rootline";
 
     actor.update(1 / 120, harness.platforms, player, []);
     environment.step(1, 1 / 120, () => undefined);
-    expect(environment.fields()).toEqual([expect.objectContaining({
-      kind: "rootline", ownerId: "rootbound:test", state: "warning", patternId: "rootbound-rootline",
-      geometry: actor.rootlineGeometry(),
-    })]);
+    expect(environment.fields()).toEqual([
+      expect.objectContaining({
+        kind: "rootline",
+        ownerId: "rootbound:test",
+        state: "warning",
+        patternId: "rootbound-rootline",
+        geometry: actor.rootlineGeometry(),
+      }),
+    ]);
     expect(player.damage).toEqual([]);
 
     actor.update(ROOTBOUND_ROOTLINE.windup, harness.platforms, player, []);
@@ -217,31 +245,54 @@ describe("Rootbound Phase I cadence", () => {
     expect(actor).toMatchObject({ canopyStepStage: "settle", x: 800, y: 461, atk: "canopy-step:settle" });
     expect(player.damage).toEqual([]);
     actor.update(ROOTBOUND_CANOPY_STEP.settle, harness.platforms, player, []);
-    expect(actor).toMatchObject({ pendingAttack: null, canopyStepStage: null, canopyDestination: null, state: "recover" });
+    expect(actor).toMatchObject({
+      pendingAttack: null,
+      canopyStepStage: null,
+      canopyDestination: null,
+      state: "recover",
+    });
     expect(player.damage).toEqual([]);
   });
 
   it("cleans every temporary Phase I owner before Phase II becomes active", () => {
     const { harness, actor } = boss();
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "phase-exit" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [Object.freeze({
-      id: "rootbound:phase-exit", source: actor,
-      state: Object.freeze({ stage: actor.rootlineStage, geometry: actor.rootlineGeometry(), damage: ROOTBOUND_ROOTLINE.damage, cleanupReason: actor.rootlineCleanupReason }),
-    })]);
+    bindVerdantEnvironmentActors(environment, "rootbound", () => [
+      Object.freeze({
+        id: "rootbound:phase-exit",
+        source: actor,
+        state: Object.freeze({
+          stage: actor.rootlineStage,
+          geometry: actor.rootlineGeometry(),
+          damage: ROOTBOUND_ROOTLINE.damage,
+          cleanupReason: actor.rootlineCleanupReason,
+        }),
+      }),
+    ]);
     actor.pendingAttack = "rootline";
     actor.update(1 / 120, harness.platforms, harness.player, []);
     environment.step(1, 1 / 120, () => undefined);
     expect(environment.fields()[0]).toMatchObject({ state: "warning" });
 
     const seed = new harness.Projectile(actor.x, actor.y, 10, -10);
-    seed.owner = actor; seed.sourceEnemy = actor; seed.bossAttack = "seed-arc";
+    seed.owner = actor;
+    seed.sourceEnemy = actor;
+    seed.bossAttack = "seed-arc";
     const projectiles: EnemyProjectile[] = [seed];
     actor.hp = actor.maxHp * actor.phaseMarks[0];
     actor.update(1 / 120, harness.platforms, harness.player, projectiles);
     expect(actor).toMatchObject({
-      phase: 2, phaseMarker: 2, phaseOneExited: true, pendingAttack: null,
-      vineSweepStage: null, seedArcStage: null, rootlineStage: null, canopyStepStage: null,
-      state: "recover", atk: "unavailable", rootlineCleanupReason: "stage-transition",
+      phase: 2,
+      phaseMarker: 2,
+      phaseOneExited: true,
+      pendingAttack: null,
+      vineSweepStage: null,
+      seedArcStage: null,
+      rootlineStage: null,
+      canopyStepStage: null,
+      state: "recover",
+      atk: "unavailable",
+      rootlineCleanupReason: "stage-transition",
     });
     expect(seed).toMatchObject({ dead: true, shatterReason: "phase-transition" });
     environment.step(2, 1 / 120, () => undefined);
@@ -249,28 +300,42 @@ describe("Rootbound Phase I cadence", () => {
   });
 
   it("keeps authored cadence fixed while current difficulty authority scales damage exactly once", () => {
-    const cycleSeconds = ROOTBOUND_PHASE_ONE_CADENCE.openingDelay * ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length
-      + ROOTBOUND_PHASE_ONE_CADENCE.recovery * ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length
-      + ROOTBOUND_VINE_SWEEP.windup + ROOTBOUND_VINE_SWEEP.active + ROOTBOUND_VINE_SWEEP.followThrough
-      + ROOTBOUND_SEED_ARC.windup + ROOTBOUND_SEED_ARC.release
-      + ROOTBOUND_ROOTLINE.windup + ROOTBOUND_ROOTLINE.active + ROOTBOUND_ROOTLINE.cleanup
-      + ROOTBOUND_CANOPY_STEP.telegraph + ROOTBOUND_CANOPY_STEP.travel + ROOTBOUND_CANOPY_STEP.settle;
+    const cycleSeconds =
+      ROOTBOUND_PHASE_ONE_CADENCE.openingDelay * ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length +
+      ROOTBOUND_PHASE_ONE_CADENCE.recovery * ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length +
+      ROOTBOUND_VINE_SWEEP.windup +
+      ROOTBOUND_VINE_SWEEP.active +
+      ROOTBOUND_VINE_SWEEP.followThrough +
+      ROOTBOUND_SEED_ARC.windup +
+      ROOTBOUND_SEED_ARC.release +
+      ROOTBOUND_ROOTLINE.windup +
+      ROOTBOUND_ROOTLINE.active +
+      ROOTBOUND_ROOTLINE.cleanup +
+      ROOTBOUND_CANOPY_STEP.telegraph +
+      ROOTBOUND_CANOPY_STEP.travel +
+      ROOTBOUND_CANOPY_STEP.settle;
     expect(cycleSeconds).toBeCloseTo(10.05);
-    expect(Math.min(
-      ROOTBOUND_VINE_SWEEP.windup,
-      ROOTBOUND_SEED_ARC.windup,
-      ROOTBOUND_ROOTLINE.windup,
-      ROOTBOUND_CANOPY_STEP.telegraph,
-    )).toBeGreaterThanOrEqual(0.55);
+    expect(
+      Math.min(
+        ROOTBOUND_VINE_SWEEP.windup,
+        ROOTBOUND_SEED_ARC.windup,
+        ROOTBOUND_ROOTLINE.windup,
+        ROOTBOUND_CANOPY_STEP.telegraph,
+      ),
+    ).toBeGreaterThanOrEqual(0.55);
 
     const scaled = (damage: number, multiplier: number): number => Math.round(damage * multiplier * 10) / 10;
-    expect(DIFFICULTY_CATALOG.map((difficulty) => ({
-      id: difficulty.id,
-      vine: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_VINE_SWEEP.damage, difficulty.modifiers.playerDamageTaken),
-      seed: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_SEED_ARC.damage, difficulty.modifiers.playerDamageTaken),
-      rootline: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_ROOTLINE.damage, difficulty.modifiers.playerDamageTaken),
-      cycleSeconds,
-    }))).toEqual([
+    expect(
+      DIFFICULTY_CATALOG.map((difficulty) => ({
+        id: difficulty.id,
+        vine: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_VINE_SWEEP.damage, difficulty.modifiers.playerDamageTaken),
+        seed: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_SEED_ARC.damage, difficulty.modifiers.playerDamageTaken),
+        rootline: difficulty.oneHit
+          ? "fatal"
+          : scaled(ROOTBOUND_ROOTLINE.damage, difficulty.modifiers.playerDamageTaken),
+        cycleSeconds,
+      })),
+    ).toEqual([
       { id: "easy", vine: 11.7, seed: 10.4, rootline: 13, cycleSeconds },
       { id: "normal", vine: 18, seed: 16, rootline: 20, cycleSeconds },
       { id: "hard", vine: 24.3, seed: 21.6, rootline: 27, cycleSeconds },
@@ -287,14 +352,24 @@ describe("Rootbound Phase I cadence", () => {
       actor.introT = 0.4;
       actor.update(1 / 120, harness.platforms, harness.player, projectiles);
       expect(actor).toMatchObject({ pendingAttack: attack, state: "intro", atk: "unavailable" });
-      expect(actor).toMatchObject({ vineSweepStage: null, seedArcStage: null, rootlineStage: null, canopyStepStage: null });
+      expect(actor).toMatchObject({
+        vineSweepStage: null,
+        seedArcStage: null,
+        rootlineStage: null,
+        canopyStepStage: null,
+      });
       expect(projectiles).toEqual([]);
 
       actor.introT = 0;
       actor.cinematicT = 0.4;
       actor.update(1 / 120, harness.platforms, harness.player, projectiles);
       expect(actor).toMatchObject({ pendingAttack: attack, state: "intro", atk: "unavailable", cinematicT: 0.4 });
-      expect(actor).toMatchObject({ vineSweepStage: null, seedArcStage: null, rootlineStage: null, canopyStepStage: null });
+      expect(actor).toMatchObject({
+        vineSweepStage: null,
+        seedArcStage: null,
+        rootlineStage: null,
+        canopyStepStage: null,
+      });
       expect(projectiles).toEqual([]);
 
       actor.cinematicT = 0;

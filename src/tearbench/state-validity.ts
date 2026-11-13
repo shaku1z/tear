@@ -97,8 +97,12 @@ export function evaluateTearStateValidity(input: TearStateValidityInput): Readon
   if (input.start.bossPhase !== undefined && input.start.boss === undefined) {
     reachabilityReasons.push("a boss phase cannot be reached without a declared boss");
   }
-  if (wave > 1 && input.stateClass === "reconstructed-reachable"
-    && input.constraints?.legalProgression !== true && !record(state.progressionLedger)) {
+  if (
+    wave > 1 &&
+    input.stateClass === "reconstructed-reachable" &&
+    input.constraints?.legalProgression !== true &&
+    !record(state.progressionLedger)
+  ) {
     reachabilityReasons.push("reconstructed waves after wave 1 require a legal progression ledger");
   }
   if (state.corruptionProfile !== undefined && input.stateClass !== "adversarial-impossible") {
@@ -133,10 +137,12 @@ export function evaluateTearStateValidity(input: TearStateValidityInput): Readon
       plausible,
       provisional,
       reasons: Object.freeze(plausibilityReasons),
-      ...(input.populationModel === undefined ? {} : {
-        modelId: input.populationModel.id,
-        sampleCount: input.populationModel.sampleCount,
-      }),
+      ...(input.populationModel === undefined
+        ? {}
+        : {
+            modelId: input.populationModel.id,
+            sampleCount: input.populationModel.sampleCount,
+          }),
     }),
   });
 }

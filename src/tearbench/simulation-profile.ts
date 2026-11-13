@@ -8,8 +8,7 @@ export const TEAR_RENDER_RATES_HZ = Object.freeze([30, 60, 144] as const);
 export const TEAR_CHECKPOINT_CADENCE_TICKS = TEAR_SIMULATION_TICKS_PER_SECOND;
 
 export function assertTearSimulationStepSeconds(stepSeconds: number): void {
-  if (!Number.isFinite(stepSeconds)
-    || Math.abs(stepSeconds - 1 / TEAR_SIMULATION_TICKS_PER_SECOND) > Number.EPSILON) {
+  if (!Number.isFinite(stepSeconds) || Math.abs(stepSeconds - 1 / TEAR_SIMULATION_TICKS_PER_SECOND) > Number.EPSILON) {
     throw new Error("Tear gameplay simulation authority must remain 120 Hz");
   }
 }

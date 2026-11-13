@@ -6,13 +6,21 @@ import path from "node:path";
 import test from "node:test";
 
 import {
-  CHECKPOINTS_PATH, ROOT, STEP_TOKEN, flattenCheckpoint, loadCheckpoints, runCheckpoint, stepCommand, validateCheckpoints,
+  CHECKPOINTS_PATH,
+  ROOT,
+  STEP_TOKEN,
+  flattenCheckpoint,
+  loadCheckpoints,
+  runCheckpoint,
+  stepCommand,
+  validateCheckpoints,
 } from "../scripts/run-checkpoint.mjs";
 
 const runner = path.join(ROOT, "scripts", "run-checkpoint.mjs");
 const packageScripts = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).scripts;
 const checkpoints = loadCheckpoints();
-const step = (label, code) => `node tests/fixtures/checkpoint-runner/step.mjs ${label}${code === undefined ? "" : ` ${String(code)}`}`;
+const step = (label, code) =>
+  `node tests/fixtures/checkpoint-runner/step.mjs ${label}${code === undefined ? "" : ` ${String(code)}`}`;
 
 function runCli(args) {
   return spawnSync(process.execPath, [runner, ...args], { cwd: ROOT, encoding: "utf8" });
@@ -32,8 +40,10 @@ function withLog(callback) {
 
 /** Repository paths a leaf command reads; artifact paths are outputs and are not required to exist. */
 function referencedPaths(command) {
-  return command.split(" ").slice(1)
-    .map((token) => token.includes("=") ? token.slice(token.indexOf("=") + 1) : token)
+  return command
+    .split(" ")
+    .slice(1)
+    .map((token) => (token.includes("=") ? token.slice(token.indexOf("=") + 1) : token))
     .filter((token) => /^[\w.-]+\/[\w./-]+\.(?:[cm]?js|ts|json)$/u.test(token) && !token.startsWith("artifacts/"));
 }
 
@@ -51,7 +61,10 @@ test("every checkpoint is runnable: its commands and the files they read exist",
     for (const command of flattenCheckpoint(checkpoints, name)) {
       const [executable, subcommand] = command.split(" ");
       if (executable === "pnpm" && subcommand !== "exec") {
-        assert.ok(Object.hasOwn(packageScripts, subcommand), `${name}: "${command}" names a package script that does not exist`);
+        assert.ok(
+          Object.hasOwn(packageScripts, subcommand),
+          `${name}: "${command}" names a package script that does not exist`,
+        );
       }
       for (const file of referencedPaths(command)) {
         assert.ok(fs.existsSync(path.join(ROOT, file)), `${name}: "${command}" reads missing ${file}`);
@@ -59,17 +72,27 @@ test("every checkpoint is runnable: its commands and the files they read exist",
       }
     }
   }
-  assert.ok(checked.has("tests/browser-c27a-live-parity-trace.js") && checked.has("tests/unit/presentation-systems.test.ts"));
-  assert.ok(checked.has("tests/fixtures/c30-production-headless-terminal-movement-jump.json"), "flag values are checked too");
+  assert.ok(
+    checked.has("tests/browser-c27a-live-parity-trace.js") && checked.has("tests/unit/presentation-systems.test.ts"),
+  );
+  assert.ok(
+    checked.has("tests/fixtures/c30-production-headless-terminal-movement-jump.json"),
+    "flag values are checked too",
+  );
 });
 
 test("checkpoint names left package.json and the runner is exposed as `pnpm checkpoint`", () => {
   assert.equal(packageScripts.checkpoint, "node scripts/run-checkpoint.mjs");
-  for (const name of Object.keys(checkpoints)) assert.ok(!Object.hasOwn(packageScripts, name), `${name} is still a package script`);
+  for (const name of Object.keys(checkpoints))
+    assert.ok(!Object.hasOwn(packageScripts, name), `${name} is still a package script`);
   for (const [name, command] of Object.entries(packageScripts)) {
     for (const checkpoint of Object.keys(checkpoints)) {
-      assert.ok(!new RegExp(`pnpm (?:run )?${checkpoint.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&")}(?![\\w:-])`, "u").test(command),
-        `${name} calls moved checkpoint ${checkpoint} without the runner`);
+      assert.ok(
+        !new RegExp(`pnpm (?:run )?${checkpoint.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&")}(?![\\w:-])`, "u").test(
+          command,
+        ),
+        `${name} calls moved checkpoint ${checkpoint} without the runner`,
+      );
     }
   }
 });
@@ -95,7 +118,10 @@ test("--list prints every checkpoint with its description", () => {
   const lines = result.stdout.trim().split(/\r?\n/u);
   assert.equal(lines.length, Object.keys(checkpoints).length);
   for (const [name, entry] of Object.entries(checkpoints)) {
-    assert.ok(lines.some((line) => line.startsWith(`${name} `) && line.endsWith(entry.description)), `${name} is listed`);
+    assert.ok(
+      lines.some((line) => line.startsWith(`${name} `) && line.endsWith(entry.description)),
+      `${name} is listed`,
+    );
   }
 });
 
@@ -135,22 +161,38 @@ test("the CLI runs a real checkpoint's pnpm step through the launching pnpm and 
   assert.deepEqual(checkpoints[name]?.steps, ["pnpm check:architecture"]);
   const fakePnpm = path.join(ROOT, "tests", "fixtures", "checkpoint-runner", "step.mjs");
   for (const exit of ["0", "4"]) {
-    const { status, lines } = withLog((env) => spawnSync(process.execPath, [runner, name], {
-      cwd: ROOT, encoding: "utf8", env: { ...env, npm_execpath: fakePnpm, CHECKPOINT_RUNNER_EXIT: exit },
-    }).status);
+    const { status, lines } = withLog(
+      (env) =>
+        spawnSync(process.execPath, [runner, name], {
+          cwd: ROOT,
+          encoding: "utf8",
+          env: { ...env, npm_execpath: fakePnpm, CHECKPOINT_RUNNER_EXIT: exit },
+        }).status,
+    );
     assert.equal(status, Number(exit));
     assert.deepEqual(lines, [`check:architecture:${name}`]);
   }
-  const withoutPnpm = spawnSync(process.execPath, [runner, name], { cwd: ROOT, encoding: "utf8", env: { ...process.env, npm_execpath: "" } });
+  const withoutPnpm = spawnSync(process.execPath, [runner, name], {
+    cwd: ROOT,
+    encoding: "utf8",
+    env: { ...process.env, npm_execpath: "" },
+  });
   assert.notEqual(withoutPnpm.status, 0, "a pnpm step without a launching pnpm fails instead of guessing");
   assert.match(withoutPnpm.stderr, /needs pnpm/u);
 });
 
 test("steps spawn without a shell: node uses this Node and pnpm re-enters the launching pnpm", () => {
-  assert.deepEqual(stepCommand("node --test a.mjs", ["x"], {}), { file: process.execPath, args: ["--test", "a.mjs", "x"] });
-  assert.deepEqual(stepCommand("pnpm check:architecture", [], { npm_execpath: "/p/pnpm.mjs" }),
-    { file: process.execPath, args: ["/p/pnpm.mjs", "check:architecture"] });
-  assert.deepEqual(stepCommand("pnpm check:architecture", [], { npm_execpath: "/p/pnpm.exe" }),
-    { file: "/p/pnpm.exe", args: ["check:architecture"] });
+  assert.deepEqual(stepCommand("node --test a.mjs", ["x"], {}), {
+    file: process.execPath,
+    args: ["--test", "a.mjs", "x"],
+  });
+  assert.deepEqual(stepCommand("pnpm check:architecture", [], { npm_execpath: "/p/pnpm.mjs" }), {
+    file: process.execPath,
+    args: ["/p/pnpm.mjs", "check:architecture"],
+  });
+  assert.deepEqual(stepCommand("pnpm check:architecture", [], { npm_execpath: "/p/pnpm.exe" }), {
+    file: "/p/pnpm.exe",
+    args: ["check:architecture"],
+  });
   assert.equal(path.resolve(CHECKPOINTS_PATH), path.join(ROOT, "config", "checkpoints.json"));
 });

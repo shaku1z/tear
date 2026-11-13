@@ -1,35 +1,64 @@
-import { buildLiveMusicObservation, type LiveMusicActor, type LiveMusicPlayer, type LiveMusicRun } from "../../audio/live-music-observation";
+import {
+  buildLiveMusicObservation,
+  type LiveMusicActor,
+  type LiveMusicPlayer,
+  type LiveMusicRun,
+} from "../../audio/live-music-observation";
 import type { MusicContextObservation } from "../../audio/music-director";
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { GameAction } from "../../input/game-action";
 import type { TearSimulationAdvanceLifecycle } from "../../gameplay/runtime/tear-simulation-runtime";
 
-export interface MutableBossIntro { delay: number; t: number; dur: number; boss: (LiveMusicActor & { introT: number }) | null }
+export interface MutableBossIntro {
+  delay: number;
+  t: number;
+  dur: number;
+  boss: (LiveMusicActor & { introT: number }) | null;
+}
 export interface MutableFramePreludeState {
-  slowMotion: number; timeScale: number; worldZoom: number; worldZoomTarget: number; zoom: number; flash: number;
-  bannerTime: number; stageBannerSeconds: number; rankPopTime: number; bossIntro: MutableBossIntro | null;
+  slowMotion: number;
+  timeScale: number;
+  worldZoom: number;
+  worldZoomTarget: number;
+  zoom: number;
+  flash: number;
+  bannerTime: number;
+  stageBannerSeconds: number;
+  rankPopTime: number;
+  bossIntro: MutableBossIntro | null;
   bossBeat: { t: number } | null;
 }
 export interface FramePreludeInput {
-  dt: number; state: MutableFramePreludeState; parrySlowScale: number; cinemaActive: boolean;
-  playgroundSlow: boolean; introScale: number; lerp(a: number, b: number, t: number): number;
+  dt: number;
+  state: MutableFramePreludeState;
+  parrySlowScale: number;
+  cinemaActive: boolean;
+  playgroundSlow: boolean;
+  introScale: number;
+  lerp(a: number, b: number, t: number): number;
   clamp(value: number, min: number, max: number): number;
 }
 
 export function advanceFramePrelude(input: FramePreludeInput): void {
   const { dt, state } = input;
-  if (state.slowMotion > 0) { state.slowMotion -= dt; state.timeScale = input.parrySlowScale; }
-  else state.timeScale = input.lerp(state.timeScale, 1, input.clamp(8 * dt, 0, 1));
+  if (state.slowMotion > 0) {
+    state.slowMotion -= dt;
+    state.timeScale = input.parrySlowScale;
+  } else state.timeScale = input.lerp(state.timeScale, 1, input.clamp(8 * dt, 0, 1));
   if (input.cinemaActive) state.timeScale = 1;
   if (input.playgroundSlow) state.timeScale = Math.min(state.timeScale, 0.35);
   const intro = state.bossIntro;
   if (intro) {
-    if (intro.delay > 0) intro.delay = Math.max(0, intro.delay - dt); else intro.t += dt;
+    if (intro.delay > 0) intro.delay = Math.max(0, intro.delay - dt);
+    else intro.t += dt;
     if (intro.boss) intro.boss.introT = Math.max(0, intro.dur - intro.t);
     if (intro.t >= intro.dur || !intro.boss || intro.boss.dead || intro.boss.dying) state.bossIntro = null;
     else if (intro.delay <= 0) state.timeScale = Math.min(state.timeScale, input.introScale);
   }
-  if (state.bossBeat) { state.bossBeat.t -= dt; if (state.bossBeat.t <= 0) state.bossBeat = null; }
+  if (state.bossBeat) {
+    state.bossBeat.t -= dt;
+    if (state.bossBeat.t <= 0) state.bossBeat = null;
+  }
   state.worldZoom = input.lerp(state.worldZoom, state.worldZoomTarget, input.clamp(3 * dt, 0, 1));
   state.zoom = input.lerp(state.zoom, state.worldZoom, input.clamp(9 * dt, 0, 1));
   if (state.flash > 0) state.flash = Math.max(0, state.flash - dt * 3.2);
@@ -54,33 +83,46 @@ export function commitBossIntroSnapshot<TBoss extends { introT?: number }>(
 }
 
 export interface FixedSimulationPort {
-  advance(milliseconds: number, actionsForTick: (tick: number) => readonly CommandEnvelope<GameAction>[],
-    lifecycle?: TearSimulationAdvanceLifecycle): Readonly<{
-    tick: number; steps: number; droppedMilliseconds: number;
+  advance(
+    milliseconds: number,
+    actionsForTick: (tick: number) => readonly CommandEnvelope<GameAction>[],
+    lifecycle?: TearSimulationAdvanceLifecycle,
+  ): Readonly<{
+    tick: number;
+    steps: number;
+    droppedMilliseconds: number;
   }>;
   /** Exact deterministic tooling uses the same canonical action/lifecycle path. */
-  advanceExact?(actionsForTick: (tick: number) => readonly CommandEnvelope<GameAction>[],
-    lifecycle?: TearSimulationAdvanceLifecycle): Readonly<{ tick: number; steps: 0 | 1 }>;
+  advanceExact?(
+    actionsForTick: (tick: number) => readonly CommandEnvelope<GameAction>[],
+    lifecycle?: TearSimulationAdvanceLifecycle,
+  ): Readonly<{ tick: number; steps: 0 | 1 }>;
 }
 export interface FixedSimulationInput {
-  dt: number; timeScale: number; hitStop: number; state(): string; simulation: FixedSimulationPort;
+  dt: number;
+  timeScale: number;
+  hitStop: number;
+  state(): string;
+  simulation: FixedSimulationPort;
   drainActions(tick: number): readonly CommandEnvelope<GameAction>[];
   /** Passive recorder hook: commands are sealed before the shared canonical step. */
   recordSealedActions?(tick: number, actions: readonly CommandEnvelope<GameAction>[]): void;
   beforeStep?(tick: number): void;
   afterStep?(tick: number): void;
-  clearSimulationInput(): void; gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
+  clearSimulationInput(): void;
+  gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
 }
 export interface FixedSimulationAdvance {
   readonly hitStop: number;
   readonly steps: number;
 }
 
-type FixedSimulationTickInput = Pick<FixedSimulationInput,
-  "state" | "drainActions" | "recordSealedActions" | "beforeStep" | "afterStep" | "clearSimulationInput">;
+type FixedSimulationTickInput = Pick<
+  FixedSimulationInput,
+  "state" | "drainActions" | "recordSealedActions" | "beforeStep" | "afterStep" | "clearSimulationInput"
+>;
 
-function sealedActionsForTick(input: FixedSimulationTickInput,
-  tick: number): readonly CommandEnvelope<GameAction>[] {
+function sealedActionsForTick(input: FixedSimulationTickInput, tick: number): readonly CommandEnvelope<GameAction>[] {
   // Device and autonomous inputs both become sealed envelopes here. The
   // runtime below is the sole owner that applies them to live gameplay.
   const actions = input.drainActions(tick);
@@ -91,68 +133,124 @@ function sealedActionsForTick(input: FixedSimulationTickInput,
 function fixedSimulationLifecycle(input: FixedSimulationTickInput): TearSimulationAdvanceLifecycle {
   return {
     shouldStep: () => input.state() === "playing",
-    beforeStep: (tick) => { input.beforeStep?.(tick); },
-    afterStep: (tick) => { input.afterStep?.(tick); },
+    beforeStep: (tick) => {
+      input.beforeStep?.(tick);
+    },
+    afterStep: (tick) => {
+      input.afterStep?.(tick);
+    },
     // The projection is browser-only state.  Keep it alive for the whole
     // canonical tick (including snapshots), then clear it even if gameplay
     // throws so it cannot bleed into the next tick.
-    cleanupStep: () => { input.clearSimulationInput(); },
+    cleanupStep: () => {
+      input.clearSimulationInput();
+    },
   };
 }
 
 export function advanceFixedSimulation(input: FixedSimulationInput): FixedSimulationAdvance {
   if (input.hitStop > 0) return Object.freeze({ hitStop: input.hitStop - input.dt, steps: 0 });
-  const advance = input.simulation.advance(input.dt * input.timeScale * 1000,
-    (tick) => sealedActionsForTick(input, tick), fixedSimulationLifecycle(input));
-  input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);
+  const advance = input.simulation.advance(
+    input.dt * input.timeScale * 1000,
+    (tick) => sealedActionsForTick(input, tick),
+    fixedSimulationLifecycle(input),
+  );
+  input.gauge("simulationTick", advance.tick);
+  input.gauge("simulationSteps", advance.steps);
   input.gauge("simulationDroppedMs", advance.droppedMilliseconds);
   return Object.freeze({ hitStop: input.hitStop, steps: advance.steps });
 }
 
 /** Runs one deterministic tooling tick without render-time hit-stop/time scale. */
-export function advanceExactFixedSimulation(input: FixedSimulationTickInput & Readonly<{
-  simulation: FixedSimulationPort;
-  gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
-}>): number {
-  if (input.simulation.advanceExact === undefined) throw new Error("fixed simulation does not support exact canonical ticks");
+export function advanceExactFixedSimulation(
+  input: FixedSimulationTickInput &
+    Readonly<{
+      simulation: FixedSimulationPort;
+      gauge(name: "simulationTick" | "simulationSteps" | "simulationDroppedMs", value: number): void;
+    }>,
+): number {
+  if (input.simulation.advanceExact === undefined)
+    throw new Error("fixed simulation does not support exact canonical ticks");
   const advance = input.simulation.advanceExact(
-    (tick) => sealedActionsForTick(input, tick), fixedSimulationLifecycle(input),
+    (tick) => sealedActionsForTick(input, tick),
+    fixedSimulationLifecycle(input),
   );
-  input.gauge("simulationTick", advance.tick); input.gauge("simulationSteps", advance.steps);
+  input.gauge("simulationTick", advance.tick);
+  input.gauge("simulationSteps", advance.steps);
   input.gauge("simulationDroppedMs", 0);
   return advance.steps;
 }
 
 export interface LiveMusicDirectorPort {
-  readonly active: boolean; emit(timeSeconds: number, event: Readonly<Record<string, unknown>>): void;
+  readonly active: boolean;
+  emit(timeSeconds: number, event: Readonly<Record<string, unknown>>): void;
   update(observation: MusicContextObservation): void;
 }
 export interface LiveMusicSyncInput {
-  director: LiveMusicDirectorPort; appState: string; run: LiveMusicRun | null; player: LiveMusicPlayer | null;
-  actors: readonly LiveMusicActor[]; projectiles: readonly Readonly<{ dead?: boolean }>[];
-  stageName: string | null; stageIndex: number; totalWaves: number; waveActive: boolean; runPhase: string;
-  topComboThreshold: number; bossIntroActor: LiveMusicActor | null;
+  director: LiveMusicDirectorPort;
+  appState: string;
+  run: LiveMusicRun | null;
+  player: LiveMusicPlayer | null;
+  actors: readonly LiveMusicActor[];
+  projectiles: readonly Readonly<{ dead?: boolean }>[];
+  stageName: string | null;
+  stageIndex: number;
+  totalWaves: number;
+  waveActive: boolean;
+  runPhase: string;
+  topComboThreshold: number;
+  bossIntroActor: LiveMusicActor | null;
 }
-export function emitLiveMusicEvent(director: LiveMusicDirectorPort, run: LiveMusicRun | null,
-  type: string, detail?: Readonly<Record<string, unknown>>): void {
+export function emitLiveMusicEvent(
+  director: LiveMusicDirectorPort,
+  run: LiveMusicRun | null,
+  type: string,
+  detail?: Readonly<Record<string, unknown>>,
+): void {
   if (run) director.emit(run.runTime, { type, ...(detail ?? {}) });
 }
 export function updateLiveMusicDirector(input: LiveMusicSyncInput): void {
   if (!input.director.active || !input.run) return;
-  input.director.update(buildLiveMusicObservation({ appState: input.appState, run: input.run, player: input.player,
-    actors: input.actors, projectiles: input.projectiles, stageName: input.stageName, stageIndex: input.stageIndex,
-    totalWaves: input.totalWaves, waveActive: input.waveActive, runPhase: input.runPhase,
-    topComboThreshold: input.topComboThreshold, bossIntroActor: input.bossIntroActor }));
+  input.director.update(
+    buildLiveMusicObservation({
+      appState: input.appState,
+      run: input.run,
+      player: input.player,
+      actors: input.actors,
+      projectiles: input.projectiles,
+      stageName: input.stageName,
+      stageIndex: input.stageIndex,
+      totalWaves: input.totalWaves,
+      waveActive: input.waveActive,
+      runPhase: input.runPhase,
+      topComboThreshold: input.topComboThreshold,
+      bossIntroActor: input.bossIntroActor,
+    }),
+  );
 }
 
-export interface MusicThemePort { setMusicTheme(theme: string, boss: boolean): void }
-export function syncMusicTheme(port: MusicThemePort | null, input: Readonly<{
-  menu: boolean; attractReady: boolean; attractStage: string; runMode: string | null; stageName: string | null;
-  bossWave: boolean; appState: string;
-}>): void {
+export interface MusicThemePort {
+  setMusicTheme(theme: string, boss: boolean): void;
+}
+export function syncMusicTheme(
+  port: MusicThemePort | null,
+  input: Readonly<{
+    menu: boolean;
+    attractReady: boolean;
+    attractStage: string;
+    runMode: string | null;
+    stageName: string | null;
+    bossWave: boolean;
+    appState: string;
+  }>,
+): void {
   if (!port) return;
   if (input.menu) port.setMusicTheme(input.attractReady ? input.attractStage : "menu", false);
-  else if (input.stageName && input.runMode && ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(input.runMode))
+  else if (
+    input.stageName &&
+    input.runMode &&
+    ["campaign", "endless", "bossonly", "gauntlet", "tutorial", "playground"].includes(input.runMode)
+  )
     port.setMusicTheme(input.stageName, input.bossWave && input.appState !== "gameover" && input.appState !== "win");
   else port.setMusicTheme("menu", false);
 }
@@ -175,8 +273,13 @@ export interface LiveFrameRuntimeOptions {
   musicInput(): LiveMusicSyncInput;
   musicThemePort(): MusicThemePort | null;
   musicThemeInput(): Readonly<{
-    menu: boolean; attractReady: boolean; attractStage: string; runMode: string | null; stageName: string | null;
-    bossWave: boolean; appState: string;
+    menu: boolean;
+    attractReady: boolean;
+    attractStage: string;
+    runMode: string | null;
+    stageName: string | null;
+    bossWave: boolean;
+    appState: string;
   }>;
 }
 
@@ -184,7 +287,9 @@ export interface LiveFrameRuntimeOptions {
 export class LiveFrameRuntime {
   readonly #options: LiveFrameRuntimeOptions;
 
-  constructor(options: LiveFrameRuntimeOptions) { this.#options = options; }
+  constructor(options: LiveFrameRuntimeOptions) {
+    this.#options = options;
+  }
 
   emitMusicEvent(type: string, detail?: Readonly<Record<string, unknown>>): void {
     emitLiveMusicEvent(this.#options.director, this.#options.getRun(), type, detail);
@@ -192,17 +297,26 @@ export class LiveFrameRuntime {
 
   advancePrelude(dt: number): void {
     const state = this.#options.readPreludeState();
-    advanceFramePrelude({ dt, state, parrySlowScale: this.#options.parrySlowScale,
-      cinemaActive: this.#options.cinemaActive(), playgroundSlow: this.#options.playgroundSlow(),
+    advanceFramePrelude({
+      dt,
+      state,
+      parrySlowScale: this.#options.parrySlowScale,
+      cinemaActive: this.#options.cinemaActive(),
+      playgroundSlow: this.#options.playgroundSlow(),
       introScale: this.#options.introScale,
       lerp: (a, b, t) => this.#options.lerp(a, b, t),
-      clamp: (value, minimum, maximum) => this.#options.clamp(value, minimum, maximum) });
+      clamp: (value, minimum, maximum) => this.#options.clamp(value, minimum, maximum),
+    });
     this.#options.writePreludeState(state);
   }
 
   advanceSimulation(dt: number): number {
-    const result = advanceFixedSimulation({ ...this.#options.fixedSimulationInput(), dt,
-      timeScale: this.#options.timeScale(), hitStop: this.#options.hitStop() });
+    const result = advanceFixedSimulation({
+      ...this.#options.fixedSimulationInput(),
+      dt,
+      timeScale: this.#options.timeScale(),
+      hitStop: this.#options.hitStop(),
+    });
     this.#options.setHitStop(result.hitStop);
     return result.steps;
   }

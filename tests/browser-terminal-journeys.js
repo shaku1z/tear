@@ -40,7 +40,13 @@ withJourney({ name: "terminal journeys", port: 8143, recordFrames: true }, async
     await page.waitForTimeout(40);
   }
   const finaleState = await page.evaluate(() => window.__PANTHEON_TEST.state());
-  assert.ok(finaleState.game === "win" || (finaleState.finale && finaleState.finale.restoring),
-    `finale debug journey did not reach restoration/results: ${JSON.stringify(finaleState)}`);
-}).then(() => console.log("browser terminal journeys passed"))
-  .catch((error) => { console.error(error); process.exit(1); });
+  assert.ok(
+    finaleState.game === "win" || (finaleState.finale && finaleState.finale.restoring),
+    `finale debug journey did not reach restoration/results: ${JSON.stringify(finaleState)}`,
+  );
+})
+  .then(() => console.log("browser terminal journeys passed"))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

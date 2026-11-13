@@ -20,7 +20,8 @@ const original = tutorialGoldSourceFingerprint(repositoryRoot);
 
 /** Names the first covered module whose normalised stream differs, for a readable failure. */
 function firstStreamDifference(root, roots = TUTORIAL_GOLD_ROOTS) {
-  const expected = collectTutorialGoldModules(repositoryRoot), actual = [...collectTutorialGoldModules(root, roots).values()];
+  const expected = collectTutorialGoldModules(repositoryRoot),
+    actual = [...collectTutorialGoldModules(root, roots).values()];
   for (const [file, { stream: text }] of expected) {
     if (actual.some((module) => module.stream === text)) continue;
     const nearest = actual.find((module) => module.stream.slice(0, 200) === text.slice(0, 200))?.stream ?? "";
@@ -50,7 +51,13 @@ function withClosureCopy(callback) {
 }
 
 function parse(file, text) {
-  return ts.createSourceFile(file, text, { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone }, true, ts.ScriptKind.TS);
+  return ts.createSourceFile(
+    file,
+    text,
+    { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone },
+    true,
+    ts.ScriptKind.TS,
+  );
 }
 
 function leafTokens(source) {
@@ -66,7 +73,9 @@ function leafTokens(source) {
 
 function applyEdits(text, edits) {
   let result = text;
-  for (const { start, end, insert } of [...edits].sort((left, right) => right.start - left.start || right.end - left.end)) {
+  for (const { start, end, insert } of [...edits].sort(
+    (left, right) => right.start - left.start || right.end - left.end,
+  )) {
     result = result.slice(0, start) + insert + result.slice(end);
   }
   return result;
@@ -78,10 +87,15 @@ function applyEdits(text, edits) {
  * indents every line that is not inside a template literal or a comment.
  */
 function reformat(file, text) {
-  const source = parse(file, text), tokens = leafTokens(source), edits = [], protectedRanges = [], comments = new Map();
+  const source = parse(file, text),
+    tokens = leafTokens(source),
+    edits = [],
+    protectedRanges = [],
+    comments = new Map();
   for (const token of tokens) {
     for (const comment of ts.getLeadingCommentRanges(text, token.pos) ?? []) comments.set(comment.pos, comment.end);
-    if (ts.isTemplateLiteralKind(token.kind) || token.kind === ts.SyntaxKind.StringLiteral) protectedRanges.push([token.getStart(source), token.end]);
+    if (ts.isTemplateLiteralKind(token.kind) || token.kind === ts.SyntaxKind.StringLiteral)
+      protectedRanges.push([token.getStart(source), token.end]);
     if (token.kind === ts.SyntaxKind.SemicolonToken || token.kind === ts.SyntaxKind.CommaToken) {
       edits.push({ start: token.end, end: token.end, insert: " // reformatted\n\n" });
     }
@@ -100,7 +114,9 @@ function reformat(file, text) {
 function resolveSpecifier(fromFile, specifier, exists) {
   if (!specifier.startsWith(".")) return undefined;
   const base = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), specifier));
-  return [`${base}.ts`, `${base}.json`, `${base}/index.ts`, base].find((candidate) => /\.(ts|json)$/u.test(candidate) && exists(candidate));
+  return [`${base}.ts`, `${base}.json`, `${base}/index.ts`, base].find(
+    (candidate) => /\.(ts|json)$/u.test(candidate) && exists(candidate),
+  );
 }
 
 function specifierFor(fromFile, target) {
@@ -110,23 +126,34 @@ function specifierFor(fromFile, target) {
 
 function isModuleSpecifier(node) {
   const parent = node.parent;
-  return ts.isStringLiteral(node) && node.text.startsWith(".") && parent !== undefined
-    && ((ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent)) && parent.moduleSpecifier === node
-      || ts.isExternalModuleReference(parent) || ts.isLiteralTypeNode(parent) && ts.isImportTypeNode(parent.parent)
-      || ts.isCallExpression(parent) && parent.expression.kind === ts.SyntaxKind.ImportKeyword);
+  return (
+    ts.isStringLiteral(node) &&
+    node.text.startsWith(".") &&
+    parent !== undefined &&
+    (((ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent)) && parent.moduleSpecifier === node) ||
+      ts.isExternalModuleReference(parent) ||
+      (ts.isLiteralTypeNode(parent) && ts.isImportTypeNode(parent.parent)) ||
+      (ts.isCallExpression(parent) && parent.expression.kind === ts.SyntaxKind.ImportKeyword))
+  );
 }
 
 /** Moves one module and rewrites every relative specifier in the closure that pointed at it or was written from it. */
 function moveModule(root, files, from, to) {
   const exists = (file) => fs.existsSync(path.join(root, file));
   for (const file of files.filter((candidate) => candidate.endsWith(".ts"))) {
-    const text = fs.readFileSync(path.join(root, file), "utf8"), source = parse(file, text), edits = [];
+    const text = fs.readFileSync(path.join(root, file), "utf8"),
+      source = parse(file, text),
+      edits = [];
     const location = file === from ? to : file;
     const visit = (node) => {
       if (isModuleSpecifier(node)) {
         const target = resolveSpecifier(file, node.text, exists);
         if (target !== undefined && (target === from || file === from)) {
-          edits.push({ start: node.getStart(source) + 1, end: node.end - 1, insert: specifierFor(location, target === from ? to : target) });
+          edits.push({
+            start: node.getStart(source) + 1,
+            end: node.end - 1,
+            insert: specifierFor(location, target === from ? to : target),
+          });
         }
       }
       ts.forEachChild(node, visit);
@@ -136,13 +163,17 @@ function moveModule(root, files, from, to) {
   }
   fs.mkdirSync(path.dirname(path.join(root, to)), { recursive: true });
   fs.renameSync(path.join(root, from), path.join(root, to));
-  return files.map((file) => file === from ? to : file);
+  return files.map((file) => (file === from ? to : file));
 }
 
 function firstNode(file, root, predicate) {
-  const text = fs.readFileSync(path.join(root, file), "utf8"), source = parse(file, text);
+  const text = fs.readFileSync(path.join(root, file), "utf8"),
+    source = parse(file, text);
   let found;
-  const visit = (node) => { if (found === undefined && predicate(node)) found = node; else if (found === undefined) ts.forEachChild(node, visit); };
+  const visit = (node) => {
+    if (found === undefined && predicate(node)) found = node;
+    else if (found === undefined) ts.forEachChild(node, visit);
+  };
   visit(source);
   if (found === undefined) throw new Error(`${file} has no matching node`);
   return { text, source, node: found };
@@ -152,39 +183,67 @@ function mutated(file, predicate, replacement) {
   let fingerprint;
   withClosureCopy((root) => {
     const { text, source, node } = firstNode(file, root, predicate);
-    fs.writeFileSync(path.join(root, file), applyEdits(text, [{ start: node.getStart(source), end: node.end, insert: replacement(node, source) }]));
+    fs.writeFileSync(
+      path.join(root, file),
+      applyEdits(text, [{ start: node.getStart(source), end: node.end, insert: replacement(node, source) }]),
+    );
     fingerprint = tutorialGoldSourceFingerprint(root).sourceHash;
   });
   return fingerprint;
 }
 
 test("the normalised stream ignores formatting, comments and redundant punctuation", () => {
-  const reference = stream("const total = (1 + 2) * 3;\nexport const values = { alpha: 0.5, beta: [1, 2] };\nconst id = (value) => value;\n");
-  const variant = stream([
-    "/** documented */ const total=( (1+2) )*3 // trailing", "export const values = {", "  \"alpha\": .5,", "  beta: [1, 2,],", "}",
-    "const id = value => value", "",
-  ].join("\n"));
+  const reference = stream(
+    "const total = (1 + 2) * 3;\nexport const values = { alpha: 0.5, beta: [1, 2] };\nconst id = (value) => value;\n",
+  );
+  const variant = stream(
+    [
+      "/** documented */ const total=( (1+2) )*3 // trailing",
+      "export const values = {",
+      '  "alpha": .5,',
+      "  beta: [1, 2,],",
+      "}",
+      "const id = value => value",
+      "",
+    ].join("\n"),
+  );
   assert.equal(variant, reference);
-  assert.equal(stream("type Choice =\n  | \"a\"\n  | \"b\";\n"), stream("type Choice = \"a\" | \"b\"\n"));
-  assert.equal(stream("import type { Shape } from \"./shape\";\nexport const x = 1;\n"), stream("export const x = 1;\n"));
+  assert.equal(stream('type Choice =\n  | "a"\n  | "b";\n'), stream('type Choice = "a" | "b"\n'));
+  assert.equal(stream('import type { Shape } from "./shape";\nexport const x = 1;\n'), stream("export const x = 1;\n"));
 });
 
 test("the normalised stream keeps every behavioural difference", () => {
   const reference = stream("const value = (1 + 2) * 3 < limit ? /a b/ : `x ${y} z`;\n");
   for (const changed of [
-    "const value = 1 + 2 * 3 < limit ? /a b/ : `x ${y} z`;\n", "const value = (1 + 2) * 4 < limit ? /a b/ : `x ${y} z`;\n",
-    "const value = (1 + 2) * 3 <= limit ? /a b/ : `x ${y} z`;\n", "const value = (1 + 2) * 3 < limit ? /ab/ : `x ${y} z`;\n",
-    "const value = (1 + 2) * 3 < limit ? /a b/ : `x ${y}  z`;\n", "const value = (1 + 2) * 3 < bound ? /a b/ : `x ${y} z`;\n",
+    "const value = 1 + 2 * 3 < limit ? /a b/ : `x ${y} z`;\n",
+    "const value = (1 + 2) * 4 < limit ? /a b/ : `x ${y} z`;\n",
+    "const value = (1 + 2) * 3 <= limit ? /a b/ : `x ${y} z`;\n",
+    "const value = (1 + 2) * 3 < limit ? /ab/ : `x ${y} z`;\n",
+    "const value = (1 + 2) * 3 < limit ? /a b/ : `x ${y}  z`;\n",
+    "const value = (1 + 2) * 3 < bound ? /a b/ : `x ${y} z`;\n",
     "const value = (1 + 2) * 3 < limit ? /a b/ : `x ${y} z`;\nvoid value;\n",
-  ]) assert.notEqual(stream(changed), reference, changed);
+  ])
+    assert.notEqual(stream(changed), reference, changed);
 });
 
 test("value-import specifiers are replaced by their resolved targets, independent of the path text", () => {
-  const near = normalizeModuleSource("src/a/user.ts", "import { hash } from \"./hash\";\nexport const h = hash;\n", () => "src/a/hash.ts");
-  const far = normalizeModuleSource("src/b/c/user.ts", "import { hash } from \"../../a/hash\";\nexport const h = hash;\n", () => "src/a/hash.ts");
+  const near = normalizeModuleSource(
+    "src/a/user.ts",
+    'import { hash } from "./hash";\nexport const h = hash;\n',
+    () => "src/a/hash.ts",
+  );
+  const far = normalizeModuleSource(
+    "src/b/c/user.ts",
+    'import { hash } from "../../a/hash";\nexport const h = hash;\n',
+    () => "src/a/hash.ts",
+  );
   assert.equal(near.stream, far.stream);
   assert.deepEqual(far.targets, ["src/a/hash.ts"]);
-  const external = normalizeModuleSource("src/a/user.ts", "import ts from \"typescript\";\nexport const t = ts;\n", () => undefined);
+  const external = normalizeModuleSource(
+    "src/a/user.ts",
+    'import ts from "typescript";\nexport const t = ts;\n',
+    () => undefined,
+  );
   assert.match(external.stream, /str:"typescript"/u);
 });
 
@@ -192,7 +251,12 @@ test("the real closure fingerprint follows value imports only and is reproducibl
   assert.match(original.sourceHash, /^[a-f0-9]{64}$/u);
   assert.equal(original.files.length > 100, true);
   for (const rootFile of TUTORIAL_GOLD_ROOTS) assert.equal(original.files.includes(rootFile), true, rootFile);
-  assert.equal(original.files.some((file) => file.endsWith("tutorial-gold-reference-data.json") || file.endsWith("tutorial-gold-binding.json")), false);
+  assert.equal(
+    original.files.some(
+      (file) => file.endsWith("tutorial-gold-reference-data.json") || file.endsWith("tutorial-gold-binding.json"),
+    ),
+    false,
+  );
   assert.equal(tutorialGoldSourceFingerprint(repositoryRoot).sourceHash, original.sourceHash);
 });
 
@@ -200,8 +264,11 @@ test("(i) reformatting every covered file leaves the fingerprint unchanged", () 
   withClosureCopy((root) => {
     let addedLines = 0;
     for (const file of original.files) {
-      const target = path.join(root, file), text = fs.readFileSync(target, "utf8");
-      const rewritten = file.endsWith(".json") ? `${JSON.stringify(JSON.parse(text), null, 4)}\n` : reformat(file, text);
+      const target = path.join(root, file),
+        text = fs.readFileSync(target, "utf8");
+      const rewritten = file.endsWith(".json")
+        ? `${JSON.stringify(JSON.parse(text), null, 4)}\n`
+        : reformat(file, text);
       addedLines += rewritten.split("\n").length - text.split("\n").length;
       fs.writeFileSync(target, rewritten.replaceAll("\n", "\r\n"));
     }
@@ -213,8 +280,15 @@ test("(i) reformatting every covered file leaves the fingerprint unchanged", () 
 test("(ii) moving and renaming covered files with their imports updated leaves the fingerprint unchanged", () => {
   withClosureCopy((root) => {
     const files = moveModule(root, original.files, "src/replay/hash.ts", "src/relocated/verification/stable-hash.ts");
-    moveModule(root, files, "src/gameplay/training/tutorial-arenas.ts", "src/gameplay/training/arenas/course-arenas.ts");
-    const roots = TUTORIAL_GOLD_ROOTS.map((file) => file === "src/gameplay/training/tutorial-arenas.ts" ? "src/gameplay/training/arenas/course-arenas.ts" : file);
+    moveModule(
+      root,
+      files,
+      "src/gameplay/training/tutorial-arenas.ts",
+      "src/gameplay/training/arenas/course-arenas.ts",
+    );
+    const roots = TUTORIAL_GOLD_ROOTS.map((file) =>
+      file === "src/gameplay/training/tutorial-arenas.ts" ? "src/gameplay/training/arenas/course-arenas.ts" : file,
+    );
     const moved = tutorialGoldSourceFingerprint(root, roots);
     assert.equal(moved.files.includes("src/relocated/verification/stable-hash.ts"), true);
     assert.equal(moved.files.includes("src/replay/hash.ts"), false);
@@ -223,11 +297,16 @@ test("(ii) moving and renaming covered files with their imports updated leaves t
 });
 
 test("(iii) changing one numeric literal or one comparison operator changes the fingerprint", () => {
-  const numeric = mutated("src/gameplay/entities/player.ts", (node) => ts.isNumericLiteral(node),
-    (node) => String(Number(node.text) + 1));
-  const comparison = mutated("src/gameplay/entities/blade.ts",
+  const numeric = mutated(
+    "src/gameplay/entities/player.ts",
+    (node) => ts.isNumericLiteral(node),
+    (node) => String(Number(node.text) + 1),
+  );
+  const comparison = mutated(
+    "src/gameplay/entities/blade.ts",
     (node) => ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.LessThanToken,
-    (node, source) => `${node.left.getText(source)} <= ${node.right.getText(source)}`);
+    (node, source) => `${node.left.getText(source)} <= ${node.right.getText(source)}`,
+  );
   assert.notEqual(numeric, original.sourceHash);
   assert.notEqual(comparison, original.sourceHash);
   assert.notEqual(numeric, comparison);

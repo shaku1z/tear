@@ -1,29 +1,45 @@
 import { runDnaObserver, withRunDnaAttack } from "../runtime/run-dna-observer";
 import type { TutorialAttemptFact } from "../training/tutorial-failure-coach";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
-import { stepCombatPrelude, type CombatPreludeBlade, type CombatPreludePlayer, type CombatPreludeRun } from "./combat-step-prelude";
-import { stepLocomotionCombat, type LocomotionBlade, type LocomotionEnemy, type LocomotionPlayer } from "./locomotion-combat-runtime";
+import {
+  stepCombatPrelude,
+  type CombatPreludeBlade,
+  type CombatPreludePlayer,
+  type CombatPreludeRun,
+} from "./combat-step-prelude";
+import {
+  stepLocomotionCombat,
+  type LocomotionBlade,
+  type LocomotionEnemy,
+  type LocomotionPlayer,
+} from "./locomotion-combat-runtime";
 import { stepWeaponSecondary, type SecondaryBlade, type SecondaryEnemy } from "./weapon-secondary-runtime";
 import { handleWeaponTransport, type TransportBlade } from "./weapon-transport-runtime";
 import { stepEnemyActors, stepEnemyStatuses, type EnemyStepActor } from "./enemy-step-runtime";
-import { stepBossRuntime, type BossStepEnemy, type BossStepPlatform, type BossStepPlayer, type BossStepRun } from "./boss-step-runtime";
+import {
+  stepBossRuntime,
+  type BossStepEnemy,
+  type BossStepPlatform,
+  type BossStepPlayer,
+  type BossStepRun,
+} from "./boss-step-runtime";
 import { advancePlatformLifecycle, type BrokenPlatform, type CrackingPlatform } from "./platform-lifecycle-runtime";
 import { resolveEnemyBladeCatch, type BladeCatchEnemy } from "./enemy-blade-catch-runtime";
 import type { BladeWeaponEvent } from "../entities/blade-contracts";
 
 export type LivePlayer = CombatPreludePlayer & LocomotionPlayer & BossStepPlayer;
 export type LiveBlade = CombatPreludeBlade & LocomotionBlade & SecondaryBlade & TransportBlade;
-export type LiveEnemy = LocomotionEnemy & SecondaryEnemy & EnemyStepActor & BossStepEnemy
-  & BladeCatchEnemy;
+export type LiveEnemy = LocomotionEnemy & SecondaryEnemy & EnemyStepActor & BossStepEnemy & BladeCatchEnemy;
 export type LivePlatform = CrackingPlatform & BossStepPlatform;
-export type LiveRun = CombatPreludeRun & BossStepRun & {
-  readonly mods: CombatPreludeRun["mods"];
-  pg?: { readonly freeze?: boolean };
-  readonly weaponId: string;
-  readonly weaponStats: CombatPreludeRun["weaponStats"] & { throws: number };
-  _dashContacts?: Set<LocomotionEnemy>;
-  _brokenPlats?: BrokenPlatform[];
-};
+export type LiveRun = CombatPreludeRun &
+  BossStepRun & {
+    readonly mods: CombatPreludeRun["mods"];
+    pg?: { readonly freeze?: boolean };
+    readonly weaponId: string;
+    readonly weaponStats: CombatPreludeRun["weaponStats"] & { throws: number };
+    _dashContacts?: Set<LocomotionEnemy>;
+    _brokenPlats?: BrokenPlatform[];
+  };
 
 export interface LiveOpeningState {
   throwCooldown: number;
@@ -105,90 +121,252 @@ export interface LiveOpeningPhaseHost {
   random: () => number;
 }
 
-export interface LiveOpeningPhaseResult { readonly blocked: boolean }
+export interface LiveOpeningPhaseResult {
+  readonly blocked: boolean;
+}
 
 /** Runs the movement, actor, arena, and boss half of one deterministic fixed tick. */
 export function runLiveOpeningPhase(host: LiveOpeningPhaseHost, dt: number): LiveOpeningPhaseResult {
   const { player, blade, run, state, config } = host;
   const timers = { throwCooldown: state.throwCooldown };
   const preparing = host.practicePreparing === true && !host.blocking;
-  if (preparing) { player.cinematicProtected = true; host.protection.active = true; host.protection.lastMode = "locked"; host.flushClosingInput(); host.consumeThrow(); blade.update(dt, player, host.platforms); blade.drainWeaponEvents(); }
-  const prelude = preparing ? { blocked: false, previousBladeState: blade.state, wasReturning: false, linkBreakReason: false as const } : stepCombatPrelude({ dt, blocking: host.blocking, playerMode: host.playerMode,
-    player, blade, run, platforms: host.platforms, protection: host.protection, timers,
-    tuning: { flowGuardTier: config.resilience.flowGuardTier, flowGuardMultiplier: config.resilience.flowGuardMult,
-      thrownMoveBoost: config.player.thrownMoveBoost },
-    overrunMovementMultiplier: host.overrunMovementMultiplier(), stepCinematic: host.stepCinematic,
-    flushClosingInput: host.flushClosingInput, updateWeaponAbilities: host.updateWeaponAbilities,
-    flushWeaponActions: (events) => { host.flushWeaponActions?.(events); },
-    updateZonesAndWalls: host.updateWorldHazards, syncVoidSupport: host.syncVoidSupport,
-    activateThrowSecondary: host.activateThrowSecondary });
+  if (preparing) {
+    player.cinematicProtected = true;
+    host.protection.active = true;
+    host.protection.lastMode = "locked";
+    host.flushClosingInput();
+    host.consumeThrow();
+    blade.update(dt, player, host.platforms);
+    blade.drainWeaponEvents();
+  }
+  const prelude = preparing
+    ? { blocked: false, previousBladeState: blade.state, wasReturning: false, linkBreakReason: false as const }
+    : stepCombatPrelude({
+        dt,
+        blocking: host.blocking,
+        playerMode: host.playerMode,
+        player,
+        blade,
+        run,
+        platforms: host.platforms,
+        protection: host.protection,
+        timers,
+        tuning: {
+          flowGuardTier: config.resilience.flowGuardTier,
+          flowGuardMultiplier: config.resilience.flowGuardMult,
+          thrownMoveBoost: config.player.thrownMoveBoost,
+        },
+        overrunMovementMultiplier: host.overrunMovementMultiplier(),
+        stepCinematic: host.stepCinematic,
+        flushClosingInput: host.flushClosingInput,
+        updateWeaponAbilities: host.updateWeaponAbilities,
+        flushWeaponActions: (events) => {
+          host.flushWeaponActions?.(events);
+        },
+        updateZonesAndWalls: host.updateWorldHazards,
+        syncVoidSupport: host.syncVoidSupport,
+        activateThrowSecondary: host.activateThrowSecondary,
+      });
   state.throwCooldown = timers.throwCooldown;
   if (prelude.blocked) return { blocked: true };
   if (prelude.linkBreakReason) host.linkBroken(prelude.linkBreakReason);
-  if (!preparing) { runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason); host.updateFeedback(dt); runLocomotion(host, dt); runTransport(host); }
+  if (!preparing) {
+    runSecondary(host, dt, prelude.previousBladeState, prelude.wasReturning, !!prelude.linkBreakReason);
+    host.updateFeedback(dt);
+    runLocomotion(host, dt);
+    runTransport(host);
+  }
   host.updateWave(dt);
-  const transformed = stepEnemyActors({ dt, enemies: host.enemies, platforms: host.platforms, player,
-    projectiles: host.projectiles, freeze: run.pg?.freeze === true, gravity: config.world.gravity,
-    groundY: config.world.groundY, viewportWidth: host.width,
-    onKill: host.onKill, startTransformation: (enemy, request) => host.startTransformation(enemy as LiveEnemy, request) });
+  const transformed = stepEnemyActors({
+    dt,
+    enemies: host.enemies,
+    platforms: host.platforms,
+    player,
+    projectiles: host.projectiles,
+    freeze: run.pg?.freeze === true,
+    gravity: config.world.gravity,
+    groundY: config.world.groundY,
+    viewportWidth: host.width,
+    onKill: host.onKill,
+    startTransformation: (enemy, request) => host.startTransformation(enemy as LiveEnemy, request),
+  });
   if (transformed || host.transformationBlocked) return { blocked: true };
   const bladeThief = resolveEnemyBladeCatch(host.enemies, blade, player);
   if (bladeThief !== null) host.onBladeStolen(bladeThief);
   host.updateSupports(dt);
-  stepEnemyStatuses({ dt, enemies: host.enemies, cinderSlow: !!run.mods.cinderSlow, random: host.random,
-    ember: host.ember, drip: host.drip, didDie: (enemy) => enemy.dead, onArmorBypass: host.armorBypass,
-    onKill: (enemy) => { host.onKill(enemy as LiveEnemy, "skill"); } });
-  host.resolveBossZones(); host.updateBossArenaPlatforms(dt); runPlatformLifecycle(host, dt); host.updateVoidScroll(dt);
-  runBosses(host, dt); host.updateEffects(dt);
+  stepEnemyStatuses({
+    dt,
+    enemies: host.enemies,
+    cinderSlow: !!run.mods.cinderSlow,
+    random: host.random,
+    ember: host.ember,
+    drip: host.drip,
+    didDie: (enemy) => enemy.dead,
+    onArmorBypass: host.armorBypass,
+    onKill: (enemy) => {
+      host.onKill(enemy as LiveEnemy, "skill");
+    },
+  });
+  host.resolveBossZones();
+  host.updateBossArenaPlatforms(dt);
+  runPlatformLifecycle(host, dt);
+  host.updateVoidScroll(dt);
+  runBosses(host, dt);
+  host.updateEffects(dt);
   return { blocked: preparing };
 }
 
-function runSecondary(host: LiveOpeningPhaseHost, dt: number, previousState: string, wasReturning: boolean, linkBroken: boolean): void {
+function runSecondary(
+  host: LiveOpeningPhaseHost,
+  dt: number,
+  previousState: string,
+  wasReturning: boolean,
+  linkBroken: boolean,
+): void {
   const { blade, run, config } = host;
-  withRunDnaAttack(blade, `throw:${String(blade.throwId)}`, () => { stepWeaponSecondary({ previousState, wasReturning, linkBroken, blade, enemies: host.enemies,
-    secondPass: Number(run.mods.secondPass) || 1, redirect: !!run.mods.redirect, stormBurst: Number(run.mods.stormBurst) || 0,
-    collisionDamage: config.weapons.chainblade.collisionDamage, slingSpeed: config.weapons.chainblade.slingSpeed,
-    throwSpeed: config.blade.throw.speed, damageMultiplier: host.runDamageMultiplier(), distance: host.distance,
-    dt, platforms: host.platforms, width: host.width, groundY: config.world.groundY,
-    worldCollisionCooldown: config.weapons.chainblade.worldCollisionCooldown,
-    aoe: host.areaDamage, ring: (x, y, radius) => { host.ring(x, y, radius, "perfect"); },
-    burst: (enemy, vx, vy) => { host.burst(enemy.x, enemy.y, vx, vy, 7, "perfect"); },
-    floater: (enemy, text) => { host.floater(enemy.x, enemy.y - 30, text, true, "perfect"); },
-    didDie: (enemy) => enemy.dead, onKill: (enemy) => { host.onKill(enemy as LiveEnemy, "skill"); },
-    onCatch: host.fireWeaponCatch,
-    onStormBurst: () => { host.areaDamage(host.player.x, host.player.y, 155, 30); host.ring(host.player.x, host.player.y, 15, "perfect"); host.shake(true); host.sound("slam"); },
-    worldImpact: host.weaponWorldImpact, lobExplode: host.lobExplode, emitThrowResolve: host.emitThrowResolve,
-    nearestEnemy: host.nearestEnemy }); });
+  withRunDnaAttack(blade, `throw:${String(blade.throwId)}`, () => {
+    stepWeaponSecondary({
+      previousState,
+      wasReturning,
+      linkBroken,
+      blade,
+      enemies: host.enemies,
+      secondPass: Number(run.mods.secondPass) || 1,
+      redirect: !!run.mods.redirect,
+      stormBurst: Number(run.mods.stormBurst) || 0,
+      collisionDamage: config.weapons.chainblade.collisionDamage,
+      slingSpeed: config.weapons.chainblade.slingSpeed,
+      throwSpeed: config.blade.throw.speed,
+      damageMultiplier: host.runDamageMultiplier(),
+      distance: host.distance,
+      dt,
+      platforms: host.platforms,
+      width: host.width,
+      groundY: config.world.groundY,
+      worldCollisionCooldown: config.weapons.chainblade.worldCollisionCooldown,
+      aoe: host.areaDamage,
+      ring: (x, y, radius) => {
+        host.ring(x, y, radius, "perfect");
+      },
+      burst: (enemy, vx, vy) => {
+        host.burst(enemy.x, enemy.y, vx, vy, 7, "perfect");
+      },
+      floater: (enemy, text) => {
+        host.floater(enemy.x, enemy.y - 30, text, true, "perfect");
+      },
+      didDie: (enemy) => enemy.dead,
+      onKill: (enemy) => {
+        host.onKill(enemy as LiveEnemy, "skill");
+      },
+      onCatch: host.fireWeaponCatch,
+      onStormBurst: () => {
+        host.areaDamage(host.player.x, host.player.y, 155, 30);
+        host.ring(host.player.x, host.player.y, 15, "perfect");
+        host.shake(true);
+        host.sound("slam");
+      },
+      worldImpact: host.weaponWorldImpact,
+      lobExplode: host.lobExplode,
+      emitThrowResolve: host.emitThrowResolve,
+      nearestEnemy: host.nearestEnemy,
+    });
+  });
   if (previousState !== "held" && blade.state === "held") runDnaObserver(blade)?.caught(blade.throwId);
 }
 
 function runLocomotion(host: LiveOpeningPhaseHost, dt: number): void {
   const { player, blade, run, state, config } = host;
-  const locomotion = { wasDashing: state.wasDashing, wasSwinging: state.wasSwinging, wasOnGround: state.wasOnGround,
-    dashGhostTime: state.dashGhostTime, landingVelocity: state.landingVelocity, contacts: run._dashContacts ?? new Set<LocomotionEnemy>() };
-  stepLocomotionCombat({ dt, player, blade, enemies: host.enemies, state: locomotion,
-    concussive: Number(run.mods.concussive) || 0, concussiveStun: !!run.mods.concStun, concussiveRefund: !!run.mods.concRefund,
-    phantomDamage: Number(run.mods.phantomDash) || 0, phantomRefund: !!run.mods.phantomRefund, cinder: !!run.mods.cinder,
-    maxFall: config.player.maxFall, ghostInterval: config.juice.dashGhostInterval, lowGraphics: host.lowGraphics,
-    overlap: host.overlap, distance: (actor, enemy) => host.distance(actor.x, actor.y, enemy.x, enemy.y),
-    aoe: (radius, damage) => { host.areaDamage(player.x, player.y, radius, damage); },
-    dashStarted: host.fireDashStart, dashContact: (enemy) => { host.fireDashContact(enemy as LiveEnemy); },
-    swing: (speed) => { host.sound("swing", speed); }, ring: host.ring, burst: host.burst,
-    shake: () => { host.shake(); }, slam: () => { host.sound("slam"); }, land: () => { host.sound("land"); },
-    ghost: (color) => { host.ghost(player.x, player.y, player.hw, player.hh, color); }, ember: host.ember, smoke: host.smoke,
-    floater: (enemy, damage) => { host.floater(enemy.x, enemy.y - 24, String(Math.round(damage)), false); },
-    styleHit: host.styleHit, kill: (enemy) => { host.onKill(enemy as LiveEnemy); }, didDie: (enemy) => enemy.dead });
-  state.wasDashing = locomotion.wasDashing; state.wasSwinging = locomotion.wasSwinging; state.wasOnGround = locomotion.wasOnGround;
-  state.dashGhostTime = locomotion.dashGhostTime; state.landingVelocity = locomotion.landingVelocity; run._dashContacts = locomotion.contacts;
+  const locomotion = {
+    wasDashing: state.wasDashing,
+    wasSwinging: state.wasSwinging,
+    wasOnGround: state.wasOnGround,
+    dashGhostTime: state.dashGhostTime,
+    landingVelocity: state.landingVelocity,
+    contacts: run._dashContacts ?? new Set<LocomotionEnemy>(),
+  };
+  stepLocomotionCombat({
+    dt,
+    player,
+    blade,
+    enemies: host.enemies,
+    state: locomotion,
+    concussive: Number(run.mods.concussive) || 0,
+    concussiveStun: !!run.mods.concStun,
+    concussiveRefund: !!run.mods.concRefund,
+    phantomDamage: Number(run.mods.phantomDash) || 0,
+    phantomRefund: !!run.mods.phantomRefund,
+    cinder: !!run.mods.cinder,
+    maxFall: config.player.maxFall,
+    ghostInterval: config.juice.dashGhostInterval,
+    lowGraphics: host.lowGraphics,
+    overlap: host.overlap,
+    distance: (actor, enemy) => host.distance(actor.x, actor.y, enemy.x, enemy.y),
+    aoe: (radius, damage) => {
+      host.areaDamage(player.x, player.y, radius, damage);
+    },
+    dashStarted: host.fireDashStart,
+    dashContact: (enemy) => {
+      host.fireDashContact(enemy as LiveEnemy);
+    },
+    swing: (speed) => {
+      host.sound("swing", speed);
+    },
+    ring: host.ring,
+    burst: host.burst,
+    shake: () => {
+      host.shake();
+    },
+    slam: () => {
+      host.sound("slam");
+    },
+    land: () => {
+      host.sound("land");
+    },
+    ghost: (color) => {
+      host.ghost(player.x, player.y, player.hw, player.hh, color);
+    },
+    ember: host.ember,
+    smoke: host.smoke,
+    floater: (enemy, damage) => {
+      host.floater(enemy.x, enemy.y - 24, String(Math.round(damage)), false);
+    },
+    styleHit: host.styleHit,
+    kill: (enemy) => {
+      host.onKill(enemy as LiveEnemy);
+    },
+    didDie: (enemy) => enemy.dead,
+  });
+  state.wasDashing = locomotion.wasDashing;
+  state.wasSwinging = locomotion.wasSwinging;
+  state.wasOnGround = locomotion.wasOnGround;
+  state.dashGhostTime = locomotion.dashGhostTime;
+  state.landingVelocity = locomotion.landingVelocity;
+  run._dashContacts = locomotion.contacts;
 }
 
 function runTransport(host: LiveOpeningPhaseHost): void {
-  const result = handleWeaponTransport({ requested: host.consumeThrow(), player: host.player, blade: host.blade,
+  const result = handleWeaponTransport({
+    requested: host.consumeThrow(),
+    player: host.player,
+    blade: host.blade,
     cooldown: host.state.throwCooldown,
-    onThrow: (throwId) => { host.run.weaponStats.throws++; host.logThrowLaunch(throwId); host.burst(host.blade.x, host.blade.y, host.blade.vx, host.blade.vy, 6); host.shake(); host.sound("throwBlade"); host.fireThrowLaunch(throwId); },
+    onThrow: (throwId) => {
+      host.run.weaponStats.throws++;
+      host.logThrowLaunch(throwId);
+      host.burst(host.blade.x, host.blade.y, host.blade.vx, host.blade.vy, 6);
+      host.shake();
+      host.sound("throwBlade");
+      host.fireThrowLaunch(throwId);
+    },
     onRecall: host.activateThrowSecondary,
-    onQueued: (x, y) => { host.floater(x, y - 40, "LINK QUEUED", false, "bladeTrail"); },
-    onTooFar: (x, y) => { host.observeTutorialAttempt?.({ kind: "recall", result: "too-far" }); host.floater(x, y - 40, "too far", false); } });
+    onQueued: (x, y) => {
+      host.floater(x, y - 40, "LINK QUEUED", false, "bladeTrail");
+    },
+    onTooFar: (x, y) => {
+      host.observeTutorialAttempt?.({ kind: "recall", result: "too-far" });
+      host.floater(x, y - 40, "too far", false);
+    },
+  });
   host.state.throwCooldown = result.cooldown;
 }
 
@@ -198,19 +376,41 @@ function runPlatformLifecycle(host: LiveOpeningPhaseHost, dt: number): void {
     const x = intent.platform.x + intent.platform.w / 2;
     if (intent.type === "break") {
       const color = intent.color && intent.color.length > 0 ? intent.color : "ink";
-      host.ring(x, intent.platform.y, 18, color); host.burst(x, intent.platform.y, 0, 1, 8, color);
-    }
-    else host.ring(x, intent.platform.y, 12, "reform");
+      host.ring(x, intent.platform.y, 18, color);
+      host.burst(x, intent.platform.y, 0, 1, 8, color);
+    } else host.ring(x, intent.platform.y, 12, "reform");
   }
   if (!host.run._brokenPlats && broken.length > 0) host.run._brokenPlats = broken;
 }
 
 function runBosses(host: LiveOpeningPhaseHost, dt: number): void {
-  stepBossRuntime({ dt, player: host.player, platforms: host.platforms, enemies: host.enemies, run: host.run,
-    thawMultiplier: host.config.source.thawSpeedMult || 1.35, maximumScrollSpeed: host.config.source.scrollSpeedMax,
-    unlockWitness: host.unlockWitness, startVoidDescent: (boss) => host.startVoidDescent(boss as LiveEnemy),
-    spawnAdds: (boss) => host.spawnBossAdds(boss as LiveEnemy), spawnClone: (boss) => { host.spawnBossClone(boss as LiveEnemy); },
-    floater: (x, y, text) => { host.floater(x, y, text, true, "charger"); }, dramaticBeat: host.dramaticBeat,
-    removeClone: (clone) => { host.removeBossClone(clone as LiveEnemy); },
-    spikeImpact: (enemy) => { const ground = enemy.y + enemy.hh; host.ring(enemy.x, ground, 10, "slam"); host.burst(enemy.x, ground, 0, -1, 7, "slam"); host.shake(true); host.sound("slam"); } });
+  stepBossRuntime({
+    dt,
+    player: host.player,
+    platforms: host.platforms,
+    enemies: host.enemies,
+    run: host.run,
+    thawMultiplier: host.config.source.thawSpeedMult || 1.35,
+    maximumScrollSpeed: host.config.source.scrollSpeedMax,
+    unlockWitness: host.unlockWitness,
+    startVoidDescent: (boss) => host.startVoidDescent(boss as LiveEnemy),
+    spawnAdds: (boss) => host.spawnBossAdds(boss as LiveEnemy),
+    spawnClone: (boss) => {
+      host.spawnBossClone(boss as LiveEnemy);
+    },
+    floater: (x, y, text) => {
+      host.floater(x, y, text, true, "charger");
+    },
+    dramaticBeat: host.dramaticBeat,
+    removeClone: (clone) => {
+      host.removeBossClone(clone as LiveEnemy);
+    },
+    spikeImpact: (enemy) => {
+      const ground = enemy.y + enemy.hh;
+      host.ring(enemy.x, ground, 10, "slam");
+      host.burst(enemy.x, ground, 0, -1, 7, "slam");
+      host.shake(true);
+      host.sound("slam");
+    },
+  });
 }

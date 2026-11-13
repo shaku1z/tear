@@ -24,16 +24,16 @@ export interface ReplayRunMetadata {
 
 export type TearScoreReplayMetadata =
   | Readonly<{
-    enabled: true;
-    engineVersion: string;
-    scoreVersion: string;
-    seed: string;
-    eventJournalHash: string;
-  }>
+      enabled: true;
+      engineVersion: string;
+      scoreVersion: string;
+      seed: string;
+      eventJournalHash: string;
+    }>
   | Readonly<{
-    enabled: false;
-    reason: "disabled" | "fallback" | "not-recorded";
-  }>;
+      enabled: false;
+      reason: "disabled" | "fallback" | "not-recorded";
+    }>;
 
 export type ReplayActionEnvelope = CommandEnvelope<GameAction>;
 
@@ -65,8 +65,7 @@ export interface ReplayValidationIssue {
 }
 
 export type ReplayValidationResult =
-  | Readonly<{ ok: true; replay: ReplayEnvelopeV2 }>
-  | Readonly<{ ok: false; issues: readonly ReplayValidationIssue[] }>;
+  Readonly<{ ok: true; replay: ReplayEnvelopeV2 }> | Readonly<{ ok: false; issues: readonly ReplayValidationIssue[] }>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -117,15 +116,21 @@ function parseTearScore(value: unknown, issues: ReplayValidationIssue[]): TearSc
 /** Validates unknown data and returns a canonical current-schema replay. */
 export function validateReplayEnvelope(value: unknown): ReplayValidationResult {
   const issues: ReplayValidationIssue[] = [];
-  if (!isRecord(value)) return Object.freeze({ ok: false, issues: [Object.freeze({ path: "$", message: "must be an object" })] });
+  if (!isRecord(value))
+    return Object.freeze({ ok: false, issues: [Object.freeze({ path: "$", message: "must be an object" })] });
   if (value.format !== REPLAY_FORMAT) issue(issues, "format", `must be ${REPLAY_FORMAT}`);
-  if (value.schemaVersion !== CURRENT_REPLAY_SCHEMA_VERSION) issue(issues, "schemaVersion", `must be ${String(CURRENT_REPLAY_SCHEMA_VERSION)}`);
+  if (value.schemaVersion !== CURRENT_REPLAY_SCHEMA_VERSION)
+    issue(issues, "schemaVersion", `must be ${String(CURRENT_REPLAY_SCHEMA_VERSION)}`);
   if (!nonEmptyString(value.rulesetVersion)) issue(issues, "rulesetVersion", "must be a non-empty string");
 
   let build: ReplayBuildMetadata | undefined;
   if (!isRecord(value.build)) {
     issue(issues, "build", "must be an object");
-  } else if (!nonEmptyString(value.build.version) || !nonEmptyString(value.build.revision) || !nonEmptyString(value.build.target)) {
+  } else if (
+    !nonEmptyString(value.build.version) ||
+    !nonEmptyString(value.build.revision) ||
+    !nonEmptyString(value.build.target)
+  ) {
     issue(issues, "build", "version, revision, and target must be non-empty strings");
   } else {
     build = Object.freeze({ version: value.build.version, revision: value.build.revision, target: value.build.target });
@@ -134,13 +139,23 @@ export function validateReplayEnvelope(value: unknown): ReplayValidationResult {
   let run: ReplayRunMetadata | undefined;
   if (!isRecord(value.run)) {
     issue(issues, "run", "must be an object");
-  } else if (!nonEmptyString(value.run.runId) || !nonEmptyString(value.run.seed) || !positiveInteger(value.run.ticksPerSecond)
-    || typeof value.run.weaponId !== "string" || !isWeaponId(value.run.weaponId)
-    || value.run.weaponSchemaVersion !== FINAL_FIVE_WEAPON_SCHEMA_VERSION) {
+  } else if (
+    !nonEmptyString(value.run.runId) ||
+    !nonEmptyString(value.run.seed) ||
+    !positiveInteger(value.run.ticksPerSecond) ||
+    typeof value.run.weaponId !== "string" ||
+    !isWeaponId(value.run.weaponId) ||
+    value.run.weaponSchemaVersion !== FINAL_FIVE_WEAPON_SCHEMA_VERSION
+  ) {
     issue(issues, "run", "must declare a supported Final Five weapon schema and weapon ID");
   } else {
-    run = Object.freeze({ runId: value.run.runId, seed: value.run.seed, ticksPerSecond: value.run.ticksPerSecond,
-      weaponId: value.run.weaponId, weaponSchemaVersion: value.run.weaponSchemaVersion });
+    run = Object.freeze({
+      runId: value.run.runId,
+      seed: value.run.seed,
+      ticksPerSecond: value.run.ticksPerSecond,
+      weaponId: value.run.weaponId,
+      weaponSchemaVersion: value.run.weaponSchemaVersion,
+    });
   }
 
   const actions: ReplayActionEnvelope[] = [];
@@ -149,7 +164,12 @@ export function validateReplayEnvelope(value: unknown): ReplayValidationResult {
   } else {
     value.actions.forEach((candidate, index) => {
       const path = `actions[${String(index)}]`;
-      if (!isRecord(candidate) || candidate.kind !== "command" || !positiveInteger(candidate.id) || !safeNonNegativeInteger(candidate.tick)) {
+      if (
+        !isRecord(candidate) ||
+        candidate.kind !== "command" ||
+        !positiveInteger(candidate.id) ||
+        !safeNonNegativeInteger(candidate.tick)
+      ) {
         issue(issues, path, "must be a command with positive id and non-negative tick");
         return;
       }
@@ -158,7 +178,9 @@ export function validateReplayEnvelope(value: unknown): ReplayValidationResult {
         issue(issues, `${path}.command`, normalized.reason);
         return;
       }
-      actions.push(Object.freeze({ kind: "command", id: candidate.id, tick: candidate.tick, command: normalized.action }));
+      actions.push(
+        Object.freeze({ kind: "command", id: candidate.id, tick: candidate.tick, command: normalized.action }),
+      );
     });
     if (actions.length === value.actions.length && !hasMonotonicEnvelopes(actions)) {
       issue(issues, "actions", "ids must increase and ticks must never decrease");
@@ -176,7 +198,14 @@ export function validateReplayEnvelope(value: unknown): ReplayValidationResult {
   if (final !== undefined && actions.some((action) => action.tick > final.tick)) {
     issue(issues, "final.tick", "must not precede an action tick");
   }
-  if (issues.length > 0 || build === undefined || run === undefined || final === undefined || tearScore === undefined || !nonEmptyString(value.rulesetVersion)) {
+  if (
+    issues.length > 0 ||
+    build === undefined ||
+    run === undefined ||
+    final === undefined ||
+    tearScore === undefined ||
+    !nonEmptyString(value.rulesetVersion)
+  ) {
     return Object.freeze({ ok: false, issues: Object.freeze(issues) });
   }
   return Object.freeze({
@@ -197,16 +226,24 @@ export function validateReplayEnvelope(value: unknown): ReplayValidationResult {
 /** Converts the sole legacy schema into the current explicit envelope. */
 export function migrateReplayV1(value: ReplayEnvelopeV1): ReplayEnvelopeV2 {
   void value;
-  throw new TypeError("Legacy replay has no verified Final Five weapon schema and cannot claim deterministic playback.");
+  throw new TypeError(
+    "Legacy replay has no verified Final Five weapon schema and cannot claim deterministic playback.",
+  );
 }
 
 function normalizeReplayV1(value: Record<string, unknown>): ReplayEnvelopeV1 | null {
-  if (value.schemaVersion !== 1 || !nonEmptyString(value.rulesetVersion) || !nonEmptyString(value.buildVersion)
-    || (typeof value.seed !== "string" && typeof value.seed !== "number")
-    || (typeof value.seed === "number" && !Number.isFinite(value.seed))
-    || (value.ticksPerSecond !== undefined && !positiveInteger(value.ticksPerSecond))
-    || !safeNonNegativeInteger(value.finalTick) || !nonEmptyString(value.finalHash)
-    || !Array.isArray(value.actions)) return null;
+  if (
+    value.schemaVersion !== 1 ||
+    !nonEmptyString(value.rulesetVersion) ||
+    !nonEmptyString(value.buildVersion) ||
+    (typeof value.seed !== "string" && typeof value.seed !== "number") ||
+    (typeof value.seed === "number" && !Number.isFinite(value.seed)) ||
+    (value.ticksPerSecond !== undefined && !positiveInteger(value.ticksPerSecond)) ||
+    !safeNonNegativeInteger(value.finalTick) ||
+    !nonEmptyString(value.finalHash) ||
+    !Array.isArray(value.actions)
+  )
+    return null;
   const actions: Readonly<{ tick: number; action: GameAction }>[] = [];
   for (const candidate of value.actions) {
     if (!isRecord(candidate) || !safeNonNegativeInteger(candidate.tick)) return null;
@@ -214,10 +251,16 @@ function normalizeReplayV1(value: Record<string, unknown>): ReplayEnvelopeV1 | n
     if (!normalized.ok) return null;
     actions.push(Object.freeze({ tick: candidate.tick, action: normalized.action }));
   }
-  return Object.freeze({ schemaVersion: 1, rulesetVersion: value.rulesetVersion,
-    buildVersion: value.buildVersion, seed: value.seed,
+  return Object.freeze({
+    schemaVersion: 1,
+    rulesetVersion: value.rulesetVersion,
+    buildVersion: value.buildVersion,
+    seed: value.seed,
     ...(value.ticksPerSecond === undefined ? {} : { ticksPerSecond: value.ticksPerSecond }),
-    actions: Object.freeze(actions), finalTick: value.finalTick, finalHash: value.finalHash });
+    actions: Object.freeze(actions),
+    finalTick: value.finalTick,
+    finalHash: value.finalHash,
+  });
 }
 
 /** Parses serialized or unknown replay data, migrating recognized older schemas. */
@@ -238,16 +281,27 @@ export function parseReplayEnvelope(value: unknown, expectedRulesetVersion?: str
     } catch (error) {
       return Object.freeze({
         ok: false,
-        issues: [Object.freeze({ path: "$", message: error instanceof Error ? error.message : "legacy migration failed" })],
+        issues: [
+          Object.freeze({ path: "$", message: error instanceof Error ? error.message : "legacy migration failed" }),
+        ],
       });
     }
   }
   const validated = validateReplayEnvelope(parsed);
-  if (validated.ok && expectedRulesetVersion !== undefined && validated.replay.rulesetVersion !== expectedRulesetVersion) {
-    return Object.freeze({ ok: false, issues: [Object.freeze({
-      path: "rulesetVersion",
-      message: `must match deterministic runtime ruleset ${expectedRulesetVersion}`,
-    })] });
+  if (
+    validated.ok &&
+    expectedRulesetVersion !== undefined &&
+    validated.replay.rulesetVersion !== expectedRulesetVersion
+  ) {
+    return Object.freeze({
+      ok: false,
+      issues: [
+        Object.freeze({
+          path: "rulesetVersion",
+          message: `must match deterministic runtime ruleset ${expectedRulesetVersion}`,
+        }),
+      ],
+    });
   }
   return validated;
 }

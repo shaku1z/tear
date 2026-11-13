@@ -11,12 +11,16 @@ describe("live victory progression host", () => {
     const markWeaponWin = vi.fn();
     const setReward = vi.fn();
     const markAdventureDifficulty = vi.fn();
-    const execute = createLiveVictoryProgressionExecutor({
-      profileStatsPersistence: { add, max },
-      victoryProfileProgressPersistence: { markWeaponWin, setReward, markAdventureDifficulty },
-      DAILY: { bump: vi.fn() },
-      Cloud: { logEvent: vi.fn() },
-    } as never, checkAchievements, finishRecording);
+    const execute = createLiveVictoryProgressionExecutor(
+      {
+        profileStatsPersistence: { add, max },
+        victoryProfileProgressPersistence: { markWeaponWin, setReward, markAdventureDifficulty },
+        DAILY: { bump: vi.fn() },
+        Cloud: { logEvent: vi.fn() },
+      } as never,
+      checkAchievements,
+      finishRecording,
+    );
 
     execute([
       { type: "profile-add", stat: "wins", value: 1 },

@@ -201,7 +201,8 @@ export function createFailureArtifact(
   options: TearFailureArtifactOptions,
 ): TearFailureArtifactV1 {
   const first = result.failures[0];
-  if (result.status !== "failed" || first === undefined) throw new TypeError("a failure artifact requires a failed TearBench result");
+  if (result.status !== "failed" || first === undefined)
+    throw new TypeError("a failure artifact requires a failed TearBench result");
   return Object.freeze({
     format: TEAR_CONTRACT_FORMAT,
     kind: "failure",

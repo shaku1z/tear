@@ -9,7 +9,10 @@ function escapeCharacter(character) {
 function alternation(glob, start) {
   const end = glob.indexOf("}", start);
   if (end < 0) throw new Error(`unterminated "{" in glob ${glob}`);
-  const choices = glob.slice(start + 1, end).split(",").map((choice) => [...choice].map(escapeCharacter).join(""));
+  const choices = glob
+    .slice(start + 1, end)
+    .split(",")
+    .map((choice) => [...choice].map(escapeCharacter).join(""));
   return { source: `(?:${choices.join("|")})`, next: end };
 }
 
@@ -61,7 +64,8 @@ function checkRoleShape(name, role) {
       problems.push(`role ${name}.${key} must be a list of strings`);
     }
   }
-  if ((role.include ?? []).length + (role.anticipate ?? []).length === 0) problems.push(`role ${name} has no include pattern`);
+  if ((role.include ?? []).length + (role.anticipate ?? []).length === 0)
+    problems.push(`role ${name} has no include pattern`);
   const unknown = Object.keys(role).filter((key) => !["purpose", "include", "exclude", "anticipate"].includes(key));
   if (unknown.length > 0) problems.push(`role ${name} has unknown keys: ${unknown.join(", ")}`);
   return problems;
@@ -106,7 +110,9 @@ export function createSelectorResolver(roles) {
 function selectorCoverage(selector, files, resolver, where, roles) {
   if (isRoleReference(selector)) {
     const anticipatedOnly = (roles[selector.slice(1)]?.include ?? []).length === 0;
-    return anticipatedOnly || resolver.members([selector], files).length > 0 ? [] : [`${where}: role ${selector} matches no file`];
+    return anticipatedOnly || resolver.members([selector], files).length > 0
+      ? []
+      : [`${where}: role ${selector} matches no file`];
   }
   return files.some((file) => matchesGlob(selector, file)) ? [] : [`${where}: "${selector}" matches no file`];
 }
@@ -122,14 +128,16 @@ export function validateCoverage(roles, files, usages) {
   const errors = [];
   for (const [name, role] of Object.entries(roles)) {
     for (const key of ["include", "exclude"]) {
-      for (const entry of role[key] ?? []) errors.push(...selectorCoverage(entry, files, resolver, `role ${name}.${key}`, roles));
+      for (const entry of role[key] ?? [])
+        errors.push(...selectorCoverage(entry, files, resolver, `role ${name}.${key}`, roles));
     }
   }
   const referenced = new Set();
   for (const { where, selectors } of usages) {
     for (const selector of selectors) {
       if (isRoleReference(selector)) referenced.add(selector.slice(1));
-      if (isRoleReference(selector) && roles[selector.slice(1)] === undefined) errors.push(`${where}: unknown role ${selector}`);
+      if (isRoleReference(selector) && roles[selector.slice(1)] === undefined)
+        errors.push(`${where}: unknown role ${selector}`);
       else errors.push(...selectorCoverage(selector, files, resolver, where, roles));
     }
   }

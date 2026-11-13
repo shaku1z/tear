@@ -1,10 +1,5 @@
 import { stableVerificationHash } from "../replay/hash";
-import {
-  BOSS_REGISTRY,
-  DIFFICULTY_REGISTRY,
-  RUN_MODE_REGISTRY,
-  WEAPON_REGISTRY,
-} from "./registries";
+import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import { bossDefinition } from "../gameplay/run/boss-definitions";
 import { STAGE_IDS } from "../gameplay/stages";
 import type { TearScenarioV1, TearSnapshotV1, TearStateClass } from "./contracts";
@@ -20,8 +15,13 @@ export interface TearSdlDocumentV1 {
   readonly stateClass: TearStateClass;
   readonly seed: string;
   readonly start: Readonly<{
-    mode: string; difficulty: string; weapon: string; stage?: string; wave?: number;
-    boss?: string; bossPhase?: string;
+    mode: string;
+    difficulty: string;
+    weapon: string;
+    stage?: string;
+    wave?: number;
+    boss?: string;
+    bossPhase?: string;
   }>;
   readonly state?: Readonly<Record<string, unknown>>;
   readonly constraints?: Readonly<Record<string, unknown>>;
@@ -58,7 +58,8 @@ function assertDeclarative(value: unknown, path = "$", depth = 0): void {
     if (typeof value === "function" || typeof value === "symbol" || typeof value === "bigint") {
       throw new TypeError(`TearSDL contains non-declarative value at ${path}`);
     }
-    if (typeof value === "number" && !Number.isFinite(value)) throw new TypeError(`TearSDL number must be finite at ${path}`);
+    if (typeof value === "number" && !Number.isFinite(value))
+      throw new TypeError(`TearSDL number must be finite at ${path}`);
     return;
   }
   for (const [key, entry] of Object.entries(value)) {
@@ -115,7 +116,8 @@ export function flattenTearSdl(
   library: ReadonlyMap<string, TearSdlDocumentV1>,
   chain: readonly string[] = [],
 ): TearSdlDocumentV1 {
-  if (chain.includes(document.id)) throw new TypeError(`TearSDL inheritance cycle: ${[...chain, document.id].join(" -> ")}`);
+  if (chain.includes(document.id))
+    throw new TypeError(`TearSDL inheritance cycle: ${[...chain, document.id].join(" -> ")}`);
   if (document.extends === undefined) return Object.freeze(structuredClone(document));
   const parent = library.get(document.extends);
   if (parent === undefined) throw new RangeError(`TearSDL parent does not exist: ${document.extends}`);
@@ -136,20 +138,35 @@ export function resolveTearSdl(
   const flattened = flattenTearSdl(document, library);
   const issues: TearSdlIssue[] = [];
   const start = flattened.start as Readonly<Record<string, unknown>>;
-  const modeValue = start.mode, difficultyValue = start.difficulty, weaponValue = start.weapon;
-  const stageValue = start.stage, bossValue = start.boss, bossPhaseValue = start.bossPhase;
-  if (typeof modeValue !== "string") issues.push({ path: "start.mode", severity: "error", message: "mode must be a string" });
-  else if (!RUN_MODE_REGISTRY.has(modeValue)) issues.push({ path: "start.mode", severity: "error", message: "unknown run mode" });
-  if (typeof difficultyValue !== "string") issues.push({ path: "start.difficulty", severity: "error", message: "difficulty must be a string" });
-  else if (!DIFFICULTY_REGISTRY.has(difficultyValue)) issues.push({ path: "start.difficulty", severity: "error", message: "unknown difficulty" });
-  if (typeof weaponValue !== "string") issues.push({ path: "start.weapon", severity: "error", message: "weapon must be a string" });
-  else if (!WEAPON_REGISTRY.has(weaponValue)) issues.push({ path: "start.weapon", severity: "error", message: "unknown weapon" });
-  if (stageValue !== undefined && (typeof stageValue !== "string" || !STAGE_IDS.includes(stageValue as typeof STAGE_IDS[number]))) {
+  const modeValue = start.mode,
+    difficultyValue = start.difficulty,
+    weaponValue = start.weapon;
+  const stageValue = start.stage,
+    bossValue = start.boss,
+    bossPhaseValue = start.bossPhase;
+  if (typeof modeValue !== "string")
+    issues.push({ path: "start.mode", severity: "error", message: "mode must be a string" });
+  else if (!RUN_MODE_REGISTRY.has(modeValue))
+    issues.push({ path: "start.mode", severity: "error", message: "unknown run mode" });
+  if (typeof difficultyValue !== "string")
+    issues.push({ path: "start.difficulty", severity: "error", message: "difficulty must be a string" });
+  else if (!DIFFICULTY_REGISTRY.has(difficultyValue))
+    issues.push({ path: "start.difficulty", severity: "error", message: "unknown difficulty" });
+  if (typeof weaponValue !== "string")
+    issues.push({ path: "start.weapon", severity: "error", message: "weapon must be a string" });
+  else if (!WEAPON_REGISTRY.has(weaponValue))
+    issues.push({ path: "start.weapon", severity: "error", message: "unknown weapon" });
+  if (
+    stageValue !== undefined &&
+    (typeof stageValue !== "string" || !STAGE_IDS.includes(stageValue as (typeof STAGE_IDS)[number]))
+  ) {
     issues.push({ path: "start.stage", severity: "error", message: "stage must be an authored stage ID" });
   }
   const validBoss = typeof bossValue === "string" && BOSS_REGISTRY.has(bossValue);
-  if (bossValue !== undefined && !validBoss) issues.push({ path: "start.boss", severity: "error", message: "boss must be an authored boss ID" });
-  if (validBoss && modeValue !== "bossonly") issues.push({ path: "start.mode", severity: "error", message: "boss selection requires bossonly mode" });
+  if (bossValue !== undefined && !validBoss)
+    issues.push({ path: "start.boss", severity: "error", message: "boss must be an authored boss ID" });
+  if (validBoss && modeValue !== "bossonly")
+    issues.push({ path: "start.mode", severity: "error", message: "boss selection requires bossonly mode" });
   if (bossPhaseValue !== undefined && bossValue === undefined) {
     issues.push({ path: "start.bossPhase", severity: "error", message: "boss phase requires a declared boss" });
   } else if (bossPhaseValue !== undefined && typeof bossPhaseValue !== "string") {
@@ -157,9 +174,17 @@ export function resolveTearSdl(
   } else if (validBoss && typeof bossPhaseValue === "string") {
     const maxOrdinal = bossDefinition(bossValue).phaseMarks.length + 1;
     if (!/^[1-9][0-9]*$/u.test(bossPhaseValue)) {
-      issues.push({ path: "start.bossPhase", severity: "error", message: "boss phase must be a source-derived numeric ordinal" });
+      issues.push({
+        path: "start.bossPhase",
+        severity: "error",
+        message: "boss phase must be a source-derived numeric ordinal",
+      });
     } else if (!Number.isSafeInteger(Number(bossPhaseValue)) || Number(bossPhaseValue) > maxOrdinal) {
-      issues.push({ path: "start.bossPhase", severity: "error", message: `numeric boss phase must be between 1 and ${String(maxOrdinal)}` });
+      issues.push({
+        path: "start.bossPhase",
+        severity: "error",
+        message: `numeric boss phase must be between 1 and ${String(maxOrdinal)}`,
+      });
     }
   }
   if (flattened.start.wave !== undefined && (!Number.isSafeInteger(flattened.start.wave) || flattened.start.wave < 1)) {
@@ -190,7 +215,9 @@ export function resolveTearSdl(
     executionClass: "engineering",
     seed: flattened.seed,
     start: Object.freeze({
-      mode, difficulty, weapon,
+      mode,
+      difficulty,
+      weapon,
       ...(flattened.start.stage === undefined ? {} : { stage: flattened.start.stage }),
       wave,
       ...(flattened.start.boss === undefined ? {} : { boss: flattened.start.boss }),
@@ -198,8 +225,13 @@ export function resolveTearSdl(
     }),
     maxTicks: flattened.maxTicks ?? 1_440,
     assertions: Object.freeze([
-      "runtime.finite-state", "entity.unique-id", "entity.valid-owner",
-      "player.valid-health", "world.legal-bounds", "boss.valid-phase", "runtime.no-softlock",
+      "runtime.finite-state",
+      "entity.unique-id",
+      "entity.valid-owner",
+      "player.valid-health",
+      "world.legal-bounds",
+      "boss.valid-phase",
+      "runtime.no-softlock",
     ] as const),
     tags: Object.freeze([...(flattened.tags ?? [])]),
   });
@@ -211,7 +243,9 @@ export function resolveTearSdl(
       issues: Object.freeze([
         ...issues,
         ...validity.structural.issues.map((issue) => ({
-          path: issue.path, severity: "error" as const, message: issue.message,
+          path: issue.path,
+          severity: "error" as const,
+          message: issue.message,
         })),
       ]),
     }),
@@ -228,9 +262,21 @@ export function createBoundaryTearSdl(
   epsilon = 1,
 ): readonly TearSdlDocumentV1[] {
   return Object.freeze([
-    Object.freeze({ ...base, id: `${base.id}-${field}-minus`, state: Object.freeze({ ...base.state, [field]: threshold - epsilon }) }),
-    Object.freeze({ ...base, id: `${base.id}-${field}-at`, state: Object.freeze({ ...base.state, [field]: threshold }) }),
-    Object.freeze({ ...base, id: `${base.id}-${field}-plus`, state: Object.freeze({ ...base.state, [field]: threshold + epsilon }) }),
+    Object.freeze({
+      ...base,
+      id: `${base.id}-${field}-minus`,
+      state: Object.freeze({ ...base.state, [field]: threshold - epsilon }),
+    }),
+    Object.freeze({
+      ...base,
+      id: `${base.id}-${field}-at`,
+      state: Object.freeze({ ...base.state, [field]: threshold }),
+    }),
+    Object.freeze({
+      ...base,
+      id: `${base.id}-${field}-plus`,
+      state: Object.freeze({ ...base.state, [field]: threshold + epsilon }),
+    }),
   ]);
 }
 
@@ -260,12 +306,14 @@ export class TearCheckpointBank {
   readonly #deltas = new Map<string, TearCheckpointDelta>();
 
   addSnapshot(snapshot: TearSnapshotV1): void {
-    if (this.#snapshots.has(snapshot.id) || this.#deltas.has(snapshot.id)) throw new TypeError(`checkpoint already exists: ${snapshot.id}`);
+    if (this.#snapshots.has(snapshot.id) || this.#deltas.has(snapshot.id))
+      throw new TypeError(`checkpoint already exists: ${snapshot.id}`);
     this.#snapshots.set(snapshot.id, structuredClone(snapshot));
   }
 
   fork(parentId: string, id: string, tick: number, statePatch: Readonly<Record<string, unknown>>): TearCheckpointDelta {
-    if (!this.#snapshots.has(parentId) && !this.#deltas.has(parentId)) throw new RangeError(`checkpoint parent does not exist: ${parentId}`);
+    if (!this.#snapshots.has(parentId) && !this.#deltas.has(parentId))
+      throw new RangeError(`checkpoint parent does not exist: ${parentId}`);
     if (this.#snapshots.has(id) || this.#deltas.has(id)) throw new TypeError(`checkpoint already exists: ${id}`);
     const delta = Object.freeze({ id, parentId, tick, statePatch: Object.freeze(structuredClone(statePatch)) });
     this.#deltas.set(id, delta);
@@ -281,14 +329,25 @@ export class TearCheckpointBank {
   }
 
   list(): readonly TearCheckpointEntry[] {
-    return Object.freeze([
-      ...[...this.#snapshots.values()].map((snapshot) => Object.freeze({
-        id: snapshot.id, kind: "snapshot" as const, tick: snapshot.tick,
-      })),
-      ...[...this.#deltas.values()].map((delta) => Object.freeze({
-        id: delta.id, kind: "delta" as const, tick: delta.tick, parentId: delta.parentId,
-      })),
-    ].sort((left, right) => left.tick - right.tick || left.id.localeCompare(right.id)));
+    return Object.freeze(
+      [
+        ...[...this.#snapshots.values()].map((snapshot) =>
+          Object.freeze({
+            id: snapshot.id,
+            kind: "snapshot" as const,
+            tick: snapshot.tick,
+          }),
+        ),
+        ...[...this.#deltas.values()].map((delta) =>
+          Object.freeze({
+            id: delta.id,
+            kind: "delta" as const,
+            tick: delta.tick,
+            parentId: delta.parentId,
+          }),
+        ),
+      ].sort((left, right) => left.tick - right.tick || left.id.localeCompare(right.id)),
+    );
   }
 
   diff(leftId: string, rightId: string): readonly string[] {
@@ -297,8 +356,12 @@ export class TearCheckpointBank {
     const paths = new Set<string>();
     const visit = (leftValue: unknown, rightValue: unknown, path: string): void => {
       if (Object.is(leftValue, rightValue)) return;
-      if (leftValue !== undefined && rightValue !== undefined
-        && stableVerificationHash(leftValue) === stableVerificationHash(rightValue)) return;
+      if (
+        leftValue !== undefined &&
+        rightValue !== undefined &&
+        stableVerificationHash(leftValue) === stableVerificationHash(rightValue)
+      )
+        return;
       if (isRecord(leftValue) && isRecord(rightValue)) {
         const keys = new Set([...Object.keys(leftValue), ...Object.keys(rightValue)]);
         for (const key of [...keys].sort()) visit(leftValue[key], rightValue[key], `${path}.${key}`);
@@ -324,8 +387,9 @@ export class TearCheckpointBank {
     for (const snapshot of archive.snapshots) candidate.addSnapshot(snapshot);
     const pending = [...archive.deltas];
     while (pending.length > 0) {
-      const index = pending.findIndex((delta) =>
-        candidate.#snapshots.has(delta.parentId) || candidate.#deltas.has(delta.parentId));
+      const index = pending.findIndex(
+        (delta) => candidate.#snapshots.has(delta.parentId) || candidate.#deltas.has(delta.parentId),
+      );
       if (index < 0) throw new TypeError("checkpoint archive contains a cycle or missing parent");
       const [delta] = pending.splice(index, 1);
       if (delta === undefined) throw new Error("checkpoint archive import lost a delta");
@@ -367,9 +431,16 @@ export function createWave99HammerPackage(): Readonly<Record<string, unknown>> {
   });
   const resolved = resolveTearSdl(document);
   const progression = synthesizeProgression({
-    mode: "endless", difficulty: "hard", weapon: "hammer", targetWave: 99,
+    mode: "endless",
+    difficulty: "hard",
+    weapon: "hammer",
+    targetWave: 99,
     policy: "archetype",
-    selections: [{ id: "keen_edge", tier: 5 }, { id: "bloodrite", tier: 3 }, { id: "air_dash", tier: 1 }],
+    selections: [
+      { id: "keen_edge", tier: 5 },
+      { id: "bloodrite", tier: 3 },
+      { id: "air_dash", tier: 1 },
+    ],
   });
   const snapshot = Object.freeze({
     id: "wave99-start",
@@ -384,8 +455,9 @@ export function createWave99HammerPackage(): Readonly<Record<string, unknown>> {
     document,
     resolved,
     progression,
-    configurationTrace: progression.ledger.events.filter((event) =>
-      event.type === "run.setup" || event.type === "weapon.selected" || event.type === "meta.applied"),
+    configurationTrace: progression.ledger.events.filter(
+      (event) => event.type === "run.setup" || event.type === "weapon.selected" || event.type === "meta.applied",
+    ),
     validation: Object.freeze({
       structural: resolved.structural,
       reachability: resolved.reachability,

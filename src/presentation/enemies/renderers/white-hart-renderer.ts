@@ -7,9 +7,7 @@ export function installWhiteHartRenderer(types: EnemyTypes, runtime: EnemyRender
   const { A11Y, CONFIG, GFX, clamp, lerp } = runtime;
   Object.assign(types.WhiteHart.prototype, {
     draw(this: RenderInstance<"WhiteHart">, ctx: CanvasRenderingContext2D) {
-      const intro = this.introT > 0
-        ? clamp(1 - this.introT / Math.max(CONFIG.bossTheater.introDur, 0.001), 0, 1)
-        : 1;
+      const intro = this.introT > 0 ? clamp(1 - this.introT / Math.max(CONFIG.bossTheater.introDur, 0.001), 0, 1) : 1;
       const direction = this.facing || -1;
       const shell = this.flash > 0 || A11Y.highContrast ? "#ffffff" : "#dceff1";
       const iceEdge = A11Y.highContrast ? "#000000" : "#4d839c";
@@ -23,21 +21,26 @@ export function installWhiteHartRenderer(types: EnemyTypes, runtime: EnemyRender
       const candidates = this.candidateRoutes;
       const primary = this.routeTelegraph;
       if ((this.state === "windup" || this.state === "commit") && (primary.length > 1 || candidates.length > 0)) {
-        ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
         const routes = candidates.length > 0 ? candidates : [primary];
         routes.forEach((route, index) => {
           if (route.length < 2) return;
           const trueRoute = candidates.length === 0 || index === this.trueRouteIndex;
           ctx.globalAlpha = trueRoute ? (A11Y.highContrast ? 0.95 : 0.68) : 0.3;
-          ctx.strokeStyle = A11Y.highContrast ? (trueRoute ? "#fff36b" : "#ffffff")
-            : trueRoute ? "#ef8da8" : "#7a91a2";
+          ctx.strokeStyle = A11Y.highContrast ? (trueRoute ? "#fff36b" : "#ffffff") : trueRoute ? "#ef8da8" : "#7a91a2";
           ctx.lineWidth = A11Y.highContrast ? (trueRoute ? 8 : 5) : trueRoute ? 6 : 3;
           ctx.setLineDash(this.state === "windup" || !trueRoute ? [18, 12] : []);
-          ctx.beginPath(); route.forEach((point, pointIndex) => {
-            if (pointIndex === 0) ctx.moveTo(point.x, point.y); else ctx.lineTo(point.x, point.y);
-          }); ctx.stroke();
+          ctx.beginPath();
+          route.forEach((point, pointIndex) => {
+            if (pointIndex === 0) ctx.moveTo(point.x, point.y);
+            else ctx.lineTo(point.x, point.y);
+          });
+          ctx.stroke();
         });
-        ctx.setLineDash([]); ctx.restore();
+        ctx.setLineDash([]);
+        ctx.restore();
       }
 
       ctx.save();
@@ -69,7 +72,9 @@ export function installWhiteHartRenderer(types: EnemyTypes, runtime: EnemyRender
       ctx.lineTo(this.hw * 0.7, -this.hh * 0.22);
       ctx.lineTo(this.hw * 0.54, this.hh * 0.34);
       ctx.lineTo(-this.hw * 0.68, this.hh * 0.38);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(this.hw * 0.34, -this.hh * 0.48);
       ctx.lineTo(this.hw * 0.68, -this.hh * 1.35);
@@ -77,7 +82,9 @@ export function installWhiteHartRenderer(types: EnemyTypes, runtime: EnemyRender
       ctx.lineTo(this.hw * 1.18, -this.hh * 1.25);
       ctx.lineTo(this.hw * 0.78, -this.hh * 1.02);
       ctx.lineTo(this.hw * 0.66, -this.hh * 0.15);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
 
       // Four angular legs remain visibly separate from the torso collision body.
       ctx.lineCap = "square";

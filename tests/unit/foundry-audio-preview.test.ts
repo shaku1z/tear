@@ -1,10 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  createFoundryPreviewProbe,
-  requestedFoundryPreview,
-} from "../../src/audio/foundry-preview";
+import { createFoundryPreviewProbe, requestedFoundryPreview } from "../../src/audio/foundry-preview";
 import type { StemCueManifest } from "../../src/audio/stems/types";
 
 afterEach(() => {
@@ -13,22 +10,12 @@ afterEach(() => {
 
 describe("Foundry audio preview bridge", () => {
   it("accepts only a content-shaped session and a real tier", () => {
-    expect(
-      requestedFoundryPreview(
-        "?foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=3",
-      ),
-    ).toEqual({
+    expect(requestedFoundryPreview("?foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=3")).toEqual({
       sessionId: "0123456789abcdef0123456789abcdef",
       fixedTier: 3,
     });
-    expect(
-      requestedFoundryPreview("?foundryPreview=unsafe&foundryTier=3"),
-    ).toBeNull();
-    expect(
-      requestedFoundryPreview(
-        "?foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=7",
-      ),
-    ).toBeNull();
+    expect(requestedFoundryPreview("?foundryPreview=unsafe&foundryTier=3")).toBeNull();
+    expect(requestedFoundryPreview("?foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=7")).toBeNull();
     expect(
       requestedFoundryPreview(
         "?foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=2&foundryTelemetry=http%3A%2F%2F127.0.0.1%3A4646%2Fapi%2Fv1%2Fgame-previews%2F0123456789abcdef0123456789abcdef%2Ftelemetry&foundryTelemetryToken=0123456789abcdefghijklmnop",
@@ -36,8 +23,7 @@ describe("Foundry audio preview bridge", () => {
     ).toEqual({
       sessionId: "0123456789abcdef0123456789abcdef",
       fixedTier: 2,
-      telemetryUrl:
-        "http://127.0.0.1:4646/api/v1/game-previews/0123456789abcdef0123456789abcdef/telemetry",
+      telemetryUrl: "http://127.0.0.1:4646/api/v1/game-previews/0123456789abcdef0123456789abcdef/telemetry",
       telemetryToken: "0123456789abcdefghijklmnop",
     });
     expect(
@@ -69,13 +55,7 @@ describe("Foundry audio preview bridge", () => {
   it("publishes the actual cue, fixed tier, active lanes, grid, and memory", () => {
     vi.stubGlobal("window", {});
     const cue = JSON.parse(
-      readFileSync(
-        resolve(
-          import.meta.dirname,
-          "../../public/audio/cues/fillet/cue.json",
-        ),
-        "utf8",
-      ),
+      readFileSync(resolve(import.meta.dirname, "../../public/audio/cues/fillet/cue.json"), "utf8"),
     ) as StemCueManifest;
     const context = {
       sampleRate: 48_000,
@@ -109,10 +89,7 @@ describe("Foundry audio preview bridge", () => {
       updates: 1,
     });
     context.currentTime = cue.grid.barsPerLoop
-      ? ((cue.loop.endFrame - cue.loop.startFrame) /
-          cue.sourceSampleRate /
-          cue.grid.barsPerLoop) *
-        2.5
+      ? ((cue.loop.endFrame - cue.loop.startFrame) / cue.sourceSampleRate / cue.grid.barsPerLoop) * 2.5
       : 0;
     publish("paused");
     expect(window.__TEAR_FOUNDRY_AUDIO_PREVIEW__).toMatchObject({

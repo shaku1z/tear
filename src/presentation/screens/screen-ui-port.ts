@@ -23,7 +23,13 @@ export interface ScreenUiTokens {
     readonly bodyWeight: number;
     readonly bodyMediumWeight: number;
   }>;
-  readonly space: Readonly<{ readonly xs: number; readonly sm: number; readonly md: number; readonly lg: number; readonly xl: number }>;
+  readonly space: Readonly<{
+    readonly xs: number;
+    readonly sm: number;
+    readonly md: number;
+    readonly lg: number;
+    readonly xl: number;
+  }>;
   readonly alpha: Record<string, number> & {
     readonly full: number;
     readonly soft: number;
@@ -67,41 +73,196 @@ export interface ScreenUiPort {
   readonly density: Readonly<{ touch: boolean; compact: boolean }>;
   font(size: number, bold?: boolean): string;
   readonly t: ScreenUiTokens;
-  text(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
+  text(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    size?: number,
+    align?: CanvasTextAlign,
+    alpha?: number,
+  ): void;
   wordmark(context: CanvasRenderingContext2D, x: number, y: number, time: number, reducedMotion?: boolean): void;
-  displayText(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number, align?: CanvasTextAlign, alpha?: number): void;
+  displayText(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    size?: number,
+    align?: CanvasTextAlign,
+    alpha?: number,
+  ): void;
   title(context: CanvasRenderingContext2D, text: string, x: number, y: number, size?: number): void;
-  tag(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): void;
+  tag(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    color?: string,
+    align?: CanvasTextAlign,
+    size?: number,
+  ): void;
   header(context: CanvasRenderingContext2D, title: string, subtitle?: string, animation?: number, hue?: string): void;
-  sectionLabel(context: CanvasRenderingContext2D, label: string, x: number, y: number, width: number, hue?: string): number;
-  card(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, hovered?: boolean,
-    options?: { readonly dashed?: boolean; readonly edge?: string; readonly shimmer?: number }): void;
+  sectionLabel(
+    context: CanvasRenderingContext2D,
+    label: string,
+    x: number,
+    y: number,
+    width: number,
+    hue?: string,
+  ): number;
+  card(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    hovered?: boolean,
+    options?: { readonly dashed?: boolean; readonly edge?: string; readonly shimmer?: number },
+  ): void;
   panel(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number): void;
   divider(context: CanvasRenderingContext2D, x: number, y: number, width: number, alpha?: number): void;
-  bar(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, fraction: number, fill?: string, line?: string): void;
+  bar(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    fraction: number,
+    fill?: string,
+    line?: string,
+  ): void;
   dim(context: CanvasRenderingContext2D, width: number, height: number, alpha?: number): void;
-  wrappedText(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number,
-    size?: number, align?: CanvasTextAlign, alpha?: number): void;
-  accentStrip(context: CanvasRenderingContext2D, x: number, y: number, width: number, color?: string, thickness?: number): void;
-  fitTitle(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, startSize?: number, minSize?: number): void;
+  wrappedText(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    lineHeight: number,
+    size?: number,
+    align?: CanvasTextAlign,
+    alpha?: number,
+  ): void;
+  accentStrip(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    color?: string,
+    thickness?: number,
+  ): void;
+  fitTitle(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    startSize?: number,
+    minSize?: number,
+  ): void;
   spine(context: CanvasRenderingContext2D, x: number, y: number, height: number, color?: string, width?: number): void;
-  badge(context: CanvasRenderingContext2D, text: string, x: number, y: number, color?: string, align?: CanvasTextAlign, size?: number): number;
+  badge(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    color?: string,
+    align?: CanvasTextAlign,
+    size?: number,
+  ): number;
   avatar(context: CanvasRenderingContext2D, x: number, y: number, size: number): void;
-  seal(context: CanvasRenderingContext2D, cx: number, cy: number, radius: number, color: string, glyph: string, muted?: boolean): void;
-  pips(context: CanvasRenderingContext2D, rightX: number, y: number, count: number, filled: number, color?: string): void;
-  tabs(context: CanvasRenderingContext2D, id: string, labels: string[], active: number, y: number,
-    push?: (button: Readonly<{ x: number; y: number; w: number; h: number; label: string; _tab?: number; _hideBox?: boolean }>) => void,
-    maxWidth?: number, frame?: Readonly<{ x: number; w: number; h: number }>): void;
-  keyBadge(context: CanvasRenderingContext2D, x: number, y: number, size: number, label: string | number, color?: string): void;
+  seal(
+    context: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    radius: number,
+    color: string,
+    glyph: string,
+    muted?: boolean,
+  ): void;
+  pips(
+    context: CanvasRenderingContext2D,
+    rightX: number,
+    y: number,
+    count: number,
+    filled: number,
+    color?: string,
+  ): void;
+  tabs(
+    context: CanvasRenderingContext2D,
+    id: string,
+    labels: string[],
+    active: number,
+    y: number,
+    push?: (
+      button: Readonly<{
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+        label: string;
+        _tab?: number;
+        _hideBox?: boolean;
+      }>,
+    ) => void,
+    maxWidth?: number,
+    frame?: Readonly<{ x: number; w: number; h: number }>,
+  ): void;
+  keyBadge(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number,
+    label: string | number,
+    color?: string,
+  ): void;
   tierPips(context: CanvasRenderingContext2D, cx: number, y: number, count: number, next: number, color: string): void;
-  scrollHint(context: CanvasRenderingContext2D, x: number, y: number, canUp: boolean, canDown: boolean, align?: CanvasTextAlign): void;
+  scrollHint(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    canUp: boolean,
+    canDown: boolean,
+    align?: CanvasTextAlign,
+  ): void;
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
   sheetFooter(): Readonly<{ y: number; h: number; backX: number }>;
   readable(color: string, ratio?: number): string;
-  textBox(context: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, options?: TextBoxOptions): TextBoxResult;
-  fitText(context: CanvasRenderingContext2D, text: string, maxWidth: number, options: TextFitOptions & { readonly bold?: boolean }): TextFitLayout;
-  emptyState(context: CanvasRenderingContext2D, glyph: string, line: string, cx: number, cy: number, detail?: string, width?: number): number;
-  finalReward(context: CanvasRenderingContext2D, options: {
-    amount: number; label: string; title: string; sigil: string; color: string; reward: string; detail: string; actions?: boolean;
-  }): Readonly<{ x: number; y: number; w: number; h: number; actionsY: number }>;
+  textBox(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    options?: TextBoxOptions,
+  ): TextBoxResult;
+  fitText(
+    context: CanvasRenderingContext2D,
+    text: string,
+    maxWidth: number,
+    options: TextFitOptions & { readonly bold?: boolean },
+  ): TextFitLayout;
+  emptyState(
+    context: CanvasRenderingContext2D,
+    glyph: string,
+    line: string,
+    cx: number,
+    cy: number,
+    detail?: string,
+    width?: number,
+  ): number;
+  finalReward(
+    context: CanvasRenderingContext2D,
+    options: {
+      amount: number;
+      label: string;
+      title: string;
+      sigil: string;
+      color: string;
+      reward: string;
+      detail: string;
+      actions?: boolean;
+    },
+  ): Readonly<{ x: number; y: number; w: number; h: number; actionsY: number }>;
 }

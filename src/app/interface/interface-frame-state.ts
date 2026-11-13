@@ -21,13 +21,23 @@ export function createLiveInterfaceFrameState(initialScreen: AppScreen): LiveInt
   let enterAmount = 1;
   return Object.freeze({
     previousScreen: (): AppScreen => previousScreen,
-    setPreviousScreen: (value: AppScreen): void => { previousScreen = value; },
+    setPreviousScreen: (value: AppScreen): void => {
+      previousScreen = value;
+    },
     seconds: (): number => seconds,
     deltaSeconds: (): number => deltaSeconds,
-    advance: (value: number): void => { seconds += value; enterSeconds += value; deltaSeconds = value; },
+    advance: (value: number): void => {
+      seconds += value;
+      enterSeconds += value;
+      deltaSeconds = value;
+    },
     enterSeconds: (): number => enterSeconds,
-    setEnterSeconds: (value: number): void => { enterSeconds = value; },
+    setEnterSeconds: (value: number): void => {
+      enterSeconds = value;
+    },
     enterAmount: (): number => enterAmount,
-    setEnterAmount: (value: number): void => { enterAmount = value; },
+    setEnterAmount: (value: number): void => {
+      enterAmount = value;
+    },
   });
 }

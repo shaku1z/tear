@@ -3,12 +3,24 @@ import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { GhostEnvelopeV3 } from "./truth-kernel";
 
 export type GhostChallengeKind =
-  | "chase-your-best" | "seed-locked-race" | "beat-this-run" | "boss-memory"
-  | "daily-echo" | "learning-ghost" | "nemesis-ghost" | "tearbot-reference";
+  | "chase-your-best"
+  | "seed-locked-race"
+  | "beat-this-run"
+  | "boss-memory"
+  | "daily-echo"
+  | "learning-ghost"
+  | "nemesis-ghost"
+  | "tearbot-reference";
 
 export const GHOST_CHALLENGE_KINDS = Object.freeze([
-  "chase-your-best", "seed-locked-race", "beat-this-run", "boss-memory",
-  "daily-echo", "learning-ghost", "nemesis-ghost", "tearbot-reference",
+  "chase-your-best",
+  "seed-locked-race",
+  "beat-this-run",
+  "boss-memory",
+  "daily-echo",
+  "learning-ghost",
+  "nemesis-ghost",
+  "tearbot-reference",
 ] as const satisfies readonly GhostChallengeKind[]);
 
 export interface GhostChallengeDefinition {
@@ -55,7 +67,8 @@ export function createChallengeAttemptProof(
   observedConditions: Readonly<Record<string, number | string>>,
 ): GhostChallengeAttemptProof {
   const completed = challenge.conditions.every((condition) =>
-    conditionSatisfied(condition, observedConditions[condition.metric]));
+    conditionSatisfied(condition, observedConditions[condition.metric]),
+  );
   const proofData = {
     challenge,
     attemptCapsule,
@@ -77,13 +90,16 @@ export function createChallengeAttemptProof(
 }
 
 export function verifyChallengeAttemptProof(proof: GhostChallengeAttemptProof): boolean {
-  return proof.proofHash === stableVerificationHash({
-    challenge: proof.challenge,
-    attemptCapsule: proof.attemptCapsule,
-    lineage: proof.lineage,
-    completed: proof.completed,
-    observedConditions: proof.observedConditions,
-  });
+  return (
+    proof.proofHash ===
+    stableVerificationHash({
+      challenge: proof.challenge,
+      attemptCapsule: proof.attemptCapsule,
+      lineage: proof.lineage,
+      completed: proof.completed,
+      observedConditions: proof.observedConditions,
+    })
+  );
 }
 
 export interface GhostLiveOverlayFrame {
@@ -95,14 +111,14 @@ export interface GhostLiveOverlayFrame {
   readonly revealsHiddenState: false;
 }
 
-export function createFairLiveGhostOverlay(
-  source: GhostEnvelopeV3,
-  currentTick: number,
-): GhostLiveOverlayFrame {
+export function createFairLiveGhostOverlay(source: GhostEnvelopeV3, currentTick: number): GhostLiveOverlayFrame {
   if (!Number.isSafeInteger(currentTick) || currentTick < 0) throw new RangeError("overlay tick must be non-negative");
-  const visibleEvents = source.events.filter((event) =>
-    event.tick <= currentTick && event.source !== "developer"
-    && !["system.exception", "test.invariant-failed", "agent.target-changed"].includes(event.type));
+  const visibleEvents = source.events.filter(
+    (event) =>
+      event.tick <= currentTick &&
+      event.source !== "developer" &&
+      !["system.exception", "test.invariant-failed", "agent.target-changed"].includes(event.type),
+  );
   return Object.freeze({
     sourceGhostId: source.id,
     tick: currentTick,
@@ -139,12 +155,15 @@ export interface GhostStudioEditDecisionList {
   readonly edlHash: string;
 }
 
-export function createStudioEdl(input: Omit<GhostStudioEditDecisionList, "format" | "schemaVersion" | "edlHash">): GhostStudioEditDecisionList {
+export function createStudioEdl(
+  input: Omit<GhostStudioEditDecisionList, "format" | "schemaVersion" | "edlHash">,
+): GhostStudioEditDecisionList {
   const clips = [...input.clips].sort((left, right) => left.outputOrder - right.outputOrder);
   if (clips.some((clip) => clip.sourceFromTick < 0 || clip.sourceToTick < clip.sourceFromTick)) {
     throw new TypeError("Studio clip range is invalid");
   }
-  if (new Set(clips.map((clip) => clip.id)).size !== clips.length) throw new TypeError("Studio clip IDs must be unique");
+  if (new Set(clips.map((clip) => clip.id)).size !== clips.length)
+    throw new TypeError("Studio clip IDs must be unique");
   const data = {
     id: input.id,
     sourceGhostId: input.sourceGhostId,
@@ -163,10 +182,12 @@ export function createStudioEdl(input: Omit<GhostStudioEditDecisionList, "format
 }
 
 export interface GhostStudioRenderer {
-  render(input: Readonly<{
-    source: GhostEnvelopeV3;
-    edl: GhostStudioEditDecisionList;
-  }>): Promise<Readonly<{ mimeType: "video/webm" | "image/gif"; bytes: Uint8Array; thumbnail: string }>>;
+  render(
+    input: Readonly<{
+      source: GhostEnvelopeV3;
+      edl: GhostStudioEditDecisionList;
+    }>,
+  ): Promise<Readonly<{ mimeType: "video/webm" | "image/gif"; bytes: Uint8Array; thumbnail: string }>>;
 }
 
 export interface GhostStudioMediaExport {
@@ -248,20 +269,27 @@ export class GhostCareerArchive {
 
   add(entry: GhostCareerEntry): void {
     if (this.#entries.has(entry.ghostId)) throw new TypeError(`career Ghost already exists: ${entry.ghostId}`);
-    if (!Number.isFinite(entry.score) || entry.score < 0) throw new TypeError("career score must be finite and non-negative");
-    this.#entries.set(entry.ghostId, Object.freeze({
-      ...entry,
-      dna: Object.freeze({
-        ...entry.dna,
-        dimensions: Object.freeze({ ...entry.dna.dimensions }),
-        sourceMetrics: Object.freeze({ ...entry.dna.sourceMetrics }),
+    if (!Number.isFinite(entry.score) || entry.score < 0)
+      throw new TypeError("career score must be finite and non-negative");
+    this.#entries.set(
+      entry.ghostId,
+      Object.freeze({
+        ...entry,
+        dna: Object.freeze({
+          ...entry.dna,
+          dimensions: Object.freeze({ ...entry.dna.dimensions }),
+          sourceMetrics: Object.freeze({ ...entry.dna.sourceMetrics }),
+        }),
       }),
-    }));
+    );
   }
 
   list(): readonly GhostCareerEntry[] {
-    return Object.freeze([...this.#entries.values()].sort((left, right) =>
-      right.completedAt.localeCompare(left.completedAt) || left.ghostId.localeCompare(right.ghostId)));
+    return Object.freeze(
+      [...this.#entries.values()].sort(
+        (left, right) => right.completedAt.localeCompare(left.completedAt) || left.ghostId.localeCompare(right.ghostId),
+      ),
+    );
   }
 
   summary(): Readonly<{
@@ -290,7 +318,7 @@ export class GhostCareerArchive {
 }
 
 export type GhostAuthoredMove =
-  | "approach" | "retreat" | "jump" | "dash" | "slash" | "throw" | "recall" | "parry" | "wait";
+  "approach" | "retreat" | "jump" | "dash" | "slash" | "throw" | "recall" | "parry" | "wait";
 
 export interface GhostNemesisGrammar {
   readonly id: string;
@@ -304,22 +332,31 @@ export interface GhostNemesisGrammar {
 
 export function distillNemesisGrammar(source: GhostEnvelopeV3): GhostNemesisGrammar {
   const counts = new Map<GhostAuthoredMove, number>();
-  const add = (move: GhostAuthoredMove): void => { counts.set(move, (counts.get(move) ?? 0) + 1); };
+  const add = (move: GhostAuthoredMove): void => {
+    counts.set(move, (counts.get(move) ?? 0) + 1);
+  };
   for (const action of source.actions) {
-    if (action.command.type === "move") add(action.command.x === 0 ? "wait" : action.command.x > 0 ? "approach" : "retreat");
+    if (action.command.type === "move")
+      add(action.command.x === 0 ? "wait" : action.command.x > 0 ? "approach" : "retreat");
     else if (action.command.type === "jump") add("jump");
     else if (action.command.type === "dash") add("dash");
-    else if (action.command.type === "weapon") add(
-      action.command.intent === "throw" ? "throw"
-        : action.command.intent === "recall" ? "recall"
-          : action.command.intent === "primary" ? "slash" : "parry");
+    else if (action.command.type === "weapon")
+      add(
+        action.command.intent === "throw"
+          ? "throw"
+          : action.command.intent === "recall"
+            ? "recall"
+            : action.command.intent === "primary"
+              ? "slash"
+              : "parry",
+      );
   }
   if (counts.size === 0) counts.set("wait", 1);
   const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
   const allowedMoves = Object.freeze([...counts.keys()].sort());
-  const zeroWeights = Object.fromEntries([
-    "approach", "retreat", "jump", "dash", "slash", "throw", "recall", "parry", "wait",
-  ].map((move) => [move, 0])) as Record<GhostAuthoredMove, number>;
+  const zeroWeights = Object.fromEntries(
+    ["approach", "retreat", "jump", "dash", "slash", "throw", "recall", "parry", "wait"].map((move) => [move, 0]),
+  ) as Record<GhostAuthoredMove, number>;
   for (const [move, count] of counts) zeroWeights[move] = count / total;
   return Object.freeze({
     id: `nemesis-${source.id}`,

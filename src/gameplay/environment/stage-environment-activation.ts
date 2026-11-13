@@ -11,7 +11,8 @@ export function activateStageEnvironment(
   startTick: number,
   reason: Extract<EnvironmentClearReason, "new-run" | "stage-transition">,
 ): void {
-  if (!Number.isSafeInteger(startTick) || startTick < 0) throw new RangeError("stage environment start tick is invalid");
+  if (!Number.isSafeInteger(startTick) || startTick < 0)
+    throw new RangeError("stage environment start tick is invalid");
   environment.setStage(stageId, reason);
   const definition = stageEnvironmentDefinition(stageId);
   if (definition === null) return;
@@ -21,12 +22,26 @@ export function activateStageEnvironment(
   for (const field of definition.initialFields) {
     const id = `${stageId}:${field.kind}:${field.slot}`;
     if (field.kind === "bloom-well") {
-      environment.addField(createBloomWellState({ id, ownerId: stageId, variant: "stage",
-        geometry: field.geometry, patternId: field.slot }, startTick));
+      environment.addField(
+        createBloomWellState(
+          { id, ownerId: stageId, variant: "stage", geometry: field.geometry, patternId: field.slot },
+          startTick,
+        ),
+      );
     } else {
-      if (field.direction !== -1 && field.direction !== 1) throw new RangeError(`stage Aurora Track ${field.slot} requires a direction`);
-      environment.addField(createAuroraTrackFieldState({ id, ownerId: stageId, variant: "stage",
-        direction: field.direction, geometry: field.geometry, startTick, patternId: field.slot }));
+      if (field.direction !== -1 && field.direction !== 1)
+        throw new RangeError(`stage Aurora Track ${field.slot} requires a direction`);
+      environment.addField(
+        createAuroraTrackFieldState({
+          id,
+          ownerId: stageId,
+          variant: "stage",
+          direction: field.direction,
+          geometry: field.geometry,
+          startTick,
+          patternId: field.slot,
+        }),
+      );
     }
   }
 }

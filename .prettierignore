@@ -1,0 +1,44 @@
+# Prettier formats the code targets listed in scripts/format.mjs (`pnpm format`,
+# `pnpm format:check`). Everything below is generated, vendored, binary-ish,
+# compared byte-for-byte, or prose whose exact text other checks depend on.
+
+# Build output, caches, evidence and dependencies.
+dist/
+artifacts/
+coverage/
+node_modules/
+node_modules*/
+tear-crazygames/
+pnpm-lock.yaml
+package-lock.json
+
+# Vendored, preserved and synced content.
+public/
+preservation/
+tear-wiki/
+vendor/
+
+# Prose: docs, plans, skills and READMEs are records whose exact text
+# check:docs, check:terminology and historical references depend on.
+*.md
+
+# JSON is data: generated baselines and registries (code-budget, architecture,
+# TearBench), tutorial gold corpus/proof/binding, the canonical hash stream,
+# parity fixtures and authored asset packages. Generators write them with
+# JSON.stringify, and tests compare several byte-for-byte. Only the small
+# hand-written root configs below are formatted.
+*.json
+*.jsonc
+!/package.json
+!/tsconfig*.json
+!/firebase.json
+!/wrangler*.jsonc
+
+# Generated code.
+# `pnpm generate:ghost-types` writes this from `wrangler types`, and
+# `pnpm check:ghost-types` compares it with fresh output.
+workers/worker-configuration.d.ts
+workers/.worker-configuration.*.d.ts
+# Contour tables generated from registered stage masks (see each file header).
+src/presentation/verdant-foreground-occlusion.ts
+src/presentation/verdant-pool-receiver.ts

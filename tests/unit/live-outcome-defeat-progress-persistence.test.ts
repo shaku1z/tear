@@ -6,8 +6,12 @@ describe("live outcome defeat-progress persistence adapter", () => {
   it("records the defeat count before the floored longest-run stat", () => {
     const calls: string[] = [];
     const persistence = createLiveOutcomeDefeatProgressPersistence({
-      addStat: vi.fn((key: string, value: number) => { calls.push(`add:${key}:${String(value)}`); }),
-      maxStat: vi.fn((key: string, value: number) => { calls.push(`max:${key}:${String(value)}`); }),
+      addStat: vi.fn((key: string, value: number) => {
+        calls.push(`add:${key}:${String(value)}`);
+      }),
+      maxStat: vi.fn((key: string, value: number) => {
+        calls.push(`max:${key}:${String(value)}`);
+      }),
     });
 
     persistence.record({ runTime: 19.8 });

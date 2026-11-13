@@ -10,79 +10,435 @@ import { parseTearPolicyActivation, parseTearPolicyArtifact } from "./policy-art
 
 const KEY = "foundry-job-v3-promotion-approval:v1:";
 const HASH = /^[a-f0-9]{16}$/u;
-export interface TearFoundryV3PromotionApprovalV1 { readonly format: "tear-foundry-v3-promotion-approval"; readonly schemaVersion: 1; readonly job: Readonly<{ id: string; jobHash: string; protocolHash: string; stopConditionsHash: string }>; readonly bridge: Readonly<{ bridgeHash: string; decisionReceiptHash: string; monitoringReceiptHash: string; evaluationResultHash: string }>; readonly candidate: Readonly<{ id: string; artifactHash: string; adapterHash: string; actionVocabularyHash: string; offlinePlanHash: string; offlineTrainingHash: string; onlinePlanHash: string; onlineCheckpointHash: string; evaluationHash: string }>; readonly rollbackBaseline?: Readonly<{ revision: number; artifactId: string; artifactHash: string; activationHash: string }>; readonly conditions: Readonly<{ currentMonitoringHead: true; monitoringReadyDecision: true; evidenceRetained: true; heldCustody: true; completedPassedV3: true; inactiveCandidateOnly: true; approverFree: true }>; readonly approvedAt: string; readonly approvalHash: string; }
-export interface TearFoundryV3PromotionApprovalContinuationV1 { readonly guards: (approval: TearFoundryV3PromotionApprovalV1) => readonly Readonly<{ store: "analysis"; key: string; expected?: string }>[]; readonly writes: (approval: TearFoundryV3PromotionApprovalV1) => readonly Readonly<{ store: "analysis" | "indexes"; key: string; value: string }>[]; }
-function hash(v: unknown): v is string { return typeof v === "string" && HASH.test(v); }
-function text(v: unknown): v is string { return typeof v === "string" && v.trim().length > 0; }
-function time(v: unknown): v is string { return text(v) && Number.isFinite(Date.parse(v)); }
-function approval(d: Omit<TearFoundryV3PromotionApprovalV1, "approvalHash">): TearFoundryV3PromotionApprovalV1 { if (!text(d.job.id) || ![d.job.jobHash, d.job.protocolHash, d.job.stopConditionsHash, d.bridge.bridgeHash, d.bridge.decisionReceiptHash, d.bridge.monitoringReceiptHash, d.bridge.evaluationResultHash, d.candidate.artifactHash, d.candidate.adapterHash, d.candidate.actionVocabularyHash, d.candidate.offlinePlanHash, d.candidate.offlineTrainingHash, d.candidate.onlinePlanHash, d.candidate.onlineCheckpointHash, d.candidate.evaluationHash].every(hash) || !text(d.candidate.id) || !time(d.approvedAt) || !Object.values(d.conditions as Record<string, unknown>).every((value) => value === true) || (d.rollbackBaseline !== undefined && (!Number.isSafeInteger(d.rollbackBaseline.revision) || d.rollbackBaseline.revision < 1 || !text(d.rollbackBaseline.artifactId) || ![d.rollbackBaseline.artifactHash, d.rollbackBaseline.activationHash].every(hash)))) throw new TypeError("invalid Foundry V3 promotion approval"); const value = Object.freeze({ ...d, job: Object.freeze({ ...d.job }), bridge: Object.freeze({ ...d.bridge }), candidate: Object.freeze({ ...d.candidate }), conditions: Object.freeze({ ...d.conditions }), ...(d.rollbackBaseline === undefined ? {} : { rollbackBaseline: Object.freeze({ ...d.rollbackBaseline }) }) }); return Object.freeze({ ...value, approvalHash: stableVerificationHash(value) }); }
-export function parseTearFoundryV3PromotionApproval(value: unknown): TearFoundryV3PromotionApprovalV1 { if (typeof value !== "object" || value === null || Array.isArray(value)) throw new TypeError("invalid Foundry V3 promotion approval"); const typed = value as TearFoundryV3PromotionApprovalV1, { approvalHash, ...draft } = typed, parsed = approval(draft); if (!hash(approvalHash) || approvalHash !== parsed.approvalHash) throw new TypeError("Foundry V3 promotion approval integrity mismatch"); return parsed; }
+export interface TearFoundryV3PromotionApprovalV1 {
+  readonly format: "tear-foundry-v3-promotion-approval";
+  readonly schemaVersion: 1;
+  readonly job: Readonly<{ id: string; jobHash: string; protocolHash: string; stopConditionsHash: string }>;
+  readonly bridge: Readonly<{
+    bridgeHash: string;
+    decisionReceiptHash: string;
+    monitoringReceiptHash: string;
+    evaluationResultHash: string;
+  }>;
+  readonly candidate: Readonly<{
+    id: string;
+    artifactHash: string;
+    adapterHash: string;
+    actionVocabularyHash: string;
+    offlinePlanHash: string;
+    offlineTrainingHash: string;
+    onlinePlanHash: string;
+    onlineCheckpointHash: string;
+    evaluationHash: string;
+  }>;
+  readonly rollbackBaseline?: Readonly<{
+    revision: number;
+    artifactId: string;
+    artifactHash: string;
+    activationHash: string;
+  }>;
+  readonly conditions: Readonly<{
+    currentMonitoringHead: true;
+    monitoringReadyDecision: true;
+    evidenceRetained: true;
+    heldCustody: true;
+    completedPassedV3: true;
+    inactiveCandidateOnly: true;
+    approverFree: true;
+  }>;
+  readonly approvedAt: string;
+  readonly approvalHash: string;
+}
+export interface TearFoundryV3PromotionApprovalContinuationV1 {
+  readonly guards: (
+    approval: TearFoundryV3PromotionApprovalV1,
+  ) => readonly Readonly<{ store: "analysis"; key: string; expected?: string }>[];
+  readonly writes: (
+    approval: TearFoundryV3PromotionApprovalV1,
+  ) => readonly Readonly<{ store: "analysis" | "indexes"; key: string; value: string }>[];
+}
+function hash(v: unknown): v is string {
+  return typeof v === "string" && HASH.test(v);
+}
+function text(v: unknown): v is string {
+  return typeof v === "string" && v.trim().length > 0;
+}
+function time(v: unknown): v is string {
+  return text(v) && Number.isFinite(Date.parse(v));
+}
+function approval(d: Omit<TearFoundryV3PromotionApprovalV1, "approvalHash">): TearFoundryV3PromotionApprovalV1 {
+  if (
+    !text(d.job.id) ||
+    ![
+      d.job.jobHash,
+      d.job.protocolHash,
+      d.job.stopConditionsHash,
+      d.bridge.bridgeHash,
+      d.bridge.decisionReceiptHash,
+      d.bridge.monitoringReceiptHash,
+      d.bridge.evaluationResultHash,
+      d.candidate.artifactHash,
+      d.candidate.adapterHash,
+      d.candidate.actionVocabularyHash,
+      d.candidate.offlinePlanHash,
+      d.candidate.offlineTrainingHash,
+      d.candidate.onlinePlanHash,
+      d.candidate.onlineCheckpointHash,
+      d.candidate.evaluationHash,
+    ].every(hash) ||
+    !text(d.candidate.id) ||
+    !time(d.approvedAt) ||
+    !Object.values(d.conditions as Record<string, unknown>).every((value) => value === true) ||
+    (d.rollbackBaseline !== undefined &&
+      (!Number.isSafeInteger(d.rollbackBaseline.revision) ||
+        d.rollbackBaseline.revision < 1 ||
+        !text(d.rollbackBaseline.artifactId) ||
+        ![d.rollbackBaseline.artifactHash, d.rollbackBaseline.activationHash].every(hash)))
+  )
+    throw new TypeError("invalid Foundry V3 promotion approval");
+  const value = Object.freeze({
+    ...d,
+    job: Object.freeze({ ...d.job }),
+    bridge: Object.freeze({ ...d.bridge }),
+    candidate: Object.freeze({ ...d.candidate }),
+    conditions: Object.freeze({ ...d.conditions }),
+    ...(d.rollbackBaseline === undefined ? {} : { rollbackBaseline: Object.freeze({ ...d.rollbackBaseline }) }),
+  });
+  return Object.freeze({ ...value, approvalHash: stableVerificationHash(value) });
+}
+export function parseTearFoundryV3PromotionApproval(value: unknown): TearFoundryV3PromotionApprovalV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    throw new TypeError("invalid Foundry V3 promotion approval");
+  const typed = value as TearFoundryV3PromotionApprovalV1,
+    { approvalHash, ...draft } = typed,
+    parsed = approval(draft);
+  if (!hash(approvalHash) || approvalHash !== parsed.approvalHash)
+    throw new TypeError("Foundry V3 promotion approval integrity mismatch");
+  return parsed;
+}
 
 /** Explicit native provenance. It contains no legacy bridge or V2 receipt identifiers. */
-export interface TrainingOperationsV3NativePromotionApprovalV1 extends Omit<TearFoundryV3PromotionApprovalV1, "format" | "bridge"> {
+export interface TrainingOperationsV3NativePromotionApprovalV1 extends Omit<
+  TearFoundryV3PromotionApprovalV1,
+  "format" | "bridge"
+> {
   readonly format: "training-operations-v3-native-promotion-approval";
-  readonly nativeOrigin: Readonly<{ authorityHash: string; trainingSourceJobHash: string; trainingReceiptHash: string;
-    evaluationReceiptHash: string; decisionReceiptHash: string; intentHash: string; scheduleHash: string; bindingHash: string }>;
+  readonly nativeOrigin: Readonly<{
+    authorityHash: string;
+    trainingSourceJobHash: string;
+    trainingReceiptHash: string;
+    evaluationReceiptHash: string;
+    decisionReceiptHash: string;
+    intentHash: string;
+    scheduleHash: string;
+    bindingHash: string;
+  }>;
 }
 export function createTrainingOperationsV3NativePromotionApproval(
   input: Omit<TrainingOperationsV3NativePromotionApprovalV1, "approvalHash">,
 ): TrainingOperationsV3NativePromotionApprovalV1 {
   const raw = input as unknown as Record<string, unknown>;
-  const conditions: readonly unknown[] = [input.conditions.currentMonitoringHead, input.conditions.monitoringReadyDecision,
-    input.conditions.evidenceRetained, input.conditions.heldCustody, input.conditions.completedPassedV3,
-    input.conditions.inactiveCandidateOnly, input.conditions.approverFree];
-  const keys = ["format", "schemaVersion", "job", "candidate", "rollbackBaseline", "conditions", "approvedAt", "nativeOrigin"];
-  if (Object.keys(input).length !== keys.length || Object.keys(input).some((key) => !keys.includes(key))
-    || raw.format !== "training-operations-v3-native-promotion-approval" || raw.schemaVersion !== 1
-    || input.rollbackBaseline === undefined || Object.keys(input.nativeOrigin).length !== 8
-    || ![input.nativeOrigin.authorityHash, input.nativeOrigin.trainingSourceJobHash, input.nativeOrigin.trainingReceiptHash,
-      input.nativeOrigin.evaluationReceiptHash, input.nativeOrigin.decisionReceiptHash, input.nativeOrigin.intentHash,
-      input.nativeOrigin.scheduleHash, input.nativeOrigin.bindingHash].every(hash)) throw new TypeError("invalid native promotion origin");
+  const conditions: readonly unknown[] = [
+    input.conditions.currentMonitoringHead,
+    input.conditions.monitoringReadyDecision,
+    input.conditions.evidenceRetained,
+    input.conditions.heldCustody,
+    input.conditions.completedPassedV3,
+    input.conditions.inactiveCandidateOnly,
+    input.conditions.approverFree,
+  ];
+  const keys = [
+    "format",
+    "schemaVersion",
+    "job",
+    "candidate",
+    "rollbackBaseline",
+    "conditions",
+    "approvedAt",
+    "nativeOrigin",
+  ];
+  if (
+    Object.keys(input).length !== keys.length ||
+    Object.keys(input).some((key) => !keys.includes(key)) ||
+    raw.format !== "training-operations-v3-native-promotion-approval" ||
+    raw.schemaVersion !== 1 ||
+    input.rollbackBaseline === undefined ||
+    Object.keys(input.nativeOrigin).length !== 8 ||
+    ![
+      input.nativeOrigin.authorityHash,
+      input.nativeOrigin.trainingSourceJobHash,
+      input.nativeOrigin.trainingReceiptHash,
+      input.nativeOrigin.evaluationReceiptHash,
+      input.nativeOrigin.decisionReceiptHash,
+      input.nativeOrigin.intentHash,
+      input.nativeOrigin.scheduleHash,
+      input.nativeOrigin.bindingHash,
+    ].every(hash)
+  )
+    throw new TypeError("invalid native promotion origin");
   const baseline = input.rollbackBaseline;
-  if (!text(input.job.id) || !text(input.candidate.id) || !time(input.approvedAt)
-    || ![input.job.jobHash, input.job.protocolHash, input.job.stopConditionsHash, input.candidate.artifactHash,
-      input.candidate.adapterHash, input.candidate.actionVocabularyHash, input.candidate.offlinePlanHash,
-      input.candidate.offlineTrainingHash, input.candidate.onlinePlanHash, input.candidate.onlineCheckpointHash,
-      input.candidate.evaluationHash, baseline.artifactHash, baseline.activationHash].every(hash)
-    || !Number.isSafeInteger(baseline.revision) || baseline.revision < 1 || !text(baseline.artifactId)
-    || Object.keys(input.conditions).length !== 7 || !conditions.every((entry) => entry === true)) {
+  if (
+    !text(input.job.id) ||
+    !text(input.candidate.id) ||
+    !time(input.approvedAt) ||
+    ![
+      input.job.jobHash,
+      input.job.protocolHash,
+      input.job.stopConditionsHash,
+      input.candidate.artifactHash,
+      input.candidate.adapterHash,
+      input.candidate.actionVocabularyHash,
+      input.candidate.offlinePlanHash,
+      input.candidate.offlineTrainingHash,
+      input.candidate.onlinePlanHash,
+      input.candidate.onlineCheckpointHash,
+      input.candidate.evaluationHash,
+      baseline.artifactHash,
+      baseline.activationHash,
+    ].every(hash) ||
+    !Number.isSafeInteger(baseline.revision) ||
+    baseline.revision < 1 ||
+    !text(baseline.artifactId) ||
+    Object.keys(input.conditions).length !== 7 ||
+    !conditions.every((entry) => entry === true)
+  ) {
     throw new TypeError("invalid native promotion eligibility");
   }
   const draft = structuredClone(input);
   return Object.freeze({ ...draft, approvalHash: stableVerificationHash(draft) });
 }
-export function parseTrainingOperationsV3NativePromotionApproval(value: unknown): TrainingOperationsV3NativePromotionApprovalV1 {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError("invalid native promotion approval");
+export function parseTrainingOperationsV3NativePromotionApproval(
+  value: unknown,
+): TrainingOperationsV3NativePromotionApprovalV1 {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError("invalid native promotion approval");
   const { approvalHash, ...draft } = value as TrainingOperationsV3NativePromotionApprovalV1;
   const parsed = createTrainingOperationsV3NativePromotionApproval(draft);
   if (approvalHash !== parsed.approvalHash) throw new TypeError("native promotion approval integrity mismatch");
   return parsed;
 }
-export function parseTearFoundryV3PromotionApprovalOrigin(value: unknown): TearFoundryV3PromotionApprovalV1 | TrainingOperationsV3NativePromotionApprovalV1 {
-  return value !== null && typeof value === "object" && "format" in value && value.format === "training-operations-v3-native-promotion-approval"
-    ? parseTrainingOperationsV3NativePromotionApproval(value) : parseTearFoundryV3PromotionApproval(value);
+export function parseTearFoundryV3PromotionApprovalOrigin(
+  value: unknown,
+): TearFoundryV3PromotionApprovalV1 | TrainingOperationsV3NativePromotionApprovalV1 {
+  return value !== null &&
+    typeof value === "object" &&
+    "format" in value &&
+    value.format === "training-operations-v3-native-promotion-approval"
+    ? parseTrainingOperationsV3NativePromotionApproval(value)
+    : parseTearFoundryV3PromotionApproval(value);
 }
 
 /** Freezes only exact existing eligibility evidence for a later atomic promotion; it never registers, activates, or places a policy. */
 export class TearFoundryV3PromotionApprovalExecutor {
-  readonly #jobs: TearFoundryJobVault; readonly #custody: TearAcademyCandidateCustodyStore;
-  constructor(jobs: TearFoundryJobVault, custody: TearAcademyCandidateCustodyStore) { if (jobs.backend() !== custody.backend()) throw new TypeError("Foundry V3 approval must share C31 custody Vault"); this.#jobs = jobs; this.#custody = custody; }
-  async approve(jobInput: TearFoundryJobV1, bridgeHash: string, approvedAt: string, continuation?: TearFoundryV3PromotionApprovalContinuationV1): Promise<TearFoundryV3PromotionApprovalV1> {
-    const job = parseTearFoundryJob(jobInput), protocol = requireTearFoundryEvaluationProtocol(job), backend = this.#jobs.backend();
-    if (job.phase !== "monitoring" || !hash(bridgeHash) || !time(approvedAt) || (await this.#jobs.get(job.id))?.jobHash !== job.jobHash) throw new RangeError("Foundry V3 approval requires exact current monitoring job");
-    const bridgeRaw = await backend.get("analysis", `foundry-job-v3-monitoring-bridge:v1:${bridgeHash}`), bridge = bridgeRaw === undefined ? undefined : parseTearFoundryV3MonitoringBridge(JSON.parse(bridgeRaw));
-    if (bridge?.job.id !== job.id || bridge.job.jobHash !== job.jobHash || bridge.job.protocolHash !== protocol.protocolHash || bridge.job.stopConditionsHash !== job.inputs.stopConditionsHash) throw new RangeError("Foundry V3 approval bridge lineage changed");
-    const jobKey = `foundry-job:v1:${job.id}`, bridgeKey = `foundry-job-v3-monitoring-bridge:v1:${bridgeHash}`, decisionKey = `foundry-job-decision:v1:${bridge.v2Monitoring.decisionReceiptHash}`, monitoringKey = `foundry-job-monitoring-entry:v1:${bridge.v2Monitoring.monitoringReceiptHash}`, candidateKey = `policy-artifact:v1:${bridge.v3.candidateArtifactId}`, [jobRaw, decisionRaw, monitoringRaw, activeRaw, held, candidateRaw] = await Promise.all([backend.get("analysis", jobKey), backend.get("analysis", decisionKey), backend.get("analysis", monitoringKey), backend.get("analysis", "policy-active:v1"), this.#custody.held(approvedAt), backend.get("analysis", candidateKey)]);
-    if (jobRaw !== JSON.stringify(job) || bridgeRaw === undefined || candidateRaw === undefined) throw new RangeError("Foundry V3 approval durable lineage changed");
-    const decision = decisionRaw === undefined ? undefined : parseTearFoundryDecisionReceipt(JSON.parse(decisionRaw)), monitoring = monitoringRaw === undefined ? undefined : parseTearFoundryMonitoringEntryReceipt(JSON.parse(monitoringRaw));
-    if (decision?.disposition !== "monitoring-ready" || decision.job.resultJobHash !== job.jobHash || decision.receiptHash !== bridge.v2Monitoring.decisionReceiptHash || decision.evaluationResultHash !== bridge.v2Monitoring.evaluationResultHash || monitoring?.health !== "evidence-retained" || monitoring.jobHash !== job.jobHash || monitoring.receiptHash !== bridge.v2Monitoring.monitoringReceiptHash || monitoring.decisionReceiptHash !== decision.receiptHash || monitoring.evaluationResultHash !== decision.evaluationResultHash || monitoring.stopConditionsHash !== job.inputs.stopConditionsHash || !job.inputs.corpusRecordHashes.every((entry) => held.some((record) => record.recordHash === entry))) throw new RangeError("Foundry V3 approval monitoring/custody lineage changed");
-    const candidate = await new TearC34V3C32CandidateRegistry(backend).get(bridge.v3.candidateArtifactId); if (candidate?.artifactHash !== bridge.v3.candidateArtifactHash) throw new RangeError("Foundry V3 approval candidate changed"); const payload = parseTearC34V3C32PolicyCandidate(candidate);
-    if (payload.sourceStateAdapter.adapterHash !== bridge.v3.adapterHash || payload.lineage.actionVocabularyHash !== bridge.v3.actionVocabularyHash || payload.lineage.offlinePlanHash !== bridge.v3.offlinePlanHash || payload.lineage.offlineTrainingHash !== bridge.v3.offlineTrainingHash || payload.lineage.onlinePlanHash !== bridge.v3.onlinePlanHash || payload.lineage.onlineCheckpointHash !== bridge.v3.onlineCheckpointHash || payload.lineage.onlineEvaluationHash !== bridge.v3.evaluationHash) throw new RangeError("Foundry V3 approval candidate lineage changed");
-    let rollbackBaseline: TearFoundryV3PromotionApprovalV1["rollbackBaseline"]; let baselineKey: string | undefined; let baselineRaw: string | undefined; if (activeRaw !== undefined) { const active = parseTearPolicyActivation(JSON.parse(activeRaw)); baselineKey = `policy-artifact:v1:${active.artifactId}`; baselineRaw = await backend.get("analysis", baselineKey); const prior = baselineRaw === undefined ? undefined : parseTearPolicyArtifact(JSON.parse(baselineRaw)); if (prior?.artifactHash !== active.artifactHash || active.artifactId === candidate.id || active.artifactHash === candidate.artifactHash) throw new RangeError("Foundry V3 approval rollback baseline changed"); rollbackBaseline = Object.freeze({ revision: active.revision, artifactId: active.artifactId, artifactHash: active.artifactHash, activationHash: active.activationHash }); }
-    const output = approval({ format: "tear-foundry-v3-promotion-approval", schemaVersion: 1, job: { id: job.id, jobHash: job.jobHash, protocolHash: protocol.protocolHash, stopConditionsHash: job.inputs.stopConditionsHash }, bridge: { bridgeHash, decisionReceiptHash: decision.receiptHash, monitoringReceiptHash: monitoring.receiptHash, evaluationResultHash: decision.evaluationResultHash }, candidate: { id: candidate.id, artifactHash: candidate.artifactHash, adapterHash: payload.sourceStateAdapter.adapterHash, actionVocabularyHash: payload.lineage.actionVocabularyHash, offlinePlanHash: payload.lineage.offlinePlanHash, offlineTrainingHash: payload.lineage.offlineTrainingHash, onlinePlanHash: payload.lineage.onlinePlanHash, onlineCheckpointHash: payload.lineage.onlineCheckpointHash, evaluationHash: payload.lineage.onlineEvaluationHash }, ...(rollbackBaseline === undefined ? {} : { rollbackBaseline }), conditions: { currentMonitoringHead: true, monitoringReadyDecision: true, evidenceRetained: true, heldCustody: true, completedPassedV3: true, inactiveCandidateOnly: true, approverFree: true }, approvedAt });
-    const key = `${KEY}${output.approvalHash}`, old = await backend.get("analysis", key); if (old !== undefined) { try { return parseTearFoundryV3PromotionApproval(JSON.parse(old)); } catch { await backend.put("quarantine", key, old); throw new RangeError("Foundry V3 approval is corrupt"); } }
-    const base = Object.freeze([{ store: "analysis" as const, key, value: JSON.stringify(output) }, { store: "indexes" as const, key: `foundry-job-v3-promotion-approval:${job.id}:${output.approvalHash}`, value: JSON.stringify(Object.freeze({ jobHash: job.jobHash, candidateArtifactHash: candidate.artifactHash, promotional: false })) }]);
-    if (continuation === undefined) await backend.commit(base); else { const inventory = await this.#custody.inventory(), records = inventory.records.filter((entry) => job.inputs.corpusRecordHashes.includes(entry.recordHash)).sort((left, right) => left.candidateHash.localeCompare(right.candidateHash)), custody = await Promise.all(records.map(async (entry) => Object.freeze({ key: `academy-candidate-custody:v1:${entry.candidateHash}`, raw: await backend.get("analysis", `academy-candidate-custody:v1:${entry.candidateHash}`) }))); if (records.length !== job.inputs.corpusRecordHashes.length || custody.some((entry) => entry.raw === undefined)) throw new RangeError("Foundry V3 approval custody evidence changed"); await backend.commitIfMatches(Object.freeze([Object.freeze({ store: "analysis" as const, key: jobKey, expected: jobRaw }), Object.freeze({ store: "analysis" as const, key: bridgeKey, expected: bridgeRaw }), Object.freeze({ store: "analysis" as const, key: decisionKey, expected: decisionRaw }), Object.freeze({ store: "analysis" as const, key: monitoringKey, expected: monitoringRaw }), Object.freeze({ store: "analysis" as const, key: candidateKey, expected: candidateRaw }), Object.freeze({ store: "analysis" as const, key: "policy-active:v1", ...(activeRaw === undefined ? {} : { expected: activeRaw }) }), ...(baselineKey === undefined || baselineRaw === undefined ? [] : [Object.freeze({ store: "analysis" as const, key: baselineKey, expected: baselineRaw })]), ...custody.map((entry) => Object.freeze({ store: "analysis" as const, key: entry.key, expected: entry.raw ?? "" })), Object.freeze({ store: "analysis" as const, key }), ...continuation.guards(output)]), Object.freeze([...base, ...continuation.writes(output)])); } return output;
+  readonly #jobs: TearFoundryJobVault;
+  readonly #custody: TearAcademyCandidateCustodyStore;
+  constructor(jobs: TearFoundryJobVault, custody: TearAcademyCandidateCustodyStore) {
+    if (jobs.backend() !== custody.backend()) throw new TypeError("Foundry V3 approval must share C31 custody Vault");
+    this.#jobs = jobs;
+    this.#custody = custody;
   }
-  async get(approvalHash: string): Promise<TearFoundryV3PromotionApprovalV1 | undefined> { if (!hash(approvalHash)) throw new TypeError("Foundry V3 approval hash is invalid"); const key = `${KEY}${approvalHash}`, raw = await this.#jobs.backend().get("analysis", key); if (raw === undefined) return undefined; try { return parseTearFoundryV3PromotionApproval(JSON.parse(raw)); } catch { await this.#jobs.backend().put("quarantine", key, raw); return undefined; } }
+  async approve(
+    jobInput: TearFoundryJobV1,
+    bridgeHash: string,
+    approvedAt: string,
+    continuation?: TearFoundryV3PromotionApprovalContinuationV1,
+  ): Promise<TearFoundryV3PromotionApprovalV1> {
+    const job = parseTearFoundryJob(jobInput),
+      protocol = requireTearFoundryEvaluationProtocol(job),
+      backend = this.#jobs.backend();
+    if (
+      job.phase !== "monitoring" ||
+      !hash(bridgeHash) ||
+      !time(approvedAt) ||
+      (await this.#jobs.get(job.id))?.jobHash !== job.jobHash
+    )
+      throw new RangeError("Foundry V3 approval requires exact current monitoring job");
+    const bridgeRaw = await backend.get("analysis", `foundry-job-v3-monitoring-bridge:v1:${bridgeHash}`),
+      bridge = bridgeRaw === undefined ? undefined : parseTearFoundryV3MonitoringBridge(JSON.parse(bridgeRaw));
+    if (
+      bridge?.job.id !== job.id ||
+      bridge.job.jobHash !== job.jobHash ||
+      bridge.job.protocolHash !== protocol.protocolHash ||
+      bridge.job.stopConditionsHash !== job.inputs.stopConditionsHash
+    )
+      throw new RangeError("Foundry V3 approval bridge lineage changed");
+    const jobKey = `foundry-job:v1:${job.id}`,
+      bridgeKey = `foundry-job-v3-monitoring-bridge:v1:${bridgeHash}`,
+      decisionKey = `foundry-job-decision:v1:${bridge.v2Monitoring.decisionReceiptHash}`,
+      monitoringKey = `foundry-job-monitoring-entry:v1:${bridge.v2Monitoring.monitoringReceiptHash}`,
+      candidateKey = `policy-artifact:v1:${bridge.v3.candidateArtifactId}`,
+      [jobRaw, decisionRaw, monitoringRaw, activeRaw, held, candidateRaw] = await Promise.all([
+        backend.get("analysis", jobKey),
+        backend.get("analysis", decisionKey),
+        backend.get("analysis", monitoringKey),
+        backend.get("analysis", "policy-active:v1"),
+        this.#custody.held(approvedAt),
+        backend.get("analysis", candidateKey),
+      ]);
+    if (jobRaw !== JSON.stringify(job) || bridgeRaw === undefined || candidateRaw === undefined)
+      throw new RangeError("Foundry V3 approval durable lineage changed");
+    const decision = decisionRaw === undefined ? undefined : parseTearFoundryDecisionReceipt(JSON.parse(decisionRaw)),
+      monitoring =
+        monitoringRaw === undefined ? undefined : parseTearFoundryMonitoringEntryReceipt(JSON.parse(monitoringRaw));
+    if (
+      decision?.disposition !== "monitoring-ready" ||
+      decision.job.resultJobHash !== job.jobHash ||
+      decision.receiptHash !== bridge.v2Monitoring.decisionReceiptHash ||
+      decision.evaluationResultHash !== bridge.v2Monitoring.evaluationResultHash ||
+      monitoring?.health !== "evidence-retained" ||
+      monitoring.jobHash !== job.jobHash ||
+      monitoring.receiptHash !== bridge.v2Monitoring.monitoringReceiptHash ||
+      monitoring.decisionReceiptHash !== decision.receiptHash ||
+      monitoring.evaluationResultHash !== decision.evaluationResultHash ||
+      monitoring.stopConditionsHash !== job.inputs.stopConditionsHash ||
+      !job.inputs.corpusRecordHashes.every((entry) => held.some((record) => record.recordHash === entry))
+    )
+      throw new RangeError("Foundry V3 approval monitoring/custody lineage changed");
+    const candidate = await new TearC34V3C32CandidateRegistry(backend).get(bridge.v3.candidateArtifactId);
+    if (candidate?.artifactHash !== bridge.v3.candidateArtifactHash)
+      throw new RangeError("Foundry V3 approval candidate changed");
+    const payload = parseTearC34V3C32PolicyCandidate(candidate);
+    if (
+      payload.sourceStateAdapter.adapterHash !== bridge.v3.adapterHash ||
+      payload.lineage.actionVocabularyHash !== bridge.v3.actionVocabularyHash ||
+      payload.lineage.offlinePlanHash !== bridge.v3.offlinePlanHash ||
+      payload.lineage.offlineTrainingHash !== bridge.v3.offlineTrainingHash ||
+      payload.lineage.onlinePlanHash !== bridge.v3.onlinePlanHash ||
+      payload.lineage.onlineCheckpointHash !== bridge.v3.onlineCheckpointHash ||
+      payload.lineage.onlineEvaluationHash !== bridge.v3.evaluationHash
+    )
+      throw new RangeError("Foundry V3 approval candidate lineage changed");
+    let rollbackBaseline: TearFoundryV3PromotionApprovalV1["rollbackBaseline"];
+    let baselineKey: string | undefined;
+    let baselineRaw: string | undefined;
+    if (activeRaw !== undefined) {
+      const active = parseTearPolicyActivation(JSON.parse(activeRaw));
+      baselineKey = `policy-artifact:v1:${active.artifactId}`;
+      baselineRaw = await backend.get("analysis", baselineKey);
+      const prior = baselineRaw === undefined ? undefined : parseTearPolicyArtifact(JSON.parse(baselineRaw));
+      if (
+        prior?.artifactHash !== active.artifactHash ||
+        active.artifactId === candidate.id ||
+        active.artifactHash === candidate.artifactHash
+      )
+        throw new RangeError("Foundry V3 approval rollback baseline changed");
+      rollbackBaseline = Object.freeze({
+        revision: active.revision,
+        artifactId: active.artifactId,
+        artifactHash: active.artifactHash,
+        activationHash: active.activationHash,
+      });
+    }
+    const output = approval({
+      format: "tear-foundry-v3-promotion-approval",
+      schemaVersion: 1,
+      job: {
+        id: job.id,
+        jobHash: job.jobHash,
+        protocolHash: protocol.protocolHash,
+        stopConditionsHash: job.inputs.stopConditionsHash,
+      },
+      bridge: {
+        bridgeHash,
+        decisionReceiptHash: decision.receiptHash,
+        monitoringReceiptHash: monitoring.receiptHash,
+        evaluationResultHash: decision.evaluationResultHash,
+      },
+      candidate: {
+        id: candidate.id,
+        artifactHash: candidate.artifactHash,
+        adapterHash: payload.sourceStateAdapter.adapterHash,
+        actionVocabularyHash: payload.lineage.actionVocabularyHash,
+        offlinePlanHash: payload.lineage.offlinePlanHash,
+        offlineTrainingHash: payload.lineage.offlineTrainingHash,
+        onlinePlanHash: payload.lineage.onlinePlanHash,
+        onlineCheckpointHash: payload.lineage.onlineCheckpointHash,
+        evaluationHash: payload.lineage.onlineEvaluationHash,
+      },
+      ...(rollbackBaseline === undefined ? {} : { rollbackBaseline }),
+      conditions: {
+        currentMonitoringHead: true,
+        monitoringReadyDecision: true,
+        evidenceRetained: true,
+        heldCustody: true,
+        completedPassedV3: true,
+        inactiveCandidateOnly: true,
+        approverFree: true,
+      },
+      approvedAt,
+    });
+    const key = `${KEY}${output.approvalHash}`,
+      old = await backend.get("analysis", key);
+    if (old !== undefined) {
+      try {
+        return parseTearFoundryV3PromotionApproval(JSON.parse(old));
+      } catch {
+        await backend.put("quarantine", key, old);
+        throw new RangeError("Foundry V3 approval is corrupt");
+      }
+    }
+    const base = Object.freeze([
+      { store: "analysis" as const, key, value: JSON.stringify(output) },
+      {
+        store: "indexes" as const,
+        key: `foundry-job-v3-promotion-approval:${job.id}:${output.approvalHash}`,
+        value: JSON.stringify(
+          Object.freeze({ jobHash: job.jobHash, candidateArtifactHash: candidate.artifactHash, promotional: false }),
+        ),
+      },
+    ]);
+    if (continuation === undefined) await backend.commit(base);
+    else {
+      const inventory = await this.#custody.inventory(),
+        records = inventory.records
+          .filter((entry) => job.inputs.corpusRecordHashes.includes(entry.recordHash))
+          .sort((left, right) => left.candidateHash.localeCompare(right.candidateHash)),
+        custody = await Promise.all(
+          records.map(async (entry) =>
+            Object.freeze({
+              key: `academy-candidate-custody:v1:${entry.candidateHash}`,
+              raw: await backend.get("analysis", `academy-candidate-custody:v1:${entry.candidateHash}`),
+            }),
+          ),
+        );
+      if (records.length !== job.inputs.corpusRecordHashes.length || custody.some((entry) => entry.raw === undefined))
+        throw new RangeError("Foundry V3 approval custody evidence changed");
+      await backend.commitIfMatches(
+        Object.freeze([
+          Object.freeze({ store: "analysis" as const, key: jobKey, expected: jobRaw }),
+          Object.freeze({ store: "analysis" as const, key: bridgeKey, expected: bridgeRaw }),
+          Object.freeze({ store: "analysis" as const, key: decisionKey, expected: decisionRaw }),
+          Object.freeze({ store: "analysis" as const, key: monitoringKey, expected: monitoringRaw }),
+          Object.freeze({ store: "analysis" as const, key: candidateKey, expected: candidateRaw }),
+          Object.freeze({
+            store: "analysis" as const,
+            key: "policy-active:v1",
+            ...(activeRaw === undefined ? {} : { expected: activeRaw }),
+          }),
+          ...(baselineKey === undefined || baselineRaw === undefined
+            ? []
+            : [Object.freeze({ store: "analysis" as const, key: baselineKey, expected: baselineRaw })]),
+          ...custody.map((entry) =>
+            Object.freeze({ store: "analysis" as const, key: entry.key, expected: entry.raw ?? "" }),
+          ),
+          Object.freeze({ store: "analysis" as const, key }),
+          ...continuation.guards(output),
+        ]),
+        Object.freeze([...base, ...continuation.writes(output)]),
+      );
+    }
+    return output;
+  }
+  async get(approvalHash: string): Promise<TearFoundryV3PromotionApprovalV1 | undefined> {
+    if (!hash(approvalHash)) throw new TypeError("Foundry V3 approval hash is invalid");
+    const key = `${KEY}${approvalHash}`,
+      raw = await this.#jobs.backend().get("analysis", key);
+    if (raw === undefined) return undefined;
+    try {
+      return parseTearFoundryV3PromotionApproval(JSON.parse(raw));
+    } catch {
+      await this.#jobs.backend().put("quarantine", key, raw);
+      return undefined;
+    }
+  }
 }

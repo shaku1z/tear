@@ -9,7 +9,7 @@ export const TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT = "tear-academy-candi
 
 function record(value: unknown): Readonly<Record<string, unknown>> | undefined {
   return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? value as Readonly<Record<string, unknown>>
+    ? (value as Readonly<Record<string, unknown>>)
     : undefined;
 }
 
@@ -54,13 +54,21 @@ function terminalAnchor(
   const anchor = record(value);
   if (anchor === undefined) return undefined;
   const terminal = record(anchor.terminal);
-  if (anchor.format !== TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT || anchor.schemaVersion !== 1
-    || anchor.candidateHash !== expectedCandidateHash || terminal?.tick !== expected.tick
-    || terminal.semanticHash !== expected.semanticHash || terminal.terminated !== expected.terminated
-    || terminal.truncated !== expected.truncated) return undefined;
+  if (
+    anchor.format !== TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT ||
+    anchor.schemaVersion !== 1 ||
+    anchor.candidateHash !== expectedCandidateHash ||
+    terminal?.tick !== expected.tick ||
+    terminal.semanticHash !== expected.semanticHash ||
+    terminal.terminated !== expected.terminated ||
+    terminal.truncated !== expected.truncated
+  )
+    return undefined;
   return Object.freeze({
-    format: TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT, schemaVersion: 1,
-    candidateHash: expectedCandidateHash, terminal: Object.freeze({ ...expected }),
+    format: TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT,
+    schemaVersion: 1,
+    candidateHash: expectedCandidateHash,
+    terminal: Object.freeze({ ...expected }),
   });
 }
 
@@ -74,7 +82,9 @@ export function createAcademyCandidateTerminalAnchor(
 ): TearAcademyCandidateTerminalAnchorV1 {
   const hash = academyCandidateHash(candidate);
   return Object.freeze({
-    format: TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT, schemaVersion: 1, candidateHash: hash,
+    format: TEAR_ACADEMY_CANDIDATE_TERMINAL_ANCHOR_FORMAT,
+    schemaVersion: 1,
+    candidateHash: hash,
     terminal: Object.freeze({ ...candidate.artifact.terminal }),
   });
 }
@@ -91,28 +101,46 @@ export async function attestAcademyCandidateSource(
 ): Promise<TearAcademyCandidateSourceAttestationV1> {
   const expectedCandidateHash = academyCandidateHash(candidate);
   const capsule = await new GhostCapsuleReader(vault).read(capsuleId);
-  if (capsule.manifest.id !== capsuleId || capsule.manifest.status !== "complete" || capsule.manifest.schemaVersion !== 2) {
+  if (
+    capsule.manifest.id !== capsuleId ||
+    capsule.manifest.status !== "complete" ||
+    capsule.manifest.schemaVersion !== 2
+  ) {
     throw new RangeError("C31 candidate requires a complete schema-v2 Vault capsule");
   }
   const context = readGhostReplayRunContext(capsule.manifest.provenance);
   if (context === undefined) throw new TypeError("C31 candidate capsule lacks a valid sealed replay context");
   const scenario = candidate.artifact.scenario;
-  if (stableVerificationHash(context.simulation.applicationFramePolicy ?? null)
-    !== stableVerificationHash(candidate.artifact.bootstrap.applicationFramePolicy ?? null)) throw new RangeError("C31 candidate generated clock policy differs from its source bootstrap");
-  if (context.run.seed !== scenario.seed || context.run.mode !== scenario.start.mode
-    || context.run.difficulty !== scenario.start.difficulty || context.run.weaponId !== scenario.start.weapon) {
+  if (
+    stableVerificationHash(context.simulation.applicationFramePolicy ?? null) !==
+    stableVerificationHash(candidate.artifact.bootstrap.applicationFramePolicy ?? null)
+  )
+    throw new RangeError("C31 candidate generated clock policy differs from its source bootstrap");
+  if (
+    context.run.seed !== scenario.seed ||
+    context.run.mode !== scenario.start.mode ||
+    context.run.difficulty !== scenario.start.difficulty ||
+    context.run.weaponId !== scenario.start.weapon
+  ) {
     throw new RangeError("C31 candidate capsule bootstrap does not match the C30 source scenario");
   }
   const mapped = mapGhostCapsuleToReplayEnvelope(capsule);
   const candidateActions = candidate.artifact.actions;
-  if (mapped.accepted.commands !== capsule.tracks.commands.length
-    || mapped.ghost.actions.length !== candidateActions.length
-    || stableVerificationHash(mapped.ghost.actions) !== stableVerificationHash(candidateActions)) {
+  if (
+    mapped.accepted.commands !== capsule.tracks.commands.length ||
+    mapped.ghost.actions.length !== candidateActions.length ||
+    stableVerificationHash(mapped.ghost.actions) !== stableVerificationHash(candidateActions)
+  ) {
     throw new RangeError("C31 candidate capsule command range does not match the C30 source artifact");
   }
-  if (capsule.maxTick !== candidate.tick) throw new RangeError("C31 candidate capsule does not cover the exact terminal range");
+  if (capsule.maxTick !== candidate.tick)
+    throw new RangeError("C31 candidate capsule does not cover the exact terminal range");
   const anchor = capsule.tracks.results
-    .map((entry) => entry.tick === candidate.tick ? terminalAnchor(entry.value, expectedCandidateHash, candidate.artifact.terminal) : undefined)
+    .map((entry) =>
+      entry.tick === candidate.tick
+        ? terminalAnchor(entry.value, expectedCandidateHash, candidate.artifact.terminal)
+        : undefined,
+    )
     .find((entry): entry is TearAcademyCandidateTerminalAnchorV1 => entry !== undefined);
   if (anchor === undefined) throw new RangeError("C31 candidate capsule lacks a matching terminal anchor");
   const build = Object.freeze({ ...context.build });
@@ -120,16 +148,30 @@ export async function attestAcademyCandidateSource(
   const actionHash = stableVerificationHash(candidateActions);
   const terminalAnchorHash = stableVerificationHash(anchor);
   const capsuleRange = Object.freeze({
-    capsuleId, rootIntegrity: capsule.manifest.integrity.rootIntegrity, fromTick: 0 as const,
-    toTick: candidate.tick, actionHash, terminalAnchorHash,
+    capsuleId,
+    rootIntegrity: capsule.manifest.integrity.rootIntegrity,
+    fromTick: 0 as const,
+    toTick: candidate.tick,
+    actionHash,
+    terminalAnchorHash,
   });
   const attestationHash = stableVerificationHash({
-    candidateId: candidate.episodeId, candidateHash: expectedCandidateHash, device: "semantic",
-    build, replayContextHash, capsuleRange,
+    candidateId: candidate.episodeId,
+    candidateHash: expectedCandidateHash,
+    device: "semantic",
+    build,
+    replayContextHash,
+    capsuleRange,
   });
   return Object.freeze({
-    format: "tear-academy-candidate-source-attestation", schemaVersion: 1,
-    candidateId: candidate.episodeId, candidateHash: expectedCandidateHash, device: "semantic",
-    build, replayContextHash, capsuleRange, attestationHash,
+    format: "tear-academy-candidate-source-attestation",
+    schemaVersion: 1,
+    candidateId: candidate.episodeId,
+    candidateHash: expectedCandidateHash,
+    device: "semantic",
+    build,
+    replayContextHash,
+    capsuleRange,
+    attestationHash,
   });
 }

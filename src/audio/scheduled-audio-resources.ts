@@ -8,8 +8,12 @@ export class ScheduledAudioResourceTracker {
     this.voiceCap = voiceCap;
   }
 
-  get activeVoices(): number { return this.#activeVoices; }
-  get activeGraphNodes(): number { return this.#activeGraphNodes; }
+  get activeVoices(): number {
+    return this.#activeVoices;
+  }
+  get activeGraphNodes(): number {
+    return this.#activeGraphNodes;
+  }
 
   track(source: AudioScheduledSourceNode, connectedNodes: readonly AudioNode[] = []): boolean {
     if (this.#activeVoices >= this.voiceCap) return false;

@@ -14,8 +14,12 @@ export function createLifecycleController(initial: { focused?: boolean; visible?
     for (const listener of [...listeners]) listener(event);
   };
   return {
-    get focused() { return focused; },
-    get visible() { return visible; },
+    get focused() {
+      return focused;
+    },
+    get visible() {
+      return visible;
+    },
     subscribe(listener): Unsubscribe {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -31,10 +35,20 @@ export function createLifecycleController(initial: { focused?: boolean; visible?
       visible = next;
       emit({ type: "visibility-changed", visible });
     },
-    loadingStarted() { return undefined; },
-    loadingFinished() { return undefined; },
-    gameplayStarted() { return undefined; },
-    gameplayFinished() { return undefined; },
-    happyMoment() { return undefined; },
+    loadingStarted() {
+      return undefined;
+    },
+    loadingFinished() {
+      return undefined;
+    },
+    gameplayStarted() {
+      return undefined;
+    },
+    gameplayFinished() {
+      return undefined;
+    },
+    happyMoment() {
+      return undefined;
+    },
   };
 }

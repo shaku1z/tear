@@ -1,13 +1,6 @@
-import {
-  UPGRADES,
-  type UpgradeCategory,
-  type UpgradeDefinition,
-} from "../gameplay/upgrades";
+import { UPGRADES, type UpgradeCategory, type UpgradeDefinition } from "../gameplay/upgrades";
 import { stableVerificationHash } from "../replay/hash";
-import type {
-  TearBuildSelection,
-  TearProgressionRequest,
-} from "./progression-ledger";
+import type { TearBuildSelection, TearProgressionRequest } from "./progression-ledger";
 
 export interface ProgressionMutableBuild {
   readonly owned: Record<string, number>;
@@ -26,9 +19,7 @@ export function maximumUpgradeTier(upgrade: UpgradeDefinition): number {
   return upgrade.tiers === undefined ? 1 : upgrade.tiers.length + 1;
 }
 
-export const PRODUCTION_UPGRADE_BY_ID = new Map(
-  UPGRADES.map((upgrade) => [upgrade.id, upgrade] as const),
-);
+export const PRODUCTION_UPGRADE_BY_ID = new Map(UPGRADES.map((upgrade) => [upgrade.id, upgrade] as const));
 
 export const PRODUCTION_CONFIGURATION_REVISION = stableVerificationHash(
   UPGRADES.map((upgrade) => ({
@@ -41,13 +32,16 @@ export const PRODUCTION_CONFIGURATION_REVISION = stableVerificationHash(
 );
 
 const CATEGORIES: readonly UpgradeCategory[] = Object.freeze([
-  "offense", "throw", "parry", "mobility", "resilience", "utility",
+  "offense",
+  "throw",
+  "parry",
+  "mobility",
+  "resilience",
+  "utility",
 ]);
 
 function categoryCounts(build: ProgressionMutableBuild): Record<UpgradeCategory, number> {
-  const counts = Object.fromEntries(
-    CATEGORIES.map((category) => [category, 0]),
-  ) as Record<UpgradeCategory, number>;
+  const counts = Object.fromEntries(CATEGORIES.map((category) => [category, 0])) as Record<UpgradeCategory, number>;
   for (const [id, owned] of Object.entries(build.owned)) {
     const category = PRODUCTION_UPGRADE_BY_ID.get(id)?.cat;
     if (category !== undefined) counts[category] += owned;
@@ -55,9 +49,7 @@ function categoryCounts(build: ProgressionMutableBuild): Record<UpgradeCategory,
   return counts;
 }
 
-function weaponCategories(
-  weapon: TearProgressionRequest["weapon"],
-): readonly UpgradeCategory[] {
+function weaponCategories(weapon: TearProgressionRequest["weapon"]): readonly UpgradeCategory[] {
   if (weapon === "hammer") return ["offense", "resilience", "mobility"];
   if (weapon === "greatsword") return ["throw", "offense", "mobility"];
   if (weapon === "chainblade") return ["throw", "utility", "mobility"];
@@ -80,16 +72,26 @@ function policyScore(
   const special = upgrade.tiers === undefined ? 0 : 12;
   const rare = upgrade.rare === true ? 2 : 0;
   switch (request.policy) {
-    case "optimized": return affinity * 20 + special + rare - owned * 4;
-    case "archetype": return affinity * 30 + special - owned * 3;
-    case "low-roll": return (upgrade.unique ? -20 : 10) - special - affinity * 3 + owned * 2;
-    case "anti-synergy": return (preferred.includes(upgrade.cat) ? -30 : 20) - special - categoryUse * 2;
-    case "coverage-seeking": return 80 - categoryUse * 15 + (owned === 0 ? 10 : 0) + special;
-    case "human-population": return affinity * 10 + (upgrade.unique ? 8 : 12) + special - owned * 5;
-    case "agent-population": return affinity * 14 + special + rare - owned * 5;
-    case "replay-derived": return affinity * 8 + special - owned * 2;
-    case "corruption": return -owned * 4 - special;
-    case "exact-ledger": return affinity * 5 + special - owned * 2;
+    case "optimized":
+      return affinity * 20 + special + rare - owned * 4;
+    case "archetype":
+      return affinity * 30 + special - owned * 3;
+    case "low-roll":
+      return (upgrade.unique ? -20 : 10) - special - affinity * 3 + owned * 2;
+    case "anti-synergy":
+      return (preferred.includes(upgrade.cat) ? -30 : 20) - special - categoryUse * 2;
+    case "coverage-seeking":
+      return 80 - categoryUse * 15 + (owned === 0 ? 10 : 0) + special;
+    case "human-population":
+      return affinity * 10 + (upgrade.unique ? 8 : 12) + special - owned * 5;
+    case "agent-population":
+      return affinity * 14 + special + rare - owned * 5;
+    case "replay-derived":
+      return affinity * 8 + special - owned * 2;
+    case "corruption":
+      return -owned * 4 - special;
+    case "exact-ledger":
+      return affinity * 5 + special - owned * 2;
   }
 }
 
@@ -113,15 +115,17 @@ export function draftCandidates(
   desired: ProgressionDesiredBuild,
   wave: number,
 ): readonly UpgradeDefinition[] {
-  const candidates = [...UPGRADES
-    .filter((upgrade) => !(upgrade.unique && (build.owned[upgrade.id] ?? 0) > 0))
-    .filter((upgrade) => upgrade.maxStacks === undefined
-      || (build.owned[upgrade.id] ?? 0) < upgrade.maxStacks)];
+  const candidates = [
+    ...UPGRADES.filter((upgrade) => !(upgrade.unique && (build.owned[upgrade.id] ?? 0) > 0)).filter(
+      (upgrade) => upgrade.maxStacks === undefined || (build.owned[upgrade.id] ?? 0) < upgrade.maxStacks,
+    ),
+  ];
   const counts = categoryCounts(build);
-  const scores = new Map(candidates.map((upgrade) => [
-    upgrade.id,
-    policyScore(upgrade, request, build, desired, counts[upgrade.cat]),
-  ] as const));
+  const scores = new Map(
+    candidates.map(
+      (upgrade) => [upgrade.id, policyScore(upgrade, request, build, desired, counts[upgrade.cat])] as const,
+    ),
+  );
   return candidates.sort((left, right) => compareCandidates(left, right, scores, wave));
 }
 

@@ -1,9 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-  buildDocument,
-  validateDocument,
-} from "../../scripts/tearbench-requirements.mjs";
+import { buildDocument, validateDocument } from "../../scripts/tearbench-requirements.mjs";
 
 const source = readFileSync(
   new URL("../../docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md", import.meta.url),
@@ -13,10 +10,9 @@ const plan = readFileSync(
   new URL("../../plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md", import.meta.url),
   "utf8",
 );
-const evidenceCatalog = JSON.parse(readFileSync(
-  new URL("../../docs/tearbench-ghost3-evidence-catalog.json", import.meta.url),
-  "utf8",
-));
+const evidenceCatalog = JSON.parse(
+  readFileSync(new URL("../../docs/tearbench-ghost3-evidence-catalog.json", import.meta.url), "utf8"),
+);
 
 // Each case rebuilds the full annex from the 13,725-line reviewed source.
 // Measured on 2026-11-11: 2.9-3.1 s alone and 3.9-4.1 s beside two other heavy

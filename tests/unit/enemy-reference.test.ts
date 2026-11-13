@@ -31,17 +31,34 @@ describe("enemy reference catalog", () => {
   it("projects the exact structural catalog and deep-freezes copied data", () => {
     const result = project();
     expect(result.families.map((family) => family.id)).toEqual([
-      "charger", "ranged", "flyer", "bomber", "armored", "priest", "mender", "herald", "anchor", "wraith", "chimera", "rootbinder",
+      "charger",
+      "ranged",
+      "flyer",
+      "bomber",
+      "armored",
+      "priest",
+      "mender",
+      "herald",
+      "anchor",
+      "wraith",
+      "chimera",
+      "rootbinder",
     ]);
     expect(result.families).toHaveLength(12);
     expect(result.families.filter((family) => family.variants.length === 0)).toHaveLength(7);
     expect(result.families.find((family) => family.id === "rootbinder")?.variants).toEqual([]);
     expect(result.families.find((family) => family.id === "charger")?.variants.map((variant) => variant.id)).toEqual([
-      "bull", "brawler", "stalker", "executioner", "gravedigger", "duelist", "briar-stalker",
+      "bull",
+      "brawler",
+      "stalker",
+      "executioner",
+      "gravedigger",
+      "duelist",
+      "briar-stalker",
     ]);
-    expect(result.families.flatMap((family) => family.variants.map((variant) => variant.id))).not.toEqual(expect.arrayContaining([
-      "rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard",
-    ]));
+    expect(result.families.flatMap((family) => family.variants.map((variant) => variant.id))).not.toEqual(
+      expect.arrayContaining(["rime-runner", "prism-seer", "snowfall-kite", "hailcaster", "glacier-guard"]),
+    );
     expect(JSON.stringify(result)).not.toContain("rimehound");
     expect(result.affixes.map((affix) => affix.id)).toEqual(["tank", "swift", "rapid", "volley", "armed", "warded"]);
     expect(result.presets).toEqual([
@@ -60,28 +77,56 @@ describe("enemy reference catalog", () => {
   });
 
   it("rejects reordered canonical source families, variants, affixes, and presets", () => {
-    expect(() => projectEnemyReference({ enemyFamilies: enemyFamilies.slice().reverse(), enemyAffixes: AFFIXES, enemyPresets: PRESETS })).toThrow(/exact canonical authored order/u);
-    const reorderedVariants = enemyFamilies.map((family) => family.id === "charger" ? { ...family, variants: family.variants.slice().reverse() } : family);
-    expect(() => projectEnemyReference({ enemyFamilies: reorderedVariants, enemyAffixes: AFFIXES, enemyPresets: PRESETS })).toThrow(/exact canonical authored order/u);
-    expect(() => projectEnemyReference({ enemyFamilies, enemyAffixes: AFFIXES.slice().reverse(), enemyPresets: PRESETS })).toThrow(/exact canonical authored order/u);
-    expect(() => projectEnemyReference({ enemyFamilies, enemyAffixes: AFFIXES, enemyPresets: PRESETS.slice().reverse() })).toThrow(/exact canonical authored order/u);
+    expect(() =>
+      projectEnemyReference({
+        enemyFamilies: enemyFamilies.slice().reverse(),
+        enemyAffixes: AFFIXES,
+        enemyPresets: PRESETS,
+      }),
+    ).toThrow(/exact canonical authored order/u);
+    const reorderedVariants = enemyFamilies.map((family) =>
+      family.id === "charger" ? { ...family, variants: family.variants.slice().reverse() } : family,
+    );
+    expect(() =>
+      projectEnemyReference({ enemyFamilies: reorderedVariants, enemyAffixes: AFFIXES, enemyPresets: PRESETS }),
+    ).toThrow(/exact canonical authored order/u);
+    expect(() =>
+      projectEnemyReference({ enemyFamilies, enemyAffixes: AFFIXES.slice().reverse(), enemyPresets: PRESETS }),
+    ).toThrow(/exact canonical authored order/u);
+    expect(() =>
+      projectEnemyReference({ enemyFamilies, enemyAffixes: AFFIXES, enemyPresets: PRESETS.slice().reverse() }),
+    ).toThrow(/exact canonical authored order/u);
   });
 
   it("rejects unsafe or malformed runtime source fields before projection", () => {
-    const badWeight = enemyFamilies.map((family) => family.id === "charger" ? {
-      ...family,
-      variants: family.variants.map((variant, index) => index === 0 ? { ...variant, weight: 0 } : variant),
-    } : family);
-    expect(() => projectEnemyReference({ enemyFamilies: badWeight, enemyAffixes: AFFIXES, enemyPresets: PRESETS })).toThrow(/must be positive/u);
+    const badWeight = enemyFamilies.map((family) =>
+      family.id === "charger"
+        ? {
+            ...family,
+            variants: family.variants.map((variant, index) => (index === 0 ? { ...variant, weight: 0 } : variant)),
+          }
+        : family,
+    );
+    expect(() =>
+      projectEnemyReference({ enemyFamilies: badWeight, enemyAffixes: AFFIXES, enemyPresets: PRESETS }),
+    ).toThrow(/must be positive/u);
 
-    const badGate = enemyFamilies.map((family) => family.id === "charger" ? {
-      ...family,
-      variants: family.variants.map((variant, index) => index === 1 ? { ...variant, minWave: 0 } : variant),
-    } : family);
-    expect(() => projectEnemyReference({ enemyFamilies: badGate, enemyAffixes: AFFIXES, enemyPresets: PRESETS })).toThrow(/must be positive/u);
+    const badGate = enemyFamilies.map((family) =>
+      family.id === "charger"
+        ? {
+            ...family,
+            variants: family.variants.map((variant, index) => (index === 1 ? { ...variant, minWave: 0 } : variant)),
+          }
+        : family,
+    );
+    expect(() =>
+      projectEnemyReference({ enemyFamilies: badGate, enemyAffixes: AFFIXES, enemyPresets: PRESETS }),
+    ).toThrow(/must be positive/u);
 
-    const badColor = AFFIXES.map((affix, index) => index === 0 ? { ...affix, color: "#fff" } : affix);
-    expect(() => projectEnemyReference({ enemyFamilies, enemyAffixes: badColor, enemyPresets: PRESETS })).toThrow(/six-digit hex/u);
+    const badColor = AFFIXES.map((affix, index) => (index === 0 ? { ...affix, color: "#fff" } : affix));
+    expect(() => projectEnemyReference({ enemyFamilies, enemyAffixes: badColor, enemyPresets: PRESETS })).toThrow(
+      /six-digit hex/u,
+    );
   });
 
   it("strictly validates imported keys, ranges, and canonical references", () => {

@@ -4,7 +4,18 @@ import type { WorldRenderContext } from "../../src/presentation/world/contracts"
 import { contrastRatio, darkenToContrast, inkIsLight } from "../../src/presentation/ui-color";
 import { STAGE_IDS, stageDefinition } from "../../src/gameplay/stages";
 
-const authored = { wordmark: 80, display: 52, h1: 40, h2: 30, title: 24, lead: 20, body: 16, label: 15, caption: 14, micro: 13 };
+const authored = {
+  wordmark: 80,
+  display: 52,
+  h1: 40,
+  h2: 30,
+  title: 24,
+  lead: 20,
+  body: 16,
+  label: 15,
+  caption: 14,
+  micro: 13,
+};
 /** A light sky (luminance above one half) keeps the dark ink, where accent labels are darkened. */
 const lightSky = (background: string): boolean => inkIsLight(background);
 const hudContext = (cssPerLogicalPixel: number, type: Record<string, number> = authored) =>
@@ -16,7 +27,8 @@ describe("HUD legibility", () => {
   });
 
   it("lifts the whole HUD ramp in a 1024x768 window so micro reads at the 1280x720 size or larger", () => {
-    const scale = 1024 / 1600, lifted = hudType(hudContext(scale));
+    const scale = 1024 / 1600,
+      lifted = hudType(hudContext(scale));
     expect(lifted.micro * scale).toBeGreaterThanOrEqual(10.4);
     expect(lifted.body).toBeGreaterThan(authored.body);
     expect(lifted.h2).toBeGreaterThan(lifted.lead);
@@ -44,7 +56,10 @@ describe("HUD legibility", () => {
       const stage = stageDefinition(id);
       if (!lightSky(stage.bg)) continue;
       // The sun glow behind the Grounds title measured #fef3e9 in a 1600x900 capture.
-      expect(contrastRatio(darkenToContrast(stage.accent, "#ffffff", 6), "#fef3e9"), `${id} banner label on the sun glow`).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(darkenToContrast(stage.accent, "#ffffff", 6), "#fef3e9"),
+        `${id} banner label on the sun glow`,
+      ).toBeGreaterThanOrEqual(4.5);
     }
   });
 });

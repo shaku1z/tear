@@ -27,7 +27,8 @@ export function setNowPlaying(next: Partial<NowPlaying>): void {
     merged.title === current.title &&
     merged.stationId === current.stationId &&
     merged.tier === current.tier
-  ) return;
+  )
+    return;
   current = merged;
   for (const listener of listeners) listener();
 }

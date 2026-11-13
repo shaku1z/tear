@@ -12,8 +12,12 @@ export function forgeRootbinderNetworkEnvironment(
   context: LiveTearRuntimeEnvironmentContext,
 ): TearLiveRestoreResult {
   const base: TearSdlDocumentV1 = {
-    format: "tearsdl", schemaVersion: 1, id: "verdant-root-network-sever", stateClass: "surgical-valid",
-    seed: "verdant-root-network-sever", start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
+    format: "tearsdl",
+    schemaVersion: 1,
+    id: "verdant-root-network-sever",
+    stateClass: "surgical-valid",
+    seed: "verdant-root-network-sever",
+    start: { mode: "campaign", difficulty: "normal", weapon: "sword" },
   };
   return launchResolvedLiveState(resolveTearSdl(forgeRootbinderNetworkState(base)), environment, snapshots, context);
 }

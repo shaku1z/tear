@@ -13,8 +13,19 @@ import { selectVersion, type MusicCatalogDocument, type MusicContext } from "./c
 import { pickNext, type StationState } from "./station";
 
 export type SlotId =
-  | "shell" | "gameplay" | "boss" | "victory" | "defeat" | "replay"
-  | "the-grounds" | "the-undercroft" | "the-crimson-fields" | "the-verdant-sanctum" | "the-pale-traverse" | "the-voidspire" | "the-tear";
+  | "shell"
+  | "gameplay"
+  | "boss"
+  | "victory"
+  | "defeat"
+  | "replay"
+  | "the-grounds"
+  | "the-undercroft"
+  | "the-crimson-fields"
+  | "the-verdant-sanctum"
+  | "the-pale-traverse"
+  | "the-voidspire"
+  | "the-tear";
 
 export interface WeightedEntry {
   readonly workId: string;
@@ -93,11 +104,7 @@ function poolPick(entries: readonly WeightedEntry[], seed: number): string | nul
 }
 
 /** Turn a slot into a concrete choice, or `canonical` when nothing applies. */
-export function resolveSlot(
-  loadout: AdvancedLoadout,
-  slot: SlotId,
-  options: ResolveOptions,
-): Resolution {
+export function resolveSlot(loadout: AdvancedLoadout, slot: SlotId, options: ResolveOptions): Resolution {
   const policy = effectivePolicy(loadout, slot);
   const { catalog, context, isLoaded } = options;
 
@@ -139,7 +146,13 @@ export function prefersInstrumental(vocals: VocalPolicy, context: MusicContext):
 export function slotForBiome(biomeId: string): SlotId | null {
   const key = biomeId.trim().toLowerCase().replace(/\s+/gu, "-");
   const slots: readonly SlotId[] = [
-    "the-grounds", "the-undercroft", "the-crimson-fields", "the-verdant-sanctum", "the-pale-traverse", "the-voidspire", "the-tear",
+    "the-grounds",
+    "the-undercroft",
+    "the-crimson-fields",
+    "the-verdant-sanctum",
+    "the-pale-traverse",
+    "the-voidspire",
+    "the-tear",
   ];
   return slots.find((s) => s === key) ?? null;
 }

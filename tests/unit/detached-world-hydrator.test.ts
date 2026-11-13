@@ -101,32 +101,38 @@ function completeCodecWorld(): TearCodecWorld {
     identityState: { nextEntityId: 6, nextWallSequence: 2, nextSlowZoneSequence: 3, claimedIds: ["enemy-echo"] },
     runtime: { cameraTarget: ref("player"), danger: { source: ref("enemy-echo") } },
   });
-  components.set("tear.enemy.v1", [{
-    id: "enemy-charger",
-    factoryId: "charger",
-    x: 100,
-    y: 200,
-    target: ref("player"),
-    partner: ref("enemy-echo"),
-  }]);
-  components.set("tear.boss.v1", [{
-    id: "enemy-echo",
-    factoryId: "echo",
-    x: 300,
-    y: 400,
-    target: ref("player"),
-    partner: ref("enemy-charger"),
-  }]);
-  components.set("tear.projectile.v1", [{
-    id: "projectile-1",
-    factoryId: "projectile",
-    x: 250,
-    y: 300,
-    vx: -4,
-    vy: 2,
-    owner: ref("enemy-echo"),
-    target: ref("player"),
-  }]);
+  components.set("tear.enemy.v1", [
+    {
+      id: "enemy-charger",
+      factoryId: "charger",
+      x: 100,
+      y: 200,
+      target: ref("player"),
+      partner: ref("enemy-echo"),
+    },
+  ]);
+  components.set("tear.boss.v1", [
+    {
+      id: "enemy-echo",
+      factoryId: "echo",
+      x: 300,
+      y: 400,
+      target: ref("player"),
+      partner: ref("enemy-charger"),
+    },
+  ]);
+  components.set("tear.projectile.v1", [
+    {
+      id: "projectile-1",
+      factoryId: "projectile",
+      x: 250,
+      y: 300,
+      vx: -4,
+      vy: 2,
+      owner: ref("enemy-echo"),
+      target: ref("player"),
+    },
+  ]);
   components.set("tear.platform.v1", [{ platformId: "platform-1", rider: ref("player"), x: 0, y: 500 }]);
   components.set("tear.hazard.v1", {
     slowZones: [{ target: ref("enemy-charger"), strength: 0.5 }],
@@ -144,28 +150,28 @@ function completeCodecWorld(): TearCodecWorld {
   };
 }
 
-function constructionPort(calls: EnemyConstruction[]): TearWorldConstructionPort<
-  FakeRun,
-  FakePlayer,
-  FakeBlade,
-  FakeEnemy,
-  FakeProjectile,
-  FakeReward
-> {
+function constructionPort(
+  calls: EnemyConstruction[],
+): TearWorldConstructionPort<FakeRun, FakePlayer, FakeBlade, FakeEnemy, FakeProjectile, FakeReward> {
   return {
     createPlayer: (x, y) => ({ kind: "player", x, y }),
     createBlade: () => ({ kind: "blade" }),
     createEnemy(factoryId, x, y, run) {
       calls.push({ factoryId, x, y, run });
       switch (factoryId) {
-        case "charger": return { kind: "charger", x, y, constructedRun: run };
-        case "echo": return { kind: "echo", x, y, constructedRun: run };
-        default: throw new RangeError(`unknown enemy factory: ${factoryId}`);
+        case "charger":
+          return { kind: "charger", x, y, constructedRun: run };
+        case "echo":
+          return { kind: "echo", x, y, constructedRun: run };
+        default:
+          throw new RangeError(`unknown enemy factory: ${factoryId}`);
       }
     },
     createProjectile: (x, y, vx, vy) => ({ kind: "projectile", x, y, vx, vy }),
     hydrateReward: (payload) => ({ payload: structuredClone(payload) }),
-    finalizeEnemy: (_factoryId, enemy, run) => { enemy.constructedRun = run; },
+    finalizeEnemy: (_factoryId, enemy, run) => {
+      enemy.constructedRun = run;
+    },
   };
 }
 
@@ -191,44 +197,80 @@ function objectValue(value: unknown, message: string): Record<string, unknown> {
 
 describe("detached Tear codec world hydrator", () => {
   it("retains detached particles and historical absence without consulting an outgoing FX owner", () => {
-    const source = completeCodecWorld(), effects = { highBudget: 3, lowBudget: 1, cullMargin: 180 };
-    const fx = createParticleSystem({ effects, lowGraphics: () => false, reducedMotion: () => false, random: () => 0.5 });
+    const source = completeCodecWorld(),
+      effects = { highBudget: 3, lowBudget: 1, cullMargin: 180 };
+    const fx = createParticleSystem({
+      effects,
+      lowGraphics: () => false,
+      reducedMotion: () => false,
+      random: () => 0.5,
+    });
     fx.spark(1, 2, 1, 0);
-    const saved = createLiveParticlePresentationState(fx, () => ({ effects, lowGraphics: false, reducedMotion: false }), createCosmeticEmissionRandom()).capture();
-    source.components.set("tear.ui.v1", JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", particlesPresentation: saved })) as TearCodecValue);
+    const saved = createLiveParticlePresentationState(
+      fx,
+      () => ({ effects, lowGraphics: false, reducedMotion: false }),
+      createCosmeticEmissionRandom(),
+    ).capture();
+    source.components.set(
+      "tear.ui.v1",
+      JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", particlesPresentation: saved })) as TearCodecValue,
+    );
     const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
-    fx.update(0.01); source.components.set("tear.ui.v1", { screen: "menu", focusId: "0" });
+    fx.update(0.01);
+    source.components.set("tear.ui.v1", { screen: "menu", focusId: "0" });
     expect(staged.particlesPresentation).toEqual(saved);
-    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).particlesPresentation).toBeUndefined();
-    const legacy = { version: 1, list: saved.list, view: saved.view, replacementCursor: saved.replacementCursor, policy: saved.policy };
-    source.components.set("tear.ui.v1", JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", particlesPresentation: legacy })) as TearCodecValue);
-    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).particlesPresentation).toEqual(legacy);
+    expect(
+      hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).particlesPresentation,
+    ).toBeUndefined();
+    const legacy = {
+      version: 1,
+      list: saved.list,
+      view: saved.view,
+      replacementCursor: saved.replacementCursor,
+      policy: saved.policy,
+    };
+    source.components.set(
+      "tear.ui.v1",
+      JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", particlesPresentation: legacy })) as TearCodecValue,
+    );
+    expect(
+      hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).particlesPresentation,
+    ).toEqual(legacy);
   });
   it("retains a detached JSON HUD checkpoint without consulting outgoing UI", () => {
     const source = completeCodecWorld();
     const hud = { version: 1, clockSeconds: 3.125, lagHp: 0.8, multiplier: 2, multiplierPop: 0.5 };
-    source.components.set("tear.ui.v1", JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", hudPresentation: hud })) as { screen: string; focusId: string; hudPresentation: typeof hud });
+    source.components.set(
+      "tear.ui.v1",
+      JSON.parse(JSON.stringify({ screen: "playing", focusId: "7", hudPresentation: hud })) as {
+        screen: string;
+        focusId: string;
+        hudPresentation: typeof hud;
+      },
+    );
     const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
     source.components.set("tear.ui.v1", { screen: "menu", focusId: "0" });
     expect(staged.hudPresentation).toEqual(hud);
-    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).hudPresentation).toBeUndefined();
+    expect(
+      hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).hudPresentation,
+    ).toBeUndefined();
   });
 
   it("retains exact fractional seconds and historical absence separately from ticks", () => {
     const source = completeCodecWorld();
-    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds).toBeUndefined();
+    expect(
+      hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds,
+    ).toBeUndefined();
     const world = objectValue(source.components.get("tear.world.v1"), "world is missing");
     source.components.set("tear.world.v1", { ...world, simulationSeconds: 0.173456789 });
-    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds).toBe(0.173456789);
+    expect(hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context).simulationSeconds).toBe(
+      0.173456789,
+    );
   });
   it("restores stable references and dispatches each factory with the decoded Echo run", () => {
     const calls: EnemyConstruction[] = [];
     const identity = hydrationContext();
-    const staged = hydrateTearCodecWorld(
-      constructionPort(calls),
-      completeCodecWorld(),
-      identity.context,
-    );
+    const staged = hydrateTearCodecWorld(constructionPort(calls), completeCodecWorld(), identity.context);
     const charger = staged.enemies.find((enemy) => enemy.kind === "charger");
     const echo = staged.enemies.find((enemy) => enemy.kind === "echo");
     const projectile = staged.projectiles[0];
@@ -259,7 +301,11 @@ describe("detached Tear codec world hydrator", () => {
     expect(objectValue(staged.walls[0], "wall is missing").owner).toBe(echo);
     expect(staged.runtime.cameraTarget).toBe(staged.player);
     expect(objectValue(staged.ghost, "ghost is missing").recording).toEqual({ target: echo });
-    expect(staged.identityBindings.map((binding) => binding.id)).toEqual(["enemy-charger", "enemy-echo", "projectile-1"]);
+    expect(staged.identityBindings.map((binding) => binding.id)).toEqual([
+      "enemy-charger",
+      "enemy-echo",
+      "projectile-1",
+    ]);
   });
 
   it("hydrates fresh data graphs without mutating or sharing source codec values", () => {
@@ -281,8 +327,10 @@ describe("detached Tear codec world hydrator", () => {
 
     expect(objectValue(second.player.mutable, "second player mutable data is missing").shield).toBe(3);
     expect(second.run.mods.echoMultiplier).toBe(2);
-    expect(objectValue(objectValue(second.configuration, "second configuration is missing").values, "gravity is missing").gravity)
-      .toBe(1);
+    expect(
+      objectValue(objectValue(second.configuration, "second configuration is missing").values, "gravity is missing")
+        .gravity,
+    ).toBe(1);
     expect([...source.components.entries()]).toEqual(before);
   });
 
@@ -314,11 +362,13 @@ describe("detached Tear codec world hydrator", () => {
     if (!Array.isArray(enemies)) throw new Error("enemy fixture is missing");
     const firstEnemy = (enemies as readonly TearCodecValue[])[0];
     if (firstEnemy === undefined) throw new Error("enemy fixture has no actor");
-    source.components.set("tear.enemy.v1", [{
-      ...objectValue(firstEnemy, "enemy fixture is malformed"),
-      variantId: "briar-stalker",
-      behavior: "briar-stalker",
-    }]);
+    source.components.set("tear.enemy.v1", [
+      {
+        ...objectValue(firstEnemy, "enemy fixture is malformed"),
+        variantId: "briar-stalker",
+        behavior: "briar-stalker",
+      },
+    ]);
 
     const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
 
@@ -332,11 +382,13 @@ describe("detached Tear codec world hydrator", () => {
     if (!Array.isArray(enemies)) throw new Error("enemy fixture is missing");
     const firstEnemy = (enemies as readonly TearCodecValue[])[0];
     if (firstEnemy === undefined) throw new Error("enemy fixture has no actor");
-    source.components.set("tear.enemy.v1", [{
-      ...objectValue(firstEnemy, "enemy fixture is malformed"),
-      variantId: "rime-runner",
-      behavior: "rime-runner",
-    }]);
+    source.components.set("tear.enemy.v1", [
+      {
+        ...objectValue(firstEnemy, "enemy fixture is malformed"),
+        variantId: "rime-runner",
+        behavior: "rime-runner",
+      },
+    ]);
 
     const staged = hydrateTearCodecWorld(constructionPort([]), source, hydrationContext().context);
 
@@ -350,9 +402,12 @@ describe("detached Tear codec world hydrator", () => {
     if (!Array.isArray(enemies)) throw new Error("enemy fixture is missing");
     const firstEnemy = (enemies as readonly TearCodecValue[])[0];
     if (firstEnemy === undefined) throw new Error("enemy fixture has no actor");
-    hostile.components.set("tear.enemy.v1", [{ ...objectValue(firstEnemy, "enemy fixture is malformed"), factoryId: "unknown" }]);
+    hostile.components.set("tear.enemy.v1", [
+      { ...objectValue(firstEnemy, "enemy fixture is malformed"), factoryId: "unknown" },
+    ]);
 
-    expect(() => hydrateTearCodecWorld(constructionPort([]), hostile, hydrationContext().context))
-      .toThrow(/unknown enemy factory: unknown/);
+    expect(() => hydrateTearCodecWorld(constructionPort([]), hostile, hydrationContext().context)).toThrow(
+      /unknown enemy factory: unknown/,
+    );
   });
 });

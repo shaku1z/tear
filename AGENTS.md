@@ -17,7 +17,8 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
   (`config/architecture-roles.json`), allowed directory edges
   (`config/architecture-layers.json`), a ratcheted allowlist of today's
   violating edges and import cycles (`config/architecture-baseline.json`) and a
-  700-line limit per module (two data tables are exempt).
+  700-line limit per module (two data tables are exempt), counted in
+  formatting-independent line equivalents (the code budget's character measure).
 - `src/agents/` (AI player research) and `src/tearbench/` (TearBench, the
   verification system) are tooling, not game features. `src/ghost/` mixes the
   player's replay system with unfinished replay features.
@@ -40,8 +41,8 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
 4. Add the smallest permanent test or scenario that fails without your change.
 5. If you changed a file covered by the tutorial reference fingerprint, refresh
    it before any build (see "Known traps").
-6. `pnpm typecheck` (about 2 minutes), then `pnpm check:quick` before handing
-   off when the change crosses modules.
+6. `pnpm format` (Prettier), `pnpm typecheck` (about 2 minutes), then
+   `pnpm check:quick` before handing off when the change crosses modules.
 
 ## Inner loop: UI change
 
@@ -96,7 +97,12 @@ while iterating; `pnpm check:quick` for cheap static confidence;
 `pnpm check:functional` is what CI requires on every pull request;
 `pnpm check` is the full release gate and runs once for a release candidate
 ([docs/RELEASE_AUTHORITY.md](docs/RELEASE_AUTHORITY.md)). Never weaken a gate to
-make it pass. `pnpm check:code-budget` ratchets file size, line length, packed lines
+make it pass. Prettier owns formatting: run `pnpm format` before handing off;
+`pnpm format:check` is in `check:quick` and CI (`static.format-check`). Settings
+are in `.prettierrc.json`, targets in `scripts/format.mjs` and exclusions (JSON
+data, Markdown, generated files) in `.prettierignore`; ESLint has no formatting
+rules. Do not widen `.prettierignore` or add `// prettier-ignore` to pass the
+check. `pnpm check:code-budget` ratchets file size, line length, packed lines
 and function size (see docs/ARCHITECTURE.md); never raise its baseline to pass.
 `pnpm check:architecture` fails closed: moving or renaming a module that the role
 map names fails until the map is updated in the same change, and the layer
@@ -148,7 +154,11 @@ Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
   phases, tutorial runtime and controller, and others) and of every module they
   import for values. Comments, whitespace, line breaks and import paths do not
   count, so moving, renaming or reformatting those files is safe; changing their
-  code makes builds fail with "Tutorial gold references are stale". Moving a
+  code makes builds fail with "Tutorial gold references are stale". One
+  exception: Prettier drops redundant parentheses in same-operator chains
+  (`a ?? (b ?? c)` becomes `a ?? b ?? c`), which regroups the syntax tree, so
+  the first `pnpm format` after writing such code needs a refresh; the gold
+  output itself does not change. Moving a
   root file also needs its new path in `TUTORIAL_GOLD_ROOTS`. Regenerate, then
   commit every file it rewrites: always
   `src/gameplay/training/tutorial-gold-binding.json`, and also

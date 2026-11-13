@@ -17,7 +17,9 @@ export function installLegacyAudioLifecycle(
   documentLike: Document = document,
 ): LegacyAudioLifecycle {
   const visibilityTransitions = { hidden: 0, visible: 0 };
-  const start = () => { options.resume(); };
+  const start = () => {
+    options.resume();
+  };
   const visibility = () => {
     if (documentLike.hidden) visibilityTransitions.hidden++;
     else visibilityTransitions.visible++;

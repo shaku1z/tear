@@ -32,7 +32,8 @@ function fullSha(value, label) {
 
 function positiveInteger(value, label) {
   const normalized = typeof value === "number" && Number.isSafeInteger(value) ? String(value) : value;
-  if (typeof normalized !== "string" || !POSITIVE_INTEGER.test(normalized)) fail(`${label} must be a canonical positive integer`);
+  if (typeof normalized !== "string" || !POSITIVE_INTEGER.test(normalized))
+    fail(`${label} must be a canonical positive integer`);
   return normalized;
 }
 
@@ -98,20 +99,39 @@ export function validatePublishedArtifact(artifact, { sourceSha, validationRunId
   if (artifact.expired !== false) fail("published artifact is expired");
   const expiresAt = Date.parse(artifact.expires_at ?? "");
   if (!Number.isFinite(expiresAt) || expiresAt <= now) fail("published artifact has expired or no future expiry");
-  if (!Number.isSafeInteger(artifact.size_in_bytes) || artifact.size_in_bytes <= 0 || artifact.size_in_bytes > MAX_ZIP_BYTES) {
+  if (
+    !Number.isSafeInteger(artifact.size_in_bytes) ||
+    artifact.size_in_bytes <= 0 ||
+    artifact.size_in_bytes > MAX_ZIP_BYTES
+  ) {
     fail("published artifact size is outside the bounded reference contract");
   }
-  if (typeof artifact.digest !== "string" || !ARTIFACT_DIGEST.test(artifact.digest)) fail("published artifact digest is not a SHA-256 digest");
+  if (typeof artifact.digest !== "string" || !ARTIFACT_DIGEST.test(artifact.digest))
+    fail("published artifact digest is not a SHA-256 digest");
   const workflowRun = artifact.workflow_run;
-  if (!isRecord(workflowRun) || positiveInteger(workflowRun.id, "artifact workflow run ID") !== runId || workflowRun.head_branch !== "main" || workflowRun.head_sha !== expectedSha) {
+  if (
+    !isRecord(workflowRun) ||
+    positiveInteger(workflowRun.id, "artifact workflow run ID") !== runId ||
+    workflowRun.head_branch !== "main" ||
+    workflowRun.head_sha !== expectedSha
+  ) {
     fail("published artifact workflow provenance does not match the validated run");
   }
-  return { artifactId, artifactName: artifact.name, artifactDigest: artifact.digest, artifactSize: artifact.size_in_bytes };
+  return {
+    artifactId,
+    artifactName: artifact.name,
+    artifactDigest: artifact.digest,
+    artifactSize: artifact.size_in_bytes,
+  };
 }
 
 async function selectPublishedArtifact({ sourceSha, validationRunId, accessToken, fetchImpl }) {
   const runId = positiveInteger(validationRunId, "validation run ID");
-  const listing = await requestGitHubJson(`/repos/${GAME_REPOSITORY}/actions/runs/${runId}/artifacts?per_page=100`, accessToken, fetchImpl);
+  const listing = await requestGitHubJson(
+    `/repos/${GAME_REPOSITORY}/actions/runs/${runId}/artifacts?per_page=100`,
+    accessToken,
+    fetchImpl,
+  );
   if (!isRecord(listing) || !Array.isArray(listing.artifacts)) fail("artifact listing is invalid");
   const totalCount = positiveInteger(listing.total_count, "artifact listing total_count");
   if (Number(totalCount) !== listing.artifacts.length) fail("artifact listing is incomplete or paginated");
@@ -127,14 +147,29 @@ async function downloadPublishedArtifact({ artifactId, accessToken, fetchImpl })
     headers: authorizationHeaders(accessToken),
     redirect: "manual",
   });
-  if (![301, 302, 303, 307, 308].includes(response?.status)) fail("artifact download did not return the approved redirect");
+  if (![301, 302, 303, 307, 308].includes(response?.status))
+    fail("artifact download did not return the approved redirect");
   const location = response.headers?.get?.("location");
   if (typeof location !== "string" || location.length === 0) fail("artifact download redirect has no location");
   let redirectUrl;
-  try { redirectUrl = new URL(location); } catch (error) { fail(`artifact download redirect is invalid: ${error.message}`); }
+  try {
+    redirectUrl = new URL(location);
+  } catch (error) {
+    fail(`artifact download redirect is invalid: ${error.message}`);
+  }
   const hostname = redirectUrl.hostname.toLowerCase();
-  const approvedHost = hostname.endsWith(".blob.core.windows.net") || hostname === "pipelines.actions.githubusercontent.com" || hostname.endsWith(".actions.githubusercontent.com");
-  if (redirectUrl.protocol !== "https:" || redirectUrl.username !== "" || redirectUrl.password !== "" || redirectUrl.port !== "" || redirectUrl.hash !== "" || !approvedHost) {
+  const approvedHost =
+    hostname.endsWith(".blob.core.windows.net") ||
+    hostname === "pipelines.actions.githubusercontent.com" ||
+    hostname.endsWith(".actions.githubusercontent.com");
+  if (
+    redirectUrl.protocol !== "https:" ||
+    redirectUrl.username !== "" ||
+    redirectUrl.password !== "" ||
+    redirectUrl.port !== "" ||
+    redirectUrl.hash !== "" ||
+    !approvedHost
+  ) {
     fail("artifact download redirect is not an approved storage host");
   }
   const blobResponse = await fetchImpl(redirectUrl.toString(), { redirect: "error" });
@@ -156,13 +191,18 @@ async function downloadPublishedArtifact({ artifactId, accessToken, fetchImpl })
     return Buffer.concat(chunks);
   }
   let bytes;
-  try { bytes = Buffer.from(await blobResponse.arrayBuffer()); } catch (error) { fail(`artifact blob response is unreadable: ${error.message}`); }
+  try {
+    bytes = Buffer.from(await blobResponse.arrayBuffer());
+  } catch (error) {
+    fail(`artifact blob response is unreadable: ${error.message}`);
+  }
   if (bytes.length > MAX_ZIP_BYTES) fail("downloaded artifact exceeds the bounded reference contract");
   return bytes;
 }
 
 function verifyArtifactBytes(bytes, { artifactDigest, artifactSize }) {
-  if (!Buffer.isBuffer(bytes) || bytes.length !== artifactSize) fail("downloaded artifact size does not match published metadata");
+  if (!Buffer.isBuffer(bytes) || bytes.length !== artifactSize)
+    fail("downloaded artifact size does not match published metadata");
   if (bytes.length > MAX_ZIP_BYTES) fail("downloaded artifact exceeds the bounded reference contract");
   const actualDigest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
   if (actualDigest !== artifactDigest) fail("downloaded artifact digest does not match published metadata");
@@ -173,9 +213,15 @@ function buildDispatchBody({ sourceSha, validationRunId, artifactId, bytes }) {
   const artifactZipBase64 = bytes.toString("base64");
   const body = JSON.stringify({
     event_type: DISPATCH_EVENT_TYPE,
-    client_payload: { game_commit: sourceSha, validation_run_id: validationRunId, artifact_id: String(artifactId), artifact_zip_base64: artifactZipBase64 },
+    client_payload: {
+      game_commit: sourceSha,
+      validation_run_id: validationRunId,
+      artifact_id: String(artifactId),
+      artifact_zip_base64: artifactZipBase64,
+    },
   });
-  if (Buffer.byteLength(body, "utf8") >= MAX_DISPATCH_BODY_BYTES) fail("repository dispatch payload exceeds the bounded GitHub limit");
+  if (Buffer.byteLength(body, "utf8") >= MAX_DISPATCH_BODY_BYTES)
+    fail("repository dispatch payload exceeds the bounded GitHub limit");
   return body;
 }
 
@@ -189,19 +235,41 @@ async function dispatchToWiki({ body, accessToken, fetchImpl }) {
   if (!response || response.status !== 204 || response.ok === false) fail("wiki repository dispatch failed");
 }
 
-export async function dispatchWikiReference({ validationRunId, expectedSha, githubToken, wikiDeployToken, fetchImpl = globalThis.fetch, now = Date.now() }) {
+export async function dispatchWikiReference({
+  validationRunId,
+  expectedSha,
+  githubToken,
+  wikiDeployToken,
+  fetchImpl = globalThis.fetch,
+  now = Date.now(),
+}) {
   if (typeof fetchImpl !== "function") fail("fetch implementation is unavailable");
   const requestedRunId = positiveInteger(validationRunId, "validation run ID");
   const gameToken = token(githubToken, "GITHUB_TOKEN");
   const wikiToken = token(wikiDeployToken, "WIKI_DEPLOY_TOKEN");
   const run = await requestGitHubJson(`/repos/${GAME_REPOSITORY}/actions/runs/${requestedRunId}`, gameToken, fetchImpl);
   const { runId, sourceSha } = validateValidateRun(run, { validationRunId: requestedRunId, expectedSha });
-  const selected = await selectPublishedArtifact({ sourceSha, validationRunId: runId, accessToken: gameToken, fetchImpl });
+  const selected = await selectPublishedArtifact({
+    sourceSha,
+    validationRunId: runId,
+    accessToken: gameToken,
+    fetchImpl,
+  });
   const artifact = validatePublishedArtifact(selected.artifact, { sourceSha, validationRunId: runId, now });
-  const bytes = verifyArtifactBytes(await downloadPublishedArtifact({ artifactId: artifact.artifactId, accessToken: gameToken, fetchImpl }), artifact);
+  const bytes = verifyArtifactBytes(
+    await downloadPublishedArtifact({ artifactId: artifact.artifactId, accessToken: gameToken, fetchImpl }),
+    artifact,
+  );
   const body = buildDispatchBody({ sourceSha, validationRunId: runId, artifactId: artifact.artifactId, bytes });
   await dispatchToWiki({ body, accessToken: wikiToken, fetchImpl });
-  return { sourceSha, validationRunId: runId, artifactId: artifact.artifactId, artifactName: artifact.artifactName, artifactDigest: artifact.artifactDigest, artifactSize: bytes.length };
+  return {
+    sourceSha,
+    validationRunId: runId,
+    artifactId: artifact.artifactId,
+    artifactName: artifact.artifactName,
+    artifactDigest: artifact.artifactDigest,
+    artifactSize: bytes.length,
+  };
 }
 
 function parseArgs(argv) {
@@ -210,7 +278,8 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];
     const value = argv[index + 1];
-    if ((flag !== "--validation-run-id" && flag !== "--expected-sha") || value === undefined) fail("CLI accepts only --validation-run-id and --expected-sha pairs");
+    if ((flag !== "--validation-run-id" && flag !== "--expected-sha") || value === undefined)
+      fail("CLI accepts only --validation-run-id and --expected-sha pairs");
     if (seen.has(flag)) fail(`duplicate CLI argument ${flag}`);
     seen.add(flag);
     if (flag === "--validation-run-id") values.validationRunId = value;
@@ -228,7 +297,9 @@ async function main() {
     githubToken: process.env.GITHUB_TOKEN,
     wikiDeployToken: process.env.WIKI_DEPLOY_TOKEN,
   });
-  console.log(`Dispatched ${DISPATCH_EVENT_TYPE} for game ${result.sourceSha}, validation run ${result.validationRunId}, artifact ${result.artifactId}.`);
+  console.log(
+    `Dispatched ${DISPATCH_EVENT_TYPE} for game ${result.sourceSha}, validation run ${result.validationRunId}, artifact ${result.artifactId}.`,
+  );
 }
 
 if (process.argv[1]?.endsWith("dispatch-wiki-reference.mjs")) {

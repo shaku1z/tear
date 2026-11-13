@@ -6,18 +6,10 @@ import type {
   RoutingScene,
 } from "./music-routing-types";
 
-const SCENES: ReadonlySet<RoutingScene> = new Set([
-  "gameplay",
-  "boss",
-  "menu",
-  "victory",
-  "defeat",
-  "replay",
-]);
+const SCENES: ReadonlySet<RoutingScene> = new Set(["gameplay", "boss", "menu", "victory", "defeat", "replay"]);
 
 function object(value: unknown, name: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error(`${name} must be an object`);
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${name} must be an object`);
   return value as Record<string, unknown>;
 }
 
@@ -28,8 +20,7 @@ function text(value: unknown, name: string): string {
 
 function scene(value: unknown): RoutingScene {
   const parsed = text(value, "routing match scene");
-  if (!(SCENES as ReadonlySet<string>).has(parsed))
-    throw new Error(`routing rule has an unknown scene: ${parsed}`);
+  if (!(SCENES as ReadonlySet<string>).has(parsed)) throw new Error(`routing rule has an unknown scene: ${parsed}`);
   return parsed as RoutingScene;
 }
 

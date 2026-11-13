@@ -4,12 +4,32 @@
  * silently substitute an actor when a snapshot or caller names an unknown ID.
  */
 export const TEAR_WORLD_ENTITY_FACTORY_IDS = Object.freeze([
-  "charger", "ranged", "flyer", "bomber", "armored", "wraith", "chimera",
-  "warden", "colossus", "aldric", "rootbound", "white-hart", "echo", "source", "void-wisp", "reflection",
-  "priest", "herald", "mender", "anchor", "rootbinder", "rimehound", "boss",
+  "charger",
+  "ranged",
+  "flyer",
+  "bomber",
+  "armored",
+  "wraith",
+  "chimera",
+  "warden",
+  "colossus",
+  "aldric",
+  "rootbound",
+  "white-hart",
+  "echo",
+  "source",
+  "void-wisp",
+  "reflection",
+  "priest",
+  "herald",
+  "mender",
+  "anchor",
+  "rootbinder",
+  "rimehound",
+  "boss",
 ] as const);
 
-export type TearWorldEntityFactoryId = typeof TEAR_WORLD_ENTITY_FACTORY_IDS[number];
+export type TearWorldEntityFactoryId = (typeof TEAR_WORLD_ENTITY_FACTORY_IDS)[number];
 
 export interface TearWorldEnemyFactory<Run, Enemy extends object> {
   create(x: number, y: number, run: Run): Enemy;
@@ -40,10 +60,7 @@ export interface TearWorldEntityConstructionOptions<
 > {
   readonly createPlayer: (x: number, y: number) => Player;
   readonly createBlade: () => Blade;
-  readonly enemyFactories: Readonly<Partial<Record<
-    TearWorldEntityFactoryId,
-    TearWorldEnemyFactory<Run, Enemy>
-  >>>;
+  readonly enemyFactories: Readonly<Partial<Record<TearWorldEntityFactoryId, TearWorldEnemyFactory<Run, Enemy>>>>;
   readonly createProjectile: (x: number, y: number, vx: number, vy: number) => Projectile;
   readonly finalizeEnemy?: (factoryId: string, enemy: Enemy, run: Run) => void;
 }

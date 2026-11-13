@@ -1,6 +1,9 @@
 import type { TearScenarioV1 } from "../tearbench/contracts";
 import { validateProductionHeadlessScenario } from "../tearbench/production-headless-environment";
-import { validateTrainingArchiveV3CandidateTrainingRequest, type TrainingArchiveV3CandidateTrainingRequest } from "./training-archive-v3-candidate-training";
+import {
+  validateTrainingArchiveV3CandidateTrainingRequest,
+  type TrainingArchiveV3CandidateTrainingRequest,
+} from "./training-archive-v3-candidate-training";
 import { requireTearFoundryEvaluationProtocol, type TearFoundryJobV1 } from "./foundry-job-state";
 
 function units(value: number): number {
@@ -14,14 +17,26 @@ function units(value: number): number {
  */
 export function trainingOperationsTrainingComputeUnits(request: TrainingArchiveV3CandidateTrainingRequest): number {
   validateTrainingArchiveV3CandidateTrainingRequest(request);
-  const ticks = request.online.scenarios.reduce((total, scenario) => units(total + Math.min(scenario.maxTicks, request.online.config.maxTicks)), 0);
+  const ticks = request.online.scenarios.reduce(
+    (total, scenario) => units(total + Math.min(scenario.maxTicks, request.online.config.maxTicks)),
+    0,
+  );
   const offlineUpdates = units(request.offline.config.epochs * request.reward.limits.maxTransitions);
   return units(offlineUpdates + Math.min(ticks, request.online.config.maxUpdates) + units(2 * ticks));
 }
 
 /** Both artifacts run each held-out case under the frozen per-case tick cap. */
-export function trainingOperationsEvaluationComputeUnits(job: TearFoundryJobV1, cases: readonly TearScenarioV1[]): number {
+export function trainingOperationsEvaluationComputeUnits(
+  job: TearFoundryJobV1,
+  cases: readonly TearScenarioV1[],
+): number {
   const protocol = requireTearFoundryEvaluationProtocol(job);
   for (const scenario of cases) validateProductionHeadlessScenario(scenario);
-  return units(2 * cases.reduce((total, scenario) => units(total + Math.min(scenario.maxTicks, protocol.thresholds.maxTicksPerCase)), 0));
+  return units(
+    2 *
+      cases.reduce(
+        (total, scenario) => units(total + Math.min(scenario.maxTicks, protocol.thresholds.maxTicksPerCase)),
+        0,
+      ),
+  );
 }

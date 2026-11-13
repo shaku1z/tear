@@ -114,10 +114,7 @@ const DEFAULT_TOLERANCES = Object.freeze({
   "blade.tension": 0.04,
 });
 
-const COMPARISON_PATHS = [
-  ...STRICT_PATHS,
-  ...Object.keys(DEFAULT_TOLERANCES),
-];
+const COMPARISON_PATHS = [...STRICT_PATHS, ...Object.keys(DEFAULT_TOLERANCES)];
 
 function valueAt(value, dottedPath) {
   return dottedPath.split(".").reduce((current, key) => current?.[key], value);
@@ -157,11 +154,14 @@ export function compareParityTraces(oracleTrace, currentTrace, options = {}) {
     }
     const requiresTickAlignment = oracle.screen === "playing" || current.screen === "playing";
     for (const field of comparisonPaths) {
-      if (!STRICT_PATHS.has(field)
-        && requiresTickAlignment
-        && Number.isFinite(oracle.simulationTick)
-        && Number.isFinite(current.simulationTick)
-        && oracle.simulationTick !== current.simulationTick) continue;
+      if (
+        !STRICT_PATHS.has(field) &&
+        requiresTickAlignment &&
+        Number.isFinite(oracle.simulationTick) &&
+        Number.isFinite(current.simulationTick) &&
+        oracle.simulationTick !== current.simulationTick
+      )
+        continue;
       const oracleValue = valueAt(oracle, field);
       const currentValue = valueAt(current, field);
       if (oracleValue == null && currentValue == null) continue;
@@ -180,9 +180,12 @@ export function compareParityTraces(oracleTrace, currentTrace, options = {}) {
         });
       }
     }
-    if (requiresTickAlignment
-      && Number.isFinite(oracle.simulationTick) && Number.isFinite(current.simulationTick)
-      && oracle.simulationTick !== current.simulationTick) {
+    if (
+      requiresTickAlignment &&
+      Number.isFinite(oracle.simulationTick) &&
+      Number.isFinite(current.simulationTick) &&
+      oracle.simulationTick !== current.simulationTick
+    ) {
       const alignment = {
         checkpointIndex: index,
         label: oracle.label,
@@ -225,8 +228,7 @@ function printUsage() {
   console.error("Usage: node scripts/parity-diff.mjs <oracle-trace.json> <current-trace.json> [report.json]");
 }
 
-const isEntryPoint = process.argv[1]
-  && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const isEntryPoint = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isEntryPoint) {
   const [, , oracleFile, currentFile, reportFile] = process.argv;

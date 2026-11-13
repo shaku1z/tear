@@ -76,14 +76,20 @@ export function resolveProjectedSupportAuras(
   if (!Number.isFinite(dt) || dt < 0) throw new RangeError("dt must be finite and non-negative");
   const actors = projectedActors as WorkingActor[];
   for (const actor of actors) {
-    actor.auraDR = 1; actor.auraDmg = 1; actor.auraSpeed = 1; actor.auraHaste = 1;
-    actor.tetherDR = 1; actor.anchored = false;
+    actor.auraDR = 1;
+    actor.auraDmg = 1;
+    actor.auraSpeed = 1;
+    actor.auraHaste = 1;
+    actor.tetherDR = 1;
+    actor.anchored = false;
     const existingBuffs: unknown = Reflect.get(actor, "buffs");
-    const buffs = Array.isArray(existingBuffs) ? existingBuffs as SupportType[] : [];
-    buffs.length = 0; actor.buffs = buffs;
+    const buffs = Array.isArray(existingBuffs) ? (existingBuffs as SupportType[]) : [];
+    buffs.length = 0;
+    actor.buffs = buffs;
     const existingLinks: unknown = Reflect.get(actor, "links");
-    const links = Array.isArray(existingLinks) ? existingLinks as EntityId[] : [];
-    links.length = 0; actor.links = links;
+    const links = Array.isArray(existingLinks) ? (existingLinks as EntityId[]) : [];
+    links.length = 0;
+    actor.links = links;
   }
   return resolveWorkingActors(actors, dt, tuning, anchorFxColor, workspace);
 }
@@ -95,11 +101,14 @@ function resolveWorkingActors(
   anchorFxColor: string,
   workspace?: ProjectedSupportWorkspace,
 ): SupportResolution {
-  const byId = workspace?.byId ?? new Map<EntityId, number>(); byId.clear();
+  const byId = workspace?.byId ?? new Map<EntityId, number>();
+  byId.clear();
   for (let index = 0; index < actors.length; index += 1) {
-    const actor = actors[index]; if (actor !== undefined) byId.set(actor.id, index);
+    const actor = actors[index];
+    if (actor !== undefined) byId.set(actor.id, index);
   }
-  const intents = workspace?.intents ?? []; intents.length = 0;
+  const intents = workspace?.intents ?? [];
+  intents.length = 0;
 
   for (const support of actors) {
     if (support.kind !== "support") continue;
@@ -129,14 +138,25 @@ function resolveWorkingActors(
       let bestHp = Number.POSITIVE_INFINITY;
       for (let actorIndex = 0; actorIndex < actors.length; actorIndex += 1) {
         const actor = actors[actorIndex];
-        if (actor === undefined || actor.id === support.id || actor.dead || actor.kind === "support" || actor.hp >= actor.maxHp) continue;
+        if (
+          actor === undefined ||
+          actor.id === support.id ||
+          actor.dead ||
+          actor.kind === "support" ||
+          actor.hp >= actor.maxHp
+        )
+          continue;
         if (distance(actor, support) > range * 1.3) continue;
-        if (actor.hp < bestHp) { bestHp = actor.hp; bestIndex = actorIndex; }
+        if (actor.hp < bestHp) {
+          bestHp = actor.hp;
+          bestIndex = actorIndex;
+        }
       }
       const best = actors[bestIndex];
       if (best !== undefined) {
         best.hp = Math.min(best.maxHp, best.hp + tuning.menderRate * dt);
-        best.buffs.push("mender"); support.links.push(best.id);
+        best.buffs.push("mender");
+        support.links.push(best.id);
       }
       continue;
     }
@@ -158,8 +178,19 @@ function resolveWorkingActors(
       let bestHp = -1;
       for (let actorIndex = 0; actorIndex < actors.length; actorIndex += 1) {
         const actor = actors[actorIndex];
-        if (actor === undefined || actor.id === support.id || actor.dead || actor.kind === "support" || actor.kind === "wraith" || actor.spawnT > 0) continue;
-        if (actor.maxHp > bestHp) { bestHp = actor.maxHp; bestIndex = actorIndex; }
+        if (
+          actor === undefined ||
+          actor.id === support.id ||
+          actor.dead ||
+          actor.kind === "support" ||
+          actor.kind === "wraith" ||
+          actor.spawnT > 0
+        )
+          continue;
+        if (actor.maxHp > bestHp) {
+          bestHp = actor.maxHp;
+          bestIndex = actorIndex;
+        }
       }
       bondedId = actors[bestIndex]?.id ?? null;
       support.bondedId = bondedId;
@@ -170,7 +201,9 @@ function resolveWorkingActors(
       if (targetIndex !== undefined && target !== undefined && !target.dead) {
         target.tetherDR = Math.min(target.tetherDR, tuning.anchorDR);
         target.hp = Math.min(target.maxHp, target.hp + tuning.anchorRegen * dt);
-        target.anchored = true; target.buffs.push("anchor"); support.links.push(target.id);
+        target.anchored = true;
+        target.buffs.push("anchor");
+        support.links.push(target.id);
       }
     }
   }

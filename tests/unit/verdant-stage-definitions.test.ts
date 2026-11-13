@@ -28,10 +28,20 @@ describe("Verdant typed stage registries", () => {
 
     expect(environment.stageId).toBe("verdant-sanctum");
     expect(environment.fields()).toHaveLength(2);
-    expect(environment.fields()).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "verdant-sanctum:bloom-well:left-rise", stageOwnerId: "verdant-sanctum", startTick: 3_600 }),
-      expect.objectContaining({ id: "verdant-sanctum:bloom-well:right-rise", stageOwnerId: "verdant-sanctum", startTick: 3_600 }),
-    ]));
+    expect(environment.fields()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "verdant-sanctum:bloom-well:left-rise",
+          stageOwnerId: "verdant-sanctum",
+          startTick: 3_600,
+        }),
+        expect.objectContaining({
+          id: "verdant-sanctum:bloom-well:right-rise",
+          stageOwnerId: "verdant-sanctum",
+          startTick: 3_600,
+        }),
+      ]),
+    );
 
     activateStageEnvironment(environment, "voidspire", 4_800, "stage-transition");
     expect(environment.stageId).toBe("voidspire");

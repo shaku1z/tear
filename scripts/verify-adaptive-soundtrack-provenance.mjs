@@ -103,15 +103,23 @@ const { value: provenance } = await readJson(provenancePath, "adaptive-soundtrac
 if (typeof provenance !== "object" || provenance === null) fail("provenance must be an object");
 if (provenance.format !== "tear-music-adaptive-soundtrack-provenance") fail("format is invalid");
 if (provenance.schemaVersion !== 1) fail("provenance schemaVersion must be 1");
-if (requiredString(provenance, "engineRepository") !== expected.engineRepository) fail("source repository is not the accepted handoff");
+if (requiredString(provenance, "engineRepository") !== expected.engineRepository)
+  fail("source repository is not the accepted handoff");
 const engineCommit = requiredString(provenance, "engineCommit");
 if (!/^[0-9a-f]{40}$/u.test(engineCommit)) fail("source commit must be a lowercase 40-hex Git commit");
 if (engineCommit !== expected.engineCommit) fail("source commit is not the accepted handoff");
-if (requiredString(provenance, "engineVersion") !== expected.releaseVersion) fail("engine version is not the accepted handoff");
-if (requiredString(provenance, "releaseVersion") !== expected.releaseVersion) fail("release version is not the accepted handoff");
-if (!Number.isSafeInteger(provenance.releaseSchemaVersion) || provenance.releaseSchemaVersion <= 0
-  || provenance.releaseSchemaVersion !== expected.releaseSchemaVersion) fail("release schema version must be positive and exactly 2");
-if (requiredString(provenance, "toneVersion") !== expected.toneVersion) fail("Tone version is not the accepted handoff");
+if (requiredString(provenance, "engineVersion") !== expected.releaseVersion)
+  fail("engine version is not the accepted handoff");
+if (requiredString(provenance, "releaseVersion") !== expected.releaseVersion)
+  fail("release version is not the accepted handoff");
+if (
+  !Number.isSafeInteger(provenance.releaseSchemaVersion) ||
+  provenance.releaseSchemaVersion <= 0 ||
+  provenance.releaseSchemaVersion !== expected.releaseSchemaVersion
+)
+  fail("release schema version must be positive and exactly 2");
+if (requiredString(provenance, "toneVersion") !== expected.toneVersion)
+  fail("Tone version is not the accepted handoff");
 if (provenance.artifactFormat !== "esm") fail("artifact format is invalid");
 if (provenance.toneFormat !== "host-context-esm") fail("Tone format is invalid");
 
@@ -122,8 +130,10 @@ const manifestSha = sha256(manifestBytes);
 if (manifestBytes.length !== expected.manifest.bytes || manifestSha !== expected.manifest.sha256) {
   fail(`release manifest does not match the accepted handoff: ${manifestBytes.length} bytes ${manifestSha}`);
 }
-if (requiredSha(provenance, "releaseManifestSha256") !== manifestSha
-  || requiredSha(provenance, "releaseManifestSha256") !== expected.manifest.sha256) {
+if (
+  requiredSha(provenance, "releaseManifestSha256") !== manifestSha ||
+  requiredSha(provenance, "releaseManifestSha256") !== expected.manifest.sha256
+) {
   fail("release manifest checksum mismatch");
 }
 console.log(`PASS ${manifestName} bytes=${manifestBytes.length} sha256=${manifestSha}`);
@@ -131,27 +141,39 @@ console.log(`PASS ${manifestName} bytes=${manifestBytes.length} sha256=${manifes
 if (typeof manifest !== "object" || manifest === null) fail("release manifest must be an object");
 if (manifest.format !== "tear-music-adaptive-soundtrack-release") fail("release manifest format is invalid");
 if (manifest.schemaVersion !== expected.releaseSchemaVersion) fail("release manifest schemaVersion must be 2");
-if (manifest.schemaVersion !== provenance.releaseSchemaVersion) fail("release schema version does not match provenance");
+if (manifest.schemaVersion !== provenance.releaseSchemaVersion)
+  fail("release schema version does not match provenance");
 if (manifest.engineRepository !== expected.engineRepository) fail("source repository does not match accepted handoff");
 if (manifest.engineCommit !== expected.engineCommit) fail("source commit does not match accepted handoff");
 if (manifest.version !== expected.releaseVersion) fail("release version does not match accepted handoff");
 if (manifest.toneVersion !== expected.toneVersion) fail("Tone version does not match accepted handoff");
-if (manifest.engineRepository !== requiredString(provenance, "engineRepository")) fail("source repository does not match provenance");
-if (manifest.engineCommit !== requiredString(provenance, "engineCommit")) fail("source commit does not match provenance");
-if (manifest.version !== requiredString(provenance, "releaseVersion")) fail("release version does not match provenance");
+if (manifest.engineRepository !== requiredString(provenance, "engineRepository"))
+  fail("source repository does not match provenance");
+if (manifest.engineCommit !== requiredString(provenance, "engineCommit"))
+  fail("source commit does not match provenance");
+if (manifest.version !== requiredString(provenance, "releaseVersion"))
+  fail("release version does not match provenance");
 if (manifest.toneVersion !== requiredString(provenance, "toneVersion")) fail("Tone version does not match provenance");
 if (manifest.packageName !== "@tear-music/adaptive-soundtrack") fail("release package name is invalid");
 if (manifest.runtimeGlobal !== "AdaptiveSoundtrack") fail("release runtime global is invalid");
 if (manifest.manifestFile !== manifestName) fail("release manifest filename is invalid");
 const builtAt = requiredString(manifest, "builtAt");
 const builtAtDate = new Date(builtAt);
-if (Number.isNaN(builtAtDate.valueOf()) || builtAtDate.toISOString() !== builtAt
-  || builtAt !== expected.manifest.builtAt) fail("release builtAt must be the accepted exact ISO timestamp");
+if (
+  Number.isNaN(builtAtDate.valueOf()) ||
+  builtAtDate.toISOString() !== builtAt ||
+  builtAt !== expected.manifest.builtAt
+)
+  fail("release builtAt must be the accepted exact ISO timestamp");
 if (provenance.builtAt !== undefined) {
   const provenanceBuiltAt = requiredString(provenance, "builtAt");
   const provenanceBuiltAtDate = new Date(provenanceBuiltAt);
-  if (Number.isNaN(provenanceBuiltAtDate.valueOf()) || provenanceBuiltAtDate.toISOString() !== provenanceBuiltAt
-    || provenanceBuiltAt !== builtAt) fail("provenance builtAt must match the release manifest exact ISO timestamp");
+  if (
+    Number.isNaN(provenanceBuiltAtDate.valueOf()) ||
+    provenanceBuiltAtDate.toISOString() !== provenanceBuiltAt ||
+    provenanceBuiltAt !== builtAt
+  )
+    fail("provenance builtAt must match the release manifest exact ISO timestamp");
 }
 if (typeof manifest.entrypoints !== "object" || manifest.entrypoints === null) fail("release entrypoints are missing");
 fixedPathValue(manifest.entrypoints.module, "release entrypoints.module", "index.mjs");
@@ -165,20 +187,22 @@ const moduleIntegrity = manifest.artifactIntegrity?.module;
 if (typeof moduleIntegrity !== "object" || moduleIntegrity === null) fail("module artifact integrity is missing");
 fixedPathValue(moduleIntegrity.path, "artifactIntegrity.module.path", "index.mjs");
 if (moduleIntegrity.path !== provenance.sourceEntrypoint) fail("selected source entrypoint does not match manifest");
-if (moduleIntegrity.bytes !== expected.artifact.bytes || moduleIntegrity.bytes !== provenance.artifactBytes) fail("module byte length does not match accepted handoff");
-if (moduleIntegrity.sha256 !== expected.artifact.sha256 || moduleIntegrity.sha256 !== requiredSha(provenance, "artifactSha256")) fail("module SHA does not match accepted handoff");
+if (moduleIntegrity.bytes !== expected.artifact.bytes || moduleIntegrity.bytes !== provenance.artifactBytes)
+  fail("module byte length does not match accepted handoff");
+if (
+  moduleIntegrity.sha256 !== expected.artifact.sha256 ||
+  moduleIntegrity.sha256 !== requiredSha(provenance, "artifactSha256")
+)
+  fail("module SHA does not match accepted handoff");
 
 const moduleName = fixedRelativePath(provenance, "artifact", "adaptive-soundtrack.esm.js");
 const modulePath = resolve(directory, moduleName);
 if (modulePath === manifestPath) fail("module artifact must be distinct from its release manifest");
-const moduleBytes = await verifyFile(
-  modulePath,
-  expected.artifact.bytes,
-  expected.artifact.sha256,
-  moduleName,
-);
-if (requiredPositiveInteger(provenance, "artifactBytes") !== expected.artifact.bytes
-  || requiredSha(provenance, "artifactSha256") !== expected.artifact.sha256) {
+const moduleBytes = await verifyFile(modulePath, expected.artifact.bytes, expected.artifact.sha256, moduleName);
+if (
+  requiredPositiveInteger(provenance, "artifactBytes") !== expected.artifact.bytes ||
+  requiredSha(provenance, "artifactSha256") !== expected.artifact.sha256
+) {
   fail("provenance module integrity does not match the accepted handoff");
 }
 const moduleText = moduleBytes.toString("utf8");
@@ -188,21 +212,18 @@ if (!moduleText.includes("AdaptiveSoundtrackAPI") || !moduleText.includes("expor
 
 const toneName = fixedRelativePath(provenance, "toneArtifact", "tone-host-14.9.17.esm.js");
 const tonePath = resolve(directory, toneName);
-const toneBytes = await verifyFile(
-  tonePath,
-  expected.tone.bytes,
-  expected.tone.sha256,
-  toneName,
-);
+const toneBytes = await verifyFile(tonePath, expected.tone.bytes, expected.tone.sha256, toneName);
 const trustedToneName = requiredString(provenance, "trustedToneArtifact");
 if (trustedToneName !== "../tear-score/tone-host-14.9.17.esm.js") {
   fail("trustedToneArtifact must be the fixed legacy Tone host path");
 }
 const trustedTonePath = resolve(directory, trustedToneName);
 const trustedToneSha = requiredSha(provenance, "trustedToneSha256");
-if (requiredPositiveInteger(provenance, "toneBytes") !== expected.tone.bytes
-  || requiredSha(provenance, "toneSha256") !== expected.tone.sha256
-  || trustedToneSha !== expected.tone.sha256) {
+if (
+  requiredPositiveInteger(provenance, "toneBytes") !== expected.tone.bytes ||
+  requiredSha(provenance, "toneSha256") !== expected.tone.sha256 ||
+  trustedToneSha !== expected.tone.sha256
+) {
   fail("provenance Tone integrity does not match the accepted handoff");
 }
 await verifyFile(trustedTonePath, expected.tone.bytes, expected.tone.sha256, trustedToneName);
@@ -226,15 +247,21 @@ const trustedLicenseBytes = await verifyFile(
   expected.license.sha256,
   trustedLicenseName,
 );
-if (requiredPositiveInteger(provenance, "toneLicenseBytes") !== expected.license.bytes
-  || requiredSha(provenance, "toneLicenseSha256") !== expected.license.sha256
-  || requiredSha(provenance, "trustedToneLicenseSha256") !== expected.license.sha256) {
+if (
+  requiredPositiveInteger(provenance, "toneLicenseBytes") !== expected.license.bytes ||
+  requiredSha(provenance, "toneLicenseSha256") !== expected.license.sha256 ||
+  requiredSha(provenance, "trustedToneLicenseSha256") !== expected.license.sha256
+) {
   fail("provenance Tone license integrity does not match the accepted handoff");
 }
-if (sha256(licenseBytes) !== sha256(trustedLicenseBytes)) fail("canonical Tone license differs from the trusted legacy license");
+if (sha256(licenseBytes) !== sha256(trustedLicenseBytes))
+  fail("canonical Tone license differs from the trusted legacy license");
 
-if (typeof provenance.legacyFallback !== "object" || provenance.legacyFallback === null
-  || provenance.legacyFallback.validationScript !== "scripts/verify-tear-score-provenance.mjs") {
+if (
+  typeof provenance.legacyFallback !== "object" ||
+  provenance.legacyFallback === null ||
+  provenance.legacyFallback.validationScript !== "scripts/verify-tear-score-provenance.mjs"
+) {
   fail("legacy fallback validation script is not preserved");
 }
 console.log(`PASS source ${provenance.engineRepository}@${provenance.engineCommit}`);

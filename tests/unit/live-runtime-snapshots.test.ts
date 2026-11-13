@@ -14,7 +14,9 @@ import {
 type StaticBuild = Omit<TearBuildIdentityV1, "configHash">;
 type UnitConfiguration = Readonly<{ rulesetVersion: string; values: Readonly<{ gravity: number }> }>;
 
-function world(configuration: UnitConfiguration = Object.freeze({ rulesetVersion: "tear-rules-unit", values: { gravity: 1 } })): TearCodecWorld {
+function world(
+  configuration: UnitConfiguration = Object.freeze({ rulesetVersion: "tear-rules-unit", values: { gravity: 1 } }),
+): TearCodecWorld {
   const components = new Map<TearCodecId, TearCodecValue>();
   for (const id of CODEC_REGISTRY.ids) components.set(id, {});
   components.set("tear.configuration.v1", configuration);
@@ -24,11 +26,19 @@ function world(configuration: UnitConfiguration = Object.freeze({ rulesetVersion
 function input(staticBuild?: StaticBuild, configuration?: UnitConfiguration) {
   const captured = world(configuration);
   return {
-    id: "live-snapshot-1", tick: 12, stateClass: "recorded-canonical" as const, seed: "snapshot-seed",
-    stateForge: { capture: () => captured }, world: captured, rng: { combat: { algorithm: "mulberry32", state: 4 } },
-    registry: createDefaultStateCodecRegistry(), observationClass: "structured-state" as const,
-    producer: "live-snapshot-test", target: staticBuild?.target ?? "test-standalone",
-    contentHash: staticBuild?.contentHash ?? "content-unit", visualHash: "visual-unit",
+    id: "live-snapshot-1",
+    tick: 12,
+    stateClass: "recorded-canonical" as const,
+    seed: "snapshot-seed",
+    stateForge: { capture: () => captured },
+    world: captured,
+    rng: { combat: { algorithm: "mulberry32", state: 4 } },
+    registry: createDefaultStateCodecRegistry(),
+    observationClass: "structured-state" as const,
+    producer: "live-snapshot-test",
+    target: staticBuild?.target ?? "test-standalone",
+    contentHash: staticBuild?.contentHash ?? "content-unit",
+    visualHash: "visual-unit",
     ...(staticBuild === undefined ? {} : { staticBuild, sourceId: "ghost-live-bootstrap-unit" }),
   };
 }
@@ -37,7 +47,10 @@ describe("live State Forge snapshot provenance", () => {
   it("preserves immutable build fields while attesting the captured keyframe configuration", () => {
     const configuration = { rulesetVersion: "tear-rules-unit", values: { gravity: 1 } };
     const staticBuild: StaticBuild = {
-      version: "0.1.0", revision: "unit", target: "test-standalone", rulesetVersion: "tear-rules-unit",
+      version: "0.1.0",
+      revision: "unit",
+      target: "test-standalone",
+      rulesetVersion: "tear-rules-unit",
       contentHash: "content-unit",
     };
 
@@ -55,7 +68,11 @@ describe("live State Forge snapshot provenance", () => {
   });
 
   it("preserves the canonical surgical class and seed for a State Forge bootstrap", () => {
-    const snapshot = captureLiveStateForgeSnapshot({ ...input(), stateClass: "surgical-valid", seed: "pale-canonical-seed" });
+    const snapshot = captureLiveStateForgeSnapshot({
+      ...input(),
+      stateClass: "surgical-valid",
+      seed: "pale-canonical-seed",
+    });
 
     expect(snapshot.stateClass).toBe("surgical-valid");
     expect(snapshot.seed).toBe("pale-canonical-seed");
@@ -63,18 +80,29 @@ describe("live State Forge snapshot provenance", () => {
 
   it("accepts the composition buildIdentity alias and rejects disagreement", () => {
     const buildIdentity: StaticBuild = {
-      version: "0.1.0", revision: "injected-revision", target: "test-standalone", rulesetVersion: "tear-rules-unit",
+      version: "0.1.0",
+      revision: "injected-revision",
+      target: "test-standalone",
+      rulesetVersion: "tear-rules-unit",
       contentHash: "content-unit",
     };
     const snapshot = captureLiveStateForgeSnapshot({ ...input(), buildIdentity });
     expect(snapshot.provenance.build).toMatchObject(buildIdentity);
 
-    expect(() => captureLiveStateForgeSnapshot({ ...input(buildIdentity), buildIdentity: { ...buildIdentity, revision: "other" } })).toThrow(/aliases disagree/u);
+    expect(() =>
+      captureLiveStateForgeSnapshot({
+        ...input(buildIdentity),
+        buildIdentity: { ...buildIdentity, revision: "other" },
+      }),
+    ).toThrow(/aliases disagree/u);
   });
 
   it("keeps the bootstrap identity stable while upgrades change later keyframe configuration", () => {
     const staticBuild: StaticBuild = {
-      version: "0.1.0", revision: "unit", target: "test-standalone", rulesetVersion: "tear-rules-unit",
+      version: "0.1.0",
+      revision: "unit",
+      target: "test-standalone",
+      rulesetVersion: "tear-rules-unit",
       contentHash: "content-unit",
     };
     const initialConfiguration = { rulesetVersion: "tear-rules-unit", values: { gravity: 1 } };

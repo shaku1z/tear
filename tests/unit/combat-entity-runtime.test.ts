@@ -1,111 +1,244 @@
 import { describe, expect, it, vi } from "vitest";
-import { CombatEntityRuntime, type CombatEntityRuntimeHooks, type LiveCombatEntity,
-  type LiveCombatPlayer } from "../../src/gameplay/combat/combat-entity-runtime";
+import {
+  CombatEntityRuntime,
+  type CombatEntityRuntimeHooks,
+  type LiveCombatEntity,
+  type LiveCombatPlayer,
+} from "../../src/gameplay/combat/combat-entity-runtime";
 import type { CombatEntityIntent } from "../../src/gameplay/combat/combat-entity-contracts";
 
 function entity(patch: Partial<LiveCombatEntity> = {}): LiveCombatEntity {
-  return { kind: "charger", x: 0, y: 0, radius: 5, hp: 10, maxHp: 10, dead: false, stun: 0,
-    vx: 0, vy: 0, r: 2, deflectDmg: 1, life: 1, hit: vi.fn(() => 1), deflect: vi.fn(),
-    counterSweeper: vi.fn(() => true), shatterSweeper: vi.fn(), ...patch };
+  return {
+    kind: "charger",
+    x: 0,
+    y: 0,
+    radius: 5,
+    hp: 10,
+    maxHp: 10,
+    dead: false,
+    stun: 0,
+    vx: 0,
+    vy: 0,
+    r: 2,
+    deflectDmg: 1,
+    life: 1,
+    hit: vi.fn(() => 1),
+    deflect: vi.fn(),
+    counterSweeper: vi.fn(() => true),
+    shatterSweeper: vi.fn(),
+    ...patch,
+  };
 }
 function harness(actors: LiveCombatEntity[] = [], shots: LiveCombatEntity[] = []) {
-  const zones: { id?: string; x: number; y: number; r: number; life: number }[] = [], walls: never[] = [];
-  const player: LiveCombatPlayer = { x: 0, y: 0, hw: 4, hh: 6, rootT: 0, hazardT: 0, slowMult: 1,
-    shield: 0, maxShield: 2, hazardDmgMult: 1, dashTimer: 0, dashX: 0, dashY: 0, facing: 1,
-    takeDamage: vi.fn(() => "hit") };
+  const zones: { id?: string; x: number; y: number; r: number; life: number }[] = [],
+    walls: never[] = [];
+  const player: LiveCombatPlayer = {
+    x: 0,
+    y: 0,
+    hw: 4,
+    hh: 6,
+    rootT: 0,
+    hazardT: 0,
+    slowMult: 1,
+    shield: 0,
+    maxShield: 2,
+    hazardDmgMult: 1,
+    dashTimer: 0,
+    dashX: 0,
+    dashY: 0,
+    facing: 1,
+    takeDamage: vi.fn(() => "hit"),
+  };
   const events: string[] = [];
-  const hooks: CombatEntityRuntimeHooks = { actors: () => actors, projectiles: () => shots, player: () => player,
-    slowZones: () => zones, setSlowZones: (next) => { zones.splice(0, zones.length, ...next); },
-    walls: () => walls, setWalls: vi.fn(), platforms: () => [], ring: vi.fn(), burst: vi.fn(), explode: vi.fn(),
-    fxFlash: vi.fn(), floater: vi.fn(), shake: vi.fn(), flash: vi.fn(), sound: vi.fn(),
-    loseStyle: () => events.push("lose"), shieldAbsorbed: vi.fn(), addStyle: () => events.push("style"), dashDodge: vi.fn(),
-    maxStat: vi.fn(), checkAchievements: vi.fn(), noteFirstDamage: vi.fn(), reflectedHit: vi.fn(), bossHit: vi.fn(),
-    onKill: vi.fn(), areaDamage: vi.fn(() => 0) };
+  const hooks: CombatEntityRuntimeHooks = {
+    actors: () => actors,
+    projectiles: () => shots,
+    player: () => player,
+    slowZones: () => zones,
+    setSlowZones: (next) => {
+      zones.splice(0, zones.length, ...next);
+    },
+    walls: () => walls,
+    setWalls: vi.fn(),
+    platforms: () => [],
+    ring: vi.fn(),
+    burst: vi.fn(),
+    explode: vi.fn(),
+    fxFlash: vi.fn(),
+    floater: vi.fn(),
+    shake: vi.fn(),
+    flash: vi.fn(),
+    sound: vi.fn(),
+    loseStyle: () => events.push("lose"),
+    shieldAbsorbed: vi.fn(),
+    addStyle: () => events.push("style"),
+    dashDodge: vi.fn(),
+    maxStat: vi.fn(),
+    checkAchievements: vi.fn(),
+    noteFirstDamage: vi.fn(),
+    reflectedHit: vi.fn(),
+    bossHit: vi.fn(),
+    onKill: vi.fn(),
+    areaDamage: vi.fn(() => 0),
+  };
   return { runtime: new CombatEntityRuntime(hooks), hooks, player, events };
 }
 
 describe("combat entity runtime", () => {
   it("assigns stable live identities across actor and projectile snapshots", () => {
-    const owner = entity(), shot = entity({ kind: "projectile", owner, family: "ordinaryProjectile" });
+    const owner = entity(),
+      shot = entity({ kind: "projectile", owner, family: "ordinaryProjectile" });
     const { runtime } = harness([owner], [shot]);
-    const first = new Map<string, LiveCombatEntity>(), second = new Map<string, LiveCombatEntity>();
-    const actorId = runtime.actorSnapshots(first)[0]?.id; const projectile = runtime.projectileSnapshots(first)[0];
-    expect(runtime.actorSnapshots(second)[0]?.id).toBe(actorId); expect(runtime.projectileSnapshots(second)[0]?.id).toBe(projectile?.id);
+    const first = new Map<string, LiveCombatEntity>(),
+      second = new Map<string, LiveCombatEntity>();
+    const actorId = runtime.actorSnapshots(first)[0]?.id;
+    const projectile = runtime.projectileSnapshots(first)[0];
+    expect(runtime.actorSnapshots(second)[0]?.id).toBe(actorId);
+    expect(runtime.projectileSnapshots(second)[0]?.id).toBe(projectile?.id);
     expect(projectile?.ownerId).toBe(actorId);
   });
 
   it("resets every run-scoped identity allocation before a new world is initialized", () => {
-    const firstEnemy = entity(); const { runtime } = harness([firstEnemy]);
+    const firstEnemy = entity();
+    const { runtime } = harness([firstEnemy]);
     expect(runtime.id(firstEnemy, "enemy")).toBe("enemy:1");
-    runtime.restoreIdentityState({ nextEntityId: 10, nextWallSequence: 4, nextSlowZoneSequence: 7,
-      claimedIds: ["enemy:1", "enemy:9"] });
+    runtime.restoreIdentityState({
+      nextEntityId: 10,
+      nextWallSequence: 4,
+      nextSlowZoneSequence: 7,
+      claimedIds: ["enemy:1", "enemy:9"],
+    });
 
     runtime.resetIdentity();
 
     expect(runtime.captureIdentityState()).toEqual({
-      nextEntityId: 1, nextWallSequence: 1, nextSlowZoneSequence: 1, claimedIds: []
+      nextEntityId: 1,
+      nextWallSequence: 1,
+      nextSlowZoneSequence: 1,
+      claimedIds: [],
     });
     expect(runtime.id(firstEnemy, "enemy")).toBe("enemy:1");
     expect(runtime.id(entity(), "enemy")).toBe("enemy:2");
   });
 
   it("applies accepted projectile patches before recursively dispatching hit intents", () => {
-    const shot = entity({ kind: "projectile", family: "ordinaryProjectile" }); const { runtime, events } = harness([], [shot]);
-    const objects = new Map([["shot", shot]]); const intents: CombatEntityIntent[] = [{ type: "damage-player",
-      damage: 2, sourceX: 1, sourceId: null, cause: "projectile", projectileId: "shot",
-      acceptedProjectilePatch: { dead: true }, afterAttempt: [{ type: "add-style", style: "deflect" }],
-      onHit: [{ type: "lose-style" }], onAbsorbed: [], onRejected: [] }];
+    const shot = entity({ kind: "projectile", family: "ordinaryProjectile" });
+    const { runtime, events } = harness([], [shot]);
+    const objects = new Map([["shot", shot]]);
+    const intents: CombatEntityIntent[] = [
+      {
+        type: "damage-player",
+        damage: 2,
+        sourceX: 1,
+        sourceId: null,
+        cause: "projectile",
+        projectileId: "shot",
+        acceptedProjectilePatch: { dead: true },
+        afterAttempt: [{ type: "add-style", style: "deflect" }],
+        onHit: [{ type: "lose-style" }],
+        onAbsorbed: [],
+        onRejected: [],
+      },
+    ];
     runtime.execute(intents, objects);
-    expect(shot.dead).toBe(true); expect(events).toEqual(["style", "lose"]);
+    expect(shot.dead).toBe(true);
+    expect(events).toEqual(["style", "lose"]);
   });
 
   it("maps support links back onto the original live entities", () => {
-    const target = entity({ x: 10 }), support = entity({ kind: "support", supportType: "priest", range: 100 });
+    const target = entity({ x: 10 }),
+      support = entity({ kind: "support", supportType: "priest", range: 100 });
     const { runtime } = harness([support, target]);
-    runtime.updateSupports(0.1, { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1,
-      menderRate: 1, anchorDR: 0.5, anchorRegen: 1 }, "blue");
-    expect(target.auraDR).toBe(0.5); expect(support.links).toEqual([target]);
-    const buffs = target.buffs, links = support.links;
-    runtime.updateSupports(0.1, { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1,
-      menderRate: 1, anchorDR: 0.5, anchorRegen: 1 }, "blue");
-    expect(target.buffs).toBe(buffs); expect(target.buffs).toEqual(["priest"]);
-    expect(support.links).toBe(links); expect(support.links).toEqual([target]);
+    runtime.updateSupports(
+      0.1,
+      { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1, menderRate: 1, anchorDR: 0.5, anchorRegen: 1 },
+      "blue",
+    );
+    expect(target.auraDR).toBe(0.5);
+    expect(support.links).toEqual([target]);
+    const buffs = target.buffs,
+      links = support.links;
+    runtime.updateSupports(
+      0.1,
+      { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1, menderRate: 1, anchorDR: 0.5, anchorRegen: 1 },
+      "blue",
+    );
+    expect(target.buffs).toBe(buffs);
+    expect(target.buffs).toEqual(["priest"]);
+    expect(support.links).toBe(links);
+    expect(support.links).toEqual([target]);
     delete support.supportType;
-    runtime.updateSupports(0.1, { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1,
-      menderRate: 1, anchorDR: 0.5, anchorRegen: 1 }, "blue");
-    expect(target.auraDR).toBe(1); expect(target.buffs).toEqual([]); expect(support.links).toEqual([]);
+    runtime.updateSupports(
+      0.1,
+      { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1, menderRate: 1, anchorDR: 0.5, anchorRegen: 1 },
+      "blue",
+    );
+    expect(target.auraDR).toBe(1);
+    expect(target.buffs).toEqual([]);
+    expect(support.links).toEqual([]);
   });
 
   it("rejects sparse live actor collections before projected support resolution", () => {
-    const actors = new Array<LiveCombatEntity>(2); actors[1] = entity();
+    const actors = new Array<LiveCombatEntity>(2);
+    actors[1] = entity();
     const { runtime } = harness(actors);
     expect(() => {
-      runtime.updateSupports(0.1, { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1,
-        menderRate: 1, anchorDR: 0.5, anchorRegen: 1 }, "blue");
+      runtime.updateSupports(
+        0.1,
+        { drMult: 0.5, dmgBuff: 2, speedBuff: 1, hasteBuff: 1, menderRate: 1, anchorDR: 0.5, anchorRegen: 1 },
+        "blue",
+      );
     }).toThrow("combat actor collection must be dense");
   });
 
   it("skips irrelevant projection passes while preserving neutral state and identity order", () => {
-    const actor = entity(), shot = entity({ kind: "projectile", family: "ordinaryProjectile" });
+    const actor = entity(),
+      shot = entity({ kind: "projectile", family: "ordinaryProjectile" });
     const { runtime, player } = harness([actor], [shot]);
     const actorSnapshots = vi.spyOn(runtime, "actorSnapshots");
     const projectileSnapshots = vi.spyOn(runtime, "projectileSnapshots");
     player.slowMult = 0.5;
 
-    runtime.updateWorldHazards(1 / 120, { groundY: 800, sludgeSlow: 0.5,
-      geoWallW: 20, geoWallH: 100, geoWallLife: 5, sludgeColor: "green" });
+    runtime.updateWorldHazards(1 / 120, {
+      groundY: 800,
+      sludgeSlow: 0.5,
+      geoWallW: 20,
+      geoWallH: 100,
+      geoWallLife: 5,
+      sludgeColor: "green",
+    });
     expect(player.slowMult).toBe(1);
     expect(runtime.captureIdentityState().nextEntityId).toBe(2);
     runtime.resolveBossZones({ groundY: 800, defaultWidth: 100, defaultDamage: 1, defaultTickCooldown: 1 });
     expect(actorSnapshots).not.toHaveBeenCalled();
 
-    runtime.resolveProjectilePhases(1 / 120, { projectileDamage: 1, projectileSpeed: 1,
-      deflectBoost: 1, deflectDamageMultiplier: 1, runDamageMultiplier: 1, phaseStep: false,
-      parryStun: false, aegisParry: false, sparkCount: 0, deflectedColor: "blue", rootColor: "green",
-      shakeBig: 0, shakeSmall: 0, achievementTracking: false, groundY: 800, mineTrigger: 10,
-      blastRadius: 10, blastDamage: 1, sludgeZoneRadius: 10, sludgeZoneLife: 1,
-      bomberColor: "red", perfectColor: "white", sludgeColor: "green", flashParry: 0,
-      enemyShotColor: "red" });
+    runtime.resolveProjectilePhases(1 / 120, {
+      projectileDamage: 1,
+      projectileSpeed: 1,
+      deflectBoost: 1,
+      deflectDamageMultiplier: 1,
+      runDamageMultiplier: 1,
+      phaseStep: false,
+      parryStun: false,
+      aegisParry: false,
+      sparkCount: 0,
+      deflectedColor: "blue",
+      rootColor: "green",
+      shakeBig: 0,
+      shakeSmall: 0,
+      achievementTracking: false,
+      groundY: 800,
+      mineTrigger: 10,
+      blastRadius: 10,
+      blastDamage: 1,
+      sludgeZoneRadius: 10,
+      sludgeZoneLife: 1,
+      bomberColor: "red",
+      perfectColor: "white",
+      sludgeColor: "green",
+      flashParry: 0,
+      enemyShotColor: "red",
+    });
     expect(projectileSnapshots).toHaveBeenCalledTimes(1);
   });
 });

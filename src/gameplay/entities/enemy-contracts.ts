@@ -155,13 +155,38 @@ export interface EnemyDependencies {
   Projectile: EnemyProjectileConstructor;
   SFX: EnemySoundPort;
   presentation?: EnemyPresentationPort;
-  aabbOverlap: (ax: number, ay: number, ahw: number, ahh: number, bx: number, by: number, bhw: number, bhh: number) => boolean;
+  aabbOverlap: (
+    ax: number,
+    ay: number,
+    ahw: number,
+    ahh: number,
+    bx: number,
+    by: number,
+    bhw: number,
+    bhh: number,
+  ) => boolean;
   clamp: (value: number, min: number, max: number) => number;
   cosmeticRandom: () => number;
   len: (x: number, y: number) => number;
   lerp: (from: number, to: number, amount: number) => number;
-  segPointDist: (ax: number, ay: number, bx: number, by: number, px: number, py: number) => { dist: number; px: number; py: number };
-  segSegmentDist: (ax: number, ay: number, bx: number, by: number, cx: number, cy: number, dx: number, dy: number) => number;
+  segPointDist: (
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    px: number,
+    py: number,
+  ) => { dist: number; px: number; py: number };
+  segSegmentDist: (
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    cx: number,
+    cy: number,
+    dx: number,
+    dy: number,
+  ) => number;
 }
 
 export interface EnemyPresentationPort {
@@ -257,7 +282,8 @@ export interface BossPresentationActor extends ProjectileOwnerPort {
   isMiniBoss?: boolean | undefined;
   _perilUntil?: number | undefined;
   _phaseFlashT?: number | undefined;
-  cinematicRequest?: (BossTransformationSpec & { speaker: string; duration: number; anchor: string }) | null | undefined;
+  cinematicRequest?:
+    (BossTransformationSpec & { speaker: string; duration: number; anchor: string }) | null | undefined;
   cinematicPose?: string | undefined;
   cinematicColor?: string | undefined;
   cinematicT?: number | undefined;

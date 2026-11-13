@@ -39,11 +39,15 @@ process.stdout.write(output);
 if (result.status !== 0) throw new Error(`Wrangler dry-run failed with exit code ${String(result.status)}`);
 
 const escapeCharacter = String.fromCharCode(27);
-const plainOutput = output.split(escapeCharacter).map((part, index) => {
-  if (index === 0) return part;
-  const terminator = part.indexOf("m");
-  return terminator < 0 ? part : part.slice(terminator + 1);
-}).join("").replaceAll("\\", "/");
+const plainOutput = output
+  .split(escapeCharacter)
+  .map((part, index) => {
+    if (index === 0) return part;
+    const terminator = part.indexOf("m");
+    return terminator < 0 ? part : part.slice(terminator + 1);
+  })
+  .join("")
+  .replaceAll("\\", "/");
 const normalizedExpected = expectedAssets.replaceAll("\\", "/");
 if (!plainOutput.includes(`assets directory ${normalizedExpected}`)) {
   throw new Error(`Wrangler did not confirm the expected assets directory: ${normalizedExpected}`);
@@ -55,7 +59,21 @@ if (!/Read \d+ files? from the assets directory/u.test(plainOutput)) {
 console.log(`PASS Cloudflare dry-run boundary: ${normalizedExpected}`);
 const receiptPath = resolve(projectRoot, "artifacts/tearbench/generated/cloudflare-dry-run.json");
 await mkdir(dirname(receiptPath), { recursive: true });
-await writeFile(receiptPath, `${JSON.stringify({ format: "tear-cloudflare-dry-run", schemaVersion: 1,
-  repository: process.env.GITHUB_REPOSITORY || RELEASE_REPOSITORY, sourceRevision: revision.stdout.trim().toLowerCase(),
-  buildIdentityDigest: verified.metadata.buildIdentityDigest, artifactHash: verified.artifact.hash,
-  assetsDirectory: "dist/standalone", status: "passed" }, null, 2)}\n`, "utf8");
+await writeFile(
+  receiptPath,
+  `${JSON.stringify(
+    {
+      format: "tear-cloudflare-dry-run",
+      schemaVersion: 1,
+      repository: process.env.GITHUB_REPOSITORY || RELEASE_REPOSITORY,
+      sourceRevision: revision.stdout.trim().toLowerCase(),
+      buildIdentityDigest: verified.metadata.buildIdentityDigest,
+      artifactHash: verified.artifact.hash,
+      assetsDirectory: "dist/standalone",
+      status: "passed",
+    },
+    null,
+    2,
+  )}\n`,
+  "utf8",
+);

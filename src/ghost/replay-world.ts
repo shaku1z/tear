@@ -1,7 +1,10 @@
 import type { RecordedGhostChallenge } from "./recorded-challenge";
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { stableVerificationHash } from "../replay/hash";
-import type { TearSimulationRuntime, TearSimulationAdvanceLifecycle } from "../gameplay/runtime/tear-simulation-runtime";
+import type {
+  TearSimulationRuntime,
+  TearSimulationAdvanceLifecycle,
+} from "../gameplay/runtime/tear-simulation-runtime";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
 import {
   createDefaultStateCodecRegistry,
@@ -87,22 +90,23 @@ export class GhostReplayWorld {
   #world: TearCodecWorld;
   #tick = 0;
 
-  constructor(
-    ghost: GhostEnvelopeV3,
-    simulation: GhostReplaySimulation,
-    registry = createDefaultStateCodecRegistry(),
-  ) {
+  constructor(ghost: GhostEnvelopeV3, simulation: GhostReplaySimulation, registry = createDefaultStateCodecRegistry()) {
     this.#ghost = ghost;
     this.#simulation = simulation;
     this.#registry = registry;
     this.#world = simulation.createWorld();
   }
 
-  world(): TearCodecWorld { return cloneWorld(this.#world); }
-  semanticHash(): string { return stableVerificationHash(this.#simulation.semanticProjection(this.#world)); }
+  world(): TearCodecWorld {
+    return cloneWorld(this.#world);
+  }
+  semanticHash(): string {
+    return stableVerificationHash(this.#simulation.semanticProjection(this.#world));
+  }
 
   seek(targetTick: number): GhostSeekResult {
-    if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
+    if (!Number.isSafeInteger(targetTick) || targetTick < 0)
+      throw new RangeError("seek tick must be a non-negative integer");
     const snapshot = [...this.#ghost.snapshots]
       .filter((candidate) => candidate.tick <= targetTick)
       .sort((left, right) => right.tick - left.tick)[0];
@@ -115,9 +119,14 @@ export class GhostReplayWorld {
         validate: (world) => this.#simulation.validateWorld(world),
       };
       const result = restoreSnapshotTransactionally(snapshot, this.#registry, factory, {
-        replace: (world) => { this.#world = world; },
+        replace: (world) => {
+          this.#world = world;
+        },
       });
-      if (!result.ok) throw new TypeError(`replay snapshot restore failed: ${result.issues.map((issue) => issue.message).join("; ")}`);
+      if (!result.ok)
+        throw new TypeError(
+          `replay snapshot restore failed: ${result.issues.map((issue) => issue.message).join("; ")}`,
+        );
       this.#tick = snapshot.tick;
     }
     let actionIndex = 0;
@@ -125,8 +134,7 @@ export class GhostReplayWorld {
       const actionTick = this.#ghost.actions[actionIndex]?.tick;
       if (actionTick === undefined) break;
       const groupStart = actionIndex;
-      while (actionIndex < this.#ghost.actions.length
-        && this.#ghost.actions[actionIndex]?.tick === actionTick) {
+      while (actionIndex < this.#ghost.actions.length && this.#ghost.actions[actionIndex]?.tick === actionTick) {
         actionIndex += 1;
       }
       if (actionTick > targetTick) continue;
@@ -143,8 +151,7 @@ export class GhostReplayWorld {
     }
     this.#simulation.advance(this.#world, this.#tick, targetTick);
     this.#tick = targetTick;
-    if (snapshot !== undefined && snapshot.hashes.semantic !== this.semanticHash()
-      && targetTick === snapshot.tick) {
+    if (snapshot !== undefined && snapshot.hashes.semantic !== this.semanticHash() && targetTick === snapshot.tick) {
       const beforeHash = this.semanticHash();
       correction = Object.freeze({
         disclosed: true,
@@ -188,7 +195,9 @@ export class GhostProductionReplayWorld<State> {
   }
 
   /** Exposes the active production runtime for identity-level evidence only. */
-  simulation(): TearSimulationRuntime<State> | null { return this.#session?.simulation ?? null; }
+  simulation(): TearSimulationRuntime<State> | null {
+    return this.#session?.simulation ?? null;
+  }
   renderView(): GhostReplayRenderView {
     if (this.#session?.renderView === undefined) throw new Error("production replay presentation is unavailable");
     return this.#session.renderView();
@@ -199,33 +208,52 @@ export class GhostProductionReplayWorld<State> {
   }
 
   seek(targetTick: number): GhostSeekResult {
-    if (this.#seeking) { this.#session?.invalidateRecordedOpening?.(); throw new Error("production replay seek is reentrant"); }
+    if (this.#seeking) {
+      this.#session?.invalidateRecordedOpening?.();
+      throw new Error("production replay seek is reentrant");
+    }
     this.#seeking = true;
-    try { return this.#seek(targetTick); } finally { this.#seeking = false; }
+    try {
+      return this.#seek(targetTick);
+    } finally {
+      this.#seeking = false;
+    }
   }
 
   /** Opt-in continuous playback. Backward targets rebuild using ordinary seek. */
   advanceTo(targetTick: number): GhostSeekResult {
-    if (this.#seeking) { this.#session?.invalidateRecordedOpening?.(); throw new Error("production replay seek is reentrant"); }
-    if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
+    if (this.#seeking) {
+      this.#session?.invalidateRecordedOpening?.();
+      throw new Error("production replay seek is reentrant");
+    }
+    if (!Number.isSafeInteger(targetTick) || targetTick < 0)
+      throw new RangeError("seek tick must be a non-negative integer");
     this.#seeking = true;
     try {
       return this.#session === null || targetTick < this.#tick ? this.#seek(targetTick) : this.#advance(targetTick);
     } catch (error) {
       // A failed observer/step must not leave a partially advanced reusable world.
-      this.#session = null; this.#originSnapshot = undefined; this.#tick = 0; throw error;
-    } finally { this.#seeking = false; }
+      this.#session = null;
+      this.#originSnapshot = undefined;
+      this.#tick = 0;
+      throw error;
+    } finally {
+      this.#seeking = false;
+    }
   }
 
   #seek(targetTick: number): GhostSeekResult {
-    if (!Number.isSafeInteger(targetTick) || targetTick < 0) throw new RangeError("seek tick must be a non-negative integer");
+    if (!Number.isSafeInteger(targetTick) || targetTick < 0)
+      throw new RangeError("seek tick must be a non-negative integer");
     const snapshot = [...this.#ghost.snapshots]
       .filter((candidate) => candidate.tick <= targetTick)
       .sort((left, right) => right.tick - left.tick)[0];
     const session = this.#composition.create(snapshot);
     const startingTick = snapshot?.tick ?? 0;
     if (session.simulation.scheduler.tick !== startingTick) {
-      throw new TypeError(`production replay composition started at tick ${String(session.simulation.scheduler.tick)}, expected ${String(startingTick)}`);
+      throw new TypeError(
+        `production replay composition started at tick ${String(session.simulation.scheduler.tick)}, expected ${String(startingTick)}`,
+      );
     }
     this.#session = session;
     this.#originSnapshot = snapshot;
@@ -234,7 +262,8 @@ export class GhostProductionReplayWorld<State> {
   }
 
   #advance(targetTick: number): GhostSeekResult {
-    const session = this.#session; if (session === null) throw new Error("production replay world has no active session");
+    const session = this.#session;
+    if (session === null) throw new Error("production replay world has no active session");
     const snapshot = this.#originSnapshot;
     if (targetTick > this.#tick && this.#tick === (snapshot?.tick ?? 0)) session.completeRecordedOpening?.();
     for (let tick = this.#tick + 1; tick <= targetTick; tick += 1) {
@@ -246,14 +275,21 @@ export class GhostProductionReplayWorld<State> {
     this.#tick = targetTick;
     const semanticHash = this.semanticHash();
     const snapshotSemanticHash = session.snapshotSemanticHash?.();
-    const correction = snapshot?.tick === targetTick && snapshotSemanticHash !== undefined && snapshot.hashes.semantic !== snapshotSemanticHash
-      ? Object.freeze({
-        disclosed: true as const, tick: targetTick,
-        reason: "restored production state did not match declared keyframe semantic hash",
-        beforeHash: snapshotSemanticHash, afterHash: snapshot.hashes.semantic,
-      }) : undefined;
+    const correction =
+      snapshot?.tick === targetTick &&
+      snapshotSemanticHash !== undefined &&
+      snapshot.hashes.semantic !== snapshotSemanticHash
+        ? Object.freeze({
+            disclosed: true as const,
+            tick: targetTick,
+            reason: "restored production state did not match declared keyframe semantic hash",
+            beforeHash: snapshotSemanticHash,
+            afterHash: snapshot.hashes.semantic,
+          })
+        : undefined;
     return Object.freeze({
-      tick: targetTick, semanticHash,
+      tick: targetTick,
+      semanticHash,
       ...(snapshot === undefined ? {} : { usedSnapshotId: snapshot.id }),
       ...(correction === undefined ? {} : { correction }),
       presentationFallback: !this.#ghost.trident.visual.available,
@@ -266,8 +302,7 @@ export class GhostProductionReplayWorld<State> {
 }
 
 export type GhostPracticeMode =
-  | "exact-practice" | "repetition-drill" | "counterfactual-sandbox"
-  | "race-practice" | "coach-assisted";
+  "exact-practice" | "repetition-drill" | "counterfactual-sandbox" | "race-practice" | "coach-assisted";
 
 export interface GhostPracticeChild {
   readonly challenge?: RecordedGhostChallenge;

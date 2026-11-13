@@ -41,20 +41,41 @@ interface RememberedLayout {
 export class TextLayoutCache {
   readonly #entries = new Map<string, RememberedLayout>();
 
-  fit(ui: UiRuntime, ctx: CanvasRenderingContext2D, text: string, maxWidth: number, options: TextFitOptions, bold: boolean): TextFitLayout {
-    const key = [ui.t.font.brand, bold ? "bold" : "", maxWidth, options.size, options.floor, options.maxLines, options.ellipsis,
-      options.wrapFirst, text].join(KEY_SEPARATOR);
+  fit(
+    ui: UiRuntime,
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxWidth: number,
+    options: TextFitOptions,
+    bold: boolean,
+  ): TextFitLayout {
+    const key = [
+      ui.t.font.brand,
+      bold ? "bold" : "",
+      maxWidth,
+      options.size,
+      options.floor,
+      options.maxLines,
+      options.ellipsis,
+      options.wrapFirst,
+      text,
+    ].join(KEY_SEPARATOR);
     const remembered = this.#entries.get(key);
     if (remembered !== undefined) {
       if (remembered.font !== undefined) ctx.font = remembered.font;
       return remembered.layout;
     }
     let font: string | undefined;
-    const layout = fitTextLayout((value, size) => {
-      font = ui.font(size, bold);
-      ctx.font = font;
-      return ctx.measureText(value).width;
-    }, text, maxWidth, options);
+    const layout = fitTextLayout(
+      (value, size) => {
+        font = ui.font(size, bold);
+        ctx.font = font;
+        return ctx.measureText(value).width;
+      },
+      text,
+      maxWidth,
+      options,
+    );
     if (this.#entries.size >= TEXT_LAYOUT_CACHE_LIMIT) this.#entries.delete(this.#entries.keys().next().value ?? "");
     this.#entries.set(key, { layout, font });
     return layout;
@@ -96,15 +117,30 @@ export function createUiText() {
      * keeps its size; it only shrinks toward `floor` (default: micro) when `maxLines`
      * would otherwise be exceeded, then ellipsizes the last line.
      */
-    textBox(this: UiRuntime, ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, options: TextBoxOptions = {}): TextBoxResult {
+    textBox(
+      this: UiRuntime,
+      ctx: CanvasRenderingContext2D,
+      text: string,
+      x: number,
+      y: number,
+      maxWidth: number,
+      options: TextBoxOptions = {},
+    ): TextBoxResult {
       const size = options.size ?? this.t.type.body;
-      const layout = layouts.fit(this, ctx, text, maxWidth, {
-        size,
-        floor: options.floor ?? Math.min(size, this.t.type.micro),
-        maxLines: options.maxLines ?? 99,
-        wrapFirst: options.wrapFirst ?? true,
-        ...(options.ellipsis === undefined ? {} : { ellipsis: options.ellipsis }),
-      }, options.bold === true);
+      const layout = layouts.fit(
+        this,
+        ctx,
+        text,
+        maxWidth,
+        {
+          size,
+          floor: options.floor ?? Math.min(size, this.t.type.micro),
+          maxLines: options.maxLines ?? 99,
+          wrapFirst: options.wrapFirst ?? true,
+          ...(options.ellipsis === undefined ? {} : { ellipsis: options.ellipsis }),
+        },
+        options.bold === true,
+      );
       const lineHeight = options.lineHeight ?? Math.round(layout.size * this.t.lineH.body);
       if (options.measureOnly !== true) {
         ctx.save();
@@ -118,8 +154,12 @@ export function createUiText() {
         });
         ctx.restore();
       }
-      return Object.freeze({ ...layout, height: layout.lines.length * lineHeight,
-        lastBaseline: y + Math.max(0, layout.lines.length - 1) * lineHeight, lineHeight });
+      return Object.freeze({
+        ...layout,
+        height: layout.lines.length * lineHeight,
+        lastBaseline: y + Math.max(0, layout.lines.length - 1) * lineHeight,
+        lineHeight,
+      });
     },
   };
 }
