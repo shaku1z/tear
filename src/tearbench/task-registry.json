@@ -551,18 +551,12 @@
     },
     {
       "taskId": "static.lint",
-      "version": 1,
+      "version": 2,
       "runner": {
-        "kind": "eslint",
-        "executable": "node_modules/eslint/bin/eslint.js",
+        "kind": "node",
+        "executable": "node",
         "args": [
-          "src",
-          "workers",
-          "scripts",
-          "tests/**/*.ts",
-          "vite.config.ts",
-          "vitest.config.ts",
-          "vitest.endurance.config.ts"
+          "scripts/lint.mjs"
         ]
       },
       "claimIds": [

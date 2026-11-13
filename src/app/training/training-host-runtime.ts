@@ -132,7 +132,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
   });
 
   const presentation = createLivePlaygroundPresentation({
-    run: () => requireRun(state), oneHit: () => player().oneHit, kinds: PLAYGROUND_ALL_KINDS,
+    run: () => requireRun(state), inputDevice: () => d.Input.mode, oneHit: () => player().oneHit, kinds: PLAYGROUND_ALL_KINDS,
     difficulties: () => d.CONFIG.difficulties, bosses: AUTHORED_BOSS_ROSTER,
     weapons: () => d.WEAPONS, colors: () => d.CONFIG.colors, uiAccent: () => "#13c4d6",
     stageAccent: () => context.stage.current.accent, arenaName: () => runtime.arenaName(),

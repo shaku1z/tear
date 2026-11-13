@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-const captured: { tutorialOptions: unknown } = vi.hoisted(() => ({ tutorialOptions: undefined }));
+const captured: { tutorialOptions: unknown; presentationOptions: unknown } = vi.hoisted(() => ({ tutorialOptions: undefined, presentationOptions: undefined }));
 
 vi.mock("../../src/gameplay/training/live-tutorial-runtime", () => ({
   createLiveTutorialRuntime: (options: unknown) => {
@@ -16,16 +16,19 @@ vi.mock("../../src/gameplay/training/runtime-bridge", () => ({
   createPlaygroundRuntimeBridge: () => Object.freeze({ homePlatforms: () => [] }),
 }));
 vi.mock("../../src/gameplay/training/live-playground-presentation", () => ({
-  createLivePlaygroundPresentation: () => Object.freeze({}),
+  createLivePlaygroundPresentation: (options: unknown) => {
+    captured.presentationOptions = options;
+    return Object.freeze({});
+  },
 }));
 
 import { createLiveTrainingHostRuntime } from "../../src/app/training/training-host-runtime";
 
 describe("live training host runtime", () => {
   it("supplies its tutorial profile-stat port from the shared adapter", () => {
-    const add = vi.fn();
+    const add = vi.fn(), input = { mode: "touch" };
     createLiveTrainingHostRuntime({
-      dependencies: { profileStatsPersistence: { add, max: vi.fn() } } as never,
+      dependencies: { profileStatsPersistence: { add, max: vi.fn() }, Input: input } as never,
       state: {} as never, width: 1600, height: 900, lifecycle: {} as never,
       stage: {} as never, spawn: vi.fn(), navigate: vi.fn(), resetScroll: vi.fn(),
       releasePointer: vi.fn(), requestPointer: vi.fn(), selectStage: vi.fn(),
@@ -40,5 +43,11 @@ describe("live training host runtime", () => {
     tutorial.addProfileStat("tutorials", 1);
 
     expect(add).toHaveBeenCalledWith("tutorials", 1);
+
+    // The playground build menu words its subtitle for the device that owns input right now.
+    const presentation = captured.presentationOptions as { readonly inputDevice: () => string };
+    expect(presentation.inputDevice()).toBe("touch");
+    input.mode = "gamepad";
+    expect(presentation.inputDevice()).toBe("gamepad");
   });
 });

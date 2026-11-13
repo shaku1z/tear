@@ -5,7 +5,11 @@ import { clamp } from "../../src/domain/geometry";
 import { createUi } from "../../src/presentation/ui";
 import { densityTokens } from "../../src/presentation/ui-density";
 import { createScreenRenderers } from "../../src/presentation/screens";
-import type { CardView, ReplayView, ScreenControl, ScreenRenderContext } from "../../src/presentation/screens";
+import type { CardView, PlaygroundScreenView, ReplayView, ScreenControl, ScreenRenderContext } from "../../src/presentation/screens";
+import { AUTHORED_BOSS_ROSTER } from "../../src/gameplay/run/content-director";
+import { createLivePlaygroundPresentation, type PlaygroundScreenModel } from "../../src/gameplay/training/live-playground-presentation";
+import { PLAYGROUND_ALL_KINDS } from "../../src/gameplay/training/playground-controller";
+import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 
 /**
  * The phone (compact density) compositions of the shop, codex, profile, leaderboards,
@@ -325,5 +329,78 @@ describe("phone compositions (compact density)", () => {
     const { ui } = phoneUi(844, 390);
     expect(ui.density).toMatchObject({ compact: true, wideSheet: true });
     expect(ui.sheetRect().w).toBeGreaterThan(1240);
+  });
+});
+
+/** The live build-menu model from the real enemy, boss, difficulty and weapon rosters (plus optional extras). */
+function liveBuildMenu(extraKinds = 0, extraBosses = 0): PlaygroundScreenView {
+  let model: PlaygroundScreenModel | undefined;
+  createLivePlaygroundPresentation({
+    run: () => ({ diff: "normal", pgArena: -1, pg: {}, mods: { owned: {}, tier: {} } }), inputDevice: () => "mouse", oneHit: () => false,
+    kinds: [...PLAYGROUND_ALL_KINDS, ...Array.from({ length: extraKinds }, (_, index) => `newkind${String(index)}`)],
+    difficulties: () => CONFIG.difficulties,
+    bosses: [...AUTHORED_BOSS_ROSTER, ...Array.from({ length: extraBosses }, (_, index) => ({ id: `new-boss-${String(index)}`, name: `New Boss ${String(index)}` }))],
+    weapons: () => WEAPON_IDS.map((id) => ({ id, name: id })), colors: () => ({}), uiAccent: () => "#13c4d6", stageAccent: () => "#13c4d6",
+    arenaName: () => "TRAINING GROUNDS", selectedWeapon: () => "sword", upgrades: () => [], abilityColors: () => ({}), labFilter: () => "all",
+    viewportHeight: 900, scroll: () => 0, setScroll: () => undefined,
+    renderMenu: (value) => { model = value; }, renderLab: () => undefined,
+  }).renderMenu();
+  if (model?.id !== "pgmenu") throw new Error("the live presentation did not build the menu");
+  return model;
+}
+
+/** One desktop (mouse, full density) frame of a screen at a window size. */
+function renderDesktop(size: Readonly<{ width: number; height: number }>, draw: (renderers: ReturnType<typeof createScreenRenderers>) => void): Frame {
+  const scale = Math.min(size.width / 1600, size.height / 900), overscan = { x: (size.width / scale - 1600) / 2, y: (size.height / scale - 900) / 2 };
+  const ui = createUi({ CLOCK: createTearWorldClock(), presentation: { view: CONFIG.view, colors: CONFIG.colors, overscan }, clamp, Input: { mode: "mouse" } });
+  ui.setDensity({ touch: false, cssPerLogicalPixel: scale });
+  ui.useCompactLayout(false, true);
+  const texts: Glyphs[] = [], controls: ScreenControl[] = [];
+  draw(createScreenRenderers({
+    canvas: recordingCanvas(texts), ui, width: 1600, height: 900, time: 0, enterAmount: 1, enterSeconds: 1,
+    deltaSeconds: 1 / 60, mouse: { x: -1, y: -1 }, scroll: 0, focus: -1, touch: false, reducedMotion: false,
+    screenRectangle: { x: -overscan.x, y: -overscan.y, w: 1600 + overscan.x * 2, h: 900 + overscan.y * 2 }, safeInsets: { l: 0, r: 0, t: 0, b: 0 },
+    enqueue(control): void { controls.push(control); }, setScroll: () => undefined,
+  }));
+  return { texts, controls, scroll: 0, scale };
+}
+
+/** No control, heading or label may overlap another, and everything stays on the 1600x900 stage. */
+function expectNoDesktopOverlap(frame: Frame, label: string): void {
+  frame.controls.forEach((control, index) => {
+    expect(control.x >= 0 && control.x + control.w <= 1600 && control.y >= 0 && control.y + control.h <= 900, `${label}: "${control.label}" on stage`).toBe(true);
+    for (const other of frame.controls.slice(index + 1)) {
+      expect(overlaps(box(control), box(other)), `${label}: "${control.label}" overlaps "${other.label}"`).toBe(false);
+    }
+  });
+  frame.texts.forEach((text, index) => {
+    for (const other of frame.texts.slice(index + 1)) {
+      expect(overlaps(textBox(text), textBox(other)), `${label}: "${text.text}" overlaps "${other.text}"`).toBe(false);
+    }
+    for (const control of frame.controls) expect(overlaps(textBox(text), box(control)), `${label}: "${text.text}" runs under "${control.label}"`).toBe(false);
+  });
+}
+
+describe("desktop playground build menu", () => {
+  for (const size of [{ width: 1600, height: 900 }, { width: 1280, height: 720 }]) {
+    it(`lays out every live enemy, boss and heading without overlap at ${String(size.width)}x${String(size.height)}`, () => {
+      const view = liveBuildMenu();
+      const frame = renderDesktop(size, (r) => { r.pgmenu(view); });
+      expectNoDesktopOverlap(frame, `pgmenu ${String(size.width)}x${String(size.height)}`);
+      const offered = new Set(frame.controls.map((control) => JSON.stringify(control.action)));
+      for (const choice of view.sections.flatMap((section) => section.choices)) {
+        expect(offered.has(JSON.stringify({ type: "playground.action", id: choice.id })), `${choice.label} offered`).toBe(true);
+      }
+      expect(offered.has(JSON.stringify({ type: "run.resume" }))).toBe(true);
+      for (const heading of ["SPAWN ENEMIES", "SPAWN MODIFIERS", "DIFFICULTY", "SUMMON A BOSS", "ARENA", "MODIFIERS"]) {
+        expect(frame.texts.some((text) => text.text === heading), `${heading} drawn`).toBe(true);
+      }
+    });
+  }
+
+  it("derives the grid from the item count, so added enemies and bosses push the next group down", () => {
+    for (const [kinds, bosses] of [[1, 0], [2, 1], [3, 2], [4, 3]] as const) {
+      expectNoDesktopOverlap(renderDesktop({ width: 1600, height: 900 }, (r) => { r.pgmenu(liveBuildMenu(kinds, bosses)); }), `+${String(kinds)} kinds +${String(bosses)} bosses`);
+    }
   });
 });
