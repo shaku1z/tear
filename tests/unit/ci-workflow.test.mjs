@@ -45,6 +45,13 @@ describe("Validate workflow", () => {
     expect(check).toContain("process.exit(1)");
   });
 
+  it("gives no step a key twice (GitHub rejects such a file)", () => {
+    for (const step of workflow.split(/\n(?= {6}- )/u)) {
+      const keys = [...step.matchAll(/^ {6}(?:- | {2})([a-z-]+):/gmu)].map((match) => match[1]);
+      expect(new Set(keys).size, `duplicate key in step: ${step.split("\n")[0]}`).toBe(keys.length);
+    }
+  });
+
   it("bounds every job's running time", () => {
     for (const [id, job] of Object.entries(all)) {
       const limit = /^ {4}timeout-minutes: (\d+)$/mu.exec(job);

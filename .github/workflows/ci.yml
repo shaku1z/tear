@@ -256,8 +256,6 @@ jobs:
       # This publication runs only after every job passed. A failed Validate
       # run cannot publish a reference.
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           fetch-depth: 0
