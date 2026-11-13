@@ -10,9 +10,9 @@ the game or a hand-written note is wrong.
 | --- | --- |
 | Stats, names, descriptions, costs, controls, arena layouts, lore | The game's exporter, `pnpm export:wiki` (`src/game-reference/wiki-data.ts`). It runs on the commit being built, so the facts cannot be older than the build. |
 | Pictures of enemies and bosses | The game's own renderers, drawn in a headless browser (`wiki/media/figures.ts`). |
-| Arena, weapon and boss-phase pictures, and the attacks each boss phase shows | Captured from the game's test build (`pnpm build:test:standalone`) by `wiki/scripts/media.mjs`. |
+| Arena, weapon and boss-phase pictures, and the attacks each boss phase shows | Captured from the game's test build (`pnpm build:test:standalone`) by `wiki/generator/media.mjs`. |
 | Advice | Hand-written, in `wiki/content/notes/<route>.md` (a "Tips" box under a generated page) and `wiki/content/guides/*.md` (guide pages). |
-| Old URLs | `REDIRECTS` in `wiki/scripts/build.mjs`; a test checks that none shadows a page and every target exists. |
+| Old URLs | `REDIRECTS` in `wiki/generator/build.mjs`; a test checks that none shadows a page and every target exists. |
 
 Nothing generated is committed. The footer and `/version.json` name the game commit the site was built from.
 

@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { build, buildPages, loadContent } from '../scripts/build.mjs';
-import { loadGameData, sourceState } from '../scripts/game-data.mjs';
-import { BUDGET } from '../scripts/media.mjs';
-import { url } from '../scripts/render.mjs';
+import { build, buildPages, loadContent } from '../generator/build.mjs';
+import { loadGameData, sourceState } from '../generator/game-data.mjs';
+import { BUDGET } from '../generator/media.mjs';
+import { url } from '../generator/render.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const dist = path.join(root, 'dist');

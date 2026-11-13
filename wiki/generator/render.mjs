@@ -38,7 +38,7 @@ const swatch = (color) => `<span class="swatch" style="--c:${esc(color)}" aria-h
 const tile = (label, value) => `<div class="tile"><span>${esc(label)}</span><b>${esc(value)}</b></div>`;
 const tiles = (items) => `<div class="tiles">${items.map(([label, value]) => tile(label, value)).join('')}</div>`;
 
-/** A generated picture (wiki/scripts/media.mjs), or nothing when the build has no media. */
+/** A generated picture (wiki/generator/media.mjs), or nothing when the build has no media. */
 function pic(data, name, alt, cls = 'pic') {
   return name ? `<img class="${cls}" src="/media/${esc(name)}" alt="${esc(alt)}" loading="lazy" decoding="async">` : '';
 }
@@ -206,7 +206,7 @@ const EFFECT_TEXT = {
 
 export function effectText(effect) {
   const render = EFFECT_TEXT[effect.stat];
-  if (!render) throw new Error(`No wording for affix effect "${effect.stat}"; add it to EFFECT_TEXT in scripts/render.mjs`);
+  if (!render) throw new Error(`No wording for affix effect "${effect.stat}"; add it to EFFECT_TEXT in wiki/generator/render.mjs`);
   return render(effect);
 }
 
@@ -293,7 +293,7 @@ const MODIFIER_LABELS = { enemyHealth: 'Enemy HP', playerDamageTaken: 'Damage yo
 export function modesPage(data, note) {
   const modes = data.modes.map((m) => `<article class="entry" id="${esc(m.id)}"><h3><a href="#${esc(m.id)}">${esc(m.label)}</a></h3><p>${esc(m.blurb)}</p></article>`).join('');
   const keys = Object.keys(data.difficulties[0].modifiers);
-  keys.forEach((k) => { if (!MODIFIER_LABELS[k]) throw new Error(`No label for difficulty modifier "${k}" in scripts/render.mjs`); });
+  keys.forEach((k) => { if (!MODIFIER_LABELS[k]) throw new Error(`No label for difficulty modifier "${k}" in wiki/generator/render.mjs`); });
   const rows = data.difficulties.map((d) => [`<span id="${esc(d.id)}">${esc(d.label)}</span>`, esc(d.description), ...keys.map((k) => `×${num(d.modifiers[k])}`)]);
   const body = `${header('Play', 'Modes and difficulty', null)}
 ${modes}

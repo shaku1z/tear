@@ -20,7 +20,7 @@ The wiki used to live in two places: an Astro and Starlight site in the separate
 | Removed | Why | Now |
 | --- | --- | --- |
 | 62 hand-kept MDX pages | They repeated game facts by hand and drifted: "Aldric" for the Berserker King, "The Iron Colossus", "Ranged" for Shooter, wrong controls. | Pages generated from the game's export. The advice in them moved to `content/notes/` and `content/guides/`. |
-| 35 Astro/Svelte components | They rendered the old reference. | `scripts/render.mjs`. |
+| 35 Astro/Svelte components | They rendered the old reference. | `generator/render.mjs`. |
 | The three-file game reference, its receipt and terminology file | No stats, no codex text, no shop, no controls. | The exporter, `pnpm export:wiki`. |
 | The wiki dispatch, artifact publication and sync scripts, receipts and workflows | A game deploy dispatched a zip to a bot that promoted three files, the owner merged, then a manual deploy. The repositories are private, so pulling the game ref also failed. | Nothing: the site is built from the game commit it ships with. |
 | The loadout builder ("Ability Lab") | Upgrade drafts are random: players are offered options and cannot pick any upgrade at will, so a planner described builds nobody can choose. It also checked no game rule. | `/builder/` redirects to `/upgrades/`, which lists every upgrade with its tiers and stacks. |
