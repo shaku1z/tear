@@ -859,7 +859,7 @@
   },
   {
     "id": "source-void-low-hp-rescue-seek",
-    "description": "At one HP, trigger the real live Source void-fall rescue through semantic movement, retain its native evidence, verify a supported pre-rescue replay receipt, and explicitly refuse unsupported detached post-rescue void replay and mixed-capsule seeking.",
+    "description": "At one HP, trigger the real live Source void-fall rescue through semantic movement, retain its native evidence, and verify and seek the capsule through production detached replay both before and after the rescue.",
     "subject": {
       "kind": "boss",
       "id": "source"
@@ -891,7 +891,7 @@
     ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-c40-source-void-ghost-seek.js",
-      "artifact": "An ephemeral sealed Ghost V3 capsule, including 60-tick canonical keyframes, a one-HP semantic void-fall rescue, its native world.void-rescue fact, a supported pre-rescue detached replay receipt, and explicit refusal of unsupported detached post-rescue void replay and mixed-capsule seeking.",
+      "artifact": "An ephemeral sealed Ghost V3 capsule, including 60-tick canonical keyframes, a one-HP semantic void-fall rescue, its native world.void-rescue fact, and pre-rescue and post-rescue detached replay receipts and seeks that reproduce the authoritative hashes.",
       "artifactRetention": "The browser proof verifies the capsule and receipts in its isolated test profile; it does not retain a checked-in release artifact.",
       "executionClass": "engineering",
       "certification": "non-certifying",

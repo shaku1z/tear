@@ -213,6 +213,10 @@ describe("Ghost application-frame evidence", () => {
     frames.installed("boss-2", 1.4, 0); frames.end(0);
     expect(recorder.record.mock.calls).toHaveLength(1);
     expect(recorder.record.mock.calls[0]?.[2]).toMatchObject({ payload: { format: "tearghost-intro-install", actorId: "boss-2" } });
+    // A raw fixed tick outside any application frame records no clock witness.
+    recorder.record.mockClear();
+    frames.installed("boss-3", 1.4, 0);
+    expect(recorder.record).not.toHaveBeenCalled();
   });
 });
 

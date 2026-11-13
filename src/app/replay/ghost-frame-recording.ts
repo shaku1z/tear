@@ -79,6 +79,10 @@ export function createLiveGhostFrameRecording(options: Readonly<{
     },
     installed(actorId: string, duration: number, delay: number) {
       const binding = identity(); if (binding === undefined) return;
+      // The witness belongs to the application clock. Raw fixed ticks driven
+      // outside any application frame (State Forge source discovery, whose
+      // timeline the forged origin rebases away) are not clock facts.
+      if (chosen === undefined && open === undefined) return;
       // Cinema callbacks run before this frame's prelude; simulation installs do not.
       activate();
       const event = createGhostApplicationClockEvent(options.session.nextEventSequence(), options.tick(), {
