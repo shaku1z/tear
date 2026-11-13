@@ -5,7 +5,7 @@ import type { WorldRect } from "../../presentation/world/contracts";
 import type { PadBindingLabel, PromptInputMode } from "../../domain/prompt-vocabulary";
 import type { LiveTutorialLessonView } from "../../gameplay/training/live-tutorial-runtime";
 import { lessonPromptActions } from "../../presentation/world/tutorial-input-prompts";
-import { TrainingCoachDirector, type TrainingCoachFrame } from "../training/training-coach-director";
+import { TrainingCoach, type TrainingCoachFrame } from "../training/training-coach";
 
 /** World point to screen point through the frame camera (see `renderWorldFrame`). */
 export function worldToScreen(camera: WorldCamera, x: number, y: number): CoachPoint {
@@ -50,10 +50,10 @@ export interface TrainingCoachSources {
 /**
  * Builds one coach frame per HUD frame: projects the player onto the screen, lists what
  * the marks must avoid (the player, the lesson card, the touch controls) and asks the
- * director which marks are visible.
+ * coach which marks are visible.
  */
 export function createTrainingCoachPresentation() {
-  const director = new TrainingCoachDirector();
+  const coach = new TrainingCoach();
   return {
     frame(sources: TrainingCoachSources) {
       const avoid: CoachRect[] = [];
@@ -97,7 +97,7 @@ export function createTrainingCoachPresentation() {
           ? { playground: { runKey: sources.run, ...(sources.arena === undefined ? {} : { arena: sources.arena }) } }
           : {}),
       };
-      return { marks: director.step(frame), avoid };
+      return { marks: coach.step(frame), avoid };
     },
   };
 }

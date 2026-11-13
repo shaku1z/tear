@@ -48,7 +48,7 @@ export interface TrainingCoachFrame {
  * starts (gone at the first counted evidence), a "show me" nudge after a stall, and the
  * Playground's one-line help when a Playground run opens.
  */
-export class TrainingCoachDirector {
+export class TrainingCoach {
   readonly #queue = new CoachQueue();
   #lessonKey = "";
   #lessonEvidence = 0;
