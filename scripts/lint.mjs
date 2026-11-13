@@ -20,7 +20,10 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const eslint = resolve(root, "node_modules", "eslint", "bin", "eslint.js");
-  const result = spawnSync(process.execPath, [eslint, ...LINT_TARGETS, ...process.argv.slice(2)], {
+  // Type-aware linting of the whole repository needs more than Node's default heap; without this
+  // ESLint dies with "JavaScript heap out of memory" on the hosted runner, which has about 16 GB.
+  const heap = "--max-old-space-size=6144";
+  const result = spawnSync(process.execPath, [heap, eslint, ...LINT_TARGETS, ...process.argv.slice(2)], {
     cwd: root,
     stdio: "inherit",
   });
