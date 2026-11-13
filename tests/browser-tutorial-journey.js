@@ -289,15 +289,14 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     });
     assert.equal((await coach()).visible, false, "meaningful real player movement must dismiss preview");
     await pause();
-    await clickLabel("LESSON HELP");
-    await clickLabel("PLAYBACK 1×");
-    await clickLabel("DIAGNOSTIC DEMO");
-    const diagnostic = await coach();
+    await clickLabel("DEMO SPEED 1×");
+    await clickLabel("SHOW DEMO");
+    const slowDemo = await coach();
     await pump(20);
-    assert.equal((await coach()).mode, "diagnostic");
+    assert.equal((await coach()).mode, "preview");
     assert.equal((await coach()).rate, 0.5);
-    assert.equal((await coach()).tick - diagnostic.tick, 10, "half-speed changes only the display cursor");
-    assert.match((await coach()).diagnosis, /unknown|recorded/i);
+    assert.equal((await coach()).tick - slowDemo.tick, 10, "half-speed changes only the display cursor");
+    assert.doesNotMatch((await coach()).diagnosis, /cause unknown|objective/i, "coach copy is player wording");
     if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "tutorial-gold-diagnostic.png") });
     await pause();
     await clickLabel("MAIN MENU");
@@ -340,7 +339,7 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     await clickLabel("‹  BACK");
     assert.equal((await coach()).reducedMotion, true);
     const objectiveBeforeCompare = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().counters);
-    await clickLabel("COMPARE ATTEMPT");
+    await clickLabel("COMPARE WITH DEMO");
     await pump(20);
     assert.equal((await coach()).mode, "comparison");
     assert.equal((await coach()).visible, true);
@@ -371,8 +370,7 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     for (let lesson = 0; lesson < 13; lesson++) {
       assert.equal((await page.evaluate(() => window.__PANTHEON_TEST.tutorial())).lessonIndex, lesson);
       await pause();
-      await clickLabel("LESSON HELP");
-      await clickLabel("SKIP UNFINISHED");
+      await clickLabel("SKIP LESSON");
     }
     await page.evaluate((maximumTicks) => {
       let ticks = 0;
@@ -403,7 +401,7 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
       const restored = environment.restoreSnapshot(JSON.parse(JSON.stringify(saved)));
       if (!restored.ok) throw new Error(JSON.stringify(restored));
     });
-    await clickLabel("SLAM · UNFINISHED");
+    await clickLabel("SLAM · SKIPPED");
     await pump(900);
     assert.equal((await coach()).adaptive.failures, 0, "idle cannot escalate coaching");
     const ladder = await page.evaluate(() => {
@@ -432,7 +430,7 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     assert.equal(ladder.coach.adaptive.assistOffered, true);
     await pause();
     if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "tutorial-adaptive-assist.png") });
-    await clickLabel("ADVANCE UNFINISHED");
+    await clickLabel("SKIP LESSON");
     const assisted = await page.evaluate(() => window.__PANTHEON_TEST.tutorial());
     assert.equal(assisted.lessonIndex, 7);
     assert.equal(assisted.session.courseCompleted, false);

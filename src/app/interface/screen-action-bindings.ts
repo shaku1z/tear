@@ -150,8 +150,12 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       const run = ports.currentRun();
       ports.startRun(run.mode, run.diff);
     },
-    "run.quit": () => {
+    "run.quit": (action) => {
       ports.quitRun();
+      if (action.next === "setup") {
+        ports.setSetupSelection("mode", "campaign");
+        ports.setScreen("setup");
+      }
     },
     "continue.revive": () => {
       ports.revive();

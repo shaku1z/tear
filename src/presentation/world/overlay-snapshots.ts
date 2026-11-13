@@ -8,37 +8,29 @@ import type {
   WorldRect,
 } from "./contracts";
 
-export interface TutorialLessonSource {
-  readonly t: string;
-  readonly d: string;
-  readonly keys?: readonly string[];
-  readonly final?: boolean;
-  readonly arenaLabel?: string;
-  readonly teachingFocus?: string;
-  readonly prog?: () => readonly [number, number];
+export interface TutorialCardSource {
+  readonly context: string;
+  readonly title: string;
+  readonly goal: string;
+  readonly final: boolean;
+  readonly bossPractice?: boolean;
 }
 export function buildTutorialCardSnapshot(
-  index: number,
-  count: number,
-  lesson: TutorialLessonSource,
+  exercise: TutorialCardSource,
+  keys: readonly string[],
+  progress: readonly [number, number] | undefined,
   doneTime: number,
   clearTop?: number,
 ): TutorialCardSnapshot {
-  const progress = lesson.prog !== undefined && lesson.final !== true ? lesson.prog() : undefined;
   return Object.freeze({
-    lessonIndex: index,
-    lessonCount: count,
-    title: lesson.t,
-    description: lesson.d,
-    ...(lesson.t.endsWith(" ANNEX") ? { annex: true } : {}),
-    ...(lesson.t.includes(" · PHASE ") ? { bossPractice: true } : {}),
-    ...(lesson.t.endsWith(" ENCOUNTER") ? { enemyPractice: true } : {}),
-    keys: lesson.keys ?? [],
-    final: lesson.final === true,
+    context: exercise.context,
+    ...(exercise.bossPractice === true ? { bossPractice: true } : {}),
+    title: exercise.title,
+    description: exercise.goal,
+    keys,
+    final: exercise.final,
     completedBeat: doneTime,
-    arenaLabel: lesson.arenaLabel ?? "TRAINING",
-    teachingFocus: lesson.teachingFocus ?? "movement",
-    progress: progress === undefined ? undefined : { current: progress[0], goal: progress[1] },
+    progress: progress === undefined || exercise.final ? undefined : { current: progress[0], goal: progress[1] },
     clearTop,
   });
 }

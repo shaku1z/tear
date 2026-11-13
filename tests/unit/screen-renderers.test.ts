@@ -341,6 +341,43 @@ describe("legacy screen renderer registry", () => {
     expect(controls.some((control) => control.label === "DOWNLOAD" || control.label.includes("THEATER"))).toBe(false);
     expect(controls.some((control) => control.action.type === "profile.closeOwnGhostCatalog")).toBe(true);
   });
+  it("pauses the Tutorial on the current lesson with plain actions and only reached lessons", () => {
+    const controls: ScreenControl[] = [],
+      context = createRenderContext(controls),
+      title = vi.spyOn(context.ui, "title");
+    const renderer = createScreenRenderers(context),
+      controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
+    expect(title).toHaveBeenCalledWith(
+      expect.anything(),
+      "TUTORIAL",
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+    const labels = controls.map((control) => control.label);
+    expect(labels.slice(0, 3)).toEqual(["RESUME", "RESTART LESSON", "SKIP LESSON"]);
+    expect(labels).toEqual(expect.arrayContaining(["SETTINGS", "MAIN MENU"]));
+    expect(labels.some((label) => /LOCKED|LESSON HELP|DIAGNOSTIC|PLAYBACK|UNFINISHED/.test(label))).toBe(false);
+    expect(
+      controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select"),
+    ).toHaveLength(1);
+    expect(controls.find((control) => control.label === "SKIP LESSON")?.action).toEqual({
+      type: "tutorial.action",
+      command: "skip",
+    });
+    controls.length = 0;
+    renderer.paused({
+      id: "paused",
+      abilities: [],
+      progress: [],
+      tutorial: { ...controller.session(), phase: "free-practice", courseCompleted: true },
+    });
+    expect(controls[0]).toMatchObject({ label: "START A RUN", action: { type: "run.quit", next: "setup" } });
+    expect(controls[1]?.label).toBe("KEEP PRACTICING");
+    expect(controls.some((control) => control.label === "SKIP LESSON")).toBe(false);
+  });
   it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
     const controls: ScreenControl[] = [],
       context = createRenderContext(controls),
@@ -390,10 +427,10 @@ describe("legacy screen renderer registry", () => {
     });
     expect(
       controls.filter((control) => control.action.type === "tutorial.action").map((control) => control.label),
-    ).toEqual(expect.arrayContaining(["SHOW DEMO", "PLAYBACK 0.5×", "DIAGNOSTIC DEMO", "COMPARE ATTEMPT"]));
+    ).toEqual(expect.arrayContaining(["SHOW DEMO", "DEMO SPEED 0.5×", "COMPARE WITH DEMO"]));
     expect(
       controls
-        .filter((control) => control.label === "COMPARE ATTEMPT")
+        .filter((control) => control.label === "COMPARE WITH DEMO")
         .every((control) => control.y + control.h <= context.height),
     ).toBe(true);
     controls.length = 0;

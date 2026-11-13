@@ -39,14 +39,14 @@ const causes: readonly Cause[] = [
   "unknown",
 ];
 const messages: Readonly<Record<Cause, string>> = {
-  slow: "Contact rejected below hit speed. Move the blade faster through the target.",
-  grounded: "Grounded contact recorded. Try the strike while airborne; timing cause unknown.",
-  "recall-range": "Recall refused outside tether range. Move closer before recalling.",
-  "no-contact": "Action ended without accepted contact. Position or timing cause unknown.",
-  "wrong-strike": "Contact accepted as a different strike. Required strike absent; direction or timing cause unknown.",
-  "shot-missed": "Shot ended without a return. Early or late timing and position remain unknown.",
-  transfer: "Contact repeated without new transfer progress. Follow the current launch, air-hit or return instruction.",
-  unknown: "Action ended without objective progress. Cause unknown. Open help for a real example.",
+  slow: "Too slow to count. Swing faster through the target.",
+  grounded: "That hit was on the ground. Try it in the air.",
+  "recall-range": "Too far to recall. Move closer to the blade first.",
+  "no-contact": "Missed. Get closer and swing through the target.",
+  "wrong-strike": "That counted as a different strike. Check the swing direction.",
+  "shot-missed": "The shot got through. Swing fast just as it reaches you.",
+  transfer: "Same hit again. Follow the next step of the lesson.",
+  unknown: "Not quite. Pause and choose SHOW DEMO to watch it done.",
 };
 export function parseTutorialFailures(value: unknown): TutorialFailureCheckpoint {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("Invalid tutorial failures");

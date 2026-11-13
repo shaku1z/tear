@@ -34,7 +34,9 @@ import {
   buildSceneEffectsSnapshot,
   type VisualEnemySource,
 } from "../../presentation/world/runtime-snapshots";
-import { padPromptLabel, tutorialInputPrompt } from "../../presentation/world/tutorial-input-prompts";
+import { padPromptLabel } from "../../presentation/world/tutorial-input-prompts";
+import { promptDevice, promptLabels } from "../../domain/prompt-vocabulary";
+import { trainingExercise } from "../../gameplay/training/training-exercises";
 import { createTrainingCoachPresentation } from "./training-coach-presentation";
 import { isSheetScreen } from "../../domain/screen-catalog";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
@@ -390,32 +392,34 @@ export function createLiveWorldPresentationAdapters(
     return pause.y + pause.r + d.UI.t.space.sm;
   };
   const coach = createTrainingCoachPresentation();
-  const drawTutorialCard = (): WorldRect => {
-    const lesson = tutorial.step();
-    const prompt = tutorialInputPrompt(lesson.d, lesson.keys, d.Input.mode, d.PAD);
+  /** The exercise on screen, read once per HUD frame for the strip and the coach. */
+  const currentExercise = () => {
+    if (!tutorial.active) return undefined;
+    const view = tutorial.step();
+    return {
+      teaching: trainingExercise(tutorial.session(), { title: view.t, goal: view.d, final: view.final === true }),
+      progress: view.prog(),
+      completing: tutorial.doneT > 0,
+    };
+  };
+  const drawTutorialCard = (exercise: NonNullable<ReturnType<typeof currentExercise>>): WorldRect => {
+    const keys = promptLabels(exercise.teaching.controls, promptDevice(d.Input.mode), padPromptLabel(d.PAD));
     return world.tutorialCard(
       buildTutorialCardSnapshot(
-        tutorial.idx,
-        tutorial.steps.length,
-        {
-          t: lesson.t,
-          d: prompt.description,
-          keys: prompt.keys,
-          prog: lesson.prog,
-          arenaLabel: lesson.arenaLabel,
-          teachingFocus: lesson.teachingFocus,
-          ...(lesson.final === undefined ? {} : { final: lesson.final }),
-        },
+        { ...exercise.teaching, bossPractice: exercise.teaching.kind === "boss" },
+        keys,
+        exercise.progress,
         tutorial.doneT,
         touchClearTop(),
       ),
     );
   };
-  const drawCoachMarks = (lessonCard: WorldRect | undefined): void => {
+  const drawTraining = (): void => {
     const run = state.run();
-    const player = state.player();
     const mode = run.mode === "tutorial" ? "tutorial" : run.mode === "playground" ? "playground" : "other";
     if (mode === "other") return;
+    const exercise = mode === "tutorial" ? currentExercise() : undefined;
+    const lessonCard = exercise ? drawTutorialCard(exercise) : undefined;
     const frame = coach.frame({
       mode,
       run,
@@ -425,11 +429,9 @@ export function createLiveWorldPresentationAdapters(
       inputMode: d.Input.mode,
       padLabel: padPromptLabel(d.PAD),
       camera: lastCamera,
-      player,
+      player: state.player(),
       bladeReach: d.CONFIG.blade.aimRadius + d.CONFIG.blade.length,
-      ...(mode === "tutorial" && tutorial.active
-        ? { lesson: { index: tutorial.idx, view: tutorial.step(), completing: tutorial.doneT > 0 } }
-        : {}),
+      ...(exercise ? { exercise } : {}),
       lessonCard,
       touchLayout: d.Input.touchActive() ? d.Input.touchLayout() : undefined,
     });
@@ -469,7 +471,7 @@ export function createLiveWorldPresentationAdapters(
     });
     world.hud(result.snapshot);
     if (state.screen() === "playing") services.chase?.hud(canvas, width);
-    drawCoachMarks(run.mode === "tutorial" ? drawTutorialCard() : undefined);
+    drawTraining();
   };
 
   return Object.freeze({
