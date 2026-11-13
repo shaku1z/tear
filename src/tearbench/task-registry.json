@@ -1059,6 +1059,21 @@
       "intentionalReplica": "none"
     },
     {
+      "taskId": "browser.check-load-budgets",
+      "version": 1,
+      "runner": { "kind": "node", "executable": "node", "args": ["tests/browser-load-profile.js", "--check"] },
+      "claimIds": ["browser", "check:load-budgets"],
+      "dependencies": [
+        { "taskId": "build.standalone", "outputId": "build-artifact" },
+        { "taskId": "build.crazygames", "outputId": "build-artifact" }
+      ],
+      "resourceClass": "browser",
+      "resourceKeys": ["resources/browser"],
+      "outputs": [],
+      "timeoutMs": 300000,
+      "intentionalReplica": "none"
+    },
+    {
       "taskId": "build.check-crazygames-package",
       "version": 1,
       "runner": {
@@ -3886,6 +3901,7 @@
       "browser.test-browser-production-isolation",
       "browser.test-browser-release-adventure",
       "build.check-bundles",
+      "browser.check-load-budgets",
       "build.check-crazygames-package",
       "certify.reproducible",
       "build.check-cloudflare",
@@ -3978,6 +3994,7 @@
       "browser.test-browser-production-isolation",
       "browser.test-browser-release-adventure",
       "build.check-bundles",
+      "browser.check-load-budgets",
       "build.check-crazygames-package",
       "certify.reproducible",
       "build.check-cloudflare",
@@ -4068,6 +4085,7 @@
       "browser.test-browser-production-isolation",
       "browser.test-browser-release-adventure",
       "build.check-bundles",
+      "browser.check-load-budgets",
       "build.check-crazygames-package",
       "certify.reproducible",
       "build.check-cloudflare",
@@ -4174,6 +4192,7 @@
       "browser.test-browser-production-isolation",
       "browser.test-browser-release-adventure",
       "build.check-bundles",
+      "browser.check-load-budgets",
       "build.check-crazygames-package",
       "certify.reproducible",
       "build.check-cloudflare",
@@ -4263,6 +4282,7 @@
       "browser.test-browser-production-isolation",
       "browser.test-browser-release-adventure",
       "build.check-bundles",
+      "browser.check-load-budgets",
       "build.check-crazygames-package",
       "certify.reproducible",
       "build.check-cloudflare",
@@ -4325,7 +4345,7 @@
   },
   "compatibilityInventory": {
     "check.functional": {
-      "expandedLeafCount": 77,
+      "expandedLeafCount": 78,
       "taskIds": [
         "static.requirements-check",
         "static.check-docs",
@@ -4365,6 +4385,7 @@
         "static.check-test-isolation",
         "browser.test-browser-production-isolation",
         "build.check-bundles",
+        "browser.check-load-budgets",
         "build.check-crazygames-package",
         "certify.reproducible",
         "build.check-cloudflare",
@@ -4414,7 +4435,7 @@
       ]
     },
     "check": {
-      "expandedLeafCount": 79,
+      "expandedLeafCount": 80,
       "taskIds": [
         "static.requirements-check",
         "static.check-docs",
@@ -4454,6 +4475,7 @@
         "static.check-test-isolation",
         "browser.test-browser-production-isolation",
         "build.check-bundles",
+        "browser.check-load-budgets",
         "build.check-crazygames-package",
         "certify.reproducible",
         "build.check-cloudflare",

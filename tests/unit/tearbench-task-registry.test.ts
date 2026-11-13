@@ -57,7 +57,7 @@ describe("TearBench atomic task registry", () => {
       "tests/tearbench-simulation-boundary-report.test.mjs",
     ]);
     expect(requiredTask("unit.tearbench-canary-contract").version).toBe(4);
-    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(79);
+    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
   });
   it("runs resource lease regressions in functional and protected profiles without rewriting the compatibility baseline", () => {
     const value = canonical();
@@ -68,13 +68,13 @@ describe("TearBench atomic task registry", () => {
       "--test",
       "tests/tearbench-resource-leases.test.mjs",
     ]);
-    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(79);
+    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
   });
   it("preserves the exact VAP-0 inventory behind thin package aliases", () => {
     const value = canonical();
-    expect(value.compatibilityInventory["check.functional"]?.expandedLeafCount).toBe(77);
+    expect(value.compatibilityInventory["check.functional"]?.expandedLeafCount).toBe(78);
     expect(value.compatibilityInventory["check.performance"]?.expandedLeafCount).toBe(2);
-    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(79);
+    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
     expect(value.profiles.check).toEqual([
       ...(value.profiles["check.functional"] ?? []),
       ...(value.profiles["check.performance"] ?? []),
@@ -130,7 +130,7 @@ describe("TearBench atomic task registry", () => {
       "tests/tearbench-task-execution.test.mjs",
       "tests/tearbench-task-receipts.test.mjs",
     ]);
-    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(79);
+    expect(value.compatibilityInventory.check?.expandedLeafCount).toBe(80);
   });
 
   it("rejects duplicate IDs, unknown dependencies, cycles, and missing outputs", () => {
