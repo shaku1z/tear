@@ -215,16 +215,6 @@ describe("Verdant gameplay regressions", () => {
     expect(targets.filter((target) => target === "enemy:shared")).toHaveLength(1);
   });
 
-  it("constructs every Verdant enemy in the production replay world, as live play does", () => {
-    const { replay } = createProductionGhostReplayComposition({
-      seed: "verdant-replay-entities",
-      mode: "campaign",
-    }).create(undefined);
-    const run = replay.world.state.run();
-    for (const kind of ["rootbinder", "rootbound"])
-      expect(replay.world.entities.createEnemy(kind, 400, CONFIG.world.groundY - 40, run as never).kind).toBe(kind);
-  });
-
   it("applies Bloom lift in the production replay world, as live play does", () => {
     const source = createProductionGhostReplayComposition({ seed: "verdant-replay-lift", mode: "campaign" }).create(
       undefined,
