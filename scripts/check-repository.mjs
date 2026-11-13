@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Repository-shape checks run by check:docs (and so check:quick and CI's static.check-docs task):
 // docs/REPOSITORY_MAP.md names every tracked top-level entry, and tracked files in the document and
 // evidence folders stay under a size cap unless config/size-caps.json gives them their own ceiling.
