@@ -140,6 +140,8 @@
     "check:position": "node scripts/position.mjs check",
     "who": "node scripts/who.mjs",
     "merge:ready": "node scripts/merge-ready.mjs",
+    "setup:hooks": "node scripts/governance/setup-hooks.mjs",
+    "check:hooks": "node scripts/governance/setup-hooks.mjs --check",
     "check:terminology": "node scripts/check-terminology.mjs",
     "check:active-roster": "node scripts/check-active-roster.mjs",
     "check:game-reference": "node scripts/check-game-reference.mjs",
