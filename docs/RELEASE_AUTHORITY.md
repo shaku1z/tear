@@ -10,9 +10,13 @@ Cloudflare is a publication target, not an independent source branch.
    contract at that exact SHA and uploads the resulting targets. The complete
    `pnpm check`, including controlled-host performance evidence, runs once for
    the final release candidate before the gate closes.
-3. `Validate` uploads `tear-release-targets-<sha>`. Each target contains
-   `build-info.json` with the repository, full SHA, target, file count, and a
-   deterministic artifact hash.
+3. `Validate` uploads `tear-release-targets-<sha>`: `dist/standalone` (what
+   the deploy workflows publish) and the CrazyGames package. Each target
+   contains `build-info.json` with the repository, full SHA, target, file
+   count, and a deterministic artifact hash. The artifact is kept 7 days for a
+   `main` run and 2 days for a pull-request run. Production only deploys the
+   current `main` head (step 7). If that head's artifact has expired, re-run
+   its Validate run, which uploads a fresh artifact under the same run ID.
 4. A maintainer manually starts `Deploy Cloudflare Production` with the
    successful Validate run ID.
 5. The protected `Production` environment provides the approval boundary and

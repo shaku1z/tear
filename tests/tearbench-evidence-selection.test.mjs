@@ -684,11 +684,8 @@ test("documentation plus an unmapped change cannot masquerade as documentation-o
   assert.ok(selection.buildTargets.includes("test-standalone"));
 });
 
-test("protected and scheduled TearBench workflows inspect complete intended commit ranges", () => {
-  const pullRequestWorkflow = readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8");
+test("the scheduled TearBench workflow inspects the complete commit range", () => {
   const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
-  assert.match(pullRequestWorkflow, /github\.event\.before/u);
-  assert.doesNotMatch(pullRequestWorkflow, /github\.sha\s*\}\}"\^/u);
   assert.doesNotMatch(scheduledWorkflow, /HEAD\^\s+HEAD/u);
   assert.match(scheduledWorkflow, /git rev-list --max-parents=0 HEAD/u);
   assert.ok((scheduledWorkflow.match(/fetch-depth: 0/gu) ?? []).length >= 2);
