@@ -1710,6 +1710,23 @@
           "checkpoint": "G4-B-MUSIC",
           "condition": "Update in the follow-up contributor-document slice once the hosted canonical vendoring workflow is accepted."
         }
+      },
+      {
+        "id": "compat-decisions-log",
+        "pathPattern": "docs/DECISIONS.md",
+        "termIds": [
+          "training-operations",
+          "training-archive"
+        ],
+        "owner": "Repository owner",
+        "reason": "The decisions log quotes the owner verbatim and names the systems a decision removed.",
+        "testEvidence": [
+          "docs/DECISIONS.md"
+        ],
+        "expiry": {
+          "checkpoint": "D-013 step 2",
+          "condition": "Removed with the training-operations and training-archive terms when those systems are deleted."
+        }
       }
     ]
   },
