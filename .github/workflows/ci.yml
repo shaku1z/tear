@@ -47,8 +47,7 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           gameplay_required=true
-          if [[ -n "$BASE" ]] && git diff --name-only "$BASE" HEAD | node -e 'const files = require("fs").readFileSync(0, "utf8").split(/?
-/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs/|plans/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT|AGENTS|CLAUDE).md$|config/position.json$|.github/pull_request_template.md$)/u.test(file)) ? 0 : 1)'; then
+          if [[ -n "$BASE" ]] && git diff --name-only "$BASE" HEAD | node -e 'const files = require("fs").readFileSync(0, "utf8").split(/\r?\n/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs\/|plans\/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT|AGENTS|CLAUDE)\.md$|config\/position\.json$|\.github\/pull_request_template\.md$)/u.test(file)) ? 0 : 1)'; then
             gameplay_required=false
           fi
           echo "gameplay_required=$gameplay_required" >> "$GITHUB_OUTPUT"

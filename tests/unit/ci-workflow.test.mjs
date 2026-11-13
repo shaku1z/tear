@@ -1,6 +1,8 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import process from "node:process";
 import { describe, expect, it } from "vitest";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -33,6 +35,20 @@ describe("Validate workflow", () => {
     expect(workflow).toMatch(
       /group: validate-\$\{\{ github\.ref \}\}-\$\{\{ github\.event_name == 'push' && github\.sha/u,
     );
+  });
+
+  it("treats a pull request as docs-only exactly when every changed file is a document", { timeout: 30_000 }, () => {
+    // Runs the workflow's own script, so a quoting or escaping mistake in the file fails here.
+    const script = /git diff --name-only "\$BASE" HEAD \| node -e '([^']+)'; then$/mu.exec(workflow)?.[1];
+    expect(script, "the docs-only scope script").toBeDefined();
+    const docsOnly = (files) =>
+      spawnSync(process.execPath, ["-e", script ?? ""], { input: `${files.join("\n")}\n` }).status === 0;
+    expect(docsOnly(["docs/RELEASE_AUTHORITY.md", "AGENTS.md", "config/position.json"])).toBe(true);
+    expect(docsOnly(["plans/active/x.md", ".github/pull_request_template.md", "README.md"])).toBe(true);
+    expect(docsOnly(["docs/x.md", "src/main.ts"])).toBe(false);
+    expect(docsOnly(["config/checks.json"])).toBe(false);
+    expect(docsOnly(["docsx/a.md"])).toBe(false);
+    expect(docsOnly([])).toBe(false);
   });
 
   it("gives no step a key twice (GitHub rejects such a file)", () => {
