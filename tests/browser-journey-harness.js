@@ -159,12 +159,18 @@ async function withJourney(options, run) {
         requestAnimationFrame(tick);
       }));
     }
+    // Screens ease in when they open, so a control is located only once two consecutive
+    // frames drew it in the same place: where a player sees it come to rest.
     /** The middle of a drawn control label (RETRY, SKIP RESERVE, a tab name). */
     async function labelPoint(label) {
       assert.ok(options.recordFrames, "labelPoint needs the recordFrames journey option");
+      await page.evaluate(() => { window.__TEAR_JOURNEY_LAST_POINT__ = null; });
       const handle = await page.waitForFunction((text) => {
         const entry = window.__TEAR_JOURNEY_FRAME__.texts.find((candidate) => candidate.text === text);
-        return entry ? { x: entry.x, y: entry.y - 4 } : null;
+        const point = entry ? { x: Math.round(entry.x), y: Math.round(entry.y - 4) } : null;
+        const previous = window.__TEAR_JOURNEY_LAST_POINT__;
+        window.__TEAR_JOURNEY_LAST_POINT__ = { key: `label:${text}`, point };
+        return point && previous?.key === `label:${text}` && previous.point?.x === point.x && previous.point.y === point.y ? point : null;
       }, label, { timeout: 5000 });
       return handle.jsonValue();
     }
@@ -175,6 +181,7 @@ async function withJourney(options, run) {
     /** Centre of the drawn card whose key badge reads `number`: the smallest outlined frame around the badge. */
     async function cardCentre(number) {
       assert.ok(options.recordFrames, "cardCentre needs the recordFrames journey option");
+      await page.evaluate(() => { window.__TEAR_JOURNEY_LAST_POINT__ = null; });
       const handle = await page.waitForFunction((label) => {
         const frame = window.__TEAR_JOURNEY_FRAME__;
         const badge = frame.texts.find((entry) => entry.text === label && entry.baseline === "middle");
@@ -183,7 +190,10 @@ async function withJourney(options, run) {
           && badge.x > rect.x && badge.x < rect.x + rect.w && badge.y > rect.y && badge.y < rect.y + rect.h);
         if (cards.length === 0) return null;
         const card = cards.reduce((best, rect) => rect.w * rect.h < best.w * best.h ? rect : best);
-        return { x: card.x + card.w / 2, y: card.y + card.h / 2 };
+        const point = { x: Math.round(card.x + card.w / 2), y: Math.round(card.y + card.h / 2) };
+        const previous = window.__TEAR_JOURNEY_LAST_POINT__;
+        window.__TEAR_JOURNEY_LAST_POINT__ = { key: `card:${label}`, point };
+        return previous?.key === `card:${label}` && previous.point?.x === point.x && previous.point.y === point.y ? point : null;
       }, String(number), { timeout: 5000 });
       return handle.jsonValue();
     }
