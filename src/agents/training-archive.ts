@@ -128,15 +128,7 @@ export const LEGACY_TRAINING_ARCHIVE_QUERY_ALIASES = Object.freeze(["academy", "
 export const TRAINING_ARCHIVE_QUERY_VALUE = "1" as const;
 
 /** Canonical semantic actions; legacy Academy action IDs remain readable. */
-export const TRAINING_ARCHIVE_ACTIONS = Object.freeze({
-  open: "training-archive.open",
-  retry: "training-archive.retry",
-  daggerAdvance: "training-archive.dagger.advance",
-  daggerReview: "training-archive.dagger.review",
-  withdrawModelTraining: "training-archive.record.withdrawModelTraining",
-  humanCalibrationOptIn: "training-archive.humanCalibration.optIn",
-  humanCalibrationRevoke: "training-archive.humanCalibration.revoke",
-} as const);
+export { TRAINING_ARCHIVE_ACTIONS } from "../domain/engineering-actions";
 export const LEGACY_TRAINING_ARCHIVE_ACTIONS = Object.freeze({
   retry: "academy.retry",
   daggerAdvance: "academy.dagger.advance",
