@@ -1,6 +1,33 @@
-import type { PlaygroundScreenView, ScreenRenderContext } from "./contracts";
+import type { ChoiceView, PlaygroundScreenView, ScreenRenderContext } from "./contracts";
 import { backControl, scrollHint } from "./screen-primitives";
 import { createCompactPlayground } from "./compact-playground";
+
+export interface GridCell { readonly column: number; readonly row: number; readonly span: number }
+export interface ChoiceGrid { readonly columns: number; readonly rows: number; readonly cellWidth: number; readonly cells: readonly GridCell[] }
+
+/**
+ * Flows `count` choices left to right into rows, the last one spanning `lastSpan` cells
+ * (it starts a new row when the current one has too few cells left). Uses the fewest
+ * columns from `minColumns` that keep the grid within `maxRows`; at `maxColumns` it
+ * stops widening and grows downward instead.
+ */
+export function choiceGrid(count: number, lastSpan: number,
+  options: Readonly<{ minColumns: number; maxColumns: number; maxRows: number; width: number; gap: number }>): ChoiceGrid {
+  const flow = (columns: number): GridCell[] => {
+    const cells: GridCell[] = [];
+    for (let index = 0, slot = 0; index < count; index++) {
+      const span = index === count - 1 ? Math.min(lastSpan, columns) : 1;
+      if (slot % columns + span > columns) slot = Math.ceil(slot / columns) * columns;
+      cells.push({ column: slot % columns, row: Math.floor(slot / columns), span });
+      slot += span;
+    }
+    return cells;
+  };
+  let columns = options.minColumns, cells = flow(columns);
+  const rowsOf = (list: readonly GridCell[]): number => list.reduce((rows, cell) => Math.max(rows, cell.row + 1), 0);
+  while (rowsOf(cells) > options.maxRows && columns < options.maxColumns) cells = flow(++columns);
+  return { columns, rows: rowsOf(cells), cellWidth: (options.width - options.gap * (columns - 1)) / columns, cells };
+}
 
 export function createPlaygroundRenderers(context: ScreenRenderContext) {
   const { ui, width, height } = context;
@@ -40,20 +67,31 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
   function renderBuildMenu(view: PlaygroundScreenView): void {
     const sections = new Map(view.sections.map((section) => [section.label, section]));
     const { canvas } = context, t = ui.t, accent = t.color.accent;
-    const left = width / 2 - 620, right = width / 2 + 20, columnWidth = 600, bh = 42, gap = 10;
+    const left = width / 2 - 620, right = width / 2 + 20, columnWidth = 600, bh = 42, gap = 10, gridTop = 208;
     const tag = (label: string, x: number, y: number): void => { ui.tag(canvas, label, x, y, accent, "left", t.type.micro); };
+    const rowY = (row: number): number => gridTop + row * (bh + gap);
+    // Everything under the enemy and boss grids is placed from the rows they use, and
+    // each grid takes as many columns as it needs to end above the bottom band
+    // (source top 640, 36 px clearance), so a new enemy or boss never lands on the next group.
+    const bandTop = 640, bandClearance = 36, headingGap = 26;
+    const leftStackBelow = headingGap + 66 + 4 + 38, rightStackBelow = headingGap + bh + 30 + 4 + bh;
+    const rowsAbove = (below: number): number => Math.floor((bandTop - bandClearance - below - gridTop) / (bh + gap));
+    const place = (choice: ChoiceView, grid: ChoiceGrid, index: number, x: number): void => {
+      const cell = grid.cells[index];
+      if (cell === undefined) return;
+      enqueueChoice(choice, x + cell.column * (grid.cellWidth + gap), rowY(cell.row), grid.cellWidth * cell.span + gap * (cell.span - 1), bh, 13);
+    };
 
-    // ---- left: enemies (kind-coloured), the target dummy, spawn modifiers ----
+    // ---- left: enemies (kind-coloured), the two-cell target dummy, spawn modifiers ----
     tag("SPAWN ENEMIES", left, 196);
     const enemies = sections.get("SPAWN ENEMIES")?.choices ?? [];
-    const kinds = enemies.slice(0, Math.max(0, enemies.length - 1));
-    kinds.forEach((choice, index) => {
-      enqueueChoice(choice, left + (index % 3) * (196 + gap), 208 + Math.floor(index / 3) * (bh + gap), 196, bh, 13);
+    // Source grid: three 196 px kinds per row (608 px), the dummy spanning two cells.
+    const enemyGrid = choiceGrid(enemies.length, 2, { minColumns: 3, maxColumns: 4, maxRows: rowsAbove(leftStackBelow), width: 3 * 196 + 2 * gap, gap });
+    enemies.forEach((choice, index) => {
+      place(choice, enemyGrid, index, left);
     });
-    const dummy = enemies[enemies.length - 1];
-    if (dummy) enqueueChoice(dummy, left, 208 + 4 * (bh + gap), 402, bh, 13);
 
-    const modifierY = 208 + 5 * (bh + gap) + 26;
+    const modifierY = rowY(enemyGrid.rows) + headingGap;
     tag("SPAWN MODIFIERS", left, modifierY - 10);
     ui.text(canvas, "HP", left, modifierY + 28, t.type.label);
     sections.get("HP")?.choices.forEach((choice, index) => { enqueueChoice(choice, left + 44 + index * 92, modifierY + 4, 84, 38, 13); });
@@ -67,10 +105,13 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
 
     // ---- right: bosses, arena, weapons ----
     tag("SUMMON A BOSS", right, 196);
-    sections.get("SUMMON A BOSS")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, right + (index % 2) * (295 + gap), 208 + Math.floor(index / 2) * (bh + gap), 295, bh, 13);
+    const bosses = sections.get("SUMMON A BOSS")?.choices ?? [];
+    // Source grid: two 295 px bosses per row across the 600 px column.
+    const bossGrid = choiceGrid(bosses.length, 1, { minColumns: 2, maxColumns: 3, maxRows: rowsAbove(rightStackBelow), width: columnWidth, gap });
+    bosses.forEach((choice, index) => {
+      place(choice, bossGrid, index, right);
     });
-    const arenaY = 208 + 3 * (bh + gap) + 26;
+    const arenaY = rowY(bossGrid.rows) + headingGap;
     tag("ARENA", right, arenaY - 10);
     sections.get("ARENA")?.choices.forEach((choice) => { enqueueChoice(choice, right, arenaY + 4, columnWidth, bh, 13); });
     const weaponY = arenaY + bh + 30;
@@ -82,7 +123,9 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
     }
 
     // ---- bottom band: toggles + actions + resume ----
-    const toggleY = 640;
+    // Source position unless a column still ends lower at its widest grid.
+    const columnsBottom = Math.max(difficultyY + 4 + 38, weaponY + 4 + bh);
+    const toggleY = Math.max(bandTop, columnsBottom + bandClearance);
     tag("MODIFIERS", left, toggleY - 10);
     sections.get("MODIFIERS")?.choices.forEach((choice, index) => { enqueueChoice(choice, left + index * (300 + 12), toggleY + 4, 300, bh, 13); });
     const actionY = toggleY + bh + 18;

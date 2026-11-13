@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import packageSource from "../../package.json";
 import registrySource from "../../src/tearbench/task-registry.json";
@@ -65,6 +66,19 @@ describe("TearBench atomic task registry", () => {
     expect(packageSource.scripts["check:functional"]).toBe("pnpm tearbench tasks run-profile check.functional");
     expect(packageSource.scripts["check:performance"]).toBe("pnpm tearbench tasks run-profile check.performance");
     expect(packageSource.scripts.check).toBe("pnpm tearbench tasks run-profile check");
+  });
+
+  it("lints exactly what pnpm lint lints: both run the one target list in scripts/lint.mjs", () => {
+    const task = requiredTask("static.lint");
+    expect(task.runner).toEqual({ kind: "node", executable: "node", args: ["scripts/lint.mjs"] });
+    expect(task.version).toBe(2);
+    expect(packageSource.scripts.lint).toBe(`node ${task.runner.args.join(" ")}`);
+    // The whole tests tree (.ts, .js and .mjs), not only its TypeScript files.
+    const source = readFileSync(new URL("../../scripts/lint.mjs", import.meta.url), "utf8");
+    const targets = /LINT_TARGETS = Object\.freeze\(\[([^\]]*)\]/u.exec(source)?.[1] ?? "";
+    const list = targets.split(",").map((entry) => entry.trim().replace(/^"|"$/gu, "")).filter(Boolean);
+    expect(list).toEqual(expect.arrayContaining(["src", "workers", "scripts", "tests"]));
+    expect(list.filter((entry) => entry.includes("*"))).toEqual([]);
   });
 
   it("requires executable evidence-client and receipt regressions in every protected functional profile", () => {

@@ -15,8 +15,20 @@ export interface PlaygroundPresentationUpgrade {
   readonly id: string; readonly name: string; readonly desc: string; readonly cat: string;
   readonly unique?: boolean; readonly tiers?: readonly unknown[];
 }
+/** The device that owns input; the build-menu subtitle only names controls that work on it. */
+export type PlaygroundPromptDevice = "mouse" | "keyboard" | "gamepad" | "touch";
+
+/**
+ * Tab and Escape close the build menu only from a keyboard; touch and controller
+ * players leave through the RESUME button, so their subtitle points there instead.
+ */
+export function playgroundMenuSubtitle(device: PlaygroundPromptDevice): string {
+  return device === "mouse" || device === "keyboard" ? "build the scene — Tab / Esc resumes" : "build the scene — RESUME returns to the arena";
+}
+
 export interface LivePlaygroundPresentationOptions {
   readonly run: () => PlaygroundPresentationRun;
+  readonly inputDevice: () => PlaygroundPromptDevice;
   readonly oneHit: () => boolean;
   readonly kinds: readonly string[];
   readonly difficulties: () => readonly Readonly<{ id: string; label: string }>[];
@@ -43,7 +55,7 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
   return Object.freeze({
     renderMenu() {
       const run = options.run(), pg = run.pg, colors = options.colors();
-      options.renderMenu({ id: "pgmenu", title: "PLAYGROUND", subtitle: "build the scene — Tab / Esc resumes", sections: [
+      options.renderMenu({ id: "pgmenu", title: "PLAYGROUND", subtitle: playgroundMenuSubtitle(options.inputDevice()), sections: [
         { label: "SPAWN ENEMIES", choices: [...options.kinds.map((kind) => ({ id: `spawn:${kind}`, label: kind.toUpperCase(), accent: colors[kind] ?? "#888" })),
           { id: "dummy", label: "TARGET DUMMY  (passive)", accent: "#888" }] },
         // Source keeps HP and COUNT as separately labelled rows under one

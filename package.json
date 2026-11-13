@@ -19,7 +19,7 @@
     "package:crazygames:existing": "node scripts/package-crazygames.mjs",
     "preview": "vite preview --mode standalone",
     "typecheck": "tsc -b",
-    "lint": "eslint src workers scripts tests vite.config.ts vitest.config.ts vitest.endurance.config.ts",
+    "lint": "node scripts/lint.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:related": "vitest related --run",
