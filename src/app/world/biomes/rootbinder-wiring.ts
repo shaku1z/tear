@@ -3,7 +3,7 @@ import {
   createVerdantEnvironmentFeature,
   type RootbinderEnvironmentActor,
 } from "../../../gameplay/environment/verdant-environment-feature";
-import type { RootbinderCandidate } from "../../../gameplay/entities/rootbinder-runtime";
+import { severRootbinder, type RootbinderCandidate } from "../../../gameplay/entities/rootbinder-runtime";
 import type { GameEnemy, GamePlayer } from "../../shell/game-runtime-state";
 
 /** Binds live actors to the authoritative environment relationship phase. */
@@ -65,6 +65,10 @@ export function bindLiveRootbinderActors(
           y: enemy.y,
         }),
         candidates: Object.freeze(candidates.filter((candidate) => candidate.id !== id)),
+        sever: () => {
+          const live = enemy as GameEnemy & { rootbinderState: RootbinderEnvironmentActor["state"] };
+          live.rootbinderState = severRootbinder(live.rootbinderState);
+        },
         ...(() => {
           const target = player();
           if (target === null) return {};

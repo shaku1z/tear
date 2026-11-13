@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BLOOM_WELL_LIFT,
   BLOOM_WELL_TIMING,
   advanceBloomWell,
   applyBloomWellForce,
@@ -12,6 +13,7 @@ import {
   BLOOM_WELL_VALIDATION,
   type BloomWellActor,
 } from "../../src/gameplay/environment/bloom-well";
+import { CONFIG } from "../../src/config/game-config";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { projectBloomWellPresentation } from "../../src/presentation/environment/bloom-well-presentation";
@@ -55,7 +57,35 @@ describe("Bloom Well V1", () => {
       "cooldown",
     );
     expect(advanceBloomWell(active, BLOOM_WELL_TIMING.totalTicks - 1).state).toBe("cooldown");
-    expect(advanceBloomWell(active, BLOOM_WELL_TIMING.totalTicks).state).toBe("dormant");
+    // Boss Wells run one authored cycle; stage Wells re-arm for as long as the stage lasts.
+    const bossWell = createBloomWellState({ ...definition, id: "boss-well", variant: "boss", bossOwnerId: "boss" }, 0);
+    expect(advanceBloomWell(bossWell, BLOOM_WELL_TIMING.totalTicks).state).toBe("dormant");
+    expect(advanceBloomWell(bossWell, BLOOM_WELL_TIMING.totalTicks * 3).state).toBe("dormant");
+  });
+
+  it("re-arms stage Wells every cycle for the whole stage", () => {
+    const well = createBloomWellState(definition, 0);
+    const cycle = BLOOM_WELL_TIMING.totalTicks;
+    for (const n of [1, 2, 7]) {
+      expect(advanceBloomWell(well, cycle * n).state).toBe("warning");
+      expect(advanceBloomWell(well, cycle * n + BLOOM_WELL_TIMING.warningTicks)).toMatchObject({
+        state: "active",
+        stateTick: cycle * n + BLOOM_WELL_TIMING.warningTicks,
+      });
+      expect(advanceBloomWell(well, cycle * (n + 1) - 1).state).toBe("cooldown");
+    }
+  });
+
+  it("lifts faster than gravity pulls, up to a capped rise speed", () => {
+    const well = advanceBloomWell(createBloomWellState(definition, 0), BLOOM_WELL_TIMING.warningTicks);
+    const player = actor({ vx: 0, vy: 0 });
+    const dt = 1 / 120;
+    for (let tick = 0; tick < 120; tick += 1) {
+      player.vy += CONFIG.world.gravity * dt;
+      applyBloomWellForce(well, player, dt);
+    }
+    expect(player.vy).toBeLessThan(-300);
+    expect(player.vy).toBeGreaterThanOrEqual(-BLOOM_WELL_LIFT.maxRiseSpeed);
   });
 
   it("exposes warning geometry, lifts eligible actors, and preserves horizontal agency", () => {
@@ -231,7 +261,7 @@ describe("Bloom Well V1", () => {
       environment.step(tick, 1 / 120, () => undefined);
       states.push(environment.fields()[0]?.state ?? "missing");
     }
-    expect(states).toEqual(["warning", "active", "cooldown", "dormant"]);
+    expect(states).toEqual(["warning", "active", "cooldown", "warning"]);
   });
 
   it("cleans authored wells transactionally for stage, boss, retry, and restore boundaries", () => {

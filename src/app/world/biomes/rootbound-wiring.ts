@@ -6,6 +6,24 @@ import {
 } from "../../../gameplay/environment/verdant-environment-feature";
 import type { GameEnemy, GamePlayer } from "../../shell/game-runtime-state";
 import { CONFIG } from "../../../config/game-config";
+import { bindLiveBloomWellActors } from "./bloom-well-wiring";
+import { bindLiveRootbinderActors } from "./rootbinder-wiring";
+
+/**
+ * Binds every Verdant actor source (Bloom Wells, Rootbinders, the Rootbound) in one place,
+ * so live play and the production replay simulation cannot drift apart.
+ */
+export function bindLiveVerdantActors(
+  environment: EnvironmentRuntime,
+  player: () => GamePlayer,
+  enemies: () => readonly GameEnemy[],
+  actorId: (enemy: object) => string,
+  config: typeof CONFIG = CONFIG,
+): void {
+  bindLiveBloomWellActors(environment, player, enemies, actorId);
+  bindLiveRootbinderActors(environment, player, enemies, actorId);
+  bindLiveRootboundActors(environment, player, enemies, actorId, config);
+}
 
 /** Projects Rootbound attack intent into the world-owned environment phase. */
 export function bindLiveRootboundActors(
@@ -34,6 +52,7 @@ export function bindLiveRootboundActors(
           regrowthState: NonNullable<RootboundEnvironmentActor["state"]["regrowth"]>;
           beginRegrowth?: NonNullable<RootboundEnvironmentActor["beginRegrowth"]>;
           advanceRegrowth?: NonNullable<RootboundEnvironmentActor["advanceRegrowth"]>;
+          regrowthChannelBroken?: () => boolean;
         };
         const id = actorId(enemy);
         const target = player();
@@ -50,7 +69,11 @@ export function bindLiveRootboundActors(
           beginRegrowth: (startTick: number, connectionIds: readonly string[]) =>
             actor.beginRegrowth?.(startTick, connectionIds) ?? false,
           advanceRegrowth: (tick: number, activeConnectionIds: ReadonlySet<string>, bossChannelBroken = false) =>
-            actor.advanceRegrowth?.(tick, activeConnectionIds, bossChannelBroken) ?? actor.regrowthState,
+            actor.advanceRegrowth?.(
+              tick,
+              activeConnectionIds,
+              bossChannelBroken || actor.regrowthChannelBroken?.() === true,
+            ) ?? actor.regrowthState,
           state: Object.freeze({
             stage: actor.rootlineStage ?? null,
             geometry: actor.rootlineGeometry?.() ?? Object.freeze({ x: enemy.x, y: enemy.y, w: 0, h: 0 }),
