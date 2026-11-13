@@ -44,7 +44,9 @@ import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
-import type { VerdantSceneNativeSelection } from "../engineering/verdant-calibration-composition";
+import { createSceneLibrary } from "../../presentation/scenes/scene-library";
+import { loadSceneBitmap } from "../../presentation/scenes/scene-bitmap";
+import { SCENE_PACKAGES } from "../../presentation/scenes/scene-registry";
 import { createCinematics } from "../../presentation/cinematics";
 import { cosmeticRandom } from "../../presentation/cosmetic-random";
 import { createCosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
@@ -99,8 +101,7 @@ interface CompositionWindow extends Window {
  *
  * Engineering-only code is loaded here, behind the build constants, so a
  * release build awaits nothing and its bundle contains none of it: the
- * research/diagnostic surface controllers (`__TEAR_ENGINEERING_SURFACES__`)
- * and the Verdant calibration scene (`__TEAR_TEST_BUILD__`).
+ * research/diagnostic surface controllers (`__TEAR_ENGINEERING_SURFACES__`).
  */
 export async function composeTearApplication(options: TearCompositionOptions): Promise<void> {
   const {
@@ -152,27 +153,18 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     reducedMotion: () => A11Y.reducedMotion,
     random: cosmeticEmissionRandom.next,
   });
-  // Test-build opt-in until final image-native acceptance. IN1 stays available
-  // as a same-build control; only the selected package is fetched/decoded.
-  // All consumers share this app owner; no world owns its lifetime.
-  const requestedScene = tearTestMode ? engineeringQuery.get("sceneNative") : null;
-  const sceneNative: VerdantSceneNativeSelection | undefined =
-    requestedScene === "1" || requestedScene === "control" || requestedScene === "layers" || requestedScene === "living"
-      ? requestedScene
-      : undefined;
-  const verdant = __TEAR_TEST_BUILD__
-    ? sceneNative === undefined
-      ? undefined
-      : (await import("../engineering/verdant-calibration-composition")).createVerdantCalibrationComposition(
-          sceneNative,
-          window,
-        )
-    : undefined;
-  const verdantCalibration = verdant?.calibration,
-    verdantMaterial = verdant?.material;
+  const Scenes = createSceneLibrary({
+    packages: SCENE_PACKAGES,
+    loadImage: loadSceneBitmap,
+    now: () => performance.now(),
+    lowGraphics: () => GFX.low,
+    reducedMotion: () => A11Y.reducedMotion,
+    onError: (stageId, error) => {
+      console.warn(`Scene package for ${stageId} unavailable; keeping procedural art.`, error);
+    },
+  });
   const Backdrop = createBackdrop({
-    ...(verdantCalibration ? { verdantCalibration } : {}),
-    ...(verdantMaterial ? { verdantMaterial } : {}),
+    verdantMaterial: Scenes.surfaceMaterial("verdant-sanctum"),
     clock: CLOCK,
     config: worldConfig,
     graphics: GFX,
@@ -370,6 +362,7 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     Attract,
     BOSSFX,
     Backdrop,
+    Scenes,
     Blade,
     biomeProgressPersistence,
     Bomber,
@@ -496,16 +489,6 @@ export async function composeTearApplication(options: TearCompositionOptions): P
       }),
     });
     compositionWindow.__TEAR_CATALOG_DEBUG__ = Object.freeze({
-      verdantCalibration: Object.freeze({
-        status: () => verdantCalibration?.status() ?? "disabled",
-        report: () => verdantCalibration?.report() ?? null,
-        setView: (view: "composite" | "support-only" | "tail-only") => {
-          verdantCalibration?.setDiagnosticView(view);
-        },
-        setMotion: (view: "live" | "neutral" | "minimum" | "maximum") => {
-          verdantCalibration?.setDiagnosticMotion(view);
-        },
-      }),
       weapons: WEAPONS.map((weapon) => ({
         id: weapon.id,
         throwIdentity: weapon.throwIdentity,

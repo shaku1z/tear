@@ -16,6 +16,7 @@ import type { TouchOnboardingController } from "../training/touch-onboarding-con
 import type { WorldRendererRegistry } from "../../presentation/world";
 import { formatEnemyLabel } from "../../presentation/world/entity-layer";
 import { renderWorldFrame, type WorldBounds, type WorldCamera } from "../../presentation/world/world-frame";
+import type { SceneDrawInput } from "../../presentation/scenes/scene-library";
 import { buildHudSnapshot } from "../../presentation/world/hud-snapshot";
 import {
   buildBossIntroSnapshot,
@@ -50,6 +51,7 @@ type Dependencies = Pick<
   | "A11Y"
   | "ACH"
   | "Backdrop"
+  | "Scenes"
   | "CLOCK"
   | "CONFIG"
   | "FX"
@@ -302,6 +304,14 @@ export function createLiveWorldPresentationAdapters(
     }
   };
 
+  const sceneInput = (
+    stageId: string,
+    timeSeconds: number,
+    playerWorldX: number,
+    view: WorldBounds,
+    camera: WorldCamera,
+  ): SceneDrawInput => ({ stageId, camera, playerWorldX, worldWidth: width, view, timeSeconds });
+
   const renderWorld = (): WorldCamera => {
     const run = state.run();
     const actorsIncluded = services.capturePolicy().actors === "include";
@@ -351,8 +361,17 @@ export function createLiveWorldPresentationAdapters(
       setEffectView: (bounds) => {
         d.FX.setViewRect(bounds);
       },
-      drawBackdrop: (_value, time, playerX, bounds) => {
-        d.Backdrop.draw(canvas, stage.current, time, playerX, bounds);
+      drawBackdrop: (_value, time, playerX, bounds, camera) => {
+        const stageId = stage.current.id;
+        if (!d.Scenes.opaque(stageId)) d.Backdrop.draw(canvas, stage.current, time, playerX, bounds);
+        d.Scenes.drawBack(canvas, sceneInput(stageId, time, playerX, bounds, camera));
+        d.Scenes.drawShadows(canvas, stageId, stage.platforms);
+      },
+      drawBackdropFront: (bounds, camera) => {
+        d.Scenes.drawFront(
+          canvas,
+          sceneInput(stage.current.id, d.CLOCK.sim, state.player()?.x ?? width / 2, bounds, camera),
+        );
       },
       drawPlatform: (platform, _value, floor, bounds) => {
         d.Backdrop.platform(canvas, platform, stage.current, floor, bounds);

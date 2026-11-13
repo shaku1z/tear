@@ -149,6 +149,8 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly setTheme: (background: string, playLike: boolean) => void;
   readonly themeInk: () => string;
   readonly backdropPost: (context: CanvasRenderingContext2D, stage: Stage, camera: WorldCamera) => void;
+  /** The colour the stage paints behind play: a ready scene package's paper, else the stage colour. */
+  readonly stageBackground: (stage: Stage) => string;
   readonly renderWorld: () => WorldCamera;
   readonly drawHud: () => void;
   readonly drawBossIntro: () => void;
@@ -203,7 +205,7 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         ui.useCompactLayout(density === "compact", density === "phone");
       },
       background: (playLike) => {
-        let color = playLike && state.biomeMode() ? services.stage.current.bg : "#fff";
+        let color = playLike && state.biomeMode() ? services.stageBackground(services.stage.current) : "#fff";
         const flashing = playLike ? state.enemies().find((enemy) => (enemy.whiteFlash ?? 0) > 0) : undefined;
         if (flashing?.whiteFlash !== undefined)
           color = services.blendColor(color, "#ffffff", flashing.whiteFlash * services.flashScale());

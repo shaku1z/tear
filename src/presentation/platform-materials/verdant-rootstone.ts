@@ -1,5 +1,13 @@
 import { clamp } from "../../domain/geometry";
-import type { PreparedVerdantMaterial } from "./prepared-verdant-material";
+
+/** Optional surface texture (a stage's scene package); false keeps the procedural fill. */
+export interface RootstoneTexture {
+  draw(
+    context: CanvasRenderingContext2D,
+    rectangle: { readonly x: number; readonly y: number; readonly w: number; readonly h: number },
+    floor: boolean,
+  ): boolean;
+}
 
 export type VerdantRootstoneState = "stable" | "stressed" | "warning" | "broken" | "reforming";
 
@@ -49,7 +57,7 @@ export function drawVerdantRootstone(
   context: CanvasRenderingContext2D,
   platform: VerdantRootstonePlatform,
   policy: VerdantRootstoneRenderPolicy,
-  material?: Pick<PreparedVerdantMaterial, "draw">,
+  material?: RootstoneTexture,
 ): void {
   const state = verdantRootstoneState(platform);
   const stress = clamp(policy.stressRatio, 0, 1);

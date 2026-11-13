@@ -78,6 +78,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     A11Y,
     Attract,
     Backdrop,
+    Scenes,
     GFX,
     Input,
     OVERSCAN,
@@ -391,6 +392,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         backdropPost: (context, stage, camera) => {
           Backdrop.post(context, stage, camera);
         },
+        stageBackground: (stage) => Scenes.paper(stage.id) ?? stage.bg,
         drawMenuAttract: () => {
           Attract.draw(ctx);
         },

@@ -35,6 +35,9 @@ importers:
       prettier:
         specifier: 3.10.1
         version: 3.10.1
+      sharp:
+        specifier: 0.34.5
+        version: 0.34.5
       tone:
         specifier: 14.9.17
         version: 14.9.17

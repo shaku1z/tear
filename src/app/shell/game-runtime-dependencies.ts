@@ -29,6 +29,7 @@ import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import type { GhostPublicationRuntime } from "../../platform/ghost-publication-runtime";
 import type { createAttract } from "../../presentation/attract";
 import type { BackdropController } from "../../presentation/backdrop";
+import type { SceneLibrary } from "../../presentation/scenes/scene-library";
 import type { CinematicPresentationRuntime } from "../../presentation/cinematics";
 import type { cosmeticRandom } from "../../presentation/cosmetic-random";
 import type { CosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
@@ -71,6 +72,8 @@ export interface GameRuntimeDependencies {
   readonly Attract: ReturnType<typeof createAttract>;
   readonly BOSSFX: EnemyTypes["BOSSFX"];
   readonly Backdrop: BackdropController;
+  /** Painted stage scene packages (lazy, app-owned); stages without one keep procedural art. */
+  readonly Scenes: SceneLibrary;
   readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"];
   readonly Boss: EnemyTypes["Boss"];

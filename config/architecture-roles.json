@@ -229,7 +229,7 @@
     },
     "engineering.channel-entries": {
       "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import.",
-      "include": ["src/app/engineering/engineering-surfaces.ts", "src/app/engineering/verdant-calibration-composition.ts"]
+      "include": ["src/app/engineering/engineering-surfaces.ts"]
     },
     "size.authored-data-exceptions": {
       "purpose": "Authored data tables exempt from the 700-line (line-equivalent) module limit.",
