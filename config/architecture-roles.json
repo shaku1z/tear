@@ -22,7 +22,9 @@
         "src/gameplay/environment/root-cage.ts",
         "src/gameplay/environment/regrowth-link.ts",
         "src/gameplay/entities/rootbinder-runtime.ts",
-        "src/gameplay/entities/enemy-types/rootbound.ts"
+        "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
+        "src/gameplay/entities/enemy-types/rootbound-ground-verbs.ts"
       ]
     },
     "biome.pale.implementation": {
@@ -48,6 +50,8 @@
         "src/gameplay/environment/regrowth-link.ts",
         "src/gameplay/entities/rootbinder-runtime.ts",
         "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
+        "src/gameplay/entities/enemy-types/rootbound-ground-verbs.ts",
         "src/presentation/environment/bloom-well-presentation.ts",
         "src/app/world/biomes/bloom-well-wiring.ts",
         "src/tearbench/rootbound-graft-anchor-forge.ts"

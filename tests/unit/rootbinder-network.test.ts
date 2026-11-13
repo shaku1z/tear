@@ -205,6 +205,8 @@ describe("Rootbinder shared environment network", () => {
   it("creates one live player leash only when no ally network is useful, then applies force and expires it", () => {
     const runtime = createEnvironmentRuntime({ worldId: "world-a", stageId: "stage-1" });
     let phase: "link-warning" | "linked" = "link-warning";
+    // The Rootbinder keeps its own spawn-relative clock; here it matches the world tick.
+    let now = 1;
     const rootState = createRootbinderState({
       id: "rootbinder-player",
       worldId: "world-a",
@@ -216,7 +218,7 @@ describe("Rootbinder shared environment network", () => {
     bindVerdantEnvironmentActors(runtime, "rootbinder", () => [
       {
         id: rootState.id,
-        state: { ...rootState, state: phase, transitionTick: phase === "linked" ? 3 : 100 },
+        state: { ...rootState, state: phase, simulationTick: now, transitionTick: phase === "linked" ? 3 : 100 },
         candidates: [candidate("only-ally")],
         player: {
           ...player,
@@ -231,10 +233,12 @@ describe("Rootbinder shared environment network", () => {
     expect(runtime.combatObjects()).toHaveLength(1);
     expect(runtime.combatObjects()[0]?.state).toBe("warning");
     phase = "linked";
+    now = 2;
     runtime.step(2, 1 / 120, () => undefined);
     expect(runtime.combatObjects()[0]?.state).toBe("active");
     expect(player.vx).toBeLessThan(0);
     expect(player.jumpEnabled && player.dashEnabled).toBe(true);
+    now = 3;
     runtime.step(3, 1 / 120, () => undefined);
     expect(runtime.combatObjects()[0]?.cleanupReason).toBe("natural-expiry");
   });

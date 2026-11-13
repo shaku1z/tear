@@ -25,7 +25,7 @@ export function activateStageEnvironment(
       environment.addField(
         createBloomWellState(
           { id, ownerId: stageId, variant: "stage", geometry: field.geometry, patternId: field.slot },
-          startTick,
+          startTick + (field.offsetTicks ?? 0),
         ),
       );
     } else {

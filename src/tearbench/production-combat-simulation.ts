@@ -6,7 +6,7 @@ import type { ProductionReplayWorld } from "./production-world-factory";
 import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./production-combat-phases";
 import { bindLiveAuroraTrackActors } from "../app/world/biomes/aurora-track-wiring";
 import { bindLiveWhiteHartActors } from "../app/world/biomes/white-hart-wiring";
-import { bindLiveRootboundActors } from "../app/world/biomes/rootbound-wiring";
+import { bindLiveVerdantActors } from "../app/world/biomes/rootbound-wiring";
 
 export interface ProductionCombatSimulationOptions<State> extends ProductionCombatPhaseOptions {
   snapshot(tick: number, input: AuthoritativeInputState): State | DeferredCanonicalState<State>;
@@ -63,6 +63,15 @@ export function createProductionCombatSimulation<State>(
     },
   });
   const config = replay.configuration.value;
+  // Live binds Verdant first (live-biome-actors.ts); the same order keeps replayed
+  // Bloom lift and Rootbinder links identical to the run that was recorded.
+  bindLiveVerdantActors(
+    replay.world.context.environment,
+    () => replay.world.state.player() as never,
+    () => replay.world.state.enemies(),
+    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
+    config,
+  );
   bindLiveAuroraTrackActors(
     replay.world.context.environment,
     () => replay.world.state.player() as never,
@@ -85,13 +94,6 @@ export function createProductionCombatSimulation<State>(
     () => replay.world.state.player() as never,
     () => replay.world.state.enemies(),
     (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
-  );
-  bindLiveRootboundActors(
-    replay.world.context.environment,
-    () => replay.world.state.player() as never,
-    () => replay.world.state.enemies(),
-    (enemy) => core.combatEntityRuntime.id(enemy, "enemy"),
-    config,
   );
   replay.world.context.environment.setAvailableActorIdsSource(
     () =>

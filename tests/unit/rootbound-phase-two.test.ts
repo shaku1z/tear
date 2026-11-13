@@ -12,6 +12,7 @@ import {
 } from "../../src/gameplay/environment/graft-anchor";
 import {
   ROOTBOUND_GRAFT_ANCHOR_GEOMETRY,
+  ROOTBOUND_BLOOM_SHIFT,
   ROOTBOUND_MEMORY_CHOIR,
   ROOTBOUND_PHASE_TWO_CADENCE,
   type RootboundPhaseTwoAttack,
@@ -47,6 +48,12 @@ type PhaseTwoBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"][
   cleanupEncounter(reason: BossEncounterCleanupReason): void;
 };
 
+/** Clears the Phase I -> II transformation beat so a test can drive Phase II directly. */
+function skipTransformation(actor: PhaseTwoBoss): void {
+  actor.cinematicRequest = null;
+  actor.cinematicT = 0;
+}
+
 describe("Rootbound Phase II Graft creation", () => {
   it("derives the exact authored placement requests only during Phase II", () => {
     const harness = createEnemyHarness();
@@ -57,6 +64,7 @@ describe("Rootbound Phase II Graft creation", () => {
     expect(actor.graftAnchorPlacements()).toEqual([]);
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     const placements = actor.graftAnchorPlacements();
     expect(placements.map((placement) => placement.graftType)).toEqual(GRAFT_ANCHOR_TYPES);
     expect(
@@ -79,6 +87,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-phase-two" });
     bindVerdantEnvironmentActors(environment, "rootbound", () => [
       Object.freeze({
@@ -117,6 +126,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-destroyed-graft" });
     bindVerdantEnvironmentActors(environment, "rootbound", () => [
       Object.freeze({
@@ -162,6 +172,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-direct-damage" });
     bindVerdantEnvironmentActors(environment, "rootbound", () => [
       Object.freeze({
@@ -196,6 +207,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-graft-lifecycle" });
     bindVerdantEnvironmentActors(environment, "rootbound", () => [
       Object.freeze({
@@ -291,6 +303,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     expect(actor.bossBloomPattern()).toBe(ROOTBOUND_BLOOM_PATTERN_IDS[0]);
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-bloom-production" });
     bindVerdantEnvironmentActors(environment, "rootbound", () => [
@@ -328,6 +341,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-bloom-pruning" });
     bindVerdantEnvironmentActors(environment, "rootbound", () => [
       Object.freeze({
@@ -371,6 +385,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     expect(actor.startMemoryChoir()).toBe(true);
     expect(actor.memoryChoirManifestations).toHaveLength(ROOTBOUND_MEMORY_CHOIR.maxManifestations);
     expect(
@@ -405,6 +420,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     expect(actor.startRootCage(harness.player.x)).toBe(true);
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-root-cage" });
     const cagePlayer = { x: CONFIG.view.w / 2, y: CONFIG.world.groundY - 32, vx: 0 };
@@ -550,6 +566,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     expect(actor.startRootCage(CONFIG.view.w / 2)).toBe(true);
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "root-cage-leash-policy" });
     const cagePlayer = {
@@ -668,6 +685,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     actor.state = "idle";
     actor.stateT = 0;
     actor.update(1 / 120, harness.platforms, harness.player, []);
@@ -704,7 +722,18 @@ describe("Rootbound Phase II Graft creation", () => {
     actor.stateT = 0;
     actor.update(1 / 120, harness.platforms, harness.player, []);
     expect(actor.bloomPatternIndex).toBe((priorPattern + 1) % ROOTBOUND_BLOOM_PATTERN_IDS.length);
-    expect(actor).toMatchObject({ phaseTwoAttackIndex: 3, phaseTwoPendingAttack: null, state: "recover" });
+    // Bloom Shift is a real, readable stage: the boss holds its warning before recovering.
+    expect(actor).toMatchObject({
+      phaseTwoAttackIndex: 3,
+      phaseTwoPendingAttack: "bloom-shift",
+      atk: "bloom-shift:warning",
+      state: "idle",
+    });
+    expect(ROOTBOUND_BLOOM_SHIFT.warning).toBeGreaterThanOrEqual(0.5);
+    actor.update(ROOTBOUND_BLOOM_SHIFT.warning / 2, harness.platforms, harness.player, []);
+    expect(actor.phaseTwoPendingAttack).toBe("bloom-shift");
+    actor.update(ROOTBOUND_BLOOM_SHIFT.warning / 2, harness.platforms, harness.player, []);
+    expect(actor).toMatchObject({ phaseTwoPendingAttack: null, state: "recover", atk: "unavailable" });
 
     actor.applyGraftEffects(
       Object.freeze({
@@ -758,6 +787,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ) as PhaseTwoBoss;
     actor.hp = actor.maxHp * 0.5;
     actor.update(1 / 120, harness.platforms, harness.player, []);
+    skipTransformation(actor);
     const environment = createEnvironmentRuntime({
       stageId: "verdant-sanctum",
       worldId: "rootbound-caps",
@@ -860,6 +890,7 @@ describe("Rootbound Phase II Graft creation", () => {
       ) as PhaseTwoBoss;
       actor.hp = actor.maxHp * 0.5;
       actor.update(1 / 120, harness.platforms, harness.player, []);
+      skipTransformation(actor);
       actor.startMemoryChoir();
       actor.startRootCage(CONFIG.view.w / 2);
       const environment = createEnvironmentRuntime({

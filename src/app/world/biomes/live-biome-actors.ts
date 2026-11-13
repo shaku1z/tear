@@ -2,9 +2,7 @@ import type { EnvironmentRuntime } from "../../../gameplay/environment/environme
 import type { GameRuntimeDependencies } from "../../shell/game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameProjectile } from "../../shell/game-runtime-state";
 import { bindLiveAuroraTrackActors } from "./aurora-track-wiring";
-import { bindLiveBloomWellActors } from "./bloom-well-wiring";
-import { bindLiveRootbinderActors } from "./rootbinder-wiring";
-import { bindLiveRootboundActors } from "./rootbound-wiring";
+import { bindLiveVerdantActors } from "./rootbound-wiring";
 import { bindLiveWhiteHartActors } from "./white-hart-wiring";
 
 export interface LiveBiomeActorSources {
@@ -22,7 +20,7 @@ export interface LiveBiomeActorSources {
 export function bindLiveBiomeActors(sources: LiveBiomeActorSources): void {
   const { environment, config, player, enemies, entityId } = sources;
   const enemyId = (enemy: object) => entityId(enemy, "enemy");
-  bindLiveBloomWellActors(environment, player, enemies, enemyId);
+  bindLiveVerdantActors(environment, player, enemies, enemyId, config);
   bindLiveAuroraTrackActors(
     environment,
     player,
@@ -40,7 +38,5 @@ export function bindLiveBiomeActors(sources: LiveBiomeActorSources): void {
       projectileMaximumSpeed: config.chargedShot.speed,
     },
   );
-  bindLiveRootbinderActors(environment, player, enemies, enemyId);
-  bindLiveRootboundActors(environment, player, enemies, enemyId);
   bindLiveWhiteHartActors(environment, player, enemies, enemyId);
 }
