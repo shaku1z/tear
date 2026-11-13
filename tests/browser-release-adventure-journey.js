@@ -1,9 +1,13 @@
 // Release Adventure journey: the PRODUCTION build (dist/standalone, clean URL, no
-// test storage or debug hooks), a fresh profile and real mouse and keyboard only.
+// test storage or debug hooks), a fresh profile and real input only.
 // PLAY -> ADVENTURE -> EASY -> START, the chapter intro waits for input and advances,
 // wave 1 is fought and cleared by a small pixel-guided player loop, the draft opens,
 // a card is clicked and wave 2 begins. A defeat is retried within the time budget;
 // a retry must skip the already-seen chapter and still progress.
+// The touch leg does the same on a phone with touch events only and with
+// document.exitPointerLock removed, as iOS Safari and Android browsers before Chrome 144
+// lack it: calling it there once kept the draft from opening after a cleared wave.
+// TEAR_RELEASE_TOUCH_VIEWPORTS (default 844x390) lists the phone sizes to play.
 //
 // Observation (test-side only): canvas text and the player's eye are read from the
 // page's own 2D draw calls, enemies from canvas pixels. Nothing in the game is called.
@@ -112,8 +116,13 @@ function looksLikeEnemy(blob, player) {
   return !(Math.hypot(blob.x - player.x, blob.y - player.y) < 220 * SCALE && blob.y < player.y - 20 * SCALE);
 }
 
-/** In-page pixel pass: dark blobs that are not HUD, ground, platforms or the player. */
-function scanEnemies(player) {
+/**
+ * In-page pixel pass: dark blobs that are not HUD, ground, platforms or the player. The
+ * argument is the player, or { player, palette: "red" } for the touch leg, which keeps only
+ * saturated red bodies and near-black ink so the grey on-screen controls never read as enemies.
+ */
+function scanEnemies(argument) {
+  const { player, palette } = argument && "palette" in argument ? argument : { player: argument, palette: "ink" };
   const canvas = document.getElementById("game");
   const W = 320,
     H = 180;
@@ -132,7 +141,8 @@ function scanEnemies(player) {
     const r = pixels[i * 4],
       g = pixels[i * 4 + 1],
       b = pixels[i * 4 + 2];
-    dark[i] = 0.299 * r + 0.587 * g + 0.114 * b < 110 ? 1 : 0;
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    dark[i] = (palette === "red" ? r - Math.max(g, b) > 70 || luma < 45 : luma < 110) ? 1 : 0;
   }
   let ground = H;
   for (let y = H - 1; y > H / 2; y -= 1) {
@@ -199,6 +209,240 @@ function scanEnemies(player) {
   return blobs;
 }
 
+/**
+ * Phone leg: a fresh touch-only context plays the Adventure opening, clears wave 1 with a
+ * left-thumb joystick and a right-thumb aim stick, taps a draft card twice (read, then take)
+ * and reaches wave 2. Returns the retries used.
+ */
+async function runTouchLeg(browser, origin, viewport, shot) {
+  const leg = `touch-${String(viewport.width)}x${String(viewport.height)}`;
+  const scale = Math.min(viewport.width / 1600, viewport.height / 900);
+  const context = await browser.newContext({
+    viewport,
+    deviceScaleFactor: 2,
+    hasTouch: true,
+    isMobile: true,
+    serviceWorkers: "block",
+  });
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  const pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
+  await page.route("**/*", (route) =>
+    route.request().url().startsWith(`${origin}/`) ? route.continue() : route.abort(),
+  );
+  await page.addInitScript(installObserver);
+  await page.addInitScript(() => {
+    delete Document.prototype.exitPointerLock;
+  });
+  const texts = (frames = 2) =>
+    page.evaluate((count) => {
+      const observed = window.__RELEASE_JOURNEY__;
+      const latest = new Map();
+      for (const entry of observed.text)
+        if (entry.f >= observed.frame - count && entry.a > 0.05)
+          latest.set(`${entry.t}|${String(Math.round(entry.x))}|${String(Math.round(entry.y))}`, entry);
+      return [...latest.values()];
+    }, frames);
+  const has = (list, pattern) => list.some((entry) => pattern.test(entry.t));
+  const fingers = new Map();
+  const send = (type) =>
+    cdp.send("Input.dispatchTouchEvent", {
+      type,
+      touchPoints: [...fingers].map(([id, point]) => ({
+        x: point.x,
+        y: point.y,
+        id,
+        radiusX: 6,
+        radiusY: 6,
+        force: 1,
+      })),
+    });
+  const down = async (id, point) => {
+    fingers.set(id, point);
+    await send("touchStart");
+  };
+  const move = async (id, point) => {
+    if (!fingers.has(id)) return;
+    fingers.set(id, point);
+    await send("touchMove");
+  };
+  const up = async (id) => {
+    if (!fingers.delete(id)) return;
+    await send("touchEnd");
+  };
+  const tap = async (point) => {
+    await down(9, point);
+    await sleep(60);
+    await up(9);
+  };
+  const waitForText = async (pattern, timeout, what) => {
+    const until = Date.now() + timeout;
+    while (Date.now() < until) {
+      const hit = (await texts()).find((entry) => pattern.test(entry.t));
+      if (hit) return hit;
+      await sleep(100);
+    }
+    await shot(`${leg}-missing-${what}`, page);
+    throw new Error(`${leg}: ${what}: ${String(pattern)} did not appear within ${String(timeout)} ms`);
+  };
+  /** Taps where the label was drawn most recently; menus slide in, so earlier frames are stale. */
+  const tapLabel = async (pattern, what) => {
+    await waitForText(pattern, 15_000, what);
+    await sleep(250);
+    const drawn = (await texts()).filter((entry) => pattern.test(entry.t)).sort((a, b) => b.f - a.f);
+    await tap(drawn[0] ?? (await waitForText(pattern, 5_000, what)));
+  };
+  const joystick = { x: viewport.width * 0.14, y: viewport.height * 0.72 };
+  const aimStick = { x: viewport.width * 0.62, y: viewport.height * 0.45 };
+  // The aim stick reads the thumb's offset in CSS px from where it landed (full deflection 130 px).
+  const reach = Math.min(115, viewport.height * 0.28);
+
+  /** Fights until the wave clears or the player falls; both thumbs are lifted afterwards. */
+  const fight = async () => {
+    // A touch that starts during the READY beat is a menu touch and never becomes a stick,
+    // so the thumbs go down once the controls are drawn.
+    await waitForText(/^JUMP$/u, 20_000, "touch controls");
+    await sleep(200);
+    await down(1, joystick);
+    await down(2, aimStick);
+    const started = Date.now();
+    const aim = { angle: -Math.PI / 2, running: true };
+    // The right thumb swings continuously around the target direction (the mouse legs' sweep).
+    const swinging = (async () => {
+      while (aim.running) {
+        const angle = aim.angle + Math.sin(((Date.now() - started) / 1000) * 22) * 1.4;
+        await move(2, { x: aimStick.x + Math.cos(angle) * reach, y: aimStick.y + Math.sin(angle) * reach });
+        await sleep(14);
+      }
+    })();
+    let outcome = "stalled",
+      lastText = 0,
+      jumpedAt = 0;
+    try {
+      while (Date.now() - started < STUCK_MS * 4) {
+        if (Date.now() - lastText > 250) {
+          lastText = Date.now();
+          const frame = await texts(1);
+          if (has(frame, /^WAVE 1 CLEARED$/u) || has(frame, /^TAKE ONE/u)) {
+            outcome = "cleared";
+            break;
+          }
+          if (has(frame, /^DEFEATED$/u)) {
+            outcome = "defeated";
+            break;
+          }
+        }
+        const eye = await page.evaluate(() => window.__RELEASE_JOURNEY__.eye);
+        const player = eye
+          ? { x: eye.x, y: eye.y + 10.5 * eye.scale }
+          : { x: viewport.width / 2, y: viewport.height * 0.8 };
+        const enemies = (await page.evaluate(scanEnemies, { player, palette: "red" })).filter(
+          (blob) =>
+            blob.y < player.y + 45 * scale &&
+            Math.min(blob.w, blob.h) >= 27 * scale &&
+            !(Math.hypot(blob.x - player.x, blob.y - player.y) < 220 * scale && blob.y < player.y - 20 * scale),
+        );
+        let target = null,
+          best = Infinity;
+        for (const enemy of enemies) {
+          const cost = Math.abs(enemy.x - player.x) + Math.max(0, player.y - enemy.y) * 0.6;
+          if (cost < best) {
+            best = cost;
+            target = enemy;
+          }
+        }
+        let push = 0;
+        if (target) {
+          const dx = target.x - player.x,
+            dy = target.y - player.y;
+          if (Math.abs(dx) > 60 * scale) push = Math.sign(dx) * 30;
+          aim.angle = Math.atan2(dy - 8 * scale, dx);
+          if (dy < -70 * scale && Math.abs(dx) < 160 * scale && Date.now() - jumpedAt > 900) {
+            jumpedAt = Date.now();
+            const jump = (await texts(1)).find((entry) => entry.t === "JUMP");
+            if (jump) {
+              await down(5, { x: jump.x, y: jump.y });
+              await sleep(120);
+              await up(5);
+            }
+          }
+        } else aim.angle = -Math.PI / 2;
+        // 30 px stays inside the joystick's follow radius, so its anchor does not drift.
+        await move(1, { x: joystick.x + push, y: joystick.y });
+        await sleep(12);
+      }
+    } finally {
+      aim.running = false;
+      await swinging;
+    }
+    await up(2);
+    await up(1);
+    return outcome;
+  };
+
+  try {
+    await page.goto(`${origin}/`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await waitForText(/^PLAY$/u, 40_000, "main menu");
+    await sleep(800);
+    await tapLabel(/^PLAY$/u, "PLAY");
+    await sleep(900);
+    await tapLabel(/^ADVENTURE$/u, "Adventure mode");
+    await sleep(400);
+    await tapLabel(/^EASY$/u, "Easy difficulty");
+    await sleep(400);
+    await tapLabel(/^START$/u, "START");
+    for (let taps = 0; taps < 30 && !has(await texts(), /^WAVE 1$/u); taps += 1) {
+      await tap({ x: viewport.width / 2, y: viewport.height * 0.45 });
+      await sleep(1_100);
+    }
+    await waitForText(/^WAVE 1$/u, 20_000, "wave 1");
+    await shot(`${leg}-wave-1`, page);
+    const deadline = Date.now() + COMBAT_BUDGET_MS;
+    let retries = 0;
+    for (;;) {
+      const outcome = await fight();
+      if (outcome === "cleared") break;
+      await shot(`${leg}-${outcome}-${String(retries)}`, page);
+      if (outcome !== "defeated" || Date.now() > deadline)
+        throw new Error(`${leg}: wave 1 was not cleared by touch (${outcome}, retries ${String(retries)})`);
+      retries += 1;
+      await sleep(1_200);
+      await tapLabel(/^RETRY$/u, "RETRY");
+      await waitForText(/^WAVE 1$/u, 20_000, "the retried run");
+    }
+    // The draft opens by itself after the clear pause; the first tap reads a card, the second takes it.
+    // Cards deal in from below, so the hint is read again once they have settled.
+    await waitForText(/^TAP TO READ$/u, 8_000, "draft cards");
+    await sleep(900);
+    const card = await waitForText(/^TAP TO READ$/u, 1_000, "settled draft cards");
+    await shot(`${leg}-draft`, page);
+    // The focused card already says TAP AGAIN, so this taps an unfocused one and checks that
+    // the first tap only reads it.
+    await tap(card);
+    const readCard = (list) => list.some((entry) => /^TAP AGAIN/u.test(entry.t) && Math.abs(entry.x - card.x) < 4);
+    const readUntil = Date.now() + 3_000;
+    while (!readCard(await texts()) && Date.now() < readUntil) await sleep(100);
+    assert.ok(readCard(await texts()), `${leg}: the first tap on a draft card reads it`);
+    assert.ok(!has(await texts(), /^WAVE 2$/u), `${leg}: the first tap on an unread card does not take it`);
+    await sleep(300);
+    await tap(card);
+    const until = Date.now() + 8_000;
+    let after = [];
+    while (Date.now() < until) {
+      after = await texts();
+      if (has(after, /^WAVE 2$/u)) break;
+      await sleep(150);
+    }
+    await shot(`${leg}-after-pick`, page);
+    assert.ok(has(after, /^WAVE 2$/u), `${leg}: wave 2 begins after tapping a draft card`);
+    assert.deepEqual(pageErrors, [], `${leg}: the touch journey raised page errors`);
+    return retries;
+  } finally {
+    await context.close();
+  }
+}
+
 async function main() {
   assert.ok(
     fs.existsSync(path.join(buildRoot, "index.html")),
@@ -237,9 +481,9 @@ async function main() {
   );
   await page.addInitScript(installObserver);
   let shots = 0;
-  const shot = async (name) => {
+  const shot = async (name, target = page) => {
     if (shotDirectory)
-      await page.screenshot({ path: path.join(shotDirectory, `${String(++shots).padStart(2, "0")}-${name}.png`) });
+      await target.screenshot({ path: path.join(shotDirectory, `${String(++shots).padStart(2, "0")}-${name}.png`) });
   };
   const texts = (frames = 2) =>
     page.evaluate((count) => {
@@ -535,33 +779,49 @@ async function main() {
     );
     assert.deepEqual(debugSurface, [], "the production build must not expose test hooks");
 
-    // Leg 1, fresh profile: the chapter intro plays, wave 1 clears, a draft card is clicked, wave 2 begins.
-    await startAdventure("fresh");
-    await passChapterIntro("fresh");
-    let retries = await clearWaveOneAndPick("fresh");
+    // TEAR_RELEASE_ADVENTURE_LEGS=mouse or =touch runs one half (default: both).
+    const legs = new Set((process.env.TEAR_RELEASE_ADVENTURE_LEGS || "mouse,touch").split(","));
+    let retries = 0;
+    if (legs.has("mouse")) {
+      // Leg 1, fresh profile: the chapter intro plays, wave 1 clears, a draft card is clicked, wave 2 begins.
+      await startAdventure("fresh");
+      await passChapterIntro("fresh");
+      retries += await clearWaveOneAndPick("fresh");
 
-    // Leg 2, restart from the pause menu in the same session: the seen chapter is skipped
-    // and the run must still progress past wave 1 (the reported stuck wave).
-    await press("KeyP", 80);
-    await waitForText(/^PAUSED$/u, 5_000, "restart: pause screen");
-    await sleep(600);
-    await clickLabel(/^RESTART$/u, "restart: RESTART");
-    await sleep(700);
-    const confirm = (await texts()).find(
-      (entry) => /^(YES|CONFIRM|RESTART)\b/u.test(entry.t) && !/^RESTART$/u.test(entry.t),
-    );
-    if (confirm) await click(confirm);
-    const restarted = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, 20_000, "restart: the restarted run");
-    assert.equal(restarted.t, "WAVE 1", "a restart in the same session skips the chapter intro already seen");
-    note("restart skipped the seen chapter");
-    retries += await clearWaveOneAndPick("restart");
+      // Leg 2, restart from the pause menu in the same session: the seen chapter is skipped
+      // and the run must still progress past wave 1 (the reported stuck wave).
+      await press("KeyP", 80);
+      await waitForText(/^PAUSED$/u, 5_000, "restart: pause screen");
+      await sleep(600);
+      await clickLabel(/^RESTART$/u, "restart: RESTART");
+      await sleep(700);
+      const confirm = (await texts()).find(
+        (entry) => /^(YES|CONFIRM|RESTART)\b/u.test(entry.t) && !/^RESTART$/u.test(entry.t),
+      );
+      if (confirm) await click(confirm);
+      const restarted = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, 20_000, "restart: the restarted run");
+      assert.equal(restarted.t, "WAVE 1", "a restart in the same session skips the chapter intro already seen");
+      note("restart skipped the seen chapter");
+      retries += await clearWaveOneAndPick("restart");
 
-    // Leg 3, a new session on the same profile: biome memory is not a seen chapter, so the intro plays again.
-    await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
-    await startAdventure("new-session");
-    await waitForText(/^THE FIRST DESCENT$/u, 15_000, "new session: chapter I intro");
-    await shot("new-session-intro");
-    note("new session shows the chapter intro");
+      // Leg 3, a new session on the same profile: biome memory is not a seen chapter, so the intro plays again.
+      await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+      await startAdventure("new-session");
+      await waitForText(/^THE FIRST DESCENT$/u, 15_000, "new session: chapter I intro");
+      await shot("new-session-intro");
+      note("new session shows the chapter intro");
+    }
+
+    // Leg 4, phones: touch only, on a browser without exitPointerLock.
+    const touchViewports = (process.env.TEAR_RELEASE_TOUCH_VIEWPORTS || "844x390").split(",").map((size) => {
+      const [width, height] = size.trim().split("x").map(Number);
+      return { width, height };
+    });
+    for (const viewport of legs.has("touch") ? touchViewports : []) {
+      const touchRetries = await runTouchLeg(browser, host.origin, viewport, shot);
+      note("touch: wave 1 cleared, a draft card tapped, wave 2 began", { viewport, retries: touchRetries });
+      retries += touchRetries;
+    }
 
     assert.deepEqual(pageErrors, [], "the journey raised page errors");
     assert.deepEqual(consoleErrors, [], "the journey logged console errors");

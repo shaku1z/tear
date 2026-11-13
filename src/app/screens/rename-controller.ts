@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { AppScreen } from "../../domain/screen-catalog";
 import { RENAME_FIELD } from "../../presentation/rename-field";
 
@@ -43,7 +44,7 @@ export class RenameController {
 
   begin(firstRun: boolean, debugBypass = false): void {
     if (!debugBypass && !this.ports.cloud.loggedIn()) return;
-    this.ports.document.exitPointerLock();
+    releasePointerLock(this.ports.document);
     this.ports.input.textEntryMode = true;
     const input = this.#input();
     input.value = this.ports.profile.username();

@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { LiveCanonicalCombatHost } from "../combat/live-canonical-state";
 import type { LiveTestBuildJournals } from "../engineering/test-build-journals";
@@ -60,7 +61,7 @@ export function assembleLiveCampaignTraining(options: LiveCampaignTrainingAssemb
       navigation.setScreen("paused");
     },
     releasePointer: () => {
-      options.browserDocument.exitPointerLock();
+      releasePointerLock(options.browserDocument);
     },
     defer: (commit) => {
       options.browserWindow.queueMicrotask(commit);

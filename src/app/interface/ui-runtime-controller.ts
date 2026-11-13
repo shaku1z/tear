@@ -100,7 +100,7 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
     scrollY: wheel.y,
     pageUp: input.ui.pageUp,
     pageDown: input.ui.pageDown,
-    pointer: { x: input.mouseX, y: input.mouseY },
+    pointer: input.mode === "mouse" ? { x: input.mouseX, y: input.mouseY } : null,
     touch,
     directions: { left: input.menuLeft(), right: input.menuRight(), up: input.menuUp(), down: input.menuDown() },
     previous: input.menuPrev(),

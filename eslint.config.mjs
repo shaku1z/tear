@@ -148,6 +148,22 @@ export default tseslint.config(
     },
   },
   {
+    // Pointer lock is optional in browsers: iOS Safari and Android browsers before Chrome 144
+    // have no exitPointerLock. A direct call throws there and aborts the caller, which once
+    // kept the upgrade draft from opening on phones; releases go through releasePointerLock.
+    files: ["src/**/*.ts"],
+    ignores: ["src/platform/browser-pointer-lock.ts"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        {
+          property: "exitPointerLock",
+          message: "Use releasePointerLock from src/platform/browser-pointer-lock.ts; phones lack this method.",
+        },
+      ],
+    },
+  },
+  {
     files: ["src/domain/**/*.ts", "src/simulation/**/*.ts", "src/gameplay/**/*.ts"],
     rules: {
       "no-restricted-syntax": [
