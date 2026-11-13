@@ -196,16 +196,21 @@ async function main() {
     };
     const releaseAll = async () => { for (const code of [...held]) await hold(code, false); };
     let sweep = 0, retries = 0, zeroLeftSince = null, lastLeft = null, lastText = 0, frameText = [];
+    // Real-time play depends on the runner: report the frame rate the game reached.
+    const frameOf = () => page.evaluate(() => window.__RELEASE_JOURNEY__.frame);
+    let fpsFrom = { at: Date.now(), frame: await frameOf() };
+    const fps = async () => { const now = { at: Date.now(), frame: await frameOf() };
+      const value = +((now.frame - fpsFrom.frame) / Math.max(0.001, (now.at - fpsFrom.at) / 1000)).toFixed(1); fpsFrom = now; return value; };
     for (;;) {
       if (Date.now() > combatDeadline) {
         await shot(`${leg}-budget-exhausted`);
-        throw new Error(`${leg}: wave 1 was not cleared within ${String(COMBAT_BUDGET_MS)} ms (retries ${String(retries)}, enemies left ${String(lastLeft)})`);
+        throw new Error(`${leg}: wave 1 was not cleared within ${String(COMBAT_BUDGET_MS)} ms (retries ${String(retries)}, enemies left ${String(lastLeft)}, ${String(await fps())} fps)`);
       }
       if (Date.now() - lastText > 250) {
         lastText = Date.now(); frameText = await texts(1);
         if (has(frameText, /^TAKE ONE/u) || has(frameText, /^WAVE 1 CLEARED$/u)) break;
         if (has(frameText, /^DEFEATED$/u)) {
-          await releaseAll(); retries += 1; note("defeated; retrying", { leg, retries }); await shot(`${leg}-defeated-${String(retries)}`);
+          await releaseAll(); retries += 1; note("defeated; retrying", { leg, retries, fps: await fps() }); await shot(`${leg}-defeated-${String(retries)}`);
           await sleep(1_200); await clickLabel(/^RETRY$/u, "RETRY");
           const back = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, 20_000, `${leg}: the retried run`);
           assert.equal(back.t, "WAVE 1", "a retry skips the chapter intro already seen this session");
@@ -242,7 +247,7 @@ async function main() {
       await sleep(12);
     }
     await releaseAll();
-    note("wave 1 cleared; draft open", { leg, retries });
+    note("wave 1 cleared; draft open", { leg, retries, fps: await fps() });
 
     // The draft opens and a mouse click on a card picks it after the settle window.
     await waitForText(/^TAKE ONE/u, 5_000, `${leg}: draft`);
