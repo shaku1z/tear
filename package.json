@@ -61,7 +61,7 @@
     "test:browser": "node tests/browser-smoke.js",
     "test:browser:features": "node tests/browser-feature-matrix.js",
     "test:browser:bosses": "node tests/browser-boss-parity.js",
-    "test:browser:journeys": "node tests/browser-navigation-journeys.js && node tests/browser-progression-journeys.js && node tests/browser-playground-journeys.js && node tests/browser-terminal-journeys.js && node tests/browser-cinematic-preferences.js",
+    "test:browser:journeys": "node tests/browser-journeys.js",
     "test:browser:fresh-run-meta": "node tests/browser-fresh-run-meta-progression.js",
     "test:browser:agent-journey": "node tests/browser-agent-journey.js",
     "test:browser:tear-runtime": "node tests/browser-tear-runtime-environment.js",

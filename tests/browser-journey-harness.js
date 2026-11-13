@@ -54,14 +54,39 @@ function recordCanvasFrames() {
   window.__TEAR_JOURNEY_FRAME__ = frame;
 }
 
-async function withJourney(options, run) {
+/**
+ * Set while runJourneySuite runs several journey files in one process: they then share one
+ * verified build, one server and one browser, and each journey gets a fresh browser context.
+ */
+let suite;
+
+function withJourney(options, run) {
+  const journey = runJourney(options, run);
+  suite?.pending.push(journey);
+  return journey;
+}
+
+/** The served directory is exactly the build of the checked-out source. */
+async function verifyServedArtifact(root, buildInfo) {
+  const { calculateArtifactHash, readSourceIdentity } = await import("../scripts/release-artifact.mjs");
+  const artifact = await calculateArtifactHash(root);
+  assert.equal(buildInfo.artifactHash, artifact.hash, "served build artifact hash is stale");
+  assert.equal(buildInfo.artifactFiles, artifact.files, "served build artifact file count is stale");
+  const source = await readSourceIdentity(path.resolve(__dirname, ".."));
+  assert.equal(buildInfo.sha, source.revision, "served build SHA does not match the current source revision");
+  assert.equal(buildInfo.sourceRevision, source.revision, "served build source revision is stale");
+  assert.equal(buildInfo.sourceState, source.state, "served build source state is stale");
+  assert.equal(buildInfo.sourceFingerprint, source.fingerprint, "served build source fingerprint is stale");
+  suite?.verified.add(root);
+}
+
+async function runJourney(options, run) {
   const buildDirectory = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
   const root = path.resolve(__dirname, "..", "dist", buildDirectory);
   assert.ok(
     fs.existsSync(path.join(root, "index.html")),
     `dist/${buildDirectory} is missing; run pnpm build:test:standalone first`,
   );
-  const { calculateArtifactHash, readSourceIdentity } = await import("../scripts/release-artifact.mjs");
   const buildInfoPath = path.join(root, "build-info.json");
   assert.ok(
     fs.existsSync(buildInfoPath),
@@ -80,46 +105,48 @@ async function withJourney(options, run) {
     `artifacts/tearbench/builds/${buildInfo.buildIdentityDigest}/payload`,
     "served content-addressed build path is stale",
   );
-  const artifact = await calculateArtifactHash(root);
-  assert.equal(buildInfo.artifactHash, artifact.hash, "served build artifact hash is stale");
-  assert.equal(buildInfo.artifactFiles, artifact.files, "served build artifact file count is stale");
-  const source = await readSourceIdentity(path.resolve(__dirname, ".."));
-  assert.equal(buildInfo.sha, source.revision, "served build SHA does not match the current source revision");
-  assert.equal(buildInfo.sourceRevision, source.revision, "served build source revision is stale");
-  assert.equal(buildInfo.sourceState, source.state, "served build source state is stale");
-  assert.equal(buildInfo.sourceFingerprint, source.fingerprint, "served build source fingerprint is stale");
-  const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
+  if (!suite?.verified.has(root)) await verifyServedArtifact(root, buildInfo);
+  const shared = suite?.servers.get(root);
+  const port = shared?.port ?? Number(process.env.TEAR_JOURNEY_PORT || options.port);
   const baseUrl = `http://127.0.0.1:${String(port)}`;
-  const server = http.createServer((request, response) => {
-    const pathname = new URL(request.url, baseUrl).pathname;
-    if (pathname === "/__tear_browser_blank_fixture__.html") {
-      response.writeHead(200, { "Content-Type": "text/html" });
-      response.end("<!doctype html><title>Tear browser fixture</title>");
-      return;
-    }
-    const relative = pathname === "/" ? "index.html" : pathname.slice(1);
-    const file = path.resolve(root, relative);
-    const containedPath = path.relative(root, file);
-    if (
-      containedPath.startsWith("..") ||
-      path.isAbsolute(containedPath) ||
-      !fs.existsSync(file) ||
-      fs.statSync(file).isDirectory()
-    ) {
-      response.writeHead(404).end();
-      return;
-    }
-    response.setHeader("Content-Type", contentType(file));
-    fs.createReadStream(file).pipe(response);
-  });
+  const server =
+    shared?.server ??
+    http.createServer((request, response) => {
+      const pathname = new URL(request.url, baseUrl).pathname;
+      if (pathname === "/__tear_browser_blank_fixture__.html") {
+        response.writeHead(200, { "Content-Type": "text/html" });
+        response.end("<!doctype html><title>Tear browser fixture</title>");
+        return;
+      }
+      const relative = pathname === "/" ? "index.html" : pathname.slice(1);
+      const file = path.resolve(root, relative);
+      const containedPath = path.relative(root, file);
+      if (
+        containedPath.startsWith("..") ||
+        path.isAbsolute(containedPath) ||
+        !fs.existsSync(file) ||
+        fs.statSync(file).isDirectory()
+      ) {
+        response.writeHead(404).end();
+        return;
+      }
+      response.setHeader("Content-Type", contentType(file));
+      fs.createReadStream(file).pipe(response);
+    });
   let browser;
   try {
-    await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+    if (shared === undefined) {
+      await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+      suite?.servers.set(root, { server, port });
+    }
     const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-    browser = await chromium.launch({
-      headless: true,
-      ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
-    });
+    browser =
+      suite?.browser ??
+      (await chromium.launch({
+        headless: true,
+        ...(fs.existsSync(chromePath) ? { executablePath: chromePath } : {}),
+      }));
+    if (suite !== undefined) suite.browser = browser;
     // Journey suites repeatedly navigate the same instrumented page. Keep the
     // production service worker out of this harness so an activation/update
     // race cannot replace the exact test build between boots. PWA behavior has
@@ -324,7 +351,10 @@ async function withJourney(options, run) {
     });
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
-    if (browser && options.browserCloseTimeoutMs) {
+    if (suite !== undefined) {
+      // The suite closes the shared browser and server; a journey closes only its own context.
+      await Promise.all(browser?.contexts().map((context) => context.close()) ?? []);
+    } else if (browser && options.browserCloseTimeoutMs) {
       let timeout;
       try {
         await Promise.race([
@@ -337,8 +367,34 @@ async function withJourney(options, run) {
         clearTimeout(timeout);
       }
     } else if (browser) await browser.close();
-    server.closeAllConnections();
-    await new Promise((resolve) => server.close(resolve));
+    if (suite === undefined) {
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+    }
+  }
+}
+
+/**
+ * Runs journey files one after another in this process, sharing the build check, server and
+ * browser. Each file starts exactly one withJourney when it loads; a failing journey exits.
+ */
+async function runJourneySuite(files) {
+  suite = { pending: [], verified: new Set(), servers: new Map(), browser: undefined };
+  try {
+    for (const file of files) {
+      const started = Date.now();
+      require(file);
+      assert.equal(suite.pending.length, 1, `${file} must start exactly one journey`);
+      await suite.pending.pop();
+      console.log(`journey ${path.basename(file)} passed in ${((Date.now() - started) / 1000).toFixed(1)} s`);
+    }
+  } finally {
+    await suite.browser?.close();
+    for (const { server } of suite.servers.values()) {
+      server.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+    }
+    suite = undefined;
   }
 }
 
@@ -372,4 +428,4 @@ async function waitForBrowserValue(page, predicate, argument, { timeout = 20_000
   }
 }
 
-module.exports = { withJourney, waitForBrowserValue };
+module.exports = { withJourney, waitForBrowserValue, runJourneySuite };

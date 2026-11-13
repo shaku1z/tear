@@ -398,7 +398,7 @@
       "duration": "minutes"
     },
     "test:browser:journeys": {
-      "purpose": "Browser navigation, progression, playground, terminal and cinematic-preference journeys",
+      "purpose": "Seven player journeys on the test build in one process and one browser (navigation, progression, playground, terminal, cinematic, Head Start, Adventure)",
       "effects": [
         "writes-artifacts",
         "launches-browser"
