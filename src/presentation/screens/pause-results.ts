@@ -2,6 +2,7 @@ import type {
   ConfirmQuitScreenView, ContinueScreenView, GameoverScreenView, PausedScreenView,
   ScreenAction, ScreenRenderContext, WinScreenView,
 } from "./contracts";
+import { wrapSpaceSeparated } from "../ui-text-fit";
 import { actionRow, menuHeight, overlayHeader, overlayLayout, verticalMenu, type OverlayLayout } from "./screen-primitives";
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
 import { RUN_MONITOR_ACTIONS } from "../../agents/surface-route";
@@ -14,14 +15,13 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   function wrapText(text: string, x: number, y: number, maxW: number, lineHeight: number, size: number, color: string): void {
     const { canvas } = context;
     canvas.font = ui.font(size, false); canvas.textAlign = "center"; canvas.fillStyle = color;
-    const words = text.split(" "); let line = "", yy = y;
+    const lines = wrapSpaceSeparated((value) => canvas.measureText(value).width, text, maxW);
     const cx = x + maxW / 2;
-    for (const word of words) {
-      const test = line ? line + " " + word : word;
-      if (canvas.measureText(test).width > maxW && line) { canvas.fillText(line, cx, yy); line = word; yy += lineHeight; }
-      else line = test;
-    }
-    if (line) canvas.fillText(line, cx, yy);
+    let lineY = y;
+    lines.forEach((line, index) => {
+      if (index > 0) lineY += lineHeight;
+      canvas.fillText(line, cx, lineY);
+    });
   }
 
   function tutorialPaused(session: NonNullable<PausedScreenView["tutorial"]>): void {

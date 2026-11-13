@@ -9,14 +9,41 @@ export interface AuthoritativeStepResult<State> {
   readonly stateHash: string;
 }
 
+/**
+ * Canonical state whose inputs were captured, by value or by immutable
+ * reference, at the end of its tick. The projection runs at most once, on the
+ * first read, and every reader shares that one result; a tick nobody reads
+ * pays only for the capture.
+ */
+export class DeferredCanonicalState<State> {
+  #project: (() => State) | undefined;
+  #state: State | undefined;
+
+  constructor(project: () => State) {
+    this.#project = project;
+  }
+
+  get state(): State {
+    const project = this.#project;
+    if (project !== undefined) {
+      this.#state = project();
+      this.#project = undefined;
+    }
+    return this.#state as State;
+  }
+}
+
 export interface AuthoritativeStepDependencies<State> {
   readonly applyActions: (tick: number, actions: readonly CommandEnvelope<GameAction>[]) => void;
   readonly step: (seconds: number) => void;
-  readonly snapshot: (tick: number) => State;
+  /** Host work that must observe the completed world before its canonical capture (the tutorial coach). */
+  readonly afterWorldStep?: (tick: number) => void;
+  /** Captures the verification state; a deferred capture is projected only when read. */
+  readonly snapshot: (tick: number) => State | DeferredCanonicalState<State>;
   readonly environment?: EnvironmentStepPort;
 }
 
-/** Owns the invariant action application -> simulation -> canonical verification state. */
+/** Owns the invariant action application -> simulation -> after-world step -> canonical verification state. */
 export class AuthoritativeStepController<State> {
   readonly #dependencies: AuthoritativeStepDependencies<State>;
   #lastTick = -1;
@@ -30,13 +57,17 @@ export class AuthoritativeStepController<State> {
     this.#dependencies.applyActions(tick, actions);
     if (this.#dependencies.environment === undefined) this.#dependencies.step(seconds);
     else this.#dependencies.environment.step(tick, seconds, () => { this.#dependencies.step(seconds); });
-    const state = this.#dependencies.snapshot(tick);
+    this.#dependencies.afterWorldStep?.(tick);
+    const captured = this.#dependencies.snapshot(tick);
+    const canonical = captured instanceof DeferredCanonicalState ? captured : new DeferredCanonicalState(() => captured);
     let cachedStateHash: string | undefined;
     const result = Object.freeze({
       tick,
-      state,
+      get state(): State {
+        return canonical.state;
+      },
       get stateHash(): string {
-        cachedStateHash ??= stableVerificationHash(state);
+        cachedStateHash ??= stableVerificationHash(canonical.state);
         return cachedStateHash;
       },
     });

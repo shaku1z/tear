@@ -10,8 +10,11 @@ export interface PresentationDimensions {
 
 export interface LivePresentationHostOptions<Screen extends string> {
   readonly dimensions: PresentationDimensions;
+  /** Built once, on the first frame: the ports read live state through their functions, never through captured values. */
   readonly framePorts: (host: LivePresentationHost) => RenderPipelinePorts<Screen>;
+  /** Built once, on first use, under the same rule as `framePorts`. */
   readonly uiPorts: () => UiRuntimePorts;
+  /** Built every frame: it carries per-frame pointer, focus and timing values. */
   readonly buttonLayer: () => ButtonLayerOptions;
 }
 
@@ -42,18 +45,27 @@ export function createLivePresentationHost<Screen extends string>(
     };
   };
 
+  let framePorts: RenderPipelinePorts<Screen> | undefined;
+  let uiPorts: UiRuntimePorts | undefined;
+  const ui = (): UiRuntimePorts => {
+    uiPorts ??= options.uiPorts();
+    return uiPorts;
+  };
   const host: LivePresentationHost = Object.freeze({
     screenRectangle,
-    render: () => { renderPresentationFrame(options.framePorts(host)); },
-    handleUi: () => { handleUiRuntimeFrame(options.uiPorts()); },
+    render: () => {
+      framePorts ??= options.framePorts(host);
+      renderPresentationFrame(framePorts);
+    },
+    handleUi: () => { handleUiRuntimeFrame(ui()); },
     drawButtons: () => { renderButtonLayer(options.buttonLayer()); },
-    firstEnabledButton: () => firstEnabledUiButton(options.uiPorts().buttons()),
+    firstEnabledButton: () => firstEnabledUiButton(ui().buttons()),
     stepTab: <Key>(
       tabs: readonly (readonly [Key, ...readonly unknown[]])[],
       current: Key,
       onChange?: (key: Key) => void,
     ): Key => {
-      const ports = options.uiPorts();
+      const ports = ui();
       return stepRuntimeTab(tabs, current, ports.input, ports.playInterfaceSound, onChange);
     },
   });

@@ -144,6 +144,10 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   );
   const UI = createUi({ CLOCK, presentation: { view: worldConfig.view, colors: worldConfig.colors, overscan: OVERSCAN }, Input, clamp,
     controllerGlyph: (buttonIndex) => PAD.glyph(buttonIndex) });
+  // Remembered text layouts were measured with the faces loaded at the time.
+  document.fonts.addEventListener("loadingdone", () => {
+    UI.clearTextLayouts();
+  });
   // One world's entity constructors. The factory takes the mutable world
   // services explicitly, so a second world can be built without a second
   // composition root; the live application still builds exactly one.
@@ -264,6 +268,7 @@ export async function composeTearApplication(options: TearCompositionOptions): P
       value: Object.freeze({
         snapshot: () => DIAG.snapshot(),
         resetTimingSamples: () => { DIAG.resetTimingSamples(); },
+        resetCounters: () => { DIAG.resetCounters(); },
       }),
     });
     compositionWindow.__TEAR_CATALOG_DEBUG__ = Object.freeze({

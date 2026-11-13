@@ -1,5 +1,6 @@
 import type { Align, ButtonSpec, Rect, TokenSnapshot, UiDependencies, UiRuntime } from "./ui-contracts";
 import { truthyOr } from "./value-fallback";
+import { wrapSpaceSeparated } from "./ui-text-fit";
 import { densityTokens, isCompactDensity, type DensityProfile } from "./ui-density";
 import { inkIsLight, withAlpha } from "./ui-color";
 
@@ -127,19 +128,7 @@ font(this: UiRuntime, size: number, bold?: boolean) {
             ctx.font = this.font(truthyOr(size, () => this.t.type.body), false);
             ctx.textAlign = truthyOr(align, () => "center");
             ctx.textBaseline = "alphabetic";
-            const words = (str || "").split(" "), lines = [];
-            let line = "";
-            for (const word of words) {
-                const test = line ? line + " " + word : word;
-                if (ctx.measureText(test).width > maxW && line) {
-                    lines.push(line);
-                    line = word;
-                }
-                else
-                    line = test;
-            }
-            if (line)
-                lines.push(line);
+            const lines = wrapSpaceSeparated((value) => ctx.measureText(value).width, str || "", maxW);
             for (let i = 0; i < lines.length; i++)
                 ctx.fillText(lines[i] ?? "", x, y + i * lineH);
             ctx.restore();

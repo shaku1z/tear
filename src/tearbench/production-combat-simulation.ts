@@ -1,6 +1,7 @@
 import { liveTutorialCoachFrame } from "../app/training/tutorial-coach-frame";
 import type { AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import { createTearCombatSimulation } from "../gameplay/runtime/tear-combat-simulation";
+import type { DeferredCanonicalState } from "../gameplay/runtime/authoritative-step";
 import type { ProductionReplayWorld } from "./production-world-factory";
 import { createProductionCombatPhases, type ProductionCombatPhaseOptions } from "./production-combat-phases";
 import { bindLiveAuroraTrackActors } from "../app/world/biomes/aurora-track-wiring";
@@ -8,7 +9,7 @@ import { bindLiveWhiteHartActors } from "../app/world/biomes/white-hart-wiring";
 import { bindLiveRootboundActors } from "../app/world/biomes/rootbound-wiring";
 
 export interface ProductionCombatSimulationOptions<State> extends ProductionCombatPhaseOptions {
-  snapshot(tick: number, input: AuthoritativeInputState): State;
+  snapshot(tick: number, input: AuthoritativeInputState): State | DeferredCanonicalState<State>;
 }
 
 /**
@@ -40,7 +41,10 @@ export function createProductionCombatSimulation<State>(
     },
     authoritative: {
       actionPort: { apply(input, tick, actions) { replay.tutorial.captureCoachCommands(actions.map((entry) => entry.command)); replay.input.actionPort.apply(input, tick, actions); } },
-      snapshot: (tick, input) => { replay.tutorial.afterWorldStep(liveTutorialCoachFrame(replay.tutorial, tick, replay.world.state, core.combatEntityRuntime, replay.stage.index), input.snapshot()); return options.snapshot(tick, input); },
+      afterWorldStep: (tick, input) => {
+        replay.tutorial.afterWorldStep(liveTutorialCoachFrame(replay.tutorial, tick, replay.world.state, core.combatEntityRuntime, replay.stage.index), input.snapshot());
+      },
+      snapshot: (tick, input) => options.snapshot(tick, input),
     },
   });
   const config = replay.configuration.value;

@@ -9,6 +9,9 @@ import * as compositionModule from "../../src/app/interface/presentation-composi
 import * as screenModule from "../../src/app/interface/screen-presentation-composition";
 import * as worldModule from "../../src/app/world/world-presentation-adapters";
 import { createLiveInterfaceComposition, type LiveInterfaceCompositionOptions } from "../../src/app/interface/interface-composition";
+import * as pipelineModule from "../../src/presentation/render-pipeline";
+import * as buttonLayerModule from "../../src/presentation/screens/button-layer";
+import * as uiRuntimeModule from "../../src/app/interface/ui-runtime-controller";
 
 // Execute the actual coordinator callback without booting unrelated browser/storage owners.
 function coordinatorRender(composition: ReturnType<typeof createLiveInterfaceComposition>): () => void {
@@ -139,5 +142,52 @@ describe("live presentation host", () => {
     host.handleUi();
     host.drawButtons();
     expect(screenDraw).toHaveBeenCalledOnce();
+  });
+  it("builds frame and UI ports once and the per-frame button layer every frame", () => {
+    const pipeline = vi.spyOn(pipelineModule, "renderPresentationFrame").mockImplementation(() => undefined);
+    vi.spyOn(buttonLayerModule, "renderButtonLayer").mockImplementation(() => undefined);
+    vi.spyOn(uiRuntimeModule, "handleUiRuntimeFrame").mockImplementation(() => undefined);
+    const framePorts = vi.fn(() => ({}) as never);
+    const uiPorts = vi.fn(() => ({ buttons: () => [] }) as never);
+    const buttonLayer = vi.fn(() => ({}) as never);
+    try {
+      const host = createLivePresentationHost({ dimensions: { width: 80, height: 60, overscan: () => ({ x: 0, y: 0 }) }, framePorts, uiPorts, buttonLayer });
+      for (let frame = 0; frame < 3; frame += 1) {
+        host.render();
+        host.handleUi();
+        host.drawButtons();
+        host.firstEnabledButton();
+      }
+      expect(framePorts).toHaveBeenCalledOnce();
+      expect(uiPorts).toHaveBeenCalledOnce();
+      expect(buttonLayer).toHaveBeenCalledTimes(3);
+      expect(new Set(pipeline.mock.calls.map(([ports]) => ports)).size).toBe(1);
+    } finally { vi.restoreAllMocks(); }
+  });
+
+  it("writes DOM hint display only when it changes", () => {
+    let ports: ReturnType<Parameters<typeof createLivePresentationHost>[0]["framePorts"]> | undefined;
+    vi.spyOn(hostModule, "createLivePresentationHost").mockImplementation((options) => {
+      ports = options.framePorts({ screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }) } as never);
+      return {} as never;
+    });
+    const writes: string[] = [];
+    const element = (name: string) => {
+      let display = "";
+      return { style: { get display() { return display; }, set display(value: string) { writes.push(`${name}=${value}`); display = value; } } };
+    };
+    try {
+      compositionModule.createLivePresentationFrameHost({ bossIntroActive: () => false } as never, {
+        capturePolicy: () => ({ ui: "include", pointerLock: "include" }), controlHintContext: () => ({ runSeconds: 0, completedRuns: 0 }),
+        touchActive: () => false, input: { mode: "mouse" }, pointerLocked: () => false, cinema: { active: false },
+        lockHint: element("lock"), inputHint: element("input"), fullscreenButton: element("fullscreen"),
+      } as never);
+      if (!ports) throw new Error("real frame composition did not produce ports");
+      ports.updateDomHints("playing");
+      ports.updateDomHints("playing");
+      ports.updateDomHints("menu");
+      ports.updateDomHints("menu");
+      expect(writes).toEqual(["lock=block", "input=block", "fullscreen=none", "lock=none", "input=none", "fullscreen="]);
+    } finally { vi.restoreAllMocks(); }
   });
 });

@@ -26,6 +26,18 @@ Pull requests and `main` run the deterministic functional contract in the requir
 
 When hardware-independent changes deliberately alter the representative workload, capture several clean runs, document why the contract changed, and update the workload and budget together. Do not raise a threshold solely to silence one overloaded or contended machine.
 
+## Runtime cost profile (reported, not yet a budget)
+
+`node tests/browser-runtime-cost-profile.js` measures a test build (`dist/test-standalone` by default, or `TEAR_PROFILE_BUILD`) in eight scenes: the menu attract scene, Adventure wave 1, an Endless wave 9 composition, the Verdant Rootbinder/Bloom workload, White Hart phase two, a tutorial lesson, the Shop sheet and the draft overlay. Each scene runs on a fresh page in three separate passes so instrumentation never touches the timing numbers:
+
+- **timing**: simulation and render per frame and the canonical tick, from the test-build `PerformanceMonitor`, plus its test-only cost counters (authoritative captures, canonical projections and their cost, environment cleanup actor sets, ticks). Counting call sites are guarded by `__TEAR_TEST_BUILD__`, so release bundles neither count nor contain the counter names.
+- **counters**: an init script counts Canvas `measureText`, gradient and pattern creation, font and shadow assignments, `fillText`, `Object.freeze`, `structuredClone` and DOM writes (inline style through an `element.style` proxy, attributes, classes, text) per frame. `TEAR_PROFILE_CALLSITES=1` also attributes each count to its source line.
+- **allocation**: Chrome's sampling heap profiler with objects collected by minor and major GC included, so the summed sample sizes estimate every byte allocated in the window rather than what survived it; a CPU profile runs alongside for attribution. With a source-mapped build (`vite build --mode test-standalone --sourcemap`) both are attributed to source files; `TEAR_PROFILE_RAW_DIR` keeps the raw profiles.
+
+Every pass repeats `TEAR_PROFILE_REPEATS` times (default 3) over a `TEAR_PROFILE_WINDOW_MS` window (default 4,000 ms) after a warm-up, and the report (`TEAR_PROFILE_OUTPUT`) keeps each run with the median, minimum and maximum. Sampled allocation is an estimate with a few per cent of sampling noise; counters are close to deterministic for a given workload.
+
+Path to budgets: once several clean runs on the controlled release host agree, promote the deterministic metrics first (canonical projections per second outside recording, `measureText`, gradient and DOM writes per frame per scene) as ceilings about 10% above the measured median in `config/browser-performance-budgets.json`, then allocation bytes per frame. Wall-clock scene timings stay reported until the controlled host shows a stable spread.
+
 ## Download and startup budgets
 
 `pnpm check:bundles` (`scripts/check-bundle-budget.mjs`, budgets in [`config/bundle-budgets.json`](../config/bundle-budgets.json)) measures both release builds, `dist/standalone` and `dist/crazygames`:

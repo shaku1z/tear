@@ -27,7 +27,7 @@ import { createLiveStateForgeAdapter, captureLiveRewardSelection } from "../app/
 import { createLiveStateForgeRuntimeBridge, resolveStateForgeBossIntro } from "../app/engineering/state-forge-runtime-bridge";
 import type { RunDifficulty } from "../gameplay/run/session";
 import { RunRandomStreams, type RunRandomStreamsSnapshot } from "../simulation/run-random";
-import { projectCanonicalGameplayState, type CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
+import { captureCanonicalGameplayState, type CanonicalGameplayState, type RuntimeEnemyState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { CAMPAIGN_STAGE_IDS, stageAt } from "../gameplay/stages";
@@ -108,25 +108,24 @@ export function projectProductionReplayCanonicalState(
   replay: ProductionReplayWorld,
   tick: number,
   input: AuthoritativeInputState,
+): CanonicalGameplayState {
+  return captureProductionReplayCanonicalState(replay, tick, input).state;
+}
+
+/** The same projection, captured at the end of a tick and projected only when read. */
+export function captureProductionReplayCanonicalState(
+  replay: ProductionReplayWorld,
+  tick: number,
+  input: AuthoritativeInputState,
 ) {
-  return projectCanonicalGameplayState(
+  return captureCanonicalGameplayState(
     tick,
     input.snapshot(),
     replay.world.state.run(),
     replay.world.state.player() as never,
     replay.world.state.blade() as never,
     replay.world.state.enemies().map((entity) => {
-      const enemy = entity as never as { _gid?: number; kind: string; bossId?: string;
-        x: number; y: number; vx: number; vy: number; hp: number; dead: boolean;
-        atk?: string; atkT?: number; atkCd?: number; packRole?: string; packFlank?: number;
-        packLockT?: number; packAttackAuthorized?: boolean; pounceTargetX?: number; pounceAirborne?: boolean;
-        auroraDirection?: number; auroraResponseT?: number; auroraPounceExtended?: boolean;
-        state?: string; stateT?: number; stateMax?: number; phaseMarker?: number; attackCursor?: number;
-        attackStep?: number; attackSequence?: number; environmentSequence?: number; routeProgress?: number;
-        trueRouteIndex?: number; fracturePlatformId?: string | null; fractureWindow?: boolean; batonStrike?: number;
-        auroraBossChargeActive?: boolean; parryOutcome?: string;
-        routeTelegraph?: readonly Readonly<{ x: number; y: number }>[];
-        candidateRoutes?: readonly (readonly Readonly<{ x: number; y: number }>[])[] };
+      const enemy = entity as never as RuntimeEnemyState & { readonly kind: string };
       return {
         ...(typeof enemy._gid === "number" ? { _gid: enemy._gid } : {}), kind: enemy.kind,
         ...(typeof enemy.bossId === "string" ? { bossId: enemy.bossId } : {}),
@@ -520,7 +519,7 @@ export function createProductionGhostReplayComposition(
         updateWave: (seconds) => { waveReward?.update(seconds); },
         ...(options.gameplayEvents === undefined ? {} : { gameplayEvents: options.gameplayEvents }),
         endRun: () => { options.endRun?.(); outcome?.controller.defeat(); },
-        snapshot: (tick, input) => projectProductionReplayCanonicalState(replay, tick, input),
+        snapshot: (tick, input) => captureProductionReplayCanonicalState(replay, tick, input),
       });
       outcome = createProductionRunOutcomeRuntime(replay, options.gameplayEvents, options.observeTerminal);
       replay.finale.bindOutcome(outcome.controller.prepareVictory.bind(outcome.controller), (campaign) => { outcome.controller.victory(campaign); waveReward?.restoreScreen("win"); });

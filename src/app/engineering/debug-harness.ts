@@ -10,6 +10,7 @@ import type { UpgradeDefinition } from "../../gameplay/upgrades";
 import type { AppScreen, AppTransitionContext } from "../interface/app-state-controller";
 import { WHITE_HART_PHASE_ATTACKS, type WhiteHartAttackId } from "../../gameplay/entities/enemy-types/white-hart";
 import type { EnvironmentRuntimeState } from "../../gameplay/environment/environment-contracts";
+import { createDebugPerformanceScenarios } from "./debug-performance-scenarios";
 
 export interface DebugLifecycle {
   readonly phase: RunPhase;
@@ -35,6 +36,7 @@ export interface LiveDebugHarnessContext {
   readonly height: number;
   readonly spawnExplicitVariant?: (kind: ExplicitVariantKind, variantId: string) => void;
   readonly startRun: (mode: RunMode, difficulty: RunDifficulty) => void;
+  readonly startNextWave?: () => void;
   readonly selectBoss: (boss: BossId) => void;
   readonly setScreen: (screen: AppScreen, detail?: AppTransitionContext) => void;
   readonly setContinueSeconds: (value: number) => void;
@@ -179,19 +181,6 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
     if (player === undefined) throw new Error("Current gameplay scenario requires a live player");
     Object.assign(player, { y: d.CONFIG.world.groundY - player.hh, vy: 0, onGround: true });
   };
-  const performanceEnvironmentSnapshot = () => {
-    if (context.environment === undefined) throw new Error("Performance environment diagnostics are unavailable");
-    const fields = context.environment.fields();
-    const combatObjects = context.environment.combatObjects();
-    const routes = context.environment.routes();
-    const kinds: Record<string, number> = {};
-    for (const entry of [...fields, ...combatObjects, ...routes]) {
-      const key = `${entry.kind}:${entry.state}`;
-      kinds[key] = (kinds[key] ?? 0) + 1;
-    }
-    return Object.freeze({ fields: fields.length, combatObjects: combatObjects.length, routes: routes.length,
-      kinds: Object.freeze(kinds) });
-  };
   context.install(Object.freeze({
     presentationDiagnostics: () => presentationDiagnostics(context),
     startMode(mode?: RunMode, difficulty?: RunDifficulty) { context.startRun(mode ?? "endless", difficulty ?? "normal"); },
@@ -220,7 +209,8 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       Object.assign(platform, { arenaState: state === "stressed" ? "stable" : state,
         stress: state === "stressed" ? 0.6 : 0, crackWarn: 0.2, respawnIn: 0.2 });
     },
-    performanceEnvironmentSnapshot,
+    ...createDebugPerformanceScenarios(context, { run: () => runOf(context.state), prepareCurrentGameplay,
+      retireWave: () => { clearPreparedOrActiveDebugWave(context.lifecycle); context.lifecycle.prepareReward("draft"); } }),
     prepareVariantSelectionScenario(kind: ExplicitVariantKind, variantId: string) {
       const run = runOf(context.state);
       if (run.mode !== "playground" && run.mode !== "sandbox") throw new Error("explicit variant selection is limited to Playground/Enemy Test");
@@ -308,26 +298,6 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
       Object.assign(boss, { spawnT: 0, introT: 0,
         ...(id === "echo" ? { _live: true, spawnClone: true } : { spawnAdds: true }) });
     },
-    /** Bounded performance fixture composed through the production entity factory and live environment bindings. */
-    prepareVerdantPerformanceScenario() {
-      prepareCurrentGameplay();
-      const run = runOf(context.state);
-      const player = context.state.player();
-      const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === "rootbound" && !enemy.dead);
-      if (player === undefined || boss === undefined) throw new Error("Verdant performance requires the live Rootbound encounter");
-      const phase = (boss as GameEnemy & { readonly phase?: number }).phase;
-      if (phase !== 2) throw new Error(`Verdant performance requires Rootbound phase two, received ${String(phase)}`);
-      const groundY = d.CONFIG.world.groundY;
-      const additions = [
-        context.entities.createEnemy("rootbinder", 520, groundY - d.CONFIG.rootbinder.h / 2, run),
-        context.entities.createEnemy("charger", 760, groundY - d.CONFIG.enemy.h / 2, run),
-        context.entities.createEnemy("ranged", 940, groundY - d.CONFIG.ranged.h / 2, run),
-      ];
-      for (const enemy of additions) Object.assign(enemy, { spawnT: 0, stun: 0, hitCd: 0, aliveT: 0 });
-      player.hp = Math.max(player.hp, 1_000);
-      context.state.setEnemies([boss, ...additions]);
-      context.state.setProjectiles([]);
-    },
     /** Exact-tick parity fixture: author one Charger after the run exists, before its next step. */
     prepareEnemyParityScenario() {
       const player = context.state.player();
@@ -343,35 +313,6 @@ export function installLiveDebugHarness(context: LiveDebugHarnessContext): void 
         variant: "", variantName: "", affixes: [], affixCount: 0,
       });
       context.state.setEnemies([enemy]);
-      context.state.setProjectiles([]);
-    },
-    /** Bounded PT3-C11 workload composed through the production boss, enemy, variant, and environment paths. */
-    preparePalePerformanceScenario() {
-      prepareCurrentGameplay();
-      const run = runOf(context.state);
-      const player = context.state.player();
-      const boss = context.state.enemies().find((enemy) => enemy.isBoss && enemy.bossId === "white-hart" && !enemy.dead);
-      if (player === undefined || boss === undefined) throw new Error("Pale performance requires the live White Hart encounter");
-      const phase = (boss as GameEnemy & { readonly phase?: number }).phase;
-      if (phase !== 2) throw new Error(`Pale performance requires White Hart phase two, received ${String(phase)}`);
-      if (context.spawnExplicitVariant === undefined) throw new Error("Pale performance requires the explicit production variant seam");
-      const groundY = d.CONFIG.world.groundY;
-      const hounds = [430, 620].map((x) => context.entities.createEnemy("rimehound", x, groundY - 17, run));
-      for (const hound of hounds) Object.assign(hound, {
-        vx: 0, vy: 0, onGround: true, spawnT: 0, stun: 0, hitCd: 0, aliveT: 0,
-        atk: "flank", atkT: 0, atkCd: 0, canClimb: false, climber: false,
-        variant: "", variantName: "", affixes: [], affixCount: 0,
-      });
-      context.state.setEnemies([boss, ...hounds]);
-      for (const [kind, variantId] of [
-        ["charger", "rime-runner"], ["ranged", "prism-seer"], ["flyer", "snowfall-kite"],
-        ["bomber", "hailcaster"], ["armored", "glacier-guard"],
-      ] as const) context.spawnExplicitVariant(kind, variantId);
-      for (const enemy of context.state.enemies()) {
-        Object.assign(enemy, { spawnT: 0, stun: 0, hitCd: 0, aliveT: 0 });
-        enemy.hp = Math.max(enemy.hp, 1_000); enemy.hpDisplay = enemy.hp;
-      }
-      player.hp = Math.max(player.hp, 1_000);
       context.state.setProjectiles([]);
     },
     /** PT3-C3 browser fixture: compose two real Rimehounds through the live factory. */

@@ -155,6 +155,11 @@ export interface LivePresentationFrameServices<Screen extends string,
   readonly trickColor: (multiplier: number) => string;
 }
 
+/** Writes an inline display value only when it differs, so an unchanged frame performs no DOM write. */
+function setDisplay(element: HTMLElement | null, display: string): void {
+  if (element !== null && element.style.display !== display) element.style.display = display;
+}
+
 /** Composes the complete canvas frame and non-gameplay input host from narrow live ports. */
 export function createLivePresentationFrameHost<Screen extends string,
   Stage extends Readonly<{ readonly bg: string }>>(
@@ -266,10 +271,10 @@ export function createLivePresentationFrameHost<Screen extends string,
           inputMode: services.input.mode, pointerLocked: services.pointerLocked(),
           runSeconds: run.runSeconds, completedRuns: run.completedRuns,
           presentationBusy: services.cinema.active || state.bossIntroActive() });
-        if (services.lockHint !== null) services.lockHint.style.display = visible.lockHint ? "block" : "none";
-        if (services.inputHint !== null) services.inputHint.style.display = visible.controlHint ? "block" : "none";
+        setDisplay(services.lockHint, visible.lockHint ? "block" : "none");
+        setDisplay(services.inputHint, visible.controlHint ? "block" : "none");
         // "" hands display back to the stylesheet, which also hides it on coarse pointers.
-        if (services.fullscreenButton !== null) services.fullscreenButton.style.display = visible.fullscreen ? "" : "none";
+        setDisplay(services.fullscreenButton, visible.fullscreen ? "" : "none");
       },
     }),
     uiPorts: () => ({ screen: state.screen, buttons: state.controls, focus: state.focus, setFocus: state.setFocus,

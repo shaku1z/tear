@@ -503,7 +503,7 @@
       "multiStatementLines": 1
     },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 35776,
+      "chars": 32485,
       "maxLineLength": 227,
       "multiStatementLines": 34
     },
@@ -769,9 +769,9 @@
       "maxLineLength": 231
     },
     "src/app/shell/game-runtime.ts": {
-      "chars": 77587,
+      "chars": 77465,
       "maxLineLength": 3969,
-      "multiStatementLines": 132,
+      "multiStatementLines": 131,
       "largestFunctionStatements": 143
     },
     "src/app/shell/platform-bootstrap.ts": {
@@ -1763,7 +1763,7 @@
     },
     "src/presentation/screens/pause-results.ts": {
       "maxLineLength": 547,
-      "multiStatementLines": 6
+      "multiStatementLines": 4
     },
     "src/presentation/screens/playground.ts": {
       "multiStatementLines": 9
@@ -1809,9 +1809,6 @@
     },
     "src/presentation/verdant-water-flow.ts": {
       "multiStatementLines": 10
-    },
-    "src/presentation/world/contracts.ts": {
-      "maxLineLength": 166
     },
     "src/presentation/world/entity-layer.ts": {
       "multiStatementLines": 20
@@ -1919,8 +1916,8 @@
       "multiStatementLines": 54
     },
     "src/tearbench/production-combat-simulation.ts": {
-      "maxLineLength": 238,
-      "multiStatementLines": 2
+      "maxLineLength": 184,
+      "multiStatementLines": 1
     },
     "src/tearbench/production-finale-runtime.ts": {
       "maxLineLength": 228,
@@ -1935,7 +1932,7 @@
       "multiStatementLines": 8
     },
     "src/tearbench/production-replay-composition.ts": {
-      "chars": 38261,
+      "chars": 37735,
       "maxLineLength": 268,
       "multiStatementLines": 11
     },

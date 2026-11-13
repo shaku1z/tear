@@ -1,6 +1,6 @@
 import type { FixedStepScheduler } from "../../simulation/fixed-step";
 import type { AuthoritativeInputState } from "./authoritative-input";
-import type { AuthoritativeStepController } from "./authoritative-step";
+import type { AuthoritativeStepController, DeferredCanonicalState } from "./authoritative-step";
 import { CombatEntityRuntime } from "../combat/combat-entity-runtime";
 import { LiveCombatRuntime, type LiveCombatRuntimeOptions } from "../combat/live-combat-runtime";
 import { LiveKillRuntime, type LiveKillHost } from "../combat/live-kill-runtime";
@@ -38,7 +38,8 @@ export interface TearCombatSimulationOptions<State> {
   }>) => Pick<LiveCombatRuntimeOptions, "opening" | "collision"> & CombatRuntimeLifecycleOptions;
   readonly authoritative: Readonly<{
     readonly actionPort: TearSimulationActionPort;
-    snapshot(tick: number, input: AuthoritativeInputState): State;
+    afterWorldStep?(tick: number, input: AuthoritativeInputState): void;
+    snapshot(tick: number, input: AuthoritativeInputState): State | DeferredCanonicalState<State>;
   }>;
 }
 
@@ -60,6 +61,9 @@ export function createTearCombatSimulation<State>(
   const simulationRuntime = new TearSimulationRuntime<State>({
     actionPort: options.authoritative.actionPort,
     step: (seconds) => { combatRuntime.step(seconds); },
+    ...(options.authoritative.afterWorldStep === undefined ? {} : { afterWorldStep: (tick: number, input: AuthoritativeInputState) => {
+      options.authoritative.afterWorldStep?.(tick, input);
+    } }),
     snapshot: (tick, input) => options.authoritative.snapshot(tick, input),
     ...(options.gameplayEvents === undefined ? {} : { events: options.gameplayEvents }),
     ...(options.environment === undefined ? {} : { environment: options.environment }),

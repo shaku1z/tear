@@ -55,6 +55,26 @@ export function wrapWords(measure: MeasureText, text: string, maxWidth: number, 
   return lines;
 }
 
+/**
+ * Greedy wrap on single spaces, the rule of the canvas paragraph helpers: a
+ * word moves to a new line when the current line plus that word is wider than
+ * the box. Unlike `wrapWords` it keeps empty words and newline characters as
+ * written and drops a trailing empty line, so those paragraphs lay out as before.
+ */
+export function wrapSpaceSeparated(measure: (text: string) => number, text: string, maxWidth: number): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(" ")) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && measure(candidate) > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else line = candidate;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 /** Shorten one line until it and an ellipsis fit. */
 export function ellipsizeLine(measure: MeasureText, text: string, maxWidth: number, size: number): string {
   if (measure(text, size) <= maxWidth) return text;
