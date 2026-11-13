@@ -210,7 +210,7 @@ async function main() {
       if (!on && held.has(code)) { held.delete(code); await page.keyboard.up(code); }
     };
     const releaseAll = async () => { for (const code of [...held]) await hold(code, false); };
-    let sweep = 0, retries = 0, zeroLeftSince = null, lastLeft = null, lastText = 0, frameText = [], lastSeen = null;
+    let loops = 0, loopsFrom = Date.now(), sweep = 0, retries = 0, zeroLeftSince = null, lastLeft = null, lastText = 0, frameText = [], lastSeen = null;
     // Real-time play depends on the runner: report the frame rate the game reached.
     const frameOf = () => page.evaluate(() => window.__RELEASE_JOURNEY__.frame);
     let fpsFrom = { at: Date.now(), frame: await frameOf() };
@@ -257,7 +257,8 @@ async function main() {
       for (const enemy of enemies.filter((blob) => looksLikeEnemy(blob, player))) { const distance = Math.hypot(enemy.x - player.x, (enemy.y - player.y) * 1.3); if (distance < best) { best = distance; target = enemy; } }
       const round = (point) => point && [Math.round(point.x), Math.round(point.y), ...(point.w ? [Math.round(point.w), Math.round(point.h)] : [])];
       lastSeen = { eye: eye !== null, player: round(player), blobs: enemies.length, target: round(target) };
-      sweep += 1.1;
+      // The swing follows the clock, not the loop count, so a faster or slower runner swings the blade at the same rate.
+      sweep = (Date.now() - loopsFrom) / 1000 * 22; loops += 1;
       if (target === null) {
         await hold("KeyA", false); await hold("KeyD", false);
         await page.mouse.move(player.x + Math.cos(sweep) * 120 * SCALE, player.y - 50 * SCALE + Math.sin(sweep) * 60 * SCALE);
@@ -272,7 +273,7 @@ async function main() {
       await sleep(12);
     }
     await releaseAll();
-    note("wave 1 cleared; draft open", { leg, retries, fps: await fps() });
+    note("wave 1 cleared; draft open", { leg, retries, fps: await fps(), loopHz: +(loops / ((Date.now() - loopsFrom) / 1000)).toFixed(1) });
 
     // The draft opens and a mouse click on a card picks it after the settle window.
     await waitForText(/^TAKE ONE/u, 5_000, `${leg}: draft`);
