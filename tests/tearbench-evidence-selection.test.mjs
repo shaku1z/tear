@@ -656,8 +656,8 @@ test("current production authority and player-surface contracts cannot silently 
   assert.deepEqual(surfaces.journeyCommands, ["node tests/browser-ghost-lab-home.js"]);
 });
 
-test("current Adaptive Soundtrack vendor changes select the existing audio lifecycle route", () => {
-  const selection = select(["public/vendor/tear-music/adaptive-soundtrack.provenance.json"]);
+test("published music changes select the existing audio lifecycle route", () => {
+  const selection = select(["public/audio/cues/once-at-a-time/cue.json"]);
   assert.ok(selection.routes.includes("audio"));
 });
 

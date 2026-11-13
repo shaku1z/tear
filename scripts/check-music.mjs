@@ -5,7 +5,8 @@
 //   - both manifests have their expected format;
 //   - the default work, every routed work and every playable catalog work has a cue;
 //   - every file a cue.json names exists, and nothing else is in public/audio/cues;
-//   - each cue stays inside its size budget;
+//   - every other build target's encode (opus-<target>/) mirrors opus/ file for file;
+//   - each cue stays inside its size budget for every target;
 //   - no shipped audio file carries a source-tool tag.
 import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
@@ -66,7 +67,18 @@ for (const work of catalog?.works ?? []) {
 }
 
 const referenced = new Set();
-const sizes = [];
+const sizes = new Map([["web", []]]);
+/** Build targets with their own encode, from the opus-<target>/ folders present. */
+const targets = new Set(
+  existsSync(cuesDir)
+    ? readdirSync(cuesDir).flatMap((cue) =>
+        existsSync(path.join(cuesDir, cue)) && statSync(path.join(cuesDir, cue)).isDirectory()
+          ? readdirSync(path.join(cuesDir, cue)).filter((name) => name.startsWith("opus-")).map((name) => name.slice(5))
+          : [],
+      )
+    : [],
+);
+for (const target of targets) sizes.set(target, []);
 for (const [id, why] of required) {
   const dir = path.join(cuesDir, id);
   const cueFile = path.join(dir, "cue.json");
@@ -100,7 +112,21 @@ for (const [id, why] of required) {
     }
   }
   if (bytes > CUE_BYTES) fail(`${id}: ${bytes} B is over the ${CUE_BYTES} B cue budget`);
-  sizes.push([id, bytes]);
+  sizes.get("web").push([id, bytes]);
+  for (const target of targets) {
+    const mirror = path.join(dir, `opus-${target}`);
+    const names = urls.map((url) => path.basename(url)).sort();
+    const present = existsSync(mirror) ? readdirSync(mirror).sort() : [];
+    if (JSON.stringify(present) !== JSON.stringify(names))
+      fail(`${id}: opus-${target}/ has [${present.join(", ")}], expected [${names.join(", ")}]`);
+    let targetBytes = statSync(cueFile).size;
+    for (const name of names.filter((n) => present.includes(n))) {
+      referenced.add(path.join(mirror, name));
+      targetBytes += statSync(path.join(mirror, name)).size;
+    }
+    if (targetBytes > CUE_BYTES) fail(`${id}: ${target} ${targetBytes} B is over the ${CUE_BYTES} B cue budget`);
+    sizes.get(target).push([id, targetBytes]);
+  }
 }
 
 if (existsSync(cuesDir)) {
@@ -124,5 +150,7 @@ if (errors.length) {
   for (const message of errors) console.error(`check:music: ${message}`);
   process.exit(1);
 }
-const total = sizes.reduce((sum, [, bytes]) => sum + bytes, 0);
-console.log(`check:music: ${sizes.length} cues complete, ${(total / 1048576).toFixed(2)} MiB, nothing unreferenced`);
+const totals = [...sizes].map(
+  ([target, list]) => `${target} ${(list.reduce((sum, [, bytes]) => sum + bytes, 0) / 1048576).toFixed(2)} MiB`,
+);
+console.log(`check:music: ${sizes.get("web").length} cues complete (${totals.join(", ")}), nothing unreferenced`);
