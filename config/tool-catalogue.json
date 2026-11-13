@@ -1647,6 +1647,19 @@
         "checkpoint"
       ]
     },
+    "scripts/run-checks.mjs": {
+      "purpose": "Runs one group (static, unit, build or browser) or one shard of the check.functional tasks; the Validate workflow's parallel jobs call it",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml",
+        "tests/unit/ci-workflow.test.mjs"
+      ]
+    },
     "scripts/run-current-live-detached-parity.mjs": {
       "purpose": "Runs the C27A live browser parity trace then the detached parity Vitest",
       "effects": [

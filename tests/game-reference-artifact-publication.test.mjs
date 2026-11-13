@@ -111,25 +111,20 @@ function createPublisherFixture() {
 }
 
 test("Validate publishes the exact game-reference artifact only after functional success", () => {
-  const functionalIndex = workflow.indexOf("- run: xvfb-run -a pnpm check:functional");
-  const releaseUploadIndex = workflow.indexOf("- uses: actions/upload-artifact@v4", functionalIndex);
+  // The gate is the final `check` job: its first step fails unless every other job passed, and the
+  // publication steps after it run only when that step succeeded.
+  const checkJobIndex = workflow.indexOf("\n  check:\n");
+  const gateIndex = workflow.indexOf("- name: Require every job to have passed", checkJobIndex);
   const publishIndex = workflow.indexOf("- name: Publish exact game-reference manifest");
   const uploadIndex = workflow.indexOf("- uses: actions/upload-artifact@v4", publishIndex);
-  assert.ok(functionalIndex >= 0, "Validate must retain the functional gate");
-  assert.ok(releaseUploadIndex > functionalIndex, "release artifact must remain immediately after the functional gate");
-  assert.ok(publishIndex > releaseUploadIndex, "publication must follow the existing release artifact");
+  assert.ok(
+    checkJobIndex >= 0 && gateIndex > checkJobIndex,
+    "Validate must retain the final check job and its gate step",
+  );
+  assert.ok(publishIndex > gateIndex, "publication must follow the check gate");
   assert.ok(uploadIndex > publishIndex, "upload must follow manifest generation");
-  const releaseArtifact = workflow.slice(releaseUploadIndex, publishIndex);
-  assert.match(releaseArtifact, /name:\s*tear-release-targets-\$\{\{\s*github\.sha\s*\}\}/u);
-  assert.match(
-    releaseArtifact,
-    /path:\s*\|\s*dist\s+artifacts\/packages\/tear-crazygames\.zip\s+artifacts\/tearbench/su,
-  );
-  assert.match(releaseArtifact, /retention-days:\s*14/u);
-  const publication = workflow.slice(
-    publishIndex,
-    workflow.indexOf("- uses: actions/upload-artifact@v4", uploadIndex + 1),
-  );
+  // The publication and its upload are the last two steps of the workflow.
+  const publication = workflow.slice(publishIndex);
   assert.match(publication, /GITHUB_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/u);
   assert.match(publication, /GITHUB_REPOSITORY:\s*\$\{\{\s*github\.repository\s*\}\}/u);
   assert.match(publication, /GITHUB_EVENT_NAME:\s*\$\{\{\s*github\.event_name\s*\}\}/u);

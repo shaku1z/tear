@@ -1,5 +1,10 @@
 name: Validate
 
+# Runs the same tasks as `pnpm check:functional`, split across parallel jobs by
+# scripts/run-checks.mjs. The job named `check` is the one required status: it
+# passes only when every other job passed (or was skipped for a docs-only pull
+# request), so the branch ruleset and the merge helper need no change.
+
 on:
   pull_request:
   push:
@@ -9,29 +14,23 @@ permissions:
   contents: read
 
 concurrency:
-  group: validate-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push to a pull request cancels the older run. Runs on main are
+  # never cancelled: each one may produce the build a deploy needs.
+  group: validate-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  check:
+  changes:
     runs-on: ubuntu-latest
-    # Preserve the complete functional command set while leaving bounded
-    # headroom for shared-runner variance; this is not a latency improvement.
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      gameplay: ${{ steps.scope.outputs.gameplay }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Resolve focused validation scope
-        id: validation-scope
+      - name: Decide whether this change can affect the game
+        id: scope
         shell: bash
         run: |
           mkdir -p artifacts/tearbench
@@ -45,38 +44,222 @@ jobs:
               git show --format= --name-only "${{ github.sha }}" > artifacts/tearbench/changed-files.txt
             fi
           fi
-          gameplay_required=true
+          gameplay=true
           if [[ "${{ github.event_name }}" == "pull_request" ]] && node --input-type=module -e 'import { readFileSync } from "node:fs"; const files = readFileSync("artifacts/tearbench/changed-files.txt", "utf8").split(/\r?\n/u).filter(Boolean); process.exit(files.length > 0 && files.every((file) => /^(?:docs\/|plans\/|(?:README|CONTRIBUTING|CRAZYGAMES|DEPLOYMENT)\.md$)/u.test(file)) ? 0 : 1)'; then
-            gameplay_required=false
+            gameplay=false
           fi
-          echo "gameplay_required=$gameplay_required" >> "$GITHUB_OUTPUT"
-      - run: pnpm exec playwright install --with-deps chromium
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
-      - name: Prove release preflight rejects unsafe repository states
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
-        run: node --test tests/release-preflight.test.mjs
-      - name: Select and run diff-aware TearBench evidence
-        run: pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt
-      - name: Validate documentation-only authority and terminology
-        if: steps.validation-scope.outputs.gameplay_required == 'false'
-        run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm requirements:check
-      - name: Check game-reference artifact publication contract
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
-        run: pnpm test:game-reference-artifact
-      - run: xvfb-run -a pnpm check:functional
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
+          echo "gameplay=$gameplay" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
+        with:
+          name: changed-files-${{ github.sha }}
+          path: artifacts/tearbench/changed-files.txt
+          retention-days: 1
+
+  docs:
+    needs: changes
+    if: needs.changes.outputs.gameplay == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check documentation and terminology
+        run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm requirements:check
+
+  static:
+    needs: changes
+    if: needs.changes.outputs.gameplay == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/2", "2/2"]
+    name: static ${{ matrix.shard }}
+    env:
+      # Type-aware lint once ran out of the default heap on a GitHub runner.
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prove release preflight rejects unsafe repository states
+        if: matrix.shard == '1/2'
+        run: node --test tests/release-preflight.test.mjs
+      - name: Check game-reference artifact publication contract
+        if: matrix.shard == '1/2'
+        run: pnpm test:game-reference-artifact
+      - run: node scripts/run-checks.mjs static --shard ${{ matrix.shard }}
+
+  unit:
+    needs: changes
+    if: needs.changes.outputs.gameplay == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/2", "2/2"]
+    name: unit ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/run-checks.mjs unit --shard ${{ matrix.shard }}
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.gameplay == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build every target once and check the builds
+        run: node scripts/run-checks.mjs build
+      # The deploy workflows take dist/standalone from this artifact, and only
+      # from a run whose overall conclusion is success, so a run that fails in
+      # a later job can never be deployed.
+      - uses: actions/upload-artifact@v4
         with:
           name: tear-release-targets-${{ github.sha }}
           path: |
-            dist
+            dist/standalone
+            dist/crazygames
             artifacts/packages/tear-crazygames.zip
-            artifacts/tearbench
           if-no-files-found: error
-          retention-days: 14
-      # This step is intentionally after the full functional gate and has no
-      # always() condition. A failed Validate run cannot publish a reference.
+          retention-days: ${{ github.event_name == 'push' && 14 || 3 }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-builds-${{ github.sha }}
+          path: |
+            dist/test-standalone
+            dist/test-crazygames
+          if-no-files-found: error
+          retention-days: 1
+
+  browser:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/3", "2/3", "3/3"]
+    name: browser ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Restore the release builds made by the build job
+        uses: actions/download-artifact@v4
+        with:
+          name: tear-release-targets-${{ github.sha }}
+      - name: Restore the test builds made by the build job
+        uses: actions/download-artifact@v4
+        with:
+          name: test-builds-${{ github.sha }}
+          path: dist
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: xvfb-run -a node scripts/run-checks.mjs browser --shard ${{ matrix.shard }}
+
+  evidence:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: changed-files-${{ github.sha }}
+          path: artifacts/tearbench
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Select and run diff-aware TearBench evidence
+        run: pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt
+
+  check:
+    needs: [changes, docs, static, unit, build, browser, evidence]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require every job to have passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          GAMEPLAY: ${{ needs.changes.outputs.gameplay }}
+        shell: bash
+        run: |
+          node --input-type=module -e '
+            const results = JSON.parse(process.env.RESULTS);
+            const gameplay = process.env.GAMEPLAY === "true";
+            const allowedSkips = gameplay ? ["docs"] : ["static", "unit", "build", "browser"];
+            const failed = Object.entries(results).filter(([job, { result }]) =>
+              result !== "success" && !(result === "skipped" && allowedSkips.includes(job)));
+            for (const [job, { result }] of Object.entries(results)) console.log(`${job}: ${result}`);
+            if (process.env.GAMEPLAY !== "true" && process.env.GAMEPLAY !== "false") failed.push(["changes", { result: "no scope" }]);
+            if (failed.length > 0) {
+              console.log(`::error::not passed: ${failed.map(([job]) => job).join(", ")}`);
+              process.exit(1);
+            }'
+      # This publication runs only after every job passed. A failed Validate
+      # run cannot publish a reference.
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       - name: Publish exact game-reference manifest
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
