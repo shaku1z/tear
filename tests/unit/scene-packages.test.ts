@@ -1,25 +1,71 @@
-// Every committed scene package: manifest, files and hashes, coverage of the
-// required viewports, and alignment of its surface art with the stage's real
-// collision geometry.
+// Every scene package present, shipped or test fixture: manifest, files and
+// hashes, coverage of the required viewports, the stage's own ink and platform
+// material, readable contrast for that ink, and a real load through the game's
+// scene library. Nothing here is specific to one biome; the Pale Traverse
+// fixture (tests/fixtures/scene-packages) exists to prove that.
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { stageDefinition } from "../../src/gameplay/stages";
 import { stagePresentationDefinition } from "../../src/presentation/stage-presentation-definitions";
+import { createSceneLibrary, type ScenePackageModule } from "../../src/presentation/scenes/scene-library";
 import { SCENE_PACKAGES } from "../../src/presentation/scenes/scene-registry";
-import { coverageReport, inspectPackage, sceneDirectories } from "../../scripts/scene/package-files.mjs";
+import {
+  coverageReport,
+  FIXTURE_SCENES_ROOT,
+  inspectPackage,
+  isShippedPackage,
+  SCENES_ROOT,
+  sceneDirectories,
+} from "../../scripts/scene/package-files.mjs";
+import { contrastReport } from "../../scripts/scene/reports.mjs";
 
 const directories = sceneDirectories();
 
+/**
+ * Minimum share of each zone where the stage's ink reaches 3:1 at rest, the
+ * playbook's readability floor for every biome (docs/BACKGROUND_WORKFLOW.md).
+ */
+const CONTRAST_FLOOR = {
+  "HUD title (600..1000, y < 115)": 0.9,
+  "HUD status (20..460, y < 100)": 0.9,
+  "play band (130..floor)": 0.75,
+};
+
+function recordingContext() {
+  const calls: string[] = [];
+  const context = new Proxy(
+    {},
+    {
+      get(_target, key) {
+        if (key === "createLinearGradient" || key === "createRadialGradient")
+          return () => ({ addColorStop: () => undefined });
+        if (key === "createPattern") return () => ({ setTransform: () => undefined });
+        return (...args: unknown[]) => {
+          calls.push(String(key) + ":" + String(args.length));
+        };
+      },
+      set: () => true,
+    },
+  ) as unknown as CanvasRenderingContext2D;
+  return { context, calls };
+}
+
 describe("scene packages", () => {
-  it("registers exactly the packages on disk", () => {
-    expect(Object.keys(SCENE_PACKAGES).sort()).toEqual(directories.map((directory) => basename(directory)).sort());
+  it("registers exactly the shipped packages on disk, and never a fixture", () => {
+    const shipped = sceneDirectories(false, [SCENES_ROOT]).map((directory) => basename(directory));
+    expect(Object.keys(SCENE_PACKAGES).sort()).toEqual(shipped.sort());
+  });
+
+  it("checks more than one biome", () => {
+    expect(new Set(directories.map((directory) => basename(directory))).size).toBeGreaterThan(1);
+    expect(sceneDirectories(false, [FIXTURE_SCENES_ROOT]).length).toBeGreaterThan(0);
   });
 
   for (const directory of directories) {
     const name = basename(directory);
-    describe(name, () => {
+    describe(`${name}${isShippedPackage(directory) ? "" : " (fixture)"}`, () => {
       // Hashing every file is slow; inspect each package once for all its tests.
       let inspected: ReturnType<typeof inspectPackage> | undefined;
       const inspect = async () => {
@@ -53,6 +99,53 @@ describe("scene packages", () => {
       it("keeps the stage's own ink, so a painting never plays a stage inverted", async () => {
         const scene = await inspect();
         expect(scene.theme.paper).toBe(stageDefinition(scene.stageId as never).bg);
+      });
+
+      it("keeps its stage's ink readable over the HUD rows and the play band", async () => {
+        const scene = await inspect();
+        const platforms = stageDefinition(scene.stageId as never)
+          .layout.map((platform) => [platform.x, platform.y, platform.w, platform.h].join(","))
+          .join(";");
+        const report = await contrastReport(directory, { platforms, quiet: true });
+        const shortfalls = Object.entries(CONTRAST_FLOOR)
+          .map(([zone, floor]) => ({ zone, floor, share: report.zones[zone]?.["theme ink"] ?? 0 }))
+          .filter((row) => row.share < row.floor);
+        expect(shortfalls).toEqual([]);
+      }, 60_000);
+
+      it("loads through the game's scene library and draws every plane", async () => {
+        const scene = await inspect();
+        const module = (await import(join(directory, "scene.ts"))) as ScenePackageModule;
+        const sizes = new Map(scene.images.map((image) => [module.files[image.file], image]));
+        const library = createSceneLibrary({
+          packages: { [scene.stageId]: () => Promise.resolve(module) },
+          loadImage: (url) => {
+            const image = sizes.get(url);
+            return Promise.resolve({ width: image?.width ?? 0, height: image?.height ?? 0 } as unknown as ImageBitmap);
+          },
+          now: () => 10_000,
+          lowGraphics: () => false,
+          reducedMotion: () => true,
+        });
+        library.prefetch(scene.stageId);
+        await expect.poll(() => library.status(scene.stageId)).toBe("ready");
+        expect(library.paper(scene.stageId)).toBe(stageDefinition(scene.stageId as never).bg);
+        const { context, calls } = recordingContext();
+        const input = {
+          stageId: scene.stageId,
+          camera: { cx: 800, cy: 450, ox: 0, oy: 0, scale: 1 },
+          playerWorldX: 800,
+          worldWidth: 1600,
+          view: { left: -56, top: -56, right: 1656, bottom: 956 },
+          timeSeconds: 1,
+        };
+        library.drawBack(context, input);
+        library.drawFront(context, input);
+        const backLayers = scene.layers.filter((layer) => layer.plane === "back").length;
+        expect(calls.filter((call) => call.startsWith("drawImage")).length).toBeGreaterThanOrEqual(backLayers);
+        const platform = stageDefinition(scene.stageId as never).layout[0];
+        if (platform === undefined) throw new Error("stage has no platforms");
+        expect(library.surfaceMaterial(scene.stageId).draw(context, platform, false)).toBe(true);
       });
 
       it("pins every source the recipe uses, with provenance", async () => {

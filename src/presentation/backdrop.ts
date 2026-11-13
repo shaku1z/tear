@@ -12,7 +12,7 @@ import { clamp, lerp } from "../domain/geometry";
 import { VoidGen } from "../gameplay/voidgen";
 import type { VoidPlatform } from "../gameplay/voidgen";
 import { stagePresentationDefinition } from "./stage-presentation-definitions";
-import { drawVerdantRootstone, type RootstoneTexture } from "./platform-materials/verdant-rootstone";
+import { drawVerdantRootstone, type SurfaceTexture } from "./platform-materials/verdant-rootstone";
 import { drawPaleIce } from "./platform-materials/pale-ice";
 
 function truthyString(value: string | undefined, fallback: string): string {
@@ -192,7 +192,7 @@ export interface BackdropController {
 
 /** Outward rendering adapters supplied by the composition that owns a world. */
 export interface BackdropPolicy {
-  readonly verdantMaterial?: RootstoneTexture;
+  readonly surfaceTexture?: (stageId: string) => SurfaceTexture;
   readonly clock: TearWorldClock;
   readonly config: Readonly<{
     view: Readonly<{ w: number; h: number }>;
@@ -890,9 +890,8 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
               ? 1 - clamp((p.respawnIn ?? 0) / truthyNumber(p.respawnWarn, config.bossArena.reformWarn), 0, 1)
               : 0,
         };
-        if (material === "verdant-rootstone")
-          drawVerdantRootstone(ctx, platform, materialPolicy, policy.verdantMaterial);
-        else drawPaleIce(ctx, platform, materialPolicy);
+        const draw = material === "pale-ice" ? drawPaleIce : drawVerdantRootstone;
+        draw(ctx, platform, materialPolicy, policy.surfaceTexture?.(stage.id));
         return;
       }
       if (p.arenaPlatId && !isFloor) {

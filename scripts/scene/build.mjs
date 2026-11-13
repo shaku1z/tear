@@ -20,6 +20,78 @@ async function readSource(recipe, sourcesDirectory, id) {
   return buffer;
 }
 
+/**
+ * Hash that pins a generated source: its generator settings, canonically
+ * ordered. Placeholder plates are reproducible and pinned like paintings.
+ */
+export function generatorHash(spec) {
+  const canonical = (value) =>
+    Array.isArray(value)
+      ? value.map(canonical)
+      : value !== null && typeof value === "object"
+        ? Object.fromEntries(
+            Object.keys(value)
+              .sort()
+              .map((key) => [key, canonical(value[key])]),
+          )
+        : value;
+  return sha256(Buffer.from(JSON.stringify(canonical(spec))));
+}
+
+const hex = (color) => [1, 3, 5].map((offset) => Number.parseInt(color.slice(offset, offset + 2), 16));
+
+function gradientAt(stops, t) {
+  let index = 1;
+  while (index < stops.length - 1 && stops[index][0] < t) index += 1;
+  const [t0, c0] = stops[index - 1];
+  const [t1, c1] = stops[index];
+  const k = clamp((t - t0) / Math.max(1e-6, t1 - t0), 0, 1);
+  const a = hex(c0);
+  const b = hex(c1);
+  return a.map((value, channel) => value + (b[channel] - value) * k);
+}
+
+/**
+ * A placeholder plate from settings, for a biome that has no painting yet:
+ * a vertical gradient (`stops`: [position 0..1, colour]) with optional ridge
+ * silhouettes (`ridges`: { y, amplitude, period, phase, color }, all in px),
+ * each filling below a sum of two sines.
+ */
+function generate(spec) {
+  const { width, height } = spec;
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const [r, g, b] = gradientAt(spec.stops, y / Math.max(1, height - 1));
+    for (let x = 0; x < width; x += 1) data.set([r, g, b, 255], (y * width + x) * 4);
+  }
+  for (const ridge of spec.ridges ?? []) {
+    const color = hex(ridge.color);
+    for (let x = 0; x < width; x += 1) {
+      const angle = ((x + (ridge.phase ?? 0)) / ridge.period) * Math.PI * 2;
+      const top = ridge.y - ridge.amplitude * (0.65 * Math.sin(angle) + 0.35 * Math.sin(angle * 2.7 + 1.3));
+      for (let y = Math.max(0, Math.floor(top)); y < height; y += 1) {
+        const cover = clamp(y + 1 - top, 0, 1); // antialiased top edge
+        const at = (y * width + x) * 4;
+        for (let channel = 0; channel < 3; channel += 1)
+          data[at + channel] += (color[channel] - data[at + channel]) * cover;
+      }
+    }
+  }
+  return { width, height, data };
+}
+
+async function loadSource(recipe, sourcesDirectory, id) {
+  const source = recipe.sources.find((item) => item.id === id);
+  if (source?.origin === "procedural" && source.generate !== undefined) {
+    if (generatorHash(source.generate) !== source.sha256)
+      throw new Error(
+        `source ${id}: generator settings do not match the pinned sha256 (${generatorHash(source.generate)})`,
+      );
+    return generate(source.generate);
+  }
+  return rgba(await readSource(recipe, sourcesDirectory, id));
+}
+
 async function rgba(buffer) {
   const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   return {
@@ -169,7 +241,7 @@ async function runOutput(output, context) {
   for (const step of output.steps) {
     switch (step.op) {
       case "load": {
-        context.image = await rgba(await readSource(context.recipe, context.sources, step.source));
+        context.image = await loadSource(context.recipe, context.sources, step.source);
         const [x, y] = step.at ?? [0, 0];
         placement = [x, y, context.image.width, context.image.height];
         break;
@@ -249,6 +321,12 @@ function moduleSource(scene) {
   ].join("\n");
 }
 
+/** True when the recipe reads any image file (anything but generated sources). */
+export function needsSourceFiles(directory) {
+  const recipe = JSON.parse(readFileSync(join(directory, "recipe.json"), "utf8"));
+  return recipe.sources.some((source) => source.generate === undefined);
+}
+
 export async function buildScene(directory, sourcesDirectory, log = console.log) {
   const recipe = JSON.parse(readFileSync(join(directory, "recipe.json"), "utf8"));
   if (recipe.format !== "tear-scene-recipe" || recipe.version !== 1) throw new Error("unsupported recipe");
@@ -285,7 +363,7 @@ export async function buildScene(directory, sourcesDirectory, log = console.log)
     version: 1,
     ...template,
     sources: recipe.sources.map((source) =>
-      Object.fromEntries(Object.entries(source).filter(([key]) => key !== "file")),
+      Object.fromEntries(Object.entries(source).filter(([key]) => key !== "file" && key !== "generate")),
     ),
     images,
     layers: template.layers.map((layer) => ({ ...layer, rect: placements.get(layer.image) })),

@@ -75,6 +75,7 @@ export default tseslint.config(
       "scripts/campaign-publication-boundary.d.mts",
       "scripts/tutorial-gold-compatibility.d.mts",
       "scripts/scene/package-files.d.mts",
+      "scripts/scene/reports.d.mts",
     ],
   },
   eslint.configs.recommended,

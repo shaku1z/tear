@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { basename, extname, join, resolve } from "node:path";
 import sharp from "sharp";
-import { inspectPackage, REPOSITORY_ROOT, REQUIRED_VIEWPORTS } from "./package-files.mjs";
+import { inspectPackage, isShippedPackage, REPOSITORY_ROOT, REQUIRED_VIEWPORTS } from "./package-files.mjs";
 
 const TYPES = {
   ".html": "text/html",
@@ -141,6 +141,7 @@ async function recordLoop(page, out, name, frames) {
 export async function preview(directory, out, options = {}) {
   const { scene, problems } = await inspectPackage(directory);
   if (scene === undefined || problems.length > 0) throw new Error("package is invalid; run pnpm scene validate");
+  if (!isShippedPackage(directory)) throw new Error("fixture packages are not in the game; preview a shipped package");
   const root = join(REPOSITORY_ROOT, "dist", "test-standalone");
   if (!existsSync(join(root, "index.html")))
     throw new Error("dist/test-standalone is missing; run pnpm build:test:standalone");

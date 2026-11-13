@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // `pnpm scene <verb> [stage] [options]`: the one entry point for painted stage
-// scene packages. See docs/SCENE_PIPELINE.md.
+// scene packages. See docs/BACKGROUND_WORKFLOW.md.
 //
 //   list                        packages and their status
 //   validate [stage]            manifest, files, hashes, sizes, budgets, coverage (exit 1 on a problem)
@@ -16,7 +16,7 @@ import {
   inspectPackage,
   loadContract,
   REQUIRED_VIEWPORTS,
-  SCENES_ROOT,
+  SCENE_ROOTS,
   sceneDirectories,
 } from "./scene/package-files.mjs";
 
@@ -36,7 +36,7 @@ function directoriesFor(stage, recipes = false) {
   const all = sceneDirectories(recipes);
   if (stage === undefined) return all;
   const match = all.find((directory) => basename(directory) === stage);
-  if (match === undefined) throw new Error(`no scene package for "${stage}" under ${SCENES_ROOT}`);
+  if (match === undefined) throw new Error(`no scene package for "${stage}" under ${SCENE_ROOTS.join(" or ")}`);
   return [match];
 }
 
@@ -106,10 +106,12 @@ async function main() {
       return coverage(positional[0]);
     case "build": {
       const [directory] = directoriesFor(positional[0] ?? "", true);
+      // A recipe made only of generated sources (a placeholder plate) needs no sources folder.
       const sources = options.sources ?? process.env.TEAR_SCENE_SOURCES;
-      if (typeof sources !== "string") throw new Error("build needs --sources <dir> or TEAR_SCENE_SOURCES");
-      const { buildScene } = await import("./scene/build.mjs");
-      await buildScene(directory, resolve(sources, basename(directory)));
+      const { buildScene, needsSourceFiles } = await import("./scene/build.mjs");
+      if (typeof sources !== "string" && needsSourceFiles(directory))
+        throw new Error("build needs --sources <dir> or TEAR_SCENE_SOURCES");
+      await buildScene(directory, typeof sources === "string" ? resolve(sources, basename(directory)) : "");
       return validate(positional[0]);
     }
     case "contrast": {

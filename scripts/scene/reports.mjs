@@ -185,7 +185,8 @@ export async function contrastReport(directory, options) {
     "lower air (450..floor)": [0, 450, width, groundY - 450],
   };
   const results = { paper: scene.theme.paper, ink: inks["theme ink"], zones: {} };
-  console.log(`${basename(directory)}: paper ${scene.theme.paper} -> theme ink ${inks["theme ink"]}`);
+  const log = options.quiet === true ? () => undefined : console.log;
+  log(`${basename(directory)}: paper ${scene.theme.paper} -> theme ink ${inks["theme ink"]}`);
   for (const [zone, [zx, zy, zw, zh]] of Object.entries(zones)) {
     const values = [];
     for (let y = zy; y < zy + zh; y += 2) {
@@ -203,10 +204,10 @@ export async function contrastReport(directory, options) {
       results.zones[zone][label] = ok3;
       return `${label} ${hex}: >=3:1 on ${(ok3 * 100).toFixed(0)}%`;
     });
-    console.log(
+    log(
       `  ${zone.padEnd(24)} luminance p10 ${pick(0.1).toFixed(3)} p50 ${pick(0.5).toFixed(3)} p90 ${pick(0.9).toFixed(3)}`,
     );
-    console.log(`    ${parts.join(" | ")}`);
+    log(`    ${parts.join(" | ")}`);
   }
   if (typeof options.out === "string") {
     mkdirSync(options.out, { recursive: true });
@@ -224,7 +225,7 @@ export async function contrastReport(directory, options) {
     await sharp(map, { raw: { width, height, channels: 4 } })
       .png()
       .toFile(file);
-    console.log(`  wrote ${file} (magenta: theme ink below 3:1)`);
+    log(`  wrote ${file} (magenta: theme ink below 3:1)`);
   }
   return results;
 }

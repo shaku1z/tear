@@ -165,7 +165,7 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     },
   });
   const Backdrop = createBackdrop({
-    verdantMaterial: Scenes.surfaceMaterial("verdant-sanctum"),
+    surfaceTexture: (stageId) => Scenes.surfaceMaterial(stageId),
     clock: CLOCK,
     config: worldConfig,
     graphics: GFX,

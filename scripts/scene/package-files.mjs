@@ -8,6 +8,15 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 export const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const SCENES_ROOT = join(REPOSITORY_ROOT, "src", "presentation", "assets", "scenes");
 export const SCENE_REGISTRY = join(REPOSITORY_ROOT, "src", "presentation", "scenes", "scene-registry.ts");
+/**
+ * Packages that never ship: built and checked exactly like shipped ones, to
+ * prove the format, CLI, loader and checks work for any biome.
+ */
+export const FIXTURE_SCENES_ROOT = join(REPOSITORY_ROOT, "tests", "fixtures", "scene-packages");
+export const SCENE_ROOTS = Object.freeze([SCENES_ROOT, FIXTURE_SCENES_ROOT]);
+
+/** True for a package under the shipped scenes folder (it must be registered). */
+export const isShippedPackage = (directory) => resolve(directory, "..") === resolve(SCENES_ROOT);
 
 /**
  * Viewports every covering layer must fill (CSS px; HiDPI changes resolution,
@@ -37,13 +46,19 @@ export async function loadContract() {
   return contractModule;
 }
 
-/** Package directories (with a scene.json, or with only a recipe.json when `recipes` is set). */
-export function sceneDirectories(recipes = false) {
-  if (!existsSync(SCENES_ROOT)) return [];
-  return readdirSync(SCENES_ROOT)
-    .filter((name) => existsSync(join(SCENES_ROOT, name, recipes ? "recipe.json" : "scene.json")))
-    .sort()
-    .map((name) => join(SCENES_ROOT, name));
+/**
+ * Package directories (with a scene.json, or with only a recipe.json when
+ * `recipes` is set): shipped packages first, then test fixtures.
+ */
+export function sceneDirectories(recipes = false, roots = SCENE_ROOTS) {
+  return roots.flatMap((root) =>
+    existsSync(root)
+      ? readdirSync(root)
+          .filter((name) => existsSync(join(root, name, recipes ? "recipe.json" : "scene.json")))
+          .sort()
+          .map((name) => join(root, name))
+      : [],
+  );
 }
 
 export function sha256(buffer) {
@@ -104,7 +119,10 @@ export async function inspectPackage(directory) {
   }
   const registry = readFileSync(SCENE_REGISTRY, "utf8");
   const name = directory.split(/[\\/]/u).at(-1);
-  if (!registry.includes(`"${scene.stageId}": () => import("../assets/scenes/${name}/scene")`)) {
+  if (
+    isShippedPackage(directory) &&
+    !registry.includes(`"${scene.stageId}": () => import("../assets/scenes/${name}/scene")`)
+  ) {
     problems.push(`scene-registry.ts: stage ${scene.stageId} is not registered`);
   }
   return { scene, problems, files };
