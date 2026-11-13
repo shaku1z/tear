@@ -17,12 +17,12 @@
   },
   "registry": {
     "path": "artifacts/tearbench/requirements/tearbench-ghost3-requirements.json",
-    "bytes": 26942123,
-    "sha256": "b183bdc8e7cfc3795437a0a4cdf58075fe00d8e00ab9a6984a028aada7e09ab5"
+    "bytes": 26941393,
+    "sha256": "093a56dd0daa1244162b9d80b6c528723aa06a3191632d27c8a6dc8b8c95c290"
   },
   "annex": {
     "path": "artifacts/tearbench/requirements/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md",
-    "bytes": 2823375,
-    "sha256": "95fcbfd8b04f9a67be83e9d696a3290d63f69a7f5f6f126b545a6e4d3a64a2d0"
+    "bytes": 2823265,
+    "sha256": "da62d14ab5e64b78cfdc53534584c491a7d7be174cef13337f60ad41043494bc"
   }
 }
