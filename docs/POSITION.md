@@ -51,7 +51,7 @@ https://tearblade.com runs `9e7d6a70` (deployed 2026-08-30). Production still ru
 
 - Next: Its pull request, then the lead's review.
 - Owner action: Judge the look: the owner's taste decides visual work.
-- Evidence: [plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="verdant-gameplay"></a>
 
@@ -61,7 +61,7 @@ https://tearblade.com runs `9e7d6a70` (deployed 2026-08-30). Production still ru
 
 - Next: Its pull request, then the lead's review.
 - Owner action: Playtest the reworked stage.
-- Evidence: [plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="training-ux"></a>
 
@@ -81,7 +81,7 @@ https://tearblade.com runs `9e7d6a70` (deployed 2026-08-30). Production still ru
 
 - Next: Start once the Verdant gameplay rework has landed.
 - Owner action: none
-- Evidence: [plans/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
+- Evidence: [plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="repository-structure"></a>
 

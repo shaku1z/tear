@@ -31,8 +31,11 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
   [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md). A new top-level entry needs a row there, and
   tracked documents and evidence stay under the size cap in `config/size-caps.json`.
 - `docs/` holds authority documents (index: [docs/README.md](docs/README.md));
-  `plans/` holds plans; the current one is
+  `plans/` holds plans (open ones in `plans/active/`, closed ones in
+  `plans/completed/`); the current one is
   [plans/active/RELEASE_READINESS_PLAN.md](plans/active/RELEASE_READINESS_PLAN.md).
+  A task that spans pull requests or sessions gets a card from
+  [plans/TASK_CARD_TEMPLATE.md](plans/TASK_CARD_TEMPLATE.md).
 
 ## Inner loop: gameplay change
 
@@ -190,6 +193,8 @@ guards it; the decisions behind the hard rules are in [docs/DECISIONS.md](docs/D
 ## Finishing
 
 Hand off with the governance skill's handoff block, listing commands and
-results. Remove your worktree (`git worktree remove`) and branch
+results. Pull request descriptions follow
+[.github/pull_request_template.md](.github/pull_request_template.md): checks
+run, checks that could not run, risks, and any position change. Remove your worktree (`git worktree remove`) and branch
 (`git branch -d`) only after the work is merged into `main` or the owner has
 archived it, and after checking the worktree for uncommitted work and junctions.

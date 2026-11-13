@@ -241,8 +241,8 @@ test("plan index and active-plan metadata must agree", () => {
       fs
         .readFileSync(indexPath, "utf8")
         .replace(
-          "| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | QA owner |",
-          "| [CONTROLLER_QA.md](CONTROLLER_QA.md) | active plan | Different owner |",
+          "| [CONTROLLER_QA.md](active/CONTROLLER_QA.md) | QA owner |",
+          "| [CONTROLLER_QA.md](active/CONTROLLER_QA.md) | Different owner |",
         ),
       "utf8",
     );

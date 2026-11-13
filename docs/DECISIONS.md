@@ -92,7 +92,7 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   their old usage statistics are kept under their old IDs.
 - **Alternatives:** recorded in the plan.
 - **Consequences:** `pnpm check:active-roster` and `pnpm test:weapons` hold the roster.
-- **Source:** [FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md](../plans/FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md),
+- **Source:** [FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md](../plans/active/FINAL_FIVE_WEAPON_ROSTER_REDESIGN_IMPLEMENTATION_PLAN.md),
   the parent `AGENTS.md`.
 
 <a id="d-005"></a>

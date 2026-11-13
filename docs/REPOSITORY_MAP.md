@@ -15,14 +15,14 @@ re-run the command instead of editing the output.
 | --- | --- | --- | --- |
 | `.agents/` | Repository skills for agents (`.agents/skills/<name>/SKILL.md`). | Hand | No |
 | `.claude/` | Claude Code preview launch config and pointers to `.agents/skills`. | Hand; pointers kept in step by `pnpm test:agent-skills` | No |
-| `.github/` | CI workflows (Validate, deploys, wiki dispatch, TearBench canary and program) and one composite action. | Hand | No |
+| `.github/` | CI workflows (Validate, deploys, wiki dispatch, TearBench canary and program), one composite action and the pull request template. | Hand | No |
 | `analysis/` | A reproducible model of the coin and shop economy (`node analysis/economy_model.js`). | Hand | No |
 | `branding/` | Store covers, the cover page and the favicon source. | Hand | No |
 | `config/` | Gate configuration and curated data: architecture roles and baselines, code-budget baseline, bundle budgets, checkpoints, terminology, workspace contract, the program position. | Mostly hand; baselines lowered by their `--update` commands | Partly: `architecture-baseline.json`, `code-budget-baseline.json` |
 | `docs/` | Authority documents (index: [README.md](README.md)), TearBench records, checkpoint history. | Hand, plus generated files listed in the index | Partly: `POSITION.md`, `TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`, the requirements digest |
 | `experiments/` | `coop-lab.html`, an online co-op proof that never ships (excluded from the CrazyGames archive). | Hand | No |
 | `migrations/` | SQL migrations for the Ghost publication database. | Hand | No |
-| `plans/` | Plans and task cards (index: [plans/README.md](../plans/README.md)). | Hand | No |
+| `plans/` | Plans and task cards: open ones in `active/`, closed ones in `completed/`, TearBench program files at the top level; new cards start from `TASK_CARD_TEMPLATE.md` (index: [plans/README.md](../plans/README.md)). | Hand | No |
 | `preservation/` | Workspace preservation and artifact-retention policies from the G5 normalization. | Hand | No |
 | `public/` | Static files served as-is: the music catalog and audio cues, vendored music engines (`public/vendor/`), fonts, branding. | Vendored from the music workspace; engine provenance checked by `pnpm check:adaptive-soundtrack` and the vendored-engine check | Vendored |
 | `scripts/` | Build, gate, report and TearBench command-line tools (catalogue: `config/tool-catalogue.json`). | Hand | No |
