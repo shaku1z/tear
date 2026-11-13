@@ -9,7 +9,7 @@ The user considers oracle commit `ee5e93141d67cc02505b2227b3be0b10d1819e1c` ("fi
 
 ## Workflow
 
-1. Read `plans/PARITY_RESTORATION_PLAN.md` and the phase status in the latest parity commits (`git log --grep="restore source"`). Do not re-restore what already shipped.
+1. Read `plans/active/PARITY_RESTORATION_PLAN.md` and the phase status in the latest parity commits (`git log --grep="restore source"`). Do not re-restore what already shipped.
 2. Open the oracle via [references/oracle-workbench.md](references/oracle-workbench.md): the `../Tear-oracle` worktree (recreate with `git worktree add ../Tear-oracle ee5e931` if missing), `git show ee5e931:js/<file>.js` for point reads, and twin-serve for A/B.
 3. Locate the authoritative oracle implementation FIRST — the exact function, constants, frame order, and state transitions in `js/game.js`, `js/ui.js`, `js/enemy.js`, `js/player.js`, `js/config.js`, etc. Quote line numbers in your findings and commit messages ("Parity with ee5e931: …").
 4. Diff behavior, not just text. Classify the divergence using [references/divergence-triage.md](references/divergence-triage.md): systemic (dt model, frame order, state/cursor ownership, adapter plumbing, double-sampling) vs line-level (constant, token, string, layout).

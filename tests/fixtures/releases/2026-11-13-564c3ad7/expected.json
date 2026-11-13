@@ -1,0 +1,48 @@
+{
+  "release": "main on 2026-11-13",
+  "commit": "564c3ad7",
+  "profile": {
+    "shards": 50,
+    "runs": 1,
+    "coinsEarned": 910,
+    "modes": [
+      "endless"
+    ]
+  },
+  "settings": {
+    "masterVolume": 0.6,
+    "musicVolume": 0.5,
+    "sfxVolume": 1,
+    "interfaceVolume": 1,
+    "masterMuted": false,
+    "musicMuted": false,
+    "sfxMuted": false,
+    "interfaceMuted": false
+  },
+  "meta": {
+    "lifetimeEarned": 910,
+    "lifetimeSpent": 0
+  },
+  "best": {
+    "mode": "endless",
+    "difficulty": "normal",
+    "wave": 1,
+    "score": 0
+  },
+  "localReplays": [
+    {
+      "id": "vmwf588du9ep0",
+      "authoritativeTick": 1303,
+      "authoritativeStateHash": "64608454eba0e809"
+    }
+  ],
+  "ghostCapsules": [
+    {
+      "id": "ghost-v3-run-kz4h95-f847d11e-8806-4ed0-a3a0-61cc9a775e25",
+      "chunks": 69,
+      "maxTick": 1304,
+      "buildRevision": "564c3ad767a2dfb690217d103c610e63aa2c288f",
+      "admission": "unavailable"
+    }
+  ]
+}
