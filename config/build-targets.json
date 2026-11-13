@@ -1,0 +1,54 @@
+{
+  "standalone": {
+    "description": "tearblade.com on Cloudflare Workers static assets: installable PWA with a service worker, Firebase accounts and leaderboards.",
+    "entry": "standalone",
+    "base": "/",
+    "serviceWorker": true,
+    "fullscreenButton": true,
+    "portalSdkScript": null,
+    "cloudflareHeaders": true,
+    "pruneUnrequestedFiles": false,
+    "forbiddenModules": ["/src/platform/crazygames.ts", "/src/platform/crazygames-cloud.ts"],
+    "testMode": "test-standalone",
+    "package": null,
+    "limits": null
+  },
+  "crazygames": {
+    "description": "CrazyGames portal upload: HTML5 SDK v3, portal storage and identity, relative URLs below the portal path, no service worker.",
+    "entry": "crazygames",
+    "base": "./",
+    "serviceWorker": false,
+    "fullscreenButton": false,
+    "portalSdkScript": "https://sdk.crazygames.com/crazygames-sdk-v3.js",
+    "cloudflareHeaders": false,
+    "pruneUnrequestedFiles": true,
+    "forbiddenModules": [
+      "/src/platform/firebase-cloud.ts",
+      "/src/platform/firebase-config.ts",
+      "/src/platform/standalone-cloud.ts"
+    ],
+    "testMode": "test-crazygames",
+    "package": { "path": "artifacts/packages/tear-crazygames.zip", "maxArchiveBytes": 21495808 },
+    "limits": { "maxUnpackedBytes": 23592960, "maxFiles": 1500, "maxFileBytes": null, "maxPathLength": null }
+  },
+  "itch": {
+    "description": "itch.io HTML5 upload: one ZIP with index.html at its root, relative URLs, local saves only (no accounts, SDK or service worker).",
+    "entry": "itch",
+    "base": "./",
+    "serviceWorker": false,
+    "fullscreenButton": true,
+    "portalSdkScript": null,
+    "cloudflareHeaders": false,
+    "pruneUnrequestedFiles": true,
+    "forbiddenModules": [
+      "/src/platform/crazygames.ts",
+      "/src/platform/crazygames-cloud.ts",
+      "/src/platform/firebase-cloud.ts",
+      "/src/platform/firebase-config.ts",
+      "/src/platform/standalone-cloud.ts"
+    ],
+    "testMode": null,
+    "package": { "path": "artifacts/packages/tear-itch.zip", "maxArchiveBytes": 21495808 },
+    "limits": { "maxUnpackedBytes": 23592960, "maxFiles": 1000, "maxFileBytes": 209715200, "maxPathLength": 240 }
+  }
+}

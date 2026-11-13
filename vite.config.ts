@@ -2,36 +2,46 @@ import { assertTutorialGoldFresh, tutorialGoldSourceFingerprint } from "./script
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
+import {
+  buildTarget,
+  resolveBuildMode,
+  type BuildTargetDefinition as TargetDefinition,
+  type BuildTargetName as TargetName,
+} from "./scripts/build-targets.mjs";
 
-function targetHtml(target: "standalone" | "crazygames"): Plugin {
+function targetHtml(target: TargetDefinition): Plugin {
   return {
     name: "tear-target-html",
     transformIndexHtml: {
       order: "pre",
       handler(html) {
-        const entry = target === "standalone" ? "standalone" : "crazygames";
-        const sdk =
-          target === "crazygames" ? '<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>' : "";
-        const targetHtml =
-          target === "crazygames"
-            ? html.replace(/\s*<!-- TEAR_STANDALONE_PWA_START -->[\s\S]*?<!-- TEAR_STANDALONE_PWA_END -->\s*/, "\n")
-            : // VitePWA owns the generated production manifest link. Removing the
-              // template placeholder prevents duplicate links in production and a
-              // dead manifest request while the PWA plugin is disabled in dev.
-              html.replace(/\s*<link rel="manifest" href="\/manifest\.webmanifest" \/>\s*/, "\n");
-        return targetHtml
+        const sdk = target.portalSdkScript === null ? "" : `<script src="${target.portalSdkScript}"></script>`;
+        const targetHtml = target.serviceWorker
+          ? // VitePWA owns the generated production manifest link. Removing the
+            // template placeholder prevents duplicate links in production and a
+            // dead manifest request while the PWA plugin is disabled in dev.
+            html.replace(/\s*<link rel="manifest" href="\/manifest\.webmanifest" \/>\s*/, "\n")
+          : html.replace(/\s*<!-- TEAR_STANDALONE_PWA_START -->[\s\S]*?<!-- TEAR_STANDALONE_PWA_END -->\s*/, "\n");
+        // CrazyGames provides fullscreen and prohibits a custom control (its gameplay requirements).
+        const withFullscreen = target.fullscreenButton
+          ? targetHtml
+          : targetHtml.replace(/\s*<button id="fs"[^>]*>[^<]*<\/button>\s*/u, "\n");
+        return withFullscreen
           .replace("<!-- TEAR_PLATFORM_SDK -->", sdk)
-          .replace("<!-- TEAR_ENTRYPOINT -->", `<script type="module" src="/src/entrypoints/${entry}.ts"></script>`);
+          .replace(
+            "<!-- TEAR_ENTRYPOINT -->",
+            `<script type="module" src="/src/entrypoints/${target.entry}.ts"></script>`,
+          );
       },
     },
   };
 }
 
-function cloudflareHeaders(target: "standalone" | "crazygames"): Plugin {
+function cloudflareHeaders(target: TargetDefinition): Plugin {
   return {
     name: "tear-cloudflare-headers",
     generateBundle() {
-      if (target !== "standalone") return;
+      if (!target.cloudflareHeaders) return;
       this.emitFile({
         type: "asset",
         fileName: "_headers",
@@ -55,20 +65,16 @@ function cloudflareHeaders(target: "standalone" | "crazygames"): Plugin {
   };
 }
 
-function targetDependencyBoundary(target: "standalone" | "crazygames"): Plugin {
+function targetDependencyBoundary(name: TargetName, target: TargetDefinition): Plugin {
   return {
     name: "tear-target-dependency-boundary",
     generateBundle(_options, bundle) {
-      const forbidden =
-        target === "crazygames"
-          ? ["/src/platform/firebase-cloud.ts", "/src/platform/firebase-config.ts", "/src/platform/standalone-cloud.ts"]
-          : ["/src/platform/crazygames.ts", "/src/platform/crazygames-cloud.ts"];
+      const forbidden = target.forbiddenModules;
       const moduleIds = Object.values(bundle)
         .flatMap((item) => (item.type === "chunk" ? Object.keys(item.modules) : []))
         .map((id) => id.replaceAll("\\", "/"));
       const violations = moduleIds.filter((id) => forbidden.some((part) => id.endsWith(part)));
-      if (violations.length > 0)
-        this.error(`${target} bundle crossed its platform boundary:\n${violations.join("\n")}`);
+      if (violations.length > 0) this.error(`${name} bundle crossed its platform boundary:\n${violations.join("\n")}`);
     },
   };
 }
@@ -124,19 +130,22 @@ function applicationChunk(id: string): string | undefined {
 }
 
 export default defineConfig(({ mode, command }) => {
-  const testBuild = mode === "test-standalone" || mode === "test-crazygames";
-  const target = mode === "crazygames" || mode === "test-crazygames" ? "crazygames" : "standalone";
+  // A mode names a target or its test build; any other mode (vite dev, vitest) is the standalone game.
+  const resolved = resolveBuildMode(mode);
+  const target: TargetName = resolved?.name ?? "standalone";
+  const testBuild = resolved?.testBuild ?? false;
+  const definition = buildTarget(target);
   const source = readSourceIdentitySync(process.cwd());
   const tutorialGoldHash = command === "build" ? assertTutorialGoldFresh() : tutorialGoldSourceFingerprint().sourceHash;
   return {
-    // CrazyGames unpacks uploads below a portal-owned path, so bundle assets
-    // must be relative instead of rooted at the host origin.
-    base: target === "crazygames" ? "./" : "/",
+    // Portals unpack an upload below a path they own, so their bundle assets are
+    // relative instead of rooted at the host origin (config/build-targets.json).
+    base: definition.base,
     plugins: [
-      targetHtml(target),
-      cloudflareHeaders(target),
-      targetDependencyBoundary(target),
-      ...(target === "standalone"
+      targetHtml(definition),
+      cloudflareHeaders(definition),
+      targetDependencyBoundary(target, definition),
+      ...(definition.serviceWorker
         ? [
             VitePWA({
               registerType: "prompt",

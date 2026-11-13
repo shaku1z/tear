@@ -3,17 +3,16 @@ import process from "node:process";
 import { resolve } from "node:path";
 import { rm } from "node:fs/promises";
 import { pruneCrazyGamesArtifact } from "./crazygames-artifact-scope.mjs";
+import { BUILD_MODES, resolveBuildMode } from "./build-targets.mjs";
 import { RELEASE_REPOSITORY, writeReleaseArtifactMetadata } from "./release-artifact.mjs";
 import { fanoutContentAddressedBuild, materializeContentAddressedBuild } from "./tearbench-build-artifact.mjs";
 
 const projectRoot = resolve(import.meta.dirname, "..");
 const mode = process.argv[2];
-const supportedModes = new Set(["standalone", "crazygames", "test-standalone", "test-crazygames"]);
-if (!supportedModes.has(mode))
-  throw new Error(
-    "usage: node scripts/build-target.mjs <standalone|crazygames|test-standalone|test-crazygames> [--out-dir path]",
-  );
-const target = mode.endsWith("crazygames") ? "crazygames" : "standalone";
+const resolved = resolveBuildMode(mode);
+if (resolved === undefined)
+  throw new Error(`usage: node scripts/build-target.mjs <${BUILD_MODES.join("|")}> [--out-dir path]`);
+const target = resolved.name;
 const outDirectoryIndex = process.argv.indexOf("--out-dir");
 const output =
   outDirectoryIndex >= 0
@@ -40,10 +39,10 @@ const result = spawnSync(process.execPath, [viteCli, "build", "--mode", mode, "-
 });
 if (result.error !== undefined) throw result.error;
 if (result.status !== 0) process.exit(result.status ?? 1);
-if (target === "crazygames") {
+if (resolved.target.pruneUnrequestedFiles) {
   const pruned = await pruneCrazyGamesArtifact(staging);
   console.log(
-    `CrazyGames output: left out ${String(pruned.files.length)} unrequested file(s), ${String(pruned.bytes)} bytes`,
+    `${target} output: left out ${String(pruned.files.length)} unrequested file(s), ${String(pruned.bytes)} bytes`,
   );
 }
 

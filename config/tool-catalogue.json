@@ -52,6 +52,13 @@
       ],
       "duration": "minutes"
     },
+    "build:itch": {
+      "purpose": "Builds the itch.io target into dist/itch",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
+    },
     "build:test": {
       "purpose": "Test builds of both targets (test hooks enabled) for browser tests",
       "effects": [
@@ -86,6 +93,13 @@
         "writes-artifacts"
       ],
       "duration": "under-a-minute"
+    },
+    "package:itch": {
+      "purpose": "Builds the itch.io target and zips it into the upload package under artifacts/",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "minutes"
     },
     "preview": {
       "purpose": "Serves an existing dist/standalone production build on port 4173 to look at what players get",
@@ -1292,7 +1306,8 @@
         "build:standalone",
         "build:crazygames",
         "build:test:standalone",
-        "build:test:crazygames"
+        "build:test:crazygames",
+        "build:itch"
       ]
     },
     "scripts/build-tear-score-tone-host.mjs": {
@@ -1522,6 +1537,16 @@
         "package:crazygames",
         "package:crazygames:existing",
         "check:crazygames-package"
+      ]
+    },
+    "scripts/package-itch.mjs": {
+      "purpose": "Zips dist/itch into the itch.io upload package and checks its limits",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "package:itch"
       ]
     },
     "scripts/parity-diff.mjs": {
@@ -1932,6 +1957,11 @@
       "scripts/check-source-architecture.mjs",
       "tests/source-architecture.test.mjs"
     ],
+    "scripts/build-targets.mjs": [
+      "scripts/build-target.mjs",
+      "scripts/package-target.mjs",
+      "vite.config.ts"
+    ],
     "scripts/campaign-publication-boundary.mjs": [
       "scripts/publish-game-reference-artifact.mjs",
       "scripts/release-preflight.mjs",
@@ -1949,6 +1979,10 @@
     "scripts/game-reference-export-preflight.mjs": [
       "scripts/export-game-reference.mjs",
       "tests/unit/game-reference-export-preflight.test.mjs"
+    ],
+    "scripts/package-target.mjs": [
+      "scripts/package-crazygames.mjs",
+      "scripts/package-itch.mjs"
     ],
     "scripts/production-headless-checkpoint.mjs": [
       "scripts/production-headless-job-store.mjs",
@@ -1973,7 +2007,7 @@
       "scripts/check-cloudflare-dry-run.mjs",
       "scripts/check-reproducible-build.mjs",
       "scripts/check-workspace.mjs",
-      "scripts/package-crazygames.mjs",
+      "scripts/package-target.mjs",
       "scripts/prepare-workspace-quarantine.mjs",
       "scripts/production-headless-worker-dispatcher.mjs",
       "scripts/production-headless-worker.mjs",
@@ -2089,9 +2123,13 @@
       "tests/tutorial-gold-fingerprint.test.mjs",
       "tests/unit/tutorial-production-ghost.test.ts",
       "vite.config.ts"
+    ],
+    "scripts/zip-archive.mjs": [
+      "scripts/package-target.mjs"
     ]
   },
   "declarations": [
+    "scripts/build-targets.d.mts",
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/release-artifact.d.mts",
     "scripts/tutorial-gold-compatibility.d.mts"

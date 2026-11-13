@@ -1,0 +1,32 @@
+export type BuildTargetName = "standalone" | "crazygames" | "itch";
+
+export interface BuildTargetLimits {
+  readonly maxUnpackedBytes: number;
+  readonly maxFiles: number;
+  readonly maxFileBytes: number | null;
+  readonly maxPathLength: number | null;
+}
+
+export interface BuildTargetDefinition {
+  readonly description: string;
+  readonly entry: BuildTargetName;
+  /** False where the portal supplies fullscreen and forbids a custom control (CrazyGames). */
+  readonly fullscreenButton: boolean;
+  readonly base: string;
+  readonly serviceWorker: boolean;
+  readonly portalSdkScript: string | null;
+  readonly cloudflareHeaders: boolean;
+  readonly pruneUnrequestedFiles: boolean;
+  readonly forbiddenModules: readonly string[];
+  readonly testMode: string | null;
+  readonly package: { readonly path: string; readonly maxArchiveBytes: number } | null;
+  readonly limits: BuildTargetLimits | null;
+}
+
+export declare const BUILD_TARGETS: Readonly<Record<BuildTargetName, BuildTargetDefinition>>;
+export declare const BUILD_TARGET_NAMES: readonly BuildTargetName[];
+export declare const BUILD_MODES: readonly string[];
+export declare function buildTarget(name: BuildTargetName): BuildTargetDefinition;
+export declare function resolveBuildMode(
+  mode: string,
+): { readonly name: BuildTargetName; readonly target: BuildTargetDefinition; readonly testBuild: boolean } | undefined;
