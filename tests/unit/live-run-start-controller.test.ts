@@ -405,7 +405,7 @@ function actualOpeningHost(
     shuffledRoster: () => [],
     bossBiome: () => 0,
     trainingPlatforms: () => [],
-    playground: { state: {}, reset: noop },
+    playground: { state: {}, reset: noop, enterArena: noop },
     tutorial: { start: noop },
     startNextWave: () => {
       order.push("opening");

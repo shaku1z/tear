@@ -1,5 +1,5 @@
-import type { ChoiceView, PlaygroundScreenView, ScreenRenderContext } from "./contracts";
-import { backControl, scrollHint } from "./screen-primitives";
+import type { PlaygroundScreenView, ScreenRenderContext } from "./contracts";
+import { scrollHint, tabs } from "./screen-primitives";
 import { createCompactPlayground } from "./compact-playground";
 
 export interface GridCell {
@@ -58,13 +58,21 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
       return;
     }
     ui.header(canvas, view.title, view.subtitle, context.enterAmount);
+    tabs(context, view.tabs ?? [], (id) => ({ type: "playground.action", id }), TAB_Y);
     if (view.id === "pgmenu") renderBuildMenu(view);
     else renderAbilityLab(view);
     // The hint shares the footer row with BACK (to its right), never the last row.
     scrollHint(context, view.canScrollUp, view.canScrollDown);
-    // The build menu resumes through its own RESUME button (and Tab / Esc); only
-    // the lab carries a back control, which returns to the build menu.
-    if (view.id === "pglab") backControl(context, { type: "navigate", to: "pgmenu" });
+    // Every tab resumes through RESUME (and Tab / Esc); ABILITIES is a tab, not a sub-page.
+    if (view.id === "pglab")
+      context.enqueue({
+        x: width / 2 - 160,
+        y: ui.sheetFooter().y,
+        w: 320,
+        h: 50,
+        label: "RESUME",
+        action: { type: "run.resume" },
+      });
   }
 
   function enqueueChoice(
@@ -91,124 +99,81 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
     });
   }
 
-  // The source build menu (ee5e931 js/game.js renderPgMenu): a bespoke two-column
-  // board — enemies/spawn modifiers/difficulty on the left, bosses/arena/weapons on
-  // the right, toggles and actions in a bottom band. Section headings are plain
-  // accent tags (no divider rule), matching the source.
+  /** Content starts under the tab strip. */
+  const TAB_Y = 136,
+    BODY_TOP = 212,
+    SMALL_GROUP = 5,
+    BAND_CHOICES = 10;
+
+  /**
+   * One tab of the Playground menu: each section is a plain accent heading over a grid
+   * of buttons (as many columns as the page needs), with RESUME in the footer row.
+   * Every tab uses the same layout, so a new enemy, boss, arena or weapon is one more
+   * button in its tab's grid.
+   */
   function renderBuildMenu(view: PlaygroundScreenView): void {
-    const sections = new Map(view.sections.map((section) => [section.label, section]));
     const { canvas } = context,
       t = ui.t,
-      accent = t.color.accent;
-    const left = width / 2 - 620,
-      right = width / 2 + 20,
-      columnWidth = 600,
-      bh = 42,
+      left = width / 2 - 620,
+      columnWidth = 1240,
       gap = 10,
-      gridTop = 208;
-    const tag = (label: string, x: number, y: number): void => {
-      ui.tag(canvas, label, x, y, accent, "left", t.type.micro);
-    };
-    const rowY = (row: number): number => gridTop + row * (bh + gap);
-    // Everything under the enemy and boss grids is placed from the rows they use, and
-    // each grid takes as many columns as it needs to end above the bottom band
-    // (source top 640, 36 px clearance), so a new enemy or boss never lands on the next group.
-    const bandTop = 640,
-      bandClearance = 36,
-      headingGap = 26;
-    const leftStackBelow = headingGap + 66 + 4 + 38,
-      rightStackBelow = headingGap + bh + 30 + 4 + bh;
-    const rowsAbove = (below: number): number => Math.floor((bandTop - bandClearance - below - gridTop) / (bh + gap));
-    const place = (choice: ChoiceView, grid: ChoiceGrid, index: number, x: number): void => {
-      const cell = grid.cells[index];
-      if (cell === undefined) return;
-      enqueueChoice(
-        choice,
-        x + cell.column * (grid.cellWidth + gap),
-        rowY(cell.row),
-        grid.cellWidth * cell.span + gap * (cell.span - 1),
-        bh,
-        13,
-      );
-    };
-
-    // ---- left: enemies (kind-coloured), the two-cell target dummy, spawn modifiers ----
-    tag("SPAWN ENEMIES", left, 196);
-    const enemies = sections.get("SPAWN ENEMIES")?.choices ?? [];
-    // Source grid: three 196 px kinds per row (608 px), the dummy spanning two cells.
-    const enemyGrid = choiceGrid(enemies.length, 2, {
-      minColumns: 3,
-      maxColumns: 4,
-      maxRows: rowsAbove(leftStackBelow),
-      width: 3 * 196 + 2 * gap,
-      gap,
-    });
-    enemies.forEach((choice, index) => {
-      place(choice, enemyGrid, index, left);
-    });
-
-    const modifierY = rowY(enemyGrid.rows) + headingGap;
-    tag("SPAWN MODIFIERS", left, modifierY - 10);
-    ui.text(canvas, "HP", left, modifierY + 28, t.type.label);
-    sections.get("HP")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + 44 + index * 92, modifierY + 4, 84, 38, 13);
-    });
-    ui.text(canvas, "COUNT", left + 340, modifierY + 28, t.type.label);
-    sections.get("COUNT")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + 424 + index * 92, modifierY + 4, 84, 38, 13);
-    });
-
-    // difficulty — the SAME tiers the real modes use, swapped live
-    const difficultyY = modifierY + 66;
-    tag("DIFFICULTY", left, difficultyY - 10);
-    sections.get("DIFFICULTY")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + index * (116 + 5), difficultyY + 4, 116, 38, 11);
-    });
-
-    // ---- right: bosses, arena, weapons ----
-    tag("SUMMON A BOSS", right, 196);
-    const bosses = sections.get("SUMMON A BOSS")?.choices ?? [];
-    // Source grid: two 295 px bosses per row across the 600 px column.
-    const bossGrid = choiceGrid(bosses.length, 1, {
-      minColumns: 2,
-      maxColumns: 3,
-      maxRows: rowsAbove(rightStackBelow),
-      width: columnWidth,
-      gap,
-    });
-    bosses.forEach((choice, index) => {
-      place(choice, bossGrid, index, right);
-    });
-    const arenaY = rowY(bossGrid.rows) + headingGap;
-    tag("ARENA", right, arenaY - 10);
-    sections.get("ARENA")?.choices.forEach((choice) => {
-      enqueueChoice(choice, right, arenaY + 4, columnWidth, bh, 13);
-    });
-    const weaponY = arenaY + bh + 30;
-    tag("WEAPON  (restarts the arena)", right, weaponY - 10);
-    const weapons = sections.get("WEAPON")?.choices ?? [];
-    if (weapons.length > 0) {
-      const buttonWidth = (columnWidth - gap * (weapons.length - 1)) / weapons.length;
-      weapons.forEach((choice, index) => {
-        enqueueChoice(choice, right + index * (buttonWidth + gap), weaponY + 4, buttonWidth, bh, 13);
-      });
+      bottom = ui.sheetFooter().y - t.space.lg;
+    // Consecutive small groups (a few options each, such as HEALTH, HOW MANY and
+    // DIFFICULTY) share one band, each as wide as its share of the buttons.
+    const bands: PlaygroundScreenView["sections"][number][][] = [];
+    for (const section of view.sections) {
+      const band = bands.at(-1),
+        small = section.choices.length <= SMALL_GROUP;
+      const bandCount = band?.reduce((total, entry) => total + entry.choices.length, 0) ?? 0;
+      if (
+        band &&
+        small &&
+        band.every((entry) => entry.choices.length <= SMALL_GROUP) &&
+        bandCount + section.choices.length <= BAND_CHOICES
+      )
+        band.push(section);
+      else bands.push([section]);
     }
-
-    // ---- bottom band: toggles + actions + resume ----
-    // Source position unless a column still ends lower at its widest grid.
-    const columnsBottom = Math.max(difficultyY + 4 + 38, weaponY + 4 + bh);
-    const toggleY = Math.max(bandTop, columnsBottom + bandClearance);
-    tag("MODIFIERS", left, toggleY - 10);
-    sections.get("MODIFIERS")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + index * (300 + 12), toggleY + 4, 300, bh, 13);
-    });
-    const actionY = toggleY + bh + 18;
-    sections.get("ACTIONS")?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, left + index * (300 + 12), actionY, 300, bh, 13);
-    });
+    let y = BODY_TOP;
+    for (const band of bands) {
+      const total = band.reduce((sum, entry) => sum + entry.choices.length, 0),
+        groupGap = 28,
+        room = columnWidth - groupGap * (band.length - 1);
+      let x = left,
+        bandBottom = y;
+      for (const section of band) {
+        const span = band.length === 1 ? columnWidth : (room * section.choices.length) / total;
+        ui.tag(canvas, section.label, x, y, t.color.accent, "left", t.type.micro);
+        const top = y + 14,
+          keyed = section.choices.some((choice) => choice.sub !== undefined),
+          bh = keyed ? 54 : 46;
+        const grid = choiceGrid(section.choices.length, 1, {
+          minColumns: band.length === 1 ? Math.min(section.choices.length, 4) : section.choices.length,
+          maxColumns: band.length === 1 ? 8 : section.choices.length,
+          maxRows: Math.max(1, Math.floor((bottom - top) / (bh + gap))),
+          width: span,
+          gap,
+        });
+        section.choices.forEach((choice, index) => {
+          const cell = grid.cells[index];
+          if (cell === undefined) return;
+          enqueueChoice(
+            choice,
+            x + cell.column * (grid.cellWidth + gap),
+            top + cell.row * (bh + gap),
+            grid.cellWidth,
+            bh,
+            14,
+          );
+        });
+        bandBottom = Math.max(bandBottom, top + grid.rows * (bh + gap));
+        x += span + groupGap;
+      }
+      y = bandBottom + 26;
+    }
     context.enqueue({
       x: width / 2 - 160,
-      y: actionY + bh + 16,
+      y: ui.sheetFooter().y,
       w: 320,
       h: 50,
       label: "RESUME",
@@ -217,7 +182,7 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
   }
 
   /**
-   * Ability Lab rows (92 px pitch, matching the lab's scroll owner): name, one fitted
+   * ABILITIES rows (92 px pitch, matching the lab's scroll owner): name, one fitted
    * line of effect copy that stops before the action button, and the ownership tag.
    * Rows clip above the footer row, and a row's button is offered only while it is
    * fully inside the clip, so nothing reaches BACK or the scroll hint.
@@ -227,13 +192,13 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
       t = ui.t;
     const filters = view.sections.find((section) => section.label === "FILTERS");
     filters?.choices.forEach((choice, index) => {
-      enqueueChoice(choice, width / 2 - 546 + index * 156, 168, 148, 34);
+      enqueueChoice(choice, width / 2 - 546 + index * 156, BODY_TOP - 18, 148, 34);
     });
     const abilities = view.sections.find((section) => section.label === "ABILITIES");
     const cardWidth = 588,
       cardHeight = 80,
       rowHeight = 92,
-      top = 232,
+      top = BODY_TOP + 40,
       left = width / 2 - cardWidth - 12;
     const bottom = ui.sheetFooter().y - t.space.md,
       buttonW = 102,

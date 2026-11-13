@@ -8,18 +8,20 @@ import {
 
 describe("live playground presentation", () => {
   it("only promises Tab / Esc to a keyboard; touch and controller are pointed at RESUME", () => {
-    expect(playgroundMenuSubtitle("mouse")).toBe("build the scene — Tab / Esc resumes");
-    expect(playgroundMenuSubtitle("keyboard")).toBe("build the scene — Tab / Esc resumes");
-    for (const device of ["touch", "gamepad"] as const) {
-      expect(playgroundMenuSubtitle(device)).toBe("build the scene — RESUME returns to the arena");
-      expect(playgroundMenuSubtitle(device)).not.toMatch(/Tab|Esc/u);
-    }
+    for (const device of ["mouse", "keyboard"] as const)
+      expect(playgroundMenuSubtitle(device)).toBe("Q / E switch tabs · Tab or Esc returns to the arena");
+    expect(playgroundMenuSubtitle("gamepad")).toBe("L1 / R1 switch tabs · RESUME returns to the arena");
+    expect(playgroundMenuSubtitle("touch")).toBe("RESUME returns to the arena");
+    for (const device of ["touch", "gamepad"] as const) expect(playgroundMenuSubtitle(device)).not.toMatch(/Tab|Esc/u);
   });
 
   it("builds menu and ability-lab models while clamping scroll", () => {
     let scroll = 999,
       device: PlaygroundPromptDevice = "touch",
       subtitle = "";
+    let tab = "spawn",
+      menu: PlaygroundScreenModel | undefined,
+      lab: PlaygroundScreenModel | undefined;
     let menuId = "",
       menuSections = 0,
       labId = "",
@@ -28,7 +30,7 @@ describe("live playground presentation", () => {
     const runtime = createLivePlaygroundPresentation({
       run: () => ({
         diff: "normal",
-        pgArena: -1,
+        pgArena: 1,
         pg: { hpMultiplier: 3, count: 1, god: true },
         mods: { owned: { dash: 1 }, tier: { dash: 1 } },
       }),
@@ -41,7 +43,10 @@ describe("live playground presentation", () => {
       colors: () => ({ charger: "#f00", boss: "#000" }),
       uiAccent: () => "#0ff",
       stageAccent: () => "#fff",
-      arenaName: () => "Training",
+      arenaName: () => "Verdant",
+      arenas: () => ["Ashen", "Verdant"],
+      tab: () => tab,
+      hotkeyKinds: ["charger"],
       selectedWeapon: () => "sword",
       upgrades: () => [{ id: "dash", name: "Dash", desc: "Move", cat: "mobility", tiers: [{}, {}] }],
       abilityColors: () => ({ mobility: { color: "#00f" }, utility: { color: "#888" } }),
@@ -52,11 +57,13 @@ describe("live playground presentation", () => {
         scroll = value;
       },
       renderMenu: (model: PlaygroundScreenModel) => {
+        menu = model;
         menuId = model.id;
         menuSections = model.sections.length;
         subtitle = model.subtitle;
       },
       renderLab: (model: PlaygroundScreenModel) => {
+        lab = model;
         labId = model.id;
         labCanScrollUp = model.canScrollUp ?? false;
         labCanScrollDown = model.canScrollDown ?? false;
@@ -75,5 +82,29 @@ describe("live playground presentation", () => {
     expect(labCanScrollUp).toBe(false);
     expect(labCanScrollDown).toBe(false);
     expect(scroll).toBe(0);
+    // One tab on screen at a time; the strip lists every tab with the open one selected.
+    expect(menu?.tabs.map((entry) => entry.label)).toEqual([
+      "SPAWN",
+      "BOSSES",
+      "ARENA",
+      "WEAPON",
+      "RULES",
+      "ABILITIES",
+    ]);
+    expect(menu?.tabs.find((entry) => entry.selected)?.id).toBe("tab:spawn");
+    expect(lab?.tabs.find((entry) => entry.selected)?.id).toBe("tab:abilities");
+    expect(menu?.sections.map((section) => section.label)).toEqual(["ENEMIES", "HEALTH", "HOW MANY", "DIFFICULTY"]);
+    // Keyboard shows each choice's arena shortcut; other devices do not.
+    expect(menu?.sections[0]?.choices.map((choice) => choice.sub)).toEqual(["KEY 1", "KEY T"]);
+    device = "gamepad";
+    runtime.renderMenu();
+    expect(menu?.sections[0]?.choices.some((choice) => choice.sub !== undefined)).toBe(false);
+    // The arena tab lists the real stages only and marks the current one.
+    tab = "arena";
+    runtime.renderMenu();
+    expect(menu?.sections[0]?.choices.map((choice) => [choice.id, choice.label, choice.selected])).toEqual([
+      ["arena:0", "ASHEN", false],
+      ["arena:1", "VERDANT", true],
+    ]);
   });
 });

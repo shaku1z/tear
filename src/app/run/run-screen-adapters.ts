@@ -234,6 +234,16 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
         renderers.paused({ id: "paused", abilities: [], progress: [], tutorial });
         return;
       }
+      if (run.mode === "playground") {
+        renderers.paused({
+          id: "paused",
+          playground: true,
+          runSummary: "PLAYGROUND   ·   " + services.formatTime(run.runTime),
+          abilities: abilityCards(),
+          progress: [],
+        });
+        return;
+      }
       renderers.paused({
         ...(services.ghostChase?.().active ? { ghostChase: services.ghostChase() } : {}),
         ...buildPausedSnapshot({

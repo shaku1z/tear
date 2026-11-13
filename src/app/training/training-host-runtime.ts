@@ -6,7 +6,13 @@ import {
   resetTutorialActors,
   recoverTutorialBlade,
 } from "../../gameplay/training/live-tutorial-runtime";
-import { PLAYGROUND_ALL_KINDS, PlaygroundController } from "../../gameplay/training/playground-controller";
+import { stepUiTab } from "../interface/ui-action-coordinator";
+import { PLAYGROUND_TABS } from "../../gameplay/training/runtime-bridge";
+import {
+  PLAYGROUND_ALL_KINDS,
+  PLAYGROUND_HOTKEY_KINDS,
+  PlaygroundController,
+} from "../../gameplay/training/playground-controller";
 import { createPlaygroundRuntimeBridge } from "../../gameplay/training/runtime-bridge";
 import { createLivePlaygroundPresentation } from "../../gameplay/training/live-playground-presentation";
 import type { PlaygroundScreenModel } from "../../gameplay/training/live-playground-presentation";
@@ -142,6 +148,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
   });
 
   const controller = new PlaygroundController();
+  let menuOpened = false;
   const runtime = createPlaygroundRuntimeBridge({
     controller,
     get difficulties() {
@@ -186,8 +193,13 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
       context.addFloater(actor.x, actor.y - 60, text, emphasis, color);
     },
     navigate: (screen) => {
-      context.navigate(screen);
-      if (screen === "pglab") context.resetScroll();
+      menuOpened = true;
+      // ABILITIES is the menu's last tab on its own screen: U opens it directly, and the
+      // menu reopens on it when it was the tab left open.
+      if (screen === "pglab") runtime.tab = "abilities";
+      const target = screen === "pgmenu" && runtime.tab === "abilities" ? "pglab" : screen;
+      context.navigate(target);
+      if (target === "pglab") context.resetScroll();
     },
     releasePointer: context.releasePointer,
     requestPointer: context.requestPointer,
@@ -257,12 +269,28 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
     uiAccent: () => "#13c4d6",
     stageAccent: () => context.stage.current.accent,
     arenaName: () => runtime.arenaName(),
+    arenas: () => d.PLAYGROUND_STAGES.map((stage) => stage.name),
+    // Q / E and L1 / R1 step the menu's tabs, as on every tabbed screen.
+    tab: () => {
+      // The E that opened the menu is also "next tab": the first menu frame ignores it.
+      if (menuOpened) {
+        menuOpened = false;
+        return runtime.tab;
+      }
+      const next = stepUiTab(PLAYGROUND_TABS, runtime.tab, d.Input.ui.tabPrev, d.Input.ui.tabNext);
+      if (next.changed) {
+        d.SFX.ui();
+        runtime.dispatchAction(`tab:${next.key}`);
+      }
+      return runtime.tab;
+    },
+    hotkeyKinds: PLAYGROUND_HOTKEY_KINDS,
     selectedWeapon: context.selectedWeapon,
     upgrades: () => d.UPGRADES,
     abilityColors: context.abilityColors,
     labFilter: () => controller.state.labFilter,
     viewportHeight: context.height,
-    // The Ability Lab's phone composition (compact density) measures and clamps its own scroll extent.
+    // The ABILITIES tab's phone composition (compact density) measures and clamps its own scroll extent.
     scroll: context.scroll,
     setScroll: (value) => {
       if (!d.UI.density.compact) context.setScroll(value);

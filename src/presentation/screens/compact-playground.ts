@@ -1,15 +1,13 @@
 import type { ChoiceView, PlaygroundScreenView, ScreenControl, ScreenRenderContext } from "./contracts";
 import { createCompactPage, type CompactPage, type ScrollBlock, type ScrollView } from "./compact-page";
 
-type Section = PlaygroundScreenView["sections"][number];
 /** Narrowest build-menu button; the column count follows from the page width. */
 const PG_BUTTON_MIN_W = 270;
 
 /**
- * The PLAYGROUND build menu and ABILITY LAB on the compact page, over the frozen arena
- * (no sheet). The build menu keeps the source's groups (spawn, modifiers, difficulty,
- * bosses, arena, weapon, toggles, actions) as rows of full-size buttons under plain
- * accent headings, with RESUME in the footer row; the lab lists abilities in two columns.
+ * The PLAYGROUND menu on the compact page, over the frozen arena (no sheet): the tab
+ * strip in the header, the open tab as rows of full-size buttons under plain accent
+ * headings, and RESUME in the footer row. ABILITIES lists abilities in two columns.
  */
 export function createCompactPlayground(context: ScreenRenderContext) {
   const { ui } = context,
@@ -67,32 +65,19 @@ export function createCompactPlayground(context: ScreenRenderContext) {
     return blocks;
   }
 
-  function buildMenu(view: PlaygroundScreenView): void {
-    const t = ui.t,
-      page = kit.header({ title: view.title, subtitle: view.subtitle, sheet: false });
-    const sections = new Map(view.sections.map((section): [string, Section] => [section.label, section]));
-    const choices = (label: string, prefix = ""): readonly (readonly [ChoiceView, string])[] =>
-      (sections.get(label)?.choices ?? []).map(
-        (choice) => [choice, prefix ? `${prefix} ${choice.label}` : choice.label] as const,
-      );
-    const columns = Math.max(3, Math.floor((page.width + t.metric.btnGap) / (PG_BUTTON_MIN_W + t.metric.btnGap)));
-    const groups: readonly (readonly [string, readonly (readonly [ChoiceView, string])[], number])[] = [
-      ["SPAWN ENEMIES", choices("SPAWN ENEMIES"), 1],
-      ["SPAWN MODIFIERS", [...choices("HP", "HP"), ...choices("COUNT", "COUNT")], 1],
-      ["DIFFICULTY", choices("DIFFICULTY"), 1],
-      ["SUMMON A BOSS", choices("SUMMON A BOSS"), 1],
-      ["ARENA", choices("ARENA"), Math.ceil(columns / 2)],
-      ["WEAPON  (restarts the arena)", choices("WEAPON"), 1],
-      ["MODIFIERS", choices("MODIFIERS"), 1],
-      ["ACTIONS", choices("ACTIONS"), 1],
-    ];
-    const blocks: ScrollBlock[] = [];
-    for (const [label, items, span] of groups) {
-      if (items.length === 0) continue;
-      blocks.push(heading(page, label), ...buttonRows(page, items, columns, span));
-    }
-    const state = kit.scroll(page, blocks, t.space.sm);
-    // The build menu resumes through RESUME (and Tab / Esc), centred in the footer row.
+  function pageHeader(view: PlaygroundScreenView): CompactPage {
+    return kit.header({
+      title: view.title,
+      subtitle: view.subtitle,
+      sheet: false,
+      tabs: view.tabs ?? [],
+      tabAction: (id) => ({ type: "playground.action", id }),
+    });
+  }
+
+  /** RESUME, centred in the footer row: every tab returns to the arena from here. */
+  function resume(page: CompactPage): void {
+    const t = ui.t;
     context.enqueue({
       x: page.centerX - t.metric.backW / 2,
       y: page.footerY,
@@ -102,13 +87,28 @@ export function createCompactPlayground(context: ScreenRenderContext) {
       size: t.type.lead,
       action: { type: "run.resume" },
     });
+  }
+
+  function buildMenu(view: PlaygroundScreenView): void {
+    const t = ui.t,
+      page = pageHeader(view);
+    const columns = Math.max(3, Math.floor((page.width + t.metric.btnGap) / (PG_BUTTON_MIN_W + t.metric.btnGap)));
+    const blocks: ScrollBlock[] = [];
+    for (const section of view.sections) {
+      const items = section.choices.map(
+        (choice) => [choice, choice.sub === undefined ? choice.label : `${choice.label} · ${choice.sub}`] as const,
+      );
+      if (items.length > 0) blocks.push(heading(page, section.label), ...buttonRows(page, items, columns));
+    }
+    const state = kit.scroll(page, blocks, t.space.sm);
+    resume(page);
     kit.footer(page, state, null);
   }
 
   function abilityLab(view: PlaygroundScreenView): void {
     const t = ui.t,
       pad = t.space.md;
-    let page = kit.header({ title: view.title, subtitle: view.subtitle, sheet: false });
+    let page = pageHeader(view);
     const filters = view.sections.find((section) => section.label === "FILTERS")?.choices ?? [];
     page = kit.toolbar(page, [{ items: filters, action: (id) => ({ type: "playground.action", id }) }]);
     const abilities = view.sections.find((section) => section.label === "ABILITIES")?.choices ?? [];
@@ -164,7 +164,9 @@ export function createCompactPlayground(context: ScreenRenderContext) {
         });
       },
     );
-    kit.footer(page, kit.scroll(page, blocks), { type: "navigate", to: "pgmenu" });
+    const state = kit.scroll(page, blocks);
+    resume(page);
+    kit.footer(page, state, null);
   }
 
   return Object.freeze({ buildMenu, abilityLab });

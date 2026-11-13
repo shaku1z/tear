@@ -550,6 +550,8 @@ export interface TierUpScreenView {
 export interface PausedScreenView {
   readonly ghostChase?: Readonly<{ visible: boolean; message: string }>;
   readonly tutorial?: TutorialSessionView;
+  /** A paused Playground run: the pause offers the Playground menu. */
+  readonly playground?: boolean;
   readonly id: "paused";
   readonly runSummary?: string;
   readonly abilities: readonly CardView[];
@@ -601,6 +603,8 @@ export interface PlaygroundScreenView {
   readonly id: "pgmenu" | "pglab";
   readonly title: string;
   readonly subtitle?: string;
+  /** The tabs of the Playground menu (SPAWN … ABILITIES); the selected one is on screen. */
+  readonly tabs?: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly choices: readonly ChoiceView[] }[];
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;

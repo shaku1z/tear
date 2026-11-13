@@ -13,8 +13,8 @@ const padLabel = (binding: PadBinding): string =>
   ({ jump: "A", dash: "RB", throw: "RT", tether: "LT", confirm: "A", back: "B", pause: "MENU" })[binding];
 
 const PLAYGROUND_HOTKEYS: readonly PromptAction[] = [
-  "build-menu",
-  "ability-lab",
+  "playground-menu",
+  "abilities",
   "quick-spawn",
   "spawn-dummy",
   "summon-boss",
@@ -70,7 +70,7 @@ describe("prompt vocabulary", () => {
   });
 
   it("drops actions a device cannot trigger and merges duplicates", () => {
-    expect(promptLabels(["throw", "recall", "build-menu"], "touch")).toEqual(["THROW"]);
-    expect(promptLabels(["build-menu", "ability-lab"], "keyboard")).toEqual(["E", "U"]);
+    expect(promptLabels(["throw", "recall", "playground-menu"], "touch")).toEqual(["THROW"]);
+    expect(promptLabels(["playground-menu", "abilities"], "keyboard")).toEqual(["E", "U"]);
   });
 });

@@ -82,8 +82,27 @@ export interface PlaygroundActionDependencies {
   playRankUp(): void;
 }
 
+/** The Playground menu's tabs, in order. ABILITIES is the ability list (screen `pglab`). */
+export const PLAYGROUND_TABS = Object.freeze([
+  ["spawn", "SPAWN"],
+  ["bosses", "BOSSES"],
+  ["arena", "ARENA"],
+  ["weapon", "WEAPON"],
+  ["rules", "RULES"],
+  ["abilities", "ABILITIES"],
+] as const);
+export type PlaygroundTab = (typeof PLAYGROUND_TABS)[number][0];
+
+export function isPlaygroundTab(value: string): value is PlaygroundTab {
+  return PLAYGROUND_TABS.some(([id]) => id === value);
+}
+
 export interface PlaygroundRuntimeBridge {
   readonly state: PlaygroundController["state"];
+  /** The open menu tab; kept for the run so the menu reopens where it was left. */
+  tab: PlaygroundTab;
+  /** Puts the arena the controller holds on screen; a new Playground run calls it once. */
+  enterArena(): void;
   execute(intents: readonly PlaygroundIntent[]): void;
   setDifficulty(id: string): void;
   nextArena(): void;
@@ -98,6 +117,13 @@ export interface PlaygroundRuntimeBridge {
 
 export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDependencies): PlaygroundRuntimeBridge {
   const { controller } = dependencies;
+  let tab: PlaygroundTab = "spawn";
+  // The Playground plays on real stages only: the Tutorial's training ground is not an arena.
+  const arenaCount = (): number => Math.max(1, dependencies.stageNames.length);
+  const selectArena = (arena: number): void => {
+    controller.state.arena = Math.max(0, Math.min(arenaCount() - 1, Math.trunc(arena)));
+    execute([{ type: "wipe" }, { type: "select-arena", arena: controller.state.arena }]);
+  };
   const homePlatforms = (): TrainingPlatform[] =>
     trainingPlatforms(dependencies.viewportWidth, dependencies.viewportHeight, dependencies.groundY).map(
       (platform) => ({ ...platform }),
@@ -209,16 +235,22 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
       dependencies.spawn("boss", 1);
       actions.playUi();
     } else if (kind === "arena") {
-      execute(controller.nextArena(dependencies.stageNames.length));
+      selectArena(value === "" ? (Math.max(0, controller.state.arena) + 1) % arenaCount() : Number(value));
       actions.playUi();
+    } else if (kind === "tab" && isPlaygroundTab(value)) {
+      tab = value;
+      if (value === "abilities") actions.openLab();
+      else dependencies.navigate("pgmenu");
     } else if (kind === "weapon") {
       actions.selectWeapon(value);
       actions.restartWithWeapon();
     } else if (kind === "toggle") {
       if (value === "god" || value === "freeze" || value === "slow") controller.toggle(value);
       else if (value === "onehit") dependencies.player.oneHit = !dependencies.player.oneHit;
-    } else if (kind === "lab") actions.openLab();
-    else if (kind === "clear") {
+    } else if (kind === "lab") {
+      tab = "abilities";
+      actions.openLab();
+    } else if (kind === "clear") {
       for (const enemy of dependencies.enemies) enemy.dead = true;
       dependencies.clearProjectiles();
       actions.playUi();
@@ -242,15 +274,24 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
 
   return {
     state: controller.state,
+    get tab() {
+      return tab;
+    },
+    set tab(value) {
+      tab = value;
+    },
+    enterArena() {
+      selectArena(controller.state.arena);
+    },
     execute,
     setDifficulty(id) {
       execute([controller.setDifficulty(id, dependencies.difficulties, dependencies.run.diffDmg || 1)]);
     },
     nextArena() {
-      execute(controller.nextArena(dependencies.stageNames.length));
+      selectArena((Math.max(0, controller.state.arena) + 1) % arenaCount());
     },
     arenaName() {
-      return controller.arenaName(dependencies.stageNames);
+      return (dependencies.stageNames[Math.max(0, controller.state.arena)] ?? "").toUpperCase();
     },
     spawn(kind) {
       execute([controller.spawn(kind)]);
@@ -267,9 +308,10 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
         slow: false,
         hpMultiplier: 1,
         count: 1,
-        arena: -1,
+        arena: 0,
         labFilter: "all",
       });
+      tab = "spawn";
     },
     homePlatforms,
   };

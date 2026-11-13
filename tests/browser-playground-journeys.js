@@ -378,32 +378,72 @@ const journey = (practiceLab) =>
       });
       console.log("playground journey: combat hotkey spawns survive the tail commit");
 
-      // The in-world E shortcut shown by the production Playground help opens the tools.
+      // Every Playground control below is reached through its rendered label, so the journey
+      // follows the layout instead of fixed coordinates.
+      await page.evaluate(() => {
+        const captured = [],
+          original = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function playgroundText(value, x, y, ...rest) {
+          captured.push({ text: String(value), x, y });
+          if (captured.length > 1500) captured.splice(0, 750);
+          return original.call(this, value, x, y, ...rest);
+        };
+        window.__PLAYGROUND_TEXT__ = captured;
+      });
+      const drawn = (label) =>
+        page.evaluate((expected) => window.__PLAYGROUND_TEXT__.findLast((entry) => entry.text === expected), label);
+      const tabOpen = (heading) =>
+        page.waitForFunction(
+          (expected) => window.__PLAYGROUND_TEXT__.some((entry) => entry.text === expected),
+          heading,
+          { timeout: STATE_WAIT_MS },
+        );
+      const clickText = async (label) => {
+        await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+        await tabOpen(label);
+        const point = await drawn(label);
+        await page.mouse.click(point.x, point.y);
+      };
+
+      // E opens the menu on its first tab; the E that opened it does not also switch tabs.
       await pressUntilScreen("e", "pgmenu");
-      console.log("playground journey: build menu open");
+      await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+      await tabOpen("ENEMIES");
+      console.log("playground journey: menu open on SPAWN");
       const enemiesBefore = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
-      await page.mouse.click(278, 229); // spawn the first enemy kind
+      await clickText("CHARGER");
       await page.waitForFunction((before) => window.__PANTHEON_TEST.state().enemyCount > before, enemiesBefore, {
         timeout: STATE_WAIT_MS,
       });
       console.log("playground journey: enemy spawned");
 
-      await page.mouse.click(330, 721); // ABILITY LAB
+      // Q / E step the tabs; a click opens one directly.
+      await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+      await page.keyboard.press("e");
+      await tabOpen("SUMMON A BOSS");
+      await clickText("ARENA");
+      await tabOpen("ARENA");
+      assert.equal(await drawn("TRAINING GROUNDS"), undefined, "the Tutorial's training ground is not an arena");
+      console.log("playground journey: tabs switch by key and by click");
+
+      await clickText("ABILITIES");
       await waitScreen("pglab");
-      console.log("playground journey: ability lab open");
-      await page.mouse.click(721, 272); // TAKE the first available ability
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      await page.mouse.wheel(0, 500);
-      await page.mouse.click(800, 850); // BUILD MENU (lab back control)
-      await waitScreen("pgmenu");
-      console.log("playground journey: returned to build menu");
-      await page.mouse.click(800, 780); // RESUME (source-position band under the actions row)
+      console.log("playground journey: abilities tab open");
+      await clickText("TAKE");
+      await clickText("RESUME");
       await waitScreen("playing");
       console.log("playground journey: pointer resume");
 
+      // U opens ABILITIES; Tab leaves the menu from any tab.
       await pressUntilScreen("u", "pglab");
-      await pressUntilScreen("Tab", "pgmenu");
       await pressUntilScreen("Tab", "playing");
+      // Pause offers the menu: the route touch and controller players use.
+      await pressUntilScreen("Escape", "paused");
+      await clickText("PLAYGROUND MENU");
+      await waitScreen("pglab");
+      console.log("playground journey: pause opens the menu on the tab left open");
+      await clickText("RESUME");
+      await waitScreen("playing");
       assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().mode), "playground");
     },
   );

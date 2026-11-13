@@ -97,7 +97,8 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
-    transitions: ["playing", "settings", "confirmquit", "rename"],
+    // A paused Playground opens its menu: the route for touch and controller players.
+    transitions: ["playing", "pgmenu", "settings", "confirmquit", "rename"],
   },
   draft: {
     channel: "release",
