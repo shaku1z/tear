@@ -1,0 +1,88 @@
+name: Deploy Wiki
+
+# Manual only. Builds wiki/ from the commit being deployed (facts from the game exporter, pictures from the
+# game's test build) and publishes it to the existing Cloudflare Worker `tear-wiki` (preview: `tear-wiki-preview`).
+# It does nothing to the game's own deploy. Enable it only after the owner confirms that the Preview and
+# Production environments' CLOUDFLARE_API_TOKEN may deploy the tear-wiki Workers (see wiki/README.md).
+# Until then it only builds and tests (publish defaults to false).
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Where to publish the wiki
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+      publish:
+        description: Publish to Cloudflare. Leave off (build only) until the owner confirms the Cloudflare token may deploy the tear-wiki Workers.
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-wiki-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  wiki:
+    name: Build and publish the wiki
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: ${{ inputs.target == 'production' && 'Production' || 'Preview' }}
+      url: ${{ inputs.target == 'production' && 'https://wiki.tearblade.com' || '' }}
+    steps:
+      - name: Require protected main
+        env:
+          WORKFLOW_REF: ${{ github.ref }}
+          REF_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          set -euo pipefail
+          [[ "${WORKFLOW_REF}" == "refs/heads/main" && "${REF_PROTECTED}" == "true" ]] || { echo "::error::The wiki deploys only from protected main."; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Wiki tests
+        run: pnpm wiki:test
+      - name: Build the game's test build (source of the pictures)
+        run: pnpm build:test:standalone
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build the wiki with pictures
+        run: pnpm wiki:build -- --media
+      - name: Publish
+        if: inputs.publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          set -uo pipefail
+          # The target decides the Worker; preview can only ever name tear-wiki-preview.
+          if [[ "${TARGET}" == "production" ]]; then
+            WORKER=tear-wiki; ARGS=()
+          else
+            WORKER=tear-wiki-preview; ARGS=(--env preview)
+          fi
+          echo "Publishing wiki/dist to Worker ${WORKER} (target ${TARGET})."
+          if ! npx --yes wrangler@4.112.0 deploy --config wiki/wrangler.jsonc "${ARGS[@]}" 2>&1 | tee wrangler.log; then
+            echo "::error title=Wiki publish failed::Cloudflare refused the deploy to Worker ${WORKER}. If wrangler.log above says authentication, permission or 'not authorized', this repository's CLOUDFLARE_API_TOKEN cannot deploy that Worker: nothing was published and no other Worker was touched."
+            exit 1
+          fi
+      - name: Record what was published
+        run: cat wiki/dist/version.json

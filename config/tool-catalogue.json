@@ -1006,27 +1006,34 @@
       ],
       "duration": "under-a-minute"
     },
-    "publish:game-reference": {
-      "purpose": "CI: writes the game reference manifest and receipt under artifacts/game-reference for upload",
+    "export:wiki": {
+      "purpose": "Writes the tear-wiki-data document (the player wiki's facts) from the game's own definitions; fails when published content is missing from it",
       "effects": [
         "writes-artifacts"
       ],
       "duration": "under-a-minute"
     },
-    "dispatch:wiki-reference": {
-      "purpose": "CI: sends a GitHub repository_dispatch so the wiki repository rebuilds from the published reference",
+    "wiki:build": {
+      "purpose": "Builds the player wiki into wiki/dist from this commit (add --media for pictures from the game's test build, which takes tens of minutes)",
       "effects": [
-        "network",
-        "deploys"
+        "writes-artifacts"
       ],
-      "duration": "seconds"
+      "duration": "under-a-minute"
     },
-    "test:game-reference-artifact": {
-      "purpose": "Node tests for game reference publication and wiki dispatch (mocked fetch)",
+    "wiki:dev": {
+      "purpose": "Builds the player wiki and serves it on port 4321, rebuilding when wiki/ changes",
       "effects": [
-        "read-only"
+        "writes-artifacts",
+        "starts-server"
       ],
-      "duration": "seconds"
+      "duration": "long"
+    },
+    "wiki:test": {
+      "purpose": "Wiki tests: coverage, links, redirects, excluded names, commit identity and page weight",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "under-a-minute"
     },
     "check:artifact-disposition": {
       "purpose": "Validates the artifact disposition records",
@@ -1459,25 +1466,15 @@
         "compare:preserved-copies"
       ]
     },
-    "scripts/dispatch-wiki-reference.mjs": {
-      "purpose": "Sends a GitHub repository_dispatch to the wiki repository for a published reference",
-      "effects": [
-        "network",
-        "deploys"
-      ],
-      "duration": "seconds",
-      "via": [
-        "dispatch:wiki-reference"
-      ]
-    },
     "scripts/export-game-reference.mjs": {
-      "purpose": "Exports the game reference JSON through a Vite SSR loader",
+      "purpose": "Exports the game reference JSON, or with --wiki the tear-wiki-data document the player wiki is built from, through a Vite SSR loader",
       "effects": [
         "read-only"
       ],
       "duration": "under-a-minute",
       "via": [
-        "export:game-reference"
+        "export:game-reference",
+        "export:wiki"
       ]
     },
     "scripts/format.mjs": {
@@ -1564,16 +1561,6 @@
       "via": [],
       "runBy": [
         "scripts/production-headless-worker-dispatcher.mjs"
-      ]
-    },
-    "scripts/publish-game-reference-artifact.mjs": {
-      "purpose": "Writes the game reference manifest and receipt under artifacts/game-reference for CI upload",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "under-a-minute",
-      "via": [
-        "publish:game-reference"
       ]
     },
     "scripts/record-build-provider-artifact.mjs": {
@@ -1933,7 +1920,6 @@
       "tests/source-architecture.test.mjs"
     ],
     "scripts/campaign-publication-boundary.mjs": [
-      "scripts/publish-game-reference-artifact.mjs",
       "scripts/release-preflight.mjs",
       "tests/campaign-publication-boundary.test.mjs",
       "tests/unit/verdant-publication-boundary.test.ts"
@@ -2089,6 +2075,9 @@
       "tests/tutorial-gold-fingerprint.test.mjs",
       "tests/unit/tutorial-production-ghost.test.ts",
       "vite.config.ts"
+    ],
+    "scripts/wiki-data-export.mjs": [
+      "scripts/export-game-reference.mjs"
     ]
   },
   "declarations": [

@@ -15,7 +15,7 @@ package-lock.json
 # Vendored, preserved and synced content.
 public/
 preservation/
-tear-wiki/
+wiki/
 vendor/
 
 # Prose: docs, plans, skills and READMEs are records whose exact text
