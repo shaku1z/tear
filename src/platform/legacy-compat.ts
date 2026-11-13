@@ -2,6 +2,7 @@ import { createBrowserPlatformServices } from "./browser";
 import type { CrazyGamesPlatformOptions, CrazyGamesPlatformServices, CrazyGamesSdkShape } from "./crazygames";
 import type { AcknowledgedStorage, PlatformServices, StorageAcknowledgement, Unsubscribe } from "./contracts";
 import type { SyncStringStorage } from "./storage";
+import { markStartupMilestone } from "./startup-milestones";
 
 export interface LegacyPlatformCompatibilityOptions {
   readonly target: "standalone" | "crazygames";
@@ -215,9 +216,11 @@ export function createLegacyPlatformCompatibility(
     },
     loadingStop() {
       loadingRequested = false;
+      markStartupMilestone("loading-finished");
       if (this.on) services.lifecycle.loadingFinished();
     },
     gameplayStart() {
+      markStartupMilestone("gameplay-start");
       if (this.on) services.lifecycle.gameplayStarted();
     },
     gameplayStop() {
