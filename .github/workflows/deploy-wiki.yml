@@ -72,11 +72,17 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TARGET: ${{ inputs.target }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # The target decides the Worker; preview can only ever name tear-wiki-preview.
           if [[ "${TARGET}" == "production" ]]; then
-            npx --yes wrangler@4.112.0 deploy --config wiki/wrangler.jsonc
+            WORKER=tear-wiki; ARGS=()
           else
-            npx --yes wrangler@4.112.0 deploy --config wiki/wrangler.jsonc --env preview
+            WORKER=tear-wiki-preview; ARGS=(--env preview)
+          fi
+          echo "Publishing wiki/dist to Worker ${WORKER} (target ${TARGET})."
+          if ! npx --yes wrangler@4.112.0 deploy --config wiki/wrangler.jsonc "${ARGS[@]}" 2>&1 | tee wrangler.log; then
+            echo "::error title=Wiki publish failed::Cloudflare refused the deploy to Worker ${WORKER}. If wrangler.log above says authentication, permission or 'not authorized', this repository's CLOUDFLARE_API_TOKEN cannot deploy that Worker: nothing was published and no other Worker was touched."
+            exit 1
           fi
       - name: Record what was published
         run: cat wiki/dist/version.json
