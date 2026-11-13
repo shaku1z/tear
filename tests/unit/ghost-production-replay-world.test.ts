@@ -163,7 +163,6 @@ describe("Ghost production replay world", () => {
       ink: "#000",
       density: { touch: false, compact: false },
       readable: (color: string) => color,
-      hudPlate: noDraw,
       displayText: noDraw,
       fitText: (_canvas: unknown, text: string, _width: number, options: { size: number }) => ({
         size: options.size,
@@ -172,6 +171,7 @@ describe("Ghost production replay world", () => {
       }),
       textBox: (_canvas: unknown, text: string) => ({ size: 16, lines: [text], height: 24, lineHeight: 24 }),
       keycap: () => 30,
+      keycapSize: () => ({ w: 30, h: 22 }),
       sheetRect: () => ({ x: 180, y: 44, w: 1240, h: 820 }),
       sheetFooter: () => ({ y: 804, h: 48, backX: 690 }),
       t: {
