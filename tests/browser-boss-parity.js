@@ -2,7 +2,11 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
 
-const BOSS_PROGRESS_TIMEOUT_MS = 10_000;
+// How long a wait for a game state may take before the test gives up. The state is the pass
+// condition, never the clock: the game runs slower than real time on a loaded machine or a small
+// CI runner, so a short limit fails on speed alone. Keep this far above any honest duration.
+const STATE_WAIT_CEILING_MS = 60_000;
+const BOSS_PROGRESS_TIMEOUT_MS = STATE_WAIT_CEILING_MS;
 
 const BOSSES = canonicalScenarios
   .filter((entry) => entry.subject.kind === "boss" && !entry.tags?.includes("unpublished-preview"))
@@ -20,7 +24,7 @@ async function startReadyBoss(page, bossId) {
   await page.waitForFunction(
     (id) => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === id),
     bossId,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_CEILING_MS },
   );
   await page.waitForFunction(
     (id) => {
@@ -28,7 +32,7 @@ async function startReadyBoss(page, bossId) {
       return boss?.spawnT <= 0 && boss?.introT === 0;
     },
     bossId,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_CEILING_MS },
   );
 }
 
@@ -131,14 +135,16 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
   await page.waitForFunction(
     (id) => window.__PANTHEON_TEST.state().active && window.__PANTHEON_TEST.state().cinema === id,
     cinematicId,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_CEILING_MS },
   );
   const entered = await bossSnapshot(page, bossId);
   assert.equal(entered.cinematicPending, false, `${bossId} must consume its phase request when the scene begins`);
   await page.evaluate(() => {
     for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
   });
-  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, { timeout: 5000 });
+  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, {
+    timeout: STATE_WAIT_CEILING_MS,
+  });
   const released = await bossSnapshot(page, bossId);
   assert.equal(released.cinematicT, 0, `${bossId} ritual presentation state must release`);
   return released;
@@ -167,7 +173,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
             .enemies.find((enemy) => enemy.bossId === "rootbound")
             ?.atk?.startsWith("vine-sweep:"),
         undefined,
-        { timeout: 5000 },
+        { timeout: STATE_WAIT_CEILING_MS },
       );
       const attacking = await bossSnapshot(page, bossId);
       assert.equal(attacking.phase, 1, "Rootbound must begin in its authored first phase");
@@ -191,7 +197,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await page.waitForFunction(
     () => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === "rootbound"),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_CEILING_MS },
   );
   const retriedStage = await page.evaluate(() => window.__PANTHEON_TEST.bossStage("rootbound"));
   assert.equal(retriedStage.currentId, retriedStage.authoredId, "Rootbound retry must return to Verdant Sanctum");
@@ -219,7 +225,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await startReadyBoss(page, "aldric");
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.19));
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().cinema === "aldric-crownfall", undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_CEILING_MS,
   });
   await forcePhase(page, "aldric", 0.19, "aldric-crownfall");
   let aldric = await bossSnapshot(page, "aldric");
@@ -227,12 +233,14 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await page.waitForFunction(
     () => ["aldric-witnessed", "aldric-angered"].includes(window.__PANTHEON_TEST.state().cinema),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_CEILING_MS },
   );
   await page.evaluate(() => {
     for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
   });
-  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, { timeout: 5000 });
+  await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, {
+    timeout: STATE_WAIT_CEILING_MS,
+  });
   aldric = await waitForBossSimulationAdvance(page, "aldric", aldric.aliveT, 0.6);
   assert.equal(aldric.mode, "frenzy", "Aldric must rise into frenzy after the kneel");
 
@@ -240,7 +248,9 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   // the reflection and phase three dissolves it while the mirror brain stays live.
   await startReadyBoss(page, "echo");
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
-  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies.length > 1, undefined, { timeout: 5000 });
+  await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies.length > 1, undefined, {
+    timeout: STATE_WAIT_CEILING_MS,
+  });
   let echo = await bossSnapshot(page, "echo");
   assert.equal(echo.phase, 2, "Echo must split at phase two");
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.2));
@@ -250,7 +260,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
       return debug.enemies.find((enemy) => enemy.bossId === "echo")?.phase === 3 && debug.enemies.length === 1;
     },
     undefined,
-    { timeout: 5000 },
+    { timeout: STATE_WAIT_CEILING_MS },
   );
   const echoFinalStart = await bossSnapshot(page, "echo");
   echo = await waitForBossSimulationAdvance(page, "echo", echoFinalStart.aliveT, 1.2, 7000);
@@ -276,7 +286,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await startReadyBoss(page, "warden");
   const fullHealth = (await bossSnapshot(page, "warden")).hp;
   await page.mouse.click(800, 450);
-  await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: 5000 });
+  await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: STATE_WAIT_CEILING_MS });
   let damaged = await bossSnapshot(page, "warden");
   let pointer = { x: 800, y: 450 };
   for (let index = 0; index < 240 && damaged.hp >= fullHealth; index += 1) {
@@ -289,7 +299,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
     await page.waitForFunction(
       (tick) => (window.__TEAR_DIAGNOSTICS__.snapshot().gauges.simulationTick || 0) > tick,
       simulationTick,
-      { timeout: 5000 },
+      { timeout: STATE_WAIT_CEILING_MS },
     );
     if (index % 12 === 11) damaged = await bossSnapshot(page, "warden");
   }
