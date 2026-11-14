@@ -107,7 +107,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
     window.__TEAR_C28_VAULT_TEXT_POSITIONS__.findLast((entry) => entry.text === "VAULT"),
   );
   await page.mouse.click(vaultTab.x, vaultTab.y); // The drawn VAULT tab label, wherever the tab row puts it.
-  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("Ghost V3 - COACHING"), undefined, {
+  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("IMPORT A REPLAY FILE"), undefined, {
     timeout: 10000,
   });
   await page.waitForTimeout(250);
