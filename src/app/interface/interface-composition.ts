@@ -24,10 +24,6 @@ import { TouchOnboardingController } from "../training/touch-onboarding-controll
 import { createLiveInterfacePresentationCapture, type LivePresentationCaptureSource } from "./presentation-capture";
 import { isWorldScreen, type AppScreen } from "../../domain/screen-catalog";
 
-// Research and diagnostic surface controllers are deliberately not re-exported
-// here: composition injects them only into engineering builds
-// (see ../engineering/engineering-surfaces-contract.ts).
-
 type SurfaceOptions = Parameters<typeof createLivePresentationSurface>[0];
 type SurfaceWorld = Omit<SurfaceOptions["world"], "screen">;
 type ScreenOptions = Omit<LiveScreenPresentationOptions, "library" | "settings"> &

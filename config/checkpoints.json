@@ -56,18 +56,6 @@
         "node tests/browser-c38-publication-review.js"
       ]
     },
-    "test:browser:c37-player-watch": {
-      "description": "C37 player watch: player watch browser proof.",
-      "steps": [
-        "node tests/browser-c37-player-watch.js"
-      ]
-    },
-    "test:browser:c32-active-policy": {
-      "description": "C32 policy runtime: active policy browser proof.",
-      "steps": [
-        "node tests/browser-c32-active-policy.js"
-      ]
-    },
     "check:c23": {
       "description": "C23 State Forge: historical checkpoint gate.",
       "steps": [
@@ -87,7 +75,7 @@
         "pnpm typecheck",
         "pnpm lint",
         "pnpm check:architecture",
-        "pnpm exec vitest run tests/unit/scripted-agent-policy.test.ts tests/unit/tearbench-scripted-agent-hierarchy.test.ts tests/unit/hierarchical-policy-adapter.test.ts tests/unit/agent-static-contracts.test.ts tests/unit/longitudinal-progression.test.ts tests/unit/live-frame-runtime.test.ts tests/unit/enemy-blade-catch-runtime.test.ts tests/unit/live-observation-actors.test.ts tests/unit/live-observation-navigation.test.ts tests/unit/predictive-survival-planner.test.ts tests/unit/watch-build-choice.test.ts",
+        "pnpm exec vitest run tests/unit/scripted-agent-policy.test.ts tests/unit/tearbench-scripted-agent-hierarchy.test.ts tests/unit/hierarchical-policy-adapter.test.ts tests/unit/longitudinal-progression.test.ts tests/unit/live-frame-runtime.test.ts tests/unit/enemy-blade-catch-runtime.test.ts tests/unit/live-observation-actors.test.ts tests/unit/live-observation-navigation.test.ts tests/unit/watch-build-choice.test.ts",
         "pnpm build:test:standalone",
         "pnpm test:browser:scripted-agent-matrix",
         "pnpm test:browser:scripted-agent",
@@ -104,18 +92,12 @@
         "pnpm typecheck",
         "pnpm lint",
         "pnpm check:architecture",
-        "pnpm exec vitest run tests/unit/pixel-observation.test.ts tests/unit/pixel-visual-comparison.test.ts tests/unit/black-box-policy.test.ts tests/unit/tearbench-black-box-certification.test.ts tests/unit/tearbench-black-box-artifact-adapter.test.ts tests/unit/tearbench-observation-channels.test.ts tests/unit/physical-controller-certification.test.ts tests/unit/class-c-parity-isolation.test.ts",
+        "pnpm exec vitest run tests/unit/tearbench-black-box-certification.test.ts tests/unit/tearbench-black-box-artifact-adapter.test.ts tests/unit/tearbench-observation-channels.test.ts tests/unit/physical-controller-certification.test.ts",
         "pnpm build",
         "pnpm test:browser:production-isolation",
-        "pnpm test:browser:class-c-production-smoke",
-        "pnpm test:browser:class-c-touch-smoke",
         "pnpm test:browser:class-c-crazygames-iframe-smoke",
         "pnpm test:browser:production-input-edge",
-        "pnpm test:browser:class-c-pwa-physical-smoke",
-        "pnpm build:test:standalone",
-        "pnpm test:browser:test-only-pixel-fixtures",
-        "pnpm test:browser:class-c-visual-flow-engineering",
-        "pnpm test:browser:class-c-touch-terminal-engineering"
+        "pnpm build:test:standalone"
       ]
     },
     "check:c26:foundation": {
@@ -657,8 +639,7 @@
         "pnpm typecheck",
         "pnpm lint",
         "pnpm check:architecture",
-        "pnpm exec vitest run tests/unit/tearbench-headless.test.ts tests/unit/production-headless-environment.test.ts tests/unit/production-headless-benchmark.test.ts tests/unit/production-headless-academy-intake.test.ts tests/unit/production-wave-reward-runtime.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts",
-        "node --test tests/production-headless-worker.test.mjs tests/production-headless-worker-dispatcher.test.mjs",
+        "pnpm exec vitest run tests/unit/tearbench-headless.test.ts tests/unit/production-headless-environment.test.ts tests/unit/production-headless-benchmark.test.ts tests/unit/production-wave-reward-runtime.test.ts tests/unit/ghost-production-replay-world.test.ts tests/unit/production-replay-composition.test.ts",
         "pnpm build:test:standalone",
         {
           "checkpoint": "test:browser:production-headless-terminal"
@@ -670,41 +651,6 @@
           "checkpoint": "test:browser:c27a-live-parity-trace"
         },
         "pnpm exec vitest run tests/unit/production-c27a-matrix.test.ts"
-      ]
-    },
-    "check:c31:foundation": {
-      "description": "C31 durable Academy corpus: foundation checkpoint gate.",
-      "steps": [
-        "pnpm typecheck",
-        "pnpm lint",
-        "pnpm check:architecture",
-        "pnpm exec vitest run tests/unit/academy-candidate-admission.test.ts tests/unit/academy-candidate-tracks.test.ts tests/unit/academy-candidate-source-attestation.test.ts tests/unit/academy-candidate-capsule-materializer.test.ts tests/unit/academy-candidate-custody.test.ts tests/unit/academy-candidate-quality.test.ts tests/unit/academy-candidate-curation.test.ts tests/unit/academy-inspection-controller.test.ts tests/unit/browser-academy-inspection.test.ts tests/unit/app-legacy-state-controller.test.ts tests/unit/screen-renderers.test.ts tests/unit/agent-academy.test.ts tests/unit/production-headless-academy-intake.test.ts",
-        "pnpm build:test:standalone",
-        "node tests/browser-navigation-journeys.js"
-      ]
-    },
-    "check:c32:foundation": {
-      "description": "C32 policy runtime: foundation checkpoint gate.",
-      "steps": [
-        "pnpm requirements:check",
-        "pnpm typecheck",
-        "pnpm lint",
-        "pnpm check:architecture",
-        "pnpm exec vitest run tests/unit/policy-artifact-registry.test.ts tests/unit/policy-runtime.test.ts tests/unit/policy-decision-journal.test.ts tests/unit/policy-evaluation.test.ts tests/unit/production-headless-environment.test.ts tests/unit/production-policy-evaluation.test.ts",
-        "pnpm build:test:standalone",
-        {
-          "checkpoint": "test:browser:c32-active-policy"
-        }
-      ]
-    },
-    "check:c33:foundation": {
-      "description": "C33 Academy curation: foundation checkpoint gate.",
-      "steps": [
-        "pnpm requirements:check",
-        "pnpm typecheck",
-        "pnpm lint",
-        "pnpm check:architecture",
-        "pnpm exec vitest run tests/unit/academy-candidate-curation.test.ts tests/unit/policy-runtime.test.ts"
       ]
     },
     "check:c27a": {

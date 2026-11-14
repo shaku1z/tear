@@ -2,52 +2,14 @@
   "format": "tear-code-budget-baseline.v1",
   "note": "Debt recorded by `node scripts/check-code-budget.mjs --update`. Values may only fall; see docs/ARCHITECTURE.md.",
   "files": {
-    "src/agents/academy-candidate-custody.ts": {
-      "chars": 27059
-    },
-    "src/agents/foundry-job-bootstrap.ts": {
-      "maxLineLength": 185
-    },
-    "src/agents/foundry-job-due-dispatcher.ts": {
-      "chars": 26371
-    },
-    "src/agents/foundry-job-schedule.ts": {
-      "maxLineLength": 167
-    },
-    "src/agents/foundry-job-scheduled-execution.ts": {
-      "largestFunctionStatements": 110
-    },
-    "src/agents/foundry-job-v4-post-promotion-monitor-terminal.ts": {
-      "maxLineLength": 161
-    },
     "src/agents/live-watch-agent-host.ts": {
-      "chars": 27170,
-      "largestFunctionStatements": 150
+      "largestFunctionStatements": 100
     },
     "src/agents/live-watch-agent-panel.ts": {
       "maxLineLength": 171
     },
-    "src/agents/offline-rl-training.ts": {
-      "chars": 41199
-    },
-    "src/agents/tearbot-human-likeness-comparison.ts": {
-      "maxLineLength": 177
-    },
-    "src/agents/tearbot-v3-canonical-evaluation.ts": {
-      "maxLineLength": 170
-    },
-    "src/agents/training-operations-v3-scheduled-cycle.ts": {
-      "chars": 50620,
-      "maxLineLength": 206
-    },
-    "src/agents/training-operations-v3-training.ts": {
-      "largestFunctionStatements": 87
-    },
-    "src/app/engineering/academy-screen.ts": {
-      "maxLineLength": 172
-    },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 29278
+      "chars": 29266
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83

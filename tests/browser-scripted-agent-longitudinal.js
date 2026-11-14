@@ -299,7 +299,7 @@ withJourney(
           save();
           assert.deepEqual(episode.before.buy, {}, "permanent upgrades must remain absent for every cohort run");
           await page.getByLabel("Seed", { exact: true }).fill(String(seed));
-          await page.getByRole("button", { name: /^Start (?:Watch Agent|Run Monitor)$/u }).click();
+          await page.getByRole("button", { name: "Start Watch Agent" }).click();
           const policyDeadline = Math.min(Date.now() + 180_000, deadline - 120_000);
           let snapshot;
           while (Date.now() < policyDeadline) {

@@ -11,9 +11,9 @@ never promoted to visible or certified gameplay evidence.
 
 | State | Requirements |
 |---|---:|
-| missing | 6470 |
-| contract | 179 |
-| prototype | 161 |
+| missing | 6581 |
+| contract | 90 |
+| prototype | 139 |
 | integrated | 58 |
 | visible | 17 |
 | certified | 0 |
@@ -25,31 +25,30 @@ never promoted to visible or certified gameplay evidence.
 | Checkpoint | Total | Missing | Contract | Prototype | Integrated | Visible | Certified |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | C21 | 371 | 371 | 0 | 0 | 0 | 0 | 0 |
-| C22 | 251 | 209 | 7 | 0 | 35 | 0 | 0 |
+| C22 | 251 | 216 | 0 | 0 | 35 | 0 | 0 |
 | C23 | 971 | 928 | 0 | 22 | 21 | 0 | 0 |
-| C24 | 651 | 570 | 64 | 0 | 0 | 17 | 0 |
-| C25 | 184 | 180 | 4 | 0 | 0 | 0 | 0 |
+| C24 | 651 | 634 | 0 | 0 | 0 | 17 | 0 |
+| C25 | 184 | 184 | 0 | 0 | 0 | 0 | 0 |
 | C26 | 105 | 104 | 0 | 1 | 0 | 0 | 0 |
 | C27 | 1166 | 1097 | 10 | 58 | 1 | 0 | 0 |
 | C28 | 168 | 136 | 5 | 27 | 0 | 0 | 0 |
 | C29 | 312 | 299 | 0 | 13 | 0 | 0 | 0 |
 | C30 | 22 | 16 | 0 | 6 | 0 | 0 | 0 |
-| C31 | 270 | 265 | 0 | 5 | 0 | 0 | 0 |
+| C31 | 270 | 270 | 0 | 0 | 0 | 0 | 0 |
 | C32 | 12 | 12 | 0 | 0 | 0 | 0 | 0 |
-| C33 | 78 | 74 | 0 | 4 | 0 | 0 | 0 |
+| C33 | 78 | 78 | 0 | 0 | 0 | 0 | 0 |
 | C34 | 83 | 83 | 0 | 0 | 0 | 0 | 0 |
-| C35 | 512 | 500 | 0 | 12 | 0 | 0 | 0 |
-| C36 | 135 | 121 | 14 | 0 | 0 | 0 | 0 |
+| C35 | 512 | 512 | 0 | 0 | 0 | 0 | 0 |
+| C36 | 135 | 135 | 0 | 0 | 0 | 0 | 0 |
 | C37 | 362 | 351 | 11 | 0 | 0 | 0 | 0 |
 | C38 | 502 | 435 | 59 | 8 | 0 | 0 | 0 |
-| C39 | 654 | 643 | 5 | 5 | 1 | 0 | 0 |
+| C39 | 654 | 644 | 5 | 4 | 1 | 0 | 0 |
 | C40 | 76 | 76 | 0 | 0 | 0 | 0 | 0 |
 
 ## Evidence Catalog Matches
 
 | Rule | Requirements matched |
 |---|---:|
-| EVID-ACADEMY-CONTRACTS | 9 |
 | EVID-C22-DISPOSABLE-ISOLATION | 12 |
 | EVID-C22-LIVE-RUNTIME-BRIDGE | 21 |
 | EVID-C22-RENDER-PROFILE-PARITY | 2 |
@@ -57,21 +56,15 @@ never promoted to visible or certified gameplay evidence.
 | EVID-C23-PROGRESSION-TRUTH | 5 |
 | EVID-C23-TRANSACTIONAL-RESTORE | 2 |
 | EVID-C23-WAVE99-PLAYABLE-EPISODE | 8 |
-| EVID-C24-DIFFICULTY-EXPECTATION-CONTRACTS | 10 |
 | EVID-C24-HIERARCHICAL-SCRIPTED-CORE | 17 |
-| EVID-C24-MODE-COMPLETION-CONTRACTS | 9 |
-| EVID-C24-PERSONA-CONTRACTS | 52 |
-| EVID-FOUNDRY-CONTRACT | 14 |
 | EVID-GHOST-CLOUD-CONTRACTS | 63 |
 | EVID-GHOST-COACH-CONTRACT | 3 |
 | EVID-GHOST-THEATER-PROTOTYPE | 23 |
 | EVID-GHOST-TRUTH-CONTRACTS | 9 |
 | EVID-GHOST-VAULT-PROTOTYPE | 47 |
 | EVID-HEADLESS-ABSTRACTION | 6 |
-| EVID-LADDER-PROTOTYPE | 13 |
 | EVID-LEGACY-REPLAY | 2 |
 | EVID-NAMED-RNG-STREAMS | 7 |
-| EVID-PHYSICAL-ADAPTER-CONTRACTS | 4 |
 | EVID-PLAYER-EXPERIENCE-CONTRACTS | 8 |
 | EVID-PRESERVATION-CONTRACTS | 7 |
 | EVID-PROGRESSION-LEDGER | 3 |
@@ -87,7 +80,7 @@ never promoted to visible or certified gameplay evidence.
 
 ## Blocking Truth
 
-- Missing normative requirements: 6470
+- Missing normative requirements: 6581
 - Visible requirements: 17
 - Certified requirements: 0
 - C22-C40 remain incomplete until their annex requirements reach their required evidence state.

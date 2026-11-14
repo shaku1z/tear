@@ -19,7 +19,7 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
   violating edges and import cycles (`config/architecture-baseline.json`) and a
   700-line limit per module (two data tables are exempt), counted in
   formatting-independent line equivalents (the code budget's character measure).
-- `src/agents/` (AI player research) and `src/tearbench/` (TearBench, the
+- `src/agents/` (the scripted test player) and `src/tearbench/` (TearBench, the
   verification system) are tooling, not game features. `src/ghost/` mixes the
   player's replay system with unfinished replay features.
 - Every package script and every `scripts/` entry point is listed in
