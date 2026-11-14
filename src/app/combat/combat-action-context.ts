@@ -142,6 +142,7 @@ export interface LiveCombatLocalPorts<Enemy extends CombatEnemy = CombatEnemy> {
       cause?: string,
       detail?: Readonly<Record<string, unknown>>,
     ): unknown;
+    makeDeathEvent(enemy: object, cause: string | undefined, cleanElimination: boolean): unknown;
     weaponHook(
       name: string,
       detail: Readonly<Record<string, unknown>>,
@@ -162,7 +163,6 @@ export interface LiveCombatLocalPorts<Enemy extends CombatEnemy = CombatEnemy> {
     ghostSample: Collision["ghostSample"];
     restorePlatforms: LiveKillHost["restorePlatforms"];
     playSound: (name: string, argument?: unknown) => void;
-    addOverrunStack: () => void;
     setBossBanner: (text: string, color: string) => void;
   }>;
 }
