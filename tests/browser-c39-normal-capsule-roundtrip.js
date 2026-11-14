@@ -148,7 +148,7 @@ async function waitStatus(page, expected) {
 }
 async function openVault(journey) {
   await journey.clickAndWait(260, 266, "profile");
-  await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.vaultTab, undefined, { timeout: 10000 });
+  await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.vaultTab, undefined, { timeout: STATE_WAIT_MS });
   const vaultTab = await journey.page.evaluate(() => window.__C39_FILE_TEXT__.vaultTab);
   await journey.page.mouse.click(vaultTab.x, vaultTab.y); // The drawn VAULT tab label.
   await settle(journey.page);
