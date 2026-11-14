@@ -1019,10 +1019,8 @@ export function createProductionCombatPhases(
       effects.death(enemy.x, enemy.y, shards, enemy.color);
     },
     deathSound: note("deathSound"),
-    // The same death event and dispatch live play uses; a hand-built event here once left kill
-    // hooks without area damage (Detonate crashed) and without Overrun stacking.
-    makeDeathEvent: (enemy: unknown, cause: string | undefined, cleanElimination: boolean) =>
-      requireWeaponRuntime().makeDeathEvent(enemy as LiveWeaponEnemy, cause, cleanElimination),
+    makeDeathEvent: (enemy: unknown, cause: string | undefined, clean: boolean) =>
+      requireWeaponRuntime().makeDeathEvent(enemy as never, cause, clean),
     fire: (hooks: unknown, event: unknown) => {
       if (Array.isArray(hooks)) requireWeaponRuntime().fire(hooks as never, event as never);
     },
