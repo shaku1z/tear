@@ -3,6 +3,7 @@
 // receipt must reproduce when the capsule is replayed through the detached production world.
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function resolved(id, start, state) {
   const document = { format: "tearsdl", schemaVersion: 1, id, stateClass: "surgical-valid", seed: id, start, state };
@@ -54,7 +55,7 @@ async function runCase(entry, port) {
     { name: `Verdant live/replay parity: ${entry.document.id}`, port, query: { "ghost-v3-profile": "forensic-qa" } },
     async ({ page }) => {
       await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-        timeout: 15_000,
+        timeout: STATE_WAIT_MS,
       });
       const previous = null;
       const id = entry.document.id;
@@ -94,7 +95,7 @@ async function runCase(entry, port) {
           return (manifest !== null && manifest.id !== prior) || window.__TEAR_GHOST_V3__.failure() !== null;
         },
         previous,
-        { timeout: 30_000 },
+        { timeout: STATE_WAIT_MS },
       );
       assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null, `${id}: recorder failed`);
       const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
