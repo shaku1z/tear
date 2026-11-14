@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 withJourney(
   { name: "progression journeys", port: 8142, recordFrames: true },
@@ -71,7 +72,9 @@ withJourney(
     const initialDraft = await page.evaluate(() => window.__PANTHEON_TEST.state().draft || null);
     assert.ok(initialDraft && initialDraft.choiceCount >= 3, "draft hook prepares real choices");
     await page.keyboard.press("r");
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().draft?.rerolls === 1, undefined, { timeout: 5000 });
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().draft?.rerolls === 1, undefined, {
+      timeout: STATE_WAIT_MS,
+    });
     assert.equal(
       await page.evaluate(() => window.__PANTHEON_TEST.state().draft.rerolls),
       1,

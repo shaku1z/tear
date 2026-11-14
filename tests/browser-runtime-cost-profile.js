@@ -28,6 +28,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const buildRoot = path.resolve(projectRoot, process.env.TEAR_PROFILE_BUILD || path.join("dist", "test-standalone"));
@@ -178,11 +179,14 @@ async function openPage(browser, pass) {
   await page.route("**/*", (route) =>
     route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
   );
-  await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, {
+    waitUntil: "domcontentloaded",
+    timeout: STATE_WAIT_MS,
+  });
   await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__ && window.__PANTHEON_TEST);
   await page.keyboard.press("Shift");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, {
-    timeout: 20000,
+    timeout: STATE_WAIT_MS,
   });
   await waitScreen(page, "menu");
   return { page, pageErrors };
@@ -206,13 +210,13 @@ async function startBossPhaseTwo(page, boss) {
         .TEAR_WEAPON_DEBUG?.()
         .enemies.some((enemy) => enemy.bossId === id && enemy.spawnT <= 0 && enemy.introT === 0),
     boss,
-    { timeout: 15000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
   await page.waitForFunction(
     (id) => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === id)?.phase === 2,
     boss,
-    { timeout: 5000 },
+    { timeout: STATE_WAIT_MS },
   );
 }
 
@@ -230,7 +234,7 @@ async function driveCombat(page, durationMs) {
         direction = direction === "d" ? "a" : "d";
         await page.keyboard.down(direction);
       }
-      await page.waitForTimeout(90);
+      await page.waitForTimeout(holdFor(90));
       iteration += 1;
     }
   } finally {
@@ -239,7 +243,7 @@ async function driveCombat(page, durationMs) {
 }
 
 async function idle(page, durationMs) {
-  await page.waitForTimeout(durationMs);
+  await page.waitForTimeout(holdFor(durationMs));
 }
 
 /** Every scene composes its state through the shipped debug/test API, then is driven for the window. */
@@ -263,7 +267,7 @@ const SCENES = Object.freeze({
           return window.__PANTHEON_TEST.state().game === "playing" && window.__PANTHEON_TEST.state().enemyCount > 0;
         },
         undefined,
-        { timeout: 30000, polling: 250 },
+        { timeout: STATE_WAIT_MS, polling: 250 },
       );
     },
   },
@@ -291,7 +295,7 @@ const SCENES = Object.freeze({
           );
         },
         undefined,
-        { timeout: 10000 },
+        { timeout: STATE_WAIT_MS },
       );
     },
   },
@@ -314,7 +318,7 @@ const SCENES = Object.freeze({
       await page.waitForFunction(
         () => window.__PANTHEON_TEST.state().game === "playing" && window.__PANTHEON_TEST.tutorial().active === true,
         undefined,
-        { timeout: 30000 },
+        { timeout: STATE_WAIT_MS },
       );
     },
   },
@@ -324,7 +328,7 @@ const SCENES = Object.freeze({
     async setup(page) {
       // The hub arms pointer input only after the cursor settles on it, as the navigation journeys do.
       await page.mouse.move(260, 452);
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(holdFor(300));
       await page.mouse.click(260, 452);
       await waitScreen(page, "shop");
     },

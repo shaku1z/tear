@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 withJourney({ name: "cinematic preference journeys", port: 8145 }, async ({ page, boot, waitScreen }) => {
   for (const preference of ["full", "brief", "off"]) {
@@ -14,7 +15,9 @@ withJourney({ name: "cinematic preference journeys", port: 8145 }, async ({ page
 
     if (preference === "off") {
       assert.equal(snapshot.active, false, "off must not launch a blocking chapter cinematic");
-      await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount > 0, undefined, { timeout: 10_000 });
+      await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount > 0, undefined, {
+        timeout: STATE_WAIT_MS,
+      });
     } else {
       assert.equal(snapshot.active, true, `${preference} must launch the chapter cinematic`);
       assert.equal(

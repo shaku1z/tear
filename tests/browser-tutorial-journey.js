@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const scenario = {
   format: "tear-contract",
@@ -54,14 +55,14 @@ withJourney({ name: "tutorial full journey", port: 4187, deferBoot: true }, asyn
     });
     await boot();
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST, undefined, {
-      timeout: 15_000,
+      timeout: STATE_WAIT_MS,
     });
     // Use the same async preflight as the real Play menu before taking exact-tick control.
     await page.evaluate(() => window.__PANTHEON_TEST.startMode("tutorial", "normal"));
     await page.waitForFunction(
       () => window.__PANTHEON_TEST.state().game === "playing" && window.__PANTHEON_TEST.tutorial().active,
       undefined,
-      { timeout: 15_000 },
+      { timeout: STATE_WAIT_MS },
     );
     const driverSource = require("typescript").transpileModule(
       fs.readFileSync(path.join(__dirname, "../src/tearbench/tutorial-course-driver.ts"), "utf8"),

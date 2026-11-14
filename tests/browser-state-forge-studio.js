@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
 withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, errors }) => {
   async function openSurface(query) {
@@ -10,8 +11,8 @@ withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, error
     url.searchParams.delete("stateforge");
     url.searchParams.set(query, "1");
     await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
-    await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
-    await page.waitForTimeout(100);
+    await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
+    await page.waitForTimeout(settleFor(100));
   }
 
   await openSurface("scenario-console");
@@ -127,7 +128,7 @@ withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, error
       .filter({ hasText: `Resolved ${document.id}` })
       .waitFor();
     await page.getByRole("button", { name: "Launch scenario", exact: true }).evaluate((button) => button.click());
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(settleFor(200));
     assert.match(await page.getByRole("status").textContent(), new RegExp(`Launched ${document.id}`));
     const forged = await page.evaluate((expectedClass) => {
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");

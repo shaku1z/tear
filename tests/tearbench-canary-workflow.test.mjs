@@ -21,7 +21,7 @@ test("parallel canary is manual and non-required while Validate keeps plain brow
   assert.match(workflow, /^name: TearBench Parallel Canary[\s\S]+?workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /\n\s+(?:pull_request|push):/u);
   assert.match(validate, /xvfb-run -a pnpm check:functional/u);
-  assert.match(validate, /timeout-minutes: 30/u);
+  assert.match(validate, /timeout-minutes: 45/u);
   assert.match(workflow, /pnpm exec playwright install --with-deps chromium/u);
   assert.doesNotMatch(workflow, /playwright[^\n]*--shard|--workers(?:=|\s)/u);
   assert.ok(

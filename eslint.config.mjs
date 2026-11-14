@@ -164,6 +164,33 @@ export default tseslint.config(
     },
   },
   {
+    // Browser tests name every wall-clock wait (tests/browser-waits.js): a state-wait ceiling, a
+    // poll interval, a held input or a "must not happen within". A bare short number here is how
+    // a correct game used to fail on a slow runner.
+    files: ["tests/**/*browser*.js", "tests/pwa-offline.js"],
+    ignores: ["tests/browser-waits.js"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Property[key.name=/^timeout(Ms)?$/] > Literal.value",
+          message:
+            "Name the wait: timeout: STATE_WAIT_MS (or SLOW_STATE_WAIT_MS) for a game state, pollEvery(ms) for a retry, from tests/browser-waits.js.",
+        },
+        {
+          selector: "Property[key.name=/^timeout(Ms)?$/] > :matches(BinaryExpression, LogicalExpression) Literal",
+          message: "Name the wait with a constant or helper from tests/browser-waits.js, not a number.",
+        },
+        {
+          selector:
+            "CallExpression[callee.property.name='waitForTimeout']:not([arguments.0.type='CallExpression'][arguments.0.callee.name=/^(pollEvery|holdFor|notWithin|settleFor)$/])",
+          message:
+            "A sleep must say what it is for: pollEvery(ms), holdFor(ms) or notWithin(ms) from tests/browser-waits.js. To wait for the game, wait for its state instead.",
+        },
+      ],
+    },
+  },
+  {
     files: ["src/domain/**/*.ts", "src/simulation/**/*.ts", "src/gameplay/**/*.ts"],
     rules: {
       "no-restricted-syntax": [

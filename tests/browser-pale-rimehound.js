@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 withJourney({ name: "Pale PT3-C3 Rimehound", port: 8353 }, async ({ page, waitScreen, buildInfo }) => {
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
@@ -17,7 +18,7 @@ withJourney({ name: "Pale PT3-C3 Rimehound", port: 8353 }, async ({ page, waitSc
       );
     },
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
 
   const windup = await page.evaluate(() =>
@@ -52,7 +53,7 @@ withJourney({ name: "Pale PT3-C3 Rimehound", port: 8353 }, async ({ page, waitSc
   await page.waitForFunction(
     () => window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.kind === "rimehound" && enemy.atk === "pounce"),
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const pounceFile = "committed-pounce-1600x900.png";
   await page.screenshot({ path: path.join(directory, pounceFile) });
@@ -60,7 +61,7 @@ withJourney({ name: "Pale PT3-C3 Rimehound", port: 8353 }, async ({ page, waitSc
   await page.waitForFunction(
     () => window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.kind === "rimehound" && enemy.atk === "skid"),
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
 
   await page.evaluate(() =>
@@ -76,7 +77,7 @@ withJourney({ name: "Pale PT3-C3 Rimehound", port: 8353 }, async ({ page, waitSc
   await page.waitForFunction(
     () => window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.kind === "rimehound" && enemy.atk === "windup"),
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const accessibilityFile = "accessible-windup-1600x900.png";
   await page.screenshot({ path: path.join(directory, accessibilityFile) });

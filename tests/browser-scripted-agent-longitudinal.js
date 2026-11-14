@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, pollEvery } = require("./browser-waits");
 
 const baseSeed = Number(process.env.C24_LONGITUDINAL_SEED || 4);
 const maxEpisodes = Number(process.env.C24_LONGITUDINAL_MAX_EPISODES || 5);
@@ -91,7 +92,7 @@ withJourney(
             return Object.values(profile.achievementOutbox?.grants ?? {}).every((grant) => grant.acknowledged);
           },
           undefined,
-          { timeout: 10_000 },
+          { timeout: STATE_WAIT_MS },
         );
         return storage();
       };
@@ -100,7 +101,7 @@ withJourney(
           (expected) =>
             window.__R18_TEXT__.some((entry) => entry.text === expected && performance.now() - entry.at < 250),
           label,
-          { timeout: 10_000 },
+          { timeout: STATE_WAIT_MS },
         );
         const point = await page.evaluate(
           (expected) => window.__R18_TEXT__.findLast((entry) => entry.text === expected),
@@ -348,7 +349,7 @@ withJourney(
           do {
             screen = await page.evaluate(() => window.__PANTHEON_TEST.state().game);
             if (screen === "gameover" || screen === "win") break;
-            await page.waitForTimeout(100);
+            await page.waitForTimeout(pollEvery(100));
           } while (Date.now() < passiveDeadline);
           episode.terminalScreen = screen;
           episode.passiveTimedOut = screen !== "gameover" && screen !== "win";
@@ -478,7 +479,7 @@ withJourney(
     const url = new URL(page.url());
     url.searchParams.set("watchagent", "1");
     await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
-    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15_000 });
+    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
     await page.getByLabel("Profile").selectOption("competent");
     await page.getByLabel("Mode").selectOption("campaign");
     await page.getByLabel("Difficulty").selectOption("easy");

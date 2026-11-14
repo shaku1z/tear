@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const variants = [
   ["charger", "rime-runner", "Rime Runner", "windup"],
@@ -45,7 +46,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
               (expected == null || enemy.atk === expected || enemy.state === expected),
           ),
       [kind, variantId, readableState],
-      { timeout: 10_000 },
+      { timeout: STATE_WAIT_MS },
     );
     const actor = await page.evaluate(
       ([family, id]) =>
@@ -69,7 +70,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
               (enemy) => enemy.variant === "rime-runner" && enemy.rimeRebounds === 1 && enemy.atk === "commit",
             ),
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       const reboundFile = "rime-runner-rebound-1600x900.png";
       await page.screenshot({ path: path.join(directory, reboundFile) });
@@ -80,7 +81,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
         () =>
           window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "prism-shard").length === 2,
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       const shards = await page.evaluate(() =>
         window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "prism-shard"),
@@ -107,7 +108,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
                 projectile.counterplay === "recombined return",
             ),
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       const returnFile = "prism-seer-perfect-recombined-return-1600x900.png";
       await page.screenshot({ path: path.join(directory, returnFile) });
@@ -127,7 +128,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
               (enemy) => enemy.variant === "snowfall-kite" && enemy.state === "recover" && enemy.snowWakeT > 0,
             ),
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       const wakeFile = "snowfall-kite-recovery-wake-1600x900.png";
       await page.screenshot({ path: path.join(directory, wakeFile) });
@@ -137,7 +138,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
       await page.waitForFunction(
         () => window.TEAR_WEAPON_DEBUG().projectiles.some((projectile) => projectile.kind === "hail-orb"),
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       const orb = await page.evaluate(() =>
         window.TEAR_WEAPON_DEBUG().projectiles.find((projectile) => projectile.kind === "hail-orb"),
@@ -153,14 +154,14 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
       await page.waitForFunction(
         () => window.TEAR_WEAPON_DEBUG().projectiles.some((projectile) => projectile.kind === "hail-orb"),
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       await page.evaluate(() => window.__PANTHEON_TEST.positionDebugPlayer(1_450));
       await page.waitForFunction(
         () =>
           window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "hail-shard").length === 6,
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       const shatterFile = "hailcaster-ground-shatter-1600x900.png";
       await page.screenshot({ path: path.join(directory, shatterFile) });
@@ -187,7 +188,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
               (enemy) => enemy.variant === "glacier-guard" && enemy.glacierCracked === true && enemy.enraged === false,
             ),
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       const crackedFile = "glacier-guard-launched-crack-1600x900.png";
       await page.screenshot({ path: path.join(directory, crackedFile) });
@@ -202,7 +203,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
               (enemy) => enemy.variant === "glacier-guard" && enemy.glacierCracked === true && enemy.enraged === true,
             ),
         undefined,
-        { timeout: 10_000 },
+        { timeout: STATE_WAIT_MS },
       );
       const brokenFile = "glacier-guard-broken-enraged-1600x900.png";
       await page.screenshot({ path: path.join(directory, brokenFile) });
@@ -225,7 +226,7 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
     () =>
       window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.variant === "snowfall-kite" && enemy.state === "warn"),
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const accessibleFile = "snowfall-kite-accessible-1600x900.png";
   await page.screenshot({ path: path.join(directory, accessibleFile) });

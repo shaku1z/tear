@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const { mkdir, writeFile } = require("node:fs/promises");
 const { join } = require("node:path");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 // One engineered immutable parent; both attempts use the ordinary live UI/RAF.
 withJourney(
@@ -55,7 +56,7 @@ withJourney(
       await page.waitForFunction(
         (label) => window.__CHALLENGE_POSITIONS__?.some((entry) => entry.text === label),
         text,
-        { timeout: 10000 },
+        { timeout: STATE_WAIT_MS },
       );
       const point = await page.evaluate(
         (label) => window.__CHALLENGE_POSITIONS__.findLast((entry) => entry.text === label),
@@ -93,7 +94,7 @@ withJourney(
       await page.waitForFunction(
         () => window.__CHALLENGE_POSITIONS__.some((entry) => entry.text === "\u25c6 THEATER" && entry.y > 310),
         undefined,
-        { timeout: 10000 },
+        { timeout: STATE_WAIT_MS },
       );
     };
     const openRow = async (index) => {
@@ -163,7 +164,7 @@ withJourney(
       await page.waitForFunction(
         () => window.__TEAR_GHOST_V3__.manifest() || window.__TEAR_GHOST_V3__.failure(),
         undefined,
-        { timeout: 20000 },
+        { timeout: STATE_WAIT_MS },
       );
       assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
       const source = await page.evaluate(() => window.__TEAR_GHOST_V3__.read(window.__TEAR_GHOST_V3__.manifest().id));
@@ -199,13 +200,13 @@ withJourney(
       await page.mouse.click(race.x, race.y);
       await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
         polling: "raf",
-        timeout: 15000,
+        timeout: STATE_WAIT_MS,
       });
       await page.mouse.move(1200, 400);
       await page.mouse.click(1200, 400, { button: "right" });
       await page.waitForFunction(() => window.__PANTHEON_TEST.state().bladeTrace?.state !== "held", undefined, {
         polling: "raf",
-        timeout: 2000,
+        timeout: STATE_WAIT_MS,
       });
       await page.mouse.click(1200, 400, { button: "right" });
       const succeeded = await waitForBrowserValue(
@@ -215,9 +216,11 @@ withJourney(
             (entry) => entry.provenance?.forkOrigin && entry.status === "complete",
           ),
         undefined,
-        { timeout: 20000 },
+        { timeout: STATE_WAIT_MS },
       );
-      const successProofBytes = await waitForBrowserValue(page, proofFromBrowser, succeeded.id, { timeout: 20000 });
+      const successProofBytes = await waitForBrowserValue(page, proofFromBrowser, succeeded.id, {
+        timeout: STATE_WAIT_MS,
+      });
       const result = JSON.parse(successProofBytes);
       assert.equal(result.status, "succeeded");
       assert.equal(result.proof.completed, true);
@@ -267,7 +270,7 @@ withJourney(
       await page.mouse.click(wave.x, wave.y);
       await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
         polling: "raf",
-        timeout: 15000,
+        timeout: STATE_WAIT_MS,
       });
       await page.keyboard.press("Escape");
       await waitScreen("paused");
@@ -281,9 +284,9 @@ withJourney(
             (entry) => entry.provenance?.forkOrigin && entry.id !== id && entry.status === "complete",
           ),
         succeeded.id,
-        { timeout: 20000 },
+        { timeout: STATE_WAIT_MS },
       );
-      const stoppedProof = await waitForBrowserValue(page, proofFromBrowser, stopped.id, { timeout: 20000 });
+      const stoppedProof = await waitForBrowserValue(page, proofFromBrowser, stopped.id, { timeout: STATE_WAIT_MS });
       assert.ok(stoppedProof, "Stopped attempt proof must persist");
       assert.equal(JSON.parse(stoppedProof).status, "abandoned");
       assert.equal(JSON.parse(stoppedProof).proof.completed, false);
