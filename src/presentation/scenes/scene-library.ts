@@ -66,10 +66,16 @@ export interface SceneDrawInput {
  * validation and drawing. A stage without a ready package returns false from
  * each draw so the caller keeps its procedural art; nothing here touches
  * simulation state.
+ *
+ * Only `prefetch` starts a download. Every other call reads what has already
+ * loaded, so a menu that merely draws a stage never fetches that stage's art.
  */
 export interface SceneLibrary {
   status(stageId: string): SceneStatus;
-  /** Starts loading a stage's package if it has one; safe to call repeatedly. */
+  /**
+   * Starts loading a stage's package if it has one; safe to call every frame.
+   * Call it when a run shows the stage or is about to, never from a menu.
+   */
   prefetch(stageId: string): void;
   /** The paper colour the theme should derive ink from, while the scene shows. */
   paper(stageId: string): string | undefined;
@@ -120,11 +126,11 @@ async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): 
 
 export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
   const entries = new Map<string, Entry>();
-  const entry = (stageId: string): Entry | undefined => {
-    const current = entries.get(stageId);
-    if (current !== undefined) return current;
+  const entry = (stageId: string): Entry | undefined => entries.get(stageId);
+  const request = (stageId: string): void => {
+    if (entries.has(stageId)) return;
     const loader = Object.hasOwn(ports.packages, stageId) ? ports.packages[stageId] : undefined;
-    if (loader === undefined) return undefined;
+    if (loader === undefined) return;
     const created: Entry = { status: "loading", readyAt: 0 };
     entries.set(stageId, created);
     loader()
@@ -138,7 +144,6 @@ export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
         created.status = "failed";
         ports.onError?.(stageId, error);
       });
-    return created;
   };
   const ready = (stageId: string): LoadedScene | undefined => {
     const current = entry(stageId);
@@ -168,9 +173,7 @@ export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
   const materials = new Map<string, ReturnType<typeof surface>>();
   return {
     status: (stageId) => entry(stageId)?.status ?? "none",
-    prefetch: (stageId) => {
-      entry(stageId);
-    },
+    prefetch: request,
     paper: (stageId) => ready(stageId)?.scene.theme.paper,
     loaded: ready,
     opaque(stageId) {

@@ -99,9 +99,16 @@ A generated source has no file: its generator settings are pinned instead.
 
 ### Runtime
 
-- The package loads the first time its stage draws. Until it has decoded, or if
-  it fails, the procedural backdrop draws as before. The painting fades in over
-  0.6 s (instantly with reduced motion).
+- A package loads only when a run needs it: one wave before the run reaches the
+  stage (during the boss of the stage before, in the campaign), or when the
+  world first shows the stage if it got there another way. Nothing loads before
+  the first frame, from a menu, or for a stage the run has not come near. The
+  menu's moving background draws every stage in turn and never fetches art; it
+  keeps the procedural look. Only `prefetch` in the scene library starts a
+  download, and `pnpm check:load-budgets` measures what a new player downloads
+  before playing, on both release builds.
+- Until a package has decoded, or if it fails, the procedural backdrop draws as
+  before. The painting fades in over 0.6 s (instantly with reduced motion).
 - Each image is decoded, then copied into a canvas once. Chrome keeps a bitmap
   decoded from a file off the GPU and re-uploads it on every frame that draws
   it. On Verdant that cost about 50 ms a frame; with the copy, Verdant measures

@@ -165,7 +165,6 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     },
   });
   const Backdrop = createBackdrop({
-    surfaceTexture: (stageId) => Scenes.surfaceMaterial(stageId),
     clock: CLOCK,
     config: worldConfig,
     graphics: GFX,

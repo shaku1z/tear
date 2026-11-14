@@ -363,6 +363,8 @@ export function createLiveWorldPresentationAdapters(
       },
       drawBackdrop: (_value, time, playerX, bounds, camera) => {
         const stageId = stage.current.id;
+        // The world is showing this stage, so its painted background may load now.
+        d.Scenes.prefetch(stageId);
         if (!d.Scenes.opaque(stageId)) d.Backdrop.draw(canvas, stage.current, time, playerX, bounds);
         d.Scenes.drawBack(canvas, sceneInput(stageId, time, playerX, bounds, camera));
         d.Scenes.drawShadows(canvas, stageId, stage.platforms);
@@ -374,7 +376,8 @@ export function createLiveWorldPresentationAdapters(
         );
       },
       drawPlatform: (platform, _value, floor, bounds) => {
-        d.Backdrop.platform(canvas, platform, stage.current, floor, bounds);
+        const texture = d.Scenes.surfaceMaterial(stage.current.id);
+        d.Backdrop.platform(canvas, platform, stage.current, floor, bounds, texture);
       },
       drawFinale: drawFinaleWorld,
       tutorialActive: actorsIncluded && run.mode === "tutorial" && tutorial.active,

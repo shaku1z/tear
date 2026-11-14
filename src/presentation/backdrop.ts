@@ -183,6 +183,7 @@ export interface BackdropController {
     stage: Stage,
     isFloor?: boolean,
     view?: ViewRect,
+    texture?: SurfaceTexture,
   ): void;
   flare(x: number, y: number, color: string, radius: number, life: number): void;
   bloom(color: string, strength: number, life: number): void;
@@ -192,7 +193,6 @@ export interface BackdropController {
 
 /** Outward rendering adapters supplied by the composition that owns a world. */
 export interface BackdropPolicy {
-  readonly surfaceTexture?: (stageId: string) => SurfaceTexture;
   readonly clock: TearWorldClock;
   readonly config: Readonly<{
     view: Readonly<{ w: number; h: number }>;
@@ -860,7 +860,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
       ctx.restore();
     },
 
-    platform(ctx, p, stage, isFloor, view) {
+    platform(ctx, p, stage, isFloor, view, texture) {
       if (p.void) {
         this.voidPlatform(ctx, p, stage);
         return;
@@ -891,7 +891,7 @@ export function createBackdrop(policy: BackdropPolicy): BackdropController {
               : 0,
         };
         const draw = material === "pale-ice" ? drawPaleIce : drawVerdantRootstone;
-        draw(ctx, platform, materialPolicy, policy.surfaceTexture?.(stage.id));
+        draw(ctx, platform, materialPolicy, texture);
         return;
       }
       if (p.arenaPlatId && !isFloor) {

@@ -68,10 +68,34 @@ describe("scene library", () => {
     expect(library.paper("grounds")).toBeUndefined();
   });
 
-  it("loads lazily, then draws the back plane, platform texture, shadows and theme paper", async () => {
+  it("never starts a download from a read or a draw, only from prefetch", () => {
+    // The menu's background draws every stage in turn. If drawing one fetched its
+    // art, a new player would download a biome before their first run.
+    const loader = vi.fn(ports().packages["fixture-stage"]);
+    const library = createSceneLibrary(ports({ packages: { "fixture-stage": loader } }));
+    const { context, calls } = recordingContext();
+    const platform = { x: 150, y: 645, w: 330, h: 24 };
+    expect(library.status("fixture-stage")).toBe("none");
+    expect(library.paper("fixture-stage")).toBeUndefined();
+    expect(library.opaque("fixture-stage")).toBe(false);
+    expect(library.loaded("fixture-stage")).toBeUndefined();
+    library.drawBack(context, input);
+    library.drawFront(context, input);
+    library.drawShadows(context, "fixture-stage", [platform]);
+    expect(library.surfaceMaterial("fixture-stage").draw(context, platform, false)).toBe(false);
+    expect(calls).toEqual([]);
+    expect(loader).not.toHaveBeenCalled();
+    library.prefetch("fixture-stage");
+    library.prefetch("fixture-stage");
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(library.status("fixture-stage")).toBe("loading");
+  });
+
+  it("loads on prefetch, then draws the back plane, platform texture, shadows and theme paper", async () => {
     const loader = vi.fn(ports().packages["fixture-stage"]);
     const library = createSceneLibrary(ports({ packages: { "fixture-stage": loader } }));
     expect(loader).not.toHaveBeenCalled();
+    library.prefetch("fixture-stage");
     expect(library.status("fixture-stage")).toBe("loading");
     await vi.waitFor(() => {
       expect(library.status("fixture-stage")).toBe("ready");
