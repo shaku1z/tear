@@ -208,7 +208,7 @@ async function pointerBelongsToTheMouseAlone(browser, configure) {
   // Sensor noise: a few pixels of drift must not bring the pointer back.
   await page.mouse.move(642, 361);
   await page.mouse.move(641, 362);
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(notWithin(150));
   assert.equal((await input()).mode, "keyboard", "mouse jitter does not reclaim the interface");
   assert.equal((await input()).ownedPointer, null);
 
@@ -237,7 +237,6 @@ async function pointerBelongsToTheMouseAlone(browser, configure) {
  * tap on PLAY opens the run setup (it once opened the Shop, which sat under the moved layout).
  */
 async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
-  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   for (const device of [
     { name: "tablet", isMobile: true, startsOn: "touch" },
     { name: "touch laptop", isMobile: false, startsOn: "mouse" },
@@ -262,7 +261,17 @@ async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
     await configure(page);
     const input = () => page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot());
     await page.waitForFunction(() => window.__DRAFT_HINTS__().some((hint) => hint.text === "PLAY"));
-    await sleep(1_200);
+    // The menu slides in: wait until PLAY is drawn in the same place on two looks in a row.
+    await page.waitForFunction(
+      () => {
+        const play = window.__DRAFT_HINTS__().findLast((hint) => hint.text === "PLAY");
+        const last = window.__PLAY_AT__;
+        window.__PLAY_AT__ = play;
+        return Boolean(play && last && play.x === last.x && play.y === last.y);
+      },
+      undefined,
+      { timeout: STATE_WAIT_MS, polling: pollEvery(250) },
+    );
     const start = await input();
     assert.equal(start.mode, device.startsOn, `${device.name}: the owning device at load`);
     assert.equal(start.touchLayout, device.isMobile, `${device.name}: the layout at load`);
@@ -273,10 +282,10 @@ async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
       type: "touchStart",
       touchPoints: [{ x: play.x + 12, y: play.y - 4, id: 1 }],
     });
-    await sleep(60);
+    await page.waitForTimeout(holdFor(60));
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen !== "menu", undefined, {
-      timeout: 5_000,
+      timeout: STATE_WAIT_MS,
     });
     assert.equal(
       await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen),
