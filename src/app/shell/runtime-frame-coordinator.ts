@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { InputMode, Point } from "../../input/browser-input-contracts";
 import { UI_CONFIRM_SETTLE_SECONDS } from "../interface/ui-action-coordinator";
 
@@ -44,7 +45,8 @@ interface RuntimeFrameDiagnostics {
 
 interface RuntimeFrameDocumentPort {
   readonly body: { readonly dataset: Record<string, string | undefined> };
-  exitPointerLock(): void;
+  /** Absent on iOS Safari and older Android browsers. */
+  readonly exitPointerLock?: () => void;
 }
 
 interface RuntimeFrameNavigatorPort {
@@ -142,7 +144,7 @@ export class RuntimeFrameCoordinator {
       ) {
         this.#options.setState("paused");
         try {
-          document.exitPointerLock();
+          releasePointerLock(document);
         } catch {
           /* Pointer lock may already be gone. */
         }
@@ -188,7 +190,7 @@ export class RuntimeFrameCoordinator {
       this.#options.setState("paused");
       this.#wasPointerLocked = false;
       try {
-        document.exitPointerLock();
+        releasePointerLock(document);
       } catch {
         /* Pointer lock may already be gone. */
       }

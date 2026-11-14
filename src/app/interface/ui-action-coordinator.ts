@@ -77,7 +77,12 @@ export interface UiFrameInput {
   readonly scrollY: number;
   readonly pageUp: boolean;
   readonly pageDown: boolean;
-  readonly pointer: UiPoint;
+  /**
+   * Where the mouse points, or null while another device owns the interface (input mode
+   * other than "mouse"). A touch screen has no hover, and a resting mouse must not take
+   * focus from a controller or the keyboard.
+   */
+  readonly pointer: UiPoint | null;
   readonly touch: boolean;
   readonly directions: Readonly<Record<NavigationDirection, boolean>>;
   readonly previous: boolean;
@@ -208,10 +213,13 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
   }
 
   let focus = input.focus;
-  // pointer hover moves focus in every input mode (source handleUI contract)
-  for (const index of enabled) {
-    const button = input.buttons[index];
-    if (button !== undefined && pointInUiRect(button, input.pointer)) focus = index;
+  // mouse hover moves focus while the mouse owns the interface
+  const pointer = input.pointer;
+  if (pointer !== null) {
+    for (const index of enabled) {
+      const button = input.buttons[index];
+      if (button !== undefined && pointInUiRect(button, pointer)) focus = index;
+    }
   }
 
   let position = enabled.indexOf(focus);
