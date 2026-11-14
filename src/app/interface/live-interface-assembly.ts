@@ -379,7 +379,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         controlHintContext: () => ({
           runSeconds: screen() === "playing" ? liveRun().runTime : 0,
           completedRuns: dependencies.PROFILE.stat("runs"),
-          coached: screen() === "playing" && ["tutorial", "playground"].includes(liveRun().mode),
         }),
         clamp,
         ease: ez,

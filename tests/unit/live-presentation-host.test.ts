@@ -324,7 +324,7 @@ describe("live presentation host", () => {
         { bossIntroActive: () => false } as never,
         {
           capturePolicy: () => ({ ui: "include", pointerLock: "include" }),
-          controlHintContext: () => ({ runSeconds: 0, completedRuns: 0, coached: false }),
+          controlHintContext: () => ({ runSeconds: 0, completedRuns: 0 }),
           touchActive: () => false,
           input: { mode: "mouse" },
           pointerLocked: () => false,

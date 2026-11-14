@@ -164,7 +164,6 @@ describe("DOM chrome over the canvas", () => {
     expect(domChromeVisibility({ ...playing, inputMode: "gamepad" }).controlHint).toBe(false);
     expect(domChromeVisibility({ ...playing, inputMode: "touch", touch: true }).controlHint).toBe(false);
     expect(domChromeVisibility({ ...playing, screen: "paused" }).controlHint).toBe(false);
-    expect(domChromeVisibility({ ...playing, coached: true }).controlHint).toBe(false);
   });
 
   it("keeps the fullscreen button off the arena and off touch devices", () => {
