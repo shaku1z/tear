@@ -1,4 +1,4 @@
-import { pointerOwnsInterface, type InputDevice } from "../input/pointer-ownership";
+import { pointerOwnsInterface, type InputDevice } from "../domain/pointer-ownership";
 
 /**
  * Cursor policy (docs/CURSOR_INPUT_CONTRACT.md):

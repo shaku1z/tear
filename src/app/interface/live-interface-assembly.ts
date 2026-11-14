@@ -1,4 +1,4 @@
-import { NO_POINTER } from "../../input/pointer-ownership";
+import { NO_POINTER } from "../../domain/pointer-ownership";
 import { blendHex as blendCol, easeOut as ez } from "../../presentation/world/primitives";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import type { LiveCanonicalCombatHost } from "../combat/live-canonical-state";

@@ -8,7 +8,7 @@ import {
   POINTER_GESTURE_GAP_MS,
   startsOnTouch,
   type InputDevice,
-} from "../../src/input/pointer-ownership";
+} from "../../src/domain/pointer-ownership";
 import { shouldDrawCanvasCursor } from "../../src/presentation/cursor-contract";
 
 const DEVICES: readonly InputDevice[] = ["mouse", "keyboard", "gamepad", "touch"];

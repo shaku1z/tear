@@ -200,7 +200,7 @@ export interface BrowserInput {
   backPressed(): boolean;
   consumeThrow(): boolean;
   takeClick(): Point | null;
-  /** The mouse position while the mouse owns the interface, else null (pointer-ownership.ts). */
+  /** The mouse position while the mouse owns the interface, else null (domain/pointer-ownership.ts). */
   pointer(): Point | null;
   takeWheel(): number;
   endFrame(preserveSimulationEdges?: boolean): void;

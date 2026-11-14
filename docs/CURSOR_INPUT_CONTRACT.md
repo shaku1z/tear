@@ -19,7 +19,7 @@ Only one device owns menu focus and only one surface owns cursor presentation.
 | Touch owns input | Hidden | No hover | Taps use logical hit testing |
 | Mouse over the HTML fullscreen button (menus only) | Native browser arrow | No | The canvas arrow hides while the pointer is off the canvas |
 
-The rule lives in one module, `src/input/pointer-ownership.ts`: the pointer (the system
+The rule lives in one module, `src/domain/pointer-ownership.ts`: the pointer (the system
 cursor, the canvas arrow, hover highlights and hover focus) exists only while the mouse
 owns the interface. Every consumer asks `Input.pointer()`, which is null for any other
 device, instead of reading the raw mouse position; the page hides the hardware cursor

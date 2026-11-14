@@ -6,7 +6,7 @@ import {
   ownedPointer,
   startsOnTouch,
   type RelativeTravel,
-} from "./pointer-ownership";
+} from "../domain/pointer-ownership";
 import { touchControlAt, touchControlLayout } from "./touch-control-layout";
 
 interface ClientPoint {

@@ -5,7 +5,7 @@ import type { WorldCamera } from "../../presentation/world/world-frame";
 import type { CinematicUiPort } from "../../presentation/cinematics";
 import type { ButtonLayerUiPort, CanvasUiButton } from "../../presentation/screens/button-layer";
 import { createUiConfirmArming, type InteractiveUiButton, type UiRuntimeInput } from "./ui-runtime-controller";
-import { NO_POINTER } from "../../input/pointer-ownership";
+import { NO_POINTER } from "../../domain/pointer-ownership";
 import { shouldDrawCanvasCursor } from "../../presentation/cursor-contract";
 import { domChromeVisibility } from "../../presentation/dom-chrome-policy";
 import { cinematicPromptForDevice } from "../../presentation/cinematic-prompts";
