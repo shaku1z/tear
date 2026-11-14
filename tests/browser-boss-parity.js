@@ -4,6 +4,8 @@ const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
 const BOSS_PROGRESS_TIMEOUT_MS = STATE_WAIT_MS;
+/** `--captured-pointer` (nightly) also requires the browser to grant real pointer lock. */
+const REQUIRE_POINTER_LOCK = process.argv.includes("--captured-pointer");
 
 const BOSSES = canonicalScenarios
   .filter((entry) => entry.subject.kind === "boss" && !entry.tags?.includes("unpublished-preview"))
@@ -148,6 +150,15 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
 }
 
 withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
+  if (!REQUIRE_POINTER_LOCK) {
+    // Decline pointer lock for the whole run, in this page and after any reload. Dropping a lock
+    // the game already holds would pause it (a lost capture pauses play), so it is never granted.
+    const declinePointerLock = () => {
+      Element.prototype.requestPointerLock = () => Promise.resolve();
+    };
+    await page.addInitScript(declinePointerLock);
+    await page.evaluate(declinePointerLock);
+  }
   for (const bossId of BOSSES) {
     await startReadyBoss(page, bossId);
     const before = await bossSnapshot(page, bossId);
@@ -277,13 +288,17 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
     "Source AI must resume after its authored void-arrival grace",
   );
 
-  // Prove damage through the actual captured-pointer + held-blade path. This is
-  // deliberately not a debug hit shortcut: it exercises the same collision gate
-  // that made every boss appear invulnerable when introT was stranded above zero.
+  // Prove damage through the real held-blade path. This is deliberately not a debug hit
+  // shortcut: it exercises the same collision gate that made every boss appear invulnerable
+  // when introT was stranded above zero. A scripted click is not always granted pointer lock
+  // on the hosted Linux runner, so the required run declines the lock and the game aims by
+  // pointer position from the same moves (each carries both position and movement). The
+  // nightly run passes --captured-pointer to require the real lock as well.
   await startReadyBoss(page, "warden");
   const fullHealth = (await bossSnapshot(page, "warden")).hp;
   await page.mouse.click(800, 450);
-  await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: STATE_WAIT_MS });
+  if (REQUIRE_POINTER_LOCK)
+    await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: STATE_WAIT_MS });
   let damaged = await bossSnapshot(page, "warden");
   let pointer = { x: 800, y: 450 };
   for (let index = 0; index < 240 && damaged.hp >= fullHealth; index += 1) {
@@ -303,7 +318,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   damaged = await bossSnapshot(page, "warden");
   assert.ok(
     damaged.hp < fullHealth,
-    `captured-pointer held blade must damage the live boss (${String(damaged.hp)} < ${String(fullHealth)})`,
+    `held blade must damage the live boss (${String(damaged.hp)} < ${String(fullHealth)})`,
   );
 
   // Observe an actual live boss clone through the normal Class-A session and

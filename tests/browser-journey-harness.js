@@ -212,26 +212,28 @@ async function withJourney(options, run) {
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     }
     // A screen that has just opened ignores input for a moment (UI_CONFIRM_SETTLE_SECONDS), and a
-    // loaded runner can reach the click before the game has drawn enough frames to arm it. So click,
-    // look for the next screen, and click again while it has not come: the screen change is the
-    // pass condition, and the clock only bounds how long to keep trying.
+    // loaded runner can reach the click before the game has drawn enough frames to arm it. So click
+    // again only while the game is still on the screen the click started from; once it has left,
+    // never click again (the next screen may have a control at the same place) and wait for the
+    // expected screen. The screen change is the pass condition; the clock only bounds the trying.
     async function clickAndWait(x, y, screen) {
+      const gameScreen = () => page.evaluate(() => window.__PANTHEON_TEST.state().game);
+      const start = await gameScreen();
       const deadline = Date.now() + STATE_WAIT_MS;
-      for (;;) {
-        await page.mouse.click(x, y);
+      await page.mouse.click(x, y);
+      while (start !== screen) {
         try {
-          await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, {
+          await page.waitForFunction((from) => window.__PANTHEON_TEST.state().game !== from, start, {
             timeout: pollEvery(1000),
           });
           break;
         } catch (error) {
           if (error?.name !== "TimeoutError") throw error;
-          if (Date.now() > deadline) {
-            const state = await page.evaluate(() => window.__PANTHEON_TEST.state().game);
-            throw new Error(`clicking (${String(x)}, ${String(y)}) never reached ${screen}; still on ${state}`, {
+          if (Date.now() > deadline)
+            throw new Error(`clicking (${String(x)}, ${String(y)}) never left ${start} for ${screen}`, {
               cause: error,
             });
-          }
+          await page.mouse.click(x, y);
         }
       }
       await waitScreen(screen);

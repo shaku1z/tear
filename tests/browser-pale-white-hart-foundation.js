@@ -9,8 +9,8 @@ function bossSnapshot(page) {
 }
 
 withJourney(
-  { name: "Pale PT3-C7 White Hart foundation regression", port: 8356 },
-  async ({ page, buildInfo, clickAndWait }) => {
+  { name: "Pale PT3-C7 White Hart foundation regression", port: 8356, recordFrames: true },
+  async ({ page, buildInfo, waitArmed, clickLabel }) => {
     await page.evaluate(() => window.__PANTHEON_TEST.startBoss("white-hart", "normal"));
     await page.waitForFunction(
       () => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === "white-hart"),
@@ -87,11 +87,10 @@ withJourney(
 
     // Exercise the real Boss Test result and retry path with the same constructor.
     await page.evaluate(() => window.__PANTHEON_TEST.defeatPlayer());
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, {
-      timeout: STATE_WAIT_MS,
-    });
-    // RETRY ignores input while the result screen settles; press it until the run restarts.
-    await clickAndWait(220, 347, "playing");
+    // The result screen eases in and ignores input while it settles: press the drawn RETRY once
+    // it has come to rest, again while the screen has not changed.
+    await waitArmed("gameover");
+    await clickLabel("RETRY", "playing");
     await page.waitForFunction(
       () => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === "white-hart"),
       undefined,
