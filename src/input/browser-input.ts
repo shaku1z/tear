@@ -1,5 +1,12 @@
 import type { BrowserInput, BrowserInputDependencies, Point, TouchZoneName } from "./browser-input-contracts";
 import { mapClientPointerToLogical } from "./pointer-coordinate";
+import {
+  accumulateRelativeTravel,
+  MEANINGFUL_POINTER_TRAVEL,
+  ownedPointer,
+  startsOnTouch,
+  type RelativeTravel,
+} from "./pointer-ownership";
 import { touchControlAt, touchControlLayout } from "./touch-control-layout";
 
 interface ClientPoint {
@@ -27,6 +34,8 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     performance,
     semantic,
   } = dependencies;
+  /** Applies a touch layout change that waited for its tap to be handled (bound by init). */
+  let settleTouchLayout: () => void = () => undefined;
   // The canvas the layout is measured against (bound by init); its CSS size sets the
   // physical scale of the on-screen controls.
   let layoutCanvas: HTMLCanvasElement | null = null;
@@ -70,6 +79,9 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     _uiPageDown: false,
     _uiContext1: false,
     _uiContext2: false,
+    pointer() {
+      return ownedPointer(this.mode, this.pointerInside, this.mouseX, this.mouseY);
+    },
     setMode(m) {
       if (this.mode === m) return;
       this.mode = m;
@@ -208,6 +220,11 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
 
     init(canvas, requestPointerLock = () => undefined) {
       layoutCanvas = canvas;
+      // A phone or tablet starts on touch: the first frame has the touch layout and no cursor.
+      if (startsOnTouch((query) => window.matchMedia(query))) {
+        this.touchOn = true;
+        this.setMode("touch");
+      }
       window.addEventListener("keydown", (e) => {
         if (this.textEntryMode) return;
         if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
@@ -254,13 +271,27 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
           const p = toLogical(e, canvas.getBoundingClientRect());
           this.mouseX = p.x;
           this.mouseY = p.y;
-          // only a MEANINGFUL move (past a few px) claims mouse ownership — sensor noise,
-          // stale coords, and mouseenter alone must not steal the UI from a controller.
-          if (Math.hypot(e.clientX - this.lastPointerX, e.clientY - this.lastPointerY) > 5) this.setMode("mouse");
-          this.lastPointerX = e.clientX;
-          this.lastPointerY = e.clientY;
         }
       };
+      // Only a MEANINGFUL move claims mouse ownership: sensor noise, stale coordinates and
+      // mouseenter alone must not take the interface from a controller, the keyboard or touch.
+      // Listening on the window keeps the same threshold over the canvas, the HTML controls and
+      // the letterbox, in fullscreen and inside an embedding frame; under pointer lock the
+      // mouse reports only relative movement, which is summed per gesture.
+      let lockedTravel: RelativeTravel = { distance: 0, at: 0 };
+      window.addEventListener("mousemove", (e) => {
+        if (this.locked) {
+          const step = accumulateRelativeTravel(lockedTravel, e.movementX, e.movementY, performance.now());
+          lockedTravel = step.travel;
+          if (step.meaningful) this.setMode("mouse");
+          return;
+        }
+        const travel = Math.hypot(e.clientX - this.lastPointerX, e.clientY - this.lastPointerY);
+        if (this.mode !== "mouse" && travel <= MEANINGFUL_POINTER_TRAVEL) return;
+        this.setMode("mouse");
+        this.lastPointerX = e.clientX;
+        this.lastPointerY = e.clientY;
+      });
       canvas.addEventListener("mousemove", (e) => {
         this.pointerInside = true;
         updateMouse(e);
@@ -319,16 +350,28 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       // preventDefault kills the browser's synthetic click, so TAPS ARE SYNTHESIZED here:
       // a short, still touch becomes Input.clicked at its point — this is what makes every
       // menu work on mobile. Hit zones are exactly the drawn controls (touch-control-layout.ts).
+      const touchesDown = new Set<number>();
+      let touchLayoutPending = false;
+      settleTouchLayout = () => {
+        if (!touchLayoutPending || touchesDown.size > 0) return;
+        touchLayoutPending = false;
+        this.touchOn = true;
+      };
       const btnTouches: Record<number, TouchZoneName | undefined> = {}; // touch id -> zone key (fingers on buttons never aim)
       const tapTrack: Record<number, TapTrack | undefined> = {}; // touch id -> { x, y, cx, cy, t, moved } for tap->click synthesis
       canvas.addEventListener(
         "touchstart",
         (e) => {
           e.preventDefault();
-          this.touchOn = true;
+          // The first touch on a mouse-first device changes the menus to their touch layout.
+          // In a menu that change waits until the finger has lifted and its tap has been
+          // handled (endFrame), so the tap lands on the controls the player saw.
+          if (this.uiMode && !this.touchOn) touchLayoutPending = true;
+          else this.touchOn = true;
           this.setMode("touch");
           const r = canvas.getBoundingClientRect();
           for (const t of e.changedTouches) {
+            touchesDown.add(t.identifier);
             const p = toLogical(t, r);
             tapTrack[t.identifier] = {
               x: p.x,
@@ -453,6 +496,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       const touchEnd = (e: TouchEvent): void => {
         e.preventDefault();
         for (const t of e.changedTouches) {
+          touchesDown.delete(t.identifier);
           const tk = tapTrack[t.identifier];
           if (tk && !tk.moved && performance.now() - tk.t < 450 && !btnTouches[t.identifier]) {
             // a clean tap -> a synthesized UI click (preventDefault suppressed the native one)
@@ -622,6 +666,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       }
       this.clicked = false;
       this.tPause = false;
+      settleTouchLayout();
     },
   };
   return Input;
