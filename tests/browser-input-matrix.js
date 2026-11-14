@@ -24,6 +24,114 @@ async function moveCapturedPointer(page, from, to) {
   );
 }
 
+/** Records where the draft cards draw their touch hint, in CSS px, for the newest frame. */
+function observeDraftHints() {
+  const hints = [];
+  let frame = 0;
+  window.__DRAFT_HINTS__ = () => hints.filter((hint) => hint.frame >= frame - 1);
+  const raf = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = (callback) =>
+    raf((time) => {
+      frame += 1;
+      callback(time);
+    });
+  const fillText = CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText = function (value, x, y, ...rest) {
+    const text = String(value);
+    if (/^TAP (TO READ|AGAIN)/u.test(text) && this.textAlign === "center") {
+      const matrix = this.getTransform();
+      const box = this.canvas.getBoundingClientRect();
+      const ratio = box.height / this.canvas.height;
+      hints.push({
+        text,
+        frame,
+        x: box.left + (matrix.a * x + matrix.c * y + matrix.e) * ratio,
+        y: box.top + (matrix.b * x + matrix.d * y + matrix.f) * ratio,
+      });
+      if (hints.length > 400) hints.splice(0, 200);
+    }
+    return fillText.call(this, value, x, y, ...rest);
+  };
+}
+
+/**
+ * iOS browsers and Android Chrome before 144 have no document.exitPointerLock. A direct call
+ * there once threw inside the wave-clear intents, so the upgrade draft never opened on phones.
+ * This removes the method, clears a wave through the test hook (the game's own wave-clear path
+ * runs from there) and takes a card by touch, in Adventure and in Endless.
+ */
+async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  for (const viewport of [
+    { width: 844, height: 390 },
+    { width: 667, height: 375 },
+  ]) {
+    const context = await browser.newContext({ viewport, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+    const phone = await context.newPage();
+    const errors = [];
+    phone.on("pageerror", (error) => errors.push(error.message));
+    await phone.addInitScript(() => {
+      delete Document.prototype.exitPointerLock;
+    });
+    await phone.addInitScript(observeDraftHints);
+    await configure(phone);
+    assert.equal(
+      await phone.evaluate(() => typeof document.exitPointerLock),
+      "undefined",
+      "the phone has no exitPointerLock",
+    );
+    const cdp = await context.newCDPSession(phone);
+    const tap = async (point) => {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ x: point.x, y: point.y, id: 1 }],
+      });
+      await sleep(60);
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    };
+    const hints = () => phone.evaluate(() => window.__DRAFT_HINTS__());
+    const label = `${String(viewport.width)}x${String(viewport.height)}`;
+    for (const mode of ["campaign", "endless"]) {
+      const where = `${label} ${mode}`;
+      await phone.evaluate((selected) => window.__PANTHEON_TEST.startMode(selected, "easy"), mode);
+      await phone.waitForFunction(() => {
+        const state = window.__PANTHEON_TEST.state();
+        if (state.active) window.__PANTHEON_TEST.skip();
+        return state.game === "playing" && !state.active;
+      });
+      // The first touch makes touch the owning device (a corner of the movement zone).
+      await tap({ x: 6, y: viewport.height - 6 });
+      await phone.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "touch");
+      await phone.evaluate(() => window.__PANTHEON_TEST.prepareNaturalWaveClearScenario());
+      await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "draft", undefined, {
+        timeout: 15_000,
+      });
+      // Cards deal in from below; read their hints once they rest, past the confirm settle window.
+      await sleep(1_200);
+      const unread = (await hints()).filter((hint) => hint.text === "TAP TO READ").at(-1);
+      assert.ok(unread, `${where}: the draft shows a card to read`);
+      await tap(unread);
+      await phone.waitForFunction(
+        (x) => window.__DRAFT_HINTS__().some((hint) => hint.text.startsWith("TAP AGAIN") && Math.abs(hint.x - x) < 4),
+        unread.x,
+        { timeout: 5_000 },
+      );
+      assert.equal(
+        await phone.evaluate(() => window.__PANTHEON_TEST.state().game),
+        "draft",
+        `${where}: the first tap reads the card without taking it`,
+      );
+      await sleep(300);
+      await tap(unread);
+      await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
+        timeout: 8_000,
+      });
+    }
+    assert.deepEqual(errors, [], `${label}: a phone without exitPointerLock raises no page errors`);
+    await context.close();
+  }
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_INPUT_TEST_PORT || 8128);
@@ -341,6 +449,8 @@ async function main() {
   });
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen === "paused");
   await controller.close();
+
+  await phoneWithoutPointerLockOpensTheDraft(browser, configure);
 
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
