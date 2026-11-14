@@ -1,9 +1,10 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 withJourney({ name: "Ghost Vault conditional commit", port: 8203 }, async ({ page }) => {
   await page.waitForFunction(() => typeof window.__TEAR_GHOST_VAULT_CONDITIONAL__?.exercise === "function", undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   const result = await page.evaluate(() =>
     window.__TEAR_GHOST_VAULT_CONDITIONAL__.exercise("tear-ghost-conditional-commit-proof"),

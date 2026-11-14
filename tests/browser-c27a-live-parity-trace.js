@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 // The live half of the C27A parity comparison. It captures, from the real
 // application, the three things a detached world needs to be checked against:
@@ -151,7 +152,7 @@ function artifactPath(scenario) {
 }
 
 withJourney({ name: "C27A live parity trace", port: 8167 }, async ({ page, buildInfo }) => {
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   const written = [];
 

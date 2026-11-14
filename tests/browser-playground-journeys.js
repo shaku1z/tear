@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 
 // Two journeys share this file: the Playground run, and the Practice Lab walk over
 // every lesson, weapon annex, enemy and boss entry. Both run by default (the
@@ -16,7 +17,7 @@ const journey = (practiceLab) =>
           await page.keyboard.press(key);
           try {
             await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, {
-              timeout: 500,
+              timeout: pollEvery(500),
             });
             await waitScreen(screen);
             return;
@@ -257,7 +258,7 @@ const journey = (practiceLab) =>
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-boss-phases-landscape.png") });
         await page.mouse.wheel(0, -144);
         await page.setViewportSize({ width: 1600, height: 900 });
-        await page.waitForTimeout(100);
+        await page.waitForTimeout(settleFor(100));
         await clickLabel("IRON COLOSSUS · P1");
         await waitScreen("playing");
         await page.waitForFunction(
@@ -289,7 +290,7 @@ const journey = (practiceLab) =>
         await page.waitForFunction(
           () => window.__PANTHEON_TEST.tutorial().session.bossPractice?.runtime.lifecycle === "active",
           undefined,
-          { timeout: 20000 },
+          { timeout: STATE_WAIT_MS },
         );
         await pressUntilScreen("p", "paused");
         await clickLabel("MAIN MENU");
@@ -346,7 +347,7 @@ const journey = (practiceLab) =>
         await page.keyboard.press(key);
         try {
           await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, {
-            timeout: 5000,
+            timeout: STATE_WAIT_MS,
           });
         } catch (error) {
           if (error?.name !== "TimeoutError") throw error;
@@ -358,7 +359,9 @@ const journey = (practiceLab) =>
         }
       }
       await page.keyboard.press("k");
-      await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 0, undefined, { timeout: 5000 });
+      await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 0, undefined, {
+        timeout: STATE_WAIT_MS,
+      });
       console.log("playground journey: combat hotkey spawns survive the tail commit");
 
       // The in-world E shortcut shown by the production Playground help opens the tools.
@@ -367,7 +370,7 @@ const journey = (practiceLab) =>
       const enemiesBefore = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
       await page.mouse.click(278, 229); // spawn the first enemy kind
       await page.waitForFunction((before) => window.__PANTHEON_TEST.state().enemyCount > before, enemiesBefore, {
-        timeout: 10000,
+        timeout: STATE_WAIT_MS,
       });
       console.log("playground journey: enemy spawned");
 

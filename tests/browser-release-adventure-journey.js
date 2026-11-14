@@ -18,6 +18,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { assertCleanProductionUrl, serveProductionBuild } = require("./class-c-browser-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const VIEW = Object.freeze({ width: 1280, height: 720 });
 const SCALE = VIEW.width / 1600;
@@ -288,7 +289,7 @@ async function runTouchLeg(browser, origin, viewport, shot) {
     await tap(drawn[0] ?? (await waitForText(pattern, 5_000, what)));
   };
   try {
-    await page.goto(`${origin}/`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(`${origin}/`, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
     await waitForText(/^PLAY$/u, 40_000, "main menu");
     await sleep(800);
     await tapLabel(/^PLAY$/u, "PLAY");
@@ -659,7 +660,7 @@ async function main() {
   };
 
   try {
-    await page.goto(`${host.origin}/`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(`${host.origin}/`, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
     assertCleanProductionUrl(page.url());
     const debugSurface = await page.evaluate(() =>
       ["__PANTHEON_TEST", "__TEAR_CATALOG_DEBUG__", "__TEAR_TEST_STORAGE__"].filter((name) => name in window),
@@ -692,7 +693,7 @@ async function main() {
       retries += await clearWaveOneAndPick("restart");
 
       // Leg 3, a new session on the same profile: biome memory is not a seen chapter, so the intro plays again.
-      await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+      await page.reload({ waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
       await startAdventure("new-session");
       await waitForText(/^THE FIRST DESCENT$/u, 15_000, "new session: chapter I intro");
       await shot("new-session-intro");

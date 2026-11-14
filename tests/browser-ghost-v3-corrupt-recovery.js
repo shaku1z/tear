@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function scenario(id, seed) {
   return {
@@ -75,7 +76,7 @@ async function waitForVaultTerminalRecovery(page, capsuleId) {
       );
     },
     capsuleId,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
 }
 
@@ -118,7 +119,7 @@ async function corruptVaultChunk(page, chunkId) {
 
 withJourney({ name: "C27 Ghost V3 browser corrupt recovery", port: 8159 }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   // The application boot run may still be sealing while this journey starts.
   // Establish its durable identity first so the interrupted-recording proof
@@ -149,7 +150,7 @@ withJourney({ name: "C27 Ghost V3 browser corrupt recovery", port: 8159 }, async
         (manifest) => !knownIds.includes(manifest.id) && manifest.status === "recording" && manifest.chunks.length > 0,
       ),
     priorIds,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   // Return a plain evidence record from the page. This preserves the exact
   // manifest fields needed by the corruption operation across the Playwright
@@ -172,7 +173,7 @@ withJourney({ name: "C27 Ghost V3 browser corrupt recovery", port: 8159 }, async
   await corruptVaultChunk(page, interrupted.chunks[0].id);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   // Bind the fresh page's audio context before its next live runtime advances.
   await page.mouse.click(10, 10);
@@ -219,7 +220,7 @@ withJourney({ name: "C27 Ghost V3 browser corrupt recovery", port: 8159 }, async
         (manifest) => manifest.id !== id && manifest.status === "complete",
       ).length >= 2,
     interrupted.id,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   assert.equal(
     await vaultValue(page, "quarantine", quarantineKey),

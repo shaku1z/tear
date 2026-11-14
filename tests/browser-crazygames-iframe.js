@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-crazygames");
@@ -67,13 +68,13 @@ async function main() {
     const frame = await iframe.contentFrame();
     if (!frame) throw new Error("CrazyGames game iframe did not load");
     await frame.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_PLATFORM_SERVICES__, undefined, {
-      timeout: 20_000,
+      timeout: STATE_WAIT_MS,
     });
     // A trusted pointer event inside the embedded document activates Web Audio;
     // the canvas center is intentionally outside the menu's interactive rails.
     await iframe.click({ position: { x: 480, y: 270 } });
     await frame.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, {
-      timeout: 20_000,
+      timeout: STATE_WAIT_MS,
     });
 
     const boot = await frame.evaluate(async () => ({
@@ -123,13 +124,15 @@ async function main() {
 
     await frame.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
     await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
-      timeout: 20_000,
+      timeout: STATE_WAIT_MS,
     });
     await frame.evaluate(() => window.__PANTHEON_TEST.pause());
-    await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused", undefined, { timeout: 20_000 });
+    await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused", undefined, {
+      timeout: STATE_WAIT_MS,
+    });
     await frame.evaluate(() => window.__PANTHEON_TEST.resume());
     await frame.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
-      timeout: 20_000,
+      timeout: STATE_WAIT_MS,
     });
     const calls = await frame.evaluate(() => window.__crazyCalls.slice());
     const gameplayCalls = calls.filter((call) => call.startsWith("gameplay-"));

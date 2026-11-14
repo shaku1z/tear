@@ -15,9 +15,10 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # Preserve the complete functional command set while leaving bounded
-    # headroom for shared-runner variance; this is not a latency improvement.
-    timeout-minutes: 30
+    # Measured: an ordinary run takes 24-26 minutes, and a pull request that touches many tests
+    # took about 34 (7.5 for the diff-selected evidence, 22+ for check:functional). 45 leaves
+    # about a third over the worst measured run; reduce it when the duplicated step goes.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:

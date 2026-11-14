@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const scenario = {
   format: "tear-contract",
@@ -20,8 +21,8 @@ const scenario = {
 };
 
 withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildInfo }) => {
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
-  await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
+  await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: STATE_WAIT_MS });
   const ordinaryReset = await page.evaluate((scenarioValue) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     const resetScenario = {
@@ -124,8 +125,8 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildIn
   );
   // Structured reset owns a stopped frame loop; the original cinematic journey needs a fresh live boot.
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
-  await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
+  await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: STATE_WAIT_MS });
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("campaign"));
   await page.waitForFunction(
     () => {
@@ -133,7 +134,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildIn
       return state.active === true && state.cinema === "chapter-0" && state.cinemaElapsed > 0.05;
     },
     undefined,
-    { timeout: 15_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const activeCinemaResult = await page.evaluate(() => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -412,9 +413,9 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildIn
   }, scenario);
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, {
-    timeout: 15_000,
+    timeout: STATE_WAIT_MS,
   });
   await page.mouse.click(10, 10);
   const result = await page.evaluate(

@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 (async () => {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -49,7 +50,7 @@ const path = require("node:path");
     await new Promise((resolve) => setTimeout(resolve, 500));
   });
   await context.setOffline(true);
-  await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+  await page.reload({ waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ !== undefined);
   assert.deepEqual(errors, []);
   assert.equal(await page.evaluate(() => navigator.serviceWorker.controller !== null), true);

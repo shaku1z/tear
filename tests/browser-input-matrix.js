@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, holdFor, notWithin, pollEvery } = require("./browser-waits");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -28,7 +29,10 @@ async function moveCapturedPointer(page, from, to) {
 function observeDraftHints() {
   const hints = [];
   let frame = 0;
+  let seq = 0;
+  window.__DRAFT_HINT_SEQ__ = () => seq;
   window.__DRAFT_HINTS__ = () => hints.filter((hint) => hint.frame >= frame - 1);
+  window.__DRAFT_HINT_LOG__ = hints;
   const raf = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = (callback) =>
     raf((time) => {
@@ -45,6 +49,8 @@ function observeDraftHints() {
       hints.push({
         text,
         frame,
+        seq: ++seq,
+        at: performance.now(),
         x: box.left + (matrix.a * x + matrix.c * y + matrix.e) * ratio,
         y: box.top + (matrix.b * x + matrix.d * y + matrix.f) * ratio,
       });
@@ -61,7 +67,6 @@ function observeDraftHints() {
  * runs from there) and takes a card by touch, in Adventure and in Endless.
  */
 async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
-  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   for (const viewport of [
     { width: 844, height: 390 },
     { width: 667, height: 375 },
@@ -86,10 +91,28 @@ async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
         type: "touchStart",
         touchPoints: [{ x: point.x, y: point.y, id: 1 }],
       });
-      await sleep(60);
+      await phone.waitForTimeout(holdFor(60));
       await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     };
-    const hints = () => phone.evaluate(() => window.__DRAFT_HINTS__());
+    // Taps, then looks for the result; taps again while the screen is still ignoring input.
+    const tapUntil = async (point, predicate, argument, what) => {
+      const deadline = Date.now() + STATE_WAIT_MS;
+      for (;;) {
+        // Each predicate sees what was drawn after this tap (seq), so an older frame cannot pass it.
+        const since = await phone.evaluate(() => window.__DRAFT_HINT_SEQ__());
+        await tap(point);
+        try {
+          await phone.waitForFunction(predicate, { argument, since }, { timeout: pollEvery(2000) });
+          return;
+        } catch (error) {
+          if (error?.name !== "TimeoutError") throw error;
+          if (Date.now() > deadline) throw new Error(`${what} never happened`, { cause: error });
+          // Tap again only while the draft is still open: a second tap on a read card takes it.
+          const screen = await phone.evaluate(() => window.__PANTHEON_TEST.state().game);
+          if (screen !== "draft") throw new Error(`${what}: the draft closed (now ${screen})`, { cause: error });
+        }
+      }
+    };
     const label = `${String(viewport.width)}x${String(viewport.height)}`;
     for (const mode of ["campaign", "endless"]) {
       const where = `${label} ${mode}`;
@@ -102,30 +125,57 @@ async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
       // The first touch makes touch the owning device (a corner of the movement zone).
       await tap({ x: 6, y: viewport.height - 6 });
       await phone.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "touch");
+      // Only hints drawn by this draft count; the log still holds the previous mode's cards.
+      const draftStart = await phone.evaluate(() => window.__DRAFT_HINT_SEQ__());
       await phone.evaluate(() => window.__PANTHEON_TEST.prepareNaturalWaveClearScenario());
       await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "draft", undefined, {
-        timeout: 15_000,
+        timeout: STATE_WAIT_MS,
       });
-      // Cards deal in from below; read their hints once they rest, past the confirm settle window.
-      await sleep(1_200);
-      const unread = (await hints()).filter((hint) => hint.text === "TAP TO READ").at(-1);
+      // Cards deal in from below one after another and ease, and the game can draw the same
+      // animation step twice, so equal positions in two frames do not mean the deal is over. It is
+      // over when every card has stayed exactly where it is for notWithin(200) ms of drawn frames.
+      const restingHint = await phone.waitForFunction(
+        ({ since, stillFor }) => {
+          const unread = window.__DRAFT_HINT_LOG__.filter((hint) => hint.seq > since && hint.text === "TAP TO READ");
+          const frames = [...new Set(unread.map((hint) => hint.frame))];
+          const at = (frame) => unread.filter((hint) => hint.frame === frame);
+          const now = at(frames.at(-1));
+          if (now.length === 0) return null;
+          const same = (frame) => {
+            const then = at(frame);
+            return then.length === now.length && then.every((hint, i) => hint.x === now[i].x && hint.y === now[i].y);
+          };
+          let earliest = now[0].at;
+          for (let index = frames.length - 2; index >= 0 && same(frames[index]); index -= 1)
+            earliest = at(frames[index])[0].at;
+          return now[0].at - earliest >= stillFor ? now.at(-1) : null;
+        },
+        { since: draftStart, stillFor: notWithin(200) },
+        { timeout: STATE_WAIT_MS },
+      );
+      const unread = await restingHint.jsonValue();
       assert.ok(unread, `${where}: the draft shows a card to read`);
-      await tap(unread);
-      await phone.waitForFunction(
-        (x) => window.__DRAFT_HINTS__().some((hint) => hint.text.startsWith("TAP AGAIN") && Math.abs(hint.x - x) < 4),
+      // The draft ignores input for a moment after it opens, so a tap is repeated until it lands.
+      await tapUntil(
+        unread,
+        ({ argument: x, since }) =>
+          window.__DRAFT_HINT_LOG__.some(
+            (hint) => hint.seq > since && hint.text.startsWith("TAP AGAIN") && Math.abs(hint.x - x) < 4,
+          ),
         unread.x,
-        { timeout: 5_000 },
+        `${where}: reading the card`,
       );
       assert.equal(
         await phone.evaluate(() => window.__PANTHEON_TEST.state().game),
         "draft",
         `${where}: the first tap reads the card without taking it`,
       );
-      await sleep(300);
-      await tap(unread);
-      await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing", undefined, {
-        timeout: 8_000,
-      });
+      await tapUntil(
+        unread,
+        () => window.__PANTHEON_TEST.state().game === "playing",
+        undefined,
+        `${where}: taking the card`,
+      );
     }
     assert.deepEqual(errors, [], `${label}: a phone without exitPointerLock raises no page errors`);
     await context.close();
@@ -223,7 +273,7 @@ async function main() {
       return trace && Math.abs(trace.vx) < 1;
     },
     undefined,
-    { timeout: 5_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await touch.close();
 
@@ -297,7 +347,7 @@ async function main() {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
     window.__testGamepad.timestamp = 4;
   });
-  await controller.waitForTimeout(500);
+  await controller.waitForTimeout(holdFor(500));
   const squareState = await controller.evaluate(() => ({
     game: window.__PANTHEON_TEST.state().game,
     input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
@@ -369,7 +419,7 @@ async function main() {
       return after && Math.hypot(after.x, after.y) < before - 8 ? { x: after.x, y: after.y } : false;
     },
     reachBeforeMove,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const aimAfterShortMove = await aimAfterShortMoveHandle.jsonValue();
   await aimAfterShortMoveHandle.dispose();
@@ -384,7 +434,7 @@ async function main() {
       return after && after.x > before.x + 10;
     },
     aimBeforeMove,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await controller.keyboard.press("Escape");
   await controller.waitForFunction(() => !window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
