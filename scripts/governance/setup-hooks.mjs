@@ -150,6 +150,61 @@ function assertCanonicalRepository(repo, root) {
   }
 }
 
+/**
+ * Every per-worktree `core.hooksPath` in this repository: the main worktree's `config.worktree`
+ * and each linked worktree's. With `extensions.worktreeConfig` on, such a value wins over the
+ * repository config, so a stale one runs other hooks than the ones installed here.
+ * @returns {{ worktree: string, file: string, values: string[] }[]}
+ */
+export function worktreeHookOverrides(repo) {
+  const commonDir = resolveGitPath(repo, gitText(repo, ["rev-parse", "--git-common-dir"]));
+  const files = [{ worktree: path.dirname(commonDir), file: path.join(commonDir, "config.worktree") }];
+  const linked = path.join(commonDir, "worktrees");
+  if (fs.existsSync(linked)) {
+    for (const name of fs.readdirSync(linked)) {
+      const gitdirFile = path.join(linked, name, "gitdir");
+      const worktree = fs.existsSync(gitdirFile)
+        ? path.dirname(fs.readFileSync(gitdirFile, "utf8").trim())
+        : path.join(linked, name);
+      files.push({ worktree, file: path.join(linked, name, "config.worktree") });
+    }
+  }
+  return files
+    .filter(({ file }) => fs.existsSync(file))
+    .map(({ worktree, file }) => {
+      const result = runGit(repo, ["config", "--file", file, "--get-all", "core.hooksPath"], { allowFailure: true });
+      const values =
+        result.status === 0
+          ? String(result.stdout ?? "")
+              .split(/\r?\n/u)
+              .filter(Boolean)
+          : [];
+      return { worktree, file, values };
+    })
+    .filter((entry) => entry.values.length > 0);
+}
+
+/**
+ * Removes per-worktree hooks paths that point at the hooks being installed or the shared skill hooks
+ * they replace, so every worktree uses the repository setting. An unknown override is preserved and
+ * refused, like an unknown repository hooks path. Checks every override before changing any.
+ */
+function clearWorktreeHookOverrides(repo, expectedHooksPath) {
+  const overrides = worktreeHookOverrides(repo);
+  for (const { file, values } of overrides) {
+    for (const value of values) {
+      const target = path.resolve(path.dirname(path.dirname(file)), value);
+      const known = [expectedHooksPath, PREVIOUS_HOOK_ROOT].some((candidate) =>
+        samePath(path.isAbsolute(value) ? value : target, candidate),
+      );
+      if (!known)
+        fail("an unknown per-worktree core.hooksPath is set in " + file + "; preserved and refusing: " + value);
+    }
+  }
+  for (const { file } of overrides) runGit(repo, ["config", "--file", file, "--unset-all", "core.hooksPath"]);
+  return overrides.map(({ worktree }) => worktree);
+}
+
 function snapshotConfig(repo) {
   return new Map(CONFIG_KEYS.map((key) => [key, configValues(repo, key)]));
 }
@@ -173,6 +228,8 @@ export function setupHooks(repoArgument, { root = CANONICAL.root, hooksRoot = EX
   }
   const previous = assertReplaceableHooks(repo, configValue(repo, "core.hooksPath"), expectedHooksPath);
   const commonDir = resolveGitPath(repo, gitText(repo, ["rev-parse", "--git-common-dir"]));
+  // Refuses an unknown per-worktree hooks path before anything changes; known stale ones go.
+  const clearedWorktrees = clearWorktreeHookOverrides(repo, expectedHooksPath);
   const snapshot = snapshotConfig(repo);
   const settings = new Map([
     ["user.name", OWNER.name],
@@ -198,7 +255,7 @@ export function setupHooks(repoArgument, { root = CANONICAL.root, hooksRoot = EX
     restoreConfig(repo, snapshot);
     throw error;
   }
-  return { repo, previous, hooksPath: expectedHooksPath };
+  return { repo, previous, hooksPath: expectedHooksPath, clearedWorktrees };
 }
 
 /** Read-only status for this clone or worktree. */
@@ -206,7 +263,24 @@ export function hookStatus(
   cwd = process.cwd(),
   { hooksRoot = path.join(CANONICAL.root, "scripts", "governance", "hooks") } = {},
 ) {
-  const configured = configValue(cwd, "core.hooksPath");
+  // A per-worktree override (config.worktree) wins over the repository setting, so read what Git
+  // actually uses here, and name every other worktree whose override points elsewhere.
+  const effective = runGit(cwd, ["config", "--get", "core.hooksPath"], { allowFailure: true });
+  const configured = effective.status === 0 ? String(effective.stdout ?? "").trim() : "";
+  const misdirected = worktreeHookOverrides(cwd).filter(({ file, values }) =>
+    values.some((value) => !samePath(path.resolve(path.dirname(path.dirname(file)), value), hooksRoot)),
+  );
+  if (misdirected.length > 0) {
+    return {
+      state: "worktree-override",
+      configured,
+      worktrees: misdirected.map(({ worktree }) => worktree),
+      message:
+        "per-worktree core.hooksPath overrides the in-repo hooks in: " +
+        misdirected.map(({ worktree, values }) => worktree + " (" + values.join(", ") + ")").join("; ") +
+        "; run pnpm setup:hooks from the canonical checkout",
+    };
+  }
   if (!configured) return { state: "none", configured, message: "no core.hooksPath: commits here are not guarded" };
   const active = resolveGitPath(cwd, configured);
   if (samePath(active, hooksRoot)) return { state: "in-repo", configured, message: "in-repo hooks active" };
@@ -231,6 +305,8 @@ export function main(argv = process.argv.slice(2)) {
     }
     const result = setupHooks(process.cwd());
     console.log("[tear-governance] hooks path set to " + result.hooksPath + " (previously " + result.previous + ")");
+    if (result.clearedWorktrees.length > 0)
+      console.log("[tear-governance] cleared per-worktree hooks overrides in: " + result.clearedWorktrees.join(", "));
     return 0;
   } catch (error) {
     console.error("[tear-governance] setup refused: " + (error instanceof Error ? error.message : String(error)));
