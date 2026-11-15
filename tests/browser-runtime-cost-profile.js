@@ -194,11 +194,11 @@ async function openPage(browser, pass) {
 
 const screen = (page) => page.evaluate(() => window.__PANTHEON_TEST.state().game);
 
-async function waitScreen(page, expected, timeout = 15000) {
+async function waitScreen(page, expected, timeout = STATE_WAIT_MS) {
   await page.waitForFunction((value) => window.__PANTHEON_TEST.state().game === value, expected, { timeout });
 }
 
-async function waitEnemies(page, minimum, timeout = 20000) {
+async function waitEnemies(page, minimum, timeout = STATE_WAIT_MS) {
   await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount >= count, minimum, { timeout });
 }
 

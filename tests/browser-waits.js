@@ -230,7 +230,27 @@ async function reloadPage(page, options = {}) {
   }
 }
 
+/**
+ * Waits for real pointer lock, for the nightly check that requires it (--captured-pointer). Only
+ * that path may wait on the lock (eslint.config.mjs): a browser may refuse a scripted request in
+ * headless mode, on a hosted runner or in a background window, so a required test waits for the
+ * game state the lock leads to instead.
+ */
+async function waitForPointerLock(page) {
+  try {
+    await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: STATE_WAIT_MS });
+  } catch (error) {
+    const state = await within(
+      page.evaluate(() => ({ focused: document.hasFocus(), visibility: document.visibilityState })),
+      5000,
+      "the page did not answer",
+    ).catch((reason) => String(reason));
+    throw new Error(`pointer lock was not granted: ${JSON.stringify(state)}`, { cause: error });
+  }
+}
+
 module.exports = {
+  waitForPointerLock,
   STATE_WAIT_MS,
   SLOW_STATE_WAIT_MS,
   JOURNEY_LIMIT_MS,
