@@ -305,7 +305,7 @@ async function pressStart(page, frame, profile) {
     frame === page
       ? { x: 0, y: 0 }
       : await (await frame.frameElement()).boundingBox().then((box) => box ?? { x: 0, y: 0 });
-  const find = async (pattern, timeout = 60_000) => {
+  const find = async (pattern, timeout = STATE_WAIT_MS) => {
     const until = Date.now() + timeout;
     while (Date.now() < until) {
       const hit = await frame.evaluate((source) => {
@@ -383,7 +383,7 @@ async function measureLoad(browser, target, profileId, server) {
   const gameFrame = () => (target === "crazygames" ? page.frames().find((frame) => frame !== page.mainFrame()) : page);
   const load = async () => {
     await page.goto(server.url, { timeout: STATE_WAIT_MS, waitUntil: "commit" });
-    const deadline = Date.now() + 180_000;
+    const deadline = Date.now() + SLOW_STATE_WAIT_MS;
     let frame;
     while (!(frame = gameFrame())) {
       assert.ok(Date.now() < deadline, `${target}/${profileId}: game frame never attached`);

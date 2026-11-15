@@ -397,7 +397,12 @@ async function withJourney(options, run) {
 }
 
 /** Poll resolved durable evidence rather than an async predicate's Promise. */
-async function waitForBrowserValue(page, predicate, argument, { timeout = 20_000, polling = 50 } = {}) {
+async function waitForBrowserValue(
+  page,
+  predicate,
+  argument,
+  { timeout = STATE_WAIT_MS, polling = pollEvery(50) } = {},
+) {
   assert.ok(Number.isFinite(timeout) && timeout > 0, "async browser wait requires a positive timeout");
   assert.ok(Number.isFinite(polling) && polling > 0, "async browser wait requires a positive polling interval");
   let cancelled = false,

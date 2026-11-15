@@ -43,6 +43,41 @@ describe("browser wait rules", { timeout: 60_000 }, () => {
     ].join("\n");
     expect(await messages(code)).toEqual([3, 4]);
   });
+
+  it("rejects unnamed setTimeout delays, deadlines, default waits and sleep helpers, in the test and in page code", async () => {
+    const code = [
+      'const { STATE_WAIT_MS, pollEvery } = require("./browser-waits");',
+      "const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));",
+      "async function find(page, timeout = 15_000, polling = pollEvery(50)) {",
+      "  const deadline = Date.now() + 8_000;",
+      "  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)));",
+      "  await page.evaluate(() => performance.now() + 20_000);",
+      "  await new Promise((resolve) => setTimeout(resolve, 2 * 100));",
+      "  const named = Date.now() + STATE_WAIT_MS;",
+      "  await page.evaluate((ceiling) => new Promise((resolve) => setTimeout(resolve, ceiling)), STATE_WAIT_MS);",
+      "  return [sleep, timeout, polling, deadline, named];",
+      "}",
+      "module.exports = { find };",
+    ].join("\n");
+    expect(await messages(code)).toEqual([2, 3, 4, 5, 6, 7]);
+  });
+
+  it("rejects waiting on pointer lock or an inline style, and accepts a performance mark", async () => {
+    const code = [
+      'const { STATE_WAIT_MS } = require("./browser-waits");',
+      "async function run(page) {",
+      "  await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: STATE_WAIT_MS });",
+      '  await page.waitForFunction(() => document.getElementById("hint").style.display === "block", undefined, {',
+      "    timeout: STATE_WAIT_MS,",
+      "  });",
+      '  await page.waitForFunction(() => performance.getEntriesByName("tear:gameplay-start").length > 0, undefined, {',
+      "    timeout: STATE_WAIT_MS,",
+      "  });",
+      "}",
+      "module.exports = { run };",
+    ].join("\n");
+    expect(await messages(code)).toEqual([3, 4]);
+  });
 });
 
 describe("reloadPage", () => {

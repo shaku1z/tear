@@ -997,14 +997,14 @@
       "duration": "seconds"
     },
     "setup:hooks": {
-      "purpose": "Points the canonical checkout on main at the in-repo owner guard hooks and pins the owner identity; idempotent, refuses any other hooks path",
+      "purpose": "Points the canonical checkout at the in-repo hooks, pins the owner identity, clears stale per-worktree hooks overrides; idempotent, refuses unknown hooks",
       "effects": [
         "changes-git-config"
       ],
       "duration": "seconds"
     },
     "check:hooks": {
-      "purpose": "Reports which hooks this clone or worktree uses (in-repo, shared skill or none); read-only and warn-only",
+      "purpose": "Reports the hooks this worktree actually uses and names any worktree whose own config overrides them; read-only and warn-only",
       "effects": [
         "read-only"
       ],
