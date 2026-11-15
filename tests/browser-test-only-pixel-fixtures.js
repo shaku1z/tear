@@ -11,6 +11,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { decodePng } = require("./class-c-png");
+const { settleFor } = require("./browser-waits");
 
 const outputDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "c25", "test-only-pixel-fixtures");
 
@@ -48,7 +49,7 @@ async function main() {
       const capture = async (name) => {
         // Capture a completed render turn rather than an opening transition.
         // The production temporal observer similarly declines unstable frames.
-        await page.waitForTimeout(300);
+        await page.waitForTimeout(settleFor(300));
         const png = await page.screenshot({ type: "png" });
         const observation = observePixels(decodePng(png), { logicalWidth: 1600, logicalHeight: 900, maximumFrames: 4 });
         fs.mkdirSync(outputDirectory, { recursive: true });

@@ -3,6 +3,7 @@ const { createHash } = require("node:crypto");
 const { mkdir, readFile, writeFile } = require("node:fs/promises");
 const { join } = require("node:path");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor } = require("./browser-waits");
 
 withJourney(
   { name: "C37 Career Archive", port: 8155, deferBoot: true, ordinaryWatch: true },
@@ -97,7 +98,7 @@ withJourney(
     };
     const click = async (label) => {
       await page.waitForFunction((text) => window.__CAREER_POSITIONS__.some((entry) => entry.text === text), label, {
-        timeout: 10000,
+        timeout: STATE_WAIT_MS,
       });
       const point = await page.evaluate(
         (text) => window.__CAREER_POSITIONS__.findLast((entry) => entry.text === text),
@@ -157,7 +158,7 @@ withJourney(
           return entry || null;
         },
         id,
-        { timeout: 30000 },
+        { timeout: STATE_WAIT_MS },
       );
     const assertSourceBytes = (snapshot, original) => {
       assert.equal(snapshot.manifests.find(([key]) => key === original.id)?.[1], original.manifest);
@@ -177,7 +178,7 @@ withJourney(
       await page.mouse.click(800, 758);
       await waitScreen("playing");
       await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, {
-        timeout: 90000,
+        timeout: SLOW_STATE_WAIT_MS,
       });
       evidence.natural = {
         fixture: "ordinary setup input and real application frames; natural one-hit defeat, no forced outcome",
@@ -186,7 +187,7 @@ withJourney(
       await page.waitForFunction(
         () => window.__TEAR_GHOST_V3__.manifest()?.status === "complete" || window.__TEAR_GHOST_V3__.failure(),
         undefined,
-        { timeout: 20000 },
+        { timeout: STATE_WAIT_MS },
       );
       assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
       const natural = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
@@ -226,7 +227,7 @@ withJourney(
               window.__TEAR_GHOST_V3__.manifest().id !== prior) ||
             window.__TEAR_GHOST_V3__.failure(),
           evidence.sources.at(-1),
-          { timeout: 20000 },
+          { timeout: STATE_WAIT_MS },
         );
         assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
         evidence.sources.push(await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest().id));
@@ -447,7 +448,10 @@ withJourney(
           window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("Page ")),
       );
       await select(sourceId);
-      const [download] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), click("DOWNLOAD")]);
+      const [download] = await Promise.all([
+        page.waitForEvent("download", { timeout: STATE_WAIT_MS }),
+        click("DOWNLOAD"),
+      ]);
       const archivePath = join(directory, "career-export.tearghost.json");
       await download.saveAs(archivePath);
       const archiveBytes = await readFile(archivePath),
@@ -464,20 +468,20 @@ withJourney(
       await click("‹  BACK");
       await click("VAULT");
       const [chooser] = await Promise.all([
-        page.waitForEvent("filechooser", { timeout: 10000 }),
+        page.waitForEvent("filechooser", { timeout: STATE_WAIT_MS }),
         click("IMPORT A REPLAY FILE"),
       ]);
       await chooser.setFiles(archivePath);
       await page.waitForFunction(
         () => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("READY / ")),
         undefined,
-        { timeout: 20000 },
+        { timeout: STATE_WAIT_MS },
       );
       await click("RESTORE");
       await page.waitForFunction(
         () => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("COMPLETE / ")),
         undefined,
-        { timeout: 30000 },
+        { timeout: STATE_WAIT_MS },
       );
       await click("CAREER");
       await indexed(sourceId);
@@ -518,20 +522,20 @@ withJourney(
           await click("‹  BACK");
           await click("VAULT");
           const [referenceChooser] = await Promise.all([
-            page.waitForEvent("filechooser", { timeout: 10000 }),
+            page.waitForEvent("filechooser", { timeout: STATE_WAIT_MS }),
             click("IMPORT A REPLAY FILE"),
           ]);
           await referenceChooser.setFiles(process.env.TEAR_C37_CHASE_ARCHIVE);
           await page.waitForFunction(
             () => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("READY / ")),
             undefined,
-            { timeout: 20000 },
+            { timeout: STATE_WAIT_MS },
           );
           await click("RESTORE");
           await page.waitForFunction(
             () => window.__CAREER_POSITIONS__.some((entry) => entry.text.startsWith("COMPLETE / ")),
             undefined,
-            { timeout: 30000 },
+            { timeout: STATE_WAIT_MS },
           );
           await click("CAREER");
           await indexed(chaseSourceId);
@@ -555,10 +559,10 @@ withJourney(
         await page.waitForFunction(
           () => window.__CAREER_TEXTS__.some((text) => text.startsWith("CHASE ") && text.includes("NONCOMPETITIVE")),
           undefined,
-          { timeout: 30000 },
+          { timeout: STATE_WAIT_MS },
         );
         await page.keyboard.down("d");
-        await page.waitForTimeout(250);
+        await page.waitForTimeout(holdFor(250));
         await page.keyboard.up("d");
         evidence.chase = {
           declaredSource: chaseSource.manifest.provenance?.actor ?? "unknown attribution",
@@ -578,7 +582,7 @@ withJourney(
         await page.waitForFunction(
           () => window.__CAREER_POSITIONS__.some((entry) => entry.text.includes("projection unavailable")),
           undefined,
-          { timeout: 10000 },
+          { timeout: STATE_WAIT_MS },
         );
         evidence.chase.coverageRefusal = (await labels()).find((text) => text.includes("projection unavailable"));
         await page.keyboard.press("Escape");
@@ -608,7 +612,7 @@ withJourney(
             );
           },
           undefined,
-          { timeout: 30000 },
+          { timeout: STATE_WAIT_MS },
         );
         assert.equal(assisted.provenance.ghostAssistance.sourceId, chaseSourceId);
         assert.equal(assisted.provenance.ghostAssistance.competitiveEligible, false);

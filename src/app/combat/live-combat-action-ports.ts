@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import { BOSS_ROSTER } from "../../gameplay/run/content-director";
 import type { AttackPresentationCueSink } from "../../gameplay/combat/attack-presentation-cue";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
@@ -356,7 +357,7 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
     requestContinue: () => {
       navigation.setScreen("continue");
       options.reviveCountdown.setSeconds(8);
-      options.browserDocument.exitPointerLock();
+      releasePointerLock(options.browserDocument);
     },
   });
   const collisionPhaseState = createLiveCollisionStateView({

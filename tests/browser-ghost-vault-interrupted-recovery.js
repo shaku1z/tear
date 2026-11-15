@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 async function waitForDurableValue(page, predicate, argument) {
   let cancelled = false,
@@ -74,7 +75,7 @@ function readRecoveryStores(page, capsuleId) {
 
 withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, async ({ page, boot }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   const knownIds = await page.evaluate(async () =>
     (await window.__TEAR_GHOST_V3__.manifests()).map((manifest) => manifest.id),
@@ -100,7 +101,7 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
 
   await boot();
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   await page.evaluate(
     (next) => {

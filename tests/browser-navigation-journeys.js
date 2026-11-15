@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, waitScreen, clickAndWait }) => {
   async function setupSnapshot() {
@@ -88,7 +89,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
           return state.game === "playing" && state.mode === expected;
         },
         mode,
-        { timeout: 10000 },
+        { timeout: STATE_WAIT_MS },
       );
     } catch (error) {
       const snapshot = await page.evaluate(() => window.__PANTHEON_TEST.state());
@@ -115,7 +116,9 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
       );
     }
     await page.evaluate(() => window.__PANTHEON_TEST.skip());
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().active === false, undefined, { timeout: 10000 });
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().active === false, undefined, {
+      timeout: STATE_WAIT_MS,
+    });
     assert.equal(
       await page.evaluate(() => window.__PANTHEON_TEST.state().active),
       false,
@@ -134,7 +137,7 @@ withJourney({ name: "navigation journeys", port: 8141 }, async ({ page, boot, wa
 
   await boot();
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().attract?.ready === true, undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   const initialAttract = await page.evaluate(() => window.__PANTHEON_TEST.state().attract || null);
   assert.ok(initialAttract, "built artifact must expose the read-only Attract summary in PANTHEON_DEBUG");

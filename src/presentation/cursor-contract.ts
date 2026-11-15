@@ -1,14 +1,14 @@
+import { pointerOwnsInterface, type InputDevice } from "../domain/pointer-ownership";
+
 /**
- * Source-of-truth cursor policy (game.js@ee5e931):
- * - The drawn ink arrow paints on every non-playing screen while a mouse,
- *   keyboard or controller owns the UI ("mouse cursor in non-playing screens":
- *   `if (state !== "playing") UI.cursor(...)`).
- * - Touch owns no hover (docs/CURSOR_INPUT_CONTRACT.md): a finger has no resting
- *   pointer, so an arrow parked at the last tap position is a stale artifact.
- * - The user has explicitly superseded the oracle's native-cursor CSS: Tear owns
- *   the only visible cursor surface. The hardware cursor stays hidden over the
+ * Cursor policy (docs/CURSOR_INPUT_CONTRACT.md):
+ * - The drawn ink arrow paints on every non-playing screen while the mouse owns the
+ *   interface. The keyboard, a controller and touch own no pointer, so an arrow parked at
+ *   the last mouse position would be a stale artifact; it returns with the next meaningful
+ *   mouse movement.
+ * - Tear owns the only visible cursor surface. The hardware cursor stays hidden over the
  *   complete game shell, avoiding overlap with the ink arrow and blade reticle.
  */
-export function shouldDrawCanvasCursor(screen: string, inputMode = "mouse"): boolean {
-  return screen !== "playing" && inputMode !== "touch";
+export function shouldDrawCanvasCursor(screen: string, inputMode: InputDevice = "mouse"): boolean {
+  return screen !== "playing" && pointerOwnsInterface(inputMode);
 }

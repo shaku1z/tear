@@ -23,7 +23,11 @@ jobs:
   check:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # From measurement: the gate groups in config/checks.json record about 20 minutes on a
+    # runner and setup (install, browser download) about 3; the last full run on this list took
+    # about 25. The limit stays at least twice the recorded total, which tests/unit/ci-workflow
+    # checks, so a slow runner is not cut off and a hung check still stops.
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
         with:

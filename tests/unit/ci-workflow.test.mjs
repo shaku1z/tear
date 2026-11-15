@@ -104,4 +104,25 @@ describe("Validate workflow", () => {
     expect(preview).toContain("/^tear-release-targets-[0-9a-f]{40}$/");
     expect(preview).toContain("candidate-release/dist/standalone");
   });
+
+  it("sets the job limit to at least twice the recorded time of the gate plus setup", () => {
+    // Setup is checkout, install and the Chromium download: about 3 minutes on a runner.
+    const setupSeconds = 180;
+    const config = loadChecks();
+    const gateSeconds = config.gate
+      .flatMap((group) => selectChecks(config, group))
+      .reduce((total, check) => total + check.seconds, 0);
+    const limits = [...workflow.matchAll(/^ {4}timeout-minutes: (\d+)$/gmu)].map((match) => Number(match[1]));
+    expect(limits, "one job-level timeout-minutes").toHaveLength(1);
+    expect(
+      gateSeconds + setupSeconds,
+      `recorded ${String(gateSeconds)} s of checks plus ${String(setupSeconds)} s setup against a ${String(limits[0])}-minute limit`,
+    ).toBeLessThanOrEqual((limits[0] * 60) / 2);
+  });
+
+  it("checks out the full history (the oracle comparison reads an old commit)", () => {
+    const checkouts = [...workflow.matchAll(/uses: actions\/checkout@v4\n {8}with:\n {10}fetch-depth: (\d+)/gu)];
+    expect(checkouts.map((match) => match[1])).toEqual(["0"]);
+    expect(workflow.match(/actions\/checkout@/gu)).toHaveLength(1);
+  });
 });

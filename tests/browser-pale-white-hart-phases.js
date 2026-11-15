@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const scenario = Object.freeze({
   start: Object.freeze({ mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "white-hart" }),
@@ -17,7 +18,7 @@ async function preparePhase(page, fraction, phase) {
     (expected) =>
       window.TEAR_WEAPON_DEBUG().enemies.find((enemy) => enemy.bossId === "white-hart")?.phaseMarker === expected,
     phase,
-    { timeout: 5_000 },
+    { timeout: STATE_WAIT_MS },
   );
 }
 
@@ -29,7 +30,7 @@ async function captureAttack(page, directory, attack, file, predicate) {
       return boss?.atk === id && boss?.state === expected;
     },
     { id: attack, expected: predicate },
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => window.__PANTHEON_TEST.pause());
   const snapshot = await hart(page);
@@ -46,7 +47,7 @@ withJourney({ name: "Pale PT3-C7 White Hart phases", port: 8357 }, async ({ page
       return boss?.spawnT <= 0 && boss?.introT === 0;
     },
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const directory = path.resolve(
     __dirname,
@@ -73,7 +74,7 @@ withJourney({ name: "Pale PT3-C7 White Hart phases", port: 8357 }, async ({ page
     () =>
       window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "aurora-shard").length === 3,
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => window.__PANTHEON_TEST.pause());
   const shards = await page.evaluate(() =>
@@ -110,7 +111,7 @@ withJourney({ name: "Pale PT3-C7 White Hart phases", port: 8357 }, async ({ page
       return boss?.atk === "endless-return" && boss?.state === "commit" && boss?.auroraBossChargeActive === true;
     },
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => window.__PANTHEON_TEST.pause());
   const endless = await hart(page);

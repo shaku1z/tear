@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
 const scenarios = [
   { name: "desktop-16:9", width: 1600, height: 900, dpr: 1 },
@@ -28,7 +29,7 @@ async function phoneJourney(page, scenario, viewport) {
   };
   const settle = async (screen) => {
     await page.waitForFunction((expected) => window.__PANTHEON_TEST?.state().game === expected, screen, {
-      timeout: 10_000,
+      timeout: STATE_WAIT_MS,
     });
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
@@ -145,7 +146,7 @@ async function main() {
         route.request().url().startsWith(origin) ? route.continue() : route.abort(),
       );
       await page.goto(`${origin}/?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
-      await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.viewport, undefined, { timeout: 20_000 });
+      await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.viewport, undefined, { timeout: STATE_WAIT_MS });
       await page.evaluate(() => document.fonts.ready);
       await page.mouse.move(scenario.width / 2, scenario.height / 2);
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "mouse");
@@ -209,7 +210,7 @@ async function main() {
           page.screenshot({ path: path.join(process.env.TEAR_VISUAL_DIR, `${fileName}-${screen}.png`) });
         const settle = async (screen) => {
           await page.waitForFunction((expected) => window.__PANTHEON_TEST?.state().game === expected, screen, {
-            timeout: 10_000,
+            timeout: STATE_WAIT_MS,
           });
           await page.waitForLoadState("networkidle");
           await page.evaluate(
@@ -236,7 +237,7 @@ async function main() {
           await settle("settings");
           await capture("settings");
           await logicalClick(800, 169);
-          await page.waitForTimeout(120);
+          await page.waitForTimeout(settleFor(120));
           await capture("settings-audio");
           await logicalClick(800, 828);
           await settle("menu");
@@ -265,7 +266,7 @@ async function main() {
           await capture("draft");
           await page.reload({ waitUntil: "domcontentloaded" });
           await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__, undefined, {
-            timeout: 20_000,
+            timeout: STATE_WAIT_MS,
           });
           await page.mouse.click(10, 10);
           await page.evaluate(() => window.__PANTHEON_TEST.startMode("endless"));
