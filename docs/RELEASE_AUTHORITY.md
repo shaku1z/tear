@@ -37,6 +37,32 @@ digest. The hash covers every other file as sorted path, byte length, and
 content SHA-256. The file is written after PWA generation, so it is fetched
 from the network and is deliberately not part of the offline precache.
 
+## Merging
+
+`main` does not require a pull request to be up to date with it before merging
+(owner decision, 2026-11-13). These rules take its place. `pnpm merge:ready <pr>`
+applies them and answers yes or no with the reason; the merge helper calls it.
+
+1. **A red `main` stops merges.** The latest finished Validate run on `main`
+   must have passed. The one exception is a pull request labelled `fixes-main`,
+   and its own check must still be current.
+2. **A stale pass is not a pass.** The pull request's latest Validate run for
+   its current head must have passed. Since the `main` commit that run checked,
+   `main` must not have changed:
+   - any file the pull request changes;
+   - any shared file: `package.json`, the lockfile, workflow files, anything
+     under `config/`, the TearBench task registry, tsconfig, ESLint, Prettier,
+     Vite and Vitest configuration, and `scripts/build-target.mjs`.
+
+   Otherwise `pnpm merge:ready <pr> --refresh` starts a fresh run.
+3. **Every check is of the change merged with `main` as it is when the check
+   starts.** Validate checks out the pull request's head, merges current `main`
+   itself, and records both commits on the run as the `checked` annotation.
+   - A re-run therefore also tests current `main`.
+   - Neither a re-run nor a reopened pull request reuses GitHub's prepared
+     merge ref.
+   - The release artifact is named after the commit actually built.
+
 ## Local boundary
 
 `pnpm deploy` and `pnpm deploy:dry-run` build and run Wrangler with

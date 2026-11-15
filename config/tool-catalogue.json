@@ -8,7 +8,9 @@
     "network": "Talks to a remote service (GitHub, Cloudflare, Firebase, package registries)",
     "deploys": "Publishes something players or the wiki can see",
     "starts-server": "Runs a local server until stopped",
-    "launches-browser": "Starts a headless browser"
+    "launches-browser": "Starts a headless browser",
+    "changes-git-config": "Changes Git configuration (hooks path, identity) of a clone",
+    "changes-github": "Changes GitHub state, such as merging a pull request"
   },
   "durations": {
     "seconds": "under about 15 seconds",
@@ -987,6 +989,27 @@
       ],
       "duration": "seconds"
     },
+    "merge:ready": {
+      "purpose": "Says whether a pull request may merge: main green and the check current against main; --refresh starts a fresh check",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds"
+    },
+    "setup:hooks": {
+      "purpose": "Points the canonical checkout on main at the in-repo owner guard hooks and pins the owner identity; idempotent, refuses any other hooks path",
+      "effects": [
+        "changes-git-config"
+      ],
+      "duration": "seconds"
+    },
+    "check:hooks": {
+      "purpose": "Reports which hooks this clone or worktree uses (in-repo, shared skill or none); read-only and warn-only",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
+    },
     "check:terminology": {
       "purpose": "Checks player-facing and doc text against the terminology registry",
       "effects": [
@@ -1496,6 +1519,42 @@
         "format:check"
       ]
     },
+    "scripts/governance/owner-safe-pr-merge.mjs": {
+      "purpose": "Squash-merges a reviewed pull request as the owner after checking authorization, exact head, green check and clean text, then verifies the merge commit",
+      "effects": [
+        "network",
+        "changes-github"
+      ],
+      "duration": "under-a-minute",
+      "via": [],
+      "runBy": [
+        "scripts/governance/README.md",
+        "AGENTS.md"
+      ]
+    },
+    "scripts/governance/setup-hooks.mjs": {
+      "purpose": "Installs or reports the in-repo owner guard hooks for the canonical checkout",
+      "effects": [
+        "changes-git-config"
+      ],
+      "duration": "seconds",
+      "via": [
+        "setup:hooks",
+        "check:hooks"
+      ]
+    },
+    "scripts/governance/tear-git-guard.mjs": {
+      "purpose": "The owner guard: identity, branch, attribution and push rules checked by every Git hook",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        "scripts/governance/hooks/pre-commit",
+        "scripts/governance/hooks/pre-push"
+      ]
+    },
     "scripts/lint.mjs": {
       "purpose": "Runs ESLint over the canonical target list",
       "effects": [
@@ -1515,6 +1574,16 @@
       "via": [],
       "runBy": [
         "config/checkpoints.json"
+      ]
+    },
+    "scripts/merge-ready.mjs": {
+      "purpose": "Merge readiness behind pnpm merge:ready: a red main stops merges and a stale pass is not a pass",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds",
+      "via": [
+        "merge:ready"
       ]
     },
     "scripts/package-crazygames.mjs": {

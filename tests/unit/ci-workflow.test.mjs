@@ -40,7 +40,7 @@ describe("Validate workflow", () => {
 
   it("treats a pull request as docs-only exactly when every changed file is a document", { timeout: 30_000 }, () => {
     // Runs the workflow's own script, so a quoting or escaping mistake in the file fails here.
-    const script = /git diff --name-only "\$BASE" HEAD \| node -e '([^']+)'; then$/mu.exec(workflow)?.[1];
+    const script = /git diff --name-only origin\/main HEAD \| node -e '([^']+)'; then$/mu.exec(workflow)?.[1];
     expect(script, "the docs-only scope script").toBeDefined();
     const docsOnly = (files) =>
       spawnSync(process.execPath, ["-e", script ?? ""], { input: `${files.join("\n")}\n` }).status === 0;
@@ -52,6 +52,41 @@ describe("Validate workflow", () => {
     expect(docsOnly(["config/checks.json"])).toBe(false);
     expect(docsOnly(["docsx/a.md"])).toBe(false);
     expect(docsOnly([])).toBe(false);
+  });
+
+  it("checks a pull request as its head merged with current main, and records both", () => {
+    // GitHub's prepared merge ref is reused by a re-run and can be stale after a reopen.
+    expect(workflow).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
+    const merge = workflow.indexOf("- name: Merge current main into the change");
+    const record = workflow.indexOf("- name: Record what was checked");
+    const install = workflow.indexOf("- run: pnpm install --frozen-lockfile");
+    expect(merge).toBeGreaterThan(0);
+    expect(record).toBeGreaterThan(merge);
+    expect(install).toBeGreaterThan(record);
+    expect(workflow.slice(merge, record)).toMatch(
+      /git fetch --quiet origin main\n.*merge --quiet --no-edit origin\/main/u,
+    );
+    // scripts/merge-ready.mjs parses exactly this annotation.
+    expect(workflow).toContain('echo "::notice title=checked::head=$head main=$main"');
+    // Every later step must expect the commit checked out here, not GitHub's GITHUB_SHA: the
+    // workspace check, the build's attribution and the artifact verification all read these.
+    const recordStep = workflow.slice(record, install);
+    expect(recordStep).toContain('echo "TEAR_RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"');
+    expect(recordStep).toContain('echo "TEAR_BUILD_GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"');
+  });
+
+  it("has every script that compares HEAD with GITHUB_SHA prefer the checked commit", () => {
+    for (const [file, variable] of [
+      ["scripts/check-workspace.mjs", "TEAR_RELEASE_SHA"],
+      ["scripts/release-preflight.mjs", "TEAR_RELEASE_SHA"],
+      ["scripts/verify-plan-certificate.mjs", "TEAR_RELEASE_SHA"],
+      ["scripts/verify-release-artifact.mjs", "TEAR_RELEASE_SHA"],
+      ["scripts/build-target.mjs", "TEAR_BUILD_GIT_SHA"],
+    ]) {
+      expect(read(file), `${file} must read ${variable} before GITHUB_SHA`).toMatch(
+        new RegExp(`${variable}[\\s\\S]{0,200}GITHUB_SHA`, "u"),
+      );
+    }
   });
 
   it("runs every gate group of config/checks.json, in the listed order, and nothing else", () => {
@@ -92,7 +127,7 @@ describe("Validate workflow", () => {
   it("uploads the release build once, under the name and layout the deploy workflows read", () => {
     const uploads =
       workflow.match(
-        /upload-artifact@v4\n(?: {8}if: .*\n)? {8}with:\n {10}name: tear-release-targets-\$\{\{ github\.sha \}\}/gu,
+        /upload-artifact@v4\n(?: {8}if: .*\n)? {8}with:\n(?: {10}#.*\n)* {10}name: tear-release-targets-\$\{\{ steps\.checked\.outputs\.commit \}\}/gu,
       ) ?? [];
     expect(uploads).toHaveLength(1);
     // Two paths keep the repository root as the archive root, so deploys find dist/standalone.
@@ -104,7 +139,6 @@ describe("Validate workflow", () => {
     expect(preview).toContain("/^tear-release-targets-[0-9a-f]{40}$/");
     expect(preview).toContain("candidate-release/dist/standalone");
   });
-
   it("sets the job limit to at least twice the recorded time of the gate plus setup", () => {
     // Setup is checkout, install and the Chromium download: about 3 minutes on a runner.
     const setupSeconds = 180;
