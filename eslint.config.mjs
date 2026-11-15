@@ -227,6 +227,15 @@ export default tseslint.config(
             "Do not wait for pointer lock: wait for the game state it leads to, or use waitForPointerLock(page) from tests/browser-waits.js on the real-lock path.",
         },
         {
+          // A hook that acts on a live game object (a projectile in flight, an actor) must check for it in
+          // the same page task: the game keeps running between two page calls, and a screenshot in
+          // between is long enough for a projectile to land.
+          selector:
+            "CallExpression[callee.property.name='evaluate']:has(MemberExpression[object.property.name='__PANTHEON_TEST'][property.name=/^trigger/])",
+          message:
+            "Act in the same page task that checks the state the hook needs: page.waitForFunction(() => present() && (trigger(), true)), not a separate page.evaluate.",
+        },
+        {
           // A DOM element's inline style is the page's presentation, not the game's state.
           selector:
             "CallExpression[callee.property.name='waitForFunction']:has(MemberExpression[object.property.name='style'])",
