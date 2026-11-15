@@ -202,9 +202,6 @@ export function createUiState(colors: UiPalette) {
         finalRewardGhost: 0.18,
         rallyBase: 0.72,
         rallyPulse: 0.18,
-        // In-run teaching card surface (tutorial lesson, playground help); the HUD
-        // itself has no plates: its text sits directly on the scene in the biome ink
-        hudPlate: 0.8,
       },
       // colour ROLES (semantic). `ink`/`paper` are the fg/bg pair; the rest pull
       // from the game palette so the system and the game never drift apart.

@@ -1,6 +1,5 @@
 import type {
   BossIntroSnapshot,
-  PlaygroundHelpSnapshot,
   ReticleSnapshot,
   StageBannerSnapshot,
   TouchControlsSnapshot,
@@ -40,29 +39,6 @@ export function buildTutorialCardSnapshot(
     arenaLabel: lesson.arenaLabel ?? "TRAINING",
     teachingFocus: lesson.teachingFocus ?? "movement",
     progress: progress === undefined ? undefined : { current: progress[0], goal: progress[1] },
-    clearTop,
-  });
-}
-
-export interface WeaponStatsSource {
-  readonly heldHits: number;
-  readonly throws: number;
-  readonly throwHits: number;
-  readonly perfectParries: number;
-  readonly breakTriggers: number;
-}
-export function buildPlaygroundHelpSnapshot(
-  weaponId: string,
-  stats: WeaponStatsSource,
-  clearTop?: number,
-): PlaygroundHelpSnapshot {
-  return Object.freeze({
-    weaponId,
-    heldHits: stats.heldHits,
-    throws: stats.throws,
-    throwHits: stats.throwHits,
-    perfectParries: stats.perfectParries,
-    breakTriggers: stats.breakTriggers,
     clearTop,
   });
 }
