@@ -478,7 +478,7 @@ withJourney(
     }
     const url = new URL(page.url());
     url.searchParams.set("watchagent", "1");
-    await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
+    await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
     await page.getByLabel("Profile").selectOption("competent");
     await page.getByLabel("Mode").selectOption("campaign");

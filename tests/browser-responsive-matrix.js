@@ -145,7 +145,7 @@ async function main() {
       await page.route("**/*", (route) =>
         route.request().url().startsWith(origin) ? route.continue() : route.abort(),
       );
-      await page.goto(`${origin}/?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${origin}/?test=1&bossdebug=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.viewport, undefined, { timeout: STATE_WAIT_MS });
       await page.evaluate(() => document.fonts.ready);
       await page.mouse.move(scenario.width / 2, scenario.height / 2);
@@ -212,7 +212,7 @@ async function main() {
           await page.waitForFunction((expected) => window.__PANTHEON_TEST?.state().game === expected, screen, {
             timeout: STATE_WAIT_MS,
           });
-          await page.waitForLoadState("networkidle");
+          await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
           await page.evaluate(
             () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
           );
@@ -264,7 +264,7 @@ async function main() {
           await page.evaluate(() => window.__PANTHEON_TEST.openDraft({ expanded: true, rerolls: 2, reserve: true }));
           await settle("draft");
           await capture("draft");
-          await page.reload({ waitUntil: "domcontentloaded" });
+          await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
           await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__, undefined, {
             timeout: STATE_WAIT_MS,
           });

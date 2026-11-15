@@ -42,7 +42,7 @@ const { STATE_WAIT_MS } = require("./browser-waits");
     if (route.request().url().startsWith(origin)) void route.continue();
     else void route.abort();
   });
-  await page.goto(`${origin}/?test=1`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${origin}/?test=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ !== undefined);
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;

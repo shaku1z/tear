@@ -382,7 +382,7 @@ async function measureLoad(browser, target, profileId, server) {
   if (profile.cpu > 1) await cdp.send("Emulation.setCPUThrottlingRate", { rate: profile.cpu });
   const gameFrame = () => (target === "crazygames" ? page.frames().find((frame) => frame !== page.mainFrame()) : page);
   const load = async () => {
-    await page.goto(server.url, { waitUntil: "commit" });
+    await page.goto(server.url, { timeout: STATE_WAIT_MS, waitUntil: "commit" });
     const deadline = Date.now() + 180_000;
     let frame;
     while (!(frame = gameFrame())) {
