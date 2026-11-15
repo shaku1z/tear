@@ -96,7 +96,23 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
         projectileCount: shards.length,
         counterplay: shards[0].counterplay,
       });
-      await page.evaluate(() => window.__PANTHEON_TEST.triggerPaleVariantCounterplay("prism-seer", "perfect-parry"));
+      // The game keeps running while the screenshot is taken, and the pair reaches the player in about
+      // half a second, so it may be gone by now. Check and parry in one page task; if the pair has
+      // landed, compose the Seer's windup again and parry the next pair.
+      await page.waitForFunction(
+        () => {
+          const debug = window.TEAR_WEAPON_DEBUG();
+          if (debug.projectiles.some((projectile) => projectile.kind === "prism-shard")) {
+            window.__PANTHEON_TEST.triggerPaleVariantCounterplay("prism-seer", "perfect-parry");
+            return true;
+          }
+          if (!debug.enemies.some((enemy) => enemy.variant === "prism-seer" && enemy.state === "windup"))
+            window.__PANTHEON_TEST.preparePaleVariantEvidenceScenario("ranged", "prism-seer");
+          return false;
+        },
+        undefined,
+        { timeout: STATE_WAIT_MS },
+      );
       await page.waitForFunction(
         () =>
           window
@@ -179,7 +195,13 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
         glacierCracked: actor.glacierCracked,
         enraged: actor.enraged,
       });
-      await page.evaluate(() => window.__PANTHEON_TEST.triggerPaleVariantCounterplay("glacier-guard", "launch"));
+      await page.waitForFunction(
+        () =>
+          window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.variant === "glacier-guard") &&
+          (window.__PANTHEON_TEST.triggerPaleVariantCounterplay("glacier-guard", "launch"), true),
+        undefined,
+        { timeout: STATE_WAIT_MS },
+      );
       await page.waitForFunction(
         () =>
           window
@@ -194,7 +216,13 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
       await page.screenshot({ path: path.join(directory, crackedFile) });
       screenshots.push(crackedFile);
       observed.push({ variantId, mechanic: "launch-cracks-shell", glacierCracked: true, enraged: false });
-      await page.evaluate(() => window.__PANTHEON_TEST.triggerPaleVariantCounterplay("glacier-guard", "break"));
+      await page.waitForFunction(
+        () =>
+          window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.variant === "glacier-guard") &&
+          (window.__PANTHEON_TEST.triggerPaleVariantCounterplay("glacier-guard", "break"), true),
+        undefined,
+        { timeout: STATE_WAIT_MS },
+      );
       await page.waitForFunction(
         () =>
           window

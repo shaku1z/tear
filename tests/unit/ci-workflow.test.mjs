@@ -1,9 +1,10 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
+import { loadChecks, selectChecks } from "../../scripts/run-checks.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 const read = (path) => readFileSync(resolve(root, path), "utf8").replace(/\r\n/gu, "\n");
@@ -88,6 +89,34 @@ describe("Validate workflow", () => {
     }
   });
 
+  it("runs every gate group of config/checks.json, in the listed order, and nothing else", () => {
+    const config = loadChecks();
+    const groups = [...workflow.matchAll(/node scripts\/run-checks\.mjs (\w+)/gu)].map((match) => match[1]);
+    expect(groups).toEqual(config.gate);
+    expect(config.gate.slice(0, 1)).toEqual(["static"]);
+    // The cheap, likely-to-fail checks come first, so a failure shows within minutes.
+    expect(config.groups.static.slice(0, 4).map((check) => check.id)).toEqual([
+      "format",
+      "docs",
+      "terminology",
+      "repository-guards",
+    ]);
+    expect(workflow).not.toMatch(/check:functional|tearbench (?:ci|tasks)/u);
+  });
+
+  it("lists every check once, with a command that names a file that exists", () => {
+    const config = loadChecks();
+    for (const group of Object.keys(config.groups)) {
+      const ids = selectChecks(config, group).map((check) => check.id);
+      expect(new Set(ids).size, `duplicate id in ${group}`).toBe(ids.length);
+      for (const check of selectChecks(config, group)) {
+        const [command, file] = check.args;
+        expect(command, check.id).toBe("node");
+        if (!file.startsWith("--")) expect(existsSync(resolve(root, file)), `${group}.${check.id}: ${file}`).toBe(true);
+      }
+    }
+  });
+
   it("gives no step a key twice (GitHub rejects such a file)", () => {
     for (const step of workflow.split(/\n(?= {6}- )/u)) {
       const keys = [...step.matchAll(/^ {6}(?:- | {2})([a-z-]+):/gmu)].map((match) => match[1]);
@@ -109,5 +138,25 @@ describe("Validate workflow", () => {
     const preview = read(".github/workflows/deploy-preview.yml");
     expect(preview).toContain("/^tear-release-targets-[0-9a-f]{40}$/");
     expect(preview).toContain("candidate-release/dist/standalone");
+  });
+  it("sets the job limit to at least twice the recorded time of the gate plus setup", () => {
+    // Setup is checkout, install and the Chromium download: about 3 minutes on a runner.
+    const setupSeconds = 180;
+    const config = loadChecks();
+    const gateSeconds = config.gate
+      .flatMap((group) => selectChecks(config, group))
+      .reduce((total, check) => total + check.seconds, 0);
+    const limits = [...workflow.matchAll(/^ {4}timeout-minutes: (\d+)$/gmu)].map((match) => Number(match[1]));
+    expect(limits, "one job-level timeout-minutes").toHaveLength(1);
+    expect(
+      gateSeconds + setupSeconds,
+      `recorded ${String(gateSeconds)} s of checks plus ${String(setupSeconds)} s setup against a ${String(limits[0])}-minute limit`,
+    ).toBeLessThanOrEqual((limits[0] * 60) / 2);
+  });
+
+  it("checks out the full history (the oracle comparison reads an old commit)", () => {
+    const checkouts = [...workflow.matchAll(/uses: actions\/checkout@v4\n {8}with:\n {10}fetch-depth: (\d+)/gu)];
+    expect(checkouts.map((match) => match[1])).toEqual(["0"]);
+    expect(workflow.match(/actions\/checkout@/gu)).toHaveLength(1);
   });
 });

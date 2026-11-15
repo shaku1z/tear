@@ -23,10 +23,11 @@ jobs:
   check:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    # Measured: an ordinary run takes 24-26 minutes, and a pull request that touches many tests
-    # took about 34 (7.5 for the diff-selected evidence, 22+ for check:functional). 45 leaves
-    # about a third over the worst measured run; reduce it when the duplicated step goes.
-    timeout-minutes: 45
+    # From measurement: the gate groups in config/checks.json record about 20 minutes on a
+    # runner and setup (install, browser download) about 3; the last full run on this list took
+    # about 25. The limit stays at least twice the recorded total, which tests/unit/ci-workflow
+    # checks, so a slow runner is not cut off and a hung check still stops.
+    timeout-minutes: 50
     steps:
       # A pull request is checked as its head merged with main as main is now,
       # not GitHub's prepared merge ref, which a re-run reuses and a reopen can
@@ -76,20 +77,26 @@ jobs:
             gameplay_required=false
           fi
           echo "gameplay_required=$gameplay_required" >> "$GITHUB_OUTPUT"
-      - run: pnpm exec playwright install --with-deps chromium
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
-      - name: Prove release preflight rejects unsafe repository states
-        if: steps.validation-scope.outputs.gameplay_required == 'true'
-        run: node --test tests/release-preflight.test.mjs
-      - name: Validate documentation-only authority and terminology
+      - name: Check documents only
         if: steps.validation-scope.outputs.gameplay_required == 'false'
         run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm requirements:check && pnpm wiki:test
-      # The wiki reads the game exporter (src/game-reference), so game changes run its tests too.
-      - name: Wiki tests
+      # The checks in config/checks.json, one step per group in the order they
+      # are listed: cheap and likely-to-fail first, so a failure shows within
+      # minutes. `pnpm check` runs the same list locally.
+      - name: Static checks (format, repository guards, typecheck, lint)
         if: steps.validation-scope.outputs.gameplay_required == 'true'
-        run: pnpm wiki:test
-      - run: xvfb-run -a pnpm check:functional
+        run: node scripts/run-checks.mjs static
+      - name: Unit tests
         if: steps.validation-scope.outputs.gameplay_required == 'true'
+        run: node scripts/run-checks.mjs unit
+      - name: Builds
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
+        run: node scripts/run-checks.mjs build
+      - run: pnpm exec playwright install --with-deps chromium
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
+      - name: Browser checks
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
+        run: xvfb-run -a node scripts/run-checks.mjs browser
       - uses: actions/upload-artifact@v4
         if: steps.validation-scope.outputs.gameplay_required == 'true'
         with:

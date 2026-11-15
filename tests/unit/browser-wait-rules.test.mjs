@@ -62,6 +62,22 @@ describe("browser wait rules", { timeout: 60_000 }, () => {
     expect(await messages(code)).toEqual([2, 3, 4, 5, 6, 7]);
   });
 
+  it("rejects a test hook that acts on live game state from a separate page call", async () => {
+    const code = [
+      'const { STATE_WAIT_MS } = require("./browser-waits");',
+      "async function run(page) {",
+      '  await page.evaluate(() => window.__PANTHEON_TEST.triggerPaleVariantCounterplay("prism-seer", "perfect-parry"));',
+      "  await page.waitForFunction(",
+      '    () => window.TEAR_WEAPON_DEBUG().projectiles.length > 0 && (window.__PANTHEON_TEST.triggerX("a"), true),',
+      "    undefined,",
+      "    { timeout: STATE_WAIT_MS },",
+      "  );",
+      "}",
+      "module.exports = { run };",
+    ].join("\n");
+    expect(await messages(code)).toEqual([3]);
+  });
+
   it("rejects waiting on pointer lock or an inline style, and accepts a performance mark", async () => {
     const code = [
       'const { STATE_WAIT_MS } = require("./browser-waits");',
