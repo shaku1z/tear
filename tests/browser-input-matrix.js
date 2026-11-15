@@ -324,7 +324,7 @@ async function main() {
     await page.route("**/*", (route) =>
       route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
     );
-    await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__PANTHEON_TEST);
   }
 

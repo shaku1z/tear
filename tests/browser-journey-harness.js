@@ -130,6 +130,9 @@ async function withJourney(options, run) {
       deviceScaleFactor: options.deviceScaleFactor || 1,
       serviceWorkers: "block",
     });
+    // A call that names no timeout still gets the state-wait ceiling, not Playwright's 30 s.
+    page.setDefaultTimeout(STATE_WAIT_MS);
+    page.setDefaultNavigationTimeout(STATE_WAIT_MS);
     if (options.settings) {
       await page.addInitScript((settings) => {
         window.__TEAR_TEST_STORAGE__ = {

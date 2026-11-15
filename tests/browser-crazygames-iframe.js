@@ -63,7 +63,7 @@ async function main() {
       else void route.abort();
     });
 
-    await page.goto(`${origin}/harness`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${origin}/harness`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
     const iframe = await page.waitForSelector("#game");
     const frame = await iframe.contentFrame();
     if (!frame) throw new Error("CrazyGames game iframe did not load");

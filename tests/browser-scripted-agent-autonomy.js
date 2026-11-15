@@ -7,7 +7,7 @@ const { STATE_WAIT_MS } = require("./browser-waits");
 withJourney({ name: "C24 competent scripted-agent autonomy", port: 8153 }, async ({ page, errors }) => {
   const url = new URL(page.url());
   url.searchParams.set("watchagent", "1");
-  await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
+  await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
   assert.equal(await page.locator("#tear-watch-agent").count(), 1);
   const apiStart = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.snapshot());
