@@ -57,6 +57,12 @@ pnpm setup:hooks
 
 It is idempotent. It replaces only the shared skill hooks or no hooks, and refuses any other hooks path. Linked worktrees share the repository config, so they use the same hooks. The hooks path is absolute and points into the canonical checkout, so a feature branch cannot weaken the guard that checks it.
 
+**Per-worktree overrides.** With `extensions.worktreeConfig` on, a worktree's own `config.worktree` can set `core.hooksPath`, and that wins over the repository setting. Every linked worktree here once carried one pointing at the shared skill hooks, next to `core.longpaths = true`. After the switch, Git ran the shared hooks, and those refused because the repository setting named the in-repo hooks.
+- `pnpm setup:hooks` removes such overrides when they point at the in-repo hooks or at the shared skill hooks, in every worktree. It refuses any other override, before changing anything.
+- `pnpm check:hooks` reads the hooks path Git actually uses in this worktree, and names every worktree whose override points elsewhere.
+
+What writes these overrides is not established. They appeared only in worktrees created by tooling, never by the setup script. Run `pnpm check:hooks` after creating worktrees, and `pnpm setup:hooks` from the canonical checkout if it reports one.
+
 ## Keeping the two copies in step
 
 The copy here is the authority for this repository; the shared skill copy remains the authority for the music and wiki repositories. `tests/unit/governance-guard.test.mjs` runs every rule case against both copies when the shared copy exists on the machine, so a difference in behaviour fails locally. CI has only this copy.
