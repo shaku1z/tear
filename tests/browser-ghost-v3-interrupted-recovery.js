@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function scenario(id, seed) {
   return {
@@ -21,7 +22,7 @@ function scenario(id, seed) {
 
 withJourney({ name: "C27 Ghost V3 interrupted browser recovery", port: 8157 }, async ({ page }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   await page.evaluate(
     (next) => {
@@ -35,7 +36,7 @@ withJourney({ name: "C27 Ghost V3 interrupted browser recovery", port: 8157 }, a
     page,
     async () => (await window.__TEAR_GHOST_V3__.manifests()).some((manifest) => manifest.status === "recording"),
     undefined,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   const interruptedId = await page.evaluate(async () => {
     const manifest = (await window.__TEAR_GHOST_V3__.manifests()).find((entry) => entry.status === "recording");
@@ -45,7 +46,7 @@ withJourney({ name: "C27 Ghost V3 interrupted browser recovery", port: 8157 }, a
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   // A reload creates a fresh legacy audio context.  Mirror the journey harness
   // boot gesture before advancing the live runtime so wave SFX have a bound
@@ -73,7 +74,7 @@ withJourney({ name: "C27 Ghost V3 interrupted browser recovery", port: 8157 }, a
     async (id) =>
       (await window.__TEAR_GHOST_V3__.manifests()).some((entry) => entry.id === id && entry.status === "recovered"),
     interruptedId,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   const recovered = await page.evaluate(
     async (id) => (await window.__TEAR_GHOST_V3__.manifests()).find((entry) => entry.id === id),

@@ -1,3 +1,5 @@
+import { markStartupMilestone } from "./startup-milestones";
+
 /**
  * The HTML loading state (#boot in index.html) covers the page while the
  * application chunks download. The canvas takes over once it has drawn its first
@@ -7,4 +9,5 @@
 export function dismissBootScreen(document: Document): void {
   document.getElementById("boot")?.remove();
   document.documentElement.dataset.booted = "true";
+  markStartupMilestone("first-frame");
 }

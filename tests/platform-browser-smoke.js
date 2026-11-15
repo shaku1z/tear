@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, notWithin, settleFor } = require("./browser-waits");
 
 (async () => {
   const target = process.argv[2] || process.env.TEAR_SMOKE_TARGET || "standalone";
@@ -53,7 +54,7 @@ const path = require("node:path");
   });
   await page.goto(`http://127.0.0.1:${address.port}/?test=1`, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_PLATFORM_SERVICES__, undefined, {
-    timeout: 10_000,
+    timeout: STATE_WAIT_MS,
   });
   const boot = await page.evaluate(() => ({
     platform: window.__TEAR_PLATFORM_SERVICES__.id,
@@ -71,10 +72,10 @@ const path = require("node:path");
   );
 
   await page.mouse.click(260, 360);
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(settleFor(350));
   await page.mouse.click(1180, 200);
   await page.mouse.click(800, 758);
-  await page.waitForTimeout(750);
+  await page.waitForTimeout(notWithin(750));
   assert.deepEqual(errors, []);
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

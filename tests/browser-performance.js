@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const { assertPacingAssessment, createPacingAssessment } = require("./browser-performance-pacing-policy");
+const { STATE_WAIT_MS, holdFor, pollEvery } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const buildRoot = path.resolve(projectRoot, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -174,11 +175,11 @@ async function openInstrumentedPage(browser, pageErrors, options = {}) {
   const agentQuery = playgroundControls ? "&watchagent=1" : "";
   await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1${agentQuery}`, {
     waitUntil: "domcontentloaded",
-    timeout: 30000,
+    timeout: STATE_WAIT_MS,
   });
   await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__ && window.__PANTHEON_TEST);
   if (playgroundControls) {
-    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15000 });
+    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
     await page.evaluate(() => {
       document.getElementById("tear-watch-agent")?.remove();
     });
@@ -188,7 +189,7 @@ async function openInstrumentedPage(browser, pageErrors, options = {}) {
   // by production so audio initialization cannot race the workload setup.
   await page.keyboard.press("Shift");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, {
-    timeout: 20000,
+    timeout: STATE_WAIT_MS,
   });
   return page;
 }
@@ -294,7 +295,7 @@ async function clickDrawnLabelUntil(page, label, state) {
     if (point) await page.mouse.click(point.x, point.y);
     try {
       await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, state, {
-        timeout: 1_000,
+        timeout: pollEvery(1_000),
       });
       return;
     } catch (error) {
@@ -342,7 +343,9 @@ async function spawnRepresentativeEnemies(page, commandCount, onSample) {
   for (let attempt = 0; attempt < 12; attempt++) {
     await page.keyboard.press("KeyE");
     try {
-      await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "pgmenu", undefined, { timeout: 500 });
+      await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "pgmenu", undefined, {
+        timeout: pollEvery(500),
+      });
       break;
     } catch (error) {
       if (error?.name !== "TimeoutError") throw error;
@@ -353,14 +356,16 @@ async function spawnRepresentativeEnemies(page, commandCount, onSample) {
     "pgmenu",
     "performance fixture could not open the Playground build menu",
   );
-  await page.waitForLoadState("networkidle", { timeout: 10000 });
+  await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
   for (let index = 0; index < commandCount; index++) {
     const before = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
     const kind = representativeEnemyKinds[index % representativeEnemyKinds.length];
     await page.evaluate((id) => window.__TEAR_WATCH_AGENT__.activatePlaygroundAction(id), `spawn:${kind}`);
-    await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, { timeout: 5000 });
+    await page.waitForFunction((count) => window.__PANTHEON_TEST.state().enemyCount > count, before, {
+      timeout: STATE_WAIT_MS,
+    });
     if (onSample) await onSample(await diagnostics(page));
   }
   await page.evaluate(() => window.__TEAR_WATCH_AGENT__.resumePlayground());
@@ -396,7 +401,7 @@ async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0, mi
         direction = direction === "d" ? "a" : "d";
         await page.keyboard.down(direction);
       }
-      await page.waitForTimeout(90);
+      await page.waitForTimeout(holdFor(90));
       const snapshot = await diagnostics(page);
       frameSamples = snapshot.frame.samples;
       if (onSample) await onSample(snapshot);
@@ -492,13 +497,13 @@ async function verdantGameplayScenario(browser, pageErrors) {
         .TEAR_WEAPON_DEBUG?.()
         .enemies.some((enemy) => enemy.bossId === "rootbound" && enemy.spawnT <= 0 && enemy.introT === 0),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
   await page.waitForFunction(
     () => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === "rootbound")?.phase === 2,
     undefined,
-    { timeout: 5000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => {
     window.__PANTHEON_TEST.prepareVerdantPerformanceScenario();
@@ -514,7 +519,7 @@ async function verdantGameplayScenario(browser, pageErrors) {
       );
     },
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
   const peakGauges = { enemies: 0, projectiles: 0, effects: 0, fields: 0, combatObjects: 0, routes: 0 };
   const peakEnvironmentKinds = {};
@@ -592,13 +597,13 @@ async function paleGameplayScenario(browser, pageErrors) {
         .TEAR_WEAPON_DEBUG?.()
         .enemies.some((enemy) => enemy.bossId === "white-hart" && enemy.spawnT <= 0 && enemy.introT === 0),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
   await page.waitForFunction(
     () => window.TEAR_WEAPON_DEBUG?.().enemies.find((enemy) => enemy.bossId === "white-hart")?.phase === 2,
     undefined,
-    { timeout: 5000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => {
     window.__PANTHEON_TEST.preparePalePerformanceScenario();
@@ -615,7 +620,7 @@ async function paleGameplayScenario(browser, pageErrors) {
         return auroraTracks >= 3 && Object.keys(snapshot.kinds).some((key) => key.startsWith("ghost-track:"));
       },
       undefined,
-      { timeout: 10000 },
+      { timeout: STATE_WAIT_MS },
     );
   } catch (error) {
     const snapshot = await environmentSnapshot();

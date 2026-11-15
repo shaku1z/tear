@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { BrowserPointerLock } from "../../src/platform/browser-pointer-lock";
+import { BrowserPointerLock, releasePointerLock } from "../../src/platform/browser-pointer-lock";
 
 function deferred(): Readonly<{
   promise: Promise<void>;
@@ -49,5 +49,24 @@ describe("browser pointer lock", () => {
     pointer.request();
     pointer.request();
     expect(requestPointerLock).toHaveBeenCalledTimes(3);
+  });
+
+  it("releases where the browser supports it and is silent where it does not (iOS Safari, older Android)", () => {
+    const exitPointerLock = vi.fn();
+    releasePointerLock({ exitPointerLock });
+    expect(exitPointerLock).toHaveBeenCalledTimes(1);
+    expect(() => {
+      releasePointerLock({});
+    }).not.toThrow();
+    expect(() => {
+      releasePointerLock({
+        exitPointerLock: () => {
+          throw new DOMException("not locked", "InvalidStateError");
+        },
+      });
+    }).not.toThrow();
+    expect(() => {
+      new BrowserPointerLock({}, {} as Pick<Document, "exitPointerLock">).release();
+    }).not.toThrow();
   });
 });

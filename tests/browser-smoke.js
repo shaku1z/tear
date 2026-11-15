@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 
 (async () => {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -41,7 +42,10 @@ const path = require("node:path");
     if (message.type() === "warning" || message.type() === "error")
       browserLogs.push(`${message.type()}: ${message.text()}`);
   });
-  await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, {
+    waitUntil: "domcontentloaded",
+    timeout: STATE_WAIT_MS,
+  });
   try {
     await page.waitForFunction(() => window.__TEAR_BUILD__ && window.__TEAR_CATALOG_DEBUG__);
   } catch (error) {
@@ -173,14 +177,14 @@ const path = require("node:path");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
   await page.mouse.click(260, 360); // PLAY -> setup/war table (renders all five weapon cards)
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running");
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(settleFor(500));
   if (process.env.TEAR_SCREENSHOT) await page.screenshot({ path: process.env.TEAR_SCREENSHOT });
   const weaponIds = ["sword", "hammer", "greatsword", "chainblade", "riftlock"];
   async function pulseThrowUntilLaunched(expectedThrows) {
     let snapshot = null;
     for (let attempt = 0; attempt < 60; attempt++) {
       await page.mouse.click(800, 450, { button: "right" });
-      await page.waitForTimeout(80);
+      await page.waitForTimeout(pollEvery(80));
       snapshot = await page.evaluate(() => {
         const weapon = window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG();
         if (weapon) weapon.input = window.__TEAR_CATALOG_DEBUG__.input.snapshot();
@@ -195,14 +199,14 @@ const path = require("node:path");
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
       await page.mouse.click(260, 360);
-      await page.waitForTimeout(450);
+      await page.waitForTimeout(settleFor(450));
     }
     await page.mouse.click(1180, 196 + i * 60);
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(settleFor(80));
     await page.mouse.click(430, 255); // Endless (a fresh profile is preselected onto the Tutorial)
-    await page.waitForTimeout(80);
+    await page.waitForTimeout(settleFor(80));
     await page.mouse.click(800, 758);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(settleFor(500));
     const debug = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
     assert.equal(
       debug && debug.weapon,
@@ -220,7 +224,7 @@ const path = require("node:path");
       `${weaponIds[i]} throw launches through shared input (${JSON.stringify({ blade: thrown.blade, input: thrown.input, pageErrors })})`,
     );
     await page.mouse.click(800, 450, { button: "right" });
-    await page.waitForTimeout(180);
+    await page.waitForTimeout(settleFor(180));
     console.log(`${weaponIds[i]} start passed`);
   }
   assert.deepEqual(pageErrors, []);

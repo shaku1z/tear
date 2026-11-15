@@ -42,8 +42,8 @@ Each folder under `tests/fixtures/releases/` is named `<date>-<commit>` and hold
 
 | Fixture | Build | What the session did |
 | --- | --- | --- |
-| `2026-08-30-9e7d6a70` | Production at tearblade.com since 2026-08-30 | Fresh profile, one Endless run on Normal, run ended; one local replay and one Ghost capsule saved. |
-| `2026-11-13-564c3ad7` | `main` on 2026-11-13 | The same session on the current build; also unlocks an achievement, so the profile carries shards and a reward receipt. |
+| `2026-08-30-9e7d6a70` | Previous release: production at tearblade.com from 2026-08-30 to 2026-11-13 | Fresh profile, one Endless run on Normal, run ended; one local replay and one Ghost capsule saved. |
+| `2026-11-13-84761549` | Current release: production at tearblade.com since 2026-11-13 | The same session on that build; also unlocks an achievement, so the profile carries shards and a reward receipt. |
 
 The test is `tests/contract/release-compatibility.test.ts`. It runs every fixture folder against
 the current code with in-memory storage, so it needs no browser and runs in the normal unit and

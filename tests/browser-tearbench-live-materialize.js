@@ -13,6 +13,7 @@ const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const root = path.resolve(__dirname, "..");
 const catalog = JSON.parse(fs.readFileSync(path.join(root, "src", "tearbench", "canonical-scenarios.json"), "utf8"));
@@ -399,7 +400,7 @@ async function main() {
       reducedMotion: presentation.reducedMotion,
     },
     async ({ page }) => {
-      await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+      await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
       const result = await page.evaluate(
         ({ scenario, resolved, schedule, actions, snapshot }) => {
           if (!window.__TEAR_RUNTIME_ENVIRONMENT__) throw new Error("test-only Tear runtime bridge was not installed");

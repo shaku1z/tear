@@ -9,6 +9,7 @@ const {
   writeClassCArtifact,
 } = require("./class-c-browser-harness");
 const { decodePng } = require("./class-c-png");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function sampleDifference(left, right) {
   let changed = 0;
@@ -56,7 +57,7 @@ async function main() {
     route.request().url().startsWith(host.origin) ? route.continue() : route.abort(),
   );
   try {
-    await page.goto(record.url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(record.url, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
     assertCleanProductionUrl(page.url());
     const controls = createClassCControls(page, record.viewport, record);
     await controls.wait(1_000);

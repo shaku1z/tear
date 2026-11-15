@@ -1,11 +1,12 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 // This intentionally follows the ordinary C27/C29 durable-capsule path.  It
 // does not manufacture Vault data or call the publication controller directly.
 withJourney({ name: "C38 player publication review", port: 8180 }, async ({ page, boot, waitScreen, baseUrl }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   await page.evaluate(() => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -32,7 +33,7 @@ withJourney({ name: "C38 player publication review", port: 8180 }, async ({ page
   await page.waitForFunction(
     () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
     undefined,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
@@ -57,12 +58,12 @@ withJourney({ name: "C38 player publication review", port: 8180 }, async ({ page
   await waitScreen("profile");
   await page.mouse.click(875, 271); // VAULT: ordinary Profile tab
   await page.waitForFunction(() => window.__TEAR_C38_PUBLICATION_TEXT__?.includes("Ghost V3 - COACHING"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   await page.mouse.click(1280, 398); // PUBLISH on the real healthy Vault row
   await waitScreen("ghostpublication");
   await page.waitForFunction(() => window.__TEAR_C38_PUBLICATION_TEXT__?.includes("GHOST PUBLICATION"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   const review = await page.evaluate(() => window.__TEAR_C38_PUBLICATION_TEXT__ ?? []);
   for (const expected of [

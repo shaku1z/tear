@@ -139,16 +139,24 @@ export function createLiveTutorialSessionActions(ports: TutorialSessionActionPor
         bossId !== undefined
       ) {
         if (saved?.version !== 3 && saved?.version !== 4 && saved?.version !== 5 && saved?.version !== 6) return;
-        if (saved.version === 5 && command === "restart") tutorial.restoreSession(saved);
-        else if (saved.version === 6 && command === "restart") {
+        if (saved.version === 5 && command === "restart") {
+          tutorial.restoreSession(saved);
+          tutorial.restorePresentation(display);
+        } else if (saved.version === 6 && command === "restart") {
           tutorial.openPractice(saved.practiceOrigin.tutorialDone);
           tutorial.selectBoss(bossId ?? "", saved.bossPractice);
           ports.resetFocus();
           ports.resume();
           return;
-        } else tutorial.openPractice(saved.practiceOrigin.tutorialDone);
-      } else tutorial.restoreSession(saved);
-      tutorial.restorePresentation(display);
+        }
+        // A fresh practice session starts its own presentation: the previous
+        // exercise's display (its gold coach reference included) belongs to a
+        // different lesson and must not be restored onto this one.
+        else tutorial.openPractice(saved.practiceOrigin.tutorialDone);
+      } else {
+        tutorial.restoreSession(saved);
+        tutorial.restorePresentation(display);
+      }
     }
     const changed =
       bossId !== undefined

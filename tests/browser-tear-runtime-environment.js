@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { chromium } = require("@playwright/test");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const scenario = {
   format: "tear-contract",
@@ -35,7 +36,7 @@ function actionsAt(tick) {
 }
 
 withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const actionSchedule = Object.fromEntries(
     Array.from({ length: scenario.maxTicks }, (_, index) => {
       const tick = index + 1;
@@ -326,8 +327,10 @@ withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
       await profilePage.route("**/*", (route) =>
         route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
       );
-      await profilePage.goto(`${baseUrl}/index.html?test=1`, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await profilePage.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15000 });
+      await profilePage.goto(`${baseUrl}/index.html?test=1`, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
+      await profilePage.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, {
+        timeout: STATE_WAIT_MS,
+      });
       await profilePage.mouse.click(10, 10);
       const profileResult = await profilePage.evaluate(
         ({ scenarioValue, schedule }) => {

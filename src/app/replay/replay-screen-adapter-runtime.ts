@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { AppScreen } from "../../domain/screen-catalog";
@@ -171,7 +172,7 @@ export function createLiveReplayScreenAdapterRuntime(services: ReplayScreenServi
     if (playback === null) return false;
     context = { data: playback.d, from, stage: -1, platforms: [], puppets: {}, info: false };
     services.setScreen("replay", { returnTo: from });
-    services.document.exitPointerLock();
+    releasePointerLock(services.document);
     return true;
   };
   const exit = (): void => {

@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const targets = ["standalone", "crazygames"];
@@ -169,7 +170,7 @@ async function drawnTextAfterFrames(page, frames = 6) {
 
 async function waitForDrawnText(page, text, description) {
   await page
-    .waitForFunction((expected) => window.__isolationDrawnText.includes(expected), text, { timeout: 30_000 })
+    .waitForFunction((expected) => window.__isolationDrawnText.includes(expected), text, { timeout: STATE_WAIT_MS })
     .catch(() => {
       throw new Error(`${description}: canvas never drew ${text}`);
     });
@@ -211,7 +212,7 @@ async function assertReleaseSurfaces(page, target) {
         return hint !== null && hint.style.display === "block";
       },
       undefined,
-      { timeout: 30_000 },
+      { timeout: STATE_WAIT_MS },
     )
     .catch(() => {
       throw new Error(`${target} START did not enter a run`);
@@ -251,10 +252,10 @@ async function assertRuntimeIsolation(browser, target, directory) {
   try {
     await page.goto(`${host.origin}/${engineeringQuery}`, {
       waitUntil: "domcontentloaded",
-      timeout: 30_000,
+      timeout: STATE_WAIT_MS,
     });
     await page.waitForFunction((expectedTarget) => window.__TEAR_BUILD__?.target === expectedTarget, target, {
-      timeout: 30_000,
+      timeout: STATE_WAIT_MS,
     });
     await page.evaluate(
       () =>

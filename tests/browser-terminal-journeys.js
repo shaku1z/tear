@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { pollEvery } = require("./browser-waits");
 
 withJourney({ name: "terminal journeys", port: 8143, recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
   const hooks = await page.evaluate(() => Object.keys(window.__PANTHEON_TEST));
@@ -37,7 +38,7 @@ withJourney({ name: "terminal journeys", port: 8143, recordFrames: true }, async
     if (state.game === "win") break;
     if (state.finale && state.finale.phase === "cut") await page.evaluate(() => window.__PANTHEON_TEST.cut());
     else await page.evaluate(() => window.__PANTHEON_TEST.advance());
-    await page.waitForTimeout(40);
+    await page.waitForTimeout(pollEvery(40));
   }
   const finaleState = await page.evaluate(() => window.__PANTHEON_TEST.state());
   assert.ok(

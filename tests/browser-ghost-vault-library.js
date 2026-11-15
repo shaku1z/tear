@@ -1,9 +1,10 @@
 const assert = require("node:assert/strict");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
 withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ page, boot, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   await page.evaluate(() => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -25,7 +26,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
     environment.step([{ kind: "command", tick: 1, id: 1, command: { type: "move", x: 1000, y: 0 } }]);
     environment.terminate();
   });
-  await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null, undefined, { timeout: 20000 });
+  await page.waitForFunction(() => window.__TEAR_GHOST_V3__.manifest() !== null, undefined, { timeout: STATE_WAIT_MS });
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
   assert.equal(manifest.status, "complete");
   await page.evaluate(
@@ -104,11 +105,11 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await waitScreen("profile");
   await page.mouse.click(875, 271); // VAULT, the third of four profile tabs
   await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("Ghost V3 - COACHING"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(settleFor(250));
   await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("MY ACCOUNT'S REPLAYS"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   await page.mouse.click(1210, 90); // Disabled for the actual anonymous/unconfigured normal profile.
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -181,7 +182,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await page.waitForFunction(
     () => window.__TEAR_C28_VAULT_TEXT__?.some((text) => text.includes("GRAVEYARD")),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
   const repairTexts = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__?.slice(-120) ?? []);
   assert.ok(

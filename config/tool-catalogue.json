@@ -908,6 +908,22 @@
       ],
       "duration": "seconds"
     },
+    "check:load-budgets": {
+      "purpose": "Fails if a release build downloads more than its load budget before the first frame",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
+    "report:load": {
+      "purpose": "Reports load times and bytes per target and device profile for the release builds",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
     "check:architecture": {
       "purpose": "Source architecture gate (roles, layer edges, cycles, module size); --update lowers the baseline",
       "effects": [

@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
 
 function scenario() {
   return {
@@ -21,7 +22,7 @@ function scenario() {
 
 withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({ page, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   // Only the physical Class-C adapter operates the visible menu and gameplay.
   // The final Class-A call is lifecycle cleanup for this test build; it does not
@@ -43,7 +44,7 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
   });
   // The live requestAnimationFrame loop owns the fixed steps.  This exceeds a
   // keyframe interval at 120 Hz without using renderFrame or semantic stepping.
-  await page.waitForTimeout(1_500);
+  await page.waitForTimeout(holdFor(1_500));
   await page.evaluate(() => {
     const physical = window.__TEAR_RUNTIME_ENVIRONMENT__.create("C");
     physical.physicalInput({ type: "key", code: "KeyD", phase: "released" });
@@ -52,7 +53,7 @@ withJourney({ name: "C27 Ghost V3 physical live capture", port: 8156 }, async ({
   await page.waitForFunction(
     () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
     undefined,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());

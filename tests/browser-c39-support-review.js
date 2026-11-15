@@ -1,11 +1,12 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 // Uses the ordinary C27/C29 durable-capsule route; it does not seed the UI or
 // call the C39 controller directly.
 withJourney({ name: "C39 player local support review", port: 8181 }, async ({ page, boot, waitScreen, baseUrl }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   await page.evaluate(() => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -31,7 +32,7 @@ withJourney({ name: "C39 player local support review", port: 8181 }, async ({ pa
   await page.waitForFunction(
     () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
     undefined,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
@@ -51,12 +52,12 @@ withJourney({ name: "C39 player local support review", port: 8181 }, async ({ pa
   await waitScreen("profile");
   await page.mouse.click(875, 271);
   await page.waitForFunction(() => window.__TEAR_C39_SUPPORT_TEXT__?.includes("Ghost V3 - COACHING"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   await page.mouse.click(1152, 398);
   await waitScreen("ghostsupport");
   await page.waitForFunction(() => window.__TEAR_C39_SUPPORT_TEXT__?.includes("GHOST SUPPORT"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   const review = await page.evaluate(() => window.__TEAR_C39_SUPPORT_TEXT__ ?? []);
   for (const expected of [
@@ -68,7 +69,7 @@ withJourney({ name: "C39 player local support review", port: 8181 }, async ({ pa
     assert.ok(review.includes(expected), `normal C39 review did not render ${expected}`);
   await page.mouse.click(640, 547);
   await page.waitForFunction(() => window.__TEAR_C39_SUPPORT_TEXT__?.includes("STATUS / CREATED"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "ghostsupport");
   assert.deepEqual(

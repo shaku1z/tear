@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { BossId } from "../../gameplay/run/content-director";
 import { isBossDefinitionId } from "../../gameplay/run/boss-definitions";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
@@ -132,7 +133,7 @@ export function createLiveWaveComposition(options: LiveWaveCompositionOptions): 
       startAdventureFinale: options.startAdventureFinale,
       winRun: options.winRun,
       releasePointer: () => {
-        document.exitPointerLock();
+        releasePointerLock(document);
       },
       openTierUp: () => {
         const run = options.run();
