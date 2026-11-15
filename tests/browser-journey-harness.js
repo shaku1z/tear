@@ -91,7 +91,15 @@ async function withJourney(options, run) {
   assert.equal(buildInfo.sourceFingerprint, source.fingerprint, "served build source fingerprint is stale");
   const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
   const baseUrl = `http://127.0.0.1:${String(port)}`;
+  // When each request reached this server and when its response finished, for stall reports.
+  const serverLog = [];
   const server = http.createServer((request, response) => {
+    const entry = { url: request.url, arrived: Date.now(), finished: undefined };
+    serverLog.push(entry);
+    if (serverLog.length > 400) serverLog.shift();
+    response.on("close", () => {
+      entry.finished = Date.now();
+    });
     const pathname = new URL(request.url, baseUrl).pathname;
     if (pathname === "/__tear_browser_blank_fixture__.html") {
       response.writeHead(200, { "Content-Type": "text/html" });
@@ -133,7 +141,7 @@ async function withJourney(options, run) {
     // A call that names no timeout still gets the state-wait ceiling, not Playwright's 30 s.
     page.setDefaultTimeout(STATE_WAIT_MS);
     page.setDefaultNavigationTimeout(STATE_WAIT_MS);
-    await watchForStalls(page);
+    await watchForStalls(page, { serverLog });
     if (options.settings) {
       await page.addInitScript((settings) => {
         window.__TEAR_TEST_STORAGE__ = {

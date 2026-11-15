@@ -77,7 +77,7 @@ describe("reloadPage", () => {
     });
     const failure = await reloadPage(page).catch((error) => error);
     expect(failure.message).toMatch(
-      /navigation events: navigated to http:\/\/127\.0\.0\.1\/index\.html at \d+ ms; page did not answer within 5 s; no stack/u,
+      /navigation events: navigated to http:\/\/127\.0\.0\.1\/index\.html at \d+ ms\npage did not answer within 5 s; no stack[^\n]*\nrequests open when the reload began: not recorded[^\n]*\nrequests since the reload began: not recorded/u,
     );
     expect(failure.cause.message).toContain("Timeout exceeded");
     expect(page.listenerCount("framenavigated")).toBe(0);

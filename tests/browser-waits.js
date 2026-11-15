@@ -39,10 +39,86 @@ const stallSessions = new WeakMap();
  * whose main thread is busy: a session cannot be opened, nor the debugger enabled, once it is.
  * Call it right after creating the page.
  */
-async function watchForStalls(page) {
+async function watchForStalls(page, { serverLog } = {}) {
   const session = await page.context().newCDPSession(page);
   await session.send("Debugger.enable");
-  stallSessions.set(page, session);
+  // The page's own network record, kept so a stalled navigation can say where its time went:
+  // waiting for a connection, waiting for the server, or loading. Bounded to the latest requests.
+  const requests = new Map();
+  const seconds = (value) => value * 1000;
+  session.on("Network.requestWillBeSent", (event) => {
+    requests.set(event.requestId, {
+      url: event.request.url,
+      type: event.type,
+      startedAt: seconds(event.wallTime),
+      startedMono: seconds(event.timestamp),
+    });
+    if (requests.size > 400) requests.delete(requests.keys().next().value);
+  });
+  session.on("Network.responseReceived", (event) => {
+    const entry = requests.get(event.requestId);
+    if (entry) Object.assign(entry, { status: event.response.status, timing: event.response.timing });
+  });
+  session.on("Network.loadingFinished", (event) => {
+    const entry = requests.get(event.requestId);
+    if (entry) entry.endedMono = seconds(event.timestamp);
+  });
+  session.on("Network.loadingFailed", (event) => {
+    const entry = requests.get(event.requestId);
+    if (entry) Object.assign(entry, { endedMono: seconds(event.timestamp), failed: event.errorText });
+  });
+  await session.send("Network.enable");
+  stallSessions.set(page, { session, requests, serverLog });
+}
+
+const shortUrl = (url) => url.replace(/^https?:\/\/[^/]+/u, "").slice(0, 80);
+
+/** Requests the page had not finished at `since` (epoch ms), oldest first. */
+function inFlight(page, since) {
+  const watch = stallSessions.get(page);
+  if (!watch) return "not recorded (watchForStalls was not called for this page)";
+  const open = [...watch.requests.values()].filter((entry) => entry.startedAt < since && entry.endedMono === undefined);
+  if (open.length === 0) return "none";
+  return open
+    .slice(0, 10)
+    .map((entry) => `${shortUrl(entry.url)} open ${String(Math.round(since - entry.startedAt))} ms`)
+    .join(", ");
+}
+
+/**
+ * Where the time went for each request the page started after `since` (epoch ms): queued for a
+ * connection, waited for response headers, loaded, from the browser's own timing; and when the
+ * test's server received and finished each request, when the harness passed its log.
+ */
+function networkSince(page, since) {
+  const watch = stallSessions.get(page);
+  if (!watch) return "not recorded";
+  const lines = [...watch.requests.values()]
+    .filter((entry) => entry.startedAt >= since)
+    .slice(0, 15)
+    .map((entry) => {
+      const at = `+${String(Math.round(entry.startedAt - since))} ms`;
+      const timing = entry.timing;
+      const phases =
+        timing === undefined
+          ? "no response yet"
+          : `queued ${String(Math.round(timing.sendStart))} ms, server ${String(Math.round(timing.receiveHeadersEnd - timing.sendEnd))} ms`;
+      const end =
+        entry.endedMono === undefined
+          ? "unfinished"
+          : `${entry.failed ? `failed (${entry.failed})` : "done"} after ${String(Math.round(entry.endedMono - entry.startedMono))} ms`;
+      return `${shortUrl(entry.url)} ${entry.type ?? ""} ${at}: ${phases}, ${end}`;
+    });
+  const server = (watch.serverLog ?? [])
+    .filter((entry) => entry.arrived >= since)
+    .slice(0, 15)
+    .map(
+      (entry) =>
+        `${shortUrl(entry.url)} arrived +${String(entry.arrived - since)} ms, ${entry.finished === undefined ? "unfinished" : `finished +${String(entry.finished - since)} ms`}`,
+    );
+  return `browser: ${lines.length > 0 ? lines.join("; ") : "no requests"}. server: ${
+    watch.serverLog === undefined ? "not recorded" : server.length > 0 ? server.join("; ") : "no requests"
+  }`;
 }
 
 /**
@@ -61,7 +137,7 @@ async function describeStall(page) {
     null,
   );
   if (answer) return `page ${answer}`;
-  const session = stallSessions.get(page);
+  const session = stallSessions.get(page)?.session;
   if (!session) return "page did not answer within 5 s; no stack (watchForStalls was not called for this page)";
   const stack = await within(
     (async () => {
@@ -133,13 +209,20 @@ async function reloadPage(page, options = {}) {
   page.on("framenavigated", onNavigated);
   page.on("domcontentloaded", onDomContentLoaded);
   page.on("crash", onCrash);
+  const openAtStart = inFlight(page, started);
   try {
     return await page.reload({ waitUntil: "domcontentloaded", ...options, timeout: STATE_WAIT_MS });
   } catch (error) {
     const seen = events.length > 0 ? events.join("; ") : "none";
-    throw new Error(`reload did not reach domcontentloaded: navigation events: ${seen}; ${await describeStall(page)}`, {
-      cause: error,
-    });
+    throw new Error(
+      [
+        `reload did not reach domcontentloaded: navigation events: ${seen}`,
+        await describeStall(page),
+        `requests open when the reload began: ${openAtStart}`,
+        `requests since the reload began: ${networkSince(page, started)}`,
+      ].join("\n"),
+      { cause: error },
+    );
   } finally {
     page.off("framenavigated", onNavigated);
     page.off("domcontentloaded", onDomContentLoaded);
