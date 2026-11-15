@@ -173,7 +173,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   const campaignLifecycle = await page.evaluate(() => window.TEAR_WEAPON_DEBUG().lifecycle);
   assert.equal(campaignLifecycle.activationDeferred, true, "campaign opening lore defers prepared-wave activation");
 
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
   await page.mouse.click(260, 360); // PLAY -> setup/war table (renders all five weapon cards)
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running");
@@ -196,7 +196,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   }
   for (let i = 0; i < weaponIds.length; i++) {
     if (i > 0) {
-      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
       await page.mouse.click(260, 360);
       await page.waitForTimeout(settleFor(450));

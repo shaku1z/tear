@@ -80,7 +80,7 @@ async function main() {
     // Opening a second browser tab causes a real browser focus transition. The
     // returned tab is then controlled only through a fresh physical keyboard edge.
     const background = await desktop.newPage();
-    await background.goto("about:blank");
+    await background.goto("about:blank", { timeout: STATE_WAIT_MS });
     await background.waitForTimeout(settleFor(120));
     await page.bringToFront();
     await controls.wait(120);

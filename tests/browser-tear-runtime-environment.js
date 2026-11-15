@@ -373,7 +373,7 @@ withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
   const labUrl = new URL(page.url());
   labUrl.searchParams.set("replay-hub", "1");
   labUrl.searchParams.delete("ghostlab");
-  await page.goto(labUrl.toString(), { waitUntil: "domcontentloaded" });
+  await page.goto(labUrl.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForSelector('[data-surface="replay-hub"]');
   await page.waitForSelector("#tear-ghost-lab");
   await page.getByRole("button", { name: "Launch disposable run" }).click();
@@ -386,7 +386,7 @@ withJourney({ name: "C22 live Tear runtime", port: 8137 }, async ({ page }) => {
   const legacyLabUrl = new URL(page.url());
   legacyLabUrl.searchParams.delete("replay-hub");
   legacyLabUrl.searchParams.set("ghostlab", "1");
-  await page.goto(legacyLabUrl.toString(), { waitUntil: "domcontentloaded" });
+  await page.goto(legacyLabUrl.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForSelector("#tear-ghost-lab");
   await page.waitForSelector('[data-surface="replay-hub"]');
   console.log("C22 live Tear runtime bridge passed");

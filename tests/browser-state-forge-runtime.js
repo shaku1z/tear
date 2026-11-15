@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, reloadPage } = require("./browser-waits");
 
 const scenario = {
   format: "tear-contract",
@@ -124,7 +124,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildIn
     "neutral prior history must produce the same strict reset baseline",
   );
   // Structured reset owns a stopped frame loop; the original cinematic journey needs a fresh live boot.
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await reloadPage(page);
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: STATE_WAIT_MS });
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("campaign"));
@@ -412,7 +412,7 @@ withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildIn
     return { snapshot, actions, sourceHashes, sourceTrace, frozenSnapshot: Object.isFrozen(snapshot) };
   }, scenario);
 
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await reloadPage(page);
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, {
     timeout: STATE_WAIT_MS,
