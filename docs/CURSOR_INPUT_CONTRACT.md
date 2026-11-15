@@ -19,9 +19,25 @@ Only one device owns menu focus and only one surface owns cursor presentation.
 | Touch owns input | Hidden | No hover | Taps use logical hit testing |
 | Mouse over the HTML fullscreen button (menus only) | Native browser arrow | No | The canvas arrow hides while the pointer is off the canvas |
 
+The rule lives in one module, `src/domain/pointer-ownership.ts`: the pointer (the system
+cursor, the canvas arrow, hover highlights and hover focus) exists only while the mouse
+owns the interface. Every consumer asks `Input.pointer()`, which is null for any other
+device, instead of reading the raw mouse position; the page hides the hardware cursor
+everywhere (the fullscreen button and the letterbox included) through
+`body[data-imode]`.
+
 The native and canvas arrows must never render together. A keyboard, controller,
 or touch action must immediately suppress stale mouse hover. A meaningful mouse
-move or click returns ownership to the mouse. The `#fs` fullscreen button sits
+move or click returns ownership to the mouse. Meaningful means more than 5 CSS px of
+travel since the mouse last owned the interface, measured on the window so that it holds
+over the canvas, the HTML controls, in fullscreen and inside an embedding frame; under
+pointer lock, where the mouse reports only relative movement, travel is summed per
+gesture.
+
+A phone or tablet (coarse primary pointer) starts on touch, with the touch layout and no
+cursor from the first frame. A laptop with a touch screen starts on the mouse; its first
+tap in a menu is resolved against the layout the player saw, and the menus change to
+their touch layout once that tap has been handled. The `#fs` fullscreen button sits
 above the canvas, where the canvas arrow cannot be drawn, so it alone carries the
 native arrow; the canvas stops drawing its arrow on `mouseleave` and resumes on the
 next canvas `mouseenter`/`mousemove`. Touch never draws the canvas arrow, so no
