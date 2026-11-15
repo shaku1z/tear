@@ -32,9 +32,9 @@ Then, for each hook:
 - **pre-push:** the remote is `origin` at the exact URL. Every pushed ref must:
   - be the current `codex/<scope>` branch, pushed to the same name;
   - be a fast-forward (no force pushes, no deletions);
-  - for a new branch, descend from `origin/main`.
+  - share history with `origin/main`. It need not contain main's newest commit: a branch may be behind main, and may take main in with `git merge origin/main`.
 
-  Every commit not yet on the remote (or not on `origin/main`, for a new branch) must be owner-authored, owner-committed and free of attribution. History already on `origin/main` is not re-scanned.
+  Every commit the push publishes (not on the remote branch and not on `origin/main`) must be owner-authored, owner-committed and free of attribution. Commits already on `origin/main`, including GitHub's squash merges brought in by `git merge origin/main`, are not re-scanned.
 
 The merge helper additionally refuses:
 
@@ -45,7 +45,7 @@ The merge helper additionally refuses:
 - a pull request without a green `check`;
 - a pull request with any non-owner commit, unless it is the exact wiki synchronization bot pull request (tear-wiki only; its file set is `WIKI_SYNC_FILES`, in one place at the top of the helper).
 
-New refusals go in `MERGE_PRECONDITIONS`. It is an ordered list of `{ id, check }`, each with its own test, and it runs after the checks above and before anything is merged. The list is empty today, so the helper behaves exactly like the shared skill copy.
+New refusals go in `MERGE_PRECONDITIONS`. It is an ordered list of `{ id, check }`, each with its own test, and it runs after the checks above and before anything is merged. It holds one rule today, for the game repository only: `merge-ready`. It refuses unless `scripts/merge-ready.mjs` says READY, meaning main's newest commit is checked and green, and the pull request's pass is not older than a main change to its files or to shared files. This is the one place freshness is enforced, now that pre-push accepts branches behind main.
 
 ## Setup
 

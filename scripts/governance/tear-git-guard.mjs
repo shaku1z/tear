@@ -270,16 +270,6 @@ function isAncestor(repo, ancestor, descendant) {
   return gitIn(repo, ["merge-base", "--is-ancestor", ancestor, descendant], { allowFailure: true }).status === 0;
 }
 
-function revList(repo, range) {
-  const output = gitIn(repo, ["rev-list", range], { allowFailure: true });
-  if (output.status !== 0)
-    fail("cannot determine unpublished commits for " + range + ": " + (output.stderr || "").trim());
-  return String(output.stdout ?? "")
-    .trim()
-    .split(/\r?\n/u)
-    .filter(Boolean);
-}
-
 function assertPushLine(repo, repositoryId, remoteName, remoteUrl, branch, line) {
   const fields = line.trim().split(/\s+/u);
   if (fields.length < 4) fail("pre-push blocked: malformed update line " + line);
@@ -294,18 +284,31 @@ function assertPushLine(repo, repositoryId, remoteName, remoteUrl, branch, line)
     fail("pre-push blocked: remote target " + remoteRef + " must be the same codex/<scope> branch");
   }
   const originMain = "refs/remotes/origin/main";
-  if (ZERO_OID.test(remoteOid)) {
-    if (gitIn(repo, ["show-ref", "--verify", "--quiet", originMain], { allowFailure: true }).status !== 0) {
-      fail("pre-push blocked: fetch origin/main before publishing a new feature branch");
-    }
-    if (!isAncestor(repo, originMain, localOid)) {
-      fail("pre-push blocked: new feature branch must descend from origin/main");
-    }
-  } else if (!isAncestor(repo, remoteOid, localOid)) {
+  if (gitIn(repo, ["show-ref", "--verify", "--quiet", originMain], { allowFailure: true }).status !== 0) {
+    fail("pre-push blocked: fetch origin/main before publishing a feature branch");
+  }
+  // A branch is built on main's history but need not contain main's newest commit: main moves
+  // many times a day, and requiring its tip made every finished branch be rebuilt and re-verified
+  // before its first push. Freshness is enforced where it decides something: the pull request's
+  // required check runs on the merge with current main, and the merge helper refuses a red main.
+  if (gitIn(repo, ["merge-base", originMain, localOid], { allowFailure: true }).status !== 0) {
+    fail("pre-push blocked: feature branch shares no history with origin/main");
+  }
+  if (!ZERO_OID.test(remoteOid) && !isAncestor(repo, remoteOid, localOid)) {
     fail("pre-push blocked: non-fast-forward/force update is not permitted");
   }
-  const range = ZERO_OID.test(remoteOid) ? originMain + ".." + localOid : remoteOid + ".." + localOid;
-  for (const oid of revList(repo, range)) assertCommitObject(repo, oid, "pre-push " + repositoryId);
+  // Only commits this push publishes are checked. Commits already on origin/main are published
+  // history (squash merges are committed by GitHub), so a branch may take main in with
+  // "git merge origin/main" to resolve a conflict and keep its one branch and pull request.
+  const published = ZERO_OID.test(remoteOid) ? [originMain] : [originMain, remoteOid];
+  const unpublished = gitIn(repo, ["rev-list", localOid, "--not", ...published], { allowFailure: true });
+  if (unpublished.status !== 0) fail("cannot determine unpublished commits: " + (unpublished.stderr || "").trim());
+  for (const oid of String(unpublished.stdout ?? "")
+    .trim()
+    .split(/\r?\n/u)
+    .filter(Boolean)) {
+    assertCommitObject(repo, oid, "pre-push " + repositoryId);
+  }
 }
 
 function runPrePush(repo, args) {

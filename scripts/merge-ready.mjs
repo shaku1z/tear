@@ -6,8 +6,10 @@
 //   node scripts/merge-ready.mjs 123 --json      print the decision as JSON
 //
 // The rules (docs/RELEASE_AUTHORITY.md, "Merging"):
-// 1. A red main stops merges: the latest finished Validate run on main must have passed, unless
-//    the pull request carries the `fixes-main` label.
+// 1. A red main stops merges: main's newest commit must have a finished Validate run, and the
+//    latest finished run on main must have passed, unless the pull request carries the
+//    `fixes-main` label. A main commit whose run was cancelled or is still running is not known to
+//    be green, so it stops merges too.
 // 2. A stale pass is not a pass: the pull request's latest Validate run for its current head must
 //    have passed, and no commit merged into main since that run may touch a file the pull request
 //    changes or a shared file below. Each run records the head and main it checked
@@ -46,8 +48,9 @@ export const FIX_LABEL = "fixes-main";
  * @param {{ status: string, conclusion: string | null, checkedHead?: string, checkedMain?: string, url?: string } | undefined} facts.run
  *   latest Validate run for the pull request's head
  * @param {string[] | undefined} facts.mainFilesSince files changed on main since `run.checkedMain`
+ * @param {string | undefined} facts.mainTip main's newest commit (origin/main after a fetch)
  */
-export function decide({ main, pr, run, mainFilesSince }) {
+export function decide({ main, pr, run, mainFilesSince, mainTip }) {
   const no = (reason, action) => ({ ready: false, reason, action });
   if (pr.state !== "OPEN") return no(`the pull request is ${pr.state.toLowerCase()}`);
   if (pr.draft) return no("the pull request is a draft", "mark it ready, which starts a check");
@@ -57,6 +60,12 @@ export function decide({ main, pr, run, mainFilesSince }) {
     return no(
       `main is red: its latest finished check (${main.headSha.slice(0, 8)}) ended ${main.conclusion}`,
       `fix main first, or label the pull request that fixes it "${FIX_LABEL}"`,
+    );
+  }
+  if (mainTip !== undefined && main.headSha !== mainTip && !fixesMain) {
+    return no(
+      `main's newest commit (${mainTip.slice(0, 8)}) has no finished check; the last finished one is ${main.headSha.slice(0, 8)}`,
+      'wait for main\'s check of its newest commit; if that run was cancelled, start one on main with "Run workflow"',
     );
   }
   if (run === undefined) return no("no Validate run exists for the pull request's current head", "refresh");
@@ -143,7 +152,9 @@ export function gatherFacts(
       mainFilesSince = names?.split(/\r?\n/u).filter(Boolean);
     }
   }
-  return { slug, main, pr, run, mainFilesSince };
+  git(["fetch", "--quiet", "origin", "main"]);
+  const mainTip = git(["rev-parse", "origin/main"])?.trim();
+  return { slug, main, pr, run, mainFilesSince, mainTip };
 }
 
 /** Starts a fresh Validate run for the pull request's head; the workflow merges current main itself. */

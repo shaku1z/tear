@@ -184,8 +184,9 @@ describe("owner-safe merge helper", () => {
   });
 
   it("runs further merge preconditions in order and refuses with the first one that throws", () => {
-    expect(MERGE_PRECONDITIONS).toEqual([]);
-    expect(() => assertMergePreconditions({ pr: 12 })).not.toThrow();
+    expect(MERGE_PRECONDITIONS.map((entry) => entry.id)).toEqual(["merge-ready"]);
+    // The merge-ready rule applies to the game repository only.
+    expect(() => assertMergePreconditions({ pr: 12, policy: { id: "tear-wiki" } })).not.toThrow();
     const seen = [];
     const preconditions = [
       { id: "first", check: (context) => seen.push(`first:${context.pr}`) },

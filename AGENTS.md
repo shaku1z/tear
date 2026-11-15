@@ -136,7 +136,12 @@ Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 
 - One writing agent owns one worktree and one branch named `codex/<scope>`,
   created from `origin/main` under `C:\Users\realm\Desktop\game\worktrees\`.
-  Never share a worktree with another writing agent.
+  Never share a worktree with another writing agent. One task keeps one branch
+  and one pull request: when main moves or the pull request conflicts, run
+  `git merge origin/main` on the branch and push again. Do not cut a `-v2`
+  branch or open a replacement pull request. The pre-push guard accepts a branch
+  that is behind main as long as it shares main's history; freshness is
+  enforced at merge (`pnpm merge:ready <pr>`).
 - The canonical checkout `C:\Users\realm\Desktop\game\Tear` stays on `main`;
   do not edit there. Preserve untracked and user-owned files everywhere.
 - Never edit, commit in, or build from `C:\Users\realm\Desktop\game\Tear-oracle`.
@@ -151,7 +156,7 @@ Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 - Standing delegation (owner, 2026-11-12; the parent `AGENTS.md` has the full
   text): you may commit, push your `codex/<scope>` branch, open and update pull
   requests, merge through `node scripts/governance/owner-safe-pr-merge.mjs` once every required check
-  is green, and start the deploy workflows from a green Validate run on `main`,
+  is green and `pnpm merge:ready <pr>` says READY (the helper refuses otherwise), and start the deploy workflows from a green Validate run on `main`,
   then tell the owner what you merged or deployed. Credentials, rulesets and
   branch protection, force pushes, history rewriting and bypassing a failing
   check still need the owner.
@@ -198,8 +203,9 @@ guards it; the decisions behind the hard rules are in [docs/DECISIONS.md](docs/D
   is busy, possibly serving a different worktree than you think; check its URL.
 - **`git rebase` stops half-way.** HEAD is detached during a rebase, and the
   commit guard refuses to commit on a detached HEAD. Abort it
-  (`git rebase --abort`) and bring commits across with `git cherry-pick` onto
-  the checked-out branch instead.
+  (`git rebase --abort`) and take main in with `git merge origin/main` on the
+  checked-out branch instead. A published branch cannot be rebased anyway: the
+  guard refuses force pushes.
 
 ## Finishing
 

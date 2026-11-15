@@ -54,6 +54,20 @@ describe("merge readiness", () => {
       ).toBe(false);
     });
 
+    it("refuses while main's newest commit has no finished check (cancelled or still running)", () => {
+      const tip = "e".repeat(40);
+      const decision = decide({ main: green, pr: pr(), run: passed(), mainFilesSince: [], mainTip: tip });
+      expect(decision.ready).toBe(false);
+      expect(decision.reason).toContain("main's newest commit (eeeeeeee) has no finished check");
+      expect(decide({ main: green, pr: pr(), run: passed(), mainFilesSince: [], mainTip: green.headSha }).ready).toBe(
+        true,
+      );
+      // The pull request that fixes main may still go first.
+      expect(
+        decide({ main: red, pr: pr({ labels: [FIX_LABEL] }), run: passed(), mainFilesSince: [], mainTip: tip }).ready,
+      ).toBe(true);
+    });
+
     it("refuses when main has no finished check at all", () => {
       expect(decide({ main: undefined, pr: pr(), run: passed(), mainFilesSince: [] }).ready).toBe(false);
     });

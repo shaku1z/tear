@@ -1,5 +1,6 @@
-// Owner-safe squash merge for shaku1z repositories. Ported unchanged in behaviour from the shared
-// governance skill; see scripts/governance/README.md. Usage:
+// Owner-safe squash merge for shaku1z repositories. Ported from the shared governance skill, plus
+// one Tear rule: a pull request merges only when `pnpm merge:ready` says so (MERGE_PRECONDITIONS).
+// See scripts/governance/README.md. Usage:
 //   node scripts/governance/owner-safe-pr-merge.mjs --repo <canonical path> --pr <n>
 //     --match-head-commit <40-hex> --subject <line> --body-file <path> --authorize-owner-merge
 import fs from "node:fs";
@@ -7,6 +8,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { OWNER, findForbiddenAttribution } from "./tear-git-guard.mjs";
+import { decide, gatherFacts } from "../merge-ready.mjs";
 
 const POLICIES = Object.freeze([
   {
@@ -337,8 +339,23 @@ export function assertHeadMatches(prView, matchHeadCommit) {
 
 // Further refusals, run in order after the checks above and before anything is merged. Each entry is
 // { id, check(context) }, and check throws to refuse; context holds repo, policy, pr, prView,
-// changedFiles, commits and authenticatedLogin. Empty today, so behaviour matches the shared skill copy.
-export const MERGE_PRECONDITIONS = Object.freeze([]);
+// changedFiles, commits and authenticatedLogin.
+export const MERGE_PRECONDITIONS = Object.freeze([
+  {
+    // Branches may be behind main (the pre-push guard no longer requires main's tip), so freshness
+    // is decided here: main's newest commit checked and green, and the pull request's own pass not
+    // older than a main change to the files it touches or to shared files (scripts/merge-ready.mjs).
+    id: "merge-ready",
+    check: ({ policy, pr }) => {
+      if (policy.id !== "tear") return;
+      const decision = decide(gatherFacts(pr, policy.slug));
+      if (!decision.ready) {
+        const next = decision.action === undefined ? "" : `; next: ${decision.action}`;
+        throw new Error(`${decision.reason}${next} (pnpm merge:ready ${String(pr)} says the same)`);
+      }
+    },
+  },
+]);
 
 export function assertMergePreconditions(context, preconditions = MERGE_PRECONDITIONS) {
   for (const { id, check } of preconditions) {

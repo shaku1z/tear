@@ -15,6 +15,7 @@ const ORIGIN = "https://github.com/shaku1z/tear.git";
 const ZERO = "0".repeat(40);
 const OWNER = { name: "shaku1z", email: "shatheartboy@gmail.com" };
 const FOREIGN = { name: "Factory Droid", email: "bot@example.com" };
+const GITHUB = { name: "GitHub", email: "noreply@github.com" };
 
 const IMPLEMENTATIONS = [
   {
@@ -271,6 +272,65 @@ for (const impl of IMPLEMENTATIONS) {
         },
         { baseIdentity: { name: "Old Bot", email: "old-bot@example.com" } },
       ));
+
+    it("lets a new branch start from an older commit of main, but not from unrelated history", () =>
+      withRepo(impl, (repo, base) => {
+        expect(tryCommit(repo, "feat: built before main moved").status).toBe(0);
+        const feature = gitOk(repo, ["rev-parse", "HEAD"]);
+        const newerMain = commitTree(repo, "squash merge on main", base, GITHUB);
+        gitOk(repo, ["update-ref", "refs/remotes/origin/main", newerMain]);
+        const behind = prePush(
+          impl,
+          repo,
+          `refs/heads/codex/test-scope ${feature} refs/heads/codex/test-scope ${ZERO}`,
+        );
+        expect(behind.status, behind.stderr).toBe(0);
+
+        const tree = gitOk(repo, ["rev-parse", `${feature}^{tree}`]);
+        const orphan = gitOk(repo, ["commit-tree", tree], { input: "unrelated root\n", env: identityEnv(OWNER) });
+        gitOk(repo, ["update-ref", "refs/heads/codex/test-scope", orphan]);
+        const unrelated = prePush(
+          impl,
+          repo,
+          `refs/heads/codex/test-scope ${orphan} refs/heads/codex/test-scope ${ZERO}`,
+        );
+        expect(unrelated.status).not.toBe(0);
+        expect(unrelated.stderr).toMatch(/shares no history with origin\/main/u);
+      }));
+
+    it("lets a published branch take main in by merge, checking only its own commits", () =>
+      withRepo(impl, (repo, base) => {
+        expect(tryCommit(repo, "feat: first push").status).toBe(0);
+        const feature = gitOk(repo, ["rev-parse", "HEAD"]);
+        const newerMain = commitTree(repo, "squash merge on main", base, GITHUB);
+        gitOk(repo, ["update-ref", "refs/remotes/origin/main", newerMain]);
+        gitOk(repo, ["merge", "--no-ff", "-m", "Merge main into the branch", newerMain]);
+        const merged = gitOk(repo, ["rev-parse", "HEAD"]);
+        const update = prePush(
+          impl,
+          repo,
+          `refs/heads/codex/test-scope ${merged} refs/heads/codex/test-scope ${feature}`,
+        );
+        expect(update.status, update.stderr).toBe(0);
+
+        const foreign = commitTree(repo, "not the owner", merged, FOREIGN);
+        gitOk(repo, ["update-ref", "refs/heads/codex/test-scope", foreign]);
+        const rejected = prePush(
+          impl,
+          repo,
+          `refs/heads/codex/test-scope ${foreign} refs/heads/codex/test-scope ${feature}`,
+        );
+        expect(rejected.status).not.toBe(0);
+        expect(rejected.stderr).toMatch(/not owner-authored/u);
+
+        const rewind = prePush(
+          impl,
+          repo,
+          `refs/heads/codex/test-scope ${feature} refs/heads/codex/test-scope ${merged}`,
+        );
+        expect(rewind.status).not.toBe(0);
+        expect(rewind.stderr).toMatch(/non-fast-forward/u);
+      }));
 
     it("refuses to run when the configured hooks path is not its own", () =>
       withRepo(impl, (repo) => {
