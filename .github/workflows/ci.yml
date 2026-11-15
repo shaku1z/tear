@@ -50,6 +50,9 @@ jobs:
           head="${{ github.event.pull_request.head.sha || github.sha }}"
           main="$(git rev-parse origin/main)"
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          # Every later step checks and builds this commit, not GitHub's GITHUB_SHA (its own merge ref).
+          echo "TEAR_RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "TEAR_BUILD_GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "::notice title=checked::head=$head main=$main"
           echo "Checked head \`$head\` merged with main \`$main\`." >> "$GITHUB_STEP_SUMMARY"
       - uses: pnpm/action-setup@v4

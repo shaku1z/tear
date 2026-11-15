@@ -67,6 +67,25 @@ describe("Validate workflow", () => {
     );
     // scripts/merge-ready.mjs parses exactly this annotation.
     expect(workflow).toContain('echo "::notice title=checked::head=$head main=$main"');
+    // Every later step must expect the commit checked out here, not GitHub's GITHUB_SHA: the
+    // workspace check, the build's attribution and the artifact verification all read these.
+    const recordStep = workflow.slice(record, install);
+    expect(recordStep).toContain('echo "TEAR_RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"');
+    expect(recordStep).toContain('echo "TEAR_BUILD_GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"');
+  });
+
+  it("has every script that compares HEAD with GITHUB_SHA prefer the checked commit", () => {
+    for (const [file, variable] of [
+      ["scripts/check-workspace.mjs", "TEAR_RELEASE_SHA"],
+      ["scripts/release-preflight.mjs", "TEAR_RELEASE_SHA"],
+      ["scripts/verify-plan-certificate.mjs", "TEAR_RELEASE_SHA"],
+      ["scripts/verify-release-artifact.mjs", "TEAR_RELEASE_SHA"],
+      ["scripts/build-target.mjs", "TEAR_BUILD_GIT_SHA"],
+    ]) {
+      expect(read(file), `${file} must read ${variable} before GITHUB_SHA`).toMatch(
+        new RegExp(`${variable}[\\s\\S]{0,200}GITHUB_SHA`, "u"),
+      );
+    }
   });
 
   it("gives no step a key twice (GitHub rejects such a file)", () => {
