@@ -187,6 +187,13 @@ export default tseslint.config(
           message:
             "A sleep must say what it is for: pollEvery(ms), holdFor(ms) or notWithin(ms) from tests/browser-waits.js. To wait for the game, wait for its state instead.",
         },
+        {
+          // Playwright's 30 s navigation default is an unnamed wall-clock limit like any other.
+          selector:
+            "CallExpression[callee.property.name=/^(goto|reload|goBack|goForward|waitForNavigation|waitForURL|waitForLoadState)$/]:not(:has(Property[key.name='timeout']))",
+          message:
+            "Give the navigation a named ceiling: { timeout: STATE_WAIT_MS }, or reloadPage(page) from tests/browser-waits.js, which also reports what the page was doing if it stalls.",
+        },
       ],
     },
   },
