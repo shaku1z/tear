@@ -13,6 +13,79 @@ const STATE_WAIT_MS = 60_000;
 /** Ceiling for cold loads, long recordings and whole runs that honestly take a minute or more. */
 const SLOW_STATE_WAIT_MS = 180_000;
 
+/**
+ * Ceiling for one whole browser journey. `page.evaluate` has no timeout of its own, so a page
+ * whose main thread never comes back would otherwise hold the job until the CI limit.
+ */
+const JOURNEY_LIMIT_MS = 600_000;
+
+/** Settles to `fallback` after `ms` unless `promise` settles first. */
+function within(promise, ms, fallback) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      timer = setTimeout(resolve, ms, fallback);
+    }),
+  ]).finally(() => {
+    clearTimeout(timer);
+  });
+}
+
+const stallSessions = new WeakMap();
+
+/**
+ * Opens a DevTools session with the debugger on, so that describeStall can later pause a page
+ * whose main thread is busy: a session cannot be opened, nor the debugger enabled, once it is.
+ * Call it right after creating the page.
+ */
+async function watchForStalls(page) {
+  const session = await page.context().newCDPSession(page);
+  await session.send("Debugger.enable");
+  stallSessions.set(page, session);
+}
+
+/**
+ * Says what a stalled page is doing: whether its main thread still answers and, when it does not,
+ * the JavaScript stack it is busy in (paused through watchForStalls' session, then resumed).
+ */
+async function describeStall(page) {
+  const answer = await within(
+    page
+      .evaluate(() => ({ url: location.href, readyState: document.readyState, visibility: document.visibilityState }))
+      .then(
+        (value) => `answered ${JSON.stringify(value)}`,
+        (failure) => `evaluate failed: ${String(failure)}`,
+      ),
+    5000,
+    null,
+  );
+  if (answer) return `page ${answer}`;
+  const session = stallSessions.get(page);
+  if (!session) return "page did not answer within 5 s; no stack (watchForStalls was not called for this page)";
+  const stack = await within(
+    (async () => {
+      const paused = new Promise((resolve) => {
+        session.once("Debugger.paused", resolve);
+      });
+      await session.send("Debugger.pause");
+      const { callFrames } = await paused;
+      const frames = callFrames
+        .slice(0, 12)
+        .map(
+          (frame) =>
+            `${frame.functionName || "(anonymous)"} ${frame.url.replace(/^.*\//u, "")}:${String(frame.location.lineNumber + 1)}:${String(frame.location.columnNumber + 1)}`,
+        );
+      // The page may have moved on (or been torn down) since the pause; the stack is what counts.
+      await session.send("Debugger.resume").catch(() => undefined);
+      return `busy in: ${frames.join(" < ")}`;
+    })().catch((failure) => `could not pause it: ${String(failure)}`),
+    10_000,
+    "no JavaScript stack within 10 s (busy outside JavaScript, or the renderer is gone)",
+  );
+  return `page did not answer within 5 s; ${stack}`;
+}
+
 function milliseconds(kind, ms) {
   if (!Number.isFinite(ms) || ms < 0) throw new RangeError(`${kind} needs a non-negative duration, got ${ms}`);
   return ms;
@@ -63,19 +136,8 @@ async function reloadPage(page, options = {}) {
   try {
     return await page.reload({ waitUntil: "domcontentloaded", ...options, timeout: STATE_WAIT_MS });
   } catch (error) {
-    const answer = await Promise.race([
-      page
-        .evaluate(() => ({ url: location.href, readyState: document.readyState, visibility: document.visibilityState }))
-        .then(
-          (value) => `answered ${JSON.stringify(value)}`,
-          (failure) => `evaluate failed: ${String(failure)}`,
-        ),
-      new Promise((resolve) => {
-        setTimeout(resolve, 5000, "no answer within 5 s (main thread busy or hung)");
-      }),
-    ]);
-    const events_ = events.length > 0 ? events.join("; ") : "none";
-    throw new Error(`reload did not reach domcontentloaded: navigation events: ${events_}; page: ${answer}`, {
+    const seen = events.length > 0 ? events.join("; ") : "none";
+    throw new Error(`reload did not reach domcontentloaded: navigation events: ${seen}; ${await describeStall(page)}`, {
       cause: error,
     });
   } finally {
@@ -85,4 +147,15 @@ async function reloadPage(page, options = {}) {
   }
 }
 
-module.exports = { STATE_WAIT_MS, SLOW_STATE_WAIT_MS, pollEvery, holdFor, notWithin, settleFor, reloadPage };
+module.exports = {
+  STATE_WAIT_MS,
+  SLOW_STATE_WAIT_MS,
+  JOURNEY_LIMIT_MS,
+  pollEvery,
+  holdFor,
+  notWithin,
+  settleFor,
+  reloadPage,
+  describeStall,
+  watchForStalls,
+};
