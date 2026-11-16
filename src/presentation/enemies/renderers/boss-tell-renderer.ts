@@ -9,6 +9,7 @@ export const BOSS_TELL_INK = Object.freeze({
   warning: "#ffd24a",
   active: "#ff5a3c",
   movement: "#f3fff0",
+  exposed: "#7fe3ff",
   backing: "#0e1a16",
 });
 
@@ -81,6 +82,18 @@ function selfMark(ctx: CanvasRenderingContext2D, tell: BossTell, color: string, 
   ctx.restore();
 }
 
+/** The ink for a tell: exposure and movement have their own, a damaging tell warns and then strikes. */
+function tellInk(tell: BossTell): string {
+  switch (tell.stage) {
+    case "exposed":
+      return BOSS_TELL_INK.exposed;
+    case "active":
+      return tell.damaging ? BOSS_TELL_INK.active : BOSS_TELL_INK.movement;
+    case "warning":
+      return tell.damaging ? BOSS_TELL_INK.warning : BOSS_TELL_INK.movement;
+  }
+}
+
 /** Draws every tell a boss reports, in world space, with the shared danger marks. */
 export function drawBossTells(
   runtime: EnemyRendererRuntime,
@@ -90,11 +103,7 @@ export function drawBossTells(
   const highContrast = runtime.A11Y.highContrast;
   for (const tell of tells) {
     const k = bossTellProgress(tell);
-    const color = !tell.damaging
-      ? BOSS_TELL_INK.movement
-      : tell.stage === "active"
-        ? BOSS_TELL_INK.active
-        : BOSS_TELL_INK.warning;
+    const color = tellInk(tell);
     const left = tell.x - tell.hw,
       top = tell.y - tell.hh;
     if (tell.mark === "self") selfMark(ctx, tell, runtime.telegraphInk(color), k, highContrast);

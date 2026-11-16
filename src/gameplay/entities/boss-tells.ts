@@ -3,7 +3,8 @@
  * renderer draws them, and the rule tests read the same data, so a warning a player sees and a warning
  * a test measures cannot drift apart.
  */
-export type BossTellStage = "warning" | "active";
+/** "exposed" marks a boss open to punishment after a move: it never hurts, and hits on the boss count more. */
+export type BossTellStage = "warning" | "active" | "exposed";
 
 /** How the tell is drawn. Every tell also carries the rectangle it threatens; "self" marks the boss itself. */
 export type BossTellMark = "lane" | "column" | "reticle" | "band" | "box" | "destination" | "self";
