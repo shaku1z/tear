@@ -16,7 +16,9 @@ permissions:
 concurrency:
   # A newer push to a pull request cancels its older run. Runs on main are never
   # cancelled: each one may produce the build a deploy needs.
-  group: validate-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'latest' }}
+  # A draft's run is skipped; it sits in its own group so it can never cancel the real run that
+  # starts when the pull request is marked ready a moment after a push.
+  group: validate-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || (github.event.pull_request.draft && 'draft' || 'latest') }}
   cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:

@@ -236,6 +236,13 @@ export default tseslint.config(
             "Act in the same page task that checks the state the hook needs: page.waitForFunction(() => present() && (trigger(), true)), not a separate page.evaluate.",
         },
         {
+          // The same race when reading: a projectile found by one page call can be gone by the next.
+          selector:
+            "CallExpression[callee.property.name='evaluate']:has(MemberExpression[property.name='projectiles'])",
+          message:
+            "Read projectiles in the page task that waits for them: const handle = await page.waitForFunction(() => found() ?? null); await handle.jsonValue(), not a separate page.evaluate.",
+        },
+        {
           // A DOM element's inline style is the page's presentation, not the game's state.
           selector:
             "CallExpression[callee.property.name='waitForFunction']:has(MemberExpression[object.property.name='style'])",

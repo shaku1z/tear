@@ -54,6 +54,15 @@ describe("merge readiness", () => {
       ).toBe(false);
     });
 
+    it("treats a skipped or cancelled run as nothing checked and asks for a fresh one", () => {
+      for (const conclusion of ["skipped", "cancelled"]) {
+        const decision = decide({ main: green, pr: pr(), run: passed({ conclusion }), mainFilesSince: [] });
+        expect(decision.ready).toBe(false);
+        expect(decision.reason).toContain(`was ${conclusion}, so nothing was checked`);
+        expect(decision.action).toBe("refresh");
+      }
+    });
+
     it("refuses while main's newest commit has no finished check (cancelled or still running)", () => {
       const tip = "e".repeat(40);
       const decision = decide({ main: green, pr: pr(), run: passed(), mainFilesSince: [], mainTip: tip });

@@ -110,6 +110,15 @@ export interface LiveWeaponRuntimeApi<TEnemy extends LiveWeaponEnemy> {
     cause?: string,
     extra?: Readonly<Record<string, unknown>>,
   ) => LiveWeaponEvent<TEnemy>;
+  /**
+   * The event every kill hook receives. Live play and the replay world both build it here, so a
+   * kill hook sees the same event (area damage, effects, Overrun stacking) wherever it runs.
+   */
+  readonly makeDeathEvent: (
+    enemy: TEnemy,
+    cause: string | undefined,
+    cleanElimination: boolean,
+  ) => LiveWeaponEvent<TEnemy>;
   readonly nearestEnemy: (x: number, y: number) => TEnemy | null;
   readonly damageMultiplier: () => number;
   readonly log: (type: string, data?: Readonly<Record<string, unknown>> | null) => void;
@@ -196,6 +205,13 @@ export function createLiveWeaponRuntime<TEnemy extends LiveWeaponEnemy>(
     },
     fire,
     makeEvent: (x, y, enemy, cause = "", extra) => event(x, y, enemy, cause, extra),
+    makeDeathEvent: (enemy, cause = "", cleanElimination) =>
+      event(enemy.x, enemy.y, enemy, cause, {
+        cleanElimination,
+        addOverrunStack: () => {
+          api.addOverrun(requireRun().mods);
+        },
+      }),
     nearestEnemy: (x, y) => nearestLivingTarget(options.enemies(), x, y),
     damageMultiplier: () => {
       const run = options.run();

@@ -77,15 +77,17 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
       screenshots.push(reboundFile);
       observed.push({ variantId, mechanic: "single-wall-rebound", liveState: "commit", rimeRebounds: 1 });
     } else if (variantId === "prism-seer") {
-      await page.waitForFunction(
-        () =>
-          window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "prism-shard").length === 2,
+      // Read the pair in the page task that finds it: it lands within half a second.
+      const shardPair = await page.waitForFunction(
+        () => {
+          const pair = window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "prism-shard");
+          return pair.length === 2 ? pair : null;
+        },
         undefined,
         { timeout: STATE_WAIT_MS },
       );
-      const shards = await page.evaluate(() =>
-        window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "prism-shard"),
-      );
+      const shards = await shardPair.jsonValue();
+      assert.equal(shards.length, 2);
       assert.ok(shards.every((projectile) => projectile.counterplay === "deflect/recombine"));
       const shardFile = "prism-seer-shard-pair-1600x900.png";
       await page.screenshot({ path: path.join(directory, shardFile) });
@@ -151,14 +153,13 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
       screenshots.push(wakeFile);
       observed.push({ variantId, mechanic: "grounded-launchable-recovery-wake", liveState: "recover" });
     } else if (variantId === "hailcaster") {
-      await page.waitForFunction(
-        () => window.TEAR_WEAPON_DEBUG().projectiles.some((projectile) => projectile.kind === "hail-orb"),
+      // Read the orb in the page task that finds it: it can land before a second page call.
+      const orbHandle = await page.waitForFunction(
+        () => window.TEAR_WEAPON_DEBUG().projectiles.find((projectile) => projectile.kind === "hail-orb") ?? null,
         undefined,
         { timeout: STATE_WAIT_MS },
       );
-      const orb = await page.evaluate(() =>
-        window.TEAR_WEAPON_DEBUG().projectiles.find((projectile) => projectile.kind === "hail-orb"),
-      );
+      const orb = await orbHandle.jsonValue();
       assert.equal(orb.counterplay, "deflect/detonate or ground shatter");
       const orbFile = "hailcaster-hail-orb-1600x900.png";
       await page.screenshot({ path: path.join(directory, orbFile) });

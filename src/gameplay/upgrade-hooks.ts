@@ -170,6 +170,10 @@ const bindings = {
 } satisfies Record<string, Binding>;
 
 export type UpgradeHookId = keyof typeof bindings;
+/** Every upgrade hook and the callback list it joins, for checks that must cover them all. */
+export const UPGRADE_HOOK_BINDINGS: readonly Readonly<{ id: UpgradeHookId; hook: UpgradeHookName }>[] = Object.freeze(
+  (Object.keys(bindings) as UpgradeHookId[]).map((id) => Object.freeze({ id, hook: bindings[id].hook })),
+);
 const identities = new WeakMap<UpgradeEventHandler, UpgradeHookId>();
 
 export function upgradeHookIdentity(handler: UpgradeEventHandler): UpgradeHookId | undefined {

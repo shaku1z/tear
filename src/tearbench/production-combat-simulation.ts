@@ -79,5 +79,11 @@ export function createProductionCombatSimulation<State>(
         ...replay.world.state.projectiles().map((projectile) => core.combatEntityRuntime.id(projectile, "projectile")),
       ]),
   );
-  return Object.freeze({ ...core, outward: phases.outward, opening: phases.opening, collision: phases.collision });
+  return Object.freeze({
+    ...core,
+    outward: phases.outward,
+    opening: phases.opening,
+    collision: phases.collision,
+    combatEntities: phases.combatEntities,
+  });
 }
