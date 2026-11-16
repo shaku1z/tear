@@ -67,7 +67,10 @@ function createBoss(id: HarnessBossId, phase: Phase) {
     source: harness.types.Source,
   } as const;
   const boss = new constructors[id](CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as unknown as Boss;
-  const player = createTestPlayer({ x: CONFIG.view.w / 2 + 250 });
+  const player = Object.assign(createTestPlayer({ x: CONFIG.view.w / 2 + 250 }), {
+    hazardDmgMult: 1,
+    invulnerable: false,
+  });
   const projectiles: EnemyProjectile[] = [];
   const marks = bossPhaseMarks(id);
   boss.introT = 0;

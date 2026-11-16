@@ -22,6 +22,41 @@ function backing(ctx: CanvasRenderingContext2D, tell: BossTell, highContrast: bo
   ctx.restore();
 }
 
+/** The area's own fill and edge. The shared lane mark alone is too faint on a painted scene. */
+function area(ctx: CanvasRenderingContext2D, tell: BossTell, color: string, k: number): void {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.14 + 0.2 * k;
+  ctx.fillRect(tell.x - tell.hw, tell.y - tell.hh, tell.hw * 2, tell.hh * 2);
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.9;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(tell.x - tell.hw, tell.y - tell.hh, tell.hw * 2, tell.hh * 2);
+  ctx.restore();
+}
+
+/** Where the boss will land: a ring on the ground with a dark edge, and an arrow above it. */
+function landing(ctx: CanvasRenderingContext2D, tell: BossTell, color: string, k: number): void {
+  const footY = tell.y + tell.hh;
+  ctx.save();
+  for (const [ink, width] of [
+    [BOSS_TELL_INK.backing, 9],
+    [color, 4],
+  ] as const) {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.ellipse(tell.x, footY, tell.hw + 22, 16, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tell.x - 16, footY - 62 + 14 * k);
+    ctx.lineTo(tell.x, footY - 40 + 14 * k);
+    ctx.lineTo(tell.x + 16, footY - 62 + 14 * k);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 /** A filled rise inside a band, so a whole-floor strike reads as time running out. */
 function bandFill(ctx: CanvasRenderingContext2D, tell: BossTell, color: string, k: number): void {
   const height = tell.hh * 2 * k;
@@ -64,12 +99,13 @@ export function drawBossTells(
       top = tell.y - tell.hh;
     if (tell.mark === "self") selfMark(ctx, tell, runtime.telegraphInk(color), k, highContrast);
     else if (tell.mark === "reticle") runtime.dangerReticle(ctx, tell.x, tell.y, Math.max(tell.hw, tell.hh), k, color);
-    else if (tell.mark === "destination") runtime.dangerReticle(ctx, tell.x, tell.y + tell.hh, tell.hw + 14, k, color);
+    else if (tell.mark === "destination") landing(ctx, tell, runtime.telegraphInk(color), k);
     else if (tell.mark === "column") {
       backing(ctx, tell, highContrast);
       runtime.dangerColumn(ctx, tell.x, tell.hw * 2, top, tell.y + tell.hh, color, k);
     } else {
       backing(ctx, tell, highContrast);
+      area(ctx, tell, runtime.telegraphInk(color), k);
       if (tell.mark === "band") bandFill(ctx, tell, runtime.telegraphInk(color), k);
       const dir = tell.mark === "lane" ? (tell.dir ?? 1) : 1;
       runtime.dangerLane(ctx, dir >= 0 ? left : left + tell.hw * 2, top, tell.hw * 2, tell.hh * 2, dir, color, k);

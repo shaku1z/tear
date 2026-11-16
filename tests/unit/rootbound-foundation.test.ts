@@ -130,7 +130,7 @@ describe("Rootbound production foundation", () => {
       const calls: string[] = [];
       boss.draw(recordingCanvas(calls), harness.player);
       expect(calls, JSON.stringify(profile)).toEqual(
-        expect.arrayContaining(["bezierCurveTo", "strokeRect", "fillRect", "arc", "setLineDash", "stroke"]),
+        expect.arrayContaining(["bezierCurveTo", "strokeRect", "fillRect", "ellipse", "setLineDash", "stroke"]),
       );
     }
   });
