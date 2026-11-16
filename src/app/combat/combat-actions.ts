@@ -1,3 +1,4 @@
+import { discardScenePresses } from "../../input/scene-release";
 import { createLiveCollisionGameplayBindings } from "../../gameplay/combat/live-collision-gameplay-bindings";
 import { bindRunDnaShot, runDnaObserver } from "../../gameplay/runtime/run-dna-observer";
 import { updateMirrorCombat } from "../../gameplay/combat/mirror-combat-feedback";
@@ -151,8 +152,7 @@ export function createLiveCombatActions<
     runDamageMultiplier: f.runDamageMultiplier,
     stepCinematic: f.stepCinematic,
     flushClosingInput() {
-      d.Input.takeClick();
-      d.Input.tJump = false;
+      discardScenePresses(d.Input);
     },
     updateWeaponAbilities: f.updateWeaponAbilities,
     flushWeaponActions(events) {

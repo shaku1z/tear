@@ -1,6 +1,7 @@
 // The Adventure opening, on each input device: after the last lore page, the biome name and READY
-// play for their authored time and hand over to the first wave with no further input, and a press
-// during them moves them on instead of being swallowed. Called from tests/browser-input-matrix.js.
+// play for their authored time and hand over to the first wave with no further input; a press
+// during them moves them on instead of being swallowed, and never reaches the player as a jump,
+// a dash or a throw. Called from tests/browser-input-matrix.js.
 const assert = require("node:assert/strict");
 const { STATE_WAIT_MS, holdFor, pollEvery } = require("./browser-waits");
 
@@ -75,7 +76,7 @@ const DEVICES = [
 
 /** Starts Adventure and confirms each lore page once it can be confirmed, until the pages are over. */
 async function readThePages(page, cdp, device, where) {
-  await page.evaluate(() => window.__PANTHEON_TEST.startMode("adventure", "easy"));
+  await page.evaluate(() => window.__PANTHEON_TEST.startMode("campaign", "easy"));
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().beat?.startsWith("page-"), undefined, {
     timeout: STATE_WAIT_MS,
   });
@@ -134,6 +135,22 @@ async function chapterOpeningCarriesThroughOnEveryDevice(browser, configure) {
     await configure(page);
     if (device.gamepad) await connectGamepad(page);
     await readThePages(page, cdp, device, where);
+    // Every frame once the scene is over: did the player receive a jump, a dash or a throw?
+    await page.evaluate(() => {
+      const reached = { jump: 0, dash: 0, thrown: 0, frames: 0 };
+      window.__SCENE_PRESS_REACHED__ = reached;
+      const look = () => {
+        const now = window.__PANTHEON_TEST.state();
+        if (!now.active && now.game === "playing" && now.playerTrace) {
+          reached.frames += 1;
+          if (now.playerTrace.jumpBuffer > 0 || now.playerTrace.vy < 0) reached.jump += 1;
+          if (now.playerTrace.dashTimer > 0) reached.dash += 1;
+          if (now.blade && now.blade.state !== "held") reached.thrown += 1;
+        }
+        if (reached.frames < 45) requestAnimationFrame(look);
+      };
+      requestAnimationFrame(look);
+    });
     const pressed = new Set();
     const hurried = await watchToPlay(page, where, async (now) => {
       if ((now.beat !== "reveal" && now.beat !== "ready") || now.cinemaElapsed < 0.3 || pressed.has(now.beat)) return;
@@ -147,6 +164,14 @@ async function chapterOpeningCarriesThroughOnEveryDevice(browser, configure) {
         `${where}: the press was swallowed; ${beat} still ran ${hurried[beat].toFixed(2)} s`,
       );
     }
+    await page.waitForFunction(() => window.__SCENE_PRESS_REACHED__.frames >= 45, undefined, {
+      timeout: STATE_WAIT_MS,
+    });
+    assert.deepEqual(
+      await page.evaluate(() => ({ ...window.__SCENE_PRESS_REACHED__, frames: 45 })),
+      { jump: 0, dash: 0, thrown: 0, frames: 45 },
+      `${where}: the press that ended the scene reached the player`,
+    );
     assert.deepEqual(errors, [], `${device.name}: the opening raises no page errors`);
     await context.close();
   }
