@@ -57,7 +57,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
   readonly #rootbinderRedistribution = new Map<string, Readonly<{ x: number; y: number }>>();
   readonly #rootbinderGenerations = new Map<string, number>();
   readonly #rootlineFields = new Map<string, string>();
-  readonly #rootlineHitFields = new Set<string>();
 
   setActorSource(slot: string, source: (() => readonly unknown[]) | undefined): void {
     if (slot === "bloom-well") this.#bloomActors = source as (() => readonly BloomWellActor[]) | undefined;
@@ -76,7 +75,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     this.#rootbinderRedistribution.clear();
     this.#rootbinderGenerations.clear();
     this.#rootlineFields.clear();
-    this.#rootlineHitFields.clear();
     void environment;
   }
   replace(environment: EnvironmentFeatureContext): void {
@@ -84,7 +82,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     this.#rootbinderLeashes.clear();
     this.#rootbinderRedistribution.clear();
     this.#rootlineFields.clear();
-    this.#rootlineHitFields.clear();
     const networks = new Map<string, string[]>();
     for (const object of environment.combatObjects()) {
       if (
@@ -149,6 +146,11 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
           force: null,
           cleanupReason: null,
           patternId: "rootbound-rootline",
+          // Declared contact damage: the environment runtime applies it once while the roots are up.
+          damage: actor.state.damage,
+          threatening: true,
+          hitActorIds: Object.freeze([]),
+          hazardScaled: true,
         });
         this.#rootlineFields.set(actor.id, fieldId);
       } else if (stage !== null && fieldId !== undefined) {
@@ -156,26 +158,10 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         if (prior !== undefined)
           environment.updateField(fieldId, { state, stateTick: tick, geometry: actor.state.geometry });
       }
-      if (stage === "active" && fieldId !== undefined && !this.#rootlineHitFields.has(fieldId)) {
-        const target = actor.player;
-        const g = actor.state.geometry;
-        if (
-          target !== undefined &&
-          !target.invulnerable &&
-          target.x + target.hw >= g.x &&
-          target.x - target.hw <= g.x + g.w &&
-          target.y + target.hh >= g.y &&
-          target.y - target.hh <= g.y + g.h
-        ) {
-          this.#rootlineHitFields.add(fieldId);
-          target.takeDamage(actor.state.damage * target.hazardDamageMultiplier, g.x + g.w / 2, actor.source);
-        }
-      }
       if (stage === null && fieldId !== undefined) {
         const reason = actor.state.cleanupReason ?? "natural-expiry";
         environment.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason: reason });
         this.#rootlineFields.delete(actor.id);
-        this.#rootlineHitFields.delete(fieldId);
       }
       const placements = actor.state.graftPlacements ?? [];
       const ownerPosition = actor.state.ownerPosition;
@@ -210,7 +196,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       if (!actors.some((actor) => actor.id === ownerId)) {
         environment.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason: "stage-transition" });
         this.#rootlineFields.delete(ownerId);
-        this.#rootlineHitFields.delete(fieldId);
       }
   }
 
@@ -649,9 +634,6 @@ export interface RootboundEnvironmentActor {
     vx?: number;
     hw: number;
     hh: number;
-    invulnerable: boolean;
-    hazardDamageMultiplier: number;
-    takeDamage: (damage: number, sourceX: number, source: unknown) => void;
     applyCageConstraint?: (x: number, vx: number) => void;
   }>;
 }

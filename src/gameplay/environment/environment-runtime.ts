@@ -19,6 +19,11 @@ import {
 } from "./combat-object-runtime";
 import type { EnvironmentCounterplayTag } from "./environment-definitions";
 import {
+  applyEnvironmentContactDamage,
+  environmentContactDamage,
+  type EnvironmentContactTarget,
+} from "./environment-contact-damage";
+import {
   cleanupOrphanedEnvironmentReferences,
   environmentActorReferenceId,
   environmentNeedsOrphanCleanup,
@@ -81,6 +86,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   readonly #features = new Map<string, EnvironmentFeature>();
   readonly #actorSources = new Map<string, (() => readonly unknown[]) | undefined>();
   readonly #combatKernels = new Map<string, EnvironmentCombatObjectRuntime>();
+  #contactTargets: (() => readonly EnvironmentContactTarget[]) | undefined;
   /** The tick being stepped, if any. Ending an object stamps it, so every ended object fades for the same time. */
   #tick: number | undefined;
 
@@ -193,6 +199,33 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     }
     this.updateCombatObject(id, { ...kernel.cleanup(reason), stateTick: tick });
     this.#combatKernels.delete(id);
+  }
+  /** Who stage objects can hurt by touch. Biome bindings set it; the runtime alone applies the damage. */
+  setContactTargets(source: (() => readonly EnvironmentContactTarget[]) | undefined): void {
+    this.#contactTargets = source;
+  }
+  /** The one contact damage path: each object's declared damage, once per target, while it is active. */
+  #applyContactDamage(): void {
+    const targets = this.#contactTargets?.() ?? [];
+    if (targets.length === 0) return;
+    for (const field of this.fields()) {
+      const declared = environmentContactDamage(field);
+      const hit = declared === undefined ? [] : applyEnvironmentContactDamage(field, declared, targets);
+      if (declared !== undefined && hit.length > 0)
+        this.updateField(field.id, { hitActorIds: Object.freeze([...declared.hitActorIds, ...hit]) });
+    }
+    for (const object of this.combatObjects()) {
+      const declared = environmentContactDamage(object);
+      const hit = declared === undefined ? [] : applyEnvironmentContactDamage(object, declared, targets);
+      if (declared !== undefined && hit.length > 0)
+        this.updateCombatObject(object.id, { hitActorIds: Object.freeze([...declared.hitActorIds, ...hit]) });
+    }
+    for (const route of this.routes()) {
+      const declared = environmentContactDamage(route);
+      const hit = declared === undefined ? [] : applyEnvironmentContactDamage(route, declared, targets);
+      if (declared !== undefined && hit.length > 0)
+        this.updateRoute(route.id, { hitActorIds: Object.freeze([...declared.hitActorIds, ...hit]) });
+    }
   }
   setEventPort(events: TearGameplayEventPort | undefined): void {
     this.#events = events;
@@ -335,6 +368,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
             });
         }
       for (const feature of activeFeatures) feature.step(this, tick, seconds);
+      this.#applyContactDamage();
       this.#hooks.activeFields?.(context);
     });
     this.#run("collision-resolution", tick, seconds, (context) => {

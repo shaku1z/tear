@@ -5,6 +5,7 @@ import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
 import type { CONFIG } from "../../../config/game-config";
 import { bindLiveBloomWellActors } from "./bloom-well-actors";
 import { bindLiveRootbinderActors } from "./rootbinder-actors";
+import { bindLiveContactTargets } from "./contact-target-actors";
 
 /**
  * Binds every Verdant actor source (Bloom Wells, Rootbinders, the Rootbound) in one place,
@@ -31,6 +32,7 @@ export function bindLiveRootboundActors(
   config: typeof CONFIG,
 ): void {
   environment.addFeature(createVerdantEnvironmentFeature());
+  bindLiveContactTargets(environment, player, enemies, actorId);
   environment.setFeatureActorSource("verdant", "rootbound", () =>
     enemies()
       .filter((enemy) => enemy.kind === "rootbound")
@@ -107,11 +109,6 @@ export function bindLiveRootboundActors(
                   vx: target.vx,
                   hw: target.hw,
                   hh: target.hh,
-                  invulnerable: target.invulnerable,
-                  hazardDamageMultiplier: target.hazardDmgMult,
-                  takeDamage: (damage: number, sourceX: number, source: unknown) => {
-                    target.takeDamage(damage, sourceX, source as never);
-                  },
                   applyCageConstraint: (x: number, vx: number) => {
                     target.x = x;
                     target.vx = vx;

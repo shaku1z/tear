@@ -309,6 +309,8 @@
       "src/gameplay/environment/environment-contracts.ts",
       "src/gameplay/environment/environment-state.ts",
       "src/gameplay/environment/environment-runtime.ts",
+      "src/gameplay/environment/environment-contact-damage.ts",
+      "src/gameplay/environment/biome-actors/contact-target-actors.ts",
       "src/gameplay/runtime/tear-world-context.ts",
       "src/gameplay/runtime/tear-world-composition.ts",
       "src/gameplay/runtime/tear-simulation-runtime.ts",
