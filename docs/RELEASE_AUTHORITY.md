@@ -91,6 +91,9 @@ applies them and answers yes or no with the reason; the merge helper calls it.
      not.
    - Main's own run still runs after each merge, and still makes the deploy
      artifact.
+   - The tool never deletes batch branches, because the pre-push guard refuses
+     deletions. `pnpm merge:batch --prunable` lists the ones nothing can still
+     merge on, so they can be pruned by hand.
 
 ## Local boundary
 

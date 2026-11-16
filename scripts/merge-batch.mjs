@@ -4,6 +4,7 @@
 //   node scripts/merge-batch.mjs [<pr> ...] [--without <pr>]   build a batch and start its check
 //   node scripts/merge-batch.mjs --status <batch branch>        say whether the batch run passed
 //   node scripts/merge-batch.mjs --verify <batch branch>        after the merges: main's tree is the checked tree
+//   node scripts/merge-batch.mjs --prunable                     list batch branches nothing needs any more
 //   node scripts/merge-batch.mjs --record "<pr>:<oid>,..."      (Validate only) record the verified members
 //
 // A batch is a branch `codex/batch-<utc stamp>` made from origin/main, with each member's head
@@ -21,6 +22,8 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const BATCH_PREFIX = "codex/batch-";
+/** A batch branch exactly as batchBranch names it, so a feature branch such as codex/batch-merge is never one. */
+export const BATCH_BRANCH = /^codex\/batch-\d{8}t\d{6}z$/u;
 
 /** "123:<oid>,124:<oid>" as members; throws on anything else, so a bad input never records. */
 export function parseMembers(text) {
@@ -101,6 +104,24 @@ export function treeVerdict({ mainTree, checkedTree, merged, members }) {
     ok: false,
     message: `MAIN DIFFERS FROM THE CHECKED BATCH: main's tree ${mainTree.slice(0, 12)}, checked tree ${checkedTree.slice(0, 12)}. Something other than the batch reached main, or a member merged a different head; run Validate on main before anything else merges.`,
   };
+}
+
+/**
+ * Whether a batch branch is still needed. The tool never deletes branches (the pre-push guard
+ * refuses deletions); it lists the ones that can go. A branch is kept while its run is going, or
+ * while its run passed and a member is still open, since that member may still merge on it.
+ * @param {{ status?: string, conclusion?: string | null, states?: Record<number, string> }} batch
+ *   the latest run on the branch (absent when there is none) and each recorded member's state
+ */
+export function pruneVerdict(batch) {
+  if (batch.status === undefined) return { prunable: true, reason: "it has no Validate run" };
+  if (batch.status !== "completed") return { prunable: false, reason: `its run is ${batch.status}` };
+  if (batch.conclusion !== "success") return { prunable: true, reason: `its run ended ${String(batch.conclusion)}` };
+  const states = Object.entries(batch.states ?? {});
+  if (states.length === 0) return { prunable: true, reason: "its run recorded no members" };
+  const open = states.filter(([, state]) => state !== "MERGED" && state !== "CLOSED").map(([pr]) => `#${pr}`);
+  if (open.length > 0) return { prunable: false, reason: `${open.join(", ")} may still merge on it` };
+  return { prunable: true, reason: "every member is merged or closed" };
 }
 
 /** The failed checks a batch run reports: run-checks prints `FAIL <group>.<id> ...` for each. */
@@ -195,7 +216,7 @@ function batchRun(branch) {
       `repos/${slug}/actions/workflows/ci.yml/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&per_page=5`,
     ]),
   ).workflow_runs;
-  if (runs.length === 0) throw new Error(`no Validate run on ${branch}`);
+  if (runs.length === 0) return { latest: undefined, job: undefined, note: "" };
   const latest = runs[0];
   const job = JSON.parse(gh(["api", `repos/${slug}/actions/runs/${String(latest.id)}/jobs`])).jobs.find(
     (entry) => entry.name === "check",
@@ -207,6 +228,7 @@ function batchRun(branch) {
 
 function status(branch) {
   const { latest, job, note } = batchRun(branch);
+  if (latest === undefined) throw new Error(`no Validate run on ${branch}`);
   console.log(`batch run ${latest.html_url}: ${latest.status}${latest.conclusion ? `, ${latest.conclusion}` : ""}`);
   console.log(note ? `members: ${note}` : "the run has not recorded its members yet");
   if (latest.conclusion === "success") {
@@ -229,7 +251,7 @@ function verify(branch) {
   const { latest, note } = batchRun(branch);
   const main = /main=([0-9a-f]{40})/u.exec(note)?.[1];
   const members = /members=(\S+)/u.exec(note)?.[1];
-  if (latest.conclusion !== "success" || main === undefined || members === undefined) {
+  if (latest?.conclusion !== "success" || main === undefined || members === undefined) {
     console.error(`the batch run on ${branch} did not pass with recorded members; nothing to verify`);
     return 1;
   }
@@ -243,6 +265,29 @@ function verify(branch) {
   const verdict = treeVerdict({ mainTree, checkedTree, merged, members: list });
   (verdict.ok ? console.log : console.error)(verdict.message);
   return verdict.ok ? 0 : 1;
+}
+
+function prunable() {
+  const heads = git(["ls-remote", "--heads", "origin", `${BATCH_PREFIX}*`])
+    .out.split(/\r?\n/u)
+    .filter(Boolean);
+  const branches = heads
+    .map((line) => line.split(/\s+/u)[1].replace(/^refs\/heads\//u, ""))
+    .filter((branch) => BATCH_BRANCH.test(branch));
+  if (branches.length === 0) console.log("no batch branches on origin");
+  for (const branch of branches) {
+    const { latest, note } = batchRun(branch);
+    const members = /members=(\S+)/u.exec(note)?.[1];
+    const states = Object.fromEntries(
+      (members ? parseMembers(members) : []).map((member) => [
+        member.pr,
+        JSON.parse(gh(["pr", "view", String(member.pr), "--json", "state"])).state,
+      ]),
+    );
+    const verdict = pruneVerdict({ status: latest?.status, conclusion: latest?.conclusion, states });
+    console.log(`${verdict.prunable ? "prunable" : "keep    "} ${branch}: ${verdict.reason}`);
+  }
+  return 0;
 }
 
 /** Validate's step: writes the `batch` annotation from the members whose head the checked commit contains. */
@@ -268,6 +313,7 @@ export function main(argv) {
     if (argv.includes("--record")) return record(value("--record"));
     if (argv.includes("--status")) return status(value("--status"));
     if (argv.includes("--verify")) return verify(value("--verify"));
+    if (argv.includes("--prunable")) return prunable();
     const without = argv.flatMap((entry, index) => (argv[index - 1] === "--without" ? [Number(entry)] : []));
     const numbers = argv.filter((entry, index) => /^\d+$/u.test(entry) && argv[index - 1] !== "--without").map(Number);
     return create(numbers, without);

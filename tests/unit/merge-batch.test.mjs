@@ -5,11 +5,13 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  BATCH_BRANCH,
   batchBranch,
   chooseMembers,
   failedChecks,
   formatMembers,
   parseMembers,
+  pruneVerdict,
   treeVerdict,
 } from "../../scripts/merge-batch.mjs";
 
@@ -95,6 +97,19 @@ describe("pnpm merge:batch", () => {
 
   it("names batch branches codex/batch-<utc stamp>, which the pre-push guard accepts", () => {
     expect(batchBranch(new Date("2026-11-16T09:08:07.123Z"))).toBe("codex/batch-20261116t090807z");
+    expect(BATCH_BRANCH.test(batchBranch())).toBe(true);
+    expect(BATCH_BRANCH.test("codex/batch-merge")).toBe(false);
+  });
+
+  it("lists a batch branch as prunable only once nothing can still merge on it", () => {
+    expect(pruneVerdict({}).prunable).toBe(true);
+    expect(pruneVerdict({ status: "in_progress" }).prunable).toBe(false);
+    expect(pruneVerdict({ status: "completed", conclusion: "failure" }).prunable).toBe(true);
+    expect(pruneVerdict({ status: "completed", conclusion: "success", states: {} }).prunable).toBe(true);
+    const open = pruneVerdict({ status: "completed", conclusion: "success", states: { 3: "MERGED", 7: "OPEN" } });
+    expect(open).toEqual({ prunable: false, reason: "#7 may still merge on it" });
+    const done = { status: "completed", conclusion: "success", states: { 3: "MERGED", 7: "CLOSED" } };
+    expect(pruneVerdict(done).prunable).toBe(true);
   });
 
   it("accepts main only when every member merged and main's tree is the checked tree", () => {

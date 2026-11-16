@@ -24,10 +24,9 @@ import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { BATCH_BRANCH } from "./merge-batch.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-/** Batch branches (scripts/merge-batch.mjs). */
-const BATCH_PREFIX = "codex/batch-";
 
 /** Files whose change can break any other change, so a merge touching them makes every pass stale. */
 export const SHARED_FILES = Object.freeze([
@@ -247,7 +246,7 @@ export function gatherFacts(
 export function gatherBatch(slug, pr) {
   const runs = api(
     `repos/${slug}/actions/workflows/ci.yml/runs?event=workflow_dispatch&status=success&per_page=20`,
-  ).workflow_runs.filter((entry) => entry.head_branch?.startsWith(BATCH_PREFIX));
+  ).workflow_runs.filter((entry) => BATCH_BRANCH.test(entry.head_branch ?? ""));
   for (const candidate of runs.slice(0, 8)) {
     const job = api(`repos/${slug}/actions/runs/${String(candidate.id)}/jobs`).jobs.find(
       (entry) => entry.name === "check",
