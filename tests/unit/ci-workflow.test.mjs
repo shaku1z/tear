@@ -176,6 +176,20 @@ describe("Validate workflow", () => {
     ).toBeLessThanOrEqual((limits[0] * 60) / 2);
   });
 
+  it("records batch members only on a run started by hand with a batch, passing the input through env", () => {
+    const steps = workflow.split(/\n(?= {6}- )/u);
+    const step = steps.find((entry) => entry.includes("name: Record the batch members")) ?? "";
+    expect(step).toMatch(/\n {8}if: github\.event_name == 'workflow_dispatch' && inputs\.batch != ''\n/u);
+    expect(step).toMatch(/\n {10}BATCH: \$\{\{ inputs\.batch \}\}\n/u);
+    const run = /\n {8}run: (.*)/u.exec(step)?.[1] ?? "";
+    expect(run).toBe('node scripts/merge-batch.mjs --record "$BATCH"');
+    // Nothing else reads the input or writes the batch annotation, so a pull request or main run emits none.
+    const others = steps.filter((entry) => entry !== step);
+    expect(others.some((entry) => /inputs\.batch|title=batch|merge-batch\.mjs/u.test(entry))).toBe(false);
+    // The step runs before the checks, so a batch that checked less than it claims fails before them.
+    expect(workflow.indexOf("Record the batch members")).toBeLessThan(workflow.indexOf("run-checks.mjs static"));
+  });
+
   it("checks out the full history (the oracle comparison reads an old commit)", () => {
     const checkouts = [...workflow.matchAll(/uses: actions\/checkout@v4\n {8}with:\n {10}fetch-depth: (\d+)/gu)];
     expect(checkouts.map((match) => match[1])).toEqual(["0"]);
