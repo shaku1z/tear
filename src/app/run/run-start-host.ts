@@ -1,4 +1,6 @@
 import type { MusicDirector } from "../../audio/music-director";
+import type { MusicRunProgress } from "../../audio/music-contracts";
+import { musicRunProgress } from "../../audio/music/run-progress";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
@@ -152,6 +154,8 @@ export function createLiveRunStartHost(
     },
   });
   let startingPlan: RunStartPlan | null = null;
+  /** Saved progress before this run's first stage marks its biome as reached. */
+  let musicProgress: MusicRunProgress | null = null;
 
   const controller = new LiveRunStartController({
     replaceActiveRun: () => {
@@ -201,6 +205,7 @@ export function createLiveRunStartHost(
       context.world.resetTransient();
       context.services.effects.resetWorld();
       context.services.clock.reset();
+      musicProgress = musicRunProgress(PROFILE.data.stats, isBossDefinitionId);
       const biomeTracker = PROFILE.data.stats._biomes;
       const discoveredBiomes = Object.keys((biomeTracker ?? {}) as Record<string, unknown>);
       return {
@@ -513,6 +518,14 @@ export function createLiveRunStartHost(
         rulesetVersion: CURRENT_RULESET_VERSION,
         gameVersion: "0.1.0",
         scoreVersion: SFX.musicScoreVersion(),
+        // First-run songs and unlocks follow saved progress only where the run also records it;
+        // seed races and practice hear the same music for everyone.
+        ...(musicProgress !== null &&
+        context.achievementTracking() &&
+        context.race?.active() !== true &&
+        context.baselinePractice?.() !== true
+          ? { progress: musicProgress }
+          : {}),
       });
     },
     requestPointerLock: context.requestPointerLock,

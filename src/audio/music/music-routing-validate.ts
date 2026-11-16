@@ -32,11 +32,15 @@ function match(value: unknown): MusicRouteMatch {
   const bossRequired = source.bossRequired;
   if (bossRequired !== undefined && typeof bossRequired !== "boolean")
     throw new Error("routing match bossRequired must be boolean");
+  const firstRun = source.firstRun;
+  if (firstRun !== undefined && typeof firstRun !== "boolean")
+    throw new Error("routing match firstRun must be boolean");
   return {
     ...(biome === undefined ? {} : { biome }),
     ...(bossId === undefined ? {} : { bossId }),
     ...(parsedScene === undefined ? {} : { scene: parsedScene }),
     ...(bossRequired === undefined ? {} : { bossRequired }),
+    ...(firstRun === undefined ? {} : { firstRun }),
   };
 }
 
@@ -50,7 +54,14 @@ function selection(value: unknown): MusicRouteSelection {
     const weight = item.weight;
     if (typeof weight !== "number" || !Number.isFinite(weight) || weight <= 0)
       throw new Error("weighted pool entry weight must be a positive finite number");
-    return { workId: text(item.workId, "weighted pool workId"), weight };
+    const requiresUnlock = item.requiresUnlock;
+    if (requiresUnlock !== undefined && typeof requiresUnlock !== "boolean")
+      throw new Error("weighted pool entry requiresUnlock must be boolean");
+    return {
+      workId: text(item.workId, "weighted pool workId"),
+      weight,
+      ...(requiresUnlock === undefined ? {} : { requiresUnlock }),
+    };
   });
   return { type: "weighted-pool", entries };
 }

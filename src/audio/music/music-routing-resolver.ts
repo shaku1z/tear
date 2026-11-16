@@ -1,4 +1,9 @@
-import type { MusicRoutingContext, MusicRoutingManifest, MusicRoutingRule } from "./music-routing-types";
+import type {
+  MusicPoolEntry,
+  MusicRoutingContext,
+  MusicRoutingManifest,
+  MusicRoutingRule,
+} from "./music-routing-types";
 
 function normalizeBiome(value: string): string {
   const lower = value.trim().toLowerCase().replace(/\s+/gu, "-");
@@ -27,6 +32,7 @@ function matches(rule: MusicRoutingRule, context: MusicRoutingContext): boolean 
   if (match.biome !== undefined && normalizeBiome(match.biome) !== normalizeBiome(context.biomeId)) return false;
   if (match.bossId !== undefined && match.bossId !== context.bossId) return false;
   if (match.bossRequired === true && !context.bossId) return false;
+  if (match.firstRun === true && context.firstRun !== true) return false;
   return true;
 }
 
@@ -34,6 +40,7 @@ function specificity(rule: MusicRoutingRule): number {
   const match = rule.match;
   return (
     (match.scene === undefined ? 0 : 1) +
+    (match.firstRun === true ? 4 : 0) +
     (match.biome === undefined ? 0 : 8) +
     (match.bossRequired ? 16 : 0) +
     (match.bossId === undefined ? 0 : 32)
@@ -41,10 +48,13 @@ function specificity(rule: MusicRoutingRule): number {
 }
 
 function choosePool(
-  candidates: readonly { readonly workId: string; readonly weight: number }[],
+  candidates: readonly MusicPoolEntry[],
   seed: number,
+  isUnlocked: (workId: string) => boolean,
 ): string | null {
-  const usable = candidates.filter((entry) => entry.weight > 0).sort((a, b) => a.workId.localeCompare(b.workId));
+  const usable = candidates
+    .filter((entry) => entry.weight > 0 && (entry.requiresUnlock !== true || isUnlocked(entry.workId)))
+    .sort((a, b) => a.workId.localeCompare(b.workId));
   const total = usable.reduce((sum, entry) => sum + entry.weight, 0);
   if (total <= 0) return null;
   let roll = ((Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b) >>> 0) / 4294967296) * total;
@@ -74,5 +84,5 @@ export function resolveMusicRoute(manifest: MusicRoutingManifest, context: Music
   const primary = ranked.find((rule) => rule.selection.type === "primary");
   if (primary?.selection.type === "primary") return primary.selection.workId;
   const pool = ranked.flatMap((rule) => (rule.selection.type === "weighted-pool" ? rule.selection.entries : []));
-  return choosePool(pool, seed) ?? manifest.defaultWorkId;
+  return choosePool(pool, seed, context.isUnlocked ?? (() => false)) ?? manifest.defaultWorkId;
 }
