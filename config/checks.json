@@ -111,13 +111,8 @@
         "seconds": 1
       },
       {
-        "id": "tear-score",
-        "run": "node scripts/verify-tear-score-provenance.mjs",
-        "seconds": 1
-      },
-      {
-        "id": "adaptive-soundtrack",
-        "run": "node scripts/verify-adaptive-soundtrack-provenance.mjs",
+        "id": "music",
+        "run": "node scripts/check-music.mjs",
         "seconds": 1
       },
       {

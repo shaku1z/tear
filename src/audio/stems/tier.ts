@@ -1,4 +1,4 @@
-import type { StemCueManifest, Tier } from "./types";
+import type { StemCueManifest, StemMixPreset, Tier } from "./types";
 
 /** Below this dB floor a stem is treated as fully silent (linear gain 0). */
 export const SILENCE_DB = -60;
@@ -19,14 +19,17 @@ export function gainToDb(gain: number): number {
  * caller can drive one bus gain per stem.
  *
  * This is the heart of "tiers via gain, not restart": the player only ramps
- * these values; it never stops or re-seeks a voice.
+ * these values; it never stops or re-seeks a voice. An optional mix preset
+ * offsets or silences layers on top of every tier.
  */
-export function planTierGains(cue: StemCueManifest, tier: Tier): Record<string, number> {
+export function planTierGains(cue: StemCueManifest, tier: Tier, preset?: StemMixPreset): Record<string, number> {
   const mix = cue.tiers[tier];
+  const off = new Set(preset?.off ?? []);
   const out: Record<string, number> = {};
   for (const stem of cue.stems) {
     const tierDb = mix[stem.id];
-    out[stem.id] = tierDb === undefined ? 0 : dbToGain(tierDb + stem.gainDb);
+    out[stem.id] =
+      tierDb === undefined || off.has(stem.id) ? 0 : dbToGain(tierDb + stem.gainDb + (preset?.gainDb?.[stem.id] ?? 0));
   }
   return out;
 }

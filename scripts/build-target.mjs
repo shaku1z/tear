@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import process from "node:process";
 import { resolve } from "node:path";
 import { rm } from "node:fs/promises";
+import { selectAudioProfile } from "./audio-profile.mjs";
 import { pruneCrazyGamesArtifact } from "./crazygames-artifact-scope.mjs";
 import { RELEASE_REPOSITORY, writeReleaseArtifactMetadata } from "./release-artifact.mjs";
 import { fanoutContentAddressedBuild, materializeContentAddressedBuild } from "./tearbench-build-artifact.mjs";
@@ -46,6 +47,10 @@ const result = spawnSync(process.execPath, [viteCli, "build", "--mode", mode, "-
 });
 if (result.error !== undefined) throw result.error;
 if (result.status !== 0) process.exit(result.status ?? 1);
+const audio = await selectAudioProfile(staging, target);
+console.log(
+  `${target} audio: ${String(audio.swapped)} file(s) from its own encode, ${String(audio.droppedBytes)} bytes of other targets' audio left out`,
+);
 if (target === "crazygames") {
   const pruned = await pruneCrazyGamesArtifact(staging);
   console.log(

@@ -92,20 +92,15 @@ async function assertVisibilityLifecycle(page, baseline) {
         }
       };
     });
-    const musicVendorRequests = [];
+    const musicRequests = [];
     page.on("request", (request) => {
       const url = request.url();
-      if (url.includes("/vendor/tear-music/") || url.includes("/vendor/tear-score/")) {
-        musicVendorRequests.push(new URL(url).pathname);
-      }
+      if (url.includes("/audio/") || url.includes("/vendor/")) musicRequests.push(new URL(url).pathname);
     });
     await page.route("**/*", (route) => {
       const url = route.request().url();
-      // Recorded stems are the normal primary backend and have their own
-      // contract suite. With cues unavailable, this page exercises the
-      // canonical Adaptive Soundtrack vendor path.
-      if (url.includes("/audio/cues/")) route.abort("failed");
-      else if (url.startsWith(`${baseUrl}/`)) route.continue();
+      // Recorded stems are the music backend; the page loads them as players do.
+      if (url.startsWith(`${baseUrl}/`)) route.continue();
       else route.abort();
     });
     await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, {
@@ -134,24 +129,26 @@ async function assertVisibilityLifecycle(page, baseline) {
       contexts: window.__tearAudioContextCount,
     }));
     assert.equal(after.contexts, 1);
-    assert.equal(after.audio.backend, "tear-score@0.1.0-alpha.1");
-    assert.ok(
-      musicVendorRequests.includes("/vendor/tear-music/adaptive-soundtrack.esm.js"),
-      "canonical Adaptive Soundtrack module was evaluated",
+    assert.equal(after.audio.backend, "stem-cue:biome-routed", "recorded stems are the music backend");
+    assert.ok(musicRequests.includes("/audio/music.json"), "the one music index was loaded");
+    assert.equal(
+      musicRequests.some((request) => request.endsWith("/cue.json")),
+      false,
+      "cue manifests come from the index, not one request each",
     );
     assert.ok(
-      musicVendorRequests.includes("/vendor/tear-music/tone-host-14.9.17.esm.js"),
-      "canonical paired Tone host was loaded",
+      musicRequests.some((request) => request.startsWith("/audio/cues/fillet/opus/")),
+      "the menu cue's layers were requested",
     );
     assert.equal(
-      musicVendorRequests.some((request) => request.includes("/vendor/tear-score/")),
+      musicRequests.some((request) => request.startsWith("/vendor/")),
       false,
-      "canonical success does not invoke the legacy vendor fallback",
+      "no vendored music engine is requested",
     );
     assert.equal(
       await page.evaluate(() => Object.prototype.hasOwnProperty.call(window, "Tone")),
       false,
-      "canonical Tone bridge is restored after module evaluation",
+      "no Tone global exists",
     );
     assert.equal(after.audio.resources.lifecycleInstalled, true);
     assert.equal(after.audio.resources.lifecycleListeners, 4);
@@ -216,7 +213,7 @@ async function assertVisibilityLifecycle(page, baseline) {
       "repeated runs do not add contexts, mixer nodes, or backend nodes",
     );
     assert.deepEqual(pageErrors, []);
-    assert.deepEqual(timingWarnings, [], "score transitions use Tone's scheduled callback time");
+    assert.deepEqual(timingWarnings, [], "music transitions use scheduled callback time");
 
     await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })));
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "disposed");
@@ -232,76 +229,14 @@ async function assertVisibilityLifecycle(page, baseline) {
       temporaryMuteReasons: [],
     });
 
-    const fallback = await browser.newPage();
-    const fallbackErrors = [];
-    const fallbackVendorRequests = [];
-    fallback.on("pageerror", (error) => fallbackErrors.push(error.stack || error.message));
-    fallback.on("request", (request) => {
-      const url = request.url();
-      if (url.includes("/vendor/tear-music/") || url.includes("/vendor/tear-score/")) {
-        fallbackVendorRequests.push(new URL(url).pathname);
-      }
-    });
-    await fallback.route("**/*", (route) => {
-      const url = route.request().url();
-      // Block only the canonical generation to prove the existing pinned
-      // TearScore vendor remains a working compatibility fallback.
-      if (url.includes("/vendor/tear-music/") || url.includes("/audio/cues/")) route.abort("failed");
-      else if (url.startsWith(`${baseUrl}/`)) route.continue();
-      else route.abort();
-    });
-    await fallback.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, {
-      waitUntil: "domcontentloaded",
-      timeout: STATE_WAIT_MS,
-    });
-    await fallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.audio, undefined, { timeout: STATE_WAIT_MS });
-    await fallback.keyboard.press("Shift");
-    await fallback.waitForFunction(
-      () => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
-      undefined,
-      { timeout: STATE_WAIT_MS },
-    );
-    const fallbackAudio = await fallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
-    assert.equal(
-      fallbackAudio.backend,
-      "tear-score@0.1.0-alpha.1",
-      "blocked canonical assets select the pinned TearScore fallback",
-    );
-    assert.equal(
-      fallbackVendorRequests.includes("/vendor/tear-score/tear-score.esm.js"),
-      true,
-      "legacy TearScore module was loaded after canonical failure",
-    );
-    assert.equal(
-      fallbackVendorRequests.includes("/vendor/tear-score/tone-host-14.9.17.esm.js"),
-      true,
-      "legacy paired Tone host was loaded after canonical failure",
-    );
-    assert.equal(fallbackAudio.resources.legacySequencer.running, false);
-    assert.equal(fallbackAudio.resources.system.effectsBackendNodes, 15);
-    await fallback.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: false })));
-    await fallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "disposed");
-    const fallbackDisposed = await fallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().resources);
-    assert.equal(fallbackDisposed.legacySequencer.running, false, "fallback interval is cleared");
-    assert.equal(fallbackDisposed.activeVoices, 0, "fallback scheduled sources are released");
-    assert.equal(fallbackDisposed.activeVoiceGraphNodes, 0);
-    assert.equal(fallbackDisposed.lifecycleListeners, 0);
-    assert.equal(fallbackDisposed.system.contexts, 0);
-    assert.equal(fallbackDisposed.system.mixerNodes, 0);
-    assert.equal(fallbackDisposed.system.effectsBackendNodes, 0);
-    assert.deepEqual(fallbackErrors, []);
-    await fallback.close();
-
     const legacySynthFallback = await browser.newPage();
     const legacySynthErrors = [];
     legacySynthFallback.on("pageerror", (error) => legacySynthErrors.push(error.stack || error.message));
     await legacySynthFallback.route("**/*", (route) => {
       const url = route.request().url();
-      // Keep the pre-existing final fallback evidence: both vendored music
-      // generations and recorded cues are unavailable, so legacy synth is the
-      // only backend allowed to initialize.
-      if (url.includes("/vendor/tear-music/") || url.includes("/vendor/tear-score/") || url.includes("/audio/cues/"))
-        route.abort("failed");
+      // With the recorded cues unavailable, AudioSystem's built-in music is the
+      // fallback, so music is never silent.
+      if (url.includes("/audio/cues/")) route.abort("failed");
       else if (url.startsWith(`${baseUrl}/`)) route.continue();
       else route.abort();
     });
@@ -322,7 +257,7 @@ async function assertVisibilityLifecycle(page, baseline) {
     assert.equal(
       legacySynthAudio.backend,
       "legacy-synth",
-      "blocked canonical and TearScore assets select the final legacy-synth fallback",
+      "unavailable recorded cues select the built-in music fallback",
     );
     assert.equal(legacySynthAudio.resources.legacySequencer.running, true);
     assert.equal(legacySynthAudio.resources.system.effectsBackendNodes, 15);

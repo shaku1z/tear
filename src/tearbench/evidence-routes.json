@@ -122,8 +122,7 @@
     "id": "audio",
     "prefixes": [
       "src/audio/",
-      "public/vendor/tear-score/",
-      "public/vendor/tear-music/"
+      "public/audio/"
     ],
     "scenarios": [
       "boot-start-run"

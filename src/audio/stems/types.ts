@@ -31,6 +31,8 @@ export interface StemAsset {
   readonly channels: 1 | 2;
   /** Static trim applied on top of tier gain. */
   readonly gainDb: number;
+  /** What the layer mixes, e.g. `["keys", "strings"]` (from tear-music's per-stem kinds). */
+  readonly kinds?: readonly string[];
   /** Static stereo position from full left (-1) through center (0) to right (1). */
   readonly pan?: number;
   /** Codec alternatives; the loader picks the first the browser can play. */
@@ -103,4 +105,14 @@ export interface StemCueManifest {
 export interface CueValidationResult {
   readonly valid: boolean;
   readonly errors: readonly string[];
+}
+
+/**
+ * A player-chosen mix over the shipped layers, applied on top of every tier.
+ * `gainDb` offsets a layer; `off` silences it. Unknown layer ids are ignored,
+ * so one preset can be applied to any cue.
+ */
+export interface StemMixPreset {
+  readonly gainDb?: Readonly<Record<string, number>>;
+  readonly off?: readonly string[];
 }
