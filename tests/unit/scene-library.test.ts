@@ -68,7 +68,7 @@ describe("scene library", () => {
     expect(library.paper("grounds")).toBeUndefined();
   });
 
-  it("never starts a download from a read or a draw, only from prefetch", () => {
+  it("never starts a download from a read or a draw, only from show or prefetch", () => {
     // The menu's background draws every stage in turn. If drawing one fetched its
     // art, a new player would download a biome before their first run.
     const loader = vi.fn(ports().packages["fixture-stage"]);
@@ -87,8 +87,89 @@ describe("scene library", () => {
     expect(loader).not.toHaveBeenCalled();
     library.prefetch("fixture-stage");
     library.prefetch("fixture-stage");
+    library.show("fixture-stage");
     expect(loader).toHaveBeenCalledTimes(1);
     expect(library.status("fixture-stage")).toBe("loading");
+  });
+
+  describe("release", () => {
+    const stages = (overrides: Partial<SceneLibraryPorts> = {}) => {
+      const base = ports();
+      const loader = base.packages["fixture-stage"];
+      if (loader === undefined) throw new Error("fixture loader missing");
+      const released: unknown[] = [];
+      const library = createSceneLibrary({
+        ...base,
+        packages: { first: loader, second: loader, third: loader },
+        releaseImage: (image) => released.push(image),
+        ...overrides,
+      });
+      const ready = (stageId: string) =>
+        vi.waitFor(() => {
+          expect(library.status(stageId)).toBe("ready");
+        });
+      return { library, released, ready };
+    };
+    const imageCount = (fixturePackage().images as unknown[]).length;
+
+    it("keeps the shown stage and the next one, and frees a stage the run has left", async () => {
+      const { library, released, ready } = stages();
+      library.show("first");
+      library.prefetch("second");
+      await ready("first");
+      await ready("second");
+      expect(released).toEqual([]);
+      // The run moves on: the second stage is shown and the third is next.
+      library.show("second");
+      expect(library.status("first")).toBe("none");
+      expect(library.loaded("first")).toBeUndefined();
+      expect(released).toHaveLength(imageCount);
+      expect(library.status("second")).toBe("ready");
+      library.prefetch("third");
+      await ready("third");
+      expect(released).toHaveLength(imageCount);
+      expect(library.status("second")).toBe("ready");
+    });
+
+    it("frees every stage on the main menu, and loads again on the next run", async () => {
+      const { library, released, ready } = stages();
+      library.show("first");
+      library.prefetch("second");
+      await ready("first");
+      await ready("second");
+      library.leave();
+      expect(released).toHaveLength(imageCount * 2);
+      expect(library.status("first")).toBe("none");
+      expect(library.status("second")).toBe("none");
+      library.leave();
+      expect(released).toHaveLength(imageCount * 2);
+      library.show("first");
+      await ready("first");
+    });
+
+    it("frees a stage that was left while it was still loading, without keeping or reporting it", async () => {
+      const onError = vi.fn();
+      const { library, released } = stages({ onError });
+      library.show("first");
+      library.leave();
+      expect(library.status("first")).toBe("none");
+      await vi.waitFor(() => {
+        expect(released).toHaveLength(imageCount);
+      });
+      expect(library.status("first")).toBe("none");
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it("frees the decoded copy of a layer once its shading is baked into a canvas", async () => {
+      const baking = recordingContext();
+      const createCanvas = (width: number, height: number) =>
+        ({ width, height, getContext: () => baking.context }) as unknown as OffscreenCanvas;
+      const { library, released, ready } = stages({ createCanvas });
+      library.show("first");
+      await ready("first");
+      const far = (fixturePackage().images as { id: string; width: number }[]).find((image) => image.id === "far");
+      expect(released.map((image) => (image as { width: number }).width)).toEqual([far?.width]);
+    });
   });
 
   it("loads on prefetch, then draws the back plane, platform texture, shadows and theme paper", async () => {

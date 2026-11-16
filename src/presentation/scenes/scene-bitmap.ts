@@ -9,11 +9,21 @@ export function createSceneCanvas(width: number, height: number): SceneCanvas & 
   return canvas;
 }
 
+/** Gives back a scene image's pixel memory at once instead of waiting for garbage collection. */
+export function releaseSceneBitmap(image: SceneBitmap): void {
+  if (typeof ImageBitmap === "function" && image instanceof ImageBitmap) image.close();
+  else if ("getContext" in image) {
+    image.width = 0;
+    image.height = 0;
+  }
+}
+
 /**
  * Fetches and decodes one scene image off the main thread where the browser
- * allows it, then copies it into a canvas once. Scene images are WebP outside
+ * allows it, then copies it into a canvas once. Scene images are AVIF outside
  * the PWA precache, so a stage's art costs nothing until that stage is first
- * shown.
+ * shown. A browser that cannot decode AVIF rejects here, and the stage keeps
+ * its coded background.
  *
  * The copy matters: Chrome keeps a bitmap decoded from a file outside the GPU
  * and re-uploads it as the game's canvas draws it, which cost about 50 ms a

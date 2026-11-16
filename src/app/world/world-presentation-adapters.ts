@@ -369,8 +369,9 @@ export function createLiveWorldPresentationAdapters(
       },
       drawBackdrop: (_value, time, playerX, bounds, camera) => {
         const stageId = stage.current.id;
-        // The world is showing this stage, so its painted background may load now.
-        d.Scenes.prefetch(stageId);
+        // The world is showing this stage: its painted background may load now,
+        // and the stages a run has left give their decoded layers back.
+        d.Scenes.show(stageId);
         if (!d.Scenes.opaque(stageId)) d.Backdrop.draw(canvas, stage.current, time, playerX, bounds);
         d.Scenes.drawBack(canvas, sceneInput(stageId, time, playerX, bounds, camera));
         d.Scenes.drawShadows(canvas, stageId, stage.platforms);

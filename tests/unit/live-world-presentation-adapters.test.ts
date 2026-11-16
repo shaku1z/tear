@@ -84,7 +84,7 @@ describe("live world capture layers", () => {
       drawGhost = vi.fn(),
       drawBackdrop = vi.fn(),
       drawEffects = vi.fn(),
-      prefetch = vi.fn();
+      show = vi.fn();
     const player = { x: 137, y: 500, hw: 10, hh: 20, draw: drawPlayer };
     const state = {
       run: () => ({ mode: "tutorial" }),
@@ -109,7 +109,7 @@ describe("live world capture layers", () => {
         UI: { font: () => "12px monospace", density: { textScale: 1 } },
         FX: { draw: drawEffects, setViewRect: vi.fn() },
         Backdrop: { draw: drawBackdrop },
-        Scenes: { prefetch, opaque: () => false, drawBack: () => undefined, drawShadows: () => undefined },
+        Scenes: { show, opaque: () => false, drawBack: () => undefined, drawShadows: () => undefined },
         cosmeticRandom: () => 0.5,
       },
       canvas: {},
@@ -143,7 +143,7 @@ describe("live world capture layers", () => {
 
     expect(drawBackdrop.mock.calls[0]?.[3]).toBe(137);
     // The world showing a stage is what loads that stage's painted background.
-    expect(prefetch).toHaveBeenCalledWith("verdant-sanctum");
+    expect(show).toHaveBeenCalledWith("verdant-sanctum");
     for (const draw of [drawPlayer, drawBlade, drawGhost, drawEffects]) {
       expect(draw).toHaveBeenCalledTimes(actors === "include" ? 1 : 0);
     }

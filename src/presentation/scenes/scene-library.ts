@@ -28,6 +28,8 @@ export interface SceneLibraryPorts {
   readonly loadImage: (url: string) => Promise<SceneBitmap>;
   /** Canvas to bake shading into at load; without it shading draws per frame. */
   readonly createCanvas?: (width: number, height: number) => SceneCanvas & SceneBitmap;
+  /** Frees a decoded image the library has finished with. */
+  readonly releaseImage?: (image: SceneBitmap) => void;
   readonly now: () => number;
   readonly lowGraphics: () => boolean;
   readonly reducedMotion: () => boolean;
@@ -62,21 +64,33 @@ export interface SceneDrawInput {
 }
 
 /**
- * Owns every painted stage package for the page lifetime: lazy import, decode,
- * validation and drawing. A stage without a ready package returns false from
- * each draw so the caller keeps its procedural art; nothing here touches
- * simulation state.
+ * Owns every painted stage package: lazy import, decode, validation, drawing
+ * and release. A stage without a ready package returns false from each draw so
+ * the caller keeps its procedural art; nothing here touches simulation state.
  *
- * Only `prefetch` starts a download. Every other call reads what has already
- * loaded, so a menu that merely draws a stage never fetches that stage's art.
+ * Only `show` and `prefetch` start a download. Every other call reads what has
+ * already loaded, so a menu that merely draws a stage never fetches that
+ * stage's art.
+ *
+ * Decoded layers are held for two stages at most: the one a run is showing and
+ * the one it reaches next. Every other stage's layers are released, so memory
+ * does not grow with the number of biomes a run has passed through.
  */
 export interface SceneLibrary {
   status(stageId: string): SceneStatus;
   /**
-   * Starts loading a stage's package if it has one; safe to call every frame.
-   * Call it when a run shows the stage or is about to, never from a menu.
+   * The world is drawing this stage: loads its package if it has one, and
+   * releases every other stage except the one prefetched as next. Call it every
+   * frame the stage is drawn, never from a menu.
+   */
+  show(stageId: string): void;
+  /**
+   * The stage a run reaches next: loads its package ahead of time and keeps it
+   * alongside the shown stage. Call it when the run is about to need the stage.
    */
   prefetch(stageId: string): void;
+  /** No run is showing a stage (the main menu): releases every stage's decoded layers. */
+  leave(): void;
   /** The paper colour the theme should derive ink from, while the scene shows. */
   paper(stageId: string): string | undefined;
   /** True once the stage's scene fully covers the view (loaded and faded in). */
@@ -104,6 +118,13 @@ interface Entry {
   status: SceneStatus;
   loaded?: LoadedScene;
   readyAt: number;
+  /** Set when the stage was released while its package was still loading. */
+  released: boolean;
+}
+
+function releaseImages(loaded: LoadedScene, ports: SceneLibraryPorts): void {
+  if (ports.releaseImage === undefined) return;
+  for (const image of loaded.images.values()) ports.releaseImage(image);
 }
 
 async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): Promise<LoadedScene> {
@@ -120,8 +141,11 @@ async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): 
     }),
   );
   const images = new Map(decoded);
-  if (ports.createCanvas !== undefined) return bakeShading(scene, images, ports.createCanvas);
-  return Object.freeze({ scene, images, shading: scene.shading });
+  if (ports.createCanvas === undefined) return Object.freeze({ scene, images, shading: scene.shading });
+  const baked = bakeShading(scene, images, ports.createCanvas);
+  // A layer with shading baked in replaces its decoded copy: free the copy now.
+  for (const [id, image] of images) if (baked.images.get(id) !== image) ports.releaseImage?.(image);
+  return baked;
 }
 
 export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
@@ -131,19 +155,35 @@ export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
     if (entries.has(stageId)) return;
     const loader = Object.hasOwn(ports.packages, stageId) ? ports.packages[stageId] : undefined;
     if (loader === undefined) return;
-    const created: Entry = { status: "loading", readyAt: 0 };
+    const created: Entry = { status: "loading", readyAt: 0, released: false };
     entries.set(stageId, created);
     loader()
       .then((module) => loadScene(module, ports))
       .then((loaded) => {
+        if (created.released) {
+          releaseImages(loaded, ports);
+          return;
+        }
         created.loaded = loaded;
         created.status = "ready";
         created.readyAt = ports.now();
       })
       .catch((error: unknown) => {
         created.status = "failed";
-        ports.onError?.(stageId, error);
+        if (!created.released) ports.onError?.(stageId, error);
       });
+  };
+  // The two stages whose decoded layers may stay: the shown one and the next one.
+  let shown: string | undefined;
+  let next: string | undefined;
+  const releaseOthers = (): void => {
+    for (const [stageId, current] of entries) {
+      if (stageId === shown || stageId === next) continue;
+      entries.delete(stageId);
+      current.released = true;
+      if (current.loaded !== undefined) releaseImages(current.loaded, ports);
+      delete current.loaded;
+    }
   };
   const ready = (stageId: string): LoadedScene | undefined => {
     const current = entry(stageId);
@@ -173,7 +213,26 @@ export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {
   const materials = new Map<string, ReturnType<typeof surface>>();
   return {
     status: (stageId) => entry(stageId)?.status ?? "none",
-    prefetch: request,
+    show(stageId) {
+      if (shown !== stageId) {
+        shown = stageId;
+        releaseOthers();
+      }
+      request(stageId);
+    },
+    prefetch(stageId) {
+      if (next !== stageId) {
+        next = stageId;
+        releaseOthers();
+      }
+      request(stageId);
+    },
+    leave() {
+      if (shown === undefined && next === undefined) return;
+      shown = undefined;
+      next = undefined;
+      releaseOthers();
+    },
     paper: (stageId) => ready(stageId)?.scene.theme.paper,
     loaded: ready,
     opaque(stageId) {
