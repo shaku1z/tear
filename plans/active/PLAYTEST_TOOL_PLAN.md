@@ -48,8 +48,10 @@ check. It has no tiers, certificates, ledgers or schedulers.
 Run through the production headless environment with `TearLiveHierarchicalPolicy("competent")`.
 
 - **It plays.** Endless, Easy, Sword, seed 1: defeated on wave 5 after 9,015 ticks (75.1 s of
-  game time), 209 damage taken, 21 kills. Time from spawn to death per kind: bull 5.3 s (7),
-  brawler 7.3 s (5), rifleman 11.7 s (2), armored 22.5 s (2), charger 20.6 s (1).
+  game time), 211 damage taken, 21 kills. Time from spawn to death per kind: bull 5.3 s (7),
+  brawler 7.3 s (5), rifleman 11.7 s (2), armored 22.5 s (2), charger 20.6 s (1). Upgrade
+  choices are scored with `buildWatchChoiceScore`; without scores the player picks
+  alphabetically and the same seed gives a different run.
 - **It is fast.** 13 to 15 times real time on one core with other sessions running; an idle
   player ran at 43 times.
 - **It is deterministic.** The same seed twice ended on the same tick with the same damage,
@@ -58,15 +60,28 @@ Run through the production headless environment with `TearLiveHierarchicalPolicy
   `variantId` and `bossId`), `death`, `loadout`, `projectile` (spawned, deflected, hit) and
   `environment` events arrive from `sourceTracks()`. Health, boss phase and boss health ratio
   come from the observation each tick.
-- **Adventure.** Easy, Riftlock, seed 3: defeated on wave 7 after 108 s, 168 damage taken,
-  40 kills across 11 enemy kinds.
+- **Adventure.** Easy, Riftlock, seed 3: defeated on wave 7 after 108 s, 172 damage taken,
+  40 kills across 11 enemy kinds. Adventure opens on the chapter page with the player locked;
+  a run must skip it (about 900 application frames, as the scenario test does). Without the
+  skip the scripted player pauses at tick 1,801 and then confirms on the pause screen until
+  the tick limit, with no damage either way.
 - **It cannot fight a boss.** Boss-only, Easy, seed 1 (the Rootbound comes first): in 120 s
   the scripted player took 0 damage with Sword and 10 with Riftlock and took nothing off the
   boss, which sat in `idle`. A player who stood still took 73 damage in 30 s, so the fight is
   live; the player never engages. The headless observation also carries no boss id or phase
   (`diagnostics.boss` is absent). Stage 1 fixes both, or its boss table is empty.
-- **A player who stands still dies.** Endless, Easy, seed 2: dead in 15.3 s on wave 1. No
-  safe spot there; the tool will ask this of every situation.
+- **A player who stands still dies.** Endless, Easy, seed 2: dead in 15.3 s on wave 1, 100
+  damage over 9 hits. No safe spot there; the tool will ask this of every situation.
+- **Damage includes the killing blow.** The first probe read health before each decision and
+  stopped after the last step, so it missed the hit that ended the run (88 instead of 100
+  above, 209 instead of 211, 168 instead of 172). The figures here are read from the final
+  observation.
+- **The same numbers on a second machine.** Repeated on 2026-11-16 at main `33cfd81a` on a
+  16-thread desktop: every run above ended on the same tick with the same damage, kills and
+  time to kill per kind. Speed there, through vitest: 22 times real time for the scripted
+  player in Endless, 29 in Adventure, 32 to 37 in a boss fight, 50 idle. Through Vite's
+  module loader without vitest the same Endless run went 32 to 39 times, so the tool uses the
+  loader. Starting a process (loading the modules) takes about 7.5 s.
 
 Limits found, each handled in a stage below:
 
@@ -79,7 +94,10 @@ Limits found, each handled in a stage below:
 2. **Save and restore is slow.** Capture took 30 ms and restore 46 ms early in a run, rising
    to 112 ms and 136 ms by 72 s, because the checkpoint copies and hashes the whole action
    list. That is about ten forks a second: enough for "start at phase 2", too slow for
-   lookahead. Stage 3 needs an in-memory fork under 5 ms or it scopes lookahead down.
+   lookahead. The faster desktop was no faster (37 and 55 ms at tick 1,200, 93 and 122 ms at
+   tick 7,200): the list grows by about three actions a tick, so the cost grows with the
+   length of the run, not with the machine. This is an open design problem for stage 3, which
+   needs an in-memory fork under 5 ms or scopes lookahead down. Stage 1 does not solve it.
 3. **Events after a restore are only the suffix.** A restored run reports no events from
    before the restore. The tool keeps its own running totals instead of re-reading the track.
 4. **Nothing reports who damaged the player, or damage dealt per hit.** Health changes are
@@ -113,11 +131,12 @@ pnpm playtest bosses  [--boss <id>] [--weapon <id>] [--difficulty <id>] [--seeds
 pnpm playtest enemies | runs | check | watch
         --compare <commit>     same situations and seeds on another commit; prints only what changed
         --json <path>          also write the report as JSON
-        --jobs N               worker processes (default: cores minus 2)
+        --jobs N               worker processes (default: cores minus 2, at most 6)
 ```
 
 One script, `scripts/playtest.mjs`, loads the TypeScript through Vite's server-side module
-loader, the way `scripts/tearbench.mjs` loads its modules today. A subcommand exists only
+loader, the way `scripts/tearbench.mjs` loads its modules today, not through vitest, which
+cost about 40 % of the speed in the verification runs. A subcommand exists only
 because it prints a different report. Long sweeps go through the machine slot limiter.
 
 ### Where the code lives
@@ -189,9 +208,17 @@ commits it says so and stops.
 
 ### Speed
 
-Headless, one process per core through `--jobs`. The required check runs a fixed set sized
-for under 30 s on a GitHub runner. Full sweeps run on demand on this machine; there is no
-nightly job, because Actions minutes are metered.
+Headless, one process per core through `--jobs`, up to 6. The required check runs a fixed
+set sized for under 30 s on a GitHub runner. Full sweeps run on demand on a local machine;
+there is no nightly job, because Actions minutes are metered.
+
+- **Tick limits.** The `still`, `walker` and `no-dodge` players play at most 60 s per boss
+  phase: they measure the boss's pressure, not the kill. Only `scripted` (and later
+  `strong`) plays to 120 s.
+- **Budget.** A full sweep finishes in under 5 minutes on 6 jobs. If it does not, seeds are
+  cut before bosses, and the report header says what was cut.
+- **Machine slots.** One sweep takes one slot of the machine's heavy-command limiter
+  (`heavy-gate.mjs`), however many worker processes it starts. Two sweeps never run at once.
 
 ### What the replay overhaul can rely on
 
@@ -270,6 +297,14 @@ Each stage is one pull request from current `origin/main` unless noted.
 `no-dodge` players, and a chosen-boss start in the headless environment. Imports the kept
 TearBench and agent modules without editing them, except the one start check.
 
+Requirements from the verification runs:
+- Damage taken is read from the observation after every step, including the last, so the
+  killing blow counts.
+- A run that ends, or reaches its tick limit, on a screen other than play is reported as
+  broken, never as survived. Adventure runs skip the chapter page first.
+- Every player takes upgrade choices by the same scored rule (`buildWatchChoiceScore`), so a
+  difference between players is never a difference between builds.
+
 Done when:
 - [ ] `pnpm playtest bosses` prints, for all five campaign bosses, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, 4 seeds, Easy and Normal, in under 5 minutes on 6 jobs.
 - [ ] The three tests of failure modes 1, 2 and 6 pass.
@@ -328,7 +363,9 @@ Done when:
 
 ## Risks and open questions
 
-- **Fork speed** decides how strong the player can get at sweep speed (limit 2 above).
+- **Fork speed** decides how strong the player can get at sweep speed (limit 2 above). Open
+  for stage 3: the checkpoint cost grows with the action list, so a faster machine does not
+  help.
 - **Boss attack definitions** are on the Verdant gameplay branch, not on main. Stage 1's
   boss columns that read tells need that branch merged, or they ship one pull request later.
 - **Phase starts must be the real fight.** The Rootbound limits one hit to one phase
