@@ -117,9 +117,6 @@ class TestUi implements WorldUiPort {
   bossIntro(_canvas: CanvasRenderingContext2D, options: Parameters<WorldUiPort["bossIntro"]>[1]): void {
     this.record("bossIntro", options);
   }
-  hudPlate(_canvas: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
-    this.record("hudPlate", { x, y, w, h });
-  }
   readable(color: string): string {
     return color;
   }
@@ -143,6 +140,9 @@ class TestUi implements WorldUiPort {
       lineHeight = options?.lineHeight ?? Math.round(size * 1.5);
     if (options?.measureOnly !== true) this.record("textBox", text, { x, y, size });
     return { size, lines: [text], height: lineHeight, lineHeight };
+  }
+  keycapSize(): Readonly<{ w: number; h: number }> {
+    return { w: 40, h: 22 };
   }
   keycap(_canvas: CanvasRenderingContext2D, key: string, x: number, y: number): number {
     this.record("keycap", key, { x, y });
@@ -245,11 +245,11 @@ describe("legacy world presentation renderers", () => {
     expect(Object.keys(registry).sort()).toEqual([
       "achievementToast",
       "bossIntro",
+      "coachMarks",
       "enemyStatus",
       "finaleWorld",
       "hud",
       "pantheonDebug",
-      "playgroundHelp",
       "reticle",
       "stageBanner",
       "touchControls",
@@ -380,13 +380,23 @@ describe("legacy world presentation renderers", () => {
       completedBeat: 0.9,
       progress: { current: 2, goal: 3 },
     });
-    renderers.playgroundHelp({
-      weaponId: "scythe",
-      heldHits: 2,
-      throws: 4,
-      throwHits: 3,
-      perfectParries: 1,
-      breakTriggers: 2,
+    renderers.coachMarks({
+      marks: [
+        {
+          mark: {
+            id: "playground:help",
+            channel: "help",
+            tone: "info",
+            title: "PLAYGROUND",
+            text: "E build menu  ·  U ability lab",
+            keys: [],
+            priority: 0,
+            seconds: 8,
+          },
+          alpha: 1,
+        },
+      ],
+      avoid: [],
     });
     renderers.touchControls({
       joystick: { active: true, anchorX: 200, anchorY: 700, dx: 30, dy: -10, radius: 92, homeX: 160, homeY: 760 },
@@ -418,7 +428,8 @@ describe("legacy world presentation renderers", () => {
         "SPACE",
         "BLOCK 2 / 5",
         "✓",
-        "TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss",
+        "PLAYGROUND",
+        "E build menu  ·  U ability lab",
         "JUMP",
         "◉ MOVE",
         "DRAG TO AIM & SWING ↷",
@@ -471,7 +482,7 @@ describe("legacy world presentation renderers", () => {
         ui = new TestUi(),
         base = renderContext(calls, ui);
       const context = { ...base, safe: { ...base.safe, top } };
-      createWorldRenderers(context).tutorialCard({
+      const card = createWorldRenderers(context).tutorialCard({
         bossPractice: true,
         lessonIndex: 0,
         lessonCount: 1,
@@ -481,11 +492,6 @@ describe("legacy world presentation renderers", () => {
         final: false,
         completedBeat: 0,
       });
-      const card = ui.calls.find((call) => call.name === "hudPlate")?.arguments[0] as {
-        x: number;
-        y: number;
-        w: number;
-      };
       expect(card.y).toBeGreaterThanOrEqual(bossHudTop(context) + 3 * ui.t.metric.bossHudH);
       expect(card.x + card.w).toBeLessThanOrEqual(1600);
     }

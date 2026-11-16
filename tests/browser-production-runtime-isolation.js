@@ -201,14 +201,9 @@ async function assertReleaseSurfaces(page, target) {
   );
   await clickVirtual(page, 800, 757);
   await page
-    .waitForFunction(
-      () => {
-        const hint = document.getElementById("hint");
-        return hint !== null && hint.style.display === "block";
-      },
-      undefined,
-      { timeout: STATE_WAIT_MS },
-    )
+    .waitForFunction(() => performance.getEntriesByName("tear:gameplay-start").length > 0, undefined, {
+      timeout: STATE_WAIT_MS,
+    })
     .catch(() => {
       throw new Error(`${target} START did not enter a run`);
     });

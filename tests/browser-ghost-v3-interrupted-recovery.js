@@ -44,7 +44,7 @@ withJourney({ name: "C27 Ghost V3 interrupted browser recovery", port: 8157 }, a
   });
   assert.equal(typeof interruptedId, "string");
 
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
     timeout: STATE_WAIT_MS,
   });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
+import { ENVIRONMENT_FADE_TICKS } from "../../src/gameplay/environment/environment-contracts";
 import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../../src/gameplay/runtime/gameplay-events";
 import {
@@ -205,6 +206,8 @@ describe("Rootbinder shared environment network", () => {
   it("creates one live player leash only when no ally network is useful, then applies force and expires it", () => {
     const runtime = createEnvironmentRuntime({ worldId: "world-a", stageId: "stage-1" });
     let phase: "link-warning" | "linked" = "link-warning";
+    // The Rootbinder keeps its own spawn-relative clock; here it matches the world tick.
+    let now = 1;
     const rootState = createRootbinderState({
       id: "rootbinder-player",
       worldId: "world-a",
@@ -216,7 +219,7 @@ describe("Rootbinder shared environment network", () => {
     bindVerdantEnvironmentActors(runtime, "rootbinder", () => [
       {
         id: rootState.id,
-        state: { ...rootState, state: phase, transitionTick: phase === "linked" ? 3 : 100 },
+        state: { ...rootState, state: phase, simulationTick: now, transitionTick: phase === "linked" ? 3 : 100 },
         candidates: [candidate("only-ally")],
         player: {
           ...player,
@@ -231,10 +234,12 @@ describe("Rootbinder shared environment network", () => {
     expect(runtime.combatObjects()).toHaveLength(1);
     expect(runtime.combatObjects()[0]?.state).toBe("warning");
     phase = "linked";
+    now = 2;
     runtime.step(2, 1 / 120, () => undefined);
     expect(runtime.combatObjects()[0]?.state).toBe("active");
     expect(player.vx).toBeLessThan(0);
     expect(player.jumpEnabled && player.dashEnabled).toBe(true);
+    now = 3;
     runtime.step(3, 1 / 120, () => undefined);
     expect(runtime.combatObjects()[0]?.cleanupReason).toBe("natural-expiry");
   });
@@ -321,8 +326,11 @@ describe("Rootbinder shared environment network", () => {
       .map((object) => object.id);
     expect(firstIds).toHaveLength(2);
     expect(secondIds).toHaveLength(2);
-    expect(runtime.combatObjects()).toHaveLength(2);
     expect(new Set([...firstIds, ...secondIds]).size).toBe(4);
+    // The first cycle's links fade out, then leave; only the live cycle remains.
+    expect(runtime.combatObjects()).toHaveLength(4);
+    runtime.step(2 + ENVIRONMENT_FADE_TICKS, 1 / 120, () => undefined);
+    expect(runtime.combatObjects().map((object) => object.id)).toEqual(secondIds);
   });
 
   it("bounds retained terminal relationships when targets churn during one linked phase", () => {
@@ -345,8 +353,13 @@ describe("Rootbinder shared environment network", () => {
     for (let tick = 1; tick <= 40; tick += 1) {
       runtime.step(tick, 1 / 120, () => undefined);
       targetGeneration += 1;
-      expect(runtime.combatObjects().length).toBeLessThanOrEqual(4);
+      const ended = runtime.combatObjects().filter((object) => object.state === "expired");
+      expect(ended.every((object) => tick - object.stateTick < ENVIRONMENT_FADE_TICKS)).toBe(true);
+      expect(runtime.combatObjects().length - ended.length).toBeLessThanOrEqual(2);
     }
+    // Targets hold still now: once the churned links fade, none is left.
+    for (let tick = 41; tick <= 41 + ENVIRONMENT_FADE_TICKS; tick += 1) runtime.step(tick, 1 / 120, () => undefined);
+    expect(runtime.combatObjects().every((object) => object.state !== "expired")).toBe(true);
   });
 
   it("rebinds retained restore relationships without duplicating them and resets generation on clear", () => {

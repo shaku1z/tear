@@ -52,7 +52,10 @@ const { STATE_WAIT_MS, notWithin, settleFor } = require("./browser-waits");
     } else if (url.startsWith(`http://127.0.0.1:${address.port}/`)) void route.continue();
     else void route.abort();
   });
-  await page.goto(`http://127.0.0.1:${address.port}/?test=1`, { waitUntil: "domcontentloaded" });
+  await page.goto(`http://127.0.0.1:${address.port}/?test=1`, {
+    timeout: STATE_WAIT_MS,
+    waitUntil: "domcontentloaded",
+  });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__TEAR_PLATFORM_SERVICES__, undefined, {
     timeout: STATE_WAIT_MS,
   });

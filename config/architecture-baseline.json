@@ -298,21 +298,6 @@
       "kind": "value"
     },
     {
-      "from": "src/tearbench/production-combat-simulation.ts",
-      "to": "src/app/world/biomes/aurora-track-wiring.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-combat-simulation.ts",
-      "to": "src/app/world/biomes/rootbound-wiring.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-combat-simulation.ts",
-      "to": "src/app/world/biomes/white-hart-wiring.ts",
-      "kind": "value"
-    },
-    {
       "from": "src/tearbench/production-finale-runtime.ts",
       "to": "src/app/world/game-host-state.ts",
       "kind": "type"

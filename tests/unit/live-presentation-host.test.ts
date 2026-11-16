@@ -175,8 +175,7 @@ describe("live presentation host", () => {
     const buttons = [{ x: 0, y: 0, w: 10, h: 10, label: "go", enabled: true, action: vi.fn() }];
     const input = {
       mode: "mouse" as const,
-      mouseX: 0,
-      mouseY: 0,
+      pointer: () => ({ x: 0, y: 0 }),
       ui: { pageUp: false, pageDown: false, tabPrev: false, tabNext: false },
       pressed: new Set<string>(),
       padBack: false,

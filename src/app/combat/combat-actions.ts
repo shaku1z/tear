@@ -720,8 +720,7 @@ function createKill(context: LiveCombatActionContext): LiveKillHost {
     deathSound: () => {
       f.playSound("death");
     },
-    makeDeathEvent: (enemy, cause, clean) =>
-      f.makeEvent(enemy.x, enemy.y, enemy, cause, { cleanElimination: clean, addOverrunStack: f.addOverrunStack }),
+    makeDeathEvent: f.makeDeathEvent,
     fire: f.fire,
     applySever: f.applySever,
     ring: (x: number, y: number, radius: number, color: string) => {

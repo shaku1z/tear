@@ -32,7 +32,6 @@ export class PaleEnvironmentFeature implements EnvironmentFeature {
 
   step(environment: EnvironmentFeatureContext, tick: number, seconds: number): void {
     const actors = this.#whiteHartActors?.() ?? [];
-    const byId = new Map(actors.map((actor) => [actor.id, actor]));
     for (const actor of actors) {
       const phaseToken = `:p${String(actor.state.phase)}:`;
       for (const field of environment.fields())
@@ -65,11 +64,8 @@ export class PaleEnvironmentFeature implements EnvironmentFeature {
     for (const route of environment.routes()) {
       if (route.kind !== "ghost-track" || route.ownerId === null) continue;
       assertGhostTrackRouteState(route);
-      const actor = byId.get(route.ownerId);
-      const result = advanceGhostTrackRoute(route, tick, actor?.player);
-      if (result.route !== route) environment.updateRoute(route.id, result.route);
-      if (result.hit && actor?.player !== undefined)
-        actor.player.takeDamage(route.damage, route.points[0]?.x ?? 0, actor.source);
+      const next = advanceGhostTrackRoute(route, tick);
+      if (next !== route) environment.updateRoute(route.id, next);
     }
     for (const field of environment.fields()) {
       if (field.kind !== "aurora-track") continue;
@@ -85,16 +81,6 @@ export interface WhiteHartEnvironmentActor {
   readonly source: unknown;
   readonly state: Readonly<{ phase: 1 | 2 | 3; requests: readonly WhiteHartEnvironmentRequest[] }>;
   readonly acknowledgeRequests: (throughSequence: number) => void;
-  readonly player?: Readonly<{
-    id: string;
-    x: number;
-    y: number;
-    hw: number;
-    hh: number;
-    invulnerable: boolean;
-    hazardDamageMultiplier: number;
-    takeDamage: (damage: number, sourceX: number, source: unknown) => void;
-  }>;
 }
 
 export function createPaleEnvironmentFeature(): PaleEnvironmentFeature {

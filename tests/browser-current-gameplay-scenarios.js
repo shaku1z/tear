@@ -285,8 +285,9 @@ async function main() {
                 presentation,
                 weaponTransportUnchanged: JSON.stringify(bladeBefore) === JSON.stringify(bladeAfter),
               };
+              // A stage well recurs: after one full cycle it re-arms into the next warning.
               proved =
-                states.join(",") === "warning,active,cooldown,dormant" &&
+                states.join(",") === "warning,active,cooldown,warning" &&
                 uniqueHashes.size === hashes.length &&
                 evidence.weaponTransportUnchanged &&
                 presentation?.boundaryVisible === true &&
@@ -294,7 +295,7 @@ async function main() {
                 presentation.lowGraphics === true &&
                 presentation.motionScale === 0 &&
                 presentation.audioIndependent === true &&
-                finalField.state === "dormant";
+                finalField.state === "warning";
               break;
             }
             case "generic-combat-object": {

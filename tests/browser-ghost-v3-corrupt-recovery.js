@@ -171,7 +171,7 @@ withJourney({ name: "C27 Ghost V3 browser corrupt recovery", port: 8159 }, async
   assert.equal(typeof interrupted?.chunks[0]?.id, "string");
 
   await corruptVaultChunk(page, interrupted.chunks[0].id);
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
     timeout: STATE_WAIT_MS,
   });

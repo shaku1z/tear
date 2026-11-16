@@ -42,8 +42,8 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   history.
 - **Decision:** every commit is authored and committed as the owner's configured Git identity.
   Commit messages and pull request bodies carry no `Co-authored-by`, `Signed-off-by`,
-  generated-by or similar trailers. Shared hooks enforce this at commit time and, for every new
-  commit object, at push time. Published history is never rewritten to remove old trailers.
+  generated-by or similar trailers. The hooks in `scripts/governance/` (formerly shared from the
+  governance skill) enforce this at commit time and, for every new commit object, at push time. Published history is never rewritten to remove old trailers.
 - **Alternatives:** rewriting history to remove the 183 old trailers (rejected: it would break
   every clone and published reference).
 - **Consequences:** `--no-verify`, plumbing commits and alternate identities are forbidden; the

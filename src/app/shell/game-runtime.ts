@@ -40,7 +40,7 @@ import { createLiveReviveCountdownState } from "../run/revive-countdown-state";
 import { liveTutorialCoachFrame } from "../training/tutorial-coach-frame";
 import { createLiveTutorialPracticeStart } from "../training/tutorial-practice-start";
 import { createLiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
-import { bindLiveBiomeActors } from "../world/biomes/live-biome-actors";
+import { bindBiomeActors } from "../../gameplay/environment/biome-actors/bind-biome-actors";
 import { countCanonicalStateCost } from "../world/canonical-state-cost";
 import { createLiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveBrowserRuntime } from "./browser-runtime";
@@ -272,7 +272,7 @@ export function startLiveGame(
   browserWindow.addEventListener("pagehide", (event) => {
     if (!event.persisted) world.dispose();
   });
-  bindLiveBiomeActors({
+  bindBiomeActors({
     environment,
     config: CONFIG,
     player: livePlayer,

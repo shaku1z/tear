@@ -7,7 +7,7 @@ const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, errors }) => {
   const url = new URL(page.url());
   url.searchParams.set("snapshot-editor", "1");
-  await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
+  await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.waitForTimeout(settleFor(100));
   assert.equal(
