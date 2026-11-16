@@ -78,6 +78,23 @@ describe("browser wait rules", { timeout: 60_000 }, () => {
     expect(await messages(code)).toEqual([3]);
   });
 
+  it("rejects reading projectiles from a separate page call after the wait that found them", async () => {
+    const code = [
+      'const { STATE_WAIT_MS } = require("./browser-waits");',
+      "async function run(page) {",
+      "  const handle = await page.waitForFunction(",
+      '    () => window.TEAR_WEAPON_DEBUG().projectiles.find((projectile) => projectile.kind === "hail-orb") ?? null,',
+      "    undefined,",
+      "    { timeout: STATE_WAIT_MS },",
+      "  );",
+      '  const late = await page.evaluate(() => window.TEAR_WEAPON_DEBUG().projectiles.find((p) => p.kind === "hail-orb"));',
+      "  return [await handle.jsonValue(), late];",
+      "}",
+      "module.exports = { run };",
+    ].join("\n");
+    expect(await messages(code)).toEqual([8]);
+  });
+
   it("rejects waiting on pointer lock or an inline style, and accepts a performance mark", async () => {
     const code = [
       'const { STATE_WAIT_MS } = require("./browser-waits");',
