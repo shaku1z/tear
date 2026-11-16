@@ -1032,18 +1032,18 @@ frozen evidence record.
 
 ## Audio
 
-- [x] Data-driven recorded-cue routing — `public/audio/music-routing.json` is
-  schema-validated and resolved through `src/audio/signal/music-routing-*`;
-  `music-routing.test.ts` preserves the five accepted biome choices, Echo's
-  Reflection override, terminal/boss fallback, and malformed-manifest rejection.
+- [x] Data-driven recorded-cue routing: the routing rules in the generated `public/audio/music.json` are
+  schema-validated and resolved through `src/audio/music/music-routing-*`;
+  `music-routing.test.ts` covers each biome's song, Echo's and Rootbound's boss songs, boss/terminal
+  inheritance, the default for a stage with no song, and malformed-manifest rejection.
 
-- [x] Built-in TearScore musical identity and adaptive arrangements — all six themes preserve the oracle tempo, tonic and two-bar drum, bass and lead identity across five intensity tiers; evidence: sibling `tear-score/packages/testing/test/themes.test.ts` plus Tear's vendored-module contract.
+- [x] Recorded adaptive stems with five intensity tiers, per-target encodes and a deferred, progressive start: `music-tier-routing.test.ts`, `stem-mix-preset.test.ts`, `stem-progressive-load.test.ts`, `audio-profile.test.mjs`, `pnpm check:music` and `browser-audio.js`.
 
 - [x] Shared host-owned AudioContext lifecycle — `audio-system.test.ts` and `browser-audio.js` prove single creation/activation across repeated runs.
 - [x] Hierarchical Master/Music/SFX/Interface mixer and internal SFX buses — `audio-mixer.test.ts` verifies graph routing, hierarchical mutes, persistence, and gain ramps.
 - [x] Existing synthesized SFX and UI feedback routed by category — `synth-cue-routing.test.ts` locks all 64 authored cues to player/weapon/enemy/environment routes; `browser-audio.js` exercises every route through distinct conditioned backend chains while UI remains on Interface.
-- [x] Canonical-first Adaptive Soundtrack ESM music backend with run session, semantic events and provenance — `adaptive-soundtrack.test.ts`, `adaptive-soundtrack-vendor.test.ts`, `tear-score-module.test.ts`, `music-director.test.ts`, `audio-system.test.ts`, `scripts/verify-adaptive-soundtrack-provenance.mjs`, and the retained `scripts/verify-tear-score-provenance.mjs` fallback gate. Shell ownership requires both the main-menu scene and menu biome, so in-run Settings preserves the current run cue; perfect-parry events remain journaled without injecting unrelated arrangement layers while cue-matched stingers are disabled.
-- [x] Legacy music as exclusive initialization/runtime fallback — `audio-system.test.ts` proves disposal and exclusive `legacy-synth` selection, while the blocked-canonical branch in `browser-audio.js` proves the pinned TearScore vendor remains the compatibility fallback.
+- [x] Biome-routed stem music backend with run session, semantic events and stingers: `music-director.test.ts`, `audio-system.test.ts`, `music-routing.test.ts` and `browser-audio.js`. Shell ownership requires both the main-menu scene and menu biome, so in-run Settings preserves the current run cue.
+- [x] Legacy music as exclusive initialization/runtime fallback: `audio-system.test.ts` proves disposal and exclusive `legacy-synth` selection, and `browser-audio.js` proves the built-in synth takes over when the recorded cues cannot load.
 - [x] Ad, portal, visibility, suspension and repeated-run leak tests — `audio-system.test.ts` and `browser-audio.js` account for contexts, mixer/backend/voice nodes, lifecycle listeners and fallback timers through repeated runs and disposal; CI runs a real headed hidden/visible tab transition under Xvfb while local headless runs retain an explicitly labeled simulation.
 
 ## Remaining proof gaps

@@ -885,15 +885,8 @@
       ],
       "duration": "seconds"
     },
-    "check:tear-score": {
-      "purpose": "Verifies vendored TearScore files against their provenance checksums",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "check:adaptive-soundtrack": {
-      "purpose": "Verifies the vendored adaptive soundtrack against its provenance",
+    "check:music": {
+      "purpose": "Checks every shipped music cue against the music index: files, per-target mirrors, byte budgets and no source-tool tags",
       "effects": [
         "read-only"
       ],
@@ -1271,17 +1264,6 @@
         "build:test:crazygames"
       ]
     },
-    "scripts/build-tear-score-tone-host.mjs": {
-      "purpose": "Builds the Tone host ESM bundle into .tmp-tone-host-esm (ignored) for TearScore vendoring",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        "docs/TEAR_SCORE_INTEGRATION.md"
-      ]
-    },
     "scripts/check-active-roster.mjs": {
       "purpose": "Checks active roster names against the terminology registry",
       "effects": [
@@ -1361,6 +1343,16 @@
       "via": [
         "generate:ghost-types",
         "check:ghost-types"
+      ]
+    },
+    "scripts/check-music.mjs": {
+      "purpose": "Verifies the shipped music cues against public/audio/music.json and the per-target Opus mirrors",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:music"
       ]
     },
     "scripts/check-parent-layout.mjs": {
@@ -1833,27 +1825,6 @@
         "check:artifact-disposition"
       ]
     },
-    "scripts/vendor-tear-score-esm.mjs": {
-      "purpose": "Copies TearScore and Tone ESM bundles into public/vendor/tear-score and rewrites provenance",
-      "effects": [
-        "writes-repo-files"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        "docs/TEAR_SCORE_INTEGRATION.md"
-      ]
-    },
-    "scripts/verify-adaptive-soundtrack-provenance.mjs": {
-      "purpose": "Verifies the vendored adaptive soundtrack provenance",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "check:adaptive-soundtrack"
-      ]
-    },
     "scripts/verify-plan-certificate.mjs": {
       "purpose": "Verifies a TearBench plan certificate",
       "effects": [
@@ -1872,16 +1843,6 @@
       "duration": "seconds",
       "via": [
         "release:verify-artifact"
-      ]
-    },
-    "scripts/verify-tear-score-provenance.mjs": {
-      "purpose": "Verifies vendored TearScore checksums",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "check:tear-score"
       ]
     },
     "scripts/who.mjs": {
@@ -1937,6 +1898,9 @@
       "scripts/architecture/evaluate.mjs",
       "scripts/check-source-architecture.mjs",
       "tests/source-architecture.test.mjs"
+    ],
+    "scripts/audio-profile.mjs": [
+      "scripts/build-target.mjs"
     ],
     "scripts/campaign-publication-boundary.mjs": [
       "scripts/release-preflight.mjs",
