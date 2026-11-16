@@ -37,7 +37,7 @@ async function settle(page) {
 }
 async function installObservation(page) {
   await page.addInitScript(() => {
-    window.__C39_FILE_TEXT__ = { status: null, recent: [] };
+    window.__C39_FILE_TEXT__ = { status: null, recent: [], positions: {} };
     const original = CanvasRenderingContext2D.prototype.fillText;
     CanvasRenderingContext2D.prototype.fillText = function c39FileText(value, ...args) {
       const text = String(value),
@@ -82,6 +82,7 @@ async function installObservation(page) {
       if (status) observation.status = status[0];
       if (text === "IMPORT A REPLAY FILE") observation.vaultOpen = true;
       if (text === "VAULT") observation.vaultTab = { x: args[0], y: args[1] };
+      observation.positions[text] = { x: args[0], y: args[1] };
       observation.recent.push(text);
       if (observation.recent.length > 160) observation.recent.shift();
       return original.call(this, value, ...args);
@@ -165,10 +166,19 @@ async function openVault(journey) {
     timeout: STATE_WAIT_MS,
   });
 }
+/** Clicks a control at the label the current frame draws for it. */
+async function clickLabel(page, label) {
+  await page.evaluate(() => {
+    window.__C39_FILE_TEXT__.positions = {};
+  });
+  await page.waitForFunction((text) => window.__C39_FILE_TEXT__.positions[text], label, { timeout: STATE_WAIT_MS });
+  const point = await page.evaluate((text) => window.__C39_FILE_TEXT__.positions[text], label);
+  await page.mouse.click(point.x, point.y);
+}
 async function chooseFile(page, file, reselect = false) {
   const [chooser] = await Promise.all([
     page.waitForEvent("filechooser", { timeout: STATE_WAIT_MS }),
-    page.mouse.click(reselect ? 522 : 330, 330),
+    clickLabel(page, reselect ? "CHOOSE AGAIN" : "IMPORT A REPLAY FILE"),
   ]);
   await chooser.setFiles(file);
   await settle(page);
@@ -287,7 +297,7 @@ async function main() {
     await page.screenshot({ path: path.join(directory, "A-populated-before-download.png") });
     const [download] = await Promise.all([
       page.waitForEvent("download", { timeout: STATE_WAIT_MS }),
-      page.mouse.click(1026, 518),
+      clickLabel(page, "DOWNLOAD"),
     ]);
     await download.saveAs(archivePath); // Preserve the real normal-player download before parsing/assertions.
     const hash = createHash("sha256");
@@ -337,7 +347,7 @@ async function main() {
     await page.screenshot({ path: path.join(directory, "B-ready-preview.png") });
     assert.equal((preview.vault.stores.manifests || []).length, 0);
     assert.equal(jobs(preview.vault)[0].binding.sha256, binding.sha256);
-    await page.mouse.click(714, 330);
+    await clickLabel(page, "RESTORE");
     await waitStatus(page, "COMPLETE");
     await observe("B-complete-before-assertions", page, buildInfo);
     await page.screenshot({ path: path.join(directory, "B-complete-restored.png") });
@@ -349,7 +359,7 @@ async function main() {
     assert.equal(jobs(historical.vault)[0].state, "complete");
     await chooseFile(page, archivePath, true);
     await waitStatus(page, "READY");
-    await page.mouse.click(714, 330);
+    await clickLabel(page, "RESTORE");
     await waitStatus(page, "COMPLETE");
     const resolved = await assertCustody("B-complete-resolved", page, buildInfo);
     assert.deepEqual(resolved.vault, historical.vault, "complete validation rewrote custody or metadata");
@@ -383,7 +393,7 @@ async function main() {
     const reselected = await observe("C-pending-reselected", page, buildInfo);
     assert.deepEqual(jobs(reselected.vault)[0], job);
     assert.equal((reselected.vault.stores.manifests || []).length, 0);
-    await page.mouse.click(714, 330);
+    await clickLabel(page, "RESTORE");
     await waitStatus(page, "COMPLETE");
     await assertCustody("C-resumed", page, buildInfo);
   });
@@ -394,7 +404,7 @@ async function main() {
     await waitStatus(page, "READY");
     const ready = await observe("D-ready", page, buildInfo),
       job = jobs(ready.vault)[0];
-    await page.mouse.click(891, 330);
+    await clickLabel(page, "CANCEL");
     await waitStatus(page, "CANCELLED");
     const cancelled = await observe("D-cancelled", page, buildInfo),
       result = jobs(cancelled.vault)[0];
@@ -460,13 +470,13 @@ async function pairedMain(input) {
     await chooseFile(page, input);
     await waitStatus(page, "READY");
     assert.ok(await page.evaluate(() => window.__C39_FILE_TEXT__.recent.includes("RESTORE BOTH")));
-    await page.mouse.click(714, 330);
+    await clickLabel(page, "RESTORE BOTH");
     await waitStatus(page, "COMPLETE");
     await assertPair("pair-A-source-custody", journey);
     await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("DOWNLOAD RUN + FINALE"));
     const [download] = await Promise.all([
       page.waitForEvent("download", { timeout: STATE_WAIT_MS }),
-      page.mouse.click(1094, 564),
+      clickLabel(page, "DOWNLOAD RUN + FINALE"),
     ]);
     await download.saveAs(archivePath);
     assert.equal(await download.failure(), null);
@@ -491,7 +501,7 @@ async function pairedMain(input) {
     assert.equal(jobs(ready.vault)[0].schemaVersion, 2);
     assert.ok(ready.ui.text.recent.includes("RESTORE BOTH"));
     await page.screenshot({ path: path.join(directory, "pair-B-preview.png") });
-    await page.mouse.click(714, 330);
+    await clickLabel(page, "RESTORE BOTH");
     await waitStatus(page, "COMPLETE");
     const custodyBefore = await assertPair("pair-B-complete", journey);
     const profileBefore = await page.evaluate(() => ({
@@ -505,7 +515,7 @@ async function pairedMain(input) {
       timeout: STATE_WAIT_MS,
     });
     await settle(page);
-    await page.mouse.click(1024, 494);
+    await clickLabel(page, "◆ THEATER");
     await journey.waitScreen("replay");
     await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("BACK TO SCORED RUN"));
     await page.screenshot({ path: path.join(directory, "pair-B-linked-theater.png") });
