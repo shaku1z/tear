@@ -1,0 +1,508 @@
+{
+  "about": "Everything the required Validate check runs, in the order it runs: static (format, repository guards, typecheck, lint first, so most failures show within minutes), unit, build, browser. `pnpm check` runs exactly this list locally; `pnpm check:quick` runs the fast group, which the pre-push hook runs. Nightly and weekly run on a schedule. `seconds` is the usual time on a GitHub runner. Edit this list, not the workflow, to add or remove a check.",
+  "gate": [
+    "static",
+    "unit",
+    "build",
+    "browser"
+  ],
+  "groups": {
+    "fast": [
+      {
+        "id": "format",
+        "run": "node scripts/format.mjs --check --changed",
+        "seconds": 24
+      },
+      {
+        "id": "docs",
+        "run": "node scripts/check-docs.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "terminology",
+        "run": "node scripts/check-terminology.mjs",
+        "seconds": 6
+      },
+      {
+        "id": "repository-guards",
+        "run": "node node_modules/vitest/vitest.mjs run tests/unit/tool-catalogue.test.mjs tests/unit/change-impact.test.mjs tests/unit/ci-workflow.test.mjs",
+        "seconds": 15
+      },
+      {
+        "id": "architecture",
+        "run": "node scripts/check-source-architecture.mjs",
+        "seconds": 3
+      },
+      {
+        "id": "code-budget",
+        "run": "node scripts/check-code-budget.mjs",
+        "seconds": 2
+      },
+      {
+        "id": "typecheck",
+        "run": "node node_modules/typescript/bin/tsc -b",
+        "seconds": 35
+      },
+      {
+        "id": "lint",
+        "run": "node scripts/lint.mjs --changed",
+        "seconds": 115
+      }
+    ],
+    "static": [
+      {
+        "id": "format",
+        "run": "node scripts/format.mjs --check",
+        "seconds": 24
+      },
+      {
+        "id": "docs",
+        "run": "node scripts/check-docs.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "terminology",
+        "run": "node scripts/check-terminology.mjs",
+        "seconds": 6
+      },
+      {
+        "id": "repository-guards",
+        "run": "node node_modules/vitest/vitest.mjs run tests/unit/tool-catalogue.test.mjs tests/unit/change-impact.test.mjs tests/unit/ci-workflow.test.mjs",
+        "seconds": 15
+      },
+      {
+        "id": "architecture",
+        "run": "node scripts/check-source-architecture.mjs",
+        "seconds": 3
+      },
+      {
+        "id": "code-budget",
+        "run": "node scripts/check-code-budget.mjs",
+        "seconds": 2
+      },
+      {
+        "id": "active-roster",
+        "run": "node scripts/check-active-roster.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "workspace",
+        "run": "node scripts/check-workspace.mjs --ci",
+        "seconds": 1
+      },
+      {
+        "id": "requirements",
+        "run": "node scripts/tearbench-requirements.mjs check",
+        "seconds": 2
+      },
+      {
+        "id": "artifact-disposition",
+        "run": "node scripts/validate-artifact-disposition.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "artifact-layout",
+        "run": "node scripts/check-artifact-layout.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "parent-layout",
+        "run": "node scripts/check-parent-layout.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "music",
+        "run": "node scripts/check-music.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "game-reference",
+        "run": "node scripts/check-game-reference.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "ghost-worker-types",
+        "run": "node scripts/check-ghost-worker-types.mjs",
+        "seconds": 3
+      },
+      {
+        "id": "wiki",
+        "run": "node --test wiki/tests/wiki.test.mjs",
+        "seconds": 5
+      },
+      {
+        "id": "typecheck",
+        "run": "node node_modules/typescript/bin/tsc -b",
+        "seconds": 35
+      },
+      {
+        "id": "lint",
+        "run": "node scripts/lint.mjs",
+        "seconds": 115
+      },
+      {
+        "id": "node-tests",
+        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/game-reference-artifact-publication.test.mjs tests/dispatch-wiki-reference.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/workspace-check.test.mjs tests/parent-layout.test.mjs tests/artifact-retention.test.mjs tests/artifact-disposition.test.mjs tests/workspace-recovery-report.test.mjs tests/workspace-recovery-second-wave.test.mjs tests/deferred-workspace-dependency.test.mjs tests/preserved-copy-comparison.test.mjs tests/remaining-workspace-inventory.test.mjs tests/workspace-quarantine.test.mjs tests/workspace-preservation-quarantine.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs tests/tearbench-canary-plan.test.mjs tests/tearbench-canary-qualification-report.test.mjs tests/tearbench-canary-workflow.test.mjs tests/tearbench-performance-sample.test.mjs tests/tearbench-paired-performance-report.test.mjs tests/tearbench-simulation-boundary-report.test.mjs tests/tearbench-client-mission.test.mjs tests/benchmark-tearbench-clients.test.mjs tests/tearbench-task-execution.test.mjs tests/tearbench-task-receipts.test.mjs tests/tearbench-resource-leases.test.mjs",
+        "seconds": 60
+      }
+    ],
+    "unit": [
+      {
+        "id": "vitest",
+        "run": "node node_modules/vitest/vitest.mjs run --no-file-parallelism",
+        "seconds": 290,
+        "shardable": true
+      }
+    ],
+    "build": [
+      {
+        "id": "build-standalone",
+        "run": "node scripts/build-target.mjs standalone",
+        "seconds": 5
+      },
+      {
+        "id": "build-crazygames",
+        "run": "node scripts/build-target.mjs crazygames",
+        "seconds": 4
+      },
+      {
+        "id": "build-test-standalone",
+        "run": "node scripts/build-target.mjs test-standalone",
+        "seconds": 6
+      },
+      {
+        "id": "build-test-crazygames",
+        "run": "node scripts/build-target.mjs test-crazygames",
+        "seconds": 4
+      },
+      {
+        "id": "release-free-of-test-code",
+        "run": "node scripts/check-production-test-isolation.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "bundle-budgets",
+        "run": "node scripts/check-bundle-budget.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "crazygames-package",
+        "run": "node scripts/package-crazygames.mjs",
+        "seconds": 1
+      },
+      {
+        "id": "reproducible-standalone-a",
+        "run": "node scripts/check-reproducible-build.mjs standalone-a",
+        "seconds": 5
+      },
+      {
+        "id": "reproducible-standalone-b",
+        "run": "node scripts/check-reproducible-build.mjs standalone-b",
+        "seconds": 5
+      },
+      {
+        "id": "reproducible-crazygames-a",
+        "run": "node scripts/check-reproducible-build.mjs crazygames-a",
+        "seconds": 4
+      },
+      {
+        "id": "reproducible-crazygames-b",
+        "run": "node scripts/check-reproducible-build.mjs crazygames-b",
+        "seconds": 4
+      },
+      {
+        "id": "reproducible-package-a",
+        "run": "node scripts/check-reproducible-build.mjs crazygames-package-a",
+        "seconds": 1
+      },
+      {
+        "id": "reproducible-package-b",
+        "run": "node scripts/check-reproducible-build.mjs crazygames-package-b",
+        "seconds": 1
+      },
+      {
+        "id": "reproducible-compare",
+        "run": "node scripts/check-reproducible-build.mjs certify",
+        "seconds": 1
+      },
+      {
+        "id": "cloudflare-dry-run",
+        "run": "node scripts/check-cloudflare-dry-run.mjs",
+        "seconds": 2
+      },
+      {
+        "id": "ghost-worker-typecheck",
+        "run": "node node_modules/typescript/bin/tsc -p tsconfig.worker.json",
+        "seconds": 1
+      },
+      {
+        "id": "ghost-worker-dry-run",
+        "run": "node node_modules/wrangler/bin/wrangler.js deploy --dry-run --config wrangler.ghost.jsonc",
+        "seconds": 1
+      }
+    ],
+    "browser": [
+      {
+        "id": "release-has-no-engineering-surfaces",
+        "run": "node tests/browser-production-runtime-isolation.js",
+        "seconds": 10
+      },
+      {
+        "id": "release-adventure",
+        "run": "node tests/browser-release-adventure-journey.js",
+        "seconds": 59
+      },
+      {
+        "id": "load-budgets",
+        "run": "node tests/browser-load-profile.js --check",
+        "seconds": 15
+      },
+      {
+        "id": "smoke",
+        "run": "node tests/browser-smoke.js",
+        "seconds": 20
+      },
+      {
+        "id": "navigation-journeys",
+        "run": "node tests/browser-navigation-journeys.js",
+        "seconds": 15
+      },
+      {
+        "id": "progression-journeys",
+        "run": "node tests/browser-progression-journeys.js",
+        "seconds": 17
+      },
+      {
+        "id": "playground-journeys",
+        "run": "node tests/browser-playground-journeys.js",
+        "seconds": 9
+      },
+      {
+        "id": "terminal-journeys",
+        "run": "node tests/browser-terminal-journeys.js",
+        "seconds": 11
+      },
+      {
+        "id": "cinematic-preferences",
+        "run": "node tests/browser-cinematic-preferences.js",
+        "seconds": 10
+      },
+      {
+        "id": "fresh-run-meta-progression",
+        "run": "node tests/browser-fresh-run-meta-progression.js",
+        "seconds": 3
+      },
+      {
+        "id": "agent-journey",
+        "run": "node tests/browser-agent-journey.js",
+        "seconds": 9
+      },
+      {
+        "id": "modes-and-hooks",
+        "run": "node tests/browser-feature-matrix.js",
+        "seconds": 15
+      },
+      {
+        "id": "bosses",
+        "run": "node tests/browser-boss-parity.js",
+        "seconds": 91
+      },
+      {
+        "id": "gameplay-scenarios",
+        "run": "node tests/browser-current-gameplay-scenarios.js",
+        "seconds": 22
+      },
+      {
+        "id": "weapon-scenarios",
+        "run": "node scripts/tearbench.mjs parity current-weapons --artifact artifacts/tearbench/generated/current-weapon-parity.json",
+        "seconds": 65
+      },
+      {
+        "id": "live-detached-parity",
+        "run": "node scripts/run-current-live-detached-parity.mjs",
+        "seconds": 13
+      },
+      {
+        "id": "framerate-determinism",
+        "run": "node tests/browser-tear-runtime-environment.js",
+        "seconds": 45
+      },
+      {
+        "id": "blade-lifecycle",
+        "run": "node tests/parity/browser-blade-parity.js --current-only",
+        "seconds": 8
+      },
+      {
+        "id": "player-locomotion",
+        "run": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/player-locomotion.json",
+        "seconds": 8
+      },
+      {
+        "id": "enemy-charge",
+        "run": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/enemy-charge-cycle.json",
+        "seconds": 5
+      },
+      {
+        "id": "combat-resolution",
+        "run": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/combat-resolution.json",
+        "seconds": 3
+      },
+      {
+        "id": "ranged-cycle",
+        "run": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/ranged-fire-cycle.json",
+        "seconds": 3
+      },
+      {
+        "id": "projectile-parry",
+        "run": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/projectile-parry.json",
+        "seconds": 3
+      },
+      {
+        "id": "mirror-pursuit",
+        "run": "node tests/parity/browser-blade-parity.js --current-only --fixture=tests/parity/mirror-pursuit.json",
+        "seconds": 3
+      },
+      {
+        "id": "input",
+        "run": "node tests/browser-input-matrix.js",
+        "seconds": 18
+      },
+      {
+        "id": "responsive-and-touch",
+        "run": "node tests/browser-responsive-matrix.js",
+        "seconds": 11
+      },
+      {
+        "id": "audio",
+        "run": "node tests/browser-audio.js",
+        "seconds": 13
+      },
+      {
+        "id": "platform-standalone",
+        "run": "node tests/platform-browser-smoke.js standalone",
+        "seconds": 2
+      },
+      {
+        "id": "platform-crazygames",
+        "run": "node tests/platform-browser-smoke.js crazygames",
+        "seconds": 2
+      },
+      {
+        "id": "crazygames-frame",
+        "run": "node tests/browser-crazygames-iframe.js",
+        "seconds": 3
+      },
+      {
+        "id": "offline",
+        "run": "node tests/pwa-offline.js",
+        "seconds": 18
+      },
+      {
+        "id": "pale-rimehound",
+        "run": "node tests/browser-pale-rimehound.js",
+        "seconds": 10
+      },
+      {
+        "id": "pale-variants",
+        "run": "node tests/browser-pale-variants.js",
+        "seconds": 10
+      },
+      {
+        "id": "pale-presentation",
+        "run": "node tests/browser-pale-presentation.js",
+        "seconds": 10
+      },
+      {
+        "id": "pale-white-hart-foundation",
+        "run": "node tests/browser-pale-white-hart-foundation.js",
+        "seconds": 10
+      },
+      {
+        "id": "pale-white-hart-phases",
+        "run": "node tests/browser-pale-white-hart-phases.js",
+        "seconds": 10
+      },
+      {
+        "id": "verdant-presentation",
+        "run": "node tests/browser-verdant-presentation.js",
+        "seconds": 10
+      }
+    ],
+    "nightly": [
+      {
+        "id": "build-test-standalone",
+        "run": "node scripts/build-target.mjs test-standalone"
+      },
+      {
+        "id": "performance",
+        "run": "node tests/browser-performance.js"
+      },
+      {
+        "id": "state-forge-runtime",
+        "run": "node tests/browser-state-forge-runtime.js"
+      },
+      {
+        "id": "state-forge-studio",
+        "run": "node tests/browser-state-forge-studio.js"
+      },
+      {
+        "id": "state-forge-exit-matrix",
+        "run": "node tests/browser-state-forge-exit-matrix.js"
+      },
+      {
+        "id": "source-void-replay-seek",
+        "run": "node tests/browser-c40-source-void-ghost-seek.js"
+      },
+      {
+        "id": "pale-aurora-track",
+        "run": "node scripts/tearbench.mjs run pale-aurora-track-behavior"
+      },
+      {
+        "id": "pale-rimehound-aurora",
+        "run": "node scripts/tearbench.mjs run pale-rimehound-aurora-interaction"
+      },
+      {
+        "id": "pale-rime-runner",
+        "run": "node scripts/tearbench.mjs run pale-rime-runner-behavior"
+      },
+      {
+        "id": "pale-prism-seer",
+        "run": "node scripts/tearbench.mjs run pale-prism-seer-behavior"
+      },
+      {
+        "id": "pale-snowfall-kite",
+        "run": "node scripts/tearbench.mjs run pale-snowfall-kite-behavior"
+      },
+      {
+        "id": "pale-hailcaster",
+        "run": "node scripts/tearbench.mjs run pale-hailcaster-behavior"
+      },
+      {
+        "id": "pale-glacier-guard",
+        "run": "node scripts/tearbench.mjs run pale-glacier-guard-behavior"
+      },
+      {
+        "id": "pale-white-hart-phase-1",
+        "run": "node scripts/tearbench.mjs run pale-white-hart-phase-1"
+      },
+      {
+        "id": "pale-white-hart-phase-2",
+        "run": "node scripts/tearbench.mjs run pale-white-hart-phase-2"
+      },
+      {
+        "id": "pale-white-hart-phase-3",
+        "run": "node scripts/tearbench.mjs run pale-white-hart-phase-3"
+      }
+    ],
+    "weekly": [
+      {
+        "id": "endurance",
+        "run": "node node_modules/vitest/vitest.mjs run --config vitest.endurance.config.ts"
+      },
+      {
+        "id": "replay-world-and-vault",
+        "run": "node node_modules/vitest/vitest.mjs run tests/unit/ghost-replay-world.test.ts tests/unit/ghost-capsule-vault.test.ts"
+      }
+    ]
+  }
+}

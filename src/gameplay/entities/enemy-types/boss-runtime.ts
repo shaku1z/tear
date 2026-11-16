@@ -66,6 +66,17 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
       platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
       death: { shake: 10, flash: 0.36, slowmo: 0.72, zoom: 0.05, hitstop: 0.09, cue: "bossDeathAldric", priority: 10 },
     },
+    rootbound: {
+      windup: { shake: 1, cue: "updraft", priority: 2 },
+      launch: { shake: 3, cue: "slam", priority: 3 },
+      contact: { shake: 7, hitstop: 0.045, cue: "slam", priority: 6 },
+      counter: { shake: 5, hitstop: 0.04, cue: "slam", priority: 6 },
+      stagger: { shake: 8, flash: 0.2, slowmo: 0.3, cue: "wardenGuardBreak", priority: 8 },
+      phaseTransition: { shake: 8, flash: 0.3, slowmo: 0.4, zoom: 0.045, cue: "boom", priority: 9 },
+      platformBreak: { shake: 4, cue: "slam", priority: 3 },
+      platformRebuild: { shake: 1, cue: "platformRebuild", priority: 1 },
+      death: { shake: 10, flash: 0.4, slowmo: 0.75, zoom: 0.055, hitstop: 0.09, cue: "bossDeathWarden", priority: 10 },
+    },
     "white-hart": {
       windup: { shake: 1, priority: 2 },
       launch: { shake: 3, priority: 3 },
@@ -183,6 +194,8 @@ export function createBossRuntime(dependencies: EnemyDependencies) {
       aldricFeral: "lower-right",
       echoMirror: "lower-right",
       sourceTrue: "depth-center",
+      rootboundGraft: "lower-left",
+      rootboundRegrowth: "lower-left",
     };
     const anchor = anchorByPose[spec.pose as keyof typeof anchorByPose] || "lower-left";
     boss.cinematicRequest = Object.assign({ color: boss.color, speaker: boss.bossName, duration: 0.88, anchor }, spec);

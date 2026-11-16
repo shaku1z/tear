@@ -1019,12 +1019,10 @@ export function createProductionCombatPhases(
       effects.death(enemy.x, enemy.y, shards, enemy.color);
     },
     deathSound: note("deathSound"),
-    makeDeathEvent: (enemy: unknown, cause: string | undefined, cleanElimination: boolean) =>
-      Object.freeze({ enemy, cause, cleanElimination }),
+    makeDeathEvent: (enemy: unknown, cause: string | undefined, clean: boolean) =>
+      requireWeaponRuntime().makeDeathEvent(enemy as never, cause, clean),
     fire: (hooks: unknown, event: unknown) => {
-      if (Array.isArray(hooks)) {
-        for (const hook of hooks) if (typeof hook === "function") (hook as (value: unknown) => void)(event);
-      }
+      if (Array.isArray(hooks)) requireWeaponRuntime().fire(hooks as never, event as never);
     },
     applySever: (enemy: { applySever?: (tier: number) => void }, tier: number) => {
       enemy.applySever?.(tier);

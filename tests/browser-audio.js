@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
 
 async function assertVisibilityLifecycle(page, baseline) {
   // Tab occlusion is window-manager behavior and is not portable through Xvfb.
@@ -102,8 +103,11 @@ async function assertVisibilityLifecycle(page, baseline) {
       if (url.startsWith(`${baseUrl}/`)) route.continue();
       else route.abort();
     });
-    await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded", timeout: 20000 });
-    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.audio, undefined, { timeout: 20000 });
+    await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, {
+      waitUntil: "domcontentloaded",
+      timeout: STATE_WAIT_MS,
+    });
+    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.audio, undefined, { timeout: STATE_WAIT_MS });
 
     const before = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
     assert.equal(before.state, "awaiting-user-activation");
@@ -116,7 +120,7 @@ async function assertVisibilityLifecycle(page, baseline) {
     // menu command into the canvas UI beneath the pointer.
     await page.keyboard.press("Shift");
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, {
-      timeout: 20000,
+      timeout: STATE_WAIT_MS,
     });
     await page.keyboard.press("Shift");
     await page.keyboard.press("Control");
@@ -176,11 +180,11 @@ async function assertVisibilityLifecycle(page, baseline) {
         const current = window.__PANTHEON_TEST.state();
         return current.game === "playing" && current.mode === selectedMode;
       }, mode);
-      await page.waitForTimeout(150);
+      await page.waitForTimeout(holdFor(150));
     }
     // The first menu-to-gameplay score swap lands on the next musical bar.
     // Keep the page alive past that boundary so callback-time regressions surface.
-    await page.waitForTimeout(2_500);
+    await page.waitForTimeout(holdFor(2_500));
     const repeated = await page.evaluate(() => ({
       audio: window.__TEAR_CATALOG_DEBUG__.audio.snapshot(),
       contexts: window.__tearAudioContextCount,
@@ -238,16 +242,16 @@ async function assertVisibilityLifecycle(page, baseline) {
     });
     await legacySynthFallback.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, {
       waitUntil: "domcontentloaded",
-      timeout: 20000,
+      timeout: STATE_WAIT_MS,
     });
     await legacySynthFallback.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__?.audio, undefined, {
-      timeout: 20000,
+      timeout: STATE_WAIT_MS,
     });
     await legacySynthFallback.keyboard.press("Shift");
     await legacySynthFallback.waitForFunction(
       () => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running",
       undefined,
-      { timeout: 20000 },
+      { timeout: STATE_WAIT_MS },
     );
     const legacySynthAudio = await legacySynthFallback.evaluate(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot());
     assert.equal(

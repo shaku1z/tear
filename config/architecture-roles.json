@@ -22,7 +22,10 @@
         "src/gameplay/environment/root-cage.ts",
         "src/gameplay/environment/regrowth-link.ts",
         "src/gameplay/entities/rootbinder-runtime.ts",
-        "src/gameplay/entities/enemy-types/rootbound.ts"
+        "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
+        "src/gameplay/entities/enemy-types/rootbound-ground-verbs.ts",
+        "src/gameplay/entities/enemy-types/rootbound-tells.ts"
       ]
     },
     "biome.pale.implementation": {
@@ -34,7 +37,7 @@
         "src/gameplay/environment/white-hart-route-runtime.ts",
         "src/gameplay/entities/enemy-types/white-hart.ts",
         "src/gameplay/entities/enemy-types/rimehound.ts",
-        "src/app/world/biomes/aurora-track-wiring.ts"
+        "src/gameplay/environment/biome-actors/aurora-track-actors.ts"
       ]
     },
     "biome.verdant.implementation": {
@@ -48,8 +51,11 @@
         "src/gameplay/environment/regrowth-link.ts",
         "src/gameplay/entities/rootbinder-runtime.ts",
         "src/gameplay/entities/enemy-types/rootbound.ts",
+        "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
+        "src/gameplay/entities/enemy-types/rootbound-ground-verbs.ts",
+        "src/gameplay/entities/enemy-types/rootbound-tells.ts",
         "src/presentation/environment/bloom-well-presentation.ts",
-        "src/app/world/biomes/bloom-well-wiring.ts",
+        "src/gameplay/environment/biome-actors/bloom-well-actors.ts",
         "src/tearbench/rootbound-graft-anchor-forge.ts"
       ]
     },
@@ -59,6 +65,7 @@
         "src/gameplay/environment/environment-runtime.ts",
         "src/gameplay/environment/environment-state.ts",
         "src/gameplay/environment/environment-contracts.ts",
+        "src/gameplay/environment/environment-contact-damage.ts",
         "src/gameplay/environment/environment-feature-ports.ts",
         "src/gameplay/environment/field-runtime.ts",
         "src/gameplay/environment/environment-events.ts",
@@ -70,6 +77,7 @@
       "purpose": "Neutral environment, codec and telemetry schema modules that must not contain biome-owned vocabulary.",
       "include": [
         "src/gameplay/environment/environment-contracts.ts",
+        "src/gameplay/environment/environment-contact-damage.ts",
         "src/gameplay/environment/environment-runtime.ts",
         "src/gameplay/environment/environment-state.ts",
         "src/gameplay/environment/environment-feature-ports.ts",

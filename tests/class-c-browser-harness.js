@@ -3,6 +3,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { holdFor } = require("./browser-waits");
 
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
@@ -87,7 +88,7 @@ function createClassCControls(page, viewport, record) {
       await touchSession.send("Input.dispatchTouchEvent", { type, touchPoints: points });
     },
     wait: async (milliseconds) => {
-      await page.waitForTimeout(milliseconds);
+      await page.waitForTimeout(holdFor(milliseconds));
     },
   });
 }

@@ -12,7 +12,8 @@ describe("Verdant typed stage registries", () => {
       stageId: "verdant-sanctum",
       initialFields: [
         { kind: "bloom-well", slot: "left-rise", geometry: { x: 480, y: 285, w: 170, h: 470 } },
-        { kind: "bloom-well", slot: "right-rise", geometry: { x: 950, y: 285, w: 170, h: 470 } },
+        // Half a cycle out of phase, so one rise column is always arming or open.
+        { kind: "bloom-well", slot: "right-rise", geometry: { x: 950, y: 285, w: 170, h: 470 }, offsetTicks: 372 },
       ],
       maximumFields: 3,
       maximumCombatObjects: 8,
@@ -38,7 +39,7 @@ describe("Verdant typed stage registries", () => {
         expect.objectContaining({
           id: "verdant-sanctum:bloom-well:right-rise",
           stageOwnerId: "verdant-sanctum",
-          startTick: 3_600,
+          startTick: 3_972,
         }),
       ]),
     );

@@ -1,0 +1,76 @@
+import { describe, expect, it } from "vitest";
+import {
+  PROMPT_ACTIONS,
+  promptAvailable,
+  promptDevice,
+  promptLabel,
+  promptLabels,
+  type PadBinding,
+  type PromptAction,
+} from "../../src/domain/prompt-vocabulary";
+
+const padLabel = (binding: PadBinding): string =>
+  ({ jump: "A", dash: "RB", throw: "RT", tether: "LT", confirm: "A", back: "B", pause: "MENU" })[binding];
+
+const PLAYGROUND_HOTKEYS: readonly PromptAction[] = [
+  "build-menu",
+  "ability-lab",
+  "quick-spawn",
+  "spawn-dummy",
+  "summon-boss",
+  "clear-enemies",
+  "heal",
+];
+
+describe("prompt vocabulary", () => {
+  it("maps every input mode onto one of three vocabularies", () => {
+    expect(promptDevice("mouse")).toBe("keyboard");
+    expect(promptDevice("keyboard")).toBe("keyboard");
+    expect(promptDevice("touch")).toBe("touch");
+    expect(promptDevice("gamepad")).toBe("gamepad");
+  });
+
+  it("words every action on keyboard, and every play action on touch and gamepad", () => {
+    for (const action of PROMPT_ACTIONS) {
+      expect(promptLabel(action, "keyboard"), action).toMatch(/\S/u);
+      for (const device of ["touch", "gamepad"] as const) {
+        const label = promptLabel(action, device, padLabel);
+        if (PLAYGROUND_HOTKEYS.includes(action)) {
+          expect(label, `${action} on ${device}`).toBeNull();
+          expect(promptAvailable(action, device)).toBe(false);
+        } else {
+          expect(label, `${action} on ${device}`).toMatch(/\S/u);
+          expect(promptAvailable(action, device)).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("never leaks keyboard or mouse words into touch or gamepad prompts", () => {
+    for (const action of PROMPT_ACTIONS)
+      for (const device of ["touch", "gamepad"] as const) {
+        const label = promptLabel(action, device, padLabel) ?? "";
+        expect(label, `${action} on ${device}`).not.toMatch(/MOUSE|CLICK|SHIFT|SPACE|ESC|ENTER|\bW\b/u);
+      }
+  });
+
+  it("keeps keyboard prompts short and in the arrow form (no MOUSE UP)", () => {
+    for (const action of PROMPT_ACTIONS) {
+      const label = promptLabel(action, "keyboard") ?? "";
+      expect(label.length, action).toBeLessThanOrEqual(12);
+      expect(label).not.toMatch(/MOUSE (UP|DOWN)/u);
+    }
+  });
+
+  it("resolves gamepad preset bindings at draw time", () => {
+    expect(promptLabel("jump", "gamepad", padLabel)).toBe("A");
+    expect(promptLabel("dash-down", "gamepad", padLabel)).toBe("LS ↓ + RB");
+    expect(promptLabel("pause", "gamepad", padLabel)).toBe("MENU");
+    expect(promptLabel("jump", "gamepad")).toBe("JUMP");
+  });
+
+  it("drops actions a device cannot trigger and merges duplicates", () => {
+    expect(promptLabels(["throw", "recall", "build-menu"], "touch")).toEqual(["THROW"]);
+    expect(promptLabels(["build-menu", "ability-lab"], "keyboard")).toEqual(["E", "U"]);
+  });
+});

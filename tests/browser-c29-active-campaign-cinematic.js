@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor } = require("./browser-waits");
 const openingJourney = process.env.TEAR_C29_OPENING_JOURNEY === "1";
 const introJourney = process.env.TEAR_R07_INTRO_JOURNEY === "1";
 if (introJourney && !process.env.TEAR_R07_INTRO_ARTIFACT_DIR)
@@ -35,7 +36,7 @@ withJourney(
   { name: "C29 durable active campaign cinematic", port: 8164 },
   async ({ page, boot, waitScreen, clickAndWait, buildInfo }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-      timeout: 15000,
+      timeout: STATE_WAIT_MS,
     });
     if (introJourney) {
       const directory = path.resolve(process.env.TEAR_R07_INTRO_ARTIFACT_DIR);
@@ -58,7 +59,7 @@ withJourney(
       await page.waitForFunction(
         () => window.TEAR_WEAPON_DEBUG().enemies.some((enemy) => enemy.bossId === "warden" && enemy.introT > 0),
         undefined,
-        { timeout: 10000 },
+        { timeout: STATE_WAIT_MS },
       );
       await page.screenshot({ path: path.join(directory, "live-intro.png") });
       await page.waitForFunction(
@@ -67,7 +68,7 @@ withJourney(
             .TEAR_WEAPON_DEBUG()
             .enemies.some((enemy) => enemy.bossId === "warden" && enemy.introT === 0 && enemy.aliveT > 0.1),
         undefined,
-        { timeout: 15000 },
+        { timeout: STATE_WAIT_MS },
       );
       const liveBoss = await page.evaluate(() =>
         window.TEAR_WEAPON_DEBUG().enemies.find((enemy) => enemy.bossId === "warden"),
@@ -75,12 +76,12 @@ withJourney(
       await page.screenshot({ path: path.join(directory, "live-ai.png") });
       // No altered actor, score, wave, clock, or forced outcome.
       await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, {
-        timeout: 90000,
+        timeout: SLOW_STATE_WAIT_MS,
       });
       await page.waitForFunction(
         () => window.__TEAR_GHOST_V3__.manifest()?.status === "complete" || window.__TEAR_GHOST_V3__.failure() !== null,
         undefined,
-        { timeout: 20000 },
+        { timeout: STATE_WAIT_MS },
       );
       assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
       const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
@@ -110,10 +111,10 @@ withJourney(
       await clickAndWait(260, 266, "profile");
       await page.mouse.click(875, 271);
       await page.waitForFunction(() => window.__R07_RENDERED_TEXT__.includes("DOWNLOAD"), undefined, {
-        timeout: 15000,
+        timeout: STATE_WAIT_MS,
       });
       const [download] = await Promise.all([
-        page.waitForEvent("download", { timeout: 15000 }),
+        page.waitForEvent("download", { timeout: STATE_WAIT_MS }),
         page.mouse.click(1026, 518),
       ]);
       const archivePath = path.join(directory, "normal-download.tearghost.json");
@@ -179,7 +180,7 @@ withJourney(
     await page.waitForFunction(
       () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
       undefined,
-      { timeout: 20000 },
+      { timeout: STATE_WAIT_MS },
     );
     assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
     const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
@@ -255,10 +256,10 @@ withJourney(
       await page.keyboard.press("Space");
       await page.keyboard.down("d");
       await page.keyboard.press("Shift");
-      await page.waitForTimeout(220);
+      await page.waitForTimeout(holdFor(220));
       await page.keyboard.up("d");
       await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, {
-        timeout: 90000,
+        timeout: SLOW_STATE_WAIT_MS,
       });
       await page.waitForFunction(
         (oldId) => {
@@ -266,7 +267,7 @@ withJourney(
           return manifest !== null && manifest.id !== oldId;
         },
         firstId ?? null,
-        { timeout: 20000 },
+        { timeout: STATE_WAIT_MS },
       );
       const current = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
       const source = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), current.id);

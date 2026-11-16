@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const scenario = Object.freeze({
   start: Object.freeze({ mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "white-hart" }),
@@ -17,7 +18,7 @@ async function preparePhase(page, fraction, phase) {
     (expected) =>
       window.TEAR_WEAPON_DEBUG().enemies.find((enemy) => enemy.bossId === "white-hart")?.phaseMarker === expected,
     phase,
-    { timeout: 5_000 },
+    { timeout: STATE_WAIT_MS },
   );
 }
 
@@ -29,7 +30,7 @@ async function captureAttack(page, directory, attack, file, predicate) {
       return boss?.atk === id && boss?.state === expected;
     },
     { id: attack, expected: predicate },
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => window.__PANTHEON_TEST.pause());
   const snapshot = await hart(page);
@@ -46,7 +47,7 @@ withJourney({ name: "Pale PT3-C7 White Hart phases", port: 8357 }, async ({ page
       return boss?.spawnT <= 0 && boss?.introT === 0;
     },
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const directory = path.resolve(
     __dirname,
@@ -69,16 +70,19 @@ withJourney({ name: "Pale PT3-C7 White Hart phases", port: 8357 }, async ({ page
 
   const volleyFile = "phase-1-aurora-volley-commit-1600x900.png";
   await page.evaluate(() => window.__PANTHEON_TEST.prepareWhiteHartAttack("aurora-volley"));
-  await page.waitForFunction(
-    () =>
-      window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "aurora-shard").length === 3,
+  // Pause and read the volley in the page task that finds it, so no shard lands in between.
+  const volley = await page.waitForFunction(
+    () => {
+      const found = window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "aurora-shard");
+      if (found.length !== 3) return null;
+      window.__PANTHEON_TEST.pause();
+      return found;
+    },
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
-  await page.evaluate(() => window.__PANTHEON_TEST.pause());
-  const shards = await page.evaluate(() =>
-    window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "aurora-shard"),
-  );
+  const shards = await volley.jsonValue();
+  assert.equal(shards.length, 3);
   assert.ok(shards.every((projectile) => projectile.counterplay === "deflect/return"));
   await page.screenshot({ path: path.join(directory, volleyFile) });
   screenshots.push(volleyFile);
@@ -110,7 +114,7 @@ withJourney({ name: "Pale PT3-C7 White Hart phases", port: 8357 }, async ({ page
       return boss?.atk === "endless-return" && boss?.state === "commit" && boss?.auroraBossChargeActive === true;
     },
     undefined,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => window.__PANTHEON_TEST.pause());
   const endless = await hart(page);
