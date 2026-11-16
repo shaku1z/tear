@@ -49,8 +49,12 @@ jobs:
           if (errors.length) throw new Error(errors.join("; "));
           const artifact = releaseArtifacts[0];
           const artifactSha = artifact.name.slice("tear-release-targets-".length);
+          // The dev build of the same commit, served below /dev/ (main runs only).
+          const devName = `tear-preview-dev-${artifactSha}`;
+          const dev = (artifactListing.artifacts ?? []).filter((entry) => entry.name === devName && entry.expired !== true);
+          if (dev.length !== 1) throw new Error(`validation has ${dev.length} current ${devName} artifacts; preview deploys come from main runs`);
           appendFileSync(process.env.GITHUB_OUTPUT,
-            `sha=${artifactSha}\nhead_sha=${run.head_sha}\nrun_id=${run.id}\nartifact_name=${artifact.name}\n`);
+            `sha=${artifactSha}\nhead_sha=${run.head_sha}\nrun_id=${run.id}\nartifact_name=${artifact.name}\ndev_artifact_name=${devName}\n`);
           NODE
       - uses: actions/checkout@v4
         with:
@@ -75,10 +79,28 @@ jobs:
           path: candidate-release
           github-token: ${{ github.token }}
           run-id: ${{ steps.validation.outputs.run_id }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.validation.outputs.dev_artifact_name }}
+          path: candidate-dev
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.validation.outputs.run_id }}
       - name: Verify exact validated standalone artifact
         env:
           TEAR_RELEASE_SHA: ${{ steps.validation.outputs.sha }}
         run: node scripts/verify-release-artifact.mjs standalone candidate-release/dist/standalone
+      - name: Verify the dev build of the same commit
+        env:
+          TEAR_RELEASE_SHA: ${{ steps.validation.outputs.sha }}
+        run: node scripts/verify-release-artifact.mjs standalone candidate-dev test-standalone
+      # The player build at the root and the dev build below /dev/, on one origin so they share saves.
+      - name: Assemble the preview site
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -r candidate-release/dist/standalone preview-site
+          test ! -e preview-site/dev
+          cp -r candidate-dev preview-site/dev
       - name: Rehearse attributed deployment
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -96,5 +118,5 @@ jobs:
           echo "::add-mask::${normalized_token}"
           export CLOUDFLARE_API_TOKEN="${normalized_token}"
           pnpm exec wrangler deploy --config wrangler.preview.jsonc \
-            --assets candidate-release/dist/standalone \
+            --assets preview-site \
             --message "preview git:${RELEASE_SHA} validate:${VALIDATION_RUN_ID}"

@@ -125,3 +125,16 @@ jobs:
             artifacts/packages/tear-crazygames.zip
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'push' && 7 || 2 }}
+      # Main only, after every check passed: the test build of the same commit, served by the
+      # preview deploy below /dev/ (Boss Test, Enemy Test and the other engineering surfaces).
+      # It is its own artifact, so nothing that deploys production can pick it up.
+      - name: Build the preview dev build
+        if: github.event_name == 'push' && steps.validation-scope.outputs.gameplay_required == 'true'
+        run: node scripts/build-target.mjs test-standalone --preview-dev
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push' && steps.validation-scope.outputs.gameplay_required == 'true'
+        with:
+          name: tear-preview-dev-${{ steps.checked.outputs.commit }}
+          path: dist/preview-dev
+          if-no-files-found: error
+          retention-days: 7
