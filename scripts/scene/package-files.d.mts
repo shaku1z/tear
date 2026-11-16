@@ -48,3 +48,4 @@ export declare function builtStorefrontArt(
   budget?: StorefrontBudget,
   roots?: readonly string[],
 ): { target: string; shareBytes: number; bytes: number; files: string[]; problems: string[] };
+export declare function assertStorefrontArt(target: string, directory: string): string;

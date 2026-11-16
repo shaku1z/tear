@@ -9,6 +9,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { validateScenePackage } from "../../src/presentation/scenes/scene-contract";
 import { hiddenDetail, hiddenMask, layersOver, softenHidden } from "../../scripts/scene/hidden-paint.mjs";
 import {
+  assertStorefrontArt,
   builtStorefrontArt,
   declaredStorefrontArt,
   FIXTURE_SCENES_ROOT,
@@ -167,6 +168,9 @@ describe("scene art share of a release build", () => {
     const clean = builtStorefrontArt("crazygames", dist);
     expect(clean.problems).toEqual([]);
     expect(clean.bytes).toBe(declaredStorefrontArt("crazygames").bytes);
+    expect(assertStorefrontArt("crazygames", dist)).toMatch(
+      /^PASS crazygames scene art: \d+ image\(s\), \d+ of 3000000 bytes$/u,
+    );
     expect(builtStorefrontArt("crazygames", dist, { shareBytes: 1000 }).problems).toEqual([
       expect.stringMatching(/over its share of 1000/u),
     ]);
@@ -183,5 +187,6 @@ describe("scene art share of a release build", () => {
       expect.stringMatching(/stray\.avif is an AVIF image no scene package lists/u),
       expect.stringMatching(/build is missing/u),
     ]);
+    expect(() => assertStorefrontArt("crazygames", dist)).toThrow(/scene art size rule failed:[\s\S]*stray\.avif/u);
   });
 });

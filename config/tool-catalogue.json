@@ -2117,6 +2117,7 @@
       "tests/unit/scene-size-rule.test.ts"
     ],
     "scripts/scene/package-files.mjs": [
+      "scripts/build-target.mjs",
       "scripts/scene.mjs",
       "scripts/scene/build.mjs",
       "scripts/scene/preview.mjs",

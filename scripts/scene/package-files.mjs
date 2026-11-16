@@ -208,3 +208,16 @@ export function builtStorefrontArt(target, directory, budget = storefrontBudget(
     );
   return { target, shareBytes: budget.shareBytes, bytes, files, problems };
 }
+
+/**
+ * The build's own check (scripts/build-target.mjs): the shipped packages'
+ * declared sizes and the built folder's scene images, against the target's
+ * share. Throws with every problem; returns the line the build logs.
+ */
+export function assertStorefrontArt(target, directory) {
+  const declared = declaredStorefrontArt(target);
+  const built = builtStorefrontArt(target, directory);
+  const problems = [...declared.problems, ...built.problems];
+  if (problems.length > 0) throw new Error(`scene art size rule failed:\n  ${problems.join("\n  ")}`);
+  return `PASS ${target} scene art: ${String(built.files.length)} image(s), ${String(built.bytes)} of ${String(built.shareBytes)} bytes`;
+}
