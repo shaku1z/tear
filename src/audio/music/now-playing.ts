@@ -4,6 +4,7 @@
  * The audio backend publishes what is actually sounding; UI reads it. Kept as a
  * tiny store so the presentation layer never imports the audio engine.
  */
+import { MUSIC_SCREEN_TITLE } from "./settings";
 
 export interface NowPlaying {
   readonly workId: string;
@@ -52,5 +53,5 @@ export function nowPlayingLabel(state: NowPlaying = current): string {
 /** Tier read-out for the card's sub-line. */
 export function nowPlayingDetail(state: NowPlaying = current): string {
   const names = ["BREATH", "PREPARED", "COMBAT", "PRESSURE", "APEX"];
-  return `◈ ${names[state.tier] ?? "—"}  ·  MUSIC ›`;
+  return `◈ ${names[state.tier] ?? "—"}  ·  ${MUSIC_SCREEN_TITLE} ›`;
 }

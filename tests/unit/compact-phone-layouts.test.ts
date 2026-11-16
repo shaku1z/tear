@@ -19,6 +19,9 @@ import {
 } from "../../src/gameplay/training/live-playground-presentation";
 import { PLAYGROUND_ALL_KINDS } from "../../src/gameplay/training/playground-controller";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
+import { catalog, routing } from "../../public/audio/music.json";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
+import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
 
 /**
  * The phone (compact density) compositions of the shop, codex, profile, leaderboards,
@@ -760,6 +763,29 @@ describe("phone compositions (compact density)", () => {
         },
         `signin ${phone.name}`,
       );
+    });
+
+    it(`lists every song with its preview, the playback rows and BACK on the MUSIC screen at ${phone.name}`, () => {
+      const view = buildMusicScreenView({
+        settings: {},
+        library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
+        nowPlaying: { workId: "fillet", title: "Fillet" },
+        preview: "spring",
+        bossName: (id) => AUTHORED_BOSS_ROSTER.find((boss) => boss.id === id)?.name ?? "",
+      });
+      const offered = sweep(
+        phone,
+        (r) => {
+          r.music(view);
+        },
+        `music ${phone.name}`,
+      );
+      for (const song of view.songs.filter((entry) => !entry.previewing))
+        expect(offered.has(JSON.stringify({ type: "music.preview", id: song.id })), song.id).toBe(true);
+      expect(offered.has(JSON.stringify({ type: "music.stopPreview" }))).toBe(true);
+      for (const key of ["station", "menuMusic", "musicMode"])
+        expect(offered.has(JSON.stringify({ type: "settings.activate", key }))).toBe(true);
+      expect(offered.has(JSON.stringify({ type: "navigate", to: "menu" }))).toBe(true);
     });
 
     it(`keeps the playground build menu and ability lab inside the frame at ${phone.name}`, () => {

@@ -6,7 +6,11 @@ import type { SettingsController, GameSettings } from "./settings-controller";
 import { buildSettingsSections } from "../../presentation/settings-snapshots";
 import { MENU_MUSIC_CHOICES } from "../../audio/music/loadout";
 import { STATION_CHOICES } from "../../audio/music/active-station";
-import { MUSIC_SETTINGS_TAB, normalizeMusicSettingsTab } from "../../audio/music/settings";
+import { normalizeMusicSettingsTab } from "../../audio/music/settings";
+import { getMusicLibrary } from "../../audio/music/library";
+import { getNowPlaying } from "../../audio/music/now-playing";
+import { getMusicPreview } from "../../audio/music/preview";
+import { buildMusicScreenView } from "../../presentation/music-snapshots";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -37,6 +41,7 @@ export interface SettingsRenameServices {
 export interface SettingsRenameAdapters {
   readonly renderSettings: () => void;
   readonly renderRename: () => void;
+  readonly renderMusic: () => void;
   readonly selectSettingsTab: (id: string) => void;
   readonly stepSetting: (key: string, direction: number) => void;
   readonly toggleSetting: (key: string) => void;
@@ -57,7 +62,6 @@ const settingsTabs = [
   ["audio", "AUDIO"],
   ["video", "VIDEO"],
   ["accessibility", "ACCESS"],
-  [MUSIC_SETTINGS_TAB, "MUSIC"],
 ] as const;
 
 export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRenameServices): SettingsRenameAdapters {
@@ -174,9 +178,21 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       ...(snapshot.error ? { message: snapshot.error } : {}),
     });
   };
+  // The MUSIC screen measures and clamps its own scroll, at every density.
+  const renderMusic = (): void => {
+    services.renderers.music(
+      buildMusicScreenView({
+        settings: services.settings,
+        library: getMusicLibrary(),
+        nowPlaying: getNowPlaying(),
+        preview: getMusicPreview(),
+      }),
+    );
+  };
   const adapters: SettingsRenameAdapters = {
     renderSettings,
     renderRename,
+    renderMusic,
     selectSettingsTab: (id) => {
       settingsTab = normalizeMusicSettingsTab(id);
       services.setScroll(0);

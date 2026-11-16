@@ -7,6 +7,7 @@ import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
+import { setMusicPreview } from "../../audio/music/preview";
 
 export interface ScreenActionBindingPorts {
   readonly controlChase?: (command: "toggle" | "stop") => void;
@@ -183,6 +184,12 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "settings.reset": () => {
       ports.resetSettings();
+    },
+    "music.preview": (action) => {
+      setMusicPreview(action.id);
+    },
+    "music.stopPreview": () => {
+      setMusicPreview(null);
     },
     "training-archive.open": () => {
       ports.setScreen("academy");

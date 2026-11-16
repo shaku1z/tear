@@ -215,6 +215,7 @@ export function createLiveScreenPresentationComposition(
       profile: library.renderProfile,
       achievements: library.renderAchievements,
       leaderboards: library.renderLeaderboards,
+      music: settings.renderMusic,
       rename: settings.renderRename,
       pgmenu: options.playground.renderMenu,
       pglab: options.playground.renderLab,

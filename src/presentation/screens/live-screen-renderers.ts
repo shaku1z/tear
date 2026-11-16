@@ -8,6 +8,7 @@ import type {
   GhostSupportScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
+  MusicScreenView,
   ScreenRendererTable,
   PlaygroundScreenView,
   ProfileScreenView,
@@ -178,6 +179,10 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
     },
     settings(view: SettingsScreenView) {
       if (renderers) renderers.settings(view);
+      else loadingFrame();
+    },
+    music(view: MusicScreenView) {
+      if (renderers) renderers.music(view);
       else loadingFrame();
     },
     rename(view: RenameScreenView) {

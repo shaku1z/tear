@@ -7,6 +7,7 @@ import { createPauseResultRenderers } from "./pause-results";
 import { createPlaygroundRenderers } from "./playground";
 import { createProfileAchievementRenderers } from "./profile-achievements";
 import { createSettingsRenameRenderers } from "./settings-rename";
+import { createMusicRenderers } from "./music";
 import { createAcademyRenderers } from "./academy";
 import { createTrainingOperationsRenderers } from "./training-operations";
 import { createGhostLabRenderers } from "./ghost-lab";
@@ -23,6 +24,7 @@ export function createScreenRenderers(context: ScreenRenderContext): ScreenRende
   const profileAchievements = createProfileAchievementRenderers(context);
   const leaderboardsReplays = createLeaderboardReplayRenderers(context);
   const settingsRename = createSettingsRenameRenderers(context);
+  const music = createMusicRenderers(context);
   const drafts = createDraftRenderers(context);
   const results = createPauseResultRenderers(context);
   const playground = createPlaygroundRenderers(context);
@@ -51,6 +53,7 @@ export function createScreenRenderers(context: ScreenRenderContext): ScreenRende
     profile: profileAchievements.profile,
     achievements: profileAchievements.achievements,
     leaderboards: leaderboardsReplays.leaderboards,
+    music: music.music,
     rename: settingsRename.rename,
     pgmenu: playground.pgmenu,
     pglab: playground.pglab,

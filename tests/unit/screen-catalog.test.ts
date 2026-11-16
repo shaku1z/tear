@@ -63,6 +63,7 @@ describe("screen catalog", () => {
       "profile",
       "achievements",
       "leaderboards",
+      "music",
       "rename",
       "pgmenu",
       "pglab",
@@ -83,6 +84,7 @@ describe("screen catalog", () => {
         "settings",
         "achievements",
         "leaderboards",
+        "music",
         "rename",
         "academy",
         "foundry",
@@ -128,10 +130,10 @@ describe("screen catalog", () => {
       ]),
     );
     expect(new Set(listed((screen) => screenDensity(screen) === "phone"))).toEqual(
-      new Set(["shop", "codex", "profile", "achievements", "leaderboards", "pgmenu", "pglab"]),
+      new Set(["shop", "codex", "profile", "achievements", "leaderboards", "music", "pgmenu", "pglab"]),
     );
     expect(new Set(listed(isSheetScreen))).toEqual(
-      new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings"]),
+      new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings", "music"]),
     );
     expect(new Set(listed(screenResetsScrollOnEnter))).toEqual(new Set(["shop", "draft", "reserve", "tierup"]));
     expect(ENGINEERING_SCREENS).toEqual([

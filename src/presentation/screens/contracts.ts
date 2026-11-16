@@ -445,6 +445,33 @@ export interface SettingsScreenView {
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
+/** A song's art tile: the hue and glyph of the stage it plays in (null draws the default tile). */
+export type MusicArtView = Readonly<{ hue: string; glyph: string }> | null;
+/** One track of the MUSIC song list. */
+export interface MusicSongView {
+  readonly id: string;
+  readonly number: number;
+  readonly title: string;
+  /** For example "The Grounds", "Boss · Echo" or "Menu"; empty when no route plays it. */
+  readonly where: string;
+  readonly art: MusicArtView;
+  readonly previewing: boolean;
+  readonly playing: boolean;
+}
+export interface MusicScreenView {
+  readonly id: "music";
+  /** The one view today; later views (a playlist, radio) become further tabs of this screen. */
+  readonly tab: "songs";
+  readonly title: string;
+  readonly subtitle: string;
+  /** What is sounding now, for the mini-player; null before anything has played. */
+  readonly nowPlaying: Readonly<{ title: string; where: string; art: MusicArtView; previewing: boolean }> | null;
+  /** Every catalogued song in catalog order; empty while the music index is still loading. */
+  readonly songs: readonly MusicSongView[];
+  readonly loading: boolean;
+  /** Station, menu music and soundtrack behavior, activated through `settings.activate`. */
+  readonly playback: readonly SettingRowView[];
+}
 export interface RenameScreenView {
   readonly id: "rename";
   readonly value: string;
@@ -697,6 +724,7 @@ export type ScreenView =
   | LeaderboardsScreenView
   | ReplayScreenView
   | SettingsScreenView
+  | MusicScreenView
   | RenameScreenView
   | DraftScreenView
   | ReserveScreenView

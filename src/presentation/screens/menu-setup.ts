@@ -179,7 +179,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
         ghost: true,
         label: view.nowPlaying.label,
         sub: view.nowPlaying.detail,
-        action: { type: "navigate", to: "settings", tab: "music" },
+        action: { type: "navigate", to: "music", resetScroll: true },
       });
     }
     const lastSlot = navSlot(Math.max(0, slot - 1)),

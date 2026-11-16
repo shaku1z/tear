@@ -549,6 +549,7 @@ describe("legacy screen renderer registry", () => {
       "ghostsupport",
       "leaderboards",
       "menu",
+      "music",
       "paused",
       "pglab",
       "pgmenu",
@@ -566,6 +567,54 @@ describe("legacy screen renderer registry", () => {
     expect(() => {
       registry.playing({ id: "playing" });
     }).not.toThrow();
+  });
+
+  it("draws the MUSIC screen with a preview control per visible song, the playback rows and BACK", () => {
+    const controls: ScreenControl[] = [];
+    let written = -1;
+    const songs = Array.from({ length: 14 }, (_, index) => ({
+      id: `song-${String(index)}`,
+      number: index + 1,
+      title: `Song ${String(index)}`,
+      where: index === 0 ? "Menu" : "",
+      art: index === 2 ? { hue: "#8b3bd6", glyph: "◇" } : null,
+      previewing: index === 1,
+      playing: index === 1,
+    }));
+    const view = {
+      id: "music" as const,
+      tab: "songs" as const,
+      title: "MUSIC",
+      subtitle: "14 songs · Tear soundtrack",
+      nowPlaying: { title: "Song 1", where: "", art: null, previewing: true },
+      songs,
+      loading: false,
+      playback: [{ key: "station", label: "Station", value: "AUTOMATIC", kind: "cycle" as const }],
+    };
+    const context = { ...createRenderContext(controls), scroll: 0, setScroll: (value: number) => (written = value) };
+    createScreenRenderers(context).music(view);
+    const previews = controls.filter((control) => control.action.type === "music.preview");
+    expect(previews.length).toBeGreaterThan(3);
+    expect(previews.length).toBeLessThan(14);
+    // The previewed row's control and the mini-player both stop the preview; PLAY previews the first song.
+    expect(controls.filter((control) => control.action.type === "music.stopPreview").map((c) => c.label)).toEqual([
+      "■",
+      "■  STOP",
+    ]);
+    expect(controls.find((control) => control.label === "▶  PLAY")?.action).toEqual({
+      type: "music.preview",
+      id: "song-0",
+    });
+    expect(controls.some((control) => control.label.includes("BACK"))).toBe(true);
+    for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
+    // Scrolled to the end, the playback rows come into view and the scroll is clamped to the list.
+    controls.length = 0;
+    createScreenRenderers({ ...context, scroll: 10_000 }).music(view);
+    expect(written).toBeGreaterThan(0);
+    expect(written).toBeLessThan(10_000);
+    expect(controls.find((control) => control.action.type === "settings.activate")).toMatchObject({
+      label: "AUTOMATIC",
+    });
   });
 
   it("records semantic navigation and menu actions without coordinating state", () => {
@@ -1594,7 +1643,12 @@ describe("release and engineering surface rendering", () => {
     const settings = controls.find((control) => control.label === "SETTINGS"),
       music = controls.find((control) => control.glyph === "♪");
     expect(settings).toMatchObject({ y: 670, h: 52 });
-    expect(music).toMatchObject({ x: 100, y: 731, h: 46, action: { type: "navigate", to: "settings", tab: "music" } });
+    expect(music).toMatchObject({
+      x: 100,
+      y: 731,
+      h: 46,
+      action: { type: "navigate", to: "music", resetScroll: true },
+    });
     // The footer tagline is drawn at height - 46; the release music row ends well above it.
     expect((music?.y ?? 0) + (music?.h ?? 0)).toBeLessThan(900 - 46 - 20);
   });

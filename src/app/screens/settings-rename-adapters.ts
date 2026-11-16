@@ -33,6 +33,7 @@ export interface SettingsRenameServices {
 export interface SettingsRenameAdapters {
   readonly renderSettings: () => void;
   readonly renderRename: () => void;
+  readonly renderMusic: () => void;
   readonly selectSettingsTab: (id: string) => void;
   readonly stepSetting: (key: string, direction: number) => void;
   readonly toggleSetting: (key: string) => void;
@@ -85,6 +86,11 @@ export function createLiveSettingsRenameAdapters(services: SettingsRenameService
     renderRename: () => {
       render((value) => {
         value.renderRename();
+      });
+    },
+    renderMusic: () => {
+      render((value) => {
+        value.renderMusic();
       });
     },
     selectSettingsTab: (id) => {

@@ -84,6 +84,8 @@ export type ScreenAction =
   | { readonly type: "settings.toggle"; readonly key: string }
   | { readonly type: "settings.activate"; readonly key: string }
   | { readonly type: "settings.reset" }
+  | { readonly type: "music.preview"; readonly id: string }
+  | { readonly type: "music.stopPreview" }
   | { readonly type: "training-archive.open" }
   | { readonly type: "training-archive.retry" }
   | { readonly type: "training-archive.dagger.advance"; readonly id: string }
