@@ -9,11 +9,15 @@
  * White Hart. Not counted: boss projectiles in flight (no collision here) and body contact.
  * Exposed time is the time the boss reports an "exposed" tell (a move's punish stage).
  * TEAR_BOSS_PRESSURE_REPORT=1 prints the measured table.
+ *
+ * READING_PLAYER_RECORD is the same fight against a player who reads the marks and does nothing clever:
+ * it jumps a lane and walks off any other marked area at run speed. It shows how much of a boss's damage
+ * is pressure a player can answer, and how much lands anyway.
  */
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
-import { bossTells } from "../../src/gameplay/entities/boss-tells";
+import { bossTellCovers, bossTells } from "../../src/gameplay/entities/boss-tells";
 import type { EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
 import { bindLiveRootboundActors } from "../../src/gameplay/environment/biome-actors/rootbound-actors";
 import { bindLiveWhiteHartActors } from "../../src/gameplay/environment/biome-actors/white-hart-actors";
@@ -32,7 +36,9 @@ type Boss = BehaviorActor & { introT: number; cinematicRequest: unknown; cinemat
 type PhaseRow = readonly [travelPerSecond: number, hits: number, damage: number, exposedSeconds: number];
 type Measured = readonly [PhaseRow, PhaseRow, PhaseRow];
 
-function measure(id: BossId, phase: 1 | 2 | 3): PhaseRow {
+type PlayerKind = "walker" | "reader";
+
+function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): PhaseRow {
   const harness = createEnemyHarness([0.25, 0.75, 0.4, 0.6, 0.1, 0.9]);
   const types = {
     warden: harness.types.Warden,
@@ -76,13 +82,32 @@ function measure(id: BossId, phase: 1 | 2 | 3): PhaseRow {
     );
   let travel = 0,
     exposedTicks = 0,
-    lastX = boss.x;
+    lastX = boss.x,
+    jumpT = 0;
+  const floorY = CONFIG.world.groundY - 36;
   for (let tick = 0; tick < SECONDS / DT; tick += 1) {
     const seconds = tick * DT;
-    player.x = 300 + 1000 * (0.5 - 0.5 * Math.cos(seconds * 0.6));
-    const jumping = Math.floor(seconds) % 4 === 0;
-    player.y = CONFIG.world.groundY - 36 - (jumping ? 120 * Math.sin((seconds % 1) * Math.PI) : 0);
-    player.onGround = !jumping;
+    if (kind === "walker") {
+      player.x = 300 + 1000 * (0.5 - 0.5 * Math.cos(seconds * 0.6));
+      const jumping = Math.floor(seconds) % 4 === 0;
+      player.y = floorY - (jumping ? 120 * Math.sin((seconds % 1) * Math.PI) : 0);
+      player.onGround = !jumping;
+    } else {
+      // Reads the marks: jumps a lane it stands in, walks out of any other marked area.
+      const standing = { x: player.x, y: floorY, hw: player.hw, hh: player.hh };
+      const threat = bossTells(boss).find(
+        (tell) => tell.damaging && tell.stage !== "exposed" && bossTellCovers(tell, standing),
+      );
+      if (threat?.mark === "lane" && jumpT <= 0 && threat.remainingSeconds <= 0.25) jumpT = 0.75;
+      else if (threat !== undefined && threat.mark !== "lane") {
+        const away = player.x >= threat.x ? 1 : -1;
+        const side = player.x + away * 200 > CONFIG.view.w - 40 || player.x + away * 200 < 40 ? -away : away;
+        player.x += side * CONFIG.player.moveSpeed * DT;
+      }
+      jumpT = Math.max(0, jumpT - DT);
+      player.y = floorY - (jumpT > 0 ? 200 * Math.sin((1 - jumpT / 0.75) * Math.PI) : 0);
+      player.onGround = jumpT <= 0;
+    }
     iframe = Math.max(0, iframe - DT);
     player.invulnerable = iframe > 0;
     environment.step(
@@ -137,11 +162,26 @@ const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
   rootbound: [
     [150, 14, 252, 9.1],
     [0, 5, 70, 0],
-    [72, 13, 268, 4.6],
+    [72, 12, 248, 4.6],
   ],
 };
 
+/** Rootbound Phases I and III against the reading player: what is left once the marks are answered. */
+// Phase I: every move can be answered. Phase III: what still lands is the old Last Spring floor band,
+// which wants a platform, not a step aside; it is rebuilt with Phase III.
+const READING_PLAYER_RECORD: readonly [PhaseRow, PhaseRow] = [
+  [44, 0, 0, 2.5],
+  [26, 10, 208, 1.9],
+];
+
 describe("boss pressure report", { timeout: 180_000 }, () => {
+  it("rootbound's move phases are answerable: a player who reads the marks takes far less", () => {
+    const measured = [measure("rootbound", 1, "reader"), measure("rootbound", 3, "reader")] as const;
+    if (process.env.TEAR_BOSS_PRESSURE_REPORT === "1") console.log(`rootbound reader: ${JSON.stringify(measured)}`);
+    expect(measured).toEqual(READING_PLAYER_RECORD);
+    expect(measured[0][2]).toBeLessThan(BOSS_PRESSURE_RECORD.rootbound[0][2] / 2);
+  });
+
   it.each(BOSSES)("%s matches its recorded movement and hits against a moving player", (id) => {
     const measured: Measured = [measure(id, 1), measure(id, 2), measure(id, 3)];
     if (process.env.TEAR_BOSS_PRESSURE_REPORT === "1") console.log(`${id}: ${JSON.stringify(measured)}`);

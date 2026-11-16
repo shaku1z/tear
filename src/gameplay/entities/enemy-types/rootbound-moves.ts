@@ -8,7 +8,10 @@ import { buildBossAttackTable, type BossAttackTable } from "../boss-attacks";
 
 export type RootboundPhase = 1 | 2 | 3;
 
-/** Distances follow the 118 px boss body: half height 59, so `dy` 19 puts a hit at knee to hip height. */
+/**
+ * Distances follow the 118 px boss body: half height 59, so `dy` 19 puts a hit at knee to hip height.
+ * Root Glide's box is raised 34 px from the locked player centre so it stands on the floor, not through it.
+ */
 export const ROOTBOUND_MOVES: BossAttackTable<RootboundPhase> = buildBossAttackTable<RootboundPhase>({
   bossId: "rootbound",
   phases: [1, 3],
@@ -32,7 +35,7 @@ export const ROOTBOUND_MOVES: BossAttackTable<RootboundPhase> = buildBossAttackT
       timing: { tell: 0.75, active: 0.2, recover: 0.25, punish: 0.7 },
       choose: { range: [380, 1600], weight: 2, cooldown: 3 },
       motion: { kind: "burrow", stage: "tell" },
-      hit: { shape: { kind: "box", anchor: "target", dx: 0, dy: 0, hw: 72, hh: 70 }, damage: 20, parryable: false },
+      hit: { shape: { kind: "box", anchor: "target", dx: 0, dy: -34, hw: 72, hh: 70 }, damage: 20, parryable: false },
       tell: { mark: "box" },
     },
     {

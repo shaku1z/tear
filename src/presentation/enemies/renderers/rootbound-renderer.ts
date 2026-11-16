@@ -198,9 +198,21 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       }
       ctx.translate(this.x, footY);
       if (this.dying) ctx.rotate(this.facing * this.deathP * 0.4);
-      // Leans into a wind-up, sags while exposed after a heavy move.
+      // Leans into a wind-up. Exposed after a heavy move or a parry: slumped forward inside a bright
+      // ring that drains as the opening closes, so it cannot be mistaken for the idle stance.
       if (pose?.stage === "tell") ctx.rotate(-this.facing * 0.08 * pose.progress);
-      else if (pose?.stage === "punish") ctx.scale(1, 0.9);
+      else if (pose?.stage === "punish") {
+        ctx.save();
+        ctx.strokeStyle = A11Y.highContrast ? "#ffffff" : "#7fe3ff";
+        ctx.lineWidth = 7;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(0, -this.hh, this.hh * 1.55, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - pose.progress));
+        ctx.stroke();
+        ctx.restore();
+        ctx.rotate(this.facing * 0.2);
+        ctx.scale(1.06, 0.8);
+      }
 
       // Intro pose: the keeper rises out of the throne while the mantle opens.
       ctx.scale(lerp(0.9, 1, intro), lerp(0.72, 1, intro));
