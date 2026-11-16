@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import { RELEASE_REPOSITORY } from "./release-artifact.mjs";
 import { assertCampaignPublicationAllowed, readCampaignPublicationPolicy } from "./campaign-publication-boundary.mjs";
 
+/** Files outside the validated artifact that a production deploy reads from main's head. */
+export const RELEASE_INPUT_PATHS = Object.freeze(["wrangler.jsonc"]);
+
 function runGit(root, args) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" });
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${(result.stderr || result.stdout).trim()}`);
@@ -42,8 +45,24 @@ export async function validateReleaseRepository({
       `main must exactly equal origin/main (ahead=${String(ahead)}, behind=${String(behind)}, HEAD=${head}, origin/main=${remote})`,
     );
   }
-  if (expectedSha !== undefined && head !== expectedSha.toLowerCase()) {
-    throw new Error(`release HEAD ${head} does not equal expected validated SHA ${expectedSha.toLowerCase()}`);
+  // The validated commit is main's head or an earlier commit on main's own line, so a merge that
+  // lands while a release is being prepared does not invalidate it. The tooling and Wrangler
+  // configuration always come from main's head, so they must not differ from the validated commit's.
+  const release = expectedSha === undefined ? head : expectedSha.toLowerCase();
+  if (release !== head) {
+    if (!/^[0-9a-f]{40}$/u.test(release)) throw new Error(`expected validated SHA ${release} is not a full SHA`);
+    const line = runGit(repositoryRoot, ["rev-list", "--first-parent", "HEAD"]).split(/\s+/u);
+    if (!line.includes(release)) {
+      throw new Error(
+        `validated SHA ${release} is not a commit on main (HEAD ${head}); only main commits can be released`,
+      );
+    }
+    const changed = runGit(repositoryRoot, ["diff", "--name-only", release, head, "--", ...RELEASE_INPUT_PATHS]);
+    if (changed !== "") {
+      throw new Error(
+        `release inputs changed on main since validated SHA ${release}; deploy main's head instead:\n${changed}`,
+      );
+    }
   }
   const evidence = JSON.parse(await readFile(resolve(evidencePath), "utf8"));
   const evidenceErrors = [];
@@ -51,7 +70,7 @@ export async function validateReleaseRepository({
     evidenceErrors.push("unsupported evidence format");
   if (evidence.repository !== expectedRepository)
     evidenceErrors.push(`repository ${String(evidence.repository)} != ${expectedRepository}`);
-  if (evidence.sha !== head) evidenceErrors.push(`SHA ${String(evidence.sha)} != ${head}`);
+  if (evidence.sha !== release) evidenceErrors.push(`SHA ${String(evidence.sha)} != ${release}`);
   if (evidence.validationWorkflow !== "Validate") evidenceErrors.push("validation workflow is not Validate");
   if (evidence.validationConclusion !== "success") evidenceErrors.push("validation conclusion is not success");
   if (!/^[1-9][0-9]*$/u.test(String(evidence.validationRunId))) evidenceErrors.push("validation run ID is missing");
@@ -59,7 +78,7 @@ export async function validateReleaseRepository({
   assertCampaignPublicationAllowed(await readCampaignPublicationPolicy(repositoryRoot));
   return Object.freeze({
     repository: expectedRepository,
-    sha: head,
+    sha: release,
     validationRunId: String(evidence.validationRunId),
   });
 }

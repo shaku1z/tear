@@ -13,10 +13,6 @@ export {
   parseC30TrainingCapacityDeclaration,
 } from "./production-headless-capacity-declaration";
 import { createProductionHeadlessEpisodePool, type ProductionHeadlessJob } from "./production-headless-environment";
-import {
-  ProductionHeadlessAcademyIntake,
-  type ProductionHeadlessAcademyIntakeSnapshot,
-} from "./production-headless-academy-intake";
 
 export const C30_NATURAL_EPISODE_BENCHMARK_PROFILE = Object.freeze({
   id: "c30-natural-opening-v1",
@@ -81,13 +77,11 @@ export interface ProductionHeadlessBenchmarkArtifact {
     maxEpisodeMilliseconds: number;
     semanticHashes: readonly string[];
     sampledArtifacts: number;
-    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
   }>;
   readonly repeat: Readonly<{
     elapsedMilliseconds: number;
     episodesPerMinute: number;
     semanticHashes: readonly string[];
-    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
   }>;
   readonly deterministic: boolean;
   readonly budget: Readonly<{
@@ -118,7 +112,6 @@ export interface ProductionHeadlessLongRunArtifact {
     maxEpisodeMilliseconds: number;
     semanticHashes: readonly string[];
     sampledArtifacts: number;
-    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
   }>[];
   readonly deterministic: boolean;
   readonly aggregate: Readonly<{
@@ -129,12 +122,6 @@ export interface ProductionHeadlessLongRunArtifact {
     p95EpisodeMilliseconds: number;
     maxEpisodeMilliseconds: number;
     sampledArtifacts: number;
-    academyIntake: Readonly<{
-      accepted: number;
-      backpressured: number;
-      closed: number;
-      maximumQueued: number;
-    }>;
   }>;
   readonly budget: Readonly<{
     episodesPerMinute: "met" | "below";
@@ -161,13 +148,11 @@ export interface ProductionHeadlessTrainingCapacityWorkloadArtifact {
     maxEpisodeMilliseconds: number;
     semanticHashes: readonly string[];
     sampledArtifacts: number;
-    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
   }>;
   readonly repeat: Readonly<{
     elapsedMilliseconds: number;
     episodesPerMinute: number;
     semanticHashes: readonly string[];
-    academyIntake: ProductionHeadlessAcademyIntakeSnapshot;
   }>;
   readonly deterministic: boolean;
   readonly budget: Readonly<{
@@ -281,7 +266,6 @@ async function runProductionWorkload(
   now: () => number,
   sampleMemory: () => void,
   retainArtifacts: boolean,
-  academyIntake: ProductionHeadlessAcademyIntake,
   cycle?: number,
 ) {
   const sampler = new BoundedArtifactSampler(profile.artifactSampleLimit);
@@ -294,9 +278,6 @@ async function runProductionWorkload(
       batchSize: profile.batchSize,
       now,
       ...(retainArtifacts ? { artifactSampler: sampler } : {}),
-      artifactConsumer: (sample) => {
-        academyIntake.offer(sample);
-      },
       onCompleted: (_job, _episode, elapsedMilliseconds) => {
         latencies.push(elapsedMilliseconds);
         sampleMemory();
@@ -305,7 +286,6 @@ async function runProductionWorkload(
   );
   return Object.freeze({
     ...summarize(episodes, Math.max(0, now() - startedAt), latencies, sampler.samples().length),
-    academyIntake: academyIntake.snapshot(),
   });
 }
 
@@ -337,13 +317,7 @@ export async function measureProductionHeadlessEpisodes(
   };
   sampleMemory();
   const execute = (retainArtifacts: boolean) =>
-    runProductionWorkload(
-      C30_NATURAL_EPISODE_BENCHMARK_PROFILE,
-      now,
-      sampleMemory,
-      retainArtifacts,
-      new ProductionHeadlessAcademyIntake(C30_NATURAL_EPISODE_BENCHMARK_PROFILE.artifactSampleLimit),
-    );
+    runProductionWorkload(C30_NATURAL_EPISODE_BENCHMARK_PROFILE, now, sampleMemory, retainArtifacts);
   const firstPass = await execute(true);
   const repeat = await execute(false);
   sampleMemory();
@@ -361,7 +335,6 @@ export async function measureProductionHeadlessEpisodes(
       elapsedMilliseconds: repeat.elapsedMilliseconds,
       episodesPerMinute: repeat.episodesPerMinute,
       semanticHashes: repeat.semanticHashes,
-      academyIntake: repeat.academyIntake,
     }),
     deterministic: firstPass.semanticHashes.every((hash, index) => hash === repeat.semanticHashes[index]),
     budget: Object.freeze({
@@ -418,16 +391,7 @@ export async function measureProductionHeadlessLongRun(
   });
   const cycles = [] as Awaited<ReturnType<typeof runProductionWorkload>>[];
   for (let index = 1; index <= C30_LONG_RUN_LEAK_PROFILE.cycles; index += 1) {
-    cycles.push(
-      await runProductionWorkload(
-        workload,
-        now,
-        sampleMemory,
-        index === 1,
-        new ProductionHeadlessAcademyIntake(C30_LONG_RUN_LEAK_PROFILE.artifactSampleLimit),
-        index,
-      ),
-    );
+    cycles.push(await runProductionWorkload(workload, now, sampleMemory, index === 1, index));
     options.collectGarbage?.();
     sampleMemory();
   }
@@ -460,12 +424,6 @@ export async function measureProductionHeadlessLongRun(
       p95EpisodeMilliseconds: percentile(latencies, 0.95),
       maxEpisodeMilliseconds: Math.max(0, ...latencies),
       sampledArtifacts: cycles.reduce((total, cycle) => total + cycle.sampledArtifacts, 0),
-      academyIntake: Object.freeze({
-        accepted: cycles.reduce((total, cycle) => total + cycle.academyIntake.accepted, 0),
-        backpressured: cycles.reduce((total, cycle) => total + cycle.academyIntake.backpressured, 0),
-        closed: cycles.reduce((total, cycle) => total + cycle.academyIntake.closed, 0),
-        maximumQueued: Math.max(0, ...cycles.map((cycle) => cycle.academyIntake.queued)),
-      }),
     }),
     budget: Object.freeze({
       episodesPerMinute:
@@ -542,20 +500,8 @@ export async function measureProductionHeadlessTrainingCapacity(
     options.collectGarbage?.();
     sampleMemory();
     const profile = declaredWorkloadProfile(declaration, workload);
-    const firstPass = await runProductionWorkload(
-      profile,
-      now,
-      sampleMemory,
-      true,
-      new ProductionHeadlessAcademyIntake(workload.artifactSampleLimit),
-    );
-    const repeat = await runProductionWorkload(
-      profile,
-      now,
-      sampleMemory,
-      false,
-      new ProductionHeadlessAcademyIntake(workload.artifactSampleLimit),
-    );
+    const firstPass = await runProductionWorkload(profile, now, sampleMemory, true);
+    const repeat = await runProductionWorkload(profile, now, sampleMemory, false);
     options.collectGarbage?.();
     sampleMemory();
     const beforeBytes = samples[0];
@@ -573,7 +519,6 @@ export async function measureProductionHeadlessTrainingCapacity(
           elapsedMilliseconds: repeat.elapsedMilliseconds,
           episodesPerMinute: repeat.episodesPerMinute,
           semanticHashes: repeat.semanticHashes,
-          academyIntake: repeat.academyIntake,
         }),
         deterministic,
         budget: capacityBudget(firstPass, workload.budget, retainedDeltaBytes, options.collectGarbage !== undefined),

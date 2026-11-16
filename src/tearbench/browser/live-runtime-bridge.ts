@@ -8,9 +8,8 @@ import type {
   TearRuntimeEnvironment,
 } from "../live-runtime-contracts";
 import { createLiveTearRuntimeEnvironment } from "../live-runtime-environment";
-import { installReplayHubPanel } from "./replay-hub";
 import { installLiveStateForgeStudio } from "./live-state-forge-studio-host";
-import { isAgentSurfaceRequested, isCanonicalAgentSurfaceRequested } from "../../agents/surface-route";
+import { isWatchAgentRequested } from "./watch-agent-route";
 import type { TearGhostManifest } from "../../ghost/capsule-vault";
 import type { GhostReadCapsule } from "../../ghost/capsule-reader";
 import type { GhostCapsuleReplayMapping } from "../../ghost/capsule-replay-envelope";
@@ -200,39 +199,10 @@ export function installLiveTearRuntimeBridge(
     writable: false,
     value: factory,
   });
-  installReplayHubPanel(factory);
   installLiveStateForgeStudio(factory);
-  const search = target.location.search;
-  if (isAgentSurfaceRequested(search, "run-monitor")) {
-    if (isCanonicalAgentSurfaceRequested(search, "run-monitor")) {
-      void Promise.all([import("../../agents/run-monitor"), import("../../agents/browser-active-policy-runtime")]).then(
-        async ([{ installRunMonitor }, { createBrowserActivePolicyRuntime }]) => {
-          const policy = await createBrowserActivePolicyRuntime(target.indexedDB);
-          installRunMonitor(
-            context,
-            target,
-            policy?.runtime,
-            policy?.decisionJournal,
-            policy?.canonicalRuntime,
-            policy?.postPromotionMonitor,
-          );
-        },
-      );
-    } else {
-      void Promise.all([
-        import("../../agents/live-watch-agent-host"),
-        import("../../agents/browser-active-policy-runtime"),
-      ]).then(async ([{ installLiveWatchAgentHost }, { createBrowserActivePolicyRuntime }]) => {
-        const policy = await createBrowserActivePolicyRuntime(target.indexedDB);
-        installLiveWatchAgentHost(
-          context,
-          target,
-          policy?.runtime,
-          policy?.decisionJournal,
-          policy?.canonicalRuntime,
-          policy?.postPromotionMonitor,
-        );
-      });
-    }
+  if (isWatchAgentRequested(target.location.search)) {
+    void import("../../agents/live-watch-agent-host").then(({ installLiveWatchAgentHost }) => {
+      installLiveWatchAgentHost(context, target);
+    });
   }
 }

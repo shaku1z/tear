@@ -12,9 +12,10 @@ G7 eligible/open; certificate absent; dashboard certified count 0.
 Capability evidence is `artifacts/tearbench/generated/diff-capability.json`,
 last-run and non-cumulative.
 
-This document is the repository entry point for the TearBench, Scenario Console,
-Game Agent, and Ghost 3.0 program. Historical State Forge, TearBot, and Ghost
-Lab names remain readable only where they identify preserved compatibility or source evidence.
+This document is the repository entry point for the TearBench and Ghost 3.0
+program. The agent training pipelines, their screens and the G4 alias names were
+removed under [D-013](DECISIONS.md#d-013); historical names remain only in
+preserved source evidence.
 
 ## Authority
 
@@ -78,7 +79,7 @@ an explicit decision. Do not silently delete earlier intent.
 
 The earlier C0-C20 reports demonstrate contract scaffolding and focused tests.
 They are not evidence that real gameplay integration, durable storage, machine
-learning, automatic Foundry operation, player-facing UI, cloud operation, or
+learning, player-facing UI, cloud operation, or
 end-to-end release certification is complete.
 
 ## Products
@@ -88,12 +89,10 @@ end-to-end release certification is complete.
 - **Scenario Console** owns the governed scenario/state-tooling boundary: state
   codecs, snapshots, restoration, legal history, synthesis, validation,
   migration, time travel, and counterfactual forks. State Forge remains a compatibility module.
-- **Game Agent** owns scripted and learned policies, Training Archive,
-  calibration, Levels 1-9, Level Omega, and Training Operations. Historical
-  TearBot/Academy/Foundry names remain only in compatibility and evidence records.
+- **Watch Agent** is the scripted test player (`?watchagent=1` in test builds).
 - **Ghost 3.0** owns causal recording, replay truth, local Vault, Theater,
   practice, comparison, Doctor, libraries, coaching, challenges, Replay Editor,
-  publication, verification, and preservation. Replay Hub is the current local player surface.
+  publication, verification, and preservation.
 
 These products share contracts but not oversized mutable runtime objects.
 
@@ -134,8 +133,7 @@ This overlay does not modify preserved source wording or hash-bound checkpoint r
 
 | Checkpoint | Status | Verified scope and evidence |
 |---|---|---|
-| C32 | Closed | Policy runtime and artifact-registry gate only; see [C32 evidence](checkpoints/C32_POLICY_RUNTIME_ARTIFACT_REGISTRY.md). |
-| C37 | Partial | Bounded Replay Hub and embedded Run Monitor; standalone Replay Editor, Coach, challenges, and trusted Game Agent Evidence remain unavailable; see [C37 evidence](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md). |
+| C37 | Partial | Standalone Replay Editor, Coach and challenges remain unavailable; see [C37 evidence](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md). |
 | C40 | Incomplete | Existing verifier foundation is not an end-to-end clean-commit release certificate; see [C40 evidence](checkpoints/C40_RELEASE_EVIDENCE_MANIFEST.md). |
 
 Current detached C29/C30 evidence covers source-owned Sword, Hammer, Greatsword,

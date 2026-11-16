@@ -22,14 +22,7 @@ import { MODE_CATALOG, RELEASE_FALLBACK_MODE, admittedRunMode, modeSurface } fro
 const RELEASE = createSurfaceAvailability("release");
 const ENGINEERING = createSurfaceAvailability("engineering");
 const SURFACES = Object.keys(SURFACE_CHANNEL) as SurfaceId[];
-const ENGINEERING_SCREENS = [
-  "academy",
-  "foundry",
-  "ghostlab",
-  "botevidence",
-  "ghostpublication",
-  "ghostsupport",
-] as const;
+const ENGINEERING_SCREENS = ["ghostpublication", "ghostsupport"] as const;
 
 describe("surface availability policy", () => {
   it("is a frozen source-owned table whose release channel admits only release surfaces", () => {
@@ -50,19 +43,6 @@ describe("surface availability policy", () => {
     for (const screen of ["menu", "setup", "profile", "replay", "leaderboards", "playing"])
       expect(screenSurface(screen), screen).toBeUndefined();
     const engineering: readonly ScreenAction[] = [
-      { type: "training-archive.open" },
-      { type: "academy.retry" },
-      { type: "training-operations.open" },
-      { type: "foundry.refresh" },
-      { type: "game-agent.open" },
-      { type: "run-monitor.open" },
-      { type: "run-monitor.control", command: "start" },
-      { type: "replay.hub.open", destination: "vault" },
-      { type: "replay.hub.watch", command: "pause" },
-      { type: "ghostlab.open", destination: "career" },
-      { type: "ghostlab.watch", command: "stop" },
-      { type: "navigate", to: "ghostlab" },
-      { type: "navigate", to: "academy" },
       { type: "setup.start", race: true },
       { type: "setup.selectBoss", id: "warden" },
       { type: "career.control", command: "race" },
@@ -114,18 +94,13 @@ describe("surface availability policy", () => {
     const routed = vi.fn<(action: ScreenAction) => void>();
     const release = gateScreenActions(RELEASE, routed),
       engineering = gateScreenActions(ENGINEERING, routed);
-    release({ type: "training-archive.open" });
-    release({ type: "training-operations.open" });
-    release({ type: "game-agent.open" });
-    release({ type: "replay.hub.open", destination: "watch" });
-    release({ type: "navigate", to: "ghostlab" });
-    release({ type: "run-monitor.control", command: "start" });
+    release({ type: "replay.coach.open" });
     release({ type: "setup.start", race: true });
     expect(routed).not.toHaveBeenCalled();
     release({ type: "setup.start" });
     expect(routed).toHaveBeenCalledExactlyOnceWith({ type: "setup.start" });
-    engineering({ type: "training-archive.open" });
-    expect(routed).toHaveBeenLastCalledWith({ type: "training-archive.open" });
+    engineering({ type: "replay.coach.open" });
+    expect(routed).toHaveBeenLastCalledWith({ type: "replay.coach.open" });
   });
 });
 
@@ -189,9 +164,9 @@ describe("application state controller surface guard", () => {
   });
   it("keeps every engineering screen enterable in engineering builds", () => {
     const controller = new AppStateController(ENGINEERING);
-    expect(controller.transition("ghostlab")).toBe("ghostlab");
-    expect(controller.transition("botevidence")).toBe("botevidence");
-    expect(controller.transition("menu")).toBe("menu");
-    expect(controller.transition("academy")).toBe("academy");
+    expect(controller.transition("profile")).toBe("profile");
+    expect(controller.transition("ghostpublication")).toBe("ghostpublication");
+    expect(controller.transition("profile")).toBe("profile");
+    expect(controller.transition("ghostsupport")).toBe("ghostsupport");
   });
 });

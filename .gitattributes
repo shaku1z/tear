@@ -16,6 +16,10 @@ js/DESIGN_SYSTEM.md export-ignore
 
 docs/tearbench-ghost3-requirements.digest.json text eol=lf
 docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md text eol=lf
+
+# Generated wiki pictures are binary and must never be line-ending converted.
+wiki/pictures/**/*.webp binary
+
 # Git hooks run under sh, which fails on CRLF; keep the governance guard LF on every checkout.
 scripts/governance/hooks/* text eol=lf
 scripts/governance/*.mjs text eol=lf
