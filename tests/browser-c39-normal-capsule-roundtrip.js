@@ -72,6 +72,7 @@ async function installObservation(page) {
         )
       )
         observation.status = text;
+      if (text === "VAULT") observation.vaultTab = { x: args[0], y: args[1] };
       observation.recent.push(text);
       if (observation.recent.length > 160) observation.recent.shift();
       return original.call(this, value, ...args);
@@ -147,7 +148,9 @@ async function waitStatus(page, expected) {
 }
 async function openVault(journey) {
   await journey.clickAndWait(260, 266, "profile");
-  await journey.page.mouse.click(875, 271);
+  await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.vaultTab, undefined, { timeout: STATE_WAIT_MS });
+  const vaultTab = await journey.page.evaluate(() => window.__C39_FILE_TEXT__.vaultTab);
+  await journey.page.mouse.click(vaultTab.x, vaultTab.y); // The drawn VAULT tab label.
   await settle(journey.page);
   await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.status !== null, undefined, {
     timeout: STATE_WAIT_MS,

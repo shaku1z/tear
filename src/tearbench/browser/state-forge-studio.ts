@@ -2,8 +2,7 @@ import type { TearProvenanceV1 } from "../contracts";
 import type { StateForgeEvaluation, StateForgeReport, StateForgeValueDiff } from "../state-forge-studio-model";
 import { diffStateForgeValues, evaluateStateForgeSource } from "../state-forge-studio-model";
 import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
-import { isScenarioConsoleRequested } from "./scenario-console-route";
-import { SCENARIO_CONSOLE_DOM_SELECTOR_ALIASES } from "./scenario-console-selectors";
+import { isSnapshotEditorRequested } from "./snapshot-editor-route";
 
 export interface StateForgeCheckpointItem {
   readonly id: string;
@@ -64,12 +63,6 @@ function button(label: string, action: () => void): HTMLButtonElement {
   const value = element("button", label);
   value.type = "button";
   value.addEventListener("click", action);
-  return value;
-}
-
-function actionButton(label: string, action: () => void, actionName: string): HTMLButtonElement {
-  const value = button(label, action);
-  value.dataset.scenarioConsoleAction = actionName;
   return value;
 }
 
@@ -135,10 +128,8 @@ function defaultDiff(
 
 function createPanel(): HTMLElement {
   const panel = element("aside");
-  panel.id = "tear-state-forge-studio";
-  panel.dataset.surface = "scenario-console";
-  panel.dataset.legacySurface = "state-forge-studio";
-  panel.setAttribute("aria-label", "Scenario Console");
+  panel.id = "tear-snapshot-editor";
+  panel.setAttribute("aria-label", "Snapshot editor");
   Object.assign(panel.style, {
     position: "fixed",
     inset: "12px",
@@ -155,43 +146,33 @@ function createPanel(): HTMLElement {
 
 function createElements(panel: HTMLElement, host: StateForgeStudioHost): StudioElements {
   const editor = element("textarea");
-  editor.id = "tear-state-forge-editor";
-  editor.dataset.scenarioConsoleControl = "editor";
+  editor.id = "tear-snapshot-editor-source";
   editor.value = host.initialSource;
   editor.rows = 20;
   editor.style.width = "100%";
   const status = element("p", "Ready.");
   status.setAttribute("role", "status");
-  status.dataset.scenarioConsole = "status";
   const reports = element("section");
   reports.setAttribute("aria-label", "Validation reports");
-  reports.dataset.scenarioConsole = "validation-reports";
   const structural = element("article");
   const reachability = element("article");
   const plausibility = element("article");
   reports.append(structural, reachability, plausibility);
   const timeline = element("select");
-  timeline.id = "tear-state-forge-timeline";
-  timeline.dataset.scenarioConsoleControl = "timeline";
+  timeline.id = "tear-snapshot-editor-timeline";
   const comparison = element("select");
-  comparison.id = "tear-state-forge-comparison";
-  comparison.dataset.scenarioConsoleControl = "comparison";
+  comparison.id = "tear-snapshot-editor-comparison";
   const provenance = element("section");
-  provenance.dataset.scenarioConsole = "provenance";
   const diff = element("section");
-  diff.dataset.scenarioConsole = "diff";
   const forkId = element("input");
-  forkId.dataset.scenarioConsoleControl = "fork-id";
   forkId.placeholder = "fork-id";
   const forkPatch = element("textarea");
-  forkPatch.dataset.scenarioConsoleControl = "fork-patch";
   forkPatch.value = "{}";
   forkPatch.rows = 5;
   const launch = element("button", "Launch scenario");
   launch.type = "button";
-  launch.dataset.scenarioConsoleAction = "launch";
   panel.append(
-    element("h2", "Scenario Console"),
+    element("h2", "Snapshot editor"),
     labelledControl("Scenario editor", editor),
     status,
     reports,
@@ -219,13 +200,12 @@ function createElements(panel: HTMLElement, host: StateForgeStudioHost): StudioE
 }
 
 export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement | null {
-  if (!isScenarioConsoleRequested(window.location.search)) return null;
-  const existing = document.querySelector<HTMLElement>(SCENARIO_CONSOLE_DOM_SELECTOR_ALIASES.root);
+  if (!isSnapshotEditorRequested(window.location.search)) return null;
+  const existing = document.getElementById("tear-snapshot-editor");
   if (existing !== null) return existing;
   const panel = createPanel();
   const controls = element("nav");
-  controls.setAttribute("aria-label", "Scenario Console actions");
-  controls.dataset.scenarioConsole = "actions";
+  controls.setAttribute("aria-label", "Snapshot editor actions");
   Object.assign(controls.style, {
     display: "flex",
     flexWrap: "wrap",
@@ -277,7 +257,6 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
   importInput.type = "file";
   importInput.accept = ".json,.tearsdl,application/json";
   importInput.setAttribute("aria-label", "Import TearSDL");
-  importInput.dataset.scenarioConsoleControl = "import";
   importInput.addEventListener("change", () => {
     const file = importInput.files?.[0];
     if (file === undefined) return;
@@ -292,51 +271,39 @@ export function installStateForgeStudio(host: StateForgeStudioHost): HTMLElement
     );
   });
   controls.append(
-    actionButton("Validate", validate, "validate"),
+    button("Validate", validate),
     importInput,
-    actionButton(
-      "Export",
-      () => {
-        host.exportScenario(`${evaluation.document?.id ?? "scenario"}.tearsdl.json`, parts.editor.value);
-      },
-      "export",
-    ),
-    actionButton(
-      "Watch checkpoint",
-      () => {
-        const checkpoint = selectedCheckpoint();
-        if (checkpoint === undefined) return;
-        try {
-          host.watch(checkpoint.id);
-          parts.status.textContent = `Watching ${checkpoint.id} in the live runtime.`;
-        } catch (error) {
-          parts.status.textContent = `Watch failed: ${error instanceof Error ? error.message : "unknown error"}`;
-        }
-      },
-      "watch",
-    ),
+    button("Export", () => {
+      host.exportScenario(`${evaluation.document?.id ?? "scenario"}.tearsdl.json`, parts.editor.value);
+    }),
+    button("Watch checkpoint", () => {
+      const checkpoint = selectedCheckpoint();
+      if (checkpoint === undefined) return;
+      try {
+        host.watch(checkpoint.id);
+        parts.status.textContent = `Watching ${checkpoint.id} in the live runtime.`;
+      } catch (error) {
+        parts.status.textContent = `Watch failed: ${error instanceof Error ? error.message : "unknown error"}`;
+      }
+    }),
     parts.launch,
-    actionButton(
-      "Fork checkpoint",
-      () => {
-        const checkpoint = selectedCheckpoint();
-        if (checkpoint === undefined) return;
-        try {
-          const patch = JSON.parse(parts.forkPatch.value) as unknown;
-          if (!isRecord(patch)) {
-            throw new TypeError("Fork patch must be a JSON object.");
-          }
-          const created = host.fork({ parentId: checkpoint.id, id: parts.forkId.value, patch });
-          refreshCheckpoints();
-          parts.timeline.value = created.id;
-          refreshSelection();
-          parts.status.textContent = `Forked ${created.id} from ${checkpoint.id}.`;
-        } catch (error) {
-          parts.status.textContent = `Fork failed: ${error instanceof Error ? error.message : "unknown error"}`;
+    button("Fork checkpoint", () => {
+      const checkpoint = selectedCheckpoint();
+      if (checkpoint === undefined) return;
+      try {
+        const patch = JSON.parse(parts.forkPatch.value) as unknown;
+        if (!isRecord(patch)) {
+          throw new TypeError("Fork patch must be a JSON object.");
         }
-      },
-      "fork",
-    ),
+        const created = host.fork({ parentId: checkpoint.id, id: parts.forkId.value, patch });
+        refreshCheckpoints();
+        parts.timeline.value = created.id;
+        refreshSelection();
+        parts.status.textContent = `Forked ${created.id} from ${checkpoint.id}.`;
+      } catch (error) {
+        parts.status.textContent = `Fork failed: ${error instanceof Error ? error.message : "unknown error"}`;
+      }
+    }),
   );
   parts.launch.addEventListener("click", () => {
     if (evaluation.resolved === undefined) return;
