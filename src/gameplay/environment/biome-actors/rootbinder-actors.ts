@@ -1,17 +1,14 @@
-import type { EnvironmentRuntime } from "../../../gameplay/environment/environment-runtime";
-import {
-  createVerdantEnvironmentFeature,
-  type RootbinderEnvironmentActor,
-} from "../../../gameplay/environment/verdant-environment-feature";
-import type { RootbinderCandidate } from "../../../gameplay/entities/rootbinder-runtime";
-import type { GameEnemy, GamePlayer } from "../../shell/game-runtime-state";
+import type { EnvironmentRuntime } from "../environment-runtime";
+import { createVerdantEnvironmentFeature, type RootbinderEnvironmentActor } from "../verdant-environment-feature";
+import { severRootbinder, type RootbinderCandidate } from "../../entities/rootbinder-runtime";
+import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
 
 /** Binds live actors to the authoritative environment relationship phase. */
 export function bindLiveRootbinderActors(
   environment: EnvironmentRuntime,
-  player: () => GamePlayer | null,
-  enemies: () => readonly GameEnemy[],
-  actorId: (enemy: GameEnemy) => string,
+  player: () => BiomeActorPlayer | null,
+  enemies: () => readonly BiomeActorEnemy[],
+  actorId: (enemy: BiomeActorEnemy) => string,
 ): void {
   environment.addFeature(createVerdantEnvironmentFeature());
   environment.setFeatureActorSource("verdant", "rootbinder", () => {
@@ -19,7 +16,7 @@ export function bindLiveRootbinderActors(
     const rootbinders = values.filter((enemy) => enemy.kind === "rootbinder");
     if (rootbinders.length === 0) return [];
     const candidates: RootbinderCandidate[] = values.map((enemy) => {
-      const supportType = (enemy as GameEnemy & { supportType?: string }).supportType;
+      const supportType = (enemy as BiomeActorEnemy & { supportType?: string }).supportType;
       const kind: RootbinderCandidate["kind"] =
         enemy.kind === "rootbinder"
           ? "rootbinder"
@@ -51,9 +48,10 @@ export function bindLiveRootbinderActors(
     });
     return rootbinders.map((enemy): RootbinderEnvironmentActor => {
       const id = actorId(enemy);
-      const state = (enemy as GameEnemy & { rootbinderState?: RootbinderEnvironmentActor["state"] }).rootbinderState;
+      const state = (enemy as BiomeActorEnemy & { rootbinderState?: RootbinderEnvironmentActor["state"] })
+        .rootbinderState;
       if (state === undefined) throw new Error("live Rootbinder is missing its deterministic state");
-      (enemy as GameEnemy & { rootbinderOwnerId?: string }).rootbinderOwnerId = id;
+      (enemy as BiomeActorEnemy & { rootbinderOwnerId?: string }).rootbinderOwnerId = id;
       return Object.freeze({
         id,
         state: Object.freeze({
@@ -65,6 +63,10 @@ export function bindLiveRootbinderActors(
           y: enemy.y,
         }),
         candidates: Object.freeze(candidates.filter((candidate) => candidate.id !== id)),
+        sever: () => {
+          const live = enemy as BiomeActorEnemy & { rootbinderState: RootbinderEnvironmentActor["state"] };
+          live.rootbinderState = severRootbinder(live.rootbinderState);
+        },
         ...(() => {
           const target = player();
           if (target === null) return {};

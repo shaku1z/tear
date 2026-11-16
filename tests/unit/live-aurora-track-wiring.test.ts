@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bindLiveAuroraTrackActors } from "../../src/app/world/biomes/aurora-track-wiring";
+import { bindLiveAuroraTrackActors } from "../../src/gameplay/environment/biome-actors/aurora-track-actors";
 import type { AuroraTransportActor } from "../../src/gameplay/environment/aurora-track-runtime";
 
 describe("live Aurora Track actor wiring", () => {

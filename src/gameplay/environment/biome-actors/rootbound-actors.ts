@@ -1,26 +1,41 @@
-import { ROOTBOUND_ROOTLINE, type RootboundRootlineStage } from "../../../gameplay/entities/enemy-types/rootbound";
-import type { EnvironmentRuntime } from "../../../gameplay/environment/environment-runtime";
-import {
-  createVerdantEnvironmentFeature,
-  type RootboundEnvironmentActor,
-} from "../../../gameplay/environment/verdant-environment-feature";
-import type { GameEnemy, GamePlayer } from "../../shell/game-runtime-state";
-import { CONFIG } from "../../../config/game-config";
+import { ROOTBOUND_ROOTLINE, type RootboundRootlineStage } from "../../entities/enemy-types/rootbound";
+import type { EnvironmentRuntime } from "../environment-runtime";
+import { createVerdantEnvironmentFeature, type RootboundEnvironmentActor } from "../verdant-environment-feature";
+import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
+import type { CONFIG } from "../../../config/game-config";
+import { bindLiveBloomWellActors } from "./bloom-well-actors";
+import { bindLiveRootbinderActors } from "./rootbinder-actors";
+
+/**
+ * Binds every Verdant actor source (Bloom Wells, Rootbinders, the Rootbound) in one place,
+ * so live play and the production replay simulation cannot drift apart.
+ */
+export function bindLiveVerdantActors(
+  environment: EnvironmentRuntime,
+  player: () => BiomeActorPlayer,
+  enemies: () => readonly BiomeActorEnemy[],
+  actorId: (enemy: object) => string,
+  config: typeof CONFIG,
+): void {
+  bindLiveBloomWellActors(environment, player, enemies, actorId);
+  bindLiveRootbinderActors(environment, player, enemies, actorId);
+  bindLiveRootboundActors(environment, player, enemies, actorId, config);
+}
 
 /** Projects Rootbound attack intent into the world-owned environment phase. */
 export function bindLiveRootboundActors(
   environment: EnvironmentRuntime,
-  player: () => GamePlayer | null,
-  enemies: () => readonly GameEnemy[],
-  actorId: (enemy: GameEnemy) => string,
-  config: typeof CONFIG = CONFIG,
+  player: () => BiomeActorPlayer | null,
+  enemies: () => readonly BiomeActorEnemy[],
+  actorId: (enemy: BiomeActorEnemy) => string,
+  config: typeof CONFIG,
 ): void {
   environment.addFeature(createVerdantEnvironmentFeature());
   environment.setFeatureActorSource("verdant", "rootbound", () =>
     enemies()
       .filter((enemy) => enemy.kind === "rootbound")
       .map((enemy): RootboundEnvironmentActor => {
-        const actor = enemy as GameEnemy & {
+        const actor = enemy as BiomeActorEnemy & {
           rootlineStage?: RootboundRootlineStage | null;
           rootlineCleanupReason?: "natural-expiry" | "stage-transition" | null;
           rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
@@ -34,6 +49,7 @@ export function bindLiveRootboundActors(
           regrowthState: NonNullable<RootboundEnvironmentActor["state"]["regrowth"]>;
           beginRegrowth?: NonNullable<RootboundEnvironmentActor["beginRegrowth"]>;
           advanceRegrowth?: NonNullable<RootboundEnvironmentActor["advanceRegrowth"]>;
+          regrowthChannelBroken?: () => boolean;
         };
         const id = actorId(enemy);
         const target = player();
@@ -50,7 +66,11 @@ export function bindLiveRootboundActors(
           beginRegrowth: (startTick: number, connectionIds: readonly string[]) =>
             actor.beginRegrowth?.(startTick, connectionIds) ?? false,
           advanceRegrowth: (tick: number, activeConnectionIds: ReadonlySet<string>, bossChannelBroken = false) =>
-            actor.advanceRegrowth?.(tick, activeConnectionIds, bossChannelBroken) ?? actor.regrowthState,
+            actor.advanceRegrowth?.(
+              tick,
+              activeConnectionIds,
+              bossChannelBroken || actor.regrowthChannelBroken?.() === true,
+            ) ?? actor.regrowthState,
           state: Object.freeze({
             stage: actor.rootlineStage ?? null,
             geometry: actor.rootlineGeometry?.() ?? Object.freeze({ x: enemy.x, y: enemy.y, w: 0, h: 0 }),

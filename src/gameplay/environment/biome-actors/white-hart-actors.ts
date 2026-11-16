@@ -1,24 +1,21 @@
-import type { EnvironmentRuntime } from "../../../gameplay/environment/environment-runtime";
-import {
-  createPaleEnvironmentFeature,
-  type WhiteHartEnvironmentActor,
-} from "../../../gameplay/environment/pale-environment-feature";
-import type { WhiteHartEnvironmentRequest } from "../../../gameplay/environment/white-hart-route-runtime";
-import type { GameEnemy, GamePlayer } from "../../shell/game-runtime-state";
+import type { EnvironmentRuntime } from "../environment-runtime";
+import { createPaleEnvironmentFeature, type WhiteHartEnvironmentActor } from "../pale-environment-feature";
+import type { WhiteHartEnvironmentRequest } from "../white-hart-route-runtime";
+import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
 
 /** Projects White Hart route intent into the existing world-owned environment runtime. */
 export function bindLiveWhiteHartActors(
   environment: EnvironmentRuntime,
-  player: () => GamePlayer | null,
-  enemies: () => readonly GameEnemy[],
-  actorId: (enemy: GameEnemy) => string,
+  player: () => BiomeActorPlayer | null,
+  enemies: () => readonly BiomeActorEnemy[],
+  actorId: (enemy: BiomeActorEnemy) => string,
 ): void {
   environment.addFeature(createPaleEnvironmentFeature());
   environment.setFeatureActorSource("pale", "white-hart", () =>
     enemies()
       .filter((enemy) => enemy.kind === "white-hart")
       .map((enemy): WhiteHartEnvironmentActor => {
-        const actor = enemy as GameEnemy & {
+        const actor = enemy as BiomeActorEnemy & {
           phase: 1 | 2 | 3;
           pendingEnvironmentRequests?: readonly WhiteHartEnvironmentRequest[];
           acknowledgeEnvironmentRequests?: (throughSequence: number) => void;
