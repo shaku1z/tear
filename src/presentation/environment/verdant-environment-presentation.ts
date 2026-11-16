@@ -74,7 +74,8 @@ export function renderVerdantEnvironmentPresentation(
     canvas.fillStyle = options.highContrast ? "#ffffff" : "#244f3f";
     canvas.lineWidth = options.highContrast ? 6 : 4;
     canvas.setLineDash(warning ? [18, 10] : []);
-    canvas.strokeRect(minX, minY, maxX - minX, maxY - minY);
+    // The warning area is the boss's Rootline tell; this draws the roots and what they leave behind.
+    if (!warning) canvas.strokeRect(minX, minY, maxX - minX, maxY - minY);
     canvas.setLineDash([]);
     if (!warning && !settled) {
       const rootWidth = options.lowGraphics ? 90 : 58;

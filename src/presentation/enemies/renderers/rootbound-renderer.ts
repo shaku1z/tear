@@ -1,8 +1,9 @@
 import type { EnemyTypes } from "../../../gameplay/entities/enemies";
+import { drawBossTells } from "./boss-tell-renderer";
 import type { EnemyRendererRuntime } from "./enemy-renderer-runtime";
 import type { RenderInstance } from "./enemy-renderer-types";
 
-/** Rootbound's base silhouette. Authored attacks add their own readable geometry later. */
+/** Rootbound's silhouette, vine arm and Choir echoes. Warning areas are drawn from its tells. */
 export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRendererRuntime): void {
   const { A11Y, CONFIG, GFX, THEME, clamp, lerp } = runtime;
   Object.assign(types.Rootbound.prototype, {
@@ -13,40 +14,8 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       const root = THEME.dark ? "#253627" : "#304b31";
 
       ctx.save();
-      if (this.canopyStepStage && this.canopyDestination) {
-        const destination = this.canopyDestination;
-        const pulse = A11Y.reducedMotion ? 1 : 0.84 + Math.sin(runtime.CLOCK.sim * 8) * 0.16;
-        ctx.globalAlpha = this.canopyStepStage === "settle" ? 0.42 : pulse;
-        ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
-        ctx.fillStyle = A11Y.highContrast ? "#ffffff" : "#7bbf72";
-        ctx.lineWidth = A11Y.highContrast ? 6 : 4;
-        ctx.setLineDash(this.canopyStepStage === "telegraph" ? [14, 9] : []);
-        const separateWarning = !A11Y.highContrast && this.canopyStepStage === "telegraph";
-        ctx.beginPath();
-        ctx.ellipse(destination.x, destination.y + this.hh, this.hw + 20, 18, 0, 0, Math.PI * 2);
-        if (separateWarning) {
-          // Retain the authored marker geometry while separating it from moss.
-          ctx.strokeStyle = "#10251e";
-          ctx.lineWidth = 8;
-          ctx.stroke();
-          ctx.strokeStyle = gold;
-          ctx.lineWidth = 4;
-        }
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.moveTo(destination.x, destination.y - 20);
-        ctx.lineTo(destination.x - 14, destination.y + 4);
-        ctx.lineTo(destination.x + 14, destination.y + 4);
-        ctx.closePath();
-        ctx.fill();
-        if (separateWarning) {
-          ctx.strokeStyle = "#10251e";
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-      }
+      // Every warning and strike area comes from the boss's own tell data, drawn by the shared marks.
+      drawBossTells(runtime, ctx, this.tells());
       if (this.memoryChoirStage)
         for (const manifestation of this.memoryChoirManifestations) {
           const active = this.memoryChoirManifestationActive(manifestation);
@@ -57,19 +26,6 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
           ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
           ctx.fillStyle = A11Y.highContrast ? "#ffffff" : "#5d765e";
           ctx.lineWidth = A11Y.highContrast ? 5 : 3;
-          ctx.setLineDash(this.memoryChoirStage === "warning" ? [12, 8] : []);
-          if (this.memoryChoirStage === "warning") {
-            // The warning bounds are actionable; the faint figures remain echoes.
-            // Use a dark backing independent of theme ink, retaining the same dash
-            // and authoritative rectangle rather than widening its danger area.
-            ctx.strokeStyle = "#10251e";
-            ctx.lineWidth += 4;
-            ctx.strokeRect(manifestation.x, manifestation.y, manifestation.w, manifestation.h);
-            ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
-            ctx.lineWidth = A11Y.highContrast ? 5 : 3;
-          }
-          ctx.strokeRect(manifestation.x, manifestation.y, manifestation.w, manifestation.h);
-          ctx.setLineDash([]);
           ctx.beginPath();
           ctx.arc(centerX, centerY - manifestation.h * 0.22, 13, 0, Math.PI * 2);
           ctx.fill();
