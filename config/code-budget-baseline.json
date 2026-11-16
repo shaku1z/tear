@@ -41,9 +41,6 @@
     "src/gameplay/entities/enemy-types/ground-enemies.ts": {
       "largestFunctionStatements": 90
     },
-    "src/gameplay/entities/enemy-types/rootbound.ts": {
-      "chars": 25452
-    },
     "src/gameplay/entities/enemy-types/source-core.ts": {
       "largestFunctionStatements": 98
     },
@@ -107,7 +104,7 @@
       "largestFunctionStatements": 81
     },
     "src/presentation/enemies/renderers/rootbound-renderer.ts": {
-      "largestFunctionStatements": 165
+      "largestFunctionStatements": 127
     },
     "src/presentation/enemies/renderers/source-renderer.ts": {
       "largestFunctionStatements": 165
@@ -128,7 +125,7 @@
       "largestFunctionStatements": 488
     },
     "src/presentation/environment/verdant-environment-presentation.ts": {
-      "largestFunctionStatements": 165
+      "largestFunctionStatements": 164
     },
     "src/presentation/particles.ts": {
       "largestFunctionStatements": 139
@@ -177,7 +174,7 @@
       "chars": 29599
     },
     "src/tearbench/production-combat-phases.ts": {
-      "chars": 30159
+      "chars": 30134
     },
     "src/tearbench/production-headless-environment.ts": {
       "chars": 31998
