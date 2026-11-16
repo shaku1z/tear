@@ -14,7 +14,7 @@ function sceneEnd() {
   semantic.push({ type: "weapon", intent: "primary", phase: "pressed" }); // left mouse
   semantic.push({ type: "weapon", intent: "primary", phase: "released" });
   const clicks = { clicked: true };
-  const input: ScenePressState & { held: Set<string>; clicked: boolean } = {
+  const input: ScenePressState & { pressed: Set<string>; held: Set<string>; clicked: boolean } = {
     pressed: new Set(["Space", "KeyW", "ArrowUp", "ShiftLeft", "Enter"]),
     held: new Set(["KeyD"]),
     tJump: true,
