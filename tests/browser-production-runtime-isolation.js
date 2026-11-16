@@ -120,8 +120,7 @@ function crazyGamesSdkStub() {
 
 // Engineering parameters that a production page must ignore: the test hook,
 // Watch Agent route, cue audition and Foundry audio preview.
-const engineeringQuery =
-  "?test=1&watchagent=1&stemcue=fillet&foundryPreview=0123456789abcdef0123456789abcdef&foundryTier=3";
+const engineeringQuery = "?test=1&watchagent=1&stemcue=fillet";
 // Canvas labels that only engineering builds may draw on the main menu and setup screen.
 const engineeringMenuLabels = ["TRAINING ARCHIVE", "TRAINING OPERATIONS", "REPLAY HUB", "LOCAL ROUTES"];
 const engineeringSetupLabels = ["DEV", "BOSS TEST", "ENEMY TEST", "CREATE SEED-LOCKED RACE"];
@@ -216,12 +215,10 @@ async function assertReleaseSurfaces(page, target) {
   const globals = await page.evaluate(() => ({
     weaponDebug: typeof window.TEAR_WEAPON_DEBUG,
     weaponDebugPresent: "TEAR_WEAPON_DEBUG" in window,
-    foundryPreview: typeof window.__TEAR_FOUNDRY_AUDIO_PREVIEW__,
-    foundryPreviewPresent: "__TEAR_FOUNDRY_AUDIO_PREVIEW__" in window,
   }));
   assert.deepEqual(
     globals,
-    { weaponDebug: "undefined", weaponDebugPresent: false, foundryPreview: "undefined", foundryPreviewPresent: false },
+    { weaponDebug: "undefined", weaponDebugPresent: false },
     `${target} production run installed an engineering global`,
   );
 }

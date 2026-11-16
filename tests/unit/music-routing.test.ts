@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FALLBACK_MUSIC_ROUTING } from "../../src/audio/music/music-routing-loader";
-import {
-  ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS,
-  resolveMusicRoute,
-} from "../../src/audio/music/music-routing-resolver";
+import { resolveMusicRoute } from "../../src/audio/music/music-routing-resolver";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 
 describe("data-driven music routing", () => {
@@ -57,20 +54,22 @@ describe("data-driven music routing", () => {
     ).toBe("fillet");
   });
 
-  it("keeps Verdant and Pale playable on engineering fallbacks without publishing final routes", () => {
-    expect(ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS).toEqual({
-      "the-verdant-sanctum": "fillet",
-      "the-pale-traverse": "fillet",
-    });
+  it("routes Verdant to its own songs; Pale Traverse has none yet and plays the default", () => {
+    expect(FALLBACK_MUSIC_ROUTING.defaultWorkId).toBe("fillet");
     expect(
       resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
         biomeId: "The Verdant Sanctum",
         scene: "gameplay",
         bossId: null,
       }),
-    ).toBe("fillet");
-    expect(FALLBACK_MUSIC_ROUTING.rules.some((rule) => rule.match.biome === "the-verdant-sanctum")).toBe(false);
-    expect(FALLBACK_MUSIC_ROUTING.rules.some((rule) => rule.match.bossId === "rootbound")).toBe(false);
+    ).toBe("once-at-a-time");
+    expect(
+      resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
+        biomeId: "The Verdant Sanctum",
+        scene: "boss",
+        bossId: "rootbound",
+      }),
+    ).toBe("nocturnal-urgency");
     expect(
       resolveMusicRoute(FALLBACK_MUSIC_ROUTING, {
         biomeId: "Pale Traverse",
