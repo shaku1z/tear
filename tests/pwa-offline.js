@@ -42,13 +42,14 @@ const { STATE_WAIT_MS } = require("./browser-waits");
     if (route.request().url().startsWith(origin)) void route.continue();
     else void route.abort();
   });
-  await page.goto(`${origin}/?test=1`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${origin}/?test=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ !== undefined);
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;
     if (!registration.active) throw new Error("service worker did not activate");
-    await new Promise((resolve) => setTimeout(resolve, 500));
   });
+  // The worker claims open pages when it activates (clientsClaim); offline reloads need that claim.
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null, undefined, { timeout: STATE_WAIT_MS });
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ !== undefined);

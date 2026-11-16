@@ -1,0 +1,4 @@
+#!/bin/sh
+HOOK_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec node "$HOOK_DIR/../tear-git-guard.mjs" pre-push "$@"
+

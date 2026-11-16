@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, pollEvery } = require("./browser-waits");
 
 const QUOTA_BYTES = 256 * 1024;
 
@@ -33,13 +33,13 @@ withJourney(
       timeout: STATE_WAIT_MS,
     });
     const source = await page.evaluate(
-      async (next) => {
+      async ({ next, ceiling, interval }) => {
         const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
         environment.reset(next);
         environment.step([]);
         environment.terminate();
         await new Promise((resolve, reject) => {
-          const deadline = performance.now() + 20_000;
+          const deadline = performance.now() + ceiling;
           const poll = async () => {
             const manifest = await window.__TEAR_GHOST_V3__.manifest();
             const failure = window.__TEAR_GHOST_V3__.failure();
@@ -55,13 +55,17 @@ withJourney(
               reject(new Error("source capsule did not complete"));
               return;
             }
-            setTimeout(poll, 20);
+            setTimeout(poll, interval);
           };
           void poll();
         });
         return window.__TEAR_GHOST_V3__.manifest();
       },
-      scenario("c28-physical-quota-source", "c28-physical-quota-source-seed", 1),
+      {
+        next: scenario("c28-physical-quota-source", "c28-physical-quota-source-seed", 1),
+        ceiling: STATE_WAIT_MS,
+        interval: pollEvery(20),
+      },
     );
     assert.equal(source.status, "complete", "the retained source capsule did not complete before storage pressure");
 

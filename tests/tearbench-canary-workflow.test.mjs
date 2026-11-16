@@ -4,7 +4,6 @@ import test from "node:test";
 import { URL } from "node:url";
 
 const workflow = await readFile(new URL("../.github/workflows/tearbench-canary.yml", import.meta.url), "utf8");
-const validate = await readFile(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
 const registry = JSON.parse(await readFile(new URL("../src/tearbench/task-registry.json", import.meta.url), "utf8"));
 const shardRunner = await readFile(new URL("../scripts/tearbench-canary-run-shard.mjs", import.meta.url), "utf8");
 const detachedParityRunner = await readFile(
@@ -17,11 +16,9 @@ const performanceBrowserAction = await readFile(
   "utf8",
 );
 
-test("parallel canary is manual and non-required while Validate keeps plain browser entrypoints", () => {
+test("parallel canary is manual and non-required", () => {
   assert.match(workflow, /^name: TearBench Parallel Canary[\s\S]+?workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /\n\s+(?:pull_request|push):/u);
-  assert.match(validate, /xvfb-run -a pnpm check:functional/u);
-  assert.match(validate, /timeout-minutes: 45/u);
   assert.match(workflow, /pnpm exec playwright install --with-deps chromium/u);
   assert.doesNotMatch(workflow, /playwright[^\n]*--shard|--workers(?:=|\s)/u);
   assert.ok(

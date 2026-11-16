@@ -261,7 +261,7 @@ async function stopTraceAfterHitch(browser, snapshot, label) {
  * hence the repeat.
  */
 async function clickDrawnLabelUntil(page, label, state) {
-  const deadline = Date.now() + 15_000;
+  const deadline = Date.now() + STATE_WAIT_MS;
   while (Date.now() < deadline) {
     const point = await page.evaluate(
       (expected) =>

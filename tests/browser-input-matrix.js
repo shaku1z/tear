@@ -25,7 +25,7 @@ async function moveCapturedPointer(page, from, to) {
   );
 }
 
-/** Records where the draft cards draw their touch hint, in CSS px, for the newest frame. */
+/** Records where the draft cards draw their touch hint and the menu its PLAY label, in CSS px, for the newest frame. */
 function observeDraftHints() {
   const hints = [];
   let frame = 0;
@@ -42,7 +42,7 @@ function observeDraftHints() {
   const fillText = CanvasRenderingContext2D.prototype.fillText;
   CanvasRenderingContext2D.prototype.fillText = function (value, x, y, ...rest) {
     const text = String(value);
-    if (/^TAP (TO READ|AGAIN)/u.test(text) && this.textAlign === "center") {
+    if (/^(TAP (TO READ|AGAIN)|PLAY$)/u.test(text)) {
       const matrix = this.getTransform();
       const box = this.canvas.getBoundingClientRect();
       const ratio = box.height / this.canvas.height;
@@ -182,6 +182,124 @@ async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
   }
 }
 
+/**
+ * docs/CURSOR_INPUT_CONTRACT.md: the system cursor, the canvas arrow and hover exist only while
+ * the mouse owns the interface, and come back only with a meaningful mouse movement, over the
+ * canvas and over the HTML fullscreen button alike.
+ */
+async function pointerBelongsToTheMouseAlone(browser, configure) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  await configure(page);
+  const input = () => page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot());
+  const cursorOf = (selector) => page.locator(selector).evaluate((element) => getComputedStyle(element).cursor);
+  const mode = (expected) => page.waitForFunction((value) => document.body.dataset.imode === value, expected);
+  await page.mouse.move(600, 300);
+  await page.mouse.move(640, 360, { steps: 4 });
+  await mode("mouse");
+  assert.notEqual((await input()).ownedPointer, null, "the mouse owns the pointer after moving");
+  assert.equal(await cursorOf("#fs"), "default");
+
+  await page.keyboard.press("ArrowDown");
+  await mode("keyboard");
+  assert.equal((await input()).ownedPointer, null, "a key press takes the pointer away");
+  assert.equal(await cursorOf("#fs"), "none", "the hardware cursor hides over the HTML button too");
+  assert.equal(await cursorOf("body"), "none", "the hardware cursor hides over the letterbox");
+
+  // Sensor noise: a few pixels of drift must not bring the pointer back.
+  await page.mouse.move(642, 361);
+  await page.mouse.move(641, 362);
+  await page.waitForTimeout(notWithin(150));
+  assert.equal((await input()).mode, "keyboard", "mouse jitter does not reclaim the interface");
+  assert.equal((await input()).ownedPointer, null);
+
+  // A slow, deliberate movement does, even though no single event travels far.
+  for (let step = 1; step <= 8; step += 1) await page.mouse.move(641 + step * 2, 362);
+  await mode("mouse");
+  assert.notEqual((await input()).ownedPointer, null, "a meaningful movement returns the pointer");
+
+  // The same threshold holds over the HTML fullscreen button, where the canvas hears nothing.
+  await page.keyboard.press("ArrowDown");
+  await mode("keyboard");
+  const button = await page.locator("#fs").boundingBox();
+  assert.ok(button, "the fullscreen button is shown on a mouse-first device");
+  const inside = { x: button.x + button.width / 2, y: button.y + button.height / 2 };
+  await page.mouse.move(inside.x - 12, inside.y, { steps: 1 });
+  await page.mouse.move(inside.x + 12, inside.y, { steps: 6 });
+  await mode("mouse");
+  assert.equal(await cursorOf("#fs"), "default");
+  await page.close();
+}
+
+/**
+ * A tablet starts on touch, so its first tap meets the touch layout it was drawn. A laptop with
+ * a touch screen starts on the mouse; its first tap is resolved against the mouse layout the
+ * player saw, and the menu changes to its touch layout only afterwards. Either way the first
+ * tap on PLAY opens the run setup (it once opened the Shop, which sat under the moved layout).
+ */
+async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
+  for (const device of [
+    { name: "tablet", isMobile: true, startsOn: "touch" },
+    { name: "touch laptop", isMobile: false, startsOn: "mouse" },
+  ]) {
+    const context = await browser.newContext({
+      viewport: { width: 1024, height: 768 },
+      hasTouch: true,
+      isMobile: device.isMobile,
+    });
+    const page = await context.newPage();
+    await page.addInitScript(observeDraftHints);
+    // Touch emulation reports a coarse primary pointer; a laptop with a touch screen has a fine one.
+    if (!device.isMobile) {
+      await page.addInitScript(() => {
+        const matchMedia = window.matchMedia.bind(window);
+        window.matchMedia = (query) =>
+          query === "(pointer: coarse)"
+            ? { ...matchMedia("not all"), media: query, matches: false }
+            : matchMedia(query);
+      });
+    }
+    await configure(page);
+    const input = () => page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot());
+    await page.waitForFunction(() => window.__DRAFT_HINTS__().some((hint) => hint.text === "PLAY"));
+    // The menu slides in: wait until PLAY is drawn in the same place on two looks in a row.
+    await page.waitForFunction(
+      () => {
+        const play = window.__DRAFT_HINTS__().findLast((hint) => hint.text === "PLAY");
+        const last = window.__PLAY_AT__;
+        window.__PLAY_AT__ = play;
+        return Boolean(play && last && play.x === last.x && play.y === last.y);
+      },
+      undefined,
+      { timeout: STATE_WAIT_MS, polling: pollEvery(250) },
+    );
+    const start = await input();
+    assert.equal(start.mode, device.startsOn, `${device.name}: the owning device at load`);
+    assert.equal(start.touchLayout, device.isMobile, `${device.name}: the layout at load`);
+    assert.equal(start.ownedPointer === null, device.isMobile, `${device.name}: the pointer at load`);
+    const play = (await page.evaluate(() => window.__DRAFT_HINTS__())).filter((hint) => hint.text === "PLAY").at(-1);
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: play.x + 12, y: play.y - 4, id: 1 }],
+    });
+    await page.waitForTimeout(holdFor(60));
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen !== "menu", undefined, {
+      timeout: STATE_WAIT_MS,
+    });
+    assert.equal(
+      await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen),
+      "setup",
+      `${device.name}: the first tap on PLAY opens the run setup`,
+    );
+    const after = await input();
+    assert.equal(after.mode, "touch", `${device.name}: touch owns the interface after a tap`);
+    assert.equal(after.touchLayout, true, `${device.name}: the touch layout follows the first tap`);
+    assert.equal(after.ownedPointer, null, `${device.name}: no pointer while touch owns the interface`);
+    await context.close();
+  }
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_INPUT_TEST_PORT || 8128);
@@ -206,7 +324,7 @@ async function main() {
     await page.route("**/*", (route) =>
       route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
     );
-    await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__PANTHEON_TEST);
   }
 
@@ -501,6 +619,8 @@ async function main() {
   await controller.close();
 
   await phoneWithoutPointerLockOpensTheDraft(browser, configure);
+  await pointerBelongsToTheMouseAlone(browser, configure);
+  await firstTapLandsOnTheControlsThePlayerSaw(browser, configure);
 
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

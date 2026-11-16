@@ -103,7 +103,10 @@ withJourney(
   async ({ page, baseUrl, boot }) => {
     // A same-origin blank 404 document lets the fixture create version 1 before
     // the production app opens its Vault database. It does not load app code.
-    await page.goto(`${baseUrl}/__tear_browser_blank_fixture__.html`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${baseUrl}/__tear_browser_blank_fixture__.html`, {
+      timeout: STATE_WAIT_MS,
+      waitUntil: "domcontentloaded",
+    });
     await createLegacyVault(page);
 
     await boot();
