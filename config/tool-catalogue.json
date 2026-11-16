@@ -1053,11 +1053,26 @@
       "duration": "under-a-minute"
     },
     "wiki:build": {
-      "purpose": "Builds the player wiki into wiki/dist from this commit (add --media for pictures from the game's test build, which takes tens of minutes)",
+      "purpose": "Builds the player wiki into wiki/dist from this commit and the committed pictures",
       "effects": [
         "writes-artifacts"
       ],
       "duration": "under-a-minute"
+    },
+    "wiki:media": {
+      "purpose": "Regenerates the wiki pictures in wiki/pictures from the game's renderers and test build (run pnpm build:test:standalone first)",
+      "effects": [
+        "writes-repo-files",
+        "launches-browser"
+      ],
+      "duration": "long"
+    },
+    "wiki:pictures-status": {
+      "purpose": "Prints whether the committed wiki pictures match the game source that draws them (--strict exits 1 when stale)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
     },
     "wiki:dev": {
       "purpose": "Builds the player wiki and serves it on port 4321, rebuilding when wiki/ changes",

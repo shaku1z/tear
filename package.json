@@ -149,6 +149,8 @@
     "export:game-reference": "node scripts/export-game-reference.mjs",
     "export:wiki": "node scripts/export-game-reference.mjs --wiki",
     "wiki:build": "node wiki/generator/build.mjs",
+    "wiki:media": "node wiki/generator/media.mjs",
+    "wiki:pictures-status": "node wiki/generator/pictures.mjs",
     "wiki:dev": "node wiki/generator/build.mjs --serve",
     "wiki:test": "node --test wiki/tests/wiki.test.mjs",
     "check:artifact-disposition": "node scripts/validate-artifact-disposition.mjs",
