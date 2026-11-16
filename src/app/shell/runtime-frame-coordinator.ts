@@ -17,6 +17,8 @@ export interface RuntimeFrameInputPort {
   pausePressed(): boolean;
   escapePressed(): boolean;
   endFrame(preserveSimulationEdges?: boolean): void;
+  /** Drops every press still waiting when a scene hands control back (src/input/scene-release.ts). */
+  discardScenePresses(): void;
 }
 
 export interface RuntimeFramePadPort {
@@ -172,7 +174,11 @@ export class RuntimeFrameCoordinator {
     }
     if (this.#options.state() === "playing") {
       this.#options.applicationFrameRecording?.begin(deltaSeconds, confirm, cinema.active);
-      if (cinema.active) cinema.update(deltaSeconds, confirm);
+      if (cinema.active) {
+        cinema.update(deltaSeconds, confirm);
+        // The press that ended the scene belongs to the scene: drop it before the next tick seals it.
+        if (!cinema.active) input.discardScenePresses();
+      }
     }
     input.allowLock = this.#options.state() === "playing";
   }

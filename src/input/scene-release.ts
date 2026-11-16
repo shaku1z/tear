@@ -5,6 +5,9 @@
  * back, every press edge still waiting from that frame is dropped, on every device: the key, tap,
  * click or controller button that dismissed the last line must not also jump, dash or throw.
  * Held movement is kept, so a player already holding a direction moves at once.
+ *
+ * Presses reach the game two ways: as flags the live loop reads, and as commands queued for the
+ * next simulation tick (the replayable stream). Both are cleared, before that tick seals them.
  */
 export interface ScenePressState {
   /** Keys that went down this frame (keyboard, and controller buttons mapped to keys). */
@@ -14,6 +17,7 @@ export interface ScenePressState {
   /** The throw edge: right mouse button, the touch throw button or the controller's throw. */
   rmb: boolean;
   takeClick(): unknown;
+  readonly semantic: { discardPresses(): void };
 }
 
 export function discardScenePresses(input: ScenePressState): void {
@@ -22,4 +26,5 @@ export function discardScenePresses(input: ScenePressState): void {
   input.tDash = false;
   input.rmb = false;
   input.takeClick();
+  input.semantic.discardPresses();
 }
