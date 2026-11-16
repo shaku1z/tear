@@ -37,30 +37,68 @@ function targetHtml(target: TargetDefinition): Plugin {
   };
 }
 
-function cloudflareHeaders(target: TargetDefinition): Plugin {
+/**
+ * The preview origin serves the test build of the same commit below this path, so
+ * Boss Test, Enemy Test and the other engineering surfaces can be played with the
+ * preview's own saves. Production never receives it (deploy-production verifies
+ * a "standalone" artifact, which this is not).
+ */
+export const PREVIEW_DEV_BASE = "/dev/";
+
+function headerRules(prefix: string): string[] {
+  return [
+    `${prefix}assets/*`,
+    "  Cache-Control: public, max-age=31536000, immutable",
+    "  X-Content-Type-Options: nosniff",
+    "",
+    `${prefix}index.html`,
+    "  Cache-Control: public, max-age=0, must-revalidate",
+    "  X-Content-Type-Options: nosniff",
+    "  Referrer-Policy: strict-origin-when-cross-origin",
+    "",
+    `${prefix}build-info.json`,
+    "  Cache-Control: public, max-age=0, must-revalidate",
+    "  X-Content-Type-Options: nosniff",
+    "",
+  ];
+}
+
+function cloudflareHeaders(target: TargetDefinition, previewDev: boolean): Plugin {
   return {
     name: "tear-cloudflare-headers",
     generateBundle() {
-      if (!target.cloudflareHeaders) return;
+      // Cloudflare reads only the root _headers; the release build's file covers
+      // the dev path too, so the dev build emits none.
+      if (!target.cloudflareHeaders || previewDev) return;
       this.emitFile({
         type: "asset",
         fileName: "_headers",
         source: [
-          "/assets/*",
-          "  Cache-Control: public, max-age=31536000, immutable",
-          "  X-Content-Type-Options: nosniff",
+          ...headerRules("/"),
+          `${PREVIEW_DEV_BASE}*`,
+          "  X-Robots-Tag: noindex",
           "",
-          "/index.html",
-          "  Cache-Control: public, max-age=0, must-revalidate",
-          "  X-Content-Type-Options: nosniff",
-          "  Referrer-Policy: strict-origin-when-cross-origin",
-          "",
-          "/build-info.json",
-          "  Cache-Control: public, max-age=0, must-revalidate",
-          "  X-Content-Type-Options: nosniff",
-          "",
+          ...headerRules(PREVIEW_DEV_BASE),
         ].join("\n"),
       });
+    },
+  };
+}
+
+/** Marks the preview dev build so it is never mistaken for the game players get. */
+function previewDevMarking(revision: string): Plugin {
+  const label = `DEV · ${revision.slice(0, 8)}`;
+  return {
+    name: "tear-preview-dev-marking",
+    transformIndexHtml(html) {
+      return html
+        .replace("</head>", '  <meta name="robots" content="noindex" />\n</head>')
+        .replace(
+          "</body>",
+          `  <div id="tear-dev-tag" aria-hidden="true" style="position:fixed;left:8px;bottom:6px;z-index:2147483647;` +
+            `pointer-events:none;font:600 11px/1 'IBM Plex Mono',monospace;letter-spacing:.06em;color:#ffd24a;opacity:.8">` +
+            `${label}</div>\n</body>`,
+        );
     },
   };
 }
@@ -135,19 +173,26 @@ export default defineConfig(({ mode, command }) => {
   const target: TargetName = resolved?.name ?? "standalone";
   const testBuild = resolved?.testBuild ?? false;
   const definition = buildTarget(target);
+  // The preview dev build is a target's second output (config/build-targets.json "previewDev").
+  const previewDev = definition.previewDev !== null && process.env[definition.previewDev.env] === "1";
+  if (previewDev && !testBuild) throw new Error("the preview dev build is a test build");
   const source = readSourceIdentitySync(process.cwd());
   const tutorialGoldHash = command === "build" ? assertTutorialGoldFresh() : tutorialGoldSourceFingerprint().sourceHash;
   return {
     // Portals unpack an upload below a path they own, so their bundle assets are
     // relative instead of rooted at the host origin (config/build-targets.json).
-    base: definition.base,
+    base: previewDev ? PREVIEW_DEV_BASE : definition.base,
     plugins: [
       targetHtml(definition),
-      cloudflareHeaders(definition),
+      cloudflareHeaders(definition, previewDev),
       targetDependencyBoundary(target, definition),
+      ...(previewDev ? [previewDevMarking(source.revision)] : []),
       ...(definition.serviceWorker
         ? [
             VitePWA({
+              // The preview dev build installs no service worker of its own; the
+              // preview's release worker leaves its path alone (denylist below).
+              disable: previewDev,
               registerType: "prompt",
               injectRegister: null,
               manifest: {
@@ -177,6 +222,9 @@ export default defineConfig(({ mode, command }) => {
                 cleanupOutdatedCaches: true,
                 clientsClaim: true,
                 navigateFallback: "/index.html",
+                // On the preview origin the dev build lives below this path; its pages
+                // must reach the network, not the release build's cached index.
+                navigateFallbackDenylist: [new RegExp(`^${PREVIEW_DEV_BASE}`, "u")],
                 globPatterns: ["**/*.{html,js,css,woff2,png,webmanifest}"],
                 // The tutorial corpus is fetched on demand (training preflight), not at
                 // install: it is runtime-cached on first use so it then works offline.

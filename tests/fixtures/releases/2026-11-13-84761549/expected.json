@@ -1,0 +1,48 @@
+{
+  "release": "Production at tearblade.com since 2026-11-13",
+  "commit": "84761549",
+  "profile": {
+    "shards": 50,
+    "runs": 1,
+    "coinsEarned": 910,
+    "modes": [
+      "endless"
+    ]
+  },
+  "settings": {
+    "masterVolume": 0.6,
+    "musicVolume": 0.5,
+    "sfxVolume": 1,
+    "interfaceVolume": 1,
+    "masterMuted": false,
+    "musicMuted": false,
+    "sfxMuted": false,
+    "interfaceMuted": false
+  },
+  "meta": {
+    "lifetimeEarned": 910,
+    "lifetimeSpent": 0
+  },
+  "best": {
+    "mode": "endless",
+    "difficulty": "normal",
+    "wave": 1,
+    "score": 0
+  },
+  "localReplays": [
+    {
+      "id": "vmwf8vb9deq0s",
+      "authoritativeTick": 1185,
+      "authoritativeStateHash": "aa71c4e9710c8a61"
+    }
+  ],
+  "ghostCapsules": [
+    {
+      "id": "ghost-v3-run-uebazr-3195ffab-20a2-429c-b8fc-cb8d36e8bb4f",
+      "chunks": 62,
+      "maxTick": 1186,
+      "buildRevision": "847615494f3b511b4e845da373a90a5277b807b7",
+      "admission": "unavailable"
+    }
+  ]
+}

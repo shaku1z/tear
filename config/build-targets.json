@@ -10,6 +10,7 @@
     "pruneUnrequestedFiles": false,
     "forbiddenModules": ["/src/platform/crazygames.ts", "/src/platform/crazygames-cloud.ts"],
     "testMode": "test-standalone",
+    "previewDev": { "mode": "test-standalone", "output": "dist/preview-dev", "env": "TEAR_PREVIEW_DEV" },
     "package": null,
     "limits": null
   },
@@ -28,6 +29,7 @@
       "/src/platform/standalone-cloud.ts"
     ],
     "testMode": "test-crazygames",
+    "previewDev": null,
     "package": { "path": "artifacts/packages/tear-crazygames.zip", "maxArchiveBytes": 21495808 },
     "limits": { "maxUnpackedBytes": 23592960, "maxFiles": 1500, "maxFileBytes": null, "maxPathLength": null }
   },
@@ -48,6 +50,7 @@
       "/src/platform/standalone-cloud.ts"
     ],
     "testMode": null,
+    "previewDev": null,
     "package": { "path": "artifacts/packages/tear-itch.zip", "maxArchiveBytes": 21495808 },
     "limits": { "maxUnpackedBytes": 23592960, "maxFiles": 1000, "maxFileBytes": 209715200, "maxPathLength": 240 }
   }

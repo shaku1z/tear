@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const bosses = ["warden", "colossus", "aldric", "echo", "source"];
 const phases = [1, 2, 3];
@@ -22,7 +23,7 @@ const boundaries = [
 ];
 
 withJourney({ name: "C23 State Forge exit matrix", port: 8144 }, async ({ page }) => {
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const result = await page.evaluate(
     ({ bossIds, phaseIds, boundaryIds }) => {
       const factory = window.__TEAR_RUNTIME_ENVIRONMENT__;

@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import { BOSS_ROSTER } from "../../gameplay/run/content-director";
 import type { AttackPresentationCueSink } from "../../gameplay/combat/attack-presentation-cue";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
@@ -78,7 +79,6 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
     log: logWeaponEvent,
     noteFirstDamage: noteFirstPlayerDamage,
     applySever,
-    addOverrun: addOverrunStack,
     updateAbilities: updateWeaponAbilities,
     emitThrowResolve,
     activateThrowSecondary,
@@ -88,6 +88,7 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
     addKillScore,
     fire,
     makeEvent: makeEv,
+    makeDeathEvent,
   } = campaignTraining.weapon;
   const {
     achievements: AT,
@@ -260,6 +261,10 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
         },
         fire,
         makeEvent: (x, y, enemy, cause, detail) => makeEv(x, y, isGameEnemy(enemy) ? enemy : null, cause, detail),
+        makeDeathEvent: (enemy, cause, cleanElimination) => {
+          if (!isGameEnemy(enemy)) throw new TypeError("a death event needs a live enemy");
+          return makeDeathEvent(enemy, cause, cleanElimination);
+        },
         weaponHook: (name, detail) => {
           const effect = weaponHook(name, { config: CONFIG, ...detail });
           return isWeaponEffect(effect) ? effect : null;
@@ -327,9 +332,6 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
         restorePlatforms: (platforms) => {
           stageRuntime.platforms = platforms.filter(isCombatPlatform);
         },
-        addOverrunStack: () => {
-          addOverrunStack(liveRun().mods);
-        },
         playSound: (name, argument) => {
           if (name === "swing") SFX.swing(typeof argument === "number" ? argument : 1);
           else if (name === "throwBlade") SFX.throwBlade();
@@ -356,7 +358,7 @@ export function createLiveCombatActionPorts(options: LiveCombatActionPortsOption
     requestContinue: () => {
       navigation.setScreen("continue");
       options.reviveCountdown.setSeconds(8);
-      options.browserDocument.exitPointerLock();
+      releasePointerLock(options.browserDocument);
     },
   });
   const collisionPhaseState = createLiveCollisionStateView({

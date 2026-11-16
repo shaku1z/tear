@@ -533,6 +533,8 @@ export async function composeTearApplication(options: TearCompositionOptions): P
           pointerLockAllowed: Input.allowLock,
           tetherHeld: Input.tetherHeld,
           pointer: { x: Input.mouseX, y: Input.mouseY },
+          ownedPointer: Input.pointer(),
+          touchLayout: Input.touchActive(),
           ui: { ...Input.ui },
         }),
       }),

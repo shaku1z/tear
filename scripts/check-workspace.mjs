@@ -267,11 +267,14 @@ function checkIdentity(root, contract, env, errors) {
       errors.push(`origin and GITHUB_REPOSITORY disagree: ${sources[0].value} != ${sources[1].value}`);
     }
   }
-  const expectedSha = String(env.GITHUB_SHA ?? "")
+  // TEAR_RELEASE_SHA names the commit a run actually checks (Validate checks a pull request as its
+  // head merged with current main, which is not GitHub's GITHUB_SHA); it wins, as in the release scripts.
+  const expectedSource = String(env.TEAR_RELEASE_SHA ?? "").trim() === "" ? "GITHUB_SHA" : "TEAR_RELEASE_SHA";
+  const expectedSha = String(env[expectedSource] ?? "")
     .trim()
     .toLowerCase();
   if (expectedSha !== "" && head !== expectedSha)
-    errors.push(`HEAD ${head ?? "unknown"} does not equal GITHUB_SHA ${expectedSha}`);
+    errors.push(`HEAD ${head ?? "unknown"} does not equal ${expectedSource} ${expectedSha}`);
   return { head, origin, environmentRepository };
 }
 

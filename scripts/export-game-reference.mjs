@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { spawnSync } from "node:child_process";
 import { createServer } from "vite";
 import { readCleanSourceIdentity } from "./game-reference-export-preflight.mjs";
+import { encodeWikiData } from "./wiki-data-export.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 
@@ -20,7 +22,19 @@ const terminologyVersion =
   option("--terminology") ??
   JSON.parse(fs.readFileSync(path.join(root, "config", "terminology-registry.json"), "utf8")).registryId;
 const output = option("--output");
-const sourceSha = readCleanSourceIdentity(root, requestedSha);
+// --allow-dirty is for local wiki previews only: the document is then marked
+// as built from uncommitted changes, and the deploy path never passes it.
+const allowDirty = process.argv.includes("--allow-dirty");
+if (allowDirty && !process.argv.includes("--wiki")) throw new Error("--allow-dirty applies only to --wiki");
+let dirty = false;
+let sourceSha;
+try {
+  sourceSha = readCleanSourceIdentity(root, requestedSha);
+} catch (error) {
+  if (!allowDirty) throw error;
+  sourceSha = requestedSha ?? spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout.trim();
+  dirty = true;
+}
 
 const server = await createServer({
   root,
@@ -65,7 +79,9 @@ try {
     tuningByWeapon: weaponTuningModule.FINAL_FIVE_WEAPON_TUNING,
   });
   if (expectedSha !== undefined) referenceModule.assertCurrentSourceSha(reference, expectedSha);
-  const encoded = referenceModule.encodeGameReferenceV1(reference);
+  const encoded = process.argv.includes("--wiki")
+    ? await encodeWikiData(server, reference, { modeModule, variantModule, affixModule }, dirty)
+    : referenceModule.encodeGameReferenceV1(reference);
   if (output === undefined) {
     process.stdout.write(encoded);
   } else {
@@ -74,6 +90,18 @@ try {
     fs.writeFileSync(destination, encoded, "utf8");
     process.stdout.write(
       `Wrote ${path.relative(root, destination)} for ${reference.source.repository}@${reference.source.sha}\n`,
+    );
+  }
+  // --wiki-output also writes the wiki document from the same loaded game, so
+  // check:game-reference verifies both exports without a second Vite start.
+  const wikiOutput = option("--wiki-output");
+  if (wikiOutput !== undefined) {
+    const destination = path.resolve(root, wikiOutput);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(
+      destination,
+      await encodeWikiData(server, reference, { modeModule, variantModule, affixModule }, dirty),
+      "utf8",
     );
   }
 } finally {

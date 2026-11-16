@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createHash } = require("node:crypto");
 const { withJourney } = require("./browser-journey-harness");
+const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor } = require("./browser-waits");
 
 // This consumer is deliberately separate from unit fixtures. Every producer and
 // consumer below owns a fresh browser process; only the normal download survives.
@@ -71,6 +72,7 @@ async function installObservation(page) {
         )
       )
         observation.status = text;
+      if (text === "VAULT") observation.vaultTab = { x: args[0], y: args[1] };
       observation.recent.push(text);
       if (observation.recent.length > 160) observation.recent.shift();
       return original.call(this, value, ...args);
@@ -141,18 +143,22 @@ async function observe(name, page, buildInfo) {
 }
 async function waitStatus(page, expected) {
   await page.waitForFunction((status) => window.__C39_FILE_TEXT__?.status?.startsWith(status + " / "), expected, {
-    timeout: 30000,
+    timeout: STATE_WAIT_MS,
   });
 }
 async function openVault(journey) {
   await journey.clickAndWait(260, 266, "profile");
-  await journey.page.mouse.click(875, 271);
+  await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.vaultTab, undefined, { timeout: STATE_WAIT_MS });
+  const vaultTab = await journey.page.evaluate(() => window.__C39_FILE_TEXT__.vaultTab);
+  await journey.page.mouse.click(vaultTab.x, vaultTab.y); // The drawn VAULT tab label.
   await settle(journey.page);
-  await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.status !== null, undefined, { timeout: 15000 });
+  await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.status !== null, undefined, {
+    timeout: STATE_WAIT_MS,
+  });
 }
 async function chooseFile(page, file, reselect = false) {
   const [chooser] = await Promise.all([
-    page.waitForEvent("filechooser", { timeout: 10000 }),
+    page.waitForEvent("filechooser", { timeout: STATE_WAIT_MS }),
     page.mouse.click(reselect ? 522 : 330, 330),
   ]);
   await chooser.setFiles(file);
@@ -246,14 +252,16 @@ async function main() {
     await page.keyboard.press("Space");
     await page.keyboard.down("d");
     await page.keyboard.press("Shift");
-    await page.waitForTimeout(220);
+    await page.waitForTimeout(holdFor(220));
     await page.keyboard.up("d");
     // No terminate, forced outcome, semantic stepping, actor patch, or timer-to-success fallback.
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, { timeout: 90000 });
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "gameover", undefined, {
+      timeout: SLOW_STATE_WAIT_MS,
+    });
     await page.waitForFunction(
       () => window.__TEAR_GHOST_V3__.manifest()?.status === "complete" || window.__TEAR_GHOST_V3__.failure() !== null,
       undefined,
-      { timeout: 20000 },
+      { timeout: STATE_WAIT_MS },
     );
     const natural = await observe("A-natural-closed", page, buildInfo),
       manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
@@ -264,12 +272,12 @@ async function main() {
     await openVault(journey);
     await settle(page);
     await page.waitForFunction(() => window.__C39_FILE_TEXT__?.recent?.includes("DOWNLOAD"), undefined, {
-      timeout: 15000,
+      timeout: STATE_WAIT_MS,
     });
     await observe("A-populated-before-download", page, buildInfo);
     await page.screenshot({ path: path.join(directory, "A-populated-before-download.png") });
     const [download] = await Promise.all([
-      page.waitForEvent("download", { timeout: 15000 }),
+      page.waitForEvent("download", { timeout: STATE_WAIT_MS }),
       page.mouse.click(1026, 518),
     ]);
     await download.saveAs(archivePath); // Preserve the real normal-player download before parsing/assertions.
@@ -448,7 +456,7 @@ async function pairedMain(input) {
     await assertPair("pair-A-source-custody", journey);
     await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("DOWNLOAD RUN + FINALE"));
     const [download] = await Promise.all([
-      page.waitForEvent("download", { timeout: 15000 }),
+      page.waitForEvent("download", { timeout: STATE_WAIT_MS }),
       page.mouse.click(1094, 564),
     ]);
     await download.saveAs(archivePath);
@@ -485,7 +493,7 @@ async function pairedMain(input) {
     // parent permit and runtime restoration remain authoritative on open.
     // The durable restore completes before the asynchronous catalog refresh.
     await page.waitForFunction(() => window.__C39_FILE_TEXT__.recent.includes("◆ THEATER"), undefined, {
-      timeout: 10000,
+      timeout: STATE_WAIT_MS,
     });
     await settle(page);
     await page.mouse.click(1024, 494);

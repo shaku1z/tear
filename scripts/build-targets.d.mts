@@ -13,6 +13,8 @@ export interface BuildTargetDefinition {
   /** False where the portal supplies fullscreen and forbids a custom control (CrazyGames). */
   readonly fullscreenButton: boolean;
   readonly base: string;
+  /** A second output of the test build, served below a path on the preview origin (null: none). */
+  readonly previewDev: { readonly mode: string; readonly output: string; readonly env: string } | null;
   readonly serviceWorker: boolean;
   readonly portalSdkScript: string | null;
   readonly cloudflareHeaders: boolean;

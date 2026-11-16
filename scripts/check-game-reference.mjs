@@ -10,10 +10,19 @@ if (head.status !== 0) throw new Error(`git rev-parse HEAD failed: ${head.stderr
 const sha = head.stdout.trim();
 const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tear-game-reference-"));
 const output = path.join(temporaryRoot, "game-reference.v1.json");
+const wikiOutput = path.join(temporaryRoot, "wiki-data.json");
 try {
   const result = spawnSync(
     process.execPath,
-    [path.join(root, "scripts", "export-game-reference.mjs"), "--output", output, "--expected-sha", sha],
+    [
+      path.join(root, "scripts", "export-game-reference.mjs"),
+      "--output",
+      output,
+      "--wiki-output",
+      wikiOutput,
+      "--expected-sha",
+      sha,
+    ],
     {
       cwd: root,
       encoding: "utf8",
@@ -146,6 +155,18 @@ try {
   )
     throw new Error("game reference check produced an invalid one-hit difficulty invariant");
   console.log(`PASS game reference check: ${reference.source.repository}@${reference.source.sha}`);
+
+  // The player wiki document, written by the same exporter run. The exporter itself
+  // fails when game content is missing from it or preview content leaks into it.
+  const wiki = JSON.parse(fs.readFileSync(wikiOutput, "utf8"));
+  if (wiki.format !== "tear-wiki-data" || wiki.schemaVersion !== 1 || wiki.source?.sha !== sha)
+    throw new Error("wiki data export produced invalid schema/provenance");
+  for (const entity of [...wiki.enemies, ...wiki.bosses])
+    if (!(entity.stats?.hp > 0) || typeof entity.desc !== "string" || entity.desc.length === 0)
+      throw new Error(`wiki data export is missing stats or Codex copy for ${String(entity.id)}`);
+  if (wiki.shop.items.length === 0 || wiki.controls.keyboard.length === 0 || wiki.modes.length === 0)
+    throw new Error("wiki data export is missing shop, controls, or modes");
+  console.log(`PASS wiki data export: ${String(wiki.enemies.length)} enemies, ${String(wiki.bosses.length)} bosses`);
 } finally {
   fs.rmSync(temporaryRoot, { recursive: true, force: true });
 }

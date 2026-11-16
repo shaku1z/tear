@@ -11,17 +11,28 @@ const projectRoot = resolve(import.meta.dirname, "..");
 const mode = process.argv[2];
 const resolved = resolveBuildMode(mode);
 if (resolved === undefined)
-  throw new Error(`usage: node scripts/build-target.mjs <${BUILD_MODES.join("|")}> [--out-dir path]`);
+  throw new Error(`usage: node scripts/build-target.mjs <${BUILD_MODES.join("|")}> [--out-dir path] [--preview-dev]`);
 const target = resolved.name;
+// --preview-dev: the target's preview build (config/build-targets.json "previewDev"), served below /dev/ on the preview origin.
+const previewDev = process.argv.includes("--preview-dev");
+if (previewDev && (resolved.target.previewDev === null || resolved.target.previewDev.mode !== mode))
+  throw new Error(`--preview-dev needs a mode with a preview build: ${mode}`);
 const outDirectoryIndex = process.argv.indexOf("--out-dir");
+// The preview dev build is a deploy input, not a build the test tooling reads, so it is written in
+// place like an --out-dir build instead of through the content-addressed store's fixed dist folders.
+const direct = outDirectoryIndex >= 0 || previewDev;
 const output =
   outDirectoryIndex >= 0
     ? resolve(process.argv[outDirectoryIndex + 1])
-    : resolve(projectRoot, "dist", mode.startsWith("test-") ? `test-${target}` : target);
-const staging =
-  outDirectoryIndex >= 0
-    ? output
-    : resolve(projectRoot, "artifacts/tearbench/generated/build-staging", `${mode}-${String(process.pid)}`);
+    : resolve(
+        projectRoot,
+        ...(previewDev
+          ? resolved.target.previewDev.output.split("/")
+          : ["dist", mode.startsWith("test-") ? `test-${target}` : target]),
+      );
+const staging = direct
+  ? output
+  : resolve(projectRoot, "artifacts/tearbench/generated/build-staging", `${mode}-${String(process.pid)}`);
 
 function git(...args) {
   const result = spawnSync("git", args, { cwd: projectRoot, encoding: "utf8", stdio: "pipe" });
@@ -36,6 +47,7 @@ const result = spawnSync(process.execPath, [viteCli, "build", "--mode", mode, "-
   cwd: projectRoot,
   encoding: "utf8",
   stdio: "inherit",
+  env: previewDev ? { ...process.env, [resolved.target.previewDev.env]: "1" } : process.env,
 });
 if (result.error !== undefined) throw result.error;
 if (result.status !== 0) process.exit(result.status ?? 1);
@@ -55,7 +67,7 @@ const metadata = await writeReleaseArtifactMetadata({
   sourceDirectory: projectRoot,
 });
 const stored = await materializeContentAddressedBuild({ workspaceRoot: projectRoot, directory: staging });
-if (outDirectoryIndex < 0) {
+if (!direct) {
   await fanoutContentAddressedBuild({ workspaceRoot: projectRoot, record: stored.record, destination: output });
   await rm(staging, { recursive: true, force: true });
 }

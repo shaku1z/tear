@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const { mkdir, writeFile } = require("node:fs/promises");
 const { join } = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 // One real native recording; reading and navigation use ordinary durable storage.
 withJourney(
@@ -41,7 +42,7 @@ withJourney(
     };
     const clickText = async (label) => {
       await page.waitForFunction((text) => window.__DNA_POSITIONS__?.some((entry) => entry.text === text), label, {
-        timeout: 10000,
+        timeout: STATE_WAIT_MS,
       });
       const point = await page.evaluate(
         (text) => window.__DNA_POSITIONS__.findLast((entry) => entry.text === text),
@@ -114,7 +115,7 @@ withJourney(
       await page.waitForFunction(
         () => window.__TEAR_GHOST_V3__.manifest() || window.__TEAR_GHOST_V3__.failure(),
         undefined,
-        { timeout: 20000 },
+        { timeout: STATE_WAIT_MS },
       );
       assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
       const source = await page.evaluate(() => window.__TEAR_GHOST_V3__.read(window.__TEAR_GHOST_V3__.manifest().id));

@@ -5,6 +5,7 @@ const http = require("node:http");
 const path = require("node:path");
 const { chromium } = require("@playwright/test");
 const { assertCleanProductionUrl, createClassCControls, writeClassCArtifact } = require("./class-c-browser-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
@@ -102,7 +103,7 @@ async function main() {
     else void route.abort();
   });
   try {
-    await page.goto(record.url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(record.url, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
     assertCleanProductionUrl(page.url());
     const controls = createClassCControls(page, record.viewport, record);
     await controls.wait(1_200);

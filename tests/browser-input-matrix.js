@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, holdFor, notWithin, pollEvery } = require("./browser-waits");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -22,6 +23,281 @@ async function moveCapturedPointer(page, from, to) {
     },
     { previous: from, next: to },
   );
+}
+
+/** Records where the draft cards draw their touch hint and the menu its PLAY label, in CSS px, for the newest frame. */
+function observeDraftHints() {
+  const hints = [];
+  let frame = 0;
+  let seq = 0;
+  window.__DRAFT_HINT_SEQ__ = () => seq;
+  window.__DRAFT_HINTS__ = () => hints.filter((hint) => hint.frame >= frame - 1);
+  window.__DRAFT_HINT_LOG__ = hints;
+  const raf = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = (callback) =>
+    raf((time) => {
+      frame += 1;
+      callback(time);
+    });
+  const fillText = CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText = function (value, x, y, ...rest) {
+    const text = String(value);
+    if (/^(TAP (TO READ|AGAIN)|PLAY$)/u.test(text)) {
+      const matrix = this.getTransform();
+      const box = this.canvas.getBoundingClientRect();
+      const ratio = box.height / this.canvas.height;
+      hints.push({
+        text,
+        frame,
+        seq: ++seq,
+        at: performance.now(),
+        x: box.left + (matrix.a * x + matrix.c * y + matrix.e) * ratio,
+        y: box.top + (matrix.b * x + matrix.d * y + matrix.f) * ratio,
+      });
+      if (hints.length > 400) hints.splice(0, 200);
+    }
+    return fillText.call(this, value, x, y, ...rest);
+  };
+}
+
+/**
+ * iOS browsers and Android Chrome before 144 have no document.exitPointerLock. A direct call
+ * there once threw inside the wave-clear intents, so the upgrade draft never opened on phones.
+ * This removes the method, clears a wave through the test hook (the game's own wave-clear path
+ * runs from there) and takes a card by touch, in Adventure and in Endless.
+ */
+async function phoneWithoutPointerLockOpensTheDraft(browser, configure) {
+  for (const viewport of [
+    { width: 844, height: 390 },
+    { width: 667, height: 375 },
+  ]) {
+    const context = await browser.newContext({ viewport, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+    const phone = await context.newPage();
+    const errors = [];
+    phone.on("pageerror", (error) => errors.push(error.message));
+    await phone.addInitScript(() => {
+      delete Document.prototype.exitPointerLock;
+    });
+    await phone.addInitScript(observeDraftHints);
+    await configure(phone);
+    assert.equal(
+      await phone.evaluate(() => typeof document.exitPointerLock),
+      "undefined",
+      "the phone has no exitPointerLock",
+    );
+    const cdp = await context.newCDPSession(phone);
+    const tap = async (point) => {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ x: point.x, y: point.y, id: 1 }],
+      });
+      await phone.waitForTimeout(holdFor(60));
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    };
+    // Taps, then looks for the result; taps again while the screen is still ignoring input.
+    const tapUntil = async (point, predicate, argument, what) => {
+      const deadline = Date.now() + STATE_WAIT_MS;
+      for (;;) {
+        // Each predicate sees what was drawn after this tap (seq), so an older frame cannot pass it.
+        const since = await phone.evaluate(() => window.__DRAFT_HINT_SEQ__());
+        await tap(point);
+        try {
+          await phone.waitForFunction(predicate, { argument, since }, { timeout: pollEvery(2000) });
+          return;
+        } catch (error) {
+          if (error?.name !== "TimeoutError") throw error;
+          if (Date.now() > deadline) throw new Error(`${what} never happened`, { cause: error });
+          // Tap again only while the draft is still open: a second tap on a read card takes it.
+          const screen = await phone.evaluate(() => window.__PANTHEON_TEST.state().game);
+          if (screen !== "draft") throw new Error(`${what}: the draft closed (now ${screen})`, { cause: error });
+        }
+      }
+    };
+    const label = `${String(viewport.width)}x${String(viewport.height)}`;
+    for (const mode of ["campaign", "endless"]) {
+      const where = `${label} ${mode}`;
+      await phone.evaluate((selected) => window.__PANTHEON_TEST.startMode(selected, "easy"), mode);
+      await phone.waitForFunction(() => {
+        const state = window.__PANTHEON_TEST.state();
+        if (state.active) window.__PANTHEON_TEST.skip();
+        return state.game === "playing" && !state.active;
+      });
+      // The first touch makes touch the owning device (a corner of the movement zone).
+      await tap({ x: 6, y: viewport.height - 6 });
+      await phone.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "touch");
+      // Only hints drawn by this draft count; the log still holds the previous mode's cards.
+      const draftStart = await phone.evaluate(() => window.__DRAFT_HINT_SEQ__());
+      await phone.evaluate(() => window.__PANTHEON_TEST.prepareNaturalWaveClearScenario());
+      await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "draft", undefined, {
+        timeout: STATE_WAIT_MS,
+      });
+      // Cards deal in from below one after another and ease, and the game can draw the same
+      // animation step twice, so equal positions in two frames do not mean the deal is over. It is
+      // over when every card has stayed exactly where it is for notWithin(200) ms of drawn frames.
+      const restingHint = await phone.waitForFunction(
+        ({ since, stillFor }) => {
+          const unread = window.__DRAFT_HINT_LOG__.filter((hint) => hint.seq > since && hint.text === "TAP TO READ");
+          const frames = [...new Set(unread.map((hint) => hint.frame))];
+          const at = (frame) => unread.filter((hint) => hint.frame === frame);
+          const now = at(frames.at(-1));
+          if (now.length === 0) return null;
+          const same = (frame) => {
+            const then = at(frame);
+            return then.length === now.length && then.every((hint, i) => hint.x === now[i].x && hint.y === now[i].y);
+          };
+          let earliest = now[0].at;
+          for (let index = frames.length - 2; index >= 0 && same(frames[index]); index -= 1)
+            earliest = at(frames[index])[0].at;
+          return now[0].at - earliest >= stillFor ? now.at(-1) : null;
+        },
+        { since: draftStart, stillFor: notWithin(200) },
+        { timeout: STATE_WAIT_MS },
+      );
+      const unread = await restingHint.jsonValue();
+      assert.ok(unread, `${where}: the draft shows a card to read`);
+      // The draft ignores input for a moment after it opens, so a tap is repeated until it lands.
+      await tapUntil(
+        unread,
+        ({ argument: x, since }) =>
+          window.__DRAFT_HINT_LOG__.some(
+            (hint) => hint.seq > since && hint.text.startsWith("TAP AGAIN") && Math.abs(hint.x - x) < 4,
+          ),
+        unread.x,
+        `${where}: reading the card`,
+      );
+      assert.equal(
+        await phone.evaluate(() => window.__PANTHEON_TEST.state().game),
+        "draft",
+        `${where}: the first tap reads the card without taking it`,
+      );
+      await tapUntil(
+        unread,
+        () => window.__PANTHEON_TEST.state().game === "playing",
+        undefined,
+        `${where}: taking the card`,
+      );
+    }
+    assert.deepEqual(errors, [], `${label}: a phone without exitPointerLock raises no page errors`);
+    await context.close();
+  }
+}
+
+/**
+ * docs/CURSOR_INPUT_CONTRACT.md: the system cursor, the canvas arrow and hover exist only while
+ * the mouse owns the interface, and come back only with a meaningful mouse movement, over the
+ * canvas and over the HTML fullscreen button alike.
+ */
+async function pointerBelongsToTheMouseAlone(browser, configure) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  await configure(page);
+  const input = () => page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot());
+  const cursorOf = (selector) => page.locator(selector).evaluate((element) => getComputedStyle(element).cursor);
+  const mode = (expected) => page.waitForFunction((value) => document.body.dataset.imode === value, expected);
+  await page.mouse.move(600, 300);
+  await page.mouse.move(640, 360, { steps: 4 });
+  await mode("mouse");
+  assert.notEqual((await input()).ownedPointer, null, "the mouse owns the pointer after moving");
+  assert.equal(await cursorOf("#fs"), "default");
+
+  await page.keyboard.press("ArrowDown");
+  await mode("keyboard");
+  assert.equal((await input()).ownedPointer, null, "a key press takes the pointer away");
+  assert.equal(await cursorOf("#fs"), "none", "the hardware cursor hides over the HTML button too");
+  assert.equal(await cursorOf("body"), "none", "the hardware cursor hides over the letterbox");
+
+  // Sensor noise: a few pixels of drift must not bring the pointer back.
+  await page.mouse.move(642, 361);
+  await page.mouse.move(641, 362);
+  await page.waitForTimeout(notWithin(150));
+  assert.equal((await input()).mode, "keyboard", "mouse jitter does not reclaim the interface");
+  assert.equal((await input()).ownedPointer, null);
+
+  // A slow, deliberate movement does, even though no single event travels far.
+  for (let step = 1; step <= 8; step += 1) await page.mouse.move(641 + step * 2, 362);
+  await mode("mouse");
+  assert.notEqual((await input()).ownedPointer, null, "a meaningful movement returns the pointer");
+
+  // The same threshold holds over the HTML fullscreen button, where the canvas hears nothing.
+  await page.keyboard.press("ArrowDown");
+  await mode("keyboard");
+  const button = await page.locator("#fs").boundingBox();
+  assert.ok(button, "the fullscreen button is shown on a mouse-first device");
+  const inside = { x: button.x + button.width / 2, y: button.y + button.height / 2 };
+  await page.mouse.move(inside.x - 12, inside.y, { steps: 1 });
+  await page.mouse.move(inside.x + 12, inside.y, { steps: 6 });
+  await mode("mouse");
+  assert.equal(await cursorOf("#fs"), "default");
+  await page.close();
+}
+
+/**
+ * A tablet starts on touch, so its first tap meets the touch layout it was drawn. A laptop with
+ * a touch screen starts on the mouse; its first tap is resolved against the mouse layout the
+ * player saw, and the menu changes to its touch layout only afterwards. Either way the first
+ * tap on PLAY opens the run setup (it once opened the Shop, which sat under the moved layout).
+ */
+async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
+  for (const device of [
+    { name: "tablet", isMobile: true, startsOn: "touch" },
+    { name: "touch laptop", isMobile: false, startsOn: "mouse" },
+  ]) {
+    const context = await browser.newContext({
+      viewport: { width: 1024, height: 768 },
+      hasTouch: true,
+      isMobile: device.isMobile,
+    });
+    const page = await context.newPage();
+    await page.addInitScript(observeDraftHints);
+    // Touch emulation reports a coarse primary pointer; a laptop with a touch screen has a fine one.
+    if (!device.isMobile) {
+      await page.addInitScript(() => {
+        const matchMedia = window.matchMedia.bind(window);
+        window.matchMedia = (query) =>
+          query === "(pointer: coarse)"
+            ? { ...matchMedia("not all"), media: query, matches: false }
+            : matchMedia(query);
+      });
+    }
+    await configure(page);
+    const input = () => page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot());
+    await page.waitForFunction(() => window.__DRAFT_HINTS__().some((hint) => hint.text === "PLAY"));
+    // The menu slides in: wait until PLAY is drawn in the same place on two looks in a row.
+    await page.waitForFunction(
+      () => {
+        const play = window.__DRAFT_HINTS__().findLast((hint) => hint.text === "PLAY");
+        const last = window.__PLAY_AT__;
+        window.__PLAY_AT__ = play;
+        return Boolean(play && last && play.x === last.x && play.y === last.y);
+      },
+      undefined,
+      { timeout: STATE_WAIT_MS, polling: pollEvery(250) },
+    );
+    const start = await input();
+    assert.equal(start.mode, device.startsOn, `${device.name}: the owning device at load`);
+    assert.equal(start.touchLayout, device.isMobile, `${device.name}: the layout at load`);
+    assert.equal(start.ownedPointer === null, device.isMobile, `${device.name}: the pointer at load`);
+    const play = (await page.evaluate(() => window.__DRAFT_HINTS__())).filter((hint) => hint.text === "PLAY").at(-1);
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: play.x + 12, y: play.y - 4, id: 1 }],
+    });
+    await page.waitForTimeout(holdFor(60));
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen !== "menu", undefined, {
+      timeout: STATE_WAIT_MS,
+    });
+    assert.equal(
+      await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen),
+      "setup",
+      `${device.name}: the first tap on PLAY opens the run setup`,
+    );
+    const after = await input();
+    assert.equal(after.mode, "touch", `${device.name}: touch owns the interface after a tap`);
+    assert.equal(after.touchLayout, true, `${device.name}: the touch layout follows the first tap`);
+    assert.equal(after.ownedPointer, null, `${device.name}: no pointer while touch owns the interface`);
+    await context.close();
+  }
 }
 
 async function main() {
@@ -48,7 +324,7 @@ async function main() {
     await page.route("**/*", (route) =>
       route.request().url().startsWith(`${baseUrl}/`) ? route.continue() : route.abort(),
     );
-    await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${baseUrl}/?test=1&bossdebug=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ && window.__PANTHEON_TEST);
   }
 
@@ -115,7 +391,7 @@ async function main() {
       return trace && Math.abs(trace.vx) < 1;
     },
     undefined,
-    { timeout: 5_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await touch.close();
 
@@ -189,7 +465,7 @@ async function main() {
     window.__testGamepad.buttons[2] = { pressed: true, touched: true, value: 1 };
     window.__testGamepad.timestamp = 4;
   });
-  await controller.waitForTimeout(500);
+  await controller.waitForTimeout(holdFor(500));
   const squareState = await controller.evaluate(() => ({
     game: window.__PANTHEON_TEST.state().game,
     input: window.__TEAR_CATALOG_DEBUG__.input.snapshot(),
@@ -261,7 +537,7 @@ async function main() {
       return after && Math.hypot(after.x, after.y) < before - 8 ? { x: after.x, y: after.y } : false;
     },
     reachBeforeMove,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const aimAfterShortMove = await aimAfterShortMoveHandle.jsonValue();
   await aimAfterShortMoveHandle.dispose();
@@ -276,7 +552,7 @@ async function main() {
       return after && after.x > before.x + 10;
     },
     aimBeforeMove,
-    { timeout: 10_000 },
+    { timeout: STATE_WAIT_MS },
   );
   await controller.keyboard.press("Escape");
   await controller.waitForFunction(() => !window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked);
@@ -341,6 +617,10 @@ async function main() {
   });
   await controller.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen === "paused");
   await controller.close();
+
+  await phoneWithoutPointerLockOpensTheDraft(browser, configure);
+  await pointerBelongsToTheMouseAlone(browser, configure);
+  await firstTapLandsOnTheControlsThePlayerSaw(browser, configure);
 
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

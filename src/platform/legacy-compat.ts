@@ -8,6 +8,7 @@ import type {
   Unsubscribe,
 } from "./contracts";
 import type { SyncStringStorage } from "./storage";
+import { markStartupMilestone } from "./startup-milestones";
 
 export interface LegacyPlatformCompatibilityOptions {
   readonly target: TearBuildTarget;
@@ -221,9 +222,11 @@ export function createLegacyPlatformCompatibility(
     },
     loadingStop() {
       loadingRequested = false;
+      markStartupMilestone("loading-finished");
       if (this.on) services.lifecycle.loadingFinished();
     },
     gameplayStart() {
+      markStartupMilestone("gameplay-start");
       if (this.on) services.lifecycle.gameplayStarted();
     },
     gameplayStop() {

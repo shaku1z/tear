@@ -33,3 +33,6 @@ artifacts/packages/tear-crazygames.zip
 .tmp-tone-host-esm/
 artifacts/
 .artifact-quarantine/
+
+# wiki build cache (exported game data and generated media)
+wiki/.cache/

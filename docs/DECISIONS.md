@@ -27,6 +27,9 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 | [D-010](#d-010) | 2026-11-13 | Prettier owns formatting; size gates measure non-whitespace characters | Active |
 | [D-011](#d-011) | 2026-11-13 | A lead session runs Tear work through side sessions | Active |
 | [D-012](#d-012) | 2026-11-13 | Program status is generated from one curated file | Active |
+| [D-013](#d-013) | 2026-11-13 | Production deploy of `84761549` after the owner played it | Active |
+| [D-014](#d-014) | 2026-11-13 | The game and wiki repositories are private | Active |
+| [D-015](#d-015) | 2026-11-13 | Remove the over-built developer systems; plain names for what stays | Active |
 
 <a id="d-001"></a>
 
@@ -39,8 +42,8 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   history.
 - **Decision:** every commit is authored and committed as the owner's configured Git identity.
   Commit messages and pull request bodies carry no `Co-authored-by`, `Signed-off-by`,
-  generated-by or similar trailers. Shared hooks enforce this at commit time and, for every new
-  commit object, at push time. Published history is never rewritten to remove old trailers.
+  generated-by or similar trailers. The hooks in `scripts/governance/` (formerly shared from the
+  governance skill) enforce this at commit time and, for every new commit object, at push time. Published history is never rewritten to remove old trailers.
 - **Alternatives:** rewriting history to remove the 183 old trailers (rejected: it would break
   every clone and published reference).
 - **Consequences:** `--no-verify`, plumbing commits and alternate identities are forbidden; the
@@ -154,6 +157,8 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   changes waits for the owner's playtest.
 - **Alternatives:** deploy as soon as `main` is green, as D-006 allows.
 - **Consequences:** production still runs `9e7d6a70` (see [POSITION.md](POSITION.md)).
+- **Amended 2026-11-13:** the owner played `main` and production moved to `84761549`
+  ([D-013](#d-013)). The hold still applies to later visual work.
 - **Source:** the release lead's record of decisions taken under the delegation.
 
 <a id="d-009"></a>
@@ -214,3 +219,59 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 - **Alternatives:** keep status in the plans (rejected: the phase tables did not follow the merges).
 - **Consequences:** a pull request that changes an area's state edits `config/position.json`.
 - **Source:** this repository-structure work.
+
+<a id="d-013"></a>
+
+## D-013 — Production deploy of `84761549` after the owner played it
+
+- **Date:** 2026-11-13.
+- **Trigger:** D-008 held the deploy of the rebuilt menus and UI until the owner had played them.
+  The owner's verdict: "build is good".
+- **Decision:** deploy `main` commit `847615494f3b511b4e845da373a90a5277b807b7` to tearblade.com
+  through the protected production workflow. The next production deploy follows the Verdant,
+  Tutorial and music work.
+- **Alternatives:** keep holding until those workstreams land (not taken: the owner approved this
+  build).
+- **Consequences:** the 2026-08-30 build `9e7d6a70` becomes the previous release; the release
+  compatibility fixtures treat it as such. `https://tearblade.com/build-info.json` reports the
+  deployed commit. D-008 still applies to later visual work.
+- **Source:** the release lead's record of the owner's approval.
+
+<a id="d-014"></a>
+
+## D-014 — The game and wiki repositories are private
+
+- **Date:** 2026-11-13.
+- **Trigger:** the owner's instruction: "private repos".
+- **Decision:** `shaku1z/tear` and `shaku1z/tear-wiki` are private repositories.
+- **Alternatives:** stay public (the repositories were public until 2026-11-13).
+- **Consequences:** everything pushed before 2026-11-13, including history, was public and may
+  have been copied; anything secret-like found in history is still treated as exposed. The
+  branch ruleset on `main` stays enforced (pull requests block on the required `check`).
+  GitHub Actions minutes are now metered against the account's allowance, so the cost of the
+  `check` job matters.
+- **Source:** the release lead's record of the owner's instruction.
+
+<a id="d-015"></a>
+
+## D-015 — Remove the over-built developer systems; plain names for what stays
+
+- **Date:** 2026-11-13.
+- **Trigger:** the owner: "I don't want anything like 'lab, foundry, studio, etc' all those types
+  of names, and tbh anything with those names could probably be simplified and removed completely
+  perhaps, just nonsense codex created that doesn't need to be, over complicating things. Want to
+  make sure all that's good and taken care of. Everything needs to be highly organized, optimized,
+  efficient and still with high quality now. and that's a standard." The earlier terminology work
+  (G4) had put new names on facades over the old modules instead of renaming or removing anything.
+- **Decision:** developer-only systems that nothing shipped or verified depends on are deleted, not
+  renamed: the agent training pipelines (Foundry, Academy), the replay hub and bot evidence screens,
+  clip export, and the G4 facades and alias vocabularies. What stays gets one plain name. Player
+  storage identifiers (the `tear-ghost-v3` database, `tear_vault_*` keys, replay file formats) are
+  identifiers, not names, and never change. In-world game writing that happens to use such a word
+  stays. Git history is the archive for deleted code and its documents.
+- **Alternatives:** rename everything in place (rejected: it keeps systems nobody uses); move the
+  code to an archive folder (rejected: git history already keeps it).
+- **Consequences:** each removal lands as its own pull request; names introduced from now on are
+  plain words for what a thing does. The cloud publication and support stack is the owner's call
+  and is not part of this decision.
+- **Source:** the owner's request relayed by the lead session on 2026-11-13.

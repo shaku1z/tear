@@ -1,3 +1,4 @@
+import type { CoachMark, CoachPlacement, CoachRect } from "../coach/coach-marks";
 export interface WorldRect {
   readonly x: number;
   readonly y: number;
@@ -61,8 +62,6 @@ export interface WorldUiPort {
   readonly ink: string;
   /** A palette hue made readable as text on the current HUD surface. */
   readable(color: string, ratio?: number): string;
-  /** The contrasting surface behind an in-run teaching card (tutorial lesson, playground help); never behind HUD groups. */
-  hudPlate(canvas: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void;
   displayText(
     canvas: CanvasRenderingContext2D,
     text: string,
@@ -105,6 +104,8 @@ export interface WorldUiPort {
   ): Readonly<{ size: number; lines: readonly string[]; height: number; lineHeight: number }>;
   /** A bordered key cap; returns its width. */
   keycap(canvas: CanvasRenderingContext2D, key: string, x: number, y: number): number;
+  /** The width and height `keycap` draws for this key. */
+  keycapSize(canvas: CanvasRenderingContext2D, key: string): Readonly<{ w: number; h: number }>;
   sheetRect(): Readonly<{ x: number; y: number; w: number; h: number }>;
   /** The sheet's footer row: its top, height, and the BACK control's left edge. */
   sheetFooter(): Readonly<{ y: number; h: number; backX: number }>;
@@ -329,15 +330,10 @@ export interface TutorialCardSnapshot {
   readonly clearTop?: number | undefined;
 }
 
-export interface PlaygroundHelpSnapshot {
-  readonly weaponId: string;
-  readonly heldHits: number;
-  readonly throws: number;
-  readonly throwHits: number;
-  readonly perfectParries: number;
-  readonly breakTriggers: number;
-  /** Lowest edge of an on-screen control in the top-right corner (touch pause) the panel must clear. */
-  readonly clearTop?: number | undefined;
+export interface CoachMarkSceneSnapshot {
+  readonly marks: readonly Readonly<{ mark: CoachMark; alpha: number }>[];
+  /** Live screen rectangles a mark must keep clear of (player, touch controls, lesson card). */
+  readonly avoid: readonly CoachRect[];
 }
 
 export interface AchievementToastSnapshot {
@@ -425,8 +421,10 @@ export interface WorldRendererRegistry {
   pantheonDebug(snapshot: PantheonDebugSnapshot): void;
   finaleWorld(layer: "rear" | "front", snapshot: FinaleWorldSnapshot): void;
   hud(snapshot: HudSnapshot): void;
-  tutorialCard(snapshot: TutorialCardSnapshot): void;
-  playgroundHelp(snapshot: PlaygroundHelpSnapshot): void;
+  /** Draws the lesson card and returns its rectangle, which coach marks keep clear of. */
+  tutorialCard(snapshot: TutorialCardSnapshot): WorldRect;
+  /** Draws the visible coach marks and returns where each landed. */
+  coachMarks(snapshot: CoachMarkSceneSnapshot): readonly CoachPlacement[];
   achievementToast(snapshot: AchievementToastSnapshot): void;
   touchControls(snapshot: TouchControlsSnapshot): void;
   waveBanner(snapshot: WaveBannerSnapshot): void;

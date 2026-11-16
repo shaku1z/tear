@@ -13,8 +13,8 @@
     "public",
     "scripts",
     "src",
-    "tear-wiki",
     "tests",
+    "wiki",
     "workers"
   ],
   "optionalTrackedDirectories": [

@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function canonical(value) {
   if (value === null || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
@@ -137,9 +138,9 @@ withJourney(
     );
     await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1&watchagent=1`, {
       waitUntil: "domcontentloaded",
-      timeout: 30_000,
+      timeout: STATE_WAIT_MS,
     });
-    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15_000 });
+    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
     let snapshot = await page.evaluate(() =>
       window.__TEAR_WATCH_AGENT__.start({
         profile: "competent",
@@ -149,8 +150,10 @@ withJourney(
         seed: 62,
       }),
     );
-    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup", undefined, { timeout: 10_000 });
-    await page.waitForLoadState("networkidle", { timeout: 10_000 });
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "setup", undefined, {
+      timeout: STATE_WAIT_MS,
+    });
+    await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
     for (let index = 0; index < 20 && snapshot.policyReceipt?.source !== "artifact"; index += 1) {
       snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(1));
     }
@@ -166,7 +169,7 @@ withJourney(
         return trace && trace.pending === 0 && trace.committed > 0;
       },
       undefined,
-      { timeout: 10_000 },
+      { timeout: STATE_WAIT_MS },
     );
     const journal = await page.evaluate(
       async (id) =>
