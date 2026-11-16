@@ -65,6 +65,7 @@
         "src/gameplay/environment/environment-runtime.ts",
         "src/gameplay/environment/environment-state.ts",
         "src/gameplay/environment/environment-contracts.ts",
+        "src/gameplay/environment/environment-contact-damage.ts",
         "src/gameplay/environment/environment-feature-ports.ts",
         "src/gameplay/environment/field-runtime.ts",
         "src/gameplay/environment/environment-events.ts",
@@ -76,6 +77,7 @@
       "purpose": "Neutral environment, codec and telemetry schema modules that must not contain biome-owned vocabulary.",
       "include": [
         "src/gameplay/environment/environment-contracts.ts",
+        "src/gameplay/environment/environment-contact-damage.ts",
         "src/gameplay/environment/environment-runtime.ts",
         "src/gameplay/environment/environment-state.ts",
         "src/gameplay/environment/environment-feature-ports.ts",
