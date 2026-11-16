@@ -36,6 +36,8 @@ describe("Validate workflow", () => {
     expect(workflow).toMatch(
       /group: validate-\$\{\{ github\.ref \}\}-\$\{\{ github\.event_name == 'push' && github\.sha/u,
     );
+    // A skipped draft run must not share a group with the run that marking ready starts.
+    expect(workflow).toMatch(/github\.event\.pull_request\.draft && 'draft' \|\| 'latest'/u);
   });
 
   it("treats a pull request as docs-only exactly when every changed file is a document", { timeout: 30_000 }, () => {

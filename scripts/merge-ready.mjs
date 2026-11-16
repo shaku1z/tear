@@ -70,6 +70,10 @@ export function decide({ main, pr, run, mainFilesSince, mainTip }) {
   }
   if (run === undefined) return no("no Validate run exists for the pull request's current head", "refresh");
   if (run.status !== "completed") return no(`the check for the current head is still ${run.status}`, "wait");
+  // A skipped run (the pull request was a draft when it started) or a cancelled one checked nothing.
+  if (run.conclusion === "skipped" || run.conclusion === "cancelled") {
+    return no(`the latest run for the current head was ${run.conclusion}, so nothing was checked`, "refresh");
+  }
   if (run.conclusion !== "success") return no(`the check for the current head ended ${run.conclusion}`, "fix it");
   if (run.checkedHead === undefined || run.checkedMain === undefined) {
     return no("the passing run did not record which main it checked against", "refresh");
