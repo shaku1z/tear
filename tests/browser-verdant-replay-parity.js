@@ -3,7 +3,7 @@
 // receipt must reproduce when the capsule is replayed through the detached production world.
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, pollEvery } = require("./browser-waits");
 
 function resolved(id, start, state) {
   const document = { format: "tearsdl", schemaVersion: 1, id, stateClass: "surgical-valid", seed: id, start, state };
@@ -59,35 +59,38 @@ async function runCase(entry, port) {
       });
       const previous = null;
       const id = entry.document.id;
-      const played = await page.evaluate(async (scenario) => {
-        const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
-        const launched = environment.forgeResolvedScenario(scenario);
-        if (!launched.ok) return { launched };
-        let command = 1;
-        let last = environment.captureSnapshot(`${scenario.document.id}-start`);
-        let ended = false;
-        // Stop at the first natural end of the run (wave clear or defeat); the recording seals there.
-        try {
-          for (let frame = 0; frame < (scenario.frames ?? 900); frame += 1) {
-            // Yield every frame as real play does; boss phases record enough per tick that bursts overflow staging.
-            await new Promise((resolve) => setTimeout(resolve, 0));
-            if (frame % 90 === 30) {
-              last = environment.captureSnapshot(`${scenario.document.id}-${String(frame)}`);
-              const x = frame % 180 === 30 ? 1000 : -1000;
-              environment.step([
-                { kind: "command", tick: last.tick + 1, id: command++, command: { type: "move", x, y: 0 } },
-              ]);
-            } else environment.advanceApplicationFrame(1 / 60);
+      const played = await page.evaluate(
+        async ({ scenario, yieldMs }) => {
+          const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
+          const launched = environment.forgeResolvedScenario(scenario);
+          if (!launched.ok) return { launched };
+          let command = 1;
+          let last = environment.captureSnapshot(`${scenario.document.id}-start`);
+          let ended = false;
+          // Stop at the first natural end of the run (wave clear or defeat); the recording seals there.
+          try {
+            for (let frame = 0; frame < (scenario.frames ?? 900); frame += 1) {
+              // Yield every frame as real play does; boss phases record enough per tick that bursts overflow staging.
+              await new Promise((resolve) => setTimeout(resolve, yieldMs));
+              if (frame % 90 === 30) {
+                last = environment.captureSnapshot(`${scenario.document.id}-${String(frame)}`);
+                const x = frame % 180 === 30 ? 1000 : -1000;
+                environment.step([
+                  { kind: "command", tick: last.tick + 1, id: command++, command: { type: "move", x, y: 0 } },
+                ]);
+              } else environment.advanceApplicationFrame(1 / 60);
+            }
+            last = environment.captureSnapshot(`${scenario.document.id}-end`);
+          } catch (error) {
+            if (!String(error).includes("requires a running Tear runtime")) throw error;
+            ended = true;
           }
-          last = environment.captureSnapshot(`${scenario.document.id}-end`);
-        } catch (error) {
-          if (!String(error).includes("requires a running Tear runtime")) throw error;
-          ended = true;
-        }
-        if (!ended) environment.terminate();
-        const bosses = last.state["tear.boss.v1"] ?? [];
-        return { launched, ended, tick: last.tick, bossPhases: bosses.map((boss) => boss.phaseMarker) };
-      }, entry);
+          if (!ended) environment.terminate();
+          const bosses = last.state["tear.boss.v1"] ?? [];
+          return { launched, ended, tick: last.tick, bossPhases: bosses.map((boss) => boss.phaseMarker) };
+        },
+        { scenario: entry, yieldMs: pollEvery(0) },
+      );
       assert.equal(played.launched.ok, true, `${id}: ${JSON.stringify(played.launched)}`);
       await page.waitForFunction(
         (prior) => {
