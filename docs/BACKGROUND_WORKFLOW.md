@@ -67,13 +67,14 @@ shading, and the shading softens the painting.
 | --- | --- |
 | `src/presentation/scenes/scene-contract.ts` | The format (`ScenePackage`), its validator, camera and coverage maths. Self-contained so the command can load it. |
 | `src/presentation/scenes/scene-renderer.ts` | Draws layers, shading, the platform texture and contact shadows; bakes shading at load. |
-| `src/presentation/scenes/scene-library.ts` | Lazy loading, validation, fade-in, fallback to the procedural backdrop, the surface texture for any platform material. |
+| `src/presentation/scenes/scene-library.ts` | Lazy loading, validation, fade-in, fallback to the procedural backdrop, release of stages a run has left, the surface texture for any platform material. |
 | `src/presentation/scenes/scene-bitmap.ts` | Fetch and decode, then one copy into a canvas (see Runtime). |
 | `src/presentation/scenes/scene-registry.ts` | `stageId -> () => import(package)`. One line per shipped package. |
 | `src/presentation/platform-materials/` | The platform materials; each takes a `SurfaceTexture` from the package. |
-| `src/presentation/assets/scenes/<stage>/` | A shipped package: `recipe.json` (how to build it) and the generated `scene.json`, `scene.ts` and WebP images. |
+| `src/presentation/assets/scenes/<stage>/` | A shipped package: `recipe.json` (how to build it) and the generated `scene.json`, `scene.ts` and AVIF images. |
 | `tests/fixtures/scene-packages/<stage>/` | A package that never ships, built and checked exactly like a shipped one. |
 | `scripts/scene.mjs`, `scripts/scene/` | The `pnpm scene` command. |
+| `config/scene-budgets.json` | Each release build's share for all its scene art (see Size rule). |
 | `tests/unit/scene-*.test.ts` | Format, library and per-package tests; `scene-packages.test.ts` checks every package present. |
 
 Source images are not in the repository. They live in a sources folder
@@ -95,7 +96,8 @@ A generated source has no file: its generator settings are pinned instead.
 | `edge` | Colour past a covering layer's edge at very wide screens, and its feather. |
 | `theme.paper` | The colour the HUD and actors take their ink from: the stage's own `bg` from `src/gameplay/stages.ts`. |
 | `sources`, `images` | Provenance (origin, licence, SHA-256; tool and exact prompt for image-tool output) and each image's size, bytes, SHA-256 and sources. |
-| `decodedBudget` | Decoded bytes (width x height x 4, summed) the package may use. Files are capped at 2 MiB and 4096 px per edge. |
+| `encodedBudget` | Bytes the package's image files may total (see Size rule). |
+| `decodedBudget` | Decoded bytes (width x height x 4, summed) the package may use. An image is at most 4096 px per edge. |
 
 ### Runtime
 
@@ -104,11 +106,17 @@ A generated source has no file: its generator settings are pinned instead.
   world first shows the stage if it got there another way. Nothing loads before
   the first frame, from a menu, or for a stage the run has not come near. The
   menu's moving background draws every stage in turn and never fetches art; it
-  keeps the procedural look. Only `prefetch` in the scene library starts a
-  download, and `pnpm check:load-budgets` measures what a new player downloads
-  before playing, on both release builds.
-- Until a package has decoded, or if it fails, the procedural backdrop draws as
-  before. The painting fades in over 0.6 s (instantly with reduced motion).
+  keeps the procedural look. Only `show` (the world is drawing the stage) and
+  `prefetch` (the run reaches it next) in the scene library start a download,
+  and `pnpm check:load-budgets` measures what a new player downloads before
+  playing, on both release builds.
+- Until a package has decoded, or if it fails (a browser without AVIF, a failed
+  download), the procedural backdrop draws as before. The painting fades in
+  over 0.6 s (instantly with reduced motion).
+- Decoded layers stay for two stages at most: the one on screen and the next.
+  When a run moves to another biome the stage it left is released, and the main
+  menu releases everything. Pausing into settings does not, so a run never
+  returns to a coded background.
 - Each image is decoded, then copied into a canvas once. Chrome keeps a bitmap
   decoded from a file off the GPU and re-uploads it on every frame that draws
   it. On Verdant that cost about 50 ms a frame; with the copy, Verdant measures
@@ -116,14 +124,52 @@ A generated source has no file: its generator settings are pinned instead.
 - Layers draw with default image smoothing. "High" smoothing cost a frame or
   more per large layer for no visible gain at the game's scale.
 
+## Size rule
+
+Every package meets this rule and the checks enforce it, so a new biome cannot
+grow a release build or its memory use unnoticed. The limits were sized from
+Verdant Sanctum with modest headroom.
+
+| Rule | Limit | Checked by |
+| --- | --- | --- |
+| Format | AVIF only, quality 62, full-resolution colour. No second copy in another format; a browser that cannot decode AVIF keeps the stage's coded background. | The format (file names), `pnpm scene build` |
+| Encoded size of one scene | The package's `encodedBudget`, at most 600,000 bytes (Verdant: 539,325). | The format |
+| Decoded size of one scene | The package's `decodedBudget`, at most 24 MiB (Verdant: 21.65 MiB). | The format |
+| All scene art in one release build | The build's share in `config/scene-budgets.json`: 3,000,000 bytes for each build. | `pnpm scene validate`, the unit tests, every build (`scripts/build-target.mjs`) |
+| Resolution | At most 2.5 image pixels per world unit, the most the game's canvas can show. | The format |
+| No unused alpha | An image stores an alpha plane only if some pixel is see-through. Colour under fully transparent pixels is cleared. | `pnpm scene build`, `pnpm scene validate` |
+| Flat or soft layers | A layer of 16 KiB or more that is 0.985 alike to its own half-size copy must be stored at half size (a `resize` step) or drawn in code. Haze, washes and gradients are `shading` entries, drawn by code, never pixels. | `pnpm scene validate` |
+| Nothing painted twice | Paint that nearer layers cover for every camera the package allows is never seen. The build softens it to a blur, which costs almost nothing to store. | `pnpm scene build`, `pnpm scene validate` |
+| When it loads | Never before the first run starts, never from a menu: one wave before the run reaches the stage, with the coded background showing until the painting has decoded. Scene art adds 0 bytes to what a new player downloads before playing. | `pnpm check:load-budgets`, `tests/unit/scene-library.test.ts` |
+| Memory | Decoded layers are held for the stage on screen and the next one only, and released on the main menu. | `tests/unit/scene-library.test.ts` |
+
+`pnpm scene validate` prints each figure next to its limit. Raising a limit or a
+build's share is a reviewed decision, not a fix for a failing check: first lower
+the bytes (fewer or smaller layers, more shading in code).
+
+**Quality.** Quality 62 measured the same against the lossless Verdant layers as
+the earlier WebP at quality 84 (structural similarity 0.976) at 73% of the bytes.
+A recipe output may set its own `quality`. Before lowering it, show the owner
+side-by-side crops of the lossless layer and the candidate at game resolution
+and at 2x; a quality the owner can tell from the source is too low.
+
+**What the storefronts measure.** CrazyGames limits the initial download to
+50 MB, and to 20 MB for the mobile homepage, measured from the start of loading
+to the first gameplay-start event when its SDK is integrated (Tear integrates
+it); the whole package may be 250 MB and 1,500 files
+([technical requirements](https://docs.crazygames.com/requirements/technical/),
+[requirements overview](https://docs.crazygames.com/requirements/intro/), read
+2026-11-16). A painting fetched when its stage nears is outside the initial
+download, which is why scene art must never load earlier.
+
 ## `pnpm scene`
 
 | Command | What it does |
 | --- | --- |
 | `pnpm scene list` | Every package, shipped and fixture, and whether it validates. |
-| `pnpm scene validate [stage]` | Manifest, files, sizes, hashes, registry line (shipped packages), budgets and coverage of every required screen shape. Exit 1 on a problem. |
+| `pnpm scene validate [stage]` | Manifest, files, hashes, registry line (shipped packages), the size rule (each figure next to its limit, and each release build's share) and coverage of every required screen shape. Exit 1 on a problem. |
 | `pnpm scene coverage [stage]` | Coverage of each covering layer under the full camera range, with the shortfall per side. |
-| `pnpm scene build <stage> [--sources <dir>]` | Runs `recipe.json`: checks source hashes, regenerates images, `scene.json` and `scene.ts`, then validates. A recipe of generated sources needs no `--sources`. |
+| `pnpm scene build <stage> [--sources <dir>]` | Runs `recipe.json`: checks source hashes, softens paint no camera can show, encodes every image as AVIF, writes `scene.json` and `scene.ts`, then validates. A recipe of generated sources needs no `--sources`. |
 | `pnpm scene contrast <stage> [--platforms ...] [--with v.json] [--out dir]` | WCAG contrast at rest of the theme ink, both inks, enemy red and Verdant's telegraph gold over the HUD title, HUD status, HUD band and play band; `--out` writes a map of pixels below 3:1. |
 | `pnpm scene sheet <stage> --out <dir> [--platforms ...] [--with v.json]` | Composite with every screen frame, the arena at rest, each image over a checkerboard, and the coverage table. |
 | `pnpm scene preview <stage> --out <dir>` | Captures in the real game from `dist/test-standalone` (run `pnpm build:test:standalone` first) at every screen shape and records a looping WebP. Shipped packages only. Options: `--wave` (a wave on that stage), `--frames`, `--dpr`, `--viewports`, `--reduced`, `--low`. |
@@ -161,6 +207,9 @@ shipped or fixture. Nothing in it names a biome:
 
 - The manifest validates; files, sizes and hashes match; sources are pinned
   with provenance.
+- The size rule: the scene's encoded and decoded budgets, no unused alpha, no
+  oversized soft layer, nothing painted twice (`scene-size-rule.test.ts` covers
+  the rule's own code and each release build's share).
 - Every covering layer covers every required screen shape under the full camera
   range.
 - The world equals the game's, and `platforms.material` is the stage's own
@@ -201,7 +250,9 @@ the tool and the exact prompt in the recipe's source entry.
    (try variants with `--with`), then show the owner the untouched painting and
    the shaded version side by side.
 7. **Register and test (script).** Add the registry line, then `pnpm scene
-   validate` and `pnpm exec vitest run tests/unit/scene-packages.test.ts`.
+   validate` and `pnpm exec vitest run tests/unit/scene-packages.test.ts
+   tests/unit/scene-size-rule.test.ts`. If the package is over a limit, lower
+   its bytes; do not raise the limit.
 8. **In the game (script, then owner).** `pnpm build:test:standalone`, then
    `pnpm scene preview`. The owner reviews the captures and the loop.
 
@@ -227,14 +278,16 @@ Traverse fixture). It is checked like a shipped package but never ships.
   without platforms and 78% with them; the misses are the near-black framing
   trunks at the sides. Untouched, the HUD status corner reaches only 7%,
   because the painting has dark trunks there, against the brief.
-- Size: 7 images, 0.87 MiB encoded, 21.65 MiB decoded. Frame cost equal to
-  the stage without art.
+- Size: 7 AVIF images, 539,325 bytes encoded, 21.65 MiB decoded. The first
+  version was 910,940 bytes of WebP: AVIF at the same measured fidelity saved
+  27%, and softening the 42% of the far plate that the framing trunks and roots
+  always cover saved another 18%. Frame cost equal to the stage without art.
 
 ## Second package: the Pale Traverse placeholder
 
 `tests/fixtures/scene-packages/pale-traverse/` is a generated plate in Pale's
 palette (sky gradient, two snow ridges) and an ice surface strip for the
-`pale-ice` material, about 4 KB. It builds without a sources folder, covers
+`pale-ice` material, about 2 KB. It builds without a sources folder, covers
 every screen shape, passes the contrast floors with Pale's own ink and loads
 through the game's scene library. It is not registered, so the game keeps
 Pale's procedural backdrop until an owner-approved painting replaces it under

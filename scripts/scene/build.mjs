@@ -1,13 +1,22 @@
 // `pnpm scene build <stage> --sources <dir>`: deterministic preparation of a
 // scene package from its recipe. Sources stay outside the repository; their
 // hashes are pinned in the recipe, so a changed source fails before any pixel
-// is written. Outputs: the package images, scene.json and scene.ts.
+// is written. Outputs: the package images (AVIF), scene.json and scene.ts.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
+import { hiddenMask, layersOver, softenHidden } from "./hidden-paint.mjs";
 import { loadContract, sha256 } from "./package-files.mjs";
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+
+/**
+ * Every layer is AVIF with full-resolution colour. Quality 62 measured the same
+ * against the lossless Verdant layers as WebP at 84 did, at 73% of the bytes;
+ * a recipe output may lower it, with side-by-side crops for the owner.
+ */
+export const SCENE_IMAGE_QUALITY = 62;
+const encodeLayer = (image, quality) => image.avif({ quality, effort: 7, chromaSubsampling: "4:4:4" }).toBuffer();
 
 async function readSource(recipe, sourcesDirectory, id) {
   const source = recipe.sources.find((item) => item.id === id);
@@ -234,7 +243,7 @@ function alphaBounds(image, pad) {
   return [left, top, right - left + 1, bottom - top + 1];
 }
 
-/** Runs one output's steps; tracks where its pixels sit in recipe space. */
+/** Runs one output's steps; tracks where its pixels sit in recipe space. Returns the layer unencoded. */
 async function runOutput(output, context) {
   const masks = new Map();
   let placement = [0, 0, 0, 0];
@@ -297,14 +306,50 @@ async function runOutput(output, context) {
     }
   }
   const { width, height, data } = context.image;
+  const alpha = output.alpha === true;
+  if (alpha) {
+    // Colour under a fully transparent pixel is never seen: clear it so the
+    // encoder spends nothing there. A layer with no transparency needs no alpha.
+    let seeThrough = 0;
+    for (let index = 0; index < width * height; index += 1) {
+      const at = index * 4;
+      if (data[at + 3] === 0) data.fill(0, at, at + 3);
+      if (data[at + 3] < 255) seeThrough += 1;
+    }
+    if (seeThrough === 0)
+      throw new Error(`output ${output.id}: every pixel is opaque; set "alpha": false so no alpha plane is stored`);
+  }
+  return { image: { width, height, data }, alpha, placement };
+}
+
+async function encode(image, alpha, quality) {
+  const { width, height, data } = image;
   const encoder = sharp(Buffer.from(data.buffer, data.byteOffset, data.length), {
     raw: { width, height, channels: 4 },
   });
-  const alpha = output.alpha === true;
-  const encoded = await (alpha ? encoder : encoder.removeAlpha())
-    .webp({ quality: output.quality ?? 82, alphaQuality: 90, effort: 6, smartSubsample: true })
-    .toBuffer();
-  return { encoded, width, height, alpha, placement };
+  return encodeLayer(alpha ? encoder : encoder.removeAlpha(), quality);
+}
+
+/**
+ * Nothing painted twice: softens the part of each layer image that nearer
+ * layers cover for every camera the package allows. An image drawn by more
+ * than one layer, or not as a layer at all, is left alone.
+ */
+async function softenHiddenPaint(template, built, log) {
+  for (const layer of template.layers) {
+    const lower = built.get(layer.image);
+    if (template.layers.filter((item) => item.image === layer.image).length !== 1) continue;
+    const uppers = layersOver(template, layer).map((item) => {
+      const upper = built.get(item.image);
+      return { ...upper.image, rect: upper.rect, depth: item.depth };
+    });
+    if (uppers.length === 0) continue;
+    const hidden = hiddenMask(template, { ...lower.image, rect: lower.rect, depth: layer.depth }, uppers);
+    const share = hidden.reduce((total, value) => total + value, 0) / hidden.length;
+    if (share === 0) continue;
+    lower.image = await softenHidden(lower.image, hidden);
+    log(`${lower.output.file}: ${(share * 100).toFixed(1)}% is always behind nearer layers; softened`);
+  }
 }
 
 function moduleSource(scene) {
@@ -332,32 +377,34 @@ export async function buildScene(directory, sourcesDirectory, log = console.log)
   if (recipe.format !== "tear-scene-recipe" || recipe.version !== 1) throw new Error("unsupported recipe");
   const context = { recipe, sources: sourcesDirectory, image: undefined };
   const { scale, origin } = recipe.space;
-  const images = [];
+  const template = recipe.scene;
+  const built = new Map();
   const placements = new Map();
   for (const output of recipe.outputs) {
     const result = await runOutput(output, context);
-    writeFileSync(join(directory, output.file), result.encoded);
-    log(`${output.file}: ${result.width}x${result.height}, ${result.encoded.length} bytes`);
+    const [x, y, w, h] = result.placement;
+    const round = (value) => Math.round(value * 1000) / 1000;
+    const rect = [round((x + origin[0]) * scale), round((y + origin[1]) * scale), round(w * scale), round(h * scale)];
+    placements.set(output.id, rect);
+    built.set(output.id, { output, image: result.image, alpha: result.alpha, rect });
+  }
+  await softenHiddenPaint(template, built, log);
+  const images = [];
+  for (const { output, image, alpha } of built.values()) {
+    const encoded = await encode(image, alpha, output.quality ?? SCENE_IMAGE_QUALITY);
+    writeFileSync(join(directory, output.file), encoded);
+    log(`${output.file}: ${image.width}x${image.height}, ${encoded.length} bytes`);
     images.push({
       id: output.id,
       file: output.file,
-      width: result.width,
-      height: result.height,
-      alpha: result.alpha,
-      bytes: result.encoded.length,
-      sha256: sha256(result.encoded),
+      width: image.width,
+      height: image.height,
+      alpha,
+      bytes: encoded.length,
+      sha256: sha256(encoded),
       sources: output.sources,
     });
-    const [x, y, w, h] = result.placement;
-    const round = (value) => Math.round(value * 1000) / 1000;
-    placements.set(output.id, [
-      round((x + origin[0]) * scale),
-      round((y + origin[1]) * scale),
-      round(w * scale),
-      round(h * scale),
-    ]);
   }
-  const template = recipe.scene;
   const scene = {
     format: "tear-scene-package",
     version: 1,

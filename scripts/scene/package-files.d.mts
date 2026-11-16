@@ -26,3 +26,25 @@ export declare function coverageReport(scene: ScenePackage): Promise<
     shortfall: Record<string, number>;
   }[]
 >;
+export declare const SCENE_BUDGETS: string;
+export interface StorefrontBudget {
+  shareBytes: number;
+}
+export declare function storefrontBudget(target: string, file?: string): StorefrontBudget;
+export declare function declaredStorefrontArt(
+  target: string,
+  budget?: StorefrontBudget,
+  root?: string,
+): {
+  target: string;
+  shareBytes: number;
+  bytes: number;
+  packages: { name: string; bytes: number }[];
+  problems: string[];
+};
+export declare function builtStorefrontArt(
+  target: string,
+  directory: string,
+  budget?: StorefrontBudget,
+  roots?: readonly string[],
+): { target: string; shareBytes: number; bytes: number; files: string[]; problems: string[] };

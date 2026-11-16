@@ -3,11 +3,11 @@ import manifest from "./scene.json";
 
 export { manifest };
 export const files: Readonly<Record<string, string>> = Object.freeze({
-  "far.webp": new URL("./far.webp", import.meta.url).href,
-  "frame-top.webp": new URL("./frame-top.webp", import.meta.url).href,
-  "frame-left.webp": new URL("./frame-left.webp", import.meta.url).href,
-  "frame-right.webp": new URL("./frame-right.webp", import.meta.url).href,
-  "roots-left.webp": new URL("./roots-left.webp", import.meta.url).href,
-  "roots-right.webp": new URL("./roots-right.webp", import.meta.url).href,
-  "stone.webp": new URL("./stone.webp", import.meta.url).href,
+  "far.avif": new URL("./far.avif", import.meta.url).href,
+  "frame-top.avif": new URL("./frame-top.avif", import.meta.url).href,
+  "frame-left.avif": new URL("./frame-left.avif", import.meta.url).href,
+  "frame-right.avif": new URL("./frame-right.avif", import.meta.url).href,
+  "roots-left.avif": new URL("./roots-left.avif", import.meta.url).href,
+  "roots-right.avif": new URL("./roots-right.avif", import.meta.url).href,
+  "stone.avif": new URL("./stone.avif", import.meta.url).href,
 });

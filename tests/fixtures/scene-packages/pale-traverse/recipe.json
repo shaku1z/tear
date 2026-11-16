@@ -85,9 +85,8 @@
   "outputs": [
     {
       "id": "far",
-      "file": "far.webp",
+      "file": "far.avif",
       "alpha": false,
-      "quality": 80,
       "sources": [
         "placeholder-plate"
       ],
@@ -104,9 +103,8 @@
     },
     {
       "id": "ice",
-      "file": "ice.webp",
+      "file": "ice.avif",
       "alpha": false,
-      "quality": 86,
       "sources": [
         "placeholder-ice"
       ],
@@ -154,6 +152,7 @@
         "covers": true
       }
     ],
+    "encodedBudget": 60000,
     "decodedBudget": 8388608,
     "platforms": {
       "material": "pale-ice",

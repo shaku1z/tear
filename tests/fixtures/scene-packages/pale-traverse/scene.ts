@@ -3,6 +3,6 @@ import manifest from "./scene.json";
 
 export { manifest };
 export const files: Readonly<Record<string, string>> = Object.freeze({
-  "far.webp": new URL("./far.webp", import.meta.url).href,
-  "ice.webp": new URL("./ice.webp", import.meta.url).href,
+  "far.avif": new URL("./far.avif", import.meta.url).href,
+  "ice.avif": new URL("./ice.avif", import.meta.url).href,
 });

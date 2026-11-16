@@ -14,6 +14,8 @@ export const SCENE_REGISTRY = join(REPOSITORY_ROOT, "src", "presentation", "scen
  */
 export const FIXTURE_SCENES_ROOT = join(REPOSITORY_ROOT, "tests", "fixtures", "scene-packages");
 export const SCENE_ROOTS = Object.freeze([SCENES_ROOT, FIXTURE_SCENES_ROOT]);
+/** Each release build's share of its size for all scene art. */
+export const SCENE_BUDGETS = join(REPOSITORY_ROOT, "config", "scene-budgets.json");
 
 /** True for a package under the shipped scenes folder (it must be registered). */
 export const isShippedPackage = (directory) => resolve(directory, "..") === resolve(SCENES_ROOT);
@@ -65,20 +67,12 @@ export function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-/** Reads the pixel size from a WebP/PNG header without decoding. */
+/** Reads the pixel size from an AVIF file's first image-size box, without decoding. */
 export function imageSize(buffer) {
-  if (buffer.toString("ascii", 1, 4) === "PNG") return [buffer.readUInt32BE(16), buffer.readUInt32BE(20)];
-  if (buffer.toString("ascii", 0, 4) !== "RIFF" || buffer.toString("ascii", 8, 12) !== "WEBP") {
-    throw new Error("not a WebP or PNG file");
-  }
-  const chunk = buffer.toString("ascii", 12, 16);
-  if (chunk === "VP8X") return [1 + buffer.readUIntLE(24, 3), 1 + buffer.readUIntLE(27, 3)];
-  if (chunk === "VP8L") {
-    const bits = buffer.readUInt32LE(21);
-    return [1 + (bits & 0x3fff), 1 + ((bits >> 14) & 0x3fff)];
-  }
-  if (chunk === "VP8 ") return [buffer.readUInt16LE(26) & 0x3fff, buffer.readUInt16LE(28) & 0x3fff];
-  throw new Error(`unknown WebP chunk ${chunk}`);
+  if (buffer.toString("ascii", 4, 12) !== "ftypavif") throw new Error("not an AVIF file");
+  const box = buffer.indexOf("ispe", 12, "ascii");
+  if (box === -1 || box + 16 > buffer.length) throw new Error("AVIF file has no image size box");
+  return [buffer.readUInt32BE(box + 8), buffer.readUInt32BE(box + 12)];
 }
 
 /** Validates one package directory; returns { scene, problems, files }. */
@@ -142,4 +136,75 @@ export async function coverageReport(scene) {
     }
   }
   return rows;
+}
+
+function manifestImages(directory) {
+  return JSON.parse(readFileSync(join(directory, "scene.json"), "utf8")).images;
+}
+
+/** One release build's entry in config/scene-budgets.json. */
+export function storefrontBudget(target, file = SCENE_BUDGETS) {
+  const entry = JSON.parse(readFileSync(file, "utf8")).targets?.[target];
+  if (!Number.isSafeInteger(entry?.shareBytes) || entry.shareBytes < 0)
+    throw new Error(`config/scene-budgets.json has no valid entry for target ${target}`);
+  return entry;
+}
+
+/**
+ * The sizes the shipped packages declare in their manifests, against one
+ * release build's share for all its scene art. Needs no build, so it runs
+ * before one, in `pnpm scene validate` and in the unit tests.
+ */
+export function declaredStorefrontArt(target, budget = storefrontBudget(target), root = SCENES_ROOT) {
+  const packages = sceneDirectories(false, [root]).map((directory) => ({
+    name: directory.split(/[\\/]/u).at(-1),
+    bytes: manifestImages(directory).reduce((total, image) => total + image.bytes, 0),
+  }));
+  const bytes = packages.reduce((total, item) => total + item.bytes, 0);
+  const problems = [];
+  if (bytes > budget.shareBytes) {
+    const each = packages.map((item) => `${item.name} ${String(item.bytes)}`).join(", ");
+    problems.push(
+      `${target}: scene packages declare ${String(bytes)} bytes, over this build's share of ${String(budget.shareBytes)} (${each})`,
+    );
+  }
+  return { target, shareBytes: budget.shareBytes, bytes, packages, problems };
+}
+
+/**
+ * What a built target holds: every image under its assets folder, matched to
+ * the package manifests by content hash. The build must hold each shipped
+ * package image once, no fixture image and no image the manifests do not know,
+ * within the target's share.
+ */
+export function builtStorefrontArt(target, directory, budget = storefrontBudget(target), roots = SCENE_ROOTS) {
+  const expected = new Map();
+  const fixtures = new Map();
+  for (const packageDirectory of sceneDirectories(false, roots)) {
+    const name = packageDirectory.split(/[\\/]/u).at(-1);
+    const shipped = resolve(packageDirectory, "..") === resolve(roots[0]);
+    for (const image of manifestImages(packageDirectory))
+      (shipped ? expected : fixtures).set(image.sha256, `${name}/${image.file}`);
+  }
+  const assets = join(directory, "assets");
+  const problems = [];
+  const files = [];
+  let bytes = 0;
+  for (const file of existsSync(assets) ? readdirSync(assets).filter((name) => name.endsWith(".avif")) : []) {
+    const buffer = readFileSync(join(assets, file));
+    const digest = sha256(buffer);
+    if (fixtures.has(digest)) problems.push(`${target}: build holds the test fixture image ${fixtures.get(digest)}`);
+    else if (!expected.delete(digest))
+      problems.push(`${target}: assets/${file} is an AVIF image no scene package lists`);
+    else {
+      bytes += buffer.length;
+      files.push(`assets/${file}`);
+    }
+  }
+  for (const image of expected.values()) problems.push(`${target}: build is missing ${image}`);
+  if (bytes > budget.shareBytes)
+    problems.push(
+      `${target}: build holds ${String(bytes)} bytes of scene art, over its share of ${String(budget.shareBytes)}`,
+    );
+  return { target, shareBytes: budget.shareBytes, bytes, files, problems };
 }

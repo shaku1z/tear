@@ -69,9 +69,8 @@
   "outputs": [
     {
       "id": "far",
-      "file": "far.webp",
+      "file": "far.avif",
       "alpha": false,
-      "quality": 84,
       "sources": [
         "overscan",
         "frame-mask"
@@ -118,9 +117,8 @@
     },
     {
       "id": "frame-top",
-      "file": "frame-top.webp",
+      "file": "frame-top.avif",
       "alpha": true,
-      "quality": 84,
       "sources": [
         "overscan",
         "frame-mask"
@@ -170,9 +168,8 @@
     },
     {
       "id": "frame-left",
-      "file": "frame-left.webp",
+      "file": "frame-left.avif",
       "alpha": true,
-      "quality": 84,
       "sources": [
         "overscan",
         "frame-mask"
@@ -222,9 +219,8 @@
     },
     {
       "id": "frame-right",
-      "file": "frame-right.webp",
+      "file": "frame-right.avif",
       "alpha": true,
-      "quality": 84,
       "sources": [
         "overscan",
         "frame-mask"
@@ -274,9 +270,8 @@
     },
     {
       "id": "roots-left",
-      "file": "roots-left.webp",
+      "file": "roots-left.avif",
       "alpha": true,
-      "quality": 84,
       "sources": [
         "overscan",
         "frame-mask"
@@ -330,9 +325,8 @@
     },
     {
       "id": "roots-right",
-      "file": "roots-right.webp",
+      "file": "roots-right.avif",
       "alpha": true,
-      "quality": 84,
       "sources": [
         "overscan",
         "frame-mask"
@@ -386,9 +380,8 @@
     },
     {
       "id": "stone",
-      "file": "stone.webp",
+      "file": "stone.avif",
       "alpha": false,
-      "quality": 86,
       "sources": [
         "moss-stone"
       ],
@@ -475,6 +468,7 @@
         "plane": "front"
       }
     ],
+    "encodedBudget": 600000,
     "decodedBudget": 25165824,
     "platforms": {
       "material": "verdant-rootstone",

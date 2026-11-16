@@ -103,6 +103,7 @@
       ]
     }
   ],
+  "encodedBudget": 600000,
   "decodedBudget": 25165824,
   "platforms": {
     "material": "verdant-rootstone",
@@ -213,12 +214,12 @@
   "images": [
     {
       "id": "far",
-      "file": "far.webp",
+      "file": "far.avif",
       "width": 2440,
       "height": 1160,
       "alpha": false,
-      "bytes": 540728,
-      "sha256": "3d42ca4a2cfd50022952995ff0079d0ba94ced787dbfa7a7aafeb2ac85355ad4",
+      "bytes": 295915,
+      "sha256": "2e3a4149555130dfd3776e7f30743b0a42b58d4c2b3359270fa2884a92fe7a56",
       "sources": [
         "overscan",
         "frame-mask"
@@ -226,12 +227,12 @@
     },
     {
       "id": "frame-top",
-      "file": "frame-top.webp",
+      "file": "frame-top.avif",
       "width": 2440,
       "height": 400,
       "alpha": true,
-      "bytes": 108626,
-      "sha256": "64a3afc3d07cad93f08ddb6478ba7c8f23e8b7b34ba00359dfd6524ce5a95b86",
+      "bytes": 70729,
+      "sha256": "caa2da04c01bb423eb2f386cc8777792b967ca9083524cb40d33993af3088c79",
       "sources": [
         "overscan",
         "frame-mask"
@@ -239,12 +240,12 @@
     },
     {
       "id": "frame-left",
-      "file": "frame-left.webp",
+      "file": "frame-left.avif",
       "width": 720,
       "height": 701,
       "alpha": true,
-      "bytes": 75164,
-      "sha256": "a327058bc96dca3a71dfe8e9dbbf74c9920ecb7c130c5aaad43e0fef575d7f56",
+      "bytes": 49998,
+      "sha256": "60189245eac5cf73538f213bf704b5d73bb1dffdaa0f2d3428717e0088f6f896",
       "sources": [
         "overscan",
         "frame-mask"
@@ -252,12 +253,12 @@
     },
     {
       "id": "frame-right",
-      "file": "frame-right.webp",
+      "file": "frame-right.avif",
       "width": 720,
       "height": 701,
       "alpha": true,
-      "bytes": 68344,
-      "sha256": "42c13ba762b2e71a087f15dbb1c116ce28281d1d279e67b65256ded805382984",
+      "bytes": 45169,
+      "sha256": "af6b7bf7658a9941d3dd99b75ee4f453ea3f5af532b49d41088634148ecdec81",
       "sources": [
         "overscan",
         "frame-mask"
@@ -265,12 +266,12 @@
     },
     {
       "id": "roots-left",
-      "file": "roots-left.webp",
+      "file": "roots-left.avif",
       "width": 1100,
       "height": 351,
       "alpha": true,
-      "bytes": 47864,
-      "sha256": "f67e9dc9fef9c46e623a40821c08e02c11f0832fb54e49c6e78ffc74d4b4bcb5",
+      "bytes": 31412,
+      "sha256": "36e67282ec1be190109a1b7ccd4fdd548c76a3cd524e55b8fe6a6953adf6f8d3",
       "sources": [
         "overscan",
         "frame-mask"
@@ -278,12 +279,12 @@
     },
     {
       "id": "roots-right",
-      "file": "roots-right.webp",
+      "file": "roots-right.avif",
       "width": 1100,
       "height": 351,
       "alpha": true,
-      "bytes": 48870,
-      "sha256": "068d6a96c6cd1758be6b74620cf32d52c8f8a14ae767e85ce8ba4e3fb772dd85",
+      "bytes": 32512,
+      "sha256": "bb909100b5f51ff668a7e62da8913cbeb1564ab55765bd9cbe105c8c05a658c7",
       "sources": [
         "overscan",
         "frame-mask"
@@ -291,12 +292,12 @@
     },
     {
       "id": "stone",
-      "file": "stone.webp",
+      "file": "stone.avif",
       "width": 479,
       "height": 181,
       "alpha": false,
-      "bytes": 21344,
-      "sha256": "f0413c6adee39642ec806313c86cfbf65e2a33f9c1d452f5c2788cf10e7b8d56",
+      "bytes": 13590,
+      "sha256": "15fa4244529fdb086b7582d557328845c72b1dcb0fbcf60a73846b797f233d5b",
       "sources": [
         "moss-stone"
       ]

@@ -2111,12 +2111,23 @@
     "scripts/scene/build.mjs": [
       "scripts/scene.mjs"
     ],
+    "scripts/scene/hidden-paint.mjs": [
+      "scripts/scene/build.mjs",
+      "scripts/scene/pixel-checks.mjs",
+      "tests/unit/scene-size-rule.test.ts"
+    ],
     "scripts/scene/package-files.mjs": [
       "scripts/scene.mjs",
       "scripts/scene/build.mjs",
       "scripts/scene/preview.mjs",
       "scripts/scene/reports.mjs",
-      "tests/unit/scene-packages.test.ts"
+      "tests/unit/scene-packages.test.ts",
+      "tests/unit/scene-size-rule.test.ts"
+    ],
+    "scripts/scene/pixel-checks.mjs": [
+      "scripts/scene.mjs",
+      "tests/unit/scene-packages.test.ts",
+      "tests/unit/scene-size-rule.test.ts"
     ],
     "scripts/scene/preview.mjs": [
       "scripts/scene.mjs"
@@ -2217,7 +2228,9 @@
   "declarations": [
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/release-artifact.d.mts",
+    "scripts/scene/hidden-paint.d.mts",
     "scripts/scene/package-files.d.mts",
+    "scripts/scene/pixel-checks.d.mts",
     "scripts/scene/reports.d.mts",
     "scripts/tutorial-gold-compatibility.d.mts"
   ]

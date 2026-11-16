@@ -3,7 +3,7 @@
 // scene packages. See docs/BACKGROUND_WORKFLOW.md.
 //
 //   list                        packages and their status
-//   validate [stage]            manifest, files, hashes, sizes, budgets, coverage (exit 1 on a problem)
+//   validate [stage]            manifest, files, hashes, the size rule, coverage (exit 1 on a problem)
 //   coverage [stage]            coverage of every covering layer per viewport
 //   build <stage> --sources D   regenerate images, scene.json and scene.ts from recipe.json
 //   contrast <stage>            actor/HUD ink contrast over the play band
@@ -13,6 +13,7 @@ process.removeAllListeners("warning"); // Node's type-stripping notice for scene
 import { basename, join, resolve } from "node:path";
 import {
   coverageReport,
+  declaredStorefrontArt,
   inspectPackage,
   loadContract,
   REQUIRED_VIEWPORTS,
@@ -41,19 +42,36 @@ function directoriesFor(stage, recipes = false) {
 }
 
 const mib = (bytes) => `${(bytes / 1024 / 1024).toFixed(2)} MiB`;
+const count = (bytes) => bytes.toLocaleString("en-US");
 
 async function validate(stage) {
-  const { decodedBytes, SCENE_MAX_FILE_BYTES } = await loadContract();
+  const { decodedBytes, layerPixelsPerUnit, SCENE_ENCODED_LIMIT, SCENE_DECODED_LIMIT } = await loadContract();
+  const { pixelChecks } = await import("./scene/pixel-checks.mjs");
   let failed = false;
   for (const directory of directoriesFor(stage)) {
     const { scene, problems, files } = await inspectPackage(directory);
     const label = basename(directory);
     if (scene !== undefined) {
       const encoded = files.reduce((total, file) => total + file.bytes, 0);
-      const largest = Math.max(...files.map((file) => file.bytes));
       console.log(`${label}: ${scene.images.length} images, ${scene.layers.length} layers`);
-      console.log(`  encoded ${mib(encoded)} (largest file ${mib(largest)} of ${mib(SCENE_MAX_FILE_BYTES)} ceiling)`);
-      console.log(`  decoded ${mib(decodedBytes(scene))} of ${mib(scene.decodedBudget)} budget`);
+      console.log(
+        `  encoded ${count(encoded)} bytes of its ${count(scene.encodedBudget)} budget (limit for any scene ${count(SCENE_ENCODED_LIMIT)})`,
+      );
+      console.log(
+        `  decoded ${mib(decodedBytes(scene))} of its ${mib(scene.decodedBudget)} budget (limit for any scene ${mib(SCENE_DECODED_LIMIT)})`,
+      );
+      const densest = Math.max(...scene.layers.map((layer) => layerPixelsPerUnit(scene, layer)));
+      console.log(`  densest layer ${densest.toFixed(2)} image pixels per world unit`);
+      const pixels = await pixelChecks(directory, scene);
+      for (const image of pixels.images)
+        console.log(
+          `  ${image.id.padEnd(12)} see-through ${(image.seeThroughShare * 100).toFixed(0).padStart(3)}%  alike to half size ${image.halfSizeLikeness.toFixed(3)}`,
+        );
+      for (const hidden of pixels.hidden)
+        console.log(
+          `  ${hidden.layer.padEnd(12)} ${(hidden.share * 100).toFixed(0).padStart(3)}% always behind nearer layers, detail left there ${hidden.detail.toFixed(1)}`,
+        );
+      problems.push(...pixels.problems);
       for (const row of await coverageReport(scene)) {
         if (row.required && !row.covered) {
           const short = Object.entries(row.shortfall).filter(([, value]) => value > 0.5);
@@ -66,6 +84,15 @@ async function validate(stage) {
     for (const problem of problems) console.log(`  PROBLEM ${problem}`);
     if (problems.length === 0) console.log("  ok");
     failed ||= problems.length > 0;
+  }
+  // Each release build's share for all its scene art (config/scene-budgets.json).
+  for (const target of ["standalone", "crazygames"]) {
+    const report = declaredStorefrontArt(target);
+    console.log(
+      `${target} build: ${String(report.packages.length)} shipped package(s), ${count(report.bytes)} of ${count(report.shareBytes)} bytes`,
+    );
+    for (const problem of report.problems) console.log(`  PROBLEM ${problem}`);
+    failed ||= report.problems.length > 0;
   }
   if (failed) process.exitCode = 1;
 }

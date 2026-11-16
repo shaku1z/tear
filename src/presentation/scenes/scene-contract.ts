@@ -9,9 +9,22 @@
 
 export const SCENE_PACKAGE_FORMAT = "tear-scene-package";
 export const SCENE_PACKAGE_VERSION = 1;
-/** Matches the PWA/runtime per-file cache ceiling used by the release gates. */
-export const SCENE_MAX_FILE_BYTES = 2 * 1024 * 1024;
 export const SCENE_MAX_IMAGE_EDGE = 4096;
+/**
+ * The size rule every package meets (docs/BACKGROUND_WORKFLOW.md, "Size rule").
+ * Sized from Verdant Sanctum with modest headroom: 539,325 bytes as AVIF at
+ * quality 62 and 21.65 MiB decoded. A package declares its own budgets at or
+ * under these limits; a release build also has a share for all its scene art
+ * (config/scene-budgets.json).
+ */
+export const SCENE_ENCODED_LIMIT = 600_000;
+export const SCENE_DECODED_LIMIT = 24 * 1024 * 1024;
+/**
+ * Most image pixels a layer may hold per world unit. The game's canvas tops out
+ * at 2.5 device pixels per logical pixel (canvas-viewport.ts), so more than
+ * this is detail no supported canvas can show.
+ */
+export const SCENE_MAX_PIXELS_PER_UNIT = 2.5;
 
 export type Rect = readonly [x: number, y: number, w: number, h: number];
 export type Point = readonly [x: number, y: number];
@@ -124,6 +137,8 @@ export interface ScenePackage {
   readonly layers: readonly SceneLayer[];
   readonly shading: readonly SceneShade[];
   readonly platforms: ScenePlatformBinding;
+  /** Encoded bytes the package's image files may total. */
+  readonly encodedBudget: number;
   /** Decoded RGBA bytes the package may hold (width x height x 4, summed). */
   readonly decodedBudget: number;
 }
@@ -236,7 +251,8 @@ function source(value: unknown, path: string): SceneSource {
 function image(value: unknown, path: string, sources: ReadonlySet<string>): SceneImage {
   const raw = record(value, path);
   const file = text(raw.file, `${path}.file`, 96);
-  if (!/^[a-z0-9][a-z0-9-]*\.(?:webp|avif|png)$/u.test(file)) fail(`${path}.file`, "plain kebab-case image file");
+  // One format: AVIF. A browser that cannot decode it keeps the stage's coded background.
+  if (!/^[a-z0-9][a-z0-9-]*\.avif$/u.test(file)) fail(`${path}.file`, "plain kebab-case .avif file");
   const used = list(raw.sources, `${path}.sources`).map((item) => id(item, `${path}.sources`));
   if (used.length === 0) fail(`${path}.sources`, "every image names its sources");
   for (const item of used) if (!sources.has(item)) fail(`${path}.sources`, `unknown source "${item}"`);
@@ -247,7 +263,7 @@ function image(value: unknown, path: string, sources: ReadonlySet<string>): Scen
     width: integer(raw.width, `${path}.width`, 1, SCENE_MAX_IMAGE_EDGE),
     height: integer(raw.height, `${path}.height`, 1, SCENE_MAX_IMAGE_EDGE),
     alpha: raw.alpha,
-    bytes: integer(raw.bytes, `${path}.bytes`, 1, SCENE_MAX_FILE_BYTES),
+    bytes: integer(raw.bytes, `${path}.bytes`, 1, SCENE_ENCODED_LIMIT),
     sha256: digest(raw.sha256, `${path}.sha256`),
     sources: Object.freeze(used),
   });
@@ -369,11 +385,24 @@ export function validateScenePackage(input: unknown): ScenePackage {
       "package.shading",
     ),
     platforms: platforms(raw.platforms, "package.platforms", imageMap),
-    decodedBudget: integer(raw.decodedBudget, "package.decodedBudget", 1, 64 * 1024 * 1024),
+    encodedBudget: integer(raw.encodedBudget, "package.encodedBudget", 1, SCENE_ENCODED_LIMIT),
+    decodedBudget: integer(raw.decodedBudget, "package.decodedBudget", 1, SCENE_DECODED_LIMIT),
   });
+  const encoded = encodedBytes(result);
+  if (encoded > result.encodedBudget) {
+    fail("package.encodedBudget", `${String(encoded)} encoded bytes exceed ${String(result.encodedBudget)}`);
+  }
   const decoded = decodedBytes(result);
   if (decoded > result.decodedBudget) {
     fail("package.decodedBudget", `${String(decoded)} decoded bytes exceed ${String(result.decodedBudget)}`);
+  }
+  for (const item of layers) {
+    const density = layerPixelsPerUnit(result, item);
+    if (density > SCENE_MAX_PIXELS_PER_UNIT)
+      fail(
+        `layer ${item.id}`,
+        `${density.toFixed(2)} image pixels per world unit; no supported canvas shows more than ${String(SCENE_MAX_PIXELS_PER_UNIT)}`,
+      );
   }
   for (const item of layers.filter((entry) => entry.plane === "front")) {
     const intrusion = frontLayerIntrusion(result, item);
@@ -385,6 +414,17 @@ export function validateScenePackage(input: unknown): ScenePackage {
 
 export function decodedBytes(scene: Pick<ScenePackage, "images">): number {
   return scene.images.reduce((total, item) => total + item.width * item.height * 4, 0);
+}
+
+export function encodedBytes(scene: Pick<ScenePackage, "images">): number {
+  return scene.images.reduce((total, item) => total + item.bytes, 0);
+}
+
+/** Image pixels a layer holds per world unit, on its denser axis. */
+export function layerPixelsPerUnit(scene: Pick<ScenePackage, "images">, layer: SceneLayer): number {
+  const image = scene.images.find((item) => item.id === layer.image);
+  if (image === undefined) return 0;
+  return Math.max(image.width / layer.rect[2], image.height / layer.rect[3]);
 }
 
 /** Camera state the renderer receives from the world frame. */

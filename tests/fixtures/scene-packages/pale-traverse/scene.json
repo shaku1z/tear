@@ -42,6 +42,7 @@
       ]
     }
   ],
+  "encodedBudget": 60000,
   "decodedBudget": 8388608,
   "platforms": {
     "material": "pale-ice",
@@ -74,24 +75,24 @@
   "images": [
     {
       "id": "far",
-      "file": "far.webp",
+      "file": "far.avif",
       "width": 1167,
       "height": 555,
       "alpha": false,
-      "bytes": 3482,
-      "sha256": "fd63fdb8f3d34e36c27753d470390ae53629fe6cb565975ed2875ceb2d308cae",
+      "bytes": 1665,
+      "sha256": "b812ebe21295c129d61f690beac9e726d849ff70ae64d3913312072df64a493e",
       "sources": [
         "placeholder-plate"
       ]
     },
     {
       "id": "ice",
-      "file": "ice.webp",
+      "file": "ice.avif",
       "width": 256,
       "height": 48,
       "alpha": false,
-      "bytes": 210,
-      "sha256": "4a3db5e4d93626da664150a3fbb575ccdfa8ba976a51c18c6780b2e45e55b007",
+      "bytes": 316,
+      "sha256": "d7b31b994dcfdacebe22afde954e26915ec3cc3c15ce7785bad1af233218b7b1",
       "sources": [
         "placeholder-ice"
       ]

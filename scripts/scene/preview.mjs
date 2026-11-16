@@ -19,6 +19,7 @@ const TYPES = {
   ".js": "text/javascript",
   ".css": "text/css",
   ".json": "application/json",
+  ".avif": "image/avif",
   ".webp": "image/webp",
   ".png": "image/png",
   ".svg": "image/svg+xml",

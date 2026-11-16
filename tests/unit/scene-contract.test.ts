@@ -4,6 +4,8 @@ import {
   layerCoverage,
   layerTransform,
   requiredLayerRect,
+  SCENE_DECODED_LIMIT,
+  SCENE_ENCODED_LIMIT,
   validateScenePackage,
   viewportWorldRect,
 } from "../../src/presentation/scenes/scene-contract";
@@ -25,7 +27,21 @@ describe("scene package validation", () => {
       { layers: [{ id: "x", image: "nope", rect: [0, 0, 1, 1], depth: 1, plane: "back", covers: true }] },
       /unknown image/u,
     ],
-    ["budget", { decodedBudget: 1000 }, /exceed/u],
+    ["decoded size over its budget", { decodedBudget: 1000 }, /decoded bytes exceed/u],
+    ["encoded size over its budget", { encodedBudget: 1100 }, /encoded bytes exceed/u],
+    ["a decoded budget above the limit for any scene", { decodedBudget: SCENE_DECODED_LIMIT + 1 }, /decodedBudget/u],
+    ["an encoded budget above the limit for any scene", { encodedBudget: SCENE_ENCODED_LIMIT + 1 }, /encodedBudget/u],
+    ["no encoded budget", { encodedBudget: undefined }, /encodedBudget/u],
+    [
+      "more pixels than any canvas can show",
+      {
+        layers: [
+          { id: "far", image: "far", rect: [-400, -300, 2400, 1500], depth: 0.8, plane: "back", covers: true },
+          { id: "roots", image: "roots", rect: [-60, 860, 120, 30], depth: 1, plane: "front" },
+        ],
+      },
+      /image pixels per world unit/u,
+    ],
     ["capital colour", { edge: { color: "#ABCDEF", feather: 1 } }, /lower-case/u],
     [
       "front layer in the arena",
@@ -66,7 +82,7 @@ describe("scene package validation", () => {
     const images = [
       {
         id: "far",
-        file: "far.webp",
+        file: "far.avif",
         width: 10,
         height: 10,
         alpha: false,
@@ -76,6 +92,14 @@ describe("scene package validation", () => {
       },
     ];
     expect(() => validateScenePackage(fixturePackage({ images }))).toThrow(/names its sources/u);
+  });
+
+  it("accepts AVIF only, so a package never carries a second copy in another format", () => {
+    const images = (fixturePackage().images as { file: string }[]).map((image) => ({
+      ...image,
+      file: image.file.replace(".avif", ".webp"),
+    }));
+    expect(() => validateScenePackage(fixturePackage({ images }))).toThrow(/\.avif/u);
   });
 });
 

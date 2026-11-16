@@ -1,5 +1,5 @@
 // Every scene package present, shipped or test fixture: manifest, files and
-// hashes, coverage of the required viewports, the stage's own ink and platform
+// hashes, the size rule, coverage of the required viewports, the stage's own ink and platform
 // material, readable contrast for that ink, and a real load through the game's
 // scene library. Nothing here is specific to one biome; the Pale Traverse
 // fixture (tests/fixtures/scene-packages) exists to prove that.
@@ -19,6 +19,7 @@ import {
   SCENES_ROOT,
   sceneDirectories,
 } from "../../scripts/scene/package-files.mjs";
+import { pixelChecks } from "../../scripts/scene/pixel-checks.mjs";
 import { contrastReport } from "../../scripts/scene/reports.mjs";
 
 const directories = sceneDirectories();
@@ -81,6 +82,11 @@ describe("scene packages", () => {
         expect(scene.stageId).toBe(name);
         expect(() => stageDefinition(scene.stageId as never)).not.toThrow();
       });
+
+      it("meets the size rule: no unused alpha, no oversized soft layer, nothing painted twice", async () => {
+        const report = await pixelChecks(directory, await inspect());
+        expect(report.problems).toEqual([]);
+      }, 60_000);
 
       it("covers every required viewport", async () => {
         const rows = await coverageReport(await inspect());

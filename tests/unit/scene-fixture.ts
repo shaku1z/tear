@@ -33,7 +33,7 @@ export function fixturePackage(overrides: Record<string, unknown> = {}): Record<
     images: [
       {
         id: "far",
-        file: "far.webp",
+        file: "far.avif",
         width: 2000,
         height: 1200,
         alpha: false,
@@ -43,7 +43,7 @@ export function fixturePackage(overrides: Record<string, unknown> = {}): Record<
       },
       {
         id: "stone",
-        file: "stone.webp",
+        file: "stone.avif",
         width: 600,
         height: 100,
         alpha: false,
@@ -53,7 +53,7 @@ export function fixturePackage(overrides: Record<string, unknown> = {}): Record<
       },
       {
         id: "roots",
-        file: "roots.webp",
+        file: "roots.avif",
         width: 400,
         height: 100,
         alpha: true,
@@ -84,6 +84,7 @@ export function fixturePackage(overrides: Record<string, unknown> = {}): Record<
       fill: "#0a1a12",
       shadow: { color: "#04110c", opacity: 0.5, length: 40 },
     },
+    encodedBudget: 2000,
     decodedBudget: 16 * 1024 * 1024,
     ...overrides,
   };
