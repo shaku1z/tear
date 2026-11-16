@@ -40,6 +40,8 @@ export function bindLiveRootboundActors(
           rootlineCleanupReason?: "natural-expiry" | "stage-transition" | null;
           rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
           graftAnchorPlacements?: () => NonNullable<RootboundEnvironmentActor["state"]["graftPlacements"]>;
+          plantedGraftTypes?: readonly string[];
+          acknowledgeGraftPlanted?: NonNullable<RootboundEnvironmentActor["acknowledgeGraftPlanted"]>;
           applyGraftEffects?: NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>;
           recoverGraftHealth?: NonNullable<RootboundEnvironmentActor["recoverGraftHealth"]>;
           bossBloomPattern?: () => NonNullable<RootboundEnvironmentActor["state"]["bloomPattern"]>;
@@ -63,6 +65,9 @@ export function bindLiveRootboundActors(
           completeRootCage: () => {
             actor.completeRootCage?.();
           },
+          acknowledgeGraftPlanted: (graftType: string) => {
+            actor.acknowledgeGraftPlanted?.(graftType);
+          },
           beginRegrowth: (startTick: number, connectionIds: readonly string[]) =>
             actor.beginRegrowth?.(startTick, connectionIds) ?? false,
           advanceRegrowth: (tick: number, activeConnectionIds: ReadonlySet<string>, bossChannelBroken = false) =>
@@ -77,6 +82,7 @@ export function bindLiveRootboundActors(
             damage: ROOTBOUND_ROOTLINE.damage,
             cleanupReason: actor.rootlineCleanupReason ?? null,
             graftPlacements: actor.graftAnchorPlacements?.() ?? Object.freeze([]),
+            plantedGraftTypes: actor.plantedGraftTypes ?? Object.freeze([]),
             ownerPosition: Object.freeze({ x: enemy.x, y: enemy.y }),
             bloomPattern: actor.bossBloomPattern?.() ?? null,
             rootCagePlacement: actor.rootCagePlacement?.() ?? null,

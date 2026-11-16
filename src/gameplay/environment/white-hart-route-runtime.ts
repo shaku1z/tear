@@ -117,16 +117,7 @@ export function installWhiteHartEnvironmentRequest(
   const id = `${ownerId}:p${String(request.phase)}:${request.kind}:${String(request.sequence)}`;
   if (request.kind === "ghost-track") {
     if (environment.routes().some((route) => route.id === id)) return id;
-    for (const route of environment
-      .routes()
-      .filter(
-        (entry) =>
-          entry.ownerId === ownerId &&
-          entry.kind === "ghost-track" &&
-          (entry.state === "expired" || entry.state === "destroyed"),
-      )) {
-      environment.removeRoute(route.id);
-    }
+    // Ended tracks leave through the environment's lifetime rule; retireOldest counts live ones only.
     const owned = environment.routes().filter((route) => route.ownerId === ownerId && route.kind === "ghost-track");
     retireOldest(owned, 3, (routeId) => {
       environment.removeRoute(routeId);
@@ -152,10 +143,7 @@ export function installWhiteHartEnvironmentRequest(
     assertAuroraTrackFieldState(field);
     return field.variant === "boss-wake";
   });
-  for (const field of wakes.filter((entry) => entry.state === "expired" || entry.state === "destroyed"))
-    environment.removeField(field.id);
-  const owned = wakes.filter((entry) => entry.state !== "expired" && entry.state !== "destroyed");
-  retireOldest(owned, 3, (fieldId) => {
+  retireOldest(wakes, 3, (fieldId) => {
     environment.removeField(fieldId);
   });
   environment.addField(

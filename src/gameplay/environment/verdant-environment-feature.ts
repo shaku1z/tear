@@ -179,9 +179,13 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       }
       const placements = actor.state.graftPlacements ?? [];
       const ownerPosition = actor.state.ownerPosition;
+      // The boss records each planted Graft, so a cut one stays gone after the stage removes it.
+      const planted = actor.state.plantedGraftTypes ?? [];
       if (ownerPosition !== undefined)
-        for (const placement of placements)
+        for (const placement of placements.filter((entry) => !planted.includes(entry.graftType))) {
           installGraftAnchor(environment, { ownerId: actor.id, ownerPosition, ...placement, createdTick: tick });
+          actor.acknowledgeGraftPlanted?.(placement.graftType);
+        }
       const owned = environment
         .combatObjects()
         .filter(isGraftAnchorState)
@@ -277,8 +281,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     const rootCageId = `${actor.id}:root-cage:g${String(request.sequence)}`;
     let matching = owned.filter((boundary) => boundary.rootCageId === rootCageId);
     if (matching.length === 0) {
-      for (const boundary of owned)
-        if (boundary.state === "destroyed" || boundary.state === "expired") environment.removeCombatObject(boundary.id);
       installRootCage(environment, actor.id, request, tick);
       matching = environment
         .combatObjects()
@@ -308,7 +310,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       present.add(actor.id);
       const existing = this.#rootbinderNetworks.get(actor.id);
       if (actor.state.state === "linked" && existing === undefined) {
-        this.#prune(environment, actor.id);
         const claimed = new Set(
           environment
             .combatObjects()
@@ -400,7 +401,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         (actor.state.state === "link-warning" || actor.state.state === "linked")
       ) {
         if (leashId === undefined && this.#rootbinderLeashes.size < actor.state.tuning.maxPlayerLeashes) {
-          this.#prune(environment, actor.id);
           const leash = createElasticLeash({
             id: this.#nextId(actor.id, "leash"),
             worldId: environment.worldId,
@@ -544,15 +544,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     this.#rootbinderGenerations.set(ownerId, generation);
     return `${ownerId}:${kind}:g${String(generation)}`;
   }
-  #prune(environment: EnvironmentFeatureContext, ownerId: string): void {
-    for (const object of [...environment.combatObjects()])
-      if (
-        object.kind === "root-link" &&
-        object.ownerId === ownerId &&
-        (object.state === "destroyed" || object.state === "expired")
-      )
-        environment.removeCombatObject(object.id);
-  }
   #pruneDormantBloomPatterns(
     environment: EnvironmentFeatureContext,
     ownerId: string,
@@ -644,6 +635,7 @@ export interface RootboundEnvironmentActor {
     damage: number;
     cleanupReason: "natural-expiry" | "stage-transition" | null;
     graftPlacements?: readonly GraftAnchorPlacementRequest[];
+    plantedGraftTypes?: readonly string[];
     ownerPosition?: Readonly<{ x: number; y: number }>;
     bloomPattern?: RootboundBloomPatternId | null;
     rootCagePlacement?: RootCagePlacementRequest | null;
@@ -654,6 +646,7 @@ export interface RootboundEnvironmentActor {
   readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
   readonly recoverGraftHealth?: (fraction: number) => number;
   readonly completeRootCage?: () => void;
+  readonly acknowledgeGraftPlanted?: (graftType: string) => void;
   readonly beginRegrowth?: (startTick: number, ids: readonly string[]) => boolean;
   readonly advanceRegrowth?: (tick: number, ids: ReadonlySet<string>, broken?: boolean) => RootboundRegrowthState;
   readonly player?: Readonly<{
