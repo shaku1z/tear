@@ -830,7 +830,7 @@ test("selected player journeys are actually dispatched through safe evidence exe
       };
     }
   });
-  const selection = select(["src/agents/live-watch-agent-host.ts"], {
+  const selection = select(["src/app/engineering/replay-editor.ts"], {
     routes: routePath,
     catalog,
     executeEvidence: true,
