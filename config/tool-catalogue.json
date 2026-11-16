@@ -882,6 +882,13 @@
       ],
       "duration": "under-a-minute"
     },
+    "test:browser:music-screen": {
+      "purpose": "Browser journey of the MUSIC screen: song list, preview and BACK, on desktop and phone landscape",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
     "test:browser:platform": {
       "purpose": "Platform smoke of the standalone and CrazyGames builds in the browser",
       "effects": [
