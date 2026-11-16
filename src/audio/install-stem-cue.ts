@@ -1,5 +1,5 @@
 import { installPrimaryMusicBackend } from "./music-backend-registry";
-import type { MusicBackend, MusicBackendHost } from "./music-contracts";
+import type { MusicBackend, MusicBackendHost, MusicRunSessionMetadata } from "./music-contracts";
 import { BiomeStemBackend, type LoadedCueRef } from "./stems/biome-stem-backend";
 import { StemCueMusicBackend } from "./stems/stem-cue-backend";
 import type { StemCueManifest } from "./stems/types";
@@ -43,6 +43,8 @@ async function loadMusicIndex(): Promise<BiomeStemBackend> {
 class DeferredStemBackend implements MusicBackend {
   readonly id = "stem-cue:biome-routed";
   #inner: BiomeStemBackend | null = null;
+  /** A run that began before the index loaded; handed over once it has. */
+  #run: MusicRunSessionMetadata | null = null;
   readonly #ready: () => Promise<BiomeStemBackend>;
   constructor(ready: () => Promise<BiomeStemBackend>) {
     this.#ready = ready;
@@ -51,9 +53,11 @@ class DeferredStemBackend implements MusicBackend {
     const inner = await this.#ready();
     await inner.initialize(host);
     this.#inner = inner;
+    if (this.#run) await inner.beginRun(this.#run);
   }
-  beginRun(...args: Parameters<MusicBackend["beginRun"]>): Promise<void> {
-    return this.#inner?.beginRun(...args) ?? Promise.resolve();
+  beginRun(metadata: MusicRunSessionMetadata): Promise<void> {
+    this.#run = metadata;
+    return this.#inner?.beginRun(metadata) ?? Promise.resolve();
   }
   updateContext(...args: Parameters<MusicBackend["updateContext"]>): void {
     this.#inner?.updateContext(...args);
@@ -62,6 +66,7 @@ class DeferredStemBackend implements MusicBackend {
     this.#inner?.emitEvent(...args);
   }
   endRun(): Promise<void> {
+    this.#run = null;
     return this.#inner?.endRun() ?? Promise.resolve();
   }
   setMuteReason(...args: Parameters<MusicBackend["setMuteReason"]>): void {

@@ -9,7 +9,7 @@ import { createProfileAchievementRenderers } from "./profile-achievements";
 import { createSettingsRenameRenderers } from "./settings-rename";
 import { createMusicRenderers } from "./music";
 import { createAcademyRenderers } from "./academy";
-import { createTrainingOperationsRenderers } from "./training-operations";
+import { createFoundryRenderers } from "./foundry";
 import { createGhostLabRenderers } from "./ghost-lab";
 
 export type * from "./contracts";
@@ -29,7 +29,7 @@ export function createScreenRenderers(context: ScreenRenderContext): ScreenRende
   const results = createPauseResultRenderers(context);
   const playground = createPlaygroundRenderers(context);
   const academy = createAcademyRenderers(context);
-  const foundry = createTrainingOperationsRenderers(context);
+  const foundry = createFoundryRenderers(context);
   const ghostLab = createGhostLabRenderers(context);
 
   return {
