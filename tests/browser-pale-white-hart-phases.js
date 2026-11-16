@@ -70,16 +70,19 @@ withJourney({ name: "Pale PT3-C7 White Hart phases", port: 8357 }, async ({ page
 
   const volleyFile = "phase-1-aurora-volley-commit-1600x900.png";
   await page.evaluate(() => window.__PANTHEON_TEST.prepareWhiteHartAttack("aurora-volley"));
-  await page.waitForFunction(
-    () =>
-      window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "aurora-shard").length === 3,
+  // Pause and read the volley in the page task that finds it, so no shard lands in between.
+  const volley = await page.waitForFunction(
+    () => {
+      const found = window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "aurora-shard");
+      if (found.length !== 3) return null;
+      window.__PANTHEON_TEST.pause();
+      return found;
+    },
     undefined,
     { timeout: STATE_WAIT_MS },
   );
-  await page.evaluate(() => window.__PANTHEON_TEST.pause());
-  const shards = await page.evaluate(() =>
-    window.TEAR_WEAPON_DEBUG().projectiles.filter((projectile) => projectile.kind === "aurora-shard"),
-  );
+  const shards = await volley.jsonValue();
+  assert.equal(shards.length, 3);
   assert.ok(shards.every((projectile) => projectile.counterplay === "deflect/return"));
   await page.screenshot({ path: path.join(directory, volleyFile) });
   screenshots.push(volleyFile);

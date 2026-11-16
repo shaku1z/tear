@@ -180,9 +180,10 @@ describe("DOM chrome over the canvas", () => {
     expect(domChromeVisibility({ ...playing, pointerLocked: false, screen: "menu" }).lockHint).toBe(false);
   });
 
-  it("never parks the canvas arrow at a touch position", () => {
+  it("never parks the canvas arrow while touch, a controller or the keyboard owns the menu", () => {
     expect(shouldDrawCanvasCursor("menu", "touch")).toBe(false);
-    expect(shouldDrawCanvasCursor("menu", "gamepad")).toBe(true);
+    expect(shouldDrawCanvasCursor("menu", "gamepad")).toBe(false);
+    expect(shouldDrawCanvasCursor("menu", "keyboard")).toBe(false);
     expect(shouldDrawCanvasCursor("menu")).toBe(true);
   });
 });

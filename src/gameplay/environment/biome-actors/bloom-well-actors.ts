@@ -1,7 +1,7 @@
-import type { BloomWellActor } from "../../../gameplay/environment/bloom-well";
-import { createVerdantEnvironmentFeature } from "../../../gameplay/environment/verdant-environment-feature";
+import type { BloomWellActor } from "../bloom-well";
+import { createVerdantEnvironmentFeature } from "../verdant-environment-feature";
 
-interface BloomWellEntity {
+export interface BloomWellEntity {
   x: number;
   y: number;
   vx: number;

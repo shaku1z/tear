@@ -187,6 +187,68 @@ export default tseslint.config(
           message:
             "A sleep must say what it is for: pollEvery(ms), holdFor(ms) or notWithin(ms) from tests/browser-waits.js. To wait for the game, wait for its state instead.",
         },
+        {
+          // Playwright's 30 s navigation default is an unnamed wall-clock limit like any other.
+          selector:
+            "CallExpression[callee.property.name=/^(goto|reload|goBack|goForward|waitForNavigation|waitForURL|waitForLoadState)$/]:not(:has(Property[key.name='timeout']))",
+          message:
+            "Give the navigation a named ceiling: { timeout: STATE_WAIT_MS }, or reloadPage(page) from tests/browser-waits.js, which also reports what the page was doing if it stalls.",
+        },
+        {
+          // A setTimeout with a number is the same unnamed wait as waitForTimeout(number), in the
+          // test or inside a function sent to the page. Pass a named value in as an argument.
+          selector:
+            "CallExpression[callee.name='setTimeout'][arguments.length>1]:matches([arguments.1.type='Literal'], [arguments.1.right.type='Literal'], [arguments.1.left.type='Literal'])",
+          message:
+            "Name the delay: a ceiling is STATE_WAIT_MS, an interval pollEvery(ms), from tests/browser-waits.js (pass it into page functions as an argument). To wait for the game, wait for its state.",
+        },
+        {
+          selector: "BinaryExpression[operator='+'][left.callee.property.name='now'] > Literal.right",
+          message:
+            "A deadline is a named ceiling: Date.now() + STATE_WAIT_MS (pass it into page functions as an argument), not a number.",
+        },
+        {
+          selector: "AssignmentPattern[left.name=/^(timeout|polling)(Ms)?$/] > Literal.right",
+          message: "Name the default wait with a constant or helper from tests/browser-waits.js, not a number.",
+        },
+        {
+          // A local sleep helper hides which kind of wait each call is.
+          selector:
+            ":matches(VariableDeclarator[id.name=/^(sleep|delay)$/], FunctionDeclaration[id.name=/^(sleep|delay)$/])",
+          message:
+            "Do not define a sleep helper: call page.waitForTimeout(pollEvery|holdFor|notWithin|settleFor(ms)) so each wait says what it is for.",
+        },
+        {
+          // Waiting on pointer lock fails in headless and in a background window, where the browser
+          // may refuse it; the nightly real-lock check owns that path (tests/browser-waits.js).
+          selector:
+            "CallExpression[callee.property.name='waitForFunction']:has(MemberExpression[property.name='pointerLockElement'])",
+          message:
+            "Do not wait for pointer lock: wait for the game state it leads to, or use waitForPointerLock(page) from tests/browser-waits.js on the real-lock path.",
+        },
+        {
+          // A hook that acts on a live game object (a projectile in flight, an actor) must check for it in
+          // the same page task: the game keeps running between two page calls, and a screenshot in
+          // between is long enough for a projectile to land.
+          selector:
+            "CallExpression[callee.property.name='evaluate']:has(MemberExpression[object.property.name='__PANTHEON_TEST'][property.name=/^trigger/])",
+          message:
+            "Act in the same page task that checks the state the hook needs: page.waitForFunction(() => present() && (trigger(), true)), not a separate page.evaluate.",
+        },
+        {
+          // The same race when reading: a projectile found by one page call can be gone by the next.
+          selector:
+            "CallExpression[callee.property.name='evaluate']:has(MemberExpression[property.name='projectiles'])",
+          message:
+            "Read projectiles in the page task that waits for them: const handle = await page.waitForFunction(() => found() ?? null); await handle.jsonValue(), not a separate page.evaluate.",
+        },
+        {
+          // A DOM element's inline style is the page's presentation, not the game's state.
+          selector:
+            "CallExpression[callee.property.name='waitForFunction']:has(MemberExpression[object.property.name='style'])",
+          message:
+            "Wait for a game state or a performance mark (for a run starting, tear:gameplay-start), not an element's inline style.",
+        },
       ],
     },
   },

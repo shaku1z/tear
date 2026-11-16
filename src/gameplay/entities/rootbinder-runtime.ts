@@ -159,6 +159,19 @@ export function advanceRootbinder(value: RootbinderState, ticks: number): Rootbi
   return current.simulationTick === now ? current : Object.freeze({ ...current, simulationTick: now });
 }
 
+/**
+ * A severed relationship staggers its Rootbinder: it enters `broken` at its
+ * current tick, so the link cannot re-form until the controller cycles again.
+ */
+export function severRootbinder(value: RootbinderState): RootbinderState {
+  if (value.state !== "link-warning" && value.state !== "linked") return value;
+  return Object.freeze({
+    ...value,
+    state: "broken" as const,
+    stateTick: value.simulationTick,
+    transitionTick: value.simulationTick + value.tuning.brokenTicks,
+  });
+}
 export interface ElasticLeash extends EnvironmentCombatObjectState {
   readonly kind: "root-link";
   readonly worldId: string;

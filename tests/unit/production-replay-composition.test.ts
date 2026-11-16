@@ -1091,7 +1091,7 @@ describe("production replay composition", () => {
     const bossPayload = spring.snapshot.state["tear.boss.v1"] as readonly Readonly<Record<string, unknown>>[];
     const malformed = {
       ...spring.snapshot,
-      state: { ...spring.snapshot.state, "tear.boss.v1": [{ ...bossPayload[0], lastSpringUseCount: 2 }] },
+      state: { ...spring.snapshot.state, "tear.boss.v1": [{ ...bossPayload[0], lastSpringUseCount: -1 }] },
     };
     expect(() => composition.create(malformed)).toThrow(/Last Spring use count/u);
 

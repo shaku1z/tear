@@ -308,6 +308,8 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
       else if (cue === "colossusServo") d.SFX.colossusServo();
       else if (cue === "aldricIgnite") d.SFX.aldricIgnite();
       else if (cue === "aldricCrownFall") d.SFX.aldricCrownFall();
+      else if (cue === "slam") d.SFX.slam();
+      else if (cue === "boom") d.SFX.boom();
     },
   });
 

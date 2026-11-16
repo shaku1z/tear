@@ -148,6 +148,8 @@ export interface UiRuntime {
   _togAnim: Record<string, number>;
   _tabAnim: Record<string, number>;
   font(size: number, bold?: boolean): string;
+  /** The size `keycap` draws for a key (sets the key font on the context). */
+  keycapSize(context: CanvasRenderingContext2D, key: string): Readonly<{ w: number; h: number }>;
   displayFont(size: number, weight?: number): string;
   bodyFont(size: number, weight?: number): string;
   wordmark(context: CanvasRenderingContext2D, x: number, y: number, time: number, reducedMotion?: boolean): void;

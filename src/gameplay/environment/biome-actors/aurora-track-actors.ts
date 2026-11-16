@@ -1,23 +1,23 @@
-import type { AuroraTransportActor, AuroraTransportKind } from "../../../gameplay/environment/aurora-track-runtime";
-import { createPaleEnvironmentFeature } from "../../../gameplay/environment/pale-environment-feature";
+import type { AuroraTransportActor, AuroraTransportKind } from "../aurora-track-runtime";
+import { createPaleEnvironmentFeature } from "../pale-environment-feature";
 
 interface DirectionInput {
   right(): boolean;
   left(): boolean;
 }
-interface LiveAuroraPlayer {
+export interface LiveAuroraPlayer {
   x: number;
   y: number;
   vx: number;
   aiInput?: DirectionInput;
 }
-interface LiveAuroraBlade {
+export interface LiveAuroraBlade {
   x: number;
   y: number;
   vx: number;
   state: string;
 }
-interface LiveAuroraEnemy {
+export interface LiveAuroraEnemy {
   x: number;
   y: number;
   vx: number;
@@ -27,7 +27,7 @@ interface LiveAuroraEnemy {
   cfg?: Readonly<{ speed?: number }>;
   onAuroraTrackInfluence?(direction: -1 | 1, onTrack: boolean): void;
 }
-interface LiveAuroraProjectile {
+export interface LiveAuroraProjectile {
   x: number;
   y: number;
   vx: number;
