@@ -103,8 +103,12 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   });
   await page.mouse.click(260, 266); // PROFILE, through the normal player menu route
   await waitScreen("profile");
-  await page.mouse.click(875, 271); // VAULT, the third of four profile tabs
-  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("Ghost V3 - COACHING"), undefined, {
+  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT_POSITIONS__?.some((entry) => entry.text === "VAULT"));
+  const vaultTab = await page.evaluate(() =>
+    window.__TEAR_C28_VAULT_TEXT_POSITIONS__.findLast((entry) => entry.text === "VAULT"),
+  );
+  await page.mouse.click(vaultTab.x, vaultTab.y); // The drawn VAULT tab label, wherever the tab row puts it.
+  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("IMPORT A REPLAY FILE"), undefined, {
     timeout: STATE_WAIT_MS,
   });
   await page.waitForTimeout(settleFor(250));

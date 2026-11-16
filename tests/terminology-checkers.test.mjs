@@ -234,12 +234,12 @@ test("generated-description translation leaves source identity and hashes immuta
   const registry = baseRegistry();
   const generated = {
     id: "TG3-example",
-    sourceStatement: "State Forge is historical source wording.",
+    sourceStatement: "TearScore is historical source wording.",
     sourceTextHash: "ABC123",
     atomicTextHash: "DEF456",
     sourceVersion: "0.6",
-    text: "State Forge is the current description.",
-    description: "State Forge is the current description.",
+    text: "TearScore is the current description.",
+    description: "TearScore is the current description.",
   };
   const translated = translateMutableGeneratedDescriptions({ requirements: [generated] }, registry);
   const requirement = translated.requirements[0];
@@ -248,8 +248,8 @@ test("generated-description translation leaves source identity and hashes immuta
   assert.equal(requirement.sourceTextHash, generated.sourceTextHash);
   assert.equal(requirement.atomicTextHash, generated.atomicTextHash);
   assert.equal(requirement.sourceVersion, generated.sourceVersion);
-  assert.equal(requirement.text, "Scenario Console is the current description.");
-  assert.equal(requirement.description, "Scenario Console is the current description.");
+  assert.equal(requirement.text, "TEAR Music is the current description.");
+  assert.equal(requirement.description, "TEAR Music is the current description.");
 });
 
 test("generated requirements apply mutable terminology at the generator boundary", () => {
@@ -263,7 +263,7 @@ test("generated requirements apply mutable terminology at the generator boundary
           startLine: 1,
           endLine: 1,
           headingPath: ["Requirements"],
-          text: "State Forge is required.",
+          text: "TearScore is required.",
           textHash: "SOURCE-HASH",
         },
       ],
@@ -271,10 +271,10 @@ test("generated requirements apply mutable terminology at the generator boundary
     new Map(),
   );
   assert.ok(requirement);
-  assert.equal(requirement.text, "Scenario Console is required.");
-  assert.equal(requirement.sourceStatement, "State Forge is required.");
+  assert.equal(requirement.text, "TEAR Music is required.");
+  assert.equal(requirement.sourceStatement, "TearScore is required.");
   assert.equal(requirement.sourceTextHash, "SOURCE-HASH");
-  assert.equal(requirement.atomicTextHash, createHash("sha256").update("State Forge is required.").digest("hex"));
+  assert.equal(requirement.atomicTextHash, createHash("sha256").update("TearScore is required.").digest("hex"));
 });
 
 test("current-source checker rejects stale provisional definitions and checkpoint claims only on mutable paths", () => {
