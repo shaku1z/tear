@@ -56,6 +56,17 @@ uses the same window so the Escape that released pointer lock cannot also resume
 Escape, Backspace (outside text entry) and controller back activate a screen's
 BACK control.
 
+## Aim ownership
+
+Aim belongs to the device that last gave aim input: the mouse when it moves past the travel
+threshold or clicks, the touch aim pad while a finger steers it, the controller while its right
+stick is deflected. The input layer records that owner (`aimDevice`, set through `claimAim` at each
+device's own source), and every aim consumer reads `aimIsLive()` instead of deciding per device,
+weapon or screen. While the owner is still steering, or is the mouse, aim follows the devices. When
+a stick or finger lets go, the aim holds where it was left. Releasing a device never hands the aim
+to another device resting somewhere else; only the next device to aim takes it. The rule is
+`aimFollowsDevices` in `src/domain/pointer-ownership.ts`.
+
 ## Coordinate pipeline
 
 Browser points are transformed once through `mapClientPointerToLogical`:

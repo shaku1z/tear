@@ -1,3 +1,4 @@
+import type { AimDevice } from "../domain/pointer-ownership";
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "./game-action";
 import type { SemanticInputBuffer } from "./semantic-buffer";
@@ -148,6 +149,8 @@ export interface BrowserInput {
   touchOn: boolean;
   forceMode: ForcedInputMode;
   touchAim: boolean;
+  /** The device that last gave aim input (domain/pointer-ownership.ts, `aimFollowsDevices`). */
+  aimDevice: AimDevice | null;
   touchAimMode: TouchAimMode;
   stickAim: Point | null;
   uiMode: boolean;
@@ -168,6 +171,10 @@ export interface BrowserInput {
   textEntryMode: boolean;
   readonly tetherHeld: boolean;
   setMode(mode: InputMode): void;
+  /** A device gave aim input: it owns the aim until another device aims. */
+  claimAim(device: AimDevice): void;
+  /** Whether aim follows the devices this tick, or holds where its owner left it. */
+  aimIsLive(): boolean;
   startSemanticRecording(): void;
   stopSemanticRecording(): void;
   discardSemanticInput(): void;

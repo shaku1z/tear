@@ -455,6 +455,7 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
         Input.stickAim = { x: (rx / rMag) * eff, y: (ry / rMag) * eff };
         semantic.setAimVector(rx, ry);
         Input.touchAim = true;
+        Input.claimAim("gamepad");
         this._stickWas = true;
       } else if (this._stickWas) {
         Input.stickAim = null;
