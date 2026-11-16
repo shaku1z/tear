@@ -133,10 +133,11 @@ const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
     [414, 23, 409, 0],
     [790, 22, 404, 0],
   ],
+  // Phase I and III play the move table (rootbound-moves.ts): the keeper glides, vaults and lunges, and is open after its heavy moves.
   rootbound: [
-    [42, 3, 58, 0],
+    [150, 14, 252, 9.1],
     [0, 5, 70, 0],
-    [0, 11, 234, 0],
+    [72, 13, 268, 4.6],
   ],
 };
 

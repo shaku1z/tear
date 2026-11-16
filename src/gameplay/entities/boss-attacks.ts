@@ -70,12 +70,18 @@ export interface BossAttackDefinition<Phase extends string | number, Place = nev
   readonly places?: readonly Readonly<{ at: "tell" | "active"; object: Place }>[];
 }
 
-/** A boss's whole move list. `gap` is the pause between moves; `exposedDamageTaken` scales hits in punish. */
+/**
+ * A boss's whole move list. `gap` is the pause between moves; `exposedDamageTaken` scales hits in punish.
+ * A parryable move can be parried from `parryLead` seconds before it strikes until it lands; a parried move
+ * leaves the boss exposed for `parryExposed` seconds.
+ */
 export interface BossAttackTableDefinition<Phase extends string | number, Place = never> {
   readonly bossId: string;
   readonly phases: readonly Phase[];
   readonly gap: number;
   readonly exposedDamageTaken: number;
+  readonly parryLead: number;
+  readonly parryExposed: number;
   readonly attacks: readonly BossAttackDefinition<Phase, Place>[];
 }
 
@@ -101,6 +107,8 @@ export interface BossAttackTable<Phase extends string | number, Place = never> {
   readonly phases: readonly Phase[];
   readonly gap: number;
   readonly exposedDamageTaken: number;
+  readonly parryLead: number;
+  readonly parryExposed: number;
   readonly attacks: readonly BossAttack<Phase, Place>[];
   readonly byId: ReadonlyMap<string, BossAttack<Phase, Place>>;
 }
@@ -177,6 +185,8 @@ export function buildBossAttackTable<Phase extends string | number, Place = neve
     phases: Object.freeze([...definition.phases]),
     gap: bossAttackSecondsToTicks(definition.gap),
     exposedDamageTaken: definition.exposedDamageTaken,
+    parryLead: bossAttackSecondsToTicks(definition.parryLead),
+    parryExposed: bossAttackSecondsToTicks(definition.parryExposed),
     attacks: Object.freeze(attacks),
     byId,
   });

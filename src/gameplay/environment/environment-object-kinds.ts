@@ -2,7 +2,6 @@
 export const ENVIRONMENT_OBJECT_KIND_IDS = Object.freeze([
   "bloom-well",
   "aurora-track",
-  "rootline",
   "root-link",
   "graft-anchor",
   "regrowth-link",

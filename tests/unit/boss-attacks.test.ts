@@ -14,11 +14,13 @@ import {
   bossAttackDamageTaken,
   bossAttackHit,
   bossAttackMotion,
+  bossAttackParryable,
   bossAttackTells,
   bossHitTouches,
   chooseBossAttack,
   createBossAttackRunnerState,
   markBossAttackLanded,
+  parryBossAttack,
   placeBossHitShape,
   type BossAttackContext,
   type BossAttackEvent,
@@ -49,7 +51,16 @@ function definition(
   attacks: readonly BossAttackDefinition<Phase, Place>[],
   overrides: Partial<BossAttackTableDefinition<Phase, Place>> = {},
 ): BossAttackTableDefinition<Phase, Place> {
-  return { bossId: "test-boss", phases: ["rooted", "wild"], gap: 0.4, exposedDamageTaken: 1.5, attacks, ...overrides };
+  return {
+    bossId: "test-boss",
+    phases: ["rooted", "wild"],
+    gap: 0.4,
+    exposedDamageTaken: 1.5,
+    parryLead: 0.125,
+    parryExposed: 0.9,
+    attacks,
+    ...overrides,
+  };
 }
 
 function context(tick: number, overrides: Partial<BossAttackContext<Phase>> = {}): BossAttackContext<Phase> {
@@ -129,6 +140,8 @@ describe("boss attack definitions", () => {
       phases: [1, 2, 3, 4],
       gap: 0.4,
       exposedDamageTaken: 1,
+      parryLead: 0,
+      parryExposed: 0,
       attacks: [
         { ...move("a"), phases: [1, 2, 3, 4], places: [] },
         { ...move("b"), phases: [1, 2, 3, 4], places: [] },
@@ -270,6 +283,39 @@ describe("boss attack runner", () => {
     expect(bossHitTouches({ kind: "circle", x: 0, y: 0, r: 100 }, { x: 100, y: 100, hw: 18, hh: 18 })).toBe(false);
   });
 
+  it("opens a parry window before the strike, and a parried move never lands and leaves the boss exposed", () => {
+    // "lash" is first; a random source that always draws 0 starts it. Tell 60 ticks, parry lead 15 ticks.
+    const started = advanceBossAttack(
+      table,
+      createBossAttackRunnerState(),
+      context(0, { random: { next: () => 0 } }),
+    ).state;
+    expect(bossAttackParryable(table, started, 44)).toBe(false);
+    expect(bossAttackParryable(table, started, 45)).toBe(true);
+    const parried = parryBossAttack(table, started, 50);
+    expect(parried.run).toMatchObject({ stage: "punish", stageTick: 50, landed: true, parried: true });
+    expect(bossAttackHit(table, parried, context(60))).toBeNull();
+    expect(bossAttackParryable(table, parried, 51)).toBe(false);
+    expect(bossAttackTells(table, parried, context(50))[0]).toMatchObject({ stage: "exposed", leadSeconds: 0.9 });
+    expect(bossAttackDamageTaken(table, parried)).toBe(1.5);
+    let state = parried;
+    for (let tick = 51; tick <= 50 + 108; tick += 1) state = advanceBossAttack(table, state, context(tick)).state;
+    expect(state.run).toBeNull();
+    // A move that cannot be parried is never parried.
+    const unparryable = buildBossAttackTable(
+      definition([
+        move("smash", { hit: { shape: { kind: "ring", radius: 80 }, damage: 20, parryable: false } }),
+        move("other"),
+      ]),
+    );
+    const smash = advanceBossAttack(
+      unparryable,
+      createBossAttackRunnerState(),
+      context(0, { random: { next: () => 0 } }),
+    ).state;
+    expect(parryBossAttack(unparryable, smash, 59)).toBe(smash);
+  });
+
   it("places every shape kind", () => {
     const shapes: readonly BossHitShape[] = [
       { kind: "box", anchor: "boss", dx: 50, dy: -10, hw: 30, hh: 30 },
@@ -288,6 +334,7 @@ describe("boss attack runner", () => {
       origin: { x: 600, y: 500 },
       target: { x: 300, y: 520 },
       landed: false,
+      parried: false,
     };
     const boss = { x: 600, y: 500, hw: 40, hh: 60 };
     expect(shapes.map((shape) => placeBossHitShape(shape, runState, boss, 560, 0))).toEqual([
@@ -325,10 +372,13 @@ describe("boss attack runner", () => {
     expect(bossAttackMotion(motions, dash, context(90))).toEqual({ x: 1600 - 40, y: 500, hidden: false });
     const leap = startWith("leap");
     expect(leap.run?.attackId).toBe("leap");
-    expect(bossAttackMotion(motions, leap, context(30))).toEqual({ x: 750, y: 300, hidden: false });
+    // Tick 29 is the 30th of a 60-tick tell: half way, at the top of the arc.
+    expect(bossAttackMotion(motions, leap, context(29))).toEqual({ x: 750, y: 300, hidden: false });
     const burrow = startWith("burrow");
     expect(burrow.run?.attackId).toBe("burrow");
     expect(bossAttackMotion(motions, burrow, context(30))).toMatchObject({ x: 600, hidden: true });
-    expect(bossAttackMotion(motions, burrow, context(60))).toMatchObject({ x: 900, hidden: false });
+    expect(bossAttackMotion(motions, burrow, context(58))).toMatchObject({ x: 600, hidden: true });
+    // The tell's last tick surfaces the boss at the target, before the strike.
+    expect(bossAttackMotion(motions, burrow, context(59))).toMatchObject({ x: 900, hidden: false });
   });
 });

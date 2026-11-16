@@ -18,6 +18,20 @@ import { BossArenaRules, createBossArena, type ArenaPlatform } from "../../src/g
 import { createEnemyHarness } from "./enemy-test-harness";
 import { createEnemyPresentation } from "../../src/presentation/enemies/enemy-presentation";
 import { clamp, len, lerp } from "../../src/domain/geometry";
+import {
+  createBossAttackRunnerState,
+  type BossAttackRunnerState,
+} from "../../src/gameplay/entities/boss-attack-runner";
+import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
+
+/** The drawing call each move's wind-up is built from: a curled vine, an earth mound, legs, thorns, a spike. */
+const MOVE_WIND_UP_CALL: Readonly<Record<string, string>> = {
+  "vine-lash": "quadraticCurveTo",
+  "root-glide": "ellipse",
+  "canopy-vault": "lineTo",
+  "thorn-burst": "lineTo",
+  "root-wave": "closePath",
+};
 
 function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
   const values = new Map<PropertyKey, unknown>();
@@ -66,7 +80,7 @@ describe("Rootbound production foundation", () => {
       presentationId: "rootbound",
       isBoss: true,
       atk: "unavailable",
-      availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"],
+      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
       phaseMarks: [0.65, 0.28],
     });
   });
@@ -99,7 +113,7 @@ describe("Rootbound production foundation", () => {
     expect(calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
   });
 
-  it("draws the Vine Sweep and Canopy Step tells with the shared danger marks in every accessibility profile", () => {
+  it("draws every move's wind-up and its shared danger mark in every accessibility profile", () => {
     for (const profile of [
       { highContrast: false, reducedMotion: false, low: false },
       { highContrast: true, reducedMotion: false, low: false },
@@ -118,20 +132,35 @@ describe("Rootbound production foundation", () => {
         len,
         lerp,
       }).install(harness.types);
-      const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as InstanceType<
-        typeof harness.types.Rootbound
-      > & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
-      boss.vineSweepStage = "windup";
-      boss.vineSweepT = 0.3;
-      boss.vineSweepFacing = 1;
-      boss.canopyStepStage = "telegraph";
-      boss.canopyStepT = 0.3;
-      boss.canopyDestination = Object.freeze({ x: 595, y: 396, platformId: "rootbound:2" });
-      const calls: string[] = [];
-      boss.draw(recordingCanvas(calls), harness.player);
-      expect(calls, JSON.stringify(profile)).toEqual(
-        expect.arrayContaining(["bezierCurveTo", "strokeRect", "fillRect", "ellipse", "setLineDash", "stroke"]),
-      );
+      for (const move of ROOTBOUND_MOVES.attacks) {
+        const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as unknown as {
+          moveState: BossAttackRunnerState;
+          tells(): readonly { attackId: string; stage: string }[];
+          draw(canvas: CanvasRenderingContext2D, player: unknown): void;
+        };
+        const target = { x: 500, y: CONFIG.world.groundY - 30 };
+        boss.moveState = {
+          ...createBossAttackRunnerState(0),
+          run: {
+            attackId: move.id,
+            stage: "tell",
+            stageTick: -30,
+            facing: -1,
+            origin: { x: 800, y: 0 },
+            target,
+            landed: false,
+            parried: false,
+          },
+        };
+        const label = `${JSON.stringify(profile)} ${move.id}`;
+        expect(
+          boss.tells().map((tell) => [tell.attackId, tell.stage]),
+          label,
+        ).toContainEqual([move.id, "warning"]);
+        const calls: string[] = [];
+        boss.draw(recordingCanvas(calls), harness.player);
+        expect(calls, label).toEqual(expect.arrayContaining([MOVE_WIND_UP_CALL[move.id], "stroke", "fill"]));
+      }
     }
   });
 
@@ -152,7 +181,7 @@ describe("Rootbound production foundation", () => {
       typeof harness.types.Rootbound
     > & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
     boss.hp = boss.maxHp * 0.5;
-    boss.update(1 / 120, harness.platforms, harness.player, []);
+    boss.update(1 / 120, harness.platforms, harness.player);
     boss.cinematicRequest = null;
     boss.cinematicT = 0;
     expect(boss.startMemoryChoir()).toBe(true);
@@ -249,7 +278,7 @@ describe("Rootbound production foundation", () => {
       phaseMarker: 1,
       phaseTag: "KEEPER OF SPRING",
       state: "idle",
-      availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"],
+      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
     });
 
     boss.introT = 0.5;
@@ -257,17 +286,17 @@ describe("Rootbound production foundation", () => {
     expect(boss.hit(100, 1, 0)).toBe(0);
     expect(boss.hp).toBe(introHp);
     expect(boss.contactDamageEnabled()).toBe(false);
-    boss.update(1 / 120, harness.platforms, harness.player, []);
+    boss.update(1 / 120, harness.platforms, harness.player);
     expect(boss.state).toBe("intro");
 
     boss.introT = 0;
-    boss.update(1 / 120, harness.platforms, harness.player, []);
+    boss.update(1 / 120, harness.platforms, harness.player);
     expect(boss.state).toBe("recover");
     expect(boss.hit(100, 1, 0)).toBe(100);
     expect(boss.hp).toBe(introHp - 100);
 
     boss.hp = boss.maxHp * boss.phaseMarks[0];
-    boss.update(1 / 120, harness.platforms, harness.player, []);
+    boss.update(1 / 120, harness.platforms, harness.player);
     expect(boss).toMatchObject({ phase: 2, phaseMarker: 2, phaseTag: "THE GARDEN REMEMBERS" });
     expect(boss.cinematicRequest).toMatchObject({ id: "rootbound-garden-remembers", pose: "rootboundGraft" });
     boss.cinematicRequest = null;
@@ -276,14 +305,14 @@ describe("Rootbound production foundation", () => {
     expect(boss.phase).toBe(2);
 
     // The opening contact grace outlasts the first recovery, so an overlapping spawn deals no touch damage.
-    boss.update(1, harness.platforms, harness.player, []);
+    boss.update(1, harness.platforms, harness.player);
     expect(boss.state).toBe("idle");
     expect(boss.contactDamageEnabled()).toBe(false);
-    boss.update(0.25, harness.platforms, harness.player, []);
+    boss.update(0.25, harness.platforms, harness.player);
     expect(boss).toMatchObject({
       state: "idle",
       atk: "unavailable",
-      availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"],
+      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
     });
     expect(boss.contactDamageEnabled()).toBe(true);
   });

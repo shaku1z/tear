@@ -1356,10 +1356,6 @@ withJourney(
                     const cue = JSON.stringify([
                       boss.phaseMarker,
                       boss.atk,
-                      boss.vineSweepStage,
-                      boss.seedArcStage,
-                      boss.rootlineStage,
-                      boss.canopyStepStage,
                       boss.memoryChoirStage,
                       boss.lastSpringStage,
                       state.combatObjects.map((object) => [object.factoryId, object.state]),
@@ -1527,10 +1523,14 @@ withJourney(
               );
             }
             if (bossCanopyOnly)
-              for (const stage of ["telegraph", "travel", "settle"]) {
+              for (const stage of ["tell", "active"]) {
                 assert.ok(
-                  result.samples.some((sample) => sample.boss.canopyStepStage === stage),
-                  `Missing Canopy Step ${stage}`,
+                  result.samples.some((sample) =>
+                    new RegExp(`^(vine-lash|root-glide|canopy-vault|thorn-burst|root-wave):${stage}$`, "u").test(
+                      sample.boss.atk,
+                    ),
+                  ),
+                  `Missing a Phase I move ${stage}`,
                 );
               }
             if (bossLatePhases && bossPhase === 2) {

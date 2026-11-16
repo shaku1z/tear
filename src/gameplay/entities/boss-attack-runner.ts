@@ -28,6 +28,8 @@ export interface BossAttackRun {
   readonly origin: Point;
   readonly target: Point;
   readonly landed: boolean;
+  /** True once the player parried it: the move skips to an exposed punish of the table's parry length. */
+  readonly parried: boolean;
 }
 
 export interface BossAttackRunnerState {
@@ -125,7 +127,17 @@ function begin<Phase extends string | number, Place>(
     origin: Object.freeze({ x: context.boss.x, y: context.boss.y }),
     target: Object.freeze({ x: context.target.x, y: context.target.y }),
     landed: false,
+    parried: false,
   });
+}
+
+/** How long the run's current stage lasts, in ticks. A parried move's punish lasts the table's parry exposure. */
+function stageLength(
+  table: BossAttackTable<string | number, unknown>,
+  attack: BossAttack<string | number, unknown>,
+  run: BossAttackRun,
+): number {
+  return run.stage === "punish" && run.parried ? table.parryExposed : attack.timing[run.stage];
 }
 
 /** The stage after `stage` that has any length, or null when the move is over. */
@@ -168,7 +180,7 @@ export function advanceBossAttack<Phase extends string | number, Place>(
   }
   const attack = table.byId.get(run.attackId);
   if (attack === undefined) throw new TypeError(`unknown boss move ${run.attackId} in ${table.bossId}`);
-  if (context.tick - run.stageTick < attack.timing[run.stage]) return { state, events: [] };
+  if (context.tick - run.stageTick < stageLength(table, attack, run)) return { state, events: [] };
   const stage = nextStage(attack, run.stage);
   if (stage === null)
     return { state: finish(table, state, attack, context.tick), events: [{ type: "finished", attackId: attack.id }] };
@@ -246,12 +258,66 @@ export function markBossAttackLanded(state: BossAttackRunnerState): BossAttackRu
   return state.run === null ? state : Object.freeze({ ...state, run: Object.freeze({ ...state.run, landed: true }) });
 }
 
+/** True while a parryable move can be parried: from `parryLead` before it strikes until it lands. */
+export function bossAttackParryable<Phase extends string | number, Place>(
+  table: BossAttackTable<Phase, Place>,
+  state: BossAttackRunnerState,
+  tick: number,
+): boolean {
+  const run = state.run;
+  const attack = currentBossAttack(table, state);
+  if (run === null || attack?.hit?.parryable !== true || run.landed) return false;
+  if (run.stage === "active") return true;
+  return run.stage === "tell" && run.stageTick + attack.timing.tell - tick <= table.parryLead;
+}
+
+/** Parries the move in progress: it never lands, and the boss is exposed for the table's parry length. */
+export function parryBossAttack<Phase extends string | number, Place>(
+  table: BossAttackTable<Phase, Place>,
+  state: BossAttackRunnerState,
+  tick: number,
+): BossAttackRunnerState {
+  const run = state.run;
+  if (run === null || !bossAttackParryable(table, state, tick)) return state;
+  const parried = Object.freeze({ ...run, stage: "punish" as const, stageTick: tick, landed: true, parried: true });
+  return Object.freeze({ ...state, run: parried });
+}
+
 export function bossHitTouches(area: BossHitArea, target: Box): boolean {
   if (area.kind === "box")
     return Math.abs(area.x - target.x) <= area.hw + target.hw && Math.abs(area.y - target.y) <= area.hh + target.hh;
   const nearestX = Math.max(target.x - target.hw, Math.min(area.x, target.x + target.hw));
   const nearestY = Math.max(target.y - target.hh, Math.min(area.y, target.y + target.hh));
   return Math.hypot(area.x - nearestX, area.y - nearestY) <= area.r;
+}
+
+/** What a renderer needs to draw a move: which move, its stage, how far through it, and where it reaches now. */
+export interface BossAttackPose {
+  readonly attackId: string;
+  readonly stage: BossAttackStage;
+  /** 0 at the start of the stage, 1 at its end. */
+  readonly progress: number;
+  readonly facing: 1 | -1;
+  readonly target: Point;
+  /** Where the move's hit sits now (also after it landed), or null for a move with no hit. */
+  readonly area: BossHitArea | null;
+}
+
+export function bossAttackPose<Phase extends string | number, Place>(
+  table: BossAttackTable<Phase, Place>,
+  state: BossAttackRunnerState,
+  context: BossAttackContext<Phase>,
+): BossAttackPose | null {
+  const run = state.run;
+  const attack = currentBossAttack(table, state);
+  if (run === null || attack === null) return null;
+  const elapsed = context.tick - run.stageTick;
+  const progress = Math.min(1, Math.max(0, elapsed / Math.max(1, stageLength(table, attack, run))));
+  const shape = attack.hit?.shape;
+  const travelled = shape?.kind === "travel" && run.stage === "active" ? shape.speed * elapsed : 0;
+  const area =
+    shape === undefined ? null : placeBossHitShape(shape, run, context.boss, context.arena.groundY, travelled);
+  return { attackId: attack.id, stage: run.stage, progress, facing: run.facing, target: run.target, area };
 }
 
 /** True while the boss is in a move's punish stage: exposed, and hits on it are scaled. */
@@ -280,8 +346,9 @@ export function bossAttackMotion<Phase extends string | number, Place>(
   const attack = currentBossAttack(table, state);
   const motion = attack?.motion;
   if (run === null || attack === null || motion?.stage !== run.stage) return null;
+  // The stage's last tick finishes the motion: a burrow surfaces, a leap lands, a dash reaches full length.
   const span = Math.max(1, attack.timing[run.stage]);
-  const progress = Math.min(1, Math.max(0, (context.tick - run.stageTick) / span));
+  const progress = Math.min(1, Math.max(0, (context.tick - run.stageTick + 1) / span));
   const clampX = (x: number) => Math.max(context.boss.hw, Math.min(context.arena.width - context.boss.hw, x));
   switch (motion.kind) {
     case "dash":
@@ -344,10 +411,10 @@ export function bossAttackTells<Phase extends string | number, Place>(
   if (run === null || attack === null || stage === null) return Object.freeze([]);
   const exposed = stage === "exposed";
   const area = exposed ? context.boss : tellArea(attack, run, context.boss, context.arena.groundY);
-  const length = attack.timing[run.stage];
+  const length = stageLength(table, attack, run);
   return Object.freeze([
     Object.freeze({
-      id: `${attack.id}:${stage}`,
+      id: exposed ? `${attack.id}:exposed` : attack.id,
       attackId: attack.id,
       mark: exposed ? "self" : attack.tell.mark,
       stage,
@@ -356,7 +423,7 @@ export function bossAttackTells<Phase extends string | number, Place>(
       hw: area.hw,
       hh: area.hh,
       dir: run.facing,
-      leadSeconds: (stage === "warning" ? attack.timing.tell : length) / BOSS_ATTACK_TICKS_PER_SECOND,
+      leadSeconds: (stage === "exposed" ? length : attack.timing.tell) / BOSS_ATTACK_TICKS_PER_SECOND,
       remainingSeconds:
         stage === "active" ? 0 : Math.max(0, run.stageTick + length - context.tick) / BOSS_ATTACK_TICKS_PER_SECOND,
       damaging: !exposed && attack.hit !== undefined,
