@@ -14,6 +14,7 @@ import { applyMusicMode, onMusicModeChange } from "../music-mode";
 import { onLoadoutChange, resolveMenuCueId } from "../music/loadout";
 import { getActiveStation, onStationChange } from "../music/active-station";
 import { setNowPlaying } from "../music/now-playing";
+import { onMusicPreviewChange } from "../music/preview";
 import { createStationState, pickNext, remember, type StationState } from "../music/station";
 import type { MusicCatalog } from "../music/catalog";
 import { StingerPlayer } from "../music/stingers";
@@ -73,6 +74,7 @@ export class BiomeStemBackend implements MusicBackend {
   #introBuffer: AudioBuffer | null = null;
   #stopModeWatch: (() => void) | null = null;
   #stopLoadoutWatch: (() => void) | null = null;
+  #stopPreviewWatch: (() => void) | null = null;
   /** While paused, ignore the user's music mode and use the adaptive tier. */
   #modeExempt = false;
   #catalog: MusicCatalog | null = null;
@@ -108,12 +110,14 @@ export class BiomeStemBackend implements MusicBackend {
     this.#stopModeWatch = onMusicModeChange(() => {
       this.#applyTier(0.5);
     });
-    // Re-pick the shell track when the player changes their menu-music loadout.
-    this.#stopLoadoutWatch = onLoadoutChange(() => {
+    // Re-pick the shell track when the player changes their menu music or previews a song.
+    const repickShell = (): void => {
       if (!this.#onShell) return;
       const next = this.#shellCueId();
       if (next !== this.#active?.cueId) void this.#activate(next, MENU_CROSSFADE_SECONDS);
-    });
+    };
+    this.#stopLoadoutWatch = onLoadoutChange(repickShell);
+    this.#stopPreviewWatch = onMusicPreviewChange(repickShell);
     this.#stopStationWatch = onStationChange(() => {
       // Switching station re-programmes the next pick immediately.
       this.#interrupted = null;
@@ -202,6 +206,8 @@ export class BiomeStemBackend implements MusicBackend {
     this.#stopModeWatch = null;
     this.#stopLoadoutWatch?.();
     this.#stopLoadoutWatch = null;
+    this.#stopPreviewWatch?.();
+    this.#stopPreviewWatch = null;
     this.#stopStationWatch?.();
     this.#stopStationWatch = null;
     this.#stingers?.dispose();
@@ -214,7 +220,7 @@ export class BiomeStemBackend implements MusicBackend {
     return Promise.resolve();
   }
 
-  /** Cue for the shell/menu slot, honouring the player's Music Loadout. */
+  /** Cue for the shell/menu slot: a MUSIC-screen preview, else the player's Music Loadout. */
   #shellCueId(): string {
     return resolveMenuCueId(this.#defaultCueId, (cueId) => this.#cues.has(cueId));
   }
