@@ -28,69 +28,16 @@ export type WhiteHartEnvironmentRequest = Readonly<{
       }>
   );
 
-export interface WhiteHartRouteTarget {
-  readonly id: string;
-  readonly x: number;
-  readonly y: number;
-  readonly hw: number;
-  readonly hh: number;
-  readonly invulnerable: boolean;
-  readonly hazardDamageMultiplier: number;
-  readonly takeDamage: (damage: number, sourceX: number, source: unknown) => void;
-}
-
-export interface GhostTrackAdvanceResult {
-  readonly route: GhostTrackRouteState;
-  readonly hit: boolean;
-}
-
-function pointSegmentDistance(pointX: number, pointY: number, start: EnvironmentPoint, end: EnvironmentPoint): number {
-  const dx = end.x - start.x,
-    dy = end.y - start.y;
-  const lengthSquared = dx * dx + dy * dy;
-  if (lengthSquared === 0) return Math.hypot(pointX - start.x, pointY - start.y);
-  const amount = Math.max(0, Math.min(1, ((pointX - start.x) * dx + (pointY - start.y) * dy) / lengthSquared));
-  return Math.hypot(pointX - (start.x + dx * amount), pointY - (start.y + dy * amount));
-}
-
-function routeTouchesTarget(route: GhostTrackRouteState, target: WhiteHartRouteTarget): boolean {
-  const reach = route.width / 2 + Math.max(target.hw, target.hh);
-  for (let index = 1; index < route.points.length; index += 1) {
-    const start = route.points[index - 1],
-      end = route.points[index];
-    if (start !== undefined && end !== undefined && pointSegmentDistance(target.x, target.y, start, end) <= reach)
-      return true;
-  }
-  return false;
-}
-
-/** Advances one persisted route without renderer or actor-owned clocks. */
-export function advanceGhostTrackRoute(
-  route: GhostTrackRouteState,
-  tick: number,
-  target?: WhiteHartRouteTarget,
-): GhostTrackAdvanceResult {
-  if (route.state === "expired" || route.state === "destroyed") return Object.freeze({ route, hit: false });
-  let next = route;
-  if (route.state === "warning" && tick - route.stateTick >= route.lifecycle.warningTicks) {
-    next = Object.freeze({ ...route, state: "active", stateTick: tick });
-  } else if (route.state === "active" && tick - route.stateTick >= route.lifecycle.activeTicks) {
-    next = Object.freeze({ ...route, state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
-  }
-  if (
-    next.state !== "active" ||
-    !next.threatening ||
-    target === undefined ||
-    target.invulnerable ||
-    next.hitActorIds.includes(target.id) ||
-    !routeTouchesTarget(next, target)
-  ) {
-    return Object.freeze({ route: next, hit: false });
-  }
-  return Object.freeze({
-    route: Object.freeze({ ...next, hitActorIds: Object.freeze([...next.hitActorIds, target.id]) }),
-    hit: true,
-  });
+/**
+ * Advances one persisted route's lifecycle on absolute ticks. Its contact damage (`damage`,
+ * `threatening`, `hitActorIds`) is declared on the route and applied by the environment runtime.
+ */
+export function advanceGhostTrackRoute(route: GhostTrackRouteState, tick: number): GhostTrackRouteState {
+  if (route.state === "warning" && tick - route.stateTick >= route.lifecycle.warningTicks)
+    return Object.freeze({ ...route, state: "active", stateTick: tick });
+  if (route.state === "active" && tick - route.stateTick >= route.lifecycle.activeTicks)
+    return Object.freeze({ ...route, state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+  return route;
 }
 
 function retireOldest(
@@ -117,16 +64,7 @@ export function installWhiteHartEnvironmentRequest(
   const id = `${ownerId}:p${String(request.phase)}:${request.kind}:${String(request.sequence)}`;
   if (request.kind === "ghost-track") {
     if (environment.routes().some((route) => route.id === id)) return id;
-    for (const route of environment
-      .routes()
-      .filter(
-        (entry) =>
-          entry.ownerId === ownerId &&
-          entry.kind === "ghost-track" &&
-          (entry.state === "expired" || entry.state === "destroyed"),
-      )) {
-      environment.removeRoute(route.id);
-    }
+    // Ended tracks leave through the environment's lifetime rule; retireOldest counts live ones only.
     const owned = environment.routes().filter((route) => route.ownerId === ownerId && route.kind === "ghost-track");
     retireOldest(owned, 3, (routeId) => {
       environment.removeRoute(routeId);
@@ -152,10 +90,7 @@ export function installWhiteHartEnvironmentRequest(
     assertAuroraTrackFieldState(field);
     return field.variant === "boss-wake";
   });
-  for (const field of wakes.filter((entry) => entry.state === "expired" || entry.state === "destroyed"))
-    environment.removeField(field.id);
-  const owned = wakes.filter((entry) => entry.state !== "expired" && entry.state !== "destroyed");
-  retireOldest(owned, 3, (fieldId) => {
+  retireOldest(wakes, 3, (fieldId) => {
     environment.removeField(fieldId);
   });
   environment.addField(

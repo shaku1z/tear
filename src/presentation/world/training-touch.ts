@@ -1,9 +1,4 @@
-import type {
-  WorldRenderContext,
-  PlaygroundHelpSnapshot,
-  TouchControlsSnapshot,
-  TutorialCardSnapshot,
-} from "./contracts";
+import type { WorldRect, WorldRenderContext, TouchControlsSnapshot, TutorialCardSnapshot } from "./contracts";
 import { clamp } from "./primitives";
 import { bossHudTop, hudFrame, hudType } from "./hud";
 
@@ -49,9 +44,11 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
 
   /**
    * The lesson card: one vertical stack (focus tag, title + count, instruction,
-   * progress bar, keys, lesson dots + block) so no row can overlap another.
+   * progress bar, keys, lesson dots + block) so no row can overlap another. It sits on
+   * the scene like the rest of the HUD (no plate), marked by its accent rule; it returns
+   * its rectangle so coach marks keep clear of it.
    */
-  function tutorialCard(snapshot: TutorialCardSnapshot): void {
+  function tutorialCard(snapshot: TutorialCardSnapshot): WorldRect {
     const t = ui.t,
       type = hudType(context),
       pad = t.space.md,
@@ -78,8 +75,8 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
     const keysY = barY + (progress ? t.space.md : 0) + type.micro + t.space.sm;
     const footerY = keysY + (snapshot.keys.length > 0 ? Math.round(type.micro * 1.7) + t.space.sm : 0);
     const height = footerY + pad - y;
-    lessonCard = { x, y, w: width, h: height };
-    ui.hudPlate(canvas, x, y, width, height);
+    const card = { x, y, w: width, h: height };
+    lessonCard = card;
     canvas.fillStyle = t.color.accent;
     canvas.fillRect(x, y, 4, height);
     ui.tag(
@@ -134,6 +131,7 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
       ui.tag(canvas, "✓", x + width - pad, keysY, ui.readable(t.color.accent), "right", Math.round(type.h2 * scale));
     }
     canvas.textAlign = "left";
+    return card;
   }
 
   function progressBar(x: number, y: number, width: number, meter: Readonly<{ current: number; goal: number }>): void {
@@ -162,40 +160,6 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
         canvas.stroke();
         canvas.globalAlpha = 1;
       }
-    }
-  }
-
-  /**
-   * Playground help: a quiet plate at the top-right of the HUD frame, below the
-   * multiplier lane so it never meets the combo meter.
-   */
-  function playgroundHelp(snapshot: PlaygroundHelpSnapshot): void {
-    const t = ui.t,
-      type = hudType(context),
-      pad = t.space.md,
-      frame = hudFrame(context);
-    // Keyboard shortcuts only help a keyboard; touch keeps the live weapon stats.
-    const lines = context.ui.density.touch
-      ? []
-      : [
-          "TAB / E — build menu   ·   1–8 quick-spawn   ·   T dummy   ·   B boss",
-          "K clear   ·   H heal   ·   U ability lab   ·   P pause",
-        ];
-    const stats =
-      `${snapshot.weaponId.toUpperCase()}  ·  held ${String(snapshot.heldHits)}  ·  throws ${String(snapshot.throws)}/${String(snapshot.throwHits)}` +
-      `  ·  parries ${String(snapshot.perfectParries)}  ·  breaks ${String(snapshot.breakTriggers)}`;
-    const layout = tutorialCardLayout(frame, bossHudTop(context), snapshot.clearTop ?? 0);
-    const lineH = type.caption + t.space.sm,
-      height = pad * 2 + type.micro + t.space.sm + (lines.length + 1) * lineH;
-    ui.hudPlate(canvas, layout.x, layout.y, layout.width, height);
-    canvas.fillStyle = t.color.accent;
-    canvas.fillRect(layout.x, layout.y, 4, height);
-    let lineY = layout.y + pad + type.micro;
-    ui.tag(canvas, "PLAYGROUND", layout.x + pad, lineY, ui.readable(t.color.accent), "left", type.micro);
-    for (const line of [...lines, stats]) {
-      lineY += lineH;
-      const fit = ui.fitText(canvas, line, layout.width - pad * 2, { size: type.caption, floor: type.micro });
-      ui.text(canvas, fit.lines[0] ?? line, layout.x + pad, lineY, fit.size, "left", t.alpha.soft);
     }
   }
 
@@ -340,5 +304,5 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
     canvas.globalAlpha = 1;
   }
 
-  return { tutorialCard, playgroundHelp, touchControls };
+  return { tutorialCard, touchControls };
 }

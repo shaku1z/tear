@@ -12,11 +12,15 @@ export function createUiLedger(dependencies: UiDependencies) {
     presentation: { view },
   } = dependencies;
   return {
-    keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y: number) {
+    /** The size `keycap` draws for this key (sets the key font on `ctx`). */
+    keycapSize(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string) {
       ctx.font = this.font(this.t.type.micro, true);
       // The cap grows with the type token, so touch density never overfills it.
-      const h = Math.max(KEYCAP_AUTHORED_H, Math.round(this.t.type.micro * 1.7)),
-        w = Math.max(h + 4, ctx.measureText(key).width + 14);
+      const h = Math.max(KEYCAP_AUTHORED_H, Math.round(this.t.type.micro * 1.7));
+      return { w: Math.max(h + 4, ctx.measureText(key).width + 14), h };
+    },
+    keycap(this: UiRuntime, ctx: CanvasRenderingContext2D, key: string, x: number, y: number) {
+      const { w, h } = this.keycapSize(ctx, key);
       // The phone cap is twice the authored height: its label is centred rather than left on the authored baseline.
       const lift = this.density.compact ? Math.round((h - KEYCAP_AUTHORED_H) / 2) : 0;
       ctx.globalAlpha = 0.9;

@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, waitForPointerLock } = require("./browser-waits");
 
 const BOSS_PROGRESS_TIMEOUT_MS = STATE_WAIT_MS;
 /** `--captured-pointer` (nightly) also requires the browser to grant real pointer lock. */
@@ -297,8 +297,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await startReadyBoss(page, "warden");
   const fullHealth = (await bossSnapshot(page, "warden")).hp;
   await page.mouse.click(800, 450);
-  if (REQUIRE_POINTER_LOCK)
-    await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: STATE_WAIT_MS });
+  if (REQUIRE_POINTER_LOCK) await waitForPointerLock(page);
   let damaged = await bossSnapshot(page, "warden");
   let pointer = { x: 800, y: 450 };
   for (let index = 0; index < 240 && damaged.hp >= fullHealth; index += 1) {

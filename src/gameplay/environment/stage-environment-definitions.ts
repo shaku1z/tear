@@ -7,6 +7,8 @@ export interface StageInitialFieldDefinition {
   readonly slot: string;
   readonly geometry: EnvironmentGeometry;
   readonly direction?: -1 | 1;
+  /** Delays a recurring field's first cycle so paired fields alternate instead of pulsing together. */
+  readonly offsetTicks?: number;
 }
 
 export interface StageEnvironmentDefinition {
@@ -34,6 +36,7 @@ export const STAGE_ENVIRONMENT_DEFINITIONS = Object.freeze({
         kind: "bloom-well",
         slot: "right-rise",
         geometry: Object.freeze({ x: 950, y: 285, w: 170, h: 470 }),
+        offsetTicks: 372,
       }),
     ]),
     maximumFields: 3,

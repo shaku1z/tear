@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, pollEvery } = require("./browser-waits");
+const { STATE_WAIT_MS, JOURNEY_LIMIT_MS, describeStall, pollEvery, watchForStalls } = require("./browser-waits");
 
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
@@ -91,7 +91,15 @@ async function withJourney(options, run) {
   assert.equal(buildInfo.sourceFingerprint, source.fingerprint, "served build source fingerprint is stale");
   const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
   const baseUrl = `http://127.0.0.1:${String(port)}`;
+  // When each request reached this server and when its response finished, for stall reports.
+  const serverLog = [];
   const server = http.createServer((request, response) => {
+    const entry = { url: request.url, arrived: Date.now(), finished: undefined };
+    serverLog.push(entry);
+    if (serverLog.length > 400) serverLog.shift();
+    response.on("close", () => {
+      entry.finished = Date.now();
+    });
     const pathname = new URL(request.url, baseUrl).pathname;
     if (pathname === "/__tear_browser_blank_fixture__.html") {
       response.writeHead(200, { "Content-Type": "text/html" });
@@ -130,6 +138,10 @@ async function withJourney(options, run) {
       deviceScaleFactor: options.deviceScaleFactor || 1,
       serviceWorkers: "block",
     });
+    // A call that names no timeout still gets the state-wait ceiling, not Playwright's 30 s.
+    page.setDefaultTimeout(STATE_WAIT_MS);
+    page.setDefaultNavigationTimeout(STATE_WAIT_MS);
+    await watchForStalls(page, { serverLog });
     if (options.settings) {
       await page.addInitScript((settings) => {
         window.__TEAR_TEST_STORAGE__ = {
@@ -332,20 +344,38 @@ async function withJourney(options, run) {
     const served = await page.request.get(`${baseUrl}/build-info.json`);
     assert.ok(served.ok(), "served build-info.json is unavailable");
     assert.deepEqual(await served.json(), buildInfo, "served build metadata differs from the verified local artifact");
-    await run({
-      page,
-      errors,
-      baseUrl,
-      boot,
-      waitScreen,
-      clickAndWait,
-      buildInfo,
-      waitArmed,
-      labelPoint,
-      clickLabel,
-      cardCentre,
-      clickCard,
+    // One ceiling for the whole journey: page.evaluate has no timeout, so a page whose main thread
+    // never comes back would otherwise hold the job until the CI limit and print nothing.
+    const limitMs = options.limitMs ?? JOURNEY_LIMIT_MS;
+    let limitTimer;
+    const overLimit = new Promise((_resolve, reject) => {
+      limitTimer = setTimeout(() => {
+        void describeStall(page).then((stall) => {
+          reject(new Error(`${options.name} did not finish within ${String(limitMs / 1000)} s: ${stall}`));
+        });
+      }, limitMs);
     });
+    try {
+      await Promise.race([
+        run({
+          page,
+          errors,
+          baseUrl,
+          boot,
+          waitScreen,
+          clickAndWait,
+          buildInfo,
+          waitArmed,
+          labelPoint,
+          clickLabel,
+          cardCentre,
+          clickCard,
+        }),
+        overLimit,
+      ]);
+    } finally {
+      clearTimeout(limitTimer);
+    }
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser && options.browserCloseTimeoutMs) {
@@ -367,7 +397,12 @@ async function withJourney(options, run) {
 }
 
 /** Poll resolved durable evidence rather than an async predicate's Promise. */
-async function waitForBrowserValue(page, predicate, argument, { timeout = 20_000, polling = 50 } = {}) {
+async function waitForBrowserValue(
+  page,
+  predicate,
+  argument,
+  { timeout = STATE_WAIT_MS, polling = pollEvery(50) } = {},
+) {
   assert.ok(Number.isFinite(timeout) && timeout > 0, "async browser wait requires a positive timeout");
   assert.ok(Number.isFinite(polling) && polling > 0, "async browser wait requires a positive polling interval");
   let cancelled = false,

@@ -85,12 +85,20 @@ const cues: Readonly<
     brief: true,
     firstVertical: true,
   },
+  "rootbound-garden-remembers": {
+    bossId: "rootbound",
+    phase: 2,
+    pose: "rootboundGraft",
+    line: "STAY. EVERYONE ELSE STAYED.",
+    sfx: "slam",
+    anchor: "lower-left",
+  },
   "rootbound-nothing-here-dies": {
     bossId: "rootbound",
     phase: 3,
     pose: "rootboundRegrowth",
     line: "THE GARDEN WILL REMEMBER YOU.",
-    sfx: "rootboundRegrowth",
+    sfx: "boom",
     anchor: "lower-left",
   },
   "source-true-form": {

@@ -17,6 +17,12 @@ export const BLOOM_WELL_TIMING = Object.freeze({
   cooldownTicks: 480,
   totalTicks: 744,
 });
+/**
+ * Lift must beat gravity (2400 px/s²) or a Well is only a slow fall. The
+ * authored push nets ~900 px/s² upward for the player, and the rise is capped
+ * so a Well is a controllable vertical route rather than a launcher.
+ */
+export const BLOOM_WELL_LIFT = Object.freeze({ force: 3300, maxRiseSpeed: 600 });
 
 export type BloomWellVariant = "stage" | "boss";
 
@@ -84,7 +90,7 @@ export function isValidBloomWellForcePolicy(value: unknown): value is Environmen
   const force = value as Partial<EnvironmentForcePolicy>;
   if (![force.x, force.y, force.magnitude].every((entry) => typeof entry === "number" && Number.isFinite(entry)))
     return false;
-  if ((force.magnitude ?? -1) < 0 || (force.magnitude ?? Infinity) > 2400) return false;
+  if ((force.magnitude ?? -1) < 0 || (force.magnitude ?? Infinity) > 4000) return false;
   return Math.hypot(force.x ?? Infinity, force.y ?? Infinity) <= (force.magnitude ?? -1);
 }
 
@@ -109,7 +115,7 @@ export function createBloomWellDefinition(value: BloomWellDefinition): BloomWell
   const extent = value.geometry.radius ?? Math.max(value.geometry.w ?? 0, value.geometry.h ?? 0);
   if (!(extent > 0) || !Number.isFinite(extent))
     throw new RangeError("Bloom Well geometry must be bounded and non-empty");
-  const force = value.force ?? { x: 0, y: -720, magnitude: 720 };
+  const force = value.force ?? { x: 0, y: -BLOOM_WELL_LIFT.force, magnitude: BLOOM_WELL_LIFT.force };
   assertBloomWellForcePolicy(force);
   return Object.freeze({
     ...value,
@@ -138,7 +144,7 @@ export function createBloomWellState(input: BloomWellDefinition, startTick = 0):
     geometry: definition.geometry,
     schedule: { startTick, endTick: startTick + BLOOM_WELL_TIMING.totalTicks },
     eligibility: { player: true, enemies: true, bosses: false },
-    force: definition.force ?? { x: 0, y: -720, magnitude: 720 },
+    force: definition.force ?? { x: 0, y: -BLOOM_WELL_LIFT.force, magnitude: BLOOM_WELL_LIFT.force },
     cleanupReason: null,
     patternId: `bloom-well/${definition.patternId}`,
   });
@@ -152,28 +158,36 @@ function stateAt(startTick: number, tick: number): BloomWellState["state"] {
   if (elapsed < BLOOM_WELL_TIMING.totalTicks) return "cooldown";
   return "dormant";
 }
-
 function transitionAt(startTick: number, state: BloomWellState["state"]): number {
   if (state === "warning") return startTick + BLOOM_WELL_TIMING.warningTicks;
   if (state === "active") return startTick + BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks;
   return startTick + BLOOM_WELL_TIMING.totalTicks;
 }
-
 function stateStartedAt(startTick: number, state: BloomWellState["state"]): number {
   if (state === "warning") return startTick;
   if (state === "active") return startTick + BLOOM_WELL_TIMING.warningTicks;
   if (state === "cooldown") return startTick + BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks;
   return startTick + BLOOM_WELL_TIMING.totalTicks;
 }
-
+/** Stage Wells recur for the whole stage; boss-owned Wells run one authored cycle, then end. */
+function cycleStart(state: BloomWellState, tick: number): number {
+  const elapsed = tick - state.startTick;
+  if (state.variant !== "stage" || elapsed < 0) return state.startTick;
+  return state.startTick + Math.floor(elapsed / BLOOM_WELL_TIMING.totalTicks) * BLOOM_WELL_TIMING.totalTicks;
+}
 /** Pure, absolute-tick lifecycle advancement; repeated renders cannot accumulate drift. */
 export function advanceBloomWell(state: BloomWellState, tick: number, events?: TearGameplayEventPort): BloomWellState {
   assertTick(tick, "Bloom Well tick");
   if (state.cleanupReason !== null) return state;
-  const next = stateAt(state.startTick, tick);
-  const timer = Math.max(0, tick - state.startTick) / BLOOM_WELL_TIMING.ticksPerSecond;
-  if (next === state.state) return state.timer === timer ? state : Object.freeze({ ...state, timer });
-  if (events !== undefined && next !== state.state && (next === "active" || next === "dormant")) {
+  const base = cycleStart(state, tick);
+  if (state.variant !== "stage" && tick - base >= BLOOM_WELL_TIMING.totalTicks)
+    return finishedBossWell(state, tick, events);
+  const next = stateAt(base, tick);
+  const timer = Math.max(0, tick - base) / BLOOM_WELL_TIMING.ticksPerSecond;
+  const stateTick = stateStartedAt(base, next);
+  if (next === state.state && stateTick === state.stateTick)
+    return state.timer === timer ? state : Object.freeze({ ...state, timer });
+  if (events !== undefined && (next === "active" || next === "dormant")) {
     publishEnvironmentEvent(
       events,
       {
@@ -189,12 +203,34 @@ export function advanceBloomWell(state: BloomWellState, tick: number, events?: T
   return Object.freeze({
     ...state,
     state: next,
-    stateTick: stateStartedAt(state.startTick, next),
-    transitionTick: transitionAt(state.startTick, next),
+    stateTick,
+    transitionTick: transitionAt(base, next),
     timer,
   });
 }
-
+/** A boss Well's one cycle is over: it ends, and the environment removes it after the fade. */
+function finishedBossWell(state: BloomWellState, tick: number, events?: TearGameplayEventPort): BloomWellState {
+  if (events !== undefined)
+    publishEnvironmentEvent(
+      events,
+      {
+        event: "field-resolved",
+        objectId: state.id,
+        category: "field",
+        objectKind: state.kind,
+        reason: "natural-expiry",
+      },
+      tick,
+    );
+  return Object.freeze({
+    ...state,
+    state: "expired",
+    stateTick: tick,
+    transitionTick: tick,
+    timer: BLOOM_WELL_TIMING.totalTicks / BLOOM_WELL_TIMING.ticksPerSecond,
+    cleanupReason: "natural-expiry",
+  });
+}
 function contains(state: BloomWellState, x: number, y: number): boolean {
   if (state.geometry.radius !== undefined)
     return Math.hypot(x - state.geometry.x, y - state.geometry.y) <= state.geometry.radius;
@@ -227,14 +263,16 @@ export function applyBloomWellForce(
   if (state.state !== "active" || !eligible || !contains(state, actor.x, actor.y)) return false;
   const scale = liftScale(actor);
   if (scale <= 0 || !(seconds > 0) || !Number.isFinite(seconds)) return false;
-  actor.vy += (state.force?.y ?? -720) * scale * seconds;
+  const rise = -BLOOM_WELL_LIFT.maxRiseSpeed * scale;
+  if (actor.vy > rise)
+    actor.vy = Math.max(rise, actor.vy + (state.force?.y ?? -BLOOM_WELL_LIFT.force) * scale * seconds);
   return true;
 }
 
 export function cleanupBloomWell(state: BloomWellState, reason: EnvironmentClearReason): BloomWellState {
   return Object.freeze({
     ...state,
-    state: "dormant",
+    state: "expired",
     stateTick: state.stateTick,
     transitionTick: state.stateTick,
     cleanupReason: reason,

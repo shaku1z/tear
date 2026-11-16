@@ -1,8 +1,10 @@
 name: TearBench Evidence Program
 
 on:
+  # Weekly. The selected evidence is the scenario, journey and graveyard set
+  # that pull requests no longer run; the static checks run on every pull request.
   schedule:
-    - cron: "17 6 * * *"
+    - cron: "17 6 * * 0"
     - cron: "23 8 * * 0"
   workflow_dispatch:
     inputs:
@@ -25,7 +27,7 @@ concurrency:
 
 jobs:
   nightly:
-    if: (github.event_name == 'schedule' && github.event.schedule == '17 6 * * *') || inputs.profile == 'nightly'
+    if: (github.event_name == 'schedule' && github.event.schedule == '17 6 * * 0') || inputs.profile == 'nightly'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -49,10 +51,6 @@ jobs:
           git diff --name-only "$root_commit" HEAD > artifacts/tearbench/changed-files.txt
           pnpm tearbench select --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/nightly-selection.json
           pnpm tearbench ci --files-from artifacts/tearbench/changed-files.txt --artifact artifacts/tearbench/nightly-ci-selection.json
-      - run: pnpm requirements:check
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm check:architecture
       - uses: actions/upload-artifact@v4
         with:
           name: tearbench-nightly-${{ github.sha }}
