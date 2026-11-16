@@ -28,12 +28,15 @@
     {
       "id": "rhythm",
       "role": "rhythm",
+      "kinds": [
+        "drums"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
       "sources": [
         {
-          "url": "opus/revisions/84c9186846cf493aa3b921f09e4a7e88/rhythm.ogg",
+          "url": "opus/rhythm.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -41,12 +44,15 @@
     {
       "id": "pulse",
       "role": "bass",
+      "kinds": [
+        "bass"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
       "sources": [
         {
-          "url": "opus/revisions/84c9186846cf493aa3b921f09e4a7e88/pulse.ogg",
+          "url": "opus/pulse.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -54,13 +60,17 @@
     {
       "id": "foundation",
       "role": "bed",
+      "kinds": [
+        "keys",
+        "other"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "crossfade",
       "crossfadeFrames": 1440,
       "sources": [
         {
-          "url": "opus/revisions/84c9186846cf493aa3b921f09e4a7e88/foundation.ogg",
+          "url": "opus/foundation.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -68,13 +78,16 @@
     {
       "id": "melody",
       "role": "motif",
+      "kinds": [
+        "synth"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "crossfade",
       "crossfadeFrames": 1440,
       "sources": [
         {
-          "url": "opus/revisions/84c9186846cf493aa3b921f09e4a7e88/melody.ogg",
+          "url": "opus/melody.ogg",
           "mime": "audio/ogg; codecs=\"opus\""
         }
       ]
@@ -107,78 +120,15 @@
     }
   },
   "provenance": {
-    "owner": "shatheartboy@gmail.com",
+    "owner": "shaku1z",
     "license": "Owned/licensed by owner, confirmed 2026-07-23.",
     "sourceSha256": "f93f002299b622623ef9ece9cf267ad3722ff25d50ad26cb110a87e09e3e3103"
   },
   "analysis": {
-    "tempoConfidence": 0.164,
-    "tempoAlternatives": [
-      42.4,
-      169.4
-    ],
-    "sourceDownbeatSeconds": 1.8086,
-    "keyConfidence": 0.048,
-    "keyAlternatives": [
-      "G major",
-      "C minor"
-    ],
-    "seam": {
-      "seamDbBelowPeak": -35.5,
-      "rmsRatio": 0.74,
-      "verdict": "pass"
-    },
-    "analysedBpm": 84.7,
-    "approvedBpm": 87.757387,
-    "metricalFactor": 1.0361,
-    "tempoDisagreementPercent": 3.61,
-    "phrasePlausibility": "typical",
-    "grid": {
-      "loopBars": 16,
-      "actualLoopFrames": 2100336,
-      "expectedLoopFrames": 2100336,
-      "barErrorFrames": 0,
-      "barErrorMs": 0,
-      "priorDriftMsPerCycle": 0,
-      "verdict": "approved",
-      "consideredBpm": [
-        {
-          "bpm": 87.757387,
-          "bars": 16,
-          "octaveDistancePercent": 3.61,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 164.545,
-          "bars": 30,
-          "octaveDistancePercent": 2.87,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 175.515,
-          "bars": 32,
-          "octaveDistancePercent": 3.61,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 76.788,
-          "bars": 14,
-          "octaveDistancePercent": 9.34,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 153.575,
-          "bars": 28,
-          "octaveDistancePercent": 9.34,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 186.484,
-          "bars": 34,
-          "octaveDistancePercent": 10.09,
-          "phrase": "unusual"
-        }
-      ]
-    }
+    "seamExcessDb": -6.6,
+    "loopLufs": -16,
+    "loopTruePeakDb": -3,
+    "trimDb": -0.4,
+    "inputHash": "d7072a41d541f977"
   }
 }

@@ -839,39 +839,18 @@
       "intentionalReplica": "none"
     },
     {
-      "taskId": "static.check-tear-score",
+      "taskId": "static.check-music",
       "version": 1,
       "runner": {
         "kind": "node",
         "executable": "node",
         "args": [
-          "scripts/verify-tear-score-provenance.mjs"
+          "scripts/check-music.mjs"
         ]
       },
       "claimIds": [
         "static",
-        "check:tear-score"
-      ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
-      "outputs": [],
-      "timeoutMs": 120000,
-      "intentionalReplica": "none"
-    },
-    {
-      "taskId": "static.check-adaptive-soundtrack",
-      "version": 1,
-      "runner": {
-        "kind": "node",
-        "executable": "node",
-        "args": [
-          "scripts/verify-adaptive-soundtrack-provenance.mjs"
-        ]
-      },
-      "claimIds": [
-        "static",
-        "check:adaptive-soundtrack"
+        "check:music"
       ],
       "dependencies": [],
       "resourceClass": "static",
@@ -3914,8 +3893,7 @@
       "unit.test-weapons",
       "headless.test-headless-current-weapon-parity",
       "headless.test-headless-current-gameplay-scenarios",
-      "static.check-tear-score",
-      "static.check-adaptive-soundtrack",
+      "static.check-music",
       "static.check-game-reference",
       "build.standalone",
       "build.crazygames",
@@ -4022,8 +4000,7 @@
       "unit.test-weapons",
       "headless.test-headless-current-weapon-parity",
       "headless.test-headless-current-gameplay-scenarios",
-      "static.check-tear-score",
-      "static.check-adaptive-soundtrack",
+      "static.check-music",
       "static.check-game-reference",
       "build.standalone",
       "build.crazygames",
@@ -4113,8 +4090,7 @@
       "unit.test-weapons",
       "headless.test-headless-current-weapon-parity",
       "headless.test-headless-current-gameplay-scenarios",
-      "static.check-tear-score",
-      "static.check-adaptive-soundtrack",
+      "static.check-music",
       "static.check-game-reference",
       "build.standalone",
       "build.crazygames",

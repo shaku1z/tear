@@ -7,7 +7,6 @@ declare global {
   }
 }
 
-import { installTearScoreMusicBackend } from "../audio/install-tear-score";
 import { installBiomeStemBackend, installStemCueMusicBackend, requestedStemsMode } from "../audio/install-stem-cue";
 import { warmChapterFonts } from "../presentation/font-loader";
 import { createEngineeringQuery, type EngineeringQuery } from "../app/shell/engineering-query";
@@ -28,7 +27,7 @@ export function identifyBuild(target: "standalone" | "crazygames"): void {
   });
 }
 
-/** The async boundary lets a target install optional adapters (such as TearScore) first. */
+/** The async boundary lets a target install the recorded-stem music backend first. */
 export async function bootstrapTear(
   target: "standalone" | "crazygames",
   compose: (surfaces: TearBootstrapSurfaces) => void | Promise<void>,
@@ -38,18 +37,11 @@ export async function bootstrapTear(
   // The only read of the build's surface channel; everything downstream receives this policy.
   const surfaces = createSurfaceAvailability(__TEAR_ENGINEERING_SURFACES__ ? "engineering" : "release");
   const engineeringQuery = createEngineeringQuery(surfaces, window.location.search);
-  // Recorded biome stems are the default. Engineering builds may select the
-  // procedural engine (`?stems=off`) or audition one cue (`?stemcue=<id>`);
-  // release builds read no query. A failed stem install always falls back to
-  // the procedural engine so music is never silent.
+  // Recorded biome stems are the default. Engineering builds may turn them off
+  // (`?stems=off`) or audition one cue (`?stemcue=<id>`); release builds read no
+  // query. A failed stem install leaves AudioSystem's built-in music in place.
   const stems = requestedStemsMode(engineeringQuery.search);
-  let stemInstalled = false;
-  if (stems.mode === "biome") stemInstalled = await installBiomeStemBackend();
-  else if (stems.mode === "single")
-    stemInstalled = await installStemCueMusicBackend(
-      stems.cueId,
-      surfaces.allows("global:foundry-audio-preview") ? engineeringQuery.search : "",
-    );
-  if (!stemInstalled) await installTearScoreMusicBackend();
+  if (stems.mode === "biome") installBiomeStemBackend();
+  else if (stems.mode === "single") await installStemCueMusicBackend(stems.cueId);
   await compose(Object.freeze({ surfaces, engineeringQuery }));
 }

@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import type { MusicCatalog } from "../../src/audio/music/catalog";
 import { createStationState, pickNext, remember, toggleFavourite } from "../../src/audio/music/station";
 
-const catalog = JSON.parse(
-  readFileSync(resolve(import.meta.dirname, "../../public/audio/catalog.json"), "utf8"),
-) as MusicCatalog;
+const catalog = (
+  JSON.parse(readFileSync(resolve(import.meta.dirname, "../../public/audio/music.json"), "utf8")) as {
+    catalog: unknown;
+  }
+).catalog as MusicCatalog;
 
 describe("Music station engine", () => {
   it("picks a gameplay-safe entry from a station", () => {
