@@ -1,6 +1,6 @@
 // The merge rules of scripts/merge-ready.mjs, decided from fixed facts.
 import { describe, expect, it } from "vitest";
-import { decide, FIX_LABEL } from "../../scripts/merge-ready.mjs";
+import { decide, FIX_LABEL, pickRun } from "../../scripts/merge-ready.mjs";
 
 const head = "a".repeat(40);
 const checkedMain = "b".repeat(40);
@@ -61,6 +61,16 @@ describe("merge readiness", () => {
         expect(decision.reason).toContain(`was ${conclusion}, so nothing was checked`);
         expect(decision.action).toBe("refresh");
       }
+    });
+
+    it("lets the real run speak for a head even when a draft's skipped run was created after it", () => {
+      const at = (second) => `2026-11-16T10:00:0${String(second)}Z`;
+      const real = { id: 1, created_at: at(0), status: "in_progress", conclusion: null };
+      const skipped = { id: 2, created_at: at(1), status: "completed", conclusion: "skipped" };
+      const cancelled = { id: 3, created_at: at(2), status: "completed", conclusion: "cancelled" };
+      expect(pickRun([skipped, real, cancelled]).id).toBe(1);
+      expect(pickRun([skipped, cancelled]).id).toBe(3);
+      expect(pickRun([])).toBeUndefined();
     });
 
     it("refuses while main's newest commit has no finished check (cancelled or still running)", () => {

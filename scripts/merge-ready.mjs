@@ -39,6 +39,18 @@ export const SHARED_FILES = Object.freeze([
 ]);
 
 export const FIX_LABEL = "fixes-main";
+/** Run conclusions that mean nothing was checked: a draft's run is skipped, a superseded one cancelled. */
+const NOTHING_CHECKED = new Set(["skipped", "cancelled"]);
+
+/**
+ * The run that speaks for a head. A draft's skipped run can be created after the real one, so the
+ * newest run that checked something (or is still running) counts; only when none did is the newest
+ * run returned, and `decide` reports it as "nothing was checked".
+ */
+export function pickRun(runs) {
+  const newestFirst = [...runs].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+  return newestFirst.find((run) => !NOTHING_CHECKED.has(run.conclusion)) ?? newestFirst[0];
+}
 
 /**
  * The decision, from facts already gathered. Pure, so tests can cover every rule.
@@ -71,7 +83,7 @@ export function decide({ main, pr, run, mainFilesSince, mainTip }) {
   if (run === undefined) return no("no Validate run exists for the pull request's current head", "refresh");
   if (run.status !== "completed") return no(`the check for the current head is still ${run.status}`, "wait");
   // A skipped run (the pull request was a draft when it started) or a cancelled one checked nothing.
-  if (run.conclusion === "skipped" || run.conclusion === "cancelled") {
+  if (NOTHING_CHECKED.has(run.conclusion)) {
     return no(`the latest run for the current head was ${run.conclusion}, so nothing was checked`, "refresh");
   }
   if (run.conclusion !== "success") return no(`the check for the current head ended ${run.conclusion}`, "fix it");
@@ -136,7 +148,7 @@ export function gatherFacts(
   const runs = api(
     `repos/${slug}/actions/workflows/ci.yml/runs?head_sha=${pr.headSha}&per_page=20`,
   ).workflow_runs.filter((run) => run.event === "pull_request" || run.event === "workflow_dispatch");
-  const latest = runs.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+  const latest = pickRun(runs);
   let run;
   let mainFilesSince;
   if (latest !== undefined) {
