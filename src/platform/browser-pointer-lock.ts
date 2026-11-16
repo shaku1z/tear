@@ -38,10 +38,20 @@ export class BrowserPointerLock {
   }
 
   release(): void {
-    try {
-      this.document.exitPointerLock();
-    } catch {
-      /* Pointer lock may already be absent. */
-    }
+    releasePointerLock(this.document);
+  }
+}
+
+/**
+ * Leaves pointer lock where the browser has it. iOS Safari, Android browsers before
+ * Chrome 144 and most in-app web views have no `exitPointerLock` at all, so calling it
+ * directly throws and aborts whatever the caller was doing (it once stopped the upgrade
+ * draft from opening on phones). Every release in the game goes through here.
+ */
+export function releasePointerLock(document: Partial<Pick<Document, "exitPointerLock">>): void {
+  try {
+    if (typeof document.exitPointerLock === "function") document.exitPointerLock();
+  } catch {
+    /* Pointer lock may already be absent. */
   }
 }

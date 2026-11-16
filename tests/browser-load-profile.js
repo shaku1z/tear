@@ -29,6 +29,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const zlib = require("node:zlib");
+const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor, pollEvery, settleFor } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const check = process.argv.includes("--check");
@@ -304,7 +305,7 @@ async function pressStart(page, frame, profile) {
     frame === page
       ? { x: 0, y: 0 }
       : await (await frame.frameElement()).boundingBox().then((box) => box ?? { x: 0, y: 0 });
-  const find = async (pattern, timeout = 60_000) => {
+  const find = async (pattern, timeout = STATE_WAIT_MS) => {
     const until = Date.now() + timeout;
     while (Date.now() < until) {
       const hit = await frame.evaluate((source) => {
@@ -315,7 +316,7 @@ async function pressStart(page, frame, profile) {
         return null;
       }, pattern.source);
       if (hit) return { x: hit.x + offset.x, y: hit.y + offset.y };
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(pollEvery(100));
     }
     throw new Error(`${String(pattern)} was never drawn`);
   };
@@ -325,20 +326,20 @@ async function pressStart(page, frame, profile) {
       return;
     }
     await page.mouse.move(point.x, point.y, { steps: 3 });
-    await page.waitForTimeout(120);
+    await page.waitForTimeout(holdFor(120));
     await page.mouse.down();
-    await page.waitForTimeout(60);
+    await page.waitForTimeout(holdFor(60));
     await page.mouse.up();
   };
   for (const label of [/^PLAY$/u, /^ENDLESS$/u]) {
     await click(await find(label));
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(settleFor(700));
   }
   const start = await find(/^START$/u);
   const pressedMs = await frame.evaluate(() => performance.now());
   await click(start);
   await frame.waitForFunction(() => performance.getEntriesByName("tear:gameplay-start").length > 0, undefined, {
-    timeout: 120_000,
+    timeout: SLOW_STATE_WAIT_MS,
     polling: 50,
   });
   return pressedMs;
@@ -381,20 +382,20 @@ async function measureLoad(browser, target, profileId, server) {
   if (profile.cpu > 1) await cdp.send("Emulation.setCPUThrottlingRate", { rate: profile.cpu });
   const gameFrame = () => (target === "crazygames" ? page.frames().find((frame) => frame !== page.mainFrame()) : page);
   const load = async () => {
-    await page.goto(server.url, { waitUntil: "commit" });
-    const deadline = Date.now() + 180_000;
+    await page.goto(server.url, { timeout: STATE_WAIT_MS, waitUntil: "commit" });
+    const deadline = Date.now() + SLOW_STATE_WAIT_MS;
     let frame;
     while (!(frame = gameFrame())) {
       assert.ok(Date.now() < deadline, `${target}/${profileId}: game frame never attached`);
-      await page.waitForTimeout(50);
+      await page.waitForTimeout(pollEvery(50));
     }
     await frame.waitForFunction(() => performance.getEntriesByName("tear:first-frame").length > 0, undefined, {
-      timeout: 180_000,
+      timeout: SLOW_STATE_WAIT_MS,
       polling: 100,
     });
     await frame
       .waitForFunction(() => performance.getEntriesByName("tear:loading-finished").length > 0, undefined, {
-        timeout: 60_000,
+        timeout: STATE_WAIT_MS,
         polling: 100,
       })
       .catch(() => undefined);
@@ -419,7 +420,7 @@ async function measureLoad(browser, target, profileId, server) {
             return sameCue.length >= 4 ? Math.max(...sameCue.map((entry) => entry.responseEnd)) : false;
           },
           undefined,
-          { timeout: 120_000, polling: 250 },
+          { timeout: SLOW_STATE_WAIT_MS, polling: 250 },
         )
         .then((handle) => handle.jsonValue())
         .catch(() => null);
@@ -438,7 +439,7 @@ async function measureLoad(browser, target, profileId, server) {
   // The returning player: on standalone the service worker has installed and controls the next load.
   if (TARGETS[target].serviceWorker)
     await coldFrame
-      .waitForFunction(() => navigator.serviceWorker?.controller != null, undefined, { timeout: 120_000 })
+      .waitForFunction(() => navigator.serviceWorker?.controller != null, undefined, { timeout: SLOW_STATE_WAIT_MS })
       .catch(() => undefined);
   const warmFrame = await load();
   const warmTimeline = await warmFrame.evaluate(readTimeline);

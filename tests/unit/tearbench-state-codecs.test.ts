@@ -3,6 +3,8 @@ import { preflightGhostRecordedCanonicalSnapshot } from "../../src/ghost/capsule
 import { describe, expect, it, vi } from "vitest";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 import { createLiveStateCodec } from "../../src/tearbench/state-codecs";
+import { CONFIG } from "../../src/config/game-config";
+import { createBossArena } from "../../src/gameplay/training/arena-rules";
 import { stableVerificationHash } from "../../src/replay/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
@@ -524,6 +526,29 @@ describe("TearBench shared state codec registry", () => {
       },
     });
     expect(result.ok).toBe(true);
+  });
+
+  it("keeps every boss arena's broken platform ids as aliases while they wait to re-form", () => {
+    const registry = createDefaultStateCodecRegistry();
+    const snapshot = snapshotFrom(populatedWorld());
+    for (const bossId of ["warden", "colossus", "aldric", "rootbound", "white-hart"]) {
+      const arena = createBossArena(bossId, 1600, 900, CONFIG.world.groundY, 0.5) ?? [];
+      const broken = arena.filter((platform) => platform.floor !== true).map((platform) => structuredClone(platform));
+      expect(broken.length, bossId).toBeGreaterThan(0);
+      const valid: TearSnapshotV1 = {
+        ...structuredClone(snapshot),
+        state: {
+          ...snapshot.state,
+          "tear.run.v1": { ...(snapshot.state["tear.run.v1"] as Record<string, unknown>), _arenaBroken: broken },
+        },
+      };
+      const result = restoreSnapshotTransactionally(valid, registry, factory, {
+        replace() {
+          /* expected */
+        },
+      });
+      expect(result.ok, `${bossId}: ${result.ok ? "" : JSON.stringify(result.issues)}`).toBe(true);
+    }
   });
 
   it("stages constructor/reference rebuilding off-run and rolls back a failed live commit", () => {

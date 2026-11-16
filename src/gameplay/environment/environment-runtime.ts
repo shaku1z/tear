@@ -1,10 +1,16 @@
 import { EnvironmentState, createEnvironmentState } from "./environment-state";
-import type {
-  EnvironmentClearReason,
-  EnvironmentObjectValidationPort,
-  EnvironmentRuntimeConfiguration,
-  EnvironmentRuntimeState,
-  EnvironmentSnapshot,
+import {
+  ENVIRONMENT_FADE_TICKS,
+  isEnvironmentObjectEnded,
+  type EnvironmentClearReason,
+  type EnvironmentCombatObjectState,
+  type EnvironmentFieldState,
+  type EnvironmentObjectState,
+  type EnvironmentObjectValidationPort,
+  type EnvironmentRouteState,
+  type EnvironmentRuntimeConfiguration,
+  type EnvironmentRuntimeState,
+  type EnvironmentSnapshot,
 } from "./environment-contracts";
 import {
   createEnvironmentCombatObjectRuntime,
@@ -12,6 +18,11 @@ import {
   type EnvironmentCounterplayResolution,
 } from "./combat-object-runtime";
 import type { EnvironmentCounterplayTag } from "./environment-definitions";
+import {
+  applyEnvironmentContactDamage,
+  environmentContactDamage,
+  type EnvironmentContactTarget,
+} from "./environment-contact-damage";
 import {
   cleanupOrphanedEnvironmentReferences,
   environmentActorReferenceId,
@@ -75,6 +86,9 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   readonly #features = new Map<string, EnvironmentFeature>();
   readonly #actorSources = new Map<string, (() => readonly unknown[]) | undefined>();
   readonly #combatKernels = new Map<string, EnvironmentCombatObjectRuntime>();
+  #contactTargets: (() => readonly EnvironmentContactTarget[]) | undefined;
+  /** The tick being stepped, if any. Ending an object stamps it, so every ended object fades for the same time. */
+  #tick: number | undefined;
 
   constructor(
     stageId = "unknown",
@@ -127,6 +141,48 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     super.clear(reason);
     this.#combatKernels.clear();
   }
+  /**
+   * An object's fade starts on the step it ends, whatever tick its owner passed; a later patch
+   * to an ended object keeps that start, so nothing can hold an ended object in the world.
+   */
+  #fadeStart<T extends Readonly<{ state?: EnvironmentObjectState; stateTick?: number }>>(
+    prior: Readonly<{ state: EnvironmentObjectState; stateTick: number }> | undefined,
+    patch: T,
+  ): T {
+    if (this.#tick === undefined || prior === undefined) return patch;
+    if (!isEnvironmentObjectEnded(patch.state ?? prior.state)) return patch;
+    const stateTick = isEnvironmentObjectEnded(prior.state) ? prior.stateTick : this.#tick;
+    return patch.stateTick === stateTick ? patch : { ...patch, stateTick };
+  }
+  override updateField<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentFieldState, "id">> & T & Readonly<Partial<T>>,
+  ): void {
+    const prior = this.fields().find((entry) => entry.id === id);
+    super.updateField(id, this.#fadeStart(prior, patch));
+  }
+  override updateCombatObject<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentCombatObjectState, "id">> & T & Readonly<Partial<T>>,
+  ): void {
+    const prior = this.combatObjects().find((entry) => entry.id === id);
+    super.updateCombatObject(id, this.#fadeStart(prior, patch));
+  }
+  override updateRoute<T extends object>(
+    id: string,
+    patch: Partial<Omit<EnvironmentRouteState, "id">> & T & Readonly<Partial<T>>,
+  ): void {
+    const prior = this.routes().find((entry) => entry.id === id);
+    super.updateRoute(id, this.#fadeStart(prior, patch));
+  }
+  /** The one lifetime rule for every biome: an ended object leaves once its fade has played. */
+  #removeFaded(tick: number): void {
+    const faded = (entry: Readonly<{ state: EnvironmentObjectState; stateTick: number }>) =>
+      isEnvironmentObjectEnded(entry.state) && tick - entry.stateTick >= ENVIRONMENT_FADE_TICKS;
+    for (const entry of this.fields().filter(faded)) this.removeField(entry.id);
+    for (const entry of this.combatObjects().filter(faded)) this.removeCombatObject(entry.id);
+    for (const entry of this.routes().filter(faded)) this.removeRoute(entry.id);
+  }
   override removeCombatObject(id: string): void {
     const prior = this.combatObjects().find((object) => object.id === id);
     super.removeCombatObject(id);
@@ -143,6 +199,33 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
     }
     this.updateCombatObject(id, { ...kernel.cleanup(reason), stateTick: tick });
     this.#combatKernels.delete(id);
+  }
+  /** Who stage objects can hurt by touch. Biome bindings set it; the runtime alone applies the damage. */
+  setContactTargets(source: (() => readonly EnvironmentContactTarget[]) | undefined): void {
+    this.#contactTargets = source;
+  }
+  /** The one contact damage path: each object's declared damage, once per target, while it is active. */
+  #applyContactDamage(): void {
+    const targets = this.#contactTargets?.() ?? [];
+    if (targets.length === 0) return;
+    for (const field of this.fields()) {
+      const declared = environmentContactDamage(field);
+      const hit = declared === undefined ? [] : applyEnvironmentContactDamage(field, declared, targets);
+      if (declared !== undefined && hit.length > 0)
+        this.updateField(field.id, { hitActorIds: Object.freeze([...declared.hitActorIds, ...hit]) });
+    }
+    for (const object of this.combatObjects()) {
+      const declared = environmentContactDamage(object);
+      const hit = declared === undefined ? [] : applyEnvironmentContactDamage(object, declared, targets);
+      if (declared !== undefined && hit.length > 0)
+        this.updateCombatObject(object.id, { hitActorIds: Object.freeze([...declared.hitActorIds, ...hit]) });
+    }
+    for (const route of this.routes()) {
+      const declared = environmentContactDamage(route);
+      const hit = declared === undefined ? [] : applyEnvironmentContactDamage(route, declared, targets);
+      if (declared !== undefined && hit.length > 0)
+        this.updateRoute(route.id, { hitActorIds: Object.freeze([...declared.hitActorIds, ...hit]) });
+    }
   }
   setEventPort(events: TearGameplayEventPort | undefined): void {
     this.#events = events;
@@ -266,7 +349,12 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
   step(tick: number, seconds: number, gameplayStep: () => void, availableActorIds?: ReadonlySet<string>): void {
     if (typeof gameplayStep !== "function") throw new TypeError("environment gameplay step is required");
     this.clearPhaseLog();
-    this.#run("pre-step", tick, seconds, this.#hooks.preStep);
+    this.#run("pre-step", tick, seconds, (context) => {
+      this.#tick = tick;
+      // First, so a faded object never holds a population slot that this step's installs need.
+      this.#removeFaded(tick);
+      this.#hooks.preStep?.(context);
+    });
     gameplayStep();
     const activeFeatures = [...this.#features.values()].filter((feature) => feature.isActive?.(this) !== false);
     this.#run("active-fields", tick, seconds, (context) => {
@@ -280,6 +368,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
             });
         }
       for (const feature of activeFeatures) feature.step(this, tick, seconds);
+      this.#applyContactDamage();
       this.#hooks.activeFields?.(context);
     });
     this.#run("collision-resolution", tick, seconds, (context) => {
@@ -290,6 +379,7 @@ export class EnvironmentRuntime extends EnvironmentState implements EnvironmentS
       this.#cleanupOrphans(tick, availableActorIds);
       this.#hooks.postCommit?.(context);
     });
+    this.#tick = undefined;
   }
 }
 

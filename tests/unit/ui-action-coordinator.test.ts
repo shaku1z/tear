@@ -109,7 +109,7 @@ describe("semantic UI action coordinator", () => {
     ).toEqual({ type: "activate-button", index: 1, source: "confirm" });
   });
 
-  it("lets pointer hover move focus in every input modality (source handleUI contract)", () => {
+  it("lets mouse hover move focus while the mouse owns the interface", () => {
     const decision = coordinateUiFrame(
       frame({
         focus: 1,
@@ -117,6 +117,21 @@ describe("semantic UI action coordinator", () => {
       }),
     );
     expect(decision.focus).toBe(0);
+  });
+
+  it("ignores a resting pointer while touch, a controller or the keyboard owns the interface", () => {
+    // A phone never moves the mouse, so its position stays at the screen centre; it must not
+    // pull focus back from the card a finger just tapped (draft cards are tap to read, tap to take).
+    const decision = coordinateUiFrame(frame({ focus: 0, pointer: null, touch: true }));
+    expect(decision.focus).toBe(0);
+    const tapped = coordinateUiPointer(buttons, decision.focus, { x: 150, y: 20 }, true);
+    expect(tapped.focus).toBe(1);
+    expect(coordinateUiFrame(frame({ focus: tapped.focus, pointer: null, touch: true })).focus).toBe(1);
+    expect(coordinateUiPointer(buttons, 1, { x: 150, y: 20 }, true).action).toEqual({
+      type: "activate-button",
+      index: 1,
+      source: "pointer",
+    });
   });
 
   it("keeps touch-confirm cards two-step while mouse and the second touch activate", () => {

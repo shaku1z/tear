@@ -6,6 +6,14 @@ export type EnvironmentObjectCategory = "field" | "combat-object" | "route";
 export type EnvironmentObjectState =
   "scheduled" | "warning" | "active" | "cooldown" | "dormant" | "destroyed" | "expired";
 
+/** An object in one of these states has ended: it fades for ENVIRONMENT_FADE_TICKS, then the runtime removes it. */
+export function isEnvironmentObjectEnded(state: EnvironmentObjectState): boolean {
+  return state === "destroyed" || state === "expired";
+}
+
+/** How long an ended field, combat object or route stays in the world, and on screen, before removal (0.25 s). */
+export const ENVIRONMENT_FADE_TICKS = 30;
+
 export type EnvironmentClearReason =
   | "new-run"
   | "retry"

@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const buildDirectoryName = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
@@ -141,15 +142,15 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
   try {
     await page.goto(`${baseUrl}/index.html?test=1&watchagent=1`, {
       waitUntil: "domcontentloaded",
-      timeout: 30_000,
+      timeout: STATE_WAIT_MS,
     });
-    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15_000 });
-    await page.waitForLoadState("networkidle", { timeout: 10_000 });
+    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
+    await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
     const buildMetadata = await page.evaluate(() => window.__TEAR_BUILD__ ?? null);
     let snapshot = await page.evaluate((options) => window.__TEAR_WATCH_AGENT__.start(options), scenario);
-    await page.waitForLoadState("networkidle", { timeout: 10_000 });
+    await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const transcript = [transcriptSample(snapshot)];
     for (let sample = 0; sample < maxSamples && snapshot.status === "running"; sample += 1) {

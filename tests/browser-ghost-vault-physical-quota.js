@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, pollEvery } = require("./browser-waits");
 
 const QUOTA_BYTES = 256 * 1024;
 
@@ -29,16 +30,16 @@ withJourney(
   },
   async ({ page }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-      timeout: 15_000,
+      timeout: STATE_WAIT_MS,
     });
     const source = await page.evaluate(
-      async (next) => {
+      async ({ next, ceiling, interval }) => {
         const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
         environment.reset(next);
         environment.step([]);
         environment.terminate();
         await new Promise((resolve, reject) => {
-          const deadline = performance.now() + 20_000;
+          const deadline = performance.now() + ceiling;
           const poll = async () => {
             const manifest = await window.__TEAR_GHOST_V3__.manifest();
             const failure = window.__TEAR_GHOST_V3__.failure();
@@ -54,13 +55,17 @@ withJourney(
               reject(new Error("source capsule did not complete"));
               return;
             }
-            setTimeout(poll, 20);
+            setTimeout(poll, interval);
           };
           void poll();
         });
         return window.__TEAR_GHOST_V3__.manifest();
       },
-      scenario("c28-physical-quota-source", "c28-physical-quota-source-seed", 1),
+      {
+        next: scenario("c28-physical-quota-source", "c28-physical-quota-source-seed", 1),
+        ceiling: STATE_WAIT_MS,
+        interval: pollEvery(20),
+      },
     );
     assert.equal(source.status, "complete", "the retained source capsule did not complete before storage pressure");
 
@@ -83,7 +88,9 @@ withJourney(
       },
       scenario("c28-physical-quota-pressure", "c28-physical-quota-pressure-seed", 1_200),
     );
-    await page.waitForFunction(() => window.__TEAR_GHOST_V3__.failure() !== null, undefined, { timeout: 20_000 });
+    await page.waitForFunction(() => window.__TEAR_GHOST_V3__.failure() !== null, undefined, {
+      timeout: STATE_WAIT_MS,
+    });
     const failure = await page.evaluate(() => window.__TEAR_GHOST_V3__.failure());
     assert.match(failure, /QuotaExceededError|quota/i, "the normal recorder did not surface a browser quota rejection");
 

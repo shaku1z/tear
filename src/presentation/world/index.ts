@@ -4,6 +4,7 @@ import { createHudRenderer } from "./hud";
 import { createOverlayRenderers } from "./overlays";
 import { createStatusDebugRenderers } from "./status-debug";
 import { createTrainingTouchRenderers } from "./training-touch";
+import { createCoachMarkRenderer } from "./coach-mark-renderer";
 
 export type * from "./contracts";
 
@@ -14,13 +15,14 @@ export function createWorldRenderers(context: WorldRenderContext): WorldRenderer
   const hud = createHudRenderer(context);
   const trainingTouch = createTrainingTouchRenderers(context);
   const overlays = createOverlayRenderers(context);
+  const coach = createCoachMarkRenderer(context);
   return {
     enemyStatus: statusDebug.enemyStatus,
     pantheonDebug: statusDebug.pantheonDebug,
     finaleWorld,
     hud,
     tutorialCard: trainingTouch.tutorialCard,
-    playgroundHelp: trainingTouch.playgroundHelp,
+    coachMarks: coach.coachMarks,
     achievementToast: overlays.achievementToast,
     touchControls: trainingTouch.touchControls,
     waveBanner: overlays.waveBanner,

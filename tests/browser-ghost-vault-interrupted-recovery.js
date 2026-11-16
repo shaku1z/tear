@@ -1,32 +1,6 @@
 const assert = require("node:assert/strict");
-const { withJourney } = require("./browser-journey-harness");
-
-async function waitForDurableValue(page, predicate, argument) {
-  let cancelled = false,
-    timer;
-  const deadline = new Promise((resolve, reject) => {
-    void resolve;
-    timer = setTimeout(
-      () => reject(new Error("durable recovery condition did not become truthy within 20000ms")),
-      20000,
-    );
-  });
-  const poll = async () => {
-    while (!cancelled) {
-      const value = await page.evaluate(predicate, argument);
-      if (cancelled) return undefined;
-      if (value) return value;
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-    return undefined;
-  };
-  try {
-    return await Promise.race([poll(), deadline]);
-  } finally {
-    cancelled = true;
-    clearTimeout(timer);
-  }
-}
+const { waitForBrowserValue, withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function scenario(id, seed) {
   return {
@@ -74,7 +48,7 @@ function readRecoveryStores(page, capsuleId) {
 
 withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, async ({ page, boot }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   const knownIds = await page.evaluate(async () =>
     (await window.__TEAR_GHOST_V3__.manifests()).map((manifest) => manifest.id),
@@ -88,7 +62,7 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
     },
     scenario("c28-vault-interrupted", "c28-vault-interrupted-seed"),
   );
-  const interruptedId = await waitForDurableValue(
+  const interruptedId = await waitForBrowserValue(
     page,
     async (ids) =>
       (await window.__TEAR_GHOST_V3__.manifests()).find(
@@ -100,7 +74,7 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
 
   await boot();
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   await page.evaluate(
     (next) => {
@@ -111,7 +85,7 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
     },
     scenario("c28-vault-recovery-trigger", "c28-vault-recovery-trigger-seed"),
   );
-  await waitForDurableValue(
+  await waitForBrowserValue(
     page,
     async (id) =>
       (await window.__TEAR_GHOST_V3__.manifests()).some(
@@ -122,7 +96,7 @@ withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, 
   // The public Vault catalog has observed recovery, but the final assertion is
   // about raw durable stores. Wait for the IndexedDB transaction itself rather
   // than sampling it in the small visibility window between those observers.
-  await waitForDurableValue(
+  await waitForBrowserValue(
     page,
     (id) =>
       new Promise((resolve, reject) => {

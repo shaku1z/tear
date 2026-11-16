@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS, JOURNEY_LIMIT_MS, describeStall, pollEvery, watchForStalls } = require("./browser-waits");
 
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
@@ -90,7 +91,15 @@ async function withJourney(options, run) {
   assert.equal(buildInfo.sourceFingerprint, source.fingerprint, "served build source fingerprint is stale");
   const port = Number(process.env.TEAR_JOURNEY_PORT || options.port);
   const baseUrl = `http://127.0.0.1:${String(port)}`;
+  // When each request reached this server and when its response finished, for stall reports.
+  const serverLog = [];
   const server = http.createServer((request, response) => {
+    const entry = { url: request.url, arrived: Date.now(), finished: undefined };
+    serverLog.push(entry);
+    if (serverLog.length > 400) serverLog.shift();
+    response.on("close", () => {
+      entry.finished = Date.now();
+    });
     const pathname = new URL(request.url, baseUrl).pathname;
     if (pathname === "/__tear_browser_blank_fixture__.html") {
       response.writeHead(200, { "Content-Type": "text/html" });
@@ -129,6 +138,10 @@ async function withJourney(options, run) {
       deviceScaleFactor: options.deviceScaleFactor || 1,
       serviceWorkers: "block",
     });
+    // A call that names no timeout still gets the state-wait ceiling, not Playwright's 30 s.
+    page.setDefaultTimeout(STATE_WAIT_MS);
+    page.setDefaultNavigationTimeout(STATE_WAIT_MS);
+    await watchForStalls(page, { serverLog });
     if (options.settings) {
       await page.addInitScript((settings) => {
         window.__TEAR_TEST_STORAGE__ = {
@@ -158,7 +171,7 @@ async function withJourney(options, run) {
     async function boot(query = initialQuery) {
       await page.goto(`${baseUrl}/index.html?${new URLSearchParams(query).toString()}`, {
         waitUntil: "domcontentloaded",
-        timeout: 30000,
+        timeout: STATE_WAIT_MS,
       });
       try {
         if (options.ordinaryWatch) {
@@ -175,7 +188,7 @@ async function withJourney(options, run) {
                   canvas.getContext("2d")?.getImageData(0, 0, 1, 1).data[3] > 0,
               ),
             undefined,
-            { timeout: 15000 },
+            { timeout: STATE_WAIT_MS },
           );
           await page.evaluate(
             () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
@@ -187,10 +200,10 @@ async function withJourney(options, run) {
               window.__TEAR_RUNTIME_ENVIRONMENT__ &&
               (!debugApi || window.__PANTHEON_TEST),
             options.debugApi !== false,
-            { timeout: 15000 },
+            { timeout: STATE_WAIT_MS },
           );
           await page.waitForFunction(() => window.__TEAR_DIAGNOSTICS__?.snapshot().frame.samples > 0, undefined, {
-            timeout: 15000,
+            timeout: STATE_WAIT_MS,
           });
         }
       } catch (error) {
@@ -202,16 +215,39 @@ async function withJourney(options, run) {
     }
     async function waitScreen(screen) {
       await page.waitForFunction((expected) => window.__PANTHEON_TEST.state().game === expected, screen, {
-        timeout: 10000,
+        timeout: STATE_WAIT_MS,
       });
       // A cold screen's state can become active before its lazy renderer chunk has
       // registered the canvas buttons. Wait for that static import to settle so
       // the next pointer action exercises the rendered screen, not a timing race.
-      await page.waitForLoadState("networkidle", { timeout: 10000 });
+      await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     }
+    // A screen that has just opened ignores input for a moment (UI_CONFIRM_SETTLE_SECONDS), and a
+    // loaded runner can reach the click before the game has drawn enough frames to arm it. So click
+    // again only while the game is still on the screen the click started from; once it has left,
+    // never click again (the next screen may have a control at the same place) and wait for the
+    // expected screen. The screen change is the pass condition; the clock only bounds the trying.
     async function clickAndWait(x, y, screen) {
+      const gameScreen = () => page.evaluate(() => window.__PANTHEON_TEST.state().game);
+      const start = await gameScreen();
+      const deadline = Date.now() + STATE_WAIT_MS;
       await page.mouse.click(x, y);
+      while (start !== screen) {
+        try {
+          await page.waitForFunction((from) => window.__PANTHEON_TEST.state().game !== from, start, {
+            timeout: pollEvery(1000),
+          });
+          break;
+        } catch (error) {
+          if (error?.name !== "TimeoutError") throw error;
+          if (Date.now() > deadline)
+            throw new Error(`clicking (${String(x)}, ${String(y)}) never left ${start} for ${screen}`, {
+              cause: error,
+            });
+          await page.mouse.click(x, y);
+        }
+      }
       await waitScreen(screen);
     }
     // Canvas screens have no DOM controls, so `recordFrames` journeys find them the way a
@@ -255,7 +291,7 @@ async function withJourney(options, run) {
             : null;
         },
         label,
-        { timeout: 5000 },
+        { timeout: STATE_WAIT_MS },
       );
       return handle.jsonValue();
     }
@@ -293,7 +329,7 @@ async function withJourney(options, run) {
             : null;
         },
         String(number),
-        { timeout: 5000 },
+        { timeout: STATE_WAIT_MS },
       );
       return handle.jsonValue();
     }
@@ -308,20 +344,38 @@ async function withJourney(options, run) {
     const served = await page.request.get(`${baseUrl}/build-info.json`);
     assert.ok(served.ok(), "served build-info.json is unavailable");
     assert.deepEqual(await served.json(), buildInfo, "served build metadata differs from the verified local artifact");
-    await run({
-      page,
-      errors,
-      baseUrl,
-      boot,
-      waitScreen,
-      clickAndWait,
-      buildInfo,
-      waitArmed,
-      labelPoint,
-      clickLabel,
-      cardCentre,
-      clickCard,
+    // One ceiling for the whole journey: page.evaluate has no timeout, so a page whose main thread
+    // never comes back would otherwise hold the job until the CI limit and print nothing.
+    const limitMs = options.limitMs ?? JOURNEY_LIMIT_MS;
+    let limitTimer;
+    const overLimit = new Promise((_resolve, reject) => {
+      limitTimer = setTimeout(() => {
+        void describeStall(page).then((stall) => {
+          reject(new Error(`${options.name} did not finish within ${String(limitMs / 1000)} s: ${stall}`));
+        });
+      }, limitMs);
     });
+    try {
+      await Promise.race([
+        run({
+          page,
+          errors,
+          baseUrl,
+          boot,
+          waitScreen,
+          clickAndWait,
+          buildInfo,
+          waitArmed,
+          labelPoint,
+          clickLabel,
+          cardCentre,
+          clickCard,
+        }),
+        overLimit,
+      ]);
+    } finally {
+      clearTimeout(limitTimer);
+    }
     assert.deepEqual(errors, [], `${options.name} page errors: ${errors.join("\n")}`);
   } finally {
     if (browser && options.browserCloseTimeoutMs) {
@@ -343,7 +397,12 @@ async function withJourney(options, run) {
 }
 
 /** Poll resolved durable evidence rather than an async predicate's Promise. */
-async function waitForBrowserValue(page, predicate, argument, { timeout = 20_000, polling = 50 } = {}) {
+async function waitForBrowserValue(
+  page,
+  predicate,
+  argument,
+  { timeout = STATE_WAIT_MS, polling = pollEvery(50) } = {},
+) {
   assert.ok(Number.isFinite(timeout) && timeout > 0, "async browser wait requires a positive timeout");
   assert.ok(Number.isFinite(polling) && polling > 0, "async browser wait requires a positive polling interval");
   let cancelled = false,

@@ -217,8 +217,8 @@ function rootboundPhaseThreeState(
   if (entry.lastSpringStage !== null && !springStages.includes(entry.lastSpringStage as never)) {
     issues.push(issue(codecId, `${path}.lastSpringStage`, "Last Spring stage is not approved"));
   }
-  if (entry.lastSpringUseCount !== 0 && entry.lastSpringUseCount !== 1) {
-    issues.push(issue(codecId, `${path}.lastSpringUseCount`, "Last Spring use count must be zero or one"));
+  if (!Number.isSafeInteger(entry.lastSpringUseCount) || (entry.lastSpringUseCount as number) < 0) {
+    issues.push(issue(codecId, `${path}.lastSpringUseCount`, "Last Spring use count must be a non-negative integer"));
   }
   if (
     !finite(entry.lastSpringT) ||
@@ -236,8 +236,8 @@ function rootboundPhaseThreeState(
   if (typeof entry.lastSpringHitSpent !== "boolean") {
     issues.push(issue(codecId, `${path}.lastSpringHitSpent`, "Last Spring hit state must be boolean"));
   }
-  if (entry.lastSpringStage !== null && entry.lastSpringUseCount !== 1) {
-    issues.push(issue(codecId, `${path}.lastSpringStage`, "active or complete Last Spring requires its single use"));
+  if (entry.lastSpringStage !== null && !((entry.lastSpringUseCount as number) >= 1)) {
+    issues.push(issue(codecId, `${path}.lastSpringStage`, "active or complete Last Spring requires at least one use"));
   }
   if (entry.lastSpringStage === "complete" && entry.lastSpringT !== 0) {
     issues.push(issue(codecId, `${path}.lastSpringT`, "complete Last Spring must have a zero timer"));

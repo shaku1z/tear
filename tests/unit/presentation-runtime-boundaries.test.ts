@@ -38,8 +38,7 @@ describe("presentation runtime boundaries", () => {
       },
       input: {
         mode: "mouse",
-        mouseX: 500,
-        mouseY: 500,
+        pointer: () => ({ x: 500, y: 500 }),
         ui: { pageUp: false, pageDown: false, tabPrev: false, tabNext: false },
         pressed: new Set(),
         padBack: false,
@@ -95,8 +94,7 @@ describe("presentation runtime boundaries", () => {
         setScroll: vi.fn(),
         input: {
           mode: "keyboard",
-          mouseX: 50,
-          mouseY: 50,
+          pointer: () => null,
           ui: { pageUp: false, pageDown: false, tabPrev: false, tabNext: false },
           pressed: new Set(digit ? ["Digit2"] : []),
           padBack: false,

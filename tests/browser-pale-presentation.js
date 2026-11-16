@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { decodePng } = require("./class-c-png");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function paintedPixelRatio(png) {
   const { rgba } = decodePng(png);
@@ -88,7 +89,7 @@ const resolved = Object.freeze({
 });
 
 withJourney({ name: "Pale PT3-C5 presentation", port: 8355 }, async ({ page, buildInfo }) => {
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   const state = await page.evaluate((scenario) => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
     window.__PALE_C5_ENVIRONMENT__ = environment;
