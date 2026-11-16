@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import routing from "../../public/audio/music-routing.json";
+import { routing } from "../../public/audio/music.json";
 import { STAGES } from "../../src/gameplay/stages";
 
 function biomeId(musicId: string): string {
