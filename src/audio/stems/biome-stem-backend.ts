@@ -82,6 +82,8 @@ export class BiomeStemBackend implements MusicBackend {
   /** Cue the station had queued before a boss/story takeover, for resume. */
   #interrupted: string | null = null;
   #stationSeed = 1;
+  /** Picks from a routing pool (the Verdant Sanctum's two songs) come from the run's seed. */
+  #routeSeed = 1;
   /** Context time the active cue began, and its bar length — for quantizing. */
   #activeStartedAt = 0;
   #activeSecondsPerBar = 2;
@@ -125,8 +127,9 @@ export class BiomeStemBackend implements MusicBackend {
     await this.#activate(this.#shellCueId(), CROSSFADE_SECONDS, 0, true);
   }
 
-  beginRun(_metadata: MusicRunSessionMetadata): Promise<void> {
-    void _metadata;
+  beginRun(metadata: MusicRunSessionMetadata): Promise<void> {
+    // Same run seed, same song: replays and seed-locked races hear what the run heard.
+    this.#routeSeed = routeSeedFromRunSeed(metadata.runSeed);
     return Promise.resolve();
   }
 
@@ -265,7 +268,7 @@ export class BiomeStemBackend implements MusicBackend {
         scene: routeScene,
         bossId: this.#lastBossId,
       },
-      this.#stationSeed,
+      this.#routeSeed,
     );
     return this.#cues.has(routed) ? routed : this.#defaultCueId;
   }
@@ -442,4 +445,14 @@ export class BiomeStemBackend implements MusicBackend {
       introGain.disconnect();
     };
   }
+}
+
+/** FNV-1a over the run seed's text: a stable 32-bit number for the routing pool. */
+export function routeSeedFromRunSeed(runSeed: string): number {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < runSeed.length; index += 1) {
+    hash ^= runSeed.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
 }
