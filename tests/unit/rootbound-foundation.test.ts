@@ -99,7 +99,7 @@ describe("Rootbound production foundation", () => {
     expect(calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
   });
 
-  it("keeps Vine Sweep and Canopy Step tells static and geometry-readable in every accessibility profile", () => {
+  it("draws the Vine Sweep and Canopy Step tells with the shared danger marks in every accessibility profile", () => {
     for (const profile of [
       { highContrast: false, reducedMotion: false, low: false },
       { highContrast: true, reducedMotion: false, low: false },
@@ -130,7 +130,7 @@ describe("Rootbound production foundation", () => {
       const calls: string[] = [];
       boss.draw(recordingCanvas(calls), harness.player);
       expect(calls, JSON.stringify(profile)).toEqual(
-        expect.arrayContaining(["bezierCurveTo", "ellipse", "setLineDash", "stroke"]),
+        expect.arrayContaining(["bezierCurveTo", "strokeRect", "fillRect", "ellipse", "setLineDash", "stroke"]),
       );
     }
   });

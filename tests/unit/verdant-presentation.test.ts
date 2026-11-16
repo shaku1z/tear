@@ -211,7 +211,7 @@ describe("Verdant environment presentation", () => {
     expect(value.calls).toContain("arc");
   });
 
-  it("renders Rootline warning bounds before its active teeth", () => {
+  it("leaves the Rootline warning to the boss tell and draws only its active teeth", () => {
     const warning = recorder();
     const snapshot: EnvironmentPresentationSnapshot = Object.freeze({
       stageId: "verdant-sanctum",
@@ -234,7 +234,8 @@ describe("Verdant environment presentation", () => {
       timeSeconds: 0,
       flashScale: 0,
     });
-    expect(warning.calls).toContain("strokeRect");
+    // The warning area is drawn once, from the boss's tell data (tests/unit/boss-tell-rules.test.ts).
+    expect(warning.calls).not.toContain("strokeRect");
     expect(warning.calls).not.toContain("fill");
 
     const active = recorder();
