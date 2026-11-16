@@ -34,6 +34,9 @@ interface CinemaInputState {
   readonly click: boolean;
 }
 
+/** Read through a call: `update` can end the scene, which a narrowed property read would hide. */
+const sceneActive = (cinema: CinemaPort): boolean => cinema.active;
+
 interface CinemaPort {
   readonly active: boolean;
   readonly playerMode: string | undefined;
@@ -177,7 +180,7 @@ export class RuntimeFrameCoordinator {
       if (cinema.active) {
         cinema.update(deltaSeconds, confirm);
         // The press that ended the scene belongs to the scene: drop it before the next tick seals it.
-        if (!cinema.active) input.discardScenePresses();
+        if (!sceneActive(cinema)) input.discardScenePresses();
       }
     }
     input.allowLock = this.#options.state() === "playing";
