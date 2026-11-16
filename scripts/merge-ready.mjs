@@ -14,12 +14,20 @@
 //    have passed, and no commit merged into main since that run may touch a file the pull request
 //    changes or a shared file below. Each run records the head and main it checked
 //    (".github/workflows/ci.yml", "Record what was checked").
+// 3. A passed batch covers its members: a pull request is also ready when a passed batch run
+//    (`pnpm merge:batch`) checked its current head together with other members, and every commit
+//    on main since the main that run checked is the merge of another member of that batch, at the
+//    head the batch checked. The combination on main was then itself checked, so main's newest
+//    commit need not have a finished run, and shared-file changes by other members do not make
+//    the pass stale. A red main still stops it.
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+/** Batch branches (scripts/merge-batch.mjs). */
+const BATCH_PREFIX = "codex/batch-";
 
 /** Files whose change can break any other change, so a merge touching them makes every pass stale. */
 export const SHARED_FILES = Object.freeze([
@@ -27,7 +35,11 @@ export const SHARED_FILES = Object.freeze([
   /^pnpm-lock\.yaml$/u,
   /^pnpm-workspace\.yaml$/u,
   /^\.github\/workflows\//u,
-  /^config\//u,
+  // Everything under config/ except the tool catalogue. The catalogue only describes package.json
+  // (shared) and the files under scripts/, and tests/unit/tool-catalogue.test.mjs is its only
+  // reader. A change that adds or removes a script must edit the catalogue itself, so it overlaps
+  // any main change to it; a change that does neither cannot make main's catalogue invalid.
+  /^config\/(?!tool-catalogue\.json$)/u,
   /^src\/tearbench\/task-registry\.json$/u,
   /^tsconfig[^/]*\.json$/u,
   /^eslint\.config\.mjs$/u,
@@ -52,6 +64,48 @@ export function pickRun(runs) {
   return newestFirst.find((run) => !NOTHING_CHECKED.has(run.conclusion)) ?? newestFirst[0];
 }
 
+/** The `batch` annotation Validate writes (scripts/merge-batch.mjs, batchNote). */
+export function parseBatchNote(message) {
+  const main = /main=([0-9a-f]{40})/u.exec(message ?? "")?.[1];
+  const list = /members=((?:\d+:[0-9a-f]{40},?)+)/u.exec(message ?? "")?.[1];
+  if (main === undefined || list === undefined) return undefined;
+  const members = list
+    .split(",")
+    .filter(Boolean)
+    .map((entry) => ({ pr: Number(entry.split(":")[0]), head: entry.split(":")[1] }));
+  return { main, members };
+}
+
+/**
+ * Rule 3: whether a passed batch run covers this pull request as main is now.
+ * @param {{ number: number, headSha: string }} pr
+ * @param {{ conclusion: string, url?: string, main: string, members: { pr: number, head: string }[] } | undefined} batch
+ * @param {{ sha: string, pr?: number, head?: string }[] | undefined} mainSinceBatch commits on main after
+ *   `batch.main`, oldest first, each with the pull request it merged and that pull request's head
+ */
+export function batchCover(pr, batch, mainSinceBatch) {
+  const no = (reason) => ({ covered: false, reason });
+  if (batch === undefined) return no("no passed batch run names this pull request");
+  if (batch.conclusion !== "success") return no(`the batch run ended ${batch.conclusion}`);
+  const member = batch.members.find((entry) => entry.pr === pr.number);
+  if (member === undefined) return no("the batch does not include this pull request");
+  if (member.head !== pr.headSha) return no(`the head moved after the batch, which checked ${member.head.slice(0, 8)}`);
+  if (mainSinceBatch === undefined) return no("could not list main's commits since the batch's main");
+  for (const commit of mainSinceBatch) {
+    const other = batch.members.find((entry) => entry.pr === commit.pr && entry.pr !== pr.number);
+    if (other === undefined) {
+      return no(`main has ${commit.sha.slice(0, 8)} since the batch, which is not another member's merge`);
+    }
+    if (other.head !== commit.head) {
+      return no(`#${String(other.pr)} merged a head the batch did not check (${String(commit.head).slice(0, 8)})`);
+    }
+  }
+  const merged = mainSinceBatch.map((commit) => `#${String(commit.pr)}`);
+  const since = merged.length === 0 ? "main has not changed since" : `main changed since only by ${merged.join(", ")}`;
+  const where = batch.url ? ` (${batch.url})` : "";
+  return { covered: true, reason: `a batch run checked it with the other members${where}, and ${since}` };
+}
+
 /**
  * The decision, from facts already gathered. Pure, so tests can cover every rule.
  * @param {object} facts
@@ -61,19 +115,34 @@ export function pickRun(runs) {
  *   latest Validate run for the pull request's head
  * @param {string[] | undefined} facts.mainFilesSince files changed on main since `run.checkedMain`
  * @param {string | undefined} facts.mainTip main's newest commit (origin/main after a fetch)
+ * @param {Parameters<typeof batchCover>[1]} [facts.batch] the newest passed batch run naming this head
+ * @param {Parameters<typeof batchCover>[2]} [facts.mainSinceBatch]
  */
-export function decide({ main, pr, run, mainFilesSince, mainTip }) {
+export function decide(facts) {
+  const { main, pr } = facts;
   const no = (reason, action) => ({ ready: false, reason, action });
   if (pr.state !== "OPEN") return no(`the pull request is ${pr.state.toLowerCase()}`);
   if (pr.draft) return no("the pull request is a draft", "mark it ready, which starts a check");
-  const fixesMain = pr.labels.includes(FIX_LABEL);
   if (main === undefined) return no("main has no finished Validate run yet", "wait for main's check");
-  if (main.conclusion !== "success" && !fixesMain) {
+  if (main.conclusion !== "success" && !pr.labels.includes(FIX_LABEL)) {
     return no(
       `main is red: its latest finished check (${main.headSha.slice(0, 8)}) ended ${main.conclusion}`,
       `fix main first, or label the pull request that fixes it "${FIX_LABEL}"`,
     );
   }
+  const single = decideSingle(facts);
+  if (single.ready || facts.batch === undefined) return single;
+  if (main.conclusion !== "success")
+    return { ...single, reason: `${single.reason}; a batch does not apply while main is red` };
+  const cover = batchCover(pr, facts.batch, facts.mainSinceBatch);
+  if (cover.covered) return { ready: true, reason: cover.reason };
+  return { ...single, reason: `${single.reason}; batch: ${cover.reason}` };
+}
+
+/** Rules 1 and 2 for one pull request on its own run, after the state, draft and red-main checks. */
+function decideSingle({ main, pr, run, mainFilesSince, mainTip }) {
+  const no = (reason, action) => ({ ready: false, reason, action });
+  const fixesMain = pr.labels.includes(FIX_LABEL);
   if (mainTip !== undefined && main.headSha !== mainTip && !fixesMain) {
     return no(
       `main's newest commit (${mainTip.slice(0, 8)}) has no finished check; the last finished one is ${main.headSha.slice(0, 8)}`,
@@ -130,6 +199,7 @@ export function gatherFacts(
     .flat()
     .flatMap((file) => [file.filename, ...(file.previous_filename ? [file.previous_filename] : [])]);
   const pr = {
+    number,
     state: view.state,
     draft: view.isDraft,
     headSha: view.headRefOid,
@@ -170,7 +240,39 @@ export function gatherFacts(
   }
   git(["fetch", "--quiet", "origin", "main"]);
   const mainTip = git(["rev-parse", "origin/main"])?.trim();
-  return { slug, main, pr, run, mainFilesSince, mainTip };
+  return { slug, main, pr, run, mainFilesSince, mainTip, ...gatherBatch(slug, pr) };
+}
+
+/** The newest passed batch run that names this head, and main's commits since the main it checked. */
+export function gatherBatch(slug, pr) {
+  const runs = api(
+    `repos/${slug}/actions/workflows/ci.yml/runs?event=workflow_dispatch&status=success&per_page=20`,
+  ).workflow_runs.filter((entry) => entry.head_branch?.startsWith(BATCH_PREFIX));
+  for (const candidate of runs.slice(0, 8)) {
+    const job = api(`repos/${slug}/actions/runs/${String(candidate.id)}/jobs`).jobs.find(
+      (entry) => entry.name === "check",
+    );
+    if (job === undefined) continue;
+    const notes = api(`repos/${slug}/check-runs/${String(job.id)}/annotations`);
+    const note = parseBatchNote(notes.find((entry) => entry.title === "batch")?.message);
+    if (note === undefined || !note.members.some((member) => member.pr === pr.number && member.head === pr.headSha))
+      continue;
+    const batch = { conclusion: candidate.conclusion, url: candidate.html_url, ...note };
+    return { batch, mainSinceBatch: commitsSince(slug, note.main) };
+  }
+  return {};
+}
+
+/** First-parent commits on origin/main after `base`, oldest first, with the pull request each merged. */
+function commitsSince(slug, base) {
+  if (git(["merge-base", "--is-ancestor", base, "origin/main"]) === undefined) return undefined;
+  const shas = git(["rev-list", "--first-parent", "--reverse", `${base}..origin/main`])
+    ?.split(/\r?\n/u)
+    .filter(Boolean);
+  return shas?.map((sha) => {
+    const merged = api(`repos/${slug}/commits/${sha}/pulls`).find((entry) => entry.merge_commit_sha === sha);
+    return { sha, pr: merged?.number, head: merged?.head?.sha };
+  });
 }
 
 /** Starts a fresh Validate run for the pull request's head; the workflow merges current main itself. */

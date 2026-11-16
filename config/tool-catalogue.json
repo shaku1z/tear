@@ -990,11 +990,18 @@
       "duration": "seconds"
     },
     "merge:ready": {
-      "purpose": "Says whether a pull request may merge: main green and the check current against main; --refresh starts a fresh check",
+      "purpose": "Says whether a pull request may merge: main green and its own check, or a passed batch, current against main; --refresh starts a fresh check",
       "effects": [
         "network"
       ],
       "duration": "seconds"
+    },
+    "merge:batch": {
+      "purpose": "Merges several ready pull requests onto a codex/batch-* branch, pushes it and starts Validate; --status and --verify follow it up",
+      "effects": [
+        "network"
+      ],
+      "duration": "under-a-minute"
     },
     "setup:hooks": {
       "purpose": "Points the canonical checkout at the in-repo hooks, pins the owner identity, clears stale per-worktree hooks overrides; idempotent, refuses unknown hooks",
@@ -1584,6 +1591,16 @@
       "duration": "seconds",
       "via": [
         "merge:ready"
+      ]
+    },
+    "scripts/merge-batch.mjs": {
+      "purpose": "Batch merging behind pnpm merge:batch, and the Validate step that records a batch's members",
+      "effects": [
+        "network"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "merge:batch"
       ]
     },
     "scripts/package-crazygames.mjs": {
