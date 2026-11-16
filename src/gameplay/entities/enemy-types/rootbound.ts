@@ -50,6 +50,8 @@ import {
   updateRootboundVineSweep,
 } from "./rootbound-ground-verbs";
 
+import type { BossTell } from "../boss-tells";
+import { rootboundTells } from "./rootbound-tells";
 export * from "./rootbound-tuning";
 
 /** The Rootbound: Keeper of Spring (ground verbs), The Garden Remembers (Grafts), Nothing Here Dies (Regrowth). */
@@ -306,6 +308,10 @@ export function createRootboundType(
       this.state = "recover";
       this.stateT = this.phase === 3 ? ROOTBOUND_PHASE_THREE_CADENCE.recovery : ROOTBOUND_PHASE_ONE_CADENCE.recovery;
       this.atk = "unavailable";
+    }
+
+    tells(): readonly BossTell[] {
+      return rootboundTells(this);
     }
 
     vineSweepGeometry(): Readonly<{ x: number; y: number; hw: number; hh: number; facing: number }> {
