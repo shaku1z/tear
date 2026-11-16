@@ -36,3 +36,4 @@ artifacts/
 
 # wiki build cache (exported game data and generated media)
 wiki/.cache/
+wiki/pictures.new/

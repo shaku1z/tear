@@ -1,31 +1,16 @@
-// Generates the wiki's pictures from the game itself, at build time:
+// Generates the wiki's pictures from the game itself and writes them to wiki/pictures/ (committed):
 //   - figures: enemies and bosses drawn by the game's own renderers (a vite page, wiki/media/figures.html)
 //   - arenas, weapon crops and boss phases: captured from the game's test build (dist/test-standalone)
-// Output is WebP in wiki/.cache/media-<key>/, cached by the game source tree hash, plus manifest.json.
-// Run only for deploy builds (`pnpm wiki:build --media`); everyday builds use the cache or skip media.
-import { createHash } from 'node:crypto';
+// Run `pnpm build:test:standalone` then `pnpm wiki:media` when wiki:test says the pictures are stale (about 30 minutes).
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { cacheDir, repo } from './game-data.mjs';
-
-/** Page-weight budget, enforced by wiki/tests and checked again here. */
-export const BUDGET = { imageBytes: 40_000, pageMediaBytes: 250_000, totalBytes: 2_000_000 };
+import { loadGameData, repo } from './game-data.mjs';
+import { BUDGET, inputsHash, picturesDir } from './pictures.mjs';
 
 const testBuild = path.join(repo, 'dist', 'test-standalone');
 const dep = (name) => import(pathToFileURL(path.join(repo, 'node_modules', name)).href);
-
-/** Key: game source (from game-data's key) plus the media scripts themselves. */
-export function mediaKey(sourceKey) {
-  const own = ['media.mjs', '../media/figures.ts', '../media/figures.html'].map((f) => fs.readFileSync(path.join(import.meta.dirname, f)));
-  return createHash('sha256').update(sourceKey).update(Buffer.concat(own)).digest('hex').slice(0, 16);
-}
-export const mediaDir = (key) => path.join(cacheDir, `media-${key}`);
-export function loadManifest(key) {
-  const file = path.join(mediaDir(key), 'manifest.json');
-  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null;
-}
 
 const save = (dir, name, dataUrl) => {
   const bytes = Buffer.from(dataUrl.split(',')[1], 'base64');
@@ -151,14 +136,12 @@ async function captures(browser, data, dir, manifest) {
   } finally { server.close(); }
 }
 
-/** Builds (or reuses) the media for this source; returns { key, manifest, dir }. */
-export async function ensureMedia(data, sourceKey, { force = false } = {}) {
-  const key = mediaKey(sourceKey);
-  const dir = mediaDir(key);
-  const cached = force ? null : loadManifest(key);
-  if (cached) return { key, manifest: cached, dir };
+/** Regenerates wiki/pictures/ from the game at this commit. */
+export async function generate() {
+  const data = loadGameData();
   const { chromium } = await dep('@playwright/test/index.mjs');
-  const manifest = { key, figures: {}, arenas: {}, weapons: {}, bosses: {}, skipped: [] };
+  const manifest = { inputsHash: inputsHash(data), figures: {}, arenas: {}, weapons: {}, bosses: {}, skipped: [] };
+  const dir = path.join(path.dirname(picturesDir), 'pictures.new');
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const browser = await chromium.launch();
@@ -166,7 +149,16 @@ export async function ensureMedia(data, sourceKey, { force = false } = {}) {
     await figures(browser, data, dir, manifest);
     await captures(browser, data, dir, manifest);
   } finally { await browser.close(); }
-  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 1));
-  return { key, manifest, dir };
+  // Page errors from the headless game (audio, network sign-in) are not facts about the pictures.
+  manifest.skipped = manifest.skipped.filter((line) => !line.startsWith('page error:'));
+  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 1) + '\n');
+  fs.rmSync(picturesDir, { recursive: true, force: true });
+  fs.renameSync(dir, picturesDir);
+  return manifest;
 }
 
+if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
+  const manifest = await generate();
+  console.log(`Wrote wiki/pictures: ${Object.keys(manifest.figures).length} figures, ${Object.keys(manifest.arenas).length} arenas, ${Object.keys(manifest.weapons).length} weapons, ${Object.keys(manifest.bosses).length} bosses`);
+  if (manifest.skipped.length) console.log('Skipped:', manifest.skipped);
+}
