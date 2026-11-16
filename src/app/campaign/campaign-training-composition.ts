@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import type { LiveStyleHostServices } from "../combat/style-host";
 import { tutorialGoldGlyphs } from "../../presentation/world/tutorial-input-prompts";
 import { createLiveWeaponRuntime } from "../../gameplay/combat/live-weapon-runtime";
@@ -204,7 +205,7 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
     navigate: options.setScreen,
     resetScroll: options.resetScroll,
     releasePointer: () => {
-      document.exitPointerLock();
+      releasePointerLock(document);
     },
     requestPointer: options.requestPointerLock,
     selectStage: options.selectStage,
@@ -307,6 +308,8 @@ export function createLiveCampaignTrainingComposition(options: LiveCampaignTrain
       else if (cue === "colossusServo") d.SFX.colossusServo();
       else if (cue === "aldricIgnite") d.SFX.aldricIgnite();
       else if (cue === "aldricCrownFall") d.SFX.aldricCrownFall();
+      else if (cue === "slam") d.SFX.slam();
+      else if (cue === "boom") d.SFX.boom();
     },
   });
 

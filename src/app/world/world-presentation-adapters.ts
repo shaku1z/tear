@@ -14,13 +14,13 @@ import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import type { AchievementToastController } from "../interface/achievement-toast-controller";
 import type { TouchOnboardingController } from "../training/touch-onboarding-controller";
 import type { WorldRendererRegistry } from "../../presentation/world";
+import type { WorldRect } from "../../presentation/world/contracts";
 import { formatEnemyLabel } from "../../presentation/world/entity-layer";
 import { renderWorldFrame, type WorldBounds, type WorldCamera } from "../../presentation/world/world-frame";
 import type { SceneDrawInput } from "../../presentation/scenes/scene-library";
 import { buildHudSnapshot } from "../../presentation/world/hud-snapshot";
 import {
   buildBossIntroSnapshot,
-  buildPlaygroundHelpSnapshot,
   buildReticleSnapshot,
   buildStageBannerSnapshot,
   buildTouchControlsSnapshot,
@@ -35,7 +35,8 @@ import {
   buildSceneEffectsSnapshot,
   type VisualEnemySource,
 } from "../../presentation/world/runtime-snapshots";
-import { tutorialInputPrompt } from "../../presentation/world/tutorial-input-prompts";
+import { padPromptLabel, tutorialInputPrompt } from "../../presentation/world/tutorial-input-prompts";
+import { createTrainingCoachPresentation } from "./training-coach-presentation";
 import { isSheetScreen } from "../../domain/screen-catalog";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
 import { projectRootbinderPresentation } from "../../gameplay/environment/rootbinder-presentation-facts";
@@ -312,7 +313,12 @@ export function createLiveWorldPresentationAdapters(
     camera: WorldCamera,
   ): SceneDrawInput => ({ stageId, camera, playerWorldX, worldWidth: width, view, timeSeconds });
 
+  let lastCamera: WorldCamera | undefined;
   const renderWorld = (): WorldCamera => {
+    lastCamera = renderWorldLayers();
+    return lastCamera;
+  };
+  const renderWorldLayers = (): WorldCamera => {
     const run = state.run();
     const actorsIncluded = services.capturePolicy().actors === "include";
     const physicalPlayer = state.player();
@@ -405,10 +411,11 @@ export function createLiveWorldPresentationAdapters(
     const pause = d.Input.touchLayout().pause;
     return pause.y + pause.r + d.UI.t.space.sm;
   };
-  const drawTutorialCard = (): void => {
+  const coach = createTrainingCoachPresentation();
+  const drawTutorialCard = (): WorldRect => {
     const lesson = tutorial.step();
-    const prompt = tutorialInputPrompt(lesson.t, lesson.d, lesson.keys, d.Input.mode, d.PAD);
-    world.tutorialCard(
+    const prompt = tutorialInputPrompt(lesson.d, lesson.keys, d.Input.mode, d.PAD);
+    return world.tutorialCard(
       buildTutorialCardSnapshot(
         tutorial.idx,
         tutorial.steps.length,
@@ -426,9 +433,29 @@ export function createLiveWorldPresentationAdapters(
       ),
     );
   };
-  const drawPlaygroundHelp = (): void => {
+  const drawCoachMarks = (lessonCard: WorldRect | undefined): void => {
     const run = state.run();
-    world.playgroundHelp(buildPlaygroundHelpSnapshot(run.weaponId, run.weaponStats, touchClearTop()));
+    const player = state.player();
+    const mode = run.mode === "tutorial" ? "tutorial" : run.mode === "playground" ? "playground" : "other";
+    if (mode === "other") return;
+    const frame = coach.frame({
+      mode,
+      run,
+      ...(run.pgArena === undefined ? {} : { arena: run.pgArena }),
+      deltaSeconds: state.lastUiDelta(),
+      reducedMotion: d.A11Y.reducedMotion,
+      inputMode: d.Input.mode,
+      padLabel: padPromptLabel(d.PAD),
+      camera: lastCamera,
+      player,
+      bladeReach: d.CONFIG.blade.aimRadius + d.CONFIG.blade.length,
+      ...(mode === "tutorial" && tutorial.active
+        ? { lesson: { index: tutorial.idx, view: tutorial.step(), completing: tutorial.doneT > 0 } }
+        : {}),
+      lessonCard,
+      touchLayout: d.Input.touchActive() ? d.Input.touchLayout() : undefined,
+    });
+    world.coachMarks(frame);
   };
   const drawHud = (): void => {
     const run = state.run();
@@ -464,8 +491,7 @@ export function createLiveWorldPresentationAdapters(
     });
     world.hud(result.snapshot);
     if (state.screen() === "playing") services.chase?.hud(canvas, width);
-    if (run.mode === "tutorial") drawTutorialCard();
-    else if (run.mode === "playground") drawPlaygroundHelp();
+    drawCoachMarks(run.mode === "tutorial" ? drawTutorialCard() : undefined);
   };
 
   return Object.freeze({

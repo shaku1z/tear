@@ -10,6 +10,7 @@ const {
   writeClassCArtifact,
 } = require("./class-c-browser-harness");
 const { decodePng } = require("./class-c-png");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 function frameDifference(left, right) {
   const length = Math.min(left.length, right.length);
@@ -54,7 +55,7 @@ async function main() {
     route.request().url().startsWith(host.origin) ? route.continue() : route.abort(),
   );
   try {
-    await page.goto(record.url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(record.url, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
     assertCleanProductionUrl(page.url());
     const controls = createClassCControls(page, record.viewport, record);
     const perception = new TearPixelTemporalTracker({ logicalWidth: 1600, logicalHeight: 900, maximumFrames: 4 });

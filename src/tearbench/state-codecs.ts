@@ -122,6 +122,10 @@ function declaresReference(codecId: TearCodecId, key: string, ownerPath: string)
   // Treating it as an entity reference makes valid long void runs impossible
   // to seal once the conveyor correctly retires the ingress platform.
   if (codecId === "tear.run.v1" && key === "platformId" && ownerPath === "$.voidScroll.ingress") return false;
+  // A broken boss-arena platform leaves the live platform set until it re-forms; its record keeps
+  // the retired platformId (and its baseSpec copy) as an alias, so it is not an actor edge either.
+  if (codecId === "tear.run.v1" && key === "platformId" && /^\$\._arenaBroken\[\d+\](?:\.baseSpec)?$/u.test(ownerPath))
+    return false;
   const authoredEnvironmentReference =
     codecId === "tear.hazard.v1" && /^(?:owner|target|source|actor).*Id$/iu.test(key);
   return (

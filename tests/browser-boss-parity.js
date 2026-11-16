@@ -1,12 +1,11 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const canonicalScenarios = require("../src/tearbench/canonical-scenarios.json");
+const { STATE_WAIT_MS, waitForPointerLock } = require("./browser-waits");
 
-// How long a wait for a game state may take before the test gives up. The state is the pass
-// condition, never the clock: the game runs slower than real time on a loaded machine or a small
-// CI runner, so a short limit fails on speed alone. Keep this far above any honest duration.
-const STATE_WAIT_CEILING_MS = 60_000;
-const BOSS_PROGRESS_TIMEOUT_MS = STATE_WAIT_CEILING_MS;
+const BOSS_PROGRESS_TIMEOUT_MS = STATE_WAIT_MS;
+/** `--captured-pointer` (nightly) also requires the browser to grant real pointer lock. */
+const REQUIRE_POINTER_LOCK = process.argv.includes("--captured-pointer");
 
 const BOSSES = canonicalScenarios
   .filter((entry) => entry.subject.kind === "boss" && !entry.tags?.includes("unpublished-preview"))
@@ -24,7 +23,7 @@ async function startReadyBoss(page, bossId) {
   await page.waitForFunction(
     (id) => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === id),
     bossId,
-    { timeout: STATE_WAIT_CEILING_MS },
+    { timeout: STATE_WAIT_MS },
   );
   await page.waitForFunction(
     (id) => {
@@ -32,7 +31,7 @@ async function startReadyBoss(page, bossId) {
       return boss?.spawnT <= 0 && boss?.introT === 0;
     },
     bossId,
-    { timeout: STATE_WAIT_CEILING_MS },
+    { timeout: STATE_WAIT_MS },
   );
 }
 
@@ -135,7 +134,7 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
   await page.waitForFunction(
     (id) => window.__PANTHEON_TEST.state().active && window.__PANTHEON_TEST.state().cinema === id,
     cinematicId,
-    { timeout: STATE_WAIT_CEILING_MS },
+    { timeout: STATE_WAIT_MS },
   );
   const entered = await bossSnapshot(page, bossId);
   assert.equal(entered.cinematicPending, false, `${bossId} must consume its phase request when the scene begins`);
@@ -143,7 +142,7 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
     for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
   });
   await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, {
-    timeout: STATE_WAIT_CEILING_MS,
+    timeout: STATE_WAIT_MS,
   });
   const released = await bossSnapshot(page, bossId);
   assert.equal(released.cinematicT, 0, `${bossId} ritual presentation state must release`);
@@ -151,6 +150,15 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
 }
 
 withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
+  if (!REQUIRE_POINTER_LOCK) {
+    // Decline pointer lock for the whole run, in this page and after any reload. Dropping a lock
+    // the game already holds would pause it (a lost capture pauses play), so it is never granted.
+    const declinePointerLock = () => {
+      Element.prototype.requestPointerLock = () => Promise.resolve();
+    };
+    await page.addInitScript(declinePointerLock);
+    await page.evaluate(declinePointerLock);
+  }
   for (const bossId of BOSSES) {
     await startReadyBoss(page, bossId);
     const before = await bossSnapshot(page, bossId);
@@ -173,7 +181,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
             .enemies.find((enemy) => enemy.bossId === "rootbound")
             ?.atk?.startsWith("vine-sweep:"),
         undefined,
-        { timeout: STATE_WAIT_CEILING_MS },
+        { timeout: STATE_WAIT_MS },
       );
       const attacking = await bossSnapshot(page, bossId);
       assert.equal(attacking.phase, 1, "Rootbound must begin in its authored first phase");
@@ -197,7 +205,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await page.waitForFunction(
     () => window.TEAR_WEAPON_DEBUG?.().enemies.some((enemy) => enemy.bossId === "rootbound"),
     undefined,
-    { timeout: STATE_WAIT_CEILING_MS },
+    { timeout: STATE_WAIT_MS },
   );
   const retriedStage = await page.evaluate(() => window.__PANTHEON_TEST.bossStage("rootbound"));
   assert.equal(retriedStage.currentId, retriedStage.authoredId, "Rootbound retry must return to Verdant Sanctum");
@@ -225,7 +233,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await startReadyBoss(page, "aldric");
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.19));
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().cinema === "aldric-crownfall", undefined, {
-    timeout: STATE_WAIT_CEILING_MS,
+    timeout: STATE_WAIT_MS,
   });
   await forcePhase(page, "aldric", 0.19, "aldric-crownfall");
   let aldric = await bossSnapshot(page, "aldric");
@@ -233,13 +241,13 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await page.waitForFunction(
     () => ["aldric-witnessed", "aldric-angered"].includes(window.__PANTHEON_TEST.state().cinema),
     undefined,
-    { timeout: STATE_WAIT_CEILING_MS },
+    { timeout: STATE_WAIT_MS },
   );
   await page.evaluate(() => {
     for (let index = 0; index < 12; index += 1) window.__PANTHEON_TEST.advance();
   });
   await page.waitForFunction(() => !window.__PANTHEON_TEST.state().active, undefined, {
-    timeout: STATE_WAIT_CEILING_MS,
+    timeout: STATE_WAIT_MS,
   });
   aldric = await waitForBossSimulationAdvance(page, "aldric", aldric.aliveT, 0.6);
   assert.equal(aldric.mode, "frenzy", "Aldric must rise into frenzy after the kneel");
@@ -249,7 +257,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
   await startReadyBoss(page, "echo");
   await page.evaluate(() => window.__PANTHEON_TEST.setBossHealthFraction(0.5));
   await page.waitForFunction(() => window.TEAR_WEAPON_DEBUG().enemies.length > 1, undefined, {
-    timeout: STATE_WAIT_CEILING_MS,
+    timeout: STATE_WAIT_MS,
   });
   let echo = await bossSnapshot(page, "echo");
   assert.equal(echo.phase, 2, "Echo must split at phase two");
@@ -260,7 +268,7 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
       return debug.enemies.find((enemy) => enemy.bossId === "echo")?.phase === 3 && debug.enemies.length === 1;
     },
     undefined,
-    { timeout: STATE_WAIT_CEILING_MS },
+    { timeout: STATE_WAIT_MS },
   );
   const echoFinalStart = await bossSnapshot(page, "echo");
   echo = await waitForBossSimulationAdvance(page, "echo", echoFinalStart.aliveT, 1.2, 7000);
@@ -280,13 +288,16 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
     "Source AI must resume after its authored void-arrival grace",
   );
 
-  // Prove damage through the actual captured-pointer + held-blade path. This is
-  // deliberately not a debug hit shortcut: it exercises the same collision gate
-  // that made every boss appear invulnerable when introT was stranded above zero.
+  // Prove damage through the real held-blade path. This is deliberately not a debug hit
+  // shortcut: it exercises the same collision gate that made every boss appear invulnerable
+  // when introT was stranded above zero. A scripted click is not always granted pointer lock
+  // on the hosted Linux runner, so the required run declines the lock and the game aims by
+  // pointer position from the same moves (each carries both position and movement). The
+  // nightly run passes --captured-pointer to require the real lock as well.
   await startReadyBoss(page, "warden");
   const fullHealth = (await bossSnapshot(page, "warden")).hp;
   await page.mouse.click(800, 450);
-  await page.waitForFunction(() => document.pointerLockElement !== null, undefined, { timeout: STATE_WAIT_CEILING_MS });
+  if (REQUIRE_POINTER_LOCK) await waitForPointerLock(page);
   let damaged = await bossSnapshot(page, "warden");
   let pointer = { x: 800, y: 450 };
   for (let index = 0; index < 240 && damaged.hp >= fullHealth; index += 1) {
@@ -299,14 +310,14 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
     await page.waitForFunction(
       (tick) => (window.__TEAR_DIAGNOSTICS__.snapshot().gauges.simulationTick || 0) > tick,
       simulationTick,
-      { timeout: STATE_WAIT_CEILING_MS },
+      { timeout: STATE_WAIT_MS },
     );
     if (index % 12 === 11) damaged = await bossSnapshot(page, "warden");
   }
   damaged = await bossSnapshot(page, "warden");
   assert.ok(
     damaged.hp < fullHealth,
-    `captured-pointer held blade must damage the live boss (${String(damaged.hp)} < ${String(fullHealth)})`,
+    `held blade must damage the live boss (${String(damaged.hp)} < ${String(fullHealth)})`,
   );
 
   // Observe an actual live boss clone through the normal Class-A session and

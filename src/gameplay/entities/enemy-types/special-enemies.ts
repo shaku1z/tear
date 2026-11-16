@@ -108,7 +108,10 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort) {
       this.tickTimers(dt);
       const dx = player.x - this.x;
-      this.vx = lerp(this.vx, Math.sign(dx || 1) * this.speed, clamp(3 * dt, 0, 1));
+      // It walks only while repositioning; planting, linking and a sever stagger hold it in place.
+      const rooted = this.rootbinderState.state !== "reposition" && this.rootbinderState.state !== "recover";
+      const goal = rooted ? 0 : Math.sign(dx || 1) * this.speed;
+      this.vx = lerp(this.vx, goal, clamp((rooted ? 9 : 3) * dt, 0, 1));
       this.integrate(dt, platforms);
       this.rootbinderTickRemainder += Math.max(0, dt) * this.rootbinderState.tuning.ticksPerSecond;
       const ticks = Math.floor(this.rootbinderTickRemainder);

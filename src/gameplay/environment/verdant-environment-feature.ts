@@ -57,7 +57,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
   readonly #rootbinderRedistribution = new Map<string, Readonly<{ x: number; y: number }>>();
   readonly #rootbinderGenerations = new Map<string, number>();
   readonly #rootlineFields = new Map<string, string>();
-  readonly #rootlineHitFields = new Set<string>();
 
   setActorSource(slot: string, source: (() => readonly unknown[]) | undefined): void {
     if (slot === "bloom-well") this.#bloomActors = source as (() => readonly BloomWellActor[]) | undefined;
@@ -76,7 +75,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     this.#rootbinderRedistribution.clear();
     this.#rootbinderGenerations.clear();
     this.#rootlineFields.clear();
-    this.#rootlineHitFields.clear();
     void environment;
   }
   replace(environment: EnvironmentFeatureContext): void {
@@ -84,7 +82,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     this.#rootbinderLeashes.clear();
     this.#rootbinderRedistribution.clear();
     this.#rootlineFields.clear();
-    this.#rootlineHitFields.clear();
     const networks = new Map<string, string[]>();
     for (const object of environment.combatObjects()) {
       if (
@@ -108,8 +105,19 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
   }
 
   step(environment: EnvironmentFeatureContext, tick: number, seconds: number): void {
+    const bossPresent = (this.#rootboundActors?.().length ?? 0) > 0;
     for (const field of environment.fields()) {
       if (!isBloomWellState(field)) continue;
+      // The Rootbound authors its own Wells; recurring stage Wells end and leave the arena to it.
+      if (bossPresent && field.variant === "stage" && field.cleanupReason === null) {
+        environment.updateField(field.id, {
+          state: "expired",
+          stateTick: tick,
+          transitionTick: tick,
+          cleanupReason: "stage-transition",
+        });
+        continue;
+      }
       const result = advanceBloomWell(field, tick, environment.events);
       if (result !== field) environment.updateField(field.id, result);
       if (result.state === "active")
@@ -138,6 +146,11 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
           force: null,
           cleanupReason: null,
           patternId: "rootbound-rootline",
+          // Declared contact damage: the environment runtime applies it once while the roots are up.
+          damage: actor.state.damage,
+          threatening: true,
+          hitActorIds: Object.freeze([]),
+          hazardScaled: true,
         });
         this.#rootlineFields.set(actor.id, fieldId);
       } else if (stage !== null && fieldId !== undefined) {
@@ -145,32 +158,20 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         if (prior !== undefined)
           environment.updateField(fieldId, { state, stateTick: tick, geometry: actor.state.geometry });
       }
-      if (stage === "active" && fieldId !== undefined && !this.#rootlineHitFields.has(fieldId)) {
-        const target = actor.player;
-        const g = actor.state.geometry;
-        if (
-          target !== undefined &&
-          !target.invulnerable &&
-          target.x + target.hw >= g.x &&
-          target.x - target.hw <= g.x + g.w &&
-          target.y + target.hh >= g.y &&
-          target.y - target.hh <= g.y + g.h
-        ) {
-          this.#rootlineHitFields.add(fieldId);
-          target.takeDamage(actor.state.damage * target.hazardDamageMultiplier, g.x + g.w / 2, actor.source);
-        }
-      }
       if (stage === null && fieldId !== undefined) {
         const reason = actor.state.cleanupReason ?? "natural-expiry";
         environment.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason: reason });
         this.#rootlineFields.delete(actor.id);
-        this.#rootlineHitFields.delete(fieldId);
       }
       const placements = actor.state.graftPlacements ?? [];
       const ownerPosition = actor.state.ownerPosition;
+      // The boss records each planted Graft, so a cut one stays gone after the stage removes it.
+      const planted = actor.state.plantedGraftTypes ?? [];
       if (ownerPosition !== undefined)
-        for (const placement of placements)
+        for (const placement of placements.filter((entry) => !planted.includes(entry.graftType))) {
           installGraftAnchor(environment, { ownerId: actor.id, ownerPosition, ...placement, createdTick: tick });
+          actor.acknowledgeGraftPlanted?.(placement.graftType);
+        }
       const owned = environment
         .combatObjects()
         .filter(isGraftAnchorState)
@@ -187,17 +188,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         }
       }
       this.#applyGraftEffects(environment, actor.id);
-      const patternId = actor.state.bloomPattern;
-      const arena = actor.state.arena;
-      this.#pruneDormantBloomPatterns(environment, actor.id, patternId);
-      if (patternId !== null && patternId !== undefined && arena !== undefined)
-        installRootboundBloomPattern(environment, {
-          patternId,
-          bossOwnerId: actor.id,
-          startTick: tick,
-          arenaWidth: arena.width,
-          groundY: arena.groundY,
-        });
+      this.#plantBloomPattern(environment, actor, tick);
       this.#advanceCage(environment, actor, tick);
       this.#advanceRegrowth(environment, actor, tick);
     }
@@ -205,7 +196,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       if (!actors.some((actor) => actor.id === ownerId)) {
         environment.updateField(fieldId, { state: "expired", stateTick: tick, cleanupReason: "stage-transition" });
         this.#rootlineFields.delete(ownerId);
-        this.#rootlineHitFields.delete(fieldId);
       }
   }
 
@@ -266,8 +256,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     const rootCageId = `${actor.id}:root-cage:g${String(request.sequence)}`;
     let matching = owned.filter((boundary) => boundary.rootCageId === rootCageId);
     if (matching.length === 0) {
-      for (const boundary of owned)
-        if (boundary.state === "destroyed" || boundary.state === "expired") environment.removeCombatObject(boundary.id);
       installRootCage(environment, actor.id, request, tick);
       matching = environment
         .combatObjects()
@@ -297,7 +285,18 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       present.add(actor.id);
       const existing = this.#rootbinderNetworks.get(actor.id);
       if (actor.state.state === "linked" && existing === undefined) {
-        this.#prune(environment, actor.id);
+        const claimed = new Set(
+          environment
+            .combatObjects()
+            .filter(
+              (object) =>
+                object.kind === "root-link" &&
+                object.ownerId !== actor.id &&
+                object.state !== "destroyed" &&
+                object.state !== "expired",
+            )
+            .map((object) => object.targetId),
+        );
         const segments = installRootNetwork(
           environment,
           {
@@ -310,7 +309,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
             maxLength: actor.state.tuning.lineMaxLength,
             tuning: actor.state.tuning,
           },
-          actor.candidates,
+          actor.candidates.map((candidate) => (claimed.has(candidate.id) ? { ...candidate, linked: true } : candidate)),
           { activeNetworks: 0, activePlayerLeashes: this.#rootbinderLeashes.size, limits: actor.state.tuning },
         );
         if (segments.length > 0) {
@@ -338,7 +337,10 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
           else if (segment && segment.state !== "destroyed" && segment.state !== "expired")
             environment.cleanupCombatObject(segment.id, "natural-expiry", tick);
         }
-        if (!active) this.#rootbinderNetworks.delete(actor.id);
+        if (!active) {
+          this.#rootbinderNetworks.delete(actor.id);
+          if (this.#severed(environment, existing)) actor.sever?.();
+        }
       } else if (existing !== undefined) {
         for (const id of existing) {
           const object = environment.combatObjects().find((entry) => entry.id === id);
@@ -374,7 +376,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         (actor.state.state === "link-warning" || actor.state.state === "linked")
       ) {
         if (leashId === undefined && this.#rootbinderLeashes.size < actor.state.tuning.maxPlayerLeashes) {
-          this.#prune(environment, actor.id);
           const leash = createElasticLeash({
             id: this.#nextId(actor.id, "leash"),
             worldId: environment.worldId,
@@ -397,14 +398,15 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
             const valid = isElasticLeashValid(leash, {
               worldId: environment.worldId,
               stageId: environment.stageId,
-              currentTick: tick,
+              currentTick: actor.state.simulationTick,
               expiryTick: actor.state.transitionTick,
               sourceAlive: true,
               playerAlive: player.alive,
               severed: leash.state === "destroyed",
             });
             if (!valid) {
-              environment.cleanupCombatObject(leash.id, "natural-expiry", tick);
+              if (leash.state === "destroyed" && leash.cleanupReason === null) actor.sever?.();
+              else environment.cleanupCombatObject(leash.id, "natural-expiry", tick);
               this.#rootbinderLeashes.delete(actor.id);
             } else {
               const active = actor.state.state === "linked";
@@ -504,38 +506,39 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     }
     return true;
   }
+  /** True when a relationship ended because the player cut it, not because it expired or went invalid. */
+  #severed(environment: EnvironmentFeatureContext, ids: readonly string[]): boolean {
+    return ids.some((id) =>
+      environment
+        .combatObjects()
+        .some((object) => object.id === id && object.state === "destroyed" && object.cleanupReason === null),
+    );
+  }
   #nextId(ownerId: string, kind: "network" | "leash"): string {
     const generation = (this.#rootbinderGenerations.get(ownerId) ?? 0) + 1;
     this.#rootbinderGenerations.set(ownerId, generation);
     return `${ownerId}:${kind}:g${String(generation)}`;
   }
-  #prune(environment: EnvironmentFeatureContext, ownerId: string): void {
-    for (const object of [...environment.combatObjects()])
-      if (
-        object.kind === "root-link" &&
-        object.ownerId === ownerId &&
-        (object.state === "destroyed" || object.state === "expired")
-      )
-        environment.removeCombatObject(object.id);
-  }
-  #pruneDormantBloomPatterns(
-    environment: EnvironmentFeatureContext,
-    ownerId: string,
-    selectedPattern: RootboundBloomPatternId | null | undefined,
-  ): void {
-    const selectedPrefix =
-      selectedPattern === null || selectedPattern === undefined ? null : `bloom-well/rootbound/${selectedPattern}/`;
-    for (const field of [...environment.fields()]) {
-      if (
-        !isBloomWellState(field) ||
-        field.variant !== "boss" ||
-        field.bossOwnerId !== ownerId ||
-        field.state !== "dormant"
-      )
-        continue;
-      if (selectedPrefix === null || field.patternId?.startsWith(selectedPrefix) !== true)
-        environment.removeField(field.id);
-    }
+  /**
+   * Plants the boss's selected Well pattern once per selection; the boss records it. When the selection
+   * changes, Wells of the old pattern that have not started yet end; running ones finish their cycle.
+   */
+  #plantBloomPattern(environment: EnvironmentFeatureContext, actor: RootboundEnvironmentActor, tick: number): void {
+    const selected = actor.state.bloomPattern ?? null;
+    if (selected === (actor.state.plantedBloomPattern ?? null)) return;
+    for (const field of environment.fields())
+      if (isBloomWellState(field) && field.bossOwnerId === actor.id && field.state === "dormant")
+        environment.updateField(field.id, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+    const arena = actor.state.arena;
+    if (selected !== null && arena !== undefined)
+      installRootboundBloomPattern(environment, {
+        patternId: selected,
+        bossOwnerId: actor.id,
+        startTick: tick,
+        arenaWidth: arena.width,
+        groundY: arena.groundY,
+      });
+    actor.acknowledgeBloomPattern?.(selected);
   }
   #applyGraftEffects(environment: EnvironmentFeatureContext, ownerId: string): void {
     const actor = this.#rootboundActors?.().find((candidate) => candidate.id === ownerId);
@@ -586,6 +589,8 @@ export interface RootbinderEnvironmentActor {
   readonly id: string;
   readonly state: RootbinderState;
   readonly candidates: readonly RootbinderCandidate[];
+  /** Staggers the Rootbinder after the player cuts its network or leash. */
+  readonly sever?: () => void;
   readonly player?: Readonly<{
     id: string;
     x: number;
@@ -607,8 +612,10 @@ export interface RootboundEnvironmentActor {
     damage: number;
     cleanupReason: "natural-expiry" | "stage-transition" | null;
     graftPlacements?: readonly GraftAnchorPlacementRequest[];
+    plantedGraftTypes?: readonly string[];
     ownerPosition?: Readonly<{ x: number; y: number }>;
     bloomPattern?: RootboundBloomPatternId | null;
+    plantedBloomPattern?: RootboundBloomPatternId | null;
     rootCagePlacement?: RootCagePlacementRequest | null;
     arena?: Readonly<{ width: number; groundY: number }>;
     phase?: number;
@@ -617,6 +624,8 @@ export interface RootboundEnvironmentActor {
   readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
   readonly recoverGraftHealth?: (fraction: number) => number;
   readonly completeRootCage?: () => void;
+  readonly acknowledgeGraftPlanted?: (graftType: string) => void;
+  readonly acknowledgeBloomPattern?: (patternId: RootboundBloomPatternId | null) => void;
   readonly beginRegrowth?: (startTick: number, ids: readonly string[]) => boolean;
   readonly advanceRegrowth?: (tick: number, ids: ReadonlySet<string>, broken?: boolean) => RootboundRegrowthState;
   readonly player?: Readonly<{
@@ -625,9 +634,6 @@ export interface RootboundEnvironmentActor {
     vx?: number;
     hw: number;
     hh: number;
-    invulnerable: boolean;
-    hazardDamageMultiplier: number;
-    takeDamage: (damage: number, sourceX: number, source: unknown) => void;
     applyCageConstraint?: (x: number, vx: number) => void;
   }>;
 }

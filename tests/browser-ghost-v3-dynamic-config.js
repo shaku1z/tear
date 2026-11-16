@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
 
 function staticBuild(build) {
   const { configHash: ignored, ...stable } = build;
@@ -9,7 +10,7 @@ function staticBuild(build) {
 
 withJourney({ name: "C27 Ghost V3 dynamic configuration provenance", port: 8163 }, async ({ page, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15_000,
+    timeout: STATE_WAIT_MS,
   });
   // The test hook creates a normal live run and reaches the real tier-up UI;
   // the click below flows through the production reward controller. Its first
@@ -20,13 +21,13 @@ withJourney({ name: "C27 Ghost V3 dynamic configuration provenance", port: 8163 
   await waitScreen("playing");
   // Let the ordinary requestAnimationFrame loop pass two 60-tick capture
   // intervals after the physical reward selection.
-  await page.waitForTimeout(1_500);
+  await page.waitForTimeout(holdFor(1_500));
   await page.evaluate(() => window.__TEAR_RUNTIME_ENVIRONMENT__.create("A").terminate());
 
   await page.waitForFunction(
     () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
     undefined,
-    { timeout: 20_000 },
+    { timeout: STATE_WAIT_MS },
   );
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
 

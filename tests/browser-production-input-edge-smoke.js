@@ -8,6 +8,7 @@ const {
   serveProductionBuild,
   writeClassCArtifact,
 } = require("./class-c-browser-harness");
+const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
 function sampleDifference(left, right) {
   let changed = 0;
@@ -59,9 +60,9 @@ async function main() {
     await page.route("**/*", (route) =>
       route.request().url().startsWith(host.origin) ? route.continue() : route.abort(),
     );
-    await page.goto(record.url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(record.url, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
     assertCleanProductionUrl(page.url());
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(settleFor(900));
     return { page, controls: createClassCControls(page, viewport, { inputs: [], frames: [] }) };
   }
 
@@ -79,8 +80,8 @@ async function main() {
     // Opening a second browser tab causes a real browser focus transition. The
     // returned tab is then controlled only through a fresh physical keyboard edge.
     const background = await desktop.newPage();
-    await background.goto("about:blank");
-    await background.waitForTimeout(120);
+    await background.goto("about:blank", { timeout: STATE_WAIT_MS });
+    await background.waitForTimeout(settleFor(120));
     await page.bringToFront();
     await controls.wait(120);
     await controls.key("ArrowDown", "down");

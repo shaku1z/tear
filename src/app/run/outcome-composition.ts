@@ -1,3 +1,4 @@
+import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import {
   snapshotOutcomeRun,
   type PreparedVictory,
@@ -179,7 +180,7 @@ export function createLiveOutcomeComposition(options: LiveOutcomeCompositionOpti
     present(outcome, result) {
       options.setOutcome(result);
       options.setScreen(outcome === "victory" ? "win" : "gameover");
-      document.exitPointerLock();
+      releasePointerLock(document);
       options.emitMusicOutcome(outcome);
       if (outcome === "victory") {
         d.SFX.wave();

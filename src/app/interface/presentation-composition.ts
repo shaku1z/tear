@@ -5,6 +5,7 @@ import type { WorldCamera } from "../../presentation/world/world-frame";
 import type { CinematicUiPort } from "../../presentation/cinematics";
 import type { ButtonLayerUiPort, CanvasUiButton } from "../../presentation/screens/button-layer";
 import { createUiConfirmArming, type InteractiveUiButton, type UiRuntimeInput } from "./ui-runtime-controller";
+import { NO_POINTER } from "../../domain/pointer-ownership";
 import { shouldDrawCanvasCursor } from "../../presentation/cursor-contract";
 import { domChromeVisibility } from "../../presentation/dom-chrome-policy";
 import { cinematicPromptForDevice } from "../../presentation/cinematic-prompts";
@@ -351,12 +352,13 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         }
       },
       drawCursor: () => {
-        ui.cursor(context, services.input.mouseX, services.input.mouseY);
+        const pointer = services.input.pointer();
+        if (pointer !== null) ui.cursor(context, pointer.x, pointer.y);
       },
       showCanvasCursor: () =>
         services.capturePolicy().ui === "include" &&
         shouldDrawCanvasCursor(state.screen(), services.input.mode) &&
-        services.input.pointerInside !== false,
+        services.input.pointer() !== null,
       drawControllerToast: () => {
         if (services.capturePolicy().ui !== "include") return;
         const controller = services.controller();
@@ -421,8 +423,8 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
       context,
       buttons: state.controls(),
       focus: state.focus(),
-      pointerX: services.input.mouseX,
-      pointerY: services.input.mouseY,
+      pointerX: (services.input.pointer() ?? NO_POINTER).x,
+      pointerY: (services.input.pointer() ?? NO_POINTER).y,
       deltaSeconds: state.deltaSeconds(),
       enterSeconds: state.enterSeconds(),
       hoverAnimation: services.hoverAnimation,

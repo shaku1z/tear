@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, holdFor } = require("./browser-waits");
 
 function physicalInput(page, input) {
   return page.evaluate((next) => {
@@ -18,7 +19,7 @@ function snapshotPlayer(entry) {
 
 withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
 
   // Class C deliberately has no structured observation or semantic stepping
@@ -60,7 +61,7 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
   // 60-tick recorder snapshots. The live requestAnimationFrame loop, rather
   // than a TearBench advance/step call, owns all fixed simulation ticks.
   await physicalInput(page, { type: "key", code: "KeyD", phase: "pressed" });
-  await page.waitForTimeout(2_100);
+  await page.waitForTimeout(holdFor(2_100));
   await physicalInput(page, { type: "key", code: "KeyD", phase: "released" });
   const frameAfterMovement = await page.screenshot({ type: "png" });
   assert.ok(
@@ -84,7 +85,7 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
   await page.waitForFunction(
     () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
     undefined,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
 
@@ -150,7 +151,7 @@ withJourney({ name: "C27A physical canonical input", port: 8162 }, async ({ page
   await page.waitForFunction(
     () => window.__PANTHEON_TEST.state().game === "playing" && window.__PANTHEON_TEST.tutorial().active,
     undefined,
-    { timeout: 15_000 },
+    { timeout: STATE_WAIT_MS },
   );
   const tutorialLifecycle = await page.evaluate(() => {
     const active = window.__TEAR_CATALOG_DEBUG__.input.snapshot().recording;

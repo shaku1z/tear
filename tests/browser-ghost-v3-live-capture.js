@@ -4,10 +4,11 @@ const { tmpdir } = require("node:os");
 const { createHash } = require("node:crypto");
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 
 withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, boot, waitScreen }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-    timeout: 15000,
+    timeout: STATE_WAIT_MS,
   });
   await page.evaluate(() => {
     const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -48,7 +49,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await page.waitForFunction(
     () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
     undefined,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
@@ -156,7 +157,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await page.waitForFunction(
     (sourceId) => window.__TEAR_GHOST_V3__.manifest()?.id !== sourceId || window.__TEAR_GHOST_V3__.failure() !== null,
     manifest.id,
-    { timeout: 20000 },
+    { timeout: STATE_WAIT_MS },
   );
   const comparisonManifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());
   assert.notEqual(comparisonManifest.id, manifest.id, "comparison needs a second durable source capsule");
@@ -202,12 +203,12 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     await page.waitForFunction(
       (sourceId) => window.__TEAR_GHOST_V3__.manifest()?.id !== sourceId || window.__TEAR_GHOST_V3__.failure() !== null,
       previousId,
-      { timeout: 20000 },
+      { timeout: STATE_WAIT_MS },
     );
     assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
   }
   await boot();
-  await page.waitForFunction(() => window.__TEAR_GHOST_V3__, undefined, { timeout: 15000 });
+  await page.waitForFunction(() => window.__TEAR_GHOST_V3__, undefined, { timeout: STATE_WAIT_MS });
   const afterReload = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifests());
   assert.ok(
     afterReload.some((candidate) => candidate.id === manifest.id && candidate.status === "complete"),
@@ -254,7 +255,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await waitScreen("profile");
   await page.mouse.click(875, 271); // VAULT tab
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("Ghost V3 - COACHING"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   const clickText = async (text) => {
     const point = await page.evaluate(
@@ -268,7 +269,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   };
   let selectedCount = 0;
   for (let attempt = 0; attempt < 32 && selectedCount < 9; attempt++) {
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(pollEvery(100));
     const point = await page.evaluate(() =>
       window.__TEAR_C29_POSITIONS__?.find((entry) => entry.text === "SELECT" && entry.y > 310 && entry.y < 810),
     );
@@ -290,7 +291,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
               : `${String(count)} comparison sources selected. Press COMPARE to open them.`),
         ),
       expectedCount,
-      { timeout: 5000 },
+      { timeout: STATE_WAIT_MS },
     );
     selectedCount = expectedCount;
   }
@@ -310,21 +311,21 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     );
   }
   assert.equal(selectedCount, 9, "all nine rendered source selections must be reached within bounded scrolling");
-  await page.waitForTimeout(140);
+  await page.waitForTimeout(settleFor(140));
   await clickText("COMPARE 9");
   await waitScreen("replay");
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("COMPARE RUNS"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   await page.mouse.click(428, 854); // next semantic event through the rendered replay transport
   await page.waitForFunction(
     () => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).startsWith("EVENT 2 / EVENT ")),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.mouse.click(428, 854); // a second repeated semantic occurrence
   await page.waitForFunction(() => window.__TEAR_C29_THEATER_TEXT__?.includes("OCCURRENCE 2"), undefined, {
-    timeout: 10000,
+    timeout: STATE_WAIT_MS,
   });
   const comparisonTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
   assert.ok(
@@ -337,16 +338,16 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   );
   await page.keyboard.press("Escape");
   await waitScreen("profile");
-  await page.waitForTimeout(180);
+  await page.waitForTimeout(settleFor(180));
   await clickText("\u25c6 THEATER"); // actual rendered healthy source control
   await waitScreen("replay");
   const theaterTextCount = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__?.length ?? 0);
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(settleFor(250));
   await page.mouse.click(428, 854); // next verified checkpoint through the visible transport
   await page.waitForFunction(
     (count) => window.__TEAR_C29_THEATER_TEXT__?.slice(count).some((text) => String(text).startsWith("0:01 /")),
     theaterTextCount,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
   const theaterTexts = await page.evaluate(
     (count) => (window.__TEAR_C29_THEATER_TEXT__ ?? []).slice(count),
@@ -365,13 +366,13 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const sceneRegion = { x: 40, y: 146, width: 1520, height: 638 };
   const firstScene = await page.screenshot({ path: join(outputDirectory, "theater-tick120.png"), clip: sceneRegion });
   await clickText("REPLAY EDITOR");
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(settleFor(120));
   await clickText("MARK IN");
   await page.mouse.click(428, 854); // next actual verified checkpoint240
-  await page.waitForTimeout(180);
+  await page.waitForTimeout(settleFor(180));
   await clickText("APPEND RANGE");
   await clickText("CLOSE EDITOR");
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(settleFor(120));
   const secondScene = await page.screenshot({ path: join(outputDirectory, "theater-tick240.png"), clip: sceneRegion });
   assert.notEqual(
     createHash("sha256").update(firstScene).digest("hex"),
@@ -379,7 +380,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     "world-only scene must change independently of tick labels",
   );
   await clickText("REPLAY EDITOR");
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(settleFor(120));
   await clickText("ENCODE WEBM");
   await page.waitForFunction(
     () =>
@@ -387,7 +388,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
         (text) => String(text).startsWith("WebM decoded locally.") || String(text).startsWith("Studio export refused:"),
       ),
     undefined,
-    { timeout: 90000 },
+    { timeout: SLOW_STATE_WAIT_MS },
   );
   assert.ok(
     await page.evaluate(() =>
@@ -398,7 +399,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     `Studio did not produce media: ${await page.evaluate(() => (window.__TEAR_C29_THEATER_TEXT__ ?? []).slice(-60).join(" | "))}`,
   );
   await page.waitForFunction(() => window.__TEAR_C37_THUMBNAIL__?.startsWith("data:image/png"), undefined, {
-    timeout: 5000,
+    timeout: STATE_WAIT_MS,
   });
   const downloadPending = page.waitForEvent("download");
   await clickText("DOWNLOAD WEBM");
@@ -409,61 +410,64 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const mediaBytes = await readFile(downloadPath);
   assert.ok(mediaBytes.length > 100);
   assert.equal(mediaBytes.subarray(0, 4).toString("hex"), "1a45dfa3", "actual WebM EBML signature");
-  const decoded = await page.evaluate(async (base64) => {
-    const bytes = Uint8Array.from(atob(base64), (value) => value.charCodeAt(0)),
-      url = URL.createObjectURL(new Blob([bytes], { type: "video/webm" }));
-    const video = document.createElement("video");
-    video.muted = true;
-    video.preload = "auto";
-    const event = (name) =>
-      new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error(`decode ${name} timeout`)), 10000);
-        video.addEventListener(
-          name,
-          () => {
-            clearTimeout(timer);
-            resolve();
-          },
-          { once: true },
-        );
-      });
-    try {
-      const ready = event("loadedmetadata");
-      video.src = url;
-      await ready;
-      if (!Number.isFinite(video.duration)) {
-        const sought = event("seeked");
-        video.currentTime = 100000;
-        await sought;
+  const decoded = await page.evaluate(
+    async ({ base64, ceiling }) => {
+      const bytes = Uint8Array.from(atob(base64), (value) => value.charCodeAt(0)),
+        url = URL.createObjectURL(new Blob([bytes], { type: "video/webm" }));
+      const video = document.createElement("video");
+      video.muted = true;
+      video.preload = "auto";
+      const event = (name) =>
+        new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error(`decode ${name} timeout`)), ceiling);
+          video.addEventListener(
+            name,
+            () => {
+              clearTimeout(timer);
+              resolve();
+            },
+            { once: true },
+          );
+        });
+      try {
+        const ready = event("loadedmetadata");
+        video.src = url;
+        await ready;
+        if (!Number.isFinite(video.duration)) {
+          const sought = event("seeked");
+          video.currentTime = 100000;
+          await sought;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("native decoded video canvas unavailable");
+        const frames = [];
+        for (const time of [0.1, 0.8]) {
+          const sought = event("seeked");
+          video.currentTime = time;
+          await sought;
+          if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
+            throw new Error("native video did not decode a current frame");
+          context.drawImage(video, 0, 0);
+          frames.push({ time, png: canvas.toDataURL("image/png") });
+        }
+        return {
+          width: video.videoWidth,
+          height: video.videoHeight,
+          duration: Number.isFinite(video.duration) ? video.duration : video.currentTime,
+          thumbnail: window.__TEAR_C37_THUMBNAIL__,
+          frames,
+        };
+      } finally {
+        video.removeAttribute("src");
+        video.load();
+        URL.revokeObjectURL(url);
       }
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("native decoded video canvas unavailable");
-      const frames = [];
-      for (const time of [0.1, 0.8]) {
-        const sought = event("seeked");
-        video.currentTime = time;
-        await sought;
-        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
-          throw new Error("native video did not decode a current frame");
-        context.drawImage(video, 0, 0);
-        frames.push({ time, png: canvas.toDataURL("image/png") });
-      }
-      return {
-        width: video.videoWidth,
-        height: video.videoHeight,
-        duration: Number.isFinite(video.duration) ? video.duration : video.currentTime,
-        thumbnail: window.__TEAR_C37_THUMBNAIL__,
-        frames,
-      };
-    } finally {
-      video.removeAttribute("src");
-      video.load();
-      URL.revokeObjectURL(url);
-    }
-  }, mediaBytes.toString("base64"));
+    },
+    { base64: mediaBytes.toString("base64"), ceiling: STATE_WAIT_MS },
+  );
   assert.equal(decoded.width, 640);
   assert.equal(decoded.height, 360);
   assert.ok(Math.abs(decoded.duration - 1) < 0.35, `decoded duration ${String(decoded.duration)}`);
@@ -501,7 +505,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await page.waitForFunction(
     () => window.__TEAR_C29_THEATER_TEXT__?.includes("RUN DNA \u00b7 RECORDED METRICS"),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
   const dnaTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
   assert.ok(dnaTexts.includes("FORMULA run-dna-v1 \u00b7 native-combat-episodes-v1"));
@@ -522,20 +526,20 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await page.waitForFunction(
     () => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH \u00b7 YOUR SELECTED RUNS"),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
-  await page.waitForTimeout(180);
+  await page.waitForTimeout(settleFor(180));
   await page.mouse.click(750, 189); // explicit first compatible local recording, no peer auto-selection
   await page.waitForFunction(
     () => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/2 usable recordings")),
     undefined,
-    { timeout: 30000 },
+    { timeout: STATE_WAIT_MS },
   );
   await clickText("RUNS");
   await page.waitForFunction(
     () => window.__TEAR_C29_POSITIONS__?.some((entry) => entry.text.startsWith("+ ") && entry.y > 170 && entry.y < 370),
     undefined,
-    { timeout: 5000 },
+    { timeout: STATE_WAIT_MS },
   );
   const nextCandidate = await page.evaluate(() =>
     window.__TEAR_C29_POSITIONS__?.find((entry) => entry.text.startsWith("+ ") && entry.y > 170 && entry.y < 370),
@@ -545,7 +549,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   await page.waitForFunction(
     () => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/3 usable recordings")),
     undefined,
-    { timeout: 30000 },
+    { timeout: STATE_WAIT_MS },
   );
   const coachTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
   assert.ok(
@@ -568,7 +572,7 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
         String(text).includes("Reconstructed source scene \u00b7 TICK 140"),
       ),
     undefined,
-    { timeout: 10000 },
+    { timeout: STATE_WAIT_MS },
   );
   await page.screenshot({ path: join(outputDirectory, "coach-moment.png") });
   await clickText("RETURN TO COACH");
