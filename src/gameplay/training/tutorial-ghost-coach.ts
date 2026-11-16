@@ -374,8 +374,9 @@ export class TutorialGhostCoach {
               ? "That hit was on the ground. Try it in the air."
               : "Hit, but not the move this lesson needs.";
         else
-          this.diagnosis =
-            frame.blade.state !== "held"
+          this.diagnosis = ["move", "jump", "dash"].includes(this.reference.lessonId)
+            ? "Not done yet."
+            : frame.blade.state !== "held"
               ? "Your blade is away. Recall it first."
               : "Missed. Get closer and swing through the target.";
       }
