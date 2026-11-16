@@ -15,6 +15,8 @@ export interface BuildTargetDefinition {
   readonly base: string;
   /** A second output of the test build, served below a path on the preview origin (null: none). */
   readonly previewDev: { readonly mode: string; readonly output: string; readonly env: string } | null;
+  /** Which of the music encodes (`opus-<profile>/`) the build keeps; itch.io uses the CrazyGames encode. */
+  readonly audioProfile: "standalone" | "crazygames";
   readonly serviceWorker: boolean;
   readonly portalSdkScript: string | null;
   readonly cloudflareHeaders: boolean;

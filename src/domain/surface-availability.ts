@@ -32,8 +32,7 @@ export type SurfaceId =
   // Every engineering query parameter and surface route.
   | "route:engineering-query"
   // Engineering window globals.
-  | "global:weapon-debug"
-  | "global:foundry-audio-preview";
+  | "global:weapon-debug";
 
 const screenSurfaceId = (screen: EngineeringScreen): `screen:${EngineeringScreen}` => `screen:${screen}`;
 
@@ -57,7 +56,6 @@ export const SURFACE_CHANNEL: Readonly<Record<SurfaceId, SurfaceChannel>> = Obje
   "feature:linked-pair-download": "engineering",
   "route:engineering-query": "engineering",
   "global:weapon-debug": "engineering",
-  "global:foundry-audio-preview": "engineering",
 });
 
 export interface SurfaceAvailability {

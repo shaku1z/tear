@@ -12,9 +12,11 @@ import {
   type AdvancedLoadout,
 } from "../../src/audio/music/advanced-loadout";
 
-const catalog = JSON.parse(
-  readFileSync(resolve(import.meta.dirname, "../../public/audio/catalog.json"), "utf8"),
-) as MusicCatalog;
+const catalog = (
+  JSON.parse(readFileSync(resolve(import.meta.dirname, "../../public/audio/music.json"), "utf8")) as {
+    catalog: unknown;
+  }
+).catalog as MusicCatalog;
 
 const opts = (seed = 1) => ({
   catalog,
