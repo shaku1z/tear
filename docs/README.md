@@ -20,7 +20,7 @@ owning test/script references in one reviewable transaction.
 | Visual/design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | [VISUAL_DESIGN_DIRECTION.md](VISUAL_DESIGN_DIRECTION.md) |
 | Feature and product inventory | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | — |
 | Shop and upgrade design contract | [SHOP_UPGRADE_DESIGN.md](product/SHOP_UPGRADE_DESIGN.md) | — |
-| Audio integration and compatibility | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) | Audio compatibility and vendor provenance checks |
+| Music in the game | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) | `pnpm check:music` |
 | Release authority and deployment matrix | [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md) | [RELEASE_MATRIX.md](RELEASE_MATRIX.md) |
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |

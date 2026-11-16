@@ -34,7 +34,7 @@ it("keeps every file a cue, the page or a bundle requests and lists the rest", a
     "audio/cues/a/opus/revisions/r1/melody.ogg": "older",
     "audio/cues/a/opus/revisions/r2/full-loop.ogg": "loop",
     "audio/stingers/victory.ogg": "s",
-    "audio/catalog.json": {},
+    "audio/music.json": {},
   });
   try {
     expect(await unrequestedCrazyGamesFiles(root)).toEqual([

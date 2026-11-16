@@ -1,0 +1,154 @@
+{
+  "format": "tear-score-stem-cue",
+  "version": 1,
+  "id": "nocturnal-urgency",
+  "name": "Nocturnal Urgency",
+  "tempo": 167.9,
+  "timeSignature": [
+    4,
+    4
+  ],
+  "sourceSampleRate": 48000,
+  "key": "unknown",
+  "grid": {
+    "downbeatFrame": 0,
+    "beatsPerBar": 4,
+    "barsPerLoop": 16,
+    "secondsPerBar": 1.429201,
+    "approvedBpm": 167.926002,
+    "barQuantizedCompatible": true
+  },
+  "loop": {
+    "startFrame": 0,
+    "endFrame": 1097626,
+    "mode": "hard"
+  },
+  "assetNote": "Pre-cut loop; frames file-relative.",
+  "stems": [
+    {
+      "id": "rhythm",
+      "role": "rhythm",
+      "kinds": [
+        "drums"
+      ],
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/rhythm.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "pulse",
+      "role": "bass",
+      "kinds": [
+        "bass"
+      ],
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/pulse.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "melody",
+      "role": "motif",
+      "kinds": [
+        "guitar",
+        "synth"
+      ],
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/melody.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "foundation",
+      "role": "bed",
+      "kinds": [
+        "keys",
+        "other",
+        "woodwinds"
+      ],
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "crossfade",
+      "crossfadeFrames": 1440,
+      "sources": [
+        {
+          "url": "opus/foundation.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    },
+    {
+      "id": "apex",
+      "role": "apex",
+      "kinds": [
+        "percussion"
+      ],
+      "channels": 2,
+      "gainDb": 0,
+      "seamMode": "hard",
+      "sources": [
+        {
+          "url": "opus/apex.ogg",
+          "mime": "audio/ogg; codecs=\"opus\""
+        }
+      ]
+    }
+  ],
+  "tiers": {
+    "0": {
+      "foundation": -7
+    },
+    "1": {
+      "foundation": -4,
+      "pulse": -7
+    },
+    "2": {
+      "foundation": -2,
+      "pulse": -3,
+      "rhythm": -1
+    },
+    "3": {
+      "foundation": -1,
+      "pulse": -1,
+      "rhythm": 0,
+      "melody": -2,
+      "apex": -4
+    },
+    "4": {
+      "foundation": 0,
+      "pulse": 0,
+      "rhythm": 0,
+      "melody": 0,
+      "apex": 0
+    }
+  },
+  "provenance": {
+    "owner": "shaku1z",
+    "license": "Owned/licensed by owner (owner-supplied stems, 2026-11-12/13).",
+    "sourceSha256": "d116db924ceff197db94d1b947ffccb5333bc8f23d3e1ad5d20092fa6f929954"
+  },
+  "analysis": {
+    "seamExcessDb": -16.2,
+    "loopLufs": -16,
+    "loopTruePeakDb": -2.3,
+    "trimDb": -3.6,
+    "inputHash": "fb0a6f63f4ac67d1"
+  }
+}

@@ -2,7 +2,7 @@
   "format": "tear-score-stem-cue",
   "version": 1,
   "id": "slicing-life-2",
-  "name": "Slicing Life 2",
+  "name": "Slicing Life II",
   "tempo": 86,
   "timeSignature": [
     4,
@@ -28,6 +28,10 @@
     {
       "id": "foundation",
       "role": "bed",
+      "kinds": [
+        "keys",
+        "other"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "crossfade",
@@ -42,6 +46,9 @@
     {
       "id": "pulse",
       "role": "bass",
+      "kinds": [
+        "bass"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
@@ -55,6 +62,9 @@
     {
       "id": "rhythm",
       "role": "rhythm",
+      "kinds": [
+        "drums"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
@@ -68,6 +78,9 @@
     {
       "id": "melody",
       "role": "motif",
+      "kinds": [
+        "synth"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "crossfade",
@@ -107,79 +120,15 @@
     }
   },
   "provenance": {
-    "owner": "shatheartboy@gmail.com",
+    "owner": "shaku1z",
     "license": "Owned/licensed by owner, confirmed 2026-07-23.",
     "sourceSha256": "69664bc883e8dace7a0f790c0d73de6781d7e36dd6b2ffa0e033fe7ba1daf282"
   },
   "analysis": {
-    "tempoConfidence": 0.036,
-    "tempoAlternatives": [
-      43,
-      172.2
-    ],
-    "sourceDownbeatSeconds": 1.1613,
-    "secondsPerBar": 2.7875,
-    "keyConfidence": 0.073,
-    "keyAlternatives": [
-      "F major",
-      "F minor"
-    ],
-    "seam": {
-      "seamDbBelowPeak": -28.1,
-      "rmsRatio": 0.84,
-      "verdict": "warning"
-    },
-    "analysedBpm": 86.1,
-    "approvedBpm": 86.023432,
-    "metricalFactor": 0.9991,
-    "tempoDisagreementPercent": 0.09,
-    "phrasePlausibility": "typical",
-    "grid": {
-      "loopBars": 16,
-      "actualLoopFrames": 2142672,
-      "expectedLoopFrames": 2142672,
-      "barErrorFrames": 0,
-      "barErrorMs": 0,
-      "priorDriftMsPerCycle": 12,
-      "verdict": "pass",
-      "consideredBpm": [
-        {
-          "bpm": 86.023,
-          "bars": 16,
-          "octaveDistancePercent": 0.09,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 172.047,
-          "bars": 32,
-          "octaveDistancePercent": 0.09,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 182.8,
-          "bars": 34,
-          "octaveDistancePercent": 6.16,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 161.294,
-          "bars": 30,
-          "octaveDistancePercent": 6.33,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 96.776,
-          "bars": 18,
-          "octaveDistancePercent": 12.4,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 193.553,
-          "bars": 36,
-          "octaveDistancePercent": 12.4,
-          "phrase": "typical"
-        }
-      ]
-    }
+    "seamExcessDb": -6.7,
+    "loopLufs": -16,
+    "loopTruePeakDb": -2,
+    "trimDb": -0.3,
+    "inputHash": "955e584f3493eb8c"
   }
 }
