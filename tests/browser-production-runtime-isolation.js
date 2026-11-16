@@ -12,15 +12,10 @@ const bridgeMarkers = [
   "live-runtime-environment",
   "createLiveTearRuntimeEnvironment",
   "installLiveTearRuntimeBridge",
-  "tear-ghost-lab",
-  "Ghost Lab",
   "__TEAR_WATCH_AGENT__",
   "live-watch-agent-host",
   "tear-watch-agent",
   "Watch Agent",
-  "__TEAR_RUN_MONITOR__",
-  "tear-run-monitor",
-  "Start Run Monitor",
 ];
 
 function filesUnder(directory) {

@@ -373,7 +373,7 @@ function parseApprovedEvidenceCommand(command) {
       tokens[0] === "node" &&
       tokens[1] === "--check" &&
       tokens.length === 3 &&
-      tokens[2] === "tests/browser-ghost-lab-home.js"
+      tokens[2] === "tests/browser-scripted-agent-autonomy.js"
     ) {
       return {
         kind: "node-check",
