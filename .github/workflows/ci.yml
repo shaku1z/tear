@@ -9,6 +9,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      batch:
+        description: "Batch members as <pr>:<head oid>, comma separated; pnpm merge:batch sets it"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -58,6 +63,14 @@ jobs:
           echo "TEAR_BUILD_GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           echo "::notice title=checked::head=$head main=$main"
           echo "Checked head \`$head\` merged with main \`$main\`." >> "$GITHUB_STEP_SUMMARY"
+      # A batch (pnpm merge:batch) records which pull request heads the checked commit contains;
+      # pnpm merge:ready reads this annotation, as it reads "checked".
+      - name: Record the batch members
+        if: github.event_name == 'workflow_dispatch' && inputs.batch != ''
+        shell: bash
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: node scripts/merge-batch.mjs --record "$BATCH"
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0
@@ -112,3 +125,16 @@ jobs:
             artifacts/packages/tear-crazygames.zip
           if-no-files-found: error
           retention-days: ${{ github.event_name == 'push' && 7 || 2 }}
+      # Main only, after every check passed: the test build of the same commit, served by the
+      # preview deploy below /dev/ (Boss Test, Enemy Test and the other engineering surfaces).
+      # It is its own artifact, so nothing that deploys production can pick it up.
+      - name: Build the preview dev build
+        if: github.event_name == 'push' && steps.validation-scope.outputs.gameplay_required == 'true'
+        run: node scripts/build-target.mjs test-standalone --preview-dev
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'push' && steps.validation-scope.outputs.gameplay_required == 'true'
+        with:
+          name: tear-preview-dev-${{ steps.checked.outputs.commit }}
+          path: dist/preview-dev
+          if-no-files-found: error
+          retention-days: 7

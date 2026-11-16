@@ -6,7 +6,6 @@
 export * from "./ghost-lab-panel";
 export * from "./live-physical-input";
 export * from "./live-runtime-bridge";
-export * from "./scenario-console";
 export * from "./replay-hub";
 export * from "./replay-hub-route";
 export * from "./replay-hub-selectors";

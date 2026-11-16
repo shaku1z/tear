@@ -141,6 +141,26 @@ describe("Validate workflow", () => {
     expect(preview).toContain("/^tear-release-targets-[0-9a-f]{40}$/");
     expect(preview).toContain("candidate-release/dist/standalone");
   });
+
+  it("serves the dev build of the same commit below /dev/ on preview, and never on production", () => {
+    // Built and uploaded on main pushes only, as its own artifact.
+    expect(workflow).toMatch(
+      /if: github\.event_name == 'push' && [^\n]*\n {8}run: node scripts\/build-target\.mjs test-standalone --preview-dev\n/u,
+    );
+    expect(workflow).toMatch(
+      /if: github\.event_name == 'push' && [^\n]*\n {8}with:\n {10}name: tear-preview-dev-\$\{\{ steps\.checked\.outputs\.commit \}\}\n {10}path: dist\/preview-dev\n/u,
+    );
+    const preview = read(".github/workflows/deploy-preview.yml");
+    expect(preview).toContain("const devName = `tear-preview-dev-${artifactSha}`;");
+    expect(preview).toContain("node scripts/verify-release-artifact.mjs standalone candidate-dev test-standalone");
+    expect(preview).toContain("cp -r candidate-dev preview-site/dev");
+    expect(preview).toContain("--assets preview-site \\");
+    // The path the deploy uses is the base the dev build is built for.
+    expect(read("vite.config.ts")).toContain('export const PREVIEW_DEV_BASE = "/dev/";');
+    for (const file of ["deploy-production.yml", "deploy-wiki.yml"]) {
+      expect(read(`.github/workflows/${file}`), file).not.toMatch(/preview-dev|candidate-dev/u);
+    }
+  });
   it("sets the job limit to at least twice the recorded time of the gate plus setup", () => {
     // Setup is checkout, install and the Chromium download: about 3 minutes on a runner.
     const setupSeconds = 180;
@@ -154,6 +174,20 @@ describe("Validate workflow", () => {
       gateSeconds + setupSeconds,
       `recorded ${String(gateSeconds)} s of checks plus ${String(setupSeconds)} s setup against a ${String(limits[0])}-minute limit`,
     ).toBeLessThanOrEqual((limits[0] * 60) / 2);
+  });
+
+  it("records batch members only on a run started by hand with a batch, passing the input through env", () => {
+    const steps = workflow.split(/\n(?= {6}- )/u);
+    const step = steps.find((entry) => entry.includes("name: Record the batch members")) ?? "";
+    expect(step).toMatch(/\n {8}if: github\.event_name == 'workflow_dispatch' && inputs\.batch != ''\n/u);
+    expect(step).toMatch(/\n {10}BATCH: \$\{\{ inputs\.batch \}\}\n/u);
+    const run = /\n {8}run: (.*)/u.exec(step)?.[1] ?? "";
+    expect(run).toBe('node scripts/merge-batch.mjs --record "$BATCH"');
+    // Nothing else reads the input or writes the batch annotation, so a pull request or main run emits none.
+    const others = steps.filter((entry) => entry !== step);
+    expect(others.some((entry) => /inputs\.batch|title=batch|merge-batch\.mjs/u.test(entry))).toBe(false);
+    // The step runs before the checks, so a batch that checked less than it claims fails before them.
+    expect(workflow.indexOf("Record the batch members")).toBeLessThan(workflow.indexOf("run-checks.mjs static"));
   });
 
   it("checks out the full history (the oracle comparison reads an old commit)", () => {

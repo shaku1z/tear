@@ -7,7 +7,7 @@ import {
   type StateForgeForkRequest,
   type StateForgeStudioHost,
 } from "./state-forge-studio";
-import { isScenarioConsoleRequested } from "./scenario-console-route";
+import { isSnapshotEditorRequested } from "./snapshot-editor-route";
 import type { TearSdlDocumentV1, TearSdlResolved } from "../tearsdl";
 import { TearCheckpointBank } from "../tearsdl";
 
@@ -141,6 +141,6 @@ export function createLiveStateForgeStudioHost(factory: TearRuntimeBridgeFactory
 }
 
 export function installLiveStateForgeStudio(factory: TearRuntimeBridgeFactory): void {
-  if (!isScenarioConsoleRequested(window.location.search)) return;
+  if (!isSnapshotEditorRequested(window.location.search)) return;
   installStateForgeStudio(createLiveStateForgeStudioHost(factory));
 }

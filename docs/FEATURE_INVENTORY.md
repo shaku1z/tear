@@ -757,7 +757,7 @@ frozen evidence record.
   `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
 - [x] Test-build State Forge Studio — `tearbench-state-forge-studio.test.ts`
   keeps structural, reachability, and population-plausibility reports
-  independent; `browser-state-forge-studio.js` proves the `?stateforge=1` live
+  independent; `browser-state-forge-studio.js` proves the `?snapshot-editor=1` live
   host can launch and capture a disposable runtime, inspect provenance and
   diffs, fork and transactionally watch a checkpoint, import/export TearSDL,
   and fail closed on malformed editor input.
