@@ -66,12 +66,21 @@ async function installObservation(page) {
         observation.expectStateHash = false;
       }
       if (text === "CONTINUATION STATE") observation.expectStateHash = true;
-      if (
-        /^(IDLE|UNAVAILABLE|PICKING|VALIDATING|READY|RESTORING|RESELECT-REQUIRED|COMPLETE|CANCELLED|FAILED|DOWNLOAD-REQUESTED) \/ /u.test(
-          text,
-        )
-      )
-        observation.status = text;
+      // The Vault draws one sentence per file status; map it back to the status name.
+      const status = [
+        ["UNAVAILABLE", "Importing replay files isn't available in this browser."],
+        ["PICKING", "Choosing a file…"],
+        ["VALIDATING", "Checking the file…"],
+        ["READY", "Ready to restore."],
+        ["RESTORING", "Restoring…"],
+        ["RESELECT-REQUIRED", "Choose the file again to continue."],
+        ["COMPLETE", "Restored to this device."],
+        ["CANCELLED", "Import cancelled."],
+        ["FAILED", "That file couldn't be restored."],
+        ["DOWNLOAD-REQUESTED", "Download started."],
+      ].find(([, sentence]) => text.startsWith(sentence));
+      if (status) observation.status = status[0];
+      if (text === "IMPORT A REPLAY FILE") observation.vaultOpen = true;
       if (text === "VAULT") observation.vaultTab = { x: args[0], y: args[1] };
       observation.recent.push(text);
       if (observation.recent.length > 160) observation.recent.shift();
@@ -142,7 +151,7 @@ async function observe(name, page, buildInfo) {
   return observation;
 }
 async function waitStatus(page, expected) {
-  await page.waitForFunction((status) => window.__C39_FILE_TEXT__?.status?.startsWith(status + " / "), expected, {
+  await page.waitForFunction((status) => window.__C39_FILE_TEXT__?.status === status, expected, {
     timeout: STATE_WAIT_MS,
   });
 }
@@ -152,7 +161,7 @@ async function openVault(journey) {
   const vaultTab = await journey.page.evaluate(() => window.__C39_FILE_TEXT__.vaultTab);
   await journey.page.mouse.click(vaultTab.x, vaultTab.y); // The drawn VAULT tab label.
   await settle(journey.page);
-  await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.status !== null, undefined, {
+  await journey.page.waitForFunction(() => window.__C39_FILE_TEXT__?.vaultOpen, undefined, {
     timeout: STATE_WAIT_MS,
   });
 }
