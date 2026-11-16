@@ -97,7 +97,7 @@ function mechanics(snapshot) {
 async function runTargetedScenario(page, scenario) {
   const url = new URL(page.url());
   url.searchParams.set("watchagent", "1");
-  await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
+  await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.mouse.click(10, 10);
   let snapshot = await page.evaluate((options) => window.__TEAR_WATCH_AGENT__.start(options), {
@@ -169,7 +169,7 @@ withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async 
   for (const weapon of weapons) {
     const url = new URL(page.url());
     url.searchParams.set("watchagent", "1");
-    await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
+    await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
     await page.getByLabel("Profile").selectOption("competent");
     await page.getByLabel("Mode").selectOption("campaign");

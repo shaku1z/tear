@@ -18,7 +18,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { assertCleanProductionUrl, serveProductionBuild } = require("./class-c-browser-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, notWithin, pollEvery, settleFor } = require("./browser-waits");
 
 const VIEW = Object.freeze({ width: 1280, height: 720 });
 const SCALE = VIEW.width / 1600;
@@ -28,10 +28,6 @@ const buildRoot = process.env.TEAR_RELEASE_BUILD_DIR
   ? path.resolve(process.env.TEAR_RELEASE_BUILD_DIR)
   : path.resolve(__dirname, "..", "dist", "standalone");
 const shotDirectory = process.env.TEAR_JOURNEY_SHOTS ? path.resolve(process.env.TEAR_JOURNEY_SHOTS) : null;
-const sleep = (milliseconds) =>
-  new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
 
 /** Installed before the game boots: records drawn text and the player's eye per animation frame. */
 function installObserver() {
@@ -268,7 +264,7 @@ async function runTouchLeg(browser, origin, viewport, shot) {
   };
   const tap = async (point) => {
     await down(9, point);
-    await sleep(60);
+    await page.waitForTimeout(holdFor(60));
     await up(9);
   };
   const waitForText = async (pattern, timeout, what) => {
@@ -276,39 +272,39 @@ async function runTouchLeg(browser, origin, viewport, shot) {
     while (Date.now() < until) {
       const hit = (await texts()).find((entry) => pattern.test(entry.t));
       if (hit) return hit;
-      await sleep(100);
+      await page.waitForTimeout(pollEvery(100));
     }
     await shot(`${leg}-missing-${what}`, page);
     throw new Error(`${leg}: ${what}: ${String(pattern)} did not appear within ${String(timeout)} ms`);
   };
   /** Taps where the label was drawn most recently; menus slide in, so earlier frames are stale. */
   const tapLabel = async (pattern, what) => {
-    await waitForText(pattern, 15_000, what);
-    await sleep(250);
+    await waitForText(pattern, STATE_WAIT_MS, what);
+    await page.waitForTimeout(settleFor(250));
     const drawn = (await texts()).filter((entry) => pattern.test(entry.t)).sort((a, b) => b.f - a.f);
-    await tap(drawn[0] ?? (await waitForText(pattern, 5_000, what)));
+    await tap(drawn[0] ?? (await waitForText(pattern, STATE_WAIT_MS, what)));
   };
   try {
     await page.goto(`${origin}/`, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
-    await waitForText(/^PLAY$/u, 40_000, "main menu");
-    await sleep(800);
+    await waitForText(/^PLAY$/u, STATE_WAIT_MS, "main menu");
+    await page.waitForTimeout(settleFor(800));
     await tapLabel(/^PLAY$/u, "PLAY");
-    await sleep(900);
+    await page.waitForTimeout(settleFor(900));
     await tapLabel(/^ADVENTURE$/u, "Adventure mode");
-    await sleep(400);
+    await page.waitForTimeout(settleFor(400));
     await tapLabel(/^EASY$/u, "Easy difficulty");
-    await sleep(400);
+    await page.waitForTimeout(settleFor(400));
     await tapLabel(/^START$/u, "START");
     for (let taps = 0; taps < 30 && !has(await texts(), /^WAVE 1$/u); taps += 1) {
       await tap({ x: viewport.width / 2, y: viewport.height * 0.45 });
-      await sleep(1_100);
+      await page.waitForTimeout(pollEvery(1_100));
     }
-    await waitForText(/^WAVE 1$/u, 20_000, "wave 1");
+    await waitForText(/^WAVE 1$/u, STATE_WAIT_MS, "wave 1");
     await shot(`${leg}-wave-1`, page);
     // A touch that starts during the READY beat is a menu touch and never becomes a stick,
     // so the thumb goes down once the controls are drawn.
-    await waitForText(/^JUMP$/u, 20_000, "touch controls");
-    await sleep(200);
+    await waitForText(/^JUMP$/u, STATE_WAIT_MS, "touch controls");
+    await page.waitForTimeout(settleFor(200));
     const eyeX = async () => (await page.evaluate(() => window.__RELEASE_JOURNEY__.eye))?.x ?? null;
     const before = await eyeX();
     assert.notEqual(before, null, `${leg}: the player is drawn`);
@@ -316,10 +312,10 @@ async function runTouchLeg(browser, origin, viewport, shot) {
     await down(1, joystick);
     // 30 px stays inside the joystick's follow radius.
     await move(1, { x: joystick.x + 30, y: joystick.y });
-    const until = Date.now() + 4_000;
+    const until = Date.now() + STATE_WAIT_MS;
     let after = before;
     while (Date.now() < until && !(after - before > 20)) {
-      await sleep(100);
+      await page.waitForTimeout(pollEvery(100));
       after = (await eyeX()) ?? after;
     }
     await up(1);
@@ -385,14 +381,14 @@ async function main() {
   const has = (list, pattern) => list.some((entry) => pattern.test(entry.t));
   const press = async (code, holdMs = 70) => {
     await page.keyboard.down(code);
-    await sleep(holdMs);
+    await page.waitForTimeout(holdFor(holdMs));
     await page.keyboard.up(code);
   };
   const click = async (point) => {
     await page.mouse.move(point.x, point.y, { steps: 4 });
-    await sleep(160);
+    await page.waitForTimeout(settleFor(160));
     await page.mouse.down();
-    await sleep(70);
+    await page.waitForTimeout(holdFor(70));
     await page.mouse.up();
   };
   const waitForText = async (pattern, timeout, what) => {
@@ -400,26 +396,26 @@ async function main() {
     while (Date.now() < until) {
       const hit = (await texts()).find((entry) => pattern.test(entry.t));
       if (hit) return hit;
-      await sleep(100);
+      await page.waitForTimeout(pollEvery(100));
     }
     await shot(`missing-${what}`);
     throw new Error(`${what}: ${String(pattern)} did not appear within ${String(timeout)} ms`);
   };
   const clickLabel = async (pattern, what) => {
-    const hit = await waitForText(pattern, 15_000, what);
+    const hit = await waitForText(pattern, STATE_WAIT_MS, what);
     await click(hit);
     return hit;
   };
 
   const startAdventure = async (leg) => {
-    await waitForText(/^PLAY$/u, 40_000, `${leg}: main menu`);
-    await sleep(800);
+    await waitForText(/^PLAY$/u, STATE_WAIT_MS, `${leg}: main menu`);
+    await page.waitForTimeout(settleFor(800));
     await clickLabel(/^PLAY$/u, `${leg}: PLAY`);
-    await sleep(900);
+    await page.waitForTimeout(settleFor(900));
     await clickLabel(/^ADVENTURE$/u, `${leg}: Adventure mode`);
-    await sleep(400);
+    await page.waitForTimeout(settleFor(400));
     await clickLabel(/^EASY$/u, `${leg}: Easy difficulty`);
-    await sleep(400);
+    await page.waitForTimeout(settleFor(400));
     await shot(`${leg}-setup`);
     await clickLabel(/^START$/u, `${leg}: START`);
     note("started adventure", { leg });
@@ -427,10 +423,10 @@ async function main() {
 
   /** The chapter intro appears, waits for the player, and advances by clicks to wave 1. */
   const passChapterIntro = async (leg) => {
-    await waitForText(/^THE FIRST DESCENT$/u, 15_000, `${leg}: chapter I intro`);
-    await sleep(500);
+    await waitForText(/^THE FIRST DESCENT$/u, STATE_WAIT_MS, `${leg}: chapter I intro`);
+    await page.waitForTimeout(settleFor(500));
     await shot(`${leg}-chapter-intro`);
-    await sleep(3_500);
+    await page.waitForTimeout(notWithin(3_500));
     let opening = await texts();
     assert.ok(!has(opening, /^WAVE \d+$/u), "the chapter intro must wait for input before the first wave");
     note("chapter intro holds without input", { leg });
@@ -441,9 +437,9 @@ async function main() {
       for (const entry of opening) if (entry.t.length > 3 && entry.px >= 14) beats.add(entry.t);
       if (has(opening, /^WAVE 1$/u)) break;
       await click({ x: VIEW.width / 2, y: VIEW.height * 0.55 });
-      await sleep(1_100);
+      await page.waitForTimeout(pollEvery(1_100));
     }
-    await waitForText(/^WAVE 1$/u, 20_000, `${leg}: wave 1 after the chapter intro`);
+    await waitForText(/^WAVE 1$/u, STATE_WAIT_MS, `${leg}: wave 1 after the chapter intro`);
     assert.ok(advances >= 2, `the chapter intro advanced by input (${String(advances)} clicks)`);
     note("chapter intro advanced", {
       leg,
@@ -536,9 +532,9 @@ async function main() {
           });
           if (retries === 1) for (const frame of evidenceFrames) console.log(`FRAME ${frame}`);
           await shot(`${leg}-defeated-${String(retries)}`);
-          await sleep(1_200);
+          await page.waitForTimeout(settleFor(1_200));
           await clickLabel(/^RETRY$/u, "RETRY");
-          const back = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, 20_000, `${leg}: the retried run`);
+          const back = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, STATE_WAIT_MS, `${leg}: the retried run`);
           assert.equal(back.t, "WAVE 1", "a retry skips the chapter intro already seen this session");
           zeroLeftSince = null;
           continue;
@@ -594,7 +590,7 @@ async function main() {
           player.x + Math.cos(sweep) * 120 * SCALE,
           player.y - 50 * SCALE + Math.sin(sweep) * 60 * SCALE,
         );
-        await sleep(30);
+        await page.waitForTimeout(pollEvery(30));
         continue;
       }
       const dx = target.x - player.x,
@@ -609,7 +605,7 @@ async function main() {
       await page.mouse.move(player.x + Math.cos(angle) * radius, player.y - 8 * SCALE + Math.sin(angle) * radius, {
         steps: 2,
       });
-      await sleep(12);
+      await page.waitForTimeout(pollEvery(12));
     }
     await releaseAll();
     note("wave 1 cleared; draft open", {
@@ -624,8 +620,8 @@ async function main() {
     });
 
     // The draft opens and a mouse click on a card picks it after the settle window.
-    await waitForText(/^TAKE ONE/u, 5_000, `${leg}: draft`);
-    await sleep(900);
+    await waitForText(/^TAKE ONE/u, STATE_WAIT_MS, `${leg}: draft`);
+    await page.waitForTimeout(settleFor(900));
     await shot(`${leg}-draft`);
     const draft = await texts();
     // Card titles: the mid-size text below the header (card layout moves between UI passes).
@@ -645,12 +641,12 @@ async function main() {
     );
     note("draft cards", { leg, cards: cards.map((entry) => entry.t) });
     await click(cards[0]);
-    const deadline = Date.now() + 8_000;
+    const deadline = Date.now() + STATE_WAIT_MS;
     let after = [];
     while (Date.now() < deadline) {
       after = await texts();
       if (!has(after, /^TAKE ONE/u) && has(after, /^WAVE 2$/u)) break;
-      await sleep(150);
+      await page.waitForTimeout(pollEvery(150));
     }
     await shot(`${leg}-after-pick`);
     assert.ok(!has(after, /^TAKE ONE/u), "a mouse click on a draft card picks it");
@@ -679,15 +675,15 @@ async function main() {
       // Leg 2, restart from the pause menu in the same session: the seen chapter is skipped
       // and the run must still progress past wave 1 (the reported stuck wave).
       await press("KeyP", 80);
-      await waitForText(/^PAUSED$/u, 5_000, "restart: pause screen");
-      await sleep(600);
+      await waitForText(/^PAUSED$/u, STATE_WAIT_MS, "restart: pause screen");
+      await page.waitForTimeout(settleFor(600));
       await clickLabel(/^RESTART$/u, "restart: RESTART");
-      await sleep(700);
+      await page.waitForTimeout(settleFor(700));
       const confirm = (await texts()).find(
         (entry) => /^(YES|CONFIRM|RESTART)\b/u.test(entry.t) && !/^RESTART$/u.test(entry.t),
       );
       if (confirm) await click(confirm);
-      const restarted = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, 20_000, "restart: the restarted run");
+      const restarted = await waitForText(/^(WAVE 1|THE FIRST DESCENT)$/u, STATE_WAIT_MS, "restart: the restarted run");
       assert.equal(restarted.t, "WAVE 1", "a restart in the same session skips the chapter intro already seen");
       note("restart skipped the seen chapter");
       retries += await clearWaveOneAndPick("restart");
@@ -695,7 +691,7 @@ async function main() {
       // Leg 3, a new session on the same profile: biome memory is not a seen chapter, so the intro plays again.
       await page.reload({ waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
       await startAdventure("new-session");
-      await waitForText(/^THE FIRST DESCENT$/u, 15_000, "new session: chapter I intro");
+      await waitForText(/^THE FIRST DESCENT$/u, STATE_WAIT_MS, "new session: chapter I intro");
       await shot("new-session-intro");
       note("new session shows the chapter intro");
     }

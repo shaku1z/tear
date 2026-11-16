@@ -14,12 +14,10 @@ export interface InteractiveUiButton extends UiActionButton {
 
 export interface UiRuntimeInput {
   readonly mode: "mouse" | "keyboard" | "gamepad" | "touch";
-  readonly mouseX: number;
-  readonly mouseY: number;
+  /** The mouse position while the mouse owns the interface, else null. */
+  pointer(): Readonly<{ x: number; y: number }> | null;
   readonly ui: Readonly<{ pageUp: boolean; pageDown: boolean; tabPrev: boolean; tabNext: boolean; context1?: boolean }>;
   readonly pressed: ReadonlySet<string>;
-  /** False while the mouse is off the canvas (over DOM chrome or outside the page). */
-  readonly pointerInside?: boolean;
   padBack: boolean;
   touchActive(): boolean;
   takeUIScroll(): Readonly<{ x: number; y: number }>;
@@ -100,7 +98,7 @@ export function handleUiRuntimeFrame(ports: UiRuntimePorts): void {
     scrollY: wheel.y,
     pageUp: input.ui.pageUp,
     pageDown: input.ui.pageDown,
-    pointer: input.mode === "mouse" ? { x: input.mouseX, y: input.mouseY } : null,
+    pointer: input.pointer(),
     touch,
     directions: { left: input.menuLeft(), right: input.menuRight(), up: input.menuUp(), down: input.menuDown() },
     previous: input.menuPrev(),

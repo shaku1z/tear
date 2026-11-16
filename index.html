@@ -208,6 +208,11 @@
        drawn, so it shows the hardware arrow; the canvas hides its own arrow while the
        pointer is off the canvas, so the two never render together. */
     #wrap #fs { cursor: default; }
+    /* The pointer belongs to the mouse alone (docs/CURSOR_INPUT_CONTRACT.md): while the keyboard, a
+       controller or touch owns the interface the hardware cursor is hidden everywhere on the page,
+       the fullscreen button and the letterbox included, until the mouse meaningfully moves. */
+    body[data-imode]:not([data-imode="mouse"]),
+    body[data-imode]:not([data-imode="mouse"]) * { cursor: none !important; }
   </style>
 </head>
 <body>

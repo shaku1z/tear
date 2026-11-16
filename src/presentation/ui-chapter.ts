@@ -450,16 +450,6 @@ export function createUiChapter(dependencies: UiDependencies) {
       ctx.fillRect(-ox, -oy, w + ox * 2, h + oy * 2); // reach the true screen edges in fullscreen
       ctx.globalAlpha = 1;
     },
-    // In-run teaching card surface (tutorial lesson, playground help): the contrasting
-    // surface for the live ink (paper under dark ink, scrim under light ink) at
-    // `alpha.hudPlate`. HUD groups and banners never use it; their text sits on the scene.
-    hudPlate(this: UiRuntime, ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-      ctx.save();
-      ctx.globalAlpha = this.t.alpha.hudPlate;
-      ctx.fillStyle = inkIsLight(this.ink) ? this.t.color.scrim : this.t.color.paper;
-      ctx.fillRect(x, y, w, h);
-      ctx.restore();
-    },
     // scroll affordance ("▲ scroll ▼") for long lists
     scrollHint(
       this: UiRuntime,

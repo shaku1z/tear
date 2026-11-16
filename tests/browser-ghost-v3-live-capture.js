@@ -410,61 +410,64 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   const mediaBytes = await readFile(downloadPath);
   assert.ok(mediaBytes.length > 100);
   assert.equal(mediaBytes.subarray(0, 4).toString("hex"), "1a45dfa3", "actual WebM EBML signature");
-  const decoded = await page.evaluate(async (base64) => {
-    const bytes = Uint8Array.from(atob(base64), (value) => value.charCodeAt(0)),
-      url = URL.createObjectURL(new Blob([bytes], { type: "video/webm" }));
-    const video = document.createElement("video");
-    video.muted = true;
-    video.preload = "auto";
-    const event = (name) =>
-      new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error(`decode ${name} timeout`)), 10000);
-        video.addEventListener(
-          name,
-          () => {
-            clearTimeout(timer);
-            resolve();
-          },
-          { once: true },
-        );
-      });
-    try {
-      const ready = event("loadedmetadata");
-      video.src = url;
-      await ready;
-      if (!Number.isFinite(video.duration)) {
-        const sought = event("seeked");
-        video.currentTime = 100000;
-        await sought;
+  const decoded = await page.evaluate(
+    async ({ base64, ceiling }) => {
+      const bytes = Uint8Array.from(atob(base64), (value) => value.charCodeAt(0)),
+        url = URL.createObjectURL(new Blob([bytes], { type: "video/webm" }));
+      const video = document.createElement("video");
+      video.muted = true;
+      video.preload = "auto";
+      const event = (name) =>
+        new Promise((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error(`decode ${name} timeout`)), ceiling);
+          video.addEventListener(
+            name,
+            () => {
+              clearTimeout(timer);
+              resolve();
+            },
+            { once: true },
+          );
+        });
+      try {
+        const ready = event("loadedmetadata");
+        video.src = url;
+        await ready;
+        if (!Number.isFinite(video.duration)) {
+          const sought = event("seeked");
+          video.currentTime = 100000;
+          await sought;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("native decoded video canvas unavailable");
+        const frames = [];
+        for (const time of [0.1, 0.8]) {
+          const sought = event("seeked");
+          video.currentTime = time;
+          await sought;
+          if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
+            throw new Error("native video did not decode a current frame");
+          context.drawImage(video, 0, 0);
+          frames.push({ time, png: canvas.toDataURL("image/png") });
+        }
+        return {
+          width: video.videoWidth,
+          height: video.videoHeight,
+          duration: Number.isFinite(video.duration) ? video.duration : video.currentTime,
+          thumbnail: window.__TEAR_C37_THUMBNAIL__,
+          frames,
+        };
+      } finally {
+        video.removeAttribute("src");
+        video.load();
+        URL.revokeObjectURL(url);
       }
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("native decoded video canvas unavailable");
-      const frames = [];
-      for (const time of [0.1, 0.8]) {
-        const sought = event("seeked");
-        video.currentTime = time;
-        await sought;
-        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA)
-          throw new Error("native video did not decode a current frame");
-        context.drawImage(video, 0, 0);
-        frames.push({ time, png: canvas.toDataURL("image/png") });
-      }
-      return {
-        width: video.videoWidth,
-        height: video.videoHeight,
-        duration: Number.isFinite(video.duration) ? video.duration : video.currentTime,
-        thumbnail: window.__TEAR_C37_THUMBNAIL__,
-        frames,
-      };
-    } finally {
-      video.removeAttribute("src");
-      video.load();
-      URL.revokeObjectURL(url);
-    }
-  }, mediaBytes.toString("base64"));
+    },
+    { base64: mediaBytes.toString("base64"), ceiling: STATE_WAIT_MS },
+  );
   assert.equal(decoded.width, 640);
   assert.equal(decoded.height, 360);
   assert.ok(Math.abs(decoded.duration - 1) < 0.35, `decoded duration ${String(decoded.duration)}`);
