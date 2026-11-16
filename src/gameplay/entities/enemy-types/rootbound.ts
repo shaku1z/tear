@@ -317,7 +317,7 @@ export function createRootboundType(
     }
 
     /** A parried Vine Lash skips to the table's parry exposure; that open window is the reward. */
-    parryBaton(_strong: boolean): boolean {
+    parryBaton(): boolean {
       const next = parryBossAttack(ROOTBOUND_MOVES, this.moveState, this.moveTick);
       if (next === this.moveState) return false;
       this.moveState = next;

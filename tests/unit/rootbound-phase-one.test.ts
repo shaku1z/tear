@@ -26,7 +26,12 @@ const groundFeet = CONFIG.world.groundY - 36;
 function boss(randomValues?: readonly number[]): { harness: Harness; actor: PhaseOneBoss } {
   const harness = createEnemyHarness(randomValues);
   const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2);
-  return { harness, actor: actor as PhaseOneBoss };
+  return { harness, actor };
+}
+
+/** The stage of the move in progress, read fresh: an update may have ended it. */
+function stageOf(actor: PhaseOneBoss): string | null {
+  return actor.moveState.run?.stage ?? null;
 }
 
 function move(id: string) {
@@ -132,9 +137,9 @@ describe("Rootbound Phase I moves", () => {
       const locked = harness.player.x;
       harness.player.x = locked + 320;
       let surfacedAt = Number.NaN;
-      for (let tick = 0; tick < 120 * 3 && actor.moveState.run !== null; tick += 1) {
+      for (let tick = 0; tick < 120 * 3 && stageOf(actor) !== null; tick += 1) {
         actor.update(dt, harness.platforms, harness.player);
-        if (actor.moveState.run?.stage === "active") surfacedAt = actor.x;
+        if (stageOf(actor) === "active") surfacedAt = actor.x;
       }
       expect(harness.player.damage, id).toEqual([]);
       expect(Math.abs(surfacedAt - locked), id).toBeLessThan(1);
