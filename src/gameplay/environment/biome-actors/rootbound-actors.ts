@@ -41,6 +41,8 @@ export function bindLiveRootboundActors(
           rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
           graftAnchorPlacements?: () => NonNullable<RootboundEnvironmentActor["state"]["graftPlacements"]>;
           plantedGraftTypes?: readonly string[];
+          plantedBloomPattern?: RootboundEnvironmentActor["state"]["plantedBloomPattern"];
+          acknowledgeBloomPattern?: NonNullable<RootboundEnvironmentActor["acknowledgeBloomPattern"]>;
           acknowledgeGraftPlanted?: NonNullable<RootboundEnvironmentActor["acknowledgeGraftPlanted"]>;
           applyGraftEffects?: NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>;
           recoverGraftHealth?: NonNullable<RootboundEnvironmentActor["recoverGraftHealth"]>;
@@ -68,6 +70,11 @@ export function bindLiveRootboundActors(
           acknowledgeGraftPlanted: (graftType: string) => {
             actor.acknowledgeGraftPlanted?.(graftType);
           },
+          acknowledgeBloomPattern: (
+            patternId: Parameters<NonNullable<RootboundEnvironmentActor["acknowledgeBloomPattern"]>>[0],
+          ) => {
+            actor.acknowledgeBloomPattern?.(patternId);
+          },
           beginRegrowth: (startTick: number, connectionIds: readonly string[]) =>
             actor.beginRegrowth?.(startTick, connectionIds) ?? false,
           advanceRegrowth: (tick: number, activeConnectionIds: ReadonlySet<string>, bossChannelBroken = false) =>
@@ -85,6 +92,7 @@ export function bindLiveRootboundActors(
             plantedGraftTypes: actor.plantedGraftTypes ?? Object.freeze([]),
             ownerPosition: Object.freeze({ x: enemy.x, y: enemy.y }),
             bloomPattern: actor.bossBloomPattern?.() ?? null,
+            plantedBloomPattern: actor.plantedBloomPattern ?? null,
             rootCagePlacement: actor.rootCagePlacement?.() ?? null,
             arena: Object.freeze({ width: config.view.w, groundY: config.world.groundY }),
             phase: actor.phase,

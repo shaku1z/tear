@@ -5,11 +5,15 @@
  *
  * The kernel cases pin the rule. The fight cases run each biome boss through every phase inside its
  * real environment, with a player who keeps moving and cuts whatever can be cut, and check every tick.
+ * Each fight then removes the boss, and everything it placed must end and leave. Every object kind in
+ * the registry must be seen ending and leaving, so a new kind with no end fails here.
  */
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { ENVIRONMENT_FADE_TICKS } from "../../src/gameplay/environment/environment-contracts";
+import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
+import { ENVIRONMENT_OBJECT_KIND_IDS } from "../../src/gameplay/environment/environment-object-kinds";
 import { createEnvironmentRuntime, type EnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { bindLiveRootboundActors } from "../../src/gameplay/environment/biome-actors/rootbound-actors";
 import { bindLiveWhiteHartActors } from "../../src/gameplay/environment/biome-actors/white-hart-actors";
@@ -24,7 +28,7 @@ const CUT_EVERY_TICKS = 180;
 /** No biome fight should ever hold more stage objects than this at once, ended ones included. */
 const POPULATION_BOUND = 24;
 
-type Entry = Readonly<{ id: string; state: string; stateTick: number }>;
+type Entry = Readonly<{ id: string; kind: string; state: string; stateTick: number }>;
 const ended = (entry: Entry) => entry.state === "expired" || entry.state === "destroyed";
 const everything = (environment: EnvironmentRuntime): readonly Entry[] => [
   ...environment.fields(),
@@ -107,6 +111,10 @@ interface FightReport {
   readonly peakPopulation: number;
   readonly endedSeen: number;
   readonly cuts: number;
+  /** Objects still present once the boss had been gone for a full fade. */
+  readonly leftAfterBoss: readonly string[];
+  /** Kinds seen ending and then leaving. */
+  readonly kindsEndedAndLeft: readonly string[];
 }
 
 function fight(bossId: (typeof BIOME_BOSSES)[number]["boss"], stageId: string, phase: 1 | 2 | 3): FightReport {
@@ -129,11 +137,13 @@ function fight(bossId: (typeof BIOME_BOSSES)[number]["boss"], stageId: string, p
     settle();
   }
   const environment = createEnvironmentRuntime({ stageId, worldId: `lifetime-rules:${bossId}:${String(phase)}` });
+  let bossPresent = true;
+  const enemies = () => (bossPresent ? [boss] : []);
   if (bossId === "rootbound")
     bindLiveRootboundActors(
       environment,
       () => player,
-      () => [boss],
+      enemies,
       () => "enemy:boss",
       CONFIG,
     );
@@ -141,14 +151,17 @@ function fight(bossId: (typeof BIOME_BOSSES)[number]["boss"], stageId: string, p
     bindLiveWhiteHartActors(
       environment,
       () => player,
-      () => [boss],
+      enemies,
       () => "enemy:boss",
     );
-  const seen = new Set<string>();
+  const seen = new Map<string, string>();
   let oldest = 0,
     peak = 0,
     cuts = 0;
-  for (let tick = 1; tick <= FIGHT_SECONDS / DT; tick += 1) {
+  const fightTicks = FIGHT_SECONDS / DT;
+  for (let tick = 1; tick <= fightTicks + ENVIRONMENT_FADE_TICKS + 1; tick += 1) {
+    // The fight ends with the boss gone; what it placed must end and leave.
+    bossPresent = tick <= fightTicks;
     // A player who never stops: across the arena and back every eight seconds.
     const sweep = (tick % 960) / 960;
     player.x = 200 + (CONFIG.view.w - 400) * (sweep < 0.5 ? sweep * 2 : 2 - sweep * 2);
@@ -156,7 +169,7 @@ function fight(bossId: (typeof BIOME_BOSSES)[number]["boss"], stageId: string, p
       tick,
       DT,
       () => {
-        boss.update(DT, platforms, player, projectiles);
+        if (bossPresent) boss.update(DT, platforms, player, projectiles);
         if (tick % CUT_EVERY_TICKS !== 0) return;
         const target = environment.combatObjects().find((object) => !ended(object) && object.integrity > 0);
         if (
@@ -165,17 +178,25 @@ function fight(bossId: (typeof BIOME_BOSSES)[number]["boss"], stageId: string, p
         )
           cuts += 1;
       },
-      new Set(["enemy:boss"]),
+      new Set(bossPresent ? ["enemy:boss"] : []),
     );
     settle();
     const entries = everything(environment);
     peak = Math.max(peak, entries.length);
     for (const entry of entries.filter(ended)) {
-      seen.add(entry.id);
+      seen.set(entry.id, entry.kind);
       oldest = Math.max(oldest, tick - entry.stateTick);
     }
   }
-  return { oldestEndedTicks: oldest, peakPopulation: peak, endedSeen: seen.size, cuts };
+  const present = new Set(everything(environment).map((entry) => entry.id));
+  return {
+    oldestEndedTicks: oldest,
+    peakPopulation: peak,
+    endedSeen: seen.size,
+    cuts,
+    leftAfterBoss: everything(environment).map((entry) => `${entry.kind}:${entry.state}:${entry.id}`),
+    kindsEndedAndLeft: [...new Set([...seen].filter(([id]) => !present.has(id)).map(([, kind]) => kind))].sort(),
+  };
 }
 
 /**
@@ -188,17 +209,26 @@ const EXERCISED: Readonly<Record<(typeof BIOME_BOSSES)[number]["boss"], readonly
 };
 
 describe("stage object lifetime rule (biome fights)", { timeout: 120_000 }, () => {
+  const kindsEndedAndLeft = new Set<string>();
   describe.each(BIOME_BOSSES)("$boss in $stageId", ({ boss, stageId }) => {
     it.each([1, 2, 3] as const)(
-      "phase %i: nothing ended outlives its fade and the population stays bounded",
+      "phase %i: nothing ended outlives its fade, the population stays bounded and nothing outlives the boss",
       (phase) => {
         const report = fight(boss, stageId, phase);
+        for (const kind of report.kindsEndedAndLeft) kindsEndedAndLeft.add(kind);
         // TEAR_LIFETIME_REPORT=1 prints what each fight did.
         if (process.env.TEAR_LIFETIME_REPORT === "1") console.log(`${boss} phase ${String(phase)}`, report);
         expect(report.oldestEndedTicks).toBeLessThan(ENVIRONMENT_FADE_TICKS);
         expect(report.peakPopulation).toBeLessThanOrEqual(POPULATION_BOUND);
         expect(report.endedSeen).toBeGreaterThanOrEqual(EXERCISED[boss][phase - 1] ?? 0);
+        expect(report.leftAfterBoss).toEqual([]);
       },
     );
+  });
+
+  it("sees every registered object kind end and leave, and every kind declares how it ends", () => {
+    for (const kind of ENVIRONMENT_OBJECT_KIND_IDS)
+      expect(ENVIRONMENT_OBJECT_DEFINITIONS[kind].endsWhen.length, kind).toBeGreaterThan(0);
+    expect([...kindsEndedAndLeft].sort()).toEqual([...ENVIRONMENT_OBJECT_KIND_IDS].sort());
   });
 });
