@@ -6,11 +6,22 @@ export interface EnvironmentObjectDefinition {
   readonly category: EnvironmentObjectCategory;
   readonly behavior: "generic-field" | "generic-combat-object" | "data-only-route";
   readonly counterplayTags: readonly EnvironmentCounterplayTag[];
+  /**
+   * How an object of this kind ends. Every kind ends; once ended it fades and the environment runtime
+   * removes it. `tests/unit/stage-object-lifetime-rules.test.ts` sees each kind end and leave.
+   */
+  readonly endsWhen: readonly EnvironmentObjectEnding[];
   readonly grantsEnemyRewards: false;
   readonly ordinaryEnemyProcEligible: false;
 }
 
 export type EnvironmentCounterplayTag = "cut" | "break" | "projectile-cut";
+
+/**
+ * `own-timer`: its authored lifecycle runs out. `cut`: the player destroys it. `owner-done`: the actor
+ * that placed it finishes with it or is gone. `stage-ends`: the stage changes or clears.
+ */
+export type EnvironmentObjectEnding = "own-timer" | "cut" | "owner-done" | "stage-ends";
 
 export function isEnvironmentObjectKind(value: unknown): value is EnvironmentObjectKind {
   return typeof value === "string" && Object.prototype.hasOwnProperty.call(ENVIRONMENT_OBJECT_DEFINITIONS, value);
@@ -24,6 +35,7 @@ export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKi
       category: "field",
       behavior: "generic-field",
       counterplayTags: [] as const,
+      endsWhen: ["own-timer", "owner-done", "stage-ends"] as const,
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     }),
@@ -32,6 +44,7 @@ export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKi
       category: "field",
       behavior: "generic-field",
       counterplayTags: [] as const,
+      endsWhen: ["own-timer", "owner-done", "stage-ends"] as const,
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     }),
@@ -40,6 +53,7 @@ export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKi
       category: "field",
       behavior: "generic-field",
       counterplayTags: [] as const,
+      endsWhen: ["owner-done", "stage-ends"] as const,
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     }),
@@ -48,6 +62,7 @@ export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKi
       category: "combat-object",
       behavior: "generic-combat-object",
       counterplayTags: ["cut", "break", "projectile-cut"] as const,
+      endsWhen: ["cut", "owner-done", "stage-ends"] as const,
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     }),
@@ -56,6 +71,7 @@ export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKi
       category: "combat-object",
       behavior: "generic-combat-object",
       counterplayTags: ["cut", "break", "projectile-cut"] as const,
+      endsWhen: ["cut", "owner-done", "stage-ends"] as const,
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     }),
@@ -64,6 +80,7 @@ export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKi
       category: "route",
       behavior: "data-only-route",
       counterplayTags: [] as const,
+      endsWhen: ["owner-done", "stage-ends"] as const,
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     }),
@@ -72,6 +89,7 @@ export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKi
       category: "route",
       behavior: "data-only-route",
       counterplayTags: [] as const,
+      endsWhen: ["own-timer", "owner-done", "stage-ends"] as const,
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     }),

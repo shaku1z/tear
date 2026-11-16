@@ -28,7 +28,8 @@ function cleanupEntry<T extends EnvironmentEntry>(
     "bossOwnerId" in entry && typeof entry.bossOwnerId === "string" && !availableActorIds.has(entry.bossOwnerId);
   return Object.freeze({
     ...entry,
-    state: entry.kind === "bloom-well" && missingBossOwner ? "dormant" : "expired",
+    // Every orphaned object ends the same way, then fades and leaves (ENVIRONMENT_FADE_TICKS).
+    state: "expired",
     cleanupReason: missingBossOwner ? "boss-terminal" : reason,
   }) as unknown as T;
 }

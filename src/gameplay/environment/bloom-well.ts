@@ -169,7 +169,7 @@ function stateStartedAt(startTick: number, state: BloomWellState["state"]): numb
   if (state === "cooldown") return startTick + BLOOM_WELL_TIMING.warningTicks + BLOOM_WELL_TIMING.activeTicks;
   return startTick + BLOOM_WELL_TIMING.totalTicks;
 }
-/** Stage Wells recur for the whole stage; boss-owned Wells run one authored cycle. */
+/** Stage Wells recur for the whole stage; boss-owned Wells run one authored cycle, then end. */
 function cycleStart(state: BloomWellState, tick: number): number {
   const elapsed = tick - state.startTick;
   if (state.variant !== "stage" || elapsed < 0) return state.startTick;
@@ -180,6 +180,8 @@ export function advanceBloomWell(state: BloomWellState, tick: number, events?: T
   assertTick(tick, "Bloom Well tick");
   if (state.cleanupReason !== null) return state;
   const base = cycleStart(state, tick);
+  if (state.variant !== "stage" && tick - base >= BLOOM_WELL_TIMING.totalTicks)
+    return finishedBossWell(state, tick, events);
   const next = stateAt(base, tick);
   const timer = Math.max(0, tick - base) / BLOOM_WELL_TIMING.ticksPerSecond;
   const stateTick = stateStartedAt(base, next);
@@ -204,6 +206,29 @@ export function advanceBloomWell(state: BloomWellState, tick: number, events?: T
     stateTick,
     transitionTick: transitionAt(base, next),
     timer,
+  });
+}
+/** A boss Well's one cycle is over: it ends, and the environment removes it after the fade. */
+function finishedBossWell(state: BloomWellState, tick: number, events?: TearGameplayEventPort): BloomWellState {
+  if (events !== undefined)
+    publishEnvironmentEvent(
+      events,
+      {
+        event: "field-resolved",
+        objectId: state.id,
+        category: "field",
+        objectKind: state.kind,
+        reason: "natural-expiry",
+      },
+      tick,
+    );
+  return Object.freeze({
+    ...state,
+    state: "expired",
+    stateTick: tick,
+    transitionTick: tick,
+    timer: BLOOM_WELL_TIMING.totalTicks / BLOOM_WELL_TIMING.ticksPerSecond,
+    cleanupReason: "natural-expiry",
   });
 }
 function contains(state: BloomWellState, x: number, y: number): boolean {
@@ -247,7 +272,7 @@ export function applyBloomWellForce(
 export function cleanupBloomWell(state: BloomWellState, reason: EnvironmentClearReason): BloomWellState {
   return Object.freeze({
     ...state,
-    state: "dormant",
+    state: "expired",
     stateTick: state.stateTick,
     transitionTick: state.stateTick,
     cleanupReason: reason,

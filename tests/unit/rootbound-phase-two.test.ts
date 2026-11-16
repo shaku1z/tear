@@ -32,7 +32,10 @@ import { createEnemyHarness } from "./enemy-test-harness";
 import { environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
 import { createRootbinderState } from "../../src/gameplay/entities/rootbinder-runtime";
-import type { EnvironmentClearReason } from "../../src/gameplay/environment/environment-contracts";
+import {
+  ENVIRONMENT_FADE_TICKS,
+  type EnvironmentClearReason,
+} from "../../src/gameplay/environment/environment-contracts";
 import type { BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
 
 type PhaseTwoBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
@@ -118,7 +121,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ).toBe(true);
   });
 
-  it("keeps a player-destroyed Graft terminal across subsequent live Phase II environment steps", () => {
+  it("removes a player-destroyed Graft after its fade and never plants it again in Phase II", () => {
     const harness = createEnemyHarness();
     const actor = new harness.types.Rootbound(
       CONFIG.view.w / 2,
@@ -132,12 +135,16 @@ describe("Rootbound Phase II Graft creation", () => {
       Object.freeze({
         id: "enemy:1",
         source: actor,
+        acknowledgeGraftPlanted: (graftType: string) => {
+          actor.acknowledgeGraftPlanted(graftType);
+        },
         state: Object.freeze({
           stage: null,
           geometry: actor.rootlineGeometry(),
           damage: 0,
           cleanupReason: null,
           graftPlacements: actor.graftAnchorPlacements(),
+          plantedGraftTypes: actor.plantedGraftTypes,
           ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
         }),
       }),
@@ -162,6 +169,11 @@ describe("Rootbound Phase II Graft creation", () => {
     expect(environment.combatObjects().filter((object) => object.id === "enemy:1:graft:mercy")).toEqual([
       expect.objectContaining({ state: "destroyed", stateTick: 360 }),
     ]);
+    for (let tick = 363; tick <= 360 + ENVIRONMENT_FADE_TICKS + 60; tick += 1)
+      environment.step(tick, 1 / 120, () => undefined, new Set(["enemy:1"]));
+    const grafts = environment.combatObjects().filter((object) => object.ownerId === "enemy:1");
+    expect(grafts.map((graft) => graft.id)).toEqual(["enemy:1:graft:bastion", "enemy:1:graft:haste"]);
+    expect(actor.plantedGraftTypes).toEqual(GRAFT_ANCHOR_TYPES);
   });
 
   it("keeps Rootbound directly damageable while all three canonical Grafts exist and are active", () => {
@@ -333,7 +345,7 @@ describe("Rootbound Phase II Graft creation", () => {
     ).toHaveLength(3);
   });
 
-  it("prunes completed boss Bloom patterns after selection moves on without restarting the selected pattern", () => {
+  it("ends completed boss Bloom patterns and plants each new selection once", () => {
     const harness = createEnemyHarness();
     const actor = new harness.types.Rootbound(
       CONFIG.view.w / 2,
@@ -347,32 +359,36 @@ describe("Rootbound Phase II Graft creation", () => {
       Object.freeze({
         id: "enemy:rootbound-live",
         source: actor,
+        acknowledgeBloomPattern: (patternId: RootboundBloomPatternId | null) => {
+          actor.acknowledgeBloomPattern(patternId);
+        },
         state: Object.freeze({
           stage: null,
           geometry: actor.rootlineGeometry(),
           damage: 0,
           cleanupReason: null,
           bloomPattern: actor.bossBloomPattern(),
+          plantedBloomPattern: actor.plantedBloomPattern,
           arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
         }),
       }),
     ]);
+    const live = new Set(["enemy:rootbound-live"]);
 
-    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    environment.step(240, 1 / 120, () => undefined, live);
     const firstPatternCompleteTick = 240 + 120 + BLOOM_WELL_TIMING.totalTicks;
-    environment.step(firstPatternCompleteTick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    environment.step(firstPatternCompleteTick, 1 / 120, () => undefined, live);
     expect(environment.fields()).toHaveLength(2);
-    expect(environment.fields().every((field) => field.state === "dormant")).toBe(true);
+    expect(environment.fields().every((field) => field.state === "expired")).toBe(true);
 
     actor.bloomPatternIndex = 1;
-    environment.step(firstPatternCompleteTick + 1, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    expect(environment.fields()).toHaveLength(1);
-    expect(environment.fields()[0]).toMatchObject({
-      state: "warning",
-      patternId: "bloom-well/rootbound/central-safe-lanes/1",
-    });
+    environment.step(firstPatternCompleteTick + 1, 1 / 120, () => undefined, live);
+    expect(environment.fields().filter((field) => field.state !== "expired")).toEqual([
+      expect.objectContaining({ state: "warning", patternId: "bloom-well/rootbound/central-safe-lanes/1" }),
+    ]);
 
-    environment.step(firstPatternCompleteTick + 2, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
+    // The old pattern's Wells leave after their fade; the selected pattern is not planted again.
+    environment.step(firstPatternCompleteTick + ENVIRONMENT_FADE_TICKS, 1 / 120, () => undefined, live);
     expect(environment.fields()).toHaveLength(1);
     expect(environment.fields()[0]).toMatchObject({ state: "warning", stateTick: firstPatternCompleteTick + 1 });
   });
@@ -804,6 +820,9 @@ describe("Rootbound Phase II Graft creation", () => {
           actor.applyGraftEffects(effects);
         },
         recoverGraftHealth: (fraction: number) => actor.recoverGraftHealth(fraction),
+        acknowledgeBloomPattern: (patternId: RootboundBloomPatternId | null) => {
+          actor.acknowledgeBloomPattern(patternId);
+        },
         state: Object.freeze({
           stage: null,
           geometry: actor.rootlineGeometry(),
@@ -812,6 +831,7 @@ describe("Rootbound Phase II Graft creation", () => {
           graftPlacements: actor.graftAnchorPlacements(),
           ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
           bloomPattern: actor.bossBloomPattern(),
+          plantedBloomPattern: actor.plantedBloomPattern,
           arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
           rootCagePlacement: actor.rootCagePlacement(),
         }),
@@ -827,9 +847,12 @@ describe("Rootbound Phase II Graft creation", () => {
       tick += ROOT_CAGE_TIMING.warningTicks + ROOT_CAGE_TIMING.activeTicks;
       environment.step(tick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
       expect(actor.rootCagePlacement()).toBeNull();
-      tick += 1;
+      // The next cage waits out the last one's fade, as any real cadence does.
+      tick += ENVIRONMENT_FADE_TICKS;
     }
-    expect(environment.fields()).toHaveLength(5);
+    // Five live Wells; a Well that finished on the last step is still fading.
+    expect(environment.fields().filter((field) => field.state !== "expired")).toHaveLength(5);
+    expect(environment.fields().length).toBeLessThanOrEqual(6);
     expect(environment.combatObjects().filter(isRootCageState)).toHaveLength(2);
 
     const undersized = createEnvironmentRuntime({

@@ -112,6 +112,10 @@ export function createRootboundType(
     phaseTwoAttackIndex = 0;
     phaseTwoPendingAttack: RootboundPhaseTwoAttack | null = null;
     finalPhaseTwoGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
+    /** Grafts the stage has planted for this boss. A cut Graft leaves the stage and is not planted again. */
+    plantedGraftTypes: readonly string[] = Object.freeze([]);
+    /** The Well pattern the stage last planted for this boss; a new selection is planted once. */
+    plantedBloomPattern: RootboundBloomPatternId | null = null;
     regrowthState: RootboundRegrowthState = createRootboundRegrowthState();
     regrowthDamageTaken = 0;
     lastSpringStage: RootboundLastSpringStage | null = null;
@@ -338,6 +342,14 @@ export function createRootboundType(
           }),
         ),
       );
+    }
+
+    acknowledgeGraftPlanted(graftType: string): void {
+      this.plantedGraftTypes = Object.freeze([...this.plantedGraftTypes, graftType]);
+    }
+
+    acknowledgeBloomPattern(patternId: RootboundBloomPatternId | null): void {
+      this.plantedBloomPattern = patternId;
     }
 
     bossBloomPattern(): RootboundBloomPatternId | null {

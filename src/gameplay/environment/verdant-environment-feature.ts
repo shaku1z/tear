@@ -111,10 +111,10 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     const bossPresent = (this.#rootboundActors?.().length ?? 0) > 0;
     for (const field of environment.fields()) {
       if (!isBloomWellState(field)) continue;
-      // The Rootbound authors its own Wells; recurring stage Wells yield the arena to it.
+      // The Rootbound authors its own Wells; recurring stage Wells end and leave the arena to it.
       if (bossPresent && field.variant === "stage" && field.cleanupReason === null) {
         environment.updateField(field.id, {
-          state: "dormant",
+          state: "expired",
           stateTick: tick,
           transitionTick: tick,
           cleanupReason: "stage-transition",
@@ -179,9 +179,13 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       }
       const placements = actor.state.graftPlacements ?? [];
       const ownerPosition = actor.state.ownerPosition;
+      // The boss records each planted Graft, so a cut one stays gone after the stage removes it.
+      const planted = actor.state.plantedGraftTypes ?? [];
       if (ownerPosition !== undefined)
-        for (const placement of placements)
+        for (const placement of placements.filter((entry) => !planted.includes(entry.graftType))) {
           installGraftAnchor(environment, { ownerId: actor.id, ownerPosition, ...placement, createdTick: tick });
+          actor.acknowledgeGraftPlanted?.(placement.graftType);
+        }
       const owned = environment
         .combatObjects()
         .filter(isGraftAnchorState)
@@ -198,17 +202,7 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         }
       }
       this.#applyGraftEffects(environment, actor.id);
-      const patternId = actor.state.bloomPattern;
-      const arena = actor.state.arena;
-      this.#pruneDormantBloomPatterns(environment, actor.id, patternId);
-      if (patternId !== null && patternId !== undefined && arena !== undefined)
-        installRootboundBloomPattern(environment, {
-          patternId,
-          bossOwnerId: actor.id,
-          startTick: tick,
-          arenaWidth: arena.width,
-          groundY: arena.groundY,
-        });
+      this.#plantBloomPattern(environment, actor, tick);
       this.#advanceCage(environment, actor, tick);
       this.#advanceRegrowth(environment, actor, tick);
     }
@@ -277,8 +271,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     const rootCageId = `${actor.id}:root-cage:g${String(request.sequence)}`;
     let matching = owned.filter((boundary) => boundary.rootCageId === rootCageId);
     if (matching.length === 0) {
-      for (const boundary of owned)
-        if (boundary.state === "destroyed" || boundary.state === "expired") environment.removeCombatObject(boundary.id);
       installRootCage(environment, actor.id, request, tick);
       matching = environment
         .combatObjects()
@@ -308,7 +300,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       present.add(actor.id);
       const existing = this.#rootbinderNetworks.get(actor.id);
       if (actor.state.state === "linked" && existing === undefined) {
-        this.#prune(environment, actor.id);
         const claimed = new Set(
           environment
             .combatObjects()
@@ -400,7 +391,6 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
         (actor.state.state === "link-warning" || actor.state.state === "linked")
       ) {
         if (leashId === undefined && this.#rootbinderLeashes.size < actor.state.tuning.maxPlayerLeashes) {
-          this.#prune(environment, actor.id);
           const leash = createElasticLeash({
             id: this.#nextId(actor.id, "leash"),
             worldId: environment.worldId,
@@ -544,33 +534,26 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     this.#rootbinderGenerations.set(ownerId, generation);
     return `${ownerId}:${kind}:g${String(generation)}`;
   }
-  #prune(environment: EnvironmentFeatureContext, ownerId: string): void {
-    for (const object of [...environment.combatObjects()])
-      if (
-        object.kind === "root-link" &&
-        object.ownerId === ownerId &&
-        (object.state === "destroyed" || object.state === "expired")
-      )
-        environment.removeCombatObject(object.id);
-  }
-  #pruneDormantBloomPatterns(
-    environment: EnvironmentFeatureContext,
-    ownerId: string,
-    selectedPattern: RootboundBloomPatternId | null | undefined,
-  ): void {
-    const selectedPrefix =
-      selectedPattern === null || selectedPattern === undefined ? null : `bloom-well/rootbound/${selectedPattern}/`;
-    for (const field of [...environment.fields()]) {
-      if (
-        !isBloomWellState(field) ||
-        field.variant !== "boss" ||
-        field.bossOwnerId !== ownerId ||
-        field.state !== "dormant"
-      )
-        continue;
-      if (selectedPrefix === null || field.patternId?.startsWith(selectedPrefix) !== true)
-        environment.removeField(field.id);
-    }
+  /**
+   * Plants the boss's selected Well pattern once per selection; the boss records it. When the selection
+   * changes, Wells of the old pattern that have not started yet end; running ones finish their cycle.
+   */
+  #plantBloomPattern(environment: EnvironmentFeatureContext, actor: RootboundEnvironmentActor, tick: number): void {
+    const selected = actor.state.bloomPattern ?? null;
+    if (selected === (actor.state.plantedBloomPattern ?? null)) return;
+    for (const field of environment.fields())
+      if (isBloomWellState(field) && field.bossOwnerId === actor.id && field.state === "dormant")
+        environment.updateField(field.id, { state: "expired", stateTick: tick, cleanupReason: "natural-expiry" });
+    const arena = actor.state.arena;
+    if (selected !== null && arena !== undefined)
+      installRootboundBloomPattern(environment, {
+        patternId: selected,
+        bossOwnerId: actor.id,
+        startTick: tick,
+        arenaWidth: arena.width,
+        groundY: arena.groundY,
+      });
+    actor.acknowledgeBloomPattern?.(selected);
   }
   #applyGraftEffects(environment: EnvironmentFeatureContext, ownerId: string): void {
     const actor = this.#rootboundActors?.().find((candidate) => candidate.id === ownerId);
@@ -644,8 +627,10 @@ export interface RootboundEnvironmentActor {
     damage: number;
     cleanupReason: "natural-expiry" | "stage-transition" | null;
     graftPlacements?: readonly GraftAnchorPlacementRequest[];
+    plantedGraftTypes?: readonly string[];
     ownerPosition?: Readonly<{ x: number; y: number }>;
     bloomPattern?: RootboundBloomPatternId | null;
+    plantedBloomPattern?: RootboundBloomPatternId | null;
     rootCagePlacement?: RootCagePlacementRequest | null;
     arena?: Readonly<{ width: number; groundY: number }>;
     phase?: number;
@@ -654,6 +639,8 @@ export interface RootboundEnvironmentActor {
   readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
   readonly recoverGraftHealth?: (fraction: number) => number;
   readonly completeRootCage?: () => void;
+  readonly acknowledgeGraftPlanted?: (graftType: string) => void;
+  readonly acknowledgeBloomPattern?: (patternId: RootboundBloomPatternId | null) => void;
   readonly beginRegrowth?: (startTick: number, ids: readonly string[]) => boolean;
   readonly advanceRegrowth?: (tick: number, ids: ReadonlySet<string>, broken?: boolean) => RootboundRegrowthState;
   readonly player?: Readonly<{
