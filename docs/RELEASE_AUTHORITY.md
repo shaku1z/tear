@@ -88,6 +88,14 @@ Worker through the `Preview` environment. Candidate source is never executed
 in the secret-bearing deploy step. The rehearsal never changes the `tear`
 production Worker or its custom domain.
 
+The preview also serves the test build of the same commit below `/dev/`
+(Boss Test, Enemy Test and the other engineering surfaces), on the same origin
+so it shares the preview's saves and settings. Validate builds it on main
+pushes only (`node scripts/build-target.mjs test-standalone --preview-dev`) and
+uploads it as its own `tear-preview-dev-<sha>` artifact; the rehearsal verifies
+it as a `test-standalone` build of that commit. Production verifies a
+`standalone` build and never reads that artifact.
+
 `Deploy Cloudflare Production` is manual even after Validate succeeds. A green
 check is necessary but never sufficient to deploy. Its required environment
 approval remains the final publication boundary until G7 authorizes the
