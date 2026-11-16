@@ -11,6 +11,7 @@
         "src/diagnostics/performance-monitor.ts",
         "src/entrypoints/bootstrap.ts",
         "src/entrypoints/crazygames.ts",
+        "src/entrypoints/itch.ts",
         "src/entrypoints/standalone.ts",
         "src/entrypoints/test-browser-storage.ts",
         "src/gameplay/affixes.ts",
