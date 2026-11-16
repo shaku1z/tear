@@ -5,6 +5,7 @@ import type { WorldCamera } from "../../presentation/world/world-frame";
 import type { CinematicUiPort } from "../../presentation/cinematics";
 import type { ButtonLayerUiPort, CanvasUiButton } from "../../presentation/screens/button-layer";
 import { createUiConfirmArming, type InteractiveUiButton, type UiRuntimeInput } from "./ui-runtime-controller";
+import { NO_POINTER } from "../../domain/pointer-ownership";
 import { shouldDrawCanvasCursor } from "../../presentation/cursor-contract";
 import { domChromeVisibility } from "../../presentation/dom-chrome-policy";
 import { cinematicPromptForDevice } from "../../presentation/cinematic-prompts";
@@ -142,7 +143,7 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly inputHint: HTMLElement | null;
   readonly fullscreenButton: HTMLElement | null;
   /** Current run age and the profile's completed runs, for the control legend. */
-  readonly controlHintContext: () => Readonly<{ runSeconds: number; completedRuns: number; coached: boolean }>;
+  readonly controlHintContext: () => Readonly<{ runSeconds: number; completedRuns: number }>;
   readonly clamp: (value: number, minimum: number, maximum: number) => number;
   readonly ease: (amount: number) => number;
   readonly blendColor: (from: string, to: string, amount: number) => string;
@@ -349,12 +350,13 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         }
       },
       drawCursor: () => {
-        ui.cursor(context, services.input.mouseX, services.input.mouseY);
+        const pointer = services.input.pointer();
+        if (pointer !== null) ui.cursor(context, pointer.x, pointer.y);
       },
       showCanvasCursor: () =>
         services.capturePolicy().ui === "include" &&
         shouldDrawCanvasCursor(state.screen(), services.input.mode) &&
-        services.input.pointerInside !== false,
+        services.input.pointer() !== null,
       drawControllerToast: () => {
         if (services.capturePolicy().ui !== "include") return;
         const controller = services.controller();
@@ -391,7 +393,6 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
           pointerLocked: services.pointerLocked(),
           runSeconds: run.runSeconds,
           completedRuns: run.completedRuns,
-          coached: run.coached,
           presentationBusy: services.cinema.active || state.bossIntroActive(),
         });
         setDisplay(services.lockHint, visible.lockHint ? "block" : "none");
@@ -420,8 +421,8 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
       context,
       buttons: state.controls(),
       focus: state.focus(),
-      pointerX: services.input.mouseX,
-      pointerY: services.input.mouseY,
+      pointerX: (services.input.pointer() ?? NO_POINTER).x,
+      pointerY: (services.input.pointer() ?? NO_POINTER).y,
       deltaSeconds: state.deltaSeconds(),
       enterSeconds: state.enterSeconds(),
       hoverAnimation: services.hoverAnimation,

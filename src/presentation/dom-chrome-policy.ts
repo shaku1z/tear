@@ -21,8 +21,6 @@ export interface DomChromeInput {
   /** Seconds of the current run; 0 outside a run. */
   readonly runSeconds: number;
   readonly completedRuns: number;
-  /** The Tutorial or the Playground: its coach marks name the controls instead of the legend. */
-  readonly coached?: boolean;
   /** A boss name card, chapter cinematic or finale prompt owns the screen. */
   readonly presentationBusy: boolean;
 }
@@ -44,7 +42,6 @@ export function domChromeVisibility(input: DomChromeInput): DomChromeVisibility 
       !input.touch &&
       keyboardAndMouse &&
       !input.presentationBusy &&
-      input.coached !== true &&
       input.completedRuns < CONTROL_HINT_RUN_LIMIT &&
       input.runSeconds < CONTROL_HINT_SECONDS,
     // Fullscreen lives on menus only; touch devices use the platform's own controls.

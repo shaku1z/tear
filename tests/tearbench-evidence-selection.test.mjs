@@ -490,7 +490,7 @@ test("Pale State Forge selection rejects detached descriptors, false claims, and
 test("current five-weapon live-versus-detached parity is mandatory in the canonical functional gate", () => {
   const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
   const registry = JSON.parse(readFileSync(join(root, "src", "tearbench", "task-registry.json"), "utf8"));
-  const functional = new Set(registry.profiles["check.functional"]);
+  const functional = new Set(registry.profiles["pull-request"]);
   assert.match(scripts["test:browser:current-weapon-parity"], /tearbench parity current-weapons/u);
   assert.equal(
     scripts["test:headless:current-weapon-parity"],
@@ -509,7 +509,7 @@ test("current five-weapon live-versus-detached parity is mandatory in the canoni
   assert.match(scripts["check:workspace"], /pnpm test:tearbench-selection/u);
   assert.ok(functional.has("unit.test-tearbench-selection"));
   assert.ok(functional.has("static.check-workspace"));
-  assert.equal(scripts["check:functional"], "pnpm tearbench tasks run-profile check.functional");
+  assert.equal(scripts["check:functional"], "node scripts/run-checks.mjs");
 });
 
 test("boss, stage, progression, event, and player owners receive current mapped evidence", () => {
@@ -684,11 +684,8 @@ test("documentation plus an unmapped change cannot masquerade as documentation-o
   assert.ok(selection.buildTargets.includes("test-standalone"));
 });
 
-test("protected and scheduled TearBench workflows inspect complete intended commit ranges", () => {
-  const pullRequestWorkflow = readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8");
+test("the scheduled TearBench workflow inspects the complete commit range", () => {
   const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
-  assert.match(pullRequestWorkflow, /github\.event\.before/u);
-  assert.doesNotMatch(pullRequestWorkflow, /github\.sha\s*\}\}"\^/u);
   assert.doesNotMatch(scheduledWorkflow, /HEAD\^\s+HEAD/u);
   assert.match(scheduledWorkflow, /git rev-list --max-parents=0 HEAD/u);
   assert.ok((scheduledWorkflow.match(/fetch-depth: 0/gu) ?? []).length >= 2);

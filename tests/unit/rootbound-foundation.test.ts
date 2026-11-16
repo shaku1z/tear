@@ -99,7 +99,7 @@ describe("Rootbound production foundation", () => {
     expect(calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
   });
 
-  it("keeps Vine Sweep and Canopy Step tells static and geometry-readable in every accessibility profile", () => {
+  it("draws the Vine Sweep and Canopy Step tells with the shared danger marks in every accessibility profile", () => {
     for (const profile of [
       { highContrast: false, reducedMotion: false, low: false },
       { highContrast: true, reducedMotion: false, low: false },
@@ -130,7 +130,7 @@ describe("Rootbound production foundation", () => {
       const calls: string[] = [];
       boss.draw(recordingCanvas(calls), harness.player);
       expect(calls, JSON.stringify(profile)).toEqual(
-        expect.arrayContaining(["bezierCurveTo", "ellipse", "setLineDash", "stroke"]),
+        expect.arrayContaining(["bezierCurveTo", "strokeRect", "fillRect", "ellipse", "setLineDash", "stroke"]),
       );
     }
   });
@@ -153,6 +153,8 @@ describe("Rootbound production foundation", () => {
     > & { draw(canvas: CanvasRenderingContext2D, player: unknown): void };
     boss.hp = boss.maxHp * 0.5;
     boss.update(1 / 120, harness.platforms, harness.player, []);
+    boss.cinematicRequest = null;
+    boss.cinematicT = 0;
     expect(boss.startMemoryChoir()).toBe(true);
     const calls: string[] = [];
     boss.draw(recordingCanvas(calls), harness.player);
@@ -267,10 +269,17 @@ describe("Rootbound production foundation", () => {
     boss.hp = boss.maxHp * boss.phaseMarks[0];
     boss.update(1 / 120, harness.platforms, harness.player, []);
     expect(boss).toMatchObject({ phase: 2, phaseMarker: 2, phaseTag: "THE GARDEN REMEMBERS" });
+    expect(boss.cinematicRequest).toMatchObject({ id: "rootbound-garden-remembers", pose: "rootboundGraft" });
+    boss.cinematicRequest = null;
+    boss.cinematicT = 0;
     boss.hp = boss.maxHp;
     expect(boss.phase).toBe(2);
 
+    // The opening contact grace outlasts the first recovery, so an overlapping spawn deals no touch damage.
     boss.update(1, harness.platforms, harness.player, []);
+    expect(boss.state).toBe("idle");
+    expect(boss.contactDamageEnabled()).toBe(false);
+    boss.update(0.25, harness.platforms, harness.player, []);
     expect(boss).toMatchObject({
       state: "idle",
       atk: "unavailable",

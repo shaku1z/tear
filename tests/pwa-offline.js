@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 (async () => {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -41,15 +42,16 @@ const path = require("node:path");
     if (route.request().url().startsWith(origin)) void route.continue();
     else void route.abort();
   });
-  await page.goto(`${origin}/?test=1`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${origin}/?test=1`, { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ !== undefined);
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;
     if (!registration.active) throw new Error("service worker did not activate");
-    await new Promise((resolve) => setTimeout(resolve, 500));
   });
+  // The worker claims open pages when it activates (clientsClaim); offline reloads need that claim.
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null, undefined, { timeout: STATE_WAIT_MS });
   await context.setOffline(true);
-  await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
+  await page.reload({ waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__ !== undefined);
   assert.deepEqual(errors, []);
   assert.equal(await page.evaluate(() => navigator.serviceWorker.controller !== null), true);

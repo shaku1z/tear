@@ -42,7 +42,7 @@ Findings fixed from this profile (allocation per canonical tick, median of three
 - **The tutorial coach reads a narrow selection.** The per-tick coach sync and the coach-frame gate used to build the whole session view and checkpoint to read five fields; they now use `TutorialController.coachSelection()`, as do the per-frame coach view and ghost display. Tutorial lesson: 59.9 to 37.4 KB per tick; the rest of the controller cost is the HUD reading the session view once per frame.
 - **The Chase arena hash is derived on demand.** It is compared only while a reference frame is selected, so a run without a Chase reference no longer hashes the platforms on every tick and frame. Platforms can change in place (Scenario Console restores, moving chunks), so there is no invalidation point that would allow caching it across ticks during a Chase.
 
-Remaining measured costs, not yet addressed: Pale track wiring (`src/app/world/biomes/aurora-track-wiring.ts`, about 39 KB per frame in White Hart), the Scenario Console state adapter encoding (`src/app/engineering/state-forge-adapter.ts`, 8 to 14 KB per frame in every combat scene), Verdant pattern and graft placement re-derivation each tick (`bloom-well.ts`, `rootbound.ts`), and the backdrop. Particles are 2 to 4% of allocated bytes in combat scenes, so pooling them is not worth the risk.
+Remaining measured costs, not yet addressed: Pale track wiring (`src/gameplay/environment/biome-actors/aurora-track-actors.ts`, about 39 KB per frame in White Hart), the Scenario Console state adapter encoding (`src/app/engineering/state-forge-adapter.ts`, 8 to 14 KB per frame in every combat scene), Verdant pattern and graft placement re-derivation each tick (`bloom-well.ts`, `rootbound.ts`), and the backdrop. Particles are 2 to 4% of allocated bytes in combat scenes, so pooling them is not worth the risk.
 
 Path to budgets: once several clean runs on the controlled release host agree, promote the deterministic metrics first (canonical projections per second outside recording, `measureText`, gradient and DOM writes per frame per scene) as ceilings about 10% above the measured median in `config/browser-performance-budgets.json`, then allocation bytes per frame. Wall-clock scene timings stay reported until the controlled host shows a stable spread.
 
@@ -59,3 +59,25 @@ Path to budgets: once several clean runs on the controlled release host agree, p
 `pnpm check:test-isolation` proves the engineering channel stays out of both release builds. Research and diagnostic screens (Training Archive, Training Operations, Replay Hub, Game Agent evidence, Run Monitor), human-calibration capture and the agent training modules they use load only through a dynamic import guarded by `__TEAR_ENGINEERING_SURFACES__` in `src/app/shell/composition.ts`, and the Verdant calibration scene only through one guarded by `__TEAR_TEST_BUILD__`. The gate fails if a release file contains one of their distinctive markers (storage keys, format identifiers and diagnostic sentences listed in the script) or a calibration image, and it fails if a marker disappears from its source module, so a renamed string cannot make the check pass vacuously.
 
 Set a new ceiling about 10% above a deliberate, measured change and record why here; never raise one to absorb an unexplained increase.
+
+## Load budgets
+
+`pnpm check:load-budgets` (`tests/browser-load-profile.js --check`, ceilings in [`config/load-budgets.json`](../config/load-budgets.json)) loads each release build the way its host serves it and fails when a player would download more before playing. Text is served brotli-compressed (quality 5, close to an edge compressing on the fly) and the standalone build gets its own `_headers` over Cloudflare's default revalidation; the CrazyGames build runs in an iframe below a portal-style path with an SDK stub. The game records three User Timing marks for this (`src/platform/startup-milestones.ts`): `tear:first-frame`, `tear:loading-finished` (the menu accepts input) and `tear:gameplay-start`. The harness clicks PLAY, ENDLESS and START on the drawn labels like a player.
+
+Only byte and request counts are checked. They are identical from run to run for a given build; load times are not, so they are reported, never enforced. Checked on the desktop profile, cold (fresh browser) and warm (reload; on standalone the service worker controls it):
+
+| Ceiling | standalone | CrazyGames | Measured at introduction | Why this number |
+|---|---:|---:|---|---|
+| Cold bytes to first frame | 830,000 | 785,000 | 752,215 / 713,038 | About 10% above the measured download, so a new startup dependency of a few tens of KB fails. |
+| Cold requests to first frame | 44 | 42 | 40 / 38 | Each extra request costs a round trip on phones (150 ms in the phone profile). |
+| Cold bytes to playing, music stems excluded | 830,000 | 785,000 | 752,215 / 713,038 | Everything a first run needs besides music; stems are excluded because how many arrive while the player clicks through the menu depends on timing. |
+| Warm network requests to first frame | 15 | 41 | 13 / 37 | Requests a returning player waits for. Standalone revalidates only the music manifests (everything else comes from the service worker); CrazyGames has no service worker. |
+
+`pnpm report:load` runs every device profile and reports milestone times, bytes per category and every request (`TEAR_LOAD_PROFILES`, `TEAR_LOAD_TARGETS`, `TEAR_LOAD_REPEATS`, `TEAR_LOAD_OUTPUT`). The profiles use Chromium network and CPU throttling: desktop (40 Mbps, 20 ms, no CPU throttle), laptop (10 Mbps, 40 ms, 4x) and phone (844x390 at 3x, 1.6 Mbps, 150 ms, 4x, touch). Service-worker traffic (the precache install) is not throttled by Chromium's page emulation, so its competition with first-session downloads is invisible here; the precache size budget above covers it. Medians of three runs when the budgets were set (cold first frame / START to playing / menu music ready / warm first frame):
+
+| Target | desktop | laptop | phone |
+|---|---|---|---|
+| standalone | 0.52 / 0.33 / 1.9 / 0.31 s | 1.31 / 0.46 / 4.0 / 0.52 s | 5.0 / 0.17 / 13.9 / 0.93 s |
+| CrazyGames | 0.57 / 0.33 / 1.9 / 0.45 s | 1.28 / 0.44 / 3.6 / 0.69 s | 5.0 / 0.18 / 13.3 / 1.8 s |
+
+The check measures the desktop profile only and does not wait for music stems, so it stays cheap enough for `check.functional` (under a minute once both release builds exist). The three-profile report with times is for the nightly run. Lower a ceiling after a deliberate reduction; raise one only with the measured reason recorded here.

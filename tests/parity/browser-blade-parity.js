@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
+const { STATE_WAIT_MS, holdFor, pollEvery } = require("../browser-waits");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "..", "..");
 const fixtureArgument = process.argv.find((argument) => argument.startsWith("--fixture="));
@@ -423,7 +424,7 @@ async function queueTickJobs(page, jobs) {
 async function readTickCapture(page, id) {
   try {
     await page.waitForFunction((captureId) => Boolean(window.__TEAR_PARITY_TICK__.captures[captureId]), id, {
-      timeout: 10_000,
+      timeout: STATE_WAIT_MS,
     });
   } catch (error) {
     const diagnostics = await page.evaluate(() => ({
@@ -446,7 +447,7 @@ async function readTickCapture(page, id) {
 async function applyAction(page, action) {
   switch (action.type) {
     case "wait":
-      await page.waitForTimeout(action.ms);
+      await page.waitForTimeout(holdFor(action.ms));
       break;
     case "mouseMove":
       await page.evaluate(({ x, y }) => {
@@ -572,7 +573,7 @@ async function applyAction(page, action) {
     case "waitForPause":
       try {
         await page.waitForFunction(() => window.__TEAR_PARITY_ADAPTER__.screen() === "paused", undefined, {
-          timeout: action.timeoutMs ?? 2000,
+          timeout: pollEvery(action.timeoutMs ?? 2000),
         });
       } catch (error) {
         if (error?.name !== "TimeoutError") throw error;
@@ -638,13 +639,13 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
   });
 
   const query = kind === "current" ? "?test=1&bossdebug=1" : "?bossdebug=1";
-  await page.goto(`${baseUrl}/${query}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+  await page.goto(`${baseUrl}/${query}`, { waitUntil: "domcontentloaded", timeout: STATE_WAIT_MS });
   if (kind === "current") {
     await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__, undefined, {
-      timeout: 15_000,
+      timeout: STATE_WAIT_MS,
     });
   } else {
-    await page.waitForFunction(() => window.__TEAR_ORACLE_PARITY__, undefined, { timeout: 15_000 });
+    await page.waitForFunction(() => window.__TEAR_ORACLE_PARITY__, undefined, { timeout: STATE_WAIT_MS });
   }
   await installAdapter(page, kind, fixture);
   await installTickBridge(page);
@@ -699,7 +700,7 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
     } else if (action.type === "keyPress" && action.key === "Escape") {
       await applyAction(page, action);
       await page.waitForFunction(() => window.__TEAR_PARITY_ADAPTER__.screen() === "paused", undefined, {
-        timeout: 3_000,
+        timeout: STATE_WAIT_MS,
       });
       snapshot = await page.evaluate(() => window.__TEAR_PARITY_ADAPTER__.snapshot());
       targetTick = snapshot.simulationTick;

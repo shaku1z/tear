@@ -164,7 +164,6 @@ describe("DOM chrome over the canvas", () => {
     expect(domChromeVisibility({ ...playing, inputMode: "gamepad" }).controlHint).toBe(false);
     expect(domChromeVisibility({ ...playing, inputMode: "touch", touch: true }).controlHint).toBe(false);
     expect(domChromeVisibility({ ...playing, screen: "paused" }).controlHint).toBe(false);
-    expect(domChromeVisibility({ ...playing, coached: true }).controlHint).toBe(false);
   });
 
   it("keeps the fullscreen button off the arena and off touch devices", () => {
@@ -181,9 +180,10 @@ describe("DOM chrome over the canvas", () => {
     expect(domChromeVisibility({ ...playing, pointerLocked: false, screen: "menu" }).lockHint).toBe(false);
   });
 
-  it("never parks the canvas arrow at a touch position", () => {
+  it("never parks the canvas arrow while touch, a controller or the keyboard owns the menu", () => {
     expect(shouldDrawCanvasCursor("menu", "touch")).toBe(false);
-    expect(shouldDrawCanvasCursor("menu", "gamepad")).toBe(true);
+    expect(shouldDrawCanvasCursor("menu", "gamepad")).toBe(false);
+    expect(shouldDrawCanvasCursor("menu", "keyboard")).toBe(false);
     expect(shouldDrawCanvasCursor("menu")).toBe(true);
   });
 });

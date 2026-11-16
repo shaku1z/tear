@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 // State Forge supplies only a legal normal Greatsword/charger encounter. The
 // center-pivoting Wheel Cut, explicit recall, and catch are live semantics.
@@ -44,7 +45,7 @@ withJourney(
   { name: "C40 Greatsword Wheel Cut Ghost seek", port: 8303, query: { "ghost-v3-profile": "forensic-qa" } },
   async ({ page }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
-      timeout: 15_000,
+      timeout: STATE_WAIT_MS,
     });
     const result = await page.evaluate((scenario) => {
       const environment = window.__TEAR_RUNTIME_ENVIRONMENT__.create("A");
@@ -110,7 +111,7 @@ withJourney(
     await page.waitForFunction(
       () => window.__TEAR_GHOST_V3__.manifest() !== null || window.__TEAR_GHOST_V3__.failure() !== null,
       undefined,
-      { timeout: 20_000 },
+      { timeout: STATE_WAIT_MS },
     );
     assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
     const manifest = await page.evaluate(() => window.__TEAR_GHOST_V3__.manifest());

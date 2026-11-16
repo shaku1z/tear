@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -36,7 +37,10 @@ async function main() {
   page.on("pageerror", (error) => errors.push(error.stack || error.message));
 
   async function boot() {
-    await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${baseUrl}/index.html?test=1&bossdebug=1`, {
+      timeout: STATE_WAIT_MS,
+      waitUntil: "domcontentloaded",
+    });
     await page.waitForFunction(() => window.__PANTHEON_TEST && window.__TEAR_CATALOG_DEBUG__);
     // Debug mode can start a run without navigating the real menu, but Web Audio
     // still requires the same user activation as production gameplay.

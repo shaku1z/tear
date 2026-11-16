@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { notWithin, settleFor } = require("./browser-waits");
 
 // Produced by the focused native observation unit case using actual source
 // training/evaluation owners. This is engineering synthetic data, not learned
@@ -165,18 +166,18 @@ withJourney(
     await waitScreen("ghostlab");
     await clickText(page, "START RUN MONITOR");
     await waitScreen("playing");
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(settleFor(250));
     await page.keyboard.press("p");
     await waitScreen("paused");
     await clickText(page, "PAUSE RUN MONITOR");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(settleFor(500));
     const paused = await readAnalysis(page);
     save("paused", paused);
     const beforePause = paused.analysis.filter(([key]) =>
       key.startsWith("policy-decision-journal:v1:watch-policy:v1:normal:"),
     );
     assert.equal(beforePause.length, 1);
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(notWithin(200));
     assert.deepEqual(
       (await readAnalysis(page)).analysis.filter(([key]) =>
         key.startsWith("policy-decision-journal:v1:watch-policy:v1:normal:"),
@@ -186,7 +187,7 @@ withJourney(
     );
     await clickText(page, "RESUME RUN MONITOR");
     await waitScreen("playing");
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(settleFor(200));
     await page.keyboard.press("p");
     await waitScreen("paused");
     await clickText(page, "STOP RUN MONITOR");

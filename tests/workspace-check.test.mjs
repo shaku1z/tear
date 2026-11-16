@@ -13,6 +13,7 @@ const contract = JSON.parse(fs.readFileSync(path.join(repositoryRoot, "config", 
 const emptyEnvironment = {
   GITHUB_REPOSITORY: undefined,
   GITHUB_SHA: undefined,
+  TEAR_RELEASE_SHA: undefined,
   TEAR_ORACLE_ROOT: undefined,
   TEAR_WORKSPACE_ROOT: undefined,
 };
@@ -130,6 +131,29 @@ test("CI mode honors an optional GITHUB_SHA equality check", () => {
     const rejected = runWorkspaceCheck({ root, mode: "ci", env: { ...emptyEnvironment, GITHUB_SHA: "0".repeat(40) } });
     assert.equal(rejected.ok, false);
     assert.match(rejected.errors.join("\n"), /does not equal GITHUB_SHA/u);
+  } finally {
+    cleanup(root);
+  }
+});
+
+test("CI mode checks the commit the run actually built (TEAR_RELEASE_SHA) over GitHub's merge ref", () => {
+  const root = createFixture();
+  try {
+    const head = git(root, ["rev-parse", "HEAD"]);
+    const githubMergeRef = "f".repeat(40);
+    const accepted = runWorkspaceCheck({
+      root,
+      mode: "ci",
+      env: { ...emptyEnvironment, GITHUB_SHA: githubMergeRef, TEAR_RELEASE_SHA: head },
+    });
+    assert.equal(accepted.ok, true, accepted.errors.join("\n"));
+    const rejected = runWorkspaceCheck({
+      root,
+      mode: "ci",
+      env: { ...emptyEnvironment, GITHUB_SHA: head, TEAR_RELEASE_SHA: "0".repeat(40) },
+    });
+    assert.equal(rejected.ok, false);
+    assert.match(rejected.errors.join("\n"), /does not equal TEAR_RELEASE_SHA/u);
   } finally {
     cleanup(root);
   }

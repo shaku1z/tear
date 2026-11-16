@@ -17,7 +17,7 @@ import {
   type OverlayLayout,
 } from "./screen-primitives";
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
-import { RUN_MONITOR_ACTIONS } from "../../agents/surface-route";
+import { RUN_MONITOR_ACTIONS } from "../../domain/engineering-actions";
 import { LESSON_TEACHING, countedLessons } from "../../gameplay/training/training-exercises";
 
 const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));

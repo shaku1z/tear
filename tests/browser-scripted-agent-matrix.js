@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
+const { STATE_WAIT_MS } = require("./browser-waits");
 
 const weapons = ["sword", "hammer", "greatsword", "chainblade", "riftlock"];
 const difficulties = ["easy", "normal", "hard", "extreme", "onehit"];
@@ -96,8 +97,8 @@ function mechanics(snapshot) {
 async function runTargetedScenario(page, scenario) {
   const url = new URL(page.url());
   url.searchParams.set("watchagent", "1");
-  await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15_000 });
+  await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.mouse.click(10, 10);
   let snapshot = await page.evaluate((options) => window.__TEAR_WATCH_AGENT__.start(options), {
     profile: scenario.profile,
@@ -107,7 +108,7 @@ async function runTargetedScenario(page, scenario) {
     boss: scenario.boss ?? "shuffle",
     seed: scenario.seed,
   });
-  await page.waitForLoadState("networkidle", { timeout: 10_000 });
+  await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const targetScreen = scenario.mode === "playground" ? "pgmenu" : "playing";
   for (let step = 0; step < 12 && snapshot.screen !== targetScreen; step += 1) {
@@ -168,8 +169,8 @@ withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async 
   for (const weapon of weapons) {
     const url = new URL(page.url());
     url.searchParams.set("watchagent", "1");
-    await page.goto(url.toString(), { waitUntil: "domcontentloaded" });
-    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: 15_000 });
+    await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
     await page.getByLabel("Profile").selectOption("competent");
     await page.getByLabel("Mode").selectOption("campaign");
     await page.getByLabel("Difficulty").selectOption("easy");

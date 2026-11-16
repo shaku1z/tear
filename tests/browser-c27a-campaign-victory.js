@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney, waitForBrowserValue } = require("./browser-journey-harness");
+const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
 const scenario = Object.freeze({
   format: "tear-contract",
@@ -21,10 +22,10 @@ const scenario = Object.freeze({
 
 const companionMode = process.env.TEAR_R07_FINALE_COMPANION === "1";
 withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, waitScreen }) => {
-  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: 15_000 });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.mouse.click(10, 10);
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running", undefined, {
-    timeout: 20_000,
+    timeout: STATE_WAIT_MS,
   });
   let evidence = await page.evaluate(
     async ({ scenarioValue, companionMode: companion }) => {
@@ -381,7 +382,7 @@ withJourney({ name: "C27A campaign victory", port: 8168 }, async ({ page, boot, 
     );
     await page.screenshot({ path: path.join(artifactDir, "theater-origin.png") });
     await clickText("▶");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(settleFor(500));
     await page.screenshot({ path: path.join(artifactDir, "theater-playing.png") });
     await page.keyboard.press("Space");
     await page.waitForFunction(() => window.__R07_FINALE_POSITIONS__.some((p) => p.text === "▶"));
