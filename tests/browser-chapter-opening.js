@@ -107,6 +107,111 @@ async function watchToPlay(page, where, act = async () => undefined) {
   return longest;
 }
 
+/**
+ * Runs in the page. Each frame: while the biome name or READY is 0.3 s in and not yet pressed, press
+ * with the device (down now, up two frames later, a quick tap); records each beat's longest time; then counts,
+ * for 45 frames of play, any jump, dash or throw that reached the player.
+ */
+function pressEachClosingBeatInPage(deviceName) {
+  const canvas = document.querySelector("canvas");
+  const box = canvas.getBoundingClientRect();
+  const x = box.left + box.width / 2;
+  const y = box.top + box.height * 0.55;
+  let touch = null;
+  const press = {
+    mouse: () => {
+      const at = { clientX: x, clientY: y, bubbles: true, button: 0 };
+      canvas.dispatchEvent(new MouseEvent("mousedown", at));
+      window.dispatchEvent(new MouseEvent("mouseup", at));
+      canvas.dispatchEvent(new MouseEvent("click", at));
+      return () => undefined;
+    },
+    keyboard: () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space", key: " ", bubbles: true }));
+      return () => window.dispatchEvent(new KeyboardEvent("keyup", { code: "Space", key: " ", bubbles: true }));
+    },
+    touch: () => {
+      touch = new Touch({ identifier: 1, target: canvas, clientX: x, clientY: y });
+      const start = {
+        touches: [touch],
+        targetTouches: [touch],
+        changedTouches: [touch],
+        cancelable: true,
+        bubbles: true,
+      };
+      canvas.dispatchEvent(new TouchEvent("touchstart", start));
+      return () => {
+        const end = { touches: [], targetTouches: [], changedTouches: [touch], cancelable: true, bubbles: true };
+        canvas.dispatchEvent(new TouchEvent("touchend", end));
+      };
+    },
+    controller: () => {
+      const set = (down) => {
+        window.__testGamepad.buttons[0] = { pressed: down, touched: down, value: down ? 1 : 0 };
+        window.__testGamepad.timestamp += 1;
+      };
+      set(true);
+      return () => set(false);
+    },
+  }[deviceName];
+  const seen = {
+    longest: {},
+    pressedAt: {},
+    reached: { jump: 0, dash: 0, thrown: 0, frames: 0 },
+    evidence: [],
+    done: false,
+  };
+  window.__CLOSING_PRESSES__ = seen;
+  let release = null;
+  let releaseIn = 0;
+  // The game must see the button up for at least one frame before the next press, as with a player.
+  let upFrames = 0;
+  const frame = () => {
+    if (release && --releaseIn <= 0) {
+      release();
+      release = null;
+      upFrames = 2;
+    } else if (upFrames > 0) upFrames -= 1;
+    const now = window.__PANTHEON_TEST.state();
+    if (now.active) {
+      seen.longest[now.beat] = Math.max(seen.longest[now.beat] ?? 0, now.cinemaElapsed);
+      const closing = now.beat === "reveal" || now.beat === "ready";
+      if (closing && now.cinemaElapsed >= 0.3 && !(now.beat in seen.pressedAt) && !release && upFrames === 0) {
+        seen.pressedAt[now.beat] = now.cinemaElapsed;
+        release = press();
+        releaseIn = 2;
+      }
+    } else if (now.game === "playing" && now.playerTrace) {
+      const reached = seen.reached;
+      reached.frames += 1;
+      const trace = now.playerTrace;
+      const hit = [
+        // A jump buffers the press or launches at -920 px/s (CONFIG.player.jumpSpeed). A grounded
+        // player on a slow frame jitters by up to about -100 px/s, which is not a jump.
+        trace.jumpBuffer > 0 || trace.vy < -460 ? "jump" : null,
+        trace.dashTimer > 0 ? "dash" : null,
+        now.blade && now.blade.state !== "held" ? "thrown" : null,
+      ].filter(Boolean);
+      for (const kind of hit) reached[kind] += 1;
+      if (hit.length > 0 && seen.evidence.length < 6)
+        seen.evidence.push({
+          frame: reached.frames,
+          hit,
+          vy: trace.vy,
+          y: trace.y,
+          onGround: trace.onGround,
+          jumpBuffer: trace.jumpBuffer,
+        });
+      if (reached.frames >= 45 && !release) {
+        seen.done = true;
+        return;
+      }
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
 async function chapterOpeningCarriesThroughOnEveryDevice(browser, configure) {
   for (const device of DEVICES) {
     const context = await browser.newContext(device.context);
@@ -135,42 +240,25 @@ async function chapterOpeningCarriesThroughOnEveryDevice(browser, configure) {
     await configure(page);
     if (device.gamepad) await connectGamepad(page);
     await readThePages(page, cdp, device, where);
-    // Every frame once the scene is over: did the player receive a jump, a dash or a throw?
-    await page.evaluate(() => {
-      const reached = { jump: 0, dash: 0, thrown: 0, frames: 0 };
-      window.__SCENE_PRESS_REACHED__ = reached;
-      const look = () => {
-        const now = window.__PANTHEON_TEST.state();
-        if (!now.active && now.game === "playing" && now.playerTrace) {
-          reached.frames += 1;
-          if (now.playerTrace.jumpBuffer > 0 || now.playerTrace.vy < 0) reached.jump += 1;
-          if (now.playerTrace.dashTimer > 0) reached.dash += 1;
-          if (now.blade && now.blade.state !== "held") reached.thrown += 1;
-        }
-        if (reached.frames < 45) requestAnimationFrame(look);
-      };
-      requestAnimationFrame(look);
-    });
-    const pressed = new Set();
-    const hurried = await watchToPlay(page, where, async (now) => {
-      if ((now.beat !== "reveal" && now.beat !== "ready") || now.cinemaElapsed < 0.3 || pressed.has(now.beat)) return;
-      pressed.add(now.beat);
-      await device.press(page, cdp);
-    });
-    assert.deepEqual([...pressed], ["reveal", "ready"], `${where}: both beats took a press`);
+    // The presses are made inside the page, in the frame where the beat is 0.3 s in, and every
+    // measure is read from the page's own frames. A press sent from the test process could arrive
+    // after a slow runner had already let the beat end on its clock, and a press after the scene
+    // is a real gameplay press, so the test would then be checking the wrong thing.
+    await page.evaluate(pressEachClosingBeatInPage, device.name);
+    await page.waitForFunction(() => window.__CLOSING_PRESSES__.done, undefined, { timeout: STATE_WAIT_MS });
+    const seen = await page.evaluate(() => window.__CLOSING_PRESSES__);
+    assert.deepEqual(Object.keys(seen.pressedAt), ["reveal", "ready"], `${where}: both beats took a press`);
     for (const beat of ["reveal", "ready"]) {
       assert.ok(
-        hurried[beat] < AUTHORED[beat] - 0.3,
-        `${where}: the press was swallowed; ${beat} still ran ${hurried[beat].toFixed(2)} s`,
+        seen.longest[beat] < AUTHORED[beat] - 0.3,
+        `${where}: the press was swallowed; ${beat} still ran ${seen.longest[beat].toFixed(2)} s`,
       );
     }
-    await page.waitForFunction(() => window.__SCENE_PRESS_REACHED__.frames >= 45, undefined, {
-      timeout: STATE_WAIT_MS,
-    });
+    assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().game), "playing", `${where}: in play`);
     assert.deepEqual(
-      await page.evaluate(() => ({ ...window.__SCENE_PRESS_REACHED__, frames: 45 })),
+      seen.reached,
       { jump: 0, dash: 0, thrown: 0, frames: 45 },
-      `${where}: the press that ended the scene reached the player`,
+      `${where}: the press that ended the scene reached the player ${JSON.stringify(seen.evidence)}`,
     );
     assert.deepEqual(errors, [], `${device.name}: the opening raises no page errors`);
     await context.close();
