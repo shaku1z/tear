@@ -43,7 +43,7 @@ import {
   parseParticlePresentationCheckpoint,
   validateParticlePresentationBinding,
 } from "../../tearbench/particle-presentation-checkpoint";
-import type { LiveParticlePresentationState } from "../world/particle-presentation-state";
+import type { LiveParticlePresentationState } from "../../tearbench/particle-presentation-state";
 import type { PreparedParticlePresentationRestore } from "../../tearbench/particle-presentation-checkpoint";
 
 interface Platform {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission-random";
 import { createParticleSystem } from "../../src/presentation/particles";
-import { createLiveParticlePresentationState } from "../../src/app/world/particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
 import { createProductionCombatPhases } from "../../src/tearbench/production-combat-phases";
 import { createMirrorRenderer } from "../../src/presentation/entities/mirror-renderer";
