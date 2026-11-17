@@ -2,7 +2,7 @@ import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { normalizeGameAction } from "../input/game-action";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { RunRandomStreamsSnapshot } from "../simulation/run-random";
 import { STAGES } from "../gameplay/stages";
 import type { TearCausalEventV1, TearObservationV1, TearScenarioV1, TearSnapshotV1, TearStateClass } from "./contracts";

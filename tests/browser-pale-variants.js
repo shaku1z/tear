@@ -100,13 +100,18 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
       });
       // The game keeps running while the screenshot is taken, and the pair reaches the player in about
       // half a second, so it may be gone by now. Check and parry in one page task; if the pair has
-      // landed, compose the Seer's windup again and parry the next pair.
-      await page.waitForFunction(
+      // landed, compose the Seer's windup again and parry the next pair. The parry turns the shard
+      // into the return at once, and the return flies at perfect-parry speed into the Seer, so read it
+      // in the same task: a later page call can find it already gone.
+      const returnHandle = await page.waitForFunction(
         () => {
           const debug = window.TEAR_WEAPON_DEBUG();
           if (debug.projectiles.some((projectile) => projectile.kind === "prism-shard")) {
             window.__PANTHEON_TEST.triggerPaleVariantCounterplay("prism-seer", "perfect-parry");
-            return true;
+            const returned = window
+              .TEAR_WEAPON_DEBUG()
+              .projectiles.find((projectile) => projectile.kind === "prism-return");
+            return { returned: returned ?? null };
           }
           if (!debug.enemies.some((enemy) => enemy.variant === "prism-seer" && enemy.state === "windup"))
             window.__PANTHEON_TEST.preparePaleVariantEvidenceScenario("ranged", "prism-seer");
@@ -115,19 +120,10 @@ withJourney({ name: "Pale PT3-C4 variants", port: 8354 }, async ({ page, waitScr
         undefined,
         { timeout: STATE_WAIT_MS },
       );
-      await page.waitForFunction(
-        () =>
-          window
-            .TEAR_WEAPON_DEBUG()
-            .projectiles.some(
-              (projectile) =>
-                projectile.kind === "prism-return" &&
-                projectile.perfect === true &&
-                projectile.counterplay === "recombined return",
-            ),
-        undefined,
-        { timeout: STATE_WAIT_MS },
-      );
+      const { returned } = await returnHandle.jsonValue();
+      assert.ok(returned, "a perfect parry of a live shard must leave a recombined return");
+      assert.equal(returned.perfect, true);
+      assert.equal(returned.counterplay, "recombined return");
       const returnFile = "prism-seer-perfect-recombined-return-1600x900.png";
       await page.screenshot({ path: path.join(directory, returnFile) });
       screenshots.push(returnFile);

@@ -6,7 +6,7 @@ import {
   captureProductionReplayCheckpoint,
   restoreProductionReplaySnapshot,
 } from "../../src/tearbench/production-replay-composition";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { GhostLocalVault, createMemoryGhostVaultBackend } from "../../src/ghost/capsule-vault";
 import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { GhostLiveRecorder } from "../../src/ghost/live-recorder";

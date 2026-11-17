@@ -1,7 +1,8 @@
 import { AudioSystem } from "./audio-system";
 import { createBrowserAudioContextFactory, unwrapBrowserAudioContext, unwrapBrowserAudioNode } from "./browser-audio";
 import type { AudioEffectsBackend, AudioEffectsBackendHost } from "./effects-contracts";
-import type { AudioCategory, AudioMixerSettings, AudioSettingsStore, SfxRoute, TemporaryMuteReason } from "./mixer";
+import type { AudioCategory, AudioSettingsStore, SfxRoute, TemporaryMuteReason } from "./mixer";
+import type { AudioMixerSettings } from "../domain/audio-mixer-settings";
 import type {
   MusicBackend,
   MusicBackendHost,

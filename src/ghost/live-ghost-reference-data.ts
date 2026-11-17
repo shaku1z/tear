@@ -1,5 +1,5 @@
 import type { SeedRaceRun } from "../gameplay/run/seed-locked-draft";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { GhostRunAssistance } from "../gameplay/run/ghost-assistance";
 import type { GhostReplayBuildFingerprint } from "./replay-admission";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";

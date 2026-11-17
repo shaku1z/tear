@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { GhostVaultBackend, GhostVaultGuard } from "./capsule-vault";
 import type { GhostPrivacyClass, GhostVisibility } from "./cloud-publication";
 

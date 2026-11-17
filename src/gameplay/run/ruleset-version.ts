@@ -1,8 +1,12 @@
 /**
  * Deterministic identity for the six-biome production campaign with Pale kept
- * as an explicitly unpublished Playground/engineering preview.
+ * as an explicitly unpublished Playground/engineering preview. v2: the Rootbound's
+ * moves run on the shared boss attack layer.
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v1";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v2";
+
+/** The six-biome identity before the Rootbound moved onto the boss attack layer; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V1_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v1";
 
 /** Frozen seven-stage engineering identity retained as historical provenance only. */
 export const PALE_R3_ENGINEERING_RULESET_VERSION = "tear-rules-verdant-pale-r3-engineering-v1";

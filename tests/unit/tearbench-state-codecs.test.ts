@@ -5,7 +5,7 @@ import { createCosmeticEmissionRandom } from "../../src/domain/cosmetic-emission
 import { createLiveStateCodec } from "../../src/tearbench/state-codecs";
 import { CONFIG } from "../../src/config/game-config";
 import { createBossArena } from "../../src/gameplay/training/arena-rules";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 import {

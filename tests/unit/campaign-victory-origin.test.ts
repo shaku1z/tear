@@ -4,7 +4,7 @@ import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime
 import { stagePlatforms } from "../../src/gameplay/stages";
 import { CONFIG } from "../../src/config/game-config";
 import { UPGRADES } from "../../src/gameplay/upgrades";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import {
   CAMPAIGN_VICTORY_FINAL_WAVE,
   CAMPAIGN_VICTORY_ORIGIN_WAVE,

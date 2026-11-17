@@ -7,7 +7,7 @@ import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostApplicationClockSchedule } from "./application-frame-events";
 import { requireGhostFinalePermit, finaleFrameWitnesses, type GhostFinalePermit } from "./finale-companion";
 import type { GhostReadCapsule } from "./capsule-reader";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { GhostVerifiedReplayRenderView } from "./production-replay-session";
 
 /** Source-time positions include zero-tick frames; ticks are never repurposed as a presentation counter. */

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, waitForScriptLoads } = require("./browser-waits");
 
 const weapons = ["sword", "hammer", "greatsword", "chainblade", "riftlock"];
 const difficulties = ["easy", "normal", "hard", "extreme", "onehit"];
@@ -108,8 +108,7 @@ async function runTargetedScenario(page, scenario) {
     boss: scenario.boss ?? "shuffle",
     seed: scenario.seed,
   });
-  await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await waitForScriptLoads(page);
   const targetScreen = scenario.mode === "playground" ? "pgmenu" : "playing";
   for (let step = 0; step < 12 && snapshot.screen !== targetScreen; step += 1) {
     snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(1));

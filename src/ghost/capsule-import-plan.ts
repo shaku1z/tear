@@ -1,4 +1,4 @@
-import { canonicalStringify, stableVerificationHash } from "../replay/hash";
+import { canonicalStringify, stableVerificationHash } from "../domain/hash";
 import type { ghostPortableArchiveData } from "./capsule-paired-archive";
 import { ghostCapsuleProtectionKey, parseGhostCapsuleProtection } from "./capsule-protection";
 import type { readGhostColdRestoreCompletion } from "./cold-restore-job";

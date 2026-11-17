@@ -71,7 +71,6 @@ export function createLiveWorldSimulationPresentationAdapter(
     graphics,
     theme,
     clamp: geometry.clamp,
-    accessibility,
   });
   const mirrorPresentation = createMirrorRenderer({
     clock,

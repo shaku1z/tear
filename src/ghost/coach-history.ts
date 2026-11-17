@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { TearGhostManifest } from "./capsule-contract";
 import type { GhostReadCapsule } from "./capsule-reader";

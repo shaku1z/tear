@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 
 export const TEARBENCH_TASK_RESOURCE_CLASSES = Object.freeze([
   "static",

@@ -1,7 +1,7 @@
 import { migrateAudioSettings } from "../persistence/audio-settings";
 import type { MusicContextSnapshot, MusicEvent, MusicRunSessionMetadata } from "./music-contracts";
 import type { LegacySynthRuntime } from "./legacy-synth-runtime";
-import type { TearScoreReplayMetadata } from "../replay/envelope";
+import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import type { BrowserAudioContextHandoff } from "./audio-context-handoff";
 import {
   createAudioDispatchJournal,

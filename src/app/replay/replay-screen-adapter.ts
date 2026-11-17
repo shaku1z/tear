@@ -5,7 +5,7 @@ import { createGhostFinaleScreenAdapter } from "./ghost-finale-screen-adapter";
 import { readGhostFinaleCompanion } from "../../ghost/finale-companion";
 import { reopenRecordedGhostChallenge } from "../../ghost/browser-recorded-challenge";
 import { createBrowserGhostReplayPresentation, createBrowserGhostStudioMedia } from "./browser-ghost-studio-media";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import { createBrowserGhostCoachHistoryPort } from "./browser-ghost-coach-history";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";

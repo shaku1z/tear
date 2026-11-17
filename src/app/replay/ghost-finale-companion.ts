@@ -3,7 +3,7 @@ import type { createLiveGhostFrameRecording } from "./ghost-frame-recording";
 import type { TearSnapshotV1 } from "../../tearbench/contracts";
 import type { GhostAuthoritativeReceiptV1 } from "../../ghost/authoritative-receipt";
 import type { GhostFinaleCompanionV1, GhostFinaleFrameWitness } from "../../ghost/finale-companion";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 
 /** One source identity owns the asynchronous handoff. It never owns gameplay or durable rewards. */
 export function createLiveGhostFinaleCompanion(

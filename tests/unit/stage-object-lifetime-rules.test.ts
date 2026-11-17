@@ -38,7 +38,7 @@ const everything = (environment: EnvironmentRuntime): readonly Entry[] => [
 
 function field(tick: number) {
   return {
-    kind: "rootline" as const,
+    kind: "bloom-well" as const,
     geometry: { x: 0, y: 0, w: 10, h: 10 },
     state: "active" as const,
     stateTick: tick,
@@ -201,10 +201,10 @@ function fight(bossId: (typeof BIOME_BOSSES)[number]["boss"], stageId: string, p
 
 /**
  * Ended objects each phase produces today, as a floor, so the rule cannot pass by a fight that stops
- * creating objects. The White Hart's first phase places none.
+ * creating objects. The first phase of each boss places none: the Rootbound's Phase I moves hit with their own shapes.
  */
 const EXERCISED: Readonly<Record<(typeof BIOME_BOSSES)[number]["boss"], readonly [number, number, number]>> = {
-  rootbound: [1, 1, 1],
+  rootbound: [0, 1, 1],
   "white-hart": [0, 1, 1],
 };
 

@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS, settleFor, trackScriptLoads, waitForScriptLoads } = require("./browser-waits");
 
 const scenarios = [
   { name: "desktop-16:9", width: 1600, height: 900, dpr: 1 },
@@ -157,6 +157,7 @@ async function main() {
         hasTouch: scenario.name.startsWith("mobile"),
       });
       const page = await context.newPage();
+      trackScriptLoads(page);
       if (scenario.name === "mobile-landscape") await recordDrawnLabels(page);
       const errors = [];
       page.on("pageerror", (error) => errors.push(error.stack || error.message));
@@ -230,10 +231,7 @@ async function main() {
           await page.waitForFunction((expected) => window.__PANTHEON_TEST?.state().game === expected, screen, {
             timeout: STATE_WAIT_MS,
           });
-          await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-          await page.evaluate(
-            () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-          );
+          await waitForScriptLoads(page);
         };
         const logicalClick = async (x, y) => {
           const cssScale = scenario.width / (viewport.logical.width + viewport.overscan.x * 2);

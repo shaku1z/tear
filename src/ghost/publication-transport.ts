@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { GhostPublicationBearerPort } from "../platform/firebase-publication-bearer";
 import { ghostSha256 } from "./cloud-publication";
 import type { GhostLocalPublicationJobs, GhostLocalPublicationJobV1 } from "./local-publication-job";

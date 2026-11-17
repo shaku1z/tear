@@ -8,7 +8,7 @@ import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-r
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { createGameplayCausalEvent } from "../../src/tearbench/gameplay-causal-events";
 import { recordingFreeBossSnapshot } from "../../src/ghost/boss-memory";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import {
   saveBossMemory,
   verifyBossMemory,
