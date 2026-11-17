@@ -77,8 +77,8 @@ with qualitative claims and remaining gaps. Inspect the handoff again after edit
 Unknown/unregistered claims cannot use this task interface: report the missing
 registration to the coordinator and retain their separate required evidence.
 This protocol does not launch the final full gate or verify a supplied protected
-certificate. The coordinator must use the existing protected certificate verifier
-before any certificate-based reuse decision; otherwise the full-gate obligation
+certificate. There is no protected certificate verifier any more (removed by
+D-015), so a supplied certificate cannot be reused: the full-gate obligation
 remains unresolved. Claimed ownership in a JSON request is not a security boundary
 against an uncooperative local process.
 
@@ -119,10 +119,9 @@ watches each external workflow; specialists report meaningful changes only.
 
 A local pass cannot replace a protected required check. A protected functional
 check cannot stand in for performance, preservation, or other omitted release
-obligations. A supplied certificate is only a candidate for reuse until the
-existing verifier proves its source, profile, tasks/claims, artifacts, retries
-and provider provenance. Missing verification support means unresolved evidence,
-not permission to approve it manually.
+obligations. A supplied certificate cannot be reused, because no verifier
+for it remains. Missing verification support means unresolved evidence, not
+permission to approve it manually.
 
 Before adding infrastructure or retrying an experiment, name the exact unresolved
 requirement, the evidence the action can produce, and its stop condition. Prefer
