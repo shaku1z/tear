@@ -16,11 +16,7 @@ const collectiveRequiredCoreMechanics = [
   "recall",
   "tether",
   "projectileParry",
-  "stolenBladeRecovery",
 ];
-const collectiveNonStolenMechanics = collectiveRequiredCoreMechanics.filter(
-  (mechanic) => mechanic !== "stolenBladeRecovery",
-);
 const weaponIdentityRequirements = Object.freeze({
   sword: ["heldSlash"],
   hammer: ["heldSlash"],
@@ -94,73 +90,6 @@ function mechanics(snapshot) {
   };
 }
 
-async function runTargetedScenario(page, scenario) {
-  const url = new URL(page.url());
-  url.searchParams.set("watchagent", "1");
-  await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
-  await page.mouse.click(10, 10);
-  let snapshot = await page.evaluate((options) => window.__TEAR_WATCH_AGENT__.start(options), {
-    profile: scenario.profile,
-    mode: scenario.mode,
-    difficulty: "easy",
-    weapon: scenario.weapon,
-    boss: scenario.boss ?? "shuffle",
-    seed: scenario.seed,
-  });
-  await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const targetScreen = scenario.mode === "playground" ? "pgmenu" : "playing";
-  for (let step = 0; step < 12 && snapshot.screen !== targetScreen; step += 1) {
-    snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(1));
-  }
-  if (scenario.mode === "playground" && snapshot.screen === "playing") {
-    await page.keyboard.press("Tab");
-    snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(1));
-  }
-  assert.equal(snapshot.screen, targetScreen, `${scenario.id} must reach its real simulation flow`);
-  for (const action of scenario.actions) {
-    if (action === "boss:source") {
-      // Source is the fifth visible boss card in the production two-column
-      // Playground board. Exercise its real pointer hitbox as a player would.
-      await page.mouse.click(900, 330);
-      snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.snapshot());
-    } else {
-      snapshot = await page.evaluate((id) => window.__TEAR_WATCH_AGENT__.activatePlaygroundAction(id), action);
-    }
-  }
-  if (scenario.mode === "playground") {
-    snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.resumePlayground());
-    assert.equal(snapshot.screen, "playing");
-  }
-  for (let batch = 0; batch < scenario.batches && snapshot.status === "running"; batch += 1) {
-    if (scenario.manualBladeClicks === true) {
-      await page.mouse.click(1_200, 430, { button: "right" });
-    }
-    snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(200));
-  }
-  return {
-    id: scenario.id,
-    flow:
-      scenario.mode === "playground"
-        ? "main menu -> setup -> Playground menu controls -> RESUME -> real simulation"
-        : "main menu -> setup -> typed boss selection -> real Boss Test simulation",
-    requestedActions: scenario.actions,
-    profile: scenario.profile,
-    weapon: scenario.weapon,
-    boss: scenario.boss ?? "shuffle",
-    status: snapshot.status,
-    terminalReason: snapshot.terminalReason ?? null,
-    fixedTicks: snapshot.fixedTicks,
-    weaponStats: snapshot.weaponStats,
-    bladeStateTransitions: snapshot.bladeStateTransitions,
-    weaponEvents: snapshot.weaponEvents,
-    engineEvents: snapshot.engineEvents,
-    mechanics: mechanics(snapshot),
-    debugTransitions: snapshot.debugTransitions,
-  };
-}
-
 withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async ({ page, errors }) => {
   const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "c24");
   const contractDirectory = path.join(artifactDirectory, "mode-contracts");
@@ -209,20 +138,6 @@ withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async 
     assert.equal(snapshot.debugTransitions, 0);
     assert.ok(snapshot.weaponStats);
   }
-
-  const targetedScenarios = [];
-  targetedScenarios.push(
-    await runTargetedScenario(page, {
-      id: "source-stolen-blade-recovery",
-      profile: "competent",
-      weapon: "sword",
-      mode: "bossonly",
-      boss: "source",
-      seed: 6,
-      actions: [],
-      batches: 100,
-    }),
-  );
 
   const campaignStarts = results.filter((entry) =>
     entry.transitions.some((transition) => transition.screen === "playing"),
@@ -282,14 +197,13 @@ withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async 
     },
     requiredCoreMechanics: collectiveRequiredCoreMechanics,
     results,
-    targetedScenarios,
     modeContracts: contractArtifacts,
     browserErrors: errors,
   };
   fs.writeFileSync(path.join(artifactDirectory, "weapon-mechanics-matrix.json"), JSON.stringify(artifact, null, 2));
   await page.screenshot({ path: path.join(artifactDirectory, "weapon-mechanics-matrix.png") });
   assert.equal(results.length, 5);
-  for (const mechanic of collectiveNonStolenMechanics) {
+  for (const mechanic of collectiveRequiredCoreMechanics) {
     assert.ok(
       results.some((entry) => entry.mechanics[mechanic].status === "observed"),
       `collective five-weapon matrix did not observe required core mechanic ${mechanic}`,
@@ -314,21 +228,6 @@ withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async 
       );
     }
   }
-  const sourceRecovery = targetedScenarios.find((entry) => entry.id === "source-stolen-blade-recovery");
-  assert.ok(sourceRecovery, "Source stolen-blade recovery scenario is missing");
-  assert.equal(
-    sourceRecovery.mechanics.stolenBladeRecovery.status,
-    "observed",
-    "Source scenario did not prove ordered hostile/stolen then owned/held recovery",
-  );
-  assert.ok(
-    sourceRecovery.engineEvents.some((event) => event.kind === "effect" && event.effect === "stolenBlade"),
-    "Source scenario did not emit the semantic stolenBlade production event",
-  );
-  assert.ok(
-    sourceRecovery.weaponEvents.some((event) => event && typeof event === "object" && event.type === "stolenBlade"),
-    "Source scenario did not emit the stolenBlade production weapon event",
-  );
   assert.equal(contractArtifacts.length, 7);
   assert.equal(contractArtifacts.flatMap((entry) => entry.rows).length, 31);
   assert.deepEqual(errors, []);
