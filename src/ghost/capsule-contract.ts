@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { GhostChunkEncoding } from "./capsule-codec";
 import { GHOST_RECORDING_PROFILES, type GhostRecordingProfileId } from "./recording-profiles";
 import type { GhostChunkKind, TearGhostChunkIndexEntry } from "./capsule-vault";

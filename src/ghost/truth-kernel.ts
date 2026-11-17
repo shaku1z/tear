@@ -1,6 +1,6 @@
 import type { ReplayActionEnvelope } from "../replay/envelope";
 import { normalizeGameAction } from "../input/game-action";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
 import { EVENT_REGISTRY, withinTickPhaseOrder } from "../tearbench/registries";
 import type { TearEventId } from "../tearbench/registries";

@@ -1,9 +1,10 @@
 import type { CommandEnvelope } from "../domain/envelopes";
+import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import { hasMonotonicEnvelopes } from "../domain/envelopes";
 import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, isWeaponId, type WeaponId } from "../gameplay/weapon-selection";
 import type { GameAction } from "../input/game-action";
 import { normalizeGameAction } from "../input/game-action";
-import { stableVerificationHash } from "./hash";
+import { stableVerificationHash } from "../domain/hash";
 
 export const REPLAY_FORMAT = "tear-replay";
 export const CURRENT_REPLAY_SCHEMA_VERSION = 2;
@@ -21,19 +22,6 @@ export interface ReplayRunMetadata {
   readonly weaponId: WeaponId;
   readonly weaponSchemaVersion: typeof FINAL_FIVE_WEAPON_SCHEMA_VERSION;
 }
-
-export type TearScoreReplayMetadata =
-  | Readonly<{
-      enabled: true;
-      engineVersion: string;
-      scoreVersion: string;
-      seed: string;
-      eventJournalHash: string;
-    }>
-  | Readonly<{
-      enabled: false;
-      reason: "disabled" | "fallback" | "not-recorded";
-    }>;
 
 export type ReplayActionEnvelope = CommandEnvelope<GameAction>;
 

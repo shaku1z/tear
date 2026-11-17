@@ -212,15 +212,30 @@ const journey = (practiceLab) =>
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-enemy-catalog.png") });
         await clickLabel("CHARGER");
         await waitScreen("playing");
-        await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 1);
-        const opponentAttempt = () =>
-          page.evaluate(() => ({
-            session: window.__PANTHEON_TEST.tutorial().session,
-            state: window.__PANTHEON_TEST.state(),
-            snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__
-              .create("A")
-              .captureSnapshot("enemy-practice", "recorded-canonical"),
-          }));
+        // The game keeps running between two page calls, so the blade can touch a fresh opponent
+        // after one call sees it spawn and before a second call reads it. Read it in the same
+        // page task that finds it. A restart reloads the arena on a later update, so the old
+        // opponent can still be counted when play resumes: `spawned` turns true only after the
+        // reload, when the new opponent is issued.
+        const opponentAttempt = async () =>
+          (
+            await page.waitForFunction(
+              () => {
+                const state = window.__PANTHEON_TEST.state();
+                const session = window.__PANTHEON_TEST.tutorial().session;
+                if (state.enemyCount !== 1 || session.enemyPractice?.spawned !== true) return null;
+                return {
+                  session,
+                  state,
+                  snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__
+                    .create("A")
+                    .captureSnapshot("enemy-practice", "recorded-canonical"),
+                };
+              },
+              undefined,
+              { timeout: STATE_WAIT_MS },
+            )
+          ).jsonValue();
         let opponent = await opponentAttempt();
         assert.equal(opponent.state.weapon, "sword");
         assert.equal(opponent.state.difficulty, "normal");
@@ -232,7 +247,6 @@ const journey = (practiceLab) =>
         await pressUntilScreen("p", "paused");
         await clickLabel("RESTART LESSON");
         await waitScreen("playing");
-        await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 1);
         opponent = await opponentAttempt();
         assert.equal(opponent.session.enemyPractice.defeated, false);
         assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].hp, opponent.snapshot.state["tear.enemy.v1"][0].maxHp);

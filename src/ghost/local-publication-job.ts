@@ -1,6 +1,6 @@
 import { readBeatRunBinding } from "../gameplay/run/beat-run";
 import { readSeedRaceRun } from "./seed-race-contract";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import {
   parseGhostCapsuleManifest,
   prepareGhostCapsuleSourceGuards,

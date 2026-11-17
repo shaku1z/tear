@@ -116,7 +116,18 @@ export class MusicDirector {
 
 export function resolveMusicScene(state: string, hasActiveBoss: boolean): MusicScene {
   if (
-    ["menu", "shop", "codex", "setup", "profile", "settings", "achievements", "leaderboards", "rename"].includes(state)
+    [
+      "menu",
+      "shop",
+      "codex",
+      "setup",
+      "profile",
+      "settings",
+      "music",
+      "achievements",
+      "leaderboards",
+      "rename",
+    ].includes(state)
   )
     return "main-menu";
   if (state === "win") return "victory";

@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { decodeGhostChunkPayload } from "./capsule-codec";
 import {
   prepareForensicGhostImport,

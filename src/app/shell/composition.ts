@@ -38,6 +38,7 @@ import { createBrowserGamepad } from "../../input/browser-gamepad";
 import { createBrowserInput } from "../../input/browser-input";
 import { createProfileStore } from "../../persistence/profile-store";
 import type { CloudFactory } from "../../platform/cloud-factory";
+import type { TearBuildTarget } from "../../platform/contracts";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import { createRunSeed } from "../../platform/run-seed";
@@ -75,7 +76,7 @@ import type { SurfaceAvailability } from "../../domain/surface-availability";
 import type { EngineeringQuery } from "./engineering-query";
 
 export interface TearCompositionOptions {
-  readonly target: "standalone" | "crazygames";
+  readonly target: TearBuildTarget;
   readonly sdk?: CrazyGamesSdkShape;
   readonly createCrazyGamesServices?: typeof createCrazyGamesPlatformServices;
   readonly createCloud: CloudFactory;

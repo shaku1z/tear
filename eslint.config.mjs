@@ -74,6 +74,7 @@ export default tseslint.config(
       "scripts/release-artifact.d.mts",
       "scripts/campaign-publication-boundary.d.mts",
       "scripts/tutorial-gold-compatibility.d.mts",
+      "scripts/build-targets.d.mts",
       "scripts/scene/hidden-paint.d.mts",
       "scripts/scene/package-files.d.mts",
       "scripts/scene/pixel-checks.d.mts",
@@ -238,6 +239,14 @@ export default tseslint.config(
             "CallExpression[callee.property.name='evaluate']:has(MemberExpression[object.property.name='__PANTHEON_TEST'][property.name=/^trigger/])",
           message:
             "Act in the same page task that checks the state the hook needs: page.waitForFunction(() => present() && (trigger(), true)), not a separate page.evaluate.",
+        },
+        {
+          // The game streams music and assets during play, so the network may never go quiet: a wait
+          // for it can hang until its ceiling (browser.pale-white-hart-foundation, main run 44012172969).
+          selector:
+            "CallExpression[callee.property.name='waitForLoadState'][arguments.0.value='networkidle'], Property[key.name='waitUntil'][value.value='networkidle']",
+          message:
+            "Do not wait for networkidle: wait for the state you need, or for a screen's lazy code with waitForScriptLoads(page) from tests/browser-waits.js.",
         },
         {
           // The same race when reading: a projectile found by one page call can be gone by the next.

@@ -1,12 +1,13 @@
 declare global {
   interface Window {
     __TEAR_BUILD__?: Readonly<{
-      target: "standalone" | "crazygames";
+      target: TearBuildTarget;
       mode: string;
     }>;
   }
 }
 
+import type { TearBuildTarget } from "../platform/contracts";
 import { installBiomeStemBackend, installStemCueMusicBackend, requestedStemsMode } from "../audio/install-stem-cue";
 import { warmChapterFonts } from "../presentation/font-loader";
 import { createEngineeringQuery, type EngineeringQuery } from "../app/shell/engineering-query";
@@ -18,7 +19,7 @@ export interface TearBootstrapSurfaces {
   readonly engineeringQuery: EngineeringQuery;
 }
 
-export function identifyBuild(target: "standalone" | "crazygames"): void {
+export function identifyBuild(target: TearBuildTarget): void {
   Object.defineProperty(window, "__TEAR_BUILD__", {
     configurable: false,
     enumerable: false,
@@ -29,7 +30,7 @@ export function identifyBuild(target: "standalone" | "crazygames"): void {
 
 /** The async boundary lets a target install the recorded-stem music backend first. */
 export async function bootstrapTear(
-  target: "standalone" | "crazygames",
+  target: TearBuildTarget,
   compose: (surfaces: TearBootstrapSurfaces) => void | Promise<void>,
 ): Promise<void> {
   identifyBuild(target);

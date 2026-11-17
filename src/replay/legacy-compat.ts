@@ -1,4 +1,5 @@
-import type { ReplayActionEnvelope, ReplayBuildMetadata, TearScoreReplayMetadata } from "./envelope";
+import type { ReplayActionEnvelope, ReplayBuildMetadata } from "./envelope";
+import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, type WeaponId } from "../gameplay/weapon-selection";
 import {
   TearGameplayEventBus,

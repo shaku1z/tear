@@ -1,6 +1,6 @@
 import type { SourceVoidState, SourceVoidTransitionState } from "./arena-rules";
 import type { VoidPlatform } from "../voidgen-contracts";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 
 /** Hydrates only aliases from an already captured v6 Source world; never creates a stream or advances it. */
 export function rebindBossPracticeSource(candidate: {

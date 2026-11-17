@@ -1,11 +1,17 @@
 import { createBrowserPlatformServices } from "./browser";
 import type { CrazyGamesPlatformOptions, CrazyGamesPlatformServices, CrazyGamesSdkShape } from "./crazygames";
-import type { AcknowledgedStorage, PlatformServices, StorageAcknowledgement, Unsubscribe } from "./contracts";
+import type {
+  AcknowledgedStorage,
+  PlatformServices,
+  StorageAcknowledgement,
+  TearBuildTarget,
+  Unsubscribe,
+} from "./contracts";
 import type { SyncStringStorage } from "./storage";
 import { markStartupMilestone } from "./startup-milestones";
 
 export interface LegacyPlatformCompatibilityOptions {
-  readonly target: "standalone" | "crazygames";
+  readonly target: TearBuildTarget;
   readonly sdk?: CrazyGamesSdkShape;
   readonly createCrazyGamesServices?: (options: CrazyGamesPlatformOptions) => Promise<CrazyGamesPlatformServices>;
   readonly storage?: SyncStringStorage;

@@ -12,18 +12,25 @@ import {
 
 /** Seconds without new lesson evidence before the coach offers a demonstration. */
 export const COACH_IDLE_SECONDS = 9;
-/** How long the lesson prompt stays at the player before it steps back to the card. */
+/** How long the lesson prompt stays at the player before it steps back to the strip. */
 export const COACH_PROMPT_SECONDS = 6;
 /** How long the Playground help line stays when the Playground opens. */
 export const COACH_HELP_SECONDS = 8;
+/** How long a counted step ("2 of 3") shows at the player. */
+export const COACH_STEP_SECONDS = 1;
+/** How long the "learned" line shows when an exercise completes. */
+export const COACH_LEARNED_SECONDS = 3;
 
 export interface TutorialCoachInput {
-  /** Changes whenever the active exercise changes (lesson, annex, drill). */
+  /** Changes whenever the active exercise changes (lesson, weapon step, opponent). */
   readonly key: string;
+  readonly kind: "lesson" | "weapon" | "enemy" | "boss";
   readonly title: string;
   readonly goal: string;
+  /** One line on what the exercise does for you in a real run. */
+  readonly why: string;
   readonly actions: readonly PromptAction[];
-  /** [current, goal] or undefined for a lesson with no counted objective. */
+  /** [current, goal] or undefined for an exercise with no counted objective. */
   readonly progress: readonly [number, number] | undefined;
   /** The completion beat is playing. */
   readonly completing: boolean;
@@ -44,14 +51,17 @@ export interface TrainingCoachFrame {
 
 /**
  * Decides which coach marks the Tutorial and the Playground show. It owns presentation
- * clocks only (never simulation state): a lesson prompt at the player when an exercise
- * starts (gone at the first counted evidence), a "show me" nudge after a stall, and the
- * Playground's one-line help when a Playground run opens.
+ * clocks only (never simulation state): the goal and its controls at the player when an
+ * exercise starts (gone at the first counted step), a short count at each counted step,
+ * a "learned" line with why it matters when the exercise completes, a demonstration
+ * offer after a stall, and the Playground's one-line help when a Playground run opens.
  */
 export class TrainingCoach {
   readonly #queue = new CoachQueue();
   #lessonKey = "";
   #lessonEvidence = 0;
+  #completing = false;
+  #learnedId = "";
   #promptShown = false;
   #idle = 0;
   #playgroundKey: unknown = undefined;
@@ -79,18 +89,25 @@ export class TrainingCoach {
       this.#queue.clear("lesson");
       this.#lessonKey = lesson.key;
       this.#lessonEvidence = evidence;
+      this.#completing = false;
       this.#promptShown = false;
       this.#idle = 0;
     }
+    if (lesson.completing && !this.#completing) this.#learned(frame, lesson);
+    this.#completing = lesson.completing;
     if (evidence !== this.#lessonEvidence || lesson.completing) {
+      if (evidence > this.#lessonEvidence && !lesson.completing) this.#counted(frame, lesson, evidence);
       this.#lessonEvidence = evidence;
       this.#idle = 0;
       this.#queue.dismiss(`lesson:${lesson.key}:prompt`);
       this.#queue.dismiss(`lesson:${lesson.key}:stuck`);
     } else this.#idle += Math.max(0, frame.deltaSeconds);
     const keys = promptLabels(lesson.actions, device, frame.padLabel);
-    if (!this.#promptShown && evidence === 0 && !lesson.completing) {
+    // The next goal waits until the previous exercise's "learned" line has played.
+    const settled = !this.#queue.has(this.#learnedId);
+    if (!this.#promptShown && settled && evidence === 0 && !lesson.completing) {
       this.#promptShown = true;
+      this.#idle = 0;
       this.#queue.offer(this.#mark(frame, lesson, "prompt", lesson.goal, keys, COACH_PROMPT_SECONDS, 1));
     } else if (this.#queue.has(`lesson:${lesson.key}:prompt`))
       this.#queue.offer(this.#mark(frame, lesson, "prompt", lesson.goal, keys, COACH_PROMPT_SECONDS, 1));
@@ -99,6 +116,38 @@ export class TrainingCoach {
       this.#idle = -COACH_PROMPT_SECONDS;
       this.#queue.offer(this.#stuck(frame, lesson, device));
     } else if (this.#queue.has(stuckId)) this.#queue.offer(this.#stuck(frame, lesson, device));
+  }
+
+  /** A short count at the player for each counted step of a multi-step goal. */
+  #counted(frame: TrainingCoachFrame, lesson: TutorialCoachInput, evidence: number): void {
+    const goal = lesson.progress?.[1] ?? 0;
+    if (goal <= 1 || evidence >= goal) return;
+    this.#queue.offer({
+      id: `beat:${lesson.key}:${String(evidence)}`,
+      channel: "beat",
+      tone: "success",
+      text: `${String(evidence)} of ${String(goal)}`,
+      keys: [],
+      ...(frame.player ? { anchor: frame.player } : {}),
+      priority: 1,
+      seconds: COACH_STEP_SECONDS,
+    });
+  }
+
+  /** The exercise is complete: name it and say what it is for. */
+  #learned(frame: TrainingCoachFrame, lesson: TutorialCoachInput): void {
+    this.#learnedId = `beat:${lesson.key}:learned`;
+    this.#queue.offer({
+      id: this.#learnedId,
+      channel: "beat",
+      tone: "success",
+      title: `${lesson.kind === "lesson" ? "LEARNED" : "DONE"} · ${lesson.title}`,
+      text: lesson.why,
+      keys: [],
+      ...(frame.player ? { anchor: frame.player } : {}),
+      priority: 3,
+      seconds: COACH_LEARNED_SECONDS,
+    });
   }
 
   #mark(
