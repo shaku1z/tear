@@ -103,6 +103,8 @@ export interface BladeMotorDecision {
 }
 
 export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeMotorDecision> {
+  #triggerHeld = false;
+
   decide(input: BladeMotorInput): BladeMotorDecision {
     const decision = this.#decide(input);
     if (input.observation.state.run.weapon !== "riftlock") return decision;
@@ -112,11 +114,16 @@ export class BladeMotorModule implements TearAgentModule<BladeMotorInput, BladeM
     const requested = decision.actions.some(
       (action) => action.type === "weapon" && action.intent === "primary" && action.phase === "pressed",
     );
+    // The Riftlock fires when its trigger is pressed, and holding the trigger draws the tether in,
+    // as it does for a player. So the motor presses when a round is ready, holds through the
+    // cooldown, and lets go for one tick once the next round is ready, so the next press fires it.
+    const hold = requested && (ready ? !this.#triggerHeld : this.#triggerHeld);
+    this.#triggerHeld = hold;
     return {
       ...decision,
       actions: [
         ...decision.actions.filter((action) => action.type !== "weapon" || action.intent !== "primary"),
-        { type: "weapon", intent: "primary", phase: ready && requested ? "pressed" : "released" },
+        { type: "weapon", intent: "primary", phase: hold ? "pressed" : "released" },
       ],
     };
   }
