@@ -1,6 +1,7 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 
 /**
@@ -23,10 +24,16 @@ export const TUTORIAL_GOLD_ROOTS = Object.freeze([
 ]);
 export const SHIPPING_CORPUS = "src/gameplay/training/tutorial-gold-reference-data.json";
 export const SHIPPING_BINDING = "src/gameplay/training/tutorial-gold-binding.json";
-export const BINDING_FORMAT = "tear-tutorial-gold-binding.v1";
+export const BINDING_FORMAT = "tear-tutorial-gold-binding.v2";
+/** The test that regenerates the gold and compares it with the committed corpus and proof. */
+export const GOLD_TEST = "tests/unit/tutorial-production-ghost.test.ts";
+export const GOLD_TEST_NAME = "replays all thirteen";
+/** Local, never committed: which (source fingerprint, corpus) pairs the gold test has passed for here. */
+export const VERIFIED_RECORD = "node_modules/.cache/tear-tutorial-gold/verified.json";
+const VERIFIED_FORMAT = "tear-tutorial-gold-verified.v1";
+const VERIFIED_KEEP = 32;
 const GENERATED_OUTPUTS = new Set([SHIPPING_CORPUS, SHIPPING_BINDING]);
-const REGENERATE_HINT =
-  "set TEAR_TUTORIAL_GOLD_WRITE=1 and run pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts before building";
+const REGENERATE_HINT = `set TEAR_TUTORIAL_GOLD_WRITE=1, run pnpm exec vitest run ${GOLD_TEST} and commit the files it rewrites`;
 
 /** First declared name per SyntaxKind value; later aliases such as FirstToken are markers. */
 const KIND_NAMES = (() => {
@@ -211,15 +218,85 @@ export function tutorialGoldSourceFingerprint(root = process.cwd(), roots = TUTO
   });
 }
 
-/** Builds check compatibility only; they never train, simulate or rewrite generated assets. */
-export function assertTutorialGoldFresh(root = process.cwd()) {
-  const expected = tutorialGoldSourceFingerprint(root).sourceHash;
+/** The committed binding for a corpus: its format and the corpus content hash, nothing derived from source. */
+export function tutorialGoldBinding(corpus) {
+  return { format: BINDING_FORMAT, corpusContentHash: corpus.contentHash };
+}
+
+/** The committed corpus content hash, after checking that the binding names that corpus. */
+export function committedTutorialGold(root = process.cwd()) {
   const binding = JSON.parse(readFileSync(resolve(root, SHIPPING_BINDING), "utf8"));
   const corpus = JSON.parse(readFileSync(resolve(root, SHIPPING_CORPUS), "utf8"));
-  if (binding?.format !== BINDING_FORMAT || binding.sourceHash !== expected)
-    throw new Error(`Tutorial gold references are stale; ${REGENERATE_HINT}`);
-  if (corpus?.format !== "tear-tutorial-gold.v1" || corpus.contentHash !== binding.corpusContentHash) {
+  if (
+    binding?.format !== BINDING_FORMAT ||
+    corpus?.format !== "tear-tutorial-gold.v1" ||
+    typeof corpus.contentHash !== "string" ||
+    corpus.contentHash !== binding.corpusContentHash
+  ) {
     throw new Error(`Tutorial gold binding does not match its corpus; ${REGENERATE_HINT}`);
   }
-  return expected;
+  return corpus.contentHash;
+}
+
+function readVerified(root) {
+  try {
+    const record = JSON.parse(readFileSync(resolve(root, VERIFIED_RECORD), "utf8"));
+    return record?.format === VERIFIED_FORMAT && Array.isArray(record.entries) ? record.entries : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Whether the gold test has passed here for exactly this source fingerprint and corpus. */
+export function isTutorialGoldVerified(root, sourceHash, corpusContentHash) {
+  return readVerified(root).some(
+    (entry) => entry?.sourceHash === sourceHash && entry?.corpusContentHash === corpusContentHash,
+  );
+}
+
+/** Called by the gold test once it has regenerated the gold and found it equal to the committed files. */
+export function recordTutorialGoldVerified(root, sourceHash, corpusContentHash) {
+  const file = resolve(root, VERIFIED_RECORD);
+  const others = readVerified(root).filter(
+    (entry) => entry?.sourceHash !== sourceHash || entry?.corpusContentHash !== corpusContentHash,
+  );
+  const entries = [{ sourceHash, corpusContentHash }, ...others].slice(0, VERIFIED_KEEP);
+  mkdirSync(dirname(file), { recursive: true });
+  const temporary = `${file}.${String(process.pid)}.tmp`;
+  writeFileSync(temporary, `${JSON.stringify({ format: VERIFIED_FORMAT, entries }, null, 2)}\n`);
+  renameSync(temporary, file);
+}
+
+/** Runs the gold test in its own process; it records the pair it verified when it passes. */
+function runGoldTest(root) {
+  const env = { ...process.env };
+  delete env.TEAR_TUTORIAL_GOLD_WRITE; // a build never rewrites the gold
+  const vitest = join(root, "node_modules", "vitest", "vitest.mjs");
+  const result = spawnSync(process.execPath, [vitest, "run", GOLD_TEST, "-t", GOLD_TEST_NAME], {
+    cwd: root,
+    env,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return { ok: result.status === 0, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+}
+
+/**
+ * Refuses gold that no longer matches the code. The committed files carry no source fingerprint;
+ * instead the gold test regenerates the gold through production physics and compares it with the
+ * committed corpus and proof. Its pass is remembered locally under the source fingerprint, so a
+ * build runs it only when the tutorial code or the corpus changed since the last pass here.
+ * @param {string} [root]
+ * @param {{ runTest?: (root: string) => { ok: boolean, output: string } }} [options]
+ */
+export function assertTutorialGoldFresh(root = process.cwd(), { runTest = runGoldTest } = {}) {
+  const corpusContentHash = committedTutorialGold(root);
+  const { sourceHash } = tutorialGoldSourceFingerprint(root);
+  if (isTutorialGoldVerified(root, sourceHash, corpusContentHash)) return corpusContentHash;
+  const result = runTest(root);
+  if (!result.ok || !isTutorialGoldVerified(root, sourceHash, corpusContentHash)) {
+    const tail = result.output.trim().split(/\r?\n/u).slice(-30).join("\n");
+    throw new Error(`Tutorial gold references are stale; ${REGENERATE_HINT}\n${tail}`);
+  }
+  return corpusContentHash;
 }

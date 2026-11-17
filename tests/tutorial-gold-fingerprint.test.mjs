@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -10,8 +11,12 @@ import {
   SHIPPING_BINDING,
   SHIPPING_CORPUS,
   TUTORIAL_GOLD_ROOTS,
+  assertTutorialGoldFresh,
   collectTutorialGoldModules,
+  committedTutorialGold,
   normalizeModuleSource,
+  recordTutorialGoldVerified,
+  tutorialGoldBinding,
   tutorialGoldSourceFingerprint,
 } from "../scripts/tutorial-gold-compatibility.mjs";
 
@@ -310,4 +315,96 @@ test("(iii) changing one numeric literal or one comparison operator changes the 
   assert.notEqual(numeric, original.sourceHash);
   assert.notEqual(comparison, original.sourceHash);
   assert.notEqual(numeric, comparison);
+});
+
+/** A code change that a formatter cannot produce: one new exported value at the end of the module. */
+function appendCode(root, file, marker) {
+  const target = path.join(root, file);
+  fs.writeFileSync(
+    target,
+    `${fs.readFileSync(target, "utf8")}\nexport const branchMarker${marker} = ${String(marker)};\n`,
+  );
+}
+
+test("the committed binding names the corpus by content hash only, with no source fingerprint", () => {
+  const binding = JSON.parse(fs.readFileSync(path.join(repositoryRoot, SHIPPING_BINDING), "utf8"));
+  const corpus = JSON.parse(fs.readFileSync(path.join(repositoryRoot, SHIPPING_CORPUS), "utf8"));
+  assert.deepEqual(binding, tutorialGoldBinding(corpus));
+  assert.deepEqual(Object.keys(binding).sort(), ["corpusContentHash", "format"]);
+  assert.equal(committedTutorialGold(repositoryRoot), corpus.contentHash);
+});
+
+test("a build runs the gold test unless it passed here for this code and corpus, and refuses when it fails", () => {
+  withClosureCopy((root) => {
+    const contentHash = committedTutorialGold(root);
+    let runs = 0;
+    const passing = (directory) => {
+      runs += 1;
+      recordTutorialGoldVerified(directory, tutorialGoldSourceFingerprint(directory).sourceHash, contentHash);
+      return { ok: true, output: "" };
+    };
+    assert.equal(assertTutorialGoldFresh(root, { runTest: passing }), contentHash);
+    assert.equal(runs, 1);
+    assert.equal(assertTutorialGoldFresh(root, { runTest: passing }), contentHash);
+    assert.equal(runs, 1, "a remembered pass for the same code and corpus is not run again");
+
+    appendCode(root, "src/gameplay/entities/player.ts", 1);
+    const failing = () => {
+      runs += 1;
+      return { ok: false, output: "Gold cut diverged at 812" };
+    };
+    assert.throws(() => assertTutorialGoldFresh(root, { runTest: failing }), /stale[\s\S]*diverged at 812/u);
+    assert.equal(runs, 2, "changed tutorial code is verified again");
+    // A test that exits cleanly without recording this exact pair (for example one that ran no test) is no pass.
+    assert.throws(() => assertTutorialGoldFresh(root, { runTest: () => ({ ok: true, output: "" }) }), /stale/u);
+    assert.equal(assertTutorialGoldFresh(root, { runTest: passing }), contentHash);
+
+    const binding = path.join(root, SHIPPING_BINDING);
+    fs.writeFileSync(binding, JSON.stringify({ ...tutorialGoldBinding({ contentHash: "0".repeat(16) }) }));
+    assert.throws(() => assertTutorialGoldFresh(root, { runTest: passing }), /does not match its corpus/u);
+  });
+});
+
+test("two branches that change different tutorial roots merge without conflict and without a refresh", () => {
+  withClosureCopy((root) => {
+    const git = (...args) => {
+      const result = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@invalid", ...args], {
+        cwd: root,
+        encoding: "utf8",
+      });
+      return { status: result.status, out: `${result.stdout}${result.stderr}`.trim() };
+    };
+    const corpus = JSON.parse(fs.readFileSync(path.join(root, SHIPPING_CORPUS), "utf8"));
+    /** What the gold refresh writes when the gold output is unchanged: the binding for the same corpus. */
+    const refresh = () =>
+      fs.writeFileSync(path.join(root, SHIPPING_BINDING), `${JSON.stringify(tutorialGoldBinding(corpus), null, 2)}\n`);
+    git("init", "--quiet", "--initial-branch", "main");
+    git("config", "core.autocrlf", "false");
+    refresh();
+    git("add", "-A");
+    git("commit", "--quiet", "-m", "base");
+    const base = fs.readFileSync(path.join(root, SHIPPING_BINDING), "utf8");
+
+    const branches = [
+      ["a", "src/gameplay/entities/player.ts"],
+      ["b", "src/gameplay/entities/blade.ts"],
+    ];
+    const fingerprints = [];
+    for (const [index, [branch, file]] of branches.entries()) {
+      git("checkout", "--quiet", "-b", branch, "main");
+      appendCode(root, file, index + 2);
+      refresh();
+      fingerprints.push(tutorialGoldSourceFingerprint(root).sourceHash);
+      git("commit", "--quiet", "-am", `change ${file}`);
+      const touched = git("diff", "--name-only", "main", branch).out.split(/\r?\n/u);
+      assert.deepEqual(touched, [file], "a code change that keeps the gold output commits nothing generated");
+    }
+    git("checkout", "--quiet", "a");
+    const merge = git("merge", "--no-edit", "b");
+    assert.equal(merge.status, 0, merge.out);
+    assert.equal(fs.readFileSync(path.join(root, SHIPPING_BINDING), "utf8"), base);
+    // The merged code has a fingerprint neither branch verified, so the next build runs the gold test on it.
+    const merged = tutorialGoldSourceFingerprint(root).sourceHash;
+    assert.equal(new Set([original.sourceHash, ...fingerprints, merged]).size, 4);
+  });
 });
