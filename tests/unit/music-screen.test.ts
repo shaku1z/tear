@@ -59,7 +59,7 @@ describe("where a song plays", () => {
 });
 
 const seconds = Object.fromEntries(songs.map((song, index) => [song.id, 20 + index]));
-const library = { songs: songs.map((song) => ({ ...song, seconds: seconds[song.id] })), routing: published };
+const library = { songs: songs.map((song) => ({ ...song, seconds: seconds[song.id] ?? 0 })), routing: published };
 const view = (page?: string, extra: Partial<Parameters<typeof buildMusicScreenView>[0]> = {}) =>
   buildMusicScreenView({
     settings: {},
