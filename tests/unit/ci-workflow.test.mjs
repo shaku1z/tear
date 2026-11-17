@@ -207,8 +207,13 @@ describe("Nightly checks workflow", () => {
   it("runs the nightly group on main once a day and by hand", () => {
     expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
     expect(nightly).toMatch(/uses: actions\/checkout@v4\n {8}with:\n {10}ref: main/u);
-    expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly/u);
+    expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
     expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
+  });
+
+  it("is the only workflow that keeps going past a failing check", () => {
+    expect(workflow).toMatch(/run-checks\.mjs browser\n/u);
+    expect(workflow).not.toMatch(/--keep-going/u);
   });
 
   it("records each check's result and keeps the file even when a check fails", () => {
