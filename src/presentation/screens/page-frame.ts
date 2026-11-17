@@ -126,6 +126,14 @@ export function evenSlots(frame: PageFrame, count: number, gap: number): readonl
 export function createPageFrame(context: ScreenRenderContext) {
   const { ui } = context,
     kit = createCompactPage(context);
+  /** A view that enqueues every control (pinned desktop parts). */
+  const unclipped = (top: number, bottom: number): ScrollView => ({
+    top,
+    bottom,
+    enqueue(control) {
+      context.enqueue(control);
+    },
+  });
 
   /** Draws the chrome for the density in use and returns the frame the body lays out in. */
   function open(spec: PageSpec): PageFrame {
@@ -195,7 +203,7 @@ export function createPageFrame(context: ScreenRenderContext) {
       const options = { size: ui.t.type.caption, maxLines: 1, align: "left", baseline, height, box: true } as const;
       tail.push(prose(frame, spec.pager.note, options) ?? { height, draw: () => undefined });
     }
-    const fixed: ScrollView = { top: frame.top, bottom: frame.bottom, enqueue: (control) => context.enqueue(control) };
+    const fixed = unclipped(frame.top, frame.bottom);
     let y = spec.desktop.top;
     for (const block of head) {
       block.draw(y, fixed);
@@ -253,11 +261,7 @@ export function createPageFrame(context: ScreenRenderContext) {
       { x: frame.left + 182, w: 150 },
     ];
     const buttons = { height: PAGER.buttonH, size: ui.t.type.label, blockHeight: 0, slots };
-    const view: ScrollView = {
-      top: footer.footerY,
-      bottom: context.height,
-      enqueue: (control) => context.enqueue(control),
-    };
+    const view = unclipped(footer.footerY, context.height);
     actions(frame, [pager.previous, pager.next], buttons).draw(footer.footerY + PAGER.buttonY, view);
     ui.text(
       context.canvas,
