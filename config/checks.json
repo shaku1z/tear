@@ -421,6 +421,11 @@
         "id": "verdant-presentation",
         "run": "node tests/browser-verdant-presentation.js",
         "seconds": 10
+      },
+      {
+        "id": "forced-flake",
+        "run": "node scripts/ci-forced-flake.mjs",
+        "seconds": 1
       }
     ],
     "nightly": [

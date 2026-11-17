@@ -1725,6 +1725,17 @@
       "via": [
         "who"
       ]
+    },
+    "scripts/ci-forced-flake.mjs": {
+      "purpose": "Temporary: fails on a first attempt and passes on a re-run, to show the flaky report",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        "config/checks.json"
+      ]
     }
   },
   "libraries": {
