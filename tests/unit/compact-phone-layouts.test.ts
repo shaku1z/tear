@@ -444,7 +444,12 @@ const rankedView = {
 const playgroundMenu = {
   id: "pgmenu" as const,
   title: "PLAYGROUND",
-  subtitle: "build the scene — Tab / Esc resumes",
+  subtitle: "Q / E switch tabs · Tab or Esc returns to the arena",
+  tabs: ["SPAWN", "BOSSES", "ARENA", "WEAPON", "RULES", "ABILITIES"].map((label, index) => ({
+    id: `tab:${label.toLowerCase()}`,
+    label,
+    selected: index === 0,
+  })),
   sections: [
     {
       label: "SPAWN ENEMIES",
@@ -509,7 +514,7 @@ const playgroundMenu = {
     },
     {
       label: "ACTIONS",
-      choices: ["ABILITY LAB ›", "CLEAR ENEMIES", "FULL HEAL", "RESET PLAYGROUND"].map((label) => ({
+      choices: ["CLEAR ENEMIES", "FULL HEAL", "RESET PLAYGROUND"].map((label) => ({
         id: `action:${label}`,
         label,
       })),
@@ -518,8 +523,13 @@ const playgroundMenu = {
 };
 const playgroundLab = {
   id: "pglab" as const,
-  title: "ABILITY LAB",
-  subtitle: "take anything · evolve anything · no waves, just you",
+  title: "PLAYGROUND",
+  subtitle: "Take or evolve any ability · Q / E switch tabs · Tab or Esc returns to the arena",
+  tabs: ["SPAWN", "BOSSES", "ARENA", "WEAPON", "RULES", "ABILITIES"].map((label, index) => ({
+    id: `tab:${label.toLowerCase()}`,
+    label,
+    selected: index === 5,
+  })),
   sections: [
     {
       label: "FILTERS",
@@ -815,7 +825,7 @@ describe("phone compositions (compact density)", () => {
         expect(settings.some((action) => action.key === key)).toBe(true);
     });
 
-    it(`keeps the playground build menu and ability lab inside the frame at ${phone.name}`, () => {
+    it(`keeps the Playground menu and its ABILITIES tab inside the frame at ${phone.name}`, () => {
       const menu = sweep(
         phone,
         (r) => {
@@ -1197,5 +1207,53 @@ describe("codex and shop: one screen definition at both densities", () => {
           desktop.add(JSON.stringify(control.action));
       expect([...sweep(phone, draw, `${label} phone`)].sort(), label).toEqual([...desktop].sort());
     }
+  });
+});
+
+describe("shop BUY state at both densities", () => {
+  it("draws every BUY enabled exactly when its upgrade can be bought, on desktop and on the phone", () => {
+    const enabled = new Map(
+      shopView.sections.flatMap((section) => section.items.map((item) => [item.id, item.enabled])),
+    );
+    const draw = (r: ReturnType<typeof createScreenRenderers>): void => {
+      r.shop(shopView);
+    };
+    const check = (controls: readonly ScreenControl[], label: string): number => {
+      const buys = controls.filter((control) => control.action.type === "shop.buy" && control.hiddenBox !== true);
+      for (const control of buys) {
+        const id = control.action.type === "shop.buy" ? control.action.id : "";
+        expect(control.enabled !== false, `${label}: ${id}`).toBe(enabled.get(id));
+      }
+      return buys.length;
+    };
+    expect(check(renderDesktop({ width: 1600, height: 900 }, draw).controls, "desktop")).toBeGreaterThan(0);
+    const phone = PHONES[0],
+      end = render(phone, draw, 1e6).scroll;
+    let seen = 0;
+    for (let scroll = 0; scroll <= end; scroll += 100) seen += check(render(phone, draw, scroll).controls, "phone");
+    expect(seen).toBeGreaterThan(0);
+  });
+});
+
+describe("playground: one screen definition at both densities", () => {
+  it("offers the same actions on the desktop and phone menu tabs, and in ABILITIES", () => {
+    const menu = (r: ReturnType<typeof createScreenRenderers>): void => {
+      r.pgmenu(playgroundMenu);
+    };
+    const lab = (r: ReturnType<typeof createScreenRenderers>): void => {
+      r.pglab(playgroundLab);
+    };
+    const actions = (controls: readonly ScreenControl[]): string[] =>
+      controls.map((control) => JSON.stringify(control.action));
+    const phone = PHONES[0];
+    const desktopMenu = new Set(actions(renderDesktop({ width: 1600, height: 900 }, menu).controls));
+    expect([...sweep(phone, menu, "pgmenu phone")].sort()).toEqual([...desktopMenu].sort());
+    // The desktop lab offers a row's button only while the row is fully in view: sweep a row at a time.
+    const rows = Math.ceil((playgroundLab.sections[1]?.choices.length ?? 0) / 2),
+      desktopLab = new Set<string>();
+    for (let scroll = 0; scroll <= rows * 92; scroll += 92)
+      for (const action of actions(renderDesktop({ width: 1600, height: 900 }, lab, scroll).controls))
+        desktopLab.add(action);
+    expect([...sweep(phone, lab, "pglab phone")].sort()).toEqual([...desktopLab].sort());
   });
 });

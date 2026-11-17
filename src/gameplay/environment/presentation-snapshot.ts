@@ -21,7 +21,6 @@ export interface EnvironmentPresentationSnapshot {
     geometry: EnvironmentSnapshot["combatObjects"][number]["geometry"];
     integrityRatio: number;
     counterplayTags: readonly string[];
-    connectionGeometry?: EnvironmentSnapshot["combatObjects"][number]["geometry"];
   }>[];
   readonly routes: readonly Readonly<{
     id: string;
@@ -95,6 +94,7 @@ const COMBAT_BASE = new Set([
   "counterplayTags",
   "procEligible",
   "damageDedupeId",
+  "damagedBy",
   "cleanupReason",
 ]);
 const ROUTE_BASE = new Set(["id", "kind", "state", "points", "stateTick", "ownerId", "cleanupReason"]);

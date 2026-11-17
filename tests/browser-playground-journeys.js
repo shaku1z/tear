@@ -249,7 +249,27 @@ const journey = (practiceLab) =>
         await waitScreen("playing");
         opponent = await opponentAttempt();
         assert.equal(opponent.session.enemyPractice.defeated, false);
-        assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].hp, opponent.snapshot.state["tear.enemy.v1"][0].maxHp);
+        {
+          // A restart issues a full-health opponent. If it is ever seen damaged, say how long it had
+          // been alive (spawnT counts down from its spawn-in) and what was near it in that same snapshot.
+          const state = opponent.snapshot.state;
+          const enemy = state["tear.enemy.v1"][0];
+          const pick = (value, keys) => Object.fromEntries(keys.map((key) => [key, value?.[key]]));
+          assert.equal(
+            enemy.hp,
+            enemy.maxHp,
+            `restarted practice opponent was damaged before the first read: ${JSON.stringify({
+              enemy: pick(enemy, ["x", "y", "vx", "vy", "spawnT", "aliveT", "atk", "atkT", "flash", "hitCd", "stun"]),
+              enemyStatus: pick(enemy, ["bleedStacks", "burnT", "burnDps", "_deathCause", "affixes"]),
+              blade: pick(state["tear.blade.v1"], ["state", "x", "y", "tipX", "tipY", "tipSpeed", "swingActive"]),
+              player: pick(state["tear.player.v1"], ["x", "y", "vx", "vy", "hp"]),
+              projectiles: state["tear.projectile.v1"]?.length,
+              hazards: pick(state["tear.hazard.v1"], ["stageId", "fields", "combatObjects"]),
+              clock: state["tear.world.v1"]?.clock,
+              simulationSeconds: state["tear.world.v1"]?.simulationSeconds,
+            })}`,
+          );
+        }
         await pressUntilScreen("p", "paused");
         await clickLabel("BOSS PRACTICE");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);

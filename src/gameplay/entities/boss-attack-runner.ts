@@ -37,6 +37,8 @@ export interface BossAttackRunnerState {
   readonly readyTick: number;
   readonly lastAttackId: string | null;
   readonly cooldownUntil: Readonly<Record<string, number>>;
+  /** A forced exposure outside any move (a cut Graft, say): the ticks it spans, or null. */
+  readonly exposed: Readonly<{ from: number; until: number }> | null;
 }
 
 export interface BossAttackContext<Phase extends string | number> {
@@ -46,6 +48,8 @@ export interface BossAttackContext<Phase extends string | number> {
   readonly target: Box;
   readonly arena: Readonly<{ width: number; groundY: number }>;
   readonly random: RandomSource;
+  /** Moves that may not be chosen now, by id (a move whose stage object is already out, say). */
+  readonly blocked?: ReadonlySet<string>;
 }
 
 export type BossAttackEvent<Place> =
@@ -61,7 +65,7 @@ export type BossHitArea =
 const STAGE_ORDER: readonly BossAttackStage[] = Object.freeze(["tell", "active", "recover", "punish"]);
 
 export function createBossAttackRunnerState(readyTick = 0): BossAttackRunnerState {
-  return Object.freeze({ run: null, readyTick, lastAttackId: null, cooldownUntil: Object.freeze({}) });
+  return Object.freeze({ run: null, readyTick, lastAttackId: null, cooldownUntil: Object.freeze({}), exposed: null });
 }
 
 function heightOf(boss: Box, target: Box): BossAttackHeight {
@@ -95,6 +99,7 @@ export function chooseBossAttack<Phase extends string | number, Place>(
     (attack) =>
       attack.phases.includes(context.phase) &&
       attack.id !== state.lastAttackId &&
+      context.blocked?.has(attack.id) !== true &&
       (state.cooldownUntil[attack.id] ?? 0) <= context.tick,
   );
   const scores = candidates.map((attack) => preference(attack, context));
@@ -158,6 +163,29 @@ function finish<Phase extends string | number, Place>(
     readyTick: tick + table.gap,
     lastAttackId: attack.id,
     cooldownUntil: Object.freeze({ ...state.cooldownUntil, [attack.id]: tick + attack.choose.cooldown }),
+    exposed: null,
+  });
+}
+
+/**
+ * Forces the boss open for `ticks`, whatever it was doing: the move in progress ends without striking, hits
+ * count as exposed, and the next move waits for the exposure and the table's gap. For answers that are not
+ * a parry, such as cutting a stage object the boss depends on.
+ */
+export function exposeBossAttack(
+  table: BossAttackTable<string | number, unknown>,
+  state: BossAttackRunnerState,
+  tick: number,
+  ticks: number,
+): BossAttackRunnerState {
+  if (!Number.isSafeInteger(ticks) || ticks < 1) throw new RangeError("a forced exposure lasts at least one tick");
+  const until = Math.max(tick + ticks, state.exposed?.until ?? 0);
+  return Object.freeze({
+    run: null,
+    readyTick: until + table.gap,
+    lastAttackId: state.run?.attackId ?? state.lastAttackId,
+    cooldownUntil: state.cooldownUntil,
+    exposed: Object.freeze({ from: tick, until }),
   });
 }
 
@@ -172,7 +200,7 @@ export function advanceBossAttack<Phase extends string | number, Place>(
     if (context.tick < state.readyTick) return { state, events: [] };
     const attack = chooseBossAttack(table, state, context);
     if (attack === null) return { state, events: [] };
-    const started = Object.freeze({ ...state, run: begin(attack, context) });
+    const started = Object.freeze({ ...state, exposed: null, run: begin(attack, context) });
     return {
       state: started,
       events: [{ type: "stage", attackId: attack.id, stage: "tell" }, ...placesAt(attack, "tell")],
@@ -320,17 +348,18 @@ export function bossAttackPose<Phase extends string | number, Place>(
   return { attackId: attack.id, stage: run.stage, progress, facing: run.facing, target: run.target, area };
 }
 
-/** True while the boss is in a move's punish stage: exposed, and hits on it are scaled. */
-export function bossAttackExposed(state: BossAttackRunnerState): boolean {
-  return state.run?.stage === "punish";
+/** True while the boss is exposed (a move's punish stage or a forced exposure): hits on it are scaled. */
+export function bossAttackExposed(state: BossAttackRunnerState, tick: number): boolean {
+  return state.run?.stage === "punish" || (state.exposed !== null && tick < state.exposed.until);
 }
 
 /** How much damage the boss takes right now, as a multiplier. */
 export function bossAttackDamageTaken(
   table: BossAttackTable<string | number, unknown>,
   state: BossAttackRunnerState,
+  tick: number,
 ): number {
-  return bossAttackExposed(state) ? table.exposedDamageTaken : 1;
+  return bossAttackExposed(state, tick) ? table.exposedDamageTaken : 1;
 }
 
 /**
@@ -408,6 +437,22 @@ export function bossAttackTells<Phase extends string | number, Place>(
   const run = state.run;
   const attack = currentBossAttack(table, state);
   const stage = run === null ? null : tellStage(run.stage);
+  if (run === null && state.exposed !== null && context.tick < state.exposed.until)
+    return Object.freeze([
+      Object.freeze({
+        id: "exposed",
+        attackId: "exposed",
+        mark: "self" as const,
+        stage: "exposed" as const,
+        x: context.boss.x,
+        y: context.boss.y,
+        hw: context.boss.hw,
+        hh: context.boss.hh,
+        leadSeconds: (state.exposed.until - state.exposed.from) / BOSS_ATTACK_TICKS_PER_SECOND,
+        remainingSeconds: (state.exposed.until - context.tick) / BOSS_ATTACK_TICKS_PER_SECOND,
+        damaging: false,
+      }),
+    ]);
   if (run === null || attack === null || stage === null) return Object.freeze([]);
   const exposed = stage === "exposed";
   const area = exposed ? context.boss : tellArea(attack, run, context.boss, context.arena.groundY);

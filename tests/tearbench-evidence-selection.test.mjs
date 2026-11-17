@@ -667,7 +667,21 @@ test("the scheduled TearBench workflow inspects the complete commit range", () =
   const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
   assert.doesNotMatch(scheduledWorkflow, /HEAD\^\s+HEAD/u);
   assert.match(scheduledWorkflow, /git rev-list --max-parents=0 HEAD/u);
-  assert.ok((scheduledWorkflow.match(/fetch-depth: 0/gu) ?? []).length >= 2);
+  assert.match(scheduledWorkflow, /fetch-depth: 0/u);
+});
+
+test("the scheduled TearBench workflow runs only the weekly endurance job", () => {
+  const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
+  const jobs = scheduledWorkflow.slice(scheduledWorkflow.indexOf("\njobs:"));
+  assert.deepEqual(
+    [...jobs.matchAll(/^ {2}([\w-]+):$/gmu)].map((match) => match[1]),
+    ["weekly-endurance"],
+  );
+  assert.deepEqual(
+    [...scheduledWorkflow.matchAll(/cron: "([^"]+)"/gu)].map((match) => match[1]),
+    ["23 8 * * 0"],
+  );
+  assert.match(scheduledWorkflow, /pnpm check:weekly/u);
 });
 
 test("missing active weapon evidence fails closed", () => {

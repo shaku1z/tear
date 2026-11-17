@@ -86,7 +86,14 @@ A boss is an enemy with phases, an arena and a move list.
   - `bossAttackMotion`: where the move puts the boss, and whether it is hidden;
   - `bossAttackDamageTaken`: the multiplier while the boss is exposed after a move;
   - `bossAttackTells`: the tells to report from `tells()`;
-  - the events: `place` events become requests for the biome feature.
+  - the events: `place` events become requests for the biome feature. The Rootbound's `plant-graft`,
+    `root-cage` and `bloom-shift` are the worked example (`rootbound-moves.ts`, and `place` in
+    `rootbound.ts`).
+
+  Two more tools: `context.blocked` is a set of move ids that may not start now (a move whose stage
+  object is already out, say), and `exposeBossAttack` opens the boss for a time outside any move, for an
+  answer that is not a parry, such as cutting a stage object the boss depends on. Build the context once
+  and reuse it every tick; do not build objects per tick in a boss.
 - **Tells:** report them from `tells()` in the shared format (`src/gameplay/entities/boss-tells.ts`). The
   shared tell renderer draws them, and `tests/unit/boss-tell-rules.test.ts` checks every boss's warnings.
   The punish stage reports an `exposed` tell, so the player can see the opening.

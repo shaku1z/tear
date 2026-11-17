@@ -52,7 +52,8 @@ describe("Verdant Final Five conformance", () => {
     expect(resolveHeldEnvironmentWeaponContacts({ environment, blade, segment, tick: 2 }).damaged).toBe(0);
     const after = environment.combatObjects()[0];
     if (after === undefined) throw new Error(`missing ${weaponId} conformance object`);
-    expect(after).toEqual({ ...original, integrity: 90, stateTick: 1 });
+    // The object itself remembers the swing that cut it, so a restore cannot let that swing cut it twice.
+    expect(after).toEqual({ ...original, integrity: 90, stateTick: 1, damagedBy: [`${weaponId}:held:swing:1`] });
     for (const forbidden of ["bleedStacks", "burnT", "markT", "rootT", "seamT", "coins", "score", "reward"]) {
       expect(Object.hasOwn(after, forbidden)).toBe(false);
     }

@@ -43,7 +43,9 @@ export function bindLiveRootboundActors(
           acknowledgeBloomPattern?: NonNullable<RootboundEnvironmentActor["acknowledgeBloomPattern"]>;
           acknowledgeGraftPlanted?: NonNullable<RootboundEnvironmentActor["acknowledgeGraftPlanted"]>;
           applyGraftEffects?: NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>;
-          recoverGraftHealth?: NonNullable<RootboundEnvironmentActor["recoverGraftHealth"]>;
+          graftSevered?: NonNullable<RootboundEnvironmentActor["graftSevered"]>;
+          adoptGraft?: NonNullable<RootboundEnvironmentActor["adoptGraft"]>;
+          cageSevered?: NonNullable<RootboundEnvironmentActor["cageSevered"]>;
           bossBloomPattern?: () => NonNullable<RootboundEnvironmentActor["state"]["bloomPattern"]>;
           rootCagePlacement?: () => NonNullable<RootboundEnvironmentActor["state"]["rootCagePlacement"]> | null;
           completeRootCage?: NonNullable<RootboundEnvironmentActor["completeRootCage"]>;
@@ -61,7 +63,14 @@ export function bindLiveRootboundActors(
           applyGraftEffects: (effects: Parameters<NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>>[0]) => {
             actor.applyGraftEffects?.(effects);
           },
-          recoverGraftHealth: (fraction: number) => actor.recoverGraftHealth?.(fraction) ?? 0,
+          graftSevered: (graftType: string) => {
+            actor.graftSevered?.(graftType);
+          },
+          cageSevered: () => {
+            actor.cageSevered?.();
+          },
+          adoptGraft: (...graft: Parameters<NonNullable<RootboundEnvironmentActor["adoptGraft"]>>) =>
+            actor.adoptGraft?.(...graft) ?? false,
           completeRootCage: () => {
             actor.completeRootCage?.();
           },

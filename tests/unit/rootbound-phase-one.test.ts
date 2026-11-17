@@ -29,6 +29,9 @@ function boss(randomValues?: readonly number[]): { harness: Harness; actor: Phas
   return { harness, actor };
 }
 
+/** The moves of Phase I: the ones that strike. Phase II adds moves that plant and place instead. */
+const STRIKES = ROOTBOUND_MOVES.attacks.filter((attack) => attack.phases.includes(1));
+
 /** The stage of the move in progress, read fresh: an update may have ended it. */
 function stageOf(actor: PhaseOneBoss): string | null {
   return actor.moveState.run?.stage ?? null;
@@ -45,7 +48,13 @@ function queue(actor: PhaseOneBoss, id: string): void {
   const cooling = Object.fromEntries(
     ROOTBOUND_MOVES.attacks.filter((other) => other.id !== id).map((other) => [other.id, Number.MAX_SAFE_INTEGER]),
   );
-  actor.moveState = { run: null, readyTick: actor.moveTick, lastAttackId: null, cooldownUntil: cooling };
+  actor.moveState = {
+    run: null,
+    readyTick: actor.moveTick,
+    lastAttackId: null,
+    cooldownUntil: cooling,
+    exposed: null,
+  };
 }
 
 /** Where the player stands so each move, played straight, lands on them. */
@@ -109,11 +118,11 @@ describe("Rootbound Phase I moves", () => {
     const first = sequence(values);
     expect(first.length).toBeGreaterThan(12);
     expect(first.every((id, index) => index === 0 || first[index - 1] !== id)).toBe(true);
-    expect(new Set(first)).toEqual(new Set(ROOTBOUND_MOVES.attacks.map((attack) => attack.id)));
+    expect(new Set(first)).toEqual(new Set(STRIKES.map((attack) => attack.id)));
     expect(sequence(values)).toEqual(first);
   });
 
-  for (const attack of ROOTBOUND_MOVES.attacks) {
+  for (const attack of STRIKES) {
     it(`warns ${attack.id} for its authored tell, then lands it once for its authored damage`, () => {
       const { firstHit, warnedFrom, stages, damage } = play(attack.id);
       expect(warnedFrom).toBe(0);
@@ -238,7 +247,7 @@ describe("Rootbound Phase I moves", () => {
     expect(
       DIFFICULTY_CATALOG.map((difficulty) => [
         difficulty.id,
-        ...ROOTBOUND_MOVES.attacks.map((attack) =>
+        ...STRIKES.map((attack) =>
           difficulty.oneHit ? "fatal" : scaled(attack.hit?.damage ?? 0, difficulty.modifiers.playerDamageTaken),
         ),
       ]),

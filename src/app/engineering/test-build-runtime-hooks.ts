@@ -234,6 +234,10 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       skipCinematic: () => {
         CINEMA.requestSkip();
       },
+      controlsDrawn: () => {
+        presentationHost.render();
+        return interfaceInteraction.buttons().length > 0;
+      },
       activateControl: (action) => {
         presentationHost.render();
         const encoded = JSON.stringify(action);

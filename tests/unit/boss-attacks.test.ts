@@ -19,6 +19,7 @@ import {
   bossHitTouches,
   chooseBossAttack,
   createBossAttackRunnerState,
+  exposeBossAttack,
   markBossAttackLanded,
   parryBossAttack,
   placeBossHitShape,
@@ -231,7 +232,7 @@ describe("boss attack runner", () => {
         );
       if (exposedAt < 0 && bossAttackTells(only, state, ctx)[0]?.stage === "exposed") {
         exposedAt = tick;
-        expect(bossAttackDamageTaken(only, state)).toBe(1.5);
+        expect(bossAttackDamageTaken(only, state, tick)).toBe(1.5);
         expect(bossAttackTells(only, state, ctx)[0]).toMatchObject({ mark: "self", damaging: false });
       }
     }
@@ -245,7 +246,7 @@ describe("boss attack runner", () => {
       "finished:lash",
     ]);
     expect(exposedAt).toBe(120);
-    expect(bossAttackDamageTaken(only, state)).toBe(1);
+    expect(bossAttackDamageTaken(only, state, 240)).toBe(1);
     expect(state.readyTick).toBe(240 + 48);
   });
 
@@ -297,7 +298,7 @@ describe("boss attack runner", () => {
     expect(bossAttackHit(table, parried, context(60))).toBeNull();
     expect(bossAttackParryable(table, parried, 51)).toBe(false);
     expect(bossAttackTells(table, parried, context(50))[0]).toMatchObject({ stage: "exposed", leadSeconds: 0.9 });
-    expect(bossAttackDamageTaken(table, parried)).toBe(1.5);
+    expect(bossAttackDamageTaken(table, parried, 51)).toBe(1.5);
     let state = parried;
     for (let tick = 51; tick <= 50 + 108; tick += 1) state = advanceBossAttack(table, state, context(tick)).state;
     expect(state.run).toBeNull();
@@ -380,5 +381,51 @@ describe("boss attack runner", () => {
     expect(bossAttackMotion(motions, burrow, context(58))).toMatchObject({ x: 600, hidden: true });
     // The tell's last tick surfaces the boss at the target, before the strike.
     expect(bossAttackMotion(motions, burrow, context(59))).toMatchObject({ x: 900, hidden: false });
+  });
+
+  it("never chooses a blocked move", () => {
+    const table = buildBossAttackTable(definition([move("lash"), move("bolt"), move("slam")]));
+    const blocked = new Set(["lash", "slam"]);
+    for (const seed of ["a", "b", "c", "d"])
+      expect(
+        chooseBossAttack(table, createBossAttackRunnerState(), context(0, { random: new SeededRandom(seed), blocked }))
+          ?.id,
+      ).toBe("bolt");
+    const all = new Set(["lash", "bolt", "slam"]);
+    expect(chooseBossAttack(table, createBossAttackRunnerState(), context(0, { blocked: all }))).toBeNull();
+  });
+
+  it("a forced exposure ends the move without a strike, scales hits and delays the next move", () => {
+    const table = buildBossAttackTable(definition([move("lash"), move("bolt")]));
+    const winding = advanceBossAttack(table, createBossAttackRunnerState(), context(0)).state;
+    expect(winding.run?.stage).toBe("tell");
+    const open = exposeBossAttack(table, winding, 30, 120);
+    expect(open.run).toBeNull();
+    expect(open.lastAttackId).toBe(winding.run?.attackId);
+    expect(bossAttackHit(table, open, context(70))).toBeNull();
+    expect(bossAttackDamageTaken(table, open, 30)).toBe(1.5);
+    expect(bossAttackDamageTaken(table, open, 149)).toBe(1.5);
+    expect(bossAttackDamageTaken(table, open, 150)).toBe(1);
+    expect(bossAttackTells(table, open, context(90))).toEqual([
+      expect.objectContaining({
+        id: "exposed",
+        mark: "self",
+        stage: "exposed",
+        damaging: false,
+        leadSeconds: 1,
+        remainingSeconds: 0.5,
+      }),
+    ]);
+    expect(bossAttackTells(table, open, context(150))).toEqual([]);
+    // Nothing starts until the exposure and the table's gap have passed.
+    let state = open;
+    for (let tick = 31; tick < 150 + 48; tick += 1) state = advanceBossAttack(table, state, context(tick)).state;
+    expect(state.run).toBeNull();
+    state = advanceBossAttack(table, state, context(150 + 48)).state;
+    expect(state.run?.stage).toBe("tell");
+    expect(state.exposed).toBeNull();
+    // A second cut while open never shortens the opening.
+    expect(exposeBossAttack(table, open, 40, 10).exposed?.until).toBe(150);
+    expect(() => exposeBossAttack(table, open, 40, 0)).toThrow(RangeError);
   });
 });

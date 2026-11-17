@@ -1,4 +1,5 @@
 // The machine-wide check slots, the group selection and the flaky-check report of scripts/run-checks.mjs.
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -101,5 +102,37 @@ describe("check results and flaky checks", () => {
     // Another tree is another change: its failure is not a flake of this one.
     expect(flakyLine(previous, "t2", "browser.pale-variants", 2)).toBeUndefined();
     expect(flakyLine(undefined, "t1", "browser.pale-variants", 2)).toBeUndefined();
+  });
+});
+
+describe("--keep-going", () => {
+  // A three-check list whose first and last checks fail.
+  function runList(extra) {
+    const dir = directory();
+    const config = join(dir, "checks.json");
+    const step = (id, code) => ({ id, run: `node -e process.exit(${String(code)})` });
+    writeFileSync(
+      config,
+      JSON.stringify({ gate: ["demo"], groups: { demo: [step("first", 3), step("second", 0), step("third", 4)] } }),
+    );
+    const env = { ...process.env, CI: "1", TEAR_CHECKS_CONFIG: config };
+    delete env.TEAR_CHECK_RESULTS;
+    delete env.GITHUB_STEP_SUMMARY;
+    return spawnSync(process.execPath, ["scripts/run-checks.mjs", "demo", ...extra], { encoding: "utf8", env });
+  }
+
+  it("stops at the first failing check without it", () => {
+    const result = runList([]);
+    expect(result.status).toBe(3);
+    expect(result.stdout).not.toMatch(/demo\.second/u);
+  });
+
+  it("runs every check, lists each failure and still fails with it", () => {
+    const result = runList(["--keep-going"]);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toMatch(/PASS demo\.second/u);
+    expect(result.stderr).toMatch(
+      /FAIL 2 of 3 check\(s\) in \d+ s:\n {2}demo\.first \(exit 3\)\n {2}demo\.third \(exit 4\)/u,
+    );
   });
 });
