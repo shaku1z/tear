@@ -16,6 +16,7 @@ import {
   committedTutorialGold,
   normalizeModuleSource,
   recordTutorialGoldVerified,
+  runGoldTest,
   tutorialGoldBinding,
   tutorialGoldSourceFingerprint,
 } from "../scripts/tutorial-gold-compatibility.mjs";
@@ -362,6 +363,20 @@ test("a build runs the gold test unless it passed here for this code and corpus,
     const binding = path.join(root, SHIPPING_BINDING);
     fs.writeFileSync(binding, JSON.stringify({ ...tutorialGoldBinding({ contentHash: "0".repeat(16) }) }));
     assert.throws(() => assertTutorialGoldFresh(root, { runTest: passing }), /does not match its corpus/u);
+  });
+});
+
+test("a build without vitest says vitest is missing, not that the gold is stale", () => {
+  withClosureCopy((root) => {
+    assert.throws(
+      () => assertTutorialGoldFresh(root),
+      (error) => {
+        assert.match(error.message, /vitest is not installed/u);
+        assert.doesNotMatch(error.message, /stale/u);
+        return true;
+      },
+    );
+    assert.throws(() => runGoldTest(root), /pnpm install --frozen-lockfile/u);
   });
 });
 

@@ -267,17 +267,28 @@ export function recordTutorialGoldVerified(root, sourceHash, corpusContentHash) 
   renameSync(temporary, file);
 }
 
-/** Runs the gold test in its own process; it records the pair it verified when it passes. */
-function runGoldTest(root) {
+/**
+ * Runs the gold test in its own process; it records the pair it verified when it passes. Without
+ * vitest it cannot run at all, which is a broken install, not stale gold, and says so.
+ */
+export function runGoldTest(root) {
   const env = { ...process.env };
   delete env.TEAR_TUTORIAL_GOLD_WRITE; // a build never rewrites the gold
   const vitest = join(root, "node_modules", "vitest", "vitest.mjs");
+  if (!existsSync(vitest)) {
+    throw new Error(
+      `Cannot verify the tutorial gold: vitest is not installed (${vitest} is missing). ` +
+        "Builds need the dev dependencies; run pnpm install --frozen-lockfile.",
+    );
+  }
   const result = spawnSync(process.execPath, [vitest, "run", GOLD_TEST, "-t", GOLD_TEST_NAME], {
     cwd: root,
     env,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
+  if (result.error)
+    throw new Error(`Cannot verify the tutorial gold: the gold test did not start (${result.error.message})`);
   return { ok: result.status === 0, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
 }
 

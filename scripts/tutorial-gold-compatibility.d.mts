@@ -31,6 +31,7 @@ export function tutorialGoldBinding(corpus: { readonly contentHash: string }): {
 export function committedTutorialGold(root?: string): string;
 export function isTutorialGoldVerified(root: string, sourceHash: string, corpusContentHash: string): boolean;
 export function recordTutorialGoldVerified(root: string, sourceHash: string, corpusContentHash: string): void;
+export function runGoldTest(root: string): { ok: boolean; output: string };
 export function assertTutorialGoldFresh(
   root?: string,
   options?: { runTest?: (root: string) => { ok: boolean; output: string } },
