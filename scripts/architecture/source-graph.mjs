@@ -156,7 +156,10 @@ const RESOLUTION_SUFFIXES = Object.freeze([".ts", ".d.ts", "/index.ts", ""]);
  */
 export function resolveSpecifier(fromFile, specifier, available) {
   if (!specifier.startsWith(".")) return { target: `npm:${specifier}`, resolved: false, external: true };
-  const candidate = path.posix.normalize(path.posix.join(path.posix.dirname(fromFile), specifier));
+  // A bundler query such as "?worker&url" or "?raw" names the same file.
+  const candidate = path.posix.normalize(
+    path.posix.join(path.posix.dirname(fromFile), specifier.replace(/\?.*$/u, "")),
+  );
   const stem = candidate.endsWith(".js") ? candidate.slice(0, -3) : candidate;
   for (const base of stem === candidate ? [candidate] : [stem, candidate]) {
     for (const suffix of RESOLUTION_SUFFIXES) {

@@ -1,3 +1,4 @@
+import { browserOnline } from "../../platform/worker-cache-warmup";
 import { parseGhostCapsuleManifest } from "../../ghost/capsule-vault";
 import { stableVerificationHash } from "../../domain/hash";
 import { UPGRADES } from "../../gameplay/upgrades";
@@ -19,6 +20,10 @@ export interface CareerLivePorts {
   actorId(actor: object): string;
 }
 /** Local-only metadata and passive recording composition; no profile/account mutations. */
+function createCareerArchiveWorker(): Worker {
+  return new Worker(new URL("../../ghost/career-archive-worker.ts", import.meta.url), { type: "module" });
+}
+
 export function createBrowserGhostCareer(factory: IDBFactory | undefined, document: Document, live: CareerLivePorts) {
   let promise: Promise<GhostCareerStore> | undefined;
   const store = () => {
@@ -133,7 +138,7 @@ export function createBrowserGhostCareer(factory: IDBFactory | undefined, docume
         return () => undefined;
       }
       let stopped = false;
-      const worker = new Worker(new URL("../../ghost/career-archive-worker.ts", import.meta.url), { type: "module" });
+      const worker = createCareerArchiveWorker();
       worker.onmessage = (event: MessageEvent<{ progress?: string; complete?: boolean; error?: string }>) => {
         if (stopped) return;
         if (event.data.error) {
@@ -146,7 +151,11 @@ export function createBrowserGhostCareer(factory: IDBFactory | undefined, docume
         } else changed();
       };
       worker.onerror = () => {
-        failed("Background indexing refused; metadata remains available.");
+        failed(
+          browserOnline()
+            ? "Background indexing refused; metadata remains available."
+            : "Your runs are listed. Re-indexing needs one online visit.",
+        );
         worker.terminate();
       };
       worker.postMessage({ id: 1 });
