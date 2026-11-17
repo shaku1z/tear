@@ -74,6 +74,7 @@ export default tseslint.config(
       "scripts/release-artifact.d.mts",
       "scripts/campaign-publication-boundary.d.mts",
       "scripts/tutorial-gold-compatibility.d.mts",
+      "scripts/build-targets.d.mts",
       "scripts/scene/hidden-paint.d.mts",
       "scripts/scene/package-files.d.mts",
       "scripts/scene/pixel-checks.d.mts",

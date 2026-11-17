@@ -24,6 +24,7 @@ owning test/script references in one reviewable transaction.
 | Music in the game | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) | `pnpm check:music` |
 | Release authority and deployment matrix | [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md) | [RELEASE_MATRIX.md](RELEASE_MATRIX.md) |
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
+| itch.io package and upload steps | [ITCH_UPLOAD.md](ITCH_UPLOAD.md) | `config/build-targets.json` (`itch`); `scripts/package-target.mjs` |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
 | TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) | [Temporary current correction plan](../plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md); [current-game alignment and permanent synchronization plan](TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md); [temporary verification-acceleration execution plan](TEARBENCH_VERIFICATION_ACCELERATION_EXECUTION_PLAN.md); preserved generated registries and evidence catalogs |
 | Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | `config/artifact-layout.json`; G5 retention and disposition records |

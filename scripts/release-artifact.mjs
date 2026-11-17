@@ -136,7 +136,8 @@ export async function calculateArtifactHash(directory) {
 export async function writeReleaseArtifactMetadata({ directory, repository, sha, target, mode, sourceDirectory }) {
   if (!/^[0-9a-f]{40}$/u.test(sha)) throw new Error(`build SHA must be a full lowercase Git SHA: ${sha}`);
   if (!repository.includes("/")) throw new Error(`build repository must be owner/name: ${repository}`);
-  if (!new Set(["standalone", "crazygames"]).has(target)) throw new Error(`unsupported build target: ${target}`);
+  if (!new Set(["standalone", "crazygames", "itch"]).has(target))
+    throw new Error(`unsupported build target: ${target}`);
   const root = resolve(directory);
   const artifact = await calculateArtifactHash(root);
   const source = readSourceIdentitySync(sourceDirectory ?? root);
