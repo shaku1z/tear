@@ -167,10 +167,13 @@ export function createLiveWorldPresentationAdapters(
     );
   };
   const drawPantheonDebug = (view: WorldBounds, painted: WorldBounds): void => {
+    // Release builds never show it, so the snapshot (a copy of every platform,
+    // projectile and enemy zone) is not built at all.
+    if (!(services.debug && services.capturePolicy().debug === "include")) return;
     const run = state.run();
     world.pantheonDebug(
       buildPantheonDebugSnapshot({
-        enabled: services.debug && services.capturePolicy().debug === "include",
+        enabled: true,
         visible: view,
         painted,
         platforms: stage.platforms.map((platform) => ({ ...platform })),
