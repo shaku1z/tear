@@ -9,6 +9,7 @@ declare global {
 
 import { installBiomeStemBackend, installStemCueMusicBackend, requestedStemsMode } from "../audio/install-stem-cue";
 import { warmChapterFonts } from "../presentation/font-loader";
+import { FIRST_STAGE_NAME } from "./first-stage";
 import { createEngineeringQuery, type EngineeringQuery } from "../app/shell/engineering-query";
 import { createSurfaceAvailability, type SurfaceAvailability } from "../domain/surface-availability";
 
@@ -41,7 +42,7 @@ export async function bootstrapTear(
   // (`?stems=off`) or audition one cue (`?stemcue=<id>`); release builds read no
   // query. A failed stem install leaves AudioSystem's built-in music in place.
   const stems = requestedStemsMode(engineeringQuery.search);
-  if (stems.mode === "biome") installBiomeStemBackend();
+  if (stems.mode === "biome") installBiomeStemBackend(FIRST_STAGE_NAME);
   else if (stems.mode === "single") await installStemCueMusicBackend(stems.cueId);
   await compose(Object.freeze({ surfaces, engineeringQuery }));
 }

@@ -23,7 +23,7 @@ import type { MusicRoutingManifest, RoutingScene } from "../music/music-routing-
 import { StemCuePlayer } from "./StemCuePlayer";
 import { loopSeconds, planTierGains } from "./tier";
 import { tierFromSnapshot } from "./tier-from-snapshot";
-import { WebAudioStemBackend } from "./web-audio-backend";
+import { WebAudioStemBackend, warmStem } from "./web-audio-backend";
 import type { StemCueManifest, Tier } from "./types";
 
 export interface LoadedCueRef {
@@ -96,7 +96,17 @@ export class BiomeStemBackend implements MusicBackend {
   #lastBiomeId = "menu";
   #lastScene: MusicScene = "main-menu";
 
-  constructor(cues: readonly LoadedCueRef[], routing: MusicRoutingManifest, catalog: MusicCatalog | null = null) {
+  readonly #firstStage: string | null;
+  readonly #warmAllowed: () => boolean;
+
+  constructor(
+    cues: readonly LoadedCueRef[],
+    routing: MusicRoutingManifest,
+    catalog: MusicCatalog | null = null,
+    warm: { readonly firstStage: string; readonly allowed: () => boolean } | null = null,
+  ) {
+    this.#firstStage = warm?.firstStage ?? null;
+    this.#warmAllowed = warm?.allowed ?? (() => false);
     this.#catalog = catalog;
     for (const cue of cues) this.#cues.set(cue.id, cue);
     this.#routing = routing;
@@ -123,8 +133,39 @@ export class BiomeStemBackend implements MusicBackend {
       if (next !== this.#active?.cueId) void this.#activate(next, CROSSFADE_SECONDS, QUANTIZE_BARS);
     });
     this.#stingers = new StingerPlayer(this.#context, this.#output);
-    void this.#stingers.load();
     await this.#activate(this.#shellCueId(), CROSSFADE_SECONDS, 0, true);
+    // Nothing else shares the bandwidth while the menu cue's layers arrive: stingers wait for
+    // all of them, then the first stage's first layer is warmed for the run ahead.
+    void (this.#active?.player.allLoaded ?? Promise.resolve()).then(() => {
+      void this.#stingers?.load();
+      if (this.#onShell && this.#firstStage && this.#warmAllowed()) this.warmFirstLayer(this.#firstStageCueId());
+    });
+  }
+
+  /** Cue for the first stage's gameplay, as the routing would pick it at the start of a run. */
+  #firstStageCueId(): string {
+    return resolveMusicRoute(this.#routing, { biomeId: this.#firstStage ?? "", scene: "gameplay", bossId: null });
+  }
+
+  /** The cue the menu would start with. */
+  get menuCueId(): string {
+    return this.#shellCueId();
+  }
+
+  /**
+   * Fetch the bytes of a cue's first layer (the stems audible at its calmest tier) ahead of
+   * playback. The one shared warm-up: the menu cue before first input, the first stage's cue
+   * while on the menu.
+   */
+  warmFirstLayer(cueId: string): void {
+    const loaded = this.#cues.get(cueId);
+    if (!loaded) return;
+    const audible = new Set(
+      Object.entries(planTierGains(loaded.manifest, 0))
+        .filter(([, gain]) => gain > 0)
+        .map(([id]) => id),
+    );
+    for (const asset of loaded.manifest.stems) if (audible.has(asset.id)) warmStem(loaded.baseUrl, asset);
   }
 
   beginRun(metadata: MusicRunSessionMetadata): Promise<void> {
