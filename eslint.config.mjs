@@ -70,7 +70,6 @@ export default tseslint.config(
       "node_modules*/**",
       "vendor/**",
       "tear-crazygames/**",
-      "workers/worker-configuration.d.ts",
       "scripts/release-artifact.d.mts",
       "scripts/campaign-publication-boundary.d.mts",
       "scripts/tutorial-gold-compatibility.d.mts",
@@ -88,7 +87,6 @@ export default tseslint.config(
     files: [
       "src/**/*.ts",
       "tests/**/*.ts",
-      "workers/**/*.ts",
       "vite.config.ts",
       "vitest.config.ts",
       "vitest.endurance.config.ts",
