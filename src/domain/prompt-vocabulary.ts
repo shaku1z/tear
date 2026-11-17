@@ -30,6 +30,9 @@ export const PROMPT_ACTIONS = [
   "pause",
   "back",
   "confirm",
+  "tab-prev",
+  "tab-next",
+  "close-menu",
   "playground-menu",
   "abilities",
   "quick-spawn",
@@ -44,7 +47,7 @@ export type PromptAction = (typeof PROMPT_ACTIONS)[number];
  * Pad bindings resolved to a glyph at draw time: the preset actions follow the player's
  * controller preset, and the menu buttons follow the glyph style (Xbox, PlayStation, generic).
  */
-export type PadBinding = "jump" | "dash" | "throw" | "tether" | "confirm" | "back" | "pause";
+export type PadBinding = "jump" | "dash" | "throw" | "tether" | "confirm" | "back" | "pause" | "tab-prev" | "tab-next";
 export type PadBindingLabel = (binding: PadBinding) => string;
 
 type Wording = string | Readonly<{ pad: PadBinding; suffix?: string; prefix?: string }>;
@@ -74,6 +77,10 @@ const WORDING: Readonly<Record<PromptAction, Readonly<Record<PromptDevice, Wordi
   pause: { keyboard: "ESC", touch: "PAUSE", gamepad: { pad: "pause" } },
   back: { keyboard: "ESC", touch: "BACK", gamepad: { pad: "back" } },
   confirm: { keyboard: "ENTER", touch: "TAP", gamepad: { pad: "confirm" } },
+  // Tabbed menus: touch players tap the tab strip and RESUME, so touch has no prompt for these.
+  "tab-prev": { keyboard: "Q", touch: null, gamepad: { pad: "tab-prev" } },
+  "tab-next": { keyboard: "E", touch: null, gamepad: { pad: "tab-next" } },
+  "close-menu": { keyboard: "TAB / ESC", touch: null, gamepad: { pad: "back" } },
   "playground-menu": { keyboard: "E", touch: null, gamepad: null },
   "abilities": { keyboard: "U", touch: null, gamepad: null },
   "quick-spawn": { keyboard: "1–8", touch: null, gamepad: null },

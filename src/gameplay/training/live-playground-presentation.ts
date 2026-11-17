@@ -1,3 +1,10 @@
+import {
+  promptDevice,
+  promptLabel,
+  promptLabels,
+  type PadBindingLabel,
+  type PromptInputMode,
+} from "../../domain/prompt-vocabulary";
 import { PLAYGROUND_TABS } from "./runtime-bridge";
 
 export interface PlaygroundChoice {
@@ -39,19 +46,21 @@ export interface PlaygroundPresentationUpgrade {
   readonly tiers?: readonly unknown[];
 }
 /** The device that owns input; the build-menu subtitle only names controls that work on it. */
-export type PlaygroundPromptDevice = "mouse" | "keyboard" | "gamepad" | "touch";
+export type PlaygroundPromptDevice = PromptInputMode;
 
 /**
- * One line under the title: how to switch tabs and how to leave, for the device in use.
- * Tab and Escape close the menu from a keyboard; touch and controller players leave
- * through the RESUME button.
+ * One line under the title: how to switch tabs and how to leave, worded by the prompt vocabulary
+ * for the device in use (Q / E and Tab / Esc on a keyboard, the bumpers and back on a pad). Touch
+ * players tap the tab strip and RESUME, which need no line, so touch gets an empty one.
  */
-export function playgroundMenuSubtitle(device: PlaygroundPromptDevice): string {
-  return device === "mouse" || device === "keyboard"
-    ? "Q / E switch tabs · Tab or Esc returns to the arena"
-    : device === "gamepad"
-      ? "L1 / R1 switch tabs · RESUME returns to the arena"
-      : "RESUME returns to the arena";
+export function playgroundMenuSubtitle(mode: PlaygroundPromptDevice, padLabel?: PadBindingLabel): string {
+  const device = promptDevice(mode),
+    tabs = promptLabels(["tab-prev", "tab-next"], device, padLabel),
+    close = promptLabel("close-menu", device, padLabel);
+  return [
+    ...(tabs.length === 2 ? [`${tabs.join(" / ")} switch tabs`] : []),
+    ...(close === null ? [] : [`${close} returns to the arena`]),
+  ].join(" · ");
 }
 
 /** Keyboard shortcuts in the arena, shown on the choice they repeat (keyboard only). */
@@ -71,6 +80,8 @@ function menuTabs(selected: string): PlaygroundScreenModel["tabs"] {
 export interface LivePlaygroundPresentationOptions {
   readonly run: () => PlaygroundPresentationRun;
   readonly inputDevice: () => PlaygroundPromptDevice;
+  /** Pad glyphs for the device-worded help line (the player's controller style). */
+  readonly padLabel?: PadBindingLabel;
   readonly oneHit: () => boolean;
   readonly kinds: readonly string[];
   readonly difficulties: () => readonly Readonly<{ id: string; label: string }>[];
@@ -106,7 +117,8 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
         pg = run.pg,
         colors = options.colors(),
         device = options.inputDevice(),
-        keyboard = device === "mouse" || device === "keyboard",
+        // Arena shortcuts are keys: shown only while the keyboard owns input.
+        keyboard = promptDevice(device) === "keyboard",
         tab = options.tab();
       const key = (id: string, hotkey = PLAYGROUND_SHORTCUTS[id]) =>
         keyboard && hotkey !== undefined ? { sub: `KEY ${hotkey}` } : {};
@@ -209,7 +221,7 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
       options.renderMenu({
         id: "pgmenu",
         title: "PLAYGROUND",
-        subtitle: playgroundMenuSubtitle(device),
+        subtitle: playgroundMenuSubtitle(device, options.padLabel),
         tabs: menuTabs(tab),
         sections: pages[tab] ?? pages.spawn ?? [],
       });
@@ -227,7 +239,9 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
       options.renderLab({
         id: "pglab",
         title: "PLAYGROUND",
-        subtitle: "Take or evolve any ability · " + playgroundMenuSubtitle(options.inputDevice()),
+        subtitle: ["Take or evolve any ability", playgroundMenuSubtitle(options.inputDevice(), options.padLabel)]
+          .filter((part) => part !== "")
+          .join(" · "),
         tabs: menuTabs("abilities"),
         sections: [
           {

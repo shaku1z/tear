@@ -24,6 +24,7 @@ import { AUTHORED_BOSS_ROSTER } from "../../gameplay/run/content-director";
 import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../../gameplay/run/session";
 import { practiceEnemyCatalog } from "../../gameplay/training/practice-enemy-catalog";
+import { padPromptLabel } from "../../presentation/world/tutorial-input-prompts";
 
 interface TrainingLifecycle {
   terminate(reason: string): void;
@@ -260,6 +261,7 @@ export function createLiveTrainingHostRuntime(context: LiveTrainingHostContext) 
   const presentation = createLivePlaygroundPresentation({
     run: () => requireRun(state),
     inputDevice: () => d.Input.mode,
+    padLabel: padPromptLabel(d.PAD),
     oneHit: () => player().oneHit,
     kinds: PLAYGROUND_ALL_KINDS,
     difficulties: () => d.CONFIG.difficulties,
