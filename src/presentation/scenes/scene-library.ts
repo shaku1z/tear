@@ -1,4 +1,5 @@
 import { validateScenePackage, type SceneCamera } from "./scene-contract";
+import { prepareMotion } from "./scene-motion";
 import {
   bakeShading,
   drawSceneBack,
@@ -125,6 +126,7 @@ interface Entry {
 function releaseImages(loaded: LoadedScene, ports: SceneLibraryPorts): void {
   if (ports.releaseImage === undefined) return;
   for (const image of loaded.images.values()) ports.releaseImage(image);
+  for (const part of loaded.motion ?? []) ports.releaseImage(part.canvas);
 }
 
 async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): Promise<LoadedScene> {
@@ -145,7 +147,7 @@ async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): 
   const baked = bakeShading(scene, images, ports.createCanvas);
   // A layer with shading baked in replaces its decoded copy: free the copy now.
   for (const [id, image] of images) if (baked.images.get(id) !== image) ports.releaseImage?.(image);
-  return baked;
+  return Object.freeze({ ...baked, motion: prepareMotion(scene, baked.images, ports.createCanvas) });
 }
 
 export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {

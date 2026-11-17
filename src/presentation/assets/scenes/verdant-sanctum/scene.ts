@@ -10,4 +10,5 @@ export const files: Readonly<Record<string, string>> = Object.freeze({
   "roots-left.avif": new URL("./roots-left.avif", import.meta.url).href,
   "roots-right.avif": new URL("./roots-right.avif", import.meta.url).href,
   "stone.avif": new URL("./stone.avif", import.meta.url).href,
+  "water.avif": new URL("./water.avif", import.meta.url).href,
 });

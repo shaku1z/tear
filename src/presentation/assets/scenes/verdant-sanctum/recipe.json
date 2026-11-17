@@ -64,6 +64,16 @@
       "prompt": "Use case: style-transfer, game environment material texture. Input image is a style reference; derive ONLY the ground bank material along the bottom of this forest sanctuary, not the landscape. Deliver one wide rectangular FULLY OPAQUE texture filling the entire image edge to edge, aspect ratio 3:1. Straight-on side elevation of an ancient dark forest-green ruined stone retaining bank. The uppermost edge is a continuous horizontal walkable moss crown: a thin broken yellow-green sunlit rim and dense small moss leaves, occupying the top 10 percent. Below it is substantial dark desaturated green irregular stone masonry, root tracery, chipped joints, localized creeping moss, dappled painterly texture in the same hand-painted visual family as the reference. Descend to very dark green earth and root-shadow in the bottom quarter. Texture scale: many modest stones, not three giant boulders. The left/right sides should join as a repeatable horizontal strip with no endcaps, no vertical border and no directional lighting gradient. No visible sky, water, landscape, trees, transparent margins, black external background, floating platform, text, diagram, checkerboard or separate swatches. No cyan bevel, no neon outline. This is the game ground's solid face texture, not a new scene painting. Keep fully opaque RGB across the entire rectangle.",
       "licence": "Owner-owned project asset.",
       "sha256": "6266a57a7afc411ade66763147b1a93620ee64159f963d44af700f336a7a3a79"
+    },
+    {
+      "id": "water-mask",
+      "file": "water-mask.png",
+      "description": "Segmentation of the pool (1672x941, white = water, including the reflections in it; standing stone, banks and trunks black). Its rows above the waterline wrongly mark misty openings as water, so the recipe uses it only from the waterline down.",
+      "origin": "image-tool",
+      "tool": "Codex built-in image editor (segmentation edit of an earlier mask, with the clean plate as reference)",
+      "prompt": "Use case: precise-object-edit. Image 1 is the WRONG black/white water mask to correct; image 2 is the exact sanctuary backing reference. Return ONLY the corrected 1672x941 black/white mask, same registration. Target the HORIZONTAL FOREGROUND POOL ONLY, roughly lower third of the scene. Make EVERY pixel above y=610 BLACK, including sky seen through upper arches. All vertical waterfalls must be BLACK. In the lower pool, make the liquid surface solid WHITE INCLUDING ALL dark wavy/reflected pillar and tree shapes: reflections are liquid, not pillars. Keep ONLY actual solid stone pillars/ruin blocks, actual foreground banks/roots and actual tree trunks BLACK; their reflections directly below their real waterline must be WHITE. The wrong mask's dangling black wavy pillar-reflection spikes around x270,y730; x425,y720; x625,y730; x820,y710; x995,y720; x1320,y740; x1460,y750 must be removed (filled WHITE), while the actual solid pillars immediately above remain BLACK. No outlines around black regions; no fine white lines on dry ruins. Preserve exact boundaries of the lower foreground pool and its real occluding architecture. The upper 610 rows are solid black by design: we will address far water separately. Pure black and white, no texture/shading/text.",
+      "licence": "Owner-owned project asset.",
+      "sha256": "6dabcf3c237f92563bb72f92b3005aa1a45e184aea9a10bdf5c4b94eb5eb74d9"
     }
   ],
   "outputs": [
@@ -399,6 +409,65 @@
           "overlap": 64
         }
       ]
+    },
+    {
+      "id": "water",
+      "file": "water.avif",
+      "alpha": true,
+      "sources": [
+        "overscan",
+        "water-mask"
+      ],
+      "steps": [
+        {
+          "op": "load",
+          "source": "overscan"
+        },
+        {
+          "op": "mask",
+          "name": "water",
+          "canvas": [
+            2440,
+            1453
+          ],
+          "fill": 0,
+          "place": [
+            {
+              "source": "water-mask",
+              "at": [
+                384,
+                256
+              ]
+            }
+          ],
+          "blur": 3,
+          "clipAbove": {
+            "y": 868,
+            "ramp": 24
+          }
+        },
+        {
+          "op": "alpha",
+          "mask": "water"
+        },
+        {
+          "op": "crop",
+          "rect": [
+            384,
+            856,
+            1672,
+            304
+          ]
+        },
+        {
+          "op": "flat",
+          "color": "#ffffff"
+        },
+        {
+          "op": "resize",
+          "scale": 0.25
+        }
+      ]
     }
   ],
   "scene": {
@@ -412,7 +481,7 @@
     },
     "camera": {
       "playerShift": 48,
-      "zoomMin": 1.0,
+      "zoomMin": 1,
       "zoomMax": 1.2,
       "shake": 24
     },
@@ -523,6 +592,27 @@
         "color": "#4f7468",
         "opacity": 0.3,
         "feather": 90
+      }
+    ],
+    "motion": [
+      {
+        "id": "pool",
+        "kind": "water",
+        "layer": "far",
+        "mask": "water",
+        "rows": 44,
+        "far": 0.22,
+        "slide": 3.2,
+        "swell": 2.2,
+        "waves": 7,
+        "period": 3.4,
+        "glints": {
+          "count": 70,
+          "color": "#f6ffe0",
+          "opacity": 0.5,
+          "length": 30,
+          "drift": 9
+        }
       }
     ]
   }

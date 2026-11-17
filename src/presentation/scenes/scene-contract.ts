@@ -89,6 +89,45 @@ export interface SceneShade {
 }
 
 /**
+ * Moving water: the part of a painted layer under `mask` is redrawn in
+ * horizontal rows that slide and stretch a little, so the painted surface and
+ * the reflections in it ripple while everything outside the mask stays still.
+ * Rows are thin and move little at the far edge (`rect` top) and grow towards
+ * the near edge, by `far` (far size as a share of near size), so the motion
+ * follows the painted perspective. `glints` are short bright strokes on the
+ * surface that fade in and out and drift.
+ */
+export interface SceneWater {
+  readonly id: string;
+  readonly kind: "water";
+  /** The layer whose paint moves; the water is drawn right after it. */
+  readonly layer: string;
+  /** Image whose alpha says where water is, stretched over `rect`. */
+  readonly mask: string;
+  /** Layer-space area the mask covers, inside the layer's rect. */
+  readonly rect: Rect;
+  readonly rows: number;
+  readonly far: number;
+  /** World px a near row slides sideways and stretches vertically. */
+  readonly slide: number;
+  readonly swell: number;
+  /** Wave crests between the far and near edge, and seconds for one to pass. */
+  readonly waves: number;
+  readonly period: number;
+  readonly glints?: {
+    readonly count: number;
+    readonly color: string;
+    readonly opacity: number;
+    /** World px of a near glint, and world px a second it drifts sideways. */
+    readonly length: number;
+    readonly drift: number;
+  };
+}
+
+/** Everything in a scene that moves. Each kind is drawn by the shared renderer from this data alone. */
+export type SceneMotion = SceneWater;
+
+/**
  * How the game draws this stage's platforms and floor. Platforms are never part
  * of the painted layers: the stage's platform material draws them from the real
  * collision geometry, above the back plane and below actors. The package only
@@ -136,6 +175,8 @@ export interface ScenePackage {
   readonly images: readonly SceneImage[];
   readonly layers: readonly SceneLayer[];
   readonly shading: readonly SceneShade[];
+  /** What moves; empty for a still scene. Reduced motion and low graphics draw none of it. */
+  readonly motion: readonly SceneMotion[];
   readonly platforms: ScenePlatformBinding;
   /** Encoded bytes the package's image files may total. */
   readonly encodedBudget: number;
@@ -300,6 +341,61 @@ function layer(value: unknown, path: string, images: ReadonlyMap<string, SceneIm
   });
 }
 
+/** Pixels of a layer's image that `area` covers, as [x, y, w, h] in whole pixels. */
+export function layerImageRect(image: SceneImage, layer: SceneLayer, area: Rect): Rect {
+  const kx = image.width / layer.rect[2];
+  const ky = image.height / layer.rect[3];
+  const x = Math.floor((area[0] - layer.rect[0]) * kx);
+  const y = Math.floor((area[1] - layer.rect[1]) * ky);
+  const right = Math.ceil((area[0] + area[2] - layer.rect[0]) * kx);
+  const bottom = Math.ceil((area[1] + area[3] - layer.rect[1]) * ky);
+  return [x, y, right - x, bottom - y];
+}
+
+function motion(
+  value: unknown,
+  path: string,
+  images: ReadonlyMap<string, SceneImage>,
+  layers: readonly SceneLayer[],
+): SceneMotion {
+  const raw = record(value, path);
+  if (raw.kind !== "water") fail(`${path}.kind`, 'expected "water"');
+  const layerId = id(raw.layer, `${path}.layer`);
+  const host = layers.find((item) => item.id === layerId);
+  if (host === undefined) fail(`${path}.layer`, `unknown layer "${layerId}"`);
+  const mask = id(raw.mask, `${path}.mask`);
+  if (images.get(mask)?.alpha !== true) fail(`${path}.mask`, `"${mask}" must be an image with alpha`);
+  const area = rect(raw.rect, `${path}.rect`);
+  const [x, y, w, h] = host.rect;
+  if (area[0] < x || area[1] < y || area[0] + area[2] > x + w + 0.01 || area[1] + area[3] > y + h + 0.01)
+    fail(`${path}.rect`, `must lie inside layer "${layerId}"`);
+  const glints = raw.glints === undefined ? undefined : record(raw.glints, `${path}.glints`);
+  return Object.freeze({
+    id: id(raw.id, `${path}.id`),
+    kind: "water" as const,
+    layer: layerId,
+    mask,
+    rect: area,
+    rows: integer(raw.rows, `${path}.rows`, 4, 96),
+    far: finite(raw.far, `${path}.far`, 0.05, 1),
+    slide: finite(raw.slide, `${path}.slide`, 0, 12),
+    swell: finite(raw.swell, `${path}.swell`, 0, 12),
+    waves: finite(raw.waves, `${path}.waves`, 0.5, 40),
+    period: finite(raw.period, `${path}.period`, 0.5, 60),
+    ...(glints === undefined
+      ? {}
+      : {
+          glints: Object.freeze({
+            count: integer(glints.count, `${path}.glints.count`, 1, 200),
+            color: color(glints.color, `${path}.glints.color`),
+            opacity: finite(glints.opacity, `${path}.glints.opacity`, 0, 1),
+            length: finite(glints.length, `${path}.glints.length`, 2, 200),
+            drift: finite(glints.drift, `${path}.glints.drift`, -200, 200),
+          }),
+        }),
+  });
+}
+
 function platforms(value: unknown, path: string, images: ReadonlyMap<string, SceneImage>): ScenePlatformBinding {
   const raw = record(value, path);
   const texture = id(raw.texture, `${path}.texture`);
@@ -384,6 +480,12 @@ export function validateScenePackage(input: unknown): ScenePackage {
       ),
       "package.shading",
     ),
+    motion: unique(
+      (raw.motion === undefined ? [] : list(raw.motion, "package.motion", 16)).map((item, index) =>
+        motion(item, `package.motion[${String(index)}]`, imageMap, layers),
+      ),
+      "package.motion",
+    ),
     platforms: platforms(raw.platforms, "package.platforms", imageMap),
     encodedBudget: integer(raw.encodedBudget, "package.encodedBudget", 1, SCENE_ENCODED_LIMIT),
     decodedBudget: integer(raw.decodedBudget, "package.decodedBudget", 1, SCENE_DECODED_LIMIT),
@@ -412,8 +514,21 @@ export function validateScenePackage(input: unknown): ScenePackage {
   return result;
 }
 
-export function decodedBytes(scene: Pick<ScenePackage, "images">): number {
-  return scene.images.reduce((total, item) => total + item.width * item.height * 4, 0);
+/**
+ * Decoded RGBA bytes a shown scene holds: every image, plus the canvas each
+ * moving part is redrawn into (the size of the paint it moves).
+ */
+export function decodedBytes(
+  scene: Pick<ScenePackage, "images"> & Partial<Pick<ScenePackage, "layers" | "motion">>,
+): number {
+  const images = scene.images.reduce((total, item) => total + item.width * item.height * 4, 0);
+  return (scene.motion ?? []).reduce((total, item) => {
+    const layer = scene.layers?.find((entry) => entry.id === item.layer);
+    const image = scene.images.find((entry) => entry.id === layer?.image);
+    if (layer === undefined || image === undefined) return total;
+    const [, , w, h] = layerImageRect(image, layer, item.rect);
+    return total + w * h * 4;
+  }, images);
 }
 
 export function encodedBytes(scene: Pick<ScenePackage, "images">): number {

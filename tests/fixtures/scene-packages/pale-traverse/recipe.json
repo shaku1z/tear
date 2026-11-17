@@ -114,6 +114,58 @@
           "source": "placeholder-ice"
         }
       ]
+    },
+    {
+      "id": "meltwater",
+      "file": "meltwater.avif",
+      "alpha": true,
+      "sources": [
+        "placeholder-plate"
+      ],
+      "steps": [
+        {
+          "op": "load",
+          "source": "placeholder-plate"
+        },
+        {
+          "op": "mask",
+          "name": "water",
+          "fill": 0,
+          "rects": [
+            {
+              "rect": [
+                700,
+                960,
+                900,
+                120
+              ],
+              "value": 255
+            }
+          ],
+          "blur": 6
+        },
+        {
+          "op": "alpha",
+          "mask": "water"
+        },
+        {
+          "op": "crop",
+          "rect": [
+            680,
+            940,
+            940,
+            160
+          ]
+        },
+        {
+          "op": "flat",
+          "color": "#ffffff"
+        },
+        {
+          "op": "resize",
+          "scale": 0.25
+        }
+      ]
     }
   ],
   "scene": {
@@ -150,6 +202,20 @@
         "depth": 0.85,
         "plane": "back",
         "covers": true
+      }
+    ],
+    "motion": [
+      {
+        "id": "meltwater",
+        "kind": "water",
+        "layer": "far",
+        "mask": "meltwater",
+        "rows": 16,
+        "far": 0.5,
+        "slide": 2,
+        "swell": 1,
+        "waves": 4,
+        "period": 4
       }
     ],
     "encodedBudget": 60000,

@@ -281,6 +281,12 @@ async function runOutput(output, context) {
         masks.clear();
         break;
       }
+      case "flat": {
+        // One colour everywhere, keeping the alpha: a mask image, whose alpha is all that is read.
+        const [r, g, b] = hex(step.color);
+        for (let at = 0; at < context.image.data.length; at += 4) context.image.data.set([r, g, b], at);
+        break;
+      }
       case "tileable": {
         const factor = placement[2] / context.image.width;
         context.image = tileable(context.image, step.overlap);
@@ -414,6 +420,10 @@ export async function buildScene(directory, sourcesDirectory, log = console.log)
     ),
     images,
     layers: template.layers.map((layer) => ({ ...layer, rect: placements.get(layer.image) })),
+    // A moving part covers the area its mask image was cut from.
+    ...(template.motion === undefined
+      ? {}
+      : { motion: template.motion.map((part) => ({ ...part, rect: placements.get(part.mask) })) }),
   };
   const { validateScenePackage } = await loadContract();
   validateScenePackage(scene);
