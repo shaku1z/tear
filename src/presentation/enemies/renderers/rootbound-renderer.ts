@@ -78,6 +78,18 @@ function vineArm(
 }
 
 /** Draws the move in progress, in world space, from the pose the shared runner reports. */
+/** The bright ring around the exposed keeper (origin at its feet); it drains as the opening closes. */
+function drawExposedRing(ctx: CanvasRenderingContext2D, halfHeight: number, progress: number, color: string) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 7;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(0, -halfHeight, halfHeight * 1.55, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - progress));
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawMove(
   ctx: CanvasRenderingContext2D,
   ink: Ink,
@@ -207,14 +219,7 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       // ring that drains as the opening closes, so it cannot be mistaken for the idle stance.
       if (pose?.stage === "tell") ctx.rotate(-this.facing * 0.08 * pose.progress);
       else if (pose?.stage === "punish") {
-        ctx.save();
-        ctx.strokeStyle = A11Y.highContrast ? "#ffffff" : "#7fe3ff";
-        ctx.lineWidth = 7;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.arc(0, -this.hh, this.hh * 1.55, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - pose.progress));
-        ctx.stroke();
-        ctx.restore();
+        drawExposedRing(ctx, this.hh, pose.progress, A11Y.highContrast ? "#ffffff" : "#7fe3ff");
         ctx.rotate(this.facing * 0.2);
         ctx.scale(1.06, 0.8);
       }
