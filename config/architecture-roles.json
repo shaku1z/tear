@@ -235,8 +235,8 @@
       "include": ["src/app/screens/menu-screen-adapters-runtime.ts", "src/app/run/run-start-host.ts"]
     },
     "engineering.channel-entries": {
-      "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import.",
-      "include": ["src/app/engineering/verdant-calibration-composition.ts"]
+      "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import. None exists today; the pattern guards the next one.",
+      "anticipate": ["src/app/engineering/*-channel-entry.ts"]
     },
     "size.authored-data-exceptions": {
       "purpose": "Authored data tables exempt from the 700-line (line-equivalent) module limit.",
