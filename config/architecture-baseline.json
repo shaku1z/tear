@@ -259,16 +259,6 @@
     },
     {
       "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/campaign/campaign-controller-factory.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/campaign/campaign-sequences.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-replay-composition.ts",
       "to": "src/app/engineering/state-forge-adapter.ts",
       "kind": "value"
     },
@@ -306,11 +296,6 @@
       "from": "src/tearbench/production-world-factory.ts",
       "to": "src/app/shell/game-runtime-dependencies.ts",
       "kind": "type"
-    },
-    {
-      "from": "src/tearbench/production-world-factory.ts",
-      "to": "src/app/world/authoritative-input-adapter.ts",
-      "kind": "value"
     },
     {
       "from": "src/tearbench/production-world-factory.ts",

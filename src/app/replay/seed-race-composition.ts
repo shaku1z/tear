@@ -12,7 +12,7 @@ import { injectedBuildIdentity } from "../../tearbench/live-runtime-snapshots";
 import { ENTITY_KIND_REGISTRY } from "../../tearbench/registries";
 import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameRun, GamePlayer, GameBlade } from "../shell/game-runtime-state";
+import type { GameRun, GamePlayer, GameBlade } from "../../gameplay/runtime/game-runtime-state";
 
 /** A scoped native-start input. It never owns profile persistence or a second simulation. */
 export function createLiveSeedRace(

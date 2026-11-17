@@ -4,9 +4,15 @@ import { tutorialGoldGlyphs } from "../../presentation/world/tutorial-input-prom
 import { createLiveWeaponRuntime } from "../../gameplay/combat/live-weapon-runtime";
 import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import { drawTutorialGhost } from "../../presentation/tutorial-ghost";
-import { cinematicLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
+import { cinematicLaunchPolicy, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
+import type {
+  GameBlade,
+  GameEnemy,
+  GamePlayer,
+  GameProjectile,
+  GameRun,
+} from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
 import type { AppScreen } from "../../domain/screen-catalog";

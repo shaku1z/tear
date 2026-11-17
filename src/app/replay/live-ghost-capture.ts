@@ -8,7 +8,7 @@ import { createDefaultStateCodecRegistry } from "../../tearbench/state-codecs";
 import type { LiveCampaignTraining } from "../campaign/campaign-training-composition";
 import type { LiveCanonicalCombatHost, LiveCanonicalStateCapture } from "../combat/live-canonical-state";
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveWorldComposition } from "../world/world-composition";
 import { createLiveGhostFinaleCompanion } from "./ghost-finale-companion";
 import type { LiveGhostRecording } from "./live-ghost-recording";

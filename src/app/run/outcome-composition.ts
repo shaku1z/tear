@@ -8,7 +8,7 @@ import {
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveRunControllerRegistry } from "./run-controller-api";
 import { createLiveRunOutcomeHost } from "./run-outcome-host";
 import type { RecordingSummary } from "../../gameplay/run/outcome-planner";
