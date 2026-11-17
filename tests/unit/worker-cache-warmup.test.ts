@@ -4,7 +4,7 @@ import { warmWorkerCache, type WorkerCacheWarmupPorts } from "../../src/platform
 const URLS = ["/assets/a-worker-1.js", "/assets/b-worker-2.js", "/assets/c-worker-3.js"];
 
 function ports(overrides: Partial<WorkerCacheWarmupPorts> = {}) {
-  const fetchScript = vi.fn(() => Promise.resolve());
+  const fetchScript = vi.fn<(url: string) => Promise<unknown>>(() => Promise.resolve());
   const missing = vi.fn(() => Promise.resolve(URLS));
   const base: WorkerCacheWarmupPorts = {
     controlled: () => true,
