@@ -5,6 +5,8 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { createUi } from "../../src/presentation/ui";
 import type { ScreenControl, ScreenRenderContext, ScreenUiPort } from "../../src/presentation/screens";
 import { createScreenRenderers } from "../../src/presentation/screens";
+import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { CONFIG } from "../../src/config/game-config";
@@ -563,52 +565,73 @@ describe("legacy screen renderer registry", () => {
     }).not.toThrow();
   });
 
-  it("draws the MUSIC screen with a preview control per visible song, the playback rows and BACK", () => {
+  it("draws MUSIC: a rail, Home's shelves, a collection's page, Settings and the transport", () => {
     const controls: ScreenControl[] = [];
     let written = -1;
-    const songs = Array.from({ length: 14 }, (_, index) => ({
-      id: `song-${String(index)}`,
-      number: index + 1,
-      title: `Song ${String(index)}`,
-      where: index === 0 ? "Menu" : "",
-      art: index === 2 ? { hue: "#8b3bd6", glyph: "◇" } : null,
-      previewing: index === 1,
-      playing: index === 1,
-    }));
-    const view = {
-      id: "music" as const,
-      tab: "songs" as const,
-      title: "MUSIC",
-      subtitle: "14 songs · Tear soundtrack",
-      nowPlaying: { title: "Song 1", where: "", art: null, previewing: true },
-      songs,
-      loading: false,
-      playback: [{ key: "station", label: "Station", value: "AUTOMATIC", kind: "cycle" as const }],
+    const music = JSON.parse(
+      readFileSync(fileURLToPath(new URL("../../public/audio/music.json", import.meta.url)), "utf8"),
+    );
+    const library = {
+      songs: music.catalog.works.map((work: { id: string; title: string }) => ({ ...work, seconds: 30 })),
+      routing: validateMusicRoutingManifest(music.routing),
     };
+    const view = (page: string) =>
+      buildMusicScreenView({
+        settings: {},
+        library,
+        nowPlaying: { workId: "fillet", title: "Fillet", since: 1 },
+        preview: "fillet",
+        page,
+        queue: ["fillet", "spring"],
+        now: 15_001,
+      });
     const context = { ...createRenderContext(controls), scroll: 0, setScroll: (value: number) => (written = value) };
-    createScreenRenderers(context).music(view);
-    const previews = controls.filter((control) => control.action.type === "music.preview");
-    expect(previews.length).toBeGreaterThan(3);
-    expect(previews.length).toBeLessThan(14);
-    // The previewed row's control and the mini-player both stop the preview; PLAY previews the first song.
+    const types = () => controls.map((control) => control.action);
+    createScreenRenderers(context).music(view("home"));
+    // The rail: Home · Songs · Settings, then every stage; the Stages shelf opens the same pages.
+    for (const tab of ["home", "songs", "settings"])
+      expect(types()).toContainEqual({ type: "navigate", to: "music", tab });
+    const stageOpens = types().filter(
+      (action) => action.type === "navigate" && action.tab?.startsWith("collection:stage:"),
+    );
+    expect(stageOpens.length).toBeGreaterThan(6);
+    // Now playing (STOP while previewing) and the transport's ◀◀ ■ ▶▶.
     expect(controls.filter((control) => control.action.type === "music.stopPreview").map((c) => c.label)).toEqual([
-      "■",
       "■  STOP",
+      "■",
     ]);
+    expect(controls.filter((control) => control.action.type === "music.step").map((c) => c.label)).toEqual([
+      "◀◀",
+      "▶▶",
+    ]);
+    expect(types()).toContainEqual({ type: "navigate", to: "menu" });
+    for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
+
+    // A stage's page: the crumb back, PLAY over the stage's songs, one row per song with that queue.
+    controls.length = 0;
+    createScreenRenderers(context).music(view("collection:stage:the-voidspire"));
+    expect(controls.find((control) => control.label === "‹ Home")?.action).toEqual({
+      type: "navigate",
+      to: "music",
+      tab: "home",
+    });
+    const queue = ["looking-out", "reflection-of-the-bladeless"];
     expect(controls.find((control) => control.label === "▶  PLAY")?.action).toEqual({
       type: "music.preview",
-      id: "song-0",
+      id: "looking-out",
+      queue,
     });
-    expect(controls.some((control) => control.label.includes("BACK"))).toBe(true);
-    for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
-    // Scrolled to the end, the playback rows come into view and the scroll is clamped to the list.
+    expect(types()).toContainEqual({ type: "music.preview", id: "reflection-of-the-bladeless", queue });
+
+    // Songs scrolls its whole list; the scroll is clamped to it.
     controls.length = 0;
-    createScreenRenderers({ ...context, scroll: 10_000 }).music(view);
+    createScreenRenderers({ ...context, scroll: 10_000 }).music(view("songs"));
     expect(written).toBeGreaterThan(0);
     expect(written).toBeLessThan(10_000);
-    expect(controls.find((control) => control.action.type === "settings.activate")).toMatchObject({
-      label: "AUTOMATIC",
-    });
+
+    controls.length = 0;
+    createScreenRenderers(context).music(view("settings"));
+    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(3);
   });
 
   it("records semantic navigation and menu actions without coordinating state", () => {

@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { catalog, routing } from "../../public/audio/music.json";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import type { MusicRoutingManifest } from "../../src/audio/music/music-routing-types";
-import { getMusicPreview, onMusicPreviewChange, setMusicPreview } from "../../src/audio/music/preview";
+import {
+  getMusicPreview,
+  getMusicQueue,
+  onMusicPreviewChange,
+  setMusicPreview,
+  stepMusicPreview,
+} from "../../src/audio/music/preview";
 import { resolveMenuCueId, setMenuMusic } from "../../src/audio/music/loadout";
 import { MUSIC_SCREEN_TITLE } from "../../src/audio/music/settings";
 import { buildMusicScreenView, musicWherePlays } from "../../src/presentation/music-snapshots";
@@ -52,39 +58,120 @@ describe("where a song plays", () => {
   });
 });
 
-describe("the MUSIC screen view", () => {
-  it("lists every catalogued song in catalog order, with or without stations on the works", () => {
-    const withoutStations = songs.map(({ id, title }) => ({ id, title }));
-    const view = buildMusicScreenView({
-      settings: {},
-      library: { songs: withoutStations, routing: published },
-      nowPlaying: { workId: "fillet", title: "Fillet" },
-      preview: "spring",
-      bossName,
-    });
-    expect(view.title).toBe(MUSIC_SCREEN_TITLE);
-    expect(view.songs.map((song) => song.title)).toEqual(catalog.works.map((work) => work.title));
-    expect(view.songs).toHaveLength(14);
-    expect(view.songs.filter((song) => song.previewing).map((song) => song.id)).toEqual(["spring"]);
-    expect(view.subtitle).toBe("14 songs · Tear soundtrack");
-    expect(view.songs.map((song) => song.number)).toEqual(catalog.works.map((_, index) => index + 1));
-    // Fillet plays: it is lit in the list and fills the mini-player; a Voidspire song takes that stage's art.
-    expect(view.songs.find((song) => song.playing)?.id).toBe("fillet");
-    expect(view.nowPlaying).toEqual({ title: "Fillet", where: "Menu", art: null, previewing: false });
-    expect(view.songs.find((song) => song.id === "looking-out")?.art).toEqual({ hue: "#8b3bd6", glyph: "◇" });
-    expect(view.playback.map((row) => row.key)).toEqual(["station", "menuMusic", "musicMode"]);
+const seconds = Object.fromEntries(songs.map((song, index) => [song.id, 20 + index]));
+const library = { songs: songs.map((song) => ({ ...song, seconds: seconds[song.id] })), routing: published };
+const view = (page?: string, extra: Partial<Parameters<typeof buildMusicScreenView>[0]> = {}) =>
+  buildMusicScreenView({
+    settings: {},
+    library,
+    nowPlaying: { workId: "fillet", title: "Fillet" },
+    preview: "spring",
+    bossName,
+    ...(page === undefined ? {} : { page }),
+    ...extra,
   });
 
-  it("shows a loading list before the music index arrives", () => {
-    const view = buildMusicScreenView({
+describe("the MUSIC screen view", () => {
+  it("lists every catalogued song in catalog order, with its art, loop length and state", () => {
+    const home = view();
+    expect(home.title).toBe(MUSIC_SCREEN_TITLE);
+    expect(home.songs.map((song) => song.title)).toEqual(catalog.works.map((work) => work.title));
+    expect(home.songs.map((song) => song.number)).toEqual(catalog.works.map((_, index) => index + 1));
+    expect(home.songs.filter((song) => song.previewing).map((song) => song.id)).toEqual(["spring"]);
+    expect(home.songs.find((song) => song.playing)?.id).toBe("fillet");
+    expect(home.songs.find((song) => song.id === "looking-out")).toMatchObject({
+      art: { hues: ["#8b3bd6"], glyph: "◇" },
+      seconds: seconds["looking-out"],
+    });
+    expect(home.nowPlaying).toEqual({ title: "Fillet", where: "Menu", art: null, previewing: false, progress: null });
+    expect(home.playback.map((row) => row.key)).toEqual(["station", "menuMusic", "musicMode"]);
+  });
+
+  it("builds the collections from the catalog and routing: stages in campaign order, bosses, menus", () => {
+    const home = view();
+    expect(home.stages.map((stage) => stage.title)).toEqual([
+      "The Grounds",
+      "The Undercroft",
+      "The Crimson Fields",
+      "The Verdant Sanctum",
+      "The Voidspire",
+      "The Tear",
+    ]);
+    // A stage's page holds its gameplay songs, then its boss song.
+    const voidspire = home.stages.find((stage) => stage.id === "stage:the-voidspire");
+    expect(voidspire?.songs.map((song) => song.id)).toEqual(["looking-out", "reflection-of-the-bladeless"]);
+    expect(voidspire?.seconds).toBe((seconds["looking-out"] ?? 0) + (seconds["reflection-of-the-bladeless"] ?? 0));
+    expect(home.shelves.map((shelf) => shelf.layout)).toEqual(["feature", "tiles", "rows", "rows"]);
+    const [, , bosses, menus] = home.shelves;
+    expect(bosses).toMatchObject({ heading: "Boss themes", open: "bosses" });
+    expect(bosses?.layout === "rows" && bosses.songs.map((song) => song.id)).toEqual([
+      "reflection-of-the-bladeless",
+      "nocturnal-urgency",
+    ]);
+    expect(menus?.layout === "rows" && menus.songs.map((song) => song.id)).toContain("fillet");
+    expect(home.soundtrack?.songs).toHaveLength(14);
+    // The boss collection's cover splits into its stages' hues.
+    expect(bosses?.layout === "rows" && home.stages.length).toBeTruthy();
+  });
+
+  it("opens Home by default, a collection's page with BACK one level up, Songs and Settings", () => {
+    expect(view()).toMatchObject({ page: "home", collection: null, back: { type: "navigate", to: "menu" } });
+    expect(view().rail.map((entry) => [entry.id, entry.selected])).toEqual([
+      ["home", true],
+      ["songs", false],
+      ["settings", false],
+    ]);
+    const stage = view("collection:stage:the-voidspire", { openedFrom: "songs" });
+    expect(stage.page).toBe("collection");
+    expect(stage.collection?.title).toBe("The Voidspire");
+    expect(stage.back).toEqual({ type: "navigate", to: "music", tab: "songs" });
+    expect(stage.rail.some((entry) => entry.selected)).toBe(false);
+    const all = view("songs");
+    expect(all).toMatchObject({ page: "collection", back: { type: "navigate", to: "menu" } });
+    expect(all.collection?.id).toBe("all");
+    expect(view("settings").page).toBe("settings");
+    expect(view("collection:nowhere").page).toBe("home");
+  });
+
+  it("shows the loop position of what is playing and lets the transport step through a queue", () => {
+    const length = seconds.fillet ?? 1;
+    const playing = view(undefined, {
+      nowPlaying: { workId: "fillet", title: "Fillet", since: 1000 },
+      now: 1000 + length * 1500,
+      queue: ["fillet", "spring"],
+    });
+    expect(playing.nowPlaying?.progress).toBeCloseTo(0.5);
+    expect(playing.canStep).toBe(true);
+    expect(view().canStep).toBe(false);
+    expect(view().start).toEqual({ id: songs[0]?.id, queue: songs.map((song) => song.id) });
+  });
+
+  it("shows a loading page before the music index arrives", () => {
+    const loading = buildMusicScreenView({
       settings: {},
       library: null,
       nowPlaying: { workId: "", title: "—" },
       preview: null,
     });
-    expect(view.loading).toBe(true);
-    expect(view.songs).toEqual([]);
-    expect(view.nowPlaying).toBeNull();
+    expect(loading).toMatchObject({ loading: true, songs: [], nowPlaying: null, shelves: [], soundtrack: null });
+  });
+});
+
+describe("the preview queue", () => {
+  it("steps forward and back through the songs the preview started from, wrapping at the ends", () => {
+    setMusicPreview("a", ["a", "b", "c"]);
+    expect(getMusicQueue()).toEqual(["a", "b", "c"]);
+    stepMusicPreview(1);
+    expect(getMusicPreview()).toBe("b");
+    stepMusicPreview(-1);
+    stepMusicPreview(-1);
+    expect(getMusicPreview()).toBe("c");
+    stepMusicPreview(1);
+    expect(getMusicPreview()).toBe("a");
+    setMusicPreview(null);
+    expect(getMusicQueue()).toEqual([]);
+    stepMusicPreview(1);
+    expect(getMusicPreview()).toBeNull();
   });
 });
 

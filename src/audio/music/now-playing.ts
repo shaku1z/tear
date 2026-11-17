@@ -14,9 +14,11 @@ export interface NowPlaying {
   readonly stationName: string | null;
   /** 0..4 arrangement tier currently sounding. */
   readonly tier: number;
+  /** `performance.now()` when this work started sounding (for the loop position). */
+  readonly since: number;
 }
 
-const EMPTY: NowPlaying = { workId: "", title: "—", stationId: null, stationName: null, tier: 0 };
+const EMPTY: NowPlaying = { workId: "", title: "—", stationId: null, stationName: null, tier: 0, since: 0 };
 
 let current: NowPlaying = EMPTY;
 const listeners = new Set<() => void>();
@@ -30,7 +32,7 @@ export function setNowPlaying(next: Partial<NowPlaying>): void {
     merged.tier === current.tier
   )
     return;
-  current = merged;
+  current = merged.workId === current.workId ? merged : { ...merged, since: globalThis.performance.now() };
   for (const listener of listeners) listener();
 }
 

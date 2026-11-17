@@ -1,11 +1,17 @@
-import type { MusicArtView, MusicScreenView, SettingRowView } from "./screens/contracts";
+import type { MusicCoverView, MusicPage, MusicScreenView, MusicSongView, SettingRowView } from "./screens/contracts";
 import { menuMusicLabel } from "../audio/music/loadout";
 import { stationLabel, stationNote } from "../audio/music/active-station";
 import { MUSIC_SCREEN_TITLE } from "../audio/music/settings";
 import type { MusicLibrary } from "../audio/music/library";
 import type { MusicRoutingManifest, MusicRoutingRule } from "../audio/music/music-routing-types";
-import { STAGES } from "../gameplay/stages";
 import { bossName } from "../gameplay/run/content-director";
+import {
+  buildMusicCollections,
+  buildMusicShelves,
+  findMusicCollection,
+  musicRoutes,
+  songStage,
+} from "./music-collections";
 
 const musicModeNotes: Readonly<Record<string, string>> = {
   adaptive: "LAYERS FOLLOW THE FIGHT",
@@ -28,17 +34,6 @@ const biomeLabel = (biome: string): string =>
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
-const slug = (name: string): string => name.toLowerCase().replace(/\s+/gu, "-");
-
-/** The rules that play a song, highest priority first; a weighted pool counts for each of its songs. */
-function musicRoutes(workId: string, routing: Pick<MusicRoutingManifest, "rules">): readonly MusicRoutingRule[] {
-  const plays = (rule: MusicRoutingRule): boolean =>
-    rule.selection.type === "primary"
-      ? rule.selection.workId === workId
-      : rule.selection.entries.some((entry) => entry.workId === workId);
-  return [...routing.rules].filter(plays).sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-}
-
 /** Where one routing rule plays its songs, in player words. */
 function rulePlace(rule: MusicRoutingRule, names: (id: string) => string): string {
   const { match } = rule;
@@ -63,15 +58,6 @@ export function musicWherePlays(
     if (place && !places.includes(place)) places.push(place);
   }
   return places.join(" · ");
-}
-
-/** A song's art: the hue and chapter symbol of the stage it plays in (by biome, then by boss), if any. */
-function songArt(workId: string, routing: MusicRoutingManifest): MusicArtView {
-  for (const { match } of musicRoutes(workId, routing)) {
-    const stage = STAGES.find((entry) => slug(entry.name) === match.biome || entry.boss === match.bossId);
-    if (stage) return { hue: stage.accent, glyph: stage.chapter.symbol };
-  }
-  return null;
 }
 
 export interface MusicPlaybackSettings {
@@ -107,39 +93,88 @@ export function buildMusicPlaybackRows(settings: MusicPlaybackSettings): readonl
   ];
 }
 
+/** A song's art: the hue and chapter glyph of the stage it plays in, if any. */
+function songArt(workId: string, routing: MusicRoutingManifest): MusicCoverView {
+  const stage = songStage(workId, routing);
+  return stage ? { hues: [stage.accent], glyph: stage.glyph } : null;
+}
+
 export interface MusicScreenSource {
   readonly settings: MusicPlaybackSettings;
   readonly library: MusicLibrary | null;
-  readonly nowPlaying: Readonly<{ workId: string; title: string }>;
+  readonly nowPlaying: Readonly<{ workId: string; title: string; since?: number }>;
   readonly preview: string | null;
+  /** The page: "home", "songs", "settings" or "collection:<id>". */
+  readonly page?: string;
+  /** The page a collection was opened from; BACK returns there. */
+  readonly openedFrom?: string;
+  /** The queue the preview started from. */
+  readonly queue?: readonly string[];
+  /** performance.now(), for the loop position. */
+  readonly now?: number;
   readonly bossName?: (id: string) => string;
 }
 
+const RAIL: readonly (readonly [string, string])[] = [
+  ["home", "Home"],
+  ["songs", "Songs"],
+  ["settings", "Settings"],
+];
+
+const musicTab = (tab: string) => ({ type: "navigate", to: "music", tab }) as const;
+
 export function buildMusicScreenView(source: MusicScreenSource): MusicScreenView {
   const { library, nowPlaying, preview } = source;
-  const songs = (library?.songs ?? []).map((song, index) => ({
+  const songs: MusicSongView[] = (library?.songs ?? []).map((song, index) => ({
     id: song.id,
     number: index + 1,
     title: song.title,
     where: library ? musicWherePlays(song.id, library.routing, source.bossName) : "",
     art: library ? songArt(song.id, library.routing) : null,
+    seconds: song.seconds ?? null,
     previewing: song.id === preview,
     playing: song.id === nowPlaying.workId,
   }));
-  const playing = songs.find((song) => song.playing);
+  const collections = library ? buildMusicCollections(songs, library.routing) : null;
+  const playing = songs.find((song) => song.playing) ?? null;
+  const requested = source.page ?? "home";
+  const openedId = requested.startsWith("collection:") ? requested.slice("collection:".length) : null;
+  const opened = collections
+    ? openedId !== null
+      ? findMusicCollection(collections, openedId)
+      : requested === "songs"
+        ? collections.all
+        : null
+    : null;
+  const page: MusicPage = opened ? "collection" : requested === "settings" ? "settings" : "home";
+  const railTab = openedId !== null ? "" : page === "home" ? "home" : requested;
+  const back = openedId !== null ? musicTab(source.openedFrom ?? "home") : ({ type: "navigate", to: "menu" } as const);
+  const seconds = playing?.seconds ?? null;
+  const since = nowPlaying.since ?? 0;
+  const progress =
+    seconds && source.now !== undefined && since > 0 ? (((source.now - since) / 1000) % seconds) / seconds : null;
+  const first = collections?.all.songs[0];
   return {
     id: "music",
-    tab: "songs",
+    page,
     title: MUSIC_SCREEN_TITLE,
-    subtitle: library ? `${String(songs.length)} songs · Tear soundtrack` : "Loading the soundtrack…",
+    rail: RAIL.map(([id, label]) => ({ id, label, selected: id === railTab })),
+    stages: collections?.stages ?? [],
+    shelves: collections ? buildMusicShelves(collections, playing) : [],
+    soundtrack: collections?.all ?? null,
+    collection: opened,
+    back,
     nowPlaying: nowPlaying.workId
       ? {
           title: nowPlaying.title,
           where: playing?.where ?? "",
           art: playing?.art ?? null,
           previewing: preview !== null && preview === nowPlaying.workId,
+          progress,
         }
       : null,
+    canStep: (source.queue?.length ?? 0) > 1,
+    start: first && collections ? { id: first.id, queue: collections.all.songs.map((song) => song.id) } : null,
     songs,
     loading: library === null,
     playback: buildMusicPlaybackRows(source.settings),

@@ -35,6 +35,8 @@ export interface SettingsRenameAdapters {
   readonly renderRename: () => void;
   readonly renderMusic: () => void;
   readonly selectSettingsTab: (id: string) => void;
+  /** MUSIC page: "home", "songs", "settings" or "collection:<id>". */
+  readonly selectMusicPage: (page: string) => void;
   readonly stepSetting: (key: string, direction: number) => void;
   readonly toggleSetting: (key: string) => void;
   readonly activateSetting: (key: string) => void;
@@ -96,6 +98,11 @@ export function createLiveSettingsRenameAdapters(services: SettingsRenameService
     selectSettingsTab: (id) => {
       invoke((value) => {
         value.selectSettingsTab(id);
+      });
+    },
+    selectMusicPage: (page) => {
+      invoke((value) => {
+        value.selectMusicPage(page);
       });
     },
     stepSetting: (key, direction) => {

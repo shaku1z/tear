@@ -9,7 +9,7 @@ import { STATION_CHOICES } from "../../audio/music/active-station";
 import { normalizeMusicSettingsTab } from "../../audio/music/settings";
 import { getMusicLibrary } from "../../audio/music/library";
 import { getNowPlaying } from "../../audio/music/now-playing";
-import { getMusicPreview } from "../../audio/music/preview";
+import { getMusicPreview, getMusicQueue } from "../../audio/music/preview";
 import { buildMusicScreenView } from "../../presentation/music-snapshots";
 
 type Dependencies = Pick<
@@ -43,6 +43,7 @@ export interface SettingsRenameAdapters {
   readonly renderRename: () => void;
   readonly renderMusic: () => void;
   readonly selectSettingsTab: (id: string) => void;
+  readonly selectMusicPage: (page: string) => void;
   readonly stepSetting: (key: string, direction: number) => void;
   readonly toggleSetting: (key: string) => void;
   readonly activateSetting: (key: string) => void;
@@ -67,7 +68,9 @@ const settingsTabs = [
 export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRenameServices): SettingsRenameAdapters {
   const d = services.dependencies;
   let settingsTab = "general",
-    maximumScroll = 0;
+    maximumScroll = 0,
+    musicPage = "home",
+    musicOpenedFrom = "home";
   const rename = new RenameController({
     document: services.document,
     canvas: services.canvas,
@@ -186,6 +189,10 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
         library: getMusicLibrary(),
         nowPlaying: getNowPlaying(),
         preview: getMusicPreview(),
+        page: musicPage,
+        openedFrom: musicOpenedFrom,
+        queue: getMusicQueue(),
+        now: performance.now(),
       }),
     );
   };
@@ -196,6 +203,12 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
     selectSettingsTab: (id) => {
       settingsTab = normalizeMusicSettingsTab(id);
       services.setScroll(0);
+    },
+    selectMusicPage: (page) => {
+      // A collection remembers the page it was opened from, so BACK goes up one level.
+      if (page.startsWith("collection:") && !musicPage.startsWith("collection:")) musicOpenedFrom = musicPage;
+      if (page !== musicPage) services.setScroll(0);
+      musicPage = page;
     },
     stepSetting: (key, direction) => {
       services.settingsController.step(key, direction);

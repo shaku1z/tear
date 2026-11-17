@@ -765,27 +765,44 @@ describe("phone compositions (compact density)", () => {
       );
     });
 
-    it(`lists every song with its preview, the playback rows and BACK on the MUSIC screen at ${phone.name}`, () => {
-      const view = buildMusicScreenView({
-        settings: {},
-        library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
-        nowPlaying: { workId: "fillet", title: "Fillet" },
-        preview: "spring",
-        bossName: (id) => AUTHORED_BOSS_ROSTER.find((boss) => boss.id === id)?.name ?? "",
-      });
-      const offered = sweep(
-        phone,
-        (r) => {
-          r.music(view);
-        },
-        `music ${phone.name}`,
-      );
-      for (const song of view.songs.filter((entry) => !entry.previewing))
-        expect(offered.has(JSON.stringify({ type: "music.preview", id: song.id })), song.id).toBe(true);
-      expect(offered.has(JSON.stringify({ type: "music.stopPreview" }))).toBe(true);
+    it(`fits Home, a stage, Songs and Settings of the MUSIC screen at ${phone.name}`, () => {
+      const view = (page: string) =>
+        buildMusicScreenView({
+          settings: {},
+          library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
+          nowPlaying: { workId: "fillet", title: "Fillet" },
+          preview: "spring",
+          page,
+          bossName: (id) => AUTHORED_BOSS_ROSTER.find((boss) => boss.id === id)?.name ?? "",
+        });
+      const offered = (page: string) =>
+        [
+          ...sweep(
+            phone,
+            (r) => {
+              r.music(view(page));
+            },
+            `music ${page} ${phone.name}`,
+          ),
+        ].map((json) => JSON.parse(json) as { type: string; id?: string; tab?: string; key?: string; to?: string });
+      const home = offered("home");
+      for (const stage of view("home").stages)
+        expect(
+          home.some((action) => action.tab === `collection:${stage.id}`),
+          stage.id,
+        ).toBe(true);
+      expect(home.some((action) => action.type === "navigate" && action.to === "menu")).toBe(true);
+      const all = offered("songs");
+      for (const song of view("songs").songs.filter((entry) => !entry.previewing))
+        expect(
+          all.some((action) => action.type === "music.preview" && action.id === song.id),
+          song.id,
+        ).toBe(true);
+      expect(all.some((action) => action.type === "music.stopPreview")).toBe(true);
+      expect(offered("collection:stage:the-grounds").some((action) => action.type === "music.preview")).toBe(true);
+      const settings = offered("settings");
       for (const key of ["station", "menuMusic", "musicMode"])
-        expect(offered.has(JSON.stringify({ type: "settings.activate", key }))).toBe(true);
-      expect(offered.has(JSON.stringify({ type: "navigate", to: "menu" }))).toBe(true);
+        expect(settings.some((action) => action.key === key)).toBe(true);
     });
 
     it(`keeps the playground build menu and ability lab inside the frame at ${phone.name}`, () => {

@@ -443,31 +443,74 @@ export interface SettingsScreenView {
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
-/** A song's art tile: the hue and glyph of the stage it plays in (null draws the default tile). */
-export type MusicArtView = Readonly<{ hue: string; glyph: string }> | null;
-/** One track of the MUSIC song list. */
+/**
+ * How a song or collection is pictured (there is no cover art): one hue per band (a single stage
+ * is one band; a mixed collection splits into up to four) and one glyph. Null draws the default.
+ */
+export type MusicCoverView = Readonly<{ hues: readonly string[]; glyph: string; locked?: boolean }> | null;
+/** One song wherever the MUSIC screen shows it: a track row, a shelf row or the transport. */
 export interface MusicSongView {
   readonly id: string;
   readonly number: number;
   readonly title: string;
   /** For example "The Grounds", "Boss · Echo" or "Menu"; empty when no route plays it. */
   readonly where: string;
-  readonly art: MusicArtView;
+  readonly art: MusicCoverView;
+  /** Length of one loop of the song, in seconds; null before the music index has loaded. */
+  readonly seconds: number | null;
   readonly previewing: boolean;
   readonly playing: boolean;
 }
+/** A set of songs with a page of its own: the whole soundtrack, one stage, the boss themes. */
+export interface MusicCollectionView {
+  readonly id: string;
+  readonly title: string;
+  /** Small line above the title: "Stage", "Soundtrack", "Collection". */
+  readonly kicker: string;
+  readonly cover: MusicCoverView;
+  readonly songs: readonly MusicSongView[];
+  /** Sum of the songs' loop lengths. */
+  readonly seconds: number;
+}
+/** One Home shelf. Three layouts only; a new shelf is data. */
+export type MusicShelfView =
+  | Readonly<{ layout: "feature"; heading: string; song: MusicSongView | null; queue: readonly string[] }>
+  | Readonly<{ layout: "tiles"; heading: string; collections: readonly MusicCollectionView[] }>
+  | Readonly<{ layout: "rows"; heading: string; open: string; songs: readonly MusicSongView[] }>;
+/** Home (shelves), a collection's page (Songs is the whole soundtrack's) or the playback settings. */
+export type MusicPage = "home" | "collection" | "settings";
 export interface MusicScreenView {
   readonly id: "music";
-  /** The one view today; later views (a playlist, radio) become further tabs of this screen. */
-  readonly tab: "songs";
+  readonly page: MusicPage;
   readonly title: string;
-  readonly subtitle: string;
-  /** What is sounding now, for the mini-player; null before anything has played. */
-  readonly nowPlaying: Readonly<{ title: string; where: string; art: MusicArtView; previewing: boolean }> | null;
+  /** Rail (desktop) or chip strip (phone): Home · Songs · Settings, the current one selected. */
+  readonly rail: readonly ChoiceView[];
+  /** The stage collections, in campaign order, for the rail's Stages list. */
+  readonly stages: readonly MusicCollectionView[];
+  readonly shelves: readonly MusicShelfView[];
+  /** The whole soundtrack, for Home's last row; null while loading. */
+  readonly soundtrack: MusicCollectionView | null;
+  /** The open collection on a collection page. */
+  readonly collection: MusicCollectionView | null;
+  /** Where BACK (and controller B) goes: up one level, then out to the menu. */
+  readonly back: ScreenAction;
+  /** What is sounding now, for the transport; null before anything has played. */
+  readonly nowPlaying: Readonly<{
+    title: string;
+    where: string;
+    art: MusicCoverView;
+    previewing: boolean;
+    /** Position in the loop, 0..1; null when unknown. */
+    progress: number | null;
+  }> | null;
+  /** ◀◀/▶▶ step through the queue the preview started from. */
+  readonly canStep: boolean;
+  /** The first song of the soundtrack, which ▶ plays when nothing is playing. */
+  readonly start: Readonly<{ id: string; queue: readonly string[] }> | null;
   /** Every catalogued song in catalog order; empty while the music index is still loading. */
   readonly songs: readonly MusicSongView[];
   readonly loading: boolean;
-  /** Station, menu music and soundtrack behavior, activated through `settings.activate`. */
+  /** Menu music and soundtrack behavior, activated through `settings.activate`. */
   readonly playback: readonly SettingRowView[];
 }
 export interface RenameScreenView {
