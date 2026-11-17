@@ -1,5 +1,6 @@
-import { careerRowKey, type CareerEntry } from "../../ghost/career-archive";
-export { careerRowKey } from "../../ghost/career-archive";
+import type { CareerEntry } from "../../ghost/career-archive";
+import { careerRowKey } from "../../domain/career-row-key";
+export { careerRowKey } from "../../domain/career-row-key";
 import type { ProfileScreenView, ScreenAction, ScreenRenderContext } from "./contracts";
 import { page, pageFooter } from "./screen-primitives";
 

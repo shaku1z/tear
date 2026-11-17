@@ -1,12 +1,12 @@
-import type { ParticleSystem } from "../../presentation/particles";
+import type { ParticleSystem } from "../presentation/particles";
 import {
   parseParticlePresentationCheckpoint,
   prepareParticlePresentationRestore,
   type ParticlePresentationCheckpoint,
   type ParticlePresentationPolicy,
   type PreparedParticlePresentationRestore,
-} from "../../tearbench/particle-presentation-checkpoint";
-import type { CosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
+} from "./particle-presentation-checkpoint";
+import type { CosmeticEmissionRandom } from "../domain/cosmetic-emission-random";
 
 export interface LiveParticlePresentationState {
   capture(): ParticlePresentationCheckpoint;

@@ -10,7 +10,7 @@ import { A11Y, GFX } from "../config/game-config";
 import { launchCampaignChapter } from "../app/campaign/campaign-sequences";
 import { createCampaignChapterController } from "../app/campaign/campaign-controller-factory";
 import { createUiState } from "../presentation/ui-tokens";
-import { createLiveParticlePresentationState } from "../app/world/particle-presentation-state";
+import { createLiveParticlePresentationState } from "./particle-presentation-state";
 import { validateParticlePresentationBinding } from "./particle-presentation-checkpoint";
 import { prepareParticlePresentationRestore } from "./particle-presentation-checkpoint";
 import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
