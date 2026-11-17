@@ -333,6 +333,12 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new AppStateController(surfaces);
+  // A waiting service-worker update is applied only on the plain main menu, after saves settle.
+  pwaUpdate.setIdleHost({
+    // The phone rotate gate is drawn over the menu in portrait on touch devices: not idle.
+    isIdle: () => APP.screen === "menu" && compositionWindow.innerWidth >= compositionWindow.innerHeight,
+    settle: () => PROFILE.flushAcknowledged(),
+  });
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
   const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
