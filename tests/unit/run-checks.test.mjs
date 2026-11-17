@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_CHECK_SECONDS,
   flakyLine,
+  loadCheckTimes,
   loadChecks,
   recordResult,
   parseShard,
@@ -15,6 +16,7 @@ import {
   shardChecks,
   takeSlot,
 } from "../../scripts/run-checks.mjs";
+import { medianTimes } from "../../scripts/ci-check-times.mjs";
 
 const made = [];
 const directory = () => {
@@ -141,6 +143,42 @@ describe("shards", () => {
   it("are the same on every call, so each CI job picks its own part of one split", () => {
     const checks = selectChecks(config, "browser");
     expect(shardChecks(checks, 2, 4)).toEqual(shardChecks([...checks], 2, 4));
+  });
+
+  it("prefer a measured time, then the recorded one, then the default", () => {
+    const checks = [
+      { group: "g", id: "a", seconds: 10 },
+      { group: "g", id: "b", seconds: 10 },
+      { group: "g", id: "c", seconds: 100 },
+      { group: "g", id: "d" },
+    ];
+    // Recorded: c (100) alone, then d (60), a and b together.
+    expect(shardChecks(checks, 1, 2).map((check) => check.id)).toEqual(["c"]);
+    // Measured: a really takes 200 s and gets a part to itself; c is measured at 50 s.
+    const measured = { "g.a": 200, "g.c": 50, "g.zero": 0 };
+    expect(shardChecks(checks, 1, 2, measured).map((check) => check.id)).toEqual(["a"]);
+    expect(shardChecks(checks, 2, 2, measured).map((check) => check.id)).toEqual(["b", "c", "d"]);
+  });
+
+  it("read the committed times file, which names only checks that exist", () => {
+    const measured = loadCheckTimes();
+    const known = new Set(selectChecks(config).map((check) => `${check.group}.${check.id}`));
+    for (const [check, seconds] of Object.entries(measured)) {
+      expect(known.has(check), check).toBe(true);
+      expect(seconds, check).toBeGreaterThan(0);
+    }
+    expect(loadCheckTimes(join(directory(), "absent.json"))).toEqual({});
+  });
+
+  it("take the median of each check's passing times across runs", () => {
+    const run = (...results) => ({ results });
+    const pass = (check, seconds) => ({ check, status: "pass", seconds });
+    const files = [
+      run(pass("b.x", 30), pass("b.y", 5)),
+      run(pass("b.x", 10), { check: "b.y", status: "fail", seconds: 900 }),
+      run(pass("b.x", 20), pass("b.y", 7)),
+    ];
+    expect(medianTimes(files)).toEqual({ "b.x": 20, "b.y": 6 });
   });
 
   it("reject a malformed shard", () => {

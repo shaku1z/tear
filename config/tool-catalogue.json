@@ -1499,6 +1499,18 @@
         ".github/workflows/ci.yml"
       ]
     },
+    "scripts/ci-check-times.mjs": {
+      "purpose": "Writes config/check-times.json, the browser shards' split, from the measured check times of given Validate runs",
+      "effects": [
+        "writes-repo-files",
+        "network"
+      ],
+      "duration": "under-a-minute",
+      "via": [],
+      "runBy": [
+        "scripts/run-checks.mjs"
+      ]
+    },
     "scripts/ci-verdict.mjs": {
       "purpose": "Validate's required check: fails unless every needed job ended as it should",
       "effects": [

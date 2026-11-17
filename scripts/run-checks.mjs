@@ -20,7 +20,7 @@
 // With --keep-going (the nightly workflow only), a failing check does not stop the run: every check
 // runs, the run lists each failure at the end and still fails. Pull request runs stop at the first.
 import { spawnSync } from "node:child_process";
-import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -45,17 +45,31 @@ export function selectChecks(config, group) {
 /** The time a check without a recorded `seconds` counts as when the shards are packed. */
 export const DEFAULT_CHECK_SECONDS = 60;
 
+/** Where scripts/ci-check-times.mjs writes the seconds each check took in recent Validate runs. */
+export const CHECK_TIMES = resolve(root, "config/check-times.json");
+
+/** The measured seconds by "group.id", or an empty map when there is no times file. */
+export function loadCheckTimes(path = CHECK_TIMES) {
+  if (!existsSync(path)) return {};
+  return JSON.parse(readFileSync(path, "utf8")).seconds ?? {};
+}
+
+const positive = (value) => Number.isFinite(value) && value > 0;
+
 /**
- * Part `index` (1-based) of `count`: the checks are packed longest first by their recorded
- * `seconds` (DEFAULT_CHECK_SECONDS when absent), each into the part with the least time so far,
- * and every part keeps list order. Every check lands in exactly one part, whatever the times say;
- * a time that drifts only unbalances the parts.
+ * Part `index` (1-based) of `count`: the checks are packed longest first, each into the part with
+ * the least time so far, and every part keeps list order. A check's time is its measured time in
+ * `measured` (by "group.id"), else its recorded `seconds`, else DEFAULT_CHECK_SECONDS. Every
+ * check lands in exactly one part, whatever the times say; a time that drifts only unbalances them.
  */
-export function shardChecks(checks, index, count) {
+export function shardChecks(checks, index, count, measured = {}) {
   if (!Number.isInteger(count) || count < 1 || !Number.isInteger(index) || index < 1 || index > count)
     throw new RangeError(`invalid shard ${String(index)}/${String(count)}`);
-  const seconds = (check) =>
-    Number.isFinite(check.seconds) && check.seconds > 0 ? check.seconds : DEFAULT_CHECK_SECONDS;
+  const seconds = (check) => {
+    const time = measured[`${check.group}.${check.id}`];
+    if (positive(time)) return time;
+    return positive(check.seconds) ? check.seconds : DEFAULT_CHECK_SECONDS;
+  };
   const order = checks
     .map((check, position) => ({ check, position }))
     .sort((a, b) => seconds(b.check) - seconds(a.check) || a.position - b.position);
@@ -180,7 +194,7 @@ async function main(argv) {
   const shardAt = argv.indexOf("--shard");
   // TEAR_CHECKS_CONFIG points the runner at another list; only its own tests use it.
   const listed = selectChecks(loadChecks(process.env.TEAR_CHECKS_CONFIG || undefined), group);
-  const checks = shardAt === -1 ? listed : shardChecks(listed, ...parseShard(argv[shardAt + 1]));
+  const checks = shardAt === -1 ? listed : shardChecks(listed, ...parseShard(argv[shardAt + 1]), loadCheckTimes());
   if (shardAt !== -1)
     console.log(`shard ${argv[shardAt + 1]}: ${String(checks.length)} of ${String(listed.length)} check(s)`);
   if (argv.includes("--list")) {
