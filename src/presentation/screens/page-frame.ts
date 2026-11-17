@@ -127,7 +127,13 @@ export function createPageFrame(context: ScreenRenderContext) {
       list = spec.list ?? [],
       tail = spec.tail ?? [];
     if (frame.compactPage) return kit.scroll(frame.compactPage, [...frame.lead, ...head, ...list, ...tail], spec.gap);
-    const fixed: ScrollView = { top: frame.top, bottom: frame.bottom, enqueue: context.enqueue };
+    const fixed: ScrollView = {
+      top: frame.top,
+      bottom: frame.bottom,
+      enqueue(control) {
+        context.enqueue(control);
+      },
+    };
     let y = spec.desktop.top;
     for (const block of head) {
       block.draw(y, fixed);
@@ -239,7 +245,11 @@ export function createPageFrame(context: ScreenRenderContext) {
     options: Readonly<{ size: number; maxLines: number; align: "center" | "left"; baseline: number; height: number }>,
   ): ScrollBlock {
     if (frame.compactPage)
-      return kit.prose(frame.compactPage, text, { size: options.size, maxLines: options.maxLines, align: options.align });
+      return kit.prose(frame.compactPage, text, {
+        size: options.size,
+        maxLines: options.maxLines,
+        align: options.align,
+      });
     const draw = (y: number): void => {
       ui.text(context.canvas, text, frame.centerX, y + options.baseline, options.size, options.align, ui.t.alpha.muted);
     };

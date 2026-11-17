@@ -193,7 +193,13 @@ const METRICS: Readonly<Record<"desktop" | "phone", (t: Tokens) => LeaderboardMe
           detailOverhang: 0,
           detailLines: 2,
           detailLineHeight: lineHeight(t.type.micro),
-          watch: { x: x + w - pad - target, y: y + (cardHeight - target) / 2, w: target, h: target, size: t.type.label },
+          watch: {
+            x: x + w - pad - target,
+            y: y + (cardHeight - target) / 2,
+            w: target,
+            h: target,
+            size: t.type.label,
+          },
         };
       },
       line: { reserve: false, height: 0, size: t.type.caption, baseline: 0 },
@@ -296,7 +302,11 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
     });
     const place = feed ? m.feed : m.ranked;
     const state = stateCopy(view, feed);
-    let parts: Readonly<{ head?: readonly ScrollBlock[]; list?: readonly ScrollBlock[]; tail?: readonly ScrollBlock[] }>;
+    let parts: Readonly<{
+      head?: readonly ScrollBlock[];
+      list?: readonly ScrollBlock[];
+      tail?: readonly ScrollBlock[];
+    }>;
     if (state) {
       const cta =
         state.status === "signin"
@@ -367,14 +377,12 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
         rankHeader(columns, y + m.header.baseline, m.header);
       },
     });
-    const list = view.rows.map(
-      (entry, index): ScrollBlock => ({
-        height: row.height,
-        draw: (y, scrollView) => {
-          rankRow(entry, index, y, columns, row, scrollView);
-        },
-      }),
-    );
+    const list = view.rows.map((entry, index): ScrollBlock => ({
+      height: row.height,
+      draw: (y, scrollView) => {
+        rankRow(entry, index, y, columns, row, scrollView);
+      },
+    }));
     const tail = view.ownRank ? [frames.prose(frame, view.ownRank, { ...m.ownRank, align: "center" })] : [];
     return { head, list, tail };
   }
