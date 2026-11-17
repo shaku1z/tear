@@ -5,11 +5,4 @@
 export const REPLAY_EDITOR_ROUTE = "replay-editor" as const;
 export const LEGACY_REPLAY_EDITOR_ROUTE = "replay.studio" as const;
 
-export const REPLAY_EDITOR_ACTIONS = Object.freeze({
-  toggle: "replay.editor.toggle",
-  createCutList: "replay.editor.createCutList",
-} as const);
-export const LEGACY_REPLAY_EDITOR_ACTIONS = Object.freeze({
-  toggle: "replay.studio.toggle",
-  createCutList: "replay.studio.createCutList",
-} as const);
+export { LEGACY_REPLAY_EDITOR_ACTIONS, REPLAY_EDITOR_ACTIONS } from "../domain/replay-editor-actions";
