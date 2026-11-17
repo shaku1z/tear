@@ -34,6 +34,8 @@ Then, for each hook:
   - be a fast-forward (no force pushes, no deletions);
   - share history with `origin/main`. It need not contain main's newest commit: a branch may be behind main, and may take main in with `git merge origin/main`.
 
+  One deletion is allowed (owner decision, 2026-11-16): a remote branch whose name is exactly a batch branch, `codex/batch-YYYYMMDDtHHMMSSz` (`pnpm merge:batch --prune`). Every other deletion is refused. The shared skill copy of the guard still refuses all deletions; the music and wiki repositories have no batch branches.
+
   Every commit the push publishes (not on the remote branch and not on `origin/main`) must be owner-authored, owner-committed and free of attribution. Commits already on `origin/main`, including GitHub's squash merges brought in by `git merge origin/main`, are not re-scanned.
 
 The merge helper additionally refuses:

@@ -86,14 +86,25 @@ applies them and answers yes or no with the reason; the merge helper calls it.
    the cover, and the member is back on rules 1 and 2.
    - `pnpm merge:batch --status <branch>` says whether the batch passed and, if
      not, which checks failed. Build it again with `--without <pr>`.
+   - `pnpm merge:batch --merge <branch> --authorize-owner-merge` merges the
+     members through the owner merge helper, in batch order, then runs
+     `--verify`.
+     - A network failure is tried again, after checking the merge did not go
+       through.
+     - A refusal, or a member that moved or closed, stops it there.
    - After the last merge, `pnpm merge:batch --verify <branch>` confirms that
      main's tree is the tree the batch run checked, and says loudly if it is
      not.
    - Main's own run still runs after each merge, and still makes the deploy
      artifact.
-   - The tool never deletes batch branches, because the pre-push guard refuses
-     deletions. `pnpm merge:batch --prunable` lists the ones nothing can still
-     merge on, so they can be pruned by hand.
+   - `pnpm merge:batch --prunable` lists batch branches nothing can still
+     merge on: a failed run, or every member merged or closed.
+     `pnpm merge:batch --prune` deletes those, on origin and locally, and says
+     what it deleted.
+   - It never deletes a branch while any check on it is running, or within an
+     hour of its push, before its run may have started.
+   - The pre-push guard allows a deletion only for a name that is exactly a
+     batch branch (owner decision, 2026-11-16).
 
 ## Local boundary
 

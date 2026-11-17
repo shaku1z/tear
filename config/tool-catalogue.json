@@ -990,7 +990,7 @@
       "duration": "seconds"
     },
     "merge:batch": {
-      "purpose": "Merges several ready pull requests onto a codex/batch-* branch, pushes it and starts Validate; --status and --verify follow it up",
+      "purpose": "Merges several ready pull requests onto a codex/batch-* branch, pushes it and starts Validate; --status, --merge, --verify and --prune follow it up",
       "effects": [
         "network"
       ],

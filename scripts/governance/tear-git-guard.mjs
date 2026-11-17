@@ -270,12 +270,19 @@ function isAncestor(repo, ancestor, descendant) {
   return gitIn(repo, ["merge-base", "--is-ancestor", ancestor, descendant], { allowFailure: true }).status === 0;
 }
 
+/** Batch branches as scripts/merge-batch.mjs names them (BATCH_BRANCH there), as a remote ref. */
+export const BATCH_BRANCH_REF = /^refs\/heads\/codex\/batch-\d{8}t\d{6}z$/u;
+
 function assertPushLine(repo, repositoryId, remoteName, remoteUrl, branch, line) {
   const fields = line.trim().split(/\s+/u);
   if (fields.length < 4) fail("pre-push blocked: malformed update line " + line);
   const [localRef, localOid, remoteRef, remoteOid] = fields;
-  if (localRef === "(delete)" || ZERO_OID.test(localOid))
+  if (localRef === "(delete)" || ZERO_OID.test(localOid)) {
+    // Owner decision, 2026-11-16: a throwaway batch branch (scripts/merge-batch.mjs --prune) may be
+    // deleted. Its name must match the batch pattern exactly; every other deletion stays refused.
+    if (localRef === "(delete)" && ZERO_OID.test(localOid) && BATCH_BRANCH_REF.test(remoteRef)) return;
     fail("pre-push blocked: branch deletion is not an approved publishing operation");
+  }
   const expectedLocalRef = "refs/heads/" + branch;
   if (localRef !== expectedLocalRef)
     fail("pre-push blocked: push source " + localRef + " is not the current branch " + expectedLocalRef);
