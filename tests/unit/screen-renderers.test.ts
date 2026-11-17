@@ -570,9 +570,9 @@ describe("legacy screen renderer registry", () => {
     let written = -1;
     const music = JSON.parse(
       readFileSync(fileURLToPath(new URL("../../public/audio/music.json", import.meta.url)), "utf8"),
-    );
+    ) as { catalog: { works: { id: string; title: string }[] }; routing: unknown };
     const library = {
-      songs: music.catalog.works.map((work: { id: string; title: string }) => ({ ...work, seconds: 30 })),
+      songs: music.catalog.works.map((work) => ({ ...work, seconds: 30 })),
       routing: validateMusicRoutingManifest(music.routing),
     };
     const view = (page: string) =>

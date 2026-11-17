@@ -174,7 +174,7 @@ export function buildMusicScreenView(source: MusicScreenSource): MusicScreenView
         }
       : null,
     canStep: (source.queue?.length ?? 0) > 1,
-    start: first && collections ? { id: first.id, queue: collections.all.songs.map((song) => song.id) } : null,
+    start: collections && first ? { id: first.id, queue: collections.all.songs.map((song) => song.id) } : null,
     songs,
     loading: library === null,
     playback: buildMusicPlaybackRows(source.settings),
