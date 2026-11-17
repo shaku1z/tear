@@ -38,6 +38,10 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   const pageErrors = [];
   const browserLogs = [];
   page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
+  // A console "Failed to load resource" names no URL; record which request failed and why.
+  page.on("requestfailed", (request) =>
+    browserLogs.push(`request failed: ${request.url()} ${request.failure()?.errorText ?? ""}`),
+  );
   page.on("console", (message) => {
     if (message.type() === "warning" || message.type() === "error")
       browserLogs.push(`${message.type()}: ${message.text()}`);
