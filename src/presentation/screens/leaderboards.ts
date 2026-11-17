@@ -353,8 +353,10 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
       const label = view.message?.length ? view.message : "▶  WATCH THE #1 RUN";
       head.push(
         frames.actions(frame, [{ label, action: { type: "leaderboards.watchReplay", id: view.legacyGhostId } }], {
-          ...m.lineButton,
+          height: m.lineButton.height,
+          size: m.lineButton.size,
           blockHeight: m.line.height,
+          slots: [{ x: frame.centerX - m.lineButton.width / 2, w: m.lineButton.width }],
         }),
       );
     } else if (view.message) {
