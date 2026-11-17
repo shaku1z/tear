@@ -800,6 +800,15 @@ describe("phone compositions (compact density)", () => {
         ).toBe(true);
       expect(all.some((action) => action.type === "music.stopPreview")).toBe(true);
       expect(offered("collection:stage:the-grounds").some((action) => action.type === "music.preview")).toBe(true);
+      // The stage page's one button, PLAY, is offered at the top of the page.
+      const top = render(
+        phone,
+        (r) => {
+          r.music(view("collection:stage:the-voidspire"));
+        },
+        0,
+      );
+      expect(top.controls.some((control) => control.label === "▶  PLAY")).toBe(true);
       const settings = offered("settings");
       for (const key of ["station", "menuMusic", "musicMode"])
         expect(settings.some((action) => action.key === key)).toBe(true);

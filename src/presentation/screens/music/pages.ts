@@ -15,8 +15,8 @@ export function collectionBlocks(
 ): ScrollBlock[] {
   const { ui } = context,
     t = ui.t;
-  const cover = m.compact ? 96 : 180,
-    playH = t.metric.btnH;
+  const cover = m.compact ? 72 : 180,
+    playH = m.compact ? t.metric.minTarget : t.metric.btnH;
   const first = collection.songs[0];
   const previewing = collection.songs.some((song) => song.previewing);
   const play: ScreenAction | null = previewing
@@ -25,7 +25,9 @@ export function collectionBlocks(
       ? playSong(first, collection.songs)
       : null;
   const playLabel = previewing ? "■  STOP" : "▶  PLAY";
-  const headerH = m.compact ? cover + t.space.md + playH : cover;
+  // The text column (kicker, title, count) can run taller than a phone's small cover.
+  const textH = t.type.micro + t.space.md + t.type.title + t.type.caption + t.space.sm;
+  const headerH = m.compact ? Math.max(cover, textH) : cover;
   const blocks: ScrollBlock[] = [];
   if (crumb)
     blocks.push({
@@ -46,8 +48,10 @@ export function collectionBlocks(
     height: headerH,
     draw: (y, view) => {
       drawCover(context, collection.cover, m.x, y, cover, cover);
+      // On a phone PLAY sits at the header's right edge, so the track list starts sooner.
+      const playW = textWidth(context, playLabel, t.type.label) + t.space.xl * 2;
       const textX = m.x + cover + t.space.lg,
-        textW = m.x + m.w - textX;
+        textW = (m.compact && play ? m.x + m.w - playW - t.space.lg : m.x + m.w) - textX;
       const kickerY = y + t.type.micro + (m.compact ? 0 : t.space.lg);
       ui.textBox(context.canvas, collection.kicker.toUpperCase(), textX, kickerY, textW, {
         size: t.type.micro,
@@ -63,9 +67,9 @@ export function collectionBlocks(
       if (!play) return;
       if (m.compact) {
         view.enqueue({
-          x: m.x,
-          y: y + cover + t.space.md,
-          w: m.w,
+          x: m.x + m.w - playW,
+          y: y + (headerH - playH) / 2,
+          w: playW,
           h: playH,
           label: playLabel,
           size: t.type.label,
@@ -74,11 +78,10 @@ export function collectionBlocks(
         });
         return;
       }
-      const w = textWidth(context, playLabel, t.type.label) + t.space.xl * 2;
       view.enqueue({
         x: textX,
         y: y + cover - playH,
-        w,
+        w: playW,
         h: playH,
         label: playLabel,
         size: t.type.label,

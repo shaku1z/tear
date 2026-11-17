@@ -67,7 +67,7 @@ async function openMusic(page, clickLabel) {
 async function collectTitles(page, viewport) {
   const seen = new Set();
   await page.mouse.move(viewport.width / 2, viewport.height / 2);
-  for (let step = 0; step < 24; step += 1) {
+  for (let step = 0; step < 60; step += 1) {
     for (const text of await frameTexts(page)) if (TITLES.includes(text)) seen.add(text);
     if (seen.size === TITLES.length) break;
     await page.mouse.wheel(0, viewport.height / 3);
@@ -153,6 +153,7 @@ withJourney(
         await waitText(page, "TEAR: BLADE");
         await capture(page, "phone-songs");
         const seen = await collectTitles(page, phone);
+        await capture(page, "phone-songs-end");
         assert.deepEqual([...seen].sort(), [...TITLES].sort(), "every catalogued song is listed at phone size");
         await page.keyboard.press("Escape");
         await waitScreen("menu");

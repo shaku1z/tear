@@ -177,7 +177,10 @@ function tiles(
             maxLines: 2,
             lineHeight: titleLine,
           });
-          const kicker = `${entry.kicker} · ${songCount(entry.songs.length)}`;
+          // On a phone the shelf heading already names the kind, so the tile keeps only the count.
+          const kicker = m.compact
+            ? songCount(entry.songs.length)
+            : `${entry.kicker} · ${songCount(entry.songs.length)}`;
           ui.textBox(context.canvas, kicker, x, titleY + titleLine + t.space.xs + t.type.micro, size, {
             size: t.type.micro,
             color: t.color.muted,
@@ -278,6 +281,8 @@ export function homeBlocks(context: ScreenRenderContext, m: MusicMetrics, view: 
   const blocks: ScrollBlock[] = [];
   const shelf = (entry: MusicShelfView): void => {
     if (entry.layout === "feature") {
+      // On a phone the pinned transport already is the now-playing card.
+      if (m.compact) return;
       blocks.push(heading(context, m, entry.heading), feature(context, m, entry.song, view.start));
       return;
     }

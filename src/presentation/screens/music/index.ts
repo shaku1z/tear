@@ -137,15 +137,19 @@ export function createMusicRenderers(context: ScreenRenderContext) {
       tabs: view.rail,
       tabAction: musicPage,
     });
-    const rowH = Math.max(t.metric.minTarget * 1.5, Math.round(t.type.label * 1.25) + Math.round(t.type.micro * 1.25));
-    const transportH = rowH + t.space.sm * 2,
+    const rowH = Math.max(
+      t.metric.minTarget,
+      Math.round(t.type.label * 1.25) + Math.round(t.type.micro * 1.25) + t.space.xs * 2,
+    );
+    // A slim bar: one touch target tall, so the page above keeps its room.
+    const transportH = t.metric.minTarget + t.space.xs * 2,
       transportY = page.bottom - transportH;
     const body: CompactPage = { ...page, bottom: transportY - t.space.sm };
     const m: MusicMetrics = {
       x: page.left,
       w: page.width,
       compact: true,
-      tileMax: 132,
+      tileMax: 240,
       tileMin: 100,
       rowH,
       cover: 40,

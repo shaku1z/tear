@@ -16,7 +16,7 @@ export function drawTransport(
     t = ui.t,
     now = view.nowPlaying;
   const { x, y, w, h } = box,
-    pad = t.space.sm,
+    pad = box.compact ? t.space.xs : t.space.sm,
     cover = h - pad * 2;
   canvas.save();
   canvas.fillStyle = ui.ink;
@@ -45,7 +45,7 @@ export function drawTransport(
     { label: "▶▶", action: { type: "music.step", delta: 1 } as const, enabled: view.canStep },
   ];
   // The step buttons carry two glyphs, so they are wider than the square play button.
-  const widthOf = (label: string): number => (label.length > 1 ? Math.round(size * 1.6) : size);
+  const widthOf = (label: string): number => (label.length > 1 ? Math.round(size * (box.compact ? 1.25 : 1.6)) : size);
   const controlsW = buttons.reduce((sum, button) => sum + widthOf(button.label), 0) + (buttons.length - 1) * gap;
   let controlX = x + w - pad - controlsW;
   for (const button of buttons) {
