@@ -106,6 +106,24 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.stopRecording());
 
   // Exercise the real shell controls, including the contextual Settings return.
+  // Every click the page receives is recorded, so a screen that never changes can say whether the
+  // click reached the canvas, which element took it, and what the page logged meanwhile.
+  await page.evaluate(() => {
+    window.__SMOKE_CLICKS__ = [];
+    window.addEventListener(
+      "click",
+      (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        window.__SMOKE_CLICKS__.push({
+          x: event.clientX,
+          y: event.clientY,
+          target: target ? `${target.tagName.toLowerCase()}${target.id ? `#${target.id}` : ""}` : String(event.target),
+          screen: window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen,
+        });
+      },
+      true,
+    );
+  });
   const waitForScreen = async (screen) => {
     try {
       await page.waitForFunction(
@@ -113,8 +131,19 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
         screen,
       );
     } catch (error) {
-      const actual = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot());
-      throw new Error(`Expected screen ${screen}; received ${JSON.stringify(actual)}`, { cause: error });
+      const actual = await page.evaluate(() => {
+        const canvas = document.getElementById("game")?.getBoundingClientRect();
+        return {
+          app: window.__TEAR_CATALOG_DEBUG__.app.snapshot(),
+          lastClicks: window.__SMOKE_CLICKS__.slice(-3),
+          canvas: canvas && { x: canvas.x, y: canvas.y, w: canvas.width, h: canvas.height },
+        };
+      });
+      throw new Error(
+        `Expected screen ${screen}; received ${JSON.stringify(actual)}\n` +
+          `page errors: ${pageErrors.join("\n") || "none"}\nconsole: ${browserLogs.join("\n") || "none"}`,
+        { cause: error },
+      );
     }
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
