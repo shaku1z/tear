@@ -72,9 +72,7 @@ const CURRENT_PROGRAM_HASH = /^[0-9a-f]{64}$/u;
 const CURRENT_PROGRAM_RUN_ID = /^[0-9]+$/u;
 
 const PATH_BOUND_TEARBENCH_ARTIFACTS = Object.freeze([
-  "docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md",
   "plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md",
-  "docs/tearbench-ghost3-requirements.digest.json",
   "docs/tearbench-ghost3-evidence-catalog.json",
   "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md",
   "docs/tearbench-c40-weapon-roster-evidence-index.json",

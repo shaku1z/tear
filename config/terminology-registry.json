@@ -32,7 +32,6 @@
       "src/gameplay/environment/*.ts",
       "src/tearbench/*.ts",
       "docs/TEARBENCH_GHOST3_PROGRAM.md",
-      "docs/TEARBENCH_GHOST3_REQUIREMENT_LEDGER.md",
       "docs/tearbench-ghost3-evidence-catalog.json",
       "docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md"
     ],
@@ -369,7 +368,6 @@
         "owner": "Program normalization history owner",
         "reason": "Long-form source specifications preserve the terminology used by their authored era.",
         "testEvidence": [
-          "requirements:check",
           "preserved documentation hashes"
         ],
         "expiry": {
@@ -410,7 +408,6 @@
         "owner": "TearBench/evidence infrastructure owner",
         "reason": "Evidence route IDs and descriptions are hash-bound and must not be rewritten.",
         "testEvidence": [
-          "requirements:check",
           "TearBench evidence route tests",
           "preservation corpus"
         ],
@@ -869,7 +866,7 @@
         "termIds": ["replay-editor"],
         "owner": "TearBench evidence-catalog owner",
         "reason": "The active evidence catalog retains source-era implementation labels inside hash-bound evidence notes; its exact path is scanned without treating those labels as current player copy.",
-        "testEvidence": ["scripts/tearbench-requirements.mjs", "tests/terminology-checkers.test.mjs", "docs/checkpoints/C21_NON_LOSSY_REQUIREMENTS_AUDIT.md"],
+        "testEvidence": ["tests/terminology-checkers.test.mjs", "docs/checkpoints/C21_NON_LOSSY_REQUIREMENTS_AUDIT.md"],
         "expiry": { "checkpoint": "G4-A", "condition": "Canonicalize generated evidence notes only when source/evidence identity and hash-bound historical trace remain intact." }
       },
       {

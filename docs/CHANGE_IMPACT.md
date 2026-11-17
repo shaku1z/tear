@@ -10,7 +10,7 @@ no route names. This page reports today's behaviour; it does not change it.
 2. **Docs-only test.** If every changed file is under `docs/` or `plans/`, or is `README.md`,
    `CONTRIBUTING.md`, `CRAZYGAMES.md` or `DEPLOYMENT.md`, CI skips the gameplay checks. It then
    runs `check:docs`, `test:docs`, `check:terminology`, `test:terminology` and
-   `requirements:check`. `AGENTS.md`, `CLAUDE.md` and `config/position.json` are not in that
+   `wiki:test`. `AGENTS.md`, `CLAUDE.md` and `config/position.json` are not in that
    list, so a change to them runs the full gate.
 3. **Evidence selection.** `pnpm tearbench ci --files-from …` matches each file against the
    prefixes in `src/tearbench/evidence-routes.json` (`evidenceForDiff` in

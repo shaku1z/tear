@@ -52,7 +52,6 @@ describe("C40 weapon-roster engineering evidence index", () => {
       expect(route).toMatchObject({
         id: proof.routeId,
         scenarios: [proof.scenarioId],
-        graveyardCases: [],
         baseComparison: "not-run-by-this-scenario",
         interactionMatrices: ["browser"],
       });

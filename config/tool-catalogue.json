@@ -174,7 +174,7 @@
       "duration": "long"
     },
     "tearbench": {
-      "purpose": "TearBench CLI (tasks, ci, parity, graveyard, forge, evidence, bisect); effects depend on the subcommand",
+      "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, forge); effects depend on the subcommand",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -200,20 +200,6 @@
       "purpose": "CI only: records a GitHub Actions build-artifact provider receipt from build records",
       "effects": [
         "writes-artifacts"
-      ],
-      "duration": "seconds"
-    },
-    "requirements:generate": {
-      "purpose": "Regenerates the Ghost3 requirements JSON, annex and capability dashboard under docs/",
-      "effects": [
-        "writes-repo-files"
-      ],
-      "duration": "seconds"
-    },
-    "requirements:check": {
-      "purpose": "Fails if the generated Ghost3 requirements documents are stale",
-      "effects": [
-        "read-only"
       ],
       "duration": "seconds"
     },
@@ -1107,7 +1093,7 @@
       "duration": "under-a-minute"
     },
     "check:workspace": {
-      "purpose": "Workspace hygiene gate: requirements, docs, workspace tool tests and checks",
+      "purpose": "Workspace hygiene gate: docs, workspace tool tests and checks",
       "effects": [
         "read-only"
       ],
@@ -1163,7 +1149,7 @@
       "duration": "under-a-minute"
     },
     "check:local": {
-      "purpose": "Local development gate: requirements, typecheck, lint, architecture, all unit tests and parity unit",
+      "purpose": "Local development gate: typecheck, lint, architecture, all unit tests and parity unit",
       "effects": [
         "writes-artifacts"
       ],
@@ -1229,13 +1215,6 @@
       ],
       "duration": "seconds"
     },
-    "release:verify-plan-certificate": {
-      "purpose": "Verifies a TearBench plan certificate against its receipts",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
     "release:verify-artifact": {
       "purpose": "Verifies a built release artifact identity against the expected Git SHA",
       "effects": [
@@ -1253,18 +1232,6 @@
       "duration": "under-a-minute",
       "via": [
         "quarantine:workspace"
-      ]
-    },
-    "scripts/benchmark-tearbench-clients.mjs": {
-      "purpose": "Benchmarks concurrent TearBench client missions and writes a report under artifacts/tearbench",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "minutes",
-      "via": [],
-      "runBy": [
-        "tests/benchmark-tearbench-clients.test.mjs",
-        "docs/TEARBENCH_VERIFICATION_ACCELERATION_EXECUTION_PLAN.md"
       ]
     },
     "scripts/build-target.mjs": {
@@ -1684,130 +1651,6 @@
         "tests/serve-contract.test.mjs"
       ]
     },
-    "scripts/tearbench-bisect-worktree.mjs": {
-      "purpose": "Local C26 regression bisection in a temporary detached worktree under artifacts/",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes",
-      "via": [],
-      "runBy": [
-        "scripts/tearbench.mjs"
-      ]
-    },
-    "scripts/tearbench-canary-bundle.mjs": {
-      "purpose": "CI canary: bundles a mission's artifacts and timing into an upload directory",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        ".github/workflows/tearbench-canary.yml"
-      ]
-    },
-    "scripts/tearbench-canary-compose.mjs": {
-      "purpose": "CI canary: copies downloaded dist/ and artifacts/ files into a workspace",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        ".github/workflows/tearbench-canary.yml"
-      ]
-    },
-    "scripts/tearbench-canary-incomplete-report.mjs": {
-      "purpose": "CI canary: writes an incomplete parity report when evidence is missing",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        ".github/workflows/tearbench-canary.yml"
-      ]
-    },
-    "scripts/tearbench-canary-plan.mjs": {
-      "purpose": "CI canary: derives a shard plan from a TearBench plan and history",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        ".github/workflows/tearbench-canary.yml"
-      ]
-    },
-    "scripts/tearbench-canary-qualification-report.mjs": {
-      "purpose": "Builds the canary qualification report from an aggregate manifest",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        "tests/tearbench-canary-qualification-report.test.mjs"
-      ]
-    },
-    "scripts/tearbench-canary-report.mjs": {
-      "purpose": "CI canary: post-run parity and timing report across shards",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        ".github/workflows/tearbench-canary.yml",
-        "scripts/tearbench-canary-qualification-report.mjs"
-      ]
-    },
-    "scripts/tearbench-canary-run-shard.mjs": {
-      "purpose": "CI canary: runs one shard of TearBench tasks and writes its results",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes",
-      "via": [],
-      "runBy": [
-        ".github/workflows/tearbench-canary.yml"
-      ]
-    },
-    "scripts/tearbench-paired-performance-report.mjs": {
-      "purpose": "Compares paired performance samples against a baseline revision",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        ".github/workflows/tearbench-canary.yml"
-      ]
-    },
-    "scripts/tearbench-requirements.mjs": {
-      "purpose": "Generates (generate) or checks (check) the Ghost3 requirements docs",
-      "effects": [
-        "writes-repo-files"
-      ],
-      "duration": "seconds",
-      "via": [
-        "requirements:generate",
-        "requirements:check"
-      ]
-    },
-    "scripts/tearbench-simulation-boundary-report.mjs": {
-      "purpose": "Reports simulation-boundary timing from performance samples",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        ".github/workflows/tearbench-canary.yml"
-      ]
-    },
     "scripts/tearbench-task-execution.mjs": {
       "purpose": "Runs a registered TearBench task (run-task) or certifies a plan (certify)",
       "effects": [
@@ -1839,16 +1682,6 @@
       "duration": "seconds",
       "via": [
         "check:artifact-disposition"
-      ]
-    },
-    "scripts/verify-plan-certificate.mjs": {
-      "purpose": "Verifies a TearBench plan certificate",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "release:verify-plan-certificate"
       ]
     },
     "scripts/verify-release-artifact.mjs": {
@@ -1954,10 +1787,8 @@
       "scripts/report-remaining-workspace-inventory.mjs",
       "scripts/report-workspace-recovery.mjs",
       "scripts/tearbench-build-artifact.mjs",
-      "scripts/tearbench-release-evidence-verifier.mjs",
       "scripts/tearbench-task-execution.mjs",
       "scripts/tearbench.mjs",
-      "scripts/verify-plan-certificate.mjs",
       "scripts/verify-release-artifact.mjs",
       "tests/browser-journey-harness.js",
       "tests/release-artifact-source-identity.test.mjs",
@@ -2012,29 +1843,20 @@
       "tests/tearbench-build-artifact.test.mjs"
     ],
     "scripts/tearbench-client-mission.mjs": [
-      "scripts/benchmark-tearbench-clients.mjs",
       "scripts/tearbench-task-execution.mjs",
       "tests/tearbench-client-mission.test.mjs",
       "tests/tearbench-task-execution.test.mjs"
     ],
     "scripts/tearbench-performance-sample.mjs": [
-      "scripts/tearbench-canary-plan.mjs",
-      "scripts/tearbench-canary-report.mjs",
-      "scripts/tearbench-canary-run-shard.mjs",
       "scripts/tearbench-task-receipts.mjs",
       "tests/tearbench-performance-sample.test.mjs",
       "tests/tearbench-task-receipts.test.mjs"
-    ],
-    "scripts/tearbench-release-evidence-verifier.mjs": [
-      "scripts/tearbench.mjs",
-      "tests/tearbench-release-evidence-verifier.test.mjs"
     ],
     "scripts/tearbench-reproducibility-contract.mjs": [
       "scripts/check-reproducible-build.mjs",
       "tests/tearbench-build-graph.test.mjs"
     ],
     "scripts/tearbench-resource-leases.mjs": [
-      "scripts/tearbench-bisect-worktree.mjs",
       "scripts/tearbench-task-execution.mjs",
       "scripts/tearbench.mjs",
       "tests/tearbench-resource-leases.test.mjs",
@@ -2061,17 +1883,8 @@
     ],
     "scripts/tearbench-task-receipts.mjs": [
       "scripts/record-build-provider-artifact.mjs",
-      "scripts/tearbench-canary-bundle.mjs",
-      "scripts/tearbench-canary-incomplete-report.mjs",
-      "scripts/tearbench-canary-plan.mjs",
-      "scripts/tearbench-canary-qualification-report.mjs",
-      "scripts/tearbench-canary-report.mjs",
-      "scripts/tearbench-canary-run-shard.mjs",
       "scripts/tearbench-client-mission.mjs",
       "scripts/tearbench-task-execution.mjs",
-      "scripts/verify-plan-certificate.mjs",
-      "tests/tearbench-canary-plan.test.mjs",
-      "tests/tearbench-canary-qualification-report.test.mjs",
       "tests/tearbench-client-mission.test.mjs",
       "tests/tearbench-task-execution.test.mjs",
       "tests/tearbench-task-receipts.test.mjs"
