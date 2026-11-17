@@ -6,14 +6,18 @@ const { STATE_WAIT_MS } = require("./browser-waits");
 const { catalog } = require("../public/audio/music.json");
 
 /**
- * The MUSIC screen in a built game: opened from the main menu's MUSIC row, it lists every
- * catalogued song; PREVIEW on a song plays it (Now playing switches to it) and BACK ends the
- * preview, so the menu music returns. The list is checked again at phone landscape.
- * Screenshots go to TEAR_VISUAL_DIR when it is set.
+ * The MUSIC screen in a built game: opened from the main menu's MUSIC row, it starts on Home.
+ * A stage opens its own page; PLAY previews its first song (STOP appears once it is what is
+ * sounding) and the transport's ▶▶ steps to the stage's next song. BACK goes up to Home, Songs
+ * lists every catalogued song, and leaving the screen ends the preview so the menu music
+ * returns. Home and Songs are checked again at phone landscape. Screenshots go to
+ * TEAR_VISUAL_DIR when it is set.
  */
 const TITLES = catalog.works.map((work) => work.title);
-const PREVIEWED = catalog.works.find((work) => work.id === "shopkeeper");
-assert.ok(PREVIEWED, "the catalog keeps the shopkeeper song this journey previews");
+const OPENED = "The Voidspire";
+const FIRST = catalog.works.find((work) => work.id === "looking-out");
+const NEXT = catalog.works.find((work) => work.id === "reflection-of-the-bladeless");
+assert.ok(FIRST && NEXT, "the catalog keeps the two Voidspire songs this journey plays");
 
 async function capture(page, name) {
   if (!process.env.TEAR_VISUAL_DIR) return;
@@ -37,11 +41,17 @@ async function startAudio(page) {
   );
 }
 
-/** Opens the MUSIC screen through the main menu's MUSIC row (it shows the playing song's title). */
+/** Waits until the last frame draws `text`. */
+const waitText = (page, text) =>
+  page.waitForFunction((value) => window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === value), text, {
+    timeout: STATE_WAIT_MS,
+  });
+
+/** Opens the MUSIC screen through the main menu's MUSIC row (it shows the playing song's title); it starts on Home. */
 async function openMusic(page, clickLabel) {
   await clickLabel("FILLET", "music");
   await page.waitForFunction(
-    () => window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === "Songs"),
+    () => window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === "Stages"),
     undefined,
     { timeout: STATE_WAIT_MS },
   );
@@ -68,29 +78,33 @@ withJourney(
   async ({ page, waitScreen, clickLabel }) => {
     await startAudio(page);
     await openMusic(page, clickLabel);
-    await capture(page, "desktop");
-    // The preview control on the song's row: the ▶ drawn level with its title.
-    const point = await page.evaluate((title) => {
-      const texts = window.__TEAR_JOURNEY_FRAME__.texts;
-      const row = texts.find((entry) => entry.text === title);
-      const control =
-        row && texts.find((entry) => entry.text === "▶" && entry.x > row.x && Math.abs(entry.y - row.y) < 30);
-      return control ? { x: Math.round(control.x), y: Math.round(control.y - 4) } : null;
-    }, PREVIEWED.title);
-    assert.ok(point, `${PREVIEWED.title} has a preview control`);
-    await page.mouse.click(point.x, point.y);
-    // The mini-player shows STOP only once the previewed song is what is sounding (Now playing switched to it).
+    await capture(page, "desktop-home");
+    // A stage opens its page: PLAY previews its first song, then ▶▶ steps to its boss song.
+    await clickLabel(OPENED, "music");
+    await waitText(page, "STAGE");
+    await capture(page, "desktop-stage");
+    await clickLabel("▶  PLAY", "music");
+    await waitText(page, "■  STOP");
+    await waitText(page, FIRST.title);
+    await clickLabel("▶▶", "music");
     await page.waitForFunction(
-      () =>
-        window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === "■  STOP") &&
-        window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === "■"),
-      undefined,
+      (title) => window.__TEAR_JOURNEY_FRAME__.texts.filter((entry) => entry.text === title).length >= 2,
+      NEXT.title,
       { timeout: STATE_WAIT_MS },
     );
-    await capture(page, "desktop-preview");
+    await capture(page, "desktop-playing");
+    // BACK goes up one level, to Home; Songs lists the whole soundtrack.
+    await page.keyboard.press("Escape");
+    await waitText(page, "Stages");
+    await clickLabel("Songs", "music");
+    await waitText(page, "TEAR: BLADE");
+    await capture(page, "desktop-songs");
     const seen = await collectTitles(page, desktop);
     assert.deepEqual([...seen].sort(), [...TITLES].sort(), "every catalogued song is listed");
     assert.equal(TITLES.length, 14);
+    await clickLabel("Settings", "music");
+    await waitText(page, "Soundtrack behavior");
+    await capture(page, "desktop-settings");
     await page.keyboard.press("Escape");
     await waitScreen("menu");
     // Leaving the screen ends the preview: the menu music (Fillet) plays again.
@@ -113,7 +127,10 @@ withJourney(
       async ({ page, waitScreen, clickLabel }) => {
         await startAudio(page);
         await openMusic(page, clickLabel);
-        await capture(page, "phone");
+        await capture(page, "phone-home");
+        await clickLabel("Songs", "music");
+        await waitText(page, "TEAR: BLADE");
+        await capture(page, "phone-songs");
         const seen = await collectTitles(page, phone);
         assert.deepEqual([...seen].sort(), [...TITLES].sort(), "every catalogued song is listed at phone size");
         await page.keyboard.press("Escape");
