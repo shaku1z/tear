@@ -165,6 +165,7 @@ function contextFixture(
     pushAction: () => undefined,
     routeAction: () => false,
     activateControl: () => false,
+    controlsDrawn: () => true,
     skipCinematic: () => {
       calls.push("skip");
     },
