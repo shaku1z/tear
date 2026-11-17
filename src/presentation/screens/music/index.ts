@@ -38,18 +38,8 @@ export function createMusicRenderers(context: ScreenRenderContext) {
     ui.displayText(context.canvas, view.title, x, y + t.type.h1, t.type.h1, "left");
     let rowY = y + t.type.h1 + t.space.xl;
     for (const entry of view.rail) {
-      context.enqueue({
-        x,
-        y: rowY,
-        w,
-        h,
-        label: entry.label,
-        size: t.type.label,
-        selected: entry.selected,
-        ghost: !entry.selected,
-        action: musicPage(entry.id),
-      });
-      rowY += h + t.space.xs;
+      railEntry(entry.label, null, entry.selected === true, musicPage(entry.id), x, rowY, w, h, t.type.label);
+      rowY += h;
     }
     if (view.stages.length === 0) return;
     rowY += t.space.lg;
@@ -57,20 +47,49 @@ export function createMusicRenderers(context: ScreenRenderContext) {
     rowY += t.space.sm;
     const openId = view.collection?.id;
     for (const stage of view.stages) {
-      context.enqueue({
-        x,
-        y: rowY,
-        w,
-        h,
-        label: stage.title,
-        size: t.type.micro,
-        dot: stage.cover?.hues[0],
-        selected: stage.id === openId,
-        ghost: stage.id !== openId,
-        action: openCollection(stage.id),
-      });
+      const hue = stage.cover?.hues[0] ?? t.color.accent;
+      railEntry(stage.title, hue, stage.id === openId, openCollection(stage.id), x, rowY, w, h, t.type.micro);
       rowY += h;
     }
+  }
+
+  /** One rail line: plain text (a hue dot for a stage); the current one gets a tint and an accent bar. */
+  function railEntry(
+    label: string,
+    hue: string | null,
+    selected: boolean,
+    action: ScreenAction,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    size: number,
+  ): void {
+    const { canvas } = context,
+      t = ui.t;
+    if (selected) {
+      canvas.save();
+      canvas.globalAlpha = 0.12;
+      canvas.fillStyle = t.color.accent;
+      canvas.fillRect(x, y, w, h);
+      canvas.globalAlpha = 1;
+      canvas.fillRect(x, y, 3, h);
+      canvas.restore();
+    }
+    let textX = x + t.space.md;
+    if (hue) {
+      canvas.save();
+      canvas.fillStyle = hue;
+      canvas.fillRect(textX, y + h / 2 - 4, 8, 8);
+      canvas.restore();
+      textX += 8 + t.space.sm;
+    }
+    ui.textBox(canvas, label, textX, y + h / 2 + Math.round(size * 0.35), x + w - textX, {
+      size,
+      bold: selected,
+      maxLines: 1,
+    });
+    context.enqueue({ x, y, w, h, label: "", hiddenBox: true, selected, action });
   }
 
   function desktop(view: MusicScreenView): void {
@@ -97,7 +116,7 @@ export function createMusicRenderers(context: ScreenRenderContext) {
       w,
       compact: false,
       tileMax: 200,
-      tileMin: 132,
+      tileMin: 120,
       rowH: t.metric.settingsRowH,
       cover: 44,
       columns: 3,

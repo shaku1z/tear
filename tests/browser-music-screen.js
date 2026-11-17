@@ -43,9 +43,15 @@ async function startAudio(page) {
 
 /** Waits until the last frame draws `text`. */
 const waitText = (page, text) =>
-  page.waitForFunction((value) => window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === value), text, {
-    timeout: STATE_WAIT_MS,
-  });
+  page
+    .waitForFunction((value) => window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => entry.text === value), text, {
+      timeout: STATE_WAIT_MS,
+    })
+    .catch(async (error) => {
+      // Name what the frame did show, so a failure says where the screen was.
+      const shown = await frameTexts(page);
+      throw new Error(`${text} never drawn; the frame shows: ${shown.slice(0, 40).join(" | ")}`, { cause: error });
+    });
 
 /** Opens the MUSIC screen through the main menu's MUSIC row (it shows the playing song's title); it starts on Home. */
 async function openMusic(page, clickLabel) {

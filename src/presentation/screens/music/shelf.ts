@@ -71,16 +71,7 @@ export function songRow(
     t.type.label,
   );
   const textX = x + box.cover + t.space.md;
-  twoLines(
-    context,
-    song.title,
-    song.where,
-    textX,
-    box.y,
-    box.h,
-    right - markW - t.space.lg - textX,
-    t.type.label,
-  );
+  twoLines(context, song.title, song.where, textX, box.y, box.h, right - markW - t.space.lg - textX, t.type.label);
   view.enqueue({ x: box.x, y: box.y, w: box.w, h: box.h, label: "", hiddenBox: true, action: playSong(song, queue) });
 }
 

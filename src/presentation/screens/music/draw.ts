@@ -79,4 +79,3 @@ export function textWidth(context: ScreenRenderContext, text: string, size: numb
   context.canvas.font = context.ui.font(size, bold);
   return context.canvas.measureText(text).width;
 }
-

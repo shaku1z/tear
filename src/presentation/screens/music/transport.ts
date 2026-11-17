@@ -44,14 +44,16 @@ export function drawTransport(
     { label: now?.previewing ? "■" : "▶", action: play, enabled: play !== null },
     { label: "▶▶", action: { type: "music.step", delta: 1 } as const, enabled: view.canStep },
   ];
-  const controlsW = buttons.length * size + (buttons.length - 1) * gap;
+  // The step buttons carry two glyphs, so they are wider than the square play button.
+  const widthOf = (label: string): number => (label.length > 1 ? Math.round(size * 1.6) : size);
+  const controlsW = buttons.reduce((sum, button) => sum + widthOf(button.label), 0) + (buttons.length - 1) * gap;
   let controlX = x + w - pad - controlsW;
   for (const button of buttons) {
     if (button.action)
       enqueue({
         x: controlX,
         y: y + (h - size) / 2,
-        w: size,
+        w: widthOf(button.label),
         h: size,
         label: button.label,
         size: t.type.label,
@@ -59,7 +61,7 @@ export function drawTransport(
         enabled: button.enabled,
         action: button.action,
       });
-    controlX += size + gap;
+    controlX += widthOf(button.label) + gap;
   }
   const textX = x + pad * 2 + cover,
     textW = x + w - pad - controlsW - t.space.lg - textX;
