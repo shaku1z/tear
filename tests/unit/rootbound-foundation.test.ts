@@ -23,6 +23,8 @@ import {
   type BossAttackRunnerState,
 } from "../../src/gameplay/entities/boss-attack-runner";
 import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
+import type { BossTell } from "../../src/gameplay/entities/boss-tells";
+import { bossTellLayer, setBossTellSkin } from "../../src/presentation/enemies/renderers/boss-tell-renderer";
 
 /** The drawing call each move's wind-up is built from: a curled vine, an earth mound, legs, thorns, a spike. */
 const MOVE_WIND_UP_CALL: Readonly<Record<string, string>> = {
@@ -111,6 +113,54 @@ describe("Rootbound production foundation", () => {
     expect(calls.filter((name) => name === "lineTo").length).toBeGreaterThanOrEqual(14);
     expect(calls.filter((name) => name === "arc").length).toBeGreaterThanOrEqual(7);
     expect(calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
+  });
+
+  it("hands every mark to the biome's skin, and puts a landing strike in front of the body", () => {
+    const harness = createEnemyHarness();
+    createEnemyPresentation({
+      A11Y: { highContrast: false, reducedMotion: false },
+      CLOCK: { sim: 2 },
+      policy: CONFIG,
+      GFX: { low: false },
+      THEME: { dark: false, ink: "#171219", rim: "#fff" },
+      UI: { font: (size) => `${String(size)}px sans-serif`, tag: () => undefined, t: { type: { caption: 13 } } },
+      clamp,
+      len,
+      lerp,
+    }).install(harness.types);
+    const draw = (stage: "tell" | "active", skinned: boolean): { skinned: string[]; calls: string[] } => {
+      const seen: string[] = [];
+      setBossTellSkin("verdant-sanctum", (_ctx, tell: BossTell, state) => {
+        seen.push(`${tell.attackId}:${tell.mark}:${tell.stage}:${bossTellLayer(tell)}:${typeof state.progress}`);
+        return skinned;
+      });
+      const boss = new harness.types.Rootbound(800, CONFIG.world.groundY - CONFIG.boss.h / 2) as unknown as {
+        moveState: BossAttackRunnerState;
+        draw(canvas: CanvasRenderingContext2D, player: unknown): void;
+      };
+      boss.moveState = {
+        ...createBossAttackRunnerState(0),
+        run: {
+          attackId: "root-glide",
+          stage,
+          stageTick: 0,
+          facing: -1,
+          origin: { x: 800, y: 0 },
+          target: { x: 500, y: CONFIG.world.groundY - 36 },
+          landed: false,
+          parried: false,
+        },
+      };
+      const calls: string[] = [];
+      boss.draw(recordingCanvas(calls), harness.player);
+      setBossTellSkin("verdant-sanctum", null);
+      return { skinned: seen, calls };
+    };
+    expect(draw("tell", true).skinned).toEqual(["root-glide:box:warning:behind:number"]);
+    expect(draw("active", true).skinned).toEqual(["root-glide:box:active:front:number"]);
+    // A skin that draws the mark replaces the default plate; one that declines leaves it in place.
+    const plates = (calls: readonly string[]): number => calls.filter((call) => call === "strokeRect").length;
+    expect(plates(draw("tell", true).calls)).toBeLessThan(plates(draw("tell", false).calls));
   });
 
   it("draws every move's wind-up and its shared danger mark in every accessibility profile", () => {

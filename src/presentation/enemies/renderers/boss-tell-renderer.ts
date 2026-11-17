@@ -94,16 +94,54 @@ function tellInk(tell: BossTell): string {
   }
 }
 
-/** Draws every tell a boss reports, in world space, with the shared danger marks. */
+/**
+ * Where a tell sits against the boss's body. A strike that is landing is drawn in front, so the body
+ * never hides the thing that hurts; warnings, landing spots and the exposed mark stay behind it.
+ */
+export type BossTellLayer = "behind" | "front";
+
+export function bossTellLayer(tell: BossTell): BossTellLayer {
+  return tell.stage === "active" && tell.damaging ? "front" : "behind";
+}
+
+/**
+ * A biome's own drawing for a tell: roots rising from the floor in place of the plain plate, say.
+ * It gets the tell (its mark, stage and area), how far the warning has run (0 to 1) and the shared ink,
+ * and returns true when it drew the tell; false leaves that tell to the default marks. A skin changes
+ * looks only: the area and timing are the tell's.
+ */
+export type BossTellSkin = (
+  ctx: CanvasRenderingContext2D,
+  tell: BossTell,
+  state: Readonly<{ progress: number; color: string; highContrast: boolean }>,
+) => boolean;
+
+const skins = new Map<string, BossTellSkin>();
+
+/** Installs (or with null removes) the skin for a biome, by stage id such as "verdant-sanctum". */
+export function setBossTellSkin(stageId: string, skin: BossTellSkin | null): void {
+  if (skin === null) skins.delete(stageId);
+  else skins.set(stageId, skin);
+}
+
+/**
+ * Draws the tells a boss reports, in world space. Every boss mark in the game comes through here:
+ * `skinId` picks the biome's skin, and `layer` draws only the tells that belong behind or in front of
+ * the body (a renderer calls it once before the body and once after).
+ */
 export function drawBossTells(
   runtime: EnemyRendererRuntime,
   ctx: CanvasRenderingContext2D,
   tells: readonly BossTell[],
+  options: Readonly<{ skinId?: string; layer?: BossTellLayer }> = {},
 ): void {
   const highContrast = runtime.A11Y.highContrast;
+  const skin = options.skinId === undefined ? undefined : skins.get(options.skinId);
   for (const tell of tells) {
+    if (options.layer !== undefined && bossTellLayer(tell) !== options.layer) continue;
     const k = bossTellProgress(tell);
     const color = tellInk(tell);
+    if (skin?.(ctx, tell, { progress: k, color: runtime.telegraphInk(color), highContrast }) === true) continue;
     const left = tell.x - tell.hw,
       top = tell.y - tell.hh;
     if (tell.mark === "self") selfMark(ctx, tell, runtime.telegraphInk(color), k, highContrast);

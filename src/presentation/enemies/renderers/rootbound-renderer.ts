@@ -4,6 +4,9 @@ import { drawBossTells } from "./boss-tell-renderer";
 import type { EnemyRendererRuntime } from "./enemy-renderer-runtime";
 import type { RenderInstance } from "./enemy-renderer-types";
 
+/** The Verdant skin for this boss's marks, if `setBossTellSkin` has installed one. */
+const TELL_SKIN = "verdant-sanctum";
+
 type Ink = Readonly<{ vine: string; thorn: string; earth: string; lineWidth: number }>;
 
 /** A row of root spikes standing on the ground, each `height` tall at full growth `k`. */
@@ -152,7 +155,8 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
 
       ctx.save();
       // Every warning and strike area comes from the boss's own tell data, drawn by the shared marks.
-      drawBossTells(runtime, ctx, this.tells());
+      const tells = this.tells();
+      drawBossTells(runtime, ctx, tells, { skinId: TELL_SKIN, layer: "behind" });
       if (this.memoryChoirStage)
         for (const manifestation of this.memoryChoirManifestations) {
           const active = this.memoryChoirManifestationActive(manifestation);
@@ -185,7 +189,8 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
             earth: THEME.dark ? "#2a2219" : "#5b4a33",
             lineWidth: 2,
           };
-      if (pose !== null) {
+      // A wind-up is drawn behind the body; the strike and what it leaves are drawn in front, below.
+      if (pose?.stage === "tell") {
         ctx.save();
         drawMove(ctx, ink, this, pose, CONFIG.world.groundY);
         ctx.restore();
@@ -305,6 +310,13 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
         ctx.stroke();
       }
       ctx.restore();
+      // In front of the body: the strike area, then the vines and spikes of the strike itself.
+      drawBossTells(runtime, ctx, tells, { skinId: TELL_SKIN, layer: "front" });
+      if (pose !== null && pose.stage !== "tell") {
+        ctx.save();
+        drawMove(ctx, ink, this, pose, CONFIG.world.groundY);
+        ctx.restore();
+      }
       this.drawHpBar(ctx);
     },
   });
