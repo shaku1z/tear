@@ -30,6 +30,7 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 | [D-013](#d-013) | 2026-11-13 | Production deploy of `84761549` after the owner played it | Active |
 | [D-014](#d-014) | 2026-11-13 | The game and wiki repositories are private | Active |
 | [D-015](#d-015) | 2026-11-13 | Remove the over-built developer systems; plain names for what stays | Active |
+| [D-016](#d-016) | 2026-11-16 | Tutorial gold is checked by regeneration, not by a committed source hash | Active |
 
 <a id="d-001"></a>
 
@@ -277,3 +278,23 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   plain words for what a thing does. The cloud publication and support stack is the owner's call
   and is not part of this decision.
 - **Source:** the owner's request relayed by the lead session on 2026-11-13.
+
+<a id="d-016"></a>
+
+## D-016 — Tutorial gold is checked by regeneration, not by a committed source hash
+
+- **Date:** 2026-11-16.
+- **Trigger:** `src/gameplay/training/tutorial-gold-binding.json` held a hash of the tutorial
+  source, so every pull request that changed a tutorial root rewrote the same line; batched
+  gameplay pull requests conflicted with each other and each needed a manual refresh.
+- **Decision:** the binding records only the gold output's content hash. Whether the committed gold
+  still matches the code is proven by regenerating it and comparing
+  (`tests/unit/tutorial-production-ghost.test.ts`). Builds run that test unless it passed locally
+  for the same tutorial code fingerprint and corpus; the fingerprint is never committed.
+- **Alternatives:** keep a committed fingerprint split one line per root (rejected: two changes
+  to the same root still conflict, and every change still needs a refresh); compare a build-time
+  fingerprint with a committed one (rejected: that is the old conflict).
+- **Consequences:** a code change that keeps the gold output needs no regenerated file. The first
+  build after a tutorial code change runs the gold test, about a minute; a CI job pays it once.
+  Builds now simulate, where before they only compared hashes.
+- **Source:** the lead session's task on 2026-11-16.
