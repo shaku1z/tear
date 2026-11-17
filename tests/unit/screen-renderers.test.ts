@@ -610,11 +610,11 @@ describe("legacy screen renderer registry", () => {
     // A stage's page: the crumb back, PLAY over the stage's songs, one row per song with that queue.
     controls.length = 0;
     createScreenRenderers(context).music(view("collection:stage:the-voidspire"));
-    expect(controls.find((control) => control.label === "‹ Home")?.action).toEqual({
-      type: "navigate",
-      to: "music",
-      tab: "home",
-    });
+    // The crumb, the rail's Home and BACK all lead up to Home.
+    const toHome = controls.filter(
+      (c) => c.action.type === "navigate" && c.action.to === "music" && c.action.tab === "home",
+    );
+    expect(toHome).toHaveLength(3);
     const queue = ["looking-out", "reflection-of-the-bladeless"];
     expect(controls.find((control) => control.label === "▶  PLAY")?.action).toEqual({
       type: "music.preview",

@@ -44,7 +44,7 @@ export function songRow(
   view: ScrollView,
   song: MusicSongView,
   queue: readonly MusicSongView[],
-  box: Readonly<{ x: number; y: number; w: number; h: number; cover: number; number?: boolean }>,
+  box: Readonly<{ x: number; y: number; w: number; h: number; cover: number; number?: number }>,
 ): void {
   const { canvas, ui } = context,
     t = ui.t,
@@ -52,10 +52,10 @@ export function songRow(
   if (lit) highlight(context, box.x - t.space.sm, box.y + 1, box.w + t.space.sm * 2, box.h - 2);
   let x = box.x;
   const middle = box.y + box.h / 2 + Math.round(t.type.label * 0.35);
-  if (box.number) {
+  if (box.number !== undefined) {
     const numberW = textWidth(context, "00", t.type.label);
     const mark = lit ? ui.readable(t.color.accent) : t.color.muted;
-    ui.tag(canvas, lit ? "♪" : String(song.number), x + numberW, middle, mark, "right", t.type.label);
+    ui.tag(canvas, lit ? "♪" : String(box.number), x + numberW, middle, mark, "right", t.type.label);
     x += numberW + t.space.md;
   }
   drawCover(context, song.art, x, box.y + (box.h - box.cover) / 2, box.cover, box.cover);

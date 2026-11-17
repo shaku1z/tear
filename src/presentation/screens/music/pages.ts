@@ -31,17 +31,15 @@ export function collectionBlocks(
     blocks.push({
       height: t.metric.minTarget,
       draw: (y, view) => {
-        const w = textWidth(context, crumb.label, t.type.label) + t.space.lg * 2;
-        view.enqueue({
-          x: m.x - t.space.sm,
-          y,
-          w,
-          h: t.metric.minTarget,
-          label: crumb.label,
+        // A plain text link, like the rail: the page's one button is PLAY.
+        const w = textWidth(context, crumb.label, t.type.label) + t.space.md,
+          h = t.metric.minTarget;
+        ui.textBox(context.canvas, crumb.label, m.x, y + h / 2 + Math.round(t.type.label * 0.35), w, {
           size: t.type.label,
-          ghost: true,
-          action: crumb.action,
+          color: ui.readable(t.color.accent),
+          maxLines: 1,
         });
+        view.enqueue({ x: m.x, y, w, h, label: "", hiddenBox: true, action: crumb.action });
       },
     });
   blocks.push({
@@ -90,14 +88,22 @@ export function collectionBlocks(
     },
   });
   blocks.push({ height: t.space.md, draw: () => undefined });
-  for (const song of collection.songs)
+  collection.songs.forEach((song, index) =>
     blocks.push({
       height: m.rowH,
       draw: (y, view) => {
-        songRow(context, view, song, collection.songs, { x: m.x, y, w: m.w, h: m.rowH, cover: m.cover, number: true });
+        songRow(context, view, song, collection.songs, {
+          x: m.x,
+          y,
+          w: m.w,
+          h: m.rowH,
+          cover: m.cover,
+          number: index + 1,
+        });
         ui.divider(context.canvas, m.x, y + m.rowH, m.w, 0.12);
       },
-    });
+    }),
+  );
   return blocks;
 }
 
