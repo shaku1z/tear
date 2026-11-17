@@ -2,6 +2,7 @@ import type { ReplayView, ScreenAction, ScreenRenderContext } from "./contracts"
 import {
   createCompactPage,
   type CompactChoice,
+  type CompactHeader,
   type CompactPage,
   type FlowAction,
   type ScrollBlock,
@@ -29,6 +30,8 @@ export interface PickerGroup {
   readonly action: (id: string) => ScreenAction;
   /** Desktop chip row: centred at `y`, each chip `width` x `height`. */
   readonly desktop: Readonly<{ y: number; width: number; height: number }>;
+  /** A view control (the codex sort): at the right end of the header row (phone) or of this chip row (desktop, `width` wide). */
+  readonly trailing?: Readonly<{ label: string; action: ScreenAction; width: number }> | undefined;
 }
 
 export interface PageSpec {
@@ -36,6 +39,8 @@ export interface PageSpec {
   /** One muted line beside (phone) or under (desktop) the title. */
   readonly subtitle?: string | undefined;
   readonly hue?: string | undefined;
+  /** A figure at the right of the title row (the shop's coins). */
+  readonly stat?: CompactHeader["stat"];
   readonly tabs?: readonly CompactChoice[] | undefined;
   readonly tabAction?: ((id: string) => ScreenAction) | undefined;
   /** One muted line under the tabs (desktop) or at the top of the body (phone). */
@@ -90,6 +95,8 @@ export interface PageBody {
     top: number;
     cull: Readonly<{ above: number; below: number }>;
     scrolls?: boolean | undefined;
+    /** A list that moves by whole blocks: `snap` blocks from the one the scroll rounds to (blocks of one height). */
+    snap?: number | undefined;
     canScrollUp?: boolean | undefined;
     canScrollDown?: boolean | undefined;
   }>;
@@ -106,6 +113,8 @@ interface ProseOptions {
   readonly height?: number | undefined;
   readonly gap?: number | undefined;
   readonly box?: boolean | undefined;
+  /** Desktop: draw the line as a tag in this colour. */
+  readonly tag?: string | undefined;
 }
 
 /** A desktop button position (`x` absolute). */
@@ -142,14 +151,16 @@ export function createPageFrame(context: ScreenRenderContext) {
         title: spec.title,
         subtitle: spec.subtitle,
         hue: spec.hue,
+        stat: spec.stat,
         tabs: spec.tabs,
         tabAction: spec.tabAction,
+        trailing: spec.pickers?.find((group) => group.trailing)?.trailing,
       });
       if (spec.pickers) compactPage = kit.toolbar(compactPage, spec.pickers);
       const lead = spec.caption ? [kit.prose(compactPage, spec.caption, { maxLines: 2 })] : [];
       return Object.freeze({ compact: true, ...compactPage, lead, compactPage });
     }
-    const layout = page(context, { title: spec.title, subtitle: spec.subtitle, hue: spec.hue });
+    const layout = page(context, { title: spec.title, subtitle: spec.subtitle, hue: spec.hue, stat: spec.stat });
     if (spec.tabs && spec.tabAction) tabs(context, spec.tabs, spec.tabAction, spec.desktop.tabsY);
     if (spec.caption && spec.desktop.captionY !== undefined)
       ui.text(
@@ -161,8 +172,24 @@ export function createPageFrame(context: ScreenRenderContext) {
         "center",
         ui.t.alpha.muted,
       );
-    for (const group of spec.pickers ?? [])
-      chips(context, group.items, group.action, group.desktop.y, group.desktop.width, group.desktop.height);
+    for (const { items, action, desktop, trailing } of spec.pickers ?? []) {
+      const gap = 8,
+        reserve = trailing ? trailing.width + gap * 2 : 0;
+      const end = chips(context, items, action, desktop.y, desktop.width, desktop.height, gap, reserve);
+      if (trailing) {
+        const { label, width: w } = trailing;
+        context.enqueue({
+          x: end + gap,
+          y: desktop.y,
+          w,
+          h: desktop.height,
+          label,
+          chip: true,
+          action: trailing.action,
+          size: ui.t.type.micro,
+        });
+      }
+    }
     const left = context.width / 2 - DESKTOP_COLUMN / 2;
     return Object.freeze({
       compact: false,
@@ -221,9 +248,13 @@ export function createPageFrame(context: ScreenRenderContext) {
           if (control.y >= listTop && control.y + control.h <= listBottom) context.enqueue(control);
         },
       };
+      const snap = spec.desktop.snap,
+        pitch = (list[0]?.height ?? 0) + spec.gap;
+      const first =
+        snap && pitch > 0 ? Math.max(0, Math.min(list.length - snap, Math.round(context.scroll / pitch))) : 0;
       const drawList = (): void => {
-        let rowY = listTop - (scrolls ? context.scroll : 0);
-        for (const block of list) {
+        let rowY = listTop - (scrolls && !snap ? context.scroll : 0);
+        for (const block of snap ? list.slice(first, first + snap) : list) {
           if (rowY >= listTop - spec.desktop.cull.above && rowY <= listBottom - spec.desktop.cull.below)
             block.draw(rowY, view);
           rowY += block.height + spec.gap;
@@ -351,8 +382,10 @@ export function createPageFrame(context: ScreenRenderContext) {
       return options.height === undefined ? undefined : { height: options.height, draw: () => undefined };
     const x = options.align === "center" ? frame.centerX : frame.left;
     if (!options.box) {
+      const { tag } = options;
       const draw = (y: number): void => {
-        ui.text(context.canvas, text, x, y + options.baseline, options.size, options.align, alpha);
+        if (tag) ui.tag(context.canvas, text, x, y + options.baseline, tag, options.align, options.size);
+        else ui.text(context.canvas, text, x, y + options.baseline, options.size, options.align, alpha);
       };
       return { height: options.height ?? 0, draw };
     }
@@ -409,6 +442,7 @@ export function createPageFrame(context: ScreenRenderContext) {
     replay,
     prose,
     actions,
+    grid: kit.grid,
     textWidth: kit.textWidth,
     lineHeight: kit.lineHeight,
     lineCount: kit.lineCount,
