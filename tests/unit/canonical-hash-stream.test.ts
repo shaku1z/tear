@@ -15,7 +15,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import type { GameAction } from "../../src/input/game-action";
 import { WEAPON_IDS, type WeaponId } from "../../src/gameplay/weapon-selection";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import type { TearObservationV1, TearScenarioV1 } from "../../src/tearbench/contracts";
 import {
   createProductionHeadlessEnvironment,

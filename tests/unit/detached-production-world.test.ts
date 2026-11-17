@@ -4,7 +4,7 @@ import { EnvelopeSequencer, type CommandEnvelope } from "../../src/domain/envelo
 import type { GameAction } from "../../src/input/game-action";
 import { CONFIG } from "../../src/config/game-config";
 import { TearSimulationRuntime } from "../../src/gameplay/runtime/tear-simulation-runtime";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { createDetachedWorld, detachedPlatforms } from "./detached-world-harness";
 
 interface Platform {

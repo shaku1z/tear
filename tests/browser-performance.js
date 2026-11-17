@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 const { assertPacingAssessment, createPacingAssessment } = require("./browser-performance-pacing-policy");
-const { STATE_WAIT_MS, holdFor, pollEvery } = require("./browser-waits");
+const { STATE_WAIT_MS, holdFor, pollEvery, trackScriptLoads, waitForScriptLoads } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const buildRoot = path.resolve(projectRoot, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -140,6 +140,7 @@ function staticServer() {
 
 async function openInstrumentedPage(browser, pageErrors, options = {}) {
   const page = await browser.newPage({ viewport: budgets.referenceProfile.viewport, deviceScaleFactor });
+  trackScriptLoads(page);
   await page.addInitScript((gfx) => {
     let settings = {};
     try {
@@ -356,8 +357,7 @@ async function spawnRepresentativeEnemies(page, commandCount, onSample) {
     "pgmenu",
     "performance fixture could not open the Playground build menu",
   );
-  await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await waitForScriptLoads(page);
 
   for (let index = 0; index < commandCount; index++) {
     const before = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);

@@ -1,28 +1,8 @@
+import { DEFAULT_AUDIO_MIXER_SETTINGS, type AudioMixerSettings } from "../domain/audio-mixer-settings";
+
 export type AudioCategory = "master" | "music" | "sfx" | "interface";
 export type SfxRoute = "weapons" | "enemies" | "player" | "environment";
 export type TemporaryMuteReason = "ad" | "portal" | "visibility" | "platform-suspend" | "system";
-
-export interface AudioMixerSettings {
-  readonly masterVolume: number;
-  readonly musicVolume: number;
-  readonly sfxVolume: number;
-  readonly interfaceVolume: number;
-  readonly masterMuted: boolean;
-  readonly musicMuted: boolean;
-  readonly sfxMuted: boolean;
-  readonly interfaceMuted: boolean;
-}
-
-export const DEFAULT_AUDIO_MIXER_SETTINGS: AudioMixerSettings = Object.freeze({
-  masterVolume: 0.6,
-  musicVolume: 0.5,
-  sfxVolume: 1,
-  interfaceVolume: 1,
-  masterMuted: false,
-  musicMuted: false,
-  sfxMuted: false,
-  interfaceMuted: false,
-});
 
 export interface AudioNodePort {
   connect(destination: AudioNodePort): void;

@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import { parseFinaleConfig } from "../../gameplay/campaign/finale-binding";
 import type { FinaleConfig } from "../../gameplay/campaign/finale-controller";
 import type { BossPracticeCandidate } from "../../gameplay/training/practice-boss-catalog";

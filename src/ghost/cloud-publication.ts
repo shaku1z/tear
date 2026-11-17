@@ -1,4 +1,4 @@
-import { canonicalStringify } from "../replay/hash";
+import { canonicalStringify } from "../domain/hash";
 
 export type GhostVisibility = "private" | "unlisted" | "public";
 export type GhostValidationStage =

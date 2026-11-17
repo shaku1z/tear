@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { encodeGhostChunkPayload, type GhostChunkEncoding } from "./capsule-codec";
 
 export type GhostVaultGuard = Readonly<{ store: GhostVaultWrite["store"]; key: string; expected?: string }>;

@@ -1,5 +1,5 @@
 import { readGhostBossMemory } from "./boss-memory-origin";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { readGhostFinaleCompanion } from "./finale-companion";
 import type { TearSnapshotV1 } from "../tearbench/contracts";
 import { rebaseEnvironmentSnapshot } from "../tearbench/environment-codec";

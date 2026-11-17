@@ -66,12 +66,12 @@ Set a new ceiling about 10% above a deliberate, measured change and record why h
 
 Only byte and request counts are checked. They are identical from run to run for a given build; load times are not, so they are reported, never enforced. Checked on the desktop profile, cold (fresh browser) and warm (reload; on standalone the service worker controls it):
 
-| Ceiling | standalone | CrazyGames | Measured at introduction | Why this number |
+| Ceiling | standalone | CrazyGames | Measured (main e48ca8d5) | Why this number |
 |---|---:|---:|---|---|
-| Cold bytes to first frame | 830,000 | 785,000 | 752,215 / 713,038 | About 10% above the measured download, so a new startup dependency of a few tens of KB fails. |
-| Cold requests to first frame | 44 | 42 | 40 / 38 | Each extra request costs a round trip on phones (150 ms in the phone profile). |
-| Cold bytes to playing, music stems excluded | 830,000 | 785,000 | 752,215 / 713,038 | Everything a first run needs besides music; stems are excluded because how many arrive while the player clicks through the menu depends on timing. |
-| Warm network requests to first frame | 15 | 41 | 13 / 37 | Requests a returning player waits for. Standalone revalidates only the music manifests (everything else comes from the service worker); CrazyGames has no service worker. |
+| Cold bytes to first frame | 730,000 | 730,000 | 687,330 / 688,931 | About 6% above the measured download (main e48ca8d5), so a new startup dependency of a few tens of KB fails. |
+| Cold requests to first frame | 28 | 28 | 25 / 25 | Each extra request costs a round trip on phones (150 ms in the phone profile). |
+| Cold bytes to playing, music stems excluded | 735,000 | 730,000 | 693,481 / 688,931 | Everything a first run needs besides music; stems are excluded because how many arrive while the player clicks through the menu depends on timing. |
+| Warm network requests to first frame | 3 | 26 | 0 / 23 | Requests a returning player waits for. Standalone serves everything from the service worker; CrazyGames has no service worker. |
 
 `pnpm report:load` runs every device profile and reports milestone times, bytes per category and every request (`TEAR_LOAD_PROFILES`, `TEAR_LOAD_TARGETS`, `TEAR_LOAD_REPEATS`, `TEAR_LOAD_OUTPUT`). The profiles use Chromium network and CPU throttling: desktop (40 Mbps, 20 ms, no CPU throttle), laptop (10 Mbps, 40 ms, 4x) and phone (844x390 at 3x, 1.6 Mbps, 150 ms, 4x, touch). Service-worker traffic (the precache install) is not throttled by Chromium's page emulation, so its competition with first-session downloads is invisible here; the precache size budget above covers it. Medians of three runs when the budgets were set (cold first frame / START to playing / menu music ready / warm first frame):
 

@@ -1,5 +1,5 @@
 import { readGhostReplayRunContext } from "./replay-admission";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { GhostLocalVault, prepareGhostCapsuleSourceGuards } from "./capsule-vault";
 import { GhostCapsuleReader } from "./capsule-reader";
 import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";

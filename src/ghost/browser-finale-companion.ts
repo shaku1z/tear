@@ -3,7 +3,7 @@ import { GhostCapsuleReader, type GhostReadCapsule } from "./capsule-reader";
 import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
 import { prepareGhostCapsuleSourceGuards } from "./capsule-protection";
 import { admitGhostFinaleCompanion, readGhostFinaleCompanion } from "./finale-companion";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 
 /** Read-only source lease: no index repair, maintenance, consent, or protection writes. */
 export async function reopenGhostFinaleCompanion(factory: IDBFactory | undefined, capsule: GhostReadCapsule) {

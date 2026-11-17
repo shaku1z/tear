@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import type { TearProgressionEvent, TearSynthesizedProgression } from "./progression-ledger";
 import { reconstructProgression, synthesizeProgression } from "./progression-ledger";

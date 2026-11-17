@@ -7,7 +7,7 @@ import {
   createLegacyDifficulties,
 } from "../../src/gameplay/run/difficulty-catalog";
 import { planRunStart } from "../../src/gameplay/run/run-start-plan";
-import { canonicalStringify, stableVerificationHash } from "../../src/replay/hash";
+import { canonicalStringify, stableVerificationHash } from "../../src/domain/hash";
 
 const remote = { coinMult: 1.2, scoreMult: 1.5, enemyHpMult: 0.9, enemyDensityMult: 1.1 };
 

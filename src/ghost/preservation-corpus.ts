@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { GhostCapsuleReader } from "./capsule-reader";
 import {
   GhostLocalVault,

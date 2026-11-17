@@ -5,11 +5,8 @@ import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { ROOTBOUND_REGROWTH_TIMING } from "../../src/gameplay/environment/regrowth-link";
 import { BLOOM_WELL_TIMING, createBloomWellState } from "../../src/gameplay/environment/bloom-well";
-import {
-  ROOTBOUND_CANOPY_STEP,
-  ROOTBOUND_ENCOUNTER,
-  ROOTBOUND_PHASE_THREE_ATTACK_ORDER,
-} from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_ENCOUNTER } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
 import { createRootbinderState, severRootLink } from "../../src/gameplay/entities/rootbinder-runtime";
 import {
   captureProductionReplayCheckpoint,
@@ -24,10 +21,8 @@ type Boss = InstanceType<Harness["types"]["Rootbound"]> & {
   phaseMarker: number;
   state: "intro" | "idle" | "recover";
   stateT: number;
-  pendingAttack: string | null;
   lastSpringStage: string | null;
   lastSpringUseCount: number;
-  canopyStepStage: string | null;
   regrowthState: Readonly<{ phase: string }>;
   beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean;
   advanceRegrowth(tick: number, ids: ReadonlySet<string>, broken?: boolean): unknown;
@@ -50,7 +45,7 @@ function skipBeat(actor: Boss): void {
 function resolvedPhaseThree(harness: Harness): Boss {
   const actor = boss(harness);
   actor.hp = actor.maxHp * 0.2;
-  actor.update(dt, harness.platforms, harness.player, []);
+  actor.update(dt, harness.platforms, harness.player);
   skipBeat(actor);
   actor.beginRegrowth(0, connections);
   actor.advanceRegrowth(ROOTBOUND_REGROWTH_TIMING.channelTicks, new Set(), false);
@@ -67,13 +62,16 @@ describe("Verdant gameplay regressions", () => {
     let idleRun = 0,
       longestIdle = 0;
     for (let tick = 0; tick < 120 * 40; tick += 1) {
-      actor.update(dt, harness.platforms, harness.player, []);
+      // Every 4 s the player steps to the far side, so the ranged moves get their turn as well.
+      if (tick % 480 === 0) harness.player.x = actor.x < CONFIG.view.w / 2 ? CONFIG.view.w - 200 : 200;
+      actor.update(dt, harness.platforms, harness.player);
       const verb = actor.atk.split(":")[0] ?? "";
       if (verb !== "unavailable" && !verb.startsWith("regrowth")) started.add(verb);
       idleRun = actor.atk === "unavailable" ? idleRun + 1 : 0;
       longestIdle = Math.max(longestIdle, idleRun);
     }
-    expect([...started].sort()).toEqual([...new Set(ROOTBOUND_PHASE_THREE_ATTACK_ORDER)].sort());
+    const phaseThreeMoves = ROOTBOUND_MOVES.attacks.filter((move) => move.phases.includes(3)).map((move) => move.id);
+    expect([...started].sort()).toEqual([...phaseThreeMoves, "last-spring"].sort());
     expect(actor.lastSpringUseCount).toBeGreaterThanOrEqual(3);
     expect(longestIdle / 120).toBeLessThan(2);
   });
@@ -84,14 +82,14 @@ describe("Verdant gameplay regressions", () => {
     actor.hit(actor.maxHp * 10, 1, 0);
     expect(actor.dying).toBe(false);
     expect(actor.hp / actor.maxHp).toBeGreaterThan(actor.phaseMarks[1]);
-    actor.update(dt, harness.platforms, harness.player, []);
+    actor.update(dt, harness.platforms, harness.player);
     expect(actor.phaseMarker).toBe(2);
     expect(actor.cinematicRequest).toMatchObject({ id: "rootbound-garden-remembers" });
     skipBeat(actor);
     actor.hitCd = 0;
     actor.hit(actor.maxHp * 10, 1, 0);
     expect(actor).toMatchObject({ dying: false, hp: 1 });
-    actor.update(dt, harness.platforms, harness.player, []);
+    actor.update(dt, harness.platforms, harness.player);
     expect(actor.phaseMarker).toBe(3);
     expect(actor.cinematicRequest).toMatchObject({ id: "rootbound-nothing-here-dies" });
   });
@@ -100,7 +98,7 @@ describe("Verdant gameplay regressions", () => {
     const harness = createEnemyHarness();
     const actor = boss(harness);
     actor.hp = actor.maxHp * 0.2;
-    actor.update(dt, harness.platforms, harness.player, []);
+    actor.update(dt, harness.platforms, harness.player);
     skipBeat(actor);
     expect(actor.beginRegrowth(0, connections)).toBe(true);
     expect(actor.regrowthChannelBroken()).toBe(false);
@@ -121,33 +119,15 @@ describe("Verdant gameplay regressions", () => {
     const harness = createEnemyHarness();
     const actor = boss(harness);
     actor.introT = dt;
-    actor.update(dt, harness.platforms, harness.player, []);
+    actor.update(dt, harness.platforms, harness.player);
     actor.introT = 0;
-    actor.update(dt, harness.platforms, harness.player, []);
+    actor.update(dt, harness.platforms, harness.player);
     let firstContact = -1;
     for (let tick = 0; tick < 240 && firstContact < 0; tick += 1) {
       if (actor.contactDamageEnabled()) firstContact = tick;
-      actor.update(dt, harness.platforms, harness.player, []);
+      actor.update(dt, harness.platforms, harness.player);
     }
     expect(firstContact === -1 || firstContact / 120 >= ROOTBOUND_ENCOUNTER.openingContactGrace - dt * 2).toBe(true);
-  });
-
-  it("returns from a canopy platform to the floor beside the player", () => {
-    const harness = createEnemyHarness();
-    const actor = boss(harness);
-    const ledge = harness.platforms[1];
-    if (ledge === undefined) throw new Error("harness ledge missing");
-    actor.x = ledge.x + ledge.w / 2;
-    actor.y = ledge.y - actor.hh;
-    actor.onGround = true;
-    actor.state = "idle";
-    actor.pendingAttack = "canopy-step";
-    const pending = (): string | null => actor.pendingAttack;
-    for (let tick = 0; tick < 240 && pending() !== null; tick += 1)
-      actor.update(dt, harness.platforms, harness.player, []);
-    expect(actor.pendingAttack).toBeNull();
-    expect(actor.y).toBeCloseTo(CONFIG.world.groundY - actor.hh, 0);
-    expect(Math.abs(Math.abs(actor.x - harness.player.x) - ROOTBOUND_CANOPY_STEP.floorStandoff)).toBeLessThan(1);
   });
 
   it("staggers a Rootbinder whose network is cut and does not relink it the next tick", () => {

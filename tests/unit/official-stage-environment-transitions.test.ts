@@ -63,7 +63,7 @@ describe("official six-stage environment transitions", () => {
     const environment = runtime();
     activateStageEnvironment(environment, "voidspire", 500, "stage-transition");
     environment.addField({
-      kind: "rootline",
+      kind: "bloom-well",
       ownerId: "voidspire",
       geometry: { x: 0, y: 0, w: 100, h: 100 },
       state: "active",

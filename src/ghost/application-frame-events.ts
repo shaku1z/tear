@@ -1,7 +1,7 @@
 import { readGhostBossMemory } from "./boss-memory-origin";
 import { ghostRecordingFirstTick } from "./fork-origin";
 import { readGhostFinaleCompanion } from "./finale-companion";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1 } from "../tearbench/contracts";
 import type { GhostReadCapsule } from "./capsule-reader";
 

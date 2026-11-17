@@ -127,7 +127,7 @@ frozen evidence record.
 - [x] Verdant identity foundation (engineering-only) — `stages.ts`,
   `boss-definitions.ts`, `content-director.ts`, and
   `environment-contracts.ts` own `verdant-sanctum`, `rootbound`, `rootbinder`,
-  and `bloom-well`/`rootline`/`root-link`/`graft-anchor`/`regrowth-link` exactly once.
+  and `bloom-well`/`root-link`/`graft-anchor`/`regrowth-link` exactly once (`rootline` was removed in 2026-11).
   TearBench projects those identities from production owners and has negative
   unmapped-identity proofs. At C1 the runtime campaign remained five stages and
   the public game-reference schema remained unchanged; the later C8 engineering
@@ -195,6 +195,13 @@ frozen evidence record.
   VS3-C11-S9 freezes both attack selection and already-selected commits during
   boss intro or transformation protection. All four verbs remain unavailable,
   create no projectile/environment intent, and resume only after protection ends.
+  Replaced (2026-11): the four C11 verbs, the `rootline` field kind and the
+  Seed Arc projectile are gone. Phases I and III now play one move table on the
+  shared boss attack layer (`rootbound-moves.ts` over `boss-attacks.ts` and
+  `boss-attack-runner.ts`): Vine Lash (parryable lunge), Root Glide (burrow and
+  surface under the player), Canopy Vault, Thorn Burst and Root Wave, each with
+  a tell of at least the shared minimum and an exposed window after the heavy
+  moves. The C11 notes above describe the old moves for history only.
   VS3-C12-S1 establishes the immutable Phase II Graft tuning contract without
   adding another environment registry: Bastion reduces incoming boss damage to
   80% but never zero, Mercy is bounded by 1.5% pulses and a 9% total budget, and

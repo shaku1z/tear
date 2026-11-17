@@ -1,4 +1,4 @@
-import type { TearScoreReplayMetadata } from "./envelope";
+import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import { migrateVisualRecording, verifyVisualReplayPacket, type VisualRecordingV2 } from "./visual-replay";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

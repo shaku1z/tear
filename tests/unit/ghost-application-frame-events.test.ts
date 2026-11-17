@@ -40,7 +40,7 @@ import { createLiveGhostChallengeController } from "../../src/app/replay/ghost-c
 import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
 import { TearGameplayEventBus } from "../../src/gameplay/runtime/gameplay-events";
 import { createGameplayCausalEvent } from "../../src/tearbench/gameplay-causal-events";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { prepareGhostLiveReference } from "../../src/ghost/live-ghost-reference";
 import { drawLiveGhostReference } from "../../src/presentation/world/live-ghost-reference";
 import type { ReplayActionEnvelope } from "../../src/replay/envelope";

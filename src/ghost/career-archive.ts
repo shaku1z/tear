@@ -1,5 +1,5 @@
 import { readSeedRaceRun } from "./seed-race-contract";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { readGhostReplayRunContext } from "./replay-admission";
 import { projectGhostRunDnaTheater } from "./run-dna-theater";
 import type { GhostReadCapsule } from "./capsule-reader";

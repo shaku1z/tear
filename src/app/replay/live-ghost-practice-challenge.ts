@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import type { TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";
 import type { BrowserInput } from "../../input/browser-input-contracts";
 import type { LiveCanonicalCombatHost, LiveCanonicalStateCapture } from "../combat/live-canonical-state";

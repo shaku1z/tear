@@ -1,4 +1,4 @@
-import { DEFAULT_AUDIO_MIXER_SETTINGS, type AudioMixerSettings } from "../audio/mixer";
+import { DEFAULT_AUDIO_MIXER_SETTINGS, type AudioMixerSettings } from "../domain/audio-mixer-settings";
 
 export const AUDIO_SETTINGS_SCHEMA_VERSION = 2;
 
