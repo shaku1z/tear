@@ -1,3 +1,4 @@
+import { browserOnline } from "../../platform/worker-cache-warmup";
 import type { GhostLiveReference } from "../../ghost/live-ghost-reference-data";
 import type { GhostRunAssistance } from "../../gameplay/run/ghost-assistance";
 import { stableVerificationHash } from "../../replay/hash";
@@ -31,7 +32,7 @@ export function createBrowserLiveGhostReference(factory: IDBFactory | undefined)
             cleanup();
             reject(
               new Error(
-                navigator.onLine
+                browserOnline()
                   ? "Reference worker unavailable."
                   : "The ghost reference needs one online visit first; you can still race without it.",
               ),

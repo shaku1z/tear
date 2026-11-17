@@ -1,3 +1,4 @@
+import { browserOnline } from "../../platform/worker-cache-warmup";
 import { listBrowserGhostCapsuleManifests } from "../../ghost/browser-capsule-vault";
 import { ghostCoachCandidate, type GhostCoachHistory } from "../../ghost/coach-history";
 import type { GhostCoachHistoryPort } from "../library/ghost-coach-history-controller";
@@ -25,7 +26,7 @@ export function createBrowserGhostCoachHistoryPort(factory: IDBFactory | undefin
         worker.addEventListener("error", () => {
           reject(
             new Error(
-              navigator.onLine
+              browserOnline()
                 ? "History worker unavailable."
                 : "History analysis needs one online visit first; your recordings are still listed.",
             ),

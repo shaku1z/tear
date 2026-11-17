@@ -56,3 +56,8 @@ export function startWorkerCacheWarmup(idle: () => boolean, workers: WorkerCache
     });
   }, 2000);
 }
+
+/** Whether the browser reports a network connection (messages say "needs one online visit" when it does not). */
+export function browserOnline(): boolean {
+  return navigator.onLine;
+}

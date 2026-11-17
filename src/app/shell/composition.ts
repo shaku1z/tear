@@ -46,7 +46,7 @@ import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import { createCareerArchiveWorker } from "../replay/browser-ghost-career";
 import { createCoachHistoryWorker } from "../replay/browser-ghost-coach-history";
 import { createLiveGhostReferenceWorker } from "../replay/browser-live-ghost-reference";
-import { startWorkerCacheWarmup } from "../replay/warm-worker-cache";
+import { startWorkerCacheWarmup } from "../../platform/worker-cache-warmup";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
 import { createSceneLibrary } from "../../presentation/scenes/scene-library";

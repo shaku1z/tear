@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { warmWorkerCache, type WorkerCacheWarmupPorts } from "../../src/app/replay/warm-worker-cache";
+import { warmWorkerCache, type WorkerCacheWarmupPorts } from "../../src/platform/worker-cache-warmup";
 
 function ports(overrides: Partial<WorkerCacheWarmupPorts> = {}) {
   const terminate = vi.fn();
@@ -39,15 +39,15 @@ describe("worker cache warm-up", () => {
 
   it("stops after the current worker when the player leaves the menu", async () => {
     let idle = true;
-    const { base, create } = ports({ idle: () => idle });
-    base.workers = [
-      () => {
-        idle = false;
-        return create();
-      },
-      create,
-      create,
-    ];
+    const terminate = vi.fn();
+    const make = () => ({ terminate });
+    const first = vi.fn(() => {
+      idle = false;
+      return make();
+    });
+    const rest = vi.fn(make);
+    const { base } = ports({ idle: () => idle, workers: [first, rest, rest] });
     expect(await warmWorkerCache(base)).toBe(1);
+    expect(rest).not.toHaveBeenCalled();
   });
 });

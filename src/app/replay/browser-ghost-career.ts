@@ -1,3 +1,4 @@
+import { browserOnline } from "../../platform/worker-cache-warmup";
 import { parseGhostCapsuleManifest } from "../../ghost/capsule-vault";
 import { stableVerificationHash } from "../../replay/hash";
 import { UPGRADES } from "../../gameplay/upgrades";
@@ -152,7 +153,7 @@ export function createBrowserGhostCareer(factory: IDBFactory | undefined, docume
       };
       worker.onerror = () => {
         failed(
-          navigator.onLine
+          browserOnline()
             ? "Background indexing refused; metadata remains available."
             : "Your runs are listed. Re-indexing needs one online visit.",
         );
