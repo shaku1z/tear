@@ -96,17 +96,7 @@ export class BiomeStemBackend implements MusicBackend {
   #lastBiomeId = "menu";
   #lastScene: MusicScene = "main-menu";
 
-  readonly #firstStage: string | null;
-  readonly #warmAllowed: () => boolean;
-
-  constructor(
-    cues: readonly LoadedCueRef[],
-    routing: MusicRoutingManifest,
-    catalog: MusicCatalog | null = null,
-    warm: { readonly firstStage: string; readonly allowed: () => boolean } | null = null,
-  ) {
-    this.#firstStage = warm?.firstStage ?? null;
-    this.#warmAllowed = warm?.allowed ?? (() => false);
+  constructor(cues: readonly LoadedCueRef[], routing: MusicRoutingManifest, catalog: MusicCatalog | null = null) {
     this.#catalog = catalog;
     for (const cue of cues) this.#cues.set(cue.id, cue);
     this.#routing = routing;
@@ -134,17 +124,10 @@ export class BiomeStemBackend implements MusicBackend {
     });
     this.#stingers = new StingerPlayer(this.#context, this.#output);
     await this.#activate(this.#shellCueId(), CROSSFADE_SECONDS, 0, true);
-    // Nothing else shares the bandwidth while the menu cue's layers arrive: stingers wait for
-    // all of them, then the first stage's first layer is warmed for the run ahead.
+    // Nothing else shares the bandwidth while the menu cue's layers arrive: stingers wait for them.
     void (this.#active?.player.allLoaded ?? Promise.resolve()).then(() => {
       void this.#stingers?.load();
-      if (this.#onShell && this.#firstStage && this.#warmAllowed()) this.warmFirstLayer(this.#firstStageCueId());
     });
-  }
-
-  /** Cue for the first stage's gameplay, as the routing would pick it at the start of a run. */
-  #firstStageCueId(): string {
-    return resolveMusicRoute(this.#routing, { biomeId: this.#firstStage ?? "", scene: "gameplay", bossId: null });
   }
 
   /** The cue the menu would start with. */
@@ -154,8 +137,7 @@ export class BiomeStemBackend implements MusicBackend {
 
   /**
    * Fetch the bytes of a cue's first layer (the stems audible at its calmest tier) ahead of
-   * playback. The one shared warm-up: the menu cue before first input, the first stage's cue
-   * while on the menu.
+   * playback: the menu cue, before the player's first input.
    */
   warmFirstLayer(cueId: string): void {
     const loaded = this.#cues.get(cueId);

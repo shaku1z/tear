@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { musicWarmAllowed } from "../../src/audio/install-stem-cue";
 import { WebAudioStemBackend, warmStem } from "../../src/audio/stems/web-audio-backend";
-import { FIRST_STAGE_NAME } from "../../src/entrypoints/first-stage";
-import { STAGE_DISPLAY_NAMES, STAGE_IDS } from "../../src/gameplay/stages";
 
 class FakeNode {
   connect(node: FakeNode): FakeNode {
@@ -93,9 +91,5 @@ describe("warming a cue's first layer", () => {
     expect(musicWarmAllowed(JSON.stringify({ masterMuted: true }), undefined)).toBe(false);
     expect(musicWarmAllowed(null, { saveData: true })).toBe(false);
     expect(musicWarmAllowed("{not json", undefined)).toBe(true);
-  });
-
-  it("warms the campaign's first stage", () => {
-    expect(FIRST_STAGE_NAME).toBe(STAGE_DISPLAY_NAMES[STAGE_IDS[0]]);
   });
 });

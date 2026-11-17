@@ -38,7 +38,7 @@ function browserMusicWarmAllowed(): boolean {
   return musicWarmAllowed(stored, (navigator as Navigator & { connection?: { saveData?: boolean } }).connection);
 }
 
-async function loadMusicIndex(firstStage: string): Promise<BiomeStemBackend> {
+async function loadMusicIndex(): Promise<BiomeStemBackend> {
   const response = await fetch(new URL("audio/music.json", document.baseURI).href);
   if (!response.ok) throw new Error(`music index unavailable (${String(response.status)})`);
   const index = (await response.json()) as {
@@ -56,7 +56,7 @@ async function loadMusicIndex(firstStage: string): Promise<BiomeStemBackend> {
     baseUrl: `audio/cues/${id}`,
   }));
   if (!cues.some((cue) => cue.id === routing.defaultWorkId)) throw new Error("default cue missing from music index");
-  return new BiomeStemBackend(cues, routing, catalog, { firstStage, allowed: browserMusicWarmAllowed });
+  return new BiomeStemBackend(cues, routing, catalog);
 }
 
 /**
@@ -136,9 +136,9 @@ export function requestedStemsMode(
  * Returns at once: the index is requested after the first frame (or when audio
  * starts, if that comes first).
  */
-export function installBiomeStemBackend(firstStage: string): void {
+export function installBiomeStemBackend(): void {
   let pending: Promise<BiomeStemBackend> | null = null;
-  const ready = (): Promise<BiomeStemBackend> => (pending ??= loadMusicIndex(firstStage));
+  const ready = (): Promise<BiomeStemBackend> => (pending ??= loadMusicIndex());
   // Two frames: the first paints, the second runs after it. Then the menu cue's first layer
   // is fetched, so the first input only has to decode it.
   requestAnimationFrame(() =>
