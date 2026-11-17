@@ -1,4 +1,4 @@
-import { assertTutorialGoldFresh, tutorialGoldSourceFingerprint } from "./scripts/tutorial-gold-compatibility.mjs";
+import { assertTutorialGoldFresh } from "./scripts/tutorial-gold-compatibility.mjs";
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
@@ -180,7 +180,8 @@ export default defineConfig(({ mode, command }) => {
   const previewDev = definition.previewDev !== null && process.env[definition.previewDev.env] === "1";
   if (previewDev && !testBuild) throw new Error("the preview dev build is a test build");
   const source = readSourceIdentitySync(process.cwd());
-  const tutorialGoldHash = command === "build" ? assertTutorialGoldFresh() : tutorialGoldSourceFingerprint().sourceHash;
+  // A build refuses tutorial gold that no longer matches the code; the dev server does not check.
+  if (command === "build") assertTutorialGoldFresh();
   return {
     // Portals unpack an upload below a path they own, so their bundle assets are
     // relative instead of rooted at the host origin (config/build-targets.json).
@@ -250,7 +251,6 @@ export default defineConfig(({ mode, command }) => {
         : []),
     ],
     define: {
-      __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: JSON.stringify(tutorialGoldHash),
       __TEAR_TEST_BUILD__: JSON.stringify(testBuild),
       // Engineering surfaces (research screens, Boss/Enemy Test, engineering
       // query routes and debug globals) exist only in test builds and `vite dev`.

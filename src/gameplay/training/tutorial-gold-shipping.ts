@@ -1,8 +1,6 @@
 import binding from "./tutorial-gold-binding.json";
 import { loadTutorialGoldCorpus, type TutorialGoldCorpus } from "./tutorial-gold-reference";
 
-declare const __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: string;
-
 /**
  * The shipped tutorial gold corpus (about 1.5 MB) is a separate on-demand
  * asset. Training preflight awaits `loadShippingTutorialGold()` before a
@@ -18,13 +16,9 @@ let loading: Promise<TutorialGoldCorpus | undefined> | undefined;
 export function shippingTutorialGold(): TutorialGoldCorpus | undefined {
   if (source === undefined) return undefined;
   if (cached === undefined) {
-    // The small binding file carries the fingerprint and ships with the code;
-    // only the corpus itself is loaded on demand.
-    const expected =
-      typeof __TEAR_TUTORIAL_GOLD_COMPATIBILITY__ === "undefined"
-        ? binding.sourceHash
-        : __TEAR_TUTORIAL_GOLD_COMPATIBILITY__;
-    const loaded = loadTutorialGoldCorpus(source, binding, expected);
+    // The small binding file names the corpus by content hash and ships with
+    // the code; only the corpus itself is loaded on demand.
+    const loaded = loadTutorialGoldCorpus(source, binding);
     cached = loaded.status === "ready" ? loaded.corpus : null;
   }
   return cached ?? undefined;
