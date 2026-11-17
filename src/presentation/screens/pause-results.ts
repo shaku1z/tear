@@ -8,16 +8,8 @@ import type {
   WinScreenView,
 } from "./contracts";
 import { wrapSpaceSeparated } from "../ui-text-fit";
-import {
-  actionRow,
-  menuHeight,
-  overlayHeader,
-  overlayLayout,
-  verticalMenu,
-  type OverlayLayout,
-} from "./screen-primitives";
+import { actionRow, overlayHeader, overlayLayout, verticalMenu, type OverlayLayout } from "./screen-primitives";
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
-import { RUN_MONITOR_ACTIONS } from "../../domain/engineering-actions";
 
 const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 
@@ -370,16 +362,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         { label: "STOP CHASE", action: { type: "chase.control", command: "stop" } },
       );
     }
-    const watch = view.playerWatch;
-    if (watch !== undefined) {
-      actions.push(
-        {
-          label: watch.status === "running" ? "PAUSE RUN MONITOR" : "RESUME RUN MONITOR",
-          action: { type: RUN_MONITOR_ACTIONS.control, command: watch.status === "running" ? "pause" : "resume" },
-        },
-        { label: "STOP RUN MONITOR", action: { type: RUN_MONITOR_ACTIONS.control, command: "stop" } },
-      );
-    }
     return actions;
   }
 
@@ -394,18 +376,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     const actions = pauseActions(view),
       columns = bodyColumns(layout);
     verticalMenu(context, actions, columns.railX, layout.bodyTop, columns.railW);
-    if (view.playerWatch !== undefined) {
-      const tagY = layout.bodyTop + menuHeight(context, actions.length) + ui.t.space.md + ui.t.type.micro;
-      ui.tag(
-        canvas,
-        `RUN MONITOR / ${String(view.playerWatch.decisions)} DECISIONS`,
-        layout.left,
-        tagY,
-        ui.readable(ui.t.color.accent),
-        "left",
-        ui.t.type.micro,
-      );
-    }
     panelTag(context, "YOUR ARSENAL", columns.primary.x, layout.bodyTop);
     arsenalPanel(context, view.abilities, columns.primary);
     runProgressPanel(

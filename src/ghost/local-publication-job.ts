@@ -57,7 +57,7 @@ export interface GhostPublicationCustodyV1 {
   readonly custodyHash: string;
 }
 
-/** Player-owned, capsule-bound C38 authority; never an Academy training record. */
+/** Player-owned, capsule-bound C38 authority; never a training record. */
 export interface GhostPlayerPublicationSourceConsentV1 {
   readonly format: "tear-ghost-player-publication-source-consent";
   readonly schemaVersion: 1;

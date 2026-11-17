@@ -75,7 +75,7 @@ async function validate(value) {
   });
 }
 
-test("accepts only clean main exactly equal to validated origin/main", async () => {
+test("accepts clean main equal to origin/main when the validated commit is its head", async () => {
   const value = await fixture();
   const result = await validate(value);
   assert.equal(result.sha, value.sha);
@@ -144,4 +144,45 @@ test("rejects a validated clean main whose campaign policy is still engineering-
     "utf8",
   );
   await assert.rejects(validate(value), /publication prohibited.*engineering-only/u);
+});
+
+async function advanceMain(value, file, text) {
+  await writeFile(join(value.checkout, file), text, "utf8");
+  git(value.checkout, "add", file);
+  git(value.checkout, "commit", "-m", `change ${file}`);
+  git(value.checkout, "push", "origin", "main");
+}
+
+test("accepts a validated commit that main has since moved past", async () => {
+  const value = await fixture();
+  await advanceMain(value, "tracked.txt", "a later merge\n");
+  assert.notEqual(git(value.checkout, "rev-parse", "HEAD"), value.sha);
+  const result = await validate(value);
+  assert.equal(result.sha, value.sha);
+});
+
+test("rejects an earlier validated commit when main has since changed the Wrangler configuration", async () => {
+  const value = await fixture();
+  await advanceMain(value, "wrangler.jsonc", "{}\n");
+  await assert.rejects(validate(value), /release inputs changed on main[\s\S]*wrangler\.jsonc/u);
+});
+
+test("rejects a validated commit that is not on main", async () => {
+  const value = await fixture();
+  git(value.checkout, "switch", "-c", "codex/side");
+  await writeFile(join(value.checkout, "tracked.txt"), "side\n", "utf8");
+  git(value.checkout, "add", "tracked.txt");
+  git(value.checkout, "commit", "-m", "side");
+  const side = git(value.checkout, "rev-parse", "HEAD");
+  git(value.checkout, "switch", "main");
+  value.sha = side;
+  await assert.rejects(validate(value), /is not a commit on main/u);
+});
+
+test("rejects evidence for a different commit than the one being released", async () => {
+  const value = await fixture();
+  const validated = value.sha;
+  await advanceMain(value, "tracked.txt", "a later merge\n");
+  value.sha = git(value.checkout, "rev-parse", "HEAD");
+  await assert.rejects(validate(value), new RegExp(`SHA ${validated} != ${value.sha}`, "u"));
 });

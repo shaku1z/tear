@@ -14,9 +14,10 @@ Cloudflare is a publication target, not an independent source branch.
    the deploy workflows publish) and the CrazyGames package. Each target
    contains `build-info.json` with the repository, full SHA, target, file
    count, and a deterministic artifact hash. The artifact is kept 7 days for a
-   `main` run and 2 days for a pull-request run. Production only deploys the
-   current `main` head (step 7). If that head's artifact has expired, re-run
-   its Validate run, which uploads a fresh artifact under the same run ID.
+   `main` run and 2 days for a pull-request run. Production deploys a green
+   commit on `main`: its head or an earlier one (step 7). If that commit's
+   artifact has expired, re-run its Validate run, which uploads a fresh
+   artifact under the same run ID.
 4. A maintainer manually starts `Deploy Cloudflare Production` with the
    successful Validate run ID.
 5. The protected `Production` environment provides the approval boundary and
@@ -24,8 +25,12 @@ Cloudflare is a publication target, not an independent source branch.
    the configured GitHub environment.
 6. A no-secret `protected-main` job proves the workflow is executing from
    protected `main`; the environment-backed deployment job depends on it.
-7. The workflow proves the checkout is clean `main`, tracks `origin/main`, is
-   neither ahead nor behind it, and exactly equals the validated SHA.
+7. The workflow proves the checkout is clean `main`, tracks `origin/main` and
+   is neither ahead nor behind it, and that the validated SHA is `main`'s head
+   or an earlier commit on `main`'s own line (owner decision, 2026-11-16: a
+   merge that lands while a release is prepared no longer invalidates it). The
+   deploy tooling and `wrangler.jsonc` come from `main`'s head, so an earlier
+   commit is refused when `wrangler.jsonc` has changed since it.
 8. The workflow downloads rather than rebuilds the validated artifact,
    verifies its metadata/hash, and publishes it with the Git SHA and Validate
    run ID in the Cloudflare version message.
@@ -51,8 +56,13 @@ applies them and answers yes or no with the reason; the merge helper calls it.
    `main` must not have changed:
    - any file the pull request changes;
    - any shared file: `package.json`, the lockfile, workflow files, anything
-     under `config/`, the TearBench task registry, tsconfig, ESLint, Prettier,
-     Vite and Vitest configuration, and `scripts/build-target.mjs`.
+     under `config/` except the tool catalogue, the TearBench task registry,
+     tsconfig, ESLint, Prettier, Vite and Vitest configuration, and
+     `scripts/build-target.mjs`.
+
+     The tool catalogue only describes `package.json` and `scripts/`. A change
+     that adds or removes a script must edit the catalogue, so it overlaps any
+     catalogue change on `main` anyway.
 
    Otherwise `pnpm merge:ready <pr> --refresh` starts a fresh run.
 3. **Every check is of the change merged with `main` as it is when the check
@@ -62,6 +72,33 @@ applies them and answers yes or no with the reason; the merge helper calls it.
    - Neither a re-run nor a reopened pull request reuses GitHub's prepared
      merge ref.
    - The release artifact is named after the commit actually built.
+4. **A passed batch covers its members.** `pnpm merge:batch [<pr> ...]` builds
+   a branch `codex/batch-<time>` from `main` and merges each pull request's head
+   into it, in the order given. Without numbers, it takes every ready pull
+   request in number order. A pull request that conflicts is left out and
+   named. It pushes the branch and starts Validate on it. The run records the
+   members it checked as the `batch` annotation.
+
+   A member is then ready to merge when all of these hold:
+   - main's latest finished run is green;
+   - its head is still the one the batch checked;
+   - every commit on `main` since the batch's `main` is the merge of another
+     member, at the head the batch checked.
+
+   The combination was checked as a whole, so main's newest commit need not
+   have a finished run, and shared-file changes by other members do not make
+   the pass stale. Anything else on `main`, a moved head or a red `main` ends
+   the cover, and the member is back on rules 1 and 2.
+   - `pnpm merge:batch --status <branch>` says whether the batch passed and, if
+     not, which checks failed. Build it again with `--without <pr>`.
+   - After the last merge, `pnpm merge:batch --verify <branch>` confirms that
+     main's tree is the tree the batch run checked, and says loudly if it is
+     not.
+   - Main's own run still runs after each merge, and still makes the deploy
+     artifact.
+   - The tool never deletes batch branches, because the pre-push guard refuses
+     deletions. `pnpm merge:batch --prunable` lists the ones nothing can still
+     merge on, so they can be pruned by hand.
 
 ## Local boundary
 
@@ -76,6 +113,8 @@ The release preflight rejects, before Wrangler can run:
 - a dirty checkout, including untracked files;
 - an upstream other than `origin/main`;
 - a checkout ahead of or behind `origin/main`;
+- a validated SHA that is not on `main`, or whose Wrangler configuration
+  differs from `main`'s head;
 - a SHA that differs from the successful Validate evidence; or
 - malformed/mismatched release evidence.
 

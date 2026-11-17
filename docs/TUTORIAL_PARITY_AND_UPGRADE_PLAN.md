@@ -96,7 +96,7 @@ unrecorded future run. Callers must resume before advancing its fixed simulation
 the tutorial does not add a presentation clock or advance while the host is paused.
 
 The distinct `tearbench-production-tutorial-handoff` artifact is intentionally
-refused by ordinary production-terminal Training Archive/durable worker consumers; it is
+refused by ordinary production-terminal durable worker consumers; it is
 not an ordinary terminal receipt or a natural victory. Explicit support in those
 consumers is a separate contract. The existing full-course browser journey can
 optionally export its actual Field Test-to-READY snapshot, held input, commands

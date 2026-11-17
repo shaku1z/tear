@@ -82,7 +82,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: ${{ steps.validation.outputs.dev_artifact_name }}
-          path: candidate-dev
+          # Outside the checkout: its files are not ignored there, and an untracked file makes the
+          # checkout dirty, which the artifact verification refuses.
+          path: ${{ runner.temp }}/candidate-dev
           github-token: ${{ github.token }}
           run-id: ${{ steps.validation.outputs.run_id }}
       - name: Verify exact validated standalone artifact
@@ -92,15 +94,16 @@ jobs:
       - name: Verify the dev build of the same commit
         env:
           TEAR_RELEASE_SHA: ${{ steps.validation.outputs.sha }}
-        run: node scripts/verify-release-artifact.mjs standalone candidate-dev test-standalone
+        run: node scripts/verify-release-artifact.mjs standalone "$RUNNER_TEMP/candidate-dev" test-standalone
       # The player build at the root and the dev build below /dev/, on one origin so they share saves.
       - name: Assemble the preview site
         shell: bash
         run: |
           set -euo pipefail
-          cp -r candidate-release/dist/standalone preview-site
-          test ! -e preview-site/dev
-          cp -r candidate-dev preview-site/dev
+          site="$RUNNER_TEMP/preview-site"
+          cp -r candidate-release/dist/standalone "$site"
+          test ! -e "$site/dev"
+          cp -r "$RUNNER_TEMP/candidate-dev" "$site/dev"
       - name: Rehearse attributed deployment
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -118,5 +121,5 @@ jobs:
           echo "::add-mask::${normalized_token}"
           export CLOUDFLARE_API_TOKEN="${normalized_token}"
           pnpm exec wrangler deploy --config wrangler.preview.jsonc \
-            --assets preview-site \
+            --assets "$RUNNER_TEMP/preview-site" \
             --message "preview git:${RELEASE_SHA} validate:${VALIDATION_RUN_ID}"

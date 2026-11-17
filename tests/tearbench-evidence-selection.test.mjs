@@ -345,7 +345,7 @@ test("Bloom Well selection reports the declared live-only backend and complete l
 });
 
 test("multi-backend scenarios materialize one backend-specific evidence command per declaration", () => {
-  const selection = select(["src/app/replay/ghost-lab-home.ts"]);
+  const selection = select(["src/agents/live-watch-agent-host.ts"]);
   const boot = selection.evidenceCommands.filter((entry) => entry.id === "boot-start-run");
   assert.deepEqual(
     boot.map((entry) => entry.backend),
@@ -530,13 +530,13 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   assert.ok(event.scenarios.includes("source-void-low-hp-rescue-seek"));
   assert.ok(event.authorityCommands.includes("pnpm exec vitest run tests/unit/gameplay-causal-events.test.ts"));
   for (const file of [
-    "src/agents/run-monitor.ts",
-    "src/app/replay/ghost-lab-home.ts",
-    "src/presentation/screens/ghost-lab.ts",
+    "src/agents/live-watch-agent-host.ts",
+    "src/agents/live-watch-agent-panel.ts",
+    "src/app/engineering/replay-editor.ts",
   ]) {
     const surface = select([file]);
     assert.ok(surface.routes.includes("current-player-surfaces"));
-    assert.deepEqual(surface.journeyCommands, ["node tests/browser-ghost-lab-home.js"]);
+    assert.deepEqual(surface.journeyCommands, ["node tests/browser-scripted-agent-autonomy.js"]);
   }
 });
 
@@ -652,7 +652,7 @@ test("current production authority and player-surface contracts cannot silently 
   const surfaces = routes.find((route) => route.id === "current-player-surfaces");
   assert.ok(surfaces);
   for (const path of surfaces.prefixes) assert.equal(existsSync(resolve(root, path)), true, path);
-  assert.deepEqual(surfaces.journeyCommands, ["node tests/browser-ghost-lab-home.js"]);
+  assert.deepEqual(surfaces.journeyCommands, ["node tests/browser-scripted-agent-autonomy.js"]);
 });
 
 test("published music changes select the existing audio lifecycle route", () => {
@@ -803,7 +803,7 @@ test("unsafe evidence commands and unknown route references fail closed", () => 
   const catalog = mutatedCatalog("unsafe-command", (entries) => {
     entries.find((entry) => entry.id === "boot-start-run").evidence = { command: 'node -e "process.exit(0)"' };
   });
-  const unsafe = rejected(["src/app/replay/ghost-lab-home.ts"], { catalog });
+  const unsafe = rejected(["src/agents/live-watch-agent-host.ts"], { catalog });
   assert.notEqual(unsafe.status, 0);
   assert.match(`${unsafe.stderr}\n${unsafe.stdout}`, /unsupported TearBench evidence command/u);
 
@@ -820,15 +820,17 @@ test("selected player journeys are actually dispatched through safe evidence exe
   const routes = JSON.parse(readFileSync(routesPath, "utf8"));
   const route = routes.find((entry) => entry.id === "current-player-surfaces");
   route.buildTargets = [];
-  route.journeyCommands = ["node --check tests/browser-ghost-lab-home.js"];
+  route.journeyCommands = ["node --check tests/browser-scripted-agent-autonomy.js"];
   const routePath = join(temporaryRoot, "journey-fixture.json");
   writeFileSync(routePath, JSON.stringify(routes), "utf8");
   const catalog = mutatedCatalog("journey-execution", (entries) => {
     for (const id of ["boot-start-run", "draft-selection-to-gameplay"]) {
-      entries.find((entry) => entry.id === id).evidence = { command: "node --check tests/browser-ghost-lab-home.js" };
+      entries.find((entry) => entry.id === id).evidence = {
+        command: "node --check tests/browser-scripted-agent-autonomy.js",
+      };
     }
   });
-  const selection = select(["src/app/replay/ghost-lab-home.ts"], {
+  const selection = select(["src/app/engineering/replay-editor.ts"], {
     routes: routePath,
     catalog,
     executeEvidence: true,
@@ -836,11 +838,11 @@ test("selected player journeys are actually dispatched through safe evidence exe
   assert.equal(selection.evidenceExecution.status, "passed");
   assert.ok(
     selection.evidenceExecution.executions.some(
-      (entry) => entry.id === "journey:node --check tests/browser-ghost-lab-home.js",
+      (entry) => entry.id === "journey:node --check tests/browser-scripted-agent-autonomy.js",
     ),
   );
   const executions = selection.evidenceExecution.executions.filter(
-    (entry) => entry.command === "node --check tests/browser-ghost-lab-home.js",
+    (entry) => entry.command === "node --check tests/browser-scripted-agent-autonomy.js",
   );
   assert.equal(executions.length, 3);
   assert.equal(executions[0].reusedExecutionId, undefined);

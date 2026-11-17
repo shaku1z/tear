@@ -45,7 +45,7 @@ The merge helper additionally refuses:
 - a pull request without a green `check`;
 - a pull request with any non-owner commit, unless it is the exact wiki synchronization bot pull request (tear-wiki only; its file set is `WIKI_SYNC_FILES`, in one place at the top of the helper).
 
-New refusals go in `MERGE_PRECONDITIONS`. It is an ordered list of `{ id, check }`, each with its own test, and it runs after the checks above and before anything is merged. It holds one rule today, for the game repository only: `merge-ready`. It refuses unless `scripts/merge-ready.mjs` says READY, meaning main's newest commit is checked and green, and the pull request's pass is not older than a main change to its files or to shared files. This is the one place freshness is enforced, now that pre-push accepts branches behind main.
+New refusals go in `MERGE_PRECONDITIONS`. It is an ordered list of `{ id, check }`, each with its own test, and it runs after the checks above and before anything is merged. It holds one rule today, for the game repository only: `merge-ready`. It refuses unless `scripts/merge-ready.mjs` says READY. That means main's newest commit is checked and green, and the pull request's pass is not older than a main change to its files or to shared files. A pull request is also READY when a passed batch run (`pnpm merge:batch`) covers it. This is the one place freshness is enforced, now that pre-push accepts branches behind main.
 
 ## Setup
 

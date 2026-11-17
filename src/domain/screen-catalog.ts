@@ -64,9 +64,6 @@ const CATALOG = {
       "settings",
       "rename",
       "replay",
-      "academy",
-      "foundry",
-      "ghostlab",
     ],
   },
   setup: {
@@ -199,18 +196,6 @@ const CATALOG = {
   rename: { channel: "release", frame: "menu", density: "touch", transitions: "every-other-screen" },
   pgmenu: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pglab", "rename"] },
   pglab: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pgmenu", "rename"] },
-  academy: { channel: "engineering", frame: "menu", density: "touch", transitions: ["menu", "rename"] },
-  foundry: { channel: "engineering", frame: "menu", density: "touch", transitions: ["menu", "rename"] },
-  // A locally validated Player Watch starts a normal run directly from its
-  // dedicated home. The route remains local-only; this edge does not grant
-  // any Foundry, traffic, or operational transition.
-  ghostlab: {
-    channel: "engineering",
-    frame: "menu",
-    density: "touch",
-    transitions: ["menu", "playing", "academy", "foundry", "profile", "botevidence", "rename"],
-  },
-  botevidence: { channel: "engineering", frame: "menu", density: "touch", transitions: ["menu", "rename"] },
   ghostpublication: {
     channel: "engineering",
     frame: "standalone",

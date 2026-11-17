@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import type { TearAgentObservation } from "../../src/agents/contracts";
 import {
-  SCRIPTED_POLICY_PROFILES,
+  BladeMotorModule,
   MovementModule,
+  SCRIPTED_POLICY_PROFILES,
   TearScriptedPolicy,
-  projectAgentActionsToLegacyControls,
-  type TearAgentObservation,
-} from "../../src/agents";
+} from "../../src/agents/scripted-policy";
 import type { TearObservationV1, TearObservedActorV1 } from "../../src/tearbench";
-import { BladeMotorModule } from "../../src/agents/scripted-policy";
 import { createBlade } from "../../src/gameplay/entities/blade";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
@@ -331,22 +330,5 @@ describe("deterministic scripted agent hierarchy", () => {
     });
     expect(hazard.actions).toContainEqual({ type: "move", x: -1_000, y: 0 });
     expect(hazard.actions).toContainEqual({ type: "jump", phase: "pressed" });
-  });
-
-  it("projects semantic actions into the typed legacy player and blade seams", () => {
-    const controls = projectAgentActionsToLegacyControls([
-      { type: "move", x: 1_000, y: -1_000 },
-      { type: "dash", x: 1_000, y: 0 },
-      { type: "jump", phase: "pressed" },
-      { type: "aim", turn: 250_000 },
-      { type: "weapon", intent: "primary", phase: "pressed" },
-    ]);
-    expect(controls.playerInput.right()).toBe(true);
-    expect(controls.playerInput.up()).toBe(true);
-    expect(controls.playerInput.dashPressed()).toBe(true);
-    expect(controls.playerInput.jumpPressed()).toBe(true);
-    expect(controls.primaryHeld).toBe(true);
-    expect(controls.aim.x).toBeCloseTo(0);
-    expect(controls.aim.y).toBeCloseTo(1);
   });
 });
