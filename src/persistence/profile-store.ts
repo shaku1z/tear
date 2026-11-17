@@ -1,3 +1,14 @@
+import {
+  equipCosmetic,
+  mergeCosmeticStates,
+  normalizeCosmeticState,
+  purchaseCosmetic,
+  shardBalance,
+  type CosmeticCatalog,
+  type CosmeticSlotId,
+  type CosmeticState,
+  type PurchaseRefusal,
+} from "../domain/cosmetics";
 import type { AcknowledgedStorage } from "../platform/contracts";
 import {
   achievementOutbox,
@@ -58,6 +69,8 @@ export interface ProfileData extends Record<string, unknown> {
   rewards?: Tracker;
   weaponsWon?: Record<string, number>;
   advDiffs?: Record<string, number>;
+  /** Cosmetic ownership and equipped slots (version 4); read through `cosmetics()`. */
+  cosmetics?: unknown;
 }
 
 export interface ProfileStore {
@@ -77,6 +90,13 @@ export interface ProfileStore {
   setUsername(name: string): void;
   shards(): number;
   addShards(amount: number): void;
+  /** Validated cosmetic ownership and equipped slots. */
+  cosmetics(): CosmeticState;
+  /** Shards left to spend: earned minus the prices paid for owned cosmetics, never below zero. */
+  shardBalance(): number;
+  buyCosmetic(itemId: string): Promise<CompletionStatus | PurchaseRefusal>;
+  /** `null` clears the slot back to the default look. */
+  equipCosmetic(slot: CosmeticSlotId, itemId: string | null): Promise<CompletionStatus | "unknown">;
   stat(key: string): number;
   addStat(key: string, amount?: number): void;
   maxStat(key: string, value: number): void;
@@ -103,6 +123,8 @@ export interface ProfileStoreOptions {
   readonly log?: (message: string) => void;
   /** Published biome display names whose discovery counts toward progression. */
   readonly countedBiomeNames?: readonly string[];
+  /** The cosmetic rows; without it every cosmetic action reports "unknown". */
+  readonly getCosmeticCatalog?: () => CosmeticCatalog | undefined;
 }
 
 function record(value: unknown): Tracker | null {
@@ -137,6 +159,7 @@ const RECEIPT_OWNED_FIELDS = new Set([
   "modes",
   "weaponsWon",
   "advDiffs",
+  "cosmetics",
 ]);
 function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Tracker, root = true): void {
   for (const key of new Set([...Object.keys(baseline), ...Object.keys(current)])) {
@@ -193,6 +216,11 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       target.username = source.username;
       target.usernameSetAt = finite(source.usernameSetAt);
     }
+    if (source.cosmetics !== undefined || target.cosmetics !== undefined)
+      target.cosmetics = mergeCosmeticStates(
+        normalizeCosmeticState(target.cosmetics),
+        normalizeCosmeticState(source.cosmetics),
+      );
     Object.assign(target.modes, boolMap(source.modes));
     Object.assign(target.seen, boolMap(source.seen));
     const rewards = record(source.rewards);
@@ -476,6 +504,57 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
         this.data.achievementOutbox = ledger;
       }
       this.save();
+    },
+    cosmetics() {
+      return normalizeCosmeticState(this.data.cosmetics);
+    },
+    shardBalance() {
+      return shardBalance(finite(this.data.shards), normalizeCosmeticState(this.data.cosmetics));
+    },
+    async buyCosmetic(itemId) {
+      const catalog = options.getCosmeticCatalog?.();
+      if (!catalog) return "unknown";
+      let outcome = "unknown" as PurchaseRefusal | "committed";
+      const apply = (target: ProfileData): void => {
+        const result = purchaseCosmetic(
+          catalog,
+          normalizeCosmeticState(target.cosmetics),
+          itemId,
+          finite(target.shards),
+          (boss) => finite(target.stats[`kill${boss.charAt(0).toUpperCase()}${boss.slice(1)}`]) > 0,
+        );
+        if (!result.ok) {
+          outcome = result.reason;
+          return;
+        }
+        target.cosmetics = result.state;
+        outcome = "committed";
+      };
+      if (!options.store.acknowledged) {
+        apply(this.data);
+        if (outcome === "committed") this.save();
+        return outcome;
+      }
+      const status = await commit(apply);
+      return status === "committed" ? outcome : status;
+    },
+    async equipCosmetic(slot, itemId) {
+      const catalog = options.getCosmeticCatalog?.();
+      if (!catalog) return "unknown";
+      let outcome = "unknown" as CompletionStatus | "unknown";
+      const apply = (target: ProfileData): void => {
+        const next = equipCosmetic(catalog, normalizeCosmeticState(target.cosmetics), slot, itemId, now());
+        if (!next) return;
+        target.cosmetics = next;
+        outcome = "committed";
+      };
+      if (!options.store.acknowledged) {
+        apply(this.data);
+        if (outcome === "committed") this.save();
+        return outcome;
+      }
+      const status = await commit(apply);
+      return status === "committed" ? outcome : status;
     },
     stat(key) {
       return finite(this.data.stats[key]);
