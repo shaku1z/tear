@@ -2,7 +2,7 @@ import type { UpgradeDefinition } from "../gameplay/upgrades";
 import { DIFFICULTY_CATALOG } from "../gameplay/run/difficulty-catalog";
 import { describeWave } from "../gameplay/run/wave-rules";
 import { calculateCoinAward } from "../gameplay/scoring/coin-awards";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { CAMPAIGN_STAGE_IDS } from "../gameplay/stages";
 import type { TearDifficultyId, TearRunModeId, TearWeaponId } from "./registries";
 import {

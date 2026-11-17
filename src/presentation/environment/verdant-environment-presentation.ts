@@ -64,47 +64,6 @@ export function renderVerdantEnvironmentPresentation(
   if (snapshot.stageId !== "verdant-sanctum") return;
   canvas.save();
   canvas.lineCap = "round";
-  for (const field of snapshot.fields) {
-    if (field.kind !== "rootline") continue;
-    const { minX, maxX, minY, maxY } = field.bounds;
-    const warning = field.state === "warning" || field.state === "scheduled";
-    const settled = field.state === "expired" || field.state === "destroyed" || field.state === "cooldown";
-    canvas.globalAlpha = settled ? 0.22 : warning ? 0.82 : 0.94;
-    canvas.strokeStyle = options.highContrast ? "#fff36b" : "#d7b84c";
-    canvas.fillStyle = options.highContrast ? "#ffffff" : "#244f3f";
-    canvas.lineWidth = options.highContrast ? 6 : 4;
-    // The boss's Rootline tell draws the warning; this draws the roots and what they leave behind.
-    if (!warning) canvas.strokeRect(minX, minY, maxX - minX, maxY - minY);
-    if (!warning && !settled) {
-      const rootWidth = options.lowGraphics ? 90 : 58;
-      canvas.beginPath();
-      canvas.moveTo(minX, maxY);
-      for (let x = minX; x <= maxX; x += rootWidth) {
-        const next = Math.min(maxX, x + rootWidth);
-        canvas.quadraticCurveTo(
-          x + rootWidth * 0.45,
-          minY + ((x / rootWidth) % 2 < 1 ? 0 : (maxY - minY) * 0.22),
-          next,
-          maxY,
-        );
-      }
-      canvas.lineTo(maxX, maxY);
-      canvas.closePath();
-      canvas.fill();
-      canvas.globalAlpha = 0.74;
-      canvas.strokeStyle = options.highContrast ? "#ffffff" : "#43aa9b";
-      canvas.lineWidth = 2;
-      canvas.beginPath();
-      canvas.moveTo(minX, minY + (maxY - minY) * 0.62);
-      canvas.quadraticCurveTo(
-        minX + (maxX - minX) * 0.48,
-        minY + (maxY - minY) * 0.22,
-        maxX,
-        minY + (maxY - minY) * 0.58,
-      );
-      canvas.stroke();
-    }
-  }
   for (const boundary of snapshot.combatObjects) {
     if (boundary.kind !== "root-link" || boundary.rootCageId === undefined) continue;
     const { x, y, w = 0, h = 0 } = boundary.geometry;

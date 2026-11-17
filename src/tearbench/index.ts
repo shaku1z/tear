@@ -39,4 +39,3 @@ export * from "./runner";
 export * from "./scenario-registry";
 export * from "./validation";
 export * from "./gameplay-causal-events";
-export * from "./task-registry";

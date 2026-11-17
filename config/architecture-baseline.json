@@ -3,11 +3,6 @@
   "note": "Recorded by `node scripts/check-source-architecture.mjs --update`. Both lists may only shrink; see docs/ARCHITECTURE.md.",
   "layerViolations": [
     {
-      "from": "src/audio/legacy-synth.ts",
-      "to": "src/replay/envelope.ts",
-      "kind": "type"
-    },
-    {
       "from": "src/config/game-config.ts",
       "to": "src/gameplay/run/boss-definitions.ts",
       "kind": "value"
@@ -31,51 +26,6 @@
       "from": "src/config/game-config.ts",
       "to": "src/input/browser-input-contracts.ts",
       "kind": "type"
-    },
-    {
-      "from": "src/game-reference/game-reference.ts",
-      "to": "src/replay/hash.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/campaign/chapter-cinematic-binding.ts",
-      "to": "src/replay/hash.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/run/seed-locked-draft.ts",
-      "to": "src/replay/hash.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/runtime/authoritative-input.ts",
-      "to": "src/input/game-action.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/runtime/authoritative-step.ts",
-      "to": "src/replay/hash.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/runtime/canonical-state.ts",
-      "to": "src/tearbench/environment-codec.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/training/boss-practice-source-restore.ts",
-      "to": "src/replay/hash.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/training/live-tutorial-runtime.ts",
-      "to": "src/replay/hash.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/training/tutorial-gold-reference.ts",
-      "to": "src/replay/hash.ts",
-      "kind": "value"
     },
     {
       "from": "src/ghost/application-frame-events.ts",
@@ -265,11 +215,6 @@
     {
       "from": "src/ghost/truth-kernel.ts",
       "to": "src/tearbench/registries.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/persistence/audio-settings.ts",
-      "to": "src/audio/mixer.ts",
       "kind": "value"
     },
     {

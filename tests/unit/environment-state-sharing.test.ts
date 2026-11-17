@@ -31,7 +31,7 @@ function expectDeepFrozen(value: unknown): void {
 const field = (): Omit<EnvironmentFieldState, "id"> & {
   authored: { points: { x: number; y: number }[]; tags: string[] };
 } => ({
-  kind: "rootline",
+  kind: "bloom-well",
   geometry: { x: 1, y: 2, w: 3, h: 4 },
   state: "warning",
   stateTick: 0,

@@ -6,7 +6,7 @@ import {
 import type { VisualReplayProvenance } from "../../replay/visual-replay";
 import type { TearCausalEventV1 } from "../../tearbench/contracts";
 import { ENTITY_KIND_REGISTRY } from "../../tearbench/registries";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import type { LiveOpeningCaptureBoundary } from "../run/run-start-host";
 
 interface OpeningCapturePorts {

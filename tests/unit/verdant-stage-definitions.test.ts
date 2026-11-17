@@ -53,6 +53,8 @@ describe("Verdant typed stage registries", () => {
   it("dispatches presentation by stable stage identity", () => {
     expect(stagePresentationDefinition("verdant-sanctum")).toEqual({
       platformMaterialId: "verdant-rootstone",
+      // The table itself is checked in boss-tell-skin.test.ts.
+      bossTellSkin: expect.objectContaining({ marks: expect.any(Object) as unknown }) as unknown,
     });
     expect(stagePresentationDefinition("grounds")).toBeNull();
   });

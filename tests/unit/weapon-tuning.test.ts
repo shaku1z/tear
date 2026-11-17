@@ -4,7 +4,7 @@ import { CONFIG } from "../../src/config/game-config";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { createTearWorldConfiguration } from "../../src/gameplay/runtime/tear-world-configuration";
 import { FINAL_FIVE_WEAPON_TUNING, createFinalFiveWeaponTuning } from "../../src/gameplay/weapon-tuning";
-import { canonicalStringify, stableVerificationHash } from "../../src/replay/hash";
+import { canonicalStringify, stableVerificationHash } from "../../src/domain/hash";
 
 describe("Final Five authored weapon tuning", () => {
   it("is the exact ordered pure source, including greatsword cleave tuning", () => {

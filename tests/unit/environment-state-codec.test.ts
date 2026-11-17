@@ -13,7 +13,7 @@ import {
   type TearCodecWorld,
   type TearObservationV1,
 } from "../../src/tearbench";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import type { EnvironmentSnapshot } from "../../src/gameplay/environment/environment-contracts";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";

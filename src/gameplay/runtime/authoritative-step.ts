@@ -1,6 +1,6 @@
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { GameAction } from "../../input/game-action";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import type { EnvironmentStepPort } from "../environment/environment-runtime";
 
 export interface AuthoritativeStepResult<State> {

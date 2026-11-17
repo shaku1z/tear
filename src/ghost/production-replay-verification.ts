@@ -13,7 +13,7 @@ import {
   readGhostReplayRunContext,
 } from "./replay-admission";
 import { createGhostV3 } from "./truth-kernel";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { AuthoritativeInputState, type AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { AIM_MAGNITUDE_SCALE } from "../input/game-action";
 import { readGhostApplicationClockSchedule, type GhostApplicationClockSchedule } from "./application-frame-events";

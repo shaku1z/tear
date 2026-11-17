@@ -12,7 +12,7 @@ import {
   verifyGhostCapsuleProductionReplay,
   createGhostProductionReplaySession,
 } from "../../src/ghost";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import {
   CODEC_REGISTRY,

@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { GhostVaultBackend, GhostVaultWrite, GhostVaultGuard } from "./capsule-vault-backend";
 import { parseGhostCapsuleManifest } from "./capsule-contract";
 

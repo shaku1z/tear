@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { projectCanonicalGameplayState } from "../../src/gameplay/runtime/canonical-state";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 
 describe("canonical gameplay state", () => {
   it("quantizes floats and sorts enemies by deterministic identity", () => {

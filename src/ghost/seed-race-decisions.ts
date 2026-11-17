@@ -1,5 +1,5 @@
 import { readBeatRunBinding } from "../gameplay/run/beat-run";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { RewardChoice, RewardSelectionSnapshot } from "../gameplay/run/reward-selection";
 import type { RewardDecision, RewardRuntime } from "../gameplay/run/reward-runtime";
 import type { TearCausalEventV1 } from "../tearbench/contracts";

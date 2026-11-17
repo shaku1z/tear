@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { GhostCapsuleReader } from "./capsule-reader";
 import { ghostRootIntegrity, type GhostChunkKind, type GhostLocalVault } from "./capsule-vault";
 import { readGhostReplayRunContext, type GhostReplayBuildFingerprint } from "./replay-admission";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalStringify } from "../../src/replay/hash";
+import { canonicalStringify } from "../../src/domain/hash";
 import {
   assertCurrentSourceSha,
   assertValidGameReferenceV1,
