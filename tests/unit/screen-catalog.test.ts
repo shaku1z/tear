@@ -72,7 +72,18 @@ describe("screen catalog", () => {
       "ghostsupport",
     ]);
     expect(new Set(listed(isMenuScreen))).toEqual(
-      new Set(["menu", "shop", "codex", "setup", "profile", "settings", "achievements", "leaderboards", "music", "rename"]),
+      new Set([
+        "menu",
+        "shop",
+        "codex",
+        "setup",
+        "profile",
+        "settings",
+        "achievements",
+        "leaderboards",
+        "music",
+        "rename",
+      ]),
     );
     expect(new Set(listed(isWorldScreen))).toEqual(
       new Set([
