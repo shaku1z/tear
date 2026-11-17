@@ -17,6 +17,8 @@ on:
 
 permissions:
   contents: read
+  # Read only: a re-run downloads the previous attempt's check results to report flaky checks.
+  actions: read
 
 concurrency:
   # A newer push to a pull request cancels its older run. Runs on main are never
@@ -95,6 +97,23 @@ jobs:
       - name: Check documents only
         if: steps.validation-scope.outputs.gameplay_required == 'false'
         run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm wiki:test
+      # Each check's result goes to one file per attempt. On a re-run, the previous attempt's file
+      # is fetched first, so a check that failed there and passes now on the same tree prints a
+      # FLAKY line and a warning. Nothing is retried; this only reports.
+      - name: Record check results, and fetch the previous attempt's
+        if: steps.validation-scope.outputs.gameplay_required == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "TEAR_CHECK_RESULTS=$RUNNER_TEMP/check-results/results.json" >> "$GITHUB_ENV"
+          previous=$((GITHUB_RUN_ATTEMPT - 1))
+          if [[ "$previous" -lt 1 ]]; then exit 0; fi
+          if gh run download "$GITHUB_RUN_ID" -n "check-results-$previous" -D "$RUNNER_TEMP/previous-check-results"; then
+            echo "TEAR_CHECK_PREVIOUS=$RUNNER_TEMP/previous-check-results/results.json" >> "$GITHUB_ENV"
+          else
+            echo "No check results from attempt $previous; this attempt cannot report flaky checks."
+          fi
       # The checks in config/checks.json, one step per group in the order they
       # are listed: cheap and likely-to-fail first, so a failure shows within
       # minutes. `pnpm check` runs the same list locally.
@@ -112,6 +131,13 @@ jobs:
       - name: Browser checks
         if: steps.validation-scope.outputs.gameplay_required == 'true'
         run: xvfb-run -a node scripts/run-checks.mjs browser
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.validation-scope.outputs.gameplay_required == 'true'
+        with:
+          name: check-results-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/check-results/results.json
+          if-no-files-found: ignore
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: steps.validation-scope.outputs.gameplay_required == 'true'
         with:

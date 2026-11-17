@@ -33,9 +33,7 @@ Route feature work through Tear's live typed architecture. Let TypeScript, contr
 
 ## Completion
 
-Own downstream claim declaration. Use the shared
-[client handoff](../tear-change-gate/references/evidence-handoff.md), including
-`client-status` and `ensure-client-task` for planned evidence, to retain exact
-receipts, source invalidators, ownership and remaining gaps.
+Own downstream claim declaration. Hand claims, commands, evidence and remaining gaps to
+`tear-change-gate` using the shared [evidence handoff](../tear-change-gate/references/evidence-handoff.md).
 
 Report the feature path, contracts touched, tests added or updated, browser evidence, inventory update, and commands run. Call out any unsupported target or evidence gap explicitly.

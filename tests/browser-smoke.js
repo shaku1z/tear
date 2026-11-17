@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor } = require("./browser-waits");
 
 (async () => {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -153,12 +153,12 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
     }
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
-  await page.mouse.click(260, 360); // PLAY
+  await clickTarget(page, "menu", "PLAY");
   await waitForScreen("setup");
   // A fresh profile is preselected onto the Tutorial; this journey plays Endless, as a player would pick it.
-  await page.mouse.click(430, 255); // Endless
+  await clickTarget(page, "setup", "ENDLESS");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
-  await page.mouse.click(800, 758); // BEGIN
+  await clickTarget(page, "setup", "START");
   await waitForScreen("playing");
   try {
     await page.waitForFunction(
@@ -185,18 +185,18 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   assert.ok(firstMusicRun.score.run?.runId);
   await page.keyboard.press("p");
   await waitForScreen("paused");
-  await page.mouse.click(190, 271); // SETTINGS (third action on the pause rail, overlay pattern)
+  await clickTarget(page, "paused", "SETTINGS");
   await waitForScreen("settings");
   assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().settingsReturn), "paused");
-  await page.mouse.click(800, 840); // BACK TO PAUSE
+  await clickTarget(page, "settings", "BACK");
   await waitForScreen("paused");
-  await page.mouse.click(190, 151); // RESUME
+  await clickTarget(page, "paused", "RESUME");
   await waitForScreen("playing");
   await page.keyboard.press("p");
   await waitForScreen("paused");
-  await page.mouse.click(190, 331); // MAIN MENU
+  await clickTarget(page, "paused", "MAIN MENU");
   await waitForScreen("confirmquit");
-  await page.mouse.click(644, 175); // QUIT (left of the confirm action row)
+  await clickTarget(page, "confirmquit", "QUIT");
   await waitForScreen("menu");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().score.run === null);
   console.log("application state flow passed");
@@ -210,7 +210,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 
   await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
-  await page.mouse.click(260, 360); // PLAY -> setup/war table (renders all five weapon cards)
+  await clickTarget(page, "menu", "PLAY"); // setup/war table (renders all five weapon cards)
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running");
   await page.waitForTimeout(settleFor(500));
   if (process.env.TEAR_SCREENSHOT) await page.screenshot({ path: process.env.TEAR_SCREENSHOT });
@@ -233,14 +233,13 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
     if (i > 0) {
       await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
-      await page.mouse.click(260, 360);
-      await page.waitForTimeout(settleFor(450));
+      await clickTarget(page, "menu", "PLAY");
     }
-    await page.mouse.click(1180, 196 + i * 60);
+    await clickTarget(page, "setup", weaponIds[i]);
     await page.waitForTimeout(settleFor(80));
-    await page.mouse.click(430, 255); // Endless (a fresh profile is preselected onto the Tutorial)
+    await clickTarget(page, "setup", "ENDLESS"); // a fresh profile is preselected onto the Tutorial
     await page.waitForTimeout(settleFor(80));
-    await page.mouse.click(800, 758);
+    await clickTarget(page, "setup", "START");
     await page.waitForTimeout(settleFor(500));
     const debug = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
     assert.equal(

@@ -1119,3 +1119,65 @@ describe("career archive: one screen definition at both densities", () => {
     }
   });
 });
+
+describe("codex and shop: one screen definition at both densities", () => {
+  it("offers the same actions on the desktop page and the phone page for the shop and every codex tab", () => {
+    const phone = PHONES[0];
+    type Draw = (renderers: ReturnType<typeof createScreenRenderers>) => void;
+    // Desktop card grids move by whole rows (170 and 184 px), so the sweep steps a row at a time.
+    const cases: readonly Readonly<{ label: string; draw: Draw; extent: number; step: number }>[] = [
+      {
+        label: "shop",
+        draw: (r) => {
+          r.shop(shopView);
+        },
+        extent: 0,
+        step: 1,
+      },
+      {
+        label: "abilities",
+        draw: (r) => {
+          r.codex({
+            ...codexBase,
+            tab: "abilities",
+            filter: "all",
+            sort: "category",
+            filters: abilityFilters,
+            cards: abilityCards,
+          });
+        },
+        extent: 510,
+        step: 170,
+      },
+      {
+        label: "bestiary",
+        draw: (r) => {
+          r.codex({
+            ...codexBase,
+            tab: "bestiary",
+            filter: "all",
+            filters: abilityFilters.slice(0, 6),
+            cards: bestiaryCards,
+          });
+        },
+        extent: 368,
+        step: 184,
+      },
+      {
+        label: "guide",
+        draw: (r) => {
+          r.codex({ ...codexBase, tab: "guide", cards: [], guide });
+        },
+        extent: 0,
+        step: 1,
+      },
+    ];
+    for (const { label, draw, extent, step } of cases) {
+      const desktop = new Set<string>();
+      for (let scroll = 0; scroll <= extent; scroll += step)
+        for (const control of renderDesktop({ width: 1600, height: 900 }, draw, scroll).controls)
+          desktop.add(JSON.stringify(control.action));
+      expect([...sweep(phone, draw, `${label} phone`)].sort(), label).toEqual([...desktop].sort());
+    }
+  });
+});
