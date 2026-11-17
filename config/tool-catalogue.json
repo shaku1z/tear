@@ -181,28 +181,6 @@
       ],
       "duration": "minutes"
     },
-    "tearbench:run-task": {
-      "purpose": "Runs one registered TearBench task and writes its receipt under artifacts/tearbench",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes"
-    },
-    "tearbench:certify-plan": {
-      "purpose": "Certifies a TearBench plan from its task receipts and writes the plan certificate",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "under-a-minute"
-    },
-    "tearbench:record-build-provider": {
-      "purpose": "CI only: records a GitHub Actions build-artifact provider receipt from build records",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds"
-    },
     "test:weapons": {
       "purpose": "Vitest for the final five weapon roster; run after weapon or ability changes",
       "effects": [
@@ -1541,16 +1519,6 @@
         "prepare:workspace-quarantine"
       ]
     },
-    "scripts/record-build-provider-artifact.mjs": {
-      "purpose": "CI: writes a GitHub Actions provider-artifact receipt for build records",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [
-        "tearbench:record-build-provider"
-      ]
-    },
     "scripts/release-preflight.mjs": {
       "purpose": "Release preflight checks",
       "effects": [
@@ -1649,18 +1617,6 @@
       "runBy": [
         "CONTRIBUTING.md",
         "tests/serve-contract.test.mjs"
-      ]
-    },
-    "scripts/tearbench-task-execution.mjs": {
-      "purpose": "Runs a registered TearBench task (run-task) or certifies a plan (certify)",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes",
-      "via": [
-        "tearbench:run-task",
-        "tearbench:certify-plan"
       ]
     },
     "scripts/tearbench.mjs": {
@@ -1787,7 +1743,6 @@
       "scripts/report-remaining-workspace-inventory.mjs",
       "scripts/report-workspace-recovery.mjs",
       "scripts/tearbench-build-artifact.mjs",
-      "scripts/tearbench-task-execution.mjs",
       "scripts/tearbench.mjs",
       "scripts/verify-release-artifact.mjs",
       "tests/browser-journey-harness.js",
@@ -1837,57 +1792,16 @@
     ],
     "scripts/tearbench-build-artifact.mjs": [
       "scripts/build-target.mjs",
-      "scripts/record-build-provider-artifact.mjs",
-      "scripts/tearbench-task-execution.mjs",
       "scripts/tearbench.mjs",
       "tests/tearbench-build-artifact.test.mjs"
     ],
-    "scripts/tearbench-client-mission.mjs": [
-      "scripts/tearbench-task-execution.mjs",
-      "tests/tearbench-client-mission.test.mjs",
-      "tests/tearbench-task-execution.test.mjs"
-    ],
-    "scripts/tearbench-performance-sample.mjs": [
-      "scripts/tearbench-task-receipts.mjs",
-      "tests/tearbench-performance-sample.test.mjs",
-      "tests/tearbench-task-receipts.test.mjs"
-    ],
     "scripts/tearbench-reproducibility-contract.mjs": [
-      "scripts/check-reproducible-build.mjs",
-      "tests/tearbench-build-graph.test.mjs"
-    ],
-    "scripts/tearbench-resource-leases.mjs": [
-      "scripts/tearbench-task-execution.mjs",
-      "scripts/tearbench.mjs",
-      "tests/tearbench-resource-leases.test.mjs",
-      "tests/tearbench-task-execution.test.mjs"
+      "scripts/check-reproducible-build.mjs"
     ],
     "scripts/tearbench-run-artifact.mjs": [
       "scripts/tearbench.mjs",
       "tests/browser-tearbench-live-materialize.js",
       "tests/tearbench-evidence-selection.test.mjs"
-    ],
-    "scripts/tearbench-runtime-identity.mjs": [
-      "scripts/tearbench-task-execution.mjs",
-      "scripts/tearbench.mjs",
-      "tests/tearbench-task-execution.test.mjs"
-    ],
-    "scripts/tearbench-shadow-plan.mjs": [
-      "scripts/tearbench-task-execution.mjs",
-      "scripts/tearbench.mjs",
-      "tests/tearbench-shadow-plan.test.mjs"
-    ],
-    "scripts/tearbench-task-profile.mjs": [
-      "scripts/tearbench.mjs",
-      "tests/tearbench-build-graph.test.mjs"
-    ],
-    "scripts/tearbench-task-receipts.mjs": [
-      "scripts/record-build-provider-artifact.mjs",
-      "scripts/tearbench-client-mission.mjs",
-      "scripts/tearbench-task-execution.mjs",
-      "tests/tearbench-client-mission.test.mjs",
-      "tests/tearbench-task-execution.test.mjs",
-      "tests/tearbench-task-receipts.test.mjs"
     ],
     "scripts/tutorial-gold-compatibility.mjs": [
       "tests/tutorial-gold-fingerprint.test.mjs",
