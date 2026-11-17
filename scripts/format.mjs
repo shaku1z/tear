@@ -13,7 +13,6 @@ export const FORMAT_TARGETS = Object.freeze([
   "src",
   "tests",
   "scripts",
-  "workers",
   "eslint.config.mjs",
   "vite.config.ts",
   "vitest.config.ts",
