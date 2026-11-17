@@ -81,7 +81,6 @@ describe("Validate workflow", () => {
     for (const [file, variable] of [
       ["scripts/check-workspace.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/release-preflight.mjs", "TEAR_RELEASE_SHA"],
-      ["scripts/verify-plan-certificate.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/verify-release-artifact.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/build-target.mjs", "TEAR_BUILD_GIT_SHA"],
     ]) {

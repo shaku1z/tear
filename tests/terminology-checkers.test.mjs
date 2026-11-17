@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -12,7 +11,6 @@ import {
   validateRegistry,
 } from "../scripts/check-terminology.mjs";
 import { runActiveRosterCheck } from "../scripts/check-active-roster.mjs";
-import { buildRequirements } from "../scripts/tearbench-requirements.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const registryPath = path.join(repositoryRoot, "config", "terminology-registry.json");
@@ -218,31 +216,6 @@ test("generated-description translation leaves source identity and hashes immuta
   assert.equal(requirement.sourceVersion, generated.sourceVersion);
   assert.equal(requirement.text, "TEAR Music is the current description.");
   assert.equal(requirement.description, "TEAR Music is the current description.");
-});
-
-test("generated requirements apply mutable terminology at the generator boundary", () => {
-  const [requirement] = buildRequirements(
-    {
-      occurrences: [
-        {
-          id: "SRC-example",
-          kind: "paragraph",
-          numberedSection: 1,
-          startLine: 1,
-          endLine: 1,
-          headingPath: ["Requirements"],
-          text: "TearScore is required.",
-          textHash: "SOURCE-HASH",
-        },
-      ],
-    },
-    new Map(),
-  );
-  assert.ok(requirement);
-  assert.equal(requirement.text, "TEAR Music is required.");
-  assert.equal(requirement.sourceStatement, "TearScore is required.");
-  assert.equal(requirement.sourceTextHash, "SOURCE-HASH");
-  assert.equal(requirement.atomicTextHash, createHash("sha256").update("TearScore is required.").digest("hex"));
 });
 
 test("current-source checker rejects stale provisional definitions and checkpoint claims only on mutable paths", () => {

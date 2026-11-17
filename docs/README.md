@@ -69,16 +69,11 @@ corresponding index/checker/test update; no bulk relocation is implied here.
 
 ## Preserved evidence boundaries
 
-Do not manually rename or regenerate the source specification, generated
-requirements digest/dashboard, evidence catalog, or C40 weapon-roster index.
+Do not manually rename or regenerate the capability dashboard, evidence catalog
+or C40 weapon-roster index.
 Their exact paths are consumed by scripts and permanent tests. The G5 baseline
 inventory at
 `checkpoints/program-normalization/G5_BASELINE_INVENTORY.md` records the
 current hashes and the excluded dependency, secret, build, and ignored-output
 scope.
 
-The full requirements registry (about 27 MB) and its Markdown annex (about 3 MB) are no
-longer tracked: `pnpm requirements:generate` writes them to
-`artifacts/tearbench/requirements/` and refreshes the tracked
-`docs/tearbench-ghost3-requirements.digest.json`, which `pnpm requirements:check` compares.
-Their earlier versions remain in git history.

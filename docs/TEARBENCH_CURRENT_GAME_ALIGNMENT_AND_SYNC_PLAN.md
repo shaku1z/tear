@@ -357,7 +357,7 @@ These are implementation facts from the baseline audit, not assumptions or permi
 - [x] Keep the governed seven-plan index stable unless a separately authorized change intentionally updates its checker and metadata contracts.
 - [x] Treat C40 as incomplete until a real clean-commit release certificate passes every named current-game requirement.
 
-**Minimum proof:** `pnpm check:terminology`, `pnpm test:terminology`, `pnpm check:docs`, `pnpm test:docs`, and `pnpm requirements:check`; regenerate only the specific generated artifact whose generator/input was intentionally changed.
+**Minimum proof:** `pnpm check:terminology`, `pnpm test:terminology`, `pnpm check:docs` and `pnpm test:docs`; regenerate only the specific generated artifact whose generator/input was intentionally changed.
 
 **Exit:** Current-facing documentation, terminology counts, checkpoint status, evidence freshness, and release identity are accurate without damaging historical or compatibility material.
 

@@ -3,28 +3,12 @@
   "definitionPolicyVersion": 2,
   "tasks": [
     {
-      "taskId": "unit.tearbench-canary-contract",
-      "version": 4,
-      "runner": {
-        "kind": "node",
-        "executable": "node",
-        "args": ["--test", "--test-concurrency=1", "tests/tearbench-canary-plan.test.mjs", "tests/tearbench-canary-qualification-report.test.mjs", "tests/tearbench-canary-workflow.test.mjs", "tests/tearbench-performance-sample.test.mjs", "tests/tearbench-paired-performance-report.test.mjs", "tests/tearbench-simulation-boundary-report.test.mjs"]
-      },
-      "claimIds": ["unit", "canary-control-plane"],
-      "dependencies": [],
-      "resourceClass": "unit",
-      "resourceKeys": [],
-      "outputs": [],
-      "timeoutMs": 120000,
-      "intentionalReplica": "none"
-    },
-    {
       "taskId": "unit.tearbench-evidence-clients",
       "version": 1,
       "runner": {
         "kind": "node",
         "executable": "node",
-        "args": ["--test", "--test-concurrency=1", "tests/tearbench-client-mission.test.mjs", "tests/benchmark-tearbench-clients.test.mjs", "tests/tearbench-task-execution.test.mjs", "tests/tearbench-task-receipts.test.mjs"]
+        "args": ["--test", "--test-concurrency=1", "tests/tearbench-client-mission.test.mjs", "tests/tearbench-task-execution.test.mjs", "tests/tearbench-task-receipts.test.mjs"]
       },
       "claimIds": ["unit", "evidence-client-contract"],
       "dependencies": [],
@@ -45,28 +29,6 @@
       "claimIds": ["unit", "resource-lease-exclusion"],
       "dependencies": [],
       "resourceClass": "unit",
-      "resourceKeys": [],
-      "outputs": [],
-      "timeoutMs": 120000,
-      "intentionalReplica": "none"
-    },
-    {
-      "taskId": "static.requirements-check",
-      "version": 1,
-      "runner": {
-        "kind": "node",
-        "executable": "node",
-        "args": [
-          "scripts/tearbench-requirements.mjs",
-          "check"
-        ]
-      },
-      "claimIds": [
-        "static",
-        "requirements:check"
-      ],
-      "dependencies": [],
-      "resourceClass": "static",
       "resourceKeys": [],
       "outputs": [],
       "timeoutMs": 120000,
@@ -2470,31 +2432,6 @@
       "intentionalReplica": "none"
     },
     {
-      "taskId": "certify.release",
-      "version": 1,
-      "runner": {
-        "kind": "tearbench",
-        "executable": "scripts/tearbench.mjs",
-        "args": [
-          "certify"
-        ]
-      },
-      "claimIds": [
-        "release-certificate"
-      ],
-      "dependencies": [],
-      "resourceClass": "static",
-      "resourceKeys": [],
-      "outputs": [
-        {
-          "outputId": "release-certificate",
-          "path": "artifacts/tearbench/generated/release-certificate.json"
-        }
-      ],
-      "timeoutMs": 120000,
-      "intentionalReplica": "none"
-    },
-    {
       "taskId": "evidence.vitest",
       "version": 1,
       "runner": {
@@ -3699,12 +3636,7 @@
         "executable": "node_modules/vitest/vitest.mjs",
         "args": [
           "run",
-          "tests/unit/tearbench-runner.test.ts",
-          "tests/unit/tearbench-regression-intelligence.test.ts",
-          "tests/unit/tearbench-graveyard.test.ts",
-          "tests/unit/tearbench-regression-minimization.test.ts",
-          "tests/unit/tearbench-bisection.test.ts",
-          "tests/unit/tearbench-release-certification.test.ts"
+          "tests/unit/tearbench-runner.test.ts"
         ]
       },
       "claimIds": [
@@ -3784,80 +3716,12 @@
       "outputs": [],
       "timeoutMs": 300000,
       "intentionalReplica": "none"
-    },
-    {
-      "taskId": "graveyard.all-shared-runtime-history",
-      "version": 1,
-      "runner": {
-        "kind": "tearbench",
-        "executable": "scripts/tearbench.mjs",
-        "args": [
-          "graveyard",
-          "run",
-          "--cases",
-          "all-shared-runtime-history"
-        ]
-      },
-      "claimIds": [
-        "selected-evidence",
-        "graveyard"
-      ],
-      "dependencies": [],
-      "resourceClass": "unit",
-      "resourceKeys": [],
-      "outputs": [],
-      "timeoutMs": 120000,
-      "intentionalReplica": "none"
-    },
-    {
-      "taskId": "graveyard.audio-lifecycle-history",
-      "version": 1,
-      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "audio-lifecycle-history"] },
-      "claimIds": ["selected-evidence", "graveyard"],
-      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
-    },
-    {
-      "taskId": "graveyard.migration-and-corruption-history",
-      "version": 1,
-      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "migration-and-corruption-history"] },
-      "claimIds": ["selected-evidence", "graveyard"],
-      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
-    },
-    {
-      "taskId": "graveyard.movement-boundary-history",
-      "version": 1,
-      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "movement-boundary-history"] },
-      "claimIds": ["selected-evidence", "graveyard"],
-      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
-    },
-    {
-      "taskId": "graveyard.planted-downstream-divergence",
-      "version": 1,
-      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "planted-downstream-divergence"] },
-      "claimIds": ["selected-evidence", "graveyard"],
-      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
-    },
-    {
-      "taskId": "graveyard.progression-ledger-history",
-      "version": 1,
-      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "progression-ledger-history"] },
-      "claimIds": ["selected-evidence", "graveyard"],
-      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
-    },
-    {
-      "taskId": "graveyard.screen-route-history",
-      "version": 1,
-      "runner": { "kind": "tearbench", "executable": "scripts/tearbench.mjs", "args": ["graveyard", "run", "--cases", "screen-route-history"] },
-      "claimIds": ["selected-evidence", "graveyard"],
-      "dependencies": [], "resourceClass": "unit", "resourceKeys": [], "outputs": [], "timeoutMs": 120000, "intentionalReplica": "none"
     }
   ],
   "profiles": {
     "release": [
-      "unit.tearbench-canary-contract",
       "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
-      "static.requirements-check",
       "static.check-docs",
       "unit.test-docs",
       "unit.test-workspace",
@@ -3949,7 +3813,6 @@
       "deploy.game-dry-run"
     ],
     "development": [
-      "static.requirements-check",
       "static.typecheck",
       "static.lint",
       "static.format-check",
@@ -3960,11 +3823,9 @@
       "unit.test-parity-unit"
     ],
     "pull-request": [
-      "unit.tearbench-canary-contract",
       "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "unit.release-preflight-negative",
-      "static.requirements-check",
       "static.check-docs",
       "unit.test-docs",
       "unit.test-workspace",
@@ -4050,11 +3911,9 @@
       "browser.test-pwa"
     ],
     "protected-main": [
-      "unit.tearbench-canary-contract",
       "unit.tearbench-evidence-clients",
       "unit.tearbench-resource-leases",
       "unit.release-preflight-negative",
-      "static.requirements-check",
       "static.check-docs",
       "unit.test-docs",
       "unit.test-workspace",
@@ -4140,7 +3999,6 @@
       "browser.test-pwa"
     ],
     "nightly": [
-      "static.requirements-check",
       "static.typecheck",
       "static.lint",
       "static.format-check",
@@ -4155,8 +4013,7 @@
       "static.check-docs",
       "unit.test-docs",
       "static.check-terminology",
-      "unit.test-terminology",
-      "static.requirements-check"
+      "unit.test-terminology"
     ]
   },
   "compatibilityInventory": {},

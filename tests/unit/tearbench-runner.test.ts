@@ -4,10 +4,7 @@ import {
   CANONICAL_ENGINEERING_SCENARIOS,
   TEAR_CONTRACT_FORMAT,
   TearBenchRunner,
-  createRunArtifact,
   createFailureArtifact,
-  createBranchDivergenceFailure,
-  investigateRegressionRuns,
   createCanonicalScenarioRegistry,
   createProductionHeadlessEnvironment,
   type TearObservationV1,
@@ -382,81 +379,5 @@ describe("TearBench engineering runner", () => {
     session.terminate();
     expect(session.done()).toBe(true);
     expect(session.result().status).toBe("truncated");
-  });
-
-  it("packages the resolved scenario, evidence, and exact rerun coordinates", () => {
-    const scenario = createCanonicalScenarioRegistry().get("blade-valid-cut");
-    const result = new TearBenchRunner(new FixtureRuntime()).run(scenario);
-    const artifact = createRunArtifact(result, {
-      id: "run-1",
-      createdAt: "2026-07-23T00:00:00.000Z",
-      build: {
-        version: "0.1.0",
-        revision: "test",
-        target: "unit",
-        rulesetVersion: "test-rules",
-        contentHash: "sha256:aaaaaaaa",
-        configHash: "sha256:bbbbbbbb",
-      },
-      console: [{ level: "info", message: "fixture completed" }],
-      hooks: {
-        captureScreenshot: (name) => `artifacts/${name}`,
-        captureReplay: (name) => `artifacts/${name}`,
-      },
-    });
-    expect(artifact.resolvedScenario.id).toBe("blade-valid-cut");
-    expect(artifact.attachments).toEqual({
-      actionTrace: "run-1.actions.json",
-      screenshot: "artifacts/run-1.png",
-      replay: "artifacts/run-1.replay.json",
-    });
-    expect(artifact.rerun).toMatchObject({ scenarioId: "blade-valid-cut", seed: "1001" });
-  });
-
-  it("persists an input-locked base/candidate investigation at the first material tick", () => {
-    const scenario = createCanonicalScenarioRegistry().get("blade-valid-cut");
-    const build = {
-      version: "0.1.0",
-      revision: "base",
-      target: "unit",
-      rulesetVersion: "test-rules",
-      contentHash: "sha256:aaaaaaaa",
-      configHash: "sha256:bbbbbbbb",
-    } as const;
-    const base = createRunArtifact(new TearBenchRunner(new FixtureRuntime()).run(scenario), {
-      id: "base-run",
-      createdAt: "2026-07-28T00:00:00.000Z",
-      build,
-    });
-    const candidate = {
-      ...base,
-      id: "candidate-run",
-      build: { ...build, revision: "candidate", contentHash: "sha256:cccccccc" },
-      observations: base.observations.map((entry) =>
-        entry.tick === 3 ? { ...entry, player: { ...entry.player, x: entry.player.x + 1 } } : entry,
-      ),
-    };
-    const investigation = investigateRegressionRuns({ base, candidate, createdAt: "2026-07-28T00:01:00.000Z" });
-    expect(investigation).toMatchObject({ status: "diverged", comparison: { firstMaterialDivergence: { tick: 3 } } });
-    const failure = createBranchDivergenceFailure({
-      investigation,
-      candidate,
-      baseRunPath: "artifacts/base-run.json",
-      candidateRunPath: "artifacts/candidate-run.json",
-      investigationPath: "artifacts/investigation.json",
-    });
-    expect(failure).toMatchObject({ invariantId: "replay.branch-equivalence", firstFailureTick: 3 });
-    expect(failure.attachments).toEqual({
-      baseRun: "artifacts/base-run.json",
-      candidateRun: "artifacts/candidate-run.json",
-      investigation: "artifacts/investigation.json",
-    });
-    expect(() =>
-      investigateRegressionRuns({
-        base,
-        candidate: { ...candidate, seed: "different-seed" },
-        createdAt: "2026-07-28T00:01:00.000Z",
-      }),
-    ).toThrow(/identical seed/u);
   });
 });

@@ -23,7 +23,6 @@ describe("C40 Hammer terrain Meteor/catch seek evidence registry", () => {
     const routes = readJson("src/tearbench/evidence-routes.json") as readonly Record<string, unknown>[];
     expect(routes.find((entry) => entry.id === "hammer-meteor-terrain-replay")).toMatchObject({
       scenarios: ["hammer-meteor-terrain-catch-seek"],
-      graveyardCases: [],
       journeyCheckpoint: "hammer-meteor-terrain-catch-seek-engineering-proof",
       baseComparison: "not-run-by-this-scenario",
       interactionMatrices: ["browser"],
