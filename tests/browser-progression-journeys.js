@@ -305,7 +305,14 @@ withJourney(
     await waitScreen("menu");
     await clickTarget(page, "menu", "ACHIEVEMENTS");
     await waitScreen("achievements");
-    await waitDrawn("Invested");
+    // Invested is the one unlock, in the MASTERY category.
+    await waitDrawn("1 / 99");
+    assert.ok(
+      await page.evaluate(() =>
+        window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => /^MASTERY\s+1\/16$/u.test(entry.text)),
+      ),
+      "the achievements page counts Invested under MASTERY after the reload",
+    );
     await clickTarget(page, "achievements", "BACK");
     await waitScreen("menu");
     await clickTarget(page, "menu", "SETTINGS");
