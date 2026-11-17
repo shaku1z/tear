@@ -14,7 +14,7 @@ const createLocalCloud: CloudFactory = (options) =>
 
 void bootstrapTear("itch", async ({ surfaces, engineeringQuery }) => {
   const { composeTearApplication } = await import("../app/shell/composition");
-  await composeTearApplication({
+  composeTearApplication({
     target: "itch",
     surfaces,
     engineeringQuery,
