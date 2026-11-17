@@ -82,7 +82,8 @@ export interface ChapterBeat {
   readonly skipScale?: number;
   /** The run HUD returns during this beat, before control does. */
   readonly hud?: boolean;
-  readonly completion?: "confirm" | "confirm-or-timeout";
+  /** Pages wait for the player or their reading dwell; every other beat plays for its duration. */
+  readonly completion?: "confirm" | "confirm-or-timeout" | "timed";
   readonly reveal?: Readonly<{ mode: "phrase"; duration: number }>;
   readonly playerMode: "locked";
   readonly exit?: boolean;
@@ -202,13 +203,21 @@ export class CampaignChapterController {
     }));
     const lastPage = pages.at(-1) ?? { label: "", text: "" };
     const beats: ChapterBeat[] = [
-      { ...scene, id: "enter", view: "enter", duration: this.timing.chapterIn, pageCount: pages.length },
+      {
+        ...scene,
+        id: "enter",
+        view: "enter",
+        completion: "timed",
+        duration: this.timing.chapterIn,
+        pageCount: pages.length,
+      },
       ...pageBeats,
       {
         ...scene,
         id: "exit",
         view: "page",
         exit: true,
+        completion: "timed",
         duration: this.timing.loreExit,
         label: lastPage.label,
         text: lastPage.text,
@@ -220,6 +229,8 @@ export class CampaignChapterController {
         id: "reveal",
         view: "reveal",
         skipScale: 1,
+        // The biome name and its line are shown, not read aloud: the beat never waits for a press.
+        completion: "timed",
         duration: brief ? this.timing.biomeRevealBrief : this.timing.biomeRevealFull,
         name: stage.name,
         line: stage.chapter.intro,
@@ -230,6 +241,7 @@ export class CampaignChapterController {
         view: "ready",
         skipScale: 1,
         hud: true,
+        completion: "timed",
         duration: brief ? this.timing.readyBrief : this.timing.readyFull,
         name: stage.name,
         line: stage.chapter.intro,

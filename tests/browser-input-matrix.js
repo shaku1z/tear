@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { chapterOpeningCarriesThroughOnEveryDevice } = require("./browser-chapter-opening");
 const { STATE_WAIT_MS, holdFor, notWithin, pollEvery } = require("./browser-waits");
 
 async function moveCapturedPointer(page, from, to) {
@@ -621,6 +622,7 @@ async function main() {
   await phoneWithoutPointerLockOpensTheDraft(browser, configure);
   await pointerBelongsToTheMouseAlone(browser, configure);
   await firstTapLandsOnTheControlsThePlayerSaw(browser, configure);
+  await chapterOpeningCarriesThroughOnEveryDevice(browser, configure);
 
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
