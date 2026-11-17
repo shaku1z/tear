@@ -31,6 +31,7 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 | [D-014](#d-014) | 2026-11-13 | The game and wiki repositories are private | Active |
 | [D-015](#d-015) | 2026-11-13 | Remove the over-built developer systems; plain names for what stays | Active |
 | [D-016](#d-016) | 2026-11-16 | Tutorial gold is checked by regeneration, not by a committed source hash | Active |
+| [D-017](#d-017) | 2026-11-13 | Pull requests no longer have to be up to date with `main` to merge | Active |
 
 <a id="d-001"></a>
 
@@ -184,8 +185,8 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 - **Trigger:** hand formatting had produced 6,559 packed multi-statement lines, and the code-budget
   limits counted raw characters, so any reformat moved them.
 - **Decision:** Prettier 3.10.1 with print width 120 formats code and root configs
-  (`pnpm format`, `pnpm format:check` in `check:quick` and CI). The code budget and the 700-line
-  module rule count non-whitespace characters (ceiling 25,300, re-derived from the old 28,000).
+  (`pnpm format`, `pnpm format:check` in `check:quick` and CI). The code budget and the architecture
+  module size rule count non-whitespace characters (ceiling 25,300, re-derived from the old 28,000).
   ESLint has no formatting rules. The format commit is listed in `.git-blame-ignore-revs`.
 - **Alternatives:** none recorded.
 - **Consequences:** `.prettierignore` must not be widened to pass the check; same-operator chains
@@ -298,3 +299,20 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   build after a tutorial code change runs the gold test, about a minute; a CI job pays it once.
   Builds now simulate, where before they only compared hashes.
 - **Source:** the lead session's task on 2026-11-16.
+
+<a id="d-017"></a>
+
+## D-017 — Pull requests no longer have to be up to date with `main` to merge
+
+- **Date:** 2026-11-13. Recorded 2026-11-17.
+- **Trigger:** with several sessions merging in a day, every merge made every other open pull request unmergeable
+  until it was rebuilt and its check re-run. The owner's words: "you can remove it, and put something in place to
+  ensure nothing wrong happens".
+- **Decision:** the "Canonical branch authority" ruleset no longer requires branches to be up to date before
+  merging. Each pull request still needs its own green `check`.
+- **Alternatives:** keep the strict rule and accept the re-runs (rejected: it multiplied metered Actions minutes,
+  see [D-014](#d-014)).
+- **Consequences:** two rules replace it, applied by `pnpm merge:ready <pr>` (`scripts/merge-ready.mjs`), which the
+  owner-safe merge helper calls before merging: a red `main` stops merges, and a stale pass is not a pass. The
+  rules are in [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md#merging).
+- **Source:** the release lead's record of the owner's instruction.
