@@ -197,8 +197,6 @@ export interface MenuScreenView {
   readonly playSub?: string;
   readonly pendingFinale?: boolean;
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
-  /** Engineering builds only: TRAINING ARCHIVE, TRAINING OPERATIONS and REPLAY HUB entries. */
-  readonly engineeringRoutes?: boolean;
 }
 export interface SetupScreenView {
   readonly practiceAvailable?: boolean;
@@ -486,8 +484,6 @@ export interface PausedScreenView {
   readonly runSummary?: string;
   readonly abilities: readonly CardView[];
   readonly progress: readonly ProgressView[];
-  /** Present only for a locally running Player Watch; never a Foundry operation. */
-  readonly playerWatch?: Readonly<{ readonly status: "running" | "paused"; readonly decisions: number }>;
 }
 export interface ConfirmQuitScreenView {
   readonly id: "confirmquit";
@@ -539,120 +535,6 @@ export interface PlaygroundScreenView {
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
-export interface AcademyScreenView {
-  readonly id: "academy";
-  readonly status: "loading" | "ready" | "unavailable";
-  readonly subtitle: string;
-  readonly rows: readonly Readonly<{ readonly label: string; readonly value: string }>[];
-  readonly records: readonly Readonly<{
-    readonly id: string;
-    readonly state: string;
-    readonly detail: string;
-    readonly candidateHash?: string;
-    readonly canWithdrawModelTraining?: boolean;
-  }>[];
-  readonly manifests: readonly Readonly<{ readonly id: string; readonly detail: string }>[];
-  readonly lessons?: readonly Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>[];
-  /** C33 exposes immutable plan progress and only session-gated decisions authorized by that plan; it cannot activate or promote a policy. */
-  readonly daggerPrograms?: readonly Readonly<{
-    readonly id: string;
-    readonly state: string;
-    readonly detail: string;
-    readonly programId?: string;
-    readonly canAdvance?: boolean;
-    readonly correctionHash?: string;
-    readonly canReview?: boolean;
-  }>[];
-  /** C35 local, signed-in consent decision. It is never inferred from a recording or ordinary Academy custody. */
-  readonly humanCalibrationConsent?: Readonly<{
-    readonly state: "loading" | "unavailable" | "not-enrolled" | "enabled" | "revoked";
-    readonly detail: string;
-    readonly canOptIn: boolean;
-    readonly canRevoke: boolean;
-  }>;
-}
-
-/** Read-only C36 local recovery projection. It deliberately contains no custody or model data. */
-export interface FoundryScreenView {
-  readonly id: "foundry";
-  /** Exact local action token; eligibility alone does not activate a policy. */
-  readonly promotion?: Readonly<{ scheduleHash: string; intentHash: string }>;
-  readonly restoration?: Readonly<{ scheduleHash: string; intentHash: string }>;
-  readonly restored?: Readonly<{ artifactId: string; receiptHash: string }>;
-  readonly status: "loading" | "unavailable" | "ready";
-  readonly subtitle: string;
-  /** Local lifecycle scheduler state; it never implies a worker, cloud task, policy activation, or promotion. */
-  readonly automation: "unavailable" | "local";
-  /** Opaque launch-authority state only. No profile inputs, hashes, or custody cross into presentation. */
-  readonly launchProfiles: readonly Readonly<{
-    readonly profileId: string;
-    readonly disposition: "eligible" | "blocked";
-  }>[];
-  readonly jobs: readonly Readonly<{
-    readonly jobHash: string;
-    readonly phase: string;
-    readonly nextManualPhase: string | null;
-    readonly resumable: boolean;
-    readonly eventCount: number;
-    readonly lastEventHash: string;
-    readonly projectionHash: string;
-  }>[];
-  /** Configured local scheduling intent only; it does not imply an installed worker or execution. */
-  readonly schedules: readonly Readonly<{
-    readonly scheduleHash: string;
-    readonly jobHash: string;
-    readonly state: "enabled" | "disabled";
-    readonly disposition: string;
-    readonly dueAt: string | null;
-    readonly intervalMs: number;
-    readonly revision: number;
-    readonly runtimeStatus: "disabled" | "configured" | "due" | "running" | "blocked" | "error";
-  }>[];
-}
-
-/** Normal-build C37 hub. It projects only player-safe local routes and explicit gaps. */
-export interface GhostLabScreenView {
-  readonly id: "ghostlab";
-  readonly subtitle: string;
-  readonly routes: readonly Readonly<{
-    readonly id:
-      "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career";
-    readonly label: string;
-    readonly detail: string;
-  }>[];
-  readonly unavailable: readonly Readonly<{ readonly label: string; readonly detail: string }>[];
-  readonly watch: Readonly<{
-    readonly status: "checking" | "unavailable" | "ready" | "starting" | "running" | "paused" | "stopped";
-    readonly detail: string;
-    readonly decisions: number;
-  }>;
-}
-
-/** A read-only projection of exactly one retained C35 canonical report. */
-export interface BotEvidenceScreenView {
-  readonly id: "botevidence";
-  readonly status: "unavailable" | "ready";
-  readonly subtitle: string;
-  readonly detail: string;
-  readonly report?: Readonly<{
-    readonly reportHash: string;
-    readonly planHash: string;
-    readonly artifactId: string;
-    readonly approvalHash: string;
-    readonly promotionReceiptHash: string;
-    readonly artifactHash: string;
-    readonly activationHash: string;
-    readonly candidatePayloadHash: string;
-    readonly episodes: number;
-    readonly completionRate: number;
-    readonly meanTicks: number;
-    readonly maxTicksPerCase: number;
-    readonly placement: "unassigned";
-    readonly humanCalibration: "not-compared";
-    readonly certification: "not-certified";
-  }>;
-}
-
 /** C38 review is a local authority-and-intent screen, never a transport status. */
 export interface GhostPublicationScreenView {
   readonly id: "ghostpublication";
@@ -707,10 +589,6 @@ export type ScreenView =
   | GameoverScreenView
   | WinScreenView
   | PlaygroundScreenView
-  | AcademyScreenView
-  | FoundryScreenView
-  | GhostLabScreenView
-  | BotEvidenceScreenView
   | GhostPublicationScreenView
   | GhostSupportScreenView;
 

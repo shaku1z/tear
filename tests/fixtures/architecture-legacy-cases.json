@@ -1487,14 +1487,14 @@
   {
    "legacy": [],
    "file": "src/app/world/content-host.ts",
-   "text": "import { LIVE_ENGINEERING_SURFACES } from \"../engineering/engineering-surfaces\";",
+   "text": "import { createVerdantCalibrationComposition } from \"../engineering/verdant-calibration-composition\";",
    "reject": true,
    "note": "new N1: engineering channel only via dynamic import"
   },
   {
    "legacy": [],
    "file": "src/app/world/content-host.ts",
-   "text": "const surfaces = import(\"../engineering/engineering-surfaces\");",
+   "text": "const calibration = import(\"../engineering/verdant-calibration-composition\");",
    "reject": false,
    "note": "N1 allows the guarded dynamic import"
   },

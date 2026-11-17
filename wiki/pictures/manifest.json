@@ -1,0 +1,329 @@
+{
+ "figures": {
+  "enemies/charger": "figures/charger.webp",
+  "enemies/ranged": "figures/ranged.webp",
+  "enemies/flyer": "figures/flyer.webp",
+  "enemies/bomber": "figures/bomber.webp",
+  "enemies/armored": "figures/armored.webp",
+  "enemies/priest": "figures/priest.webp",
+  "enemies/mender": "figures/mender.webp",
+  "enemies/herald": "figures/herald.webp",
+  "enemies/anchor": "figures/anchor.webp",
+  "enemies/wraith": "figures/wraith.webp",
+  "enemies/chimera": "figures/chimera.webp",
+  "bosses/warden": "figures/warden.webp",
+  "bosses/colossus": "figures/colossus.webp",
+  "bosses/aldric": "figures/aldric.webp",
+  "bosses/rootbound": "figures/rootbound.webp",
+  "bosses/echo": "figures/echo.webp",
+  "bosses/source": "figures/source.webp"
+ },
+ "arenas": {
+  "grounds": "arenas/grounds.webp",
+  "undercroft": "arenas/undercroft.webp",
+  "crimson-fields": "arenas/crimson-fields.webp",
+  "verdant-sanctum": "arenas/verdant-sanctum.webp",
+  "voidspire": "arenas/voidspire.webp",
+  "tear": "arenas/tear.webp"
+ },
+ "weapons": {
+  "sword": "weapons/sword.webp",
+  "hammer": "weapons/hammer.webp",
+  "greatsword": "weapons/greatsword.webp",
+  "chainblade": "weapons/chainblade.webp",
+  "riftlock": "weapons/riftlock.webp"
+ },
+ "bosses": {
+  "warden": [
+   {
+    "phase": 1,
+    "tag": "ON DUTY",
+    "image": "bosses/warden-1.webp",
+    "moves": [
+     {
+      "state": "string",
+      "seen": 3,
+      "seconds": 0.92
+     }
+    ]
+   },
+   {
+    "phase": 2,
+    "tag": "UNCHAINED",
+    "image": "bosses/warden-2.webp",
+    "moves": [
+     {
+      "state": "string",
+      "seen": 1,
+      "seconds": 1.32
+     }
+    ]
+   },
+   {
+    "phase": 3,
+    "tag": "NOTHING LEFT",
+    "image": "bosses/warden-3.webp",
+    "moves": [
+     {
+      "state": "fakedeath",
+      "seen": 1,
+      "seconds": 7.32
+     }
+    ]
+   }
+  ],
+  "colossus": [
+   {
+    "phase": 1,
+    "tag": "SEALED",
+    "image": "bosses/colossus-1.webp",
+    "moves": [
+     {
+      "state": "grabwind",
+      "seen": 2,
+      "seconds": 0.32
+     },
+     {
+      "state": "grab",
+      "seen": 2,
+      "seconds": 0.02
+     },
+     {
+      "state": "recover",
+      "seen": 1,
+      "seconds": 0.42
+     },
+     {
+      "state": "windup",
+      "seen": 1,
+      "seconds": 0.52
+     }
+    ]
+   },
+   {
+    "phase": 2,
+    "tag": "BREACHED",
+    "image": "bosses/colossus-2.webp",
+    "moves": [
+     {
+      "state": "grabwind",
+      "seen": 1,
+      "seconds": 0.12
+     },
+     {
+      "state": "grab",
+      "seen": 1,
+      "seconds": 0.12
+     },
+     {
+      "state": "recover",
+      "seen": 1,
+      "seconds": 0.32
+     }
+    ]
+   },
+   {
+    "phase": 3,
+    "tag": "MELTDOWN",
+    "image": "bosses/colossus-3.webp",
+    "moves": [
+     {
+      "state": "grabwind",
+      "seen": 1,
+      "seconds": 0.12
+     },
+     {
+      "state": "grab",
+      "seen": 1,
+      "seconds": 0.12
+     },
+     {
+      "state": "recover",
+      "seen": 1,
+      "seconds": 0.32
+     }
+    ]
+   }
+  ],
+  "aldric": [
+   {
+    "phase": 1,
+    "tag": "THE DUEL",
+    "image": "bosses/aldric-1.webp",
+    "moves": [
+     {
+      "state": "windup",
+      "seen": 4,
+      "seconds": 0.42
+     },
+     {
+      "state": "lunge",
+      "seen": 4,
+      "seconds": 0.22
+     },
+     {
+      "state": "recover",
+      "seen": 3,
+      "seconds": 0.32
+     }
+    ]
+   },
+   {
+    "phase": 2,
+    "tag": "THRONE BURNS",
+    "image": "bosses/aldric-2.webp",
+    "moves": [
+     {
+      "state": "windup",
+      "seen": 4,
+      "seconds": 0.42
+     },
+     {
+      "state": "lunge",
+      "seen": 4,
+      "seconds": 0.22
+     },
+     {
+      "state": "recover",
+      "seen": 3,
+      "seconds": 0.32
+     }
+    ]
+   },
+   {
+    "phase": 3,
+    "tag": "THE KNEEL",
+    "image": "bosses/aldric-3.webp",
+    "moves": []
+   }
+  ],
+  "rootbound": [
+   {
+    "phase": 1,
+    "tag": "KEEPER OF SPRING",
+    "image": "bosses/rootbound-1.webp",
+    "moves": [
+     {
+      "state": "recover",
+      "seen": 4,
+      "seconds": 0.52
+     }
+    ]
+   },
+   {
+    "phase": 2,
+    "tag": "THE GARDEN REMEMBERS",
+    "image": "bosses/rootbound-2.webp",
+    "moves": [
+     {
+      "state": "recover",
+      "seen": 4,
+      "seconds": 0.52
+     }
+    ]
+   },
+   {
+    "phase": 3,
+    "tag": "NOTHING HERE DIES",
+    "image": "bosses/rootbound-3.webp",
+    "moves": [
+     {
+      "state": "recover",
+      "seen": 2,
+      "seconds": 0.62
+     }
+    ]
+   }
+  ],
+  "echo": [
+   {
+    "phase": 1,
+    "tag": "SEALED",
+    "image": "bosses/echo-1.webp",
+    "moves": [
+     {
+      "state": "mirror",
+      "seen": 1,
+      "seconds": 7.42
+     }
+    ]
+   },
+   {
+    "phase": 2,
+    "tag": "SEALED",
+    "image": "bosses/echo-2.webp",
+    "moves": [
+     {
+      "state": "mirror",
+      "seen": 1,
+      "seconds": 7.82
+     }
+    ]
+   },
+   {
+    "phase": 3,
+    "tag": "SEALED",
+    "image": "bosses/echo-3.webp",
+    "moves": [
+     {
+      "state": "mirror",
+      "seen": 1,
+      "seconds": 9.52
+     }
+    ]
+   }
+  ],
+  "source": [
+   {
+    "phase": 1,
+    "tag": "THE CYCLE",
+    "image": "bosses/source-1.webp",
+    "moves": [
+     {
+      "state": "cycle",
+      "seen": 1,
+      "seconds": 11.42
+     }
+    ]
+   },
+   {
+    "phase": 2,
+    "tag": "WORLD UNMAKES",
+    "image": "bosses/source-2.webp",
+    "moves": [
+     {
+      "state": "cycle",
+      "seen": 1,
+      "seconds": 1.32
+     },
+     {
+      "state": "collapse",
+      "seen": 1,
+      "seconds": 10.52
+     }
+    ]
+   },
+   {
+    "phase": 3,
+    "tag": "IT REMEMBERS",
+    "image": "bosses/source-3.webp",
+    "moves": [
+     {
+      "state": "cycle",
+      "seen": 1,
+      "seconds": 1.32
+     },
+     {
+      "state": "downed",
+      "seen": 1,
+      "seconds": 10.52
+     }
+    ]
+   }
+  ]
+ },
+ "skipped": [
+  "figure rootbinder (the game draws no figure for it)"
+ ],
+ "inputsHash": "2e3734c950b9c0b259f6"
+}

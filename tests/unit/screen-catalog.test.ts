@@ -66,29 +66,12 @@ describe("screen catalog", () => {
       "rename",
       "pgmenu",
       "pglab",
-      "academy",
-      "foundry",
-      "ghostlab",
-      "botevidence",
+
       "ghostpublication",
       "ghostsupport",
     ]);
     expect(new Set(listed(isMenuScreen))).toEqual(
-      new Set([
-        "menu",
-        "shop",
-        "codex",
-        "setup",
-        "profile",
-        "settings",
-        "achievements",
-        "leaderboards",
-        "rename",
-        "academy",
-        "foundry",
-        "ghostlab",
-        "botevidence",
-      ]),
+      new Set(["menu", "shop", "codex", "setup", "profile", "settings", "achievements", "leaderboards", "rename"]),
     );
     expect(new Set(listed(isWorldScreen))).toEqual(
       new Set([
@@ -134,14 +117,7 @@ describe("screen catalog", () => {
       new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings"]),
     );
     expect(new Set(listed(screenResetsScrollOnEnter))).toEqual(new Set(["shop", "draft", "reserve", "tierup"]));
-    expect(ENGINEERING_SCREENS).toEqual([
-      "academy",
-      "foundry",
-      "ghostlab",
-      "botevidence",
-      "ghostpublication",
-      "ghostsupport",
-    ]);
+    expect(ENGINEERING_SCREENS).toEqual(["ghostpublication", "ghostsupport"]);
   });
 
   it("names only catalogued screens in transitions and lets rename return anywhere else", () => {
@@ -173,15 +149,5 @@ describe("screen catalog", () => {
       engineering.setScreen("rename");
       expect(engineering.setScreen(screen), screen).toBe(screen);
     }
-  });
-
-  it("treats the engineering menu screens as menu screens for the frame coordinator's attract scene", () => {
-    // Decision: the frame coordinator used `isAppScreen(screen) && isMenuScreen(screen)`, which
-    // was false on academy, foundry, ghostlab and botevidence although the renderer and music
-    // theme already drew them as menu screens. It now uses the catalog predicate.
-    for (const screen of ["academy", "foundry", "ghostlab", "botevidence"])
-      expect(isMenuScreen(screen), screen).toBe(true);
-    for (const screen of ["ghostpublication", "ghostsupport", "replay"])
-      expect(isMenuScreen(screen), screen).toBe(false);
   });
 });

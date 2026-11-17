@@ -1,9 +1,5 @@
 import type {
   AchievementsScreenView,
-  AcademyScreenView,
-  FoundryScreenView,
-  GhostLabScreenView,
-  BotEvidenceScreenView,
   GhostPublicationScreenView,
   GhostSupportScreenView,
   CodexScreenView,
@@ -150,22 +146,6 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
     },
     pglab(view: PlaygroundScreenView) {
       if (renderers) renderers.pglab(view);
-      else loadingFrame();
-    },
-    academy(view: AcademyScreenView) {
-      if (renderers) renderers.academy(view);
-      else loadingFrame();
-    },
-    foundry(view: FoundryScreenView) {
-      if (renderers) renderers.foundry(view);
-      else loadingFrame();
-    },
-    ghostlab(view: GhostLabScreenView) {
-      if (renderers) renderers.ghostlab(view);
-      else loadingFrame();
-    },
-    botevidence(view: BotEvidenceScreenView) {
-      if (renderers) renderers.botevidence(view);
       else loadingFrame();
     },
     ghostpublication(view: GhostPublicationScreenView) {

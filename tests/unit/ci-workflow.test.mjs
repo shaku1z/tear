@@ -152,9 +152,14 @@ describe("Validate workflow", () => {
     );
     const preview = read(".github/workflows/deploy-preview.yml");
     expect(preview).toContain("const devName = `tear-preview-dev-${artifactSha}`;");
-    expect(preview).toContain("node scripts/verify-release-artifact.mjs standalone candidate-dev test-standalone");
-    expect(preview).toContain("cp -r candidate-dev preview-site/dev");
-    expect(preview).toContain("--assets preview-site \\");
+    expect(preview).toContain(
+      'node scripts/verify-release-artifact.mjs standalone "$RUNNER_TEMP/candidate-dev" test-standalone',
+    );
+    // Its files are not ignored, so inside the checkout they would make it dirty and fail verification.
+    expect(preview).toContain("path: ${{ runner.temp }}/candidate-dev");
+    expect(preview).not.toMatch(/path: candidate-dev|cp -r candidate-dev/u);
+    expect(preview).toContain('cp -r "$RUNNER_TEMP/candidate-dev" "$site/dev"');
+    expect(preview).toContain('--assets "$RUNNER_TEMP/preview-site" \\');
     // The path the deploy uses is the base the dev build is built for.
     expect(read("vite.config.ts")).toContain('export const PREVIEW_DEV_BASE = "/dev/";');
     for (const file of ["deploy-production.yml", "deploy-wiki.yml"]) {
