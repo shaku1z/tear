@@ -11,7 +11,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 const journey = (practiceLab) =>
   withJourney(
     { name: practiceLab ? "practice lab journeys" : "playground journeys", port: practiceLab ? 8145 : 8144 },
-    async ({ page, boot, waitScreen }) => {
+    async ({ page, boot, waitScreen, restBlade, clickAtRest }) => {
       async function pressUntilScreen(key, screen) {
         for (let attempt = 0; attempt < 12; attempt++) {
           await page.keyboard.press(key);
@@ -99,7 +99,8 @@ const journey = (practiceLab) =>
         });
         const directory = process.env.TEAR_PRACTICE_LAB_ARTIFACT_DIR;
         if (directory) fs.mkdirSync(path.resolve(directory), { recursive: true });
-        const clickLabel = async (label) => {
+        // `atRest` clicks without leaving the pointer on the control (see clickAtRest in the harness).
+        const clickLabel = async (label, atRest = false) => {
           try {
             await page.waitForFunction(
               (expected) => window.__TEAR_PRACTICE_LAB_TEXT__?.some((entry) => entry.text === expected),
@@ -120,7 +121,8 @@ const journey = (practiceLab) =>
             (expected) => window.__TEAR_PRACTICE_LAB_TEXT__.findLast((entry) => entry.text === expected),
             label,
           );
-          await page.mouse.click(point.x, point.y);
+          if (atRest) await clickAtRest(point.x, point.y, "playing");
+          else await page.mouse.click(point.x, point.y);
         };
         const savedEffects = () =>
           page.evaluate(() => {
@@ -244,9 +246,11 @@ const journey = (practiceLab) =>
         assert.equal(opponent.snapshot.state["tear.enemy.v1"].length, 1);
         assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].kind, "charger");
         assert.notEqual(opponent.snapshot.state["tear.enemy.v1"][0].tutDummy, true);
+        // The restarted opponent spawns beside the player. Hold the blade still and away from it
+        // across the pause, so the click on RESTART LESSON does not swing the blade through it.
+        await restBlade();
         await pressUntilScreen("p", "paused");
-        await clickLabel("RESTART LESSON");
-        await waitScreen("playing");
+        await clickLabel("RESTART LESSON", true);
         opponent = await opponentAttempt();
         assert.equal(opponent.session.enemyPractice.defeated, false);
         {
