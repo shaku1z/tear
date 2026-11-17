@@ -41,7 +41,7 @@ function resolvedBoss(): Readonly<{ actor: PhaseThreeBoss; harness: ReturnType<t
     CONFIG.world.groundY - CONFIG.boss.h / 2,
   ) as PhaseThreeBoss;
   actor.hp = actor.maxHp * 0.2;
-  actor.update(1 / 120, harness.platforms, harness.player, []);
+  actor.update(1 / 120, harness.platforms, harness.player);
   actor.cinematicRequest = null;
   actor.cinematicT = 0;
   actor.beginRegrowth(0, connectionIds);
@@ -58,19 +58,19 @@ describe("Rootbound Last Spring", () => {
     expect(actor).toMatchObject({ lastSpringStage: "warning", lastSpringUseCount: 1, atk: "last-spring:warning" });
     expect(actor.bossBloomPattern()).toBe("last-spring");
 
-    actor.update(ROOTBOUND_LAST_SPRING.warning, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_LAST_SPRING.warning, harness.platforms, harness.player);
     expect(actor).toMatchObject({ lastSpringStage: "bloom", atk: "last-spring:bloom" });
     expect(harness.platforms.find((platform) => platform.arenaPlatId)?.arenaFractureRequest).toEqual({
       reason: "rootbound-last-spring",
       color: "#e4c95a",
     });
-    actor.update(ROOTBOUND_LAST_SPRING.bloom, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_LAST_SPRING.bloom, harness.platforms, harness.player);
     expect(actor).toMatchObject({ lastSpringStage: "commit", atk: "last-spring:commit" });
-    actor.update(ROOTBOUND_LAST_SPRING.commit, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_LAST_SPRING.commit, harness.platforms, harness.player);
     expect(actor).toMatchObject({ lastSpringStage: "punish", atk: "last-spring:punish" });
     expect(harness.player.damage).toHaveLength(1);
     expect(harness.player.damage[0]?.amount).toBe(ROOTBOUND_LAST_SPRING.damage);
-    actor.update(ROOTBOUND_LAST_SPRING.punish, harness.platforms, harness.player, []);
+    actor.update(ROOTBOUND_LAST_SPRING.punish, harness.platforms, harness.player);
     expect(actor).toMatchObject({ lastSpringStage: "complete", state: "recover", atk: "unavailable" });
     expect(actor.startLastSpring()).toBe(false);
   });
@@ -87,7 +87,7 @@ describe("Rootbound Last Spring", () => {
       )?.map((platform) => ({ ...platform })) ?? [];
     const broken: typeof platforms = [];
     expect(actor.startLastSpring()).toBe(true);
-    actor.update(ROOTBOUND_LAST_SPRING.warning, platforms, harness.player, []);
+    actor.update(ROOTBOUND_LAST_SPRING.warning, platforms, harness.player);
     const route = platforms.find((platform) => platform.arenaFractureRequest?.reason === "rootbound-last-spring");
     if (route === undefined) throw new Error("Last Spring must request one authored living route fracture");
     const rules = new BossArenaRules(CONFIG.bossArena, CONFIG.colors);
@@ -117,7 +117,7 @@ describe("Rootbound Last Spring", () => {
       CONFIG.world.groundY - CONFIG.boss.h / 2,
     ) as PhaseThreeBoss;
     actor.hp = actor.maxHp * 0.2;
-    actor.update(1 / 120, harness.platforms, harness.player, []);
+    actor.update(1 / 120, harness.platforms, harness.player);
     actor.cinematicRequest = null;
     actor.cinematicT = 0;
     const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-phase-three" });

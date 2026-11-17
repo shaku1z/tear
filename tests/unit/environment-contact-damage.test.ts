@@ -25,9 +25,9 @@ function target(hits: { damage: number; sourceX: number; ownerId: string | null 
   } satisfies EnvironmentContactTarget;
 }
 
-function rootline(state: "warning" | "active", extra: Record<string, unknown> = {}) {
+function touchField(state: "warning" | "active", extra: Record<string, unknown> = {}) {
   return {
-    kind: "rootline" as const,
+    kind: "bloom-well" as const,
     geometry: { x: 0, y: 40, w: 100, h: 20 },
     state,
     stateTick: 0,
@@ -49,8 +49,8 @@ describe("environment contact damage", () => {
     const hits: { damage: number; sourceX: number; ownerId: string | null }[] = [];
     const environment = createEnvironmentRuntime({ stageId: "rule-test", worldId: "contact-once" });
     environment.setContactTargets(() => [target(hits)]);
-    const scaled = environment.addField(rootline("active", { hazardScaled: true }));
-    const plain = environment.addField(rootline("active"));
+    const scaled = environment.addField(touchField("active", { hazardScaled: true }));
+    const plain = environment.addField(touchField("active"));
     for (let tick = 1; tick <= 5; tick += 1) environment.step(tick, DT, () => undefined);
     expect(hits).toEqual([
       { damage: 10, sourceX: 50, ownerId: "enemy:boss" },
@@ -63,13 +63,13 @@ describe("environment contact damage", () => {
   it("does not hurt while warning, when harmless, when out of reach or when the target is invulnerable", () => {
     const hits: { damage: number; sourceX: number; ownerId: string | null }[] = [];
     const environment = createEnvironmentRuntime({ stageId: "rule-test", worldId: "contact-none" });
-    environment.addField(rootline("warning"));
-    environment.addField(rootline("active", { threatening: false }));
-    environment.addField(rootline("active", { geometry: { x: 400, y: 40, w: 100, h: 20 } }));
+    environment.addField(touchField("warning"));
+    environment.addField(touchField("active", { threatening: false }));
+    environment.addField(touchField("active", { geometry: { x: 400, y: 40, w: 100, h: 20 } }));
     environment.setContactTargets(() => [target(hits)]);
     environment.step(1, DT, () => undefined);
     environment.setContactTargets(() => [target(hits, { invulnerable: true })]);
-    environment.addField(rootline("active"));
+    environment.addField(touchField("active"));
     environment.step(2, DT, () => undefined);
     expect(hits).toEqual([]);
   });

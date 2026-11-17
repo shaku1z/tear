@@ -85,7 +85,7 @@ function createBoss(id: HarnessBossId, phase: Phase) {
     settle();
   }
   player.damage.length = 0;
-  // The biome bosses run inside their environment, as in play: it owns Rootline's field, Grafts,
+  // The biome bosses run inside their environment, as in play: it owns Grafts,
   // the Root Cage and the Regrowth channel.
   const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: `boss-tell-rules:${id}` });
   const actorId = () => "enemy:boss";

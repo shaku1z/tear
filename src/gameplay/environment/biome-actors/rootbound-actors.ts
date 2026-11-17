@@ -1,4 +1,3 @@
-import { ROOTBOUND_ROOTLINE, type RootboundRootlineStage } from "../../entities/enemy-types/rootbound";
 import type { EnvironmentRuntime } from "../environment-runtime";
 import { createVerdantEnvironmentFeature, type RootboundEnvironmentActor } from "../verdant-environment-feature";
 import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
@@ -38,9 +37,6 @@ export function bindLiveRootboundActors(
       .filter((enemy) => enemy.kind === "rootbound")
       .map((enemy): RootboundEnvironmentActor => {
         const actor = enemy as BiomeActorEnemy & {
-          rootlineStage?: RootboundRootlineStage | null;
-          rootlineCleanupReason?: "natural-expiry" | "stage-transition" | null;
-          rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
           graftAnchorPlacements?: () => NonNullable<RootboundEnvironmentActor["state"]["graftPlacements"]>;
           plantedGraftTypes?: readonly string[];
           plantedBloomPattern?: RootboundEnvironmentActor["state"]["plantedBloomPattern"];
@@ -86,10 +82,6 @@ export function bindLiveRootboundActors(
               bossChannelBroken || actor.regrowthChannelBroken?.() === true,
             ) ?? actor.regrowthState,
           state: Object.freeze({
-            stage: actor.rootlineStage ?? null,
-            geometry: actor.rootlineGeometry?.() ?? Object.freeze({ x: enemy.x, y: enemy.y, w: 0, h: 0 }),
-            damage: ROOTBOUND_ROOTLINE.damage,
-            cleanupReason: actor.rootlineCleanupReason ?? null,
             graftPlacements: actor.graftAnchorPlacements?.() ?? Object.freeze([]),
             plantedGraftTypes: actor.plantedGraftTypes ?? Object.freeze([]),
             ownerPosition: Object.freeze({ x: enemy.x, y: enemy.y }),
