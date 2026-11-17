@@ -1792,7 +1792,6 @@
     ],
     "scripts/tearbench-build-artifact.mjs": [
       "scripts/build-target.mjs",
-      "scripts/tearbench.mjs",
       "tests/tearbench-build-artifact.test.mjs"
     ],
     "scripts/tearbench-reproducibility-contract.mjs": [

@@ -30,10 +30,8 @@ Build on Tear's Vitest suites, fixed-step simulation (120 Hz, per the ee5e931 or
 
 ## Completion
 
-Own permanent fail-first fixtures and canonical scenario packets. Transfer their
-claims, receipt identities, invalidators and gaps using the shared
-[client handoff](../tear-change-gate/references/evidence-handoff.md). For planned
-tasks, consume `client-status` and request `ensure-client-task` instead of repeating
-valid evidence. Leave final full-gate coordination to `tear-change-gate`.
+Own permanent fail-first fixtures and canonical scenario packets. Hand their claims,
+commands, evidence and gaps to `tear-change-gate` using the shared [evidence handoff](../tear-change-gate/references/evidence-handoff.md), and leave final
+full-gate coordination to it.
 
 Report the original failure, chosen suite, seed/actions/ticks, assertions, determinism scope, production fix, and exact commands run.

@@ -91,7 +91,7 @@
       "largestFunctionStatements": 106
     },
     "src/presentation/backdrop.ts": {
-      "chars": 25964,
+      "chars": 25909,
       "largestFunctionStatements": 140
     },
     "src/presentation/combat/attack-presentation-director.ts": {
@@ -129,9 +129,6 @@
     },
     "src/presentation/particles.ts": {
       "largestFunctionStatements": 139
-    },
-    "src/presentation/platform-materials/pale-ice.ts": {
-      "largestFunctionStatements": 82
     },
     "src/presentation/platform-materials/verdant-rootstone.ts": {
       "largestFunctionStatements": 129
