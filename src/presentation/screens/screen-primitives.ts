@@ -312,10 +312,10 @@ export function chips(
   width: number,
   height: number,
   gap = 8,
-  size?: number,
-): void {
-  if (values.length === 0) return;
-  const start = (context.width - (width * values.length + gap * (values.length - 1))) / 2;
+  reserve = 0,
+): number {
+  // `reserve` is room kept at the row's right end, centred with the chips; returns the x after the last chip.
+  const start = (context.width - (width * values.length + gap * (values.length - 1) + reserve)) / 2;
   values.forEach((value, index) => {
     context.enqueue({
       x: start + index * (width + gap),
@@ -326,9 +326,10 @@ export function chips(
       selected: value.selected,
       chip: true,
       action: action(value.id),
-      size: size ?? context.ui.t.type.micro,
+      size: context.ui.t.type.micro,
     });
   });
+  return start + values.length * (width + gap);
 }
 
 /** Oracle replay-vault/feed row shared by Profile and Leaderboards. */

@@ -11,6 +11,12 @@ rules below are the shared layer every biome uses. A biome adds content to it an
 - **Environment:** its row in `src/gameplay/environment/stage-environment-definitions.ts`.
 - **Look:** a backdrop in `src/presentation/backdrop-biomes.ts` and a row in
   `src/presentation/stage-presentation-definitions.ts`.
+- **Boss marks:** the same row may carry `bossTellSkin`, a table that says how boss warnings and strikes
+  are drawn on this stage (`src/presentation/enemies/renderers/boss-tell-skin.ts`): which shape each mark
+  takes and the colour of its body. The shared tell renderer draws from it when the boss's renderer passes
+  the stage id as `skinId`. A table changes looks only: every shape stays inside the tell's area and keeps
+  the shared warning and strike inks. A stage without a table, the exposed mark and high contrast keep the
+  shared marks. Verdant's roots are the example; `tests/unit/boss-tell-skin.test.ts` checks every table.
 - **Content:** the run's content director (`src/gameplay/run/content-director.ts`) decides which enemies
   appear on it.
 

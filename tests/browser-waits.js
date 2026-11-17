@@ -302,7 +302,55 @@ async function waitForScriptLoads(page) {
   await frames();
 }
 
+/** A control's label as a test names it: letters and digits only, case-insensitive ("‹  BACK" is "back"). */
+const targetName = (label) =>
+  String(label)
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .toUpperCase();
+
+/**
+ * Clicks the control labelled `name` once a drawn frame of `screen` has registered it, at the
+ * centre the game reports. Use it for menu clicks right after a screen change, instead of a
+ * coordinate click: a screen's state changes before its first frame is drawn, and a screen with a
+ * lazy renderer draws nothing (so has no targets) until its chunk has loaded. A click before then
+ * reaches a canvas with nothing under the pointer and is ignored, as it would be for a player who
+ * clicked a button not yet on screen. Needs a test build (`window.__TEAR_UI_TARGETS__`).
+ */
+async function clickTarget(page, screen, name) {
+  let point;
+  try {
+    const handle = await page.waitForFunction(
+      ({ screen: expected, wanted }) => {
+        if (window.__TEAR_CATALOG_DEBUG__?.app.snapshot().screen !== expected) return false;
+        const normal = (label) =>
+          String(label)
+            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .trim()
+            .toUpperCase();
+        const target = window.__TEAR_UI_TARGETS__?.().find((entry) => entry.enabled && normal(entry.label) === wanted);
+        return target === undefined ? false : { x: target.clientX, y: target.clientY };
+      },
+      { screen, wanted: targetName(name) },
+      { timeout: STATE_WAIT_MS },
+    );
+    point = await handle.jsonValue();
+  } catch (error) {
+    const state = await within(
+      page.evaluate(() => ({
+        screen: window.__TEAR_CATALOG_DEBUG__?.app.snapshot().screen,
+        targets: window.__TEAR_UI_TARGETS__?.().map((entry) => entry.label) ?? "not exposed",
+      })),
+      5000,
+      "the page did not answer",
+    ).catch((reason) => String(reason));
+    throw new Error(`no enabled "${name}" target on screen ${screen}: ${JSON.stringify(state)}`, { cause: error });
+  }
+  await page.mouse.click(point.x, point.y);
+}
+
 module.exports = {
+  clickTarget,
   trackScriptLoads,
   waitForScriptLoads,
   waitForPointerLock,

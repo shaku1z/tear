@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 const root = resolve(import.meta.dirname, "../..");
 const eslint = new ESLint({ cwd: root });
-const { reloadPage, STATE_WAIT_MS, trackScriptLoads, waitForScriptLoads } = createRequire(import.meta.url)(
+const { clickTarget, reloadPage, STATE_WAIT_MS, trackScriptLoads, waitForScriptLoads } = createRequire(import.meta.url)(
   "../browser-waits.js",
 );
 
@@ -195,5 +195,50 @@ describe("reloadPage", () => {
     );
     expect(failure.cause.message).toContain("Timeout exceeded");
     expect(page.listenerCount("framenavigated")).toBe(0);
+  });
+});
+
+describe("clickTarget", () => {
+  // Each poll of the page sees the next drawn frame: the screen's state changes before its first
+  // frame registers its controls, as the settings screen does while its lazy renderer loads.
+  function framesPage(frames) {
+    const clicks = [];
+    let frame = 0;
+    const page = {
+      mouse: { click: async (x, y) => void clicks.push([x, y]) },
+      evaluate: async () => ({ screen: frames.at(-1).screen, targets: [] }),
+      waitForFunction: async (predicate, argument) => {
+        for (; frame < frames.length; frame += 1) {
+          const { screen, targets } = frames[frame];
+          globalThis.window = {
+            __TEAR_CATALOG_DEBUG__: { app: { snapshot: () => ({ screen }) } },
+            __TEAR_UI_TARGETS__: () => targets,
+          };
+          const value = predicate(argument);
+          delete globalThis.window;
+          if (value) return { jsonValue: async () => value };
+        }
+        throw new Error("Timeout exceeded");
+      },
+    };
+    return { page, clicks };
+  }
+  const back = { label: "‹  BACK", enabled: true, clientX: 800, clientY: 828 };
+
+  it("clicks a control only once a frame of the expected screen has registered it", async () => {
+    const { page, clicks } = framesPage([
+      { screen: "paused", targets: [{ ...back, label: "RESUME", clientY: 151 }] },
+      { screen: "settings", targets: [] },
+      { screen: "settings", targets: [{ ...back, enabled: false }] },
+      { screen: "settings", targets: [back] },
+    ]);
+    await clickTarget(page, "settings", "BACK");
+    expect(clicks).toEqual([[800, 828]]);
+  });
+
+  it("names the screen and the targets it found when the control never appears", async () => {
+    const { page, clicks } = framesPage([{ screen: "settings", targets: [] }]);
+    await expect(clickTarget(page, "settings", "BACK")).rejects.toThrow(/no enabled "BACK" target on screen settings/u);
+    expect(clicks).toEqual([]);
   });
 });
