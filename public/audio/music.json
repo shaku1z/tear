@@ -1179,8 +1179,8 @@
      "archive"
     ],
     "unlock": {
-     "type": "biome-enter",
-     "biome": "The Verdant Sanctum"
+     "type": "boss-defeat",
+     "bossId": "rootbound"
     },
     "rights": {
      "gameUse": true,
@@ -1225,6 +1225,7 @@
        "gameplay"
       ],
       "vocals": false,
+      "openingIntro": true,
       "roles": [
        "rhythm",
        "pulse",
@@ -1522,6 +1523,18 @@
     "selection": {
      "type": "primary",
      "workId": "nocturnal-urgency"
+    }
+   },
+   {
+    "id": "verdant-first-run",
+    "match": {
+     "biome": "the-verdant-sanctum",
+     "scene": "gameplay",
+     "firstRun": true
+    },
+    "selection": {
+     "type": "primary",
+     "workId": "spring"
     }
    }
   ]
@@ -3007,6 +3020,11 @@
      "apex": 0
     }
    },
+   "openingIntro": {
+    "asset": "opus/intro.ogg",
+    "lengthSeconds": 23.287,
+    "note": "opening vocals (0-23.29 s, ending on the 8-bar phrase line in the vocal gap); plays once before the loop"
+   },
    "provenance": {
     "owner": "shaku1z",
     "license": "Owned/licensed by owner (owner-supplied stems, 2026-11-12/13).",
@@ -3017,7 +3035,7 @@
     "loopLufs": -16,
     "loopTruePeakDb": -2.2,
     "trimDb": -1.8,
-    "inputHash": "d61ef475ab4054b5"
+    "inputHash": "1ff1a27957c1cc45"
    }
   },
   "steady": {

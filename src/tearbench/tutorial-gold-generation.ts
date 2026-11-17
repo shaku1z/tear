@@ -333,7 +333,7 @@ function course(legacy: boolean) {
     throw new Error("Gold driver failed complete required course coverage");
   return { references, proofs };
 }
-export function generateTutorialGold(sourceHash: string): {
+export function generateTutorialGold(): {
   corpus: TutorialGoldCorpus;
   proof: TutorialGoldProof;
   binding: TutorialGoldBinding;
@@ -369,7 +369,7 @@ export function generateTutorialGold(sourceHash: string): {
     compatibility,
     references: [...current.proofs, ...legacy.proofs],
   };
-  return { corpus, proof, binding: bindTutorialGoldCorpus(corpus, sourceHash) };
+  return { corpus, proof, binding: bindTutorialGoldCorpus(corpus) };
 }
 export function verifyTutorialGoldReference(reference: TutorialGoldReference, proof: TutorialGoldProofReference): void {
   if (

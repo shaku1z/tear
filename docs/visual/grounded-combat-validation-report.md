@@ -40,7 +40,7 @@ The prior cel/anime captures remain historical rejection evidence. Generated con
 - `pnpm lint`: PASS
 - `pnpm check:architecture`: PASS
 - `pnpm build:test:standalone`: PASS
-- `node tests/browser-attack-presentation-capture.js`: PASS, 20 captures
+- `node tests/browser-attack-presentation-capture.js`: PASS, 20 captures (the capture script was deleted on 2026-11-16; git history keeps it)
 - Five production C40 engineering journeys: PASS for Sword, Hammer, Greatsword, Chainblade, and Riftlock
 - `pnpm test:browser:current-gameplay-scenarios`: PASS, 13 source-owned scenarios
 - Full Vitest: PASS, 457 files passed / 4 skipped; 1,980 tests passed / 4 skipped
