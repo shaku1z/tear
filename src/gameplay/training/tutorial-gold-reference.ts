@@ -26,11 +26,14 @@ export interface TutorialGoldCompatibility {
   readonly configurationHash: string;
   readonly definitionHash: string;
 }
-export const TUTORIAL_GOLD_BINDING_FORMAT = "tear-tutorial-gold-binding.v1";
-/** Binds a corpus to the source fingerprint it was generated from; a source-only refresh rewrites just this record. */
+export const TUTORIAL_GOLD_BINDING_FORMAT = "tear-tutorial-gold-binding.v2";
+/**
+ * Names the corpus the code ships with, by its content hash. It records only the gold output, never a
+ * source fingerprint, so it changes only when the gold output does; whether the output still matches
+ * the code is proven by regenerating it (tests/unit/tutorial-production-ghost.test.ts, and every build).
+ */
 export interface TutorialGoldBinding {
   readonly format: typeof TUTORIAL_GOLD_BINDING_FORMAT;
-  readonly sourceHash: string;
   readonly corpusContentHash: string;
 }
 export interface TutorialGoldBody {
@@ -237,20 +240,20 @@ function decodedCorpus(value: object): TutorialGoldCorpus {
     })),
   };
 }
-export function bindTutorialGoldCorpus(corpus: TutorialGoldCorpus, sourceHash: string): TutorialGoldBinding {
-  return { format: TUTORIAL_GOLD_BINDING_FORMAT, sourceHash, corpusContentHash: corpus.contentHash };
+export function bindTutorialGoldCorpus(corpus: TutorialGoldCorpus): TutorialGoldBinding {
+  return { format: TUTORIAL_GOLD_BINDING_FORMAT, corpusContentHash: corpus.contentHash };
 }
 function readBinding(value: unknown): TutorialGoldBinding | undefined {
   const binding = value as Partial<TutorialGoldBinding> | null;
   if (binding?.format !== TUTORIAL_GOLD_BINDING_FORMAT) return undefined;
-  if (typeof binding.sourceHash !== "string" || typeof binding.corpusContentHash !== "string") return undefined;
-  return { format: binding.format, sourceHash: binding.sourceHash, corpusContentHash: binding.corpusContentHash };
+  if (typeof binding.corpusContentHash !== "string" || !/^[a-f0-9]{16}$/.test(binding.corpusContentHash))
+    return undefined;
+  return { format: binding.format, corpusContentHash: binding.corpusContentHash };
 }
 /** Shipping data is detached, finite JSON; physics execution remains in the production generator/verifier. */
 export function loadTutorialGoldCorpus(
   value: unknown,
   binding: unknown,
-  expectedSourceHash: string,
 ):
   | Readonly<{ status: "ready"; corpus: TutorialGoldCorpus }>
   | Readonly<{ status: "unavailable"; reason: "incompatible" | "invalid" }> {
@@ -272,8 +275,7 @@ export function loadTutorialGoldCorpus(
       compatibility.difficulty !== "normal"
     )
       throw new Error("Invalid gold corpus");
-    if (!/^[a-f0-9]{64}$/.test(expectedSourceHash) || bound?.sourceHash !== expectedSourceHash)
-      return { status: "unavailable", reason: "incompatible" };
+    if (bound === undefined) return { status: "unavailable", reason: "incompatible" };
     const corpus = decodedCorpus(value as object);
     const ids = new Set<string>();
     for (const reference of corpus.references) {

@@ -64,3 +64,20 @@ export function accumulateRelativeTravel(
   const meaningful = distance > MEANINGFUL_POINTER_TRAVEL;
   return { travel: { distance: meaningful ? 0 : distance, at: now }, meaningful };
 }
+
+/** The devices that can aim the blade. */
+export type AimDevice = "mouse" | "touch" | "gamepad";
+
+/**
+ * Aim belongs to the device that last gave aim input: the mouse when it moves or clicks, the touch
+ * aim pad while a finger steers it, the controller while its right stick is deflected. The input
+ * layer records that owner (`BrowserInputState.aimDevice`) and every aim consumer reads it.
+ *
+ * Aim follows the devices while the owner is the mouse (its pointer stays where it is) or while the
+ * owner is still steering. When a stick or finger lets go, the aim holds where it left it; releasing
+ * a device never hands the aim to another one resting somewhere else. Only the next device to aim
+ * takes it.
+ */
+export function aimFollowsDevices(owner: AimDevice | null, steering: boolean): boolean {
+  return owner === null || owner === "mouse" || steering;
+}

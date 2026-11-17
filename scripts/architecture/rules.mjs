@@ -653,10 +653,10 @@ const STRUCTURE_RULES = [
       except: ["@engineering.channel-entries"],
       edges: "static-value",
       fixtures: {
-        reject: [{ imports: "@engineering.channel-entries", file: "@app.live-runtime-root" }],
+        reject: [{ imports: "src/app/engineering/example-channel-entry", file: "@app.live-runtime-root" }],
         accept: [
-          { imports: "@engineering.channel-entries", type: true, file: "@app.live-runtime-root" },
-          { dynamic: "@engineering.channel-entries", file: "@app.live-runtime-root" },
+          { imports: "src/app/engineering/example-channel-entry", type: true, file: "@app.live-runtime-root" },
+          { dynamic: "src/app/engineering/example-channel-entry", file: "@app.live-runtime-root" },
         ],
       },
     },

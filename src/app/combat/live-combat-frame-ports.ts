@@ -148,7 +148,7 @@ export function createLiveCombatFramePorts(options: LiveCombatFramePortsOptions)
       // into the same sealed action stream used by automation and future
       // detached replay hosts.  The canonical action adapter owns the actual
       // player/blade overrides during the resulting simulation tick.
-      if (inputAuthority.allowsDeviceAimCapture()) {
+      if (inputAuthority.allowsDeviceAimCapture() && Input.aimIsLive()) {
         const blade = liveBlade();
         const hand = blade.handPos(livePlayer());
         const aim = blade.captureDeviceAim(hand);

@@ -250,6 +250,32 @@ for (const impl of IMPLEMENTATIONS) {
         expect(prePush(impl, repo, line, "fork", "https://github.com/someone/tear.git").status).not.toBe(0);
       }));
 
+    it("rejects deleting any branch that is not exactly a batch branch", () =>
+      withRepo(impl, (repo) => {
+        for (const name of [
+          "codex/batch-x",
+          "codex/batch-20261116t232224z-extra",
+          "codex/batch-20261116T232224Z",
+          "codex/batch-merge",
+          "codex/test-scope",
+          "main",
+        ]) {
+          const deletion = `(delete) ${ZERO} refs/heads/${name} ${"a".repeat(40)}`;
+          expect(prePush(impl, repo, deletion).status, name).not.toBe(0);
+        }
+      }));
+
+    // The shared skill copy serves the music and wiki repositories, which have no batch branches,
+    // and keeps refusing every deletion; this owner decision (2026-11-16) is the game repository's.
+    it.runIf(impl.label === "in-repo")("allows deleting a batch branch, and only by its exact name", () =>
+      withRepo(impl, (repo) => {
+        const deletion = `(delete) ${ZERO} refs/heads/codex/batch-20261116t232224z ${"a".repeat(40)}`;
+        expect(prePush(impl, repo, deletion).status).toBe(0);
+        const disguised = `refs/heads/codex/test-scope ${ZERO} refs/heads/codex/batch-20261116t232224z ${"a".repeat(40)}`;
+        expect(prePush(impl, repo, disguised).status).not.toBe(0);
+      }),
+    );
+
     it("rejects pushing a foreign commit object made without hooks", () =>
       withRepo(impl, (repo, base) => {
         const foreign = commitTree(repo, "feat: foreign object", base, FOREIGN);
