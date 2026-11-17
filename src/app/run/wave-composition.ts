@@ -8,7 +8,7 @@ import type { RunMode } from "../../gameplay/run/session";
 import { describeWave } from "../../gameplay/run/wave-rules";
 import { createTearWaveFactPublisher } from "../../gameplay/runtime/gameplay-event-publishers";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { createLiveCampaignHost } from "../campaign/campaign-host";
 import type { createLiveContentComposition } from "../world/content-composition";
 import type { LiveRunControllerRegistry } from "./run-controller-api";

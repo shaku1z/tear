@@ -23,7 +23,7 @@ import { createSeedRaceDecision } from "../../ghost/seed-race-decisions";
 import type { RewardDecision } from "../../gameplay/run/reward-runtime";
 import type { RewardChoice, RewardSelectionSnapshot } from "../../gameplay/run/reward-selection";
 import type { GhostPublicationRuntime } from "../../platform/ghost-publication-runtime";
-import type { GameRun } from "../shell/game-runtime-state";
+import type { GameRun } from "../../gameplay/runtime/game-runtime-state";
 
 export function createLiveBeatThisRunController(
   options: Readonly<{

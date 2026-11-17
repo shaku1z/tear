@@ -6,7 +6,7 @@ import type { LiveGhostPublicationController } from "../replay/ghost-publication
 import type { LiveGhostSupportController } from "../replay/ghost-support-controller";
 import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameRun } from "../shell/game-runtime-state";
+import type { GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import { trainingRunRequiresPreflight } from "../training/training-host";
 import type { LiveWorldSessionState } from "../world/world-session-state";

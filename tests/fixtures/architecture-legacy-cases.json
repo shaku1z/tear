@@ -14,7 +14,7 @@
     "R06"
    ],
    "file": "src/tearbench/__planted-world-violation.ts",
-   "text": "import type { GameEnemy } from \"../app/shell/game-runtime-state\";",
+   "text": "import type { GameEnemy } from \"../gameplay/runtime/game-runtime-state\";",
    "reject": true
   },
   {

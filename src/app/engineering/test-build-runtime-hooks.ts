@@ -25,7 +25,7 @@ import type { LiveRunAbandonment } from "../run/live-run-abandonment";
 import type { LiveRunOrchestration } from "../run/run-orchestration-composition";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { RuntimeFrameDriver } from "../shell/runtime-frame-driver";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveInputAuthorityState } from "../world/input-authority-state";
