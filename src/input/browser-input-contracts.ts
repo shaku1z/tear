@@ -171,6 +171,8 @@ export interface BrowserInput {
   startSemanticRecording(): void;
   stopSemanticRecording(): void;
   discardSemanticInput(): void;
+  /** Drops every press still waiting when a scene hands control back (src/input/scene-release.ts). */
+  discardScenePresses(): void;
   drainSemanticActions(tick: number, aimTurn?: number): readonly CommandEnvelope<GameAction>[];
   syncSemanticMovement(): void;
   setPadTether(held: boolean): void;
