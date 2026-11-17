@@ -467,26 +467,28 @@ test("Pale State Forge selection rejects detached descriptors, false claims, and
 
 test("current five-weapon live-versus-detached parity is mandatory in the canonical functional gate", () => {
   const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
-  const registry = JSON.parse(readFileSync(join(root, "src", "tearbench", "task-registry.json"), "utf8"));
-  const functional = new Set(registry.profiles["pull-request"]);
+  const checks = JSON.parse(readFileSync(join(root, "config", "checks.json"), "utf8"));
+  const runs = new Map(
+    Object.entries(checks.groups).flatMap(([group, list]) => list.map((check) => [`${group}.${check.id}`, check.run])),
+  );
   assert.match(scripts["test:browser:current-weapon-parity"], /tearbench parity current-weapons/u);
+  assert.match(runs.get("browser.weapon-scenarios") ?? "", /tearbench\.mjs parity current-weapons/u);
   assert.equal(
     scripts["test:headless:current-weapon-parity"],
     "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts",
   );
-  assert.ok(functional.has("headless.test-headless-current-weapon-parity"));
   assert.equal(
     scripts["test:headless:current-gameplay-scenarios"],
     "pnpm exec vitest run tests/unit/current-headless-gameplay-scenarios.test.ts",
   );
-  assert.ok(functional.has("headless.test-headless-current-gameplay-scenarios"));
+  // unit.vitest runs every tests/unit test, the two headless files included.
+  assert.ok(runs.has("unit.vitest"));
   assert.equal(scripts["test:browser:current-gameplay-scenarios"], "node tests/browser-current-gameplay-scenarios.js");
-  assert.ok(functional.has("browser.test-browser-current-gameplay-scenarios"));
-  assert.ok(functional.has("browser.test-browser-current-weapon-parity"));
+  assert.equal(runs.get("browser.gameplay-scenarios"), "node tests/browser-current-gameplay-scenarios.js");
   assert.equal(scripts["test:tearbench-selection"], "node --test tests/tearbench-evidence-selection.test.mjs");
   assert.match(scripts["check:workspace"], /pnpm test:tearbench-selection/u);
-  assert.ok(functional.has("unit.test-tearbench-selection"));
-  assert.ok(functional.has("static.check-workspace"));
+  assert.match(runs.get("static.node-tests") ?? "", /tests\/tearbench-evidence-selection\.test\.mjs/u);
+  assert.equal(runs.get("static.workspace"), "node scripts/check-workspace.mjs --ci");
   assert.equal(scripts["check:functional"], "node scripts/run-checks.mjs");
 });
 
@@ -859,7 +861,7 @@ test("diff scope canonicalization deduplicates and sorts changed files", () => {
 test("served build identity refuses stale revision and source fingerprint", async () => {
   const previousArgv = process.argv,
     previousLog = console.log;
-  process.argv = [process.execPath, script, "identity-test-import"];
+  process.argv = [process.execPath, script, "help"];
   console.log = () => undefined;
   let canReuseDiffCapabilityReport,
     formatFailedEvidenceExecution,

@@ -1,6 +1,6 @@
-export const INPUT_AXIS_SCALE = 1_000;
-export const AIM_TURN_SCALE = 1_000_000;
-export const AIM_MAGNITUDE_SCALE = 1_000;
+import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE } from "../domain/input-scales";
+
+export { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE };
 
 export type InputPhase = "pressed" | "released";
 export type WeaponIntent = "primary" | "secondary" | "throw" | "recall";
