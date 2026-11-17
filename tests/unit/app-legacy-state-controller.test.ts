@@ -20,8 +20,6 @@ function controllerAt(screen: AppScreen): AppStateController {
       confirmquit: ["playing", "paused", "confirmquit"],
       pgmenu: ["playing", "pgmenu"],
       pglab: ["playing", "pglab"],
-      // Bot Evidence is a read-only Ghost Lab child, not a menu destination.
-      botevidence: ["ghostlab", "botevidence"],
       // Publication and Support are selected from a Vault row in Profile.
       ghostpublication: ["profile", "ghostpublication"],
       ghostsupport: ["profile", "ghostsupport"],
@@ -34,13 +32,6 @@ function controllerAt(screen: AppScreen): AppStateController {
 }
 
 describe("AppStateController transition matrix", () => {
-  it("keeps Bot Evidence behind the normal Ghost Lab route", () => {
-    const controller = new AppStateController(ENGINEERING);
-    expect(() => controller.transition("botevidence")).toThrow(IllegalLegacyAppTransitionError);
-    controller.transition("ghostlab");
-    expect(controller.transition("botevidence")).toBe("botevidence");
-  });
-
   it("accepts every declared legal edge", () => {
     for (const from of APP_SCREENS) {
       for (const to of LEGAL_TRANSITIONS[from]) {
