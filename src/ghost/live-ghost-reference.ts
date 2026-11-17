@@ -1,6 +1,6 @@
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { readSeedRaceRun, seedRaceInitialBuildHash } from "./seed-race-contract";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
 import { injectedBuildIdentity } from "../tearbench/live-runtime-snapshots";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";

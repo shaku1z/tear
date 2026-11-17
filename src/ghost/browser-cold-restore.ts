@@ -3,7 +3,7 @@ import {
   prepareGhostPortableArchive,
   type GhostPortableArchiveBinding,
 } from "./capsule-paired-archive";
-import { canonicalStringify } from "../replay/hash";
+import { canonicalStringify } from "../domain/hash";
 import { prepareCompleteGhostCapsuleArchive } from "./capsule-archive";
 import { GhostColdRestore, GhostColdRestoreError } from "./cold-restore";
 import { ghostColdRestoreJobKey, parseGhostColdRestoreJob, type GhostColdRestoreJob } from "./cold-restore-job";

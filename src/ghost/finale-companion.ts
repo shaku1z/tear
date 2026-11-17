@@ -6,7 +6,7 @@ import {
   type GhostApplicationClockEvent,
 } from "./application-frame-events";
 import type { GhostReadCapsule } from "./capsule-reader";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
 
 export interface GhostFinaleCompanionV1 {

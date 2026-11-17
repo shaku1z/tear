@@ -1,6 +1,6 @@
 import type { AuthoritativeInputSnapshot } from "../runtime/authoritative-input";
 import type { GameAction } from "../../input/game-action";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 
 export const TUTORIAL_GOLD_LESSONS = [
   "move",

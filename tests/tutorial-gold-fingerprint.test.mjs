@@ -285,7 +285,7 @@ test("(i) reformatting every covered file leaves the fingerprint unchanged", () 
 
 test("(ii) moving and renaming covered files with their imports updated leaves the fingerprint unchanged", () => {
   withClosureCopy((root) => {
-    const files = moveModule(root, original.files, "src/replay/hash.ts", "src/relocated/verification/stable-hash.ts");
+    const files = moveModule(root, original.files, "src/domain/hash.ts", "src/relocated/verification/stable-hash.ts");
     moveModule(
       root,
       files,
@@ -297,7 +297,7 @@ test("(ii) moving and renaming covered files with their imports updated leaves t
     );
     const moved = tutorialGoldSourceFingerprint(root, roots);
     assert.equal(moved.files.includes("src/relocated/verification/stable-hash.ts"), true);
-    assert.equal(moved.files.includes("src/replay/hash.ts"), false);
+    assert.equal(moved.files.includes("src/domain/hash.ts"), false);
     assert.equal(moved.sourceHash, original.sourceHash, firstStreamDifference(root, roots));
   });
 });

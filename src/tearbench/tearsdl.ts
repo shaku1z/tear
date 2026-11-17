@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { BOSS_REGISTRY, DIFFICULTY_REGISTRY, RUN_MODE_REGISTRY, WEAPON_REGISTRY } from "./registries";
 import { bossDefinition } from "../gameplay/run/boss-definitions";
 import { STAGE_IDS } from "../gameplay/stages";

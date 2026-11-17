@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import type { TearSnapshotV1 } from "../contracts";
 import type { TearRuntimeBridgeFactory } from "../live-runtime-contracts";
 import {

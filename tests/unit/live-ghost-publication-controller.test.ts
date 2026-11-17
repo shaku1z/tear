@@ -25,7 +25,7 @@ import {
   classifyRunEligibility,
   parseGhostLocalPublicationJob,
 } from "../../src/ghost";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { LiveGhostPublicationController } from "../../src/app/replay/ghost-publication-controller";
 import type { GhostPublicationRuntime } from "../../src/platform/ghost-publication-runtime";
 

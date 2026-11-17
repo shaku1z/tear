@@ -17,7 +17,7 @@ import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
 import { admitGhostFinaleCompanion, type GhostFinaleCompanionV1 } from "../../src/ghost/finale-companion";
 import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-receipt";
 import { reviseGhostCapsuleManifest, ghostRootIntegrity, type TearGhostManifest } from "../../src/ghost/capsule-vault";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,

@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
 import { ENVIRONMENT_OBJECT_KIND_IDS } from "../gameplay/environment/environment-object-kinds";
 import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";

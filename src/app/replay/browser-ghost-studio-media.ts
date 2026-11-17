@@ -35,7 +35,7 @@ import {
 } from "../../ghost/player-experiences";
 import { parseGhostApplicationClockEvent } from "../../ghost/application-frame-events";
 import { mapGhostCapsuleToReplayEnvelope } from "../../ghost/capsule-replay-envelope";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 
 type Ui = LiveWorldSimulationPresentationAdapterOptions["ui"] & CinematicUiPort & WorldUiPort;
 /** Each reconstructed world gets its own theme, backdrop caches, FX and renderer constructors. */

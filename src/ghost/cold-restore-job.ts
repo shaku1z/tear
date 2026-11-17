@@ -1,5 +1,5 @@
 import type { GhostPortableArchiveBinding, GhostPairedArchiveBinding } from "./capsule-paired-archive";
-import { canonicalStringify } from "../replay/hash";
+import { canonicalStringify } from "../domain/hash";
 import { ghostArchiveSha256, normalGhostArchiveLimits, type NormalGhostArchiveLimits } from "./capsule-archive";
 import type { GhostImportBaseline } from "./capsule-import-plan";
 import type { GhostVaultGuard, GhostVaultWrite } from "./capsule-vault-backend";

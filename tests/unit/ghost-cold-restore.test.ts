@@ -20,7 +20,7 @@ import {
 import { prepareGhostCapsuleArchive } from "../../src/ghost/capsule-archive";
 import type { GhostColdRestoreCompletion } from "../../src/ghost/cold-restore-job";
 import { encodeGhostChunkPayload } from "../../src/ghost/capsule-codec";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { ghostRootIntegrity } from "../../src/ghost/capsule-vault";
 
 const now = () => "2026-10-19T00:00:02Z";

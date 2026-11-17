@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { createGhostProductionReplaySession } from "./production-replay-session";
