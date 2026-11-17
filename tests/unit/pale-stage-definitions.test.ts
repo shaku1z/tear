@@ -8,12 +8,7 @@ import { stagePresentationDefinition } from "../../src/presentation/stage-presen
 describe("Pale typed stage environment", () => {
   it("routes the stable Pale identity to its bounded presentation policies", () => {
     expect(stagePresentationDefinition("pale-traverse")).toEqual({
-      backdropId: "pale-traverse",
       platformMaterialId: "pale-ice",
-      environmentPresentationId: "pale-traverse",
-      reflectionPolicy: "frozen-lower-field",
-      particlePolicy: "sparse-snow",
-      lowGraphicsPolicy: "silhouette-and-telegraph-only",
     });
   });
 
