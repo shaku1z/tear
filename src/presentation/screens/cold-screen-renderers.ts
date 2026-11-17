@@ -5,9 +5,7 @@ import { createPlaygroundRenderers } from "./playground";
 import { createProfileAchievementRenderers } from "./profile-achievements";
 import { createSettingsRenameRenderers } from "./settings-rename";
 import { createMusicRenderers } from "./music";
-import { createAcademyRenderers } from "./academy";
-import { createFoundryRenderers } from "./foundry";
-import { createGhostLabRenderers } from "./ghost-lab";
+import { createGhostPublicationSupportRenderers } from "./ghost-publication-support";
 
 /** Cold canvas screens kept outside the startup bundle. */
 export function createColdScreenRenderers(context: ScreenRenderContext) {
@@ -18,8 +16,6 @@ export function createColdScreenRenderers(context: ScreenRenderContext) {
     ...createPlaygroundRenderers(context),
     ...createSettingsRenameRenderers(context),
     ...createMusicRenderers(context),
-    ...createAcademyRenderers(context),
-    ...createFoundryRenderers(context),
-    ...createGhostLabRenderers(context),
+    ...createGhostPublicationSupportRenderers(context),
   });
 }

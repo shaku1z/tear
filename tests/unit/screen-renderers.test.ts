@@ -10,8 +10,6 @@ import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
-import { LiveGhostLabHomeController } from "../../src/app/replay/ghost-lab-home";
-import type { LivePlayerWatchController } from "../../src/app/engineering/player-watch-controller";
 
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";
@@ -535,16 +533,12 @@ describe("legacy screen renderer registry", () => {
     expectTypeOf<ReturnType<typeof createUi>>().toExtend<ScreenUiPort>();
     const registry = createScreenRenderers(createControlContext([]));
     expect(Object.keys(registry).sort()).toEqual([
-      "academy",
       "achievements",
-      "botevidence",
       "codex",
       "confirmquit",
       "continue",
       "draft",
-      "foundry",
       "gameover",
-      "ghostlab",
       "ghostpublication",
       "ghostsupport",
       "leaderboards",
@@ -961,298 +955,6 @@ describe("legacy screen renderer registry", () => {
     });
   });
 
-  it("renders durable Academy custody through a typed view with a semantic return", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    expect(() => {
-      renderer.academy({
-        id: "academy",
-        status: "ready",
-        subtitle: "durable training custody",
-        rows: [
-          { label: "HELD", value: "3" },
-          { label: "REVIEWED", value: "2" },
-          { label: "CURATED", value: "1" },
-          { label: "TRAINING SPLIT", value: "1" },
-        ],
-        records: [
-          {
-            id: "A1B2C3D4",
-            state: "held · reviewed · training",
-            detail: "anonymous-improvement · indefinite retention · curation-approved",
-          },
-        ],
-        manifests: [{ id: "RELEASE V2", detail: "1 governed entry · root BEEFCAFE" }],
-      });
-    }).not.toThrow();
-    expect(
-      controls.find((control) => control.action.type === "navigate" && control.action.to === "menu"),
-    ).toMatchObject({ label: "‹  BACK" });
-  });
-
-  it("renders Ghost Lab as safe local routes and explicit unavailable operations", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.ghostlab({
-      id: "ghostlab",
-      subtitle: "local routes",
-      routes: [
-        { id: "academy", label: "ACADEMY", detail: "local custody" },
-        { id: "training-operations", label: "TRAINING OPERATIONS", detail: "local recovery" },
-        { id: "vault", label: "GHOST VAULT", detail: "capsule gated Theater" },
-        { id: "botevidence", label: "GAME AGENT EVIDENCE", detail: "exact retained report" },
-        { id: "watch", label: "RUN MONITOR", detail: "canonical V3 locally available" },
-      ],
-      unavailable: [
-        { label: "WATCH", detail: "not player-safe" },
-        { label: "STATE FORGE", detail: "engineering only" },
-      ],
-      watch: { status: "ready", detail: "canonical V3 locally available", decisions: 0 },
-    });
-    expect(
-      controls.filter((control) => control.action.type === "replay.hub.open").map((control) => control.action),
-    ).toEqual([
-      { type: "replay.hub.open", destination: "academy" },
-      { type: "replay.hub.open", destination: "training-operations" },
-      { type: "replay.hub.open", destination: "vault" },
-    ]);
-    expect(
-      controls.some(
-        (control) => control.action.type === "game-agent.open" || control.action.type === "run-monitor.open",
-      ),
-    ).toBe(false);
-    expect(controls.find((control) => control.action.type === "run-monitor.control")).toMatchObject({
-      label: "START RUN MONITOR",
-      action: { type: "run-monitor.control", command: "start" },
-    });
-    expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
-  });
-
-  it("keeps Run Monitor embedded and derives unavailable routes from one watch snapshot", () => {
-    const snapshot = vi.fn(() => ({
-      status: "ready" as const,
-      detail: "canonical V3 locally available",
-      decisions: 0,
-    }));
-    const view = new LiveGhostLabHomeController({ snapshot }).snapshot();
-    expect(snapshot).toHaveBeenCalledOnce();
-    expect(view.routes.map((route) => route.id)).not.toContain("watch");
-    expect(view.routes.map((route) => route.id)).not.toContain("botevidence");
-    expect(view.unavailable.map((entry) => entry.label)).not.toContain("RUN MONITOR");
-    expect(view.unavailable.map((entry) => entry.label)).toContain("GAME AGENT EVIDENCE");
-  });
-
-  it("keeps an unavailable Run Monitor out of available routes and hides its commands", () => {
-    const view = new LiveGhostLabHomeController({
-      snapshot: () => ({ status: "unavailable", detail: "no policy", decisions: 0 }),
-    } as unknown as LivePlayerWatchController).snapshot();
-    expect(view.routes.map((route) => route.label)).not.toContain("RUN MONITOR");
-    expect(view.unavailable.filter((entry) => entry.label === "RUN MONITOR")).toHaveLength(1);
-    const controls: ScreenControl[] = [],
-      renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.ghostlab(view);
-    expect(controls.some((control) => control.action.type === "run-monitor.control")).toBe(false);
-  });
-
-  it("renders Bot Evidence as a read-only unavailable or exact-report projection", () => {
-    const controls: ScreenControl[] = [],
-      renderer = createScreenRenderers(createRenderContext(controls));
-    expect(() => {
-      renderer.botevidence({
-        id: "botevidence",
-        status: "unavailable",
-        subtitle: "exact local evidence",
-        detail: "missing or stale",
-      });
-    }).not.toThrow();
-    expect(
-      controls.find((control) => control.action.type === "navigate" && control.action.to === "menu"),
-    ).toMatchObject({ label: "‹  BACK" });
-  });
-
-  it("projects a running Run Monitor into the paused screen with semantic pause and stop controls", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.paused({ id: "paused", abilities: [], progress: [], playerWatch: { status: "running", decisions: 7 } });
-    expect(
-      controls.filter((control) => control.action.type === "run-monitor.control").map((control) => control.action),
-    ).toEqual([
-      { type: "run-monitor.control", command: "pause" },
-      { type: "run-monitor.control", command: "stop" },
-    ]);
-    // Run Monitor controls continue the pause action rail at the shared button metrics.
-    const rail = controls.filter((control) => control.x === controls[0]?.x);
-    expect(rail.map((control) => control.label)).toEqual([
-      "RESUME",
-      "RESTART",
-      "SETTINGS",
-      "MAIN MENU",
-      "PAUSE RUN MONITOR",
-      "STOP RUN MONITOR",
-    ]);
-    expect(
-      controls.find((control) => control.action.type === "run-monitor.control" && control.action.command === "pause"),
-    ).toMatchObject({ label: "PAUSE RUN MONITOR", x: 40, w: 300, h: 48 });
-  });
-
-  it("offers a semantic retry with storage guidance when Academy inspection is unavailable", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.academy({
-      id: "academy",
-      status: "unavailable",
-      subtitle: "Academy storage is unavailable",
-      rows: [],
-      records: [],
-      manifests: [],
-    });
-    expect(controls.find((control) => control.action.type === "training-archive.retry")).toMatchObject({
-      label: "TRY AGAIN",
-      x: 690,
-      w: 220,
-      h: 46,
-    });
-  });
-
-  it("renders opaque Foundry launch eligibility and only an eligible semantic bootstrap", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.foundry({
-      id: "foundry",
-      status: "ready",
-      subtitle: "local recovery",
-      automation: "unavailable",
-      launchProfiles: [
-        { profileId: "eligible-local-cycle", disposition: "eligible" },
-        { profileId: "blocked-local-cycle", disposition: "blocked" },
-      ],
-      jobs: [
-        {
-          jobHash: "a".repeat(16),
-          phase: "collecting",
-          nextManualPhase: "curating",
-          resumable: true,
-          eventCount: 2,
-          lastEventHash: "b".repeat(16),
-          projectionHash: "c".repeat(16),
-        },
-      ],
-      schedules: [],
-    });
-    expect(controls.find((control) => control.action.type === "training-operations.bootstrap")).toMatchObject({
-      label: "START LOCAL CYCLE",
-      action: { profileId: "eligible-local-cycle" },
-      enabled: true,
-    });
-    expect(
-      controls.find(
-        (control) =>
-          control.action.type === "training-operations.bootstrap" && control.action.profileId === "blocked-local-cycle",
-      ),
-    ).toMatchObject({ label: "BLOCKED", enabled: false });
-    expect(JSON.stringify(controls)).not.toContain("artifactHash");
-    expect(JSON.stringify(controls)).not.toContain("custody");
-  });
-
-  it("renders durable DAgger status and exposes only a persisted-plan advance action", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    expect(() => {
-      renderer.academy({
-        id: "academy",
-        status: "ready",
-        subtitle: "durable training custody",
-        rows: [],
-        records: [
-          {
-            id: "A1",
-            state: "HELD",
-            detail: "anonymous improvement",
-            candidateHash: "a".repeat(16),
-            canWithdrawModelTraining: true,
-          },
-        ],
-        manifests: [],
-        daggerPrograms: [
-          { id: "DAGGER ALPHA", state: "REVIEW REQUIRED", detail: "round 1 · awaiting an authorized review" },
-          {
-            id: "CORRECTION 12345678",
-            programId: "dagger-alpha",
-            state: "AWAITING DECISION",
-            detail: "tick 3 - challenger: primary - teacher: guard",
-            correctionHash: "a".repeat(16),
-            canReview: true,
-          },
-          {
-            id: "DAGGER BETA",
-            programId: "dagger-beta",
-            state: "COMPLETED",
-            detail: "fit retained; not activated or promoted",
-            canAdvance: true,
-          },
-        ],
-      });
-    }).not.toThrow();
-    expect(controls.find((control) => control.action.type === "training-archive.dagger.advance")).toMatchObject({
-      label: "ADVANCE PLAN",
-      action: { id: "dagger-beta" },
-    });
-    expect(controls.find((control) => control.action.type === "training-archive.dagger.review")).toMatchObject({
-      label: "ACCEPT",
-      action: { id: "dagger-alpha", disposition: "accepted" },
-    });
-    expect(
-      controls.find((control) => control.action.type === "training-archive.record.withdrawModelTraining"),
-    ).toMatchObject({ label: "WITHDRAW TRAINING CONSENT", action: { candidateHash: "a".repeat(16) } });
-  });
-
-  it("projects only an explicit human-calibration consent control", () => {
-    const controls: ScreenControl[] = [];
-    const renderer = createScreenRenderers(createRenderContext(controls));
-    renderer.academy({
-      id: "academy",
-      status: "ready",
-      subtitle: "durable training custody",
-      rows: [],
-      records: [],
-      manifests: [],
-      humanCalibrationConsent: {
-        state: "not-enrolled",
-        detail: "no recorded consent",
-        canOptIn: true,
-        canRevoke: false,
-      },
-    });
-    expect(controls.find((control) => control.action.type === "training-archive.humanCalibration.optIn")).toMatchObject(
-      { label: "ALLOW ANONYMOUS CALIBRATION", action: { consent: "anonymous-improvement" } },
-    );
-    expect(controls.some((control) => control.action.type === "training-archive.humanCalibration.revoke")).toBe(false);
-  });
-
-  it("pages complete privacy-safe Academy records and manifests through screen scroll", () => {
-    const controls: ScreenControl[] = [];
-    const context = createRenderContext(controls);
-    const renderer = createScreenRenderers({ ...context, scroll: 52 });
-    expect(() => {
-      renderer.academy({
-        id: "academy",
-        status: "ready",
-        subtitle: "durable training custody",
-        rows: [],
-        records: Array.from({ length: 5 }, (_, index) => ({
-          id: `RECORD-${String(index + 1)}`,
-          state: "held",
-          detail: "anonymous",
-        })),
-        manifests: Array.from({ length: 4 }, (_, index) => ({
-          id: `MANIFEST V${String(index + 1)}`,
-          detail: "governed",
-        })),
-      });
-    }).not.toThrow();
-    expect(controls.some((control) => control.action.type === "navigate" && control.action.to === "menu")).toBe(true);
-  });
-
   it("uses the oracle replay-vault row geometry and a profile-specific watch intent", () => {
     const controls: ScreenControl[] = [];
     const renderer = createScreenRenderers(createRenderContext(controls));
@@ -1635,11 +1337,9 @@ describe("release and engineering surface rendering", () => {
     difficultyLabel: "Normal",
     nowPlaying: { label: "NOW PLAYING", detail: "Grounds" },
   };
-  const engineeringLabels = ["TRAINING ARCHIVE", "TRAINING OPERATIONS", "REPLAY HUB"];
-  it("omits the engineering menu routes in release and seats the music row directly under SETTINGS", () => {
+  it("seats the music row directly under SETTINGS", () => {
     const controls: ScreenControl[] = [];
     createScreenRenderers(createRenderContext(controls)).menu(menuView);
-    expect(controls.some((control) => engineeringLabels.includes(control.label))).toBe(false);
     const settings = controls.find((control) => control.label === "SETTINGS"),
       music = controls.find((control) => control.glyph === "♪");
     expect(settings).toMatchObject({ y: 670, h: 52 });
@@ -1651,21 +1351,6 @@ describe("release and engineering surface rendering", () => {
     });
     // The footer tagline is drawn at height - 46; the release music row ends well above it.
     expect((music?.y ?? 0) + (music?.h ?? 0)).toBeLessThan(900 - 46 - 20);
-  });
-  it("keeps the engineering menu routes at their established coordinates", () => {
-    const controls: ScreenControl[] = [];
-    createScreenRenderers(createRenderContext(controls)).menu({ ...menuView, engineeringRoutes: true });
-    expect(
-      controls
-        .filter((control) => engineeringLabels.includes(control.label))
-        .map(({ label, x, y }) => ({ label, x, y })),
-    ).toEqual([
-      { label: "TRAINING ARCHIVE", x: 100, y: 731 },
-      { label: "TRAINING OPERATIONS", x: 438, y: 731 },
-      { label: "REPLAY HUB", x: 670, y: 731 },
-    ]);
-    // Extra rows continue the rail rhythm (61 px pitch) under the engineering row.
-    expect(controls.find((control) => control.glyph === "♪")).toMatchObject({ y: 792 });
   });
   it("renders a release setup with no DEV section, no race control and a centred START", () => {
     const controls: ScreenControl[] = [],

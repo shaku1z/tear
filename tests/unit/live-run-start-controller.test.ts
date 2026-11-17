@@ -1097,7 +1097,7 @@ describe("LiveRunStartController", () => {
     },
   );
 
-  it.each(["menu", "setup", "gameover", "win", "playing", "ghostlab", "paused"])(
+  it.each(["menu", "setup", "gameover", "win", "playing", "paused"])(
     "retains the canonical %s predecessor/playing edge",
     async (screen) => {
       const { capsule, snapshot } = await sealedActualOpening(screen),

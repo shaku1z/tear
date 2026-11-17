@@ -9,7 +9,6 @@ import type { LiveCombatCoordinatorContext } from "../combat/combat-frame-contex
 import { createLiveCanonicalStateCapture, type LiveCanonicalCombatHost } from "../combat/live-canonical-state";
 import { createLiveCombatActionPorts } from "../combat/live-combat-action-ports";
 import { createLiveCombatFramePorts } from "../combat/live-combat-frame-ports";
-import { RELEASE_ENGINEERING_SURFACES } from "../engineering/engineering-surfaces-contract";
 import { createGhostV3BrowserTestOptions } from "../engineering/ghost-v3-browser-test-options";
 import { assembleLiveStateForge } from "../engineering/live-state-forge-assembly";
 import { createLiveTestBuildJournals } from "../engineering/test-build-journals";
@@ -43,7 +42,6 @@ import { createLiveTutorialPracticeStart } from "../training/tutorial-practice-s
 import { createLiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
 import { bindBiomeActors } from "../../gameplay/environment/biome-actors/bind-biome-actors";
 import { countCanonicalStateCost } from "../world/canonical-state-cost";
-import { createLiveCanonicalWatchComposition } from "../world/canonical-watch-composition";
 import { createLiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveBrowserRuntime } from "./browser-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
@@ -91,10 +89,8 @@ export function startLiveGame(
   const { canvas, viewport, requestPointerLock: requestLock } = browserRuntime;
   const inputAuthority = createLiveInputAuthorityState(requestLock);
   const requestOwnedPointerLock = inputAuthority.requestPointerLock;
-  const engineering = dependencies.engineeringSurfaces ?? RELEASE_ENGINEERING_SURFACES;
   const currentSignedInActor = (): string | undefined =>
     Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined;
-  const humanCalibration = engineering.humanCalibration(browserIndexedDb, browserWindow, currentSignedInActor);
   const ghostV3Options =
     createGhostV3BrowserTestOptions(browserRuntime.testMode, dependencies.engineeringQuery.search) ?? {};
   const ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb);
@@ -115,7 +111,6 @@ export function startLiveGame(
     indexedDb: browserIndexedDb,
     document: browserDocument,
     recorderOptions: ghostV3Options,
-    humanCalibration,
     beatFinalized: (manifestId) => {
       beat.finalized(manifestId);
     },
@@ -131,8 +126,6 @@ export function startLiveGame(
     finale: () => ghostCapture.finale,
   });
   const { session: ghostV3Session, recorder: ghostV3, career, frames: ghostFrames } = ghostRecording;
-  const academyScreen = engineering.academy(browserIndexedDb, currentSignedInActor);
-  const foundryScreen = engineering.foundry(browserIndexedDb);
   const ghostPublicationScreen = new LiveGhostPublicationController(
     browserIndexedDb,
     ghostPublication,
@@ -141,7 +134,6 @@ export function startLiveGame(
   const ghostSupportScreen = new LiveGhostSupportController(browserIndexedDb);
   observeLiveGhostRecordingBoundaries(ghostRecording, {
     ghost: GHOST,
-    humanCalibration,
     run: liveRun,
     configurationProjection: () => liveStateForge.capture().components.get("tear.configuration.v1"),
     randomSnapshot: () => worldContext.services.random.snapshot(),
@@ -563,29 +555,7 @@ export function startLiveGame(
           : captureLiveCanonicalState(tick, input),
     },
   });
-  const { combatEntityRuntime: combatRuntime, authoritativeStep } = combatHost;
-  const canonicalWatchState = () => authoritativeStep.lastResult?.state ?? null;
-  const playerWatch = engineering.playerWatch(browserIndexedDb, {
-    bindRunEvents: true,
-    canonicalState: canonicalWatchState,
-    availableActions: () =>
-      createLiveCanonicalWatchComposition({
-        state: hostState,
-        screen: () => navigation.screen(),
-        canonicalGameplayState: canonicalWatchState,
-      }).availableGameActions(),
-    pushAction: (action) => {
-      Input.semantic.push(action);
-    },
-    setSemanticAuthority: inputAuthority.setSemanticInputAuthority,
-    startNormalRun: () => {
-      campaignTraining.startRunWithPreflight("endless", "normal");
-    },
-  });
-  gameplayEvents.bind({ playerWatch: playerWatch.observeRunEvent });
-  void playerWatch.refresh();
-  const replayHub = engineering.replayHub(playerWatch);
-  const botEvidence = engineering.botEvidence(browserIndexedDb);
+  const { combatEntityRuntime: combatRuntime } = combatHost;
   GAMEPLAY_EVENTS.setTickSource(() => combatHost.simulationRuntime.scheduler.tick);
   environment.setAvailableActorIdsSource(() => {
     if (__TEAR_TEST_BUILD__) DIAG.count("environmentCleanupSets");
@@ -662,7 +632,6 @@ export function startLiveGame(
       publication: ghostPublicationScreen,
       support: ghostSupportScreen,
     },
-    engineeringScreens: { academy: academyScreen, foundry: foundryScreen, playerWatch, botEvidence, replayHub },
     launchGhostPractice: ghostPracticeChallenge.launch,
     abandonRun: (reason) => {
       runAbandonment.abandon(reason);
@@ -695,7 +664,6 @@ export function startLiveGame(
     journals,
     canonicalState: captureLiveCanonicalState,
     frameDriver,
-    playerWatch,
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
@@ -704,7 +672,6 @@ export function startLiveGame(
   installLiveBossDebugWhenEnabled(testBuildHookSources);
   let firstFrameDrawn = false;
   frameDriver.start(({ deltaSeconds, intervalSeconds }) => {
-    if (navigation.screen() === "playing") playerWatch.advance();
     combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds);
     if (!firstFrameDrawn) {
       firstFrameDrawn = true;

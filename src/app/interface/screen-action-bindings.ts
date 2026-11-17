@@ -37,21 +37,6 @@ export interface ScreenActionBindingPorts {
   readonly campaignDifficulty: () => RunDifficulty;
   readonly resetSettings: () => void;
   readonly buyShopItem: (id: string) => void;
-  readonly refreshAcademy: () => void;
-  readonly advanceAcademyDagger: (id: string) => void;
-  readonly reviewAcademyDagger: (id: string, correctionHash: string, disposition: "accepted" | "rejected") => void;
-  readonly withdrawAcademyModelTraining: (candidateHash: string) => void;
-  readonly optInHumanCalibration: (consent: "anonymous-improvement" | "public-training") => void;
-  readonly revokeHumanCalibration: () => void;
-  readonly refreshFoundry: () => void;
-  readonly bootstrapFoundry: (profileId: string) => void;
-  readonly restoreFoundryBaseline?: (scheduleHash: string, intentHash: string) => void;
-  readonly promoteFoundry?: (scheduleHash: string, intentHash: string) => void;
-  readonly setFoundryScheduleEnabled: (scheduleHash: string, enabled: boolean) => void;
-  readonly openGhostLab: (
-    destination:
-      "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career",
-  ) => void;
   readonly openGhostPublication: (id: string) => void;
   readonly grantGhostPublication: () => void;
   readonly runGhostPublicationOnce: () => void;
@@ -61,7 +46,6 @@ export interface ScreenActionBindingPorts {
   readonly loadOwnGhostCapsules: () => void;
   readonly recoverOwnGhostCapsule: (id: string) => void;
   readonly closeOwnGhostCatalog: () => void;
-  readonly controlGhostLabWatch: (command: "start" | "pause" | "resume" | "stop") => void;
   readonly signIn: () => void;
   readonly signOut: () => void;
   readonly pinReplay: (id: string, pinned: boolean) => boolean;
@@ -190,103 +174,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "music.stopPreview": () => {
       setMusicPreview(null);
-    },
-    "training-archive.open": () => {
-      ports.setScreen("academy");
-      ports.refreshAcademy();
-      ports.resetScroll();
-    },
-    "training-archive.retry": () => {
-      ports.refreshAcademy();
-    },
-    "training-archive.dagger.advance": (action) => {
-      ports.advanceAcademyDagger(action.id);
-    },
-    "training-archive.dagger.review": (action) => {
-      ports.reviewAcademyDagger(action.id, action.correctionHash, action.disposition);
-    },
-    "training-archive.record.withdrawModelTraining": (action) => {
-      ports.withdrawAcademyModelTraining(action.candidateHash);
-    },
-    "training-archive.humanCalibration.optIn": (action) => {
-      ports.optInHumanCalibration(action.consent);
-    },
-    "training-archive.humanCalibration.revoke": () => {
-      ports.revokeHumanCalibration();
-    },
-    "academy.retry": () => {
-      ports.refreshAcademy();
-    },
-    "academy.dagger.advance": (action) => {
-      ports.advanceAcademyDagger(action.id);
-    },
-    "academy.dagger.review": (action) => {
-      ports.reviewAcademyDagger(action.id, action.correctionHash, action.disposition);
-    },
-    "academy.record.withdrawModelTraining": (action) => {
-      ports.withdrawAcademyModelTraining(action.candidateHash);
-    },
-    "academy.humanCalibration.optIn": (action) => {
-      ports.optInHumanCalibration(action.consent);
-    },
-    "academy.humanCalibration.revoke": () => {
-      ports.revokeHumanCalibration();
-    },
-    "training-operations.open": () => {
-      ports.setScreen("foundry");
-      ports.refreshFoundry();
-      ports.resetScroll();
-    },
-    "training-operations.refresh": () => {
-      ports.refreshFoundry();
-    },
-    "training-operations.restoreBaseline": (action) => {
-      ports.restoreFoundryBaseline?.(action.scheduleHash, action.intentHash);
-    },
-    "training-operations.promote": (action) => {
-      ports.promoteFoundry?.(action.scheduleHash, action.intentHash);
-    },
-    "training-operations.bootstrap": (action) => {
-      ports.bootstrapFoundry(action.profileId);
-    },
-    "training-operations.schedule.enable": (action) => {
-      ports.setFoundryScheduleEnabled(action.scheduleHash, true);
-    },
-    "training-operations.schedule.disable": (action) => {
-      ports.setFoundryScheduleEnabled(action.scheduleHash, false);
-    },
-    "foundry.refresh": () => {
-      ports.refreshFoundry();
-    },
-    "foundry.bootstrap": (action) => {
-      ports.bootstrapFoundry(action.profileId);
-    },
-    "foundry.schedule.enable": (action) => {
-      ports.setFoundryScheduleEnabled(action.scheduleHash, true);
-    },
-    "foundry.schedule.disable": (action) => {
-      ports.setFoundryScheduleEnabled(action.scheduleHash, false);
-    },
-    "game-agent.open": () => {
-      ports.openGhostLab("botevidence");
-    },
-    "run-monitor.open": () => {
-      ports.openGhostLab("watch");
-    },
-    "run-monitor.control": (action) => {
-      ports.controlGhostLabWatch(action.command);
-    },
-    "replay.hub.open": (action) => {
-      ports.openGhostLab(action.destination);
-    },
-    "replay.hub.watch": (action) => {
-      ports.controlGhostLabWatch(action.command);
-    },
-    "ghostlab.open": (action) => {
-      ports.openGhostLab(action.destination);
-    },
-    "ghostlab.watch": (action) => {
-      ports.controlGhostLabWatch(action.command);
     },
     "shop.buy": (action) => {
       ports.buyShopItem(action.id);
@@ -502,8 +389,8 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
 
 /**
  * Surface gate in front of the exhaustive action router. An action whose
- * surface the build does not admit (an engineering screen, Run Monitor control
- * or hidden unfinished feature) is inert, whichever path dispatched it.
+ * surface the build does not admit (an engineering screen or a hidden
+ * unfinished feature) is inert, whichever path dispatched it.
  */
 export function gateScreenActions(
   surfaces: SurfaceAvailability,

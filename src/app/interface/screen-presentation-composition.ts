@@ -30,14 +30,7 @@ import {
   type SettingsRenameServices,
 } from "../screens/settings-rename-adapters";
 import { isAppScreen, type AppScreen } from "../../domain/screen-catalog";
-import type { AcademyScreenView } from "../../presentation/screens/contracts";
-import type { FoundryScreenView } from "../../presentation/screens/contracts";
-import type { GhostLabScreenView } from "../../presentation/screens/contracts";
-import type {
-  BotEvidenceScreenView,
-  GhostPublicationScreenView,
-  GhostSupportScreenView,
-} from "../../presentation/screens/contracts";
+import type { GhostPublicationScreenView, GhostSupportScreenView } from "../../presentation/screens/contracts";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
@@ -78,10 +71,6 @@ export interface LiveScreenPresentationOptions {
   readonly menuState: MenuScreenState;
   readonly menuServices: MenuServicesBase;
   readonly playground: Readonly<{ renderMenu: () => void; renderLab: () => void }>;
-  readonly academy: () => AcademyScreenView;
-  readonly foundry: () => FoundryScreenView;
-  readonly ghostLab: () => GhostLabScreenView;
-  readonly botEvidence: () => BotEvidenceScreenView;
   readonly ghostPublication: () => GhostPublicationScreenView;
   readonly ghostSupport: () => GhostSupportScreenView;
 }
@@ -219,18 +208,6 @@ export function createLiveScreenPresentationComposition(
       rename: settings.renderRename,
       pgmenu: options.playground.renderMenu,
       pglab: options.playground.renderLab,
-      academy: () => {
-        renderer.academy(options.academy());
-      },
-      foundry: () => {
-        renderer.foundry(options.foundry());
-      },
-      ghostlab: () => {
-        renderer.ghostlab(options.ghostLab());
-      },
-      botevidence: () => {
-        renderer.botevidence(options.botEvidence());
-      },
       ghostpublication: () => {
         renderer.ghostpublication(options.ghostPublication());
       },
