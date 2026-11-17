@@ -216,7 +216,11 @@ describe("warming the menu cue", () => {
       manifest,
       baseUrl: `audio/cues/${id}`,
     }));
-    const early = new BiomeStemBackend(cues, validateMusicRoutingManifest(index.routing), parseMusicCatalog(index.catalog));
+    const early = new BiomeStemBackend(
+      cues,
+      validateMusicRoutingManifest(index.routing),
+      parseMusicCatalog(index.catalog),
+    );
     early.warmFirstLayer(early.menuCueId);
     expect(cueRequested(early.menuCueId)).toBe(true);
     dropWarmedStems();
