@@ -10,6 +10,9 @@ import {
   chooseMembers,
   failedChecks,
   formatMembers,
+  isNetworkFailure,
+  mergeMessage,
+  mergePlan,
   parseMembers,
   pruneVerdict,
   treeVerdict,
@@ -102,7 +105,12 @@ describe("pnpm merge:batch", () => {
   });
 
   it("lists a batch branch as prunable only once nothing can still merge on it", () => {
-    expect(pruneVerdict({}).prunable).toBe(true);
+    expect(pruneVerdict({ ageMinutes: 600 }).prunable).toBe(true);
+    // Just pushed: merge:batch starts its run a moment after the push.
+    expect(pruneVerdict({ ageMinutes: 5 }).prunable).toBe(false);
+    // Never while any check on the branch is going, whatever the latest run says.
+    const running = { running: true, status: "completed", conclusion: "failure", ageMinutes: 600 };
+    expect(pruneVerdict(running)).toEqual({ prunable: false, reason: "a check is running on it" });
     expect(pruneVerdict({ status: "in_progress" }).prunable).toBe(false);
     expect(pruneVerdict({ status: "completed", conclusion: "failure" }).prunable).toBe(true);
     expect(pruneVerdict({ status: "completed", conclusion: "success", states: {} }).prunable).toBe(true);
@@ -119,6 +127,35 @@ describe("pnpm merge:batch", () => {
     const differs = treeVerdict({ mainTree: "t1", checkedTree: "t2", merged: [3, 7], members });
     expect(differs.ok).toBe(false);
     expect(differs.message).toContain("MAIN DIFFERS FROM THE CHECKED BATCH");
+  });
+
+  it("merges members in batch order, skips ones already merged at their head, and stops at anything else", () => {
+    const members = [3, 7, 9].map((pr) => ({ pr, head: String(pr).repeat(40) }));
+    const view = (pr, state, head = String(pr).repeat(40)) => ({ state, headRefOid: head });
+    const steps = (views) => mergePlan(members, views).map((entry) => entry.step);
+    expect(steps({ 3: view(3, "MERGED"), 7: view(7, "OPEN"), 9: view(9, "OPEN") })).toEqual(["done", "merge", "merge"]);
+    // A moved head stops the sequence there: the members after it were checked together with it.
+    const moved = mergePlan(members, { 3: view(3, "OPEN", "f".repeat(40)), 7: view(7, "OPEN"), 9: view(9, "OPEN") });
+    expect(moved).toEqual([{ ...members[0], step: "stop", reason: "#3 is moved since the batch" }]);
+    expect(steps({ 3: view(3, "OPEN"), 7: view(7, "CLOSED") })).toEqual(["merge", "stop"]);
+    expect(steps({ 3: view(3, "MERGED", "e".repeat(40)) })).toEqual(["stop"]);
+  });
+
+  it("tries again only after a network failure, never after a refusal", () => {
+    expect(isNetworkFailure("Post https://api.github.com/graphql: net/http: TLS handshake timeout")).toBe(true);
+    expect(isNetworkFailure("read ECONNRESET")).toBe(true);
+    expect(isNetworkFailure("HTTP 502: Bad Gateway")).toBe(true);
+    expect(isNetworkFailure("refusing to merge: merge-ready: NOT READY #7: main is red")).toBe(false);
+    expect(isNetworkFailure("refusing to merge: head moved")).toBe(false);
+  });
+
+  it("writes each squash merge as the title with its number and the summary paragraph", () => {
+    const crlf = String.fromCharCode(13, 10);
+    const body = ["## Why", "", "A bare number fails", "a correct game.", "", "## What"].join(crlf);
+    const pr = { number: 7, title: "Name every wait", body };
+    const summary = ["A bare number fails", "a correct game."].join(String.fromCharCode(10));
+    expect(mergeMessage(pr)).toEqual({ subject: "Name every wait (#7)", body: summary });
+    expect(mergeMessage({ number: 8, title: "Fix", body: "" }).body).toBe("Fix");
   });
 
   it("lists the checks a failed batch run reports", () => {

@@ -145,7 +145,11 @@ describe("verdant-rootstone platform material", () => {
   });
 });
 
-function renderPale(state: string, policy: Partial<PaleIceRenderPolicy> = {}) {
+function renderPale(
+  state: string,
+  policy: Partial<PaleIceRenderPolicy> = {},
+  texture?: Parameters<typeof drawPaleIce>[3],
+) {
   const calls: string[] = [];
   const gradient = {
     addColorStop: (_offset: number, color: string) => {
@@ -181,11 +185,21 @@ function renderPale(state: string, policy: Partial<PaleIceRenderPolicy> = {}) {
       reformRatio: 0.6,
       ...policy,
     },
+    texture,
   );
   return calls;
 }
 
 describe("pale-ice platform material", () => {
+  it("fills its body from a scene texture when one is ready, keeping the snow edge", () => {
+    const draw = vi.fn(() => true);
+    const textured = renderPale("stable", { floor: true }, { draw });
+    expect(draw).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ x: 20, y: 30 }), true);
+    expect(textured).not.toContain(`stop:${PALE_ICE_COLORS.bodyDeep}`);
+    expect(textured).toContain(`fillStyle:${PALE_ICE_COLORS.snow}`);
+    expect(renderPale("stable", {}, { draw: () => false })).toEqual(renderPale("stable"));
+  });
+
   it("derives presentation state from the existing arena lifecycle", () => {
     expect(paleIceState({ x: 0, y: 0, w: 1, h: 1 })).toBe("stable");
     expect(paleIceState({ x: 0, y: 0, w: 1, h: 1, stress: 0.2 })).toBe("stressed");

@@ -9,7 +9,7 @@ const crazyGamesWindow = window as Window & {
 
 void bootstrapTear("crazygames", async ({ surfaces, engineeringQuery }) => {
   const { composeTearApplication } = await import("../app/shell/composition");
-  await composeTearApplication({
+  composeTearApplication({
     target: "crazygames",
     surfaces,
     engineeringQuery,
