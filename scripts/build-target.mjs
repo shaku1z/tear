@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import process from "node:process";
 import { resolve } from "node:path";
 import { rm } from "node:fs/promises";
+import { selectAudioProfile } from "./audio-profile.mjs";
 import { pruneCrazyGamesArtifact } from "./crazygames-artifact-scope.mjs";
 import { RELEASE_REPOSITORY, writeReleaseArtifactMetadata } from "./release-artifact.mjs";
 import { fanoutContentAddressedBuild, materializeContentAddressedBuild } from "./tearbench-build-artifact.mjs";
@@ -11,18 +12,23 @@ const mode = process.argv[2];
 const supportedModes = new Set(["standalone", "crazygames", "test-standalone", "test-crazygames"]);
 if (!supportedModes.has(mode))
   throw new Error(
-    "usage: node scripts/build-target.mjs <standalone|crazygames|test-standalone|test-crazygames> [--out-dir path]",
+    "usage: node scripts/build-target.mjs <standalone|crazygames|test-standalone|test-crazygames> [--out-dir path] [--preview-dev]",
   );
 const target = mode.endsWith("crazygames") ? "crazygames" : "standalone";
+// --preview-dev: the test build served below /dev/ on the preview origin (see vite.config.ts).
+const previewDev = process.argv.includes("--preview-dev");
+if (previewDev && mode !== "test-standalone") throw new Error("--preview-dev needs the test-standalone mode");
 const outDirectoryIndex = process.argv.indexOf("--out-dir");
+// The preview dev build is a deploy input, not a build the test tooling reads, so it is written in
+// place like an --out-dir build instead of through the content-addressed store's fixed dist folders.
+const direct = outDirectoryIndex >= 0 || previewDev;
 const output =
   outDirectoryIndex >= 0
     ? resolve(process.argv[outDirectoryIndex + 1])
-    : resolve(projectRoot, "dist", mode.startsWith("test-") ? `test-${target}` : target);
-const staging =
-  outDirectoryIndex >= 0
-    ? output
-    : resolve(projectRoot, "artifacts/tearbench/generated/build-staging", `${mode}-${String(process.pid)}`);
+    : resolve(projectRoot, "dist", previewDev ? "preview-dev" : mode.startsWith("test-") ? `test-${target}` : target);
+const staging = direct
+  ? output
+  : resolve(projectRoot, "artifacts/tearbench/generated/build-staging", `${mode}-${String(process.pid)}`);
 
 function git(...args) {
   const result = spawnSync("git", args, { cwd: projectRoot, encoding: "utf8", stdio: "pipe" });
@@ -37,9 +43,14 @@ const result = spawnSync(process.execPath, [viteCli, "build", "--mode", mode, "-
   cwd: projectRoot,
   encoding: "utf8",
   stdio: "inherit",
+  env: previewDev ? { ...process.env, TEAR_PREVIEW_DEV: "1" } : process.env,
 });
 if (result.error !== undefined) throw result.error;
 if (result.status !== 0) process.exit(result.status ?? 1);
+const audio = await selectAudioProfile(staging, target);
+console.log(
+  `${target} audio: ${String(audio.swapped)} file(s) from its own encode, ${String(audio.droppedBytes)} bytes of other targets' audio left out`,
+);
 if (target === "crazygames") {
   const pruned = await pruneCrazyGamesArtifact(staging);
   console.log(
@@ -56,7 +67,7 @@ const metadata = await writeReleaseArtifactMetadata({
   sourceDirectory: projectRoot,
 });
 const stored = await materializeContentAddressedBuild({ workspaceRoot: projectRoot, directory: staging });
-if (outDirectoryIndex < 0) {
+if (!direct) {
   await fanoutContentAddressedBuild({ workspaceRoot: projectRoot, record: stored.record, destination: output });
   await rm(staging, { recursive: true, force: true });
 }

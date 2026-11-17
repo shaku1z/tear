@@ -4,7 +4,6 @@ import {
   type GhostReplayRunContextInput,
   type GhostReplayRunContextV1,
 } from "../../ghost/replay-admission";
-import type { LiveHumanCalibrationSurface } from "../engineering/engineering-surfaces-contract";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../shell/game-runtime-state";
 import { createBrowserGhostCareer } from "./browser-ghost-career";
@@ -20,7 +19,6 @@ export interface LiveGhostRecordingOptions {
   readonly indexedDb: IDBFactory | undefined;
   readonly document: Document;
   readonly recorderOptions: BrowserGhostLiveRecorderOptions;
-  readonly humanCalibration: LiveHumanCalibrationSurface;
   /** Beat This Run is told when one of its recordings is finalized. */
   readonly beatFinalized: (manifestId: string) => void;
   readonly run: () => GameRun;
@@ -42,15 +40,12 @@ export interface LiveGhostRecordingOptions {
  * run and never changes gameplay.
  */
 export function createLiveGhostRecording(options: LiveGhostRecordingOptions) {
-  const { indexedDb, recorderOptions, humanCalibration } = options;
+  const { indexedDb, recorderOptions } = options;
   const session = createLiveGhostRecordingSessionState(indexedDb, {
     ...recorderOptions,
     onFinalized: async (manifest, vault) => {
       await recorderOptions.onFinalized?.(manifest, vault);
       if (manifest.provenance?.beatThisRun !== undefined) options.beatFinalized(manifest.id);
-      if (manifest.provenance?.forkOrigin === undefined && manifest.provenance?.finaleCompanion === undefined) {
-        await humanCalibration.capture?.finalized(manifest, vault);
-      }
     },
   });
   const recorder = session.recorder();
@@ -100,7 +95,6 @@ export type LiveGhostRecording = ReturnType<typeof createLiveGhostRecording>;
 
 export interface LiveGhostRecordingBoundaryPorts {
   readonly ghost: Pick<GameRuntimeDependencies["GHOST"], "setRecordingObserver">;
-  readonly humanCalibration: LiveHumanCalibrationSurface;
   readonly run: () => GameRun;
   /** The State Forge projection of the live configuration component. */
   readonly configurationProjection: () => unknown;
@@ -118,7 +112,7 @@ export function observeLiveGhostRecordingBoundaries(
   ports: LiveGhostRecordingBoundaryPorts,
 ): void {
   const { session, recorder, career, dna, frames, opening } = recording;
-  const { humanCalibration, run } = ports;
+  const { run } = ports;
   // Keyframes attest the immutable bootstrap identity saved at recording boundary; never rebuild a divergent fingerprint later in the live loop.
   ports.ghost.setRecordingObserver(
     recorder === null
@@ -129,8 +123,6 @@ export function observeLiveGhostRecordingBoundaries(
             ports.finale().reset();
             frames.reset();
             session.reset();
-            humanCalibration.input.reset();
-            humanCalibration.capture?.started();
             let provenance: Readonly<Record<string, unknown>>;
             let replayContext: GhostReplayRunContextV1 | undefined;
             try {

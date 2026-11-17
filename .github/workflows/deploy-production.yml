@@ -103,7 +103,7 @@ jobs:
             validationRunId: process.env.RUN_ID,
           }, null, 2)}\n`);
           NODE
-      - name: Prove clean main equals validated origin/main
+      - name: Prove clean main and that the validated commit is on it
         env:
           TEAR_RELEASE_EVIDENCE: artifacts/release/validation.json
           TEAR_RELEASE_SHA: ${{ steps.validation.outputs.sha }}

@@ -550,13 +550,6 @@
       ],
       "duration": "under-a-minute"
     },
-    "test:browser:ghost-lab-home": {
-      "purpose": "Browser check of the Ghost Lab home screen",
-      "effects": [
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
     "test:preservation-corpus": {
       "purpose": "Vitest ghost preservation corpus with a JSON report under artifacts/tearbench/checkpoints",
       "effects": [
@@ -616,13 +609,6 @@
       ],
       "duration": "minutes"
     },
-    "test:browser:game-agent-run-monitor": {
-      "purpose": "Browser check of the game agent run monitor",
-      "effects": [
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
     "test:browser:scripted-agent-matrix": {
       "purpose": "Browser scripted-agent scenario matrix",
       "effects": [
@@ -662,22 +648,6 @@
       ],
       "duration": "minutes"
     },
-    "test:browser:class-c-production-smoke": {
-      "purpose": "Class C production smoke in the browser with evidence under artifacts/",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
-    "test:browser:class-c-touch-smoke": {
-      "purpose": "Class C touch-input smoke in the browser",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
     "test:browser:class-c-crazygames-iframe-smoke": {
       "purpose": "Class C CrazyGames iframe smoke in the browser",
       "effects": [
@@ -688,38 +658,6 @@
     },
     "test:browser:production-input-edge": {
       "purpose": "Browser production input edge-case smoke",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
-    "test:browser:class-c-pwa-physical-smoke": {
-      "purpose": "Class C PWA install and offline smoke in the browser",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
-    "test:browser:class-c-visual-flow-engineering": {
-      "purpose": "Engineering visual-flow capture across screens in the browser",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes"
-    },
-    "test:browser:class-c-touch-terminal-engineering": {
-      "purpose": "Engineering visual-flow capture with touch input",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes"
-    },
-    "test:browser:test-only-pixel-fixtures": {
-      "purpose": "Browser pixel fixtures that exist only in test builds",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -956,15 +894,8 @@
       ],
       "duration": "seconds"
     },
-    "check:tear-score": {
-      "purpose": "Verifies vendored TearScore files against their provenance checksums",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "check:adaptive-soundtrack": {
-      "purpose": "Verifies the vendored adaptive soundtrack against its provenance",
+    "check:music": {
+      "purpose": "Checks every shipped music cue against the music index: files, per-target mirrors, byte budgets and no source-tool tags",
       "effects": [
         "read-only"
       ],
@@ -999,11 +930,18 @@
       "duration": "seconds"
     },
     "merge:ready": {
-      "purpose": "Says whether a pull request may merge: main green and the check current against main; --refresh starts a fresh check",
+      "purpose": "Says whether a pull request may merge: main green and its own check, or a passed batch, current against main; --refresh starts a fresh check",
       "effects": [
         "network"
       ],
       "duration": "seconds"
+    },
+    "merge:batch": {
+      "purpose": "Merges several ready pull requests onto a codex/batch-* branch, pushes it and starts Validate; --status and --verify follow it up",
+      "effects": [
+        "network"
+      ],
+      "duration": "under-a-minute"
     },
     "setup:hooks": {
       "purpose": "Points the canonical checkout at the in-repo hooks, pins the owner identity, clears stale per-worktree hooks overrides; idempotent, refuses unknown hooks",
@@ -1062,11 +1000,26 @@
       "duration": "under-a-minute"
     },
     "wiki:build": {
-      "purpose": "Builds the player wiki into wiki/dist from this commit (add --media for pictures from the game's test build, which takes tens of minutes)",
+      "purpose": "Builds the player wiki into wiki/dist from this commit and the committed pictures",
       "effects": [
         "writes-artifacts"
       ],
       "duration": "under-a-minute"
+    },
+    "wiki:media": {
+      "purpose": "Regenerates the wiki pictures in wiki/pictures from the game's renderers and test build (run pnpm build:test:standalone first)",
+      "effects": [
+        "writes-repo-files",
+        "launches-browser"
+      ],
+      "duration": "long"
+    },
+    "wiki:pictures-status": {
+      "purpose": "Prints whether the committed wiki pictures match the game source that draws them (--strict exits 1 when stale)",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds"
     },
     "wiki:dev": {
       "purpose": "Builds the player wiki and serves it on port 4321, rebuilding when wiki/ changes",
@@ -1342,17 +1295,6 @@
         "build:test:crazygames"
       ]
     },
-    "scripts/build-tear-score-tone-host.mjs": {
-      "purpose": "Builds the Tone host ESM bundle into .tmp-tone-host-esm (ignored) for TearScore vendoring",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        "docs/TEAR_SCORE_INTEGRATION.md"
-      ]
-    },
     "scripts/check-active-roster.mjs": {
       "purpose": "Checks active roster names against the terminology registry",
       "effects": [
@@ -1432,6 +1374,16 @@
       "via": [
         "generate:ghost-types",
         "check:ghost-types"
+      ]
+    },
+    "scripts/check-music.mjs": {
+      "purpose": "Verifies the shipped music cues against public/audio/music.json and the per-target Opus mirrors",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [
+        "check:music"
       ]
     },
     "scripts/check-parent-layout.mjs": {
@@ -1595,6 +1547,16 @@
         "merge:ready"
       ]
     },
+    "scripts/merge-batch.mjs": {
+      "purpose": "Batch merging behind pnpm merge:batch, and the Validate step that records a batch's members",
+      "effects": [
+        "network"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "merge:batch"
+      ]
+    },
     "scripts/package-crazygames.mjs": {
       "purpose": "Zips dist/crazygames into the CrazyGames upload package and checks its size",
       "effects": [
@@ -1636,17 +1598,6 @@
       "duration": "under-a-minute",
       "via": [
         "prepare:workspace-quarantine"
-      ]
-    },
-    "scripts/production-headless-worker.mjs": {
-      "purpose": "Child process spawned by the headless worker dispatcher; runs production headless episodes over IPC",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        "scripts/production-headless-worker-dispatcher.mjs"
       ]
     },
     "scripts/record-build-provider-artifact.mjs": {
@@ -1927,27 +1878,6 @@
         "check:artifact-disposition"
       ]
     },
-    "scripts/vendor-tear-score-esm.mjs": {
-      "purpose": "Copies TearScore and Tone ESM bundles into public/vendor/tear-score and rewrites provenance",
-      "effects": [
-        "writes-repo-files"
-      ],
-      "duration": "seconds",
-      "via": [],
-      "runBy": [
-        "docs/TEAR_SCORE_INTEGRATION.md"
-      ]
-    },
-    "scripts/verify-adaptive-soundtrack-provenance.mjs": {
-      "purpose": "Verifies the vendored adaptive soundtrack provenance",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "check:adaptive-soundtrack"
-      ]
-    },
     "scripts/verify-plan-certificate.mjs": {
       "purpose": "Verifies a TearBench plan certificate",
       "effects": [
@@ -1966,16 +1896,6 @@
       "duration": "seconds",
       "via": [
         "release:verify-artifact"
-      ]
-    },
-    "scripts/verify-tear-score-provenance.mjs": {
-      "purpose": "Verifies vendored TearScore checksums",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "check:tear-score"
       ]
     },
     "scripts/who.mjs": {
@@ -2032,6 +1952,9 @@
       "scripts/check-source-architecture.mjs",
       "tests/source-architecture.test.mjs"
     ],
+    "scripts/audio-profile.mjs": [
+      "scripts/build-target.mjs"
+    ],
     "scripts/campaign-publication-boundary.mjs": [
       "scripts/release-preflight.mjs",
       "tests/campaign-publication-boundary.test.mjs",
@@ -2053,22 +1976,6 @@
       "scripts/export-game-reference.mjs",
       "tests/unit/game-reference-export-preflight.test.mjs"
     ],
-    "scripts/production-headless-checkpoint.mjs": [
-      "scripts/production-headless-job-store.mjs",
-      "scripts/production-headless-worker.mjs",
-      "tests/production-headless-job-store.test.mjs",
-      "tests/production-headless-worker.test.mjs"
-    ],
-    "scripts/production-headless-job-store.mjs": [
-      "scripts/production-headless-worker-dispatcher.mjs",
-      "tests/fixtures/production-headless-job-crash.mjs",
-      "tests/production-headless-job-store.test.mjs",
-      "tests/production-headless-worker-dispatcher.test.mjs"
-    ],
-    "scripts/production-headless-worker-dispatcher.mjs": [
-      "tests/fixtures/production-headless-job-crash.mjs",
-      "tests/production-headless-worker-dispatcher.test.mjs"
-    ],
     "scripts/release-artifact.mjs": [
       "scripts/apply-workspace-quarantine.mjs",
       "scripts/build-target.mjs",
@@ -2078,8 +1985,6 @@
       "scripts/check-workspace.mjs",
       "scripts/package-crazygames.mjs",
       "scripts/prepare-workspace-quarantine.mjs",
-      "scripts/production-headless-worker-dispatcher.mjs",
-      "scripts/production-headless-worker.mjs",
       "scripts/release-preflight.mjs",
       "scripts/report-artifacts.mjs",
       "scripts/report-deferred-workspace-dependency.mjs",
@@ -2092,7 +1997,6 @@
       "scripts/verify-plan-certificate.mjs",
       "scripts/verify-release-artifact.mjs",
       "tests/browser-journey-harness.js",
-      "tests/fixtures/production-headless-job-crash.mjs",
       "tests/release-artifact-source-identity.test.mjs",
       "tests/tearbench-build-artifact.test.mjs",
       "tests/unit/current-live-detached-mechanic-parity.test.ts",
@@ -2179,11 +2083,8 @@
       "tests/tearbench-evidence-selection.test.mjs"
     ],
     "scripts/tearbench-runtime-identity.mjs": [
-      "scripts/production-headless-worker-dispatcher.mjs",
-      "scripts/production-headless-worker.mjs",
       "scripts/tearbench-task-execution.mjs",
       "scripts/tearbench.mjs",
-      "tests/fixtures/production-headless-job-crash.mjs",
       "tests/tearbench-task-execution.test.mjs"
     ],
     "scripts/tearbench-shadow-plan.mjs": [
@@ -2196,10 +2097,6 @@
       "tests/tearbench-build-graph.test.mjs"
     ],
     "scripts/tearbench-task-receipts.mjs": [
-      "scripts/production-headless-checkpoint.mjs",
-      "scripts/production-headless-job-store.mjs",
-      "scripts/production-headless-worker-dispatcher.mjs",
-      "scripts/production-headless-worker.mjs",
       "scripts/record-build-provider-artifact.mjs",
       "scripts/tearbench-canary-bundle.mjs",
       "scripts/tearbench-canary-incomplete-report.mjs",
@@ -2210,7 +2107,6 @@
       "scripts/tearbench-client-mission.mjs",
       "scripts/tearbench-task-execution.mjs",
       "scripts/verify-plan-certificate.mjs",
-      "tests/production-headless-worker.test.mjs",
       "tests/tearbench-canary-plan.test.mjs",
       "tests/tearbench-canary-qualification-report.test.mjs",
       "tests/tearbench-client-mission.test.mjs",

@@ -1,11 +1,5 @@
 import { modeSurface } from "../../gameplay/run/mode-catalog";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
-import type {
-  LiveAcademySurface,
-  LiveBotEvidenceSurface,
-  LiveFoundrySurface,
-  LivePlayerWatchSurface,
-} from "../engineering/engineering-surfaces-contract";
 import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
 import type { LiveGhostPublicationController } from "../replay/ghost-publication-controller";
@@ -33,14 +27,6 @@ export interface LiveGhostLibraryScreens {
   readonly support: LiveGhostSupportController;
 }
 
-/** Engineering-surface controllers; release builds supply inert stand-ins. */
-export interface LiveEngineeringScreens {
-  readonly academy: LiveAcademySurface;
-  readonly foundry: LiveFoundrySurface;
-  readonly playerWatch: LivePlayerWatchSurface;
-  readonly botEvidence: LiveBotEvidenceSurface;
-}
-
 export interface LiveScreenActionsOptions {
   readonly dependencies: GameRuntimeDependencies;
   readonly session: LiveWorldSessionState;
@@ -53,7 +39,6 @@ export interface LiveScreenActionsOptions {
   readonly interaction: Pick<LiveInterfaceInteractionState, "setScroll">;
   readonly chase: Pick<LiveGhostChaseRuntime, "toggle" | "stop">;
   readonly ghostLibrary: LiveGhostLibraryScreens;
-  readonly engineeringScreens: LiveEngineeringScreens;
   readonly run: () => GameRun;
   /** The browser pointer-lock request, not the input-authority-owned one. */
   readonly requestPointerLock: () => void;
@@ -61,7 +46,7 @@ export interface LiveScreenActionsOptions {
   readonly presentation: () => Pick<LiveInterfaceComposition, "frame" | "screens">;
 }
 
-/** The semantic action table that menu, setup, profile and engineering screens dispatch into. */
+/** The semantic action table that menu, setup, profile and replay screens dispatch into. */
 export function createLiveScreenActions(
   options: LiveScreenActionsOptions,
 ): LiveInterfaceCompositionOptions["screens"]["actions"] {
@@ -74,7 +59,6 @@ export function createLiveScreenActions(
     publication: ghostPublicationScreen,
     support: ghostSupportScreen,
   } = options.ghostLibrary;
-  const { academy: academyScreen, foundry: foundryScreen, playerWatch, botEvidence } = options.engineeringScreens;
   const { seedRace, settingsController } = options.services;
   const { resumeSavedFinale, claimSavedFinale, endRun, retryRun } = options.services.controllers.api;
   const {
@@ -103,9 +87,6 @@ export function createLiveScreenActions(
     },
     setScreen: (screen) => {
       if (screen !== "profile") ownerRecovery.close();
-      if (screen === "academy") academyScreen.refresh();
-      if (screen === "foundry") foundryScreen.refresh();
-      if (screen === "ghostlab") void playerWatch.refresh();
       setScreen(screen);
     },
     openGhostPublication: (id) => {
@@ -131,32 +112,6 @@ export function createLiveScreenActions(
     },
     createGhostSupport: () => {
       void ghostSupportScreen.create().then(render);
-    },
-    openGhostLab: (destination) => {
-      if (destination === "academy" || destination === "training-archive") {
-        academyScreen.refresh();
-        setScreen("academy");
-      } else if (destination === "foundry" || destination === "training-operations") {
-        foundryScreen.refresh();
-        setScreen("foundry");
-      } else if (destination === "watch") {
-        void playerWatch.refresh();
-        setScreen("ghostlab");
-      } else if (destination === "botevidence") {
-        void botEvidence.refresh().then(render);
-        setScreen("botevidence");
-      } else {
-        setScreen("profile");
-        options.presentation().screens.library.selectProfileTab(destination === "career" ? "career" : "vault");
-      }
-    },
-    controlGhostLabWatch: (command) => {
-      void playerWatch[command]();
-      if (command === "resume" && navigation.screen() === "paused") {
-        setScreen("playing");
-        requestLock();
-      }
-      render();
     },
     resetScroll: () => {
       options.interaction.setScroll(0);
@@ -191,21 +146,6 @@ export function createLiveScreenActions(
     resetSettings: () => {
       settingsController.reset();
     },
-    refreshAcademy: academyScreen.refresh,
-    advanceAcademyDagger: academyScreen.advance,
-    reviewAcademyDagger: academyScreen.review,
-    withdrawAcademyModelTraining: academyScreen.withdrawModelTraining,
-    optInHumanCalibration: (consent) => {
-      academyScreen.setHumanCalibrationConsent(consent);
-    },
-    revokeHumanCalibration: () => {
-      academyScreen.setHumanCalibrationConsent("revoked");
-    },
-    refreshFoundry: foundryScreen.refresh,
-    promoteFoundry: foundryScreen.promote,
-    restoreFoundryBaseline: foundryScreen.restoreBaseline,
-    bootstrapFoundry: foundryScreen.bootstrap,
-    setFoundryScheduleEnabled: foundryScreen.setScheduleEnabled,
     signIn: () => {
       void Cloud.signIn();
     },

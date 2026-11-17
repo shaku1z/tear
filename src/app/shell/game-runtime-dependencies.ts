@@ -49,7 +49,6 @@ import type { StyleAchievementPersistence } from "../progress/style-achievement-
 import type { PlatformBootstrapPersistence } from "../progress/platform-bootstrap-persistence";
 import type { VictoryProfileProgressPersistence } from "../progress/victory-profile-progress-persistence";
 import type { TutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
-import type { LiveEngineeringSurfaceFactory } from "../engineering/engineering-surfaces-contract";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -80,8 +79,6 @@ export interface GameRuntimeDependencies {
   /** Release/engineering surface policy and its admitted engineering query (empty in release). */
   readonly surfaces: SurfaceAvailability;
   readonly engineeringQuery: EngineeringQuery;
-  /** Research/diagnostic surface controllers; composition supplies them only in engineering builds. */
-  readonly engineeringSurfaces?: LiveEngineeringSurfaceFactory;
   readonly browserDocument: Document;
   readonly browserIndexedDb: IDBFactory | undefined;
   readonly browserStorage: Pick<Storage, "setItem">;

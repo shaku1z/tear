@@ -19,19 +19,9 @@ const forbidden = [
 // distinctive storage key, format identifier or diagnostic sentence of one
 // stripped module; none of them is release player copy.
 const ENGINEERING_MARKERS = Object.freeze([
-  ["tear-offline-rl-reward-definition", "src/agents/offline-rl-training.ts"],
-  ["training-operations-schedule-owner:v5:", "src/agents/training-operations-v3-scheduled-cycle.ts"],
-  ["foundry-job-due-lease:v1:", "src/agents/foundry-job-due-dispatcher.ts"],
-  ["tear-temporal-dagger-program", "src/agents/temporal-dagger-program.ts"],
-  ["tear-live-human-calibration-capture", "src/agents/tearbot-human-calibration-capture.ts"],
-  ["Training Operations storage is unavailable in this runtime", "src/app/engineering/foundry-screen.ts"],
-  ["Reading your local consent decision", "src/app/engineering/academy-screen.ts"],
-  ["Local Run Monitor: at most 256 decisions", "src/app/engineering/player-watch-controller.ts"],
-  [
-    "No exact retained Game Agent evaluation report is selected locally",
-    "src/app/engineering/bot-evidence-controller.ts",
-  ],
-  ["Scenario controls remain test and engineering evidence only", "src/app/replay/ghost-lab-home.ts"],
+  ["Watch Agent must start from the real main menu", "src/agents/live-watch-agent-host.ts"],
+  ["Watch Agent seed must be positive", "src/agents/live-watch-agent-panel.ts"],
+  ["Snapshot editor actions", "src/tearbench/browser/state-forge-studio.ts"],
 ]);
 const failures = [];
 

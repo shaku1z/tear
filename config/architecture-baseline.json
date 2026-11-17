@@ -283,33 +283,13 @@
       "kind": "value"
     },
     {
-      "from": "src/presentation/screens/ghost-lab.ts",
-      "to": "src/replay/surface-route.ts",
-      "kind": "value"
-    },
-    {
       "from": "src/presentation/screens/leaderboards-replays.ts",
       "to": "src/replay/surface-route.ts",
       "kind": "value"
     },
     {
       "from": "src/tearbench/browser/live-runtime-bridge.ts",
-      "to": "src/agents/browser-active-policy-runtime.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/browser/live-runtime-bridge.ts",
       "to": "src/agents/live-watch-agent-host.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/browser/live-runtime-bridge.ts",
-      "to": "src/agents/run-monitor.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/browser/live-runtime-bridge.ts",
-      "to": "src/agents/surface-route.ts",
       "kind": "value"
     },
     {

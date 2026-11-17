@@ -1,47 +1,60 @@
-# TEAR Music / Adaptive Soundtrack integration provenance
+# Music in the game
 
-Tear consumes an exact browser release from the separately versioned
-`tear-music` repository through `AudioSystem`'s `MusicBackend` contract. The
-canonical Adaptive Soundtrack module never owns the host audio context,
-lifecycle, user settings, ad mute state, or game state. The prior `tear-score`
-release remains an explicit compatibility fallback until its signed removal
-gate.
+Music is recorded stems, authored and built in the separate `tear-music`
+repository and published into this one. The game plays them with its own Web
+Audio player; there is no vendored music engine and no Tone.js.
 
-The canonical checked-in runtime is the schema-v2 ESM release of
-`@tear-music/adaptive-soundtrack` `0.1.0-alpha.1` from
-`shaku1z/tear-music@7662fc95769d2ed022593c10f308ec10f054edfc`, paired with the
-byte-pinned host-context ESM build of Tone.js `14.9.17`. Its selected `index.mjs`
-entrypoint is vendored as
-`public/vendor/tear-music/adaptive-soundtrack.esm.js`; the release manifest and
-independent module/host/license provenance are verified by
-`scripts/verify-adaptive-soundtrack-provenance.mjs`. The canonical module reads
-the pinned Tone namespace through its historical `globalThis.Tone` boundary;
-the game loader assigns only the exact paired host namespace before import.
-The old `@tear-score/adapter-tear` ESM remains under `public/vendor/tear-score/`
-with its independent `check:tear-score` validation and unchanged bytes.
+## What ships
 
-Both score revisions restore each oracle theme's tempo, tonic, two-bar drum,
-bass and lead identity, then derive five adaptive intensity tiers from that
-identity. Hats and percussion use filtered noise rather than pitched metallic
-oscillators. The host build deliberately omits Tone's eager root exports, which
-would otherwise create a second `AudioContext` before the game can install the
-AudioSystem-owned context.
+- `public/audio/music.json`: the one music index. It holds the station catalog,
+  the routing rules (which song plays for each biome, boss and scene) and every
+  cue's manifest. `tear-music` generates it; never edit it by hand.
+- `public/audio/cues/<id>/`: one folder per song, holding `cue.json` (the same
+  manifest), `opus/` (the web encode, 96 kb/s), `opus-crazygames/` (the
+  CrazyGames encode, provisionally 64 kb/s) and an optional boss intro.
+- `public/audio/stingers/`: short one-shots (boss arrival, victory, TEARING).
 
-Updating the canonical Adaptive Soundtrack requires all of the following:
+`scripts/audio-profile.mjs` runs during each build. The CrazyGames build moves
+`opus-crazygames/` over `opus/`; every other build drops the mirror. Each build
+carries exactly one encode.
 
-1. Build and fully verify a release in the `tear-music` repository on an accepted
-   protected commit.
-2. Consume the release manifest's selected ESM entrypoint and paired Tone host;
-   do not substitute the browser IIFE or rewrite emitted bytes.
-3. Update the independent provenance record and checksums, including the trusted
-   legacy Tone host/license identity.
-4. Run canonical and legacy audio contracts, replay provenance tests, bundle budgets, standalone PWA tests,
-   CrazyGames lifecycle tests, and repeated-run leak tests.
+## How it plays
 
-Updating the retained legacy `tear-score` fallback remains a separate transaction
-through `scripts/build-tear-score-tone-host.mjs` and
-`scripts/vendor-tear-score-esm.mjs`; its `check:tear-score` gate must stay green
-while the compatibility path is shipped.
+`src/entrypoints/bootstrap.ts` installs `DeferredStemBackend`
+(`src/audio/install-stem-cue.ts`) without any network request, so music never
+blocks the first frame. After first paint, or when audio is first initialized if
+that comes sooner, it fetches `music.json` and builds `BiomeStemBackend`. The
+first menu cue starts as soon as the layers audible at its opening tier have
+arrived. The remaining layers join in phase and fade in over one bar.
 
-Initialization failure must select the exclusive legacy music backend. It must never
-start both backends, create a second `AudioContext`, or make the game unplayable.
+`BiomeStemBackend` (`src/audio/stems/`) works in three steps:
+
+1. It routes each game snapshot to a cue with `resolveMusicRoute`.
+2. It maps the snapshot to an intensity tier from 0 to 4 with `tierFromSnapshot`.
+3. It crossfades layer gains with `planTierGains`, optionally adjusted by a
+   `StemMixPreset`.
+
+A boss or terminal scene with no rule of its own inherits its biome's gameplay
+song. A stage with no song at all plays the index's `defaultWorkId`.
+
+If `music.json` cannot be loaded, initialization fails and `AudioSystem` falls
+back to its built-in synthesized music. It never runs two music backends or
+creates a second `AudioContext`.
+
+## Changing the music
+
+1. Follow `docs/ADD_A_SONG.md` in `tear-music`: add or edit the song there,
+   build and verify.
+2. Publish it here with `node tools/music.mjs publish --game <this worktree>`.
+3. In this repository, run `pnpm check:music`, the music unit tests and
+   `pnpm test:browser:audio`.
+4. Include the CrazyGames build size in the pull request.
+
+`pnpm check:music` fails when any of these is true:
+
+- a cue is missing a file;
+- the index and the cue folders disagree;
+- a CrazyGames mirror is incomplete;
+- a cue exceeds its byte budget;
+- a file is unreferenced;
+- a shipped file carries a source-tool tag or a contact address.

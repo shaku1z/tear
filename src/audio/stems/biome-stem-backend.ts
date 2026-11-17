@@ -21,7 +21,7 @@ import { nextBoundaryTime, secondsPerBar } from "../music/quantize";
 import { resolveMusicRoute } from "../music/music-routing-resolver";
 import type { MusicRoutingManifest, RoutingScene } from "../music/music-routing-types";
 import { StemCuePlayer } from "./StemCuePlayer";
-import { loopSeconds } from "./tier";
+import { loopSeconds, planTierGains } from "./tier";
 import { tierFromSnapshot } from "./tier-from-snapshot";
 import { WebAudioStemBackend } from "./web-audio-backend";
 import type { StemCueManifest, Tier } from "./types";
@@ -82,6 +82,8 @@ export class BiomeStemBackend implements MusicBackend {
   /** Cue the station had queued before a boss/story takeover, for resume. */
   #interrupted: string | null = null;
   #stationSeed = 1;
+  /** Picks from a routing pool (the Verdant Sanctum's two songs) come from the run's seed. */
+  #routeSeed = 1;
   /** Context time the active cue began, and its bar length — for quantizing. */
   #activeStartedAt = 0;
   #activeSecondsPerBar = 2;
@@ -122,11 +124,12 @@ export class BiomeStemBackend implements MusicBackend {
     });
     this.#stingers = new StingerPlayer(this.#context, this.#output);
     void this.#stingers.load();
-    await this.#activate(this.#shellCueId());
+    await this.#activate(this.#shellCueId(), CROSSFADE_SECONDS, 0, true);
   }
 
-  beginRun(_metadata: MusicRunSessionMetadata): Promise<void> {
-    void _metadata;
+  beginRun(metadata: MusicRunSessionMetadata): Promise<void> {
+    // Same run seed, same song: replays and seed-locked races hear what the run heard.
+    this.#routeSeed = routeSeedFromRunSeed(metadata.runSeed);
     return Promise.resolve();
   }
 
@@ -265,7 +268,7 @@ export class BiomeStemBackend implements MusicBackend {
         scene: routeScene,
         bossId: this.#lastBossId,
       },
-      this.#stationSeed,
+      this.#routeSeed,
     );
     return this.#cues.has(routed) ? routed : this.#defaultCueId;
   }
@@ -320,7 +323,12 @@ export class BiomeStemBackend implements MusicBackend {
     });
   }
 
-  async #activate(cueId: string, fadeSeconds: number = CROSSFADE_SECONDS, quantizeBars = 0): Promise<void> {
+  async #activate(
+    cueId: string,
+    fadeSeconds: number = CROSSFADE_SECONDS,
+    quantizeBars = 0,
+    fastStart = false,
+  ): Promise<void> {
     const context = this.#context;
     const output = this.#output;
     const loaded = this.#cues.get(cueId);
@@ -337,7 +345,15 @@ export class BiomeStemBackend implements MusicBackend {
     cueGain.connect(output);
     const backend = new WebAudioStemBackend(context, cueGain, loaded.baseUrl);
     const player = new StemCuePlayer();
-    await player.load(loaded.manifest, backend);
+    // The first cue of the session starts as soon as its calmest layer (the
+    // stems tier 0 plays) has arrived; the others fade in, in phase, as they
+    // land. Later swaps load everything while the outgoing cue keeps playing.
+    const first = fastStart
+      ? Object.entries(planTierGains(loaded.manifest, 0))
+          .filter(([, gain]) => gain > 0)
+          .map(([id]) => id)
+      : [];
+    await player.load(loaded.manifest, backend, first.length > 0 ? { first } : {});
     if (token !== this.#switchToken) {
       player.unload();
       cueGain.disconnect();
@@ -429,4 +445,14 @@ export class BiomeStemBackend implements MusicBackend {
       introGain.disconnect();
     };
   }
+}
+
+/** FNV-1a over the run seed's text: a stable 32-bit number for the routing pool. */
+export function routeSeedFromRunSeed(runSeed: string): number {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < runSeed.length; index += 1) {
+    hash ^= runSeed.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
 }

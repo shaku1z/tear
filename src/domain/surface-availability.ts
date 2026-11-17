@@ -13,12 +13,10 @@ import { ENGINEERING_SCREENS, screenFacts, type EngineeringScreen } from "./scre
 export type SurfaceChannel = "release" | "engineering";
 
 export type SurfaceId =
-  // Engineering screens (research and diagnostic screens and the unfinished
-  // Ghost V3 publication-service screens), plus every route into them. Their
+  // Engineering screens (the unfinished Ghost V3 publication-service
+  // screens), plus every route into them. Their
   // channel is the screen catalog's (src/domain/screen-catalog.ts).
   | `screen:${EngineeringScreen}`
-  // AI-drives-the-run controls (Replay Hub and pause screen).
-  | "control:run-monitor"
   // Boss Test boss picker on the setup screen.
   | "setup:boss-picker"
   // Unfinished player features.
@@ -32,8 +30,7 @@ export type SurfaceId =
   // Every engineering query parameter and surface route.
   | "route:engineering-query"
   // Engineering window globals.
-  | "global:weapon-debug"
-  | "global:foundry-audio-preview";
+  | "global:weapon-debug";
 
 const screenSurfaceId = (screen: EngineeringScreen): `screen:${EngineeringScreen}` => `screen:${screen}`;
 
@@ -46,7 +43,6 @@ export const SURFACE_CHANNEL: Readonly<Record<SurfaceId, SurfaceChannel>> = Obje
     `screen:${EngineeringScreen}`,
     SurfaceChannel
   >),
-  "control:run-monitor": "engineering",
   "setup:boss-picker": "engineering",
   "feature:seed-race": "engineering",
   "feature:beat-this-run": "engineering",
@@ -57,7 +53,6 @@ export const SURFACE_CHANNEL: Readonly<Record<SurfaceId, SurfaceChannel>> = Obje
   "feature:linked-pair-download": "engineering",
   "route:engineering-query": "engineering",
   "global:weapon-debug": "engineering",
-  "global:foundry-audio-preview": "engineering",
 });
 
 export interface SurfaceAvailability {
@@ -113,12 +108,6 @@ export function screenActionSurface(action: ScreenAction): SurfaceId | undefined
     return action.id.startsWith("boss-memory-") ? "feature:boss-memory" : undefined;
   if (action.type === "profile.downloadGhostArchive")
     return action.paired === true ? "feature:linked-pair-download" : undefined;
-  if (type.startsWith("training-archive.") || type.startsWith("academy.")) return "screen:academy";
-  if (type.startsWith("training-operations.") || type.startsWith("foundry.")) return "screen:foundry";
-  if (type === "game-agent.open") return "screen:botevidence";
-  if (type === "run-monitor.control" || type === "replay.hub.watch" || type === "ghostlab.watch")
-    return "control:run-monitor";
-  if (type === "run-monitor.open" || type === "replay.hub.open" || type === "ghostlab.open") return "screen:ghostlab";
   if (type.startsWith("replay.coach.")) return "feature:coach";
   if (type.startsWith("replay.editor.") || type.startsWith("replay.studio.")) return "feature:replay-editor";
   if (

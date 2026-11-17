@@ -73,7 +73,6 @@ import { startLiveGame } from "./game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { SurfaceAvailability } from "../../domain/surface-availability";
 import type { EngineeringQuery } from "./engineering-query";
-import type { LiveEngineeringSurfaceFactory } from "../engineering/engineering-surfaces-contract";
 
 export interface TearCompositionOptions {
   readonly target: "standalone" | "crazygames";
@@ -99,9 +98,8 @@ interface CompositionWindow extends Window {
  * The real application composition root. Target adapters are passed from their
  * entrypoint so standalone builds do not import the CrazyGames implementation.
  *
- * Engineering-only code is loaded here, behind the build constants, so a
- * release build awaits nothing and its bundle contains none of it: the
- * research/diagnostic surface controllers (`__TEAR_ENGINEERING_SURFACES__`).
+ * Test-build-only code is reached only behind `__TEAR_TEST_BUILD__`, so a
+ * release build's bundle contains none of it.
  */
 export async function composeTearApplication(options: TearCompositionOptions): Promise<void> {
   const {
@@ -137,9 +135,6 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   // Optional capture tooling is a development adapter, never a production
   // gameplay dependency or shared writable global.
   const clipper = import.meta.env.DEV ? compositionWindow.Clipper : undefined;
-  const engineeringSurfaces: LiveEngineeringSurfaceFactory | undefined = __TEAR_ENGINEERING_SURFACES__
-    ? (await import("../engineering/engineering-surfaces")).LIVE_ENGINEERING_SURFACES
-    : undefined;
   // These data-only services are created before any world constructor captures
   // them. The bootstrap deliberately leaves all presentation adapters outside.
   const { configuration: worldConfiguration, clock: CLOCK, random } = createTearWorldBootstrap(CONFIG);
@@ -371,7 +366,6 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     achievementToastPersistence,
     surfaces,
     engineeringQuery,
-    ...(engineeringSurfaces === undefined ? {} : { engineeringSurfaces }),
     browserDocument: document,
     browserIndexedDb,
     browserNavigator: navigator,

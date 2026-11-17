@@ -122,8 +122,7 @@
     "id": "audio",
     "prefixes": [
       "src/audio/",
-      "public/vendor/tear-score/",
-      "public/vendor/tear-music/"
+      "public/audio/"
     ],
     "scenarios": [
       "boot-start-run"
@@ -1159,30 +1158,19 @@
   {
     "id": "current-player-surfaces",
     "prefixes": [
-      "src/app/engineering/replay-hub.ts",
-      "src/app/engineering/run-monitor.ts",
       "src/app/replay/replay-screen-adapter.ts",
       "src/app/library/replay-library-controller.ts",
       "src/app/engineering/replay-editor.ts",
       "src/app/library/replay-transport-controller.ts",
-      "src/app/engineering/player-watch-controller.ts",
-      "src/app/replay/ghost-lab-home.ts",
-      "src/tearbench/browser/replay-hub.ts",
-      "src/tearbench/browser/replay-hub-route.ts",
-      "src/tearbench/browser/replay-hub-selectors.ts",
-      "src/agents/run-monitor.ts",
       "src/agents/live-watch-agent-host.ts",
-      "src/agents/live-watch-agent-panel.ts",
-      "src/agents/panel-surface.ts",
-      "src/agents/surface-route.ts",
-      "src/presentation/screens/ghost-lab.ts"
+      "src/agents/live-watch-agent-panel.ts"
     ],
     "scenarios": [
       "boot-start-run",
       "draft-selection-to-gameplay"
     ],
     "graveyardCases": [],
-    "journeyCheckpoint": "replay-hub-run-monitor-player-journey",
+    "journeyCheckpoint": "watch-agent-player-journey",
     "baseComparison": "main-base",
     "interactionMatrices": [
       "browser",
@@ -1193,10 +1181,10 @@
       "test-standalone"
     ],
     "journeyCommands": [
-      "node tests/browser-ghost-lab-home.js"
+      "node tests/browser-scripted-agent-autonomy.js"
     ],
     "journeyTaskIds": [
-      "evidence.browser-ghost-lab-home"
+      "evidence.browser-scripted-agent-autonomy"
     ]
   },
   {
