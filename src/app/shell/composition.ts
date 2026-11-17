@@ -101,7 +101,7 @@ interface CompositionWindow extends Window {
  * Test-build-only code is reached only behind `__TEAR_TEST_BUILD__`, so a
  * release build's bundle contains none of it.
  */
-export async function composeTearApplication(options: TearCompositionOptions): Promise<void> {
+export function composeTearApplication(options: TearCompositionOptions): void {
   const {
     target,
     sdk,
