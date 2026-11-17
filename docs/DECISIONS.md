@@ -172,6 +172,8 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   `pnpm checkpoint <name>`; `pnpm checkpoint --list` lists them.
 - **Alternatives:** deleting them (rejected: they reproduce historical evidence).
 - **Consequences:** `pnpm test:checkpoints` keeps the registry runnable.
+- **Superseded 2026-11-16:** the registry, its runner and the browser tests only it named were
+  deleted under [D-015](#d-015); git history keeps them.
 - **Source:** [README.md](../README.md); [pull request 85](https://github.com/shaku1z/tear/pull/85).
 
 <a id="d-010"></a>
@@ -266,7 +268,7 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   (G4) had put new names on facades over the old modules instead of renaming or removing anything.
 - **Decision:** developer-only systems that nothing shipped or verified depends on are deleted, not
   renamed: the agent training pipelines (Foundry, Academy), the replay hub and bot evidence screens,
-  clip export, and the G4 facades and alias vocabularies. What stays gets one plain name. Player
+  the historical checkpoint registry, and the G4 facades and alias vocabularies. What stays gets one plain name. Player
   storage identifiers (the `tear-ghost-v3` database, `tear_vault_*` keys, replay file formats) are
   identifiers, not names, and never change. In-world game writing that happens to use such a word
   stays. Git history is the archive for deleted code and its documents.

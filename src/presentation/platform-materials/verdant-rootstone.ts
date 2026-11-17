@@ -1,5 +1,7 @@
 import { clamp } from "../../domain/geometry";
-import type { PreparedVerdantMaterial } from "./prepared-verdant-material";
+import type { SurfaceTexture } from "./surface-texture";
+
+export type { SurfaceTexture };
 
 export type VerdantRootstoneState = "stable" | "stressed" | "warning" | "broken" | "reforming";
 
@@ -49,7 +51,7 @@ export function drawVerdantRootstone(
   context: CanvasRenderingContext2D,
   platform: VerdantRootstonePlatform,
   policy: VerdantRootstoneRenderPolicy,
-  material?: Pick<PreparedVerdantMaterial, "draw">,
+  material?: SurfaceTexture,
 ): void {
   const state = verdantRootstoneState(platform);
   const stress = clamp(policy.stressRatio, 0, 1);
