@@ -63,7 +63,7 @@ Path to budgets: once several clean runs on the controlled release host agree, p
 - **Main chunk.** The largest application JavaScript chunk, excluding worker bundles and the on-demand tutorial corpus, stays within `standaloneMainGzipBytes` / `crazygamesMainGzipBytes` gzip bytes.
 - **Workers.** The largest worker bundle (Career Archive, coach history, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
 - **Tutorial corpus.** The tutorial demonstration corpus is a separate chunk of at most `tutorialGoldGzipBytes` gzip bytes. Training preflight fetches it before a tutorial or practice run; the service worker runtime-caches it on first use, so it then works offline, rather than precaching it for every player.
-- **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (42 entries and about 6.74 MB measured), and never the tutorial corpus.
+- **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (33 entries and about 2.70 MB measured; the three large workers are cached on first use instead), and never the tutorial corpus.
 
 `pnpm check:test-isolation` proves the engineering channel stays out of both release builds. The Watch Agent and the snapshot editor load only through dynamic imports guarded by the test-build constants, and the Verdant calibration scene only through one guarded by `__TEAR_TEST_BUILD__`. The gate fails if a release file contains one of their distinctive markers (storage keys, format identifiers and diagnostic sentences listed in the script) or a calibration image, and it fails if a marker disappears from its source module, so a renamed string cannot make the check pass vacuously.
 
