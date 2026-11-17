@@ -5,14 +5,16 @@ import { GhostLocalVault } from "../../ghost/capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "../../ghost/indexeddb-vault-backend";
 import { prepareGhostCapsuleSourceGuards } from "../../ghost/capsule-protection";
 
+export function createLiveGhostReferenceWorker(): Worker {
+  return new Worker(new URL("../../ghost/live-ghost-reference-worker.ts", import.meta.url), { type: "module" });
+}
+
 export function createBrowserLiveGhostReference(factory: IDBFactory | undefined) {
   return Object.freeze({
     prepare(id: string, signal: AbortSignal): Promise<GhostLiveReference> {
       if (factory === undefined || signal.aborted)
         return Promise.reject(new Error("Reference selection unavailable or cancelled."));
-      const worker = new Worker(new URL("../../ghost/live-ghost-reference-worker.ts", import.meta.url), {
-        type: "module",
-      });
+      const worker = createLiveGhostReferenceWorker();
       return new Promise<GhostLiveReference>((resolve, reject) => {
         const cancel = () => {
           worker.terminate();
@@ -27,7 +29,13 @@ export function createBrowserLiveGhostReference(factory: IDBFactory | undefined)
           "error",
           () => {
             cleanup();
-            reject(new Error("Reference worker unavailable."));
+            reject(
+              new Error(
+                navigator.onLine
+                  ? "Reference worker unavailable."
+                  : "The ghost reference needs one online visit first; you can still race without it.",
+              ),
+            );
           },
           { once: true },
         );

@@ -43,6 +43,10 @@ import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../..
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
+import { createCareerArchiveWorker } from "../replay/browser-ghost-career";
+import { createCoachHistoryWorker } from "../replay/browser-ghost-coach-history";
+import { createLiveGhostReferenceWorker } from "../replay/browser-live-ghost-reference";
+import { startWorkerCacheWarmup } from "../replay/warm-worker-cache";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
 import { createSceneLibrary } from "../../presentation/scenes/scene-library";
@@ -333,6 +337,12 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new AppStateController(surfaces);
+  // The ghost workers are cached by the service worker on first use; start each once on an idle menu.
+  if (target === "standalone")
+    startWorkerCacheWarmup(
+      () => APP.screen === "menu",
+      [createCareerArchiveWorker, createCoachHistoryWorker, createLiveGhostReferenceWorker],
+    );
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
   const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
