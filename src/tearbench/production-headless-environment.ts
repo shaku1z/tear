@@ -33,6 +33,7 @@ import {
   type TearHeadlessTransition,
 } from "./headless";
 import { validateTearContract } from "./validation";
+import { requireProductionHeadlessScenario } from "./production-headless-scenario";
 import {
   canonicalObservationActions,
   canonicalObservationEnemyKind,
@@ -149,7 +150,7 @@ export function validateProductionHeadlessCheckpointRequest(
   batches: readonly Readonly<{ tick: number; actions: readonly unknown[] }>[],
 ): ProductionHeadlessCheckpoint {
   const checkpoint = validateProductionHeadlessCheckpoint(value),
-    scenario = requireScenario(sourceScenario);
+    scenario = requireProductionHeadlessScenario(sourceScenario);
   if (stableVerificationHash(scenario) !== stableVerificationHash(checkpoint.scenario)) {
     throw new TypeError("checkpoint scenario differs from admitted request");
   }
@@ -195,6 +196,13 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   policyObservation(): TearObservationV1;
   /** Exact source-owned UI facts; observing never selects or rerolls a reward. */
   policyUiObservation(): Readonly<{ screen: string; choices: readonly Readonly<{ id: string }>[]; focusedId?: string }>;
+  /** The running world, for measurement that reads what the observation does not carry. Read only. */
+  world(): ProductionReplayWorld["world"]["state"];
+  /**
+   * True while a cinematic (a boss phase change, a chapter page) holds the simulation. It runs on
+   * application frames, so the caller must advance them or the run stays held for ever.
+   */
+  cinematicActive(): boolean;
   /** Build provenance remains available outside checkpointable lifecycle states. */
   sourceBuild(): ProductionReplayBootstrap["build"];
   /** Before the associated fixed step; no implicit cadence or confirm policy. */
@@ -208,44 +216,6 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   /** Available only when the environment was explicitly created for source-track capture. */
   sourceTracks(): ProductionHeadlessSourceTracks;
 }
-
-function requireNaturalScenario(value: TearScenarioV1): TearScenarioV1 {
-  if (value.backends !== undefined && !value.backends.includes("headless")) {
-    throw new RangeError(`scenario ${value.id} does not support headless execution`);
-  }
-  if (value.subject?.kind === "environment-field" || value.subject?.kind === "environment-combat-object") {
-    throw new RangeError(`scenario ${value.id} is environment-owned and requires the live backend`);
-  }
-  if (value.stateClass !== "recorded-canonical") {
-    throw new RangeError("production headless runs require recorded-canonical natural openings");
-  }
-  if (
-    value.start.stage !== undefined ||
-    (value.start.wave !== undefined && value.start.wave !== 1) ||
-    value.start.boss !== undefined ||
-    value.start.bossPhase !== undefined
-  ) {
-    throw new RangeError("production headless runs require a natural opening; use State Forge for surgical state");
-  }
-  return value;
-}
-
-function requireScenario(value: unknown): TearScenarioV1 {
-  const validated = validateTearContract(value);
-  if (!validated.ok || validated.value.kind !== "scenario") {
-    throw new TypeError(
-      `invalid headless scenario: ${
-        validated.ok
-          ? "wrong contract kind"
-          : validated.issues.map((issue) => `${issue.path} ${issue.message}`).join("; ")
-      }`,
-    );
-  }
-  return requireNaturalScenario(validated.value);
-}
-
-/** Pure admission shared by runtime reset and governed training requests. */
-export const validateProductionHeadlessScenario = requireScenario;
 
 function cloneActions(actions: readonly CommandEnvelope<GameAction>[]): readonly CommandEnvelope<GameAction>[] {
   return Object.freeze(
@@ -337,7 +307,7 @@ export function validateProductionHeadlessCheckpoint(value: unknown): Production
   if (!record(value) || value.format !== "tearbench-production-headless-checkpoint" || value.schemaVersion !== 2) {
     throw new TypeError("production headless checkpoint format is invalid");
   }
-  const scenario = requireScenario(value.scenario);
+  const scenario = requireProductionHeadlessScenario(value.scenario);
   const bootstrap = requireBootstrap(value.bootstrap);
   const snapshot = validateTearContract(value.snapshot);
   if (!snapshot.ok || snapshot.value.kind !== "snapshot") {
@@ -720,6 +690,7 @@ export function createProductionHeadlessEnvironment(
       mode: scenario.start.mode,
       weaponId: scenario.start.weapon,
       difficulty: scenario.start.difficulty,
+      ...(scenario.start.boss === undefined ? {} : { firstBoss: scenario.start.boss }),
       ...(snapshot === undefined || input === undefined ? {} : { inputSnapshots: new Map([[snapshot.tick, input]]) }),
       gameplayEvents,
       ...(sourceTracks === undefined
@@ -771,7 +742,7 @@ export function createProductionHeadlessEnvironment(
 
   return Object.freeze({
     reset(source: TearScenarioV1): CanonicalGameplayState {
-      const scenario = requireScenario(source);
+      const scenario = requireProductionHeadlessScenario(source);
       core = compose(scenario);
       nextCommandId = 0;
       actionTrace = [];
@@ -799,6 +770,8 @@ export function createProductionHeadlessEnvironment(
         ...(focusedId === undefined ? {} : { focusedId }),
       });
     },
+    world: () => requireCore().replay.world.state,
+    cinematicActive: () => requireCore().replay.world.context.cinema.active,
     sourceBuild: () => Object.freeze({ ...requireCore().bootstrap.build }),
     advanceApplicationFrame: (seconds: number, confirm?: ProductionApplicationFrameConfirm) => {
       requireCore().advanceApplicationFrame(seconds, confirm);
@@ -808,7 +781,7 @@ export function createProductionHeadlessEnvironment(
       const current = requireCore();
       if (current.replay.tutorialHandoff() === null)
         throw new RangeError("tutorial has not reached its next-run handoff");
-      const next = requireScenario(source);
+      const next = requireProductionHeadlessScenario(source);
       if (
         next.start.mode !== "playground" ||
         next.start.difficulty !== "normal" ||

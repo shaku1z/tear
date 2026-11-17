@@ -187,6 +187,13 @@
       ],
       "duration": "long"
     },
+    "playtest": {
+      "purpose": "Plays the real game headless and prints results; `bosses` fights the named bosses with scripted players on fixed seeds, one table per fight",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
     "tearbench": {
       "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, forge); effects depend on the subcommand",
       "effects": [
@@ -1649,6 +1656,16 @@
       "runBy": [
         "CONTRIBUTING.md",
         "tests/serve-contract.test.mjs"
+      ]
+    },
+    "scripts/playtest.mjs": {
+      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights headless and prints the tables; --json also writes them to the named file",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "playtest"
       ]
     },
     "scripts/tearbench.mjs": {

@@ -52,6 +52,7 @@ import type { TearCodecWorld } from "./state-codecs";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";
 import { captureLiveStateForgeSnapshot, injectedBuildIdentity } from "./live-runtime-snapshots";
 import { createProductionCombatSimulation } from "./production-combat-simulation";
+import type { ProductionApplicationFrameConfirm } from "./production-application-frame";
 import { createProductionRunOutcomeRuntime, type ProductionRunOutcomeRuntime } from "./production-run-outcome-runtime";
 import { createProductionReplayWorld, type ProductionReplayWorld } from "./production-world-factory";
 import {
@@ -84,10 +85,7 @@ export function captureProductionRewardSelection(selection: RewardSelectionSnaps
 
 const productionWaveRewards = new WeakMap<ProductionReplayWorld, ProductionWaveRewardRuntime>();
 
-/** Explicit application-frame inputs, independent of fixed simulation ticks. */
-export type ProductionApplicationFrameConfirm = NonNullable<
-  Parameters<InstanceType<typeof CinematicTimeline.Director>["update"]>[1]
->;
+export type { ProductionApplicationFrameConfirm } from "./production-application-frame";
 
 export interface ProductionGhostReplayCompositionOptions {
   readonly observeStyle?: ProductionCombatPhaseOptions["observeStyle"];
@@ -98,6 +96,7 @@ export interface ProductionGhostReplayCompositionOptions {
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
+  readonly firstBoss?: string;
   /** Optional immutable identity supplied by the build/composition boundary. */
   readonly buildIdentity?: Omit<TearBuildIdentityV1, "configHash">;
   readonly forkOrigin?: GhostForkOriginV1;
@@ -734,6 +733,7 @@ export function createProductionGhostReplayComposition(options: ProductionGhostR
         ...(options.mode === undefined ? {} : { mode: options.mode }),
         ...(options.weaponId === undefined ? {} : { weaponId: options.weaponId }),
         ...(options.difficulty === undefined ? {} : { difficulty: options.difficulty }),
+        ...(options.firstBoss === undefined ? {} : { firstBoss: options.firstBoss }),
         tutorialHandoff: () => {
           waveReward?.restoreScreen("paused");
         },

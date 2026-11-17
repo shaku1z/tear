@@ -127,7 +127,8 @@
       "src/simulation/",
       "src/domain/",
       "src/tearbench/",
-      "src/agents/"
+      "src/agents/",
+      "src/playtest/"
     ],
     "scenarios": [
       "boot-start-run",
