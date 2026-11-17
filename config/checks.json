@@ -454,6 +454,11 @@
         "run": "node tests/browser-c40-source-void-ghost-seek.js"
       },
       {
+        "id": "replay-file-round-trip",
+        "run": "node tests/browser-c39-normal-capsule-roundtrip.js",
+        "seconds": 43
+      },
+      {
         "id": "pale-aurora-track",
         "run": "node scripts/tearbench.mjs run pale-aurora-track-behavior"
       },

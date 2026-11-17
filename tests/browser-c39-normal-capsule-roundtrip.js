@@ -7,9 +7,11 @@ const { SLOW_STATE_WAIT_MS, STATE_WAIT_MS, holdFor } = require("./browser-waits"
 
 // This consumer is deliberately separate from unit fixtures. Every producer and
 // consumer below owns a fresh browser process; only the normal download survives.
-const requestedDirectory = process.env.TEAR_C39_ARTIFACT_DIR;
-if (!requestedDirectory || !path.isAbsolute(requestedDirectory))
-  throw new Error("Set an absolute unique empty TEAR_C39_ARTIFACT_DIR outside the repository.");
+// TEAR_C39_ARTIFACT_DIR keeps the evidence in a chosen folder; without it the run uses a fresh temporary one.
+const requestedDirectory =
+  process.env.TEAR_C39_ARTIFACT_DIR || fs.mkdtempSync(path.join(require("node:os").tmpdir(), "tear-c39-"));
+if (!path.isAbsolute(requestedDirectory))
+  throw new Error("TEAR_C39_ARTIFACT_DIR must be an absolute, empty folder outside the repository.");
 const directory = path.resolve(requestedDirectory),
   repository = path.resolve(__dirname, "..");
 const relative = path.relative(repository, directory);

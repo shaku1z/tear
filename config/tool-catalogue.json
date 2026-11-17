@@ -152,13 +152,6 @@
       ],
       "duration": "seconds"
     },
-    "test:checkpoints": {
-      "purpose": "Node tests for the checkpoint runner and config/checkpoints.json",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
     "check:quick": {
       "purpose": "Fast group of config/checks.json (changed-file format and lint, guards, typecheck); the pre-push tier",
       "effects": [
@@ -1153,14 +1146,6 @@
       ],
       "duration": "under-a-minute"
     },
-    "checkpoint": {
-      "purpose": "Runs a historical milestone checkpoint gate from config/checkpoints.json; --list shows them",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes"
-    },
     "check:crazygames-package": {
       "purpose": "Packages an existing dist/crazygames and checks the upload size budget",
       "effects": [
@@ -1517,17 +1502,6 @@
         "lint"
       ]
     },
-    "scripts/measure-production-headless-long-run.mjs": {
-      "purpose": "Measures a long production headless run and writes a JSON artifact (C30 checkpoint)",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "minutes",
-      "via": [],
-      "runBy": [
-        "config/checkpoints.json"
-      ]
-    },
     "scripts/merge-ready.mjs": {
       "purpose": "Merge readiness behind pnpm merge:ready: a red main stops merges and a stale pass is not a pass",
       "effects": [
@@ -1649,17 +1623,6 @@
       "duration": "under-a-minute",
       "via": [
         "report:workspace-recovery"
-      ]
-    },
-    "scripts/run-checkpoint.mjs": {
-      "purpose": "Runs a named historical checkpoint gate from config/checkpoints.json",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes",
-      "via": [
-        "checkpoint"
       ]
     },
     "scripts/run-checks.mjs": {
