@@ -103,6 +103,11 @@ export class PwaUpdateController implements PwaUpdateCapability {
     void this.#autoTick();
   }
 
+  /** A separate read, because the flag can change while `settle` is awaited. */
+  #finished(): boolean {
+    return this.#autoDone;
+  }
+
   async #autoTick(): Promise<void> {
     const auto = this.#auto;
     const host = this.#host;
@@ -114,7 +119,7 @@ export class PwaUpdateController implements PwaUpdateCapability {
     // Idle after the player has started playing: wait until they leave and come back.
     if (this.#interacted && !this.#leftIdleSinceInput) return;
     await host.settle();
-    if (!host.isIdle() || this.#autoDone) return;
+    if (!host.isIdle() || this.#finished()) return;
     this.#autoDone = true;
     if (this.#poll !== null) auto.clearInterval(this.#poll);
     this.#poll = null;
