@@ -211,7 +211,7 @@ export function warmStem(baseUrl: string, asset: StemAsset, canPlay: (mime: stri
   if (!source) return;
   const url = resolveUrl(baseUrl, source.url);
   if (warmed.has(url)) return;
-  const pending = fetchStemBytes(url, asset.id, { priority: "low" } as RequestInit);
+  const pending = fetchStemBytes(url, asset.id, { priority: "low" });
   pending.catch(() => {
     warmed.delete(url);
   });

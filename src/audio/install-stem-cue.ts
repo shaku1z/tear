@@ -28,14 +28,19 @@ export function musicWarmAllowed(
   }
 }
 
-function browserMusicWarmAllowed(): boolean {
-  let stored: string | null = null;
+function storedSettings(): string | null {
   try {
-    stored = window.localStorage.getItem("tear_settings");
+    return window.localStorage.getItem("tear_settings");
   } catch {
-    stored = null;
+    return null;
   }
-  return musicWarmAllowed(stored, (navigator as Navigator & { connection?: { saveData?: boolean } }).connection);
+}
+
+function browserMusicWarmAllowed(): boolean {
+  return musicWarmAllowed(
+    storedSettings(),
+    (navigator as Navigator & { connection?: { saveData?: boolean } }).connection,
+  );
 }
 
 async function loadMusicIndex(): Promise<BiomeStemBackend> {
