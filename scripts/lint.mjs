@@ -10,7 +10,6 @@ import { changedFiles, withinTargets } from "./changed-files.mjs";
 
 export const LINT_TARGETS = Object.freeze([
   "src",
-  "workers",
   "scripts",
   "tests",
   "vite.config.ts",

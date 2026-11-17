@@ -183,12 +183,12 @@ test("strict mode rejects dirty worktrees", () => {
 });
 
 test("CI mode rejects missing required and forbidden tracked directories", () => {
-  const missing = createFixture({ missingDirectory: "workers" });
+  const missing = createFixture({ missingDirectory: "scripts" });
   const forbidden = createFixture({ forbiddenDirectory: "dist" });
   try {
     const missingResult = runWorkspaceCheck({ root: missing, mode: "ci", env: emptyEnvironment });
     assert.equal(missingResult.ok, false);
-    assert.match(missingResult.errors.join("\n"), /required tracked directory is missing: workers/u);
+    assert.match(missingResult.errors.join("\n"), /required tracked directory is missing: scripts/u);
     const forbiddenResult = runWorkspaceCheck({ root: forbidden, mode: "ci", env: emptyEnvironment });
     assert.equal(forbiddenResult.ok, false);
     assert.match(forbiddenResult.errors.join("\n"), /forbidden generated\/output directory is tracked: dist/u);

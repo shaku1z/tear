@@ -86,11 +86,8 @@
       "src/persistence/",
       "src/platform/",
       "src/ghost/",
-      "workers/",
-      "migrations/",
       "wrangler.jsonc",
-      "wrangler.preview.jsonc",
-      "wrangler.ghost.jsonc"
+      "wrangler.preview.jsonc"
     ],
     "scenarios": [
       "boot-start-run"
