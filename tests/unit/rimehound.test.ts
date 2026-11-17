@@ -10,7 +10,7 @@ import { createProjectile } from "../../src/gameplay/entities/projectile";
 import { createAuroraTrackFieldState } from "../../src/gameplay/environment/aurora-track";
 import { advanceAuroraTrack } from "../../src/gameplay/environment/aurora-track-runtime";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench";
 
 function fixture() {

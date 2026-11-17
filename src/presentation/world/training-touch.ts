@@ -22,10 +22,10 @@ export function tutorialCardLayout(
     gap = 24;
   const besideMeter = frame.right - (meterRight + gap);
   if (besideMeter >= 460) {
-    const width = Math.min(700, besideMeter);
+    const width = Math.min(560, besideMeter);
     return { x: frame.right - width, y: Math.max(frame.top, minimumTop), width };
   }
-  const width = Math.min(700, frame.right - frame.left);
+  const width = Math.min(560, frame.right - frame.left);
   return { x: frame.centerX - width / 2, y: Math.max(laneBottom, minimumTop), width };
 }
 
@@ -35,18 +35,11 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
   /** This frame's lesson card (drawn with the HUD, before the touch controls), which the touch coaching keeps clear of. */
   let lessonCard: Readonly<{ x: number; y: number; w: number; h: number }> | null = null;
 
-  function practiceFooter(snapshot: TutorialCardSnapshot): string {
-    if (snapshot.bossPractice) return "BOSS PRACTICE · BASELINE · NO REWARDS";
-    if (snapshot.enemyPractice) return "ENEMY PRACTICE · BASELINE · NO REWARDS";
-    if (snapshot.annex) return "WEAPON ANNEX · BASELINE · NO REWARDS";
-    return `BLOCK ${String(snapshot.lessonIndex + 1)} / ${String(snapshot.lessonCount)}`;
-  }
-
   /**
-   * The lesson card: one vertical stack (focus tag, title + count, instruction,
-   * progress bar, keys, lesson dots + block) so no row can overlap another. It sits on
-   * the scene like the rest of the HUD (no plate), marked by its accent rule; it returns
-   * its rectangle so coach marks keep clear of it.
+   * The lesson strip: one vertical stack (context, title + count, goal, progress bar,
+   * keys) so no row can overlap another. It sits on the scene like the rest of the HUD
+   * (no plate), marked by its accent rule, and returns its rectangle so coach marks keep
+   * clear of it.
    */
   function tutorialCard(snapshot: TutorialCardSnapshot): WorldRect {
     const t = ui.t,
@@ -64,40 +57,23 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
     const countText = progress ? `${String(progress.current)} / ${String(progress.goal)}` : "";
     canvas.font = ui.font(type.title, true);
     const countW = countText ? canvas.measureText(countText).width + t.space.md : 0;
-    const tagY = y + pad + type.micro,
-      titleY = tagY + t.space.sm + type.title;
-    const description = ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner, {
+    const contextY = y + pad + type.micro,
+      titleY = contextY + t.space.sm + type.title;
+    const goalY = titleY + t.space.sm + type.body;
+    const goal = ui.textBox(canvas, snapshot.description, left, goalY, inner, {
       size: type.body,
       measureOnly: true,
-      maxLines: 4,
+      maxLines: 3,
     });
-    const barY = titleY + t.space.sm + description.height + t.space.xs;
+    const barY = titleY + t.space.sm + goal.height + t.space.xs;
     const keysY = barY + (progress ? t.space.md : 0) + type.micro + t.space.sm;
-    const footerY = keysY + (snapshot.keys.length > 0 ? Math.round(type.micro * 1.7) + t.space.sm : 0);
-    const height = footerY + pad - y;
+    const bottom = snapshot.keys.length > 0 ? keysY + 5 : barY + (progress ? 5 : 0);
+    const height = bottom + pad - y;
     const card = { x, y, w: width, h: height };
     lessonCard = card;
     canvas.fillStyle = t.color.accent;
     canvas.fillRect(x, y, 4, height);
-    ui.tag(
-      canvas,
-      `${snapshot.arenaLabel ?? "TRAINING"}  /  ${(snapshot.teachingFocus ?? "movement").toUpperCase()}`,
-      left,
-      tagY,
-      ui.readable(t.color.accent),
-      "left",
-      type.micro,
-    );
-    if (snapshot.final)
-      ui.text(
-        canvas,
-        "training summary · practice arena loading…",
-        x + width - pad,
-        tagY,
-        type.micro,
-        "right",
-        t.alpha.muted,
-      );
+    ui.tag(canvas, snapshot.context, left, contextY, ui.readable(t.color.accent), "left", type.micro);
     const title = ui.fitText(canvas, snapshot.title, inner - countW, {
       size: type.title,
       floor: type.label,
@@ -116,16 +92,14 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
         type.title,
       );
     }
-    ui.textBox(canvas, snapshot.description, left, titleY + t.space.sm + type.body, inner, {
+    ui.textBox(canvas, snapshot.description, left, goalY, inner, {
       size: type.body,
       alpha: t.alpha.soft,
-      maxLines: 4,
+      maxLines: 3,
     });
     if (progress) progressBar(left, barY, inner, progress);
     let keyX = left;
     for (const key of snapshot.keys) keyX += ui.keycap(canvas, key, keyX, keysY) + t.space.sm;
-    lessonDots(snapshot, left, footerY - type.micro * 0.35);
-    ui.text(canvas, practiceFooter(snapshot), x + width - pad, footerY, type.micro, "right", t.alpha.muted);
     if (snapshot.completedBeat > 0) {
       const scale = 1 + (1 - Math.abs(snapshot.completedBeat - 0.9) / 0.9) * 0.4;
       ui.tag(canvas, "✓", x + width - pad, keysY, ui.readable(t.color.accent), "right", Math.round(type.h2 * scale));
@@ -143,24 +117,6 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
     canvas.fillStyle = ui.t.color.accent;
     canvas.fillRect(x, y, width * clamp(meter.current / Math.max(1, meter.goal)), 5);
     canvas.restore();
-  }
-
-  function lessonDots(snapshot: TutorialCardSnapshot, x: number, y: number): void {
-    if (snapshot.annex || snapshot.enemyPractice || snapshot.bossPractice) return;
-    for (let index = 0; index < snapshot.lessonCount; index++) {
-      canvas.beginPath();
-      canvas.arc(x + 4 + index * 14, y, 3.5, 0, Math.PI * 2);
-      if (index <= snapshot.lessonIndex) {
-        canvas.fillStyle = index < snapshot.lessonIndex ? ui.t.color.accent : ui.ink;
-        canvas.fill();
-      } else {
-        canvas.globalAlpha = 0.45;
-        canvas.strokeStyle = ui.ink;
-        canvas.lineWidth = 1.5;
-        canvas.stroke();
-        canvas.globalAlpha = 1;
-      }
-    }
   }
 
   /**

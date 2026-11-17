@@ -5,6 +5,8 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { createUi } from "../../src/presentation/ui";
 import type { ScreenControl, ScreenRenderContext, ScreenUiPort } from "../../src/presentation/screens";
 import { createScreenRenderers } from "../../src/presentation/screens";
+import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { CONFIG } from "../../src/config/game-config";
@@ -339,6 +341,43 @@ describe("legacy screen renderer registry", () => {
     expect(controls.some((control) => control.label === "DOWNLOAD" || control.label.includes("THEATER"))).toBe(false);
     expect(controls.some((control) => control.action.type === "profile.closeOwnGhostCatalog")).toBe(true);
   });
+  it("pauses the Tutorial on the current lesson with plain actions and only reached lessons", () => {
+    const controls: ScreenControl[] = [],
+      context = createRenderContext(controls),
+      title = vi.spyOn(context.ui, "title");
+    const renderer = createScreenRenderers(context),
+      controller = new TutorialController(CONFIG);
+    controller.start(1600);
+    renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
+    expect(title).toHaveBeenCalledWith(
+      expect.anything(),
+      "TUTORIAL",
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+    const labels = controls.map((control) => control.label);
+    expect(labels.slice(0, 3)).toEqual(["RESUME", "RESTART LESSON", "SKIP LESSON"]);
+    expect(labels).toEqual(expect.arrayContaining(["SETTINGS", "MAIN MENU"]));
+    expect(labels.some((label) => /LOCKED|LESSON HELP|DIAGNOSTIC|PLAYBACK|UNFINISHED/.test(label))).toBe(false);
+    expect(
+      controls.filter((control) => control.action.type === "tutorial.action" && control.action.command === "select"),
+    ).toHaveLength(1);
+    expect(controls.find((control) => control.label === "SKIP LESSON")?.action).toEqual({
+      type: "tutorial.action",
+      command: "skip",
+    });
+    controls.length = 0;
+    renderer.paused({
+      id: "paused",
+      abilities: [],
+      progress: [],
+      tutorial: { ...controller.session(), phase: "free-practice", courseCompleted: true },
+    });
+    expect(controls[0]).toMatchObject({ label: "START A RUN", action: { type: "run.quit", next: "setup" } });
+    expect(controls[1]?.label).toBe("KEEP PRACTICING");
+    expect(controls.some((control) => control.label === "SKIP LESSON")).toBe(false);
+  });
   it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
     const controls: ScreenControl[] = [],
       context = createRenderContext(controls),
@@ -388,10 +427,10 @@ describe("legacy screen renderer registry", () => {
     });
     expect(
       controls.filter((control) => control.action.type === "tutorial.action").map((control) => control.label),
-    ).toEqual(expect.arrayContaining(["SHOW DEMO", "PLAYBACK 0.5×", "DIAGNOSTIC DEMO", "COMPARE ATTEMPT"]));
+    ).toEqual(expect.arrayContaining(["SHOW DEMO", "DEMO SPEED 0.5×", "COMPARE WITH DEMO"]));
     expect(
       controls
-        .filter((control) => control.label === "COMPARE ATTEMPT")
+        .filter((control) => control.label === "COMPARE WITH DEMO")
         .every((control) => control.y + control.h <= context.height),
     ).toBe(true);
     controls.length = 0;
@@ -543,6 +582,7 @@ describe("legacy screen renderer registry", () => {
       "ghostsupport",
       "leaderboards",
       "menu",
+      "music",
       "paused",
       "pglab",
       "pgmenu",
@@ -560,6 +600,75 @@ describe("legacy screen renderer registry", () => {
     expect(() => {
       registry.playing({ id: "playing" });
     }).not.toThrow();
+  });
+
+  it("draws MUSIC: a rail, Home's shelves, a collection's page, Settings and the transport", () => {
+    const controls: ScreenControl[] = [];
+    let written = -1;
+    const music = JSON.parse(
+      readFileSync(fileURLToPath(new URL("../../public/audio/music.json", import.meta.url)), "utf8"),
+    ) as { catalog: { works: { id: string; title: string }[] }; routing: unknown };
+    const library = {
+      songs: music.catalog.works.map((work) => ({ ...work, seconds: 30 })),
+      routing: validateMusicRoutingManifest(music.routing),
+    };
+    const view = (page: string) =>
+      buildMusicScreenView({
+        settings: {},
+        library,
+        nowPlaying: { workId: "fillet", title: "Fillet", since: 1 },
+        preview: "fillet",
+        page,
+        queue: ["fillet", "spring"],
+        now: 15_001,
+      });
+    const context = { ...createRenderContext(controls), scroll: 0, setScroll: (value: number) => (written = value) };
+    const types = () => controls.map((control) => control.action);
+    createScreenRenderers(context).music(view("home"));
+    // The rail: Home · Songs · Settings, then every stage; the Stages shelf opens the same pages.
+    for (const tab of ["home", "songs", "settings"])
+      expect(types()).toContainEqual({ type: "navigate", to: "music", tab });
+    const stageOpens = types().filter(
+      (action) => action.type === "navigate" && action.tab?.startsWith("collection:stage:"),
+    );
+    expect(stageOpens.length).toBeGreaterThan(6);
+    // Now playing (STOP while previewing) and the transport's ◀◀ ■ ▶▶.
+    expect(controls.filter((control) => control.action.type === "music.stopPreview").map((c) => c.label)).toEqual([
+      "■  STOP",
+      "■",
+    ]);
+    expect(controls.filter((control) => control.action.type === "music.step").map((c) => c.label)).toEqual([
+      "◀◀",
+      "▶▶",
+    ]);
+    expect(types()).toContainEqual({ type: "navigate", to: "menu" });
+    for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
+
+    // A stage's page: the crumb back, PLAY over the stage's songs, one row per song with that queue.
+    controls.length = 0;
+    createScreenRenderers(context).music(view("collection:stage:the-voidspire"));
+    // The crumb, the rail's Home and BACK all lead up to Home.
+    const toHome = controls.filter(
+      (c) => c.action.type === "navigate" && c.action.to === "music" && c.action.tab === "home",
+    );
+    expect(toHome).toHaveLength(3);
+    const queue = ["looking-out", "reflection-of-the-bladeless"];
+    expect(controls.find((control) => control.label === "▶  PLAY")?.action).toEqual({
+      type: "music.preview",
+      id: "looking-out",
+      queue,
+    });
+    expect(types()).toContainEqual({ type: "music.preview", id: "reflection-of-the-bladeless", queue });
+
+    // Songs scrolls its whole list; the scroll is clamped to it.
+    controls.length = 0;
+    createScreenRenderers({ ...context, scroll: 10_000 }).music(view("songs"));
+    expect(written).toBeGreaterThan(0);
+    expect(written).toBeLessThan(10_000);
+
+    controls.length = 0;
+    createScreenRenderers(context).music(view("settings"));
+    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(3);
   });
 
   it("records semantic navigation and menu actions without coordinating state", () => {
@@ -1294,8 +1403,13 @@ describe("release and engineering surface rendering", () => {
     const settings = controls.find((control) => control.label === "SETTINGS"),
       music = controls.find((control) => control.glyph === "♪");
     expect(settings).toMatchObject({ y: 670, h: 52 });
-    expect(music).toMatchObject({ x: 100, y: 731, h: 46, action: { type: "navigate", to: "settings", tab: "music" } });
-    // The footer tagline is drawn at height - 46; the music row ends well above it.
+    expect(music).toMatchObject({
+      x: 100,
+      y: 731,
+      h: 46,
+      action: { type: "navigate", to: "music", resetScroll: true },
+    });
+    // The footer tagline is drawn at height - 46; the release music row ends well above it.
     expect((music?.y ?? 0) + (music?.h ?? 0)).toBeLessThan(900 - 46 - 20);
   });
   it("renders a release setup with no DEV section, no race control and a centred START", () => {

@@ -1,7 +1,7 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import { CONFIG } from "../config/game-config";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { TUTORIAL_LESSONS, TUTORIAL_LESSON_IDS } from "../gameplay/training/tutorial-controller";
 import {

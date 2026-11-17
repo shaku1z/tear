@@ -6,7 +6,7 @@ import { UPGRADES } from "../../src/gameplay/upgrades";
 import { calculateCoinAward } from "../../src/gameplay/scoring/coin-awards";
 import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import {
   buildCanonicalProgressionLedger,
   replayProgressionConfiguration,

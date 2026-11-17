@@ -1,3 +1,4 @@
+import type { TearBuildTarget } from "./contracts";
 import type { GhostPublicationBearerPort } from "./firebase-publication-bearer";
 
 /**
@@ -14,7 +15,7 @@ export interface GhostPublicationRuntime {
 }
 
 export interface StandaloneGhostPublicationRuntimeOptions {
-  readonly target: "standalone" | "crazygames";
+  readonly target: TearBuildTarget;
   readonly endpoint: string | undefined;
   readonly loadBearer: () => Promise<GhostPublicationBearerPort>;
 }

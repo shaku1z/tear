@@ -1,5 +1,5 @@
 import { UPGRADES, type UpgradeCategory, type UpgradeDefinition } from "../gameplay/upgrades";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearBuildSelection, TearProgressionRequest } from "./progression-ledger";
 
 export interface ProgressionMutableBuild {

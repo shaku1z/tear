@@ -19,7 +19,7 @@ import {
 } from "../../src/gameplay/training/tutorial-gold-reference";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createProductionReplayRun, createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { CONFIG } from "../../src/config/game-config";
 import { productionGhostPath, recordProductionGhostTrace } from "../../src/gameplay/training/tutorial-production-ghost";
 import {
@@ -66,6 +66,18 @@ describe("gold coach presentation", () => {
     expect(coach.play("comparison")).toBe(true);
     for (let tick = 0; tick < 2400; tick++) coach.observe(frame, input, false, false);
     expect(coach.view(true, true).visible).toBe(false);
+  });
+  it("never tells a movement lesson that a swing missed", () => {
+    const corpus = shippingTutorialGold();
+    const coach = new TutorialGhostCoach(() => corpus, CONFIG.blade.minHitSpeed);
+    coach.select("jump", 2);
+    const frame = corpus?.references.find((entry) => entry.lessonId === "jump")?.frames[0];
+    if (!frame) throw new Error("Jump reference missing");
+    const input = { tick: 0, moveX: 1, moveY: 0, aimTurn: 0, primaryHeld: false };
+    coach.captureCommands([{ type: "dash", x: 1000, y: 0 }]);
+    coach.observe(frame, input, false);
+    coach.observe({ ...frame, tick: frame.tick + 1 }, input, false);
+    expect(coach.view(false, false).diagnosis).toBe("Not done yet.");
   });
   it("aborts partial recording on restore instead of reusing the old absolute clock", () => {
     const coach = new TutorialGhostCoach();

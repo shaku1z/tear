@@ -1,7 +1,8 @@
-import type { ReplayActionEnvelope, ReplayBuildMetadata, ReplayEnvelopeV2, TearScoreReplayMetadata } from "./envelope";
+import type { ReplayActionEnvelope, ReplayBuildMetadata, ReplayEnvelopeV2 } from "./envelope";
+import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import { CURRENT_REPLAY_SCHEMA_VERSION, REPLAY_FORMAT, validateReplayEnvelope } from "./envelope";
 import type { FINAL_FIVE_WEAPON_SCHEMA_VERSION, WeaponId } from "../gameplay/weapon-selection";
-import { stableVerificationHash } from "./hash";
+import { stableVerificationHash } from "../domain/hash";
 
 export interface VisualStageEvent {
   readonly t: number;

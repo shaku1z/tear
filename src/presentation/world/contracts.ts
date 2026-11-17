@@ -313,18 +313,16 @@ export interface HudSnapshot {
 }
 
 export interface TutorialCardSnapshot {
-  readonly annex?: boolean;
-  readonly enemyPractice?: boolean;
+  /** Short line above the title: "LESSON 4 OF 13", "BOSS PRACTICE · NO REWARDS". */
+  readonly context: string;
+  /** Boss practice: the card drops below the boss header. */
   readonly bossPractice?: boolean;
-  readonly lessonIndex: number;
-  readonly lessonCount: number;
   readonly title: string;
+  /** The goal: what to do now, in a few words. */
   readonly description: string;
   readonly keys: readonly string[];
   readonly final: boolean;
   readonly completedBeat: number;
-  readonly arenaLabel?: string;
-  readonly teachingFocus?: string;
   readonly progress?: { readonly current: number; readonly goal: number } | undefined;
   /** Lowest edge of an on-screen control in the top-right corner (touch pause) the card must clear. */
   readonly clearTop?: number | undefined;

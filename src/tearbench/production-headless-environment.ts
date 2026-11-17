@@ -3,7 +3,7 @@ import { AIM_MAGNITUDE_SCALE, normalizeGameAction, type GameAction } from "../in
 import type { CanonicalGameplayState } from "../gameplay/runtime/canonical-state";
 import type { AuthoritativeInputSnapshot } from "../gameplay/runtime/authoritative-input";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { createProductionCombatSimulation } from "./production-combat-simulation";
 import {
   captureProductionReplayCheckpoint,

@@ -116,3 +116,6 @@ export interface PlatformServices {
   readonly fullscreen: Capability<FullscreenService>;
   readonly overlay: Capability<OverlayService>;
 }
+
+/** The release targets a build can be made for; the definitions are in config/build-targets.json. */
+export type TearBuildTarget = "standalone" | "crazygames" | "itch";

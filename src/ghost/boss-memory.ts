@@ -1,4 +1,4 @@
-import { stableVerificationHash, canonicalStringify } from "../replay/hash";
+import { stableVerificationHash, canonicalStringify } from "../domain/hash";
 import {
   createProductionGhostReplayComposition,
   captureProductionReplayCheckpoint,

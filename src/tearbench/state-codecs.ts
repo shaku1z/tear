@@ -1,6 +1,6 @@
 import { sourceVoidHistoryReferences } from "./source-void-history-references";
 import { isAuthoredArenaSlotReference } from "./arena-slot-references";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearSnapshotV1 } from "./contracts";
 import { CODEC_REGISTRY, type TearCodecId } from "./registries";
 import { validateLiveCodecPayload } from "./live-codec-validation";

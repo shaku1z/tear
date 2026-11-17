@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   COACH_HELP_SECONDS,
   COACH_IDLE_SECONDS,
+  COACH_LEARNED_SECONDS,
+  COACH_STEP_SECONDS,
   TrainingCoach,
   type TrainingCoachFrame,
   type TutorialCoachInput,
@@ -9,8 +11,10 @@ import {
 
 const lesson = (overrides: Partial<TutorialCoachInput> = {}): TutorialCoachInput => ({
   key: "3:CUT",
+  kind: "lesson",
   title: "CUT",
   goal: "Swing through the dummy.",
+  why: "Speed is damage.",
   actions: ["swing"],
   progress: [0, 3],
   completing: false,
@@ -41,10 +45,38 @@ describe("training coach", () => {
     expect(touch[0]?.mark.keys).toEqual(["DRAG"]);
   });
 
-  it("steps back as soon as the lesson counts evidence", () => {
+  it("steps back to a short count as soon as the lesson counts evidence", () => {
     const coach = new TrainingCoach();
     coach.step(frame({ tutorial: lesson() }));
-    expect(ids(coach.step(frame({ tutorial: lesson({ progress: [1, 3] }) })))).toEqual([]);
+    const marks = coach.step(frame({ tutorial: lesson({ progress: [1, 3] }) }));
+    expect(ids(marks)).toEqual(["beat:3:CUT:1"]);
+    expect(marks[0]?.mark).toMatchObject({ text: "1 of 3", channel: "beat", anchor: { x: 300, y: 600 } });
+    let later = marks;
+    for (let elapsed = 0; elapsed < COACH_STEP_SECONDS + 0.5; elapsed += 0.1)
+      later = coach.step(frame({ deltaSeconds: 0.1, tutorial: lesson({ progress: [1, 3] }) }));
+    expect(ids(later)).toEqual([]);
+  });
+
+  it("names what was learned and why, then holds the next goal until it has played", () => {
+    const coach = new TrainingCoach();
+    coach.step(frame({ tutorial: lesson() }));
+    const done = coach.step(frame({ tutorial: lesson({ progress: [3, 3], completing: true }) }));
+    expect(done.map((entry) => entry.mark)).toEqual([
+      expect.objectContaining({ id: "beat:3:CUT:learned", title: "LEARNED · CUT", text: "Speed is damage." }),
+    ]);
+    const next = lesson({ key: "4:LAUNCH", title: "LAUNCH" });
+    expect(ids(coach.step(frame({ tutorial: next })))).toEqual(["beat:3:CUT:learned"]);
+    let marks = done;
+    for (let elapsed = 0; elapsed < COACH_LEARNED_SECONDS + 0.5; elapsed += 0.1)
+      marks = coach.step(frame({ deltaSeconds: 0.1, tutorial: next }));
+    expect(ids(marks)).toEqual(["lesson:4:LAUNCH:prompt"]);
+    const weapon = new TrainingCoach();
+    weapon.step(frame({ tutorial: lesson({ kind: "weapon", key: "weapon:hammer:0", title: "HAMMER" }) }));
+    expect(
+      weapon.step(
+        frame({ tutorial: lesson({ kind: "weapon", key: "weapon:hammer:0", title: "HAMMER", completing: true }) }),
+      )[0]?.mark.title,
+    ).toBe("DONE · HAMMER");
   });
 
   it("offers the demonstration after a stall, with the pause control for the device", () => {
@@ -54,7 +86,7 @@ describe("training coach", () => {
       marks = coach.step(frame({ inputMode: "gamepad", deltaSeconds: 0.1, tutorial: lesson() }));
     expect(marks[0]?.mark).toMatchObject({ id: "lesson:3:CUT:stuck", tone: "nudge", keys: ["PAUSE"] });
     marks = coach.step(frame({ inputMode: "gamepad", tutorial: lesson({ progress: [1, 3] }) }));
-    expect(ids(marks)).toEqual([]);
+    expect(ids(marks)).toEqual(["beat:3:CUT:1"]);
   });
 
   it("restarts for a new lesson and stays silent on the final hand-off", () => {

@@ -4,6 +4,7 @@ import { BiomeStemBackend, type LoadedCueRef } from "./stems/biome-stem-backend"
 import { StemCueMusicBackend } from "./stems/stem-cue-backend";
 import type { StemCueManifest } from "./stems/types";
 import { parseMusicCatalog } from "./music/catalog";
+import { publishMusicLibrary } from "./music/library";
 import { validateMusicRoutingManifest } from "./music/music-routing-validate";
 
 /**
@@ -29,6 +30,13 @@ async function loadMusicIndex(): Promise<BiomeStemBackend> {
     baseUrl: `audio/cues/${id}`,
   }));
   if (!cues.some((cue) => cue.id === routing.defaultWorkId)) throw new Error("default cue missing from music index");
+  const seconds = Object.fromEntries(
+    cues.map(({ id, manifest }) => [
+      id,
+      (manifest.loop.endFrame - manifest.loop.startFrame) / manifest.sourceSampleRate,
+    ]),
+  );
+  publishMusicLibrary(catalog.works, routing, seconds);
   return new BiomeStemBackend(cues, routing, catalog);
 }
 

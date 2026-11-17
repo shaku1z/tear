@@ -1,6 +1,6 @@
 import { createGhostAuthoritativeReceipt } from "../../ghost/authoritative-receipt";
 import { ghostLiveBootstrapEventId } from "../../ghost/live-causal-events";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import type { TearSnapshotV1 } from "../../tearbench/contracts";
 import { captureLiveStateForgeSnapshot } from "../../tearbench/live-runtime-snapshots";
 import type { TearLiveWorldAdapter } from "../../tearbench/live-state-snapshot";

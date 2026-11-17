@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import type { TearSnapshotV1 } from "../../src/tearbench/contracts";
 import { synthesizeProgression } from "../../src/tearbench/progression-ledger";
 import {

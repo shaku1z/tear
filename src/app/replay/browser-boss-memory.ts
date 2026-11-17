@@ -5,7 +5,7 @@ import { createIndexedDbGhostVaultBackend } from "../../ghost/indexeddb-vault-ba
 import { GhostCapsuleReader, type GhostReadCapsule } from "../../ghost/capsule-reader";
 import { saveBossMemory } from "../../ghost/boss-memory";
 import { prepareCompleteGhostCapsuleArchive } from "../../ghost/capsule-archive";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 
 export function createBrowserBossMemory(factory: IDBFactory | undefined, document: Document) {
   const text = createCareerTextPort(

@@ -1,8 +1,8 @@
 import type { CloudCompatibility, LegacyMetaPort, LegacyProfilePort } from "./cloud";
-import type { PlatformServices } from "./contracts";
+import type { PlatformServices, TearBuildTarget } from "./contracts";
 
 export interface CloudFactoryOptions {
-  readonly target: "standalone" | "crazygames";
+  readonly target: TearBuildTarget;
   readonly getPlatform: () => PlatformServices;
   readonly getProfile: () => LegacyProfilePort;
   readonly getMeta: () => LegacyMetaPort;
