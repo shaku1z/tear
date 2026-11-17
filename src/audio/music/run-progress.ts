@@ -5,6 +5,17 @@ import type { MusicRunProgress } from "../music-contracts";
  * (`stats._biomes`, written on entering a stage) and the bosses defeated (`stats.kill<BossId>`).
  * Read it before the run's first stage loads, so the biome a run starts in still counts as new.
  */
+/**
+ * Saved progress reaches the music only in runs that also record it: not in seed races (every
+ * racer must hear the same song) and not in practice. Replays have no music director.
+ */
+export function admittedMusicProgress(
+  progress: MusicRunProgress | null,
+  run: { readonly tracksProgress: boolean; readonly seedRace: boolean; readonly practice: boolean },
+): MusicRunProgress | null {
+  return progress !== null && run.tracksProgress && !run.seedRace && !run.practice ? progress : null;
+}
+
 export function musicRunProgress(
   stats: Readonly<Record<string, unknown>>,
   isBossId: (id: string) => boolean,

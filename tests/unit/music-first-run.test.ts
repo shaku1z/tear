@@ -3,7 +3,7 @@ import type { MusicCatalog } from "../../src/audio/music/catalog";
 import { resolveMusicRoute } from "../../src/audio/music/music-routing-resolver";
 import type { MusicRoutingContext } from "../../src/audio/music/music-routing-types";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
-import { musicRunProgress } from "../../src/audio/music/run-progress";
+import { admittedMusicProgress, musicRunProgress } from "../../src/audio/music/run-progress";
 import { musicProgressRouting } from "../../src/audio/stems/biome-stem-backend";
 
 const VERDANT = "The Verdant Sanctum";
@@ -122,5 +122,42 @@ describe("saved progress at run start decides first runs and unlocks", () => {
     const none = musicProgressRouting(null, catalog, VERDANT);
     expect(none.firstRun).toBe(false);
     expect(none.isUnlocked("spring")).toBe(false);
+  });
+});
+
+describe("a route this build cannot read never wins", () => {
+  it("drops a rule naming an unknown condition, so the place keeps its ordinary song", () => {
+    const manifest = validateMusicRoutingManifest({
+      format: "tear-music-routing",
+      version: 1,
+      defaultWorkId: "fillet",
+      rules: [
+        {
+          id: "verdant-someday",
+          match: { biome: "the-verdant-sanctum", scene: "gameplay", nightOnly: true },
+          selection: { type: "primary", workId: "spring" },
+        },
+        {
+          id: "verdant-gameplay",
+          match: { biome: "the-verdant-sanctum", scene: "gameplay" },
+          selection: { type: "primary", workId: "once-at-a-time" },
+        },
+      ],
+    });
+    expect(manifest.rules.map((rule) => rule.id)).toEqual(["verdant-gameplay"]);
+    expect(resolveMusicRoute(manifest, verdant({ firstRun: true }))).toBe("once-at-a-time");
+  });
+});
+
+describe("saved progress reaches the music only in runs that record it", () => {
+  const progress = { biomesReached: ["The Grounds"], bossesDefeated: [] };
+  const run = { tracksProgress: true, seedRace: false, practice: false };
+  it("passes progress in an ordinary run", () => {
+    expect(admittedMusicProgress(progress, run)).toBe(progress);
+  });
+  it("withholds it in seed races, practice and untracked runs, so everyone hears Once At A Time", () => {
+    expect(admittedMusicProgress(progress, { ...run, seedRace: true })).toBeNull();
+    expect(admittedMusicProgress(progress, { ...run, practice: true })).toBeNull();
+    expect(admittedMusicProgress(progress, { ...run, tracksProgress: false })).toBeNull();
   });
 });

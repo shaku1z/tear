@@ -66,6 +66,20 @@ function selection(value: unknown): MusicRouteSelection {
   return { type: "weighted-pool", entries };
 }
 
+/** Match conditions this build understands. */
+const MATCH_KEYS: ReadonlySet<string> = new Set(["scene", "biome", "bossId", "bossRequired", "firstRun"]);
+
+/**
+ * A rule that names a condition this build does not understand never matches: ignoring the
+ * condition would widen the rule (a first-run song would win every run), so the rule is dropped
+ * and the place falls back to its ordinary song.
+ */
+function understood(value: unknown): boolean {
+  const source = object(value, "routing rule");
+  const conditions = source.match;
+  return !conditions || typeof conditions !== "object" || Object.keys(conditions).every((key) => MATCH_KEYS.has(key));
+}
+
 function rule(value: unknown): MusicRoutingRule {
   const source = object(value, "routing rule");
   const priority = source.priority;
@@ -85,7 +99,7 @@ export function validateMusicRoutingManifest(value: unknown): MusicRoutingManife
   if (source.format !== "tear-music-routing" || source.version !== 1)
     throw new Error("unsupported music routing manifest format/version");
   if (!Array.isArray(source.rules)) throw new Error("music routing rules must be an array");
-  const rules = source.rules.map(rule);
+  const rules = source.rules.filter(understood).map(rule);
   const ids = new Set<string>();
   for (const item of rules) {
     if (ids.has(item.id)) throw new Error(`duplicate routing rule id: ${item.id}`);

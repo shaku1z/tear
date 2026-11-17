@@ -1,6 +1,6 @@
 import type { MusicDirector } from "../../audio/music-director";
 import type { MusicRunProgress } from "../../audio/music-contracts";
-import { musicRunProgress } from "../../audio/music/run-progress";
+import { admittedMusicProgress, musicRunProgress } from "../../audio/music/run-progress";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
@@ -520,12 +520,13 @@ export function createLiveRunStartHost(
         scoreVersion: SFX.musicScoreVersion(),
         // First-run songs and unlocks follow saved progress only where the run also records it;
         // seed races and practice hear the same music for everyone.
-        ...(musicProgress !== null &&
-        context.achievementTracking() &&
-        context.race?.active() !== true &&
-        context.baselinePractice?.() !== true
-          ? { progress: musicProgress }
-          : {}),
+        ...musicProgressField(
+          admittedMusicProgress(musicProgress, {
+            tracksProgress: context.achievementTracking(),
+            seedRace: context.race?.active() === true,
+            practice: context.baselinePractice?.() === true,
+          }),
+        ),
       });
     },
     requestPointerLock: context.requestPointerLock,
@@ -569,3 +570,7 @@ function isRunDifficulty(value: string): value is RunDifficulty {
 }
 
 const isBossId = isBossDefinitionId satisfies (value: string) => value is BossId;
+
+function musicProgressField(progress: MusicRunProgress | null): { progress?: MusicRunProgress } {
+  return progress === null ? {} : { progress };
+}
