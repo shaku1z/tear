@@ -28,10 +28,11 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
 | [D-011](#d-011) | 2026-11-13 | A lead session runs Tear work through side sessions | Active |
 | [D-012](#d-012) | 2026-11-13 | Program status is generated from one curated file | Active |
 | [D-013](#d-013) | 2026-11-13 | Production deploy of `84761549` after the owner played it | Active |
-| [D-014](#d-014) | 2026-11-13 | The game and wiki repositories are private | Active |
+| [D-014](#d-014) | 2026-11-13 | The game and wiki repositories are private | Superseded by D-018 for the game repository; active for the wiki repository |
 | [D-015](#d-015) | 2026-11-13 | Remove the over-built developer systems; plain names for what stays | Active |
 | [D-016](#d-016) | 2026-11-16 | Tutorial gold is checked by regeneration, not by a committed source hash | Active |
 | [D-017](#d-017) | 2026-11-13 | Pull requests no longer have to be up to date with `main` to merge | Active |
+| [D-018](#d-018) | 2026-11-16 | The game repository is public again | Active |
 
 <a id="d-001"></a>
 
@@ -255,6 +256,8 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   GitHub Actions minutes are now metered against the account's allowance, so the cost of the
   `check` job matters.
 - **Source:** the release lead's record of the owner's instruction.
+- **Superseded by D-018** for `shaku1z/tear`, which is public again from 2026-11-16. The wiki repository
+  stays private.
 
 <a id="d-015"></a>
 
@@ -310,9 +313,24 @@ Where each workstream stands now is in [POSITION.md](POSITION.md), not here.
   ensure nothing wrong happens".
 - **Decision:** the "Canonical branch authority" ruleset no longer requires branches to be up to date before
   merging. Each pull request still needs its own green `check`.
-- **Alternatives:** keep the strict rule and accept the re-runs (rejected: it multiplied metered Actions minutes,
-  see [D-014](#d-014)).
+- **Alternatives:** keep the strict rule and accept the re-runs (rejected: on 2026-11-13 the repository was
+  private and Actions minutes were metered, see [D-014](#d-014), and every merge multiplied the re-runs; the
+  repository has been public since 2026-11-16, [D-018](#d-018)).
 - **Consequences:** two rules replace it, applied by `pnpm merge:ready <pr>` (`scripts/merge-ready.mjs`), which the
   owner-safe merge helper calls before merging: a red `main` stops merges, and a stale pass is not a pass. The
   rules are in [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md#merging).
 - **Source:** the release lead's record of the owner's instruction.
+
+<a id="d-018"></a>
+
+## D-018 — The game repository is public again
+
+- **Date:** 2026-11-16. Recorded 2026-11-17.
+- **Trigger:** the owner's decision, for free GitHub Actions minutes. No quote was recorded.
+- **Decision:** `shaku1z/tear` is public. `tear-music` and the wiki repository stay private.
+- **Alternatives:** stay private and pay for metered minutes (the state under [D-014](#d-014)).
+- **Consequences:**
+  - Everything in the repository and its history is public again.
+  - Secrets stay out of the repository, as before.
+  - Actions minutes for this repository are not metered.
+- **Source:** the release lead's record of the owner's decision.
