@@ -39,7 +39,7 @@ import {
   bossAttackExposed,
   bossAttackHit,
   bossAttackMotion,
-  bossAttackParryable,
+  bossAttackStatus,
   bossAttackPose,
   bossAttackTells,
   bossHitTouches,
@@ -283,10 +283,19 @@ export function createRootboundType(
         this.moveTick,
         bossAttackSecondsToTicks(seconds),
       );
-      this.moveCarries = false;
-      this.hidden = false;
-      this.batonStrike = 0;
-      this.atk = "exposed";
+      this.syncMoves(true);
+    }
+
+    /**
+     * Sets the body's flags from the runner state. Called after every change to that state. `label` also
+     * writes the state's name (`atk`), which only a tick or a forced exposure does.
+     */
+    private syncMoves(label: boolean): void {
+      const status = bossAttackStatus(ROOTBOUND_MOVES, this.moveState, this.moveContext());
+      this.moveCarries = status.carries;
+      this.hidden = status.hidden;
+      this.batonStrike = status.parryable ? 1 : 0;
+      if (label) this.atk = status.label ?? (status.exposed ? "exposed" : "unavailable");
     }
 
     /** The player cut a Graft: it stops helping, none is planted for a while, and the keeper is opened. */
@@ -406,6 +415,8 @@ export function createRootboundType(
     private moveContext(): BossAttackContext<RootboundPhase> {
       const phase = this.phase;
       this.scratch.context.tick = this.moveTick;
+      // A Haste Graft shortens the pause after each move.
+      this.scratch.context.gapMultiplier = Math.min(1, this.graftGapMultiplier);
       this.scratch.context.phase = phase === 3 ? 3 : phase === 2 ? 2 : 1;
       this.scratch.box.x = this.x;
       this.scratch.box.y = this.y;
@@ -451,7 +462,7 @@ export function createRootboundType(
       const next = parryBossAttack(ROOTBOUND_MOVES, this.moveState, this.moveTick);
       if (next === this.moveState) return false;
       this.moveState = next;
-      this.batonStrike = 0;
+      this.syncMoves(false);
       return true;
     }
 
@@ -485,8 +496,6 @@ export function createRootboundType(
         else if (event.type === "finished") this.moveFinished();
       }
       const motion = bossAttackMotion(ROOTBOUND_MOVES, this.moveState, this.scratch.context);
-      this.moveCarries = motion !== null;
-      this.hidden = motion?.hidden ?? false;
       if (motion !== null) {
         this.x = motion.x;
         this.y = motion.y;
@@ -497,18 +506,14 @@ export function createRootboundType(
         this.moveState = markBossAttackLanded(this.moveState);
         player.takeDamage(hit.damage, this.x, this);
       }
-      this.batonStrike = bossAttackParryable(ROOTBOUND_MOVES, this.moveState, this.moveTick) ? 1 : 0;
       const run = this.moveState.run;
       if (run !== null) this.facing = run.facing;
-      this.atk = run !== null ? `${run.attackId}:${run.stage}` : this.exposed() ? "exposed" : "unavailable";
+      this.syncMoves(true);
     }
 
-    /** A move ended. Phase III counts it towards Last Spring; a Haste Graft shortens the pause after it. */
+    /** A move ended. Phase III counts it towards Last Spring. */
     private moveFinished(): void {
       this.movesSinceLastSpring += 1;
-      if (this.graftGapMultiplier >= 1) return;
-      const gap = Math.round(ROOTBOUND_MOVES.gap * this.graftGapMultiplier);
-      this.moveState = Object.freeze({ ...this.moveState, readyTick: this.moveTick + gap });
     }
 
     /** What a Phase II move asks of the stage: a Graft, a Root Cage, or the next Bloom Well pattern. */
@@ -522,9 +527,7 @@ export function createRootboundType(
     /** Ends any move in progress, without a strike; the next move waits `delaySeconds`. */
     private resetMoves(delaySeconds: number): void {
       this.moveState = createBossAttackRunnerState(this.moveTick + bossAttackSecondsToTicks(delaySeconds));
-      this.moveCarries = false;
-      this.hidden = false;
-      this.batonStrike = 0;
+      this.syncMoves(false);
     }
 
     /** Asks the stage for the next Graft the keeper does not have, on its perch. */
