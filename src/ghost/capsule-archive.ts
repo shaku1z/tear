@@ -1,7 +1,7 @@
 import { readGhostBossMemory } from "./boss-memory-origin";
 import { verifyBossMemory } from "./boss-memory";
 import { GhostCapsuleReader } from "./capsule-reader";
-import { canonicalStringify, stableVerificationHash } from "../replay/hash";
+import { canonicalStringify, stableVerificationHash } from "../domain/hash";
 import { GHOST_CHUNK_CODECS } from "./capsule-codec";
 import { validateGhostCapsuleEntries } from "./capsule-reader";
 import {

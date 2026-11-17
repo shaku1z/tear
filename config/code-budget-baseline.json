@@ -2,52 +2,14 @@
   "format": "tear-code-budget-baseline.v1",
   "note": "Debt recorded by `node scripts/check-code-budget.mjs --update`. Values may only fall; see docs/ARCHITECTURE.md.",
   "files": {
-    "src/agents/academy-candidate-custody.ts": {
-      "chars": 27059
-    },
-    "src/agents/foundry-job-bootstrap.ts": {
-      "maxLineLength": 185
-    },
-    "src/agents/foundry-job-due-dispatcher.ts": {
-      "chars": 26371
-    },
-    "src/agents/foundry-job-schedule.ts": {
-      "maxLineLength": 167
-    },
-    "src/agents/foundry-job-scheduled-execution.ts": {
-      "largestFunctionStatements": 110
-    },
-    "src/agents/foundry-job-v4-post-promotion-monitor-terminal.ts": {
-      "maxLineLength": 161
-    },
     "src/agents/live-watch-agent-host.ts": {
-      "chars": 27170,
-      "largestFunctionStatements": 150
+      "largestFunctionStatements": 100
     },
     "src/agents/live-watch-agent-panel.ts": {
       "maxLineLength": 171
     },
-    "src/agents/offline-rl-training.ts": {
-      "chars": 41199
-    },
-    "src/agents/tearbot-human-likeness-comparison.ts": {
-      "maxLineLength": 177
-    },
-    "src/agents/tearbot-v3-canonical-evaluation.ts": {
-      "maxLineLength": 170
-    },
-    "src/agents/training-operations-v3-scheduled-cycle.ts": {
-      "chars": 50620,
-      "maxLineLength": 206
-    },
-    "src/agents/training-operations-v3-training.ts": {
-      "largestFunctionStatements": 87
-    },
-    "src/app/engineering/academy-screen.ts": {
-      "maxLineLength": 172
-    },
     "src/app/engineering/debug-harness.ts": {
-      "chars": 29278
+      "chars": 29266
     },
     "src/audio/stems/validate.ts": {
       "largestFunctionStatements": 83
@@ -78,9 +40,6 @@
     },
     "src/gameplay/entities/enemy-types/ground-enemies.ts": {
       "largestFunctionStatements": 90
-    },
-    "src/gameplay/entities/enemy-types/rootbound.ts": {
-      "chars": 25452
     },
     "src/gameplay/entities/enemy-types/source-core.ts": {
       "largestFunctionStatements": 98
@@ -132,7 +91,7 @@
       "largestFunctionStatements": 106
     },
     "src/presentation/backdrop.ts": {
-      "chars": 26406,
+      "chars": 25909,
       "largestFunctionStatements": 140
     },
     "src/presentation/combat/attack-presentation-director.ts": {
@@ -145,7 +104,7 @@
       "largestFunctionStatements": 81
     },
     "src/presentation/enemies/renderers/rootbound-renderer.ts": {
-      "largestFunctionStatements": 165
+      "largestFunctionStatements": 127
     },
     "src/presentation/enemies/renderers/source-renderer.ts": {
       "largestFunctionStatements": 165
@@ -166,13 +125,10 @@
       "largestFunctionStatements": 488
     },
     "src/presentation/environment/verdant-environment-presentation.ts": {
-      "largestFunctionStatements": 165
+      "largestFunctionStatements": 164
     },
     "src/presentation/particles.ts": {
       "largestFunctionStatements": 139
-    },
-    "src/presentation/platform-materials/pale-ice.ts": {
-      "largestFunctionStatements": 82
     },
     "src/presentation/platform-materials/verdant-rootstone.ts": {
       "largestFunctionStatements": 129
@@ -192,13 +148,6 @@
     "src/presentation/ui-cinematic.ts": {
       "largestFunctionStatements": 104
     },
-    "src/presentation/verdant-foreground-occlusion.ts": {
-      "maxLineLength": 7650
-    },
-    "src/presentation/verdant-pool-receiver.ts": {
-      "chars": 25609,
-      "maxLineLength": 25156
-    },
     "src/presentation/world/finale.ts": {
       "largestFunctionStatements": 89
     },
@@ -215,7 +164,7 @@
       "chars": 29599
     },
     "src/tearbench/production-combat-phases.ts": {
-      "chars": 30159
+      "chars": 30134
     },
     "src/tearbench/production-headless-environment.ts": {
       "chars": 31998

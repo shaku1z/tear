@@ -22,7 +22,6 @@ describe("C40 Riftlock Loose Cannon/catch seek evidence registry", () => {
     const routes = readJson("src/tearbench/evidence-routes.json") as readonly Record<string, unknown>[];
     expect(routes.find((entry) => entry.id === "riftlock-loose-cannon-replay")).toMatchObject({
       scenarios: ["riftlock-loose-cannon-catch-seek"],
-      graveyardCases: [],
       journeyCheckpoint: "riftlock-loose-cannon-catch-seek-engineering-proof",
       baseComparison: "not-run-by-this-scenario",
       interactionMatrices: ["browser"],

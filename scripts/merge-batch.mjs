@@ -5,6 +5,9 @@
 //   node scripts/merge-batch.mjs --status <batch branch>        say whether the batch run passed
 //   node scripts/merge-batch.mjs --verify <batch branch>        after the merges: main's tree is the checked tree
 //   node scripts/merge-batch.mjs --prunable                     list batch branches nothing needs any more
+//   node scripts/merge-batch.mjs --prune                        delete those, on origin and here
+//   node scripts/merge-batch.mjs --merge <batch branch> --authorize-owner-merge
+//                                                               merge the members in order, then --verify
 //   node scripts/merge-batch.mjs --record "<pr>:<oid>,..."      (Validate only) record the verified members
 //
 // A batch is a branch `codex/batch-<utc stamp>` made from origin/main, with each member's head
@@ -14,11 +17,12 @@
 // started on it by hand, with the member list as its `batch` input. Validate records the members
 // whose head is in the commit it checked as the `batch` annotation; `pnpm merge:ready` reads it.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { CANONICAL } from "./governance/setup-hooks.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const BATCH_PREFIX = "codex/batch-";
@@ -110,11 +114,18 @@ export function treeVerdict({ mainTree, checkedTree, merged, members }) {
  * Whether a batch branch is still needed. The tool never deletes branches (the pre-push guard
  * refuses deletions); it lists the ones that can go. A branch is kept while its run is going, or
  * while its run passed and a member is still open, since that member may still merge on it.
- * @param {{ status?: string, conclusion?: string | null, states?: Record<number, string> }} batch
- *   the latest run on the branch (absent when there is none) and each recorded member's state
+ * @param {{ status?: string, conclusion?: string | null, states?: Record<number, string>, running?: boolean, ageMinutes?: number }} batch
+ *   the latest run on the branch (absent when there is none), whether any run on it is still going,
+ *   each recorded member's state, and how long ago the branch's newest commit was made
  */
 export function pruneVerdict(batch) {
-  if (batch.status === undefined) return { prunable: true, reason: "it has no Validate run" };
+  if (batch.running) return { prunable: false, reason: "a check is running on it" };
+  if (batch.status === undefined) {
+    // merge:batch pushes and then starts the run; a fresh branch may simply not have one yet.
+    if ((batch.ageMinutes ?? 0) < 60)
+      return { prunable: false, reason: "pushed under an hour ago; its run may not have started" };
+    return { prunable: true, reason: "it has no Validate run" };
+  }
   if (batch.status !== "completed") return { prunable: false, reason: `its run is ${batch.status}` };
   if (batch.conclusion !== "success") return { prunable: true, reason: `its run ended ${String(batch.conclusion)}` };
   const states = Object.entries(batch.states ?? {});
@@ -122,6 +133,47 @@ export function pruneVerdict(batch) {
   const open = states.filter(([, state]) => state !== "MERGED" && state !== "CLOSED").map(([pr]) => `#${pr}`);
   if (open.length > 0) return { prunable: false, reason: `${open.join(", ")} may still merge on it` };
   return { prunable: true, reason: "every member is merged or closed" };
+}
+
+/** A failure worth trying again: the network or GitHub, not a refusal by the merge helper. */
+export function isNetworkFailure(text) {
+  return /TLS handshake timeout|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|socket hang up|i\/o timeout|connection reset|HTTP 50[234]|Bad Gateway|Service Unavailable|Gateway Timeout/iu.test(
+    String(text),
+  );
+}
+
+/**
+ * What --merge does next for each member, in batch order. A merged member is done if it merged
+ * at the head the batch checked; anything else stops the sequence, because the members after it
+ * were only checked together with it.
+ * @param {{ pr: number, head: string }[]} members
+ * @param {Record<number, { state: string, headRefOid: string }>} views
+ */
+export function mergePlan(members, views) {
+  const plan = [];
+  for (const member of members) {
+    const view = views[member.pr];
+    if (view?.state === "MERGED" && view.headRefOid === member.head) plan.push({ ...member, step: "done" });
+    else if (view?.state === "OPEN" && view.headRefOid === member.head) plan.push({ ...member, step: "merge" });
+    else {
+      const what =
+        view === undefined ? "unknown" : view.headRefOid !== member.head ? "moved" : view.state.toLowerCase();
+      plan.push({ ...member, step: "stop", reason: `#${String(member.pr)} is ${what} since the batch` });
+      break;
+    }
+  }
+  return plan;
+}
+
+/** Subject and body for a member's squash merge: its title with its number, and its summary paragraph. */
+export function mergeMessage(pr) {
+  const subject = `${pr.title} (#${String(pr.number)})`;
+  const paragraphs = String(pr.body ?? "")
+    .replace(/\r\n/gu, "\n")
+    .split(/\n\s*\n/u)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0 && !paragraph.startsWith("#"));
+  return { subject, body: paragraphs[0] ?? pr.title };
 }
 
 /** The failed checks a batch run reports: run-checks prints `FAIL <group>.<id> ...` for each. */
@@ -216,14 +268,15 @@ function batchRun(branch) {
       `repos/${slug}/actions/workflows/ci.yml/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&per_page=5`,
     ]),
   ).workflow_runs;
-  if (runs.length === 0) return { latest: undefined, job: undefined, note: "" };
+  const running = runs.some((entry) => entry.status !== "completed");
+  if (runs.length === 0) return { latest: undefined, job: undefined, note: "", running };
   const latest = runs[0];
   const job = JSON.parse(gh(["api", `repos/${slug}/actions/runs/${String(latest.id)}/jobs`])).jobs.find(
     (entry) => entry.name === "check",
   );
   const notes = job ? JSON.parse(gh(["api", `repos/${slug}/check-runs/${String(job.id)}/annotations`])) : [];
   const note = notes.find((entry) => entry.title === "batch")?.message ?? "";
-  return { latest, job, note };
+  return { latest, job, note, running };
 }
 
 function status(branch) {
@@ -247,6 +300,59 @@ function status(branch) {
   return 1;
 }
 
+const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+/**
+ * Merges each member through the owner merge helper, in batch order, then runs --verify. A network
+ * failure is tried again (after checking that the merge did not in fact go through); a refusal
+ * by the helper stops the sequence, so nothing merges out of the order the batch checked.
+ */
+function mergeAll(branch, authorized) {
+  if (!authorized) throw new Error("--merge needs --authorize-owner-merge, which the merge helper requires");
+  const { latest, note } = batchRun(branch);
+  const members = /members=(\S+)/u.exec(note)?.[1];
+  if (latest?.conclusion !== "success" || members === undefined) {
+    throw new Error(`the batch run on ${branch} did not pass with recorded members`);
+  }
+  const helper = join(CANONICAL.root, "scripts", "governance", "owner-safe-pr-merge.mjs");
+  const view = (number) =>
+    JSON.parse(gh(["pr", "view", String(number), "--json", "number,state,headRefOid,title,body"]));
+  const list = parseMembers(members);
+  const plan = mergePlan(list, Object.fromEntries(list.map((member) => [member.pr, view(member.pr)])));
+  for (const entry of plan) {
+    if (entry.step === "done") console.log(`#${String(entry.pr)} is already merged`);
+    if (entry.step === "stop") {
+      console.error(`stopped: ${entry.reason}`);
+      return 1;
+    }
+    if (entry.step !== "merge") continue;
+    const { subject, body } = mergeMessage(view(entry.pr));
+    const directory = mkdtempSync(join(tmpdir(), "tear-batch-merge-"));
+    const bodyFile = join(directory, "body.txt");
+    writeFileSync(bodyFile, `${body}\n`);
+    const args = [helper, "--repo", CANONICAL.root, "--pr", String(entry.pr), "--match-head-commit", entry.head];
+    args.push("--subject", subject, "--body-file", bodyFile, "--authorize-owner-merge");
+    try {
+      for (let attempt = 1; ; attempt += 1) {
+        const result = run("node", args, { cwd: CANONICAL.root, allowFailure: true });
+        if (result.ok) break;
+        const output = `${result.err}\n${result.out}`;
+        if (view(entry.pr).state === "MERGED") break; // the request went through before the connection failed
+        if (!isNetworkFailure(output) || attempt === 4) {
+          console.error(`stopped at #${String(entry.pr)}: ${output.trim()}`);
+          return 1;
+        }
+        console.log(`#${String(entry.pr)}: network failure, trying again (${String(attempt)} of 3)`);
+        pause(10_000 * attempt);
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+    console.log(`merged #${String(entry.pr)}: ${subject}`);
+  }
+  return verify(branch);
+}
+
 function verify(branch) {
   const { latest, note } = batchRun(branch);
   const main = /main=([0-9a-f]{40})/u.exec(note)?.[1];
@@ -267,16 +373,15 @@ function verify(branch) {
   return verdict.ok ? 0 : 1;
 }
 
-function prunable() {
+/** Every batch branch on origin with its prune verdict. */
+function pruneVerdicts() {
   const heads = git(["ls-remote", "--heads", "origin", `${BATCH_PREFIX}*`])
     .out.split(/\r?\n/u)
-    .filter(Boolean);
-  const branches = heads
-    .map((line) => line.split(/\s+/u)[1].replace(/^refs\/heads\//u, ""))
-    .filter((branch) => BATCH_BRANCH.test(branch));
-  if (branches.length === 0) console.log("no batch branches on origin");
-  for (const branch of branches) {
-    const { latest, note } = batchRun(branch);
+    .filter(Boolean)
+    .map((line) => ({ oid: line.split(/\s+/u)[0], branch: line.split(/\s+/u)[1].replace(/^refs\/heads\//u, "") }))
+    .filter((head) => BATCH_BRANCH.test(head.branch));
+  return heads.map(({ oid, branch }) => {
+    const { latest, note, running } = batchRun(branch);
     const members = /members=(\S+)/u.exec(note)?.[1];
     const states = Object.fromEntries(
       (members ? parseMembers(members) : []).map((member) => [
@@ -284,10 +389,64 @@ function prunable() {
         JSON.parse(gh(["pr", "view", String(member.pr), "--json", "state"])).state,
       ]),
     );
-    const verdict = pruneVerdict({ status: latest?.status, conclusion: latest?.conclusion, states });
-    console.log(`${verdict.prunable ? "prunable" : "keep    "} ${branch}: ${verdict.reason}`);
-  }
+    git(["fetch", "--quiet", "origin", oid], { allowFailure: true });
+    const committed = Number(git(["show", "-s", "--format=%ct", oid], { allowFailure: true }).out) * 1000;
+    const ageMinutes = Number.isFinite(committed) && committed > 0 ? (Date.now() - committed) / 60_000 : Infinity;
+    const verdict = pruneVerdict({
+      status: latest?.status,
+      conclusion: latest?.conclusion,
+      states,
+      running,
+      ageMinutes,
+    });
+    return { branch, ...verdict };
+  });
+}
+
+function prunable() {
+  const verdicts = pruneVerdicts();
+  if (verdicts.length === 0) console.log("no batch branches on origin");
+  for (const entry of verdicts)
+    console.log(`${entry.prunable ? "prunable" : "keep    "} ${entry.branch}: ${entry.reason}`);
   return 0;
+}
+
+/**
+ * Deletes the batch branches --prunable reports, on origin and here. The push is made from a
+ * throwaway worktree on the branch itself, so the pre-push guard sees a codex/ branch and allows
+ * the deletion only because the name is exactly a batch branch. A running check is asked about
+ * again just before each deletion.
+ */
+function prune() {
+  const verdicts = pruneVerdicts();
+  if (verdicts.length === 0) console.log("no batch branches on origin");
+  let failed = 0;
+  for (const entry of verdicts) {
+    if (!entry.prunable) {
+      console.log(`kept    ${entry.branch}: ${entry.reason}`);
+      continue;
+    }
+    if (batchRun(entry.branch).running) {
+      console.log(`kept    ${entry.branch}: a check started on it`);
+      continue;
+    }
+    const directory = mkdtempSync(join(tmpdir(), "tear-batch-prune-"));
+    try {
+      git(["fetch", "--quiet", "origin", `+refs/heads/${entry.branch}:refs/remotes/origin/${entry.branch}`]);
+      git(["worktree", "add", "--quiet", "-B", entry.branch, directory, `origin/${entry.branch}`]);
+      git(["push", "--quiet", "origin", "--delete", entry.branch], { cwd: directory });
+      console.log(`deleted ${entry.branch}: ${entry.reason}`);
+    } catch (error) {
+      failed += 1;
+      console.error(`could not delete ${entry.branch}: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      git(["worktree", "remove", "--force", directory], { allowFailure: true });
+      rmSync(directory, { recursive: true, force: true });
+      git(["branch", "-D", entry.branch], { allowFailure: true });
+      git(["branch", "-dr", `origin/${entry.branch}`], { allowFailure: true });
+    }
+  }
+  return failed === 0 ? 0 : 1;
 }
 
 /** Validate's step: writes the `batch` annotation from the members whose head the checked commit contains. */
@@ -314,6 +473,8 @@ export function main(argv) {
     if (argv.includes("--status")) return status(value("--status"));
     if (argv.includes("--verify")) return verify(value("--verify"));
     if (argv.includes("--prunable")) return prunable();
+    if (argv.includes("--prune")) return prune();
+    if (argv.includes("--merge")) return mergeAll(value("--merge"), argv.includes("--authorize-owner-merge"));
     const without = argv.flatMap((entry, index) => (argv[index - 1] === "--without" ? [Number(entry)] : []));
     const numbers = argv.filter((entry, index) => /^\d+$/u.test(entry) && argv[index - 1] !== "--without").map(Number);
     return create(numbers, without);

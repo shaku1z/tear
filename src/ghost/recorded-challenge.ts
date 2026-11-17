@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
 import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
 import { TearGameplayEventBus } from "../gameplay/runtime/gameplay-events";

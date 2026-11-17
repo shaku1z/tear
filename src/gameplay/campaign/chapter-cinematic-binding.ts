@@ -8,7 +8,7 @@ import {
   type ChapterIntent,
   type ChapterPage,
 } from "./chapter-controller";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 
 export interface CampaignChapterBindingSpecV1 {
   readonly format: "tear.campaign-chapter-binding";

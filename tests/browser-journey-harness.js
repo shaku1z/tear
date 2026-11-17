@@ -3,7 +3,15 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, JOURNEY_LIMIT_MS, describeStall, pollEvery, watchForStalls } = require("./browser-waits");
+const {
+  STATE_WAIT_MS,
+  JOURNEY_LIMIT_MS,
+  describeStall,
+  pollEvery,
+  trackScriptLoads,
+  waitForScriptLoads,
+  watchForStalls,
+} = require("./browser-waits");
 
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
@@ -136,12 +144,15 @@ async function withJourney(options, run) {
     const page = await browser.newPage({
       viewport: options.viewport || { width: 1600, height: 900 },
       deviceScaleFactor: options.deviceScaleFactor || 1,
+      // A touch phone: the game selects its compact layout only for touch screens.
+      ...(options.touch ? { isMobile: true, hasTouch: true } : {}),
       serviceWorkers: "block",
     });
     // A call that names no timeout still gets the state-wait ceiling, not Playwright's 30 s.
     page.setDefaultTimeout(STATE_WAIT_MS);
     page.setDefaultNavigationTimeout(STATE_WAIT_MS);
     await watchForStalls(page, { serverLog });
+    trackScriptLoads(page);
     if (options.settings) {
       await page.addInitScript((settings) => {
         window.__TEAR_TEST_STORAGE__ = {
@@ -218,10 +229,8 @@ async function withJourney(options, run) {
         timeout: STATE_WAIT_MS,
       });
       // A cold screen's state can become active before its lazy renderer chunk has
-      // registered the canvas buttons. Wait for that static import to settle so
-      // the next pointer action exercises the rendered screen, not a timing race.
-      await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      // registered the canvas buttons, so the next pointer action waits for that chunk.
+      await waitForScriptLoads(page);
     }
     // A screen that has just opened ignores input for a moment (UI_CONFIRM_SETTLE_SECONDS), and a
     // loaded runner can reach the click before the game has drawn enough frames to arm it. So click

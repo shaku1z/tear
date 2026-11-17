@@ -1,5 +1,5 @@
 import { prepareGhostPortableArchive, type PreparedGhostPortableArchive } from "./capsule-paired-archive";
-import { canonicalStringify } from "../replay/hash";
+import { canonicalStringify } from "../domain/hash";
 import { ghostArchiveSha256, type NormalGhostArchiveLimits } from "./capsule-archive";
 import { ghostCapsuleImportBaseline, ghostCapsuleImportGuards, type GhostImportBaseline } from "./capsule-import-plan";
 import {

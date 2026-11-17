@@ -4,6 +4,7 @@
  * The audio backend publishes what is actually sounding; UI reads it. Kept as a
  * tiny store so the presentation layer never imports the audio engine.
  */
+import { MUSIC_SCREEN_TITLE } from "./settings";
 
 export interface NowPlaying {
   readonly workId: string;
@@ -13,9 +14,11 @@ export interface NowPlaying {
   readonly stationName: string | null;
   /** 0..4 arrangement tier currently sounding. */
   readonly tier: number;
+  /** `performance.now()` when this work started sounding (for the loop position). */
+  readonly since?: number;
 }
 
-const EMPTY: NowPlaying = { workId: "", title: "—", stationId: null, stationName: null, tier: 0 };
+const EMPTY: NowPlaying = { workId: "", title: "—", stationId: null, stationName: null, tier: 0, since: 0 };
 
 let current: NowPlaying = EMPTY;
 const listeners = new Set<() => void>();
@@ -29,7 +32,7 @@ export function setNowPlaying(next: Partial<NowPlaying>): void {
     merged.tier === current.tier
   )
     return;
-  current = merged;
+  current = merged.workId === current.workId ? merged : { ...merged, since: globalThis.performance.now() };
   for (const listener of listeners) listener();
 }
 
@@ -52,5 +55,5 @@ export function nowPlayingLabel(state: NowPlaying = current): string {
 /** Tier read-out for the card's sub-line. */
 export function nowPlayingDetail(state: NowPlaying = current): string {
   const names = ["BREATH", "PREPARED", "COMBAT", "PRESSURE", "APEX"];
-  return `◈ ${names[state.tier] ?? "—"}  ·  MUSIC ›`;
+  return `◈ ${names[state.tier] ?? "—"}  ·  ${MUSIC_SCREEN_TITLE} ›`;
 }

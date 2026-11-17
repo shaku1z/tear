@@ -13,9 +13,6 @@
     "scenarioSubjects": [
       "active-weapons"
     ],
-    "graveyardCases": [
-      "planted-downstream-divergence"
-    ],
     "journeyCheckpoint": "normal-adventure-wave",
     "baseComparison": "oracle-ee5e931",
     "interactionMatrices": [
@@ -38,9 +35,6 @@
       "movement-jump",
       "dash-one-way-platform"
     ],
-    "graveyardCases": [
-      "movement-boundary-history"
-    ],
     "journeyCheckpoint": "normal-adventure-wave",
     "baseComparison": "oracle-ee5e931",
     "interactionMatrices": [
@@ -60,9 +54,6 @@
       "wave-clear-to-draft",
       "draft-selection-to-gameplay"
     ],
-    "graveyardCases": [
-      "progression-ledger-history"
-    ],
     "journeyCheckpoint": "draft-return-to-gameplay",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -80,9 +71,6 @@
     ],
     "scenarios": [
       "boot-start-run"
-    ],
-    "graveyardCases": [
-      "screen-route-history"
     ],
     "journeyCheckpoint": "menu-to-menu-smoke",
     "baseComparison": "oracle-ee5e931",
@@ -107,9 +95,6 @@
     "scenarios": [
       "boot-start-run"
     ],
-    "graveyardCases": [
-      "migration-and-corruption-history"
-    ],
     "journeyCheckpoint": "replay-library-round-trip",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -126,9 +111,6 @@
     ],
     "scenarios": [
       "boot-start-run"
-    ],
-    "graveyardCases": [
-      "audio-lifecycle-history"
     ],
     "journeyCheckpoint": "audio-repeated-run",
     "baseComparison": "oracle-ee5e931",
@@ -158,9 +140,6 @@
     ],
     "scenarioSubjects": [
       "active-weapons"
-    ],
-    "graveyardCases": [
-      "all-shared-runtime-history"
     ],
     "journeyCheckpoint": "menu-to-menu-smoke",
     "baseComparison": "main-base",
@@ -203,7 +182,6 @@
     "scenarios": [
       "source-void-low-hp-rescue-seek"
     ],
-    "graveyardCases": [],
     "journeyCheckpoint": "source-void-low-hp-rescue-seek-engineering-proof",
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": [
@@ -226,7 +204,6 @@
     "scenarioSubjects": [
       "active-weapons"
     ],
-    "graveyardCases": [],
     "journeyCheckpoint": "current-game-event-runtime",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -279,7 +256,6 @@
       "active-weapons",
       "current-stage-bosses"
     ],
-    "graveyardCases": [],
     "journeyCheckpoint": "current-game-alignment",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -323,7 +299,6 @@
       "boot-start-run"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "current-environment-runtime-foundation",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -345,6 +320,7 @@
     "reducedDisposition": "engineering-only-codec",
     "prefixes": [
       "src/tearbench/environment-codec.ts",
+      "src/gameplay/environment/environment-projection.ts",
       "src/tearbench/state-codecs.ts",
       "src/tearbench/contracts.ts",
       "src/tearbench/invariants.ts",
@@ -354,14 +330,12 @@
       "src/tearbench/live-runtime-snapshots.ts",
       "src/tearbench/production-replay-composition.ts",
       "src/tearbench/campaign-victory-origin.ts",
-      "src/tearbench/regression-minimization.ts",
       "src/gameplay/runtime/canonical-state.ts",
       "tests/unit/environment-state-codec.test.ts",
       "tests/unit/production-replay-composition.test.ts"
     ],
     "scenarios": [],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "verdant-c3-environment-codec-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [],
@@ -410,7 +384,6 @@
       "generic-environment-combat-object-transition"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "verdant-c4-environment-kernel-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [],
@@ -452,7 +425,6 @@
     ],
     "backend": "live-only",
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "verdant-c5-bloom-well-cycle-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [],
@@ -496,7 +468,6 @@
       "verdant-root-network-sever"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "verdant-c6-rootbinder-network-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [],
@@ -574,7 +545,6 @@
       "verdant-variant-selection"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "verdant-c7-variant-selection-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [],
@@ -616,7 +586,6 @@
     ],
     "scenarios": [],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "verdant-c9-responsive-presentation-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -674,7 +643,6 @@
       "rootbound-graft-anchor-destruction"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "verdant-c12-rootbound-phase-two-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -730,7 +698,6 @@
       "draft-selection-to-gameplay"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "verdant-c15-wave-balance-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -793,7 +760,6 @@
       "pale-rimehound-aurora-interaction"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "pale-aurora-rimehound-state-forge-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [],
@@ -860,7 +826,6 @@
       "pale-glacier-guard-behavior"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "pale-variant-state-forge-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [],
@@ -925,7 +890,6 @@
       "pale-white-hart-phase-3"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "pale-white-hart-natural-and-surgical-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -1008,7 +972,6 @@
       "draft-selection-to-gameplay"
     ],
     "scenarioSubjects": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "pale-reference-and-wave-authority-engineering",
     "baseComparison": "main-base",
     "interactionMatrices": [
@@ -1049,7 +1012,6 @@
       "src/tearbench/production-headless-environment.ts"
     ],
     "scenarios": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "production-replay-headless-composition-engineering",
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": [],
@@ -1162,24 +1124,14 @@
       "src/app/library/replay-library-controller.ts",
       "src/app/engineering/replay-editor.ts",
       "src/app/library/replay-transport-controller.ts",
-      "src/app/engineering/player-watch-controller.ts",
-      "src/app/replay/ghost-lab-home.ts",
-      "src/tearbench/browser/replay-hub.ts",
-      "src/tearbench/browser/replay-hub-route.ts",
-      "src/tearbench/browser/replay-hub-selectors.ts",
-      "src/agents/run-monitor.ts",
       "src/agents/live-watch-agent-host.ts",
-      "src/agents/live-watch-agent-panel.ts",
-      "src/agents/panel-surface.ts",
-      "src/agents/surface-route.ts",
-      "src/presentation/screens/ghost-lab.ts"
+      "src/agents/live-watch-agent-panel.ts"
     ],
     "scenarios": [
       "boot-start-run",
       "draft-selection-to-gameplay"
     ],
-    "graveyardCases": [],
-    "journeyCheckpoint": "replay-hub-run-monitor-player-journey",
+    "journeyCheckpoint": "watch-agent-player-journey",
     "baseComparison": "main-base",
     "interactionMatrices": [
       "browser",
@@ -1190,10 +1142,10 @@
       "test-standalone"
     ],
     "journeyCommands": [
-      "node tests/browser-ghost-lab-home.js"
+      "node tests/browser-scripted-agent-autonomy.js"
     ],
     "journeyTaskIds": [
-      "evidence.browser-ghost-lab-home"
+      "evidence.browser-scripted-agent-autonomy"
     ]
   },
   {
@@ -1206,7 +1158,6 @@
       "DEPLOYMENT.md"
     ],
     "scenarios": [],
-    "graveyardCases": [],
     "journeyCheckpoint": "documentation-only",
     "baseComparison": "not-run",
     "interactionMatrices": [],
@@ -1244,7 +1195,6 @@
     "scenarios": [
       "chainblade-hook-sling-catch-seek"
     ],
-    "graveyardCases": [],
     "journeyCheckpoint": "chainblade-hook-sling-catch-seek-engineering-proof",
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": [
@@ -1276,7 +1226,6 @@
     "scenarios": [
       "hammer-meteor-terrain-catch-seek"
     ],
-    "graveyardCases": [],
     "journeyCheckpoint": "hammer-meteor-terrain-catch-seek-engineering-proof",
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": [
@@ -1308,7 +1257,6 @@
     "scenarios": [
       "greatsword-wheelcut-catch-seek"
     ],
-    "graveyardCases": [],
     "journeyCheckpoint": "greatsword-wheelcut-catch-seek-engineering-proof",
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": [
@@ -1341,7 +1289,6 @@
     "scenarios": [
       "sword-reversal-threadcut-catch-seek"
     ],
-    "graveyardCases": [],
     "journeyCheckpoint": "sword-reversal-threadcut-catch-seek-engineering-proof",
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": [
@@ -1373,7 +1320,6 @@
     "scenarios": [
       "riftlock-loose-cannon-catch-seek"
     ],
-    "graveyardCases": [],
     "journeyCheckpoint": "riftlock-loose-cannon-catch-seek-engineering-proof",
     "baseComparison": "not-run-by-this-scenario",
     "interactionMatrices": [

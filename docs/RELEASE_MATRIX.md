@@ -28,7 +28,12 @@ This matrix is the release evidence checklist. A target is not ready because it 
 
 - Five repeated start/play/quit cycles show bounded enemies, projectiles, effects, audio voices, nodes, listeners, timers, and caches.
 - Simulation/render/frame p95 values, long tasks, startup, bundle gzip, file count, and total artifact bytes stay within checked budgets.
-- CrazyGames remains below Tear's 22.5 MiB unpacked mobile-homepage artifact budget (and the 20.5 MiB compressed upload-package budget) and 1,500 files, with no root-absolute game asset paths.
+- CrazyGames stays within what the portal measures, each limit checked by a build or a gate and none looser than the portal's ([technical requirements](https://docs.crazygames.com/requirements/technical/), [requirements overview](https://docs.crazygames.com/requirements/intro/), read 2026-11-16):
+  - Download before the first gameplay-start event: the portal allows 20 MB for its mobile homepage (50 MB elsewhere). `pnpm check:load-budgets` holds the cold download up to playing, music stems not counted, to the ceiling in `config/load-budgets.json` (730,000 bytes for CrazyGames); the same figure with music counted is not yet a gate. Painted stage backgrounds add 0 bytes to it: a stage's painting is fetched when a run nears the stage, and the coded background shows until it has decoded.
+  - Whole package: at most 1,500 files (the portal's limit) and 26,500,000 bytes unpacked, Tear's own ceiling far below the portal's 250 MB (`pnpm check:reproducible`); the upload ZIP stays under Tear's 20.5 MiB (`pnpm package:crazygames`).
+  - Painted backgrounds: each scene within its encoded and decoded budgets, and all scene art in one build within that build's share, 3,000,000 bytes (`config/scene-budgets.json`, checked by every build; rule in [BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), "Size rule").
+  - No root-absolute game asset paths.
+  - This replaces an earlier line that called a 22.5 MiB unpacked package Tear's "mobile-homepage artifact budget". The portal has no such package limit: its 20 MB mobile-homepage figure is the download before gameplay starts. The change corrects an invented limit to the measured one; it does not loosen a portal limit.
 - Standalone and CrazyGames builds are byte-for-byte reproducible and contain no source, tests, plans, repository metadata, or opposite-target integrations.
 - `pnpm package:crazygames` builds only the portal target and emits a verified ZIP whose `index.html` is at the archive root.
 - Wrangler dry-run uploads only `dist/standalone` and reports no source-tree assets.

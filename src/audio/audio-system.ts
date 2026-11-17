@@ -3,12 +3,12 @@ import {
   normalizeAudioMixerSettings,
   type AudioCategory,
   type AudioGraphContext,
-  type AudioMixerSettings,
   type AudioSettingsStore,
   type GainNodePort,
   type SfxRoute,
   type TemporaryMuteReason,
 } from "./mixer";
+import type { AudioMixerSettings } from "../domain/audio-mixer-settings";
 import type {
   MusicBackend,
   MusicContextSnapshot,

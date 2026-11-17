@@ -54,6 +54,8 @@ export interface MusicVersion {
   readonly cue?: string;
   readonly contexts?: readonly MusicContext[];
   readonly bossIntro?: boolean;
+  /** The cue plays a one-shot intro before its loop the first time it starts in a run. */
+  readonly openingIntro?: boolean;
   readonly status?: string;
 }
 

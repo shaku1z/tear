@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS, settleFor, trackScriptLoads, waitForScriptLoads } = require("./browser-waits");
 
 const scenarios = [
   { name: "desktop-16:9", width: 1600, height: 900, dpr: 1 },
@@ -19,11 +19,27 @@ const scenarios = [
  * their compact composition, scroll, and return through their own footer control. Positions
  * follow the compact menu rail (menu-setup.ts) and the compact page footer (compact-page.ts).
  */
+/** Records where each text label was last drawn, in page (client) pixels. */
+async function recordDrawnLabels(page) {
+  await page.addInitScript(() => {
+    window.__TEAR_DRAWN_LABELS__ = {};
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function recordLabel(value, x, y, ...rest) {
+      const point = this.getTransform().transformPoint({ x, y }),
+        rect = this.canvas.getBoundingClientRect();
+      window.__TEAR_DRAWN_LABELS__[String(value)] = {
+        x: rect.left + (point.x * rect.width) / this.canvas.width,
+        y: rect.top + (point.y * rect.height) / this.canvas.height,
+      };
+      return original.call(this, value, x, y, ...rest);
+    };
+  });
+}
+
 async function phoneJourney(page, scenario, viewport) {
   const scale = Math.min(scenario.width / 1600, scenario.height / 900);
   const target = Math.ceil(44 / scale),
-    gap = 12,
-    pitch = target + gap;
+    gap = 12;
   const tap = async (x, y) => {
     await page.touchscreen.tap((x + viewport.overscan.x) * scale, (y + viewport.overscan.y) * scale);
   };
@@ -66,31 +82,32 @@ async function phoneJourney(page, scenario, viewport) {
       [x, y],
     );
   };
-  // Compact main menu: identity row, PLAY, then the navigation flowing into columns (nine rows in a test build).
-  const identityY = 96 + 34 + 24,
-    playY = identityY + target + gap,
-    navTop = playY + Math.round(target * 1.2) + gap * 2;
-  const rows = Math.max(1, Math.floor((900 - 24 - navTop + gap) / pitch)),
-    columns = Math.max(2, Math.ceil(9 / rows));
+  // Compact main menu: the identity row sits under the wordmark; the navigation rows are found by the
+  // labels the menu draws, so the journey does not depend on how many rows the build shows.
+  const identityY = 96 + 34 + 24;
   const railX = 100 - viewport.overscan.x;
-  const slot = (index) => [
-    railX + (index % columns) * (320 + gap) + 160,
-    navTop + Math.floor(index / columns) * pitch + target / 2,
-  ];
+  const tapLabel = async (label) => {
+    await page.waitForFunction((text) => window.__TEAR_DRAWN_LABELS__?.[text], label, { timeout: STATE_WAIT_MS });
+    const point = await page.evaluate((text) => window.__TEAR_DRAWN_LABELS__[text], label);
+    await page.touchscreen.tap(point.x, point.y);
+  };
   const routes = [
-    ["profile", [railX + 200, identityY + target / 2]],
-    ["shop", slot(0)],
-    ["achievements", slot(1)],
-    ["leaderboards", slot(2)],
-    ["codex", slot(3)],
+    ["profile", () => tap(railX + 200, identityY + target / 2)],
+    ["shop", () => tapLabel("SHOP")],
+    ["achievements", () => tapLabel("ACHIEVEMENTS")],
+    ["leaderboards", () => tapLabel("LEADERBOARDS")],
+    ["codex", () => tapLabel("CODEX")],
   ];
   // The wide compact sheet is inset 20 from the frame's top and bottom; BACK is centred in its footer row.
   const back = [800, 20 + 860 - target - gap + target / 2];
   // A first touch beside the rail hands the interface to touch (and the compact density) before any control is tapped.
   await tap(-viewport.overscan.x + 20, 450);
   await settle("menu");
-  for (const [screen, point] of routes) {
-    await tap(point[0], point[1]);
+  for (const [screen, open] of routes) {
+    await page.evaluate(() => {
+      window.__TEAR_DRAWN_LABELS__ = {};
+    });
+    await open();
     await settle(screen);
     await swipeUp();
     assert.equal(
@@ -140,6 +157,8 @@ async function main() {
         hasTouch: scenario.name.startsWith("mobile"),
       });
       const page = await context.newPage();
+      trackScriptLoads(page);
+      if (scenario.name === "mobile-landscape") await recordDrawnLabels(page);
       const errors = [];
       page.on("pageerror", (error) => errors.push(error.stack || error.message));
       await page.route("**/*", (route) =>
@@ -212,10 +231,7 @@ async function main() {
           await page.waitForFunction((expected) => window.__PANTHEON_TEST?.state().game === expected, screen, {
             timeout: STATE_WAIT_MS,
           });
-          await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-          await page.evaluate(
-            () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-          );
+          await waitForScriptLoads(page);
         };
         const logicalClick = async (x, y) => {
           const cssScale = scenario.width / (viewport.logical.width + viewport.overscan.x * 2);

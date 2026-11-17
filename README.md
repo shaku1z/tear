@@ -43,9 +43,7 @@ Run everything from the repository root. "Slow" means minutes, not seconds.
 | `pnpm test` | Every unit test. Slow. |
 
 `package.json` has more than 160 scripts, mostly CI gates; the table above
-covers routine work. Replays of old milestone verification checkpoints (such as
-`check:c27a:foundation`) live in `config/checkpoints.json`: list them with
-`pnpm checkpoint --list` and run one with `pnpm checkpoint <name>`. Do not run
+covers routine work. Do not run
 `pnpm deploy` expecting a deployment: it only builds and runs a Wrangler dry run
 (see [DEPLOYMENT.md](DEPLOYMENT.md)).
 
@@ -62,7 +60,7 @@ covers routine work. Replays of old milestone verification checkpoints (such as
 | `src/audio/` | Sound effects, music and the mixer. |
 | `src/persistence/`, `src/platform/` | Saved data formats and migrations; storage, cloud, CrazyGames, PWA and other host adapters. |
 | `src/replay/`, `src/ghost/` | Run recording and replay. `ghost/` also holds the replay vault and several unfinished replay-based features. |
-| `src/agents/` | Research code: AI players and their training. |
+| `src/agents/` | The scripted test player: a bot that plays the real game in test builds and headless runs. |
 | `src/tearbench/` | TearBench, the game's verification system (scenarios, headless runs, CI evidence selection). |
 | `src/config/`, `src/game-reference/` | Tuning values, and the exported game data the wiki consumes. |
 | `tests/` | Vitest tests in `tests/unit/` and `tests/contract/`; browser tests are `tests/*.js`; Node tests for scripts are `tests/*.mjs`. |

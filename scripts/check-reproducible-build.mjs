@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join, posix, relative, resolve } from "node:path";
+import { buildTarget } from "./build-targets.mjs";
 import { calculateArtifactHash } from "./release-artifact.mjs";
 import { assertReproducibilitySideIdentity } from "./tearbench-reproducibility-contract.mjs";
 
@@ -83,10 +84,19 @@ async function assertBoundary(target, directory) {
     const packaged = [...files].filter((file) => !revisionAsset(file) || active.has(file));
     let bytes = 0;
     for (const file of packaged) bytes += (await stat(resolve(directory, file))).size;
-    if (files.size > 1_500)
-      throw new Error(`CrazyGames output exceeds the 1,500-file portal limit: ${String(files.size)}`);
-    if (bytes > 22.5 * 1024 * 1024)
-      throw new Error(`CrazyGames output exceeds the 22.5 MiB unpacked budget: ${String(bytes)} bytes`);
+    // Both figures live in config/build-targets.json (crazygames.limits).
+    const { maxFiles, maxUnpackedBytes } = buildTarget("crazygames").limits;
+    if (files.size > maxFiles)
+      throw new Error(`CrazyGames output exceeds the ${String(maxFiles)}-file portal limit: ${String(files.size)}`);
+    // Tear's own ceiling, far below the portal's 250 MB whole-package limit: the
+    // package without painted backgrounds (23,419,147 bytes on 2026-11-16) plus
+    // the build's share for scene art in config/scene-budgets.json (3,000,000).
+    // What the portal measures for the mobile homepage is the download before the
+    // first gameplay start (20 MB), which `pnpm check:load-budgets` checks.
+    if (bytes > maxUnpackedBytes)
+      throw new Error(
+        `CrazyGames output exceeds Tear's ${String(maxUnpackedBytes)}-byte unpacked ceiling: ${String(bytes)} bytes`,
+      );
   }
   return list;
 }

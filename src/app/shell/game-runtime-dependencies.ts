@@ -29,6 +29,7 @@ import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import type { GhostPublicationRuntime } from "../../platform/ghost-publication-runtime";
 import type { createAttract } from "../../presentation/attract";
 import type { BackdropController } from "../../presentation/backdrop";
+import type { SceneLibrary } from "../../presentation/scenes/scene-library";
 import type { CinematicPresentationRuntime } from "../../presentation/cinematics";
 import type { cosmeticRandom } from "../../presentation/cosmetic-random";
 import type { CosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
@@ -48,7 +49,6 @@ import type { StyleAchievementPersistence } from "../progress/style-achievement-
 import type { PlatformBootstrapPersistence } from "../progress/platform-bootstrap-persistence";
 import type { VictoryProfileProgressPersistence } from "../progress/victory-profile-progress-persistence";
 import type { TutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
-import type { LiveEngineeringSurfaceFactory } from "../engineering/engineering-surfaces-contract";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 type MirrorTypes = ReturnType<typeof createMirrorTypes>;
@@ -71,14 +71,14 @@ export interface GameRuntimeDependencies {
   readonly Attract: ReturnType<typeof createAttract>;
   readonly BOSSFX: EnemyTypes["BOSSFX"];
   readonly Backdrop: BackdropController;
+  /** Painted stage scene packages (lazy, app-owned); stages without one keep procedural art. */
+  readonly Scenes: SceneLibrary;
   readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"];
   readonly Boss: EnemyTypes["Boss"];
   /** Release/engineering surface policy and its admitted engineering query (empty in release). */
   readonly surfaces: SurfaceAvailability;
   readonly engineeringQuery: EngineeringQuery;
-  /** Research/diagnostic surface controllers; composition supplies them only in engineering builds. */
-  readonly engineeringSurfaces?: LiveEngineeringSurfaceFactory;
   readonly browserDocument: Document;
   readonly browserIndexedDb: IDBFactory | undefined;
   readonly browserStorage: Pick<Storage, "setItem">;

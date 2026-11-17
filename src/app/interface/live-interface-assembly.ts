@@ -2,7 +2,6 @@ import { NO_POINTER } from "../../domain/pointer-ownership";
 import { blendHex as blendCol, easeOut as ez } from "../../presentation/world/primitives";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import type { LiveCanonicalCombatHost } from "../combat/live-canonical-state";
-import type { LiveReplayHubSurface } from "../engineering/engineering-surfaces-contract";
 import type { GhostPracticeLaunchResult } from "../replay/ghost-practice-launch";
 import type { GhostPracticeChild } from "../../ghost/replay-world";
 import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
@@ -21,11 +20,7 @@ import type { LiveHudFeedbackState } from "./hud-feedback-state";
 import { createLiveInterfaceComposition } from "./interface-composition";
 import type { LiveInterfaceFrameState } from "./interface-frame-state";
 import type { LiveInterfaceInteractionState } from "./interface-interaction-state";
-import {
-  createLiveScreenActions,
-  type LiveEngineeringScreens,
-  type LiveGhostLibraryScreens,
-} from "./live-screen-actions";
+import { createLiveScreenActions, type LiveGhostLibraryScreens } from "./live-screen-actions";
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 import { renderRegisteredScreen } from "./screen-registry";
 import { isMenuScreen } from "../../domain/screen-catalog";
@@ -47,7 +42,6 @@ export interface LiveInterfaceAssemblyOptions {
   readonly chase: LiveGhostChaseRuntime;
   readonly career: LiveGhostRecording["career"];
   readonly ghostLibrary: LiveGhostLibraryScreens;
-  readonly engineeringScreens: LiveEngineeringScreens & Readonly<{ replayHub: LiveReplayHubSurface }>;
   readonly launchGhostPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
   readonly abandonRun: (reason: string) => void;
   readonly persistentEffects: () => boolean;
@@ -79,6 +73,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     A11Y,
     Attract,
     Backdrop,
+    Scenes,
     GFX,
     Input,
     OVERSCAN,
@@ -128,13 +123,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     publication: ghostPublicationScreen,
     support: ghostSupportScreen,
   } = options.ghostLibrary;
-  const {
-    academy: academyScreen,
-    foundry: foundryScreen,
-    playerWatch,
-    botEvidence,
-    replayHub,
-  } = options.engineeringScreens;
   const { simulation } = options.combat;
   const requestLock = browser.requestPointerLock;
   const screenRect = () => presentationHost.screenRectangle();
@@ -150,7 +138,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     interaction: interfaceInteraction,
     chase,
     ghostLibrary: options.ghostLibrary,
-    engineeringScreens: options.engineeringScreens,
     run: liveRun,
     requestPointerLock: requestLock,
     presentation: () => interfaceComposition,
@@ -301,7 +288,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           addShake,
           addFlash,
           requestPointer: requestLock,
-          playerWatch: playerWatch.snapshot,
           persistentEffects: options.persistentEffects,
           tutorialSession: () =>
             (liveRun().mode === "tutorial" ||
@@ -322,10 +308,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         },
         menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck },
         playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
-        academy: academyScreen.snapshot,
-        foundry: foundryScreen.snapshot,
-        ghostLab: replayHub.snapshot,
-        botEvidence: botEvidence.snapshot,
         ghostPublication: ghostPublicationScreen.snapshot,
         ghostSupport: ghostSupportScreen.snapshot,
       },
@@ -387,11 +369,14 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         setTheme: (background, playLike) => {
           THEME.set(playLike && biomeMode() ? background : "#ffffff");
           UI.ink = THEME.ink;
+          // On the main menu no run is showing a stage: painted backgrounds give their memory back.
+          if (screen() === "menu") Scenes.leave();
         },
         themeInk: () => THEME.ink,
         backdropPost: (context, stage, camera) => {
           Backdrop.post(context, stage, camera);
         },
+        stageBackground: (stage) => Scenes.paper(stage.id) ?? stage.bg,
         drawMenuAttract: () => {
           Attract.draw(ctx);
         },

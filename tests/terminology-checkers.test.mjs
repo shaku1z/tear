@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -12,7 +11,6 @@ import {
   validateRegistry,
 } from "../scripts/check-terminology.mjs";
 import { runActiveRosterCheck } from "../scripts/check-active-roster.mjs";
-import { buildRequirements } from "../scripts/tearbench-requirements.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const registryPath = path.join(repositoryRoot, "config", "terminology-registry.json");
@@ -63,12 +61,12 @@ test("terminology checker rejects a new unallowlisted deprecated label", () => {
   withFixture((root) => {
     const registry = baseRegistry();
     writeRegistry(root, registry);
-    writeFixture(root, "src/presentation/screens/new-screen.ts", 'export const label = "Ghost Lab";\n');
+    writeFixture(root, "src/presentation/screens/new-screen.ts", 'export const label = "TearScore";\n');
 
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
 
     assert.equal(result.ok, false);
-    assert.match(result.errors.join("\n"), /new-screen\.ts.*Ghost Lab/u);
+    assert.match(result.errors.join("\n"), /new-screen\.ts.*TearScore/u);
   });
 });
 
@@ -79,10 +77,10 @@ test("terminology checker reports every unallowlisted repeated occurrence", () =
     writeFixture(
       root,
       "src/presentation/screens/new-screen.ts",
-      'export const labels = "Ghost Lab Ghost Lab\nGhost Lab";\n',
+      'export const labels = "TearScore TearScore\nTearScore";\n',
     );
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
-    const findings = result.findings.filter((finding) => finding.alias === "Ghost Lab");
+    const findings = result.findings.filter((finding) => finding.alias === "TearScore");
     assert.equal(result.ok, false);
     assert.equal(findings.length, 3);
     assert.equal(result.errors.length, 3);
@@ -98,44 +96,12 @@ test("terminology checker accepts only the existing exact compatibility path", (
   withFixture((root) => {
     const registry = baseRegistry();
     writeRegistry(root, registry);
-    writeFixture(root, "src/presentation/screens/menu-setup.ts", 'export const label = "Ghost Lab";\n');
+    writeFixture(root, "docs/FEATURE_INVENTORY.md", "TearScore\n");
 
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
 
     assert.equal(result.ok, true);
-    assert.ok(result.findings.some((finding) => finding.allowlistId === "compat-menu-setup-surfaces"));
-  });
-});
-
-test("Run Monitor vocabulary owners are scanned with only their exact historical panel exception", () => {
-  const registry = baseRegistry();
-  assert.ok(registry.userFacingCopyScan.pathPatterns.includes("src/agents/panel-surface.ts"));
-  assert.ok(registry.userFacingCopyScan.pathPatterns.includes("src/app/engineering/player-watch-controller.ts"));
-
-  withFixture((root) => {
-    writeRegistry(root, registry);
-    writeFixture(root, "src/agents/panel-surface.ts", 'export const labels = "Watch Agent Watch Agent Watch Agent";\n');
-    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
-    const findings = result.findings.filter((finding) => finding.alias === "Watch Agent");
-    assert.equal(result.ok, true);
-    assert.equal(findings.length, 3);
-    assert.ok(
-      findings.every(
-        (finding) =>
-          finding.classification === "mutable-compatibility" &&
-          finding.allowlistId === "compat-run-monitor-panel-surface",
-      ),
-    );
-  });
-
-  withFixture((root) => {
-    writeRegistry(root, registry);
-    writeFixture(root, "src/app/engineering/player-watch-controller.ts", 'export const label = "Watch Agent";\n');
-    const result = runTerminologyCheck({ root, registryPath: "registry.json" });
-    assert.equal(result.ok, false);
-    assert.ok(
-      result.findings.some((finding) => finding.alias === "Watch Agent" && finding.classification === "unallowlisted"),
-    );
+    assert.ok(result.findings.some((finding) => finding.allowlistId === "compat-current-docs-inventory"));
   });
 });
 
@@ -146,14 +112,17 @@ test("terminology checker scans active evidence JSON without misclassifying pres
     writeFixture(
       root,
       "docs/tearbench-ghost3-evidence-catalog.json",
-      '{"notes":"Foundry and Ghost Lab are retained source-era evidence labels."}\n',
+      '{"notes":"Ghost Studio is a retained source-era evidence label."}\n',
     );
     const result = runTerminologyCheck({ root, registryPath: "registry.json" });
     const findings = result.findings.filter(
       (finding) => finding.relativePath === "docs/tearbench-ghost3-evidence-catalog.json",
     );
     assert.equal(result.ok, true);
-    assert.deepEqual(findings.map((finding) => finding.alias).sort(), ["Foundry", "Ghost Lab"]);
+    assert.deepEqual(
+      findings.map((finding) => finding.alias),
+      ["Ghost Studio"],
+    );
     assert.ok(
       findings.every(
         (finding) =>
@@ -166,18 +135,15 @@ test("terminology checker scans active evidence JSON without misclassifying pres
 
 test("terminology checker classifies every repeated compatibility and historical occurrence", () => {
   for (const [relativePath, classification, allowlistId] of [
-    ["src/presentation/screens/menu-setup.ts", "mutable-compatibility", "compat-menu-setup-surfaces"],
+    ["docs/FEATURE_INVENTORY.md", "mutable-compatibility", "compat-current-docs-inventory"],
     ["docs/TEARBENCH_GHOST3_TERMINOLOGY.md", "immutable-history", "history-ghost3-top-level-docs"],
   ])
     withFixture((root) => {
       const registry = baseRegistry();
       writeRegistry(root, registry);
-      const content = relativePath.endsWith(".ts")
-        ? 'export const labels = "Ghost Lab Ghost Lab\nGhost Lab";\n'
-        : "Ghost Lab Ghost Lab\nGhost Lab\n";
-      writeFixture(root, relativePath, content);
+      writeFixture(root, relativePath, "TearScore TearScore\nTearScore\n");
       const result = runTerminologyCheck({ root, registryPath: "registry.json" });
-      const findings = result.findings.filter((finding) => finding.alias === "Ghost Lab");
+      const findings = result.findings.filter((finding) => finding.alias === "TearScore");
       assert.equal(result.ok, true);
       assert.deepEqual(
         findings.map((finding) => finding.line),
@@ -250,31 +216,6 @@ test("generated-description translation leaves source identity and hashes immuta
   assert.equal(requirement.sourceVersion, generated.sourceVersion);
   assert.equal(requirement.text, "TEAR Music is the current description.");
   assert.equal(requirement.description, "TEAR Music is the current description.");
-});
-
-test("generated requirements apply mutable terminology at the generator boundary", () => {
-  const [requirement] = buildRequirements(
-    {
-      occurrences: [
-        {
-          id: "SRC-example",
-          kind: "paragraph",
-          numberedSection: 1,
-          startLine: 1,
-          endLine: 1,
-          headingPath: ["Requirements"],
-          text: "TearScore is required.",
-          textHash: "SOURCE-HASH",
-        },
-      ],
-    },
-    new Map(),
-  );
-  assert.ok(requirement);
-  assert.equal(requirement.text, "TEAR Music is required.");
-  assert.equal(requirement.sourceStatement, "TearScore is required.");
-  assert.equal(requirement.sourceTextHash, "SOURCE-HASH");
-  assert.equal(requirement.atomicTextHash, createHash("sha256").update("TearScore is required.").digest("hex"));
 });
 
 test("current-source checker rejects stale provisional definitions and checkpoint claims only on mutable paths", () => {

@@ -19,7 +19,7 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
   violating edges and import cycles (`config/architecture-baseline.json`) and a
   700-line limit per module (two data tables are exempt), counted in
   formatting-independent line equivalents (the code budget's character measure).
-- `src/agents/` (AI player research) and `src/tearbench/` (TearBench, the
+- `src/agents/` (the scripted test player) and `src/tearbench/` (TearBench, the
   verification system) are tooling, not game features. `src/ghost/` mixes the
   player's replay system with unfinished replay features.
 - Every package script and every `scripts/` entry point is listed in
@@ -176,23 +176,22 @@ guards it; the decisions behind the hard rules are in [docs/DECISIONS.md](docs/D
   native program's output as text and re-encode it, so images, archives and
   other binary files come out broken. Have the tool write the file itself
   (Playwright's `path`, `--outFile`, `tar -f`) or use the Bash tool.
-- **Tutorial reference fingerprint.** Every build runs
-  `assertTutorialGoldFresh()` from `scripts/tutorial-gold-compatibility.mjs`.
-  It hashes the code of the tutorial roots listed there (player, blade, combat
-  phases, tutorial runtime and controller, and others) and of every module they
-  import for values. Comments, whitespace, line breaks and import paths do not
-  count, so moving, renaming or reformatting those files is safe; changing their
-  code makes builds fail with "Tutorial gold references are stale". One
-  exception: Prettier drops redundant parentheses in same-operator chains
-  (`a ?? (b ?? c)` becomes `a ?? b ?? c`), which regroups the syntax tree, so
-  the first `pnpm format` after writing such code needs a refresh; the gold
-  output itself does not change. Moving a
-  root file also needs its new path in `TUTORIAL_GOLD_ROOTS`. Regenerate, then
-  commit every file it rewrites: always
-  `src/gameplay/training/tutorial-gold-binding.json`, and also
-  `src/gameplay/training/tutorial-gold-reference-data.json` and
-  `tests/fixtures/tutorial-gold-reference-proof.json` when the gold output
-  itself changed:
+- **Tutorial gold.** Every build runs `assertTutorialGoldFresh()` from
+  `scripts/tutorial-gold-compatibility.mjs`. It refuses ("Tutorial gold
+  references are stale") when the tutorial code no longer produces the
+  committed gold: it runs `tests/unit/tutorial-production-ghost.test.ts`, which
+  regenerates the gold through production physics and compares it with the
+  committed corpus and proof. A pass is remembered in
+  `node_modules/.cache/tear-tutorial-gold/` under a fingerprint of the tutorial
+  code (the roots in `TUTORIAL_GOLD_ROOTS` and everything they import for
+  values), so the first build after a tutorial code change takes about a
+  minute longer and later builds skip it. Nothing committed depends on that
+  fingerprint: `src/gameplay/training/tutorial-gold-binding.json` holds only
+  the corpus content hash, so a code change that keeps the gold output commits
+  no generated file, and two pull requests that change different tutorial
+  files merge cleanly. When the output did change, regenerate and commit
+  `src/gameplay/training/tutorial-gold-reference-data.json`,
+  `tests/fixtures/tutorial-gold-reference-proof.json` and the binding together:
   - PowerShell: `$env:TEAR_TUTORIAL_GOLD_WRITE = "1"; pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts; Remove-Item Env:TEAR_TUTORIAL_GOLD_WRITE`
   - Bash: `TEAR_TUTORIAL_GOLD_WRITE=1 pnpm exec vitest run tests/unit/tutorial-production-ghost.test.ts`
 - **`node_modules` junctions.** Some older worktrees use a Windows junction for

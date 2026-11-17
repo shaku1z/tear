@@ -70,10 +70,6 @@ export function buildMenuSnapshot(input: {
   readonly pendingFinale: boolean;
   readonly surfaces: Surfaces;
 }): MenuScreenView {
-  const engineeringRoutes =
-    input.surfaces.allows("screen:academy") &&
-    input.surfaces.allows("screen:foundry") &&
-    input.surfaces.allows("screen:ghostlab");
   return Object.freeze({
     id: "menu",
     nowPlaying: menuMusicRow(getNowPlaying()),
@@ -88,7 +84,6 @@ export function buildMenuSnapshot(input: {
     ...(input.firstRun === true && input.selectedMode === "tutorial" ? { playSub: FIRST_RUN_PLAY_LABEL } : {}),
     biome: input.biome,
     pendingFinale: input.pendingFinale,
-    ...(engineeringRoutes ? { engineeringRoutes: true } : {}),
   });
 }
 

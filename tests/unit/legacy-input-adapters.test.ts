@@ -342,6 +342,34 @@ describe("legacy gamepad adapter", () => {
     expect(input.stickAim).toBeNull();
   });
 
+  it("keeps the aim with the device that last aimed: a released stick holds it until the mouse moves", () => {
+    const { input, PAD, axes, windowTarget } = controllerFixture();
+    const mouseTo = (clientX: number, clientY: number) => {
+      const event = new Event("mousemove");
+      Object.defineProperties(event, { clientX: { value: clientX }, clientY: { value: clientY } });
+      windowTarget.dispatchEvent(event);
+    };
+    mouseTo(40, 450);
+    expect(input.aimDevice).toBe("mouse");
+    expect(input.aimIsLive()).toBe(true);
+
+    axes[2] = 0.9;
+    PAD.poll(1 / 60, false);
+    expect(input.aimDevice).toBe("gamepad");
+    expect(input.aimIsLive()).toBe(true);
+
+    axes[2] = 0;
+    PAD.poll(1 / 60, false);
+    expect(input.aimDevice).toBe("gamepad");
+    expect(input.aimIsLive()).toBe(false);
+
+    mouseTo(42, 452);
+    expect(input.aimIsLive()).toBe(false);
+    mouseTo(120, 452);
+    expect(input.aimDevice).toBe("mouse");
+    expect(input.aimIsLive()).toBe(true);
+  });
+
   it("maps Square/X to the semantic primary-context edge in menus", () => {
     const input = createInput();
     const listeners = new Map<string, EventListener>();

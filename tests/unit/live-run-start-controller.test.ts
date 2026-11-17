@@ -44,7 +44,7 @@ import {
   verifyGhostCapsuleOpeningContinuation,
 } from "../../src/ghost/production-replay-verification";
 import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import type { ReplayActionEnvelope } from "../../src/replay/envelope";
 import { restoreProductionReplaySnapshot } from "../../src/tearbench/production-replay-composition";
 import { createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
@@ -1097,7 +1097,7 @@ describe("LiveRunStartController", () => {
     },
   );
 
-  it.each(["menu", "setup", "gameover", "win", "playing", "ghostlab", "paused"])(
+  it.each(["menu", "setup", "gameover", "win", "playing", "paused"])(
     "retains the canonical %s predecessor/playing edge",
     async (screen) => {
       const { capsule, snapshot } = await sealedActualOpening(screen),

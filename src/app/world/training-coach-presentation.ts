@@ -3,8 +3,7 @@ import type { TouchControlLayout } from "../../input/touch-control-layout";
 import type { WorldCamera } from "../../presentation/world/world-frame";
 import type { WorldRect } from "../../presentation/world/contracts";
 import type { PadBindingLabel, PromptInputMode } from "../../domain/prompt-vocabulary";
-import type { LiveTutorialLessonView } from "../../gameplay/training/live-tutorial-runtime";
-import { lessonPromptActions } from "../../presentation/world/tutorial-input-prompts";
+import type { TrainingExercise } from "../../gameplay/training/training-exercises";
 import { TrainingCoach, type TrainingCoachFrame } from "../training/training-coach";
 
 /** World point to screen point through the frame camera (see `renderWorldFrame`). */
@@ -38,9 +37,9 @@ export interface TrainingCoachSources {
   readonly player: Readonly<{ x: number; y: number; hw: number; hh: number }> | undefined;
   /** World distance from the player the held blade can reach (`blade.aimRadius + blade.length`). */
   readonly bladeReach?: number;
-  readonly lesson?: Readonly<{
-    index: number;
-    view: LiveTutorialLessonView;
+  readonly exercise?: Readonly<{
+    teaching: TrainingExercise;
+    progress: readonly [number, number] | undefined;
     completing: boolean;
   }>;
   readonly lessonCard: WorldRect | undefined;
@@ -73,23 +72,25 @@ export function createTrainingCoachPresentation() {
       }
       if (sources.lessonCard) avoid.push(sources.lessonCard);
       if (sources.touchLayout) avoid.push(...touchControlRects(sources.touchLayout));
-      const lesson = sources.lesson;
+      const exercise = sources.exercise;
       const frame: TrainingCoachFrame = {
         deltaSeconds: sources.deltaSeconds,
         reducedMotion: sources.reducedMotion,
         inputMode: sources.inputMode,
         padLabel: sources.padLabel,
         player: anchor,
-        ...(sources.mode === "tutorial" && lesson
+        ...(sources.mode === "tutorial" && exercise
           ? {
               tutorial: {
-                key: `${String(lesson.index)}:${lesson.view.t}`,
-                title: lesson.view.t,
-                goal: lesson.view.d,
-                actions: lessonPromptActions(lesson.view.keys),
-                progress: lesson.view.need === undefined ? undefined : lesson.view.prog(),
-                completing: lesson.completing,
-                final: lesson.view.final === true,
+                key: exercise.teaching.key,
+                kind: exercise.teaching.kind,
+                title: exercise.teaching.title,
+                goal: exercise.teaching.goal,
+                why: exercise.teaching.why,
+                actions: exercise.teaching.controls,
+                progress: exercise.progress,
+                completing: exercise.completing,
+                final: exercise.teaching.final,
               },
             }
           : {}),

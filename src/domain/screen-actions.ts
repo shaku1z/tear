@@ -84,73 +84,10 @@ export type ScreenAction =
   | { readonly type: "settings.toggle"; readonly key: string }
   | { readonly type: "settings.activate"; readonly key: string }
   | { readonly type: "settings.reset" }
-  | { readonly type: "training-archive.open" }
-  | { readonly type: "training-archive.retry" }
-  | { readonly type: "training-archive.dagger.advance"; readonly id: string }
-  | {
-      readonly type: "training-archive.dagger.review";
-      readonly id: string;
-      readonly correctionHash: string;
-      readonly disposition: "accepted" | "rejected";
-    }
-  | { readonly type: "training-archive.record.withdrawModelTraining"; readonly candidateHash: string }
-  | {
-      readonly type: "training-archive.humanCalibration.optIn";
-      readonly consent: "anonymous-improvement" | "public-training";
-    }
-  | { readonly type: "training-archive.humanCalibration.revoke" }
-  | { readonly type: "academy.retry" }
-  | { readonly type: "academy.dagger.advance"; readonly id: string }
-  | {
-      readonly type: "academy.dagger.review";
-      readonly id: string;
-      readonly correctionHash: string;
-      readonly disposition: "accepted" | "rejected";
-    }
-  | { readonly type: "academy.record.withdrawModelTraining"; readonly candidateHash: string }
-  | { readonly type: "academy.humanCalibration.optIn"; readonly consent: "anonymous-improvement" | "public-training" }
-  | { readonly type: "academy.humanCalibration.revoke" }
-  | { readonly type: "training-operations.open" }
-  | { readonly type: "training-operations.refresh" }
-  | { readonly type: "training-operations.restoreBaseline"; readonly scheduleHash: string; readonly intentHash: string }
-  | { readonly type: "training-operations.promote"; readonly scheduleHash: string; readonly intentHash: string }
-  | { readonly type: "training-operations.bootstrap"; readonly profileId: string }
-  | { readonly type: "training-operations.schedule.enable"; readonly scheduleHash: string }
-  | { readonly type: "training-operations.schedule.disable"; readonly scheduleHash: string }
-  | { readonly type: "foundry.refresh" }
-  | { readonly type: "foundry.bootstrap"; readonly profileId: string }
-  | { readonly type: "foundry.schedule.enable"; readonly scheduleHash: string }
-  | { readonly type: "foundry.schedule.disable"; readonly scheduleHash: string }
-  | { readonly type: "game-agent.open" }
-  | { readonly type: "run-monitor.open" }
-  | { readonly type: "run-monitor.control"; readonly command: "start" | "pause" | "resume" | "stop" }
-  | {
-      readonly type: "replay.hub.open";
-      readonly destination:
-        | "academy"
-        | "training-archive"
-        | "training-operations"
-        | "foundry"
-        | "vault"
-        | "watch"
-        | "botevidence"
-        | "career";
-    }
-  | { readonly type: "replay.hub.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
-  /** Ghost Lab only names already-safe normal routes; it never enables lab operations. */
-  | {
-      readonly type: "ghostlab.open";
-      readonly destination:
-        | "academy"
-        | "training-archive"
-        | "training-operations"
-        | "foundry"
-        | "vault"
-        | "watch"
-        | "botevidence"
-        | "career";
-    }
-  | { readonly type: "ghostlab.watch"; readonly command: "start" | "pause" | "resume" | "stop" }
+  /** Preview one song; `queue` is the collection it was started from, for ◀◀/▶▶. */
+  | { readonly type: "music.preview"; readonly id: string; readonly queue?: readonly string[] }
+  | { readonly type: "music.step"; readonly delta: 1 | -1 }
+  | { readonly type: "music.stopPreview" }
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }
   | { readonly type: "ghostpublication.cancel" }
@@ -163,7 +100,8 @@ export type ScreenAction =
   | { readonly type: "tierup.choose"; readonly index: number }
   | { readonly type: "run.resume" }
   | { readonly type: "run.restart" }
-  | { readonly type: "run.quit" }
+  /** `next: "setup"` leaves the run for the run setup (Adventure selected) instead of the main menu. */
+  | { readonly type: "run.quit"; readonly next?: "setup" }
   | { readonly type: "continue.revive" }
   | { readonly type: "continue.giveUp" }
   | { readonly type: "results.retry" }

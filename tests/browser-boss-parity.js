@@ -179,13 +179,17 @@ withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, asyn
           window
             .TEAR_WEAPON_DEBUG?.()
             .enemies.find((enemy) => enemy.bossId === "rootbound")
-            ?.atk?.startsWith("vine-sweep:"),
+            ?.atk?.endsWith(":tell"),
         undefined,
         { timeout: STATE_WAIT_MS },
       );
       const attacking = await bossSnapshot(page, bossId);
       assert.equal(attacking.phase, 1, "Rootbound must begin in its authored first phase");
-      assert.match(attacking.atk, /^vine-sweep:/u, "Rootbound must reach its first authored attack transition");
+      assert.match(
+        attacking.atk,
+        /^(?:vine-lash|root-glide|canopy-vault|thorn-burst|root-wave):/u,
+        "Rootbound must start a move from its Phase I table",
+      );
     } else if (bossId === "white-hart") {
       assert.equal(after.phase, 1, "White Hart must begin in phase one");
       assert.ok(

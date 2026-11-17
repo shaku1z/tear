@@ -24,7 +24,7 @@
         "src/gameplay/entities/rootbinder-runtime.ts",
         "src/gameplay/entities/enemy-types/rootbound.ts",
         "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
-        "src/gameplay/entities/enemy-types/rootbound-ground-verbs.ts",
+        "src/gameplay/entities/enemy-types/rootbound-moves.ts",
         "src/gameplay/entities/enemy-types/rootbound-tells.ts"
       ]
     },
@@ -52,7 +52,7 @@
         "src/gameplay/entities/rootbinder-runtime.ts",
         "src/gameplay/entities/enemy-types/rootbound.ts",
         "src/gameplay/entities/enemy-types/rootbound-tuning.ts",
-        "src/gameplay/entities/enemy-types/rootbound-ground-verbs.ts",
+        "src/gameplay/entities/enemy-types/rootbound-moves.ts",
         "src/gameplay/entities/enemy-types/rootbound-tells.ts",
         "src/presentation/environment/bloom-well-presentation.ts",
         "src/gameplay/environment/biome-actors/bloom-well-actors.ts",
@@ -112,7 +112,7 @@
     },
     "tearbench.detached-world": {
       "purpose": "Detached TearBench world hydration and runtime, portable outside the browser app.",
-      "include": ["src/tearbench/detached-world-hydrator.ts", "src/tearbench/detached-world-runtime.ts"]
+      "include": ["src/tearbench/detached-world-hydrator.ts"]
     },
     "tearbench.production-headless-entry": {
       "purpose": "The production headless environment entry, run outside any browser.",
@@ -134,7 +134,6 @@
       "purpose": "Browser/developer UI and test-support modules that the portable barrel must not expose.",
       "include": ["@tearbench.browser-adapters", "src/tearbench/test-support/**"],
       "anticipate": [
-        "src/tearbench/ghost-lab-panel.ts",
         "src/tearbench/state-forge-studio.ts",
         "src/tearbench/live-state-forge-studio-host.ts",
         "src/tearbench/test-environment.ts"
@@ -236,8 +235,8 @@
       "include": ["src/app/screens/menu-screen-adapters-runtime.ts", "src/app/run/run-start-host.ts"]
     },
     "engineering.channel-entries": {
-      "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import.",
-      "include": ["src/app/engineering/engineering-surfaces.ts", "src/app/engineering/verdant-calibration-composition.ts"]
+      "purpose": "Engineering-channel entry modules that composition loads only through a build-guarded dynamic import. None exists today; the pattern guards the next one.",
+      "anticipate": ["src/app/engineering/*-channel-entry.ts"]
     },
     "size.authored-data-exceptions": {
       "purpose": "Authored data tables exempt from the 700-line (line-equivalent) module limit.",

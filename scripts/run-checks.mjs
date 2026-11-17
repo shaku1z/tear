@@ -10,6 +10,14 @@
 // slots shared by all worktrees of the repository (TEAR_CHECK_SLOTS, default 2), so parallel
 // sessions do not starve each other into timeouts. A full `pnpm check` that passes on a clean
 // checkout records the commit in the Git directory (`--passed` prints it) for the pull request.
+//
+// With TEAR_CHECK_RESULTS set to a file, each check's result is added to that file as it finishes
+// (one file per run; CI uploads it per attempt). With TEAR_CHECK_PREVIOUS set to an earlier
+// attempt's file, a check that failed there on the same tree and passes now prints a FLAKY line.
+// Nothing is retried: a failure still fails the run.
+//
+// With --keep-going (the nightly workflow only), a failing check does not stop the run: every check
+// runs, the run lists each failure at the end and still fails. Pull request runs stop at the first.
 import { spawnSync } from "node:child_process";
 import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
@@ -81,6 +89,42 @@ export async function takeSlot({ directory, slots, staleMs = 3 * 60 * 60_000, wa
   }
 }
 
+export const RESULTS_FORMAT = "tear-check-results.v1";
+
+function readResults(path) {
+  if (path === undefined || path === "") return undefined;
+  try {
+    const record = JSON.parse(readFileSync(path, "utf8"));
+    return record.format === RESULTS_FORMAT ? record : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Adds one check's result to the run's results file, starting the file on the run's first check. */
+export function recordResult(path, run, result) {
+  const record = readResults(path);
+  const results = record?.tree === run.tree && record?.attempt === run.attempt ? record.results : [];
+  const next = {
+    format: RESULTS_FORMAT,
+    ...run,
+    results: [...results.filter((r) => r.check !== result.check), result],
+  };
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(next, undefined, 2)}\n`);
+}
+
+/**
+ * The FLAKY line for a check that just passed, when an earlier attempt of the same tree failed it;
+ * undefined otherwise. A different tree is a different change, so its failure says nothing here.
+ */
+export function flakyLine(previous, tree, check, attempt) {
+  if (previous === undefined || previous.tree !== tree) return undefined;
+  const failed = previous.results.find((result) => result.check === check && result.status === "fail");
+  if (failed === undefined) return undefined;
+  return `FLAKY ${check}: failed on attempt ${String(previous.attempt)} (${failed.reason}), passed on attempt ${String(attempt)}`;
+}
+
 function summary(line) {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n`);
 }
@@ -98,7 +142,8 @@ async function main(argv) {
       return 1;
     }
   }
-  const checks = selectChecks(loadChecks(), group);
+  // TEAR_CHECKS_CONFIG points the runner at another list; only its own tests use it.
+  const checks = selectChecks(loadChecks(process.env.TEAR_CHECKS_CONFIG || undefined), group);
   if (argv.includes("--list")) {
     for (const check of checks) console.log(`${check.group}.${check.id}: ${check.run}`);
     return 0;
@@ -113,6 +158,20 @@ async function main(argv) {
         })
       : () => undefined;
   const startCommit = git(["rev-parse", "HEAD"]);
+  const resultsFile = process.env.TEAR_CHECK_RESULTS || undefined;
+  const previous = readResults(process.env.TEAR_CHECK_PREVIOUS);
+  const run = {
+    commit: startCommit,
+    // The tree, not the commit: CI merges main into the head afresh on every attempt.
+    tree: git(["rev-parse", "HEAD^{tree}"]),
+    attempt: Number(process.env.GITHUB_RUN_ATTEMPT ?? 1),
+  };
+  const record = (check, status, seconds, reason) => {
+    if (resultsFile !== undefined)
+      recordResult(resultsFile, run, { check, status, seconds: Number(seconds), ...(reason ? { reason } : {}) });
+  };
+  const keepGoing = argv.includes("--keep-going");
+  const failures = [];
   const startClean = git(["status", "--porcelain"]) === "";
   const started = Date.now();
   try {
@@ -130,15 +189,31 @@ async function main(argv) {
       if (result.error !== undefined || result.status !== 0) {
         const reason = result.error?.message ?? `exit ${String(result.status ?? result.signal)}`;
         console.error(`FAIL ${check.group}.${check.id} after ${seconds} s (${reason}): ${check.run}`);
+        record(`${check.group}.${check.id}`, "fail", seconds, reason);
         summary(`### Failed: \`${check.group}.${check.id}\`\n\n\`${check.run}\` (${reason}, after ${seconds} s)\n`);
-        return result.status || 1;
+        if (!keepGoing) return result.status || 1;
+        failures.push(`${check.group}.${check.id} (${reason})`);
+        continue;
       }
       console.log(`PASS ${check.group}.${check.id} ${seconds} s`);
+      record(`${check.group}.${check.id}`, "pass", seconds);
+      const flaky = flakyLine(previous, run.tree, `${check.group}.${check.id}`, run.attempt);
+      if (flaky !== undefined) {
+        console.log(flaky);
+        if (!local) console.log(`::warning title=Flaky check::${flaky}`);
+        summary(`### ${flaky}\n`);
+      }
     }
   } finally {
     release();
   }
   const total = ((Date.now() - started) / 1000).toFixed(0);
+  if (failures.length > 0) {
+    const line = `FAIL ${String(failures.length)} of ${String(checks.length)} check(s) in ${total} s`;
+    console.error(`${line}:\n${failures.map((failure) => `  ${failure}`).join("\n")}`);
+    summary(`${line}:\n\n${failures.map((failure) => `- \`${failure}\``).join("\n")}\n`);
+    return 1;
+  }
   console.log(`PASS ${String(checks.length)} check(s) in ${total} s`);
   summary(`Passed ${String(checks.length)} check(s) in ${total} s.`);
   if (group === undefined && local && passedFile !== undefined) {

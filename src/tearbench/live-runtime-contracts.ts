@@ -236,6 +236,8 @@ export interface LiveTearRuntimeEnvironmentContext {
   readonly pushAction: (action: GameAction) => void;
   readonly routeAction: (action: GameAction) => boolean;
   readonly activateControl: (action: ScreenAction) => boolean;
+  /** Whether the current screen has drawn any controls; false while its lazy renderer is still loading. */
+  readonly controlsDrawn: () => boolean;
   readonly skipCinematic: () => void;
   /** Test-build/Class-A bridge to one real cinematic-director transition. */
   readonly advanceStateForgeCinematicBeat: () => boolean;

@@ -8,16 +8,9 @@ import type {
   WinScreenView,
 } from "./contracts";
 import { wrapSpaceSeparated } from "../ui-text-fit";
-import {
-  actionRow,
-  menuHeight,
-  overlayHeader,
-  overlayLayout,
-  verticalMenu,
-  type OverlayLayout,
-} from "./screen-primitives";
+import { actionRow, overlayHeader, overlayLayout, verticalMenu, type OverlayLayout } from "./screen-primitives";
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
-import { RUN_MONITOR_ACTIONS } from "../../domain/engineering-actions";
+import { LESSON_TEACHING, countedLessons } from "../../gameplay/training/training-exercises";
 
 const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 
@@ -63,7 +56,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       top = header.bodyTop;
     ui.title(
       canvas,
-      lab ? "PRACTICE LAB" : unfinished ? "UNFINISHED COURSE" : complete ? "TECHNIQUES LEARNED" : "CUTTING ROOM",
+      lab ? "PRACTICE LAB" : complete || unfinished ? "TRAINING COMPLETE" : "TUTORIAL",
       width / 2,
       titleY,
       ui.t.type.display,
@@ -78,7 +71,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     ui.text(
       canvas,
       unfinished
-        ? "Skipped exercises remain unearned · revisit below · no course reward or Lab unlock"
+        ? "Some lessons were skipped. Replay them below to finish the course."
         : complete
           ? lab
             ? bosses
@@ -88,43 +81,43 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
                 : annexes
                   ? "Choose a weapon · baseline loadout · no rewards"
                   : "Choose a technique · baseline sword · no rewards"
-            : "Course complete · baseline practice · no waves"
-          : `${activeTitle} · ${String(session.progress[0])} / ${String(session.progress[1])}`,
+            : "Every technique learned. Pick your next step."
+          : `${activeTitle} · ${String(session.progress[0])} of ${String(session.progress[1])}`,
       width / 2,
       header.subtitleY,
       ui.t.type.caption,
       "center",
       ui.t.alpha.soft,
     );
+    const learned = session.lessons.filter((lesson) => lesson.completed && lesson.id !== "ready").length;
+    const drill =
+      session.annex !== undefined || session.enemyPractice !== undefined || session.bossPractice !== undefined;
+    const exercise = current?.canPractice === true || drill;
+    // The finished course leads into a real run; a course in progress can skip a lesson
+    // (it stays unfinished and is listed for replay), never earn it.
+    const courseEnd = (complete || unfinished) && !lab;
     const menu: { label: string; action: ScreenAction }[] = [
+      ...(courseEnd ? [{ label: "START A RUN", action: { type: "run.quit", next: "setup" } as const }] : []),
       {
-        label: unfinished ? "CONTINUE FREE PRACTICE" : complete ? "CONTINUE PRACTICE" : "RESUME LESSON",
+        label: complete || unfinished ? "KEEP PRACTICING" : "RESUME",
         action: { type: "run.resume" },
       },
-      ...(current?.canPractice || session.annex || session.enemyPractice || session.bossPractice
+      ...(exercise
         ? [{ label: "RESTART LESSON", action: { type: "tutorial.action", command: "restart" } as const }]
         : []),
-      {
-        label: session.helpVisible ? "HIDE HELP" : "LESSON HELP",
-        action: { type: "tutorial.action", command: "help" },
-      },
-      ...(session.coach?.available &&
-      current?.canPractice &&
-      !session.annex &&
-      !session.enemyPractice &&
-      !session.bossPractice
+      ...(session.coach?.available && current?.canPractice && !drill
         ? [{ label: "SHOW DEMO", action: { type: "tutorial.action", command: "demo" } as const }]
         : []),
-      ...(session.helpVisible &&
-      current?.canPractice &&
-      session.phase !== "free-practice" &&
-      !session.annex &&
-      !session.enemyPractice &&
-      !session.bossPractice
-        ? [{ label: "SKIP UNFINISHED", action: { type: "tutorial.action", command: "skip" } as const }]
-        : []),
-      ...(session.coach?.adaptive?.assistOffered && session.phase !== "free-practice"
-        ? [{ label: "ADVANCE UNFINISHED", action: { type: "tutorial.action", command: "assist" } as const }]
+      ...(current?.canPractice && session.phase !== "free-practice" && !drill
+        ? [
+            {
+              label: "SKIP LESSON",
+              action: {
+                type: "tutorial.action",
+                command: session.coach?.adaptive?.assistOffered ? "assist" : "skip",
+              } as const,
+            },
+          ]
         : []),
       ...(lab
         ? [
@@ -132,18 +125,10 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
               label: annexes ? "BASELINE EXERCISES" : "WEAPON ANNEXES",
               action: { type: "tutorial.action", command: "annexes" } as const,
             },
-          ]
-        : []),
-      ...(lab
-        ? [
             {
               label: bosses ? "BASELINE EXERCISES" : "BOSS PRACTICE",
               action: { type: "tutorial.action", command: "bosses" } as const,
             },
-          ]
-        : []),
-      ...(lab
-        ? [
             {
               label: catalog ? "BASELINE EXERCISES" : "ENEMY CATALOG",
               action: { type: "tutorial.action", command: "catalog" } as const,
@@ -185,7 +170,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
               ? "UNLOCKED EXERCISES"
               : complete
                 ? "PRACTICE A TECHNIQUE"
-                : "REACHED LESSONS",
+                : "LESSONS",
       panelX,
       top,
       ui.t.color.accent,
@@ -202,9 +187,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
             ? "Real weapon effects · restart any attempt · no rewards"
             : lab
               ? "Restart any exercise, or use help and demos."
-              : session.coach?.adaptive?.assistOffered
-                ? "Assist: advance checkpoint unfinished. No completion credit."
-                : "Skip advances unfinished. Revisit it to earn completion.",
+              : `${String(learned)} of ${String(countedLessons(session))} learned · replay any lesson you have reached`,
       panelX,
       top + 21,
       ui.t.type.micro,
@@ -227,7 +210,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
           }))
         : annexes
           ? (session.annexes ?? []).map((annex) => ({ ...annex, completed: false, reached: true, canPractice: true }))
-          : session.lessons.filter((lesson) => lesson.id !== "ready");
+          : session.lessons.filter((lesson) => lesson.id !== "ready" && (lab || complete || lesson.reached));
     const rows = bosses ? (compact ? 3 : 6) : catalog ? Math.max(1, Math.ceil(exercises.length / 2)) : 7,
       rowH = Math.min(bosses ? (compact ? 42 : 62) : catalog ? 62 : 46, (height - rowTop - helpH - 16) / rows);
     const bossOffset = bosses && compact ? clampValue(Math.floor(context.scroll / 48), 0, 3) * 3 : 0;
@@ -242,7 +225,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         y: rowTop + row * rowH,
         w: panelW / (bosses ? 3 : 2) - 8,
         h: rowH - 4,
-        label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · UNFINISHED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
+        label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · SKIPPED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
         ...("knowledge" in lesson && typeof lesson.knowledge === "string"
           ? {
               sub: (
@@ -280,14 +263,15 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
           : annexes
             ? "Sword: Reversal and launch. Hammer: slam and Break. Greatsword: Cleave and Wheel Cut. Chainblade: Hook and Sling. Riftlock: Capture and Razor Rounds. Select a weapon to try its real mechanics."
             : complete
-              ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then evade and punish. Select any technique above to revisit its baseline exercise."
-              : "Pause at any time to restart a block or revisit a reached lesson. Complete the action yourself to advance.";
+              ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then dodge and punish. Choose any lesson above to practice it again."
+              : current
+                ? `${LESSON_TEACHING[current.id].goal} ${LESSON_TEACHING[current.id].why}`
+                : "";
     if (session.coach?.available && !bosses && !catalog && !annexes) {
       const coach = session.coach,
-        controls: { label: string; command: "coach-rate" | "coach-diagnostic" | "coach-compare" }[] = [
-          { label: `PLAYBACK ${String(coach.rate)}×`, command: "coach-rate" },
-          { label: "DIAGNOSTIC DEMO", command: "coach-diagnostic" },
-          ...(coach.canCompare ? [{ label: "COMPARE ATTEMPT", command: "coach-compare" as const }] : []),
+        controls: { label: string; command: "coach-rate" | "coach-compare" }[] = [
+          { label: `DEMO SPEED ${String(coach.rate)}×`, command: "coach-rate" },
+          ...(coach.canCompare ? [{ label: "COMPARE WITH DEMO", command: "coach-compare" as const }] : []),
         ];
       controls.forEach((control, index) => {
         context.enqueue({
@@ -302,8 +286,8 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       });
       wrapText(
         coach.adaptive?.assistOffered
-          ? "ASSIST OFFER: advance checkpoint unfinished. No credit or reward. Choose ADVANCE UNFINISHED explicitly."
-          : (coach.adaptive?.nudge ?? (session.helpVisible ? session.instruction : coach.diagnosis)),
+          ? `${help} Stuck? SKIP LESSON moves on; you can come back to it.`
+          : (coach.adaptive?.nudge ?? (session.helpVisible ? session.instruction : `${help} ${coach.diagnosis}`)),
         panelX,
         header.footerY - ui.t.space.md - ui.t.type.micro * 2,
         panelW,
@@ -370,16 +354,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         { label: "STOP CHASE", action: { type: "chase.control", command: "stop" } },
       );
     }
-    const watch = view.playerWatch;
-    if (watch !== undefined) {
-      actions.push(
-        {
-          label: watch.status === "running" ? "PAUSE RUN MONITOR" : "RESUME RUN MONITOR",
-          action: { type: RUN_MONITOR_ACTIONS.control, command: watch.status === "running" ? "pause" : "resume" },
-        },
-        { label: "STOP RUN MONITOR", action: { type: RUN_MONITOR_ACTIONS.control, command: "stop" } },
-      );
-    }
     return actions;
   }
 
@@ -394,18 +368,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     const actions = pauseActions(view),
       columns = bodyColumns(layout);
     verticalMenu(context, actions, columns.railX, layout.bodyTop, columns.railW);
-    if (view.playerWatch !== undefined) {
-      const tagY = layout.bodyTop + menuHeight(context, actions.length) + ui.t.space.md + ui.t.type.micro;
-      ui.tag(
-        canvas,
-        `RUN MONITOR / ${String(view.playerWatch.decisions)} DECISIONS`,
-        layout.left,
-        tagY,
-        ui.readable(ui.t.color.accent),
-        "left",
-        ui.t.type.micro,
-      );
-    }
     panelTag(context, "YOUR ARSENAL", columns.primary.x, layout.bodyTop);
     arsenalPanel(context, view.abilities, columns.primary);
     runProgressPanel(

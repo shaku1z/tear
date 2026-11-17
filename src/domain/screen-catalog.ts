@@ -62,11 +62,9 @@ const CATALOG = {
       "leaderboards",
       "codex",
       "settings",
+      "music",
       "rename",
       "replay",
-      "academy",
-      "foundry",
-      "ghostlab",
     ],
   },
   setup: {
@@ -196,21 +194,10 @@ const CATALOG = {
     sheet: true,
     transitions: ["menu", "profile", "replay", "rename"],
   },
+  music: { channel: "release", frame: "menu", density: "phone", sheet: true, transitions: ["menu", "rename"] },
   rename: { channel: "release", frame: "menu", density: "touch", transitions: "every-other-screen" },
   pgmenu: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pglab", "rename"] },
   pglab: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pgmenu", "rename"] },
-  academy: { channel: "engineering", frame: "menu", density: "touch", transitions: ["menu", "rename"] },
-  foundry: { channel: "engineering", frame: "menu", density: "touch", transitions: ["menu", "rename"] },
-  // A locally validated Player Watch starts a normal run directly from its
-  // dedicated home. The route remains local-only; this edge does not grant
-  // any Foundry, traffic, or operational transition.
-  ghostlab: {
-    channel: "engineering",
-    frame: "menu",
-    density: "touch",
-    transitions: ["menu", "playing", "academy", "foundry", "profile", "botevidence", "rename"],
-  },
-  botevidence: { channel: "engineering", frame: "menu", density: "touch", transitions: ["menu", "rename"] },
   ghostpublication: {
     channel: "engineering",
     frame: "standalone",

@@ -212,15 +212,30 @@ const journey = (practiceLab) =>
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-enemy-catalog.png") });
         await clickLabel("CHARGER");
         await waitScreen("playing");
-        await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 1);
-        const opponentAttempt = () =>
-          page.evaluate(() => ({
-            session: window.__PANTHEON_TEST.tutorial().session,
-            state: window.__PANTHEON_TEST.state(),
-            snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__
-              .create("A")
-              .captureSnapshot("enemy-practice", "recorded-canonical"),
-          }));
+        // The game keeps running between two page calls, so the blade can touch a fresh opponent
+        // after one call sees it spawn and before a second call reads it. Read it in the same
+        // page task that finds it. A restart reloads the arena on a later update, so the old
+        // opponent can still be counted when play resumes: `spawned` turns true only after the
+        // reload, when the new opponent is issued.
+        const opponentAttempt = async () =>
+          (
+            await page.waitForFunction(
+              () => {
+                const state = window.__PANTHEON_TEST.state();
+                const session = window.__PANTHEON_TEST.tutorial().session;
+                if (state.enemyCount !== 1 || session.enemyPractice?.spawned !== true) return null;
+                return {
+                  session,
+                  state,
+                  snapshot: window.__TEAR_RUNTIME_ENVIRONMENT__
+                    .create("A")
+                    .captureSnapshot("enemy-practice", "recorded-canonical"),
+                };
+              },
+              undefined,
+              { timeout: STATE_WAIT_MS },
+            )
+          ).jsonValue();
         let opponent = await opponentAttempt();
         assert.equal(opponent.state.weapon, "sword");
         assert.equal(opponent.state.difficulty, "normal");
@@ -232,10 +247,29 @@ const journey = (practiceLab) =>
         await pressUntilScreen("p", "paused");
         await clickLabel("RESTART LESSON");
         await waitScreen("playing");
-        await page.waitForFunction(() => window.__PANTHEON_TEST.state().enemyCount === 1);
         opponent = await opponentAttempt();
         assert.equal(opponent.session.enemyPractice.defeated, false);
-        assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].hp, opponent.snapshot.state["tear.enemy.v1"][0].maxHp);
+        {
+          // A restart issues a full-health opponent. If it is ever seen damaged, say how long it had
+          // been alive (spawnT counts down from its spawn-in) and what was near it in that same snapshot.
+          const state = opponent.snapshot.state;
+          const enemy = state["tear.enemy.v1"][0];
+          const pick = (value, keys) => Object.fromEntries(keys.map((key) => [key, value?.[key]]));
+          assert.equal(
+            enemy.hp,
+            enemy.maxHp,
+            `restarted practice opponent was damaged before the first read: ${JSON.stringify({
+              enemy: pick(enemy, ["x", "y", "vx", "vy", "spawnT", "aliveT", "atk", "atkT", "flash", "hitCd", "stun"]),
+              enemyStatus: pick(enemy, ["bleedStacks", "burnT", "burnDps", "_deathCause", "affixes"]),
+              blade: pick(state["tear.blade.v1"], ["state", "x", "y", "tipX", "tipY", "tipSpeed", "swingActive"]),
+              player: pick(state["tear.player.v1"], ["x", "y", "vx", "vy", "hp"]),
+              projectiles: state["tear.projectile.v1"]?.length,
+              hazards: pick(state["tear.hazard.v1"], ["stageId", "fields", "combatObjects"]),
+              clock: state["tear.world.v1"]?.clock,
+              simulationSeconds: state["tear.world.v1"]?.simulationSeconds,
+            })}`,
+          );
+        }
         await pressUntilScreen("p", "paused");
         await clickLabel("BOSS PRACTICE");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);

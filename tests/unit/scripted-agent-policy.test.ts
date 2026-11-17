@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import type { TearAgentObservation } from "../../src/agents/contracts";
 import {
-  SCRIPTED_POLICY_PROFILES,
+  BladeMotorModule,
   MovementModule,
+  SCRIPTED_POLICY_PROFILES,
   TearScriptedPolicy,
-  projectAgentActionsToLegacyControls,
-  type TearAgentObservation,
-} from "../../src/agents";
+} from "../../src/agents/scripted-policy";
 import type { TearObservationV1, TearObservedActorV1 } from "../../src/tearbench";
-import { BladeMotorModule } from "../../src/agents/scripted-policy";
 import { createBlade } from "../../src/gameplay/entities/blade";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { CONFIG } from "../../src/config/game-config";
@@ -109,7 +108,8 @@ describe("deterministic scripted agent hierarchy", () => {
       input = new AuthoritativeInputState(),
       sequence = new EnvelopeSequencer();
     let rounds = 0,
-      releases = 0;
+      releases = 0,
+      tether = 1;
     for (let tick = 1; tick <= 120 && rounds < 2; tick++) {
       const target = actor("close-opponent", blade.x + 40, blade.y),
         current = state(tick, [target]);
@@ -130,9 +130,12 @@ describe("deterministic scripted agent hierarchy", () => {
       clock.sim = tick / 120;
       blade.update(1 / 120, player, []);
       rounds += blade.drainWeaponEvents().filter((event) => event.type === "razorRound").length;
+      tether = Math.min(tether, blade.tetherFactor);
     }
     expect(rounds).toBe(2);
     expect(releases).toBeGreaterThan(0);
+    // Holding the trigger between rounds draws the tether in, as it does for a player.
+    expect(tether).toBeLessThan(0.9);
     expect(blade.riftChambers).toBe(config.weapons.riftlock.chambers - 2);
   });
   it("exercises slash, secondary, throw, recall, parry, navigation, jump, and dash mechanics", () => {
@@ -331,22 +334,5 @@ describe("deterministic scripted agent hierarchy", () => {
     });
     expect(hazard.actions).toContainEqual({ type: "move", x: -1_000, y: 0 });
     expect(hazard.actions).toContainEqual({ type: "jump", phase: "pressed" });
-  });
-
-  it("projects semantic actions into the typed legacy player and blade seams", () => {
-    const controls = projectAgentActionsToLegacyControls([
-      { type: "move", x: 1_000, y: -1_000 },
-      { type: "dash", x: 1_000, y: 0 },
-      { type: "jump", phase: "pressed" },
-      { type: "aim", turn: 250_000 },
-      { type: "weapon", intent: "primary", phase: "pressed" },
-    ]);
-    expect(controls.playerInput.right()).toBe(true);
-    expect(controls.playerInput.up()).toBe(true);
-    expect(controls.playerInput.dashPressed()).toBe(true);
-    expect(controls.playerInput.jumpPressed()).toBe(true);
-    expect(controls.primaryHeld).toBe(true);
-    expect(controls.aim.x).toBeCloseTo(0);
-    expect(controls.aim.y).toBeCloseTo(1);
   });
 });

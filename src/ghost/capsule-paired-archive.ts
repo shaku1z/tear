@@ -1,5 +1,5 @@
 import { parseGhostCapsuleManifest } from "./capsule-import-plan";
-import { canonicalStringify } from "../replay/hash";
+import { canonicalStringify } from "../domain/hash";
 import {
   ghostArchiveData,
   ghostArchiveSha256,

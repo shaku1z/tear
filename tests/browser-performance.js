@@ -3,8 +3,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { assertPacingAssessment, createPacingAssessment } = require("./browser-performance-pacing-policy");
-const { STATE_WAIT_MS, holdFor, pollEvery } = require("./browser-waits");
+const {
+  assertPacingAssessment,
+  createPacingAssessment,
+  performanceHost,
+} = require("./browser-performance-pacing-policy");
+const { STATE_WAIT_MS, holdFor, pollEvery, trackScriptLoads, waitForScriptLoads } = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const buildRoot = path.resolve(projectRoot, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -140,6 +144,7 @@ function staticServer() {
 
 async function openInstrumentedPage(browser, pageErrors, options = {}) {
   const page = await browser.newPage({ viewport: budgets.referenceProfile.viewport, deviceScaleFactor });
+  trackScriptLoads(page);
   await page.addInitScript((gfx) => {
     let settings = {};
     try {
@@ -356,8 +361,7 @@ async function spawnRepresentativeEnemies(page, commandCount, onSample) {
     "pgmenu",
     "performance fixture could not open the Playground build menu",
   );
-  await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await waitForScriptLoads(page);
 
   for (let index = 0; index < commandCount; index++) {
     const before = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
@@ -378,6 +382,17 @@ function gauge(snapshot, name) {
 
 function assertAtMost(actual, budget, label) {
   assert.ok(actual <= budget, `${label}: ${actual} exceeded budget ${budget}`);
+}
+
+// Interval budgets are enforced on a controlled host only; frame work is asserted on every host.
+const host = performanceHost();
+
+function assessPacing(label, scenario, frameInterval) {
+  return createPacingAssessment({ label, scenario, frameInterval, host });
+}
+
+function assertPacing(assessment, label, scenario, frameInterval) {
+  for (const line of assertPacingAssessment(assessment, { label, scenario, frameInterval, host })) console.log(line);
 }
 
 async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0, minimumCollectionRateFps = 10) {
@@ -465,7 +480,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     frame: snapshot.frame,
     frameInterval: snapshot.frameInterval,
     outsideFrameWork: snapshot.outsideFrameWork,
-    pacingAssessment: createPacingAssessment({ label, scenario, frameInterval: snapshot.frameInterval }),
+    pacingAssessment: assessPacing(label, scenario, snapshot.frameInterval),
     backingStore: await canvasBackingStore(page),
     newLongTasks: snapshot.longTasks - longTasksBefore,
     peakGauges,
@@ -480,7 +495,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, `${label} simulation p95 ms`);
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, `${label} render p95 ms`);
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, `${label} frame-work p95 ms`);
-  assertPacingAssessment(result.pacingAssessment, { label, scenario, frameInterval: snapshot.frameInterval });
+  assertPacing(result.pacingAssessment, label, scenario, snapshot.frameInterval);
   assertAtMost(result.newLongTasks, scenario.newLongTasksMax, `${label} new >50 ms frames`);
   assert.ok(peakGauges.enemies > 0, `${label} did not exercise representative enemies`);
   await closeMeasuredPage(page);
@@ -555,6 +570,7 @@ async function verdantGameplayScenario(browser, pageErrors) {
     render: snapshot.render,
     frame: snapshot.frame,
     frameInterval: snapshot.frameInterval,
+    pacingAssessment: assessPacing("Verdant", scenario, snapshot.frameInterval),
     outsideFrameWork: snapshot.outsideFrameWork,
     backingStore: await canvasBackingStore(page),
     newLongTasks: snapshot.longTasks - longTasksBefore,
@@ -569,8 +585,7 @@ async function verdantGameplayScenario(browser, pageErrors) {
   assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, "Verdant simulation p95 ms");
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, "Verdant render p95 ms");
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, "Verdant frame-work p95 ms");
-  assertAtMost(snapshot.frameInterval.p99Ms, scenario.frameIntervalP99Ms, "Verdant frame-interval p99 ms");
-  assertAtMost(snapshot.frameInterval.maxMs, scenario.frameIntervalMaxMs, "Verdant frame-interval max ms");
+  assertPacing(result.pacingAssessment, "Verdant", scenario, snapshot.frameInterval);
   assertAtMost(result.newLongTasks, scenario.newLongTasksMax, "Verdant new >50 ms frames");
   for (const [name, limit] of Object.entries(scenario.ceilings)) {
     assertAtMost(peakGauges[name], limit, `Verdant peak ${name} (${JSON.stringify(peakEnvironmentKinds)})`);
@@ -687,6 +702,7 @@ async function paleGameplayScenario(browser, pageErrors) {
     render: snapshot.render,
     frame: snapshot.frame,
     frameInterval: snapshot.frameInterval,
+    pacingAssessment: assessPacing("Pale", scenario, snapshot.frameInterval),
     outsideFrameWork: snapshot.outsideFrameWork,
     backingStore: await canvasBackingStore(page),
     newLongTasks: snapshot.longTasks - longTasksBefore,
@@ -702,8 +718,7 @@ async function paleGameplayScenario(browser, pageErrors) {
   assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, "Pale simulation p95 ms");
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, "Pale render p95 ms");
   assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, "Pale frame-work p95 ms");
-  assertAtMost(snapshot.frameInterval.p99Ms, scenario.frameIntervalP99Ms, "Pale frame-interval p99 ms");
-  assertAtMost(snapshot.frameInterval.maxMs, scenario.frameIntervalMaxMs, "Pale frame-interval max ms");
+  assertPacing(result.pacingAssessment, "Pale", scenario, snapshot.frameInterval);
   assertAtMost(result.newLongTasks, scenario.newLongTasksMax, "Pale new >50 ms frames");
   for (const [name, limit] of Object.entries(scenario.ceilings)) {
     assertAtMost(peakGauges[name], limit, `Pale peak ${name} (${JSON.stringify(peakEnvironmentKinds)})`);
@@ -832,7 +847,13 @@ async function repeatedRunScenario(browser, pageErrors) {
     assert.deepEqual(pageErrors, [], `browser page errors: ${pageErrors.join("\n")}`);
     const report = {
       capturedAt: new Date().toISOString(),
-      referenceProfile: { ...budgets.referenceProfile, durationMultiplier, deviceScaleFactor, graphicsPreference },
+      referenceProfile: {
+        ...budgets.referenceProfile,
+        host,
+        durationMultiplier,
+        deviceScaleFactor,
+        graphicsPreference,
+      },
       build: buildInfo,
       browserRuntime,
       ...(activeGameplay && { activeGameplay }),

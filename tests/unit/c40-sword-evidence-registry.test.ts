@@ -22,7 +22,6 @@ describe("C40 Sword Reversal/Threadcut/catch seek evidence registry", () => {
     const routes = readJson("src/tearbench/evidence-routes.json") as readonly Record<string, unknown>[];
     expect(routes.find((entry) => entry.id === "sword-reversal-threadcut-replay")).toMatchObject({
       scenarios: ["sword-reversal-threadcut-catch-seek"],
-      graveyardCases: [],
       journeyCheckpoint: "sword-reversal-threadcut-catch-seek-engineering-proof",
       baseComparison: "not-run-by-this-scenario",
       interactionMatrices: ["browser"],

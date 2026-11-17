@@ -46,8 +46,7 @@ This is the migration checklist for the architectural redesign. A checked featur
   the one source-owned table. Standalone and CrazyGames production builds use
   the release channel; test builds and `vite dev` use the engineering channel.
   Engineering-only (not drawn, not focusable, actions inert, screens refused):
-  Training Archive, Training Operations, Replay Hub, Game Agent Evidence, Run
-  Monitor controls, Boss Test and Enemy Test (still catalog modes) with the
+  Boss Test and Enemy Test (still catalog modes) with the
   boss picker, Seed-Locked Race, Beat This Run, Boss Memory, Coach, Replay
   Editor, cloud capsule recovery, Vault/Career publish, support bundles,
   linked-pair download, every engineering URL parameter (`test`, `stemcue`,
@@ -128,7 +127,7 @@ frozen evidence record.
 - [x] Verdant identity foundation (engineering-only) — `stages.ts`,
   `boss-definitions.ts`, `content-director.ts`, and
   `environment-contracts.ts` own `verdant-sanctum`, `rootbound`, `rootbinder`,
-  and `bloom-well`/`rootline`/`root-link`/`graft-anchor`/`regrowth-link` exactly once.
+  and `bloom-well`/`root-link`/`graft-anchor`/`regrowth-link` exactly once (`rootline` was removed in 2026-11).
   TearBench projects those identities from production owners and has negative
   unmapped-identity proofs. At C1 the runtime campaign remained five stages and
   the public game-reference schema remained unchanged; the later C8 engineering
@@ -196,6 +195,13 @@ frozen evidence record.
   VS3-C11-S9 freezes both attack selection and already-selected commits during
   boss intro or transformation protection. All four verbs remain unavailable,
   create no projectile/environment intent, and resume only after protection ends.
+  Replaced (2026-11): the four C11 verbs, the `rootline` field kind and the
+  Seed Arc projectile are gone. Phases I and III now play one move table on the
+  shared boss attack layer (`rootbound-moves.ts` over `boss-attacks.ts` and
+  `boss-attack-runner.ts`): Vine Lash (parryable lunge), Root Glide (burrow and
+  surface under the player), Canopy Vault, Thorn Burst and Root Wave, each with
+  a tell of at least the shared minimum and an exposed window after the heavy
+  moves. The C11 notes above describe the old moves for history only.
   VS3-C12-S1 establishes the immutable Phase II Graft tuning contract without
   adding another environment registry: Bastion reduces incoming boss damage to
   80% but never zero, Mercy is bounded by 1.5% pulses and a 9% total budget, and
@@ -229,6 +235,12 @@ frozen evidence record.
   `BloomWellState` fields with deterministic offsets and stable Rootbound owner
   references; production composition installs the selected Phase II pattern
   idempotently. S9 remains responsible for cycling and attack cadence.
+  The Phase II described by the VS3-C12 notes below was rebuilt on the shared boss
+  attack layer: the keeper plays its move table and plants Grafts one at a time
+  (`plant-graft`), a cut Graft or cage wall opens it, Mercy heals by the one table
+  `ROOTBOUND_HEALING`, the thrown blade cuts what the held blade cuts, and the
+  Memory Choir, the fixed attack order and Mercy's timed pulses are gone. The notes
+  are kept as history.
   VS3-C12-S6 implements Memory Choir as three bounded Rootbound-owned attack
   manifestations rather than cloned enemies. A static 0.65-second warning,
   staggered one-hit rectangles, boss source/damage, afterimage recovery, and
@@ -751,8 +763,7 @@ frozen evidence record.
   classes or their outward services portable.
   Real
   full-world portability, durable
-  Ghost/Academy storage, genuine learned policies,
-  automatic Foundry operation, complete visible experiences, and end-to-end
+  Ghost storage, complete visible experiences, and end-to-end
   certification remain tracked by
   `plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`.
 - [x] Test-build State Forge Studio — `tearbench-state-forge-studio.test.ts`
@@ -842,7 +853,7 @@ frozen evidence record.
 
 ## Game flow and modes
 
-- [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `browser-tutorial-journey.js`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.
+- [x] Main menu, setup/war table and tutorial — `browser-navigation-journeys.js`, `browser-feature-matrix.js`, `tutorial-production-ghost.test.ts`, and `training-controllers.test.ts`; setup preserves the oracle risk pips, weapon identity/rating strip, and hero START treatment through the typed live-renderer boundary while placing all public choices on one aligned row grid. The fourteen-block Cutting Room resets its task arena/state per block and never applies shop/meta upgrades. Read the Charge teaches the defensive read; Field Test then states and validates one two-step route—evade, then punish recovery—before handing off to no-wave practice. Prompts adapt to keyboard/mouse, configured controller glyphs, and touch; the browser journey completes the whole course through real semantic gameplay input.
 - Practice Lab boss entries: six published bosses × three authored phases, explicit v6 portable practice origin, historical-defeat P1 access and exact acknowledged ordinary-phase discovery for later entries. Actual entry owners preserve rituals, Source void transfer and Rootbound graft/regrowth preparation. Practice remains Sword/Normal with no progression effects. Focused controls: `production-tutorial-continuation.test.ts`, `live-profile-stats-persistence.test.ts`, `screen-renderers.test.ts`. Parent fresh-build `browser-playground-journeys.js` Practice-Lab-only fixture passed on `e09913f1`: normal selection/reset/reload and unchanged saved progress, using declared history. Physical mobile usability, preview White Hart and mastery medals remain separate work.
 - Tutorial gold coaching: verified saved-origin 120 Hz references for all thirteen action blocks plus legacy Field Test; explicit finite preview/help, recorded contact/stage response, adaptive tick-labelled input, 1×/0.5× display playback and reduced-motion poses. Optional baseline Lab comparison retains a bounded shortest valid same-reference session attempt without reward/objective effects or mastery grading. Shipping gold stays outside checkpoints; only verified identity/cursor and bounded personal presentation are retained. See `TUTORIAL_PARITY_AND_UPGRADE_PLAN.md`. Fresh `068c0514` build and the normal `browser-tutorial-journey.js` passed the full course in 12,543 fixed ticks, earned Lab unlock, real MOVE attempt, reduced-motion setting and comparison resume. This is scripted browser evidence; physical-device usability and broader mastery remain open.
 - Tutorial adaptive assistance: native resolved actions drive related-failure nudges at two, a finite diagnostic at four and explicit unfinished checkpoint advance at six. Visible Skip and versioned unearned summaries preserve original issued-course identity and real redo requirements. Fresh `2455393e` build/journey passed the ordinary course (12,892 ticks), restored thirteen-skipped summary and real 2/4/6-to-Assist UI without progress/currency grants. Baseline drills only; annex/enemy/boss coaching, mastery and physical-device acceptance remain separate.
@@ -971,11 +982,7 @@ frozen evidence record.
    a versioned, forced-GC five-cycle developer-host observation: 160 natural
    600-tick episodes / 96,000 fixed steps completed with identical repeat hashes,
    2.4 MiB retained heap, and 610.4 episodes/minute on the declared local host.
-   A bounded C30 Academy-candidate intake also receives those real terminal
-   artifacts: each cycle retains eight, explicitly reports pressure for the
-   remaining 24 (40 accepted / 120 backpressured across the run), and never
-   stops an episode. It is neither a target-hardware capacity pass nor a
-   consent, corpus, or training claim. C30 also exercises its existing
+   C30 also exercises its existing
    serialized dispatcher with 32 independent source episodes across exactly
    eight operating-system workers, then reuses that bounded pool; it is not an
    unbounded fleet or target-throughput certification. A parent can also cancel
@@ -992,154 +999,7 @@ frozen evidence record.
    restarts from origin; it does not resume a checkpoint. Explicit lower-only
    8 MiB request / 32 MiB result ceilings are application policy, not whole-heap
    or target-hardware capacity evidence. Reward/draft/finale checkpoint recovery,
-   natural victory coverage and target capacity remain separate obligations;
-   C31 now places a fail-closed Academy admission decision in front of that
-   candidate stream. It separately checks local/cloud/analytics/model consent,
-   privacy, structured-training provenance, build identity, and a verified raw
-   track bundle against a real C30 terminal before any corpus action. That
-   bundle now reconstructs actual canonical observations/actions/timing plus
-   native facts, reward snapshots, and ordered planner intents through the
-   shared composition. It accurately identifies the semantic source device. A
-   separate C31 Vault reader can bind an integrity-checked C27 capsule only
-   when its replay bootstrap, commands, terminal range, and C30 terminal anchor
-   all agree. A C31-only, explicit post-intake materializer now writes that
-   exact source capsule and reads back its attestation; the synchronous C30
-   stream itself remains storage-free, and an unmaterialized intake item still
-   refuses build/provenance and capsule-range tracks by default. This is source
-   custody only: an eligible materialized source may now enter a durable,
-   hash-chained C31 pre-corpus ledger with explicit retention and consent
-   decisions. Revoked or expired records are excluded from future held-candidate
-   queries without erasing their audit history. An authorized C31 deletion
-   removes the exact attested source capsule atomically with a non-training
-   tombstone. Each custody record also persists a privacy-class-matched,
-   versioned local authority policy; undeclared actors cannot revoke, expire, or
-   delete it. Held sources can now receive a durable, fail-closed quality
-   assessment derived from their verified raw tracks: transparent coverage and
-   density components, source metadata, explicit outlier flags, and a content
-   hash that recognizes equivalent captures as duplicates. That assessment is
-   still only `review-required` or `duplicate`, never trainer input. An
-   authorized human can record one immutable curation decision or correction
-   request against an exact held assessment; a future active-candidate view
-   removes it after custody revocation/expiry. An approved source can then enter
-   a lineage-bound durable pre-corpus split/manifest and materialize a reviewed
-   sample retaining its exact Vault range and verified tracks. Trainer manifests
-   omit hidden exams. The normal main-menu `ACADEMY` screen presents a read-only
-   runtime-owned aggregate plus a bounded privacy-safe record/manifest inspection
-   of durable held, reviewed, curated, consent, retention, split, and revision
-   state, including an explicit storage-unavailable state with a retry that
-   refreshes the existing inspection controller after the player checks browser
-   storage permissions. Its lesson labels
-   report only active governed corpus coverage (`unrepresented`, `governed`, or
-   `recovery-evidenced`), never a lesson pass or policy quality; it is not a
-   trainer input or full Academy workspace. A reviewed governed source can now become a durable Academy corpus entry with
-   a versioned reader-scoped manifest; trainer views exclude hidden exams and
-   revocation removes entries from future manifests. In the normal Academy, a
-   signed-in ID named by a held record can withdraw only model-training consent;
-   the action is re-authorized at execution and preserves the local audit
-   history. It is not cloud-account deletion or cross-device authority. C32 now has a local,
-   Vault-backed versioned policy-artifact registry: it validates content hashes
-   and runtime compatibility, quarantines corrupt/incompatible bytes, and makes
-   activation plus rollback pointer history atomic. It does not execute model
-   payloads, train from Academy data, or expose a Watch Agent policy. A
-   browser-seeded IndexedDB artifact now survives reload into the normal Class-A
-   Watch Agent route and its validated canonical action is submitted through
-   semantic input with an inspectable receipt. That normal route also writes a
-   bounded integrity-checked Ghost Vault analysis decision journal containing
-   the real canonical action batch, observation hash, artifact receipt, and
-   Class-A hierarchy trace; it is explicitly separate from causal capsule
-   recording. A bounded frozen structured suite now also produces a reproducible
-   active-artifact decision-conformance report, but does not establish real-game
-   performance or promotion safety. The data-only table runtime has static
-   payload/work/action limits and elapsed fallback containment, but no external
-   inference backend. Only unactivated leaf artifacts may be evicted, with
-   receipt-backed preservation of active/rollback lineage. Player-facing policy
-   controls remain absent. The active table artifact can also run against the
-   C29/C30 source-owned production world and return repeatable in-memory
-   terminal evidence; bounded hash-checked reports now have local Vault custody
-   with corrupt-byte quarantine. A fixed, bounded multi-scenario production
-   suite also records only observed terminal/truncation and artifact/fallback
-   execution facts; it defines no quality score, training result, or promotion
-   threshold. Those suite reports now have idempotent, corruption-safe local
-   Vault custody and bounded auditable retention by deterministic content-hash
-   order, never an outcome-derived ranking. C33 now loads bounded immutable
-   track sequences only through a named C31 trainer manifest, rechecking every
-   custody/curation/split/track hash and excluding hidden exams; it does not yet
-   train or produce a policy artifact. Its fixed 17-feature normalization fits
-   only the training split and batches held-out splits separately. It now also
-   deterministically fits a bounded linear artifact and executes it through the
-   C32 runtime against a source-owned production observation. A separately
-   governed validation split can produce a reproducible offline exact-action-
-   conformance report only from a persisted fit; it rejects the training split
-   and provides no quality threshold or promotion path. Those reports have
-   idempotent corruption-safe local custody only.
-   C33 also captures bounded active-artifact versus scripted-teacher action
-   disagreements from the shared production headless world, preserving
-   artifact/scenario/context lineage while applying only challenger actions.
-   Named local reviewers can make immutable accept/reject decisions on those
-   proposals; neither unreviewed nor rejected proposals are corpus input or
-   promotion. Each proposal retains only the shared bounded training feature
-   vector needed for later approved-only retraining.
-   C33 now also fits a bounded causal temporal-window perceptron from those
-   governed tracks and executes its data-only artifact through the same C32
-   source-world runtime; it has no future frames and clears its bounded history
-   on reset. It is not a GRU/LSTM, quality result, baseline comparison, or
-   promotion path. New temporal fits retain governed training-scenario hashes;
-   a source-world temporal-versus-scripted comparison fails closed on overlap
-   and records observed deltas only. Approved temporal DAgger corrections now
-   retain causal frames and run condition before they can become normalized,
-   hash-bound temporal augmentation. The governed lesson fixture now has
-    separate 60-tick production-world training and validation episodes, a
-    61-example held-out split, and a distinct 60-tick eight-proposal correction
-    capture. Temporal correction-source identity now joins the retraining
-    lineage and is refused from held-out evaluation; paired parent/corrected
-    three-scenario source-world reports and baseline comparisons have bounded,
-    corruption-safe local custody. This remains observed measurement, not a
-    quality result, activation, or promotion. Meaningful held-out quality and an
-   automated repeated DAgger loop,
-   and promotion remain absent. C33 now has an immutable Vault-backed program
-   plan that binds a governed trainer manifest, temporal configuration, named
-   reviewer authority, and distinct source-world rounds; its explicit process
-   owner resumes accepted corrections only from those durable inputs and stops
-   at human review. Academy now exposes that persisted plan as an explicit
-   start/resume control and projects action-divergence decisions only to a
-   signed-in session whose exact ID is named in the immutable plan. It never
-   infers an actor from the renderer, accepts a guest/local/unauthorized
-   session, activates, promotes, or declares a quality result. This is local
-   plan authority, not account/cloud authorization. A second immutable Academy
-   evaluation plan now freezes canonical unseen seeds and lesson thresholds,
-   recovery coverage, an explicit scripted baseline/margin, and full
-   dataset/DAgger exclusions before execution. Its executor runs candidate and
-   baseline through the same fresh source-world case runner; recovery accepts
-   only an exact lineage-bound State Forge frontier, and its local hash-bound
-   pass/fail custody has no registry activation or promotion route. The
-   permanent short fixture fails, so a meaningful held-out pass still remains.
-   C34 now has a hash-bound, training-split-only offline-RL trajectory plan
-   over those governed C31/C30 source tracks and a deterministic bounded
-   fitted-Q trainer over that receipt. It exposes only declared, capped
-   source-fact reward components and rejects altered plans, held-out data,
-   trace misalignment, off-episode actions, and a planted duplicate terminal
-   reward fact. Checkpoint/result custody is idempotent and quarantines corrupt
-   bytes; Q/TD divergence stops before a model is emitted. Its retained Q model
-   is not a C32 runtime artifact, activation, promotion, online exploration,
-   or self-play result. C34 also has a narrow ordered curriculum scheduler that
-   accepts only the already-governed full C30 training scenarios/lessons,
-   derives its normalized semantic vocabulary from that receipt, and retains
-   bounded fresh-headless rollout evidence with integer epsilon decay. The
-   fallback action is fixed and governed, not a Q-model decision; those results
-   are non-trainable and cannot update, register, activate, promote, or prove
-   online RL/self-play quality. A V2-only online-Q runner now selects from that
-   governed vocabulary, applies TD updates only after valid fresh C30 ticks,
-   and preserves a source-world checkpoint after each nonterminal transition.
-   Cancellation, timeout, budget, malformed-lineage, and Q-value guards retain
-   non-promotional stopped custody; the resume fixture equals one uninterrupted
-   source-world update run. This remains local online-Q work, not self-play or
-   evaluated/published policy quality. C34 can also retain a deterministic
-   challenger/defender paired tournament over the same frozen C30 cases, but it
-   deliberately creates independent worlds and never co-mingles actions; it is
-   comparison evidence, not simultaneous self-play or quality certification. A
-   separate immutable source-evaluation receipt pairs the retained online-Q
-   checkpoint against its frozen offline baseline on those same fresh C30 cases;
-   the permanent thresholded fixture fails and is retained without promotion.
+   natural victory coverage and target capacity remain separate obligations.
    Account/cloud identity and deletion, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work. C38 now has a
    local-only immutable publication declaration: it binds a healthy complete
@@ -1196,232 +1056,12 @@ frozen evidence record.
 - [x] Hierarchical Master/Music/SFX/Interface mixer and internal SFX buses — `audio-mixer.test.ts` verifies graph routing, hierarchical mutes, persistence, and gain ramps.
 - [x] Existing synthesized SFX and UI feedback routed by category — `synth-cue-routing.test.ts` locks all 64 authored cues to player/weapon/enemy/environment routes; `browser-audio.js` exercises every route through distinct conditioned backend chains while UI remains on Interface.
 - [x] Biome-routed stem music backend with run session, semantic events and stingers: `music-director.test.ts`, `audio-system.test.ts`, `music-routing.test.ts` and `browser-audio.js`. Shell ownership requires both the main-menu scene and menu biome, so in-run Settings preserves the current run cue.
-- [ ] C35 executed TearBot ladder foundation — hash-bound benchmark plans now execute declared scripted or C33-artifact adapters through fresh C30 worlds and retain action/event/terminal traces plus derived distributions. It is not a certified level population or human calibration.
-- [ ] C35 human calibration source boundary — separately consented signed-in players can explicitly record or revoke a local calibration decision. Only a completed Ghost V3 capture with browser-trusted physical input, unchanged actor/revision, and exact root/range/command custody creates a local pending attestation. Explicit local admission rechecks consent; a reproducible, participant-balanced (30+ pseudonymous participants) trace/cadence distribution is source evidence only, never automatic training, upload, or level certification.
-- [ ] C35 held-out human-likeness comparison — a pure, hash-bound protocol can compare the 30+ participant calibration distribution with one exact C36-promoted V3 canonical evaluation report against frozen tolerance metrics. It fails closed, excludes Omega, and returns only insufficient evidence or compared-not-certified; it cannot assign placement, certify a level, mutate a policy, or consume a synthetic human anchor.
-- [ ] C36 durable Foundry job foundation — a content-addressed local job ledger fixes champion, held-corpus, evaluation, reward, invariant, budget, and stop-condition identities; it records only legal workflow transitions and safely resumes the current phase after restart. Its action-time integrations admit exact held C31 custody and a matching published trainer manifest, then retain at most one hash-bound C34 offline-Q checkpoint from that exact dataset. It does not curate, publish manifests, finalize a model, evaluate quality, activate, promote, schedule, or present a policy.
-- [ ] C36 immutable launch-profile authority — a product-owned content-addressed profile freezes V2 evaluation/budget/stop inputs, exact published C31 trainer manifest, cadence, and V3 successor intent. It derives the champion only from the active strict C32 V3 artifact and corpus records only from held matching custody; public eligibility is opaque. It creates no C31 data, execution, policy mutation, UI, or unattended-cycle claim.
 - [x] Legacy music as exclusive initialization/runtime fallback: `audio-system.test.ts` proves disposal and exclusive `legacy-synth` selection, and `browser-audio.js` proves the built-in synth takes over when the recorded cues cannot load.
 - [x] Ad, portal, visibility, suspension and repeated-run leak tests — `audio-system.test.ts` and `browser-audio.js` account for contexts, mixer/backend/voice nodes, lifecycle listeners and fallback timers through repeated runs and disposal; CI runs a real headed hidden/visible tab transition under Xvfb while local headless runs retain an explicitly labeled simulation.
-
-## C36 Foundry status
-
-- [ ] Governed C31 → V3 → inactive C32 admission — an explicit local executor
-  trains an exact published trainer manifest with bounded offline and source
-  training, then atomically retains derived evidence, candidate/index pairs,
-  and its legal training successor. Final-transaction guards reject source,
-  custody, consent, curation, or output-slot drift. Numeric jobs charge bounded
-  attempts before source work and refuse missing or exhausted allowances.
-  `academy-candidate-curation.test.ts` executes the resulting inactive artifact
-  through the existing canonical C32 adapter in a real C30 world. This evidence
-  does not establish learned quality, population levels, promotion, or an
-  unattended full cycle.
-
-- [ ] C36 launch-profile screen action — the standard Foundry renderer receives
-  only an opaque profile ID and `eligible`/`blocked` disposition. Its one
-  semantic `foundry.bootstrap { profileId }` command rechecks the profile at
-  action time, delegates the derived request to the bootstrap executor, and
-  refreshes the view. It exposes no configuration, hashes, champion identity,
-  or C31 custody, and it is not autonomous-cycle evidence.
-
-- [ ] C36 V2-to-V3 local bootstrap admission — one fail-closed local boundary
-  can atomically admit an already-frozen V2 `created` request into its enabled
-  schedule revision and exact V3 execution binding, after rechecking a
-  pre-published exact C31 trainer manifest/root and action-time held custody.
-  It guards all authority bytes with the same Vault transaction and retains an
-  idempotency receipt; it does not curate, execute, train, evaluate, activate,
-  promote, roll back, schedule a worker, render UI, or contact cloud.
-
-- [ ] C36 restart recovery projection — validated Foundry jobs can be projected
-  as hashes-only current phase and legal manual restart state; corrupt/missing
-  custody is refused through local Vault quarantine. The normal standalone
-  `FOUNDRY STATUS` route visibly renders only those hashes/counts, phase, legal
-  next manual phase, and explicit unavailable/not-running automation state;
-  refresh/back have built navigation evidence. This remains read-only and does
-  not execute, schedule, activate, promote, or contact cloud.
-
-- [ ] C36 controlled local schedule intent â€” a content-addressed local record
-  can enable or disable a pre-existing job's fixed-cadence due discovery and
-  binds compute/storage/stop identities. Due discovery is restart-safe and
-  blocks corrupt, stale, terminal, stop-mismatched, or revoked-custody records.
-  Its explicit rebind advances only an exact, nonterminal immutable successor
-  together with the schedule under conditional current schedule/job-head and
-  action-time held-custody checks; retry is idempotent and concurrency has one
-  winner. It is not a worker or action executor.
-
-- [ ] C36 app-owned bounded local scheduler — after browser IndexedDB is
-  available, an app-edge lifecycle service rediscovers enabled schedules and
-  sends at most one due, V3-bound opaque schedule hash to the existing executor
-  per serialized sixty-second wake. It exposes disabled/configured/due/running/
-  blocked/error state on the normal Foundry screen and survives reload through
-  Vault rediscovery. It has no worker, network, cloud call, generic phase
-  command, active-policy/artifact route, activation, placement, or promotion.
-
-- [ ] C36 lease-bound collection and manifest dispatch — an explicit local
-  caller can claim a due schedule with a sixty-second conditional Vault lease,
-  collect only held C31 custody, or advance one `collecting` job through an
-  already-published exact trainer manifest. The manifest claim pins the current
-  schedule, job, every named custody byte, and prior lease; stale, early,
-  concurrent, revoked, mismatched, absent, and budget-invalid work fails
-  closed. Receipts make exact retries idempotent. No timer, C31 mutation,
-  dataset load, training, evaluation, activation, promotion, or cloud work is
-  introduced.
-
-- [ ] C36 lease-bound bounded offline-Q launch — a due `curating` job may call
-  the existing one-epoch C34 offline executor only after immutable
-  manifest/root/dataset/plan/configuration/reward identities, schedule/job,
-  and every named C31 custody byte revalidate. Its conditional lease supports
-  exact retry and rejects stale, concurrent, revoked, early, budget-invalid,
-  or changed-lineage work. It emits no online run, final result, artifact,
-  evaluation, activation, promotion, timer, or cloud operation.
-
-- [ ] V2 Foundry source-evaluation derivation — V2 requests freeze an
-  identifier/threshold protocol before a challenger exists, retain its content
-  hash, and can derive (but not execute) one C34 paired source-evaluation plan
-  only after current job, completed lineage, C31 dataset, and action-time held
-  custody revalidate. Historical V1 jobs remain recoverable but are expressly
-  ineligible for source evaluation. No scoring, artifact creation, activation,
-  promotion, scheduling, or UI occurs here.
-
-- [ ] V2 Foundry source-evaluation execution — only a persisted V2 derivation
-  with unchanged live C31/C34 lineage can run the existing C34 evaluator and
-  move from evaluating to deciding. Its Foundry receipt retains a result hash,
-  not a score or winner; failed/invalid runs reject without metrics. No artifact,
-  registry, activation, promotion, scheduler, or UI path exists.
-
-- [ ] C36 V4 source-evaluation plan binding — the scheduled V4 paired-ready
-  head revalidates exact authority/handoff/launch/readiness/paired-receipt,
-  original source, current schedule/job/pointer, launch-profile and C31 custody
-  bytes before it derives only the frozen V2/C34 plan. Plan/receipt/index and
-  the next receipt-bound V4 pointer are one conditional commit, so a lost
-  commit writes neither plan bytes nor a new current head. It cannot execute
-  evaluation, decide, create/admit a candidate, activate, promote, roll back,
-  schedule additional work, render UI, or contact cloud.
-
-- [ ] C36 V4 source-evaluation execution binding — only the exact retained
-  V4 plan receipt may run the existing paired C34 evaluator. The factual
-  result, `evaluating -> deciding` job successor, schedule rebind, and
-  receipt-bound decision-ready pointer are one guarded transaction over the
-  retained authority/handoff/launch/readiness/plan/profile/bootstrap and held
-  C31 custody bytes. A corrupt plan, revoked custody, or lost transaction
-  leaves no result or successor pointer; this is not a decision, candidate,
-  activation, promotion, rollback, or cloud capability.
-
-- [ ] V2 Foundry frozen decision boundary — the predeclared C34 result is
-  revalidated and yields only a monitoring-ready challenger or rejection.
-  Monitoring-ready is not activation or promotion, and produces no C32 artifact
-  or player-visible change.
-
-- [ ] C36 lease-bound bounded offline-Q resume — only a due schedule bound to
-  the current V2 `training` head may resume exactly one existing C34 offline
-  checkpoint after rechecking launch/plan/configuration, trainer manifest,
-  dataset, receipt/checkpoint, current schedule/job, every named C31 custody
-  byte, budgets, stop identity, and lease. Old schedules, V1 launches,
-  altered/revoked/early/budget-invalid lineage, and competing claims fail
-  closed; exact retry returns its receipt. It remains `training → training`
-  only, with no terminalization, evaluation, artifact, activation, promotion,
-  timer, or cloud behavior.
-
-- [ ] C36 bounded schedule continuation coordinator — after one successful
-  lease-backed dispatch, a receipt-bound control-plane action can rebind only
-  the same due schedule to its already-current exact nonterminal successor.
-  It conditionally guards schedule/job/receipt bytes, fixed budgets/stop and
-  action-time held custody; terminal, stale, early, revoked, budget-invalid,
-  corrupt, and competing work fails closed, and retry is idempotent. It runs no
-  phase and has no timer, worker, cloud, evaluation, artifact, activation, or
-  promotion behavior.
 
 ## Remaining proof gaps
 
 No feature-preservation evidence gaps remain in this inventory. Release readiness still requires the full clean-commit gate described above.
-
-The future learned-Q runtime has a separate versioned C34/C32 canonical-source
-compatibility identity. It proves common C30 source-state encoding and canonical
-action selection mechanics only; legacy C34 results refuse the path, and it
-does not create a policy artifact, activation, promotion, or player feature.
-Its separate V3 bounded offline trainer now preserves receipt/configuration/
-vocabulary lineage and corruption-safe local custody, still without registry,
-activation, promotion, or player runtime integration.
-
-The V3 online-Q continuation now runs only fresh bounded C30 source worlds,
-preserves exact interruption checkpoints, and retains non-promotional baseline/
-challenger evaluation custody. Cancellation, timeout, update-budget and Q
-divergence stops are explicit terminal evidence. The V3 model is still not a
-C32 registry artifact, active runtime, Foundry input, self-play population, or
-player-facing feature.
-
-An inactive-only C34 V3 canonical-Q candidate can now execute the real C30/C32
-source-state adapter after a completed passed V3 evaluation. It is bounded,
-masked, deterministic, integrity-checked, and corruption-quarantined, but has
-a strict C32 active Watch route now consumes it only when an already-installed
-V3 active pointer validates. That route receives the actual post-step C30/C27A
-canonical state and production-advertised action kinds rather than rebuilding
-them from a TearBench observation; incompatible V3 bytes quarantine and refuse
-instead of falling through to legacy inference. Legacy artifacts remain on the
-existing structured route. There is still no player activation UI, Foundry
-activation/promotion, placement, or traffic-control path.
-
-A Foundry V3 approval can now be consumed by one narrow atomic local promotion
-transaction: it revalidates the frozen C31/C34/C36 lineage and writes the C32
-active pointer/history plus a promotion receipt together, or writes none of
-them. This is not a player control, traffic placement, monitoring loop,
-rollback operation, scheduler, or cloud capability.
-
-A separate C35 evaluator can measure only the exact C36-promoted active C34 V3
-canonical candidate across its declared bounded C30 cases. It verifies the
-promotion receipt, candidate bytes, and active C32 head before executing each
-fresh world through the strict canonical source-state runtime, then retains
-provenance-bound semantic/terminal/event distributions. The report is
-explicitly unassigned and not human-compared: it performs no level placement,
-calibration, activation/pointer mutation, traffic selection, rollback, UI,
-schedule, or cloud action.
-
-The C36 V3 monitoring bridge can retain exact V2 monitoring plus C31 custody
-and completed V3 candidate lineage as a quarantined, inactive-only evidence
-record. It cannot activate, route, place, promote, roll back, schedule, or
-surface that candidate to players.
-
-The V4 terminal can additionally retain complete separately-produced V3
-evidence bytes through one atomic, inactive-only bridge declaration. It is a
-durable handoff pointer, not a scheduler, runtime route, registry, activation,
-approval, promotion, placement, or traffic feature.
-
-Eligible V3 monitoring evidence can also be frozen in an approver-free C36
-promotion-approval package, including any valid prior active-policy rollback
-identity. It is still only durable evidence: no registry admission, activation,
-promotion, placement, runtime traffic, or player surface is reachable.
-
-### C37 normal Ghost Lab home
-
-The normal main-menu `GHOST LAB` route is a local, typed home with Academy,
-Foundry Status, Ghost Vault, and a conditional local Watch route. Vault remains
-the existing capsule-gated entry to Theater and Coach. Watch reads the exact
-raw active pointer and artifact bytes, validates their hashes, and then admits
-only the strict C32 canonical V3 runtime; absent, malformed, mismatched, or
-non-V3 bytes remain visibly unavailable and never fall back to a scripted or
-legacy policy. Its normal-speed start/pause/resume/stop control reports local
-aggregate decision health only and restores native input on pause, refusal, or
-stop. It has no decision journal, C36 monitoring/promotion/rollback, schedule,
-traffic, cloud, placement, or test-only host/panel path. State Forge, Bot
-Ladder, and Studio remain visible unavailable declarations. Unit controller and
-screen-action evidence plus `tests/browser-ghost-lab-home.js` cover the normal
-unavailable browser route. `tests/browser-c37-player-watch.js` seeds an exact
-C32 V3 candidate and activation in the ordinary IndexedDB store, then proves
-the no-`watchagent` normal-build Watch control visibly enables, advances,
-pauses without new decisions, resumes, and stops. This remains engineering
-evidence only and is not represented as player certification.
-
-### C37 Bot Evidence read-only projection
-
-The normal Ghost Lab also exposes `BOT EVIDENCE`. It projects at most one
-explicitly supplied exact report hash through `TearBotV3CanonicalEvidenceVault`.
-It never lists, scans, executes, scores, places, calibrates, activates,
-promotes, or changes traffic. Missing, stale, and malformed retained bytes are
-unavailable; an exact parsed report visibly renders its C36/C32 provenance,
-distribution, `unassigned` placement, `not compared` human calibration, and
-`not certified` status. `tests/unit/tearbot-v3-canonical-evaluation.test.ts`
-uses a genuinely executed and retained C35 report to prove the projection and
-tamper refusal; renderer and semantic-route tests protect the normal surface.
 
 ### C37 recorded Run DNA Theater projection
 
@@ -1493,7 +1133,7 @@ remain separate work.
 
 Vault source retention now uses one shared backend with exact transaction
 guards, a manifest mutation fence, reference-safe shared-chunk removal, and
-owner protection acquired with Academy custody. Legacy source protection is
+capsule owner protection. Legacy source protection is
 backfilled from durable custody before quota upkeep, including damaged chunks
 and absent manifests. These retention fences preserve forensic evidence and
 future exact source reappearance without certifying chunk health. Malformed or
@@ -1536,74 +1176,6 @@ cancels the job before any request. Immutable remote uploads awaiting verificati
 verification without creating another multipart upload. The four focused
 publication controller/job/transport/Worker suites preserve these contracts.
 Configured-account browser resume and real cloud publication remain unproven.
-
-### C36 approval-bound post-promotion monitor
-
-An active C36-promoted V3 Watch run can retain one aggregate-only terminal health record after exact active pointer, promotion/approval, frozen protocol, and complete real Watch journal revalidation. It freezes the prior thresholds and `classify-only-no-rollback`; it cannot retain raw actions/states, mutate the pointer, roll back, schedule, place traffic, or render UI.
-
-An exact C36 `threshold-breach` record can now authorize one atomic restoration of its frozen pre-promotion baseline. The dedicated boundary rechecks provenance, V2 policy, custody, and baseline bytes and retains a rollback receipt; generic registry rollback remains unreachable from Foundry.
-
-### C36 V4 frozen decision lifecycle
-
-The scheduled V4 Foundry head can now consume only an exact retained C34
-source-evaluation result under its frozen V2 protocol. It atomically retains a
-monitoring-ready or rejected successor, the matching cadence state, and a
-receipt-bound terminal V4 head. It does not construct candidates, mutate C32,
-or expose player traffic; `tests/unit/foundry-job-offline-training-finalization.test.ts`
-proves real lineage, tamper/custody refusal, and commit-loss recovery.
-
-### C36 V4 monitoring-entry terminal
-
-Only a current `monitoring` decision terminal with a retained
-`monitoring-ready` decision can write one factual monitoring receipt. The
-receipt, disabled schedule, and terminal pointer are atomic under exact V4,
-decision, and C31 custody bytes; rejected terminals create no receipt. This
-does not bridge, activate, promote, place traffic, roll back, or provide a
-complete unattended lifecycle.
-
-### C36 V4 promotion-approval handoff
-
-A current disabled V4 V3-monitoring declaration can now atomically freeze an
-approver-free approval package and replace only that V4 pointer with an opaque
-approval-ready handoff. It pins the declared bridge, decision/monitoring facts,
-inactive candidate, active rollback baseline if any, and C31 custody, and
-refuses a candidate that becomes active. It cannot promote, activate, place
-traffic, resume the schedule, or surface a policy to players.
-
-### C36 V4 atomic V3 promotion terminal
-
-Only the current disabled `v3-promotion-approval-ready` V4 head may invoke the
-existing V3 promotion boundary. Its continuation makes the active C32 pointer,
-activation history, promotion receipt/index, and a
-`v3-promotion-terminal { declarationHash, approvalHash, promotionReceiptHash }`
-binding/index one conditional commit, or writes none. The schedule remains
-disabled and this direct terminal has no scheduled-execution branch, timer,
-traffic, placement, UI, or cloud behavior. Exact retry requires both the
-terminal pointer and its retained promotion receipt to agree. The V4 test
-proves declaration/approval/bridge/candidate/pointer/custody/baseline refusal
-and planted commit-loss recovery; it is not a completed unattended lifecycle.
-
-### C36 V4 post-promotion Watch authority
-
-Only a current disabled V4 promotion terminal can atomically declare one opaque
-aggregate-only Watch head. The immutable authority pins its source declaration,
-approval/promotion receipt, current C32 active artifact and activation, V2
-protocol/stop conditions, and action-time C31 raw-custody hashes. It freezes
-`local-watch-agent-terminal-aggregate-only` plus
-`classify-only-no-rollback`; it cannot execute or consume Watch, schedule,
-place traffic, expose UI, invoke cloud services, activate, promote, or roll
-back. The V4 test proves a real promotion-to-arm path, disabled schedule, and
-idempotent retry. Watch execution and monitor consumption remain open.
-
-### C36 V4 direct rollback terminal
-
-Only a caller holding the current disabled V4 named Watch terminal may consume
-an exact `threshold-breach` with `rollback-ready-not-invoked`. Its guarded V3
-continuation restores the already-frozen baseline, activation history, and V3
-rollback receipt together with one opaque V4 rollback-terminal binding. It
-revalidates the terminal, Watch authority, declaration, approval, promotion,
-active artifact, baseline, and action-time C31 custody bytes. It has no
-dispatcher, timer, automatic trigger, traffic, placement, UI, or cloud path.
 
 ### C39 local sanitized Ghost support bundle
 
@@ -1690,7 +1262,7 @@ account deletion remain unverified or separate work.
 
 ### Durable local Career Archive
 
-Profile CAREER / GhostLab CAREER ARCHIVE provide metadata-first whole retained
+Profile CAREER provides metadata-first whole retained
 history, eighteen searchable filters, nine evidence-bounded career views and
 paginated details. Canonical recordings enrich sequentially in one cancellable
 worker; retained Ghost2 recordings remain visual-only under their original owners.
@@ -1707,25 +1279,3 @@ three pages, ten view routes, persistent tags/pins, canonical/legacy playback,
 protected refusal and a real exact-byte archive download/delete/restore. Desktop
 and compact captures were inspected; physical-device and broader C37 acceptance
 remain separate.
-
-
-The explicit native return-subskill adapters now preserve real empty decisions,
-native catch rewards, support/default/fallback receipts and constructor-owned
-immutable selection. Additive return-V3 identities prefer observed support on
-equal Q without changing older model meanings. The actual 24-case V3
-training/validation experiment did not establish transfer: feature validation
-was 0/4 and its separate held-out stage was not opened. See
-[C34 return-subskill evidence](checkpoints/C34_RL_SELF_PLAY_CURRICULUM.md#explicit-native-return-subskill-adapters-and-measured-limits).
-
-An explicit factorized-return V4 implementation now has continuous motor and
-independent threat value features, ordered past-action/native-effect context,
-training-only bounded Gaussian bases, offline/online TD and source-replayed
-recovery prefixes. Its inactive artifacts use a separate strict C32/Watch route
-and distinguish basis support, generalization, unknown support and refusal.
-Four bounded implementation cases cover the retained quantization failure,
-native fresh/tick-145 return conformance, exact resume and candidate/journal
-boundaries. They are not a governed learning or quality experiment. V2/V3
-models and six historical sources are unchanged; the 32 held-out cases remain
-unopened. Final runtime integration and the original train/validation quality
-criteria remain open. See the
-[V4 implementation boundary](checkpoints/C34_RL_SELF_PLAY_CURRICULUM.md#factorized-return-v4-implementation-boundary).

@@ -59,8 +59,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     const navTop = compact ? playY + playH + metric.btnGap * 2 : 426;
     // Navigation row `index`: one column on desktop; in compact density the rows flow
     // into as many columns as the remaining height needs.
-    const navCount =
-      5 + (view.engineeringRoutes === true ? 3 : 0) + (view.practiceAvailable ? 1 : 0) + (view.nowPlaying ? 1 : 0);
+    const navCount = 5 + (view.practiceAvailable ? 1 : 0) + (view.nowPlaying ? 1 : 0);
     const rowsAvailable = Math.max(1, Math.floor((height - ui.t.space.lg - navTop + metric.btnGap) / pitch));
     const columns = compact ? Math.max(2, Math.ceil(navCount / rowsAvailable)) : 1;
     const railWidth = columns * columnWidth + (columns - 1) * metric.btnGap;
@@ -137,29 +136,8 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
         action: { type: "navigate", to, resetScroll: to !== "settings" },
       });
     });
-    // Extra rows continue the same rhythm under SETTINGS: engineering routes (engineering
-    // builds only; one shared row on desktop), the Practice Lab, then the music row.
+    // Extra rows continue the same rhythm under SETTINGS: the Practice Lab, then the music row.
     let slot = rail.length;
-    if (view.engineeringRoutes === true) {
-      const routes = [
-        { glyph: "◇", label: "TRAINING ARCHIVE", action: { type: "training-archive.open" } as const },
-        { glyph: "T", label: "TRAINING OPERATIONS", action: { type: "training-operations.open" } as const },
-        {
-          glyph: "◇",
-          label: "REPLAY HUB",
-          sub: "LOCAL ROUTES",
-          action: { type: "navigate", to: "ghostlab", resetScroll: true } as const,
-        },
-      ];
-      const row = navSlot(slot);
-      routes.forEach((route, index) => {
-        // Desktop keeps the established shared row: the archive in the rail, the other two beside it.
-        const beside = { ...row, x: row.x + railWidth + 18 + (index - 1) * 232, w: 220 };
-        const place = compact ? navSlot(slot + index) : index === 0 ? row : beside;
-        context.enqueue({ ...place, ...route, ghost: true });
-      });
-      slot += compact ? routes.length : 1;
-    }
     if (view.practiceAvailable) {
       context.enqueue({
         ...navSlot(slot++),
@@ -179,7 +157,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
         ghost: true,
         label: view.nowPlaying.label,
         sub: view.nowPlaying.detail,
-        action: { type: "navigate", to: "settings", tab: "music" },
+        action: { type: "navigate", to: "music", resetScroll: true },
       });
     }
     const lastSlot = navSlot(Math.max(0, slot - 1)),

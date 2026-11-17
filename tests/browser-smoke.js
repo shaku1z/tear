@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
+const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor } = require("./browser-waits");
 
 (async () => {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -38,6 +38,10 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   const pageErrors = [];
   const browserLogs = [];
   page.on("pageerror", (error) => pageErrors.push(error.stack || error.message));
+  // A console "Failed to load resource" names no URL; record which request failed and why.
+  page.on("requestfailed", (request) =>
+    browserLogs.push(`request failed: ${request.url()} ${request.failure()?.errorText ?? ""}`),
+  );
   page.on("console", (message) => {
     if (message.type() === "warning" || message.type() === "error")
       browserLogs.push(`${message.type()}: ${message.text()}`);
@@ -106,6 +110,24 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.stopRecording());
 
   // Exercise the real shell controls, including the contextual Settings return.
+  // Every click the page receives is recorded, so a screen that never changes can say whether the
+  // click reached the canvas, which element took it, and what the page logged meanwhile.
+  await page.evaluate(() => {
+    window.__SMOKE_CLICKS__ = [];
+    window.addEventListener(
+      "click",
+      (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        window.__SMOKE_CLICKS__.push({
+          x: event.clientX,
+          y: event.clientY,
+          target: target ? `${target.tagName.toLowerCase()}${target.id ? `#${target.id}` : ""}` : String(event.target),
+          screen: window.__TEAR_CATALOG_DEBUG__.app.snapshot().screen,
+        });
+      },
+      true,
+    );
+  });
   const waitForScreen = async (screen) => {
     try {
       await page.waitForFunction(
@@ -113,17 +135,30 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
         screen,
       );
     } catch (error) {
-      const actual = await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot());
-      throw new Error(`Expected screen ${screen}; received ${JSON.stringify(actual)}`, { cause: error });
+      const actual = await page.evaluate(() => {
+        const canvas = document.getElementById("game")?.getBoundingClientRect();
+        return {
+          app: window.__TEAR_CATALOG_DEBUG__.app.snapshot(),
+          lastClicks: window.__SMOKE_CLICKS__.slice(-3),
+          // What a click is matched against on the latest drawn frame.
+          targets: window.__TEAR_UI_TARGETS__?.() ?? "not exposed",
+          canvas: canvas && { x: canvas.x, y: canvas.y, w: canvas.width, h: canvas.height },
+        };
+      });
+      throw new Error(
+        `Expected screen ${screen}; received ${JSON.stringify(actual)}\n` +
+          `page errors: ${pageErrors.join("\n") || "none"}\nconsole: ${browserLogs.join("\n") || "none"}`,
+        { cause: error },
+      );
     }
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
-  await page.mouse.click(260, 360); // PLAY
+  await clickTarget(page, "menu", "PLAY");
   await waitForScreen("setup");
   // A fresh profile is preselected onto the Tutorial; this journey plays Endless, as a player would pick it.
-  await page.mouse.click(430, 255); // Endless
+  await clickTarget(page, "setup", "ENDLESS");
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().setup.mode === "endless");
-  await page.mouse.click(800, 758); // BEGIN
+  await clickTarget(page, "setup", "START");
   await waitForScreen("playing");
   try {
     await page.waitForFunction(
@@ -150,18 +185,18 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
   assert.ok(firstMusicRun.score.run?.runId);
   await page.keyboard.press("p");
   await waitForScreen("paused");
-  await page.mouse.click(190, 271); // SETTINGS (third action on the pause rail, overlay pattern)
+  await clickTarget(page, "paused", "SETTINGS");
   await waitForScreen("settings");
   assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.app.snapshot().settingsReturn), "paused");
-  await page.mouse.click(800, 840); // BACK TO PAUSE
+  await clickTarget(page, "settings", "BACK");
   await waitForScreen("paused");
-  await page.mouse.click(190, 151); // RESUME
+  await clickTarget(page, "paused", "RESUME");
   await waitForScreen("playing");
   await page.keyboard.press("p");
   await waitForScreen("paused");
-  await page.mouse.click(190, 331); // MAIN MENU
+  await clickTarget(page, "paused", "MAIN MENU");
   await waitForScreen("confirmquit");
-  await page.mouse.click(644, 175); // QUIT (left of the confirm action row)
+  await clickTarget(page, "confirmquit", "QUIT");
   await waitForScreen("menu");
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().score.run === null);
   console.log("application state flow passed");
@@ -175,7 +210,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 
   await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
-  await page.mouse.click(260, 360); // PLAY -> setup/war table (renders all five weapon cards)
+  await clickTarget(page, "menu", "PLAY"); // setup/war table (renders all five weapon cards)
   await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.audio.snapshot().state === "running");
   await page.waitForTimeout(settleFor(500));
   if (process.env.TEAR_SCREENSHOT) await page.screenshot({ path: process.env.TEAR_SCREENSHOT });
@@ -198,14 +233,13 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
     if (i > 0) {
       await page.reload({ timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
       await page.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__);
-      await page.mouse.click(260, 360);
-      await page.waitForTimeout(settleFor(450));
+      await clickTarget(page, "menu", "PLAY");
     }
-    await page.mouse.click(1180, 196 + i * 60);
+    await clickTarget(page, "setup", weaponIds[i]);
     await page.waitForTimeout(settleFor(80));
-    await page.mouse.click(430, 255); // Endless (a fresh profile is preselected onto the Tutorial)
+    await clickTarget(page, "setup", "ENDLESS"); // a fresh profile is preselected onto the Tutorial
     await page.waitForTimeout(settleFor(80));
-    await page.mouse.click(800, 758);
+    await clickTarget(page, "setup", "START");
     await page.waitForTimeout(settleFor(500));
     const debug = await page.evaluate(() => window.TEAR_WEAPON_DEBUG && window.TEAR_WEAPON_DEBUG());
     assert.equal(

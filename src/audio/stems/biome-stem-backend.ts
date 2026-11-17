@@ -6,6 +6,7 @@ import type {
   MusicContextSnapshot,
   MusicEvent,
   MusicReplayMetadata,
+  MusicRunProgress,
   MusicRunSessionMetadata,
   MusicScene,
 } from "../music-contracts";
@@ -14,6 +15,7 @@ import { applyMusicMode, onMusicModeChange } from "../music-mode";
 import { onLoadoutChange, resolveMenuCueId } from "../music/loadout";
 import { getActiveStation, onStationChange } from "../music/active-station";
 import { setNowPlaying } from "../music/now-playing";
+import { onMusicPreviewChange } from "../music/preview";
 import { createStationState, pickNext, remember, type StationState } from "../music/station";
 import type { MusicCatalog } from "../music/catalog";
 import { StingerPlayer } from "../music/stingers";
@@ -30,6 +32,7 @@ export interface LoadedCueRef {
   readonly id: string;
   readonly manifest: StemCueManifest & {
     readonly bossIntro?: { readonly asset: string; readonly lengthSeconds: number };
+    readonly openingIntro?: { readonly asset: string; readonly lengthSeconds: number };
   };
   readonly baseUrl: string;
 }
@@ -38,6 +41,8 @@ interface ActiveCue {
   readonly cueId: string;
   readonly player: StemCuePlayer;
   readonly cueGain: GainNode;
+  /** The opening intro, while it is still scheduled or sounding. */
+  intro: AudioBufferSourceNode | null;
 }
 
 const CROSSFADE_SECONDS = 0.9;
@@ -73,6 +78,7 @@ export class BiomeStemBackend implements MusicBackend {
   #introBuffer: AudioBuffer | null = null;
   #stopModeWatch: (() => void) | null = null;
   #stopLoadoutWatch: (() => void) | null = null;
+  #stopPreviewWatch: (() => void) | null = null;
   /** While paused, ignore the user's music mode and use the adaptive tier. */
   #modeExempt = false;
   #catalog: MusicCatalog | null = null;
@@ -84,6 +90,10 @@ export class BiomeStemBackend implements MusicBackend {
   #stationSeed = 1;
   /** Picks from a routing pool (the Verdant Sanctum's two songs) come from the run's seed. */
   #routeSeed = 1;
+  /** Saved progress at run start; null outside a run and in runs that must sound the same for everyone. */
+  #progress: MusicRunProgress | null = null;
+  /** Cues whose opening intro has played this run: it plays once, not after every boss. */
+  readonly #introduced = new Set<string>();
   /** Context time the active cue began, and its bar length — for quantizing. */
   #activeStartedAt = 0;
   #activeSecondsPerBar = 2;
@@ -110,12 +120,14 @@ export class BiomeStemBackend implements MusicBackend {
     this.#stopModeWatch = onMusicModeChange(() => {
       this.#applyTier(0.5);
     });
-    // Re-pick the shell track when the player changes their menu-music loadout.
-    this.#stopLoadoutWatch = onLoadoutChange(() => {
+    // Re-pick the shell track when the player changes their menu music or previews a song.
+    const repickShell = (): void => {
       if (!this.#onShell) return;
       const next = this.#shellCueId();
       if (next !== this.#active?.cueId) void this.#activate(next, MENU_CROSSFADE_SECONDS);
-    });
+    };
+    this.#stopLoadoutWatch = onLoadoutChange(repickShell);
+    this.#stopPreviewWatch = onMusicPreviewChange(repickShell);
     this.#stopStationWatch = onStationChange(() => {
       // Switching station re-programmes the next pick immediately.
       this.#interrupted = null;
@@ -153,6 +165,8 @@ export class BiomeStemBackend implements MusicBackend {
   beginRun(metadata: MusicRunSessionMetadata): Promise<void> {
     // Same run seed, same song: replays and seed-locked races hear what the run heard.
     this.#routeSeed = routeSeedFromRunSeed(metadata.runSeed);
+    this.#progress = metadata.progress ?? null;
+    this.#introduced.clear();
     return Promise.resolve();
   }
 
@@ -197,6 +211,8 @@ export class BiomeStemBackend implements MusicBackend {
   }
 
   endRun(): Promise<void> {
+    this.#progress = null;
+    this.#introduced.clear();
     return Promise.resolve();
   }
 
@@ -228,11 +244,14 @@ export class BiomeStemBackend implements MusicBackend {
     this.#stopModeWatch = null;
     this.#stopLoadoutWatch?.();
     this.#stopLoadoutWatch = null;
+    this.#stopPreviewWatch?.();
+    this.#stopPreviewWatch = null;
     this.#stopStationWatch?.();
     this.#stopStationWatch = null;
     this.#stingers?.dispose();
     this.#stingers = null;
     if (this.#active) {
+      stopIntro(this.#active);
       this.#active.player.unload();
       this.#active.cueGain.disconnect();
       this.#active = null;
@@ -240,7 +259,7 @@ export class BiomeStemBackend implements MusicBackend {
     return Promise.resolve();
   }
 
-  /** Cue for the shell/menu slot, honouring the player's Music Loadout. */
+  /** Cue for the shell/menu slot: a MUSIC-screen preview, else the player's Music Loadout. */
   #shellCueId(): string {
     return resolveMenuCueId(this.#defaultCueId, (cueId) => this.#cues.has(cueId));
   }
@@ -290,6 +309,7 @@ export class BiomeStemBackend implements MusicBackend {
         biomeId,
         scene: routeScene,
         bossId: this.#lastBossId,
+        ...musicProgressRouting(this.#progress, this.#catalog, biomeId),
       },
       this.#routeSeed,
     );
@@ -376,7 +396,12 @@ export class BiomeStemBackend implements MusicBackend {
           .filter(([, gain]) => gain > 0)
           .map(([id]) => id)
       : [];
-    await player.load(loaded.manifest, backend, first.length > 0 ? { first } : {});
+    const opening = loaded.manifest.openingIntro;
+    const playOpening = opening !== undefined && !this.#introduced.has(cueId);
+    const [, openingBuffer] = await Promise.all([
+      player.load(loaded.manifest, backend, first.length > 0 ? { first } : {}),
+      playOpening ? this.#decode(loaded, opening.asset) : Promise.resolve(null),
+    ]);
     if (token !== this.#switchToken) {
       player.unload();
       cueGain.disconnect();
@@ -387,7 +412,23 @@ export class BiomeStemBackend implements MusicBackend {
     // Land the swap on a musical boundary when asked; otherwise go immediately.
     const at = quantizeBars > 0 ? this.#nextBoundary(quantizeBars) : context.currentTime + 0.15;
     const lead = Math.max(0.05, at - context.currentTime);
-    player.start({ leadSeconds: lead });
+    // An opening intro plays first; the loop starts as it ends, on the phrase line it was cut to.
+    let intro: AudioBufferSourceNode | null = null;
+    let introSeconds = 0;
+    if (openingBuffer) {
+      intro = context.createBufferSource();
+      intro.buffer = openingBuffer;
+      intro.connect(cueGain);
+      intro.start(context.currentTime + lead);
+      introSeconds = openingBuffer.duration;
+      this.#introduced.add(cueId);
+      const source = intro;
+      source.onended = () => {
+        source.disconnect();
+        if (this.#active?.intro === source) this.#active.intro = null;
+      };
+    }
+    player.start({ leadSeconds: lead + introSeconds });
     this.#tier = this.#modeExempt ? this.#requestedTier : applyMusicMode(this.#requestedTier);
     player.setTier(this.#tier);
 
@@ -402,6 +443,7 @@ export class BiomeStemBackend implements MusicBackend {
       previous.cueGain.gain.linearRampToValueAtTime(0, now + fadeSeconds);
       const delayMs = Math.max(0, (now - context.currentTime + fadeSeconds + 0.2) * 1000);
       window.setTimeout(() => {
+        stopIntro(previous);
         previous.player.unload();
         previous.cueGain.disconnect();
       }, delayMs);
@@ -416,8 +458,8 @@ export class BiomeStemBackend implements MusicBackend {
         ? this.#activeLoopSeconds / grid.barsPerLoop
         : secondsPerBar(loaded.manifest.tempo, grid.beatsPerBar);
     this.#activeBarQuantized = grid.barQuantizedCompatible !== false;
-    this.#activeStartedAt = now;
-    this.#active = { cueId, player, cueGain };
+    this.#activeStartedAt = now + introSeconds;
+    this.#active = { cueId, player, cueGain, intro };
     this.#publishNowPlaying(cueId);
 
     this.#introBuffer = null;
@@ -425,15 +467,20 @@ export class BiomeStemBackend implements MusicBackend {
   }
 
   async #preloadIntro(loaded: LoadedCueRef): Promise<void> {
-    const context = this.#context;
     const intro = loaded.manifest.bossIntro;
-    if (!context || !intro) return;
+    if (intro) this.#introBuffer = await this.#decode(loaded, intro.asset);
+  }
+
+  /** Fetch and decode one of a cue's one-shot assets; null when it cannot be had. */
+  async #decode(loaded: LoadedCueRef, asset: string): Promise<AudioBuffer | null> {
+    const context = this.#context;
+    if (!context) return null;
     try {
-      const url = new URL(`${loaded.baseUrl.replace(/\/?$/u, "/")}${intro.asset}`, document.baseURI).href;
+      const url = new URL(`${loaded.baseUrl.replace(/\/?$/u, "/")}${asset}`, document.baseURI).href;
       const bytes = await fetch(url).then((r) => r.arrayBuffer());
-      this.#introBuffer = await context.decodeAudioData(bytes);
+      return await context.decodeAudioData(bytes);
     } catch {
-      this.#introBuffer = null;
+      return null;
     }
   }
 
@@ -468,6 +515,39 @@ export class BiomeStemBackend implements MusicBackend {
       introGain.disconnect();
     };
   }
+}
+
+function stopIntro(cue: ActiveCue): void {
+  try {
+    cue.intro?.stop();
+  } catch {
+    // Already stopped.
+  }
+  cue.intro = null;
+}
+
+/**
+ * What saved progress means for routing in one biome: is this the player's first run that
+ * reached it, and which works are unlocked. No progress: neither.
+ */
+export function musicProgressRouting(
+  progress: MusicRunProgress | null,
+  catalog: MusicCatalog | null,
+  biomeId: string,
+): { readonly firstRun: boolean; readonly isUnlocked: (workId: string) => boolean } {
+  if (!progress) return { firstRun: false, isUnlocked: () => false };
+  const biomes = new Set(progress.biomesReached);
+  const bosses = new Set(progress.bossesDefeated);
+  return {
+    firstRun: !biomes.has(biomeId),
+    isUnlocked: (workId) => {
+      const unlock = catalog?.works.find((work) => work.id === workId)?.unlock;
+      if (!unlock) return false;
+      if (unlock.type === "boss-defeat") return unlock.bossId !== undefined && bosses.has(unlock.bossId);
+      if (unlock.type === "biome-enter") return unlock.biome !== undefined && biomes.has(unlock.biome);
+      return unlock.type === "default";
+    },
+  };
 }
 
 /** FNV-1a over the run seed's text: a stable 32-bit number for the routing pool. */

@@ -19,6 +19,9 @@ import {
 } from "../../src/gameplay/training/live-playground-presentation";
 import { PLAYGROUND_ALL_KINDS } from "../../src/gameplay/training/playground-controller";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
+import { catalog, routing } from "../../public/audio/music.json";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
+import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
 
 /**
  * The phone (compact density) compositions of the shop, codex, profile, leaderboards,
@@ -762,6 +765,55 @@ describe("phone compositions (compact density)", () => {
       );
     });
 
+    it(`fits Home, a stage, Songs and Settings of the MUSIC screen at ${phone.name}`, () => {
+      const view = (page: string) =>
+        buildMusicScreenView({
+          settings: {},
+          library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
+          nowPlaying: { workId: "fillet", title: "Fillet" },
+          preview: "spring",
+          page,
+          bossName: (id) => AUTHORED_BOSS_ROSTER.find((boss) => boss.id === id)?.name ?? "",
+        });
+      const offered = (page: string) =>
+        [
+          ...sweep(
+            phone,
+            (r) => {
+              r.music(view(page));
+            },
+            `music ${page} ${phone.name}`,
+          ),
+        ].map((json) => JSON.parse(json) as { type: string; id?: string; tab?: string; key?: string; to?: string });
+      const home = offered("home");
+      for (const stage of view("home").stages)
+        expect(
+          home.some((action) => action.tab === `collection:${stage.id}`),
+          stage.id,
+        ).toBe(true);
+      expect(home.some((action) => action.type === "navigate" && action.to === "menu")).toBe(true);
+      const all = offered("songs");
+      for (const song of view("songs").songs.filter((entry) => !entry.previewing))
+        expect(
+          all.some((action) => action.type === "music.preview" && action.id === song.id),
+          song.id,
+        ).toBe(true);
+      expect(all.some((action) => action.type === "music.stopPreview")).toBe(true);
+      expect(offered("collection:stage:the-grounds").some((action) => action.type === "music.preview")).toBe(true);
+      // The stage page's one button, PLAY, is offered at the top of the page.
+      const top = render(
+        phone,
+        (r) => {
+          r.music(view("collection:stage:the-voidspire"));
+        },
+        0,
+      );
+      expect(top.controls.some((control) => control.label === "▶  PLAY")).toBe(true);
+      const settings = offered("settings");
+      for (const key of ["station", "menuMusic", "musicMode"])
+        expect(settings.some((action) => action.key === key)).toBe(true);
+    });
+
     it(`keeps the playground build menu and ability lab inside the frame at ${phone.name}`, () => {
       const menu = sweep(
         phone,
@@ -905,6 +957,7 @@ function liveBuildMenu(extraKinds = 0, extraBosses = 0): PlaygroundScreenView {
 function renderDesktop(
   size: Readonly<{ width: number; height: number }>,
   draw: (renderers: ReturnType<typeof createScreenRenderers>) => void,
+  scroll = 0,
 ): Frame {
   const scale = Math.min(size.width / 1600, size.height / 900),
     overscan = { x: (size.width / scale - 1600) / 2, y: (size.height / scale - 900) / 2 };
@@ -929,7 +982,7 @@ function renderDesktop(
       enterSeconds: 1,
       deltaSeconds: 1 / 60,
       mouse: { x: -1, y: -1 },
-      scroll: 0,
+      scroll,
       focus: -1,
       touch: false,
       reducedMotion: false,
@@ -941,7 +994,7 @@ function renderDesktop(
       setScroll: () => undefined,
     }),
   );
-  return { texts, controls, scroll: 0, scale };
+  return { texts, controls, scroll, scale };
 }
 
 /** No control, heading or label may overlap another, and everything stays on the 1600x900 stage. */
@@ -1008,5 +1061,171 @@ describe("desktop playground build menu", () => {
         `+${String(kinds)} kinds +${String(bosses)} bosses`,
       );
     }
+  });
+});
+
+describe("leaderboards: one screen definition at both densities", () => {
+  /** Every action the desktop page offers for a view, over its whole scroll (the app owns the desktop extent). */
+  function desktopActions(draw: (renderers: ReturnType<typeof createScreenRenderers>) => void, extent: number) {
+    const ids = new Set<string>();
+    for (let scroll = 0; scroll <= extent; scroll += 34)
+      for (const control of renderDesktop({ width: 1600, height: 900 }, draw, scroll).controls)
+        ids.add(JSON.stringify(control.action));
+    return ids;
+  }
+
+  it("offers the same actions on the desktop page and the phone page for every board state", () => {
+    const phone = PHONES[0];
+    const cases = [
+      { label: "ranked", view: rankedView, extent: rankedView.rows.length * 34 },
+      {
+        label: "feed",
+        view: { ...leaderboardBase, tab: "feed", status: "ready" as const, rows: replays },
+        extent: replays.length * 96,
+      },
+      {
+        label: "signin",
+        view: { ...rankedView, status: "signin" as const, signInRequired: true, rows: [] },
+        extent: 0,
+      },
+      { label: "empty feed", view: { ...leaderboardBase, tab: "feed", status: "empty" as const, rows: [] }, extent: 0 },
+    ];
+    for (const { label, view, extent } of cases) {
+      const draw = (r: ReturnType<typeof createScreenRenderers>): void => {
+        r.leaderboards(view);
+      };
+      expect([...sweep(phone, draw, `${label} phone`)].sort(), label).toEqual([...desktopActions(draw, extent)].sort());
+    }
+  });
+});
+
+describe("career archive: one screen definition at both densities", () => {
+  it("offers the same actions on the desktop page and the phone page for the list, a run and the delete question", () => {
+    const phone = PHONES[0];
+    const cases = [
+      { label: "career list", career: careerView(false) },
+      { label: "career run", career: careerView(true) },
+      { label: "career delete", career: { ...careerView(true), confirming: true, message: "ignored" } },
+      { label: "career empty", career: { ...careerView(false), rows: [], total: 0 } },
+    ];
+    for (const { label, career } of cases) {
+      const draw = (r: ReturnType<typeof createScreenRenderers>): void => {
+        r.profile({ ...profileBase, tab: "career", career });
+      };
+      const desktop = renderDesktop({ width: 1600, height: 900 }, draw).controls.map((control) =>
+        JSON.stringify(control.action),
+      );
+      expect([...sweep(phone, draw, `${label} phone`)].sort(), label).toEqual([...new Set(desktop)].sort());
+    }
+  });
+});
+
+describe("codex and shop: one screen definition at both densities", () => {
+  it("offers the same actions on the desktop page and the phone page for the shop and every codex tab", () => {
+    const phone = PHONES[0];
+    type Draw = (renderers: ReturnType<typeof createScreenRenderers>) => void;
+    // Desktop card grids move by whole rows (170 and 184 px), so the sweep steps a row at a time.
+    const cases: readonly Readonly<{ label: string; draw: Draw; extent: number; step: number }>[] = [
+      {
+        label: "shop",
+        draw: (r) => {
+          r.shop(shopView);
+        },
+        extent: 0,
+        step: 1,
+      },
+      {
+        label: "abilities",
+        draw: (r) => {
+          r.codex({
+            ...codexBase,
+            tab: "abilities",
+            filter: "all",
+            sort: "category",
+            filters: abilityFilters,
+            cards: abilityCards,
+          });
+        },
+        extent: 510,
+        step: 170,
+      },
+      {
+        label: "bestiary",
+        draw: (r) => {
+          r.codex({
+            ...codexBase,
+            tab: "bestiary",
+            filter: "all",
+            filters: abilityFilters.slice(0, 6),
+            cards: bestiaryCards,
+          });
+        },
+        extent: 368,
+        step: 184,
+      },
+      {
+        label: "guide",
+        draw: (r) => {
+          r.codex({ ...codexBase, tab: "guide", cards: [], guide });
+        },
+        extent: 0,
+        step: 1,
+      },
+    ];
+    for (const { label, draw, extent, step } of cases) {
+      const desktop = new Set<string>();
+      for (let scroll = 0; scroll <= extent; scroll += step)
+        for (const control of renderDesktop({ width: 1600, height: 900 }, draw, scroll).controls)
+          desktop.add(JSON.stringify(control.action));
+      expect([...sweep(phone, draw, `${label} phone`)].sort(), label).toEqual([...desktop].sort());
+    }
+  });
+});
+
+describe("shop BUY state at both densities", () => {
+  it("draws every BUY enabled exactly when its upgrade can be bought, on desktop and on the phone", () => {
+    const enabled = new Map(
+      shopView.sections.flatMap((section) => section.items.map((item) => [item.id, item.enabled])),
+    );
+    const draw = (r: ReturnType<typeof createScreenRenderers>): void => {
+      r.shop(shopView);
+    };
+    const check = (controls: readonly ScreenControl[], label: string): number => {
+      const buys = controls.filter((control) => control.action.type === "shop.buy" && control.hiddenBox !== true);
+      for (const control of buys) {
+        const id = control.action.type === "shop.buy" ? control.action.id : "";
+        expect(control.enabled !== false, `${label}: ${id}`).toBe(enabled.get(id));
+      }
+      return buys.length;
+    };
+    expect(check(renderDesktop({ width: 1600, height: 900 }, draw).controls, "desktop")).toBeGreaterThan(0);
+    const phone = PHONES[0],
+      end = render(phone, draw, 1e6).scroll;
+    let seen = 0;
+    for (let scroll = 0; scroll <= end; scroll += 100) seen += check(render(phone, draw, scroll).controls, "phone");
+    expect(seen).toBeGreaterThan(0);
+  });
+});
+
+describe("playground: one screen definition at both densities", () => {
+  it("offers the same actions on the desktop board and the phone flow, and in the Ability Lab", () => {
+    const menu = (r: ReturnType<typeof createScreenRenderers>): void => {
+      r.pgmenu(playgroundMenu);
+    };
+    const lab = (r: ReturnType<typeof createScreenRenderers>): void => {
+      r.pglab(playgroundLab);
+    };
+    const actions = (controls: readonly ScreenControl[]): string[] =>
+      controls.map((control) => JSON.stringify(control.action));
+    const phone = PHONES[0];
+    const desktopMenu = new Set(actions(renderDesktop({ width: 1600, height: 900 }, menu).controls));
+    expect([...sweep(phone, menu, "pgmenu phone")].sort()).toEqual([...desktopMenu].sort());
+    // The desktop lab offers a row's button only while the row is fully in view: sweep a row at a time.
+    const rows = Math.ceil((playgroundLab.sections[1]?.choices.length ?? 0) / 2),
+      desktopLab = new Set<string>();
+    for (let scroll = 0; scroll <= rows * 92; scroll += 92)
+      for (const action of actions(renderDesktop({ width: 1600, height: 900 }, lab, scroll).controls))
+        desktopLab.add(action);
+    expect([...sweep(phone, lab, "pglab phone")].sort()).toEqual([...desktopLab].sort());
   });
 });

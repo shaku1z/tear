@@ -52,28 +52,6 @@ test.after(() => {
   rmSync(temporaryRoot, { recursive: true, force: true });
 });
 
-test("evidence receipts reject arbitrary shell execution before spawning it", () => {
-  const marker = join(temporaryRoot, "shell-bypass-marker.txt");
-  const result = spawnSync(
-    process.execPath,
-    [
-      script,
-      "evidence",
-      "record",
-      "--id",
-      "shell-bypass",
-      "--",
-      "node",
-      "-e",
-      `require('node:fs').writeFileSync('${marker.replaceAll("\\", "\\\\")}', 'unsafe')`,
-    ],
-    { cwd: root, encoding: "utf8" },
-  );
-  assert.notEqual(result.status, 0);
-  assert.match(`${result.stderr}\n${result.stdout}`, /unsupported TearBench evidence command/u);
-  assert.equal(existsSync(marker), false);
-});
-
 test("materialized run status fails closed for failed or truncated artifacts", () => {
   const cases = [
     ["failed", "failed"],
@@ -345,7 +323,7 @@ test("Bloom Well selection reports the declared live-only backend and complete l
 });
 
 test("multi-backend scenarios materialize one backend-specific evidence command per declaration", () => {
-  const selection = select(["src/app/replay/ghost-lab-home.ts"]);
+  const selection = select(["src/agents/live-watch-agent-host.ts"]);
   const boot = selection.evidenceCommands.filter((entry) => entry.id === "boot-start-run");
   assert.deepEqual(
     boot.map((entry) => entry.backend),
@@ -489,26 +467,28 @@ test("Pale State Forge selection rejects detached descriptors, false claims, and
 
 test("current five-weapon live-versus-detached parity is mandatory in the canonical functional gate", () => {
   const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
-  const registry = JSON.parse(readFileSync(join(root, "src", "tearbench", "task-registry.json"), "utf8"));
-  const functional = new Set(registry.profiles["pull-request"]);
+  const checks = JSON.parse(readFileSync(join(root, "config", "checks.json"), "utf8"));
+  const runs = new Map(
+    Object.entries(checks.groups).flatMap(([group, list]) => list.map((check) => [`${group}.${check.id}`, check.run])),
+  );
   assert.match(scripts["test:browser:current-weapon-parity"], /tearbench parity current-weapons/u);
+  assert.match(runs.get("browser.weapon-scenarios") ?? "", /tearbench\.mjs parity current-weapons/u);
   assert.equal(
     scripts["test:headless:current-weapon-parity"],
     "pnpm exec vitest run tests/unit/current-headless-weapon-parity.test.ts",
   );
-  assert.ok(functional.has("headless.test-headless-current-weapon-parity"));
   assert.equal(
     scripts["test:headless:current-gameplay-scenarios"],
     "pnpm exec vitest run tests/unit/current-headless-gameplay-scenarios.test.ts",
   );
-  assert.ok(functional.has("headless.test-headless-current-gameplay-scenarios"));
+  // unit.vitest runs every tests/unit test, the two headless files included.
+  assert.ok(runs.has("unit.vitest"));
   assert.equal(scripts["test:browser:current-gameplay-scenarios"], "node tests/browser-current-gameplay-scenarios.js");
-  assert.ok(functional.has("browser.test-browser-current-gameplay-scenarios"));
-  assert.ok(functional.has("browser.test-browser-current-weapon-parity"));
+  assert.equal(runs.get("browser.gameplay-scenarios"), "node tests/browser-current-gameplay-scenarios.js");
   assert.equal(scripts["test:tearbench-selection"], "node --test tests/tearbench-evidence-selection.test.mjs");
   assert.match(scripts["check:workspace"], /pnpm test:tearbench-selection/u);
-  assert.ok(functional.has("unit.test-tearbench-selection"));
-  assert.ok(functional.has("static.check-workspace"));
+  assert.match(runs.get("static.node-tests") ?? "", /tests\/tearbench-evidence-selection\.test\.mjs/u);
+  assert.equal(runs.get("static.workspace"), "node scripts/check-workspace.mjs --ci");
   assert.equal(scripts["check:functional"], "node scripts/run-checks.mjs");
 });
 
@@ -530,13 +510,13 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   assert.ok(event.scenarios.includes("source-void-low-hp-rescue-seek"));
   assert.ok(event.authorityCommands.includes("pnpm exec vitest run tests/unit/gameplay-causal-events.test.ts"));
   for (const file of [
-    "src/agents/run-monitor.ts",
-    "src/app/replay/ghost-lab-home.ts",
-    "src/presentation/screens/ghost-lab.ts",
+    "src/agents/live-watch-agent-host.ts",
+    "src/agents/live-watch-agent-panel.ts",
+    "src/app/engineering/replay-editor.ts",
   ]) {
     const surface = select([file]);
     assert.ok(surface.routes.includes("current-player-surfaces"));
-    assert.deepEqual(surface.journeyCommands, ["node tests/browser-ghost-lab-home.js"]);
+    assert.deepEqual(surface.journeyCommands, ["node tests/browser-scripted-agent-autonomy.js"]);
   }
 });
 
@@ -652,7 +632,7 @@ test("current production authority and player-surface contracts cannot silently 
   const surfaces = routes.find((route) => route.id === "current-player-surfaces");
   assert.ok(surfaces);
   for (const path of surfaces.prefixes) assert.equal(existsSync(resolve(root, path)), true, path);
-  assert.deepEqual(surfaces.journeyCommands, ["node tests/browser-ghost-lab-home.js"]);
+  assert.deepEqual(surfaces.journeyCommands, ["node tests/browser-scripted-agent-autonomy.js"]);
 });
 
 test("published music changes select the existing audio lifecycle route", () => {
@@ -687,7 +667,21 @@ test("the scheduled TearBench workflow inspects the complete commit range", () =
   const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
   assert.doesNotMatch(scheduledWorkflow, /HEAD\^\s+HEAD/u);
   assert.match(scheduledWorkflow, /git rev-list --max-parents=0 HEAD/u);
-  assert.ok((scheduledWorkflow.match(/fetch-depth: 0/gu) ?? []).length >= 2);
+  assert.match(scheduledWorkflow, /fetch-depth: 0/u);
+});
+
+test("the scheduled TearBench workflow runs only the weekly endurance job", () => {
+  const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
+  const jobs = scheduledWorkflow.slice(scheduledWorkflow.indexOf("\njobs:"));
+  assert.deepEqual(
+    [...jobs.matchAll(/^ {2}([\w-]+):$/gmu)].map((match) => match[1]),
+    ["weekly-endurance"],
+  );
+  assert.deepEqual(
+    [...scheduledWorkflow.matchAll(/cron: "([^"]+)"/gu)].map((match) => match[1]),
+    ["23 8 * * 0"],
+  );
+  assert.match(scheduledWorkflow, /pnpm check:weekly/u);
 });
 
 test("missing active weapon evidence fails closed", () => {
@@ -803,7 +797,7 @@ test("unsafe evidence commands and unknown route references fail closed", () => 
   const catalog = mutatedCatalog("unsafe-command", (entries) => {
     entries.find((entry) => entry.id === "boot-start-run").evidence = { command: 'node -e "process.exit(0)"' };
   });
-  const unsafe = rejected(["src/app/replay/ghost-lab-home.ts"], { catalog });
+  const unsafe = rejected(["src/agents/live-watch-agent-host.ts"], { catalog });
   assert.notEqual(unsafe.status, 0);
   assert.match(`${unsafe.stderr}\n${unsafe.stdout}`, /unsupported TearBench evidence command/u);
 
@@ -820,15 +814,17 @@ test("selected player journeys are actually dispatched through safe evidence exe
   const routes = JSON.parse(readFileSync(routesPath, "utf8"));
   const route = routes.find((entry) => entry.id === "current-player-surfaces");
   route.buildTargets = [];
-  route.journeyCommands = ["node --check tests/browser-ghost-lab-home.js"];
+  route.journeyCommands = ["node --check tests/browser-scripted-agent-autonomy.js"];
   const routePath = join(temporaryRoot, "journey-fixture.json");
   writeFileSync(routePath, JSON.stringify(routes), "utf8");
   const catalog = mutatedCatalog("journey-execution", (entries) => {
     for (const id of ["boot-start-run", "draft-selection-to-gameplay"]) {
-      entries.find((entry) => entry.id === id).evidence = { command: "node --check tests/browser-ghost-lab-home.js" };
+      entries.find((entry) => entry.id === id).evidence = {
+        command: "node --check tests/browser-scripted-agent-autonomy.js",
+      };
     }
   });
-  const selection = select(["src/app/replay/ghost-lab-home.ts"], {
+  const selection = select(["src/app/engineering/replay-editor.ts"], {
     routes: routePath,
     catalog,
     executeEvidence: true,
@@ -836,11 +832,11 @@ test("selected player journeys are actually dispatched through safe evidence exe
   assert.equal(selection.evidenceExecution.status, "passed");
   assert.ok(
     selection.evidenceExecution.executions.some(
-      (entry) => entry.id === "journey:node --check tests/browser-ghost-lab-home.js",
+      (entry) => entry.id === "journey:node --check tests/browser-scripted-agent-autonomy.js",
     ),
   );
   const executions = selection.evidenceExecution.executions.filter(
-    (entry) => entry.command === "node --check tests/browser-ghost-lab-home.js",
+    (entry) => entry.command === "node --check tests/browser-scripted-agent-autonomy.js",
   );
   assert.equal(executions.length, 3);
   assert.equal(executions[0].reusedExecutionId, undefined);
@@ -876,49 +872,10 @@ test("diff scope canonicalization deduplicates and sorts changed files", () => {
   assert.equal(selection.changedFiles.join(","), "docs/a.md,docs/z.md");
 });
 
-test("dirty development evidence receipts remain bound to the executed source", () => {
-  const id = `identity-receipt-${String(artifactIndex++)}`;
-  const artifact = join(root, "artifacts", "tearbench", "receipts", `${id}.json`);
-  const result = spawnSync(
-    process.execPath,
-    [script, "evidence", "record", "--id", id, "--artifact", artifact, "--", "node", "--version"],
-    { cwd: root, encoding: "utf8" },
-  );
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  const receipt = JSON.parse(readFileSync(artifact, "utf8"));
-  assert.equal(receipt.status, "passed");
-  assert.equal(receipt.commit, receipt.source.revision);
-  assert.equal(receipt.worktreeFingerprint, receipt.source.worktreeFingerprint);
-  assert.equal(receipt.scope.subject, `artifacts/tearbench/generated/receipt-subjects/${id}.json`);
-  assert.equal(receipt.scope.id, receipt.id);
-  assert.match(receipt.source.fingerprint, /^[0-9a-f]{64}$/u);
-});
-
-test("evidence receipts reject noncanonical current artifact filenames", () => {
-  const result = spawnSync(
-    process.execPath,
-    [
-      script,
-      "evidence",
-      "record",
-      "--id",
-      "canonical-receipt-test",
-      "--artifact",
-      join(root, "artifacts", "tearbench", "receipts", "alternate-name.json"),
-      "--",
-      "node",
-      "--version",
-    ],
-    { cwd: root, encoding: "utf8" },
-  );
-  assert.notEqual(result.status, 0);
-  assert.match(`${result.stdout}\n${result.stderr}`, /receipt artifact must use the canonical/u);
-});
-
 test("served build identity refuses stale revision and source fingerprint", async () => {
   const previousArgv = process.argv,
     previousLog = console.log;
-  process.argv = [process.execPath, script, "identity-test-import"];
+  process.argv = [process.execPath, script, "help"];
   console.log = () => undefined;
   let canReuseDiffCapabilityReport,
     formatFailedEvidenceExecution,

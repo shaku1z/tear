@@ -1,7 +1,7 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
 import { CONFIG } from "../config/game-config";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { TearGameplayEventBus, type TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
 import { TUTORIAL_LESSONS, TUTORIAL_LESSON_IDS } from "../gameplay/training/tutorial-controller";
 import {
@@ -333,7 +333,7 @@ function course(legacy: boolean) {
     throw new Error("Gold driver failed complete required course coverage");
   return { references, proofs };
 }
-export function generateTutorialGold(sourceHash: string): {
+export function generateTutorialGold(): {
   corpus: TutorialGoldCorpus;
   proof: TutorialGoldProof;
   binding: TutorialGoldBinding;
@@ -369,7 +369,7 @@ export function generateTutorialGold(sourceHash: string): {
     compatibility,
     references: [...current.proofs, ...legacy.proofs],
   };
-  return { corpus, proof, binding: bindTutorialGoldCorpus(corpus, sourceHash) };
+  return { corpus, proof, binding: bindTutorialGoldCorpus(corpus) };
 }
 export function verifyTutorialGoldReference(reference: TutorialGoldReference, proof: TutorialGoldProofReference): void {
   if (

@@ -29,15 +29,8 @@ const environment = {
 describe("settings snapshots", () => {
   it("keeps hierarchical audio channels separate", () => {
     const rows = buildSettingsSections("audio", settings, environment)[0]?.rows ?? [];
-    // One row per channel (each volume carries its own mute switch), then Music preferences.
-    expect(rows.map((row) => row.key)).toEqual([
-      "masterVolume",
-      "musicVolume",
-      "sfxVolume",
-      "interfaceVolume",
-      "menuMusic",
-      "musicMode",
-    ]);
+    // One row per channel (each volume carries its own mute switch); music preferences live on the MUSIC screen.
+    expect(rows.map((row) => row.key)).toEqual(["masterVolume", "musicVolume", "sfxVolume", "interfaceVolume"]);
     expect(rows.slice(0, 4).map((row) => row.muteKey)).toEqual([
       "masterMuted",
       "musicMuted",
@@ -45,11 +38,10 @@ describe("settings snapshots", () => {
       "interfaceMuted",
     ]);
   });
-  it("normalizes the legacy signal tab to the canonical Music surface", () => {
-    const legacy = buildSettingsSections("signal", settings, environment);
-    const canonical = buildSettingsSections("music", settings, environment);
-    expect(legacy).toEqual(canonical);
-    expect(canonical[0]?.label).toBe("MUSIC");
+  it("lands the old music and signal tabs on AUDIO, which keeps only the mix", () => {
+    const audio = buildSettingsSections("audio", settings, environment);
+    expect(buildSettingsSections("signal", settings, environment)).toEqual(audio);
+    expect(buildSettingsSections("music", settings, environment)).toEqual(audio);
   });
   it("exposes the full cinematic preference in accessibility", () => {
     expect(

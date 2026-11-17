@@ -58,6 +58,8 @@ describe("Verdant typed stage registries", () => {
       reflectionPolicy: "lower-field-restrained",
       particlePolicy: "sparse-petals-pollen",
       lowGraphicsPolicy: "silhouette-and-telegraph-only",
+      // The table itself is checked in boss-tell-skin.test.ts.
+      bossTellSkin: expect.objectContaining({ marks: expect.any(Object) as unknown }) as unknown,
     });
     expect(stagePresentationDefinition("grounds")).toBeNull();
   });

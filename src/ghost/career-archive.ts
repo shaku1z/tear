@@ -1,5 +1,5 @@
 import { readSeedRaceRun } from "./seed-race-contract";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { readGhostReplayRunContext } from "./replay-admission";
 import { projectGhostRunDnaTheater } from "./run-dna-theater";
 import type { GhostReadCapsule } from "./capsule-reader";
@@ -119,8 +119,7 @@ export interface CareerRow {
   readonly detail?: string;
   readonly group?: string;
 }
-export const careerRowKey = (row: CareerRow): string =>
-  `career:v1:${encodeURIComponent(row.entry.id)}:${row.entry.root}${row.group ? `#${encodeURIComponent(row.group)}` : ""}`;
+export { careerRowKey } from "../domain/career-row-key";
 export interface CareerQuery {
   readonly text: string;
   readonly filters: Partial<Record<(typeof CAREER_FILTERS)[number], string>>;

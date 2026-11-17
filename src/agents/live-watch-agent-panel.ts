@@ -1,24 +1,12 @@
 import type { TearWatchAgentApi, TearWatchAgentOptions, TearWatchAgentSnapshot } from "./live-watch-agent-host";
 import type { TearAgentProfileId } from "./contracts";
-import { isAgentSurfaceRequested } from "./surface-route";
-import { LEGACY_WATCH_AGENT_PANEL, type AgentPanelSurface } from "./panel-surface";
+import { isWatchAgentRequested } from "../tearbench/browser/watch-agent-route";
 
-export function installLiveWatchAgentPanel(
-  api: TearWatchAgentApi,
-  defaults: Required<TearWatchAgentOptions>,
-  surface: AgentPanelSurface = LEGACY_WATCH_AGENT_PANEL,
-): void {
-  if (
-    !isAgentSurfaceRequested(
-      window.location.search,
-      surface.query === "watchagent" || surface.query === "run-monitor" ? "run-monitor" : "game-agent",
-    ) ||
-    document.getElementById(surface.rootId) !== null
-  )
-    return;
+export function installLiveWatchAgentPanel(api: TearWatchAgentApi, defaults: Required<TearWatchAgentOptions>): void {
+  if (!isWatchAgentRequested(window.location.search) || document.getElementById("tear-watch-agent") !== null) return;
   const root = document.createElement("section");
-  root.id = surface.rootId;
-  root.setAttribute("aria-label", surface.ariaLabel);
+  root.id = "tear-watch-agent";
+  root.setAttribute("aria-label", "Watch Agent");
   Object.assign(root.style, {
     position: "fixed",
     right: "12px",
@@ -33,9 +21,9 @@ export function installLiveWatchAgentPanel(
     whiteSpace: "pre-wrap",
   });
   const title = document.createElement("strong");
-  title.textContent = surface.title;
+  title.textContent = "WATCH AGENT";
   const fields = document.createElement("div");
-  fields.setAttribute("aria-label", surface.selectionLabel);
+  fields.setAttribute("aria-label", "Watch Agent selection");
   const select = <T extends string>(label: string, values: readonly T[], selected: T): HTMLSelectElement => {
     const wrapper = document.createElement("label");
     wrapper.textContent = `${label}: `;
@@ -135,10 +123,11 @@ export function installLiveWatchAgentPanel(
   };
   let advanceOwner = 0;
   const start = document.createElement("button");
-  start.textContent = surface.startLabel;
+  start.textContent = "Start Watch Agent";
   start.addEventListener("click", () => {
     const numericSeed = Number(seed.value);
-    if (!Number.isSafeInteger(numericSeed) || numericSeed < 1) throw new RangeError(surface.seedErrorLabel);
+    if (!Number.isSafeInteger(numericSeed) || numericSeed < 1)
+      throw new RangeError("Watch Agent seed must be positive");
     advanceOwner++;
     render(
       api.start({

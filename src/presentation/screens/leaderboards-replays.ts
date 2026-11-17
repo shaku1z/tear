@@ -1,7 +1,7 @@
 import type { ReplayScreenView, ScreenRenderContext } from "./contracts";
 import { ellipsize } from "./screen-primitives";
 import { createLeaderboardRenderers } from "./leaderboards";
-import { REPLAY_EDITOR_ACTIONS } from "../../replay/surface-route";
+import { REPLAY_EDITOR_ACTIONS } from "../../domain/replay-editor-actions";
 import { replayClock } from "../replay-snapshots";
 
 const REPLAY_CYAN = "#13c4d6";

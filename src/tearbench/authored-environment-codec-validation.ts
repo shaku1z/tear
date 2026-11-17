@@ -8,21 +8,7 @@ import {
 } from "./environment-codec";
 
 const issue = (path: string, message: string): EnvironmentCodecIssue => Object.freeze({ path, message });
-const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 const text = (value: unknown): value is string => typeof value === "string" && value.length > 0;
-const record = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-function geometry(value: unknown, path: string): readonly EnvironmentCodecIssue[] {
-  if (!record(value) || !finite(value.x) || !finite(value.y)) return [issue(path, "geometry requires finite x and y")];
-  const issues: EnvironmentCodecIssue[] = [];
-  for (const key of ["w", "h", "radius"] as const) {
-    if (value[key] !== undefined && (!finite(value[key]) || value[key] < 0)) {
-      issues.push(issue(`${path}.${key}`, `${key} must be finite and non-negative`));
-    }
-  }
-  return issues;
-}
 
 const VERDANT_CODEC_VALIDATION: EnvironmentCodecValidationPort = Object.freeze({
   id: "verdant-authored-environment",
@@ -40,24 +26,10 @@ const VERDANT_CODEC_VALIDATION: EnvironmentCodecValidationPort = Object.freeze({
           if (entry[name] !== expected)
             issues.push(issue(`${path}.${name}`, "Graft Anchor effect definition does not match canonical tuning"));
         }
-      issues.push(...geometry(entry.connectionGeometry, `${path}.connectionGeometry`));
       for (const name of ["createdTick", "activationTick"] as const)
         if (!Number.isSafeInteger(entry[name]) || Number(entry[name]) < 0) {
           issues.push(issue(`${path}.${name}`, `${name} must be a non-negative safe integer`));
         }
-      if (
-        entry.nextPulseTick !== null &&
-        (!Number.isSafeInteger(entry.nextPulseTick) || Number(entry.nextPulseTick) < 0)
-      ) {
-        issues.push(issue(`${path}.nextPulseTick`, "nextPulseTick must be null or a non-negative safe integer"));
-      }
-      if (
-        !finite(entry.recoverySpentHealthFraction) ||
-        entry.recoverySpentHealthFraction < 0 ||
-        entry.recoverySpentHealthFraction > 0.1
-      ) {
-        issues.push(issue(`${path}.recoverySpentHealthFraction`, "Graft recovery spend must be finite and bounded"));
-      }
       if (entry.procPolicyId !== "boss-combat-object")
         issues.push(issue(`${path}.procPolicyId`, "Graft Anchor proc policy must remain boss-combat-object"));
     }

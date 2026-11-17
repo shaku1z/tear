@@ -16,12 +16,13 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | --- | --- | --- | --- |
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
-| [Verdant Sanctum visuals](#verdant-visuals) | In progress | Its pull request, then the lead's review. | Judge the look: the owner's taste decides visual work. |
+| [Verdant Sanctum visuals](#verdant-visuals) | In progress | Living motion (water, light, foliage) as package data, in its own pull request. | Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading. |
 | [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Its pull request, then the lead's review. | Playtest the reworked stage. |
 | [Tutorial and Playground experience](#training-ux) | In progress | Its pull request, then the lead's review. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
+| [Playtest tool](#playtest-tool) | Planned; stage 1 waits on pull request 138 | Stage 1: the measurement core and a per-boss, per-phase report. | — |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
 
 <a id="release-readiness"></a>
@@ -48,11 +49,11 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum visuals
 
-**In progress.** A session is building the Verdant living-stage background and a repeatable workflow for producing backgrounds of that quality for any biome.
+**In progress.** Verdant has a painted background drawn from a scene package, with platforms still drawn by the game from collision geometry. The same format, command and checks work for any biome; a Pale Traverse placeholder fixture proves it. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.
 
-- Next: Its pull request, then the lead's review.
-- Owner action: Judge the look: the owner's taste decides visual work.
-- Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
+- Next: Living motion (water, light, foliage) as package data, in its own pull request.
+- Owner action: Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading.
+- Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/scene-packages.test.ts](../tests/unit/scene-packages.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="verdant-gameplay"></a>
 
@@ -103,6 +104,16 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 - Next: After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md).
 - Owner action: none
 - Evidence: [AGENTS.md](../AGENTS.md), [docs/README.md](README.md)
+
+<a id="playtest-tool"></a>
+
+### Playtest tool
+
+**Planned; stage 1 waits on pull request 138.** One command, pnpm playtest, that plays the game headless with scripted players on fixed seeds and reports clear rates, time to kill, damage taken and differences between builds. It is built from the working parts of TearBench and the scripted player and replaces both names. Verified on 2026-11-16: the scripted player runs headless at 13 to 15 times real time and the same seed reproduces exactly.
+
+- Next: Stage 1: the measurement core and a per-boss, per-phase report.
+- Owner action: none
+- Evidence: [plans/active/PLAYTEST_TOOL_PLAN.md](../plans/active/PLAYTEST_TOOL_PLAN.md)
 
 <a id="tearbench-program"></a>
 

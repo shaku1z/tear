@@ -1,5 +1,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { tutorialGoldSourceFingerprint, assertTutorialGoldFresh } from "../../scripts/tutorial-gold-compatibility.mjs";
+import {
+  committedTutorialGold,
+  recordTutorialGoldVerified,
+  tutorialGoldSourceFingerprint,
+} from "../../scripts/tutorial-gold-compatibility.mjs";
 import {
   generateTutorialGold,
   verifyTutorialGoldReference,
@@ -15,7 +19,7 @@ import {
 } from "../../src/gameplay/training/tutorial-gold-reference";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createProductionReplayRun, createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { CONFIG } from "../../src/config/game-config";
 import { productionGhostPath, recordProductionGhostTrace } from "../../src/gameplay/training/tutorial-production-ghost";
 import {
@@ -63,6 +67,18 @@ describe("gold coach presentation", () => {
     for (let tick = 0; tick < 2400; tick++) coach.observe(frame, input, false, false);
     expect(coach.view(true, true).visible).toBe(false);
   });
+  it("never tells a movement lesson that a swing missed", () => {
+    const corpus = shippingTutorialGold();
+    const coach = new TutorialGhostCoach(() => corpus, CONFIG.blade.minHitSpeed);
+    coach.select("jump", 2);
+    const frame = corpus?.references.find((entry) => entry.lessonId === "jump")?.frames[0];
+    if (!frame) throw new Error("Jump reference missing");
+    const input = { tick: 0, moveX: 1, moveY: 0, aimTurn: 0, primaryHeld: false };
+    coach.captureCommands([{ type: "dash", x: 1000, y: 0 }]);
+    coach.observe(frame, input, false);
+    coach.observe({ ...frame, tick: frame.tick + 1 }, input, false);
+    expect(coach.view(false, false).diagnosis).toBe("Not done yet.");
+  });
   it("aborts partial recording on restore instead of reusing the old absolute clock", () => {
     const coach = new TutorialGhostCoach();
     coach.select("move", 2);
@@ -109,17 +125,17 @@ describe("verified tutorial gold corpus", () => {
     const fresh = createProductionReplayRun("tutorial");
     expect([fresh.combo, fresh.comboTimer, fresh.mult]).toEqual([0, 0, 1]);
     expect([fresh.rank, fresh.lastTrick]).toEqual(["", ""]);
+    // Only the local record of this pass is keyed by the source fingerprint; nothing committed is.
     const sourceHash = tutorialGoldSourceFingerprint().sourceHash;
     const shippingPath = "src/gameplay/training/tutorial-gold-reference-data.json",
       proofPath = "tests/fixtures/tutorial-gold-reference-proof.json";
     const bindingPath = "src/gameplay/training/tutorial-gold-binding.json";
-    let rawCorpus: unknown,
-      expectedCorpus: TutorialGoldCorpus | undefined,
-      proof: TutorialGoldProof,
-      binding: TutorialGoldBinding;
+    // Every run regenerates the gold through production physics. Without the write flag the result
+    // must equal the committed corpus, proof and binding: this is what proves the gold is not stale.
+    const generated = generateTutorialGold();
+    const expectedCorpus: TutorialGoldCorpus = generated.corpus;
+    let rawCorpus: unknown, proof: TutorialGoldProof, binding: TutorialGoldBinding;
     if (process.env.TEAR_TUTORIAL_GOLD_WRITE === "1") {
-      const generated = generateTutorialGold(sourceHash);
-      expectedCorpus = generated.corpus;
       rawCorpus = packTutorialGoldCorpus(generated.corpus);
       proof = generated.proof;
       binding = generated.binding;
@@ -127,21 +143,25 @@ describe("verified tutorial gold corpus", () => {
       rawCorpus = JSON.parse(readFileSync(shippingPath, "utf8")) as unknown;
       proof = JSON.parse(readFileSync(proofPath, "utf8")) as TutorialGoldProof;
       binding = JSON.parse(readFileSync(bindingPath, "utf8")) as TutorialGoldBinding;
+      const stale = "the tutorial gold output changed; regenerate it with TEAR_TUTORIAL_GOLD_WRITE=1 and commit";
+      expect((rawCorpus as { contentHash?: unknown }).contentHash, stale).toBe(generated.corpus.contentHash);
+      expect(stableVerificationHash(proof), stale).toBe(stableVerificationHash(generated.proof));
+      expect(binding, stale).toEqual(generated.binding);
     }
     const loadStarted = performance.now();
-    const loaded = loadTutorialGoldCorpus(rawCorpus, binding, sourceHash);
+    const loaded = loadTutorialGoldCorpus(rawCorpus, binding);
     expect(loaded.status).toBe("ready");
     if (loaded.status !== "ready") throw new Error("Gold shipping decode refused");
     const corpus = loaded.corpus;
     const loadMilliseconds = performance.now() - loadStarted;
-    if (expectedCorpus !== undefined) expect(corpus).toEqual(expectedCorpus);
-    expect(bindTutorialGoldCorpus(corpus, sourceHash)).toEqual(binding);
-    const roundTrip = loadTutorialGoldCorpus(packTutorialGoldCorpus(corpus), binding, sourceHash);
+    expect(corpus).toEqual(expectedCorpus);
+    expect(bindTutorialGoldCorpus(corpus)).toEqual(binding);
+    const roundTrip = loadTutorialGoldCorpus(packTutorialGoldCorpus(corpus), binding);
     if (roundTrip.status !== "ready") throw new Error("Packed gold round trip refused");
     expect(roundTrip.corpus).toEqual(corpus);
     const incompatible = { status: "unavailable", reason: "incompatible" };
-    expect(loadTutorialGoldCorpus(rawCorpus, binding, "0".repeat(64))).toEqual(incompatible);
-    expect(loadTutorialGoldCorpus(rawCorpus, { ...binding, corpusContentHash: "0".repeat(16) }, sourceHash)).toEqual(
+    expect(loadTutorialGoldCorpus(rawCorpus, { ...binding, corpusContentHash: "0".repeat(16) })).toEqual(incompatible);
+    expect(loadTutorialGoldCorpus(rawCorpus, { ...binding, format: "tear-tutorial-gold-binding.v1" })).toEqual(
       incompatible,
     );
     expect(corpus.references).toHaveLength(14);
@@ -181,12 +201,14 @@ describe("verified tutorial gold corpus", () => {
     );
     expect(new Set(field?.frames.map((frame) => frame.encounter))).toEqual(new Set(["charger", "breath", "mixed"]));
     if (process.env.TEAR_TUTORIAL_GOLD_WRITE === "1") {
-      // A source-only change rewrites just the binding; the corpus and proof change only with the gold output.
+      // The binding holds only the corpus content hash: a code change that keeps the gold output rewrites nothing.
       writeFileSync(shippingPath, JSON.stringify(rawCorpus) + "\n");
       writeFileSync(proofPath, JSON.stringify(proof) + "\n");
       writeFileSync(bindingPath, JSON.stringify(binding, null, 2) + "\n");
     }
-    expect(assertTutorialGoldFresh()).toBe(sourceHash);
+    expect(committedTutorialGold()).toBe(corpus.contentHash);
+    // Lets builds here skip this run until the tutorial code or the corpus changes (see assertTutorialGoldFresh).
+    recordTutorialGoldVerified(process.cwd(), sourceHash, corpus.contentHash);
     process.stdout.write(
       `Gold packed ${String(Buffer.byteLength(JSON.stringify(rawCorpus)))} bytes, decoded ${String(Buffer.byteLength(JSON.stringify(corpus)))} bytes; proof ${String(Buffer.byteLength(JSON.stringify(proof)))} bytes; detached hash/validation/freeze load ${String(loadMilliseconds)}ms; all 14 replayed\n`,
     );

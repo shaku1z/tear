@@ -1,5 +1,5 @@
 import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
-import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort, EnemyProjectile } from "../enemy-contracts";
+import type { EnemyDependencies, EnemyPlatform, EnemyPlayerPort } from "../enemy-contracts";
 import type { EnemyBaseConstructor } from "./enemy-base";
 import { ROOTBOUND_DEFINITION } from "../../run/boss-definitions";
 import type { BossEncounterCleanupReason } from "../../run/boss-encounter";
@@ -7,6 +7,7 @@ import {
   GRAFT_ANCHOR_TYPES,
   ROOTBOUND_NO_GRAFT_EFFECTS,
   type GraftAnchorPlacementRequest,
+  type GraftAnchorType,
   type RootboundGraftEffects,
 } from "../../environment/graft-anchor";
 import { ROOTBOUND_BLOOM_PATTERN_IDS, type RootboundBloomPatternId } from "../../environment/bloom-well";
@@ -20,41 +21,63 @@ import {
 } from "../../environment/regrowth-link";
 import type { BossRuntime } from "./boss-runtime";
 import {
-  ROOTBOUND_BLOOM_SHIFT,
   ROOTBOUND_ENCOUNTER,
   ROOTBOUND_GRAFT_ANCHOR_GEOMETRY,
+  ROOTBOUND_GRAFTS,
+  ROOTBOUND_HEALING,
   ROOTBOUND_LAST_SPRING,
-  ROOTBOUND_MEMORY_CHOIR,
-  ROOTBOUND_PHASE_ONE_ATTACK_ORDER,
   ROOTBOUND_PHASE_ONE_CADENCE,
-  ROOTBOUND_PHASE_THREE_ATTACK_ORDER,
   ROOTBOUND_PHASE_THREE_CADENCE,
-  ROOTBOUND_PHASE_TWO_ATTACK_ORDER,
   ROOTBOUND_PHASE_TWO_CADENCE,
-  type RootboundCanopyStepStage,
   type RootboundLastSpringStage,
-  type RootboundMemoryChoirManifestation,
-  type RootboundMemoryChoirStage,
-  type RootboundPhaseOneAttack,
-  type RootboundPhaseTwoAttack,
-  type RootboundRootlineStage,
-  type RootboundSeedArcStage,
-  type RootboundVineSweepStage,
 } from "./rootbound-tuning";
+import type { BatonSegment } from "../../combat/held-blade-collision-contracts";
+import { bossAttackSecondsToTicks } from "../boss-attacks";
 import {
-  rootboundRootlineGeometry,
-  rootboundVineSweepGeometry,
-  updateRootboundCanopyStep,
-  updateRootboundRootline,
-  updateRootboundSeedArc,
-  updateRootboundVineSweep,
-} from "./rootbound-ground-verbs";
-
+  advanceBossAttack,
+  bossAttackDamageTaken,
+  bossAttackExposed,
+  bossAttackHit,
+  bossAttackMotion,
+  bossAttackParryable,
+  bossAttackPose,
+  bossAttackTells,
+  bossHitTouches,
+  createBossAttackRunnerState,
+  exposeBossAttack,
+  markBossAttackLanded,
+  parryBossAttack,
+  type BossAttackContext,
+  type BossAttackPose,
+  type BossAttackRunnerState,
+} from "../boss-attack-runner";
 import type { BossTell } from "../boss-tells";
-import { rootboundTells } from "./rootbound-tells";
+import { ROOTBOUND_MOVES, type RootboundPhase, type RootboundPlace } from "./rootbound-moves";
+import { rootboundLastSpringTell } from "./rootbound-tells";
 export * from "./rootbound-tuning";
 
-/** The Rootbound: Keeper of Spring (ground verbs), The Garden Remembers (Grafts), Nothing Here Dies (Regrowth). */
+/** Phase III plays this many moves between Last Springs, and opens with one. */
+export const ROOTBOUND_MOVES_PER_LAST_SPRING = 3;
+
+interface MutableBox {
+  x: number;
+  y: number;
+  hw: number;
+  hh: number;
+}
+type MoveContext = {
+  -readonly [Key in keyof BossAttackContext<RootboundPhase>]: BossAttackContext<RootboundPhase>[Key];
+};
+interface MoveScratch {
+  readonly box: MutableBox;
+  readonly target: MutableBox;
+  readonly blocked: Set<string>;
+  readonly context: MoveContext;
+}
+const NO_TELLS: readonly BossTell[] = Object.freeze([]);
+const NO_GRAFT_REQUESTS: readonly GraftAnchorPlacementRequest[] = Object.freeze([]);
+
+/** The Rootbound: Keeper of Spring (moves), The Garden Remembers (Grafts), Nothing Here Dies (Regrowth). */
 export function createRootboundType(
   dependencies: EnemyDependencies,
   Enemy: EnemyBaseConstructor,
@@ -62,6 +85,30 @@ export function createRootboundType(
 ) {
   const { CONFIG } = dependencies;
   const { bossTransformation } = bossRuntime;
+  // The boss and the player as the runner sees them: one set of objects per boss, reused every tick. Kept
+  // off the boss itself, so a saved and restored boss never carries a copy of them (or of the random source).
+  const scratchByBoss = new WeakMap<object, MoveScratch>();
+  const scratchOf = (boss: object): MoveScratch => {
+    let scratch = scratchByBoss.get(boss);
+    if (scratch === undefined) {
+      const box: MutableBox = { x: 0, y: 0, hw: 0, hh: 0 };
+      const target: MutableBox = { x: 0, y: 0, hw: 0, hh: 0 };
+      const blocked = new Set<string>();
+      const arena = { width: CONFIG.view.w, groundY: CONFIG.world.groundY };
+      const context: MoveContext = {
+        tick: 0,
+        phase: 1,
+        boss: box,
+        target,
+        arena,
+        random: dependencies.GAME_RANDOM,
+        blocked,
+      };
+      scratch = { box, target, blocked, context };
+      scratchByBoss.set(boss, scratch);
+    }
+    return scratch;
+  };
   class Rootbound extends Enemy {
     declare cfg: typeof CONFIG.boss;
     introT = 0;
@@ -74,46 +121,53 @@ export function createRootboundType(
       ROOTBOUND_DEFINITION.phaseMarks[0],
       ROOTBOUND_DEFINITION.phaseMarks[1],
     ];
-    readonly availableAttacks: readonly string[] = Object.freeze(["vine-sweep", "seed-arc", "rootline", "canopy-step"]);
-    readonly phaseOneAttackOrder = ROOTBOUND_PHASE_ONE_ATTACK_ORDER;
-    pendingAttack: RootboundPhaseOneAttack | null = null;
-    attackIndex = 0;
-    phaseThreeAttackIndex = 0;
+    readonly availableAttacks: readonly string[] = Object.freeze(ROOTBOUND_MOVES.attacks.map((move) => move.id));
     contactGraceT = 0;
-    vineSweepStage: RootboundVineSweepStage | null = null;
-    vineSweepT = 0;
-    vineSweepHitSpent = false;
-    vineSweepFacing = 1;
-    seedArcStage: RootboundSeedArcStage | null = null;
-    seedArcT = 0;
-    rootlineStage: RootboundRootlineStage | null = null;
-    rootlineT = 0;
-    rootlineFacing = 1;
-    rootlineCleanupReason: "natural-expiry" | "stage-transition" | null = null;
-    canopyStepStage: RootboundCanopyStepStage | null = null;
-    canopyStepT = 0;
-    canopyStepIndex = 0;
-    canopyStepStart: Readonly<{ x: number; y: number }> = Object.freeze({ x: 0, y: 0 });
-    canopyDestination: Readonly<{ x: number; y: number; platformId: string }> | null = null;
+    /** The shared runner's state for the move table, and the boss's own tick count (one per update). */
+    moveState: BossAttackRunnerState = createBossAttackRunnerState(
+      bossAttackSecondsToTicks(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay),
+    );
+    moveTick = 0;
+    /** `blocked`: moves that may not start now (a Graft with nowhere to go, a cage already standing). */
+    private get scratch(): MoveScratch {
+      return scratchOf(this);
+    }
+    private tellsFor: BossAttackRunnerState | null = null;
+    private tellsUpdate = -1;
+    private tellsSpring: RootboundLastSpringStage | null = null;
+    private tellsCache: readonly BossTell[] = NO_TELLS;
+    private updates = 0;
+    movesSinceLastSpring = ROOTBOUND_MOVES_PER_LAST_SPRING;
+    /** True while a move moves the boss itself (the body does not fall or slide on its own). */
+    moveCarries = false;
+    /** True while burrowed: out of sight, untouchable and harmless to touch. */
+    hidden = false;
+    batonStrike = 0;
     cleanupReason: BossEncounterCleanupReason | null = null;
     phaseOneExited = false;
     graftDamageTakenMultiplier = ROOTBOUND_NO_GRAFT_EFFECTS.incomingDamageMultiplier;
-    graftCadenceMultiplier = ROOTBOUND_NO_GRAFT_EFFECTS.cadenceMultiplier;
+    graftGapMultiplier = ROOTBOUND_NO_GRAFT_EFFECTS.gapMultiplier;
+    graftHeals = ROOTBOUND_NO_GRAFT_EFFECTS.heals;
     activeGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
+    /** Grafts asked of the stage and not cut since: standing, or about to be planted. */
+    graftRequests: readonly GraftAnchorPlacementRequest[] = Object.freeze([]);
+    /** The requested Grafts the stage has planted. */
+    plantedGraftTypes: readonly string[] = Object.freeze([]);
+    /** True once all three Grafts stood together; cutting the last of them then uproots the keeper. */
+    fullGrove = false;
+    /** Phase II opens with a planting: until then no other move may start. */
+    openingGraft = false;
+    /** The move tick before which no Graft is planted (after a cut). */
+    graftRegrowTick = 0;
+    /** Seconds since the player last hit the keeper, and the share of full health healed in Phase II. */
+    quietT = 0;
+    healedFraction = 0;
+    /** The health the keeper entered Phase II with: Mercy never heals above it. */
+    phaseTwoEntryHp: number | null = null;
     bloomPatternIndex = 0;
-    bloomShiftT = 0;
-    memoryChoirStage: RootboundMemoryChoirStage | null = null;
-    memoryChoirT = 0;
-    memoryChoirElapsed = 0;
-    memoryChoirManifestations: readonly RootboundMemoryChoirManifestation[] = Object.freeze([]);
     rootCageSequence = 0;
     rootCageRequest: RootCagePlacementRequest | null = null;
-    readonly phaseTwoAttackOrder = ROOTBOUND_PHASE_TWO_ATTACK_ORDER;
-    phaseTwoAttackIndex = 0;
-    phaseTwoPendingAttack: RootboundPhaseTwoAttack | null = null;
     finalPhaseTwoGraftTypes = ROOTBOUND_NO_GRAFT_EFFECTS.activeTypes;
-    /** Grafts the stage has planted for this boss. A cut Graft leaves the stage and is not planted again. */
-    plantedGraftTypes: readonly string[] = Object.freeze([]);
     /** The Well pattern the stage last planted for this boss; a new selection is planted once. */
     plantedBloomPattern: RootboundBloomPatternId | null = null;
     regrowthState: RootboundRegrowthState = createRootboundRegrowthState();
@@ -158,7 +212,7 @@ export function createRootboundType(
         phase,
         targetPhase: this.phase === 3 ? 3 : this.phase === 2 ? 2 : 1,
         ready:
-          (phase !== 2 || GRAFT_ANCHOR_TYPES.every((type) => this.activeGraftTypes.includes(type))) &&
+          (phase !== 2 || this.activeGraftTypes.length > 0) &&
           (phase !== 3 || this.regrowthState.phase !== "idle") &&
           this.introT <= 0 &&
           this.cinematicT <= 0 &&
@@ -186,7 +240,7 @@ export function createRootboundType(
     }
 
     override blocksDamage(): boolean {
-      return this.introT > 0;
+      return this.introT > 0 || this.hidden;
     }
 
     /** Nothing here dies: the Rootbound cannot fall before Phase III, nor while Regrowth channels. */
@@ -197,27 +251,92 @@ export function createRootboundType(
     /** Phase I damage stops short of Phase III, so burst damage cannot skip the Graft phase. */
     override limitIncomingDamage(damage: number): number {
       if (this.introT > 0) return 0;
-      let dealt = damage * this.graftDamageTakenMultiplier;
+      let dealt =
+        damage *
+        this.graftDamageTakenMultiplier *
+        bossAttackDamageTaken(ROOTBOUND_MOVES, this.moveState, this.moveTick);
       if (this.phaseMarker === 1) dealt = Math.min(dealt, Math.max(0, this.hp - (this.maxHp * this.phaseMarks[1] + 1)));
       if (this.regrowthState.phase === "channeling") this.regrowthDamageTaken += dealt;
+      // Any hit restarts the wait before the keeper may heal.
+      if (dealt > 0) this.quietT = 0;
       return dealt;
     }
 
     applyGraftEffects(effects: RootboundGraftEffects): void {
       this.graftDamageTakenMultiplier = effects.incomingDamageMultiplier;
-      this.graftCadenceMultiplier = effects.cadenceMultiplier;
+      this.graftGapMultiplier = effects.gapMultiplier;
+      this.graftHeals = effects.heals;
       this.activeGraftTypes = effects.activeTypes;
+      if (effects.activeTypes.length === GRAFT_ANCHOR_TYPES.length) this.fullGrove = true;
     }
 
-    recoverGraftHealth(fraction: number): number {
-      if (!Number.isFinite(fraction) || fraction < 0)
-        throw new RangeError("Rootbound Graft recovery must be finite and non-negative");
-      if (this.dead || this.dying || this.hp <= 0 || this.maxHp <= 0) return 0;
-      const before = this.hp;
-      this.hp = Math.min(this.maxHp, this.hp + this.maxHp * fraction);
-      return (this.hp - before) / this.maxHp;
+    /** True while the keeper is open: a punish stage, a parry, or a cut Graft or cage. */
+    exposed(): boolean {
+      return bossAttackExposed(this.moveState, this.moveTick);
     }
 
+    /** Opens the keeper for `seconds`: the move in progress ends without striking. */
+    private expose(seconds: number): void {
+      this.moveState = exposeBossAttack(
+        ROOTBOUND_MOVES,
+        this.moveState,
+        this.moveTick,
+        bossAttackSecondsToTicks(seconds),
+      );
+      this.moveCarries = false;
+      this.hidden = false;
+      this.batonStrike = 0;
+      this.atk = "exposed";
+    }
+
+    /** The player cut a Graft: it stops helping, none is planted for a while, and the keeper is opened. */
+    graftSevered(graftType: string): void {
+      if (this.phase !== 2 || this.cleanupReason !== null) return;
+      if (!this.graftRequests.some((request) => request.graftType === graftType)) return;
+      this.graftRequests = Object.freeze(this.graftRequests.filter((request) => request.graftType !== graftType));
+      this.plantedGraftTypes = Object.freeze(this.plantedGraftTypes.filter((planted) => planted !== graftType));
+      this.graftRegrowTick = this.moveTick + bossAttackSecondsToTicks(ROOTBOUND_GRAFTS.regrow);
+      const uprooted = this.fullGrove && this.graftRequests.length === 0;
+      if (uprooted) this.fullGrove = false;
+      this.expose(uprooted ? ROOTBOUND_GRAFTS.uprootedExposed : ROOTBOUND_GRAFTS.cutExposed);
+    }
+
+    /** A Graft restored into the fight (TearBench state restore): the keeper takes it as planted. */
+    adoptGraft(graftType: GraftAnchorType, geometry: GraftAnchorPlacementRequest["geometry"]): boolean {
+      if (this.phase !== 2 || this.cleanupReason !== null) return false;
+      this.openingGraft = false;
+      if (this.graftRequests.some((request) => request.graftType === graftType)) return true;
+      this.graftRequests = Object.freeze([...this.graftRequests, Object.freeze({ graftType, geometry })]);
+      this.plantedGraftTypes = Object.freeze([...this.plantedGraftTypes, graftType]);
+      return true;
+    }
+
+    /** The player cut a Root Cage wall: the keeper is opened. */
+    cageSevered(): void {
+      if (this.phase === 2 && this.cleanupReason === null) this.expose(ROOTBOUND_GRAFTS.cutExposed);
+    }
+
+    /** Mercy heals only an unpressed keeper, by the rules of `ROOTBOUND_HEALING`. */
+    private updateHealing(dt: number): void {
+      this.quietT += dt;
+      if (
+        this.phase !== 2 ||
+        !this.graftHeals ||
+        this.quietT < ROOTBOUND_HEALING.quietSeconds ||
+        this.dead ||
+        this.dying ||
+        this.hp <= 0
+      )
+        return;
+      const amount = Math.min(
+        this.maxHp * ROOTBOUND_HEALING.perSecond * dt,
+        this.maxHp * (ROOTBOUND_HEALING.phaseTwoCap - this.healedFraction),
+        (this.phaseTwoEntryHp ?? this.maxHp * this.phaseMarks[0]) - this.hp,
+      );
+      if (!(amount > 0)) return;
+      this.hp += amount;
+      this.healedFraction += amount / this.maxHp;
+    }
     beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean {
       if (
         this.phaseMarker !== 3 ||
@@ -267,7 +386,9 @@ export function createRootboundType(
         !this.attackCommitProtected() &&
         this.contactGraceT <= 0 &&
         this.state === "idle" &&
-        this.pendingAttack === null &&
+        this.moveState.run === null &&
+        !this.exposed() &&
+        !this.hidden &&
         (this.lastSpringStage === null || this.lastSpringStage === "complete")
       );
     }
@@ -276,74 +397,180 @@ export function createRootboundType(
       return this.introT > 0 || this.state === "intro" || this.cinematicT > 0 || this.cinematicRequest !== null;
     }
 
-    selectNextPhaseOneAttack(): RootboundPhaseOneAttack | null {
-      if (this.phase !== 1 || this.attackCommitProtected() || this.state !== "idle" || this.pendingAttack !== null)
-        return null;
-      const selected = this.phaseOneAttackOrder[this.attackIndex % this.phaseOneAttackOrder.length];
-      if (selected === undefined) throw new RangeError("Rootbound Phase I attack order is empty");
-      this.attackIndex += 1;
-      this.pendingAttack = selected;
-      this.stateT = 0;
-      return selected;
+    /** True when the move table drives the boss: always, except while Regrowth is unresolved in Phase III. */
+    playsMoves(): boolean {
+      return this.phase !== 3 || this.regrowthState.phase === "resolved";
     }
 
-    /** Phase III rotation after Regrowth: Last Spring, then the ground verbs, repeating. */
-    selectNextPhaseThreeAttack(): string | null {
-      if (
-        this.phase !== 3 ||
-        this.regrowthState.phase !== "resolved" ||
-        this.attackCommitProtected() ||
-        this.state !== "idle" ||
-        this.pendingAttack !== null
-      )
-        return null;
-      const order = ROOTBOUND_PHASE_THREE_ATTACK_ORDER;
-      const selected = order[this.phaseThreeAttackIndex % order.length] ?? "last-spring";
-      this.phaseThreeAttackIndex += 1;
-      this.stateT = 0;
-      if (selected === "last-spring") return this.startLastSpring() ? selected : null;
-      this.pendingAttack = selected;
-      return selected;
+    /** The one move context, brought up to date with the boss. `updateMoves` sets the target once a tick. */
+    private moveContext(): BossAttackContext<RootboundPhase> {
+      const phase = this.phase;
+      this.scratch.context.tick = this.moveTick;
+      this.scratch.context.phase = phase === 3 ? 3 : phase === 2 ? 2 : 1;
+      this.scratch.box.x = this.x;
+      this.scratch.box.y = this.y;
+      this.scratch.box.hw = this.hw;
+      this.scratch.box.hh = this.hh;
+      return this.scratch.context;
     }
 
-    completePhaseOneAttack(): void {
-      if (this.pendingAttack === null) return;
-      this.pendingAttack = null;
-      this.state = "recover";
-      this.stateT = this.phase === 3 ? ROOTBOUND_PHASE_THREE_CADENCE.recovery : ROOTBOUND_PHASE_ONE_CADENCE.recovery;
-      this.atk = "unavailable";
-    }
-
+    /** The marks to draw now. Built once per update and move state, then handed out again. */
     tells(): readonly BossTell[] {
-      return rootboundTells(this);
+      if (
+        this.tellsUpdate === this.updates &&
+        this.tellsFor === this.moveState &&
+        this.tellsSpring === this.lastSpringStage
+      )
+        return this.tellsCache;
+      const moves = bossAttackTells(ROOTBOUND_MOVES, this.moveState, this.moveContext());
+      const spring = rootboundLastSpringTell(this);
+      this.tellsCache = spring === null ? moves : Object.freeze([...moves, spring]);
+      this.tellsUpdate = this.updates;
+      this.tellsFor = this.moveState;
+      this.tellsSpring = this.lastSpringStage;
+      return this.tellsCache;
     }
 
-    vineSweepGeometry(): Readonly<{ x: number; y: number; hw: number; hh: number; facing: number }> {
-      return rootboundVineSweepGeometry(this);
+    /** The move being played, for the renderer: move, stage, progress and where it reaches. */
+    movePose(): BossAttackPose | null {
+      return bossAttackPose(ROOTBOUND_MOVES, this.moveState, this.moveContext());
     }
 
-    rootlineGeometry(): Readonly<{ x: number; y: number; w: number; h: number }> {
-      return rootboundRootlineGeometry(this, CONFIG.world.groundY);
+    /** The vine the player can parry while a parryable move is about to land: from the hand to its reach. */
+    batonSegment(): BatonSegment {
+      const hit = bossAttackHit(ROOTBOUND_MOVES, this.moveState, this.moveContext());
+      const reach = hit?.area.kind === "box" ? hit.area.hw * 2 : 260;
+      const y = this.y + 19;
+      const a = Object.freeze({ x: this.x + this.facing * this.hw, y });
+      const b = Object.freeze({ x: a.x + this.facing * reach, y });
+      return { a, b, x1: a.x, y1: a.y, x2: b.x, y2: b.y, radius: 24 };
+    }
+
+    /** A parried Vine Lash skips to the parry exposure of the table; that open window is the reward. */
+    parryBaton(): boolean {
+      const next = parryBossAttack(ROOTBOUND_MOVES, this.moveState, this.moveTick);
+      if (next === this.moveState) return false;
+      this.moveState = next;
+      this.batonStrike = 0;
+      return true;
+    }
+
+    /** Which moves may not start now. Changes the one set in place. */
+    private refreshBlockedMoves(): void {
+      const blocked = this.scratch.blocked;
+      const cannotPlant =
+        this.graftRequests.length >= GRAFT_ANCHOR_TYPES.length || this.moveTick < this.graftRegrowTick;
+      // The phase opens with a planting and nothing else, unless planting is not possible: it never idles.
+      const opening = this.phase === 2 && this.openingGraft && !cannotPlant;
+      for (const move of ROOTBOUND_MOVES.attacks) {
+        if (opening && move.id !== "plant-graft") blocked.add(move.id);
+        else blocked.delete(move.id);
+      }
+      if (cannotPlant) blocked.add("plant-graft");
+      if (this.rootCageRequest !== null) blocked.add("root-cage");
+    }
+
+    /** Advances the move table one tick: motion, the strike, the parry window and what the move places. */
+    private updateMoves(platforms: readonly EnemyPlatform[], player: EnemyPlayerPort): void {
+      this.moveTick += 1;
+      this.scratch.target.x = player.x;
+      this.scratch.target.y = player.y;
+      this.scratch.target.hw = player.hw;
+      this.scratch.target.hh = player.hh;
+      this.refreshBlockedMoves();
+      const result = advanceBossAttack(ROOTBOUND_MOVES, this.moveState, this.moveContext());
+      this.moveState = result.state;
+      for (const event of result.events) {
+        if (event.type === "place") this.place(event.object, platforms);
+        else if (event.type === "finished") this.moveFinished();
+      }
+      const motion = bossAttackMotion(ROOTBOUND_MOVES, this.moveState, this.scratch.context);
+      this.moveCarries = motion !== null;
+      this.hidden = motion?.hidden ?? false;
+      if (motion !== null) {
+        this.x = motion.x;
+        this.y = motion.y;
+        this.vy = 0;
+      }
+      const hit = bossAttackHit(ROOTBOUND_MOVES, this.moveState, this.moveContext());
+      if (hit !== null && !player.invulnerable && bossHitTouches(hit.area, player)) {
+        this.moveState = markBossAttackLanded(this.moveState);
+        player.takeDamage(hit.damage, this.x, this);
+      }
+      this.batonStrike = bossAttackParryable(ROOTBOUND_MOVES, this.moveState, this.moveTick) ? 1 : 0;
+      const run = this.moveState.run;
+      if (run !== null) this.facing = run.facing;
+      this.atk = run !== null ? `${run.attackId}:${run.stage}` : this.exposed() ? "exposed" : "unavailable";
+    }
+
+    /** A move ended. Phase III counts it towards Last Spring; a Haste Graft shortens the pause after it. */
+    private moveFinished(): void {
+      this.movesSinceLastSpring += 1;
+      if (this.graftGapMultiplier >= 1) return;
+      const gap = Math.round(ROOTBOUND_MOVES.gap * this.graftGapMultiplier);
+      this.moveState = Object.freeze({ ...this.moveState, readyTick: this.moveTick + gap });
+    }
+
+    /** What a Phase II move asks of the stage: a Graft, a Root Cage, or the next Bloom Well pattern. */
+    private place(object: RootboundPlace, platforms: readonly EnemyPlatform[]): void {
+      if (object === "bloom")
+        this.bloomPatternIndex = (this.bloomPatternIndex + 1) % ROOTBOUND_BLOOM_PATTERN_IDS.length;
+      else if (object === "cage") this.startRootCage(this.moveState.run?.target.x ?? this.scratch.target.x);
+      else this.requestGraft(platforms);
+    }
+
+    /** Ends any move in progress, without a strike; the next move waits `delaySeconds`. */
+    private resetMoves(delaySeconds: number): void {
+      this.moveState = createBossAttackRunnerState(this.moveTick + bossAttackSecondsToTicks(delaySeconds));
+      this.moveCarries = false;
+      this.hidden = false;
+      this.batonStrike = 0;
+    }
+
+    /** Asks the stage for the next Graft the keeper does not have, on its perch. */
+    private requestGraft(platforms: readonly EnemyPlatform[]): void {
+      this.openingGraft = false;
+      const index = GRAFT_ANCHOR_TYPES.findIndex(
+        (type) => !this.graftRequests.some((request) => request.graftType === type),
+      );
+      const graftType = GRAFT_ANCHOR_TYPES[index];
+      if (graftType === undefined) return;
+      this.graftRequests = Object.freeze([
+        ...this.graftRequests,
+        Object.freeze({ graftType, geometry: this.graftPerch(index, platforms) }),
+      ]);
+    }
+
+    /**
+     * Where Graft `index` (0 left, 1 middle, 2 right) stands: on a platform when the arena has enough of
+     * them, otherwise on the floor at a fifth, half and four fifths of the arena.
+     */
+    private graftPerch(index: number, platforms: readonly EnemyPlatform[]): GraftAnchorPlacementRequest["geometry"] {
+      const { width, height } = ROOTBOUND_GRAFT_ANCHOR_GEOMETRY;
+      const perches = platforms
+        .filter(
+          (platform) =>
+            platform.oneway === true &&
+            platform.floor !== true &&
+            platform.void !== true &&
+            platform.y < CONFIG.world.groundY - 40 &&
+            (platform.arenaState === undefined ||
+              platform.arenaState === "stable" ||
+              platform.arenaState === "stressed"),
+        )
+        .sort((a, b) => a.x - b.x);
+      const last = perches.length - 1;
+      const slots =
+        last >= 2 ? [0, Math.floor(last / 2), last] : last === 1 ? [0, -1, 1] : last === 0 ? [-1, 0, -1] : [];
+      const perch = perches[slots[index] ?? -1];
+      const centre = perch === undefined ? CONFIG.view.w * (0.2 + index * 0.3) : perch.x + perch.w / 2;
+      const top = perch === undefined ? CONFIG.world.groundY : perch.y;
+      return Object.freeze({ x: centre - width / 2, y: top - height, w: width, h: height });
     }
 
     graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[] {
-      if (this.phase !== 2) return Object.freeze([]);
-      const y = CONFIG.world.groundY - ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height;
-      return Object.freeze(
-        GRAFT_ANCHOR_TYPES.map((graftType, index) =>
-          Object.freeze({
-            graftType,
-            geometry: Object.freeze({
-              x: CONFIG.view.w * (0.2 + index * 0.3) - ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width / 2,
-              y,
-              w: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width,
-              h: ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height,
-            }),
-          }),
-        ),
-      );
+      return this.phase === 2 ? this.graftRequests : NO_GRAFT_REQUESTS;
     }
-
     acknowledgeGraftPlanted(graftType: string): void {
       this.plantedGraftTypes = Object.freeze([...this.plantedGraftTypes, graftType]);
     }
@@ -425,36 +652,7 @@ export function createRootboundType(
       }
     }
 
-    selectNextPhaseTwoAttack(playerX: number): RootboundPhaseTwoAttack | null {
-      if (
-        this.phase !== 2 ||
-        this.attackCommitProtected() ||
-        this.state !== "idle" ||
-        this.phaseTwoPendingAttack !== null
-      )
-        return null;
-      const selected = this.phaseTwoAttackOrder[this.phaseTwoAttackIndex % this.phaseTwoAttackOrder.length];
-      if (selected === undefined) throw new RangeError("Rootbound Phase II attack order is empty");
-      this.phaseTwoAttackIndex += 1;
-      this.phaseTwoPendingAttack = selected;
-      this.stateT = 0;
-      if (selected === "memory-choir") this.startMemoryChoir();
-      else if (selected === "root-cage") this.startRootCage(playerX);
-      else {
-        this.bloomPatternIndex = (this.bloomPatternIndex + 1) % ROOTBOUND_BLOOM_PATTERN_IDS.length;
-        this.bloomShiftT = ROOTBOUND_BLOOM_SHIFT.warning;
-        this.atk = "bloom-shift:warning";
-      }
-      return selected;
-    }
-
-    private completePhaseTwoAttack(): void {
-      this.phaseTwoPendingAttack = null;
-      this.state = "recover";
-      this.stateT = ROOTBOUND_PHASE_TWO_CADENCE.recovery / this.graftCadenceMultiplier;
-      this.atk = "unavailable";
-    }
-
+    /** Raises a Root Cage around `centerX`. False when one already stands or the phase is not Phase II. */
     startRootCage(centerX: number): boolean {
       if (
         this.phase !== 2 ||
@@ -470,7 +668,6 @@ export function createRootboundType(
         arenaWidth: CONFIG.view.w,
         groundY: CONFIG.world.groundY,
       });
-      this.atk = "root-cage:warning";
       return true;
     }
 
@@ -478,135 +675,17 @@ export function createRootboundType(
       return this.phase === 2 ? this.rootCageRequest : null;
     }
 
+    /** The stage reports the cage gone (cut, timed out or cleaned up); another may be raised. */
     completeRootCage(): void {
       this.rootCageRequest = null;
-      if (this.phase === 2 && this.phaseTwoPendingAttack === "root-cage") this.completePhaseTwoAttack();
-      else if (this.atk.startsWith("root-cage:")) this.atk = "unavailable";
     }
 
-    startMemoryChoir(): boolean {
-      if (this.phase !== 2 || this.attackCommitProtected() || this.memoryChoirStage !== null) return false;
-      this.memoryChoirStage = "warning";
-      this.memoryChoirT = ROOTBOUND_MEMORY_CHOIR.warning;
-      this.memoryChoirElapsed = 0;
-      this.memoryChoirManifestations = Object.freeze(
-        Array.from({ length: ROOTBOUND_MEMORY_CHOIR.maxManifestations }, (_, index) =>
-          Object.freeze({
-            id: `memory-choir:${String(index + 1)}`,
-            x: CONFIG.view.w * (0.25 + index * 0.25) - ROOTBOUND_MEMORY_CHOIR.width / 2,
-            y: CONFIG.world.groundY - ROOTBOUND_MEMORY_CHOIR.height,
-            w: ROOTBOUND_MEMORY_CHOIR.width,
-            h: ROOTBOUND_MEMORY_CHOIR.height,
-            activationDelay: index * ROOTBOUND_MEMORY_CHOIR.echoStagger,
-            hitSpent: false,
-          }),
-        ),
-      );
-      this.atk = "memory-choir:warning";
-      return true;
-    }
-
-    memoryChoirManifestationActive(manifestation: RootboundMemoryChoirManifestation): boolean {
-      return (
-        this.memoryChoirStage === "active" &&
-        this.memoryChoirElapsed >= manifestation.activationDelay &&
-        this.memoryChoirElapsed < manifestation.activationDelay + ROOTBOUND_MEMORY_CHOIR.active
-      );
-    }
-
-    private cancelMemoryChoir(): void {
-      this.memoryChoirStage = null;
-      this.memoryChoirT = 0;
-      this.memoryChoirElapsed = 0;
-      this.memoryChoirManifestations = Object.freeze([]);
-      if (this.atk.startsWith("memory-choir:")) this.atk = "unavailable";
-    }
-
-    private updateMemoryChoir(dt: number, player: EnemyPlayerPort): void {
-      if (this.memoryChoirStage === null) return;
-      this.memoryChoirT = Math.max(0, this.memoryChoirT - dt);
-      if (this.memoryChoirStage === "warning") {
-        if (this.memoryChoirT <= 0) {
-          this.memoryChoirStage = "active";
-          this.memoryChoirElapsed = 0;
-          this.memoryChoirT =
-            ROOTBOUND_MEMORY_CHOIR.active +
-            ROOTBOUND_MEMORY_CHOIR.echoStagger * (ROOTBOUND_MEMORY_CHOIR.maxManifestations - 1);
-          this.atk = "memory-choir:active";
-        }
-        return;
-      }
-      if (this.memoryChoirStage === "active") {
-        this.memoryChoirElapsed += dt;
-        this.memoryChoirManifestations = Object.freeze(
-          this.memoryChoirManifestations.map((manifestation) => {
-            if (
-              manifestation.hitSpent ||
-              !this.memoryChoirManifestationActive(manifestation) ||
-              player.invulnerable ||
-              !dependencies.aabbOverlap(
-                manifestation.x + manifestation.w / 2,
-                manifestation.y + manifestation.h / 2,
-                manifestation.w / 2,
-                manifestation.h / 2,
-                player.x,
-                player.y,
-                player.hw,
-                player.hh,
-              )
-            )
-              return manifestation;
-            player.takeDamage(ROOTBOUND_MEMORY_CHOIR.damage, manifestation.x + manifestation.w / 2, this);
-            return Object.freeze({ ...manifestation, hitSpent: true });
-          }),
-        );
-        if (this.memoryChoirT <= 0) {
-          this.memoryChoirStage = "afterimage";
-          this.memoryChoirT = ROOTBOUND_MEMORY_CHOIR.afterimage;
-          this.atk = "memory-choir:afterimage";
-        }
-        return;
-      }
-      if (this.memoryChoirT <= 0) {
-        this.cancelMemoryChoir();
-        this.completePhaseTwoAttack();
-      }
-    }
-
-    private updateBloomShift(dt: number): void {
-      this.bloomShiftT = Math.max(0, this.bloomShiftT - dt);
-      if (this.bloomShiftT <= 0) this.completePhaseTwoAttack();
-    }
-
-    private clearGroundVerbs(): void {
-      this.pendingAttack = null;
-      this.vineSweepStage = null;
-      this.vineSweepT = 0;
-      this.vineSweepHitSpent = false;
-      this.seedArcStage = null;
-      this.seedArcT = 0;
-      if (this.rootlineStage !== null) this.rootlineCleanupReason = "stage-transition";
-      this.rootlineStage = null;
-      this.rootlineT = 0;
-      this.canopyStepStage = null;
-      this.canopyStepT = 0;
-      this.canopyDestination = null;
-    }
-
-    private exitPhaseOne(projectiles: EnemyProjectile[]): void {
+    private exitPhaseOne(): void {
       if (this.phaseOneExited) return;
       this.phaseOneExited = true;
-      if (this.canopyDestination !== null && this.canopyStepStage === "travel") {
-        this.x = this.canopyDestination.x;
-        this.y = this.canopyDestination.y;
-        this.onGround = true;
-      }
-      this.clearGroundVerbs();
-      for (const projectile of projectiles)
-        if (projectile.owner === this && projectile.bossAttack === "seed-arc" && !projectile.dead) {
-          projectile.dead = true;
-          projectile.shatterReason = "phase-transition";
-        }
+      this.resetMoves(ROOTBOUND_PHASE_TWO_CADENCE.openingDelay);
+      this.openingGraft = true;
+      this.phaseTwoEntryHp = this.hp;
       this.atk = "unavailable";
       this.state = "recover";
       this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.recovery;
@@ -620,12 +699,21 @@ export function createRootboundType(
       });
     }
 
+    /** Phase II is over: its Grafts and cage go (the stage removes what is no longer requested). */
+    private endGarden(): void {
+      this.graftRequests = NO_GRAFT_REQUESTS;
+      this.plantedGraftTypes = Object.freeze([]);
+      this.fullGrove = false;
+      this.openingGraft = false;
+      this.rootCageRequest = null;
+      this.scratch.blocked.clear();
+    }
+
     private exitPhaseTwo(): void {
       this.finalPhaseTwoGraftTypes = Object.freeze([...this.activeGraftTypes]);
-      this.cancelMemoryChoir();
-      this.completeRootCage();
-      this.phaseTwoPendingAttack = null;
-      this.bloomShiftT = 0;
+      this.endGarden();
+      this.resetMoves(ROOTBOUND_PHASE_THREE_CADENCE.openingDelay);
+      this.movesSinceLastSpring = ROOTBOUND_MOVES_PER_LAST_SPRING;
       this.state = "recover";
       this.stateT = ROOTBOUND_PHASE_TWO_CADENCE.recovery;
       bossTransformation(this, {
@@ -647,17 +735,12 @@ export function createRootboundType(
       this.vx = 0;
       this.vy = 0;
       this.atk = "unavailable";
-      this.clearGroundVerbs();
-      this.vineSweepFacing = this.facing;
-      this.rootlineCleanupReason = "stage-transition";
+      this.resetMoves(0);
       this.cinematicRequest = null;
       this.cinematicPose = "";
       this.cinematicT = 0;
       this.applyGraftEffects(ROOTBOUND_NO_GRAFT_EFFECTS);
-      this.cancelMemoryChoir();
-      this.completeRootCage();
-      this.phaseTwoPendingAttack = null;
-      this.bloomShiftT = 0;
+      this.endGarden();
       if (this.regrowthState.phase === "channeling") {
         const interrupted = advanceRootboundRegrowth(
           this.regrowthState,
@@ -672,55 +755,36 @@ export function createRootboundType(
       this.lastSpringHitSpent = false;
     }
 
-    private selectIdleAttack(player: EnemyPlayerPort): void {
-      if (this.phase === 1) this.selectNextPhaseOneAttack();
-      else if (this.phase === 2) this.selectNextPhaseTwoAttack(player.x);
-      else this.selectNextPhaseThreeAttack();
+    /** Phase III between moves: after every few moves the keeper calls a Last Spring. */
+    private startDueLastSpring(): boolean {
+      if (this.phase !== 3 || this.moveState.run !== null) return false;
+      if (this.movesSinceLastSpring < ROOTBOUND_MOVES_PER_LAST_SPRING || !this.startLastSpring()) return false;
+      this.movesSinceLastSpring = 0;
+      return true;
     }
 
-    private openingDelay(): number {
-      if (this.phase === 2) return ROOTBOUND_PHASE_TWO_CADENCE.openingDelay / this.graftCadenceMultiplier;
-      return this.phase === 3 ? ROOTBOUND_PHASE_THREE_CADENCE.openingDelay : ROOTBOUND_PHASE_ONE_CADENCE.openingDelay;
-    }
-
-    private updateAttacks(
-      dt: number,
-      platforms: readonly EnemyPlatform[],
-      player: EnemyPlayerPort,
-      projectiles: EnemyProjectile[],
-    ): void {
-      const d = dependencies;
-      if (this.memoryChoirStage !== null) this.updateMemoryChoir(dt, player);
-      else if (this.phaseTwoPendingAttack === "bloom-shift") this.updateBloomShift(dt);
-      else if (this.lastSpringStage !== null && this.lastSpringStage !== "complete")
+    private updateAttacks(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort): void {
+      this.moveCarries = false;
+      if (this.lastSpringStage !== null && this.lastSpringStage !== "complete")
         this.updateLastSpring(dt, platforms, player);
-      else if (this.pendingAttack === "vine-sweep") updateRootboundVineSweep(this, dt, player, d);
-      else if (this.pendingAttack === "seed-arc") updateRootboundSeedArc(this, dt, player, projectiles, d);
-      else if (this.pendingAttack === "rootline") updateRootboundRootline(this, dt);
-      else if (this.pendingAttack === "canopy-step") updateRootboundCanopyStep(this, dt, platforms, player, d);
-      else if (this.stun <= 0) {
-        this.stateT = Math.max(0, this.stateT - dt);
-        if (this.stateT > 0) return;
-        if (this.state === "idle") this.selectIdleAttack(player);
-        else {
-          this.state = "idle";
-          this.stateT = this.openingDelay();
-        }
+      else if (this.playsMoves()) {
+        // A recovery (after the intro, a phase change, Regrowth or Last Spring) runs out before the next move.
+        if (this.state !== "idle") {
+          this.stateT = Math.max(0, this.stateT - dt);
+          if (this.stateT <= 0) this.state = "idle";
+        } else if (this.stun <= 0 && !this.attackCommitProtected() && !this.startDueLastSpring())
+          this.updateMoves(platforms, player);
       }
     }
 
-    update(
-      dt: number,
-      platforms: readonly EnemyPlatform[],
-      player: EnemyPlayerPort,
-      projectiles: EnemyProjectile[],
-    ): void {
+    update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort): void {
+      this.updates += 1;
       this.tickTimers(dt);
       const fraction = this.maxHp > 0 ? this.hp / this.maxHp : 0;
       const nextPhase = fraction > this.phaseMarks[0] ? 1 : fraction > this.phaseMarks[1] ? 2 : 3;
       // Hits cross one threshold at a time (limitIncomingDamage); a direct health set may cross both.
       while (nextPhase > this.phaseMarker) {
-        if (this.phaseMarker === 1) this.exitPhaseOne(projectiles);
+        if (this.phaseMarker === 1) this.exitPhaseOne();
         else this.exitPhaseTwo();
         this.phaseMarker += 1;
         this.phaseTag = this.phaseMarker === 2 ? "THE GARDEN REMEMBERS" : "NOTHING HERE DIES";
@@ -743,8 +807,11 @@ export function createRootboundType(
         this.state = "recover";
         this.stateT = 0.35;
         this.contactGraceT = ROOTBOUND_ENCOUNTER.openingContactGrace;
-      } else this.updateAttacks(dt, platforms, player, projectiles);
-      if (this.canopyStepStage !== "travel") this.integrate(dt, platforms);
+      } else {
+        this.updateHealing(dt);
+        this.updateAttacks(dt, platforms, player);
+      }
+      if (!this.moveCarries) this.integrate(dt, platforms);
     }
   }
   return Rootbound;

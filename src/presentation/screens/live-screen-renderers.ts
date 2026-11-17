@@ -1,13 +1,10 @@
 import type {
   AchievementsScreenView,
-  AcademyScreenView,
-  FoundryScreenView,
-  GhostLabScreenView,
-  BotEvidenceScreenView,
   GhostPublicationScreenView,
   GhostSupportScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
+  MusicScreenView,
   ScreenRendererTable,
   PlaygroundScreenView,
   ProfileScreenView,
@@ -152,22 +149,6 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
       if (renderers) renderers.pglab(view);
       else loadingFrame();
     },
-    academy(view: AcademyScreenView) {
-      if (renderers) renderers.academy(view);
-      else loadingFrame();
-    },
-    foundry(view: FoundryScreenView) {
-      if (renderers) renderers.foundry(view);
-      else loadingFrame();
-    },
-    ghostlab(view: GhostLabScreenView) {
-      if (renderers) renderers.ghostlab(view);
-      else loadingFrame();
-    },
-    botevidence(view: BotEvidenceScreenView) {
-      if (renderers) renderers.botevidence(view);
-      else loadingFrame();
-    },
     ghostpublication(view: GhostPublicationScreenView) {
       if (renderers) renderers.ghostpublication(view);
       else loadingFrame();
@@ -178,6 +159,10 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
     },
     settings(view: SettingsScreenView) {
       if (renderers) renderers.settings(view);
+      else loadingFrame();
+    },
+    music(view: MusicScreenView) {
+      if (renderers) renderers.music(view);
       else loadingFrame();
     },
     rename(view: RenameScreenView) {

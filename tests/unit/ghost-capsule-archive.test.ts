@@ -8,7 +8,7 @@ import {
   type TearGhostManifest,
 } from "../../src/ghost/capsule-vault";
 import { encodeGhostChunkPayload } from "../../src/ghost/capsule-codec";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {

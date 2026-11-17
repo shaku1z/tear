@@ -9,7 +9,7 @@ import {
 } from "../../src/gameplay/runtime/canonical-state";
 import type { TutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 
 describe("deferred canonical state", () => {
   it("projects at most once, only when read, and shares the result", () => {

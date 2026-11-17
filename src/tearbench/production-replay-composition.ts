@@ -10,7 +10,7 @@ import { A11Y, GFX } from "../config/game-config";
 import { launchCampaignChapter } from "../app/campaign/campaign-sequences";
 import { createCampaignChapterController } from "../app/campaign/campaign-controller-factory";
 import { createUiState } from "../presentation/ui-tokens";
-import { createLiveParticlePresentationState } from "../app/world/particle-presentation-state";
+import { createLiveParticlePresentationState } from "./particle-presentation-state";
 import { validateParticlePresentationBinding } from "./particle-presentation-checkpoint";
 import { prepareParticlePresentationRestore } from "./particle-presentation-checkpoint";
 import { createTearWorldConfiguration } from "../gameplay/runtime/tear-world-configuration";
@@ -46,7 +46,7 @@ import {
 import type { AuthoritativeInputSnapshot, AuthoritativeInputState } from "../gameplay/runtime/authoritative-input";
 import type { TearGameplayEventPort } from "../gameplay/runtime/gameplay-events";
 import { CAMPAIGN_STAGE_IDS, stageAt } from "../gameplay/stages";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearBuildIdentityV1, TearSnapshotV1 } from "./contracts";
 import type { TearCodecWorld } from "./state-codecs";
 import { applyTearCodecConfiguration, hydrateTearCodecWorld } from "./detached-world-hydrator";

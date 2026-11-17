@@ -32,7 +32,6 @@ import type { LiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveCanonicalWatchComposition } from "../world/canonical-watch-composition";
 import type { LiveWorldComposition } from "../world/world-composition";
 import type { LiveWorldSessionState } from "../world/world-session-state";
-import type { LivePlayerWatchSurface } from "./engineering-surfaces-contract";
 import { createLiveStateForgeCinematicAdvance } from "./state-forge-cinematic-advance";
 import type { LiveStateForge } from "./live-state-forge-assembly";
 import { replayLiveStateForgeProgression } from "./state-forge-progression";
@@ -63,7 +62,6 @@ export interface LiveTestBuildHookSources {
   readonly journals: LiveTestBuildJournals;
   readonly canonicalState: LiveCanonicalStateCapture;
   readonly frameDriver: RuntimeFrameDriver;
-  readonly playerWatch: LivePlayerWatchSurface;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
@@ -120,7 +118,6 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
     recorder: ghostV3,
     ghostPractice: ghostPracticeSession,
     frameDriver,
-    playerWatch,
     journals,
     canonicalState,
     run: liveRun,
@@ -226,7 +223,6 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       },
       startFrameLoop: () => {
         frameDriver.start(({ deltaSeconds, intervalSeconds }) => {
-          if (screen() === "playing") playerWatch.advance();
           combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds);
         });
       },
@@ -237,6 +233,10 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       routeAction: (action) => routeLiveTearBenchAction(actionRouting, action),
       skipCinematic: () => {
         CINEMA.requestSkip();
+      },
+      controlsDrawn: () => {
+        presentationHost.render();
+        return interfaceInteraction.buttons().length > 0;
       },
       activateControl: (action) => {
         presentationHost.render();
@@ -322,6 +322,30 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
 
 /** Test builds only, with `?bossdebug=1`: loads the boss debug harness. */
 export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSources): void {
+  if (__TEAR_TEST_BUILD__) {
+    // The click targets of the latest drawn frame, as a pointer click is matched against them, each
+    // with the page point of its centre (the inverse of the pointer's logical mapping).
+    const { canvas } = sources.browser;
+    const { CONFIG, OVERSCAN } = sources.dependencies;
+    Object.defineProperty(sources.dependencies.browserWindow, "__TEAR_UI_TARGETS__", {
+      configurable: true,
+      value: () => {
+        const rect = canvas.getBoundingClientRect();
+        const spanWidth = CONFIG.view.w + OVERSCAN.x * 2;
+        const spanHeight = CONFIG.view.h + OVERSCAN.y * 2;
+        return sources.interaction.buttons().map((button) => ({
+          label: button.label,
+          x: button.x,
+          y: button.y,
+          w: button.w,
+          h: button.h,
+          enabled: button.enabled !== false,
+          clientX: rect.left + ((button.x + button.w / 2 + OVERSCAN.x) / spanWidth) * rect.width,
+          clientY: rect.top + ((button.y + button.h / 2 + OVERSCAN.y) / spanHeight) * rect.height,
+        }));
+      },
+    });
+  }
   if (__TEAR_TEST_BUILD__ && sources.browser.pantheonDebug) {
     void import("./debug-composition").then(({ installLiveGameDebug }) => {
       installBossDebug(sources, installLiveGameDebug);

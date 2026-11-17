@@ -249,7 +249,110 @@ async function waitForPointerLock(page) {
   }
 }
 
+const scriptLoads = new WeakMap();
+
+/**
+ * Counts the page's script requests in flight. Screens and runtimes load their code as lazy chunks,
+ * which are script requests; music, images and other media are not. Call it right after creating
+ * the page, before the first navigation.
+ */
+function trackScriptLoads(page) {
+  if (scriptLoads.has(page)) return;
+  const pending = new Set();
+  const waiters = new Set();
+  const settle = (request) => {
+    if (!pending.delete(request) || pending.size > 0) return;
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+  };
+  page.on("request", (request) => {
+    if (request.resourceType() === "script") pending.add(request);
+  });
+  page.on("requestfinished", settle);
+  page.on("requestfailed", settle);
+  scriptLoads.set(page, { pending, waiters });
+}
+
+/**
+ * Waits until the code the current screen asked for has loaded, then for two frames so it has
+ * drawn: a screen's state can be active before its lazy renderer chunk registers the canvas
+ * buttons. Never wait for the whole network to go quiet instead (`networkidle`): the game keeps
+ * loading music and assets during play, so the page may never be idle; eslint rejects it.
+ */
+async function waitForScriptLoads(page) {
+  const tracker = scriptLoads.get(page);
+  if (tracker === undefined) throw new Error("waitForScriptLoads needs trackScriptLoads(page) before navigation");
+  const frames = () =>
+    page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  // The screen's first frames are what ask for its chunk.
+  await frames();
+  if (tracker.pending.size > 0) {
+    let resolveIdle;
+    const idle = new Promise((resolve) => {
+      resolveIdle = resolve;
+      tracker.waiters.add(resolve);
+    });
+    const outcome = await within(idle, STATE_WAIT_MS, "still loading");
+    tracker.waiters.delete(resolveIdle);
+    if (outcome === "still loading") {
+      const urls = [...tracker.pending].map((request) => request.url()).join(", ");
+      throw new Error(`script loads still pending after ${String(STATE_WAIT_MS)} ms: ${urls}`);
+    }
+  }
+  await frames();
+}
+
+/** A control's label as a test names it: letters and digits only, case-insensitive ("‹  BACK" is "back"). */
+const targetName = (label) =>
+  String(label)
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .toUpperCase();
+
+/**
+ * Clicks the control labelled `name` once a drawn frame of `screen` has registered it, at the
+ * centre the game reports. Use it for menu clicks right after a screen change, instead of a
+ * coordinate click: a screen's state changes before its first frame is drawn, and a screen with a
+ * lazy renderer draws nothing (so has no targets) until its chunk has loaded. A click before then
+ * reaches a canvas with nothing under the pointer and is ignored, as it would be for a player who
+ * clicked a button not yet on screen. Needs a test build (`window.__TEAR_UI_TARGETS__`).
+ */
+async function clickTarget(page, screen, name) {
+  let point;
+  try {
+    const handle = await page.waitForFunction(
+      ({ screen: expected, wanted }) => {
+        if (window.__TEAR_CATALOG_DEBUG__?.app.snapshot().screen !== expected) return false;
+        const normal = (label) =>
+          String(label)
+            .replace(/[^\p{L}\p{N}]+/gu, " ")
+            .trim()
+            .toUpperCase();
+        const target = window.__TEAR_UI_TARGETS__?.().find((entry) => entry.enabled && normal(entry.label) === wanted);
+        return target === undefined ? false : { x: target.clientX, y: target.clientY };
+      },
+      { screen, wanted: targetName(name) },
+      { timeout: STATE_WAIT_MS },
+    );
+    point = await handle.jsonValue();
+  } catch (error) {
+    const state = await within(
+      page.evaluate(() => ({
+        screen: window.__TEAR_CATALOG_DEBUG__?.app.snapshot().screen,
+        targets: window.__TEAR_UI_TARGETS__?.().map((entry) => entry.label) ?? "not exposed",
+      })),
+      5000,
+      "the page did not answer",
+    ).catch((reason) => String(reason));
+    throw new Error(`no enabled "${name}" target on screen ${screen}: ${JSON.stringify(state)}`, { cause: error });
+  }
+  await page.mouse.click(point.x, point.y);
+}
+
 module.exports = {
+  clickTarget,
+  trackScriptLoads,
+  waitForScriptLoads,
   waitForPointerLock,
   STATE_WAIT_MS,
   SLOW_STATE_WAIT_MS,

@@ -184,11 +184,6 @@ describe("Verdant environment presentation", () => {
         geometry: Object.freeze({ x, y: 400, radius: 24 }),
         integrityRatio: 1,
         counterplayTags: Object.freeze(["cut"]),
-        connectionGeometry: Object.freeze({
-          x: 800,
-          y: 500,
-          points: Object.freeze([Object.freeze({ x: 800, y: 500 }), Object.freeze({ x, y: 400 })]),
-        }),
       });
     renderVerdantEnvironmentPresentation(
       value.context,
@@ -209,53 +204,6 @@ describe("Verdant environment presentation", () => {
     expect(value.calls).toContain("fillStyle:#91bf62");
     expect(value.calls).toContain("strokeRect");
     expect(value.calls).toContain("arc");
-  });
-
-  it("leaves the Rootline warning to the boss tell and draws only its active teeth", () => {
-    const warning = recorder();
-    const snapshot: EnvironmentPresentationSnapshot = Object.freeze({
-      stageId: "verdant-sanctum",
-      fields: Object.freeze([
-        Object.freeze({
-          id: "rootline",
-          kind: "rootline",
-          state: "warning",
-          active: false,
-          bounds: Object.freeze({ minX: 820, maxX: 1250, minY: 696, maxY: 800 }),
-        }),
-      ]),
-      combatObjects: Object.freeze([]),
-      routes: Object.freeze([]),
-    });
-    renderVerdantEnvironmentPresentation(warning.context, snapshot, {
-      highContrast: false,
-      reducedMotion: true,
-      lowGraphics: true,
-      timeSeconds: 0,
-      flashScale: 0,
-    });
-    // The warning area is drawn once, from the boss's tell data (tests/unit/boss-tell-rules.test.ts).
-    expect(warning.calls).not.toContain("strokeRect");
-    expect(warning.calls).not.toContain("fill");
-
-    const active = recorder();
-    renderVerdantEnvironmentPresentation(
-      active.context,
-      {
-        ...snapshot,
-        fields: Object.freeze([
-          Object.freeze({
-            id: "rootline",
-            kind: "rootline",
-            state: "active",
-            active: true,
-            bounds: Object.freeze({ minX: 820, maxX: 1250, minY: 696, maxY: 800 }),
-          }),
-        ]),
-      },
-      { highContrast: true, reducedMotion: true, lowGraphics: true, timeSeconds: 0, flashScale: 0 },
-    );
-    expect(active.calls).toEqual(expect.arrayContaining(["strokeRect", "fill", "fillStyle:#ffffff"]));
   });
 
   it("keeps Root Cage warning and sever geometry visible in reduced low-graphics presentation", () => {

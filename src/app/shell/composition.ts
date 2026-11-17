@@ -38,13 +38,16 @@ import { createBrowserGamepad } from "../../input/browser-gamepad";
 import { createBrowserInput } from "../../input/browser-input";
 import { createProfileStore } from "../../persistence/profile-store";
 import type { CloudFactory } from "../../platform/cloud-factory";
+import type { TearBuildTarget } from "../../platform/contracts";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
-import type { VerdantSceneNativeSelection } from "../engineering/verdant-calibration-composition";
+import { createSceneLibrary } from "../../presentation/scenes/scene-library";
+import { createSceneCanvas, loadSceneBitmap, releaseSceneBitmap } from "../../presentation/scenes/scene-bitmap";
+import { SCENE_PACKAGES } from "../../presentation/scenes/scene-registry";
 import { createCinematics } from "../../presentation/cinematics";
 import { cosmeticRandom } from "../../presentation/cosmetic-random";
 import { createCosmeticEmissionRandom } from "../../domain/cosmetic-emission-random";
@@ -71,10 +74,9 @@ import { startLiveGame } from "./game-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { SurfaceAvailability } from "../../domain/surface-availability";
 import type { EngineeringQuery } from "./engineering-query";
-import type { LiveEngineeringSurfaceFactory } from "../engineering/engineering-surfaces-contract";
 
 export interface TearCompositionOptions {
-  readonly target: "standalone" | "crazygames";
+  readonly target: TearBuildTarget;
   readonly sdk?: CrazyGamesSdkShape;
   readonly createCrazyGamesServices?: typeof createCrazyGamesPlatformServices;
   readonly createCloud: CloudFactory;
@@ -97,12 +99,10 @@ interface CompositionWindow extends Window {
  * The real application composition root. Target adapters are passed from their
  * entrypoint so standalone builds do not import the CrazyGames implementation.
  *
- * Engineering-only code is loaded here, behind the build constants, so a
- * release build awaits nothing and its bundle contains none of it: the
- * research/diagnostic surface controllers (`__TEAR_ENGINEERING_SURFACES__`)
- * and the Verdant calibration scene (`__TEAR_TEST_BUILD__`).
+ * Test-build-only code is reached only behind `__TEAR_TEST_BUILD__`, so a
+ * release build's bundle contains none of it.
  */
-export async function composeTearApplication(options: TearCompositionOptions): Promise<void> {
+export function composeTearApplication(options: TearCompositionOptions): void {
   const {
     target,
     sdk,
@@ -136,9 +136,6 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   // Optional capture tooling is a development adapter, never a production
   // gameplay dependency or shared writable global.
   const clipper = import.meta.env.DEV ? compositionWindow.Clipper : undefined;
-  const engineeringSurfaces: LiveEngineeringSurfaceFactory | undefined = __TEAR_ENGINEERING_SURFACES__
-    ? (await import("../engineering/engineering-surfaces")).LIVE_ENGINEERING_SURFACES
-    : undefined;
   // These data-only services are created before any world constructor captures
   // them. The bootstrap deliberately leaves all presentation adapters outside.
   const { configuration: worldConfiguration, clock: CLOCK, random } = createTearWorldBootstrap(CONFIG);
@@ -152,27 +149,19 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     reducedMotion: () => A11Y.reducedMotion,
     random: cosmeticEmissionRandom.next,
   });
-  // Test-build opt-in until final image-native acceptance. IN1 stays available
-  // as a same-build control; only the selected package is fetched/decoded.
-  // All consumers share this app owner; no world owns its lifetime.
-  const requestedScene = tearTestMode ? engineeringQuery.get("sceneNative") : null;
-  const sceneNative: VerdantSceneNativeSelection | undefined =
-    requestedScene === "1" || requestedScene === "control" || requestedScene === "layers" || requestedScene === "living"
-      ? requestedScene
-      : undefined;
-  const verdant = __TEAR_TEST_BUILD__
-    ? sceneNative === undefined
-      ? undefined
-      : (await import("../engineering/verdant-calibration-composition")).createVerdantCalibrationComposition(
-          sceneNative,
-          window,
-        )
-    : undefined;
-  const verdantCalibration = verdant?.calibration,
-    verdantMaterial = verdant?.material;
+  const Scenes = createSceneLibrary({
+    packages: SCENE_PACKAGES,
+    loadImage: loadSceneBitmap,
+    createCanvas: createSceneCanvas,
+    releaseImage: releaseSceneBitmap,
+    now: () => performance.now(),
+    lowGraphics: () => GFX.low,
+    reducedMotion: () => A11Y.reducedMotion,
+    onError: (stageId, error) => {
+      console.warn(`Scene package for ${stageId} unavailable; keeping procedural art.`, error);
+    },
+  });
   const Backdrop = createBackdrop({
-    ...(verdantCalibration ? { verdantCalibration } : {}),
-    ...(verdantMaterial ? { verdantMaterial } : {}),
     clock: CLOCK,
     config: worldConfig,
     graphics: GFX,
@@ -344,6 +333,12 @@ export async function composeTearApplication(options: TearCompositionOptions): P
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new AppStateController(surfaces);
+  // A waiting service-worker update is applied only on the plain main menu, after saves settle.
+  pwaUpdate.setIdleHost({
+    // The phone rotate gate is drawn over the menu in portrait on touch devices: not idle.
+    isIdle: () => APP.screen === "menu" && compositionWindow.innerWidth >= compositionWindow.innerHeight,
+    settle: () => PROFILE.flushAcknowledged(),
+  });
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
   const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
@@ -370,6 +365,7 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     Attract,
     BOSSFX,
     Backdrop,
+    Scenes,
     Blade,
     biomeProgressPersistence,
     Bomber,
@@ -377,7 +373,6 @@ export async function composeTearApplication(options: TearCompositionOptions): P
     achievementToastPersistence,
     surfaces,
     engineeringQuery,
-    ...(engineeringSurfaces === undefined ? {} : { engineeringSurfaces }),
     browserDocument: document,
     browserIndexedDb,
     browserNavigator: navigator,
@@ -496,16 +491,6 @@ export async function composeTearApplication(options: TearCompositionOptions): P
       }),
     });
     compositionWindow.__TEAR_CATALOG_DEBUG__ = Object.freeze({
-      verdantCalibration: Object.freeze({
-        status: () => verdantCalibration?.status() ?? "disabled",
-        report: () => verdantCalibration?.report() ?? null,
-        setView: (view: "composite" | "support-only" | "tail-only") => {
-          verdantCalibration?.setDiagnosticView(view);
-        },
-        setMotion: (view: "live" | "neutral" | "minimum" | "maximum") => {
-          verdantCalibration?.setDiagnosticMotion(view);
-        },
-      }),
       weapons: WEAPONS.map((weapon) => ({
         id: weapon.id,
         throwIdentity: weapon.throwIdentity,

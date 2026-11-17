@@ -1,4 +1,3 @@
-import { ROOTBOUND_ROOTLINE, type RootboundRootlineStage } from "../../entities/enemy-types/rootbound";
 import type { EnvironmentRuntime } from "../environment-runtime";
 import { createVerdantEnvironmentFeature, type RootboundEnvironmentActor } from "../verdant-environment-feature";
 import type { BiomeActorEnemy, BiomeActorPlayer } from "./actor-entities";
@@ -38,16 +37,15 @@ export function bindLiveRootboundActors(
       .filter((enemy) => enemy.kind === "rootbound")
       .map((enemy): RootboundEnvironmentActor => {
         const actor = enemy as BiomeActorEnemy & {
-          rootlineStage?: RootboundRootlineStage | null;
-          rootlineCleanupReason?: "natural-expiry" | "stage-transition" | null;
-          rootlineGeometry?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
           graftAnchorPlacements?: () => NonNullable<RootboundEnvironmentActor["state"]["graftPlacements"]>;
           plantedGraftTypes?: readonly string[];
           plantedBloomPattern?: RootboundEnvironmentActor["state"]["plantedBloomPattern"];
           acknowledgeBloomPattern?: NonNullable<RootboundEnvironmentActor["acknowledgeBloomPattern"]>;
           acknowledgeGraftPlanted?: NonNullable<RootboundEnvironmentActor["acknowledgeGraftPlanted"]>;
           applyGraftEffects?: NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>;
-          recoverGraftHealth?: NonNullable<RootboundEnvironmentActor["recoverGraftHealth"]>;
+          graftSevered?: NonNullable<RootboundEnvironmentActor["graftSevered"]>;
+          adoptGraft?: NonNullable<RootboundEnvironmentActor["adoptGraft"]>;
+          cageSevered?: NonNullable<RootboundEnvironmentActor["cageSevered"]>;
           bossBloomPattern?: () => NonNullable<RootboundEnvironmentActor["state"]["bloomPattern"]>;
           rootCagePlacement?: () => NonNullable<RootboundEnvironmentActor["state"]["rootCagePlacement"]> | null;
           completeRootCage?: NonNullable<RootboundEnvironmentActor["completeRootCage"]>;
@@ -65,7 +63,14 @@ export function bindLiveRootboundActors(
           applyGraftEffects: (effects: Parameters<NonNullable<RootboundEnvironmentActor["applyGraftEffects"]>>[0]) => {
             actor.applyGraftEffects?.(effects);
           },
-          recoverGraftHealth: (fraction: number) => actor.recoverGraftHealth?.(fraction) ?? 0,
+          graftSevered: (graftType: string) => {
+            actor.graftSevered?.(graftType);
+          },
+          cageSevered: () => {
+            actor.cageSevered?.();
+          },
+          adoptGraft: (...graft: Parameters<NonNullable<RootboundEnvironmentActor["adoptGraft"]>>) =>
+            actor.adoptGraft?.(...graft) ?? false,
           completeRootCage: () => {
             actor.completeRootCage?.();
           },
@@ -86,10 +91,6 @@ export function bindLiveRootboundActors(
               bossChannelBroken || actor.regrowthChannelBroken?.() === true,
             ) ?? actor.regrowthState,
           state: Object.freeze({
-            stage: actor.rootlineStage ?? null,
-            geometry: actor.rootlineGeometry?.() ?? Object.freeze({ x: enemy.x, y: enemy.y, w: 0, h: 0 }),
-            damage: ROOTBOUND_ROOTLINE.damage,
-            cleanupReason: actor.rootlineCleanupReason ?? null,
             graftPlacements: actor.graftAnchorPlacements?.() ?? Object.freeze([]),
             plantedGraftTypes: actor.plantedGraftTypes ?? Object.freeze([]),
             ownerPosition: Object.freeze({ x: enemy.x, y: enemy.y }),

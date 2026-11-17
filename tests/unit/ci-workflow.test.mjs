@@ -1,6 +1,6 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
@@ -81,7 +81,6 @@ describe("Validate workflow", () => {
     for (const [file, variable] of [
       ["scripts/check-workspace.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/release-preflight.mjs", "TEAR_RELEASE_SHA"],
-      ["scripts/verify-plan-certificate.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/verify-release-artifact.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/build-target.mjs", "TEAR_BUILD_GIT_SHA"],
     ]) {
@@ -97,24 +96,24 @@ describe("Validate workflow", () => {
     expect(groups).toEqual(config.gate);
     expect(config.gate.slice(0, 1)).toEqual(["static"]);
     // The cheap, likely-to-fail checks come first, so a failure shows within minutes.
-    expect(config.groups.static.slice(0, 4).map((check) => check.id)).toEqual([
-      "format",
-      "docs",
-      "terminology",
-      "repository-guards",
-    ]);
+    expect(config.groups.static.slice(0, 3).map((check) => check.id)).toEqual(["format", "docs", "terminology"]);
     expect(workflow).not.toMatch(/check:functional|tearbench (?:ci|tasks)/u);
   });
 
-  it("lists every check once, with a command that names a file that exists", () => {
+  it("lists every check once, and every file a command names exists", () => {
     const config = loadChecks();
+    // A path-shaped argument (a slash or a file extension) must exist, because `node --test` and
+    // vitest skip a missing file without failing. Files under artifacts/ are outputs a check writes.
+    const namesFile = (argument) =>
+      !argument.startsWith("-") && !argument.startsWith("artifacts/") && /\/|\.[a-z]+$/u.test(argument);
     for (const group of Object.keys(config.groups)) {
       const ids = selectChecks(config, group).map((check) => check.id);
       expect(new Set(ids).size, `duplicate id in ${group}`).toBe(ids.length);
       for (const check of selectChecks(config, group)) {
-        const [command, file] = check.args;
+        const [command, ...args] = check.args;
         expect(command, check.id).toBe("node");
-        if (!file.startsWith("--")) expect(existsSync(resolve(root, file)), `${group}.${check.id}: ${file}`).toBe(true);
+        for (const file of args.filter(namesFile))
+          expect(existsSync(resolve(root, file)), `${group}.${check.id}: ${file}`).toBe(true);
       }
     }
   });
@@ -152,9 +151,14 @@ describe("Validate workflow", () => {
     );
     const preview = read(".github/workflows/deploy-preview.yml");
     expect(preview).toContain("const devName = `tear-preview-dev-${artifactSha}`;");
-    expect(preview).toContain("node scripts/verify-release-artifact.mjs standalone candidate-dev test-standalone");
-    expect(preview).toContain("cp -r candidate-dev preview-site/dev");
-    expect(preview).toContain("--assets preview-site \\");
+    expect(preview).toContain(
+      'node scripts/verify-release-artifact.mjs standalone "$RUNNER_TEMP/candidate-dev" test-standalone',
+    );
+    // Its files are not ignored, so inside the checkout they would make it dirty and fail verification.
+    expect(preview).toContain("path: ${{ runner.temp }}/candidate-dev");
+    expect(preview).not.toMatch(/path: candidate-dev|cp -r candidate-dev/u);
+    expect(preview).toContain('cp -r "$RUNNER_TEMP/candidate-dev" "$site/dev"');
+    expect(preview).toContain('--assets "$RUNNER_TEMP/preview-site" \\');
     // The path the deploy uses is the base the dev build is built for.
     expect(read("vite.config.ts")).toContain('export const PREVIEW_DEV_BASE = "/dev/";');
     for (const file of ["deploy-production.yml", "deploy-wiki.yml"]) {
@@ -194,5 +198,42 @@ describe("Validate workflow", () => {
     const checkouts = [...workflow.matchAll(/uses: actions\/checkout@v4\n {8}with:\n {10}fetch-depth: (\d+)/gu)];
     expect(checkouts.map((match) => match[1])).toEqual(["0"]);
     expect(workflow.match(/actions\/checkout@/gu)).toHaveLength(1);
+  });
+});
+
+describe("Nightly checks workflow", () => {
+  const nightly = read(".github/workflows/nightly.yml");
+
+  it("runs the nightly group on main once a day and by hand", () => {
+    expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
+    expect(nightly).toMatch(/uses: actions\/checkout@v4\n {8}with:\n {10}ref: main/u);
+    expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
+    expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
+  });
+
+  it("is the only workflow that keeps going past a failing check", () => {
+    expect(workflow).toMatch(/run-checks\.mjs browser\n/u);
+    expect(workflow).not.toMatch(/--keep-going/u);
+  });
+
+  it("records each check's result and keeps the file even when a check fails", () => {
+    expect(nightly.indexOf("TEAR_CHECK_RESULTS=")).toBeLessThan(nightly.indexOf("run-checks.mjs nightly"));
+    expect(nightly).toMatch(/- uses: actions\/upload-artifact@v4\n {8}if: always\(\)/u);
+  });
+
+  it("only reads the repository", () => {
+    expect(nightly).toMatch(/permissions:\n {2}contents: read\n\n/u);
+  });
+});
+
+describe("Check list override", () => {
+  // TEAR_CHECKS_CONFIG swaps the list run-checks.mjs runs; only the runner's own tests may set it.
+  const workflows = readdirSync(resolve(root, ".github/workflows")).filter((name) => /\.ya?ml$/u.test(name));
+
+  it("is set by no workflow", () => {
+    expect(workflows).toEqual(expect.arrayContaining(["ci.yml", "nightly.yml"]));
+    for (const name of workflows) {
+      expect(read(`.github/workflows/${name}`), name).not.toMatch(/TEAR_CHECKS_CONFIG/u);
+    }
   });
 });

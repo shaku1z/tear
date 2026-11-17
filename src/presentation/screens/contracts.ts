@@ -197,8 +197,6 @@ export interface MenuScreenView {
   readonly playSub?: string;
   readonly pendingFinale?: boolean;
   readonly nowPlaying?: Readonly<{ label: string; detail: string }>;
-  /** Engineering builds only: TRAINING ARCHIVE, TRAINING OPERATIONS and REPLAY HUB entries. */
-  readonly engineeringRoutes?: boolean;
 }
 export interface SetupScreenView {
   readonly practiceAvailable?: boolean;
@@ -445,6 +443,76 @@ export interface SettingsScreenView {
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
+/**
+ * How a song or collection is pictured (there is no cover art): one hue per band (a single stage
+ * is one band; a mixed collection splits into up to four) and one glyph. Null draws the default.
+ */
+export type MusicCoverView = Readonly<{ hues: readonly string[]; glyph: string; locked?: boolean }> | null;
+/** One song wherever the MUSIC screen shows it: a track row, a shelf row or the transport. */
+export interface MusicSongView {
+  readonly id: string;
+  readonly number: number;
+  readonly title: string;
+  /** For example "The Grounds", "Boss · Echo" or "Menu"; empty when no route plays it. */
+  readonly where: string;
+  readonly art: MusicCoverView;
+  /** Length of one loop of the song, in seconds; null before the music index has loaded. */
+  readonly seconds: number | null;
+  readonly previewing: boolean;
+  readonly playing: boolean;
+}
+/** A set of songs with a page of its own: the whole soundtrack, one stage, the boss themes. */
+export interface MusicCollectionView {
+  readonly id: string;
+  readonly title: string;
+  /** Small line above the title: "Stage", "Soundtrack", "Collection". */
+  readonly kicker: string;
+  readonly cover: MusicCoverView;
+  readonly songs: readonly MusicSongView[];
+  /** Sum of the songs' loop lengths. */
+  readonly seconds: number;
+}
+/** One Home shelf. Three layouts only; a new shelf is data. */
+export type MusicShelfView =
+  | Readonly<{ layout: "feature"; heading: string; song: MusicSongView | null; queue: readonly string[] }>
+  | Readonly<{ layout: "tiles"; heading: string; collections: readonly MusicCollectionView[] }>
+  | Readonly<{ layout: "rows"; heading: string; open: string; songs: readonly MusicSongView[] }>;
+/** Home (shelves), a collection's page (Songs is the whole soundtrack's) or the playback settings. */
+export type MusicPage = "home" | "collection" | "settings";
+export interface MusicScreenView {
+  readonly id: "music";
+  readonly page: MusicPage;
+  readonly title: string;
+  /** Rail (desktop) or chip strip (phone): Home · Songs · Settings, the current one selected. */
+  readonly rail: readonly ChoiceView[];
+  /** The stage collections, in campaign order, for the rail's Stages list. */
+  readonly stages: readonly MusicCollectionView[];
+  readonly shelves: readonly MusicShelfView[];
+  /** The whole soundtrack, for Home's last row; null while loading. */
+  readonly soundtrack: MusicCollectionView | null;
+  /** The open collection on a collection page. */
+  readonly collection: MusicCollectionView | null;
+  /** Where BACK (and controller B) goes: up one level, then out to the menu. */
+  readonly back: ScreenAction;
+  /** What is sounding now, for the transport; null before anything has played. */
+  readonly nowPlaying: Readonly<{
+    title: string;
+    where: string;
+    art: MusicCoverView;
+    previewing: boolean;
+    /** Position in the loop, 0..1; null when unknown. */
+    progress: number | null;
+  }> | null;
+  /** ◀◀/▶▶ step through the queue the preview started from. */
+  readonly canStep: boolean;
+  /** The first song of the soundtrack, which ▶ plays when nothing is playing. */
+  readonly start: Readonly<{ id: string; queue: readonly string[] }> | null;
+  /** Every catalogued song in catalog order; empty while the music index is still loading. */
+  readonly songs: readonly MusicSongView[];
+  readonly loading: boolean;
+  /** Menu music and soundtrack behavior, activated through `settings.activate`. */
+  readonly playback: readonly SettingRowView[];
+}
 export interface RenameScreenView {
   readonly id: "rename";
   readonly value: string;
@@ -486,8 +554,6 @@ export interface PausedScreenView {
   readonly runSummary?: string;
   readonly abilities: readonly CardView[];
   readonly progress: readonly ProgressView[];
-  /** Present only for a locally running Player Watch; never a Foundry operation. */
-  readonly playerWatch?: Readonly<{ readonly status: "running" | "paused"; readonly decisions: number }>;
 }
 export interface ConfirmQuitScreenView {
   readonly id: "confirmquit";
@@ -539,120 +605,6 @@ export interface PlaygroundScreenView {
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
-export interface AcademyScreenView {
-  readonly id: "academy";
-  readonly status: "loading" | "ready" | "unavailable";
-  readonly subtitle: string;
-  readonly rows: readonly Readonly<{ readonly label: string; readonly value: string }>[];
-  readonly records: readonly Readonly<{
-    readonly id: string;
-    readonly state: string;
-    readonly detail: string;
-    readonly candidateHash?: string;
-    readonly canWithdrawModelTraining?: boolean;
-  }>[];
-  readonly manifests: readonly Readonly<{ readonly id: string; readonly detail: string }>[];
-  readonly lessons?: readonly Readonly<{ readonly id: string; readonly state: string; readonly detail: string }>[];
-  /** C33 exposes immutable plan progress and only session-gated decisions authorized by that plan; it cannot activate or promote a policy. */
-  readonly daggerPrograms?: readonly Readonly<{
-    readonly id: string;
-    readonly state: string;
-    readonly detail: string;
-    readonly programId?: string;
-    readonly canAdvance?: boolean;
-    readonly correctionHash?: string;
-    readonly canReview?: boolean;
-  }>[];
-  /** C35 local, signed-in consent decision. It is never inferred from a recording or ordinary Academy custody. */
-  readonly humanCalibrationConsent?: Readonly<{
-    readonly state: "loading" | "unavailable" | "not-enrolled" | "enabled" | "revoked";
-    readonly detail: string;
-    readonly canOptIn: boolean;
-    readonly canRevoke: boolean;
-  }>;
-}
-
-/** Read-only C36 local recovery projection. It deliberately contains no custody or model data. */
-export interface FoundryScreenView {
-  readonly id: "foundry";
-  /** Exact local action token; eligibility alone does not activate a policy. */
-  readonly promotion?: Readonly<{ scheduleHash: string; intentHash: string }>;
-  readonly restoration?: Readonly<{ scheduleHash: string; intentHash: string }>;
-  readonly restored?: Readonly<{ artifactId: string; receiptHash: string }>;
-  readonly status: "loading" | "unavailable" | "ready";
-  readonly subtitle: string;
-  /** Local lifecycle scheduler state; it never implies a worker, cloud task, policy activation, or promotion. */
-  readonly automation: "unavailable" | "local";
-  /** Opaque launch-authority state only. No profile inputs, hashes, or custody cross into presentation. */
-  readonly launchProfiles: readonly Readonly<{
-    readonly profileId: string;
-    readonly disposition: "eligible" | "blocked";
-  }>[];
-  readonly jobs: readonly Readonly<{
-    readonly jobHash: string;
-    readonly phase: string;
-    readonly nextManualPhase: string | null;
-    readonly resumable: boolean;
-    readonly eventCount: number;
-    readonly lastEventHash: string;
-    readonly projectionHash: string;
-  }>[];
-  /** Configured local scheduling intent only; it does not imply an installed worker or execution. */
-  readonly schedules: readonly Readonly<{
-    readonly scheduleHash: string;
-    readonly jobHash: string;
-    readonly state: "enabled" | "disabled";
-    readonly disposition: string;
-    readonly dueAt: string | null;
-    readonly intervalMs: number;
-    readonly revision: number;
-    readonly runtimeStatus: "disabled" | "configured" | "due" | "running" | "blocked" | "error";
-  }>[];
-}
-
-/** Normal-build C37 hub. It projects only player-safe local routes and explicit gaps. */
-export interface GhostLabScreenView {
-  readonly id: "ghostlab";
-  readonly subtitle: string;
-  readonly routes: readonly Readonly<{
-    readonly id:
-      "academy" | "training-archive" | "training-operations" | "foundry" | "vault" | "watch" | "botevidence" | "career";
-    readonly label: string;
-    readonly detail: string;
-  }>[];
-  readonly unavailable: readonly Readonly<{ readonly label: string; readonly detail: string }>[];
-  readonly watch: Readonly<{
-    readonly status: "checking" | "unavailable" | "ready" | "starting" | "running" | "paused" | "stopped";
-    readonly detail: string;
-    readonly decisions: number;
-  }>;
-}
-
-/** A read-only projection of exactly one retained C35 canonical report. */
-export interface BotEvidenceScreenView {
-  readonly id: "botevidence";
-  readonly status: "unavailable" | "ready";
-  readonly subtitle: string;
-  readonly detail: string;
-  readonly report?: Readonly<{
-    readonly reportHash: string;
-    readonly planHash: string;
-    readonly artifactId: string;
-    readonly approvalHash: string;
-    readonly promotionReceiptHash: string;
-    readonly artifactHash: string;
-    readonly activationHash: string;
-    readonly candidatePayloadHash: string;
-    readonly episodes: number;
-    readonly completionRate: number;
-    readonly meanTicks: number;
-    readonly maxTicksPerCase: number;
-    readonly placement: "unassigned";
-    readonly humanCalibration: "not-compared";
-    readonly certification: "not-certified";
-  }>;
-}
-
 /** C38 review is a local authority-and-intent screen, never a transport status. */
 export interface GhostPublicationScreenView {
   readonly id: "ghostpublication";
@@ -697,6 +649,7 @@ export type ScreenView =
   | LeaderboardsScreenView
   | ReplayScreenView
   | SettingsScreenView
+  | MusicScreenView
   | RenameScreenView
   | DraftScreenView
   | ReserveScreenView
@@ -707,10 +660,6 @@ export type ScreenView =
   | GameoverScreenView
   | WinScreenView
   | PlaygroundScreenView
-  | AcademyScreenView
-  | FoundryScreenView
-  | GhostLabScreenView
-  | BotEvidenceScreenView
   | GhostPublicationScreenView
   | GhostSupportScreenView;
 

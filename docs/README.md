@@ -18,11 +18,13 @@ owning test/script references in one reviewable transaction.
 | AI agent working guide | [AGENTS.md](../AGENTS.md) | [CLAUDE.md](../CLAUDE.md); `.agents/skills/`; the parent-directory `AGENTS.md` and the governance skill remain authoritative |
 | Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) | Current typed module boundaries and architecture checks |
 | Visual/design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | [VISUAL_DESIGN_DIRECTION.md](VISUAL_DESIGN_DIRECTION.md) |
+| Painted stage backgrounds | [BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md) | `pnpm scene`; `tests/unit/scene-packages.test.ts` |
 | Feature and product inventory | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | — |
 | Shop and upgrade design contract | [SHOP_UPGRADE_DESIGN.md](product/SHOP_UPGRADE_DESIGN.md) | — |
 | Music in the game | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) | `pnpm check:music` |
 | Release authority and deployment matrix | [RELEASE_AUTHORITY.md](RELEASE_AUTHORITY.md) | [RELEASE_MATRIX.md](RELEASE_MATRIX.md) |
 | Performance budgets | [PERFORMANCE_BUDGETS.md](PERFORMANCE_BUDGETS.md) | — |
+| itch.io package and upload steps | [ITCH_UPLOAD.md](ITCH_UPLOAD.md) | `config/build-targets.json` (`itch`); `scripts/package-target.mjs` |
 | Browser journey coverage | [BROWSER_JOURNEY_COVERAGE.md](BROWSER_JOURNEY_COVERAGE.md) | — |
 | TearBench program and requirements | [TEARBENCH_GHOST3_PROGRAM.md](TEARBENCH_GHOST3_PROGRAM.md) | [Temporary current correction plan](../plans/TEARBENCH_CURRENT_CORRECTION_PLAN.md); [current-game alignment and permanent synchronization plan](TEARBENCH_CURRENT_GAME_ALIGNMENT_AND_SYNC_PLAN.md); [temporary verification-acceleration execution plan](TEARBENCH_VERIFICATION_ACCELERATION_EXECUTION_PLAN.md); preserved generated registries and evidence catalogs |
 | Artifact and checkpoint-evidence organization | [ARTIFACTS.md](ARTIFACTS.md) | `config/artifact-layout.json`; G5 retention and disposition records |
@@ -69,16 +71,11 @@ corresponding index/checker/test update; no bulk relocation is implied here.
 
 ## Preserved evidence boundaries
 
-Do not manually rename or regenerate the source specification, generated
-requirements digest/dashboard, evidence catalog, or C40 weapon-roster index.
+Do not manually rename or regenerate the capability dashboard, evidence catalog
+or C40 weapon-roster index.
 Their exact paths are consumed by scripts and permanent tests. The G5 baseline
 inventory at
 `checkpoints/program-normalization/G5_BASELINE_INVENTORY.md` records the
 current hashes and the excluded dependency, secret, build, and ignored-output
 scope.
 
-The full requirements registry (about 27 MB) and its Markdown annex (about 3 MB) are no
-longer tracked: `pnpm requirements:generate` writes them to
-`artifacts/tearbench/requirements/` and refreshes the tracked
-`docs/tearbench-ghost3-requirements.digest.json`, which `pnpm requirements:check` compares.
-Their earlier versions remain in git history.
