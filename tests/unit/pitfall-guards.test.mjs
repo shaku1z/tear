@@ -45,4 +45,21 @@ describe("pitfall guards", () => {
     for (const [name, command] of Object.entries(scripts)) if (/--no-verify\b/u.test(command)) offenders.push(name);
     expect(offenders).toEqual([]);
   });
+
+  it("lint starts ESLint with a raised heap, and the lint script goes through it", () => {
+    const lint = fs.readFileSync(path.join(root, "scripts", "lint.mjs"), "utf8");
+    expect(lint).toMatch(/--max-old-space-size=\d{4,}/u);
+    expect(scripts.lint).toBe("node scripts/lint.mjs");
+  });
+
+  it("no current document states a line-count module limit; the size rule lives in ARCHITECTURE.md", () => {
+    const rootDocuments = fs.readdirSync(root).filter((name) => name.endsWith(".md"));
+    const current = [rootDocuments, ...["docs", "plans", ".agents"].map((folder) => listFiles(folder, [".md"]))]
+      .flat()
+      .filter((file) => !/^docs\/(?:history|checkpoints)\//u.test(file) && !file.startsWith("plans/completed/"));
+    const stale = /\b(?:700|500)[- ](?:physical[- ])?lines?\b(?! equivalents)|\bbelow 500\b/iu;
+    const offenders = current.filter((file) => stale.test(fs.readFileSync(path.join(root, file), "utf8")));
+    expect(offenders).toEqual([]);
+    expect(fs.readFileSync(path.join(root, "docs", "ARCHITECTURE.md"), "utf8")).toContain("**The module size rule.**");
+  });
 });
