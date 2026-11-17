@@ -43,9 +43,7 @@ Run everything from the repository root. "Slow" means minutes, not seconds.
 | `pnpm test` | Every unit test. Slow. |
 
 `package.json` has more than 160 scripts, mostly CI gates; the table above
-covers routine work. Replays of old milestone verification checkpoints (such as
-`check:c27a:foundation`) live in `config/checkpoints.json`: list them with
-`pnpm checkpoint --list` and run one with `pnpm checkpoint <name>`. Do not run
+covers routine work. Do not run
 `pnpm deploy` expecting a deployment: it only builds and runs a Wrangler dry run
 (see [DEPLOYMENT.md](DEPLOYMENT.md)).
 

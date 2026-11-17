@@ -57,21 +57,11 @@ const ENVIRONMENT_INVARIANT_IDS = Object.freeze([
   "environment.bounded",
 ]);
 const UNSUPPORTED_INVARIANT_IDS = new Set(["replay.branch-equivalence", "test.production-isolation"]);
-const GRAVEYARD_TASK_IDS = Object.freeze({
-  "all-shared-runtime-history": "graveyard.all-shared-runtime-history",
-  "audio-lifecycle-history": "graveyard.audio-lifecycle-history",
-  "migration-and-corruption-history": "graveyard.migration-and-corruption-history",
-  "movement-boundary-history": "graveyard.movement-boundary-history",
-  "planted-downstream-divergence": "graveyard.planted-downstream-divergence",
-  "progression-ledger-history": "graveyard.progression-ledger-history",
-  "screen-route-history": "graveyard.screen-route-history",
-});
 const PLANNER_POLICY = Object.freeze({
   version: 1,
   commonInvariantIds: COMMON_INVARIANT_IDS,
   environmentInvariantIds: ENVIRONMENT_INVARIANT_IDS,
   unsupportedInvariantIds: [...UNSUPPORTED_INVARIANT_IDS].sort(),
-  graveyardTaskIds: GRAVEYARD_TASK_IDS,
   resourceContention: "resource-class-and-key-serial-upper-bound",
 });
 
@@ -206,20 +196,6 @@ export function createTearBenchShadowPlan({ registry, policy, selection, catalog
   for (const taskId of profile) request(taskId, `profile:${effectiveProfileId}`);
   if (!docsOnly && ["pull-request", "protected-main", "nightly", "endurance"].includes(profileId)) {
     request("unit.tearbench-ci-core", `selected-evidence-core:${profileId}`);
-    for (const caseId of selection.graveyardCases ?? []) {
-      const taskId = GRAVEYARD_TASK_IDS[caseId];
-      if (taskId === undefined) {
-        obligation({
-          obligationId: `graveyard:${caseId}`,
-          kind: "graveyard",
-          status: "missing",
-          reason: "selected graveyard case has no typed task binding",
-        });
-      } else {
-        obligation({ obligationId: `graveyard:${caseId}`, kind: "graveyard", taskIds: [taskId] });
-        request(taskId, `graveyard:${caseId}`);
-      }
-    }
   }
   const selectedScenarios = new Map(
     catalog.filter((scenario) => selection.scenarios.includes(scenario.id)).map((scenario) => [scenario.id, scenario]),

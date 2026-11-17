@@ -94,7 +94,7 @@ jobs:
           echo "gameplay_required=$gameplay_required" >> "$GITHUB_OUTPUT"
       - name: Check documents only
         if: steps.validation-scope.outputs.gameplay_required == 'false'
-        run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm requirements:check && pnpm wiki:test
+        run: pnpm check:docs && pnpm test:docs && pnpm check:terminology && pnpm test:terminology && pnpm wiki:test
       # The checks in config/checks.json, one step per group in the order they
       # are listed: cheap and likely-to-fail first, so a failure shows within
       # minutes. `pnpm check` runs the same list locally.

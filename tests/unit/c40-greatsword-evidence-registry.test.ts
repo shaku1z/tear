@@ -20,7 +20,6 @@ describe("C40 Greatsword Wheel Cut/catch seek evidence registry", () => {
     const routes = readJson("src/tearbench/evidence-routes.json") as readonly Record<string, unknown>[];
     expect(routes.find((entry) => entry.id === "greatsword-wheelcut-replay")).toMatchObject({
       scenarios: ["greatsword-wheelcut-catch-seek"],
-      graveyardCases: [],
       journeyCheckpoint: "greatsword-wheelcut-catch-seek-engineering-proof",
       baseComparison: "not-run-by-this-scenario",
       interactionMatrices: ["browser"],

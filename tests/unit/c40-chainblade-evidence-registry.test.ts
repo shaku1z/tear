@@ -23,7 +23,6 @@ describe("C40 Chainblade Hook & Sling/catch seek evidence registry", () => {
     const routes = readJson("src/tearbench/evidence-routes.json") as readonly Record<string, unknown>[];
     expect(routes.find((entry) => entry.id === "chainblade-hook-sling-replay")).toMatchObject({
       scenarios: ["chainblade-hook-sling-catch-seek"],
-      graveyardCases: [],
       journeyCheckpoint: "chainblade-hook-sling-catch-seek-engineering-proof",
       baseComparison: "not-run-by-this-scenario",
       interactionMatrices: ["browser"],

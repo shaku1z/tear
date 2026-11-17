@@ -91,7 +91,7 @@
       "largestFunctionStatements": 106
     },
     "src/presentation/backdrop.ts": {
-      "chars": 26406,
+      "chars": 25964,
       "largestFunctionStatements": 140
     },
     "src/presentation/combat/attack-presentation-director.ts": {
@@ -150,13 +150,6 @@
     },
     "src/presentation/ui-cinematic.ts": {
       "largestFunctionStatements": 104
-    },
-    "src/presentation/verdant-foreground-occlusion.ts": {
-      "maxLineLength": 7650
-    },
-    "src/presentation/verdant-pool-receiver.ts": {
-      "chars": 25609,
-      "maxLineLength": 25156
     },
     "src/presentation/world/finale.ts": {
       "largestFunctionStatements": 89

@@ -1,7 +1,7 @@
 name: TearBench Evidence Program
 
 on:
-  # Weekly. The selected evidence is the scenario, journey and graveyard set
+  # Weekly. The selected evidence is the scenario and journey set
   # that pull requests no longer run; the static checks run on every pull request.
   schedule:
     - cron: "17 6 * * 0"
@@ -16,7 +16,6 @@ on:
         options:
           - nightly
           - weekly-endurance
-          - evidence-review
 
 permissions:
   contents: read
@@ -89,52 +88,3 @@ jobs:
           path: artifacts/tearbench
           if-no-files-found: error
           retention-days: 30
-
-  evidence-review:
-    if: inputs.profile == 'evidence-review'
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Record preservation-corpus receipt at clean HEAD
-        run: pnpm tearbench evidence record --id preservation-corpus --subject artifacts/tearbench/c39/preservation-corpus-vitest.json -- pnpm test:preservation-corpus
-      - name: Record Source-void engineering receipt at clean HEAD
-        shell: bash
-        run: >-
-          pnpm tearbench evidence record --id source-void-hazard-seek
-          --subject artifacts/tearbench/c40/source-void-hazard-seek.log --
-          "pnpm build:test:standalone && node tests/browser-c40-source-void-ghost-seek.js > artifacts/tearbench/c40/source-void-hazard-seek.log 2>&1"
-      - name: Compose intentionally partial evidence manifest
-        run: >-
-          pnpm tearbench evidence partial-manifest
-          --receipts artifacts/tearbench/receipts/preservation-corpus.json,artifacts/tearbench/receipts/source-void-hazard-seek.json
-          --artifact artifacts/tearbench/generated/partial-release-evidence.json
-      - name: Confirm the incomplete manifest is rejected (not a release decision)
-        shell: bash
-        run: |
-          set +e
-          pnpm tearbench certify --manifest artifacts/tearbench/generated/partial-release-evidence.json --artifact artifacts/tearbench/generated/partial-release-certificate.json
-          status=$?
-          set -e
-          if [[ "$status" -eq 0 ]]; then
-            echo "Expected the deliberately partial manifest to be rejected."
-            exit 1
-          fi
-          node --input-type=module -e 'import { readFile } from "node:fs/promises"; const certificate = JSON.parse(await readFile("artifacts/tearbench/generated/partial-release-certificate.json", "utf8")); if (certificate.schemaVersion !== 2 || certificate.status !== "rejected") throw new Error("partial evidence did not produce the expected rejected certificate");'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tearbench-partial-evidence-${{ github.sha }}
-          path: artifacts/tearbench
-          if-no-files-found: error
-          retention-days: 90

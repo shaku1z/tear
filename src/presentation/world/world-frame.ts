@@ -62,7 +62,15 @@ export interface WorldFramePorts<Platform extends WorldPlatform = WorldPlatform>
   readonly platforms: readonly Platform[];
   readonly projectiles: readonly Readonly<{ draw: (canvas: CanvasRenderingContext2D) => void }>[];
   readonly setEffectView: (bounds: WorldBounds) => void;
-  readonly drawBackdrop: (stage: unknown, time: number, playerX: number, bounds: WorldBounds) => void;
+  readonly drawBackdrop: (
+    stage: unknown,
+    time: number,
+    playerX: number,
+    bounds: WorldBounds,
+    camera: WorldCamera,
+  ) => void;
+  /** Scene front plane: dresses the floor body after platforms, never the arena above it. */
+  readonly drawBackdropFront?: (bounds: WorldBounds, camera: WorldCamera) => void;
   readonly drawPlatform: (platform: Platform, stage: unknown, floor: boolean, bounds: WorldBounds) => void;
   readonly drawFinale: (layer: "rear" | "front") => void;
   readonly drawTutorialGhost: () => void;
@@ -111,12 +119,19 @@ export function renderWorldFrame<Platform extends WorldPlatform>(ports: WorldFra
     canvas.fillRect(visible.left, visible.top, visible.right - visible.left, visible.bottom - visible.top);
   }
   if (ports.biome)
-    ports.drawBackdrop(ports.stage, ports.timeSeconds * (ports.reducedMotion ? 0.25 : 1), ports.playerX, painted);
+    ports.drawBackdrop(
+      ports.stage,
+      ports.timeSeconds * (ports.reducedMotion ? 0.25 : 1),
+      ports.playerX,
+      painted,
+      camera,
+    );
   renderBossDressing(canvas, ports.sceneEffects);
   renderRearEntities(canvas, ports.enemies);
   ports.drawFinale("rear");
   for (const platform of ports.brokenPlatforms) ports.drawPlatform(platform, ports.stage, false, painted);
   for (const platform of ports.platforms) ports.drawPlatform(platform, ports.stage, platform.floor === true, painted);
+  if (ports.biome) ports.drawBackdropFront?.(painted, camera);
   renderPlatformCracks(canvas, ports.sceneEffects);
   ports.drawFinale("front");
   renderGroundHazards(canvas, ports.sceneEffects);

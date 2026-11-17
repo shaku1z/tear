@@ -33,12 +33,9 @@ The program has three governing documents:
 3. The original v0.6 living design document,
    `TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN(3).md`.
 
-The original source is preserved in-repository at
-`docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md`.
-Atomic requirement truth and current evidence state live in:
+The original source specification, its requirements digest and the generator were
+removed (D-015); they remain in git history. Current evidence state lives in:
 
-- `docs/tearbench-ghost3-requirements.digest.json` (tracked digest; `pnpm requirements:generate`
-  writes the full annex and registry to `artifacts/tearbench/requirements/`)
 - `docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`
 - `docs/tearbench-ghost3-evidence-catalog.json`
 - `config/tearbench-current-program-state.json`
@@ -124,8 +121,8 @@ Each checkpoint is complete only when its documented exit gate has reproducible
 evidence. Later work may be prototyped, but it cannot be called complete before
 its dependencies pass.
 
-Program status is tracked in
-[the requirement ledger](TEARBENCH_GHOST3_REQUIREMENT_LEDGER.md).
+The requirement ledger, the requirements digest and the generator that kept
+them were removed (D-015); earlier versions remain in git history.
 
 ## Current Checkpoint Status
 
