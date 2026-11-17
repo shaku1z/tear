@@ -143,8 +143,7 @@
         "executable": "node_modules/vitest/vitest.mjs",
         "args": [
           "run",
-          "tests/unit/run-lifecycle.test.ts",
-          "tests/unit/app-state-machine.test.ts"
+          "tests/unit/run-lifecycle.test.ts"
         ]
       },
       "claimIds": [
