@@ -10,7 +10,7 @@ import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies
 import type { GameRun } from "../shell/game-runtime-state";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
-import { createLiveParticlePresentationState } from "../world/particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../tearbench/particle-presentation-state";
 import type { LiveWorldComposition } from "../world/world-composition";
 import { createLiveStateForgeAdapter } from "./state-forge-adapter";
 import { createLiveStateForgeRuntimeBridge } from "./state-forge-runtime-bridge";

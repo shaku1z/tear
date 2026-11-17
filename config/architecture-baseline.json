@@ -223,16 +223,6 @@
       "kind": "type"
     },
     {
-      "from": "src/presentation/screens/career-archive.ts",
-      "to": "src/ghost/career-archive.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/presentation/screens/leaderboards-replays.ts",
-      "to": "src/replay/surface-route.ts",
-      "kind": "value"
-    },
-    {
       "from": "src/tearbench/browser/live-runtime-bridge.ts",
       "to": "src/agents/live-watch-agent-host.ts",
       "kind": "value"
@@ -270,11 +260,6 @@
     {
       "from": "src/tearbench/production-replay-composition.ts",
       "to": "src/app/shell/frame-runtime.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/tearbench/production-replay-composition.ts",
-      "to": "src/app/world/particle-presentation-state.ts",
       "kind": "value"
     },
     {

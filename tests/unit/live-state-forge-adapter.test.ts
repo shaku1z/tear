@@ -16,7 +16,7 @@ import { STAGES, PLAYGROUND_STAGES } from "../../src/gameplay/stages";
 import { UPGRADES, applyUpgrade } from "../../src/gameplay/upgrades";
 import { applyWeapon } from "../../src/gameplay/weapons";
 import { createLiveHudFeedbackState } from "../../src/app/interface/hud-feedback-state";
-import { createLiveParticlePresentationState } from "../../src/app/world/particle-presentation-state";
+import { createLiveParticlePresentationState } from "../../src/tearbench/particle-presentation-state";
 
 import { TutorialController, parseTutorialSessionCheckpoint } from "../../src/gameplay/training/tutorial-controller";
 
