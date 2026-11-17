@@ -94,6 +94,7 @@ const COMBAT_BASE = new Set([
   "counterplayTags",
   "procEligible",
   "damageDedupeId",
+  "damagedBy",
   "cleanupReason",
 ]);
 const ROUTE_BASE = new Set(["id", "kind", "state", "points", "stateTick", "ownerId", "cleanupReason"]);

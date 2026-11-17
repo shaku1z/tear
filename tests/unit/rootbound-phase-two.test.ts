@@ -19,6 +19,7 @@ import { isBloomWellState } from "../../src/gameplay/environment/bloom-well";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import {
   GRAFT_ANCHOR_TYPES,
+  installGraftAnchor,
   isGraftAnchorState,
   type GraftAnchorPlacementRequest,
   type GraftAnchorState,
@@ -38,6 +39,8 @@ type GardenBoss = InstanceType<Harness["types"]["Rootbound"]> & {
   graftDamageTakenMultiplier: number;
   graftGapMultiplier: number;
   healedFraction: number;
+  phaseTwoEntryHp: number | null;
+  openingGraft: boolean;
   bloomPatternIndex: number;
   exposed(): boolean;
   graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[];
@@ -259,17 +262,40 @@ describe("Rootbound Phase II: what a Graft does, and what cutting it does", () =
 });
 
 describe("Rootbound Phase II: healing is fair (ROOTBOUND_HEALING)", () => {
-  it("sitting back: an unpressed keeper heals, slowly, and never more than the phase cap", () => {
+  it("sitting back: a damaged, unpressed keeper heals slowly, up to the phase cap and no further", () => {
     const scene = garden();
+    scene.until(() => scene.boss.activeGraftTypes.includes("mercy"));
+    // Far enough under its entry health that only the cap can stop the healing.
+    scene.boss.hp -= scene.boss.maxHp * 0.15;
     const start = scene.boss.hp;
+    const movesBefore = scene.moves.length;
     scene.step(60);
     const healed = (scene.boss.hp - start) / scene.boss.maxHp;
-    expect(healed).toBeGreaterThan(0);
-    expect(healed).toBeLessThanOrEqual(ROOTBOUND_HEALING.phaseTwoCap + 1e-9);
-    expect(scene.boss.healedFraction).toBeLessThanOrEqual(ROOTBOUND_HEALING.phaseTwoCap + 1e-9);
-    expect(scene.boss.hp).toBeLessThanOrEqual(scene.boss.maxHp * scene.boss.phaseMarks[0]);
+    expect(healed).toBeCloseTo(ROOTBOUND_HEALING.phaseTwoCap, 6);
+    expect(scene.boss.healedFraction).toBeCloseTo(ROOTBOUND_HEALING.phaseTwoCap, 6);
+    expect(scene.boss.hp).toBeLessThan(scene.boss.phaseTwoEntryHp ?? 0);
     // It did not stand still to do it: the sitting player was attacked throughout.
-    expect(scene.moves.length).toBeGreaterThan(20);
+    expect(scene.moves.length - movesBefore).toBeGreaterThan(20);
+  });
+
+  it("never heals above the health it entered Phase II with, even when that is under the phase line", () => {
+    const scene = garden();
+    scene.step(0.05);
+    const entry = scene.boss.phaseTwoEntryHp;
+    if (entry === null) throw new Error("no Phase II entry health");
+    // The harness enters Phase II two percent under the line, as a burst would.
+    expect(entry).toBeLessThan(scene.boss.maxHp * scene.boss.phaseMarks[0]);
+    scene.until(() => scene.boss.activeGraftTypes.includes("mercy"));
+    // Undamaged since it entered: sitting back heals nothing.
+    scene.step(20);
+    expect(scene.boss.hp).toBe(entry);
+    expect(scene.boss.healedFraction).toBe(0);
+    // Three percent down: it heals those three percent back and stops at its entry health.
+    scene.boss.hp -= scene.boss.maxHp * 0.03;
+    scene.step(30);
+    expect(scene.boss.hp).toBeCloseTo(entry, 6);
+    expect(scene.boss.hp).toBeLessThanOrEqual(entry);
+    expect(scene.boss.healedFraction).toBeCloseTo(0.03, 6);
   });
 
   it("any hit restarts the wait: a player who lands one hit every 2.5 s sees no healing at all", () => {
@@ -396,5 +422,51 @@ describe("Rootbound Phase II: leaving the phase, and cost", () => {
       return { moves: scene.moves, hp: scene.boss.hp, x: scene.boss.x, hits: scene.player.damage.length };
     };
     expect(run()).toEqual(run());
+  });
+});
+
+describe("Rootbound Phase II: Grafts restored into the fight", () => {
+  const perch = (index: number) => ({
+    shape: "aabb" as const,
+    x: 200 + index * 300,
+    y: CONFIG.world.groundY - 90,
+    w: 54,
+    h: 90,
+  });
+  function restored(types: readonly (typeof GRAFT_ANCHOR_TYPES)[number][]) {
+    const scene = garden();
+    types.forEach((graftType, index) => {
+      installGraftAnchor(scene.environment, {
+        ownerId: "enemy:boss",
+        graftType,
+        geometry: perch(index),
+        createdTick: 0,
+      });
+    });
+    return scene;
+  }
+
+  it("adopts three restored Grafts and goes on attacking: the opening planting is not owed", () => {
+    const scene = restored(GRAFT_ANCHOR_TYPES);
+    scene.step(1);
+    expect(scene.boss.graftRequests.map((request) => request.graftType).sort()).toEqual([...GRAFT_ANCHOR_TYPES].sort());
+    expect(scene.boss.openingGraft).toBe(false);
+    scene.step(10);
+    expect(scene.moves.length).toBeGreaterThan(3);
+    expect(scene.moves).not.toContain("plant-graft");
+  });
+
+  it("does not idle when an adopted Graft is cut before it has planted one of its own", () => {
+    const scene = restored(["mercy"]);
+    scene.step(0.2);
+    const mercy = scene.grafts().find((entry) => entry.graftType === "mercy");
+    if (mercy === undefined) throw new Error("the restored Graft was not kept");
+    scene.cut(mercy.id);
+    expect(scene.boss.exposed()).toBe(true);
+    const movesBefore = scene.moves.length;
+    // No Graft may be planted for `regrow` seconds; the keeper fights on with its other moves meanwhile.
+    scene.step(ROOTBOUND_GRAFTS.regrow - 1);
+    expect(scene.moves.length - movesBefore).toBeGreaterThan(2);
+    expect(scene.moves.slice(movesBefore)).not.toContain("plant-graft");
   });
 });

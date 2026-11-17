@@ -471,4 +471,40 @@ describe("environment weapon contact runtime", () => {
       }),
     ).toMatchObject({ considered: 0, damaged: 0 });
   });
+
+  it("a throw overlapping an object hits it once per pass across a snapshot restore and a state change", () => {
+    const sword = getWeapon("sword");
+    const run = (between: (environment: EnvironmentRuntime) => void): readonly (number | undefined)[] => {
+      const environment = new EnvironmentRuntime("verdant-sanctum", "thrown-restore");
+      environment.addCombatObject(object("graft", "graft-anchor", { x: 180, y: -45, w: 54, h: 90 }, 100));
+      const integrity: (number | undefined)[] = [];
+      for (let tick = 1; tick <= 4; tick += 1) {
+        resolveThrownEnvironmentWeaponContacts({
+          environment,
+          blade: { thrown: true, state: "flying", throwId: 7, throwDmg: 30, weapon: sword },
+          segment: { x1: 170 + tick, y1: 0, x2: 200 + tick, y2: 0 },
+          pad: 4,
+          tick,
+        });
+        integrity.push(environment.combatObjects()[0]?.integrity);
+        if (tick === 2) between(environment);
+      }
+      return integrity;
+    };
+    const continuous = run(() => undefined);
+    expect(continuous).toEqual([70, 70, 70, 70]);
+    // Restored from a snapshot in the middle of the overlap.
+    expect(
+      run((environment) => {
+        environment.replace(structuredClone(environment.snapshot()));
+      }),
+    ).toEqual(continuous);
+    // The object changes state in the middle of the overlap, as a Graft does when it finishes growing in.
+    expect(
+      run((environment) => {
+        const [graft] = environment.combatObjects();
+        if (graft !== undefined) environment.updateCombatObject(graft.id, { ...graft, state: "warning", stateTick: 2 });
+      }),
+    ).toEqual(continuous);
+  });
 });

@@ -162,6 +162,8 @@ export function createRootboundType(
     /** Seconds since the player last hit the keeper, and the share of full health healed in Phase II. */
     quietT = 0;
     healedFraction = 0;
+    /** The health the keeper entered Phase II with: Mercy never heals above it. */
+    phaseTwoEntryHp: number | null = null;
     bloomPatternIndex = 0;
     rootCageSequence = 0;
     rootCageRequest: RootCagePlacementRequest | null = null;
@@ -302,6 +304,7 @@ export function createRootboundType(
     /** A Graft restored into the fight (TearBench state restore): the keeper takes it as planted. */
     adoptGraft(graftType: GraftAnchorType, geometry: GraftAnchorPlacementRequest["geometry"]): boolean {
       if (this.phase !== 2 || this.cleanupReason !== null) return false;
+      this.openingGraft = false;
       if (this.graftRequests.some((request) => request.graftType === graftType)) return true;
       this.graftRequests = Object.freeze([...this.graftRequests, Object.freeze({ graftType, geometry })]);
       this.plantedGraftTypes = Object.freeze([...this.plantedGraftTypes, graftType]);
@@ -328,7 +331,7 @@ export function createRootboundType(
       const amount = Math.min(
         this.maxHp * ROOTBOUND_HEALING.perSecond * dt,
         this.maxHp * (ROOTBOUND_HEALING.phaseTwoCap - this.healedFraction),
-        this.maxHp * this.phaseMarks[0] - this.hp,
+        (this.phaseTwoEntryHp ?? this.maxHp * this.phaseMarks[0]) - this.hp,
       );
       if (!(amount > 0)) return;
       this.hp += amount;
@@ -455,13 +458,15 @@ export function createRootboundType(
     /** Which moves may not start now. Changes the one set in place. */
     private refreshBlockedMoves(): void {
       const blocked = this.scratch.blocked;
-      const opening = this.phase === 2 && this.openingGraft;
+      const cannotPlant =
+        this.graftRequests.length >= GRAFT_ANCHOR_TYPES.length || this.moveTick < this.graftRegrowTick;
+      // The phase opens with a planting and nothing else, unless planting is not possible: it never idles.
+      const opening = this.phase === 2 && this.openingGraft && !cannotPlant;
       for (const move of ROOTBOUND_MOVES.attacks) {
         if (opening && move.id !== "plant-graft") blocked.add(move.id);
         else blocked.delete(move.id);
       }
-      if (this.graftRequests.length >= GRAFT_ANCHOR_TYPES.length || this.moveTick < this.graftRegrowTick)
-        blocked.add("plant-graft");
+      if (cannotPlant) blocked.add("plant-graft");
       if (this.rootCageRequest !== null) blocked.add("root-cage");
     }
 
@@ -680,6 +685,7 @@ export function createRootboundType(
       this.phaseOneExited = true;
       this.resetMoves(ROOTBOUND_PHASE_TWO_CADENCE.openingDelay);
       this.openingGraft = true;
+      this.phaseTwoEntryHp = this.hp;
       this.atk = "unavailable";
       this.state = "recover";
       this.stateT = ROOTBOUND_PHASE_ONE_CADENCE.recovery;
