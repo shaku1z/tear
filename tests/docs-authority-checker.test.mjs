@@ -57,7 +57,7 @@ test("docs checker passes the canonical tracked documentation baseline", () => {
   const result = runDocsCheck({ root: repositoryRoot });
   assert.equal(result.ok, true, result.errors.join("\n"));
   assert.equal(result.rootMarkdownFiles, 6);
-  assert.equal(result.pathBoundArtifacts, 9);
+  assert.equal(result.pathBoundArtifacts, 7);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
   assert.equal(result.currentAuthorities, 18);
