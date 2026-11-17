@@ -445,11 +445,12 @@ const CinematicTimeline = (() => {
     get fullyVisible() {
       return this.revealProgress >= 1;
     }
-    // which timing/completion contract governs the current beat
+    // Which timing/completion contract governs the current beat. A beat waits for the player only
+    // when its script says so with `completion`: nothing is inferred from its content, so a beat
+    // that shows a line for an authored duration plays for that duration.
     private _policy(beat: CinematicBeat): CompletionPolicy {
       if (beat.completion) return beat.completion;
       if (beat.waitUntil) return "condition";
-      if (beat.line) return "confirm-or-timeout"; // spoken lines never expire sub-second
       return "timed";
     }
     // is the AUTO fallback approaching (drives the AUTO glyph)
@@ -536,9 +537,11 @@ const CinematicTimeline = (() => {
       if (this.revealProgress < 1 && !this.forceReveal) this.revealElapsed += dt;
       this.fullyVisibleElapsed = this.revealProgress >= 1 ? this.fullyVisibleElapsed + dt : 0;
       if (beat.onUpdate) beat.onUpdate(this.context ?? {}, this, dt);
-      // a fresh (post-arm) press first completes an unfinished reveal, then advances
+      // A fresh (post-arm) press first completes an unfinished reveal, then advances. A timed beat
+      // never waits for a press, so there it only advances: a press is never spent on a reveal the
+      // beat would not have waited for.
       if (latch.reveal) {
-        if (this.revealProgress < 1 && !this.forceReveal) {
+        if (this._policy(beat) !== "timed" && this.revealProgress < 1 && !this.forceReveal) {
           this.forceReveal = true;
           return;
         }

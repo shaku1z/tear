@@ -166,13 +166,6 @@
       ],
       "duration": "seconds"
     },
-    "test:checkpoints": {
-      "purpose": "Node tests for the checkpoint runner and config/checkpoints.json",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
     "check:quick": {
       "purpose": "Fast group of config/checks.json (changed-file format and lint, guards, typecheck); the pre-push tier",
       "effects": [
@@ -878,6 +871,15 @@
       ],
       "duration": "minutes"
     },
+    "scene": {
+      "purpose": "Painted stage backgrounds: validate, build, contrast, contact sheet and in-game preview of scene packages",
+      "effects": [
+        "writes-repo-files",
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
     "check:architecture": {
       "purpose": "Source architecture gate (roles, layer edges, cycles, module size); --update lowers the baseline",
       "effects": [
@@ -942,7 +944,7 @@
       "duration": "seconds"
     },
     "merge:batch": {
-      "purpose": "Merges several ready pull requests onto a codex/batch-* branch, pushes it and starts Validate; --status and --verify follow it up",
+      "purpose": "Merges several ready pull requests onto a codex/batch-* branch, pushes it and starts Validate; --status, --merge, --verify and --prune follow it up",
       "effects": [
         "network"
       ],
@@ -1166,14 +1168,6 @@
         "writes-artifacts"
       ],
       "duration": "under-a-minute"
-    },
-    "checkpoint": {
-      "purpose": "Runs a historical milestone checkpoint gate from config/checkpoints.json; --list shows them",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes"
     },
     "check:crazygames-package": {
       "purpose": "Packages an existing dist/crazygames and checks the upload size budget",
@@ -1532,17 +1526,6 @@
         "lint"
       ]
     },
-    "scripts/measure-production-headless-long-run.mjs": {
-      "purpose": "Measures a long production headless run and writes a JSON artifact (C30 checkpoint)",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "minutes",
-      "via": [],
-      "runBy": [
-        "config/checkpoints.json"
-      ]
-    },
     "scripts/merge-ready.mjs": {
       "purpose": "Merge readiness behind pnpm merge:ready: a red main stops merges and a stale pass is not a pass",
       "effects": [
@@ -1676,17 +1659,6 @@
         "report:workspace-recovery"
       ]
     },
-    "scripts/run-checkpoint.mjs": {
-      "purpose": "Runs a named historical checkpoint gate from config/checkpoints.json",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "minutes",
-      "via": [
-        "checkpoint"
-      ]
-    },
     "scripts/run-checks.mjs": {
       "purpose": "Runs config/checks.json groups in order, stops at the first failure, shares machine-wide slots and records a full pass",
       "effects": [
@@ -1711,6 +1683,18 @@
       "duration": "minutes",
       "via": [
         "test:browser:current-live-detached-parity"
+      ]
+    },
+    "scripts/scene.mjs": {
+      "purpose": "The pnpm scene command; build rewrites a package's images and manifest, reports and previews write elsewhere",
+      "effects": [
+        "writes-repo-files",
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "scene"
       ]
     },
     "scripts/serve.py": {
@@ -1958,6 +1942,7 @@
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
+      "scripts/check-reproducible-build.mjs",
       "scripts/package-target.mjs",
       "vite.config.ts"
     ],
@@ -2024,6 +2009,35 @@
       "scripts/report-deferred-workspace-dependency.mjs",
       "scripts/report-remaining-workspace-inventory.mjs",
       "scripts/report-workspace-recovery.mjs"
+    ],
+    "scripts/scene/build.mjs": [
+      "scripts/scene.mjs"
+    ],
+    "scripts/scene/hidden-paint.mjs": [
+      "scripts/scene/build.mjs",
+      "scripts/scene/pixel-checks.mjs",
+      "tests/unit/scene-size-rule.test.ts"
+    ],
+    "scripts/scene/package-files.mjs": [
+      "scripts/build-target.mjs",
+      "scripts/scene.mjs",
+      "scripts/scene/build.mjs",
+      "scripts/scene/preview.mjs",
+      "scripts/scene/reports.mjs",
+      "tests/unit/scene-packages.test.ts",
+      "tests/unit/scene-size-rule.test.ts"
+    ],
+    "scripts/scene/pixel-checks.mjs": [
+      "scripts/scene.mjs",
+      "tests/unit/scene-packages.test.ts",
+      "tests/unit/scene-size-rule.test.ts"
+    ],
+    "scripts/scene/preview.mjs": [
+      "scripts/scene.mjs"
+    ],
+    "scripts/scene/reports.mjs": [
+      "scripts/scene.mjs",
+      "tests/unit/scene-packages.test.ts"
     ],
     "scripts/tearbench-build-artifact.mjs": [
       "scripts/build-target.mjs",
@@ -2113,6 +2127,10 @@
     "scripts/build-targets.d.mts",
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/release-artifact.d.mts",
+    "scripts/scene/hidden-paint.d.mts",
+    "scripts/scene/package-files.d.mts",
+    "scripts/scene/pixel-checks.d.mts",
+    "scripts/scene/reports.d.mts",
     "scripts/tutorial-gold-compatibility.d.mts"
   ]
 }

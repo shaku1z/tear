@@ -138,6 +138,11 @@
       "apex": 0
     }
   },
+  "openingIntro": {
+    "asset": "opus/intro.ogg",
+    "lengthSeconds": 23.287,
+    "note": "opening vocals (0-23.29 s, ending on the 8-bar phrase line in the vocal gap); plays once before the loop"
+  },
   "provenance": {
     "owner": "shaku1z",
     "license": "Owned/licensed by owner (owner-supplied stems, 2026-11-12/13).",
@@ -148,6 +153,6 @@
     "loopLufs": -16,
     "loopTruePeakDb": -2.2,
     "trimDb": -1.8,
-    "inputHash": "d61ef475ab4054b5"
+    "inputHash": "1ff1a27957c1cc45"
   }
 }

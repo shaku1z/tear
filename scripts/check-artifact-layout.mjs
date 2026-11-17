@@ -96,7 +96,6 @@ const activeLegacyReferences = [
   ["tests/unit/detached-live-parity.test.ts", "artifacts/tearbench/c27a"],
   ["tests/unit/detached-finale-live-parity.test.ts", "artifacts/tearbench/c27a"],
   ["tests/unit/production-c27a-matrix.test.ts", "artifacts/tearbench/c27a"],
-  ["scripts/measure-production-headless-long-run.mjs", "artifacts/tearbench/c30/"],
   ["package.json", "artifacts/tearbench/c26/"],
   ["package.json", "artifacts/tearbench/c30/"],
   ["package.json", "artifacts/tearbench/c39/"],

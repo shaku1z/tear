@@ -101,6 +101,7 @@ for (const [id, why] of required) {
   const urls = [
     ...(cue.stems ?? []).flatMap((stem) => (stem.sources ?? []).map((source) => source.url)),
     ...(cue.bossIntro?.asset ? [cue.bossIntro.asset] : []),
+    ...(cue.openingIntro?.asset ? [cue.openingIntro.asset] : []),
   ];
   if (!cue.stems?.length) fail(`${id}: cue has no stems`);
   let bytes = statSync(cueFile).size;
