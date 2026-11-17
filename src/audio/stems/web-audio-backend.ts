@@ -216,6 +216,23 @@ export function warmStem(baseUrl: string, asset: StemAsset, canPlay: (mime: stri
     warmed.delete(url);
   });
   warmed.set(url, pending);
+  // Bytes nobody takes are let go: music turned off, or another cue played first.
+  setTimeout(() => {
+    if (warmed.get(url) === pending) warmed.delete(url);
+  }, WARM_HOLD_MS);
+}
+
+/** How long warmed bytes wait for the voice that plays them. */
+export const WARM_HOLD_MS = 120_000;
+
+/** Let go of every warmed copy no voice has taken; called once the first cue has loaded. */
+export function dropWarmedStems(): void {
+  warmed.clear();
+}
+
+/** Warmed copies still held (for tests). */
+export function warmedStemCount(): number {
+  return warmed.size;
 }
 
 /** `StemAudioBackend` on the game's shared AudioContext — no Tone, no 2nd context. */

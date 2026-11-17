@@ -1,3 +1,5 @@
+import type { AudioMixerSettings } from "../domain/audio-mixer-settings";
+import { readStoredAudioSettings } from "../persistence/audio-settings";
 import { installPrimaryMusicBackend } from "./music-backend-registry";
 import type { MusicBackend, MusicBackendHost, MusicRunSessionMetadata } from "./music-contracts";
 import { BiomeStemBackend, type LoadedCueRef } from "./stems/biome-stem-backend";
@@ -17,29 +19,22 @@ import { validateMusicRoutingManifest } from "./music/music-routing-validate";
  * off (or everything muted), and not when the browser asks to save data.
  */
 export function musicWarmAllowed(
-  storedSettings: string | null,
+  settings: Pick<AudioMixerSettings, "musicMuted" | "masterMuted">,
   connection: { readonly saveData?: boolean } | undefined,
 ): boolean {
   if (connection?.saveData === true) return false;
-  try {
-    const settings = JSON.parse(storedSettings ?? "{}") as Record<string, unknown>;
-    return settings.music !== false && settings.musicMuted !== true && settings.masterMuted !== true;
-  } catch {
-    return true;
-  }
-}
-
-function storedSettings(): string | null {
-  try {
-    return window.localStorage.getItem("tear_settings");
-  } catch {
-    return null;
-  }
+  return !settings.musicMuted && !settings.masterMuted;
 }
 
 function browserMusicWarmAllowed(): boolean {
+  let storage: Pick<Storage, "getItem">;
+  try {
+    storage = window.localStorage;
+  } catch {
+    storage = { getItem: () => null };
+  }
   return musicWarmAllowed(
-    storedSettings(),
+    readStoredAudioSettings(storage),
     (navigator as Navigator & { connection?: { saveData?: boolean } }).connection,
   );
 }

@@ -25,7 +25,7 @@ import type { MusicRoutingManifest, RoutingScene } from "../music/music-routing-
 import { StemCuePlayer } from "./StemCuePlayer";
 import { loopSeconds, planTierGains } from "./tier";
 import { tierFromSnapshot } from "./tier-from-snapshot";
-import { WebAudioStemBackend, warmStem } from "./web-audio-backend";
+import { WebAudioStemBackend, dropWarmedStems, warmStem } from "./web-audio-backend";
 import type { StemCueManifest, Tier } from "./types";
 
 export interface LoadedCueRef {
@@ -135,11 +135,10 @@ export class BiomeStemBackend implements MusicBackend {
       if (next !== this.#active?.cueId) void this.#activate(next, CROSSFADE_SECONDS, QUANTIZE_BARS);
     });
     this.#stingers = new StingerPlayer(this.#context, this.#output);
+    void this.#stingers.load();
     await this.#activate(this.#shellCueId(), CROSSFADE_SECONDS, 0, true);
-    // Nothing else shares the bandwidth while the menu cue's layers arrive: stingers wait for them.
-    void (this.#active?.player.allLoaded ?? Promise.resolve()).then(() => {
-      void this.#stingers?.load();
-    });
+    // The first cue has taken what it needs; warmed bytes for anything else are let go.
+    void (this.#active?.player.allLoaded ?? Promise.resolve()).then(dropWarmedStems, dropWarmedStems);
   }
 
   /** The cue the menu would start with. */
