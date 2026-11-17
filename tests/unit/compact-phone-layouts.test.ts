@@ -1098,3 +1098,24 @@ describe("leaderboards: one screen definition at both densities", () => {
     }
   });
 });
+
+describe("career archive: one screen definition at both densities", () => {
+  it("offers the same actions on the desktop page and the phone page for the list, a run and the delete question", () => {
+    const phone = PHONES[0];
+    const cases = [
+      { label: "career list", career: careerView(false) },
+      { label: "career run", career: careerView(true) },
+      { label: "career delete", career: { ...careerView(true), confirming: true, message: "ignored" } },
+      { label: "career empty", career: { ...careerView(false), rows: [], total: 0 } },
+    ];
+    for (const { label, career } of cases) {
+      const draw = (r: ReturnType<typeof createScreenRenderers>): void => {
+        r.profile({ ...profileBase, tab: "career", career });
+      };
+      const desktop = renderDesktop({ width: 1600, height: 900 }, draw).controls.map((control) =>
+        JSON.stringify(control.action),
+      );
+      expect([...sweep(phone, draw, `${label} phone`)].sort(), label).toEqual([...new Set(desktop)].sort());
+    }
+  });
+});

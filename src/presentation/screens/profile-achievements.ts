@@ -1,7 +1,6 @@
 import { createCareerArchiveRenderer } from "./career-archive";
 import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } from "./contracts";
 import { clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
-import { createCompactCareer } from "./compact-career";
 import { createCompactProfile } from "./compact-profile";
 
 const PROFILE_HUE = "#b06cff";
@@ -26,13 +25,11 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
   const { ui } = context;
   const career = createCareerArchiveRenderer(context);
   // Phone landscape (compact density) composes these screens as compact pages.
-  const compact = createCompactProfile(context),
-    compactCareer = createCompactCareer(context);
+  const compact = createCompactProfile(context);
 
   function profile(view: ProfileScreenView): void {
     if (view.career) {
-      if (ui.density.compact) compactCareer(view.career);
-      else career(view.career);
+      career(view.career);
       return;
     }
     if (ui.density.compact) {
