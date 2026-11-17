@@ -1,9 +1,16 @@
-// The machine-wide check slots and the group selection of scripts/run-checks.mjs.
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+// The machine-wide check slots, the group selection and the flaky-check report of scripts/run-checks.mjs.
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadChecks, selectChecks, takeSlot } from "../../scripts/run-checks.mjs";
+import {
+  flakyLine,
+  loadChecks,
+  recordResult,
+  RESULTS_FORMAT,
+  selectChecks,
+  takeSlot,
+} from "../../scripts/run-checks.mjs";
 
 const made = [];
 const directory = () => {
@@ -51,5 +58,48 @@ describe("check groups", () => {
   it("keeps the fast group free of browsers and builds", () => {
     for (const check of selectChecks(loadChecks(), "fast"))
       expect(check.run).not.toMatch(/browser|build-target|vitest\.mjs run$/u);
+  });
+});
+
+describe("check results and flaky checks", () => {
+  const run = { commit: "c1", tree: "t1", attempt: 1 };
+
+  it("collects every group's results of one attempt in one file", () => {
+    const file = join(directory(), "results", "results.json");
+    recordResult(file, run, { check: "static.lint", status: "pass", seconds: 2 });
+    recordResult(file, run, { check: "browser.pale-variants", status: "fail", seconds: 60, reason: "exit 1" });
+    const record = JSON.parse(readFileSync(file, "utf8"));
+    expect(record).toMatchObject({ format: RESULTS_FORMAT, ...run });
+    expect(record.results.map((result) => `${result.check}:${result.status}`)).toEqual([
+      "static.lint:pass",
+      "browser.pale-variants:fail",
+    ]);
+  });
+
+  it("starts the file again for another tree or attempt", () => {
+    const file = join(directory(), "results.json");
+    recordResult(file, run, { check: "static.lint", status: "fail", seconds: 2, reason: "exit 1" });
+    recordResult(file, { ...run, attempt: 2 }, { check: "static.lint", status: "pass", seconds: 2 });
+    expect(JSON.parse(readFileSync(file, "utf8")).results).toEqual([
+      { check: "static.lint", status: "pass", seconds: 2 },
+    ]);
+  });
+
+  it("names a check that failed on an earlier attempt of the same tree and passes now", () => {
+    const previous = {
+      format: RESULTS_FORMAT,
+      ...run,
+      results: [
+        { check: "static.lint", status: "pass", seconds: 2 },
+        { check: "browser.pale-variants", status: "fail", seconds: 60, reason: "exit 1" },
+      ],
+    };
+    expect(flakyLine(previous, "t1", "browser.pale-variants", 2)).toBe(
+      "FLAKY browser.pale-variants: failed on attempt 1 (exit 1), passed on attempt 2",
+    );
+    expect(flakyLine(previous, "t1", "static.lint", 2)).toBeUndefined();
+    // Another tree is another change: its failure is not a flake of this one.
+    expect(flakyLine(previous, "t2", "browser.pale-variants", 2)).toBeUndefined();
+    expect(flakyLine(undefined, "t1", "browser.pale-variants", 2)).toBeUndefined();
   });
 });

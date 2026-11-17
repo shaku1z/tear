@@ -200,3 +200,23 @@ describe("Validate workflow", () => {
     expect(workflow.match(/actions\/checkout@/gu)).toHaveLength(1);
   });
 });
+
+describe("Nightly checks workflow", () => {
+  const nightly = read(".github/workflows/nightly.yml");
+
+  it("runs the nightly group on main once a day and by hand", () => {
+    expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
+    expect(nightly).toMatch(/uses: actions\/checkout@v4\n {8}with:\n {10}ref: main/u);
+    expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly/u);
+    expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
+  });
+
+  it("records each check's result and keeps the file even when a check fails", () => {
+    expect(nightly.indexOf("TEAR_CHECK_RESULTS=")).toBeLessThan(nightly.indexOf("run-checks.mjs nightly"));
+    expect(nightly).toMatch(/- uses: actions\/upload-artifact@v4\n {8}if: always\(\)/u);
+  });
+
+  it("only reads the repository", () => {
+    expect(nightly).toMatch(/permissions:\n {2}contents: read\n\n/u);
+  });
+});

@@ -18,15 +18,11 @@ Use Tear's existing `package.json`, tests, scripts, and CI as the authority. Orc
 
 ## Evidence coordination
 
-This skill owns skill-level gate coordination, not certification authority.
-Specialists hand off their claims, evidence and gaps using the shared reference;
-they do not independently launch the final full gate. Use `client-status` to inspect
-the bound mission, then `ensure-client-task` for its missing registered task IDs,
-as described in the shared reference. A reused task stops duplicate execution;
-failed, stale, unsupported or occupied-lease results require resolution, not an
-automatic retry. Keep unregistered obligations explicit. Only this skill
-coordinates the final full gate; neither a client handoff nor a local receipt
-is a protected certificate.
+Specialists hand off their claims, commands, evidence and gaps using the shared
+[evidence handoff](references/evidence-handoff.md); they do not independently launch the
+final full gate. Rerun only what the handoff does not cover or what ran on an older source.
+Failed or stale results need resolution, not an automatic retry. Only this skill
+coordinates the final full gate, and a local pass never stands in for a required CI check.
 
 ## Boundaries
 
