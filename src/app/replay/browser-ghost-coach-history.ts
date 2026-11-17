@@ -3,7 +3,7 @@ import { listBrowserGhostCapsuleManifests } from "../../ghost/browser-capsule-va
 import { ghostCoachCandidate, type GhostCoachHistory } from "../../ghost/coach-history";
 import type { GhostCoachHistoryPort } from "../library/ghost-coach-history-controller";
 
-export function createCoachHistoryWorker(): Worker {
+function createCoachHistoryWorker(): Worker {
   return new Worker(new URL("../../ghost/coach-history-worker.ts", import.meta.url), { type: "module" });
 }
 

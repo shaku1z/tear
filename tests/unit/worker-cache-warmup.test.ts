@@ -1,53 +1,57 @@
 import { describe, expect, it, vi } from "vitest";
 import { warmWorkerCache, type WorkerCacheWarmupPorts } from "../../src/platform/worker-cache-warmup";
 
+const URLS = ["/assets/a-worker-1.js", "/assets/b-worker-2.js", "/assets/c-worker-3.js"];
+
 function ports(overrides: Partial<WorkerCacheWarmupPorts> = {}) {
-  const terminate = vi.fn();
-  const create = vi.fn(() => ({ terminate }));
-  const pause = vi.fn(() => Promise.resolve());
+  const fetchScript = vi.fn(() => Promise.resolve());
+  const missing = vi.fn(() => Promise.resolve(URLS));
   const base: WorkerCacheWarmupPorts = {
     controlled: () => true,
     online: () => true,
     metered: () => false,
     idle: () => true,
-    workers: [create, create, create],
-    pause,
+    missing,
+    fetchScript,
     ...overrides,
   };
-  return { base, create, terminate, pause };
+  return { base, fetchScript, missing };
 }
 
 describe("worker cache warm-up", () => {
-  it("starts each worker once, one at a time with a gap, and stops it", async () => {
-    const { base, create, terminate, pause } = ports();
+  it("fetches each script that is not cached yet", async () => {
+    const { base, fetchScript } = ports();
     expect(await warmWorkerCache(base)).toBe(3);
-    expect(create).toHaveBeenCalledTimes(3);
-    expect(pause).toHaveBeenCalledTimes(3);
-    expect(terminate).toHaveBeenCalledTimes(3);
+    expect(fetchScript.mock.calls.map((call) => call[0])).toEqual(URLS);
+  });
+
+  it("fetches only the missing scripts, and nothing when all three are cached", async () => {
+    const partial = ports({ missing: () => Promise.resolve(URLS.slice(2)) });
+    expect(await warmWorkerCache(partial.base)).toBe(1);
+    expect(partial.fetchScript).toHaveBeenCalledWith(URLS[2]);
+    const none = ports({ missing: () => Promise.resolve([]) });
+    expect(await warmWorkerCache(none.base)).toBe(0);
+    expect(none.fetchScript).not.toHaveBeenCalled();
   });
 
   it.each([
     ["no service worker controls the page", { controlled: () => false }],
     ["the browser is offline", { online: () => false }],
     ["data saver or a metered connection", { metered: () => true }],
-    ["the player is not on the menu", { idle: () => false }],
-  ] as const)("starts nothing when %s", async (_name, override) => {
-    const { base, create } = ports(override);
+  ] as const)("looks at nothing and fetches nothing when %s", async (_name, override) => {
+    const { base, fetchScript, missing } = ports(override);
     expect(await warmWorkerCache(base)).toBe(0);
-    expect(create).not.toHaveBeenCalled();
+    expect(missing).not.toHaveBeenCalled();
+    expect(fetchScript).not.toHaveBeenCalled();
   });
 
-  it("stops after the current worker when the player leaves the menu", async () => {
+  it("stops when the player leaves the menu", async () => {
     let idle = true;
-    const terminate = vi.fn();
-    const make = () => ({ terminate });
-    const first = vi.fn(() => {
+    const fetchScript = vi.fn(() => {
       idle = false;
-      return make();
+      return Promise.resolve();
     });
-    const rest = vi.fn(make);
-    const { base } = ports({ idle: () => idle, workers: [first, rest, rest] });
+    const { base } = ports({ idle: () => idle, fetchScript });
     expect(await warmWorkerCache(base)).toBe(1);
-    expect(rest).not.toHaveBeenCalled();
   });
 });

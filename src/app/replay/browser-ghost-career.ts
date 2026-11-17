@@ -20,8 +20,7 @@ export interface CareerLivePorts {
   actorId(actor: object): string;
 }
 /** Local-only metadata and passive recording composition; no profile/account mutations. */
-/** Started by the career screen and, once per session, by the cache warm-up. */
-export function createCareerArchiveWorker(): Worker {
+function createCareerArchiveWorker(): Worker {
   return new Worker(new URL("../../ghost/career-archive-worker.ts", import.meta.url), { type: "module" });
 }
 

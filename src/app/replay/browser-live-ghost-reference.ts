@@ -6,7 +6,7 @@ import { GhostLocalVault } from "../../ghost/capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "../../ghost/indexeddb-vault-backend";
 import { prepareGhostCapsuleSourceGuards } from "../../ghost/capsule-protection";
 
-export function createLiveGhostReferenceWorker(): Worker {
+function createLiveGhostReferenceWorker(): Worker {
   return new Worker(new URL("../../ghost/live-ghost-reference-worker.ts", import.meta.url), { type: "module" });
 }
 

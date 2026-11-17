@@ -43,9 +43,7 @@ import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../..
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
-import { createCareerArchiveWorker } from "../replay/browser-ghost-career";
-import { createCoachHistoryWorker } from "../replay/browser-ghost-coach-history";
-import { createLiveGhostReferenceWorker } from "../replay/browser-live-ghost-reference";
+import { GHOST_WORKER_URLS } from "../replay/ghost-worker-urls";
 import { startWorkerCacheWarmup } from "../../platform/worker-cache-warmup";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
@@ -337,12 +335,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new AppStateController(surfaces);
-  // The ghost workers are cached by the service worker on first use; start each once on an idle menu.
-  if (target === "standalone")
-    startWorkerCacheWarmup(
-      () => APP.screen === "menu",
-      [createCareerArchiveWorker, createCoachHistoryWorker, createLiveGhostReferenceWorker],
-    );
+  // The ghost worker scripts are cached by the service worker on first fetch; fetch any missing one on an idle menu.
+  if (target === "standalone") startWorkerCacheWarmup(() => APP.screen === "menu", GHOST_WORKER_URLS);
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
   const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
