@@ -11,6 +11,7 @@ function createHarness(initialState = "playing") {
   let escape = false;
   let pause = false;
   let cinemaActive = false;
+  let endCinemaOnUpdate = false;
   let cinemaPlayerMode: string | undefined;
   let cssPerLogicalPixel = 1;
   let simulationSteps = 1;
@@ -34,6 +35,9 @@ function createHarness(initialState = "playing") {
     escapePressed: () => escape,
     endFrame: () => {
       events.push("end-input");
+    },
+    discardScenePresses: () => {
+      events.push("discard-scene-presses");
     },
   };
   const pad = {
@@ -69,6 +73,7 @@ function createHarness(initialState = "playing") {
       },
       update: () => {
         events.push("cinema");
+        if (endCinemaOnUpdate) cinemaActive = false;
       },
     },
     clipper: null,
@@ -147,6 +152,9 @@ function createHarness(initialState = "playing") {
       cinemaActive = active;
       cinemaPlayerMode = playerMode;
     },
+    endCinemaOnNextUpdate: () => {
+      endCinemaOnUpdate = true;
+    },
     setCssPerLogicalPixel: (value: number) => {
       cssPerLogicalPixel = value;
     },
@@ -161,6 +169,26 @@ function createHarness(initialState = "playing") {
 }
 
 describe("RuntimeFrameCoordinator", () => {
+  it("drops the press that ended a scene before the next simulation tick seals it", () => {
+    const harness = createHarness();
+    harness.setCinema(true, "locked");
+    harness.coordinator.run(1 / 60);
+    expect(harness.events, "a scene still playing keeps its input").not.toContain("discard-scene-presses");
+
+    harness.events.length = 0;
+    harness.endCinemaOnNextUpdate();
+    harness.coordinator.run(1 / 60);
+    const discard = harness.events.indexOf("discard-scene-presses");
+    expect(discard, "the frame that ends the scene drops waiting presses").toBeGreaterThan(
+      harness.events.indexOf("cinema"),
+    );
+    expect(discard, "before the simulation tick reads them").toBeLessThan(harness.events.indexOf("simulation"));
+
+    harness.events.length = 0;
+    harness.coordinator.run(1 / 60);
+    expect(harness.events, "later frames keep the player's presses").not.toContain("discard-scene-presses");
+  });
+
   it("preserves input, fixed-step host, platform, music, render and diagnostic ordering", () => {
     const harness = createHarness();
     harness.coordinator.run(1 / 60);

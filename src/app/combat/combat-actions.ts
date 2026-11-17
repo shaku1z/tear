@@ -151,8 +151,7 @@ export function createLiveCombatActions<
     runDamageMultiplier: f.runDamageMultiplier,
     stepCinematic: f.stepCinematic,
     flushClosingInput() {
-      d.Input.takeClick();
-      d.Input.tJump = false;
+      d.Input.discardScenePresses();
     },
     updateWeaponAbilities: f.updateWeaponAbilities,
     flushWeaponActions(events) {

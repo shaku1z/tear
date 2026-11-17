@@ -138,7 +138,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const renderedVaultText = await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__ ?? []);
   assert.ok(
-    renderedVaultText.some((text) => text.includes("NEEDS REPAIR")),
+    renderedVaultText.some((text) => text.includes("needs repair")),
     `Vault did not render the Doctor health state: ${renderedVaultText.slice(-80).join(" | ")}`,
   );
   assert.ok(
@@ -184,7 +184,7 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
     (item) => item.lineage?.parentId === manifest.id && item.status === "repaired",
   );
   await page.waitForFunction(
-    () => window.__TEAR_C28_VAULT_TEXT__?.some((text) => text.includes("GRAVEYARD")),
+    () => window.__TEAR_C28_VAULT_TEXT__?.some((text) => text.includes("repaired copy available")),
     undefined,
     { timeout: STATE_WAIT_MS },
   );
