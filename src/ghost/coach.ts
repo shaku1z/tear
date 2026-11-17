@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
 import { resolveTearSdl, type TearSdlDocumentV1 } from "../tearbench/tearsdl";
 import type { GhostEnvelopeV3 } from "./truth-kernel";

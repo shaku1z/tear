@@ -13,7 +13,7 @@ import {
 import type { CampaignChapterTiming } from "../../src/gameplay/campaign/chapter-controller";
 import { CinematicTimeline, INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 import { stageAt } from "../../src/gameplay/stages";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import {
   captureProductionReplayCheckpoint,
   createProductionGhostReplayComposition,

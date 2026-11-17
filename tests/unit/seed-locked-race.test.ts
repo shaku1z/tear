@@ -16,7 +16,7 @@ import {
   restoreProductionReplaySnapshot,
 } from "../../src/tearbench/production-replay-composition";
 import { declareSeedRace, readSeedRaceRun, seedRaceInitialBuildHash } from "../../src/ghost/seed-race-contract";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { legalSeedRaceUpgrade, type SeedRaceRun } from "../../src/gameplay/run/seed-locked-draft";
 import { createRewardRuntime } from "../../src/gameplay/run/reward-runtime";
 import { createSeedRaceDecision, createSeedRaceDecisionPlayback } from "../../src/ghost/seed-race-decisions";

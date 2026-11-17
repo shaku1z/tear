@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
-const { STATE_WAIT_MS } = require("./browser-waits");
+const { STATE_WAIT_MS, trackScriptLoads, waitForScriptLoads } = require("./browser-waits");
 
 const repositoryRoot = path.resolve(__dirname, "..");
 const buildDirectoryName = process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone";
@@ -133,6 +133,7 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
     serviceWorkers: "block",
   });
   const page = await context.newPage();
+  trackScriptLoads(page);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.stack || error.message));
   await context.route("**/*", (route) => {
@@ -145,13 +146,11 @@ async function runFreshJourney(browser, baseUrl, runNumber) {
       timeout: STATE_WAIT_MS,
     });
     await page.waitForFunction(() => window.__TEAR_WATCH_AGENT__, undefined, { timeout: STATE_WAIT_MS });
-    await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await waitForScriptLoads(page);
 
     const buildMetadata = await page.evaluate(() => window.__TEAR_BUILD__ ?? null);
     let snapshot = await page.evaluate((options) => window.__TEAR_WATCH_AGENT__.start(options), scenario);
-    await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await waitForScriptLoads(page);
     const transcript = [transcriptSample(snapshot)];
     for (let sample = 0; sample < maxSamples && snapshot.status === "running"; sample += 1) {
       snapshot = await page.evaluate((budget) => window.__TEAR_WATCH_AGENT__.run(budget), sampleStepBudget);

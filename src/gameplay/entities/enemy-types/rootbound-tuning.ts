@@ -1,43 +1,9 @@
-/** Authored Rootbound timing, geometry and damage. Behaviour lives in rootbound.ts and its phase modules. */
-export const ROOTBOUND_PHASE_ONE_ATTACK_ORDER = Object.freeze([
-  "vine-sweep",
-  "seed-arc",
-  "rootline",
-  "canopy-step",
-] as const);
-export type RootboundPhaseOneAttack = (typeof ROOTBOUND_PHASE_ONE_ATTACK_ORDER)[number];
+/**
+ * Authored Rootbound timing, geometry and damage for the parts not on the move table (`rootbound-moves.ts`):
+ * phase cadence, Grafts, the Memory Choir and Last Spring. Behaviour lives in rootbound.ts.
+ */
+/** openingDelay: seconds before the first move of Phase I; recovery: the pause as Phase I ends. */
 export const ROOTBOUND_PHASE_ONE_CADENCE = Object.freeze({ openingDelay: 0.9, recovery: 0.55 });
-export const ROOTBOUND_VINE_SWEEP = Object.freeze({
-  windup: 0.65,
-  active: 0.14,
-  followThrough: 0.22,
-  reach: 360,
-  halfHeight: 72,
-  damage: 18,
-});
-export type RootboundVineSweepStage = "windup" | "active" | "follow-through";
-export const ROOTBOUND_SEED_ARC = Object.freeze({
-  windup: 0.55,
-  release: 0.3,
-  launchSpeed: 560,
-  gravity: 820,
-  spread: 140,
-  damage: 16,
-  radius: 12,
-});
-export type RootboundSeedArcStage = "windup" | "release";
-export const ROOTBOUND_ROOTLINE = Object.freeze({
-  windup: 0.7,
-  active: 0.24,
-  cleanup: 0.18,
-  width: 430,
-  height: 104,
-  damage: 20,
-});
-export type RootboundRootlineStage = "warning" | "active" | "cleanup";
-/** floorStandoff: how far from the player the drop back to the floor lands. */
-export const ROOTBOUND_CANOPY_STEP = Object.freeze({ telegraph: 0.55, travel: 0.48, settle: 0.24, floorStandoff: 230 });
-export type RootboundCanopyStepStage = "telegraph" | "travel" | "settle";
 
 export const ROOTBOUND_GRAFT_ANCHOR_GEOMETRY = Object.freeze({ width: 54, height: 90 });
 export const ROOTBOUND_MEMORY_CHOIR = Object.freeze({
@@ -66,18 +32,8 @@ export interface RootboundMemoryChoirManifestation {
   readonly hitSpent: boolean;
 }
 
-/**
- * Phase III after Regrowth: Last Spring opens every rotation and the ground
- * verbs fill the gaps, so the final phase never runs out of attacks.
- */
-export const ROOTBOUND_PHASE_THREE_ATTACK_ORDER = Object.freeze([
-  "last-spring",
-  "vine-sweep",
-  "rootline",
-  "seed-arc",
-] as const);
-export type RootboundPhaseThreeAttack = (typeof ROOTBOUND_PHASE_THREE_ATTACK_ORDER)[number];
-export const ROOTBOUND_PHASE_THREE_CADENCE = Object.freeze({ openingDelay: 0.7, recovery: 0.45 });
+/** Phase III after Regrowth: openingDelay before its first move or Last Spring. */
+export const ROOTBOUND_PHASE_THREE_CADENCE = Object.freeze({ openingDelay: 0.7 });
 /** Bloom Shift holds a readable re-planting pose while the next Well pattern arms. */
 export const ROOTBOUND_BLOOM_SHIFT = Object.freeze({ warning: 0.6 });
 /**

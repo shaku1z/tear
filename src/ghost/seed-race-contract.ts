@@ -5,7 +5,7 @@ import { VERDANT_VARIANT_IDS } from "../gameplay/variants";
 import { UPGRADES } from "../gameplay/upgrades";
 import type { SeedRaceRun, SeedRaceShared } from "../gameplay/run/seed-locked-draft";
 import { seedRaceCatalogHash, seedRaceLegality } from "../gameplay/run/seed-locked-draft";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 const HASH = /^[a-f0-9]{16}$/u;
 function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);

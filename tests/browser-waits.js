@@ -249,7 +249,62 @@ async function waitForPointerLock(page) {
   }
 }
 
+const scriptLoads = new WeakMap();
+
+/**
+ * Counts the page's script requests in flight. Screens and runtimes load their code as lazy chunks,
+ * which are script requests; music, images and other media are not. Call it right after creating
+ * the page, before the first navigation.
+ */
+function trackScriptLoads(page) {
+  if (scriptLoads.has(page)) return;
+  const pending = new Set();
+  const waiters = new Set();
+  const settle = (request) => {
+    if (!pending.delete(request) || pending.size > 0) return;
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+  };
+  page.on("request", (request) => {
+    if (request.resourceType() === "script") pending.add(request);
+  });
+  page.on("requestfinished", settle);
+  page.on("requestfailed", settle);
+  scriptLoads.set(page, { pending, waiters });
+}
+
+/**
+ * Waits until the code the current screen asked for has loaded, then for two frames so it has
+ * drawn: a screen's state can be active before its lazy renderer chunk registers the canvas
+ * buttons. Never wait for the whole network to go quiet instead (`networkidle`): the game keeps
+ * loading music and assets during play, so the page may never be idle; eslint rejects it.
+ */
+async function waitForScriptLoads(page) {
+  const tracker = scriptLoads.get(page);
+  if (tracker === undefined) throw new Error("waitForScriptLoads needs trackScriptLoads(page) before navigation");
+  const frames = () =>
+    page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  // The screen's first frames are what ask for its chunk.
+  await frames();
+  if (tracker.pending.size > 0) {
+    let resolveIdle;
+    const idle = new Promise((resolve) => {
+      resolveIdle = resolve;
+      tracker.waiters.add(resolve);
+    });
+    const outcome = await within(idle, STATE_WAIT_MS, "still loading");
+    tracker.waiters.delete(resolveIdle);
+    if (outcome === "still loading") {
+      const urls = [...tracker.pending].map((request) => request.url()).join(", ");
+      throw new Error(`script loads still pending after ${String(STATE_WAIT_MS)} ms: ${urls}`);
+    }
+  }
+  await frames();
+}
+
 module.exports = {
+  trackScriptLoads,
+  waitForScriptLoads,
   waitForPointerLock,
   STATE_WAIT_MS,
   SLOW_STATE_WAIT_MS,

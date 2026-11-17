@@ -1,6 +1,6 @@
 import { browserOnline } from "../../platform/worker-cache-warmup";
 import { parseGhostCapsuleManifest } from "../../ghost/capsule-vault";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import { UPGRADES } from "../../gameplay/upgrades";
 import type { StyleState, TrickTuning } from "../../gameplay/scoring/style-runtime";
 import type { TearGameplayEvent } from "../../gameplay/runtime/gameplay-events";

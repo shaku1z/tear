@@ -1,381 +1,253 @@
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
-import type { EnemyProjectile } from "../../src/gameplay/entities/enemy-contracts";
-import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
+import { BOSS_TELL_MIN_LEAD_SECONDS } from "../../src/gameplay/entities/boss-tells";
+import type { BossAttackRunnerState } from "../../src/gameplay/entities/boss-attack-runner";
+import { ROOTBOUND_PHASE_ONE_CADENCE } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
 import { DIFFICULTY_CATALOG } from "../../src/gameplay/run/difficulty-catalog";
-import {
-  ROOTBOUND_PHASE_ONE_ATTACK_ORDER,
-  ROOTBOUND_PHASE_ONE_CADENCE,
-  ROOTBOUND_CANOPY_STEP,
-  ROOTBOUND_SEED_ARC,
-  ROOTBOUND_ROOTLINE,
-  ROOTBOUND_VINE_SWEEP,
-  type RootboundPhaseOneAttack,
-} from "../../src/gameplay/entities/enemy-types/rootbound";
 import { createEnemyHarness } from "./enemy-test-harness";
 
-type PhaseOneBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
-  pendingAttack: RootboundPhaseOneAttack | null;
-  attackIndex: number;
-  completePhaseOneAttack(): void;
-  selectNextPhaseOneAttack(): RootboundPhaseOneAttack | null;
+type Harness = ReturnType<typeof createEnemyHarness>;
+type PhaseOneBoss = InstanceType<Harness["types"]["Rootbound"]> & {
+  moveState: BossAttackRunnerState;
+  moveTick: number;
+  hidden: boolean;
+  batonStrike: number;
+  phaseMarker: number;
+  contactDamageEnabled(): boolean;
+  parryBaton(strong: boolean): boolean;
+  tells(): readonly Readonly<{ attackId: string; stage: string; leadSeconds: number; damaging: boolean }>[];
 };
 
-function boss() {
-  const harness = createEnemyHarness();
-  return {
-    harness,
-    actor: new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as PhaseOneBoss,
-  };
+const dt = 1 / 120;
+const groundFeet = CONFIG.world.groundY - 36;
+
+function boss(randomValues?: readonly number[]): { harness: Harness; actor: PhaseOneBoss } {
+  const harness = createEnemyHarness(randomValues);
+  const actor = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2);
+  return { harness, actor };
 }
 
-describe("Rootbound Phase I cadence", () => {
-  it("selects the authored four-verb order deterministically without committing placeholder attacks", () => {
-    const first = boss();
-    const second = boss();
-    const selected: RootboundPhaseOneAttack[] = [];
-    const mirrored: RootboundPhaseOneAttack[] = [];
-    for (let index = 0; index < ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length * 2; index += 1) {
-      for (const entry of [first, second]) {
-        entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, entry.harness.platforms, entry.harness.player, []);
-        const target = entry === first ? selected : mirrored;
-        if (entry.actor.pendingAttack !== null) target.push(entry.actor.pendingAttack);
-        expect(entry.actor).toMatchObject({
-          state: "idle",
-          stateT: 0,
-          atk: "unavailable",
-          availableAttacks: ["vine-sweep", "seed-arc", "rootline", "canopy-step"],
-        });
-        entry.actor.completePhaseOneAttack();
-        expect(entry.actor).toMatchObject({
-          state: "recover",
-          stateT: ROOTBOUND_PHASE_ONE_CADENCE.recovery,
-          pendingAttack: null,
-        });
-        entry.actor.update(ROOTBOUND_PHASE_ONE_CADENCE.recovery, entry.harness.platforms, entry.harness.player, []);
+/** The stage of the move in progress, read fresh: an update may have ended it. */
+function stageOf(actor: PhaseOneBoss): string | null {
+  return actor.moveState.run?.stage ?? null;
+}
+
+function move(id: string) {
+  const found = ROOTBOUND_MOVES.byId.get(id);
+  if (found === undefined) throw new Error(`no Rootbound move ${id}`);
+  return found;
+}
+
+/** The next move must be `id`: every other move is still cooling down, and it may start now. */
+function queue(actor: PhaseOneBoss, id: string): void {
+  const cooling = Object.fromEntries(
+    ROOTBOUND_MOVES.attacks.filter((other) => other.id !== id).map((other) => [other.id, Number.MAX_SAFE_INTEGER]),
+  );
+  actor.moveState = { run: null, readyTick: actor.moveTick, lastAttackId: null, cooldownUntil: cooling };
+}
+
+/** Where the player stands so each move, played straight, lands on them. */
+const STAND_FOR: Readonly<Record<string, number>> = {
+  "vine-lash": -150,
+  "root-glide": -500,
+  "canopy-vault": -400,
+  "thorn-burst": -90,
+  "root-wave": -500,
+};
+
+/** Runs `id` from its first tick to its end and reports what the player felt. */
+function play(id: string) {
+  const { harness, actor } = boss();
+  harness.player.x = actor.x + (STAND_FOR[id] ?? -150);
+  harness.player.y = groundFeet;
+  queue(actor, id);
+  let tick = 0,
+    firstHit = -1,
+    warnedFrom = -1;
+  const stages: string[] = [];
+  for (; tick < 120 * 4; tick += 1) {
+    const before = harness.player.damage.length;
+    actor.update(dt, harness.platforms, harness.player);
+    const stage = actor.moveState.run?.stage ?? "done";
+    if (stages.at(-1) !== stage) stages.push(stage);
+    if (warnedFrom < 0 && actor.tells().some((tell) => tell.attackId === id && tell.stage === "warning"))
+      warnedFrom = tick;
+    if (firstHit < 0 && harness.player.damage.length > before) firstHit = tick;
+    if (stage === "done") break;
+  }
+  return { harness, actor, firstHit, warnedFrom, stages, damage: harness.player.damage.map((hit) => hit.amount) };
+}
+
+describe("Rootbound Phase I moves", () => {
+  it("waits out the opening, then plays table moves with no move twice running, the same way every time", () => {
+    const sequence = (randomValues: readonly number[]): readonly string[] => {
+      const { harness, actor } = boss(randomValues);
+      const started: string[] = [];
+      let firstStart = -1;
+      for (let tick = 0; tick < 120 * 30; tick += 1) {
+        // Every 3 s the player either crowds the keeper or steps across the arena, so moves of every range come up.
+        if (tick % 720 === 0) harness.player.x = actor.x < CONFIG.view.w / 2 ? CONFIG.view.w - 160 : 160;
+        else if (tick % 720 === 360) harness.player.x = actor.x + (actor.x < CONFIG.view.w / 2 ? 90 : -90);
+        actor.update(dt, harness.platforms, harness.player);
+        const run = actor.moveState.run;
+        if (
+          run !== null &&
+          run.stage === "tell" &&
+          actor.atk === `${run.attackId}:tell` &&
+          started.at(-1) !== run.attackId
+        ) {
+          started.push(run.attackId);
+          if (firstStart < 0) firstStart = tick;
+        }
       }
-    }
-    expect(selected).toEqual([...ROOTBOUND_PHASE_ONE_ATTACK_ORDER, ...ROOTBOUND_PHASE_ONE_ATTACK_ORDER]);
-    expect(mirrored).toEqual(selected);
+      expect(firstStart / 120).toBeGreaterThanOrEqual(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay - dt);
+      return started;
+    };
+    const values = [0.13, 0.71, 0.42, 0.95, 0.06, 0.58];
+    const first = sequence(values);
+    expect(first.length).toBeGreaterThan(12);
+    expect(first.every((id, index) => index === 0 || first[index - 1] !== id)).toBe(true);
+    expect(new Set(first)).toEqual(new Set(ROOTBOUND_MOVES.attacks.map((attack) => attack.id)));
+    expect(sequence(values)).toEqual(first);
   });
 
-  it("does not select during intro, recovery, stun, or while a selection is pending", () => {
-    const { harness, actor } = boss();
-    actor.introT = 0.4;
-    actor.update(1, harness.platforms, harness.player, []);
-    expect(actor.pendingAttack).toBeNull();
-    actor.introT = 0;
-    actor.update(1 / 120, harness.platforms, harness.player, []);
-    expect(actor.state).toBe("recover");
-    actor.stun = 1;
-    actor.update(2, harness.platforms, harness.player, []);
-    expect(actor.pendingAttack).toBeNull();
-    actor.stun = 0;
-    actor.update(ROOTBOUND_PHASE_ONE_CADENCE.recovery, harness.platforms, harness.player, []);
-    actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, harness.platforms, harness.player, []);
-    expect(actor.pendingAttack).toBe("vine-sweep");
-    expect(actor.selectNextPhaseOneAttack()).toBeNull();
-    expect(actor).toMatchObject({ pendingAttack: "vine-sweep", attackIndex: 1, atk: "unavailable" });
-  });
-
-  it("telegraphs Vine Sweep geometry before one bounded active hit and punish recovery", () => {
-    const { harness, actor } = boss();
-    const player = harness.player;
-    player.x = actor.x + 220;
-    player.y = CONFIG.world.groundY - player.hh;
-
-    actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, harness.platforms, player, []);
-    actor.update(1 / 120, harness.platforms, player, []);
-    expect(actor).toMatchObject({
-      pendingAttack: "vine-sweep",
-      vineSweepStage: "windup",
-      atk: "vine-sweep:windup",
-      vineSweepHitSpent: false,
+  for (const attack of ROOTBOUND_MOVES.attacks) {
+    it(`warns ${attack.id} for its authored tell, then lands it once for its authored damage`, () => {
+      const { firstHit, warnedFrom, stages, damage } = play(attack.id);
+      expect(warnedFrom).toBe(0);
+      expect(attack.timing.tell / 120).toBeGreaterThanOrEqual(BOSS_TELL_MIN_LEAD_SECONDS.normal);
+      expect(firstHit).toBeGreaterThanOrEqual(attack.timing.tell);
+      expect(damage).toEqual([attack.hit?.damage]);
+      expect(stages).toEqual(
+        attack.timing.punish > 0
+          ? ["tell", "active", "recover", "punish", "done"]
+          : ["tell", "active", "recover", "done"],
+      );
     });
-    expect(actor.vineSweepGeometry()).toMatchObject({ facing: 1, hh: ROOTBOUND_VINE_SWEEP.halfHeight });
-    expect(player.damage).toEqual([]);
+  }
 
-    actor.update(ROOTBOUND_VINE_SWEEP.windup, harness.platforms, player, []);
-    expect(actor).toMatchObject({ vineSweepStage: "active", atk: "vine-sweep:active" });
-    expect(player.damage).toEqual([]);
-    actor.update(1 / 120, harness.platforms, player, []);
-    actor.update(1 / 120, harness.platforms, player, []);
-    expect(player.damage).toHaveLength(1);
-    expect(player.damage[0]).toMatchObject({ amount: ROOTBOUND_VINE_SWEEP.damage, sourceX: actor.x, source: actor });
-
-    actor.update(ROOTBOUND_VINE_SWEEP.active, harness.platforms, player, []);
-    expect(actor).toMatchObject({ vineSweepStage: "follow-through", atk: "vine-sweep:follow-through" });
-    actor.update(ROOTBOUND_VINE_SWEEP.followThrough, harness.platforms, player, []);
-    expect(actor).toMatchObject({ pendingAttack: null, vineSweepStage: null, state: "recover", atk: "unavailable" });
-  });
-
-  it("keeps Vine Sweep safe behind the committed facing and above its near-air coverage", () => {
-    for (const playerOffset of [-180, 220] as const) {
+  it("strikes where the player stood at the wind-up, so moving away from a target move dodges it", () => {
+    for (const id of ["root-glide", "canopy-vault"]) {
       const { harness, actor } = boss();
-      const player = harness.player;
-      player.x = actor.x + 220;
-      actor.update(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay, harness.platforms, player, []);
-      actor.update(1 / 120, harness.platforms, player, []);
-      player.x = actor.x + playerOffset;
-      if (playerOffset > 0) player.y = actor.y - ROOTBOUND_VINE_SWEEP.halfHeight * 2 - player.hh;
-      actor.update(ROOTBOUND_VINE_SWEEP.windup, harness.platforms, player, []);
-      actor.update(1 / 120, harness.platforms, player, []);
-      expect(player.damage, `offset ${String(playerOffset)}`).toEqual([]);
+      harness.player.x = actor.x - 450;
+      queue(actor, id);
+      actor.update(dt, harness.platforms, harness.player);
+      const locked = harness.player.x;
+      harness.player.x = locked + 320;
+      let surfacedAt = Number.NaN;
+      for (let tick = 0; tick < 120 * 3 && stageOf(actor) !== null; tick += 1) {
+        actor.update(dt, harness.platforms, harness.player);
+        if (stageOf(actor) === "active") surfacedAt = actor.x;
+      }
+      expect(harness.player.damage, id).toEqual([]);
+      expect(Math.abs(surfacedAt - locked), id).toBeLessThan(1);
     }
   });
 
-  it("releases a bounded, deflectable Seed Arc with visible landing ownership", () => {
+  it("cannot be hit and deals no contact damage while burrowed for Root Glide", () => {
     const { harness, actor } = boss();
-    const shots: EnemyProjectile[] = [];
-    actor.pendingAttack = "seed-arc";
-    actor.update(1 / 120, harness.platforms, harness.player, shots);
-    expect(actor).toMatchObject({ seedArcStage: "windup", atk: "seed-arc:windup" });
-    expect(shots).toEqual([]);
-
-    actor.update(ROOTBOUND_SEED_ARC.windup, harness.platforms, harness.player, shots);
-    expect(actor).toMatchObject({ seedArcStage: "release", atk: "seed-arc:release" });
-    expect(shots).toHaveLength(3);
-    expect(shots.map((shot) => shot.landingX)).toEqual([
-      harness.player.x - ROOTBOUND_SEED_ARC.spread,
-      harness.player.x,
-      harness.player.x + ROOTBOUND_SEED_ARC.spread,
-    ]);
-    for (const shot of shots)
-      expect(shot).toMatchObject({
-        family: "ordinaryProjectile",
-        counterplay: "deflect",
-        unparryable: false,
-        bossAttack: "seed-arc",
-        owner: actor,
-        sourceEnemy: actor,
-        landingY: CONFIG.world.groundY,
-        groundImpact: true,
-        mud: false,
-        root: 0,
-        dmg: ROOTBOUND_SEED_ARC.damage,
-      });
-    expect(Math.max(...shots.map((shot) => shot.life))).toBeLessThan(2);
-
-    actor.update(ROOTBOUND_SEED_ARC.release, harness.platforms, harness.player, shots);
-    expect(actor).toMatchObject({ pendingAttack: null, seedArcStage: null, state: "recover", atk: "unavailable" });
-  });
-
-  it("routes Rootline warning, one active hit, and cleanup through the environment owner", () => {
-    const { harness, actor } = boss();
-    const player = harness.player;
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootline-test" });
-    player.x = actor.x + 180;
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "rootbound:test",
-        source: actor,
-        state: Object.freeze({
-          stage: actor.rootlineStage,
-          geometry: actor.rootlineGeometry(),
-          damage: ROOTBOUND_ROOTLINE.damage,
-          cleanupReason: actor.rootlineCleanupReason,
-        }),
-        player: Object.freeze({
-          x: player.x,
-          y: player.y,
-          hw: player.hw,
-          hh: player.hh,
-          invulnerable: Boolean(player.invulnerable),
-          hazardDamageMultiplier: 1,
-          takeDamage: (damage: number, sourceX: number, source: unknown) => {
-            player.takeDamage(damage, sourceX, source as never);
-          },
-        }),
-      }),
-    ]);
-    actor.pendingAttack = "rootline";
-
-    actor.update(1 / 120, harness.platforms, player, []);
-    environment.step(1, 1 / 120, () => undefined);
-    expect(environment.fields()).toEqual([
-      expect.objectContaining({
-        kind: "rootline",
-        ownerId: "rootbound:test",
-        state: "warning",
-        patternId: "rootbound-rootline",
-        geometry: actor.rootlineGeometry(),
-      }),
-    ]);
-    expect(player.damage).toEqual([]);
-
-    actor.update(ROOTBOUND_ROOTLINE.windup, harness.platforms, player, []);
-    environment.step(2, 1 / 120, () => undefined);
-    expect(environment.fields()[0]).toMatchObject({ state: "active" });
-    expect(player.damage).toHaveLength(1);
-    environment.step(3, 1 / 120, () => undefined);
-    expect(player.damage).toHaveLength(1);
-
-    actor.update(ROOTBOUND_ROOTLINE.active, harness.platforms, player, []);
-    environment.step(4, 1 / 120, () => undefined);
-    expect(environment.fields()[0]).toMatchObject({ state: "cooldown" });
-    actor.update(ROOTBOUND_ROOTLINE.cleanup, harness.platforms, player, []);
-    environment.step(5, 1 / 120, () => undefined);
-    expect(environment.fields()[0]).toMatchObject({ state: "expired", cleanupReason: "natural-expiry" });
-    expect(actor).toMatchObject({ pendingAttack: null, rootlineStage: null, state: "recover" });
-  });
-
-  it("telegraphs an authored Canopy Step destination before moving without an arrival hit", () => {
-    const { harness, actor } = boss();
-    const player = harness.player;
-    const start = { x: actor.x, y: actor.y };
-    actor.pendingAttack = "canopy-step";
-    actor.update(1 / 120, harness.platforms, player, []);
-    expect(actor).toMatchObject({
-      canopyStepStage: "telegraph",
-      canopyDestination: { x: 800, y: 461, platformId: "test:ledge" },
-      atk: "canopy-step:telegraph",
-      x: start.x,
-      y: start.y,
-    });
+    harness.player.x = actor.x - 600;
+    queue(actor, "root-glide");
+    for (let tick = 0; tick < move("root-glide").timing.tell / 2; tick += 1)
+      actor.update(dt, harness.platforms, harness.player);
+    expect(actor.hidden).toBe(true);
     expect(actor.contactDamageEnabled()).toBe(false);
-    expect(player.damage).toEqual([]);
-
-    actor.update(ROOTBOUND_CANOPY_STEP.telegraph, harness.platforms, player, []);
-    expect(actor).toMatchObject({ canopyStepStage: "travel", x: start.x, y: start.y });
-    actor.update(ROOTBOUND_CANOPY_STEP.travel / 2, harness.platforms, player, []);
-    expect(actor.y).toBeLessThan(start.y);
-    actor.update(ROOTBOUND_CANOPY_STEP.travel / 2, harness.platforms, player, []);
-    expect(actor).toMatchObject({ canopyStepStage: "settle", x: 800, y: 461, atk: "canopy-step:settle" });
-    expect(player.damage).toEqual([]);
-    actor.update(ROOTBOUND_CANOPY_STEP.settle, harness.platforms, player, []);
-    expect(actor).toMatchObject({
-      pendingAttack: null,
-      canopyStepStage: null,
-      canopyDestination: null,
-      state: "recover",
-    });
-    expect(player.damage).toEqual([]);
+    expect(actor.blocksDamage()).toBe(true);
   });
 
-  it("cleans every temporary Phase I owner before Phase II becomes active", () => {
+  it("is open after its heavy moves: an exposed tell, and hits count for more until it recovers", () => {
+    for (const id of ["root-glide", "canopy-vault"]) {
+      const { harness, actor } = boss();
+      harness.player.x = actor.x - 500;
+      queue(actor, id);
+      for (let tick = 0; tick < 120 * 3 && actor.moveState.run?.stage !== "punish"; tick += 1)
+        actor.update(dt, harness.platforms, harness.player);
+      expect(
+        actor.tells().map((tell) => [tell.attackId, tell.stage, tell.damaging]),
+        id,
+      ).toContainEqual([id, "exposed", false]);
+      actor.hitCd = 0;
+      expect(actor.hit(100, 1, 0), id).toBeCloseTo(100 * ROOTBOUND_MOVES.exposedDamageTaken);
+      while (actor.moveState.run !== null) actor.update(dt, harness.platforms, harness.player);
+      actor.hitCd = 0;
+      expect(actor.hit(100, 1, 0), id).toBe(100);
+    }
+  });
+
+  it("can be parried only in Vine Lash's window; a parry spares the player and opens the keeper", () => {
     const { harness, actor } = boss();
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "phase-exit" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "rootbound:phase-exit",
-        source: actor,
-        state: Object.freeze({
-          stage: actor.rootlineStage,
-          geometry: actor.rootlineGeometry(),
-          damage: ROOTBOUND_ROOTLINE.damage,
-          cleanupReason: actor.rootlineCleanupReason,
-        }),
-      }),
-    ]);
-    actor.pendingAttack = "rootline";
-    actor.update(1 / 120, harness.platforms, harness.player, []);
-    environment.step(1, 1 / 120, () => undefined);
-    expect(environment.fields()[0]).toMatchObject({ state: "warning" });
-
-    const seed = new harness.Projectile(actor.x, actor.y, 10, -10);
-    seed.owner = actor;
-    seed.sourceEnemy = actor;
-    seed.bossAttack = "seed-arc";
-    const projectiles: EnemyProjectile[] = [seed];
-    actor.hp = actor.maxHp * actor.phaseMarks[0];
-    actor.update(1 / 120, harness.platforms, harness.player, projectiles);
-    expect(actor).toMatchObject({
-      phase: 2,
-      phaseMarker: 2,
-      phaseOneExited: true,
-      pendingAttack: null,
-      vineSweepStage: null,
-      seedArcStage: null,
-      rootlineStage: null,
-      canopyStepStage: null,
-      state: "recover",
-      atk: "unavailable",
-      rootlineCleanupReason: "stage-transition",
-    });
-    expect(seed).toMatchObject({ dead: true, shatterReason: "phase-transition" });
-    environment.step(2, 1 / 120, () => undefined);
-    expect(environment.fields()[0]).toMatchObject({ state: "expired", cleanupReason: "stage-transition" });
+    harness.player.x = actor.x - 150;
+    queue(actor, "vine-lash");
+    actor.update(dt, harness.platforms, harness.player);
+    expect(actor.batonStrike).toBe(0);
+    expect(actor.parryBaton(false)).toBe(false);
+    let opened = -1;
+    for (let tick = 1; tick < 120 && opened < 0; tick += 1) {
+      actor.update(dt, harness.platforms, harness.player);
+      if (actor.batonStrike > 0) opened = tick;
+    }
+    const lash = move("vine-lash");
+    expect(opened).toBe(lash.timing.tell - ROOTBOUND_MOVES.parryLead);
+    expect(actor.parryBaton(true)).toBe(true);
+    expect(actor.batonStrike).toBe(0);
+    let exposedTicks = 0;
+    while (actor.moveState.run !== null) {
+      actor.update(dt, harness.platforms, harness.player);
+      if (actor.tells().some((tell) => tell.stage === "exposed")) exposedTicks += 1;
+    }
+    expect(harness.player.damage).toEqual([]);
+    expect(Math.abs(exposedTicks - ROOTBOUND_MOVES.parryExposed)).toBeLessThanOrEqual(1);
   });
 
-  it("keeps authored cadence fixed while current difficulty authority scales damage exactly once", () => {
-    const cycleSeconds =
-      ROOTBOUND_PHASE_ONE_CADENCE.openingDelay * ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length +
-      ROOTBOUND_PHASE_ONE_CADENCE.recovery * ROOTBOUND_PHASE_ONE_ATTACK_ORDER.length +
-      ROOTBOUND_VINE_SWEEP.windup +
-      ROOTBOUND_VINE_SWEEP.active +
-      ROOTBOUND_VINE_SWEEP.followThrough +
-      ROOTBOUND_SEED_ARC.windup +
-      ROOTBOUND_SEED_ARC.release +
-      ROOTBOUND_ROOTLINE.windup +
-      ROOTBOUND_ROOTLINE.active +
-      ROOTBOUND_ROOTLINE.cleanup +
-      ROOTBOUND_CANOPY_STEP.telegraph +
-      ROOTBOUND_CANOPY_STEP.travel +
-      ROOTBOUND_CANOPY_STEP.settle;
-    expect(cycleSeconds).toBeCloseTo(10.05);
-    expect(
-      Math.min(
-        ROOTBOUND_VINE_SWEEP.windup,
-        ROOTBOUND_SEED_ARC.windup,
-        ROOTBOUND_ROOTLINE.windup,
-        ROOTBOUND_CANOPY_STEP.telegraph,
-      ),
-    ).toBeGreaterThanOrEqual(0.55);
+  it("freezes moves through the intro and a cinematic, then resumes", () => {
+    const { harness, actor } = boss();
+    queue(actor, "vine-lash");
+    actor.introT = 0.4;
+    actor.update(dt, harness.platforms, harness.player);
+    expect(actor).toMatchObject({ state: "intro", atk: "unavailable" });
+    expect(actor.moveState.run).toBeNull();
+    actor.introT = 0;
+    actor.cinematicT = 0.4;
+    actor.update(dt, harness.platforms, harness.player);
+    expect(actor.atk).toBe("unavailable");
+    expect(actor.moveState.run).toBeNull();
+    actor.cinematicT = 0;
+    for (let tick = 0; tick < 120 && actor.moveState.run === null; tick += 1)
+      actor.update(dt, harness.platforms, harness.player);
+    expect(actor.moveState.run?.attackId).toBe("vine-lash");
+  });
 
+  it("drops the move in progress, unhurt, when Phase II begins", () => {
+    const { harness, actor } = boss();
+    harness.player.x = actor.x - 600;
+    queue(actor, "root-glide");
+    for (let tick = 0; tick < 10; tick += 1) actor.update(dt, harness.platforms, harness.player);
+    expect(actor.hidden).toBe(true);
+    actor.hp = actor.maxHp * actor.phaseMarks[0];
+    actor.update(dt, harness.platforms, harness.player);
+    expect(actor).toMatchObject({ phase: 2, phaseMarker: 2, hidden: false, batonStrike: 0, atk: "unavailable" });
+    expect(actor.moveState.run).toBeNull();
+    expect(actor.tells().filter((tell) => ROOTBOUND_MOVES.byId.has(tell.attackId))).toEqual([]);
+    expect(harness.player.damage).toEqual([]);
+  });
+
+  it("scales move damage once through the difficulty table", () => {
     const scaled = (damage: number, multiplier: number): number => Math.round(damage * multiplier * 10) / 10;
     expect(
-      DIFFICULTY_CATALOG.map((difficulty) => ({
-        id: difficulty.id,
-        vine: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_VINE_SWEEP.damage, difficulty.modifiers.playerDamageTaken),
-        seed: difficulty.oneHit ? "fatal" : scaled(ROOTBOUND_SEED_ARC.damage, difficulty.modifiers.playerDamageTaken),
-        rootline: difficulty.oneHit
-          ? "fatal"
-          : scaled(ROOTBOUND_ROOTLINE.damage, difficulty.modifiers.playerDamageTaken),
-        cycleSeconds,
-      })),
+      DIFFICULTY_CATALOG.map((difficulty) => [
+        difficulty.id,
+        ...ROOTBOUND_MOVES.attacks.map((attack) =>
+          difficulty.oneHit ? "fatal" : scaled(attack.hit?.damage ?? 0, difficulty.modifiers.playerDamageTaken),
+        ),
+      ]),
     ).toEqual([
-      { id: "easy", vine: 11.7, seed: 10.4, rootline: 13, cycleSeconds },
-      { id: "normal", vine: 18, seed: 16, rootline: 20, cycleSeconds },
-      { id: "hard", vine: 24.3, seed: 21.6, rootline: 27, cycleSeconds },
-      { id: "extreme", vine: 32.4, seed: 28.8, rootline: 36, cycleSeconds },
-      { id: "onehit", vine: "fatal", seed: "fatal", rootline: "fatal", cycleSeconds },
+      ["easy", 11.7, 13, 14.3, 10.4, 10.4],
+      ["normal", 18, 20, 22, 16, 16],
+      ["hard", 24.3, 27, 29.7, 21.6, 21.6],
+      ["extreme", 32.4, 36, 39.6, 28.8, 28.8],
+      ["onehit", "fatal", "fatal", "fatal", "fatal", "fatal"],
     ]);
-  });
-
-  it("freezes every selected attack without commits during intro or transformation protection", () => {
-    for (const attack of ROOTBOUND_PHASE_ONE_ATTACK_ORDER) {
-      const { harness, actor } = boss();
-      const projectiles: EnemyProjectile[] = [];
-      actor.pendingAttack = attack;
-      actor.introT = 0.4;
-      actor.update(1 / 120, harness.platforms, harness.player, projectiles);
-      expect(actor).toMatchObject({ pendingAttack: attack, state: "intro", atk: "unavailable" });
-      expect(actor).toMatchObject({
-        vineSweepStage: null,
-        seedArcStage: null,
-        rootlineStage: null,
-        canopyStepStage: null,
-      });
-      expect(projectiles).toEqual([]);
-
-      actor.introT = 0;
-      actor.cinematicT = 0.4;
-      actor.update(1 / 120, harness.platforms, harness.player, projectiles);
-      expect(actor).toMatchObject({ pendingAttack: attack, state: "intro", atk: "unavailable", cinematicT: 0.4 });
-      expect(actor).toMatchObject({
-        vineSweepStage: null,
-        seedArcStage: null,
-        rootlineStage: null,
-        canopyStepStage: null,
-      });
-      expect(projectiles).toEqual([]);
-
-      actor.cinematicT = 0;
-      actor.state = "idle";
-      actor.update(1 / 120, harness.platforms, harness.player, projectiles);
-      expect(actor.atk).not.toBe("unavailable");
-    }
   });
 });

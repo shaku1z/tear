@@ -5,7 +5,7 @@ import { assertGhostForkAnchor, readGhostForkOrigin } from "./fork-origin";
 import { ghostRootIntegrity, type TearGhostManifest } from "./capsule-vault";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { ghostLiveBootstrapEventId } from "./live-causal-events";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
 import { validateTearContract } from "../tearbench/validation";
 import { mapGhostCapsuleToReplayEnvelope, preflightGhostRecordedCanonicalSnapshot } from "./capsule-replay-envelope";

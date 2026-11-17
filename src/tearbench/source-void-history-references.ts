@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { parseFinaleBinding } from "../gameplay/campaign/finale-binding";
 import type { TearCodecWorld, TearCodecIssue } from "./state-codecs";
 

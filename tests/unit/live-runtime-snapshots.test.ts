@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { captureLiveStateForgeSnapshot } from "../../src/tearbench/live-runtime-snapshots";
 import {
   CODEC_REGISTRY,

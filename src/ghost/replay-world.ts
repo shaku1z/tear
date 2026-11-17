@@ -1,6 +1,6 @@
 import type { RecordedGhostChallenge } from "./recorded-challenge";
 import type { ReplayActionEnvelope } from "../replay/envelope";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type {
   TearSimulationRuntime,
   TearSimulationAdvanceLifecycle,

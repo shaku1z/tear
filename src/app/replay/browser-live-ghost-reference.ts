@@ -1,7 +1,7 @@
 import { browserOnline } from "../../platform/worker-cache-warmup";
 import type { GhostLiveReference } from "../../ghost/live-ghost-reference-data";
 import type { GhostRunAssistance } from "../../gameplay/run/ghost-assistance";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import { GhostLocalVault } from "../../ghost/capsule-vault";
 import { createIndexedDbGhostVaultBackend } from "../../ghost/indexeddb-vault-backend";
 import { prepareGhostCapsuleSourceGuards } from "../../ghost/capsule-protection";

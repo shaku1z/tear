@@ -1,4 +1,4 @@
-import { canonicalStringify, stableVerificationHash } from "../replay/hash";
+import { canonicalStringify, stableVerificationHash } from "../domain/hash";
 import { projectCareerEntry, type CareerEntry } from "./career-archive";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostReplayRunContext, type GhostReplayBuildFingerprint } from "./replay-admission";

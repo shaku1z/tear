@@ -3,7 +3,7 @@ import type { RewardDecision } from "../../gameplay/run/reward-runtime";
 import type { RewardChoice, RewardSelectionSnapshot } from "../../gameplay/run/reward-selection";
 import type { TearCausalEventV1 } from "../../tearbench/contracts";
 import { SeededRandom } from "../../domain/random";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import { META_RANK_LIMITS } from "../../gameplay/progression/meta";
 import { seedRaceCatalogHash, type SeedRaceRun, type SeedRaceShared } from "../../gameplay/run/seed-locked-draft";
 import { declareSeedRace, readSeedRaceRun, seedRaceInitialBuildHash } from "../../ghost/seed-race-contract";

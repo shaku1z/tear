@@ -11,7 +11,7 @@ import {
   type VariantEnemy,
   type VariantSelectionContext,
 } from "../../src/gameplay/variants";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { captureProductionReplayCheckpoint, createProductionGhostReplayComposition } from "../../src/tearbench";
 import { PALE_VARIANT_STATE_FORGE_SCENARIOS } from "../../src/tearbench/pale-state-forge-scenarios";
 import { createEnemyHarness, createStandardActor, updateActor } from "./enemy-test-harness";

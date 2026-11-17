@@ -7,7 +7,7 @@ import {
   type ReplayEnvelopeV1,
   type ReplayEnvelopeV2,
 } from "../../src/replay/envelope";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import {
   CURRENT_RULESET_VERSION,
   PALE_R3_ENGINEERING_RULESET_VERSION,

@@ -48,15 +48,6 @@ export const ENVIRONMENT_OBJECT_DEFINITIONS: Readonly<Record<EnvironmentObjectKi
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     }),
-    "rootline": Object.freeze({
-      kind: "rootline",
-      category: "field",
-      behavior: "generic-field",
-      counterplayTags: [] as const,
-      endsWhen: ["owner-done", "stage-ends"] as const,
-      grantsEnemyRewards: false,
-      ordinaryEnemyProcEligible: false,
-    }),
     "root-link": Object.freeze({
       kind: "root-link",
       category: "combat-object",

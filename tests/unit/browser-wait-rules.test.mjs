@@ -7,7 +7,9 @@ import { describe, expect, it } from "vitest";
 
 const root = resolve(import.meta.dirname, "../..");
 const eslint = new ESLint({ cwd: root });
-const { reloadPage, STATE_WAIT_MS } = createRequire(import.meta.url)("../browser-waits.js");
+const { reloadPage, STATE_WAIT_MS, trackScriptLoads, waitForScriptLoads } = createRequire(import.meta.url)(
+  "../browser-waits.js",
+);
 
 async function messages(code) {
   const [result] = await eslint.lintText(code, { filePath: resolve(root, "tests/rule-probe-browser.js") });
@@ -123,6 +125,50 @@ describe("reloadPage", () => {
     page.evaluate = evaluate;
     return page;
   }
+
+  it("rejects waiting for networkidle in any form, and accepts waiting for script loads", async () => {
+    const code = [
+      'const { STATE_WAIT_MS, waitForScriptLoads } = require("./browser-waits");',
+      "async function run(page) {",
+      '  await page.waitForLoadState("networkidle", { timeout: STATE_WAIT_MS });',
+      '  await page.goto("http://127.0.0.1/", { waitUntil: "networkidle", timeout: STATE_WAIT_MS });',
+      "  await waitForScriptLoads(page);",
+      "}",
+      "module.exports = { run };",
+    ].join(String.fromCharCode(10));
+    expect(await messages(code)).toEqual([3, 4]);
+  });
+
+  it("waits for script requests in flight and ignores media that keeps loading", async () => {
+    const page = new EventEmitter();
+    let frames = 0;
+    page.evaluate = async () => {
+      frames += 1;
+    };
+    await expect(waitForScriptLoads(page)).rejects.toThrow(/trackScriptLoads/u);
+    trackScriptLoads(page);
+    const request = (type, url) => ({ resourceType: () => type, url: () => url });
+    const music = request("media", "http://127.0.0.1/assets/stem.ogg");
+    page.emit("request", music); // still loading when the screen is ready: must not hold the wait
+    await waitForScriptLoads(page);
+    expect(frames).toBe(2);
+
+    const chunk = request("script", "http://127.0.0.1/assets/cold-screen-renderers.js");
+    page.emit("request", chunk);
+    let done = false;
+    const waiting = waitForScriptLoads(page).then(() => {
+      done = true;
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(done).toBe(false);
+    page.emit("requestfinished", music);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(done).toBe(false);
+    page.emit("requestfinished", chunk);
+    await waiting;
+    expect(done).toBe(true);
+    expect(frames).toBe(4);
+  });
 
   it("reloads with the state-wait ceiling", async () => {
     let seen;

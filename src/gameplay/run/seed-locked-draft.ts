@@ -1,5 +1,5 @@
 import { SeededRandom } from "../../domain/random";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import { UPGRADES, rollUpgrades, type UpgradeDefinition } from "../upgrades";
 
 export interface SeedLockedDraft {
