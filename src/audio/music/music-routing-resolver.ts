@@ -1,16 +1,5 @@
 import type { MusicRoutingContext, MusicRoutingManifest, MusicRoutingRule } from "./music-routing-types";
 
-/**
- * Feature-branch safety net for stages whose reviewed soundtrack release has
- * not shipped yet. These selections are deliberately kept out of the public
- * routing manifest: they are playable engineering fallbacks, not canonical
- * music assignments.
- */
-export const ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS: Readonly<Record<string, string>> = Object.freeze({
-  "the-verdant-sanctum": "fillet",
-  "the-pale-traverse": "fillet",
-});
-
 function normalizeBiome(value: string): string {
   const lower = value.trim().toLowerCase().replace(/\s+/gu, "-");
   const aliases: Readonly<Record<string, string>> = {
@@ -75,7 +64,8 @@ export function resolveMusicRoute(manifest: MusicRoutingManifest, context: Music
     matchesForContext = manifest.rules.filter((rule) => matches(rule, { ...context, scene: "gameplay" }));
   }
   if (matchesForContext.length === 0) {
-    return ENGINEERING_ONLY_BIOME_MUSIC_FALLBACKS[normalizeBiome(context.biomeId)] ?? manifest.defaultWorkId;
+    // A stage with no song of its own (today: The Pale Traverse) plays the default work.
+    return manifest.defaultWorkId;
   }
   const maxSpecificity = Math.max(...matchesForContext.map(specificity));
   const scoped = matchesForContext.filter((rule) => specificity(rule) === maxSpecificity);

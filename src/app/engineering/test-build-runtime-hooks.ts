@@ -32,7 +32,6 @@ import type { LiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveCanonicalWatchComposition } from "../world/canonical-watch-composition";
 import type { LiveWorldComposition } from "../world/world-composition";
 import type { LiveWorldSessionState } from "../world/world-session-state";
-import type { LivePlayerWatchSurface } from "./engineering-surfaces-contract";
 import { createLiveStateForgeCinematicAdvance } from "./state-forge-cinematic-advance";
 import type { LiveStateForge } from "./live-state-forge-assembly";
 import { replayLiveStateForgeProgression } from "./state-forge-progression";
@@ -63,7 +62,6 @@ export interface LiveTestBuildHookSources {
   readonly journals: LiveTestBuildJournals;
   readonly canonicalState: LiveCanonicalStateCapture;
   readonly frameDriver: RuntimeFrameDriver;
-  readonly playerWatch: LivePlayerWatchSurface;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
@@ -120,7 +118,6 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
     recorder: ghostV3,
     ghostPractice: ghostPracticeSession,
     frameDriver,
-    playerWatch,
     journals,
     canonicalState,
     run: liveRun,
@@ -226,7 +223,6 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
       },
       startFrameLoop: () => {
         frameDriver.start(({ deltaSeconds, intervalSeconds }) => {
-          if (screen() === "playing") playerWatch.advance();
           combatHost.frameCoordinator.run(deltaSeconds, intervalSeconds);
         });
       },

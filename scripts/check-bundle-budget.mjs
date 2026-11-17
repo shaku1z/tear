@@ -91,10 +91,6 @@ export function evaluateBundleBudgets(label, measured, budgets, { pwa }) {
   return results;
 }
 
-async function staticGzip(vendor, file) {
-  return gzipSync(await readFile(resolve(root, "public", "vendor", vendor, file))).byteLength;
-}
-
 async function main() {
   const budgets = JSON.parse(await readFile(resolve(root, "config/bundle-budgets.json"), "utf8"));
   const results = [];
@@ -121,15 +117,6 @@ async function main() {
         { pwa: target === "standalone" },
       ),
     );
-  }
-  for (const [label, vendor, file, budget] of [
-    ["TearScore", "tear-score", "tear-score.esm.js", budgets.tearScoreGzipBytes],
-    ["Adaptive Soundtrack", "tear-music", "adaptive-soundtrack.esm.js", budgets.adaptiveSoundtrackGzipBytes],
-    ["Tone host", "tear-score", "tone-host-14.9.17.esm.js", budgets.toneGzipBytes],
-    ["Adaptive Soundtrack Tone host", "tear-music", "tone-host-14.9.17.esm.js", budgets.toneGzipBytes],
-  ]) {
-    const bytes = await staticGzip(vendor, file);
-    results.push([label, bytes <= budget, `${String(bytes)}/${String(budget)} gzip bytes (${file})`]);
   }
   let failed = false;
   for (const [label, ok, detail] of results) {

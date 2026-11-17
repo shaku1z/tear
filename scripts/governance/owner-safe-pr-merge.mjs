@@ -344,7 +344,8 @@ export const MERGE_PRECONDITIONS = Object.freeze([
   {
     // Branches may be behind main (the pre-push guard no longer requires main's tip), so freshness
     // is decided here: main's newest commit checked and green, and the pull request's own pass not
-    // older than a main change to the files it touches or to shared files (scripts/merge-ready.mjs).
+    // older than a main change to the files it touches or to shared files, or a passed batch run
+    // covering it (scripts/merge-ready.mjs).
     id: "merge-ready",
     check: ({ policy, pr }) => {
       if (policy.id !== "tear") return;

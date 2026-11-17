@@ -7,9 +7,7 @@ import { createPauseResultRenderers } from "./pause-results";
 import { createPlaygroundRenderers } from "./playground";
 import { createProfileAchievementRenderers } from "./profile-achievements";
 import { createSettingsRenameRenderers } from "./settings-rename";
-import { createAcademyRenderers } from "./academy";
-import { createTrainingOperationsRenderers } from "./training-operations";
-import { createGhostLabRenderers } from "./ghost-lab";
+import { createGhostPublicationSupportRenderers } from "./ghost-publication-support";
 
 export type * from "./contracts";
 
@@ -26,9 +24,7 @@ export function createScreenRenderers(context: ScreenRenderContext): ScreenRende
   const drafts = createDraftRenderers(context);
   const results = createPauseResultRenderers(context);
   const playground = createPlaygroundRenderers(context);
-  const academy = createAcademyRenderers(context);
-  const foundry = createTrainingOperationsRenderers(context);
-  const ghostLab = createGhostLabRenderers(context);
+  const ghostCloud = createGhostPublicationSupportRenderers(context);
 
   return {
     menu: menuSetup.menu,
@@ -54,11 +50,7 @@ export function createScreenRenderers(context: ScreenRenderContext): ScreenRende
     rename: settingsRename.rename,
     pgmenu: playground.pgmenu,
     pglab: playground.pglab,
-    academy: academy.academy,
-    foundry: foundry.foundry,
-    ghostlab: ghostLab.ghostlab,
-    botevidence: ghostLab.botevidence,
-    ghostpublication: ghostLab.ghostpublication,
-    ghostsupport: ghostLab.ghostsupport,
+    ghostpublication: ghostCloud.ghostpublication,
+    ghostsupport: ghostCloud.ghostsupport,
   };
 }

@@ -5,52 +5,28 @@ const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
 withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, errors }) => {
-  async function openSurface(query) {
-    const url = new URL(page.url());
-    url.searchParams.delete("scenario-console");
-    url.searchParams.delete("stateforge");
-    url.searchParams.set(query, "1");
-    await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
-    await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
-    await page.waitForTimeout(settleFor(100));
-  }
-
-  await openSurface("scenario-console");
+  const url = new URL(page.url());
+  url.searchParams.set("snapshot-editor", "1");
+  await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
+  await page.waitForTimeout(settleFor(100));
   assert.equal(
-    await page.locator('[data-surface="scenario-console"]').count(),
+    await page.locator("#tear-snapshot-editor").count(),
     1,
-    `Scenario Console canonical route did not install: ${errors.join("\n")}`,
-  );
-  assert.equal(await page.locator('[data-scenario-console-control="editor"]').count(), 1);
-  assert.equal(
-    await page.locator("#tear-state-forge-studio").count(),
-    1,
-    "canonical route must preserve the C23 root selector",
+    `Snapshot editor did not install: ${errors.join("\n")}`,
   );
 
-  await openSurface("stateforge");
-  assert.equal(
-    await page.locator("#tear-state-forge-studio").count(),
-    1,
-    `State Forge Studio did not install: ${errors.join("\n")}`,
-  );
-  assert.equal(
-    await page.locator('[data-surface="scenario-console"]').count(),
-    1,
-    "legacy route must expose the canonical Scenario Console selector",
-  );
-
-  const editor = page.locator("#tear-state-forge-editor");
+  const editor = page.locator("#tear-snapshot-editor-source");
   const originalSource = await editor.inputValue();
   const reports = await page
     .locator('[aria-label="Validation reports"] article')
     .evaluateAll((articles) => articles.map((article) => article.dataset.status));
   assert.deepEqual(reports, ["valid", "reachable", "plausible"]);
-  assert.equal(await page.locator("#tear-state-forge-timeline option").count(), 0);
+  assert.equal(await page.locator("#tear-snapshot-editor-timeline option").count(), 0);
 
   await page.getByRole("button", { name: "Launch scenario" }).click();
   await page.getByRole("status").filter({ hasText: "Launched state-forge.live-sandbox" }).waitFor();
-  assert.equal(await page.locator("#tear-state-forge-timeline option").count(), 1);
+  assert.equal(await page.locator("#tear-snapshot-editor-timeline option").count(), 1);
   assert.match(await page.getByText("Provenance").locator("..").textContent(), /live-tear-runtime/);
 
   await page.getByLabel("Fork id").fill("studio-low-health");
@@ -61,7 +37,7 @@ withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, error
   );
   await page.getByRole("button", { name: "Fork checkpoint" }).evaluate((button) => button.click());
   assert.match(await page.getByRole("status").textContent(), /Forked studio-low-health/);
-  assert.equal(await page.locator("#tear-state-forge-timeline option").count(), 2);
+  assert.equal(await page.locator("#tear-snapshot-editor-timeline option").count(), 2);
   assert.match(await page.getByText("Checkpoint diff").locator("..").textContent(), /tear\.player\.v1\.hp/);
 
   await page.getByRole("button", { name: "Watch checkpoint" }).evaluate((button) => button.click());

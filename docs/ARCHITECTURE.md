@@ -33,7 +33,7 @@ input          -> simulation, domain
 simulation, config, persistence, diagnostics -> domain
 ```
 
-The edges that break this today (84: 59 value, 25 type-only, for example `gameplay -> tearbench`, `tearbench -> app`, `ghost -> tearbench`, `presentation -> agents`) are recorded file by file in `config/architecture-baseline.json`. The gate fails on any new one, on a type-only allowance that becomes a value import, and on an entry whose file no longer exists. The baseline also records file-level import cycles over static value imports (type-only imports are erased and dynamic imports are lazy): today one 16-file cycle (15 `ghost` files and `tearbench/production-replay-composition.ts`). A new cycle, or a recorded one that absorbs another file, fails. The gate summary also lists directory pairs that import each other with value edges (six today).
+The edges that break this today (76: 51 value, 25 type-only, for example `gameplay -> tearbench`, `tearbench -> app`, `ghost -> tearbench`) are recorded file by file in `config/architecture-baseline.json`. The gate fails on any new one, on a type-only allowance that becomes a value import, and on an entry whose file no longer exists. The baseline also records file-level import cycles over static value imports (type-only imports are erased and dynamic imports are lazy): today one 16-file cycle (15 `ghost` files and `tearbench/production-replay-composition.ts`). A new cycle, or a recorded one that absorbs another file, fails. The gate summary also lists directory pairs that import each other with value edges (six today).
 
 ## Runtime ownership
 

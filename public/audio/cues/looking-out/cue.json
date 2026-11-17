@@ -9,6 +9,7 @@
     4
   ],
   "sourceSampleRate": 48000,
+  "key": "C minor",
   "grid": {
     "downbeatFrame": 0,
     "beatsPerBar": 4,
@@ -27,6 +28,9 @@
     {
       "id": "rhythm",
       "role": "rhythm",
+      "kinds": [
+        "drums"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
@@ -40,6 +44,9 @@
     {
       "id": "pulse",
       "role": "bass",
+      "kinds": [
+        "bass"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "hard",
@@ -53,6 +60,9 @@
     {
       "id": "melody",
       "role": "motif",
+      "kinds": [
+        "synth"
+      ],
       "channels": 2,
       "gainDb": 0,
       "seamMode": "crossfade",
@@ -90,79 +100,15 @@
     }
   },
   "provenance": {
-    "owner": "shatheartboy@gmail.com",
+    "owner": "shaku1z",
     "license": "owned/licensed by owner",
     "sourceSha256": "a4c6571c4c608f32ef1d5a8bd7c3aa8f767ebf1c49dd3b10b0fece41e1f10c8d"
   },
-  "key": "C minor",
   "analysis": {
-    "tempoConfidence": 0.033,
-    "tempoAlternatives": [
-      86.2
-    ],
-    "sourceDownbeatSeconds": 0.0406,
-    "secondsPerBar": 1.3929,
-    "keyConfidence": 0.053,
-    "keyAlternatives": [
-      "C major",
-      "F major"
-    ],
-    "seam": {
-      "seamDbBelowPeak": -32.9,
-      "rmsRatio": 0.94,
-      "verdict": "warning"
-    },
-    "analysedBpm": 172.3,
-    "approvedBpm": 165.923468,
-    "metricalFactor": 0.963,
-    "tempoDisagreementPercent": 3.7,
-    "phrasePlausibility": "typical",
-    "grid": {
-      "loopBars": 20,
-      "actualLoopFrames": 1388592,
-      "expectedLoopFrames": 1388592,
-      "barErrorFrames": 0,
-      "barErrorMs": 0,
-      "priorDriftMsPerCycle": 4,
-      "verdict": "review",
-      "consideredBpm": [
-        {
-          "bpm": 82.962,
-          "bars": 10,
-          "octaveDistancePercent": 3.7,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 165.923,
-          "bars": 20,
-          "octaveDistancePercent": 3.7,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 182.516,
-          "bars": 22,
-          "octaveDistancePercent": 5.93,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 149.331,
-          "bars": 18,
-          "octaveDistancePercent": 13.33,
-          "phrase": "unusual"
-        },
-        {
-          "bpm": 99.554,
-          "bars": 12,
-          "octaveDistancePercent": 15.56,
-          "phrase": "typical"
-        },
-        {
-          "bpm": 199.108,
-          "bars": 24,
-          "octaveDistancePercent": 15.56,
-          "phrase": "typical"
-        }
-      ]
-    }
+    "seamExcessDb": -12,
+    "loopLufs": -16,
+    "loopTruePeakDb": -3.9,
+    "trimDb": -0.4,
+    "inputHash": "3ab2a3f73a9c6e80"
   }
 }
