@@ -77,6 +77,65 @@ function vineArm(
   ctx.fill();
 }
 
+/** A root runs along the ground from the keeper to every Graft it has planted. `colors` null: high contrast. */
+function drawGraftRoots(
+  ctx: CanvasRenderingContext2D,
+  boss: RenderInstance<"Rootbound">,
+  footY: number,
+  colors: Readonly<{ mercy: string; other: string }> | null,
+) {
+  for (const graft of boss.graftAnchorPlacements()) {
+    if (!boss.plantedGraftTypes.includes(graft.graftType)) continue;
+    const gx = graft.geometry.x + (graft.geometry.w ?? 0) / 2;
+    const gy = graft.geometry.y + (graft.geometry.h ?? 0);
+    ctx.save();
+    ctx.globalAlpha = boss.activeGraftTypes.includes(graft.graftType) ? 0.9 : 0.45;
+    ctx.strokeStyle = colors === null ? "#ffffff" : graft.graftType === "mercy" ? colors.mercy : colors.other;
+    ctx.lineWidth = colors === null ? 5 : 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(boss.x, footY);
+    ctx.quadraticCurveTo((boss.x + gx) / 2, Math.max(footY, gy) + 26, gx, gy);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/** The Phase II moves that place stage objects: planting a Graft, raising the cage, moving the Wells. */
+function drawGardenMove(
+  ctx: CanvasRenderingContext2D,
+  ink: Ink,
+  boss: Readonly<{ x: number; y: number; hw: number; hh: number }>,
+  pose: BossAttackPose,
+  ground: number,
+) {
+  const { stage, facing } = pose;
+  const k = stage === "tell" ? pose.progress : 1;
+  if (pose.attackId === "plant-graft" && stage !== "recover") {
+    // Kneeling: a sprout rises from the earth at its feet while it plants.
+    const x = boss.x + facing * (boss.hw + 18);
+    mound(ctx, ink, x, ground, k);
+    ctx.strokeStyle = ink.thorn;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x, ground);
+    ctx.lineTo(x, ground - 46 * k);
+    ctx.stroke();
+  } else if (pose.attackId === "root-cage" && stage === "tell") {
+    // The earth swells where the two walls will rise, either side of where the player stood.
+    for (const side of [-1, 1]) mound(ctx, ink, pose.target.x + side * 268, ground, k);
+  } else if (pose.attackId === "bloom-shift" && stage !== "recover") {
+    // Arms raised: rings of pollen open around the keeper as the Wells move.
+    ctx.strokeStyle = ink.thorn;
+    ctx.lineWidth = 3;
+    for (const ring of [0.5, 1]) {
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y - boss.hh * 0.4, boss.hh * (0.9 + ring * k), Math.PI, 0);
+      ctx.stroke();
+    }
+  }
+}
+
 /** Draws the move in progress, in world space, from the pose the shared runner reports. */
 function drawMove(
   ctx: CanvasRenderingContext2D,
@@ -139,11 +198,11 @@ function drawMove(
       }
       return;
     default:
-      return;
+      drawGardenMove(ctx, ink, boss, pose, ground);
   }
 }
 
-/** Rootbound's silhouette, its moves and Choir echoes. Warning areas are drawn from its tells. */
+/** Rootbound's silhouette, its moves and the roots to its Grafts. Warning areas are drawn from its tells. */
 export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRendererRuntime): void {
   const { A11Y, CONFIG, GFX, THEME, clamp, lerp } = runtime;
   Object.assign(types.Rootbound.prototype, {
@@ -157,28 +216,7 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       // Every warning and strike area comes from the boss's own tell data, drawn by the shared marks.
       const tells = this.tells();
       drawBossTells(runtime, ctx, tells, { skinId: TELL_SKIN, layer: "behind" });
-      if (this.memoryChoirStage)
-        for (const manifestation of this.memoryChoirManifestations) {
-          const active = this.memoryChoirManifestationActive(manifestation);
-          const centerX = manifestation.x + manifestation.w / 2;
-          const centerY = manifestation.y + manifestation.h / 2;
-          ctx.save();
-          ctx.globalAlpha = this.memoryChoirStage === "afterimage" ? 0.3 : active ? 0.82 : 0.58;
-          ctx.strokeStyle = A11Y.highContrast ? "#fff36b" : gold;
-          ctx.fillStyle = A11Y.highContrast ? "#ffffff" : "#5d765e";
-          ctx.lineWidth = A11Y.highContrast ? 5 : 3;
-          ctx.beginPath();
-          ctx.arc(centerX, centerY - manifestation.h * 0.22, 13, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillRect(centerX - 16, centerY - manifestation.h * 0.08, 32, manifestation.h * 0.42);
-          ctx.beginPath();
-          ctx.moveTo(centerX - 16, centerY);
-          ctx.lineTo(centerX - 42, centerY + manifestation.h * 0.24);
-          ctx.moveTo(centerX + 16, centerY);
-          ctx.lineTo(centerX + 42, centerY + manifestation.h * 0.24);
-          ctx.stroke();
-          ctx.restore();
-        }
+      drawGraftRoots(ctx, this, footY, A11Y.highContrast ? null : { mercy: gold, other: root });
       // The move itself: vines, mounds and root spikes, drawn from the runner's pose.
       const pose = this.movePose();
       const ink: Ink = A11Y.highContrast
@@ -205,14 +243,24 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       if (this.dying) ctx.rotate(this.facing * this.deathP * 0.4);
       // Leans into a wind-up. Exposed after a heavy move or a parry: slumped forward inside a bright
       // ring that drains as the opening closes, so it cannot be mistaken for the idle stance.
-      if (pose?.stage === "tell") ctx.rotate(-this.facing * 0.08 * pose.progress);
-      else if (pose?.stage === "punish") {
+      // A cut Graft or cage opens it the same way, outside any move.
+      const forced = this.moveState.exposed;
+      const opening =
+        pose?.stage === "punish"
+          ? pose.progress
+          : pose === null && forced !== null && this.moveTick < forced.until
+            ? (this.moveTick - forced.from) / Math.max(1, forced.until - forced.from)
+            : null;
+      if (pose?.stage === "tell") {
+        ctx.rotate(-this.facing * 0.08 * pose.progress);
+        if (pose.attackId === "plant-graft") ctx.scale(1, 1 - 0.16 * pose.progress);
+      } else if (opening !== null) {
         ctx.save();
         ctx.strokeStyle = A11Y.highContrast ? "#ffffff" : "#7fe3ff";
         ctx.lineWidth = 7;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.arc(0, -this.hh, this.hh * 1.55, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - pose.progress));
+        ctx.arc(0, -this.hh, this.hh * 1.55, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - opening));
         ctx.stroke();
         ctx.restore();
         ctx.rotate(this.facing * 0.2);

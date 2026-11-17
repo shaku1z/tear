@@ -21,7 +21,6 @@ export interface EnvironmentPresentationSnapshot {
     geometry: EnvironmentSnapshot["combatObjects"][number]["geometry"];
     integrityRatio: number;
     counterplayTags: readonly string[];
-    connectionGeometry?: EnvironmentSnapshot["combatObjects"][number]["geometry"];
   }>[];
   readonly routes: readonly Readonly<{
     id: string;

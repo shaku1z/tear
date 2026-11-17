@@ -33,7 +33,20 @@ const MOVE_WIND_UP_CALL: Readonly<Record<string, string>> = {
   "canopy-vault": "lineTo",
   "thorn-burst": "lineTo",
   "root-wave": "closePath",
+  "plant-graft": "ellipse",
+  "root-cage": "ellipse",
+  "bloom-shift": "arc",
 };
+const ALL_MOVES = [
+  "vine-lash",
+  "root-glide",
+  "canopy-vault",
+  "thorn-burst",
+  "root-wave",
+  "plant-graft",
+  "root-cage",
+  "bloom-shift",
+];
 
 function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
   const values = new Map<PropertyKey, unknown>();
@@ -82,7 +95,7 @@ describe("Rootbound production foundation", () => {
       presentationId: "rootbound",
       isBoss: true,
       atk: "unavailable",
-      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
+      availableAttacks: ALL_MOVES,
       phaseMarks: [0.65, 0.28],
     });
   });
@@ -214,7 +227,7 @@ describe("Rootbound production foundation", () => {
     }
   });
 
-  it("keeps Memory Choir warning geometry visible in low-graphics reduced-motion rendering", () => {
+  it("draws a root from the keeper to each planted Graft in low-graphics reduced-motion rendering", () => {
     const harness = createEnemyHarness();
     createEnemyPresentation({
       A11Y: { highContrast: true, reducedMotion: true },
@@ -234,10 +247,22 @@ describe("Rootbound production foundation", () => {
     boss.update(1 / 120, harness.platforms, harness.player);
     boss.cinematicRequest = null;
     boss.cinematicT = 0;
-    expect(boss.startMemoryChoir()).toBe(true);
-    const calls: string[] = [];
-    boss.draw(recordingCanvas(calls), harness.player);
-    expect(calls).toEqual(expect.arrayContaining(["strokeRect", "setLineDash", "arc", "fillRect", "lineTo", "stroke"]));
+    const roots = (): number => {
+      const calls: string[] = [];
+      boss.draw(recordingCanvas(calls), harness.player);
+      return calls.filter((call) => call === "quadraticCurveTo").length;
+    };
+    const unrooted = roots();
+    Object.assign(boss, {
+      graftRequests: [
+        { graftType: "mercy", geometry: { x: 300, y: 620, w: 54, h: 90 } },
+        { graftType: "bastion", geometry: { x: 780, y: 430, w: 54, h: 90 } },
+        { graftType: "haste", geometry: { x: 1250, y: 620, w: 54, h: 90 } },
+      ],
+      plantedGraftTypes: ["mercy", "bastion"],
+    });
+    // One root per planted Graft; the requested but unplanted one has none yet.
+    expect(roots() - unrooted).toBe(2);
   });
 
   it("places the grounded Rootbound body through the shared boss placement authority", () => {
@@ -328,7 +353,7 @@ describe("Rootbound production foundation", () => {
       phaseMarker: 1,
       phaseTag: "KEEPER OF SPRING",
       state: "idle",
-      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
+      availableAttacks: ALL_MOVES,
     });
 
     boss.introT = 0.5;
@@ -362,7 +387,7 @@ describe("Rootbound production foundation", () => {
     expect(boss).toMatchObject({
       state: "idle",
       atk: "unavailable",
-      availableAttacks: ["vine-lash", "root-glide", "canopy-vault", "thorn-burst", "root-wave"],
+      availableAttacks: ALL_MOVES,
     });
     expect(boss.contactDamageEnabled()).toBe(true);
   });

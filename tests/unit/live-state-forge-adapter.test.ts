@@ -24,7 +24,7 @@ type Failure = "clear" | "replace" | "late" | "runtime";
 interface BossFacts {
   maxHp: number;
   graftDamageTakenMultiplier: number;
-  graftCadenceMultiplier: number;
+  graftGapMultiplier: number;
   activeGraftTypes: readonly string[];
   rootCageRequest: unknown;
   applyGraftEffects(effects: RootboundGraftEffects): void;
@@ -193,7 +193,8 @@ function fixture(includeTutorial = false) {
     });
     actor.applyGraftEffects({
       incomingDamageMultiplier: damage,
-      cadenceMultiplier: 1.15,
+      gapMultiplier: 0.6,
+      heals: false,
       activeTypes: ["bastion", "haste"],
     });
     expect(actor.startRootCage(800)).toBe(true);
@@ -447,7 +448,7 @@ describe("live State Forge adapter ownership boundary", () => {
     expect(host.state.enemies()[0]).not.toBe(outgoing);
     expect(host.state.enemies()[0]).toMatchObject({
       graftDamageTakenMultiplier: 0.8,
-      graftCadenceMultiplier: 1.15,
+      graftGapMultiplier: 0.6,
       activeGraftTypes: ["bastion", "haste"],
       rootCageRequest: { sequence: 1, centerX: 800 },
     });

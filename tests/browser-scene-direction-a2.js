@@ -1356,7 +1356,7 @@ withJourney(
                     const cue = JSON.stringify([
                       boss.phaseMarker,
                       boss.atk,
-                      boss.memoryChoirStage,
+                      (boss.graftRequests ?? []).length,
                       boss.lastSpringStage,
                       state.combatObjects.map((object) => [object.factoryId, object.state]),
                       ...(latePhases

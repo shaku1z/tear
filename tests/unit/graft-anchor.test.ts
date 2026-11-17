@@ -4,114 +4,172 @@ import {
   GRAFT_ANCHOR_MAX_INTEGRITY,
   GRAFT_ANCHOR_TIMING,
   GRAFT_ANCHOR_TYPES,
-  GRAFT_WARNING_FLOOR_SECONDS,
   MAX_ACTIVE_GRAFT_ANCHORS,
+  ROOTBOUND_NO_GRAFT_EFFECTS,
   advanceGraftAnchor,
   createGraftAnchorState,
   graftAnchorDefinition,
   installGraftAnchor,
+  resolveRootboundGraftEffects,
 } from "../../src/gameplay/environment/graft-anchor";
 import { ENVIRONMENT_OBJECT_DEFINITIONS } from "../../src/gameplay/environment/environment-definitions";
+import { ENVIRONMENT_FADE_TICKS } from "../../src/gameplay/environment/environment-contracts";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { environmentHash, environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
+import { environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
 import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
 import { forgeRootboundGraftAnchorState } from "../../src/tearbench/state-forge-factories";
 import type { TearSdlDocumentV1 } from "../../src/tearbench/tearsdl";
 
-describe("Rootbound Graft Anchor definitions", () => {
-  it("defines the exact bounded Phase II roster without creating another environment kind", () => {
-    expect(GRAFT_ANCHOR_TYPES).toEqual(["bastion", "mercy", "haste"]);
+const GEOMETRY = { x: 773, y: 610, w: 54, h: 90 } as const;
+
+describe("Graft definitions", () => {
+  it("lists the three Grafts in planting order, on the existing graft-anchor kind", () => {
+    expect(GRAFT_ANCHOR_TYPES).toEqual(["mercy", "bastion", "haste"]);
     expect(GRAFT_ANCHOR_DEFINITIONS.map((definition) => definition.graftType)).toEqual(GRAFT_ANCHOR_TYPES);
-    expect(GRAFT_ANCHOR_DEFINITIONS).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          kind: "graft-anchor",
-          factoryId: "graft-anchor",
-          procPolicyId: "boss-combat-object",
-        }),
-      ]),
-    );
+    for (const definition of GRAFT_ANCHOR_DEFINITIONS)
+      expect(definition).toMatchObject({
+        kind: "graft-anchor",
+        factoryId: "graft-anchor",
+        procPolicyId: "boss-combat-object",
+      });
     expect(MAX_ACTIVE_GRAFT_ANCHORS).toBe(3);
-  });
-
-  it("keeps Bastion protective without making Rootbound invulnerable", () => {
-    const bastion = graftAnchorDefinition("bastion");
-    expect(bastion.effect).toBe("incoming-damage-multiplier");
-    if (bastion.effect !== "incoming-damage-multiplier") throw new TypeError("expected Bastion definition");
-    expect(bastion.incomingDamageMultiplier).toBeGreaterThan(0);
-    expect(bastion.incomingDamageMultiplier).toBeLessThan(1);
-  });
-
-  it("gives Mercy a finite pulse and a finite total recovery budget", () => {
-    const mercy = graftAnchorDefinition("mercy");
-    expect(mercy.effect).toBe("bounded-pulse-recovery");
-    if (mercy.effect !== "bounded-pulse-recovery") throw new TypeError("expected Mercy definition");
-    expect(mercy.pulseIntervalSeconds).toBeGreaterThan(0);
-    expect(mercy.pulseHealthFraction).toBeGreaterThan(0);
-    expect(mercy.maxRecoveryHealthFraction).toBeGreaterThanOrEqual(mercy.pulseHealthFraction);
-    expect(mercy.maxRecoveryHealthFraction).toBeLessThanOrEqual(0.1);
-  });
-
-  it("lets Haste accelerate selected attacks without crossing the warning floor", () => {
-    const haste = graftAnchorDefinition("haste");
-    expect(haste.effect).toBe("selected-attack-cadence-multiplier");
-    if (haste.effect !== "selected-attack-cadence-multiplier") throw new TypeError("expected Haste definition");
-    expect(haste.cadenceMultiplier).toBeGreaterThan(1);
-    expect(haste.cadenceMultiplier).toBeLessThanOrEqual(1.25);
-    expect(haste.minimumWarningSeconds).toBeGreaterThanOrEqual(GRAFT_WARNING_FLOOR_SECONDS);
-    expect(GRAFT_WARNING_FLOOR_SECONDS).toBe(0.55);
-  });
-
-  it("is immutable and retains the canonical combat-object reward/proc policy", () => {
-    expect(Object.isFrozen(GRAFT_ANCHOR_TYPES)).toBe(true);
-    expect(Object.isFrozen(GRAFT_ANCHOR_DEFINITIONS)).toBe(true);
-    expect(GRAFT_ANCHOR_DEFINITIONS.every(Object.isFrozen)).toBe(true);
     expect(ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"]).toMatchObject({
       category: "combat-object",
-      behavior: "generic-combat-object",
-      counterplayTags: ["cut", "break", "projectile-cut"],
       grantsEnemyRewards: false,
       ordinaryEnemyProcEligible: false,
     });
   });
 
-  it("promotes the exact subtype definition into specialized canonical state", () => {
+  it("Bastion protects without making the boss invulnerable; Haste shortens the gap without removing it", () => {
     const bastion = graftAnchorDefinition("bastion");
-    if (bastion.effect !== "incoming-damage-multiplier") throw new TypeError("expected Bastion definition");
-    const state = createGraftAnchorState({
-      ownerId: "enemy:rootbound",
-      ownerPosition: { x: 800, y: 520 },
-      graftType: "bastion",
-      geometry: { x: 280, y: 610, w: 54, h: 90 },
-      createdTick: 240,
-    });
-    expect(state).toMatchObject({
-      id: "enemy:rootbound:graft:bastion",
-      factoryId: "graft-anchor",
-      kind: "graft-anchor",
-      ownerId: "enemy:rootbound",
-      targetId: "enemy:rootbound",
-      graftType: "bastion",
-      effect: "incoming-damage-multiplier",
-      incomingDamageMultiplier: bastion.incomingDamageMultiplier,
-      integrity: GRAFT_ANCHOR_MAX_INTEGRITY,
-      maxIntegrity: GRAFT_ANCHOR_MAX_INTEGRITY,
-      state: "warning",
-      stateTick: 240,
-      createdTick: 240,
-      procPolicyId: "boss-combat-object",
-      procEligible: false,
-    });
-    expect(state.connectionGeometry.points).toEqual([
-      { x: 800, y: 520 },
-      { x: 307, y: 655 },
-    ]);
-    expect(Object.isFrozen(state)).toBe(true);
-    expect(Object.isFrozen(state.geometry)).toBe(true);
-    expect(Object.isFrozen(state.connectionGeometry.points)).toBe(true);
+    if (bastion.effect !== "incoming-damage-multiplier") throw new TypeError("expected Bastion");
+    expect(bastion.incomingDamageMultiplier).toBeGreaterThan(0);
+    expect(bastion.incomingDamageMultiplier).toBeLessThan(1);
+    const haste = graftAnchorDefinition("haste");
+    if (haste.effect !== "move-gap-multiplier") throw new TypeError("expected Haste");
+    expect(haste.gapMultiplier).toBeGreaterThan(0);
+    expect(haste.gapMultiplier).toBeLessThan(1);
   });
 
-  it("composes the surgical Rootbound fixture through the existing combat-object factory", () => {
+  it("Mercy carries no healing numbers of its own: they live in ROOTBOUND_HEALING", () => {
+    expect(Object.keys(graftAnchorDefinition("mercy")).sort()).toEqual(
+      ["effect", "factoryId", "graftType", "kind", "procPolicyId"].sort(),
+    );
+  });
+});
+
+describe("Graft state", () => {
+  it("is built frozen, owned by its boss, warning first, cuttable by blade and thrown blade", () => {
+    const state = createGraftAnchorState({
+      ownerId: "enemy:1",
+      graftType: "mercy",
+      geometry: GEOMETRY,
+      createdTick: 40,
+    });
+    expect(state).toMatchObject({
+      id: "enemy:1:graft:mercy",
+      ownerId: "enemy:1",
+      targetId: "enemy:1",
+      state: "warning",
+      createdTick: 40,
+      activationTick: 40 + GRAFT_ANCHOR_TIMING.warningTicks,
+      integrity: GRAFT_ANCHOR_MAX_INTEGRITY,
+      maxIntegrity: GRAFT_ANCHOR_MAX_INTEGRITY,
+      procEligible: false,
+      geometry: GEOMETRY,
+    });
+    expect(state.counterplayTags).toEqual(expect.arrayContaining(["cut", "break"]));
+    expect(Object.isFrozen(state)).toBe(true);
+  });
+
+  it("rejects an ownerless Graft, empty geometry and a bad tick", () => {
+    const input = { ownerId: "enemy:1", graftType: "haste", geometry: GEOMETRY, createdTick: 1 } as const;
+    expect(() => createGraftAnchorState({ ...input, ownerId: "" })).toThrow(/owner ID/u);
+    expect(() => createGraftAnchorState({ ...input, geometry: { x: 10, y: 20 } })).toThrow(/geometry/u);
+    expect(() => createGraftAnchorState({ ...input, createdTick: -1 })).toThrow(/tick/u);
+    expect(() => createGraftAnchorState({ ...input, maxIntegrity: 0 })).toThrow(/integrity/u);
+  });
+
+  it("takes hold when its warning has run, on an absolute tick", () => {
+    const state = createGraftAnchorState({
+      ownerId: "enemy:1",
+      graftType: "bastion",
+      geometry: GEOMETRY,
+      createdTick: 10,
+    });
+    expect(advanceGraftAnchor(state, state.activationTick - 1)).toBe(state);
+    const active = advanceGraftAnchor(state, state.activationTick + 30);
+    expect(active).toMatchObject({ state: "active", stateTick: state.activationTick });
+    expect(advanceGraftAnchor(active, state.activationTick + 60)).toBe(active);
+    expect(() => advanceGraftAnchor(state, -1)).toThrow(RangeError);
+  });
+
+  it("passes the authored-environment codec check, and a Graft with a changed effect does not", () => {
+    const state = createGraftAnchorState({
+      ownerId: "enemy:1",
+      graftType: "haste",
+      geometry: GEOMETRY,
+      createdTick: 1,
+    });
+    const payload = (combatObjects: readonly unknown[]) => ({
+      slowZones: [],
+      walls: [],
+      fields: [],
+      combatObjects,
+      routes: [],
+    });
+    expect(validateEnvironmentCodecPayload(payload([state]))).toEqual([]);
+    const invalid = validateEnvironmentCodecPayload(payload([{ ...state, gapMultiplier: 0.1 }]));
+    expect(invalid.some((entry) => entry.path.endsWith(".gapMultiplier"))).toBe(true);
+  });
+});
+
+describe("Grafts on the stage", () => {
+  const input = { ownerId: "enemy:rootbound", geometry: GEOMETRY, createdTick: 240 } as const;
+
+  it("plants each type once for its owner", () => {
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "graft-install" });
+    const first = installGraftAnchor(environment, { ...input, graftType: "bastion" });
+    expect(installGraftAnchor(environment, { ...input, graftType: "bastion", createdTick: 241 })).toBe(first);
+    installGraftAnchor(environment, { ...input, graftType: "mercy" });
+    installGraftAnchor(environment, { ...input, graftType: "haste" });
+    expect(environment.combatObjects()).toHaveLength(MAX_ACTIVE_GRAFT_ANCHORS);
+    expect(environment.combatObjects().every((object) => object.ownerId === "enemy:rootbound")).toBe(true);
+  });
+
+  it("does not plant over a cut Graft that is still fading, and plants again once it has left", () => {
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "graft-replant" });
+    const planted = installGraftAnchor(environment, { ...input, graftType: "mercy" });
+    if (planted === null) throw new Error("expected a planted Graft");
+    expect(environment.damageCombatObject(planted.id, planted.integrity, "cut", 360).destroyed).toBe(true);
+    expect(installGraftAnchor(environment, { ...input, graftType: "mercy", createdTick: 361 })).toBeNull();
+    for (let tick = 361; tick <= 362 + ENVIRONMENT_FADE_TICKS; tick += 1)
+      environment.step(tick, 1 / 120, () => undefined, new Set(["enemy:rootbound"]));
+    const again = installGraftAnchor(environment, { ...input, graftType: "mercy", createdTick: 700 });
+    expect(again).toMatchObject({ id: planted.id, state: "warning", createdTick: 700 });
+  });
+
+  it("only active Grafts help the boss", () => {
+    const warning = createGraftAnchorState({ ...input, graftType: "bastion" });
+    const active = (graftType: "mercy" | "bastion" | "haste") =>
+      Object.freeze({ ...createGraftAnchorState({ ...input, graftType }), state: "active" as const });
+    expect(resolveRootboundGraftEffects([warning], "enemy:rootbound")).toBe(ROOTBOUND_NO_GRAFT_EFFECTS);
+    expect(resolveRootboundGraftEffects([active("mercy")], "enemy:other")).toBe(ROOTBOUND_NO_GRAFT_EFFECTS);
+    expect(resolveRootboundGraftEffects([active("mercy")], "enemy:rootbound")).toEqual({
+      activeTypes: ["mercy"],
+      incomingDamageMultiplier: 1,
+      gapMultiplier: 1,
+      heals: true,
+    });
+    expect(resolveRootboundGraftEffects([active("bastion"), active("haste"), warning], "enemy:rootbound")).toEqual({
+      activeTypes: ["bastion", "haste"],
+      incomingDamageMultiplier: 0.65,
+      gapMultiplier: 0.6,
+      heals: false,
+    });
+  });
+
+  it("builds the TearBench Graft fixture and shows its type in the structured observation", () => {
     const base: TearSdlDocumentV1 = {
       format: "tearsdl",
       schemaVersion: 1,
@@ -122,163 +180,20 @@ describe("Rootbound Graft Anchor definitions", () => {
     };
     const forged = forgeRootboundGraftAnchorState(base);
     expect(forged.id).toBe("rootbound-graft-anchor-destruction-graft-mercy");
-    expect(forged.start).toEqual(base.start);
     expect(forged.state?.environment).toMatchObject({
-      fields: [],
-      routes: [],
       combatObjects: [
         expect.objectContaining({
           id: "enemy:1:graft:mercy",
-          factoryId: "graft-anchor",
           kind: "graft-anchor",
           ownerId: "enemy:1",
-          targetId: "enemy:1",
           graftType: "mercy",
           state: "active",
         }),
       ],
     });
-    expect(ENVIRONMENT_OBJECT_DEFINITIONS["graft-anchor"]).toMatchObject({
-      category: "combat-object",
-      behavior: "generic-combat-object",
-    });
-  });
-
-  it("installs through the production environment owner with stable idempotent ownership", () => {
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "graft-production" });
-    const base = {
-      ownerId: "enemy:rootbound",
-      ownerPosition: { x: 800, y: 520 },
-      geometry: { x: 280, y: 610, w: 54, h: 90 },
-      createdTick: 240,
-    } as const;
-    const first = installGraftAnchor(environment, { ...base, graftType: "bastion" });
-    const repeated = installGraftAnchor(environment, { ...base, graftType: "bastion", createdTick: 241 });
-    installGraftAnchor(environment, { ...base, graftType: "mercy", geometry: { ...base.geometry, x: 773 } });
-    installGraftAnchor(environment, { ...base, graftType: "haste", geometry: { ...base.geometry, x: 1253 } });
-    expect(repeated).toBe(first);
-    expect(environment.combatObjects()).toHaveLength(MAX_ACTIVE_GRAFT_ANCHORS);
-    expect(environment.combatObjects().map((object) => object.ownerId)).toEqual([
-      "enemy:rootbound",
-      "enemy:rootbound",
-      "enemy:rootbound",
-    ]);
-    expect(environment.combatObjects().every((object) => object.factoryId === "graft-anchor")).toBe(true);
-  });
-
-  it("does not reinstall a terminal Graft while Rootbound still advertises its Phase II placement", () => {
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "graft-terminal-idempotency" });
-    const input = {
-      ownerId: "enemy:1",
-      ownerPosition: { x: 800, y: 520 },
-      graftType: "mercy",
-      geometry: { x: 773, y: 610, w: 54, h: 90 },
-      createdTick: 240,
-    } as const;
-    const installed = installGraftAnchor(environment, input);
-    expect(
-      environment.damageCombatObject(installed.id, installed.integrity, "player-destroyed-mercy", 360).destroyed,
-    ).toBe(true);
-
-    const repeated = installGraftAnchor(environment, { ...input, createdTick: 361 });
-
-    expect(repeated).toMatchObject({ id: "enemy:1:graft:mercy", state: "destroyed" });
-    expect(environment.combatObjects().filter((object) => object.id === installed.id)).toHaveLength(1);
-  });
-
-  it("accepts the specialized source-owned factory in the existing codec and rejects invalid inputs", () => {
-    const state = createGraftAnchorState({
-      ownerId: "enemy:rootbound",
-      ownerPosition: { x: 0, y: 0 },
-      graftType: "haste",
-      geometry: { x: 10, y: 20, radius: 12 },
-      createdTick: 1,
-    });
-    expect(
-      validateEnvironmentCodecPayload({ slowZones: [], walls: [], fields: [], combatObjects: [state], routes: [] }),
-    ).toEqual([]);
-    expect(() =>
-      createGraftAnchorState({
-        ownerId: "",
-        ownerPosition: { x: 0, y: 0 },
-        graftType: "haste",
-        geometry: { x: 10, y: 20, radius: 12 },
-        createdTick: 1,
-      }),
-    ).toThrow(/owner ID/u);
-    expect(() =>
-      createGraftAnchorState({
-        ownerId: "enemy:rootbound",
-        ownerPosition: { x: 0, y: 0 },
-        graftType: "haste",
-        geometry: { x: 10, y: 20 },
-        createdTick: 1,
-      }),
-    ).toThrow(/geometry/u);
-    expect(() =>
-      createGraftAnchorState({
-        ownerId: "enemy:rootbound",
-        ownerPosition: { x: 0, y: 0 },
-        graftType: "haste",
-        geometry: { x: 10, y: 20, radius: 12 },
-        createdTick: -1,
-      }),
-    ).toThrow(/tick/u);
-  });
-
-  it("advances from visible warning to active on an absolute tick", () => {
-    const state = createGraftAnchorState({
-      ownerId: "enemy:rootbound",
-      ownerPosition: { x: 0, y: 0 },
-      graftType: "bastion",
-      geometry: { x: 10, y: 20, radius: 12 },
-      createdTick: 10,
-    });
-    expect(advanceGraftAnchor(state, 10 + GRAFT_ANCHOR_TIMING.warningTicks - 1).state).toBe("warning");
-    expect(advanceGraftAnchor(state, 10 + GRAFT_ANCHOR_TIMING.warningTicks)).toMatchObject({
-      state: "active",
-      stateTick: 10 + GRAFT_ANCHOR_TIMING.warningTicks,
-    });
-  });
-
-  it("caps Mercy recovery at the exact definition budget even across a large tick jump", () => {
-    const state = createGraftAnchorState({
-      ownerId: "enemy:rootbound",
-      ownerPosition: { x: 0, y: 0 },
-      graftType: "mercy",
-      geometry: { x: 10, y: 20, radius: 12 },
-      createdTick: 0,
-    });
-    const mercy = graftAnchorDefinition("mercy");
-    if (mercy.effect !== "bounded-pulse-recovery") throw new TypeError("expected Mercy definition");
-    const after = advanceGraftAnchor(state, GRAFT_ANCHOR_TIMING.warningTicks + 120 * 30, (fraction) => fraction);
-    expect(after).toMatchObject({ state: "active", recoverySpentHealthFraction: mercy.maxRecoveryHealthFraction });
-    expect(advanceGraftAnchor(after, 120 * 60, (fraction) => fraction)).toBe(after);
-  });
-
-  it("carries Graft effect and spent-budget truth through hash and structured observation", () => {
-    const state = createGraftAnchorState({
-      ownerId: "enemy:rootbound",
-      ownerPosition: { x: 0, y: 0 },
-      graftType: "mercy",
-      geometry: { x: 10, y: 20, radius: 12 },
-      createdTick: 0,
-    });
-    const snapshot = { stageId: "verdant-sanctum", fields: [], combatObjects: [state], routes: [] } as const;
-    const spent = { ...snapshot, combatObjects: [{ ...state, recoverySpentHealthFraction: 0.015 }] } as const;
-    expect(environmentHash(spent)).not.toBe(environmentHash(snapshot));
-    expect(environmentSnapshotToObservation(spent).combatObjects[0]).toMatchObject({
-      graftType: "mercy",
-      effect: "bounded-pulse-recovery",
-      recoverySpentHealthFraction: 0.015,
-    });
-    expect(validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...spent })).toEqual([]);
-    const invalid = validateEnvironmentCodecPayload({
-      slowZones: [],
-      walls: [],
-      ...snapshot,
-      combatObjects: [{ ...state, pulseHealthFraction: 0.5 }],
-    });
-    expect(invalid.some((entry) => entry.path.endsWith(".pulseHealthFraction"))).toBe(true);
+    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "graft-observation" });
+    installGraftAnchor(environment, { ...input, graftType: "mercy" });
+    const observation = environmentSnapshotToObservation(environment.snapshot());
+    expect(JSON.stringify(observation)).toContain("mercy");
   });
 });

@@ -10,7 +10,7 @@ export type BossTellStage = "warning" | "active" | "exposed";
 export type BossTellMark = "lane" | "column" | "reticle" | "band" | "box" | "destination" | "self";
 
 export interface BossTell {
-  /** Stable per attack and target, for example "vine-lash" or "memory-choir:2". */
+  /** Stable per attack and target, for example "vine-lash" or "aurora-track:2". */
   readonly id: string;
   readonly attackId: string;
   readonly mark: BossTellMark;

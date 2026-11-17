@@ -102,23 +102,6 @@ export function renderVerdantEnvironmentPresentation(
       canvas.stroke();
       continue;
     }
-    const connection = anchor.connectionGeometry?.points;
-    if (connection !== undefined && connection.length >= 2) {
-      const first = connection[0];
-      if (first !== undefined) {
-        canvas.strokeStyle = options.highContrast ? "#ffffff" : "#d0b957";
-        canvas.lineWidth = options.highContrast ? 5 : 3;
-        canvas.setLineDash(warning ? [10, 7] : []);
-        canvas.beginPath();
-        canvas.moveTo(first.x, first.y);
-        for (let index = 1; index < connection.length; index += 1) {
-          const point = connection[index];
-          if (point !== undefined) canvas.lineTo(point.x, point.y);
-        }
-        canvas.stroke();
-        canvas.setLineDash([]);
-      }
-    }
     const typeColor =
       anchor.graftType === "bastion"
         ? "#6f8f78"

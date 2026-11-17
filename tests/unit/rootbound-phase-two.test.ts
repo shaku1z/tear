@@ -1,916 +1,398 @@
+/**
+ * Rootbound Phase II, "The Garden Remembers": the keeper plays its move table and plants Grafts one at a
+ * time. A Graft helps it while it stands; cutting one always opens the keeper. Healing follows the one
+ * table `ROOTBOUND_HEALING`. Each test runs the real boss inside the real Verdant environment.
+ */
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
-import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
+import type { BossAttackRunnerState } from "../../src/gameplay/entities/boss-attack-runner";
+import { bossTells } from "../../src/gameplay/entities/boss-tells";
 import {
-  GRAFT_ANCHOR_TIMING,
+  ROOTBOUND_GRAFTS,
+  ROOTBOUND_GRAFT_ANCHOR_GEOMETRY,
+  ROOTBOUND_HEALING,
+} from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
+import { bindLiveRootboundActors } from "../../src/gameplay/environment/biome-actors/rootbound-actors";
+import { isBloomWellState } from "../../src/gameplay/environment/bloom-well";
+import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
+import {
   GRAFT_ANCHOR_TYPES,
   isGraftAnchorState,
   type GraftAnchorPlacementRequest,
-  type RootboundGraftEffects,
+  type GraftAnchorState,
 } from "../../src/gameplay/environment/graft-anchor";
-import {
-  ROOTBOUND_GRAFT_ANCHOR_GEOMETRY,
-  ROOTBOUND_BLOOM_SHIFT,
-  ROOTBOUND_MEMORY_CHOIR,
-  ROOTBOUND_PHASE_TWO_CADENCE,
-  type RootboundPhaseTwoAttack,
-} from "../../src/gameplay/entities/enemy-types/rootbound";
-import {
-  BLOOM_WELL_TIMING,
-  ROOTBOUND_BLOOM_PATTERN_IDS,
-  type RootboundBloomPatternId,
-} from "../../src/gameplay/environment/bloom-well";
-import {
-  ROOT_CAGE_GEOMETRY,
-  ROOT_CAGE_TIMING,
-  isRootCageState,
-  type RootCagePlacementRequest,
-} from "../../src/gameplay/environment/root-cage";
-import { createEnemyHarness } from "./enemy-test-harness";
-import { environmentSnapshotToObservation } from "../../src/tearbench/environment-codec";
-import { validateAuthoredEnvironmentCodecPayload as validateEnvironmentCodecPayload } from "../../src/tearbench/authored-environment-codec-validation";
-import { createRootbinderState } from "../../src/gameplay/entities/rootbinder-runtime";
-import {
-  ENVIRONMENT_FADE_TICKS,
-  type EnvironmentClearReason,
-} from "../../src/gameplay/environment/environment-contracts";
+import { isRootCageState } from "../../src/gameplay/environment/root-cage";
 import type { BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
+import { createBossArena } from "../../src/gameplay/training/arena-rules";
+import { createEnemyHarness, createTestPlayer } from "./enemy-test-harness";
 
-type PhaseTwoBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
-  graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[];
+type Harness = ReturnType<typeof createEnemyHarness>;
+type GardenBoss = InstanceType<Harness["types"]["Rootbound"]> & {
+  moveState: BossAttackRunnerState;
+  moveTick: number;
+  phaseMarker: number;
+  graftRequests: readonly GraftAnchorPlacementRequest[];
+  activeGraftTypes: readonly string[];
+  graftDamageTakenMultiplier: number;
+  graftGapMultiplier: number;
+  healedFraction: number;
   bloomPatternIndex: number;
-  bossBloomPattern(): RootboundBloomPatternId | null;
-  startRootCage(centerX: number): boolean;
-  rootCagePlacement(): RootCagePlacementRequest | null;
-  completeRootCage(): void;
-  phaseTwoAttackIndex: number;
-  phaseTwoPendingAttack: RootboundPhaseTwoAttack | null;
-  finalPhaseTwoGraftTypes: readonly string[];
+  exposed(): boolean;
+  graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[];
+  rootCagePlacement(): unknown;
+  limitIncomingDamage(damage: number): number;
   cleanupEncounter(reason: BossEncounterCleanupReason): void;
+  tells(): readonly unknown[];
 };
 
-/** Clears the Phase I -> II transformation beat so a test can drive Phase II directly. */
-function skipTransformation(actor: PhaseTwoBoss): void {
-  actor.cinematicRequest = null;
-  actor.cinematicT = 0;
+const DT = 1 / 120;
+const ended = (object: Readonly<{ state: string }>) => object.state === "destroyed" || object.state === "expired";
+
+/** The boss at the start of Phase II, inside its environment, with a player standing at `playerX`. */
+function garden(options: Readonly<{ arena?: boolean; bare?: boolean; playerX?: number }> = {}) {
+  const harness = createEnemyHarness([0.25, 0.75, 0.4, 0.6, 0.1, 0.9]);
+  const boss = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as GardenBoss;
+  const player = Object.assign(createTestPlayer({ x: options.playerX ?? 300 }), {
+    hazardDmgMult: 1,
+    invulnerable: false,
+  });
+  const arena = createBossArena("rootbound", CONFIG.view.w, CONFIG.view.h, CONFIG.world.groundY, 0.5);
+  const platforms =
+    options.arena === true && arena !== null
+      ? arena
+      : options.bare === true
+        ? harness.platforms.filter((platform) => platform.oneway !== true)
+        : harness.platforms;
+  const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-phase-two" });
+  bindLiveRootboundActors(
+    environment,
+    () => player,
+    () => [boss],
+    () => "enemy:boss",
+    CONFIG,
+  );
+  boss.introT = 0;
+  boss.hp = boss.maxHp * (boss.phaseMarks[0] - 0.02);
+  let tick = 0;
+  const moves: string[] = [];
+  const step = (seconds: number, each?: () => void): void => {
+    for (let index = 0; index < Math.round(seconds / DT); index += 1) {
+      tick += 1;
+      const before = boss.moveState.run?.attackId ?? null;
+      environment.step(
+        tick + 8,
+        DT,
+        () => {
+          boss.update(DT, platforms, player);
+        },
+        new Set(["enemy:boss"]),
+      );
+      boss.cinematicRequest = null;
+      boss.cinematicT = 0;
+      const now = boss.moveState.run?.attackId ?? null;
+      if (now !== null && now !== before) moves.push(now);
+      each?.();
+    }
+  };
+  const grafts = (): readonly GraftAnchorState[] =>
+    environment
+      .combatObjects()
+      .filter(isGraftAnchorState)
+      .filter((graft) => !ended(graft));
+  const cut = (id: string): void => {
+    environment.damageCombatObject(id, 100_000, `cut:${String(tick)}`, tick + 8);
+  };
+  /** Runs until `done`, at most `limit` seconds. */
+  const until = (done: () => boolean, limit = 60): void => {
+    for (let waited = 0; waited < limit / DT && !done(); waited += 1) step(DT);
+    if (!done()) throw new Error("the garden never reached the expected state");
+  };
+  return { boss, player, environment, platforms, moves, step, grafts, cut, until, tick: () => tick };
 }
 
-describe("Rootbound Phase II Graft creation", () => {
-  it("derives the exact authored placement requests only during Phase II", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    expect(actor.graftAnchorPlacements()).toEqual([]);
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    const placements = actor.graftAnchorPlacements();
-    expect(placements.map((placement) => placement.graftType)).toEqual(GRAFT_ANCHOR_TYPES);
-    expect(
-      placements.every(
-        (placement) =>
-          placement.geometry.w === ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width &&
-          placement.geometry.h === ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.height,
-      ),
-    ).toBe(true);
-    actor.hp = actor.maxHp * 0.2;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    expect(actor.graftAnchorPlacements()).toEqual([]);
+/** A grove of all three Grafts, each grown in. */
+function fullGrove(options?: Parameters<typeof garden>[0]) {
+  const scene = garden(options);
+  scene.until(() => scene.boss.activeGraftTypes.length === GRAFT_ANCHOR_TYPES.length);
+  return scene;
+}
+
+describe("Rootbound Phase II: planting", () => {
+  it("opens the phase by kneeling to plant one Graft, and keeps playing its Phase I moves", () => {
+    const scene = garden();
+    scene.until(() => scene.grafts().length === 1);
+    expect(scene.moves).toEqual(["plant-graft"]);
+    expect(scene.boss.graftRequests.map((request) => request.graftType)).toEqual(["mercy"]);
+    scene.step(30);
+    const phaseOneMoves = ROOTBOUND_MOVES.attacks.filter((move) => move.phases.includes(1)).map((move) => move.id);
+    expect(scene.moves.some((id) => phaseOneMoves.includes(id))).toBe(true);
+    expect(scene.moves.every((id, index) => id !== scene.moves[index - 1])).toBe(true);
   });
 
-  it("creates each request once through the canonical environment collection with the stable live owner ID", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-phase-two" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        state: Object.freeze({
-          graftPlacements: actor.graftAnchorPlacements(),
-          ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
-        }),
-      }),
-    ]);
-    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    environment.step(241, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    const grafts = environment.combatObjects().filter(isGraftAnchorState);
-    expect(grafts).toHaveLength(3);
-    expect(grafts.map((graft) => graft.id)).toEqual([
-      "enemy:rootbound-live:graft:bastion",
-      "enemy:rootbound-live:graft:mercy",
-      "enemy:rootbound-live:graft:haste",
-    ]);
-    expect(grafts.map((graft) => graft.graftType)).toEqual(GRAFT_ANCHOR_TYPES);
-    expect(
-      grafts.every((graft) => graft.ownerId === "enemy:rootbound-live" && graft.targetId === "enemy:rootbound-live"),
-    ).toBe(true);
+  it("plants the three Grafts one at a time, in order, and never more than three", () => {
+    const scene = fullGrove();
+    expect(scene.grafts().map((graft) => graft.graftType)).toEqual([...GRAFT_ANCHOR_TYPES]);
+    expect(scene.moves.filter((id) => id === "plant-graft")).toHaveLength(3);
+    scene.step(20);
+    expect(scene.grafts()).toHaveLength(3);
+    expect(scene.moves.filter((id) => id === "plant-graft")).toHaveLength(3);
   });
 
-  it("removes a player-destroyed Graft after its fade and never plants it again in Phase II", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-destroyed-graft" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:1",
-        source: actor,
-        acknowledgeGraftPlanted: (graftType: string) => {
-          actor.acknowledgeGraftPlanted(graftType);
-        },
-        state: Object.freeze({
-          graftPlacements: actor.graftAnchorPlacements(),
-          plantedGraftTypes: actor.plantedGraftTypes,
-          ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
-        }),
-      }),
-    ]);
-    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:1"]));
-    const mercy = environment
-      .combatObjects()
-      .filter(isGraftAnchorState)
-      .find((graft) => graft.graftType === "mercy");
-    if (mercy === undefined) throw new TypeError("expected Mercy Graft");
-    expect(environment.damageCombatObject(mercy.id, mercy.integrity, "player-destroyed-mercy", 360).destroyed).toBe(
-      true,
-    );
-
-    expect(() => {
-      environment.step(361, 1 / 120, () => undefined, new Set(["enemy:1"]));
-      environment.step(362, 1 / 120, () => undefined, new Set(["enemy:1"]));
-    }).not.toThrow();
-    expect(
-      environment.combatObjects().filter((object) => object.ownerId === "enemy:1" && isGraftAnchorState(object)),
-    ).toHaveLength(3);
-    expect(environment.combatObjects().filter((object) => object.id === "enemy:1:graft:mercy")).toEqual([
-      expect.objectContaining({ state: "destroyed", stateTick: 360 }),
-    ]);
-    for (let tick = 363; tick <= 360 + ENVIRONMENT_FADE_TICKS + 60; tick += 1)
-      environment.step(tick, 1 / 120, () => undefined, new Set(["enemy:1"]));
-    const grafts = environment.combatObjects().filter((object) => object.ownerId === "enemy:1");
-    expect(grafts.map((graft) => graft.id)).toEqual(["enemy:1:graft:bastion", "enemy:1:graft:haste"]);
-    expect(actor.plantedGraftTypes).toEqual(GRAFT_ANCHOR_TYPES);
-  });
-
-  it("keeps Rootbound directly damageable while all three canonical Grafts exist and are active", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-direct-damage" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        state: Object.freeze({
-          graftPlacements: actor.graftAnchorPlacements(),
-          ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
-        }),
-      }),
-    ]);
-    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    for (const graft of environment.combatObjects().filter(isGraftAnchorState))
-      environment.updateCombatObject(graft.id, { state: "active" });
-    expect(environment.combatObjects().filter(isGraftAnchorState)).toHaveLength(3);
-    expect(actor.blocksDamage()).toBe(false);
-    expect(actor.limitIncomingDamage(20)).toBe(20);
-    const hpBefore = actor.hp;
-    expect(actor._dot(20)).toBe(20);
-    expect(actor.hp).toBe(hpBefore - 20);
-  });
-
-  it("activates bounded effects, spends Mercy canonically, removes destroyed effects, and cleans the phase", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-graft-lifecycle" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        applyGraftEffects: (effects: RootboundGraftEffects) => {
-          actor.applyGraftEffects(effects);
-        },
-        recoverGraftHealth: (fraction: number) => actor.recoverGraftHealth(fraction),
-        state: Object.freeze({
-          graftPlacements: actor.graftAnchorPlacements(),
-          ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
-        }),
-      }),
-    ]);
-    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    expect(
-      environment
-        .combatObjects()
-        .filter(isGraftAnchorState)
-        .map((graft) => graft.state),
-    ).toEqual(["warning", "warning", "warning"]);
-    environment.step(
-      240 + GRAFT_ANCHOR_TIMING.warningTicks,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live"]),
-    );
-    expect(actor).toMatchObject({
-      graftDamageTakenMultiplier: 0.8,
-      graftCadenceMultiplier: 1.15,
-      activeGraftTypes: ["bastion", "mercy", "haste"],
+  it("warns before it plants: the planting move shows a tell and deals no damage", () => {
+    const scene = garden();
+    let warned = 0;
+    scene.until(() => {
+      if (bossTells(scene.boss).some((tell) => tell.attackId === "plant-graft" && tell.stage === "warning"))
+        warned += 1;
+      return scene.grafts().length === 1;
     });
-    expect(actor.limitIncomingDamage(20)).toBe(16);
+    expect(warned * DT).toBeGreaterThanOrEqual(0.8);
+    expect(scene.player.damage).toEqual([]);
+  });
 
-    const mercy = environment
-      .combatObjects()
-      .filter(isGraftAnchorState)
-      .find((graft) => graft.graftType === "mercy");
-    if (mercy?.nextPulseTick == null) throw new TypeError("expected Mercy Graft");
-    const hpBeforeMercy = actor.hp;
-    environment.step(mercy.nextPulseTick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    const spentMercy = environment
-      .combatObjects()
-      .filter(isGraftAnchorState)
-      .find((graft) => graft.graftType === "mercy");
-    expect(actor.hp).toBeCloseTo(hpBeforeMercy + actor.maxHp * 0.015, 8);
-    expect(spentMercy?.recoverySpentHealthFraction).toBeCloseTo(0.015, 8);
+  it("stands the Grafts apart on the floor of a bare arena, and on the platforms of its own arena", () => {
+    const bare = fullGrove({ bare: true });
+    const floor = bare.grafts().map((graft) => graft.geometry);
+    expect(floor.map((geometry) => geometry.y + (geometry.h ?? 0))).toEqual([
+      CONFIG.world.groundY,
+      CONFIG.world.groundY,
+      CONFIG.world.groundY,
+    ]);
+    expect(floor.map((geometry) => geometry.x + ROOTBOUND_GRAFT_ANCHOR_GEOMETRY.width / 2)).toEqual([
+      CONFIG.view.w * 0.2,
+      CONFIG.view.w * 0.5,
+      CONFIG.view.w * 0.8,
+    ]);
+    const arena = fullGrove({ arena: true });
+    const perches = arena.platforms.filter((platform) => platform.oneway === true && platform.floor !== true);
+    if (perches.length === 0) return;
+    const raised = arena.grafts().filter((graft) => graft.geometry.y + (graft.geometry.h ?? 0) < CONFIG.world.groundY);
+    expect(raised.length).toBeGreaterThan(0);
+    for (const graft of raised) {
+      const foot = graft.geometry.y + (graft.geometry.h ?? 0);
+      const centre = graft.geometry.x + (graft.geometry.w ?? 0) / 2;
+      expect(perches.some((perch) => perch.y === foot && centre >= perch.x && centre <= perch.x + perch.w)).toBe(true);
+    }
+  });
+});
 
-    const bastion = environment
-      .combatObjects()
-      .filter(isGraftAnchorState)
-      .find((graft) => graft.graftType === "bastion");
-    const haste = environment
-      .combatObjects()
-      .filter(isGraftAnchorState)
-      .find((graft) => graft.graftType === "haste");
-    if (bastion === undefined || haste === undefined) throw new TypeError("expected active protection Grafts");
-    expect(
-      environment.damageCombatObject(bastion.id, bastion.integrity, "break-bastion", mercy.nextPulseTick + 1).destroyed,
-    ).toBe(true);
-    expect(actor.graftDamageTakenMultiplier).toBe(1);
-    expect(actor.graftCadenceMultiplier).toBe(1.15);
-    expect(
-      environment.damageCombatObject(haste.id, haste.integrity, "break-haste", mercy.nextPulseTick + 2).destroyed,
-    ).toBe(true);
-    expect(actor.graftCadenceMultiplier).toBe(1);
+describe("Rootbound Phase II: what a Graft does, and what cutting it does", () => {
+  it("Bastion lowers the damage the keeper takes and Haste shortens the pause between its moves", () => {
+    const scene = fullGrove();
+    expect(scene.boss.graftDamageTakenMultiplier).toBe(0.65);
+    expect(scene.boss.graftGapMultiplier).toBe(0.6);
+    scene.until(() => scene.boss.moveState.run === null && !scene.boss.exposed());
+    expect(scene.boss.limitIncomingDamage(100)).toBeCloseTo(65, 8);
+    expect(scene.boss.moveState.readyTick - scene.boss.moveTick).toBeLessThanOrEqual(
+      Math.round(ROOTBOUND_MOVES.gap * 0.6),
+    );
+  });
 
-    actor.hp = actor.maxHp * 0.2;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    environment.step(mercy.nextPulseTick + 3, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    expect(
-      environment
-        .combatObjects()
-        .filter(isGraftAnchorState)
-        .find((graft) => graft.graftType === "mercy"),
-    ).toMatchObject({
-      state: "expired",
-      cleanupReason: "stage-transition",
+  it("cutting a Graft always opens the keeper, ends its move without a strike and ends the effect", () => {
+    for (const type of GRAFT_ANCHOR_TYPES) {
+      const scene = fullGrove();
+      // Cut while a move is winding up, to show the move is cancelled.
+      scene.until(() => scene.boss.moveState.run?.stage === "tell");
+      const hitsBefore = scene.player.damage.length;
+      const graft = scene.grafts().find((entry) => entry.graftType === type);
+      if (graft === undefined) throw new Error(`no ${type} Graft`);
+      scene.cut(graft.id);
+      expect(scene.boss.exposed()).toBe(true);
+      expect(scene.boss.moveState.run).toBeNull();
+      expect(scene.boss.activeGraftTypes).not.toContain(type);
+      expect(bossTells(scene.boss).some((tell) => tell.stage === "exposed")).toBe(true);
+      // Exposed hits count 1.5x; Bastion, if it still stands, still takes its share.
+      const bastion = type === "bastion" ? 1 : 0.65;
+      expect(scene.boss.limitIncomingDamage(100)).toBeCloseTo(150 * bastion, 8);
+      let open = 0;
+      scene.step(ROOTBOUND_GRAFTS.cutExposed + 0.5, () => {
+        if (scene.boss.exposed()) open += 1;
+      });
+      expect(open * DT).toBeCloseTo(ROOTBOUND_GRAFTS.cutExposed, 1);
+      expect(scene.player.damage.length).toBe(hitsBefore);
+    }
+  });
+
+  it("does not plant again for the regrow time after a cut, then plants the missing Graft", () => {
+    const scene = fullGrove();
+    const mercy = scene.grafts().find((entry) => entry.graftType === "mercy");
+    if (mercy === undefined) throw new Error("no Mercy Graft");
+    scene.cut(mercy.id);
+    const planted = scene.moves.filter((id) => id === "plant-graft").length;
+    scene.step(ROOTBOUND_GRAFTS.regrow - 0.2);
+    expect(scene.moves.filter((id) => id === "plant-graft")).toHaveLength(planted);
+    expect(scene.grafts().map((graft) => graft.graftType)).not.toContain("mercy");
+    scene.until(() => scene.grafts().some((graft) => graft.graftType === "mercy"), 30);
+    expect(scene.grafts()).toHaveLength(3);
+  });
+
+  it("cutting the last Graft of a full grove uproots the keeper for the long opening", () => {
+    const scene = fullGrove();
+    const [first, second, third] = scene.grafts();
+    if (first === undefined || second === undefined || third === undefined) throw new Error("no full grove");
+    scene.cut(first.id);
+    scene.cut(second.id);
+    scene.cut(third.id);
+    let open = 0;
+    scene.step(ROOTBOUND_GRAFTS.uprootedExposed + 0.5, () => {
+      if (scene.boss.exposed()) open += 1;
     });
-    expect(actor).toMatchObject({ graftDamageTakenMultiplier: 1, graftCadenceMultiplier: 1, activeGraftTypes: [] });
+    expect(open * DT).toBeCloseTo(ROOTBOUND_GRAFTS.uprootedExposed, 1);
   });
 
-  it("projects the selected authored Bloom arrangement into the shared production field runtime", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    expect(actor.bossBloomPattern()).toBe(ROOTBOUND_BLOOM_PATTERN_IDS[0]);
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-bloom-production" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        state: Object.freeze({
-          bloomPattern: actor.bossBloomPattern(),
-          arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
-        }),
-      }),
-    ]);
-    environment.step(240, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    environment.step(241, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    expect(environment.fields()).toHaveLength(2);
-    expect(
-      environment.fields().every((field) => field.kind === "bloom-well" && field.ownerId === "enemy:rootbound-live"),
-    ).toBe(true);
-    actor.bloomPatternIndex = 2;
-    environment.step(242, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    expect(
-      environment.fields().filter((field) => field.patternId?.startsWith("bloom-well/rootbound/cage-route") === true),
-    ).toHaveLength(3);
+  it("cutting the only Graft planted so far is an ordinary cut, not an uprooting", () => {
+    const scene = garden();
+    scene.until(() => scene.grafts().length === 1);
+    const [only] = scene.grafts();
+    if (only === undefined) throw new Error("no Graft");
+    scene.cut(only.id);
+    let open = 0;
+    scene.step(ROOTBOUND_GRAFTS.uprootedExposed + 0.5, () => {
+      if (scene.boss.exposed()) open += 1;
+    });
+    expect(open * DT).toBeCloseTo(ROOTBOUND_GRAFTS.cutExposed, 1);
+  });
+});
+
+describe("Rootbound Phase II: healing is fair (ROOTBOUND_HEALING)", () => {
+  it("sitting back: an unpressed keeper heals, slowly, and never more than the phase cap", () => {
+    const scene = garden();
+    const start = scene.boss.hp;
+    scene.step(60);
+    const healed = (scene.boss.hp - start) / scene.boss.maxHp;
+    expect(healed).toBeGreaterThan(0);
+    expect(healed).toBeLessThanOrEqual(ROOTBOUND_HEALING.phaseTwoCap + 1e-9);
+    expect(scene.boss.healedFraction).toBeLessThanOrEqual(ROOTBOUND_HEALING.phaseTwoCap + 1e-9);
+    expect(scene.boss.hp).toBeLessThanOrEqual(scene.boss.maxHp * scene.boss.phaseMarks[0]);
+    // It did not stand still to do it: the sitting player was attacked throughout.
+    expect(scene.moves.length).toBeGreaterThan(20);
   });
 
-  it("ends completed boss Bloom patterns and plants each new selection once", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-bloom-pruning" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        acknowledgeBloomPattern: (patternId: RootboundBloomPatternId | null) => {
-          actor.acknowledgeBloomPattern(patternId);
-        },
-        state: Object.freeze({
-          bloomPattern: actor.bossBloomPattern(),
-          plantedBloomPattern: actor.plantedBloomPattern,
-          arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
-        }),
-      }),
-    ]);
-    const live = new Set(["enemy:rootbound-live"]);
-
-    environment.step(240, 1 / 120, () => undefined, live);
-    const firstPatternCompleteTick = 240 + 120 + BLOOM_WELL_TIMING.totalTicks;
-    environment.step(firstPatternCompleteTick, 1 / 120, () => undefined, live);
-    expect(environment.fields()).toHaveLength(2);
-    expect(environment.fields().every((field) => field.state === "expired")).toBe(true);
-
-    actor.bloomPatternIndex = 1;
-    environment.step(firstPatternCompleteTick + 1, 1 / 120, () => undefined, live);
-    expect(environment.fields().filter((field) => field.state !== "expired")).toEqual([
-      expect.objectContaining({ state: "warning", patternId: "bloom-well/rootbound/central-safe-lanes/1" }),
-    ]);
-
-    // The old pattern's Wells leave after their fade; the selected pattern is not planted again.
-    environment.step(firstPatternCompleteTick + ENVIRONMENT_FADE_TICKS, 1 / 120, () => undefined, live);
-    expect(environment.fields()).toHaveLength(1);
-    expect(environment.fields()[0]).toMatchObject({ state: "warning", stateTick: firstPatternCompleteTick + 1 });
+  it("any hit restarts the wait: a player who lands one hit every 2.5 s sees no healing at all", () => {
+    const scene = garden();
+    let sinceHit = 0,
+      healed = 0,
+      last = scene.boss.hp;
+    scene.step(60, () => {
+      if (scene.boss.hp > last) healed += scene.boss.hp - last;
+      sinceHit += DT;
+      if (sinceHit >= 2.5) {
+        sinceHit = 0;
+        scene.boss.hp -= scene.boss.limitIncomingDamage(1);
+      }
+      last = scene.boss.hp;
+    });
+    expect(healed).toBe(0);
+    expect(scene.boss.healedFraction).toBe(0);
   });
 
-  it("runs Memory Choir as three bounded boss-owned attack manifestations rather than enemy clones", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    expect(actor.startMemoryChoir()).toBe(true);
-    expect(actor.memoryChoirManifestations).toHaveLength(ROOTBOUND_MEMORY_CHOIR.maxManifestations);
-    expect(
-      actor.memoryChoirManifestations.every((manifestation) => !("hp" in manifestation) && !("kind" in manifestation)),
-    ).toBe(true);
-    const first = actor.memoryChoirManifestations[0];
-    if (first === undefined) throw new TypeError("expected Memory Choir manifestation");
-    harness.player.x = first.x + first.w / 2;
-    harness.player.y = first.y + first.h / 2;
-    actor.update(ROOTBOUND_MEMORY_CHOIR.warning - 1 / 120, harness.platforms, harness.player);
-    expect(harness.player.damage).toEqual([]);
-    actor.update(1 / 120, harness.platforms, harness.player);
-    expect(actor.memoryChoirStage).toBe("active");
-    expect(harness.player.damage).toEqual([]);
-    actor.update(1 / 120, harness.platforms, harness.player);
-    actor.update(1 / 120, harness.platforms, harness.player);
-    expect(harness.player.damage).toEqual([
-      expect.objectContaining({ amount: ROOTBOUND_MEMORY_CHOIR.damage, source: actor }),
-    ]);
-
-    actor.hp = actor.maxHp * 0.2;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    expect(actor.memoryChoirStage).toBeNull();
-    expect(actor.memoryChoirManifestations).toEqual([]);
+  it("heals only while a Mercy Graft stands", () => {
+    const scene = garden();
+    scene.until(() => scene.boss.activeGraftTypes.includes("mercy"));
+    const mercy = scene.grafts().find((entry) => entry.graftType === "mercy");
+    if (mercy === undefined) throw new Error("no Mercy Graft");
+    scene.boss.hp -= scene.boss.maxHp * 0.05;
+    scene.cut(mercy.id);
+    const start = scene.boss.hp;
+    scene.step(ROOTBOUND_GRAFTS.regrow - 0.5);
+    expect(scene.boss.hp).toBe(start);
   });
 
-  it("places Root Cage through the canonical root-link owner with a guaranteed sever response and bounded expiry", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    expect(actor.startRootCage(harness.player.x)).toBe(true);
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-root-cage" });
-    const cagePlayer = { x: CONFIG.view.w / 2, y: CONFIG.world.groundY - 32, vx: 0 };
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        completeRootCage: () => {
-          actor.completeRootCage();
-        },
-        player: Object.freeze({
-          ...cagePlayer,
-          hw: 20,
-          hh: 32,
-          invulnerable: false,
-          hazardDamageMultiplier: 1,
-          takeDamage: () => undefined,
-          applyCageConstraint: (x: number, vx: number) => {
-            cagePlayer.x = x;
-            cagePlayer.vx = vx;
-          },
-        }),
-        state: Object.freeze({
-          rootCagePlacement: actor.rootCagePlacement(),
-        }),
-      }),
-    ]);
-
-    const startTick = 300;
-    environment.step(startTick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    const warning = environment.combatObjects().filter(isRootCageState);
-    expect(warning).toHaveLength(2);
-    expect(warning.map((boundary) => boundary.boundarySide)).toEqual(["left", "right"]);
-    expect(
-      warning.every(
-        (boundary) =>
-          boundary.state === "warning" &&
-          boundary.counterplayTags.includes("cut") &&
-          boundary.counterplayTags.includes("break") &&
-          boundary.ownerId === "enemy:rootbound-live" &&
-          !boundary.procEligible,
-      ),
-    ).toBe(true);
-    expect(validateEnvironmentCodecPayload({ slowZones: [], walls: [], ...environment.snapshot() })).toEqual([]);
-    expect(environmentSnapshotToObservation(environment.snapshot()).combatObjects).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          rootCageId: "enemy:rootbound-live:root-cage:g1",
-          boundarySide: "left",
-          response: "sever-either-boundary",
-        }),
-        expect.objectContaining({
-          rootCageId: "enemy:rootbound-live:root-cage:g1",
-          boundarySide: "right",
-          response: "sever-either-boundary",
-        }),
-      ]),
-    );
-    const [left, right] = warning;
-    if (left === undefined || right === undefined || left.geometry.w === undefined)
-      throw new TypeError("expected Root Cage boundaries");
-    expect(right.geometry.x - (left.geometry.x + left.geometry.w)).toBe(ROOT_CAGE_GEOMETRY.interiorWidth);
-
-    environment.step(
-      startTick + ROOT_CAGE_TIMING.warningTicks - 1,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live"]),
-    );
-    expect(
-      environment
-        .combatObjects()
-        .filter(isRootCageState)
-        .every((boundary) => boundary.state === "warning"),
-    ).toBe(true);
-    environment.step(
-      startTick + ROOT_CAGE_TIMING.warningTicks,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live"]),
-    );
-    const active = environment.combatObjects().filter(isRootCageState);
-    expect(active.every((boundary) => boundary.state === "active")).toBe(true);
-    const leftActive = active.find((boundary) => boundary.boundarySide === "left");
-    if (leftActive?.geometry.w === undefined) throw new TypeError("expected left Root Cage boundary");
-    cagePlayer.x = leftActive.geometry.x + leftActive.geometry.w + 10;
-    cagePlayer.vx = -120;
-    environment.step(
-      startTick + ROOT_CAGE_TIMING.warningTicks + 1,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live"]),
-    );
-    expect(cagePlayer).toMatchObject({ x: leftActive.geometry.x + leftActive.geometry.w + 20, vx: 0 });
-    expect(
-      environment.damageCombatObject(
-        leftActive.id,
-        leftActive.integrity,
-        "sever-root-cage",
-        startTick + ROOT_CAGE_TIMING.warningTicks + 1,
-      ).destroyed,
-    ).toBe(true);
-    expect(
-      environment
-        .combatObjects()
-        .filter(isRootCageState)
-        .some((boundary) => boundary.boundarySide === "right" && boundary.state === "active"),
-    ).toBe(true);
-    cagePlayer.x = leftActive.geometry.x + leftActive.geometry.w + 10;
-    cagePlayer.vx = -120;
-    environment.step(
-      startTick + ROOT_CAGE_TIMING.warningTicks + 2,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live"]),
-    );
-    expect(cagePlayer).toMatchObject({ x: leftActive.geometry.x + leftActive.geometry.w + 10, vx: -120 });
-
-    environment.step(
-      startTick + ROOT_CAGE_TIMING.warningTicks + ROOT_CAGE_TIMING.activeTicks,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live"]),
-    );
-    expect(
-      environment
-        .combatObjects()
-        .filter(isRootCageState)
-        .every((boundary) => boundary.state === "destroyed" || boundary.state === "expired"),
-    ).toBe(true);
-    expect(actor.rootCagePlacement()).toBeNull();
+  it("waits the quiet time before the first heal, then heals at the table's rate", () => {
+    const scene = garden();
+    scene.until(() => scene.boss.activeGraftTypes.includes("mercy"));
+    scene.boss.hp -= scene.boss.limitIncomingDamage(scene.boss.maxHp * 0.05);
+    const start = scene.boss.hp;
+    scene.step(ROOTBOUND_HEALING.quietSeconds - 0.1);
+    expect(scene.boss.hp).toBe(start);
+    scene.step(1.1);
+    expect((scene.boss.hp - start) / scene.boss.maxHp).toBeCloseTo(ROOTBOUND_HEALING.perSecond, 3);
   });
+});
 
-  it("suspends Root Cage collision while the canonical player leash is active, then restores it after leash cleanup", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    expect(actor.startRootCage(CONFIG.view.w / 2)).toBe(true);
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "root-cage-leash-policy" });
-    const cagePlayer = {
-      x: CONFIG.view.w / 2,
-      y: CONFIG.world.groundY - 32,
-      vx: 0,
-      vy: 0,
-      jumpEnabled: true,
-      dashEnabled: true,
+describe("Rootbound Phase II: Root Cage and Bloom Shift are moves that place stage objects", () => {
+  /** The next move must be `id`: every other move is cooling down. */
+  function queue(boss: GardenBoss, id: string): void {
+    const cooling = Object.fromEntries(
+      ROOTBOUND_MOVES.attacks.filter((other) => other.id !== id).map((other) => [other.id, Number.MAX_SAFE_INTEGER]),
+    );
+    boss.moveState = {
+      run: null,
+      readyTick: boss.moveTick,
+      lastAttackId: null,
+      cooldownUntil: cooling,
+      exposed: null,
     };
-    const rootbinder = createRootbinderState({
-      id: "rootbinder:live",
-      worldId: environment.worldId,
-      stageId: environment.stageId,
-      x: 0,
-      y: cagePlayer.y,
-    });
-    let rootbinderPhase: "linked" | "broken" = "linked";
-    bindVerdantEnvironmentActors(environment, "rootbinder", () => [
-      Object.freeze({
-        id: rootbinder.id,
-        state: Object.freeze({ ...rootbinder, state: rootbinderPhase, transitionTick: 1_000 }),
-        candidates: Object.freeze([]),
-        player: Object.freeze({
-          id: "player",
-          ...cagePlayer,
-          alive: true,
-          apply: (value: { readonly vx: number; readonly vy: number }) => {
-            cagePlayer.vx = value.vx;
-            cagePlayer.vy = value.vy;
-          },
-        }),
-      }),
-    ]);
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        completeRootCage: () => {
-          actor.completeRootCage();
-        },
-        player: Object.freeze({
-          ...cagePlayer,
-          hw: 20,
-          hh: 32,
-          invulnerable: false,
-          hazardDamageMultiplier: 1,
-          takeDamage: () => undefined,
-          applyCageConstraint: (x: number, vx: number) => {
-            cagePlayer.x = x;
-            cagePlayer.vx = vx;
-          },
-        }),
-        state: Object.freeze({
-          rootCagePlacement: actor.rootCagePlacement(),
-        }),
-      }),
-    ]);
+  }
 
-    const startTick = 400;
-    environment.step(startTick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live", rootbinder.id, "player"]));
-    environment.step(
-      startTick + 1,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live", rootbinder.id, "player"]),
+  it("raises a cage around where the player stood; cutting a wall opens the keeper", () => {
+    const scene = garden({ playerX: 700 });
+    scene.until(() => scene.grafts().length === 1);
+    scene.until(() => scene.boss.moveState.run === null);
+    queue(scene.boss, "root-cage");
+    scene.until(() => scene.environment.combatObjects().some(isRootCageState));
+    const walls = scene.environment.combatObjects().filter(isRootCageState);
+    expect(walls).toHaveLength(2);
+    expect(walls.every((wall) => Math.abs(wall.geometry.x + (wall.geometry.w ?? 0) / 2 - 700) < 300)).toBe(true);
+    expect(scene.boss.rootCagePlacement()).not.toBeNull();
+    scene.until(() =>
+      scene.environment.combatObjects().some((wall) => isRootCageState(wall) && wall.state === "active"),
     );
-    const leash = environment.combatObjects().find((object) => object.id.includes(":leash:"));
-    expect(leash?.state).toBe("active");
-    environment.step(
-      startTick + ROOT_CAGE_TIMING.warningTicks,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live", rootbinder.id, "player"]),
-    );
-    const left = environment
-      .combatObjects()
-      .filter(isRootCageState)
-      .find((boundary) => boundary.boundarySide === "left");
-    if (left?.geometry.w === undefined) throw new TypeError("expected active left Root Cage boundary");
-    cagePlayer.x = left.geometry.x + left.geometry.w + 10;
-    cagePlayer.vx = -120;
-    environment.step(
-      startTick + ROOT_CAGE_TIMING.warningTicks + 1,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live", rootbinder.id, "player"]),
-    );
-    expect(cagePlayer.x).toBe(left.geometry.x + left.geometry.w + 10);
-    expect(cagePlayer.vx).toBeLessThan(0);
-    expect(cagePlayer.jumpEnabled && cagePlayer.dashEnabled).toBe(true);
-
-    rootbinderPhase = "broken";
-    environment.step(
-      startTick + ROOT_CAGE_TIMING.warningTicks + 2,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live", rootbinder.id, "player"]),
-    );
-    expect(cagePlayer).toMatchObject({ x: left.geometry.x + left.geometry.w + 20, vx: 0 });
-    expect(environment.combatObjects().find((object) => object.id.includes(":leash:"))).toMatchObject({
-      state: "expired",
-      cleanupReason: "stage-transition",
-    });
+    const wall = scene.environment.combatObjects().find(isRootCageState);
+    if (wall === undefined) throw new Error("no cage wall");
+    scene.cut(wall.id);
+    expect(scene.boss.exposed()).toBe(true);
+    // The other wall stands until its time runs out; then the keeper may raise a cage again.
+    scene.until(() => scene.boss.rootCagePlacement() === null, 4);
   });
 
-  it("cycles the bounded Phase II attack order, applies Haste only to cadence, and enters Phase III through boss theater", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    actor.state = "idle";
-    actor.stateT = 0;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    expect(actor).toMatchObject({
-      phaseTwoPendingAttack: "memory-choir",
-      memoryChoirStage: "warning",
-      atk: "memory-choir:warning",
-    });
-    expect(ROOTBOUND_MEMORY_CHOIR.warning).toBeGreaterThanOrEqual(0.55);
-    actor.update(ROOTBOUND_MEMORY_CHOIR.warning, harness.platforms, harness.player);
-    actor.update(
-      ROOTBOUND_MEMORY_CHOIR.active + ROOTBOUND_MEMORY_CHOIR.echoStagger * 2,
-      harness.platforms,
-      harness.player,
-    );
-    actor.update(ROOTBOUND_MEMORY_CHOIR.afterimage, harness.platforms, harness.player);
-    expect(actor).toMatchObject({
-      phaseTwoPendingAttack: null,
-      memoryChoirStage: null,
-      state: "recover",
-      stateT: ROOTBOUND_PHASE_TWO_CADENCE.recovery,
-    });
+  it("re-plants the Bloom Wells in the next pattern", () => {
+    const scene = garden();
+    scene.until(() => scene.grafts().length === 1);
+    scene.until(() => scene.boss.moveState.run === null);
+    const before = scene.boss.bloomPatternIndex;
+    queue(scene.boss, "bloom-shift");
+    scene.until(() => scene.boss.bloomPatternIndex !== before, 5);
+    scene.step(0.5);
+    expect(scene.environment.fields().some(isBloomWellState)).toBe(true);
+  });
+});
 
-    actor.state = "idle";
-    actor.stateT = 0;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    expect(actor).toMatchObject({ phaseTwoPendingAttack: "root-cage", atk: "root-cage:warning" });
-    actor.completeRootCage();
-    expect(actor).toMatchObject({ phaseTwoPendingAttack: null, rootCageRequest: null, state: "recover" });
+describe("Rootbound Phase II: leaving the phase, and cost", () => {
+  it("takes its Grafts and cage with it into Phase III and on cleanup", () => {
+    const scene = fullGrove();
+    scene.boss.hp = scene.boss.maxHp * (scene.boss.phaseMarks[1] - 0.02);
+    scene.step(0.1);
+    expect(scene.boss.phaseMarker).toBe(3);
+    expect(scene.boss.graftAnchorPlacements()).toEqual([]);
+    expect(scene.grafts()).toEqual([]);
+    expect(scene.boss.graftDamageTakenMultiplier).toBe(1);
+    expect(scene.boss.exposed()).toBe(false);
 
-    const priorPattern = actor.bloomPatternIndex;
-    actor.state = "idle";
-    actor.stateT = 0;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    expect(actor.bloomPatternIndex).toBe((priorPattern + 1) % ROOTBOUND_BLOOM_PATTERN_IDS.length);
-    // Bloom Shift is a real, readable stage: the boss holds its warning before recovering.
-    expect(actor).toMatchObject({
-      phaseTwoAttackIndex: 3,
-      phaseTwoPendingAttack: "bloom-shift",
-      atk: "bloom-shift:warning",
-      state: "idle",
-    });
-    expect(ROOTBOUND_BLOOM_SHIFT.warning).toBeGreaterThanOrEqual(0.5);
-    actor.update(ROOTBOUND_BLOOM_SHIFT.warning / 2, harness.platforms, harness.player);
-    expect(actor.phaseTwoPendingAttack).toBe("bloom-shift");
-    actor.update(ROOTBOUND_BLOOM_SHIFT.warning / 2, harness.platforms, harness.player);
-    expect(actor).toMatchObject({ phaseTwoPendingAttack: null, state: "recover", atk: "unavailable" });
-
-    actor.applyGraftEffects(
-      Object.freeze({
-        incomingDamageMultiplier: 1,
-        cadenceMultiplier: 1.15,
-        activeTypes: Object.freeze(["haste"] as const),
-      }),
-    );
-    actor.phaseTwoAttackIndex = 0;
-    actor.state = "idle";
-    actor.stateT = 0;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    actor.update(ROOTBOUND_MEMORY_CHOIR.warning, harness.platforms, harness.player);
-    actor.update(
-      ROOTBOUND_MEMORY_CHOIR.active + ROOTBOUND_MEMORY_CHOIR.echoStagger * 2,
-      harness.platforms,
-      harness.player,
-    );
-    actor.update(ROOTBOUND_MEMORY_CHOIR.afterimage, harness.platforms, harness.player);
-    expect(actor.stateT).toBeCloseTo(ROOTBOUND_PHASE_TWO_CADENCE.recovery / 1.15, 8);
-    expect(ROOTBOUND_MEMORY_CHOIR.warning).toBe(0.65);
-    expect(ROOT_CAGE_TIMING.warningTicks / ROOT_CAGE_TIMING.ticksPerSecond).toBe(0.6);
-
-    actor.applyGraftEffects(
-      Object.freeze({
-        incomingDamageMultiplier: 0.8,
-        cadenceMultiplier: 1.15,
-        activeTypes: Object.freeze(["bastion", "haste"] as const),
-      }),
-    );
-    actor.hp = actor.maxHp * 0.2;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    expect(actor).toMatchObject({
-      phase: 3,
-      phaseMarker: 3,
-      phaseTag: "NOTHING HERE DIES",
-      phaseTwoPendingAttack: null,
-      memoryChoirStage: null,
-      rootCageRequest: null,
-      finalPhaseTwoGraftTypes: ["bastion", "haste"],
-      cinematicRequest: { id: "rootbound-nothing-here-dies", title: "NOTHING HERE DIES", pose: "rootboundRegrowth" },
-    });
+    const other = fullGrove();
+    other.boss.cleanupEncounter("death");
+    other.step(0.1);
+    expect(other.grafts()).toEqual([]);
+    expect(other.boss.graftAnchorPlacements()).toEqual([]);
   });
 
-  it("keeps repeated Phase II placement below exact collection caps and rejects an undersized host", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseTwoBoss;
-    actor.hp = actor.maxHp * 0.5;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    skipTransformation(actor);
-    const environment = createEnvironmentRuntime({
-      stageId: "verdant-sanctum",
-      worldId: "rootbound-caps",
-      configuration: { maxFields: 6, maxCombatObjects: 5 },
-    });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        completeRootCage: () => {
-          actor.completeRootCage();
-        },
-        applyGraftEffects: (effects: RootboundGraftEffects) => {
-          actor.applyGraftEffects(effects);
-        },
-        recoverGraftHealth: (fraction: number) => actor.recoverGraftHealth(fraction),
-        acknowledgeBloomPattern: (patternId: RootboundBloomPatternId | null) => {
-          actor.acknowledgeBloomPattern(patternId);
-        },
-        state: Object.freeze({
-          graftPlacements: actor.graftAnchorPlacements(),
-          ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
-          bloomPattern: actor.bossBloomPattern(),
-          plantedBloomPattern: actor.plantedBloomPattern,
-          arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
-          rootCagePlacement: actor.rootCagePlacement(),
-        }),
-      }),
-    ]);
-    let tick = 1_000;
-    for (let cycle = 0; cycle < 40; cycle += 1) {
-      actor.bloomPatternIndex = cycle % ROOTBOUND_BLOOM_PATTERN_IDS.length;
-      expect(actor.startRootCage(CONFIG.view.w / 2)).toBe(true);
-      environment.step(tick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-      expect(environment.fields().length).toBeLessThanOrEqual(6);
-      expect(environment.combatObjects().length).toBeLessThanOrEqual(5);
-      tick += ROOT_CAGE_TIMING.warningTicks + ROOT_CAGE_TIMING.activeTicks;
-      environment.step(tick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-      expect(actor.rootCagePlacement()).toBeNull();
-      // The next cage waits out the last one's fade, as any real cadence does.
-      tick += ENVIRONMENT_FADE_TICKS;
-    }
-    // Five live Wells; a Well that finished on the last step is still fading.
-    expect(environment.fields().filter((field) => field.state !== "expired")).toHaveLength(5);
-    expect(environment.fields().length).toBeLessThanOrEqual(6);
-    expect(environment.combatObjects().filter(isRootCageState)).toHaveLength(2);
-
-    const undersized = createEnvironmentRuntime({
-      stageId: "verdant-sanctum",
-      worldId: "rootbound-cap-negative",
-      configuration: { maxFields: 6, maxCombatObjects: 4 },
-    });
-    expect(actor.startRootCage(CONFIG.view.w / 2)).toBe(true);
-    bindVerdantEnvironmentActors(undersized, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        state: Object.freeze({
-          graftPlacements: actor.graftAnchorPlacements(),
-          ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
-          rootCagePlacement: actor.rootCagePlacement(),
-        }),
-      }),
-    ]);
-    expect(() => {
-      undersized.step(tick, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    }).toThrow("environment combat-object population bound exceeded");
+  it("hands out one tell list per update instead of building a new one for every reader", () => {
+    const scene = garden();
+    scene.until(() => scene.boss.moveState.run?.stage === "tell");
+    expect(scene.boss.tells()).toBe(scene.boss.tells());
+    const before = scene.boss.tells();
+    scene.step(DT);
+    expect(scene.boss.tells()).not.toBe(before);
   });
 
-  it("clears every Rootbound environment and boss-local Phase II owner across reset and terminal reasons", () => {
-    const clearReasons: readonly EnvironmentClearReason[] = [
-      "new-run",
-      "retry",
-      "stage-transition",
-      "boss-encounter-replacement",
-      "boss-terminal",
-      "defeat",
-      "abandon",
-      "tutorial-reset",
-      "restore",
-      "replay-seek",
-      "disposal",
-    ];
-    const bossReason = (reason: EnvironmentClearReason): BossEncounterCleanupReason =>
-      reason === "retry"
-        ? "retry"
-        : reason === "restore"
-          ? "restore"
-          : reason === "defeat" || reason === "boss-terminal"
-            ? "death"
-            : reason === "abandon" || reason === "disposal" || reason === "stage-transition"
-              ? "exit"
-              : "reset";
-    for (const reason of clearReasons) {
-      const harness = createEnemyHarness();
-      const actor = new harness.types.Rootbound(
-        CONFIG.view.w / 2,
-        CONFIG.world.groundY - CONFIG.boss.h / 2,
-      ) as PhaseTwoBoss;
-      actor.hp = actor.maxHp * 0.5;
-      actor.update(1 / 120, harness.platforms, harness.player);
-      skipTransformation(actor);
-      actor.startMemoryChoir();
-      actor.startRootCage(CONFIG.view.w / 2);
-      const environment = createEnvironmentRuntime({
-        stageId: "verdant-sanctum",
-        worldId: `rootbound-clear:${reason}`,
-      });
-      bindVerdantEnvironmentActors(environment, "rootbound", () => [
-        Object.freeze({
-          id: "enemy:rootbound-live",
-          source: actor,
-          completeRootCage: () => {
-            actor.completeRootCage();
-          },
-          applyGraftEffects: (effects: RootboundGraftEffects) => {
-            actor.applyGraftEffects(effects);
-          },
-          state: Object.freeze({
-            graftPlacements: actor.graftAnchorPlacements(),
-            ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
-            bloomPattern: actor.bossBloomPattern(),
-            arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
-            rootCagePlacement: actor.rootCagePlacement(),
-          }),
-        }),
-      ]);
-      environment.step(100, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-      actor.cleanupEncounter(bossReason(reason));
-      environment.clear(reason);
-      expect(environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
-      expect(environment.lastClearReason).toBe(reason);
-      expect(actor).toMatchObject({
-        memoryChoirStage: null,
-        memoryChoirManifestations: [],
-        rootCageRequest: null,
-        phaseTwoPendingAttack: null,
-        graftDamageTakenMultiplier: 1,
-        graftCadenceMultiplier: 1,
-        activeGraftTypes: [],
-      });
-    }
+  it("plays the same garden twice from the same start", () => {
+    const run = () => {
+      const scene = garden();
+      scene.step(40);
+      return { moves: scene.moves, hp: scene.boss.hp, x: scene.boss.x, hits: scene.player.damage.length };
+    };
+    expect(run()).toEqual(run());
   });
 });

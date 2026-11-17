@@ -235,6 +235,12 @@ frozen evidence record.
   `BloomWellState` fields with deterministic offsets and stable Rootbound owner
   references; production composition installs the selected Phase II pattern
   idempotently. S9 remains responsible for cycling and attack cadence.
+  The Phase II described by the VS3-C12 notes below was rebuilt on the shared boss
+  attack layer: the keeper plays its move table and plants Grafts one at a time
+  (`plant-graft`), a cut Graft or cage wall opens it, Mercy heals by the one table
+  `ROOTBOUND_HEALING`, the thrown blade cuts what the held blade cuts, and the
+  Memory Choir, the fixed attack order and Mercy's timed pulses are gone. The notes
+  are kept as history.
   VS3-C12-S6 implements Memory Choir as three bounded Rootbound-owned attack
   manifestations rather than cloned enemies. A static 0.65-second warning,
   staggered one-hit rectangles, boss source/damage, afterimage recovery, and
