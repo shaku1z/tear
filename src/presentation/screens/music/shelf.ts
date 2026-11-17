@@ -7,7 +7,7 @@ import type {
   ScreenRenderContext,
 } from "../contracts";
 import type { ScrollBlock, ScrollView } from "../compact-page";
-import { clock, drawCover, highlight, textWidth, twoLines } from "./draw";
+import { drawCover, highlight, textWidth, twoLines } from "./draw";
 
 /** Sizes one density hands the shelves: the column and the tile/row measures. */
 export interface MusicMetrics {
@@ -38,7 +38,7 @@ export const playSong = (song: MusicSongView, queue: readonly MusicSongView[]): 
 
 export const songCount = (count: number): string => `${String(count)} ${count === 1 ? "song" : "songs"}`;
 
-/** One song row: cover, title over where it plays, the duration and the ▶/■ mark; the whole row is the target. */
+/** One song row: cover, title over where it plays and the ▶/■ mark; the whole row is the target. */
 export function songRow(
   context: ScreenRenderContext,
   view: ScrollView,
@@ -70,9 +70,6 @@ export function songRow(
     "right",
     t.type.label,
   );
-  const duration = song.seconds === null ? "" : clock(song.seconds),
-    durationW = duration ? textWidth(context, duration, t.type.micro, false) + t.space.md : 0;
-  if (duration) ui.tag(canvas, duration, right - markW - t.space.md, middle, t.color.muted, "right", t.type.micro);
   const textX = x + box.cover + t.space.md;
   twoLines(
     context,
@@ -81,7 +78,7 @@ export function songRow(
     textX,
     box.y,
     box.h,
-    right - markW - durationW - t.space.lg - textX,
+    right - markW - t.space.lg - textX,
     t.type.label,
   );
   view.enqueue({ x: box.x, y: box.y, w: box.w, h: box.h, label: "", hiddenBox: true, action: playSong(song, queue) });
@@ -253,7 +250,7 @@ function soundtrackRow(context: ScreenRenderContext, m: MusicMetrics, all: Music
     draw: (y, view) => {
       ui.card(context.canvas, m.x, y, m.w, height, false);
       drawCover(context, all.cover, m.x + pad, y + (height - cover) / 2, cover, cover);
-      const note = `${all.kicker} · ${songCount(all.songs.length)} · ${clock(all.seconds)}`;
+      const note = `${all.kicker} · ${songCount(all.songs.length)}`;
       const textX = m.x + pad * 2 + cover;
       twoLines(
         context,

@@ -1,10 +1,10 @@
 import type { MusicCollectionView, ScreenAction, ScreenRenderContext, SettingRowView } from "../contracts";
 import type { ScrollBlock } from "../compact-page";
-import { clock, drawCover, textWidth, twoLines } from "./draw";
+import { drawCover, textWidth, twoLines } from "./draw";
 import { playSong, songCount, songRow, type MusicMetrics } from "./shelf";
 
 /**
- * A collection's page (Songs is the whole soundtrack's): cover, kicker, title, "N songs · time",
+ * A collection's page (Songs is the whole soundtrack's): cover, kicker, title, "N songs",
  * ▶ PLAY (the collection in order, through the transport), then the numbered track list.
  */
 export function collectionBlocks(
@@ -57,7 +57,7 @@ export function collectionBlocks(
       });
       const titleSize = m.compact ? t.type.title : t.type.h1;
       ui.displayText(context.canvas, collection.title, textX, kickerY + t.space.sm + titleSize, titleSize, "left");
-      const total = `${songCount(collection.songs.length)} · ${clock(collection.seconds)} of loops`;
+      const total = songCount(collection.songs.length);
       ui.textBox(context.canvas, total, textX, kickerY + t.space.md + titleSize + t.type.caption, textW, {
         size: t.type.caption,
         color: t.color.muted,

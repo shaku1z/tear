@@ -80,8 +80,3 @@ export function textWidth(context: ScreenRenderContext, text: string, size: numb
   return context.canvas.measureText(text).width;
 }
 
-/** "2:04"; "0:15" for one short loop. */
-export function clock(seconds: number): string {
-  const whole = Math.max(0, Math.round(seconds));
-  return `${String(Math.floor(whole / 60))}:${String(whole % 60).padStart(2, "0")}`;
-}
