@@ -22,12 +22,7 @@ const ENGINEERING_MARKERS = Object.freeze([
   ["Watch Agent must start from the real main menu", "src/agents/live-watch-agent-host.ts"],
   ["Watch Agent seed must be positive", "src/agents/live-watch-agent-panel.ts"],
   ["Snapshot editor actions", "src/tearbench/browser/state-forge-studio.ts"],
-  // Test-build-only Verdant calibration scene (`?sceneNative=`).
-  ["tear-verdant-image-package", "src/presentation/assets/verdant-calibration/scene-package.json"],
 ]);
-// The calibration scene's large images are test-build assets only.
-const FORBIDDEN_ASSET =
-  /(?:^|\/)(?:calibration-(?:top|bottom)|support-(?:top|bottom)|tail-motion|moss-stone|structure-(?:top|bottom)|exterior-(?:top|bottom)-(?:left|right))-[\w-]+\.(?:png|webp)$/u;
 const failures = [];
 
 // A marker that no longer exists in its source module would pass vacuously.
@@ -53,7 +48,6 @@ for (const target of targets) {
   }
   for (const file of walk(directory)) {
     const relative = path.relative(root, file).replaceAll("\\", "/");
-    if (FORBIDDEN_ASSET.test(relative)) failures.push(`${relative} is a test-only Verdant calibration asset`);
     if (!/\.(?:html|js|css)$/u.test(file)) continue;
     const text = fs.readFileSync(file, "utf8");
     for (const marker of forbidden) {
@@ -70,5 +64,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `production test-isolation gate passed (${String(forbidden.length)} test globals, ${String(ENGINEERING_MARKERS.length)} engineering markers, calibration assets)`,
+  `production test-isolation gate passed (${String(forbidden.length)} test globals, ${String(ENGINEERING_MARKERS.length)} engineering markers)`,
 );

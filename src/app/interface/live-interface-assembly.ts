@@ -73,6 +73,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     A11Y,
     Attract,
     Backdrop,
+    Scenes,
     GFX,
     Input,
     OVERSCAN,
@@ -368,11 +369,14 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         setTheme: (background, playLike) => {
           THEME.set(playLike && biomeMode() ? background : "#ffffff");
           UI.ink = THEME.ink;
+          // On the main menu no run is showing a stage: painted backgrounds give their memory back.
+          if (screen() === "menu") Scenes.leave();
         },
         themeInk: () => THEME.ink,
         backdropPost: (context, stage, camera) => {
           Backdrop.post(context, stage, camera);
         },
+        stageBackground: (stage) => Scenes.paper(stage.id) ?? stage.bg,
         drawMenuAttract: () => {
           Attract.draw(ctx);
         },

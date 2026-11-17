@@ -81,7 +81,6 @@ describe("Validate workflow", () => {
     for (const [file, variable] of [
       ["scripts/check-workspace.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/release-preflight.mjs", "TEAR_RELEASE_SHA"],
-      ["scripts/verify-plan-certificate.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/verify-release-artifact.mjs", "TEAR_RELEASE_SHA"],
       ["scripts/build-target.mjs", "TEAR_BUILD_GIT_SHA"],
     ]) {
@@ -97,24 +96,24 @@ describe("Validate workflow", () => {
     expect(groups).toEqual(config.gate);
     expect(config.gate.slice(0, 1)).toEqual(["static"]);
     // The cheap, likely-to-fail checks come first, so a failure shows within minutes.
-    expect(config.groups.static.slice(0, 4).map((check) => check.id)).toEqual([
-      "format",
-      "docs",
-      "terminology",
-      "repository-guards",
-    ]);
+    expect(config.groups.static.slice(0, 3).map((check) => check.id)).toEqual(["format", "docs", "terminology"]);
     expect(workflow).not.toMatch(/check:functional|tearbench (?:ci|tasks)/u);
   });
 
-  it("lists every check once, with a command that names a file that exists", () => {
+  it("lists every check once, and every file a command names exists", () => {
     const config = loadChecks();
+    // A path-shaped argument (a slash or a file extension) must exist, because `node --test` and
+    // vitest skip a missing file without failing. Files under artifacts/ are outputs a check writes.
+    const namesFile = (argument) =>
+      !argument.startsWith("-") && !argument.startsWith("artifacts/") && /\/|\.[a-z]+$/u.test(argument);
     for (const group of Object.keys(config.groups)) {
       const ids = selectChecks(config, group).map((check) => check.id);
       expect(new Set(ids).size, `duplicate id in ${group}`).toBe(ids.length);
       for (const check of selectChecks(config, group)) {
-        const [command, file] = check.args;
+        const [command, ...args] = check.args;
         expect(command, check.id).toBe("node");
-        if (!file.startsWith("--")) expect(existsSync(resolve(root, file)), `${group}.${check.id}: ${file}`).toBe(true);
+        for (const file of args.filter(namesFile))
+          expect(existsSync(resolve(root, file)), `${group}.${check.id}: ${file}`).toBe(true);
       }
     }
   });

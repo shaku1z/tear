@@ -23,7 +23,7 @@ test("mission/task exclusion preserves independent missions and rejects unsafe i
 
 test("resource-free planned tasks reject an occupied mission/task lease before execution", async () => {
   const missionId = `unit-lease-${process.pid}`,
-    taskId = "static.requirements-check";
+    taskId = "static.check-code-budget";
   const key = missionTaskResourceKey(await realpath(root), missionId, taskId);
   await withResourceLeases([key], async () => {
     for (const action of ["run-task", "ensure-task"]) {
@@ -138,7 +138,7 @@ test("typed task execution emits one immutable local attempt and refuses overwri
         "--plan",
         planPath,
         "--task",
-        "static.requirements-check",
+        "static.check-code-budget",
         "--mission",
         missionId,
         "--attempt",
@@ -146,14 +146,14 @@ test("typed task execution emits one immutable local attempt and refuses overwri
       ],
       { cwd: root, env: executionEnvironment, stdio: "pipe" },
     );
-    const taskPath = resolve(missionPath, "static.requirements-check");
+    const taskPath = resolve(missionPath, "static.check-code-budget");
     const files = await readdir(taskPath);
     assert.equal(files.length, 1);
     const receipt = JSON.parse(await readFile(resolve(taskPath, files[0]), "utf8"));
     assert.equal(receipt.result.status, "passed");
     assert.equal(receipt.authority, "local-engineering");
     assert.equal(receipt.canonicalReleaseAuthority, false);
-    assert.equal(receipt.task.taskId, "static.requirements-check");
+    assert.equal(receipt.task.taskId, "static.check-code-budget");
     const ensure = (environment = executionEnvironment, selectedMission = missionId) =>
       spawnSync(
         process.execPath,
@@ -409,7 +409,7 @@ test("typed task execution emits one immutable local attempt and refuses overwri
         "--plan",
         planPath,
         "--task",
-        "static.requirements-check",
+        "static.check-code-budget",
         "--mission",
         missionId,
         "--attempt",

@@ -1,4 +1,5 @@
 import { clamp } from "../../domain/geometry";
+import type { SurfaceTexture } from "./surface-texture";
 
 export type PaleIceState = "stable" | "stressed" | "warning" | "broken" | "reforming";
 
@@ -12,6 +13,7 @@ export interface PaleIcePlatform {
 }
 
 export interface PaleIceRenderPolicy {
+  readonly floor?: boolean;
   readonly timeSeconds: number;
   readonly lowGraphics: boolean;
   readonly highContrast: boolean;
@@ -45,11 +47,20 @@ export function paleIceState(platform: PaleIcePlatform): PaleIceState {
   return (platform.stress ?? 0) > 0 ? "stressed" : "stable";
 }
 
+function fillPaleIceBody(context: CanvasRenderingContext2D, platform: PaleIcePlatform): void {
+  const body = context.createLinearGradient(0, platform.y, 0, platform.y + platform.h);
+  body.addColorStop(0, PALE_ICE_COLORS.body);
+  body.addColorStop(1, PALE_ICE_COLORS.bodyDeep);
+  context.fillStyle = body;
+  context.fillRect(platform.x, platform.y, platform.w, platform.h);
+}
+
 /** Presentation-only snow and ice treatment for the existing platform lifecycle. */
 export function drawPaleIce(
   context: CanvasRenderingContext2D,
   platform: PaleIcePlatform,
   policy: PaleIceRenderPolicy,
+  texture?: SurfaceTexture,
 ): void {
   const state = paleIceState(platform);
   const stress = clamp(policy.stressRatio, 0, 1);
@@ -87,11 +98,7 @@ export function drawPaleIce(
 
   context.fillStyle = "rgba(10,24,44,0.18)";
   context.fillRect(platform.x + 5, platform.y + platform.h, platform.w, 8);
-  const body = context.createLinearGradient(0, platform.y, 0, platform.y + platform.h);
-  body.addColorStop(0, PALE_ICE_COLORS.body);
-  body.addColorStop(1, PALE_ICE_COLORS.bodyDeep);
-  context.fillStyle = body;
-  context.fillRect(platform.x, platform.y, platform.w, platform.h);
+  if (!texture?.draw(context, platform, policy.floor === true)) fillPaleIceBody(context, platform);
 
   // Snow remains a clean contact plane; cyan ice below it carries the biome identity.
   context.fillStyle = PALE_ICE_COLORS.snow;

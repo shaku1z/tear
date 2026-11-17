@@ -32,11 +32,15 @@ function match(value: unknown): MusicRouteMatch {
   const bossRequired = source.bossRequired;
   if (bossRequired !== undefined && typeof bossRequired !== "boolean")
     throw new Error("routing match bossRequired must be boolean");
+  const firstRun = source.firstRun;
+  if (firstRun !== undefined && typeof firstRun !== "boolean")
+    throw new Error("routing match firstRun must be boolean");
   return {
     ...(biome === undefined ? {} : { biome }),
     ...(bossId === undefined ? {} : { bossId }),
     ...(parsedScene === undefined ? {} : { scene: parsedScene }),
     ...(bossRequired === undefined ? {} : { bossRequired }),
+    ...(firstRun === undefined ? {} : { firstRun }),
   };
 }
 
@@ -50,9 +54,30 @@ function selection(value: unknown): MusicRouteSelection {
     const weight = item.weight;
     if (typeof weight !== "number" || !Number.isFinite(weight) || weight <= 0)
       throw new Error("weighted pool entry weight must be a positive finite number");
-    return { workId: text(item.workId, "weighted pool workId"), weight };
+    const requiresUnlock = item.requiresUnlock;
+    if (requiresUnlock !== undefined && typeof requiresUnlock !== "boolean")
+      throw new Error("weighted pool entry requiresUnlock must be boolean");
+    return {
+      workId: text(item.workId, "weighted pool workId"),
+      weight,
+      ...(requiresUnlock === undefined ? {} : { requiresUnlock }),
+    };
   });
   return { type: "weighted-pool", entries };
+}
+
+/** Match conditions this build understands. */
+const MATCH_KEYS: ReadonlySet<string> = new Set(["scene", "biome", "bossId", "bossRequired", "firstRun"]);
+
+/**
+ * A rule that names a condition this build does not understand never matches: ignoring the
+ * condition would widen the rule (a first-run song would win every run), so the rule is dropped
+ * and the place falls back to its ordinary song.
+ */
+function understood(value: unknown): boolean {
+  const source = object(value, "routing rule");
+  const conditions = source.match;
+  return !conditions || typeof conditions !== "object" || Object.keys(conditions).every((key) => MATCH_KEYS.has(key));
 }
 
 function rule(value: unknown): MusicRoutingRule {
@@ -74,7 +99,7 @@ export function validateMusicRoutingManifest(value: unknown): MusicRoutingManife
   if (source.format !== "tear-music-routing" || source.version !== 1)
     throw new Error("unsupported music routing manifest format/version");
   if (!Array.isArray(source.rules)) throw new Error("music routing rules must be an array");
-  const rules = source.rules.map(rule);
+  const rules = source.rules.filter(understood).map(rule);
   const ids = new Set<string>();
   for (const item of rules) {
     if (ids.has(item.id)) throw new Error(`duplicate routing rule id: ${item.id}`);

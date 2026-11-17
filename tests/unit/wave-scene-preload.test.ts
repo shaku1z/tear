@@ -1,0 +1,36 @@
+// A stage's painted background is fetched one wave before the run reaches the
+// stage, and never for a stage the mode does not lead to next.
+import { describe, expect, it } from "vitest";
+import { stageIdAfterWave } from "../../src/app/run/wave-composition";
+import { STAGES } from "../../src/gameplay/stages";
+
+describe("painted background preload", () => {
+  it("names the next campaign stage during the boss wave before it", () => {
+    const verdant = STAGES.findIndex((stage) => stage.id === "verdant-sanctum");
+    expect(verdant).toBeGreaterThan(0);
+    const boss = verdant * 10;
+    expect(stageIdAfterWave("campaign", boss, STAGES)).toBe("verdant-sanctum");
+    expect(stageIdAfterWave("campaign", boss - 1, STAGES)).toBe(STAGES[verdant - 1]?.id);
+  });
+
+  it("names nothing after the campaign's last wave", () => {
+    expect(stageIdAfterWave("campaign", STAGES.length * 10, STAGES)).toBeUndefined();
+  });
+
+  it("stays on the opening stage through a new run's first waves", () => {
+    for (const mode of ["campaign", "endless", "gauntlet"] as const) {
+      expect(stageIdAfterWave(mode, 1, STAGES)).toBe(STAGES[0]?.id);
+    }
+  });
+
+  it("follows the endless stage cycle, wrapping after the last stage", () => {
+    expect(stageIdAfterWave("endless", 5, STAGES)).toBe(STAGES[1]?.id);
+    expect(stageIdAfterWave("endless", STAGES.length * 5, STAGES)).toBe(STAGES[0]?.id);
+  });
+
+  it("names nothing for modes that pick their stage another way", () => {
+    for (const mode of ["bossonly", "tutorial", "playground"] as const) {
+      expect(stageIdAfterWave(mode, 1, STAGES)).toBeUndefined();
+    }
+  });
+});

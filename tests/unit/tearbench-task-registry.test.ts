@@ -41,23 +41,6 @@ describe("TearBench atomic task registry", () => {
       { taskId: "build.crazygames", outputId: "build-artifact" },
     ]);
   });
-  it("runs canary parity, provider-clock and workflow contracts once per protected profile", () => {
-    const value = canonical();
-    for (const profile of ["release", "pull-request", "protected-main"]) {
-      expect(value.profiles[profile]?.filter((id) => id === "unit.tearbench-canary-contract")).toHaveLength(1);
-    }
-    expect(requiredTask("unit.tearbench-canary-contract").runner.args).toEqual([
-      "--test",
-      "--test-concurrency=1",
-      "tests/tearbench-canary-plan.test.mjs",
-      "tests/tearbench-canary-qualification-report.test.mjs",
-      "tests/tearbench-canary-workflow.test.mjs",
-      "tests/tearbench-performance-sample.test.mjs",
-      "tests/tearbench-paired-performance-report.test.mjs",
-      "tests/tearbench-simulation-boundary-report.test.mjs",
-    ]);
-    expect(requiredTask("unit.tearbench-canary-contract").version).toBe(4);
-  });
   it("runs resource lease regressions in functional and protected profiles without rewriting the compatibility baseline", () => {
     const value = canonical();
     for (const profile of ["release", "pull-request", "protected-main"]) {
@@ -122,7 +105,6 @@ describe("TearBench atomic task registry", () => {
       "--test",
       "--test-concurrency=1",
       "tests/tearbench-client-mission.test.mjs",
-      "tests/benchmark-tearbench-clients.test.mjs",
       "tests/tearbench-task-execution.test.mjs",
       "tests/tearbench-task-receipts.test.mjs",
     ]);

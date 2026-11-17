@@ -101,6 +101,7 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
             active: d.PAD.active,
             movingRight: d.Input.held.has("KeyD"),
             aiming: Boolean(d.Input.stickAim),
+            aimDevice: d.Input.aimDevice,
           },
     audio: {
       ready: Boolean(d.SFX.ctx),

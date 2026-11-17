@@ -60,6 +60,18 @@ export class SemanticInputBuffer {
     this.#aimDirty = this.#aim !== undefined;
   }
 
+  /**
+   * Drops every unsealed press (jump, dash, throw, ability, confirm and the like) and keeps
+   * releases, movement and aim. Used when a scene hands control back: the press that ended it
+   * must not also act, but a button the player lets go of is still let go of.
+   */
+  discardPresses(): void {
+    if (!this.#recording) return;
+    const releases = this.#pendingEdges.filter((action) => "phase" in action && action.phase === "released");
+    this.#pendingEdges.length = 0;
+    this.#pendingEdges.push(...releases);
+  }
+
   setMovement(x: number, y: number): void {
     if (!this.#recording) return;
     const next = Object.freeze({ type: "move" as const, x: axis(x), y: axis(y) });

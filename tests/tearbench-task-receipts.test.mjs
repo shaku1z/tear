@@ -1,7 +1,4 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import test from "node:test";
 import {
   assessPlanTaskReceipts,
@@ -13,7 +10,6 @@ import {
   taskAttemptPath,
 } from "../scripts/tearbench-task-receipts.mjs";
 import { PERFORMANCE_TASK_ID } from "../scripts/tearbench-performance-sample.mjs";
-import { verifyProtectedPlanCertificate } from "../scripts/verify-plan-certificate.mjs";
 
 const origin = Object.freeze({
   kind: "github-actions",
@@ -622,52 +618,4 @@ test("build receipts bind canonical build-info paths and independently recompute
       make("consumer", { attestations: [{ ...attestation, buildInfoPath: "other/build-info.json" }], produced: [] }),
     /stale or malformed/u,
   );
-});
-
-test("production consumer requires the exact certified plan, source, coverage, and protected run origin", async () => {
-  const root = await mkdtemp(join(tmpdir(), "tear-plan-certificate-"));
-  try {
-    const receipts = [receipt("task.a"), receipt("task.b")];
-    const certificate = certify(receipts);
-    const planPath = join(root, "artifacts/tearbench/generated/plan.json"),
-      certificatePath = join(root, "artifacts/tearbench/generated/certificate.json");
-    await mkdir(join(root, "artifacts/tearbench/generated"), { recursive: true });
-    await writeFile(planPath, JSON.stringify(plan), "utf8");
-    await writeFile(certificatePath, JSON.stringify(certificate), "utf8");
-    const receiptPaths = [];
-    for (const entry of receipts) {
-      const path = join(root, entry.immutablePath);
-      receiptPaths.push(path);
-      await mkdir(join(path, ".."), { recursive: true });
-      await writeFile(path, JSON.stringify(entry), "utf8");
-    }
-    const artifactPath = join(root, artifact.path);
-    await mkdir(join(artifactPath, ".."), { recursive: true });
-    await writeFile(artifactPath, bytes);
-    const common = {
-      certificatePath,
-      planPath,
-      receiptPaths,
-      workspaceRoot: root,
-      expectedRepository: "shaku1z/tear",
-      expectedSha: source.revision,
-      expectedRunId: origin.runId,
-      expectedRunAttempt: origin.attempt,
-    };
-    const verified = await verifyProtectedPlanCertificate(common);
-    assert.equal(verified.planDigest, plan.planDigest);
-    await assert.rejects(
-      verifyProtectedPlanCertificate({ ...common, expectedRunId: "999" }),
-      /origin is forged or mismatched/u,
-    );
-    await assert.rejects(verifyProtectedPlanCertificate({ ...common, certificatePath: undefined }), /requires a plan/u);
-    const rejectedPath = join(root, "artifacts/tearbench/generated/rejected.json");
-    await writeFile(rejectedPath, JSON.stringify({ ...certificate, status: "rejected" }), "utf8");
-    await assert.rejects(
-      verifyProtectedPlanCertificate({ ...common, certificatePath: rejectedPath }),
-      /does not bind|not certified/u,
-    );
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
 });
