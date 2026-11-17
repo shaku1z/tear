@@ -1,3 +1,4 @@
+import { discardScenePresses } from "./scene-release";
 import type { BrowserInput, BrowserInputDependencies, Point, TouchZoneName } from "./browser-input-contracts";
 import { mapClientPointerToLogical } from "./pointer-coordinate";
 import {
@@ -96,6 +97,9 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     discardSemanticInput() {
       this.semantic.discardUnsealed();
       this.syncSemanticMovement();
+    },
+    discardScenePresses() {
+      discardScenePresses(this);
     },
     drainSemanticActions(tick, aimTurn) {
       if (aimTurn != null) this.semantic.push({ type: "aim", turn: aimTurn });

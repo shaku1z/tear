@@ -35,6 +35,7 @@ their own.
 | [TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md](active/TEAR_THE_PALE_TRAVERSE_FULL_BIOME_PLAN_REVISION_3.md) | Pale biome and campaign owner | Active | PT3-C0 through PT3-C11 are green at one frozen Pale feature identity, all Pale implementation reuses the singular Verdant shared contracts, and joint Verdant/Pale integration remains explicitly blocked pending separate authorization. | Pale biome, Aurora route runtime, Rimehound, White Hart, TearBench, and engineering-freeze authority; current publication truth comes from the tracked boundary and typed source; does not authorize publication, dispatch, deployment, or C40 certification. |
 | [ECONOMY_REWORK_PLAN.md](active/ECONOMY_REWORK_PLAN.md) | Economy/balance owner | Active | Live-balance evidence and achievement-pool totals reconcile with the typed implementation and approved model; no balance claim closes from documentation alone. | Partially implemented balance plan; catalogue totals are reconciled; remaining scope is fresh-profile progression and live-balance validation. |
 | [RELEASE_READINESS_PLAN.md](active/RELEASE_READINESS_PLAN.md) | Release-readiness owner | Active | Every phase in the plan is done or explicitly dropped by the owner, `pnpm check` passes from the final commit, and the owner has authorised the merge and deployment. | Phased plan to make the game releasable to players: gate developer surfaces, green gates, input and first-run fixes, UI system and screen passes, payload, repository and workflow cleanup. |
+| [PLAYTEST_TOOL_PLAN.md](active/PLAYTEST_TOOL_PLAN.md) | Playtest tool owner | Active | Every "done when" line of stages 1 to 6 holds, `pnpm check` passes from the final commit, and no file, command or document is still named TearBench. | One command that plays Tear headless with scripted players and reports clear rates, time to kill, damage and comparisons between builds; replaces TearBench and the AI-player work. |
 
 ## Completed plans
 
@@ -63,7 +64,7 @@ Where a plan lives:
 New plans start from [TASK_CARD_TEMPLATE.md](TASK_CARD_TEMPLATE.md) and go in
 `active/` with a row in the Active plans table.
 
-The active-plan set is exactly the eleven active rows across the two tables in
+The active-plan set is exactly the twelve active rows across the two tables in
 this index. `check:docs` derives that set from these tables, requires each
 plan's file metadata to match its Owner/Status/Closure condition cells, and
 fails closed on duplicate, malformed, empty, or additional active rows.
