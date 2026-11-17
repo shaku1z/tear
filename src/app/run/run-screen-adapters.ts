@@ -77,7 +77,6 @@ export interface RunScreenServices {
   readonly addShake: (amount: number) => void;
   readonly addFlash: (amount: number) => void;
   readonly requestPointer: () => void;
-  readonly playerWatch: () => Readonly<{ readonly status: string; readonly decisions: number }>;
   readonly persistentEffects?: () => boolean;
   readonly tutorialSession?: () => TutorialSessionView | undefined;
 }
@@ -235,7 +234,6 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
         renderers.paused({ id: "paused", abilities: [], progress: [], tutorial });
         return;
       }
-      const playerWatch = services.playerWatch();
       renderers.paused({
         ...(services.ghostChase?.().active ? { ghostChase: services.ghostChase() } : {}),
         ...buildPausedSnapshot({
@@ -249,9 +247,6 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
           abilities: abilityCards(),
           progress: progressRows(),
         }),
-        ...(playerWatch.status === "running" || playerWatch.status === "paused"
-          ? { playerWatch: { status: playerWatch.status, decisions: playerWatch.decisions } as const }
-          : {}),
       });
     },
     renderConfirmQuit(): void {

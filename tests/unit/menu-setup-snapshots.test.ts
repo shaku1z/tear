@@ -61,24 +61,6 @@ describe("menu/setup snapshots", () => {
     expect(buildMenuSnapshot({ ...input, tutorialDone: 1 }).practiceAvailable).toBe(true);
     expect(buildMenuSnapshot({ ...input, tutorialDone: 0.5 }).practiceAvailable).toBeUndefined();
   });
-  it("offers the engineering menu routes only in the engineering channel", () => {
-    const input = {
-      username: "Guest",
-      campaignEmblem: false,
-      signedIn: false,
-      coins: 0,
-      shards: 0,
-      unlocked: 0,
-      selectedMode: "endless",
-      selectedDifficulty: "normal",
-      modes,
-      difficulties,
-      biome: "Grounds",
-      pendingFinale: false,
-    };
-    expect(buildMenuSnapshot({ ...input, surfaces: RELEASE }).engineeringRoutes).toBeUndefined();
-    expect(buildMenuSnapshot({ ...input, surfaces: ENGINEERING }).engineeringRoutes).toBe(true);
-  });
   it("projects weapon identity and best summary", () => {
     const view = buildSetupSnapshot({
       selectedMode: "endless",
