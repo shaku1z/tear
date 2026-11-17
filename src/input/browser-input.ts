@@ -10,6 +10,7 @@ import {
   type RelativeTravel,
 } from "../domain/pointer-ownership";
 import { touchControlAt, touchControlLayout } from "./touch-control-layout";
+import { readTouchAimStick } from "./touch-aim-stick";
 
 interface ClientPoint {
   readonly clientX: number;
@@ -41,6 +42,19 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
   // The canvas the layout is measured against (bound by init); its CSS size sets the
   // physical scale of the on-screen controls.
   let layoutCanvas: HTMLCanvasElement | null = null;
+  const cssPerLogicalPixel = (): number =>
+    layoutCanvas && layoutCanvas.clientHeight > 0 ? layoutCanvas.clientHeight / (CONFIG.view.h + OVERSCAN.y * 2) : 1;
+  // element px -> logical px. The element spans the arena PLUS the fullscreen
+  // overscan bleed, so subtract the overscan offset after scaling.
+  const toLogical = (e: ClientPoint, r: DOMRect): Point =>
+    mapClientPointerToLogical(e, r, {
+      width: CONFIG.view.w,
+      height: CONFIG.view.h,
+      overscanX: OVERSCAN.x,
+      overscanY: OVERSCAN.y,
+    });
+  const stickShape = () => ({ reach: CONFIG.touch?.stickRadius ?? 130, dead: CONFIG.touch?.stickDead ?? 10 });
+  let aimEngaged = false; // the aim touch has left the dead zone (touch-aim-stick.ts)
 
   const Input: BrowserInput = {
     semantic,
@@ -221,16 +235,19 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     // physical pixels. touch-control-layout.ts owns the geometry; input hit-tests and the
     // renderer draws the same circles.
     touchLayout() {
-      const span = CONFIG.view.h + OVERSCAN.y * 2;
-      const cssPerLogicalPixel = layoutCanvas && layoutCanvas.clientHeight > 0 ? layoutCanvas.clientHeight / span : 1;
       return touchControlLayout({
         width: CONFIG.view.w,
         height: CONFIG.view.h,
         overscanX: OVERSCAN.x,
         overscanY: OVERSCAN.y,
         safe: SAFE,
-        cssPerLogicalPixel,
+        cssPerLogicalPixel: cssPerLogicalPixel(),
       });
+    },
+    aimStickView() {
+      if (this._aimId === -1 || this.touchAimMode !== "stick" || !layoutCanvas) return null;
+      const anchor = toLogical({ clientX: this._aimAX, clientY: this._aimAY }, layoutCanvas.getBoundingClientRect());
+      return { x: anchor.x, y: anchor.y, r: stickShape().reach / cssPerLogicalPixel(), aim: this.stickAim };
     },
     textEntryMode: false,
 
@@ -269,15 +286,6 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         if (["Space", "KeyW", "ArrowUp"].includes(e.code)) this.semantic.push({ type: "jump", phase: "released" });
       });
 
-      // element px -> logical px. The element spans the arena PLUS the fullscreen
-      // overscan bleed, so subtract the overscan offset after scaling.
-      const toLogical = (e: ClientPoint, r: DOMRect): Point =>
-        mapClientPointerToLogical(e, r, {
-          width: CONFIG.view.w,
-          height: CONFIG.view.h,
-          overscanX: OVERSCAN.x,
-          overscanY: OVERSCAN.y,
-        });
       const updateMouse = (e: MouseEvent): void => {
         if (this.locked) {
           // pointer-lock: accumulate raw movement, mapped to the reticle by the blade
@@ -440,7 +448,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
               this._aimAX = t.clientX;
               this._aimAY = t.clientY; // stick anchor
               this.steerAim("touch");
-              if (this.touchAimMode === "stick") this.stickAim = { x: 0, y: 0 };
+              aimEngaged = false; // the blade keeps its aim until this thumb leaves the dead zone
             } else {
               // a SECOND finger in the aim zone = THROW, so the right thumb never has to stop
               // sweeping (the throw inherits the blade's live momentum)
@@ -486,23 +494,15 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
               if (this.touchAimMode === "stick") {
                 // RADIAL STICK: the blade reticle sits where the stick points — flicks
                 // teleport the aim across the arc, and the blade spring supplies the whip
-                const sr2 = CONFIG.touch?.stickRadius ?? 130;
-                const dead = CONFIG.touch?.stickDead ?? 10;
-                let vx = t.clientX - this._aimAX,
-                  vy = t.clientY - this._aimAY;
-                const m = Math.hypot(vx, vy);
-                if (m > sr2 * 1.3) {
-                  // follow past full deflection, like the joystick
-                  const k = (m - sr2 * 1.3) / m;
-                  this._aimAX += vx * k;
-                  this._aimAY += vy * k;
-                  vx = t.clientX - this._aimAX;
-                  vy = t.clientY - this._aimAY;
-                }
-                const m2 = Math.hypot(vx, vy);
-                const eff = m2 <= dead ? 0 : Math.min((m2 - dead) / (sr2 - dead), 1);
-                this.stickAim = m2 > 0.001 ? { x: (vx / m2) * eff, y: (vy / m2) * eff } : { x: 0, y: 0 };
-                if (m2 > 0.001) this.semantic.setAimVector(vx, vy);
+                const anchor = { x: this._aimAX, y: this._aimAY };
+                const read = readTouchAimStick(stickShape(), anchor, { x: t.clientX, y: t.clientY }, aimEngaged);
+                this._aimAX = read.anchor.x;
+                this._aimAY = read.anchor.y;
+                aimEngaged = read.engaged;
+                if (read.aim) this.stickAim = read.aim;
+                const vx = t.clientX - read.anchor.x,
+                  vy = t.clientY - read.anchor.y;
+                if (read.aim && Math.hypot(vx, vy) > 0.001) this.semantic.setAimVector(vx, vy);
               } else {
                 this.dx += (t.clientX - this._aimLX) * boost; // thumb-drag steers the blade like a captured mouse
                 this.dy += (t.clientY - this._aimLY) * boost;

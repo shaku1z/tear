@@ -552,7 +552,8 @@ export function createLiveWorldPresentationAdapters(
           held: Object.fromEntries(
             Object.entries(d.Input.btnHeld).filter((entry): entry is [string, boolean] => entry[1] !== undefined),
           ),
-          ...(d.Input.touchAim && d.Input.stickAim ? { aim: d.Input.stickAim } : {}),
+          ...(d.Input.touchAim ? { aimStick: d.Input.aimStickView() ?? undefined } : {}),
+          aimMode: d.Input.touchAimMode === "drag" ? "drag" : "stick",
           onboardingAlpha: onboarding.alpha,
         }),
       );

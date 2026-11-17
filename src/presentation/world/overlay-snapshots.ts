@@ -63,7 +63,8 @@ export function buildTouchControlsSnapshot(input: {
   readonly layout: TouchLayoutSource;
   readonly joystick: TouchJoystickSource;
   readonly held: Readonly<Record<string, boolean>>;
-  readonly aim?: Readonly<{ x: number; y: number }>;
+  readonly aimStick?: TouchControlsSnapshot["aimStick"];
+  readonly aimMode: "stick" | "drag";
   readonly onboardingAlpha: number;
 }): TouchControlsSnapshot {
   const button = (source: TouchButtonSource, key: string, prominent: boolean) => ({
@@ -86,8 +87,9 @@ export function buildTouchControlsSnapshot(input: {
       homeX: home.x,
       homeY: home.y,
     },
-    aim: input.aim,
+    aimStick: input.aimStick,
     aimPad: { x: input.layout.aimPad.x, y: input.layout.aimPad.y, r: input.layout.aimPad.r },
+    aimMode: input.aimMode,
     buttons: [
       button(input.layout.jump, "jump", true),
       button(input.layout.dash, "dash", false),

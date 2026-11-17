@@ -371,8 +371,20 @@ export interface TouchControlsSnapshot {
     readonly homeX: number;
     readonly homeY: number;
   };
-  readonly aim?: { readonly x: number; readonly y: number } | undefined;
+  /** The aim stick a finger holds: drawn where the thumb landed, at its real reach (input's `aimStickView`). */
+  readonly aimStick?:
+    | {
+        readonly x: number;
+        readonly y: number;
+        readonly r: number;
+        /** Deflection, each axis -1..1; `null` while the thumb rests in the dead zone. */
+        readonly aim: { readonly x: number; readonly y: number } | null;
+      }
+    | undefined;
+  /** Where first-run coaching places the aim hint. */
   readonly aimPad: { readonly x: number; readonly y: number; readonly r: number };
+  /** The player's touch aim setting: the stick is pushed, drag steers like a mouse. */
+  readonly aimMode: "stick" | "drag";
   readonly buttons: readonly TouchButtonSnapshot[];
   readonly onboardingAlpha: number;
 }

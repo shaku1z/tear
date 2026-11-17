@@ -187,18 +187,17 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
       0.8,
       2,
     );
-    if (snapshot.aim) {
-      const pad = snapshot.aimPad;
-      disc(pad.x, pad.y, pad.r, 0.22, t.color.scrimInk, 0.5, 3);
-      disc(
-        pad.x + snapshot.aim.x * pad.r * 0.8,
-        pad.y + snapshot.aim.y * pad.r * 0.8,
-        pad.r * 0.34,
-        0.55,
-        t.color.scrimInk,
-        0.8,
-        2,
-      );
+    const stick = snapshot.aimStick,
+      knob = snapshot.aimPad.r * 0.34;
+    if (stick) {
+      // the ring is the stick that aims: centred where the thumb landed, as wide as its reach
+      disc(stick.x, stick.y, stick.r, 0.22, t.color.scrimInk, 0.5, 3);
+      const aim = stick.aim ?? { x: 0, y: 0 };
+      disc(stick.x + aim.x * stick.r, stick.y + aim.y * stick.r, knob, 0.55, t.color.scrimInk, 0.8, 2);
+    } else if (snapshot.aimMode === "stick" && snapshot.onboardingAlpha > 0) {
+      const pad = snapshot.aimPad; // first-run hint: put the right thumb down around here
+      const fade = clamp(snapshot.onboardingAlpha);
+      disc(pad.x, pad.y, pad.r, 0.12 * fade, t.color.scrimInk, 0.35 * fade, 2);
     }
     for (const button of snapshot.buttons) touchButton(button);
     if (snapshot.onboardingAlpha > 0) onboarding(snapshot);
@@ -242,7 +241,7 @@ export function createTrainingTouchRenderers(context: WorldRenderContext) {
         align: "left" as const,
       },
       {
-        title: "DRAG TO AIM & SWING ↷",
+        title: `${snapshot.aimMode === "stick" ? "PUSH" : "DRAG"} TO AIM & SWING ↷`,
         hint: "fast flicks = fast cuts · second finger = throw",
         x: pad.x + pad.r,
         bottom: pad.y - pad.r - t.space.md,
