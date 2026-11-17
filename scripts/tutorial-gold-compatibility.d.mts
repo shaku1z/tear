@@ -21,4 +21,18 @@ export function tutorialGoldSourceFingerprint(
   root?: string,
   roots?: readonly string[],
 ): Readonly<{ sourceHash: string; files: readonly string[] }>;
-export function assertTutorialGoldFresh(root?: string): string;
+export const GOLD_TEST: string;
+export const GOLD_TEST_NAME: string;
+export const VERIFIED_RECORD: string;
+export function tutorialGoldBinding(corpus: { readonly contentHash: string }): {
+  format: string;
+  corpusContentHash: string;
+};
+export function committedTutorialGold(root?: string): string;
+export function isTutorialGoldVerified(root: string, sourceHash: string, corpusContentHash: string): boolean;
+export function recordTutorialGoldVerified(root: string, sourceHash: string, corpusContentHash: string): void;
+export function runGoldTest(root: string): { ok: boolean; output: string };
+export function assertTutorialGoldFresh(
+  root?: string,
+  options?: { runTest?: (root: string) => { ok: boolean; output: string } },
+): string;

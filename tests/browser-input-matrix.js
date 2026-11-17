@@ -301,6 +301,69 @@ async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
   }
 }
 
+/**
+ * docs/CURSOR_INPUT_CONTRACT.md: aim belongs to the device that last aimed. A controller's right
+ * stick aims the blade away from a resting mouse; letting go keeps that aim; only moving the mouse
+ * takes it back. It runs without pointer lock, where the mouse aims at its absolute position.
+ */
+async function aimStaysWithTheDeviceThatLastAimed(browser, configure) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  await page.addInitScript(() => {
+    window.__testGamepad = null;
+    Object.defineProperty(navigator, "getGamepads", {
+      configurable: true,
+      value: () => (window.__testGamepad ? [window.__testGamepad] : []),
+    });
+  });
+  await configure(page);
+  await page.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+  await page.evaluate(() => window.__PANTHEON_TEST.resume());
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked), false);
+  // The mouse rests far to the left of the player and owns the aim.
+  await page.mouse.move(400, 360);
+  await page.mouse.move(60, 360, { steps: 6 });
+  const aim = () => page.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().bladeAim?.x < -40, undefined, {
+    timeout: STATE_WAIT_MS,
+  });
+  await page.evaluate(() => {
+    window.__testGamepad = {
+      axes: [0, 0, 0, 0],
+      buttons: Array.from({ length: 16 }, () => ({ pressed: false, touched: false, value: 0 })),
+      connected: true,
+      id: "Aim Matrix Pad",
+      index: 0,
+      mapping: "standard",
+      timestamp: 1,
+    };
+    const event = new Event("gamepadconnected");
+    Object.defineProperty(event, "gamepad", { value: window.__testGamepad });
+    window.dispatchEvent(event);
+  });
+  const stick = (x) =>
+    page.evaluate((value) => {
+      window.__testGamepad.axes = [0, 0, value, 0];
+      window.__testGamepad.timestamp += 1;
+    }, x);
+  await stick(1);
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().bladeAim?.x > 40, undefined, {
+    timeout: STATE_WAIT_MS,
+  });
+  await stick(0);
+  await page.waitForTimeout(notWithin(500));
+  const released = await aim();
+  assert.ok(released.x > 40, `a released stick keeps its aim, not the resting mouse's (aim x ${released.x})`);
+  await page.mouse.move(80, 380, { steps: 6 });
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().bladeAim?.x < -40, undefined, {
+    timeout: STATE_WAIT_MS,
+  });
+  await page.close();
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_INPUT_TEST_PORT || 8128);
@@ -623,6 +686,7 @@ async function main() {
   await pointerBelongsToTheMouseAlone(browser, configure);
   await firstTapLandsOnTheControlsThePlayerSaw(browser, configure);
   await chapterOpeningCarriesThroughOnEveryDevice(browser, configure);
+  await aimStaysWithTheDeviceThatLastAimed(browser, configure);
 
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

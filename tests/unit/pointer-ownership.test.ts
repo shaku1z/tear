@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   accumulateRelativeTravel,
+  aimFollowsDevices,
   MEANINGFUL_POINTER_TRAVEL,
   NO_POINTER,
   ownedPointer,
@@ -82,5 +83,17 @@ describe("relative mouse travel under pointer lock", () => {
 
   it("counts one fast movement at once", () => {
     expect(accumulateRelativeTravel(still, 4, 4, 1_000).meaningful).toBe(true);
+  });
+});
+
+describe("aim belongs to the device that last aimed", () => {
+  it("follows the devices while the mouse owns the aim, or while the owner is still steering", () => {
+    expect(aimFollowsDevices(null, false)).toBe(true);
+    expect(aimFollowsDevices("mouse", false)).toBe(true);
+    for (const device of ["touch", "gamepad"] as const) expect(aimFollowsDevices(device, true), device).toBe(true);
+  });
+
+  it("holds where a released stick or finger left it, so no resting device takes it", () => {
+    for (const device of ["touch", "gamepad"] as const) expect(aimFollowsDevices(device, false), device).toBe(false);
   });
 });
