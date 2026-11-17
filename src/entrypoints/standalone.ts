@@ -4,9 +4,18 @@ import { createStandaloneCloud } from "../platform/standalone-cloud";
 import { PwaUpdateController } from "../platform/pwa-update";
 import { browserIndexedDbForTestStorage } from "./test-browser-storage";
 
+/** Reading sessionStorage can throw (blocked site data, some embedded frames). */
+function browserSessionStorage(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
 const pwaUpdate = new PwaUpdateController({
   buildId: __TEAR_BUILD_REVISION__,
-  storage: window.sessionStorage,
+  storage: browserSessionStorage(),
   setInterval: (callback, ms) => window.setInterval(callback, ms),
   clearInterval: (handle) => {
     window.clearInterval(handle as number);

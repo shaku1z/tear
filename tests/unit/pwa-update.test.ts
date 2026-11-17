@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { PwaUpdateController, unavailablePwaUpdate } from "../../src/platform/pwa-update";
 
-function setup(options: { buildId?: string; marker?: string | null; idle?: boolean } = {}) {
+function setup(
+  options: {
+    buildId?: string;
+    marker?: string | null;
+    idle?: boolean;
+    throwOn?: "get" | "set" | "none";
+    noStorage?: boolean;
+  } = {},
+) {
   const store = new Map<string, string>();
   if (options.marker) store.set("tear-auto-update-from", options.marker);
   let idle = options.idle ?? true;
@@ -11,7 +19,18 @@ function setup(options: { buildId?: string; marker?: string | null; idle?: boole
   const settle = vi.fn(() => Promise.resolve());
   const controller = new PwaUpdateController({
     buildId: options.buildId ?? "build-a",
-    storage: { getItem: (key) => store.get(key) ?? null, setItem: (key, value) => void store.set(key, value) },
+    storage: options.noStorage
+      ? null
+      : {
+          getItem: (key) => {
+            if (options.throwOn === "get") throw new Error("blocked");
+            return store.get(key) ?? null;
+          },
+          setItem: (key, value) => {
+            if (options.throwOn === "set") throw new Error("quota");
+            store.set(key, value);
+          },
+        },
     setInterval: (callback) => {
       tick = callback;
       return 1;
@@ -96,6 +115,19 @@ describe("automatic update on the main menu", () => {
     t.controller.markReady();
     await t.flush();
     expect(t.apply).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["storage is unavailable", { noStorage: true }],
+    ["reading the marker throws", { throwOn: "get" }],
+    ["writing the marker throws", { throwOn: "set" }],
+  ] as const)("has no loop guard, so applies nothing, when %s", async (_name, options) => {
+    const t = setup(options);
+    t.controller.markReady();
+    await t.flush();
+    await t.tick();
+    expect(t.apply).not.toHaveBeenCalled();
+    expect(t.controller.snapshot().ready).toBe(true);
   });
 
   it("is inert without ports, and a target without a service worker ignores the host", () => {

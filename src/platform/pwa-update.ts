@@ -26,8 +26,12 @@ export interface PwaUpdateCapability {
 export interface PwaAutoUpdateOptions {
   /** Id of the build this page is running. */
   readonly buildId: string;
-  /** sessionStorage-like marker store for the loop guard. */
-  readonly storage: { getItem(key: string): string | null; setItem(key: string, value: string): void };
+  /**
+   * sessionStorage-like marker store for the loop guard; null when the browser refuses
+   * access to it. Without a working marker there is no loop guard, so nothing is applied
+   * automatically and the Settings row remains.
+   */
+  readonly storage: { getItem(key: string): string | null; setItem(key: string, value: string): void } | null;
   readonly setInterval: (callback: () => void, ms: number) => unknown;
   readonly clearInterval: (handle: unknown) => void;
   /** Registers a callback for the player's first input; returns nothing. */
@@ -93,7 +97,7 @@ export class PwaUpdateController implements PwaUpdateCapability {
   #startAutoApply(): void {
     const auto = this.#auto;
     if (auto === null || this.#autoDone || this.#poll !== null || !this.#ready || this.#host === null) return;
-    if (auto.storage.getItem(AUTO_UPDATE_MARKER) === auto.buildId) {
+    if (this.#markerBlocks(auto)) {
       this.#autoDone = true;
       return;
     }
@@ -101,6 +105,15 @@ export class PwaUpdateController implements PwaUpdateCapability {
       void this.#autoTick();
     }, IDLE_POLL_MS);
     void this.#autoTick();
+  }
+
+  /** True when the loop guard forbids an automatic apply: the marker names this build, or storage fails. */
+  #markerBlocks(auto: PwaAutoUpdateOptions): boolean {
+    try {
+      return auto.storage === null || auto.storage.getItem(AUTO_UPDATE_MARKER) === auto.buildId;
+    } catch {
+      return true;
+    }
   }
 
   /** A separate read, because the flag can change while `settle` is awaited. */
@@ -123,7 +136,12 @@ export class PwaUpdateController implements PwaUpdateCapability {
     this.#autoDone = true;
     if (this.#poll !== null) auto.clearInterval(this.#poll);
     this.#poll = null;
-    auto.storage.setItem(AUTO_UPDATE_MARKER, auto.buildId);
+    try {
+      auto.storage?.setItem(AUTO_UPDATE_MARKER, auto.buildId);
+    } catch {
+      // No marker, no loop guard: leave the update to the Settings row.
+      return;
+    }
     await this.apply();
   }
 
