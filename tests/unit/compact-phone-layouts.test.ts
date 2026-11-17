@@ -905,6 +905,7 @@ function liveBuildMenu(extraKinds = 0, extraBosses = 0): PlaygroundScreenView {
 function renderDesktop(
   size: Readonly<{ width: number; height: number }>,
   draw: (renderers: ReturnType<typeof createScreenRenderers>) => void,
+  scroll = 0,
 ): Frame {
   const scale = Math.min(size.width / 1600, size.height / 900),
     overscan = { x: (size.width / scale - 1600) / 2, y: (size.height / scale - 900) / 2 };
@@ -929,7 +930,7 @@ function renderDesktop(
       enterSeconds: 1,
       deltaSeconds: 1 / 60,
       mouse: { x: -1, y: -1 },
-      scroll: 0,
+      scroll,
       focus: -1,
       touch: false,
       reducedMotion: false,
@@ -941,7 +942,7 @@ function renderDesktop(
       setScroll: () => undefined,
     }),
   );
-  return { texts, controls, scroll: 0, scale };
+  return { texts, controls, scroll, scale };
 }
 
 /** No control, heading or label may overlap another, and everything stays on the 1600x900 stage. */
@@ -1007,6 +1008,41 @@ describe("desktop playground build menu", () => {
         }),
         `+${String(kinds)} kinds +${String(bosses)} bosses`,
       );
+    }
+  });
+});
+
+describe("leaderboards: one screen definition at both densities", () => {
+  /** Every action the desktop page offers for a view, over its whole scroll (the app owns the desktop extent). */
+  function desktopActions(draw: (renderers: ReturnType<typeof createScreenRenderers>) => void, extent: number) {
+    const ids = new Set<string>();
+    for (let scroll = 0; scroll <= extent; scroll += 34)
+      for (const control of renderDesktop({ width: 1600, height: 900 }, draw, scroll).controls)
+        ids.add(JSON.stringify(control.action));
+    return ids;
+  }
+
+  it("offers the same actions on the desktop page and the phone page for every board state", () => {
+    const phone = PHONES[0];
+    const cases = [
+      { label: "ranked", view: rankedView, extent: rankedView.rows.length * 34 },
+      {
+        label: "feed",
+        view: { ...leaderboardBase, tab: "feed", status: "ready" as const, rows: replays },
+        extent: replays.length * 96,
+      },
+      {
+        label: "signin",
+        view: { ...rankedView, status: "signin" as const, signInRequired: true, rows: [] },
+        extent: 0,
+      },
+      { label: "empty feed", view: { ...leaderboardBase, tab: "feed", status: "empty" as const, rows: [] }, extent: 0 },
+    ];
+    for (const { label, view, extent } of cases) {
+      const draw = (r: ReturnType<typeof createScreenRenderers>): void => {
+        r.leaderboards(view);
+      };
+      expect([...sweep(phone, draw, `${label} phone`)].sort(), label).toEqual([...desktopActions(draw, extent)].sort());
     }
   });
 });
