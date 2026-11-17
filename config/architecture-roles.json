@@ -112,7 +112,7 @@
     },
     "tearbench.detached-world": {
       "purpose": "Detached TearBench world hydration and runtime, portable outside the browser app.",
-      "include": ["src/tearbench/detached-world-hydrator.ts", "src/tearbench/detached-world-runtime.ts"]
+      "include": ["src/tearbench/detached-world-hydrator.ts"]
     },
     "tearbench.production-headless-entry": {
       "purpose": "The production headless environment entry, run outside any browser.",

@@ -1262,7 +1262,7 @@
    "legacy": [
     "R09"
    ],
-   "file": "src/tearbench/detached-world-runtime.ts",
+   "file": "src/tearbench/detached-world-hydrator.ts",
    "text": "import type { GameRuntimeDependencies } from \"../app/shell/game-runtime-dependencies\";",
    "reject": true
   },
@@ -1270,7 +1270,7 @@
    "legacy": [
     "R10"
    ],
-   "file": "src/tearbench/detached-world-runtime.ts",
+   "file": "src/tearbench/detached-world-hydrator.ts",
    "text": "const canvas: HTMLCanvasElement | null = null;",
    "reject": true
   },
