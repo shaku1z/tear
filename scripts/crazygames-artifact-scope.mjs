@@ -27,6 +27,7 @@ function cueReferences(cueName, cue) {
     }
   }
   if (typeof cue?.bossIntro?.asset === "string") urls.push(cue.bossIntro.asset);
+  if (typeof cue?.openingIntro?.asset === "string") urls.push(cue.openingIntro.asset);
   return urls.map((url) => posix.normalize(posix.join(base, url.replaceAll("\\", "/"))));
 }
 

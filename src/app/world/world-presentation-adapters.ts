@@ -17,6 +17,7 @@ import type { WorldRendererRegistry } from "../../presentation/world";
 import type { WorldRect } from "../../presentation/world/contracts";
 import { formatEnemyLabel } from "../../presentation/world/entity-layer";
 import { renderWorldFrame, type WorldBounds, type WorldCamera } from "../../presentation/world/world-frame";
+import type { SceneDrawInput } from "../../presentation/scenes/scene-library";
 import { buildHudSnapshot } from "../../presentation/world/hud-snapshot";
 import {
   buildBossIntroSnapshot,
@@ -51,6 +52,7 @@ type Dependencies = Pick<
   | "A11Y"
   | "ACH"
   | "Backdrop"
+  | "Scenes"
   | "CLOCK"
   | "CONFIG"
   | "FX"
@@ -303,6 +305,14 @@ export function createLiveWorldPresentationAdapters(
     }
   };
 
+  const sceneInput = (
+    stageId: string,
+    timeSeconds: number,
+    playerWorldX: number,
+    view: WorldBounds,
+    camera: WorldCamera,
+  ): SceneDrawInput => ({ stageId, camera, playerWorldX, worldWidth: width, view, timeSeconds });
+
   let lastCamera: WorldCamera | undefined;
   const renderWorld = (): WorldCamera => {
     lastCamera = renderWorldLayers();
@@ -357,11 +367,24 @@ export function createLiveWorldPresentationAdapters(
       setEffectView: (bounds) => {
         d.FX.setViewRect(bounds);
       },
-      drawBackdrop: (_value, time, playerX, bounds) => {
-        d.Backdrop.draw(canvas, stage.current, time, playerX, bounds);
+      drawBackdrop: (_value, time, playerX, bounds, camera) => {
+        const stageId = stage.current.id;
+        // The world is showing this stage: its painted background may load now,
+        // and the stages a run has left give their decoded layers back.
+        d.Scenes.show(stageId);
+        if (!d.Scenes.opaque(stageId)) d.Backdrop.draw(canvas, stage.current, time, playerX, bounds);
+        d.Scenes.drawBack(canvas, sceneInput(stageId, time, playerX, bounds, camera));
+        d.Scenes.drawShadows(canvas, stageId, stage.platforms);
+      },
+      drawBackdropFront: (bounds, camera) => {
+        d.Scenes.drawFront(
+          canvas,
+          sceneInput(stage.current.id, d.CLOCK.sim, state.player()?.x ?? width / 2, bounds, camera),
+        );
       },
       drawPlatform: (platform, _value, floor, bounds) => {
-        d.Backdrop.platform(canvas, platform, stage.current, floor, bounds);
+        const texture = d.Scenes.surfaceMaterial(stage.current.id);
+        d.Backdrop.platform(canvas, platform, stage.current, floor, bounds, texture);
       },
       drawFinale: drawFinaleWorld,
       tutorialActive: actorsIncluded && run.mode === "tutorial" && tutorial.active,

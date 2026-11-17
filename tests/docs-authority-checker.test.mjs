@@ -60,7 +60,7 @@ test("docs checker passes the canonical tracked documentation baseline", () => {
   assert.equal(result.pathBoundArtifacts, 7);
   assert.ok(result.trackedMarkdownFiles >= 100);
   assert.ok(result.localLinks >= 30);
-  assert.equal(result.currentAuthorities, 18);
+  assert.equal(result.currentAuthorities, 19);
   assert.equal(result.positionAreas > 0, true);
   assert.equal(result.activePlans, ACTIVE_PLAN_METADATA_PATHS.length);
 });
@@ -145,7 +145,7 @@ test("current program-state checker accepts historical text while requiring curr
 test("current authority table has one local primary per unique topic", () => {
   const result = checkCurrentAuthorityTable(repositoryRoot);
   assert.deepEqual(result.errors, []);
-  assert.equal(result.rows.length, 18);
+  assert.equal(result.rows.length, 19);
 });
 
 test("current authority parser rejects duplicate topics, primary paths, and malformed multiple links", () => {

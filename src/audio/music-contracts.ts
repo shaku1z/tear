@@ -15,6 +15,19 @@ export interface MusicRunSessionMetadata {
   readonly rulesetVersion: string;
   readonly gameVersion: string;
   readonly scoreVersion: string;
+  /**
+   * Saved progress as it stood when the run began, for first-run songs and unlocks.
+   * Absent (seed races, practice, replays): no first-run song and nothing unlocked, so
+   * everyone hears the same music.
+   */
+  readonly progress?: MusicRunProgress;
+}
+
+export interface MusicRunProgress {
+  /** Biomes (stage names) any earlier run reached. */
+  readonly biomesReached: readonly string[];
+  /** Bosses (boss ids) the player has defeated. */
+  readonly bossesDefeated: readonly string[];
 }
 
 export type MusicReplayMetadata =

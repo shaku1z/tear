@@ -1487,14 +1487,14 @@
   {
    "legacy": [],
    "file": "src/app/world/content-host.ts",
-   "text": "import { createVerdantCalibrationComposition } from \"../engineering/verdant-calibration-composition\";",
+   "text": "import { createExampleChannel } from \"../engineering/example-channel-entry\";",
    "reject": true,
    "note": "new N1: engineering channel only via dynamic import"
   },
   {
    "legacy": [],
    "file": "src/app/world/content-host.ts",
-   "text": "const calibration = import(\"../engineering/verdant-calibration-composition\");",
+   "text": "const channel = import(\"../engineering/example-channel-entry\");",
    "reject": false,
    "note": "N1 allows the guarded dynamic import"
   },

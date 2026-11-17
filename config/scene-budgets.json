@@ -1,0 +1,12 @@
+{
+  "format": "tear-scene-budgets.v1",
+  "note": "The share of each release build's size that all its painted stage backgrounds together may use: encoded bytes, summed over every image of every shipped scene package. Each package also meets the per-scene limits in src/presentation/scenes/scene-contract.ts. scripts/build-target.mjs fails a build whose packages declare more than the share, or whose output holds scene images it should not; pnpm scene validate and tests/unit/scene-packages.test.ts check the declared sizes without a build. Raising a share is a reviewed decision. See docs/BACKGROUND_WORKFLOW.md, Size rule.",
+  "targets": {
+    "standalone": {
+      "shareBytes": 3000000
+    },
+    "crazygames": {
+      "shareBytes": 3000000
+    }
+  }
+}

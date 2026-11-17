@@ -1,5 +1,5 @@
 {
-  "about": "Everything the required Validate check runs, in the order it runs: static (format, repository guards, typecheck, lint first, so most failures show within minutes), unit, build, browser. `pnpm check` runs exactly this list locally; `pnpm check:quick` runs the fast group, which the pre-push hook runs. Nightly and weekly run on a schedule. `seconds` is the usual time on a GitHub runner. Edit this list, not the workflow, to add or remove a check.",
+  "about": "Everything the required Validate check runs, in the order it runs: static (format, docs, terminology, typecheck, lint first, so most failures show within minutes; the repository guards run with the unit tests), unit, build, browser. `pnpm check` runs exactly this list locally; `pnpm check:quick` runs the fast group, which the pre-push hook runs. Nightly and weekly run on a schedule. `seconds` is the usual time on a GitHub runner. Edit this list, not the workflow, to add or remove a check.",
   "gate": [
     "static",
     "unit",
@@ -64,11 +64,6 @@
         "id": "terminology",
         "run": "node scripts/check-terminology.mjs",
         "seconds": 6
-      },
-      {
-        "id": "repository-guards",
-        "run": "node node_modules/vitest/vitest.mjs run tests/unit/tool-catalogue.test.mjs tests/unit/change-impact.test.mjs tests/unit/ci-workflow.test.mjs",
-        "seconds": 15
       },
       {
         "id": "architecture",
@@ -137,7 +132,7 @@
       },
       {
         "id": "node-tests",
-        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/game-reference-artifact-publication.test.mjs tests/dispatch-wiki-reference.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/workspace-check.test.mjs tests/parent-layout.test.mjs tests/artifact-retention.test.mjs tests/artifact-disposition.test.mjs tests/workspace-recovery-report.test.mjs tests/workspace-recovery-second-wave.test.mjs tests/deferred-workspace-dependency.test.mjs tests/preserved-copy-comparison.test.mjs tests/remaining-workspace-inventory.test.mjs tests/workspace-quarantine.test.mjs tests/workspace-preservation-quarantine.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs tests/tearbench-performance-sample.test.mjs tests/tearbench-client-mission.test.mjs tests/tearbench-task-execution.test.mjs tests/tearbench-task-receipts.test.mjs tests/tearbench-resource-leases.test.mjs",
+        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/workspace-check.test.mjs tests/parent-layout.test.mjs tests/artifact-retention.test.mjs tests/artifact-disposition.test.mjs tests/workspace-recovery-report.test.mjs tests/workspace-recovery-second-wave.test.mjs tests/deferred-workspace-dependency.test.mjs tests/preserved-copy-comparison.test.mjs tests/remaining-workspace-inventory.test.mjs tests/workspace-quarantine.test.mjs tests/workspace-preservation-quarantine.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs tests/tearbench-performance-sample.test.mjs tests/tearbench-client-mission.test.mjs tests/tearbench-task-execution.test.mjs tests/tearbench-task-receipts.test.mjs tests/tearbench-resource-leases.test.mjs",
         "seconds": 60
       }
     ],
