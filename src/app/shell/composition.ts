@@ -539,6 +539,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         },
       }),
       app: Object.freeze({ snapshot: () => APP.snapshot() }),
+      // What the isolated storage holds now, so a journey can boot a fresh page from it: the
+      // same contents a reload would find in the browser's real storage.
+      storage: Object.freeze({ snapshot: () => Object.fromEntries(disposableValues) }),
       viewport: Object.freeze({
         snapshot: () => {
           const canvas = document.querySelector<HTMLCanvasElement>("#game");
