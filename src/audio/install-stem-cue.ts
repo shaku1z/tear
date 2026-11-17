@@ -144,16 +144,30 @@ export function requestedStemsMode(
  * Returns at once: the index is requested after the first frame (or when audio
  * starts, if that comes first).
  */
+/** Runs `task` once the page's load event has fired and the browser next has idle time. */
+function afterStartup(task: () => void): void {
+  const idle = (): void => {
+    // Safari has no requestIdleCallback.
+    if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(task, { timeout: 2000 });
+    else setTimeout(task, 200);
+  };
+  if (document.readyState === "complete") idle();
+  else window.addEventListener("load", idle, { once: true });
+}
+
 export function installBiomeStemBackend(): void {
   let pending: Promise<BiomeStemBackend> | null = null;
   const ready = (): Promise<BiomeStemBackend> => (pending ??= loadMusicIndex());
-  // Two frames: the first paints, the second runs after it. Then the menu cue's first layer
-  // is fetched, so the first input only has to decode it.
+  // Two frames: the first paints, the second runs after it; then the music index. The menu
+  // cue's first layer waits until the page has finished loading and the browser is idle, so
+  // it never competes with the first frame or the menu; the first input then only decodes it.
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       ready()
         .then((backend) => {
-          if (browserMusicWarmAllowed()) backend.warmFirstLayer(backend.menuCueId);
+          afterStartup(() => {
+            if (browserMusicWarmAllowed()) backend.warmFirstLayer(backend.menuCueId);
+          });
         })
         .catch((error: unknown) => {
           console.warn("Music index unavailable; built-in music will play", error);
