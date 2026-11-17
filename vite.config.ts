@@ -131,12 +131,45 @@ const APPLICATION_FOLDER_CHUNKS: Readonly<Record<string, string>> = {
   world: "runtime-app-combat",
 };
 
+/** The entry points import the application composition dynamically; it is where the startup path begins. */
+const STARTUP_ROOT = "/src/app/shell/composition.ts";
+
+interface ChunkModuleInfo {
+  readonly isEntry: boolean;
+  readonly importers: readonly string[];
+  readonly dynamicImporters: readonly string[];
+}
+interface ChunkMeta {
+  readonly getModuleInfo: (id: string) => ChunkModuleInfo | null;
+}
+
+/**
+ * True when every path from the application composition to the module crosses a dynamic import.
+ * Such a module is fetched on demand, so no named group may pull it into a
+ * chunk that the startup path loads (a group would merge it with static code).
+ */
+function reachedOnlyDynamically(id: string, meta: ChunkMeta, memo = new Map<string, boolean>()): boolean {
+  const known = memo.get(id);
+  if (known !== undefined) return known;
+  if (id.replaceAll("\\", "/").endsWith(STARTUP_ROOT)) return false;
+  memo.set(id, false); // a cycle through static importers is not evidence of a dynamic-only path
+  const info = meta.getModuleInfo(id);
+  const dynamicOnly =
+    info !== null &&
+    !info.isEntry &&
+    info.dynamicImporters.length + info.importers.length > 0 &&
+    info.importers.every((importer) => reachedOnlyDynamically(importer, meta, memo));
+  memo.set(id, dynamicOnly);
+  return dynamicOnly;
+}
+
 /** Keep the async application composition below the release transfer budget. */
-function applicationChunk(id: string): string | undefined {
+function applicationChunk(id: string, meta: ChunkMeta): string | undefined {
   const normalized = id.replaceAll("\\", "/");
   const source = normalized.indexOf("/src/");
   if (source < 0) return undefined;
   const relative = normalized.slice(source + "/src/".length);
+  if (reachedOnlyDynamically(id, meta)) return undefined;
   const topLevel = relative.split("/")[0] ?? "";
   if (topLevel === "app") return APPLICATION_FOLDER_CHUNKS[relative.split("/")[1] ?? ""] ?? "runtime-app-core";
   // The ~1.5 MB tutorial demonstration corpus is imported only by training

@@ -1,8 +1,5 @@
-import {
-  createProductionGhostReplayComposition,
-  projectProductionReplayCanonicalState,
-  type ProductionGhostReplayCompositionOptions,
-} from "../tearbench/production-replay-composition";
+import type { ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
+import { replayEngine } from "./replay-engine";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostApplicationClockSchedule } from "./application-frame-events";
 import { requireGhostFinalePermit, finaleFrameWitnesses, type GhostFinalePermit } from "./finale-companion";
@@ -38,7 +35,7 @@ export function createGhostFinalePlayback(
   )
     throw new TypeError("Finale frame coverage or command range is incomplete");
   const inputSnapshots = new Map([[anchor.tick, origin.origin.input]]);
-  const composition = createProductionGhostReplayComposition({
+  const composition = replayEngine().createProductionGhostReplayComposition({
     ...presentation,
     seed: anchor.seed,
     inputSnapshots,
@@ -124,7 +121,7 @@ export function createGhostFinalePlayback(
       }
       const replay = session.replay;
       actualHash = stableVerificationHash({
-        canonical: projectProductionReplayCanonicalState(
+        canonical: replayEngine().projectProductionReplayCanonicalState(
           replay,
           session.simulation.scheduler.tick,
           session.simulation.input,

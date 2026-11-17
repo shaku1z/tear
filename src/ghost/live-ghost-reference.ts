@@ -1,7 +1,8 @@
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { readSeedRaceRun, seedRaceInitialBuildHash } from "./seed-race-contract";
 import { stableVerificationHash } from "../domain/hash";
-import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
+import type { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
+import { replayEngine } from "./replay-engine";
 import { injectedBuildIdentity } from "../tearbench/live-runtime-snapshots";
 import { ENTITY_KIND_REGISTRY } from "../tearbench/registries";
 import { CURRENT_RULESET_VERSION } from "../gameplay/run/ruleset-version";
@@ -110,7 +111,7 @@ export async function prepareGhostLiveReference(
       if (boundary) boundaries.push(boundary);
     }
   });
-  const composition = createProductionGhostReplayComposition({
+  const composition = replayEngine().createProductionGhostReplayComposition({
     seed: anchor.seed,
     raceDecisions: readSeedRaceDecisions(capsule, context.run.id),
     requireRecordedApplicationFrames: true,

@@ -2,7 +2,7 @@ import { readGhostBossMemory } from "./boss-memory-origin";
 import { verifyBossMemory } from "./boss-memory";
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
-import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
+import { replayEngine } from "./replay-engine";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt, type GhostAuthoritativeReceiptV1 } from "./authoritative-receipt";
@@ -216,7 +216,7 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
       });
     }
     const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
-    const composition = createProductionGhostReplayComposition({
+    const composition = replayEngine().createProductionGhostReplayComposition({
       seed: anchor.seed,
       openingPermit: permit,
       raceDecisions: readSeedRaceDecisions(capsule, context?.run.id ?? ""),
@@ -353,7 +353,7 @@ export function verifyGhostCapsuleProductionReplay(
       mappingIssues: Object.freeze([...mappingIssues, error instanceof Error ? error.message : String(error)]),
     });
   }
-  const composition = createProductionGhostReplayComposition({
+  const composition = replayEngine().createProductionGhostReplayComposition({
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
     inputSnapshots: inputs,
     ...(forkOrigin === undefined ? {} : { forkOrigin }),

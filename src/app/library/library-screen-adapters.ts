@@ -1,3 +1,4 @@
+import { ensureReplayEngine, replayEngineStatus } from "../../ghost/replay-engine";
 import type { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
@@ -143,6 +144,30 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
       ensureLoaded();
     }
   }
+  /**
+   * Replaying, verifying or opening a ghost needs the replay engine, fetched on
+   * first use. Show a wait line, run the action when the code is there, and
+   * show one plain message (tap again to retry) when the fetch fails.
+   */
+  function invokeReplay(action: DeferredAction): void {
+    if (replayEngineStatus() === "ready") {
+      invoke(action);
+      return;
+    }
+    invoke((value) => {
+      value.setProfileMessage("Loading replay code…");
+    });
+    ensureReplayEngine().then(
+      () => {
+        invoke(action);
+      },
+      (error: unknown) => {
+        invoke((value) => {
+          value.setProfileMessage(error instanceof Error ? error.message : "Replay code is unavailable.");
+        });
+      },
+    );
+  }
   function render(renderNow: DeferredAction): void {
     if (runtime) renderNow(runtime);
     else ensureLoaded();
@@ -150,7 +175,7 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
 
   const adapters: LibraryScreenAdapters = {
     careerAction: (command, id) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.careerAction(command, id);
       });
     },
@@ -236,32 +261,32 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
       });
     },
     watchReplay: (id, from) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.watchReplay(id, from);
       });
     },
     watchGhostCapsule: (id) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.watchGhostCapsule(id);
       });
     },
     compareGhostCapsule: (id) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.compareGhostCapsule(id);
       });
     },
     openGhostComparison: () => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.openGhostComparison();
       });
     },
     publishReplay: (id) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.publishReplay(id);
       });
     },
     repairGhostCapsule: (id) => {
-      invoke((value) => {
+      invokeReplay((value) => {
         value.repairGhostCapsule(id);
       });
     },

@@ -3,12 +3,14 @@ import { GhostCapsuleReader } from "./capsule-reader";
 import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
 import { prepareGhostCapsuleSourceGuards } from "./capsule-protection";
 import { prepareGhostLiveReference } from "./live-ghost-reference";
+import { ensureReplayEngine } from "./replay-engine";
 
 self.addEventListener("message", (event: MessageEvent<Readonly<{ id: string }>>) => {
   void (async () => {
     try {
       if (typeof event.data.id !== "string" || !event.data.id || event.data.id.length > 256)
         throw new TypeError("Invalid reference selection.");
+      await ensureReplayEngine();
       const vault = new GhostLocalVault(await createIndexedDbGhostVaultBackend(self.indexedDB)),
         raw = await vault.backend().get("manifests", event.data.id),
         manifest = await vault.getManifest(event.data.id);

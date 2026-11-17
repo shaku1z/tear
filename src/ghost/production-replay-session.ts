@@ -2,10 +2,8 @@ import { readGhostBossMemory } from "./boss-memory-origin";
 import { bossMemoryReplay, verifyBossMemory } from "./boss-memory";
 import { readSeedRaceDecisions } from "./seed-race-decisions";
 import { ghostRecordingFirstTick, requireGhostForkPermit, type GhostForkPermit } from "./fork-origin";
-import {
-  createProductionGhostReplayComposition,
-  type ProductionGhostReplayCompositionOptions,
-} from "../tearbench/production-replay-composition";
+import type { ProductionGhostReplayCompositionOptions } from "../tearbench/production-replay-composition";
+import { replayEngine } from "./replay-engine";
 import type { GhostReadCapsule } from "./capsule-reader";
 import { mapGhostCapsuleToReplayEnvelope } from "./capsule-replay-envelope";
 import { readGhostAuthoritativeReceipt } from "./authoritative-receipt";
@@ -155,7 +153,7 @@ export function createGhostProductionReplaySession(
     context?.run.id ?? "",
     context?.simulation.applicationFrames !== undefined,
   );
-  const composition = createProductionGhostReplayComposition({
+  const composition = replayEngine().createProductionGhostReplayComposition({
     ...presentation,
     ...(forkOrigin === undefined ? {} : { forkOrigin }),
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",

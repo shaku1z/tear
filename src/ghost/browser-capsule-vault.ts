@@ -1,3 +1,4 @@
+import { ensureReplayEngine } from "./replay-engine";
 import {
   GhostLocalVault,
   parseGhostCapsuleManifest,
@@ -211,6 +212,8 @@ export async function readBrowserGhostCapsule(
   id: string,
 ): Promise<GhostReadCapsule | undefined> {
   if (factory === undefined) return undefined;
+  // Every replay starts from a capsule read here, so the engine is requested once, at this door.
+  await ensureReplayEngine();
   return new GhostCapsuleReader(await openBrowserGhostVault(factory)).read(id);
 }
 
