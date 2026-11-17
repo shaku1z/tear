@@ -5,6 +5,7 @@
  * gameplay / boss / victory and the advanced per-biome matrix. Kept as a small
  * shared store (like `music-mode`) so settings never imports the audio backend.
  */
+import { getMusicPreview } from "./preview";
 
 /** `default` means "let the game decide" (canonical routing). */
 export const MENU_MUSIC_DEFAULT = "default";
@@ -61,9 +62,12 @@ export function onLoadoutChange(listener: () => void): () => void {
 
 /**
  * Resolve the shell/menu slot to a cue id. Work ids and cue ids are 1:1 in the
- * current catalog, so a selected work maps straight onto its adaptive cue.
+ * current catalog, so a selected work maps straight onto its adaptive cue. A
+ * song previewed on the MUSIC screen wins over the menu music while it is set.
  */
 export function resolveMenuCueId(defaultCueId: string, isLoaded: (cueId: string) => boolean): string {
+  const preview = getMusicPreview();
+  if (preview !== null && isLoaded(preview)) return preview;
   if (menuWorkId === MENU_MUSIC_DEFAULT) return defaultCueId;
   return isLoaded(menuWorkId) ? menuWorkId : defaultCueId;
 }

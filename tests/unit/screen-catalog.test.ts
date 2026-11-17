@@ -63,6 +63,7 @@ describe("screen catalog", () => {
       "profile",
       "achievements",
       "leaderboards",
+      "music",
       "rename",
       "pgmenu",
       "pglab",
@@ -71,7 +72,18 @@ describe("screen catalog", () => {
       "ghostsupport",
     ]);
     expect(new Set(listed(isMenuScreen))).toEqual(
-      new Set(["menu", "shop", "codex", "setup", "profile", "settings", "achievements", "leaderboards", "rename"]),
+      new Set([
+        "menu",
+        "shop",
+        "codex",
+        "setup",
+        "profile",
+        "settings",
+        "achievements",
+        "leaderboards",
+        "music",
+        "rename",
+      ]),
     );
     expect(new Set(listed(isWorldScreen))).toEqual(
       new Set([
@@ -111,10 +123,10 @@ describe("screen catalog", () => {
       ]),
     );
     expect(new Set(listed((screen) => screenDensity(screen) === "phone"))).toEqual(
-      new Set(["shop", "codex", "profile", "achievements", "leaderboards", "pgmenu", "pglab"]),
+      new Set(["shop", "codex", "profile", "achievements", "leaderboards", "music", "pgmenu", "pglab"]),
     );
     expect(new Set(listed(isSheetScreen))).toEqual(
-      new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings"]),
+      new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings", "music"]),
     );
     expect(new Set(listed(screenResetsScrollOnEnter))).toEqual(new Set(["shop", "draft", "reserve", "tierup"]));
     expect(ENGINEERING_SCREENS).toEqual(["ghostpublication", "ghostsupport"]);

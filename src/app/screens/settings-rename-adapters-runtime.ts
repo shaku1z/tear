@@ -6,7 +6,11 @@ import type { SettingsController, GameSettings } from "./settings-controller";
 import { buildSettingsSections } from "../../presentation/settings-snapshots";
 import { MENU_MUSIC_CHOICES } from "../../audio/music/loadout";
 import { STATION_CHOICES } from "../../audio/music/active-station";
-import { MUSIC_SETTINGS_TAB, normalizeMusicSettingsTab } from "../../audio/music/settings";
+import { normalizeMusicSettingsTab } from "../../audio/music/settings";
+import { getMusicLibrary } from "../../audio/music/library";
+import { getNowPlaying } from "../../audio/music/now-playing";
+import { getMusicPreview, getMusicQueue } from "../../audio/music/preview";
+import { buildMusicScreenView } from "../../presentation/music-snapshots";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -37,7 +41,9 @@ export interface SettingsRenameServices {
 export interface SettingsRenameAdapters {
   readonly renderSettings: () => void;
   readonly renderRename: () => void;
+  readonly renderMusic: () => void;
   readonly selectSettingsTab: (id: string) => void;
+  readonly selectMusicPage: (page: string) => void;
   readonly stepSetting: (key: string, direction: number) => void;
   readonly toggleSetting: (key: string) => void;
   readonly activateSetting: (key: string) => void;
@@ -57,13 +63,14 @@ const settingsTabs = [
   ["audio", "AUDIO"],
   ["video", "VIDEO"],
   ["accessibility", "ACCESS"],
-  [MUSIC_SETTINGS_TAB, "MUSIC"],
 ] as const;
 
 export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRenameServices): SettingsRenameAdapters {
   const d = services.dependencies;
   let settingsTab = "general",
-    maximumScroll = 0;
+    maximumScroll = 0,
+    musicPage = "home",
+    musicOpenedFrom = "home";
   const rename = new RenameController({
     document: services.document,
     canvas: services.canvas,
@@ -174,12 +181,34 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       ...(snapshot.error ? { message: snapshot.error } : {}),
     });
   };
+  // The MUSIC screen measures and clamps its own scroll, at every density.
+  const renderMusic = (): void => {
+    services.renderers.music(
+      buildMusicScreenView({
+        settings: services.settings,
+        library: getMusicLibrary(),
+        nowPlaying: getNowPlaying(),
+        preview: getMusicPreview(),
+        page: musicPage,
+        openedFrom: musicOpenedFrom,
+        queue: getMusicQueue(),
+        now: performance.now(),
+      }),
+    );
+  };
   const adapters: SettingsRenameAdapters = {
     renderSettings,
     renderRename,
+    renderMusic,
     selectSettingsTab: (id) => {
       settingsTab = normalizeMusicSettingsTab(id);
       services.setScroll(0);
+    },
+    selectMusicPage: (page) => {
+      // A collection remembers the page it was opened from, so BACK goes up one level.
+      if (page.startsWith("collection:") && !musicPage.startsWith("collection:")) musicOpenedFrom = musicPage;
+      if (page !== musicPage) services.setScroll(0);
+      musicPage = page;
     },
     stepSetting: (key, direction) => {
       services.settingsController.step(key, direction);

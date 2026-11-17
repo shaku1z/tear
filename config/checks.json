@@ -278,6 +278,11 @@
         "seconds": 10
       },
       {
+        "id": "music-screen",
+        "run": "node tests/browser-music-screen.js",
+        "seconds": 15
+      },
+      {
         "id": "fresh-run-meta-progression",
         "run": "node tests/browser-fresh-run-meta-progression.js",
         "seconds": 3

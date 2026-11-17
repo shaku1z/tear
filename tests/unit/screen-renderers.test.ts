@@ -5,6 +5,8 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { createUi } from "../../src/presentation/ui";
 import type { ScreenControl, ScreenRenderContext, ScreenUiPort } from "../../src/presentation/screens";
 import { createScreenRenderers } from "../../src/presentation/screens";
+import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { CONFIG } from "../../src/config/game-config";
@@ -580,6 +582,7 @@ describe("legacy screen renderer registry", () => {
       "ghostsupport",
       "leaderboards",
       "menu",
+      "music",
       "paused",
       "pglab",
       "pgmenu",
@@ -597,6 +600,75 @@ describe("legacy screen renderer registry", () => {
     expect(() => {
       registry.playing({ id: "playing" });
     }).not.toThrow();
+  });
+
+  it("draws MUSIC: a rail, Home's shelves, a collection's page, Settings and the transport", () => {
+    const controls: ScreenControl[] = [];
+    let written = -1;
+    const music = JSON.parse(
+      readFileSync(fileURLToPath(new URL("../../public/audio/music.json", import.meta.url)), "utf8"),
+    ) as { catalog: { works: { id: string; title: string }[] }; routing: unknown };
+    const library = {
+      songs: music.catalog.works.map((work) => ({ ...work, seconds: 30 })),
+      routing: validateMusicRoutingManifest(music.routing),
+    };
+    const view = (page: string) =>
+      buildMusicScreenView({
+        settings: {},
+        library,
+        nowPlaying: { workId: "fillet", title: "Fillet", since: 1 },
+        preview: "fillet",
+        page,
+        queue: ["fillet", "spring"],
+        now: 15_001,
+      });
+    const context = { ...createRenderContext(controls), scroll: 0, setScroll: (value: number) => (written = value) };
+    const types = () => controls.map((control) => control.action);
+    createScreenRenderers(context).music(view("home"));
+    // The rail: Home · Songs · Settings, then every stage; the Stages shelf opens the same pages.
+    for (const tab of ["home", "songs", "settings"])
+      expect(types()).toContainEqual({ type: "navigate", to: "music", tab });
+    const stageOpens = types().filter(
+      (action) => action.type === "navigate" && action.tab?.startsWith("collection:stage:"),
+    );
+    expect(stageOpens.length).toBeGreaterThan(6);
+    // Now playing (STOP while previewing) and the transport's ◀◀ ■ ▶▶.
+    expect(controls.filter((control) => control.action.type === "music.stopPreview").map((c) => c.label)).toEqual([
+      "■  STOP",
+      "■",
+    ]);
+    expect(controls.filter((control) => control.action.type === "music.step").map((c) => c.label)).toEqual([
+      "◀◀",
+      "▶▶",
+    ]);
+    expect(types()).toContainEqual({ type: "navigate", to: "menu" });
+    for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
+
+    // A stage's page: the crumb back, PLAY over the stage's songs, one row per song with that queue.
+    controls.length = 0;
+    createScreenRenderers(context).music(view("collection:stage:the-voidspire"));
+    // The crumb, the rail's Home and BACK all lead up to Home.
+    const toHome = controls.filter(
+      (c) => c.action.type === "navigate" && c.action.to === "music" && c.action.tab === "home",
+    );
+    expect(toHome).toHaveLength(3);
+    const queue = ["looking-out", "reflection-of-the-bladeless"];
+    expect(controls.find((control) => control.label === "▶  PLAY")?.action).toEqual({
+      type: "music.preview",
+      id: "looking-out",
+      queue,
+    });
+    expect(types()).toContainEqual({ type: "music.preview", id: "reflection-of-the-bladeless", queue });
+
+    // Songs scrolls its whole list; the scroll is clamped to it.
+    controls.length = 0;
+    createScreenRenderers({ ...context, scroll: 10_000 }).music(view("songs"));
+    expect(written).toBeGreaterThan(0);
+    expect(written).toBeLessThan(10_000);
+
+    controls.length = 0;
+    createScreenRenderers(context).music(view("settings"));
+    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(3);
   });
 
   it("records semantic navigation and menu actions without coordinating state", () => {
@@ -1331,8 +1403,13 @@ describe("release and engineering surface rendering", () => {
     const settings = controls.find((control) => control.label === "SETTINGS"),
       music = controls.find((control) => control.glyph === "♪");
     expect(settings).toMatchObject({ y: 670, h: 52 });
-    expect(music).toMatchObject({ x: 100, y: 731, h: 46, action: { type: "navigate", to: "settings", tab: "music" } });
-    // The footer tagline is drawn at height - 46; the music row ends well above it.
+    expect(music).toMatchObject({
+      x: 100,
+      y: 731,
+      h: 46,
+      action: { type: "navigate", to: "music", resetScroll: true },
+    });
+    // The footer tagline is drawn at height - 46; the release music row ends well above it.
     expect((music?.y ?? 0) + (music?.h ?? 0)).toBeLessThan(900 - 46 - 20);
   });
   it("renders a release setup with no DEV section, no race control and a centred START", () => {

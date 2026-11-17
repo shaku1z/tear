@@ -84,6 +84,10 @@ export type ScreenAction =
   | { readonly type: "settings.toggle"; readonly key: string }
   | { readonly type: "settings.activate"; readonly key: string }
   | { readonly type: "settings.reset" }
+  /** Preview one song; `queue` is the collection it was started from, for ◀◀/▶▶. */
+  | { readonly type: "music.preview"; readonly id: string; readonly queue?: readonly string[] }
+  | { readonly type: "music.step"; readonly delta: 1 | -1 }
+  | { readonly type: "music.stopPreview" }
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }
   | { readonly type: "ghostpublication.cancel" }
