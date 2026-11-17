@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { build, buildPages, loadContent } from '../generator/build.mjs';
 import { loadGameData, sourceState } from '../generator/game-data.mjs';
-import { BUDGET } from '../generator/media.mjs';
+import { BUDGET, inputsHash, loadPictures } from '../generator/pictures.mjs';
 import { url } from '../generator/render.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
@@ -88,6 +88,19 @@ test('the site stays small', () => {
   assert.ok(size('search.json') < 200_000, 'search index over 200 KB');
   const total = fs.readdirSync(dist, { recursive: true }).map((f) => path.join(dist, f)).filter((f) => fs.statSync(f).isFile()).reduce((sum, f) => sum + fs.statSync(f).size, 0);
   assert.ok(total < 3_000_000, `site is ${total} bytes (budget 3 MB)`);
+});
+
+test('committed pictures exist for every entity that shows one, and the staleness check sees a visual change', () => {
+  const pictures = loadPictures();
+  assert.ok(pictures, 'wiki/pictures/manifest.json is missing: run pnpm build:test:standalone && pnpm wiki:media');
+  // Staleness is reported by the deploy and pnpm wiki:pictures-status, never failed here: it must not block a game change.
+  for (const e of data.enemies) if (e.id !== 'rootbinder') assert.ok(pictures.figures['enemies/' + e.id], 'no picture for enemy ' + e.id);
+  for (const b of data.bosses) assert.ok(pictures.figures['bosses/' + b.id], 'no picture for boss ' + b.id);
+  for (const w of data.weapons) assert.ok(pictures.weapons[w.id], 'no picture for weapon ' + w.id);
+  for (const s of data.stages) assert.ok(pictures.arenas[s.id], 'no picture for stage ' + s.id);
+  const recoloured = structuredClone(data);
+  recoloured.enemies[0].color = '#123456';
+  assert.notEqual(inputsHash(recoloured), inputsHash(data));
 });
 
 test('pictures stay inside the page-weight budget and every referenced picture exists', () => {

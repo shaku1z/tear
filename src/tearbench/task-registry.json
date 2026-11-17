@@ -3643,13 +3643,13 @@
       "intentionalReplica": "none"
     },
     {
-      "taskId": "evidence.browser-ghost-lab-home",
+      "taskId": "evidence.browser-scripted-agent-autonomy",
       "version": 1,
       "runner": {
         "kind": "node",
         "executable": "node",
         "args": [
-          "tests/browser-ghost-lab-home.js"
+          "tests/browser-scripted-agent-autonomy.js"
         ]
       },
       "claimIds": [
@@ -4320,8 +4320,8 @@
     "pnpm exec vitest run tests/unit/production-combat-parity.test.ts tests/unit/production-replay-composition.test.ts tests/unit/production-headless-environment.test.ts": [
       "evidence.vitest.24"
     ],
-    "node tests/browser-ghost-lab-home.js": [
-      "evidence.browser-ghost-lab-home"
+    "node tests/browser-scripted-agent-autonomy.js": [
+      "evidence.browser-scripted-agent-autonomy"
     ],
     "node scripts/check-docs.mjs": [
       "static.check-docs"
