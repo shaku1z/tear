@@ -1,7 +1,7 @@
 import type { AuthoritativeInputSnapshot } from "./authoritative-input";
 import type { TutorialSessionCheckpoint } from "../training/tutorial-controller";
 import type { EnvironmentSnapshot } from "../environment/environment-contracts";
-import { projectEnvironmentSemanticSnapshot } from "../../tearbench/environment-codec";
+import { projectEnvironmentSemanticSnapshot } from "../environment/environment-projection";
 import { DeferredCanonicalState } from "./authoritative-step";
 
 export interface RuntimeRunState {
