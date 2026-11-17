@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import evidencePolicy from "./evidence-policy.json";
 
 export type TearSuiteCadence = "local" | "pull-request" | "nightly" | "weekly-endurance" | "release-candidate";

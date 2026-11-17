@@ -15,7 +15,7 @@ import {
 } from "../../src/gameplay/training/tutorial-gold-reference";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createProductionReplayRun, createProductionReplayWorld } from "../../src/tearbench/production-world-factory";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { CONFIG } from "../../src/config/game-config";
 import { productionGhostPath, recordProductionGhostTrace } from "../../src/gameplay/training/tutorial-production-ghost";
 import {

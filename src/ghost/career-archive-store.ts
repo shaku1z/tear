@@ -2,7 +2,7 @@ import { parseGhostColdRestoreJob, parseGhostColdRestoreResult, ghostColdRestore
 import { ghostArchiveSha256 } from "./capsule-archive";
 import { parseGhostLocalPublicationJob, parseGhostPublicationCustody } from "./local-publication-job";
 import { parseGhostPublicationTransportState } from "./publication-transport";
-import { canonicalStringify, stableVerificationHash } from "../replay/hash";
+import { canonicalStringify, stableVerificationHash } from "../domain/hash";
 import {
   GhostLocalVault,
   parseGhostCapsuleManifest,

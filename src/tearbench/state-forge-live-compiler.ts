@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import { stageRuntimeIndexForSurface, type StageId } from "../gameplay/stages";
 import { findVariant } from "../gameplay/variants";
 import type { TearSnapshotV1 } from "./contracts";

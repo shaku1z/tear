@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 
 /**
  * C25 treats controllers differently from keyboard, mouse, and touch.  The

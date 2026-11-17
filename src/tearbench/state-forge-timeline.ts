@@ -1,6 +1,6 @@
 import type { CommandEnvelope } from "../domain/envelopes";
 import type { GameAction } from "../input/game-action";
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "./contracts";
 import { TearCheckpointBank, type TearCheckpointArchiveV1 } from "./tearsdl";
 

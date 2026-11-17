@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1 } from "./contracts";
 
 export interface TearHeadlessTransition<TObservation> {

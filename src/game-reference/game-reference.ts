@@ -1,4 +1,4 @@
-import { canonicalStringify } from "../replay/hash";
+import { canonicalStringify } from "../domain/hash";
 import {
   FINAL_FIVE_WEAPON_SCHEMA_VERSION,
   isRetiredWeaponSelection,

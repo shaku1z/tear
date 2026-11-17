@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearFailureArtifactV1 } from "./contracts";
 import type { TearBenchReplayContextV1, TearBenchRunArtifactV1 } from "./artifact";
 import { investigateRegressionRuns, type TearOwnershipRoute } from "./regression-intelligence";

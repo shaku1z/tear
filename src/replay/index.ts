@@ -1,3 +1,3 @@
 export * from "./envelope";
-export * from "./hash";
+export * from "../domain/hash";
 export * from "./surface-route";

@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 
 export const C30_TRAINING_CAPACITY_WORKLOAD_KINDS = Object.freeze(["bc", "dagger", "rl"] as const);
 

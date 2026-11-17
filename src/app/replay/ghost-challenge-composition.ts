@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import type { TearSnapshotV1 } from "../../tearbench/contracts";
 import type { AuthoritativeInputSnapshot } from "../../gameplay/runtime/authoritative-input";
 import {

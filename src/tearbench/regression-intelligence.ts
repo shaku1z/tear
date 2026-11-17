@@ -1,4 +1,4 @@
-import { stableVerificationHash } from "../replay/hash";
+import { stableVerificationHash } from "../domain/hash";
 import type { TearBenchRunArtifactV1 } from "./artifact";
 import type { TearBuildIdentityV1, TearFailureArtifactV1, TearObservationClass } from "./contracts";
 

@@ -20,7 +20,7 @@ import {
   type TearCausalEventV1,
   type TearSnapshotV1,
 } from "../../src/tearbench";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import { INACTIVE_CINEMATIC_DIRECTOR_STATE_V1 } from "../../src/gameplay/runtime/cinematic-director";
 
 const trident: GhostReplayTrident = {

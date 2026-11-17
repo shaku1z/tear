@@ -17,7 +17,7 @@ import { injectedBuildIdentity } from "../../tearbench/live-runtime-snapshots";
 import { ENTITY_KIND_REGISTRY } from "../../tearbench/registries";
 import { CURRENT_RULESET_VERSION } from "../../gameplay/run/ruleset-version";
 import { seedRaceInitialBuildHash } from "../../ghost/seed-race-contract";
-import { stableVerificationHash } from "../../replay/hash";
+import { stableVerificationHash } from "../../domain/hash";
 import { createCareerTextPort } from "./browser-ghost-career-search";
 import { createSeedRaceDecision } from "../../ghost/seed-race-decisions";
 import type { RewardDecision } from "../../gameplay/run/reward-runtime";

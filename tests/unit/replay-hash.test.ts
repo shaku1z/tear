@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalStringify, stableVerificationHash } from "../../src/replay/hash";
+import { canonicalStringify, stableVerificationHash } from "../../src/domain/hash";
 
 function hashCanonicalText(canonical: string): string {
   let hash = 0xcbf29ce484222325n;

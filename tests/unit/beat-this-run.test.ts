@@ -23,7 +23,7 @@ import { createGhostAuthoritativeReceipt } from "../../src/ghost/authoritative-r
 import { ghostLiveBootstrapEventId, createLiveGhostCausalEvent } from "../../src/ghost/live-causal-events";
 import { createBrowserGhostCareer } from "../../src/app/replay/browser-ghost-career";
 import type { LiveGhostRecordingSessionState } from "../../src/app/replay/ghost-recording-session-state";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 import {
   assertBeatRuntimeCompatibility,
   createBeatThisRunCode,

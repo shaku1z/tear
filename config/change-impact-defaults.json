@@ -69,7 +69,6 @@
         "src/gameplay/voidgen.ts",
         "src/gameplay/weapon-tuning.ts",
         "src/replay/envelope.ts",
-        "src/replay/hash.ts",
         "src/replay/index.ts",
         "src/replay/legacy-compat-validation.ts",
         "src/replay/surface-route.ts",

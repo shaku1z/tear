@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
 import { MODE_CATALOG } from "../../src/gameplay/run/mode-catalog";
-import { stableVerificationHash } from "../../src/replay/hash";
+import { stableVerificationHash } from "../../src/domain/hash";
 
 function legacyRuntimeMode(mode: (typeof MODE_CATALOG)[number]) {
   return {
