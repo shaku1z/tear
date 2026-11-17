@@ -2,6 +2,7 @@ import { discardScenePresses } from "./scene-release";
 import type { BrowserInput, BrowserInputDependencies, Point, TouchZoneName } from "./browser-input-contracts";
 import { mapClientPointerToLogical } from "./pointer-coordinate";
 import {
+  aimFollowsDevices,
   accumulateRelativeTravel,
   MEANINGFUL_POINTER_TRAVEL,
   ownedPointer,
@@ -82,6 +83,16 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     _uiContext2: false,
     pointer() {
       return ownedPointer(this.mode, this.pointerInside, this.mouseX, this.mouseY);
+    },
+    claimAim(device) {
+      this.aimDevice = device;
+    },
+    steerAim(device) {
+      this.touchAim = true;
+      this.claimAim(device);
+    },
+    aimIsLive() {
+      return aimFollowsDevices(this.aimDevice, this.touchAim);
     },
     setMode(m) {
       if (this.mode === m) return;
@@ -178,6 +189,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       return this.forceMode === "touch" || (this.forceMode !== "desktop" && this.touchOn);
     },
     touchAim: false, // a finger is steering the blade
+    aimDevice: null, // the device that last gave aim input
     touchAimMode: "stick", // "stick" (radial virtual stick) | "drag" (relative, mouse-like)
     stickAim: null, // stick mode: {x,y} deflection vector, each -1..1 (null = inactive)
     uiMode: false, // set by the game each frame: menus/overlays (taps + drag-scroll)
@@ -287,12 +299,16 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         if (this.locked) {
           const step = accumulateRelativeTravel(lockedTravel, e.movementX, e.movementY, performance.now());
           lockedTravel = step.travel;
-          if (step.meaningful) this.setMode("mouse");
+          if (step.meaningful) {
+            this.setMode("mouse");
+            this.claimAim("mouse");
+          }
           return;
         }
         const travel = Math.hypot(e.clientX - this.lastPointerX, e.clientY - this.lastPointerY);
         if (this.mode !== "mouse" && travel <= MEANINGFUL_POINTER_TRAVEL) return;
         this.setMode("mouse");
+        this.claimAim("mouse");
         this.lastPointerX = e.clientX;
         this.lastPointerY = e.clientY;
       });
@@ -316,6 +332,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         this.clicked = true;
         this.clickSource = "mouse";
         this.setMode("mouse");
+        this.claimAim("mouse");
         if (this.allowLock && !this.locked) requestPointerLock();
       });
       // right-click = throw / recall the blade (no context menu)
@@ -422,7 +439,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
               this._aimLY = t.clientY;
               this._aimAX = t.clientX;
               this._aimAY = t.clientY; // stick anchor
-              this.touchAim = true;
+              this.steerAim("touch");
               if (this.touchAimMode === "stick") this.stickAim = { x: 0, y: 0 };
             } else {
               // a SECOND finger in the aim zone = THROW, so the right thumb never has to stop

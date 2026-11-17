@@ -1,4 +1,4 @@
-import { assertTutorialGoldFresh, tutorialGoldSourceFingerprint } from "./scripts/tutorial-gold-compatibility.mjs";
+import { assertTutorialGoldFresh } from "./scripts/tutorial-gold-compatibility.mjs";
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { readSourceIdentitySync } from "./scripts/release-artifact.mjs";
@@ -137,6 +137,9 @@ function applicationChunk(id: string): string | undefined {
   // The ~1.5 MB tutorial demonstration corpus is imported only by training
   // preflight; its own chunk keeps it out of the startup modulepreload set.
   if (relative === TUTORIAL_GOLD_DATA) return "tutorial-gold-reference";
+  // A painted stage background (manifest and image URLs) is imported on demand
+  // when a run nears its stage; its own chunk keeps it out of the startup set.
+  if (relative.startsWith("presentation/assets/scenes/")) return undefined;
   if (topLevel === "gameplay") {
     const area = relative.split("/").slice(1, 2)[0] ?? "core";
     return `gameplay-${area}`;
@@ -168,7 +171,8 @@ export default defineConfig(({ mode, command }) => {
   const previewDev = process.env[PREVIEW_DEV_ENV] === "1";
   if (previewDev && mode !== "test-standalone") throw new Error("the preview dev build is a test-standalone build");
   const source = readSourceIdentitySync(process.cwd());
-  const tutorialGoldHash = command === "build" ? assertTutorialGoldFresh() : tutorialGoldSourceFingerprint().sourceHash;
+  // A build refuses tutorial gold that no longer matches the code; the dev server does not check.
+  if (command === "build") assertTutorialGoldFresh();
   return {
     // CrazyGames unpacks uploads below a portal-owned path, so bundle assets
     // must be relative instead of rooted at the host origin. The preview dev
@@ -239,7 +243,6 @@ export default defineConfig(({ mode, command }) => {
         : []),
     ],
     define: {
-      __TEAR_TUTORIAL_GOLD_COMPATIBILITY__: JSON.stringify(tutorialGoldHash),
       __TEAR_TEST_BUILD__: JSON.stringify(testBuild),
       // Engineering surfaces (research screens, Boss/Enemy Test, engineering
       // query routes and debug globals) exist only in test builds and `vite dev`.

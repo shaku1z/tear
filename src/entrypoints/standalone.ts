@@ -9,7 +9,7 @@ const pwaUpdate = new PwaUpdateController();
 void bootstrapTear("standalone", async ({ surfaces, engineeringQuery }) => {
   const { composeTearApplication } = await import("../app/shell/composition");
   const browserIndexedDb = await browserIndexedDbForTestStorage();
-  await composeTearApplication({
+  composeTearApplication({
     target: "standalone",
     createCloud: createStandaloneCloud,
     pwaUpdate,

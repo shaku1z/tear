@@ -83,7 +83,8 @@ describe("live world capture layers", () => {
       drawBlade = vi.fn(),
       drawGhost = vi.fn(),
       drawBackdrop = vi.fn(),
-      drawEffects = vi.fn();
+      drawEffects = vi.fn(),
+      show = vi.fn();
     const player = { x: 137, y: 500, hw: 10, hh: 20, draw: drawPlayer };
     const state = {
       run: () => ({ mode: "tutorial" }),
@@ -108,6 +109,7 @@ describe("live world capture layers", () => {
         UI: { font: () => "12px monospace", density: { textScale: 1 } },
         FX: { draw: drawEffects, setViewRect: vi.fn() },
         Backdrop: { draw: drawBackdrop },
+        Scenes: { show, opaque: () => false, drawBack: () => undefined, drawShadows: () => undefined },
         cosmeticRandom: () => 0.5,
       },
       canvas: {},
@@ -123,7 +125,13 @@ describe("live world capture layers", () => {
       expect(ports.player).toEqual(
         actors === "include" ? { x: 137, y: 500, halfWidth: 10, halfHeight: 20 } : undefined,
       );
-      ports.drawBackdrop(ports.stage, ports.timeSeconds, ports.playerX, { left: 0, top: 0, right: 1600, bottom: 900 });
+      ports.drawBackdrop(
+        ports.stage,
+        ports.timeSeconds,
+        ports.playerX,
+        { left: 0, top: 0, right: 1600, bottom: 900 },
+        { cx: 800, cy: 450, ox: 0, oy: 0, scale: 1 },
+      );
       if (ports.tutorialActive) ports.drawTutorialGhost();
       ports.drawPlayer();
       ports.drawBlade();
@@ -134,8 +142,72 @@ describe("live world capture layers", () => {
     createLiveWorldPresentationAdapters(state, services).renderWorld();
 
     expect(drawBackdrop.mock.calls[0]?.[3]).toBe(137);
+    // The world showing a stage is what loads that stage's painted background.
+    expect(show).toHaveBeenCalledWith("verdant-sanctum");
     for (const draw of [drawPlayer, drawBlade, drawGhost, drawEffects]) {
       expect(draw).toHaveBeenCalledTimes(actors === "include" ? 1 : 0);
     }
+  });
+  it("builds the boss debug snapshot only when it will be drawn", () => {
+    const frame = (debug: boolean, policy: "include" | "exclude") => {
+      const pantheonDebug = vi.fn(),
+        platforms = vi.fn(() => []);
+      const state = {
+        run: () => ({ mode: "endless" }),
+        player: () => ({ x: 1, y: 1, hw: 10, hh: 20, draw: vi.fn() }),
+        blade: () => ({ draw: vi.fn() }),
+        enemies: () => [],
+        projectiles: () => [],
+        floaters: () => [],
+        slowZones: () => [],
+        temporaryWalls: () => [],
+        screen: () => "playing",
+        zoom: () => 1,
+        shake: () => 0,
+      } as unknown as WorldPresentationState;
+      const services = {
+        dependencies: {
+          CONFIG,
+          CLOCK: { sim: 1 },
+          A11Y: { reducedMotion: false, highContrast: false, flashScale: 1 },
+          GFX: { low: false },
+          THEME: { dark: false, ink: "#000" },
+          UI: { font: () => "12px monospace", density: { textScale: 1 } },
+          FX: { draw: vi.fn(), setViewRect: vi.fn() },
+          Backdrop: { draw: vi.fn() },
+          cosmeticRandom: () => 0.5,
+        },
+        canvas: {},
+        width: 1600,
+        height: 900,
+        screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
+        debug,
+        world: { pantheonDebug },
+        stage: {
+          current: { id: "verdant-sanctum" },
+          get platforms() {
+            return platforms();
+          },
+        },
+        capturePolicy: () => ({ actors: "include", debug: policy }),
+      } as unknown as WorldPresentationServices;
+      vi.mocked(renderWorldFrame).mockImplementation((ports) => {
+        ports.drawDebug({ left: 0, top: 0, right: 1600, bottom: 900 }, { left: 0, top: 0, right: 1600, bottom: 900 });
+        return {} as ReturnType<typeof renderWorldFrame>;
+      });
+      createLiveWorldPresentationAdapters(state, services).renderWorld();
+      return { drawn: pantheonDebug.mock.calls.length, platformReads: platforms.mock.calls.length };
+    };
+
+    const release = frame(false, "include");
+    const excluded = frame(true, "exclude");
+    const debugBuild = frame(true, "include");
+
+    expect(release.drawn).toBe(0);
+    expect(excluded.drawn).toBe(0);
+    expect(debugBuild.drawn).toBe(1);
+    // The snapshot copies the stage platforms; a frame that will not draw it must not read them for it.
+    expect(release.platformReads).toBeLessThan(debugBuild.platformReads);
+    expect(excluded.platformReads).toBe(release.platformReads);
   });
 });
