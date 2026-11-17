@@ -16,6 +16,7 @@ function createHarness(initialState = "playing") {
   let cssPerLogicalPixel = 1;
   let simulationSteps = 1;
   let now = 0;
+  let away = { hidden: false, blurred: false };
   const events: string[] = [];
   const input: RuntimeFrameInputPort = {
     held: new Set(),
@@ -78,6 +79,13 @@ function createHarness(initialState = "playing") {
     },
     clipper: null,
     autoPauseDisconnect: () => true,
+    screen: {
+      take: () => {
+        const seen = away;
+        away = { hidden: false, blurred: false };
+        return seen;
+      },
+    },
     advancePlayingPrelude: () => {
       events.push("prelude");
     },
@@ -139,6 +147,13 @@ function createHarness(initialState = "playing") {
     input,
     pad,
     state: () => state,
+    /** The page was hidden or lost focus before the next frame. */
+    leaveScreen: (how: { hidden?: boolean; blurred?: boolean }) => {
+      away = { hidden: how.hidden ?? false, blurred: how.blurred ?? false };
+    },
+    setLocked: (value: boolean) => {
+      input.locked = value;
+    },
     setTouch: (value: boolean) => {
       touch = value;
     },
@@ -329,5 +344,63 @@ describe("RuntimeFrameCoordinator", () => {
     harness.coordinator.run(1 / 240);
 
     expect(endFrame).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("a run pauses when the game loses the screen (src/domain/screen-loss.ts)", () => {
+  it("pauses a run in play when the page was hidden, on every device, before the simulation advances", () => {
+    for (const touch of [false, true]) {
+      const harness = createHarness();
+      harness.setTouch(touch);
+      harness.leaveScreen({ hidden: true });
+      harness.coordinator.run(1 / 60);
+      expect(harness.state()).toBe("paused");
+      expect(harness.events).not.toContain("simulation");
+    }
+  });
+
+  it("pauses on lost focus only while touch owns the input", () => {
+    const desktop = createHarness();
+    desktop.leaveScreen({ blurred: true });
+    desktop.coordinator.run(1 / 60);
+    expect(desktop.state(), "devtools, a second monitor or a storefront frame took focus").toBe("playing");
+
+    const phone = createHarness();
+    phone.setTouch(true);
+    phone.leaveScreen({ blurred: true });
+    phone.coordinator.run(1 / 60);
+    expect(phone.state(), "a notification shade or call banner over the page").toBe("paused");
+  });
+
+  it("pauses through the same entry when the mouse capture is lost", () => {
+    const harness = createHarness();
+    harness.setLocked(true);
+    harness.coordinator.run(1 / 60);
+    harness.setLocked(false);
+    harness.events.length = 0;
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("paused");
+    expect(harness.events).toContain("unlock");
+  });
+
+  it("leaves a screen that is not play alone, and forgets the loss so a later run is not paused", () => {
+    for (const screen of ["draft", "paused", "replay", "menu", "tierup"]) {
+      const harness = createHarness(screen);
+      harness.setTouch(true);
+      harness.leaveScreen({ hidden: true, blurred: true });
+      harness.coordinator.run(1 / 60);
+      expect(harness.state(), `${screen} keeps its screen`).toBe(screen);
+      harness.options.setState("playing");
+      harness.coordinator.run(1 / 60);
+      expect(harness.state(), `the run after ${screen} is not paused by an old loss`).toBe("playing");
+    }
+  });
+
+  it("pauses a boss scene in play like the pause key does", () => {
+    const harness = createHarness();
+    harness.setCinema(true, "locked");
+    harness.leaveScreen({ hidden: true });
+    harness.coordinator.run(1 / 60);
+    expect(harness.state()).toBe("paused");
   });
 });
