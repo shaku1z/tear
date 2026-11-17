@@ -2,13 +2,24 @@ import type { ReplayView, ScreenAction, ScreenRenderContext } from "./contracts"
 import {
   createCompactPage,
   type CompactChoice,
+  type CompactHeader,
   type CompactPage,
   type FlowAction,
   type ScrollBlock,
   type ScrollState,
   type ScrollView,
 } from "./compact-page";
-import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
+import {
+  chips,
+  clipBody,
+  page,
+  pageFooter,
+  pageLayout,
+  replayRow,
+  scrollHint,
+  tabs,
+  type ChipRow,
+} from "./screen-primitives";
 
 /**
  * THE PAGE FRAME: one screen definition that lays out at both densities. A screen states its
@@ -27,8 +38,10 @@ import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-pri
 export interface PickerGroup {
   readonly items: readonly CompactChoice[];
   readonly action: (id: string) => ScreenAction;
-  /** Desktop chip row: centred at `y`, each chip `width` x `height`. */
-  readonly desktop: Readonly<{ y: number; width: number; height: number }>;
+  /** The desktop row (see `ChipRow`). */
+  readonly desktop: Omit<ChipRow, "trailing">;
+  /** A view control (the codex sort): at the right end of the header row (phone) or of this chip row (desktop, `width` wide). */
+  readonly trailing?: Readonly<{ label: string; action: ScreenAction; width: number }> | undefined;
 }
 
 export interface PageSpec {
@@ -36,6 +49,8 @@ export interface PageSpec {
   /** One muted line beside (phone) or under (desktop) the title. */
   readonly subtitle?: string | undefined;
   readonly hue?: string | undefined;
+  /** A figure at the right of the title row (the shop's coins). */
+  readonly stat?: CompactHeader["stat"];
   readonly tabs?: readonly CompactChoice[] | undefined;
   readonly tabAction?: ((id: string) => ScreenAction) | undefined;
   /** One muted line under the tabs (desktop) or at the top of the body (phone). */
@@ -43,6 +58,8 @@ export interface PageSpec {
   readonly pickers?: readonly PickerGroup[] | undefined;
   /** Desktop chrome positions. */
   readonly desktop: Readonly<{ tabsY?: number; captionY?: number }>;
+  /** Without a sheet (the playground over its frozen arena): the overlay header on desktop, the safe frame on the phone. */
+  readonly sheet?: false | undefined;
 }
 
 export interface PageFrame {
@@ -90,6 +107,8 @@ export interface PageBody {
     top: number;
     cull: Readonly<{ above: number; below: number }>;
     scrolls?: boolean | undefined;
+    /** A list that moves by whole blocks: `snap` blocks from the one the scroll rounds to (blocks of one height). */
+    snap?: number | undefined;
     canScrollUp?: boolean | undefined;
     canScrollDown?: boolean | undefined;
   }>;
@@ -106,6 +125,8 @@ interface ProseOptions {
   readonly height?: number | undefined;
   readonly gap?: number | undefined;
   readonly box?: boolean | undefined;
+  /** Desktop: draw the line as a tag in this colour. */
+  readonly tag?: string | undefined;
 }
 
 /** A desktop button position (`x` absolute). */
@@ -142,14 +163,22 @@ export function createPageFrame(context: ScreenRenderContext) {
         title: spec.title,
         subtitle: spec.subtitle,
         hue: spec.hue,
+        stat: spec.stat,
         tabs: spec.tabs,
         tabAction: spec.tabAction,
+        trailing: spec.pickers?.find((group) => group.trailing)?.trailing,
+        sheet: spec.sheet,
       });
       if (spec.pickers) compactPage = kit.toolbar(compactPage, spec.pickers);
       const lead = spec.caption ? [kit.prose(compactPage, spec.caption, { maxLines: 2 })] : [];
       return Object.freeze({ compact: true, ...compactPage, lead, compactPage });
     }
-    const layout = page(context, { title: spec.title, subtitle: spec.subtitle, hue: spec.hue });
+    let layout: Readonly<{ bodyTop: number; bodyBottom: number }>;
+    if (spec.sheet === false) {
+      // The overlay header; the screen places its own rows (the body top is the page's).
+      ui.header(context.canvas, spec.title, spec.subtitle, context.enterAmount, spec.hue);
+      layout = { bodyTop: pageLayout(context).bodyTop, bodyBottom: ui.sheetFooter().y - ui.t.space.md };
+    } else layout = page(context, { title: spec.title, subtitle: spec.subtitle, hue: spec.hue, stat: spec.stat });
     if (spec.tabs && spec.tabAction) tabs(context, spec.tabs, spec.tabAction, spec.desktop.tabsY);
     if (spec.caption && spec.desktop.captionY !== undefined)
       ui.text(
@@ -161,8 +190,8 @@ export function createPageFrame(context: ScreenRenderContext) {
         "center",
         ui.t.alpha.muted,
       );
-    for (const group of spec.pickers ?? [])
-      chips(context, group.items, group.action, group.desktop.y, group.desktop.width, group.desktop.height);
+    for (const { items, action, desktop, trailing } of spec.pickers ?? [])
+      chips(context, items, action, { ...desktop, trailing });
     const left = context.width / 2 - DESKTOP_COLUMN / 2;
     return Object.freeze({
       compact: false,
@@ -221,9 +250,13 @@ export function createPageFrame(context: ScreenRenderContext) {
           if (control.y >= listTop && control.y + control.h <= listBottom) context.enqueue(control);
         },
       };
+      const snap = spec.desktop.snap,
+        pitch = (list[0]?.height ?? 0) + spec.gap;
+      const first =
+        snap && pitch > 0 ? Math.max(0, Math.min(list.length - snap, Math.round(context.scroll / pitch))) : 0;
       const drawList = (): void => {
-        let rowY = listTop - (scrolls ? context.scroll : 0);
-        for (const block of list) {
+        let rowY = listTop - (scrolls && !snap ? context.scroll : 0);
+        for (const block of snap ? list.slice(first, first + snap) : list) {
           if (rowY >= listTop - spec.desktop.cull.above && rowY <= listBottom - spec.desktop.cull.below)
             block.draw(rowY, view);
           rowY += block.height + spec.gap;
@@ -243,14 +276,29 @@ export function createPageFrame(context: ScreenRenderContext) {
     };
   }
 
-  /** The footer row: BACK, the scroll hint and, on desktop, the pager. */
+  /**
+   * The footer row: BACK (none with `back: null`), or `primary` in its place (the playground's
+   * RESUME), the scroll hint and, on desktop, the pager.
+   */
   function close(
     frame: PageFrame,
     state: ScrollState,
-    options: Readonly<{ back?: ScreenAction | undefined; pager?: Pager | undefined }> = {},
+    options: Readonly<{ back?: ScreenAction | null; primary?: FlowAction | undefined; pager?: Pager | undefined }> = {},
   ): void {
+    const { primary } = options,
+      metric = ui.t.metric;
+    if (primary) {
+      const y = frame.compactPage?.footerY ?? pageLayout(context).footerY,
+        x = frame.centerX - metric.backW / 2;
+      const size = ui.t.type.lead;
+      context.enqueue({ x, y, w: metric.backW, h: metric.btnH, label: primary.label, size, action: primary.action });
+    }
     if (frame.compactPage) {
       kit.footer(frame.compactPage, state, options.back);
+      return;
+    }
+    if (options.back === null) {
+      scrollHint(context, state.canScrollUp, state.canScrollDown);
       return;
     }
     const footer = pageFooter(context, { ...state, ...(options.back ? { back: options.back } : {}) });
@@ -351,8 +399,10 @@ export function createPageFrame(context: ScreenRenderContext) {
       return options.height === undefined ? undefined : { height: options.height, draw: () => undefined };
     const x = options.align === "center" ? frame.centerX : frame.left;
     if (!options.box) {
+      const { tag } = options;
       const draw = (y: number): void => {
-        ui.text(context.canvas, text, x, y + options.baseline, options.size, options.align, alpha);
+        if (tag) ui.tag(context.canvas, text, x, y + options.baseline, tag, options.align, options.size);
+        else ui.text(context.canvas, text, x, y + options.baseline, options.size, options.align, alpha);
       };
       return { height: options.height ?? 0, draw };
     }
@@ -409,6 +459,7 @@ export function createPageFrame(context: ScreenRenderContext) {
     replay,
     prose,
     actions,
+    grid: kit.grid,
     textWidth: kit.textWidth,
     lineHeight: kit.lineHeight,
     lineCount: kit.lineCount,

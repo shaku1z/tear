@@ -33,7 +33,11 @@ export interface EnvironmentCombatObjectRuntime {
   resolveCounterplay(capability: EnvironmentCounterplayTag): EnvironmentCounterplayResolution;
 }
 
-const MAX_ATTACK_IDS = 512;
+/**
+ * How many attack IDs an object remembers. They are kept in the object's own state (`damagedBy`), so a
+ * snapshot restore, or a feature changing the object's state, never forgets a hit already taken.
+ */
+export const MAX_ATTACK_IDS = 32;
 const MAX_ATTACK_ID_LENGTH = 256;
 const COUNTERPLAY_CAPABILITIES = new Set<EnvironmentCounterplayTag>(["cut", "break", "projectile-cut"]);
 
@@ -64,7 +68,7 @@ export function createEnvironmentCombatObjectRuntime(
     throw new RangeError("environment integrity must be finite and within maxIntegrity");
   assertEnvironmentCombatCapabilities(initial.kind, counterplayTags, initial.procEligible);
   let state = Object.freeze({ ...initial, counterplayTags: Object.freeze([...counterplayTags]), procEligible: false });
-  const processed = new Set<string>();
+  const processed = new Set<string>(initial.damagedBy ?? []);
   const policy: EnvironmentCombatObjectPolicy = Object.freeze({
     countsAsOrdinaryEnemy: false,
     grantsEnemyReward: false,
@@ -111,7 +115,12 @@ export function createEnvironmentCombatObjectRuntime(
       const damage = Math.min(amount, state.integrity);
       const integrity = state.integrity - damage;
       const destroyed = integrity <= 0;
-      state = Object.freeze({ ...state, integrity, state: destroyed ? "destroyed" : state.state });
+      state = Object.freeze({
+        ...state,
+        integrity,
+        state: destroyed ? "destroyed" : state.state,
+        damagedBy: Object.freeze([...processed]),
+      });
       if (events !== undefined) {
         publishEnvironmentEvent(
           events,

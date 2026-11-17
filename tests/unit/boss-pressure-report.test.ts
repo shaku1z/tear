@@ -134,8 +134,8 @@ function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): Pha
 }
 
 /**
- * Today's numbers. See the header before changing a row. The Rootbound stands still in Phases II and
- * III and lands a fraction of what Aldric and the White Hart land; its rebuild is judged on this table.
+ * Today's numbers. See the header before changing a row. The Rootbound's rebuild is judged on this table:
+ * Phases I and II are rebuilt; Phase III still mixes the new moves with the old Last Spring.
  */
 const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
   warden: [
@@ -158,10 +158,11 @@ const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
     [414, 23, 409, 0],
     [790, 22, 404, 0],
   ],
-  // Phase I and III play the move table (rootbound-moves.ts): the keeper glides, vaults and lunges, and is open after its heavy moves.
+  // Every phase plays the move table (rootbound-moves.ts): the keeper glides, vaults and lunges, and is open
+  // after its heavy moves. Phase II adds planting, the cage and the Wells; it was [0, 5, 70, 0] before its rebuild.
   rootbound: [
     [150, 14, 252, 9.1],
-    [0, 5, 70, 0],
+    [141, 11, 208, 9.1],
     [72, 12, 248, 4.6],
   ],
 };
@@ -169,17 +170,23 @@ const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
 /** Rootbound Phases I and III against the reading player: what is left once the marks are answered. */
 // Phase I: every move can be answered. Phase III: what still lands is the old Last Spring floor band,
 // which wants a platform, not a step aside; it is rebuilt with Phase III.
-const READING_PLAYER_RECORD: readonly [PhaseRow, PhaseRow] = [
+const READING_PLAYER_RECORD: Measured = [
   [44, 0, 0, 2.5],
+  [46, 0, 0, 2.4],
   [26, 10, 208, 1.9],
 ];
 
 describe("boss pressure report", { timeout: 180_000 }, () => {
   it("rootbound's move phases are answerable: a player who reads the marks takes far less", () => {
-    const measured = [measure("rootbound", 1, "reader"), measure("rootbound", 3, "reader")] as const;
+    const measured: Measured = [
+      measure("rootbound", 1, "reader"),
+      measure("rootbound", 2, "reader"),
+      measure("rootbound", 3, "reader"),
+    ];
     if (process.env.TEAR_BOSS_PRESSURE_REPORT === "1") console.log(`rootbound reader: ${JSON.stringify(measured)}`);
     expect(measured).toEqual(READING_PLAYER_RECORD);
-    expect(measured[0][2]).toBeLessThan(BOSS_PRESSURE_RECORD.rootbound[0][2] / 2);
+    for (const phase of [0, 1] as const)
+      expect(measured[phase][2]).toBeLessThan(BOSS_PRESSURE_RECORD.rootbound[phase][2] / 2);
   });
 
   it.each(BOSSES)("%s matches its recorded movement and hits against a moving player", (id) => {

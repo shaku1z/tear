@@ -108,7 +108,8 @@ describe("deterministic scripted agent hierarchy", () => {
       input = new AuthoritativeInputState(),
       sequence = new EnvelopeSequencer();
     let rounds = 0,
-      releases = 0;
+      releases = 0,
+      tether = 1;
     for (let tick = 1; tick <= 120 && rounds < 2; tick++) {
       const target = actor("close-opponent", blade.x + 40, blade.y),
         current = state(tick, [target]);
@@ -129,9 +130,12 @@ describe("deterministic scripted agent hierarchy", () => {
       clock.sim = tick / 120;
       blade.update(1 / 120, player, []);
       rounds += blade.drainWeaponEvents().filter((event) => event.type === "razorRound").length;
+      tether = Math.min(tether, blade.tetherFactor);
     }
     expect(rounds).toBe(2);
     expect(releases).toBeGreaterThan(0);
+    // Holding the trigger between rounds draws the tether in, as it does for a player.
+    expect(tether).toBeLessThan(0.9);
     expect(blade.riftChambers).toBe(config.weapons.riftlock.chambers - 2);
   });
   it("exercises slash, secondary, throw, recall, parry, navigation, jump, and dash mechanics", () => {

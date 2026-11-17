@@ -304,31 +304,46 @@ export function tabs(
   );
 }
 
+/** A desktop picker row: each item `width` x `height`, 8 px apart, centred unless `left` is given. */
+export interface ChipRow {
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly left?: number | undefined;
+  /** Plain buttons in the default type instead of chips (the Ability Lab filters). */
+  readonly buttons?: boolean | undefined;
+  /** A view control after the last chip (the codex sort), centred with the row. */
+  readonly trailing?: Readonly<{ label: string; action: ScreenAction; width: number }> | undefined;
+}
+
 export function chips(
   context: ScreenRenderContext,
   values: readonly { id: string; label: string; selected?: boolean | undefined }[],
   action: (id: string) => ScreenAction,
-  y: number,
-  width: number,
-  height: number,
-  gap = 8,
-  size?: number,
+  row: ChipRow,
 ): void {
-  if (values.length === 0) return;
-  const start = (context.width - (width * values.length + gap * (values.length - 1))) / 2;
+  const { y, width, height, trailing } = row,
+    gap = 8,
+    reserve = trailing ? trailing.width + gap * 2 : 0;
+  const start = row.left ?? (context.width - (width * values.length + gap * (values.length - 1) + reserve)) / 2;
+  const style = row.buttons ? {} : { chip: true, size: context.ui.t.type.micro };
   values.forEach((value, index) => {
+    const x = start + index * (width + gap);
     context.enqueue({
-      x: start + index * (width + gap),
+      x,
       y,
       w: width,
       h: height,
       label: value.label,
       selected: value.selected,
-      chip: true,
+      ...style,
       action: action(value.id),
-      size: size ?? context.ui.t.type.micro,
     });
   });
+  if (trailing) {
+    const x = start + values.length * (width + gap) + gap;
+    context.enqueue({ x, y, w: trailing.width, h: height, label: trailing.label, ...style, action: trailing.action });
+  }
 }
 
 /** Oracle replay-vault/feed row shared by Profile and Leaderboards. */

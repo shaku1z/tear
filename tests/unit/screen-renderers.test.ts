@@ -754,6 +754,7 @@ describe("legacy screen renderer registry", () => {
       "draft-reserve-tierup.ts",
       "pause-results.ts",
       "codex-shop.ts",
+      "codex-shop-metrics.ts",
       "profile-achievements.ts",
     ];
     const source = [
@@ -847,10 +848,12 @@ describe("legacy screen renderer registry", () => {
     });
     const buys = controls.filter((control) => control.action.type === "shop.buy");
     // 88 px rows (two-line descriptions), 14 px between categories; columns flow independently.
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "v1")?.y).toBe(243);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "b1")?.y).toBe(551);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "t1")?.y).toBe(243);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "f1")?.y).toBe(375);
+    // A category label takes the shop's fixed head (the game's sectionLabel always advances 18 px),
+    // not this test UI's 24 px advance.
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "v1")?.y).toBe(237);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "b1")?.y).toBe(539);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "t1")?.y).toBe(237);
+    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "f1")?.y).toBe(363);
   });
 
   it("models Codex guide details and rich profile/achievement surfaces without gameplay callbacks", () => {

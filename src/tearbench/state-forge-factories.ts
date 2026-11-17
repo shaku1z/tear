@@ -100,7 +100,6 @@ export function forgeRootbinderNetworkState(base: TearSdlDocumentV1): TearSdlDoc
 export function forgeRootboundGraftAnchorState(base: TearSdlDocumentV1): TearSdlDocumentV1 {
   const warning = createGraftAnchorState({
     ownerId: "enemy:1",
-    ownerPosition: { x: 800, y: 620 },
     graftType: "mercy",
     geometry: { x: 773, y: 610, w: 54, h: 90 },
     createdTick: 0,

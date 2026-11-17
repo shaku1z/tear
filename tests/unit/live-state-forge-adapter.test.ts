@@ -24,7 +24,7 @@ type Failure = "clear" | "replace" | "late" | "runtime";
 interface BossFacts {
   maxHp: number;
   graftDamageTakenMultiplier: number;
-  graftCadenceMultiplier: number;
+  graftGapMultiplier: number;
   activeGraftTypes: readonly string[];
   rootCageRequest: unknown;
   applyGraftEffects(effects: RootboundGraftEffects): void;
@@ -193,7 +193,8 @@ function fixture(includeTutorial = false) {
     });
     actor.applyGraftEffects({
       incomingDamageMultiplier: damage,
-      cadenceMultiplier: 1.15,
+      gapMultiplier: 0.6,
+      heals: false,
       activeTypes: ["bastion", "haste"],
     });
     expect(actor.startRootCage(800)).toBe(true);
@@ -434,6 +435,22 @@ describe("live State Forge adapter ownership boundary", () => {
   it("cleans outgoing actors and identities before installing intact candidate Graft and Root Cage state", () => {
     const host = fixture();
     host.facts(0.8);
+    // What the rebuilt Phase II keeps on the boss: each must come back from a snapshot as it was.
+    const gardenFacts = {
+      phaseTwoEntryHp: 321,
+      healedFraction: 0.03,
+      quietT: 1.25,
+      openingGraft: true,
+      fullGrove: true,
+      graftRegrowTick: 777,
+      graftHeals: false,
+      plantedGraftTypes: ["bastion", "haste"],
+      graftRequests: [
+        { graftType: "bastion", geometry: { shape: "aabb", x: 100, y: 200, w: 54, h: 90 } },
+        { graftType: "haste", geometry: { shape: "aabb", x: 400, y: 200, w: 54, h: 90 } },
+      ],
+    };
+    Object.assign(host.state.enemies()[0] as object, structuredClone(gardenFacts));
     host.replay.world.context.services.clock.set(0.173456789);
     const snapshot = host.capture();
     const outgoing = host.state.enemies()[0];
@@ -447,9 +464,10 @@ describe("live State Forge adapter ownership boundary", () => {
     expect(host.state.enemies()[0]).not.toBe(outgoing);
     expect(host.state.enemies()[0]).toMatchObject({
       graftDamageTakenMultiplier: 0.8,
-      graftCadenceMultiplier: 1.15,
+      graftGapMultiplier: 0.6,
       activeGraftTypes: ["bastion", "haste"],
       rootCageRequest: { sequence: 1, centerX: 800 },
+      ...gardenFacts,
     });
     expect(host.replay.world.context.services.clock.seconds()).toBe(0.173456789);
     expect(host.capture().state).toEqual(snapshot.state);

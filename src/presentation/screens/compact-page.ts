@@ -353,15 +353,16 @@ export function createCompactPage(context: ScreenRenderContext) {
     }
   }
 
-  /** Rows of equal cells: one block per row so scrolling culls whole rows. */
+  /** Rows of equal cells across `span` (the page by default), `gap` apart: one block per row so scrolling culls whole rows. */
   function grid<Item>(
-    page: CompactPage,
+    span: Readonly<{ left: number; width: number }>,
     items: readonly Item[],
     columns: number,
     rowHeight: (row: readonly Item[]) => number,
     cell: (item: Item, x: number, y: number, w: number, h: number, view: ScrollView, index: number) => void,
+    gap = ui.t.space.md,
   ): readonly ScrollBlock[] {
-    const gap = ui.t.space.md,
+    const page = span,
       w = (page.width - gap * (columns - 1)) / columns,
       blocks: ScrollBlock[] = [];
     for (let start = 0; start < items.length; start += columns) {

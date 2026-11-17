@@ -1,0 +1,52 @@
+name: Nightly checks
+
+# The nightly group of config/checks.json: slower browser journeys and scenario runs that pull
+# requests do not run. Once a day on main at an off-peak minute, or by hand with "Run workflow".
+# The result is read from the run and its check-results artifact; nothing opens issues.
+on:
+  schedule:
+    - cron: "41 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-checks
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    # The group has no complete recorded total yet; the first runs measure it. The limit is
+    # generous so a slow runner is not cut off, and a hung check still stops.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Record check results
+        shell: bash
+        run: echo "TEAR_CHECK_RESULTS=$RUNNER_TEMP/check-results/results.json" >> "$GITHUB_ENV"
+      # The group builds the test build itself; the performance journey also serves the release
+      # build, which only the build group makes.
+      - name: Release build
+        run: node scripts/build-target.mjs standalone
+      - name: Nightly checks
+        run: xvfb-run -a node scripts/run-checks.mjs nightly --keep-going
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-check-results-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/check-results/results.json
+          if-no-files-found: ignore
+          retention-days: 14
