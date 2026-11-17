@@ -11,8 +11,11 @@ Cloudflare is a publication target, not an independent source branch.
    commit, and uploads the resulting targets. Its build job builds once; the
    browser shards download that release artifact and refuse to test it unless
    its hash matches the build job's. The complete
-   `pnpm check`, including controlled-host performance evidence, runs once for
-   the final release candidate before the gate closes.
+   `pnpm check` runs once for the final release candidate before the gate
+   closes. The performance test is not part of `pnpm check`: it is in the
+   nightly group. A release candidate also needs a `pnpm check:performance`
+   run on the controlled release host. A performance report whose
+   `referenceProfile.host` is `"shared"` is not release evidence.
 3. `Validate` uploads `tear-release-targets-<sha>`: `dist/standalone` (what
    the deploy workflows publish) and the CrazyGames package. Each target
    contains `build-info.json` with the repository, full SHA, target, file
