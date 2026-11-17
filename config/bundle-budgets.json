@@ -4,6 +4,6 @@
   "workerGzipBytes": 325000,
   "tutorialGoldGzipBytes": 475000,
   "startupScriptBytes": 2300000,
-  "precacheEntries": 46,
-  "precacheBytes": 7400000
+  "precacheEntries": 36,
+  "precacheBytes": 2900000
 }
