@@ -318,6 +318,21 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
 
 /** Test builds only, with `?bossdebug=1`: loads the boss debug harness. */
 export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSources): void {
+  if (__TEAR_TEST_BUILD__) {
+    // The click targets of the latest drawn frame, as a pointer click is matched against them.
+    Object.defineProperty(sources.dependencies.browserWindow, "__TEAR_UI_TARGETS__", {
+      configurable: true,
+      value: () =>
+        sources.interaction.buttons().map((button) => ({
+          label: button.label,
+          x: button.x,
+          y: button.y,
+          w: button.w,
+          h: button.h,
+          enabled: button.enabled !== false,
+        })),
+    });
+  }
   if (__TEAR_TEST_BUILD__ && sources.browser.pantheonDebug) {
     void import("./debug-composition").then(({ installLiveGameDebug }) => {
       installBossDebug(sources, installLiveGameDebug);

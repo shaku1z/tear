@@ -136,6 +136,8 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
         return {
           app: window.__TEAR_CATALOG_DEBUG__.app.snapshot(),
           lastClicks: window.__SMOKE_CLICKS__.slice(-3),
+          // What a click is matched against on the latest drawn frame.
+          targets: window.__TEAR_UI_TARGETS__?.() ?? "not exposed",
           canvas: canvas && { x: canvas.x, y: canvas.y, w: canvas.width, h: canvas.height },
         };
       });
