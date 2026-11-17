@@ -28,16 +28,6 @@
       "kind": "type"
     },
     {
-      "from": "src/gameplay/runtime/authoritative-input.ts",
-      "to": "src/input/game-action.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/gameplay/runtime/canonical-state.ts",
-      "to": "src/tearbench/environment-codec.ts",
-      "kind": "value"
-    },
-    {
       "from": "src/ghost/application-frame-events.ts",
       "to": "src/tearbench/contracts.ts",
       "kind": "type"

@@ -319,18 +319,27 @@ function installTearBenchBridge(sources: LiveTestBuildHookSources, bridge: typeo
 /** Test builds only, with `?bossdebug=1`: loads the boss debug harness. */
 export function installLiveBossDebugWhenEnabled(sources: LiveTestBuildHookSources): void {
   if (__TEAR_TEST_BUILD__) {
-    // The click targets of the latest drawn frame, as a pointer click is matched against them.
+    // The click targets of the latest drawn frame, as a pointer click is matched against them, each
+    // with the page point of its centre (the inverse of the pointer's logical mapping).
+    const { canvas } = sources.browser;
+    const { CONFIG, OVERSCAN } = sources.dependencies;
     Object.defineProperty(sources.dependencies.browserWindow, "__TEAR_UI_TARGETS__", {
       configurable: true,
-      value: () =>
-        sources.interaction.buttons().map((button) => ({
+      value: () => {
+        const rect = canvas.getBoundingClientRect();
+        const spanWidth = CONFIG.view.w + OVERSCAN.x * 2;
+        const spanHeight = CONFIG.view.h + OVERSCAN.y * 2;
+        return sources.interaction.buttons().map((button) => ({
           label: button.label,
           x: button.x,
           y: button.y,
           w: button.w,
           h: button.h,
           enabled: button.enabled !== false,
-        })),
+          clientX: rect.left + ((button.x + button.w / 2 + OVERSCAN.x) / spanWidth) * rect.width,
+          clientY: rect.top + ((button.y + button.h / 2 + OVERSCAN.y) / spanHeight) * rect.height,
+        }));
+      },
     });
   }
   if (__TEAR_TEST_BUILD__ && sources.browser.pantheonDebug) {
