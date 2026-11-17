@@ -342,7 +342,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     const actions: { label: string; action: ScreenAction }[] = [
       { label: "RESUME", action: { type: "run.resume" } },
       ...(view.playground === true
-        ? [{ label: "PLAYGROUND MENU", action: { type: "navigate", to: "pgmenu" } as const }]
+        ? [{ label: "PLAYGROUND MENU", action: { type: "playground.action", id: "menu" } as const }]
         : [{ label: "RESTART", action: { type: "run.restart" } as const }]),
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },

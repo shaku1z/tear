@@ -237,6 +237,9 @@ export function createPlaygroundRuntimeBridge(dependencies: PlaygroundRuntimeDep
     } else if (kind === "arena") {
       selectArena(value === "" ? (Math.max(0, controller.state.arena) + 1) % arenaCount() : Number(value));
       actions.playUi();
+    } else if (kind === "menu") {
+      // Reopens the menu on the tab left open (the bridge's navigate picks the screen).
+      dependencies.navigate("pgmenu");
     } else if (kind === "tab" && isPlaygroundTab(value)) {
       tab = value;
       if (value === "abilities") actions.openLab();
