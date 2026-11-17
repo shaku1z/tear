@@ -183,6 +183,8 @@ describe("Rootbound Phase II: what a Graft does, and what cutting it does", () =
     const scene = fullGrove();
     expect(scene.boss.graftDamageTakenMultiplier).toBe(0.65);
     expect(scene.boss.graftGapMultiplier).toBe(0.6);
+    // The pause after a move that ends with all three Grafts standing.
+    scene.until(() => scene.boss.moveState.run !== null);
     scene.until(() => scene.boss.moveState.run === null && !scene.boss.exposed());
     expect(scene.boss.limitIncomingDamage(100)).toBeCloseTo(65, 8);
     expect(scene.boss.moveState.readyTick - scene.boss.moveTick).toBeLessThanOrEqual(

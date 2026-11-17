@@ -68,6 +68,12 @@ interface MutableBox {
 type MoveContext = {
   -readonly [Key in keyof BossAttackContext<RootboundPhase>]: BossAttackContext<RootboundPhase>[Key];
 };
+interface MoveScratch {
+  readonly box: MutableBox;
+  readonly target: MutableBox;
+  readonly blocked: Set<string>;
+  readonly context: MoveContext;
+}
 const NO_TELLS: readonly BossTell[] = Object.freeze([]);
 const NO_GRAFT_REQUESTS: readonly GraftAnchorPlacementRequest[] = Object.freeze([]);
 
@@ -79,6 +85,30 @@ export function createRootboundType(
 ) {
   const { CONFIG } = dependencies;
   const { bossTransformation } = bossRuntime;
+  // The boss and the player as the runner sees them: one set of objects per boss, reused every tick. Kept
+  // off the boss itself, so a saved and restored boss never carries a copy of them (or of the random source).
+  const scratchByBoss = new WeakMap<object, MoveScratch>();
+  const scratchOf = (boss: object): MoveScratch => {
+    let scratch = scratchByBoss.get(boss);
+    if (scratch === undefined) {
+      const box: MutableBox = { x: 0, y: 0, hw: 0, hh: 0 };
+      const target: MutableBox = { x: 0, y: 0, hw: 0, hh: 0 };
+      const blocked = new Set<string>();
+      const arena = { width: CONFIG.view.w, groundY: CONFIG.world.groundY };
+      const context: MoveContext = {
+        tick: 0,
+        phase: 1,
+        boss: box,
+        target,
+        arena,
+        random: dependencies.GAME_RANDOM,
+        blocked,
+      };
+      scratch = { box, target, blocked, context };
+      scratchByBoss.set(boss, scratch);
+    }
+    return scratch;
+  };
   class Rootbound extends Enemy {
     declare cfg: typeof CONFIG.boss;
     introT = 0;
@@ -98,20 +128,10 @@ export function createRootboundType(
       bossAttackSecondsToTicks(ROOTBOUND_PHASE_ONE_CADENCE.openingDelay),
     );
     moveTick = 0;
-    /** The boss and the player as the runner sees them. One context, reused every tick. */
-    private readonly bossBox: MutableBox = { x: 0, y: 0, hw: 0, hh: 0 };
-    readonly moveTarget: MutableBox = { x: 0, y: 0, hw: 0, hh: 0 };
-    /** Moves that may not start now: a Graft with nowhere to go, a cage already standing. */
-    readonly blockedMoves = new Set<string>();
-    private readonly context: MoveContext = {
-      tick: 0,
-      phase: 1,
-      boss: this.bossBox,
-      target: this.moveTarget,
-      arena: { width: CONFIG.view.w, groundY: CONFIG.world.groundY },
-      random: dependencies.GAME_RANDOM,
-      blocked: this.blockedMoves,
-    };
+    /** `blocked`: moves that may not start now (a Graft with nowhere to go, a cage already standing). */
+    private get scratch(): MoveScratch {
+      return scratchOf(this);
+    }
     private tellsFor: BossAttackRunnerState | null = null;
     private tellsUpdate = -1;
     private tellsSpring: RootboundLastSpringStage | null = null;
@@ -382,13 +402,13 @@ export function createRootboundType(
     /** The one move context, brought up to date with the boss. `updateMoves` sets the target once a tick. */
     private moveContext(): BossAttackContext<RootboundPhase> {
       const phase = this.phase;
-      this.context.tick = this.moveTick;
-      this.context.phase = phase === 3 ? 3 : phase === 2 ? 2 : 1;
-      this.bossBox.x = this.x;
-      this.bossBox.y = this.y;
-      this.bossBox.hw = this.hw;
-      this.bossBox.hh = this.hh;
-      return this.context;
+      this.scratch.context.tick = this.moveTick;
+      this.scratch.context.phase = phase === 3 ? 3 : phase === 2 ? 2 : 1;
+      this.scratch.box.x = this.x;
+      this.scratch.box.y = this.y;
+      this.scratch.box.hw = this.hw;
+      this.scratch.box.hh = this.hh;
+      return this.scratch.context;
     }
 
     /** The marks to draw now. Built once per update and move state, then handed out again. */
@@ -434,7 +454,7 @@ export function createRootboundType(
 
     /** Which moves may not start now. Changes the one set in place. */
     private refreshBlockedMoves(): void {
-      const blocked = this.blockedMoves;
+      const blocked = this.scratch.blocked;
       const opening = this.phase === 2 && this.openingGraft;
       for (const move of ROOTBOUND_MOVES.attacks) {
         if (opening && move.id !== "plant-graft") blocked.add(move.id);
@@ -448,10 +468,10 @@ export function createRootboundType(
     /** Advances the move table one tick: motion, the strike, the parry window and what the move places. */
     private updateMoves(platforms: readonly EnemyPlatform[], player: EnemyPlayerPort): void {
       this.moveTick += 1;
-      this.moveTarget.x = player.x;
-      this.moveTarget.y = player.y;
-      this.moveTarget.hw = player.hw;
-      this.moveTarget.hh = player.hh;
+      this.scratch.target.x = player.x;
+      this.scratch.target.y = player.y;
+      this.scratch.target.hw = player.hw;
+      this.scratch.target.hh = player.hh;
       this.refreshBlockedMoves();
       const result = advanceBossAttack(ROOTBOUND_MOVES, this.moveState, this.moveContext());
       this.moveState = result.state;
@@ -459,7 +479,7 @@ export function createRootboundType(
         if (event.type === "place") this.place(event.object, platforms);
         else if (event.type === "finished") this.moveFinished();
       }
-      const motion = bossAttackMotion(ROOTBOUND_MOVES, this.moveState, this.context);
+      const motion = bossAttackMotion(ROOTBOUND_MOVES, this.moveState, this.scratch.context);
       this.moveCarries = motion !== null;
       this.hidden = motion?.hidden ?? false;
       if (motion !== null) {
@@ -490,7 +510,7 @@ export function createRootboundType(
     private place(object: RootboundPlace, platforms: readonly EnemyPlatform[]): void {
       if (object === "bloom")
         this.bloomPatternIndex = (this.bloomPatternIndex + 1) % ROOTBOUND_BLOOM_PATTERN_IDS.length;
-      else if (object === "cage") this.startRootCage(this.moveState.run?.target.x ?? this.moveTarget.x);
+      else if (object === "cage") this.startRootCage(this.moveState.run?.target.x ?? this.scratch.target.x);
       else this.requestGraft(platforms);
     }
 
@@ -680,7 +700,7 @@ export function createRootboundType(
       this.fullGrove = false;
       this.openingGraft = false;
       this.rootCageRequest = null;
-      this.blockedMoves.clear();
+      this.scratch.blocked.clear();
     }
 
     private exitPhaseTwo(): void {
