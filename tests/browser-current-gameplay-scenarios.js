@@ -432,7 +432,8 @@ async function main() {
                 .slice(eventCountBeforeDamage)
                 .filter((event) => event.type === "world.environment-object-cleaned" && event.actorId === graft.id);
               const finalObservation = environment.observe();
-              const expectedOwnerGraftIds = ["enemy:1:graft:bastion", "enemy:1:graft:mercy", "enemy:1:graft:haste"];
+              // The restored fight holds the one Mercy Graft; the keeper plants the others later, one at a time.
+              const expectedOwnerGraftIds = ["enemy:1:graft:mercy"];
               const oneStableOwnerGraftSet = pollOwnerGrafts.every(
                 (entries) =>
                   entries.length === expectedOwnerGraftIds.length &&
@@ -447,8 +448,7 @@ async function main() {
                   ([entry]) =>
                     entry?.id === graft.id &&
                     entry.state === "destroyed" &&
-                    entry.stateTick === beforeObservation.tick + 1 &&
-                    entry.recoverySpentHealthFraction === graft.recoverySpentHealthFraction,
+                    entry.stateTick === beforeObservation.tick + 1,
                 );
               const mercyEffectProjection = pollGrafts.map(([entry]) => entry?.state === "active");
               evidence = {

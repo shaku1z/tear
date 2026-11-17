@@ -9,7 +9,17 @@ import {
   type ScrollState,
   type ScrollView,
 } from "./compact-page";
-import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
+import {
+  chips,
+  clipBody,
+  page,
+  pageFooter,
+  pageLayout,
+  replayRow,
+  scrollHint,
+  tabs,
+  type ChipRow,
+} from "./screen-primitives";
 
 /**
  * THE PAGE FRAME: one screen definition that lays out at both densities. A screen states its
@@ -28,8 +38,8 @@ import { chips, clipBody, page, pageFooter, replayRow, tabs } from "./screen-pri
 export interface PickerGroup {
   readonly items: readonly CompactChoice[];
   readonly action: (id: string) => ScreenAction;
-  /** Desktop chip row: centred at `y`, each chip `width` x `height`. */
-  readonly desktop: Readonly<{ y: number; width: number; height: number }>;
+  /** The desktop row (see `ChipRow`). */
+  readonly desktop: Omit<ChipRow, "trailing">;
   /** A view control (the codex sort): at the right end of the header row (phone) or of this chip row (desktop, `width` wide). */
   readonly trailing?: Readonly<{ label: string; action: ScreenAction; width: number }> | undefined;
 }
@@ -48,6 +58,8 @@ export interface PageSpec {
   readonly pickers?: readonly PickerGroup[] | undefined;
   /** Desktop chrome positions. */
   readonly desktop: Readonly<{ tabsY?: number; captionY?: number }>;
+  /** Without a sheet (the playground over its frozen arena): the overlay header on desktop, the safe frame on the phone. */
+  readonly sheet?: false | undefined;
 }
 
 export interface PageFrame {
@@ -155,12 +167,18 @@ export function createPageFrame(context: ScreenRenderContext) {
         tabs: spec.tabs,
         tabAction: spec.tabAction,
         trailing: spec.pickers?.find((group) => group.trailing)?.trailing,
+        sheet: spec.sheet,
       });
       if (spec.pickers) compactPage = kit.toolbar(compactPage, spec.pickers);
       const lead = spec.caption ? [kit.prose(compactPage, spec.caption, { maxLines: 2 })] : [];
       return Object.freeze({ compact: true, ...compactPage, lead, compactPage });
     }
-    const layout = page(context, { title: spec.title, subtitle: spec.subtitle, hue: spec.hue, stat: spec.stat });
+    let layout: Readonly<{ bodyTop: number; bodyBottom: number }>;
+    if (spec.sheet === false) {
+      // The overlay header; the screen places its own rows (the body top is the page's).
+      ui.header(context.canvas, spec.title, spec.subtitle, context.enterAmount, spec.hue);
+      layout = { bodyTop: pageLayout(context).bodyTop, bodyBottom: ui.sheetFooter().y - ui.t.space.md };
+    } else layout = page(context, { title: spec.title, subtitle: spec.subtitle, hue: spec.hue, stat: spec.stat });
     if (spec.tabs && spec.tabAction) tabs(context, spec.tabs, spec.tabAction, spec.desktop.tabsY);
     if (spec.caption && spec.desktop.captionY !== undefined)
       ui.text(
@@ -172,24 +190,8 @@ export function createPageFrame(context: ScreenRenderContext) {
         "center",
         ui.t.alpha.muted,
       );
-    for (const { items, action, desktop, trailing } of spec.pickers ?? []) {
-      const gap = 8,
-        reserve = trailing ? trailing.width + gap * 2 : 0;
-      const end = chips(context, items, action, desktop.y, desktop.width, desktop.height, gap, reserve);
-      if (trailing) {
-        const { label, width: w } = trailing;
-        context.enqueue({
-          x: end + gap,
-          y: desktop.y,
-          w,
-          h: desktop.height,
-          label,
-          chip: true,
-          action: trailing.action,
-          size: ui.t.type.micro,
-        });
-      }
-    }
+    for (const { items, action, desktop, trailing } of spec.pickers ?? [])
+      chips(context, items, action, { ...desktop, trailing });
     const left = context.width / 2 - DESKTOP_COLUMN / 2;
     return Object.freeze({
       compact: false,
@@ -274,14 +276,29 @@ export function createPageFrame(context: ScreenRenderContext) {
     };
   }
 
-  /** The footer row: BACK, the scroll hint and, on desktop, the pager. */
+  /**
+   * The footer row: BACK (none with `back: null`), or `primary` in its place (the playground's
+   * RESUME), the scroll hint and, on desktop, the pager.
+   */
   function close(
     frame: PageFrame,
     state: ScrollState,
-    options: Readonly<{ back?: ScreenAction | undefined; pager?: Pager | undefined }> = {},
+    options: Readonly<{ back?: ScreenAction | null; primary?: FlowAction | undefined; pager?: Pager | undefined }> = {},
   ): void {
+    const { primary } = options,
+      metric = ui.t.metric;
+    if (primary) {
+      const y = frame.compactPage?.footerY ?? pageLayout(context).footerY,
+        x = frame.centerX - metric.backW / 2;
+      const size = ui.t.type.lead;
+      context.enqueue({ x, y, w: metric.backW, h: metric.btnH, label: primary.label, size, action: primary.action });
+    }
     if (frame.compactPage) {
       kit.footer(frame.compactPage, state, options.back);
+      return;
+    }
+    if (options.back === null) {
+      scrollHint(context, state.canScrollUp, state.canScrollDown);
       return;
     }
     const footer = pageFooter(context, { ...state, ...(options.back ? { back: options.back } : {}) });

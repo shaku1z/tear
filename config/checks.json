@@ -433,6 +433,16 @@
         "run": "node tests/browser-performance.js"
       },
       {
+        "id": "watch-agent-weapon-matrix",
+        "run": "node tests/browser-scripted-agent-matrix.js",
+        "seconds": 224
+      },
+      {
+        "id": "watch-agent-repeatability",
+        "run": "node tests/browser-scripted-agent-repeatability.js",
+        "seconds": 252
+      },
+      {
         "id": "state-forge-runtime",
         "run": "node tests/browser-state-forge-runtime.js"
       },

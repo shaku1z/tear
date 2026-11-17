@@ -548,10 +548,10 @@ describe("authored boss phase practice", () => {
         if (bossId === "aldric" && phase === 3)
           expect(world.boss).toMatchObject({ mode: "downed", witnessEarned: false, crownWorn: false, faked: false });
         if (bossId === "rootbound" && phase === 2)
-          expect(world.boss).toMatchObject({ activeGraftTypes: [...GRAFT_ANCHOR_TYPES] });
+          expect(world.boss).toMatchObject({ activeGraftTypes: [GRAFT_ANCHOR_TYPES[0]] });
         if (bossId === "rootbound" && phase === 3) {
           expect(world.boss).toMatchObject({
-            finalPhaseTwoGraftTypes: [...GRAFT_ANCHOR_TYPES],
+            finalPhaseTwoGraftTypes: [GRAFT_ANCHOR_TYPES[0]],
             regrowthState: { phase: "channeling" },
             lastSpringUseCount: 0,
           });
