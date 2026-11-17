@@ -88,6 +88,7 @@ test("specifiers resolve like the bundler and keep unresolved candidates for pla
   const available = new Set(["src/a/b.ts", "src/a/c/index.ts", "src/data.json"]);
   assert.equal(resolveSpecifier("src/x/y.ts", "../a/b", available).target, "src/a/b.ts");
   assert.equal(resolveSpecifier("src/x/y.ts", "../a/b.js", available).target, "src/a/b.ts");
+  assert.equal(resolveSpecifier("src/x/y.ts", "../a/b.ts?worker&url", available).target, "src/a/b.ts");
   assert.equal(resolveSpecifier("src/x/y.ts", "../a/c", available).target, "src/a/c/index.ts");
   assert.equal(resolveSpecifier("src/x/y.ts", "../data.json", available).target, "src/data.json");
   assert.deepEqual(resolveSpecifier("src/x/y.ts", "../remote/config", available), {

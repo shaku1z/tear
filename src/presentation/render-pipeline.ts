@@ -1,5 +1,10 @@
 import { isWorldScreen, screenResetsScrollOnEnter } from "../domain/screen-catalog";
 
+/** The phone rotate gate shows on a touch device whose canvas is taller than wide. The one source for that rule. */
+export function rotateGateShown(touchActive: boolean, clientWidth: number, clientHeight: number): boolean {
+  return touchActive && clientHeight > clientWidth;
+}
+
 export interface ScreenRectangle {
   readonly x: number;
   readonly y: number;
@@ -88,7 +93,8 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
   ports.drawPostLayers();
   if (ports.showCanvasCursor()) ports.drawCursor();
   ports.drawControllerToast();
-  if (ports.touchActive() && ports.canvas.clientHeight > ports.canvas.clientWidth) ports.drawRotationGate();
+  if (rotateGateShown(ports.touchActive(), ports.canvas.clientWidth, ports.canvas.clientHeight))
+    ports.drawRotationGate();
   if (screen !== ports.previousScreen()) {
     ports.setPreviousScreen(screen);
     ports.setFocus(ports.firstEnabledButton());
