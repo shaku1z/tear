@@ -1,5 +1,6 @@
 import type { CommandEnvelope } from "../../domain/envelopes";
-import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE, type GameAction } from "../../input/game-action";
+import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE } from "../../domain/input-scales";
+import type { GameAction } from "../../input/game-action";
 
 export interface AuthoritativeInputSnapshot {
   readonly tick: number;

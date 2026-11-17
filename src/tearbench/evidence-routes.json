@@ -320,6 +320,7 @@
     "reducedDisposition": "engineering-only-codec",
     "prefixes": [
       "src/tearbench/environment-codec.ts",
+      "src/gameplay/environment/environment-projection.ts",
       "src/tearbench/state-codecs.ts",
       "src/tearbench/contracts.ts",
       "src/tearbench/invariants.ts",
