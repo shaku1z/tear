@@ -371,8 +371,7 @@ describe("legacy world presentation renderers", () => {
     const ui = new TestUi();
     const renderers = createWorldRenderers(renderContext(canvasCalls, ui));
     renderers.tutorialCard({
-      lessonIndex: 1,
-      lessonCount: 5,
+      context: "LESSON 2 OF 5",
       title: "DASH THROUGH",
       description: "Avoid damage.",
       keys: ["SHIFT", "SPACE"],
@@ -426,7 +425,7 @@ describe("legacy world presentation renderers", () => {
         "2 / 3",
         "SHIFT",
         "SPACE",
-        "BLOCK 2 / 5",
+        "LESSON 2 OF 5",
         "✓",
         "PLAYGROUND",
         "E build menu  ·  U ability lab",
@@ -440,12 +439,11 @@ describe("legacy world presentation renderers", () => {
     );
   });
 
-  it("stacks the tutorial card so keys, dots and the progress bar never share a row", () => {
+  it("stacks the tutorial card so the goal, the progress bar and the keys never share a row", () => {
     const ui = new TestUi(),
       calls: CanvasCall[] = [];
     createWorldRenderers(renderContext(calls, ui)).tutorialCard({
-      lessonIndex: 2,
-      lessonCount: 14,
+      context: "LESSON 2 OF 13",
       title: "JUMP",
       description: "Jump three times. Use the ledges to climb.",
       keys: ["W", "SPACE"],
@@ -458,10 +456,8 @@ describe("legacy world presentation renderers", () => {
     );
     const description = ui.calls.find((call) => call.name === "textBox")?.arguments[1] as { y: number };
     const bar = calls.find((call) => call.name === "fillRect" && call.arguments[3] === 5);
-    const dots = calls.filter((call) => call.name === "arc").map((call) => Number(call.arguments[1]));
     expect(Number(bar?.arguments[1])).toBeGreaterThan(description.y);
     expect(keyY).toBeGreaterThan(Number(bar?.arguments[1]) + 5 + 13);
-    expect(Math.min(...dots)).toBeGreaterThan(keyY);
   });
 
   it("keeps the tutorial card clear of the centered style meter", () => {
@@ -484,8 +480,7 @@ describe("legacy world presentation renderers", () => {
       const context = { ...base, safe: { ...base.safe, top } };
       const card = createWorldRenderers(context).tutorialCard({
         bossPractice: true,
-        lessonIndex: 0,
-        lessonCount: 1,
+        context: "BOSS PRACTICE · NO REWARDS",
         title: "ROOTBOUND · PHASE 2",
         description: "Read the boss recovery.",
         keys: [],

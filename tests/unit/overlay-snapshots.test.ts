@@ -7,9 +7,12 @@ import {
 
 describe("world overlay snapshots", () => {
   it("normalizes tutorial progress and wave fractions", () => {
-    expect(buildTutorialCardSnapshot(1, 4, { t: "CUT", d: "swing", prog: () => [2, 3] }, 0).progress).toEqual({
-      current: 2,
-      goal: 3,
+    const cut = { context: "LESSON 4 OF 13", title: "CUT", goal: "Land six cuts.", final: false };
+    expect(buildTutorialCardSnapshot(cut, ["MOUSE"], [2, 3], 0).progress).toEqual({ current: 2, goal: 3 });
+    expect(buildTutorialCardSnapshot({ ...cut, final: true }, [], [2, 3], 0).progress).toBeUndefined();
+    expect(buildTutorialCardSnapshot(cut, [], undefined, 0)).toMatchObject({
+      context: "LESSON 4 OF 13",
+      description: "Land six cuts.",
     });
     expect(
       buildWaveBannerSnapshot({

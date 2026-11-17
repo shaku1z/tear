@@ -49,6 +49,7 @@
         "src/gameplay/training/practice-boss-catalog.ts",
         "src/gameplay/training/practice-enemy-catalog.ts",
         "src/gameplay/training/runtime-bridge.ts",
+        "src/gameplay/training/training-exercises.ts",
         "src/gameplay/training/tutorial-arenas.ts",
         "src/gameplay/training/tutorial-contract.ts",
         "src/gameplay/training/tutorial-controller.ts",
