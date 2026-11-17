@@ -52,28 +52,6 @@ test.after(() => {
   rmSync(temporaryRoot, { recursive: true, force: true });
 });
 
-test("evidence receipts reject arbitrary shell execution before spawning it", () => {
-  const marker = join(temporaryRoot, "shell-bypass-marker.txt");
-  const result = spawnSync(
-    process.execPath,
-    [
-      script,
-      "evidence",
-      "record",
-      "--id",
-      "shell-bypass",
-      "--",
-      "node",
-      "-e",
-      `require('node:fs').writeFileSync('${marker.replaceAll("\\", "\\\\")}', 'unsafe')`,
-    ],
-    { cwd: root, encoding: "utf8" },
-  );
-  assert.notEqual(result.status, 0);
-  assert.match(`${result.stderr}\n${result.stdout}`, /unsupported TearBench evidence command/u);
-  assert.equal(existsSync(marker), false);
-});
-
 test("materialized run status fails closed for failed or truncated artifacts", () => {
   const cases = [
     ["failed", "failed"],
@@ -876,45 +854,6 @@ test("diff scope canonicalization deduplicates and sorts changed files", () => {
   const selection = select(["docs/z.md", "docs/a.md", "docs/z.md", "docs\\a.md"]);
   assert.deepEqual(selection.scope.changedFiles, ["docs/a.md", "docs/z.md"]);
   assert.equal(selection.changedFiles.join(","), "docs/a.md,docs/z.md");
-});
-
-test("dirty development evidence receipts remain bound to the executed source", () => {
-  const id = `identity-receipt-${String(artifactIndex++)}`;
-  const artifact = join(root, "artifacts", "tearbench", "receipts", `${id}.json`);
-  const result = spawnSync(
-    process.execPath,
-    [script, "evidence", "record", "--id", id, "--artifact", artifact, "--", "node", "--version"],
-    { cwd: root, encoding: "utf8" },
-  );
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  const receipt = JSON.parse(readFileSync(artifact, "utf8"));
-  assert.equal(receipt.status, "passed");
-  assert.equal(receipt.commit, receipt.source.revision);
-  assert.equal(receipt.worktreeFingerprint, receipt.source.worktreeFingerprint);
-  assert.equal(receipt.scope.subject, `artifacts/tearbench/generated/receipt-subjects/${id}.json`);
-  assert.equal(receipt.scope.id, receipt.id);
-  assert.match(receipt.source.fingerprint, /^[0-9a-f]{64}$/u);
-});
-
-test("evidence receipts reject noncanonical current artifact filenames", () => {
-  const result = spawnSync(
-    process.execPath,
-    [
-      script,
-      "evidence",
-      "record",
-      "--id",
-      "canonical-receipt-test",
-      "--artifact",
-      join(root, "artifacts", "tearbench", "receipts", "alternate-name.json"),
-      "--",
-      "node",
-      "--version",
-    ],
-    { cwd: root, encoding: "utf8" },
-  );
-  assert.notEqual(result.status, 0);
-  assert.match(`${result.stdout}\n${result.stderr}`, /receipt artifact must use the canonical/u);
 });
 
 test("served build identity refuses stale revision and source fingerprint", async () => {

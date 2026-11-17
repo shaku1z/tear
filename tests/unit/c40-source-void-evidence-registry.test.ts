@@ -50,7 +50,6 @@ describe("C40 Source one-HP void rescue seek evidence registry", () => {
         "tests/unit/c40-source-void-evidence-registry.test.ts",
       ],
       scenarios: ["source-void-low-hp-rescue-seek"],
-      graveyardCases: [],
       journeyCheckpoint: "source-void-low-hp-rescue-seek-engineering-proof",
       baseComparison: "not-run-by-this-scenario",
       interactionMatrices: ["browser"],

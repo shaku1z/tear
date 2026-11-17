@@ -53,9 +53,9 @@ governs *how* to work, while the documents below define *what* to build.
 
 Mandatory reading order:
 
-1. [`docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md`](../docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md) — complete product intent and rationale.
+1. `docs/source/TEAR_AUTONOMOUS_PLAYTESTING_AND_AGENT_SKILL_PLAN.v0.6.md` — removed by D-015; it remains in git history.
 2. `artifacts/tearbench/requirements/TEARBENCH_GHOST3_NON_LOSSY_REQUIREMENTS_ANNEX.md` — generated human view (`pnpm requirements:generate`); never hand-edit it.
-3. `artifacts/tearbench/requirements/tearbench-ghost3-requirements.json` — authoritative atomic registry, generated; its digest is tracked in [`docs/tearbench-ghost3-requirements.digest.json`](../docs/tearbench-ghost3-requirements.digest.json).
+3. `artifacts/tearbench/requirements/tearbench-ghost3-requirements.json` — authoritative atomic registry, generated; its generator and digest were removed by D-015.
 4. [`plans/TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md`](TEARBENCH_GHOST3_AUTONOMOUS_COMPLETION_PLAN.md) — current C21-C40 order, dependencies, deliverables, and gates.
 5. [`docs/TEARBENCH_GHOST3_PROGRAM.md`](../docs/TEARBENCH_GHOST3_PROGRAM.md) — authority hierarchy and interpretation.
 6. [`docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md`](../docs/TEARBENCH_GHOST3_CAPABILITY_DASHBOARD.md) and [`docs/tearbench-ghost3-evidence-catalog.json`](../docs/tearbench-ghost3-evidence-catalog.json) — conservative evidence state.

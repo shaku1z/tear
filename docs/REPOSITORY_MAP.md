@@ -75,7 +75,7 @@ re-run the command instead of editing the output.
 | --- | --- |
 | `node_modules/` | Installed dependencies (`pnpm install --frozen-lockfile`). |
 | `dist/` | Build outputs (`pnpm build`, `pnpm build:test:standalone`). |
-| `artifacts/` | Generated evidence, packages and TearBench outputs, including the full requirements annex (`pnpm requirements:generate`). |
+| `artifacts/` | Generated evidence, packages and TearBench outputs. |
 | `coverage/`, `test-results/`, `playwright-report/` | Test tool outputs. |
 
 ## Size caps
