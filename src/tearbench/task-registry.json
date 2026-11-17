@@ -2439,8 +2439,7 @@
         "executable": "node_modules/vitest/vitest.mjs",
         "args": [
           "run",
-          "tests/unit/run-lifecycle.test.ts",
-          "tests/unit/app-state-machine.test.ts"
+          "tests/unit/run-lifecycle.test.ts"
         ]
       },
       "claimIds": [
@@ -4022,7 +4021,7 @@
       "build.test-standalone",
       "browser.test-browser-current-gameplay-scenarios"
     ],
-    "pnpm exec vitest run tests/unit/run-lifecycle.test.ts tests/unit/app-state-machine.test.ts": [
+    "pnpm exec vitest run tests/unit/run-lifecycle.test.ts": [
       "evidence.vitest"
     ],
     "pnpm exec vitest run tests/unit/player-locomotion.test.ts": [

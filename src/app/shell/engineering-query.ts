@@ -1,6 +1,6 @@
 import type { SurfaceAvailability } from "../../domain/surface-availability";
 
-/** Engineering query parameters (`?test`, `?stemcue`, `?foundryPreview`, surface routes, ...). */
+/** Engineering query parameters (`?test`, `?stemcue`, surface routes, ...). */
 export interface EngineeringQuery {
   /** The admitted query string; empty in the release channel. */
   readonly search: string;
