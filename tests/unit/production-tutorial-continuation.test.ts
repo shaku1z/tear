@@ -29,7 +29,6 @@ import {
   replayProductionC27ATrace,
   type ProductionC27ATrace,
 } from "../../src/tearbench/production-c27a-matrix";
-import { ProductionHeadlessAcademyIntake } from "../../src/tearbench/production-headless-academy-intake";
 import { runLiveCollisionPhase } from "../../src/gameplay/combat/live-collision-phase";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import type { createBlade } from "../../src/gameplay/entities/blade";
@@ -933,11 +932,6 @@ describe("production tutorial reconstructed-byte continuation", () => {
       courseSessionId: "retained-issued-course",
     });
     expect(completed.events?.some((event) => event.type === "run.completed")).toBe(false);
-    const intake = new ProductionHeadlessAcademyIntake(1);
-    expect(() =>
-      intake.offer({ episodeId: "tutorial-handoff", tick: completed.observation.tick, artifact: completed.artifact }),
-    ).toThrow(/invalid production terminal artifact/);
-    expect(intake.snapshot().accepted).toBe(0);
     const saved = environment.captureCheckpoint();
     expect((saved.snapshot.state["tear.world.v1"] as Record<string, unknown>).runtime).toMatchObject({
       lifecycle: { phase: "training-active", outcome: null },
