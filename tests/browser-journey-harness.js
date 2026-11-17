@@ -13,12 +13,6 @@ const {
   watchForStalls,
 } = require("./browser-waits");
 
-/**
- * Where a journey parks the pointer so the held blade hangs straight down from a player standing
- * at x 320 (the practice start): below the floor line, away from both enemy spawn bands.
- */
-const BLADE_REST_POINT = Object.freeze({ x: 320, y: 890 });
-
 function contentType(file) {
   if (file.endsWith(".js")) return "text/javascript";
   if (file.endsWith(".html")) return "text/html";
@@ -314,13 +308,14 @@ async function withJourney(options, run) {
       const point = await labelPoint(label);
       await clickAndWait(point.x, point.y, screen);
     }
-    // The held blade follows the pointer, and a click on a canvas control leaves the pointer
-    // on that control: when play resumes, the blade sweeps from where it was to the control and
-    // can strike whatever appears on the way (a restarted practice opponent spawning beside the
-    // player). These two helpers keep the blade still and pointed away from the arena floor.
-    /** Points the blade at `rest` and waits until it is held, not swinging, and slower than 30 px/s. */
-    async function restBlade(rest = BLADE_REST_POINT) {
-      await page.mouse.move(rest.x, rest.y, { steps: 4 });
+    // The held blade aims at the pointer. A pointer that moves while the game is paused (to reach
+    // a pause-menu control) makes the blade swing to it on the first frames of play, fast enough to
+    // strike whatever is there; the click itself never reaches gameplay. A journey that resumes
+    // beside something it must not touch first rests the blade aimed at the control it will click,
+    // then clicks there without moving: a blade below CONFIG.blade.minHitSpeed deals no damage.
+    /** Points the blade at `point` (CSS pixels) and waits until it is held, not swinging, and slower than 30 px/s. */
+    async function restBlade(point) {
+      await page.mouse.move(point.x, point.y, { steps: 4 });
       await page.waitForFunction(
         () => {
           const blade = window.__TEAR_RUNTIME_ENVIRONMENT__
@@ -331,26 +326,6 @@ async function withJourney(options, run) {
         undefined,
         { timeout: STATE_WAIT_MS },
       );
-    }
-    /**
-     * Clicks the control at (`x`, `y`) and moves the pointer back to `rest` in the same page task,
-     * so the game's next frame already aims at `rest`. A bare click event (no mousedown) is what a
-     * menu control reads, and it does not also queue a swing. Rest the blade first (`restBlade`).
-     */
-    async function clickAtRest(x, y, screen, rest = BLADE_REST_POINT) {
-      await page.evaluate(
-        ({ point, back }) => {
-          const canvas = document.querySelector("canvas");
-          const event = (type, at) =>
-            new MouseEvent(type, { bubbles: true, cancelable: true, clientX: at.x, clientY: at.y, button: 0 });
-          canvas.dispatchEvent(event("mousemove", point));
-          canvas.dispatchEvent(event("click", point));
-          canvas.dispatchEvent(event("mousemove", back));
-        },
-        { point: { x, y }, back: rest },
-      );
-      await page.mouse.move(rest.x, rest.y);
-      await waitScreen(screen);
     }
     /** Centre of the drawn card whose key badge reads `number`: the smallest outlined frame around the badge. */
     async function cardCentre(number) {
@@ -424,7 +399,6 @@ async function withJourney(options, run) {
           cardCentre,
           clickCard,
           restBlade,
-          clickAtRest,
         }),
         overLimit,
       ]);
@@ -486,4 +460,4 @@ async function waitForBrowserValue(
   }
 }
 
-module.exports = { withJourney, waitForBrowserValue, BLADE_REST_POINT };
+module.exports = { withJourney, waitForBrowserValue };
