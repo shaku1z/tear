@@ -132,7 +132,7 @@
       },
       {
         "id": "node-tests",
-        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/workspace-check.test.mjs tests/parent-layout.test.mjs tests/artifact-retention.test.mjs tests/artifact-disposition.test.mjs tests/workspace-recovery-report.test.mjs tests/workspace-recovery-second-wave.test.mjs tests/deferred-workspace-dependency.test.mjs tests/preserved-copy-comparison.test.mjs tests/remaining-workspace-inventory.test.mjs tests/workspace-quarantine.test.mjs tests/workspace-preservation-quarantine.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs tests/tearbench-performance-sample.test.mjs tests/tearbench-client-mission.test.mjs tests/tearbench-task-execution.test.mjs tests/tearbench-task-receipts.test.mjs tests/tearbench-resource-leases.test.mjs",
+        "run": "node --test --test-concurrency=1 tests/release-preflight.test.mjs tests/tutorial-gold-fingerprint.test.mjs tests/parity/parity-diff.test.mjs tests/docs-authority-checker.test.mjs tests/workspace-check.test.mjs tests/parent-layout.test.mjs tests/artifact-retention.test.mjs tests/artifact-disposition.test.mjs tests/workspace-recovery-report.test.mjs tests/workspace-recovery-second-wave.test.mjs tests/deferred-workspace-dependency.test.mjs tests/preserved-copy-comparison.test.mjs tests/remaining-workspace-inventory.test.mjs tests/workspace-quarantine.test.mjs tests/workspace-preservation-quarantine.test.mjs tests/serve-contract.test.mjs tests/code-budget.test.mjs tests/source-architecture.test.mjs tests/tearbench-evidence-selection.test.mjs",
         "seconds": 60
       }
     ],
@@ -452,6 +452,11 @@
         "id": "replay-file-round-trip",
         "run": "node tests/browser-c39-normal-capsule-roundtrip.js",
         "seconds": 43
+      },
+      {
+        "id": "vault-library",
+        "run": "node tests/browser-ghost-vault-library.js",
+        "seconds": 16
       },
       {
         "id": "pale-aurora-track",
