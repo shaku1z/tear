@@ -1,4 +1,5 @@
 import type { EnvironmentSnapshot } from "../gameplay/environment/environment-contracts";
+import { MAX_ATTACK_IDS } from "../gameplay/environment/combat-object-runtime";
 import { ENVIRONMENT_OBJECT_KIND_IDS } from "../gameplay/environment/environment-object-kinds";
 import { environmentObjectDefinition, isEnvironmentObjectKind } from "../gameplay/environment/environment-definitions";
 import type { TearEnvironmentObservationV1 } from "./contracts";
@@ -236,6 +237,13 @@ export function validateEnvironmentCodecPayload(
           }
         }
         if (!text(entry.damageDedupeId)) issues.push(issue(`${path}.damageDedupeId`, "damageDedupeId is required"));
+        if (
+          entry.damagedBy !== undefined &&
+          (!Array.isArray(entry.damagedBy) ||
+            entry.damagedBy.length > MAX_ATTACK_IDS ||
+            entry.damagedBy.some((attack) => !text(attack)))
+        )
+          issues.push(issue(`${path}.damagedBy`, "damagedBy must be a bounded string array"));
         if (entry.procEligible !== false)
           issues.push(issue(`${path}.procEligible`, "environment combat objects cannot be ordinary-proc eligible"));
         for (const validator of validators) issues.push(...(validator.validateCombatObject?.(entry, path) ?? []));
