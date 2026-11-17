@@ -4,7 +4,27 @@ import { createStandaloneCloud } from "../platform/standalone-cloud";
 import { PwaUpdateController } from "../platform/pwa-update";
 import { browserIndexedDbForTestStorage } from "./test-browser-storage";
 
-const pwaUpdate = new PwaUpdateController();
+/** Reading sessionStorage can throw (blocked site data, some embedded frames). */
+function browserSessionStorage(): Storage | null {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+const pwaUpdate = new PwaUpdateController({
+  buildId: __TEAR_BUILD_REVISION__,
+  storage: browserSessionStorage(),
+  setInterval: (callback, ms) => window.setInterval(callback, ms),
+  clearInterval: (handle) => {
+    window.clearInterval(handle as number);
+  },
+  onFirstInput: (callback) => {
+    for (const type of ["pointerdown", "keydown", "touchstart"])
+      window.addEventListener(type, callback, { once: true, capture: true });
+  },
+});
 
 void bootstrapTear("standalone", async ({ surfaces, engineeringQuery }) => {
   const { composeTearApplication } = await import("../app/shell/composition");
