@@ -364,6 +364,72 @@ async function aimStaysWithTheDeviceThatLastAimed(browser, configure) {
   await page.close();
 }
 
+/**
+ * The touch aim stick (src/input/touch-aim-stick.ts): a thumb that lands again after a jump or a
+ * dash keeps the blade's aim until it moves past the dead zone, and the stick is drawn where the
+ * thumb landed, at its real reach, not at a fixed pad.
+ */
+async function aimStickKeepsItsAimAndIsDrawnWhereItAims(browser, configure) {
+  const page = await browser.newPage({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
+  await configure(page);
+  await page.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  const touch = (type, x, y) =>
+    page.evaluate(
+      ([kind, clientX, clientY]) => {
+        const canvas = document.querySelector("canvas");
+        const point = new Touch({ identifier: 41, target: canvas, clientX, clientY, pageX: clientX, pageY: clientY });
+        canvas.dispatchEvent(
+          new TouchEvent(kind, {
+            bubbles: true,
+            cancelable: true,
+            touches: kind === "touchend" ? [] : [point],
+            changedTouches: [point],
+          }),
+        );
+      },
+      [type, x, y],
+    );
+  const aim = () => page.evaluate(() => window.__PANTHEON_TEST.state().bladeAim);
+  const stick = () => page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().aimStick);
+  const aimUp = () =>
+    page.waitForFunction(() => window.__PANTHEON_TEST.state().bladeAim?.y < -40, undefined, {
+      timeout: STATE_WAIT_MS,
+    });
+
+  await touch("touchstart", 600, 200);
+  const first = await stick();
+  assert.ok(first, "a finger on the aim side holds the aim stick");
+  assert.equal(first.aim, null, "a thumb that has not moved does not aim yet");
+  await touch("touchmove", 600, 140);
+  await touch("touchmove", 600, 70);
+  await aimUp();
+  const pushed = await stick();
+  assert.ok(pushed.aim.y < -0.9, `a thumb pushed its full reach aims fully (deflection ${pushed.aim.y})`);
+  await touch("touchend", 600, 70);
+  await page.waitForTimeout(notWithin(300));
+  assert.ok((await aim()).y < -40, "a lifted thumb leaves the aim where it was");
+
+  // The thumb lands again somewhere else, as it does after a jump: the blade keeps its aim.
+  await touch("touchstart", 700, 200);
+  await touch("touchmove", 704, 203);
+  await page.waitForTimeout(notWithin(400));
+  const landed = await aim();
+  assert.ok(landed.y < -40, `a thumb landing again does not drop the blade onto the hand (aim y ${landed.y})`);
+  // Drawn where it aims: the second anchor sits 100 CSS px right of the first, and the ring's
+  // radius is the stick's reach (130 CSS px) at the same scale.
+  const second = await stick();
+  const cssStep = second.x - first.x;
+  assert.ok(cssStep > 0 && Math.abs(second.y - first.y) < 0.5, "the stick is anchored where the thumb landed");
+  assert.ok(Math.abs(second.r / cssStep - 1.3) < 0.01, `the ring is as wide as the stick's reach (${second.r})`);
+  await touch("touchmove", 790, 203);
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().bladeAim?.x > 40, undefined, {
+    timeout: STATE_WAIT_MS,
+  });
+  await touch("touchend", 790, 203);
+  await page.close();
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_INPUT_TEST_PORT || 8128);
@@ -687,6 +753,7 @@ async function main() {
   await firstTapLandsOnTheControlsThePlayerSaw(browser, configure);
   await chapterOpeningCarriesThroughOnEveryDevice(browser, configure);
   await aimStaysWithTheDeviceThatLastAimed(browser, configure);
+  await aimStickKeepsItsAimAndIsDrawnWhereItAims(browser, configure);
 
   await browser.close();
   await new Promise((resolve) => server.close(resolve));

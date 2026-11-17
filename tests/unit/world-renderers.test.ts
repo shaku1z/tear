@@ -6,6 +6,7 @@ import {
   createWorldRenderers,
   type EnemyStatusSnapshot,
   type HudSnapshot,
+  type TouchControlsSnapshot,
   type WorldRenderContext,
   type WorldRect,
   type WorldUiPort,
@@ -399,8 +400,9 @@ describe("legacy world presentation renderers", () => {
     });
     renderers.touchControls({
       joystick: { active: true, anchorX: 200, anchorY: 700, dx: 30, dy: -10, radius: 92, homeX: 160, homeY: 760 },
-      aim: { x: 0.5, y: -0.25 },
+      aimStick: { x: 1250, y: 520, r: 110, aim: { x: 0.5, y: -0.25 } },
       aimPad: { x: 1300, y: 600, r: 60 },
+      aimMode: "stick",
       buttons: [{ x: 1400, y: 700, radius: 44, label: "JUMP", held: true, prominent: true }],
       onboardingAlpha: 1,
     });
@@ -431,12 +433,39 @@ describe("legacy world presentation renderers", () => {
         "E build menu  ·  U ability lab",
         "JUMP",
         "◉ MOVE",
-        "DRAG TO AIM & SWING ↷",
+        "PUSH TO AIM & SWING ↷",
         "UNLOCKED · RARE",
         "◆ +5  +20c",
         "A SHARP BEGINNING",
       ]),
     );
+  });
+
+  it("draws the aim stick where the thumb landed, at its reach, and words the coaching for the aim mode", () => {
+    const touch = (overrides: Partial<TouchControlsSnapshot>) => {
+      const calls: CanvasCall[] = [],
+        ui = new TestUi();
+      createWorldRenderers(renderContext(calls, ui)).touchControls({
+        joystick: { active: false, anchorX: 160, anchorY: 760, dx: 0, dy: 0, radius: 92, homeX: 160, homeY: 760 },
+        aimPad: { x: 1300, y: 600, r: 60 },
+        aimMode: "stick",
+        buttons: [],
+        onboardingAlpha: 0,
+        ...overrides,
+      });
+      const arcs = calls.filter((call) => call.name === "arc").map((call) => call.arguments.slice(0, 3));
+      const text = ui.calls.flatMap((call) => call.arguments.filter((value) => typeof value === "string"));
+      return { arcs, text };
+    };
+    const held = touch({ aimStick: { x: 1100, y: 450, r: 120, aim: { x: 1, y: 0 } } });
+    expect(held.arcs).toContainEqual([1100, 450, 120]);
+    expect(held.arcs).toContainEqual([1220, 450, 60 * 0.34]);
+    expect(held.arcs.some(([x, y]) => x === 1300 && y === 600)).toBe(false);
+    const resting = touch({ aimStick: { x: 1100, y: 450, r: 120, aim: null } });
+    expect(resting.arcs).toContainEqual([1100, 450, 60 * 0.34]);
+    expect(touch({ onboardingAlpha: 1 }).text).toContain("PUSH TO AIM & SWING ↷");
+    expect(touch({ onboardingAlpha: 1, aimMode: "drag" }).text).toContain("DRAG TO AIM & SWING ↷");
+    expect(touch({ onboardingAlpha: 1, aimMode: "drag" }).arcs.some(([x, y]) => x === 1300 && y === 600)).toBe(false);
   });
 
   it("stacks the tutorial card so the goal, the progress bar and the keys never share a row", () => {

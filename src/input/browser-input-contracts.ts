@@ -153,6 +153,12 @@ export interface BrowserInput {
   aimDevice: AimDevice | null;
   touchAimMode: TouchAimMode;
   stickAim: Point | null;
+  /**
+   * The radial aim stick a finger is holding, in logical pixels: where the thumb
+   * landed, its full reach and its deflection (`null` until it leaves the dead
+   * zone). `null` with no aim finger down or in drag mode.
+   */
+  aimStickView(): Readonly<{ x: number; y: number; r: number; aim: Point | null }> | null;
   uiMode: boolean;
   tJump: boolean;
   tDash: boolean;

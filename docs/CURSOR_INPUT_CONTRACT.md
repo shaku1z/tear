@@ -67,6 +67,12 @@ a stick or finger lets go, the aim holds where it was left. Releasing a device n
 to another device resting somewhere else; only the next device to aim takes it. The rule is
 `aimFollowsDevices` in `src/domain/pointer-ownership.ts`.
 
+The touch aim stick (`src/input/touch-aim-stick.ts`) is anchored where the thumb lands. A thumb
+that lands again, for example after a jump or a dash, keeps the aim the blade already had until it
+moves past the dead zone; only then does the stick read from the new anchor. The touch overlay
+draws the ring at that anchor with the stick's real reach (`aimStickView`), so the stick on screen
+is the stick that aims.
+
 ## Coordinate pipeline
 
 Browser points are transformed once through `mapClientPointerToLogical`:

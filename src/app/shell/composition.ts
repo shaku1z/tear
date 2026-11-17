@@ -526,6 +526,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
           pointer: { x: Input.mouseX, y: Input.mouseY },
           ownedPointer: Input.pointer(),
           touchLayout: Input.touchActive(),
+          aimStick: Input.aimStickView(),
           ui: { ...Input.ui },
         }),
       }),
