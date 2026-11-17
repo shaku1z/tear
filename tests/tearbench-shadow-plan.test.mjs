@@ -53,7 +53,6 @@ function combatSelection() {
     routes: [route.id],
     routeScenarios: [{ routeId: route.id, scenarioIds }],
     scenarios: scenarioIds,
-    graveyardCases: [],
     currentWeaponParity: { required: false },
     buildTargets: route.buildTargets,
     backendDispositions: [],
@@ -134,15 +133,15 @@ test("all six shadow profiles are represented without becoming authoritative", (
   }
 });
 
-test("planner classifies profile duplicates, task reuse, replicas, and selected graveyard cases without execution", () => {
+test("planner classifies profile duplicates, task reuse and replicas without execution", () => {
   const selected = combatSelection();
-  selected.graveyardCases = ["audio-lifecycle-history"];
   const mutatedRegistry = structuredClone(registry);
   mutatedRegistry.profiles.nightly.push(mutatedRegistry.profiles.nightly[0]);
-  const markerTask = mutatedRegistry.tasks.find((task) => task.taskId === "graveyard.audio-lifecycle-history");
+  const markerId = mutatedRegistry.profiles.nightly[1];
+  const markerTask = mutatedRegistry.tasks.find((task) => task.taskId === markerId);
   markerTask.runner.executable = "this-executable-must-never-run";
   markerTask.intentionalReplica = "independent-rerun";
-  markerTask.replicaGroup = "graveyard-canary";
+  markerTask.replicaGroup = "replica-canary";
   const plan = createTearBenchShadowPlan({
     registry: mutatedRegistry,
     policy,
@@ -159,12 +158,12 @@ test("planner classifies profile duplicates, task reuse, replicas, and selected 
   assert.ok(
     plan.diagnostics.intentionalReplicas.some(
       (entry) =>
-        entry.taskId === "graveyard.audio-lifecycle-history" &&
+        entry.taskId === markerId &&
         entry.classification === "independent-rerun" &&
-        entry.replicaGroup === "graveyard-canary",
+        entry.replicaGroup === "replica-canary",
     ),
   );
-  assert.ok(plan.requiredTaskIds.includes("graveyard.audio-lifecycle-history"));
+  assert.ok(plan.requiredTaskIds.includes(markerId));
 });
 
 test("CLI shadow planning covers every route family and conservative selection boundary", () => {
