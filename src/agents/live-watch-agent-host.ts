@@ -326,6 +326,26 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
     transition();
     return immutableSnapshot(context, state);
   };
+  /** Takes one setup step; false while the setup screen has not drawn its controls yet. */
+  const takeSetupStep = (step: Readonly<{ action: ScreenAction; label: string }>): boolean => {
+    // The setup screen's renderer is a lazy chunk, and a batch runs inside one page task, so the
+    // chunk cannot load during it. Until the screen has drawn its controls, end the batch without
+    // acting; the next batch finds them. The no-progress watchdog bounds the wait.
+    if (!context.controlsDrawn()) {
+      state.noProgressTicks += 1;
+      if (state.noProgressTicks >= NO_PROGRESS_LIMIT) fail("setup-render-watchdog");
+      return false;
+    }
+    if (step.action.type === "setup.start") context.setRunSeed(state.director?.seed() ?? state.options.seed);
+    activateRequired(context, step.action, step.label);
+    state.setupStep += 1;
+    if (step.action.type === "setup.start") {
+      context.stopFrameLoop();
+      if (state.options.skipCinematics) context.skipCinematic();
+    }
+    return true;
+  };
+
   const advance = (tickBudget = 2_000): TearWatchAgentSnapshot => {
     if (!Number.isSafeInteger(tickBudget) || tickBudget < 1 || tickBudget > 20_000) {
       throw new RangeError("Watch Agent tick budget must be an integer from 1 to 20000");
@@ -385,17 +405,8 @@ export function createLiveWatchAgentHost(context: LiveTearRuntimeEnvironmentCont
           { action: { type: "setup.start" }, label: "START" },
         ];
         const step = setupActions[state.setupStep];
-        if (step === undefined) {
-          fail("setup-transition-watchdog");
-        } else {
-          if (step.action.type === "setup.start") context.setRunSeed(state.director?.seed() ?? state.options.seed);
-          activateRequired(context, step.action, step.label);
-          state.setupStep += 1;
-          if (step.action.type === "setup.start") {
-            context.stopFrameLoop();
-            if (state.options.skipCinematics) context.skipCinematic();
-          }
-        }
+        if (step === undefined) fail("setup-transition-watchdog");
+        else if (!takeSetupStep(step)) break;
         transition();
         break;
       }
