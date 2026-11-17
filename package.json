@@ -128,6 +128,7 @@
     "position:render": "node scripts/position.mjs render",
     "check:position": "node scripts/position.mjs check",
     "who": "node scripts/who.mjs",
+    "leftovers": "node scripts/leftovers.mjs",
     "merge:ready": "node scripts/merge-ready.mjs",
     "merge:batch": "node scripts/merge-batch.mjs",
     "setup:hooks": "node scripts/governance/setup-hooks.mjs",

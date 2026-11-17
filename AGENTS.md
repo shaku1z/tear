@@ -216,4 +216,6 @@ run, checks that could not run, risks, and any position change. Remove your work
 archived it, and after checking the worktree for uncommitted work and junctions.
 `pnpm who` lists every worktree with its branch, dirty files, pull request and
 flags such as `dirty`, `node_modules-link` and `merged-or-empty`; it never
-changes anything.
+changes anything. `pnpm leftovers` adds what it does not show: local branches
+already on `main` (squash merges included), ignored tracked files, leftovers
+beside the repository and cache sizes, with sizes; it never deletes anything.
