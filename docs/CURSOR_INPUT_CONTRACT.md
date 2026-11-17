@@ -89,6 +89,25 @@ feeds relative motion to blade aim. Escape or unexpected capture loss pauses the
 run; menus and reward screens release capture. Returning from a reward selection
 flushes accumulated deltas before requesting capture again.
 
+## Losing the screen
+
+A run in play pauses when the game loses the screen. The rule is `screenLoss` in
+`src/domain/screen-loss.ts`, and the pause is the same one the P key opens:
+
+- **On every device:** the page was hidden or is being left (app switch, screen lock, tab
+  switch, a call that takes the screen).
+- **On desktop:** the mouse capture was lost.
+- **While touch owns the input:** the window lost focus. This covers a notification shade or
+  call banner over a page that stays visible.
+
+Window focus does not count for a mouse, keyboard or controller. On a desktop, focus moves to
+developer tools, a second monitor or a storefront's frame while the player is still watching.
+
+A hidden page draws no frames, so `src/platform/screen-presence.ts` latches the event until
+the next frame. A screen that is not play (the pause screen, a draft, a replay, a menu) keeps
+its screen, and the latch is cleared every frame, so a later run is not paused by an old loss.
+Losing the screen also lets go of held keys and fingers.
+
 Pointer-lock capability and rejection handling remain isolated behind the browser
 adapter. Game state owns when capture is allowed; input owns whether capture is
 currently active; presentation owns how that state is communicated.

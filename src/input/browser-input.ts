@@ -514,10 +514,33 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         },
         { passive: false },
       );
+      /** Lets go of one finger: its stick, aim, button or scroll. */
+      const releaseTouch = (id: number): void => {
+        touchesDown.delete(id);
+        Reflect.deleteProperty(tapTrack, id);
+        if (id === this.joy.id) {
+          this.joy = { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 };
+          this.syncSemanticMovement();
+        }
+        if (id === this._aimId) {
+          this._aimId = -1;
+          this.touchAim = false;
+          this.stickAim = null;
+        }
+        const button = btnTouches[id];
+        if (button === "jump") this.semantic.push({ type: "jump", phase: "released" });
+        if (button !== undefined) Reflect.deleteProperty(this.btnHeld, button);
+        if (id === this._scrollId) {
+          this._scrollId = -1;
+          // flick momentum: carry the last drag velocity into the wheel channel
+          if (Math.abs(this._scrollV || 0) > 6) this.scrollFlick = this._scrollV;
+          this._scrollV = 0;
+        }
+        Reflect.deleteProperty(btnTouches, id);
+      };
       const touchEnd = (e: TouchEvent): void => {
         e.preventDefault();
         for (const t of e.changedTouches) {
-          touchesDown.delete(t.identifier);
           const tk = tapTrack[t.identifier];
           if (tk && !tk.moved && performance.now() - tk.t < 450 && !btnTouches[t.identifier]) {
             // a clean tap -> a synthesized UI click (preventDefault suppressed the native one)
@@ -526,26 +549,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
             this.clicked = true;
             this.clickSource = "touch";
           }
-          Reflect.deleteProperty(tapTrack, t.identifier);
-          if (t.identifier === this.joy.id) {
-            this.joy = { active: false, id: -1, ax: 0, ay: 0, dx: 0, dy: 0 };
-            this.syncSemanticMovement();
-          }
-          if (t.identifier === this._aimId) {
-            this._aimId = -1;
-            this.touchAim = false;
-            this.stickAim = null;
-          }
-          const button = btnTouches[t.identifier];
-          if (button === "jump") this.semantic.push({ type: "jump", phase: "released" });
-          if (button !== undefined) Reflect.deleteProperty(this.btnHeld, button);
-          if (t.identifier === this._scrollId) {
-            this._scrollId = -1;
-            // flick momentum: carry the last drag velocity into the wheel channel
-            if (Math.abs(this._scrollV || 0) > 6) this.scrollFlick = this._scrollV;
-            this._scrollV = 0;
-          }
-          Reflect.deleteProperty(btnTouches, t.identifier);
+          releaseTouch(t.identifier);
         }
       };
       canvas.addEventListener("touchend", touchEnd, { passive: false });
@@ -554,12 +558,19 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         this.locked = document.pointerLockElement === canvas;
       });
 
-      // lose focus -> drop held keys so the player doesn't run forever, and release
-      // any controller-held tether so the blade doesn't stay tightened after refocus
-      window.addEventListener("blur", () => {
+      // lose focus or the screen -> drop held keys and fingers so the player doesn't run forever
+      // (a phone may send no touchcancel for fingers that were down when the app went away), and
+      // release any controller-held tether so the blade doesn't stay tightened after coming back
+      const releaseAll = (): void => {
         this.held.clear();
+        for (const id of [...touchesDown]) releaseTouch(id);
         this.setPadTether(false);
         this.syncSemanticMovement();
+      };
+      window.addEventListener("blur", releaseAll);
+      window.addEventListener("pagehide", releaseAll);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) releaseAll();
       });
     },
 
