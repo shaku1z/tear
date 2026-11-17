@@ -1,4 +1,4 @@
-import type { IdentityService, PlatformServices, Unsubscribe } from "./contracts";
+import type { IdentityService, PlatformServices, Unsubscribe, TearBuildTarget } from "./contracts";
 import { createStandaloneGhostPublicationRuntime, type GhostPublicationRuntime } from "./ghost-publication-runtime";
 
 export type CloudStatus = "local" | "guest" | "signedin";
@@ -72,7 +72,7 @@ export interface SharedCloudService {
 }
 
 export interface CloudCompatibilityOptions {
-  readonly target: "standalone" | "crazygames";
+  readonly target: TearBuildTarget;
   readonly getPlatform: () => PlatformServices;
   readonly getProfile: () => LegacyProfilePort;
   readonly getMeta: () => LegacyMetaPort;

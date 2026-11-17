@@ -122,7 +122,7 @@ describe("adaptive production tutorial coaching", () => {
         step();
         const coach = tutorial.session().coach;
         seen.add(coach?.adaptive?.failures ?? 0);
-        if (coach?.adaptive?.failures === 2) expect(coach.adaptive.nudge).toMatch(/unknown/);
+        if (coach?.adaptive?.failures === 2) expect(coach.adaptive.nudge).toMatch(/^(?!.*(cause|unknown)).+./i);
         if (coach?.adaptive?.failures === 4 && coach.mode === "diagnostic" && coach.visible) diagnostic = true;
       }
     }

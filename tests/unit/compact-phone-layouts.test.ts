@@ -19,6 +19,9 @@ import {
 } from "../../src/gameplay/training/live-playground-presentation";
 import { PLAYGROUND_ALL_KINDS } from "../../src/gameplay/training/playground-controller";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
+import { catalog, routing } from "../../public/audio/music.json";
+import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
+import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
 
 /**
  * The phone (compact density) compositions of the shop, codex, profile, leaderboards,
@@ -760,6 +763,55 @@ describe("phone compositions (compact density)", () => {
         },
         `signin ${phone.name}`,
       );
+    });
+
+    it(`fits Home, a stage, Songs and Settings of the MUSIC screen at ${phone.name}`, () => {
+      const view = (page: string) =>
+        buildMusicScreenView({
+          settings: {},
+          library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
+          nowPlaying: { workId: "fillet", title: "Fillet" },
+          preview: "spring",
+          page,
+          bossName: (id) => AUTHORED_BOSS_ROSTER.find((boss) => boss.id === id)?.name ?? "",
+        });
+      const offered = (page: string) =>
+        [
+          ...sweep(
+            phone,
+            (r) => {
+              r.music(view(page));
+            },
+            `music ${page} ${phone.name}`,
+          ),
+        ].map((json) => JSON.parse(json) as { type: string; id?: string; tab?: string; key?: string; to?: string });
+      const home = offered("home");
+      for (const stage of view("home").stages)
+        expect(
+          home.some((action) => action.tab === `collection:${stage.id}`),
+          stage.id,
+        ).toBe(true);
+      expect(home.some((action) => action.type === "navigate" && action.to === "menu")).toBe(true);
+      const all = offered("songs");
+      for (const song of view("songs").songs.filter((entry) => !entry.previewing))
+        expect(
+          all.some((action) => action.type === "music.preview" && action.id === song.id),
+          song.id,
+        ).toBe(true);
+      expect(all.some((action) => action.type === "music.stopPreview")).toBe(true);
+      expect(offered("collection:stage:the-grounds").some((action) => action.type === "music.preview")).toBe(true);
+      // The stage page's one button, PLAY, is offered at the top of the page.
+      const top = render(
+        phone,
+        (r) => {
+          r.music(view("collection:stage:the-voidspire"));
+        },
+        0,
+      );
+      expect(top.controls.some((control) => control.label === "▶  PLAY")).toBe(true);
+      const settings = offered("settings");
+      for (const key of ["station", "menuMusic", "musicMode"])
+        expect(settings.some((action) => action.key === key)).toBe(true);
     });
 
     it(`keeps the playground build menu and ability lab inside the frame at ${phone.name}`, () => {

@@ -7,6 +7,7 @@ import type { RunDifficulty, RunMode } from "../../gameplay/run/session";
 import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
+import { setMusicPreview, stepMusicPreview } from "../../audio/music/preview";
 
 export interface ScreenActionBindingPorts {
   readonly controlChase?: (command: "toggle" | "stop") => void;
@@ -85,6 +86,8 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
         else if (action.to === "codex") ports.library.selectCodexTab(action.tab);
         else if (action.to === "settings") ports.settings.selectSettingsTab(action.tab);
       }
+      // MUSIC opens on Home from outside; inside it, the tab names the page.
+      if (action.to === "music") ports.settings.selectMusicPage(action.tab ?? "home");
     },
     "menu.resumeFinale": () => {
       ports.resumeFinale();
@@ -134,8 +137,12 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       const run = ports.currentRun();
       ports.startRun(run.mode, run.diff);
     },
-    "run.quit": () => {
+    "run.quit": (action) => {
       ports.quitRun();
+      if (action.next === "setup") {
+        ports.setSetupSelection("mode", "campaign");
+        ports.setScreen("setup");
+      }
     },
     "continue.revive": () => {
       ports.revive();
@@ -167,6 +174,15 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "settings.reset": () => {
       ports.resetSettings();
+    },
+    "music.preview": (action) => {
+      setMusicPreview(action.id, action.queue);
+    },
+    "music.step": (action) => {
+      stepMusicPreview(action.delta);
+    },
+    "music.stopPreview": () => {
+      setMusicPreview(null);
     },
     "shop.buy": (action) => {
       ports.buyShopItem(action.id);

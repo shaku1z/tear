@@ -7,6 +7,9 @@
     },
     "crazygames": {
       "shareBytes": 3000000
+    },
+    "itch": {
+      "shareBytes": 3000000
     }
   }
 }

@@ -84,6 +84,10 @@ export type ScreenAction =
   | { readonly type: "settings.toggle"; readonly key: string }
   | { readonly type: "settings.activate"; readonly key: string }
   | { readonly type: "settings.reset" }
+  /** Preview one song; `queue` is the collection it was started from, for ◀◀/▶▶. */
+  | { readonly type: "music.preview"; readonly id: string; readonly queue?: readonly string[] }
+  | { readonly type: "music.step"; readonly delta: 1 | -1 }
+  | { readonly type: "music.stopPreview" }
   | { readonly type: "ghostpublication.grant" }
   | { readonly type: "ghostpublication.runOnce" }
   | { readonly type: "ghostpublication.cancel" }
@@ -96,7 +100,8 @@ export type ScreenAction =
   | { readonly type: "tierup.choose"; readonly index: number }
   | { readonly type: "run.resume" }
   | { readonly type: "run.restart" }
-  | { readonly type: "run.quit" }
+  /** `next: "setup"` leaves the run for the run setup (Adventure selected) instead of the main menu. */
+  | { readonly type: "run.quit"; readonly next?: "setup" }
   | { readonly type: "continue.revive" }
   | { readonly type: "continue.giveUp" }
   | { readonly type: "results.retry" }

@@ -1,8 +1,5 @@
 import type { SettingRowView, SettingsScreenView } from "./screens/contracts";
-import { menuMusicLabel } from "../audio/music/loadout";
-import { stationLabel, stationNote } from "../audio/music/active-station";
-import { nowPlayingLabel, getNowPlaying } from "../audio/music/now-playing";
-import { MUSIC_SETTINGS_TAB, normalizeMusicSettingsTab } from "../audio/music/settings";
+import { normalizeMusicSettingsTab } from "../audio/music/settings";
 
 export interface ControllerPresetView {
   readonly name: string;
@@ -24,9 +21,6 @@ export interface SettingsSnapshotSource {
   readonly cinematics?: string;
   readonly reducedMotion?: boolean;
   readonly highContrast?: boolean;
-  readonly musicMode?: string;
-  readonly menuMusic?: string;
-  readonly station?: string;
   readonly padPreset: string;
   readonly tetherMode: string;
   readonly dashDoubleTap?: boolean;
@@ -51,20 +45,6 @@ export interface SettingsEnvironmentSnapshot {
 }
 export type SettingsSections = SettingsScreenView["sections"];
 const percent = (value: number): string => String(Math.round(value * 100)) + "%";
-const musicModeNotes: Readonly<Record<string, string>> = {
-  adaptive: "LAYERS FOLLOW THE FIGHT",
-  full: "EVERY LAYER, ALWAYS",
-  calm: "STAY RELAXED — NEVER ESCALATES",
-  dynamic: "BARER LULLS, BIGGER PEAKS",
-};
-const musicModeNote = (mode: string | undefined): string =>
-  musicModeNotes[mode ?? "adaptive"] ?? "LAYERS FOLLOW THE FIGHT";
-
-/** Player wording for the station names the audio layer owns ("canonical" is the game's own choice). */
-export function playerStationLabel(id: string): string {
-  return id === "canonical" ? "AUTOMATIC" : stationLabel(id);
-}
-
 export function buildSettingsSections(
   tab: string,
   settings: SettingsSnapshotSource,
@@ -109,61 +89,9 @@ export function buildSettingsSections(
             muteKey: "interfaceMuted",
             muted: settings.interfaceMuted,
           },
-          {
-            key: "menuMusic",
-            label: "Menu music",
-            value: menuMusicLabel(settings.menuMusic ?? "default"),
-            kind: "cycle",
-            note: "PLAYS ON THE MENUS",
-          },
-          {
-            key: "musicMode",
-            label: "Soundtrack behavior",
-            value: (settings.musicMode ?? "adaptive").toUpperCase(),
-            kind: "cycle",
-            note: musicModeNote(settings.musicMode),
-          },
         ],
       },
     ];
-  if (normalizedTab === MUSIC_SETTINGS_TAB) {
-    const np = getNowPlaying();
-    return [
-      {
-        label: "MUSIC",
-        rows: [
-          {
-            key: "nowPlaying",
-            label: "Now playing",
-            value: np.workId ? nowPlayingLabel(np) : "NOTHING YET",
-            kind: "cycle",
-            enabled: false,
-          },
-          {
-            key: "station",
-            label: "Station",
-            value: playerStationLabel(settings.station ?? "canonical"),
-            kind: "cycle",
-            note: stationNote(settings.station ?? "canonical"),
-          },
-          {
-            key: "menuMusic",
-            label: "Menu music",
-            value: menuMusicLabel(settings.menuMusic ?? "default"),
-            kind: "cycle",
-            note: "PLAYS ON THE MENUS",
-          },
-          {
-            key: "musicMode",
-            label: "Soundtrack behavior",
-            value: (settings.musicMode ?? "adaptive").toUpperCase(),
-            kind: "cycle",
-            note: musicModeNote(settings.musicMode),
-          },
-        ],
-      },
-    ];
-  }
   if (tab === "video")
     return [
       {
