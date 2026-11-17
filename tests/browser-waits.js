@@ -302,7 +302,11 @@ async function waitForScriptLoads(page) {
   await frames();
 }
 
-/** A control's label as a test names it: letters and digits only, case-insensitive ("‹  BACK" is "back"). */
+/**
+ * A control's label as a test names it: letters and digits only, case-insensitive ("‹  BACK" is
+ * "back"). A label with no letters or digits ("−", "+") is matched exactly as drawn instead, so it
+ * cannot match an unlabelled control.
+ */
 const targetName = (label) =>
   String(label)
     .replace(/[^\p{L}\p{N}]+/gu, " ")
@@ -328,10 +332,11 @@ async function clickTarget(page, screen, name) {
             .replace(/[^\p{L}\p{N}]+/gu, " ")
             .trim()
             .toUpperCase();
-        const target = window.__TEAR_UI_TARGETS__?.().find((entry) => entry.enabled && normal(entry.label) === wanted);
+        const matches = (label) => (wanted.normal === "" ? label === wanted.raw : normal(label) === wanted.normal);
+        const target = window.__TEAR_UI_TARGETS__?.().find((entry) => entry.enabled && matches(entry.label));
         return target === undefined ? false : { x: target.clientX, y: target.clientY };
       },
-      { screen, wanted: targetName(name) },
+      { screen, wanted: { normal: targetName(name), raw: String(name) } },
       { timeout: STATE_WAIT_MS },
     );
     point = await handle.jsonValue();

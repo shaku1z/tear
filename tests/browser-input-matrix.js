@@ -364,6 +364,100 @@ async function aimStaysWithTheDeviceThatLastAimed(browser, configure) {
   await page.close();
 }
 
+/** Headless pages never lose visibility or focus, so the test sends what a phone or browser would. */
+async function leaveTheScreen(page, how) {
+  await page.evaluate((kind) => {
+    if (kind === "blur") {
+      window.dispatchEvent(new Event("blur"));
+      window.dispatchEvent(new Event("focus"));
+      return;
+    }
+    const set = (hidden) => {
+      Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => (hidden ? "hidden" : "visible"),
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    set(true);
+    set(false);
+  }, how);
+}
+
+/**
+ * docs/CURSOR_INPUT_CONTRACT.md "Losing the screen": a run in play pauses when the page is hidden
+ * (every device) or loses focus while touch owns the input; a desktop blur does not pause, and a
+ * screen that is not play keeps its screen. The finger that was down is let go.
+ */
+async function aRunPausesWhenTheGameLosesTheScreen(browser, configure) {
+  const screen = (page) => page.evaluate(() => window.__PANTHEON_TEST.state().game);
+  const play = async (page) => {
+    await page.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
+    await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  };
+
+  const context = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    deviceScaleFactor: 2,
+    hasTouch: true,
+    isMobile: true,
+  });
+  const phone = await context.newPage();
+  await configure(phone);
+  const cdp = await context.newCDPSession(phone);
+  await play(phone);
+  // A thumb rests on the movement stick when the phone locks.
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 120, y: 300, id: 1 }] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 190, y: 300, id: 1 }] });
+  await phone.waitForFunction(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().mode === "touch");
+  const travel = async () => {
+    const from = await phone.evaluate(() => window.__PANTHEON_TEST.state().playerTrace?.x);
+    await phone.waitForTimeout(notWithin(500));
+    return (await phone.evaluate(() => window.__PANTHEON_TEST.state().playerTrace?.x)) - from;
+  };
+  const held = await travel();
+  assert.ok(held > 40, `the held stick walks the player (moved ${held})`);
+  await leaveTheScreen(phone, "hide");
+  await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+  await phone.evaluate(() => window.__PANTHEON_TEST.resume());
+  // A few pixels of slide are left from the walk; a stick still held would walk as far as before.
+  const after = await travel();
+  assert.ok(after < held / 4, `the finger down when the screen went away is let go (moved ${after}, held ${held})`);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+
+  // A notification shade over a page that stays visible.
+  await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  await leaveTheScreen(phone, "blur");
+  await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+
+  // A draft keeps its screen, and the run after it is not paused by the old loss.
+  await phone.evaluate(() => window.__PANTHEON_TEST.startMode("endless", "easy"));
+  await phone.waitForFunction(() => {
+    const state = window.__PANTHEON_TEST.state();
+    if (state.active) window.__PANTHEON_TEST.skip();
+    return state.game === "playing" && !state.active;
+  });
+  await phone.evaluate(() => window.__PANTHEON_TEST.openDraft({ preserveRun: true }));
+  await phone.waitForFunction(() => window.__PANTHEON_TEST.state().game === "draft");
+  await leaveTheScreen(phone, "hide");
+  await phone.waitForTimeout(notWithin(300));
+  assert.equal(await screen(phone), "draft", "a draft keeps its screen when the page is hidden");
+  await context.close();
+
+  const desktop = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  await configure(desktop);
+  await play(desktop);
+  await desktop.mouse.move(400, 360);
+  await desktop.mouse.move(600, 360, { steps: 4 });
+  await leaveTheScreen(desktop, "blur");
+  await desktop.waitForTimeout(notWithin(400));
+  assert.equal(await screen(desktop), "playing", "devtools or a second monitor taking focus does not pause");
+  await leaveTheScreen(desktop, "hide");
+  await desktop.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+  await desktop.close();
+}
+
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
   const port = Number(process.env.TEAR_INPUT_TEST_PORT || 8128);
@@ -687,6 +781,7 @@ async function main() {
   await firstTapLandsOnTheControlsThePlayerSaw(browser, configure);
   await chapterOpeningCarriesThroughOnEveryDevice(browser, configure);
   await aimStaysWithTheDeviceThatLastAimed(browser, configure);
+  await aRunPausesWhenTheGameLosesTheScreen(browser, configure);
 
   await browser.close();
   await new Promise((resolve) => server.close(resolve));
