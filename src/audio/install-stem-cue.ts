@@ -144,28 +144,25 @@ export function requestedStemsMode(
  * Returns at once: the index is requested after the first frame (or when audio
  * starts, if that comes first).
  */
-/** Runs `task` once the page's load event has fired and the browser next has idle time. */
-function afterStartup(task: () => void): void {
-  const idle = (): void => {
-    // Safari has no requestIdleCallback.
-    if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(task, { timeout: 2000 });
-    else setTimeout(task, 200);
-  };
-  if (document.readyState === "complete") idle();
-  else window.addEventListener("load", idle, { once: true });
+/** Runs `task` the next time the browser has idle time. */
+function whenIdle(task: () => void): void {
+  // Safari has no requestIdleCallback.
+  if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(task, { timeout: 2000 });
+  else setTimeout(task, 200);
 }
 
 export function installBiomeStemBackend(): void {
   let pending: Promise<BiomeStemBackend> | null = null;
   const ready = (): Promise<BiomeStemBackend> => (pending ??= loadMusicIndex());
   // Two frames: the first paints, the second runs after it; then the music index. The menu
-  // cue's first layer waits until the page has finished loading and the browser is idle, so
-  // it never competes with the first frame or the menu; the first input then only decodes it.
+  // cue's first layer follows at the browser's next idle moment, at low priority, so the
+  // first input only has to decode it. Waiting for the page's load event instead came after
+  // a player's first input on a slow phone connection, and gained nothing.
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       ready()
         .then((backend) => {
-          afterStartup(() => {
+          whenIdle(() => {
             if (browserMusicWarmAllowed()) backend.warmFirstLayer(backend.menuCueId);
           });
         })

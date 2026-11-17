@@ -148,9 +148,12 @@ export class BiomeStemBackend implements MusicBackend {
 
   /**
    * Fetch the bytes of a cue's first layer (the stems audible at its calmest tier) ahead of
-   * playback: the menu cue, before the player's first input.
+   * playback: the menu cue, before the player's first input. Once music has started (the
+   * first input came first), the cue fetches its own stems, and a warm-up would only fetch
+   * them a second time alongside it, so it does nothing.
    */
   warmFirstLayer(cueId: string): void {
+    if (this.#context !== null) return;
     const loaded = this.#cues.get(cueId);
     if (!loaded) return;
     const audible = new Set(
