@@ -130,7 +130,7 @@ export function createProductionWaveRewardRuntime(
     const placement = planBossPlacement(id, config.view.w, config);
     return world.entities.createEnemy(placement.factoryId, placement.x, placement.y, run());
   };
-  const content = createLiveContentRuntime({
+  const content = createLiveContentRuntime<ReturnType<typeof makeBoss>>({
     width: config.view.w,
     random: random.streams.stream("spawn"),
     run: () => {
@@ -155,7 +155,6 @@ export function createProductionWaveRewardRuntime(
       createGround: (kind) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
       createAir: (kind, x, y) => world.entities.createEnemy(kind, x, y, run() as never) as never,
       createSupport: (kind) => world.entities.createEnemy(kind, 0, 0, run() as never) as never,
-      createBoss: (id) => makeBoss(id ?? ""),
       beginBossPresentation: (enemy) => {
         beginBossEncounter(run(), enemy, config.bossTheater.introDur, {
           platforms: () => stage.platforms as never[],

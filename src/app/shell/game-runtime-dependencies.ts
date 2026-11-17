@@ -75,7 +75,6 @@ export interface GameRuntimeDependencies {
   readonly Scenes: SceneLibrary;
   readonly Blade: ReturnType<typeof createBlade>;
   readonly Bomber: EnemyTypes["Bomber"];
-  readonly Boss: EnemyTypes["Boss"];
   /** Release/engineering surface policy and its admitted engineering query (empty in release). */
   readonly surfaces: SurfaceAvailability;
   readonly engineeringQuery: EngineeringQuery;

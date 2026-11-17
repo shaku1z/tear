@@ -76,10 +76,6 @@ export function createLiveContentComposition(options: LiveContentCompositionOpti
     createGround: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
     createAir: (kind, x, y) => options.entities.createEnemy(kind, x, y, options.run()),
     createSupport: (kind) => options.entities.createEnemy(kind, 0, 0, options.run()),
-    createDefaultBoss: () => {
-      const placement = planBossPlacement("", options.width, d.CONFIG);
-      return options.entities.createEnemy(placement.factoryId, placement.x, placement.y, options.run());
-    },
     createBoss(id) {
       // Spawn placement is canonical world state, so it is shared rather than
       // restated: a detached, replay, or headless world must place bosses

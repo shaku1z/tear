@@ -34,7 +34,8 @@ export interface LiveContentRuntimeOptions<TEnemy extends LiveSpawnEnemy> {
   readonly bossBiomeStages?: readonly ContentStage[];
   readonly platforms: () => readonly GroundPlatform[];
   readonly groundY: () => number;
-  readonly construction: LiveEnemyConstructionPort<TEnemy>;
+  /** Boss construction is this runtime's own (`createBoss` below), so the port omits it. */
+  readonly construction: Omit<LiveEnemyConstructionPort<TEnemy>, "createBoss">;
   readonly spawning: LiveEnemySpawnPort<TEnemy>;
   readonly createBoss: (id: string) => TEnemy;
 }

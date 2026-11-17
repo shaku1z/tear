@@ -29,7 +29,6 @@ export type LiveWorldEntityDependencies = Pick<
   | "ReflectionEnemy"
   | "Support"
   | "Rootbinder"
-  | "Boss"
 >;
 
 export type LiveWorldEntityConstructionPort = TearWorldEntityConstructionPort<
@@ -81,7 +80,6 @@ export function createLiveWorldEntityFactory(
       reflection: (x, y) => enemy(new dependencies.ReflectionEnemy(x, y)),
       support: (x, y, kind) =>
         kind === "rootbinder" ? enemy(new dependencies.Rootbinder(x, y)) : enemy(new dependencies.Support(x, y, kind)),
-      boss: (x, y) => enemy(new dependencies.Boss(x, y)),
     },
     rebindEchoMods(actor, mods): void {
       // Codec hydration clones `_mods`; restore the Echo host's live run link

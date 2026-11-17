@@ -44,6 +44,32 @@ export const BOSS_DEFINITIONS = Object.freeze([
   Object.freeze({ id: "source", name: "The Source", phaseMarks: Object.freeze([0.58, 0.28] as const) }),
 ] as const satisfies readonly BossDefinition[]);
 
+/** A body in the game config whose height sets a boss's spawn height. */
+export type BossSpawnBody = "boss" | "whiteHart" | "echo" | "aldric" | "colossus";
+
+/** Where a boss enters the arena. */
+export interface BossSpawn {
+  /** The entity-construction factory id. */
+  readonly factoryId: string;
+  /** How far above the ground the boss's centre starts: a fixed distance, or half a config body's height. */
+  readonly lift: number | BossSpawnBody;
+}
+
+/**
+ * Spawn data for each authored boss. It sits beside the definitions rather than
+ * on them because the game reference exports the definitions field for field.
+ */
+export const BOSS_SPAWNS = Object.freeze({
+  warden: Object.freeze({ factoryId: "warden", lift: 140 }),
+  colossus: Object.freeze({ factoryId: "colossus", lift: "colossus" }),
+  aldric: Object.freeze({ factoryId: "aldric", lift: "aldric" }),
+  // Rootbound starts at the generic boss body's height, not its own.
+  rootbound: Object.freeze({ factoryId: "rootbound", lift: "boss" }),
+  "white-hart": Object.freeze({ factoryId: "white-hart", lift: "whiteHart" }),
+  echo: Object.freeze({ factoryId: "echo", lift: "echo" }),
+  source: Object.freeze({ factoryId: "source", lift: 300 }),
+} as const satisfies Readonly<Record<BossDefinitionId, BossSpawn>>);
+
 /** Source-derived display projection; boss IDs and names remain definition-owned. */
 export const BOSS_DISPLAY_NAMES = Object.freeze(
   Object.fromEntries(BOSS_DEFINITIONS.map(({ id, name }) => [id, name])) as Readonly<Record<BossDefinitionId, string>>,

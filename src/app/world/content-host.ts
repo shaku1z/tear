@@ -42,7 +42,6 @@ export interface LiveContentHostContext<TEnemy extends ContentHostEnemy> {
   readonly createGround: (kind: "charger" | "ranged" | "bomber" | "armored" | "chimera" | "rimehound") => TEnemy;
   readonly createAir: (kind: "flyer" | "wraith", x: number, y: number) => TEnemy;
   readonly createSupport: (kind: "priest" | "herald" | "mender" | "anchor" | "rootbinder") => TEnemy;
-  readonly createDefaultBoss: () => TEnemy;
   readonly createBoss: (id: string) => TEnemy;
   readonly applyPreset: (enemy: TEnemy, preset: EnemyPreset) => void;
   readonly rollVariant: (kind: string, wave: number, context?: VariantSelectionContext) => EnemyVariant | null;
@@ -70,7 +69,6 @@ export function createLiveContentHost<TEnemy extends ContentHostEnemy>(
     createGround: context.createGround,
     createAir: context.createAir,
     createSupport: context.createSupport,
-    createBoss: context.createDefaultBoss,
     beginBossPresentation(enemy: TEnemy) {
       // Canonical world changes are shared; only the four calls below are
       // presentation, so a detached world reproduces the encounter exactly.

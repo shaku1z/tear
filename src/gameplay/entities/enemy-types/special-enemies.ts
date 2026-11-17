@@ -4,46 +4,6 @@ import { advanceRootbinder, createRootbinderState, type RootbinderState } from "
 
 export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: EnemyBaseConstructor) {
   const { CONFIG, FX, GAME_RANDOM, Projectile, clamp, len, lerp } = dependencies;
-  // ---- Boss: large, multi-phase ----
-  class Boss extends Enemy {
-    fireTimer: number;
-    declare cfg: typeof CONFIG.boss;
-
-    constructor(x: number, y: number) {
-      super(x, y, CONFIG.boss);
-      this.color = CONFIG.colors.boss;
-      this.kind = "boss";
-      this.isBoss = true;
-      this.fireTimer = 2;
-    }
-    get phase() {
-      const f = this.hp / this.maxHp;
-      return f > 0.66 ? 1 : f > 0.33 ? 2 : 3;
-    }
-    update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
-      this.tickTimers(dt);
-      const C = this.cfg,
-        ph = this.phase;
-      const dir = Math.sign(player.x - this.x) || 1;
-      this.vx = lerp(this.vx, dir * C.speed * (1 + (ph - 1) * 0.4), clamp(4 * dt, 0, 1));
-      this.integrate(dt, platforms);
-      this.fireTimer -= dt;
-      if (this.fireTimer <= 0) {
-        this.fireTimer = C.fireBase / ph;
-        const shots = ph === 1 ? 1 : ph === 2 ? 3 : 5;
-        const base = Math.atan2(player.y - this.y, player.x - this.x);
-        for (let i = 0; i < shots; i++) {
-          const a = base + (i - (shots - 1) / 2) * 0.24;
-          projectiles.push(
-            this.ownProjectile(
-              new Projectile(this.x, this.y, Math.cos(a) * CONFIG.proj.speed, Math.sin(a) * CONFIG.proj.speed),
-            ),
-          );
-        }
-      }
-    }
-  }
-
   // ---- Support family: no real attack, they make every OTHER enemy worse (priority kills) ----
   // War Priest (damage-reduction aura), Herald (speed buff), Mender (heals allies), Anchor
   // (shields a tethered ally). The actual buff/heal/tether is applied by updateSupports() in
@@ -263,5 +223,5 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
     }
   }
 
-  return { Boss, Rootbinder, Support, Wraith, Chimera };
+  return { Rootbinder, Support, Wraith, Chimera };
 }
