@@ -449,6 +449,11 @@
         "seconds": 43
       },
       {
+        "id": "vault-library",
+        "run": "node tests/browser-ghost-vault-library.js",
+        "seconds": 16
+      },
+      {
         "id": "pale-aurora-track",
         "run": "node scripts/tearbench.mjs run pale-aurora-track-behavior"
       },
