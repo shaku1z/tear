@@ -87,6 +87,10 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     claimAim(device) {
       this.aimDevice = device;
     },
+    steerAim(device) {
+      this.touchAim = true;
+      this.claimAim(device);
+    },
     aimIsLive() {
       return aimFollowsDevices(this.aimDevice, this.touchAim);
     },
@@ -435,8 +439,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
               this._aimLY = t.clientY;
               this._aimAX = t.clientX;
               this._aimAY = t.clientY; // stick anchor
-              this.touchAim = true;
-              this.claimAim("touch");
+              this.steerAim("touch");
               if (this.touchAimMode === "stick") this.stickAim = { x: 0, y: 0 };
             } else {
               // a SECOND finger in the aim zone = THROW, so the right thumb never has to stop

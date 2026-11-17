@@ -304,7 +304,7 @@ async function firstTapLandsOnTheControlsThePlayerSaw(browser, configure) {
 /**
  * docs/CURSOR_INPUT_CONTRACT.md: aim belongs to the device that last aimed. A controller's right
  * stick aims the blade away from a resting mouse; letting go keeps that aim; only moving the mouse
- * takes it back.
+ * takes it back. It runs without pointer lock, where the mouse aims at its absolute position.
  */
 async function aimStaysWithTheDeviceThatLastAimed(browser, configure) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
@@ -318,6 +318,11 @@ async function aimStaysWithTheDeviceThatLastAimed(browser, configure) {
   await configure(page);
   await page.evaluate(() => window.__PANTHEON_TEST.startMode("playground"));
   await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "paused");
+  await page.evaluate(() => window.__PANTHEON_TEST.resume());
+  await page.waitForFunction(() => window.__PANTHEON_TEST.state().game === "playing");
+  assert.equal(await page.evaluate(() => window.__TEAR_CATALOG_DEBUG__.input.snapshot().pointerLocked), false);
   // The mouse rests far to the left of the player and owns the aim.
   await page.mouse.move(400, 360);
   await page.mouse.move(60, 360, { steps: 6 });

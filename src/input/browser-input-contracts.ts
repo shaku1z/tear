@@ -173,6 +173,8 @@ export interface BrowserInput {
   setMode(mode: InputMode): void;
   /** A device gave aim input: it owns the aim until another device aims. */
   claimAim(device: AimDevice): void;
+  /** A finger or stick starts or keeps steering the aim: it is steering, and it owns the aim. */
+  steerAim(device: AimDevice): void;
   /** Whether aim follows the devices this tick, or holds where its owner left it. */
   aimIsLive(): boolean;
   startSemanticRecording(): void;

@@ -454,8 +454,7 @@ export function createBrowserGamepad(dependencies: BrowserGamepadDependencies): 
         const eff = Math.min(((rMag - deadR) / (1 - deadR)) * PAD_CONFIG.aimSens, 1);
         Input.stickAim = { x: (rx / rMag) * eff, y: (ry / rMag) * eff };
         semantic.setAimVector(rx, ry);
-        Input.touchAim = true;
-        Input.claimAim("gamepad");
+        Input.steerAim("gamepad");
         this._stickWas = true;
       } else if (this._stickWas) {
         Input.stickAim = null;
