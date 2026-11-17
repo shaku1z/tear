@@ -184,11 +184,6 @@ describe("Verdant environment presentation", () => {
         geometry: Object.freeze({ x, y: 400, radius: 24 }),
         integrityRatio: 1,
         counterplayTags: Object.freeze(["cut"]),
-        connectionGeometry: Object.freeze({
-          x: 800,
-          y: 500,
-          points: Object.freeze([Object.freeze({ x: 800, y: 500 }), Object.freeze({ x, y: 400 })]),
-        }),
       });
     renderVerdantEnvironmentPresentation(
       value.context,

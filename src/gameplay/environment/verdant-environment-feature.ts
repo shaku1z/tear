@@ -26,6 +26,7 @@ import {
   resolveRootboundGraftEffects,
   ROOTBOUND_NO_GRAFT_EFFECTS,
   type GraftAnchorPlacementRequest,
+  type GraftAnchorType,
   type RootboundGraftEffects,
 } from "./graft-anchor";
 import { advanceRootCage, installRootCage, isRootCageState, type RootCagePlacementRequest } from "./root-cage";
@@ -95,7 +96,13 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     for (const [ownerId, ids] of networks) this.#rootbinderNetworks.set(ownerId, Object.freeze(ids));
   }
   combatObjectUpdated(environment: EnvironmentFeatureContext, object: EnvironmentCombatObjectState): void {
-    if (isGraftAnchorState(object) && object.ownerId !== null) this.#applyGraftEffects(environment, object.ownerId);
+    if (object.ownerId === null) return;
+    // "destroyed" is the player's cut; cleanup ends an object as "expired".
+    const cut = object.state === "destroyed";
+    if (isGraftAnchorState(object)) {
+      this.#applyGraftEffects(environment, object.ownerId);
+      if (cut) this.#rootbound(object.ownerId)?.graftSevered?.(object.graftType);
+    } else if (cut && isRootCageState(object)) this.#rootbound(object.ownerId)?.cageSevered?.();
   }
   combatObjectRemoved(environment: EnvironmentFeatureContext, object: EnvironmentCombatObjectState): void {
     if (isGraftAnchorState(object) && object.ownerId !== null) this.#applyGraftEffects(environment, object.ownerId);
@@ -128,26 +135,27 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
     const actors = this.#rootboundActors?.() ?? [];
     for (const actor of actors) {
       const placements = actor.state.graftPlacements ?? [];
-      const ownerPosition = actor.state.ownerPosition;
-      // The boss records each planted Graft, so a cut one stays gone after the stage removes it.
+      // The boss lists the Grafts it wants; each is planted once, and again only after the boss asks again.
       const planted = actor.state.plantedGraftTypes ?? [];
-      if (ownerPosition !== undefined)
-        for (const placement of placements.filter((entry) => !planted.includes(entry.graftType))) {
-          installGraftAnchor(environment, { ownerId: actor.id, ownerPosition, ...placement, createdTick: tick });
+      for (const placement of placements) {
+        if (planted.includes(placement.graftType)) continue;
+        if (installGraftAnchor(environment, { ownerId: actor.id, ...placement, createdTick: tick }) !== null)
           actor.acknowledgeGraftPlanted?.(placement.graftType);
-        }
+      }
       const owned = environment
         .combatObjects()
         .filter(isGraftAnchorState)
         .filter((graft) => graft.ownerId === actor.id);
-      if (placements.length === 0) {
-        for (const graft of owned)
-          if (graft.state !== "destroyed" && graft.state !== "expired") {
-            environment.cleanupCombatObject(graft.id, "stage-transition", tick);
-          }
-      } else {
-        for (const graft of owned) {
-          const next = advanceGraftAnchor(graft, tick, actor.recoverGraftHealth);
+      // A standing Graft the boss did not ask for is one restored into the fight: the boss adopts it, or
+      // (after Phase II, or once the encounter is cleaned up) it goes.
+      for (const graft of owned) {
+        if (graft.state === "destroyed" || graft.state === "expired") continue;
+        const wanted =
+          placements.some((entry) => entry.graftType === graft.graftType) ||
+          actor.adoptGraft?.(graft.graftType, graft.geometry) === true;
+        if (!wanted) environment.cleanupCombatObject(graft.id, "stage-transition", tick);
+        else {
+          const next = advanceGraftAnchor(graft, tick);
           if (next !== graft) environment.updateCombatObject(graft.id, next);
         }
       }
@@ -499,9 +507,11 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       });
     actor.acknowledgeBloomPattern?.(selected);
   }
+  #rootbound(ownerId: string): RootboundEnvironmentActor | undefined {
+    return this.#rootboundActors?.().find((candidate) => candidate.id === ownerId);
+  }
   #applyGraftEffects(environment: EnvironmentFeatureContext, ownerId: string): void {
-    const actor = this.#rootboundActors?.().find((candidate) => candidate.id === ownerId);
-    actor?.applyGraftEffects?.(resolveRootboundGraftEffects(environment.combatObjects(), ownerId));
+    this.#rootbound(ownerId)?.applyGraftEffects?.(resolveRootboundGraftEffects(environment.combatObjects(), ownerId));
   }
   resolveCollisions(environment: EnvironmentFeatureContext): void {
     if (
@@ -577,7 +587,11 @@ export interface RootboundEnvironmentActor {
     regrowth?: RootboundRegrowthState;
   }>;
   readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
-  readonly recoverGraftHealth?: (fraction: number) => number;
+  /** The player cut a Graft of this type, or a Root Cage wall. */
+  readonly graftSevered?: (graftType: string) => void;
+  /** A Graft restored into the fight; true when the boss takes it as its own. */
+  readonly adoptGraft?: (graftType: GraftAnchorType, geometry: GraftAnchorPlacementRequest["geometry"]) => boolean;
+  readonly cageSevered?: () => void;
   readonly completeRootCage?: () => void;
   readonly acknowledgeGraftPlanted?: (graftType: string) => void;
   readonly acknowledgeBloomPattern?: (patternId: RootboundBloomPatternId | null) => void;

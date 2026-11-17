@@ -270,8 +270,13 @@ describe("environment runtime", () => {
       duplicate: true,
       integrity: 2,
     });
+    // A change to the object from outside (a feature advancing it, a restore) does not forget the hit.
     runtime.updateCombatObject(survivorId, { integrity: 1 });
-    expect(runtime.damageCombatObject(survivorId, 1, "attack-1", 3).accepted).toBe(true);
+    expect(runtime.damageCombatObject(survivorId, 1, "attack-1", 3)).toMatchObject({
+      accepted: false,
+      duplicate: true,
+    });
+    expect(runtime.damageCombatObject(survivorId, 1, "attack-2", 3).accepted).toBe(true);
     runtime.removeCombatObject(survivorId);
     expect(() => runtime.damageCombatObject(survivorId, 1, "attack-1", 4)).toThrow(/unknown/u);
   });

@@ -81,6 +81,53 @@ export function resolveHeldEnvironmentWeaponContacts(
   return Object.freeze({ considered, accepted, damaged, destroyed });
 }
 
+export interface ThrownEnvironmentWeaponContactInput {
+  readonly environment: EnvironmentWeaponContactPort;
+  readonly blade: Readonly<{
+    thrown: boolean;
+    state: string;
+    throwId: number;
+    throwDmg: number;
+    weapon?: Readonly<{
+      id: string;
+      environmentCounterplay?: Readonly<{ held?: EnvironmentCounterplayTag }>;
+    }> | null;
+  }>;
+  readonly segment: Readonly<{ x1: number; y1: number; x2: number; y2: number }>;
+  readonly pad: number;
+  readonly tick?: number;
+}
+
+/**
+ * A thrown blade cuts whatever the same blade cuts when held: the flying blade's segment against
+ * environment-owned combat objects, once on the way out and once on the way back. As with the held blade,
+ * enemy hit hooks are absent.
+ */
+export function resolveThrownEnvironmentWeaponContacts(
+  input: ThrownEnvironmentWeaponContactInput,
+): EnvironmentWeaponContactResult {
+  const { blade } = input;
+  const capability = blade.weapon?.environmentCounterplay?.held;
+  if (!blade.thrown || (blade.state !== "flying" && blade.state !== "returning")) return emptyResult();
+  if (capability === undefined || !(blade.throwDmg > 0)) return emptyResult();
+  let considered = 0,
+    accepted = 0,
+    damaged = 0,
+    destroyed = 0;
+  const attackId = `${blade.weapon?.id ?? "unknown"}:throw:${String(blade.throwId)}:${blade.state}`;
+  const segment = { ...input.segment, pad: input.pad };
+  for (const object of input.environment.combatObjects()) {
+    if (object.state === "destroyed" || object.state === "expired" || !intersects(segment, object.geometry)) continue;
+    considered += 1;
+    if (!input.environment.resolveCombatObjectCounterplay(object.id, capability).accepted) continue;
+    accepted += 1;
+    const result = input.environment.damageCombatObject(object.id, blade.throwDmg, attackId, input.tick);
+    if (result.accepted) damaged += 1;
+    if (result.destroyed) destroyed += 1;
+  }
+  return Object.freeze({ considered, accepted, damaged, destroyed });
+}
+
 /** Resolves player-owned cutting projectiles without invoking enemy throw-hit mechanics. */
 export function resolveEnvironmentWeaponProjectileContacts(
   input: EnvironmentWeaponProjectileContactInput,

@@ -48,6 +48,7 @@ import type { BladePlayerPort } from "../entities/blade-contracts";
 import {
   resolveEnvironmentWeaponProjectileContacts,
   resolveHeldEnvironmentWeaponContacts,
+  resolveThrownEnvironmentWeaponContacts,
   type EnvironmentWeaponContactPort,
 } from "./environment-weapon-contact-runtime";
 
@@ -221,6 +222,14 @@ export function runLiveCollisionPhase(host: LiveCollisionPhaseHost, dt: number):
       ...(host.environmentTick === undefined ? {} : { tick: host.environmentTick() }),
     });
   }
+  if (host.environment !== undefined && blade.thrown)
+    resolveThrownEnvironmentWeaponContacts({
+      environment: host.environment,
+      blade,
+      segment: blade.thrownCollisionSegment(),
+      pad: blade.thrownCollisionPad(),
+      ...(host.environmentTick === undefined ? {} : { tick: host.environmentTick() }),
+    });
   runThrown(host);
   runParries(host, held);
   host.combat.resolveProjectilePhases(dt, projectileTuning(host));
