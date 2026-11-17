@@ -64,18 +64,14 @@ export interface PageFrame {
 /** A block, or a slot the phone closes up when it has nothing to show (see `prose`). */
 type Slot = ScrollBlock | undefined;
 
-/**
- * Page turning for a paged list. Phone: PREVIOUS / NEXT and the page line (with the note) flow
- * at the end of the body. Desktop (`PAGER`): the buttons and the page line sit in the footer row
- * beside BACK, and the note has its own line pinned above the footer.
- */
+/** Page turning. Phone: the buttons and the page line (with the note) end the body. Desktop: they sit in the footer row, the note on a line above it. */
 export interface Pager {
   readonly previous: FlowAction;
   readonly next: FlowAction;
   readonly label: string;
   readonly note?: string | undefined;
 }
-const PAGER = { previous: [0, 170], next: [182, 150], buttonY: 6, buttonH: 36, label: 30, note: [26, 22] } as const;
+const PAGER = { buttonY: 6, buttonH: 36, label: 30, noteHeight: 26, noteBaseline: 22 } as const;
 
 export interface PageBody {
   readonly head?: readonly Slot[] | undefined;
@@ -195,26 +191,11 @@ export function createPageFrame(context: ScreenRenderContext) {
         spec.gap,
       );
     if (spec.pager) {
-      const note = spec.pager.note;
-      tail.push({
-        height: PAGER.note[0],
-        draw: (y) => {
-          if (note)
-            ui.textBox(context.canvas, note, frame.left, y + PAGER.note[1], frame.width, {
-              size: ui.t.type.caption,
-              alpha: ui.t.alpha.muted,
-              maxLines: 1,
-            });
-        },
-      });
+      const { noteHeight: height, noteBaseline: baseline } = PAGER;
+      const options = { size: ui.t.type.caption, maxLines: 1, align: "left", baseline, height, box: true } as const;
+      tail.push(prose(frame, spec.pager.note, options) ?? { height, draw: () => undefined });
     }
-    const fixed: ScrollView = {
-      top: frame.top,
-      bottom: frame.bottom,
-      enqueue(control) {
-        context.enqueue(control);
-      },
-    };
+    const fixed: ScrollView = { top: frame.top, bottom: frame.bottom, enqueue: (control) => context.enqueue(control) };
     let y = spec.desktop.top;
     for (const block of head) {
       block.draw(y, fixed);
@@ -267,20 +248,17 @@ export function createPageFrame(context: ScreenRenderContext) {
     const footer = pageFooter(context, { ...state, ...(options.back ? { back: options.back } : {}) });
     const pager = options.pager;
     if (!pager) return;
-    for (const [item, [x, w]] of [
-      [pager.previous, PAGER.previous],
-      [pager.next, PAGER.next],
-    ] as const)
-      context.enqueue({
-        x: frame.left + x,
-        y: footer.footerY + PAGER.buttonY,
-        w,
-        h: PAGER.buttonH,
-        label: item.label,
-        size: ui.t.type.label,
-        enabled: item.enabled ?? true,
-        action: item.action,
-      });
+    const slots = [
+      { x: frame.left, w: 170 },
+      { x: frame.left + 182, w: 150 },
+    ];
+    const buttons = { height: PAGER.buttonH, size: ui.t.type.label, blockHeight: 0, slots };
+    const view: ScrollView = {
+      top: footer.footerY,
+      bottom: context.height,
+      enqueue: (control) => context.enqueue(control),
+    };
+    actions(frame, [pager.previous, pager.next], buttons).draw(footer.footerY + PAGER.buttonY, view);
     ui.text(
       context.canvas,
       pager.label,
@@ -364,14 +342,7 @@ export function createPageFrame(context: ScreenRenderContext) {
   function prose(frame: PageFrame, text: string | undefined, options: ProseOptions): Slot {
     const alpha = options.alpha ?? ui.t.alpha.muted;
     if (frame.compactPage)
-      return text === undefined
-        ? undefined
-        : kit.prose(frame.compactPage, text, {
-            size: options.size,
-            maxLines: options.maxLines,
-            align: options.align,
-            alpha,
-          });
+      return text === undefined ? undefined : kit.prose(frame.compactPage, text, { ...options, alpha });
     if (text === undefined)
       return options.height === undefined ? undefined : { height: options.height, draw: () => undefined };
     const x = options.align === "center" ? frame.centerX : frame.left;

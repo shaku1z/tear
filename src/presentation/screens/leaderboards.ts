@@ -7,7 +7,6 @@ type PodiumEntry = NonNullable<LeaderboardsScreenView["podium"]>[number];
 type RankRow = LeaderboardsScreenView["rows"][number];
 type Tokens = ScreenRenderContext["ui"]["t"];
 type Place = Omit<ScreenControl, "label" | "action">;
-type Cull = Readonly<{ above: number; below: number }>;
 
 /** Where one podium card sits and how its parts are placed inside it. */
 interface PodiumBox {
@@ -57,51 +56,41 @@ interface RowMetrics {
   readonly watch: Readonly<{ top: number; w: number; h: number; size: number }>;
 }
 
-/**
- * Every size and position that differs between the desktop design and the phone layout. Fields
- * marked "desktop only" place things on the fixed design page; the phone page flows its body and
- * ignores them (its column holds zeros).
- */
+/** What both densities draw with different numbers (desktop-only placements are in `DESKTOP`). */
 interface LeaderboardMetrics {
-  /** Desktop only: tabs and caption y, and the two picker rows. */
-  readonly tabsY: number;
-  readonly captionY: number;
-  readonly modePicker: Readonly<{ y: number; width: number; height: number }>;
-  readonly difficultyPicker: Readonly<{ y: number; width: number; height: number }>;
   /** Space between body blocks. */
   readonly gap: number;
-  /** Desktop only: where each tab's body starts, where its state centres, and which list rows are drawn. */
-  readonly ranked: Readonly<{ top: number; stateCentre: number; cull: Cull }>;
-  readonly feed: Readonly<{ top: number; stateCentre: number; cull: Cull }>;
-  /** Desktop only: the state's wrap width and its call-to-action size. */
-  readonly state: Readonly<{ wrap: number; ctaWidth: number; ctaHeight: number }>;
   readonly podiumHeight: number;
   readonly podium: (frame: PageFrame, y: number, index: number, watch: boolean) => PodiumBox | null;
   /** The watch-the-#1 line (or the board message) under the podium; a reserved line keeps its height when empty. */
   readonly line: Readonly<{ reserve: boolean; height: number; size: number; baseline: number }>;
-  readonly lineButton: Readonly<{ width: number; height: number; size: number }>;
   readonly columns: (frame: PageFrame, watch: boolean) => RankColumns;
   /** Column headings: block height, baseline from the top, ink, and the rule below the baseline. */
   readonly header: Readonly<{ height: number; baseline: number; muted: "alpha" | "colour"; rule: number }>;
   readonly row: (watch: boolean) => RowMetrics;
   readonly ownRank: Readonly<{ size: number; maxLines: number; height: number; baseline: number }>;
-  /** Desktop only: the feed's replay rows. */
-  readonly replay: Readonly<{ width: number; pitch: number; inset: number; textReserve: number }>;
 }
 
 const lineHeight = (size: number): number => Math.round(size * 1.25);
 
+/** The desktop design's placements, which the phone page does not use (it flows and measures instead). */
+const DESKTOP = {
+  tabsY: 124,
+  captionY: 184,
+  modePicker: { y: 198, width: 190, height: 34 },
+  difficultyPicker: { y: 240, width: 150, height: 32 },
+  /** Where each tab's body starts, where its state centres, and which list rows are drawn. */
+  ranked: { top: 300, stateCentre: 110, cull: { above: 28, below: 10 } },
+  feed: { top: 202, stateCentre: 178, cull: { above: 104, below: 0 } },
+  state: { wrap: 720, ctaWidth: 320, ctaHeight: 46 },
+  lineButton: { width: 280, height: 30 },
+  replay: { width: 1120, pitch: 96, inset: 8, textReserve: 170 },
+} as const;
+
 /** Desktop: the design's numbers. Phone: the live (compact) tokens. */
 const METRICS: Readonly<Record<"desktop" | "phone", (t: Tokens) => LeaderboardMetrics>> = {
   desktop: (t) => ({
-    tabsY: 124,
-    captionY: 184,
-    modePicker: { y: 198, width: 190, height: 34 },
-    difficultyPicker: { y: 240, width: 150, height: 32 },
     gap: 0,
-    ranked: { top: 300, stateCentre: 110, cull: { above: 28, below: 10 } },
-    feed: { top: 202, stateCentre: 178, cull: { above: 104, below: 0 } },
-    state: { wrap: 720, ctaWidth: 320, ctaHeight: 46 },
     podiumHeight: 140,
     podium: (frame, y, index) => {
       const slot = [
@@ -132,7 +121,6 @@ const METRICS: Readonly<Record<"desktop" | "phone", (t: Tokens) => LeaderboardMe
       };
     },
     line: { reserve: true, height: 40, size: t.type.micro, baseline: 18 },
-    lineButton: { width: 280, height: 30, size: t.type.micro },
     columns: (frame) => {
       const left = frame.centerX - 460,
         width = 920;
@@ -158,21 +146,13 @@ const METRICS: Readonly<Record<"desktop" | "phone", (t: Tokens) => LeaderboardMe
       watch: { top: 4, w: 54, h: 26, size: t.type.micro },
     }),
     ownRank: { size: t.type.micro, maxLines: 1, height: 24, baseline: 20 },
-    replay: { width: 1120, pitch: 96, inset: 8, textReserve: 170 },
   }),
   phone: (t) => {
     const pad = t.space.md,
       target = t.metric.minTarget,
       cardHeight = Math.max(target + pad * 2, pad * 2 + t.type.body + t.space.sm + lineHeight(t.type.micro) * 2);
     return {
-      tabsY: 0,
-      captionY: 0,
-      modePicker: { y: 0, width: 0, height: 0 },
-      difficultyPicker: { y: 0, width: 0, height: 0 },
       gap: pad,
-      ranked: { top: 0, stateCentre: 0, cull: { above: 0, below: 0 } },
-      feed: { top: 0, stateCentre: 0, cull: { above: 0, below: 0 } },
-      state: { wrap: 0, ctaWidth: 0, ctaHeight: 0 },
       podiumHeight: cardHeight,
       podium: (frame, y, index, watch) => {
         const w = (frame.width - pad * 2) / 3,
@@ -203,7 +183,6 @@ const METRICS: Readonly<Record<"desktop" | "phone", (t: Tokens) => LeaderboardMe
         };
       },
       line: { reserve: false, height: 0, size: t.type.caption, baseline: 0 },
-      lineButton: { width: 0, height: 0, size: 0 },
       columns: (frame, watch) => {
         const score = frame.right - (watch ? target + t.space.md : 0);
         return {
@@ -231,7 +210,6 @@ const METRICS: Readonly<Record<"desktop" | "phone", (t: Tokens) => LeaderboardMe
         };
       },
       ownRank: { size: t.type.micro, maxLines: 2, height: 0, baseline: 0 },
-      replay: { width: 0, pitch: 0, inset: 0, textReserve: 0 },
     };
   },
 };
@@ -290,17 +268,17 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
         {
           items: view.modes,
           action: (id) => ({ type: "leaderboards.selectBoard", id: `mode:${id}` }),
-          desktop: m.modePicker,
+          desktop: DESKTOP.modePicker,
         },
         {
           items: view.difficulties ?? [],
           action: (id) => ({ type: "leaderboards.selectBoard", id: `difficulty:${id}` }),
-          desktop: m.difficultyPicker,
+          desktop: DESKTOP.difficultyPicker,
         },
       ],
-      desktop: { tabsY: m.tabsY, captionY: m.captionY },
+      desktop: { tabsY: DESKTOP.tabsY, captionY: DESKTOP.captionY },
     });
-    const place = feed ? m.feed : m.ranked;
+    const place = feed ? DESKTOP.feed : DESKTOP.ranked;
     const state = stateCopy(view, feed);
     let parts: Readonly<{
       head?: readonly ScrollBlock[];
@@ -312,7 +290,7 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
         state.status === "signin"
           ? { label: "SIGN IN VIA PROFILE", action: { type: "navigate", to: "profile", tab: "bests" } as const }
           : undefined;
-      parts = { head: [frames.emptyState(frame, state, cta, { centre: place.stateCentre, ...m.state })] };
+      parts = { head: [frames.emptyState(frame, state, cta, { centre: place.stateCentre, ...DESKTOP.state })] };
     } else if (feed) parts = { list: view.rows.map((row) => feedRow(frame, m, row)) };
     else parts = rankedBoard(frame, m, view);
     const desktop = {
@@ -330,7 +308,7 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
       row,
       { label: "▶  WATCH", enabled: row.available, action: { type: "leaderboards.watchReplay", id: row.id } },
       row.badge ? LEADERBOARD_HUE : ui.t.color.accent,
-      { x: frame.centerX - m.replay.width / 2, ...m.replay },
+      { x: frame.centerX - DESKTOP.replay.width / 2, ...DESKTOP.replay },
     );
   }
 
@@ -353,10 +331,10 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
       const label = view.message?.length ? view.message : "▶  WATCH THE #1 RUN";
       head.push(
         frames.actions(frame, [{ label, action: { type: "leaderboards.watchReplay", id: view.legacyGhostId } }], {
-          height: m.lineButton.height,
-          size: m.lineButton.size,
+          height: DESKTOP.lineButton.height,
+          size: m.line.size,
           blockHeight: m.line.height,
-          slots: [{ x: frame.centerX - m.lineButton.width / 2, w: m.lineButton.width }],
+          slots: [{ x: frame.centerX - DESKTOP.lineButton.width / 2, w: DESKTOP.lineButton.width }],
         }),
       );
     } else if (view.message) {
