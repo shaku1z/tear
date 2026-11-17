@@ -10,7 +10,7 @@ const { catalog } = require("../public/audio/music.json");
  * A stage opens its own page; PLAY previews its first song (STOP appears once it is what is
  * sounding) and the transport's ▶▶ steps to the stage's next song. BACK goes up to Home, Songs
  * lists every catalogued song, and leaving the screen ends the preview so the menu music
- * returns. Home and Songs are checked again at phone landscape. Screenshots go to
+ * returns. The same walk runs again on a touch phone in landscape, where the compact layout shows. Screenshots go to
  * TEAR_VISUAL_DIR when it is set.
  */
 const TITLES = catalog.works.map((work) => work.title);
@@ -129,11 +129,26 @@ withJourney(
         recordFrames: true,
         viewport: phone,
         deviceScaleFactor: 3,
+        touch: true,
       },
       async ({ page, waitScreen, clickLabel }) => {
         await startAudio(page);
         await openMusic(page, clickLabel);
         await capture(page, "phone-home");
+        await clickLabel(OPENED, "music");
+        await waitText(page, "STAGE");
+        await capture(page, "phone-stage");
+        await clickLabel("▶  PLAY", "music");
+        await waitText(page, "■  STOP");
+        await clickLabel("▶▶", "music");
+        await page.waitForFunction(
+          (title) => window.__TEAR_JOURNEY_FRAME__.texts.filter((entry) => entry.text === title).length >= 2,
+          NEXT.title,
+          { timeout: STATE_WAIT_MS },
+        );
+        await capture(page, "phone-playing");
+        await page.keyboard.press("Escape");
+        await waitText(page, "Stages");
         await clickLabel("Songs", "music");
         await waitText(page, "TEAR: BLADE");
         await capture(page, "phone-songs");

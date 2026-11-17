@@ -136,6 +136,8 @@ async function withJourney(options, run) {
     const page = await browser.newPage({
       viewport: options.viewport || { width: 1600, height: 900 },
       deviceScaleFactor: options.deviceScaleFactor || 1,
+      // A touch phone: the game selects its compact layout only for touch screens.
+      ...(options.touch ? { isMobile: true, hasTouch: true } : {}),
       serviceWorkers: "block",
     });
     // A call that names no timeout still gets the state-wait ceiling, not Playwright's 30 s.

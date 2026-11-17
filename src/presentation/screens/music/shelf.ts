@@ -159,7 +159,9 @@ function tiles(
   // Balanced rows: six stages that do not fit one row become two rows of three, not five and one.
   const perRow = Math.ceil(collections.length / Math.ceil(collections.length / fits));
   const size = Math.floor(Math.min(m.tileMax, (m.w - m.gap * (perRow - 1)) / perRow));
-  const textH = t.space.sm + t.type.label + t.space.xs + t.type.micro + t.space.sm;
+  // Two title lines are reserved on every tile, so a row of tiles stays aligned when one name wraps.
+  const titleLine = Math.round(t.type.label * 1.25);
+  const textH = t.space.sm + t.type.label + titleLine + t.space.xs + t.type.micro + t.space.sm;
   const blocks: ScrollBlock[] = [];
   for (let start = 0; start < collections.length; start += perRow) {
     const row = collections.slice(start, start + perRow);
@@ -170,9 +172,13 @@ function tiles(
           const x = m.x + index * (size + m.gap);
           drawCover(context, entry.cover, x, y, size, size);
           const titleY = y + size + t.space.sm + t.type.label;
-          ui.textBox(context.canvas, entry.title, x, titleY, size, { size: t.type.label, maxLines: 1 });
+          ui.textBox(context.canvas, entry.title, x, titleY, size, {
+            size: t.type.label,
+            maxLines: 2,
+            lineHeight: titleLine,
+          });
           const kicker = `${entry.kicker} · ${songCount(entry.songs.length)}`;
-          ui.textBox(context.canvas, kicker, x, titleY + t.space.xs + t.type.micro, size, {
+          ui.textBox(context.canvas, kicker, x, titleY + titleLine + t.space.xs + t.type.micro, size, {
             size: t.type.micro,
             color: t.color.muted,
             maxLines: 1,
