@@ -291,7 +291,7 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
           ? { label: "SIGN IN VIA PROFILE", action: { type: "navigate", to: "profile", tab: "bests" } as const }
           : undefined;
       parts = { head: [frames.emptyState(frame, state, cta, { centre: place.stateCentre, ...DESKTOP.state })] };
-    } else if (feed) parts = { list: view.rows.map((row) => feedRow(frame, m, row)) };
+    } else if (feed) parts = { list: view.rows.map((row) => feedRow(frame, row)) };
     else parts = rankedBoard(frame, m, view);
     const desktop = {
       top: place.top,
@@ -302,7 +302,7 @@ export function createLeaderboardRenderers(context: ScreenRenderContext) {
     frames.close(frame, frames.body(frame, { ...parts, gap: m.gap, desktop }));
   }
 
-  function feedRow(frame: PageFrame, m: LeaderboardMetrics, row: RankRow): ScrollBlock {
+  function feedRow(frame: PageFrame, row: RankRow): ScrollBlock {
     return frames.replay(
       frame,
       row,
