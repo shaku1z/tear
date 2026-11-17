@@ -1,4 +1,5 @@
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
+import { screenLoss } from "../../domain/screen-loss";
 import type { InputMode, Point } from "../../input/browser-input-contracts";
 import { UI_CONFIRM_SETTLE_SECONDS } from "../interface/ui-action-coordinator";
 
@@ -70,6 +71,8 @@ export interface RuntimeFrameCoordinatorOptions {
   readonly cinema: CinemaPort;
   readonly clipper: Readonly<{ start(): void; stop(): void }> | null;
   readonly autoPauseDisconnect: () => boolean;
+  /** Whether the page was hidden or lost focus since the last frame (src/platform/screen-presence.ts). */
+  readonly screen: Readonly<{ take(): Readonly<{ hidden: boolean; blurred: boolean }> }>;
   readonly advancePlayingPrelude: (deltaSeconds: number) => void;
   readonly advancePlayingSimulation: (deltaSeconds: number) => number;
   readonly resetSimulation: () => void;
@@ -118,9 +121,11 @@ export class RuntimeFrameCoordinator {
     const frameStarted = this.#options.now();
     this.#frameStartedMilliseconds = frameStarted;
     const startedPlaying = this.#options.state() === "playing";
+    // Taken every frame, so a page hidden on another screen does not pause a later run.
+    const away = this.#options.screen.take();
     this.#prepareInput(deltaSeconds);
     let simulationSteps = 0;
-    if (this.#options.state() === "playing") simulationSteps = this.#advancePlaying(deltaSeconds);
+    if (this.#options.state() === "playing") simulationSteps = this.#advancePlaying(deltaSeconds, away);
     else this.#advanceInactive();
     this.#options.applicationFrameRecording?.end(simulationSteps);
     this.#advanceApplication(deltaSeconds);
@@ -146,14 +151,8 @@ export class RuntimeFrameCoordinator {
         !pad.connected &&
         this.#options.state() === "playing" &&
         this.#options.autoPauseDisconnect()
-      ) {
-        this.#options.setState("paused");
-        try {
-          releasePointerLock(document);
-        } catch {
-          /* Pointer lock may already be gone. */
-        }
-      }
+      )
+        this.#pause();
       this.#padWasConnected = pad.connected;
     }
     input.updateUI();
@@ -186,23 +185,18 @@ export class RuntimeFrameCoordinator {
     input.allowLock = this.#options.state() === "playing";
   }
 
-  #advancePlaying(deltaSeconds: number): number {
-    const { canvas, document, input } = this.#options;
+  #advancePlaying(deltaSeconds: number, away: Readonly<{ hidden: boolean; blurred: boolean }>): number {
+    const { canvas, input } = this.#options;
     this.#pausedSinceMilliseconds = null;
     this.#options.advancePlayingPrelude(deltaSeconds);
     this.#options.applicationFrameRecording?.preludeApplied();
     if (input.locked) this.#wasPointerLocked = true;
-    const lostCapture = this.#wasPointerLocked && !input.locked;
-    const portraitGate = input.touchActive() && canvas.clientHeight > canvas.clientWidth;
-    if (input.pausePressed() || input.escapePressed() || lostCapture || portraitGate) {
+    const touch = input.touchActive();
+    const lostScreen = screenLoss({ ...away, captureLost: this.#wasPointerLocked && !input.locked, touch });
+    const portraitGate = touch && canvas.clientHeight > canvas.clientWidth;
+    if (input.pausePressed() || input.escapePressed() || lostScreen !== null || portraitGate) {
       this.#consume("KeyP", "Escape");
-      this.#options.setState("paused");
-      this.#wasPointerLocked = false;
-      try {
-        releasePointerLock(document);
-      } catch {
-        /* Pointer lock may already be gone. */
-      }
+      this.#pause();
       return 0;
     }
     return this.#options.advancePlayingSimulation(deltaSeconds);
@@ -237,6 +231,17 @@ export class RuntimeFrameCoordinator {
     } else if (state === "replay" && input.escapePressed()) {
       this.#consume("Escape");
       this.#options.exitReplay();
+    }
+  }
+
+  /** The one way a run in play pauses: the pause key, a lost screen, the portrait gate or a lost pad. */
+  #pause(): void {
+    this.#options.setState("paused");
+    this.#wasPointerLocked = false;
+    try {
+      releasePointerLock(this.#options.document);
+    } catch {
+      /* Pointer lock may already be gone. */
     }
   }
 
