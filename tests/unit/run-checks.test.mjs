@@ -4,11 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  DEFAULT_CHECK_SECONDS,
   flakyLine,
   loadChecks,
   recordResult,
+  parseShard,
   RESULTS_FORMAT,
   selectChecks,
+  shardChecks,
   takeSlot,
 } from "../../scripts/run-checks.mjs";
 
@@ -101,5 +104,53 @@ describe("check results and flaky checks", () => {
     // Another tree is another change: its failure is not a flake of this one.
     expect(flakyLine(previous, "t2", "browser.pale-variants", 2)).toBeUndefined();
     expect(flakyLine(undefined, "t1", "browser.pale-variants", 2)).toBeUndefined();
+  });
+});
+
+describe("shards", () => {
+  const config = loadChecks();
+
+  it("put every check of every group in exactly one shard, for any shard count", () => {
+    for (const group of Object.keys(config.groups)) {
+      const checks = selectChecks(config, group);
+      for (let count = 1; count <= 6; count += 1) {
+        const parts = Array.from({ length: count }, (_, part) => shardChecks(checks, part + 1, count));
+        const ids = parts.flat().map((check) => check.id);
+        expect(ids.sort(), `${group} in ${String(count)}`).toEqual(checks.map((check) => check.id).sort());
+        // Each part keeps the list's order.
+        for (const part of parts) expect(part).toEqual(checks.filter((check) => part.includes(check)));
+      }
+    }
+  });
+
+  it("count a check with no recorded time as the stated default, and still place it", () => {
+    expect(DEFAULT_CHECK_SECONDS).toBe(60);
+    const checks = [
+      { id: "long", seconds: 100 },
+      { id: "new" },
+      { id: "zero", seconds: 0 },
+      { id: "short", seconds: 50 },
+    ];
+    // Longest first into the lighter part: long (100) and new (60) start the two parts, zero (60)
+    // joins new, and short (50) joins long. The two without a time are counted, and placed.
+    expect(shardChecks(checks, 1, 2).map((check) => check.id)).toEqual(["long", "short"]);
+    expect(shardChecks(checks, 2, 2).map((check) => check.id)).toEqual(["new", "zero"]);
+  });
+
+  it("are the same on every call, so each CI job picks its own part of one split", () => {
+    const checks = selectChecks(config, "browser");
+    expect(shardChecks(checks, 2, 4)).toEqual(shardChecks([...checks], 2, 4));
+  });
+
+  it("reject a malformed shard", () => {
+    expect(parseShard("2/4")).toEqual([2, 4]);
+    for (const text of ["", "2", "a/b", "2/4/1", undefined])
+      expect(() => parseShard(text), String(text)).toThrow(RangeError);
+    for (const [part, count] of [
+      [0, 4],
+      [5, 4],
+      [1, 0],
+    ])
+      expect(() => shardChecks([], part, count), `${String(part)}/${String(count)}`).toThrow(RangeError);
   });
 });

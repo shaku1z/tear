@@ -1,14 +1,18 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
-import { loadChecks, selectChecks } from "../../scripts/run-checks.mjs";
+import { hashMismatches } from "../../scripts/ci-build-hashes.mjs";
+import { FIXED_JOBS, verdictProblems } from "../../scripts/ci-verdict.mjs";
+import { loadChecks, selectChecks, shardChecks } from "../../scripts/run-checks.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
 const read = (path) => readFileSync(resolve(root, path), "utf8").replace(/\r\n/gu, "\n");
 const workflow = read(".github/workflows/ci.yml");
+const checkedCommit = read(".github/actions/checked-commit/action.yml");
 
 /** The trigger names under `on:` with the activity types of `pull_request`. */
 function triggers(text) {
@@ -21,14 +25,52 @@ function triggers(text) {
   return { names, types };
 }
 
+/** Each job's block of ci.yml, by job id. */
+function jobs(text) {
+  const body = text.slice(text.indexOf("\njobs:\n") + "\njobs:\n".length);
+  const blocks = {};
+  for (const part of body.split(/\n(?= {2}[a-z][\w-]*:\n)/u)) {
+    const id = /^ {2}([a-z][\w-]*):\n/u.exec(part)?.[1];
+    if (id !== undefined) blocks[id] = part;
+  }
+  return blocks;
+}
+
+const jobBlocks = jobs(workflow);
+const needsOf = (block) => {
+  const line = /\n {4}needs: (.*)\n/u.exec(block)?.[1] ?? "";
+  return line.startsWith("[")
+    ? line
+        .slice(1, -1)
+        .split(",")
+        .map((job) => job.trim())
+    : line
+      ? [line]
+      : [];
+};
+const shardCount = Number(/--shard \$\{\{ matrix\.shard \}\}\/(\d+)/u.exec(workflow)?.[1]);
+
+/** A job's results for ci-verdict: every job given `result`, then the overrides. */
+function needs(result, overrides = {}, docsOnly = "false") {
+  const all = Object.fromEntries([...FIXED_JOBS, ...loadChecks().gate].map((job) => [job, { result, outputs: {} }]));
+  all.scope = { result: "success", outputs: { docs_only: docsOnly } };
+  all.docs = { result: docsOnly === "true" ? "success" : "skipped", outputs: {} };
+  for (const [job, value] of Object.entries(overrides)) all[job] = { ...all[job], result: value };
+  // An override of undefined means the job is missing from `needs` altogether.
+  return Object.fromEntries(Object.entries(all).filter(([job]) => !(job in overrides) || overrides[job] !== undefined));
+}
+
 describe("Validate workflow", () => {
   it("runs for ready pull requests, main pushes and by hand, and skips drafts", () => {
     const { names, types } = triggers(workflow);
     expect(names).toEqual(["pull_request", "push", "workflow_dispatch"]);
     expect(types).toEqual(expect.arrayContaining(["opened", "synchronize", "reopened", "ready_for_review"]));
-    expect(workflow).toMatch(
-      /^ {2}check:\n {4}if: github\.event_name != 'pull_request' \|\| !github\.event\.pull_request\.draft$/mu,
-    );
+    const draft = "(github.event_name != 'pull_request' || !github.event.pull_request.draft)";
+    expect(jobBlocks.scope).toContain(`\n    if: ${draft.slice(1, -1)}\n`);
+    // `check` runs even when a needed job failed, but not on a draft, whose run is skipped.
+    expect(jobBlocks.check).toContain(`\n    if: always() && ${draft}\n`);
+    for (const [id, block] of Object.entries(jobBlocks))
+      if (id !== "scope" && id !== "check") expect(needsOf(block), id).toContain("scope");
   });
 
   it("cancels superseded pull-request runs but never a main run", () => {
@@ -56,26 +98,71 @@ describe("Validate workflow", () => {
     expect(docsOnly([])).toBe(false);
   });
 
-  it("checks a pull request as its head merged with current main, and records both", () => {
+  it("checks one commit in every job: the head merged with the main commit the scope job picked", () => {
     // GitHub's prepared merge ref is reused by a re-run and can be stale after a reopen.
-    expect(workflow).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
-    const merge = workflow.indexOf("- name: Merge current main into the change");
-    const record = workflow.indexOf("- name: Record what was checked");
-    const install = workflow.indexOf("- run: pnpm install --frozen-lockfile");
-    expect(merge).toBeGreaterThan(0);
-    expect(record).toBeGreaterThan(merge);
-    expect(install).toBeGreaterThan(record);
-    expect(workflow.slice(merge, record)).toMatch(
-      /git fetch --quiet origin main\n.*merge --quiet --no-edit origin\/main/u,
-    );
-    // scripts/merge-ready.mjs parses exactly this annotation.
-    expect(workflow).toContain('echo "::notice title=checked::head=$head main=$main"');
+    for (const [id, block] of Object.entries(jobBlocks)) {
+      expect(block, id).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
+      if (id === "scope" || !block.includes("checked-commit")) continue;
+      expect(block, id).toMatch(
+        /uses: \.\/\.github\/actions\/checked-commit\n(?: {8}if: .*\n)? {8}with:\n {10}main: \$\{\{ needs\.scope\.outputs\.merge_main \}\}\n {10}commit: \$\{\{ needs\.scope\.outputs\.commit \}\}\n/u,
+      );
+    }
+    for (const id of loadChecks().gate) expect(jobBlocks[id], id).toContain("./.github/actions/checked-commit");
+    // scripts/merge-ready.mjs parses exactly this annotation, from the job named `check`.
+    expect(jobBlocks.check).toContain('echo "::notice title=checked::head=$HEAD_SHA main=$MAIN"');
     // Every later step must expect the commit checked out here, not GitHub's GITHUB_SHA: the
     // workspace check, the build's attribution and the artifact verification all read these.
-    const recordStep = workflow.slice(record, install);
-    expect(recordStep).toContain('echo "TEAR_RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"');
-    expect(recordStep).toContain('echo "TEAR_BUILD_GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"');
+    expect(checkedCommit).toContain('echo "TEAR_RELEASE_SHA=$commit" >> "$GITHUB_ENV"');
+    expect(checkedCommit).toContain('echo "TEAR_BUILD_GIT_SHA=$commit" >> "$GITHUB_ENV"');
   });
+
+  it(
+    "makes the identical merge commit in every job, and refuses a job that checked out another",
+    { timeout: 60_000 },
+    () => {
+      const script = /\n {4}- name: Merge main into the change\n[\s\S]*?\n {6}run: \|\n((?: {8}.*\n|\n)+)/u
+        .exec(checkedCommit)?.[1]
+        ?.replace(/^ {8}/gmu, "");
+      expect(script, "the merge script").toBeDefined();
+      const work = mkdtempSync(join(tmpdir(), "tear-checked-commit-"));
+      const sh = (cwd, command, env = {}) =>
+        spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", env: { ...process.env, ...env } });
+      try {
+        const origin = join(work, "origin");
+        const commits = ["git init --quiet -b main", "git config user.name t", "git config user.email t@invalid"];
+        expect(sh(work, `mkdir origin && cd origin && ${commits.join(" && ")}`).status).toBe(0);
+        sh(origin, "echo a > a && git add a && git commit --quiet -m a && git checkout --quiet -b change");
+        sh(origin, "echo b > b && git add b && git commit --quiet -m b && git checkout --quiet main");
+        sh(origin, "echo c > c && git add c && git commit --quiet -m c");
+        const main = sh(origin, "git rev-parse main").stdout.trim();
+        const merged = [];
+        for (const name of ["one", "two"]) {
+          expect(sh(work, `git clone --quiet origin ${name} && cd ${name} && git checkout --quiet change`).status).toBe(
+            0,
+          );
+          const output = join(work, `${name}.out`);
+          const env = { MAIN: main, EXPECTED: "", GITHUB_OUTPUT: output, GITHUB_ENV: join(work, `${name}.env`) };
+          const result = sh(join(work, name), script ?? "", env);
+          expect(result.status, result.stdout + result.stderr).toBe(0);
+          merged.push(/commit=([0-9a-f]{40})/u.exec(readFileSync(output, "utf8"))?.[1]);
+        }
+        expect(merged[0]).toMatch(/^[0-9a-f]{40}$/u);
+        expect(merged[1]).toBe(merged[0]);
+        const env = {
+          MAIN: main,
+          EXPECTED: "0".repeat(40),
+          GITHUB_OUTPUT: join(work, "x"),
+          GITHUB_ENV: join(work, "y"),
+        };
+        sh(work, "git clone --quiet origin three && cd three && git checkout --quiet change");
+        const refused = sh(join(work, "three"), script ?? "", env);
+        expect(refused.status).not.toBe(0);
+        expect(refused.stdout).toContain("not the commit the scope job recorded");
+      } finally {
+        rmSync(work, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("has every script that compares HEAD with GITHUB_SHA prefer the checked commit", () => {
     for (const [file, variable] of [
@@ -90,14 +177,27 @@ describe("Validate workflow", () => {
     }
   });
 
-  it("runs every gate group of config/checks.json, in the listed order, and nothing else", () => {
+  it("runs every gate group of config/checks.json as its own job, and nothing else", () => {
     const config = loadChecks();
     const groups = [...workflow.matchAll(/node scripts\/run-checks\.mjs (\w+)/gu)].map((match) => match[1]);
-    expect(groups).toEqual(config.gate);
-    expect(config.gate.slice(0, 1)).toEqual(["static"]);
-    // The cheap, likely-to-fail checks come first, so a failure shows within minutes.
+    expect([...groups].sort()).toEqual([...config.gate].sort());
+    for (const group of config.gate) expect(jobBlocks[group], `job ${group}`).toContain(`run-checks.mjs ${group}`);
+    // The browser shards serve the builds, so they wait for the build job.
+    expect(needsOf(jobBlocks.browser)).toContain("build");
     expect(config.groups.static.slice(0, 3).map((check) => check.id)).toEqual(["format", "docs", "terminology"]);
     expect(workflow).not.toMatch(/check:functional|tearbench (?:ci|tasks)/u);
+  });
+
+  it("splits the browser group into shards that together run every browser check once", () => {
+    expect(shardCount).toBeGreaterThan(1);
+    const matrix = /\n {8}shard: \[([^\]]*)\]\n/u.exec(jobBlocks.browser)?.[1].split(",").map(Number);
+    expect(matrix).toEqual(Array.from({ length: shardCount }, (_, index) => index + 1));
+    const all = selectChecks(loadChecks(), "browser");
+    const parts = (matrix ?? []).map((part) => shardChecks(all, part, shardCount).map((check) => check.id));
+    expect(parts.flat().sort()).toEqual(all.map((check) => check.id).sort());
+    expect(parts.every((part) => part.length > 0)).toBe(true);
+    // One shard's failure must not cancel the others, or it would hide their results.
+    expect(jobBlocks.browser).toContain("\n      fail-fast: false\n");
   });
 
   it("lists every check once, and every file a command names exists", () => {
@@ -119,18 +219,26 @@ describe("Validate workflow", () => {
   });
 
   it("gives no step a key twice (GitHub rejects such a file)", () => {
-    for (const step of workflow.split(/\n(?= {6}- )/u)) {
-      const keys = [...step.matchAll(/^ {6}(?:- | {2})([a-z-]+):/gmu)].map((match) => match[1]);
-      expect(new Set(keys).size, `duplicate key in step: ${step.split("\n")[0]}`).toBe(keys.length);
+    for (const [text, indent] of [
+      [workflow, 6],
+      [checkedCommit, 4],
+    ]) {
+      for (const step of text.split(new RegExp(`\\n(?= {${String(indent)}}- )`, "u"))) {
+        const keys = [...step.matchAll(new RegExp(`^ {${String(indent)}}(?:- | {2})([a-z-]+):`, "gmu"))].map(
+          (match) => match[1],
+        );
+        expect(new Set(keys).size, `duplicate key in step: ${step.split("\n")[0]}`).toBe(keys.length);
+      }
     }
   });
 
-  it("uploads the release build once, under the name and layout the deploy workflows read", () => {
+  it("uploads the release build once, from the build job, under the name and layout the deploy workflows read", () => {
     const uploads =
       workflow.match(
-        /upload-artifact@v4\n(?: {8}if: .*\n)? {8}with:\n(?: {10}#.*\n)* {10}name: tear-release-targets-\$\{\{ steps\.checked\.outputs\.commit \}\}/gu,
+        /upload-artifact@v4\n(?: {8}if: .*\n)? {8}with:\n(?: {10}#.*\n)* {10}name: tear-release-targets-\$\{\{ needs\.scope\.outputs\.commit \}\}/gu,
       ) ?? [];
     expect(uploads).toHaveLength(1);
+    expect(jobBlocks.build).toContain("name: tear-release-targets-");
     // Two paths keep the repository root as the archive root, so deploys find dist/standalone.
     expect(workflow).toMatch(/path: \|\n {12}dist\/standalone\n {12}artifacts\/packages\/tear-crazygames\.zip\n/u);
     expect(read(".github/workflows/deploy-production.yml")).toContain(
@@ -139,15 +247,40 @@ describe("Validate workflow", () => {
     const preview = read(".github/workflows/deploy-preview.yml");
     expect(preview).toContain("/^tear-release-targets-[0-9a-f]{40}$/");
     expect(preview).toContain("candidate-release/dist/standalone");
+    // The build lands before the browser shards finish, so a deploy must refuse a run that failed.
+    for (const file of ["deploy-preview.yml", "deploy-production.yml"])
+      expect(read(`.github/workflows/${file}`), file).toContain(
+        'if (run.conclusion !== "success") errors.push(`conclusion ${run.conclusion} is not success`);',
+      );
+  });
+
+  it("has every browser shard test the release artifact's bytes, checked by hash before any test", () => {
+    const shard = jobBlocks.browser;
+    const download = shard.indexOf("name: tear-release-targets-${{ needs.scope.outputs.commit }}");
+    const verify = shard.indexOf('run: node scripts/ci-build-hashes.mjs --expect "$EXPECTED"');
+    const tests = shard.indexOf("run-checks.mjs browser");
+    expect(download).toBeGreaterThan(0);
+    expect(verify).toBeGreaterThan(download);
+    expect(tests).toBeGreaterThan(verify);
+    expect(shard).toContain("EXPECTED: ${{ needs.build.outputs.hashes }}");
+    expect(jobBlocks.build).toContain('run: echo "hashes=$(node scripts/ci-build-hashes.mjs)" >> "$GITHUB_OUTPUT"');
+    expect(jobBlocks.build.indexOf("ci-build-hashes.mjs")).toBeGreaterThan(
+      jobBlocks.build.indexOf("run-checks.mjs build"),
+    );
+    const built = { standalone: "a", crazygames: "b", "test-standalone": "c", "test-crazygames": "d", package: "e" };
+    expect(hashMismatches(built, { ...built })).toEqual([]);
+    expect(hashMismatches(built, { ...built, standalone: "x" })).toEqual(["standalone"]);
+    expect(hashMismatches({ ...built, package: undefined }, built)).toEqual(["package"]);
+    expect(hashMismatches(null, built)).toEqual(Object.keys(built));
   });
 
   it("serves the dev build of the same commit below /dev/ on preview, and never on production", () => {
     // Built and uploaded on main pushes only, as its own artifact.
-    expect(workflow).toMatch(
-      /if: github\.event_name == 'push' && [^\n]*\n {8}run: node scripts\/build-target\.mjs test-standalone --preview-dev\n/u,
+    expect(jobBlocks.build).toMatch(
+      /if: github\.event_name == 'push'\n {8}run: node scripts\/build-target\.mjs test-standalone --preview-dev\n/u,
     );
-    expect(workflow).toMatch(
-      /if: github\.event_name == 'push' && [^\n]*\n {8}with:\n {10}name: tear-preview-dev-\$\{\{ steps\.checked\.outputs\.commit \}\}\n {10}path: dist\/preview-dev\n/u,
+    expect(jobBlocks.build).toMatch(
+      /if: github\.event_name == 'push'\n {8}with:\n {10}name: tear-preview-dev-\$\{\{ needs\.scope\.outputs\.commit \}\}\n {10}path: dist\/preview-dev\n/u,
     );
     const preview = read(".github/workflows/deploy-preview.yml");
     expect(preview).toContain("const devName = `tear-preview-dev-${artifactSha}`;");
@@ -165,39 +298,128 @@ describe("Validate workflow", () => {
       expect(read(`.github/workflows/${file}`), file).not.toMatch(/preview-dev|candidate-dev/u);
     }
   });
-  it("sets the job limit to at least twice the recorded time of the gate plus setup", () => {
-    // Setup is checkout, install and the Chromium download: about 3 minutes on a runner.
+
+  it("gives each job a limit of at least twice its recorded checks plus setup, and at least 10 minutes", () => {
+    // Setup is checkout, install and, for a browser shard, the Chromium download: about 3 minutes.
     const setupSeconds = 180;
     const config = loadChecks();
-    const gateSeconds = config.gate
-      .flatMap((group) => selectChecks(config, group))
-      .reduce((total, check) => total + check.seconds, 0);
-    const limits = [...workflow.matchAll(/^ {4}timeout-minutes: (\d+)$/gmu)].map((match) => Number(match[1]));
-    expect(limits, "one job-level timeout-minutes").toHaveLength(1);
-    expect(
-      gateSeconds + setupSeconds,
-      `recorded ${String(gateSeconds)} s of checks plus ${String(setupSeconds)} s setup against a ${String(limits[0])}-minute limit`,
-    ).toBeLessThanOrEqual((limits[0] * 60) / 2);
+    const recorded = (checks) => checks.reduce((total, check) => total + check.seconds, 0);
+    const limit = (id) => Number(/\n {4}timeout-minutes: (\d+)\n/u.exec(jobBlocks[id] ?? "")?.[1]);
+    for (const id of Object.keys(jobBlocks)) expect(limit(id), `${id} has a timeout-minutes`).toBeGreaterThan(0);
+    for (const group of config.gate) {
+      const checks = selectChecks(config, group);
+      const slowest =
+        group === "browser"
+          ? Math.max(
+              ...Array.from({ length: shardCount }, (_, part) => recorded(shardChecks(checks, part + 1, shardCount))),
+            )
+          : recorded(checks);
+      const minutes = Math.max(10, Math.ceil(((slowest + setupSeconds) * 2) / 60));
+      expect(limit(group), `${group}: ${String(slowest)} s recorded`).toBeGreaterThanOrEqual(minutes);
+      // The point of the parallel jobs: no group may take the old single job's half hour.
+      expect(limit(group), group).toBeLessThanOrEqual(20);
+    }
+  });
+
+  it("gives no job more than read access, and uses no secret", () => {
+    expect(workflow).toMatch(/\npermissions:\n {2}contents: read\n {2}actions: read\n/u);
+    for (const [id, block] of Object.entries(jobBlocks)) {
+      const permissions = /\n {4}permissions:\n((?: {6}.*\n)+)/u.exec(block)?.[1];
+      expect(permissions, `${id} states its permissions`).toBeDefined();
+      for (const line of (permissions ?? "").trim().split("\n"))
+        expect(line.trim(), `${id}: ${line.trim()}`).toMatch(/^(?:contents|actions): read$/u);
+    }
+    expect(`${workflow}\n${checkedCommit}`).not.toMatch(/secrets\./u);
   });
 
   it("records batch members only on a run started by hand with a batch, passing the input through env", () => {
     const steps = workflow.split(/\n(?= {6}- )/u);
-    const step = steps.find((entry) => entry.includes("name: Record the batch members")) ?? "";
-    expect(step).toMatch(/\n {8}if: github\.event_name == 'workflow_dispatch' && inputs\.batch != ''\n/u);
-    expect(step).toMatch(/\n {10}BATCH: \$\{\{ inputs\.batch \}\}\n/u);
-    const run = /\n {8}run: (.*)/u.exec(step)?.[1] ?? "";
-    expect(run).toBe('node scripts/merge-batch.mjs --record "$BATCH"');
+    const batchSteps = steps.filter((entry) => entry.includes("merge-batch.mjs"));
+    // Checked in the scope job before any check runs, and recorded again by `check`, where
+    // pnpm merge:ready and merge:batch read the annotation.
+    expect(batchSteps).toHaveLength(2);
+    expect(jobBlocks.scope).toContain("merge-batch.mjs --record");
+    expect(jobBlocks.check).toContain("merge-batch.mjs --record");
+    for (const step of batchSteps) {
+      expect(step).toMatch(
+        /\n {8}if: (?:needs\.scope\.result == 'success' && )?github\.event_name == 'workflow_dispatch' && inputs\.batch != ''\n/u,
+      );
+      expect(step).toMatch(/\n {10}BATCH: \$\{\{ inputs\.batch \}\}\n/u);
+      expect(/\n {8}run: (.*)/u.exec(step)?.[1]).toBe('node scripts/merge-batch.mjs --record "$BATCH"');
+    }
     // Nothing else reads the input or writes the batch annotation, so a pull request or main run emits none.
-    const others = steps.filter((entry) => entry !== step);
-    expect(others.some((entry) => /inputs\.batch|title=batch|merge-batch\.mjs/u.test(entry))).toBe(false);
-    // The step runs before the checks, so a batch that checked less than it claims fails before them.
-    expect(workflow.indexOf("Record the batch members")).toBeLessThan(workflow.indexOf("run-checks.mjs static"));
+    const others = steps.filter((entry) => !batchSteps.includes(entry));
+    expect(others.some((entry) => /BATCH: |title=batch|merge-batch\.mjs/u.test(entry))).toBe(false);
   });
 
-  it("checks out the full history (the oracle comparison reads an old commit)", () => {
+  it("checks out the full history in every job (the oracle comparison reads an old commit)", () => {
     const checkouts = [...workflow.matchAll(/uses: actions\/checkout@v4\n {8}with:\n {10}fetch-depth: (\d+)/gu)];
-    expect(checkouts.map((match) => match[1])).toEqual(["0"]);
-    expect(workflow.match(/actions\/checkout@/gu)).toHaveLength(1);
+    expect(checkouts.map((match) => match[1])).toEqual(Object.keys(jobBlocks).map(() => "0"));
+    expect(workflow.match(/actions\/checkout@/gu)).toHaveLength(Object.keys(jobBlocks).length);
+  });
+});
+
+describe("the required check job", () => {
+  const gate = loadChecks().gate;
+
+  it("needs the scope and docs jobs and every gate group", () => {
+    expect(needsOf(jobBlocks.check).sort()).toEqual([...FIXED_JOBS, ...gate].sort());
+    expect(jobBlocks.check).toContain("NEEDS: ${{ toJSON(needs) }}");
+    expect(jobBlocks.check).toMatch(/\n {8}run: node scripts\/ci-verdict\.mjs\n?$/u);
+  });
+
+  it("passes when every gate job passed, or when a documents-only change passed its document checks", () => {
+    expect(verdictProblems(needs("success"), gate)).toEqual([]);
+    expect(verdictProblems(needs("skipped", {}, "true"), gate)).toEqual([]);
+  });
+
+  it("fails when a needed job failed, timed out, was cancelled or was skipped", () => {
+    // A job that hits its timeout-minutes reports failure.
+    for (const result of ["failure", "cancelled", "skipped"]) {
+      for (const job of gate)
+        expect(verdictProblems(needs("success", { [job]: result }), gate), `${job} ${result}`).toEqual([
+          `${job}: ${result}`,
+        ]);
+    }
+    expect(verdictProblems(needs("skipped", { docs: "failure" }, "true"), gate)).toEqual(["docs: failure"]);
+    expect(verdictProblems(needs("skipped", { docs: "cancelled" }, "true"), gate)).toEqual(["docs: cancelled"]);
+  });
+
+  it("fails when the scope job did not pass or gave no answer", () => {
+    for (const result of ["failure", "cancelled", "skipped"])
+      expect(verdictProblems({ ...needs("skipped"), scope: { result, outputs: {} } }, gate)).toEqual([
+        `scope: ${result}`,
+      ]);
+    expect(verdictProblems({ ...needs("success"), scope: { result: "success", outputs: {} } }, gate)).toEqual([
+      "scope: docs_only is undefined",
+    ]);
+  });
+
+  it("fails when a job ran that the scope said should not, or a needed job is missing or unknown", () => {
+    expect(verdictProblems(needs("success", { docs: "success" }), gate)).toEqual([
+      "docs: success where it should not run",
+    ]);
+    expect(verdictProblems(needs("success", {}, "true"), gate)).toEqual(
+      gate.map((job) => `${job}: success where it should not run`),
+    );
+    expect(verdictProblems(needs("success", { unit: undefined }), gate)).toEqual(["unit: not among the needed jobs"]);
+    expect(verdictProblems({ ...needs("success"), extra: { result: "success" } }, gate)).toEqual([
+      "extra: needed but not a gate group, scope or docs",
+    ]);
+    expect(verdictProblems(null, gate)).toHaveLength(FIXED_JOBS.length + gate.length);
+  });
+
+  it("exits non-zero on a failing verdict and zero on a passing one, as the job runs it", () => {
+    const run = (value) =>
+      spawnSync(process.execPath, [resolve(root, "scripts/ci-verdict.mjs")], {
+        encoding: "utf8",
+        env: { ...process.env, NEEDS: JSON.stringify(value) },
+      });
+    expect(run(needs("success")).status).toBe(0);
+    const failed = run(needs("success", { browser: "cancelled" }));
+    expect(failed.status).toBe(1);
+    expect(failed.stdout).toContain("::error title=check::browser: cancelled");
+    expect(run(null).status).toBe(1);
   });
 });
 

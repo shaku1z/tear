@@ -4,6 +4,7 @@
 //   node scripts/run-checks.mjs fast             the fast group (`pnpm check:quick`, the pre-push hook)
 //   node scripts/run-checks.mjs static           one group: fast, static, unit, build, browser, nightly, weekly
 //   node scripts/run-checks.mjs browser --list   print what would run
+//   node scripts/run-checks.mjs browser --shard 2/4   one of four parts of a group (CI's parallel jobs)
 //
 // It stops at the first failing check. The browser and nightly groups serve the builds in dist/, so
 // run the build group first. On this machine, every group except `fast` first takes one of a few
@@ -36,6 +37,40 @@ export function selectChecks(config, group) {
     for (const check of checks) selected.push({ ...check, group: name, args: check.run.split(" ") });
   }
   return selected;
+}
+
+/** The time a check without a recorded `seconds` counts as when the shards are packed. */
+export const DEFAULT_CHECK_SECONDS = 60;
+
+/**
+ * Part `index` (1-based) of `count`: the checks are packed longest first by their recorded
+ * `seconds` (DEFAULT_CHECK_SECONDS when absent), each into the part with the least time so far,
+ * and every part keeps list order. Every check lands in exactly one part, whatever the times say;
+ * a time that drifts only unbalances the parts.
+ */
+export function shardChecks(checks, index, count) {
+  if (!Number.isInteger(count) || count < 1 || !Number.isInteger(index) || index < 1 || index > count)
+    throw new RangeError(`invalid shard ${String(index)}/${String(count)}`);
+  const seconds = (check) =>
+    Number.isFinite(check.seconds) && check.seconds > 0 ? check.seconds : DEFAULT_CHECK_SECONDS;
+  const order = checks
+    .map((check, position) => ({ check, position }))
+    .sort((a, b) => seconds(b.check) - seconds(a.check) || a.position - b.position);
+  const totals = Array.from({ length: count }, () => 0);
+  const part = new Map();
+  for (const { check, position } of order) {
+    const lightest = totals.indexOf(Math.min(...totals));
+    totals[lightest] += seconds(check);
+    part.set(position, lightest + 1);
+  }
+  return checks.filter((_, position) => part.get(position) === index);
+}
+
+/** "2/4" as [2, 4]; throws on anything else. */
+export function parseShard(text) {
+  const match = /^(\d+)\/(\d+)$/u.exec(text ?? "");
+  if (match === null) throw new RangeError(`--shard takes <part>/<count>, got ${String(text)}`);
+  return [Number(match[1]), Number(match[2])];
 }
 
 function git(args) {
@@ -139,7 +174,11 @@ async function main(argv) {
       return 1;
     }
   }
-  const checks = selectChecks(loadChecks(), group);
+  const shardAt = argv.indexOf("--shard");
+  const listed = selectChecks(loadChecks(), group);
+  const checks = shardAt === -1 ? listed : shardChecks(listed, ...parseShard(argv[shardAt + 1]));
+  if (shardAt !== -1)
+    console.log(`shard ${argv[shardAt + 1]}: ${String(checks.length)} of ${String(listed.length)} check(s)`);
   if (argv.includes("--list")) {
     for (const check of checks) console.log(`${check.group}.${check.id}: ${check.run}`);
     return 0;

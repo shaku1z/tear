@@ -1488,6 +1488,28 @@
         "merge:ready"
       ]
     },
+    "scripts/ci-build-hashes.mjs": {
+      "purpose": "Prints the hashes of Validate's builds, or refuses a browser shard whose downloaded builds differ",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    "scripts/ci-verdict.mjs": {
+      "purpose": "Validate's required check: fails unless every needed job ended as it should",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
     "scripts/merge-batch.mjs": {
       "purpose": "Batch merging behind pnpm merge:batch, and the Validate step that records a batch's members",
       "effects": [

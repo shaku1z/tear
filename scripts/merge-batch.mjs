@@ -176,6 +176,13 @@ export function mergeMessage(pr) {
   return { subject, body: paragraphs[0] ?? pr.title };
 }
 
+/** "job: step" for each failed step of a run's jobs (Validate runs its checks in several jobs). */
+export function failedSteps(jobs) {
+  return jobs.flatMap((job) =>
+    (job.steps ?? []).filter((step) => step.conclusion === "failure").map((step) => `${job.name}: ${step.name}`),
+  );
+}
+
 /** The failed checks a batch run reports: run-checks prints `FAIL <group>.<id> ...` for each. */
 export function failedChecks(log) {
   return [...String(log).matchAll(/FAIL ([\w-]+\.[\w-]+) after/gu)].map((match) => match[1]);
@@ -269,18 +276,18 @@ function batchRun(branch) {
     ]),
   ).workflow_runs;
   const running = runs.some((entry) => entry.status !== "completed");
-  if (runs.length === 0) return { latest: undefined, job: undefined, note: "", running };
+  if (runs.length === 0) return { latest: undefined, job: undefined, jobs: [], note: "", running };
   const latest = runs[0];
-  const job = JSON.parse(gh(["api", `repos/${slug}/actions/runs/${String(latest.id)}/jobs`])).jobs.find(
-    (entry) => entry.name === "check",
-  );
+  const jobs = JSON.parse(gh(["api", `repos/${slug}/actions/runs/${String(latest.id)}/jobs`])).jobs;
+  // The batch annotation is on the required job, `check`; failed steps can be in any job.
+  const job = jobs.find((entry) => entry.name === "check");
   const notes = job ? JSON.parse(gh(["api", `repos/${slug}/check-runs/${String(job.id)}/annotations`])) : [];
   const note = notes.find((entry) => entry.title === "batch")?.message ?? "";
-  return { latest, job, note, running };
+  return { latest, job, jobs, note, running };
 }
 
 function status(branch) {
-  const { latest, job, note } = batchRun(branch);
+  const { latest, jobs, note } = batchRun(branch);
   if (latest === undefined) throw new Error(`no Validate run on ${branch}`);
   console.log(`batch run ${latest.html_url}: ${latest.status}${latest.conclusion ? `, ${latest.conclusion}` : ""}`);
   console.log(note ? `members: ${note}` : "the run has not recorded its members yet");
@@ -289,8 +296,8 @@ function status(branch) {
     console.log(`merge them in the listed order, then: pnpm merge:batch --verify ${branch}`);
     return 0;
   }
-  if (latest.status === "completed" && job) {
-    const steps = job.steps.filter((step) => step.conclusion === "failure").map((step) => step.name);
+  if (latest.status === "completed" && jobs.length > 0) {
+    const steps = failedSteps(jobs);
     const log = run("gh", ["run", "view", String(latest.id), "--log-failed"], { allowFailure: true }).out;
     console.log(`failed step: ${steps.join(", ") || "(none recorded)"}`);
     const checks = failedChecks(log);
