@@ -261,6 +261,11 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
     name: browser (${{ matrix.shard }}/4)
+    # Playwright's own image for the lockfile's @playwright/test version (the ci-workflow test keeps
+    # them equal): Chromium and its system packages are already in it, so no shard installs them.
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v4
         with:
@@ -284,7 +289,6 @@ jobs:
       - uses: ./.github/actions/check-results
         with:
           job: browser-${{ matrix.shard }}
-      - run: pnpm exec playwright install --with-deps chromium
       - name: Browser checks
         run: xvfb-run -a node scripts/run-checks.mjs browser --shard ${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v4

@@ -460,3 +460,20 @@ describe("Check list override", () => {
     }
   });
 });
+
+describe("Browser jobs' container", () => {
+  it("is Playwright's image for the version the lockfile installs", () => {
+    const locked = /\n {6}'@playwright\/test':\n {8}specifier: [^\n]+\n {8}version: ([\d.]+)/u.exec(
+      read("pnpm-lock.yaml"),
+    )?.[1];
+    const image = /\n {4}container:\n {6}image: mcr\.microsoft\.com\/playwright:v([\d.]+)-noble\n/u.exec(
+      jobBlocks.browser,
+    )?.[1];
+    expect(locked).toMatch(/^\d+\.\d+\.\d+$/u);
+    expect(image).toBe(locked);
+  });
+
+  it("installs no browser, so a slow package mirror cannot stall a shard", () => {
+    expect(jobBlocks.browser).not.toMatch(/playwright install/u);
+  });
+});
