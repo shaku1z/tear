@@ -305,18 +305,17 @@ export class GhostLiveRecorder {
     return this.#activeSession === null || session.sequence >= this.#activeSession.sequence;
   }
 
+  /**
+   * Resolves once every accepted entry is written. One write loop owns the queue, and `flushing` is cleared
+   * in the same step that finds the queue empty, so a caller is never handed a loop that has already ended.
+   */
   async #flush(session: LiveGhostCaptureSession): Promise<void> {
     if (session.recorder === null || session.failure !== null) return;
-    if (session.flushing !== null) return session.flushing;
-    session.flushing = this.#flushQueued(session).catch((error: unknown) => {
-      this.#fail(session, error);
-    });
-    try {
-      await session.flushing;
-    } finally {
-      session.flushing = null;
+    if (session.flushing === null) {
+      if (session.pending.length === 0) return;
+      session.flushing = this.#flushQueued(session);
     }
-    if (!this.#hasFailed(session) && session.pending.length > 0) await this.#flush(session);
+    await session.flushing;
   }
 
   #hasFailed(session: LiveGhostCaptureSession): boolean {
@@ -324,11 +323,18 @@ export class GhostLiveRecorder {
   }
 
   async #flushQueued(session: LiveGhostCaptureSession): Promise<void> {
-    const recorder = session.recorder;
-    if (recorder === null) return;
-    while (session.pending.length > 0) {
-      const entry = session.pending.shift();
-      if (entry !== undefined) await recorder.append(entry);
+    try {
+      // Reaching the first append takes a turn, so `flushing` is always assigned before it is cleared.
+      await Promise.resolve();
+      const recorder = session.recorder;
+      while (recorder !== null && session.pending.length > 0) {
+        const entry = session.pending.shift();
+        if (entry !== undefined) await recorder.append(entry);
+      }
+    } catch (error) {
+      this.#fail(session, error);
+    } finally {
+      session.flushing = null;
     }
   }
 

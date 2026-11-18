@@ -316,6 +316,8 @@ const LONG =
   "Take six percent less floor and environmental hazard damage per level, stacking with every other source of resistance.";
 const shopView = {
   id: "shop" as const,
+  tab: "upgrades",
+  tabs: [],
   coins: 12_345,
   ownedLevels: 3,
   totalLevels: 80,

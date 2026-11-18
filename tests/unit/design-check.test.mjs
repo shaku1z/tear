@@ -47,6 +47,37 @@ describe("design-check verdict", () => {
     expect(designCheckVerdict(template, "enforce").refuse).toContain("General case (empty)");
   });
 
+  it("reads a label extended in its bold span or with the colon outside it, but not a heading", () => {
+    // The shape of #214, which observe mode wrongly reported as "Cause (missing)".
+    const extended = DESIGN_CHECK_LABELS.map((label, index) => {
+      const shown = label === "Cause" ? "Cause and check" : label;
+      return `${String(index + 1)}. **${shown}:** answer ${String(index)}`;
+    }).join("\n");
+    expect(designCheckVerdict(`### Cause\n\nprose\n\n## Design check\n\n${extended}`, "enforce")).toEqual({});
+    expect(designCheckVerdict(answered.replace("**Cause:**", "**Cause**:"), "enforce")).toEqual({});
+    const headingOnly = answered.replace("- **Cause:** an answer", "### Cause\n\nprose");
+    expect(designCheckVerdict(headingOnly, "enforce").refuse).toContain("Cause (missing)");
+    const otherWord = answered.replace("**Cause:**", "**Causes:**");
+    expect(designCheckVerdict(otherWord, "enforce").refuse).toContain("Cause (missing)");
+    const emptyExtended = answered.replace("**Cause:** an answer", "**Cause and check:**");
+    expect(designCheckVerdict(emptyExtended, "enforce").refuse).toContain("Cause (empty)");
+  });
+
+  it("reads a qualifier before the colon and an answer given as a nested list", () => {
+    // The shape of #205, which observe mode wrongly reported as "Measured (missing), Removed (empty)".
+    const nested = answered
+      .replace(
+        "- **Measured:** an answer",
+        "5. **Measured** (`pnpm build`, before and after):\n   - chunk: 554 kB to 556 kB",
+      )
+      .replace("- **Removed:** an answer", "6. **Removed:**\n   - the old comment;\n   - the copy.\n\n## Checks");
+    expect(designCheckVerdict(nested, "enforce")).toEqual({});
+    const notIndented = answered.replace("- **Removed:** an answer", "- **Removed:**\n\n## Checks\n\n- tests");
+    expect(designCheckVerdict(notIndented, "enforce").refuse).toContain("Removed (empty)");
+    const bareNested = answered.replace("- **Removed:** an answer", "- **Removed:**\n  - n/a");
+    expect(designCheckVerdict(bareNested, "enforce").refuse).toContain('Removed ("n/a" without a reason)');
+  });
+
   it("throws on an unknown mode instead of switching the gate off", () => {
     expect(() => designCheckVerdict(answered, "warn")).toThrow(/unknown design-check mode/u);
   });

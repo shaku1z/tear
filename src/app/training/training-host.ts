@@ -156,6 +156,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     },
     demonstrate: () => loaded?.tutorial.demonstrate() ?? false,
     captureSession: () => loaded?.tutorial.captureSession(),
+    freePracticeCourse: () => loaded?.tutorial.freePracticeCourse(),
     validateSession: (value, weaponId, actors, candidate) => {
       if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session");
       loaded?.tutorial.validateSession(value, weaponId, actors, candidate);
