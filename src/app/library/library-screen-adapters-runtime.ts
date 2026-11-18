@@ -48,6 +48,7 @@ type Dependencies = Pick<
   | "DAILY"
   | "Echo"
   | "FirebaseProvider"
+  | "fullscreen"
   | "Flyer"
   | "META"
   | "PROFILE"
@@ -260,13 +261,18 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     });
     const guide =
       codexTab === "guide"
-        ? buildCodexGuide(d.CONFIG.trick.pts, d.CONFIG.trick.tiers, {
-            jump: d.PAD.bindingLabel("jump"),
-            dash: d.PAD.bindingLabel("dash"),
-            throw: d.PAD.bindingLabel("throw"),
-            tether: d.PAD.bindingLabel("tether"),
-            pause: d.PAD.glyph(9),
-          })
+        ? buildCodexGuide(
+            d.CONFIG.trick.pts,
+            d.CONFIG.trick.tiers,
+            {
+              jump: d.PAD.bindingLabel("jump"),
+              dash: d.PAD.bindingLabel("dash"),
+              throw: d.PAD.bindingLabel("throw"),
+              tether: d.PAD.bindingLabel("tether"),
+              pause: d.PAD.glyph(9),
+            },
+            d.fullscreen().available,
+          )
         : undefined;
     const result = buildCodexScreenSnapshot({
       tab: codexTab,
