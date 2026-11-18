@@ -1,5 +1,5 @@
 import { A11Y, CONFIG, GFX } from "../../src/config/game-config";
-import { createLiveAuthoritativeInputAdapter } from "../../src/app/world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../src/gameplay/runtime/authoritative-input-adapter";
 import { createTearWorldBootstrap } from "../../src/gameplay/runtime/tear-world-bootstrap";
 import { createLiveWorldState, type LiveWorldSessionPort } from "../../src/app/world/world-composition";
 import { createLiveWorldServices } from "../../src/app/world/world-context";

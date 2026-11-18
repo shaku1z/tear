@@ -1,5 +1,5 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
 import type { AppTransitionContext } from "../interface/app-state-controller";
