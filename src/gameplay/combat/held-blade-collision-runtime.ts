@@ -1,4 +1,5 @@
 import { runDnaObserver, withRunDnaAttack } from "../runtime/run-dna-observer";
+import { drillMoveCallout } from "../weapons";
 import { planHeldStrike } from "./held-strike-planner";
 import type { HeldBladeCollisionInput, HeldBladeEnemy, PointDistance } from "./held-blade-collision-contracts";
 
@@ -334,20 +335,22 @@ function applyWeaponEffect(
 ): void {
   if (!effect) return;
   const { blade, run, tuning: t, effects: fx } = input;
+  // A drilled move (Reversal, Break) floats its name from the weapon's `drillMoves`.
+  const callout = drillMoveCallout(run.weaponId, effect.mechanic);
   if (effect.hitIframe != null) enemy.hitCd = Math.min(enemy.hitCd, effect.hitIframe);
   if (effect.mechanic === "reversal") {
     run.weaponStats.reversals++;
     enemy.stun = Math.max(enemy.stun, enemy.isBoss ? 0 : (effect.stun ?? 0));
     if (fx.presentAttack === undefined) {
       fx.ribbon(blade.x, blade.y, blade.tipX, blade.tipY, t.colors.perfect);
-      fx.floater(enemy.x, enemy.y - 42, "REVERSAL", true, t.colors.perfect);
+      if (callout) fx.floater(enemy.x, enemy.y - 42, callout, true, t.colors.perfect);
     }
   } else if (effect.mechanic === "break" && enemy.applyBreak && effect.breakPower !== undefined) {
     if (enemy.applyBreak(effect.breakPower)) {
       effect.broke = true;
       run.weaponStats.breakTriggers++;
       if (fx.presentAttack === undefined) {
-        fx.floater(enemy.x, enemy.y - 42, "BREAK", true, t.colors.armoredShield);
+        if (callout) fx.floater(enemy.x, enemy.y - 42, callout, true, t.colors.armoredShield);
         fx.ring(enemy.x, enemy.y, 15, t.colors.armoredShield);
       }
     }

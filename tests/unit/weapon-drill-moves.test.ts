@@ -10,7 +10,7 @@ import {
   TUTORIAL_WEAPON_ANNEXES,
 } from "../../src/gameplay/training/tutorial-weapon-annexes";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
-import { getWeapon } from "../../src/gameplay/weapons";
+import { drillMoveCallout, getWeapon } from "../../src/gameplay/weapons";
 
 /** Every TypeScript source under `dir`, as text. */
 function sources(dir: string): { path: string; text: string }[] {
@@ -20,6 +20,9 @@ function sources(dir: string): { path: string; text: string }[] {
     return entry.name.endsWith(".ts") ? [{ path, text: readFileSync(path, "utf8") }] : [];
   });
 }
+
+/** The game code that reports effects and floats text, read once for every test here. */
+const GAME_SOURCES = [...sources("src/gameplay"), ...sources("src/app")];
 
 describe("weapon drill moves (one source of the drilled move names)", () => {
   it("drills every weapon through its own moves, one instruction per move", () => {
@@ -57,8 +60,11 @@ describe("weapon drill moves (one source of the drilled move names)", () => {
   it("names only effects the combat code reports", () => {
     // The reporters are the combat and entity runtimes that call `weaponEffect` or return a
     // `mechanic`; the drill table itself (weapons.ts) and the training code only read the ids.
-    const reporters = [...sources("src/gameplay"), ...sources("src/app/combat")].filter(
-      ({ path }) => !path.includes(join("gameplay", "training")) && !path.endsWith(join("gameplay", "weapons.ts")),
+    const reporters = GAME_SOURCES.filter(
+      ({ path }) =>
+        (path.includes(join("src", "gameplay")) || path.includes(join("app", "combat"))) &&
+        !path.includes(join("gameplay", "training")) &&
+        !path.endsWith(join("gameplay", "weapons.ts")),
     );
     for (const annex of TUTORIAL_WEAPON_ANNEXES)
       for (const effect of annex.moves.flatMap((move) => move.effects))
@@ -66,6 +72,27 @@ describe("weapon drill moves (one source of the drilled move names)", () => {
           reporters.some(({ text }) => text.includes(`"${effect}"`)),
           `${annex.id}: "${effect}" is reported by the combat code`,
         ).toBe(true);
+  });
+
+  it("floats a drilled move's name from its weapon, and no floater spells one by hand", () => {
+    expect(drillMoveCallout("sword", "reversal")).toBe("REVERSAL");
+    expect(drillMoveCallout("hammer", "break")).toBe("BREAK");
+    expect(drillMoveCallout("greatsword", "wheelReturn")).toBe("WHEEL CUT");
+    expect(drillMoveCallout("sword", "break"), "another weapon's move").toBeUndefined();
+    expect(drillMoveCallout(undefined, "reversal"), "no weapon").toBeUndefined();
+    const names = new Set(
+      TUTORIAL_WEAPON_ANNEXES.flatMap((annex) => annex.moves.map((move) => move.name.toUpperCase())),
+    );
+    // Every floater call's string literals, across the game code.
+    const spelled = GAME_SOURCES.filter(({ text }) => text.includes("floater(")).flatMap(({ path, text }) =>
+      [...text.matchAll(/floater\(([^;]*?)\);/gs)].flatMap((call) =>
+        [...(call[1] ?? "").matchAll(/"([^"]*)"/g)]
+          .map((literal) => (literal[1] ?? "").replace(/!+$/, ""))
+          .filter((literal) => names.has(literal))
+          .map((literal) => `${path}: "${literal}"`),
+      ),
+    );
+    expect(spelled).toEqual([]);
   });
 
   it("builds the WEAPONS help and the drill's teaching line from the moves", () => {

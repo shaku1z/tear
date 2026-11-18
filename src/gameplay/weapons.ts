@@ -537,5 +537,16 @@ function applyWeapon(config: WeaponConfiguration, id: string): WeaponDefinition 
   return weapon;
 }
 
-export { WEAPONS, applyWeapon, getWeapon };
+/**
+ * What a weapon effect floats when it lands one of the weapon's drilled moves: the move's name in
+ * capitals ("REVERSAL"), from the weapon's `drillMoves`. Undefined for any other effect.
+ */
+function drillMoveCallout(weaponId: string | undefined, effect: string): string | undefined {
+  if (weaponId === undefined) return undefined;
+  return getWeapon(weaponId)
+    .drillMoves.find((move) => move.effects.includes(effect))
+    ?.name.toUpperCase();
+}
+
+export { WEAPONS, applyWeapon, drillMoveCallout, getWeapon };
 export { migrateWeaponSelection, WEAPON_SELECTION_MIGRATION } from "./weapon-selection";
