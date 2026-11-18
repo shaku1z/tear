@@ -8,9 +8,10 @@ import type {
   WinScreenView,
 } from "./contracts";
 import { wrapSpaceSeparated } from "../ui-text-fit";
-import { actionRow, overlayHeader, overlayLayout, verticalMenu, type OverlayLayout } from "./screen-primitives";
+import { actionRow, overlayHeader, overlayLayout, tabs, verticalMenu, type OverlayLayout } from "./screen-primitives";
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
 import { LESSON_TEACHING, countedLessons } from "../../gameplay/training/training-exercises";
+import { PRACTICE_TABS, practiceTabDefinition, type PracticeTab } from "../../gameplay/training/practice-tabs";
 
 const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 
@@ -44,9 +45,10 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     ui.dim(canvas, width, height, 0.9);
     const unfinished = session.unfinished === true && session.phase === "free-practice";
     const lab = session.practiceOnly === true,
-      annexes = lab && session.annexSelector === true,
-      catalog = lab && session.catalogSelector === true,
-      bosses = lab && session.bossSelector === true,
+      tab = lab ? practiceTabDefinition(session.practiceTab ?? "lessons") : undefined,
+      annexes = tab?.id === "weapons",
+      catalog = tab?.id === "enemies",
+      bosses = tab?.id === "bosses",
       complete = (session.courseCompleted || lab) && session.phase === "free-practice",
       current = session.lessons.find((lesson) => lesson.current);
     // Geometry comes from the shared overlay pattern; compact density (phone) tightens gaps.
@@ -56,7 +58,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       top = header.bodyTop;
     ui.title(
       canvas,
-      lab ? "PRACTICE LAB" : complete || unfinished ? "TRAINING COMPLETE" : "TUTORIAL",
+      lab ? "DRILLS" : complete || unfinished ? "TRAINING COMPLETE" : "TUTORIAL",
       width / 2,
       titleY,
       ui.t.type.display,
@@ -73,15 +75,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       unfinished
         ? "Some lessons were skipped. Replay them below to finish the course."
         : complete
-          ? lab
-            ? bosses
-              ? "Choose a boss phase · baseline sword · no rewards"
-              : catalog
-                ? "Choose an opponent · baseline sword · no rewards"
-                : annexes
-                  ? "Choose a weapon · baseline loadout · no rewards"
-                  : "Choose a technique · baseline sword · no rewards"
-            : "Every technique learned. Pick your next step."
+          ? (tab?.subtitle ?? "Every technique learned. Pick your next step.")
           : `${activeTitle} · ${String(session.progress[0])} of ${String(session.progress[1])}`,
       width / 2,
       header.subtitleY,
@@ -119,22 +113,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
             },
           ]
         : []),
-      ...(lab
-        ? [
-            {
-              label: annexes ? "BASELINE EXERCISES" : "WEAPON ANNEXES",
-              action: { type: "tutorial.action", command: "annexes" } as const,
-            },
-            {
-              label: bosses ? "BASELINE EXERCISES" : "BOSS PRACTICE",
-              action: { type: "tutorial.action", command: "bosses" } as const,
-            },
-            {
-              label: catalog ? "BASELINE EXERCISES" : "ENEMY CATALOG",
-              action: { type: "tutorial.action", command: "catalog" } as const,
-            },
-          ]
-        : []),
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ];
@@ -158,42 +136,27 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       panelW = width * 0.54,
       rowTop = top + (compact ? 38 : 45),
       helpH = compact ? (catalog ? 70 : 90) : 130;
-    ui.tag(
-      canvas,
-      bosses
-        ? "BOSS PHASE ENTRIES"
-        : catalog
-          ? "KNOWN OPPONENTS"
-          : annexes
-            ? "CHOOSE A WEAPON"
-            : lab
-              ? "UNLOCKED EXERCISES"
-              : complete
-                ? "PRACTICE A TECHNIQUE"
-                : "LESSONS",
-      panelX,
-      top,
-      ui.t.color.accent,
-      "left",
-      ui.t.type.micro,
-    );
-    ui.text(
-      canvas,
-      bosses
-        ? "P1: defeated identity or seen phase · P2/3: saved exact exposure"
-        : catalog
-          ? "Unknown history stays unknown · practice never unlocks entries"
-          : annexes
-            ? "Real weapon effects · restart any attempt · no rewards"
-            : lab
-              ? "Restart any exercise, or use help and demos."
-              : `${String(learned)} of ${String(countedLessons(session))} learned · replay any lesson you have reached`,
-      panelX,
-      top + 21,
-      ui.t.type.micro,
-      "left",
-      ui.t.alpha.soft,
-    );
+    if (tab) drillTabs(tab.id, panelX, top, panelW, rowTop - top - (compact ? 6 : 10));
+    else {
+      ui.tag(
+        canvas,
+        complete ? "PRACTICE A TECHNIQUE" : "LESSONS",
+        panelX,
+        top,
+        ui.t.color.accent,
+        "left",
+        ui.t.type.micro,
+      );
+      ui.text(
+        canvas,
+        `${String(learned)} of ${String(countedLessons(session))} learned · replay any lesson you have reached`,
+        panelX,
+        top + 21,
+        ui.t.type.micro,
+        "left",
+        ui.t.alpha.soft,
+      );
+    }
     const exercises = bosses
       ? (session.bossCatalog ?? []).map((boss) => ({
           ...boss,
@@ -217,25 +180,25 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     exercises.forEach((lesson, originalIndex) => {
       const index = originalIndex - bossOffset;
       if (bosses && compact && (index < 0 || index >= 9)) return;
-      const columns = bosses ? 3 : 2,
+      const columns = tab?.columns ?? 2,
         column = index % columns,
         row = Math.floor(index / columns);
       context.enqueue({
-        x: panelX + column * (panelW / (bosses ? 3 : 2) + 4),
+        x: panelX + column * (panelW / columns + 4),
         y: rowTop + row * rowH,
-        w: panelW / (bosses ? 3 : 2) - 8,
+        w: panelW / columns - 8,
         h: rowH - 4,
         label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · SKIPPED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
         ...("knowledge" in lesson && typeof lesson.knowledge === "string"
           ? {
               sub: (
                 {
-                  "defeated-identity": "DEFEATED IDENTITY",
-                  "encountered-phase": "SAVED PHASE EXPOSURE",
-                  "confirmed-defeated": "CONFIRMED DEFEATED",
-                  encountered: "ENCOUNTERED",
-                  "save-unconfirmed": "SAVE NOT CONFIRMED",
-                  unknown: "HISTORY NOT RECORDED",
+                  "defeated-identity": "DEFEATED",
+                  "encountered-phase": "PHASE REACHED",
+                  "confirmed-defeated": "DEFEATED",
+                  encountered: "MET",
+                  "save-unconfirmed": "NOT SAVED YET",
+                  unknown: "NOT MET YET",
                 } as Readonly<Record<string, string>>
               )[lesson.knowledge],
             }
@@ -244,7 +207,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         selected: lesson.current,
         action: {
           type: "tutorial.action",
-          command: bosses ? "select-boss" : catalog ? "select-enemy" : annexes ? "select-annex" : "select",
+          command: tab?.select ?? "select",
           lessonId: lesson.id,
         },
         size: compact ? ui.t.type.micro : ui.t.type.caption,
@@ -252,21 +215,24 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     });
     if (bosses && compact)
       ui.scrollHint(canvas, panelX + panelW / 2, rowTop + rows * rowH + 10, bossOffset > 0, bossOffset < 9);
-    const help = bosses
-      ? compact
-        ? "Scroll for more bosses. P1: recorded defeat or seen phase. Later phases: exact saved exposure. Real entry transitions and rituals; baseline, no rewards."
-        : "Opening phase access from a recorded defeat does not reconstruct old phase history. Later phases require their exact saved exposure. Each exercise starts at its real authored transition; rituals remain interactive. No rewards or discovery."
-      : catalog
-        ? "Confirmed defeated uses an existing recorded kill. Encountered means an opponent was exposed in ordinary live play. Missing older history is not proof you have never met it. Practice uses a real opponent; pause to reset."
-        : session.helpVisible || session.annex || session.enemyPractice || session.bossPractice
-          ? session.instruction
-          : annexes
-            ? "Sword: Reversal and launch. Hammer: slam and Break. Greatsword: Cleave and Wheel Cut. Chainblade: Hook and Sling. Riftlock: Capture and Razor Rounds. Select a weapon to try its real mechanics."
-            : complete
-              ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then dodge and punish. Choose any lesson above to practice it again."
-              : current
-                ? `${LESSON_TEACHING[current.id].goal} ${LESSON_TEACHING[current.id].why}`
-                : "";
+    // On the drill's own tab, the drill under way says what to do now; any other tab explains its list.
+    const drillTab = session.annex
+        ? "weapons"
+        : session.enemyPractice
+          ? "enemies"
+          : session.bossPractice
+            ? "bosses"
+            : undefined,
+      tabHelp = tab?.help === undefined ? undefined : compact ? (tab.compactHelp ?? tab.help) : tab.help;
+    const help =
+      session.helpVisible || (drillTab !== undefined && drillTab === tab?.id)
+        ? session.instruction
+        : (tabHelp ??
+          (complete
+            ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then dodge and punish. Choose any lesson above to practice it again."
+            : current
+              ? `${LESSON_TEACHING[current.id].goal} ${LESSON_TEACHING[current.id].why}`
+              : ""));
     if (session.coach?.available && !bosses && !catalog && !annexes) {
       const coach = session.coach,
         controls: { label: string; command: "coach-rate" | "coach-compare" }[] = [
@@ -306,6 +272,17 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       Math.round(ui.t.type.caption * 1.35),
       ui.t.type.caption,
       ui.ink,
+    );
+  }
+
+  /** The Drills tabs over the list panel: the hubs' tab strip, framed to the panel. */
+  function drillTabs(open: PracticeTab, x: number, y: number, w: number, h: number): void {
+    tabs(
+      context,
+      PRACTICE_TABS.map(({ id, label }) => ({ id, label, selected: id === open })),
+      (id) => ({ type: "tutorial.action", command: "tab", tab: id }),
+      y,
+      { x, w, h },
     );
   }
 
