@@ -23,7 +23,7 @@ import {
   unique,
   type Rect,
 } from "./scene-fields";
-import { parseMotion, SCENE_MOTE_SPRITE, type SceneMotion } from "./scene-motion-contract";
+import { lightCanvasSize, parseMotion, SCENE_MOTE_SPRITE, type SceneMotion } from "./scene-motion-contract";
 
 export { ScenePackageError };
 export type { Point, Rect } from "./scene-fields";
@@ -382,8 +382,9 @@ export function validateScenePackage(input: unknown): ScenePackage {
 
 /**
  * Decoded RGBA bytes a shown scene holds: every image, plus the canvas each
- * stretch of water is redrawn into (the size of the paint it moves), and the
- * speck image of each set of motes. Light is drawn straight onto the frame.
+ * stretch of water is redrawn into (the size of the paint it moves), the canvas
+ * each set of light shafts is redrawn into, and the speck image of each set of
+ * motes.
  */
 export function decodedBytes(
   scene: Pick<ScenePackage, "images"> & Partial<Pick<ScenePackage, "layers" | "motion">>,
@@ -391,7 +392,10 @@ export function decodedBytes(
   const images = scene.images.reduce((total, item) => total + item.width * item.height * 4, 0);
   return (scene.motion ?? []).reduce((total, item) => {
     if (item.kind === "motes") return total + SCENE_MOTE_SPRITE * SCENE_MOTE_SPRITE * 4;
-    if (item.kind !== "water") return total;
+    if (item.kind === "light") {
+      const [w, h] = lightCanvasSize(item);
+      return total + w * h * 4;
+    }
     const layer = scene.layers?.find((entry) => entry.id === item.layer);
     const image = scene.images.find((entry) => entry.id === layer?.image);
     if (layer === undefined || image === undefined) return total;

@@ -15,7 +15,7 @@ import {
   waterRow,
   type PreparedMotion,
 } from "../../src/presentation/scenes/scene-motion";
-import { SCENE_MOTE_SPRITE } from "../../src/presentation/scenes/scene-motion-contract";
+import { SCENE_LIGHT_SCALE, SCENE_MOTE_SPRITE } from "../../src/presentation/scenes/scene-motion-contract";
 import { drawSceneBack, type LoadedScene, type SceneFrame } from "../../src/presentation/scenes/scene-renderer";
 import { fixturePackage } from "./scene-fixture";
 
@@ -70,6 +70,8 @@ function recorder() {
       };
     },
     set(_target, property, value): boolean {
+      if (property === "globalAlpha")
+        calls.push({ name: "globalAlpha", args: [value], blend: values.get("globalCompositeOperation") });
       values.set(property, value);
       return true;
     },
@@ -110,7 +112,7 @@ function loadedPackage(input: unknown) {
 /** The first prepared part, which these tests make water. */
 function waterPart(motion: readonly PreparedMotion[]) {
   const part = motion[0];
-  if (part === undefined || !("canvas" in part)) throw new Error("no water");
+  if (part === undefined || !("source" in part)) throw new Error("no water");
   return part;
 }
 
@@ -339,34 +341,38 @@ describe("light and motes in a scene package", () => {
     expect(() => validateScenePackage(withParts(part))).toThrow(message);
   });
 
-  it("counts the speck image of motes as decoded memory; light holds none", () => {
+  it("counts the light's canvas and the speck image of motes as decoded memory", () => {
     const still = decodedBytes(validateScenePackage(withParts()));
-    expect(decodedBytes(validateScenePackage(withParts(light)))).toBe(still);
+    expect(decodedBytes(validateScenePackage(withParts(light)))).toBe(
+      still + 1400 * SCENE_LIGHT_SCALE * 800 * SCENE_LIGHT_SCALE * 4,
+    );
     expect(decodedBytes(validateScenePackage(withParts(motes)))).toBe(still + SCENE_MOTE_SPRITE ** 2 * 4);
   });
 });
 
 describe("drawing light and motes", () => {
-  it("makes no canvas for light and one small speck for motes, and releases what it made", () => {
+  it("makes a quarter-size canvas for light and one small speck for motes, and releases what it made", () => {
     const { motion, created } = loadedPackage(withParts(water, light, motes));
     expect(created).toEqual([
       { width: 1000, height: 240 },
+      { width: 1400 * SCENE_LIGHT_SCALE, height: 800 * SCENE_LIGHT_SCALE },
       { width: SCENE_MOTE_SPRITE, height: SCENE_MOTE_SPRITE },
     ]);
-    expect(motionCanvases(motion)).toHaveLength(2);
+    expect(motionCanvases(motion)).toHaveLength(3);
   });
 
-  it("fills every beam, softly, inside the light's area and brightening what is under it", () => {
-    const { motion, images } = loadedPackage(withParts(light));
+  it("fills every beam softly into the light's canvas, then brightens its area with it", () => {
+    const { motion, images, work } = loadedPackage(withParts(light));
     const main = recorder();
     drawLayerMotion(main.context, motion, images, "far", farPaint(images), 1);
-    expect(main.calls.find((call) => call.name === "clip")).toBeDefined();
-    expect(main.calls.find((call) => call.name === "rect")?.args).toEqual(light.rect);
-    const fills = main.calls.filter((call) => call.name === "fill");
+    const fills = work.calls.filter((call) => call.name === "fill");
     // Each beam is three nested fills, so its edge is soft.
     expect(fills).toHaveLength(light.beams.length * 3);
     expect(fills.every((call) => call.blend === "lighter")).toBe(true);
-    const turns = main.calls.filter((call) => call.name === "rotate").map((call) => call.args[0] as number);
+    const draw = main.calls.find((call) => call.name === "drawImage");
+    expect(draw?.args.slice(1)).toEqual(light.rect);
+    expect(draw?.blend).toBe("lighter");
+    const turns = work.calls.filter((call) => call.name === "rotate").map((call) => call.args[0] as number);
     // A beam leaning right (positive angle) turns the canvas the other way, and sway stays within its degrees.
     for (const [index, beam] of light.beams.entries()) {
       const lean = (-(turns[index] ?? 0) * 180) / Math.PI;
@@ -376,18 +382,9 @@ describe("drawing light and motes", () => {
 
   it("breathes: the beams are brighter or dimmer a moment later", () => {
     const strength = (seconds: number) => {
-      const { motion, images } = loadedPackage(withParts(light));
-      const main = recorder();
-      const alphas: unknown[] = [];
-      const context = new Proxy(main.context, {
-        set(target, property, value): boolean {
-          if (property === "globalAlpha") alphas.push(value);
-          return Reflect.set(target, property, value);
-        },
-      });
-      context.globalAlpha = 1;
-      drawLayerMotion(context, motion, images, "far", farPaint(images), seconds);
-      return alphas.slice(1);
+      const { motion, images, work } = loadedPackage(withParts(light));
+      drawLayerMotion(recorder().context, motion, images, "far", farPaint(images), seconds);
+      return work.calls.filter((call) => call.name === "globalAlpha").map((call) => call.args[0]);
     };
     expect(strength(1)).not.toEqual(strength(3));
     for (const alpha of strength(2)) expect(alpha).toBeLessThanOrEqual(light.opacity / 3 + 1e-9);

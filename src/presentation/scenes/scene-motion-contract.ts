@@ -70,8 +70,9 @@ export interface SceneBeam {
 }
 
 /**
- * Light shafts: soft beams fanning out from `from` (layer space), brightest at
- * the start and fading to nothing, kept inside `rect`. Each beam breathes
+ * Light shafts: soft beams fanning out from `from` (layer space), brightest
+ * just after the start and fading to nothing, kept inside `rect` (which sets
+ * the size of the canvas they are redrawn into). Each beam breathes
  * brighter and dimmer on its own clock of about `period` seconds and leans by up
  * to `sway` degrees, so the light seems to move through leaves above.
  */
@@ -108,6 +109,14 @@ export type SceneMotion = SceneWater | SceneLight | SceneMotes;
 
 /** Edge in px of the soft speck image a `motes` part draws every speck from. */
 export const SCENE_MOTE_SPRITE = 32;
+
+/** Canvas px per world unit light is redrawn at; soft beams lose nothing at a quarter. */
+export const SCENE_LIGHT_SCALE = 0.25;
+
+/** The canvas light shafts are redrawn into: its area at `SCENE_LIGHT_SCALE`, in whole px. */
+export function lightCanvasSize(light: Pick<SceneLight, "rect">): readonly [width: number, height: number] {
+  return [Math.ceil(light.rect[2] * SCENE_LIGHT_SCALE), Math.ceil(light.rect[3] * SCENE_LIGHT_SCALE)];
+}
 
 function water(raw: Raw, path: string, images: ReadonlyMap<string, { readonly alpha: boolean }>) {
   const mask = id(raw.mask, `${path}.mask`);

@@ -1,12 +1,19 @@
 /**
  * The moving parts of a painted scene, drawn from package data alone, over the
- * layer each part names. Water is redrawn into its own small canvas a fixed
- * number of times a second and that canvas is drawn every frame, so a frame pays
- * for one image draw however much the ripples cost. Light shafts and motes are
- * a handful of fills each and are drawn straight onto the frame.
+ * layer each part names. Water and light are redrawn into their own canvases a
+ * fixed number of times a second and each canvas is drawn every frame, so a
+ * frame pays for one image draw however much the ripples or beams cost. Motes
+ * are one small image draw a speck, straight onto the frame.
  */
 import { layerImageRect, type Rect, type SceneBitmap, type SceneCanvas, type ScenePackage } from "./scene-contract";
-import { SCENE_MOTE_SPRITE, type SceneLight, type SceneMotes, type SceneWater } from "./scene-motion-contract";
+import {
+  lightCanvasSize,
+  SCENE_LIGHT_SCALE,
+  SCENE_MOTE_SPRITE,
+  type SceneLight,
+  type SceneMotes,
+  type SceneWater,
+} from "./scene-motion-contract";
 
 type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -16,19 +23,22 @@ export const SCENE_MOTION_RATE = 30;
 type MotionCanvas = SceneCanvas & SceneBitmap;
 const TURN = Math.PI * 2;
 
-/** Water ready to draw: its canvas, and which step of time the canvas holds. */
-interface PreparedWater {
-  readonly motion: SceneWater;
+/** A part redrawn into its own canvas: the canvas, where it is drawn, and which step of time it holds. */
+interface CachedPart {
   readonly canvas: MotionCanvas;
-  /** Pixels of the layer image this part moves: [x, y, w, h]. */
-  readonly source: Rect;
-  /** The same pixels in layer space, where the canvas is drawn. */
+  /** Layer-space area the canvas is drawn over. */
   readonly area: Rect;
   step: number;
 }
 
-/** Light shafts, with the fade every beam is filled with once a frame's context has made it. */
-interface PreparedLight {
+interface PreparedWater extends CachedPart {
+  readonly motion: SceneWater;
+  /** Pixels of the layer image this part moves: [x, y, w, h]; `area` is the same pixels in layer space. */
+  readonly source: Rect;
+}
+
+/** Light shafts, with the fade every beam is filled with once the light's canvas has made it. */
+interface PreparedLight extends CachedPart {
   readonly motion: SceneLight;
   fade: CanvasGradient | undefined;
 }
@@ -86,7 +96,14 @@ export function prepareMotion(
 ): readonly PreparedMotion[] {
   const prepared: PreparedMotion[] = [];
   for (const motion of scene.motion) {
-    if (motion.kind === "light") prepared.push({ motion, fade: undefined });
+    if (motion.kind === "light")
+      prepared.push({
+        motion,
+        canvas: createCanvas(...lightCanvasSize(motion)),
+        area: motion.rect,
+        step: -1,
+        fade: undefined,
+      });
     else if (motion.kind === "motes") prepared.push({ motion, speck: prepareSpeck(motion.color, createCanvas) });
     else {
       const water = prepareWater(scene, motion, images, createCanvas);
@@ -98,7 +115,7 @@ export function prepareMotion(
 
 /** Every canvas the prepared parts hold, for releasing them with the scene's images. */
 export function motionCanvases(prepared: readonly PreparedMotion[]): readonly MotionCanvas[] {
-  return prepared.flatMap((part) => ("canvas" in part ? [part.canvas] : "speck" in part ? [part.speck] : []));
+  return prepared.map((part) => ("speck" in part ? part.speck : part.canvas));
 }
 
 /** A position that wraps around a span, for things leaving one edge and coming back at the other. */
@@ -185,7 +202,7 @@ function drawGlints(context: Context2D, water: SceneWater, source: Rect, seconds
 }
 
 /** Redraws water for `seconds`. Returns false when its paint or mask has gone. */
-function redraw(
+function redrawWater(
   prepared: PreparedWater,
   images: ReadonlyMap<string, SceneBitmap>,
   paint: SceneBitmap,
@@ -222,31 +239,32 @@ const BEAM_FADE = [
   [1, "00"],
 ] as const;
 
-function drawLight(context: CanvasRenderingContext2D, part: PreparedLight, seconds: number): void {
+/** Redraws light shafts for `seconds` into their canvas, which covers `rect` at `SCENE_LIGHT_SCALE`. */
+function redrawLight(part: PreparedLight, seconds: number): boolean {
+  const context = part.canvas.getContext("2d");
+  if (context === null) return false;
   const light = part.motion;
   if (part.fade === undefined) {
-    // One fade in a beam's own unit space, reused by every beam and frame.
+    // One fade in a beam's own unit space, reused by every beam and redraw.
     const fade = context.createLinearGradient(0, 0, 0, 1);
     for (const [at, alpha] of BEAM_FADE) fade.addColorStop(at, `${light.color}${alpha}`);
     part.fade = fade;
   }
-  const strength = context.globalAlpha * light.opacity;
-  context.save();
-  context.beginPath();
-  context.rect(...light.rect);
-  context.clip();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, part.canvas.width, part.canvas.height);
   context.globalCompositeOperation = "lighter";
   context.fillStyle = part.fade;
+  const originX = (light.from[0] - light.rect[0]) * SCENE_LIGHT_SCALE;
+  const originY = (light.from[1] - light.rect[1]) * SCENE_LIGHT_SCALE;
   light.beams.forEach((beam, index) => {
     // Each beam breathes and leans on its own clock, so the shafts never pulse together.
     const clock = light.period * (0.75 + 0.5 * scatter(index, 6));
     const breath = 0.5 + 0.5 * Math.sin(TURN * (seconds / clock + scatter(index, 7)));
     const lean = beam.angle + light.sway * Math.sin(TURN * (seconds / (clock * 2.3) + scatter(index, 8)));
-    context.save();
-    context.translate(...light.from);
+    context.setTransform(SCENE_LIGHT_SCALE, 0, 0, SCENE_LIGHT_SCALE, originX, originY);
     context.rotate((-lean * Math.PI) / 180);
     context.scale(beam.width, beam.length);
-    context.globalAlpha = (strength * (0.45 + 0.55 * breath)) / BEAM_PASSES.length;
+    context.globalAlpha = (light.opacity * (0.45 + 0.55 * breath)) / BEAM_PASSES.length;
     for (const share of BEAM_PASSES) {
       context.beginPath();
       context.moveTo((-share * light.taper) / 2, 0);
@@ -255,9 +273,9 @@ function drawLight(context: CanvasRenderingContext2D, part: PreparedLight, secon
       context.lineTo(-share / 2, 1);
       context.fill();
     }
-    context.restore();
   });
-  context.restore();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  return true;
 }
 
 function drawMotes(context: CanvasRenderingContext2D, part: PreparedMotes, seconds: number): void {
@@ -282,20 +300,30 @@ function drawMotes(context: CanvasRenderingContext2D, part: PreparedMotes, secon
   context.restore();
 }
 
-function drawWater(
+/** Redraws a cached part when the step of time has moved on, then draws its canvas over its area. */
+function drawCached(
   context: CanvasRenderingContext2D,
-  part: PreparedWater,
+  part: PreparedWater | PreparedLight,
   images: ReadonlyMap<string, SceneBitmap>,
   paint: SceneBitmap,
   seconds: number,
 ): void {
   const step = Math.floor(seconds * SCENE_MOTION_RATE);
   if (part.step !== step) {
-    if (!redraw(part, images, paint, step / SCENE_MOTION_RATE)) return;
+    const at = step / SCENE_MOTION_RATE;
+    if (!("fade" in part ? redrawLight(part, at) : redrawWater(part, images, paint, at))) return;
     part.step = step;
   }
   const [x, y, w, h] = part.area;
+  if (!("fade" in part)) {
+    context.drawImage(part.canvas, x, y, w, h);
+    return;
+  }
+  // Light brightens what is under it.
+  context.save();
+  context.globalCompositeOperation = "lighter";
   context.drawImage(part.canvas, x, y, w, h);
+  context.restore();
 }
 
 /**
@@ -312,8 +340,7 @@ export function drawLayerMotion(
 ): void {
   for (const part of prepared) {
     if (part.motion.layer !== layerId) continue;
-    if ("canvas" in part) drawWater(context, part, images, paint, seconds);
-    else if ("fade" in part) drawLight(context, part, seconds);
-    else drawMotes(context, part, seconds);
+    if ("speck" in part) drawMotes(context, part, seconds);
+    else drawCached(context, part, images, paint, seconds);
   }
 }
