@@ -20,6 +20,7 @@ owning test/script references in one reviewable transaction.
 | Runtime architecture and dependency direction | [ARCHITECTURE.md](ARCHITECTURE.md) | Current typed module boundaries and architecture checks |
 | Visual/design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | [VISUAL_DESIGN_DIRECTION.md](VISUAL_DESIGN_DIRECTION.md) |
 | Painted stage backgrounds | [BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md) | `pnpm scene`; `tests/unit/scene-packages.test.ts` |
+| Reference images of everything the game draws | [ASSET_SHEETS.md](ASSET_SHEETS.md) | `pnpm assets:sheets`; `tests/unit/asset-sheets.test.ts` |
 | Feature and product inventory | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | — |
 | Shop and upgrade design contract | [SHOP_UPGRADE_DESIGN.md](product/SHOP_UPGRADE_DESIGN.md) | — |
 | Music in the game | [TEAR_SCORE_INTEGRATION.md](TEAR_SCORE_INTEGRATION.md) | `pnpm check:music` |

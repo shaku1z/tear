@@ -9,6 +9,8 @@ export function createProductionReplayFrame(
     clockBlocked: boolean;
     cameraX: number;
     cameraY: number;
+    /** Leaves the area behind the world clear instead of filling it. */
+    transparent?: boolean;
     ports: Omit<WorldFramePorts, "canvas" | "screen">;
   }>,
 ) {
@@ -39,8 +41,10 @@ export function createProductionReplayFrame(
         canvas.beginPath();
         canvas.rect(rectangle.x, rectangle.y, rectangle.w, rectangle.h);
         canvas.clip();
-        canvas.fillStyle = "#090e15";
-        canvas.fillRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h);
+        if (input.transparent !== true) {
+          canvas.fillStyle = "#090e15";
+          canvas.fillRect(rectangle.x, rectangle.y, rectangle.w, rectangle.h);
+        }
         const scale = Math.min(rectangle.w / width, rectangle.h / height);
         canvas.translate(
           rectangle.x + (rectangle.w - width * scale) / 2,
