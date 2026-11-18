@@ -1,4 +1,4 @@
-import type { GameEnemy, GameFloater } from "./game-runtime-state";
+import type { GameEnemy, GameFloater } from "../../gameplay/runtime/game-runtime-state";
 
 export function isGameEnemy(value: unknown): value is GameEnemy {
   return (

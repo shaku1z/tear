@@ -3,7 +3,7 @@ import { isRunDifficultySelection, isRunModeSelection } from "../interface/inter
 import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
 import type { LiveGameplayEventFanOut } from "../run/live-gameplay-event-fanout";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameRun, GamePlayer } from "../shell/game-runtime-state";
+import type { GameRun, GamePlayer } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveCampaignTraining } from "../campaign/campaign-training-composition";
 import type { LiveWorldComposition } from "../world/world-composition";

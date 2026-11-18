@@ -7,7 +7,7 @@ import { createLiveSourceVoidController } from "../app/run/source-void-controlle
 import { stageAt } from "../gameplay/stages";
 import type { EnemyKind } from "../gameplay/run/content-director";
 import { A11Y, CONFIG, GFX, REMOTE } from "../config/game-config";
-import { createLiveAuthoritativeInputAdapter } from "../app/world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../gameplay/runtime/authoritative-input-adapter";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../app/world/world-composition";
 import type { GameRuntimeDependencies } from "../app/shell/game-runtime-dependencies";
 import { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist } from "../domain/geometry";

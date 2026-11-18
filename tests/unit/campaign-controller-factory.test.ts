@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createCampaignChapterController,
   createFinaleController,
-} from "../../src/app/campaign/campaign-controller-factory";
+} from "../../src/gameplay/campaign/campaign-controller-factory";
 
 const motion = {
   loreReveal: 1,

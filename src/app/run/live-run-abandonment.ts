@@ -1,7 +1,7 @@
 import { cleanupBossEncounterActors } from "../../gameplay/run/boss-encounter";
 import type { BrowserInput } from "../../input/browser-input-contracts";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameRun } from "../shell/game-runtime-state";
+import type { GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveWorldComposition } from "../world/world-composition";
 
 export interface LiveRunAbandonmentOptions {

@@ -1,5 +1,5 @@
-import type { ChapterIntent, CampaignChapterState } from "../../gameplay/campaign/chapter-controller";
-export { dispatchFinaleIntents, type FinaleIntentPorts } from "../../gameplay/campaign/finale-runtime";
+import type { ChapterIntent, CampaignChapterState } from "./chapter-controller";
+export { dispatchFinaleIntents, type FinaleIntentPorts } from "./finale-runtime";
 
 export interface ChapterIntentPorts {
   activatePreparedWave(): void;
