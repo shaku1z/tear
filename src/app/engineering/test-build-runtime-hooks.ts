@@ -38,6 +38,7 @@ import { replayLiveStateForgeProgression } from "./state-forge-progression";
 import type { LiveTestBuildJournals } from "./test-build-journals";
 import type * as LiveRuntimeBridge from "../../tearbench/browser/live-runtime-bridge";
 import type { installLiveGameDebug as LiveGameDebugInstaller } from "./debug-composition";
+import { createStageRestFrame } from "./stage-rest-frame";
 
 /** The runtime owners that test-build inspection hooks observe and drive. */
 export interface LiveTestBuildHookSources {
@@ -432,5 +433,9 @@ function installBossDebug(
     authoritative: () => authoritativeStep.lastResult,
     startFinale: startAdventureFinale,
     severFinale: () => severFinaleAnchor(false),
+  });
+  Object.defineProperty(window, "__TEAR_STAGE_REST_FRAME__", {
+    configurable: true,
+    value: createStageRestFrame({ dependencies, stage: stageRuntime, width: browser.width, height: browser.height }),
   });
 }

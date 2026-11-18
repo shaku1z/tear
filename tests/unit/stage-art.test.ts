@@ -3,11 +3,14 @@
 // every viewport the stage must support. A recording 2D context stands in for a
 // canvas, so these run without a browser; the pixels are checked in the browser
 // evidence instead.
+import { existsSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import viewports from "../../config/scene-viewports.json";
+import readability from "../../config/stage-readability.json";
 import { stageDefinition } from "../../src/gameplay/stages";
 import { requiredLayerRect, viewportWorldRect, type Rect } from "../../src/presentation/scenes/scene-contract";
 import type { ScenePaintPorts } from "../../src/presentation/scenes/scene-library";
+import { SCENE_PACKAGES } from "../../src/presentation/scenes/scene-registry";
 import type { SceneBitmap, SceneCanvas } from "../../src/presentation/scenes/scene-renderer";
 import { stagePresentationDefinition } from "../../src/presentation/stage-presentation-definitions";
 import { paintedStage } from "../../src/presentation/stage-art/painted-stage";
@@ -117,6 +120,14 @@ describe("stage art recipes", () => {
     expect(() => {
       validateStageArt(withLayers([{ ...firstLayer, strokes: [{ ...dense, shape }] }]));
     }).toThrow(/brush operations, over/u);
+  });
+});
+
+describe("stage readability rules", () => {
+  it("lists every stage that has scene art, with the browser check that measures it", () => {
+    const listed = readability.stages.map((entry) => entry.stage);
+    expect([...listed].sort()).toEqual(Object.keys(SCENE_PACKAGES).sort());
+    for (const entry of readability.stages) expect(existsSync(entry.check), entry.check).toBe(true);
   });
 });
 
