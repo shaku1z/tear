@@ -12,10 +12,10 @@ import type {
   MusicRunSessionMetadata,
 } from "./music-contracts";
 import { createInstalledPrimaryMusicBackend } from "./music-backend-registry";
-import { migrateAudioSettings } from "../persistence/audio-settings";
+import { AUDIO_SETTINGS_KEY, migrateAudioSettings, readStoredAudioSettings } from "../persistence/audio-settings";
 import type { LegacySynthContract } from "./legacy-synth-contracts";
 
-const LEGACY_SETTINGS_KEY = "tear_settings";
+const LEGACY_SETTINGS_KEY = AUDIO_SETTINGS_KEY;
 
 function objectRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
@@ -86,8 +86,7 @@ export class LegacyAudioSettingsStore implements AudioSettingsStore {
   }
 
   load(): Partial<AudioMixerSettings> {
-    const record = readLocalSettings(this.#storage);
-    return migrateAudioSettings(record.audio ?? record);
+    return readStoredAudioSettings(this.#storage);
   }
 
   save(settings: AudioMixerSettings): void {

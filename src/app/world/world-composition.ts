@@ -13,7 +13,7 @@ import type {
   GameRun,
   GameSlowZone,
   GameTemporaryWall,
-} from "../shell/game-runtime-state";
+} from "../../gameplay/runtime/game-runtime-state";
 import type { BossBeatState, BossIntroState, LiveGameHostState } from "./game-host-state";
 import { createLiveWorldServices, type LiveWorldContext } from "./world-context";
 import { createLiveWorldEntityFactory, type LiveWorldEntityConstructionPort } from "./world-entity-factory";

@@ -10,7 +10,7 @@ import type { TutorialGhostSnapshot, TutorialMark } from "../../gameplay/trainin
 import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../../gameplay/run/session";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { AppScreen } from "../../domain/screen-catalog";
 
@@ -240,6 +240,15 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       if (loaded === undefined) throw new Error("Training preflight must complete before playground setup");
       loaded.runtime.setDifficulty(id);
     },
+    get tab() {
+      return loaded?.runtime.tab ?? "spawn";
+    },
+    set tab(value) {
+      if (loaded) loaded.runtime.tab = value;
+    },
+    enterArena() {
+      loaded?.runtime.enterArena();
+    },
     nextArena() {
       loaded?.runtime.nextArena();
     },
@@ -267,7 +276,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
           slow: false,
           hpMultiplier: 1,
           count: 1,
-          arena: -1,
+          arena: 0,
           labFilter: "all",
         });
     },

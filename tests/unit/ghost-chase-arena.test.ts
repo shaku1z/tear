@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import * as browserReference from "../../src/app/replay/browser-live-ghost-reference";
 import { createLiveGhostChase } from "../../src/app/replay/ghost-chase-composition";
-import type { GameRun, GamePlayer } from "../../src/app/shell/game-runtime-state";
+import type { GameRun, GamePlayer } from "../../src/gameplay/runtime/game-runtime-state";
 import { readGhostRunAssistance } from "../../src/gameplay/run/ghost-assistance";
 import {
   ghostReferenceArena,

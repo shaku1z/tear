@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { DESIGN_CHECK_LABELS } from "../../scripts/design-check.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8").replaceAll("\r\n", "\n");
@@ -12,9 +13,25 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8").replaceAll
 describe("pull request template", () => {
   const template = read(".github/pull_request_template.md");
 
-  it("asks for what, checks run, checks not run, risks and position, in that order", () => {
+  it("asks for what, the design check, checks run, checks not run, risks and position, in that order", () => {
     const headings = [...template.matchAll(/^## (.+)$/gmu)].map((match) => match[1]);
-    expect(headings).toEqual(["What and why", "Checks run here", "Checks that could not run", "Risks", "Position"]);
+    expect(headings).toEqual([
+      "What and why",
+      "Design check",
+      "Checks run here",
+      "Checks that could not run",
+      "Risks",
+      "Position",
+    ]);
+  });
+
+  it("lists the six design-check questions of docs/ENGINEERING_STANDARD.md and asks for a reason with n/a", () => {
+    const standard = read("docs/ENGINEERING_STANDARD.md");
+    const section = template.slice(template.indexOf("## Design check"), template.indexOf("## Checks run here"));
+    const asked = standard.slice(standard.indexOf("## The design check"), standard.indexOf("## How it is enforced"));
+    expect([...asked.matchAll(/^\d+\. \*\*(.+?):\*\*/gmu)].map((match) => match[1])).toEqual([...DESIGN_CHECK_LABELS]);
+    expect([...section.matchAll(/^- \*\*(.+?):\*\* /gmu)].map((match) => match[1])).toEqual([...DESIGN_CHECK_LABELS]);
+    expect(section).toContain(`"n/a" needs a reason`);
   });
 
   it("contains no attribution trailer or generated-with line", () => {

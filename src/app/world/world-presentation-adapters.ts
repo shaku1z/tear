@@ -8,7 +8,7 @@ import type {
   GameRun,
   GameSlowZone,
   GameTemporaryWall,
-} from "../shell/game-runtime-state";
+} from "../../gameplay/runtime/game-runtime-state";
 import type { LiveTutorialRuntime } from "../../gameplay/training/live-tutorial-runtime";
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import type { AchievementToastController } from "../interface/achievement-toast-controller";

@@ -8,6 +8,11 @@ rules briefly and never relaxes them; where it disagrees with them, they win.
 
 Read [README.md](README.md) first for the commands and the map of `src/`.
 
+**Binding for every change:** [docs/ENGINEERING_STANDARD.md](docs/ENGINEERING_STANDARD.md), the owner's
+engineering standard (build for the next instance, one source of truth, no one-off fixes, measured, no
+slop). Every plan and pull request answers its design check; a pull request that does not meet it is not
+merged.
+
 ## Repository map
 
 - Game code is in `src/`. Dependencies point inward: entrypoints, then app,

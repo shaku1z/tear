@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { CampaignRuntimeState } from "../../src/app/campaign/campaign-runtime-state";
-import { createLiveCampaignRuntime } from "../../src/app/campaign/campaign-runtime";
+import { CampaignRuntimeState } from "../../src/gameplay/campaign/campaign-runtime-state";
+import { createLiveCampaignRuntime } from "../../src/gameplay/campaign/campaign-runtime";
 import { CampaignChapterController } from "../../src/gameplay/campaign/chapter-controller";
 import { FinaleController } from "../../src/gameplay/campaign/finale-controller";
 import type { ChapterPage } from "../../src/gameplay/campaign/chapter-controller";

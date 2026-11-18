@@ -61,6 +61,7 @@ covers routine work. Do not run
 | `src/persistence/`, `src/platform/` | Saved data formats and migrations; storage, cloud, CrazyGames, PWA and other host adapters. |
 | `src/replay/`, `src/ghost/` | Run recording and replay. `ghost/` also holds the replay vault and several unfinished replay-based features. |
 | `src/agents/` | The scripted test player: a bot that plays the real game in test builds and headless runs. |
+| `src/playtest/` | The playtest tool: plays boss fights headless with scripted players and measures them. Run it with `pnpm playtest bosses`. |
 | `src/tearbench/` | TearBench, the game's verification system (scenarios, headless runs, CI evidence selection). |
 | `src/config/`, `src/game-reference/` | Tuning values, and the exported game data the wiki consumes. |
 | `tests/` | Vitest tests in `tests/unit/` and `tests/contract/`; browser tests are `tests/*.js`; Node tests for scripts are `tests/*.mjs`. |
@@ -86,12 +87,13 @@ does not seed test storage or load those hooks, so use a test build for them.
 ## How a change reaches players
 
 1. Open a pull request against `main`. `main` is protected.
-2. The **Validate** workflow (`.github/workflows/ci.yml`) runs
-   `pnpm check:functional`, the full functional gate (about 15 minutes in CI).
-   Pull requests that change only documentation run the documentation gates
-   instead.
+2. The **Validate** workflow (`.github/workflows/ci.yml`) runs the checks of
+   `pnpm check:functional` as parallel jobs: static, unit, one build, and the
+   browser checks in four shards that test that build. The required check
+   `check` passes only when every one of them passed. Pull requests that change
+   only documentation run the documentation gates instead.
 3. After merge, Validate runs again on `main` and stores the built targets as a
-   workflow artifact for 14 days.
+   workflow artifact for 7 days.
 4. A maintainer starts the manual **Deploy Cloudflare Production** workflow with
    that Validate run ID, and the `Production` environment requires approval.
    The workflow deploys the stored artifact; it does not rebuild.

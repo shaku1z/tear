@@ -1,3 +1,4 @@
+import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { createLiveTutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
 import { createLivePracticeEncounterPersistence } from "../progress/practice-encounter-persistence";
 import { createLegacySynthFacade } from "../../audio/legacy-synth";
@@ -291,6 +292,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     getMeta: () => META,
     writerId: () => (CG.live ? "crazygames" : "browser"),
     countedBiomeNames: STAGES.map(({ name }) => name),
+    getCosmeticCatalog: () => COSMETIC_CATALOG,
     log: (message) => {
       console.log(message);
     },
@@ -315,7 +317,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
-  const { Cloud, FirebaseProvider, ghostPublication } = createCloud({
+  const { Cloud, FirebaseProvider } = createCloud({
     target,
     getPlatform: () => platform.services,
     getProfile: () => PROFILE,
@@ -394,7 +396,6 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     Clipper: clipper,
     Cloud,
     Colossus,
-    ghostPublication,
     DAILY,
     DIAG,
     Echo,

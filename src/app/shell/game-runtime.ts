@@ -25,10 +25,7 @@ import { createLiveScreenNavigation } from "../interface/live-screen-navigation"
 import { isAppScreen, isMenuScreen } from "../../domain/screen-catalog";
 import { bindGhostArchiveFileLifecycle } from "../library/browser-ghost-archive-files";
 import { createBrowserGhostVaultLibrary } from "../library/ghost-vault-library-controller";
-import { createBrowserLiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
 import { createLiveGhostPracticeSessionState } from "../replay/ghost-practice-session-state";
-import { LiveGhostPublicationController } from "../replay/ghost-publication-controller";
-import { LiveGhostSupportController } from "../replay/ghost-support-controller";
 import { createLiveGhostCapture } from "../replay/live-ghost-capture";
 import { createLiveGhostChaseRuntime } from "../replay/live-ghost-chase";
 import { createLiveGhostPracticeChallenge } from "../replay/live-ghost-practice-challenge";
@@ -40,13 +37,13 @@ import { assembleLiveRunOrchestration } from "../run/live-run-orchestration-asse
 import { createLiveReviveCountdownState } from "../run/revive-countdown-state";
 import { liveTutorialCoachFrame } from "../training/tutorial-coach-frame";
 import { createLiveTutorialPracticeStart } from "../training/tutorial-practice-start";
-import { createLiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../gameplay/runtime/authoritative-input-adapter";
 import { bindBiomeActors } from "../../gameplay/environment/biome-actors/bind-biome-actors";
 import { countCanonicalStateCost } from "../world/canonical-state-cost";
 import { createLiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveBrowserRuntime } from "./browser-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import { createLiveProductionWorld } from "./production-world";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveSessionServices } from "./session-services-composition";
@@ -69,7 +66,6 @@ export function startLiveGame(
     CG,
     CLOCK,
     CONFIG,
-    Cloud,
     DIAG,
     FX,
     GAMEPLAY_EVENTS,
@@ -84,37 +80,19 @@ export function startLiveGame(
     browserIndexedDb,
     browserNavigator,
     browserWindow,
-    ghostPublication,
   } = dependencies;
   const browserRuntime = createLiveBrowserRuntime(dependencies);
   const { canvas, viewport, requestPointerLock: requestLock } = browserRuntime;
   const inputAuthority = createLiveInputAuthorityState(requestLock);
   const requestOwnedPointerLock = inputAuthority.requestPointerLock;
-  const currentSignedInActor = (): string | undefined =>
-    Cloud.loggedIn() && Cloud.user !== null && !Cloud.user.guest ? Cloud.user.id : undefined;
   const ghostV3Options =
     createGhostV3BrowserTestOptions(browserRuntime.testMode, dependencies.engineeringQuery.search) ?? {};
   const ghostVault = createBrowserGhostVaultLibrary(browserIndexedDb);
   bindGhostArchiveFileLifecycle(browserWindow, ghostVault);
-  const ownerRecovery = createBrowserLiveGhostOwnerRecoveryController(
-    browserIndexedDb,
-    ghostPublication,
-    currentSignedInActor,
-    () => {
-      ghostVault.refresh();
-    },
-    (input, init) => browserWindow.fetch(input, init),
-  );
-  Cloud.onChange(() => {
-    ownerRecovery.accountChanged();
-  });
   const ghostRecording = createLiveGhostRecording({
     indexedDb: browserIndexedDb,
     document: browserDocument,
     recorderOptions: ghostV3Options,
-    beatFinalized: (manifestId) => {
-      beat.finalized(manifestId);
-    },
     run: liveRun,
     player: livePlayer,
     blade: liveBlade,
@@ -127,12 +105,6 @@ export function startLiveGame(
     finale: () => ghostCapture.finale,
   });
   const { session: ghostV3Session, recorder: ghostV3, career, frames: ghostFrames } = ghostRecording;
-  const ghostPublicationScreen = new LiveGhostPublicationController(
-    browserIndexedDb,
-    ghostPublication,
-    currentSignedInActor,
-  );
-  const ghostSupportScreen = new LiveGhostSupportController(browserIndexedDb);
   observeLiveGhostRecordingBoundaries(ghostRecording, {
     ghost: GHOST,
     run: liveRun,
@@ -141,7 +113,6 @@ export function startLiveGame(
     chaseConfiguration: (configHash) => {
       chase.configuration(configHash);
     },
-    beatDeclaration: () => beat.declaration(),
     sessionNonce: () => browserWindow.crypto.randomUUID(),
     captureReceipt: (tick) => {
       ghostCapture.captureReceipt(tick);
@@ -171,30 +142,6 @@ export function startLiveGame(
   }
   const interfaceInteraction = createLiveInterfaceInteractionState();
   const sessionServices = createLiveSessionServices({
-    beat: {
-      screen: () => navigation.screen(),
-      capture: () => liveStateForge.capture().components,
-      tick: () => combatHost.simulationRuntime.scheduler.tick,
-      recording: ghostV3Session,
-      nativeStart: {
-        session: () => session,
-        prepare: () => {
-          chase.stop();
-          navigation.setScreen("setup");
-        },
-        start: (mode, difficulty) => {
-          startRunImmediate(mode, difficulty);
-        },
-        refuse: () => {
-          try {
-            runAbandonment.abandon("beat-start-refused");
-          } finally {
-            navigation.setScreen("menu");
-            navigation.setScreen("profile");
-          }
-        },
-      },
-    },
     dependencies,
     run: liveRun,
     player: livePlayer,
@@ -238,8 +185,8 @@ export function startLiveGame(
       interfaceComposition.screens.settings.beginRename(firstRun);
     },
   });
-  const { settings, controllers: runControllers, seedRace, beat } = sessionServices;
-  const { endRun, startRun: startRunImmediate } = runControllers.api;
+  const { settings, controllers: runControllers, seedRace } = sessionServices;
+  const { endRun } = runControllers.api;
   // Time dilation, camera framing (the void run pulls world zoom OUT), banner
   // and rank readouts, hit stop, slow motion, shake, the blade-throw cooldown,
   // dash ghosting, and the opening audio cadence are per-world transient
@@ -247,7 +194,6 @@ export function startLiveGame(
   const navigation = createLiveScreenNavigation({
     app: APP,
     input: Input,
-    beat,
     runScreenFact: createTearRunScreenFactPublisher(GAMEPLAY_EVENTS, () => RUN_LIFECYCLE.snapshot(), liveRun),
   });
   const interfaceFrame = createLiveInterfaceFrameState(navigation.screen());
@@ -293,7 +239,7 @@ export function startLiveGame(
   const { transient } = worldContext;
   const CINEMA = worldContext.cinema;
   const ghostPracticeSession = createLiveGhostPracticeSessionState();
-  const persistentEffects = () => ghostPracticeSession.active() === null && !seedRace.active() && !beat.active();
+  const persistentEffects = () => ghostPracticeSession.active() === null && !seedRace.active();
   const journals = createLiveTestBuildJournals(SFX);
   const practiceStart = createLiveTutorialPracticeStart();
   const campaignTraining = assembleLiveCampaignTraining({
@@ -628,12 +574,7 @@ export function startLiveGame(
     hudFeedback,
     chase,
     career,
-    ghostLibrary: {
-      vault: ghostVault,
-      ownerRecovery,
-      publication: ghostPublicationScreen,
-      support: ghostSupportScreen,
-    },
+    ghostLibrary: { vault: ghostVault },
     launchGhostPractice: ghostPracticeChallenge.launch,
     abandonRun: (reason) => {
       runAbandonment.abandon(reason);

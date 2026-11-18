@@ -1,5 +1,5 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { RewardRuntime } from "../../gameplay/run/reward-runtime";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import {
@@ -232,6 +232,16 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
       const tutorial = services.tutorialSession?.();
       if (tutorial !== undefined) {
         renderers.paused({ id: "paused", abilities: [], progress: [], tutorial });
+        return;
+      }
+      if (run.mode === "playground") {
+        renderers.paused({
+          id: "paused",
+          playground: true,
+          runSummary: "PLAYGROUND   ·   " + services.formatTime(run.runTime),
+          abilities: abilityCards(),
+          progress: [],
+        });
         return;
       }
       renderers.paused({

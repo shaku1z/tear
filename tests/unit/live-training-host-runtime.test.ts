@@ -16,9 +16,11 @@ vi.mock("../../src/gameplay/training/playground-controller", () => ({
     readonly state = { labFilter: "" };
   },
   PLAYGROUND_ALL_KINDS: [],
+  PLAYGROUND_HOTKEY_KINDS: [],
 }));
 vi.mock("../../src/gameplay/training/runtime-bridge", () => ({
   createPlaygroundRuntimeBridge: () => Object.freeze({ homePlatforms: () => [] }),
+  PLAYGROUND_TABS: [],
 }));
 vi.mock("../../src/gameplay/training/live-playground-presentation", () => ({
   createLivePlaygroundPresentation: (options: unknown) => {
