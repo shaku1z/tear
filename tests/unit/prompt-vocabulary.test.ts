@@ -33,6 +33,7 @@ const PLAYGROUND_HOTKEYS: readonly PromptAction[] = [
   "summon-boss",
   "clear-enemies",
   "heal",
+  "fullscreen",
 ];
 
 describe("prompt vocabulary", () => {
@@ -70,7 +71,8 @@ describe("prompt vocabulary", () => {
   it("keeps keyboard prompts short and in the arrow form (no MOUSE UP)", () => {
     for (const action of PROMPT_ACTIONS) {
       const label = promptLabel(action, "keyboard") ?? "";
-      expect(label.length, action).toBeLessThanOrEqual(12);
+      // "E / RIGHT CLICK" is the longest: a key and its mouse twin.
+      expect(label.length, action).toBeLessThanOrEqual(15);
       expect(label).not.toMatch(/MOUSE (UP|DOWN)/u);
     }
   });
@@ -90,6 +92,6 @@ describe("prompt vocabulary", () => {
 
   it("drops actions a device cannot trigger and merges duplicates", () => {
     expect(promptLabels(["throw", "recall", "playground-menu"], "touch")).toEqual(["THROW"]);
-    expect(promptLabels(["playground-menu", "abilities"], "keyboard")).toEqual(["E", "U"]);
+    expect(promptLabels(["playground-menu", "abilities"], "keyboard")).toEqual(["TAB", "U"]);
   });
 });

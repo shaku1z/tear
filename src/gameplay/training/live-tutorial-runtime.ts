@@ -246,7 +246,6 @@ export interface LiveTutorialPort<TEnemy extends LiveTutorialEnemy> {
 export interface LiveTutorialLessonView {
   readonly t: string;
   readonly d: string;
-  readonly keys: readonly string[];
   readonly need: number | undefined;
   readonly ranged: boolean | undefined;
   readonly final: boolean | undefined;
@@ -355,7 +354,6 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
     return {
       t: lesson.title,
       d: nudge ?? lesson.instruction?.(controller.counters) ?? lesson.description,
-      keys: lesson.keys,
       need: lesson.dummyCount,
       ranged: lesson.ranged,
       final: lesson.final,
