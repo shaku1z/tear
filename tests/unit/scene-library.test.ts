@@ -40,6 +40,8 @@ function ports(overrides: Partial<SceneLibraryPorts> = {}): SceneLibraryPorts {
           files: Object.fromEntries([...sizes.keys()].map((file) => [file, `/assets/${file}`])),
         }),
     },
+    world: { width: 1600, height: 900, groundY: 800 },
+    nextSlice: () => Promise.resolve(),
     loadImage: (url) => {
       const image = sizes.get(url.replace("/assets/", ""));
       return Promise.resolve(sizedBitmap(image?.width ?? 1, image?.height ?? 1));

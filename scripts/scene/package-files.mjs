@@ -25,18 +25,9 @@ export const isShippedPackage = (directory) => resolve(directory, "..") === reso
  * not the logical framing, so one entry per aspect is enough), plus the wider
  * shapes reported but allowed to fall back to the feathered edge colour.
  */
-export const REQUIRED_VIEWPORTS = Object.freeze([
-  ["16:9 desktop", 1600, 900],
-  ["16:9 720p", 1280, 720],
-  ["16:10 laptop", 1600, 1000],
-  ["4:3 tablet", 1200, 900],
-  ["5:4", 1280, 1024],
-  ["21:9 ultrawide", 2560, 1080],
-  ["21.5:9 ultrawide", 3440, 1440],
-  ["phone landscape 19.5:9", 844, 390],
-  ["phone landscape 20:9", 932, 419],
-]);
-export const BEST_EFFORT_VIEWPORTS = Object.freeze([["32:9 super-ultrawide", 5120, 1440]]);
+const viewports = JSON.parse(readFileSync(join(REPOSITORY_ROOT, "config", "scene-viewports.json"), "utf8"));
+export const REQUIRED_VIEWPORTS = Object.freeze(viewports.required.map((entry) => Object.freeze(entry)));
+export const BEST_EFFORT_VIEWPORTS = Object.freeze(viewports.bestEffort.map((entry) => Object.freeze(entry)));
 
 let contractModule;
 /** The TypeScript contract, loaded through Node's type stripping (no build step). */
