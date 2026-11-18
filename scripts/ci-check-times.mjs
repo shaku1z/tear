@@ -5,14 +5,15 @@
 //
 // For each run it downloads every check-results-* artifact (gh run download), and keeps each
 // check's passing times. A check's time is the median over the runs, so one slow runner does not
-// move the split. Checks missing from every run keep the time in config/checks.json.
+// move the split. Checks missing from every run keep the time in config/checks.json, and checks no
+// longer in config/checks.json are left out.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { CHECK_TIMES } from "./run-checks.mjs";
+import { CHECK_TIMES, loadChecks, selectChecks } from "./run-checks.mjs";
 
 export const FORMAT = "tear-check-times.v1";
 
@@ -28,7 +29,8 @@ export function medianTimes(resultsFiles) {
     const sorted = times.get(check).sort((a, b) => a - b);
     const middle = Math.floor(sorted.length / 2);
     const median = sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-    seconds[check] = Math.round(median * 10) / 10;
+    // At least 0.1 s: the split reads 0 as "no time", and a check that ran did take some.
+    seconds[check] = Math.max(0.1, Math.round(median * 10) / 10);
   }
   return seconds;
 }
@@ -65,7 +67,8 @@ if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(
       if (existsSync(directory)) rmSync(directory, { recursive: true, force: true });
     }
   }
-  const seconds = medianTimes(files);
+  const listed = new Set(selectChecks(loadChecks()).map((check) => `${check.group}.${check.id}`));
+  const seconds = Object.fromEntries(Object.entries(medianTimes(files)).filter(([check]) => listed.has(check)));
   writeFileSync(CHECK_TIMES, `${JSON.stringify({ format: FORMAT, runs, seconds }, null, 2)}\n`);
   console.log(`${String(Object.keys(seconds).length)} check time(s) from ${String(runs.length)} run(s)`);
 }
