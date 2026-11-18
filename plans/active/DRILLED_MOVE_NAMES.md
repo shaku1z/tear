@@ -26,10 +26,10 @@ The weapon definitions (`src/gameplay/weapons.ts`) have `name` and `mechanics`. 
 
 ## Done when
 
-- [ ] Each weapon definition has one table from the move ids its drill uses to their display names (for example `moves: { reversal: "Reversal", launch: "Launch" }`). The types allow an annex step to list only ids from its weapon's table.
-- [ ] The WEAPONS help in `src/gameplay/training/practice-tabs.ts` is built from the annexes and that table: the weapon's `name` plus the names of the moves its steps train.
-- [ ] `WEAPON_TEACHING` no longer holds per-weapon move prose. Its line is either built from the same table, or removed where the drill step's own instruction already says it. Its `controls` stay where they are or move to the annex row.
-- [ ] A unit test for the annexes covers failure modes 1 and 2, and it fails without the table.
+- [x] Each weapon definition has one list of the moves its drill trains: `drillMoves`, each a display name and the effect ids that count as it (for example `{ name: "Launch", effects: ["launch", "updraft"] }`). The annex steps no longer list effect ids at all: they are the weapon's `drillMoves`, so a step cannot name an id without a name.
+- [x] The WEAPONS help in `src/gameplay/training/practice-tabs.ts` is built from the annexes and that list: the weapon's `name` plus the names of the moves its steps train.
+- [x] `WEAPON_TEACHING` no longer holds per-weapon move prose. Its line is built from the same list ("Sword: Reversal, then Launch."), and its `controls` moved to the annex row, which is keyed by weapon id so a new weapon does not compile without one.
+- [x] `tests/unit/weapon-drill-moves.test.ts` covers failure modes 1 and 2: every move is named and has one instruction, each step counts only its own move's effects, and every effect id is reported by the combat code (a source search of `src/gameplay` and `src/app/combat` outside the training code and `weapons.ts`). It does not compile without `drillMoves`.
 - [ ] The build's tutorial gold check reports the gold output unchanged.
 - [ ] Desktop and 844x390 Drills WEAPONS captures show the built line, with nothing cut.
 
@@ -47,3 +47,4 @@ The weapon definitions (`src/gameplay/weapons.ts`) have `name` and `mechanics`. 
 ## Log
 
 - 2026-11-18 Card written after the lead accepted #203's generic WEAPONS help and asked for this follow-up; placed in `plans/active` because it spans pull requests.
+- 2026-11-18 `drillMoves` on each weapon definition, built into the annex steps and titles, the drill's teaching line and the WEAPONS help (first pull request). The combat floaters still spell "REVERSAL" and "BREAK" by hand in the combat runtime; that is outside this card's scope and is noted for the lead.

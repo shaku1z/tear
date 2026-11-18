@@ -1,6 +1,7 @@
 import type { PromptAction } from "../../domain/prompt-vocabulary";
 import type { WeaponId } from "../weapon-selection";
 import type { TutorialLessonId, TutorialSessionView } from "./tutorial-controller";
+import { drillMovesLine, TUTORIAL_WEAPON_ANNEXES } from "./tutorial-weapon-annexes";
 
 /**
  * What the Tutorial and Practice say about each exercise: a short goal, one line on
@@ -96,15 +97,19 @@ export const LESSON_TEACHING: Readonly<Record<TutorialLessonId, ExerciseTeaching
   },
 });
 
-/** Weapon practice: one line each on what the weapon's own moves do. */
+/**
+ * Weapon practice: the moves the drill trains, in order, named by the weapon's own definition, and
+ * the controls the drill prompts. The step's own instruction says how to land each move.
+ */
 export const WEAPON_TEACHING: Readonly<Record<WeaponId, Readonly<{ why: string; controls: readonly PromptAction[] }>>> =
-  Object.freeze({
-    sword: { why: "Sword: reverse back through a target, then launch it.", controls: ["swing", "swing-up"] },
-    hammer: { why: "Hammer: heavy slams fill a target's Break meter.", controls: ["jump", "swing-down"] },
-    greatsword: { why: "Greatsword: fast edges Cleave; the thrown Wheel Cut returns.", controls: ["swing", "throw"] },
-    chainblade: { why: "Chainblade: Hook a target, then Sling it away.", controls: ["throw", "swing", "recall"] },
-    riftlock: { why: "Riftlock: Capture a target, then fire Razor Rounds.", controls: ["throw", "tether"] },
-  });
+  Object.freeze(
+    Object.fromEntries(
+      TUTORIAL_WEAPON_ANNEXES.map((annex) => [
+        annex.id,
+        { why: drillMovesLine(annex, "sequence"), controls: annex.controls },
+      ]),
+    ) as Record<WeaponId, Readonly<{ why: string; controls: readonly PromptAction[] }>>,
+  );
 
 /** Opponent practice is taught from the opponent itself: survive and win with every tool. */
 const OPPONENT_CONTROLS: readonly PromptAction[] = ["swing", "dash", "throw"];
