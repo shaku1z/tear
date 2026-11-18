@@ -262,7 +262,8 @@ describe("durable personal Career Archive", () => {
     for (let page = 0; page < 7; page++)
       queryCareer(many, { ...emptyCareerQuery(), page }, 3).rows.forEach((row) => found.add(row.entry.id));
     expect(found.size).toBe(20);
-    expect(CAREER_FILTERS).toHaveLength(18);
+    expect(CAREER_FILTERS).toHaveLength(17);
+    expect(CAREER_FILTERS).not.toContain("shared");
     expect(CAREER_VIEWS).toHaveLength(10);
     expect(
       queryCareer(rows, { ...emptyCareerQuery(), filters: { ability: "unknown", verified: "unavailable" } }).total,

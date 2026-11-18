@@ -31,8 +31,13 @@ const owner = (id: string) => `career:${id}`;
 const protectedTier = (tier: CareerNotes["retention"]) =>
   ["pinned", "milestone", "diagnostic", "imported"].includes(tier);
 
+/** Fields older Career indexes carry that no longer exist; they are dropped unread (removed in shaku1z/tear#204). */
+const RETIRED_CAREER_ENTRY_KEYS: ReadonlySet<string> = new Set(["sharing", "shared"]);
+
 function parseEntry(raw: string): CareerEntry {
-  const entry = careerObject(JSON.parse(raw));
+  const entry = Object.fromEntries(
+    Object.entries(careerObject(JSON.parse(raw))).filter(([key]) => !RETIRED_CAREER_ENTRY_KEYS.has(key)),
+  );
   if (
     entry.kind !== "capsule" ||
     entry.version !== CAREER_VERSION ||
@@ -55,14 +60,13 @@ function parseEntry(raw: string): CareerEntry {
     ![entry.mode, entry.difficulty, entry.weapon, entry.result, entry.gameVersion, entry.build].every(nullableText) ||
     (entry.beatAttempt !== undefined && typeof entry.beatAttempt !== "boolean") ||
     (entry.assisted !== undefined && typeof entry.assisted !== "boolean") ||
-    ![entry.resumed, entry.shared].every((v) => v === null || typeof v === "boolean") ||
+    !(entry.resumed === null || typeof entry.resumed === "boolean") ||
     typeof entry.present !== "boolean" ||
     ![entry.categories, entry.abilities, entry.bosses].every((v) => v === null || strings(v)) ||
     !strings(entry.unavailable) ||
     !strings(entry.witnesses) ||
     !["integrity", "receipts", "unavailable"].includes(String(entry.verified)) ||
     !["human", "bot", "unknown"].includes(String(entry.actor)) ||
-    !["public", "unlisted", "private", "queued", "unknown"].includes(String(entry.sharing)) ||
     typeof entry.catalogHash !== "string" ||
     entry.dna === null ||
     typeof entry.dna !== "object" ||
@@ -174,9 +178,7 @@ export class GhostCareerStore {
       } catch {
         /* Keep source visible with annotation refusal on edit. */
       }
-      // Nothing on this device records a capsule's sharing any more. Records left by the removed
-      // publication queue stay in the vault unread, so every capsule row reads as unknown.
-      result.push(Object.freeze({ entry: { ...entry, sharing: "unknown" as const, shared: null }, notes }));
+      result.push(Object.freeze({ entry, notes }));
     }
     return Object.freeze(result);
   }

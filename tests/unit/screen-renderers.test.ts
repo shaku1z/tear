@@ -1446,7 +1446,6 @@ describe("release and engineering surface rendering", () => {
       bosses: [],
       style: null,
       nearMiss: [],
-      sharing: "private",
       gameVersion: "0.1.0",
       unavailable: [],
       beatAttempt: false,

@@ -22,7 +22,6 @@ export const CAREER_FILTERS = [
   "actor",
   "tags",
   "pinned",
-  "shared",
   "resumed",
   "version",
 ] as const;
@@ -81,8 +80,6 @@ export interface CareerEntry {
   readonly damage: number | null;
   readonly verified: "integrity" | "receipts" | "unavailable";
   readonly actor: "human" | "bot" | "unknown";
-  readonly shared: boolean | null;
-  readonly sharing: "public" | "unlisted" | "private" | "queued" | "unknown";
   readonly resumed: boolean | null;
   readonly gameVersion: string | null;
   readonly build: string | null;
@@ -187,8 +184,6 @@ export function provisionalCareerEntry(manifest: TearGhostManifest): CareerEntry
     damage: null,
     verified: "unavailable",
     actor: actor === "human" ? "human" : actor === "bot" || actor === "tearbot" ? "bot" : "unknown",
-    shared: null,
-    sharing: "unknown",
     resumed: manifest.provenance?.forkOrigin !== undefined ? true : null,
     gameVersion: context?.build.version ?? null,
     build: context ? stableVerificationHash(context.build) : null,
@@ -240,8 +235,6 @@ export function legacyCareerRow(
     damage: null,
     verified: "unavailable",
     actor: "unknown",
-    shared: value.shareId ? true : null,
-    sharing: value.shareId ? "unlisted" : "unknown",
     resumed: null,
     gameVersion: null,
     build: null,
@@ -550,7 +543,6 @@ export function queryCareer(rows: readonly CareerRow[], query: CareerQuery, page
           actor: e.actor,
           tags: n.tags,
           pinned: n.retention === "pinned",
-          shared: e.shared,
           resumed: e.resumed,
           version: e.gameVersion,
         } as Record<string, unknown>
@@ -561,7 +553,6 @@ export function queryCareer(rows: readonly CareerRow[], query: CareerQuery, page
           .map((tag) => tag.trim())
           .filter(Boolean)
           .every((tag) => n.tags.includes(tag));
-      if (key === "shared" && ["private", "queued", "public", "unlisted"].includes(value)) return e.sharing === value;
       if (value === "unknown") return actual === null || actual === "unknown";
       if (["wave", "score", "damage"].includes(key)) return range(actual as number | null, value);
       if (key === "date") {
