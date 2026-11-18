@@ -51,6 +51,26 @@ export function validateGhostCapsuleEntries(
   }
 }
 
+/** Freezes a value and everything it holds. A frozen parent can still hold an unfrozen child, so every object is visited. */
+function deepFreeze<T>(value: T, visited = new Set<object>()): T {
+  if (typeof value !== "object" || value === null || visited.has(value)) return value;
+  visited.add(value);
+  Object.freeze(value);
+  for (const child of Object.values(value)) deepFreeze(child, visited);
+  return value;
+}
+
+const UNCHANGED_READS = new WeakSet<GhostReadCapsule>();
+
+/**
+ * True only for the object a `GhostCapsuleReader` returned. Its chunks passed the Vault's
+ * integrity check and it is frozen all the way down, so it cannot differ from what was read.
+ * A copy, or a capsule assembled any other way, is not one, whatever it contains.
+ */
+export function isUnchangedGhostRead(capsule: GhostReadCapsule): boolean {
+  return UNCHANGED_READS.has(capsule);
+}
+
 function parseEntries(
   chunk: unknown,
   kind: GhostChunkKind,
@@ -59,7 +79,7 @@ function parseEntries(
 ): readonly GhostCapsuleEntry[] {
   validateGhostCapsuleEntries(chunk, kind, fromTick, toTick);
   return Object.freeze(
-    chunk.map((entry) => Object.freeze({ kind, tick: entry.tick, value: structuredClone(entry.value) })),
+    chunk.map((entry) => Object.freeze({ kind, tick: entry.tick, value: deepFreeze(structuredClone(entry.value)) })),
   );
 }
 
@@ -97,6 +117,8 @@ export class GhostCapsuleReader {
       presentation: ordered("presentation"),
     });
     const maxTick = Math.max(0, ...manifest.chunks.map((chunk) => chunk.toTick));
-    return Object.freeze({ manifest, tracks, maxTick });
+    const capsule = Object.freeze({ manifest: deepFreeze(manifest), tracks, maxTick });
+    UNCHANGED_READS.add(capsule);
+    return capsule;
   }
 }
