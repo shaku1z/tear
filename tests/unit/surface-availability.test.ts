@@ -105,11 +105,11 @@ describe("surface availability policy", () => {
 });
 
 describe("engineering query gate", () => {
-  const search = "?test=1&stemcue=x&foundryPreview=0123456789abcdef0123456789abcdef&watchagent=1&replay-hub=1";
+  const search = "?test=1&stemcue=x&watchagent=1&replay-hub=1";
   it("yields no parameters in release", () => {
     const query = createEngineeringQuery(RELEASE, search);
     expect(query.search).toBe("");
-    for (const name of ["test", "stemcue", "foundryPreview", "watchagent", "replay-hub", "stems", "bossdebug"])
+    for (const name of ["test", "stemcue", "watchagent", "replay-hub", "stems", "bossdebug"])
       expect(query.get(name), name).toBeNull();
   });
   it("preserves every parameter in engineering builds", () => {

@@ -1,6 +1,7 @@
 import type { TearWorldConfiguration } from "../../gameplay/runtime/tear-world-configuration";
 import { tracksAchievements } from "../../gameplay/progression/achievement-runtime";
 import { dismissBootScreen } from "../../platform/browser-boot-screen";
+import { createScreenPresence } from "../../platform/screen-presence";
 import { assembleLiveCampaignTraining } from "../campaign/live-campaign-training-assembly";
 import { createLiveBossPhasePractice } from "../campaign/boss-phase-practice";
 import { createLiveAttackPresentation } from "../combat/attack-presentation";
@@ -468,6 +469,7 @@ export function startLiveGame(
     cinema: CINEMA,
     clipper: dependencies.Clipper ?? null,
     autoPauseDisconnect: () => settings.autoPauseDisconnect,
+    screen: createScreenPresence(browserWindow, browserDocument),
     requestPointerLock: requestOwnedPointerLock,
     exitReplay: () => {
       interfaceComposition.screens.replay.exit();

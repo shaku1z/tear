@@ -145,8 +145,6 @@
         "tsconfig.json",
         "tsconfig.node.json",
         "tsconfig.test.json",
-        "tsconfig.worker-test.json",
-        "tsconfig.worker.json",
         "vite.config.ts",
         "vitest.config.ts",
         "vitest.endurance.config.ts"

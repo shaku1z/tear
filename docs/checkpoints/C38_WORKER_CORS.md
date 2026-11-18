@@ -1,5 +1,7 @@
 # C38 Worker credential-safe CORS
 
+The Ghost publication Worker and the files this note names were removed in shaku1z/tear#190.
+
 The Ghost publication Worker now defaults to **no CORS origins**. A deployment
 must inject exact absolute origins through `createGhostPublicationHandler({
 allowedOrigins })`; it never reflects arbitrary or `null` origins and never

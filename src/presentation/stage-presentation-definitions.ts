@@ -2,12 +2,7 @@ import type { StageId } from "../gameplay/stages";
 import type { BossTellSkinTable } from "./enemies/renderers/boss-tell-skin";
 
 export interface StagePresentationDefinition {
-  readonly backdropId: StageId;
   readonly platformMaterialId: string;
-  readonly environmentPresentationId: StageId;
-  readonly reflectionPolicy: "lower-field-restrained" | "frozen-lower-field";
-  readonly particlePolicy: "sparse-petals-pollen" | "sparse-snow";
-  readonly lowGraphicsPolicy: "silhouette-and-telegraph-only";
   /** How boss warnings and strikes are drawn on this stage. Without it the shared default marks are used. */
   readonly bossTellSkin?: BossTellSkinTable;
 }
@@ -15,12 +10,7 @@ export interface StagePresentationDefinition {
 /** Stable presentation dispatch metadata, intentionally separate from display names. */
 export const STAGE_PRESENTATION_DEFINITIONS = Object.freeze({
   "verdant-sanctum": Object.freeze({
-    backdropId: "verdant-sanctum",
     platformMaterialId: "verdant-rootstone",
-    environmentPresentationId: "verdant-sanctum",
-    reflectionPolicy: "lower-field-restrained",
-    particlePolicy: "sparse-petals-pollen",
-    lowGraphicsPolicy: "silhouette-and-telegraph-only",
     // Roots and thorns rising from the floor: bark-brown root bodies, the warning or strike ink on their tips.
     bossTellSkin: Object.freeze({
       body: "#4a3422",
@@ -34,12 +24,7 @@ export const STAGE_PRESENTATION_DEFINITIONS = Object.freeze({
     }),
   }),
   "pale-traverse": Object.freeze({
-    backdropId: "pale-traverse",
     platformMaterialId: "pale-ice",
-    environmentPresentationId: "pale-traverse",
-    reflectionPolicy: "frozen-lower-field",
-    particlePolicy: "sparse-snow",
-    lowGraphicsPolicy: "silhouette-and-telegraph-only",
   }),
 } as const satisfies Readonly<Partial<Record<StageId, StagePresentationDefinition>>>);
 

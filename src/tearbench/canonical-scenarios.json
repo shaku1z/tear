@@ -21,8 +21,7 @@
     ],
     "maxTicks": 240,
     "testFiles": [
-      "tests/unit/run-lifecycle.test.ts",
-      "tests/unit/app-state-machine.test.ts"
+      "tests/unit/run-lifecycle.test.ts"
     ],
     "evidence": {
       "command": "pnpm build:test:standalone && node tests/browser-current-gameplay-scenarios.js",
