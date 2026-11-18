@@ -61,10 +61,21 @@ export interface ScreenUiTokens {
     readonly settingsControlH: number;
     readonly settingsStepperW: number;
     readonly minTarget: number;
+    /** Shortest row of a button list; `buttonFitHeight` never answers less. */
+    readonly listRowH: number;
     readonly railFadeW: number;
     readonly railFadeMid: number;
   };
 }
+
+/** The text of a default button, which is all its fitted size depends on. */
+export type ButtonText = Readonly<{
+  label: string;
+  size?: number | undefined;
+  glyph?: string | undefined;
+  sub?: string | undefined;
+  pips?: Readonly<{ n: number; filled: number; color: string }> | undefined;
+}>;
 
 /** The drawing components screen renderers use; the live UI runtime satisfies it structurally. */
 export interface ScreenUiPort {
@@ -244,16 +255,9 @@ export interface ScreenUiPort {
     options: TextFitOptions & { readonly bold?: boolean },
   ): TextFitLayout;
   /** The width a default button needs for its label (and sub line) on one line at full size. */
-  buttonFitWidth(
-    context: CanvasRenderingContext2D,
-    button: Readonly<{
-      label: string;
-      size?: number | undefined;
-      glyph?: string | undefined;
-      sub?: string | undefined;
-      pips?: Readonly<{ n: number; filled: number; color: string }> | undefined;
-    }>,
-  ): number;
+  buttonFitWidth(context: CanvasRenderingContext2D, button: ButtonText): number;
+  /** The height a default button `w` wide needs for its text at full size (at least a list row). */
+  buttonFitHeight(context: CanvasRenderingContext2D, button: ButtonText & Readonly<{ w: number }>): number;
   emptyState(
     context: CanvasRenderingContext2D,
     glyph: string,

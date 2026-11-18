@@ -228,6 +228,7 @@ export interface UiRuntime {
   ): void;
   chapterHeader(context: CanvasRenderingContext2D, options?: UiOptions): ChapterLayout;
   buttonFitWidth(context: CanvasRenderingContext2D, button: ButtonLabelSpec): number;
+  buttonFitHeight(context: CanvasRenderingContext2D, button: ButtonLabelSpec & Readonly<{ w: number }>): number;
   buttonLabelFit(
     context: CanvasRenderingContext2D,
     button: ButtonLabelSpec & Readonly<{ w: number; h: number }>,

@@ -1,6 +1,6 @@
 import type { ChoiceView, PlaygroundScreenView, ScreenControl, ScreenRenderContext } from "./contracts";
 import { createActionCard, desktopActionCard, phoneActionCard } from "./action-card";
-import { choiceGrid } from "./choice-grid";
+import { buttonGrid } from "./choice-grid";
 import { createPageFrame, type FlowAction, type PageFrame, type ScrollBlock, type ScrollView } from "./page-frame";
 
 type Tokens = ScreenRenderContext["ui"]["t"];
@@ -25,8 +25,6 @@ interface MenuMetrics {
   readonly band: Readonly<{ small: number; choices: number }>;
   /** Columns for a group of `count` choices in `width`, alone in its band or not. */
   readonly columns: (count: number, width: number, alone: boolean) => number;
-  /** Button height; keyed choices (a shortcut on the sub line) are taller on desktop. */
-  readonly button: (keyed: boolean) => number;
   readonly size: number;
   /** Desktop buttons carry the glyph and the sub line; the phone puts the sub after the label. */
   readonly detail: boolean;
@@ -40,7 +38,6 @@ function desktopMenu(): MenuMetrics {
     bandGap: 16,
     band: { small: 5, choices: 10 },
     columns: (count, _width, alone) => (alone ? Math.min(Math.max(count, 1), count <= 4 ? 4 : 8) : count),
-    button: (keyed) => (keyed ? 54 : 46),
     size: 14,
     detail: true,
   };
@@ -55,7 +52,6 @@ function phoneMenu(t: Tokens): MenuMetrics {
     bandGap: 0,
     band: { small: 0, choices: 0 },
     columns: (_count, width) => Math.max(3, Math.floor((width + gap) / (270 + gap))),
-    button: () => t.metric.minTarget,
     size: t.type.label,
     detail: false,
   };
@@ -138,13 +134,12 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
       const w = band.length === 1 ? frame.width : (room * section.choices.length) / total;
       const columns = m.columns(section.choices.length, w, band.length === 1),
         buttons = section.choices.map((choice) => control(choice, { x: 0, y: 0, w, h: 0 }, m, keyed));
-      const grid = choiceGrid(section.choices.length, 1, {
+      const grid = buttonGrid(ui, context.canvas, buttons, {
         minColumns: columns,
         maxColumns: columns,
         maxRows: Number.MAX_SAFE_INTEGER,
         width: w,
         gap: m.gap,
-        minCellWidth: Math.max(0, ...buttons.map((button) => ui.buttonFitWidth(context.canvas, button))),
       });
       const entry = { section, x, grid };
       x += w + groupGap;
@@ -161,7 +156,8 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
         },
       },
     ];
-    const h = m.button(keyed);
+    // One row height across the band: the tallest button any of its groups needs.
+    const h = Math.max(...placed.map((entry) => entry.grid.rowHeight));
     for (let row = 0; row < rows; row++) {
       const draw = (y: number, scrollView: ScrollView): void => {
         for (const { section, x: left, grid } of placed)
