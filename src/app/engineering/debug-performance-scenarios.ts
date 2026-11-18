@@ -1,4 +1,4 @@
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveDebugHarnessContext } from "./debug-harness";
 
 /** Debug-harness services the performance fixtures reuse instead of re-implementing. */

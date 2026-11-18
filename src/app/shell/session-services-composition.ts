@@ -2,7 +2,7 @@ import { createLiveSeedRace } from "../replay/seed-race-composition";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
 import { BestScoreRepository } from "../../gameplay/scoring/best-scores";
 import { createLiveEconomyRuntime } from "../../gameplay/scoring/live-economy-runtime";
-import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 import type { AppScreen } from "../../domain/screen-catalog";
 import { initializeLivePlatformBootstrap } from "./platform-bootstrap";

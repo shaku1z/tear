@@ -5,7 +5,7 @@ import {
   type GhostReplayRunContextV1,
 } from "../../ghost/replay-admission";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import { createBrowserGhostCareer } from "./browser-ghost-career";
 import type { createLiveGhostFinaleCompanion } from "./ghost-finale-companion";
 import { createLiveGhostFrameRecording, declareGhostApplicationFrames } from "./ghost-frame-recording";

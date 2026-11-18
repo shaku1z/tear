@@ -4,7 +4,7 @@ import { planBossPlacement } from "../../gameplay/run/boss-placement";
 import { createTearSpawnFactPublisher } from "../../gameplay/runtime/gameplay-event-publishers";
 import { createLiveContentHost } from "./content-host";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameEnemy, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "./game-host-state";
 import type { LiveWorldEntityConstructionPort } from "./world-entity-factory";
 import type { LiveWorldServices } from "./world-context";

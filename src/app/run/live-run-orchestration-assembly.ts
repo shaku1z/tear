@@ -10,7 +10,7 @@ import type { LiveGhostPracticeSessionState } from "../replay/ghost-practice-ses
 import type { LiveGhostRecording } from "../replay/live-ghost-recording";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveTutorialPracticeStart } from "../training/tutorial-practice-start";
 import type { LiveWorldComposition } from "../world/world-composition";

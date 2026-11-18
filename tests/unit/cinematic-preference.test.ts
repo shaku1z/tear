@@ -4,7 +4,7 @@ import {
   chapterLaunchPolicy,
   cinematicLaunchPolicy,
   sanitizeCinematicPreference,
-} from "../../src/app/campaign/cinematic-preference";
+} from "../../src/gameplay/campaign/cinematic-preference";
 
 describe("cinematic preference policy", () => {
   it.each([

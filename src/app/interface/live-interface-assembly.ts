@@ -12,7 +12,7 @@ import type { LiveRunOrchestration } from "../run/run-orchestration-composition"
 import { createLiveShopFeedbackState } from "../run/shop-feedback-state";
 import type { LiveBrowserRuntime } from "../shell/browser-runtime";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveSessionServices } from "../shell/session-services-composition";
 import type { LiveWorldComposition } from "../world/world-composition";
 import type { LiveWorldSessionState } from "../world/world-session-state";
