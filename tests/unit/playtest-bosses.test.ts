@@ -116,7 +116,10 @@ describe("chosen boss in a headless boss-only run", () => {
     const environment = createProductionHeadlessEnvironment();
     try {
       environment.reset({ ...bossOnly("rootbound"), maxTicks: 6000 });
-      const boss = (): RawBoss | undefined => environment.world().enemies().find(isRawBoss);
+      const boss = (): RawBoss | undefined => {
+        for (const enemy of environment.world().enemies()) if (isRawBoss(enemy)) return enemy;
+        return undefined;
+      };
       for (let tick = 0; tick < 600; tick += 1) environment.step([]);
       const actor = boss();
       expect(actor?.phase).toBe(1);
