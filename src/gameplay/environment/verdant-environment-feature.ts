@@ -172,6 +172,8 @@ export class VerdantEnvironmentFeature implements EnvironmentFeature {
       ownerPosition = actor.state.ownerPosition;
     if (actor.state.phase !== 3 || regrowth === undefined || arena === undefined || ownerPosition === undefined) return;
     if (regrowth.phase === "idle") {
+      // The links grow when the keeper's Regrowth move asks for them, at its tell.
+      if (actor.state.regrowthCalled !== true) return;
       const rootNodes = [
         { id: "left-remnant", x: arena.width * 0.18, y: arena.groundY },
         { id: "heart-root", x: arena.width * 0.5, y: arena.groundY },
@@ -585,6 +587,7 @@ export interface RootboundEnvironmentActor {
     arena?: Readonly<{ width: number; groundY: number }>;
     phase?: number;
     regrowth?: RootboundRegrowthState;
+    regrowthCalled?: boolean;
   }>;
   readonly applyGraftEffects?: (effects: RootboundGraftEffects) => void;
   /** The player cut a Graft of this type, or a Root Cage wall. */

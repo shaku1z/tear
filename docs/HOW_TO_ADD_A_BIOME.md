@@ -98,6 +98,15 @@ A boss is an enemy with phases, an arena and a move list.
   `bossAttackStatus` after every change to the runner state, as `syncMoves` in `rootbound.ts` does, so a
   parry or a forced exposure cannot leave one behind. Build the context once and reuse it every tick; do
   not build objects per tick in a boss.
+
+  A channel that keeps attacking (the Rootbound's `regrowth`) is a move with a long active stage and
+  `hit.every`: the strike is armed again each `every` seconds, and a travelling shape starts again from the
+  boss. A move that must come at a set point in the fight is scheduled in its `choose` data, never in the
+  boss: `opens` plays it first when a phase it belongs to starts (Phase II's planting, Phase III's
+  Regrowth), `once` plays it at most once, and `afterMoves` brings it back after that many other moves and
+  only then (Last Spring). A fight restored part-way through a phase calls `openBossPhase` so no opening is
+  owed. `bossAttackThreatens` says whether a strike is on its way, for rules that must not count that time
+  (the Rootbound's healing wait). Do not run a schedule as a state machine beside the table.
 - **Tells:** report them from `tells()` in the shared format (`src/gameplay/entities/boss-tells.ts`). The
   shared tell renderer draws them, and `tests/unit/boss-tell-rules.test.ts` checks every boss's warnings.
   The punish stage reports an `exposed` tell, so the player can see the opening.

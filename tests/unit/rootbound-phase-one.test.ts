@@ -49,6 +49,7 @@ function queue(actor: PhaseOneBoss, id: string): void {
     ROOTBOUND_MOVES.attacks.filter((other) => other.id !== id).map((other) => [other.id, Number.MAX_SAFE_INTEGER]),
   );
   actor.moveState = {
+    ...actor.moveState,
     run: null,
     readyTick: actor.moveTick,
     lastAttackId: null,

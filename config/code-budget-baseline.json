@@ -101,7 +101,7 @@
       "largestFunctionStatements": 81
     },
     "src/presentation/enemies/renderers/rootbound-renderer.ts": {
-      "largestFunctionStatements": 108
+      "largestFunctionStatements": 100
     },
     "src/presentation/enemies/renderers/source-renderer.ts": {
       "largestFunctionStatements": 165

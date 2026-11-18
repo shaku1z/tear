@@ -3,14 +3,18 @@
  * will not stay put: it lashes up close, glides under the floor to surface beneath the player, vaults onto
  * them, bursts thorns when crowded and sends roots along the ground. Phase II adds the garden: it kneels to
  * plant a Graft, raises a Root Cage around the player and re-plants the Bloom Wells; those three place stage
- * objects (`places`) instead of striking. Phase III uses the Phase I moves between Last Springs. Every time
- * here is in seconds; the table holds ticks.
+ * objects (`places`) instead of striking. Phase III opens with Regrowth, a channel that keeps attacking,
+ * and plays the Phase I moves with Last Spring between them. Every time here is in seconds; the table holds
+ * ticks.
  */
 import { buildBossAttackTable, type BossAttackTable } from "../boss-attacks";
 
 export type RootboundPhase = 1 | 2 | 3;
-/** What a Phase II move asks the stage to place; `rootbound.ts` turns each into a request. */
-export type RootboundPlace = "graft" | "cage" | "bloom";
+/** What a move asks the stage to place; `rootbound.ts` turns each into a request. */
+export type RootboundPlace = "graft" | "cage" | "bloom" | "regrowth" | "spring";
+
+/** The arena the table is authored for (`CONFIG.view.w`); a test holds the two equal. */
+export const ROOTBOUND_ARENA_WIDTH = 1600;
 
 /**
  * Distances follow the 118 px boss body: half height 59, so `dy` 19 puts a hit at knee to hip height.
@@ -74,7 +78,8 @@ export const ROOTBOUND_MOVES: BossAttackTable<RootboundPhase, RootboundPlace> = 
       id: "plant-graft",
       phases: [2],
       timing: { tell: 0.9, active: 0.1, recover: 0.2, punish: 0.4 },
-      choose: { range: [0, 1600], weight: 4, cooldown: 4 },
+      // Phase II opens with a planting, unless the keeper cannot plant then.
+      choose: { range: [0, 1600], weight: 4, cooldown: 4, opens: true },
       tell: { mark: "self" },
       places: [{ at: "active", object: "graft" }],
     },
@@ -93,6 +98,41 @@ export const ROOTBOUND_MOVES: BossAttackTable<RootboundPhase, RootboundPlace> = 
       choose: { range: [0, 1600], weight: 1, cooldown: 10 },
       tell: { mark: "self" },
       places: [{ at: "active", object: "bloom" }],
+    },
+    {
+      // Phase III opens with it, once. The links grow at the tell and the channel runs to the end of the active
+      // stage: tell plus active is the channel length in `regrowth-link.ts`. While it channels, a root wave runs
+      // from its front every 1.1 s.
+      id: "regrowth",
+      phases: [3],
+      timing: { tell: 0.8, active: 3.2, recover: 0.65, punish: 1.1 },
+      choose: { range: [0, 1600], weight: 1, cooldown: 0, opens: true, once: true },
+      hit: { shape: { kind: "travel", dy: 29, hw: 30, hh: 30, speed: 900 }, damage: 16, parryable: false, every: 1.1 },
+      tell: { mark: "lane" },
+      places: [{ at: "tell", object: "regrowth" }],
+    },
+    {
+      // The keeper's big strike: every platform-free stretch of floor blooms. It comes right after Regrowth and
+      // then after every three other moves. A platform starts to fracture at its tell, so the player sees which
+      // perch will not hold.
+      id: "last-spring",
+      phases: [3],
+      timing: { tell: 2.3, active: 0.35, recover: 0, punish: 0.9 },
+      choose: { range: [0, 1600], weight: 1, cooldown: 0, afterMoves: 3 },
+      hit: {
+        shape: {
+          kind: "box",
+          anchor: "arena",
+          dx: ROOTBOUND_ARENA_WIDTH / 2,
+          dy: -65,
+          hw: ROOTBOUND_ARENA_WIDTH * 0.4,
+          hh: 65,
+        },
+        damage: 24,
+        parryable: false,
+      },
+      tell: { mark: "band" },
+      places: [{ at: "tell", object: "spring" }],
     },
   ],
 });
