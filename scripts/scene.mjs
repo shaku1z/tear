@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // `pnpm scene <verb> [stage] [options]`: the one entry point for painted stage
 // scene packages. See docs/BACKGROUND_WORKFLOW.md.
 //

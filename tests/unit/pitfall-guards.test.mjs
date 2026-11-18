@@ -1,4 +1,5 @@
 // Guards for the rules in docs/PITFALLS.md. Each test names the row it protects.
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -86,6 +87,22 @@ describe("pitfall guards", () => {
     expect(offenders).toEqual([]);
     expect(fs.readFileSync(path.join(root, "docs", "ARCHITECTURE.md"), "utf8")).toContain("**The module size rule.**");
   });
+  it("no JavaScript or TypeScript module starts with a shebang (a CRLF checkout breaks the import)", () => {
+    // One git grep over the tracked modules instead of opening each. Git hooks have no extension
+    // and keep theirs: git runs them directly, nothing imports them.
+    const found = spawnSync(
+      "git",
+      ["grep", "-n", "-I", "-e", "^#!", "--", "*.mjs", "*.js", "*.cjs", "*.ts", "*.mts", "*.cts"],
+      { cwd: root, encoding: "utf8" },
+    );
+    expect([0, 1], found.stderr).toContain(found.status);
+    const offenders = found.stdout
+      .split("\n")
+      .filter((line) => /^[^:]+:1:/u.test(line))
+      .map((line) => line.split(":")[0]);
+    expect(offenders).toEqual([]);
+  });
+
   it("docs/PITFALLS.md has no duplicate rows: no two rows share an incident or a rule, and every row names its guard", () => {
     const rows = pitfallRows(fs.readFileSync(path.join(root, "docs", "PITFALLS.md"), "utf8"));
     expect(rows.length).toBeGreaterThan(0);
