@@ -24,7 +24,10 @@ import { createLiveScreenActions, type LiveGhostLibraryScreens } from "./live-sc
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 import { renderRegisteredScreen } from "./screen-registry";
 import { isMenuScreen } from "../../domain/screen-catalog";
-import { PRACTICE_TABS, practiceTabOf } from "../../gameplay/training/practice-tabs";
+import { PRACTICE_TABS } from "../../gameplay/training/practice-tabs";
+
+/** The Drills tabs in the shape the shared tab stepper reads (Q/E, bumpers). */
+const PRACTICE_TAB_STEPS = Object.freeze(PRACTICE_TABS.map(({ id }) => [id] as const));
 
 export interface LiveInterfaceAssemblyOptions {
   readonly dependencies: GameRuntimeDependencies;
@@ -297,7 +300,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
               ? TUT.session()
               : undefined,
           stepPracticeTab: (practice) => {
-            presentationHost.stepTab(PRACTICE_TABS, practiceTabOf(practice), (tab) => {
+            presentationHost.stepTab(PRACTICE_TAB_STEPS, practice.practiceTab ?? "lessons", (tab) => {
               TUT.showPracticeTab(tab);
             });
           },

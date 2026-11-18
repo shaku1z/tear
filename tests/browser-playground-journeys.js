@@ -179,22 +179,12 @@ const journey = (practiceLab) =>
         );
         if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-selector.png") });
         // Q / E step the Drills tabs, as on every tabbed screen.
-        const openTab = () =>
-          page.evaluate(() => {
-            const drills = window.__PANTHEON_TEST.tutorial().session;
-            return drills.bossSelector
-              ? "bosses"
-              : drills.catalogSelector
-                ? "enemies"
-                : drills.annexSelector
-                  ? "weapons"
-                  : "lessons";
-          });
+        const openTab = () => page.evaluate(() => window.__PANTHEON_TEST.tutorial().session.practiceTab);
         assert.equal(await openTab(), "lessons");
         await page.keyboard.press("e");
-        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.annexSelector === true);
+        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.practiceTab === "weapons");
         await page.keyboard.press("q");
-        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.annexSelector !== true);
+        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.practiceTab === "lessons");
         assert.equal(await openTab(), "lessons");
         await clickLabel("LAUNCH");
         await waitScreen("playing");

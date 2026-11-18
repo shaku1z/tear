@@ -273,7 +273,7 @@ describe("legacy screen renderer registry", () => {
       const renderer = createScreenRenderers({ ...context, ui, width: 800, height: 360, scroll });
       renderer.paused({
         id: "paused",
-        tutorial: { ...controller.session(), bossSelector: true, bossCatalog: practiceBossCatalog(() => 1) },
+        tutorial: { ...controller.session(), practiceTab: "bosses", bossCatalog: practiceBossCatalog(() => 1) },
       } as Parameters<typeof renderer.paused>[0]);
       expect(controls.every((control) => control.y >= 0 && control.y + control.h <= 360 && control.h >= 24)).toBe(true);
       found.push(
@@ -402,16 +402,19 @@ describe("legacy screen renderer registry", () => {
       (control) => control.action.type === "tutorial.action" && control.action.command === "select",
     );
     expect(exercises).toHaveLength(13);
-    // One tab row (LESSONS open) replaces the three mode buttons.
+    // One tab row, the hubs' shared strip (hit boxes only), replaces the three mode buttons.
     const tabs = controls.filter(
       (control) => control.action.type === "tutorial.action" && control.action.command === "tab",
     );
-    expect(tabs.map((control) => [control.label, control.selected])).toEqual([
-      ["LESSONS", true],
-      ["WEAPONS", false],
-      ["ENEMIES", false],
-      ["BOSSES", false],
+    expect(
+      tabs.map((control) => [control.action.type === "tutorial.action" && control.action.lessonId, control.hiddenBox]),
+    ).toEqual([
+      ["lessons", true],
+      ["weapons", true],
+      ["enemies", true],
+      ["bosses", true],
     ]);
+    expect(controller.session().practiceTab).toBe("lessons");
     expect(controls.some((control) => /ANNEXES|CATALOG|BOSS PRACTICE|BASELINE EXERCISES/u.test(control.label))).toBe(
       false,
     );
