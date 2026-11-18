@@ -4,9 +4,14 @@
  * moves run on the shared boss attack layer. v3: its Phase II is rebuilt (Grafts planted one at a time,
  * fair healing) and a thrown blade cuts the stage objects a held blade cuts. v4: its Phase III is rebuilt
  * (Regrowth and Last Spring are moves on the shared layer; Regrowth keeps attacking and heals by the one table). v5: each
- * repeat of a repeating boss strike has a warning of its own, in which the hit is off.
+ * repeat of a repeating boss strike has a warning of its own, in which the hit is off. v6: a boss body
+ * hurts only inside a declared move (the Rootbound's blocks instead), and a move the target could not walk
+ * out of is not chosen.
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v5";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v6";
+
+/** The identity while the Rootbound's idle body hurt on contact; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v5";
 
 /** The identity while a repeating boss strike came again unwarned; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v4";

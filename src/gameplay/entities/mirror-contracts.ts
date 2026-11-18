@@ -1,6 +1,7 @@
 import type { BladeActionResult, BladePoint } from "./blade";
 import type { PlayerInputPort, PlayerPlatformPort } from "./player";
 import type { CONFIG as GAME_CONFIG } from "../../config/game-config";
+import type { BossBodyContactRow } from "./boss-body-contact";
 import type { EnemyConfig } from "./enemy-contracts";
 
 export type GameConfig = typeof GAME_CONFIG;
@@ -93,6 +94,7 @@ export interface EnemyBasePort {
   color: string;
   kind: string;
   isBoss?: boolean;
+  bodyContact: BossBodyContactRow | null;
   bossName: string | null;
   shield: number;
   maxShield: number;
