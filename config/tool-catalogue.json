@@ -1126,27 +1126,6 @@
       ],
       "duration": "under-a-minute"
     },
-    "generate:ghost-types": {
-      "purpose": "Regenerates workers/worker-configuration.d.ts with Wrangler types",
-      "effects": [
-        "writes-repo-files"
-      ],
-      "duration": "seconds"
-    },
-    "check:ghost-types": {
-      "purpose": "Fails if workers/worker-configuration.d.ts is stale",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "check:ghost-cloud": {
-      "purpose": "Ghost worker types check, worker typecheck and Wrangler dry-run of the ghost worker",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "under-a-minute"
-    },
     "check:crazygames-package": {
       "purpose": "Packages an existing dist/crazygames and checks the upload size budget",
       "effects": [
@@ -1322,17 +1301,6 @@
       "duration": "under-a-minute",
       "via": [
         "check:game-reference"
-      ]
-    },
-    "scripts/check-ghost-worker-types.mjs": {
-      "purpose": "Checks (or with --write regenerates) workers/worker-configuration.d.ts via Wrangler",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "generate:ghost-types",
-        "check:ghost-types"
       ]
     },
     "scripts/check-music.mjs": {

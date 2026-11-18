@@ -416,9 +416,9 @@
       "sourceSections": [73, 74, 78],
       "textRegex": "(publication|upload|verification verdict|eligibility|privacy class|moderation|relay|D1|R2)",
       "excludeTextRegex": "(authenticated|deployed|real service|cross-device|player can|atomic upload)",
-      "implementationRefs": ["src/ghost/cloud-publication.ts", "workers/ghost-publication.ts", "migrations/ghost/0001_ghost_publication.sql"],
+      "implementationRefs": ["src/ghost/cloud-publication.ts"],
       "evidenceRefs": ["tests/unit/ghost-cloud-publication.test.ts"],
-      "notes": "Local service contracts, Worker source, and schema exist; no live-service outcome is claimed."
+      "notes": "Local service contracts exist; the Worker source and schema were removed; no live-service outcome is claimed."
     },
     {
       "id": "EVID-PRESERVATION-CONTRACTS",
