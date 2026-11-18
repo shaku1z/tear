@@ -7,7 +7,7 @@ import type {
   TierUpScreenView,
 } from "./contracts";
 import { actionRow, overlayHeader, scrollHint, type OverlayLayout } from "./screen-primitives";
-import { keyCodeLabel, keyCodes } from "../../domain/keyboard-bindings";
+import { keyboardLabel, keyCodeLabel, keyCodes } from "../../domain/keyboard-bindings";
 
 /** The label of the key that picks the card at `index`. */
 const chooseKey = (index: number): string => keyCodeLabel(keyCodes("choose")[index] ?? "");
@@ -512,7 +512,7 @@ export function createDraftRenderers(context: ScreenRenderContext) {
   function draftActions(view: DraftScreenView): { label: string; action: ScreenAction; enabled?: boolean }[] {
     const actions: { label: string; action: ScreenAction; enabled?: boolean }[] = [
       {
-        label: `⟳  REROLL · ${String(view.rerolls)}${context.touch ? "" : "  [R]"}`,
+        label: `⟳  REROLL · ${String(view.rerolls)}${context.touch ? "" : `  [${keyboardLabel("reroll")}]`}`,
         enabled: view.rerolls > 0,
         action: { type: "draft.reroll" },
       },
