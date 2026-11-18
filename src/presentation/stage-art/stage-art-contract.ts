@@ -103,7 +103,7 @@ export interface TrunkStroke extends Seeded, Hazed {
   readonly braid?: number;
 }
 
-/** Ruined arcades: arched bays, cornices, coursing, stains and ivy. */
+/** Ruined arcades: arched bays, cornices, coursing, stains and ivy. Haze also gathers as mist at the foot. */
 export interface ArcadeStroke extends Seeded, Hazed {
   readonly kind: "arcade";
   /** Left edge and base row, world px. */
@@ -122,11 +122,13 @@ export interface ArcadeStroke extends Seeded, Hazed {
   readonly ruin?: number;
   /** Ivy multiplier (1 = default growth). */
   readonly ivy?: number;
-  /** Standing in water: draws its reflection and a wet waterline in this ramp. */
-  readonly waterRamp?: string;
 }
 
-/** Still water: depth gradient, rippled reflection of everything behind, glints. */
+/**
+ * Still water: a depth gradient, then one reflection pass that flips, fades and ripples everything already
+ * painted above the waterline (earlier layers and this one), the key light lying on the surface, and glints.
+ * Paint it after whatever stands in it.
+ */
 export interface WaterStroke extends Seeded {
   readonly kind: "water";
   readonly top: number;

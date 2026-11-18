@@ -173,6 +173,59 @@ describe("painting a stage", () => {
   });
 });
 
+describe("water and the ruins standing in it", () => {
+  const WATER_TOP = 600;
+  const ruin = (haze: number) =>
+    ({
+      kind: "arcade",
+      seed: 3,
+      x: 700,
+      y: WATER_TOP + 10,
+      bays: 2,
+      bayWidth: 100,
+      height: 120,
+      levels: 1,
+      ramp: "stone",
+      mossRamp: "moss",
+      thickness: 16,
+      haze,
+    }) as const;
+  const water = { kind: "water", seed: 5, top: WATER_TOP, ramp: "water", reflection: 0.7, ripples: 0 } as const;
+  const layerCalls = async (strokes: StageArtRecipe["layers"][number]["strokes"]) => {
+    const recorded: Recorded = { canvases: [] };
+    const recipe = withLayers([{ ...firstLayer, strokes }]);
+    await paintedStage(recipe).paint(paintPorts(recorded).ports);
+    const layer = recorded.canvases[0];
+    if (layer === undefined) throw new Error("no layer was painted");
+    const [layerRect] = recipe.layers.map((entry) => stageArtLayerRect(recipe, entry, WORLD));
+    if (layerRect === undefined) throw new Error("no layer rectangle");
+    return { calls: layer.calls, top: layerRect[1] };
+  };
+
+  it("reflects everything above the waterline in one pass, and nothing else mirrors itself", async () => {
+    const { calls, top } = await layerCalls([ruin(0.2), water]);
+    // The water stroke copies rows of what is already painted: drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh).
+    const rows = calls
+      .filter((call) => call.startsWith("drawImage(") && call.split(",").length === 9)
+      .map((call) => call.slice("drawImage(".length, -1).split(",").map(Number));
+    expect(rows.length).toBeGreaterThan(50);
+    for (const row of rows) {
+      const sourceY = (row[2] ?? 0) + top;
+      expect(sourceY).toBeLessThan(WATER_TOP);
+      expect(row[6]).toBeGreaterThanOrEqual(WATER_TOP);
+    }
+    // No stroke flips the canvas to paint a reflection of its own.
+    expect(calls.filter((call) => call.startsWith("scale(") && call.includes("-1.00"))).toEqual([]);
+  });
+
+  it("gathers mist at the foot of a hazed ruin and none at a near one", async () => {
+    const clips = (calls: readonly string[]) => calls.filter((call) => call.startsWith("clip(")).length;
+    const near = await layerCalls([ruin(0)]);
+    const far = await layerCalls([ruin(0.6)]);
+    expect(clips(far.calls)).toBe(clips(near.calls) + 1);
+  });
+});
+
 describe("layer coverage", () => {
   const contains = (outer: Rect, inner: Rect) =>
     outer[0] <= inner[0] &&

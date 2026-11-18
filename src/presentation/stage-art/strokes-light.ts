@@ -115,6 +115,14 @@ export function* paintVignette(kit: PaintKit, stroke: VignetteStroke): Generator
 
 const REFLECTION_ROW = 2;
 const REFLECTION_ROWS_PER_YIELD = 8;
+/** World rows above the waterline sampled per row of water: the surface is seen at a shallow angle. */
+const REFLECTION_STRETCH = 1.5;
+/** Share of the reflection lost by the near edge of the water. */
+const REFLECTION_FADE = 0.65;
+/** The key light on the water: half-width as a share of the water's depth, and its strength at full light. */
+const LIGHT_PATH_WIDTH = 0.9;
+const LIGHT_PATH_ALPHA = 0.5;
+const SURFACE_LINE_ALPHA = 0.6;
 
 export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void> {
   const { context, light } = kit;
@@ -138,16 +146,16 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
     for (let row = 0; row < depth; row += REFLECTION_ROW) {
       if (row % (REFLECTION_ROW * REFLECTION_ROWS_PER_YIELD) === 0) yield;
       const k = row / depth;
-      const sourceY = stroke.top - row - REFLECTION_ROW;
+      const sourceY = stroke.top - (row + REFLECTION_ROW) * REFLECTION_STRETCH;
       if (sourceY < kit.bounds[1]) break;
       const offset = Math.sin(row * 0.35 + random() * 0.6) * (1 + k * 6);
-      context.globalAlpha = stroke.reflection * (1 - k * 0.7);
+      context.globalAlpha = stroke.reflection * (1 - k * REFLECTION_FADE);
       context.drawImage(
         behind,
         0,
         (sourceY - kit.bounds[1]) * scale,
         width * scale,
-        REFLECTION_ROW * scale,
+        REFLECTION_ROW * REFLECTION_STRETCH * scale,
         left + offset,
         stroke.top + row,
         width,
@@ -156,6 +164,23 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
     }
     context.globalAlpha = 1;
   }
+  yield;
+  // The key light lies on the water as a bright path toward the viewer.
+  const reach = lightAt(kit, light.x, stroke.top);
+  context.save();
+  context.beginPath();
+  context.rect(left, stroke.top, width, depth);
+  context.clip();
+  context.globalCompositeOperation = "lighter";
+  context.translate(light.x, stroke.top);
+  context.scale(LIGHT_PATH_WIDTH, 1);
+  const path = context.createRadialGradient(0, 0, 0, 0, 0, depth);
+  path.addColorStop(0, rgba(light.core, LIGHT_PATH_ALPHA * reach));
+  path.addColorStop(0.5, rgba(light.glow, LIGHT_PATH_ALPHA * reach * 0.4));
+  path.addColorStop(1, rgba(light.glow, 0));
+  context.fillStyle = path;
+  context.fillRect(-depth, 0, depth * 2, depth);
+  context.restore();
   const shallow = sampleRamp(stops, 0.5),
     deep = sampleRamp(stops, 1);
   const glints = Math.round(((width * depth) / 10_000) * stroke.ripples * kit.detail);
@@ -165,10 +190,8 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
     const y = stroke.top + k * depth,
       x = left + random() * width;
     const trough = random() < 0.4;
-    const reach = lightAt(kit, x, stroke.top) * (1 - k * 0.5);
-    context.strokeStyle = trough
-      ? rgba(deep, 0.25)
-      : rgba(mix(shallow, light.core, 0.5 + reach * 0.5), 0.25 + reach * 0.5);
+    const lit = lightAt(kit, x, stroke.top) * (1 - k * 0.5);
+    context.strokeStyle = trough ? rgba(deep, 0.25) : rgba(mix(shallow, light.core, 0.5 + lit * 0.5), 0.25 + lit * 0.5);
     context.lineWidth = 1 + k * (trough ? 3 : 2);
     const length = (trough ? 10 : 8) + k * (trough ? 70 : 50) * random();
     context.beginPath();
@@ -176,8 +199,12 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
     context.lineTo(x + length, y);
     context.stroke();
   }
-  context.fillStyle = rgba(mix(kit.atmosphere.haze, light.core, 0.4), 0.35);
-  context.fillRect(left, stroke.top - 1, width, 2);
+  // The far edge of the water catches the light as one bright line.
+  const line = mix(kit.atmosphere.haze, light.core, 0.7);
+  context.fillStyle = rgba(line, SURFACE_LINE_ALPHA * 0.3);
+  context.fillRect(left, stroke.top - 3, width, 8);
+  context.fillStyle = rgba(line, SURFACE_LINE_ALPHA);
+  context.fillRect(left, stroke.top - 1, width, 2.5);
 }
 
 const FALLS_STREAKS_PER_PX = 0.9;

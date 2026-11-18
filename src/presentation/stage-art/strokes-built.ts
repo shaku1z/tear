@@ -1,4 +1,4 @@
-/** Built forms: ruined arcades and their reflections. */
+/** Built forms: ruined arcades and the platform surface. */
 import type { ArcadeStroke, StageArtSurface } from "./stage-art-contract";
 import {
   BRUSH_OPERATIONS_PER_YIELD,
@@ -11,7 +11,6 @@ import {
   sampleRamp,
   seededRandom,
   type PaintKit,
-  type Ramp,
   type Rgb,
 } from "./paint-kit";
 
@@ -19,11 +18,15 @@ import {
 const PIER_SHARE = 0.22;
 const SPRING_DROP = 0.18;
 const MAX_ARCH_TO_HEIGHT = 0.38;
-const REFLECTION_ALPHA = 0.45;
 /** Share of the wall thickness seen as the jamb inside each arch, and how far it drops toward the viewer. */
 const JAMB_SHARE = 0.7;
 const JAMB_DROP = 0.3;
 const RETURN_RISE = 0.35;
+/** Stone far from the key light keeps this share of its value; the rest comes with the light. */
+const UNLIT_STONE = 0.5;
+/** Mist at the foot of a ruin: how far up the bottom storey it climbs, and its strength per unit of haze. */
+const BASE_MIST_RISE = 0.7;
+const BASE_MIST_PER_HAZE = 1.3;
 
 /** One storey's measurements and the two paths everything else is drawn from. */
 interface Storey {
@@ -54,7 +57,8 @@ function storeyShape(kit: PaintKit, stroke: ArcadeStroke, level: number, random:
   const pier = stroke.bayWidth * PIER_SHARE;
   const radius = Math.min((stroke.bayWidth - pier) / 2, height * MAX_ARCH_TO_HEIGHT);
   const spring = top + height * SPRING_DROP + radius;
-  const tone = (value: number) => hazed(kit, sampleRamp(stone, value), stroke.haze, stroke.x + width / 2, top);
+  const lit = UNLIT_STONE + (1 - UNLIT_STONE) * lightAt(kit, stroke.x + width / 2, top);
+  const tone = (value: number) => hazed(kit, sampleRamp(stone, value * lit), stroke.haze, stroke.x + width / 2, top);
   // A ruined top storey loses chunks of its upper edge.
   const segment = stroke.bayWidth / 3;
   const notches: number[] = [];
@@ -208,19 +212,6 @@ function paintWeathering(kit: PaintKit, stroke: ArcadeStroke, storey: Storey, ra
   context.restore();
 }
 
-/** A wet band and a bright line where the base meets the water. */
-function paintWaterline(kit: PaintKit, stroke: ArcadeStroke, storey: Storey, water: Ramp): void {
-  const { context } = kit;
-  const { bottom, width, height } = storey;
-  const wet = context.createLinearGradient(0, bottom - height * 0.25, 0, bottom);
-  wet.addColorStop(0, rgba(sampleRamp(water, 0.5), 0));
-  wet.addColorStop(1, rgba(sampleRamp(water, 0), 0.55));
-  context.fillStyle = wet;
-  context.fillRect(stroke.x - 5, bottom - height * 0.25, width + 10, height * 0.25);
-  context.fillStyle = rgba(kit.light.core, 0.35);
-  context.fillRect(stroke.x - 6, bottom - 1, width + 12, 2);
-}
-
 /** Cornice runs along every stretch of the top edge that still stands. */
 function paintCornices(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
   const { context } = kit;
@@ -264,48 +255,56 @@ function* paintIvy(kit: PaintKit, stroke: ArcadeStroke, storey: Storey, random: 
   }
 }
 
-function* storey(
-  kit: PaintKit,
-  stroke: ArcadeStroke,
-  level: number,
-  random: () => number,
-  water: Ramp | undefined,
-): Generator<void> {
+function* storey(kit: PaintKit, stroke: ArcadeStroke, level: number, random: () => number): Generator<void> {
   const shape = storeyShape(kit, stroke, level, random);
   paintReturnFace(kit, stroke, shape);
   paintFace(kit, stroke, shape);
   paintJambs(kit, stroke, shape);
   yield;
   paintWeathering(kit, stroke, shape, random);
-  if (water !== undefined && level === 0) paintWaterline(kit, stroke, shape, water);
   paintCornices(kit, stroke, shape);
   yield;
   yield* paintIvy(kit, stroke, shape, random);
 }
 
-function* arcadeBody(kit: PaintKit, stroke: ArcadeStroke, water: Ramp | undefined): Generator<void> {
-  const random = seededRandom(stroke.seed);
-  for (let level = 0; level < stroke.levels; level += 1) yield* storey(kit, stroke, level, random, water);
+/**
+ * Mist gathers at the foot of a ruin in proportion to its haze, so distant
+ * blocks lose their bases into the air and the water instead of standing as boxes.
+ */
+function paintBaseMist(kit: PaintKit, stroke: ArcadeStroke): void {
+  const strength = clamp01(stroke.haze * BASE_MIST_PER_HAZE);
+  if (strength <= 0) return;
+  const { context } = kit;
+  const foot = storeyShape(kit, stroke, 0, seededRandom(stroke.seed));
+  const rise = foot.height * BASE_MIST_RISE;
+  const air = hazed(kit, kit.atmosphere.haze, 1, stroke.x + foot.width / 2, stroke.y);
+  const mist = context.createLinearGradient(0, stroke.y - rise, 0, stroke.y);
+  mist.addColorStop(0, rgba(air, 0));
+  mist.addColorStop(1, rgba(air, strength));
+  context.save();
+  context.beginPath();
+  foot.wall();
+  context.clip();
+  context.fillStyle = mist;
+  context.fillRect(stroke.x, stroke.y - rise, foot.width, rise);
+  context.restore();
 }
 
 export function* paintArcade(kit: PaintKit, stroke: ArcadeStroke): Generator<void> {
-  const water = stroke.waterRamp === undefined ? undefined : ramp(kit, stroke.waterRamp);
-  const { context } = kit;
-  if (water !== undefined) {
-    // The reflection: the same arcade mirrored about its base, faint and tinted by the water.
-    context.save();
-    context.translate(0, 2 * stroke.y);
-    context.scale(1, -1);
-    context.globalAlpha = REFLECTION_ALPHA;
-    yield* arcadeBody(kit, stroke, undefined);
-    context.restore();
-  }
-  yield* arcadeBody(kit, stroke, water);
+  const random = seededRandom(stroke.seed);
+  for (let level = 0; level < stroke.levels; level += 1) yield* storey(kit, stroke, level, random);
+  paintBaseMist(kit, stroke);
 }
+
+/** Share of the strip's height under solid moss, and how far the hanging tufts reach. */
+const MOSS_BAND = 0.34;
+const MOSS_REACH = 0.7;
+const MOSS_TUFTS_PER_PX = 2.6;
 
 /**
  * Platform surface strip, lit top edge at row 0, seamless when repeated across:
- * stone body with coursing, a moss lip and hanging tufts. Painted in strip px.
+ * a bright moss band over a dark stone body, so a platform reads as a light
+ * edge on a dark bar against any painted scene. Painted in strip px.
  */
 export function* paintSurface(kit: PaintKit, surface: StageArtSurface): Generator<void> {
   const { context } = kit;
@@ -314,9 +313,8 @@ export function* paintSurface(kit: PaintKit, surface: StageArtSurface): Generato
     moss = ramp(kit, surface.mossRamp);
   const { width, height } = surface;
   const body = context.createLinearGradient(0, 0, 0, height);
-  body.addColorStop(0, rgba(sampleRamp(stone, 0.72)));
-  body.addColorStop(0.3, rgba(sampleRamp(stone, 0.52)));
-  body.addColorStop(1, rgba(sampleRamp(stone, 0.3)));
+  body.addColorStop(0, rgba(sampleRamp(stone, 0.34)));
+  body.addColorStop(1, rgba(sampleRamp(stone, 0.1)));
   context.fillStyle = body;
   context.fillRect(0, 0, width, height);
   // Draws at x and its wrapped twin so the strip tiles without a seam.
@@ -326,7 +324,7 @@ export function* paintSurface(kit: PaintKit, surface: StageArtSurface): Generato
     if (x > width * 0.9) draw(x - width);
   };
   const block = height * 0.32;
-  context.strokeStyle = rgba(sampleRamp(stone, 0.05), 0.6);
+  context.strokeStyle = rgba(sampleRamp(stone, 0), 0.6);
   context.lineWidth = 1;
   for (let row = 0; row * block < height; row += 1) {
     const y = height * 0.18 + row * block;
@@ -346,18 +344,23 @@ export function* paintSurface(kit: PaintKit, surface: StageArtSurface): Generato
     const x = random() * width,
       y = random() * height;
     wrapped(x, (at) => {
-      dab(context, at, y, 1 + random() * 3, 0, sampleRamp(stone, random() * 0.7), 0.25, 1);
+      dab(context, at, y, 1 + random() * 3, 0, sampleRamp(stone, random() * 0.4), 0.25, 1);
     });
   }
-  for (let index = 0; index < width * 1.6; index += 1) {
+  const band = context.createLinearGradient(0, 0, 0, height * MOSS_BAND);
+  band.addColorStop(0, rgba(sampleRamp(moss, 0.95)));
+  band.addColorStop(1, rgba(sampleRamp(moss, 0.5)));
+  context.fillStyle = band;
+  context.fillRect(0, 0, width, height * MOSS_BAND);
+  for (let index = 0; index < width * MOSS_TUFTS_PER_PX; index += 1) {
     if (index % BRUSH_OPERATIONS_PER_YIELD === 0) yield;
     const x = random() * width,
-      y = Math.pow(random(), 3) * height * 0.55;
-    const value = clamp01(0.85 - y / (height * 0.5) + (random() - 0.5) * 0.4);
+      y = Math.pow(random(), 2) * height * MOSS_REACH;
+    const value = clamp01(1 - y / (height * MOSS_REACH) + (random() - 0.5) * 0.4);
     wrapped(x, (at) => {
       dab(context, at, y, 1.5 + random() * 2.5, random() * 3, sampleRamp(moss, value), 0.95);
     });
   }
-  context.fillStyle = rgba(sampleRamp(moss, 1), 0.5);
-  context.fillRect(0, 0, width, 1.5);
+  context.fillStyle = rgba(sampleRamp(moss, 1), 0.8);
+  context.fillRect(0, 0, width, 2);
 }

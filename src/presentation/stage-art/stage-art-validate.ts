@@ -36,11 +36,8 @@ function rampsOf(stroke: StageArtStroke): readonly string[] {
     case "falls":
       return [stroke.ramp];
     case "trunk":
-      return [stroke.ramp, stroke.mossRamp];
     case "arcade":
-      return stroke.waterRamp === undefined
-        ? [stroke.ramp, stroke.mossRamp]
-        : [stroke.ramp, stroke.mossRamp, stroke.waterRamp];
+      return [stroke.ramp, stroke.mossRamp];
     default:
       return [];
   }
@@ -65,8 +62,7 @@ export function strokeOperations(stroke: StageArtStroke, layerArea: number): num
       return stroke.fibers * 180 + stroke.moss;
     case "arcade": {
       const width = stroke.bays * stroke.bayWidth;
-      const once = stroke.levels * width * (ARCADE_OPERATIONS_PER_PX * (stroke.ivy ?? 1) + stroke.height * 0.004);
-      return stroke.waterRamp === undefined ? once : once * 2;
+      return stroke.levels * width * (ARCADE_OPERATIONS_PER_PX * (stroke.ivy ?? 1) + stroke.height * 0.004);
     }
     case "water":
       return (layerArea / 10_000) * stroke.ripples;
