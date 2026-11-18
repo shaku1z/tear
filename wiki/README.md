@@ -4,6 +4,8 @@ The wiki at <https://wiki.tearblade.com> is built from this folder, from the sam
 There is no separate repository, no sync command and no data file to refresh: a page is wrong only if
 the game or a hand-written note is wrong.
 
+Changes here follow the Tear engineering standard (one source of truth, content as data, no one-off fixes): see `ENGINEERING_STANDARD.md` in the lead's notes folder until it is committed to the repository.
+
 ## Where each thing comes from
 
 | What | Source |
