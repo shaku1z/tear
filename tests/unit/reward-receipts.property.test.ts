@@ -148,6 +148,51 @@ describe("outbox receipts", () => {
     expect(receiptOpen(ledger, dailyReceiptId(dailyDateKey(new Date(2026, 0, 1)), POOL[5]?.id ?? ""))).toBe(false);
   });
 
+  // The date key is unpadded, so as text "2026-10-1" sorts before "2026-7-19" and "2026-9-10" before "2026-9-5".
+  // Folding and merging compare the parsed calendar day.
+  describe("orders days by the calendar, not by the unpadded key's text", () => {
+    const three = POOL.slice(0, 3);
+    /** Three dailies a day for `days` days from `start`, each paying 10. */
+    const claimDays = (start: Date, days: number, ledger = achievementOutbox(undefined)) => {
+      for (let day = 0; day < days; day += 1) {
+        const key = dailyDateKey(new Date(start.getFullYear(), start.getMonth(), start.getDate() + day));
+        for (const challenge of three)
+          ledger = apply(ledger, { id: dailyReceiptId(key, challenge.id), coins: 0, shards: 10 });
+      }
+      return ledger;
+    };
+    const keyed = (ledger: AchievementOutbox, key: string) =>
+      dailyCount(ledger).filter((id) => id.startsWith(`daily:${key}:`));
+
+    it("folds the oldest day when the kept days cross from single to double digits", () => {
+      // 2026-9-5 through 2026-10-5: 31 days, so the oldest one, 2026-9-5, folds.
+      const ledger = claimDays(new Date(2026, 8, 5), MAX_DAILY_RECEIPTS / 3 + 1);
+      expect(keyed(ledger, "2026-9-5")).toHaveLength(0);
+      for (const key of ["2026-9-6", "2026-9-9", "2026-9-10", "2026-9-30", "2026-10-1", "2026-10-5"])
+        expect(keyed(ledger, key)).toHaveLength(3);
+      expect(receiptOpen(ledger, dailyReceiptId("2026-9-5", POOL[5]?.id ?? ""))).toBe(false);
+      expect(receiptOpen(ledger, dailyReceiptId("2026-10-1", POOL[5]?.id ?? ""))).toBe(true);
+    });
+
+    it("merges by the calendar: July folds before October, and the later closed day wins", () => {
+      const october = claimDays(new Date(2026, 9, 1), MAX_DAILY_RECEIPTS / 3);
+      const july = claimDays(new Date(2026, 6, 19), 1);
+      for (const merged of [mergeAchievementOutboxes(october, july), mergeAchievementOutboxes(july, october)]) {
+        expect(keyed(merged, "2026-7-19")).toHaveLength(0);
+        expect(keyed(merged, "2026-10-1")).toHaveLength(3);
+        expect(dailyCount(merged)).toHaveLength(MAX_DAILY_RECEIPTS);
+      }
+      // One side closed through 2026-7-9, the other through 2026-10-1: 2026-10-1 is later.
+      const closedJuly = claimDays(new Date(2026, 6, 9), MAX_DAILY_RECEIPTS / 3 + 1);
+      const closedOctober = claimDays(new Date(2026, 9, 1), MAX_DAILY_RECEIPTS / 3 + 1);
+      const merged = mergeAchievementOutboxes(closedJuly, closedOctober);
+      expect(merged.dailyClosedThrough).toBe(closedOctober.dailyClosedThrough);
+      expect(receiptOpen(merged, dailyReceiptId("2026-10-1", POOL[5]?.id ?? ""))).toBe(false);
+      // 2026-10-1 is closed; on 2026-10-2 a challenge nobody claimed is still open.
+      expect(receiptOpen(merged, dailyReceiptId("2026-10-2", POOL[5]?.id ?? ""))).toBe(true);
+    });
+  });
+
   it("refuses malformed ids and dates that do not exist", () => {
     const empty = achievementOutbox(undefined);
     for (const id of ["daily:2026-2-30:d_kills", "daily:2026-07-19:d_kills", "daily:1969-12-31:d_kills", "bonus:x"])
