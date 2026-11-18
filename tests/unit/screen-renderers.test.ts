@@ -90,6 +90,9 @@ class TestUi implements ScreenUiPort {
   fitText(...values: Parameters<ScreenUiPort["fitText"]>): ReturnType<ScreenUiPort["fitText"]> {
     return { size: values[3].size, lines: [values[1]], truncated: false, overflow: false };
   }
+  buttonFitWidth(...values: Parameters<ScreenUiPort["buttonFitWidth"]>): number {
+    return values[0].measureText(values[1].label).width + 16;
+  }
   emptyState(...values: Parameters<ScreenUiPort["emptyState"]>): number {
     return values[4] + 60;
   }
@@ -197,6 +200,7 @@ function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -248,6 +252,7 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -270,7 +275,7 @@ describe("legacy screen renderer registry", () => {
       const renderer = createScreenRenderers({ ...context, ui, width: 800, height: 360, scroll });
       renderer.paused({
         id: "paused",
-        tutorial: { ...controller.session(), bossSelector: true, bossCatalog: practiceBossCatalog(() => 1) },
+        tutorial: { ...controller.session(), practiceTab: "bosses", bossCatalog: practiceBossCatalog(() => 1) },
       } as Parameters<typeof renderer.paused>[0]);
       expect(controls.every((control) => control.y >= 0 && control.y + control.h <= 360 && control.h >= 24)).toBe(true);
       found.push(
@@ -348,7 +353,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls[1]?.label).toBe("KEEP PRACTICING");
     expect(controls.some((control) => control.label === "SKIP LESSON")).toBe(false);
   });
-  it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
+  it("offers explicit unlocked Drills without labeling unknown historical lessons as learned", () => {
     const controls: ScreenControl[] = [],
       context = createRenderContext(controls),
       title = vi.spyOn(context.ui, "title"),
@@ -360,7 +365,7 @@ describe("legacy screen renderer registry", () => {
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
     expect(title).toHaveBeenCalledWith(
       expect.anything(),
-      "PRACTICE LAB",
+      "DRILLS",
       expect.anything(),
       expect.anything(),
       expect.anything(),
@@ -369,6 +374,25 @@ describe("legacy screen renderer registry", () => {
       (control) => control.action.type === "tutorial.action" && control.action.command === "select",
     );
     expect(exercises).toHaveLength(13);
+    // One tab row, the hubs' shared strip (hit boxes only), replaces the three mode buttons.
+    const tabs = controls.filter(
+      (control) => control.action.type === "tutorial.action" && control.action.command === "tab",
+    );
+    expect(
+      tabs.map((control) => [
+        control.action.type === "tutorial.action" && control.action.command === "tab" && control.action.tab,
+        control.hiddenBox,
+      ]),
+    ).toEqual([
+      ["lessons", true],
+      ["weapons", true],
+      ["enemies", true],
+      ["bosses", true],
+    ]);
+    expect(controller.session().practiceTab).toBe("lessons");
+    expect(controls.some((control) => /ANNEXES|CATALOG|BOSS PRACTICE|BASELINE EXERCISES/u.test(control.label))).toBe(
+      false,
+    );
     expect(
       exercises.every(
         (control) => control.enabled && !control.label.includes("✓") && !control.label.includes("LOCKED"),
@@ -404,7 +428,7 @@ describe("legacy screen renderer registry", () => {
         .every((control) => control.y + control.h <= context.height),
     ).toBe(true);
     controls.length = 0;
-    controller.showAnnexes();
+    controller.showPracticeTab("weapons");
     controller.selectAnnex("hammer");
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
     expect(
@@ -415,7 +439,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
     controls.length = 0;
     copy.mockClear();
-    controller.showCatalog();
+    controller.showPracticeTab("enemies");
     renderer.paused({
       id: "paused",
       abilities: [],
@@ -430,16 +454,16 @@ describe("legacy screen renderer registry", () => {
     });
     expect(controls.find((control) => control.label === "CHARGER")).toMatchObject({
       enabled: true,
-      sub: "CONFIRMED DEFEATED",
+      sub: "DEFEATED",
       action: { command: "select-enemy", lessonId: "charger" },
     });
     expect(controls.find((control) => control.label === "MENDER")).toMatchObject({
       enabled: false,
-      sub: "HISTORY NOT RECORDED",
+      sub: "NOT MET YET",
     });
     expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
     expect(copy.mock.calls.map(([line]) => line).join(" ")).toContain(
-      "Confirmed defeated uses an existing recorded kill.",
+      "Opponents you have met in a run are listed here.",
     );
     expect(copy.mock.calls.map(([line]) => line).join(" ")).not.toContain("slam");
     const lastRowBottom = Math.max(
@@ -461,7 +485,7 @@ describe("legacy screen renderer registry", () => {
       difficultyLabel: "Normal",
       practiceAvailable: true,
     });
-    expect(controls.find((control) => control.label === "PRACTICE LAB")?.action).toEqual({
+    expect(controls.find((control) => control.label === "DRILLS")?.action).toEqual({
       type: "tutorial.action",
       command: "open-practice",
     });

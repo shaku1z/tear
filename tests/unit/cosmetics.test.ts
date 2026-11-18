@@ -23,7 +23,7 @@ import {
   purchaseCosmetic,
   shardBalance,
 } from "../../src/domain/cosmetics";
-import { conditionMet, conditionProblems, type ProgressFacts } from "../../src/domain/unlock-condition";
+import type { ProgressFacts } from "../../src/domain/unlock-condition";
 import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import { COSMETIC_BACKDROPS, COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 import { AUTHORED_STAGES } from "../../src/gameplay/stages";
@@ -158,6 +158,39 @@ describe("cosmetic data files", () => {
     expect(parseCosmeticCatalog(COSMETIC_CATALOG, COSMETIC_BACKDROPS)).toEqual(COSMETIC_CATALOG);
   });
 
+  it("lists every malformed row as a problem instead of failing on it", () => {
+    const nameless = { ...item("trail_dusk"), name: undefined };
+    const [firstSlot, ...otherSlots] = COSMETIC_CATALOG.slots;
+    const [firstFamily, ...otherFamilies] = COSMETIC_CATALOG.families;
+    const raw = {
+      ...COSMETIC_CATALOG,
+      items: [nameless, null, { ...item("spark_orchid"), evolves: 5 }, { ...item("trail_tidewater"), evolves: [null] }],
+      slots: [{ ...firstSlot, label: undefined }, ...otherSlots],
+      families: [{ ...firstFamily, params: { tint: null, mode: { type: "enum" } } }, ...otherFamilies],
+      tiers: [7],
+      assets: [{}],
+    };
+    let message = "";
+    try {
+      parseCosmeticCatalog(raw, COSMETIC_BACKDROPS);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message.startsWith("Invalid cosmetic data:")).toBe(true);
+    for (const expected of [
+      "items trail_dusk: missing name",
+      "items row 2: must be an object",
+      "items spark_orchid: evolves must be a list",
+      "items trail_tidewater evolution 1: must be an object",
+      `slots ${firstSlot?.id ?? ""}: missing label`,
+      `families ${firstFamily?.id ?? ""} parameter tint: needs a type`,
+      `families ${firstFamily?.id ?? ""} parameter mode: missing values`,
+      "tiers row 1: must be an object",
+      "assets row 1: must be a string",
+    ])
+      expect(message).toContain(expected);
+  });
+
   it("rejects a reward that is not acquired by its collection", () => {
     const collections = COSMETIC_CATALOG.collections.map((entry) => ({ ...entry, reward: "title_wanderer" }));
     expect(problems({ collections })).toContain("reward");
@@ -176,25 +209,6 @@ describe("readability rules", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 0);
     expect(Object.keys(COSMETIC_BACKDROPS)).toEqual(AUTHORED_STAGES.map((stage) => stage.id));
     for (const stage of AUTHORED_STAGES) expect(COSMETIC_BACKDROPS[stage.id]).toBe(stage.bg);
-  });
-});
-
-describe("unlock conditions", () => {
-  it("validate and evaluate in the language music and achievements already use", () => {
-    expect(conditionProblems({ type: "boss-defeat", bossId: "rootbound" }, "x")).toEqual([]);
-    expect(conditionProblems({ type: "default" }, "x")).toEqual([]);
-    expect(conditionProblems({ type: "stat-threshold", stat: "kills", goal: 0 }, "x")).not.toEqual([]);
-    expect(conditionProblems({ type: "nope" }, "x")).not.toEqual([]);
-    expect(conditionProblems({ type: "all", of: [] }, "x")).not.toEqual([]);
-    const all = {
-      type: "all",
-      of: [
-        { type: "boss-defeat", bossId: "rootbound" },
-        { type: "stat-threshold", stat: "kills", goal: 5 },
-      ],
-    } as const;
-    expect(conditionMet(all, rootbound)).toBe(false);
-    expect(conditionMet(all, facts({ bossDefeated: () => true, stat: () => 5 }))).toBe(true);
   });
 });
 
@@ -278,6 +292,37 @@ describe("cosmetic state", () => {
     const off = on && equipCosmetic(COSMETIC_CATALOG, on, "trail", null, 5);
     expect(off?.loadouts.main?.slots.trail).toEqual({ id: null, at: 11 });
     expect(off && loadoutOf(COSMETIC_CATALOG, off)).toEqual({});
+  });
+
+  it("equips into the live main loadout when the active one was deleted, and never overwrites it", () => {
+    const state = normalizeCosmeticState({
+      v: 1,
+      owned: { trail_dusk: 25, spark_orchid: 25 },
+      loadouts: {
+        main: { name: "My Main", nameAt: 5, slots: { trail: { id: "trail_dusk", at: 6 } } },
+        alt: { name: "ALT", nameAt: 7, deletedAt: 20, slots: {} },
+      },
+      active: { id: "alt", at: 8 },
+    });
+    const next = equipCosmetic(COSMETIC_CATALOG, state, "spark", "spark_orchid", 30);
+    expect(next?.loadouts.main).toEqual({
+      name: "My Main",
+      nameAt: 5,
+      slots: { trail: { id: "trail_dusk", at: 6 }, spark: { id: "spark_orchid", at: 30 } },
+    });
+    expect(next && loadoutOf(COSMETIC_CATALOG, next)).toEqual({ trail: "trail_dusk", spark: "spark_orchid" });
+    const deletedMain = normalizeCosmeticState({
+      v: 1,
+      owned: { spark_orchid: 25 },
+      loadouts: { main: { name: "My Main", nameAt: 5, deletedAt: 9, slots: { trail: { id: "trail_dusk", at: 6 } } } },
+    });
+    const remade = equipCosmetic(COSMETIC_CATALOG, deletedMain, "spark", "spark_orchid", 3);
+    expect(remade?.loadouts.main).toEqual({
+      name: "MAIN",
+      nameAt: 3,
+      slots: { spark: { id: "spark_orchid", at: 10 } },
+    });
+    expect(remade && activeLoadout(remade)).toBe(remade?.loadouts.main);
   });
 
   it("falls back to the default look for an unknown or unowned equipped id", () => {

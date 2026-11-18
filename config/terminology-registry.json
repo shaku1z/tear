@@ -247,6 +247,44 @@
         "id": "never",
         "condition": "Never remove or rename TearBench as part of terminology normalization."
       }
+    },
+    {
+      "id": "playground-abilities",
+      "displayName": "Abilities",
+      "codeId": "playground-abilities",
+      "deprecatedAliases": ["Ability Lab"],
+      "deprecatedCopyAliases": ["Ability Lab"],
+      "persistenceImpact": {
+        "scope": "Playground menu tab copy and prompt-vocabulary action id only; no saved data",
+        "legacyRead": ["AppScreen pglab"],
+        "canonicalWrite": "ABILITIES tab of the Playground menu",
+        "preserve": ["pglab screen id", "playground.action ability:<id> and filter:<id> action ids"]
+      },
+      "owner": "Training and Playground experience owner",
+      "compatibilityStrategy": "Keep the pglab screen id and its actions; only the player-facing name changes to the ABILITIES tab of the Playground menu.",
+      "removalCheckpoint": {
+        "id": "TRAINING-UX-ABILITIES",
+        "condition": "Remove the alias once no player-facing copy or evidence names the Ability Lab."
+      }
+    },
+    {
+      "id": "practice-drills",
+      "displayName": "Drills",
+      "codeId": "practice-drills",
+      "deprecatedAliases": ["Practice Lab"],
+      "deprecatedCopyAliases": ["Practice Lab"],
+      "persistenceImpact": {
+        "scope": "Player-facing name of the practice mode opened after the Tutorial, and its tab names; no saved data",
+        "legacyRead": ["practice origin and practice session fields (practiceOnly, annexSelector, catalogSelector, bossSelector)"],
+        "canonicalWrite": "DRILLS with the tabs LESSONS, WEAPONS, ENEMIES and BOSSES",
+        "preserve": ["tutorial.action open-practice, select, select-annex, select-enemy and select-boss action ids", "saved practice origin"]
+      },
+      "owner": "Training and Playground experience owner",
+      "compatibilityStrategy": "Keep the practice session fields, saved practice origin and selection actions; only the player-facing name changes to DRILLS, and the three mode toggles become one tab action.",
+      "removalCheckpoint": {
+        "id": "TRAINING-UX-DRILLS",
+        "condition": "Remove the alias once no player-facing copy or evidence names the Practice Lab."
+      }
     }
   ],
   "userFacingCopyScan": {
@@ -418,6 +456,18 @@
       }
     ],
     "mutableCompatibility": [
+      {
+        "id": "compat-tutorial-parity-plan",
+        "pathPattern": "docs/TUTORIAL_PARITY_AND_UPGRADE_PLAN.md",
+        "termIds": ["practice-drills"],
+        "owner": "Training and Playground experience owner",
+        "reason": "The tutorial parity plan records how the Practice Lab was built, under its name at the time; the mode is now DRILLS.",
+        "testEvidence": ["check:terminology"],
+        "expiry": {
+          "checkpoint": "TRAINING-UX-DRILLS",
+          "condition": "Rewrite or retire the plan's Practice Lab sections when the alias is removed."
+        }
+      },
       {
         "id": "compat-audio-bootstrap",
         "pathPattern": "src/entrypoints/bootstrap.ts",

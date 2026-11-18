@@ -10,6 +10,8 @@ import {
   shardBalance,
   type PurchaseRefusal,
 } from "../domain/cosmetics";
+import { progressFacts } from "../domain/progress-facts";
+import { finiteOrZero, hasOwnKey, ownValue, safeEntries } from "../domain/records";
 import type { ProgressFacts } from "../domain/unlock-condition";
 import type { AcknowledgedStorage } from "../platform/contracts";
 import {
@@ -104,6 +106,8 @@ export interface ProfileStore {
   /** Records that the player has seen these items, which clears their "new" badge. */
   markCosmeticsSeen(itemIds: readonly string[]): Promise<CompletionStatus>;
   stat(key: string): number;
+  /** What the condition language can ask of this profile, read live. */
+  facts(): ProgressFacts;
   addStat(key: string, amount?: number): void;
   maxStat(key: string, value: number): void;
   markBiome(name: string): number;
@@ -137,32 +141,17 @@ function record(value: unknown): Tracker | null {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Tracker) : null;
 }
 
-function finite(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-const capitalised = (id: string): string => `${id.charAt(0).toUpperCase()}${id.slice(1)}`;
-/** What the profile can answer for unlock conditions, read from a profile body. */
-function progressFacts(data: ProfileData): ProgressFacts {
-  return {
-    bossDefeated: (bossId) => finite(data.stats[`kill${capitalised(bossId)}`]) > 0,
-    biomeEntered: (biome) => record(data.stats._biomes)?.[biome] !== undefined,
-    stat: (key) => finite(data.stats[key]),
-    achievementUnlocked: (id) => data.ach[id] !== undefined,
-  };
-}
-
 function boolMap(value: unknown): Record<string, boolean> {
   const source = record(value);
   const output: Record<string, boolean> = {};
-  if (source) for (const [key, entry] of Object.entries(source)) if (entry) output[key] = true;
+  if (source) for (const [key, entry] of safeEntries(source)) if (entry) output[key] = true;
   return output;
 }
 
 function numberMap(value: unknown): Record<string, number> {
   const source = record(value);
   const output: Record<string, number> = {};
-  if (source) for (const [key, entry] of Object.entries(source)) output[key] = finite(entry);
+  if (source) for (const [key, entry] of safeEntries(source)) output[key] = finiteOrZero(entry);
   return output;
 }
 
@@ -216,22 +205,27 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
   const mergeData = (target: ProfileData, remote: unknown): void => {
     const source = record(remote);
     if (!source) return;
-    target.shards = Math.max(target.shards, finite(source.shards));
+    target.shards = Math.max(target.shards, finiteOrZero(source.shards));
     const remoteStats = record(source.stats);
     if (remoteStats)
-      for (const [key, value] of Object.entries(remoteStats)) {
-        if (key.startsWith("_") && record(value)) {
-          target.stats[key] = { ...(record(target.stats[key]) ?? {}), ...record(value) };
-        } else target.stats[key] = Math.max(finite(target.stats[key]), finite(value));
+      for (const [key, value] of safeEntries(remoteStats)) {
+        const local = ownValue(target.stats, key);
+        const remoteMap = record(value);
+        if (key.startsWith("_") && remoteMap) {
+          target.stats[key] = { ...(record(local) ?? {}), ...Object.fromEntries(safeEntries(remoteMap)) };
+        } else target.stats[key] = Math.max(finiteOrZero(local), finiteOrZero(value));
       }
     const remoteAchievements = numberMap(source.ach);
     for (const [id, timestamp] of Object.entries(remoteAchievements)) {
-      const local = target.ach[id];
+      const local = ownValue(target.ach, id);
       if (local === undefined || timestamp < local) target.ach[id] = timestamp;
     }
-    if (typeof source.username === "string" && finite(source.usernameSetAt) > finite(target.usernameSetAt)) {
+    if (
+      typeof source.username === "string" &&
+      finiteOrZero(source.usernameSetAt) > finiteOrZero(target.usernameSetAt)
+    ) {
       target.username = source.username;
-      target.usernameSetAt = finite(source.usernameSetAt);
+      target.usernameSetAt = finiteOrZero(source.usernameSetAt);
     }
     if (source.cosmetics !== undefined || target.cosmetics !== undefined)
       target.cosmetics = mergeCosmeticStates(
@@ -245,7 +239,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     const remoteFinale = record(source.pendingFinale);
     if (
       remoteFinale &&
-      (!target.pendingFinale || finite(remoteFinale.savedAt) > finite(target.pendingFinale.savedAt))
+      (!target.pendingFinale || finiteOrZero(remoteFinale.savedAt) > finiteOrZero(target.pendingFinale.savedAt))
     ) {
       target.pendingFinale = remoteFinale;
     }
@@ -258,20 +252,20 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     };
     mergeSet("weaponsWon");
     mergeSet("advDiffs");
-    target.stats.biomesSeen = Math.max(finite(target.stats.biomesSeen), countBiomes(target.stats._biomes));
-    target.stats.modesPlayed = Math.max(finite(target.stats.modesPlayed), Object.keys(target.modes).length);
+    target.stats.biomesSeen = Math.max(finiteOrZero(target.stats.biomesSeen), countBiomes(target.stats._biomes));
+    target.stats.modesPlayed = Math.max(finiteOrZero(target.stats.modesPlayed), Object.keys(target.modes).length);
     if (target.weaponsWon)
       target.stats.distinctWeaponsWon = Math.max(
-        finite(target.stats.distinctWeaponsWon),
+        finiteOrZero(target.stats.distinctWeaponsWon),
         Object.keys(target.weaponsWon).length,
       );
     if (target.advDiffs)
-      target.stats.clearAdvAll = Math.max(finite(target.stats.clearAdvAll), Object.keys(target.advDiffs).length);
+      target.stats.clearAdvAll = Math.max(finiteOrZero(target.stats.clearAdvAll), Object.keys(target.advDiffs).length);
     if (target.tutorialCompletion !== undefined || source.tutorialCompletion !== undefined) {
       const left = tutorialLedger(target.tutorialCompletion),
         right = tutorialLedger(source.tutorialCompletion);
-      left.floor = Math.max(left.floor, finite(target.stats.tutorialDone));
-      right.floor = Math.max(right.floor, finite(remoteStats?.tutorialDone));
+      left.floor = Math.max(left.floor, finiteOrZero(target.stats.tutorialDone));
+      right.floor = Math.max(right.floor, finiteOrZero(remoteStats?.tutorialDone));
       const ledger = mergeTutorialLedgers(left, right);
       target.tutorialCompletion = ledger;
       target.stats.tutorialDone = tutorialCount(ledger);
@@ -279,20 +273,20 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     if (target.achievementOutbox !== undefined || source.achievementOutbox !== undefined) {
       const left = achievementOutbox(target.achievementOutbox),
         right = achievementOutbox(source.achievementOutbox);
-      left.floorCoins = Math.max(left.floorCoins, finite(target.stats.coinsEarned));
-      right.floorCoins = Math.max(right.floorCoins, finite(remoteStats?.coinsEarned));
+      left.floorCoins = Math.max(left.floorCoins, finiteOrZero(target.stats.coinsEarned));
+      right.floorCoins = Math.max(right.floorCoins, finiteOrZero(remoteStats?.coinsEarned));
       left.floorShards = Math.max(left.floorShards, target.shards);
-      right.floorShards = Math.max(right.floorShards, finite(source.shards));
+      right.floorShards = Math.max(right.floorShards, finiteOrZero(source.shards));
       const ledger = mergeAchievementOutboxes(left, right);
       target.achievementOutbox = ledger;
       target.shards = outboxShards(ledger);
       target.stats.coinsEarned = outboxCoins(ledger);
     }
-    for (const [key, value] of Object.entries(source)) if (!(key in target)) target[key] = structuredClone(value);
+    for (const [key, value] of safeEntries(source)) if (!hasOwnKey(target, key)) target[key] = structuredClone(value);
   };
   const unlockInto = (target: ProfileData, achievement: AchievementDefinition): boolean => {
-    if (target.ach[achievement.id] !== undefined) return false;
-    const outbox = achievementOutbox(target.achievementOutbox, finite(target.stats.coinsEarned), target.shards);
+    if (ownValue(target.ach, achievement.id) !== undefined) return false;
+    const outbox = achievementOutbox(target.achievementOutbox, finiteOrZero(target.stats.coinsEarned), target.shards);
     const grant: AchievementGrant = {
       coins: achievement.coins ?? options.getAchievements()?.coinsFor(achievement) ?? 0,
       shards: achievement.shards ?? options.getAchievements()?.shardsFor?.(achievement) ?? 0,
@@ -347,7 +341,10 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     const merged = structuredClone(committed);
     if (merged.achievementOutbox !== undefined && current.achievementOutbox === undefined) {
       const ledger = achievementOutbox(merged.achievementOutbox);
-      ledger.baselineCoins += Math.max(0, finite(current.stats.coinsEarned) - finite(atWrite.stats.coinsEarned));
+      ledger.baselineCoins += Math.max(
+        0,
+        finiteOrZero(current.stats.coinsEarned) - finiteOrZero(atWrite.stats.coinsEarned),
+      );
       ledger.baselineShards += Math.max(0, current.shards - atWrite.shards);
       merged.achievementOutbox = ledger;
     }
@@ -392,7 +389,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     async issueTutorial(id) {
       if (!isTutorialCourseId(id)) return "unknown";
       return commit((target) => {
-        const ledger = tutorialLedger(target.tutorialCompletion, finite(target.stats.tutorialDone));
+        const ledger = tutorialLedger(target.tutorialCompletion, finiteOrZero(target.stats.tutorialDone));
         ledger.courses[id] ??= "issued";
         target.tutorialCompletion = ledger;
       });
@@ -401,7 +398,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       if (!isTutorialCourseId(id)) return "unknown";
       let outcome: CompletionStatus = "unknown";
       const status = await commit((target) => {
-        const ledger = tutorialLedger(target.tutorialCompletion, finite(target.stats.tutorialDone));
+        const ledger = tutorialLedger(target.tutorialCompletion, finiteOrZero(target.stats.tutorialDone));
         if (ledger.courses[id] === undefined) return;
         if (ledger.courses[id] === "completed") {
           outcome = "already";
@@ -522,7 +519,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       return typeof this.data.username === "string" ? this.data.username : "";
     },
     usernameSetAt() {
-      return finite(this.data.usernameSetAt);
+      return finiteOrZero(this.data.usernameSetAt);
     },
     setUsername(name) {
       this.data.username = name;
@@ -530,10 +527,10 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       this.save();
     },
     shards() {
-      return finite(this.data.shards);
+      return finiteOrZero(this.data.shards);
     },
     addShards(amount) {
-      this.data.shards = finite(this.data.shards) + amount;
+      this.data.shards = finiteOrZero(this.data.shards) + amount;
       if (this.data.achievementOutbox !== undefined) {
         const ledger = achievementOutbox(this.data.achievementOutbox);
         ledger.baselineShards =
@@ -546,7 +543,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       return normalizeCosmeticState(this.data.cosmetics);
     },
     shardBalance() {
-      return shardBalance(finite(this.data.shards), normalizeCosmeticState(this.data.cosmetics));
+      return shardBalance(finiteOrZero(this.data.shards), normalizeCosmeticState(this.data.cosmetics));
     },
     async buyCosmetic(itemId) {
       const catalog = options.getCosmeticCatalog?.();
@@ -556,7 +553,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
           catalog,
           normalizeCosmeticState(target.cosmetics),
           itemId,
-          finite(target.shards),
+          finiteOrZero(target.shards),
           progressFacts(target),
         );
         if (!purchase.ok) {
@@ -596,10 +593,13 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       });
     },
     stat(key) {
-      return finite(this.data.stats[key]);
+      return finiteOrZero(ownValue(this.data.stats, key));
+    },
+    facts() {
+      return progressFacts(this.data);
     },
     addStat(key, amount = 1) {
-      this.data.stats[key] = finite(this.data.stats[key]) + amount;
+      this.data.stats[key] = finiteOrZero(ownValue(this.data.stats, key)) + amount;
       if (key === "coinsEarned" && this.data.achievementOutbox !== undefined) {
         const ledger = achievementOutbox(this.data.achievementOutbox);
         ledger.baselineCoins =
@@ -608,7 +608,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       }
     },
     maxStat(key, value) {
-      if (value > finite(this.data.stats[key])) this.data.stats[key] = value;
+      if (value > finiteOrZero(ownValue(this.data.stats, key))) this.data.stats[key] = value;
     },
     markBiome(name) {
       const seen = record(this.data.stats._biomes) ?? {};
@@ -637,7 +637,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       this.save();
     },
     unlocked(id) {
-      return this.data.ach[id] !== undefined;
+      return ownValue(this.data.ach, id) !== undefined;
     },
     unlock(achievement) {
       if (options.store.acknowledged) {

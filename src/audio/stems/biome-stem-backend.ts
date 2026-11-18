@@ -1,3 +1,5 @@
+import { progressFacts, type ProgressSource } from "../../domain/progress-facts";
+import { conditionMet } from "../../domain/unlock-condition";
 import { unwrapBrowserAudioContext, unwrapBrowserAudioNode } from "../browser-audio";
 import type { TemporaryMuteReason } from "../mixer";
 import type {
@@ -6,7 +8,6 @@ import type {
   MusicContextSnapshot,
   MusicEvent,
   MusicReplayMetadata,
-  MusicRunProgress,
   MusicRunSessionMetadata,
   MusicScene,
 } from "../music-contracts";
@@ -91,7 +92,7 @@ export class BiomeStemBackend implements MusicBackend {
   /** Picks from a routing pool (the Verdant Sanctum's two songs) come from the run's seed. */
   #routeSeed = 1;
   /** Saved progress at run start; null outside a run and in runs that must sound the same for everyone. */
-  #progress: MusicRunProgress | null = null;
+  #progress: ProgressSource | null = null;
   /** Cues whose opening intro has played this run: it plays once, not after every boss. */
   readonly #introduced = new Set<string>();
   /** Context time the active cue began, and its bar length — for quantizing. */
@@ -533,21 +534,17 @@ function stopIntro(cue: ActiveCue): void {
  * reached it, and which works are unlocked. No progress: neither.
  */
 export function musicProgressRouting(
-  progress: MusicRunProgress | null,
+  progress: ProgressSource | null,
   catalog: MusicCatalog | null,
   biomeId: string,
 ): { readonly firstRun: boolean; readonly isUnlocked: (workId: string) => boolean } {
   if (!progress) return { firstRun: false, isUnlocked: () => false };
-  const biomes = new Set(progress.biomesReached);
-  const bosses = new Set(progress.bossesDefeated);
+  const facts = progressFacts(progress);
   return {
-    firstRun: !biomes.has(biomeId),
+    firstRun: !facts.biomeEntered(biomeId),
     isUnlocked: (workId) => {
       const unlock = catalog?.works.find((work) => work.id === workId)?.unlock;
-      if (!unlock) return false;
-      if (unlock.type === "boss-defeat") return unlock.bossId !== undefined && bosses.has(unlock.bossId);
-      if (unlock.type === "biome-enter") return unlock.biome !== undefined && biomes.has(unlock.biome);
-      return unlock.type === "default";
+      return unlock !== undefined && unlock.type !== "unreadable" && conditionMet(unlock, facts);
     },
   };
 }

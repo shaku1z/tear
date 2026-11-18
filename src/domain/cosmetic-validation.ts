@@ -17,6 +17,7 @@ import {
   MAX_OWNED,
   MAX_PRICE,
   SLOT_GROUPS,
+  COSMETIC_STATE_VERSION,
   type Acquisition,
   type CosmeticCatalog,
   type CosmeticItem,
@@ -24,7 +25,8 @@ import {
   type LookFamily,
   type ParamSpec,
 } from "./cosmetic-types";
-import { isRecord, ITEM_ID, REFERENCE_ID } from "./identifiers";
+import { isItemId, isReferenceId } from "./identifiers";
+import { isRecord } from "./records";
 import { conditionProblems } from "./unlock-condition";
 
 interface LookOptions {
@@ -55,7 +57,7 @@ function paramProblem(key: string, spec: ParamSpec, value: unknown, options: Loo
         ? []
         : [`${key} must be a number from ${String(spec.min)} to ${String(spec.max)}`];
     case "int":
-      return Number.isInteger(value) && (value as number) >= spec.min && (value as number) <= spec.max
+      return typeof value === "number" && Number.isInteger(value) && value >= spec.min && value <= spec.max
         ? []
         : [`${key} must be a whole number from ${String(spec.min)} to ${String(spec.max)}`];
     case "enum":
@@ -70,7 +72,7 @@ function paramProblem(key: string, spec: ParamSpec, value: unknown, options: Loo
         ? []
         : [`${key} must be ${String(spec.min)} to ${String(spec.max)} plain characters`];
     case "id":
-      return typeof value === "string" && ITEM_ID.test(value) ? [] : [`${key} must be a lowercase id`];
+      return isItemId(value) ? [] : [`${key} must be a lowercase id`];
   }
 }
 
@@ -89,17 +91,18 @@ export function lookProblems(look: Look, family: LookFamily, where: string, opti
   return problems;
 }
 
+/** Whether a closed list of names holds the value, without widening the list's type. */
+const listed = (names: readonly string[], value: unknown): boolean => names.some((name) => name === value);
+
 function acquireProblems(entries: readonly Acquisition[], where: string): string[] {
-  if (!Array.isArray(entries) || entries.length === 0) return [`${where}: acquire must list at least one way`];
-  return entries.flatMap((entry) => {
-    const how = (entry as { how?: unknown }).how;
+  if (entries.length === 0) return [`${where}: acquire must list at least one way`];
+  return entries.flatMap((entry: unknown) => {
+    if (!isRecord(entry)) return [`${where}: each acquire entry must be an object`];
+    const how = entry.how;
     if (how === "shards") return [];
-    if (typeof how === "string" && (ACQUIRE_KINDS_WITH_ID as readonly string[]).includes(how))
-      return ITEM_ID.test((entry as { id?: string }).id ?? "") ? [] : [`${where}: acquire ${how} needs an id`];
-    if (how === "code")
-      return ITEM_ID.test((entry as { campaign?: string }).campaign ?? "")
-        ? []
-        : [`${where}: acquire code needs a campaign`];
+    if (typeof how === "string" && listed(ACQUIRE_KINDS_WITH_ID, how))
+      return isItemId(entry.id) ? [] : [`${where}: acquire ${how} needs an id`];
+    if (how === "code") return isItemId(entry.campaign) ? [] : [`${where}: acquire code needs a campaign`];
     return [`${where}: unknown acquire kind`];
   });
 }
@@ -109,7 +112,7 @@ function itemProblems(item: CosmeticItem, catalog: CosmeticCatalog, backdrops: R
   const slot = catalog.slots.find((entry) => entry.id === item.slot);
   const family = catalog.families.find((entry) => entry.id === slot?.family);
   const problems: string[] = [];
-  if (!ITEM_ID.test(item.id)) problems.push(`${where}: id must be lowercase letters, digits and underscores`);
+  if (!isItemId(item.id)) problems.push(`${where}: id must be lowercase letters, digits and underscores`);
   if (item.name.trim() === "" || /\s\d+$/u.test(item.name))
     problems.push(`${where}: needs a real name, not a numbered stand-in`);
   if (!slot || !family) return [...problems, `${where}: unknown slot ${item.slot}`];
@@ -124,7 +127,7 @@ function itemProblems(item: CosmeticItem, catalog: CosmeticCatalog, backdrops: R
     problems.push(`${where}: asset ${item.asset} is not in the manifest`);
   let previous = 0;
   for (const step of item.evolves ?? []) {
-    if (!ITEM_ID.test(step.counter) || !Number.isInteger(step.at) || step.at <= previous)
+    if (!isItemId(step.counter) || !Number.isInteger(step.at) || step.at <= previous)
       problems.push(`${where}: evolution steps need a counter id and rising "at"`);
     previous = step.at;
     problems.push(...lookProblems(step.look, family, `${where} evolution`, { backdrops, rejectTell, partial: true }));
@@ -160,7 +163,7 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: Rea
   );
 
   for (const family of catalog.families) {
-    if (!REFERENCE_ID.test(family.id) || Object.keys(family.params).length === 0)
+    if (!isReferenceId(family.id) || Object.keys(family.params).length === 0)
       problems.push(`family ${family.id}: needs an id and parameters`);
     for (const [key, spec] of Object.entries(family.params)) {
       if (spec.type === "number" && spec.unit === "per-second" && spec.max > MAX_FLASHES_PER_SECOND)
@@ -171,14 +174,14 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: Rea
     );
   }
   for (const tier of catalog.tiers)
-    if (!ITEM_ID.test(tier.id) || !Number.isSafeInteger(tier.price) || tier.price < 0 || tier.price > MAX_PRICE)
+    if (!isItemId(tier.id) || !Number.isSafeInteger(tier.price) || tier.price < 0 || tier.price > MAX_PRICE)
       problems.push(`tier ${tier.id}: price must be a whole number 0 to ${String(MAX_PRICE)}`);
   for (const slot of catalog.slots) {
     const family = catalog.families.find((entry) => entry.id === slot.family);
     if (
-      !ITEM_ID.test(slot.id) ||
+      !isItemId(slot.id) ||
       slot.label.trim() === "" ||
-      !(SLOT_GROUPS as readonly string[]).includes(slot.group) ||
+      !listed(SLOT_GROUPS, slot.group) ||
       !["ready", "not yet"].includes(slot.hook)
     )
       problems.push(`slot ${slot.id}: invalid id, label, group or hook`);
@@ -190,7 +193,7 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: Rea
   }
   for (const collection of catalog.collections) {
     const where = `collection ${collection.id}`;
-    if (!ITEM_ID.test(collection.id) || collection.name.trim() === "") problems.push(`${where}: invalid id or name`);
+    if (!isItemId(collection.id) || collection.name.trim() === "") problems.push(`${where}: invalid id or name`);
     problems.push(...conditionProblems(collection.unlock, where));
     if (collection.reward !== undefined) {
       const reward = catalog.items.find((entry) => entry.id === collection.reward);
@@ -205,18 +208,126 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: Rea
 /** The data files as imported: arrays of rows whose shape the validator, not the compiler, vouches for. */
 export type RawCosmeticCatalog = { readonly [Key in keyof CosmeticCatalog]: readonly unknown[] };
 
+const FIELD_KINDS = ["string", "number", "boolean", "record", "list"] as const;
+type FieldKind = (typeof FIELD_KINDS)[number];
+/** A row's fields and their kinds; a trailing "?" marks an optional field. */
+type RowShape = Readonly<Record<string, FieldKind | `${FieldKind}?`>>;
+
+/** What every row of each data file must look like before the rules above may read its fields. */
+const ROW_SHAPES: Readonly<Record<Exclude<keyof CosmeticCatalog, "assets">, RowShape>> = {
+  slots: { id: "string", label: "string", group: "string", family: "string", hook: "string", default: "record" },
+  families: { id: "string", params: "record", calm: "record" },
+  tiers: { id: "string", price: "number" },
+  collections: { id: "string", name: "string", unlock: "record", reward: "string?" },
+  items: {
+    id: "string",
+    slot: "string",
+    name: "string",
+    tier: "string",
+    acquire: "list",
+    look: "record",
+    collection: "string?",
+    unlock: "record?",
+    asset: "string?",
+    evolves: "list?",
+  },
+};
+/** The fields each kind of family parameter needs, beyond its `type`. */
+const PARAM_SHAPES: Readonly<Record<ParamSpec["type"], RowShape>> = {
+  color: { readable: "boolean?" },
+  colors: { min: "number", max: "number", readable: "boolean?" },
+  number: { min: "number", max: "number", unit: "string?" },
+  int: { min: "number", max: "number" },
+  enum: { values: "list" },
+  text: { min: "number", max: "number" },
+  id: {},
+};
+const EVOLUTION_SHAPE: RowShape = { counter: "string", at: "number", look: "record" };
+
+function isKind(value: unknown, kind: FieldKind): boolean {
+  switch (kind) {
+    case "record":
+      return isRecord(value);
+    case "list":
+      return Array.isArray(value);
+    default:
+      return typeof value === kind;
+  }
+}
+
+/** Every way a value differs from a shape: not an object, a required field missing, a field of the wrong kind. */
+function shapeProblems(value: unknown, shape: RowShape, where: string): string[] {
+  if (!isRecord(value)) return [`${where}: must be an object`];
+  return Object.entries(shape).flatMap(([key, spelled]) => {
+    const optional = spelled.endsWith("?");
+    const kind = FIELD_KINDS.find((entry) => entry === (optional ? spelled.slice(0, -1) : spelled)) ?? "record";
+    if (value[key] === undefined) return optional ? [] : [`${where}: missing ${key}`];
+    return isKind(value[key], kind) ? [] : [`${where}: ${key} must be a ${kind}`];
+  });
+}
+
+const rowName = (file: string, row: unknown, index: number): string =>
+  `${file} ${isRecord(row) && typeof row.id === "string" ? row.id : `row ${String(index + 1)}`}`;
+
+/** The entry of a table keyed by name, read from data without widening the name. */
+const entryNamed = <T>(table: Readonly<Record<string, T>>, name: string): T | undefined =>
+  Object.entries(table).find(([key]) => key === name)?.[1];
+
+/** Shape problems inside a row that passed its own shape: family parameters and evolution steps. */
+function nestedProblems(file: string, row: Record<string, unknown>, where: string): string[] {
+  if (file === "families" && isRecord(row.params))
+    return Object.entries(row.params).flatMap(([key, spec]) => {
+      const at = `${where} parameter ${key}`;
+      if (!isRecord(spec) || typeof spec.type !== "string") return [`${at}: needs a type`];
+      const fields = entryNamed(PARAM_SHAPES, spec.type);
+      return fields ? shapeProblems(spec, fields, at) : [`${at}: unknown type ${spec.type}`];
+    });
+  if (file === "items" && Array.isArray(row.evolves))
+    return row.evolves.flatMap((step: unknown, index) =>
+      shapeProblems(step, EVOLUTION_SHAPE, `${where} evolution ${String(index + 1)}`),
+    );
+  return [];
+}
+
+/** Every row of every file checked against its shape. Empty means the rules can read every field safely. */
+function catalogShapeProblems(raw: RawCosmeticCatalog): string[] {
+  const problems: string[] = [];
+  for (const [file, rows] of Object.entries(raw)) {
+    if (!Array.isArray(rows)) {
+      problems.push(`${file}: must be a list`);
+      continue;
+    }
+    const shape = entryNamed(ROW_SHAPES, file);
+    rows.forEach((row: unknown, index) => {
+      const where = rowName(file, row, index);
+      if (!shape) {
+        if (typeof row !== "string") problems.push(`${where}: must be a string`);
+        return;
+      }
+      const own = shapeProblems(row, shape, where);
+      problems.push(...own);
+      if (own.length === 0 && isRecord(row)) problems.push(...nestedProblems(file, row, where));
+    });
+  }
+  return problems;
+}
+
 /**
- * The one loader of the data files. It validates every row and throws with the full problem list, so a
- * catalog that exists is a catalog that passed.
+ * The one loader of the data files. It checks every row's shape, then every rule, and throws with the full
+ * problem list, so a catalog that exists is a catalog that passed. A malformed row is a listed problem,
+ * never a bare TypeError.
  */
 export function parseCosmeticCatalog(raw: RawCosmeticCatalog, backdrops: ReadabilityBackdrops): CosmeticCatalog {
+  const problems = catalogShapeProblems(raw);
+  // Once the shapes pass, every row has the fields and kinds `CosmeticCatalog` declares; the rules check values.
   const catalog = raw as CosmeticCatalog;
-  const problems = Object.values(raw).every(Array.isArray)
-    ? validateCosmeticCatalog(catalog, backdrops)
-    : ["every cosmetic data file must be a list"];
+  if (problems.length === 0) problems.push(...validateCosmeticCatalog(catalog, backdrops));
   if (problems.length > 0) throw new Error(["Invalid cosmetic data:", ...problems].join("\n"));
   return catalog;
 }
+
+/** A time later than any real save time, so the worst case is never shorter than a real record. */
+const LATEST_PLAUSIBLE_TIME = 9_999_999_999_999;
 
 /** The largest record a player can produce, in characters: every cap reached at once. Must fit MAX_STATE_CHARS. */
 export function worstCaseStateSize(catalog: CosmeticCatalog): number {
@@ -224,19 +335,19 @@ export function worstCaseStateSize(catalog: CosmeticCatalog): number {
   const owned = Object.fromEntries(
     Array.from({ length: MAX_OWNED }, (_, index) => [`${id}${String(index)}`, MAX_PRICE]),
   );
-  const slots = Object.fromEntries(catalog.slots.map((slot) => [slot.id, { id, at: 1_800_000_000_000 }]));
+  const slots = Object.fromEntries(catalog.slots.map((slot) => [slot.id, { id, at: LATEST_PLAUSIBLE_TIME }]));
   const loadouts = Object.fromEntries(
     Array.from({ length: MAX_LOADOUTS }, (_, index) => [
       `loadout_${String(index)}`,
-      { name: "x".repeat(MAX_LOADOUT_NAME), nameAt: 1_800_000_000_000, slots },
+      { name: "x".repeat(MAX_LOADOUT_NAME), nameAt: LATEST_PLAUSIBLE_TIME, deletedAt: LATEST_PLAUSIBLE_TIME, slots },
     ]),
   );
   return JSON.stringify({
-    v: 1,
+    v: COSMETIC_STATE_VERSION,
     owned,
     seen: owned,
     counters: owned,
     loadouts,
-    active: { id: "loadout_0", at: 1_800_000_000_000 },
+    active: { id: "loadout_0", at: LATEST_PLAUSIBLE_TIME },
   }).length;
 }

@@ -79,6 +79,8 @@ export interface RunScreenServices {
   readonly requestPointer: () => void;
   readonly persistentEffects?: () => boolean;
   readonly tutorialSession?: () => TutorialSessionView | undefined;
+  /** Steps the Drills tabs with Q / E and the pad bumpers, as on every tabbed screen. */
+  readonly stepPracticeTab?: (session: TutorialSessionView) => void;
 }
 
 export interface LiveRunScreenAdapters {
@@ -229,9 +231,23 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
     },
     renderPaused(): void {
       const run = state.run();
-      const tutorial = services.tutorialSession?.();
+      let tutorial = services.tutorialSession?.();
+      if (tutorial?.practiceOnly === true && services.stepPracticeTab) {
+        services.stepPracticeTab(tutorial);
+        tutorial = services.tutorialSession?.();
+      }
       if (tutorial !== undefined) {
         renderers.paused({ id: "paused", abilities: [], progress: [], tutorial });
+        return;
+      }
+      if (run.mode === "playground") {
+        renderers.paused({
+          id: "paused",
+          playground: true,
+          runSummary: "PLAYGROUND   ·   " + services.formatTime(run.runTime),
+          abilities: abilityCards(),
+          progress: [],
+        });
         return;
       }
       renderers.paused({

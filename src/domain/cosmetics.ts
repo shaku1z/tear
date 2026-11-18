@@ -18,7 +18,8 @@ import {
   type Loadout,
   type SavedLoadout,
 } from "./cosmetic-types";
-import { isRecord, ITEM_ID } from "./identifiers";
+import { isItemId } from "./identifiers";
+import { hasOwnKey, isRecord, ownValue } from "./records";
 import { conditionMet, type ProgressFacts } from "./unlock-condition";
 
 const wholeNumber = (value: unknown): value is number =>
@@ -36,7 +37,7 @@ export const emptyCosmeticState = (): CosmeticState => ({
 function numberMap(value: unknown): Record<string, number> {
   const output: Record<string, number> = {};
   if (isRecord(value))
-    for (const [key, entry] of Object.entries(value)) if (ITEM_ID.test(key) && wholeNumber(entry)) output[key] = entry;
+    for (const [key, entry] of Object.entries(value)) if (isItemId(key) && wholeNumber(entry)) output[key] = entry;
   return output;
 }
 
@@ -44,9 +45,8 @@ function slotMap(value: unknown): Record<string, EquippedEntry> {
   const output: Record<string, EquippedEntry> = {};
   if (!isRecord(value)) return output;
   for (const [slot, entry] of Object.entries(value)) {
-    if (!ITEM_ID.test(slot) || !isRecord(entry) || !wholeNumber(entry.at)) continue;
-    if (entry.id === null || (typeof entry.id === "string" && ITEM_ID.test(entry.id)))
-      output[slot] = { id: entry.id, at: entry.at };
+    if (!isItemId(slot) || !isRecord(entry) || !wholeNumber(entry.at)) continue;
+    if (entry.id === null || isItemId(entry.id)) output[slot] = { id: entry.id, at: entry.at };
   }
   return output;
 }
@@ -61,7 +61,7 @@ export function normalizeCosmeticState(value: unknown): CosmeticState {
   const loadouts: Record<string, SavedLoadout> = {};
   if (isRecord(value.loadouts))
     for (const [id, entry] of Object.entries(value.loadouts)) {
-      if (!ITEM_ID.test(id) || !isRecord(entry) || typeof entry.name !== "string") continue;
+      if (!isItemId(id) || !isRecord(entry) || typeof entry.name !== "string") continue;
       loadouts[id] = {
         name: entry.name.slice(0, MAX_LOADOUT_NAME),
         nameAt: wholeNumber(entry.nameAt) ? entry.nameAt : 0,
@@ -71,7 +71,7 @@ export function normalizeCosmeticState(value: unknown): CosmeticState {
     }
   const raw = value.active;
   const active =
-    isRecord(raw) && typeof raw.id === "string" && ITEM_ID.test(raw.id) && wholeNumber(raw.at)
+    isRecord(raw) && isItemId(raw.id) && wholeNumber(raw.at)
       ? { id: raw.id, at: raw.at }
       : { id: DEFAULT_LOADOUT_ID, at: 0 };
   return {
@@ -90,7 +90,7 @@ const newer = (a: { at: number; id: string | null }, b: { at: number; id: string
 function mergeLoadout(left: SavedLoadout, right: SavedLoadout): SavedLoadout {
   const slots: Record<string, EquippedEntry> = { ...left.slots };
   for (const [slot, entry] of Object.entries(right.slots)) {
-    const current = slots[slot];
+    const current = ownValue(slots, slot);
     if (!current || newer(entry, current)) slots[slot] = entry;
   }
   const rightName = right.nameAt > left.nameAt || (right.nameAt === left.nameAt && right.name > left.name);
@@ -109,7 +109,10 @@ function mergeNumbers(
   pick: (x: number, y: number) => number,
 ): Record<string, number> {
   const output: Record<string, number> = { ...a };
-  for (const [key, entry] of Object.entries(b)) output[key] = key in output ? pick(output[key] ?? 0, entry) : entry;
+  for (const [key, entry] of Object.entries(b)) {
+    const current = ownValue(output, key);
+    output[key] = current === undefined ? entry : pick(current, entry);
+  }
   return output;
 }
 
@@ -117,7 +120,7 @@ function mergeNumbers(
 export function mergeCosmeticStates(left: CosmeticState, right: CosmeticState): CosmeticState {
   const loadouts: Record<string, SavedLoadout> = { ...left.loadouts };
   for (const [id, entry] of Object.entries(right.loadouts)) {
-    const current = loadouts[id];
+    const current = ownValue(loadouts, id);
     loadouts[id] = current ? mergeLoadout(current, entry) : entry;
   }
   return {
@@ -146,11 +149,17 @@ const latestChange = (loadout: SavedLoadout): number =>
 const isDeletedLoadout = (loadout: SavedLoadout): boolean =>
   loadout.deletedAt !== undefined && loadout.deletedAt >= latestChange(loadout);
 
-/** The loadout in use, or undefined while nothing has been equipped yet. */
-export function activeLoadout(state: CosmeticState): SavedLoadout | undefined {
-  const loadout = state.loadouts[state.active.id];
+/** The loadout saved under `id`, or undefined when there is none or it was deleted. */
+function liveLoadout(state: CosmeticState, id: string): SavedLoadout | undefined {
+  const loadout = ownValue(state.loadouts, id);
   return loadout && !isDeletedLoadout(loadout) ? loadout : undefined;
 }
+
+/** The loadout in use, or undefined while nothing has been equipped yet. */
+export const activeLoadout = (state: CosmeticState): SavedLoadout | undefined => liveLoadout(state, state.active.id);
+
+/** Whether the player owns the item (bought or granted). */
+const owns = (state: CosmeticState, id: string): boolean => hasOwnKey(state.owned, id);
 
 export type ItemStatus = "equipped" | "owned" | "available" | "locked" | "elsewhere";
 /**
@@ -163,8 +172,10 @@ export function itemStatus(
   item: CosmeticItem,
   facts: ProgressFacts,
 ): ItemStatus {
-  if (state.owned[item.id] !== undefined)
-    return activeLoadout(state)?.slots[item.slot]?.id === item.id ? "equipped" : "owned";
+  if (owns(state, item.id)) {
+    const slots = activeLoadout(state)?.slots;
+    return slots && ownValue(slots, item.slot)?.id === item.id ? "equipped" : "owned";
+  }
   const collection = catalog.collections.find((entry) => entry.id === item.collection);
   if ((collection && !conditionMet(collection.unlock, facts)) || (item.unlock && !conditionMet(item.unlock, facts)))
     return "locked";
@@ -198,7 +209,7 @@ export function purchaseCosmetic(
  * (its reward). Challenge, mastery, code and bundle grants arrive through their own receipts later.
  */
 export function claimableGrants(catalog: CosmeticCatalog, state: CosmeticState, facts: ProgressFacts): string[] {
-  const owned = (id: string): boolean => state.owned[id] !== undefined;
+  const owned = (id: string): boolean => owns(state, id);
   const complete = (collectionId: string): boolean => {
     const reward = catalog.collections.find((entry) => entry.id === collectionId)?.reward;
     const members = catalog.items.filter((item) => item.collection === collectionId && item.id !== reward);
@@ -218,7 +229,7 @@ export function claimableGrants(catalog: CosmeticCatalog, state: CosmeticState, 
 }
 
 export const grantItems = (state: CosmeticState, ids: readonly string[]): CosmeticState => {
-  const fresh = ids.filter((id) => state.owned[id] === undefined);
+  const fresh = ids.filter((id) => !owns(state, id));
   return fresh.length === 0
     ? state
     : { ...state, owned: { ...state.owned, ...Object.fromEntries(fresh.map((id) => [id, 0])) } };
@@ -237,12 +248,17 @@ export function equipCosmetic(
 ): CosmeticState | null {
   if (itemId !== null) {
     const item = catalog.items.find((entry) => entry.id === itemId);
-    if (item?.slot !== slot || state.owned[item.id] === undefined) return null;
+    if (item?.slot !== slot || !owns(state, item.id)) return null;
   } else if (!catalog.slots.some((entry) => entry.id === slot)) return null;
+  // The loadout in use; failing that, the live main loadout; only when neither exists is a fresh main made.
   const live = activeLoadout(state);
   const id = live ? state.active.id : DEFAULT_LOADOUT_ID;
-  const base: SavedLoadout = live ?? { name: "MAIN", nameAt: now, slots: {} };
-  const at = Math.max(Math.trunc(now), (base.slots[slot]?.at ?? 0) + 1, (state.loadouts[id]?.deletedAt ?? -1) + 1);
+  const base: SavedLoadout = live ?? liveLoadout(state, id) ?? { name: "MAIN", nameAt: now, slots: {} };
+  const at = Math.max(
+    Math.trunc(now),
+    (ownValue(base.slots, slot)?.at ?? 0) + 1,
+    (ownValue(state.loadouts, id)?.deletedAt ?? -1) + 1,
+  );
   const loadout: SavedLoadout = { ...base, slots: { ...base.slots, [slot]: { id: itemId, at } } };
   return { ...state, loadouts: { ...state.loadouts, [id]: loadout }, active: live ? state.active : { id, at } };
 }
@@ -254,7 +270,7 @@ export function loadoutOf(catalog: CosmeticCatalog, state: CosmeticState): Loado
   if (!loadout) return output;
   for (const [slot, entry] of Object.entries(loadout.slots)) {
     const item = entry.id ? catalog.items.find((candidate) => candidate.id === entry.id) : undefined;
-    if (item?.slot === slot && state.owned[item.id] !== undefined) output[slot] = item.id;
+    if (item?.slot === slot && owns(state, item.id)) output[slot] = item.id;
   }
   return output;
 }
@@ -264,7 +280,7 @@ export const markSeen = (state: CosmeticState, ids: readonly string[], now: numb
   seen: {
     ...state.seen,
     ...Object.fromEntries(
-      ids.filter((id) => state.seen[id] === undefined).map((id) => [id, Math.max(0, Math.trunc(now))]),
+      ids.filter((id) => !hasOwnKey(state.seen, id)).map((id) => [id, Math.max(0, Math.trunc(now))]),
     ),
   },
 });
