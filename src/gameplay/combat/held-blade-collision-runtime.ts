@@ -335,13 +335,13 @@ function applyWeaponEffect(
 ): void {
   if (!effect) return;
   const { blade, run, tuning: t, effects: fx } = input;
-  // A drilled move (Reversal, Break) floats its name from the weapon's `drillMoves`.
-  const callout = drillMoveCallout(run.weaponId, effect.mechanic);
   if (effect.hitIframe != null) enemy.hitCd = Math.min(enemy.hitCd, effect.hitIframe);
   if (effect.mechanic === "reversal") {
     run.weaponStats.reversals++;
     enemy.stun = Math.max(enemy.stun, enemy.isBoss ? 0 : (effect.stun ?? 0));
     if (fx.presentAttack === undefined) {
+      // A drilled move floats its name from the weapon's `drillMoves`, as Break does below.
+      const callout = drillMoveCallout(run.weaponId, effect.mechanic);
       fx.ribbon(blade.x, blade.y, blade.tipX, blade.tipY, t.colors.perfect);
       if (callout) fx.floater(enemy.x, enemy.y - 42, callout, true, t.colors.perfect);
     }
@@ -350,6 +350,7 @@ function applyWeaponEffect(
       effect.broke = true;
       run.weaponStats.breakTriggers++;
       if (fx.presentAttack === undefined) {
+        const callout = drillMoveCallout(run.weaponId, effect.mechanic);
         if (callout) fx.floater(enemy.x, enemy.y - 42, callout, true, t.colors.armoredShield);
         fx.ring(enemy.x, enemy.y, 15, t.colors.armoredShield);
       }
