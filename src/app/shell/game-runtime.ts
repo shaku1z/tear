@@ -40,13 +40,13 @@ import { assembleLiveRunOrchestration } from "../run/live-run-orchestration-asse
 import { createLiveReviveCountdownState } from "../run/revive-countdown-state";
 import { liveTutorialCoachFrame } from "../training/tutorial-coach-frame";
 import { createLiveTutorialPracticeStart } from "../training/tutorial-practice-start";
-import { createLiveAuthoritativeInputAdapter } from "../world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../../gameplay/runtime/authoritative-input-adapter";
 import { bindBiomeActors } from "../../gameplay/environment/biome-actors/bind-biome-actors";
 import { countCanonicalStateCost } from "../world/canonical-state-cost";
 import { createLiveInputAuthorityState } from "../world/input-authority-state";
 import { createLiveBrowserRuntime } from "./browser-runtime";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "./game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import { createLiveProductionWorld } from "./production-world";
 import { RuntimeFrameDriver } from "./runtime-frame-driver";
 import { createLiveSessionServices } from "./session-services-composition";

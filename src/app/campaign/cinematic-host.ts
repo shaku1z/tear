@@ -1,5 +1,5 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameProjectile } from "../shell/game-runtime-state";
+import type { GameProjectile } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { ArenaPlatform, SourceVoidController } from "../../gameplay/training/arena-rules";
 import { createSourceVoidRuntimeBridge } from "../../gameplay/campaign/source-void-runtime";

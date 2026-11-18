@@ -1,5 +1,5 @@
-import { CampaignChapterController } from "../../gameplay/campaign/chapter-controller";
-import { FinaleController } from "../../gameplay/campaign/finale-controller";
+import { CampaignChapterController } from "./chapter-controller";
+import { FinaleController } from "./finale-controller";
 
 export interface ChapterMotionTokens {
   readonly loreReveal: number;

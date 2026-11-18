@@ -11,7 +11,7 @@ import type {
   GameRun,
   GameSlowZone,
   GameTemporaryWall,
-} from "../shell/game-runtime-state";
+} from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 
 type CollisionState = Omit<LiveCollisionPhaseState, "enemies" | "projectiles" | "floaters">;
