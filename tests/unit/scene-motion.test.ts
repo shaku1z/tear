@@ -1,19 +1,19 @@
 // The moving parts of a painted scene (src/presentation/scenes/scene-motion.ts): package data in, drawing
 // out, with nothing in the renderer that knows which stage it is drawing.
 import { describe, expect, it } from "vitest";
-import { decodedBytes, validateScenePackage } from "../../src/presentation/scenes/scene-contract";
+import {
+  decodedBytes,
+  validateScenePackage,
+  type SceneBitmap,
+  type SceneCanvas,
+} from "../../src/presentation/scenes/scene-contract";
 import {
   drawLayerMotion,
   prepareMotion,
   SCENE_MOTION_RATE,
   waterRow,
 } from "../../src/presentation/scenes/scene-motion";
-import {
-  drawSceneBack,
-  type LoadedScene,
-  type SceneBitmap,
-  type SceneFrame,
-} from "../../src/presentation/scenes/scene-renderer";
+import { drawSceneBack, type LoadedScene, type SceneFrame } from "../../src/presentation/scenes/scene-renderer";
 import { fixturePackage } from "./scene-fixture";
 
 const digest = "a".repeat(64);
@@ -74,19 +74,32 @@ function recorder() {
   return { context, calls };
 }
 
+/** A stand-in for a decoded image or canvas: a size, and a context that records calls. */
+function fakeCanvas(width: number, height: number, context: CanvasRenderingContext2D): SceneCanvas & SceneBitmap {
+  const canvas: SceneCanvas = { width, height, getContext: () => context };
+  return canvas as SceneCanvas & SceneBitmap;
+}
+
 function loadedScene(part: Record<string, unknown> = {}) {
   const scene = validateScenePackage(withWater(part));
   const work = recorder();
   const images = new Map<string, SceneBitmap>(
-    scene.images.map((image) => [image.id, { width: image.width, height: image.height } as SceneBitmap]),
+    scene.images.map((image) => [image.id, fakeCanvas(image.width, image.height, work.context)]),
   );
   const created: { width: number; height: number }[] = [];
   const motion = prepareMotion(scene, images, (width, height) => {
     created.push({ width, height });
-    return { width, height, getContext: () => work.context } as never;
+    return fakeCanvas(width, height, work.context);
   });
   const loaded: LoadedScene = { scene, images, shading: [], motion };
   return { scene, images, motion, loaded, work, created };
+}
+
+/** The far layer's decoded paint; every test scene has one. */
+function farPaint(images: ReadonlyMap<string, SceneBitmap>): SceneBitmap {
+  const paint = images.get("far");
+  if (paint === undefined) throw new Error("no far layer");
+  return paint;
 }
 
 const frame = (overrides: Partial<SceneFrame> = {}): SceneFrame => ({
@@ -160,7 +173,7 @@ describe("drawing water", () => {
   it("redraws the rows, the glints and the mask, then draws the result over its layer", () => {
     const { motion, images, work } = loadedScene();
     const main = recorder();
-    const paint = images.get("far") as SceneBitmap;
+    const paint = farPaint(images);
     drawLayerMotion(main.context, motion, images, "far", paint, 1);
     const rows = work.calls.filter((call) => call.name === "drawImage" && call.args[0] === paint);
     expect(rows).toHaveLength(water.rows);
@@ -192,7 +205,7 @@ describe("drawing water", () => {
   it("moves: rows read different paint a moment later", () => {
     const reads = (seconds: number) => {
       const { motion, images, work } = loadedScene();
-      const paint = images.get("far") as SceneBitmap;
+      const paint = farPaint(images);
       drawLayerMotion(recorder().context, motion, images, "far", paint, seconds);
       return work.calls.filter((call) => call.args[0] === paint).map((call) => (call.args as number[])[1]);
     };
@@ -204,7 +217,7 @@ describe("drawing water", () => {
   it("redraws at a fixed rate, and only draws the kept canvas in between", () => {
     const { motion, images, work } = loadedScene();
     const main = recorder();
-    const paint = images.get("far") as SceneBitmap;
+    const paint = farPaint(images);
     const tick = 1 / SCENE_MOTION_RATE;
     drawLayerMotion(main.context, motion, images, "far", paint, 10 * tick);
     const first = work.calls.length;
@@ -219,7 +232,7 @@ describe("drawing water", () => {
   it("draws nothing for another layer, or when the mask has been released", () => {
     const { motion, images, work } = loadedScene();
     const main = recorder();
-    const paint = images.get("far") as SceneBitmap;
+    const paint = farPaint(images);
     drawLayerMotion(main.context, motion, images, "roots", paint, 1);
     images.delete("water");
     drawLayerMotion(main.context, motion, images, "far", paint, 1);
@@ -248,7 +261,7 @@ describe("the scene renderer", () => {
   it("draws a package with no motion exactly as before", () => {
     const scene = validateScenePackage(fixturePackage());
     const images = new Map<string, SceneBitmap>(
-      scene.images.map((image) => [image.id, { width: image.width, height: image.height } as SceneBitmap]),
+      scene.images.map((image) => [image.id, fakeCanvas(image.width, image.height, recorder().context)]),
     );
     const plain = recorder();
     drawSceneBack(plain.context, { scene, images, shading: [] }, frame());

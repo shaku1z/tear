@@ -1,15 +1,14 @@
 import {
   layerTransform,
   type Rect,
+  type SceneBitmap,
+  type SceneCanvas,
   type SceneCamera,
   type SceneLayer,
   type ScenePackage,
   type SceneShade,
 } from "./scene-contract";
 import { drawLayerMotion, type PreparedMotion } from "./scene-motion";
-
-/** A decoded image the renderer can draw; ImageBitmap and canvases qualify. */
-export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
 
 export interface LoadedScene {
   readonly scene: ScenePackage;
@@ -18,13 +17,6 @@ export interface LoadedScene {
   readonly shading: readonly SceneShade[];
   /** The moving parts of the scene; absent or empty for still paint. */
   readonly motion?: readonly PreparedMotion[];
-}
-
-/** A canvas to bake into; HTMLCanvasElement and OffscreenCanvas qualify. */
-export interface SceneCanvas {
-  readonly width: number;
-  readonly height: number;
-  getContext(id: "2d"): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
 }
 
 export interface SceneView {

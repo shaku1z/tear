@@ -4,14 +4,17 @@
  * that canvas is drawn over its layer every frame, so a frame pays for one image
  * draw however much the part itself costs.
  */
-import { layerImageRect, type Rect, type SceneMotion, type ScenePackage, type SceneWater } from "./scene-contract";
+import {
+  layerImageRect,
+  type Rect,
+  type SceneBitmap,
+  type SceneCanvas,
+  type SceneMotion,
+  type ScenePackage,
+  type SceneWater,
+} from "./scene-contract";
 
 type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-/** A decoded image, and a canvas to redraw into; the same shapes the scene renderer uses. */
-type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
-interface SceneCanvas {
-  getContext(id: "2d"): Context2D | null;
-}
 
 /** Times a second a moving part is redrawn. Ripples read as smooth well below the frame rate. */
 export const SCENE_MOTION_RATE = 30;

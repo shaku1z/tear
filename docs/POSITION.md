@@ -16,7 +16,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | --- | --- | --- | --- |
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
-| [Verdant Sanctum visuals](#verdant-visuals) | In progress | Living motion (water, light, foliage) as package data, in its own pull request. | Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading. |
+| [Verdant Sanctum visuals](#verdant-visuals) | In progress | Light shafts and motes, then foliage sway, as package data on the same branch. | Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading. |
 | [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Its pull request, then the lead's review. | Playtest the reworked stage. |
 | [Tutorial and Playground experience](#training-ux) | In progress | Its pull request, then the lead's review. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
@@ -49,9 +49,9 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum visuals
 
-**In progress.** Verdant has a painted background drawn from a scene package, with platforms still drawn by the game from collision geometry. The same format, command and checks work for any biome; a Pale Traverse placeholder fixture proves it. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The background does not move yet.
+**In progress.** Verdant has a painted background drawn from a scene package, with platforms still drawn by the game from collision geometry. The same format, command and checks work for any biome; a Pale Traverse placeholder fixture proves it. Boss warnings and strikes on Verdant are drawn as roots and thorns rising from the floor, from a table on the stage's presentation definition that any biome can supply. The owner said yes to the painted stage on 2026-11-17. The pool's water moves, as package data the shared renderer draws; light, motes and foliage do not move yet.
 
-- Next: Living motion (water, light, foliage) as package data, in its own pull request.
+- Next: Light shafts and motes, then foliage sway, as package data on the same branch.
 - Owner action: Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading.
 - Evidence: [docs/BACKGROUND_WORKFLOW.md](BACKGROUND_WORKFLOW.md), [tests/unit/scene-packages.test.ts](../tests/unit/scene-packages.test.ts), [tests/unit/boss-tell-skin.test.ts](../tests/unit/boss-tell-skin.test.ts), [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 

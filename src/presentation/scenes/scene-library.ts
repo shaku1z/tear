@@ -1,4 +1,4 @@
-import { validateScenePackage, type SceneCamera } from "./scene-contract";
+import { validateScenePackage, type SceneBitmap, type SceneCamera, type SceneCanvas } from "./scene-contract";
 import { prepareMotion } from "./scene-motion";
 import {
   bakeShading,
@@ -7,8 +7,6 @@ import {
   drawPlatformShadows,
   drawPlatformTexture,
   type LoadedScene,
-  type SceneBitmap,
-  type SceneCanvas,
   type SceneView,
   type SurfaceTarget,
 } from "./scene-renderer";

@@ -27,6 +27,16 @@ export const SCENE_DECODED_LIMIT = 24 * 1024 * 1024;
 export const SCENE_MAX_PIXELS_PER_UNIT = 2.5;
 
 export type Rect = readonly [x: number, y: number, w: number, h: number];
+
+/** A decoded image the scene code can draw; ImageBitmap and canvases qualify. */
+export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
+
+/** A canvas to draw into; HTMLCanvasElement and OffscreenCanvas qualify. */
+export interface SceneCanvas {
+  readonly width: number;
+  readonly height: number;
+  getContext(id: "2d"): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+}
 export type Point = readonly [x: number, y: number];
 
 export type SceneSourceOrigin = "owner-supplied" | "image-tool" | "derived" | "procedural";
