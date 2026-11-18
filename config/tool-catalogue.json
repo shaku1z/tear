@@ -1535,6 +1535,18 @@
         "scripts/run-checks.mjs"
       ]
     },
+    "scripts/ci-checked-commit.mjs": {
+      "purpose": "Validate: merges the chosen main commit into the change and refuses a job on another commit",
+      "effects": [
+        "network",
+        "writes-repo-files"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/actions/checked-commit/action.yml"
+      ]
+    },
     "scripts/ci-verdict.mjs": {
       "purpose": "Validate's required check: fails unless every needed job ended as it should",
       "effects": [
@@ -1840,6 +1852,10 @@
     ],
     "scripts/asset-sheets/output.mjs": [
       "scripts/asset-sheets.mjs"
+    ],
+    "scripts/relative-imports.mjs": [
+      "scripts/asset-sheets/fingerprint.mjs",
+      "tests/unit/tool-catalogue.test.mjs"
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
