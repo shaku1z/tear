@@ -167,10 +167,10 @@
       "chars": 30134
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 31998
+      "chars": 31820
     },
     "src/tearbench/production-replay-composition.ts": {
-      "chars": 35031
+      "chars": 34925
     },
     "src/tearbench/tutorial-course-driver.ts": {
       "largestFunctionStatements": 209

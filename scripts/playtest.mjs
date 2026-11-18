@@ -7,11 +7,14 @@ import { createServer } from "vite";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const USAGE = `Usage: pnpm playtest bosses [options]
-  --boss <ids>         comma list, default rootbound,aldric,white-hart
+  --boss <ids>         comma list; default every boss the game defines
+                       (with --phase: every boss the game's boss practice accepts)
   --difficulty <id>    easy, normal, hard or extreme; default normal
   --weapon <ids>       comma list, default sword
   --seed <seeds>       comma list, default 1
   --player <ids>       comma list of scripted, avoids-tells; default both
+  --phase <phases>     comma list of phase numbers: start there through the game's boss practice
+                       (Sword on Normal only); default: start at Phase I in boss-only mode
   --seconds <n>        game seconds before a fight is stopped; default 180
   --json <file>        also write the measured fights as JSON
 `;
@@ -38,6 +41,9 @@ if (command !== "bosses") {
 const given = options(rest);
 const seconds = Number(given.get("seconds") ?? "180");
 if (!Number.isFinite(seconds) || seconds <= 0) throw new Error("--seconds must be a positive number");
+const phases = given.has("phase") ? list(given.get("phase"), []).map(Number) : undefined;
+if (phases !== undefined && (phases.length === 0 || !phases.every(Number.isInteger)))
+  throw new Error("--phase takes whole phase numbers");
 
 const server = await createServer({
   root,
@@ -52,11 +58,12 @@ try {
   let fights;
   try {
     fights = report.playBossReport({
-      bosses: list(given.get("boss"), report.DEFAULT_REPORT_BOSSES),
+      bosses: list(given.get("boss"), phases === undefined ? report.REPORT_BOSSES : report.PRACTICE_REPORT_BOSSES),
       difficulty: given.get("difficulty") ?? "normal",
       weapons: list(given.get("weapon"), ["sword"]),
       seeds: list(given.get("seed"), ["1"]),
       players: list(given.get("player"), ["scripted", "avoids-tells"]),
+      ...(phases === undefined ? {} : { phases }),
       maxTicks: Math.round(seconds * 120),
     });
   } catch (error) {

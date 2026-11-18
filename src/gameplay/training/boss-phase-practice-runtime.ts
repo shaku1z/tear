@@ -69,13 +69,17 @@ export function practicePhaseEntryHealth(marks: readonly number[], phase: 2 | 3)
     throw new RangeError("Invalid boss phase marks");
   return phase === 2 ? (first + second) / 2 : second / 2;
 }
-function isPhase(value: unknown): value is PracticeBossPhase {
+/** True for a boss the game's phase practice offers: the published roster. */
+export function isPracticeBossId(value: unknown): value is PracticeBossId {
+  return BOSS_ROSTER.some(({ id }) => id === value);
+}
+export function isPracticeBossPhase(value: unknown): value is PracticeBossPhase {
   return value === 1 || value === 2 || value === 3;
 }
 function validRequest(value: BossPhasePracticeRequest): boolean {
   return (
-    BOSS_ROSTER.some(({ id }) => id === value.bossId) &&
-    isPhase(value.phase) &&
+    isPracticeBossId(value.bossId) &&
+    isPracticeBossPhase(value.phase) &&
     typeof value.seed === "string" &&
     value.seed.length > 0 &&
     value.seed.length <= 128
@@ -133,7 +137,7 @@ export function validateBossPhasePracticeState(value: unknown, world?: BossPhase
     state.encounterId !== identity(state, state.generation) ||
     !["preparing", "entering", "active", "cancelled"].includes(state.lifecycle) ||
     !["opening", "phase-2", "phase-2-baseline", "phase-3", "target"].includes(state.setupStage) ||
-    !isPhase(state.enteredPhase) ||
+    !isPracticeBossPhase(state.enteredPhase) ||
     (state.lifecycle !== "active" && state.lifecycle !== "cancelled" && state.enteredPhase > state.phase) ||
     !["opening", "transition", "combat", "kneel", "regrowth", "void-descent", "graft-baseline"].includes(
       state.entryStage,

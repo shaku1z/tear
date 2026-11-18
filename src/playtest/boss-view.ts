@@ -32,6 +32,8 @@ interface BossActor {
   readonly isBoss?: boolean;
   readonly bossId?: string;
   readonly phase?: number;
+  /** The phase the boss has committed to, declared by every boss with phase practice. */
+  practicePhaseEntry?(): Readonly<{ phase: number }>;
   readonly hp: number;
   readonly maxHp?: number;
   readonly x: number;
@@ -56,7 +58,7 @@ export function readBoss(world: PlaytestWorld): BossView | null {
   if (actor === undefined) return null;
   return {
     id: actor.bossId ?? "unknown",
-    phase: typeof actor.phase === "number" ? actor.phase : 1,
+    phase: bossPhase(actor),
     hp: Math.max(0, actor.hp),
     maxHp: actor.maxHp ?? actor.hp,
     x: actor.x,
@@ -73,10 +75,35 @@ export function readBoss(world: PlaytestWorld): BossView | null {
   };
 }
 
+/**
+ * The boss's phase: the committed phase it declares for practice, else its own phase field. The committed phase is
+ * the one rule for every boss that has it; some keep the phase field elsewhere (the Echo's lives on its mirror).
+ */
+function bossPhase(actor: BossActor): number {
+  if (typeof actor.practicePhaseEntry === "function") return actor.practicePhaseEntry().phase;
+  return typeof actor.phase === "number" ? actor.phase : 1;
+}
+
 export function readPlayerBox(world: PlaytestWorld): PlayerBox | null {
   const player = world.player() as Partial<PlayerBox> | undefined;
   if (player === undefined || typeof player.x !== "number" || typeof player.y !== "number") return null;
   return { x: player.x, y: player.y, hw: player.hw ?? 14, hh: player.hh ?? 24 };
+}
+
+/**
+ * Invulnerability left after a Playground reset is above this. The reset gives 2 s (`resolvePlayerDeath`); a hit
+ * gives 0.9 s (`CONFIG.player.hitIframe`) and a dash 0.15 s, so nothing else reaches it.
+ */
+const RESET_INVULNERABILITY_ABOVE_SECONDS = 1.5;
+
+/**
+ * True when the step reset a defeated player, as Playground modes do instead of ending the run: health back to full
+ * with a fresh invulnerability timer longer than any hit or dash gives.
+ */
+export function playerWasReset(world: PlaytestWorld, hpBefore: number, hpAfter: number, maxHp: number): boolean {
+  const player = world.player() as { iframe?: unknown } | undefined;
+  const iframe = typeof player?.iframe === "number" ? player.iframe : 0;
+  return hpBefore < maxHp && hpAfter >= maxHp && iframe > RESET_INVULNERABILITY_ABOVE_SECONDS;
 }
 
 /** True when the box overlaps the rectangle grown by the margin on every side. */

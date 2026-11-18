@@ -25,6 +25,9 @@ function operationalObservation(observation: TearAgentObservation): TearHierarch
         observation.state.run.score,
         Math.round(observation.state.player.hp),
         observation.state.entities.length,
+        // Damage to an enemy is progress. Without it a fight where nothing scores (Playground boss practice)
+        // reads as a softlock after the no-progress limit, and the watchdog pauses the game.
+        Math.round(100 * observation.state.entities.reduce((total, entity) => total + (entity.hpRatio ?? 0), 0)),
       ].join(":"),
     }),
   });

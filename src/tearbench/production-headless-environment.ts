@@ -34,6 +34,8 @@ import {
 } from "./headless";
 import { validateTearContract } from "./validation";
 import { requireProductionHeadlessScenario } from "./production-headless-scenario";
+import { beginProductionBossPractice } from "./production-boss-practice-start";
+import type { PracticeBossId, PracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
 import {
   canonicalObservationActions,
   canonicalObservationEnemyKind,
@@ -207,6 +209,8 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   tutorialHandoff(): ReturnType<ProductionReplayWorld["tutorialHandoff"]>;
   /** A new episode from caller-supplied identity, never an inferred historical next-run seed. */
   continueTutorialPractice(nextScenario: TearScenarioV1): CanonicalGameplayState;
+  /** In a fresh tutorial episode: Playground boss practice at a chosen phase. Returns a reader of its lifecycle. */
+  practiceBoss(bossId: PracticeBossId, phase: PracticeBossPhase): ReturnType<typeof beginProductionBossPractice>;
   captureCheckpoint(): ProductionHeadlessCheckpoint;
   restoreCheckpoint(checkpoint: ProductionHeadlessCheckpoint): CanonicalGameplayState;
   restoreStateForgeEvaluation(evaluation: ProductionHeadlessStateForgeEvaluation): CanonicalGameplayState;
@@ -774,6 +778,15 @@ export function createProductionHeadlessEnvironment(
       requireCore().advanceApplicationFrame(seconds, confirm);
     },
     tutorialHandoff: () => requireCore().replay.tutorialHandoff(),
+    practiceBoss: (bossId: PracticeBossId, phase: PracticeBossPhase) => {
+      const current = requireCore();
+      return beginProductionBossPractice(
+        current.replay,
+        current.simulation.simulationRuntime.scheduler.tick,
+        bossId,
+        phase,
+      );
+    },
     continueTutorialPractice: (source: TearScenarioV1): CanonicalGameplayState => {
       const current = requireCore();
       if (current.replay.tutorialHandoff() === null)
