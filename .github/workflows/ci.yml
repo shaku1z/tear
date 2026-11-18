@@ -266,6 +266,12 @@ jobs:
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-noble
       options: --ipc=host
+    # The checkout is owned by the runner's user, not the container's, so git would refuse it as
+    # "dubious ownership". This marks it safe for this job's git commands only, writing no config file.
+    env:
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
     steps:
       - uses: actions/checkout@v4
         with:
