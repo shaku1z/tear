@@ -33,6 +33,7 @@ export function createLiveWaveHost(options: LiveWaveHostOptions): LiveWaveContro
     loreBusy: options.loreBusy,
     achievementTracking: options.achievementTracking,
     playerOneHit: options.playerOneHit,
+    ...(options.playerHealth === undefined ? {} : { playerHealth: options.playerHealth }),
     availableTierUpCount: options.availableTierUpCount,
   });
   options.install(controller);

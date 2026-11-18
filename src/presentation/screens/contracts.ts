@@ -621,6 +621,9 @@ export interface GameoverScreenView {
 export interface WinScreenView {
   readonly id: "win";
   readonly campaign: boolean;
+  /** A mode's own title and first line ("GAUNTLET CLEARED"); the generic VICTORY otherwise. */
+  readonly title?: string;
+  readonly headline?: string;
   readonly score: number;
   readonly time: string;
   readonly isNew: boolean;

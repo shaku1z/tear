@@ -47,7 +47,7 @@ const saved = (storage: ReturnType<typeof memory>): { profile: Record<string, un
     schemaVersion: number;
   };
 
-describe("profile envelope version 4", () => {
+describe("profile envelope: the version 4 cosmetics ledger", () => {
   it("adds an empty cosmetics ledger to an old version 3 save and keeps everything else", () => {
     const result = migrateProfileEnvelope({
       schema: "tear.profile",
@@ -70,7 +70,7 @@ describe("profile envelope version 4", () => {
         extensions: { keep: true },
       },
     });
-    expect(PROFILE_ENVELOPE_VERSION).toBe(4);
+    expect(PROFILE_ENVELOPE_VERSION).toBe(5);
   });
 
   it("gives a legacy save an empty ledger and drops malformed cosmetics from a current one", () => {
@@ -80,7 +80,7 @@ describe("profile envelope version 4", () => {
     });
     const result = migrateProfileEnvelope({
       schema: "tear.profile",
-      schemaVersion: 4,
+      schemaVersion: PROFILE_ENVELOPE_VERSION,
       profile: { cosmetics: { v: 1, owned: { ok_item: 10, bad: -1, "Bad Id": 3 }, loadouts: { main: "junk" } } },
     });
     expect(result).toMatchObject({
@@ -89,7 +89,11 @@ describe("profile envelope version 4", () => {
       value: { profile: { cosmetics: { v: 1, owned: { ok_item: 10 }, loadouts: {} } } },
     });
     expect(
-      migrateProfileEnvelope({ schema: "tear.profile", schemaVersion: 4, profile: { cosmetics: 12 } }),
+      migrateProfileEnvelope({
+        schema: "tear.profile",
+        schemaVersion: PROFILE_ENVELOPE_VERSION,
+        profile: { cosmetics: 12 },
+      }),
     ).toMatchObject({
       ok: true,
       value: {
@@ -115,7 +119,9 @@ describe("profile envelope version 4", () => {
   });
 
   it("rejects a future version safely", () => {
-    expect(migrateProfileEnvelope({ schema: "tear.profile", schemaVersion: 5, profile: {} }).ok).toBe(false);
+    expect(
+      migrateProfileEnvelope({ schema: "tear.profile", schemaVersion: PROFILE_ENVELOPE_VERSION + 1, profile: {} }).ok,
+    ).toBe(false);
   });
 });
 

@@ -659,7 +659,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       void services.enterGhostTheater(id).then((result) => {
         if (result.kind === "refused") {
           services.ghostVault.setTheaterEligibility(id, result);
-          profileMessage = "This replay can't be played back right now.";
+          profileMessage =
+            result.category === "ruleset-retired" ? result.detail : "This replay can't be played back right now.";
         }
       });
     },

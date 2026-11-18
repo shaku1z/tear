@@ -42,6 +42,8 @@ import { createTrainingCoachPresentation } from "./training-coach-presentation";
 import { isSheetScreen } from "../../domain/screen-catalog";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
 import { renderEnvironmentLayer } from "./environment-layer";
+import { gauntletTrialCard, gauntletWave } from "../../gameplay/run/gauntlet-trials";
+import { bossName } from "../../gameplay/run/content-director";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -521,8 +523,10 @@ export function createLiveWorldPresentationAdapters(
         buildWaveBannerSnapshot({
           remainingSeconds: state.bannerSeconds(),
           duration: d.CONFIG.juice.bannerTime,
+          mode: run.mode,
           bossWave: !!run.isBossWave,
           wave: run.wave,
+          ...(run.mode === "gauntlet" ? { trialCount: run.bossOrder?.length ?? 0 } : {}),
           waveTag: run.waveTag,
           horde: !!run.horde,
           hordeColor: d.CONFIG.colors.charger,
@@ -554,6 +558,7 @@ export function createLiveWorldPresentationAdapters(
           stageName: stage.name || stage.current.name,
           blurb: stage.current.blurb || "",
           accent: stage.current.accent || d.THEME.ink,
+          trial: gauntletTrialBanner(run),
         }),
       );
     },
@@ -694,4 +699,16 @@ export function projectSceneBoss(enemy: GameEnemy): SceneBoss {
     ...(zoneColor === undefined ? {} : { zoneColor }),
     zones: projectBossZones(enemy),
   };
+}
+
+/** The Gauntlet trial card's label and boss; undefined outside a Gauntlet. */
+function gauntletTrialBanner(
+  run: Readonly<{ mode: string; wave: number; bossOrder?: readonly string[] }>,
+): Readonly<{ label: string; boss: string }> | undefined {
+  if (run.mode !== "gauntlet" || run.wave < 1 || run.bossOrder === undefined) return undefined;
+  const trial = gauntletWave(run.wave).trial;
+  const boss = run.bossOrder[trial];
+  return boss === undefined
+    ? undefined
+    : { label: gauntletTrialCard(trial, run.bossOrder.length), boss: bossName(boss) };
 }

@@ -107,11 +107,12 @@ describe("live enemy spawn", () => {
 
   it("applies structural and difficulty boss scaling without regular affixes", () => {
     const target = enemy({ kind: "boss", hp: 1000, maxHp: 1000, isBoss: true, bossId: "warden", bossName: "Warden" });
-    const { base } = port({ run: () => ({ mode: "gauntlet" as const, wave: 8, bossesBeaten: 2, diffHp: 1.5 }) });
+    const { base } = port({ run: () => ({ mode: "gauntlet" as const, wave: 9, bossesBeaten: 2, diffHp: 1.5 }) });
     completeEnemySpawn(target, { type: "boss" }, base);
 
-    expect(target.hp).toBeCloseTo(3120);
-    expect(target.contactDmg).toBeCloseTo(14);
+    // Third trial's boss: HP ×(1 + 0.12 × 2) × difficulty 1.5, contact ×(1 + 0.05 × 2).
+    expect(target.hp).toBeCloseTo(1860);
+    expect(target.contactDmg).toBeCloseTo(11);
     expect(base.applyVariant).not.toHaveBeenCalled();
     expect(base.rollAffixes).not.toHaveBeenCalled();
     expect(base.recordSpawn).toHaveBeenCalledWith(target, "boss", { vn: "", b: "warden" });

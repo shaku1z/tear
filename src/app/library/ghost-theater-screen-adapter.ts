@@ -29,6 +29,8 @@ import { projectGhostRunDnaTheater } from "../../ghost/run-dna-theater";
 import { createGhostStudioCutListFromTheater } from "../../ghost/studio-cut-list-theater";
 import type { GhostStudioEditDecisionList } from "../../ghost/player-experiences";
 import { refuseGhostTheater, type GhostTheaterOpenResult } from "../../ghost/theater-open-result";
+import { readGhostReplayRunContext } from "../../ghost/replay-admission";
+import { rulesetRefusal } from "../../gameplay/run/ruleset-version";
 
 export interface GhostTheaterScreenServices {
   readonly render: (view: ReplayScreenView) => void;
@@ -284,6 +286,12 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     ): GhostTheaterOpenResult {
       invalidateStudio();
       history.close();
+      const recorded = readGhostReplayRunContext(capsule.manifest.provenance);
+      const retired = rulesetRefusal(recorded?.build.rulesetVersion, recorded?.run.mode);
+      if (retired !== null) {
+        context = undefined;
+        return refuseGhostTheater("ruleset-retired", capsule.manifest.rootIntegrity, 0, retired);
+      }
       let mapped: ReturnType<typeof mapGhostCapsuleToReplayEnvelope>;
       try {
         mapped = mapGhostCapsuleToReplayEnvelope(capsule);

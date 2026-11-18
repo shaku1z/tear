@@ -175,7 +175,6 @@ export interface LiveCombatActionContext<
   readonly dependencies: GameRuntimeDependencies;
   readonly canvas: HTMLCanvasElement;
   readonly width: number;
-  readonly bossRosterSize: number;
   readonly environment: EnvironmentRuntime;
   readonly attackPresentation: AttackPresentationCueSink;
   readonly combatRuntime: () => CombatEntityRuntime;

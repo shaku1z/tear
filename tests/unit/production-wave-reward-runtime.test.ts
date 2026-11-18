@@ -1,4 +1,5 @@
 import { WEAPONS } from "../../src/gameplay/weapons";
+import { STAGES } from "../../src/gameplay/stages";
 import {
   createProductionGhostReplayComposition,
   captureProductionReplayCheckpoint,
@@ -135,21 +136,23 @@ describe("production wave and reward runtime", () => {
       if (boundary) splits.push(boundary);
     });
     runtime.startNaturalOpening();
-    run.wave = 10;
+    // Wave 10 opens the fourth trial, in its boss's home stage.
+    const fourthHome = STAGES.findIndex((stage) => stage.boss === run.bossOrder[3]);
+    run.wave = 9;
     run.runTime = 12;
     replay.world.lifecycle.clearWave();
     replay.world.lifecycle.prepareReward("draft");
     runtime.waves.startNextWave();
-    expect(replay.stage.index).toBe(2);
+    expect(replay.stage.index).toBe(fourthHome);
     expect(stageFacts).toBe(0);
-    expect(splits.at(-1)).toMatchObject({ stage: 2, wave: 11, time: 12, event: "start" });
-    run.wave = 15;
+    expect(splits.at(-1)).toMatchObject({ stage: fourthHome, wave: 10, time: 12, event: "start" });
+    run.wave = 11;
     run.runTime = 24;
     replay.world.lifecycle.clearWave();
     replay.world.lifecycle.prepareReward("draft");
     runtime.waves.startNextWave();
     expect(run.isBossWave).toBe(true);
-    expect(splits.at(-1)).toMatchObject({ stage: replay.stage.index, wave: 16, time: 24, event: "start" });
+    expect(splits.at(-1)).toMatchObject({ stage: replay.stage.index, wave: 12, time: 24, event: "start" });
   });
   it("preserves restored focus until a source transition explicitly resets it", () => {
     const replay = createProductionReplayWorld({ seed: "reward-focus", mode: "endless" });
