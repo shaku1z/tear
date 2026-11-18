@@ -36,7 +36,8 @@ const musicModeNote = (mode: string | undefined): string =>
  */
 export function musicPickLabel(value: string | undefined, library: MusicLibrary | null): string {
   const source = heardSource(parseMusicSource(value), library);
-  if (source.kind === "song") return (library?.songs.find((song) => song.id === source.workId)?.title ?? "").toUpperCase();
+  if (source.kind === "song")
+    return (library?.songs.find((song) => song.id === source.workId)?.title ?? "").toUpperCase();
   if (source.kind === "channel") {
     const name = library?.radio.channels.find((channel) => channel.id === source.channelId)?.name ?? "";
     return `${name.toUpperCase()} · RADIO`;

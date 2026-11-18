@@ -9,6 +9,7 @@
  * old save needs no migration and a pick comes back once it can be heard.
  */
 import { conditionMet, type ProgressFacts } from "../../domain/unlock-condition";
+import type { MusicScene } from "../music-contracts";
 import type { MusicUnlock } from "./catalog";
 import type { MusicLibrary } from "./library";
 import { tunableChannels, type RadioListener, type TunableChannel } from "./radio";
@@ -19,6 +20,17 @@ export type MusicSource =
   | { readonly kind: "channel"; readonly channelId: string };
 
 export const DEFAULT_MUSIC_SOURCE: MusicSource = Object.freeze({ kind: "default" });
+
+/** A boss, a win and a loss bring their own music: the story wins over the pick. */
+const STORY_SCENES: ReadonlySet<MusicScene> = new Set(["boss", "victory", "defeat"]);
+
+/**
+ * Whether the player's pick may play at this point in a run; elsewhere the canonical cue plays. The
+ * one place this rule lives. Every run hears the pick the same way, seed races included.
+ */
+export function pickPlaysInRun(scene: MusicScene): boolean {
+  return !STORY_SCENES.has(scene);
+}
 
 const CHANNEL_PREFIX = "channel:";
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/u;
@@ -118,10 +130,7 @@ export function musicPickChoices(library: Pick<MusicLibrary, "songs" | "radio"> 
 }
 
 /** The pick as the player can hear it now; one they cannot is the default. */
-export function heardSource(
-  source: MusicSource,
-  library: Pick<MusicLibrary, "songs" | "radio"> | null,
-): MusicSource {
+export function heardSource(source: MusicSource, library: Pick<MusicLibrary, "songs" | "radio"> | null): MusicSource {
   if (source.kind === "default" || library === null) return DEFAULT_MUSIC_SOURCE;
   if (source.kind === "song") return musicListener(library).found(source.workId) ? source : DEFAULT_MUSIC_SOURCE;
   return playerChannels(library).some(({ channel }) => channel.id === source.channelId) ? source : DEFAULT_MUSIC_SOURCE;

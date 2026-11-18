@@ -21,6 +21,7 @@ import {
   musicUnlocked,
   onMusicSourceChange,
   onNextSongRequest,
+  pickPlaysInRun,
   playerChannels,
   type MusicSource,
 } from "../music/music-source";
@@ -97,8 +98,6 @@ export class BiomeStemBackend implements MusicBackend {
   #radio: RadioState | null = null;
   /** When the Radio moves to its next song: one timer, never per-frame work. */
   #radioTimer: ReturnType<typeof setTimeout> | null = null;
-  /** In a seed race every racer hears the same music: the gameplay slot ignores the pick. */
-  #seedRace = false;
   /** The player's pick as they can hear it, read again by `#retune`. */
   #pick: MusicSource = DEFAULT_MUSIC_SOURCE;
   /** Picks from a routing pool (the Verdant Sanctum's two songs) come from the run's seed. */
@@ -187,7 +186,6 @@ export class BiomeStemBackend implements MusicBackend {
     // Same run seed, same song: replays and seed-locked races hear what the run heard.
     this.#routeSeed = routeSeedFromRunSeed(metadata.runSeed);
     this.#progress = metadata.progress ?? null;
-    this.#seedRace = metadata.seedRace === true;
     this.#retune();
     this.#introduced.clear();
     return Promise.resolve();
@@ -235,7 +233,6 @@ export class BiomeStemBackend implements MusicBackend {
 
   endRun(): Promise<void> {
     this.#progress = null;
-    this.#seedRace = false;
     // The run may have found songs: a pick that could not be heard before may be heard now.
     this.#retune();
     this.#introduced.clear();
@@ -297,7 +294,12 @@ export class BiomeStemBackend implements MusicBackend {
   /** The cue the player's pick plays now, or null when the pick is the default. Cheap: read every snapshot. */
   #pickCueId(): string | null {
     const source = this.#pick;
-    const cueId = source.kind === "song" ? source.workId : source.kind === "channel" && this.#radio ? currentSong(this.#radio) : null;
+    const cueId =
+      source.kind === "song"
+        ? source.workId
+        : source.kind === "channel" && this.#radio
+          ? currentSong(this.#radio)
+          : null;
     return cueId !== null && this.#cues.has(cueId) ? cueId : null;
   }
 
@@ -412,15 +414,14 @@ export class BiomeStemBackend implements MusicBackend {
   }
 
   /**
-   * Which cue plays. Menus play the menu slot. In a run the player's pick plays, except that a
-   * boss, victory or defeat takes the canonical cue (the story wins) and the pick comes back after,
-   * and that a seed race plays the canonical cue throughout. With the default pick, runs route
-   * exactly as they do without one.
+   * Which cue plays. Menus play the menu slot. In a run the player's pick plays where
+   * `pickPlaysInRun` allows it, and the canonical cue plays everywhere else; the pick comes back
+   * after a boss. With the default pick, runs route exactly as they do without one.
    */
   #routeCueId(biomeId: string, scene: MusicScene): string {
     if (isMusicShell(scene, biomeId)) return this.#shellCueId();
     const canonical = this.#canonicalCueId(biomeId, scene);
-    if (this.#seedRace || scene === "boss" || scene === "victory" || scene === "defeat") return canonical;
+    if (!pickPlaysInRun(scene)) return canonical;
     return this.#pickCueId() ?? canonical;
   }
 

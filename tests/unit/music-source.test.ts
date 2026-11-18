@@ -28,7 +28,8 @@ afterEach(() => setMusicProgressFacts(null));
 
 describe("the saved music pick", () => {
   it("reads default, a song or a channel, and saves back what it read", () => {
-    for (const value of ["default", "fillet", "channel:calm"]) expect(musicSourceValue(parseMusicSource(value))).toBe(value);
+    for (const value of ["default", "fillet", "channel:calm"])
+      expect(musicSourceValue(parseMusicSource(value))).toBe(value);
     expect(parseMusicSource("channel:calm")).toEqual({ kind: "channel", channelId: "calm" });
   });
 
@@ -43,7 +44,12 @@ describe("what the player can hear", () => {
     expect(musicUnlocked({ type: "default" }, null)).toBe(true);
     expect(musicUnlocked({ type: "boss-defeat", bossId: "rootbound" }, null)).toBe(false);
     expect(musicUnlocked({ type: "unreadable" }, progressFacts(FRESH))).toBe(false);
-    expect(musicUnlocked({ type: "boss-defeat", bossId: "rootbound" }, progressFacts({ stats: { killRootbound: 1 }, ach: {} }))).toBe(true);
+    expect(
+      musicUnlocked(
+        { type: "boss-defeat", bossId: "rootbound" },
+        progressFacts({ stats: { killRootbound: 1 }, ach: {} }),
+      ),
+    ).toBe(true);
   });
 
   it("plays a locked or unknown song, or a hidden channel, as the default", () => {

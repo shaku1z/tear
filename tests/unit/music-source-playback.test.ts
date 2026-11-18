@@ -84,14 +84,6 @@ describe("the player's pick during runs", () => {
     backend.updateContext(snapshot(VERDANT, "combat"));
     await nowPlaying("shopkeeper");
   });
-
-  it("plays the stage's own music in a seed race, so every racer hears the same", async () => {
-    hear(FRESH);
-    setMusicSource("shopkeeper");
-    const { backend } = await start({ seedRace: true });
-    backend.updateContext(snapshot(VERDANT, "combat"));
-    await nowPlaying("once-at-a-time");
-  });
 });
 
 describe("a Radio channel", () => {
@@ -118,5 +110,57 @@ describe("a Radio channel", () => {
 
     requestNextSong();
     await nowPlaying(first === "fillet" ? "shopkeeper" : "fillet");
+  });
+
+  it("costs nothing per frame: a minute of run frames on a channel schedules no timer and changes no song", async () => {
+    hear(FRESH);
+    setMusicSource("channel:calm");
+    const { backend } = await start();
+    await vi.waitFor(() => {
+      expect(["fillet", "shopkeeper"]).toContain(playing());
+    });
+    backend.updateContext(snapshot(VERDANT, "combat"));
+    await settle();
+    const first = playing();
+    const timers = vi.spyOn(globalThis, "setTimeout");
+    for (let frame = 0; frame < 3600; frame += 1) backend.updateContext(snapshot(VERDANT, "combat"));
+    expect(timers).not.toHaveBeenCalled();
+    expect(playing()).toBe(first);
+  });
+
+  it("takes a song found mid-run at its next deal: the song playing carries on, and the order dealt holds", async () => {
+    hear(FRESH);
+    setMusicSource("channel:calm");
+    const { backend } = await start();
+    await vi.waitFor(() => {
+      expect(["fillet", "shopkeeper"]).toContain(playing());
+    });
+    backend.updateContext(snapshot(VERDANT, "combat"));
+    const first = playing();
+    const second = first === "fillet" ? "shopkeeper" : "fillet";
+
+    // Rootbound falls mid-song: Spring, a calm song, is found.
+    hear({ stats: { killRootbound: 1 }, ach: {} });
+    backend.updateContext(snapshot(VERDANT, "combat"));
+    await settle();
+    expect(playing()).toBe(first);
+    expect(cueRequested("spring")).toBe(false);
+
+    // The order already dealt plays out first.
+    requestNextSong();
+    await nowPlaying(second);
+    expect(cueRequested("spring")).toBe(false);
+
+    // The next deal holds Spring; it never opens with the song that just played.
+    const heard: string[] = [];
+    for (let step = 0; step < 3; step += 1) {
+      const before = playing();
+      requestNextSong();
+      await vi.waitFor(() => {
+        expect(playing()).not.toBe(before);
+      });
+      heard.push(playing());
+    }
+    expect(heard).toContain("spring");
   });
 });

@@ -41,4 +41,3 @@ describe("Now Playing", () => {
     expect(getNowPlaying().tier).toBe(2);
   });
 });
-

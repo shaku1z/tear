@@ -69,9 +69,10 @@ describe("menu and replay player wording", () => {
       label: "MUSIC",
       detail: "nothing playing yet",
     });
-    expect(
-      menuMusicRow({ workId: "w", title: "Fillet", channelId: "calm", channelName: "Calm", tier: 2 }),
-    ).toEqual({ label: "MUSIC", detail: "FILLET · CALM" });
+    expect(menuMusicRow({ workId: "w", title: "Fillet", channelId: "calm", channelName: "Calm", tier: 2 })).toEqual({
+      label: "MUSIC",
+      detail: "FILLET · CALM",
+    });
   });
 
   it("formats simulation ticks as m:ss", () => {

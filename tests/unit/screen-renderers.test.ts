@@ -8,6 +8,11 @@ import { createScreenRenderers } from "../../src/presentation/screens";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
 import { parseRadioProgramme } from "../../src/audio/music/radio";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { publishMusicLibrary } from "../../src/audio/music/library";
+import { setMusicProgressFacts } from "../../src/audio/music/music-source";
+import { progressFacts } from "../../src/domain/progress-facts";
+import { TEST_CHANNELS, index as musicIndex } from "./music-backend-harness";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
 import { CONFIG } from "../../src/config/game-config";
@@ -643,7 +648,47 @@ describe("legacy screen renderer registry", () => {
 
     controls.length = 0;
     createScreenRenderers(context).music(view("settings"));
-    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(3);
+    // Music (the pick) and Soundtrack behavior.
+    expect(controls.filter((control) => control.action.type === "settings.activate")).toHaveLength(2);
+  });
+
+  it("draws the Radio: a row per channel the player can tune to, PLAY to pick it, STOP on the pick; ▶▶ moves it on", () => {
+    const controls: ScreenControl[] = [];
+    setMusicProgressFacts(() => progressFacts({ stats: {}, ach: {} }));
+    const library = publishMusicLibrary(
+      parseMusicCatalog({ ...musicIndex.catalog, ...TEST_CHANNELS }),
+      validateMusicRoutingManifest(musicIndex.routing),
+    );
+    const view = (menuMusic: string, channel: Readonly<{ channelId: string; channelName: string }> | null) =>
+      buildMusicScreenView({
+        settings: { menuMusic },
+        library,
+        nowPlaying: { workId: "fillet", title: "Fillet", since: 1, ...channel },
+        preview: null,
+        page: "radio",
+        now: 15_001,
+      });
+    const context = { ...createRenderContext(controls), scroll: 0, setScroll: () => undefined };
+    const picks = () => controls.filter((control) => control.action.type === "music.pick");
+
+    createScreenRenderers(context).music(view("default", null));
+    expect(controls.map((control) => control.action)).toContainEqual({ type: "navigate", to: "music", tab: "radio" });
+    // A new player can tune to Calm only: Bosses holds nothing found, My mix and Odd cannot be honoured.
+    expect(picks().map((control) => [control.label, control.action])).toEqual([
+      ["▶  PLAY", { type: "music.pick", value: "channel:calm" }],
+    ]);
+    expect(controls.some((control) => control.action.type === "music.next")).toBe(false);
+
+    controls.length = 0;
+    createScreenRenderers(context).music(view("channel:calm", { channelId: "calm", channelName: "Calm" }));
+    expect(picks().map((control) => [control.label, control.action])).toEqual([
+      ["■  STOP", { type: "music.pick", value: "default" }],
+    ]);
+    expect(controls.filter((control) => control.action.type === "music.next").map((control) => control.label)).toEqual([
+      "▶▶",
+    ]);
+    for (const control of controls) expect(control.y + control.h).toBeLessThanOrEqual(900);
+    setMusicProgressFacts(null);
   });
 
   it("records semantic navigation and menu actions without coordinating state", () => {

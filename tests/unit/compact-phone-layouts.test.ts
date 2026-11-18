@@ -846,8 +846,7 @@ describe("phone compositions (compact density)", () => {
       );
       expect(top.controls.some((control) => control.label === "▶  PLAY")).toBe(true);
       const settings = offered("settings");
-      for (const key of ["menuMusic", "musicMode"])
-        expect(settings.some((action) => action.key === key)).toBe(true);
+      for (const key of ["menuMusic", "musicMode"]) expect(settings.some((action) => action.key === key)).toBe(true);
     });
 
     it(`keeps the Playground menu and its ABILITIES tab inside the frame at ${phone.name}`, () => {

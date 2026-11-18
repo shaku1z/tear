@@ -156,7 +156,6 @@ export function shippedCues(): LoadedCueRef[] {
 
 export interface MusicBackendOptions {
   readonly progress?: ProgressSource;
-  readonly seedRace?: boolean;
   /** Extra catalog fields (Radio channels) on top of the shipped catalog; omitted: no library. */
   readonly catalog?: Readonly<Record<string, unknown>>;
 }
@@ -167,7 +166,10 @@ export async function musicBackend(options: MusicBackendOptions = {}) {
   const catalog = parseMusicCatalog({ ...index.catalog, ...(options.catalog ?? {}) });
   const cues = shippedCues();
   const seconds = Object.fromEntries(
-    cues.map(({ id, manifest }) => [id, (manifest.loop.endFrame - manifest.loop.startFrame) / manifest.sourceSampleRate]),
+    cues.map(({ id, manifest }) => [
+      id,
+      (manifest.loop.endFrame - manifest.loop.startFrame) / manifest.sourceSampleRate,
+    ]),
   );
   const library = options.catalog === undefined ? null : publishMusicLibrary(catalog, routing, seconds);
   const backend = new BiomeStemBackend(cues, routing, catalog, library);
@@ -183,7 +185,6 @@ export async function musicBackend(options: MusicBackendOptions = {}) {
     gameVersion: "0.1.0",
     scoreVersion: "s",
     ...(options.progress ? { progress: options.progress } : {}),
-    ...(options.seedRace ? { seedRace: true } : {}),
   });
   return { backend, context };
 }
