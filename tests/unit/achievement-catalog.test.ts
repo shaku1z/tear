@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { conditionProblems } from "../../src/domain/unlock-condition";
 import { ACHIEVEMENT_CATALOG, CANONICAL_ACHIEVEMENT_IDS } from "../../src/gameplay/progression/achievement-catalog";
 import { DIFFICULTY_IDS } from "../../src/gameplay/run/difficulty-catalog";
 import { PROFILE_TRACKED_MODE_IDS } from "../../src/gameplay/run/mode-catalog";
@@ -37,5 +38,13 @@ describe("achievement catalog", () => {
       desc: `Clear Adventure on all ${String(DIFFICULTY_IDS.length)} difficulties.`,
       rule: { kind: "stat-threshold", stat: "clearAdvAll", goal: DIFFICULTY_IDS.length },
     });
+  });
+
+  it("states every stat rule as a valid condition of the shared language", () => {
+    for (const entry of ACHIEVEMENT_CATALOG) {
+      if (entry.rule.kind !== "stat-threshold") continue;
+      const { stat, goal } = entry.rule;
+      expect(conditionProblems({ type: "stat-threshold", stat, goal }, entry.id), entry.id).toEqual([]);
+    }
   });
 });

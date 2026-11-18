@@ -51,6 +51,8 @@ async function loadMusicIndex(): Promise<BiomeStemBackend> {
   if (index.format !== "tear-music-index") throw new Error(`music index format is ${index.format}`);
   const routing = validateMusicRoutingManifest(index.routing);
   const catalog = parseMusicCatalog(index.catalog);
+  // A work this build cannot read stays locked; dev builds say why so our own data stays clean.
+  if (import.meta.env.DEV && catalog.problems.length > 0) console.warn("Music catalog problems", catalog.problems);
   const cues: LoadedCueRef[] = Object.entries(index.cues).map(([id, manifest]) => ({
     id,
     manifest,

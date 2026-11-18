@@ -10,6 +10,7 @@ import {
   shardBalance,
   type PurchaseRefusal,
 } from "../domain/cosmetics";
+import { progressFacts } from "../domain/progress-facts";
 import type { ProgressFacts } from "../domain/unlock-condition";
 import type { AcknowledgedStorage } from "../platform/contracts";
 import {
@@ -104,6 +105,8 @@ export interface ProfileStore {
   /** Records that the player has seen these items, which clears their "new" badge. */
   markCosmeticsSeen(itemIds: readonly string[]): Promise<CompletionStatus>;
   stat(key: string): number;
+  /** What the condition language can ask of this profile, read live. */
+  facts(): ProgressFacts;
   addStat(key: string, amount?: number): void;
   maxStat(key: string, value: number): void;
   markBiome(name: string): number;
@@ -139,17 +142,6 @@ function record(value: unknown): Tracker | null {
 
 function finite(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
-}
-
-const capitalised = (id: string): string => `${id.charAt(0).toUpperCase()}${id.slice(1)}`;
-/** What the profile can answer for unlock conditions, read from a profile body. */
-function progressFacts(data: ProfileData): ProgressFacts {
-  return {
-    bossDefeated: (bossId) => finite(data.stats[`kill${capitalised(bossId)}`]) > 0,
-    biomeEntered: (biome) => record(data.stats._biomes)?.[biome] !== undefined,
-    stat: (key) => finite(data.stats[key]),
-    achievementUnlocked: (id) => data.ach[id] !== undefined,
-  };
 }
 
 function boolMap(value: unknown): Record<string, boolean> {
@@ -597,6 +589,9 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     },
     stat(key) {
       return finite(this.data.stats[key]);
+    },
+    facts() {
+      return progressFacts(this.data);
     },
     addStat(key, amount = 1) {
       this.data.stats[key] = finite(this.data.stats[key]) + amount;

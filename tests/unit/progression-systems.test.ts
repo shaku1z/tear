@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { progressFacts } from "../../src/domain/progress-facts";
+import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import {
   createAchievements,
   type Achievement,
@@ -169,6 +171,7 @@ describe("achievements", () => {
     const profile: AchievementProfilePort = {
       unlocked: (id) => unlocked.has(id),
       stat: () => 0,
+      facts: () => progressFacts({ stats: {}, ach: {} }),
       unlock: (achievement) => {
         if (unlocked.has(achievement.id)) return false;
         unlocked.add(achievement.id);
@@ -200,6 +203,7 @@ describe("achievements", () => {
     const profile: AchievementProfilePort = {
       unlocked: (id) => unlocked.has(id),
       stat: () => 0,
+      facts: () => progressFacts({ stats: {}, ach: {} }),
       unlock: (achievement) => {
         if (unlocked.has(achievement.id)) return false;
         unlocked.add(achievement.id);
@@ -218,6 +222,52 @@ describe("achievements", () => {
     expect(achievements.unlock("witness")).toBe(false);
     expect(granted).toHaveLength(1);
     expect(audio).toHaveBeenCalledOnce();
+  });
+});
+
+describe("achievements judged by the shared condition language", () => {
+  const stats: Record<string, number> = {};
+  const unlocked = new Set<string>();
+  const profile: AchievementProfilePort = {
+    unlocked: (id) => unlocked.has(id),
+    stat: (key) => stats[key] ?? 0,
+    facts: () => progressFacts({ stats, ach: Object.fromEntries([...unlocked].map((id) => [id, 1])) }),
+    unlock: (achievement) => {
+      unlocked.add(achievement.id);
+      return true;
+    },
+  };
+  const achievements = createAchievements({
+    meta: { level: () => 0 },
+    profile,
+    audio: { rankup: () => undefined },
+    shop: [],
+    clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
+  });
+  const rule = ACHIEVEMENT_CATALOG.find((entry) => entry.rule.kind === "stat-threshold" && entry.rule.goal > 1);
+  if (rule?.rule.kind !== "stat-threshold") throw new Error("expected a counted stat achievement");
+  const { stat, goal } = rule.rule;
+  const counted = achievements.byId(rule.id);
+  if (counted === undefined) throw new Error("expected the achievement at runtime");
+
+  it("unlocks on reaching the goal, not before, and reports counted progress", () => {
+    stats[stat] = goal - 1;
+    achievements.check();
+    expect(unlocked.has(rule.id)).toBe(false);
+    expect(achievements.progressText(counted)).toBe(`${String(goal - 1)} / ${String(goal)}`);
+    expect(achievements.progress(counted)).toBeCloseTo((goal - 1) / goal);
+    stats[stat] = goal;
+    achievements.check();
+    expect(unlocked.has(rule.id)).toBe(true);
+    expect(achievements.progress(counted)).toBe(1);
+  });
+
+  it("measures a manual achievement as locked until its own event", () => {
+    const manual = achievements._all.find((entry) => entry.manual);
+    if (manual === undefined) throw new Error("expected a manual achievement");
+    achievements.check();
+    expect(unlocked.has(manual.id)).toBe(false);
+    expect(achievements.progressText(manual)).toBe("Locked");
   });
 });
 

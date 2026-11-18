@@ -278,4 +278,26 @@ describe("confirm arming on screens that interrupt play", () => {
     expect(nowhere.action).toBeNull();
     expect(nowhere.consumeBack).toBe(true);
   });
+
+  it("leaves a screen with no BACK through RESUME once it has settled (pad B on pause or the Playground menu)", () => {
+    const buttons = [
+      { x: 0, y: 0, w: 100, h: 40, label: "SPAWN" },
+      { x: 0, y: 60, w: 100, h: 40, label: "RESUME" },
+    ];
+    for (const screen of ["paused", "pgmenu", "pglab"]) {
+      const settled = coordinateUiFrame(frame({ screen, back: true, buttons }));
+      expect(settled.action, screen).toEqual({ type: "activate-button", index: 1, source: "back" });
+      expect(settled.consumeBack).toBe(true);
+    }
+    // The Escape that just opened the pause screen is not a back: nothing resumes while it settles.
+    const opening = coordinateUiFrame(
+      frame({ screen: "paused", back: true, buttons, screenAgeSeconds: 0, confirmReleasedSinceOpen: false }),
+    );
+    expect(opening.action).toBeNull();
+    // BACK still wins where a screen has both.
+    const both = coordinateUiFrame(
+      frame({ screen: "settings", back: true, buttons: [...buttons, { x: 0, y: 120, w: 100, h: 40, label: "BACK" }] }),
+    );
+    expect(both.action).toEqual({ type: "activate-button", index: 2, source: "back" });
+  });
 });
