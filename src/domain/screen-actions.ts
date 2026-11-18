@@ -21,6 +21,10 @@ export type ScreenAction =
   | { readonly type: "codex.cycleSort" }
   | { readonly type: "codex.inspect"; readonly id: string }
   | { readonly type: "shop.buy"; readonly id: string }
+  | { readonly type: "shop.selectTab"; readonly id: string }
+  | { readonly type: "shards.buy"; readonly id: string }
+  /** Equip an owned cosmetic in its slot; a null id puts the game look back. */
+  | { readonly type: "shards.equip"; readonly slot: string; readonly id: string | null }
   | { readonly type: "career.control"; readonly command: string; readonly id?: string }
   | { readonly type: "profile.selectTab"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }

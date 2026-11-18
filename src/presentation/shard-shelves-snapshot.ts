@@ -21,6 +21,29 @@ import {
 } from "../domain/unlock-condition";
 import type { ShardCardView, ShardShelfView, ShardSwatchView, ShardsView } from "./screens/contracts";
 
+/**
+ * Shelf geometry, shared by the renderer and the desktop scroll extent so they cannot disagree. A shelf is
+ * its label row and then rows of cards; shelves stand `shelfGap` apart.
+ */
+export const SHARD_SHELF = Object.freeze({
+  head: 34,
+  card: 212,
+  gap: 16,
+  shelfGap: 22,
+  columns: Object.freeze({ desktop: 6, phone: 2 }),
+});
+
+/** Cards per row at a density. */
+export const shelfColumns = (compact: boolean): number => SHARD_SHELF.columns[compact ? "phone" : "desktop"];
+
+/** Height of every shelf laid out at `columns` cards a row. */
+export function shardShelvesHeight(view: ShardsView, columns: number): number {
+  const rows = view.shelves.map((shelf) => Math.ceil(shelf.cards.length / columns));
+  // A row of cards is the card plus the gap under it (see the renderer's grid).
+  const cards = rows.reduce((sum, count) => sum + count * (SHARD_SHELF.card + SHARD_SHELF.gap), 0);
+  return view.shelves.length * SHARD_SHELF.head + cards + Math.max(0, view.shelves.length - 1) * SHARD_SHELF.shelfGap;
+}
+
 export interface ShardShelvesInput {
   readonly catalog: CosmeticCatalog;
   readonly state: CosmeticState;
@@ -30,6 +53,8 @@ export interface ShardShelvesInput {
   readonly names: ConditionNames;
   /** Names of collections by id, for "complete the ... collection". */
   readonly collectionName: (id: string) => string;
+  /** Held items to badge NEW (the app keeps the set for one visit to the tab). */
+  readonly newItems: ReadonlySet<string>;
 }
 
 /** The colours and text a look is made of, read from the family's own parameter list: no per-family code. */
@@ -91,7 +116,7 @@ function itemCard(
     ...(forSale ? { price } : {}),
     affordable: status === "available" && balance >= price,
     note: noteFor(item, status, input),
-    isNew: isHeld(status) && input.state.seen[item.id] === undefined,
+    isNew: isHeld(status) && input.newItems.has(item.id),
     swatch: lookSwatch(item.look, params),
   };
 }
