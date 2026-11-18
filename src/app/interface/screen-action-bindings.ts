@@ -44,26 +44,7 @@ export interface ScreenActionBindingPorts {
   readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void;
   readonly dispatchPlayground: (id: string) => void;
-  readonly tutorialAction?: (
-    command:
-      | "open-practice"
-      | "restart"
-      | "select"
-      | "help"
-      | "demo"
-      | "coach-rate"
-      | "coach-compare"
-      | "coach-diagnostic"
-      | "skip"
-      | "assist"
-      | "annexes"
-      | "select-annex"
-      | "catalog"
-      | "select-enemy"
-      | "bosses"
-      | "select-boss",
-    lessonId?: string,
-  ) => void;
+  readonly tutorialAction?: (action: Extract<ScreenAction, { type: "tutorial.action" }>) => void;
   readonly library: LibraryScreenAdapters;
   readonly replay: ReplayScreenAdapter;
   readonly settings: SettingsRenameAdapters;
@@ -352,7 +333,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.dispatchPlayground(action.id);
     },
     "tutorial.action": (action) => {
-      ports.tutorialAction?.(action.command, action.lessonId);
+      ports.tutorialAction?.(action);
     },
     "codex.selectTab": (action) => {
       ports.library.selectCodexTab(action.id);

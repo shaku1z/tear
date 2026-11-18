@@ -11,7 +11,7 @@ const { catalog } = require("../public/audio/music.json");
  * sounding) and the transport's ▶▶ steps to the stage's next song. BACK goes up to Home, Songs
  * lists every catalogued song, and leaving the screen ends the preview so the menu music
  * returns. The same walk runs again on a touch phone in landscape, where the compact layout shows. Screenshots go to
- * TEAR_VISUAL_DIR when it is set.
+ * TEAR_VISUAL_DIR when it is set. Home and a stage page each wait until the game reports every painting drawn.
  */
 const TITLES = catalog.works.map((work) => work.title);
 const OPENED = "The Voidspire";
@@ -23,6 +23,33 @@ async function capture(page, name) {
   if (!process.env.TEAR_VISUAL_DIR) return;
   fs.mkdirSync(process.env.TEAR_VISUAL_DIR, { recursive: true });
   await page.screenshot({ path: path.join(process.env.TEAR_VISUAL_DIR, `music-screen-${name}.png`) });
+}
+
+/**
+ * Waits until the game reports that the last drawn frame showed every cover that has a painting
+ * as that painting (none still waiting on its file), so a capture shows them rather than the hue
+ * covers they replace. Every painting request must have returned 200.
+ */
+async function paintingsShown(page) {
+  await page.waitForFunction(
+    () => {
+      const covers = window.__TEAR_CATALOG_DEBUG__.musicCovers.snapshot();
+      return covers.paintings > 0 && covers.waiting === 0;
+    },
+    undefined,
+    { timeout: STATE_WAIT_MS },
+  );
+  const statuses = await page.evaluate(() =>
+    performance
+      .getEntriesByType("resource")
+      .filter((entry) => /-(512|768)[^/]*\.webp$/u.test(new URL(entry.name).pathname))
+      .map((entry) => entry.responseStatus || 200),
+  );
+  assert.ok(statuses.length > 0, "the covers fetched their paintings");
+  assert.ok(
+    statuses.every((status) => status === 200),
+    `every cover painting loads (${statuses.join(", ")})`,
+  );
 }
 
 /** Texts the last drawn frame shows. */
@@ -84,10 +111,12 @@ withJourney(
   async ({ page, waitScreen, clickLabel }) => {
     await startAudio(page);
     await openMusic(page, clickLabel);
+    await paintingsShown(page);
     await capture(page, "desktop-home");
     // A stage opens its page: PLAY previews its first song, then ▶▶ steps to its boss song.
     await clickLabel(OPENED, "music");
     await waitText(page, "STAGE");
+    await paintingsShown(page);
     await capture(page, "desktop-stage");
     await clickLabel("▶  PLAY", "music");
     await waitText(page, "■  STOP");
@@ -134,9 +163,11 @@ withJourney(
       async ({ page, waitScreen, clickLabel }) => {
         await startAudio(page);
         await openMusic(page, clickLabel);
+        await paintingsShown(page);
         await capture(page, "phone-home");
         await clickLabel(OPENED, "music");
         await waitText(page, "STAGE");
+        await paintingsShown(page);
         await capture(page, "phone-stage");
         await clickLabel("▶  PLAY", "music");
         await waitText(page, "■  STOP");

@@ -58,3 +58,20 @@ creates a second `AudioContext`.
 - a cue exceeds its byte budget;
 - a file is unreferenced;
 - a shipped file carries a source-tool tag or a contact address.
+
+## MUSIC covers
+
+A stage's songs and collections on the MUSIC screen show its painting when
+`src/presentation/assets/music-covers/covers.json` has a row for that stage,
+and its hue bands otherwise. That manifest is the only list: it carries the
+sizes, the encoding, the byte limit per cover and, per stage, where the painting came
+from. To add or replace a stage's painting:
+
+```bash
+pnpm music:cover add <stageId> <painting.png> --description "<what it shows>" --licence "<who owns it and on what terms>"
+```
+
+The tool encodes every listed size and writes the row; the painting itself
+stays outside the repository. `tests/unit/music-covers.test.ts` then checks
+that the files match the row byte for byte, the row names a real stage and the
+cover stays under its limit. No code changes for a new cover.

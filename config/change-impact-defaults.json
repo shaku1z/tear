@@ -52,6 +52,7 @@
         "src/gameplay/training/boss-phase-practice-runtime.ts",
         "src/gameplay/training/boss-practice-source-restore.ts",
         "src/gameplay/training/live-playground-presentation.ts",
+        "src/gameplay/training/practice-tabs.ts",
         "src/gameplay/training/live-tutorial-runtime.ts",
         "src/gameplay/training/playground-controller.ts",
         "src/gameplay/training/practice-boss-catalog.ts",

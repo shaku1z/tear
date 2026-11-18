@@ -2,6 +2,7 @@ import type { AppStateController, AppTransitionContext } from "./app-state-contr
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { BrowserInput } from "../../input/browser-input-contracts";
 import { setMusicPreview } from "../../audio/music/preview";
+import { retryFailedCoverPaintings } from "../../presentation/music-cover-art";
 
 /** Collaborators that react to a transition but are constructed after the navigation owner. */
 export interface LiveScreenTransitionHooks {
@@ -46,6 +47,8 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
     if (prior === "profile" && state !== "profile") leaveCareer();
     // A song previewed on the MUSIC screen stops when the player leaves it (rename sits over it).
     if (prior === "music" && state !== "music" && state !== "rename") setMusicPreview(null);
+    // Opening it gives cover paintings that failed to load (offline, say) another try.
+    else if (prior !== "music" && prior !== "rename" && state === "music") retryFailedCoverPaintings();
     input.allowLock = state === "playing";
     if (prior === "playing" && state !== "playing") {
       interruptTutorialCoaching();

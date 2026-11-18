@@ -1,3 +1,5 @@
+import { AUTHORED_BOSS_ROSTER } from "../gameplay/run/content-director";
+import { isPracticeBossId } from "../gameplay/training/boss-phase-practice-runtime";
 import { TELL_AVOIDANCE, type BossPlayerId } from "./boss-player";
 import {
   bossFightScenario,
@@ -16,15 +18,17 @@ export interface BossReportRequest {
   readonly weapons: readonly BossFightRequest["weapon"][];
   readonly seeds: readonly string[];
   readonly players: readonly BossPlayerId[];
+  /** Chosen start phases, through the game's boss practice. Absent: every fight starts at Phase I in boss-only mode. */
+  readonly phases?: readonly number[];
   readonly maxTicks: number;
 }
 
-/** The bosses reported when none is named: the ones the current work is about. */
-export const DEFAULT_REPORT_BOSSES: readonly BossFightRequest["boss"][] = Object.freeze([
-  "rootbound",
-  "aldric",
-  "white-hart",
-]);
+/** The bosses reported when none is named: every boss the game defines, in its order. */
+export const REPORT_BOSSES: readonly BossFightRequest["boss"][] = Object.freeze(
+  AUTHORED_BOSS_ROSTER.map(({ id }) => id),
+);
+/** With chosen start phases: every boss the game's boss practice accepts. */
+export const PRACTICE_REPORT_BOSSES = Object.freeze(REPORT_BOSSES.filter(isPracticeBossId));
 
 const ROMAN = ["", "I", "II", "III"];
 
@@ -32,14 +36,17 @@ export function bossFightRequests(request: BossReportRequest): readonly BossFigh
   return request.bosses.flatMap((boss) =>
     request.weapons.flatMap((weapon) =>
       request.seeds.flatMap((seed) =>
-        request.players.map((player) => ({
-          boss,
-          weapon,
-          seed,
-          player,
-          difficulty: request.difficulty,
-          maxTicks: request.maxTicks,
-        })),
+        (request.phases ?? [undefined]).flatMap((phase) =>
+          request.players.map((player) => ({
+            boss,
+            weapon,
+            seed,
+            player,
+            difficulty: request.difficulty,
+            ...(phase === undefined ? {} : { phase }),
+            maxTicks: request.maxTicks,
+          })),
+        ),
       ),
     ),
   );
@@ -85,6 +92,11 @@ function phaseEnd(fight: BossFightResult, index: number): string {
 function fightText(fight: BossFightResult): string {
   const head =
     `${fight.boss}  difficulty ${fight.difficulty}  weapon ${fight.weapon}  seed ${fight.seed}  player ${fight.player}` +
+    (fight.phase === undefined
+      ? ""
+      : `
+start: phase ${ROMAN[fight.phase] ?? String(fight.phase)} through the game's boss practice, ` +
+        `reached in ${secondsOf(fight.setupTicks).toFixed(1)} s before the fight`) +
     `\nresult: ${fight.end} after ${secondsOf(fight.ticks).toFixed(1)} s` +
     (fight.bossMaxHp > 0 ? `, boss health left ${((100 * fight.bossHpLeft) / fight.bossMaxHp).toFixed(0)}%` : "") +
     (fight.reason === undefined ? "" : ` (${fight.reason})`) +
@@ -151,7 +163,9 @@ export function formatBossReport(fights: readonly BossFightResult[]): string {
   });
   const notes =
     "How to read this. Each fight is the real game played headless from a boss-only start; the same seed gives the " +
-    "same table. A phase is reached by play, so a phase the player never reached has no row. Damage sources are " +
+    "same table. A phase is reached by play, so a phase the player never reached has no row, unless the fight " +
+    "started at a chosen phase: then the game's own boss practice (the Playground's, Sword on Normal only) brought " +
+    "the boss there through its own transitions and the time before it is not counted. Damage sources are " +
     'attributed from the tells the boss declares, not reported by the game: "unmarked" is damage with no active ' +
     'tell on the player and no body contact. The "no tell" column is body contact plus unmarked: damage nothing warned of. The "avoids-tells" player leaves a warned area ' +
     `${String(TELL_AVOIDANCE.reactTicks)} ticks before it lands and dashes at ${String(TELL_AVOIDANCE.dashTicks)} ticks ` +

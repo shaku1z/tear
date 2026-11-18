@@ -5,6 +5,7 @@
  * the presentation layer that drew it.
  */
 import type { AppScreen } from "./screen-catalog";
+import type { PracticeTab } from "./practice-tab";
 
 export type ScreenAction =
   | { readonly type: "chase.control"; readonly command: "toggle" | "stop" }
@@ -103,6 +104,7 @@ export type ScreenAction =
   | { readonly type: "results.watchReplay" }
   | { readonly type: "results.descendAgain" }
   | { readonly type: "playground.action"; readonly id: string }
+  | { readonly type: "tutorial.action"; readonly command: "tab"; readonly tab: PracticeTab }
   | {
       readonly type: "tutorial.action";
       readonly command:
@@ -116,11 +118,8 @@ export type ScreenAction =
         | "coach-diagnostic"
         | "skip"
         | "assist"
-        | "annexes"
         | "select-annex"
-        | "catalog"
         | "select-enemy"
-        | "bosses"
         | "select-boss";
       readonly lessonId?: string;
     };

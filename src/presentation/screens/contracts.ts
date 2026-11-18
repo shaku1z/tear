@@ -46,6 +46,8 @@ export interface ScreenRenderContext {
   readonly focus: number;
   readonly touch: boolean;
   readonly reducedMotion: boolean;
+  /** Device pixels per logical unit this frame (the canvas backing scale): what image art picks its size by. */
+  readonly pixelScale: number;
   /** True physical viewport expressed in logical coordinates, including aspect-ratio overscan. */
   readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly safeInsets: Readonly<{ l: number; r: number; t: number; b: number }>;
@@ -466,10 +468,16 @@ export interface SettingsScreenView {
   readonly canScrollDown?: boolean;
 }
 /**
- * How a song or collection is pictured (there is no cover art): one hue per band (a single stage
- * is one band; a mixed collection splits into up to four) and one glyph. Null draws the default.
+ * How a song or collection is pictured: one hue per band (a single stage is one band; a mixed
+ * collection splits into up to four) and one glyph, and, where its stages have paintings, `art`
+ * (up to four stage ids), drawn instead of the bands once loaded. Null draws the default.
  */
-export type MusicCoverView = Readonly<{ hues: readonly string[]; glyph: string; locked?: boolean }> | null;
+export type MusicCoverView = Readonly<{
+  hues: readonly string[];
+  glyph: string;
+  art?: readonly string[];
+  locked?: boolean;
+}> | null;
 /** One song wherever the MUSIC screen shows it: a track row, a shelf row or the transport. */
 export interface MusicSongView {
   readonly id: string;
