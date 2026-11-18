@@ -52,6 +52,7 @@ type ActionBase = Omit<
   | "quitRun"
   | "revive"
   | "buyShopItem"
+  | "shop"
   | "library"
   | "replay"
   | "settings"
@@ -167,6 +168,7 @@ export function createLiveScreenPresentationComposition(
       quitRun: run.quitRun,
       revive: run.reviveByAd,
       buyShopItem: menu.buyShopItem,
+      shop: menu,
       library,
       replay,
       settings,
