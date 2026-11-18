@@ -1,5 +1,7 @@
 # C38 Worker Firebase owner authentication
 
+The Ghost publication Worker and the files this note names were removed in shaku1z/tear#190.
+
 The Ghost publication Worker no longer accepts `x-tear-owner` (or any other
 caller-supplied owner identifier) for owner-scoped endpoints. It accepts only a
 Firebase ID token in `Authorization: Bearer <token>` and uses its verified,

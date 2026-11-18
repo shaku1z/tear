@@ -41,8 +41,8 @@ Before coding, read this file, then:
 4. Do not introduce a second combat host, scheduler, replay runtime, or
    headless simulator. Replay/headless work may use the production composition
    only after that same composition is genuinely portable.
-5. Keep `src/app/live-game-runtime.ts` at or below 700 lines. The current file
-   has 696 physical lines; the architecture gate is the authoritative limit.
+5. Keep `src/app/live-game-runtime.ts` within the module size rule in
+   `docs/ARCHITECTURE.md` (code budget); the gates are the authoritative limit.
 
 ## Completed in this handoff
 
