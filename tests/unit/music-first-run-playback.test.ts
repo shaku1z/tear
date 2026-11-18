@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BrowserAudioGraphContext, BrowserAudioNodePort } from "../../src/audio/browser-audio";
-import type { MusicContextSnapshot, MusicRunProgress, MusicScene } from "../../src/audio/music-contracts";
+import type { MusicContextSnapshot, MusicScene } from "../../src/audio/music-contracts";
+import type { ProgressSource } from "../../src/domain/progress-facts";
 import { parseMusicCatalog } from "../../src/audio/music/catalog";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { BiomeStemBackend, type LoadedCueRef } from "../../src/audio/stems/biome-stem-backend";
@@ -129,7 +130,7 @@ function snapshot(biomeId: string, scene: MusicScene, bossId: string | null = nu
   };
 }
 
-async function backendFor(progress: MusicRunProgress | undefined) {
+async function backendFor(progress: ProgressSource | undefined) {
   const cues: LoadedCueRef[] = Object.entries(index.cues).map(([id, manifest]) => ({
     id,
     manifest,
@@ -159,7 +160,7 @@ async function backendFor(progress: MusicRunProgress | undefined) {
 const cueRequested = (cue: string) => requested.some((url) => url.includes(`/audio/cues/${cue}/`));
 const settle = () => vi.waitFor(() => new Promise((resolve) => setTimeout(resolve, 5)));
 
-async function enterVerdant(progress: MusicRunProgress | undefined) {
+async function enterVerdant(progress: ProgressSource | undefined) {
   const run = await backendFor(progress);
   run.backend.updateContext(snapshot(VERDANT, "combat"));
   await vi.waitFor(() => {
@@ -171,7 +172,7 @@ async function enterVerdant(progress: MusicRunProgress | undefined) {
 
 describe("the Verdant Sanctum's music follows saved progress", () => {
   it("plays Spring on the first Verdant run: the opening intro once, then the loop", async () => {
-    const { backend, context } = await enterVerdant({ biomesReached: ["The Grounds"], bossesDefeated: [] });
+    const { backend, context } = await enterVerdant({ stats: { _biomes: { "The Grounds": 1 } }, ach: {} });
     expect(cueRequested("spring")).toBe(true);
     const intros = () => context.sources.filter((s) => s.buffer?.url.endsWith("spring/opus/intro.ogg"));
     await vi.waitFor(() => {
@@ -197,7 +198,7 @@ describe("the Verdant Sanctum's music follows saved progress", () => {
   });
 
   it("plays Once At A Time when the save has already reached the Verdant Sanctum", async () => {
-    await enterVerdant({ biomesReached: ["The Grounds", VERDANT], bossesDefeated: ["rootbound"] });
+    await enterVerdant({ stats: { _biomes: { "The Grounds": 1, [VERDANT]: 1 }, killRootbound: 1 }, ach: {} });
     expect(cueRequested("once-at-a-time")).toBe(true);
     expect(cueRequested("spring")).toBe(false);
   });

@@ -1,7 +1,6 @@
 import type { TearCodecValue } from "../../src/tearbench/state-codecs";
 import { createLiveEconomyRuntime } from "../../src/gameplay/scoring/live-economy-runtime";
 import { LiveRecordingController } from "../../src/gameplay/run/live-recording-controller";
-import { ghostPublicationSourceEligibility } from "../../src/ghost/local-publication-job";
 import { provisionalCareerEntry } from "../../src/ghost/career-archive";
 import { recordedGhostChallengeChoices, verifyRecordedGhostChallenge } from "../../src/ghost/recorded-challenge";
 import { describe, expect, it, vi } from "vitest";
@@ -372,17 +371,6 @@ describe("Race source category", () => {
         provenance: { seedRace: race, actor: "bot" },
       } as unknown as Parameters<typeof provisionalCareerEntry>[0];
       expect(provisionalCareerEntry(manifest)).toMatchObject({ assisted: true, seedRaceRole: role, actor: "bot" });
-      expect(
-        ghostPublicationSourceEligibility(manifest, {
-          resumed: false,
-          modded: false,
-          coached: false,
-          ghostAssisted: false,
-          bot: false,
-          debug: false,
-          stateForge: false,
-        }),
-      ).toMatchObject({ coached: true, ghostAssisted: true, bot: true });
       const parent = { manifest } as Parameters<typeof recordedGhostChallengeChoices>[0];
       expect(recordedGhostChallengeChoices(parent, {} as never)).toEqual([]);
       expect(() => verifyRecordedGhostChallenge({} as never, parent, {} as never)).toThrow(

@@ -1,3 +1,4 @@
+import { progressFacts } from "../../src/domain/progress-facts";
 import { describe, expect, it } from "vitest";
 
 import { canonicalStringify } from "../../src/domain/hash";
@@ -299,7 +300,12 @@ describe("game-reference.v1", () => {
     expect(Object.isFrozen(ACHIEVEMENT_CATALOG[0])).toBe(true);
     const runtime = createAchievements({
       meta: { level: () => 0 },
-      profile: { unlocked: (id) => unlocked.has(id), stat: () => 0, unlock: () => false },
+      profile: {
+        unlocked: (id) => unlocked.has(id),
+        stat: () => 0,
+        facts: () => progressFacts({ stats: {}, ach: {} }),
+        unlock: () => false,
+      },
       audio: { rankup: () => undefined },
       shop: [],
       clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
@@ -331,8 +337,7 @@ describe("game-reference.v1", () => {
       const achievement = runtime.byId(entry.id);
       if (achievement === undefined) throw new Error(`runtime achievement missing ${entry.id}`);
       if (entry.rule.kind === "stat-threshold") {
-        expect(achievement.stat).toBe(entry.rule.stat);
-        expect(achievement.goal).toBe(entry.rule.goal);
+        expect(achievement.condition).toEqual({ type: "stat-threshold", stat: entry.rule.stat, goal: entry.rule.goal });
       } else if (entry.rule.kind === "manual") {
         expect(achievement.check).toBeUndefined();
         expect(achievement.current).toBeUndefined();

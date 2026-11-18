@@ -1,4 +1,5 @@
 import type { ReplayActionEnvelope, ReplayBuildMetadata } from "./envelope";
+import { isRecord } from "../domain/records";
 import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import { FINAL_FIVE_WEAPON_SCHEMA_VERSION, type WeaponId } from "../gameplay/weapon-selection";
 import {
@@ -7,14 +8,7 @@ import {
   type TearGameplayEvent,
   type UntickedTearGameplayEvent,
 } from "../gameplay/runtime/gameplay-events";
-import {
-  acceptedRecording,
-  arrayValue,
-  isRecord,
-  numberValue,
-  stringValue,
-  tearScoreMetadata,
-} from "./legacy-compat-validation";
+import { acceptedRecording, arrayValue, numberValue, stringValue, tearScoreMetadata } from "./legacy-compat-validation";
 import {
   buildVisualReplayPacket,
   migrateVisualRecording,

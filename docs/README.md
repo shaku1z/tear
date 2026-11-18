@@ -9,6 +9,7 @@ owning test/script references in one reviewable transaction.
 | Topic | Primary authority | Supporting contract/evidence |
 | --- | --- | --- |
 | Where each workstream stands (generated) | [POSITION.md](POSITION.md) | Rendered from `config/position.json` by `pnpm position:render`; `check:docs` fails when it is stale or edited by hand. `config/tearbench-current-program-state.json` records only the TearBench C25–C40 program state for the 2026-08-30 production build. |
+| Engineering standard for every change, and the design check every plan and pull request answers | [ENGINEERING_STANDARD.md](ENGINEERING_STANDARD.md) | Set by the owner on 2026-11-17; `.github/pull_request_template.md` "Design check"; `tests/unit/pull-request-template.test.mjs` |
 | Decisions and their triggers | [DECISIONS.md](DECISIONS.md) | Dated entries amended in place; inferred entries are marked |
 | Pitfalls and the guard behind each rule | [PITFALLS.md](PITFALLS.md) | `tests/unit/pitfall-guards.test.mjs`; [AGENTS.md](../AGENTS.md) "Known traps" |
 | Repository layout, generated files and size caps | [REPOSITORY_MAP.md](REPOSITORY_MAP.md) | `config/size-caps.json`; `scripts/check-repository.mjs` (run by `check:docs`) |

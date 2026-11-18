@@ -20,10 +20,16 @@
 //    head the batch checked. The combination on main was then itself checked, so main's newest
 //    commit need not have a finished run, and shared-file changes by other members do not make
 //    the pass stale. A red main still stops it.
+// 4. The design check is answered (docs/RELEASE_AUTHORITY.md, rule 5): the description gives a
+//    non-empty answer after each design-check label of docs/ENGINEERING_STANDARD.md, or one
+//    `Design check: not applicable — <reason>` line. The labels, the rule and the gate's mode
+//    (off, observe, enforce; config/design-check.json) live in scripts/design-check.mjs. In observe
+//    mode the decision carries a "would refuse" note instead of refusing.
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { designCheckVerdict, readDesignCheckConfig } from "./design-check.mjs";
 import { BATCH_BRANCH } from "./merge-batch.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -116,12 +122,31 @@ export function batchCover(pr, batch, mainSinceBatch) {
  * @param {string | undefined} facts.mainTip main's newest commit (origin/main after a fetch)
  * @param {Parameters<typeof batchCover>[1]} [facts.batch] the newest passed batch run naming this head
  * @param {Parameters<typeof batchCover>[2]} [facts.mainSinceBatch]
+ * @param {string} [facts.designCheckMode] the design-check gate's mode; missing means enforce
+ * @returns {{ ready: boolean, reason: string, action?: string, notes?: string[] }} `notes` are printed and
+ *   never change `ready`: a would-refuse in observe mode, or an accepted "not applicable" line
  */
 export function decide(facts) {
+  const { pr } = facts;
+  if (pr.state !== "OPEN") return { ready: false, reason: `the pull request is ${pr.state.toLowerCase()}` };
+  if (pr.draft)
+    return { ready: false, reason: "the pull request is a draft", action: "mark it ready, which starts a check" };
+  const verdict = designCheckVerdict(pr.body, facts.designCheckMode ?? "enforce");
+  if (verdict.refuse !== undefined) {
+    return {
+      ready: false,
+      reason: verdict.refuse,
+      action: "answer each design-check label in the description (docs/ENGINEERING_STANDARD.md)",
+    };
+  }
+  const decision = decideChecks(facts);
+  return verdict.note === undefined ? decision : { ...decision, notes: [verdict.note] };
+}
+
+/** Rules 1 to 3: main's state, the pull request's own pass, and batch cover. */
+function decideChecks(facts) {
   const { main, pr } = facts;
   const no = (reason, action) => ({ ready: false, reason, action });
-  if (pr.state !== "OPEN") return no(`the pull request is ${pr.state.toLowerCase()}`);
-  if (pr.draft) return no("the pull request is a draft", "mark it ready, which starts a check");
   if (main === undefined) return no("main has no finished Validate run yet", "wait for main's check");
   if (main.conclusion !== "success" && !pr.labels.includes(FIX_LABEL)) {
     return no(
@@ -193,7 +218,9 @@ export function gatherFacts(
   number,
   slug = gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).trim(),
 ) {
-  const view = JSON.parse(gh(["pr", "view", String(number), "--json", "state,isDraft,headRefOid,headRefName,labels"]));
+  const view = JSON.parse(
+    gh(["pr", "view", String(number), "--json", "state,isDraft,headRefOid,headRefName,labels,body"]),
+  );
   const files = JSON.parse(gh(["api", `repos/${slug}/pulls/${String(number)}/files`, "--paginate", "--slurp"]))
     .flat()
     .flatMap((file) => [file.filename, ...(file.previous_filename ? [file.previous_filename] : [])]);
@@ -204,6 +231,7 @@ export function gatherFacts(
     headSha: view.headRefOid,
     headRefName: view.headRefName,
     labels: view.labels.map((label) => label.name),
+    body: view.body,
     files,
   };
   const mainRuns = api(
@@ -239,7 +267,8 @@ export function gatherFacts(
   }
   git(["fetch", "--quiet", "origin", "main"]);
   const mainTip = git(["rev-parse", "origin/main"])?.trim();
-  return { slug, main, pr, run, mainFilesSince, mainTip, ...gatherBatch(slug, pr) };
+  const designCheckMode = readDesignCheckConfig(root).mode;
+  return { slug, main, pr, run, mainFilesSince, mainTip, designCheckMode, ...gatherBatch(slug, pr) };
 }
 
 /** The newest passed batch run that names this head, and main's commits since the main it checked. */
@@ -294,6 +323,7 @@ function main(argv) {
     console.log(JSON.stringify({ pr: number, ...decision, ...(note ? { refreshed: note } : {}) }, null, 2));
   } else {
     console.log(`${decision.ready ? "READY" : "NOT READY"} #${String(number)}: ${decision.reason}`);
+    for (const note of decision.notes ?? []) console.log(note);
     if (!decision.ready && decision.action !== undefined) console.log(`next: ${note ?? decision.action}`);
     if (facts.run?.url) console.log(`check: ${facts.run.url}`);
   }

@@ -1,10 +1,8 @@
-import type { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { BrowserGamepad } from "../../input/browser-input-contracts";
 import { ABILITY_CATEGORY_ORDER, SPECIAL_ABILITY_COLOR, abilityBadge } from "../../presentation/codex-snapshots";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
-import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import type { CareerPort } from "./ghost-career-controller";
 
@@ -45,7 +43,6 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
-  readonly beat?: Pick<ReturnType<typeof createLiveBeatThisRunController>, "action" | "snapshot" | "cancel">;
   readonly chase?: Readonly<{
     choose(id: string, expectedManifestHash?: string): Promise<void>;
     chooseRace?(id: string, expectedManifestHash?: string): Promise<void>;
@@ -68,7 +65,6 @@ export interface LibraryScreenServices {
   readonly formatTime: (seconds: number) => string;
   readonly getBest: (mode: string, difficulty: string) => Readonly<{ wave: number; score: number; time?: number }>;
   readonly ghostVault: GhostVaultLibraryPort;
-  readonly ownerRecovery?: Pick<LiveGhostOwnerRecoveryController, "snapshot" | "close">;
   readonly enterReplay: (record: unknown, from: string) => boolean;
   readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
   readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
