@@ -1,14 +1,15 @@
+import { PRACTICE_TAB_IDS, type PracticeTab } from "../../domain/practice-tab";
+
 /**
  * The Drills tabs, one row each: what the tab is called, the line under the title, the help under
  * its list (LESSONS shows the lesson's own copy; `compactHelp` replaces it on the phone where the
  * phone needs different words), the command a list entry sends and how many
  * columns the list uses. One tab is open at a time; the tutorial controller keeps it. A new tab is
- * a row here plus its list in the Drills renderer (a `Record<PracticeTab, …>`, so the compiler
- * asks for it).
+ * an id in `domain/practice-tab.ts` plus its row here (the compiler asks for the row) and its
+ * list in the Drills renderer.
  */
-export const PRACTICE_TABS = Object.freeze([
-  {
-    id: "lessons",
+const TAB_ROWS = {
+  lessons: {
     label: "LESSONS",
     subtitle: "Practice any technique · no rewards",
     help: undefined,
@@ -16,17 +17,16 @@ export const PRACTICE_TABS = Object.freeze([
     select: "select",
     columns: 2,
   },
-  {
-    id: "weapons",
+  weapons: {
     label: "WEAPONS",
     subtitle: "Try each weapon's own moves · no rewards",
-    help: "Sword: Reversal and launch. Hammer: slam and Break. Greatsword: Cleave and Wheel Cut. Chainblade: Hook and Sling. Riftlock: Capture and Razor Rounds. Choose a weapon to try its moves.",
+    // Generic on purpose: the weapons' drilled moves have no display names to build a list from yet.
+    help: "Choose a weapon to try its own moves.",
     compactHelp: undefined,
     select: "select-annex",
     columns: 2,
   },
-  {
-    id: "enemies",
+  enemies: {
     label: "ENEMIES",
     subtitle: "Fight an opponent you have met · no rewards",
     help: "Opponents you have met in a run are listed here. Each drill is a real fight; pause to restart it. No rewards.",
@@ -34,8 +34,7 @@ export const PRACTICE_TABS = Object.freeze([
     select: "select-enemy",
     columns: 2,
   },
-  {
-    id: "bosses",
+  bosses: {
     label: "BOSSES",
     subtitle: "Replay a boss phase you have reached · no rewards",
     help: "Phase 1 opens once you have beaten or met a boss; a later phase once you have reached it in a run. Each drill starts where that phase really begins. No rewards.",
@@ -44,17 +43,16 @@ export const PRACTICE_TABS = Object.freeze([
     select: "select-boss",
     columns: 3,
   },
-] as const);
+} as const satisfies Record<PracticeTab, unknown>;
 
-export type PracticeTab = (typeof PRACTICE_TABS)[number]["id"];
+/** The tabs in order, each its id plus its row. */
+export const PRACTICE_TABS = Object.freeze(PRACTICE_TAB_IDS.map((id) => ({ id, ...TAB_ROWS[id] })));
+
 export type PracticeTabDefinition = (typeof PRACTICE_TABS)[number];
-
-export function isPracticeTab(value: unknown): value is PracticeTab {
-  return PRACTICE_TABS.some(({ id }) => id === value);
-}
+export type { PracticeTab };
 
 export function practiceTabDefinition(tab: PracticeTab): PracticeTabDefinition {
-  return PRACTICE_TABS.find(({ id }) => id === tab) ?? PRACTICE_TABS[0];
+  return { id: tab, ...TAB_ROWS[tab] };
 }
 
 /**

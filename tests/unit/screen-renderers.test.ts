@@ -377,7 +377,10 @@ describe("legacy screen renderer registry", () => {
       (control) => control.action.type === "tutorial.action" && control.action.command === "tab",
     );
     expect(
-      tabs.map((control) => [control.action.type === "tutorial.action" && control.action.lessonId, control.hiddenBox]),
+      tabs.map((control) => [
+        control.action.type === "tutorial.action" && control.action.command === "tab" && control.action.tab,
+        control.hiddenBox,
+      ]),
     ).toEqual([
       ["lessons", true],
       ["weapons", true],

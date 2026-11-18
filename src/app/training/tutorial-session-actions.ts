@@ -2,9 +2,8 @@ import type { LiveTrainingHost } from "./training-host";
 import type { LiveTutorialRuntime } from "../../gameplay/training/live-tutorial-runtime";
 import type { ScreenAction } from "../../domain/screen-actions";
 import { weaponAnnex } from "../../gameplay/training/tutorial-weapon-annexes";
-import { isPracticeTab } from "../../gameplay/training/practice-tabs";
 
-type TutorialCommand = Extract<ScreenAction, { type: "tutorial.action" }>["command"];
+type TutorialAction = Extract<ScreenAction, { type: "tutorial.action" }>;
 interface TutorialSessionActionPorts {
   readonly training: Pick<LiveTrainingHost, "ensureLoaded" | "openPractice">;
   readonly tutorial: LiveTutorialRuntime;
@@ -19,7 +18,17 @@ interface TutorialSessionActionPorts {
 /** Normal menu entry and existing paused lesson actions share one session owner. */
 export function createLiveTutorialSessionActions(ports: TutorialSessionActionPorts) {
   let opening = false;
-  const dispatch = (command: TutorialCommand, lessonId?: string): void => {
+  /** Lesson and tab commands act only on the paused tutorial, or on free practice in the playground. */
+  const inPausedTraining = (): boolean =>
+    ports.screen() === "paused" &&
+    (ports.mode() === "tutorial" ||
+      (ports.mode() === "playground" && ports.tutorial.session().phase === "free-practice"));
+  const dispatch = (action: TutorialAction): void => {
+    if (action.command === "tab") {
+      if (inPausedTraining()) ports.tutorial.showPracticeTab(action.tab);
+      return;
+    }
+    const { command, lessonId } = action;
     if (command === "open-practice") {
       if (opening || (ports.screen() !== "menu" && ports.screen() !== "setup")) return;
       opening = true;
@@ -38,11 +47,7 @@ export function createLiveTutorialSessionActions(ports: TutorialSessionActionPor
       return;
     }
     const tutorial = ports.tutorial;
-    if (
-      ports.screen() !== "paused" ||
-      (ports.mode() !== "tutorial" && !(ports.mode() === "playground" && tutorial.session().phase === "free-practice"))
-    )
-      return;
+    if (!inPausedTraining()) return;
     if (command === "skip" || command === "assist") {
       if (tutorial.advanceUnfinished(command === "assist")) {
         ports.resetFocus();
@@ -69,10 +74,6 @@ export function createLiveTutorialSessionActions(ports: TutorialSessionActionPor
     }
     if (command === "help") {
       tutorial.showHelp();
-      return;
-    }
-    if (command === "tab") {
-      if (isPracticeTab(lessonId)) tutorial.showPracticeTab(lessonId);
       return;
     }
     const annexId =
