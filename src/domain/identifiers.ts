@@ -15,6 +15,9 @@ const idShape = (characters: string) => {
 
 /** Ids of cosmetic items, slots, tiers, collections and loadouts: lowercase letters, digits and underscores. */
 export const isItemId = idShape("a-z0-9_");
+const isMusicCharacters = idShape("a-z0-9\\-");
+/** Ids of songs and Radio channels, as tear-music publishes them: lowercase letters, digits and hyphens, never a leading hyphen. */
+export const isMusicId = (value: unknown): value is string => isMusicCharacters(value) && !value.startsWith("-");
 /** Ids that name things defined elsewhere (a look family). */
 export const isReferenceId = idShape("A-Za-z0-9_\\-");
 /**

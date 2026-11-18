@@ -207,43 +207,6 @@ describe("wave planning conformance", () => {
     ]);
   });
 
-  it("preserves gauntlet boss cadence and boss roster wrapping", () => {
-    const boss = planNextWave(
-      options({
-        state: state({ mode: "gauntlet", wave: 7, biomeIdx: 1, bossIdx: 5 }),
-      }),
-    );
-    expect(boss.state).toMatchObject({
-      wave: 8,
-      isBossWave: true,
-      curBoss: "source",
-      bossIdx: 6,
-      waveTag: "The Source",
-    });
-    expect(boss.state.spawnQueue).toEqual([{ type: "boss" }]);
-
-    const wrappedA = planNextWave(
-      options({
-        state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 7 }),
-        random: new SeededRandom("wrap"),
-      }),
-    );
-    const wrappedB = planNextWave(
-      options({
-        state: state({ mode: "gauntlet", wave: 15, biomeIdx: 3, bossIdx: 7 }),
-        random: new SeededRandom("wrap"),
-      }),
-    );
-    expect(wrappedA.state.bossOrder).toEqual(wrappedB.state.bossOrder);
-    expect([...wrappedA.state.bossOrder].sort()).toEqual(BOSS_ROSTER.map((entry) => entry.id).sort());
-    expect(wrappedA.state.bossIdx).toBe(1);
-
-    const betweenBosses = planNextWave(
-      options({ state: state({ mode: "gauntlet", wave: 8, biomeIdx: 1, curBoss: "source" }) }),
-    );
-    expect(betweenBosses.state.curBoss).toBe("source");
-  });
-
   it("puts every boss-test fight in its home biome and wipes after the opener", () => {
     for (const [index, boss] of BOSS_ROSTER.entries()) {
       const planned = planNextWave(

@@ -9,16 +9,16 @@ import { MUSIC_SCREEN_TITLE } from "./settings";
 export interface NowPlaying {
   readonly workId: string;
   readonly title: string;
-  /** Station that programmed it, or null when routing is canonical. */
-  readonly stationId: string | null;
-  readonly stationName: string | null;
+  /** The Radio channel playing it, or null when it is not playing on the Radio. */
+  readonly channelId: string | null;
+  readonly channelName: string | null;
   /** 0..4 arrangement tier currently sounding. */
   readonly tier: number;
   /** `performance.now()` when this work started sounding (for the loop position). */
   readonly since?: number;
 }
 
-const EMPTY: NowPlaying = { workId: "", title: "—", stationId: null, stationName: null, tier: 0, since: 0 };
+const EMPTY: NowPlaying = { workId: "", title: "—", channelId: null, channelName: null, tier: 0, since: 0 };
 
 let current: NowPlaying = EMPTY;
 const listeners = new Set<() => void>();
@@ -28,7 +28,7 @@ export function setNowPlaying(next: Partial<NowPlaying>): void {
   if (
     merged.workId === current.workId &&
     merged.title === current.title &&
-    merged.stationId === current.stationId &&
+    merged.channelId === current.channelId &&
     merged.tier === current.tier
   )
     return;
@@ -45,11 +45,11 @@ export function onNowPlayingChange(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Compact label for the menu card, e.g. `BESERKER · CUTLINE`. */
+/** Compact label for the menu card, e.g. `BESERKER · CALM`. */
 export function nowPlayingLabel(state: NowPlaying = current): string {
   if (!state.workId) return "MUSIC — NO TRACK";
-  const station = state.stationName ? ` · ${state.stationName}` : "";
-  return `${state.title.toUpperCase()}${station}`;
+  const channel = state.channelName ? ` · ${state.channelName.toUpperCase()}` : "";
+  return `${state.title.toUpperCase()}${channel}`;
 }
 
 /** Tier read-out for the card's sub-line. */

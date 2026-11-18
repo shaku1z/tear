@@ -30,20 +30,28 @@ the menu with status `completed`; a defeat ends on the game-over screen with rea
 other stop (a watchdog, an invariant, the batch limit) still fails it.
 
 **Open goal: the scripted player finishes an easy `riftlock` campaign.** Where it stands, headless, competent
-profile, 2026-11-18:
+profile, 2026-11-18. "Before" is the player that only backs away; "after" is the player that closes in when its
+attacks have landed nothing for 6 seconds (`PURSUE_AFTER_TICKS` in `src/agents/scripted-policy.ts`):
 
-| Seed | Defeated at wave |
-| ---- | ---------------- |
-| 117  | 9                |
-| 1    | 6                |
-| 2    | 7                |
-| 3    | 5                |
+| Seed | Before: defeated at wave | After: defeated at wave    |
+| ---- | ------------------------ | -------------------------- |
+| 117  | 9                        | 9                          |
+| 1    | 6                        | 5                          |
+| 2    | 7                        | 7                          |
+| 3    | 5                        | 5                          |
+| 4    | 2                        | still alive at 28 (750 s)  |
+| 5    | 8                        | 8                          |
+| 6    | 14                       | 15                         |
+| 7    | 9                        | 8                          |
 
 In the browser journey seed 117 was defeated at wave 17 in weekly run 44218184366 (commit `68f6c034`). On main
-of 2026-11-18 the same journey reaches wave 23 and then stalls: one `herald` support enemy is left walking on a
-platform, the player stays on the ground about 520 pixels away, health does not change for 16,000 ticks, and no
-watchdog stops the run. The herald is alive and can be damaged, so this is the player failing to go after a
-passive enemy, not a broken game state. The journey then runs into the 10-minute test limit and fails.
+of 2026-11-18 the same journey reached wave 23 and then stalled: one `herald` support enemy was left walking on a
+platform, the player stayed on the ground about 520 pixels away, health did not change for 16,000 ticks, and no
+watchdog stopped the run. The cause was in the player, not the game. With `riftlock` it always moved away from its
+target and its hits only land within about 120 pixels (a thrown Riftlock is recalled at once), so it never reached
+an enemy that does not come to it; at low health every weapon backed away the same way. The player now closes in
+after 6 seconds without a hit landing. `tests/unit/scripted-player-pursuit.test.ts` plays that case on the real
+game, headless, for every weapon: one herald left alone must fall within 25 seconds.
 
 The goal is met when the journey prints `C24 end: campaign completed`; at that point the completion can become
 an assertion again.

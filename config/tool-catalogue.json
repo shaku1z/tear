@@ -880,7 +880,7 @@
       "duration": "seconds"
     },
     "check:test-isolation": {
-      "purpose": "Fails if engineering or test-only code reached a production bundle",
+      "purpose": "Fails if a release build defines a test global",
       "effects": [
         "read-only"
       ],
@@ -1534,6 +1534,18 @@
         "scripts/run-checks.mjs"
       ]
     },
+    "scripts/ci-checked-commit.mjs": {
+      "purpose": "Validate: merges the chosen main commit into the change and refuses a job on another commit",
+      "effects": [
+        "network",
+        "writes-repo-files"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/actions/checked-commit/action.yml"
+      ]
+    },
     "scripts/ci-verdict.mjs": {
       "purpose": "Validate's required check: fails unless every needed job ended as it should",
       "effects": [
@@ -1837,6 +1849,7 @@
     "scripts/architecture/selectors.mjs": [
       "scripts/architecture/analyze.mjs",
       "scripts/architecture/layering.mjs",
+      "scripts/release-developer-code.mjs",
       "tests/source-architecture.test.mjs"
     ],
     "scripts/architecture/source-graph.mjs": [
@@ -1849,6 +1862,10 @@
     ],
     "scripts/asset-sheets/output.mjs": [
       "scripts/asset-sheets.mjs"
+    ],
+    "scripts/relative-imports.mjs": [
+      "scripts/asset-sheets/fingerprint.mjs",
+      "tests/unit/tool-catalogue.test.mjs"
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
@@ -1890,6 +1907,10 @@
     "scripts/package-target.mjs": [
       "scripts/package-crazygames.mjs",
       "scripts/package-itch.mjs"
+    ],
+    "scripts/release-developer-code.mjs": [
+      "tests/unit/release-developer-code.test.mjs",
+      "vite.config.ts"
     ],
     "scripts/release-artifact.mjs": [
       "scripts/apply-workspace-quarantine.mjs",
@@ -1970,6 +1991,11 @@
       "tests/unit/tutorial-production-ghost.test.ts",
       "vite.config.ts"
     ],
+    "scripts/test-files.mjs": [
+      "tests/unit/pitfall-guards.test.mjs",
+      "vitest.config.ts",
+      "vitest.endurance.config.ts"
+    ],
     "scripts/wiki-data-export.mjs": [
       "scripts/export-game-reference.mjs"
     ],
@@ -1982,10 +2008,12 @@
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/music-cover.d.mts",
     "scripts/release-artifact.d.mts",
+    "scripts/release-developer-code.d.mts",
     "scripts/scene/hidden-paint.d.mts",
     "scripts/scene/package-files.d.mts",
     "scripts/scene/pixel-checks.d.mts",
     "scripts/scene/reports.d.mts",
+    "scripts/test-files.d.mts",
     "scripts/tutorial-gold-compatibility.d.mts"
   ]
 }

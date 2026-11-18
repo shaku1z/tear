@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // The one Prettier target list. `pnpm format` (--write), `pnpm format:check` (--check) and the
 // TearBench `static.format` task (which CI's check:functional runs) all execute this file, so
 // they cannot drift apart. Exclusions inside these targets live in `.prettierignore`; the

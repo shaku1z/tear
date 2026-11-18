@@ -284,6 +284,8 @@ export interface RunHudSnapshot {
   readonly mode: string;
   readonly bossWave: boolean;
   readonly wave: number;
+  /** Gauntlet only: the number of trials, for the title and the trial strip. */
+  readonly trialCount?: number;
   readonly score: number;
   readonly timeLabel: string;
   readonly remaining: number;
@@ -379,8 +381,11 @@ export interface TouchControlsSnapshot {
 
 export interface WaveBannerSnapshot {
   readonly remainingFraction: number;
+  readonly mode?: string;
   readonly bossWave: boolean;
   readonly wave: number;
+  /** Gauntlet only: the number of trials, for the title. */
+  readonly trialCount?: number;
   readonly waveTag?: string | undefined;
   readonly horde: boolean;
   readonly hordeColor: string;
@@ -404,6 +409,8 @@ export interface StageBannerSnapshot {
   readonly stageName: string;
   readonly blurb: string;
   readonly accent: string;
+  /** Gauntlet only: the trial card's label ("TRIAL 2/6") and the boss waiting at its end. */
+  readonly trial?: Readonly<{ label: string; boss: string }> | undefined;
 }
 
 export interface ReticleSnapshot {
