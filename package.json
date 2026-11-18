@@ -31,6 +31,7 @@
     "check:quick": "node scripts/run-checks.mjs fast",
     "test:unit:without-preservation-corpus": "pnpm exec vitest run --exclude '**/ghost-preservation-corpus.test.ts' --no-file-parallelism",
     "test:endurance": "vitest run --config vitest.endurance.config.ts",
+    "playtest": "node scripts/playtest.mjs",
     "tearbench": "node scripts/tearbench.mjs",
     "test:weapons": "pnpm exec vitest run tests/unit/final-five-weapon-roster.test.ts",
     "test:determinism": "pnpm exec vitest run tests/unit/canonical-hash-stream.test.ts",

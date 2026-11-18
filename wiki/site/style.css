@@ -126,7 +126,11 @@ meter { width: 100%; height: .5rem; }
 
 /* generated pictures */
 .pic { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); background: var(--paper); }
-.pic.fig { float: right; width: 8rem; margin: 0 0 .8rem 1rem; image-rendering: auto; }
+.pic.fig { width: 8rem; margin: 0; image-rendering: auto; }
+/* The Codex line with its figure beside it; with no figure the text takes the whole width. */
+.intro { display: grid; gap: 1rem; margin-bottom: .8rem; }
+.intro.with-figure { grid-template-columns: 1fr 8rem; align-items: start; }
+.intro .codex { margin: 0; }
 .pic.wide { width: 100%; max-width: 40rem; margin: 1rem 0; }
 .phase h3 { margin-top: 1.2rem; }
 .muted { color: var(--muted); }

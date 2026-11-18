@@ -1,4 +1,5 @@
 {
+ "inputsHash": "108ed5acf71090db0eb2",
  "figures": {
   "enemies/charger": "figures/charger.webp",
   "enemies/ranged": "figures/ranged.webp",
@@ -202,13 +203,7 @@
     "phase": 1,
     "tag": "KEEPER OF SPRING",
     "image": "bosses/rootbound-1.webp",
-    "moves": [
-     {
-      "state": "recover",
-      "seen": 4,
-      "seconds": 0.52
-     }
-    ]
+    "moves": []
    },
    {
     "phase": 2,
@@ -217,8 +212,8 @@
     "moves": [
      {
       "state": "recover",
-      "seen": 4,
-      "seconds": 0.52
+      "seen": 1,
+      "seconds": 6.72
      }
     ]
    },
@@ -229,8 +224,8 @@
     "moves": [
      {
       "state": "recover",
-      "seen": 2,
-      "seconds": 0.62
+      "seen": 1,
+      "seconds": 3.32
      }
     ]
    }
@@ -324,6 +319,5 @@
  },
  "skipped": [
   "figure rootbinder (the game draws no figure for it)"
- ],
- "inputsHash": "2e3734c950b9c0b259f6"
+ ]
 }

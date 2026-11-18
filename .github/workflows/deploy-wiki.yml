@@ -69,8 +69,17 @@ jobs:
         run: pnpm wiki:test
       - name: Report whether the committed pictures are stale
         run: |
-          pnpm -s wiki:pictures-status | tee pictures-status.txt
-          if grep -q stale pictures-status.txt; then echo "::warning title=Wiki pictures are stale::$(cat pictures-status.txt)"; fi
+          pnpm -s wiki:pictures-status | tee "$RUNNER_TEMP/pictures-status.txt"
+          if grep -q stale "$RUNNER_TEMP/pictures-status.txt"; then echo "::warning title=Wiki pictures are stale::$(cat "$RUNNER_TEMP/pictures-status.txt")"; fi
+      - name: Require a clean checkout
+        # The footer and version.json say "with local changes" when the checkout is not exactly the commit.
+        # A step above that writes a file into the repository would show up here, by name, and fail the deploy.
+        run: |
+          if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
+            git status --short
+            echo "::error title=Dirty checkout::A step changed the checkout before the build."
+            exit 1
+          fi
       - name: Build the game's test build (only to regenerate pictures)
         if: inputs.pictures == 'regenerate'
         run: pnpm build:test:standalone
@@ -97,8 +106,8 @@ jobs:
             WORKER=tear-wiki-preview; ARGS=(--env preview)
           fi
           echo "Publishing wiki/dist to Worker ${WORKER} (target ${TARGET})."
-          if ! npx --yes wrangler@4.112.0 deploy --config wiki/wrangler.jsonc "${ARGS[@]}" 2>&1 | tee wrangler.log; then
-            echo "::error title=Wiki publish failed::Cloudflare refused the deploy to Worker ${WORKER}. If wrangler.log above says authentication, permission or 'not authorized', this repository's CLOUDFLARE_API_TOKEN cannot deploy that Worker: nothing was published and no other Worker was touched."
+          if ! npx --yes wrangler@4.112.0 deploy --config wiki/wrangler.jsonc "${ARGS[@]}" 2>&1 | tee "$RUNNER_TEMP/wrangler.log"; then
+            echo "::error title=Wiki publish failed::Cloudflare refused the deploy to Worker ${WORKER}. If the wrangler output above says authentication, permission or 'not authorized', this repository's CLOUDFLARE_API_TOKEN cannot deploy that Worker: nothing was published and no other Worker was touched."
             exit 1
           fi
       - name: Record what was published

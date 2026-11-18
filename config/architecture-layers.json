@@ -17,6 +17,7 @@
     "diagnostics": ["src/diagnostics/**"],
     "agents": ["src/agents/**"],
     "tearbench": ["src/tearbench/**"],
+    "playtest": ["src/playtest/**"],
     "app": ["src/app/**"],
     "entrypoints": ["src/entrypoints/**"],
     "ambient": ["src/*.d.ts"]
@@ -42,6 +43,7 @@
       "domain": "any", "config": "any", "simulation": "any", "input": "any", "gameplay": "any", "replay": "any", "audio": "any",
       "persistence": "any", "platform": "any", "presentation": "any", "ghost": "any", "game-reference": "any", "diagnostics": "any"
     },
+    "playtest": { "domain": "any", "input": "any", "gameplay": "any", "agents": "any", "tearbench": "any" },
     "app": {
       "domain": "any", "config": "any", "simulation": "any", "input": "any", "gameplay": "any", "replay": "any", "audio": "any",
       "persistence": "any", "platform": "any", "presentation": "any", "ghost": "any", "game-reference": "any", "diagnostics": "any",
