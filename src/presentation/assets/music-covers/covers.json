@@ -12,7 +12,7 @@
     512,
     768
   ],
-  "maxTotalBytes": 800000,
+  "maxBytesPerCover": 250000,
   "covers": [
     {
       "stageId": "grounds",

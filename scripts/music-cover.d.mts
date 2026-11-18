@@ -10,12 +10,13 @@ export interface CoverRow {
   readonly files: readonly CoverFile[];
 }
 export interface CoverManifest<Row extends CoverRow = CoverRow> {
-  readonly maxTotalBytes: number;
+  readonly maxBytesPerCover: number;
   readonly covers: readonly Row[];
 }
 
 export declare const COVERS_DIR: string;
 export declare function coverFileName(stageId: string, size: number): string;
+export declare function coverBytes(row: CoverRow): number;
 export declare function encodeCover(
   manifest: Readonly<{ sizes: readonly number[]; encoding: Readonly<{ quality: number; effort: number }> }>,
   stageId: string,

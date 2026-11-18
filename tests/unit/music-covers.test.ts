@@ -1,11 +1,15 @@
 // MUSIC covers: covers.json is their one owner. Its files match it byte for byte at every size it
-// lists, stay inside its limit and belong to real stages; covers ask for a painting only where a
-// row exists; and the add tool keeps the manifest whole.
+// lists, each cover stays inside the per-cover limit and belongs to a real stage; covers ask for a
+// painting only where a row exists, retry a failed one when MUSIC reopens and report what each
+// frame showed; and the add tool keeps the manifest whole.
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { coverFileName, COVERS_DIR, withCover } from "../../scripts/music-cover.mjs";
+import { coverBytes, coverFileName, COVERS_DIR, withCover } from "../../scripts/music-cover.mjs";
+import { AppStateController } from "../../src/app/interface/app-state-controller";
+import { createLiveScreenNavigation } from "../../src/app/interface/live-screen-navigation";
+import { createSurfaceAvailability } from "../../src/domain/surface-availability";
 import { AUTHORED_STAGES } from "../../src/gameplay/stages";
 import manifest from "../../src/presentation/assets/music-covers/covers.json";
 import { buildMusicCollections } from "../../src/presentation/music-collections";
@@ -13,7 +17,10 @@ import {
   coverPainting,
   coverUrl,
   hasCoverPainting,
+  lastCoverFrameTally,
+  noteCoverDrawn,
   resetCoverPaintings,
+  retryFailedCoverPaintings,
   stageCover,
 } from "../../src/presentation/music-cover-art";
 import type { SceneBitmap } from "../../src/presentation/scenes/scene-renderer";
@@ -34,8 +41,9 @@ describe("music cover files", () => {
     }
   });
 
-  it("stay inside the manifest's byte limit", () => {
-    expect(listed.reduce((sum, entry) => sum + entry.bytes, 0)).toBeLessThanOrEqual(manifest.maxTotalBytes);
+  it("stay inside the manifest's per-cover byte limit, every size together", () => {
+    for (const cover of manifest.covers)
+      expect(coverBytes(cover), cover.stageId).toBeLessThanOrEqual(manifest.maxBytesPerCover);
   });
 
   it("give each real stage at most one row, at every listed size, with where it came from", () => {
@@ -131,13 +139,64 @@ describe("music covers", () => {
     expect(loads).toHaveLength(2);
   });
 
-  it("keep the hue cover when a painting fails to load", async () => {
+  it("keep the hue cover when a painting fails, and fetch it again only when MUSIC reopens", async () => {
     const stageId = firstRow();
-    const load = (): Promise<SceneBitmap> => Promise.reject(new Error("offline"));
+    const bitmap = { width: 1, height: 1 } as SceneBitmap;
+    let online = false;
+    let loads = 0;
+    const load = (): Promise<SceneBitmap> => {
+      loads += 1;
+      return online ? Promise.resolve(bitmap) : Promise.reject(new Error("offline"));
+    };
     expect(coverPainting(stageId, 1, load)).toBeNull();
     await Promise.resolve();
     await Promise.resolve();
+    online = true;
     expect(coverPainting(stageId, 1, load)).toBeNull();
+    expect(loads).toBe(1);
+    retryFailedCoverPaintings();
+    expect(coverPainting(stageId, 1, load)).toBeNull();
+    await Promise.resolve();
+    expect(coverPainting(stageId, 1, load)).toBe(bitmap);
+    expect(loads).toBe(2);
+  });
+
+  it("retry failed paintings when MUSIC is opened, not when the rename overlay closes", async () => {
+    const stageId = firstRow();
+    let loads = 0;
+    const load = (): Promise<SceneBitmap> => {
+      loads += 1;
+      return Promise.reject(new Error("offline"));
+    };
+    const navigation = createLiveScreenNavigation({
+      app: new AppStateController(createSurfaceAvailability("release")),
+      input: { allowLock: false, discardSemanticInput: () => undefined },
+      beat: { screenChanged: () => undefined },
+      runScreenFact: () => undefined,
+    });
+    navigation.setScreen("music");
+    coverPainting(stageId, 1, load);
+    await Promise.resolve();
+    await Promise.resolve();
+    navigation.setScreen("rename");
+    navigation.setScreen("music");
+    coverPainting(stageId, 1, load);
+    expect(loads).toBe(1);
+    navigation.setScreen("menu");
+    navigation.setScreen("music");
+    coverPainting(stageId, 1, load);
+    expect(loads).toBe(2);
+  });
+
+  it("report what each frame's covers showed, frame by frame", () => {
+    noteCoverDrawn(1, "paintings");
+    noteCoverDrawn(1, "waiting");
+    noteCoverDrawn(1, "bands");
+    expect(lastCoverFrameTally()).toEqual({ paintings: 0, bands: 0, waiting: 0 });
+    noteCoverDrawn(2, "paintings");
+    expect(lastCoverFrameTally()).toEqual({ paintings: 1, bands: 1, waiting: 1 });
+    noteCoverDrawn(3, "paintings");
+    expect(lastCoverFrameTally()).toEqual({ paintings: 1, bands: 0, waiting: 0 });
   });
 });
 
@@ -146,7 +205,7 @@ describe("pnpm music:cover", () => {
     stageId,
     files: [{ file: coverFileName(stageId, 512), size: 512, bytes, sha256: "" }],
   });
-  const base = { maxTotalBytes: 100, covers: [row("a", 10), row("b", 20)] };
+  const base = { maxBytesPerCover: 50, covers: [row("a", 10), row("b", 20)] };
 
   it("replaces a stage's row in place and adds a new one last", () => {
     expect(withCover(base, row("a", 30)).covers.map((cover) => [cover.stageId, cover.files[0]?.bytes])).toEqual([
@@ -156,7 +215,9 @@ describe("pnpm music:cover", () => {
     expect(withCover(base, row("c", 5)).covers.map((cover) => cover.stageId)).toEqual(["a", "b", "c"]);
   });
 
-  it("refuses a cover that would pass the byte limit", () => {
-    expect(() => withCover(base, row("c", 71))).toThrow(/over the limit/u);
+  it("refuses a cover over the per-cover limit, and never limits how many covers there are", () => {
+    expect(() => withCover(base, row("c", 51))).toThrow(/over the per-cover limit/u);
+    const many = Array.from({ length: 40 }, (_, index) => row(`stage-${String(index)}`, 50));
+    expect(many.reduce((manifest, next) => withCover(manifest, next), base).covers).toHaveLength(42);
   });
 });

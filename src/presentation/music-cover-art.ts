@@ -79,7 +79,43 @@ export function coverPainting(
   return null;
 }
 
+/**
+ * Lets every painting that failed to load be fetched again the next time a cover asks for it.
+ * Called when the MUSIC screen opens, so a player who was offline once sees the paintings on a
+ * later visit, without a retry every frame.
+ */
+export function retryFailedCoverPaintings(): void {
+  for (const [url, slot] of slots) if (slot === "failed") slots.delete(url);
+}
+
 /** Forgets every loaded painting (tests). */
 export function resetCoverPaintings(): void {
   slots.clear();
+  coverFrame = { time: Number.NaN, tally: emptyTally() };
+  lastCoverFrame = emptyTally();
 }
+
+/**
+ * What one drawn frame's covers showed: `paintings`, `bands` (no painting exists) and `waiting`
+ * (bands while a painting is still on its way, or after it failed).
+ */
+export interface CoverFrameTally {
+  paintings: number;
+  bands: number;
+  waiting: number;
+}
+const emptyTally = (): CoverFrameTally => ({ paintings: 0, bands: 0, waiting: 0 });
+let coverFrame = { time: Number.NaN, tally: emptyTally() };
+let lastCoverFrame: CoverFrameTally = emptyTally();
+
+/** Counts one drawn cover against the frame drawn at `time` (the screen's frame clock). */
+export function noteCoverDrawn(time: number, shown: keyof CoverFrameTally): void {
+  if (time !== coverFrame.time) {
+    if (!Number.isNaN(coverFrame.time)) lastCoverFrame = coverFrame.tally;
+    coverFrame = { time, tally: emptyTally() };
+  }
+  coverFrame.tally[shown] += 1;
+}
+
+/** The covers of the last completed frame (a journey waits on this before a capture). */
+export const lastCoverFrameTally = (): Readonly<CoverFrameTally> => ({ ...lastCoverFrame });

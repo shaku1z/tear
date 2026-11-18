@@ -1,5 +1,5 @@
 import type { MusicCoverView, ScreenRenderContext } from "../contracts";
-import { coverPainting } from "../../music-cover-art";
+import { coverPainting, noteCoverDrawn } from "../../music-cover-art";
 import type { SceneBitmap } from "../../scenes/scene-renderer";
 
 /** Paper grey for locked covers (used from the lock PR on). */
@@ -62,8 +62,10 @@ export function drawCover(
     }
     canvas.restore();
     frame(canvas, x, y, w, h);
+    noteCoverDrawn(context.time, "paintings");
     return;
   }
+  noteCoverDrawn(context.time, cover?.art?.length && !cover.locked ? "waiting" : "bands");
   const hues = cover && cover.hues.length > 0 ? cover.hues : [ui.t.color.accent];
   const glyph = cover?.locked ? "⚿" : (cover?.glyph ?? "♪"),
     band = w / hues.length;

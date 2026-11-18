@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Adds or replaces one MUSIC cover: encodes a stage painting at every size the manifest lists,
 // writes the files and the stage's row in src/presentation/assets/music-covers/covers.json, and
-// refuses a result over the manifest's byte limit. The painting itself stays where it is.
+// refuses a cover over the manifest's per-cover byte limit. The painting itself stays where it is.
 //
 //   pnpm music:cover add <stageId> <painting.png> --description <text> --licence <text>
 //
@@ -31,14 +31,22 @@ export async function encodeCover(manifest, stageId, source) {
   );
 }
 
-/** The manifest with this stage's row added or replaced (rows stay in their order; a new one goes last). */
+/** All of a cover's files together, in bytes (the manifest's per-cover limit applies to this). */
+export const coverBytes = (row) => row.files.reduce((sum, file) => sum + file.bytes, 0);
+
+/**
+ * The manifest with this stage's row added or replaced (rows stay in their order; a new one goes
+ * last). Refuses a row over the per-cover limit, so the total grows with the stages, never by edits.
+ */
 export function withCover(manifest, row) {
+  const bytes = coverBytes(row);
+  if (bytes > manifest.maxBytesPerCover)
+    throw new Error(
+      `${row.stageId}'s files total ${String(bytes)} bytes, over the per-cover limit of ${String(manifest.maxBytesPerCover)}`,
+    );
   const covers = manifest.covers.some((cover) => cover.stageId === row.stageId)
     ? manifest.covers.map((cover) => (cover.stageId === row.stageId ? row : cover))
     : [...manifest.covers, row];
-  const total = covers.flatMap((cover) => cover.files).reduce((sum, file) => sum + file.bytes, 0);
-  if (total > manifest.maxTotalBytes)
-    throw new Error(`covers would total ${String(total)} bytes, over the limit of ${String(manifest.maxTotalBytes)}`);
   return { ...manifest, covers };
 }
 
