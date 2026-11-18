@@ -4,7 +4,7 @@ import {
   captureCanonicalGameplayState,
   type projectCanonicalGameplayState,
 } from "../../gameplay/runtime/canonical-state";
-import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GameEnemy, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveTrainingHost } from "../training/training-host";
 import { projectLiveCanonicalEnemy } from "../world/canonical-enemy-projection";
 import type { LiveCombatHostRuntimeApi } from "./combat-host-factory";

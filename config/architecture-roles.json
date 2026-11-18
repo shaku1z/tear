@@ -173,9 +173,9 @@
       "purpose": "The only modules that may import the handoff: the composition root and the first-gesture audio facade.",
       "include": ["src/app/shell/composition.ts", "src/audio/legacy-synth.ts"]
     },
-    "app.world-runtime-types": {
-      "purpose": "Concrete app world types that portable TearBench code must not consume.",
-      "include": ["src/app/shell/game-runtime-state.ts"]
+    "gameplay.world-runtime-types": {
+      "purpose": "Concrete live world state types that portable TearBench code must not consume.",
+      "include": ["src/gameplay/runtime/game-runtime-state.ts"]
     },
     "app.live-runtime-root": {
       "purpose": "The live runtime wiring root (startLiveGame); it composes typed owners and must not own world, interface or session state itself.",

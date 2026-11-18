@@ -10,7 +10,7 @@ import {
   drawLiveGhostSplits,
   type GhostChaseUi,
 } from "../../presentation/world/live-ghost-reference";
-import type { GameRun, GamePlayer } from "../shell/game-runtime-state";
+import type { GameRun, GamePlayer } from "../../gameplay/runtime/game-runtime-state";
 import type { TearGameplayEvent } from "../../gameplay/runtime/gameplay-events";
 
 export function createLiveGhostChase(

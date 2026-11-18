@@ -1,14 +1,21 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { LiveGameHostState } from "../world/game-host-state";
-import { CampaignRuntimeState } from "./campaign-runtime-state";
+import { CampaignRuntimeState } from "../../gameplay/campaign/campaign-runtime-state";
 import { StageRuntimeState } from "../world/stage-runtime-state";
 import { LiveStageController } from "../world/stage-controller";
-import { createCampaignChapterController, createFinaleController } from "./campaign-controller-factory";
-import { createLiveCampaignRuntime, type LiveCampaignRuntimeApi } from "./campaign-runtime";
+import {
+  createCampaignChapterController,
+  createFinaleController,
+} from "../../gameplay/campaign/campaign-controller-factory";
+import { createLiveCampaignRuntime, type LiveCampaignRuntimeApi } from "../../gameplay/campaign/campaign-runtime";
 import type { RunLifecycleController } from "../../gameplay/run/lifecycle";
 import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
-import type { CinematicPreference } from "./cinematic-preference";
-import type { CampaignCinematicBeat, CampaignCinematicDirector, CampaignCinematicScript } from "./campaign-sequences";
+import type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
+import type {
+  CampaignCinematicBeat,
+  CampaignCinematicDirector,
+  CampaignCinematicScript,
+} from "../../gameplay/campaign/campaign-sequences";
 import type { CinematicBeat, CinematicScript } from "../../presentation/cinematics";
 import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
 import type { FinaleIntent } from "../../gameplay/campaign/finale-controller";

@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { CampaignRuntimeState } from "../../src/app/campaign/campaign-runtime-state";
+import { CampaignRuntimeState } from "../../src/gameplay/campaign/campaign-runtime-state";
 import {
   createCampaignChapterController,
   createFinaleController,
-} from "../../src/app/campaign/campaign-controller-factory";
+} from "../../src/gameplay/campaign/campaign-controller-factory";
 
 const motion = {
   loreReveal: 1,
