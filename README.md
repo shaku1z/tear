@@ -61,6 +61,7 @@ covers routine work. Do not run
 | `src/persistence/`, `src/platform/` | Saved data formats and migrations; storage, cloud, CrazyGames, PWA and other host adapters. |
 | `src/replay/`, `src/ghost/` | Run recording and replay. `ghost/` also holds the replay vault and several unfinished replay-based features. |
 | `src/agents/` | The scripted test player: a bot that plays the real game in test builds and headless runs. |
+| `src/playtest/` | The playtest tool: plays boss fights headless with scripted players and measures them. Run it with `pnpm playtest bosses`. |
 | `src/tearbench/` | TearBench, the game's verification system (scenarios, headless runs, CI evidence selection). |
 | `src/config/`, `src/game-reference/` | Tuning values, and the exported game data the wiki consumes. |
 | `tests/` | Vitest tests in `tests/unit/` and `tests/contract/`; browser tests are `tests/*.js`; Node tests for scripts are `tests/*.mjs`. |
