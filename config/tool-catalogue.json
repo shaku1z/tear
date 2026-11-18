@@ -1480,6 +1480,40 @@
         "merge:ready"
       ]
     },
+    "scripts/ci-build-hashes.mjs": {
+      "purpose": "Prints the hashes of Validate's builds, or refuses a browser shard whose downloaded builds differ",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    "scripts/ci-check-times.mjs": {
+      "purpose": "Writes config/check-times.json, the browser shards' split, from the measured check times of given Validate runs",
+      "effects": [
+        "writes-repo-files",
+        "network"
+      ],
+      "duration": "under-a-minute",
+      "via": [],
+      "runBy": [
+        "scripts/run-checks.mjs"
+      ]
+    },
+    "scripts/ci-verdict.mjs": {
+      "purpose": "Validate's required check: fails unless every needed job ended as it should",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
     "scripts/merge-batch.mjs": {
       "purpose": "Batch merging behind pnpm merge:batch, and the Validate step that records a batch's members",
       "effects": [
