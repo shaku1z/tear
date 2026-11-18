@@ -83,7 +83,7 @@ export interface LiveWavePort {
   readonly loreBusy: () => boolean;
   readonly achievementTracking: () => boolean;
   readonly playerOneHit: () => boolean;
-  readonly playerHealth?: () => Readonly<{ hp: number; maxHp: number }>;
+  readonly playerHealth: () => Readonly<{ hp: number; maxHp: number }>;
   readonly availableTierUpCount: () => number;
 }
 
@@ -242,7 +242,7 @@ export class LiveWaveController {
       waveHealBonus: run.mods.waveHeal ?? 0,
       waveClearPause: tuning.waveClearPause,
       availableTierUpCount: this.#port.availableTierUpCount(),
-      ...(this.#port.playerHealth === undefined ? {} : { playerHealth: this.#port.playerHealth() }),
+      playerHealth: this.#port.playerHealth(),
       trialCount: run.mode === "gauntlet" ? (run.bossOrder?.length ?? 0) : 0,
     });
     run.clearTimer = cleared.state.clearTimer;

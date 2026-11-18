@@ -1523,6 +1523,10 @@ export function createDetachedWaveRuntime(
     loreBusy: () => false,
     achievementTracking: () => false,
     playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
+    playerHealth: () => {
+      const player = world.state.player() as never as { hp: number; maxHp: number };
+      return { hp: player.hp, maxHp: player.maxHp };
+    },
     availableTierUpCount: () => {
       const current = run() as unknown as {
         mods: { owned: Readonly<Record<string, number>>; tier: Readonly<Record<string, number>> };

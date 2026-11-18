@@ -290,6 +290,10 @@ export function createProductionWaveRewardRuntime(
     loreBusy: options.chapterFlowActive ?? (() => false),
     achievementTracking: () => false,
     playerOneHit: () => (world.state.player() as never as { oneHit: boolean }).oneHit,
+    playerHealth: () => {
+      const player = world.state.player() as never as { hp: number; maxHp: number };
+      return { hp: player.hp, maxHp: player.maxHp };
+    },
     availableTierUpCount: () => eligibleTierChoices(UPGRADES, run().mods.owned, run().mods.tier).length,
   });
   reward = createRewardRuntime<UpgradeDefinition>({

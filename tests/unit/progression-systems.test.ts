@@ -189,10 +189,10 @@ describe("achievements", () => {
       shop: [],
       clamp: (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value)),
     });
-    expect(achievements._all).toHaveLength(100);
-    expect(new Set(achievements._all.map((achievement) => achievement.id)).size).toBe(100);
+    expect(achievements._all).toHaveLength(102);
+    expect(new Set(achievements._all.map((achievement) => achievement.id)).size).toBe(102);
     expect(achievements._all.reduce((total, achievement) => total + achievements.coinsFor(achievement), 0)).toBe(
-      73_000,
+      75_900,
     );
   });
 
