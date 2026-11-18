@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { LazyModuleUnavailable, lazyModuleReady, lazySlot } from "../../src/domain/lazy-module";
-import { GhostCapsuleReader } from "../../src/ghost/capsule-reader";
+import { GhostCapsuleReader, type GhostCapsuleContents } from "../../src/ghost/capsule-reader";
+import { createGhostProductionReplaySession } from "../../src/ghost/production-replay-session";
 import { replayEngine, type ReplayEngine } from "../../src/ghost/replay-engine";
 import type * as ProductionReplayComposition from "../../src/tearbench/production-replay-composition";
 
@@ -84,5 +85,12 @@ describe("replay engine gate", () => {
     expectTypeOf<ReplayEngine["projectProductionReplayCanonicalState"]>().toEqualTypeOf<
       typeof ProductionReplayComposition.projectProductionReplayCanonicalState
     >();
+  });
+
+  it("lets only a capsule from GhostCapsuleReader.read reach the replay engine (the compiler proves it)", () => {
+    const plain = {} as GhostCapsuleContents;
+    // @ts-expect-error a capsule built by hand is not branded, so replay code refuses it
+    const refused = (): unknown => createGhostProductionReplaySession(plain);
+    expect(refused).toBeTypeOf("function");
   });
 });

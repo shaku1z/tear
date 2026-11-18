@@ -16,10 +16,23 @@ export interface GhostCapsuleTracks {
   readonly presentation: readonly GhostCapsuleEntry[];
 }
 
-export interface GhostReadCapsule {
+/**
+ * Not exported: only `GhostCapsuleReader.read` can name it, so only the reader can make a capsule the
+ * replay code accepts. That is how the compiler proves every replay starts from a read, and a read
+ * waits for the replay engine.
+ */
+const readByReader: unique symbol = Symbol("capsule read by GhostCapsuleReader");
+
+/** What a capsule holds. Code that only reads its contents (a mapper, a check) can take this. */
+export interface GhostCapsuleContents {
   readonly manifest: TearGhostManifest;
   readonly tracks: GhostCapsuleTracks;
   readonly maxTick: number;
+}
+
+/** A capsule `GhostCapsuleReader.read` returned; replay code that needs the engine takes only this. */
+export interface GhostReadCapsule extends GhostCapsuleContents {
+  readonly [readByReader]: true;
 }
 
 function record(value: unknown): Readonly<Record<string, unknown>> {
@@ -101,6 +114,6 @@ export class GhostCapsuleReader {
       presentation: ordered("presentation"),
     });
     const maxTick = Math.max(0, ...manifest.chunks.map((chunk) => chunk.toTick));
-    return Object.freeze({ manifest, tracks, maxTick });
+    return Object.freeze({ [readByReader]: true as const, manifest, tracks, maxTick });
   }
 }

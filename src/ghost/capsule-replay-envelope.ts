@@ -10,7 +10,7 @@ import {
   type TearWorldFactory,
 } from "../tearbench/state-codecs";
 import { validateTearContract } from "../tearbench/validation";
-import type { GhostCapsuleEntry, GhostReadCapsule } from "./capsule-reader";
+import type { GhostCapsuleContents, GhostCapsuleEntry } from "./capsule-reader";
 import { createGhostV3, GhostTimeline, type GhostEnvelopeV3, type GhostReplayTrident } from "./truth-kernel";
 
 export interface GhostCapsuleReplayIssue {
@@ -194,7 +194,7 @@ function events(
   }
 }
 
-function visualSamples(capsule: GhostReadCapsule): readonly Readonly<{ tick: number; value: unknown }>[] {
+function visualSamples(capsule: GhostCapsuleContents): readonly Readonly<{ tick: number; value: unknown }>[] {
   const compactKeyframes = capsule.tracks.keyframes.filter((entry) => {
     const contract = validateTearContract(entry.value);
     return !contract.ok || contract.value.kind !== "snapshot";
@@ -217,7 +217,7 @@ function rulesetVersion(snapshots: readonly TearSnapshotV1[]): string {
  * truth. Missing or malformed tracks degrade capability rather than inventing
  * actions, state, causal events, or verification status.
  */
-export function mapGhostCapsuleToReplayEnvelope(capsule: GhostReadCapsule): GhostCapsuleReplayMapping {
+export function mapGhostCapsuleToReplayEnvelope(capsule: GhostCapsuleContents): GhostCapsuleReplayMapping {
   const issues: GhostCapsuleReplayIssue[] = [];
   const actionTrack = commands(capsule.tracks.commands, issues);
   const snapshotTrack = snapshots(capsule.tracks.keyframes, issues);
