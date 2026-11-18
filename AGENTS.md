@@ -58,7 +58,8 @@ merged.
    `pnpm test:related <changed src files>`; add `pnpm test:weapons` for weapon
    or ability changes.
 4. Add the smallest permanent test or scenario that fails without your change.
-   A new file under `src/` needs a TearBench evidence route in
+   Vitest runs only test files in git's index, so `git add -N` a new test
+   file before running it. A new file under `src/` needs a TearBench evidence route in
    `src/tearbench/evidence-routes.json` or a line in
    `config/change-impact-defaults.json`; `tests/unit/change-impact.test.mjs`
    fails otherwise ([docs/CHANGE_IMPACT.md](docs/CHANGE_IMPACT.md)).
