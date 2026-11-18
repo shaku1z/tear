@@ -1,25 +1,26 @@
 # Change impact
 
-How a pull request's changed files decide which evidence runs, and what happens to a file that
-no route names. This page reports today's behaviour; it does not change it.
+How changed files decide what runs: on a pull request, only whether the change is docs-only; in
+an evidence selection, which scenarios and journeys run, and what happens to a file that no route
+names. This page reports today's behaviour; it does not change it.
 
 ## What runs for a pull request
 
-1. CI writes the changed files to `artifacts/tearbench/changed-files.txt`
-   (`.github/workflows/ci.yml`).
-2. **Docs-only test.** If every changed file is under `docs/` or `plans/`, or is `README.md`,
-   `CONTRIBUTING.md`, `CRAZYGAMES.md` or `DEPLOYMENT.md`, CI skips the gameplay checks. It then
-   runs `check:docs`, `test:docs`, `check:terminology`, `test:terminology` and
-   `wiki:test`. `AGENTS.md`, `CLAUDE.md` and `config/position.json` are not in that
-   list, so a change to them runs the full gate.
-3. **Evidence selection.** `pnpm tearbench ci --files-from …` matches each file against the
-   prefixes in `src/tearbench/evidence-routes.json` (`evidenceForDiff` in
-   `scripts/tearbench.mjs`). A prefix ending in `/` or `-` matches by start; anything else must
-   equal the path. Every matched route contributes its scenarios, Graveyard cases, journey
-   checkpoint, interaction matrices and build targets. The TearBench runner tests plus the
-   selected scenarios' test files then run.
-4. **Full gate.** Unless the change was docs-only, CI runs `pnpm check:functional`, which does
-   not depend on the selection.
+1. **Docs-only test.** The scope job of `.github/workflows/ci.yml` holds the one pattern of
+   documentation paths. If every changed file matches it, CI skips the gameplay checks and runs
+   `check:docs`, `test:docs`, `check:terminology`, `test:terminology` and `wiki:test` instead.
+   The pattern there is the definition; this page does not repeat it.
+2. **Full gate.** Otherwise CI runs the checks of `pnpm check:functional`. It does not depend on
+   the evidence selection below.
+
+## Evidence selection
+
+CI does not run it on a pull request. `pnpm tearbench ci --files-from <file>` runs it by hand,
+and the weekly endurance job in `.github/workflows/tearbench-program.yml` runs it on the week's
+changes. It matches each file against the prefixes in `src/tearbench/evidence-routes.json`
+(`evidenceForDiff` in `scripts/tearbench.mjs`). A prefix ending in `/` or `-` matches by start;
+anything else must equal the path. Every matched route contributes its scenarios, Graveyard
+cases, journey checkpoint, interaction matrices and build targets.
 
 ## What happens to a path no route names
 
@@ -29,8 +30,8 @@ no route names. This page reports today's behaviour; it does not change it.
   matrix.
 - Nothing is reported. The selection artifact lists the routes chosen, but it does not say
   that a file fell through to the fallback.
-- Because `check:functional` runs anyway, an unrouted file is not untested. What it misses is
-  the targeted evidence its area would select: a change to an unrouted combat or replay file
+- A pull request runs the `check:functional` checks whatever the routes say, so an unrouted file
+  is not untested there. What a selection misses is the targeted evidence its area would choose: a change to an unrouted combat or replay file
   gets the generic seven scenarios, not that area's own scenarios.
 
 On 2026-11-13, 893 of 2,156 tracked paths matched no route. Most are tests, tooling, assets and
