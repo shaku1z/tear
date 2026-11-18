@@ -121,6 +121,22 @@ interface Frame {
   readonly controls: readonly ScreenControl[];
   readonly scroll: number;
   readonly scale: number;
+  /** Whether the button draw would cut this control's label with an ellipsis. */
+  readonly labelCut: (control: ScreenControl) => boolean;
+}
+
+/** Asks the live UI's button draw whether it would cut a control's label with an ellipsis. */
+function labelCutter(ui: ReturnType<typeof createUi>): Frame["labelCut"] {
+  const canvas = recordingCanvas([]);
+  return (control) =>
+    ui.buttonLabelFit(canvas, {
+      label: control.label,
+      w: control.w,
+      h: control.h,
+      ...(control.size === undefined ? {} : { size: control.size }),
+      ...(control.glyph === undefined ? {} : { glyph: control.glyph }),
+      ...(control.sub === undefined ? {} : { sub: control.sub }),
+    }).truncated;
 }
 
 /** Renders one screen at a phone size and scroll; returns what it drew and enqueued, and the scroll it wrote back. */
@@ -158,7 +174,7 @@ function render(
     },
   };
   draw(createScreenRenderers(context));
-  return { texts, controls, scroll: written, scale };
+  return { texts, controls, scroll: written, scale, labelCut: labelCutter(ui) };
 }
 
 const overlaps = (
@@ -173,8 +189,19 @@ const box = (control: ScreenControl) => ({
 });
 const textBox = (text: Glyphs) => ({ x: text.x, y: text.top, r: text.right, b: text.bottom });
 
-/** The phone contract: text floor, touch targets, nothing off the safe frame, nothing overlapping. */
+/** No default button cuts its label with an ellipsis (chips, rail buttons and hidden boxes draw their own way). */
+function expectNoCutLabels(frame: Frame, label: string): void {
+  for (const control of frame.controls)
+    if (control.label !== "" && control.hiddenBox !== true && control.chip !== true && control.ghost !== true)
+      expect(frame.labelCut(control), `${label}: "${control.label}" label cut`).toBe(false);
+}
+
+/**
+ * The phone contract: text floor, touch targets, nothing off the safe frame, nothing overlapping,
+ * and no button label cut with an ellipsis.
+ */
 function expectPhoneContract(frame: Frame, label: string): void {
+  expectNoCutLabels(frame, label);
   for (const text of frame.texts)
     expect(text.size * frame.scale, `${label}: "${text.text}" text size`).toBeGreaterThanOrEqual(11);
   for (const control of frame.controls) {
@@ -867,6 +894,14 @@ describe("phone compositions (compact density)", () => {
         expectPhoneContract(render(phone, draw, 0, false), "desktop composition");
       }).toThrow();
     }
+    // A label too long for its button is caught as cut, on one line beside a sub line or wrapped.
+    const frame = render(phone, (r) => {
+      r.pgmenu(playgroundMenu);
+    });
+    const box = { x: 0, y: 0, w: 160, h: 60, action: { type: "run.resume" } as const };
+    expect(frame.labelCut({ ...box, label: "SUMMON A VERY LONG BOSS NAME" })).toBe(true);
+    expect(frame.labelCut({ ...box, label: "SUMMON A VERY LONG BOSS NAME", glyph: "◆", sub: "KEY M" })).toBe(true);
+    expect(frame.labelCut({ ...box, label: "RESUME" })).toBe(false);
   });
 
   it("clamps an overscrolled page to its measured extent and writes it back", () => {
@@ -932,7 +967,7 @@ function liveBuildMenu(
   extraKinds = 0,
   extraBosses = 0,
   tab = "spawn",
-  device: "mouse" | "gamepad" = "mouse",
+  device: "mouse" | "keyboard" | "gamepad" = "mouse",
 ): PlaygroundScreenView {
   let model: PlaygroundScreenModel | undefined;
   createLivePlaygroundPresentation({
@@ -1013,11 +1048,15 @@ function renderDesktop(
       setScroll: () => undefined,
     }),
   );
-  return { texts, controls, scroll, scale };
+  return { texts, controls, scroll, scale, labelCut: labelCutter(ui) };
 }
 
-/** No control, heading or label may overlap another, and everything stays on the 1600x900 stage. */
+/**
+ * No control, heading or label may overlap another, everything stays on the 1600x900 stage, and no
+ * button label is cut.
+ */
 function expectNoDesktopOverlap(frame: Frame, label: string): void {
+  expectNoCutLabels(frame, label);
   frame.controls.forEach((control, index) => {
     expect(
       control.x >= 0 && control.x + control.w <= 1600 && control.y >= 0 && control.y + control.h <= 900,
@@ -1052,7 +1091,7 @@ describe("desktop playground build menu", () => {
     { width: 1280, height: 720 },
   ])
     for (const [tab, labels] of Object.entries(headings))
-      for (const device of ["mouse", "gamepad"] as const)
+      for (const device of ["mouse", "keyboard", "gamepad"] as const)
         it(`lays out the ${tab} tab without overlap at ${String(size.width)}x${String(size.height)} (${device})`, () => {
           const view = liveBuildMenu(0, 0, tab, device);
           const frame = renderDesktop(size, (r) => {

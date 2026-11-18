@@ -1,54 +1,12 @@
 import type { ChoiceView, PlaygroundScreenView, ScreenControl, ScreenRenderContext } from "./contracts";
 import { createActionCard, desktopActionCard, phoneActionCard } from "./action-card";
+import { choiceGrid } from "./choice-grid";
 import { createPageFrame, type FlowAction, type PageFrame, type ScrollBlock, type ScrollView } from "./page-frame";
-
-export interface GridCell {
-  readonly column: number;
-  readonly row: number;
-  readonly span: number;
-}
-export interface ChoiceGrid {
-  readonly columns: number;
-  readonly rows: number;
-  readonly cellWidth: number;
-  readonly cells: readonly GridCell[];
-}
-
-/**
- * Flows `count` choices left to right into rows, the last one spanning `lastSpan` cells
- * (it starts a new row when the current one has too few cells left). Uses the fewest
- * columns from `minColumns` that keep the grid within `maxRows`; at `maxColumns` it
- * stops widening and grows downward instead.
- */
-export function choiceGrid(
-  count: number,
-  lastSpan: number,
-  options: Readonly<{ minColumns: number; maxColumns: number; maxRows: number; width: number; gap: number }>,
-): ChoiceGrid {
-  const flow = (columns: number): GridCell[] => {
-    const cells: GridCell[] = [];
-    for (let index = 0, slot = 0; index < count; index++) {
-      const span = index === count - 1 ? Math.min(lastSpan, columns) : 1;
-      if ((slot % columns) + span > columns) slot = Math.ceil(slot / columns) * columns;
-      cells.push({ column: slot % columns, row: Math.floor(slot / columns), span });
-      slot += span;
-    }
-    return cells;
-  };
-  let columns = options.minColumns,
-    cells = flow(columns);
-  const rowsOf = (list: readonly GridCell[]): number => list.reduce((rows, cell) => Math.max(rows, cell.row + 1), 0);
-  while (rowsOf(cells) > options.maxRows && columns < options.maxColumns) cells = flow(++columns);
-  return { columns, rows: rowsOf(cells), cellWidth: (options.width - options.gap * (columns - 1)) / columns, cells };
-}
 
 type Tokens = ScreenRenderContext["ui"]["t"];
 /** The view's choices for one section. */
 type Choices = (section: string) => readonly ChoiceView[];
 type Section = PlaygroundScreenView["sections"][number];
-
-/** A one-line button label's horizontal room taken by the button: 16 px inset, 14 px right reserve, slack. */
-const LABEL_INSET = 34;
 
 /** Desktop chrome under the overlay header: the tab strip, then the tab's body. */
 const DESKTOP = { tabsY: 136, bodyTop: 212 } as const;
@@ -178,20 +136,15 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
     let x = frame.left;
     const placed = band.map((section) => {
       const w = band.length === 1 ? frame.width : (room * section.choices.length) / total;
-      let columns = m.columns(section.choices.length, w, band.length === 1);
-      // A keyed band puts every label on one line (see `control`): a group alone in its band
-      // takes fewer, wider columns until its longest label fits.
-      if (m.detail && keyed && band.length === 1) {
-        const widest = longestLabel(section),
-          cell = (count: number): number => (w - m.gap * (count - 1)) / count;
-        while (columns > 1 && widest + LABEL_INSET > cell(columns)) columns--;
-      }
+      const columns = m.columns(section.choices.length, w, band.length === 1),
+        buttons = section.choices.map((choice) => control(choice, { x: 0, y: 0, w, h: 0 }, m, keyed));
       const grid = choiceGrid(section.choices.length, 1, {
         minColumns: columns,
         maxColumns: columns,
         maxRows: Number.MAX_SAFE_INTEGER,
         width: w,
         gap: m.gap,
+        minCellWidth: Math.max(0, ...buttons.map((button) => ui.buttonFitWidth(context.canvas, button))),
       });
       const entry = { section, x, grid };
       x += w + groupGap;
@@ -222,16 +175,6 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
       blocks.push({ height: h, draw });
     }
     return blocks;
-  }
-
-  /** The widest label in a group at the menu's button type (bold), in canvas pixels. */
-  function longestLabel(section: Section): number {
-    const { canvas } = context;
-    canvas.save();
-    canvas.font = ui.font(desktopMenu().size, true);
-    const widest = Math.max(0, ...section.choices.map((choice) => canvas.measureText(choice.label).width));
-    canvas.restore();
-    return widest;
   }
 
   /**
