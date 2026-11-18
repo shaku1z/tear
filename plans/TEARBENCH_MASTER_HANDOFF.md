@@ -115,7 +115,7 @@ These figures do not mean newer work has no value. They mean most original atomi
 - Keep DOM/browser adapters at the app edge. Gameplay/runtime composition stays portable.
 - Test seams may observe/drive production behavior but must not become production authority.
 - Preserve lazy menu-time construction and startup semantics unless a checkpoint explicitly changes them.
-- Keep `src/app/live-game-runtime.ts` within the user-approved 700 physical-line ceiling; the source-architecture gate owns the current count.
+- Keep `src/app/live-game-runtime.ts` within the module size rule in `docs/ARCHITECTURE.md` (code budget); the gates own the current measure.
 - Preserve honest execution classes:
   - **A:** privileged in-process deterministic execution.
   - **B:** production runtime through supported bridges.
