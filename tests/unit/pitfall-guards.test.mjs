@@ -76,6 +76,13 @@ describe("pitfall guards", () => {
         '"test": "vitest run --retry=2"',
         "run: npx playwright test --retries 2",
         "node --test --test-retries=1 tests/a.test.mjs",
+        // Re-running GitHub jobs that already ran is a retry too: the same code, the same main.
+        'gh(["run", "rerun", String(run.id), "--failed"]);',
+        "gh run rerun 44070220239 --failed",
+        "gh run rerun 44070220239 --job 134559336319",
+        "gh api -X POST repos/shaku1z/tear/actions/runs/44070220239/rerun-failed-jobs",
+        "api(`repos/${slug}/actions/runs/${run.id}/rerun`, { method: 'POST' });",
+        "gh api -X POST repos/shaku1z/tear/actions/jobs/134559336319/rerun",
       ])
         expect(retryRequests(text), text).not.toEqual([]);
       for (const text of [
@@ -85,6 +92,9 @@ describe("pitfall guards", () => {
         "let retries = 0; retries += 1;",
         '{ reason: "retry" }',
         "curl --fail --location --retry 3 --retry-all-errors --output out.tgz https://example.test/a.tgz",
+        // A fresh run of the head merged with current main is new evidence, not a retry.
+        'gh(["workflow", "run", "ci.yml", "--ref", pr.headRefName]);',
+        "pnpm tearbench rerun --artifact run.json",
       ])
         expect(retryRequests(text), text).toEqual([]);
     });
@@ -108,16 +118,25 @@ describe("pitfall guards", () => {
 /**
  * The lines of `text` that ask a test runner or check to run again after a failure: a `retry` or
  * `retries` setting whose value is not a function (a function is a game or port method named
- * retry), a retry flag, or Mocha's and Jest's retry calls. A download may retry the network, so a
- * retry flag on a `curl` command is not one.
+ * retry), a retry flag, Mocha's and Jest's retry calls, or a re-run of GitHub jobs that already
+ * ran (`gh run rerun`, in a shell or as `gh([...])` arguments, and the REST `rerun` and
+ * `rerun-failed-jobs` endpoints). A download may retry the network, so a retry flag on a `curl`
+ * command is not one; dispatching a fresh run (`gh workflow run`) is new evidence, not a retry.
  */
 function retryRequests(text) {
   const setting = /["']?\bretr(?:y|ies)["']?\s*:\s*(?!\(|async\b|function\b)\S/u;
   const flag = /(?:^|\s)--(?:[\w-]+-)?retr(?:y|ies)\b/u;
   const call = /\bthis\.retries\s*\(|\bretryTimes\s*\(/u;
-  if (!/retr(?:y|ies)/iu.test(text)) return [];
+  const jobRerun = /\bgh\b\W+run\W+rerun\b|\/actions\/(?:runs|jobs)\/[^\s"'`/]+\/rerun(?:-failed-jobs)?\b/u;
+  if (!/retr(?:y|ies)|rerun/iu.test(text)) return [];
   return text
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => setting.test(line) || call.test(line) || (flag.test(line) && !/(?:^|\s)curl\s/u.test(line)));
+    .filter(
+      (line) =>
+        setting.test(line) ||
+        call.test(line) ||
+        jobRerun.test(line) ||
+        (flag.test(line) && !/(?:^|\s)curl\s/u.test(line)),
+    );
 }
