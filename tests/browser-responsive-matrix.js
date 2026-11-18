@@ -157,7 +157,7 @@ async function main() {
         hasTouch: scenario.name.startsWith("mobile"),
       });
       const page = await context.newPage();
-      trackScriptLoads(page);
+      await trackScriptLoads(page);
       if (scenario.name === "mobile-landscape") await recordDrawnLabels(page);
       const errors = [];
       page.on("pageerror", (error) => errors.push(error.stack || error.message));

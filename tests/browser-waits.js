@@ -251,26 +251,53 @@ async function waitForPointerLock(page) {
 
 const scriptLoads = new WeakMap();
 
+/** Runs in the page: reports each worker's script URL to the tracker before the worker fetches it. */
+function reportWorkerScripts() {
+  for (const name of ["Worker", "SharedWorker"]) {
+    const Original = window[name];
+    if (typeof Original !== "function") continue;
+    window[name] = class extends Original {
+      constructor(url, options) {
+        void window.__tearWorkerScript(new URL(String(url), window.location.href).href);
+        super(url, options);
+      }
+    };
+  }
+}
+
 /**
  * Counts the page's script requests in flight. Screens and runtimes load their code as lazy chunks,
- * which are script requests; music, images and other media are not. Call it right after creating
- * the page, before the first navigation.
+ * which are script requests; music, images and other media are not. A worker's own script is not
+ * screen code either, and a worker the game terminates before its script has loaded (a screen
+ * closed during a slow load) leaves a request that Playwright never reports as finished or failed,
+ * so worker scripts are never counted. Await it right after creating the page, before the first
+ * navigation.
  */
 function trackScriptLoads(page) {
-  if (scriptLoads.has(page)) return;
+  if (scriptLoads.has(page)) return scriptLoads.get(page).ready;
   const pending = new Set();
   const waiters = new Set();
+  const workerScripts = new Set();
   const settle = (request) => {
     if (!pending.delete(request) || pending.size > 0) return;
     for (const resolve of waiters) resolve();
     waiters.clear();
   };
   page.on("request", (request) => {
-    if (request.resourceType() === "script") pending.add(request);
+    if (request.resourceType() === "script" && !workerScripts.has(request.url())) pending.add(request);
   });
   page.on("requestfinished", settle);
   page.on("requestfailed", settle);
-  scriptLoads.set(page, { pending, waiters });
+  // The page reports a worker's URL and the request event arrives in either order.
+  const ready = Promise.all([
+    page.exposeBinding("__tearWorkerScript", (_source, url) => {
+      workerScripts.add(url);
+      for (const request of pending) if (request.url() === url) settle(request);
+    }),
+    page.addInitScript(reportWorkerScripts),
+  ]);
+  scriptLoads.set(page, { pending, waiters, ready });
+  return ready;
 }
 
 /**
@@ -282,6 +309,7 @@ function trackScriptLoads(page) {
 async function waitForScriptLoads(page) {
   const tracker = scriptLoads.get(page);
   if (tracker === undefined) throw new Error("waitForScriptLoads needs trackScriptLoads(page) before navigation");
+  await tracker.ready;
   const frames = () =>
     page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   // The screen's first frames are what ask for its chunk.
@@ -356,6 +384,7 @@ async function clickTarget(page, screen, name) {
 
 module.exports = {
   clickTarget,
+  reportWorkerScripts,
   trackScriptLoads,
   waitForScriptLoads,
   waitForPointerLock,

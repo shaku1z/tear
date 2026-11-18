@@ -144,7 +144,7 @@ function staticServer() {
 
 async function openInstrumentedPage(browser, pageErrors, options = {}) {
   const page = await browser.newPage({ viewport: budgets.referenceProfile.viewport, deviceScaleFactor });
-  trackScriptLoads(page);
+  await trackScriptLoads(page);
   await page.addInitScript((gfx) => {
     let settings = {};
     try {
