@@ -14,7 +14,6 @@ import {
   MAX_LOADOUTS,
   MAX_OWNED,
   MAX_PRICE,
-  MAX_STATE_CHARS,
   type Acquisition,
   type CosmeticCatalog,
   type CosmeticItem,
@@ -225,4 +224,3 @@ export function worstCaseStateSize(catalog: CosmeticCatalog): number {
     active: { id: "loadout_0", at: 1_800_000_000_000 },
   }).length;
 }
-export { MAX_STATE_CHARS };

@@ -21,7 +21,7 @@ export const COSMETIC_CATALOG: CosmeticCatalog = Object.freeze({
   collections,
   items,
   assets,
-} as unknown as CosmeticCatalog);
+} as CosmeticCatalog);
 
 /**
  * The backdrops a look is checked against, read from the stage definitions so a repaint keeps the

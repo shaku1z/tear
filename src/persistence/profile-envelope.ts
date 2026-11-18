@@ -57,8 +57,9 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
   // always re-validated (malformed entries dropped, unknown ids kept) before it reaches game code.
   const cosmetics =
     version < PROFILE_ENVELOPE_VERSION || profile.value.cosmetics !== undefined
-      ? (normalizeCosmeticState(profile.value.cosmetics) as unknown as JsonObject)
-      : undefined;
+      ? validateJsonObject(normalizeCosmeticState(profile.value.cosmetics))
+      : null;
+  if (cosmetics && !cosmetics.ok) return invalid(cosmetics.error);
   const extensions = extensionFields(isEnvelope ? source : {}, KNOWN_FIELDS);
   if (!extensions.ok) return invalid(extensions.error);
   return {
@@ -70,7 +71,7 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
       revision: safeInteger(source.revision, 0),
       updatedAtMs: safeInteger(source.updatedAtMs, nowMs),
       writerId: safeString(source.writerId, "legacy"),
-      profile: cosmetics === undefined ? profile.value : { ...profile.value, cosmetics },
+      profile: cosmetics ? { ...profile.value, cosmetics: cosmetics.value } : profile.value,
       extensions: extensions.value,
     }),
   };

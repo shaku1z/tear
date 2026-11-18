@@ -76,24 +76,3 @@ export function conditionMet(condition: UnlockCondition, facts: ProgressFacts): 
       return false;
   }
 }
-
-/** Short player-facing text for a locked item ("Defeat rootbound"). Names come from the callers' lookups. */
-export function conditionText(
-  condition: UnlockCondition,
-  names: (kind: "boss" | "biome" | "achievement", id: string) => string,
-): string {
-  switch (condition.type) {
-    case "default":
-      return "";
-    case "boss-defeat":
-      return `Defeat ${names("boss", condition.bossId)}`;
-    case "biome-enter":
-      return `Reach ${names("biome", condition.biome)}`;
-    case "achievement":
-      return `Earn ${names("achievement", condition.id)}`;
-    case "stat-threshold":
-      return `${condition.stat} ${String(condition.goal)}`;
-    case "all":
-      return condition.of.map((entry) => conditionText(entry, names)).join(" and ");
-  }
-}

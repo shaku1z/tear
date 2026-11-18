@@ -144,7 +144,7 @@ const sellsForShards = (item: CosmeticItem): boolean => item.acquire.some((entry
 
 const latestChange = (loadout: SavedLoadout): number =>
   Math.max(loadout.nameAt, ...Object.values(loadout.slots).map((entry) => entry.at));
-export const isDeletedLoadout = (loadout: SavedLoadout): boolean =>
+const isDeletedLoadout = (loadout: SavedLoadout): boolean =>
   loadout.deletedAt !== undefined && loadout.deletedAt >= latestChange(loadout);
 
 /** The loadout in use, or undefined while nothing has been equipped yet. */
