@@ -74,6 +74,7 @@ function harness(
     loreBusy: () => false,
     achievementTracking: () => false,
     playerOneHit: () => false,
+    playerHealth: () => ({ hp: 100, maxHp: 100 }),
     availableTierUpCount: () => 0,
   };
   return {

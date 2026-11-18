@@ -14,7 +14,28 @@ import {
   type AchievementProgressSource,
   type UpgradePresentationSource,
 } from "../../presentation/run-screen-snapshots";
-import type { RunResultInfo } from "../../gameplay/run/outcome-planner";
+import type { GauntletResult, RunResultInfo } from "../../gameplay/run/outcome-planner";
+import { bossName } from "../../gameplay/run/content-director";
+import { waveTitle } from "../../gameplay/run/wave-rules";
+import { GAUNTLET_TICKS_PER_SECOND } from "../../domain/gauntlet-records";
+import type { GauntletResultSource } from "../../presentation/run-screen-snapshots";
+
+/** A Gauntlet result in the units the result screens show. */
+function gauntletResultSource(result: GauntletResult | undefined): Readonly<{ gauntlet?: GauntletResultSource }> {
+  if (result === undefined) return {};
+  const seconds = (ticks: number) => ticks / GAUNTLET_TICKS_PER_SECOND;
+  return {
+    gauntlet: {
+      trialsCleared: result.trialsCleared,
+      trialCount: result.trialCount,
+      bossName: bossName(result.boss),
+      seconds: seconds(result.ticks),
+      hits: result.hits,
+      best: result.best === null ? null : { seconds: seconds(result.best.ticks), hits: result.best.hits },
+      newBest: result.newBest,
+    },
+  };
+}
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
 
 type Dependencies = Pick<
@@ -254,7 +275,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
         ...(services.ghostChase?.().active ? { ghostChase: services.ghostChase() } : {}),
         ...buildPausedSnapshot({
           summary:
-            (run.isBossWave ? "BOSS" : "WAVE " + String(run.wave)) +
+            waveTitle(run.mode, run.wave, run.isBossWave === true, run.bossOrder.length) +
             "   ·   " +
             String(run.score) +
             " pts   ·   " +
@@ -288,6 +309,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
           progress: progressRows(),
           log: resultLog(),
           formatTime: services.formatTime,
+          ...gauntletResultSource(outcome.gauntlet),
         }),
       );
     },
@@ -304,6 +326,7 @@ export function createLiveRunScreenAdapters(state: RunScreenState, services: Run
           difficulty: outcome.diff ?? "",
           log: resultLog(),
           formatTime: services.formatTime,
+          ...gauntletResultSource(outcome.gauntlet),
         }),
       );
     },

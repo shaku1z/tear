@@ -89,7 +89,7 @@ export function buildMenuSnapshot(input: {
 const modeTrim: Readonly<Record<string, Readonly<{ glyph: string; sub: string }>>> = Object.freeze({
   campaign: { glyph: "▲", sub: "stage after stage, ever deeper" },
   endless: { glyph: "∞", sub: "biomes cycle — chase your best" },
-  gauntlet: { glyph: "☠", sub: "a full boss every 8 waves" },
+  gauntlet: { glyph: "☠", sub: "a trial for every boss" },
   playground: { glyph: "✦", sub: "open arena — test everything" },
   tutorial: { glyph: "➔", sub: "learn the blade" },
 });

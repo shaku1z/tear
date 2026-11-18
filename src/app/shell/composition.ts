@@ -515,6 +515,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       abilities: UPGRADES.filter((upgrade) => ["stormbank", "overrun", "sever"].includes(upgrade.id)).map(
         (upgrade) => upgrade.name,
       ),
+      // The achievement count the achievements screen shows, so a journey never hard-codes it.
+      achievementCount: () => ACH.list.length,
       input: Object.freeze({
         startRecording: () => {
           Input.startSemanticRecording();
