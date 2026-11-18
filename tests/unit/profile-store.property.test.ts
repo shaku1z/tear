@@ -2,8 +2,9 @@
  * The live profile store (`createProfileStore`), whatever its two storage
  * slots hold (the envelope and the legacy mirror):
  * - loading never throws;
- * - saving and loading again gives back the profile that was loaded, and
- *   leaves an envelope that is never overwritten when it was unreadable.
+ * - saving and loading again keeps every loaded field, and doing it a second
+ *   time changes nothing;
+ * - an envelope the store could not read is never overwritten.
  */
 import { describe, expect, it } from "vitest";
 
@@ -76,15 +77,22 @@ describe("profile store", () => {
     );
   });
 
-  it("saving then loading gives back the loaded profile", () => {
+  it("saving then loading keeps everything that was loaded, and a second time changes nothing", () => {
     checkProperty(
       fc.property(storage, (slots) => {
         const values = fill(slots);
         const first = openStore(values);
         // Compared as stored text: JSON writes -0 as 0.
-        const loaded = JSON.stringify(first.load());
+        const loaded = JSON.parse(JSON.stringify(first.load())) as Record<string, unknown>;
         first.save();
-        expect(JSON.stringify(openStore(values).load())).toBe(loaded);
+        const second = openStore(values);
+        const reloaded = JSON.parse(JSON.stringify(second.load())) as Record<string, unknown>;
+        // A reload may add a default the migration owns (the empty cosmetics ledger); it never drops or changes a field.
+        for (const [field, value] of Object.entries(loaded)) {
+          expect(JSON.stringify(reloaded[field]), field).toBe(JSON.stringify(value));
+        }
+        second.save();
+        expect(JSON.stringify(openStore(values).load())).toBe(JSON.stringify(reloaded));
       }),
     );
   });
