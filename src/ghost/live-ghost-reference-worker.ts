@@ -3,7 +3,11 @@ import { GhostCapsuleReader } from "./capsule-reader";
 import { createIndexedDbGhostVaultBackend } from "./indexeddb-vault-backend";
 import { prepareGhostCapsuleSourceGuards } from "./capsule-protection";
 import { prepareGhostLiveReference } from "./live-ghost-reference";
-import { ensureReplayEngine } from "./replay-engine";
+import * as replayEngineModule from "../tearbench/production-replay-composition";
+import { ensureReplayEngine, installReplayEngine } from "./replay-engine";
+
+// This bundle already contains the engine; no separate chunk is fetched.
+installReplayEngine(() => Promise.resolve(replayEngineModule));
 
 self.addEventListener("message", (event: MessageEvent<Readonly<{ id: string }>>) => {
   void (async () => {

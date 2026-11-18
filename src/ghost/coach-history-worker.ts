@@ -8,10 +8,16 @@ import {
   readGhostCoachHistorySource,
   type GhostCoachCandidate,
 } from "./coach-history";
+import * as replayEngineModule from "../tearbench/production-replay-composition";
+import { ensureReplayEngine, installReplayEngine } from "./replay-engine";
+
+// This bundle already contains the engine; no separate chunk is fetched.
+installReplayEngine(() => Promise.resolve(replayEngineModule));
 
 self.addEventListener("message", (event: MessageEvent<Readonly<{ sources: readonly GhostCoachCandidate[] }>>) => {
   void (async () => {
     try {
+      await ensureReplayEngine();
       const sources = event.data.sources;
       checkGhostCoachSelection(sources);
       const vault = new GhostLocalVault(await createIndexedDbGhostVaultBackend(self.indexedDB));

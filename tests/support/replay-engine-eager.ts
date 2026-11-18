@@ -4,6 +4,7 @@ import * as engine from "../../src/tearbench/production-replay-composition";
 import type { LazyStatus } from "../../src/platform/lazy-module";
 
 export type ReplayEngine = typeof engine;
+export const installReplayEngine = (): void => undefined;
 export const ensureReplayEngine = (): Promise<void> => Promise.resolve();
 export const replayEngine = (): ReplayEngine => engine;
 export const replayEngineStatus = (): LazyStatus => "ready";

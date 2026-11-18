@@ -5,7 +5,11 @@ import { GhostCareerStore } from "./career-archive-store";
 import { projectCareerEntry } from "./career-archive";
 import { verifyGhostCapsuleProductionReplay } from "./production-replay-verification";
 import { reopenRecordedGhostChallenge } from "./browser-recorded-challenge";
-import { ensureReplayEngine } from "./replay-engine";
+import * as replayEngineModule from "../tearbench/production-replay-composition";
+import { ensureReplayEngine, installReplayEngine } from "./replay-engine";
+
+// This bundle already contains the engine; no separate chunk is fetched.
+installReplayEngine(() => Promise.resolve(replayEngineModule));
 
 const host = globalThis as unknown as {
   onmessage: ((event: MessageEvent<{ id: number }>) => void) | null;
