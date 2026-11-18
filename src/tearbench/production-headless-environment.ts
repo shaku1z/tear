@@ -46,7 +46,7 @@ import {
   projectLivePlayerMechanics,
 } from "./live-observation-actors";
 import { createGameplayCausalEvent } from "./gameplay-causal-events";
-import { assertTearSimulationStepSeconds } from "./simulation-profile";
+import { assertTearSimulationStepSeconds, TEAR_SIMULATION_TICKS_PER_SECOND } from "./simulation-profile";
 
 type ProductionHeadlessCore = Readonly<{
   replay: ProductionReplayWorld;
@@ -198,10 +198,7 @@ export interface ProductionHeadlessEnvironment extends TearHeadlessEnvironment<
   policyUiObservation(): Readonly<{ screen: string; choices: readonly Readonly<{ id: string }>[]; focusedId?: string }>;
   /** The running world, for measurement that reads what the observation does not carry. Read only. */
   world(): ProductionReplayWorld["world"]["state"];
-  /**
-   * True while a cinematic (a boss phase change, a chapter page) holds the simulation. It runs on
-   * application frames, so the caller must advance them or the run stays held for ever.
-   */
+  /** True while a cinematic (a boss phase change, a chapter page) holds the simulation. */
   cinematicActive(): boolean;
   /** Build provenance remains available outside checkpointable lifecycle states. */
   sourceBuild(): ProductionReplayBootstrap["build"];
@@ -828,6 +825,9 @@ export function createProductionHeadlessEnvironment(
         if (policy === undefined)
           throw new TypeError("active intro requires its declared generated application-frame policy");
         current.advanceApplicationFrame(policy.secondsPerStep);
+      } else if (current.replay.world.context.cinema.active) {
+        // A cinematic (a boss phase change) holds the simulation and runs on application frames.
+        current.advanceApplicationFrame(1 / TEAR_SIMULATION_TICKS_PER_SECOND);
       }
       const envelopes: CommandEnvelope<GameAction>[] = normalizedActions.map((command) =>
         Object.freeze({ kind: "command" as const, id: ++nextCommandId, tick, command }),

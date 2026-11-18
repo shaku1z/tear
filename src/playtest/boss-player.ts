@@ -2,13 +2,11 @@ import { TearLiveHierarchicalPolicy } from "../agents/hierarchical-policy-adapte
 import type { TearAgentObservation } from "../agents/contracts";
 import type { BossTell } from "../gameplay/entities/boss-tells";
 import { INPUT_AXIS_SCALE, type GameAction } from "../input/game-action";
+import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { boxOverlaps, type BossView, type PlayerBox } from "./boss-view";
 
-/** The simulation runs 120 fixed steps a second; every timing below is in those steps. */
-export const PLAYTEST_TICKS_PER_SECOND = 120;
-
 /**
- * How the tell-avoiding player reacts. One place, in simulation ticks and world pixels, so a change
+ * How the tell-avoiding player reacts. One place, in simulation ticks (120 a second) and world pixels, so a change
  * here is a visible change to every table.
  */
 export const TELL_AVOIDANCE = Object.freeze({
@@ -36,7 +34,7 @@ export interface BossPlayer {
 }
 
 function ticksLeft(tell: BossTell): number {
-  return tell.stage === "active" ? 0 : tell.remainingSeconds * PLAYTEST_TICKS_PER_SECOND;
+  return tell.stage === "active" ? 0 : tell.remainingSeconds * TEAR_SIMULATION_TICKS_PER_SECOND;
 }
 
 function threatening(tell: BossTell): boolean {

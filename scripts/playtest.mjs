@@ -49,21 +49,31 @@ const server = await createServer({
 try {
   const report = await server.ssrLoadModule("/src/playtest/boss-report.ts");
   const started = performance.now();
-  const fights = report.playBossReport({
-    bosses: list(given.get("boss"), report.DEFAULT_REPORT_BOSSES),
-    difficulty: given.get("difficulty") ?? "normal",
-    weapons: list(given.get("weapon"), ["sword"]),
-    seeds: list(given.get("seed"), ["1"]),
-    players: list(given.get("player"), ["scripted", "avoids-tells"]),
-    maxTicks: Math.round(seconds * 120),
-  });
-  process.stdout.write(report.formatBossReport(fights));
-  process.stdout.write(
-    `\n${String(fights.length)} fights in ${((performance.now() - started) / 1000).toFixed(1)} s of real time.\n`,
-  );
-  const json = given.get("json");
-  if (json !== undefined) writeFileSync(path.resolve(json), `${JSON.stringify(fights, null, 2)}\n`);
-  if (fights.some((fight) => fight.end === "broken")) process.exitCode = 1;
+  let fights;
+  try {
+    fights = report.playBossReport({
+      bosses: list(given.get("boss"), report.DEFAULT_REPORT_BOSSES),
+      difficulty: given.get("difficulty") ?? "normal",
+      weapons: list(given.get("weapon"), ["sword"]),
+      seeds: list(given.get("seed"), ["1"]),
+      players: list(given.get("player"), ["scripted", "avoids-tells"]),
+      maxTicks: Math.round(seconds * 120),
+    });
+  } catch (error) {
+    // A mistyped boss, weapon or difficulty is refused before any fight; print the reason, not a stack.
+    if (!(error instanceof TypeError || error instanceof RangeError)) throw error;
+    process.stderr.write(`playtest: ${error.message}\n`);
+    process.exitCode = 1;
+  }
+  if (fights !== undefined) {
+    process.stdout.write(report.formatBossReport(fights));
+    process.stdout.write(
+      `\n${String(fights.length)} fights in ${((performance.now() - started) / 1000).toFixed(1)} s of real time.\n`,
+    );
+    const json = given.get("json");
+    if (json !== undefined) writeFileSync(path.resolve(json), `${JSON.stringify(fights, null, 2)}\n`);
+    if (fights.some((fight) => fight.end === "broken")) process.exitCode = 1;
+  }
 } finally {
   await server.close();
 }

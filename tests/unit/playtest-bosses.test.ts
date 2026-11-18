@@ -1,28 +1,50 @@
 import { describe, expect, it } from "vitest";
 import type { BossTell } from "../../src/gameplay/entities/boss-tells";
-import { attributeHit, BODY_HIT, playBossFight, UNMARKED_HIT } from "../../src/playtest/boss-fight";
+import type { TearAgentObservation } from "../../src/agents/contracts";
+import {
+  attributeHit,
+  BODY_HIT,
+  bossFightScenario,
+  playBossFight,
+  UNMARKED_HIT,
+  type BossFightRequest,
+} from "../../src/playtest/boss-fight";
 import { createTellAvoidingBossPlayer, TELL_AVOIDANCE } from "../../src/playtest/boss-player";
 import { formatBossReport, noTellTotals } from "../../src/playtest/boss-report";
 import { readBoss, type BossView, type PlayerBox } from "../../src/playtest/boss-view";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
+import { requireProductionHeadlessScenario } from "../../src/tearbench/production-headless-scenario";
 
-function bossOnly(boss: string | undefined, mode = "bossonly"): TearScenarioV1 {
-  return {
-    format: "tear-contract",
-    kind: "scenario",
-    schemaVersion: 1,
-    id: `playtest-test-${boss ?? "roster"}-${mode}`,
-    version: 1,
-    description: "playtest test",
-    stateClass: "recorded-canonical",
-    executionClass: "engineering",
+function bossOnly(boss: BossFightRequest["boss"]): TearScenarioV1 {
+  return bossFightScenario({
+    boss,
+    difficulty: "normal",
+    weapon: "sword",
     seed: "7",
-    start: { mode, difficulty: "normal", weapon: "sword", ...(boss === undefined ? {} : { boss }) },
+    player: "scripted",
     maxTicks: 600,
-    assertions: ["runtime.finite-state"],
-    tags: ["playtest"],
-  } as unknown as TearScenarioV1;
+  });
+}
+
+interface RawBoss {
+  readonly isBoss: true;
+  hp: number;
+  readonly maxHp: number;
+  readonly phase: number;
+  readonly updates: number;
+}
+
+function isRawBoss(value: unknown): value is RawBoss {
+  if (typeof value !== "object" || value === null) return false;
+  const actor = value as Record<string, unknown>;
+  return (
+    actor.isBoss === true &&
+    typeof actor.hp === "number" &&
+    typeof actor.maxHp === "number" &&
+    typeof actor.phase === "number" &&
+    typeof actor.updates === "number"
+  );
 }
 
 function tell(overrides: Partial<BossTell>): BossTell {
@@ -62,7 +84,7 @@ function boss(tells: readonly BossTell[]): BossView {
 const PLAYER: PlayerBox = { x: 520, y: 716, hw: 14, hh: 24 };
 
 describe("chosen boss in a headless boss-only run", () => {
-  it.each(["rootbound", "aldric", "white-hart"])("starts the fight with %s", (id) => {
+  it.each(["rootbound", "aldric", "white-hart"] as const)("starts the fight with %s", (id) => {
     const environment = createProductionHeadlessEnvironment();
     try {
       environment.reset(bossOnly(id));
@@ -77,10 +99,41 @@ describe("chosen boss in a headless boss-only run", () => {
     }
   });
 
-  it("still refuses a chosen boss outside boss-only mode", () => {
+  it("still refuses a chosen boss outside boss-only mode, and an unknown id, by name", () => {
+    const raw = { ...bossOnly("rootbound"), start: { mode: "endless", difficulty: "normal", weapon: "sword" } };
+    expect(() => requireProductionHeadlessScenario({ ...raw, start: { ...raw.start, boss: "rootbound" } })).toThrow(
+      "natural boss selection requires bossonly mode",
+    );
+    expect(() =>
+      requireProductionHeadlessScenario({
+        ...bossOnly("rootbound"),
+        start: { ...raw.start, mode: "bossonly", boss: "nobody" },
+      }),
+    ).toThrow("start.boss is not a registered current-game boss");
+  });
+
+  it("passes through a boss phase change: the cinematic that holds the simulation ends and the boss goes on", () => {
     const environment = createProductionHeadlessEnvironment();
     try {
-      expect(() => environment.reset(bossOnly("rootbound", "endless"))).toThrow();
+      environment.reset({ ...bossOnly("rootbound"), maxTicks: 6000 });
+      const boss = (): RawBoss | undefined => environment.world().enemies().find(isRawBoss);
+      for (let tick = 0; tick < 600; tick += 1) environment.step([]);
+      const actor = boss();
+      expect(actor?.phase).toBe(1);
+      if (actor === undefined) return;
+      // Test-only: bring the boss to its Phase II threshold without playing the whole of Phase I.
+      actor.hp = actor.maxHp * 0.5;
+      let held = 0;
+      for (let tick = 0; tick < 1800 && (held === 0 || environment.cinematicActive()); tick += 1) {
+        environment.step([]);
+        if (environment.cinematicActive()) held += 1;
+      }
+      expect(held).toBeGreaterThan(0);
+      expect(environment.cinematicActive()).toBe(false);
+      expect(boss()?.phase).toBe(2);
+      const updates = boss()?.updates ?? 0;
+      for (let tick = 0; tick < 60; tick += 1) environment.step([]);
+      expect(boss()?.updates).toBeGreaterThan(updates);
     } finally {
       environment.dispose();
     }
@@ -160,19 +213,19 @@ describe("boss fight measurement", () => {
 });
 
 describe("the player that avoids tells", () => {
-  const observation = (x: number) =>
-    ({
-      state: {
-        tick: 1,
-        observationClass: "structured-state",
-        player: { x, y: 716, vx: 0, vy: 0, hp: 100, maxHp: 100, facing: 1, grounded: true, dashCharges: 1 },
-        blade: { handX: x, handY: 700, tipX: x + 40, tipY: 700, vx: 0, vy: 0, tipSpeed: 0, state: "held" },
-        entities: [],
-        run: { mode: "bossonly", difficulty: "normal", weapon: "sword", stage: "verdant", wave: 1, score: 0 },
-        availableActions: ["move"],
-      },
-      ui: { screen: "playing", choices: [] },
-    }) as never;
+  const observation = (x: number): TearAgentObservation => {
+    const environment = createProductionHeadlessEnvironment();
+    try {
+      environment.reset(bossOnly("rootbound"));
+      const state = environment.policyObservation();
+      return {
+        state: { ...state, player: { ...state.player, x, y: 716, grounded: true, dashCharges: 1 } },
+        ui: { screen: "playing", choices: [] },
+      };
+    } finally {
+      environment.dispose();
+    }
+  };
 
   it("leaves a warned area by the nearer edge once it is about to land, and dashes when it is late", () => {
     const player = createTellAvoidingBossPlayer();

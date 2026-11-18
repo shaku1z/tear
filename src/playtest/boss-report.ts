@@ -1,5 +1,6 @@
 import { TELL_AVOIDANCE, type BossPlayerId } from "./boss-player";
 import {
+  bossFightScenario,
   playBossFight,
   secondsOf,
   BODY_HIT,
@@ -10,16 +11,20 @@ import {
 } from "./boss-fight";
 
 export interface BossReportRequest {
-  readonly bosses: readonly string[];
-  readonly difficulty: string;
-  readonly weapons: readonly string[];
+  readonly bosses: readonly BossFightRequest["boss"][];
+  readonly difficulty: BossFightRequest["difficulty"];
+  readonly weapons: readonly BossFightRequest["weapon"][];
   readonly seeds: readonly string[];
   readonly players: readonly BossPlayerId[];
   readonly maxTicks: number;
 }
 
 /** The bosses reported when none is named: the ones the current work is about. */
-export const DEFAULT_REPORT_BOSSES = Object.freeze(["rootbound", "aldric", "white-hart"]);
+export const DEFAULT_REPORT_BOSSES: readonly BossFightRequest["boss"][] = Object.freeze([
+  "rootbound",
+  "aldric",
+  "white-hart",
+]);
 
 const ROMAN = ["", "I", "II", "III"];
 
@@ -41,7 +46,10 @@ export function bossFightRequests(request: BossReportRequest): readonly BossFigh
 }
 
 export function playBossReport(request: BossReportRequest): readonly BossFightResult[] {
-  return bossFightRequests(request).map(playBossFight);
+  const requests = bossFightRequests(request);
+  // Every fight is admitted before the first is played, so a mistyped id costs no playing time.
+  for (const fight of requests) bossFightScenario(fight);
+  return requests.map(playBossFight);
 }
 
 function table(rows: readonly (readonly string[])[]): string {

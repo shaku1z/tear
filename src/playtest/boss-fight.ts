@@ -1,13 +1,18 @@
 import { buildWatchChoiceScore } from "../agents/watch-build-choice";
-import type { TearScenarioV1 } from "../tearbench/contracts";
+import type { BossId } from "../gameplay/run/content-director";
+import type { RunDifficulty } from "../gameplay/run/session";
+import type { WeaponId } from "../gameplay/weapon-selection";
+import { TEAR_CONTRACT_FORMAT, TEAR_CONTRACT_VERSION, type TearScenarioV1 } from "../tearbench/contracts";
+import { requireProductionHeadlessScenario } from "../tearbench/production-headless-scenario";
+import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { createProductionHeadlessEnvironment } from "../tearbench/production-headless-environment";
-import { createBossPlayer, PLAYTEST_TICKS_PER_SECOND, type BossPlayerId } from "./boss-player";
+import { createBossPlayer, type BossPlayerId } from "./boss-player";
 import { boxOverlaps, readBoss, readPlayerBox, type BossView, type PlayerBox } from "./boss-view";
 
 export interface BossFightRequest {
-  readonly boss: string;
-  readonly difficulty: string;
-  readonly weapon: string;
+  readonly boss: BossId;
+  readonly difficulty: RunDifficulty;
+  readonly weapon: WeaponId;
   readonly seed: string;
   readonly player: BossPlayerId;
   /** The fight is stopped and reported as a time limit after this many simulation ticks. */
@@ -68,11 +73,15 @@ interface MutablePhase {
   hitsBy: Record<string, { hits: number; damage: number }>;
 }
 
-function scenario(request: BossFightRequest): TearScenarioV1 {
-  return {
-    format: "tear-contract",
+/**
+ * The scenario for a fight, admitted by the headless environment's own check. An unknown boss, weapon or
+ * difficulty is refused here, by name, before any fight starts.
+ */
+export function bossFightScenario(request: BossFightRequest): TearScenarioV1 {
+  return requireProductionHeadlessScenario({
+    format: TEAR_CONTRACT_FORMAT,
     kind: "scenario",
-    schemaVersion: 1,
+    schemaVersion: TEAR_CONTRACT_VERSION,
     id: `playtest-boss-${request.boss}-${request.difficulty}-${request.weapon}-${request.seed}`,
     version: 1,
     description: "Playtest boss fight",
@@ -83,7 +92,7 @@ function scenario(request: BossFightRequest): TearScenarioV1 {
     maxTicks: request.maxTicks,
     assertions: ["runtime.finite-state"],
     tags: ["playtest"],
-  } as unknown as TearScenarioV1;
+  });
 }
 
 /** The move a loss of health is attributed to, from the tells seen just before and just after the step. */
@@ -103,7 +112,7 @@ export function attributeHit(player: PlayerBox, before: BossView | null, after: 
 export function playBossFight(request: BossFightRequest): BossFightResult {
   const environment = createProductionHeadlessEnvironment();
   try {
-    environment.reset(scenario(request));
+    environment.reset(bossFightScenario(request));
     const player = createBossPlayer(request.player);
     const phases: MutablePhase[] = [];
     const phaseRow = (phase: number): MutablePhase => {
@@ -136,7 +145,7 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
         ...rawUi,
         choices: rawUi.choices.map((choice) => ({
           ...choice,
-          score: buildWatchChoiceScore(choice.id, request.weapon as never),
+          score: buildWatchChoiceScore(choice.id, request.weapon),
         })),
       };
       const before = readBoss(environment.world());
@@ -147,12 +156,7 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
       }
       const box = readPlayerBox(environment.world());
       const hpBefore = state.player.hp;
-      // A phase change plays a cinematic that holds the simulation and runs on application frames.
-      // Live play always has them; a headless run must supply them or the fight never resumes.
-      if (environment.cinematicActive()) {
-        environment.advanceApplicationFrame(1 / PLAYTEST_TICKS_PER_SECOND);
-        cinematicTicks += 1;
-      }
+      if (environment.cinematicActive()) cinematicTicks += 1;
       const step = environment.step(player.decide({ state, ui }, before, box));
       ticks += 1;
       const after = readBoss(environment.world());
@@ -205,4 +209,4 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
   }
 }
 
-export const secondsOf = (ticks: number): number => ticks / PLAYTEST_TICKS_PER_SECOND;
+export const secondsOf = (ticks: number): number => ticks / TEAR_SIMULATION_TICKS_PER_SECOND;
