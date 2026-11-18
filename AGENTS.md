@@ -8,6 +8,11 @@ rules briefly and never relaxes them; where it disagrees with them, they win.
 
 Read [README.md](README.md) first for the commands and the map of `src/`.
 
+**Binding for every change:** [docs/ENGINEERING_STANDARD.md](docs/ENGINEERING_STANDARD.md), the owner's
+engineering standard (build for the next instance, one source of truth, no one-off fixes, measured, no
+slop). Every plan and pull request answers its design check; a pull request that does not meet it is not
+merged.
+
 ## Repository map
 
 - Game code is in `src/`. Dependencies point inward: entrypoints, then app,
@@ -16,9 +21,9 @@ Read [README.md](README.md) first for the commands and the map of `src/`.
   `pnpm check:architecture` enforces it: rules over module roles
   (`config/architecture-roles.json`), allowed directory edges
   (`config/architecture-layers.json`), a ratcheted allowlist of today's
-  violating edges and import cycles (`config/architecture-baseline.json`) and a
-  700-line limit per module (two data tables are exempt), counted in
-  formatting-independent line equivalents (the code budget's character measure).
+  violating edges and import cycles (`config/architecture-baseline.json`) and the
+  module size rule, which counts characters, not lines, and is stated once in
+  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#code-budget-and-refactor-safety-nets).
 - `src/agents/` (the scripted test player) and `src/tearbench/` (TearBench, the
   verification system) are tooling, not game features. `src/ghost/` mixes the
   player's replay system with unfinished replay features.

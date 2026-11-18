@@ -15,6 +15,7 @@ import {
   bossAttackHit,
   bossAttackMotion,
   bossAttackParryable,
+  bossAttackStatus,
   bossAttackTells,
   bossHitTouches,
   chooseBossAttack,
@@ -427,5 +428,78 @@ describe("boss attack runner", () => {
     // A second cut while open never shortens the opening.
     expect(exposeBossAttack(table, open, 40, 10).exposed?.until).toBe(150);
     expect(() => exposeBossAttack(table, open, 40, 0)).toThrow(RangeError);
+  });
+});
+
+describe("the runner owns the pause after a move and the body's flags", () => {
+  const table = buildBossAttackTable(
+    definition([
+      move("burrow", {
+        timing: { tell: 0.5, active: 0.25, recover: 0.25, punish: 0.25 },
+        motion: { kind: "burrow", stage: "active" },
+      }),
+      // Never in range: the table needs two moves, the test plays one.
+      move("never", { choose: { range: [5000, 6000], weight: 1, cooldown: 0 } }),
+    ]),
+  );
+  const at = (tick: number, gapMultiplier?: number) =>
+    context(tick, gapMultiplier === undefined ? {} : { gapMultiplier });
+  /** Runs one whole move from tick 0 and returns the state on the tick it finished. */
+  const finishOne = (gapMultiplier?: number) => {
+    let state = createBossAttackRunnerState(0);
+    for (let tick = 0; tick < 1000; tick += 1) {
+      const result = advanceBossAttack(table, state, at(tick, gapMultiplier));
+      state = result.state;
+      if (result.events.some((event) => event.type === "finished")) return { state, tick };
+    }
+    throw new Error("the move never finished");
+  };
+
+  it("scales the pause after a move by the context's gap multiplier, and by nothing when there is none", () => {
+    const plain = finishOne();
+    expect(plain.state.readyTick - plain.tick).toBe(table.gap);
+    const hastened = finishOne(0.6);
+    expect(hastened.state.readyTick - hastened.tick).toBe(Math.round(table.gap * 0.6));
+    expect(() => finishOne(Number.NaN)).toThrow(RangeError);
+    expect(() => finishOne(-1)).toThrow(RangeError);
+  });
+
+  it("reports the body's flags from the state alone, so a move ended early leaves none behind", () => {
+    let state = createBossAttackRunnerState(0);
+    expect(bossAttackStatus(table, state, at(0))).toEqual({
+      label: null,
+      exposed: false,
+      carries: false,
+      hidden: false,
+      parryable: false,
+    });
+    let tick = 0;
+    for (; state.run?.stage !== "active"; tick += 1) state = advanceBossAttack(table, state, at(tick)).state;
+    // Burrowed in its active stage: carried by the move, out of sight, and the strike can be parried.
+    expect(bossAttackStatus(table, state, at(tick))).toEqual({
+      label: "burrow:active",
+      exposed: false,
+      carries: true,
+      hidden: true,
+      parryable: true,
+    });
+    // A forced exposure in the middle of the burrow: nothing of the burrow is left on the body.
+    const cut = exposeBossAttack(table, state, tick, 30);
+    expect(bossAttackStatus(table, cut, at(tick))).toEqual({
+      label: null,
+      exposed: true,
+      carries: false,
+      hidden: false,
+      parryable: false,
+    });
+    // A parry in the middle of it: the body is out and open, no longer carried or hidden.
+    const parried = parryBossAttack(table, state, tick);
+    expect(bossAttackStatus(table, parried, at(tick))).toEqual({
+      label: "burrow:punish",
+      exposed: true,
+      carries: false,
+      hidden: false,
+      parryable: false,
+    });
   });
 });

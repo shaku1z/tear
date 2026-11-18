@@ -5,6 +5,5 @@
     "types": ["node", "vitest/globals"],
     "tsBuildInfoFile": "./artifacts/build-cache/typescript/test.tsbuildinfo"
   },
-  "include": ["tests/**/*.ts"],
-  "exclude": ["tests/unit/ghost-publication-worker-auth.test.ts"]
+  "include": ["tests/**/*.ts"]
 }

@@ -70,7 +70,6 @@ export default tseslint.config(
       "node_modules*/**",
       "vendor/**",
       "tear-crazygames/**",
-      "workers/worker-configuration.d.ts",
       // Hand-written types for the .mjs tools beside them (config/tool-catalogue.json lists each
       // under "declarations"); the TypeScript projects that import them check them.
       "scripts/**/*.d.mts",
@@ -80,14 +79,7 @@ export default tseslint.config(
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {
-    files: [
-      "src/**/*.ts",
-      "tests/**/*.ts",
-      "workers/**/*.ts",
-      "vite.config.ts",
-      "vitest.config.ts",
-      "vitest.endurance.config.ts",
-    ],
+    files: ["src/**/*.ts", "tests/**/*.ts", "vite.config.ts", "vitest.config.ts", "vitest.endurance.config.ts"],
     languageOptions: {
       parserOptions: {
         projectService: true,
