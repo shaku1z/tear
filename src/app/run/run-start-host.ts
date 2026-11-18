@@ -53,6 +53,8 @@ interface CampaignPort {
 interface PlaygroundPort {
   readonly state: Readonly<{ hpMultiplier?: number; count?: number; god?: boolean; freeze?: boolean; slow?: boolean }>;
   reset(): void;
+  /** Shows the Playground's first real arena (the Playground has no training ground). */
+  enterArena(): void;
 }
 
 interface TutorialPort {
@@ -499,7 +501,7 @@ export function createLiveRunStartHost(
         run.bossOrder = context.shuffledRoster();
         run.bossIdx = 0;
         run.pg = context.playground.state;
-        run.pgArena = -1;
+        context.playground.enterArena();
       } else context.tutorial.start();
     },
     enterPlayingState: (sessionId) => {

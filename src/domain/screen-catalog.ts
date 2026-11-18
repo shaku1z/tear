@@ -97,7 +97,9 @@ const CATALOG = {
     frame: "world",
     density: "compact",
     confirmArming: true,
-    transitions: ["playing", "settings", "confirmquit", "rename"],
+    // A paused Playground opens its menu on the tab left open (ABILITIES is screen pglab):
+    // the route for touch and controller players.
+    transitions: ["playing", "pgmenu", "pglab", "settings", "confirmquit", "rename"],
   },
   draft: {
     channel: "release",
