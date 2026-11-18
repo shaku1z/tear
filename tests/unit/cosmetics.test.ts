@@ -23,7 +23,7 @@ import {
   purchaseCosmetic,
   shardBalance,
 } from "../../src/domain/cosmetics";
-import { conditionMet, conditionProblems, type ProgressFacts } from "../../src/domain/unlock-condition";
+import type { ProgressFacts } from "../../src/domain/unlock-condition";
 import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import { COSMETIC_BACKDROPS, COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 import { AUTHORED_STAGES } from "../../src/gameplay/stages";
@@ -176,25 +176,6 @@ describe("readability rules", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 0);
     expect(Object.keys(COSMETIC_BACKDROPS)).toEqual(AUTHORED_STAGES.map((stage) => stage.id));
     for (const stage of AUTHORED_STAGES) expect(COSMETIC_BACKDROPS[stage.id]).toBe(stage.bg);
-  });
-});
-
-describe("unlock conditions", () => {
-  it("validate and evaluate in the language music and achievements already use", () => {
-    expect(conditionProblems({ type: "boss-defeat", bossId: "rootbound" }, "x")).toEqual([]);
-    expect(conditionProblems({ type: "default" }, "x")).toEqual([]);
-    expect(conditionProblems({ type: "stat-threshold", stat: "kills", goal: 0 }, "x")).not.toEqual([]);
-    expect(conditionProblems({ type: "nope" }, "x")).not.toEqual([]);
-    expect(conditionProblems({ type: "all", of: [] }, "x")).not.toEqual([]);
-    const all = {
-      type: "all",
-      of: [
-        { type: "boss-defeat", bossId: "rootbound" },
-        { type: "stat-threshold", stat: "kills", goal: 5 },
-      ],
-    } as const;
-    expect(conditionMet(all, rootbound)).toBe(false);
-    expect(conditionMet(all, facts({ bossDefeated: () => true, stat: () => 5 }))).toBe(true);
   });
 });
 

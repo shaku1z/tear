@@ -3,10 +3,20 @@ import type { MusicCatalog } from "../../src/audio/music/catalog";
 import { resolveMusicRoute } from "../../src/audio/music/music-routing-resolver";
 import type { MusicRoutingContext } from "../../src/audio/music/music-routing-types";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
-import { admittedMusicProgress, musicRunProgress } from "../../src/audio/music/run-progress";
+import { admittedMusicProgress } from "../../src/audio/music/run-progress";
+import { snapshotProgress, type ProgressSource } from "../../src/domain/progress-facts";
 import { musicProgressRouting } from "../../src/audio/stems/biome-stem-backend";
 
 const VERDANT = "The Verdant Sanctum";
+
+/** Saved progress that reached these biomes and defeated these bosses (given as `kill<Name>` stat suffixes). */
+const saved = (biomes: readonly string[], bosses: readonly string[] = []): ProgressSource => ({
+  stats: {
+    _biomes: Object.fromEntries(biomes.map((name) => [name, 1])),
+    ...Object.fromEntries(bosses.map((name) => [`kill${name}`, 1])),
+  },
+  ach: {},
+});
 
 // The routing tear-music publishes for the Verdant Sanctum (shaku1z/tear-music#19).
 const routing = (rejoin: boolean) =>
@@ -96,26 +106,49 @@ describe("a first-run route plays only on the player's first run that reaches it
 });
 
 describe("saved progress at run start decides first runs and unlocks", () => {
-  it("reads biomes reached and bosses defeated from profile stats", () => {
-    const progress = musicRunProgress(
-      { _biomes: { "The Grounds": 1, [VERDANT]: 1 }, killRootbound: 1, killEcho: 0, kills: 90, kill_bomber: 4 },
-      (id) => id === "rootbound" || id === "echo",
-    );
-    expect(progress).toEqual({ biomesReached: ["The Grounds", VERDANT], bossesDefeated: ["rootbound"] });
+  it("snapshots the biomes reached and bosses defeated, and later play does not change it", () => {
+    const stats: Record<string, unknown> = { _biomes: { "The Grounds": 1 }, killRootbound: 1, kills: 90 };
+    const snapshot = snapshotProgress({ stats, ach: { first_boss: 123 } });
+    stats.killEcho = 1;
+    (stats._biomes as Record<string, number>)[VERDANT] = 1;
+    expect(snapshot).toEqual({
+      stats: { _biomes: { "The Grounds": 1 }, killRootbound: 1, kills: 90 },
+      ach: { first_boss: 1 },
+    });
   });
 
   it("makes a biome no earlier run reached a first run", () => {
-    const fresh = { biomesReached: ["The Grounds"], bossesDefeated: [] };
+    const fresh = saved(["The Grounds"]);
     expect(musicProgressRouting(fresh, catalog, VERDANT).firstRun).toBe(true);
     expect(musicProgressRouting(fresh, catalog, "The Grounds").firstRun).toBe(false);
   });
 
   it("unlocks Spring by defeating Rootbound", () => {
-    const before = musicProgressRouting({ biomesReached: [VERDANT], bossesDefeated: [] }, catalog, VERDANT);
-    const after = musicProgressRouting({ biomesReached: [VERDANT], bossesDefeated: ["rootbound"] }, catalog, VERDANT);
+    const before = musicProgressRouting(saved([VERDANT]), catalog, VERDANT);
+    const after = musicProgressRouting(saved([VERDANT], ["Rootbound"]), catalog, VERDANT);
     expect(before.isUnlocked("spring")).toBe(false);
     expect(after.isUnlocked("spring")).toBe(true);
     expect(after.isUnlocked("once-at-a-time")).toBe(true);
+  });
+
+  it("reads any condition of the shared language, and keeps a work it cannot read locked", () => {
+    const withUnlocks = {
+      works: [
+        { id: "grinder", unlock: { type: "stat-threshold", stat: "kills", goal: 10 } },
+        { id: "both", unlock: { type: "all", of: [{ type: "default" }, { type: "achievement", id: "first_boss" }] } },
+        { id: "mystery", unlock: { type: "moon-phase" } },
+        { id: "broken", unlock: { type: "boss-defeat" } },
+        { id: "missing" },
+      ],
+    } as unknown as MusicCatalog;
+    const routing = (stats: Record<string, unknown>, ach: Record<string, unknown> = {}) =>
+      musicProgressRouting({ stats, ach }, withUnlocks, VERDANT);
+    expect(routing({ kills: 9 }).isUnlocked("grinder")).toBe(false);
+    expect(routing({ kills: 10 }).isUnlocked("grinder")).toBe(true);
+    expect(routing({}).isUnlocked("both")).toBe(false);
+    expect(routing({}, { first_boss: 1 }).isUnlocked("both")).toBe(true);
+    for (const id of ["mystery", "broken", "missing", "not-a-work"])
+      expect(routing({ kills: 99 }).isUnlocked(id), id).toBe(false);
   });
 
   it("gives no first run and no unlocks without progress (seed races, practice, menus)", () => {
@@ -150,7 +183,7 @@ describe("a route this build cannot read never wins", () => {
 });
 
 describe("saved progress reaches the music only in runs that record it", () => {
-  const progress = { biomesReached: ["The Grounds"], bossesDefeated: [] };
+  const progress = saved(["The Grounds"]);
   const run = { tracksProgress: true, seedRace: false, practice: false };
   it("passes progress in an ordinary run", () => {
     expect(admittedMusicProgress(progress, run)).toBe(progress);
