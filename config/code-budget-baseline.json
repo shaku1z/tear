@@ -3,7 +3,7 @@
   "note": "Debt recorded by `node scripts/check-code-budget.mjs --update`. Values may only fall; see docs/ARCHITECTURE.md.",
   "files": {
     "src/agents/live-watch-agent-host.ts": {
-      "largestFunctionStatements": 100
+      "largestFunctionStatements": 94
     },
     "src/agents/live-watch-agent-panel.ts": {
       "maxLineLength": 171
@@ -75,9 +75,6 @@
     "src/gameplay/voidgen-inspection.ts": {
       "largestFunctionStatements": 111
     },
-    "src/ghost/publication-transport.ts": {
-      "largestFunctionStatements": 100
-    },
     "src/ghost/replay-admission.ts": {
       "chars": 26832
     },
@@ -104,7 +101,7 @@
       "largestFunctionStatements": 81
     },
     "src/presentation/enemies/renderers/rootbound-renderer.ts": {
-      "largestFunctionStatements": 127
+      "largestFunctionStatements": 108
     },
     "src/presentation/enemies/renderers/source-renderer.ts": {
       "largestFunctionStatements": 165
@@ -122,19 +119,16 @@
       "largestFunctionStatements": 202
     },
     "src/presentation/entities/projectile-renderer.ts": {
-      "largestFunctionStatements": 488
+      "largestFunctionStatements": 471
     },
     "src/presentation/environment/verdant-environment-presentation.ts": {
-      "largestFunctionStatements": 164
+      "largestFunctionStatements": 120
     },
     "src/presentation/particles.ts": {
       "largestFunctionStatements": 139
     },
     "src/presentation/platform-materials/verdant-rootstone.ts": {
       "largestFunctionStatements": 129
-    },
-    "src/presentation/screens/career-archive.ts": {
-      "maxLineLength": 175
     },
     "src/presentation/screens/leaderboards-replays.ts": {
       "maxLineLength": 229
@@ -167,10 +161,10 @@
       "chars": 30134
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 31998
+      "chars": 31411
     },
     "src/tearbench/production-replay-composition.ts": {
-      "chars": 35031
+      "chars": 34925
     },
     "src/tearbench/tutorial-course-driver.ts": {
       "largestFunctionStatements": 209
