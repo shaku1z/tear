@@ -1,0 +1,302 @@
+[
+  {
+    "id": "blade",
+    "label": "BLADE",
+    "group": "combat",
+    "family": "tint",
+    "hook": "ready",
+    "default": {
+      "base": "#2c3340",
+      "glow": "#13c4d6",
+      "accent": "#13c4d6"
+    }
+  },
+  {
+    "id": "trail",
+    "label": "SWING TRAIL",
+    "group": "combat",
+    "family": "ribbon",
+    "hook": "ready",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "widthScale": 1,
+      "glow": 0.4,
+      "fade": "linear"
+    }
+  },
+  {
+    "id": "tether",
+    "label": "TETHER",
+    "group": "combat",
+    "family": "ribbon",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "widthScale": 1,
+      "glow": 0.4,
+      "fade": "linear"
+    }
+  },
+  {
+    "id": "dash",
+    "label": "DASH AFTERIMAGE",
+    "group": "combat",
+    "family": "afterimage",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "copies": 3,
+      "fade": "linear"
+    }
+  },
+  {
+    "id": "parry",
+    "label": "PARRY FLASH",
+    "group": "combat",
+    "family": "ring",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "radiusScale": 1,
+      "thickness": 1,
+      "pulseRate": 0
+    }
+  },
+  {
+    "id": "slam",
+    "label": "SLAM SHOCKWAVE",
+    "group": "combat",
+    "family": "ring",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "radiusScale": 1,
+      "thickness": 1,
+      "pulseRate": 0
+    }
+  },
+  {
+    "id": "updraft",
+    "label": "UPDRAFT",
+    "group": "combat",
+    "family": "ring",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "radiusScale": 1,
+      "thickness": 1,
+      "pulseRate": 0
+    }
+  },
+  {
+    "id": "throw",
+    "label": "THROW TRAIL",
+    "group": "combat",
+    "family": "ribbon",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "widthScale": 1,
+      "glow": 0.4,
+      "fade": "linear"
+    }
+  },
+  {
+    "id": "recall",
+    "label": "RECALL TRAIL",
+    "group": "combat",
+    "family": "ribbon",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "widthScale": 1,
+      "glow": 0.4,
+      "fade": "linear"
+    }
+  },
+  {
+    "id": "spark",
+    "label": "HIT SPARK",
+    "group": "combat",
+    "family": "burst",
+    "hook": "ready",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "countScale": 1,
+      "shape": "line"
+    }
+  },
+  {
+    "id": "kill",
+    "label": "KILL EFFECT",
+    "group": "combat",
+    "family": "burst",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "countScale": 1,
+      "shape": "line"
+    }
+  },
+  {
+    "id": "aura",
+    "label": "STYLE AURA",
+    "group": "combat",
+    "family": "aura",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "intensity": 0.3,
+      "pulseRate": 0
+    }
+  },
+  {
+    "id": "revive",
+    "label": "REVIVE",
+    "group": "combat",
+    "family": "ring",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#13c4d6"
+      ],
+      "radiusScale": 1,
+      "thickness": 1,
+      "pulseRate": 0
+    }
+  },
+  {
+    "id": "hud",
+    "label": "HUD THEME",
+    "group": "interface",
+    "family": "tint",
+    "hook": "not yet",
+    "default": {
+      "base": "#2c3340",
+      "glow": "#13c4d6",
+      "accent": "#13c4d6"
+    }
+  },
+  {
+    "id": "numbers",
+    "label": "DAMAGE NUMBERS",
+    "group": "interface",
+    "family": "tint",
+    "hook": "not yet",
+    "default": {
+      "base": "#2c3340",
+      "glow": "#13c4d6",
+      "accent": "#13c4d6"
+    }
+  },
+  {
+    "id": "title",
+    "label": "TITLE",
+    "group": "profile",
+    "family": "text",
+    "hook": "ready",
+    "default": {
+      "text": "BLADE"
+    }
+  },
+  {
+    "id": "banner",
+    "label": "BANNER",
+    "group": "profile",
+    "family": "banner",
+    "hook": "ready",
+    "default": {
+      "colors": [
+        "#2c3340",
+        "#13c4d6"
+      ],
+      "pattern": "flat"
+    }
+  },
+  {
+    "id": "frame",
+    "label": "PROFILE FRAME",
+    "group": "profile",
+    "family": "banner",
+    "hook": "not yet",
+    "default": {
+      "colors": [
+        "#2c3340",
+        "#13c4d6"
+      ],
+      "pattern": "flat"
+    }
+  },
+  {
+    "id": "emblem",
+    "label": "EMBLEM",
+    "group": "profile",
+    "family": "text",
+    "hook": "not yet",
+    "default": {
+      "text": "\u25c6"
+    }
+  },
+  {
+    "id": "menu_track",
+    "label": "MENU TRACK",
+    "group": "music",
+    "family": "audio-choice",
+    "hook": "not yet",
+    "default": {
+      "choice": "default"
+    }
+  },
+  {
+    "id": "stage_track",
+    "label": "STAGE TRACK",
+    "group": "music",
+    "family": "audio-choice",
+    "hook": "not yet",
+    "default": {
+      "choice": "default"
+    }
+  },
+  {
+    "id": "stinger",
+    "label": "STINGER SET",
+    "group": "music",
+    "family": "audio-choice",
+    "hook": "not yet",
+    "default": {
+      "choice": "default"
+    }
+  },
+  {
+    "id": "mix_preset",
+    "label": "MIX PRESET",
+    "group": "music",
+    "family": "audio-choice",
+    "hook": "not yet",
+    "default": {
+      "choice": "default"
+    }
+  }
+]
