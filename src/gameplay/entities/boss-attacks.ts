@@ -65,7 +65,11 @@ export interface BossAttackDefinition<Phase extends string | number, Place = nev
     cooldown: number;
   }>;
   readonly motion?: BossMotion;
-  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean }>;
+  /**
+   * `every`: the strike repeats each `every` seconds of the active stage (a channel that keeps attacking); a
+   * travelling shape starts again from the boss each time. Without it the move strikes once.
+   */
+  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean; every?: number }>;
   readonly tell: Readonly<{ mark: BossTellMark }>;
   readonly places?: readonly Readonly<{ at: "tell" | "active"; object: Place }>[];
 }
@@ -97,7 +101,8 @@ export interface BossAttack<Phase extends string | number, Place = never> {
     cooldown: number;
   }>;
   readonly motion?: BossMotion;
-  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean }>;
+  /** `every` in ticks, 0 for a single strike. */
+  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean; every: number }>;
   readonly tell: Readonly<{ mark: BossTellMark }>;
   readonly places: readonly Readonly<{ at: "tell" | "active"; object: Place }>[];
 }
@@ -144,6 +149,19 @@ function checkChoice(table: string, attack: BossAttackDefinition<string | number
   if (!(attack.choose.weight > 0)) fail(table, `${attack.id} needs a positive weight`);
 }
 
+function buildHit(
+  table: string,
+  attack: BossAttackDefinition<string | number, unknown>,
+  active: number,
+): BossAttack<string>["hit"] {
+  const hit = attack.hit;
+  if (hit === undefined) return undefined;
+  const every = hit.every === undefined ? 0 : bossAttackSecondsToTicks(hit.every);
+  if (hit.every !== undefined && (every < 1 || every >= active))
+    fail(table, `${attack.id} repeats its strike less than once a tick or not within its active window`);
+  return Object.freeze({ ...hit, shape: buildShape(hit.shape), every });
+}
+
 function buildAttack<Phase extends string | number, Place>(
   table: BossAttackTableDefinition<Phase, Place>,
   attack: BossAttackDefinition<Phase, Place>,
@@ -151,13 +169,15 @@ function buildAttack<Phase extends string | number, Place>(
   checkChoice(table.bossId, attack);
   for (const phase of attack.phases)
     if (!table.phases.includes(phase)) fail(table.bossId, `${attack.id} names unknown phase ${String(phase)}`);
+  const timing = buildTiming(table.bossId, attack);
+  const hit = buildHit(table.bossId, attack, timing.active);
   return Object.freeze({
     id: attack.id,
     phases: Object.freeze([...attack.phases]),
-    timing: buildTiming(table.bossId, attack),
+    timing,
     choose: Object.freeze({ ...attack.choose, cooldown: bossAttackSecondsToTicks(attack.choose.cooldown) }),
     ...(attack.motion === undefined ? {} : { motion: Object.freeze({ ...attack.motion }) }),
-    ...(attack.hit === undefined ? {} : { hit: Object.freeze({ ...attack.hit, shape: buildShape(attack.hit.shape) }) }),
+    ...(hit === undefined ? {} : { hit }),
     tell: Object.freeze({ ...attack.tell }),
     places: Object.freeze((attack.places ?? []).map((entry) => Object.freeze({ ...entry }))),
   });

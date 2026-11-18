@@ -36,6 +36,8 @@ const MOVE_WIND_UP_CALL: Readonly<Record<string, string>> = {
   "plant-graft": "ellipse",
   "root-cage": "ellipse",
   "bloom-shift": "arc",
+  regrowth: "ellipse",
+  "last-spring": "closePath",
 };
 const ALL_MOVES = [
   "vine-lash",
@@ -46,6 +48,8 @@ const ALL_MOVES = [
   "plant-graft",
   "root-cage",
   "bloom-shift",
+  "regrowth",
+  "last-spring",
 ];
 
 function recordingCanvas(calls: string[]): CanvasRenderingContext2D {

@@ -213,7 +213,14 @@ export function advanceBossAttack<Phase extends string | number, Place>(
   }
   const attack = table.byId.get(run.attackId);
   if (attack === undefined) throw new TypeError(`unknown boss move ${run.attackId} in ${table.bossId}`);
-  if (context.tick - run.stageTick < stageLength(table, attack, run)) return { state, events: [] };
+  const elapsed = context.tick - run.stageTick;
+  if (elapsed < stageLength(table, attack, run)) {
+    // A repeating strike is armed again at the start of each repeat.
+    const every = attack.hit?.every ?? 0;
+    if (run.stage !== "active" || every === 0 || elapsed === 0 || elapsed % every !== 0 || run.parried)
+      return { state, events: [] };
+    return { state: Object.freeze({ ...state, run: Object.freeze({ ...run, landed: false }) }), events: [] };
+  }
   const stage = nextStage(attack, run.stage);
   if (stage === null)
     return { state: finish(table, state, attack, context), events: [{ type: "finished", attackId: attack.id }] };
@@ -270,6 +277,12 @@ export function placeBossHitShape(
   }
 }
 
+/** Ticks since the current strike started: since the active stage began, or since the last repeat. */
+function strikeElapsed(attack: BossAttack<string | number, unknown>, elapsed: number): number {
+  const every = attack.hit?.every ?? 0;
+  return every > 0 ? elapsed % every : elapsed;
+}
+
 /**
  * Where the move hits this tick: only while active and before it has landed. The boss applies the damage
  * through its own damage call (with its parry check) and then calls `markBossAttackLanded`.
@@ -282,7 +295,10 @@ export function bossAttackHit<Phase extends string | number, Place>(
   const run = state.run;
   const attack = currentBossAttack(table, state);
   if (run === null || attack?.hit === undefined || run.stage !== "active" || run.landed) return null;
-  const travelled = attack.hit.shape.kind === "travel" ? attack.hit.shape.speed * (context.tick - run.stageTick) : 0;
+  const travelled =
+    attack.hit.shape.kind === "travel"
+      ? attack.hit.shape.speed * strikeElapsed(attack, context.tick - run.stageTick)
+      : 0;
   const area = placeBossHitShape(attack.hit.shape, run, context.boss, context.arena.groundY, travelled);
   return { area, damage: attack.hit.damage, parryable: attack.hit.parryable };
 }
@@ -347,7 +363,8 @@ export function bossAttackPose<Phase extends string | number, Place>(
   const elapsed = context.tick - run.stageTick;
   const progress = Math.min(1, Math.max(0, elapsed / Math.max(1, stageLength(table, attack, run))));
   const shape = attack.hit?.shape;
-  const travelled = shape?.kind === "travel" && run.stage === "active" ? shape.speed * elapsed : 0;
+  const travelled =
+    shape?.kind === "travel" && run.stage === "active" ? shape.speed * strikeElapsed(attack, elapsed) : 0;
   const area =
     shape === undefined ? null : placeBossHitShape(shape, run, context.boss, context.arena.groundY, travelled);
   return { attackId: attack.id, stage: run.stage, progress, facing: run.facing, target: run.target, area };
@@ -453,7 +470,8 @@ function tellArea(attack: BossAttack<string | number, unknown>, run: BossAttackR
   const shape = attack.hit?.shape;
   if (shape === undefined) return boss;
   if (shape.kind !== "travel") return toBox(placeBossHitShape(shape, run, boss, groundY, 0));
-  const path = shape.speed * attack.timing.active;
+  const every = attack.hit?.every ?? 0;
+  const path = shape.speed * (every > 0 ? every : attack.timing.active);
   const start = run.origin.x + run.facing * boss.hw;
   return {
     x: start + run.facing * (path / 2 + shape.hw),

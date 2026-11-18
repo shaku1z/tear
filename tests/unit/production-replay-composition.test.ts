@@ -5,7 +5,10 @@ import {
   createCampaignChapterBindingSpec,
   stageCampaignChapterBinding,
 } from "../../src/gameplay/campaign/chapter-cinematic-binding";
-import { ROOTBOUND_LAST_SPRING } from "../../src/gameplay/entities/enemy-types/rootbound";
+import {
+  createBossAttackRunnerState,
+  type BossAttackRunnerState,
+} from "../../src/gameplay/entities/boss-attack-runner";
 import {
   createRootboundRegrowthConnections,
   ROOTBOUND_REGROWTH_TIMING,
@@ -990,13 +993,12 @@ describe("production replay composition", () => {
         requiredConnectionIds: readonly string[];
         progress: number;
       }>;
-      lastSpringStage: string | null;
-      lastSpringT: number;
+      regrowthCalled: boolean;
       lastSpringUseCount: number;
-      lastSpringHitSpent: boolean;
+      movesSinceLastSpring: number;
+      moveState: BossAttackRunnerState;
       beginRegrowth(tick: number, connectionIds: readonly string[]): boolean;
       advanceRegrowth(tick: number, connectionIds: ReadonlySet<string>, broken?: boolean): unknown;
-      startLastSpring(): boolean;
     };
     boss.phaseMarker = 3;
     boss.hp = boss.maxHp * 0.2;
@@ -1004,6 +1006,7 @@ describe("production replay composition", () => {
     boss.cinematicT = 0;
     boss.state = "idle";
     boss.stateT = 0;
+    boss.regrowthCalled = true;
     source.replay.world.state.setEnemies([boss] as never);
     const links = createRootboundRegrowthConnections({
       ownerId: "enemy:1",
@@ -1056,10 +1059,20 @@ describe("production replay composition", () => {
     });
 
     boss.advanceRegrowth(40 + ROOTBOUND_REGROWTH_TIMING.channelTicks, new Set(), false);
-    boss.state = "idle";
-    boss.stateT = 0;
-    expect(boss.startLastSpring()).toBe(true);
-    boss.lastSpringT = ROOTBOUND_LAST_SPRING.warning / 2;
+    // Last Spring half-way through its tell, as the move table holds it.
+    const run = Object.freeze({
+      attackId: "last-spring",
+      stage: "tell" as const,
+      stageTick: 10,
+      facing: 1 as const,
+      origin: Object.freeze({ x: 800, y: 520 }),
+      target: Object.freeze({ x: 500, y: 800 }),
+      landed: false,
+      parried: false,
+    });
+    boss.moveState = Object.freeze({ ...createBossAttackRunnerState(0), run });
+    boss.lastSpringUseCount = 1;
+    boss.movesSinceLastSpring = 3;
     const spring = captureProductionReplayCheckpoint(
       source.replay,
       source.combat,
@@ -1068,12 +1081,7 @@ describe("production replay composition", () => {
     );
     const restoredSpring = composition.create(spring.snapshot);
     const springBoss = restoredSpring.replay.world.state.enemies()[0] as never as typeof boss;
-    expect(springBoss).toMatchObject({
-      lastSpringStage: "warning",
-      lastSpringUseCount: 1,
-      lastSpringT: ROOTBOUND_LAST_SPRING.warning / 2,
-      lastSpringHitSpent: false,
-    });
+    expect(springBoss).toMatchObject({ lastSpringUseCount: 1, regrowthCalled: true, moveState: { run } });
     const springRoundTrip = captureProductionReplayCheckpoint(
       restoredSpring.replay,
       restoredSpring.combat,
@@ -1116,16 +1124,15 @@ describe("production replay composition", () => {
       stateClass: "surgical-valid",
       seed: spring.snapshot.seed,
       start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
-      state: { boss: { lastSpringT: ROOTBOUND_LAST_SPRING.warning / 4 } },
+      state: { boss: { movesSinceLastSpring: 1 } },
     };
     const fork = compileResolvedTearSdlSnapshot(spring.snapshot, resolveTearSdl(forkDocument));
     const forked = composition.create(fork);
-    expect((forked.replay.world.state.enemies()[0] as never as typeof boss).lastSpringT).toBe(
-      ROOTBOUND_LAST_SPRING.warning / 4,
-    );
+    expect((forked.replay.world.state.enemies()[0] as never as typeof boss).movesSinceLastSpring).toBe(1);
     expect(
-      (composition.create(spring.snapshot).replay.world.state.enemies()[0] as never as typeof boss).lastSpringT,
-    ).toBe(ROOTBOUND_LAST_SPRING.warning / 2);
+      (composition.create(spring.snapshot).replay.world.state.enemies()[0] as never as typeof boss)
+        .movesSinceLastSpring,
+    ).toBe(3);
     expect(fork.hashes.exact).not.toBe(spring.snapshot.hashes.exact);
   });
 

@@ -98,6 +98,12 @@ A boss is an enemy with phases, an arena and a move list.
   `bossAttackStatus` after every change to the runner state, as `syncMoves` in `rootbound.ts` does, so a
   parry or a forced exposure cannot leave one behind. Build the context once and reuse it every tick; do
   not build objects per tick in a boss.
+
+  A channel that keeps attacking (the Rootbound's `regrowth`) is a move with a long active stage and
+  `hit.every`: the strike is armed again each `every` seconds, and a travelling shape starts again from the
+  boss. A move that must come at a set point in the fight (an opening ritual, a big strike every few moves)
+  is an ordinary move that the boss forces through `context.blocked`, as `blockPhaseThree` in `rootbound.ts`
+  does; do not run it as a state machine beside the table.
 - **Tells:** report them from `tells()` in the shared format (`src/gameplay/entities/boss-tells.ts`). The
   shared tell renderer draws them, and `tests/unit/boss-tell-rules.test.ts` checks every boss's warnings.
   The punish stage reports an `exposed` tell, so the player can see the opening.
