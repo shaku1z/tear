@@ -5,7 +5,7 @@
  * Adding a kind of requirement means one more member of `UnlockCondition`, one more case in
  * `parseCondition`, `conditionMet` and `conditionProgress`, and one more answer in `ProgressFacts`.
  */
-import { PROFILE_NAME } from "./identifiers";
+import { isProfileName } from "./identifiers";
 import { isRecord } from "./records";
 
 export type UnlockCondition =
@@ -39,7 +39,7 @@ function parseCondition(value: unknown, where: string, problems: string[], depth
   const kind = value.type;
   const reference = (key: string): string | null => {
     const found = value[key];
-    if (typeof found === "string" && PROFILE_NAME.test(found)) return found;
+    if (isProfileName(found)) return found;
     problems.push(`${where}: ${kind} needs a valid ${key}`);
     return null;
   };
