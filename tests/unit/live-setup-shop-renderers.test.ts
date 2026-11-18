@@ -21,7 +21,7 @@ describe("live setup shop renderers", () => {
         scroll: () => 0,
         setScroll: vi.fn(),
         time: () => 5,
-        shop: () => ({ displayedCoins: 20, flash: null }),
+        shop: () => ({ tab: "upgrades", displayedCoins: 20, flash: null }),
         setShop,
       },
       {
@@ -53,6 +53,6 @@ describe("live setup shop renderers", () => {
 
     expect(flow).toEqual(["buy", "sound", "flash", "progress", "achievements"]);
     expect(recordPurchase).toHaveBeenCalledOnce();
-    expect(setShop).toHaveBeenCalledWith({ displayedCoins: 20, flash: { id: "maxed", time: 5 } });
+    expect(setShop).toHaveBeenCalledWith({ tab: "upgrades", displayedCoins: 20, flash: { id: "maxed", time: 5 } });
   });
 });
