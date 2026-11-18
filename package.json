@@ -64,7 +64,6 @@
     "test:browser:tear-runtime": "node tests/browser-tear-runtime-environment.js",
     "test:browser:current-gameplay-scenarios": "node tests/browser-current-gameplay-scenarios.js",
     "test:browser:current-weapon-parity": "pnpm tearbench parity current-weapons --artifact artifacts/tearbench/generated/current-weapon-parity.json",
-    "test:browser:ghost-v3-live-capture": "node tests/browser-ghost-v3-live-capture.js",
     "test:browser:verdant-presentation": "node tests/browser-verdant-presentation.js",
     "test:browser:pale-rimehound": "node tests/browser-pale-rimehound.js",
     "test:browser:pale-variants": "node tests/browser-pale-variants.js",

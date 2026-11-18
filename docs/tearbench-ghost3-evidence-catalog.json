@@ -388,17 +388,6 @@
       "notes": "Transport, seek, comparison, and practice helpers exist without a complete player-facing Theater."
     },
     {
-      "id": "EVID-GHOST-COACH-CONTRACT",
-      "priority": 80,
-      "state": "contract",
-      "sourceSections": [72, 76],
-      "textRegex": "(Run Autopsy|Ghost Coach|draft regret|one-fix|skill graph|replay-to-drill)",
-      "excludeTextRegex": "(player can|visible|real counterfactual|measured improvement)",
-      "implementationRefs": ["src/ghost/coach.ts"],
-      "evidenceRefs": ["tests/unit/ghost-coach.test.ts"],
-      "notes": "Pure analysis contracts exist; real evidence ingestion and player UI are absent."
-    },
-    {
       "id": "EVID-PLAYER-EXPERIENCE-CONTRACTS",
       "priority": 75,
       "state": "contract",

@@ -1458,7 +1458,7 @@ describe("release and engineering surface rendering", () => {
   });
   it("closes up the Career command row when a command surface is unavailable", () => {
     const controls: ScreenControl[] = [];
-    const hidden = new Set(["coach", "race"]);
+    const hidden = new Set(["race"]);
     const context: ScreenRenderContext = {
       ...createRenderContext(controls),
       available: (action) => action.type !== "career.control" || !hidden.has(action.command),
@@ -1514,7 +1514,7 @@ describe("release and engineering surface rendering", () => {
     const row = controls.filter(
       (control) =>
         control.action.type === "career.control" &&
-        ["watch", "challenge", "download", "chase", "coach", "race"].includes(control.action.command),
+        ["watch", "challenge", "download", "chase", "race"].includes(control.action.command),
     );
     expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
     // The page pattern content column is 1120 wide.

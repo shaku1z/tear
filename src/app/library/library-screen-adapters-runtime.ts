@@ -604,7 +604,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       if (command !== "chase" && command !== "race") services.chase?.cancelPreparation();
       if (command === "suspend") career?.close();
       else if (command === "select" && id) career?.select(id);
-      else if (["watch", "coach", "challenge", "download", "chase", "race"].includes(command)) {
+      else if (["watch", "challenge", "download", "chase", "race"].includes(command)) {
         void career?.sourceAction(async (source) => {
           if (career.snapshot().selected?.entry.kind === "legacy-visual") {
             if (command !== "watch") throw new Error("This tool requires a canonical capsule");

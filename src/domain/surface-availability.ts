@@ -19,7 +19,6 @@ type FeatureSurfaceId =
   // Unfinished player features.
   | "feature:seed-race"
   | "feature:boss-memory"
-  | "feature:coach"
   | "feature:replay-editor"
   | "feature:linked-pair-download"
   // Every engineering query parameter and surface route.
@@ -43,7 +42,6 @@ export const SURFACE_CHANNEL: Readonly<Record<FeatureSurfaceId, SurfaceChannel>>
   "setup:boss-picker": "engineering",
   "feature:seed-race": "engineering",
   "feature:boss-memory": "engineering",
-  "feature:coach": "engineering",
   "feature:replay-editor": "engineering",
   "feature:linked-pair-download": "engineering",
   "route:engineering-query": "engineering",
@@ -85,7 +83,6 @@ export function screenSurface(screen: string): SurfaceId | undefined {
 
 const CAREER_COMMAND_SURFACES: Readonly<Partial<Record<string, SurfaceId>>> = Object.freeze({
   race: "feature:seed-race",
-  coach: "feature:coach",
 });
 
 /**
@@ -102,7 +99,6 @@ export function screenActionSurface(action: ScreenAction): SurfaceId | undefined
     return action.id.startsWith("boss-memory-") ? "feature:boss-memory" : undefined;
   if (action.type === "profile.downloadGhostArchive")
     return action.paired === true ? "feature:linked-pair-download" : undefined;
-  if (type.startsWith("replay.coach.")) return "feature:coach";
   if (type.startsWith("replay.editor.") || type.startsWith("replay.studio.")) return "feature:replay-editor";
   return undefined;
 }
