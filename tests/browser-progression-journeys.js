@@ -306,7 +306,7 @@ withJourney(
     await clickTarget(page, "menu", "ACHIEVEMENTS");
     await waitScreen("achievements");
     // Invested is the one unlock, in the MASTERY category.
-    await waitDrawn("1 / 99");
+    await waitDrawn("1 / 101");
     assert.ok(
       await page.evaluate(() =>
         window.__TEAR_JOURNEY_FRAME__.texts.some((entry) => /^MASTERY\s+1\/16$/u.test(entry.text)),
