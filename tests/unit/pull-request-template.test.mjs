@@ -12,9 +12,26 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8").replaceAll
 describe("pull request template", () => {
   const template = read(".github/pull_request_template.md");
 
-  it("asks for what, checks run, checks not run, risks and position, in that order", () => {
+  it("asks for what, the design check, checks run, checks not run, risks and position, in that order", () => {
     const headings = [...template.matchAll(/^## (.+)$/gmu)].map((match) => match[1]);
-    expect(headings).toEqual(["What and why", "Checks run here", "Checks that could not run", "Risks", "Position"]);
+    expect(headings).toEqual([
+      "What and why",
+      "Design check",
+      "Checks run here",
+      "Checks that could not run",
+      "Risks",
+      "Position",
+    ]);
+  });
+
+  it("lists the six design-check questions of docs/ENGINEERING_STANDARD.md and asks for a reason with n/a", () => {
+    const standard = read("docs/ENGINEERING_STANDARD.md");
+    const section = template.slice(template.indexOf("## Design check"), template.indexOf("## Checks run here"));
+    for (const label of ["General case", "One owner", "The next one", "Cause", "Measured", "Removed"]) {
+      expect(standard).toContain(`**${label}:**`);
+      expect(section).toContain(`- **${label}:** `);
+    }
+    expect(section).toContain(`"n/a" needs a reason`);
   });
 
   it("contains no attribution trailer or generated-with line", () => {
