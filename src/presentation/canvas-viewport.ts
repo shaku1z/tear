@@ -14,6 +14,7 @@ export interface LogicalOverscan {
 export class CanvasViewport {
   #started = false;
   #cssPerLogicalPixel = 1;
+  #pixelScale = 1;
   #resizePending = false;
   #resizeObserver: ResizeObserver | null = null;
   readonly #resizeListener = () => {
@@ -32,6 +33,11 @@ export class CanvasViewport {
 
   get cssPerLogicalPixel(): number {
     return this.#cssPerLogicalPixel;
+  }
+
+  /** Backing-store pixels per logical pixel: how many device pixels one logical unit covers. */
+  get pixelScale(): number {
+    return this.#pixelScale;
   }
 
   start(): void {
@@ -65,6 +71,7 @@ export class CanvasViewport {
     this.overscan.x = Math.max(0, (backingWidth / scale - this.logicalWidth) / 2);
     this.overscan.y = Math.max(0, (backingHeight / scale - this.logicalHeight) / 2);
     this.#cssPerLogicalPixel = scale / dpr;
+    this.#pixelScale = scale;
 
     const probe = this.browserDocument.getElementById("safeprobe");
     if (probe === null) return;

@@ -136,13 +136,13 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
         action: { type: "navigate", to, resetScroll: to !== "settings" },
       });
     });
-    // Extra rows continue the same rhythm under SETTINGS: the Practice Lab, then the music row.
+    // Extra rows continue the same rhythm under SETTINGS: DRILLS, then the music row.
     let slot = rail.length;
     if (view.practiceAvailable) {
       context.enqueue({
         ...navSlot(slot++),
         glyph: "◎",
-        label: "PRACTICE LAB",
+        label: "DRILLS",
         sub: "LESSONS · NO REWARDS",
         ghost: true,
         action: { type: "tutorial.action", command: "open-practice" },
@@ -380,7 +380,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
         y: startY,
         w: 254,
         h: 58,
-        label: "PRACTICE LAB",
+        label: "DRILLS",
         sub: "BASELINE SWORD · NO REWARDS",
         glyph: "◎",
         action: { type: "tutorial.action", command: "open-practice" },
@@ -452,7 +452,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
     });
   }
 
-  /** Phone landscape: the three choice columns at touch size; PRACTICE LAB · BACK · START share the footer row. */
+  /** Phone landscape: the three choice columns at touch size; DRILLS · BACK · START share the footer row. */
   function compactSetup(
     view: SetupScreenView,
     grid: Readonly<{ top: number; rowTop: number; rowHeight: number; rowPitch: number; rowSize: number }>,
@@ -481,7 +481,7 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
         y: layout.footerY,
         w: width / 2 - metric.backW / 2 - metric.btnGap - practiceX,
         h: metric.btnH,
-        label: "PRACTICE LAB",
+        label: "DRILLS",
         glyph: "◎",
         action: { type: "tutorial.action", command: "open-practice" },
       });

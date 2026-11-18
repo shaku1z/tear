@@ -577,6 +577,7 @@
       "src/gameplay/environment/bloom-well-presentation-facts.ts",
       "src/gameplay/environment/presentation-snapshot.ts",
       "src/app/world/world-presentation-adapters.ts",
+      "src/app/world/environment-layer.ts",
       "tests/browser-verdant-presentation.js",
       "tests/unit/backdrop-biomes.test.ts",
       "tests/unit/platform-materials.test.ts",

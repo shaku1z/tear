@@ -1,5 +1,5 @@
 import type { ReplayView, ScreenAction, ScreenControl, ScreenRenderContext } from "./contracts";
-import { backControl } from "./screen-primitives";
+import { backControl, tabs as tabStrip } from "./screen-primitives";
 
 /**
  * THE COMPACT PAGE: the phone-landscape composition shared by the library and shop
@@ -189,7 +189,7 @@ export function createCompactPage(context: ScreenRenderContext) {
       const strip = beside
         ? { x: besideX, y: rowTop, w: besideW }
         : { x: left, y: bottom + t.metric.btnGap, w: right - left };
-      tabStrip(tabs, spec.tabAction, strip.x, strip.y, strip.w);
+      tabStrip(context, tabs, spec.tabAction, strip.y, { x: strip.x, w: strip.w, h: ui.t.metric.btnH });
       if (!beside) bottom = strip.y + rowH;
     } else if (spec.subtitle && !spec.stat) {
       const room = right - (left + titleW + t.space.xl);
@@ -218,42 +218,6 @@ export function createCompactPage(context: ScreenRenderContext) {
       bottom: footerY - t.space.md,
       footerY,
     });
-  }
-
-  /** A tab strip in an explicit span, one full-height touch target per tab. */
-  function tabStrip(
-    tabs: readonly CompactChoice[],
-    action: (id: string) => ScreenAction,
-    x: number,
-    y: number,
-    w: number,
-  ): void {
-    const active = Math.max(
-      0,
-      tabs.findIndex((tab) => tab.selected),
-    );
-    ui.tabs(
-      context.canvas,
-      tabs.map((tab) => tab.id).join("-"),
-      tabs.map((tab) => tab.label),
-      active,
-      y,
-      (button) => {
-        const tab = tabs[button._tab ?? 0];
-        if (tab !== undefined)
-          context.enqueue({
-            x: button.x,
-            y: button.y,
-            w: button.w,
-            h: button.h,
-            label: "",
-            hiddenBox: true,
-            action: action(tab.id),
-          });
-      },
-      w,
-      { x, w, h: ui.t.metric.btnH },
-    );
   }
 
   /**

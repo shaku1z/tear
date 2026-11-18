@@ -32,6 +32,8 @@ export interface TailRun {
   runTime: number;
   waveTime: number;
   adRevived?: boolean;
+  /** Defeats a training mode answered by restoring the player instead of ending the run. */
+  trainingResets?: number;
   _prevGround?: boolean;
   _airT?: number;
   _updraftChain?: number;
@@ -169,6 +171,7 @@ export function resolvePlayerDeath(player: TailPlayer, run: TailRun, hooks: Play
   if (run.mode === "tutorial" || run.mode === "playground") {
     player.hp = player.maxHp;
     player.iframe = 2;
+    run.trainingResets = (run.trainingResets ?? 0) + 1;
     hooks.trainingReset(player);
     return "training-reset";
   }

@@ -15,7 +15,7 @@ The program succeeds only when all of the following are true:
 
 1. One deterministic TearBench plan enumerates every release obligation for an exact source candidate.
 2. Every selected route, scenario, backend, invariant, matrix cell, build, journey, preservation proof, and publication requirement materializes into an executable task or an explicit blocking unsupported disposition.
-3. Each atomic task executes at most once per complete execution identity, except for intentionally independent evidence such as reproducibility A/B tasks or an explicitly recorded retry.
+3. Each atomic task executes at most once per complete execution identity, except for intentionally independent evidence such as reproducibility A/B tasks.
 4. All task receipts are immutable, claim-aware, exact-source/build/toolchain/policy-bound, and independently verifiable.
 5. One protected aggregate certificate is the stable required release gate.
 6. Production deploys only the exact certified artifact.
@@ -131,7 +131,7 @@ These are hard execution limits.
 ### Investigation and retry limits
 
 - **Two-hypothesis rule:** after two failed attempts at the same diagnosis or fix, stop. Record what falsified both attempts and escalate or move to an independent checklist item.
-- **One retry per atomic task:** retry a failed task once against the same execution identity. Preserve both attempts and mark `recovered-flaky` if the retry passes. A second failure is a real blocker until investigated.
+- **No retries:** a failed task is a failure. Fix its cause, or delete the task with its reason, as AGENTS.md "Gates" says; never retry it (this replaced a one-retry rule on 2026-11-18).
 - **No whole-gate retry for one atomic failure:** rerun only the failed task and the aggregate certifier unless source or plan identity changed.
 - **No repeated green evidence:** reuse a valid receipt. Rerun only when an invalidator changed or a checkpoint explicitly requires independent repetition.
 - **One final full profile per frozen source:** a source-changing correction invalidates the prior profile and certificate; a documentation read or repeated review does not.
