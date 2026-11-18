@@ -10,7 +10,7 @@ import type { FinaleOutwardCall, FinaleParticleEmissionReceipt } from "../../src
 
 const forwarding = vi.hoisted((): { port: unknown } => ({ port: undefined }));
 
-vi.mock("../../src/app/campaign/campaign-runtime", () => ({
+vi.mock("../../src/gameplay/campaign/campaign-runtime", () => ({
   createLiveCampaignRuntime: (port: unknown) => {
     forwarding.port = port;
     return Object.freeze({});

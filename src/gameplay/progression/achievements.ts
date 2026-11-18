@@ -1,3 +1,9 @@
+import {
+  conditionMet,
+  conditionProgress,
+  type ProgressFacts,
+  type UnlockCondition,
+} from "../../domain/unlock-condition";
 import { ACHIEVEMENT_CATALOG, CANONICAL_ACHIEVEMENT_IDS } from "./achievement-catalog";
 
 export type AchievementRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
@@ -6,6 +12,8 @@ export type AchievementCategory = "combat" | "skill" | "progress" | "boss" | "su
 export interface AchievementProfilePort {
   unlocked(id: string): boolean;
   stat(key: string): number;
+  /** What the shared condition language can ask of the profile. */
+  facts(): ProgressFacts;
   unlock(achievement: Achievement): boolean;
 }
 
@@ -15,8 +23,10 @@ export interface Achievement {
   rarity: AchievementRarity;
   name: string;
   desc: string;
-  stat?: string;
-  goal?: number | ((profile: AchievementProfilePort) => number);
+  /** The requirement, in the shared condition language. Most achievements are a stat reaching a goal. */
+  condition?: UnlockCondition;
+  /** Counted progress for requirements that are not profile facts (shop items maxed). */
+  goal?: (profile: AchievementProfilePort) => number;
   current?: (profile: AchievementProfilePort) => number;
   check?: (profile: AchievementProfilePort) => boolean;
   hidden?: boolean;
@@ -48,15 +58,6 @@ export interface AchievementDependencies {
 export interface AchievementSystem {
   readonly RARITY: Record<AchievementRarity, Readonly<{ name: string; color: string; shards: number; coins: number }>>;
   readonly CATS: Record<AchievementCategory, Readonly<{ name: string; color: string; icon: string }>>;
-  _s(
-    id: string,
-    cat: AchievementCategory,
-    rarity: AchievementRarity,
-    name: string,
-    desc: string,
-    stat?: string,
-    goal?: number,
-  ): Achievement;
   _all: Achievement[];
   readonly list: Achievement[];
   _build(): void;
@@ -64,6 +65,8 @@ export interface AchievementSystem {
   shardsFor(achievement: Achievement): number;
   coinsFor(achievement: Achievement): number;
   totalShards(): number;
+  measure(achievement: Achievement, facts: ProgressFacts): Readonly<{ current: number; goal: number }>;
+  isMet(achievement: Achievement, facts: ProgressFacts): boolean;
   progress(achievement: Achievement): number;
   progressText(achievement: Achievement): string;
   pending: Achievement[];
@@ -96,19 +99,6 @@ function createAchievements(dependencies: AchievementDependencies): AchievementS
       mastery: { name: "Mastery", color: "#c9ccd6", icon: "◆" },
     },
 
-    // goal helper: a stat-threshold achievement (the common case)
-    _s(id, cat, rarity, name, desc, stat, goal) {
-      return {
-        id,
-        cat,
-        rarity,
-        name,
-        desc,
-        ...(stat === undefined ? {} : { stat }),
-        ...(goal === undefined ? {} : { goal }),
-      };
-    },
-
     _all: [], // canonical list; includes locked hidden achievements for mastery logic
     get list() {
       return this._all.filter((a) => !a.hidden || PROFILE.unlocked(a.id));
@@ -127,8 +117,7 @@ function createAchievements(dependencies: AchievementDependencies): AchievementS
         if (entry.master) achievement.master = true;
         switch (entry.rule.kind) {
           case "stat-threshold":
-            achievement.stat = entry.rule.stat;
-            achievement.goal = entry.rule.goal;
+            achievement.condition = { type: "stat-threshold", stat: entry.rule.stat, goal: entry.rule.goal };
             break;
           case "manual":
             break;
@@ -169,33 +158,41 @@ function createAchievements(dependencies: AchievementDependencies): AchievementS
       return s;
     },
 
+    // How far along an achievement is, as counts. A condition is measured by the shared language.
+    measure(a, facts) {
+      if (a.condition) return conditionProgress(a.condition, facts);
+      if (a.current && a.goal) return { current: a.current(PROFILE), goal: a.goal(PROFILE) };
+      return { current: a.check?.(PROFILE) === true ? 1 : 0, goal: 1 };
+    },
     // 0..1 progress toward an achievement (for the menu's bars)
     progress(a) {
       if (PROFILE.unlocked(a.id)) return 1;
       if (a.manual) return 0;
-      if (a.check) return a.check(PROFILE) ? 1 : 0;
-      const cur = a.current ? a.current(PROFILE) : PROFILE.stat(a.stat ?? "");
-      const goal = (typeof a.goal === "function" ? a.goal(PROFILE) : a.goal) ?? 1;
-      return clamp(cur / goal, 0, 1);
+      const { current, goal } = this.measure(a, PROFILE.facts());
+      return clamp(current / goal, 0, 1);
     },
     progressText(a) {
-      if (a.check || !a.goal) return PROFILE.unlocked(a.id) ? "Complete" : "Locked";
-      const goal = typeof a.goal === "function" ? a.goal(PROFILE) : a.goal;
-      const cur = Math.min(a.current ? a.current(PROFILE) : PROFILE.stat(a.stat ?? ""), goal);
-      return `${String(cur)} / ${String(goal)}`;
+      if (a.check || (!a.condition && !a.goal)) return PROFILE.unlocked(a.id) ? "Complete" : "Locked";
+      const { current, goal } = this.measure(a, PROFILE.facts());
+      return `${String(Math.min(current, goal))} / ${String(goal)}`;
     },
 
     pending: [], // freshly unlocked -> the HUD/menu toast queue
 
+    isMet(a, facts) {
+      if (a.condition) return conditionMet(a.condition, facts);
+      if (a.check) return a.check(PROFILE);
+      const { current, goal } = this.measure(a, facts);
+      return current >= goal;
+    },
+
     // evaluate every locked achievement; unlock + reward + queue toasts for newly-met ones
     check() {
+      const facts = PROFILE.facts();
       for (const a of this._all) {
         if (PROFILE.unlocked(a.id)) continue;
         if (a.manual) continue; // scripted/choice achievements unlock only at their authored event
-        const goal = (typeof a.goal === "function" ? a.goal(PROFILE) : a.goal) ?? 1;
-        const current = a.current ? a.current(PROFILE) : PROFILE.stat(a.stat ?? "");
-        const met = a.check ? a.check(PROFILE) : current >= goal;
-        if (met) {
+        if (this.isMet(a, facts)) {
           a.shards = this.shardsFor(a);
           a.coins = this.coinsFor(a);
           if (PROFILE.unlock(a)) {

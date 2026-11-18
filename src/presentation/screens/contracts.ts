@@ -46,6 +46,8 @@ export interface ScreenRenderContext {
   readonly focus: number;
   readonly touch: boolean;
   readonly reducedMotion: boolean;
+  /** Device pixels per logical unit this frame (the canvas backing scale): what image art picks its size by. */
+  readonly pixelScale: number;
   /** True physical viewport expressed in logical coordinates, including aspect-ratio overscan. */
   readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly safeInsets: Readonly<{ l: number; r: number; t: number; b: number }>;
@@ -152,20 +154,6 @@ export interface GhostArchiveOperationView {
   readonly canReselect?: boolean;
   readonly canCancel?: boolean;
   readonly canCancelSelection?: boolean;
-}
-export interface GhostOwnerRecoveryView {
-  readonly status: "idle" | "unavailable" | "loading" | "ready" | "recovering" | "failed";
-  readonly detail: string;
-  readonly catalogVisible: boolean;
-  readonly canLoad: boolean;
-  readonly canRecover: boolean;
-  readonly entries: readonly Readonly<{
-    capsuleId: string;
-    buildId: string;
-    rootIntegrity: string;
-    byteLength: number;
-    localStatus?: "recovered" | "already-recovered";
-  }>[];
 }
 export interface ProgressView {
   readonly label: string;
@@ -305,7 +293,6 @@ export interface ProfileScreenView {
     pages: number;
   }>;
   readonly archive?: GhostArchiveOperationView;
-  readonly ownerRecovery?: GhostOwnerRecoveryView;
 }
 export interface AchievementsScreenView {
   readonly id: "achievements";
@@ -444,10 +431,16 @@ export interface SettingsScreenView {
   readonly canScrollDown?: boolean;
 }
 /**
- * How a song or collection is pictured (there is no cover art): one hue per band (a single stage
- * is one band; a mixed collection splits into up to four) and one glyph. Null draws the default.
+ * How a song or collection is pictured: one hue per band (a single stage is one band; a mixed
+ * collection splits into up to four) and one glyph, and, where its stages have paintings, `art`
+ * (up to four stage ids), drawn instead of the bands once loaded. Null draws the default.
  */
-export type MusicCoverView = Readonly<{ hues: readonly string[]; glyph: string; locked?: boolean }> | null;
+export type MusicCoverView = Readonly<{
+  hues: readonly string[];
+  glyph: string;
+  art?: readonly string[];
+  locked?: boolean;
+}> | null;
 /** One song wherever the MUSIC screen shows it: a track row, a shelf row or the transport. */
 export interface MusicSongView {
   readonly id: string;
@@ -550,6 +543,8 @@ export interface TierUpScreenView {
 export interface PausedScreenView {
   readonly ghostChase?: Readonly<{ visible: boolean; message: string }>;
   readonly tutorial?: TutorialSessionView;
+  /** A paused Playground run: the pause offers the Playground menu. */
+  readonly playground?: boolean;
   readonly id: "paused";
   readonly runSummary?: string;
   readonly abilities: readonly CardView[];
@@ -601,43 +596,12 @@ export interface PlaygroundScreenView {
   readonly id: "pgmenu" | "pglab";
   readonly title: string;
   readonly subtitle?: string;
+  /** The tabs of the Playground menu (SPAWN … ABILITIES); the selected one is on screen. */
+  readonly tabs?: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly choices: readonly ChoiceView[] }[];
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
-/** C38 review is a local authority-and-intent screen, never a transport status. */
-export interface GhostPublicationScreenView {
-  readonly id: "ghostpublication";
-  readonly status: "unavailable" | "ready" | "queued" | "uploading" | "terminal";
-  readonly detail: string;
-  readonly capsuleId?: string;
-  readonly rootIntegrity?: string;
-  readonly capability: string;
-  readonly privacy: "pseudonymous";
-  readonly visibility: "private";
-  readonly training: "no-training";
-  readonly canGrant: boolean;
-  readonly canRun?: boolean;
-  readonly canCancel?: boolean;
-  readonly attempts?: number;
-  readonly retryAt?: string;
-  readonly terminal?: string;
-}
-
-/** C39 creates only an ephemeral, sanitized support description after player approval. */
-export interface GhostSupportScreenView {
-  readonly id: "ghostsupport";
-  readonly status: "unavailable" | "ready" | "created";
-  readonly detail: string;
-  readonly capsuleId?: string;
-  readonly rootIntegrity?: string;
-  readonly build?: string;
-  readonly range?: string;
-  readonly segments?: string;
-  readonly bundleHash?: string;
-  readonly canCreate: boolean;
-}
-
 export type ScreenView =
   | MenuScreenView
   | SetupScreenView
@@ -659,9 +623,7 @@ export type ScreenView =
   | ContinueScreenView
   | GameoverScreenView
   | WinScreenView
-  | PlaygroundScreenView
-  | GhostPublicationScreenView
-  | GhostSupportScreenView;
+  | PlaygroundScreenView;
 
 export type ScreenViewById<Id extends AppScreen, View = ScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? (Id extends ViewId ? View : never) : never;

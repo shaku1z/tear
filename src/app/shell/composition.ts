@@ -1,3 +1,4 @@
+import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { createLiveTutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
 import { createLivePracticeEncounterPersistence } from "../progress/practice-encounter-persistence";
 import { createLegacySynthFacade } from "../../audio/legacy-synth";
@@ -49,6 +50,7 @@ import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
 import { rotateGateShown } from "../../presentation/render-pipeline";
 import { createSceneLibrary } from "../../presentation/scenes/scene-library";
+import { lastCoverFrameTally } from "../../presentation/music-cover-art";
 import { createSceneCanvas, loadSceneBitmap, releaseSceneBitmap } from "../../presentation/scenes/scene-bitmap";
 import { SCENE_PACKAGES } from "../../presentation/scenes/scene-registry";
 import { createCinematics } from "../../presentation/cinematics";
@@ -291,6 +293,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     getMeta: () => META,
     writerId: () => (CG.live ? "crazygames" : "browser"),
     countedBiomeNames: STAGES.map(({ name }) => name),
+    getCosmeticCatalog: () => COSMETIC_CATALOG,
     log: (message) => {
       console.log(message);
     },
@@ -315,7 +318,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
-  const { Cloud, FirebaseProvider, ghostPublication } = createCloud({
+  const { Cloud, FirebaseProvider } = createCloud({
     target,
     getPlatform: () => platform.services,
     getProfile: () => PROFILE,
@@ -394,7 +397,6 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     Clipper: clipper,
     Cloud,
     Colossus,
-    ghostPublication,
     DAILY,
     DIAG,
     Echo,
@@ -539,6 +541,8 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         },
       }),
       app: Object.freeze({ snapshot: () => APP.snapshot() }),
+      // What the last drawn frame's MUSIC covers showed: paintings, bands, or bands still waiting.
+      musicCovers: Object.freeze({ snapshot: lastCoverFrameTally }),
       // What the isolated storage holds now, so a journey can boot a fresh page from it: the
       // same contents a reload would find in the browser's real storage.
       storage: Object.freeze({ snapshot: () => Object.fromEntries(disposableValues) }),

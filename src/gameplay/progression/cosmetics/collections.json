@@ -1,0 +1,11 @@
+[
+  {
+    "id": "rootbound",
+    "name": "Rootbound Collection",
+    "unlock": {
+      "type": "boss-defeat",
+      "bossId": "rootbound"
+    },
+    "reward": "title_rootcutter"
+  }
+]

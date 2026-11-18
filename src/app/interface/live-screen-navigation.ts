@@ -2,6 +2,7 @@ import type { AppStateController, AppTransitionContext } from "./app-state-contr
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { BrowserInput } from "../../input/browser-input-contracts";
 import { setMusicPreview } from "../../audio/music/preview";
+import { retryFailedCoverPaintings } from "../../presentation/music-cover-art";
 
 /** Collaborators that react to a transition but are constructed after the navigation owner. */
 export interface LiveScreenTransitionHooks {
@@ -14,7 +15,6 @@ export interface LiveScreenTransitionHooks {
 export interface LiveScreenNavigationOptions {
   readonly app: AppStateController;
   readonly input: Pick<BrowserInput, "allowLock" | "discardSemanticInput">;
-  readonly beat: Readonly<{ screenChanged(next: AppScreen): void }>;
   readonly runScreenFact: (transition: "paused" | "resumed") => void;
 }
 
@@ -27,7 +27,7 @@ export interface LiveScreenNavigation {
 
 /** Owns the live application screen and the side effects of every transition. */
 export function createLiveScreenNavigation(options: LiveScreenNavigationOptions): LiveScreenNavigation {
-  const { app, input, beat } = options;
+  const { app, input } = options;
   let state: AppScreen = app.screen;
   let cancelChase: LiveScreenTransitionHooks["cancelChase"] = () => undefined;
   let cancelPendingReplayOpen: LiveScreenTransitionHooks["cancelPendingReplayOpen"] = () => {
@@ -40,7 +40,6 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
     /* Training is loaded later. */
   };
   function setScreen(next: AppScreen, context?: AppTransitionContext): AppScreen {
-    beat.screenChanged(next);
     cancelChase(next);
     const prior = state;
     state = app.transition(next, context);
@@ -48,6 +47,8 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
     if (prior === "profile" && state !== "profile") leaveCareer();
     // A song previewed on the MUSIC screen stops when the player leaves it (rename sits over it).
     if (prior === "music" && state !== "music" && state !== "rename") setMusicPreview(null);
+    // Opening it gives cover paintings that failed to load (offline, say) another try.
+    else if (prior !== "music" && prior !== "rename" && state === "music") retryFailedCoverPaintings();
     input.allowLock = state === "playing";
     if (prior === "playing" && state !== "playing") {
       interruptTutorialCoaching();

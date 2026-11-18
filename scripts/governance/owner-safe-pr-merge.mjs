@@ -350,6 +350,7 @@ export const MERGE_PRECONDITIONS = Object.freeze([
     check: ({ policy, pr }) => {
       if (policy.id !== "tear") return;
       const decision = decide(gatherFacts(pr, policy.slug));
+      for (const note of decision.notes ?? []) console.warn(`merge-ready: ${note}`);
       if (!decision.ready) {
         const next = decision.action === undefined ? "" : `; next: ${decision.action}`;
         throw new Error(`${decision.reason}${next} (pnpm merge:ready ${String(pr)} says the same)`);

@@ -18,6 +18,23 @@ function flag(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
+/** The storage key the player's settings, audio included, are saved under. */
+export const AUDIO_SETTINGS_KEY = "tear_settings";
+
+/**
+ * The player's saved audio settings, read from `storage` and migrated: the one reader of the
+ * saved format, used by the audio system and by the music warm-up before it starts.
+ */
+export function readStoredAudioSettings(storage: Pick<Storage, "getItem">): PersistedAudioSettingsV2 {
+  let saved: Record<string, unknown>;
+  try {
+    saved = record(JSON.parse(storage.getItem(AUDIO_SETTINGS_KEY) ?? "{}"));
+  } catch {
+    saved = {};
+  }
+  return migrateAudioSettings(saved.audio ?? saved);
+}
+
 /** Migrates both Tear's legacy `{ vol, music }` settings and the v2 mixer record. */
 export function migrateAudioSettings(value: unknown): PersistedAudioSettingsV2 {
   const source = record(value);

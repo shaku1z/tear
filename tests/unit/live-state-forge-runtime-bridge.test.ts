@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { GameEnemy, GameRun } from "../../src/app/shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../src/gameplay/runtime/game-runtime-state";
 import { createLiveStateForgeRuntimeBridge } from "../../src/app/engineering/state-forge-runtime-bridge";
 import type { BossIntroState } from "../../src/app/world/game-host-state";
 import {

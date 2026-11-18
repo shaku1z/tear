@@ -11,7 +11,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 const journey = (practiceLab) =>
   withJourney(
     { name: practiceLab ? "practice lab journeys" : "playground journeys", port: practiceLab ? 8145 : 8144 },
-    async ({ page, boot, waitScreen }) => {
+    async ({ page, boot, waitScreen, restBlade }) => {
       async function pressUntilScreen(key, screen) {
         for (let attempt = 0; attempt < 12; attempt++) {
           await page.keyboard.press(key);
@@ -99,7 +99,8 @@ const journey = (practiceLab) =>
         });
         const directory = process.env.TEAR_PRACTICE_LAB_ARTIFACT_DIR;
         if (directory) fs.mkdirSync(path.resolve(directory), { recursive: true });
-        const clickLabel = async (label) => {
+        // Where a label is drawn once the screen has eased in: two reads a frame apart agree.
+        const labelAt = async (label) => {
           try {
             await page.waitForFunction(
               (expected) => window.__TEAR_PRACTICE_LAB_TEXT__?.some((entry) => entry.text === expected),
@@ -116,10 +117,26 @@ const journey = (practiceLab) =>
               await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-failure.png") });
             throw error;
           }
-          const point = await page.evaluate(
-            (expected) => window.__TEAR_PRACTICE_LAB_TEXT__.findLast((entry) => entry.text === expected),
+          const handle = await page.waitForFunction(
+            (expected) => {
+              const entry = window.__TEAR_PRACTICE_LAB_TEXT__.findLast((candidate) => candidate.text === expected);
+              const point = entry ? { x: Math.round(entry.x), y: Math.round(entry.y) } : null;
+              const previous = window.__TEAR_PRACTICE_LAB_LAST_POINT__;
+              window.__TEAR_PRACTICE_LAB_LAST_POINT__ = { label: expected, point };
+              return point &&
+                previous?.label === expected &&
+                previous.point?.x === point.x &&
+                previous.point.y === point.y
+                ? point
+                : null;
+            },
             label,
+            { polling: "raf", timeout: STATE_WAIT_MS },
           );
+          return handle.jsonValue();
+        };
+        const clickLabel = async (label) => {
+          const point = await labelAt(label);
           await page.mouse.click(point.x, point.y);
         };
         const savedEffects = () =>
@@ -244,6 +261,13 @@ const journey = (practiceLab) =>
         assert.equal(opponent.snapshot.state["tear.enemy.v1"].length, 1);
         assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].kind, "charger");
         assert.notEqual(opponent.snapshot.state["tear.enemy.v1"][0].tutDummy, true);
+        // The restarted opponent spawns beside the player, and the blade swings to wherever the
+        // pointer moved while paused. Rest it aimed at RESTART LESSON first, so the click there
+        // resumes play with a still blade (see restBlade in the harness).
+        await pressUntilScreen("p", "paused");
+        const restart = await labelAt("RESTART LESSON");
+        await pressUntilScreen("p", "playing");
+        await restBlade(restart);
         await pressUntilScreen("p", "paused");
         await clickLabel("RESTART LESSON");
         await waitScreen("playing");
@@ -398,32 +422,72 @@ const journey = (practiceLab) =>
       });
       console.log("playground journey: combat hotkey spawns survive the tail commit");
 
-      // The in-world E shortcut shown by the production Playground help opens the tools.
+      // Every Playground control below is reached through its rendered label, so the journey
+      // follows the layout instead of fixed coordinates.
+      await page.evaluate(() => {
+        const captured = [],
+          original = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function playgroundText(value, x, y, ...rest) {
+          captured.push({ text: String(value), x, y });
+          if (captured.length > 1500) captured.splice(0, 750);
+          return original.call(this, value, x, y, ...rest);
+        };
+        window.__PLAYGROUND_TEXT__ = captured;
+      });
+      const drawn = (label) =>
+        page.evaluate((expected) => window.__PLAYGROUND_TEXT__.findLast((entry) => entry.text === expected), label);
+      const tabOpen = (heading) =>
+        page.waitForFunction(
+          (expected) => window.__PLAYGROUND_TEXT__.some((entry) => entry.text === expected),
+          heading,
+          { timeout: STATE_WAIT_MS },
+        );
+      const clickText = async (label) => {
+        await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+        await tabOpen(label);
+        const point = await drawn(label);
+        await page.mouse.click(point.x, point.y);
+      };
+
+      // E opens the menu on its first tab; the E that opened it does not also switch tabs.
       await pressUntilScreen("e", "pgmenu");
-      console.log("playground journey: build menu open");
+      await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+      await tabOpen("ENEMIES");
+      console.log("playground journey: menu open on SPAWN");
       const enemiesBefore = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
-      await page.mouse.click(278, 229); // spawn the first enemy kind
+      await clickText("CHARGER");
       await page.waitForFunction((before) => window.__PANTHEON_TEST.state().enemyCount > before, enemiesBefore, {
         timeout: STATE_WAIT_MS,
       });
       console.log("playground journey: enemy spawned");
 
-      await page.mouse.click(330, 721); // ABILITY LAB
+      // Q / E step the tabs; a click opens one directly.
+      await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+      await page.keyboard.press("e");
+      await tabOpen("SUMMON A BOSS");
+      await clickText("ARENA");
+      await tabOpen("ARENA");
+      assert.equal(await drawn("TRAINING GROUNDS"), undefined, "the Tutorial's training ground is not an arena");
+      console.log("playground journey: tabs switch by key and by click");
+
+      await clickText("ABILITIES");
       await waitScreen("pglab");
-      console.log("playground journey: ability lab open");
-      await page.mouse.click(721, 272); // TAKE the first available ability
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      await page.mouse.wheel(0, 500);
-      await page.mouse.click(800, 850); // BUILD MENU (lab back control)
-      await waitScreen("pgmenu");
-      console.log("playground journey: returned to build menu");
-      await page.mouse.click(800, 780); // RESUME (source-position band under the actions row)
+      console.log("playground journey: abilities tab open");
+      await clickText("TAKE");
+      await clickText("RESUME");
       await waitScreen("playing");
       console.log("playground journey: pointer resume");
 
+      // U opens ABILITIES; Tab leaves the menu from any tab.
       await pressUntilScreen("u", "pglab");
-      await pressUntilScreen("Tab", "pgmenu");
       await pressUntilScreen("Tab", "playing");
+      // Pause offers the menu: the route touch and controller players use.
+      await pressUntilScreen("Escape", "paused");
+      await clickText("PLAYGROUND MENU");
+      await waitScreen("pglab");
+      console.log("playground journey: pause opens the menu on the tab left open");
+      await clickText("RESUME");
+      await waitScreen("playing");
       assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().mode), "playground");
     },
   );

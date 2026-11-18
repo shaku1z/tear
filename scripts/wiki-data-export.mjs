@@ -20,6 +20,8 @@ export async function encodeWikiData(server, reference, { modeModule, variantMod
   const { SHOP_CATEGORIES } = await load("/src/presentation/shop-snapshot.ts");
   const { createMetaProgression } = await load("/src/gameplay/progression/meta.ts");
   const { createBrowserGamepad } = await load("/src/input/browser-gamepad.ts");
+  const { BOSS_ATTACK_TICKS_PER_SECOND } = await load("/src/gameplay/entities/boss-attacks.ts");
+  const { ROOTBOUND_MOVES } = await load("/src/gameplay/entities/enemy-types/rootbound-moves.ts");
 
   // Base stats: build every published enemy and boss through the game's own
   // by-id entity factory (the one the live world uses), over every enemy type
@@ -115,6 +117,15 @@ export async function encodeWikiData(server, reference, { modeModule, variantMod
     enemyIds: director.PUBLISHED_ENEMY_IDENTITY_IDS,
     enemyCopy: bestiary.ENEMY_BESTIARY_COPY,
     bossCopy: bestiary.BOSS_BESTIARY_COPY,
+    // The only boss whose moves are data so far. Older bosses are read from play, by the picture generator.
+    bossMoves: {
+      rootbound: ROOTBOUND_MOVES.attacks.map((attack) => ({
+        id: attack.id,
+        phases: [...attack.phases],
+        tellSeconds: attack.timing.tell / BOSS_ATTACK_TICKS_PER_SECOND,
+        strikes: Boolean(attack.hit),
+      })),
+    },
     bodies,
     affixes: affixModule.AFFIXES,
     elite: CONFIG.elite,

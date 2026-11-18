@@ -1,7 +1,5 @@
 import type {
   AchievementsScreenView,
-  GhostPublicationScreenView,
-  GhostSupportScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
   MusicScreenView,
@@ -62,6 +60,7 @@ export interface LiveScreenRendererOptions {
   readonly focus: () => number;
   readonly touch: () => boolean;
   readonly reducedMotion: () => boolean;
+  readonly pixelScale: () => number;
   readonly screenRectangle?: () => Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly safeInsets?: () => Readonly<{ l: number; r: number; t: number; b: number }>;
   readonly dispatch: (action: ScreenAction) => void;
@@ -149,14 +148,6 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
       if (renderers) renderers.pglab(view);
       else loadingFrame();
     },
-    ghostpublication(view: GhostPublicationScreenView) {
-      if (renderers) renderers.ghostpublication(view);
-      else loadingFrame();
-    },
-    ghostsupport(view: GhostSupportScreenView) {
-      if (renderers) renderers.ghostsupport(view);
-      else loadingFrame();
-    },
     settings(view: SettingsScreenView) {
       if (renderers) renderers.settings(view);
       else loadingFrame();
@@ -205,6 +196,9 @@ export function createLiveScreenRenderers(options: LiveScreenRendererOptions): S
     },
     get reducedMotion() {
       return options.reducedMotion();
+    },
+    get pixelScale() {
+      return options.pixelScale();
     },
     get screenRectangle() {
       return options.screenRectangle?.() ?? { x: 0, y: 0, w: options.width, h: options.height };
