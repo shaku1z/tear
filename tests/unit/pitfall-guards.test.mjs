@@ -62,4 +62,62 @@ describe("pitfall guards", () => {
     expect(offenders).toEqual([]);
     expect(fs.readFileSync(path.join(root, "docs", "ARCHITECTURE.md"), "utf8")).toContain("**The module size rule.**");
   });
+
+  describe("a test or check runs once, and that run is its verdict (flaky tests are fixed, never retried)", () => {
+    it("finds every way of asking for a retry, and nothing else", () => {
+      for (const text of [
+        "export default defineConfig({ test: { retry: 2 } });",
+        "module.exports = { retries: process.env.CI ? 2 : 0 };",
+        '{ "retries": 1 }',
+        'it("loads", { retry: 3 }, () => {});',
+        "test.describe.configure({ mode: 'serial', retries: 2 });",
+        "this.retries(2);",
+        "jest.retryTimes(3);",
+        '"test": "vitest run --retry=2"',
+        "run: npx playwright test --retries 2",
+        "node --test --test-retries=1 tests/a.test.mjs",
+      ])
+        expect(retryRequests(text), text).not.toEqual([]);
+      for (const text of [
+        "retry: () => { restarts += 1; },",
+        "retry: async () => undefined,",
+        'await clickLabel("RETRY", "playing");',
+        "let retries = 0; retries += 1;",
+        '{ reason: "retry" }',
+        "curl --fail --location --retry 3 --retry-all-errors --output out.tgz https://example.test/a.tgz",
+      ])
+        expect(retryRequests(text), text).toEqual([]);
+    });
+
+    it("no test, test configuration, check list, package script, script or workflow asks for one", () => {
+      const sources = [
+        ...listFiles("tests", [".js", ".mjs", ".cjs", ".ts", ".json"]),
+        ...listFiles("scripts", [".js", ".mjs", ".cjs", ".ts", ".ps1", ".sh"]),
+        ...listFiles(".github", [".yml", ".yaml"]),
+        ...listFiles("config", [".json"]),
+        ...fs.readdirSync(root).filter((name) => /\.config\.[cm]?[jt]s$/u.test(name) || name === "package.json"),
+      ].filter((file) => file !== "tests/unit/pitfall-guards.test.mjs");
+      const offenders = sources.flatMap((file) =>
+        retryRequests(fs.readFileSync(path.join(root, file), "utf8")).map((line) => `${file}: ${line}`),
+      );
+      expect(offenders).toEqual([]);
+    });
+  });
 });
+
+/**
+ * The lines of `text` that ask a test runner or check to run again after a failure: a `retry` or
+ * `retries` setting whose value is not a function (a function is a game or port method named
+ * retry), a retry flag, or Mocha's and Jest's retry calls. A download may retry the network, so a
+ * retry flag on a `curl` command is not one.
+ */
+function retryRequests(text) {
+  const setting = /["']?\bretr(?:y|ies)["']?\s*:\s*(?!\(|async\b|function\b)\S/u;
+  const flag = /(?:^|\s)--(?:[\w-]+-)?retr(?:y|ies)\b/u;
+  const call = /\bthis\.retries\s*\(|\bretryTimes\s*\(/u;
+  if (!/retr(?:y|ies)/iu.test(text)) return [];
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => setting.test(line) || call.test(line) || (flag.test(line) && !/(?:^|\s)curl\s/u.test(line)));
+}
