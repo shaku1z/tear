@@ -16,6 +16,7 @@ describe("shop snapshot", () => {
       canBuy: () => false,
       shopBuys: 0,
       lifetimeSpent: 0,
+      tab: "upgrades" as const,
     };
     const fresh = buildShopSnapshot(input).view;
     expect(fresh.onboarding).toContain("permanent upgrades");
@@ -28,6 +29,7 @@ describe("shop snapshot", () => {
   it("eases the visible ledger and projects affordability", () => {
     const item = { id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" };
     const result = buildShopSnapshot({
+      tab: "upgrades",
       items: [item],
       realCoins: 100,
       displayedCoins: 0,
