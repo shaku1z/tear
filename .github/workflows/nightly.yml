@@ -67,6 +67,10 @@ jobs:
       - name: Release build
         run: node scripts/build-target.mjs standalone
       - name: Nightly checks
+        # Playwright passes on the browser's own stderr only under this flag. It is where Chromium
+        # says why a page or the browser died (a renderer killed for memory, a GPU process crash).
+        env:
+          DEBUG: pw:browser
         run: xvfb-run -a node scripts/run-checks.mjs nightly --keep-going
       - uses: actions/upload-artifact@v4
         if: always()
