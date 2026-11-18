@@ -674,7 +674,7 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
       firstRunJobs.push({ id, captureTick: plannedTick, action: null, actionTick: null });
     } else {
       const actionTick = plannedTick + 1;
-      plannedTick = actionTick + 12;
+      plannedTick = actionTick + captureAfterTicks(action);
       firstRunJobs.push({ id, captureTick: plannedTick, action, actionTick });
     }
     planned.set(index, plannedTick);
@@ -733,7 +733,7 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
         snapshot = await page.evaluate(() => window.__TEAR_PARITY_ADAPTER__.snapshot());
       } else if (await page.evaluate(() => window.__TEAR_PARITY_ADAPTER__.screen() === "playing")) {
         const actionTick = targetTick + 1;
-        targetTick = actionTick + 12;
+        targetTick = actionTick + captureAfterTicks(action);
         await queueTickJobs(page, [{ id: captureId, captureTick: targetTick, action, actionTick }]);
         snapshot = await readTickCapture(page, captureId);
       } else {
@@ -767,6 +767,20 @@ async function captureTrace(browser, kind, baseUrl, root, fixture) {
   };
   await page.close();
   return trace;
+}
+
+/**
+ * How many ticks after an in-play action its checkpoint is read: 12 unless the fixture names it.
+ * A checkpoint about the tick an action resolves (a parry, say) reads 1 tick later, so what it
+ * asserts does not depend on how far the world moved on in the ticks after.
+ */
+function captureAfterTicks(action) {
+  const ticks = action.captureAfterTicks ?? 12;
+  assert.ok(
+    Number.isSafeInteger(ticks) && ticks >= 1,
+    `captureAfterTicks must be a whole number of ticks, at least 1; got ${ticks}`,
+  );
+  return ticks;
 }
 
 function checkpoint(trace, label) {

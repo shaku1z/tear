@@ -14,7 +14,7 @@ export interface LiveScreenTransitionHooks {
 
 export interface LiveScreenNavigationOptions {
   readonly app: AppStateController;
-  readonly input: Pick<BrowserInput, "allowLock" | "discardSemanticInput">;
+  readonly input: Pick<BrowserInput, "allowLock" | "discardSemanticInput" | "returnControl">;
   readonly runScreenFact: (transition: "paused" | "resumed") => void;
 }
 
@@ -53,7 +53,7 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
     if (prior === "playing" && state !== "playing") {
       interruptTutorialCoaching();
       input.discardSemanticInput();
-    } else if (prior !== "playing" && state === "playing") input.discardSemanticInput();
+    } else if (prior !== "playing" && state === "playing") input.returnControl();
     if (prior === "playing" && state === "paused") options.runScreenFact("paused");
     else if (prior === "paused" && state === "playing") options.runScreenFact("resumed");
     return state;

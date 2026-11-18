@@ -7,6 +7,7 @@
  * and merges (max / union / newest) converge on every device.
  */
 import {
+  type Acquisition,
   COSMETIC_STATE_VERSION,
   DEFAULT_LOADOUT_ID,
   MAX_LOADOUT_NAME,
@@ -20,7 +21,7 @@ import {
 } from "./cosmetic-types";
 import { isItemId } from "./identifiers";
 import { hasOwnKey, isRecord, ownValue } from "./records";
-import { conditionMet, type ProgressFacts } from "./unlock-condition";
+import { conditionMet, type ProgressFacts, type UnlockCondition } from "./unlock-condition";
 
 const wholeNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
@@ -136,9 +137,11 @@ export function mergeCosmeticStates(left: CosmeticState, right: CosmeticState): 
 export const cosmeticsSpent = (state: CosmeticState): number =>
   Object.values(state.owned).reduce((sum, price) => sum + price, 0);
 
+/** Shards earned as a usable count: a missing or broken saved value counts as none. */
+export const shardsEarned = (earned: number): number => (Number.isFinite(earned) ? Math.max(0, earned) : 0);
 /** Shards left to spend. Never negative: merging two devices' purchases can overspend, which only blocks buying. */
 export const shardBalance = (earned: number, state: CosmeticState): number =>
-  Math.max(0, (Number.isFinite(earned) ? earned : 0) - cosmeticsSpent(state));
+  Math.max(0, shardsEarned(earned) - cosmeticsSpent(state));
 
 export const priceOf = (catalog: CosmeticCatalog, item: CosmeticItem): number =>
   catalog.tiers.find((tier) => tier.id === item.tier)?.price ?? Number.POSITIVE_INFINITY;
@@ -205,6 +208,17 @@ export function purchaseCosmetic(
 }
 
 /**
+ * The profile fact an acquire entry grants on, in the shared condition language, or null when it is not one
+ * (shards are a purchase, a collection is completed by ownership, the other kinds are not live yet). Grants and
+ * the shipped-data reference check both read it, so an achievement or boss id is judged one way everywhere.
+ */
+export function acquireCondition(entry: Acquisition): UnlockCondition | null {
+  if (entry.how === "achievement") return { type: "achievement", id: entry.id };
+  if (entry.how === "boss") return { type: "boss-defeat", bossId: entry.id };
+  return null;
+}
+
+/**
  * Items the player has earned without paying: an achievement, a defeated boss, or a finished collection
  * (its reward). Challenge, mastery, code and bundle grants arrive through their own receipts later.
  */
@@ -219,10 +233,9 @@ export function claimableGrants(catalog: CosmeticCatalog, state: CosmeticState, 
     .filter((item) => !owned(item.id) && !(item.unlock && !conditionMet(item.unlock, facts)))
     .filter((item) =>
       item.acquire.some((entry) => {
-        if (entry.how === "achievement") return facts.achievementUnlocked(entry.id);
-        if (entry.how === "boss") return facts.bossDefeated(entry.id);
-        if (entry.how === "collection") return complete(entry.id);
-        return false;
+        const condition = acquireCondition(entry);
+        if (condition) return conditionMet(condition, facts);
+        return entry.how === "collection" && complete(entry.id);
       }),
     )
     .map((item) => item.id);

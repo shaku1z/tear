@@ -126,3 +126,34 @@ export function conditionProgress(
       return { current: conditionMet(condition, facts) ? 1 : 0, goal: 1 };
   }
 }
+
+/** The names a player reads for the things a condition refers to. Supplied by the layer that knows them. */
+export interface ConditionNames {
+  boss(bossId: string): string;
+  /** A biome reference (a stage's id or name) as the stage's own name. */
+  biome(biome: string): string;
+  achievement(id: string): string;
+  /** A stat key in words ("bossKills" to "boss kills"). */
+  stat(key: string): string;
+}
+
+/** What a player must do, as a short phrase without a final stop. "" for a condition that is always met. */
+export function conditionText(condition: UnlockCondition, names: ConditionNames): string {
+  switch (condition.type) {
+    case "default":
+      return "";
+    case "boss-defeat":
+      return `Defeat ${names.boss(condition.bossId)}`;
+    case "biome-enter":
+      return `Reach ${names.biome(condition.biome)}`;
+    case "stat-threshold":
+      return `Reach ${condition.goal.toLocaleString("en-US")} ${names.stat(condition.stat)}`;
+    case "achievement":
+      return `Unlock ${names.achievement(condition.id)}`;
+    case "all":
+      return condition.of
+        .map((entry) => conditionText(entry, names))
+        .filter((text) => text !== "")
+        .join(" and ");
+  }
+}
