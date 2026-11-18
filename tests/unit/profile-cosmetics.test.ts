@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 import { migrateProfileEnvelope, PROFILE_ENVELOPE_VERSION } from "../../src/persistence/profile-envelope";
+import { activeLoadout } from "../../src/domain/cosmetics";
 import { createProfileStore, type ProfileStore } from "../../src/persistence/profile-store";
 
 /** In-memory storage with the acknowledged channel the live platform provides. */
@@ -60,7 +61,12 @@ describe("profile envelope version 4", () => {
       migratedFrom: 3,
       value: {
         schemaVersion: PROFILE_ENVELOPE_VERSION,
-        profile: { shards: 40, ach: { a: 1 }, unknownFuture: "kept", cosmetics: { v: 1, owned: {}, equipped: {} } },
+        profile: {
+          shards: 40,
+          ach: { a: 1 },
+          unknownFuture: "kept",
+          cosmetics: { v: 1, owned: {}, seen: {}, counters: {}, loadouts: {}, active: { id: "main", at: 0 } },
+        },
         extensions: { keep: true },
       },
     });
@@ -75,18 +81,22 @@ describe("profile envelope version 4", () => {
     const result = migrateProfileEnvelope({
       schema: "tear.profile",
       schemaVersion: 4,
-      profile: { cosmetics: { v: 1, owned: { ok_item: 10, bad: -1, "Bad Id": 3 }, equipped: { trail: "junk" } } },
+      profile: { cosmetics: { v: 1, owned: { ok_item: 10, bad: -1, "Bad Id": 3 }, loadouts: { main: "junk" } } },
     });
     expect(result).toMatchObject({
       ok: true,
       migratedFrom: null,
-      value: { profile: { cosmetics: { v: 1, owned: { ok_item: 10 }, equipped: {} } } },
+      value: { profile: { cosmetics: { v: 1, owned: { ok_item: 10 }, loadouts: {} } } },
     });
     expect(
       migrateProfileEnvelope({ schema: "tear.profile", schemaVersion: 4, profile: { cosmetics: 12 } }),
     ).toMatchObject({
       ok: true,
-      value: { profile: { cosmetics: { v: 1, owned: {}, equipped: {} } } },
+      value: {
+        profile: {
+          cosmetics: { v: 1, owned: {}, seen: {}, counters: {}, loadouts: {}, active: { id: "main", at: 0 } },
+        },
+      },
     });
   });
 
@@ -112,17 +122,17 @@ describe("buying and equipping through the profile store", () => {
       tear_profile_v2: JSON.stringify({ schema: "tear.profile", schemaVersion: 3, profile: { shards: 200 } }),
     });
     const { profile } = open(storage);
-    expect(await profile.buyCosmetic("trail_1")).toBe("committed");
+    expect(await profile.buyCosmetic("trail_dusk")).toBe("committed");
     expect(profile.shards()).toBe(200);
-    expect(profile.shardBalance()).toBe(125);
-    expect(await profile.buyCosmetic("trail_1")).toBe("owned");
-    expect(await profile.equipCosmetic("trail", "trail_1")).toBe("committed");
-    expect(await profile.equipCosmetic("trail", "trail_2")).toBe("unknown");
+    expect(profile.shardBalance()).toBe(175);
+    expect(await profile.buyCosmetic("trail_dusk")).toBe("owned");
+    expect(await profile.equipCosmetic("trail", "trail_dusk")).toBe("committed");
+    expect(await profile.equipCosmetic("trail", "trail_tidewater")).toBe("unknown");
     // The balance is derived: the stored shard number is untouched, only ownership is recorded.
     expect(saved(storage).profile.shards).toBe(200);
     const reloaded = open(storage).profile;
-    expect(reloaded.shardBalance()).toBe(125);
-    expect(reloaded.cosmetics().equipped.trail?.id).toBe("trail_1");
+    expect(reloaded.shardBalance()).toBe(175);
+    expect(activeLoadout(reloaded.cosmetics())?.slots.trail?.id).toBe("trail_dusk");
   });
 
   it("refuses what cannot be afforded, is locked, or is unknown, and writes nothing", async () => {
@@ -130,8 +140,8 @@ describe("buying and equipping through the profile store", () => {
       tear_profile_v2: JSON.stringify({ schema: "tear.profile", schemaVersion: 3, profile: { shards: 50 } }),
     });
     const { profile } = open(storage);
-    expect(await profile.buyCosmetic("trail_2")).toBe("insufficient");
-    expect(await profile.buyCosmetic("rootbound_trail")).toBe("locked");
+    expect(await profile.buyCosmetic("trail_tidewater")).toBe("insufficient");
+    expect(await profile.buyCosmetic("trail_heartwood")).toBe("locked");
     expect(await profile.buyCosmetic("not_an_item")).toBe("unknown");
     expect(profile.cosmetics().owned).toEqual({});
   });
@@ -146,18 +156,18 @@ describe("buying and equipping through the profile store", () => {
         }),
       }),
     );
-    expect(await profile.buyCosmetic("rootbound_trail")).toBe("committed");
-    expect(profile.shardBalance()).toBe(350);
+    expect(await profile.buyCosmetic("trail_heartwood")).toBe("committed");
+    expect(profile.shardBalance()).toBe(200);
   });
 
   it("works without the acknowledged channel (plain local storage)", () => {
     const storage = memory({}, false);
     const { profile } = open(storage);
     profile.addShards(100);
-    return profile.buyCosmetic("trail_1").then(async (status) => {
+    return profile.buyCosmetic("trail_dusk").then(async (status) => {
       expect(status).toBe("committed");
-      expect(await profile.equipCosmetic("trail", "trail_1")).toBe("committed");
-      expect(open(storage).profile.cosmetics().owned).toEqual({ trail_1: 75 });
+      expect(await profile.equipCosmetic("trail", "trail_dusk")).toBe("committed");
+      expect(open(storage).profile.cosmetics().owned).toEqual({ trail_dusk: 25 });
     });
   });
 
@@ -169,7 +179,11 @@ describe("buying and equipping through the profile store", () => {
           schemaVersion: 4,
           profile: {
             shards: 300,
-            cosmetics: { v: 1, owned: { future_trail: 100 }, equipped: { trail: { id: "future_trail", at: 9 } } },
+            cosmetics: {
+              v: 1,
+              owned: { future_trail: 100 },
+              loadouts: { main: { name: "MAIN", nameAt: 1, slots: { trail: { id: "future_trail", at: 9 } } } },
+            },
           },
         }),
       }),
@@ -183,24 +197,54 @@ describe("buying and equipping through the profile store", () => {
       right = open().profile;
     left.addShards(300);
     right.addShards(300);
-    left.data.cosmetics = { v: 1, owned: { trail_1: 75 }, equipped: { trail: { id: "trail_1", at: 5 } } };
-    right.data.cosmetics = { v: 1, owned: { spark_1: 75 }, equipped: { trail: { id: null, at: 9 } } };
+    left.data.cosmetics = {
+      v: 1,
+      owned: { trail_dusk: 25 },
+      loadouts: { main: { name: "MAIN", nameAt: 1, slots: { trail: { id: "trail_dusk", at: 5 } } } },
+    };
+    right.data.cosmetics = {
+      v: 1,
+      owned: { spark_orchid: 25 },
+      loadouts: { main: { name: "MAIN", nameAt: 1, slots: { trail: { id: null, at: 9 } } } },
+    };
     const remoteOfRight = structuredClone(right.data);
     const remoteOfLeft = structuredClone(left.data);
     left.merge(remoteOfRight);
     right.merge(remoteOfLeft);
     expect(left.cosmetics()).toEqual(right.cosmetics());
-    expect(left.cosmetics().owned).toEqual({ trail_1: 75, spark_1: 75 });
-    expect(left.cosmetics().equipped.trail).toEqual({ id: null, at: 9 });
+    expect(left.cosmetics().owned).toEqual({ trail_dusk: 25, spark_orchid: 25 });
+    expect(left.cosmetics().loadouts.main?.slots.trail).toEqual({ id: null, at: 9 });
     left.merge(remoteOfRight);
     expect(left.cosmetics()).toEqual(right.cosmetics());
+  });
+
+  it("claims items earned by an achievement or a boss without spending shards", async () => {
+    const { profile } = open(
+      memory({
+        tear_profile_v2: JSON.stringify({
+          schema: "tear.profile",
+          schemaVersion: 4,
+          profile: { shards: 10, ach: { first_boss: 1 } },
+        }),
+      }),
+    );
+    expect(await profile.claimCosmeticGrants()).toBe("committed");
+    expect(profile.cosmetics().owned).toEqual({ title_giant_slayer: 0 });
+    expect(profile.shardBalance()).toBe(10);
+    expect(await profile.claimCosmeticGrants()).toBe("already");
+  });
+
+  it("records that an item was seen once", async () => {
+    const { profile } = open();
+    expect(await profile.markCosmeticsSeen(["trail_dusk"])).toBe("committed");
+    expect(await profile.markCosmeticsSeen(["trail_dusk"])).toBe("already");
   });
 
   it("shows zero, and blocks buying, when merged purchases overspend", async () => {
     const { profile } = open();
     profile.addShards(100);
-    profile.merge({ cosmetics: { v: 1, owned: { a: 80, b: 80 }, equipped: {} } });
+    profile.merge({ cosmetics: { v: 1, owned: { a: 80, b: 80 }, loadouts: {} } });
     expect(profile.shardBalance()).toBe(0);
-    expect(await profile.buyCosmetic("title_1")).toBe("insufficient");
+    expect(await profile.buyCosmetic("title_wanderer")).toBe("insufficient");
   });
 });

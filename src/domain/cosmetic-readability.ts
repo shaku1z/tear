@@ -55,9 +55,9 @@ export function isTellColor(hex: string): boolean {
 }
 
 /** The first reason a colour is unreadable or tell-like, or null when it passes. */
-export function colourProblem(hex: string, backdrops: ReadabilityBackdrops): string | null {
+export function colourProblem(hex: string, backdrops: ReadabilityBackdrops, rejectTell = true): string | null {
   if (!isHexColor(hex)) return `"${String(hex)}" is not a #rrggbb colour`;
-  if (isTellColor(hex)) return `${hex} is in the red/orange enemy-tell family`;
+  if (rejectTell && isTellColor(hex)) return `${hex} is in the red/orange enemy-tell family`;
   for (const [name, backdrop] of Object.entries(backdrops))
     if (contrastRatio(hex, backdrop) < MIN_BACKDROP_CONTRAST)
       return `${hex} has contrast ${contrastRatio(hex, backdrop).toFixed(2)} against the ${name} backdrop (minimum ${String(MIN_BACKDROP_CONTRAST)})`;

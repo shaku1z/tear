@@ -1,0 +1,196 @@
+[
+  {
+    "id": "ribbon",
+    "params": {
+      "colors": {
+        "type": "colors",
+        "min": 1,
+        "max": 3,
+        "readable": true
+      },
+      "widthScale": {
+        "type": "number",
+        "min": 0.8,
+        "max": 1.4
+      },
+      "glow": {
+        "type": "number",
+        "min": 0,
+        "max": 1
+      },
+      "fade": {
+        "type": "enum",
+        "values": [
+          "linear",
+          "hold"
+        ]
+      }
+    },
+    "calm": {
+      "glow": 0
+    }
+  },
+  {
+    "id": "burst",
+    "params": {
+      "colors": {
+        "type": "colors",
+        "min": 1,
+        "max": 3,
+        "readable": true
+      },
+      "countScale": {
+        "type": "number",
+        "min": 0.8,
+        "max": 1.5
+      },
+      "shape": {
+        "type": "enum",
+        "values": [
+          "line"
+        ]
+      }
+    },
+    "calm": {
+      "countScale": 0.8
+    }
+  },
+  {
+    "id": "ring",
+    "params": {
+      "colors": {
+        "type": "colors",
+        "min": 1,
+        "max": 3,
+        "readable": true
+      },
+      "radiusScale": {
+        "type": "number",
+        "min": 0.8,
+        "max": 1.2
+      },
+      "thickness": {
+        "type": "number",
+        "min": 0.8,
+        "max": 1.4
+      },
+      "pulseRate": {
+        "type": "number",
+        "min": 0,
+        "max": 3
+      }
+    },
+    "calm": {
+      "pulseRate": 0
+    }
+  },
+  {
+    "id": "afterimage",
+    "params": {
+      "colors": {
+        "type": "colors",
+        "min": 1,
+        "max": 3,
+        "readable": true
+      },
+      "copies": {
+        "type": "int",
+        "min": 2,
+        "max": 6
+      },
+      "fade": {
+        "type": "enum",
+        "values": [
+          "linear",
+          "hold"
+        ]
+      }
+    },
+    "calm": {
+      "copies": 2
+    }
+  },
+  {
+    "id": "aura",
+    "params": {
+      "colors": {
+        "type": "colors",
+        "min": 1,
+        "max": 3,
+        "readable": true
+      },
+      "intensity": {
+        "type": "number",
+        "min": 0,
+        "max": 0.6
+      },
+      "pulseRate": {
+        "type": "number",
+        "min": 0,
+        "max": 3
+      }
+    },
+    "calm": {
+      "pulseRate": 0,
+      "intensity": 0.2
+    }
+  },
+  {
+    "id": "tint",
+    "params": {
+      "base": {
+        "type": "color",
+        "readable": true
+      },
+      "glow": {
+        "type": "color",
+        "readable": true
+      },
+      "accent": {
+        "type": "color",
+        "readable": true
+      }
+    },
+    "calm": {}
+  },
+  {
+    "id": "text",
+    "params": {
+      "text": {
+        "type": "text",
+        "min": 1,
+        "max": 24
+      }
+    },
+    "calm": {}
+  },
+  {
+    "id": "banner",
+    "params": {
+      "colors": {
+        "type": "colors",
+        "min": 2,
+        "max": 2,
+        "readable": false
+      },
+      "pattern": {
+        "type": "enum",
+        "values": [
+          "flat",
+          "split",
+          "stripe"
+        ]
+      }
+    },
+    "calm": {}
+  },
+  {
+    "id": "audio-choice",
+    "params": {
+      "choice": {
+        "type": "id"
+      }
+    },
+    "calm": {}
+  }
+]

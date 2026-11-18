@@ -45,7 +45,7 @@ describe("versioned persistence envelopes", () => {
     expect(result.value.profile).toEqual({
       shards: 12,
       futureFeature: { enabled: true },
-      cosmetics: { v: 1, owned: {}, equipped: {} },
+      cosmetics: { v: 1, owned: {}, seen: {}, counters: {}, loadouts: {}, active: { id: "main", at: 0 } },
     });
     expect(result.value.writerId).toBe("legacy");
     expect(result.value.updatedAtMs).toBe(500);

@@ -1,14 +1,16 @@
+import type { CosmeticCatalog, CosmeticState } from "../domain/cosmetic-types";
 import {
+  claimableGrants,
   equipCosmetic,
+  grantItems,
+  markSeen,
   mergeCosmeticStates,
   normalizeCosmeticState,
   purchaseCosmetic,
   shardBalance,
-  type CosmeticCatalog,
-  type CosmeticSlotId,
-  type CosmeticState,
   type PurchaseRefusal,
 } from "../domain/cosmetics";
+import type { ProgressFacts } from "../domain/unlock-condition";
 import type { AcknowledgedStorage } from "../platform/contracts";
 import {
   achievementOutbox,
@@ -96,7 +98,11 @@ export interface ProfileStore {
   shardBalance(): number;
   buyCosmetic(itemId: string): Promise<CompletionStatus | PurchaseRefusal>;
   /** `null` clears the slot back to the default look. */
-  equipCosmetic(slot: CosmeticSlotId, itemId: string | null): Promise<CompletionStatus | "unknown">;
+  equipCosmetic(slot: string, itemId: string | null): Promise<CompletionStatus | "unknown">;
+  /** Grants items earned without paying (an achievement, a defeated boss, a finished collection). */
+  claimCosmeticGrants(): Promise<CompletionStatus>;
+  /** Records that the player has seen these items, which clears their "new" badge. */
+  markCosmeticsSeen(itemIds: readonly string[]): Promise<CompletionStatus>;
   stat(key: string): number;
   addStat(key: string, amount?: number): void;
   maxStat(key: string, value: number): void;
@@ -133,6 +139,17 @@ function record(value: unknown): Tracker | null {
 
 function finite(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+const capitalised = (id: string): string => `${id.charAt(0).toUpperCase()}${id.slice(1)}`;
+/** What the profile can answer for unlock conditions, read from a profile body. */
+function progressFacts(data: ProfileData): ProgressFacts {
+  return {
+    bossDefeated: (bossId) => finite(data.stats[`kill${capitalised(bossId)}`]) > 0,
+    biomeEntered: (biome) => record(data.stats._biomes)?.[biome] !== undefined,
+    stat: (key) => finite(data.stats[key]),
+    achievementUnlocked: (id) => data.ach[id] !== undefined,
+  };
 }
 
 function boolMap(value: unknown): Record<string, boolean> {
@@ -347,6 +364,20 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     options.onCommitted?.();
     return "committed";
   };
+  /** Runs one cosmetic change through the acknowledged commit, or directly on a plain local store. */
+  async function runCosmeticChange<Outcome extends string>(
+    self: ProfileStore,
+    apply: (target: ProfileData) => void,
+    outcome: () => Outcome,
+  ): Promise<CompletionStatus | Outcome> {
+    if (!options.store.acknowledged) {
+      apply(self.data);
+      if (outcome() === "committed") self.save();
+      return outcome();
+    }
+    const status = await commit(apply);
+    return status === "committed" ? outcome() : status;
+  }
   const profile: ProfileStore = {
     KEY: "tear_profile",
     ENVELOPE_KEY: "tear_profile_v2",
@@ -521,7 +552,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
           normalizeCosmeticState(target.cosmetics),
           itemId,
           finite(target.shards),
-          (boss) => finite(target.stats[`kill${boss.charAt(0).toUpperCase()}${boss.slice(1)}`]) > 0,
+          progressFacts(target),
         );
         if (!result.ok) {
           outcome = result.reason;
@@ -530,13 +561,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
         target.cosmetics = result.state;
         outcome = "committed";
       };
-      if (!options.store.acknowledged) {
-        apply(this.data);
-        if (outcome === "committed") this.save();
-        return outcome;
-      }
-      const status = await commit(apply);
-      return status === "committed" ? outcome : status;
+      return runCosmeticChange(this, apply, () => outcome);
     },
     async equipCosmetic(slot, itemId) {
       const catalog = options.getCosmeticCatalog?.();
@@ -548,13 +573,37 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
         target.cosmetics = next;
         outcome = "committed";
       };
-      if (!options.store.acknowledged) {
-        apply(this.data);
-        if (outcome === "committed") this.save();
-        return outcome;
-      }
-      const status = await commit(apply);
-      return status === "committed" ? outcome : status;
+      return runCosmeticChange(this, apply, () => outcome);
+    },
+    async claimCosmeticGrants() {
+      const catalog = options.getCosmeticCatalog?.();
+      if (!catalog) return "unknown";
+      let outcome = "unknown" as CompletionStatus;
+      const apply = (target: ProfileData): void => {
+        const state = normalizeCosmeticState(target.cosmetics);
+        const ids = claimableGrants(catalog, state, progressFacts(target));
+        if (ids.length === 0) {
+          outcome = "already";
+          return;
+        }
+        target.cosmetics = grantItems(state, ids);
+        outcome = "committed";
+      };
+      return runCosmeticChange(this, apply, () => outcome);
+    },
+    async markCosmeticsSeen(itemIds) {
+      let outcome = "unknown" as CompletionStatus;
+      const apply = (target: ProfileData): void => {
+        const state = normalizeCosmeticState(target.cosmetics);
+        const next = markSeen(state, itemIds, now());
+        if (Object.keys(next.seen).length === Object.keys(state.seen).length) {
+          outcome = "already";
+          return;
+        }
+        target.cosmetics = next;
+        outcome = "committed";
+      };
+      return runCosmeticChange(this, apply, () => outcome);
     },
     stat(key) {
       return finite(this.data.stats[key]);
