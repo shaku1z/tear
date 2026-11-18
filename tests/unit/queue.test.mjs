@@ -1,10 +1,10 @@
 // The shared queue for heavy local commands (scripts/queue.mjs): arrival order, dead owners,
 // inherited tickets and the light-command rule.
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { commandFrom, joinQueue, lightKind, queueSlots } from "../../scripts/queue.mjs";
+import { commandFrom, joinQueue, lightKind, quoteArgument, queueSlots } from "../../scripts/queue.mjs";
 
 const made = [];
 const directory = () => {
@@ -79,6 +79,27 @@ describe("queue", () => {
     (await late)();
   });
 
+  it("drops a ticket of a live process id that stopped refreshing, and serves the next waiter", async () => {
+    const queue = directory();
+    const silent = join(queue, "000000000000001-1-1.json");
+    writeFileSync(silent, JSON.stringify({ pid: process.pid, joined: 1 }));
+    const tenMinutesAgo = (Date.now() - 10 * 60_000) / 1000;
+    utimesSync(silent, tenMinutesAgo, tenMinutesAgo);
+    const release = await joinQueue({ directory: queue, slots: 1, env: {}, ...quiet });
+    expect(readdirSync(queue)).toHaveLength(1);
+    release();
+  });
+
+  it("keeps a holder's ticket fresh while the holder is blocked in synchronous work", async () => {
+    const queue = directory();
+    const release = await joinQueue({ directory: queue, slots: 1, env: {}, refreshMs: 50, ...quiet });
+    const [ticket] = readdirSync(queue);
+    const before = statSync(join(queue, ticket)).mtimeMs;
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 600);
+    expect(statSync(join(queue, ticket)).mtimeMs).toBeGreaterThan(before);
+    release();
+  });
+
   it("lets a command inside a holder through on the holder's ticket", async () => {
     const queue = directory();
     const env = {};
@@ -126,6 +147,15 @@ describe("command line", () => {
   it("takes the command after an optional --", () => {
     expect(commandFrom(["--", "pnpm", "typecheck"])).toEqual(["pnpm", "typecheck"]);
     expect(commandFrom(["pnpm", "typecheck"])).toEqual(["pnpm", "typecheck"]);
+  });
+
+  it("quotes arguments for the shell, and refuses what cmd cannot pass", () => {
+    expect(quoteArgument("tests/unit/a.test.ts", "win32")).toBe("tests/unit/a.test.ts");
+    expect(quoteArgument("arrival order", "win32")).toBe('"arrival order"');
+    expect(quoteArgument("a&b", "win32")).toBe('"a&b"');
+    expect(() => quoteArgument("%PATH%", "win32")).toThrow(RangeError);
+    expect(() => quoteArgument('say "hi"', "win32")).toThrow(RangeError);
+    expect(quoteArgument("it's $HOME", "linux")).toBe(String.raw`'it'\''s $HOME'`);
   });
 
   it("reads the slot count from TEAR_QUEUE_SLOTS, at least one", () => {

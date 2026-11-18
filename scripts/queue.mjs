@@ -11,12 +11,25 @@
 // two. scripts/run-checks.mjs joins the same queue itself, so a bare `pnpm check:functional` waits
 // its turn too.
 //
-// Each waiter is a file in <git common dir>/tear-queue named by its arrival time. A ticket whose
-// process has died is dropped by the next waiter that looks, and so is a holder served more than
-// three hours ago. Waiters wake when the directory changes, and look again every two seconds in case
-// a holder died without removing its ticket.
+// Each waiter is a file in <git common dir>/tear-queue named by its arrival time. A small heartbeat
+// process touches the ticket every 30 s for as long as its owner lives (it exits when the owner's IPC
+// channel closes, however the owner died), so the ticket stays fresh even while the owner is blocked
+// in spawnSync. The next waiter that looks drops a ticket that has not been touched for two minutes,
+// whatever its process id says (Windows reuses ids quickly), one whose process has died, and, as the
+// backstop for a hung command, a holder served more than three hours ago. Waiters wake when the
+// directory changes, and look again every two seconds.
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, watch, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  utimesSync,
+  watch,
+  writeFileSync,
+} from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -24,6 +37,8 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const TICKET_ENV = "TEAR_QUEUE_TICKET";
 const STALE_MS = 3 * 60 * 60_000;
+const REFRESH_MS = 30_000;
+const SILENT_MS = 2 * 60_000;
 
 const startsWith = (args, prefix) => prefix.every((part, index) => args[index] === part);
 const TEST_FILE = /\.(?:test|spec)\.[cm]?[jt]sx?$/u;
@@ -87,30 +102,45 @@ const alive = (pid) => {
   }
 };
 
-/** True when the ticket's owner has died, or it was served longer than staleMs ago. */
-function expired(path, staleMs, now) {
+/** Marks the ticket as refreshed at `at` (ms). False when it is gone. */
+function touch(path, at) {
+  try {
+    utimesSync(path, at / 1000, at / 1000);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * True when the ticket has not been refreshed for silentMs, its owner has died, or it was served
+ * longer than staleMs ago. A ticket being written right now reads as empty and is judged by its age.
+ */
+function expired(path, { staleMs, silentMs }, now) {
+  let refreshed;
+  try {
+    refreshed = statSync(path).mtimeMs;
+  } catch {
+    return true;
+  }
+  if (now - refreshed > silentMs) return true;
   let owner;
   try {
     owner = JSON.parse(readFileSync(path, "utf8"));
   } catch {
-    // A ticket being written right now reads as empty; one still unreadable after a minute is junk.
-    try {
-      return now - statSync(path).mtimeMs > 60_000;
-    } catch {
-      return true;
-    }
+    return false;
   }
   return !alive(owner.pid) || (owner.served !== undefined && now - owner.served > staleMs);
 }
 
 /** The live tickets in arrival order. Expired ones are removed on the way. */
-function liveTickets(directory, staleMs, now) {
+function liveTickets(directory, limits, now) {
   const live = [];
   for (const name of readdirSync(directory)
     .filter((file) => file.endsWith(".json"))
     .sort()) {
     const path = join(directory, name);
-    if (expired(path, staleMs, now)) rmSync(path, { force: true });
+    if (expired(path, limits, now)) rmSync(path, { force: true });
     else live.push(name);
   }
   return live;
@@ -136,6 +166,27 @@ function nextChange(directory, wait) {
 
 let joined = 0;
 
+/** Starts the process that keeps a ticket fresh; it exits when this process does. */
+function startHeartbeat(path, refreshMs) {
+  const script = fileURLToPath(import.meta.url);
+  const child = spawn(process.execPath, [script, "--heartbeat", path, String(refreshMs)], {
+    stdio: ["ignore", "ignore", "ignore", "ipc"],
+    windowsHide: true,
+  });
+  child.unref();
+  child.channel?.unref();
+  return child;
+}
+
+/** The heartbeat process: touch the ticket every refreshMs until it is gone or the owner exits. */
+function heartbeat(path, refreshMs) {
+  process.on("disconnect", () => process.exit(0));
+  touch(path, Date.now());
+  setInterval(() => {
+    if (!touch(path, Date.now())) process.exit(0);
+  }, refreshMs);
+}
+
 /**
  * Joins the queue and resolves, once this caller is among the first `slots` live tickets, with a
  * function that leaves it. A caller whose environment already names a held ticket is inside a
@@ -147,6 +198,8 @@ export async function joinQueue({
   label = "",
   env = process.env,
   staleMs = STALE_MS,
+  silentMs = SILENT_MS,
+  refreshMs = REFRESH_MS,
   wait = 2000,
   log = console.error,
   now = Date.now,
@@ -159,11 +212,16 @@ export async function joinQueue({
   const path = join(directory, name);
   const owner = { pid: process.pid, joined: now(), cwd: process.cwd(), command: label };
   writeFileSync(path, JSON.stringify(owner), { flag: "wx" });
+  touch(path, now());
+  const beat = startHeartbeat(path, refreshMs);
   const started = now();
   let ahead;
   for (;;) {
-    const live = liveTickets(directory, staleMs, now());
-    if (!live.includes(name)) writeFileSync(path, JSON.stringify(owner), { flag: "wx" });
+    if (!touch(path, now())) {
+      writeFileSync(path, JSON.stringify(owner), { flag: "wx" });
+      touch(path, now());
+    }
+    const live = liveTickets(directory, { staleMs, silentMs }, now());
     const place = live.indexOf(name);
     if (place !== -1 && place < slots) break;
     const waiting = (place === -1 ? live.length : place) - slots + 1;
@@ -173,8 +231,10 @@ export async function joinQueue({
   }
   if (ahead !== undefined) log(`queue: started after ${String(Math.round((now() - started) / 1000))} s`);
   writeFileSync(path, JSON.stringify({ ...owner, served: now() }));
+  touch(path, now());
   env[TICKET_ENV] = path;
   return () => {
+    beat.kill();
     rmSync(path, { force: true });
     if (env[TICKET_ENV] === path) Reflect.deleteProperty(env, TICKET_ENV);
   };
@@ -198,10 +258,33 @@ export function commandFrom(argv) {
   return argv[0] === "--" ? argv.slice(1) : argv;
 }
 
+/**
+ * One argument as the shell will pass it on. POSIX sh gets single quotes. Windows cmd gets double
+ * quotes around anything outside the safe set; cmd has no escape for a double quote inside them and
+ * still expands %NAME% there, so an argument holding either is refused.
+ */
+export function quoteArgument(part, platform = process.platform) {
+  if (/^[\w@+=:,./\\-]+$/u.test(part)) return part;
+  if (platform !== "win32") return `'${part.replaceAll("'", "'\\''")}'`;
+  if (/["%]/u.test(part)) throw new RangeError(`queue: cmd cannot pass this argument intact: ${part}`);
+  return `"${part}"`;
+}
+
 async function main(argv) {
+  if (argv[0] === "--heartbeat") {
+    heartbeat(argv[1], Number(argv[2]));
+    return undefined;
+  }
   const command = commandFrom(argv);
   if (command.length === 0) {
     console.error("usage: pnpm queue -- <command> [args...]");
+    return 2;
+  }
+  let line;
+  try {
+    line = command.map((part) => quoteArgument(part)).join(" ");
+  } catch (error) {
+    console.error(error.message);
     return 2;
   }
   const kind = lightKind(command);
@@ -212,10 +295,8 @@ async function main(argv) {
       : () => undefined;
   process.on("exit", release);
   for (const signal of ["SIGINT", "SIGTERM", "SIGBREAK"]) process.on(signal, () => process.exit(130));
-  // A shell starts .cmd launchers such as pnpm on Windows; arguments with spaces or shell
-  // characters are quoted so each arrives as one argument.
-  const quoted = command.map((part) => (/^[\w@%+=:,./\\-]+$/u.test(part) ? part : `"${part.replaceAll('"', '\\"')}"`));
-  const child = spawn(quoted.join(" "), { stdio: "inherit", shell: true });
+  // A shell starts .cmd launchers such as pnpm on Windows (see quoteArgument).
+  const child = spawn(line, { stdio: "inherit", shell: true });
   return new Promise((done) => {
     child.on("error", (error) => {
       console.error(`queue: could not start the command: ${error.message}`);
@@ -225,5 +306,7 @@ async function main(argv) {
   });
 }
 
-if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  process.exitCode = await main(process.argv.slice(2));
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const code = await main(process.argv.slice(2));
+  if (code !== undefined) process.exitCode = code;
+}
