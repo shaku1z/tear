@@ -14,10 +14,12 @@ import { densityTokens, isCompactDensity, type DensityProfile } from "./ui-densi
 import { inkIsLight, withAlpha } from "./ui-color";
 
 /**
- * The default button's horizontal padding: what its label never draws into. A centred label keeps
- * `centred` clear in total; a left-aligned one (glyph or sub line) starts `left` in, after a glyph
- * slot of at least `glyphMin` plus `glyphGap`, and keeps `right` clear (or `pip` per pip plus
- * `pipsRight`). Drawing and fitting (`buttonFitWidth`) both read it.
+ * The default button's padding: what its text never draws into. A centred label keeps `centred`
+ * clear in total; a left-aligned one (glyph or sub line) starts `left` in, after a glyph slot of at
+ * least `glyphMin` plus `glyphGap`, and keeps `right` clear (or `pip` per pip plus `pipsRight`).
+ * Vertically the text keeps `y` clear above and below; with a sub line the label centre sits
+ * `subLift` above the button's centre and the sub line `subDrop` below it. Drawing and fitting
+ * (`buttonFitWidth`, `buttonFitHeight`) both read it.
  */
 const BUTTON_PAD = Object.freeze({
   centred: 16,
@@ -27,6 +29,9 @@ const BUTTON_PAD = Object.freeze({
   glyphGap: 13,
   pip: 14,
   pipsRight: 24,
+  y: 9,
+  subLift: 10,
+  subDrop: 13,
 });
 
 export function createUiFoundation(dependencies: UiDependencies) {
@@ -412,6 +417,23 @@ export function createUiFoundation(dependencies: UiDependencies) {
       return Math.ceil(width + this._buttonChrome(b));
     },
     /**
+     * The height a button `w` wide needs for its text at full size: the label's lines (two when it
+     * cannot sit on one), or the label over its sub line, `BUTTON_PAD.y` clear above and below, and
+     * never shorter than a list row (`metric.listRowH`). A button list sizes its rows from it.
+     */
+    buttonFitHeight(
+      this: UiRuntime,
+      ctx: CanvasRenderingContext2D,
+      b: ButtonLabelSpec & Readonly<{ w: number }>,
+    ): number {
+      const size = truthyOr(b.size, () => this.t.type.lead);
+      // With a sub line the label keeps one line and the pair is centred as the draw places it.
+      const text = b.sub
+        ? 2 * Math.max(BUTTON_PAD.subLift + size / 2, BUTTON_PAD.subDrop + this.t.type.micro / 2)
+        : (this.buttonFitWidth(ctx, b) <= b.w ? 0 : Math.round(size * 1.12)) + size;
+      return Math.max(this.t.metric.listRowH, Math.ceil(text + 2 * BUTTON_PAD.y));
+    },
+    /**
      * The button's label layout: the shared fitting rule over the room its padding leaves, on one
      * line beside a sub line, else wrapping to two when the height allows. Drawing uses it, and a
      * layout check can ask it whether a label would be cut (`truncated`).
@@ -498,12 +520,12 @@ export function createUiFoundation(dependencies: UiDependencies) {
         ctx.fillStyle = selected ? t.color.paper : on ? this.ink : "#8b8d98";
         ctx.font = this.font(fit.size, true);
         ctx.textAlign = "left";
-        this._drawLines(ctx, fit.lines, lx2, (b.sub ? cy2 - 10 : cy2) + 1, fit.size);
+        this._drawLines(ctx, fit.lines, lx2, (b.sub ? cy2 - BUTTON_PAD.subLift : cy2) + 1, fit.size);
         if (b.sub) {
           const sub = this.fitText(ctx, b.sub, room, { size: t.type.micro, floor: t.type.micro });
           ctx.globalAlpha = selected ? 0.85 : t.alpha.muted;
           ctx.font = this.font(sub.size, false);
-          ctx.fillText(sub.lines[0] ?? "", lx2, cy2 + 13);
+          ctx.fillText(sub.lines[0] ?? "", lx2, cy2 + BUTTON_PAD.subDrop);
           ctx.globalAlpha = 1;
         }
         ctx.textBaseline = "alphabetic";

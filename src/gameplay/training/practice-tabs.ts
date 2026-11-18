@@ -39,7 +39,7 @@ const TAB_ROWS = {
     subtitle: "Replay a boss phase you have reached · no rewards",
     help: "Phase 1 opens once you have beaten or met a boss; a later phase once you have reached it in a run. Each drill starts where that phase really begins. No rewards.",
     compactHelp:
-      "Scroll for more bosses. Phase 1 opens once you have beaten or met a boss; a later phase once you have reached it. No rewards.",
+      "Phase 1 opens once you have beaten or met a boss; a later phase once you have reached it. No rewards.",
     select: "select-boss",
     columns: 3,
   },

@@ -52,9 +52,14 @@ function slotMap(value: unknown): Record<string, EquippedEntry> {
   return output;
 }
 
+/** The entries of `map` whose key passes `keep`. */
+function keepKeys(map: Readonly<Record<string, number>>, keep: (id: string) => boolean): Record<string, number> {
+  return Object.fromEntries(Object.entries(map).filter(([id]) => keep(id)));
+}
+
 /**
  * Any stored or remote value to a valid state. Malformed entries are dropped, never thrown on. Unknown
- * item, slot and loadout ids are kept (a newer client may know them) and nothing is dropped for being
+ * item, slot and loadout ids are kept (a newer client may know them) and no owned item is dropped for being
  * too many, so a save never loses an item depending on key order.
  */
 export function normalizeCosmeticState(value: unknown): CosmeticState {
@@ -117,17 +122,32 @@ function mergeNumbers(
   return output;
 }
 
-/** Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest active loadout. */
-export function mergeCosmeticStates(left: CosmeticState, right: CosmeticState): CosmeticState {
+/**
+ * Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest
+ * active loadout. Order-independent: merge(a, b) equals merge(b, a).
+ *
+ * Owned items and counters are never dropped, whatever their id: dropping an owned item would refund its
+ * shards with nobody seeing why, and a counter may be a newer client's progress toward an item this build does
+ * not list yet, which an older device merging the profile must not erase. With the catalog, `seen` is kept
+ * for its items only: a seen mark may name an item the player does not own (looking at a shelf clears its NEW
+ * mark before buying), and losing one for an id this build does not list only shows NEW once more. Each entry
+ * is judged alone, so the merge stays commutative, associative and idempotent.
+ */
+export function mergeCosmeticStates(
+  left: CosmeticState,
+  right: CosmeticState,
+  catalog?: CosmeticCatalog,
+): CosmeticState {
   const loadouts: Record<string, SavedLoadout> = { ...left.loadouts };
   for (const [id, entry] of Object.entries(right.loadouts)) {
     const current = ownValue(loadouts, id);
     loadouts[id] = current ? mergeLoadout(current, entry) : entry;
   }
+  const seen = mergeNumbers(left.seen, right.seen, Math.min);
   return {
     v: COSMETIC_STATE_VERSION,
     owned: mergeNumbers(left.owned, right.owned, Math.max),
-    seen: mergeNumbers(left.seen, right.seen, Math.min),
+    seen: catalog ? keepKeys(seen, (id) => catalog.items.some((item) => item.id === id)) : seen,
     counters: mergeNumbers(left.counters, right.counters, Math.max),
     loadouts,
     active: newer(right.active, left.active) ? right.active : left.active,
