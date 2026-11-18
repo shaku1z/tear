@@ -17,7 +17,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Release readiness](#release-readiness) | Merged to main | Production deploy, after the owner has played the build. | — |
 | [Production deploy](#production-deploy) | Deployed 2026-11-13 | The next production deploy follows the Verdant, Tutorial and music work. | — |
 | [Verdant Sanctum visuals](#verdant-visuals) | In progress | Living motion (water, light, foliage) as package data, in its own pull request. | Judge the look: the owner's taste decides visual work. A sharper, wider source painting that meets the brief in docs/BACKGROUND_WORKFLOW.md would remove most of the readability shading. |
-| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | Its pull request, then the lead's review. | Playtest the reworked stage. |
+| [Verdant Sanctum gameplay](#verdant-gameplay) | In progress | A shared rule that a boss body hurts only inside a declared move, then the Bloom Wells and Rootbinder design. | Playtest the Rootbound in all three phases. |
 | [Tutorial and Playground experience](#training-ux) | In progress | Its pull request, then the lead's review. | — |
 | [Pale Traverse rework](#pale-traverse) | Not started | Start once the Verdant gameplay rework has landed. | — |
 | [Player wiki](#wiki) | In progress | Review the move pull request, then confirm the Cloudflare secret question and run the first wiki deploy. | Archive shaku1z/tear-wiki after the first deploy from this repository. |
@@ -59,10 +59,10 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 
 ### Verdant Sanctum gameplay
 
-**In progress.** A session is reworking the Verdant stage, its enemies and its boss, which the owner found broken and unfinished.
+**In progress.** The Rootbound boss is rebuilt in all three phases as data on a shared boss move layer that Pale and later bosses reuse: Phase I's moves, Phase II's Grafts, Root Cage and Bloom Wells, and Phase III's Regrowth and Last Spring. Bloom Wells, the Rootbinder and its links, and Verdant waves are not rebuilt yet.
 
-- Next: Its pull request, then the lead's review.
-- Owner action: Playtest the reworked stage.
+- Next: A shared rule that a boss body hurts only inside a declared move, then the Bloom Wells and Rootbinder design.
+- Owner action: Playtest the Rootbound in all three phases.
 - Evidence: [plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md](../plans/active/TEAR_THE_VERDANT_SANCTUM_FULL_BIOME_PLAN_REVISION_3.md)
 
 <a id="training-ux"></a>

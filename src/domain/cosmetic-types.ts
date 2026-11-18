@@ -93,7 +93,7 @@ export interface CosmeticCatalog {
   readonly tiers: readonly PriceTier[];
   readonly collections: readonly CosmeticCollection[];
   readonly items: readonly CosmeticItem[];
-  /** Ids of art assets that exist; empty until the art session adds some. */
+  /** Ids of art assets that exist: the rows of config/asset-manifest.json. An item's `asset` must be one. */
   readonly assets: readonly string[];
 }
 

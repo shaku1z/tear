@@ -1,3 +1,5 @@
+import type { ButtonText } from "./screen-ui-port";
+
 export interface GridCell {
   readonly column: number;
   readonly row: number;
@@ -48,4 +50,41 @@ export function choiceGrid(count: number, lastSpan: number, options: ChoiceGridO
   const rowsOf = (list: readonly GridCell[]): number => list.reduce((rows, cell) => Math.max(rows, cell.row + 1), 0);
   while (rowsOf(cells) > options.maxRows && columns < widest) cells = flow(++columns);
   return { columns, rows: rowsOf(cells), cellWidth: cellWidth(columns), cells };
+}
+
+/** The shared button fit a button grid measures with (`ui.buttonFitWidth` / `ui.buttonFitHeight`). */
+export interface ButtonMeasure {
+  buttonFitWidth(context: CanvasRenderingContext2D, button: ButtonText): number;
+  buttonFitHeight(context: CanvasRenderingContext2D, button: ButtonText & Readonly<{ w: number }>): number;
+}
+
+export interface ButtonGrid extends ChoiceGrid {
+  /** One height for every row: the tallest any button needs at its cell's width. */
+  readonly rowHeight: number;
+}
+
+/**
+ * A list of buttons laid out from their text: the columns from the widest button (each label on one
+ * line at full size, see `minCellWidth`), the rows from the tallest (name, status line, shortcut).
+ * No screen picks a row size: a longer name or an added status line grows the grid.
+ */
+export function buttonGrid(
+  measure: ButtonMeasure,
+  canvas: CanvasRenderingContext2D,
+  buttons: readonly ButtonText[],
+  options: Omit<ChoiceGridOptions, "minCellWidth">,
+  lastSpan = 1,
+): ButtonGrid {
+  const grid = choiceGrid(buttons.length, lastSpan, {
+    ...options,
+    minCellWidth: Math.max(0, ...buttons.map((button) => measure.buttonFitWidth(canvas, button))),
+  });
+  const rowHeight = Math.max(
+    0,
+    ...buttons.map((button, index) => {
+      const span = grid.cells[index]?.span ?? 1;
+      return measure.buttonFitHeight(canvas, { ...button, w: grid.cellWidth * span + options.gap * (span - 1) });
+    }),
+  );
+  return { ...grid, rowHeight };
 }

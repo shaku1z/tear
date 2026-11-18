@@ -99,8 +99,14 @@ function matches(state: BossPhasePracticeState, world: BossPhasePracticeWorld): 
     world.noProgression
   );
 }
-/** Validate BEFORE adopting a restored world. This never spawns, ticks or requests entry. */
-export function validateBossPhasePracticeState(value: unknown, world?: BossPhasePracticeWorld): BossPhasePracticeState {
+/**
+ * Frozen states whose fields were already checked. A state holds only strings, numbers and null, so a frozen
+ * one cannot change and its fields need checking once, not at every tick that reads it.
+ */
+const checkedStates = new WeakSet();
+
+function assertPracticeStateFields(value: unknown): asserts value is BossPhasePracticeState {
+  if (typeof value === "object" && value !== null && checkedStates.has(value)) return;
   if (
     value === null ||
     typeof value !== "object" ||
@@ -155,32 +161,52 @@ export function validateBossPhasePracticeState(value: unknown, world?: BossPhase
     (state.setupStage === "target" && state.enteredPhase < state.phase)
   )
     throw new Error("Invalid boss practice lifecycle");
-  if (world !== undefined) {
-    const entry = world.actor.practicePhaseEntry();
-    if (
-      state.lifecycle === "cancelled" ||
-      !matches(state, world) ||
-      !world.arenaReady ||
-      !world.checkpointReady ||
-      (entry.phase !== state.enteredPhase && entry.phase !== state.pendingPhase) ||
-      (state.pendingPhase !== null && entry.targetPhase !== state.pendingPhase) ||
-      (state.pendingPhase === null && entry.stage !== state.entryStage)
-    )
-      throw new Error("Boss practice world mismatch");
-  }
-  return Object.freeze({ ...state });
+  if (Object.isFrozen(value)) checkedStates.add(value);
+}
+
+/** The world a state is checked against changes every tick, so this part runs at every check. */
+function assertPracticeWorld(
+  state: BossPhasePracticeState,
+  world: BossPhasePracticeWorld,
+  entry = world.actor.practicePhaseEntry(),
+): void {
+  if (
+    state.lifecycle === "cancelled" ||
+    !matches(state, world) ||
+    !world.arenaReady ||
+    !world.checkpointReady ||
+    (entry.phase !== state.enteredPhase && entry.phase !== state.pendingPhase) ||
+    (state.pendingPhase !== null && entry.targetPhase !== state.pendingPhase) ||
+    (state.pendingPhase === null && entry.stage !== state.entryStage)
+  )
+    throw new Error("Boss practice world mismatch");
+}
+
+/** Validate BEFORE adopting a restored world. This never spawns, ticks or requests entry. */
+export function validateBossPhasePracticeState(value: unknown, world?: BossPhasePracticeWorld): BossPhasePracticeState {
+  assertPracticeStateFields(value);
+  if (world !== undefined) assertPracticeWorld(value, world);
+  if (Object.isFrozen(value)) return value;
+  const adopted = Object.freeze({ ...value });
+  checkedStates.add(adopted);
+  return adopted;
 }
 
 export function createBossPhasePracticeRuntime(services: BossPhasePracticeServices) {
   let current: BossPhasePracticeState | null = null;
   let generation = 0;
-  function result(): BossPhasePracticeResult {
+  /** `observed` is this tick's world and phase entry when the caller already read them and changed neither. */
+  function result(observed?: {
+    world: BossPhasePracticeWorld;
+    entry: ReturnType<BossPhasePracticeActor["practicePhaseEntry"]>;
+  }): BossPhasePracticeResult {
     if (current === null) return { status: "refused", reason: "inactive" };
-    const world = services.observe();
+    const world = observed?.world ?? services.observe();
     let capture: "canonical-checkpoint" | "unavailable" = "unavailable";
     if (current.lifecycle !== "cancelled" && world !== null) {
       try {
-        validateBossPhasePracticeState(current, world);
+        assertPracticeStateFields(current);
+        assertPracticeWorld(current, world, observed?.entry);
         capture = "canonical-checkpoint";
       } catch {
         /* A half-installed world cannot be captured. */
@@ -210,6 +236,11 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
     services.createEncounter(request, generation, encounterId);
     return result();
   }
+  /** The same object when no field differs: an unchanged state is not rebuilt, or re-checked, every tick. */
+  function changed(state: BossPhasePracticeState, fields: Partial<BossPhasePracticeState>): BossPhasePracticeState {
+    const names = Object.keys(fields) as (keyof BossPhasePracticeState)[];
+    return names.every((name) => state[name] === fields[name]) ? state : Object.freeze({ ...state, ...fields });
+  }
   function afterWorldStep(): BossPhasePracticeResult {
     if (current === null || current.lifecycle === "cancelled") return result();
     const world = services.observe();
@@ -218,33 +249,33 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
     const entry = world.actor.practicePhaseEntry();
     if (current.lifecycle === "active") {
       if (entry.phase < current.enteredPhase) return { status: "refused", reason: "world-mismatch" };
-      current = Object.freeze({ ...current, enteredPhase: entry.phase, entryStage: entry.stage });
-      return result();
+      current = changed(current, { enteredPhase: entry.phase, entryStage: entry.stage });
+      return result({ world, entry });
     }
     if (entry.phase < current.enteredPhase || entry.phase > (current.pendingPhase ?? current.enteredPhase))
       return { status: "refused", reason: "world-mismatch" };
     if (current.pendingPhase === entry.phase)
-      current = Object.freeze({ ...current, enteredPhase: entry.phase, pendingPhase: null });
-    current = Object.freeze({ ...current, entryStage: entry.stage });
+      current = changed(current, { enteredPhase: entry.phase, pendingPhase: null });
+    current = changed(current, { entryStage: entry.stage });
     if (current.pendingPhase !== null) {
-      return entry.targetPhase === current.pendingPhase ? result() : { status: "refused", reason: "world-mismatch" };
+      return entry.targetPhase === current.pendingPhase
+        ? result({ world, entry })
+        : { status: "refused", reason: "world-mismatch" };
     }
     if (entry.phase === current.phase) {
-      current = Object.freeze({
-        ...current,
+      current = changed(current, {
         lifecycle: entry.ready && !world.cinematicActive && world.phaseWorldReady ? "active" : "entering",
         setupStage: "target",
       });
-      return result();
+      return result({ world, entry });
     }
     if (!entry.ready || world.cinematicActive || !world.phaseWorldReady) {
-      current = Object.freeze({ ...current, setupStage: entry.phase === 1 ? "opening" : "phase-2-baseline" });
-      return result();
+      current = changed(current, { setupStage: entry.phase === 1 ? "opening" : "phase-2-baseline" });
+      return result({ world, entry });
     }
     const next = entry.phase === 1 ? 2 : 3;
     if (!world.actor.requestPracticePhase(next)) return { status: "refused", reason: "entry-refused" };
-    current = Object.freeze({
-      ...current,
+    current = changed(current, {
       lifecycle: next === current.phase ? "entering" : "preparing",
       pendingPhase: next,
       setupStage: next === 2 ? "phase-2" : "phase-3",

@@ -12,7 +12,7 @@
   "difficulty": "normal",
   "actions": [
     { "type": "mouseMove", "x": 1000, "y": 450, "steps": 2, "checkpoint": "aim-authored" },
-    { "type": "prepareProjectileParryScenario", "checkpoint": "perfect-counter" },
-    { "type": "wait", "ms": 45, "checkpoint": "source-impact" }
+    { "type": "prepareProjectileParryScenario", "captureAfterTicks": 1, "checkpoint": "perfect-counter" },
+    { "type": "wait", "ms": 150, "checkpoint": "source-impact" }
   ]
 }

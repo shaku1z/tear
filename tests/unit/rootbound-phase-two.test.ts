@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
-import type { BossAttackRunnerState } from "../../src/gameplay/entities/boss-attack-runner";
+import { bossAttackThreatens, type BossAttackRunnerState } from "../../src/gameplay/entities/boss-attack-runner";
 import { bossTells } from "../../src/gameplay/entities/boss-tells";
 import {
   ROOTBOUND_GRAFTS,
@@ -40,7 +40,6 @@ type GardenBoss = InstanceType<Harness["types"]["Rootbound"]> & {
   graftGapMultiplier: number;
   healedFraction: number;
   phaseTwoEntryHp: number | null;
-  openingGraft: boolean;
   bloomPatternIndex: number;
   exposed(): boolean;
   graftAnchorPlacements(): readonly GraftAnchorPlacementRequest[];
@@ -328,15 +327,70 @@ describe("Rootbound Phase II: healing is fair (ROOTBOUND_HEALING)", () => {
     expect(scene.boss.hp).toBe(start);
   });
 
-  it("waits the quiet time before the first heal, then heals at the table's rate", () => {
+  /** True while the player is pressed: a strike is on its way or a Root Cage stands. */
+  const pressed = (boss: GardenBoss): boolean =>
+    bossAttackThreatens(ROOTBOUND_MOVES, boss.moveState) || boss.rootCagePlacement() !== null;
+
+  it("waits the quiet time before the first heal, counting only unpressed time, then heals at the table's rate", () => {
     const scene = garden();
     scene.until(() => scene.boss.activeGraftTypes.includes("mercy"));
     scene.boss.hp -= scene.boss.limitIncomingDamage(scene.boss.maxHp * 0.05);
     const start = scene.boss.hp;
-    scene.step(ROOTBOUND_HEALING.quietSeconds - 0.1);
-    expect(scene.boss.hp).toBe(start);
-    scene.step(1.1);
-    expect((scene.boss.hp - start) / scene.boss.maxHp).toBeCloseTo(ROOTBOUND_HEALING.perSecond, 3);
+    let free = 0,
+      waited = 0;
+    scene.until(() => {
+      if (scene.boss.hp > start) return true;
+      waited += DT;
+      if (!pressed(scene.boss)) free += DT;
+      return false;
+    }, 30);
+    // The keeper struck while it waited, so the wait took longer than the quiet time it counted.
+    expect(free).toBeCloseTo(ROOTBOUND_HEALING.quietSeconds, 1);
+    expect(waited).toBeGreaterThan(free + 0.5);
+    const healing = scene.boss.hp;
+    scene.step(1);
+    expect((scene.boss.hp - healing) / scene.boss.maxHp).toBeCloseTo(ROOTBOUND_HEALING.perSecond, 3);
+  });
+
+  it("a dodging player who answers each strike after it lands sees no healing: dodging time is not quiet", () => {
+    const scene = garden();
+    scene.until(() => scene.boss.activeGraftTypes.includes("mercy"));
+    scene.boss.hp -= scene.boss.limitIncomingDamage(scene.boss.maxHp * 0.05);
+    // The player never hits during a tell: they dodge it, then land one hit as the strike ends.
+    let wasPressed = false,
+      healed = 0,
+      pressedTime = 0,
+      hits = 0,
+      last = scene.boss.hp;
+    scene.step(40, () => {
+      if (scene.boss.hp > last) healed += scene.boss.hp - last;
+      const now = pressed(scene.boss);
+      if (now) pressedTime += DT;
+      else if (wasPressed) {
+        hits += 1;
+        scene.boss.hp -= scene.boss.limitIncomingDamage(1);
+      }
+      wasPressed = now;
+      last = scene.boss.hp;
+    });
+    expect(hits).toBeGreaterThan(8);
+    expect(pressedTime / 40).toBeGreaterThan(0.25);
+    expect(healed).toBe(0);
+  });
+
+  it("the quiet wait stands still while a strike is coming or a cage stands", () => {
+    const scene = garden();
+    scene.until(() => scene.boss.activeGraftTypes.includes("mercy"));
+    let checked = 0;
+    scene.step(30, () => {
+      const before = scene.boss.quietT;
+      if (!pressed(scene.boss)) return;
+      scene.step(DT);
+      if (!pressed(scene.boss) || scene.boss.quietT === 0) return;
+      expect(scene.boss.quietT).toBe(before);
+      checked += 1;
+    });
+    expect(checked).toBeGreaterThan(100);
   });
 });
 
@@ -347,6 +401,7 @@ describe("Rootbound Phase II: Root Cage and Bloom Shift are moves that place sta
       ROOTBOUND_MOVES.attacks.filter((other) => other.id !== id).map((other) => [other.id, Number.MAX_SAFE_INTEGER]),
     );
     boss.moveState = {
+      ...boss.moveState,
       run: null,
       readyTick: boss.moveTick,
       lastAttackId: null,
@@ -450,7 +505,7 @@ describe("Rootbound Phase II: Grafts restored into the fight", () => {
     const scene = restored(GRAFT_ANCHOR_TYPES);
     scene.step(1);
     expect(scene.boss.graftRequests.map((request) => request.graftType).sort()).toEqual([...GRAFT_ANCHOR_TYPES].sort());
-    expect(scene.boss.openingGraft).toBe(false);
+    expect(scene.boss.moveState.openedPhase).toBe(2);
     scene.step(10);
     expect(scene.moves.length).toBeGreaterThan(3);
     expect(scene.moves).not.toContain("plant-graft");
