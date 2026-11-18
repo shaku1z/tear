@@ -136,9 +136,9 @@ export function mergeCosmeticStates(left: CosmeticState, right: CosmeticState): 
 export const cosmeticsSpent = (state: CosmeticState): number =>
   Object.values(state.owned).reduce((sum, price) => sum + price, 0);
 
-/** Shards left to spend. Never negative: merging two devices' purchases can overspend, which only blocks buying. */
 /** Shards earned as a usable count: a missing or broken saved value counts as none. */
 export const shardsEarned = (earned: number): number => (Number.isFinite(earned) ? Math.max(0, earned) : 0);
+/** Shards left to spend. Never negative: merging two devices' purchases can overspend, which only blocks buying. */
 export const shardBalance = (earned: number, state: CosmeticState): number =>
   Math.max(0, shardsEarned(earned) - cosmeticsSpent(state));
 

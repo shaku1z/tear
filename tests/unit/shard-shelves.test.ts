@@ -4,6 +4,7 @@ import { normalizeCosmeticState } from "../../src/domain/cosmetics";
 import { conditionText, type ConditionNames, type ProgressFacts } from "../../src/domain/unlock-condition";
 import { CONDITION_NAMES, statWords } from "../../src/gameplay/progression/condition-names";
 import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
+import { AUTHORED_STAGES } from "../../src/gameplay/stages";
 import {
   buildShardShelves,
   lookSwatch,
@@ -24,6 +25,7 @@ const nobody: ProgressFacts = {
 };
 const names: ConditionNames = {
   boss: (id) => `boss ${id}`,
+  biome: (biome) => `biome ${biome}`,
   achievement: (id) => `achievement ${id}`,
   stat: (key) => `stat ${key}`,
 };
@@ -46,7 +48,7 @@ describe("condition text", () => {
   it("says each kind of requirement in words and joins an all", () => {
     expect(conditionText({ type: "default" }, names)).toBe("");
     expect(conditionText({ type: "boss-defeat", bossId: "rootbound" }, names)).toBe("Defeat boss rootbound");
-    expect(conditionText({ type: "biome-enter", biome: "The Grounds" }, names)).toBe("Reach The Grounds");
+    expect(conditionText({ type: "biome-enter", biome: "The Grounds" }, names)).toBe("Reach biome The Grounds");
     expect(conditionText({ type: "stat-threshold", stat: "kills", goal: 1500 }, names)).toBe("Reach 1,500 stat kills");
     expect(conditionText({ type: "achievement", id: "first_boss" }, names)).toBe("Unlock achievement first_boss");
     expect(
@@ -65,6 +67,12 @@ describe("condition text", () => {
     expect(statWords("encounterEnemy:charger")).toBe("encounter enemy charger");
     expect(CONDITION_NAMES.boss("not-a-boss")).toBe("not-a-boss");
     expect(CONDITION_NAMES.achievement("first_blood")).toBe("First Blood");
+    // A biome reads as its stage's name, whether the reference is the stage id or its name.
+    for (const stage of AUTHORED_STAGES) {
+      expect(CONDITION_NAMES.biome(stage.id)).toBe(stage.name);
+      expect(CONDITION_NAMES.biome(stage.name)).toBe(stage.name);
+    }
+    expect(CONDITION_NAMES.biome("not-a-stage")).toBe("not-a-stage");
   });
 });
 
