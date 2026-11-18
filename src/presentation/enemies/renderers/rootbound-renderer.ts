@@ -77,6 +77,44 @@ function vineArm(
   ctx.fill();
 }
 
+/**
+ * What a standing Graft does to the keeper, drawn on the keeper so the player can see it: Bastion wraps it in
+ * bark plates (it takes less damage), Haste trails streaks behind it (it pauses less between moves). First
+ * draft shapes; the keeper's final figure is drawn elsewhere.
+ */
+function drawGraftEffects(
+  ctx: CanvasRenderingContext2D,
+  boss: RenderInstance<"Rootbound">,
+  colors: Readonly<{ bark: string; haste: string }>,
+) {
+  const cy = boss.y;
+  const r = boss.hh * 1.3;
+  ctx.save();
+  ctx.lineCap = "round";
+  if (boss.graftDamageTakenMultiplier < 1) {
+    ctx.strokeStyle = colors.bark;
+    ctx.lineWidth = 9;
+    for (const start of [0.15, 0.65, 1.15, 1.65]) {
+      ctx.beginPath();
+      ctx.arc(boss.x, cy, r, start * Math.PI, (start + 0.32) * Math.PI);
+      ctx.stroke();
+    }
+  }
+  if (boss.graftGapMultiplier < 1) {
+    ctx.strokeStyle = colors.haste;
+    ctx.lineWidth = 4;
+    const back = -boss.facing;
+    for (const dy of [-0.6, 0, 0.6]) {
+      const x = boss.x + back * (boss.hw + 18);
+      ctx.beginPath();
+      ctx.moveTo(x, cy + dy * boss.hh);
+      ctx.lineTo(x + back * 46, cy + dy * boss.hh);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 /** A root runs along the ground from the keeper to every Graft it has planted. `colors` null: high contrast. */
 function drawGraftRoots(
   ctx: CanvasRenderingContext2D,
@@ -240,6 +278,11 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       const tells = this.tells();
       drawBossTells(runtime, ctx, tells, { skinId: TELL_SKIN, layer: "behind" });
       drawGraftRoots(ctx, this, footY, A11Y.highContrast ? null : { mercy: gold, other: root });
+      drawGraftEffects(
+        ctx,
+        this,
+        A11Y.highContrast ? { bark: "#ffffff", haste: "#fff36b" } : { bark: "#9a7442", haste: "#cfe9a0" },
+      );
       // The move itself: vines, mounds and root spikes, drawn from the runner's pose.
       const pose = this.movePose();
       const ink: Ink = A11Y.highContrast
@@ -274,9 +317,13 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
           : pose === null && forced !== null && this.moveTick < forced.until
             ? (this.moveTick - forced.from) / Math.max(1, forced.until - forced.from)
             : null;
-      if (pose?.stage === "tell") {
+      // Kneeling to plant or to channel Regrowth: low and wide, held until the move lets go.
+      const kneels = pose !== null && (pose.attackId === "plant-graft" || pose.attackId === "regrowth");
+      if (kneels && (pose.stage === "tell" || pose.stage === "active")) {
+        const kneel = pose.stage === "tell" ? pose.progress : 1;
+        ctx.scale(1 + 0.12 * kneel, 1 - 0.34 * kneel);
+      } else if (pose?.stage === "tell") {
         ctx.rotate(-this.facing * 0.08 * pose.progress);
-        if (pose.attackId === "plant-graft") ctx.scale(1, 1 - 0.16 * pose.progress);
       } else if (opening !== null) {
         drawExposedRing(ctx, this.hh, opening, A11Y.highContrast ? "#ffffff" : "#7fe3ff");
         ctx.rotate(this.facing * 0.2);
