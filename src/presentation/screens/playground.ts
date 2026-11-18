@@ -47,6 +47,9 @@ type Tokens = ScreenRenderContext["ui"]["t"];
 type Choices = (section: string) => readonly ChoiceView[];
 type Section = PlaygroundScreenView["sections"][number];
 
+/** A one-line button label's horizontal room taken by the button: 16 px inset, 14 px right reserve, slack. */
+const LABEL_INSET = 34;
+
 /** Desktop chrome under the overlay header: the tab strip, then the tab's body. */
 const DESKTOP = { tabsY: 136, bodyTop: 212 } as const;
 
@@ -171,10 +174,18 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
     const groupGap = 28,
       total = band.reduce((sum, entry) => sum + entry.choices.length, 0),
       room = frame.width - groupGap * (band.length - 1);
+    const keyed = band.some((section) => section.choices.some((choice) => choice.sub !== undefined));
     let x = frame.left;
     const placed = band.map((section) => {
       const w = band.length === 1 ? frame.width : (room * section.choices.length) / total;
-      const columns = m.columns(section.choices.length, w, band.length === 1);
+      let columns = m.columns(section.choices.length, w, band.length === 1);
+      // A keyed band puts every label on one line (see `control`): a group alone in its band
+      // takes fewer, wider columns until its longest label fits.
+      if (m.detail && keyed && band.length === 1) {
+        const widest = longestLabel(section),
+          cell = (count: number): number => (w - m.gap * (count - 1)) / count;
+        while (columns > 1 && widest + LABEL_INSET > cell(columns)) columns--;
+      }
       const grid = choiceGrid(section.choices.length, 1, {
         minColumns: columns,
         maxColumns: columns,
@@ -182,7 +193,7 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
         width: w,
         gap: m.gap,
       });
-      const entry = { section, x, grid, keyed: section.choices.some((choice) => choice.sub !== undefined) };
+      const entry = { section, x, grid };
       x += w + groupGap;
       return entry;
     });
@@ -197,8 +208,7 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
         },
       },
     ];
-    const keyed = placed.some((entry) => entry.keyed),
-      h = m.button(keyed);
+    const h = m.button(keyed);
     for (let row = 0; row < rows; row++) {
       const draw = (y: number, scrollView: ScrollView): void => {
         for (const { section, x: left, grid } of placed)
@@ -212,6 +222,16 @@ export function createPlaygroundRenderers(context: ScreenRenderContext) {
       blocks.push({ height: h, draw });
     }
     return blocks;
+  }
+
+  /** The widest label in a group at the menu's button type (bold), in canvas pixels. */
+  function longestLabel(section: Section): number {
+    const { canvas } = context;
+    canvas.save();
+    canvas.font = ui.font(desktopMenu().size, true);
+    const widest = Math.max(0, ...section.choices.map((choice) => canvas.measureText(choice.label).width));
+    canvas.restore();
+    return widest;
   }
 
   /**
