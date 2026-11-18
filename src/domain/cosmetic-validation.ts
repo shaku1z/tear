@@ -94,14 +94,18 @@ export function lookProblems(look: Look, family: LookFamily, where: string, opti
 /** Whether a closed list of names holds the value, without widening the list's type. */
 const listed = (names: readonly string[], value: unknown): boolean => names.some((name) => name === value);
 
-function acquireProblems(entries: readonly Acquisition[], where: string): string[] {
+function acquireProblems(entries: readonly Acquisition[], where: string, collections: readonly string[]): string[] {
   if (entries.length === 0) return [`${where}: acquire must list at least one way`];
   return entries.flatMap((entry: unknown) => {
     if (!isRecord(entry)) return [`${where}: each acquire entry must be an object`];
     const how = entry.how;
     if (how === "shards") return [];
-    if (typeof how === "string" && listed(ACQUIRE_KINDS_WITH_ID, how))
-      return isItemId(entry.id) ? [] : [`${where}: acquire ${how} needs an id`];
+    if (typeof how === "string" && listed(ACQUIRE_KINDS_WITH_ID, how)) {
+      if (!isItemId(entry.id)) return [`${where}: acquire ${how} needs an id`];
+      return how === "collection" && !listed(collections, entry.id)
+        ? [`${where}: acquire collection ${entry.id} is not a collection`]
+        : [];
+    }
     if (how === "code") return isItemId(entry.campaign) ? [] : [`${where}: acquire code needs a campaign`];
     return [`${where}: unknown acquire kind`];
   });
@@ -117,7 +121,13 @@ function itemProblems(item: CosmeticItem, catalog: CosmeticCatalog, backdrops: R
     problems.push(`${where}: needs a real name, not a numbered stand-in`);
   if (!slot || !family) return [...problems, `${where}: unknown slot ${item.slot}`];
   if (!catalog.tiers.some((tier) => tier.id === item.tier)) problems.push(`${where}: unknown tier ${item.tier}`);
-  problems.push(...acquireProblems(item.acquire, where));
+  problems.push(
+    ...acquireProblems(
+      item.acquire,
+      where,
+      catalog.collections.map((collection) => collection.id),
+    ),
+  );
   if (item.collection !== undefined && !catalog.collections.some((entry) => entry.id === item.collection))
     problems.push(`${where}: unknown collection ${item.collection}`);
   if (item.unlock) problems.push(...conditionProblems(item.unlock, where));
