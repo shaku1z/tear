@@ -20,6 +20,7 @@ import {
   type UnlockCondition,
 } from "../domain/unlock-condition";
 import type { ShardCardView, ShardShelfView, ShardSwatchView, ShardsView } from "./screens/contracts";
+import { TYPE_SCALE } from "./ui-tokens";
 
 /**
  * Shelf geometry, shared by the renderer and the desktop scroll extent so they cannot disagree. A shelf is
@@ -27,20 +28,62 @@ import type { ShardCardView, ShardShelfView, ShardSwatchView, ShardsView } from 
  */
 export const SHARD_SHELF = Object.freeze({
   head: 34,
-  card: 212,
   gap: 16,
   shelfGap: 22,
   columns: Object.freeze({ desktop: 6, phone: 2 }),
 });
 
+/** Card parts, from the card's top-left corner: padding, the preview's height, the button, note lines. */
+export const SHARD_CARD = Object.freeze({ pad: 12, swatch: 76, button: 36, noteLines: 2 });
+
+export interface ShardCardLayout {
+  /** Baselines of the name, the tier tag and the first note line, from the card's top. */
+  readonly nameY: number;
+  readonly tierY: number;
+  readonly noteY: number;
+  /** Baseline-to-baseline distance of the note's lines. */
+  readonly noteLine: number;
+  readonly button: number;
+  readonly height: number;
+}
+
+/** Baseline-to-baseline distance for card text at `size` (the compact page's rule). */
+const cardLine = (size: number): number => Math.round(size * 1.25);
+
+/**
+ * Where a card's text rows sit for the given type sizes, and the card height that holds them. Touch density
+ * raises the type, so the rows follow the sizes instead of fixed offsets. `minTarget` is the density's
+ * smallest control; the button is never shorter.
+ */
+export function shardCardLayout(type: Readonly<{ body: number; micro: number }>, minTarget = 0): ShardCardLayout {
+  const noteLine = cardLine(type.micro),
+    button = Math.max(SHARD_CARD.button, minTarget);
+  const nameY = SHARD_CARD.pad + SHARD_CARD.swatch + cardLine(type.body),
+    tierY = nameY + noteLine,
+    noteY = tierY + noteLine;
+  const noteBottom = noteY + (SHARD_CARD.noteLines - 1) * noteLine;
+  return Object.freeze({
+    nameY,
+    tierY,
+    noteY,
+    noteLine,
+    button,
+    height: noteBottom + SHARD_CARD.pad + button + SHARD_CARD.pad,
+  });
+}
+
 /** Cards per row at a density. */
 export const shelfColumns = (compact: boolean): number => SHARD_SHELF.columns[compact ? "phone" : "desktop"];
 
-/** Height of every shelf laid out at `columns` cards a row. */
-export function shardShelvesHeight(view: ShardsView, columns: number): number {
+/** Height of every shelf laid out at `columns` cards a row, at the authored (desktop) type sizes by default. */
+export function shardShelvesHeight(
+  view: ShardsView,
+  columns: number,
+  cardHeight = shardCardLayout(TYPE_SCALE).height,
+): number {
   const rows = view.shelves.map((shelf) => Math.ceil(shelf.cards.length / columns));
   // A row of cards is the card plus the gap under it (see the renderer's grid).
-  const cards = rows.reduce((sum, count) => sum + count * (SHARD_SHELF.card + SHARD_SHELF.gap), 0);
+  const cards = rows.reduce((sum, count) => sum + count * (cardHeight + SHARD_SHELF.gap), 0);
   return view.shelves.length * SHARD_SHELF.head + cards + Math.max(0, view.shelves.length - 1) * SHARD_SHELF.shelfGap;
 }
 

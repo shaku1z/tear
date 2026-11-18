@@ -8,7 +8,8 @@ import { createScreenRenderers } from "../../src/presentation/screens";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
-import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
+import { buildShopSnapshot, SHOP_LIST_TOP } from "../../src/presentation/shop-snapshot";
+import { DESKTOP } from "../../src/presentation/screens/codex-shop-metrics";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
@@ -536,10 +537,10 @@ describe("legacy screen renderer registry", () => {
       controls.length = 0;
       renderer.shop(shop);
       expect(controls).toEqual(shopControls);
-      // The first-run hint takes the header status row at the subtitle's own (caption) size.
+      // The first-run hint takes the status row under the tabs, at caption size, above the list.
       const hint = hints.find((entry) => entry.text.includes("Buying is optional"));
       expect(hint).toMatchObject({ size: ui.t.type.caption });
-      expect((hint?.y ?? 0) > 138 && (hint?.y ?? 0) < 180).toBe(true);
+      expect((hint?.y ?? 0) > DESKTOP.shop.statusTop && (hint?.y ?? 0) < SHOP_LIST_TOP).toBe(true);
     }
   });
   it("is exhaustive for every canonical application screen", () => {
@@ -820,14 +821,16 @@ describe("legacy screen renderer registry", () => {
         { label: "FORTUNE", items: [item("f1"), item("f2")] },
       ],
     });
-    const buys = controls.filter((control) => control.action.type === "shop.buy");
+    const buyY = (id: string) =>
+      controls.find((control) => control.action.type === "shop.buy" && control.action.id === id)?.y ?? Number.NaN;
     // 88 px rows (two-line descriptions), 14 px between categories; columns flow independently.
     // A category label takes the shop's fixed head (the game's sectionLabel always advances 18 px),
-    // not this test UI's 24 px advance.
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "v1")?.y).toBe(237);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "b1")?.y).toBe(539);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "t1")?.y).toBe(237);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "f1")?.y).toBe(363);
+    // not this test UI's 24 px advance. The first BUY sits a fixed distance under the list top.
+    const first = SHOP_LIST_TOP + 57;
+    expect(buyY("v1")).toBe(first);
+    expect(buyY("b1")).toBe(first + 302);
+    expect(buyY("t1")).toBe(first);
+    expect(buyY("f1")).toBe(first + 126);
   });
 
   it("models Codex guide details and rich profile/achievement surfaces without gameplay callbacks", () => {

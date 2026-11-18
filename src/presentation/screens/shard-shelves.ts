@@ -6,7 +6,13 @@
  * The preview on each card is drawn from the look's own colours and text (`ShardSwatchView`), so a new
  * item or slot needs no new drawing code here.
  */
-import { SHARD_SHELF, shelfColumns } from "../shard-shelves-snapshot";
+import {
+  SHARD_CARD,
+  SHARD_SHELF,
+  shardCardLayout,
+  shelfColumns,
+  type ShardCardLayout,
+} from "../shard-shelves-snapshot";
 import { contrastRatio } from "../ui-color";
 import type { ScreenAction, ScreenRenderContext, ShardCardView, ShardShelfView, ShardsView } from "./contracts";
 import type { ScrollBlock, ScrollView } from "./compact-page";
@@ -14,8 +20,6 @@ import type { createPageFrame, PageFrame } from "./page-frame";
 
 type Frame = ReturnType<typeof createPageFrame>;
 
-/** Card parts, from the card's top-left corner. */
-const CARD = Object.freeze({ pad: 12, swatch: 76, nameY: 116, tierY: 136, noteY: 150, button: 36 });
 /** How far a card that cannot be had yet is faded. */
 const DIM_ALPHA = 0.45;
 /** Text over a preview takes whichever of these stands out more from the preview colour. */
@@ -56,38 +60,62 @@ export function createShardShelves(context: ScreenRenderContext, pf: Frame) {
       canvas.fillRect(x + (index * w) / colors.length, y, w / colors.length + 0.5, h);
     });
     if (text === undefined) return;
-    const fitted = ui.fitText(canvas, text, w - CARD.pad * 2, { size: ui.t.type.lead, floor: ui.t.type.micro, bold: true });
+    const fitted = ui.fitText(canvas, text, w - SHARD_CARD.pad * 2, {
+      size: ui.t.type.lead,
+      floor: ui.t.type.micro,
+      bold: true,
+    });
     const ground = colors[0];
     const ink =
       ground === undefined ? ui.ink : contrastRatio(DARK, ground) >= contrastRatio(LIGHT, ground) ? DARK : LIGHT;
     ui.tag(canvas, fitted.lines[0] ?? text, x + w / 2, y + h / 2 + fitted.size / 3, ink, "center", fitted.size);
   }
 
-  function cardCell(card: ShardCardView, x: number, y: number, w: number, h: number, view: ScrollView): void {
+  function cardCell(
+    card: ShardCardView,
+    x: number,
+    y: number,
+    w: number,
+    layout: ShardCardLayout,
+    view: ScrollView,
+  ): void {
     const { canvas } = context,
       t = ui.t,
-      inner = w - CARD.pad * 2;
+      pad = SHARD_CARD.pad,
+      inner = w - pad * 2,
+      h = layout.height;
     const dimmed = card.state === "locked" || card.state === "elsewhere";
     ui.card(canvas, x, y, w, h, card.state === "equipped");
     canvas.globalAlpha = dimmed ? DIM_ALPHA : 1;
-    swatch(card, x + CARD.pad, y + CARD.pad, inner, CARD.swatch);
+    swatch(card, x + pad, y + pad, inner, SHARD_CARD.swatch);
     const name = ui.fitText(canvas, card.label, inner, { size: t.type.body, floor: t.type.label, bold: true });
-    ui.displayText(canvas, name.lines[0] ?? card.label, x + CARD.pad, y + CARD.nameY, name.size);
-    ui.tag(canvas, card.tier || "GAME LOOK", x + CARD.pad, y + CARD.tierY, t.color.muted, "left", t.type.micro);
+    ui.displayText(canvas, name.lines[0] ?? card.label, x + pad, y + layout.nameY, name.size);
+    ui.tag(canvas, card.tier || "GAME LOOK", x + pad, y + layout.tierY, t.color.muted, "left", t.type.micro);
     canvas.globalAlpha = 1;
-    if (card.isNew) ui.badge(canvas, "NEW", x + w - CARD.pad, y + CARD.tierY, ui.readable(t.color.accent), "right", t.type.micro);
+    // NEW sits on the preview's top-right corner (the badge has its own fill), clear of a long name.
+    if (card.isNew)
+      ui.badge(
+        canvas,
+        "NEW",
+        x + w - pad * 2,
+        y + pad + layout.noteLine,
+        ui.readable(t.color.accent),
+        "right",
+        t.type.micro,
+      );
     if (card.note)
-      ui.textBox(canvas, card.note, x + CARD.pad, y + CARD.noteY, inner, {
+      ui.textBox(canvas, card.note, x + pad, y + layout.noteY, inner, {
         size: t.type.micro,
-        maxLines: 2,
+        maxLines: SHARD_CARD.noteLines,
+        lineHeight: layout.noteLine,
         alpha: t.alpha.soft,
       });
     const { action, enabled } = cardAction(card);
     view.enqueue({
-      x: x + CARD.pad,
-      y: y + h - CARD.pad - CARD.button,
+      x: x + pad,
+      y: y + h - pad - layout.button,
       w: inner,
-      h: CARD.button,
+      h: layout.button,
       label: buttonLabel(card),
       selected: card.state === "equipped",
       enabled,
@@ -110,16 +138,17 @@ export function createShardShelves(context: ScreenRenderContext, pf: Frame) {
   /** Every shelf as body blocks: a label row, then the shelf's cards in rows. */
   function shelves(frame: PageFrame, view: ShardsView): ScrollBlock[] {
     const span = { left: frame.left, width: frame.width },
-      columns = shelfColumns(frame.compact);
+      columns = shelfColumns(frame.compact),
+      layout = shardCardLayout(ui.t.type, ui.t.metric.minTarget);
     return view.shelves.flatMap((shelf, index) => {
       const spacer: ScrollBlock[] = index > 0 ? [{ height: SHARD_SHELF.shelfGap, draw: () => undefined }] : [];
       const rows = pf.grid(
         span,
         shelf.cards,
         columns,
-        () => SHARD_SHELF.card + SHARD_SHELF.gap,
+        () => layout.height + SHARD_SHELF.gap,
         (card, x, y, w, _h, scroll) => {
-          cardCell(card, x, y, w, SHARD_SHELF.card, scroll);
+          cardCell(card, x, y, w, layout, scroll);
         },
         SHARD_SHELF.gap,
       );

@@ -5,7 +5,7 @@ import { hasOwnKey } from "../../domain/records";
 import { CONDITION_NAMES } from "../../gameplay/progression/condition-names";
 import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { buildShardShelves } from "../../presentation/shard-shelves-snapshot";
-import { buildShopSnapshot, SHOP_TABS, type ShopTab } from "../../presentation/shop-snapshot";
+import { buildShopSnapshot, SHOP_TABS } from "../../presentation/shop-snapshot";
 import type { MenuScreenServices, MenuScreenState } from "../screens/menu-screen-adapters";
 
 const collectionName = (id: string): string =>
@@ -132,5 +132,3 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
     },
   });
 }
-
-export type { ShopTab };
