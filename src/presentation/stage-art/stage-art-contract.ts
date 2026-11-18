@@ -137,6 +137,19 @@ export interface WaterStroke extends Seeded {
   readonly ripples: number;
 }
 
+/** Falling water: bright streaks from a ledge down to the pool, with mist where it lands. */
+export interface FallsStroke extends Seeded, Hazed {
+  readonly kind: "falls";
+  /** Centre column, the ledge row and the row it lands on. */
+  readonly x: number;
+  readonly top: number;
+  readonly bottom: number;
+  readonly width: number;
+  /** Shallow-to-deep water ramp; the streaks use its light end. */
+  readonly ramp: string;
+  readonly alpha: number;
+}
+
 /** Beams fanning down from the key light (angles in radians, 0 = right). */
 export interface ShaftsStroke extends Seeded {
   readonly kind: "shafts";
@@ -173,6 +186,7 @@ export type StageArtStroke =
   | TrunkStroke
   | ArcadeStroke
   | WaterStroke
+  | FallsStroke
   | ShaftsStroke
   | VignetteStroke
   | ScatterStroke;

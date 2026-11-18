@@ -203,7 +203,7 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
           haze: 0.15,
           ruin: 0.35,
           ivy: 2.5,
-          thickness: 10,
+          thickness: 14,
         },
         {
           kind: "arcade",
@@ -219,7 +219,7 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
           haze: 0.3,
           ruin: 0.35,
           ivy: 2.5,
-          thickness: 10,
+          thickness: 14,
         },
         {
           kind: "arcade",
@@ -235,8 +235,10 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
           haze: 0.18,
           ruin: 0.35,
           ivy: 2.5,
-          thickness: 10,
+          thickness: 14,
         },
+        { kind: "falls", seed: 40, x: 1252, top: 410, bottom: 668, width: 46, ramp: "water", haze: 0.2, alpha: 0.8 },
+        { kind: "falls", seed: 41, x: 1424, top: 536, bottom: 668, width: 34, ramp: "water", haze: 0.25, alpha: 0.7 },
         {
           kind: "strands",
           form: "curtain",
@@ -500,7 +502,7 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
           ramp: "leaf",
           haze: 0.05,
         },
-        { kind: "water", seed: 17, top: WATER_TOP, ramp: "water", reflection: 0.55, ripples: 30 },
+        { kind: "water", seed: 17, top: WATER_TOP, ramp: "water", reflection: 0.82, ripples: 30 },
         {
           kind: "arcade",
           seed: 14,
@@ -516,7 +518,7 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
           haze: 0.1,
           ruin: 0.2,
           ivy: 2,
-          thickness: 12,
+          thickness: 20,
         },
         {
           kind: "arcade",
@@ -533,7 +535,7 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
           haze: 0.08,
           ruin: 0.2,
           ivy: 2,
-          thickness: 12,
+          thickness: 22,
         },
         {
           kind: "arcade",
@@ -550,10 +552,11 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
           haze: 0.1,
           ruin: 0.2,
           ivy: 2,
-          thickness: 12,
+          thickness: 20,
         },
         { kind: "shafts", seed: 18, count: 14, from: 0.85, to: 2.3, width: 0.018, alpha: 0.07 },
-        { kind: "glow", radius: 480, alpha: 0.36 },
+        { kind: "glow", radius: 480, alpha: 0.26 },
+        { kind: "glow", radius: 190, alpha: 0.7 },
       ],
     },
     {

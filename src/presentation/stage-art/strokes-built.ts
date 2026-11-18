@@ -19,7 +19,11 @@ import {
 const PIER_SHARE = 0.22;
 const SPRING_DROP = 0.18;
 const MAX_ARCH_TO_HEIGHT = 0.38;
-const REFLECTION_ALPHA = 0.32;
+const REFLECTION_ALPHA = 0.45;
+/** Share of the wall thickness seen as the jamb inside each arch, and how far it drops toward the viewer. */
+const JAMB_SHARE = 0.7;
+const JAMB_DROP = 0.3;
+const RETURN_RISE = 0.35;
 
 /** One storey's measurements and the two paths everything else is drawn from. */
 interface Storey {
@@ -87,29 +91,62 @@ function paintReturnFace(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): v
   const { top, bottom, width, tone } = storey;
   const away = stroke.x + width / 2 < kit.light.x ? -1 : 1;
   const edgeX = away < 0 ? stroke.x : stroke.x + width;
-  context.fillStyle = rgba(tone(0.18));
+  const rise = thickness * RETURN_RISE;
+  // The side turned from the light: darkest at the base, picking up bounce toward the top.
+  const side = context.createLinearGradient(0, top, 0, bottom);
+  side.addColorStop(0, rgba(tone(0.4)));
+  side.addColorStop(1, rgba(tone(0.16)));
+  context.fillStyle = side;
   context.beginPath();
   context.moveTo(edgeX, bottom);
   context.lineTo(edgeX, top);
-  context.lineTo(edgeX + away * thickness, top - thickness * 0.35);
-  context.lineTo(edgeX + away * thickness, bottom - thickness * 0.35);
+  context.lineTo(edgeX + away * thickness, top - rise);
+  context.lineTo(edgeX + away * thickness, bottom - rise);
   context.closePath();
   context.fill();
-  context.fillStyle = rgba(tone(0.75));
+  context.fillStyle = rgba(tone(0.85));
   context.beginPath();
   context.moveTo(stroke.x, top);
   context.lineTo(stroke.x + width, top);
-  context.lineTo(stroke.x + width + away * thickness, top - thickness * 0.35);
-  context.lineTo(stroke.x + away * thickness, top - thickness * 0.35);
+  context.lineTo(stroke.x + width + away * thickness, top - rise);
+  context.lineTo(stroke.x + away * thickness, top - rise);
   context.closePath();
   context.fill();
+}
+
+/**
+ * The wall thickness seen through each arch: the far jamb catching the light
+ * and the soffit in shadow, so the openings read as holes through a block.
+ */
+function paintJambs(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
+  const jamb = (stroke.thickness ?? 0) * JAMB_SHARE;
+  if (jamb <= 0) return;
+  const { context } = kit;
+  const { top, bottom, width, spring, radius, tone } = storey;
+  const away = stroke.x + width / 2 < kit.light.x ? -1 : 1;
+  context.save();
+  context.beginPath();
+  storey.openings();
+  context.clip();
+  context.beginPath();
+  storey.openings();
+  context.translate(away * jamb, jamb * JAMB_DROP);
+  storey.openings();
+  context.translate(-away * jamb, -jamb * JAMB_DROP);
+  const depth = context.createLinearGradient(0, spring - radius, 0, bottom);
+  depth.addColorStop(0, rgba(tone(0.22)));
+  depth.addColorStop(Math.min(0.9, (radius * 1.2) / Math.max(1, bottom - top)), rgba(tone(0.5)));
+  depth.addColorStop(1, rgba(tone(0.78)));
+  context.fillStyle = depth;
+  context.fill("evenodd");
+  context.restore();
 }
 
 /** Shadowed interior seen through the openings, the lit wall around them, and the arch reveals. */
 function paintFace(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
   const { context } = kit;
   const { top, bottom, width, pier, radius, spring, tone } = storey;
-  context.fillStyle = rgba(tone(0.08), 0.35);
+  context.fillStyle = rgba(tone(0.08), 0.2);
   context.beginPath();
   storey.openings();
   context.fill();
@@ -237,6 +274,7 @@ function* storey(
   const shape = storeyShape(kit, stroke, level, random);
   paintReturnFace(kit, stroke, shape);
   paintFace(kit, stroke, shape);
+  paintJambs(kit, stroke, shape);
   yield;
   paintWeathering(kit, stroke, shape, random);
   if (water !== undefined && level === 0) paintWaterline(kit, stroke, shape, water);

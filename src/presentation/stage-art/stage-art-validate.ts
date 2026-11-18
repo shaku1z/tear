@@ -33,6 +33,7 @@ function rampsOf(stroke: StageArtStroke): readonly string[] {
     case "mass":
     case "strands":
     case "water":
+    case "falls":
       return [stroke.ramp];
     case "trunk":
       return [stroke.ramp, stroke.mossRamp];
@@ -69,6 +70,8 @@ export function strokeOperations(stroke: StageArtStroke, layerArea: number): num
     }
     case "water":
       return (layerArea / 10_000) * stroke.ripples;
+    case "falls":
+      return stroke.width * 2.5;
     case "scatter":
       return stroke.spots.length * stroke.count * (stroke.petals + 1);
     default:

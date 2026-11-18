@@ -19,7 +19,7 @@ import type { StageArtIdentity, StageArtLayer, StageArtRecipe, StageArtStroke } 
 import { validateStageArt } from "./stage-art-validate";
 import { paintArcade, paintSurface } from "./strokes-built";
 import { paintMass, paintScatter, paintStrands, paintTrunk } from "./strokes-growth";
-import { paintGlow, paintHaze, paintShafts, paintSky, paintVignette, paintWater } from "./strokes-light";
+import { paintFalls, paintGlow, paintHaze, paintShafts, paintSky, paintVignette, paintWater } from "./strokes-light";
 
 const EDGE_FEATHER = 72;
 
@@ -48,6 +48,8 @@ function strokeSteps(kit: PaintKit, stroke: StageArtStroke): Generator<void> {
       return paintArcade(kit, stroke);
     case "water":
       return paintWater(kit, stroke);
+    case "falls":
+      return paintFalls(kit, stroke);
     case "shafts":
       return paintShafts(kit, stroke);
     case "vignette":

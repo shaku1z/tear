@@ -3,7 +3,7 @@
 // every viewport the stage must support. A recording 2D context stands in for a
 // canvas, so these run without a browser; the pixels are checked in the browser
 // evidence instead.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import viewports from "../../config/scene-viewports.json";
 import { stageDefinition } from "../../src/gameplay/stages";
 import { requiredLayerRect, viewportWorldRect, type Rect } from "../../src/presentation/scenes/scene-contract";
@@ -128,6 +128,18 @@ describe("painting a stage", () => {
     await paintedStage(VERDANT_SANCTUM_ART).paint(paintPorts(second).ports);
     expect(first.canvases.length).toBeGreaterThan(0);
     expect(second.canvases).toEqual(first.canvases);
+  });
+
+  it("draws its randomness from the recipe seed alone, never a shared source", async () => {
+    // Gameplay and replays use the injected random source and simulation ticks. Painting must not
+    // touch either, so a stage looks the same on every machine and no replay can depend on it.
+    const shared = vi.spyOn(Math, "random");
+    const clock = vi.spyOn(Date, "now");
+    await paintedStage(VERDANT_SANCTUM_ART).paint(paintPorts({ canvases: [] }).ports);
+    expect(shared).not.toHaveBeenCalled();
+    expect(clock).not.toHaveBeenCalled();
+    shared.mockRestore();
+    clock.mockRestore();
   });
 
   it("hands the thread back whenever a slice has used its time", async () => {

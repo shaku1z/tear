@@ -1,5 +1,6 @@
 /** Light and air: sky, bloom, haze bands, light shafts, vignette and water. */
 import type {
+  FallsStroke,
   GlowStroke,
   HazeStroke,
   ShaftsStroke,
@@ -8,7 +9,9 @@ import type {
   WaterStroke,
 } from "./stage-art-contract";
 import {
+  dab,
   BRUSH_OPERATIONS_PER_YIELD,
+  hazed,
   lightAt,
   mix,
   parseHex,
@@ -173,4 +176,37 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
   }
   context.fillStyle = rgba(mix(kit.atmosphere.haze, light.core, 0.4), 0.35);
   context.fillRect(left, stroke.top - 1, width, 2);
+}
+
+const FALLS_STREAKS_PER_PX = 0.9;
+const FALLS_MIST_PER_PX = 1.6;
+
+export function* paintFalls(kit: PaintKit, stroke: FallsStroke): Generator<void> {
+  const { context, light } = kit;
+  const stops = ramp(kit, stroke.ramp);
+  const random = seededRandom(stroke.seed);
+  const height = stroke.bottom - stroke.top;
+  const pale = mix(sampleRamp(stops, 0), light.core, 0.55);
+  const veil = context.createLinearGradient(0, stroke.top, 0, stroke.bottom);
+  veil.addColorStop(0, rgba(hazed(kit, pale, stroke.haze, stroke.x, stroke.top), stroke.alpha * 0.55));
+  veil.addColorStop(1, rgba(hazed(kit, pale, stroke.haze, stroke.x, stroke.bottom), stroke.alpha * 0.25));
+  context.fillStyle = veil;
+  context.fillRect(stroke.x - stroke.width / 2, stroke.top, stroke.width, height);
+  const streaks = Math.round(stroke.width * FALLS_STREAKS_PER_PX * kit.detail);
+  for (let index = 0; index < streaks; index += 1) {
+    if (index % BRUSH_OPERATIONS_PER_YIELD === 0) yield;
+    const x = stroke.x + (random() - 0.5) * stroke.width;
+    const start = stroke.top + random() * height * 0.5;
+    const length = height * (0.25 + random() * 0.6);
+    const color = hazed(kit, random() < 0.3 ? sampleRamp(stops, 0.5) : pale, stroke.haze, x, start);
+    context.fillStyle = rgba(color, stroke.alpha * (0.3 + random() * 0.6));
+    context.fillRect(x, start, 0.8 + random() * 1.8, Math.min(length, stroke.bottom - start));
+  }
+  const mist = Math.round(stroke.width * FALLS_MIST_PER_PX * kit.detail);
+  for (let index = 0; index < mist; index += 1) {
+    if (index % BRUSH_OPERATIONS_PER_YIELD === 0) yield;
+    const x = stroke.x + (random() - 0.5) * stroke.width * 1.8;
+    const y = stroke.bottom - Math.pow(random(), 2) * height * 0.16;
+    dab(context, x, y, 3 + random() * 9, 0, pale, stroke.alpha * 0.16, 0.7);
+  }
 }
