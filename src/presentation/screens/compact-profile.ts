@@ -44,10 +44,7 @@ export function createCompactProfile(context: ScreenRenderContext) {
     const blocks: ScrollBlock[] = [passport(page, view)];
     const listTab = view.tab === "replays" || view.tab === "vault";
     if (view.tab === "vault") blocks.push(...vaultToolbar(page, view));
-    const recovery =
-      view.tab === "vault" && view.ownerRecovery?.catalogVisible === true ? view.ownerRecovery : undefined;
-    if (recovery) blocks.push(...recoveryRows(page, recovery));
-    else if (listTab) blocks.push(...replayBlocks(page, view));
+    if (listTab) blocks.push(...replayBlocks(page, view));
     else if (view.tab === "bests") blocks.push(...bests(page, view));
     else blocks.push(...stats(page, view));
     kit.footer(page, kit.scroll(page, blocks));
@@ -142,81 +139,44 @@ export function createCompactProfile(context: ScreenRenderContext) {
     return { height, draw };
   }
 
-  /** Vault import and account-restore controls with their status line. */
+  /** Vault import controls with their status line. */
   function vaultToolbar(page: CompactPage, view: ProfileScreenView): readonly ScrollBlock[] {
     const archive = view.archive,
-      recovery = view.ownerRecovery,
       items: FlowAction[] = [];
-    if (archive === undefined && recovery === undefined) return [];
-    if (archive !== undefined) {
-      items.push({
-        label: "IMPORT A REPLAY FILE",
-        action: { type: "profile.pickGhostArchive" },
-        enabled: archive.canPick,
-      });
-      if (archive.jobId !== undefined && archive.revision !== undefined) {
-        if (archive.canReselect)
-          items.push({ label: "CHOOSE AGAIN", action: { type: "profile.reselectGhostArchive", id: archive.jobId } });
-        if (archive.canRestore)
-          items.push({
-            label: archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE",
-            action: { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision },
-          });
-        if (archive.canCancel)
-          items.push({
-            label: "CANCEL",
-            action: { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision },
-          });
-      }
-      if (archive.canCancelSelection)
-        items.push({ label: "CANCEL", action: { type: "profile.cancelGhostArchiveSelection" } });
+    if (archive === undefined) return [];
+    items.push({
+      label: "IMPORT A REPLAY FILE",
+      action: { type: "profile.pickGhostArchive" },
+      enabled: archive.canPick,
+    });
+    if (archive.jobId !== undefined && archive.revision !== undefined) {
+      if (archive.canReselect)
+        items.push({ label: "CHOOSE AGAIN", action: { type: "profile.reselectGhostArchive", id: archive.jobId } });
+      if (archive.canRestore)
+        items.push({
+          label: archive.pairedCapsuleIds ? "RESTORE BOTH" : "RESTORE",
+          action: { type: "profile.restoreGhostArchive", id: archive.jobId, revision: archive.revision },
+        });
+      if (archive.canCancel)
+        items.push({
+          label: "CANCEL",
+          action: { type: "profile.cancelGhostRestore", id: archive.jobId, revision: archive.revision },
+        });
     }
-    if (recovery?.catalogVisible)
-      items.push({ label: "‹ THIS DEVICE", action: { type: "profile.closeOwnGhostCatalog" } });
-    if (recovery !== undefined)
-      items.push({
-        label: "MY ACCOUNT'S REPLAYS",
-        action: { type: "profile.loadOwnGhostCapsules" },
-        enabled: recovery.canLoad,
-      });
+    if (archive.canCancelSelection)
+      items.push({ label: "CANCEL", action: { type: "profile.cancelGhostArchiveSelection" } });
     const height = kit.actionsHeight(items, page.width);
     const blocks: ScrollBlock[] = [
       { height, draw: (y, scrollView) => kit.actions(items, page.left, y, page.width, scrollView) },
     ];
-    const status =
-      archive === undefined
-        ? ""
-        : [
-            ARCHIVE_STATUS[archive.status] ?? "",
-            archive.pairedCapsuleIds ? "Includes the scored run and its finale." : "",
-          ]
-            .filter(Boolean)
-            .join(" ");
+    const status = [
+      ARCHIVE_STATUS[archive.status] ?? "",
+      archive.pairedCapsuleIds ? "Includes the scored run and its finale." : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     if (status) blocks.push(kit.prose(page, status, { alpha: ui.t.alpha.soft, maxLines: 2 }));
     return blocks;
-  }
-
-  function recoveryRows(
-    page: CompactPage,
-    recovery: NonNullable<ProfileScreenView["ownerRecovery"]>,
-  ): readonly ScrollBlock[] {
-    if (recovery.entries.length === 0 && recovery.status === "ready")
-      return [kit.empty(page, "◇", "No saved replays in your account")];
-    return recovery.entries.map((entry, index) => {
-      const status =
-        entry.localStatus === "already-recovered"
-          ? "Already on this device"
-          : entry.localStatus === "recovered"
-            ? "Restored to this device"
-            : "Stored in your account";
-      return kit.replayRow(page, { id: entry.capsuleId, title: `SAVED REPLAY ${String(index + 1)}`, detail: status }, [
-        {
-          label: "RESTORE TO THIS DEVICE",
-          action: { type: "profile.recoverOwnGhostCapsule", id: entry.capsuleId },
-          enabled: recovery.canRecover,
-        },
-      ]);
-    });
   }
 
   function replayBlocks(page: CompactPage, view: ProfileScreenView): readonly ScrollBlock[] {
@@ -291,16 +251,6 @@ export function createCompactProfile(context: ScreenRenderContext) {
     const sources = replay.comparisonSourceCount ?? 0;
     if (sources >= 2)
       items.push({ label: `COMPARE ${String(sources)}`, action: { type: "profile.openGhostComparison" } });
-    items.push({
-      label: "PUBLISH",
-      enabled: replay.available,
-      action: { type: "profile.openGhostPublication", id: replay.id },
-    });
-    items.push({
-      label: "SUPPORT",
-      enabled: replay.available,
-      action: { type: "profile.openGhostSupport", id: replay.id },
-    });
     if (replay.canDownloadArchive)
       items.push({ label: "DOWNLOAD", action: { type: "profile.downloadGhostArchive", id: replay.id } });
     if (replay.canDownloadLinkedPair) {
