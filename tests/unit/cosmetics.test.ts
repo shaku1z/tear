@@ -24,6 +24,11 @@ import {
 import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 
+function firstItem(): CosmeticItem {
+  const item = COSMETIC_CATALOG.items[0];
+  if (!item) throw new Error("catalog has no items");
+  return item;
+}
 const noBoss = (): boolean => false;
 const rootbound = (boss: string): boolean => boss === "rootbound";
 /** Shards a common achievement pays (the rarity table in achievements.ts). */
@@ -57,7 +62,7 @@ describe("cosmetic catalog", () => {
   });
 
   it("rejects bad rows with a reason", () => {
-    const base = COSMETIC_CATALOG.items[0]!;
+    const base = firstItem();
     const row = (patch: Partial<CosmeticItem>): string =>
       validateCosmeticCatalog({ collections: [], items: [{ ...base, ...patch }] }).join();
     const trail = (colors: string[], extra: Record<string, unknown> = {}) => ({
@@ -140,7 +145,7 @@ describe("cosmetic state", () => {
     const off = equipCosmetic(COSMETIC_CATALOG, on ?? owned, "trail", null, 5);
     expect(off?.equipped.trail?.id).toBeNull();
     expect(off?.equipped.trail?.at).toBe(11);
-    const first = COSMETIC_CATALOG.items[0]!;
+    const first = firstItem();
     expect(itemStatus(COSMETIC_CATALOG, on ?? owned, first, noBoss)).toBe("equipped");
   });
 
