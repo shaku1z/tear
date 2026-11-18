@@ -142,7 +142,9 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     },
     coachAction: (command) => loaded?.tutorial.coachAction(command) ?? false,
     showPracticeTab: (tab) => {
+      // Each Drills tab is its own list, so a new tab opens at its top.
       loaded?.tutorial.showPracticeTab(tab);
+      context.resetScroll();
     },
     selectBoss: (id, retained) => loaded?.tutorial.selectBoss(id, retained) ?? false,
     selectEnemy: (id) => loaded?.tutorial.selectEnemy(id) ?? false,
