@@ -23,8 +23,30 @@ baseline for what it runs now:
   six. Nothing in those runs looked like a broken game state.
 
 Not established: whether the game became harder after July or the player was always this weak with `riftlock`.
-The journey still asserts `status === "completed"` and a return to the menu, so it fails until either the
-player can finish an easy campaign or the assertion is changed to what the repeatability journey checks.
+
+What the journey asserts now: the run starts from the visible panel, goes through the real setup, play and
+draft screens, and reaches one of the game's own ends with no page error and no watchdog stop. A win ends on
+the menu with status `completed`; a defeat ends on the game-over screen with reason `terminal-gameover`. Any
+other stop (a watchdog, an invariant, the batch limit) still fails it.
+
+**Open goal: the scripted player finishes an easy `riftlock` campaign.** Where it stands, headless, competent
+profile, 2026-11-18:
+
+| Seed | Defeated at wave |
+| ---- | ---------------- |
+| 117  | 9                |
+| 1    | 6                |
+| 2    | 7                |
+| 3    | 5                |
+
+In the browser journey seed 117 was defeated at wave 17 in weekly run 44218184366 (commit `68f6c034`). On main
+of 2026-11-18 the same journey reaches wave 23 and then stalls: one `herald` support enemy is left walking on a
+platform, the player stays on the ground about 520 pixels away, health does not change for 16,000 ticks, and no
+watchdog stops the run. The herald is alive and can be damaged, so this is the player failing to go after a
+passive enemy, not a broken game state. The journey then runs into the 10-minute test limit and fails.
+
+The goal is met when the journey prints `C24 end: campaign completed`; at that point the completion can become
+an assertion again.
 
 ## Exit-gate result
 
