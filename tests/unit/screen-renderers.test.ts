@@ -61,6 +61,7 @@ class TestUi implements ScreenUiPort {
       settingsControlH: 42,
       settingsStepperW: 54,
       minTarget: 32,
+      listRowH: 46,
       railFadeW: 800,
       railFadeMid: 0.56,
     },
@@ -93,6 +94,9 @@ class TestUi implements ScreenUiPort {
   }
   buttonFitWidth(...values: Parameters<ScreenUiPort["buttonFitWidth"]>): number {
     return values[0].measureText(values[1].label).width + 16;
+  }
+  buttonFitHeight(...values: Parameters<ScreenUiPort["buttonFitHeight"]>): number {
+    return values[1].sub === undefined ? this.t.metric.listRowH : this.t.metric.listRowH + 8;
   }
   emptyState(...values: Parameters<ScreenUiPort["emptyState"]>): number {
     return values[4] + 60;
@@ -263,11 +267,12 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 }
 
 describe("legacy screen renderer registry", () => {
-  it("keeps boss phase controls and every Lab menu item reachable at 800 by 360 with the existing scroll owner", () => {
+  it("keeps every boss phase reachable by scrolling the Drills list at 800 by 360", () => {
     const controller = new TutorialController(CONFIG);
     controller.openPractice(800, 1);
     const found: string[] = [];
-    for (const scroll of [0, 144]) {
+    // The list scrolls over its measured extent (the shared scrolling list clamps past the end).
+    for (let scroll = 0; scroll <= 2400; scroll += 24) {
       // A small landscape touch screen runs the compact density (tutorial pause uses its tight composition).
       const controls: ScreenControl[] = [],
         context = createRenderContext(controls);
@@ -472,7 +477,10 @@ describe("legacy screen renderer registry", () => {
         .filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-enemy")
         .map((control) => control.y + control.h),
     );
-    expect(copy.mock.calls.every(([, , y]) => y >= lastRowBottom + 28)).toBe(true);
+    // The help starts under the list, a gap clear of its last row (its first line's top below it).
+    expect(
+      copy.mock.calls.every(([, , y]) => y - context.ui.t.type.caption >= lastRowBottom + context.ui.t.space.sm),
+    ).toBe(true);
     expect(context.canvas.textBaseline).toBe("alphabetic");
     controls.length = 0;
     renderer.menu({
@@ -1450,7 +1458,7 @@ describe("release and engineering surface rendering", () => {
   });
   it("closes up the Career command row when a command surface is unavailable", () => {
     const controls: ScreenControl[] = [];
-    const hidden = new Set(["coach", "race"]);
+    const hidden = new Set(["race"]);
     const context: ScreenRenderContext = {
       ...createRenderContext(controls),
       available: (action) => action.type !== "career.control" || !hidden.has(action.command),
@@ -1506,7 +1514,7 @@ describe("release and engineering surface rendering", () => {
     const row = controls.filter(
       (control) =>
         control.action.type === "career.control" &&
-        ["watch", "challenge", "download", "chase", "coach", "race"].includes(control.action.command),
+        ["watch", "challenge", "download", "chase", "race"].includes(control.action.command),
     );
     expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
     // The page pattern content column is 1120 wide.

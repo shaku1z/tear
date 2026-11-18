@@ -7,9 +7,9 @@
 //   node scripts/run-checks.mjs browser --shard 2/4   one of four parts of a group (CI's parallel jobs)
 //
 // It stops at the first failing check. The browser and nightly groups serve the builds in dist/, so
-// run the build group first. On this machine, every group except `fast` first takes one of a few
-// slots shared by all worktrees of the repository (TEAR_CHECK_SLOTS, default 2), so parallel
-// sessions do not starve each other into timeouts. A full `pnpm check` that passes on a clean
+// run the build group first. On this machine, every group except `fast` first waits its turn in
+// the queue all worktrees of the repository share (scripts/queue.mjs), so parallel sessions do not
+// starve each other into timeouts. A full `pnpm check` that passes on a clean
 // checkout records the commit in the Git directory (`--passed` prints it) for the pull request.
 //
 // With TEAR_CHECK_RESULTS set to a file, each check's result is added to that file as it finishes
@@ -20,10 +20,11 @@
 // With --keep-going (the nightly workflow only), a failing check does not stop the run: every check
 // runs, the run lists each failure at the end and still fails. Pull request runs stop at the first.
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { joinQueue, lightKind, queueDirectory, queueSlots } from "./queue.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -98,44 +99,6 @@ function git(args) {
 function gitPath(args) {
   const value = git(args);
   return value === undefined ? undefined : isAbsolute(value) ? value : resolve(root, value);
-}
-
-const alive = (pid) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error.code === "EPERM";
-  }
-};
-
-/** Waits for a free machine-wide slot and returns a function that releases it. */
-export async function takeSlot({ directory, slots, staleMs = 3 * 60 * 60_000, wait = 5000, log = console.log }) {
-  mkdirSync(directory, { recursive: true });
-  const started = Date.now();
-  let announced = false;
-  for (;;) {
-    for (let index = 0; index < slots; index += 1) {
-      const slot = resolve(directory, `slot-${String(index)}.json`);
-      try {
-        writeFileSync(slot, JSON.stringify({ pid: process.pid, since: Date.now(), cwd: root }), { flag: "wx" });
-        return () => rmSync(slot, { force: true });
-      } catch {
-        try {
-          const owner = JSON.parse(readFileSync(slot, "utf8"));
-          if (!alive(owner.pid) || Date.now() - owner.since > staleMs) rmSync(slot, { force: true });
-        } catch {
-          // A slot being written right now, or already freed: try again on the next pass.
-        }
-      }
-    }
-    if (!announced) {
-      log(`waiting for one of ${String(slots)} check slot(s) held by other sessions (${directory})`);
-      announced = true;
-    }
-    await new Promise((done) => setTimeout(done, wait));
-    if (Date.now() - started > staleMs) throw new Error("gave up waiting for a check slot");
-  }
 }
 
 export const RESULTS_FORMAT = "tear-check-results.v1";
@@ -239,13 +202,10 @@ async function main(argv) {
     return 0;
   }
   const local = process.env.CI === undefined;
-  const commonDir = gitPath(["rev-parse", "--git-common-dir"]);
+  const directory = queueDirectory(root);
   const release =
-    local && group !== "fast" && commonDir !== undefined
-      ? await takeSlot({
-          directory: resolve(commonDir, "tear-check-slots"),
-          slots: Math.max(1, Number(process.env.TEAR_CHECK_SLOTS ?? 2)),
-        })
+    local && lightKind(["node", "scripts/run-checks.mjs", ...argv]) === undefined && directory !== undefined
+      ? await joinQueue({ directory, slots: queueSlots(), label: `run-checks ${argv.join(" ")}` })
       : () => undefined;
   const startCommit = git(["rev-parse", "HEAD"]);
   const resultsFile = process.env.TEAR_CHECK_RESULTS || undefined;

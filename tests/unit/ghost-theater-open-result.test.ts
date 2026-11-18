@@ -18,12 +18,8 @@ vi.mock("../../src/ghost/production-replay-session", () => ({
 }));
 
 import { createGhostTheaterScreenAdapter } from "../../src/app/library/ghost-theater-screen-adapter";
-import { createGhostCapsuleManifestV2 } from "../../src/ghost/capsule-contract";
-import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
-import { ghostCoachCandidate, projectGhostCoachHistory } from "../../src/ghost/coach-history";
 import type { ReplayScreenView } from "../../src/presentation/screens/contracts";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
-import { CURRENT_RULESET_VERSION } from "../../src/gameplay/run/ruleset-version";
 
 function hostileCapsule(): GhostReadCapsule {
   return {
@@ -65,13 +61,6 @@ describe("Ghost Theater open result", () => {
         },
       }),
       launchPractice: () => ({ ok: false as const, message: "unused" }),
-      coachHistory: {
-        list: () => Promise.resolve([]),
-        current: () => Promise.resolve(true),
-        analyze: () => {
-          throw new Error("unused");
-        },
-      },
     };
     const theater = createGhostTheaterScreenAdapter(services);
     expect(theater.open(hostileCapsule(), "profile").kind).toBe("opened");
@@ -131,13 +120,6 @@ describe("Ghost Theater open result", () => {
       width: () => 1200,
       deltaSeconds: () => 0,
       launchPractice: () => ({ ok: false, message: "unused" }),
-      coachHistory: {
-        list: () => Promise.resolve([]),
-        current: () => Promise.resolve(false),
-        analyze: () => {
-          throw new Error("unused");
-        },
-      },
     });
 
     const result = theater.open(hostileCapsule(), "profile");
@@ -156,117 +138,6 @@ describe("Ghost Theater open result", () => {
     theater.render();
     expect(rendered).toEqual([]);
   });
-});
-
-describe("Coach cited seek refusal", () => {
-  it.each(["seek", "render"])(
-    "keeps a genuine session %s failure visible without adopting the cited tick",
-    async (failure) => {
-      const context = createGhostReplayRunContext({
-        runId: "run",
-        seed: "engineering",
-        mode: "endless",
-        difficulty: "normal",
-        weaponId: "sword",
-        ticksPerSecond: 120,
-        build: {
-          version: "1",
-          revision: "test",
-          target: "test-standalone",
-          rulesetVersion: CURRENT_RULESET_VERSION,
-          contentHash: "test",
-          configHash: "test",
-        },
-        rng: { gameplay: { algorithm: "xorshift32", state: "1" } },
-      });
-      const make = (id: string) =>
-        createGhostCapsuleManifestV2({
-          id,
-          status: "complete",
-          createdAt: "2026-10-19T10:00:00Z",
-          recordingProfile: "coaching",
-          provenance: { replayContext: context },
-          chunks: [],
-          rootIntegrity: `root-${id}`,
-          fidelity: { presentation: "full", downgrades: [] },
-        });
-      const target = ghostCoachCandidate(make("target")),
-        other = ghostCoachCandidate(make("other"));
-      const output = projectGhostCoachHistory([
-        {
-          candidate: target,
-          receipts: [120, 240],
-          events: [
-            {
-              format: "tear-contract",
-              kind: "event",
-              schemaVersion: 1,
-              id: "native-throw",
-              type: "blade.thrown",
-              tick: 140,
-              phase: "player-and-blade",
-              sequence: 1,
-              source: "engine",
-              payload: { weaponId: "sword", throwId: 1, x: 1, y: 2 },
-            },
-          ],
-        },
-        { candidate: other, receipts: [120, 240], events: [] },
-      ]);
-      fixture.mapped = { ghost: { events: [] }, issues: [] };
-      fixture.session = {
-        verifiedReceiptTicks: [120, 240],
-        sourceRootHash: "root",
-        seek(tick: number) {
-          if (tick === 140 && failure === "seek") throw new Error("source continuation refused");
-          return { tick, semanticHash: "hash" };
-        },
-        renderFrame(tick: number) {
-          if (tick === 140 && failure === "render") throw new Error("source continuation refused");
-          return { tick };
-        },
-      };
-      const rendered: ReplayScreenView[] = [];
-      const theater = createGhostTheaterScreenAdapter({
-        render: (view) => {
-          rendered.push(view);
-        },
-        width: () => 1600,
-        deltaSeconds: () => 0,
-        launchPractice: () => ({ ok: false, message: "unused" }),
-        coachHistory: {
-          list: () => Promise.resolve([target, other]),
-          current: () => Promise.resolve(true),
-          analyze: () => ({
-            result: Promise.resolve(output),
-            cancel() {
-              return;
-            },
-          }),
-        },
-      });
-      expect(theater.open({ ...hostileCapsule(), manifest: make("target"), maxTick: 240 }, "profile").kind).toBe(
-        "opened",
-      );
-      theater.openCoach();
-      await vi.waitFor(() => {
-        theater.render();
-        expect(rendered.at(-1)?.coach?.candidates.length).toBe(1);
-      });
-      theater.selectCoachBaseline("other");
-      await vi.waitFor(() => {
-        theater.render();
-        expect(rendered.at(-1)?.coach?.result).toBeDefined();
-      });
-      theater.viewCoachMoment("throws:native-throw");
-      await vi.waitFor(() => {
-        theater.render();
-        expect(rendered.at(-1)?.notice).toContain("Replay halted: source continuation refused");
-      });
-      expect(rendered.at(-1)?.elapsed).toBe("0:00");
-      fixture.session = undefined;
-    },
-  );
 });
 
 describe("Theater local media ownership", () => {
@@ -290,13 +161,6 @@ describe("Theater local media ownership", () => {
       width: () => 1600,
       deltaSeconds: () => 0,
       launchPractice: () => ({ ok: false, message: "unused" }),
-      coachHistory: {
-        list: () => Promise.resolve([]),
-        current: () => Promise.resolve(true),
-        analyze: () => {
-          throw new Error("unused");
-        },
-      },
       studioMedia: {
         available: () => true,
         dispose: vi.fn(),

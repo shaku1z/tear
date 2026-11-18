@@ -301,8 +301,7 @@ export class GhostProductionReplayWorld<State> {
   }
 }
 
-export type GhostPracticeMode =
-  "exact-practice" | "repetition-drill" | "counterfactual-sandbox" | "race-practice" | "coach-assisted";
+export type GhostPracticeMode = "exact-practice" | "repetition-drill" | "counterfactual-sandbox" | "race-practice";
 
 export interface GhostPracticeChild {
   readonly challenge?: RecordedGhostChallenge;

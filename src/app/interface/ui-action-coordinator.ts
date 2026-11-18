@@ -5,6 +5,7 @@ import {
   type NavigationDirection,
 } from "./ui-navigation";
 import { screenNeedsConfirmArming, screenNeedsPointerSettle } from "../../domain/screen-catalog";
+import { anyKeyIn, rangeKeyIn } from "../../domain/keyboard-bindings";
 
 export interface UiActionButton extends FocusableRect {
   readonly label?: string;
@@ -154,10 +155,7 @@ export function stepUiTab<Key>(
 }
 
 function digitChoice(pressed: ReadonlySet<string>, count: number): number | null {
-  for (let index = 0; index < count; index += 1) {
-    if (pressed.has(`Digit${String(index + 1)}`)) return index;
-  }
-  return null;
+  return rangeKeyIn(pressed, "choose", count);
 }
 
 function quickAction(
@@ -173,7 +171,7 @@ function quickAction(
   if (screen === "draft") {
     const index = digitChoice(pressed, 4);
     if (index !== null) return Object.freeze({ type: "choose-upgrade", index });
-    if (pressed.has("KeyR")) return Object.freeze({ type: "reroll-draft" });
+    if (anyKeyIn(pressed, "reroll")) return Object.freeze({ type: "reroll-draft" });
   } else if (screen === "reserve") {
     const index = digitChoice(pressed, 3);
     if (index !== null) return Object.freeze({ type: "choose-reserve", index });

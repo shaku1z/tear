@@ -23,8 +23,6 @@ import type { GhostPracticeChild, GhostSeekResult } from "../../ghost/replay-wor
 import type { ReplayScreenView } from "../../presentation/screens/contracts";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { GhostPracticeLaunchResult } from "../replay/ghost-practice-launch";
-import { ghostCoachCandidate } from "../../ghost/coach-history";
-import { createGhostCoachHistoryController, type GhostCoachHistoryPort } from "./ghost-coach-history-controller";
 import { projectGhostRunDnaTheater } from "../../ghost/run-dna-theater";
 import { createGhostStudioCutListFromTheater } from "../../ghost/studio-cut-list-theater";
 import type { GhostStudioEditDecisionList } from "../../ghost/player-experiences";
@@ -42,7 +40,6 @@ export interface GhostTheaterScreenServices {
   readonly deltaSeconds: () => number;
   readonly nativeTransport?: () => ReplayNativeTransport;
   readonly launchPractice: (child: GhostPracticeChild) => GhostPracticeLaunchResult;
-  readonly coachHistory: GhostCoachHistoryPort;
 }
 
 export interface GhostTheaterScreenStatus {
@@ -69,12 +66,10 @@ interface GhostTheaterContext {
   readonly choiceCache: Map<number, readonly RecordedGhostChallenge[]>;
   firstTick: number;
   lastTick: number;
-  coachOpen: boolean;
   runDnaOpen: boolean;
   studioOpen: boolean;
   studioCutList: GhostStudioEditDecisionList | undefined;
   frame: GhostVerifiedReplayRenderView | undefined;
-  coachScene: boolean;
   studioMark: number | undefined;
   studioAbort: AbortController | undefined;
   studioArtifact: GhostStudioWebmArtifact | undefined;
@@ -97,7 +92,6 @@ function isSpeed(value: number): value is (typeof SPEEDS)[number] {
 export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServices) {
   let context: GhostTheaterContext | undefined;
   let memoryOwner: AbortController | undefined;
-  const history = createGhostCoachHistoryController(services.coachHistory);
   const invalidateStudio = (): void => {
     memoryOwner?.abort();
     memoryOwner = undefined;
@@ -199,7 +193,6 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       },
       theater: true,
       worldVisible: currentContext.frame !== undefined,
-      coachReturnAvailable: currentContext.coachScene,
       practiceAvailable:
         currentContext.challengeResult === undefined &&
         (currentContext.capsule.manifest.provenance?.bossMemory !== undefined ||
@@ -224,7 +217,6 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
             },
           }
         : {}),
-      ...(currentContext.coachOpen ? { coach: history.snapshot() } : {}),
       ...(currentContext.runDnaOpen ? { runDna: projectGhostRunDnaTheater(currentContext.capsule) } : {}),
       ...(currentContext.studioOpen
         ? {
@@ -285,7 +277,6 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       evidence?: Readonly<{ permit: GhostForkPermit; result: RecordedGhostChallengeResult }>,
     ): GhostTheaterOpenResult {
       invalidateStudio();
-      history.close();
       const recorded = readGhostReplayRunContext(capsule.manifest.provenance);
       const retired = rulesetRefusal(recorded?.build.rulesetVersion);
       if (retired !== null) {
@@ -327,12 +318,10 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
           challengeResult: evidence?.result,
           challengeChoices: [],
           choiceCache: new Map(),
-          coachOpen: false,
           runDnaOpen: false,
           studioOpen: false,
           studioCutList: undefined,
           frame: session.renderFrame?.(firstTick),
-          coachScene: false,
           studioMark: undefined,
           studioAbort: undefined,
           studioArtifact: undefined,
@@ -346,13 +335,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     },
     render(): void {
       advance();
-      if (
-        context !== undefined &&
-        !context.coachOpen &&
-        !context.challengeOpen &&
-        !context.runDnaOpen &&
-        !context.studioOpen
-      ) {
+      if (context !== undefined && !context.challengeOpen && !context.runDnaOpen && !context.studioOpen) {
         const native = services.nativeTransport?.(),
           current = context;
         if (native !== undefined)
@@ -377,7 +360,6 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       const from = context?.from;
       invalidateStudio();
       context = undefined;
-      history.close();
       return from;
     },
     togglePause(): void {
@@ -428,10 +410,9 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
     openChallenges(): void {
       if (context === undefined) return;
       context.challengeOpen = !context.challengeOpen;
-      context.coachOpen = context.runDnaOpen = context.studioOpen = false;
+      context.runDnaOpen = context.studioOpen = false;
       if (context.challengeOpen) context.challengeChoices = challengeChoices();
       context.transport.pause();
-      history.close();
     },
     startChallenge(id: string): void {
       if (id === "boss-memory-watch") {
@@ -495,92 +476,16 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
         captured.message = `Challenge unavailable: ${error instanceof Error ? error.message : String(error)}`;
       }
     },
-    openCoach(): void {
-      if (context === undefined) return;
-      delete context.message;
-      context.coachOpen = !context.coachOpen;
-      context.challengeOpen = false;
-      context.runDnaOpen = context.studioOpen = false;
-      context.transport.pause();
-      if (context.coachOpen) void history.open(ghostCoachCandidate(context.capsule.manifest));
-      else history.close();
-    },
-    selectCoachBaseline(id: string): void {
-      if (context?.coachOpen) {
-        delete context.message;
-        void history.toggle(id);
-      }
-    },
-    controlCoach(
-      command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section",
-      delta: number,
-    ): void {
-      if (context?.coachScene && command === "scene") {
-        context.coachScene = false;
-        context.coachOpen = true;
-        return;
-      }
-      if (!context?.coachOpen) return;
-      if (command === "scene") {
-        context.coachOpen = false;
-        context.coachScene = true;
-        return;
-      }
-      if (command === "close") {
-        context.coachOpen = false;
-        history.close();
-      } else if (command === "details") history.details();
-      else if (command === "sources") history.sources();
-      else history[command](delta);
-    },
-    viewCoachMoment(id: string): void {
-      const captured = context;
-      if (!captured?.coachOpen) return;
-      void history.action(id, (moment) => {
-        if (context !== captured) return;
-        captured.transport.pause();
-        if (seek(moment.tick) && captured.result.tick === moment.tick) {
-          captured.coachOpen = false;
-          captured.coachScene = true;
-          captured.message = `Reconstructed source scene · TICK ${String(moment.tick)} · return to Coach for practice.`;
-        }
-      });
-    },
-    practiceCoachFinding(id: string): void {
-      const captured = context;
-      if (!captured?.coachOpen) return;
-      void history.action(id, (moment) => {
-        if (context !== captured || moment.priorTick === undefined || !captured.checkpoints.includes(moment.priorTick))
-          return;
-        try {
-          const child = captured.session.forkPractice(moment.priorTick, "coach-assisted");
-          captured.transport.pause();
-          invalidateStudio();
-          const launched = services.launchPractice(child);
-          captured.message = launched.ok
-            ? "Practice launched before the cited moment · unranked and non-persistent."
-            : launched.message;
-          if (launched.ok) {
-            history.close();
-            captured.coachOpen = false;
-          }
-        } catch (error) {
-          captured.message = `Practice unavailable: ${error instanceof Error ? error.message : String(error)}`;
-        }
-      });
-    },
     toggleRunDna(): void {
       if (context !== undefined) {
         context.runDnaOpen = !context.runDnaOpen;
-        context.coachOpen = context.studioOpen = false;
-        history.close();
+        context.studioOpen = false;
       }
     },
     toggleStudio(): void {
       if (context !== undefined) {
         context.studioOpen = !context.studioOpen;
-        context.coachOpen = context.runDnaOpen = false;
-        history.close();
+        context.runDnaOpen = false;
       }
     },
     markStudioIn(): void {

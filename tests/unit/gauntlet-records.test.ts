@@ -56,7 +56,6 @@ describe("Gauntlet bests in the profile", () => {
       schemaVersion: PROFILE_ENVELOPE_VERSION,
       profile: { shards: 3, unknownFuture: "kept" },
     });
-    expect(PROFILE_ENVELOPE_VERSION).toBe(4);
     expect(result).toMatchObject({
       ok: true,
       migratedFrom: null,

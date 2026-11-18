@@ -48,6 +48,7 @@ type Dependencies = Pick<
   | "DAILY"
   | "Echo"
   | "FirebaseProvider"
+  | "fullscreen"
   | "Flyer"
   | "META"
   | "PROFILE"
@@ -260,13 +261,18 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     });
     const guide =
       codexTab === "guide"
-        ? buildCodexGuide(d.CONFIG.trick.pts, d.CONFIG.trick.tiers, {
-            jump: d.PAD.bindingLabel("jump"),
-            dash: d.PAD.bindingLabel("dash"),
-            throw: d.PAD.bindingLabel("throw"),
-            tether: d.PAD.bindingLabel("tether"),
-            pause: d.PAD.glyph(9),
-          })
+        ? buildCodexGuide(
+            d.CONFIG.trick.pts,
+            d.CONFIG.trick.tiers,
+            {
+              jump: d.PAD.bindingLabel("jump"),
+              dash: d.PAD.bindingLabel("dash"),
+              throw: d.PAD.bindingLabel("throw"),
+              tether: d.PAD.bindingLabel("tether"),
+              pause: d.PAD.glyph(9),
+            },
+            d.fullscreen().available,
+          )
         : undefined;
     const result = buildCodexScreenSnapshot({
       tab: codexTab,
@@ -604,7 +610,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       if (command !== "chase" && command !== "race") services.chase?.cancelPreparation();
       if (command === "suspend") career?.close();
       else if (command === "select" && id) career?.select(id);
-      else if (["watch", "coach", "challenge", "download", "chase", "race"].includes(command)) {
+      else if (["watch", "challenge", "download", "chase", "race"].includes(command)) {
         void career?.sourceAction(async (source) => {
           if (career.snapshot().selected?.entry.kind === "legacy-visual") {
             if (command !== "watch") throw new Error("This tool requires a canonical capsule");

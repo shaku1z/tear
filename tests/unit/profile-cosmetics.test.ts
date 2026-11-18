@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 import { migrateProfileEnvelope, PROFILE_ENVELOPE_VERSION } from "../../src/persistence/profile-envelope";
 import { activeLoadout, normalizeCosmeticState } from "../../src/domain/cosmetics";
+import { dailyReceiptId } from "../../src/domain/reward-receipts";
 import { createProfileStore, type ProfileStore } from "../../src/persistence/profile-store";
 
 /** In-memory storage with the acknowledged channel the live platform provides. */
@@ -26,6 +27,9 @@ function memory(initial: Record<string, string> = {}, acknowledged = true) {
   };
   return { values, store };
 }
+/** Shards earned the way a player earns them: one paid daily claim. */
+const earn = (profile: ProfileStore, shards: number) =>
+  profile.claimShards(dailyReceiptId("2026-1-1", "d_kills"), shards);
 function open(
   storage = memory(),
   clock = { now: 1_000 },
@@ -70,7 +74,7 @@ describe("profile envelope: the version 4 cosmetics ledger", () => {
         extensions: { keep: true },
       },
     });
-    expect(PROFILE_ENVELOPE_VERSION).toBe(4);
+    expect(PROFILE_ENVELOPE_VERSION).toBe(5);
   });
 
   it("gives a legacy save an empty ledger and drops malformed cosmetics from a current one", () => {
@@ -183,7 +187,7 @@ describe("buying and equipping through the profile store", () => {
   it("works without the acknowledged channel (plain local storage)", () => {
     const storage = memory({}, false);
     const { profile } = open(storage);
-    profile.addShards(100);
+    earn(profile, 100);
     return profile.buyCosmetic("trail_dusk").then(async (status) => {
       expect(status).toBe("committed");
       expect(await profile.equipCosmetic("trail", "trail_dusk")).toBe("committed");
@@ -215,8 +219,8 @@ describe("buying and equipping through the profile store", () => {
   it("merges two devices' purchases without losing either and converges", () => {
     const left = open().profile,
       right = open().profile;
-    left.addShards(300);
-    right.addShards(300);
+    earn(left, 300);
+    earn(right, 300);
     left.data.cosmetics = {
       v: 1,
       owned: { trail_dusk: 25 },
@@ -262,7 +266,7 @@ describe("buying and equipping through the profile store", () => {
 
   it("shows zero, and blocks buying, when merged purchases overspend", async () => {
     const { profile } = open();
-    profile.addShards(100);
+    earn(profile, 100);
     profile.merge({ cosmetics: { v: 1, owned: { a: 80, b: 80 }, loadouts: {} } });
     expect(profile.shardBalance()).toBe(0);
     expect(await profile.buyCosmetic("title_wanderer")).toBe("insufficient");

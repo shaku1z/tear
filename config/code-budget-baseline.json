@@ -63,7 +63,7 @@
       "chars": 26787
     },
     "src/gameplay/training/tutorial-controller.ts": {
-      "chars": 47038,
+      "chars": 45807,
       "largestFunctionStatements": 170
     },
     "src/gameplay/upgrades.ts": {
@@ -130,9 +130,6 @@
     "src/presentation/platform-materials/verdant-rootstone.ts": {
       "largestFunctionStatements": 129
     },
-    "src/presentation/screens/leaderboards-replays.ts": {
-      "maxLineLength": 229
-    },
     "src/presentation/tear-wipe.ts": {
       "largestFunctionStatements": 106
     },
@@ -161,7 +158,7 @@
       "chars": 30100
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 29937
+      "chars": 29925
     },
     "src/tearbench/production-replay-composition.ts": {
       "chars": 34925

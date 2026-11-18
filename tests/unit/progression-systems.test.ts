@@ -275,11 +275,16 @@ describe("daily challenges", () => {
   it("selects deterministically and awards each completion once", () => {
     let shards = 0;
     let saves = 0;
+    const paid = new Set<string>();
     const profile: DailyProfilePort = {
       data: {},
-      addShards: (amount) => {
+      claimShards: (receiptId, amount) => {
+        if (paid.has(receiptId)) return false;
+        paid.add(receiptId);
         shards += amount;
+        return true;
       },
+      shardsClaimable: (receiptId) => !paid.has(receiptId),
       save: () => {
         saves += 1;
       },
@@ -302,6 +307,8 @@ describe("daily challenges", () => {
     daily.bump(challenge.key, challenge.goal, challenge.mode);
     daily.bump(challenge.key, challenge.goal, challenge.mode);
     expect(shards).toBe(challenge.shards);
+    expect([...paid]).toEqual([`daily:2026-7-19:${challenge.id}`]);
+    expect(daily.isDone(challenge)).toBe(true);
     expect(achievements.pending).toHaveLength(1);
     expect(saves).toBeGreaterThan(0);
   });

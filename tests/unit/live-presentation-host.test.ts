@@ -331,6 +331,7 @@ describe("live presentation host", () => {
           lockHint: element("lock"),
           inputHint: element("input"),
           fullscreenButton: element("fullscreen"),
+          fullscreenAvailable: () => true,
         } as never,
       );
       if (!ports) throw new Error("real frame composition did not produce ports");

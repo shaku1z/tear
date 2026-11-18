@@ -271,26 +271,11 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.practice": () => {
       ports.replay.practice();
     },
-    "replay.coach.viewMoment": (action) => {
-      ports.replay.viewCoachMoment(action.id);
-    },
-    "replay.coach.control": (action) => {
-      ports.replay.controlCoach(action.command, action.delta);
-    },
     "replay.challenge.open": () => {
       ports.replay.openChallenges();
     },
     "replay.challenge.start": (action) => {
       ports.replay.startChallenge(action.id);
-    },
-    "replay.coach.open": () => {
-      ports.replay.openCoach();
-    },
-    "replay.coach.selectBaseline": (action) => {
-      ports.replay.selectCoachBaseline(action.id);
-    },
-    "replay.coach.practice": (action) => {
-      ports.replay.practiceCoachFinding(action.findingId);
     },
     "replay.runDna.toggle": () => {
       ports.replay.toggleRunDna();
