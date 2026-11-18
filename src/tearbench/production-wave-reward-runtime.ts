@@ -364,9 +364,8 @@ export function createProductionWaveRewardRuntime(
     if (world.lifecycle.phase !== "idle") throw new Error("production wave runtime cannot restart an active lifecycle");
     run().wave = 0;
     // As the live run start does, a Gauntlet opening draws its trial order.
-    const opening = run() as ProductionRun & { bossOrder?: string[] };
-    if (opening.mode === "gauntlet" && (opening.bossOrder?.length ?? 0) === 0)
-      opening.bossOrder = content.gauntletTrials();
+    const opening = run();
+    if (opening.mode === "gauntlet" && opening.bossOrder.length === 0) opening.bossOrder = content.gauntletTrials();
     world.lifecycle.start(`run-${run().runSeed.toString(36)}`);
     const session = world.lifecycle.snapshot();
     if (session.sessionId === null)

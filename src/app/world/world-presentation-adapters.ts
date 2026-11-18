@@ -526,7 +526,7 @@ export function createLiveWorldPresentationAdapters(
           mode: run.mode,
           bossWave: !!run.isBossWave,
           wave: run.wave,
-          ...(run.mode === "gauntlet" ? { trialCount: run.bossOrder?.length ?? 0 } : {}),
+          ...(run.mode === "gauntlet" ? { trialCount: run.bossOrder.length } : {}),
           waveTag: run.waveTag,
           horde: !!run.horde,
           hordeColor: d.CONFIG.colors.charger,

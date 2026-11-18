@@ -74,7 +74,9 @@ export function gauntletRound(round: number): GauntletRound {
 export function gauntletTrialOrder(roster: readonly BossId[], random: RandomSource): BossId[] {
   if (roster.length === 0) throw new RangeError("the Gauntlet needs at least one boss");
   if (new Set(roster).size !== roster.length) throw new RangeError("the Gauntlet roster repeats a boss");
-  if (roster.length <= 2) return [...roster];
+  const first = roster[0],
+    last = roster.at(-1);
+  if (roster.length <= 2 || first === undefined || last === undefined) return [...roster];
   const middle = roster.slice(1, -1);
   for (let index = middle.length - 1; index > 0; index -= 1) {
     const target = Math.floor(random.next() * (index + 1));
@@ -84,7 +86,7 @@ export function gauntletTrialOrder(roster: readonly BossId[], random: RandomSour
     middle[index] = swap;
     middle[target] = current;
   }
-  return [roster[0] as BossId, ...middle, roster.at(-1) as BossId];
+  return [first, ...middle, last];
 }
 
 export interface GauntletScale {

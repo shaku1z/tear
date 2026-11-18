@@ -21,7 +21,7 @@ const STAGE_INPUT: readonly WaveStage[] = STAGES.map((stage) => ({
   id: stage.id,
   name: stage.name,
   boss: stage.boss,
-  pool: stage.pool.map(([kind, weight, unlockWave]) => ({ kind, weight: weight ?? 1, unlockWave: unlockWave ?? 1 })),
+  pool: stage.pool.map(([kind, weight, unlockWave]) => ({ kind, weight, unlockWave: unlockWave ?? 1 })),
 }));
 
 const ROSTER = bossIdsAvailableOn("gauntlet");

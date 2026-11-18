@@ -225,6 +225,31 @@ function regularWaveQueue(
   return queue;
 }
 
+/**
+ * One Gauntlet wave: the trial's boss from the run's trial order, its home stage, and on the
+ * trial's first wave the stage load and the trial card.
+ */
+function planGauntletTrialWave(
+  wave: number,
+  bossOrder: readonly BossId[],
+  stages: readonly WaveStage[],
+  intents: WavePlanIntent[],
+): Readonly<{ curBoss: BossId; stage: number; bossIdx: number; boss: boolean; opensTrial: boolean }> {
+  const trial = gauntletWave(wave);
+  const curBoss = bossOrder[trial.trial];
+  if (curBoss === undefined) throw new Error(`the Gauntlet has no trial ${String(trial.trial + 1)}`);
+  const stage = stages.findIndex((candidate) => candidate.boss === curBoss);
+  if (stage < 0) throw new Error(`${curBoss} has no home stage in the Gauntlet`);
+  if (trial.opensTrial) {
+    if (wave > 1) intents.push({ type: "begin-wipe" });
+    intents.push(
+      { type: "load-stage", stageIndex: stage },
+      { type: "set-stage-banner", duration: GAUNTLET_RULES.trialCardSeconds, name: stageAt(stages, stage).name },
+    );
+  }
+  return { curBoss, stage, bossIdx: trial.trial + 1, boss: trial.boss, opensTrial: trial.opensTrial };
+}
+
 export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
   const prior = options.state;
   const wave = prior.wave + 1;
@@ -258,28 +283,12 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
       biomeIdx = stage;
     }
   } else if (prior.mode === "gauntlet") {
-    // One trial per boss in the run's trial order: two rounds, then the boss, in the boss's home stage.
-    const trial = gauntletWave(wave);
-    curBoss = bossOrder[trial.trial] ?? null;
-    if (curBoss === null) throw new Error(`the Gauntlet has no trial ${String(trial.trial + 1)}`);
-    const home = options.stages.findIndex((candidate) => candidate.boss === curBoss);
-    if (home < 0) throw new Error(`${curBoss} has no home stage in the Gauntlet`);
-    stage = home;
-    if (trial.opensTrial) {
-      if (wave > 1) intents.push({ type: "begin-wipe" });
-      intents.push(
-        { type: "load-stage", stageIndex: home },
-        {
-          type: "set-stage-banner",
-          duration: GAUNTLET_RULES.trialCardSeconds,
-          name: stageAt(options.stages, home).name,
-        },
-      );
-      biomeIdx = home;
-    }
+    const trial = planGauntletTrialWave(wave, bossOrder, options.stages, intents);
+    ({ curBoss, stage } = trial);
+    if (trial.opensTrial) biomeIdx = trial.stage;
     if (trial.boss) {
-      bossIdx = trial.trial + 1;
-      waveTag = bossName(curBoss);
+      bossIdx = trial.bossIdx;
+      waveTag = bossName(trial.curBoss);
     }
   } else if (prior.mode === "endless") {
     const nextBiome = description.endlessBiome;
