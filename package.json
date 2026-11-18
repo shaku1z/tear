@@ -179,6 +179,7 @@
     "@vite-pwa/assets-generator": "1.0.2",
     "@vitest/coverage-v8": "4.1.10",
     "eslint": "10.7.0",
+    "fast-check": "4.10.2",
     "globals": "17.7.0",
     "marked": "18.1.0",
     "prettier": "3.10.1",
