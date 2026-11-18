@@ -219,6 +219,8 @@ export const ROOTBOUND_FIGURE: BossFigureDefinition<RootboundFigureColor> = {
       parts: { far: { rotate: -0.08 }, near: { rotate: 0.08 }, sprout: { scaleX: 1.5, scaleY: 1.5 } },
       flags: ["open", "split", "bud"],
     },
+    // Gathering for the next Regrowth wave: the kneel lifts a little and the sprout rises again.
+    gather: { figure: { scaleX: 0.96, scaleY: 1.14 }, parts: { sprout: { scaleX: 1.3, scaleY: 1.3 } } },
     // Last Spring wakes: swollen, the sprout in bloom.
     spring: { figure: { scaleX: 1.08, scaleY: 1.08 }, parts: { sprout: { scaleX: 1.7, scaleY: 1.7 } }, flags: ["bud"] },
     death: {
@@ -273,7 +275,7 @@ export const ROOTBOUND_MOVE_POSES: FigureMovePoses = {
   "plant-graft": { tell: "kneel", active: "kneel", recover: "kneel", punish: "split" },
   "root-cage": { tell: "stretch", active: "slam", recover: "slam", punish: "split" },
   "bloom-shift": { tell: "bloom", active: "bloom", recover: "bloom", punish: "split" },
-  regrowth: { tell: "kneel", active: "channel", recover: "channel", punish: "split" },
+  regrowth: { tell: "kneel", active: "channel", recover: "channel", punish: "split", repeatWarning: "gather" },
   "last-spring": { tell: "spring", active: "slam", recover: "slam", punish: "split" },
 };
 

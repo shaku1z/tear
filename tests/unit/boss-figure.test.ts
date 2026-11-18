@@ -5,6 +5,7 @@ import {
   bossFigureProblems,
   drawBossFigure,
   movePoseLayer,
+  repeatWarningLayer,
   type BossFigureFrame,
   type FigureCanvas,
 } from "../../src/presentation/enemies/figures/boss-figure";
@@ -126,10 +127,30 @@ describe("boss figure layer", () => {
       facing: 1,
       target: { x: 0, y: 0 },
       area: null,
+      repeat: 0,
+      striking: true,
+      repeatWarning: null,
     });
     expect(movePoseLayer(ROOTBOUND_MOVE_POSES, pose("tell", 0.25))).toEqual({ pose: "coil", weight: 0.25 });
     expect(movePoseLayer(ROOTBOUND_MOVE_POSES, pose("active", 0.5))).toEqual({ pose: "lunge", weight: 1 });
     expect(movePoseLayer(ROOTBOUND_MOVE_POSES, pose("recover", 0.75))).toEqual({ pose: "lunge", weight: 0.25 });
     expect(movePoseLayer(ROOTBOUND_MOVE_POSES, null)).toBeNull();
+  });
+
+  it("winds up again before each further strike of a repeating move", () => {
+    const regrowth = (repeatWarning: number | null): BossAttackPose => ({
+      attackId: "regrowth",
+      stage: "active",
+      progress: 0.5,
+      facing: 1,
+      target: { x: 0, y: 0 },
+      area: null,
+      repeat: 1,
+      striking: repeatWarning === null,
+      repeatWarning,
+    });
+    expect(repeatWarningLayer(ROOTBOUND_MOVE_POSES, regrowth(null))).toBeNull();
+    expect(repeatWarningLayer(ROOTBOUND_MOVE_POSES, regrowth(0.4))).toEqual({ pose: "gather", weight: 0.4 });
+    expect(repeatWarningLayer(ROOTBOUND_MOVE_POSES, { ...regrowth(0.4), attackId: "vine-lash" })).toBeNull();
   });
 });

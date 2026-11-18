@@ -331,8 +331,13 @@ export function bossFigureProblems<Key extends string>(
   return problems;
 }
 
-/** Which pose each stage of each move shows. A tell grows in, an active stage holds, a recovery lets go. */
-export type FigureMovePoses = Readonly<Record<string, Readonly<Partial<Record<BossAttackPose["stage"], string>>>>>;
+/**
+ * Which pose each stage of each move shows. A tell grows in, an active stage holds, a recovery lets go.
+ * `repeatWarning` names the wind-up a repeating move grows into before each further strike, over the stage's pose.
+ */
+export type FigureMovePoses = Readonly<
+  Record<string, Readonly<Partial<Record<BossAttackPose["stage"] | "repeatWarning", string>>>>
+>;
 
 /** The pose layer for a move in progress, from the shared attack runner's pose. */
 export function movePoseLayer(table: FigureMovePoses, pose: BossAttackPose | null): FigurePoseLayer | null {
@@ -341,4 +346,12 @@ export function movePoseLayer(table: FigureMovePoses, pose: BossAttackPose | nul
   if (name === undefined) return null;
   const weight = pose.stage === "tell" ? pose.progress : pose.stage === "recover" ? 1 - pose.progress : 1;
   return { pose: name, weight };
+}
+
+/** The wind-up before a repeating move's next strike, grown in by how far that strike's warning has run. */
+export function repeatWarningLayer(table: FigureMovePoses, pose: BossAttackPose | null): FigurePoseLayer | null {
+  const warning = pose?.repeatWarning ?? null;
+  if (pose === null || warning === null) return null;
+  const name = table[pose.attackId]?.repeatWarning;
+  return name === undefined ? null : { pose: name, weight: warning };
 }

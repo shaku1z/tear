@@ -3,6 +3,7 @@ import type { BossAttackPose } from "../../../gameplay/entities/boss-attack-runn
 import {
   drawBossFigure,
   movePoseLayer,
+  repeatWarningLayer,
   traceStem,
   type BossFigureFrame,
   type FigurePoseLayer,
@@ -192,6 +193,7 @@ function rootboundFrame(
   const layers: (FigurePoseLayer | null)[] = [
     { pose: ROOTBOUND_PHASE_POSES[boss.phase] ?? "", weight: 1 },
     movePoseLayer(ROOTBOUND_MOVE_POSES, pose),
+    repeatWarningLayer(ROOTBOUND_MOVE_POSES, pose),
     pose === null && opening !== null ? { pose: "split", weight: 1 } : null,
     { pose: "rise", weight: 1 - intro },
     boss.dying ? { pose: "death", weight: boss.deathP } : null,
