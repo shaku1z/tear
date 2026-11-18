@@ -52,7 +52,24 @@ export type BossMotion =
 
 export type BossAttackHeight = "below" | "level" | "above";
 
+/**
+ * When a move must come, beside the weighted choice. A move with none of these is chosen by weight alone.
+ * - `opens`: it is played first whenever the boss starts a phase it belongs to (an opening ritual). If it
+ *   cannot start then, the phase opens with an ordinary move instead.
+ * - `once`: it is played at most once in the runner's life.
+ * - `afterMoves`: it is played as soon as that many other moves have begun since it last began, and only
+ *   then (a big strike every few moves). It is owed at once if it has not been played yet.
+ */
+export interface BossAttackSchedule {
+  readonly opens?: boolean;
+  readonly once?: boolean;
+  readonly afterMoves?: number;
+}
+
 /** One boss move as an author writes it. Every time is in seconds. */
+/** A strike that comes again: how often, and how long each repeat is warned (both in seconds). */
+export type BossStrikeRepeat = Readonly<{ every: number; tell: number }>;
+
 export interface BossAttackDefinition<Phase extends string | number, Place = never> {
   readonly id: string;
   readonly phases: readonly Phase[];
@@ -63,9 +80,16 @@ export interface BossAttackDefinition<Phase extends string | number, Place = nev
     height?: BossAttackHeight;
     weight: number;
     cooldown: number;
-  }>;
+  }> &
+    BossAttackSchedule;
   readonly motion?: BossMotion;
-  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean }>;
+  /**
+   * `repeat`: the strike comes again each `every` seconds of the active stage (a channel that keeps
+   * attacking); a travelling shape starts again from the boss each time. The tell of the move warns of the
+   * first strike. Each later one is warned for the last `tell` seconds of the repeat before it, and the hit is
+   * off during that warning. Without `repeat` the move strikes once.
+   */
+  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean; repeat?: BossStrikeRepeat }>;
   readonly tell: Readonly<{ mark: BossTellMark }>;
   readonly places?: readonly Readonly<{ at: "tell" | "active"; object: Place }>[];
 }
@@ -95,9 +119,17 @@ export interface BossAttack<Phase extends string | number, Place = never> {
     height?: BossAttackHeight;
     weight: number;
     cooldown: number;
-  }>;
+  }> &
+    BossAttackSchedule;
   readonly motion?: BossMotion;
-  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean }>;
+  /** `every` and `repeatTell` in ticks, both 0 for a single strike. */
+  readonly hit?: Readonly<{
+    shape: BossHitShape;
+    damage: number;
+    parryable: boolean;
+    every: number;
+    repeatTell: number;
+  }>;
   readonly tell: Readonly<{ mark: BossTellMark }>;
   readonly places: readonly Readonly<{ at: "tell" | "active"; object: Place }>[];
 }
@@ -142,6 +174,30 @@ function checkChoice(table: string, attack: BossAttackDefinition<string | number
   const [min, max] = attack.choose.range;
   if (!(min >= 0 && max >= min)) fail(table, `${attack.id} has an empty range`);
   if (!(attack.choose.weight > 0)) fail(table, `${attack.id} needs a positive weight`);
+  const after = attack.choose.afterMoves;
+  if (after !== undefined && !(Number.isSafeInteger(after) && after >= 1))
+    fail(table, `${attack.id} must come after a whole number of moves, at least one`);
+  if (after !== undefined && attack.choose.once === true)
+    fail(table, `${attack.id} cannot both come once and come back every few moves`);
+}
+
+function buildHit(
+  table: string,
+  attack: BossAttackDefinition<string | number, unknown>,
+  active: number,
+): BossAttack<string>["hit"] {
+  const hit = attack.hit;
+  if (hit === undefined) return undefined;
+  const { repeat, ...strike } = hit;
+  const every = repeat === undefined ? 0 : bossAttackSecondsToTicks(repeat.every);
+  const repeatTell = repeat === undefined ? 0 : bossAttackSecondsToTicks(repeat.tell);
+  if (repeat !== undefined && (every < 1 || every >= active))
+    fail(table, `${attack.id} repeats its strike less than once a tick or not within its active window`);
+  if (repeat !== undefined && repeat.tell < BOSS_TELL_MIN_LEAD_SECONDS.normal)
+    fail(table, `${attack.id} warns of a repeat for less than ${String(BOSS_TELL_MIN_LEAD_SECONDS.normal)} s`);
+  if (repeat !== undefined && repeatTell >= every)
+    fail(table, `${attack.id} warns of a repeat for as long as the repeat lasts, so the strike is never live`);
+  return Object.freeze({ ...strike, shape: buildShape(hit.shape), every, repeatTell });
 }
 
 function buildAttack<Phase extends string | number, Place>(
@@ -151,21 +207,28 @@ function buildAttack<Phase extends string | number, Place>(
   checkChoice(table.bossId, attack);
   for (const phase of attack.phases)
     if (!table.phases.includes(phase)) fail(table.bossId, `${attack.id} names unknown phase ${String(phase)}`);
+  const timing = buildTiming(table.bossId, attack);
+  const hit = buildHit(table.bossId, attack, timing.active);
   return Object.freeze({
     id: attack.id,
     phases: Object.freeze([...attack.phases]),
-    timing: buildTiming(table.bossId, attack),
+    timing,
     choose: Object.freeze({ ...attack.choose, cooldown: bossAttackSecondsToTicks(attack.choose.cooldown) }),
     ...(attack.motion === undefined ? {} : { motion: Object.freeze({ ...attack.motion }) }),
-    ...(attack.hit === undefined ? {} : { hit: Object.freeze({ ...attack.hit, shape: buildShape(attack.hit.shape) }) }),
+    ...(hit === undefined ? {} : { hit }),
     tell: Object.freeze({ ...attack.tell }),
     places: Object.freeze((attack.places ?? []).map((entry) => Object.freeze({ ...entry }))),
   });
 }
 
+/** True for a move that can always come back by weight: one that is neither played once nor on a count. */
+export function isOrdinaryBossAttack(attack: BossAttack<string | number, unknown>): boolean {
+  return attack.choose.once !== true && attack.choose.afterMoves === undefined;
+}
+
 /**
- * Builds a boss's move list: checks it and converts every time to ticks. Each phase needs two moves at
- * least, because the runner never plays the same move twice running.
+ * Builds a boss's move list: checks it and converts every time to ticks. Each phase needs two ordinary moves
+ * at least, because the runner never plays the same move twice running and must never be left without one.
  */
 export function buildBossAttackTable<Phase extends string | number, Place = never>(
   definition: BossAttackTableDefinition<Phase, Place>,
@@ -177,8 +240,8 @@ export function buildBossAttackTable<Phase extends string | number, Place = neve
     byId.set(attack.id, attack);
   }
   for (const phase of definition.phases)
-    if (attacks.filter((attack) => attack.phases.includes(phase)).length < 2)
-      fail(definition.bossId, `phase ${String(phase)} needs at least two moves`);
+    if (attacks.filter((attack) => attack.phases.includes(phase) && isOrdinaryBossAttack(attack)).length < 2)
+      fail(definition.bossId, `phase ${String(phase)} needs at least two moves chosen by weight`);
   if (!(definition.exposedDamageTaken >= 1)) fail(definition.bossId, "exposed damage taken must be at least 1");
   return Object.freeze({
     bossId: definition.bossId,

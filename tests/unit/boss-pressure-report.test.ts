@@ -37,6 +37,8 @@ type PhaseRow = readonly [travelPerSecond: number, hits: number, damage: number,
 type Measured = readonly [PhaseRow, PhaseRow, PhaseRow];
 
 type PlayerKind = "walker" | "reader";
+/** How close to a wall the reading player will stand. */
+const ARENA_MARGIN = 40;
 
 function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): PhaseRow {
   const harness = createEnemyHarness([0.25, 0.75, 0.4, 0.6, 0.1, 0.9]);
@@ -100,8 +102,13 @@ function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): Pha
       );
       if (threat?.mark === "lane" && jumpT <= 0 && threat.remainingSeconds <= 0.25) jumpT = 0.75;
       else if (threat !== undefined && threat.mark !== "lane") {
-        const away = player.x >= threat.x ? 1 : -1;
-        const side = player.x + away * 200 > CONFIG.view.w - 40 || player.x + away * 200 < 40 ? -away : away;
+        // Leaves by the nearer side of the marked area that is still inside the arena.
+        const left = threat.x - threat.hw - player.hw;
+        const right = threat.x + threat.hw + player.hw;
+        const canLeft = left > ARENA_MARGIN;
+        const canRight = right < CONFIG.view.w - ARENA_MARGIN;
+        const nearer = player.x - left <= right - player.x ? -1 : 1;
+        const side = canLeft && canRight ? nearer : canLeft ? -1 : canRight ? 1 : nearer;
         player.x += side * CONFIG.player.moveSpeed * DT;
       }
       jumpT = Math.max(0, jumpT - DT);
@@ -134,8 +141,8 @@ function measure(id: BossId, phase: 1 | 2 | 3, kind: PlayerKind = "walker"): Pha
 }
 
 /**
- * Today's numbers. See the header before changing a row. The Rootbound's rebuild is judged on this table:
- * Phases I and II are rebuilt; Phase III still mixes the new moves with the old Last Spring.
+ * Today's numbers, on Normal (the unscaled base config: boss health and damage multipliers 1). See the header
+ * before changing a row. The Rootbound's rebuild is judged on this table; all three phases are rebuilt.
  */
 const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
   warden: [
@@ -160,20 +167,25 @@ const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
   ],
   // Every phase plays the move table (rootbound-moves.ts): the keeper glides, vaults and lunges, and is open
   // after its heavy moves. Phase II adds planting, the cage and the Wells; it was [0, 5, 70, 0] before its rebuild.
+  // Phase III opens with Regrowth and plays Last Spring every fourth move, at a shorter pause; it was
+  // [72, 12, 248, 4.6] while it still stood to heal and ran the old Last Spring.
   rootbound: [
     [150, 14, 252, 9.1],
     [141, 11, 208, 9.1],
-    [72, 12, 248, 4.6],
+    [111, 12, 264, 12.3],
   ],
 };
 
-/** Rootbound Phases I and III against the reading player: what is left once the marks are answered. */
-// Phase I: every move can be answered. Phase III: what still lands is the old Last Spring floor band,
-// which wants a platform, not a step aside; it is rebuilt with Phase III.
+/** Rootbound against the reading player: what is left once the marks are answered. */
+// Phases I and II: every move can be answered. Phase III: Last Spring is left by the nearer edge of its band.
+// Regrowth's root wave warns of each repeat, so the reader jumps all of them; it took 3 hits (48) from them
+// while a repeat came with no tell of its own. The one hit left is a Thorn Burst (a ring of radius 150 after
+// a 0.5 s tell) that starts while the reader stands between the keeper and the left wall: it can only walk,
+// and there is no room to walk out on that side.
 const READING_PLAYER_RECORD: Measured = [
-  [44, 0, 0, 2.5],
+  [42, 0, 0, 2.5],
   [46, 0, 0, 2.4],
-  [26, 10, 208, 1.9],
+  [33, 1, 16, 8],
 ];
 
 describe("boss pressure report", { timeout: 180_000 }, () => {
@@ -185,7 +197,7 @@ describe("boss pressure report", { timeout: 180_000 }, () => {
     ];
     if (process.env.TEAR_BOSS_PRESSURE_REPORT === "1") console.log(`rootbound reader: ${JSON.stringify(measured)}`);
     expect(measured).toEqual(READING_PLAYER_RECORD);
-    for (const phase of [0, 1] as const)
+    for (const phase of [0, 1, 2] as const)
       expect(measured[phase][2]).toBeLessThan(BOSS_PRESSURE_RECORD.rootbound[phase][2] / 2);
   });
 

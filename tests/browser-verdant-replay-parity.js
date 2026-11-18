@@ -45,8 +45,9 @@ const CASES = [
   ),
   resolved("rootbound-phase-1", bossStart, undefined),
   resolved("rootbound-phase-2", bossStart, { boss: { hp: 1375 } }),
-  // Phase III plays through Regrowth into the Last Spring rotation before the run ends.
-  { ...resolved("rootbound-phase-3", bossStart, { boss: { hp: 625 } }), frames: 1500 },
+  // Phase III plays through Regrowth and the Last Spring rotation until the fight ends by itself (about frame
+  // 1600). `frames` is only a safety cap: the case fails if the cap, not the fight's own end, stops it.
+  { ...resolved("rootbound-phase-3", bossStart, { boss: { hp: 625 } }), frames: 2000, endsItself: true },
 ];
 
 // Each case gets a fresh page and Ghost vault, so recordings cannot interact through vault retention.
@@ -92,6 +93,7 @@ async function runCase(entry, port) {
         { scenario: entry, yieldMs: pollEvery(0) },
       );
       assert.equal(played.launched.ok, true, `${id}: ${JSON.stringify(played.launched)}`);
+      if (entry.endsItself === true) assert.equal(played.ended, true, `${id}: the frame cap stopped the fight`);
       await page.waitForFunction(
         (prior) => {
           const manifest = window.__TEAR_GHOST_V3__.manifest();

@@ -181,6 +181,8 @@ export interface BrowserInput {
   startSemanticRecording(): void;
   stopSemanticRecording(): void;
   discardSemanticInput(): void;
+  /** Play resumes: drops unsealed input like discardSemanticInput and seals a resume action, so the held blade re-seats along the aim on the first tick. */
+  returnControl(): void;
   /** Drops every press still waiting when a scene hands control back (src/input/scene-release.ts). */
   discardScenePresses(): void;
   drainSemanticActions(tick: number, aimTurn?: number): readonly CommandEnvelope<GameAction>[];

@@ -39,6 +39,11 @@ export interface BossAttackRunnerState {
   readonly cooldownUntil: Readonly<Record<string, number>>;
   /** A forced exposure outside any move (a cut Graft, say): the ticks it spans, or null. */
   readonly exposed: Readonly<{ from: number; until: number }> | null;
+  /** The phase the last move began in, or null before the first. A phase is open once a move began in it. */
+  readonly openedPhase: string | number | null;
+  /** How many moves have begun, and that count when each move last began (for `once` and `afterMoves`). */
+  readonly begun: number;
+  readonly begunAt: Readonly<Record<string, number>>;
 }
 
 export interface BossAttackContext<Phase extends string | number> {
@@ -67,7 +72,23 @@ export type BossHitArea =
 const STAGE_ORDER: readonly BossAttackStage[] = Object.freeze(["tell", "active", "recover", "punish"]);
 
 export function createBossAttackRunnerState(readyTick = 0): BossAttackRunnerState {
-  return Object.freeze({ run: null, readyTick, lastAttackId: null, cooldownUntil: Object.freeze({}), exposed: null });
+  return Object.freeze({
+    run: null,
+    readyTick,
+    lastAttackId: null,
+    cooldownUntil: Object.freeze({}),
+    exposed: null,
+    openedPhase: null,
+    begun: 0,
+    begunAt: Object.freeze({}),
+  });
+}
+
+/**
+ * Marks `phase` as already open, so no opening move is owed: for a fight restored part-way through a phase.
+ */
+export function openBossPhase(state: BossAttackRunnerState, phase: string | number): BossAttackRunnerState {
+  return state.openedPhase === phase ? state : Object.freeze({ ...state, openedPhase: phase });
 }
 
 function heightOf(boss: Box, target: Box): BossAttackHeight {
@@ -91,19 +112,55 @@ function preference<Phase extends string | number, Place>(
   return score;
 }
 
+/** Whether `attack` may start now at all: its phase, not twice running, not blocked, cooled down, not spent. */
+function mayStart<Phase extends string | number>(
+  attack: BossAttack<Phase, unknown>,
+  state: BossAttackRunnerState,
+  context: BossAttackContext<Phase>,
+): boolean {
+  return (
+    attack.phases.includes(context.phase) &&
+    attack.id !== state.lastAttackId &&
+    context.blocked?.has(attack.id) !== true &&
+    (state.cooldownUntil[attack.id] ?? 0) <= context.tick &&
+    !(attack.choose.once === true && attack.id in state.begunAt)
+  );
+}
+
+/** Whether a move on a count is owed: it has not been played, or enough other moves began since it was. */
+function owed(attack: BossAttack<string | number, unknown>, state: BossAttackRunnerState): boolean {
+  const after = attack.choose.afterMoves;
+  if (after === undefined) return false;
+  const at = state.begunAt[attack.id];
+  return at === undefined || state.begun - at - 1 >= after;
+}
+
+/**
+ * The moves to choose among now, by the schedule: a move that opens a phase not yet open, else a move on a
+ * count that is owed, else the moves chosen by weight (a move on a count is never one of them).
+ */
+function scheduled<Phase extends string | number, Place>(
+  table: BossAttackTable<Phase, Place>,
+  state: BossAttackRunnerState,
+  context: BossAttackContext<Phase>,
+): BossAttack<Phase, Place>[] {
+  const ready = table.attacks.filter((attack) => mayStart(attack, state, context));
+  if (state.openedPhase !== context.phase) {
+    const openers = ready.filter((attack) => attack.choose.opens === true);
+    if (openers.length > 0) return openers;
+  }
+  const due = ready.filter((attack) => owed(attack, state));
+  if (due.length > 0) return due;
+  return ready.filter((attack) => attack.choose.afterMoves === undefined);
+}
+
 /** The next move, or null when none may start. Draws exactly one number from the random source. */
 export function chooseBossAttack<Phase extends string | number, Place>(
   table: BossAttackTable<Phase, Place>,
   state: BossAttackRunnerState,
   context: BossAttackContext<Phase>,
 ): BossAttack<Phase, Place> | null {
-  const candidates = table.attacks.filter(
-    (attack) =>
-      attack.phases.includes(context.phase) &&
-      attack.id !== state.lastAttackId &&
-      context.blocked?.has(attack.id) !== true &&
-      (state.cooldownUntil[attack.id] ?? 0) <= context.tick,
-  );
+  const candidates = scheduled(table, state, context);
   const scores = candidates.map((attack) => preference(attack, context));
   const total = scores.reduce((sum, score) => sum + score, 0);
   const roll = context.random.next() * total;
@@ -164,6 +221,7 @@ function finish<Phase extends string | number, Place>(
   const scale = context.gapMultiplier ?? 1;
   if (!Number.isFinite(scale) || scale < 0) throw new RangeError("a move gap multiplier is a finite number, 0 or more");
   return Object.freeze({
+    ...state,
     run: null,
     readyTick: tick + Math.round(table.gap * scale),
     lastAttackId: attack.id,
@@ -186,10 +244,10 @@ export function exposeBossAttack(
   if (!Number.isSafeInteger(ticks) || ticks < 1) throw new RangeError("a forced exposure lasts at least one tick");
   const until = Math.max(tick + ticks, state.exposed?.until ?? 0);
   return Object.freeze({
+    ...state,
     run: null,
     readyTick: until + table.gap,
     lastAttackId: state.run?.attackId ?? state.lastAttackId,
-    cooldownUntil: state.cooldownUntil,
     exposed: Object.freeze({ from: tick, until }),
   });
 }
@@ -205,7 +263,14 @@ export function advanceBossAttack<Phase extends string | number, Place>(
     if (context.tick < state.readyTick) return { state, events: [] };
     const attack = chooseBossAttack(table, state, context);
     if (attack === null) return { state, events: [] };
-    const started = Object.freeze({ ...state, exposed: null, run: begin(attack, context) });
+    const started = Object.freeze({
+      ...state,
+      exposed: null,
+      run: begin(attack, context),
+      openedPhase: context.phase,
+      begun: state.begun + 1,
+      begunAt: Object.freeze({ ...state.begunAt, [attack.id]: state.begun }),
+    });
     return {
       state: started,
       events: [{ type: "stage", attackId: attack.id, stage: "tell" }, ...placesAt(attack, "tell")],
@@ -213,7 +278,14 @@ export function advanceBossAttack<Phase extends string | number, Place>(
   }
   const attack = table.byId.get(run.attackId);
   if (attack === undefined) throw new TypeError(`unknown boss move ${run.attackId} in ${table.bossId}`);
-  if (context.tick - run.stageTick < stageLength(table, attack, run)) return { state, events: [] };
+  const elapsed = context.tick - run.stageTick;
+  if (elapsed < stageLength(table, attack, run)) {
+    // A repeating strike is armed again at the start of each repeat.
+    const every = attack.hit?.every ?? 0;
+    if (run.stage !== "active" || every === 0 || elapsed === 0 || elapsed % every !== 0 || run.parried)
+      return { state, events: [] };
+    return { state: Object.freeze({ ...state, run: Object.freeze({ ...run, landed: false }) }), events: [] };
+  }
   const stage = nextStage(attack, run.stage);
   if (stage === null)
     return { state: finish(table, state, attack, context), events: [{ type: "finished", attackId: attack.id }] };
@@ -221,6 +293,20 @@ export function advanceBossAttack<Phase extends string | number, Place>(
   const events: BossAttackEvent<Place>[] = [{ type: "stage", attackId: attack.id, stage }];
   if (stage === "active") events.push(...placesAt(attack, "active"));
   return { state: Object.freeze({ ...state, run: moved }), events };
+}
+
+/**
+ * True while a strike is on its way: the move in progress hits and is in its tell or active stage. The player
+ * is busy reading or dodging it then, so rules that reward an unpressed boss (healing after a quiet spell)
+ * should not count that time.
+ */
+export function bossAttackThreatens(
+  table: BossAttackTable<string | number, unknown>,
+  state: BossAttackRunnerState,
+): boolean {
+  const run = state.run;
+  if (run === null || run.parried || (run.stage !== "tell" && run.stage !== "active")) return false;
+  return table.byId.get(run.attackId)?.hit !== undefined;
 }
 
 /** The move in progress, if any. */
@@ -271,6 +357,30 @@ export function placeBossHitShape(
 }
 
 /**
+ * Where the active stage is in its strikes. `repeat` counts them from 0. `ticks` is how long the current
+ * strike has been live (it stops counting when the strike goes off). `live` is false once a repeating strike
+ * has given way to the warning of the next one. `warned` is how far through that warning it is, or null
+ * when no further strike is coming.
+ */
+interface BossStrike {
+  readonly repeat: number;
+  readonly ticks: number;
+  readonly live: boolean;
+  readonly warned: number | null;
+}
+
+function strikeAt(attack: BossAttack<string | number, unknown>, elapsed: number): BossStrike {
+  const every = attack.hit?.every ?? 0;
+  if (every === 0) return { repeat: 0, ticks: elapsed, live: true, warned: null };
+  const repeat = Math.floor(elapsed / every);
+  const liveTicks = every - (attack.hit?.repeatTell ?? 0);
+  const into = elapsed % every;
+  if (into < liveTicks) return { repeat, ticks: into, live: true, warned: null };
+  const comes = (repeat + 1) * every < attack.timing.active;
+  return { repeat, ticks: liveTicks, live: false, warned: comes ? into - liveTicks : null };
+}
+
+/**
  * Where the move hits this tick: only while active and before it has landed. The boss applies the damage
  * through its own damage call (with its parry check) and then calls `markBossAttackLanded`.
  */
@@ -282,7 +392,9 @@ export function bossAttackHit<Phase extends string | number, Place>(
   const run = state.run;
   const attack = currentBossAttack(table, state);
   if (run === null || attack?.hit === undefined || run.stage !== "active" || run.landed) return null;
-  const travelled = attack.hit.shape.kind === "travel" ? attack.hit.shape.speed * (context.tick - run.stageTick) : 0;
+  const strike = strikeAt(attack, context.tick - run.stageTick);
+  if (!strike.live) return null;
+  const travelled = attack.hit.shape.kind === "travel" ? attack.hit.shape.speed * strike.ticks : 0;
   const area = placeBossHitShape(attack.hit.shape, run, context.boss, context.arena.groundY, travelled);
   return { area, damage: attack.hit.damage, parryable: attack.hit.parryable };
 }
@@ -334,6 +446,12 @@ export interface BossAttackPose {
   readonly target: Point;
   /** Where the move's hit sits now (also after it landed), or null for a move with no hit. */
   readonly area: BossHitArea | null;
+  /** Which strike of a repeating move this is, from 0. Always 0 for a move that strikes once. */
+  readonly repeat: number;
+  /** False while a repeating move is between strikes: its hit is off and `area` is where the last one ended. */
+  readonly striking: boolean;
+  /** How far through the warning of its next repeat the move is, 0 to 1, or null outside one. */
+  readonly repeatWarning: number | null;
 }
 
 export function bossAttackPose<Phase extends string | number, Place>(
@@ -347,10 +465,22 @@ export function bossAttackPose<Phase extends string | number, Place>(
   const elapsed = context.tick - run.stageTick;
   const progress = Math.min(1, Math.max(0, elapsed / Math.max(1, stageLength(table, attack, run))));
   const shape = attack.hit?.shape;
-  const travelled = shape?.kind === "travel" && run.stage === "active" ? shape.speed * elapsed : 0;
+  const strike = run.stage === "active" ? strikeAt(attack, elapsed) : null;
+  const travelled = shape?.kind === "travel" && strike !== null ? shape.speed * strike.ticks : 0;
   const area =
     shape === undefined ? null : placeBossHitShape(shape, run, context.boss, context.arena.groundY, travelled);
-  return { attackId: attack.id, stage: run.stage, progress, facing: run.facing, target: run.target, area };
+  const warned = strike?.warned ?? null;
+  return {
+    attackId: attack.id,
+    stage: run.stage,
+    progress,
+    facing: run.facing,
+    target: run.target,
+    area,
+    repeat: strike?.repeat ?? 0,
+    striking: strike?.live ?? false,
+    repeatWarning: warned === null ? null : warned / Math.max(1, attack.hit?.repeatTell ?? 0),
+  };
 }
 
 /** True while the boss is exposed (a move's punish stage or a forced exposure): hits on it are scaled. */
@@ -453,7 +583,8 @@ function tellArea(attack: BossAttack<string | number, unknown>, run: BossAttackR
   const shape = attack.hit?.shape;
   if (shape === undefined) return boss;
   if (shape.kind !== "travel") return toBox(placeBossHitShape(shape, run, boss, groundY, 0));
-  const path = shape.speed * attack.timing.active;
+  const every = attack.hit?.every ?? 0;
+  const path = shape.speed * (every > 0 ? every - (attack.hit?.repeatTell ?? 0) : attack.timing.active);
   const start = run.origin.x + run.facing * boss.hw;
   return {
     x: start + run.facing * (path / 2 + shape.hw),
@@ -495,6 +626,29 @@ export function bossAttackTells<Phase extends string | number, Place>(
   const exposed = stage === "exposed";
   const area = exposed ? context.boss : tellArea(attack, run, context.boss, context.arena.groundY);
   const length = stageLength(table, attack, run);
+  if (stage === "active") {
+    // A repeating strike: each repeat is a tell of its own, so its warning is measured like any other.
+    const strike = strikeAt(attack, context.tick - run.stageTick);
+    const lead = attack.hit?.repeatTell ?? 0;
+    if (!strike.live && strike.warned === null) return Object.freeze([]);
+    const repeat = strike.live ? strike.repeat : strike.repeat + 1;
+    return Object.freeze([
+      Object.freeze({
+        id: repeat === 0 ? attack.id : `${attack.id}:${String(repeat + 1)}`,
+        attackId: attack.id,
+        mark: attack.tell.mark,
+        stage: strike.live ? ("active" as const) : ("warning" as const),
+        x: area.x,
+        y: area.y,
+        hw: area.hw,
+        hh: area.hh,
+        dir: run.facing,
+        leadSeconds: (repeat === 0 ? attack.timing.tell : lead) / BOSS_ATTACK_TICKS_PER_SECOND,
+        remainingSeconds: strike.live ? 0 : (lead - (strike.warned ?? 0)) / BOSS_ATTACK_TICKS_PER_SECOND,
+        damaging: attack.hit !== undefined,
+      }),
+    ]);
+  }
   return Object.freeze([
     Object.freeze({
       id: exposed ? `${attack.id}:exposed` : attack.id,
@@ -507,8 +661,7 @@ export function bossAttackTells<Phase extends string | number, Place>(
       hh: area.hh,
       dir: run.facing,
       leadSeconds: (stage === "exposed" ? length : attack.timing.tell) / BOSS_ATTACK_TICKS_PER_SECOND,
-      remainingSeconds:
-        stage === "active" ? 0 : Math.max(0, run.stageTick + length - context.tick) / BOSS_ATTACK_TICKS_PER_SECOND,
+      remainingSeconds: Math.max(0, run.stageTick + length - context.tick) / BOSS_ATTACK_TICKS_PER_SECOND,
       damaging: !exposed && attack.hit !== undefined,
     }),
   ]);

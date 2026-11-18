@@ -959,6 +959,10 @@ export class TutorialController {
     this.coachIdle = 0;
     return true;
   }
+  /** The course a finished tutorial hands to the next run, read without building a checkpoint. */
+  freePracticeCourse(): string | undefined {
+    return this.phase === "free-practice" ? this.courseSessionId : undefined;
+  }
   captureSession() {
     const checkpoint = {
       version: 1 as const,
