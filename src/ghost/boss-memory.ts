@@ -360,12 +360,9 @@ export async function saveBossMemory(
           if (receipt && stableVerificationHash(session.semanticProjection()) !== receipt.stateHash)
             throw new TypeError(`Source encounter continuation mismatch at ${String(tick)}`);
           if (tick === terminal.tick) {
-            const c = replayEngine.loaded().captureProductionReplayCheckpoint(
-              session.replay,
-              session.combat,
-              session.waveReward,
-              `${id}-endpoint`,
-            );
+            const c = replayEngine
+              .loaded()
+              .captureProductionReplayCheckpoint(session.replay, session.combat, session.waveReward, `${id}-endpoint`);
             ending.push({
               snapshot: recordingFreeBossSnapshot(c.snapshot, id),
               stateHash: c.semanticHash,

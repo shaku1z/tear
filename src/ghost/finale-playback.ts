@@ -121,11 +121,9 @@ export function createGhostFinalePlayback(
       }
       const replay = session.replay;
       actualHash = stableVerificationHash({
-        canonical: replayEngine.loaded().projectProductionReplayCanonicalState(
-          replay,
-          session.simulation.scheduler.tick,
-          session.simulation.input,
-        ),
+        canonical: replayEngine
+          .loaded()
+          .projectProductionReplayCanonicalState(replay, session.simulation.scheduler.tick, session.simulation.input),
         finale: replay.finale.runtime.captureBinding(),
         cinema: replay.world.context.cinema.captureState(),
         cinemaInput: replay.world.context.cinema.captureRecordedInput(),
