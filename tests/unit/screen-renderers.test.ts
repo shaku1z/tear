@@ -515,6 +515,7 @@ describe("legacy screen renderer registry", () => {
       controls.length = 0;
       lines.length = 0;
       const shop = buildShopSnapshot({
+        tab: "upgrades",
         items: [{ id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" }],
         realCoins: 0,
         displayedCoins: 0,
@@ -806,6 +807,8 @@ describe("legacy screen renderer registry", () => {
     const item = (id: string) => ({ id, label: id.toUpperCase(), level: 0, maxLevel: 3, cost: "10c", enabled: true });
     renderer.shop({
       id: "shop",
+      tab: "upgrades",
+      tabs: [],
       coins: 100,
       ownedLevels: 0,
       totalLevels: 18,

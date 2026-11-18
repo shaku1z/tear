@@ -48,6 +48,7 @@ export function createLiveSetupShopRenderers(state: MenuScreenState, services: M
       const current = state.shop(),
         realCoins = d.META.coins();
       const result = buildShopSnapshot({
+        tab: "upgrades",
         items: d.SHOP,
         realCoins,
         displayedCoins: current.displayedCoins,

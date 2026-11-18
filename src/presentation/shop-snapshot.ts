@@ -1,4 +1,4 @@
-import type { ShopScreenView } from "./screens/contracts";
+import type { ShardsView, ShopScreenView } from "./screens/contracts";
 
 export const SHOP_CATEGORIES = Object.freeze([
   ["vit", "VITALITY"],
@@ -6,6 +6,12 @@ export const SHOP_CATEGORIES = Object.freeze([
   ["tempo", "TEMPO"],
   ["fortune", "FORTUNE"],
 ] as const);
+/** The Shop pages: coin upgrades and shard cosmetics. */
+export const SHOP_TABS = Object.freeze([
+  ["upgrades", "UPGRADES"],
+  ["shards", "SHARDS"],
+] as const);
+export type ShopTab = (typeof SHOP_TABS)[number][0];
 /** Shared shop list geometry (renderer and scroll bounds must agree). */
 export const SHOP_LIST_TOP = 180,
   SHOP_ROW_PITCH = 88,
@@ -28,6 +34,8 @@ export interface ShopSnapshotResult {
   readonly maximumScroll: number;
 }
 export function buildShopSnapshot(input: {
+  readonly tab: ShopTab;
+  readonly shards?: ShardsView;
   readonly items: readonly ShopItemSource[];
   readonly realCoins: number;
   readonly displayedCoins: number | null;
@@ -61,6 +69,9 @@ export function buildShopSnapshot(input: {
       : undefined;
   const view: ShopScreenView = {
     id: "shop",
+    tab: input.tab,
+    tabs: SHOP_TABS.map(([id, label]) => ({ id, label, selected: id === input.tab })),
+    ...(input.shards === undefined ? {} : { shards: input.shards }),
     coins: Math.round(displayedCoins),
     ...(onboarding === undefined ? {} : { onboarding }),
     ownedLevels,
