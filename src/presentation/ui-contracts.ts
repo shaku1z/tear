@@ -26,6 +26,8 @@ export interface Rect {
   w: number;
   h: number;
 }
+/** What a button's label room depends on: the label, its type size, and the glyph, sub line and pips. */
+export type ButtonLabelSpec = Pick<ButtonSpec, "label" | "size" | "glyph" | "sub" | "pips">;
 export interface ButtonSpec extends Rect {
   label: string;
   enabled?: boolean;
@@ -225,6 +227,12 @@ export interface UiRuntime {
     amount: number,
   ): void;
   chapterHeader(context: CanvasRenderingContext2D, options?: UiOptions): ChapterLayout;
+  buttonFitWidth(context: CanvasRenderingContext2D, button: ButtonLabelSpec): number;
+  buttonLabelFit(
+    context: CanvasRenderingContext2D,
+    button: ButtonLabelSpec & Readonly<{ w: number; h: number }>,
+  ): TextFitLayout;
+  _buttonChrome(button: Omit<ButtonLabelSpec, "label" | "size">): number;
   _fitLabel(
     context: CanvasRenderingContext2D,
     label: string,

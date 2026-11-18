@@ -112,12 +112,11 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
     timeout: STATE_WAIT_MS,
   });
   await page.waitForTimeout(settleFor(250));
-  await page.waitForFunction(() => window.__TEAR_C28_VAULT_TEXT__?.includes("MY ACCOUNT'S REPLAYS"), undefined, {
-    timeout: STATE_WAIT_MS,
-  });
-  await page.mouse.click(1210, 90); // Disabled for the actual anonymous/unconfigured normal profile.
-  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  assert.deepEqual(recoveryRequests, [], "normal anonymous Vault navigation/click must not request cloud recovery");
+  assert.ok(
+    !(await page.evaluate(() => window.__TEAR_C28_VAULT_TEXT__.includes("MY ACCOUNT'S REPLAYS"))),
+    "the removed account-recovery control must not be drawn",
+  );
+  assert.deepEqual(recoveryRequests, [], "normal Vault navigation must not request any cloud capsule");
   assert.deepEqual(
     await vaultRecords(),
     beforeOwnerNavigation,
@@ -125,13 +124,6 @@ withJourney({ name: "C28 Ghost Vault player library", port: 8162 }, async ({ pag
   );
   page.off("request", observeRecovery);
   await page.unroute(recoveryPattern, blockRecovery);
-  if (process.env.TEAR_OWNER_RECOVERY_SCREENSHOT) {
-    assert.ok(
-      require("node:path").isAbsolute(process.env.TEAR_OWNER_RECOVERY_SCREENSHOT),
-      "owner recovery screenshot must use an absolute path",
-    );
-    await page.screenshot({ path: process.env.TEAR_OWNER_RECOVERY_SCREENSHOT });
-  }
   await page.evaluate(() => {
     window.__TEAR_C28_VAULT_TEXT__.length = 0;
   });

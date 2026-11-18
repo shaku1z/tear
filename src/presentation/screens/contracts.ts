@@ -155,20 +155,6 @@ export interface GhostArchiveOperationView {
   readonly canCancel?: boolean;
   readonly canCancelSelection?: boolean;
 }
-export interface GhostOwnerRecoveryView {
-  readonly status: "idle" | "unavailable" | "loading" | "ready" | "recovering" | "failed";
-  readonly detail: string;
-  readonly catalogVisible: boolean;
-  readonly canLoad: boolean;
-  readonly canRecover: boolean;
-  readonly entries: readonly Readonly<{
-    capsuleId: string;
-    buildId: string;
-    rootIntegrity: string;
-    byteLength: number;
-    localStatus?: "recovered" | "already-recovered";
-  }>[];
-}
 export interface ProgressView {
   readonly label: string;
   readonly current: number;
@@ -307,7 +293,6 @@ export interface ProfileScreenView {
     pages: number;
   }>;
   readonly archive?: GhostArchiveOperationView;
-  readonly ownerRecovery?: GhostOwnerRecoveryView;
 }
 export interface AchievementsScreenView {
   readonly id: "achievements";
@@ -558,6 +543,8 @@ export interface TierUpScreenView {
 export interface PausedScreenView {
   readonly ghostChase?: Readonly<{ visible: boolean; message: string }>;
   readonly tutorial?: TutorialSessionView;
+  /** A paused Playground run: the pause offers the Playground menu. */
+  readonly playground?: boolean;
   readonly id: "paused";
   readonly runSummary?: string;
   readonly abilities: readonly CardView[];
@@ -609,43 +596,12 @@ export interface PlaygroundScreenView {
   readonly id: "pgmenu" | "pglab";
   readonly title: string;
   readonly subtitle?: string;
+  /** The tabs of the Playground menu (SPAWN … ABILITIES); the selected one is on screen. */
+  readonly tabs?: readonly ChoiceView[];
   readonly sections: readonly { readonly label: string; readonly choices: readonly ChoiceView[] }[];
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
 }
-/** C38 review is a local authority-and-intent screen, never a transport status. */
-export interface GhostPublicationScreenView {
-  readonly id: "ghostpublication";
-  readonly status: "unavailable" | "ready" | "queued" | "uploading" | "terminal";
-  readonly detail: string;
-  readonly capsuleId?: string;
-  readonly rootIntegrity?: string;
-  readonly capability: string;
-  readonly privacy: "pseudonymous";
-  readonly visibility: "private";
-  readonly training: "no-training";
-  readonly canGrant: boolean;
-  readonly canRun?: boolean;
-  readonly canCancel?: boolean;
-  readonly attempts?: number;
-  readonly retryAt?: string;
-  readonly terminal?: string;
-}
-
-/** C39 creates only an ephemeral, sanitized support description after player approval. */
-export interface GhostSupportScreenView {
-  readonly id: "ghostsupport";
-  readonly status: "unavailable" | "ready" | "created";
-  readonly detail: string;
-  readonly capsuleId?: string;
-  readonly rootIntegrity?: string;
-  readonly build?: string;
-  readonly range?: string;
-  readonly segments?: string;
-  readonly bundleHash?: string;
-  readonly canCreate: boolean;
-}
-
 export type ScreenView =
   | MenuScreenView
   | SetupScreenView
@@ -667,9 +623,7 @@ export type ScreenView =
   | ContinueScreenView
   | GameoverScreenView
   | WinScreenView
-  | PlaygroundScreenView
-  | GhostPublicationScreenView
-  | GhostSupportScreenView;
+  | PlaygroundScreenView;
 
 export type ScreenViewById<Id extends AppScreen, View = ScreenView> =
   View extends Readonly<{ id: infer ViewId }> ? (Id extends ViewId ? View : never) : never;

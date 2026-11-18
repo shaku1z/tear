@@ -1,5 +1,10 @@
 // The merge rules of scripts/merge-ready.mjs, decided from fixed facts.
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { DESIGN_CHECK_CONFIG, DESIGN_CHECK_LABELS, readDesignCheckConfig } from "../../scripts/design-check.mjs";
 import { batchNote } from "../../scripts/merge-batch.mjs";
 import { decide, FIX_LABEL, parseBatchNote, pickRun } from "../../scripts/merge-ready.mjs";
 
@@ -7,11 +12,13 @@ const head = "a".repeat(40);
 const checkedMain = "b".repeat(40);
 const green = { conclusion: "success", headSha: "c".repeat(40) };
 const red = { conclusion: "failure", headSha: "d".repeat(40) };
+const answered = DESIGN_CHECK_LABELS.map((label) => `- **${label}:** n/a: a fixture answer`).join("\n");
 const pr = (overrides = {}) => ({
   state: "OPEN",
   draft: false,
   headSha: head,
   labels: [],
+  body: answered,
   files: ["src/gameplay/run/live-enemy-spawn.ts"],
   ...overrides,
 });
@@ -24,6 +31,92 @@ const passed = (overrides = {}) => ({
 });
 
 describe("merge readiness", () => {
+  describe("rule 4: the design check is answered", () => {
+    it("reads the mode from main's copy, ignoring a branch that switches its own gate off", () => {
+      const repo = fs.mkdtempSync(path.join(os.tmpdir(), "tear-merge-ready-mode-"));
+      try {
+        const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8", windowsHide: true });
+        const setMode = (mode) => {
+          fs.mkdirSync(path.join(repo, "config"), { recursive: true });
+          const config = { mode, observingSince: "2026-11-18" };
+          fs.writeFileSync(path.join(repo, DESIGN_CHECK_CONFIG), JSON.stringify(config));
+        };
+        git("init", "-q", "-b", "main");
+        git("config", "user.name", "Test");
+        git("config", "user.email", "test@example.invalid");
+        setMode("enforce");
+        git("add", ".");
+        git("commit", "-q", "-m", "main");
+        git("update-ref", "refs/remotes/origin/main", "HEAD");
+        git("switch", "-q", "-c", "codex/switch-it-off");
+        setMode("off");
+        git("commit", "-qam", "turn my own gate off");
+        expect(readDesignCheckConfig(repo).mode).toBe("enforce");
+        const facts = { main: green, pr: pr({ body: "## What" }), run: passed(), mainFilesSince: [] };
+        expect(decide({ ...facts, designCheckMode: readDesignCheckConfig(repo).mode }).ready).toBe(false);
+        git("update-ref", "-d", "refs/remotes/origin/main");
+        expect(() => readDesignCheckConfig(repo)).toThrow(/cannot read origin\/main:config\/design-check.json/u);
+      } finally {
+        fs.rmSync(repo, { recursive: true, force: true });
+      }
+    }, 60_000);
+
+    it("in observe mode lets an unanswered pull request through with a would-refuse note", () => {
+      const facts = { main: green, pr: pr({ body: "## What" }), run: passed(), mainFilesSince: [] };
+      const observed = decide({ ...facts, designCheckMode: "observe" });
+      expect(observed.ready).toBe(true);
+      expect(observed.notes).toEqual([expect.stringMatching(/^design check \(observe\): would refuse: /u)]);
+      expect(decide({ ...facts, designCheckMode: "enforce" }).ready).toBe(false);
+      expect(decide({ ...facts, designCheckMode: "off" })).toMatchObject({ ready: true });
+      expect(decide({ ...facts, designCheckMode: "off" }).notes).toBeUndefined();
+    });
+
+    it("does not let observe mode hide another refusal", () => {
+      const decision = decide({
+        main: red,
+        pr: pr({ body: "## What" }),
+        run: passed(),
+        mainFilesSince: [],
+        designCheckMode: "observe",
+      });
+      expect(decision.ready).toBe(false);
+      expect(decision.reason).toContain("main is red");
+      expect(decision.notes).toHaveLength(1);
+    });
+
+    const ready = (body) => decide({ main: green, pr: pr({ body }), run: passed(), mainFilesSince: [] });
+
+    it("refuses a description with no design check, naming every label", () => {
+      const decision = ready("## What and why\n\nA change.");
+      expect(decision.ready).toBe(false);
+      for (const label of DESIGN_CHECK_LABELS) expect(decision.reason).toContain(`${label} (missing)`);
+      expect(ready(undefined).ready).toBe(false);
+    });
+
+    it("refuses the unedited template: its prompts are comments, so every answer is empty", () => {
+      const template = fs.readFileSync(new URL("../../.github/pull_request_template.md", import.meta.url), "utf8");
+      const decision = ready(template);
+      expect(decision.ready).toBe(false);
+      for (const label of DESIGN_CHECK_LABELS) expect(decision.reason).toContain(`${label} (empty)`);
+    });
+
+    it("refuses a bare n/a and accepts n/a with a reason", () => {
+      const bare = answered.replace("**Measured:** n/a: a fixture answer", "**Measured:** N/A.");
+      expect(ready(bare)).toMatchObject({ ready: false });
+      expect(ready(bare).reason).toContain('Measured ("n/a" without a reason)');
+      expect(ready(answered.replace("n/a: a fixture answer", "n/a, docs only")).ready).toBe(true);
+    });
+
+    it("refuses a description that drops one label and accepts real answers", () => {
+      const lines = answered.split("\n");
+      expect(ready(lines.slice(1).join("\n")).reason).toContain("General case (missing)");
+      const real = DESIGN_CHECK_LABELS.map(
+        (label, index) => `${String(index + 1)}. **${label}:** answer ${String(index)}`,
+      );
+      expect(ready(real.join("\r\n")).ready).toBe(true);
+    });
+  });
+
   it("is ready when the check passed and main has not changed since", () => {
     expect(decide({ main: green, pr: pr(), run: passed(), mainFilesSince: [] })).toMatchObject({ ready: true });
   });

@@ -240,6 +240,15 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       if (loaded === undefined) throw new Error("Training preflight must complete before playground setup");
       loaded.runtime.setDifficulty(id);
     },
+    get tab() {
+      return loaded?.runtime.tab ?? "spawn";
+    },
+    set tab(value) {
+      if (loaded) loaded.runtime.tab = value;
+    },
+    enterArena() {
+      loaded?.runtime.enterArena();
+    },
     nextArena() {
       loaded?.runtime.nextArena();
     },
@@ -267,7 +276,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
           slow: false,
           hpMultiplier: 1,
           count: 1,
-          arena: -1,
+          arena: 0,
           labFilter: "all",
         });
     },

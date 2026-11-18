@@ -243,6 +243,17 @@ export interface ScreenUiPort {
     maxWidth: number,
     options: TextFitOptions & { readonly bold?: boolean },
   ): TextFitLayout;
+  /** The width a default button needs for its label (and sub line) on one line at full size. */
+  buttonFitWidth(
+    context: CanvasRenderingContext2D,
+    button: Readonly<{
+      label: string;
+      size?: number | undefined;
+      glyph?: string | undefined;
+      sub?: string | undefined;
+      pips?: Readonly<{ n: number; filled: number; color: string }> | undefined;
+    }>,
+  ): number;
   emptyState(
     context: CanvasRenderingContext2D,
     glyph: string,

@@ -108,7 +108,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const interfaceFrame = options.frame;
   const interfaceInteraction = options.interaction;
   const { reviveCountdown, hudFeedback } = options;
-  const { settingsController, settings, reward: rewardRuntime, beat } = services;
+  const { settingsController, settings, reward: rewardRuntime } = services;
   const { awardCoins } = services.economy;
   const { read: getBest, record: saveBest } = services.bestScores.api;
   const { stage: stageRuntime, story } = campaignTraining.campaign;
@@ -117,12 +117,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
   const { addFloater } = campaignTraining;
   const { addShake, addFlash } = campaignTraining.weapon;
   const { color: trickColor, formatTime: fmtTime, check: achCheck } = campaignTraining.style;
-  const {
-    vault: ghostVault,
-    ownerRecovery,
-    publication: ghostPublicationScreen,
-    support: ghostSupportScreen,
-  } = options.ghostLibrary;
+  const { vault: ghostVault } = options.ghostLibrary;
   const { simulation } = options.combat;
   const requestLock = browser.requestPointerLock;
   const screenRect = () => presentationHost.screenRectangle();
@@ -140,7 +135,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     ghostLibrary: options.ghostLibrary,
     run: liveRun,
     requestPointerLock: requestLock,
-    presentation: () => interfaceComposition,
   });
   const interfaceComposition = createLiveInterfaceComposition(
     {
@@ -221,7 +215,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           launchGhostPractice: options.launchGhostPractice,
         },
         library: {
-          beat,
           chase,
           dependencies,
           canvas: ctx,
@@ -235,7 +228,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           formatTime: fmtTime,
           getBest,
           ghostVault,
-          ownerRecovery,
           career: options.career.port,
         },
         settings: {
@@ -309,8 +301,6 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         },
         menuServices: { dependencies, height: H, getBest, formatTime: fmtTime, clamp, checkAchievements: achCheck },
         playground: { renderMenu: renderPgMenu, renderLab: renderPgLab },
-        ghostPublication: ghostPublicationScreen.snapshot,
-        ghostSupport: ghostSupportScreen.snapshot,
       },
       frameState: {
         screen,

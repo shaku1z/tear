@@ -1,7 +1,5 @@
 import type {
   AchievementsScreenView,
-  GhostPublicationScreenView,
-  GhostSupportScreenView,
   CodexScreenView,
   LeaderboardsScreenView,
   MusicScreenView,
@@ -148,14 +146,6 @@ function createColdScreenBoundary(context: ScreenRenderContext): ColdScreenRende
     },
     pglab(view: PlaygroundScreenView) {
       if (renderers) renderers.pglab(view);
-      else loadingFrame();
-    },
-    ghostpublication(view: GhostPublicationScreenView) {
-      if (renderers) renderers.ghostpublication(view);
-      else loadingFrame();
-    },
-    ghostsupport(view: GhostSupportScreenView) {
-      if (renderers) renderers.ghostsupport(view);
       else loadingFrame();
     },
     settings(view: SettingsScreenView) {

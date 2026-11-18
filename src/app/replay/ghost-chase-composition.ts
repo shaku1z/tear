@@ -15,7 +15,6 @@ import type { TearGameplayEvent } from "../../gameplay/runtime/gameplay-events";
 
 export function createLiveGhostChase(
   options: Readonly<{
-    beat?: () => Readonly<{ active: boolean; message: string }>;
     factory: IDBFactory | undefined;
     ui: GhostChaseUi;
     run(): GameRun | null;
@@ -58,14 +57,6 @@ export function createLiveGhostChase(
     };
   };
   const view = () => {
-    const beat = options.beat?.();
-    if (beat?.active)
-      return Object.freeze({
-        active: false,
-        visible: false,
-        beat: true,
-        message: beat.message || "BEAT THIS RUN · independent attempt · NONCOMPETITIVE / no progression",
-      });
     const run = options.run(),
       race = run?.seedRace,
       current = controller.snapshot(live());
