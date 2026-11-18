@@ -233,8 +233,7 @@ export default defineConfig(({ mode, command }) => {
                 // The tutorial corpus is fetched on demand (training preflight), not at
                 // install: it is runtime-cached on first use so it then works offline.
                 // Workers bundle a lazy copy they never request; it is not precached.
-                // The three ~1 MB workers (career archive, coach history, live ghost
-                // reference) and the two large install icons are not needed to start
+                // The two ~1 MB workers (career archive, live ghost reference) and the two large install icons are not needed to start
                 // the game: the workers are runtime-cached on first use, and the browser
                 // fetches install icons from the network when it installs the app.
                 globIgnores: [
@@ -242,7 +241,6 @@ export default defineConfig(({ mode, command }) => {
                   "assets/tutorial-gold-reference-*.js",
                   "assets/worker-tutorial-gold-*.js",
                   "assets/career-archive-worker-*.js",
-                  "assets/coach-history-worker-*.js",
                   "assets/live-ghost-reference-worker-*.js",
                   "branding/icons/icon-512.png",
                   "branding/icons/icon-maskable-512.png",
@@ -254,7 +252,7 @@ export default defineConfig(({ mode, command }) => {
                     options: { cacheName: "tear-tutorial-gold", expiration: { maxEntries: 1 } },
                   },
                   {
-                    urlPattern: /\/assets\/(?:career-archive|coach-history|live-ghost-reference)-worker-[\w-]+\.js$/u,
+                    urlPattern: /\/assets\/(?:career-archive|live-ghost-reference)-worker-[\w-]+\.js$/u,
                     handler: "CacheFirst",
                     options: { cacheName: "tear-workers", expiration: { maxEntries: 6 } },
                   },

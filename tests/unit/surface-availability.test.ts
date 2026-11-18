@@ -40,8 +40,6 @@ describe("surface availability policy", () => {
       { type: "setup.start", race: true },
       { type: "setup.selectBoss", id: "warden" },
       { type: "career.control", command: "race" },
-      { type: "career.control", command: "coach" },
-      { type: "replay.coach.open" },
       { type: "replay.editor.toggle" },
       { type: "replay.studio.toggle" },
       { type: "replay.challenge.start", id: "boss-memory-save" },
@@ -81,13 +79,13 @@ describe("surface availability policy", () => {
     const routed = vi.fn<(action: ScreenAction) => void>();
     const release = gateScreenActions(RELEASE, routed),
       engineering = gateScreenActions(ENGINEERING, routed);
-    release({ type: "replay.coach.open" });
+    release({ type: "replay.editor.toggle" });
     release({ type: "setup.start", race: true });
     expect(routed).not.toHaveBeenCalled();
     release({ type: "setup.start" });
     expect(routed).toHaveBeenCalledExactlyOnceWith({ type: "setup.start" });
-    engineering({ type: "replay.coach.open" });
-    expect(routed).toHaveBeenLastCalledWith({ type: "replay.coach.open" });
+    engineering({ type: "replay.editor.toggle" });
+    expect(routed).toHaveBeenLastCalledWith({ type: "replay.editor.toggle" });
   });
 });
 

@@ -3,13 +3,13 @@
  * including the names every plain object inherits, must not create a NaN, break the merge, or meet a
  * condition on an empty profile.
  */
-import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { mergeCosmeticStates, normalizeCosmeticState, shardBalance } from "../../src/domain/cosmetics";
 import { progressFacts, snapshotProgress } from "../../src/domain/progress-facts";
 import { conditionFrom, conditionMet } from "../../src/domain/unlock-condition";
 import { createProfileStore } from "../../src/persistence/profile-store";
+import { checkProperty, fc } from "./property-harness";
 
 /** Every member a plain object inherits: `__proto__`, `constructor`, `toString`, `hasOwnProperty`... */
 const INHERITED = Object.getOwnPropertyNames(Object.prototype);
@@ -54,7 +54,7 @@ const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
 describe("any saved key, inherited names included", () => {
   it("never puts a NaN or a negative number into a merged balance", () => {
-    fc.assert(
+    checkProperty(
       fc.property(savedState, savedState, fc.nat({ max: 100_000 }), (left, right, earned) => {
         const merged = mergeCosmeticStates(left, right);
         for (const paid of Object.values(merged.owned)) expect(Number.isFinite(paid)).toBe(true);
@@ -66,7 +66,7 @@ describe("any saved key, inherited names included", () => {
   });
 
   it("merges the same way in either order, and merging a state with itself changes nothing", () => {
-    fc.assert(
+    checkProperty(
       fc.property(savedState, savedState, (left, right) => {
         expect(plain(mergeCosmeticStates(left, right))).toEqual(plain(mergeCosmeticStates(right, left)));
         expect(plain(mergeCosmeticStates(left, left))).toEqual(plain(left));
@@ -75,7 +75,7 @@ describe("any saved key, inherited names included", () => {
   });
 
   it("keeps an inherited name out of a normalized state", () => {
-    fc.assert(
+    checkProperty(
       fc.property(savedState, (state) => {
         const keys = [
           ...Object.keys(state.owned),
@@ -91,7 +91,7 @@ describe("any saved key, inherited names included", () => {
 
   it("meets no condition on an empty profile, whatever it names", () => {
     const empty = progressFacts({ stats: {}, ach: {} });
-    fc.assert(
+    checkProperty(
       fc.property(key, (name) => {
         expect(empty.achievementUnlocked(name)).toBe(false);
         expect(empty.bossDefeated(name)).toBe(false);
@@ -111,7 +111,7 @@ describe("any saved key, inherited names included", () => {
   });
 
   it("answers only what a saved profile itself holds", () => {
-    fc.assert(
+    checkProperty(
       fc.property(savedMap(loose), savedMap(fc.nat()), key, (stats, ach, name) => {
         for (const source of [{ stats, ach }, snapshotProgress({ stats, ach })]) {
           const facts = progressFacts(source);

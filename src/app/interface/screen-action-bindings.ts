@@ -1,3 +1,4 @@
+import type { ShopShardsPort } from "../screens/menu-screen-adapters";
 import { createScreenActionRouter } from "./screen-action-router";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { LibraryScreenAdapters } from "../library/library-screen-adapters";
@@ -37,6 +38,7 @@ export interface ScreenActionBindingPorts {
   readonly campaignDifficulty: () => RunDifficulty;
   readonly resetSettings: () => void;
   readonly buyShopItem: (id: string) => void;
+  readonly shop: ShopShardsPort;
   readonly signIn: () => void;
   readonly signOut: () => void;
   readonly pinReplay: (id: string, pinned: boolean) => boolean;
@@ -159,6 +161,15 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "shop.buy": (action) => {
       ports.buyShopItem(action.id);
     },
+    "shop.selectTab": (action) => {
+      ports.shop.selectShopTab(action.id);
+    },
+    "shards.buy": (action) => {
+      ports.shop.buyCosmetic(action.id);
+    },
+    "shards.equip": (action) => {
+      ports.shop.equipCosmetic(action.slot, action.id);
+    },
     "profile.selectTab": (action) => {
       ports.library.selectProfileTab(action.id);
     },
@@ -260,26 +271,11 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "replay.practice": () => {
       ports.replay.practice();
     },
-    "replay.coach.viewMoment": (action) => {
-      ports.replay.viewCoachMoment(action.id);
-    },
-    "replay.coach.control": (action) => {
-      ports.replay.controlCoach(action.command, action.delta);
-    },
     "replay.challenge.open": () => {
       ports.replay.openChallenges();
     },
     "replay.challenge.start": (action) => {
       ports.replay.startChallenge(action.id);
-    },
-    "replay.coach.open": () => {
-      ports.replay.openCoach();
-    },
-    "replay.coach.selectBaseline": (action) => {
-      ports.replay.selectCoachBaseline(action.id);
-    },
-    "replay.coach.practice": (action) => {
-      ports.replay.practiceCoachFinding(action.findingId);
     },
     "replay.runDna.toggle": () => {
       ports.replay.toggleRunDna();

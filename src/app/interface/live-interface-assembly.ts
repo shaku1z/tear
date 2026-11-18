@@ -104,6 +104,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
     lockHint,
     hint: hintEl,
     fullscreenButton,
+    fullscreenAvailable,
     pantheonDebug: PANTHEON_DEBUG,
   } = browser;
   const { state: hostState, environment } = world;
@@ -360,6 +361,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
         lockHint,
         inputHint: hintEl,
         fullscreenButton,
+        fullscreenAvailable,
         controlHintContext: () => ({
           runSeconds: screen() === "playing" ? liveRun().runTime : 0,
           completedRuns: dependencies.PROFILE.stat("runs"),

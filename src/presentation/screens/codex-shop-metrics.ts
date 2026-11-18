@@ -107,7 +107,15 @@ export const DESKTOP = {
   rows: 3,
   filters: { y: 198, height: 32, abilities: 120, bestiary: 128 },
   sort: 170,
-  shop: { statusBaseline: 6, listTop: SHOP_LIST_TOP - 4, column: 550, step: 570, buy: { w: 96, h: 40 } },
+  shop: {
+    /** The status line sits under the tab row, like the caption on the other tabbed pages. */
+    statusTop: 168,
+    statusBaseline: 16,
+    listTop: SHOP_LIST_TOP - 4,
+    column: 550,
+    step: 570,
+    buy: { w: 96, h: 40 },
+  },
   guide: { labelTop: 226, left: { left: 250, width: 500 }, right: { left: 830, width: 520 } },
 } as const;
 

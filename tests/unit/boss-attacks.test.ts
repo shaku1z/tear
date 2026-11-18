@@ -15,13 +15,16 @@ import {
   bossAttackHit,
   bossAttackMotion,
   bossAttackParryable,
+  bossAttackPose,
   bossAttackStatus,
   bossAttackTells,
+  bossAttackThreatens,
   bossHitTouches,
   chooseBossAttack,
   createBossAttackRunnerState,
   exposeBossAttack,
   markBossAttackLanded,
+  openBossPhase,
   parryBossAttack,
   placeBossHitShape,
   type BossAttackContext,
@@ -118,7 +121,7 @@ describe("boss attack definitions", () => {
   });
 
   it("rejects a table a runner could not play fairly", () => {
-    expect(() => buildBossAttackTable(definition([move("only")]))).toThrow(/two moves/u);
+    expect(() => buildBossAttackTable(definition([move("only")]))).toThrow(/two moves chosen by weight/u);
     expect(() =>
       buildBossAttackTable(definition([move("a"), move("b", { timing: { tell: 0.3, active: 0.2, recover: 0 } })])),
     ).toThrow(/tell shorter/u);
@@ -501,5 +504,222 @@ describe("the runner owns the pause after a move and the body's flags", () => {
       hidden: false,
       parryable: false,
     });
+  });
+});
+
+describe("the move schedule: openings, once and every few moves", () => {
+  /** The order moves begin in, from a fresh runner, with the phase switched at `switchAt`. */
+  function order(
+    table: ReturnType<typeof buildBossAttackTable<Phase, Place>>,
+    ticks: number,
+    options: Readonly<{ switchAt?: number; seed?: string }> = {},
+  ): string[] {
+    const random = new SeededRandom(options.seed ?? "schedule");
+    let state = createBossAttackRunnerState();
+    const begun: string[] = [];
+    for (let tick = 0; tick < ticks; tick += 1) {
+      const phase: Phase = tick >= (options.switchAt ?? Infinity) ? "wild" : "rooted";
+      const result = advanceBossAttack(table, state, context(tick, { random, phase }));
+      state = result.state;
+      for (const event of result.events)
+        if (event.type === "stage" && event.stage === "tell") begun.push(event.attackId);
+    }
+    return begun;
+  }
+  const ordinary = [move("lash"), move("bolt"), move("slam")];
+  const opener = move("plant", { phases: ["wild"], choose: { range: [0, 2000], weight: 1, cooldown: 0, opens: true } });
+
+  it("plays an opening move first whenever a phase it belongs to starts, then chooses it by weight", () => {
+    const table = buildBossAttackTable(definition([...ordinary, opener]));
+    for (const seed of ["a", "b", "c"]) {
+      const begun = order(table, 6000, { switchAt: 600, seed });
+      const before = order(table, 600, { seed });
+      expect(before).not.toContain("plant");
+      expect(begun[before.length]).toBe("plant");
+      expect(begun.filter((id) => id === "plant").length).toBeGreaterThan(1);
+    }
+    // A fresh runner in the wild phase opens with it at once.
+    const fresh = advanceBossAttack(table, createBossAttackRunnerState(), context(0, { phase: "wild" }));
+    expect(fresh.state.run?.attackId).toBe("plant");
+    expect(fresh.state.openedPhase).toBe("wild");
+  });
+
+  it("opens with an ordinary move when the opening move cannot start, and then owes it no longer", () => {
+    const table = buildBossAttackTable(definition([...ordinary, opener]));
+    const blocked = new Set(["plant"]);
+    const first = advanceBossAttack(table, createBossAttackRunnerState(), context(0, { phase: "wild", blocked }));
+    expect(first.state.run?.attackId).not.toBe("plant");
+    expect(first.state.openedPhase).toBe("wild");
+    // A fight restored part-way through the phase owes no opening either.
+    const restored = openBossPhase(createBossAttackRunnerState(), "wild");
+    const picks = ["a", "b", "c", "d", "e", "f"].map(
+      (seed) => chooseBossAttack(table, restored, context(0, { phase: "wild", random: new SeededRandom(seed) }))?.id,
+    );
+    expect(new Set(picks).size).toBeGreaterThan(1);
+  });
+
+  it("plays a move marked once at most once, and a move on a count after that many others and only then", () => {
+    const table = buildBossAttackTable(
+      definition([
+        ...ordinary,
+        move("ritual", {
+          phases: ["wild"],
+          choose: { range: [0, 2000], weight: 1, cooldown: 0, opens: true, once: true },
+        }),
+        move("spring", { phases: ["wild"], choose: { range: [0, 2000], weight: 1, cooldown: 0, afterMoves: 2 } }),
+      ]),
+    );
+    const begun = order(table, 6000, { switchAt: 0, seed: "count" });
+    expect(begun.length).toBeGreaterThan(20);
+    expect(begun[0]).toBe("ritual");
+    expect(begun.filter((id) => id === "ritual")).toHaveLength(1);
+    // Owed at once after the opening, then after every two other moves.
+    expect(begun.slice(1).map((id) => id === "spring")).toEqual(begun.slice(1).map((_, index) => index % 3 === 0));
+  });
+
+  it("counts a move that was cut short: the count is kept from when it began", () => {
+    const table = buildBossAttackTable(
+      definition([
+        ...ordinary,
+        move("spring", { choose: { range: [0, 2000], weight: 1, cooldown: 0, afterMoves: 1 } }),
+      ]),
+    );
+    const started = advanceBossAttack(table, createBossAttackRunnerState(), context(0)).state;
+    expect(started.run?.attackId).toBe("spring");
+    const cut = exposeBossAttack(table, started, 10, 30);
+    expect(cut).toMatchObject({ begun: 1, begunAt: { spring: 0 } });
+    expect(chooseBossAttack(table, cut, context(200))?.id).not.toBe("spring");
+  });
+
+  it("rejects a schedule the runner could not keep", () => {
+    const counted = (afterMoves: number, once?: boolean) =>
+      move("spring", {
+        choose: { range: [0, 2000], weight: 1, cooldown: 0, afterMoves, ...(once === undefined ? {} : { once }) },
+      });
+    expect(() => buildBossAttackTable(definition([...ordinary, counted(0)]))).toThrow(/whole number/u);
+    expect(() => buildBossAttackTable(definition([...ordinary, counted(1.5)]))).toThrow(/whole number/u);
+    expect(() => buildBossAttackTable(definition([...ordinary, counted(2, true)]))).toThrow(/once/u);
+    // A phase left with fewer than two moves chosen by weight could stall the no-repeat rule.
+    expect(() => buildBossAttackTable(definition([move("lash"), counted(2)]))).toThrow(/chosen by weight/u);
+  });
+
+  it("says a strike is on its way only in a hitting move's tell and active stage", () => {
+    const quiet = move("hop", { timing: { tell: 0.2, active: 0.3, recover: 0.2 } });
+    delete (quiet as { hit?: unknown }).hit;
+    const table = buildBossAttackTable(definition([move("lash"), quiet]));
+    let state = createBossAttackRunnerState();
+    expect(bossAttackThreatens(table, state)).toBe(false);
+    const seen = new Map<string, boolean>();
+    for (let tick = 0; tick < 1200; tick += 1) {
+      state = advanceBossAttack(table, state, context(tick)).state;
+      if (state.run !== null) seen.set(`${state.run.attackId}:${state.run.stage}`, bossAttackThreatens(table, state));
+    }
+    expect(seen.get("lash:tell")).toBe(true);
+    expect(seen.get("lash:active")).toBe(true);
+    expect(seen.get("lash:recover")).toBe(false);
+    expect(seen.get("hop:tell")).toBe(false);
+    expect(seen.get("hop:active")).toBe(false);
+  });
+});
+
+describe("a strike that repeats warns of each repeat", () => {
+  // Tell 60 ticks, then strikes 120 ticks apart: each is live for 60 ticks and the next is warned for 60.
+  // The active stage is 330 ticks, so there are three strikes and no fourth.
+  const channel = move("channel", {
+    timing: { tell: 0.5, active: 2.75, recover: 0.25 },
+    hit: {
+      shape: { kind: "travel", dy: 0, hw: 20, hh: 20, speed: 1200 },
+      damage: 15,
+      parryable: false,
+      repeat: { every: 1, tell: 0.5 },
+    },
+  });
+  const table = buildBossAttackTable(
+    definition([channel, move("rare", { choose: { range: [0, 1], weight: 1e-9, cooldown: 0 } })]),
+  );
+  const ACTIVE = 60;
+
+  /** The runner state at `tick`, with every strike marked landed the tick it first could hit. */
+  function at(tick: number, landing = false): BossAttackRunnerState {
+    let state = createBossAttackRunnerState();
+    for (let now = 0; now <= tick; now += 1) {
+      state = advanceBossAttack(table, state, context(now, { random: { next: () => 0 } })).state;
+      if (landing && now < tick && bossAttackHit(table, state, context(now)) !== null)
+        state = markBossAttackLanded(state);
+    }
+    return state;
+  }
+
+  it("turns the hit off for the warning before each repeat, and arms it again when the repeat starts", () => {
+    expect(bossAttackHit(table, at(ACTIVE + 59), context(ACTIVE + 59))?.area).toMatchObject({ x: 660 + 590 });
+    expect(bossAttackHit(table, at(ACTIVE + 60), context(ACTIVE + 60))).toBeNull();
+    expect(bossAttackHit(table, at(ACTIVE + 119), context(ACTIVE + 119))).toBeNull();
+    // The repeat starts again from the boss, and hits even though the strike before it landed.
+    expect(bossAttackHit(table, at(ACTIVE + 120, true), context(ACTIVE + 120))?.area).toMatchObject({ x: 660 });
+    expect(bossAttackThreatens(table, at(ACTIVE + 90))).toBe(true);
+  });
+
+  it("shows each repeat as a tell of its own, warned for its full length before it goes active", () => {
+    const seen: string[] = [];
+    const warned = new Map<string, number>();
+    for (let tick = 0; tick < ACTIVE + 330; tick += 1) {
+      const tell = bossAttackTells(table, at(tick), context(tick))[0];
+      if (tell === undefined) continue;
+      const label = `${tell.id}:${tell.stage}`;
+      if (seen.at(-1) !== label) seen.push(label);
+      if (tell.stage === "warning") warned.set(tell.id, (warned.get(tell.id) ?? 0) + 1);
+    }
+    expect(seen).toEqual([
+      "channel:warning",
+      "channel:active",
+      "channel:2:warning",
+      "channel:2:active",
+      "channel:3:warning",
+      "channel:3:active",
+    ]);
+    expect([...warned.values()]).toEqual([60, 60, 60]);
+    const second = bossAttackTells(table, at(ACTIVE + 60), context(ACTIVE + 60))[0];
+    expect(second).toMatchObject({ mark: "lane", damaging: true, leadSeconds: 0.5, remainingSeconds: 0.5, dir: 1 });
+    // The tell marks the path the strike covers while it is live.
+    expect((second?.x ?? 0) + (second?.hw ?? 0)).toBeCloseTo(600 + 40 + 1200 * 0.5 + 40);
+  });
+
+  it("shows no tell and has no hit once the last strike is over, though the stage runs on", () => {
+    const tick = ACTIVE + 310;
+    expect(at(tick).run?.stage).toBe("active");
+    expect(bossAttackTells(table, at(tick), context(tick))).toEqual([]);
+    expect(bossAttackHit(table, at(tick), context(tick))).toBeNull();
+  });
+
+  it("tells a renderer which repeat it is, whether it is striking and how far the next warning is", () => {
+    expect(bossAttackPose(table, at(ACTIVE + 30), context(ACTIVE + 30))).toMatchObject({
+      repeat: 0,
+      striking: true,
+      repeatWarning: null,
+    });
+    expect(bossAttackPose(table, at(ACTIVE + 90), context(ACTIVE + 90))).toMatchObject({
+      repeat: 0,
+      striking: false,
+      repeatWarning: 0.5,
+    });
+    expect(bossAttackPose(table, at(ACTIVE + 130), context(ACTIVE + 130))).toMatchObject({ repeat: 1, striking: true });
+    expect(bossAttackPose(table, at(30), context(30))).toMatchObject({ repeat: 0, striking: false });
+  });
+
+  it("rejects a repeat with a warning too short to read, or one that leaves the strike never live", () => {
+    const repeating = (repeat: { every: number; tell: number }) =>
+      move("channel", {
+        timing: { tell: 0.5, active: 2.75, recover: 0.25 },
+        hit: { shape: { kind: "ring", radius: 100 }, damage: 10, parryable: false, repeat },
+      });
+    expect(() => buildBossAttackTable(definition([move("lash"), repeating({ every: 1, tell: 0.3 })]))).toThrow(
+      /warns of a repeat for less/u,
+    );
+    expect(() => buildBossAttackTable(definition([move("lash"), repeating({ every: 0.5, tell: 0.5 })]))).toThrow(
+      /never live/u,
+    );
+    expect(() => buildBossAttackTable(definition([move("lash"), repeating({ every: 3, tell: 0.5 })]))).toThrow(
+      /not within its active window/u,
+    );
   });
 });

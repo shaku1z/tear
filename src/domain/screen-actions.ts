@@ -22,6 +22,10 @@ export type ScreenAction =
   | { readonly type: "codex.cycleSort" }
   | { readonly type: "codex.inspect"; readonly id: string }
   | { readonly type: "shop.buy"; readonly id: string }
+  | { readonly type: "shop.selectTab"; readonly id: string }
+  | { readonly type: "shards.buy"; readonly id: string }
+  /** Equip an owned cosmetic in its slot; a null id puts the game look back. */
+  | { readonly type: "shards.equip"; readonly slot: string; readonly id: string | null }
   | { readonly type: "career.control"; readonly command: string; readonly id?: string }
   | { readonly type: "profile.selectTab"; readonly id: string }
   | { readonly type: "profile.watchReplay"; readonly id: string }
@@ -56,15 +60,6 @@ export type ScreenAction =
   | { readonly type: "replay.practice" }
   | { readonly type: "replay.challenge.open" }
   | { readonly type: "replay.challenge.start"; readonly id: string }
-  | { readonly type: "replay.coach.open" }
-  | { readonly type: "replay.coach.viewMoment"; readonly id: string }
-  | {
-      readonly type: "replay.coach.control";
-      readonly command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section";
-      readonly delta: number;
-    }
-  | { readonly type: "replay.coach.selectBaseline"; readonly id: string }
-  | { readonly type: "replay.coach.practice"; readonly findingId: string }
   | { readonly type: "replay.runDna.toggle" }
   | { readonly type: "replay.editor.toggle" }
   | { readonly type: "replay.editor.createCutList" }

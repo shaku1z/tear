@@ -1,5 +1,4 @@
 import type { CareerRow, CareerQuery, CareerUsage } from "../../ghost/career-archive";
-import type { GhostCoachHistoryView } from "../../ghost/coach-history";
 import type { ScreenAction } from "../../domain/screen-actions";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
@@ -231,7 +230,44 @@ export interface CodexScreenView {
     readonly variety: string;
   };
 }
+/** The colours and text a cosmetic look is made of, for the small preview on its card. */
+export interface ShardSwatchView {
+  readonly colors: readonly string[];
+  readonly text?: string;
+}
+/** One card on a shelf. `id` is null for the game own look in that slot. */
+export interface ShardCardView {
+  readonly id: string | null;
+  readonly slot: string;
+  readonly label: string;
+  readonly tier: string;
+  readonly state: "equipped" | "owned" | "available" | "locked" | "elsewhere";
+  /** Shown while the item is for sale. */
+  readonly price?: number;
+  readonly affordable: boolean;
+  /** What to do to get it, for a locked or earned-elsewhere item; empty otherwise. */
+  readonly note: string;
+  readonly isNew: boolean;
+  readonly swatch: ShardSwatchView;
+}
+export interface ShardShelfView {
+  readonly slot: string;
+  readonly label: string;
+  /** False when nothing draws this slot in a run yet. */
+  readonly hookReady: boolean;
+  readonly cards: readonly ShardCardView[];
+}
+export interface ShardsView {
+  /** Shards left to spend. */
+  readonly balance: number;
+  /** Shards earned in total. */
+  readonly earned: number;
+  readonly shelves: readonly ShardShelfView[];
+}
 export interface ShopScreenView {
+  readonly tab: string;
+  readonly tabs: readonly ChoiceView[];
+  readonly shards?: ShardsView;
   readonly race?: Readonly<{ ordinal: number; carried?: DraftCardView; pass: boolean }>;
   readonly onboarding?: string;
   readonly id: "shop";
@@ -377,7 +413,6 @@ export interface ReplayScreenView {
     result?: string;
     elapsedTicks?: number;
   }>;
-  readonly coach?: GhostCoachHistoryView;
   /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
   readonly runDna?: Readonly<{
     readonly available: boolean;
@@ -389,7 +424,6 @@ export interface ReplayScreenView {
     readonly unavailable: readonly string[];
   }>;
   readonly worldVisible?: boolean;
-  readonly coachReturnAvailable?: boolean;
   readonly studioMedia?: Readonly<{
     available: boolean;
     status: string;

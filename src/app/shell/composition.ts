@@ -42,6 +42,7 @@ import type { CloudFactory } from "../../platform/cloud-factory";
 import type { TearBuildTarget } from "../../platform/contracts";
 import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../../platform/crazygames";
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
+import { browserFullscreen } from "../../platform/browser";
 import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import { GHOST_WORKER_URLS } from "../replay/ghost-worker-urls";
@@ -126,7 +127,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const disposableValues = new Map<string, string>(
     tearTestMode ? Object.entries(compositionWindow.__TEAR_TEST_STORAGE__ ?? {}) : [],
   );
-  const tearTestEnvironment = tearTestMode ? createTearTestEnvironment("live-test-composition") : undefined;
+  const tearTestEnvironment = tearTestMode
+    ? createTearTestEnvironment("live-test-composition", { fullscreen: browserFullscreen(document) })
+    : undefined;
   const disposableStorage = tearTestMode
     ? {
         getItem: (key: string) => disposableValues.get(key) ?? null,
@@ -399,6 +402,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     browserStorage: window.localStorage,
     browserWindow: window,
     CG,
+    fullscreen: () => platform.services.fullscreen,
     CLOCK,
     CONFIG: worldConfig,
     Charger,

@@ -52,6 +52,7 @@ type ActionBase = Omit<
   | "quitRun"
   | "revive"
   | "buyShopItem"
+  | "shop"
   | "library"
   | "replay"
   | "settings"
@@ -133,8 +134,7 @@ export function createLiveScreenPresentationComposition(
       }
       const result = await replay.enterGhostCapsule(id, "profile");
       if (result.kind === "refused") throw new Error(result.detail);
-      if (command === "coach") replay.openCoach();
-      else if (command === "challenge") replay.openChallenges();
+      if (command === "challenge") replay.openChallenges();
     },
     enterGhostComparison: (ids) => replay.enterGhostComparison(ids, "profile"),
   });
@@ -167,6 +167,7 @@ export function createLiveScreenPresentationComposition(
       quitRun: run.quitRun,
       revive: run.reviveByAd,
       buyShopItem: menu.buyShopItem,
+      shop: menu,
       library,
       replay,
       settings,

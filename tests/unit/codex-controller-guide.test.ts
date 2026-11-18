@@ -22,6 +22,7 @@ describe("Codex controller guide", () => {
         tether: "L1",
         pause: "Options",
       },
+      true,
     );
     expect(guide.controller[1]).toBe("✕ jump · ◯ dash · ▢ throw · L1 tether · Options pause");
   });

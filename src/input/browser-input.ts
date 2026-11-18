@@ -10,6 +10,20 @@ import {
   type RelativeTravel,
 } from "../domain/pointer-ownership";
 import { touchControlAt, touchControlLayout } from "./touch-control-layout";
+import { anyKeyIn, bindsKey, type KeyboardAction } from "../domain/keyboard-bindings";
+
+/** Keys the browser would otherwise use to scroll the page or move focus. */
+const PAGE_KEYS: readonly KeyboardAction[] = [
+  "jump",
+  "move-up",
+  "move-down",
+  "move-left",
+  "move-right",
+  "playground-menu",
+];
+const MOVEMENT_KEYS: readonly KeyboardAction[] = ["move-left", "move-right", "move-up", "move-down"];
+const bindsAny = (actions: readonly KeyboardAction[], code: string): boolean =>
+  actions.some((action) => bindsKey(action, code));
 
 interface ClientPoint {
   readonly clientX: number;
@@ -54,6 +68,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     allowLock: false, // only request pointer lock while actually playing
     rmb: false, // right mouse button edge (throw / recall)
     lmb: false, // left mouse button held (draw tether in close)
+    keyTether: false, // tether key held: its own channel, like the controller's
     padTether: false, // controller tether-tighten held (separate channel so the pad
     // never clobbers a real mouse hold — see tetherHeld getter)
     clicked: false, // left-click edge (for menu/UI)
@@ -109,6 +124,10 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       this.semantic.discardUnsealed();
       this.syncSemanticMovement();
     },
+    returnControl() {
+      this.discardSemanticInput();
+      this.semantic.push({ type: "resume" });
+    },
     discardScenePresses() {
       discardScenePresses(this);
     },
@@ -122,10 +141,14 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       this.semantic.setMovement(x, y);
     },
     setPadTether(held) {
-      const next = held;
-      if (this.padTether === next) return;
-      this.padTether = next;
-      this.semantic.push({ type: "weapon", intent: "primary", phase: next ? "pressed" : "released" });
+      if (this.padTether === held) return;
+      this.padTether = held;
+      this.semantic.push({ type: "weapon", intent: "primary", phase: held ? "pressed" : "released" });
+    },
+    setKeyTether(held) {
+      if (this.keyTether === held) return;
+      this.keyTether = held;
+      this.semantic.push({ type: "weapon", intent: "primary", phase: held ? "pressed" : "released" });
     },
     // explicit per-frame UI action snapshot. Screens read Input.ui.* instead of
     // re-deriving arrows / confirm / tabs / scroll. Populated by updateUI() each frame.
@@ -153,11 +176,12 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       u.right = this.menuRight();
       u.confirm = this.confirmPressed();
       u.back = this.backPressed();
-      // Q/E and PageUp/PageDown are keyboard analogues of L1/R1 and L2/R2
-      u.tabPrev = this._uiTabPrev || this.pressed.has("KeyQ");
-      u.tabNext = this._uiTabNext || this.pressed.has("KeyE");
-      u.pageUp = this._uiPageUp || this.pressed.has("PageUp");
-      u.pageDown = this._uiPageDown || this.pressed.has("PageDown");
+      // The tab and page keys are keyboard analogues of L1/R1 and L2/R2. Tab keys count only
+      // while menus own input: in play the same keys throw and tether.
+      u.tabPrev = this._uiTabPrev || (this.uiMode && anyKeyIn(this.pressed, "tab-prev"));
+      u.tabNext = this._uiTabNext || (this.uiMode && anyKeyIn(this.pressed, "tab-next"));
+      u.pageUp = this._uiPageUp || anyKeyIn(this.pressed, "page-up");
+      u.pageDown = this._uiPageDown || anyKeyIn(this.pressed, "page-down");
       u.context1 = this._uiContext1;
       u.context2 = this._uiContext2;
       u.scrollX = this.padScrollX;
@@ -241,32 +265,44 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         this.touchOn = true;
         this.setMode("touch");
       }
+      // Every key reads the binding table (src/domain/keyboard-bindings.ts). Auto-repeat of a
+      // held key is not an edge, so holding the throw key throws once.
       window.addEventListener("keydown", (e) => {
         if (this.textEntryMode) return;
-        if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(e.code)) e.preventDefault();
-        const edge = !this.held.has(e.code);
-        if (edge) this.pressed.add(e.code);
-        this.held.add(e.code);
+        const code = e.code;
+        if (bindsAny(PAGE_KEYS, code)) e.preventDefault();
+        const edge = !this.held.has(code);
+        if (edge) this.pressed.add(code);
+        this.held.add(code);
         this.setMode("keyboard"); // a real key press (gamepad-injected arrows never come through here)
-        if (["KeyA", "KeyD", "KeyW", "KeyS", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.code))
-          this.syncSemanticMovement();
-        if (edge && ["Space", "KeyW", "ArrowUp"].includes(e.code))
-          this.semantic.push({ type: "jump", phase: "pressed" });
-        if (edge && (e.code === "ShiftLeft" || e.code === "ShiftRight")) {
+        if (bindsAny(MOVEMENT_KEYS, code)) this.syncSemanticMovement();
+        if (!edge) return;
+        if (bindsKey("jump", code)) this.semantic.push({ type: "jump", phase: "pressed" });
+        if (bindsKey("dash", code)) {
           this.semantic.push({
             type: "dash",
             x: ((this.right() ? 1 : 0) - (this.left() ? 1 : 0)) * 1000,
             y: ((this.down() ? 1 : 0) - (this.up() ? 1 : 0)) * 1000,
           });
         }
-        if (edge && e.code === "KeyP") this.semantic.push({ type: "pause" });
+        // Escape is not a semantic pause: it also releases pointer lock and backs out of menus.
+        if (bindsKey("pause", code) && !bindsKey("back", code)) this.semantic.push({ type: "pause" });
+        // The throw and tether keys are the right and left mouse buttons, edge for edge, in play only:
+        // while menus own input the same keys step tabs, and a key held into play acts only on a new press.
+        if (this.uiMode) return;
+        if (bindsKey("throw", code)) {
+          this.rmb = true;
+          this.semantic.push({ type: "weapon", intent: "throw", phase: "pressed" });
+        }
+        if (bindsKey("tether", code)) this.setKeyTether(true);
       });
       window.addEventListener("keyup", (e) => {
         if (this.textEntryMode) return;
-        this.held.delete(e.code);
-        if (["KeyA", "KeyD", "KeyW", "KeyS", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.code))
-          this.syncSemanticMovement();
-        if (["Space", "KeyW", "ArrowUp"].includes(e.code)) this.semantic.push({ type: "jump", phase: "released" });
+        const code = e.code;
+        this.held.delete(code);
+        if (bindsAny(MOVEMENT_KEYS, code)) this.syncSemanticMovement();
+        if (bindsKey("jump", code)) this.semantic.push({ type: "jump", phase: "released" });
+        if (bindsKey("tether", code) && !anyKeyIn(this.held, "tether")) this.setKeyTether(false);
       });
 
       // element px -> logical px. The element spans the arena PLUS the fullscreen
@@ -565,6 +601,7 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         this.held.clear();
         for (const id of [...touchesDown]) releaseTouch(id);
         this.setPadTether(false);
+        this.setKeyTether(false);
         this.syncSemanticMovement();
       };
       window.addEventListener("blur", releaseAll);
@@ -584,16 +621,16 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
 
     // logical directional helpers (keyboard OR the touch joystick)
     left() {
-      return this.held.has("KeyA") || this.held.has("ArrowLeft") || (this.joy.active && this.joy.dx < -26);
+      return anyKeyIn(this.held, "move-left") || (this.joy.active && this.joy.dx < -26);
     },
     right() {
-      return this.held.has("KeyD") || this.held.has("ArrowRight") || (this.joy.active && this.joy.dx > 26);
+      return anyKeyIn(this.held, "move-right") || (this.joy.active && this.joy.dx > 26);
     },
     up() {
-      return this.held.has("KeyW") || this.held.has("ArrowUp") || (this.joy.active && this.joy.dy < -42);
+      return anyKeyIn(this.held, "move-up") || (this.joy.active && this.joy.dy < -42);
     },
     down() {
-      return this.held.has("KeyS") || this.held.has("ArrowDown") || (this.joy.active && this.joy.dy > 42);
+      return anyKeyIn(this.held, "move-down") || (this.joy.active && this.joy.dy > 42);
     },
 
     jumpPressed() {
@@ -601,21 +638,21 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         this.tJump = false;
         return true;
       }
-      return this.pressed.has("Space") || this.pressed.has("KeyW") || this.pressed.has("ArrowUp");
+      return anyKeyIn(this.pressed, "jump");
     },
     dashPressed() {
       if (this.tDash) {
         this.tDash = false;
         return true;
       }
-      return this.pressed.has("ShiftLeft") || this.pressed.has("ShiftRight");
+      return anyKeyIn(this.pressed, "dash");
     },
     pausePressed() {
       if (this.tPause) {
         this.tPause = false;
         return true;
       }
-      return this.pressed.has("KeyP");
+      return anyKeyIn(this.pressed, "pause");
     },
     escapePressed() {
       return this.pressed.has("Escape");
@@ -626,16 +663,16 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     // Prev/Next wrappers (which collapse Up+Left -> Prev, Down+Right -> Next exactly
     // as before, so existing screens are unchanged).
     menuUp() {
-      return this.pressed.has("ArrowUp") || this.pressed.has("KeyW");
+      return anyKeyIn(this.pressed, "menu-up");
     },
     menuDown() {
-      return this.pressed.has("ArrowDown") || this.pressed.has("KeyS");
+      return anyKeyIn(this.pressed, "menu-down");
     },
     menuLeft() {
-      return this.pressed.has("ArrowLeft") || this.pressed.has("KeyA");
+      return anyKeyIn(this.pressed, "menu-left");
     },
     menuRight() {
-      return this.pressed.has("ArrowRight") || this.pressed.has("KeyD");
+      return anyKeyIn(this.pressed, "menu-right");
     },
     menuPrev() {
       return this.menuUp() || this.menuLeft();
@@ -643,26 +680,23 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
     menuNext() {
       return this.menuDown() || this.menuRight();
     },
-    // unified tether hold: mouse OR controller. Consumers read this, not lmb, so the
-    // two input sources coexist without one clearing the other.
+    // unified tether hold: mouse, tether key OR controller. Consumers read this, not lmb,
+    // so the input sources coexist without one clearing another.
     get tetherHeld() {
-      return this.lmb || this.padTether;
+      return this.lmb || this.keyTether || this.padTether;
     },
     confirmPressed() {
-      return this.pressed.has("Enter") || this.pressed.has("NumpadEnter") || this.pressed.has("Space");
+      return anyKeyIn(this.pressed, "confirm");
     },
     // level state of every key or button that can confirm or choose on a menu; the UI
     // arms confirm on a newly opened screen only after all of these have been let go.
     confirmHeld() {
-      return (
-        this.padConfirmHeld ||
-        ["Enter", "NumpadEnter", "Space", "Digit1", "Digit2", "Digit3", "Digit4"].some((code) => this.held.has(code))
-      );
+      return this.padConfirmHeld || anyKeyIn(this.held, "confirm") || anyKeyIn(this.held, "choose");
     },
-    // semantic back: controller back, Escape, or Backspace. Keydown is ignored while a
-    // text field owns input (textEntryMode), so Backspace never leaves the rename field.
+    // semantic back: controller back or the back keys. Keydown is ignored while a text
+    // field owns input (textEntryMode), so Backspace never leaves the rename field.
     backPressed() {
-      return this.padBack || this.escapePressed() || this.pressed.has("Backspace");
+      return this.padBack || anyKeyIn(this.pressed, "back");
     },
     // one-shot: the loop may run several fixed substeps per frame, so this edge must
     // be consumed on first read or a single click would throw AND recall in one frame.

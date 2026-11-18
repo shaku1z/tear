@@ -28,9 +28,10 @@ const TOUCH_METRICS: Readonly<Record<string, number>> = {
   settingsControlH: 54,
   settingsStepperW: 60,
   minTarget: 48,
+  listRowH: 48,
 };
 const TEXT_ROLES = ["micro", "caption", "label", "body", "lead", "title", "h2", "h1", "display"] as const;
-const TARGET_METRICS = ["btnH", "chipH", "settingsControlH", "settingsStepperW", "minTarget"] as const;
+const TARGET_METRICS = ["btnH", "chipH", "settingsControlH", "settingsStepperW", "minTarget", "listRowH"] as const;
 
 /**
  * Derives the live token values from the authored (desktop) tokens.

@@ -1,6 +1,7 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { AppScreen } from "../../domain/screen-catalog";
+import { anyKeyIn } from "../../domain/keyboard-bindings";
 
 interface DebugCinemaSnapshot {
   readonly id: string | undefined;
@@ -99,7 +100,7 @@ export function createLiveDebugSnapshot(options: LiveDebugSnapshotOptions): obje
         : {
             connected: d.PAD.connected,
             active: d.PAD.active,
-            movingRight: d.Input.held.has("KeyD"),
+            movingRight: anyKeyIn(d.Input.held, "move-right"),
             aiming: Boolean(d.Input.stickAim),
             aimDevice: d.Input.aimDevice,
           },

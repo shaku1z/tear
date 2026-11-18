@@ -3,11 +3,8 @@ import { readGhostRunAssistance } from "../gameplay/run/ghost-assistance";
 import type { TearCodecId } from "./registries";
 import type { TearCodecIssue } from "./state-codecs";
 import { findVariant } from "../gameplay/variants";
-import { ROOTBOUND_LAST_SPRING } from "../gameplay/entities/enemy-types/rootbound";
-import {
-  ROOTBOUND_REGROWTH_CONNECTION_COUNT,
-  ROOTBOUND_REGROWTH_OUTCOMES,
-} from "../gameplay/environment/regrowth-link";
+import { ROOTBOUND_HEALING } from "../gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_REGROWTH_CONNECTION_COUNT } from "../gameplay/environment/regrowth-link";
 import { parseUiTutorialPresentationCheckpoint, parseUiHudPresentationCheckpoint } from "./ui-presentation-checkpoint";
 import { parseParticlePresentationCheckpoint } from "./particle-presentation-checkpoint";
 
@@ -166,7 +163,7 @@ function rootboundPhaseThreeState(
         ),
       );
     }
-    if (heal !== null && (!finite(heal) || heal < 0 || heal > ROOTBOUND_REGROWTH_OUTCOMES.maximumHealFraction)) {
+    if (heal !== null && (!finite(heal) || heal < 0 || heal > ROOTBOUND_HEALING.regrowthMax)) {
       issues.push(
         issue(
           codecId,
@@ -213,34 +210,13 @@ function rootboundPhaseThreeState(
       );
     }
   }
-  const springStages = ["warning", "bloom", "commit", "punish", "complete"] as const;
-  if (entry.lastSpringStage !== null && !springStages.includes(entry.lastSpringStage as never)) {
-    issues.push(issue(codecId, `${path}.lastSpringStage`, "Last Spring stage is not approved"));
-  }
   if (!Number.isSafeInteger(entry.lastSpringUseCount) || (entry.lastSpringUseCount as number) < 0) {
     issues.push(issue(codecId, `${path}.lastSpringUseCount`, "Last Spring use count must be a non-negative integer"));
   }
-  if (
-    !finite(entry.lastSpringT) ||
-    entry.lastSpringT < 0 ||
-    entry.lastSpringT >
-      Math.max(
-        ROOTBOUND_LAST_SPRING.warning,
-        ROOTBOUND_LAST_SPRING.bloom,
-        ROOTBOUND_LAST_SPRING.commit,
-        ROOTBOUND_LAST_SPRING.punish,
-      )
-  ) {
-    issues.push(issue(codecId, `${path}.lastSpringT`, "Last Spring timer is outside its authored bounds"));
-  }
-  if (typeof entry.lastSpringHitSpent !== "boolean") {
-    issues.push(issue(codecId, `${path}.lastSpringHitSpent`, "Last Spring hit state must be boolean"));
-  }
-  if (entry.lastSpringStage !== null && !((entry.lastSpringUseCount as number) >= 1)) {
-    issues.push(issue(codecId, `${path}.lastSpringStage`, "active or complete Last Spring requires at least one use"));
-  }
-  if (entry.lastSpringStage === "complete" && entry.lastSpringT !== 0) {
-    issues.push(issue(codecId, `${path}.lastSpringT`, "complete Last Spring must have a zero timer"));
+  if (typeof entry.regrowthCalled !== "boolean") {
+    issues.push(issue(codecId, `${path}.regrowthCalled`, "Regrowth call must be boolean"));
+  } else if (!entry.regrowthCalled && record(regrowth) && regrowth.phase !== "idle") {
+    issues.push(issue(codecId, `${path}.regrowthCalled`, "Regrowth cannot channel before its move calls it"));
   }
   return issues;
 }

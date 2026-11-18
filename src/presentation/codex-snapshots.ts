@@ -1,6 +1,20 @@
 import type { CardView, CodexScreenView } from "./screens/contracts";
 import type { UpgradeCategoryPresentation, UpgradePresentationSource } from "./run-screen-snapshots";
 import { publishedBestiaryEntries, type BestiaryEntry } from "./bestiary-catalog";
+import { promptLabel, type PromptAction } from "../domain/prompt-vocabulary";
+
+/** The keyboard and mouse rows of the controls guide, worded by the prompt vocabulary. */
+const KEYBOARD_GUIDE: readonly Readonly<{ action: PromptAction; description: string }>[] = [
+  { action: "move", description: "move" },
+  { action: "jump", description: "jump" },
+  { action: "move-down", description: "hold — drop through platforms" },
+  { action: "dash", description: "dash · aim 8-way with WASD · i-frames" },
+  { action: "swing", description: "the blade — clean CUTS beat pokes" },
+  { action: "throw", description: "throw / recall inside the dashed ring" },
+  { action: "tether", description: "hold — draw the tether in" },
+  { action: "pause", description: "pause · Escape also releases the mouse" },
+  { action: "fullscreen", description: "fullscreen" },
+];
 
 /** Bestiary rows on the codex card grid (2 columns). Renderer and scroll bounds share these. */
 export const BESTIARY_CARD_HEIGHT = 172,
@@ -144,6 +158,8 @@ export function buildCodexGuide(
   points: TrickPoints,
   tiersSource: readonly TrickTier[],
   controller: ControllerGuideLabels,
+  /** The platform can go fullscreen; otherwise the guide does not name the key. */
+  fullscreen: boolean,
 ): NonNullable<CodexScreenView["guide"]> {
   const tricks = [
     ["/", "CUT", points.hit, "any clean blade hit"],
@@ -161,16 +177,10 @@ export function buildCodexGuide(
   const tiers = tiersSource.filter((tier) => tier.name !== undefined),
     maximum = tiers.at(-1)?.at ?? 1;
   return Object.freeze({
-    controls: [
-      { keys: ["A", "D"], description: "move" },
-      { keys: ["W", "SPACE"], description: "jump" },
-      { keys: ["S"], description: "hold — drop through platforms" },
-      { keys: ["SHIFT"], description: "dash · aim 8-way with WASD · i-frames" },
-      { keys: ["MOUSE"], description: "the blade — clean CUTS beat pokes" },
-      { keys: ["RMB"], description: "throw / recall inside the dashed ring" },
-      { keys: ["P"], description: "pause" },
-      { keys: ["ESC"], description: "release the mouse" },
-    ],
+    controls: KEYBOARD_GUIDE.filter((row) => fullscreen || row.action !== "fullscreen").map((row) => ({
+      keys: [promptLabel(row.action, "keyboard") ?? ""],
+      description: row.description,
+    })),
     controller: [
       "left stick move · right stick swings the blade",
       `${controller.jump} jump · ${controller.dash} dash · ${controller.throw} throw · ${controller.tether} tether · ${controller.pause} pause`,

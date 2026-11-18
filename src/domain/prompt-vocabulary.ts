@@ -2,8 +2,11 @@
  * The one prompt vocabulary: every control a coach mark, lesson or help line may
  * name, worded for the device that owns input right now. Lessons and screens name
  * semantic prompt actions; only this table turns them into keys, buttons or touch
- * zones, so no caller ever matches on lesson titles or hard-codes a key.
+ * zones, so no caller ever matches on lesson titles or hard-codes a key. Keyboard
+ * wording names keyboard actions, and the keys come from the binding table.
  */
+
+import { keyboardLabel, type KeyboardAction } from "./keyboard-bindings";
 
 export type PromptDevice = "keyboard" | "touch" | "gamepad";
 
@@ -40,6 +43,7 @@ export const PROMPT_ACTIONS = [
   "summon-boss",
   "clear-enemies",
   "heal",
+  "fullscreen",
 ] as const;
 export type PromptAction = (typeof PROMPT_ACTIONS)[number];
 
@@ -53,41 +57,63 @@ export type PadBindingLabel = (binding: PadBinding) => string;
 type Wording = string | Readonly<{ pad: PadBinding; suffix?: string; prefix?: string }>;
 
 /**
+ * Keyboard wording: the labels of bound keyboard actions joined in order, or a pointer
+ * word ("MOUSE ↑") for what only the mouse does. Never a key letter: keys are named by
+ * the binding table so a rebind renames every prompt.
+ */
+type KeyboardWording =
+  `MOUSE${string}` | Readonly<{ keys: readonly KeyboardAction[]; join?: string; prefix?: string; suffix?: string }>;
+
+interface ActionWording {
+  readonly keyboard: KeyboardWording;
+  readonly touch: Wording | null;
+  readonly gamepad: Wording | null;
+}
+
+const keys = (...actions: readonly KeyboardAction[]) => Object.freeze({ keys: actions });
+
+/**
  * `null` means the device has no direct control for the action (the prompt is then
  * omitted, and the screen offers a button instead). Gamepad entries that depend on
  * the player's preset name the binding; the glyph is resolved at draw time.
  */
-const WORDING: Readonly<Record<PromptAction, Readonly<Record<PromptDevice, Wording | null>>>> = Object.freeze({
-  move: { keyboard: "A / D", touch: "LEFT STICK", gamepad: "LS" },
-  "move-left": { keyboard: "A", touch: "STICK ←", gamepad: "LS ←" },
-  "move-right": { keyboard: "D", touch: "STICK →", gamepad: "LS →" },
-  "move-up": { keyboard: "W", touch: "STICK ↑", gamepad: "LS ↑" },
-  "move-down": { keyboard: "S", touch: "STICK ↓", gamepad: "LS ↓" },
-  jump: { keyboard: "W / SPACE", touch: "JUMP", gamepad: { pad: "jump" } },
-  drop: { keyboard: "HOLD S", touch: "STICK ↓", gamepad: "LS ↓" },
-  dash: { keyboard: "SHIFT", touch: "DASH", gamepad: { pad: "dash" } },
-  "dash-down": { keyboard: "S + SHIFT", touch: "STICK ↓ + DASH", gamepad: { pad: "dash", prefix: "LS ↓ + " } },
+const WORDING: Readonly<Record<PromptAction, ActionWording>> = Object.freeze({
+  move: { keyboard: keys("move-left", "move-right"), touch: "LEFT STICK", gamepad: "LS" },
+  "move-left": { keyboard: keys("move-left"), touch: "STICK ←", gamepad: "LS ←" },
+  "move-right": { keyboard: keys("move-right"), touch: "STICK →", gamepad: "LS →" },
+  "move-up": { keyboard: keys("move-up"), touch: "STICK ↑", gamepad: "LS ↑" },
+  "move-down": { keyboard: keys("move-down"), touch: "STICK ↓", gamepad: "LS ↓" },
+  jump: { keyboard: keys("jump"), touch: "JUMP", gamepad: { pad: "jump" } },
+  drop: { keyboard: { keys: ["move-down"], prefix: "HOLD " }, touch: "STICK ↓", gamepad: "LS ↓" },
+  dash: { keyboard: keys("dash"), touch: "DASH", gamepad: { pad: "dash" } },
+  "dash-down": {
+    keyboard: { keys: ["move-down", "dash"], join: " + " },
+    touch: "STICK ↓ + DASH",
+    gamepad: { pad: "dash", prefix: "LS ↓ + " },
+  },
   swing: { keyboard: "MOUSE", touch: "DRAG", gamepad: "RS" },
   aim: { keyboard: "MOUSE", touch: "DRAG", gamepad: "RS" },
   "swing-up": { keyboard: "MOUSE ↑", touch: "DRAG ↑", gamepad: "RS ↑" },
   "swing-down": { keyboard: "MOUSE ↓", touch: "DRAG ↓", gamepad: "RS ↓" },
-  throw: { keyboard: "RIGHT CLICK", touch: "THROW", gamepad: { pad: "throw" } },
-  recall: { keyboard: "RIGHT CLICK", touch: "THROW", gamepad: { pad: "throw" } },
-  tether: { keyboard: "LEFT CLICK", touch: "HOLD", gamepad: { pad: "tether" } },
-  pause: { keyboard: "ESC", touch: "PAUSE", gamepad: { pad: "pause" } },
-  back: { keyboard: "ESC", touch: "BACK", gamepad: { pad: "back" } },
-  confirm: { keyboard: "ENTER", touch: "TAP", gamepad: { pad: "confirm" } },
+  throw: { keyboard: { keys: ["throw"], suffix: " / RIGHT CLICK" }, touch: "THROW", gamepad: { pad: "throw" } },
+  recall: { keyboard: { keys: ["throw"], suffix: " / RIGHT CLICK" }, touch: "THROW", gamepad: { pad: "throw" } },
+  tether: { keyboard: { keys: ["tether"], suffix: " / LEFT CLICK" }, touch: "HOLD", gamepad: { pad: "tether" } },
+  pause: { keyboard: keys("pause"), touch: "PAUSE", gamepad: { pad: "pause" } },
+  back: { keyboard: keys("back"), touch: "BACK", gamepad: { pad: "back" } },
+  confirm: { keyboard: keys("confirm"), touch: "TAP", gamepad: { pad: "confirm" } },
   // Tabbed menus: touch players tap the tab strip and RESUME, so touch has no prompt for these.
-  "tab-prev": { keyboard: "Q", touch: null, gamepad: { pad: "tab-prev" } },
-  "tab-next": { keyboard: "E", touch: null, gamepad: { pad: "tab-next" } },
-  "close-menu": { keyboard: "TAB / ESC", touch: null, gamepad: { pad: "back" } },
-  "playground-menu": { keyboard: "E", touch: null, gamepad: null },
-  "abilities": { keyboard: "U", touch: null, gamepad: null },
-  "quick-spawn": { keyboard: "1–8", touch: null, gamepad: null },
-  "spawn-dummy": { keyboard: "T", touch: null, gamepad: null },
-  "summon-boss": { keyboard: "B", touch: null, gamepad: null },
-  "clear-enemies": { keyboard: "K", touch: null, gamepad: null },
-  heal: { keyboard: "H", touch: null, gamepad: null },
+  "tab-prev": { keyboard: keys("tab-prev"), touch: null, gamepad: { pad: "tab-prev" } },
+  "tab-next": { keyboard: keys("tab-next"), touch: null, gamepad: { pad: "tab-next" } },
+  "close-menu": { keyboard: keys("close-menu", "back"), touch: null, gamepad: { pad: "back" } },
+  "playground-menu": { keyboard: keys("playground-menu"), touch: null, gamepad: null },
+  abilities: { keyboard: keys("abilities"), touch: null, gamepad: null },
+  "quick-spawn": { keyboard: keys("quick-spawn"), touch: null, gamepad: null },
+  "spawn-dummy": { keyboard: keys("spawn-dummy"), touch: null, gamepad: null },
+  "summon-boss": { keyboard: keys("summon-boss"), touch: null, gamepad: null },
+  "clear-enemies": { keyboard: keys("clear-enemies"), touch: null, gamepad: null },
+  heal: { keyboard: keys("heal"), touch: null, gamepad: null },
+  // Callers name it only where the platform can go fullscreen (not CrazyGames or iPhone Safari).
+  fullscreen: { keyboard: keys("fullscreen"), touch: null, gamepad: null },
 });
 
 export function promptDevice(mode: PromptInputMode): PromptDevice {
@@ -96,12 +122,18 @@ export function promptDevice(mode: PromptInputMode): PromptDevice {
 
 /** The label for one action on one device, or `null` when that device has no direct control for it. */
 export function promptLabel(action: PromptAction, device: PromptDevice, padLabel?: PadBindingLabel): string | null {
+  if (device === "keyboard") return keyboardWording(WORDING[action].keyboard);
   const wording = WORDING[action][device];
   if (wording === null) return null;
   if (typeof wording === "string") return wording;
   const resolved = padLabel?.(wording.pad);
   const glyph = resolved === undefined || resolved === "" ? wording.pad.toUpperCase() : resolved;
   return `${wording.prefix ?? ""}${glyph}${wording.suffix ?? ""}`;
+}
+
+function keyboardWording(wording: KeyboardWording): string {
+  if (typeof wording === "string") return wording;
+  return `${wording.prefix ?? ""}${wording.keys.map(keyboardLabel).join(wording.join ?? " / ")}${wording.suffix ?? ""}`;
 }
 
 /** Labels for a list of actions; actions with no direct control are dropped and duplicates merge. */
@@ -120,5 +152,5 @@ export function promptLabels(
 
 /** True when the device can trigger the action directly (otherwise a screen must offer a control for it). */
 export function promptAvailable(action: PromptAction, device: PromptDevice): boolean {
-  return WORDING[action][device] !== null;
+  return device === "keyboard" || WORDING[action][device] !== null;
 }

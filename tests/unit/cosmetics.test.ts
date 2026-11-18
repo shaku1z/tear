@@ -27,6 +27,7 @@ import type { ProgressFacts } from "../../src/domain/unlock-condition";
 import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import { COSMETIC_BACKDROPS, COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 import { AUTHORED_STAGES } from "../../src/gameplay/stages";
+import manifest from "../../config/asset-manifest.json";
 
 const facts = (over: Partial<ProgressFacts> = {}): ProgressFacts => ({
   bossDefeated: () => false,
@@ -120,6 +121,7 @@ describe("cosmetic data files", () => {
     expect(withItem({ name: "Trail 1" })).toContain("real name");
     expect(withItem({ acquire: [] })).toContain("acquire");
     expect(withItem({ acquire: [{ how: "achievement" }] })).toContain("needs an id");
+    expect(withItem({ acquire: [{ how: "collection", id: "nope" }] })).toContain("collection nope is not a collection");
     expect(withItem({ unlock: { type: "boss-defeat" } })).toContain("bossId");
     expect(withItem(trail(["#e23b3b"]))).toContain("enemy-tell");
     expect(withItem(trail(["#e0f4d8"]))).toContain("contrast");
@@ -129,6 +131,14 @@ describe("cosmetic data files", () => {
     expect(withItem({ evolves: [{ counter: "kills", at: 5, look: { glow: 9 } }] })).toContain("glow");
     expect(problems({ items: [item("trail_dusk"), item("trail_dusk")] })).toContain("duplicate item id");
     expect(problems({ tiers: [{ id: "common", price: 99_999 }] })).toContain("price");
+  });
+
+  it("takes its art ids from the asset manifest, so an item may name any drawn asset and nothing else", () => {
+    expect(COSMETIC_CATALOG.assets).toEqual(manifest.assets.map((row) => row.id));
+    const drawn = manifest.assets[0]?.id;
+    if (drawn === undefined) throw new Error("the asset manifest lists no assets");
+    expect(withItem({ asset: drawn })).not.toContain("not in the manifest");
+    expect(withItem({ asset: "not_in_the_manifest" })).toContain("asset not_in_the_manifest is not in the manifest");
   });
 
   it("allows a tell colour on a profile banner", () => {
