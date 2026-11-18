@@ -434,7 +434,7 @@ function installBossDebug(
     startFinale: startAdventureFinale,
     severFinale: () => severFinaleAnchor(false),
   });
-  Object.defineProperty(window, "__TEAR_STAGE_REST_FRAME__", {
+  Object.defineProperty(dependencies.browserWindow, "__TEAR_STAGE_REST_FRAME__", {
     configurable: true,
     value: createStageRestFrame({ dependencies, stage: stageRuntime, width: browser.width, height: browser.height }),
   });

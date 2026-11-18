@@ -12,7 +12,7 @@ export interface StageRestFrame {
 }
 
 export interface StageRestFrameOptions {
-  readonly dependencies: Pick<GameRuntimeDependencies, "Scenes" | "Backdrop" | "THEME">;
+  readonly dependencies: Pick<GameRuntimeDependencies, "Scenes" | "Backdrop" | "THEME" | "browserDocument">;
   readonly stage: Readonly<{
     current: BackdropStage & Readonly<{ id: string }>;
     platforms: readonly (BackdropPlatform & Readonly<{ floor?: boolean }>)[];
@@ -29,12 +29,12 @@ export interface StageRestFrameOptions {
  * Returns undefined until the stage's own scene covers the view.
  */
 export function createStageRestFrame(options: StageRestFrameOptions): () => StageRestFrame | undefined {
-  const { Scenes, Backdrop, THEME } = options.dependencies;
+  const { Scenes, Backdrop, THEME, browserDocument } = options.dependencies;
   const { width, height } = options;
   return () => {
     const current = options.stage.current;
     if (!Scenes.opaque(current.id)) return undefined;
-    const canvas = document.createElement("canvas");
+    const canvas = browserDocument.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
