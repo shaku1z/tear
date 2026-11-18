@@ -234,6 +234,7 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       target.cosmetics = mergeCosmeticStates(
         normalizeCosmeticState(target.cosmetics),
         normalizeCosmeticState(source.cosmetics),
+        options.getCosmeticCatalog?.(),
       );
     Object.assign(target.modes, boolMap(source.modes));
     Object.assign(target.seen, boolMap(source.seen));
