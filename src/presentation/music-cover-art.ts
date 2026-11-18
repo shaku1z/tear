@@ -1,32 +1,35 @@
-import manifest from "./assets/music-covers/covers.json";
 import { loadSceneBitmap } from "./scenes/scene-bitmap";
 import type { SceneBitmap } from "./scenes/scene-renderer";
 import type { MusicCoverView } from "./screens/contracts";
 
 /**
  * The stage paintings MUSIC covers show. assets/music-covers/covers.json owns them: one row per
- * stage, its files at every size the manifest lists and where each came from. Adding a cover is
+ * stage, its files at every size the manifest lists and where each came from, and
+ * tests/unit/music-covers.test.ts holds the folder to it file for file. Adding a cover is
  * `pnpm music:cover add`, which encodes the painting and writes its row; nothing here changes.
- * A painting is fetched the first time a cover asks for it, so nothing downloads until the MUSIC
- * screen draws; until it arrives (or if it never does) the cover keeps its hue bands. The files
- * are WebP outside the PWA precache, as scene art is.
+ * The screen needs only the files, named `<stageId>-<size>.webp`, so the manifest itself never
+ * ships. A painting is fetched the first time a cover asks for it, so nothing downloads until the
+ * MUSIC screen draws; until it arrives (or if it never does) the cover keeps its hue bands. The
+ * files are WebP outside the PWA precache, as scene art is.
  */
-const URLS: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.entries(
-    import.meta.glob<string>("./assets/music-covers/*.webp", { eager: true, query: "?url", import: "default" }),
-  ).map(([path, url]) => [path.slice(path.lastIndexOf("/") + 1), url]),
-);
+const FILE = /\/([a-z][a-z-]*)-(\d+)\.webp$/u;
 
 /** Each stage's painting, by stage id: its file URL at each size, smallest first. */
-const PAINTINGS: ReadonlyMap<string, readonly (readonly [size: number, url: string])[]> = new Map(
-  manifest.covers.map((cover) => [
-    cover.stageId,
-    cover.files
-      .map((file) => [file.size, URLS[file.file] ?? ""] as const)
-      .filter(([, url]) => url !== "")
-      .sort(([a], [b]) => a - b),
-  ]),
-);
+const PAINTINGS: ReadonlyMap<string, readonly (readonly [size: number, url: string])[]> = (() => {
+  const files = import.meta.glob<string>("./assets/music-covers/*.webp", {
+    eager: true,
+    query: "?url",
+    import: "default",
+  });
+  const byStage = new Map<string, (readonly [number, string])[]>();
+  for (const [path, url] of Object.entries(files)) {
+    const [, stageId, size] = FILE.exec(path) ?? [];
+    if (stageId === undefined || size === undefined) continue;
+    byStage.set(stageId, [...(byStage.get(stageId) ?? []), [Number(size), url] as const]);
+  }
+  for (const sizes of byStage.values()) sizes.sort(([a], [b]) => a - b);
+  return byStage;
+})();
 
 /** Whether a stage has a painting. */
 export const hasCoverPainting = (stageId: string): boolean => (PAINTINGS.get(stageId)?.length ?? 0) > 0;
