@@ -18,7 +18,8 @@ import {
   type Loadout,
   type SavedLoadout,
 } from "./cosmetic-types";
-import { isRecord, ITEM_ID } from "./identifiers";
+import { ITEM_ID } from "./identifiers";
+import { isRecord } from "./records";
 import { conditionMet, type ProgressFacts } from "./unlock-condition";
 
 const wholeNumber = (value: unknown): value is number =>

@@ -70,14 +70,9 @@ export default tseslint.config(
       "node_modules*/**",
       "vendor/**",
       "tear-crazygames/**",
-      "scripts/release-artifact.d.mts",
-      "scripts/campaign-publication-boundary.d.mts",
-      "scripts/tutorial-gold-compatibility.d.mts",
-      "scripts/build-targets.d.mts",
-      "scripts/scene/hidden-paint.d.mts",
-      "scripts/scene/package-files.d.mts",
-      "scripts/scene/pixel-checks.d.mts",
-      "scripts/scene/reports.d.mts",
+      // Hand-written types for the .mjs tools beside them (config/tool-catalogue.json lists each
+      // under "declarations"); the TypeScript projects that import them check them.
+      "scripts/**/*.d.mts",
     ],
   },
   eslint.configs.recommended,

@@ -4,14 +4,14 @@
 
 ## Design check
 
-<!-- The design check from docs/ENGINEERING_STANDARD.md. Short answers are fine. "n/a" needs a reason, for example "n/a: docs only, no rule or content changed". -->
+<!-- The design check from docs/ENGINEERING_STANDARD.md. Answer after each label; short answers are fine. "n/a" needs a reason, for example "n/a: docs only, no rule or content changed". `pnpm merge:ready` checks that no answer is missing or empty and that no "n/a" is bare (config/design-check.json sets whether it refuses or only reports). A change with nothing to design (a typo, a dependency bump) may replace the six lines with one: Design check: not applicable — <reason>. -->
 
-- **General case:** what is the general version of this, and where else does it (or will it) apply?
-- **One owner:** which single module or data file owns this rule or content now?
-- **The next one:** what does adding the second instance take?
-- **Cause:** for a fix, the cause, which other places shared it, and the check that stops it returning.
-- **Measured:** what numbers changed (time, bytes, frame cost, CI minutes), on which profile?
-- **Removed:** what this deleted or replaced (duplicates, dead code, old paths).
+- **General case:** <!-- What is the general version of this, and where else does it (or will it) apply? -->
+- **One owner:** <!-- Which single module or data file owns this rule or content now? -->
+- **The next one:** <!-- What does adding the second instance take? -->
+- **Cause:** <!-- For a fix: the cause, which other places shared it, and the check that stops it returning. -->
+- **Measured:** <!-- What numbers changed (time, bytes, frame cost, CI minutes), on which profile? -->
+- **Removed:** <!-- What this deleted or replaced (duplicates, dead code, old paths). -->
 
 ## Checks run here
 

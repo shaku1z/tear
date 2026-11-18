@@ -857,6 +857,13 @@
       ],
       "duration": "minutes"
     },
+    "music:cover": {
+      "purpose": "MUSIC covers: encode a stage painting at every size covers.json lists and write its row",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "under-a-minute"
+    },
     "scene": {
       "purpose": "Painted stage backgrounds: validate, build, contrast, contact sheet and in-game preview of scene packages",
       "effects": [
@@ -924,6 +931,13 @@
     },
     "merge:ready": {
       "purpose": "Says whether a pull request may merge: main green and its own check, or a passed batch, current against main; --refresh starts a fresh check",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds"
+    },
+    "design-check:report": {
+      "purpose": "Lists merged pull requests the design-check gate would have refused, for reviewing false refusals before enforce",
       "effects": [
         "network"
       ],
@@ -1461,6 +1475,16 @@
         "lint"
       ]
     },
+    "scripts/design-check-report.mjs": {
+      "purpose": "Replays the design-check gate over merged pull requests behind pnpm design-check:report; changes nothing",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds",
+      "via": [
+        "design-check:report"
+      ]
+    },
     "scripts/merge-ready.mjs": {
       "purpose": "Merge readiness behind pnpm merge:ready: a red main stops merges and a stale pass is not a pass",
       "effects": [
@@ -1667,6 +1691,16 @@
         "scene"
       ]
     },
+    "scripts/music-cover.mjs": {
+      "purpose": "The pnpm music:cover command; add encodes one painting into src/presentation/assets/music-covers and writes its covers.json row",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "music:cover"
+      ]
+    },
     "scripts/serve.py": {
       "purpose": "Loopback-only static server for local tools such as the oracle workbench",
       "effects": [
@@ -1806,6 +1840,13 @@
       "scripts/build-target.mjs",
       "tests/unit/crazygames-artifact-scope.test.mjs"
     ],
+    "scripts/design-check.mjs": [
+      "scripts/design-check-report.mjs",
+      "scripts/merge-ready.mjs",
+      "tests/unit/design-check.test.mjs",
+      "tests/unit/merge-ready.test.mjs",
+      "tests/unit/pull-request-template.test.mjs"
+    ],
     "scripts/game-reference-export-preflight.mjs": [
       "scripts/export-game-reference.mjs",
       "tests/unit/game-reference-export-preflight.test.mjs"
@@ -1903,6 +1944,7 @@
   "declarations": [
     "scripts/build-targets.d.mts",
     "scripts/campaign-publication-boundary.d.mts",
+    "scripts/music-cover.d.mts",
     "scripts/release-artifact.d.mts",
     "scripts/scene/hidden-paint.d.mts",
     "scripts/scene/package-files.d.mts",

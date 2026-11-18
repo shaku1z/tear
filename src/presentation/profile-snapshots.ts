@@ -1,3 +1,4 @@
+import { bossKillStat } from "../domain/progress-facts";
 import type { ProfileScreenView, ReplayView, StatView } from "./screens/contracts";
 
 export interface ModeViewSource {
@@ -326,7 +327,7 @@ export function buildProfileSnapshot(input: {
             bosses: input.bosses.map((boss) => ({
               id: boss.id,
               label: boss.name,
-              selected: input.stat("kill" + boss.id.charAt(0).toUpperCase() + boss.id.slice(1)) > 0,
+              selected: input.stat(bossKillStat(boss.id)) > 0,
             })),
           },
         }

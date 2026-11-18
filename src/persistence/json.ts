@@ -1,3 +1,5 @@
+import { isRecord } from "../domain/records";
+
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
 export interface JsonObject {
@@ -90,9 +92,7 @@ export function parseStoredJson(text: string, maxCharacters = 5_000_000): Valida
 }
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
+  return isRecord(value) ? value : null;
 }
 
 export function safeInteger(value: unknown, fallback: number): number {

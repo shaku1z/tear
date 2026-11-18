@@ -74,7 +74,10 @@ applies them and answers yes or no with the reason; the merge helper calls it.
 3. **Every check is of the change merged with `main` as it is when the check
    starts.** Validate checks out the pull request's head, merges current `main`
    itself, and records both commits on the run as the `checked` annotation.
-   - A re-run therefore also tests current `main`.
+   - "Re-run all jobs" therefore also tests current `main`. "Re-run failed
+     jobs" keeps the first attempt's scope job, so it re-checks the `main` that
+     attempt recorded; `pnpm merge:ready` treats it as stale once `main` has
+     moved in files the change touches.
    - Neither a re-run nor a reopened pull request reuses GitHub's prepared
      merge ref.
    - The release artifact is named after the commit actually built.
@@ -116,6 +119,26 @@ applies them and answers yes or no with the reason; the merge helper calls it.
      hour of its push, before its run may have started.
    - The pre-push guard allows a deletion only for a name that is exactly a
      batch branch (owner decision, 2026-11-16).
+5. **The design check is answered.** The description must give a non-empty
+   answer after each of the six design-check labels of
+   [ENGINEERING_STANDARD.md](ENGINEERING_STANDARD.md) (general case, one owner,
+   the next one, cause, measured, removed). HTML comments do not count, and
+   "n/a" counts only with a reason after it. A change with nothing to design
+   (a typo, a dependency bump) may carry one line instead:
+   `Design check: not applicable — <reason>`. That line is accepted and printed.
+   - The gate's mode is in `config/design-check.json`: `off`, `observe` or
+     `enforce`. It is read from `origin/main`'s copy, never the working tree,
+     so a branch cannot switch its own gate off.
+   - In `observe`, the default for now, `merge:ready` prints
+     "would refuse: <reason>" and lets the merge through.
+   - `pnpm design-check:report` lists every merged pull request since
+     observe began that the gate would have refused, so false refusals can be
+     reviewed.
+   - Switching to `enforce` is the lead's decision, after a few days of
+     observe with no false refusals.
+   - The labels, the rule and the mode reader live once, in
+     `scripts/design-check.mjs`. The pull request template test checks the
+     template and the standard against that list.
 
 ## Local boundary
 

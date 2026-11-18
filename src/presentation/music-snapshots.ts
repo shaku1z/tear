@@ -12,6 +12,7 @@ import {
   musicRoutes,
   songStage,
 } from "./music-collections";
+import { stageCover } from "./music-cover-art";
 
 const musicModeNotes: Readonly<Record<string, string>> = {
   adaptive: "LAYERS FOLLOW THE FIGHT",
@@ -93,10 +94,10 @@ export function buildMusicPlaybackRows(settings: MusicPlaybackSettings): readonl
   ];
 }
 
-/** A song's art: the hue and chapter glyph of the stage it plays in, if any. */
+/** A song's art: the hue, chapter glyph and painting of the stage it plays in, if any. */
 function songArt(workId: string, routing: MusicRoutingManifest): MusicCoverView {
   const stage = songStage(workId, routing);
-  return stage ? { hues: [stage.accent], glyph: stage.glyph } : null;
+  return stage ? stageCover(stage) : null;
 }
 
 export interface MusicScreenSource {

@@ -133,6 +133,13 @@ allowlist and cycle baseline may only shrink (`--update` lowers them; growth nee
 a reviewed `--allow-increase <file>`). `--explain <file>` lists the rules, roles
 and allowlisted edges that apply to a file; `pnpm test:architecture` covers the gate.
 `pnpm test:determinism` must stay green for any refactor that claims no behaviour change.
+A test or check runs once and that run is its verdict. No retries: none in test
+configurations, test options, runner flags, the check list or workflows
+(`tests/unit/pitfall-guards.test.mjs` fails on one), and no re-running an
+unchanged run hoping it passes. Fix a flaky test at its cause, usually by waiting
+on a game state instead of a time, or delete it and write the reason and the gap
+it leaves in docs/PITFALLS.md. After three failed rounds of fixing one flaky
+test, stop and bring in the lead.
 Docs-only changes: `pnpm check:docs`, `pnpm test:docs`,
 `pnpm check:terminology`. Use the product names in
 `config/terminology-registry.json` in anything players or docs see.
