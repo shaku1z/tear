@@ -21,7 +21,7 @@ import { expect } from "vitest";
 export const DEFAULT_PROPERTY_SEED = 1117;
 
 /** Inputs tried per property: pure functions of data are cheap, runs of the game are not. */
-export const PROPERTY_RUNS = Object.freeze({ data: 200, simulation: 6 });
+export const PROPERTY_RUNS = Object.freeze({ data: 200, simulation: 12 });
 export type PropertyBudget = keyof typeof PROPERTY_RUNS;
 
 export interface PropertySettings {

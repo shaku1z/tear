@@ -47,6 +47,51 @@ covers routine work. Do not run
 `pnpm deploy` expecting a deployment: it only builds and runs a Wrangler dry run
 (see [DEPLOYMENT.md](DEPLOYMENT.md)).
 
+## Property tests
+
+A property test states a rule that must hold for every input ("a saved profile loads back the same") and lets
+[fast-check](https://fast-check.dev) try many generated inputs. On a failure it shrinks the input to a small one that
+still fails.
+
+- **Where:** `tests/unit/<area>.property.test.ts`. The normal unit run, the CI shards and `pnpm test:related` pick
+  them up like any other unit test.
+- **How:** import `checkProperty` (or `checkAsyncProperty`) and `fc` from `tests/unit/property-harness.ts`; never call
+  `fc.assert` or import `fast-check` yourself (`tests/unit/property-harness.test.ts` fails if you do). Shared input
+  generators (any JSON, stored text, game actions) are in `tests/unit/property-arbitraries.ts`; add yours there when a
+  second file needs it.
+- **Seed:** fixed, so CI and every machine try the same inputs. A failure prints the seed, the shrunk input, the
+  reason and the exact command that replays that one input.
+- **Budget:** `checkProperty(property)` tries 200 inputs, for rules over plain data; `checkProperty(property,
+  "simulation")` tries 12, for rules that run the game. Keep a property file within a few seconds.
+- **Deeper search before a pull request:** `TEAR_PROPERTY_SCALE=50` multiplies every budget and `TEAR_PROPERTY_SEED=7`
+  tries other inputs; add `--testTimeout=0`, because a deep run is longer than the 5 s test limit.
+
+```ts
+import { checkProperty, fc } from "./property-harness";
+
+it("sorting twice changes nothing", () => {
+  checkProperty(
+    fc.property(fc.array(fc.integer()), (values) => {
+      const sorted = [...values].sort((a, b) => a - b);
+      expect([...sorted].sort((a, b) => a - b)).toEqual(sorted);
+    }),
+  );
+});
+```
+
+Four things that go wrong:
+
+- **Do not change a generated input.** fast-check prints the input after the run, so a changed one hides what failed.
+  Copy it first.
+- **Take lists and ranges from the game** (`WEAPON_IDS`, `RUN_MODE_IDS`, the input scales), so the next weapon or
+  mode is covered without editing the test.
+- **Compare a stored copy as text.** JSON writes `-0` as `0`, so `toEqual` on a value read back from storage fails on
+  a difference no game rule can see.
+- **Keep long inputs cheap to shrink.** Build a long string by repeating a short generated piece; shrinking a
+  16,000-character generated string takes minutes.
+
+A property that finds a bug lands with the fix, in its own pull request that names the bug.
+
 ## Where things live
 
 | Path | Contents |
