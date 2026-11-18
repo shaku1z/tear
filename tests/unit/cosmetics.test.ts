@@ -121,6 +121,7 @@ describe("cosmetic data files", () => {
     expect(withItem({ name: "Trail 1" })).toContain("real name");
     expect(withItem({ acquire: [] })).toContain("acquire");
     expect(withItem({ acquire: [{ how: "achievement" }] })).toContain("needs an id");
+    expect(withItem({ acquire: [{ how: "collection", id: "nope" }] })).toContain("collection nope is not a collection");
     expect(withItem({ unlock: { type: "boss-defeat" } })).toContain("bossId");
     expect(withItem(trail(["#e23b3b"]))).toContain("enemy-tell");
     expect(withItem(trail(["#e0f4d8"]))).toContain("contrast");
