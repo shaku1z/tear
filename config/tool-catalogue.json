@@ -1970,6 +1970,11 @@
       "tests/unit/tutorial-production-ghost.test.ts",
       "vite.config.ts"
     ],
+    "scripts/test-files.mjs": [
+      "tests/unit/pitfall-guards.test.mjs",
+      "vitest.config.ts",
+      "vitest.endurance.config.ts"
+    ],
     "scripts/wiki-data-export.mjs": [
       "scripts/export-game-reference.mjs"
     ],
@@ -1986,6 +1991,7 @@
     "scripts/scene/package-files.d.mts",
     "scripts/scene/pixel-checks.d.mts",
     "scripts/scene/reports.d.mts",
+    "scripts/test-files.d.mts",
     "scripts/tutorial-gold-compatibility.d.mts"
   ]
 }
