@@ -20,9 +20,6 @@ function controllerAt(screen: AppScreen): AppStateController {
       confirmquit: ["playing", "paused", "confirmquit"],
       pgmenu: ["playing", "pgmenu"],
       pglab: ["playing", "pglab"],
-      // Publication and Support are selected from a Vault row in Profile.
-      ghostpublication: ["profile", "ghostpublication"],
-      ghostsupport: ["profile", "ghostsupport"],
       replay: ["replay"],
     };
     for (const next of path[screen] ?? [screen])

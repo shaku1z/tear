@@ -317,7 +317,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
-  const { Cloud, FirebaseProvider, ghostPublication } = createCloud({
+  const { Cloud, FirebaseProvider } = createCloud({
     target,
     getPlatform: () => platform.services,
     getProfile: () => PROFILE,
@@ -396,7 +396,6 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     Clipper: clipper,
     Cloud,
     Colossus,
-    ghostPublication,
     DAILY,
     DIAG,
     Echo,

@@ -197,7 +197,6 @@ describe("song preview", () => {
     const navigation = createLiveScreenNavigation({
       app: new AppStateController(createSurfaceAvailability("release")),
       input: { allowLock: false, discardSemanticInput: () => undefined },
-      beat: { screenChanged: () => undefined },
       runScreenFact: () => undefined,
     });
     navigation.setScreen("music");
