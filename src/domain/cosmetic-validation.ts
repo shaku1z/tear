@@ -14,7 +14,6 @@ import {
   MAX_FLASHES_PER_SECOND,
   MAX_LOADOUT_NAME,
   MAX_LOADOUTS,
-  MAX_OWNED,
   MAX_PRICE,
   SLOT_GROUPS,
   COSMETIC_STATE_VERSION,
@@ -25,7 +24,7 @@ import {
   type LookFamily,
   type ParamSpec,
 } from "./cosmetic-types";
-import { isItemId, isReferenceId } from "./identifiers";
+import { isItemId, isReferenceId, MAX_ID_LENGTH } from "./identifiers";
 import { isRecord } from "./records";
 import { conditionProblems } from "./unlock-condition";
 
@@ -94,14 +93,18 @@ export function lookProblems(look: Look, family: LookFamily, where: string, opti
 /** Whether a closed list of names holds the value, without widening the list's type. */
 const listed = (names: readonly string[], value: unknown): boolean => names.some((name) => name === value);
 
-function acquireProblems(entries: readonly Acquisition[], where: string): string[] {
+function acquireProblems(entries: readonly Acquisition[], where: string, collections: readonly string[]): string[] {
   if (entries.length === 0) return [`${where}: acquire must list at least one way`];
   return entries.flatMap((entry: unknown) => {
     if (!isRecord(entry)) return [`${where}: each acquire entry must be an object`];
     const how = entry.how;
     if (how === "shards") return [];
-    if (typeof how === "string" && listed(ACQUIRE_KINDS_WITH_ID, how))
-      return isItemId(entry.id) ? [] : [`${where}: acquire ${how} needs an id`];
+    if (typeof how === "string" && listed(ACQUIRE_KINDS_WITH_ID, how)) {
+      if (!isItemId(entry.id)) return [`${where}: acquire ${how} needs an id`];
+      return how === "collection" && !listed(collections, entry.id)
+        ? [`${where}: acquire collection ${entry.id} is not a collection`]
+        : [];
+    }
     if (how === "code") return isItemId(entry.campaign) ? [] : [`${where}: acquire code needs a campaign`];
     return [`${where}: unknown acquire kind`];
   });
@@ -117,7 +120,13 @@ function itemProblems(item: CosmeticItem, catalog: CosmeticCatalog, backdrops: R
     problems.push(`${where}: needs a real name, not a numbered stand-in`);
   if (!slot || !family) return [...problems, `${where}: unknown slot ${item.slot}`];
   if (!catalog.tiers.some((tier) => tier.id === item.tier)) problems.push(`${where}: unknown tier ${item.tier}`);
-  problems.push(...acquireProblems(item.acquire, where));
+  problems.push(
+    ...acquireProblems(
+      item.acquire,
+      where,
+      catalog.collections.map((collection) => collection.id),
+    ),
+  );
   if (item.collection !== undefined && !catalog.collections.some((entry) => entry.id === item.collection))
     problems.push(`${where}: unknown collection ${item.collection}`);
   if (item.unlock) problems.push(...conditionProblems(item.unlock, where));
@@ -329,25 +338,37 @@ export function parseCosmeticCatalog(raw: RawCosmeticCatalog, backdrops: Readabi
 /** A time later than any real save time, so the worst case is never shorter than a real record. */
 const LATEST_PLAUSIBLE_TIME = 9_999_999_999_999;
 
-/** The largest record a player can produce, in characters: every cap reached at once. Must fit MAX_STATE_CHARS. */
+/**
+ * The largest cosmetic record this catalog allows, in characters. It must fit MAX_STATE_CHARS.
+ *
+ * The bound is the catalog, not MAX_OWNED (which only refuses a purchase). The worst case is every item
+ * owned, seen and counted, plus MAX_LOADOUTS loadouts with every slot filled.
+ * Every value is at its longest: the highest price, the latest plausible time, the largest counter, ids at
+ * MAX_ID_LENGTH where a player chooses them, and loadout names that each escape to six characters in JSON.
+ *
+ * Outside this bound: owned items and counters for ids this catalog does not list. Neither is ever dropped
+ * (`mergeCosmeticStates`), because they are a newer client's purchases and progress. That newer build checks
+ * its own catalog's worst case, so a profile holding its ids fits the budget that build was checked against.
+ */
 export function worstCaseStateSize(catalog: CosmeticCatalog): number {
-  const id = "x".repeat(MAX_LOADOUT_NAME);
-  const owned = Object.fromEntries(
-    Array.from({ length: MAX_OWNED }, (_, index) => [`${id}${String(index)}`, MAX_PRICE]),
-  );
-  const slots = Object.fromEntries(catalog.slots.map((slot) => [slot.id, { id, at: LATEST_PLAUSIBLE_TIME }]));
+  const items = catalog.items.map((item) => item.id);
+  const longestItem = items.reduce((longest, id) => (id.length > longest.length ? id : longest), "");
+  const at = LATEST_PLAUSIBLE_TIME;
+  const every = (value: number) => Object.fromEntries(items.map((id) => [id, value]));
+  const slots = Object.fromEntries(catalog.slots.map((slot) => [slot.id, { id: longestItem, at }]));
+  const loadoutId = (index: number) => `${String(index)}_`.padEnd(MAX_ID_LENGTH, "x");
   const loadouts = Object.fromEntries(
     Array.from({ length: MAX_LOADOUTS }, (_, index) => [
-      `loadout_${String(index)}`,
-      { name: "x".repeat(MAX_LOADOUT_NAME), nameAt: LATEST_PLAUSIBLE_TIME, deletedAt: LATEST_PLAUSIBLE_TIME, slots },
+      loadoutId(index),
+      { name: "\u0001".repeat(MAX_LOADOUT_NAME), nameAt: at, deletedAt: at, slots },
     ]),
   );
   return JSON.stringify({
     v: COSMETIC_STATE_VERSION,
-    owned,
-    seen: owned,
-    counters: owned,
+    owned: every(MAX_PRICE),
+    seen: every(at),
+    counters: every(Number.MAX_SAFE_INTEGER),
     loadouts,
-    active: { id: "loadout_0", at: LATEST_PLAUSIBLE_TIME },
+    active: { id: loadoutId(0), at },
   }).length;
 }

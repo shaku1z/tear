@@ -356,10 +356,28 @@ export function placeBossHitShape(
   }
 }
 
-/** Ticks since the current strike started: since the active stage began, or since the last repeat. */
-function strikeElapsed(attack: BossAttack<string | number, unknown>, elapsed: number): number {
+/**
+ * Where the active stage is in its strikes. `repeat` counts them from 0. `ticks` is how long the current
+ * strike has been live (it stops counting when the strike goes off). `live` is false once a repeating strike
+ * has given way to the warning of the next one. `warned` is how far through that warning it is, or null
+ * when no further strike is coming.
+ */
+interface BossStrike {
+  readonly repeat: number;
+  readonly ticks: number;
+  readonly live: boolean;
+  readonly warned: number | null;
+}
+
+function strikeAt(attack: BossAttack<string | number, unknown>, elapsed: number): BossStrike {
   const every = attack.hit?.every ?? 0;
-  return every > 0 ? elapsed % every : elapsed;
+  if (every === 0) return { repeat: 0, ticks: elapsed, live: true, warned: null };
+  const repeat = Math.floor(elapsed / every);
+  const liveTicks = every - (attack.hit?.repeatTell ?? 0);
+  const into = elapsed % every;
+  if (into < liveTicks) return { repeat, ticks: into, live: true, warned: null };
+  const comes = (repeat + 1) * every < attack.timing.active;
+  return { repeat, ticks: liveTicks, live: false, warned: comes ? into - liveTicks : null };
 }
 
 /**
@@ -374,10 +392,9 @@ export function bossAttackHit<Phase extends string | number, Place>(
   const run = state.run;
   const attack = currentBossAttack(table, state);
   if (run === null || attack?.hit === undefined || run.stage !== "active" || run.landed) return null;
-  const travelled =
-    attack.hit.shape.kind === "travel"
-      ? attack.hit.shape.speed * strikeElapsed(attack, context.tick - run.stageTick)
-      : 0;
+  const strike = strikeAt(attack, context.tick - run.stageTick);
+  if (!strike.live) return null;
+  const travelled = attack.hit.shape.kind === "travel" ? attack.hit.shape.speed * strike.ticks : 0;
   const area = placeBossHitShape(attack.hit.shape, run, context.boss, context.arena.groundY, travelled);
   return { area, damage: attack.hit.damage, parryable: attack.hit.parryable };
 }
@@ -429,6 +446,12 @@ export interface BossAttackPose {
   readonly target: Point;
   /** Where the move's hit sits now (also after it landed), or null for a move with no hit. */
   readonly area: BossHitArea | null;
+  /** Which strike of a repeating move this is, from 0. Always 0 for a move that strikes once. */
+  readonly repeat: number;
+  /** False while a repeating move is between strikes: its hit is off and `area` is where the last one ended. */
+  readonly striking: boolean;
+  /** How far through the warning of its next repeat the move is, 0 to 1, or null outside one. */
+  readonly repeatWarning: number | null;
 }
 
 export function bossAttackPose<Phase extends string | number, Place>(
@@ -442,11 +465,22 @@ export function bossAttackPose<Phase extends string | number, Place>(
   const elapsed = context.tick - run.stageTick;
   const progress = Math.min(1, Math.max(0, elapsed / Math.max(1, stageLength(table, attack, run))));
   const shape = attack.hit?.shape;
-  const travelled =
-    shape?.kind === "travel" && run.stage === "active" ? shape.speed * strikeElapsed(attack, elapsed) : 0;
+  const strike = run.stage === "active" ? strikeAt(attack, elapsed) : null;
+  const travelled = shape?.kind === "travel" && strike !== null ? shape.speed * strike.ticks : 0;
   const area =
     shape === undefined ? null : placeBossHitShape(shape, run, context.boss, context.arena.groundY, travelled);
-  return { attackId: attack.id, stage: run.stage, progress, facing: run.facing, target: run.target, area };
+  const warned = strike?.warned ?? null;
+  return {
+    attackId: attack.id,
+    stage: run.stage,
+    progress,
+    facing: run.facing,
+    target: run.target,
+    area,
+    repeat: strike?.repeat ?? 0,
+    striking: strike?.live ?? false,
+    repeatWarning: warned === null ? null : warned / Math.max(1, attack.hit?.repeatTell ?? 0),
+  };
 }
 
 /** True while the boss is exposed (a move's punish stage or a forced exposure): hits on it are scaled. */
@@ -550,7 +584,7 @@ function tellArea(attack: BossAttack<string | number, unknown>, run: BossAttackR
   if (shape === undefined) return boss;
   if (shape.kind !== "travel") return toBox(placeBossHitShape(shape, run, boss, groundY, 0));
   const every = attack.hit?.every ?? 0;
-  const path = shape.speed * (every > 0 ? every : attack.timing.active);
+  const path = shape.speed * (every > 0 ? every - (attack.hit?.repeatTell ?? 0) : attack.timing.active);
   const start = run.origin.x + run.facing * boss.hw;
   return {
     x: start + run.facing * (path / 2 + shape.hw),
@@ -592,6 +626,29 @@ export function bossAttackTells<Phase extends string | number, Place>(
   const exposed = stage === "exposed";
   const area = exposed ? context.boss : tellArea(attack, run, context.boss, context.arena.groundY);
   const length = stageLength(table, attack, run);
+  if (stage === "active") {
+    // A repeating strike: each repeat is a tell of its own, so its warning is measured like any other.
+    const strike = strikeAt(attack, context.tick - run.stageTick);
+    const lead = attack.hit?.repeatTell ?? 0;
+    if (!strike.live && strike.warned === null) return Object.freeze([]);
+    const repeat = strike.live ? strike.repeat : strike.repeat + 1;
+    return Object.freeze([
+      Object.freeze({
+        id: repeat === 0 ? attack.id : `${attack.id}:${String(repeat + 1)}`,
+        attackId: attack.id,
+        mark: attack.tell.mark,
+        stage: strike.live ? ("active" as const) : ("warning" as const),
+        x: area.x,
+        y: area.y,
+        hw: area.hw,
+        hh: area.hh,
+        dir: run.facing,
+        leadSeconds: (repeat === 0 ? attack.timing.tell : lead) / BOSS_ATTACK_TICKS_PER_SECOND,
+        remainingSeconds: strike.live ? 0 : (lead - (strike.warned ?? 0)) / BOSS_ATTACK_TICKS_PER_SECOND,
+        damaging: attack.hit !== undefined,
+      }),
+    ]);
+  }
   return Object.freeze([
     Object.freeze({
       id: exposed ? `${attack.id}:exposed` : attack.id,
@@ -604,8 +661,7 @@ export function bossAttackTells<Phase extends string | number, Place>(
       hh: area.hh,
       dir: run.facing,
       leadSeconds: (stage === "exposed" ? length : attack.timing.tell) / BOSS_ATTACK_TICKS_PER_SECOND,
-      remainingSeconds:
-        stage === "active" ? 0 : Math.max(0, run.stageTick + length - context.tick) / BOSS_ATTACK_TICKS_PER_SECOND,
+      remainingSeconds: Math.max(0, run.stageTick + length - context.tick) / BOSS_ATTACK_TICKS_PER_SECOND,
       damaging: !exposed && attack.hit !== undefined,
     }),
   ]);

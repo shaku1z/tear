@@ -142,7 +142,9 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     },
     coachAction: (command) => loaded?.tutorial.coachAction(command) ?? false,
     showPracticeTab: (tab) => {
+      // Each Drills tab is its own list, so a new tab opens at its top.
       loaded?.tutorial.showPracticeTab(tab);
+      context.resetScroll();
     },
     selectBoss: (id, retained) => loaded?.tutorial.selectBoss(id, retained) ?? false,
     selectEnemy: (id) => loaded?.tutorial.selectEnemy(id) ?? false,
@@ -154,6 +156,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     },
     demonstrate: () => loaded?.tutorial.demonstrate() ?? false,
     captureSession: () => loaded?.tutorial.captureSession(),
+    freePracticeCourse: () => loaded?.tutorial.freePracticeCourse(),
     validateSession: (value, weaponId, actors, candidate) => {
       if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session");
       loaded?.tutorial.validateSession(value, weaponId, actors, candidate);

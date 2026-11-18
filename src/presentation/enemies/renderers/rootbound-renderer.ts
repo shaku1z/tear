@@ -274,7 +274,7 @@ function drawMove(
     case "regrowth":
       // Kneeling into the earth, as when planting; while it channels a root wave leaves its front.
       if (stage !== "recover") mound(ctx, ink, boss.x, ground, stage === "tell" ? k : 1);
-      if (stage === "active" && box !== null) spikes(ctx, ink, box.x, ground, box.hw, box.hh * 2.4, 1);
+      if (pose.striking && box !== null) spikes(ctx, ink, box.x, ground, box.hw, box.hh * 2.4, 1);
       return;
     case "last-spring":
       // The floor wakes along the whole band: thorns rise through the tell and stand at the strike.

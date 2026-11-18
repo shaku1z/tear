@@ -7,6 +7,7 @@
  * and merges (max / union / newest) converge on every device.
  */
 import {
+  type Acquisition,
   COSMETIC_STATE_VERSION,
   DEFAULT_LOADOUT_ID,
   MAX_LOADOUT_NAME,
@@ -20,7 +21,7 @@ import {
 } from "./cosmetic-types";
 import { isItemId } from "./identifiers";
 import { hasOwnKey, isRecord, ownValue } from "./records";
-import { conditionMet, type ProgressFacts } from "./unlock-condition";
+import { conditionMet, type ProgressFacts, type UnlockCondition } from "./unlock-condition";
 
 const wholeNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
@@ -51,9 +52,14 @@ function slotMap(value: unknown): Record<string, EquippedEntry> {
   return output;
 }
 
+/** The entries of `map` whose key passes `keep`. */
+function keepKeys(map: Readonly<Record<string, number>>, keep: (id: string) => boolean): Record<string, number> {
+  return Object.fromEntries(Object.entries(map).filter(([id]) => keep(id)));
+}
+
 /**
  * Any stored or remote value to a valid state. Malformed entries are dropped, never thrown on. Unknown
- * item, slot and loadout ids are kept (a newer client may know them) and nothing is dropped for being
+ * item, slot and loadout ids are kept (a newer client may know them) and no owned item is dropped for being
  * too many, so a save never loses an item depending on key order.
  */
 export function normalizeCosmeticState(value: unknown): CosmeticState {
@@ -116,17 +122,32 @@ function mergeNumbers(
   return output;
 }
 
-/** Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest active loadout. */
-export function mergeCosmeticStates(left: CosmeticState, right: CosmeticState): CosmeticState {
+/**
+ * Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest
+ * active loadout. Order-independent: merge(a, b) equals merge(b, a).
+ *
+ * Owned items and counters are never dropped, whatever their id: dropping an owned item would refund its
+ * shards with nobody seeing why, and a counter may be a newer client's progress toward an item this build does
+ * not list yet, which an older device merging the profile must not erase. With the catalog, `seen` is kept
+ * for its items only: a seen mark may name an item the player does not own (looking at a shelf clears its NEW
+ * mark before buying), and losing one for an id this build does not list only shows NEW once more. Each entry
+ * is judged alone, so the merge stays commutative, associative and idempotent.
+ */
+export function mergeCosmeticStates(
+  left: CosmeticState,
+  right: CosmeticState,
+  catalog?: CosmeticCatalog,
+): CosmeticState {
   const loadouts: Record<string, SavedLoadout> = { ...left.loadouts };
   for (const [id, entry] of Object.entries(right.loadouts)) {
     const current = ownValue(loadouts, id);
     loadouts[id] = current ? mergeLoadout(current, entry) : entry;
   }
+  const seen = mergeNumbers(left.seen, right.seen, Math.min);
   return {
     v: COSMETIC_STATE_VERSION,
     owned: mergeNumbers(left.owned, right.owned, Math.max),
-    seen: mergeNumbers(left.seen, right.seen, Math.min),
+    seen: catalog ? keepKeys(seen, (id) => catalog.items.some((item) => item.id === id)) : seen,
     counters: mergeNumbers(left.counters, right.counters, Math.max),
     loadouts,
     active: newer(right.active, left.active) ? right.active : left.active,
@@ -207,6 +228,17 @@ export function purchaseCosmetic(
 }
 
 /**
+ * The profile fact an acquire entry grants on, in the shared condition language, or null when it is not one
+ * (shards are a purchase, a collection is completed by ownership, the other kinds are not live yet). Grants and
+ * the shipped-data reference check both read it, so an achievement or boss id is judged one way everywhere.
+ */
+export function acquireCondition(entry: Acquisition): UnlockCondition | null {
+  if (entry.how === "achievement") return { type: "achievement", id: entry.id };
+  if (entry.how === "boss") return { type: "boss-defeat", bossId: entry.id };
+  return null;
+}
+
+/**
  * Items the player has earned without paying: an achievement, a defeated boss, or a finished collection
  * (its reward). Challenge, mastery, code and bundle grants arrive through their own receipts later.
  */
@@ -221,10 +253,9 @@ export function claimableGrants(catalog: CosmeticCatalog, state: CosmeticState, 
     .filter((item) => !owned(item.id) && !(item.unlock && !conditionMet(item.unlock, facts)))
     .filter((item) =>
       item.acquire.some((entry) => {
-        if (entry.how === "achievement") return facts.achievementUnlocked(entry.id);
-        if (entry.how === "boss") return facts.bossDefeated(entry.id);
-        if (entry.how === "collection") return complete(entry.id);
-        return false;
+        const condition = acquireCondition(entry);
+        if (condition) return conditionMet(condition, facts);
+        return entry.how === "collection" && complete(entry.id);
       }),
     )
     .map((item) => item.id);
