@@ -65,7 +65,7 @@ const ANNEX_ROWS = {
 } as const satisfies Record<
   WeaponId,
   {
-    arena: TutorialLesson["arena"];
+    arena: NonNullable<TutorialLesson["arena"]>;
     keys: readonly string[];
     controls: readonly PromptAction[];
     instructions: readonly string[];
@@ -78,7 +78,7 @@ export interface TutorialWeaponAnnex {
   readonly name: string;
   /** The name in capitals, as the Drills list shows it. */
   readonly title: string;
-  readonly arena: TutorialLesson["arena"];
+  readonly arena: NonNullable<TutorialLesson["arena"]>;
   readonly keys: readonly string[];
   readonly controls: readonly PromptAction[];
   /** The weapon's drill moves, one step each. */
