@@ -13,7 +13,7 @@ import {
 } from "./json";
 import { invalid, unsupportedVersion, type MigrationResult } from "./result";
 
-export const PROFILE_ENVELOPE_VERSION = 5;
+export const PROFILE_ENVELOPE_VERSION = 4;
 const KNOWN_FIELDS = new Set([
   "schema",
   "schemaVersion",
@@ -57,14 +57,14 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
   // Version 4 adds the cosmetics ledger. Older saves get the empty default; a present value is
   // always re-validated (malformed entries dropped, unknown ids kept) before it reaches game code.
   const cosmetics =
-    version < 4 || profile.value.cosmetics !== undefined
+    version < PROFILE_ENVELOPE_VERSION || profile.value.cosmetics !== undefined
       ? validateJsonObject(normalizeCosmeticState(profile.value.cosmetics))
       : null;
   if (cosmetics && !cosmetics.ok) return invalid(cosmetics.error);
-  // Version 5 adds the Gauntlet personal bests (one per difficulty). Older saves get none; a present
-  // value is re-validated the same way, malformed entries dropped.
+  // The Gauntlet personal bests (one per difficulty) are an optional field, so they need no version:
+  // older builds carry the field through unchanged. A present value is re-validated, malformed entries dropped.
   const gauntletBest =
-    version < 5 || profile.value.gauntletBest !== undefined
+    profile.value.gauntletBest !== undefined
       ? validateJsonObject(normalizeGauntletBests(profile.value.gauntletBest))
       : null;
   if (gauntletBest && !gauntletBest.ok) return invalid(gauntletBest.error);

@@ -70,7 +70,7 @@ describe("profile envelope: the version 4 cosmetics ledger", () => {
         extensions: { keep: true },
       },
     });
-    expect(PROFILE_ENVELOPE_VERSION).toBe(5);
+    expect(PROFILE_ENVELOPE_VERSION).toBe(4);
   });
 
   it("gives a legacy save an empty ledger and drops malformed cosmetics from a current one", () => {

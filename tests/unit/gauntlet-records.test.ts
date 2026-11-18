@@ -49,28 +49,26 @@ describe("Gauntlet personal bests", () => {
   });
 });
 
-describe("profile envelope version 5", () => {
-  it("gives a version 4 save empty Gauntlet bests and keeps everything else", () => {
+describe("Gauntlet bests in the profile", () => {
+  it("needs no envelope version: a save without bests migrates unchanged, unknown fields kept", () => {
     const result = migrateProfileEnvelope({
       schema: "tear.profile",
-      schemaVersion: 4,
-      profile: { shards: 3, cosmetics: { v: 1, owned: { trail_a: 10 } }, unknownFuture: "kept" },
+      schemaVersion: PROFILE_ENVELOPE_VERSION,
+      profile: { shards: 3, unknownFuture: "kept" },
     });
-    expect(PROFILE_ENVELOPE_VERSION).toBe(5);
+    expect(PROFILE_ENVELOPE_VERSION).toBe(4);
     expect(result).toMatchObject({
       ok: true,
-      migratedFrom: 4,
-      value: {
-        schemaVersion: 5,
-        profile: { shards: 3, cosmetics: { owned: { trail_a: 10 } }, unknownFuture: "kept", gauntletBest: {} },
-      },
+      migratedFrom: null,
+      value: { profile: { shards: 3, unknownFuture: "kept" } },
     });
+    if (result.ok) expect(result.value.profile).not.toHaveProperty("gauntletBest");
   });
 
-  it("re-validates a current save's bests", () => {
+  it("re-validates bests a save carries", () => {
     const result = migrateProfileEnvelope({
       schema: "tear.profile",
-      schemaVersion: 5,
+      schemaVersion: PROFILE_ENVELOPE_VERSION,
       profile: { gauntletBest: { normal: { ticks: 7000, hits: 1 }, hard: { ticks: "x" } } },
     });
     expect(result).toMatchObject({

@@ -1,7 +1,7 @@
 import { isSafeKey } from "./records";
 
 /**
- * The Gauntlet personal best, one per difficulty, kept in the profile (envelope version 5).
+ * The Gauntlet personal best, one per difficulty, kept in the profile as an optional field.
  * A clear is measured in simulation ticks from the run's first tick to the last boss's
  * defeat; the faster clear wins and a tie goes to fewer hits taken. Wall-clock time is
  * never used, so a replay of the same run always measures the same.

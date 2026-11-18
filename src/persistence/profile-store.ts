@@ -82,7 +82,7 @@ export interface ProfileData extends Record<string, unknown> {
   advDiffs?: Record<string, number>;
   /** Cosmetic ownership and equipped slots (version 4); read through `cosmetics()`. */
   cosmetics?: unknown;
-  /** The Gauntlet personal best per difficulty (version 5); read through `gauntletBest()`. */
+  /** The Gauntlet personal best per difficulty, an optional field; read through `gauntletBest()`. */
   gauntletBest?: unknown;
 }
 
