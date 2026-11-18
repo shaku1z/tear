@@ -625,8 +625,23 @@ const careerView = (selected: boolean) =>
     selected: selected ? { entry: careerEntry, notes: { revision: 0, tags: [], retention: "recent" } } : undefined,
   }) as unknown as NonNullable<Parameters<ReturnType<typeof createScreenRenderers>["profile"]>[0]["career"]>;
 
+/** The demo coach on a lesson, with a diagnosis long enough to wrap over several lines. */
+const DRILLS_COACH = {
+  available: true,
+  visible: true,
+  mode: "diagnostic",
+  rate: 1,
+  diagnosis:
+    "Your last attempt left the ground before the cut landed; stay grounded through the swing, then jump once it connects.",
+  canCompare: true,
+  reducedMotion: false,
+  tick: 0,
+  fromTick: 0,
+  toTick: 0,
+} as const;
+
 /** The Drills overlay on one tab, with every opponent met and every boss phase reached (the longest lists). */
-function drillsView(tab: (typeof PRACTICE_TABS)[number]["id"]) {
+function drillsView(tab: (typeof PRACTICE_TABS)[number]["id"], coach?: typeof DRILLS_COACH) {
   const controller = new TutorialController(CONFIG);
   controller.openPractice(1600, 1);
   controller.showPracticeTab(tab);
@@ -638,6 +653,7 @@ function drillsView(tab: (typeof PRACTICE_TABS)[number]["id"]) {
       ...controller.session(),
       enemyCatalog: practiceEnemyCatalog(() => 1),
       bossCatalog: practiceBossCatalog(() => 1),
+      ...(coach ? { coach } : {}),
     },
   };
 }
@@ -886,6 +902,18 @@ describe("phone compositions (compact density)", () => {
         const listed = [...offered].filter((action) => action.includes('"lessonId"') && !action.includes('"tab"'));
         expect(listed.length, `drills ${id} ${phone.name}: every entry offered`).toBe(entries.length);
       }
+    });
+
+    it(`keeps the lesson coach's copy clear of its DEMO SPEED row at ${phone.name}`, () => {
+      const view = drillsView("lessons", DRILLS_COACH),
+        offered = sweep(
+          phone,
+          (r) => {
+            r.paused(view);
+          },
+          `drills coach ${phone.name}`,
+        );
+      expect([...offered].some((action) => action.includes('"coach-rate"'))).toBe(true);
     });
 
     it(`keeps the Playground menu and its ABILITIES tab inside the frame at ${phone.name}`, () => {

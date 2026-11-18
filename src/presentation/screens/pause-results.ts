@@ -204,17 +204,28 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
             : current
               ? `${LESSON_TEACHING[current.id].goal} ${LESSON_TEACHING[current.id].why}`
               : ""));
-    // The list takes the room the help leaves: the coach's copy over the footer row, or else the
-    // help's measured lines under the list (down to the overlay's bottom margin).
-    const coach = bosses || catalog || annexes ? undefined : session.coach,
-      helpSize = ui.t.type.caption,
-      helpLine = Math.round(helpSize * 1.35);
-    canvas.font = ui.font(helpSize, false);
-    const helpLines =
-      help === "" ? 0 : wrapSpaceSeparated((value) => canvas.measureText(value).width, help, panelW).length;
-    const listBottom = coach?.available
-      ? header.footerY - ui.t.space.md - ui.t.type.micro * 3 - ui.t.space.sm
-      : height - 16 - (helpLines === 0 ? 0 : ui.t.space.sm + helpSize + (helpLines - 1) * helpLine);
+    // One copy block follows the list: the coach's copy above its footer row, or else the help
+    // above the overlay's bottom margin. The list takes the room the copy's measured lines leave.
+    const coach = bosses || catalog || annexes ? undefined : session.coach?.available ? session.coach : undefined,
+      copy = coach
+        ? {
+            text: coach.adaptive?.assistOffered
+              ? `${help} Stuck? SKIP LESSON moves on; you can come back to it.`
+              : (coach.adaptive?.nudge ?? (session.helpVisible ? session.instruction : `${help} ${coach.diagnosis}`)),
+            size: ui.t.type.micro,
+            line: Math.round(ui.t.type.micro * 1.3),
+            limit: header.footerY - ui.t.space.md,
+          }
+        : {
+            text: help,
+            size: ui.t.type.caption,
+            line: Math.round(ui.t.type.caption * 1.35),
+            limit: height - 16,
+          };
+    canvas.font = ui.font(copy.size, false);
+    const copyLines =
+      copy.text === "" ? 0 : wrapSpaceSeparated((value) => canvas.measureText(value).width, copy.text, panelW).length;
+    const listBottom = copy.limit - (copyLines === 0 ? 0 : ui.t.space.sm + copy.size + (copyLines - 1) * copy.line);
     // The list is the shared button list: columns from the widest name, rows from the tallest
     // (name and status line), scrolling inside the panel with its hint on a line of its own.
     const buttons = exercises.map((lesson) => ({
@@ -250,7 +261,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       ),
       ui.t.space.xs,
     );
-    if (coach?.available) {
+    if (coach) {
       const controls: { label: string; command: "coach-rate" | "coach-compare" }[] = [
         { label: `DEMO SPEED ${String(coach.rate)}×`, command: "coach-rate" },
         ...(coach.canCompare ? [{ label: "COMPARE WITH DEMO", command: "coach-compare" as const }] : []),
@@ -266,21 +277,9 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
           size: ui.t.type.micro,
         });
       });
-      wrapText(
-        coach.adaptive?.assistOffered
-          ? `${help} Stuck? SKIP LESSON moves on; you can come back to it.`
-          : (coach.adaptive?.nudge ?? (session.helpVisible ? session.instruction : `${help} ${coach.diagnosis}`)),
-        panelX,
-        header.footerY - ui.t.space.md - ui.t.type.micro * 2,
-        panelW,
-        Math.round(ui.t.type.micro * 1.3),
-        ui.t.type.micro,
-        ui.ink,
-      );
-      return;
     }
     canvas.textBaseline = "alphabetic";
-    wrapText(help, panelX, list.bottom + ui.t.space.sm + helpSize, panelW, helpLine, helpSize, ui.ink);
+    wrapText(copy.text, panelX, list.bottom + ui.t.space.sm + copy.size, panelW, copy.line, copy.size, ui.ink);
   }
 
   /** The Drills tabs over the list panel: the hubs' tab strip, framed to the panel. */
