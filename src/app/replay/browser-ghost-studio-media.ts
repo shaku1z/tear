@@ -17,7 +17,7 @@ import {
   buildSceneEffectsSnapshot,
 } from "../../presentation/world/runtime-snapshots";
 import { formatEnemyLabel } from "../../presentation/world/entity-layer";
-import { renderEnvironmentLayer } from "../world/environment-layer";
+import { isEnvironmentDrawnEnemy, renderEnvironmentLayer } from "../world/environment-layer";
 import {
   createLiveWorldSimulationPresentationAdapter,
   type LiveWorldSimulationPresentationAdapterOptions,
@@ -134,10 +134,12 @@ export function createBrowserGhostReplayPresentation(
           crackT: typeof crack === "number" ? crack : 0,
         };
       });
-      // An enemy without a renderer of its own (the Rootbinder) is drawn by the environment layer, as in play.
-      const drawableEnemies = (hidden.has("enemies") ? [] : enemies).flatMap((enemy) =>
-        isDrawableEnemy(enemy) ? [projectPresentationEnemy(enemy)] : [],
-      );
+      // The environment layer draws its own enemy kinds, as in play; any other enemy needs a renderer.
+      const drawableEnemies = (hidden.has("enemies") ? [] : enemies).flatMap((enemy) => {
+        if (isDrawableEnemy(enemy)) return [projectPresentationEnemy(enemy)];
+        if (isEnvironmentDrawnEnemy(enemy)) return [];
+        throw new TypeError("replay enemy renderer is unavailable");
+      });
       const sceneEffects = buildSceneEffectsSnapshot({
         voidActive: Boolean(run.voidScroll?.active),
         enemies: hidden.has("hazards") ? [] : enemies.map(projectSceneBoss),

@@ -17,6 +17,16 @@ export interface EnvironmentLayerOptions {
   readonly audioEnabled: boolean;
 }
 
+/**
+ * Enemy kinds drawn by this layer instead of an enemy renderer of their own. A replay frame skips these and
+ * refuses any other enemy that has no renderer, so a missing renderer still fails loudly.
+ */
+export const ENVIRONMENT_DRAWN_ENEMY_KINDS: readonly string[] = ["rootbinder"];
+
+export function isEnvironmentDrawnEnemy(enemy: { readonly kind?: string }): boolean {
+  return enemy.kind !== undefined && ENVIRONMENT_DRAWN_ENEMY_KINDS.includes(enemy.kind);
+}
+
 /** The part of an enemy this layer reads: a Rootbinder is drawn here, not by an enemy renderer. */
 interface EnvironmentLayerEnemy {
   readonly kind?: string;
@@ -51,7 +61,7 @@ export function renderEnvironmentLayer(
   renderVerdantEnvironmentPresentation(canvas, environmentPresentation, { ...presentationOptions, timeSeconds });
   renderPaleEnvironmentPresentation(canvas, environmentPresentation, { ...presentationOptions, timeSeconds });
   for (const enemy of enemies) {
-    if (enemy.kind !== "rootbinder") continue;
+    if (!isEnvironmentDrawnEnemy(enemy)) continue;
     const rootState = enemy.rootbinderState;
     if (rootState === undefined || enemy.rootbinderOwnerId === undefined) continue;
     const owned = snapshot.combatObjects.filter((object) => object.ownerId === enemy.rootbinderOwnerId);
