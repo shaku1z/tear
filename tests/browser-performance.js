@@ -809,11 +809,14 @@ async function repeatedRunScenario(browser, pageErrors) {
         "--disable-renderer-backgrounding",
         "--enable-precise-memory-info",
       ],
-      ...(chromePath ? { executablePath: chromePath } : {}),
+      // Without an installed Chrome, Playwright's full Chromium, not its headless shell: the shell is a
+      // separate, lighter build whose renderer crashed under the 4x throttle in the container (nightly
+      // 44282549007), and a frame-timing budget has to measure the real rendering pipeline.
+      ...(chromePath ? { executablePath: chromePath } : { channel: "chromium" }),
     });
     const browserRuntime = {
       version: browser.version(),
-      executable: chromePath || "playwright-bundled-chromium",
+      executable: chromePath || "playwright-chromium",
       archiveSha256: browserPreference === "pinned" ? pinnedBrowserArchiveSha256 : null,
     };
     // Emit the build identity before any scenario assertion so every failing
