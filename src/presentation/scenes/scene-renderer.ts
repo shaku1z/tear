@@ -1,27 +1,22 @@
 import {
   layerTransform,
   type Rect,
+  type SceneBitmap,
+  type SceneCanvas,
   type SceneCamera,
   type SceneLayer,
   type ScenePackage,
   type SceneShade,
 } from "./scene-contract";
-
-/** A decoded image the renderer can draw; ImageBitmap and canvases qualify. */
-export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
+import { drawLayerMotion, type PreparedMotion } from "./scene-motion";
 
 export interface LoadedScene {
   readonly scene: ScenePackage;
   readonly images: ReadonlyMap<string, SceneBitmap>;
   /** Shades still drawn each frame; the rest were baked into their layer at load. */
   readonly shading: readonly SceneShade[];
-}
-
-/** A canvas to bake into; HTMLCanvasElement and OffscreenCanvas qualify. */
-export interface SceneCanvas {
-  readonly width: number;
-  readonly height: number;
-  getContext(id: "2d"): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+  /** The moving parts of the scene; absent or empty for still paint. */
+  readonly motion?: readonly PreparedMotion[];
 }
 
 export interface SceneView {
@@ -83,6 +78,9 @@ function drawLayer(context: CanvasRenderingContext2D, loaded: LoadedScene, layer
   context.scale(k, k);
   context.globalAlpha = layer.opacity * frame.opacity;
   context.drawImage(bitmap, x, y, w, h);
+  // Reduced motion and low graphics both show the still painting.
+  if (loaded.motion !== undefined && !frame.reducedMotion && !frame.lowGraphics)
+    drawLayerMotion(context, loaded.motion, loaded.images, layer.id, bitmap, frame.timeSeconds);
   if (layer.covers) featherEdges(context, loaded.scene, layer.rect, layerSpaceView(frame, k, tx, ty));
   context.restore();
 }

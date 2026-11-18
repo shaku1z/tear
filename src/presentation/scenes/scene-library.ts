@@ -1,4 +1,5 @@
-import { validateScenePackage, type SceneCamera } from "./scene-contract";
+import { validateScenePackage, type SceneBitmap, type SceneCamera, type SceneCanvas } from "./scene-contract";
+import { motionCanvases, prepareMotion } from "./scene-motion";
 import {
   bakeShading,
   drawSceneBack,
@@ -6,8 +7,6 @@ import {
   drawPlatformShadows,
   drawPlatformTexture,
   type LoadedScene,
-  type SceneBitmap,
-  type SceneCanvas,
   type SceneView,
   type SurfaceTarget,
 } from "./scene-renderer";
@@ -125,6 +124,7 @@ interface Entry {
 function releaseImages(loaded: LoadedScene, ports: SceneLibraryPorts): void {
   if (ports.releaseImage === undefined) return;
   for (const image of loaded.images.values()) ports.releaseImage(image);
+  for (const canvas of motionCanvases(loaded.motion ?? [])) ports.releaseImage(canvas);
 }
 
 async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): Promise<LoadedScene> {
@@ -145,7 +145,7 @@ async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): 
   const baked = bakeShading(scene, images, ports.createCanvas);
   // A layer with shading baked in replaces its decoded copy: free the copy now.
   for (const [id, image] of images) if (baked.images.get(id) !== image) ports.releaseImage?.(image);
-  return baked;
+  return Object.freeze({ ...baked, motion: prepareMotion(scene, baked.images, ports.createCanvas) });
 }
 
 export function createSceneLibrary(ports: SceneLibraryPorts): SceneLibrary {

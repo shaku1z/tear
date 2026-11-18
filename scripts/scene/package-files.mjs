@@ -2,6 +2,7 @@
 // packages in the repository and check their files against their manifests.
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { registerHooks } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -39,9 +40,21 @@ export const REQUIRED_VIEWPORTS = Object.freeze([
 export const BEST_EFFORT_VIEWPORTS = Object.freeze([["32:9 super-ultrawide", 5120, 1440]]);
 
 let contractModule;
-/** The TypeScript contract, loaded through Node's type stripping (no build step). */
+/**
+ * The TypeScript contract, loaded through Node's type stripping (no build step).
+ * The contract's modules import each other the way the game's bundler expects,
+ * without an extension; Node needs the file name, so the hook adds `.ts` for
+ * relative imports between modules of the scenes folder.
+ */
 export async function loadContract() {
   if (contractModule === undefined) {
+    const scenes = pathToFileURL(join(REPOSITORY_ROOT, "src", "presentation", "scenes")).href + "/";
+    registerHooks({
+      resolve(specifier, context, nextResolve) {
+        const local = context.parentURL?.startsWith(scenes) === true && /^\.\/[\w-]+$/u.test(specifier);
+        return nextResolve(local ? `${specifier}.ts` : specifier, context);
+      },
+    });
     const url = pathToFileURL(join(REPOSITORY_ROOT, "src", "presentation", "scenes", "scene-contract.ts")).href;
     contractModule = await import(url);
   }

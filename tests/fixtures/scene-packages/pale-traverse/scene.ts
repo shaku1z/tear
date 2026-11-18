@@ -5,4 +5,5 @@ export { manifest };
 export const files: Readonly<Record<string, string>> = Object.freeze({
   "far.avif": new URL("./far.avif", import.meta.url).href,
   "ice.avif": new URL("./ice.avif", import.meta.url).href,
+  "meltwater.avif": new URL("./meltwater.avif", import.meta.url).href,
 });

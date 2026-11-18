@@ -1,4 +1,4 @@
-import type { SceneBitmap, SceneCanvas } from "./scene-renderer";
+import type { SceneBitmap, SceneCanvas } from "./scene-contract";
 
 /** A canvas the scene library bakes shading into, off the DOM where possible. */
 export function createSceneCanvas(width: number, height: number): SceneCanvas & SceneBitmap {

@@ -1,11 +1,12 @@
 // `pnpm scene preview <stage> --out <dir>`: captures the package in the real
 // game. Serves an existing dist/test-standalone (run pnpm build:test:standalone
 // first), forges a State Forge scenario on the package's stage, screenshots the
-// required viewports and records a looping animated WebP at 1600x900.
+// required viewports and records a looping animated WebP (at 1600x900 unless --loop says otherwise).
 //
 // Options: --wave N (default 1), --frames N (default 48, 0 skips the loop),
 // --dpr N (default 1), --reduced (prefers-reduced-motion), --low (low graphics),
-// --viewports 1600x900,844x390 (default: every required viewport).
+// --viewports 1600x900,844x390 (default: every required viewport),
+// --loop 844x390 (the size the loop is recorded at; default 1600x900).
 /* global window, requestAnimationFrame -- page.evaluate callbacks run in the browser */
 import { createReadStream, existsSync, mkdirSync, statSync } from "node:fs";
 import { createServer } from "node:http";
@@ -116,8 +117,8 @@ const settle = (page) =>
     await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
   });
 
-async function recordLoop(page, out, name, frames) {
-  await page.setViewportSize({ width: 1600, height: 900 });
+async function recordLoop(page, out, name, frames, [width, height]) {
+  await page.setViewportSize({ width, height });
   await settle(page);
   const shots = [];
   for (let index = 0; index < frames; index += 1) {
@@ -125,14 +126,11 @@ async function recordLoop(page, out, name, frames) {
       window.__SCENE_PREVIEW__.renderFrame(1 / 30);
       return new Promise((done) => requestAnimationFrame(done));
     });
-    shots.push(
-      await sharp(await page.screenshot())
-        .resize(800)
-        .png()
-        .toBuffer(),
-    );
+    // Wide captures are stored at half size; a phone-sized one is kept whole.
+    const shot = sharp(await page.screenshot());
+    shots.push(await (width > 1000 ? shot.resize(Math.round(width / 2)) : shot).png().toBuffer());
   }
-  const file = join(out, `${name}-loop.webp`);
+  const file = join(out, width === 1600 ? `${name}-loop.webp` : `${name}-loop-${width}x${height}.webp`);
   await sharp(shots, { join: { animated: true } })
     .webp({ quality: 70, loop: 0, delay: Array(frames).fill(33) })
     .toFile(file);
@@ -178,7 +176,8 @@ export async function preview(directory, out, options = {}) {
       console.log(`wrote ${file}`);
     }
     const frames = Number(options.frames ?? 48);
-    if (frames > 0) await recordLoop(page, out, name, frames);
+    const loop = typeof options.loop === "string" ? options.loop.split("x").map(Number) : [1600, 900];
+    if (frames > 0) await recordLoop(page, out, name, frames, loop);
   } finally {
     await browser.close();
     server.close();

@@ -92,12 +92,45 @@ A generated source has no file: its generator settings are pinned instead.
 | `camera` | The camera range the art must survive: `playerShift`, `zoomMin`, `zoomMax`, `shake`. |
 | `layers` | `{ id, image, rect, depth, plane, opacity, covers }`. `rect` in world px; depth 1 moves with the world, below 1 is further away. `back` draws under platforms, `front` over them but never above the floor surface. One back layer must `covers` the screen. |
 | `shading` | `{ id, kind, rect, depth, color, opacity, feather }`. A `band` is solid from its top and fades over its last `feather` px (behind the HUD row); a `pool` is a soft ellipse (a local wash). A shade at the depth of a covering back layer is applied to that layer's decoded copy at load; any other shade draws each frame. |
+| `motion` | What moves, as data; see Motion. Optional: a package without it is a still painting. |
 | `platforms` | `{ material, texture, scale, fill, shadow }`. `material` must equal the stage's `platformMaterialId`. `texture` is a surface strip (lit edge at the top) anchored to each surface top and repeated along x from world x = 0; `fill` covers the floor below it. `shadow` is the soft shade each standing platform casts on the background. |
 | `edge` | Colour past a covering layer's edge at very wide screens, and its feather. |
 | `theme.paper` | The colour the HUD and actors take their ink from: the stage's own `bg` from `src/gameplay/stages.ts`. |
 | `sources`, `images` | Provenance (origin, licence, SHA-256; tool and exact prompt for image-tool output) and each image's size, bytes, SHA-256 and sources. |
 | `encodedBudget` | Bytes the package's image files may total (see Size rule). |
-| `decodedBudget` | Decoded bytes (width x height x 4, summed) the package may use. An image is at most 4096 px per edge. |
+| `decodedBudget` | Decoded bytes (width x height x 4, summed) the package may use, counting the canvas each stretch of water is redrawn into and the speck image of each set of motes. An image is at most 4096 px per edge. |
+
+### Motion
+
+Everything that moves is an entry in `motion`, drawn by the shared renderer
+from that entry alone. Nothing in the renderer names a stage, so a second biome
+gets the same motion by writing the same data. Every entry has an `id`, the
+`layer` it is drawn over (right after that layer's paint, so it moves with the
+layer's parallax) and a layer-space `rect` inside that layer. Entries draw in
+list order. The types and checks are in `scene-motion-contract.ts`; the drawing
+is in `scene-motion.ts`, one routine per kind.
+
+| Kind | Fields | What it draws |
+| --- | --- | --- |
+| `water` | `layer`, `mask`, `rect`, `rows`, `far`, `slide`, `swell`, `waves`, `period`, `glints { count, color, opacity, length, drift }` | The paint of `layer` under `mask` is redrawn in `rows` horizontal rows. Each row is read from a little to the side (`slide`, world px at the near edge) and from a slightly taller or shorter band (`swell`), on two wave trains running opposite ways, so the painted surface and the reflections painted in it ripple. Rows are thin and move little at the far edge and grow towards the near edge by `far` (far size as a share of near size), which is what makes the motion follow the painted perspective. `waves` is the number of crests between the far and near edge and `period` the seconds one takes to pass. `glints` are short bright strokes that fade in and out and drift. |
+| `light` | `from`, `beams [{ angle, width, length }]`, `taper`, `color`, `opacity`, `period`, `sway` | Soft shafts fanning out from `from`, kept inside `rect`. A beam's `angle` is degrees from straight down (positive leans right); `width` and `length` are world px at its far end, and `taper` is its width at the start as a share of that. It is brightest at the start and fades to nothing, with a soft edge, and brightens what is under it. Each beam breathes brighter and dimmer on its own clock of about `period` seconds and leans up to `sway` degrees. Place the start on the painted light source. |
+| `motes` | `count`, `color`, `opacity`, `size`, `rise`, `wander`, `period` | Small soft specks of light (pollen, spores, dust, snow) spread through `rect`. Each rises `rise` world px a second (negative falls), swings up to `wander` px sideways and twinkles, on clocks around `period` seconds; nearer specks are larger and move further, and a speck leaving one edge comes back at the other. `size` is the bright middle of the largest speck in world px. |
+
+- **The mask.** `mask` names a package image whose alpha is 1 on water and 0 on
+  anything standing in it. Paint outside the mask never moves, so an arch in
+  the pool stays still while its reflection ripples. The recipe cuts the mask
+  from a pinned source and stores it at a quarter of the painting's size; the
+  build sets `rect` to the area it was cut from. Light and motes give their
+  own `rect` in the recipe's scene template.
+- **Cost.** Water is redrawn into its own canvas 30 times a second and that
+  canvas is drawn over its layer every frame, so a frame pays for one image
+  draw. The canvas is the size of the paint it moves and counts against
+  `decodedBudget`. Light is three fills a beam and motes one small image draw a
+  speck, straight onto the frame; motes hold one 32 px speck image.
+- **Reduced motion and low graphics** both show the still painting: no moving
+  part is drawn or redrawn.
+- **Time** is the game's simulation clock, so everything that moves stops when
+  the game is paused and slows with it.
 
 ### Runtime
 
@@ -190,6 +223,7 @@ outside the repository. Required screen shapes: 16:9 (1600x900, 1280x720),
 | `inpaint-blur` | Fill masked areas from a normalised blur, keeping original pixels where confidence is low. |
 | `alpha` | Use a mask as alpha. |
 | `crop`, `crop-alpha` | Crop to a rectangle or to the alpha bounds; placement is tracked so layers stay registered. |
+| `flat` | Set every pixel to one colour and keep the alpha: a mask image, whose alpha is all that is read. |
 | `tileable` | Cross-fade the ends so a strip repeats horizontally. |
 | `resize` | Lanczos resize; the layer keeps its world size, only pixel density changes. |
 
@@ -219,6 +253,9 @@ shipped or fixture. Nothing in it names a biome:
   90% of the HUD title, 90% of the HUD status and 75% of the play band.
 - The package loads through the game's scene library, draws its back and front
   planes, and textures a real platform of the stage.
+- Every moving part names a layer and a mask the package has, lies inside its
+  layer, and fits the decoded budget with its canvas counted
+  (`scene-motion.test.ts` covers the drawing).
 - Shipped packages are exactly the registered ones; fixtures are never
   registered.
 

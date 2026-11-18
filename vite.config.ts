@@ -302,6 +302,9 @@ export default defineConfig(({ mode, command }) => {
       sourcemap: false,
       target: "baseline-widely-available",
       reportCompressedSize: true,
+      // Scene art always ships as files: a small mask inlined into a script would
+      // escape the scene size rule and the lazy, per-stage download.
+      assetsInlineLimit: (file: string) => (/[\\/]assets[\\/]scenes[\\/]/u.test(file) ? false : undefined),
       rollupOptions: {
         output: { manualChunks: applicationChunk },
       },

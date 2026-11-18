@@ -42,6 +42,44 @@
       ]
     }
   ],
+  "motion": [
+    {
+      "id": "meltwater",
+      "kind": "water",
+      "layer": "far",
+      "mask": "meltwater",
+      "rows": 16,
+      "far": 0.5,
+      "slide": 2,
+      "swell": 1,
+      "waves": 4,
+      "period": 4,
+      "rect": [
+        313,
+        695,
+        940,
+        160
+      ]
+    },
+    {
+      "id": "snow",
+      "kind": "motes",
+      "layer": "far",
+      "rect": [
+        0,
+        -100,
+        1600,
+        900
+      ],
+      "count": 60,
+      "color": "#f4f8ff",
+      "opacity": 0.8,
+      "size": 2,
+      "rise": -40,
+      "wander": 24,
+      "period": 6
+    }
+  ],
   "encodedBudget": 60000,
   "decodedBudget": 8388608,
   "platforms": {
@@ -95,6 +133,18 @@
       "sha256": "d7b31b994dcfdacebe22afde954e26915ec3cc3c15ce7785bad1af233218b7b1",
       "sources": [
         "placeholder-ice"
+      ]
+    },
+    {
+      "id": "meltwater",
+      "file": "meltwater.avif",
+      "width": 235,
+      "height": 40,
+      "alpha": true,
+      "bytes": 570,
+      "sha256": "6fdac334c37bf9e7587f61ea31ecae680fe777ba94ff21b7afb673283564e665",
+      "sources": [
+        "placeholder-plate"
       ]
     }
   ]

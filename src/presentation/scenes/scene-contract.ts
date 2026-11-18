@@ -3,9 +3,30 @@
  * painted stage background is delivered in, and the pure maths every consumer
  * shares (validation, parallax camera, coverage, surface binding).
  *
- * This module has no runtime imports so the `pnpm scene` CLI can load it with
- * Node's type stripping; keep it that way (type-only imports are erased).
+ * Field readers live in scene-fields.ts and the `motion` list in
+ * scene-motion-contract.ts. These modules import only each other, so the
+ * `pnpm scene` CLI can load them with Node's type stripping (its loader adds
+ * the `.ts` to their relative imports); keep them free of other imports.
  */
+import {
+  color,
+  digest,
+  fail,
+  finite,
+  id,
+  integer,
+  list,
+  record,
+  rect,
+  ScenePackageError,
+  text,
+  unique,
+  type Rect,
+} from "./scene-fields";
+import { lightCanvasSize, parseMotion, SCENE_MOTE_SPRITE, type SceneMotion } from "./scene-motion-contract";
+
+export { ScenePackageError };
+export type { Point, Rect } from "./scene-fields";
 
 export const SCENE_PACKAGE_FORMAT = "tear-scene-package";
 export const SCENE_PACKAGE_VERSION = 1;
@@ -26,8 +47,15 @@ export const SCENE_DECODED_LIMIT = 24 * 1024 * 1024;
  */
 export const SCENE_MAX_PIXELS_PER_UNIT = 2.5;
 
-export type Rect = readonly [x: number, y: number, w: number, h: number];
-export type Point = readonly [x: number, y: number];
+/** A decoded image the scene code can draw; ImageBitmap and canvases qualify. */
+export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
+
+/** A canvas to draw into; HTMLCanvasElement and OffscreenCanvas qualify. */
+export interface SceneCanvas {
+  readonly width: number;
+  readonly height: number;
+  getContext(id: "2d"): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+}
 
 export type SceneSourceOrigin = "owner-supplied" | "image-tool" | "derived" | "procedural";
 
@@ -136,90 +164,13 @@ export interface ScenePackage {
   readonly images: readonly SceneImage[];
   readonly layers: readonly SceneLayer[];
   readonly shading: readonly SceneShade[];
+  /** What moves; empty for a still scene. Reduced motion and low graphics draw none of it. */
+  readonly motion: readonly SceneMotion[];
   readonly platforms: ScenePlatformBinding;
   /** Encoded bytes the package's image files may total. */
   readonly encodedBudget: number;
   /** Decoded RGBA bytes the package may hold (width x height x 4, summed). */
   readonly decodedBudget: number;
-}
-
-type Raw = Record<string, unknown>;
-
-export class ScenePackageError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ScenePackageError";
-  }
-}
-
-function fail(path: string, message: string): never {
-  throw new ScenePackageError(`${path}: ${message}`);
-}
-
-function record(value: unknown, path: string): Raw {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) fail(path, "expected an object");
-  return value as Raw;
-}
-
-function list(value: unknown, path: string, max = 64): readonly unknown[] {
-  if (!Array.isArray(value)) fail(path, "expected an array");
-  if (value.length > max) fail(path, `more than ${String(max)} entries`);
-  return value as readonly unknown[];
-}
-
-function text(value: unknown, path: string, max = 4000): string {
-  if (typeof value !== "string" || value.length === 0 || value.length > max) fail(path, "expected a non-empty string");
-  return value;
-}
-
-function id(value: unknown, path: string): string {
-  const result = text(value, path, 64);
-  if (!/^[a-z0-9][a-z0-9-]*$/u.test(result)) fail(path, "ids are lower-case kebab-case");
-  return result;
-}
-
-function finite(value: unknown, path: string, min = -1e6, max = 1e6): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
-    fail(path, `expected a number in [${String(min)}, ${String(max)}]`);
-  }
-  return value;
-}
-
-function integer(value: unknown, path: string, min: number, max: number): number {
-  const result = finite(value, path, min, max);
-  if (!Number.isInteger(result)) fail(path, "expected an integer");
-  return result;
-}
-
-function color(value: unknown, path: string): string {
-  const result = text(value, path, 9);
-  if (!/^#[0-9a-f]{6}$/u.test(result)) fail(path, "colours are #rrggbb lower-case");
-  return result;
-}
-
-function digest(value: unknown, path: string): string {
-  const result = text(value, path, 64);
-  if (!/^[a-f0-9]{64}$/u.test(result)) fail(path, "expected a sha256 hex digest");
-  return result;
-}
-
-function rect(value: unknown, path: string): Rect {
-  const items = list(value, path, 4);
-  if (items.length !== 4) fail(path, "expected [x, y, w, h]");
-  const [x, y, w, h] = items.map((item, index) => finite(item, `${path}[${String(index)}]`));
-  if (x === undefined || y === undefined || w === undefined || h === undefined || w <= 0 || h <= 0) {
-    fail(path, "width and height must be positive");
-  }
-  return Object.freeze([x, y, w, h] as const);
-}
-
-function unique<T extends { readonly id: string }>(items: readonly T[], path: string): readonly T[] {
-  const seen = new Set<string>();
-  for (const item of items) {
-    if (seen.has(item.id)) fail(path, `duplicate id "${item.id}"`);
-    seen.add(item.id);
-  }
-  return Object.freeze(items);
 }
 
 const ORIGINS: readonly SceneSourceOrigin[] = ["owner-supplied", "image-tool", "derived", "procedural"];
@@ -298,6 +249,17 @@ function layer(value: unknown, path: string, images: ReadonlyMap<string, SceneIm
     opacity: raw.opacity === undefined ? 1 : finite(raw.opacity, `${path}.opacity`, 0, 1),
     covers: raw.covers === true,
   });
+}
+
+/** Pixels of a layer's image that `area` covers, as [x, y, w, h] in whole pixels. */
+export function layerImageRect(image: SceneImage, layer: SceneLayer, area: Rect): Rect {
+  const kx = image.width / layer.rect[2];
+  const ky = image.height / layer.rect[3];
+  const x = Math.floor((area[0] - layer.rect[0]) * kx);
+  const y = Math.floor((area[1] - layer.rect[1]) * ky);
+  const right = Math.ceil((area[0] + area[2] - layer.rect[0]) * kx);
+  const bottom = Math.ceil((area[1] + area[3] - layer.rect[1]) * ky);
+  return [x, y, right - x, bottom - y];
 }
 
 function platforms(value: unknown, path: string, images: ReadonlyMap<string, SceneImage>): ScenePlatformBinding {
@@ -384,6 +346,12 @@ export function validateScenePackage(input: unknown): ScenePackage {
       ),
       "package.shading",
     ),
+    motion: unique(
+      (raw.motion === undefined ? [] : list(raw.motion, "package.motion", 16)).map((item, index) =>
+        parseMotion(item, `package.motion[${String(index)}]`, imageMap, layers),
+      ),
+      "package.motion",
+    ),
     platforms: platforms(raw.platforms, "package.platforms", imageMap),
     encodedBudget: integer(raw.encodedBudget, "package.encodedBudget", 1, SCENE_ENCODED_LIMIT),
     decodedBudget: integer(raw.decodedBudget, "package.decodedBudget", 1, SCENE_DECODED_LIMIT),
@@ -412,8 +380,28 @@ export function validateScenePackage(input: unknown): ScenePackage {
   return result;
 }
 
-export function decodedBytes(scene: Pick<ScenePackage, "images">): number {
-  return scene.images.reduce((total, item) => total + item.width * item.height * 4, 0);
+/**
+ * Decoded RGBA bytes a shown scene holds: every image, plus the canvas each
+ * stretch of water is redrawn into (the size of the paint it moves), the canvas
+ * each set of light shafts is redrawn into, and the speck image of each set of
+ * motes.
+ */
+export function decodedBytes(
+  scene: Pick<ScenePackage, "images"> & Partial<Pick<ScenePackage, "layers" | "motion">>,
+): number {
+  const images = scene.images.reduce((total, item) => total + item.width * item.height * 4, 0);
+  return (scene.motion ?? []).reduce((total, item) => {
+    if (item.kind === "motes") return total + SCENE_MOTE_SPRITE * SCENE_MOTE_SPRITE * 4;
+    if (item.kind === "light") {
+      const [w, h] = lightCanvasSize(item);
+      return total + w * h * 4;
+    }
+    const layer = scene.layers?.find((entry) => entry.id === item.layer);
+    const image = scene.images.find((entry) => entry.id === layer?.image);
+    if (layer === undefined || image === undefined) return total;
+    const [, , w, h] = layerImageRect(image, layer, item.rect);
+    return total + w * h * 4;
+  }, images);
 }
 
 export function encodedBytes(scene: Pick<ScenePackage, "images">): number {
