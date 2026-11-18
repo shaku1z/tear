@@ -1,6 +1,7 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { BrowserGamepad } from "../../input/browser-input-contracts";
+import type { LiveShopFeedbackSnapshot } from "../run/shop-feedback-state";
 import { createLiveMenuScreenAdaptersRuntime } from "./menu-screen-adapters-runtime";
 
 type Dependencies = Pick<
@@ -29,13 +30,8 @@ export interface MenuScreenState {
   readonly scroll: () => number;
   readonly setScroll: (value: number) => void;
   readonly time: () => number;
-  readonly shop: () => Readonly<{
-    displayedCoins: number | null;
-    flash: Readonly<{ id: string; time: number }> | null;
-  }>;
-  readonly setShop: (
-    value: Readonly<{ displayedCoins: number | null; flash: Readonly<{ id: string; time: number }> | null }>,
-  ) => void;
+  readonly shop: () => LiveShopFeedbackSnapshot;
+  readonly setShop: (value: LiveShopFeedbackSnapshot) => void;
 }
 
 export interface MenuScreenServices {
@@ -48,7 +44,14 @@ export interface MenuScreenServices {
   readonly checkAchievements: () => void;
 }
 
-export interface LiveMenuScreenAdapters {
+/** What the Shop's SHARDS tab and its tab row can ask for. */
+export interface ShopShardsPort {
+  readonly selectShopTab: (id: string) => void;
+  readonly buyCosmetic: (id: string) => void;
+  readonly equipCosmetic: (slot: string, id: string | null) => void;
+}
+
+export interface LiveMenuScreenAdapters extends ShopShardsPort {
   readonly renderMenu: () => void;
   readonly renderSetup: () => void;
   readonly renderShop: () => void;

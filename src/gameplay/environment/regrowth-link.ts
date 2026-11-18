@@ -1,17 +1,15 @@
 import type { EnvironmentCombatObjectState, EnvironmentPoint, EnvironmentRouteState } from "./environment-contracts";
 import { environmentObjectDefinition } from "./environment-definitions";
 
+/**
+ * The channel runs `channelTicks` from the moment the links grow: the tell plus the active stage of the
+ * Rootbound's `regrowth` move (a test holds the two equal). Its healing numbers are in `ROOTBOUND_HEALING`.
+ */
 export const ROOTBOUND_REGROWTH_TIMING = Object.freeze({
   ticksPerSecond: 120,
   channelTicks: 480,
 });
 export const ROOTBOUND_REGROWTH_CONNECTION_COUNT = 3;
-export const ROOTBOUND_REGROWTH_OUTCOMES = Object.freeze({
-  maximumHealFraction: 0.12,
-  fullInterruptRecovery: 1.8,
-  partialInterruptRecovery: 1.1,
-  noInterruptRecovery: 0.65,
-});
 
 export interface RootboundRegrowthConnectionBundle {
   readonly combatObjects: readonly EnvironmentCombatObjectState[];
@@ -82,7 +80,7 @@ export function createRootboundRegrowthConnections(
 export type RootboundRegrowthPhase = "idle" | "channeling" | "resolved";
 export type RootboundRegrowthInterruptClassification = "full-interrupt" | "partial-interrupt" | "no-interrupt";
 
-/** Canonical, replay-safe Regrowth channel facts. Healing and recovery belong to the outcome resolver. */
+/** Canonical, replay-safe Regrowth channel facts. Healing belongs to the outcome resolver. */
 export interface RootboundRegrowthState {
   readonly phase: RootboundRegrowthPhase;
   readonly useCount: 0 | 1;
@@ -97,7 +95,6 @@ export interface RootboundRegrowthState {
 export interface RootboundRegrowthResolution {
   readonly state: RootboundRegrowthState;
   readonly resolvedHealFraction: number;
-  readonly recoverySeconds: number;
 }
 
 function freezeState(state: RootboundRegrowthState): RootboundRegrowthState {
@@ -178,34 +175,30 @@ export function advanceRootboundRegrowth(
   return freezeState({ ...state, phase: "resolved", survivingConnectionIds, progress: 1, interruptClassification });
 }
 
-function recoveryFor(classification: RootboundRegrowthInterruptClassification): number {
-  if (classification === "full-interrupt") return ROOTBOUND_REGROWTH_OUTCOMES.fullInterruptRecovery;
-  if (classification === "partial-interrupt") return ROOTBOUND_REGROWTH_OUTCOMES.partialInterruptRecovery;
-  return ROOTBOUND_REGROWTH_OUTCOMES.noInterruptRecovery;
-}
-
-/** Applies the bounded outcome once; the caller owns converting the fraction into actor HP. */
+/**
+ * Applies the bounded outcome once; the caller owns converting the fraction into actor HP. A full interrupt
+ * heals nothing; otherwise the heal is `maximumHealFraction` times the share of links still standing, never
+ * more than `maximumRecoverableFraction`.
+ */
 export function resolveRootboundRegrowthOutcome(
   state: RootboundRegrowthState,
+  maximumHealFraction: number,
   maximumRecoverableFraction: number,
 ): RootboundRegrowthResolution {
   if (state.phase !== "resolved" || state.interruptClassification === null)
     throw new RangeError("Regrowth outcome requires a resolved channel");
-  if (!Number.isFinite(maximumRecoverableFraction) || maximumRecoverableFraction < 0) {
-    throw new RangeError("Regrowth recoverable fraction must be finite and non-negative");
-  }
-  const recoverySeconds = recoveryFor(state.interruptClassification);
+  for (const fraction of [maximumHealFraction, maximumRecoverableFraction])
+    if (!Number.isFinite(fraction) || fraction < 0)
+      throw new RangeError("Regrowth heal fractions must be finite and non-negative");
   if (state.resolvedHealFraction !== null)
-    return Object.freeze({ state, resolvedHealFraction: state.resolvedHealFraction, recoverySeconds });
+    return Object.freeze({ state, resolvedHealFraction: state.resolvedHealFraction });
   const survivingRatio =
     state.requiredConnectionIds.length === 0
       ? 0
       : state.survivingConnectionIds.length / state.requiredConnectionIds.length;
   const requestedHealFraction =
-    state.interruptClassification === "full-interrupt"
-      ? 0
-      : ROOTBOUND_REGROWTH_OUTCOMES.maximumHealFraction * survivingRatio;
+    state.interruptClassification === "full-interrupt" ? 0 : maximumHealFraction * survivingRatio;
   const resolvedHealFraction = Math.min(requestedHealFraction, maximumRecoverableFraction);
   const resolvedState = freezeState({ ...state, resolvedHealFraction });
-  return Object.freeze({ state: resolvedState, resolvedHealFraction, recoverySeconds });
+  return Object.freeze({ state: resolvedState, resolvedHealFraction });
 }

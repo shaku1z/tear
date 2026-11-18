@@ -1,181 +1,222 @@
+/**
+ * Rootbound Phase III, "Nothing Here Dies": the keeper opens with Regrowth, a channel that keeps attacking
+ * while three links feed it, and then plays its strikes with Last Spring every few moves. Both are moves on the
+ * shared table. Healing follows the one table `ROOTBOUND_HEALING`. Each test runs the real boss inside the real
+ * Verdant environment.
+ */
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
-import {
-  ROOTBOUND_LAST_SPRING,
-  type RootboundLastSpringStage,
-} from "../../src/gameplay/entities/enemy-types/rootbound";
-import {
-  createRootboundRegrowthConnections,
-  ROOTBOUND_REGROWTH_TIMING,
-  type RootboundRegrowthState,
-} from "../../src/gameplay/environment/regrowth-link";
-import { createRootboundBloomPattern } from "../../src/gameplay/environment/bloom-well";
-import { createEnemyHarness } from "./enemy-test-harness";
-import { BossArenaRules, createBossArena } from "../../src/gameplay/training/arena-rules";
+import type { BossAttackRunnerState } from "../../src/gameplay/entities/boss-attack-runner";
+import { ROOTBOUND_HEALING, ROOTBOUND_PHASE_THREE_CADENCE } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_ARENA_WIDTH, ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
+import { bindLiveRootboundActors } from "../../src/gameplay/environment/biome-actors/rootbound-actors";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
-import type { RootboundEnvironmentActor } from "../../src/gameplay/environment/verdant-environment-feature";
-import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
+import { ROOTBOUND_REGROWTH_TIMING, type RootboundRegrowthState } from "../../src/gameplay/environment/regrowth-link";
+import type { BossEncounterCleanupReason } from "../../src/gameplay/run/boss-encounter";
+import { createBossArena } from "../../src/gameplay/training/arena-rules";
+import { createEnemyHarness, createTestPlayer } from "./enemy-test-harness";
 
-type PhaseThreeBoss = InstanceType<ReturnType<typeof createEnemyHarness>["types"]["Rootbound"]> & {
+type Harness = ReturnType<typeof createEnemyHarness>;
+type FinalBoss = InstanceType<Harness["types"]["Rootbound"]> & {
+  moveState: BossAttackRunnerState;
+  moveTick: number;
+  phaseMarker: number;
   regrowthState: RootboundRegrowthState;
-  beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean;
-  advanceRegrowth(
-    tick: number,
-    activeConnectionIds: ReadonlySet<string>,
-    bossChannelBroken?: boolean,
-  ): RootboundRegrowthState;
-  lastSpringStage: RootboundLastSpringStage | null;
-  lastSpringT: number;
+  regrowthCalled: boolean;
+  phaseThreeEntryHp: number | null;
   lastSpringUseCount: number;
-  startLastSpring(): boolean;
+  exposed(): boolean;
+  limitIncomingDamage(damage: number): number;
   bossBloomPattern(): string | null;
+  cleanupEncounter(reason: BossEncounterCleanupReason): void;
 };
 
-const connectionIds = ["rootbound:regrowth:1", "rootbound:regrowth:2", "rootbound:regrowth:3"] as const;
+const DT = 1 / 120;
+const live = (object: Readonly<{ state: string }>) => object.state !== "destroyed" && object.state !== "expired";
+const move = (id: string) => {
+  const found = ROOTBOUND_MOVES.byId.get(id);
+  if (found === undefined) throw new Error(`no move ${id}`);
+  return found;
+};
 
-function resolvedBoss(): Readonly<{ actor: PhaseThreeBoss; harness: ReturnType<typeof createEnemyHarness> }> {
-  const harness = createEnemyHarness();
-  const actor = new harness.types.Rootbound(
-    CONFIG.view.w / 2,
-    CONFIG.world.groundY - CONFIG.boss.h / 2,
-  ) as PhaseThreeBoss;
-  actor.hp = actor.maxHp * 0.2;
-  actor.update(1 / 120, harness.platforms, harness.player);
-  actor.cinematicRequest = null;
-  actor.cinematicT = 0;
-  actor.beginRegrowth(0, connectionIds);
-  actor.advanceRegrowth(ROOTBOUND_REGROWTH_TIMING.channelTicks, new Set(), false);
-  actor.state = "idle";
-  actor.stateT = 0;
-  return { actor, harness };
+/** The boss entering Phase III inside its environment, with a player standing at `playerX` on the floor. */
+function finale(options: Readonly<{ playerX?: number; arena?: boolean }> = {}) {
+  const harness = createEnemyHarness([0.25, 0.75, 0.4, 0.6, 0.1, 0.9]);
+  const boss = new harness.types.Rootbound(CONFIG.view.w / 2, CONFIG.world.groundY - CONFIG.boss.h / 2) as FinalBoss;
+  const player = Object.assign(createTestPlayer({ x: options.playerX ?? 100 }), {
+    hazardDmgMult: 1,
+    invulnerable: false,
+  });
+  const arena = createBossArena("rootbound", CONFIG.view.w, CONFIG.view.h, CONFIG.world.groundY, 0.5);
+  const platforms = options.arena === true && arena !== null ? arena.map((p) => ({ ...p })) : harness.platforms;
+  const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-phase-three" });
+  bindLiveRootboundActors(
+    environment,
+    () => player,
+    () => [boss],
+    () => "enemy:boss",
+    CONFIG,
+  );
+  boss.introT = 0;
+  boss.hp = boss.maxHp * (boss.phaseMarks[1] - 0.02);
+  let tick = 0;
+  const moves: string[] = [];
+  const step = (seconds: number): void => {
+    for (let index = 0; index < Math.round(seconds / DT); index += 1) {
+      tick += 1;
+      const before = boss.moveState.run?.attackId ?? null;
+      environment.step(
+        tick + 8,
+        DT,
+        () => {
+          boss.update(DT, platforms, player);
+        },
+        new Set(["enemy:boss"]),
+      );
+      boss.cinematicRequest = null;
+      boss.cinematicT = 0;
+      const now = boss.moveState.run?.attackId ?? null;
+      if (now !== null && now !== before) moves.push(now);
+    }
+  };
+  const until = (done: () => boolean, limit = 60): void => {
+    for (let waited = 0; waited < limit / DT && !done(); waited += 1) step(DT);
+    if (!done()) throw new Error("the finale never reached the expected state");
+  };
+  const links = () => environment.combatObjects().filter((object) => object.kind === "root-link" && live(object));
+  const cut = (id: string): void => {
+    environment.damageCombatObject(id, 100_000, `cut:${String(tick)}`, tick + 8);
+  };
+  const channeling = () => boss.regrowthState.phase === "channeling";
+  return { boss, player, environment, platforms, moves, step, until, links, cut, channeling };
 }
 
-describe("Rootbound Last Spring", () => {
-  it("runs one authored warning, Bloom, commit, and punish sequence", () => {
-    const { actor, harness } = resolvedBoss();
-    expect(actor.startLastSpring()).toBe(true);
-    expect(actor).toMatchObject({ lastSpringStage: "warning", lastSpringUseCount: 1, atk: "last-spring:warning" });
-    expect(actor.bossBloomPattern()).toBe("last-spring");
+/** Into the channel, with the keeper `down` of its full health under the health it entered Phase III with. */
+function channel(down: number, options?: Parameters<typeof finale>[0]) {
+  const scene = finale(options);
+  scene.until(scene.channeling);
+  scene.boss.hp -= scene.boss.maxHp * down;
+  return scene;
+}
 
-    actor.update(ROOTBOUND_LAST_SPRING.warning, harness.platforms, harness.player);
-    expect(actor).toMatchObject({ lastSpringStage: "bloom", atk: "last-spring:bloom" });
-    expect(harness.platforms.find((platform) => platform.arenaPlatId)?.arenaFractureRequest).toEqual({
-      reason: "rootbound-last-spring",
-      color: "#e4c95a",
+describe("Rootbound Phase III: Regrowth is a move that keeps attacking", () => {
+  it("opens with Regrowth and nothing else; its links grow at the tell", () => {
+    const scene = finale();
+    scene.until(() => scene.moves.length > 0);
+    expect(scene.moves[0]).toBe("regrowth");
+    expect(scene.boss.regrowthCalled).toBe(true);
+    scene.step(0.1);
+    expect(scene.links()).toHaveLength(3);
+    expect(scene.boss.regrowthState.phase).toBe("channeling");
+  });
+
+  it("runs the channel for exactly the move's tell and active stages", () => {
+    const regrowth = move("regrowth");
+    expect(regrowth.timing.tell + regrowth.timing.active).toBe(ROOTBOUND_REGROWTH_TIMING.channelTicks);
+    expect(ROOTBOUND_ARENA_WIDTH).toBe(CONFIG.view.w);
+  });
+
+  it("sitting back is answered: a root wave hits a player in front of it on every repeat", () => {
+    const scene = finale({ playerX: 420 });
+    scene.until(scene.channeling);
+    scene.step(4.2);
+    const waves = scene.player.damage.filter((entry) => entry.amount === 16);
+    // Three waves in the active stage (0, 1.1 and 2.2 s in); a player that never moves takes all three.
+    expect(waves).toHaveLength(3);
+  });
+
+  it("a channel left alone heals the most the table allows, never above the Phase III entry health", () => {
+    const scene = channel(0.15);
+    const start = scene.boss.hp;
+    scene.until(() => scene.boss.regrowthState.phase === "resolved");
+    expect(scene.boss.regrowthState.interruptClassification).toBe("no-interrupt");
+    expect((scene.boss.hp - start) / scene.boss.maxHp).toBeCloseTo(ROOTBOUND_HEALING.regrowthMax, 6);
+
+    const shallow = channel(0.02);
+    shallow.until(() => shallow.boss.regrowthState.phase === "resolved");
+    expect(shallow.boss.hp).toBeCloseTo(shallow.boss.phaseThreeEntryHp ?? 0, 6);
+  });
+
+  it("one link cut heals for the two left, and the keeper still opens after the channel", () => {
+    const scene = channel(0.15);
+    const start = scene.boss.hp;
+    const [first] = scene.links();
+    if (first === undefined) throw new Error("no link to cut");
+    scene.cut(first.id);
+    scene.until(() => scene.boss.regrowthState.phase === "resolved");
+    expect(scene.boss.regrowthState.interruptClassification).toBe("partial-interrupt");
+    expect((scene.boss.hp - start) / scene.boss.maxHp).toBeCloseTo((ROOTBOUND_HEALING.regrowthMax * 2) / 3, 6);
+    scene.until(() => scene.boss.exposed(), 3);
+    expect(scene.boss.moveState.run?.attackId).toBe("regrowth");
+  });
+
+  it("all three links cut: no healing, and the keeper is opened at once", () => {
+    const scene = channel(0.15);
+    const start = scene.boss.hp;
+    for (const link of scene.links()) scene.cut(link.id);
+    scene.step(2 * DT);
+    expect(scene.boss.regrowthState).toMatchObject({ phase: "resolved", interruptClassification: "full-interrupt" });
+    expect(scene.boss.hp).toBe(start);
+    expect(scene.boss.exposed()).toBe(true);
+    expect(scene.boss.moveState.run).toBeNull();
+  });
+
+  it("hitting the keeper for the break share while it channels breaks it the same way", () => {
+    const scene = channel(0.15);
+    const start = scene.boss.hp;
+    const dealt = scene.boss.limitIncomingDamage(scene.boss.maxHp * ROOTBOUND_HEALING.regrowthBreak);
+    scene.boss.hp -= dealt;
+    scene.step(2 * DT);
+    expect(scene.boss.regrowthState.interruptClassification).toBe("full-interrupt");
+    expect(scene.boss.hp).toBe(start - dealt);
+    expect(scene.boss.exposed()).toBe(true);
+  });
+});
+
+describe("Rootbound Phase III: Last Spring and the strikes", () => {
+  it("follows Regrowth with Last Spring, then plays it after every few moves and never otherwise", () => {
+    const scene = finale();
+    const after = move("last-spring").choose.afterMoves ?? 0;
+    expect(after).toBeGreaterThan(0);
+    scene.until(() => scene.moves.length >= 2 + 2 * after, 90);
+    const every = after + 1;
+    scene.moves.slice(1).forEach((id, index) => {
+      expect(id === "last-spring").toBe(index % every === 0);
     });
-    actor.update(ROOTBOUND_LAST_SPRING.bloom, harness.platforms, harness.player);
-    expect(actor).toMatchObject({ lastSpringStage: "commit", atk: "last-spring:commit" });
-    actor.update(ROOTBOUND_LAST_SPRING.commit, harness.platforms, harness.player);
-    expect(actor).toMatchObject({ lastSpringStage: "punish", atk: "last-spring:punish" });
-    expect(harness.player.damage).toHaveLength(1);
-    expect(harness.player.damage[0]?.amount).toBe(ROOTBOUND_LAST_SPRING.damage);
-    actor.update(ROOTBOUND_LAST_SPRING.punish, harness.platforms, harness.player);
-    expect(actor).toMatchObject({ lastSpringStage: "complete", state: "recover", atk: "unavailable" });
-    expect(actor.startLastSpring()).toBe(false);
+    expect(scene.moves.filter((id) => id === "regrowth")).toHaveLength(1);
   });
 
-  it("drives the existing living arena through warning, broken, reforming, and stable", () => {
-    const { actor, harness } = resolvedBoss();
-    const platforms =
-      createBossArena(
-        "rootbound",
-        CONFIG.view.w,
-        CONFIG.view.h,
-        CONFIG.world.groundY,
-        CONFIG.bossArena.reformWarn,
-      )?.map((platform) => ({ ...platform })) ?? [];
-    const broken: typeof platforms = [];
-    expect(actor.startLastSpring()).toBe(true);
-    actor.update(ROOTBOUND_LAST_SPRING.warning, platforms, harness.player);
-    const route = platforms.find((platform) => platform.arenaFractureRequest?.reason === "rootbound-last-spring");
-    if (route === undefined) throw new Error("Last Spring must request one authored living route fracture");
-    const rules = new BossArenaRules(CONFIG.bossArena, CONFIG.colors);
-    rules.update({ platforms, broken }, 0, null, [actor], true);
-    expect(route.arenaState).toBe("warning");
-    rules.update({ platforms, broken }, CONFIG.bossArena.crackWarn, null, [actor], true);
-    expect(route.arenaState).toBe("broken");
-    expect(platforms.filter((platform) => platform.oneway)).toHaveLength(4);
-    rules.update(
-      { platforms, broken },
-      CONFIG.bossArena.brokenDuration - CONFIG.bossArena.crackWarn + 0.05,
-      null,
-      [actor],
-      true,
-    );
-    expect(route.arenaState).toBe("reforming");
-    rules.update({ platforms, broken }, CONFIG.bossArena.reformWarn, null, [actor], true);
-    expect(route.arenaState).toBe("stable");
-    expect(platforms).toContain(route);
-    expect(broken).toEqual([]);
+  it("warns for its whole tell: the Wells bloom and a perch starts to fracture as the tell begins", () => {
+    const scene = finale({ arena: true });
+    scene.until(() => scene.boss.moveState.run?.attackId === "last-spring");
+    expect(scene.boss.bossBloomPattern()).toBe("last-spring");
+    expect(scene.platforms.some((p) => p.arenaFractureRequest?.reason === "rootbound-last-spring")).toBe(true);
+    expect(move("last-spring").timing.tell / 120).toBeGreaterThanOrEqual(2.3);
+    expect(scene.boss.lastSpringUseCount).toBe(1);
   });
 
-  it("materializes Regrowth through the environment owner and clears every terminal collection", () => {
-    const harness = createEnemyHarness();
-    const actor = new harness.types.Rootbound(
-      CONFIG.view.w / 2,
-      CONFIG.world.groundY - CONFIG.boss.h / 2,
-    ) as PhaseThreeBoss;
-    actor.hp = actor.maxHp * 0.2;
-    actor.update(1 / 120, harness.platforms, harness.player);
-    actor.cinematicRequest = null;
-    actor.cinematicT = 0;
-    const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: "rootbound-phase-three" });
-    bindVerdantEnvironmentActors(environment, "rootbound", () => [
-      Object.freeze({
-        id: "enemy:rootbound-live",
-        source: actor,
-        beginRegrowth: (startTick: number, ids: readonly string[]) => actor.beginRegrowth(startTick, ids),
-        advanceRegrowth: (tick: number, ids: ReadonlySet<string>, brokenChannel = false) =>
-          actor.advanceRegrowth(tick, ids, brokenChannel),
-        state: Object.freeze({
-          stage: null,
-          geometry: Object.freeze({ x: actor.x, y: actor.y, w: 0, h: 0 }),
-          damage: 0,
-          cleanupReason: null,
-          ownerPosition: Object.freeze({ x: actor.x, y: actor.y }),
-          arena: Object.freeze({ width: CONFIG.view.w, groundY: CONFIG.world.groundY }),
-          phase: actor.phase,
-          regrowth: actor.regrowthState,
-          bloomPattern: actor.bossBloomPattern(),
-        }),
-      }) satisfies RootboundEnvironmentActor,
-    ]);
-    environment.step(100, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    expect(environment.combatObjects()).toHaveLength(3);
-    expect(environment.routes()).toHaveLength(3);
-    expect(actor.regrowthState).toMatchObject({ phase: "channeling", startTick: 100 });
-
-    const severed = environment.combatObjects()[0];
-    if (severed === undefined) throw new Error("Regrowth must install a severable connection");
-    environment.cleanupCombatObject(severed.id, "natural-expiry", 101);
-    environment.step(
-      100 + ROOTBOUND_REGROWTH_TIMING.channelTicks,
-      1 / 120,
-      () => undefined,
-      new Set(["enemy:rootbound-live"]),
-    );
-    expect(actor.regrowthState).toMatchObject({ phase: "resolved", interruptClassification: "partial-interrupt" });
-    expect(environment.combatObjects().every((object) => object.state === "expired")).toBe(true);
-    expect(environment.routes().every((route) => route.state === "expired")).toBe(true);
-
-    actor.state = "idle";
-    actor.stateT = 0;
-    actor.startLastSpring();
-    environment.step(700, 1 / 120, () => undefined, new Set(["enemy:rootbound-live"]));
-    expect(environment.fields().some((field) => field.patternId?.includes("last-spring") === true)).toBe(true);
-    actor.cleanupEncounter("death");
-    environment.clear("boss-terminal");
-    expect(environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
-    expect(actor).toMatchObject({
-      lastSpringStage: null,
-      lastSpringT: 0,
-      lastSpringHitSpent: false,
-      cleanupReason: "death",
-    });
+  it("strikes the floor across most of the arena once, for its authored damage", () => {
+    const scene = finale({ playerX: 500 });
+    scene.until(() => scene.boss.moveState.run?.attackId === "last-spring");
+    const before = scene.player.damage.length;
+    scene.until(() => scene.boss.moveState.run?.stage === "punish", 5);
+    const springs = scene.player.damage.slice(before).filter((entry) => entry.amount === 24);
+    expect(springs).toHaveLength(1);
   });
 
-  it("cleans active final-phase ownership across retry, defeat, victory, and abandon boundaries", () => {
+  it("is the fastest phase: the pause after each move is cut by the Phase III multiplier", () => {
+    const scene = finale();
+    scene.until(() => scene.moves.length >= 3, 30);
+    const state = scene.boss.moveState;
+    if (state.run !== null) scene.until(() => scene.boss.moveState.run === null, 5);
+    const pause = scene.boss.moveState.readyTick - scene.boss.moveTick;
+    expect(pause).toBe(Math.round(ROOTBOUND_MOVES.gap * ROOTBOUND_PHASE_THREE_CADENCE.gapMultiplier));
+  });
+});
+
+describe("Rootbound Phase III: ending the encounter", () => {
+  it("cleans every Phase III object across retry, defeat, victory and abandon, mid-channel", () => {
     const cases = [
       { label: "retry", bossReason: "retry", environmentReason: "retry" },
       { label: "defeat", bossReason: "death", environmentReason: "defeat" },
@@ -183,39 +224,16 @@ describe("Rootbound Last Spring", () => {
       { label: "abandon", bossReason: "exit", environmentReason: "abandon" },
     ] as const;
     for (const entry of cases) {
-      const { actor } = resolvedBoss();
-      expect(actor.startLastSpring()).toBe(true);
-      const environment = createEnvironmentRuntime({ stageId: "verdant-sanctum", worldId: `rootbound-${entry.label}` });
-      const links = createRootboundRegrowthConnections({
-        ownerId: "enemy:rootbound",
-        ownerPosition: { x: actor.x, y: actor.y },
-        startTick: 10,
-        rootNodes: [
-          { id: "left-remnant", x: 280, y: 800 },
-          { id: "heart-root", x: 800, y: 800 },
-          { id: "right-remnant", x: 1_320, y: 800 },
-        ],
-      });
-      links.combatObjects.forEach((value) => environment.addCombatObject(value));
-      links.routes.forEach((value) => environment.addRoute(value));
-      createRootboundBloomPattern({
-        patternId: "last-spring",
-        bossOwnerId: "enemy:rootbound",
-        stageOwnerId: "verdant-sanctum",
-        startTick: 10,
-        arenaWidth: CONFIG.view.w,
-        groundY: CONFIG.world.groundY,
-      }).forEach((value) => environment.addField(value));
-      actor.cleanupEncounter(entry.bossReason);
-      environment.clear(entry.environmentReason);
-      expect(environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
-      expect(actor).toMatchObject({
+      const scene = channel(0.1);
+      expect(scene.links()).toHaveLength(3);
+      scene.boss.cleanupEncounter(entry.bossReason);
+      scene.environment.clear(entry.environmentReason);
+      expect(scene.environment.snapshot()).toMatchObject({ fields: [], combatObjects: [], routes: [] });
+      expect(scene.boss).toMatchObject({
         cleanupReason: entry.bossReason,
-        lastSpringStage: null,
-        lastSpringT: 0,
-        lastSpringHitSpent: false,
         regrowthState: { phase: "resolved", resolvedHealFraction: 0 },
       });
+      expect(scene.boss.moveState.run).toBeNull();
     }
   });
 });

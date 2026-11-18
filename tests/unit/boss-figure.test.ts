@@ -13,7 +13,6 @@ import {
   ROOTBOUND_MOVE_POSES,
   ROOTBOUND_PHASE_POSES,
   ROOTBOUND_RENDERER_FLAGS,
-  ROOTBOUND_SPRING_POSES,
   graftFlag,
   type RootboundFigureColor,
 } from "../../src/presentation/enemies/figures/rootbound-figure";
@@ -72,7 +71,6 @@ describe("boss figure layer", () => {
         expect(ROOTBOUND_MOVE_POSES[attack.id]?.[stage], `${attack.id} ${stage}`).toBeDefined();
     const named = [
       ...Object.values(ROOTBOUND_MOVE_POSES).flatMap((stagesOf) => Object.values(stagesOf)),
-      ...Object.values(ROOTBOUND_SPRING_POSES),
       ...Object.values(ROOTBOUND_PHASE_POSES),
     ];
     for (const pose of named) expect(ROOTBOUND_FIGURE.poses[pose], pose).toBeDefined();
@@ -107,6 +105,8 @@ describe("boss figure layer", () => {
     expect(strokes([graftFlag("bastion")])).toContain(palette.shell);
     expect(strokes([graftFlag("haste")])).toContain(palette.mark);
     expect(strokes([graftFlag("haste")])).not.toContain(palette.shell);
+    expect(strokes([])).not.toContain(palette.haste);
+    expect(strokes([graftFlag("haste")])).toContain(palette.haste);
   });
 
   it("turns only the flash colours white on a hit", () => {

@@ -19,7 +19,7 @@ export const ROOTBOUND_RENDERER_FLAGS: readonly string[] = [
  * which Grafts are feeding it. Feet at the origin, facing +x.
  */
 export type RootboundFigureColor =
-  "ink" | "near" | "far" | "seam" | "heart" | "eye" | "stem" | "leaf" | "shell" | "mark";
+  "ink" | "near" | "far" | "seam" | "heart" | "eye" | "stem" | "leaf" | "shell" | "mark" | "haste";
 
 /** One half of the pod; `side` -1 is the far half, 1 the near half. `closed` adds the seam edge. */
 function podHalf(side: number, closed: boolean): readonly FigurePathCommand[] {
@@ -39,8 +39,17 @@ const SPROUT_BASE: FigurePoint = [0, -150];
 const SPROUT_TIP: FigurePoint = [4, -174];
 const SEEDLING_TIP: FigurePoint = [2, -28];
 
+const HASTE_STREAK = { from: -74, to: -122, width: 4, heights: [-120, -76, -32] } as const;
+
 export const ROOTBOUND_FIGURE: BossFigureDefinition<RootboundFigureColor> = {
   parts: [
+    // A Haste Graft trails speed streaks behind the pod: it pauses less between moves.
+    ...HASTE_STREAK.heights.map((y) => ({
+      id: `haste-streak-${String(-y)}`,
+      shape: { kind: "stroke" as const, from: [HASTE_STREAK.from, y] as const, to: [HASTE_STREAK.to, y] as const },
+      line: { color: "haste" as const, width: HASTE_STREAK.width },
+      when: graftFlag("haste"),
+    })),
     {
       id: "heart",
       pivot: [0, -76],
@@ -201,12 +210,17 @@ export const ROOTBOUND_FIGURE: BossFigureDefinition<RootboundFigureColor> = {
     swell: { figure: { scaleX: 1.08, scaleY: 1.08 } },
     burst: { parts: { far: { rotate: -0.14 }, near: { rotate: 0.14 } }, flags: ["open", "split"] },
     slam: { figure: { rotate: 0.06, scaleX: 1.08, scaleY: 0.86 } },
-    kneel: { figure: { rotate: 0.14, scaleX: 1.06, scaleY: 0.84 } },
+    // Kneeling to plant or to channel Regrowth: low and wide, held until the move lets go.
+    kneel: { figure: { scaleX: 1.12, scaleY: 0.66 } },
     bloom: { parts: { sprout: { scaleX: 1.7, scaleY: 1.7 } }, flags: ["bud"] },
+    // Channelling Regrowth: still kneeling, the seam eased open and the sprout raised.
     channel: {
+      figure: { scaleX: 1.12, scaleY: 0.66 },
       parts: { far: { rotate: -0.08 }, near: { rotate: 0.08 }, sprout: { scaleX: 1.5, scaleY: 1.5 } },
       flags: ["open", "split", "bud"],
     },
+    // Last Spring wakes: swollen, the sprout in bloom.
+    spring: { figure: { scaleX: 1.08, scaleY: 1.08 }, parts: { sprout: { scaleX: 1.7, scaleY: 1.7 } }, flags: ["bud"] },
     death: {
       parts: {
         far: { dx: -26, rotate: -1.3 },
@@ -230,6 +244,7 @@ export const ROOTBOUND_FIGURE: BossFigureDefinition<RootboundFigureColor> = {
       leaf: "#9ccc52",
       shell: "#6f8f78",
       mark: "#e4c95a",
+      haste: "#cfe9a0",
     },
     highContrast: {
       ink: "#000000",
@@ -242,6 +257,7 @@ export const ROOTBOUND_FIGURE: BossFigureDefinition<RootboundFigureColor> = {
       leaf: "#ffffff",
       shell: "#ffffff",
       mark: "#fff36b",
+      haste: "#fff36b",
     },
   },
   flashKeys: ["near", "far", "shell"],
@@ -257,16 +273,10 @@ export const ROOTBOUND_MOVE_POSES: FigureMovePoses = {
   "plant-graft": { tell: "kneel", active: "kneel", recover: "kneel", punish: "split" },
   "root-cage": { tell: "stretch", active: "slam", recover: "slam", punish: "split" },
   "bloom-shift": { tell: "bloom", active: "bloom", recover: "bloom", punish: "split" },
+  regrowth: { tell: "kneel", active: "channel", recover: "channel", punish: "split" },
+  "last-spring": { tell: "spring", active: "slam", recover: "slam", punish: "split" },
 };
 
-/** The figure's stance in each step of Last Spring and while Regrowth is channelled. */
-export const ROOTBOUND_SPRING_POSES: Readonly<Record<string, string>> = {
-  warning: "swell",
-  bloom: "bloom",
-  commit: "lunge",
-  punish: "split",
-};
-export const ROOTBOUND_CHANNEL_POSE = "channel";
 export const ROOTBOUND_PHASE_POSES: Readonly<Record<number, string>> = { 2: "phase-2", 3: "phase-3" };
 
 /** Sizes the renderer needs around the figure: the exposed ring, the death beat and the lash vine. */

@@ -8,13 +8,11 @@ import {
   type FigurePoseLayer,
 } from "../figures/boss-figure";
 import {
-  ROOTBOUND_CHANNEL_POSE,
   ROOTBOUND_FIGURE,
   ROOTBOUND_FIGURE_LAYOUT,
   ROOTBOUND_MOVE_POSES,
   ROOTBOUND_PHASE_POSES,
   ROOTBOUND_SEEDLING_FLAG,
-  ROOTBOUND_SPRING_POSES,
   graftFlag,
   type RootboundFigureColor,
 } from "../figures/rootbound-figure";
@@ -195,8 +193,6 @@ function rootboundFrame(
     { pose: ROOTBOUND_PHASE_POSES[boss.phase] ?? "", weight: 1 },
     movePoseLayer(ROOTBOUND_MOVE_POSES, pose),
     pose === null && opening !== null ? { pose: "split", weight: 1 } : null,
-    { pose: ROOTBOUND_SPRING_POSES[boss.lastSpringStage ?? ""] ?? "", weight: 1 },
-    boss.regrowthState.phase === "channeling" ? { pose: ROOTBOUND_CHANNEL_POSE, weight: 1 } : null,
     { pose: "rise", weight: 1 - intro },
     boss.dying ? { pose: "death", weight: boss.deathP } : null,
   ];
@@ -274,6 +270,17 @@ function drawMove(
         spikes(ctx, ink, box.x, ground, box.hw, box.hh * 2.4, 1);
         spikes(ctx, ink, box.x - facing * box.hw * 2.2, ground, box.hw, box.hh * 1.4, 0.7);
       }
+      return;
+    case "regrowth":
+      // Kneeling into the earth, as when planting; while it channels a root wave leaves its front.
+      if (stage !== "recover") mound(ctx, ink, boss.x, ground, stage === "tell" ? k : 1);
+      if (stage === "active" && box !== null) spikes(ctx, ink, box.x, ground, box.hw, box.hh * 2.4, 1);
+      return;
+    case "last-spring":
+      // The floor wakes along the whole band: thorns rise through the tell and stand at the strike.
+      if ((stage === "tell" || stage === "active") && box !== null)
+        for (let x = box.x - box.hw + 40; x < box.x + box.hw; x += 120)
+          spikes(ctx, ink, x, ground, 24, (stage === "active" ? 1 : 0.25 + 0.5 * k) * box.hh * 2, 1);
       return;
     default:
       drawGardenMove(ctx, ink, boss, pose, ground);
