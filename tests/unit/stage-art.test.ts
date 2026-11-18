@@ -235,6 +235,41 @@ describe("water and the ruins standing in it", () => {
     const columned = await layerCalls([{ ...tall, columns: 0.6 }]);
     expect(count(columned.calls, "fillRect(")).toBeGreaterThan(count(whole.calls, "fillRect("));
   });
+
+  it("stands a wading ruin in water painted earlier and reflects it through the same pass", async () => {
+    const depth = 12;
+    const wading = { ...ruin(0), y: WATER_TOP + 40, wade: { depth, ramp: "water", reflection: 0.5 } } as const;
+    const line = wading.y - depth;
+    const span = wading.bays * wading.bayWidth + wading.thickness * 2;
+    const { calls, top } = await layerCalls([water, wading]);
+    const rows = calls
+      .filter((call) => call.startsWith("drawImage(") && call.split(",").length === 9)
+      .map((call) => call.slice("drawImage(".length, -1).split(",").map(Number));
+    // The ruin's own rows are as wide as the ruin, start at its waterline and copy what stands above it.
+    const own = rows.filter((row) => row[7] === span);
+    expect(own.length).toBeGreaterThan(20);
+    for (const row of own) {
+      expect((row[2] ?? 0) + top).toBeLessThan(line);
+      expect(row[6]).toBeGreaterThanOrEqual(line);
+    }
+    expect(calls.filter((call) => call.startsWith("scale(") && call.includes("-1.00"))).toEqual([]);
+    const dry = await layerCalls([water, { ...ruin(0), y: WATER_TOP + 40 }]);
+    expect(dry.calls.filter((call) => call.startsWith("drawImage(")).length).toBe(rows.length - own.length);
+  });
+
+  it("names a wading ruin's water ramp when the recipe lacks it", () => {
+    const wading = { ...ruin(0), wade: { depth: 12, ramp: "lava", reflection: 0.5 } } as const;
+    expect(() => {
+      validateStageArt(withLayers([{ ...firstLayer, strokes: [wading] }]));
+    }).toThrow(/unknown ramp "lava"/u);
+  });
+
+  it("keeps ivy off the arch openings, so wider arches carry less of it", async () => {
+    const leaves = (calls: readonly string[]) => calls.filter((call) => call.startsWith("ellipse(")).length;
+    const narrow = await layerCalls([{ ...ruin(0), ivy: 1, pier: 0.8 }]);
+    const wide = await layerCalls([{ ...ruin(0), ivy: 1, pier: 0.1 }]);
+    expect(leaves(wide.calls)).toBeLessThan(leaves(narrow.calls));
+  });
 });
 
 describe("layer coverage", () => {

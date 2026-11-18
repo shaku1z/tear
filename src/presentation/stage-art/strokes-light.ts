@@ -127,6 +127,58 @@ const SHORE_FEATHER = 26;
 /** How far the far water takes the colour of the air. */
 const FAR_WATER_HAZE = 0.6;
 
+/** Where and how strongly to reflect: a span of water below a line, world units. */
+export interface ReflectionSpan {
+  readonly left: number;
+  readonly width: number;
+  /** The row the surface meets what stands above it. */
+  readonly line: number;
+  /** Rows of water below the line that carry the reflection. */
+  readonly depth: number;
+  readonly strength: number;
+  /** Rows over which the reflection fades in from the line. */
+  readonly feather: number;
+}
+
+/**
+ * The one reflection pass: rows of everything already painted above the line
+ * (earlier layers and this one), flipped below it, fading and rippling with
+ * distance from the line. The water stroke uses it for the whole scene; a form
+ * standing nearer in the water uses it for its own span.
+ */
+export function* reflectBelow(kit: PaintKit, random: () => number, span: ReflectionSpan): Generator<void> {
+  const { context } = kit;
+  const behind = kit.behind();
+  yield;
+  if (behind === undefined) return;
+  const scale = context.getTransform().a;
+  context.save();
+  context.beginPath();
+  context.rect(span.left, span.line, span.width, span.depth);
+  context.clip();
+  for (let row = 0; row < span.depth; row += REFLECTION_ROW) {
+    if (row % (REFLECTION_ROW * REFLECTION_ROWS_PER_YIELD) === 0) yield;
+    const k = row / span.depth;
+    const sourceY = span.line - (row + REFLECTION_ROW) * REFLECTION_STRETCH;
+    if (sourceY < kit.bounds[1]) break;
+    const offset = Math.sin(row * 0.35 + random() * 0.6) * (1 + k * 6);
+    context.globalAlpha =
+      span.strength * (1 - k * REFLECTION_FADE) * Math.min(1, (row + REFLECTION_ROW) / span.feather);
+    context.drawImage(
+      behind,
+      (span.left - kit.bounds[0]) * scale,
+      (sourceY - kit.bounds[1]) * scale,
+      span.width * scale,
+      REFLECTION_ROW * REFLECTION_STRETCH * scale,
+      span.left + offset,
+      span.line + row,
+      span.width,
+      REFLECTION_ROW,
+    );
+  }
+  context.restore();
+}
+
 export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void> {
   const { context, light } = kit;
   const stops = ramp(kit, stroke.ramp);
@@ -145,32 +197,14 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
   context.fillStyle = body;
   context.fillRect(left, stroke.top, width, depth);
   yield;
-  // Rippled reflection: rows of everything painted above, mirrored about the waterline.
-  const behind = kit.behind();
-  yield;
-  if (behind !== undefined) {
-    const scale = context.getTransform().a;
-    for (let row = 0; row < depth; row += REFLECTION_ROW) {
-      if (row % (REFLECTION_ROW * REFLECTION_ROWS_PER_YIELD) === 0) yield;
-      const k = row / depth;
-      const sourceY = stroke.top - (row + REFLECTION_ROW) * REFLECTION_STRETCH;
-      if (sourceY < kit.bounds[1]) break;
-      const offset = Math.sin(row * 0.35 + random() * 0.6) * (1 + k * 6);
-      context.globalAlpha = stroke.reflection * (1 - k * REFLECTION_FADE) * Math.min(1, row / SHORE_FEATHER);
-      context.drawImage(
-        behind,
-        0,
-        (sourceY - kit.bounds[1]) * scale,
-        width * scale,
-        REFLECTION_ROW * REFLECTION_STRETCH * scale,
-        left + offset,
-        stroke.top + row,
-        width,
-        REFLECTION_ROW,
-      );
-    }
-    context.globalAlpha = 1;
-  }
+  yield* reflectBelow(kit, random, {
+    left,
+    width,
+    line: stroke.top,
+    depth,
+    strength: stroke.reflection,
+    feather: SHORE_FEATHER,
+  });
   yield;
   // The key light lies on the water as a bright path toward the viewer.
   const reach = lightAt(kit, light.x, stroke.top);

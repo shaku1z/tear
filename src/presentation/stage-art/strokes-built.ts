@@ -6,6 +6,7 @@ import {
   dab,
   hazed,
   lightAt,
+  mix,
   ramp,
   rgba,
   sampleRamp,
@@ -13,6 +14,7 @@ import {
   type PaintKit,
   type Rgb,
 } from "./paint-kit";
+import { reflectBelow } from "./strokes-light";
 
 /** Opening proportions of one bay: pier share and the arch's rise. */
 const PIER_SHARE = 0.22;
@@ -34,6 +36,10 @@ const EDGE_STEPS_PER_BAY = 4;
 /** A column's capital and base: width and height as multiples of the shaft width. */
 const CAPITAL_WIDTH = 1.6;
 const CAPITAL_HEIGHT = 0.55;
+/** A wading ruin: reflection length as a share of its height, rows it fades in over, and ripple dashes per px of width. */
+const WADE_REFLECTION_REACH = 0.75;
+const WADE_CONTACT_FEATHER = 8;
+const WADE_RIPPLES_PER_PX = 0.09;
 
 /** One storey's measurements and the two paths everything else is drawn from. */
 interface Storey {
@@ -74,7 +80,7 @@ function storeyShape(kit: PaintKit, stroke: ArcadeStroke, level: number, random:
     bottom = stroke.y - stroke.height * level;
   const width = bays * stroke.bayWidth,
     height = bottom - top;
-  const pier = stroke.bayWidth * PIER_SHARE;
+  const pier = stroke.bayWidth * (stroke.pier ?? PIER_SHARE);
   const radius = Math.min((stroke.bayWidth - pier) / 2, height * MAX_ARCH_TO_HEIGHT);
   const spring = top + height * SPRING_DROP + radius;
   const lit = UNLIT_STONE + (1 - UNLIT_STONE) * lightAt(kit, x + width / 2, top);
@@ -295,12 +301,22 @@ function paintCornices(kit: PaintKit, storey: Storey): void {
   });
 }
 
-/** Ivy hanging in drips from the top and gathered in tufts along it. */
+/** True inside one of the storey's arched openings. */
+function inOpening(stroke: ArcadeStroke, storey: Storey, x: number, y: number): boolean {
+  if (y > storey.bottom || x < storey.x || x > storey.x + storey.width) return false;
+  const within = (x - storey.x) % stroke.bayWidth;
+  const fromCentre = within - stroke.bayWidth / 2;
+  if (Math.abs(fromCentre) > storey.radius) return false;
+  return y >= storey.spring || Math.hypot(fromCentre, y - storey.spring) <= storey.radius;
+}
+
+/** Ivy hanging in drips from the top and gathered in tufts along it, kept off the openings. */
 function* paintIvy(kit: PaintKit, stroke: ArcadeStroke, storey: Storey, random: () => number): Generator<void> {
   const { context } = kit;
   const { top, width, height } = storey;
   const moss = ramp(kit, stroke.mossRamp);
   const ivy = (x: number, y: number, size: number, angle: number, jitter: number) => {
+    if (inOpening(stroke, storey, x, y)) return;
     const value = clamp01(lightAt(kit, x, y) * 0.8 + jitter);
     dab(context, x, y, size, angle, hazed(kit, sampleRamp(moss, value), stroke.haze, x, y), 0.9);
   };
@@ -357,10 +373,51 @@ function paintBaseMist(kit: PaintKit, stroke: ArcadeStroke): void {
   context.restore();
 }
 
+/**
+ * A ruin standing in water: the sunk part of its piers shows through the
+ * water, the shared reflection pass mirrors it below the surface, and broken
+ * ripples soften the line where stone meets water.
+ */
+function* paintWading(kit: PaintKit, stroke: ArcadeStroke, random: () => number): Generator<void> {
+  const wade = stroke.wade;
+  if (wade === undefined) return;
+  const { context } = kit;
+  const water = ramp(kit, wade.ramp);
+  const reach = stroke.thickness ?? 0;
+  const left = stroke.x - reach,
+    width = stroke.bays * stroke.bayWidth + reach * 2;
+  const line = stroke.y - wade.depth;
+  const sunk = context.createLinearGradient(0, line, 0, stroke.y);
+  sunk.addColorStop(0, rgba(sampleRamp(water, 0.5), 0.35));
+  sunk.addColorStop(1, rgba(sampleRamp(water, 0.8), 0.95));
+  context.fillStyle = sunk;
+  context.fillRect(left, line, width, wade.depth);
+  yield* reflectBelow(kit, random, {
+    left,
+    width,
+    line,
+    depth: stroke.height * stroke.levels * WADE_REFLECTION_REACH,
+    strength: wade.reflection,
+    feather: WADE_CONTACT_FEATHER,
+  });
+  const glint = mix(sampleRamp(water, 0), kit.light.core, 0.6);
+  context.strokeStyle = rgba(glint, 0.5);
+  context.lineWidth = 1.5;
+  for (let ripple = 0; ripple < width * WADE_RIPPLES_PER_PX; ripple += 1) {
+    const x = left + random() * width,
+      y = line + random() * WADE_CONTACT_FEATHER;
+    context.beginPath();
+    context.moveTo(x, y);
+    context.lineTo(x + 6 + random() * 16, y);
+    context.stroke();
+  }
+}
+
 export function* paintArcade(kit: PaintKit, stroke: ArcadeStroke): Generator<void> {
   const random = seededRandom(stroke.seed);
   for (let level = 0; level < stroke.levels; level += 1) yield* storey(kit, stroke, level, random);
   paintBaseMist(kit, stroke);
+  yield* paintWading(kit, stroke, random);
 }
 
 /** Share of the strip's height under solid moss, and how far the hanging tufts reach. */

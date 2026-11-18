@@ -126,6 +126,13 @@ export interface ArcadeStroke extends Seeded, Hazed {
   readonly columns?: number;
   /** How dark the arch interiors are: 0 see-through .. 1 solid shadow. */
   readonly reveal?: number;
+  /** Pier width as a share of the bay (omitted = the default; smaller gives wider arches). */
+  readonly pier?: number;
+  /**
+   * Standing in water painted earlier: the surface crosses the piers `depth` px
+   * above the base, the sunk part shows through the water and the ruin is reflected.
+   */
+  readonly wade?: { readonly depth: number; readonly ramp: string; readonly reflection: number };
   /** Ivy multiplier (1 = default growth). */
   readonly ivy?: number;
 }
@@ -133,7 +140,7 @@ export interface ArcadeStroke extends Seeded, Hazed {
 /**
  * Still water: a depth gradient, then one reflection pass that flips, fades and ripples everything already
  * painted above the waterline (earlier layers and this one), the key light lying on the surface, and glints.
- * Paint it after whatever stands in it.
+ * Paint it after whatever stands at its far edge; forms standing nearer in it are painted afterwards and wade.
  */
 export interface WaterStroke extends Seeded {
   readonly kind: "water";

@@ -36,8 +36,11 @@ function rampsOf(stroke: StageArtStroke): readonly string[] {
     case "falls":
       return [stroke.ramp];
     case "trunk":
-    case "arcade":
       return [stroke.ramp, stroke.mossRamp];
+    case "arcade":
+      return stroke.wade === undefined
+        ? [stroke.ramp, stroke.mossRamp]
+        : [stroke.ramp, stroke.mossRamp, stroke.wade.ramp];
     default:
       return [];
   }
