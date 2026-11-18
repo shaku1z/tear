@@ -220,14 +220,6 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
   );
   const comparisonSources = afterReload.filter((candidate) => candidate.status === "complete");
   assert.ok(comparisonSources.length >= 9, "N-way comparison needs nine durable sources");
-  const durableSourcesBeforeVisiblePractice = Object.fromEntries(
-    await Promise.all(
-      comparisonSources.map(async (candidate) => [
-        candidate.id,
-        JSON.stringify(await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), candidate.id)),
-      ]),
-    ),
-  );
   const reloadedCapsule = await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), manifest.id);
   assert.equal(reloadedCapsule.tracks.results.length > 0, true);
   await page.evaluate(() => {
@@ -522,92 +514,4 @@ withJourney({ name: "C27 Ghost V3 live capture", port: 8155 }, async ({ page, bo
     assert.ok(dnaTexts.includes(`${name.toUpperCase()} \u00b7 ${String(value)}`));
   if (nativeDna.capture.censored > 0 || nativeDna.metrics.attacks === 0)
     assert.ok(dnaTexts.some((text) => String(text).startsWith("UNAVAILABLE \u00b7 precision:")));
-  await page.mouse.click(892, 854); // rendered C37 COACH control; it has no implicit baseline
-  await page.waitForFunction(
-    () => window.__TEAR_C29_THEATER_TEXT__?.includes("COACH \u00b7 YOUR SELECTED RUNS"),
-    undefined,
-    { timeout: STATE_WAIT_MS },
-  );
-  await page.waitForTimeout(settleFor(180));
-  await page.mouse.click(750, 189); // explicit first compatible local recording, no peer auto-selection
-  await page.waitForFunction(
-    () => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/2 usable recordings")),
-    undefined,
-    { timeout: STATE_WAIT_MS },
-  );
-  await clickText("RUNS");
-  await page.waitForFunction(
-    () => window.__TEAR_C29_POSITIONS__?.some((entry) => entry.text.startsWith("+ ") && entry.y > 170 && entry.y < 370),
-    undefined,
-    { timeout: STATE_WAIT_MS },
-  );
-  const nextCandidate = await page.evaluate(() =>
-    window.__TEAR_C29_POSITIONS__?.find((entry) => entry.text.startsWith("+ ") && entry.y > 170 && entry.y < 370),
-  );
-  assert.ok(nextCandidate, "Coach must render a distinct unselected recording");
-  await clickText(nextCandidate.text);
-  await page.waitForFunction(
-    () => window.__TEAR_C29_THEATER_TEXT__?.some((text) => String(text).includes("/3 usable recordings")),
-    undefined,
-    { timeout: STATE_WAIT_MS },
-  );
-  const coachTexts = await page.evaluate(() => window.__TEAR_C29_THEATER_TEXT__ ?? []);
-  assert.ok(
-    coachTexts.some((text) => String(text).includes("CHRONOLOGICAL HISTORY")),
-    "Coach did not render per-measure run history",
-  );
-  assert.ok(
-    coachTexts.some((text) => String(text).includes("Count distribution:")),
-    "Coach did not disclose count distribution",
-  );
-  assert.ok(
-    coachTexts.some((text) => String(text).includes("OPEN RUN MOMENT") && String(text).includes("TICK 140")),
-    "Coach omitted the actual identified native throw",
-  );
-  await page.screenshot({ path: join(outputDirectory, "coach-history.png") });
-  await clickText("VIEW MOMENT"); // normal source-owned seek
-  await page.waitForFunction(
-    () =>
-      window.__TEAR_C29_THEATER_TEXT__?.some((text) =>
-        String(text).includes("Reconstructed source scene \u00b7 TICK 140"),
-      ),
-    undefined,
-    { timeout: STATE_WAIT_MS },
-  );
-  await page.screenshot({ path: join(outputDirectory, "coach-moment.png") });
-  await clickText("RETURN TO COACH");
-  await clickText("PRACTICE BEFORE"); // strictly preceding checkpoint120
-  await waitScreen("playing");
-  const launchedPractice = await page.evaluate(() => window.__TEAR_GHOST_V3__.activePractice());
-  assert.ok(Object.hasOwn(durableSourcesBeforeVisiblePractice, launchedPractice.sourceGhostId));
-  assert.equal(launchedPractice.id, `${launchedPractice.sourceGhostId}:practice:120:coach-assisted`);
-  assert.equal(launchedPractice.mode, "coach-assisted");
-  assert.equal(typeof launchedPractice.sourceRootHash, "string");
-  assert.equal(launchedPractice.forkTick, 120);
-  assert.equal(launchedPractice.rankedEligible, false);
-  assert.equal(launchedPractice.leaderboardEligible, false);
-  assert.equal(launchedPractice.inputLatchPolicy, "release-all");
-  const sourceAfterVisiblePractice = JSON.stringify(
-    await page.evaluate((id) => window.__TEAR_GHOST_V3__.read(id), launchedPractice.sourceGhostId),
-  );
-  assert.equal(
-    sourceAfterVisiblePractice,
-    durableSourcesBeforeVisiblePractice[launchedPractice.sourceGhostId],
-    "visible practice launch mutated durable source custody",
-  );
-  assert.equal(await page.evaluate(() => window.__TEAR_GHOST_V3__.failure()), null);
-  await writeFile(
-    join(outputDirectory, "coach-history.json"),
-    JSON.stringify(
-      {
-        sourceCount: 3,
-        nativeMoment: 140,
-        practice: launchedPractice,
-        sourceUnchanged: true,
-        renderedTexts: coachTexts.slice(-180),
-      },
-      null,
-      2,
-    ),
-  );
 });

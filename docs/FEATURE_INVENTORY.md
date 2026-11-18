@@ -39,7 +39,7 @@ This is the migration checklist for the architectural redesign. A checked featur
   the release channel; test builds and `vite dev` use the engineering channel.
   Engineering-only (not drawn, not focusable, actions inert, screens refused):
   Boss Test and Enemy Test (still catalog modes) with the
-  boss picker, Seed-Locked Race, Boss Memory, Coach, Replay
+  boss picker, Seed-Locked Race, Boss Memory, Replay
   Editor, linked-pair download, every engineering URL parameter (`test`, `stemcue`,
   `stems`, `foundry*`, surface routes) and the weapon/audio-preview debug
   globals.
@@ -878,7 +878,7 @@ frozen evidence record.
 - [ ] Ghost 3.0 durable Vault and governed cloud publication — C28's named
   gate now proves real IndexedDB Vault storage across browser restart,
   version-1-to-version-2 migration, interrupted-write recovery, hostile
-  imports, Doctor repair children, governed knowledge libraries, and a
+  imports, Doctor repair children, the record of corrupt capsules, and a
   browser-enforced physical quota rejection after retaining a source capsule.
   C27 also includes a real IndexedDB live-capture sidecar plus a persisted V1
   replay bootstrap, keyframe-aligned canonical authoritative-hash receipts,
@@ -1061,7 +1061,6 @@ The inventory is reviewed at every phase gate. New features added during the red
 
 The verified V3 Theater now draws the reconstructed production world through
 per-world presentation ports and the shared actor/platform/world renderers.
-Coach View Moment minimizes its panel onto that scene, with a return control.
 Studio marks verified IN/OUT checkpoints and appends immutable ranges in chosen
 order at the transport speed. Local native WebM encoding uses a dedicated canvas,
 reconstructed player-follow, deterministic aspect fit, and explicit simulation
@@ -1075,18 +1074,9 @@ seeking to 0.1s and 0.8s; durable source bytes stayed unchanged. Practice keeps
 its source mode and combat/style math while suppressing outward profile, daily,
 achievement and biome writes through its active practice disposition.
 
-### C37 personal recorded-observation history
+### C37 local Theater challenges
 
-Coach accepts an explicit selection of two to eight compatible local recordings.
-Its versioned native observations use a shared verified tick window, disclose
-usable sample counts and distributions, and show chronological per-run history.
-Identified moments link to verified Theater seeks and practice from a strictly
-preceding checkpoint. Missing or unclassified facts remain unavailable. The
-normal `56a49044` browser journey selected three recordings, displayed the
-shared `(0, 240]` interval, sought an identified throw at tick140, returned to
-Coach, and launched unranked practice at checkpoint120 without changing its
-source. Skill ratings and population claims remain unavailable. Explicit local
-Theater challenges now record an unranked child at its real checkpoint tick,
+Explicit local Theater challenges now record an unranked child at its real checkpoint tick,
 reexecute native catch/wave/boss conditions and retain a guarded local result;
 normal browser/profile-equality acceptance remains pending. Broader challenges
 remain separate work.
@@ -1116,6 +1106,17 @@ screen; cloud owner recovery in Profile → Vault; and Beat This Run in Career.
 None was ever available in a release build. Records they left in a player's
 vault stay in place unread, and runs and replays recorded as Beat This Run
 attempts still load and are still labelled as such.
+
+### Removed: replay Coach, Coach history and the knowledge libraries
+
+Removed in shaku1z/tear#PRNUM. The engineering-only Coach panel in the
+Theater (selected-run history, View Moment, practice before a cited moment)
+and its worker are gone, with the unused coach analysis contracts. The
+knowledge libraries (Canon, Frontier, Corpus) never had a writer outside
+tests and are gone; the one part the Vault uses, its record of capsules
+that failed their integrity check, is now `src/ghost/corrupt-capsule-records.ts`
+and stores the same bytes as before. The tutorial coach in Training is a
+different system and is unchanged.
 
 ### Linked scored-run/finale portable files
 

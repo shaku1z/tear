@@ -133,8 +133,7 @@ export function createLiveScreenPresentationComposition(
       }
       const result = await replay.enterGhostCapsule(id, "profile");
       if (result.kind === "refused") throw new Error(result.detail);
-      if (command === "coach") replay.openCoach();
-      else if (command === "challenge") replay.openChallenges();
+      if (command === "challenge") replay.openChallenges();
     },
     enterGhostComparison: (ids) => replay.enterGhostComparison(ids, "profile"),
   });
