@@ -9,7 +9,7 @@ import { requireProductionHeadlessScenario } from "../tearbench/production-headl
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { createProductionHeadlessEnvironment } from "../tearbench/production-headless-environment";
 import { createBossPlayer, type BossPlayerId } from "./boss-player";
-import { boxOverlaps, playerWasReset, readBoss, readPlayerBox, type BossView, type PlayerBox } from "./boss-view";
+import { boxOverlaps, readBoss, readPlayerBox, trainingResets, type BossView, type PlayerBox } from "./boss-view";
 
 export interface BossFightRequest {
   readonly boss: BossId;
@@ -197,14 +197,16 @@ export function playBossFight(request: BossFightRequest): BossFightResult {
       }
       const box = readPlayerBox(environment.world());
       const hpBefore = state.player.hp;
+      const resetsBefore = trainingResets(environment.world());
       if (environment.cinematicActive()) cinematicTicks += 1;
       const step = environment.step(player.decide({ state, ui }, before, box));
       ticks += 1;
       const after = readBoss(environment.world());
       const boxAfter = readPlayerBox(environment.world());
       const observed = environment.policyObservation().player;
-      // Playground practice restores a defeated player instead of ending the run; count it as the defeat it is.
-      const reset = playerWasReset(environment.world(), hpBefore, observed.hp, observed.maxHp);
+      // Playground practice restores a defeated player instead of ending the run; the game reports it, and it
+      // counts as the defeat it is.
+      const reset = trainingResets(environment.world()) > resetsBefore;
       const hpAfter = reset ? 0 : observed.hp;
       if (before !== null && !environment.cinematicActive()) {
         seenBoss = after ?? before;

@@ -50,6 +50,7 @@ interface BossActor {
 export interface PlaytestWorld {
   enemies(): readonly unknown[];
   player(): unknown;
+  run(): unknown;
 }
 
 /** The boss in the world, or null before it spawns and after it is removed. */
@@ -91,19 +92,12 @@ export function readPlayerBox(world: PlaytestWorld): PlayerBox | null {
 }
 
 /**
- * Invulnerability left after a Playground reset is above this. The reset gives 2 s (`resolvePlayerDeath`); a hit
- * gives 0.9 s (`CONFIG.player.hitIframe`) and a dash 0.15 s, so nothing else reaches it.
+ * How many defeats the game has answered by restoring the player instead of ending the run, as training modes do.
+ * The game counts them where it resolves a defeat (`resolvePlayerDeath`).
  */
-const RESET_INVULNERABILITY_ABOVE_SECONDS = 1.5;
-
-/**
- * True when the step reset a defeated player, as Playground modes do instead of ending the run: health back to full
- * with a fresh invulnerability timer longer than any hit or dash gives.
- */
-export function playerWasReset(world: PlaytestWorld, hpBefore: number, hpAfter: number, maxHp: number): boolean {
-  const player = world.player() as { iframe?: unknown } | undefined;
-  const iframe = typeof player?.iframe === "number" ? player.iframe : 0;
-  return hpBefore < maxHp && hpAfter >= maxHp && iframe > RESET_INVULNERABILITY_ABOVE_SECONDS;
+export function trainingResets(world: PlaytestWorld): number {
+  const run = world.run() as { trainingResets?: unknown } | undefined;
+  return typeof run?.trainingResets === "number" ? run.trainingResets : 0;
 }
 
 /** True when the box overlaps the rectangle grown by the margin on every side. */

@@ -13,7 +13,8 @@ import {
 import { createTellAvoidingBossPlayer, TELL_AVOIDANCE } from "../../src/playtest/boss-player";
 import { formatBossReport, noTellTotals, PRACTICE_REPORT_BOSSES, REPORT_BOSSES } from "../../src/playtest/boss-report";
 import { isPracticeBossId } from "../../src/gameplay/training/boss-phase-practice-runtime";
-import { playerWasReset, readBoss, type BossView, type PlayerBox } from "../../src/playtest/boss-view";
+import { readBoss, trainingResets, type BossView, type PlayerBox } from "../../src/playtest/boss-view";
+import { resolvePlayerDeath } from "../../src/gameplay/combat/combat-tail-runtime";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
 import { requireProductionHeadlessScenario } from "../../src/tearbench/production-headless-scenario";
@@ -215,11 +216,27 @@ describe("start at a chosen phase through the game's boss practice", () => {
     expect(fight.killingHit).toBeDefined();
   });
 
-  it("tells a reset from a hit or a dash by its fresh invulnerability", () => {
-    const world = (iframe: number) => ({ enemies: () => [], player: () => ({ iframe }) });
-    expect(playerWasReset(world(2), 12, 100, 100)).toBe(true);
-    expect(playerWasReset(world(0.9), 12, 100, 100)).toBe(false);
-    expect(playerWasReset(world(2), 100, 100, 100)).toBe(false);
+  it("reads a training reset from the game's own count, and nothing else as one", () => {
+    const hooks = {
+      trainingReset: () => undefined,
+      shopRevive: () => undefined,
+      abilityRevive: () => undefined,
+      adAvailable: () => false,
+      requestAdContinue: () => undefined,
+      endRun: () => undefined,
+    };
+    const player = () => ({ hp: 0, maxHp: 100, iframe: 0, shopRevives: 0, abilityRevives: 0, oneHit: false });
+    const world = (run: object) => ({ enemies: () => [], player: () => undefined, run: () => run });
+    for (const mode of ["tutorial", "playground"]) {
+      const run = { mode, runTime: 0, waveTime: 0 };
+      expect(trainingResets(world(run))).toBe(0);
+      expect(resolvePlayerDeath(player() as never, run, hooks)).toBe("training-reset");
+      expect(resolvePlayerDeath({ ...player(), hp: 40 } as never, run, hooks)).toBe("alive");
+      expect(trainingResets(world(run))).toBe(1);
+    }
+    const ended = { mode: "bossonly", runTime: 0, waveTime: 0 };
+    expect(resolvePlayerDeath(player() as never, ended, hooks)).toBe("run-ended");
+    expect(trainingResets(world(ended))).toBe(0);
   });
 
   it("refuses, by name, a boss without phase practice and a weapon or difficulty the practice does not run", () => {
