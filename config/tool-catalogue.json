@@ -921,6 +921,13 @@
       ],
       "duration": "seconds"
     },
+    "design-check:report": {
+      "purpose": "Lists merged pull requests the design-check gate would have refused, for reviewing false refusals before enforce",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds"
+    },
     "merge:batch": {
       "purpose": "Merges several ready pull requests onto a codex/batch-* branch, pushes it and starts Validate; --status, --merge, --verify and --prune follow it up",
       "effects": [
@@ -1453,6 +1460,16 @@
         "lint"
       ]
     },
+    "scripts/design-check-report.mjs": {
+      "purpose": "Replays the design-check gate over merged pull requests behind pnpm design-check:report; changes nothing",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds",
+      "via": [
+        "design-check:report"
+      ]
+    },
     "scripts/merge-ready.mjs": {
       "purpose": "Merge readiness behind pnpm merge:ready: a red main stops merges and a stale pass is not a pass",
       "effects": [
@@ -1748,7 +1765,9 @@
       "tests/unit/crazygames-artifact-scope.test.mjs"
     ],
     "scripts/design-check.mjs": [
+      "scripts/design-check-report.mjs",
       "scripts/merge-ready.mjs",
+      "tests/unit/design-check.test.mjs",
       "tests/unit/merge-ready.test.mjs",
       "tests/unit/pull-request-template.test.mjs"
     ],

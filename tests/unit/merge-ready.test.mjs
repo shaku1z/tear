@@ -29,6 +29,29 @@ const passed = (overrides = {}) => ({
 
 describe("merge readiness", () => {
   describe("rule 4: the design check is answered", () => {
+    it("in observe mode lets an unanswered pull request through with a would-refuse note", () => {
+      const facts = { main: green, pr: pr({ body: "## What" }), run: passed(), mainFilesSince: [] };
+      const observed = decide({ ...facts, designCheckMode: "observe" });
+      expect(observed.ready).toBe(true);
+      expect(observed.notes).toEqual([expect.stringMatching(/^design check \(observe\): would refuse: /u)]);
+      expect(decide({ ...facts, designCheckMode: "enforce" }).ready).toBe(false);
+      expect(decide({ ...facts, designCheckMode: "off" })).toMatchObject({ ready: true });
+      expect(decide({ ...facts, designCheckMode: "off" }).notes).toBeUndefined();
+    });
+
+    it("does not let observe mode hide another refusal", () => {
+      const decision = decide({
+        main: red,
+        pr: pr({ body: "## What" }),
+        run: passed(),
+        mainFilesSince: [],
+        designCheckMode: "observe",
+      });
+      expect(decision.ready).toBe(false);
+      expect(decision.reason).toContain("main is red");
+      expect(decision.notes).toHaveLength(1);
+    });
+
     const ready = (body) => decide({ main: green, pr: pr({ body }), run: passed(), mainFilesSince: [] });
 
     it("refuses a description with no design check, naming every label", () => {
