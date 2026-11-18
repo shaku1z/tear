@@ -107,7 +107,7 @@ const desktop = { width: 1600, height: 900 };
 const phone = { width: 800, height: 360 };
 
 withJourney(
-  { name: "music screen journey", port: 8188, recordFrames: true, viewport: desktop },
+  { name: "music screen journey", recordFrames: true, viewport: desktop },
   async ({ page, waitScreen, clickLabel }) => {
     await startAudio(page);
     await openMusic(page, clickLabel);
@@ -154,7 +154,6 @@ withJourney(
     withJourney(
       {
         name: "music screen journey (phone landscape)",
-        port: 8189,
         recordFrames: true,
         viewport: phone,
         deviceScaleFactor: 3,

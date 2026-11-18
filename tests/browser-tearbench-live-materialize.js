@@ -394,7 +394,6 @@ async function main() {
   await withJourney(
     {
       name: `C26 live TearBench materialization (${scenarioId})`,
-      port: 8166,
       viewport: presentation.viewport,
       colorScheme: presentation.colorScheme,
       reducedMotion: presentation.reducedMotion,

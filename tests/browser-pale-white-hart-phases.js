@@ -39,7 +39,7 @@ async function captureAttack(page, directory, attack, file, predicate) {
   return snapshot;
 }
 
-withJourney({ name: "Pale PT3-C7 White Hart phases", port: 8357 }, async ({ page, buildInfo }) => {
+withJourney({ name: "Pale PT3-C7 White Hart phases" }, async ({ page, buildInfo }) => {
   await page.evaluate(({ boss, difficulty }) => window.__PANTHEON_TEST.startBoss(boss, difficulty), scenario.start);
   await page.waitForFunction(
     () => {

@@ -20,7 +20,7 @@ const scenario = {
   tags: ["c23", "state-forge", "live-restore"],
 };
 
-withJourney({ name: "C23 live State Forge", port: 8143 }, async ({ page, buildInfo }) => {
+withJourney({ name: "C23 live State Forge" }, async ({ page, buildInfo }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__, undefined, { timeout: STATE_WAIT_MS });
   await page.waitForFunction(() => window.__PANTHEON_TEST, undefined, { timeout: STATE_WAIT_MS });
   const ordinaryReset = await page.evaluate((scenarioValue) => {

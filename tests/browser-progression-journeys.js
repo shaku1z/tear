@@ -5,7 +5,7 @@ const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS, clickTarget } = require("./browser-waits");
 
 withJourney(
-  { name: "progression journeys", port: 8142, recordFrames: true },
+  { name: "progression journeys", recordFrames: true },
   async ({ page, boot, waitScreen, clickAndWait, waitArmed, labelPoint, clickLabel, clickCard }) => {
     function requireHook(hooks, name) {
       assert.ok(hooks.includes(name), `built artifact is missing required PANTHEON_DEBUG hook: ${name}`);

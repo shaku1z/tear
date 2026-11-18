@@ -12,7 +12,6 @@ const r18 = process.env.TEAR_R18_CONTROLLED_COHORT === "1";
 withJourney(
   {
     name: r18 ? "R18 controlled Normal depth cohort" : "C24 longitudinal earned-profile journey",
-    port: 8155,
     ...(r18 ? { deferBoot: true, ordinaryWatch: true, query: { test: "0", watchagent: "1" } } : {}),
   },
   async ({ page, errors, boot, buildInfo }) => {

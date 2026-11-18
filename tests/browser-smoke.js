@@ -2,13 +2,14 @@ const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
+const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor } = require("./browser-waits");
 
 (async () => {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
-  const port = Number(process.env.TEAR_TEST_PORT || 8123);
-  const baseUrl = `http://127.0.0.1:${port}`;
+  // Set once the server listens on a free port (tests/local-server.js).
+  let baseUrl = "http://127.0.0.1";
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, "http://127.0.0.1").pathname;
     const rel = pathname === "/" ? "index.html" : pathname.slice(1);
@@ -23,7 +24,7 @@ const { STATE_WAIT_MS, clickTarget, pollEvery, settleFor } = require("./browser-
     );
     fs.createReadStream(file).pipe(response);
   });
-  await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+  ({ origin: baseUrl } = await listenOnFreePort(server));
   const chromePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
   const browser = await chromium.launch({
     headless: true,

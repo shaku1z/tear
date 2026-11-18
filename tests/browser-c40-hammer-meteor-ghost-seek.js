@@ -40,7 +40,7 @@ const resolved = Object.freeze({
 });
 
 withJourney(
-  { name: "C40 Hammer terrain Meteor Ghost seek", port: 8306, query: { "ghost-v3-profile": "forensic-qa" } },
+  { name: "C40 Hammer terrain Meteor Ghost seek", query: { "ghost-v3-profile": "forensic-qa" } },
   async ({ page }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
       timeout: STATE_WAIT_MS,

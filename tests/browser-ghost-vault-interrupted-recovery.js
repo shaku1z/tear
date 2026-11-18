@@ -46,7 +46,7 @@ function readRecoveryStores(page, capsuleId) {
   );
 }
 
-withJourney({ name: "C28 Ghost Vault interrupted-write recovery", port: 8165 }, async ({ page, boot }) => {
+withJourney({ name: "C28 Ghost Vault interrupted-write recovery" }, async ({ page, boot }) => {
   await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__TEAR_GHOST_V3__, undefined, {
     timeout: STATE_WAIT_MS,
   });
