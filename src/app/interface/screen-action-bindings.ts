@@ -8,6 +8,7 @@ import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-contr
 import { screenActionAvailable, type SurfaceAvailability } from "../../domain/surface-availability";
 import type { ScreenAction } from "../../presentation/screens/contracts";
 import { setMusicPreview, stepMusicPreview } from "../../audio/music/preview";
+import { requestNextSong } from "../../audio/music/music-source";
 
 export interface ScreenActionBindingPorts {
   readonly controlChase?: (command: "toggle" | "stop") => void;
@@ -174,6 +175,12 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "music.stopPreview": () => {
       setMusicPreview(null);
+    },
+    "music.pick": (action) => {
+      ports.settings.pickMusic(action.value);
+    },
+    "music.next": () => {
+      requestNextSong();
     },
     "shop.buy": (action) => {
       ports.buyShopItem(action.id);

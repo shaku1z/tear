@@ -65,13 +65,13 @@ describe("codex bestiary derivation", () => {
 
 describe("menu and replay player wording", () => {
   it("labels the music row MUSIC with the track or a plain empty state", () => {
-    expect(menuMusicRow({ workId: "", title: "—", stationId: null, stationName: null, tier: 0 })).toEqual({
+    expect(menuMusicRow({ workId: "", title: "—", channelId: null, channelName: null, tier: 0 })).toEqual({
       label: "MUSIC",
       detail: "nothing playing yet",
     });
     expect(
-      menuMusicRow({ workId: "w", title: "Fillet", stationId: "cutline", stationName: "CUTLINE", tier: 2 }),
-    ).toEqual({ label: "MUSIC", detail: "FILLET · CUTLINE" });
+      menuMusicRow({ workId: "w", title: "Fillet", channelId: "calm", channelName: "Calm", tier: 2 }),
+    ).toEqual({ label: "MUSIC", detail: "FILLET · CALM" });
   });
 
   it("formats simulation ticks as m:ss", () => {

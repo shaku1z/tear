@@ -73,7 +73,6 @@ export interface MusicWork {
   readonly tempo: number;
   readonly key: string;
   readonly tags: readonly string[];
-  readonly stations: readonly string[];
   /** What the player must have done to hear it, in the shared condition language. */
   readonly unlock: MusicUnlock;
   /** `calm` or `intense`; the Radio's mood channels select by it. Absent in older catalogs. */
@@ -82,20 +81,10 @@ export interface MusicWork {
   readonly versions: Readonly<Record<string, MusicVersion>>;
 }
 
-export interface Station {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string;
-  readonly selection: { readonly mode: string; readonly repeatProtection: number };
-  readonly filters: { readonly tagsAny: readonly string[]; readonly adaptiveRequiredDuringGameplay: boolean };
-  readonly contextRules: Readonly<Record<string, readonly string[]>>;
-}
-
 export interface MusicCatalog {
   readonly format: "tear-music-catalog";
   readonly version: 1;
   readonly works: readonly MusicWork[];
-  readonly stations: readonly Station[];
   /** Why any work's unlock could not be read; empty for a catalog this build fully understands. */
   readonly problems: readonly string[];
   /** Radio channels and song length: read only through `parseRadioProgramme`, which validates them. */
@@ -109,7 +98,6 @@ export interface LegacyMusicCatalog {
   readonly format: "tear-signal-catalog";
   readonly version: 1;
   readonly works: readonly MusicWork[];
-  readonly stations: readonly Station[];
   readonly [key: string]: unknown;
 }
 
@@ -121,32 +109,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Parse either catalog wire name and normalize it to the canonical Music form.
- * The normalization changes only the format discriminator; work, cue, station,
- * rights, and unknown extension fields are preserved byte-for-byte in memory.
+ * The normalization changes only the format discriminator; work, cue, rights and
+ * unknown extension fields (a retired `stations` list among them) are kept in memory.
  */
 export function parseMusicCatalog(value: unknown): MusicCatalog {
   if (
     !isRecord(value) ||
     value.version !== 1 ||
     (value.format !== "tear-music-catalog" && value.format !== "tear-signal-catalog") ||
-    !Array.isArray(value.works) ||
-    (value.stations !== undefined && !Array.isArray(value.stations))
+    !Array.isArray(value.works)
   ) {
     throw new TypeError("unsupported music catalog format/version");
   }
-  // Stations are on their way out: a catalog without them (or a work without its station
-  // list) reads as having none.
-  const base = { ...value, format: "tear-music-catalog", version: 1, stations: value.stations ?? [] } as MusicCatalog;
+  const base = { ...value, format: "tear-music-catalog", version: 1 } as MusicCatalog;
   const problems: string[] = [];
   const works = base.works.map((work) => {
     const known: Record<string, unknown> = isRecord(work) ? work : {};
-    const listed: unknown[] = Array.isArray(known.stations) ? known.stations : [];
-    const stations = listed.filter((id): id is string => typeof id === "string");
     const unlock = conditionFrom(known.unlock);
-    if (unlock !== null) return { ...work, stations, unlock };
+    if (unlock !== null) return { ...work, unlock };
     const where = typeof known.id === "string" ? known.id : "a music work";
     problems.push(...conditionProblems(known.unlock, `music work ${where}`));
-    return { ...work, stations, unlock: { type: "unreadable" } as const };
+    return { ...work, unlock: { type: "unreadable" } as const };
   });
   return Object.freeze({ ...base, works, problems });
 }
@@ -155,9 +138,8 @@ export function parseMusicCatalog(value: unknown): MusicCatalog {
 export function musicCatalogSemanticProjection(catalog: MusicCatalogDocument): Readonly<{
   version: 1;
   works: readonly MusicWork[];
-  stations: readonly Station[];
 }> {
-  return Object.freeze({ version: 1 as const, works: catalog.works, stations: catalog.stations });
+  return Object.freeze({ version: 1 as const, works: catalog.works });
 }
 
 /** Contexts that must never be handed a non-adaptive (linear) version. */
@@ -168,18 +150,10 @@ export function isSelectableAsBed(version: MusicVersion): boolean {
   return version.available && version.class !== "D";
 }
 
-/**
- * Choose the best available version of a work for a context.
- *
- * `allowedOrder` normally comes from the active station's `contextRules` and is a
- * strict allowlist in priority order — a station that programmes album versions
- * must not silently fall back to the adaptive game mix. When it is empty (no
- * station, i.e. a direct work pick) any context-legal version may be used.
- */
+/** Choose the best available version of a work for a context: the most capable one it may use there. */
 export function selectVersion(
   work: MusicWork,
   context: MusicContext,
-  allowedOrder: readonly string[] = [],
 ): { versionId: string; version: MusicVersion } | null {
   const fits = (v: MusicVersion): boolean => {
     if (ADAPTIVE_REQUIRED.has(context) && v.adaptive !== true) return false;
@@ -189,14 +163,6 @@ export function selectVersion(
   const usable = Object.entries(work.versions).filter(([, v]) => isSelectableAsBed(v) && fits(v));
   if (usable.length === 0) return null;
 
-  if (allowedOrder.length > 0) {
-    for (const id of allowedOrder) {
-      const hit = usable.find(([versionId]) => versionId === id);
-      if (hit) return { versionId: hit[0], version: hit[1] };
-    }
-    return null; // the station's programming is unavailable for this work here
-  }
-  // No station constraint: prefer the most capable version.
   const ranked = [...usable].sort((a, b) => score(b[1]) - score(a[1]));
   const best = ranked[0];
   return best ? { versionId: best[0], version: best[1] } : null;
@@ -208,21 +174,4 @@ function score(v: MusicVersion): number {
 
 export function findWork(catalog: MusicCatalogDocument, workId: string): MusicWork | null {
   return catalog.works.find((w) => w.id === workId) ?? null;
-}
-
-export function findStation(catalog: MusicCatalogDocument, stationId: string): Station | null {
-  return catalog.stations.find((s) => s.id === stationId) ?? null;
-}
-
-/** Works a station may draw from, honouring its tag filter and gameplay safety. */
-export function stationWorks(
-  catalog: MusicCatalogDocument,
-  station: Station,
-  context: MusicContext,
-): readonly MusicWork[] {
-  const order = station.contextRules[context] ?? [];
-  return catalog.works.filter((work) => {
-    if (!work.stations.includes(station.id)) return false;
-    return selectVersion(work, context, order) !== null;
-  });
 }

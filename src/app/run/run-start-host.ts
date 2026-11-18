@@ -514,6 +514,7 @@ export function createLiveRunStartHost(
       }
     },
     beginMusic: (runId, seed) => {
+      const seedRace = context.race?.active() === true;
       context.music.begin({
         runId,
         runSeed: String(seed),
@@ -525,10 +526,11 @@ export function createLiveRunStartHost(
         ...musicProgressField(
           admittedMusicProgress(musicProgress, {
             tracksProgress: context.achievementTracking(),
-            seedRace: context.race?.active() === true,
+            seedRace,
             practice: context.baselinePractice?.() === true,
           }),
         ),
+        ...(seedRace ? { seedRace } : {}),
       });
     },
     requestPointerLock: context.requestPointerLock,

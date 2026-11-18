@@ -65,8 +65,8 @@ async function loadMusicIndex(): Promise<BiomeStemBackend> {
       (manifest.loop.endFrame - manifest.loop.startFrame) / manifest.sourceSampleRate,
     ]),
   );
-  publishMusicLibrary(catalog, routing, seconds);
-  return new BiomeStemBackend(cues, routing, catalog);
+  const library = publishMusicLibrary(catalog, routing, seconds);
+  return new BiomeStemBackend(cues, routing, catalog, library);
 }
 
 /**

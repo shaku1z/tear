@@ -22,6 +22,8 @@ export interface MusicRunSessionMetadata {
    * everyone hears the same music.
    */
   readonly progress?: ProgressSource;
+  /** A seed race: every racer hears the same music, so the player's music pick does not play. */
+  readonly seedRace?: boolean;
 }
 
 export type MusicReplayMetadata =

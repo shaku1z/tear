@@ -10,7 +10,6 @@ import {
   stepMusicPreview,
 } from "../../src/audio/music/preview";
 import { parseRadioProgramme } from "../../src/audio/music/radio";
-import { resolveMenuCueId, setMenuMusic } from "../../src/audio/music/loadout";
 import { MUSIC_SCREEN_TITLE } from "../../src/audio/music/settings";
 import { buildMusicScreenView, musicWherePlays } from "../../src/presentation/music-snapshots";
 import { bossName } from "../../src/gameplay/run/content-director";
@@ -23,7 +22,6 @@ const songs = catalog.works.map((work) => ({ id: work.id, title: work.title }));
 
 afterEach(() => {
   setMusicPreview(null);
-  setMenuMusic("default");
 });
 
 describe("where a song plays", () => {
@@ -89,7 +87,7 @@ describe("the MUSIC screen view", () => {
       seconds: seconds["looking-out"],
     });
     expect(home.nowPlaying).toEqual({ title: "Fillet", where: "Menu", art: null, previewing: false, progress: null });
-    expect(home.playback.map((row) => row.key)).toEqual(["station", "menuMusic", "musicMode"]);
+    expect(home.playback.map((row) => row.key)).toEqual(["menuMusic", "musicMode"]);
   });
 
   it("builds the collections from the catalog and routing: stages in campaign order, bosses, menus", () => {
@@ -181,19 +179,14 @@ describe("the preview queue", () => {
 });
 
 describe("song preview", () => {
-  it("makes the shell slot play the previewed song while it is set, then the menu music again", () => {
-    const loaded = (id: string): boolean => id !== "missing";
+  // What the menu slot plays while a preview is set: music-source-playback.test.ts.
+  it("tells its listeners when the previewed song changes, and only then", () => {
     const changes: string[] = [];
     const stop = onMusicPreviewChange(() => changes.push(String(getMusicPreview())));
-    setMenuMusic("shopkeeper");
-    expect(resolveMenuCueId("fillet", loaded)).toBe("shopkeeper");
     setMusicPreview("spring");
-    expect(resolveMenuCueId("fillet", loaded)).toBe("spring");
     setMusicPreview("spring");
     setMusicPreview("missing");
-    expect(resolveMenuCueId("fillet", loaded)).toBe("shopkeeper");
     setMusicPreview(null);
-    expect(resolveMenuCueId("fillet", loaded)).toBe("shopkeeper");
     stop();
     expect(changes).toEqual(["spring", "missing", "null"]);
   });

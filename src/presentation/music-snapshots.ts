@@ -1,6 +1,12 @@
-import type { MusicCoverView, MusicPage, MusicScreenView, MusicSongView, SettingRowView } from "./screens/contracts";
-import { menuMusicLabel } from "../audio/music/loadout";
-import { stationLabel, stationNote } from "../audio/music/active-station";
+import type {
+  MusicChannelView,
+  MusicCoverView,
+  MusicPage,
+  MusicScreenView,
+  MusicSongView,
+  SettingRowView,
+} from "./screens/contracts";
+import { heardSource, parseMusicSource, playerChannels, type MusicSource } from "../audio/music/music-source";
 import { MUSIC_SCREEN_TITLE } from "../audio/music/settings";
 import type { MusicLibrary } from "../audio/music/library";
 import type { MusicRoutingManifest, MusicRoutingRule } from "../audio/music/music-routing-types";
@@ -11,6 +17,7 @@ import {
   findMusicCollection,
   musicRoutes,
   songStage,
+  splitCover,
 } from "./music-collections";
 import { stageCover } from "./music-cover-art";
 
@@ -23,9 +30,18 @@ const musicModeNotes: Readonly<Record<string, string>> = {
 const musicModeNote = (mode: string | undefined): string =>
   musicModeNotes[mode ?? "adaptive"] ?? "LAYERS FOLLOW THE FIGHT";
 
-/** Player wording for the station names the audio layer owns ("canonical" is the game's own choice). */
-export function playerStationLabel(id: string): string {
-  return id === "canonical" ? "AUTOMATIC" : stationLabel(id);
+/**
+ * The player's music pick in player words: "DEFAULT", a song's title, or "<CHANNEL> · RADIO". A
+ * pick they cannot hear right now reads as the default, which is what plays.
+ */
+export function musicPickLabel(value: string | undefined, library: MusicLibrary | null): string {
+  const source = heardSource(parseMusicSource(value), library);
+  if (source.kind === "song") return (library?.songs.find((song) => song.id === source.workId)?.title ?? "").toUpperCase();
+  if (source.kind === "channel") {
+    const name = library?.radio.channels.find((channel) => channel.id === source.channelId)?.name ?? "";
+    return `${name.toUpperCase()} · RADIO`;
+  }
+  return "DEFAULT";
 }
 
 /** "the-verdant-sanctum" reads as "The Verdant Sanctum": routing biome ids are the stage names, hyphenated. */
@@ -62,27 +78,25 @@ export function musicWherePlays(
 }
 
 export interface MusicPlaybackSettings {
-  readonly station?: string;
   readonly menuMusic?: string;
   readonly musicMode?: string;
 }
 
-/** The music settings rows (they moved here from SETTINGS): station, menu music and soundtrack behavior. */
-export function buildMusicPlaybackRows(settings: MusicPlaybackSettings): readonly SettingRowView[] {
+/**
+ * The music settings rows (they moved here from SETTINGS): what plays (the pick, in menus and in
+ * runs, where a boss still brings its own music) and soundtrack behavior.
+ */
+export function buildMusicPlaybackRows(
+  settings: MusicPlaybackSettings,
+  library: MusicLibrary | null,
+): readonly SettingRowView[] {
   return [
     {
-      key: "station",
-      label: "Station",
-      value: playerStationLabel(settings.station ?? "canonical"),
-      kind: "cycle",
-      note: stationNote(settings.station ?? "canonical"),
-    },
-    {
       key: "menuMusic",
-      label: "Menu music",
-      value: menuMusicLabel(settings.menuMusic ?? "default"),
+      label: "Music",
+      value: musicPickLabel(settings.menuMusic, library),
       kind: "cycle",
-      note: "PLAYS ON THE MENUS",
+      note: "MENUS AND RUNS · BOSSES BRING THEIR OWN",
     },
     {
       key: "musicMode",
@@ -103,9 +117,15 @@ function songArt(workId: string, routing: MusicRoutingManifest): MusicCoverView 
 export interface MusicScreenSource {
   readonly settings: MusicPlaybackSettings;
   readonly library: MusicLibrary | null;
-  readonly nowPlaying: Readonly<{ workId: string; title: string; since?: number }>;
+  readonly nowPlaying: Readonly<{
+    workId: string;
+    title: string;
+    since?: number;
+    channelId?: string | null;
+    channelName?: string | null;
+  }>;
   readonly preview: string | null;
-  /** The page: "home", "songs", "settings" or "collection:<id>". */
+  /** The page: "home", "radio", "songs", "settings" or "collection:<id>". */
   readonly page?: string;
   /** The page a collection was opened from; BACK returns there. */
   readonly openedFrom?: string;
@@ -118,9 +138,30 @@ export interface MusicScreenSource {
 
 const RAIL: readonly (readonly [string, string])[] = [
   ["home", "Home"],
+  ["radio", "Radio"],
   ["songs", "Songs"],
   ["settings", "Settings"],
 ];
+
+/** The channels the player can tune to, each with how many of their songs it holds and whether it is the pick. */
+function radioChannels(
+  library: MusicLibrary | null,
+  songs: readonly MusicSongView[],
+  heard: MusicSource,
+): readonly MusicChannelView[] {
+  if (library === null) return [];
+  return playerChannels(library).map(({ channel, songs: held }) => ({
+    id: channel.id,
+    name: channel.name,
+    description: channel.description,
+    songs: held.length,
+    cover: splitCover(
+      songs.filter((song) => held.some((entry) => entry.id === song.id)),
+      "♪",
+    ),
+    picked: heard.kind === "channel" && heard.channelId === channel.id,
+  }));
+}
 
 const musicTab = (tab: string) => ({ type: "navigate", to: "music", tab }) as const;
 
@@ -147,7 +188,14 @@ export function buildMusicScreenView(source: MusicScreenSource): MusicScreenView
         ? collections.all
         : null
     : null;
-  const page: MusicPage = opened ? "collection" : requested === "settings" ? "settings" : "home";
+  const radio = radioChannels(library, songs, heardSource(parseMusicSource(source.settings.menuMusic), library));
+  const page: MusicPage = opened
+    ? "collection"
+    : requested === "settings"
+      ? "settings"
+      : requested === "radio" && radio.length > 0
+        ? "radio"
+        : "home";
   const railTab = openedId !== null ? "" : page === "home" ? "home" : requested;
   const back = openedId !== null ? musicTab(source.openedFrom ?? "home") : ({ type: "navigate", to: "menu" } as const);
   const seconds = playing?.seconds ?? null;
@@ -159,11 +207,17 @@ export function buildMusicScreenView(source: MusicScreenSource): MusicScreenView
     id: "music",
     page,
     title: MUSIC_SCREEN_TITLE,
-    rail: RAIL.map(([id, label]) => ({ id, label, selected: id === railTab })),
+    // No channel to tune to, no Radio entry: the rail never offers an empty page.
+    rail: RAIL.filter(([id]) => id !== "radio" || radio.length > 0).map(([id, label]) => ({
+      id,
+      label,
+      selected: id === railTab,
+    })),
     stages: collections?.stages ?? [],
     shelves: collections ? buildMusicShelves(collections, playing) : [],
     soundtrack: collections?.all ?? null,
     collection: opened,
+    radio,
     back,
     nowPlaying: nowPlaying.workId
       ? {
@@ -171,13 +225,15 @@ export function buildMusicScreenView(source: MusicScreenSource): MusicScreenView
           where: playing?.where ?? "",
           art: playing?.art ?? null,
           previewing: preview !== null && preview === nowPlaying.workId,
+          channel: preview === null ? (nowPlaying.channelName ?? null) : null,
           progress,
         }
       : null,
     canStep: (source.queue?.length ?? 0) > 1,
+    radioNext: preview === null && Boolean(nowPlaying.channelId),
     start: collections && first ? { id: first.id, queue: collections.all.songs.map((song) => song.id) } : null,
     songs,
     loading: library === null,
-    playback: buildMusicPlaybackRows(source.settings),
+    playback: buildMusicPlaybackRows(source.settings, library),
   };
 }

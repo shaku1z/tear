@@ -1,7 +1,6 @@
 import type { LegacyAudioCompatibility } from "../../audio/legacy-live-audio";
 import { setMusicMode } from "../../audio/music-mode";
-import { MENU_MUSIC_DEFAULT, isMenuMusicChoice, setMenuMusic } from "../../audio/music/loadout";
-import { isStationChoice, setActiveStation } from "../../audio/music/active-station";
+import { musicSourceValue, parseMusicSource, setMusicSource } from "../../audio/music/music-source";
 import { sanitizeCinematicPreference, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
 export type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
@@ -51,11 +50,15 @@ export interface GameSettings extends Record<string, unknown> {
   glyphStyle: GlyphPreference;
   autoPauseDisconnect: boolean;
   musicMode: MusicModePreference;
-  /** Music: which work plays on the menu/shell ("default" = canonical). */
+  /**
+   * Music: the player's pick, in menus and in runs: `default`, a song's id, or `channel:<id>`
+   * (see `music-source.ts`). The key keeps its old name so existing saves carry over.
+   */
   menuMusic: string;
-  /** Music: active radio station ("canonical" = Director mode). */
-  station: string;
 }
+
+/** Settings a past build saved and this one no longer has; dropped on load, so the next save omits them. */
+const RETIRED_SETTINGS = ["station"] as const;
 
 interface SettingsConfig {
   blade: { aimSensitivity: number };
@@ -142,8 +145,7 @@ function defaults(aimSensitivity: number): GameSettings {
     glyphStyle: "auto",
     autoPauseDisconnect: true,
     musicMode: "adaptive",
-    menuMusic: MENU_MUSIC_DEFAULT,
-    station: "canonical",
+    menuMusic: "default",
   };
 }
 
@@ -182,6 +184,7 @@ export class SettingsController {
     const stored = parseStoredSettings(this.dependencies.store.get("tear_settings"));
     const merged = Object.assign(defaults(this.dependencies.config.blade.aimSensitivity), stored);
     const migrated = this.dependencies.audio.migrateSettings(merged, stored);
+    for (const key of RETIRED_SETTINGS) Reflect.deleteProperty(migrated, key);
     for (const key of Object.keys(this.settings)) {
       if (!Object.hasOwn(migrated, key)) Reflect.deleteProperty(this.settings, key);
     }
@@ -217,10 +220,10 @@ export class SettingsController {
     config.pad.glyphStyle = glyphValues.includes(settings.glyphStyle) ? settings.glyphStyle : "auto";
     settings.musicMode = musicModeValues.includes(settings.musicMode) ? settings.musicMode : "adaptive";
     setMusicMode(settings.musicMode);
-    settings.menuMusic = isMenuMusicChoice(settings.menuMusic) ? settings.menuMusic : MENU_MUSIC_DEFAULT;
-    setMenuMusic(settings.menuMusic);
-    settings.station = isStationChoice(settings.station) ? settings.station : "canonical";
-    setActiveStation(settings.station);
+    // A value that is not a pick at all reads as the default; one this build does not know (a song
+    // or channel from a later catalog) is kept and plays as the default until it can be heard.
+    settings.menuMusic = musicSourceValue(parseMusicSource(settings.menuMusic));
+    setMusicSource(settings.menuMusic);
     audio.applySettings(settings);
   }
 
@@ -285,6 +288,15 @@ export class SettingsController {
     const current = this.settings[key];
     if (typeof current !== "boolean") return false;
     this.settings[key] = !current;
+    this.apply();
+    this.save();
+    return true;
+  }
+
+  /** Sets a choice setting to one of its values; a value not offered is ignored. */
+  choose(key: string, value: string, values: readonly string[]): boolean {
+    if (!values.includes(value)) return false;
+    this.settings[key] = value;
     this.apply();
     this.save();
     return true;

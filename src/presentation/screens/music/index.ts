@@ -1,7 +1,7 @@
 import type { MusicScreenView, ScreenAction, ScreenControl, ScreenRenderContext } from "../contracts";
 import { createCompactPage, type CompactPage, type ScrollBlock } from "../compact-page";
 import { pageFooter, pageLayout } from "../screen-primitives";
-import { collectionBlocks, settingsBlocks } from "./pages";
+import { collectionBlocks, radioBlocks, settingsBlocks } from "./pages";
 import { homeBlocks, openCollection, type MusicMetrics } from "./shelf";
 import { drawTransport } from "./transport";
 
@@ -16,9 +16,12 @@ function crumb(view: MusicScreenView): Readonly<{ label: string; action: ScreenA
 }
 
 /**
- * MUSIC: a rail (Home · Songs · Settings, then the stages) beside the page, and the transport
- * under it. Home is shelves; a collection's page is the album view; Settings is the playback rows.
- * Phone landscape: the rail becomes the header's chip strip and the transport sits above BACK.
+ * MUSIC: a rail (Home · Radio · Songs · Settings, then the stages) beside the page, and the
+ * transport under it. Home is shelves; the Radio is its channels; a collection's page is the album
+ * view; Settings is the playback rows. Phone landscape: the rail becomes the header's chip strip
+ * and the transport sits above BACK.
+ *
+ * Music pages are pageBlocks only; chrome (rail, header, transport, footer) lives in this file.
  */
 export function createMusicRenderers(context: ScreenRenderContext) {
   const { ui } = context,
@@ -26,6 +29,7 @@ export function createMusicRenderers(context: ScreenRenderContext) {
 
   function pageBlocks(view: MusicScreenView, m: MusicMetrics): readonly ScrollBlock[] {
     if (view.page === "settings") return settingsBlocks(context, m, view.playback);
+    if (view.page === "radio") return radioBlocks(context, m, view.radio);
     if (view.page === "collection" && view.collection)
       return collectionBlocks(context, m, view.collection, m.compact ? null : crumb(view));
     return homeBlocks(context, m, view);

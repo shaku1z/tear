@@ -179,7 +179,7 @@ describe("a channel plays songs back to back", () => {
 });
 
 describe("the music library carries the Radio", () => {
-  it("publishes each song's mood, tags and cue length with the programme", () => {
+  it("publishes each song's mood, tags, unlock and cue length with the programme", () => {
     const catalog = parseMusicCatalog({
       format: "tear-music-catalog",
       version: 1,
@@ -191,12 +191,14 @@ describe("the music library carries the Radio", () => {
     });
     publishMusicLibrary(catalog, validateMusicRoutingManifest(routing), { fillet: 26.25 });
     const library = getMusicLibrary();
-    expect(library?.songs).toEqual([{ id: "fillet", title: "Fillet", tags: ["calm"], mood: "calm", seconds: 26.25 }]);
+    expect(library?.songs).toEqual([
+      { id: "fillet", title: "Fillet", tags: ["calm"], mood: "calm", unlock: { type: "default" }, seconds: 26.25 },
+    ]);
     expect(library?.radio.channels.map((entry) => entry.id)).toEqual(["calm"]);
     expect(library?.radio.songSeconds).toBe(90);
   });
 
-  it("reads a catalog with stations and no channels as a Radio with no channels", () => {
+  it("reads a catalog with retired stations and no channels as a Radio with no channels", () => {
     const catalog = parseMusicCatalog({
       format: "tear-music-catalog",
       version: 1,
@@ -207,7 +209,6 @@ describe("the music library carries the Radio", () => {
     });
     publishMusicLibrary(catalog, validateMusicRoutingManifest(routing));
     expect(getMusicLibrary()?.radio).toEqual({ channels: [], songSeconds: DEFAULT_RADIO_SONG_SECONDS });
-    expect(catalog.works[0]?.stations).toEqual(["still"]);
   });
 
   it("reads the shipped index, with or without channels", () => {

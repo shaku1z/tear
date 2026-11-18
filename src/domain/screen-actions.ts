@@ -83,6 +83,10 @@ export type ScreenAction =
   | { readonly type: "music.preview"; readonly id: string; readonly queue?: readonly string[] }
   | { readonly type: "music.step"; readonly delta: 1 | -1 }
   | { readonly type: "music.stopPreview" }
+  /** Make this the music pick (`default`, a song id or `channel:<id>`), as the Settings row would. */
+  | { readonly type: "music.pick"; readonly value: string }
+  /** On a Radio channel: move on to its next song. */
+  | { readonly type: "music.next" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

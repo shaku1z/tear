@@ -543,33 +543,6 @@
         }
       },
       {
-        "id": "compat-audio-signal-shim-active-station",
-        "pathPattern": "src/audio/signal/active-station.ts",
-        "termIds": ["music"],
-        "owner": "Music-surface compatibility owner",
-        "reason": "Legacy active-station import path remains a thin Music API shim.",
-        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
-        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
-      },
-      {
-        "id": "compat-audio-signal-shim-advanced-loadout",
-        "pathPattern": "src/audio/signal/advanced-loadout.ts",
-        "termIds": ["music"],
-        "owner": "Music-surface compatibility owner",
-        "reason": "Legacy advanced-loadout import path remains a thin Music API shim.",
-        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
-        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
-      },
-      {
-        "id": "compat-audio-signal-shim-loadout",
-        "pathPattern": "src/audio/signal/loadout.ts",
-        "termIds": ["music"],
-        "owner": "Music-surface compatibility owner",
-        "reason": "Legacy loadout import path remains a thin Music API shim while menuMusic values stay stable.",
-        "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
-        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
-      },
-      {
         "id": "compat-audio-signal-shim-routing-resolver",
         "pathPattern": "src/audio/signal/music-routing-resolver.ts",
         "termIds": ["music"],
@@ -612,15 +585,6 @@
         "owner": "Music-surface compatibility owner",
         "reason": "Legacy quantize import path remains a thin Music API shim.",
         "testEvidence": ["tests/unit/music-surface-compat.test.ts"],
-        "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
-      },
-      {
-        "id": "compat-audio-signal-shim-station",
-        "pathPattern": "src/audio/signal/station.ts",
-        "termIds": ["music"],
-        "owner": "Music-surface compatibility owner",
-        "reason": "Legacy station import path remains a thin Music API shim while station IDs stay stable.",
-        "testEvidence": ["tests/unit/music-surface-compat.test.ts", "tests/unit/music-station.test.ts"],
         "expiry": {"checkpoint": "G4-B-MUSIC-SURFACE", "condition": "Remove after downstream imports move to src/audio/music."}
       },
       {
