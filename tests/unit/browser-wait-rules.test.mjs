@@ -154,9 +154,9 @@ describe("reloadPage", () => {
   });
 
   it("ends a journey that runs out of time and says which step and what the page was doing", async () => {
-    const page = {
+    const page = Object.assign(new EventEmitter(), {
       evaluate: async () => ({ url: "http://127.0.0.1/", readyState: "complete", visibility: "visible" }),
-    };
+    });
     const browser = Object.assign(new EventEmitter(), {
       newContext: async () => new EventEmitter(),
       newPage: async () => page,
@@ -179,10 +179,42 @@ describe("reloadPage", () => {
     }
   });
 
+  it("ends a journey at once when its page crashes, with the step and the machine's free memory", async () => {
+    const page = new EventEmitter();
+    const context = new EventEmitter();
+    const browser = Object.assign(new EventEmitter(), {
+      newContext: async () => context,
+      newPage: async () => page,
+      close: async () => undefined,
+    });
+    const errors = [];
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation((line) => errors.push(line));
+    try {
+      const launched = await launchJourney({ launch: async () => browser }, {}, { name: "probe", limitMs: 60_000 });
+      await launched.newPage();
+      journeyStep(launched, "starting the Playground");
+      page.emit("crash");
+      expect(exit).toHaveBeenCalledWith(1);
+      expect(errors[0]).toMatch(
+        /^probe failed: the page crashed in step "starting the Playground" \(free memory \d+ of \d+ MiB\)$/u,
+      );
+      // A page a context opens later is watched too.
+      await launched.newContext();
+      const later = new EventEmitter();
+      context.emit("page", later);
+      later.emit("crash");
+      expect(exit).toHaveBeenCalledTimes(2);
+    } finally {
+      exit.mockRestore();
+      error.mockRestore();
+    }
+  });
+
   it("disarms the journey ceiling when the browser closes", async () => {
     const browser = Object.assign(new EventEmitter(), {
       newContext: async () => new EventEmitter(),
-      newPage: async () => ({}),
+      newPage: async () => new EventEmitter(),
       close: async () => undefined,
     });
     const exit = vi.spyOn(process, "exit").mockImplementation(() => undefined);

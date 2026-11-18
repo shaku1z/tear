@@ -183,11 +183,20 @@ async function launchJourney(chromium, launchOptions = {}, { name, limitMs = JOU
   const ceiling = milliseconds("limitMs", limitMs);
   const browser = await chromium.launch(launchOptions);
   const state = { step: "started", page: null, timer: null };
+  const disarm = () => clearTimeout(state.timer);
   journeys.set(browser, state);
+  const stop = (message) => {
+    disarm();
+    console.error(`${journey} ${message}`);
+    process.exit(1);
+  };
+  // A crashed page answers nothing again, so a journey waiting on it would only stop at the ceiling.
+  const track = (page) => {
+    state.page = page;
+    page.on("crash", () => stop(`failed: the page crashed in step "${state.step}" (${memoryLine()})`));
+  };
   const follow = (context) => {
-    context.on("page", (page) => {
-      state.page = page;
-    });
+    context.on("page", track);
     return context;
   };
   const newContext = browser.newContext.bind(browser);
@@ -195,10 +204,9 @@ async function launchJourney(chromium, launchOptions = {}, { name, limitMs = JOU
   const newPage = browser.newPage.bind(browser);
   browser.newPage = async (...options) => {
     const page = await newPage(...options);
-    state.page = page;
+    track(page);
     return page;
   };
-  const disarm = () => clearTimeout(state.timer);
   browser.on("disconnected", disarm);
   const close = browser.close.bind(browser);
   browser.close = async (...options) => {
@@ -207,15 +215,19 @@ async function launchJourney(chromium, launchOptions = {}, { name, limitMs = JOU
   };
   state.timer = setTimeout(() => {
     void (state.page ? describeStall(state.page) : Promise.resolve("no page was open")).then((stall) => {
-      console.error(
-        `${journey} did not finish within ${String(ceiling / 1000)} s, ` + `waiting in step "${state.step}": ${stall}`,
-      );
-      process.exit(1);
+      stop(`did not finish within ${String(ceiling / 1000)} s, waiting in step "${state.step}": ${stall}`);
     });
   }, ceiling);
   // A journey that finished but left its browser open is not held alive by its own ceiling.
   state.timer.unref();
   return browser;
+}
+
+/** Free and total memory of the machine, for a failure that may be the browser running out of it. */
+function memoryLine() {
+  const os = require("node:os");
+  const mib = (bytes) => String(Math.round(bytes / 2 ** 20));
+  return `free memory ${mib(os.freemem())} of ${mib(os.totalmem())} MiB`;
 }
 
 /** Names what the journey does next, so a journey that runs out of time says where it was. */
