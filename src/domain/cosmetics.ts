@@ -59,8 +59,7 @@ function keepKeys(map: Readonly<Record<string, number>>, keep: (id: string) => b
 /**
  * Any stored or remote value to a valid state. Malformed entries are dropped, never thrown on. Unknown
  * item, slot and loadout ids are kept (a newer client may know them) and no owned item is dropped for being
- * too many, so a save never loses an item depending on key order. `seen` is kept for owned items only: it
- * records when an owned item was first shown, so an entry for anything else is noise.
+ * too many, so a save never loses an item depending on key order.
  */
 export function normalizeCosmeticState(value: unknown): CosmeticState {
   if (!isRecord(value) || value.v !== COSMETIC_STATE_VERSION) return emptyCosmeticState();
@@ -80,11 +79,10 @@ export function normalizeCosmeticState(value: unknown): CosmeticState {
     isRecord(raw) && isItemId(raw.id) && wholeNumber(raw.at)
       ? { id: raw.id, at: raw.at }
       : { id: DEFAULT_LOADOUT_ID, at: 0 };
-  const owned = numberMap(value.owned);
   return {
     v: COSMETIC_STATE_VERSION,
-    owned,
-    seen: keepKeys(numberMap(value.seen), (id) => hasOwnKey(owned, id)),
+    owned: numberMap(value.owned),
+    seen: numberMap(value.seen),
     counters: numberMap(value.counters),
     loadouts,
     active,
@@ -125,9 +123,12 @@ function mergeNumbers(
 
 /**
  * Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest
- * active loadout. Order-independent: merge(a, b) equals merge(b, a). Never drops an owned item. With the
- * catalog, counters are kept for its items only (a counter may track an item not yet owned, but an id no
- * catalog lists is noise); the catalog's worst case then bounds the merged record (`worstCaseStateSize`).
+ * active loadout. Order-independent: merge(a, b) equals merge(b, a). Never drops an owned item: dropping one
+ * would refund its shards with nobody seeing why. With the catalog, `seen` and `counters` are kept for its
+ * items only. Both may name an item the player does not own (looking at a shelf clears its NEW mark before
+ * buying; a counter may track progress toward an item), but an id no catalog lists is noise. Each entry is
+ * judged alone, so the merge stays commutative, associative and idempotent, and the catalog's worst case
+ * bounds the merged record (`worstCaseStateSize`).
  */
 export function mergeCosmeticStates(
   left: CosmeticState,
@@ -139,12 +140,13 @@ export function mergeCosmeticStates(
     const current = ownValue(loadouts, id);
     loadouts[id] = current ? mergeLoadout(current, entry) : entry;
   }
-  const counters = mergeNumbers(left.counters, right.counters, Math.max);
+  const listed = (map: Record<string, number>): Record<string, number> =>
+    catalog ? keepKeys(map, (id) => catalog.items.some((item) => item.id === id)) : map;
   return {
     v: COSMETIC_STATE_VERSION,
     owned: mergeNumbers(left.owned, right.owned, Math.max),
-    seen: mergeNumbers(left.seen, right.seen, Math.min),
-    counters: catalog ? keepKeys(counters, (id) => catalog.items.some((item) => item.id === id)) : counters,
+    seen: listed(mergeNumbers(left.seen, right.seen, Math.min)),
+    counters: listed(mergeNumbers(left.counters, right.counters, Math.max)),
     loadouts,
     active: newer(right.active, left.active) ? right.active : left.active,
   };

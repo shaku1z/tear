@@ -1,11 +1,17 @@
 /**
  * Property tests for the cosmetic record's bounds (src/domain/cosmetics.ts): merging two devices' records
- * never drops an owned item, keeps `seen` for owned items and `counters` for catalog items, does not depend
- * on order, and stays inside the catalog's worst case, which fits the saved-record budget.
+ * never drops an owned item, keeps `seen` and `counters` for catalog items, does not depend on order, and
+ * stays inside the catalog's worst case, which fits the saved-record budget.
  */
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_LOADOUT_ID, MAX_LOADOUTS, MAX_PRICE, MAX_STATE_CHARS } from "../../src/domain/cosmetic-types";
+import {
+  DEFAULT_LOADOUT_ID,
+  MAX_LOADOUTS,
+  MAX_PRICE,
+  MAX_STATE_CHARS,
+  type CosmeticState,
+} from "../../src/domain/cosmetic-types";
 import { worstCaseStateSize } from "../../src/domain/cosmetic-validation";
 import { mergeCosmeticStates, normalizeCosmeticState } from "../../src/domain/cosmetics";
 import { MAX_ID_LENGTH } from "../../src/domain/identifiers";
@@ -53,23 +59,26 @@ const catalogRecord = savedRecord(fc.constantFrom(...catalogIds));
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
 describe("cosmetic record bounds", () => {
-  it("keeps every owned item from both sides, seen for owned items only, counters for catalog items only", () => {
+  it("keeps every owned item from both sides, and seen and counters for catalog items only", () => {
     checkProperty(
       fc.property(anyRecord, anyRecord, (left, right) => {
         const merged = mergeCosmeticStates(left, right, COSMETIC_CATALOG);
         for (const id of [...Object.keys(left.owned), ...Object.keys(right.owned)])
           expect(Object.hasOwn(merged.owned, id)).toBe(true);
-        for (const id of Object.keys(merged.seen)) expect(Object.hasOwn(merged.owned, id)).toBe(true);
+        for (const id of Object.keys(merged.seen)) expect(catalogIds).toContain(id);
         for (const id of Object.keys(merged.counters)) expect(catalogIds).toContain(id);
       }),
     );
   });
 
-  it("does not depend on order, and a merged record is already normal", () => {
+  it("is commutative, associative and idempotent, and a merged record is already normal", () => {
+    const merge = (a: CosmeticState, b: CosmeticState) => mergeCosmeticStates(a, b, COSMETIC_CATALOG);
     checkProperty(
-      fc.property(anyRecord, anyRecord, (left, right) => {
-        const merged = mergeCosmeticStates(left, right, COSMETIC_CATALOG);
-        expect(plain(merged)).toEqual(plain(mergeCosmeticStates(right, left, COSMETIC_CATALOG)));
+      fc.property(anyRecord, anyRecord, anyRecord, (a, b, c) => {
+        const merged = merge(a, b);
+        expect(plain(merged)).toEqual(plain(merge(b, a)));
+        expect(plain(merge(merge(a, b), c))).toEqual(plain(merge(a, merge(b, c))));
+        expect(plain(merge(merged, merged))).toEqual(plain(merged));
         expect(plain(normalizeCosmeticState(merged))).toEqual(plain(merged));
       }),
     );
@@ -86,6 +95,9 @@ describe("cosmetic record bounds", () => {
   it("fits the catalog's worst case, and the worst case fits the saved-record budget", () => {
     const worst = worstCaseStateSize(COSMETIC_CATALOG);
     expect(worst).toBeLessThanOrEqual(MAX_STATE_CHARS);
+    // Pinned for today's catalog (12 items, 23 slots): a change to the catalog or the record format updates
+    // this number in the same pull request, so its size cost is reviewed rather than discovered.
+    expect(worst).toBe(13_751);
     checkProperty(
       fc.property(catalogRecord, catalogRecord, (left, right) => {
         const merged = mergeCosmeticStates(left, right, COSMETIC_CATALOG);
