@@ -206,10 +206,6 @@ export function purchaseCosmetic(
 }
 
 /**
- * Items the player has earned without paying: an achievement, a defeated boss, or a finished collection
- * (its reward). Challenge, mastery, code and bundle grants arrive through their own receipts later.
- */
-/**
  * The profile fact an acquire entry grants on, in the shared condition language, or null when it is not one
  * (shards are a purchase, a collection is completed by ownership, the other kinds are not live yet). Grants and
  * the shipped-data reference check both read it, so an achievement or boss id is judged one way everywhere.
@@ -220,6 +216,10 @@ export function acquireCondition(entry: Acquisition): UnlockCondition | null {
   return null;
 }
 
+/**
+ * Items the player has earned without paying: an achievement, a defeated boss, or a finished collection
+ * (its reward). Challenge, mastery, code and bundle grants arrive through their own receipts later.
+ */
 export function claimableGrants(catalog: CosmeticCatalog, state: CosmeticState, facts: ProgressFacts): string[] {
   const owned = (id: string): boolean => owns(state, id);
   const complete = (collectionId: string): boolean => {
