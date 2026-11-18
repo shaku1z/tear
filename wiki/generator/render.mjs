@@ -250,7 +250,7 @@ function phaseDetails(data, boss) {
       : p.moves.filter(isWindup).map((m) => `<li><b>${esc(label(m.state))}</b> shows a wind-up of about ${num(m.seconds)} s before it lands.</li>`).join('');
     return `<section class="phase">${pic(data, p.image, `${boss.name}, phase ${p.phase}${p.tag ? `: ${p.tag}` : ''}`, 'pic wide')}<h3>Phase ${p.phase}${p.tag ? ` · ${esc(title(p.tag.toLowerCase()))}` : ''}</h3>${warnings ? `<ul>${warnings}</ul>` : '<p class="muted">No wind-up was seen in the timed play of this phase.</p>'}</section>`;
   }).join('');
-  const source = declared.length ? 'Pictures come from playing each phase in the game. The warning times are the game's own, from the boss's move list.' : 'Pictures and wind-up times come from playing each phase in the game. The wind-up is the warning before the hit. A phase that lists none had no wind-up state in the timed play.';
+  const source = declared.length ? 'Pictures come from playing each phase in the game. The warning times come from the boss move list in the game.' : 'Pictures and wind-up times come from playing each phase in the game. The wind-up is the warning before the hit. A phase that lists none had no wind-up state in the timed play.';
   return `<p class="muted">${source}</p>${items}`;
 }
 
