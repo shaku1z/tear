@@ -88,6 +88,7 @@ export default tseslint.config(
     files: [
       "src/**/*.ts",
       "tests/**/*.ts",
+      "scripts/asset-sheets/**/*.ts",
       "workers/**/*.ts",
       "vite.config.ts",
       "vitest.config.ts",

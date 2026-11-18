@@ -1,0 +1,379 @@
+{
+  "schema": "tear-asset-manifest.v1",
+  "about": "Every asset the game draws, one row each. The asset id is the contract: pnpm assets:sheets writes <category>/<id>/ and Shards items name art by the same id. scripts/asset-sheets/manifest.ts validates this file against the game's registries; docs/ASSET_SHEETS.md says how to add a row.",
+  "idPattern": "^[a-z0-9_]{1,64}$",
+  "budget": {
+    "svgBytes": 100000,
+    "pngBytes": 1500000,
+    "png3xBytes": 8000000,
+    "totalBytes": 200000000
+  },
+  "categories": [
+    {
+      "id": "player",
+      "about": "The player with each weapon: idle, run, jump, dash, hit, swing and the thrown blade.",
+      "stager": "player",
+      "seconds": 6,
+      "sources": [
+        "src/presentation/entities/player-renderer.ts",
+        "src/presentation/entities/blade-renderer.ts"
+      ]
+    },
+    {
+      "id": "weapons",
+      "about": "Each weapon's blade alone: held, swung, thrown, stuck and recalled.",
+      "stager": "weapon",
+      "seconds": 6,
+      "sources": [
+        "src/presentation/entities/blade-renderer.ts"
+      ]
+    },
+    {
+      "id": "enemies",
+      "about": "Every enemy and variant in each state its behaviour visits, then hurt and four steps of its death.",
+      "stager": "enemy",
+      "seconds": 14,
+      "variantSeconds": 8,
+      "sources": [
+        "src/presentation/enemies/renderers/standard-renderers.ts"
+      ]
+    },
+    {
+      "id": "bosses",
+      "about": "Every boss in each phase: each attack with its tell, active, recover and punish stages, hurt, and death.",
+      "stager": "boss",
+      "seconds": 40,
+      "sources": [
+        "src/presentation/enemies/renderers/boss-tell-renderer.ts",
+        "src/presentation/enemies/renderers/boss-tell-skin.ts"
+      ]
+    },
+    {
+      "id": "stage-objects",
+      "about": "Every stage object kind in each state, taken from the scene that first showed it.",
+      "stager": null,
+      "sources": []
+    },
+    {
+      "id": "platforms",
+      "about": "The platforms and floor of every stage, without the painted background.",
+      "stager": "stage",
+      "seconds": 1,
+      "sources": [
+        "src/presentation/backdrop.ts",
+        "src/presentation/platform-materials/verdant-rootstone.ts",
+        "src/presentation/platform-materials/pale-ice.ts",
+        "src/presentation/scenes/scene-renderer.ts"
+      ]
+    },
+    {
+      "id": "projectiles",
+      "about": "Every projectile family, one state per look, taken from the scene that first fired it.",
+      "stager": null,
+      "sources": [
+        "src/presentation/entities/projectile-renderer.ts"
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "player_sword",
+      "category": "player",
+      "subject": "sword"
+    },
+    {
+      "id": "player_hammer",
+      "category": "player",
+      "subject": "hammer"
+    },
+    {
+      "id": "player_greatsword",
+      "category": "player",
+      "subject": "greatsword"
+    },
+    {
+      "id": "player_chainblade",
+      "category": "player",
+      "subject": "chainblade"
+    },
+    {
+      "id": "player_riftlock",
+      "category": "player",
+      "subject": "riftlock"
+    },
+    {
+      "id": "weapon_sword",
+      "category": "weapons",
+      "subject": "sword"
+    },
+    {
+      "id": "weapon_hammer",
+      "category": "weapons",
+      "subject": "hammer"
+    },
+    {
+      "id": "weapon_greatsword",
+      "category": "weapons",
+      "subject": "greatsword"
+    },
+    {
+      "id": "weapon_chainblade",
+      "category": "weapons",
+      "subject": "chainblade"
+    },
+    {
+      "id": "weapon_riftlock",
+      "category": "weapons",
+      "subject": "riftlock"
+    },
+    {
+      "id": "enemy_charger",
+      "category": "enemies",
+      "subject": "charger"
+    },
+    {
+      "id": "enemy_ranged",
+      "category": "enemies",
+      "subject": "ranged"
+    },
+    {
+      "id": "enemy_flyer",
+      "category": "enemies",
+      "subject": "flyer"
+    },
+    {
+      "id": "enemy_bomber",
+      "category": "enemies",
+      "subject": "bomber"
+    },
+    {
+      "id": "enemy_armored",
+      "category": "enemies",
+      "subject": "armored"
+    },
+    {
+      "id": "enemy_priest",
+      "category": "enemies",
+      "subject": "priest",
+      "name": "War Priest",
+      "allies": [
+        "charger",
+        "charger"
+      ]
+    },
+    {
+      "id": "enemy_mender",
+      "category": "enemies",
+      "subject": "mender",
+      "allies": [
+        "charger",
+        "charger"
+      ]
+    },
+    {
+      "id": "enemy_herald",
+      "category": "enemies",
+      "subject": "herald",
+      "allies": [
+        "charger",
+        "charger"
+      ]
+    },
+    {
+      "id": "enemy_anchor",
+      "category": "enemies",
+      "subject": "anchor",
+      "allies": [
+        "charger",
+        "charger"
+      ]
+    },
+    {
+      "id": "enemy_wraith",
+      "category": "enemies",
+      "subject": "wraith"
+    },
+    {
+      "id": "enemy_chimera",
+      "category": "enemies",
+      "subject": "chimera"
+    },
+    {
+      "id": "enemy_rootbinder",
+      "category": "enemies",
+      "subject": "rootbinder",
+      "sources": [
+        "src/presentation/environment/rootbinder-presentation.ts"
+      ],
+      "allies": [
+        "charger",
+        "charger"
+      ]
+    },
+    {
+      "id": "enemy_rimehound",
+      "category": "enemies",
+      "subject": "rimehound",
+      "sources": [
+        "src/presentation/enemies/renderers/rimehound-renderer.ts"
+      ]
+    },
+    {
+      "id": "boss_warden",
+      "category": "bosses",
+      "subject": "warden",
+      "sources": [
+        "src/presentation/enemies/renderers/warden-colossus-renderers.ts"
+      ]
+    },
+    {
+      "id": "boss_colossus",
+      "category": "bosses",
+      "subject": "colossus",
+      "sources": [
+        "src/presentation/enemies/renderers/warden-colossus-renderers.ts"
+      ]
+    },
+    {
+      "id": "boss_aldric",
+      "category": "bosses",
+      "subject": "aldric",
+      "sources": [
+        "src/presentation/enemies/renderers/aldric-echo-renderers.ts"
+      ]
+    },
+    {
+      "id": "boss_rootbound",
+      "category": "bosses",
+      "subject": "rootbound",
+      "sources": [
+        "src/presentation/enemies/renderers/rootbound-renderer.ts",
+        "src/presentation/environment/verdant-environment-presentation.ts"
+      ]
+    },
+    {
+      "id": "boss_white_hart",
+      "category": "bosses",
+      "subject": "white-hart",
+      "sources": [
+        "src/presentation/enemies/renderers/white-hart-renderer.ts",
+        "src/presentation/environment/pale-environment-presentation.ts"
+      ]
+    },
+    {
+      "id": "boss_echo",
+      "category": "bosses",
+      "subject": "echo",
+      "sources": [
+        "src/presentation/enemies/renderers/aldric-echo-renderers.ts",
+        "src/presentation/entities/mirror-renderer.ts"
+      ]
+    },
+    {
+      "id": "boss_source",
+      "category": "bosses",
+      "subject": "source",
+      "sources": [
+        "src/presentation/enemies/renderers/source-renderer.ts"
+      ]
+    },
+    {
+      "id": "stage_object_bloom_well",
+      "category": "stage-objects",
+      "subject": "bloom-well",
+      "sources": [
+        "src/presentation/environment/bloom-well-presentation.ts"
+      ]
+    },
+    {
+      "id": "stage_object_aurora_track",
+      "category": "stage-objects",
+      "subject": "aurora-track",
+      "sources": [
+        "src/presentation/environment/pale-environment-presentation.ts"
+      ]
+    },
+    {
+      "id": "stage_object_root_link",
+      "category": "stage-objects",
+      "subject": "root-link",
+      "sources": [
+        "src/presentation/environment/rootbinder-presentation.ts"
+      ]
+    },
+    {
+      "id": "stage_object_graft_anchor",
+      "category": "stage-objects",
+      "subject": "graft-anchor",
+      "sources": [
+        "src/presentation/environment/verdant-environment-presentation.ts"
+      ]
+    },
+    {
+      "id": "stage_object_regrowth_link",
+      "category": "stage-objects",
+      "subject": "regrowth-link",
+      "sources": [
+        "src/presentation/environment/verdant-environment-presentation.ts"
+      ]
+    },
+    {
+      "id": "stage_object_ghost_track",
+      "category": "stage-objects",
+      "subject": "ghost-track",
+      "sources": [
+        "src/presentation/environment/pale-environment-presentation.ts"
+      ]
+    },
+    {
+      "id": "platforms_grounds",
+      "category": "platforms",
+      "subject": "grounds"
+    },
+    {
+      "id": "platforms_undercroft",
+      "category": "platforms",
+      "subject": "undercroft"
+    },
+    {
+      "id": "platforms_crimson_fields",
+      "category": "platforms",
+      "subject": "crimson-fields"
+    },
+    {
+      "id": "platforms_verdant_sanctum",
+      "category": "platforms",
+      "subject": "verdant-sanctum"
+    },
+    {
+      "id": "platforms_voidspire",
+      "category": "platforms",
+      "subject": "voidspire"
+    },
+    {
+      "id": "platforms_tear",
+      "category": "platforms",
+      "subject": "tear"
+    },
+    {
+      "id": "platforms_pale_traverse",
+      "category": "platforms",
+      "subject": "pale-traverse"
+    },
+    {
+      "id": "projectile_ordinary_projectile",
+      "category": "projectiles",
+      "subject": "ordinaryProjectile"
+    },
+    {
+      "id": "projectile_ground_shock",
+      "category": "projectiles",
+      "subject": "groundShock"
+    },
+    {
+      "id": "projectile_sweeper",
+      "category": "projectiles",
+      "subject": "sweeper"
+    }
+  ]
+}

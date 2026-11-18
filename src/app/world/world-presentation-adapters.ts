@@ -41,13 +41,7 @@ import { trainingExercise } from "../../gameplay/training/training-exercises";
 import { createTrainingCoachPresentation } from "./training-coach-presentation";
 import { isSheetScreen } from "../../domain/screen-catalog";
 import type { EnvironmentSnapshot } from "../../gameplay/environment/environment-contracts";
-import { projectRootbinderPresentation } from "../../gameplay/environment/rootbinder-presentation-facts";
-import { renderRootbinderPresentation } from "../../presentation/environment/rootbinder-presentation";
-import { projectBloomWellPresentation } from "../../gameplay/environment/bloom-well-presentation-facts";
-import { buildEnvironmentPresentationSnapshot } from "../../gameplay/environment/presentation-snapshot";
-import { renderBloomWellPresentation } from "../../presentation/environment/bloom-well-presentation";
-import { renderVerdantEnvironmentPresentation } from "../../presentation/environment/verdant-environment-presentation";
-import { renderPaleEnvironmentPresentation } from "../../presentation/environment/pale-environment-presentation";
+import { renderEnvironmentLayer } from "./environment-layer";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -264,50 +258,14 @@ export function createLiveWorldPresentationAdapters(
   const drawEnvironment = (): void => {
     const snapshot = state.environment?.();
     if (snapshot === undefined) return;
-    const presentationOptions = {
+    renderEnvironmentLayer(canvas, snapshot, state.enemies(), {
       highContrast: d.A11Y.highContrast,
       reducedMotion: d.A11Y.reducedMotion,
       lowGraphics: d.GFX.low,
       flashScale: d.A11Y.flashScale,
-    };
-    for (const field of snapshot.fields) {
-      if (field.kind !== "bloom-well") continue;
-      renderBloomWellPresentation(
-        canvas,
-        projectBloomWellPresentation(field, {
-          ...presentationOptions,
-          audioEnabled: true,
-        }),
-        d.CLOCK.sim,
-      );
-    }
-    const environmentPresentation = buildEnvironmentPresentationSnapshot(snapshot);
-    renderVerdantEnvironmentPresentation(canvas, environmentPresentation, {
-      ...presentationOptions,
       timeSeconds: d.CLOCK.sim,
+      audioEnabled: true,
     });
-    renderPaleEnvironmentPresentation(canvas, environmentPresentation, {
-      ...presentationOptions,
-      timeSeconds: d.CLOCK.sim,
-    });
-    for (const enemy of state.enemies()) {
-      if (enemy.kind !== "rootbinder") continue;
-      const root = enemy as GameEnemy & {
-        rootbinderOwnerId?: string;
-        rootbinderState?: { x: number; y: number; state: Parameters<typeof projectRootbinderPresentation>[0]["state"] };
-      };
-      const rootState = root.rootbinderState;
-      if (rootState === undefined || root.rootbinderOwnerId === undefined) continue;
-      const owned = snapshot.combatObjects.filter((object) => object.ownerId === root.rootbinderOwnerId);
-      const generationOf = (id: string): number => Number(/:(?:network|leash):g(\d+)/u.exec(id)?.[1] ?? 0);
-      const latestGeneration = owned.reduce((latest, object) => Math.max(latest, generationOf(object.id)), 0);
-      const visible =
-        latestGeneration === 0 ? owned : owned.filter((object) => generationOf(object.id) === latestGeneration);
-      renderRootbinderPresentation(
-        canvas,
-        projectRootbinderPresentation(rootState, visible, { ...presentationOptions, audioEnabled: true }),
-      );
-    }
   };
 
   const sceneInput = (

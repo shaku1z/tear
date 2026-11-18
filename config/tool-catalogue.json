@@ -842,6 +842,14 @@
       ],
       "duration": "minutes"
     },
+    "assets:sheets": {
+      "purpose": "SVG and transparent PNG pictures of everything the game draws, redrawn where its drawing code changed; written outside the repo",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
     "scene": {
       "purpose": "Painted stage backgrounds: validate, build, contrast, contact sheet and in-game preview of scene packages",
       "effects": [
@@ -1627,6 +1635,17 @@
         "test:browser:current-live-detached-parity"
       ]
     },
+    "scripts/asset-sheets.mjs": {
+      "purpose": "The pnpm assets:sheets command; drives scripts/asset-sheets/page.html in headless Chrome and writes pictures outside the repo",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [
+        "assets:sheets"
+      ]
+    },
     "scripts/scene.mjs": {
       "purpose": "The pnpm scene command; build rewrites a package's images and manifest, reports and previews write elsewhere",
       "effects": [
@@ -1735,6 +1754,12 @@
       "scripts/architecture/evaluate.mjs",
       "scripts/check-source-architecture.mjs",
       "tests/source-architecture.test.mjs"
+    ],
+    "scripts/asset-sheets/fingerprint.mjs": [
+      "scripts/asset-sheets.mjs"
+    ],
+    "scripts/asset-sheets/output.mjs": [
+      "scripts/asset-sheets.mjs"
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
