@@ -177,8 +177,10 @@ describe("Rootbound Phase III: Regrowth is a move that keeps attacking", () => {
 describe("Rootbound Phase III: Last Spring and the strikes", () => {
   it("follows Regrowth with Last Spring, then plays it after every few moves and never otherwise", () => {
     const scene = finale();
-    scene.until(() => scene.moves.length >= 2 + 2 * ROOTBOUND_PHASE_THREE_CADENCE.movesPerLastSpring, 90);
-    const every = ROOTBOUND_PHASE_THREE_CADENCE.movesPerLastSpring + 1;
+    const after = move("last-spring").choose.afterMoves ?? 0;
+    expect(after).toBeGreaterThan(0);
+    scene.until(() => scene.moves.length >= 2 + 2 * after, 90);
+    const every = after + 1;
     scene.moves.slice(1).forEach((id, index) => {
       expect(id === "last-spring").toBe(index % every === 0);
     });

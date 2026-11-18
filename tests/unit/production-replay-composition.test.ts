@@ -995,7 +995,6 @@ describe("production replay composition", () => {
       }>;
       regrowthCalled: boolean;
       lastSpringUseCount: number;
-      movesSinceLastSpring: number;
       moveState: BossAttackRunnerState;
       beginRegrowth(tick: number, connectionIds: readonly string[]): boolean;
       advanceRegrowth(tick: number, connectionIds: ReadonlySet<string>, broken?: boolean): unknown;
@@ -1070,9 +1069,15 @@ describe("production replay composition", () => {
       landed: false,
       parried: false,
     });
-    boss.moveState = Object.freeze({ ...createBossAttackRunnerState(0), run });
+    // Regrowth opened Phase III and Last Spring followed it: the schedule must survive the round trip.
+    boss.moveState = Object.freeze({
+      ...createBossAttackRunnerState(0),
+      run,
+      openedPhase: 3,
+      begun: 2,
+      begunAt: Object.freeze({ regrowth: 0, "last-spring": 1 }),
+    });
     boss.lastSpringUseCount = 1;
-    boss.movesSinceLastSpring = 3;
     const spring = captureProductionReplayCheckpoint(
       source.replay,
       source.combat,
@@ -1081,7 +1086,11 @@ describe("production replay composition", () => {
     );
     const restoredSpring = composition.create(spring.snapshot);
     const springBoss = restoredSpring.replay.world.state.enemies()[0] as never as typeof boss;
-    expect(springBoss).toMatchObject({ lastSpringUseCount: 1, regrowthCalled: true, moveState: { run } });
+    expect(springBoss).toMatchObject({
+      lastSpringUseCount: 1,
+      regrowthCalled: true,
+      moveState: { run, openedPhase: 3, begun: 2, begunAt: { regrowth: 0, "last-spring": 1 } },
+    });
     const springRoundTrip = captureProductionReplayCheckpoint(
       restoredSpring.replay,
       restoredSpring.combat,
@@ -1124,15 +1133,14 @@ describe("production replay composition", () => {
       stateClass: "surgical-valid",
       seed: spring.snapshot.seed,
       start: { mode: "bossonly", difficulty: "normal", weapon: "sword", boss: "rootbound" },
-      state: { boss: { movesSinceLastSpring: 1 } },
+      state: { boss: { lastSpringUseCount: 2 } },
     };
     const fork = compileResolvedTearSdlSnapshot(spring.snapshot, resolveTearSdl(forkDocument));
     const forked = composition.create(fork);
-    expect((forked.replay.world.state.enemies()[0] as never as typeof boss).movesSinceLastSpring).toBe(1);
+    expect((forked.replay.world.state.enemies()[0] as never as typeof boss).lastSpringUseCount).toBe(2);
     expect(
-      (composition.create(spring.snapshot).replay.world.state.enemies()[0] as never as typeof boss)
-        .movesSinceLastSpring,
-    ).toBe(3);
+      (composition.create(spring.snapshot).replay.world.state.enemies()[0] as never as typeof boss).lastSpringUseCount,
+    ).toBe(1);
     expect(fork.hashes.exact).not.toBe(spring.snapshot.hashes.exact);
   });
 

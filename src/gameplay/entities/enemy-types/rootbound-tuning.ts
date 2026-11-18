@@ -15,7 +15,8 @@ export const ROOTBOUND_GRAFTS = Object.freeze({ cutExposed: 1.4, uprootedExposed
  * Every Rootbound healing rule, in one place.
  *
  * Phase II (Mercy): the keeper heals only while a Mercy Graft stands and the player has not hit it for
- * `quietSeconds`; any hit restarts that wait. It heals `perSecond` of its full health each second, at most
+ * `quietSeconds`; any hit restarts that wait, and the wait stands still while a strike is coming at the
+ * player or a Root Cage holds them. It heals `perSecond` of its full health each second, at most
  * `phaseTwoCap` of its full health in the whole of Phase II, and never back above the health it entered
  * Phase II with.
  *
@@ -36,14 +37,10 @@ export const ROOTBOUND_HEALING = Object.freeze({
 export const ROOTBOUND_PHASE_TWO_CADENCE = Object.freeze({ openingDelay: 0.85, recovery: 0.7 });
 
 /**
- * Phase III: openingDelay before Regrowth; movesPerLastSpring moves between Last Springs (one follows
- * Regrowth); gapMultiplier shortens the pause after each move, so the last phase is the fastest.
+ * Phase III: openingDelay before Regrowth; gapMultiplier shortens the pause after each move, so the last phase
+ * is the fastest. When Last Spring comes is its move's `afterMoves` (`rootbound-moves.ts`).
  */
-export const ROOTBOUND_PHASE_THREE_CADENCE = Object.freeze({
-  openingDelay: 0.7,
-  movesPerLastSpring: 3,
-  gapMultiplier: 0.7,
-});
+export const ROOTBOUND_PHASE_THREE_CADENCE = Object.freeze({ openingDelay: 0.7, gapMultiplier: 0.7 });
 /**
  * openingContactGrace: seconds after the intro before the body deals contact damage
  * (the boss spawns where the player stands).

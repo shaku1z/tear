@@ -40,10 +40,12 @@ import {
   bossAttackStatus,
   bossAttackPose,
   bossAttackTells,
+  bossAttackThreatens,
   bossHitTouches,
   createBossAttackRunnerState,
   exposeBossAttack,
   markBossAttackLanded,
+  openBossPhase,
   parryBossAttack,
   type BossAttackContext,
   type BossAttackPose,
@@ -52,9 +54,6 @@ import {
 import type { BossTell } from "../boss-tells";
 import { ROOTBOUND_MOVES, type RootboundPhase, type RootboundPlace } from "./rootbound-moves";
 export * from "./rootbound-tuning";
-
-/** The moves only Phase III plays, each under its own rule (`refreshBlockedMoves`). */
-const PHASE_THREE_RITUALS: ReadonlySet<string> = new Set(["regrowth", "last-spring"]);
 
 interface MutableBox {
   x: number;
@@ -133,7 +132,6 @@ export function createRootboundType(
     private tellsUpdate = -1;
     private tellsCache: readonly BossTell[] = NO_TELLS;
     private updates = 0;
-    movesSinceLastSpring: number = ROOTBOUND_PHASE_THREE_CADENCE.movesPerLastSpring;
     /** True while a move moves the boss itself (the body does not fall or slide on its own). */
     moveCarries = false;
     /** True while burrowed: out of sight, untouchable and harmless to touch. */
@@ -151,8 +149,6 @@ export function createRootboundType(
     plantedGraftTypes: readonly string[] = Object.freeze([]);
     /** True once all three Grafts stood together; cutting the last of them then uproots the keeper. */
     fullGrove = false;
-    /** Phase II opens with a planting: until then no other move may start. */
-    openingGraft = false;
     /** The move tick before which no Graft is planted (after a cut). */
     graftRegrowTick = 0;
     /** Seconds since the player last hit the keeper, and the share of full health healed in Phase II. */
@@ -310,7 +306,8 @@ export function createRootboundType(
     /** A Graft restored into the fight (TearBench state restore): the keeper takes it as planted. */
     adoptGraft(graftType: GraftAnchorType, geometry: GraftAnchorPlacementRequest["geometry"]): boolean {
       if (this.phase !== 2 || this.cleanupReason !== null) return false;
-      this.openingGraft = false;
+      // The fight resumes part-way through Phase II: its opening planting is not owed.
+      this.moveState = openBossPhase(this.moveState, this.phase);
       if (this.graftRequests.some((request) => request.graftType === graftType)) return true;
       this.graftRequests = Object.freeze([...this.graftRequests, Object.freeze({ graftType, geometry })]);
       this.plantedGraftTypes = Object.freeze([...this.plantedGraftTypes, graftType]);
@@ -324,7 +321,8 @@ export function createRootboundType(
 
     /** Mercy heals only an unpressed keeper, by the rules of `ROOTBOUND_HEALING`. */
     private updateHealing(dt: number): void {
-      this.quietT += dt;
+      // The wait counts only time the player was free to attack: not while a strike is coming or a cage holds.
+      if (!bossAttackThreatens(ROOTBOUND_MOVES, this.moveState) && this.rootCageRequest === null) this.quietT += dt;
       if (
         this.phase !== 2 ||
         !this.graftHeals ||
@@ -447,31 +445,10 @@ export function createRootboundType(
     /** Which moves may not start now. Changes the one set in place. */
     private refreshBlockedMoves(): void {
       const blocked = this.scratch.blocked;
-      const cannotPlant =
-        this.graftRequests.length >= GRAFT_ANCHOR_TYPES.length || this.moveTick < this.graftRegrowTick;
-      // The phase opens with a planting and nothing else, unless planting is not possible: it never idles.
-      const opening = this.phase === 2 && this.openingGraft && !cannotPlant;
-      for (const move of ROOTBOUND_MOVES.attacks) {
-        if (opening && move.id !== "plant-graft") blocked.add(move.id);
-        else blocked.delete(move.id);
-      }
-      if (cannotPlant) blocked.add("plant-graft");
+      blocked.clear();
+      if (this.graftRequests.length >= GRAFT_ANCHOR_TYPES.length || this.moveTick < this.graftRegrowTick)
+        blocked.add("plant-graft");
       if (this.rootCageRequest !== null) blocked.add("root-cage");
-      if (this.phase === 3) this.blockPhaseThree(blocked);
-    }
-
-    /**
-     * Phase III opens with Regrowth and nothing else, once. After it, every `movesPerLastSpring` moves the
-     * keeper plays Last Spring and nothing else; Last Spring is not played otherwise.
-     */
-    private blockPhaseThree(blocked: Set<string>): void {
-      const due = this.regrowthCalled
-        ? this.movesSinceLastSpring >= ROOTBOUND_PHASE_THREE_CADENCE.movesPerLastSpring
-          ? "last-spring"
-          : null
-        : "regrowth";
-      for (const move of ROOTBOUND_MOVES.attacks)
-        if (due === null ? PHASE_THREE_RITUALS.has(move.id) : move.id !== due) blocked.add(move.id);
     }
 
     /** Advances the move table one tick: motion, the strike, the parry window and what the move places. */
@@ -486,7 +463,6 @@ export function createRootboundType(
       this.moveState = result.state;
       for (const event of result.events) {
         if (event.type === "place") this.place(event.object, platforms);
-        else if (event.type === "finished") this.moveFinished(event.attackId);
       }
       const motion = bossAttackMotion(ROOTBOUND_MOVES, this.moveState, this.scratch.context);
       if (motion !== null) {
@@ -502,11 +478,6 @@ export function createRootboundType(
       const run = this.moveState.run;
       if (run !== null) this.facing = run.facing;
       this.syncMoves(true);
-    }
-
-    /** A move ended. Phase III counts it towards Last Spring. */
-    private moveFinished(attackId: string): void {
-      this.movesSinceLastSpring = attackId === "last-spring" ? 0 : this.movesSinceLastSpring + 1;
     }
 
     /**
@@ -530,7 +501,6 @@ export function createRootboundType(
 
     /** Asks the stage for the next Graft the keeper does not have, on its perch. */
     private requestGraft(platforms: readonly EnemyPlatform[]): void {
-      this.openingGraft = false;
       const index = GRAFT_ANCHOR_TYPES.findIndex(
         (type) => !this.graftRequests.some((request) => request.graftType === type),
       );
@@ -630,7 +600,6 @@ export function createRootboundType(
       if (this.phaseOneExited) return;
       this.phaseOneExited = true;
       this.resetMoves(ROOTBOUND_PHASE_TWO_CADENCE.openingDelay);
-      this.openingGraft = true;
       this.phaseTwoEntryHp = this.hp;
       this.atk = "unavailable";
       this.state = "recover";
@@ -650,7 +619,6 @@ export function createRootboundType(
       this.graftRequests = NO_GRAFT_REQUESTS;
       this.plantedGraftTypes = Object.freeze([]);
       this.fullGrove = false;
-      this.openingGraft = false;
       this.rootCageRequest = null;
       this.scratch.blocked.clear();
     }
@@ -659,7 +627,6 @@ export function createRootboundType(
       this.finalPhaseTwoGraftTypes = Object.freeze([...this.activeGraftTypes]);
       this.endGarden();
       this.resetMoves(ROOTBOUND_PHASE_THREE_CADENCE.openingDelay);
-      this.movesSinceLastSpring = ROOTBOUND_PHASE_THREE_CADENCE.movesPerLastSpring;
       this.phaseThreeEntryHp = this.hp;
       this.state = "recover";
       this.stateT = ROOTBOUND_PHASE_TWO_CADENCE.recovery;

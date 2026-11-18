@@ -78,7 +78,8 @@ export const ROOTBOUND_MOVES: BossAttackTable<RootboundPhase, RootboundPlace> = 
       id: "plant-graft",
       phases: [2],
       timing: { tell: 0.9, active: 0.1, recover: 0.2, punish: 0.4 },
-      choose: { range: [0, 1600], weight: 4, cooldown: 4 },
+      // Phase II opens with a planting, unless the keeper cannot plant then.
+      choose: { range: [0, 1600], weight: 4, cooldown: 4, opens: true },
       tell: { mark: "self" },
       places: [{ at: "active", object: "graft" }],
     },
@@ -99,24 +100,25 @@ export const ROOTBOUND_MOVES: BossAttackTable<RootboundPhase, RootboundPlace> = 
       places: [{ at: "active", object: "bloom" }],
     },
     {
-      // Played once, first in Phase III (rootbound.ts blocks every other move until it starts). The links grow
-      // at the tell and the channel runs to the end of the active stage: tell plus active is the channel length
-      // in `regrowth-link.ts`. While it channels, a root wave runs from its front every 1.1 s.
+      // Phase III opens with it, once. The links grow at the tell and the channel runs to the end of the active
+      // stage: tell plus active is the channel length in `regrowth-link.ts`. While it channels, a root wave runs
+      // from its front every 1.1 s.
       id: "regrowth",
       phases: [3],
       timing: { tell: 0.8, active: 3.2, recover: 0.65, punish: 1.1 },
-      choose: { range: [0, 1600], weight: 1, cooldown: 0 },
+      choose: { range: [0, 1600], weight: 1, cooldown: 0, opens: true, once: true },
       hit: { shape: { kind: "travel", dy: 29, hw: 30, hh: 30, speed: 900 }, damage: 16, parryable: false, every: 1.1 },
       tell: { mark: "lane" },
       places: [{ at: "tell", object: "regrowth" }],
     },
     {
-      // The keeper's big strike: every platform-free stretch of floor blooms. Chosen when due (rootbound.ts);
-      // a platform starts to fracture at its tell, so the player sees which perch will not hold.
+      // The keeper's big strike: every platform-free stretch of floor blooms. It comes right after Regrowth and
+      // then after every three other moves. A platform starts to fracture at its tell, so the player sees which
+      // perch will not hold.
       id: "last-spring",
       phases: [3],
       timing: { tell: 2.3, active: 0.35, recover: 0, punish: 0.9 },
-      choose: { range: [0, 1600], weight: 1, cooldown: 0 },
+      choose: { range: [0, 1600], weight: 1, cooldown: 0, afterMoves: 3 },
       hit: {
         shape: {
           kind: "box",

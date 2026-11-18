@@ -39,6 +39,11 @@ export interface BossAttackRunnerState {
   readonly cooldownUntil: Readonly<Record<string, number>>;
   /** A forced exposure outside any move (a cut Graft, say): the ticks it spans, or null. */
   readonly exposed: Readonly<{ from: number; until: number }> | null;
+  /** The phase the last move began in, or null before the first. A phase is open once a move began in it. */
+  readonly openedPhase: string | number | null;
+  /** How many moves have begun, and that count when each move last began (for `once` and `afterMoves`). */
+  readonly begun: number;
+  readonly begunAt: Readonly<Record<string, number>>;
 }
 
 export interface BossAttackContext<Phase extends string | number> {
@@ -67,7 +72,23 @@ export type BossHitArea =
 const STAGE_ORDER: readonly BossAttackStage[] = Object.freeze(["tell", "active", "recover", "punish"]);
 
 export function createBossAttackRunnerState(readyTick = 0): BossAttackRunnerState {
-  return Object.freeze({ run: null, readyTick, lastAttackId: null, cooldownUntil: Object.freeze({}), exposed: null });
+  return Object.freeze({
+    run: null,
+    readyTick,
+    lastAttackId: null,
+    cooldownUntil: Object.freeze({}),
+    exposed: null,
+    openedPhase: null,
+    begun: 0,
+    begunAt: Object.freeze({}),
+  });
+}
+
+/**
+ * Marks `phase` as already open, so no opening move is owed: for a fight restored part-way through a phase.
+ */
+export function openBossPhase(state: BossAttackRunnerState, phase: string | number): BossAttackRunnerState {
+  return state.openedPhase === phase ? state : Object.freeze({ ...state, openedPhase: phase });
 }
 
 function heightOf(boss: Box, target: Box): BossAttackHeight {
@@ -91,19 +112,55 @@ function preference<Phase extends string | number, Place>(
   return score;
 }
 
+/** Whether `attack` may start now at all: its phase, not twice running, not blocked, cooled down, not spent. */
+function mayStart<Phase extends string | number>(
+  attack: BossAttack<Phase, unknown>,
+  state: BossAttackRunnerState,
+  context: BossAttackContext<Phase>,
+): boolean {
+  return (
+    attack.phases.includes(context.phase) &&
+    attack.id !== state.lastAttackId &&
+    context.blocked?.has(attack.id) !== true &&
+    (state.cooldownUntil[attack.id] ?? 0) <= context.tick &&
+    !(attack.choose.once === true && attack.id in state.begunAt)
+  );
+}
+
+/** Whether a move on a count is owed: it has not been played, or enough other moves began since it was. */
+function owed(attack: BossAttack<string | number, unknown>, state: BossAttackRunnerState): boolean {
+  const after = attack.choose.afterMoves;
+  if (after === undefined) return false;
+  const at = state.begunAt[attack.id];
+  return at === undefined || state.begun - at - 1 >= after;
+}
+
+/**
+ * The moves to choose among now, by the schedule: a move that opens a phase not yet open, else a move on a
+ * count that is owed, else the moves chosen by weight (a move on a count is never one of them).
+ */
+function scheduled<Phase extends string | number, Place>(
+  table: BossAttackTable<Phase, Place>,
+  state: BossAttackRunnerState,
+  context: BossAttackContext<Phase>,
+): BossAttack<Phase, Place>[] {
+  const ready = table.attacks.filter((attack) => mayStart(attack, state, context));
+  if (state.openedPhase !== context.phase) {
+    const openers = ready.filter((attack) => attack.choose.opens === true);
+    if (openers.length > 0) return openers;
+  }
+  const due = ready.filter((attack) => owed(attack, state));
+  if (due.length > 0) return due;
+  return ready.filter((attack) => attack.choose.afterMoves === undefined);
+}
+
 /** The next move, or null when none may start. Draws exactly one number from the random source. */
 export function chooseBossAttack<Phase extends string | number, Place>(
   table: BossAttackTable<Phase, Place>,
   state: BossAttackRunnerState,
   context: BossAttackContext<Phase>,
 ): BossAttack<Phase, Place> | null {
-  const candidates = table.attacks.filter(
-    (attack) =>
-      attack.phases.includes(context.phase) &&
-      attack.id !== state.lastAttackId &&
-      context.blocked?.has(attack.id) !== true &&
-      (state.cooldownUntil[attack.id] ?? 0) <= context.tick,
-  );
+  const candidates = scheduled(table, state, context);
   const scores = candidates.map((attack) => preference(attack, context));
   const total = scores.reduce((sum, score) => sum + score, 0);
   const roll = context.random.next() * total;
@@ -164,6 +221,7 @@ function finish<Phase extends string | number, Place>(
   const scale = context.gapMultiplier ?? 1;
   if (!Number.isFinite(scale) || scale < 0) throw new RangeError("a move gap multiplier is a finite number, 0 or more");
   return Object.freeze({
+    ...state,
     run: null,
     readyTick: tick + Math.round(table.gap * scale),
     lastAttackId: attack.id,
@@ -186,10 +244,10 @@ export function exposeBossAttack(
   if (!Number.isSafeInteger(ticks) || ticks < 1) throw new RangeError("a forced exposure lasts at least one tick");
   const until = Math.max(tick + ticks, state.exposed?.until ?? 0);
   return Object.freeze({
+    ...state,
     run: null,
     readyTick: until + table.gap,
     lastAttackId: state.run?.attackId ?? state.lastAttackId,
-    cooldownUntil: state.cooldownUntil,
     exposed: Object.freeze({ from: tick, until }),
   });
 }
@@ -205,7 +263,14 @@ export function advanceBossAttack<Phase extends string | number, Place>(
     if (context.tick < state.readyTick) return { state, events: [] };
     const attack = chooseBossAttack(table, state, context);
     if (attack === null) return { state, events: [] };
-    const started = Object.freeze({ ...state, exposed: null, run: begin(attack, context) });
+    const started = Object.freeze({
+      ...state,
+      exposed: null,
+      run: begin(attack, context),
+      openedPhase: context.phase,
+      begun: state.begun + 1,
+      begunAt: Object.freeze({ ...state.begunAt, [attack.id]: state.begun }),
+    });
     return {
       state: started,
       events: [{ type: "stage", attackId: attack.id, stage: "tell" }, ...placesAt(attack, "tell")],
@@ -228,6 +293,20 @@ export function advanceBossAttack<Phase extends string | number, Place>(
   const events: BossAttackEvent<Place>[] = [{ type: "stage", attackId: attack.id, stage }];
   if (stage === "active") events.push(...placesAt(attack, "active"));
   return { state: Object.freeze({ ...state, run: moved }), events };
+}
+
+/**
+ * True while a strike is on its way: the move in progress hits and is in its tell or active stage. The player
+ * is busy reading or dodging it then, so rules that reward an unpressed boss (healing after a quiet spell)
+ * should not count that time.
+ */
+export function bossAttackThreatens(
+  table: BossAttackTable<string | number, unknown>,
+  state: BossAttackRunnerState,
+): boolean {
+  const run = state.run;
+  if (run === null || run.parried || (run.stage !== "tell" && run.stage !== "active")) return false;
+  return table.byId.get(run.attackId)?.hit !== undefined;
 }
 
 /** The move in progress, if any. */
