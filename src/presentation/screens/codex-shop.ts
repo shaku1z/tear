@@ -25,7 +25,13 @@ function columns(stacks: readonly (readonly ScrollBlock[])[], gap: number, inset
   if (only && others.length === 0) {
     const [first, ...rest] = only;
     if (!first) return [];
-    return [{ height: inset + first.height, draw: (y, view) => first.draw(y + inset, view) }, ...rest];
+    const lead: ScrollBlock = {
+      height: inset + first.height,
+      draw: (y, view) => {
+        first.draw(y + inset, view);
+      },
+    };
+    return [lead, ...rest];
   }
   const height = (blocks: readonly ScrollBlock[]): number =>
     blocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, blocks.length - 1) * gap;
