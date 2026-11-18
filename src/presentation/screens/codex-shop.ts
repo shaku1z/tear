@@ -11,6 +11,7 @@ import {
   type ShopItem,
 } from "./codex-shop-metrics";
 import { createPageFrame, type PageFrame, type ScrollBlock, type ScrollView } from "./page-frame";
+import { createShardShelves } from "./shard-shelves";
 
 const GOLD = "#e0a326",
   SPECIAL_GOLD = "#e8a32e";
@@ -39,38 +40,68 @@ function columns(stacks: readonly (readonly ScrollBlock[])[], gap: number, inset
  */
 export function createCodexShopRenderers(context: ScreenRenderContext) {
   const { ui } = context,
-    pf = createPageFrame(context);
+    pf = createPageFrame(context),
+    shardShelves = createShardShelves(context, pf);
   const measure: Measure = { textWidth: pf.textWidth, lineCount: pf.lineCount, lineHeight: pf.lineHeight };
   const metrics = (frame: PageFrame): Metrics => codexShopMetrics(ui.t, frame, measure, context.width);
 
   function shop(view: ShopScreenView): void {
     const t = ui.t,
-      goldInk = ui.readable(GOLD);
+      goldInk = ui.readable(GOLD),
+      shards = view.tab === "shards" ? view.shards : undefined;
+    // Tabs take the subtitle's place, as on the other tabbed pages; the status line under them says the rest.
     const frame = pf.open({
       title: "SHOP",
-      subtitle: "permanent upgrades — applied at the start of every run",
       hue: GOLD,
-      stat: { value: view.coins.toLocaleString("en-US"), label: "COINS", color: goldInk, glyph: "◆" },
+      stat: shards
+        ? {
+            value: shards.balance.toLocaleString("en-US"),
+            label: "SHARDS",
+            color: ui.readable(t.color.accent),
+            glyph: "⬡",
+          }
+        : { value: view.coins.toLocaleString("en-US"), label: "COINS", color: goldInk, glyph: "◆" },
+      tabs: view.tabs,
+      tabAction: (id) => ({ type: "shop.selectTab", id }),
       desktop: {},
     });
-    const m = metrics(frame),
-      s = m.shop;
-    // One status line under the header: the first-run hint replaces the ledger totals.
+    const m = metrics(frame);
+    // One status line under the tabs: on UPGRADES the first-run hint replaces the ledger totals.
+    const emphasis = shards === undefined && view.onboarding !== undefined;
     const status = pf.prose(
       frame,
-      view.onboarding ??
-        `${String(view.ownedLevels)} / ${String(view.totalLevels)} LEVELS OWNED   ·   LIFETIME EARNED ◆ ${view.lifetimeEarned.toLocaleString("en-US")}`,
+      shards
+        ? `⬡ ${shards.earned.toLocaleString("en-US")} SHARDS EARNED   ·   LOOKS ONLY — THEY NEVER CHANGE HOW A RUN PLAYS`
+        : (view.onboarding ??
+            `${String(view.ownedLevels)} / ${String(view.totalLevels)} LEVELS OWNED   ·   LIFETIME EARNED ◆ ${view.lifetimeEarned.toLocaleString("en-US")}`),
       {
-        ...(view.onboarding
+        ...(emphasis
           ? { size: t.type.caption, alpha: t.alpha.soft }
           : { size: t.type.micro, alpha: t.alpha.muted, tag: t.color.muted }),
         maxLines: 2,
         align: m.align,
         baseline: DESKTOP.shop.statusBaseline,
-        height: DESKTOP.shop.listTop - frame.top,
+        height: DESKTOP.shop.listTop - DESKTOP.shop.statusTop,
       },
     );
-    const perColumn = Math.ceil(view.sections.length / s.columns);
+    const state = pf.body(frame, {
+      head: [status],
+      list: shards ? shardShelves.shelves(frame, shards) : [upgradeColumns(frame, m, view, goldInk)],
+      gap: m.gap,
+      desktop: {
+        top: DESKTOP.shop.statusTop,
+        cull: { above: Number.POSITIVE_INFINITY, below: 0 },
+        canScrollUp: view.canScrollUp,
+        canScrollDown: view.canScrollDown,
+      },
+    });
+    pf.close(frame, state);
+  }
+
+  /** The UPGRADES tab: the upgrade sections in the metrics' columns, each a gold rule and its rows. */
+  function upgradeColumns(frame: PageFrame, m: Metrics, view: ShopScreenView, goldInk: string): ScrollBlock {
+    const s = m.shop,
+      perColumn = Math.ceil(view.sections.length / s.columns);
     const stacks = Array.from({ length: s.columns }, (_, column) => {
       const x = frame.left + column * s.step;
       return view.sections.slice(column * perColumn, (column + 1) * perColumn).flatMap((section, index) => {
@@ -85,18 +116,7 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
         return [rule, ...section.items.map((item) => shopRow(frame, m, item, x, goldInk))];
       });
     });
-    const state = pf.body(frame, {
-      head: [status],
-      list: [columns(stacks, m.gap, s.inset)],
-      gap: m.gap,
-      desktop: {
-        top: frame.top,
-        cull: { above: Number.POSITIVE_INFINITY, below: 0 },
-        canScrollUp: view.canScrollUp,
-        canScrollDown: view.canScrollDown,
-      },
-    });
-    pf.close(frame, state);
+    return columns(stacks, m.gap, s.inset);
   }
 
   /** One upgrade: icon tile, name and level, pips, up to two lines of effect copy, and BUY. */
