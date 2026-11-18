@@ -103,7 +103,7 @@ function matches(state: BossPhasePracticeState, world: BossPhasePracticeWorld): 
  * Frozen states whose fields were already checked. A state holds only strings, numbers and null, so a frozen
  * one cannot change and its fields need checking once, not at every tick that reads it.
  */
-const checkedStates = new WeakSet<object>();
+const checkedStates = new WeakSet();
 
 function assertPracticeStateFields(value: unknown): asserts value is BossPhasePracticeState {
   if (typeof value === "object" && value !== null && checkedStates.has(value)) return;
@@ -165,8 +165,11 @@ function assertPracticeStateFields(value: unknown): asserts value is BossPhasePr
 }
 
 /** The world a state is checked against changes every tick, so this part runs at every check. */
-function assertPracticeWorld(state: BossPhasePracticeState, world: BossPhasePracticeWorld): void {
-  const entry = world.actor.practicePhaseEntry();
+function assertPracticeWorld(
+  state: BossPhasePracticeState,
+  world: BossPhasePracticeWorld,
+  entry = world.actor.practicePhaseEntry(),
+): void {
   if (
     state.lifecycle === "cancelled" ||
     !matches(state, world) ||
@@ -192,13 +195,18 @@ export function validateBossPhasePracticeState(value: unknown, world?: BossPhase
 export function createBossPhasePracticeRuntime(services: BossPhasePracticeServices) {
   let current: BossPhasePracticeState | null = null;
   let generation = 0;
-  function result(): BossPhasePracticeResult {
+  /** `observed` is this tick's world and phase entry when the caller already read them and changed neither. */
+  function result(observed?: {
+    world: BossPhasePracticeWorld;
+    entry: ReturnType<BossPhasePracticeActor["practicePhaseEntry"]>;
+  }): BossPhasePracticeResult {
     if (current === null) return { status: "refused", reason: "inactive" };
-    const world = services.observe();
+    const world = observed?.world ?? services.observe();
     let capture: "canonical-checkpoint" | "unavailable" = "unavailable";
     if (current.lifecycle !== "cancelled" && world !== null) {
       try {
-        validateBossPhasePracticeState(current, world);
+        assertPracticeStateFields(current);
+        assertPracticeWorld(current, world, observed?.entry);
         capture = "canonical-checkpoint";
       } catch {
         /* A half-installed world cannot be captured. */
@@ -242,7 +250,7 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
     if (current.lifecycle === "active") {
       if (entry.phase < current.enteredPhase) return { status: "refused", reason: "world-mismatch" };
       current = changed(current, { enteredPhase: entry.phase, entryStage: entry.stage });
-      return result();
+      return result({ world, entry });
     }
     if (entry.phase < current.enteredPhase || entry.phase > (current.pendingPhase ?? current.enteredPhase))
       return { status: "refused", reason: "world-mismatch" };
@@ -250,18 +258,20 @@ export function createBossPhasePracticeRuntime(services: BossPhasePracticeServic
       current = changed(current, { enteredPhase: entry.phase, pendingPhase: null });
     current = changed(current, { entryStage: entry.stage });
     if (current.pendingPhase !== null) {
-      return entry.targetPhase === current.pendingPhase ? result() : { status: "refused", reason: "world-mismatch" };
+      return entry.targetPhase === current.pendingPhase
+        ? result({ world, entry })
+        : { status: "refused", reason: "world-mismatch" };
     }
     if (entry.phase === current.phase) {
       current = changed(current, {
         lifecycle: entry.ready && !world.cinematicActive && world.phaseWorldReady ? "active" : "entering",
         setupStage: "target",
       });
-      return result();
+      return result({ world, entry });
     }
     if (!entry.ready || world.cinematicActive || !world.phaseWorldReady) {
       current = changed(current, { setupStage: entry.phase === 1 ? "opening" : "phase-2-baseline" });
-      return result();
+      return result({ world, entry });
     }
     const next = entry.phase === 1 ? 2 : 3;
     if (!world.actor.requestPracticePhase(next)) return { status: "refused", reason: "entry-refused" };
