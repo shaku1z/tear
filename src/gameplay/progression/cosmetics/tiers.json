@@ -1,0 +1,18 @@
+[
+  {
+    "id": "common",
+    "price": 25
+  },
+  {
+    "id": "rare",
+    "price": 150
+  },
+  {
+    "id": "epic",
+    "price": 400
+  },
+  {
+    "id": "legendary",
+    "price": 900
+  }
+]

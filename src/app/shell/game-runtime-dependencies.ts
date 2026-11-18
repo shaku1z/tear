@@ -26,7 +26,6 @@ import type { CloudFactory } from "../../platform/cloud-factory";
 import type { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import type { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
-import type { GhostPublicationRuntime } from "../../platform/ghost-publication-runtime";
 import type { createAttract } from "../../presentation/attract";
 import type { BackdropController } from "../../presentation/backdrop";
 import type { SceneLibrary } from "../../presentation/scenes/scene-library";
@@ -93,7 +92,6 @@ export interface GameRuntimeDependencies {
   readonly Clipper: Readonly<{ start(): void; stop(): void }> | undefined;
   readonly Cloud: Cloud["Cloud"];
   readonly Colossus: EnemyTypes["Colossus"];
-  readonly ghostPublication: GhostPublicationRuntime;
   readonly DAILY: ReturnType<typeof createDailyChallenges>;
   readonly DIAG: PerformanceMonitor;
   readonly Echo: EnemyTypes["Echo"];

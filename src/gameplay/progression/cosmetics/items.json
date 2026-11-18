@@ -1,0 +1,215 @@
+[
+  {
+    "id": "trail_dusk",
+    "slot": "trail",
+    "name": "Dusk Ribbon",
+    "tier": "common",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "colors": [
+        "#7a4ff0"
+      ],
+      "widthScale": 1,
+      "glow": 0.4,
+      "fade": "linear"
+    }
+  },
+  {
+    "id": "trail_tidewater",
+    "slot": "trail",
+    "name": "Tidewater",
+    "tier": "rare",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "colors": [
+        "#2f7bd6",
+        "#0f9fb0"
+      ],
+      "widthScale": 1.1,
+      "glow": 0.5,
+      "fade": "linear"
+    }
+  },
+  {
+    "id": "trail_heartwood",
+    "slot": "trail",
+    "name": "Heartwood",
+    "tier": "epic",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "colors": [
+        "#2f9e6b",
+        "#0f9fb0"
+      ],
+      "widthScale": 1.2,
+      "glow": 0.5,
+      "fade": "hold"
+    },
+    "collection": "rootbound"
+  },
+  {
+    "id": "spark_orchid",
+    "slot": "spark",
+    "name": "Orchid",
+    "tier": "common",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "colors": [
+        "#c23bb0"
+      ],
+      "countScale": 1,
+      "shape": "line"
+    }
+  },
+  {
+    "id": "spark_glacier",
+    "slot": "spark",
+    "name": "Glacier",
+    "tier": "rare",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "colors": [
+        "#0f9fb0",
+        "#7a4ff0"
+      ],
+      "countScale": 1.2,
+      "shape": "line"
+    }
+  },
+  {
+    "id": "blade_moonsteel",
+    "slot": "blade",
+    "name": "Moonsteel",
+    "tier": "rare",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "base": "#6f86b8",
+      "glow": "#7a4ff0",
+      "accent": "#2f7bd6"
+    }
+  },
+  {
+    "id": "title_wanderer",
+    "slot": "title",
+    "name": "Wanderer",
+    "tier": "common",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "text": "WANDERER"
+    }
+  },
+  {
+    "id": "title_giant_slayer",
+    "slot": "title",
+    "name": "Giant Slayer",
+    "tier": "rare",
+    "acquire": [
+      {
+        "how": "achievement",
+        "id": "first_boss"
+      }
+    ],
+    "look": {
+      "text": "GIANT SLAYER"
+    }
+  },
+  {
+    "id": "title_rootcutter",
+    "slot": "title",
+    "name": "Rootcutter",
+    "tier": "epic",
+    "acquire": [
+      {
+        "how": "collection",
+        "id": "rootbound"
+      }
+    ],
+    "look": {
+      "text": "ROOTCUTTER"
+    },
+    "collection": "rootbound"
+  },
+  {
+    "id": "banner_nightfall",
+    "slot": "banner",
+    "name": "Nightfall",
+    "tier": "common",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "colors": [
+        "#1b2130",
+        "#7a4ff0"
+      ],
+      "pattern": "split"
+    }
+  },
+  {
+    "id": "banner_morning",
+    "slot": "banner",
+    "name": "Verdant Morning",
+    "tier": "rare",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "colors": [
+        "#2f9e6b",
+        "#0f9fb0"
+      ],
+      "pattern": "stripe"
+    }
+  },
+  {
+    "id": "banner_canopy",
+    "slot": "banner",
+    "name": "Rootbound Canopy",
+    "tier": "epic",
+    "acquire": [
+      {
+        "how": "shards"
+      }
+    ],
+    "look": {
+      "colors": [
+        "#2f9e6b",
+        "#7a4ff0"
+      ],
+      "pattern": "split"
+    },
+    "collection": "rootbound"
+  }
+]

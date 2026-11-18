@@ -23,7 +23,6 @@ const FIELD_LABELS: Readonly<Record<string, string>> = Object.freeze({
   damage: "Damage taken (min..max)",
   tags: "Tags (comma-separated)",
   pinned: "Pinned (true / false)",
-  shared: "Shared (public / unlisted / private)",
   resumed: "Continued from a replay (true / false)",
   verified: "Checked recording (receipts / integrity / unavailable)",
   actor: "Played by (human / bot)",

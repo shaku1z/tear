@@ -1,3 +1,17 @@
+import type { CosmeticCatalog, CosmeticState } from "../domain/cosmetic-types";
+import {
+  claimableGrants,
+  equipCosmetic,
+  grantItems,
+  markSeen,
+  mergeCosmeticStates,
+  normalizeCosmeticState,
+  purchaseCosmetic,
+  shardBalance,
+  type PurchaseRefusal,
+} from "../domain/cosmetics";
+import { progressFacts } from "../domain/progress-facts";
+import type { ProgressFacts } from "../domain/unlock-condition";
 import type { AcknowledgedStorage } from "../platform/contracts";
 import {
   achievementOutbox,
@@ -58,6 +72,8 @@ export interface ProfileData extends Record<string, unknown> {
   rewards?: Tracker;
   weaponsWon?: Record<string, number>;
   advDiffs?: Record<string, number>;
+  /** Cosmetic ownership and equipped slots (version 4); read through `cosmetics()`. */
+  cosmetics?: unknown;
 }
 
 export interface ProfileStore {
@@ -77,7 +93,20 @@ export interface ProfileStore {
   setUsername(name: string): void;
   shards(): number;
   addShards(amount: number): void;
+  /** Validated cosmetic ownership and equipped slots. */
+  cosmetics(): CosmeticState;
+  /** Shards left to spend: earned minus the prices paid for owned cosmetics, never below zero. */
+  shardBalance(): number;
+  buyCosmetic(itemId: string): Promise<CompletionStatus | PurchaseRefusal>;
+  /** `null` clears the slot back to the default look. */
+  equipCosmetic(slot: string, itemId: string | null): Promise<CompletionStatus | "unknown">;
+  /** Grants items earned without paying (an achievement, a defeated boss, a finished collection). */
+  claimCosmeticGrants(): Promise<CompletionStatus>;
+  /** Records that the player has seen these items, which clears their "new" badge. */
+  markCosmeticsSeen(itemIds: readonly string[]): Promise<CompletionStatus>;
   stat(key: string): number;
+  /** What the condition language can ask of this profile, read live. */
+  facts(): ProgressFacts;
   addStat(key: string, amount?: number): void;
   maxStat(key: string, value: number): void;
   markBiome(name: string): number;
@@ -103,6 +132,8 @@ export interface ProfileStoreOptions {
   readonly log?: (message: string) => void;
   /** Published biome display names whose discovery counts toward progression. */
   readonly countedBiomeNames?: readonly string[];
+  /** The cosmetic rows; without it every cosmetic action reports "unknown". */
+  readonly getCosmeticCatalog?: () => CosmeticCatalog | undefined;
 }
 
 function record(value: unknown): Tracker | null {
@@ -137,6 +168,7 @@ const RECEIPT_OWNED_FIELDS = new Set([
   "modes",
   "weaponsWon",
   "advDiffs",
+  "cosmetics",
 ]);
 function overlayNormalChanges(target: Tracker, baseline: Tracker, current: Tracker, root = true): void {
   for (const key of new Set([...Object.keys(baseline), ...Object.keys(current)])) {
@@ -193,6 +225,11 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       target.username = source.username;
       target.usernameSetAt = finite(source.usernameSetAt);
     }
+    if (source.cosmetics !== undefined || target.cosmetics !== undefined)
+      target.cosmetics = mergeCosmeticStates(
+        normalizeCosmeticState(target.cosmetics),
+        normalizeCosmeticState(source.cosmetics),
+      );
     Object.assign(target.modes, boolMap(source.modes));
     Object.assign(target.seen, boolMap(source.seen));
     const rewards = record(source.rewards);
@@ -319,6 +356,26 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     options.onCommitted?.();
     return "committed";
   };
+  /**
+   * Runs one cosmetic change through the acknowledged commit, or directly on a plain local store. `apply` sets
+   * `result.value` to what happened; a committed change is saved, anything else is reported as it is.
+   */
+  async function runCosmeticChange<Outcome extends string>(
+    self: ProfileStore,
+    initial: Outcome,
+    apply: (target: ProfileData, result: { value: Outcome }) => void,
+  ): Promise<CompletionStatus | Outcome> {
+    const result = { value: initial };
+    if (!options.store.acknowledged) {
+      apply(self.data, result);
+      if (result.value === "committed") self.save();
+      return result.value;
+    }
+    const status = await commit((target) => {
+      apply(target, result);
+    });
+    return status === "committed" ? result.value : status;
+  }
   const profile: ProfileStore = {
     KEY: "tear_profile",
     ENVELOPE_KEY: "tear_profile_v2",
@@ -477,8 +534,64 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
       }
       this.save();
     },
+    cosmetics() {
+      return normalizeCosmeticState(this.data.cosmetics);
+    },
+    shardBalance() {
+      return shardBalance(finite(this.data.shards), normalizeCosmeticState(this.data.cosmetics));
+    },
+    async buyCosmetic(itemId) {
+      const catalog = options.getCosmeticCatalog?.();
+      if (!catalog) return "unknown";
+      return runCosmeticChange<PurchaseRefusal | "committed">(this, "unknown", (target, result) => {
+        const purchase = purchaseCosmetic(
+          catalog,
+          normalizeCosmeticState(target.cosmetics),
+          itemId,
+          finite(target.shards),
+          progressFacts(target),
+        );
+        if (!purchase.ok) {
+          result.value = purchase.reason;
+          return;
+        }
+        target.cosmetics = purchase.state;
+        result.value = "committed";
+      });
+    },
+    async equipCosmetic(slot, itemId) {
+      const catalog = options.getCosmeticCatalog?.();
+      if (!catalog) return "unknown";
+      return runCosmeticChange<CompletionStatus>(this, "unknown", (target, result) => {
+        const next = equipCosmetic(catalog, normalizeCosmeticState(target.cosmetics), slot, itemId, now());
+        if (!next) return;
+        target.cosmetics = next;
+        result.value = "committed";
+      });
+    },
+    async claimCosmeticGrants() {
+      const catalog = options.getCosmeticCatalog?.();
+      if (!catalog) return "unknown";
+      return runCosmeticChange<CompletionStatus>(this, "unknown", (target, result) => {
+        const state = normalizeCosmeticState(target.cosmetics);
+        const ids = claimableGrants(catalog, state, progressFacts(target));
+        result.value = ids.length === 0 ? "already" : "committed";
+        if (ids.length > 0) target.cosmetics = grantItems(state, ids);
+      });
+    },
+    async markCosmeticsSeen(itemIds) {
+      return runCosmeticChange<CompletionStatus>(this, "unknown", (target, result) => {
+        const state = normalizeCosmeticState(target.cosmetics);
+        const next = markSeen(state, itemIds, now());
+        result.value = Object.keys(next.seen).length === Object.keys(state.seen).length ? "already" : "committed";
+        if (result.value === "committed") target.cosmetics = next;
+      });
+    },
     stat(key) {
       return finite(this.data.stats[key]);
+    },
+    facts() {
+      return progressFacts(this.data);
     },
     addStat(key, amount = 1) {
       this.data.stats[key] = finite(this.data.stats[key]) + amount;

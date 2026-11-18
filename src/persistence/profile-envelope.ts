@@ -1,3 +1,4 @@
+import { normalizeCosmeticState } from "../domain/cosmetics";
 import { achievementOutbox, tutorialLedger } from "../domain/reward-receipts";
 import {
   asRecord,
@@ -11,7 +12,7 @@ import {
 } from "./json";
 import { invalid, unsupportedVersion, type MigrationResult } from "./result";
 
-export const PROFILE_ENVELOPE_VERSION = 3;
+export const PROFILE_ENVELOPE_VERSION = 4;
 const KNOWN_FIELDS = new Set([
   "schema",
   "schemaVersion",
@@ -52,6 +53,13 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
   } catch {
     return invalid("Invalid profile completion/reward ledger.");
   }
+  // Version 4 adds the cosmetics ledger. Older saves get the empty default; a present value is
+  // always re-validated (malformed entries dropped, unknown ids kept) before it reaches game code.
+  const cosmetics =
+    version < PROFILE_ENVELOPE_VERSION || profile.value.cosmetics !== undefined
+      ? validateJsonObject(normalizeCosmeticState(profile.value.cosmetics))
+      : null;
+  if (cosmetics && !cosmetics.ok) return invalid(cosmetics.error);
   const extensions = extensionFields(isEnvelope ? source : {}, KNOWN_FIELDS);
   if (!extensions.ok) return invalid(extensions.error);
   return {
@@ -63,7 +71,7 @@ export function migrateProfileEnvelope(input: unknown, nowMs = 0): MigrationResu
       revision: safeInteger(source.revision, 0),
       updatedAtMs: safeInteger(source.updatedAtMs, nowMs),
       writerId: safeString(source.writerId, "legacy"),
-      profile: profile.value,
+      profile: cosmetics ? { ...profile.value, cosmetics: cosmetics.value } : profile.value,
       extensions: extensions.value,
     }),
   };

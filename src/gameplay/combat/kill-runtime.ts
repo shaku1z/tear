@@ -1,3 +1,4 @@
+import { bossKillStat } from "../../domain/progress-facts";
 import { cleanupBossEncounterActors } from "../run/boss-encounter";
 
 export interface KillEnemy {
@@ -138,7 +139,7 @@ function trackKillAchievements(options: KillRuntimeOptions): void {
       run._bossOnlyKills = (run._bossOnlyKills ?? 0) + 1;
       if (run._bossOnlyKills >= options.bossRosterSize) options.maxStat("gauntletFull", 1);
     }
-    if (enemy.bossId) options.maxStat(`kill${enemy.bossId.charAt(0).toUpperCase()}${enemy.bossId.slice(1)}`, 1);
+    if (enemy.bossId) options.maxStat(bossKillStat(enemy.bossId), 1);
     if (enemy.bossId === "rootbound") {
       options.addStat("rootboundKills", 1);
       if (!run._dmgThisWave) options.addStat("rootboundNoHitKills", 1);

@@ -4,6 +4,7 @@
 //   node scripts/run-checks.mjs fast             the fast group (`pnpm check:quick`, the pre-push hook)
 //   node scripts/run-checks.mjs static           one group: fast, static, unit, build, browser, nightly, weekly
 //   node scripts/run-checks.mjs browser --list   print what would run
+//   node scripts/run-checks.mjs browser --shard 2/4   one of four parts of a group (CI's parallel jobs)
 //
 // It stops at the first failing check. The browser and nightly groups serve the builds in dist/, so
 // run the build group first. On this machine, every group except `fast` first takes one of a few
@@ -19,7 +20,7 @@
 // With --keep-going (the nightly workflow only), a failing check does not stop the run: every check
 // runs, the run lists each failure at the end and still fails. Pull request runs stop at the first.
 import { spawnSync } from "node:child_process";
-import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -39,6 +40,54 @@ export function selectChecks(config, group) {
     for (const check of checks) selected.push({ ...check, group: name, args: check.run.split(" ") });
   }
   return selected;
+}
+
+/** The time a check without a recorded `seconds` counts as when the shards are packed. */
+export const DEFAULT_CHECK_SECONDS = 60;
+
+/** Where scripts/ci-check-times.mjs writes the seconds each check took in recent Validate runs. */
+export const CHECK_TIMES = resolve(root, "config/check-times.json");
+
+/** The measured seconds by "group.id", or an empty map when there is no times file. */
+export function loadCheckTimes(path = CHECK_TIMES) {
+  if (!existsSync(path)) return {};
+  return JSON.parse(readFileSync(path, "utf8")).seconds ?? {};
+}
+
+const positive = (value) => Number.isFinite(value) && value > 0;
+
+/**
+ * Part `index` (1-based) of `count`: the checks are packed longest first, each into the part with
+ * the least time so far, and every part keeps list order. A check's time is its measured time in
+ * `measured` (by "group.id"), else its recorded `seconds`, else DEFAULT_CHECK_SECONDS. Every
+ * check lands in exactly one part, whatever the times say; a time that drifts only unbalances them.
+ */
+export function shardChecks(checks, index, count, measured = {}) {
+  if (!Number.isInteger(count) || count < 1 || !Number.isInteger(index) || index < 1 || index > count)
+    throw new RangeError(`invalid shard ${String(index)}/${String(count)}`);
+  const seconds = (check) => {
+    const time = measured[`${check.group}.${check.id}`];
+    if (positive(time)) return time;
+    return positive(check.seconds) ? check.seconds : DEFAULT_CHECK_SECONDS;
+  };
+  const order = checks
+    .map((check, position) => ({ check, position }))
+    .sort((a, b) => seconds(b.check) - seconds(a.check) || a.position - b.position);
+  const totals = Array.from({ length: count }, () => 0);
+  const part = new Map();
+  for (const { check, position } of order) {
+    const lightest = totals.indexOf(Math.min(...totals));
+    totals[lightest] += seconds(check);
+    part.set(position, lightest + 1);
+  }
+  return checks.filter((_, position) => part.get(position) === index);
+}
+
+/** "2/4" as [2, 4]; throws on anything else. */
+export function parseShard(text) {
+  const match = /^(\d+)\/(\d+)$/u.exec(text ?? "");
+  if (match === null) throw new RangeError(`--shard takes <part>/<count>, got ${String(text)}`);
+  return [Number(match[1]), Number(match[2])];
 }
 
 function git(args) {
@@ -142,8 +191,12 @@ async function main(argv) {
       return 1;
     }
   }
+  const shardAt = argv.indexOf("--shard");
   // TEAR_CHECKS_CONFIG points the runner at another list; only its own tests use it.
-  const checks = selectChecks(loadChecks(process.env.TEAR_CHECKS_CONFIG || undefined), group);
+  const listed = selectChecks(loadChecks(process.env.TEAR_CHECKS_CONFIG || undefined), group);
+  const checks = shardAt === -1 ? listed : shardChecks(listed, ...parseShard(argv[shardAt + 1]), loadCheckTimes());
+  if (shardAt !== -1)
+    console.log(`shard ${argv[shardAt + 1]}: ${String(checks.length)} of ${String(listed.length)} check(s)`);
   if (argv.includes("--list")) {
     for (const check of checks) console.log(`${check.group}.${check.id}: ${check.run}`);
     return 0;
