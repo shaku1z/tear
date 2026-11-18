@@ -525,13 +525,6 @@ describe("source-linked finale continuation", () => {
         deltaSeconds: () => 0,
         nativeTransport: () => ({ controls, scrub: { x: 0, y: 0, width: 100 } }),
         launchPractice: () => ({ ok: false, message: "unused" }),
-        coachHistory: {
-          list: () => Promise.resolve([]),
-          current: () => Promise.resolve(false),
-          analyze: () => {
-            throw new Error("unused");
-          },
-        },
       });
       screen.open(child, admitGhostFinaleCompanion(child, parent), "profile");
       screen.render();

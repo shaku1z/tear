@@ -1,6 +1,6 @@
 import { GhostCareerStore } from "./career-archive-store";
 import { GhostDoctor } from "./ghost-doctor";
-import { GhostVaultKnowledgeLibraries, type GhostVaultKnowledgeLibraryInventory } from "./durable-knowledge-libraries";
+import { GhostCorruptCapsuleRecords } from "./corrupt-capsule-records";
 import type { GhostLocalVault, TearGhostManifest } from "./capsule-vault";
 
 export type GhostVaultRetentionTier = "pinned" | "standard" | "temporary";
@@ -26,7 +26,6 @@ export interface GhostVaultMaintenanceReport {
   readonly evictedCapsuleIds: readonly string[];
   readonly integrity: readonly GhostVaultIntegrityEntry[];
   readonly rebuiltIndexes: number;
-  readonly libraries: GhostVaultKnowledgeLibraryInventory;
 }
 
 export const DEFAULT_GHOST_VAULT_MAXIMUM_BYTES = 256 * 1024 * 1024;
@@ -78,9 +77,9 @@ export async function maintainGhostVault(
       }),
     ),
   );
-  const libraries = new GhostVaultKnowledgeLibraries(vault.backend());
+  const corruptRecords = new GhostCorruptCapsuleRecords(vault.backend());
   for (const { manifest, report } of scans) {
-    if (!report.healthy) await libraries.recordCorruptCapsule(manifest, report, checkedAt);
+    if (!report.healthy) await corruptRecords.record(manifest, report, checkedAt);
   }
   const rebuiltIndexes = await doctor.rebuildIndex();
   const report = Object.freeze({
@@ -90,7 +89,6 @@ export async function maintainGhostVault(
     evictedCapsuleIds: sortedIds(evictedCapsuleIds),
     integrity: Object.freeze([...integrity].sort((left, right) => left.id.localeCompare(right.id))),
     rebuiltIndexes,
-    libraries: await libraries.inventory(),
   });
   await vault.backend().put("analysis", GHOST_VAULT_MAINTENANCE_KEY, JSON.stringify(report));
   return report;
