@@ -168,8 +168,10 @@ export function keyboardLabel(action: KeyboardAction): string {
   return labels.join(" / ");
 }
 
-/** Every key used twice on one screen that `KEYBOARD_SHARED_KEYS` does not explain. */
-export function keyboardCollisions(): readonly Readonly<{
+/** Every key used twice on one screen that `KEYBOARD_SHARED_KEYS` does not explain; `bindings` defaults to the table. */
+export function keyboardCollisions(
+  bindings: Readonly<Record<KeyboardAction, KeyboardBinding>> = KEYBOARD_BINDINGS,
+): readonly Readonly<{
   screen: string;
   code: string;
   actions: readonly string[];
@@ -182,7 +184,7 @@ export function keyboardCollisions(): readonly Readonly<{
   for (const [screen, contexts] of Object.entries(KEYBOARD_SCREENS)) {
     const byCode = new Map<string, string[]>();
     for (const action of KEYBOARD_ACTIONS) {
-      const binding = KEYBOARD_BINDINGS[action];
+      const binding = bindings[action];
       if (!contexts.includes(binding.context)) continue;
       for (const code of new Set(binding.codes)) byCode.set(code, [...(byCode.get(code) ?? []), action]);
     }

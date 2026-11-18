@@ -16,6 +16,16 @@ describe("keyboard binding table", () => {
     expect(keyboardCollisions()).toEqual([]);
   });
 
+  it("refuses the Playground menu on E, where E throws, and accepts it on Tab", () => {
+    const onE = { ...KEYBOARD_BINDINGS, "playground-menu": { codes: ["KeyE"], context: "playground" as const } };
+    expect(keyboardCollisions(onE)).toContainEqual({
+      screen: "playground",
+      code: "KeyE",
+      actions: ["throw", "playground-menu"],
+    });
+    expect(KEYBOARD_BINDINGS["playground-menu"]).toEqual({ codes: ["Tab"], context: "playground" });
+  });
+
   it("binds every action to at least one key, each listed once, live on at least one screen", () => {
     const liveContexts = new Set(Object.values(KEYBOARD_SCREENS).flat());
     for (const action of KEYBOARD_ACTIONS) {
