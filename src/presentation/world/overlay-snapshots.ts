@@ -106,8 +106,10 @@ export function buildWaveBannerSnapshot(
 ): WaveBannerSnapshot {
   return Object.freeze({
     remainingFraction: input.remainingSeconds / input.duration,
+    ...(input.mode === undefined ? {} : { mode: input.mode }),
     bossWave: input.bossWave,
     wave: input.wave,
+    ...(input.trialCount === undefined ? {} : { trialCount: input.trialCount }),
     waveTag: input.waveTag,
     horde: input.horde,
     hordeColor: input.hordeColor,

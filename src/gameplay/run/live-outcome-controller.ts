@@ -2,6 +2,7 @@ import {
   appendDefeatWave,
   buildPendingFinale,
   buildRunResult,
+  gauntletRunCleared,
   planVictoryProgression,
   type OutcomeRunState,
   type PreparedVictory,
@@ -9,6 +10,7 @@ import {
   type VictoryProgressionIntent,
 } from "./outcome-planner";
 import type { OutcomeChronologyEffect } from "./outcome-chronology-journal";
+import type { GauntletClear } from "../../domain/gauntlet-records";
 
 type TerminalOutcome = "defeat" | "victory";
 type BestRecord = Readonly<{ wave: number; score: number; time: number }>;
@@ -25,6 +27,9 @@ export interface LiveOutcomeControllerPort {
   publishTerminal(outcome: TerminalOutcome, run: OutcomeRunState): void;
   saveBest(run: OutcomeRunState): boolean;
   best(run: OutcomeRunState): BestRecord;
+  /** Keeps a cleared Gauntlet's time when it is a personal best; true when it is. */
+  recordGauntletClear?(run: OutcomeRunState): boolean;
+  gauntletBest?(run: OutcomeRunState): GauntletClear | null;
   awardCoins(score: number): number;
   coins(): number;
   achievementTracking(): boolean;
@@ -69,7 +74,12 @@ export class LiveRunOutcomeController {
     }
     if (run.mode !== "tutorial" && (run.beatThisRun !== undefined || run.seedRace !== undefined))
       this.#port.finishRecording(false);
-    const result = buildRunResult(run, { best: this.#best(run), prepared, victory: false });
+    const result = buildRunResult(run, {
+      best: this.#best(run),
+      prepared,
+      victory: false,
+      ...this.#gauntletBest(run),
+    });
     this.#port.present("defeat", result);
     this.#record({ type: "outcome.presentation-dispatched", outcome: "defeat", result });
     return result;
@@ -132,6 +142,7 @@ export class LiveRunOutcomeController {
       prepared,
       victory: true,
       campaign,
+      ...this.#gauntletBest(run),
     });
     if (campaign) {
       this.#port.clearPendingFinale();
@@ -161,11 +172,17 @@ export class LiveRunOutcomeController {
     this.#record({ type: "outcome.coins-awarded", score: run.score, earned });
     const coins = this.#port.coins();
     this.#record({ type: "outcome.wallet-read", coins });
+    const gauntletNewBest = gauntletRunCleared(run.gauntlet) && this.#port.recordGauntletClear?.(run) === true;
     return Object.freeze({
       isNew,
       earned,
       coins,
+      ...(run.gauntlet === undefined ? {} : { gauntletNewBest }),
     });
+  }
+
+  #gauntletBest(run: OutcomeRunState): Readonly<{ gauntletBest?: GauntletClear | null }> {
+    return run.gauntlet === undefined ? {} : { gauntletBest: this.#port.gauntletBest?.(run) ?? null };
   }
 
   #achievementTracking(): boolean {

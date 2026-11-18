@@ -474,9 +474,10 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     }
     ui.dim(canvas, width, height, 0.92);
     const layout = overlayHeader(context, {
-      title: "VICTORY",
+      title: view.title ?? "VICTORY",
       subtitle: [
-        `boss down   ·   ${String(view.score)} pts   ·   ${view.time}${view.isNew ? "   ·   NEW BEST" : ""}`,
+        view.headline ??
+          `boss down   ·   ${String(view.score)} pts   ·   ${view.time}${view.isNew ? "   ·   NEW BEST" : ""}`,
         `+${String(view.earned)} coins  (${String(view.coins)} total)`,
       ],
     });
