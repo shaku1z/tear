@@ -44,18 +44,6 @@ export function drawLiveGhostSplits(
   try {
     const w = Math.min(620, width - 32),
       x = (width - w) / 2;
-    if (view.beat) {
-      canvas.globalAlpha = 0.9;
-      canvas.fillStyle = ui.t.color.cinema;
-      canvas.fillRect(x, 112, w, 44);
-      canvas.globalAlpha = 1;
-      canvas.fillStyle = ui.t.color.cinemaInk;
-      canvas.textAlign = "center";
-      canvas.font = ui.font(ui.t.type.micro);
-      canvas.fillText("BEAT THIS RUN · NONCOMPETITIVE · NO PROGRESSION", width / 2, 130);
-      canvas.fillText(view.message, width / 2, 148, w - 20);
-      return;
-    }
     if (view.raceRole === "reference") {
       canvas.globalAlpha = 0.9;
       canvas.fillStyle = ui.t.color.cinema;

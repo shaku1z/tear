@@ -52,6 +52,8 @@ export interface ProductionReplayWorldOptions {
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
+  /** Boss-only mode: the boss chosen on the start screen. It is fought first; the roster is drawn after it. */
+  readonly firstBoss?: string;
   /** Source-owned persisted discovery projection for detached Endless/Gauntlet runs. */
   readonly discoveredVariantIds?: readonly string[];
   /** Host-only notification; completion never issues a new run seed or writes progress. */
@@ -276,6 +278,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const run = {
     ...createProductionReplayRun(options.mode, options.weaponId, runSeed, difficulty),
     variantDiscovery: [...(options.discoveredVariantIds ?? [])],
+    ...(options.firstBoss === undefined ? {} : { bossOrder: [options.firstBoss] }),
   };
   world.state.setRun(run as never);
   configuration.resetToBase();

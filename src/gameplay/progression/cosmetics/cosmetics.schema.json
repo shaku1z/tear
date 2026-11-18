@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Cosmetic data files",
+  "description": "Editor help for items.json and slots.json. The validator in src/domain/cosmetic-validation.ts is the authority: it also checks looks against families.json, colours against the stage backdrops, and prices against tiers.json.",
+  "definitions": {
+    "id": { "type": "string", "pattern": "^[a-z0-9_]{1,64}$" },
+    "condition": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["default", "boss-defeat", "biome-enter", "stat-threshold", "achievement", "all"] }
+      }
+    },
+    "acquire": {
+      "type": "object",
+      "required": ["how"],
+      "properties": {
+        "how": { "enum": ["shards", "achievement", "boss", "challenge", "mastery", "collection", "bundle", "code"] },
+        "id": { "$ref": "#/definitions/id" },
+        "campaign": { "$ref": "#/definitions/id" }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "items.json",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "slot", "name", "tier", "acquire", "look"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/definitions/id" },
+          "slot": { "$ref": "#/definitions/id" },
+          "name": { "type": "string", "minLength": 1 },
+          "tier": { "$ref": "#/definitions/id" },
+          "acquire": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/acquire" } },
+          "collection": { "$ref": "#/definitions/id" },
+          "unlock": { "$ref": "#/definitions/condition" },
+          "look": { "type": "object" },
+          "asset": { "$ref": "#/definitions/id" },
+          "evolves": { "type": "array", "items": { "type": "object", "required": ["counter", "at", "look"] } }
+        }
+      }
+    },
+    {
+      "title": "slots.json",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "group", "family", "hook", "default"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/definitions/id" },
+          "label": { "type": "string" },
+          "group": { "enum": ["combat", "interface", "profile", "music"] },
+          "family": { "$ref": "#/definitions/id" },
+          "hook": { "enum": ["ready", "not yet"] },
+          "default": { "type": "object" }
+        }
+      }
+    }
+  ]
+}
