@@ -5,7 +5,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatBytes, isProtectedPath, measure, normalizePath, report } from "../../scripts/leftovers.mjs";
+import {
+  formatBytes,
+  isProtectedPath,
+  KNOWN_FOLDERS,
+  measure,
+  normalizePath,
+  report,
+} from "../../scripts/leftovers.mjs";
 
 const scratch = [];
 
@@ -85,12 +92,40 @@ describe("pnpm leftovers", () => {
     git(repo, "commit", "-q", "-m", "track an ignored file");
     const result = run(repo, home);
     const byName = new Map(result.leftovers.map((entry) => [path.basename(entry.path), entry]));
-    expect(byName.get("old-gate.log")).toMatchObject({ bytes: 3, complete: true });
-    expect(byName.get("Tear-oracle")).toMatchObject({ protected: true, bytes: null });
+    expect(byName.get("old-gate.log")).toMatchObject({ kind: "leftover", bytes: 3, complete: true });
+    expect(byName.get("Tear-oracle")).toMatchObject({ kind: "locked comparison copy", bytes: null });
     expect(byName.has("Tear")).toBe(false);
     expect(result.ignoredTrackedFiles).toEqual(["coverage/tracked.txt"]);
     const main = result.caches.find((row) => normalizePath(row.worktree) === normalizePath(repo));
     expect(main.folders.find((entry) => entry.relative === "dist").bytes).toBe(2048);
+  }, 60_000);
+
+  it("lists another repository and the archive beside the repo as never-to-remove, without reading them", () => {
+    const { home, repo } = makeRepository();
+    const music = path.join(home, "tear-score");
+    fs.mkdirSync(music);
+    git(music, "init", "-q");
+    write(path.join(music, "song.wav"), "s".repeat(4096));
+    const otherWorktree = path.join(home, "tear-wiki");
+    fs.mkdirSync(otherWorktree);
+    write(path.join(otherWorktree, ".git"), "gitdir: elsewhere\n");
+    write(path.join(home, "Tear-archives", "old.zip"), "z".repeat(4096));
+    const byName = new Map(run(repo, home).leftovers.map((entry) => [path.basename(entry.path), entry]));
+    expect(byName.get("tear-score")).toEqual({ path: music, kind: "other repository", bytes: null, complete: false });
+    expect(byName.get("tear-wiki")).toMatchObject({ kind: "other repository", bytes: null });
+    expect(byName.get("Tear-archives")).toMatchObject({ kind: "archive", bytes: null });
+    expect(KNOWN_FOLDERS).toMatchObject({ "tear-oracle": expect.any(String), "tear-archives": "archive" });
+  }, 60_000);
+
+  it("by default scans only the folders holding linked worktrees, never the main checkout's parent", () => {
+    const { home, repo } = makeRepository();
+    write(path.join(home, "AGENTS.md"), "governing rules");
+    addWorktree(repo, home, "Tear-feature", "codex/feature");
+    git(repo, "worktree", "add", "-q", "-b", "codex/beside", path.join(home, "Tear-beside"), "main");
+    write(path.join(home, "worktrees", "stale.log"), "log");
+    const result = report(repo, { base: "main", gh: false });
+    expect(result.scannedFolders).toEqual([normalizePath(path.join(home, "worktrees"))]);
+    expect(result.leftovers.map((entry) => path.basename(entry.path))).toEqual(["stale.log"]);
   }, 60_000);
 
   it("never follows a link when sizing and stops at the entry budget", () => {
@@ -108,6 +143,7 @@ describe("pnpm leftovers", () => {
     expect(normalizePath("\\\\?\\UNC\\server\\share\\Tear")).toBe(path.resolve("\\\\server\\share\\Tear"));
     expect(isProtectedPath("\\\\?\\C:\\game\\Tear-oracle\\dist")).toBe(true);
     expect(isProtectedPath("C:\\game\\Tear")).toBe(false);
+    expect(isProtectedPath("C:\\game\\Tear-archives\\2026")).toBe(true);
     expect(formatBytes(1536)).toBe("1.5 KB");
   });
 });

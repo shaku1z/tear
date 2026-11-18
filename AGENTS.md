@@ -222,5 +222,7 @@ archived it, and after checking the worktree for uncommitted work and junctions.
 `pnpm who` lists every worktree with its branch, dirty files, pull request and
 flags such as `dirty`, `node_modules-link` and `merged-or-empty`; it never
 changes anything. `pnpm leftovers` adds what it does not show: local branches
-already on `main` (squash merges included), ignored tracked files, leftovers
-beside the repository and cache sizes, with sizes; it never deletes anything.
+already on `main` (squash merges included), ignored tracked files, leftover
+files in the worktree folders and cache sizes; it never deletes anything. It
+lists other repositories and the folders in its `KNOWN_FOLDERS` (Tear-oracle,
+the archive) by name only, as never to be removed.

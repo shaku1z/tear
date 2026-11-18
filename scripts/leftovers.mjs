@@ -2,10 +2,14 @@
 // It never deletes, moves, fetches or writes anything. It lists:
 // - local branches whose work is already on origin/main, including squash-merged ones;
 // - tracked files that the ignore rules now ignore;
-// - files and folders beside the repository (in the folders that hold its worktrees) that no worktree owns,
-//   with sizes;
+// - files and folders beside the repository that no worktree owns, with sizes. Only the folders that
+//   hold linked worktrees are scanned, never the folder that holds the main checkout, even when a
+//   linked worktree also sits there: that is the owner's workspace (other repositories, archives,
+//   governing files), not a place worktrees pile up;
+// - separately, and never sized, what beside it must not be removed: other git repositories or
+//   worktrees (anything with a `.git`) and the known folders in KNOWN_FOLDERS;
 // - per worktree, the size of its build output and cache folders.
-// The locked comparison copy (Tear-oracle) is listed by name only and never read.
+// The known folders (the locked comparison copy, the archive) are listed by name only and never read.
 // `--json` prints the report as JSON; `--no-gh` skips the merged pull request lookup.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -27,7 +31,14 @@ export const CACHE_PATHS = Object.freeze([
 ]);
 /** Entries counted per leftover; a larger folder reports "at least" its partial size. */
 export const ENTRY_BUDGET = 50_000;
-const PROTECTED_NAMES = Object.freeze(["tear-oracle"]);
+/**
+ * Folders beside the repository that are never leftovers, by lower-case name, with what they are.
+ * They are listed by name only and never read. This is the one list; add a folder here, not a check.
+ */
+export const KNOWN_FOLDERS = Object.freeze({
+  "tear-oracle": "locked comparison copy",
+  "tear-archives": "archive",
+});
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, { cwd, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
@@ -53,10 +64,16 @@ function isInside(parent, child) {
   return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
 }
 
-export function isProtectedPath(target) {
-  return normalizePath(target)
+/** What a path inside a known folder is (`archive`, …), or undefined. */
+export function knownFolderKind(target) {
+  const segment = normalizePath(target)
     .split(/[\\/]+/u)
-    .some((segment) => PROTECTED_NAMES.includes(segment.toLowerCase()));
+    .find((part) => Object.hasOwn(KNOWN_FOLDERS, part.toLowerCase()));
+  return segment === undefined ? undefined : KNOWN_FOLDERS[segment.toLowerCase()];
+}
+
+export function isProtectedPath(target) {
+  return knownFolderKind(target) !== undefined;
 }
 
 function lstatOrNull(target) {
@@ -134,7 +151,11 @@ export function ignoredTrackedFiles(root) {
   return result.ok ? result.stdout.split(/\r?\n/u).filter(Boolean) : [];
 }
 
-/** Entries in `folders` that are not a registered worktree and contain none. */
+/**
+ * Entries in `folders` that are not a registered worktree and contain none. `kind` is `leftover`,
+ * `other repository` (it has a `.git`: another repository, or a worktree of one) or a KNOWN_FOLDERS
+ * kind. Only leftovers are sized; the others are listed by name and never read.
+ */
 export function leftovers(worktreePaths, folders) {
   const rows = [];
   for (const folder of [...new Set(folders.map((entry) => normalizePath(entry)))]) {
@@ -147,9 +168,11 @@ export function leftovers(worktreePaths, folders) {
     for (const entry of entries) {
       const absolute = path.join(folder, entry.name);
       if (worktreePaths.some((worktree) => samePath(worktree, absolute) || isInside(absolute, worktree))) continue;
-      const protectedEntry = isProtectedPath(absolute);
-      const size = protectedEntry ? { bytes: null, complete: false } : measure(absolute, ENTRY_BUDGET);
-      rows.push({ path: absolute, protected: protectedEntry, ...size });
+      const known = knownFolderKind(absolute);
+      const repository = entry.isDirectory() && lstatOrNull(path.join(absolute, ".git")) !== null;
+      const kind = known ?? (repository ? "other repository" : "leftover");
+      const size = kind === "leftover" ? measure(absolute, ENTRY_BUDGET) : { bytes: null, complete: false };
+      rows.push({ path: absolute, kind, ...size });
     }
   }
   return rows;
@@ -167,9 +190,16 @@ export function report(root, { base = "origin/main", gh = true, besideFolders } 
   if (!porcelain.ok) throw new Error("git worktree list failed");
   const worktrees = parseWorktreePorcelain(porcelain.stdout).map((worktree) => normalizePath(worktree.path));
   const heads = gh ? mergedPullRequestHeads(root) : null;
-  const folders = besideFolders ?? [...new Set(worktrees.map((worktree) => path.dirname(worktree)))];
+  // The first entry is the main checkout; the folder holding it is never scanned (see the header).
+  const workspace = path.dirname(worktrees[0]);
+  const folders =
+    besideFolders ??
+    [...new Set(worktrees.slice(1).map((worktree) => path.dirname(worktree)))].filter(
+      (folder) => !samePath(folder, workspace),
+    );
   return {
     base,
+    scannedFolders: [...new Set(folders.map((folder) => normalizePath(folder)))],
     mergedBranches: mergedBranches(root, base, heads ?? new Set()),
     pullRequestLookup: !gh ? "skipped" : heads === null ? "unavailable" : "done",
     ignoredTrackedFiles: ignoredTrackedFiles(root),
@@ -200,13 +230,15 @@ function render(result) {
   if (result.pullRequestLookup === "unavailable") lines.push("  gh unavailable: squash-merged branches may be missing");
   lines.push("", "Tracked files the ignore rules now ignore:");
   for (const file of result.ignoredTrackedFiles) lines.push(`  ${file}`);
-  lines.push("", "Beside the repository, owned by no worktree:");
-  for (const entry of result.leftovers) {
-    const size = entry.protected
-      ? "protected, not read"
-      : `${entry.complete ? "" : "at least "}${formatBytes(entry.bytes)}`;
-    lines.push(`  ${entry.path}  ${size}`);
-  }
+  lines.push(
+    "",
+    `Beside the repository, owned by no worktree (check before removing), in ${result.scannedFolders.join(", ")}:`,
+  );
+  for (const entry of result.leftovers.filter((row) => row.kind === "leftover"))
+    lines.push(`  ${entry.path}  ${entry.complete ? "" : "at least "}${formatBytes(entry.bytes)}`);
+  lines.push("", "Beside the repository and never to be removed by this report (not read):");
+  for (const entry of result.leftovers.filter((row) => row.kind !== "leftover"))
+    lines.push(`  ${entry.path}  ${entry.kind}`);
   lines.push("", "Build output and caches per worktree:");
   for (const row of result.caches) {
     if (row.protected) lines.push(`  ${row.worktree}  protected, not read`);
