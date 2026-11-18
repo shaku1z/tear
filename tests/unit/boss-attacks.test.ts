@@ -573,7 +573,7 @@ describe("the move schedule: openings, once and every few moves", () => {
     expect(begun[0]).toBe("ritual");
     expect(begun.filter((id) => id === "ritual")).toHaveLength(1);
     // Owed at once after the opening, then after every two other moves.
-    begun.slice(1).forEach((id, index) => expect(id === "spring").toBe(index % 3 === 0));
+    expect(begun.slice(1).map((id) => id === "spring")).toEqual(begun.slice(1).map((_, index) => index % 3 === 0));
   });
 
   it("counts a move that was cut short: the count is kept from when it began", () => {
