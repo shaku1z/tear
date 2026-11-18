@@ -213,7 +213,7 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
             choices: [
               { id: "clear", label: "CLEAR ENEMIES", ...key("clear") },
               { id: "heal", label: "FULL HEAL", ...key("heal") },
-              { id: "reset", label: "RESET PLAYGROUND" },
+              { id: "reset", label: "RESET ALL" },
             ],
           },
         ],

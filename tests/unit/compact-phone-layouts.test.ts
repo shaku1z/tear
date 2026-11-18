@@ -514,7 +514,7 @@ const playgroundMenu = {
     },
     {
       label: "ACTIONS",
-      choices: ["CLEAR ENEMIES", "FULL HEAL", "RESET PLAYGROUND"].map((label) => ({
+      choices: ["CLEAR ENEMIES", "FULL HEAL", "RESET ALL"].map((label) => ({
         id: `action:${label}`,
         label,
       })),
