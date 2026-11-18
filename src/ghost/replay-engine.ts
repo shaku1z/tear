@@ -12,7 +12,8 @@
  * Callers that start such work are asynchronous: they `await replayEngine.ensure()`
  * once, then the synchronous replay code below them calls `replayEngine.loaded()`.
  * A caller that reaches the engine without having awaited gets a plain error
- * instead of a hang. A failed fetch (offline) is reported once, as
+ * instead of a hang. Every capsule comes from `GhostCapsuleReader.read`, which waits
+ * for the engine first, so replay code that works on a capsule never depends on timing. A failed fetch (offline) is reported once, as
  * `LazyModuleUnavailable`, and the next call tries again.
  */
 import { lazySlot } from "../domain/lazy-module";

@@ -80,3 +80,24 @@ export function lazySlot<Module>(failureMessage: string): LazyModuleSlot<Module>
     status: () => (lazy === undefined ? "idle" : lazy.status()),
   };
 }
+
+/**
+ * For a screen action that needs the module now. Answers `true` when it is there. When it is not, says
+ * `waitMessage` through `announce`, waits, and answers `true`; if the fetch fails it announces the plain
+ * failure message once and answers `false`, so the player can simply try again.
+ */
+export async function lazyModuleReady(
+  module: LazyModule<unknown>,
+  announce: (message: string) => void,
+  waitMessage: string,
+): Promise<boolean> {
+  if (module.status() === "ready") return true;
+  announce(waitMessage);
+  try {
+    await module.ensure();
+    return true;
+  } catch (error) {
+    announce(error instanceof Error ? error.message : "This code is unavailable.");
+    return false;
+  }
+}

@@ -1,4 +1,5 @@
 import type { GhostLocalVault, GhostChunkKind, TearGhostManifest } from "./capsule-vault";
+import { replayEngine } from "./replay-engine";
 
 export interface GhostCapsuleEntry {
   readonly kind: GhostChunkKind;
@@ -72,6 +73,9 @@ export class GhostCapsuleReader {
   }
 
   async read(id: string): Promise<GhostReadCapsule> {
+    // Every replay, verification and import starts from a capsule read here, so this is the one
+    // place that makes sure the replay engine is there; no replay code depends on timing.
+    await replayEngine.ensure();
     const manifest = await this.#vault.getManifest(id);
     if (manifest === undefined) throw new RangeError(`capsule does not exist: ${id}`);
     const mutable: Record<GhostChunkKind, GhostCapsuleEntry[]> = {

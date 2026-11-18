@@ -1,3 +1,4 @@
+import { lazyModuleReady } from "../../domain/lazy-module";
 import { replayEngine } from "../../ghost/replay-engine";
 import type { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
@@ -144,29 +145,16 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
       ensureLoaded();
     }
   }
-  /**
-   * Replaying, verifying or opening a ghost needs the replay engine, fetched on
-   * first use. Show a wait line, run the action when the code is there, and
-   * show one plain message (tap again to retry) when the fetch fails.
-   */
+  /** Replaying, verifying or opening a ghost needs the replay engine: wait line, then run (or one retryable message). */
   function invokeReplay(action: DeferredAction): void {
-    if (replayEngine.status() === "ready") {
-      invoke(action);
-      return;
-    }
-    invoke((value) => {
-      value.setProfileMessage("Loading replay code…");
+    const announce = (message: string): void => {
+      invoke((value) => {
+        value.setProfileMessage(message);
+      });
+    };
+    void lazyModuleReady(replayEngine, announce, "Loading replay code…").then((ready) => {
+      if (ready) invoke(action);
     });
-    replayEngine.ensure().then(
-      () => {
-        invoke(action);
-      },
-      (error: unknown) => {
-        invoke((value) => {
-          value.setProfileMessage(error instanceof Error ? error.message : "Replay code is unavailable.");
-        });
-      },
-    );
   }
   function render(renderNow: DeferredAction): void {
     if (runtime) renderNow(runtime);

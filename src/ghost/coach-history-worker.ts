@@ -8,12 +8,10 @@ import {
   readGhostCoachHistorySource,
   type GhostCoachCandidate,
 } from "./coach-history";
-import { replayEngine } from "./replay-engine";
 
 self.addEventListener("message", (event: MessageEvent<Readonly<{ sources: readonly GhostCoachCandidate[] }>>) => {
   void (async () => {
     try {
-      await replayEngine.ensure();
       const sources = event.data.sources;
       checkGhostCoachSelection(sources);
       const vault = new GhostLocalVault(await createIndexedDbGhostVaultBackend(self.indexedDB));
