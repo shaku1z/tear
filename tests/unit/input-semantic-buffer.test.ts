@@ -35,6 +35,16 @@ describe("SemanticInputBuffer", () => {
     ]);
   });
 
+  it("seals a resume after the level controls, so the resume tick carries the aim it re-seats along", () => {
+    const buffer = new SemanticInputBuffer();
+    buffer.startRecording();
+    buffer.setAimVector(-1, 0);
+    buffer.drain(1);
+    buffer.discardUnsealed();
+    buffer.push({ type: "resume" });
+    expect(buffer.drain(2).map((envelope) => envelope.command.type)).toEqual(["move", "aim", "resume"]);
+  });
+
   it("does not accumulate device events until a canonical input session begins", () => {
     const buffer = new SemanticInputBuffer();
     buffer.setMovement(1, 0);

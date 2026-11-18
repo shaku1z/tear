@@ -2,6 +2,7 @@ import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1 } from "./contracts";
 
 export interface TearHeadlessTransition<TObservation> {
+  /** May be a getter that builds the state on first read, so a caller that steps without reading it does not pay for it. */
   readonly observation: TObservation;
   readonly terminated: boolean;
   readonly truncated: boolean;

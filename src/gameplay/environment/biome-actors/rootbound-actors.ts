@@ -51,6 +51,7 @@ export function bindLiveRootboundActors(
           completeRootCage?: NonNullable<RootboundEnvironmentActor["completeRootCage"]>;
           phase: number;
           regrowthState: NonNullable<RootboundEnvironmentActor["state"]["regrowth"]>;
+          regrowthCalled?: boolean;
           beginRegrowth?: NonNullable<RootboundEnvironmentActor["beginRegrowth"]>;
           advanceRegrowth?: NonNullable<RootboundEnvironmentActor["advanceRegrowth"]>;
           regrowthChannelBroken?: () => boolean;
@@ -100,6 +101,7 @@ export function bindLiveRootboundActors(
             arena: Object.freeze({ width: config.view.w, groundY: config.world.groundY }),
             phase: actor.phase,
             regrowth: actor.regrowthState,
+            regrowthCalled: actor.regrowthCalled === true,
           }),
           ...(target === null
             ? {}

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { acquireCondition } from "../../src/domain/cosmetics";
 import type { UnlockCondition } from "../../src/domain/unlock-condition";
 import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
@@ -21,6 +22,13 @@ const sources: readonly (readonly [string, UnlockCondition])[] = [
   ),
   ...COSMETIC_CATALOG.collections.map((collection) => [`collection ${collection.id}`, collection.unlock] as const),
   ...COSMETIC_CATALOG.items.flatMap((item) => (item.unlock ? [[`item ${item.id}`, item.unlock] as const] : [])),
+  // An item granted by an achievement or a boss names it in `acquire`; the same reference rules apply.
+  ...COSMETIC_CATALOG.items.flatMap((item) =>
+    item.acquire.flatMap((entry) => {
+      const condition = acquireCondition(entry);
+      return condition ? [[`item ${item.id} acquire`, condition] as const] : [];
+    }),
+  ),
 ];
 
 describe("conditions in the shipped data", () => {
@@ -29,9 +37,10 @@ describe("conditions in the shipped data", () => {
     expect(music.works.filter((work) => work.unlock.type === "unreadable")).toEqual([]);
   });
 
-  it("covers music, collections and items", () => {
+  it("covers music, collections, items and the grants items are acquired by", () => {
     expect(music.works.length).toBeGreaterThan(0);
     expect(sources.length).toBeGreaterThan(music.works.length);
+    expect(sources.some(([where]) => where.endsWith(" acquire"))).toBe(true);
   });
 
   it("name a registered boss, a real stage and an existing achievement", () => {

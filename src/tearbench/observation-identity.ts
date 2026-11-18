@@ -1,6 +1,5 @@
 import type { GameAction } from "../input/game-action";
 import type { TearGameplayEvent } from "../gameplay/runtime/gameplay-events";
-import type { TearSimulationEnemyView } from "../simulation/runtime-world-port";
 import { stageIdAtRuntimeIndex } from "../gameplay/stages";
 import { ENTITY_KIND_REGISTRY, type TearEntityKindId, type TearStageId } from "./registries";
 
@@ -57,12 +56,17 @@ export function canonicalObservationStage(index: number): TearStageId {
   return stage;
 }
 
-/** Resolves authored support subtypes, void wisps, and bosses identically in both backends. */
-export function canonicalObservationEnemyKind(
-  enemy: Pick<TearSimulationEnemyView, "kind"> &
-    Partial<Pick<TearSimulationEnemyView, "bossId" | "supportType" | "isVoidWisp">>,
-): TearEntityKindId {
-  let raw = enemy.kind;
+/**
+ * Resolves authored support subtypes, void wisps, and bosses identically in both backends. It reads four
+ * fields of the live actor, so callers pass the actor itself and never a copy of it.
+ */
+export function canonicalObservationEnemyKind(enemy: {
+  readonly kind?: string | undefined;
+  readonly bossId?: string | undefined;
+  readonly supportType?: string | undefined;
+  readonly isVoidWisp?: boolean | undefined;
+}): TearEntityKindId {
+  let raw = enemy.kind ?? "";
   if (typeof enemy.bossId === "string" && enemy.bossId.length > 0) raw = enemy.bossId;
   else if (enemy.kind === "support" && typeof enemy.supportType === "string") raw = enemy.supportType;
   else if (enemy.kind === "wisp" && enemy.isVoidWisp === true) raw = "void-wisp";

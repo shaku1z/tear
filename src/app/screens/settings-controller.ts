@@ -159,6 +159,20 @@ function parseStoredSettings(serialized: string | null): Record<string, unknown>
   }
 }
 
+/**
+ * The stored values that can be trusted: a setting keeps its stored value only when it has the type of its default
+ * (and, for a number, is finite). A value of another type is dropped, so the default stands. Names without a default
+ * (the audio record, values a newer build wrote) pass through unchanged.
+ */
+function typedLikeDefaults(defaultValues: GameSettings, stored: Record<string, unknown>): Record<string, unknown> {
+  const kept: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(stored)) {
+    const sameType = !Object.hasOwn(defaultValues, name) || typeof value === typeof defaultValues[name];
+    if (sameType && (typeof value !== "number" || Number.isFinite(value))) kept[name] = value;
+  }
+  return kept;
+}
+
 export class SettingsController {
   readonly settings: GameSettings;
   readonly api = Object.freeze({
@@ -182,7 +196,8 @@ export class SettingsController {
 
   reload(): void {
     const stored = parseStoredSettings(this.dependencies.store.get("tear_settings"));
-    const merged = Object.assign(defaults(this.dependencies.config.blade.aimSensitivity), stored);
+    const defaultValues = defaults(this.dependencies.config.blade.aimSensitivity);
+    const merged = Object.assign(defaultValues, typedLikeDefaults(defaultValues, stored));
     const migrated = this.dependencies.audio.migrateSettings(merged, stored);
     for (const key of RETIRED_SETTINGS) Reflect.deleteProperty(migrated, key);
     for (const key of Object.keys(this.settings)) {

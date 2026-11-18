@@ -12,6 +12,7 @@ interface LiveInputBlade {
   lmbOverride?: boolean;
   aimOverride?: BladePoint;
   handPos(player: BladePlayerPort): BladePoint;
+  reseatHeld(hand: BladePoint, aim: BladePoint): void;
 }
 
 export interface LiveAuthoritativeInputAdapter {
@@ -50,6 +51,10 @@ export function createLiveAuthoritativeInputAdapter(
       x: hand.x + aim.x * options.aimRadius(),
       y: hand.y + aim.y * options.aimRadius(),
     };
+    // A hand-back of control seats the blade still along this tick's aim, so play never opens
+    // with a swing toward wherever the pointer went while it was stopped.
+    if (input.consumeResume())
+      blade.reseatHeld(hand, { x: aim.x * options.aimRadius(), y: aim.y * options.aimRadius() });
   };
   return Object.freeze({
     actionPort: Object.freeze({ apply }),

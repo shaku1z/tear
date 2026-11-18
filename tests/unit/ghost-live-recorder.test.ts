@@ -109,6 +109,30 @@ describe("Ghost V3 live recorder sidecar", () => {
     expect(recorder.failure).toBeNull();
   });
 
+  it("seals every entry when a run is stopped while its last entry is still being written", async () => {
+    // A stop (the test bridge's terminate, or quitting) records its event and finishes in one call, at any
+    // moment relative to the write queue. Every moment must seal the event and the result.
+    for (let yields = 0; yields <= 12; yields += 1) {
+      const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
+      const recorder = new GhostLiveRecorder({
+        createVault: () => Promise.resolve(vault),
+        now: () => "2026-11-18T00:00:01.000Z",
+      });
+      recorder.start({ sessionId: "stopped", createdAt: "2026-11-18T00:00:00.000Z", provenance: {} });
+      await recorder.drain();
+      recorder.record("events", 1, { type: "earlier" });
+      for (let turn = 0; turn < yields; turn += 1) await Promise.resolve();
+      recorder.record("events", 2, { type: "run.abandoned" });
+      const manifest = await recorder.finish({ abandoned: "stopped" });
+
+      expect(recorder.failure, `after ${String(yields)} queue turns`).toBeNull();
+      expect(manifest?.status, `after ${String(yields)} queue turns`).toBe("complete");
+      const sealed = (await Promise.all((manifest?.chunks ?? []).map((chunk) => vault.readChunk(chunk)))).flat();
+      expect(sealed).toContainEqual({ kind: "events", tick: 2, value: { type: "run.abandoned" } });
+      expect(sealed).toContainEqual({ kind: "results", tick: 2, value: { abandoned: "stopped" } });
+    }
+  });
+
   it("releases a stopped session immediately so a replacement run cannot lose its recorder", async () => {
     const vault = new GhostLocalVault(createMemoryGhostVaultBackend());
     const recorder = new GhostLiveRecorder({
