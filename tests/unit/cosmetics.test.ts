@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { CONFIG } from "../../src/config/game-config";
-import { colourProblem, contrastRatio, isTellColor, relativeLuminance } from "../../src/domain/cosmetic-readability";
+import { colourProblem, contrastRatio, isTellColor } from "../../src/domain/cosmetic-readability";
 import { MAX_OWNED, MAX_STATE_CHARS, type CosmeticCatalog, type CosmeticItem } from "../../src/domain/cosmetic-types";
-import { validateCosmeticCatalog, worstCaseStateSize } from "../../src/domain/cosmetic-validation";
+import {
+  parseCosmeticCatalog,
+  validateCosmeticCatalog,
+  worstCaseStateSize,
+} from "../../src/domain/cosmetic-validation";
 import {
   activeLoadout,
   claimableGrants,
@@ -22,7 +26,7 @@ import {
 import { conditionMet, conditionProblems, type ProgressFacts } from "../../src/domain/unlock-condition";
 import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
 import { COSMETIC_BACKDROPS, COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
-import { stageDefinition } from "../../src/gameplay/stages";
+import { AUTHORED_STAGES } from "../../src/gameplay/stages";
 
 const facts = (over: Partial<ProgressFacts> = {}): ProgressFacts => ({
   bossDefeated: () => false,
@@ -133,13 +137,25 @@ describe("cosmetic data files", () => {
     expect(problems({ items })).toBe("");
   });
 
-  it("rejects a family that allows a pulse above three a second", () => {
+  it("caps every per-second parameter by its unit, whatever it is called", () => {
     const families = COSMETIC_CATALOG.families.map((family) =>
       family.id === "aura"
-        ? { ...family, params: { ...family.params, pulseRate: { type: "number" as const, min: 0, max: 9 } } }
+        ? {
+            ...family,
+            params: {
+              ...family.params,
+              blink: { type: "number" as const, min: 0, max: 9, unit: "per-second" as const },
+            },
+          }
         : family,
     );
     expect(problems({ families })).toContain("per second");
+  });
+
+  it("loads the data files only if they validate", () => {
+    const raw = { ...COSMETIC_CATALOG, items: [{ ...item("trail_dusk"), tier: "mythic" }] };
+    expect(() => parseCosmeticCatalog(raw, COSMETIC_BACKDROPS)).toThrow("unknown tier");
+    expect(parseCosmeticCatalog(COSMETIC_CATALOG, COSMETIC_BACKDROPS)).toEqual(COSMETIC_CATALOG);
   });
 
   it("rejects a reward that is not acquired by its collection", () => {
@@ -156,10 +172,10 @@ describe("readability rules", () => {
     for (const tell of [CONFIG.colors.enemyShot, CONFIG.colors.slam, CONFIG.colors.scarf])
       expect(isTellColor(tell)).toBe(true);
   });
-  it("read their backdrops from the stage definitions", () => {
+  it("check against every authored stage background, keyed by stage id", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 0);
-    expect(COSMETIC_BACKDROPS.verdant).toBe(stageDefinition("verdant-sanctum").bg);
-    expect(relativeLuminance(COSMETIC_BACKDROPS.dark ?? "#fff")).toBeLessThan(0.02);
+    expect(Object.keys(COSMETIC_BACKDROPS)).toEqual(AUTHORED_STAGES.map((stage) => stage.id));
+    for (const stage of AUTHORED_STAGES) expect(COSMETIC_BACKDROPS[stage.id]).toBe(stage.bg);
   });
 });
 

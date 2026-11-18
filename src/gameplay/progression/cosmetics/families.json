@@ -77,7 +77,8 @@
       "pulseRate": {
         "type": "number",
         "min": 0,
-        "max": 3
+        "max": 3,
+        "unit": "per-second"
       }
     },
     "calm": {
@@ -127,7 +128,8 @@
       "pulseRate": {
         "type": "number",
         "min": 0,
-        "max": 3
+        "max": 3,
+        "unit": "per-second"
       }
     },
     "calm": {

@@ -364,19 +364,25 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     options.onCommitted?.();
     return "committed";
   };
-  /** Runs one cosmetic change through the acknowledged commit, or directly on a plain local store. */
+  /**
+   * Runs one cosmetic change through the acknowledged commit, or directly on a plain local store. `apply` sets
+   * `result.value` to what happened; a committed change is saved, anything else is reported as it is.
+   */
   async function runCosmeticChange<Outcome extends string>(
     self: ProfileStore,
-    apply: (target: ProfileData) => void,
-    outcome: () => Outcome,
+    initial: Outcome,
+    apply: (target: ProfileData, result: { value: Outcome }) => void,
   ): Promise<CompletionStatus | Outcome> {
+    const result = { value: initial };
     if (!options.store.acknowledged) {
-      apply(self.data);
-      if (outcome() === "committed") self.save();
-      return outcome();
+      apply(self.data, result);
+      if (result.value === "committed") self.save();
+      return result.value;
     }
-    const status = await commit(apply);
-    return status === "committed" ? outcome() : status;
+    const status = await commit((target) => {
+      apply(target, result);
+    });
+    return status === "committed" ? result.value : status;
   }
   const profile: ProfileStore = {
     KEY: "tear_profile",
@@ -545,65 +551,49 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     async buyCosmetic(itemId) {
       const catalog = options.getCosmeticCatalog?.();
       if (!catalog) return "unknown";
-      let outcome = "unknown" as PurchaseRefusal | "committed";
-      const apply = (target: ProfileData): void => {
-        const result = purchaseCosmetic(
+      return runCosmeticChange<PurchaseRefusal | "committed">(this, "unknown", (target, result) => {
+        const purchase = purchaseCosmetic(
           catalog,
           normalizeCosmeticState(target.cosmetics),
           itemId,
           finite(target.shards),
           progressFacts(target),
         );
-        if (!result.ok) {
-          outcome = result.reason;
+        if (!purchase.ok) {
+          result.value = purchase.reason;
           return;
         }
-        target.cosmetics = result.state;
-        outcome = "committed";
-      };
-      return runCosmeticChange(this, apply, () => outcome);
+        target.cosmetics = purchase.state;
+        result.value = "committed";
+      });
     },
     async equipCosmetic(slot, itemId) {
       const catalog = options.getCosmeticCatalog?.();
       if (!catalog) return "unknown";
-      let outcome = "unknown" as CompletionStatus | "unknown";
-      const apply = (target: ProfileData): void => {
+      return runCosmeticChange<CompletionStatus>(this, "unknown", (target, result) => {
         const next = equipCosmetic(catalog, normalizeCosmeticState(target.cosmetics), slot, itemId, now());
         if (!next) return;
         target.cosmetics = next;
-        outcome = "committed";
-      };
-      return runCosmeticChange(this, apply, () => outcome);
+        result.value = "committed";
+      });
     },
     async claimCosmeticGrants() {
       const catalog = options.getCosmeticCatalog?.();
       if (!catalog) return "unknown";
-      let outcome = "unknown" as CompletionStatus;
-      const apply = (target: ProfileData): void => {
+      return runCosmeticChange<CompletionStatus>(this, "unknown", (target, result) => {
         const state = normalizeCosmeticState(target.cosmetics);
         const ids = claimableGrants(catalog, state, progressFacts(target));
-        if (ids.length === 0) {
-          outcome = "already";
-          return;
-        }
-        target.cosmetics = grantItems(state, ids);
-        outcome = "committed";
-      };
-      return runCosmeticChange(this, apply, () => outcome);
+        result.value = ids.length === 0 ? "already" : "committed";
+        if (ids.length > 0) target.cosmetics = grantItems(state, ids);
+      });
     },
     async markCosmeticsSeen(itemIds) {
-      let outcome = "unknown" as CompletionStatus;
-      const apply = (target: ProfileData): void => {
+      return runCosmeticChange<CompletionStatus>(this, "unknown", (target, result) => {
         const state = normalizeCosmeticState(target.cosmetics);
         const next = markSeen(state, itemIds, now());
-        if (Object.keys(next.seen).length === Object.keys(state.seen).length) {
-          outcome = "already";
-          return;
-        }
-        target.cosmetics = next;
-        outcome = "committed";
-      };
-      return runCosmeticChange(this, apply, () => outcome);
+        result.value = Object.keys(next.seen).length === Object.keys(state.seen).length ? "already" : "committed";
+        if (result.value === "committed") target.cosmetics = next;
+      });
     },
     stat(key) {
       return finite(this.data.stats[key]);

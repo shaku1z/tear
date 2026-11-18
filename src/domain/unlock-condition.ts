@@ -5,6 +5,8 @@
  * `conditionMet`; music and achievements keep their own call sites and can move to this evaluator
  * without a change of data, because their shapes are a subset of it.
  */
+import { isRecord, REFERENCE_ID } from "./identifiers";
+
 export type UnlockCondition =
   | Readonly<{ type: "default" }>
   | Readonly<{ type: "boss-defeat"; bossId: string }>
@@ -21,15 +23,11 @@ export interface ProgressFacts {
   achievementUnlocked(id: string): boolean;
 }
 
-const NAME = /^[A-Za-z0-9_-]{1,64}$/u;
-const record = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 /** Every reason a condition value is invalid; empty when valid. `where` prefixes each message. */
 export function conditionProblems(value: unknown, where: string, depth = 0): string[] {
-  if (!record(value) || typeof value.type !== "string") return [`${where}: condition must have a type`];
+  if (!isRecord(value) || typeof value.type !== "string") return [`${where}: condition must have a type`];
   const need = (key: string): string[] =>
-    typeof value[key] === "string" && NAME.test(value[key])
+    typeof value[key] === "string" && REFERENCE_ID.test(value[key])
       ? []
       : [`${where}: ${String(value.type)} needs a valid ${key}`];
   switch (value.type) {

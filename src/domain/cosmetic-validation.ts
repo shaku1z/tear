@@ -10,10 +10,13 @@
  */
 import { colourProblem, isHexColor, type ReadabilityBackdrops } from "./cosmetic-readability";
 import {
+  ACQUIRE_KINDS_WITH_ID,
   MAX_FLASHES_PER_SECOND,
+  MAX_LOADOUT_NAME,
   MAX_LOADOUTS,
   MAX_OWNED,
   MAX_PRICE,
+  SLOT_GROUPS,
   type Acquisition,
   type CosmeticCatalog,
   type CosmeticItem,
@@ -21,13 +24,8 @@ import {
   type LookFamily,
   type ParamSpec,
 } from "./cosmetic-types";
+import { isRecord, ITEM_ID, REFERENCE_ID } from "./identifiers";
 import { conditionProblems } from "./unlock-condition";
-
-const ID = /^[a-z0-9_]{1,64}$/u;
-const GROUPS = ["combat", "interface", "profile", "music"];
-const ACQUIRE_WITH_ID = ["achievement", "boss", "challenge", "mastery", "collection", "bundle"];
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 interface LookOptions {
   /** Backdrops to check readable colours against; omitted for defaults, which are the game's own look. */
@@ -72,7 +70,7 @@ function paramProblem(key: string, spec: ParamSpec, value: unknown, options: Loo
         ? []
         : [`${key} must be ${String(spec.min)} to ${String(spec.max)} plain characters`];
     case "id":
-      return typeof value === "string" && ID.test(value) ? [] : [`${key} must be a lowercase id`];
+      return typeof value === "string" && ITEM_ID.test(value) ? [] : [`${key} must be a lowercase id`];
   }
 }
 
@@ -96,10 +94,10 @@ function acquireProblems(entries: readonly Acquisition[], where: string): string
   return entries.flatMap((entry) => {
     const how = (entry as { how?: unknown }).how;
     if (how === "shards") return [];
-    if (typeof how === "string" && ACQUIRE_WITH_ID.includes(how))
-      return ID.test((entry as { id?: string }).id ?? "") ? [] : [`${where}: acquire ${how} needs an id`];
+    if (typeof how === "string" && (ACQUIRE_KINDS_WITH_ID as readonly string[]).includes(how))
+      return ITEM_ID.test((entry as { id?: string }).id ?? "") ? [] : [`${where}: acquire ${how} needs an id`];
     if (how === "code")
-      return ID.test((entry as { campaign?: string }).campaign ?? "")
+      return ITEM_ID.test((entry as { campaign?: string }).campaign ?? "")
         ? []
         : [`${where}: acquire code needs a campaign`];
     return [`${where}: unknown acquire kind`];
@@ -111,7 +109,7 @@ function itemProblems(item: CosmeticItem, catalog: CosmeticCatalog, backdrops: R
   const slot = catalog.slots.find((entry) => entry.id === item.slot);
   const family = catalog.families.find((entry) => entry.id === slot?.family);
   const problems: string[] = [];
-  if (!ID.test(item.id)) problems.push(`${where}: id must be lowercase letters, digits and underscores`);
+  if (!ITEM_ID.test(item.id)) problems.push(`${where}: id must be lowercase letters, digits and underscores`);
   if (item.name.trim() === "" || /\s\d+$/u.test(item.name))
     problems.push(`${where}: needs a real name, not a numbered stand-in`);
   if (!slot || !family) return [...problems, `${where}: unknown slot ${item.slot}`];
@@ -126,7 +124,7 @@ function itemProblems(item: CosmeticItem, catalog: CosmeticCatalog, backdrops: R
     problems.push(`${where}: asset ${item.asset} is not in the manifest`);
   let previous = 0;
   for (const step of item.evolves ?? []) {
-    if (!ID.test(step.counter) || !Number.isInteger(step.at) || step.at <= previous)
+    if (!ITEM_ID.test(step.counter) || !Number.isInteger(step.at) || step.at <= previous)
       problems.push(`${where}: evolution steps need a counter id and rising "at"`);
     previous = step.at;
     problems.push(...lookProblems(step.look, family, `${where} evolution`, { backdrops, rejectTell, partial: true }));
@@ -162,10 +160,10 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: Rea
   );
 
   for (const family of catalog.families) {
-    if (!/^[a-z0-9_-]{1,64}$/u.test(family.id) || Object.keys(family.params).length === 0)
+    if (!REFERENCE_ID.test(family.id) || Object.keys(family.params).length === 0)
       problems.push(`family ${family.id}: needs an id and parameters`);
     for (const [key, spec] of Object.entries(family.params)) {
-      if (spec.type === "number" && spec.max > MAX_FLASHES_PER_SECOND && /pulse|flash|rate/iu.test(key))
+      if (spec.type === "number" && spec.unit === "per-second" && spec.max > MAX_FLASHES_PER_SECOND)
         problems.push(`family ${family.id}: ${key} may not exceed ${String(MAX_FLASHES_PER_SECOND)} per second`);
     }
     problems.push(
@@ -173,14 +171,14 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: Rea
     );
   }
   for (const tier of catalog.tiers)
-    if (!ID.test(tier.id) || !Number.isSafeInteger(tier.price) || tier.price < 0 || tier.price > MAX_PRICE)
+    if (!ITEM_ID.test(tier.id) || !Number.isSafeInteger(tier.price) || tier.price < 0 || tier.price > MAX_PRICE)
       problems.push(`tier ${tier.id}: price must be a whole number 0 to ${String(MAX_PRICE)}`);
   for (const slot of catalog.slots) {
     const family = catalog.families.find((entry) => entry.id === slot.family);
     if (
-      !ID.test(slot.id) ||
+      !ITEM_ID.test(slot.id) ||
       slot.label.trim() === "" ||
-      !GROUPS.includes(slot.group) ||
+      !(SLOT_GROUPS as readonly string[]).includes(slot.group) ||
       !["ready", "not yet"].includes(slot.hook)
     )
       problems.push(`slot ${slot.id}: invalid id, label, group or hook`);
@@ -192,7 +190,7 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: Rea
   }
   for (const collection of catalog.collections) {
     const where = `collection ${collection.id}`;
-    if (!ID.test(collection.id) || collection.name.trim() === "") problems.push(`${where}: invalid id or name`);
+    if (!ITEM_ID.test(collection.id) || collection.name.trim() === "") problems.push(`${where}: invalid id or name`);
     problems.push(...conditionProblems(collection.unlock, where));
     if (collection.reward !== undefined) {
       const reward = catalog.items.find((entry) => entry.id === collection.reward);
@@ -204,15 +202,33 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: Rea
   return problems;
 }
 
+/** The data files as imported: arrays of rows whose shape the validator, not the compiler, vouches for. */
+export type RawCosmeticCatalog = { readonly [Key in keyof CosmeticCatalog]: readonly unknown[] };
+
+/**
+ * The one loader of the data files. It validates every row and throws with the full problem list, so a
+ * catalog that exists is a catalog that passed.
+ */
+export function parseCosmeticCatalog(raw: RawCosmeticCatalog, backdrops: ReadabilityBackdrops): CosmeticCatalog {
+  const catalog = raw as CosmeticCatalog;
+  const problems = Object.values(raw).every(Array.isArray)
+    ? validateCosmeticCatalog(catalog, backdrops)
+    : ["every cosmetic data file must be a list"];
+  if (problems.length > 0) throw new Error(["Invalid cosmetic data:", ...problems].join("\n"));
+  return catalog;
+}
+
 /** The largest record a player can produce, in characters: every cap reached at once. Must fit MAX_STATE_CHARS. */
 export function worstCaseStateSize(catalog: CosmeticCatalog): number {
-  const id = "x".repeat(24);
-  const owned = Object.fromEntries(Array.from({ length: MAX_OWNED }, (_, index) => [`${id}${String(index)}`, 2000]));
+  const id = "x".repeat(MAX_LOADOUT_NAME);
+  const owned = Object.fromEntries(
+    Array.from({ length: MAX_OWNED }, (_, index) => [`${id}${String(index)}`, MAX_PRICE]),
+  );
   const slots = Object.fromEntries(catalog.slots.map((slot) => [slot.id, { id, at: 1_800_000_000_000 }]));
   const loadouts = Object.fromEntries(
     Array.from({ length: MAX_LOADOUTS }, (_, index) => [
       `loadout_${String(index)}`,
-      { name: "x".repeat(24), nameAt: 1_800_000_000_000, slots },
+      { name: "x".repeat(MAX_LOADOUT_NAME), nameAt: 1_800_000_000_000, slots },
     ]),
   );
   return JSON.stringify({

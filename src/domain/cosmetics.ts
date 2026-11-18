@@ -9,6 +9,7 @@
 import {
   COSMETIC_STATE_VERSION,
   DEFAULT_LOADOUT_ID,
+  MAX_LOADOUT_NAME,
   MAX_OWNED,
   type CosmeticCatalog,
   type CosmeticItem,
@@ -17,11 +18,9 @@ import {
   type Loadout,
   type SavedLoadout,
 } from "./cosmetic-types";
+import { isRecord, ITEM_ID } from "./identifiers";
 import { conditionMet, type ProgressFacts } from "./unlock-condition";
 
-const ID = /^[a-z0-9_]{1,64}$/u;
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 const wholeNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 
@@ -37,7 +36,7 @@ export const emptyCosmeticState = (): CosmeticState => ({
 function numberMap(value: unknown): Record<string, number> {
   const output: Record<string, number> = {};
   if (isRecord(value))
-    for (const [key, entry] of Object.entries(value)) if (ID.test(key) && wholeNumber(entry)) output[key] = entry;
+    for (const [key, entry] of Object.entries(value)) if (ITEM_ID.test(key) && wholeNumber(entry)) output[key] = entry;
   return output;
 }
 
@@ -45,8 +44,8 @@ function slotMap(value: unknown): Record<string, EquippedEntry> {
   const output: Record<string, EquippedEntry> = {};
   if (!isRecord(value)) return output;
   for (const [slot, entry] of Object.entries(value)) {
-    if (!ID.test(slot) || !isRecord(entry) || !wholeNumber(entry.at)) continue;
-    if (entry.id === null || (typeof entry.id === "string" && ID.test(entry.id)))
+    if (!ITEM_ID.test(slot) || !isRecord(entry) || !wholeNumber(entry.at)) continue;
+    if (entry.id === null || (typeof entry.id === "string" && ITEM_ID.test(entry.id)))
       output[slot] = { id: entry.id, at: entry.at };
   }
   return output;
@@ -62,9 +61,9 @@ export function normalizeCosmeticState(value: unknown): CosmeticState {
   const loadouts: Record<string, SavedLoadout> = {};
   if (isRecord(value.loadouts))
     for (const [id, entry] of Object.entries(value.loadouts)) {
-      if (!ID.test(id) || !isRecord(entry) || typeof entry.name !== "string") continue;
+      if (!ITEM_ID.test(id) || !isRecord(entry) || typeof entry.name !== "string") continue;
       loadouts[id] = {
-        name: entry.name.slice(0, 24),
+        name: entry.name.slice(0, MAX_LOADOUT_NAME),
         nameAt: wholeNumber(entry.nameAt) ? entry.nameAt : 0,
         ...(wholeNumber(entry.deletedAt) ? { deletedAt: entry.deletedAt } : {}),
         slots: slotMap(entry.slots),
@@ -72,7 +71,7 @@ export function normalizeCosmeticState(value: unknown): CosmeticState {
     }
   const raw = value.active;
   const active =
-    isRecord(raw) && typeof raw.id === "string" && ID.test(raw.id) && wholeNumber(raw.at)
+    isRecord(raw) && typeof raw.id === "string" && ITEM_ID.test(raw.id) && wholeNumber(raw.at)
       ? { id: raw.id, at: raw.at }
       : { id: DEFAULT_LOADOUT_ID, at: 0 };
   return {

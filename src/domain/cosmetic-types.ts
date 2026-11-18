@@ -16,7 +16,10 @@ export const DEFAULT_LOADOUT_ID = "main";
 /** No more than this many full-screen flashes a second, for photosensitive players. */
 export const MAX_FLASHES_PER_SECOND = 3;
 
-export type SlotGroup = "combat" | "interface" | "profile" | "music";
+export const SLOT_GROUPS = ["combat", "interface", "profile", "music"] as const;
+export type SlotGroup = (typeof SLOT_GROUPS)[number];
+export const ACQUIRE_KINDS_WITH_ID = ["achievement", "boss", "challenge", "mastery", "collection", "bundle"] as const;
+export const MAX_LOADOUT_NAME = 24;
 /** "ready": the presentation hook that reads this slot exists. "not yet": the slot and its data exist, the hook does not. */
 export type SlotHook = "ready" | "not yet";
 export type Look = Readonly<Record<string, unknown>>;
@@ -35,7 +38,8 @@ export interface CosmeticSlot {
 export type ParamSpec =
   | Readonly<{ type: "color"; readable?: boolean }>
   | Readonly<{ type: "colors"; min: number; max: number; readable?: boolean }>
-  | Readonly<{ type: "number"; min: number; max: number }>
+  /** `unit: "per-second"` marks a rate (pulses, flashes): the validator caps it at MAX_FLASHES_PER_SECOND. */
+  | Readonly<{ type: "number"; min: number; max: number; unit?: "per-second" }>
   | Readonly<{ type: "int"; min: number; max: number }>
   | Readonly<{ type: "enum"; values: readonly string[] }>
   | Readonly<{ type: "text"; min: number; max: number }>
@@ -56,7 +60,7 @@ export interface PriceTier {
 /** How an item can be had. Only "shards" is a purchase; the rest are free grants or reserved shapes. */
 export type Acquisition =
   | Readonly<{ how: "shards" }>
-  | Readonly<{ how: "achievement" | "boss" | "challenge" | "mastery" | "collection" | "bundle"; id: string }>
+  | Readonly<{ how: (typeof ACQUIRE_KINDS_WITH_ID)[number]; id: string }>
   | Readonly<{ how: "code"; campaign: string }>;
 
 export interface CosmeticItem {
