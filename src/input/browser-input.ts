@@ -283,7 +283,9 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
         }
         // Escape is not a semantic pause: it also releases pointer lock and backs out of menus.
         if (bindsKey("pause", code) && !bindsKey("back", code)) this.semantic.push({ type: "pause" });
-        // The throw and tether keys are the right and left mouse buttons, edge for edge.
+        // The throw and tether keys are the right and left mouse buttons, edge for edge, in play only:
+        // while menus own input the same keys step tabs, and a key held into play acts only on a new press.
+        if (this.uiMode) return;
         if (bindsKey("throw", code)) {
           this.rmb = true;
           this.semantic.push({ type: "weapon", intent: "throw", phase: "pressed" });

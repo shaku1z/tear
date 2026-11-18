@@ -232,6 +232,27 @@ describe("keyboard throw and tether keys", () => {
     keys.input.updateUI();
     expect(keys.input.ui.tabNext).toBe(true);
   });
+
+  it("lets no throw or tether from pause-menu tab steps reach the run, even with Q held across resume", () => {
+    const keys = keyboardFixture();
+    keys.input.uiMode = true; // the pause menu owns input
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyE"));
+    keys.windowTarget.dispatchEvent(keyEvent("keyup", "KeyE"));
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ")); // held through the resume
+    keys.input.updateUI();
+    expect(keys.input.ui).toMatchObject({ tabPrev: true, tabNext: true });
+    keys.input.endFrame(true); // a frame that keeps simulation edges for the next tick
+
+    keys.input.uiMode = false; // resumed
+    expect(keys.input.consumeThrow()).toBe(false);
+    expect(keys.input.tetherHeld).toBe(false);
+    expect(keys.commands().filter((command) => command.type === "weapon")).toEqual([]);
+
+    // Letting Q go and pressing it again in play tethers as usual.
+    keys.windowTarget.dispatchEvent(keyEvent("keyup", "KeyQ"));
+    keys.windowTarget.dispatchEvent(keyEvent("keydown", "KeyQ"));
+    expect(keys.input.tetherHeld).toBe(true);
+  });
 });
 
 describe("legacy gamepad adapter", () => {
