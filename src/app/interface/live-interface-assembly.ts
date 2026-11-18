@@ -24,6 +24,7 @@ import { createLiveScreenActions, type LiveGhostLibraryScreens } from "./live-sc
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 import { renderRegisteredScreen } from "./screen-registry";
 import { isMenuScreen } from "../../domain/screen-catalog";
+import { PRACTICE_TABS, practiceTabOf } from "../../gameplay/training/practice-tabs";
 
 export interface LiveInterfaceAssemblyOptions {
   readonly dependencies: GameRuntimeDependencies;
@@ -295,6 +296,11 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
             TUT.session().phase !== "inactive"
               ? TUT.session()
               : undefined,
+          stepPracticeTab: (practice) => {
+            presentationHost.stepTab(PRACTICE_TABS, practiceTabOf(practice), (tab) => {
+              TUT.showPracticeTab(tab);
+            });
+          },
         },
         menuState: {
           selection: () => session.selection(),

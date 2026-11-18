@@ -121,11 +121,9 @@ export type ScreenAction =
         | "coach-diagnostic"
         | "skip"
         | "assist"
-        | "annexes"
+        | "tab"
         | "select-annex"
-        | "catalog"
         | "select-enemy"
-        | "bosses"
         | "select-boss";
       readonly lessonId?: string;
     };

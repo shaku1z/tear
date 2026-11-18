@@ -2,6 +2,7 @@ import type { LiveTrainingHost } from "./training-host";
 import type { LiveTutorialRuntime } from "../../gameplay/training/live-tutorial-runtime";
 import type { ScreenAction } from "../../domain/screen-actions";
 import { weaponAnnex } from "../../gameplay/training/tutorial-weapon-annexes";
+import { isPracticeTab } from "../../gameplay/training/practice-tabs";
 
 type TutorialCommand = Extract<ScreenAction, { type: "tutorial.action" }>["command"];
 interface TutorialSessionActionPorts {
@@ -70,16 +71,8 @@ export function createLiveTutorialSessionActions(ports: TutorialSessionActionPor
       tutorial.showHelp();
       return;
     }
-    if (command === "annexes") {
-      tutorial.showAnnexes();
-      return;
-    }
-    if (command === "bosses") {
-      tutorial.showBosses();
-      return;
-    }
-    if (command === "catalog") {
-      tutorial.showCatalog();
+    if (command === "tab") {
+      if (isPracticeTab(lessonId)) tutorial.showPracticeTab(lessonId);
       return;
     }
     const annexId =

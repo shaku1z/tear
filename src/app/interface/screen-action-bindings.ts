@@ -63,11 +63,9 @@ export interface ScreenActionBindingPorts {
       | "coach-diagnostic"
       | "skip"
       | "assist"
-      | "annexes"
+      | "tab"
       | "select-annex"
-      | "catalog"
       | "select-enemy"
-      | "bosses"
       | "select-boss",
     lessonId?: string,
   ) => void;

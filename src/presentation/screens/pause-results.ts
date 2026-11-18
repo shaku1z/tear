@@ -11,6 +11,7 @@ import { wrapSpaceSeparated } from "../ui-text-fit";
 import { actionRow, overlayHeader, overlayLayout, verticalMenu, type OverlayLayout } from "./screen-primitives";
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
 import { LESSON_TEACHING, countedLessons } from "../../gameplay/training/training-exercises";
+import { PRACTICE_TABS, practiceTabOf } from "../../gameplay/training/practice-tabs";
 
 const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
 
@@ -56,7 +57,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       top = header.bodyTop;
     ui.title(
       canvas,
-      lab ? "PRACTICE LAB" : complete || unfinished ? "TRAINING COMPLETE" : "TUTORIAL",
+      lab ? "DRILLS" : complete || unfinished ? "TRAINING COMPLETE" : "TUTORIAL",
       width / 2,
       titleY,
       ui.t.type.display,
@@ -75,12 +76,12 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         : complete
           ? lab
             ? bosses
-              ? "Choose a boss phase · baseline sword · no rewards"
+              ? "Replay a boss phase you have reached · no rewards"
               : catalog
-                ? "Choose an opponent · baseline sword · no rewards"
+                ? "Fight an opponent you have met · no rewards"
                 : annexes
-                  ? "Choose a weapon · baseline loadout · no rewards"
-                  : "Choose a technique · baseline sword · no rewards"
+                  ? "Try each weapon's own moves · no rewards"
+                  : "Practice any technique · no rewards"
             : "Every technique learned. Pick your next step."
           : `${activeTitle} · ${String(session.progress[0])} of ${String(session.progress[1])}`,
       width / 2,
@@ -119,22 +120,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
             },
           ]
         : []),
-      ...(lab
-        ? [
-            {
-              label: annexes ? "BASELINE EXERCISES" : "WEAPON ANNEXES",
-              action: { type: "tutorial.action", command: "annexes" } as const,
-            },
-            {
-              label: bosses ? "BASELINE EXERCISES" : "BOSS PRACTICE",
-              action: { type: "tutorial.action", command: "bosses" } as const,
-            },
-            {
-              label: catalog ? "BASELINE EXERCISES" : "ENEMY CATALOG",
-              action: { type: "tutorial.action", command: "catalog" } as const,
-            },
-          ]
-        : []),
       { label: "SETTINGS", action: { type: "navigate", to: "settings" } },
       { label: "MAIN MENU", action: { type: "navigate", to: "confirmquit" } },
     ];
@@ -158,42 +143,27 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       panelW = width * 0.54,
       rowTop = top + (compact ? 38 : 45),
       helpH = compact ? (catalog ? 70 : 90) : 130;
-    ui.tag(
-      canvas,
-      bosses
-        ? "BOSS PHASE ENTRIES"
-        : catalog
-          ? "KNOWN OPPONENTS"
-          : annexes
-            ? "CHOOSE A WEAPON"
-            : lab
-              ? "UNLOCKED EXERCISES"
-              : complete
-                ? "PRACTICE A TECHNIQUE"
-                : "LESSONS",
-      panelX,
-      top,
-      ui.t.color.accent,
-      "left",
-      ui.t.type.micro,
-    );
-    ui.text(
-      canvas,
-      bosses
-        ? "P1: defeated identity or seen phase · P2/3: saved exact exposure"
-        : catalog
-          ? "Unknown history stays unknown · practice never unlocks entries"
-          : annexes
-            ? "Real weapon effects · restart any attempt · no rewards"
-            : lab
-              ? "Restart any exercise, or use help and demos."
-              : `${String(learned)} of ${String(countedLessons(session))} learned · replay any lesson you have reached`,
-      panelX,
-      top + 21,
-      ui.t.type.micro,
-      "left",
-      ui.t.alpha.soft,
-    );
+    if (lab) drillTabs(session, panelX, top, panelW, rowTop - top - (compact ? 6 : 10));
+    else {
+      ui.tag(
+        canvas,
+        complete ? "PRACTICE A TECHNIQUE" : "LESSONS",
+        panelX,
+        top,
+        ui.t.color.accent,
+        "left",
+        ui.t.type.micro,
+      );
+      ui.text(
+        canvas,
+        `${String(learned)} of ${String(countedLessons(session))} learned · replay any lesson you have reached`,
+        panelX,
+        top + 21,
+        ui.t.type.micro,
+        "left",
+        ui.t.alpha.soft,
+      );
+    }
     const exercises = bosses
       ? (session.bossCatalog ?? []).map((boss) => ({
           ...boss,
@@ -230,12 +200,12 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
           ? {
               sub: (
                 {
-                  "defeated-identity": "DEFEATED IDENTITY",
-                  "encountered-phase": "SAVED PHASE EXPOSURE",
-                  "confirmed-defeated": "CONFIRMED DEFEATED",
-                  encountered: "ENCOUNTERED",
-                  "save-unconfirmed": "SAVE NOT CONFIRMED",
-                  unknown: "HISTORY NOT RECORDED",
+                  "defeated-identity": "DEFEATED",
+                  "encountered-phase": "PHASE REACHED",
+                  "confirmed-defeated": "DEFEATED",
+                  encountered: "MET",
+                  "save-unconfirmed": "NOT SAVED YET",
+                  unknown: "NOT MET YET",
                 } as Readonly<Record<string, string>>
               )[lesson.knowledge],
             }
@@ -254,14 +224,14 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       ui.scrollHint(canvas, panelX + panelW / 2, rowTop + rows * rowH + 10, bossOffset > 0, bossOffset < 9);
     const help = bosses
       ? compact
-        ? "Scroll for more bosses. P1: recorded defeat or seen phase. Later phases: exact saved exposure. Real entry transitions and rituals; baseline, no rewards."
-        : "Opening phase access from a recorded defeat does not reconstruct old phase history. Later phases require their exact saved exposure. Each exercise starts at its real authored transition; rituals remain interactive. No rewards or discovery."
+        ? "Scroll for more bosses. Phase 1 opens once you have beaten or met a boss; a later phase once you have reached it. No rewards."
+        : "Phase 1 opens once you have beaten or met a boss; a later phase once you have reached it in a run. Each drill starts where that phase really begins. No rewards."
       : catalog
-        ? "Confirmed defeated uses an existing recorded kill. Encountered means an opponent was exposed in ordinary live play. Missing older history is not proof you have never met it. Practice uses a real opponent; pause to reset."
+        ? "Opponents you have met in a run are listed here. Each drill is a real fight; pause to restart it. No rewards."
         : session.helpVisible || session.annex || session.enemyPractice || session.bossPractice
           ? session.instruction
           : annexes
-            ? "Sword: Reversal and launch. Hammer: slam and Break. Greatsword: Cleave and Wheel Cut. Chainblade: Hook and Sling. Riftlock: Capture and Razor Rounds. Select a weapon to try its real mechanics."
+            ? "Sword: Reversal and launch. Hammer: slam and Break. Greatsword: Cleave and Wheel Cut. Chainblade: Hook and Sling. Riftlock: Capture and Razor Rounds. Choose a weapon to try its moves."
             : complete
               ? "Move, jump and dash. Cut, launch and juggle. Slam and updraft. Throw, recall, parry, then dodge and punish. Choose any lesson above to practice it again."
               : current
@@ -307,6 +277,31 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       ui.t.type.caption,
       ui.ink,
     );
+  }
+
+  /** The Drills tab row at the top of the list panel: one tab open at a time. */
+  function drillTabs(
+    session: NonNullable<PausedScreenView["tutorial"]>,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+  ): void {
+    const open = practiceTabOf(session),
+      gap = 6,
+      tabW = (w - gap * (PRACTICE_TABS.length - 1)) / PRACTICE_TABS.length;
+    PRACTICE_TABS.forEach(([id, label], index) => {
+      context.enqueue({
+        x: x + index * (tabW + gap),
+        y,
+        w: tabW,
+        h,
+        label,
+        selected: id === open,
+        action: { type: "tutorial.action", command: "tab", lessonId: id },
+        size: ui.density.compact ? ui.t.type.micro : ui.t.type.caption,
+      });
+    });
   }
 
   /**

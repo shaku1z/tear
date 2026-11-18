@@ -5,6 +5,7 @@ import {
   type PracticeBossState,
 } from "./practice-boss-catalog";
 import type { TutorialArenaId } from "./tutorial-arenas";
+import type { PracticeTab } from "./practice-tabs";
 import { productionGhostTraces, type TutorialGhostFrame, type TutorialGhostScript } from "./tutorial-production-ghost";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import {
@@ -890,26 +891,12 @@ export class TutorialController {
       this.phase = "free-practice";
     }
   }
-  showBosses(): void {
-    if (this.practiceOrigin) {
-      this.bossSelector = !this.bossSelector;
-      this.catalogSelector = false;
-      this.annexSelector = false;
-    }
-  }
-  showAnnexes(): void {
-    if (this.practiceOrigin !== undefined) {
-      this.annexSelector = !this.annexSelector;
-      this.bossSelector = false;
-      this.catalogSelector = false;
-    }
-  }
-  showCatalog(): void {
-    if (this.practiceOrigin !== undefined) {
-      this.catalogSelector = !this.catalogSelector;
-      this.bossSelector = false;
-      this.annexSelector = false;
-    }
+  /** Opens one Drills tab: exactly one list shows (LESSONS is the baseline exercises). */
+  showPracticeTab(tab: PracticeTab): void {
+    if (this.practiceOrigin === undefined) return;
+    this.annexSelector = tab === "weapons";
+    this.catalogSelector = tab === "enemies";
+    this.bossSelector = tab === "bosses";
   }
   selectEnemy(entry: PracticeEnemyEntry): boolean {
     if (!this.practiceOrigin || !entry.canPractice || entry.knowledge === "unknown" || !isPracticeEnemy(entry.id))
