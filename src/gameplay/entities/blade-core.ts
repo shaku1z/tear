@@ -246,6 +246,43 @@ export function createBladeCore(dependencies: BladeDependencies) {
       return { x: this.aimX, y: this.aimY };
     }
 
+    /**
+     * Seats a held blade at rest along `aim` (an offset from the hand): the body where the spring
+     * and the blade's weight cancel, the tip on the line out from the hand, and no velocity. Every
+     * hand-back of control calls this (a resume, a lesson or practice restart), so the first tick
+     * of play never swings toward an aim chosen while play was stopped. A blade that is not held
+     * is left alone.
+     */
+    reseatHeld(hand: BladePoint, aim: BladePoint): void {
+      if (this.state !== "held") return;
+      const B = CONFIG.blade;
+      const radius = B.aimRadius * this.tetherFactor;
+      const aimLength = len(aim.x, aim.y);
+      const scale = aimLength > radius ? radius / aimLength : 1;
+      this.aimX = aimLength > 1e-9 ? aim.x * scale : 0;
+      this.aimY = aimLength > 1e-9 ? aim.y * scale : -radius;
+      this.reticleX = hand.x + this.aimX;
+      this.reticleY = hand.y + this.aimY;
+      // _updateHeld's equilibrium: the spring's pull (reticle - body) * stiffness balances gravity.
+      this.x = this.reticleX;
+      this.y = this.reticleY + B.gravity / B.springStiffness;
+      this.vx = 0;
+      this.vy = 0;
+      const outX = this.x - hand.x,
+        outY = this.y - hand.y;
+      this.angle = len(outX, outY) > 8 ? Math.atan2(outY, outX) : Math.atan2(this.aimY, this.aimX);
+      this.tipX = this.x + Math.cos(this.angle) * this.curLength;
+      this.tipY = this.y + Math.sin(this.angle) * this.curLength;
+      this.prevTipX = this.tipX;
+      this.prevTipY = this.tipY;
+      this.tipVX = 0;
+      this.tipVY = 0;
+      this.tipSpeed = 0;
+      this.glowV = 0;
+      this.swingActive = false;
+      this.trail.length = 0;
+    }
+
     // ---- aim / reticle (runs in every state so the throw direction stays current) ----
     _updateAim(hand: BladePoint, dt: number): void {
       const B = CONFIG.blade;
