@@ -1,7 +1,10 @@
 // The merge rules of scripts/merge-ready.mjs, decided from fixed facts.
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { DESIGN_CHECK_LABELS } from "../../scripts/design-check.mjs";
+import { DESIGN_CHECK_CONFIG, DESIGN_CHECK_LABELS, readDesignCheckConfig } from "../../scripts/design-check.mjs";
 import { batchNote } from "../../scripts/merge-batch.mjs";
 import { decide, FIX_LABEL, parseBatchNote, pickRun } from "../../scripts/merge-ready.mjs";
 
@@ -29,6 +32,35 @@ const passed = (overrides = {}) => ({
 
 describe("merge readiness", () => {
   describe("rule 4: the design check is answered", () => {
+    it("reads the mode from main's copy, ignoring a branch that switches its own gate off", () => {
+      const repo = fs.mkdtempSync(path.join(os.tmpdir(), "tear-merge-ready-mode-"));
+      try {
+        const git = (...args) => execFileSync("git", args, { cwd: repo, encoding: "utf8", windowsHide: true });
+        const setMode = (mode) => {
+          fs.mkdirSync(path.join(repo, "config"), { recursive: true });
+          const config = { mode, observingSince: "2026-11-18" };
+          fs.writeFileSync(path.join(repo, DESIGN_CHECK_CONFIG), JSON.stringify(config));
+        };
+        git("init", "-q", "-b", "main");
+        git("config", "user.name", "Test");
+        git("config", "user.email", "test@example.invalid");
+        setMode("enforce");
+        git("add", ".");
+        git("commit", "-q", "-m", "main");
+        git("update-ref", "refs/remotes/origin/main", "HEAD");
+        git("switch", "-q", "-c", "codex/switch-it-off");
+        setMode("off");
+        git("commit", "-qam", "turn my own gate off");
+        expect(readDesignCheckConfig(repo).mode).toBe("enforce");
+        const facts = { main: green, pr: pr({ body: "## What" }), run: passed(), mainFilesSince: [] };
+        expect(decide({ ...facts, designCheckMode: readDesignCheckConfig(repo).mode }).ready).toBe(false);
+        git("update-ref", "-d", "refs/remotes/origin/main");
+        expect(() => readDesignCheckConfig(repo)).toThrow(/cannot read origin\/main:config\/design-check.json/u);
+      } finally {
+        fs.rmSync(repo, { recursive: true, force: true });
+      }
+    }, 60_000);
+
     it("in observe mode lets an unanswered pull request through with a would-refuse note", () => {
       const facts = { main: green, pr: pr({ body: "## What" }), run: passed(), mainFilesSince: [] };
       const observed = decide({ ...facts, designCheckMode: "observe" });

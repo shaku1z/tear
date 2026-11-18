@@ -124,7 +124,8 @@ applies them and answers yes or no with the reason; the merge helper calls it.
    (a typo, a dependency bump) may carry one line instead:
    `Design check: not applicable — <reason>`. That line is accepted and printed.
    - The gate's mode is in `config/design-check.json`: `off`, `observe` or
-     `enforce`.
+     `enforce`. It is read from `origin/main`'s copy, never the working tree,
+     so a branch cannot switch its own gate off.
    - In `observe`, the default for now, `merge:ready` prints
      "would refuse: <reason>" and lets the merge through.
    - `pnpm design-check:report` lists every merged pull request since

@@ -1,27 +1,21 @@
 // The design-check gate's modes, its "not applicable" line, its setting, and the read-only replay
 // behind `pnpm design-check:report`. Nothing here calls gh or touches the checkout.
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { replay } from "../../scripts/design-check-report.mjs";
 import {
   DESIGN_CHECK_CONFIG,
   DESIGN_CHECK_LABELS,
   DESIGN_CHECK_MODES,
   designCheckVerdict,
-  readDesignCheckConfig,
+  parseDesignCheckConfig,
 } from "../../scripts/design-check.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const answered = DESIGN_CHECK_LABELS.map((label) => `- **${label}:** an answer`).join("\n");
 const unanswered = "## What and why\n\nA change.";
-const scratch = [];
-
-afterEach(() => {
-  for (const folder of scratch.splice(0)) fs.rmSync(folder, { recursive: true, force: true });
-});
 
 describe("design-check verdict", () => {
   it("refuses only in enforce, reports a would-refuse in observe, and checks nothing when off", () => {
@@ -60,20 +54,18 @@ describe("design-check verdict", () => {
 
 describe("design-check setting", () => {
   it("is observe in the repository for now, observing since the template gained the check", () => {
-    expect(readDesignCheckConfig(root)).toEqual({ mode: "observe", observingSince: "2026-11-18T01:53:47Z" });
-    const about = JSON.parse(fs.readFileSync(path.join(root, DESIGN_CHECK_CONFIG), "utf8")).about;
+    const text = fs.readFileSync(path.join(root, DESIGN_CHECK_CONFIG), "utf8");
+    expect(parseDesignCheckConfig(text)).toEqual({ mode: "observe", observingSince: "2026-11-18T01:53:47Z" });
+    const about = JSON.parse(text).about;
     expect(about).toContain("Switching to enforce is the lead's decision");
   });
 
   it("refuses an unknown mode or a missing date", () => {
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), "tear-design-check-"));
-    scratch.push(home);
-    fs.mkdirSync(path.join(home, "config"));
-    const write = (config) => fs.writeFileSync(path.join(home, DESIGN_CHECK_CONFIG), JSON.stringify(config));
-    write({ mode: "strict", observingSince: "2026-11-18" });
-    expect(() => readDesignCheckConfig(home)).toThrow(/mode must be one of off, observe, enforce/u);
-    write({ mode: "enforce" });
-    expect(() => readDesignCheckConfig(home)).toThrow(/observingSince/u);
+    const parse = (config) => () => parseDesignCheckConfig(JSON.stringify(config));
+    expect(parse({ mode: "strict", observingSince: "2026-11-18" })).toThrow(
+      /mode must be one of off, observe, enforce/u,
+    );
+    expect(parse({ mode: "enforce" })).toThrow(/observingSince/u);
   });
 });
 

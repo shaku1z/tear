@@ -2,8 +2,7 @@
 // answers. This module is the one copy of the labels, the answer rule and the gate's mode. The pull
 // request template test checks the template and the standard against the labels, `pnpm merge:ready`
 // applies the verdict, and `pnpm design-check:report` replays it over merged pull requests.
-import fs from "node:fs";
-import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 /** The design-check labels, in the order the standard asks them. */
 export const DESIGN_CHECK_LABELS = Object.freeze([
@@ -80,18 +79,34 @@ export function designCheckVerdict(body, mode) {
 }
 
 /**
- * The gate's setting from config/design-check.json. An unreadable file or an unknown mode throws,
- * so a broken setting stops merges instead of silently switching the gate off.
- * @param {string} root the repository root
+ * Validates the text of config/design-check.json. An unknown mode or a bad date throws, so a
+ * broken setting stops merges instead of silently switching the gate off.
+ * @param {string} text the file's contents
+ * @param {string} [source] where the text came from, for the error
  * @returns {{ mode: string, observingSince: string }}
  */
-export function readDesignCheckConfig(root) {
-  const config = JSON.parse(fs.readFileSync(path.join(root, DESIGN_CHECK_CONFIG), "utf8"));
+export function parseDesignCheckConfig(text, source = DESIGN_CHECK_CONFIG) {
+  const config = JSON.parse(text);
   if (!DESIGN_CHECK_MODES.includes(config.mode)) {
-    throw new Error(`${DESIGN_CHECK_CONFIG}: mode must be one of ${DESIGN_CHECK_MODES.join(", ")}`);
+    throw new Error(`${source}: mode must be one of ${DESIGN_CHECK_MODES.join(", ")}`);
   }
   if (!OBSERVING_SINCE.test(String(config.observingSince))) {
-    throw new Error(`${DESIGN_CHECK_CONFIG}: observingSince must be a YYYY-MM-DD date or a UTC time`);
+    throw new Error(`${source}: observingSince must be a YYYY-MM-DD date or a UTC time`);
   }
   return { mode: config.mode, observingSince: config.observingSince };
+}
+
+/**
+ * The gate's setting as main has it: `git show <ref>:config/design-check.json`, never the working
+ * tree, so a pull request branch cannot switch its own gate off and a lagging checkout does not
+ * decide. The caller fetches the ref first. A missing or unreadable file throws.
+ * @param {string} root a checkout of the repository
+ * @param {string} [ref] the ref whose copy decides; "origin/main"
+ * @returns {{ mode: string, observingSince: string }}
+ */
+export function readDesignCheckConfig(root, ref = "origin/main") {
+  const source = `${ref}:${DESIGN_CHECK_CONFIG}`;
+  const shown = spawnSync("git", ["show", source], { cwd: root, encoding: "utf8", windowsHide: true });
+  if (shown.status !== 0) throw new Error(`cannot read ${source}: ${String(shown.stderr).trim()}`);
+  return parseDesignCheckConfig(shown.stdout, source);
 }

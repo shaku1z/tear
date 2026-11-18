@@ -1,7 +1,8 @@
 // `pnpm design-check:report`: a read-only replay of the design-check gate over merged pull requests,
 // so the lead can review false refusals before switching config/design-check.json to enforce. It
 // lists every pull request merged since a date (default: the config's observingSince) that the gate
-// would have refused, and every one accepted through a "not applicable" line. It changes nothing.
+// would have refused, and every one accepted through a "not applicable" line. Like merge:ready, it
+// reads the setting from origin/main (fetch first for a current answer). It changes nothing.
 //
 //   node scripts/design-check-report.mjs [--since YYYY-MM-DD[THH:MM:SSZ]] [--limit N] [--json]
 import { spawnSync } from "node:child_process";
