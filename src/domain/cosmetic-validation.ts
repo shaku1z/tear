@@ -24,7 +24,8 @@ import {
   type LookFamily,
   type ParamSpec,
 } from "./cosmetic-types";
-import { isRecord, ITEM_ID, REFERENCE_ID } from "./identifiers";
+import { ITEM_ID, REFERENCE_ID } from "./identifiers";
+import { isRecord } from "./records";
 import { conditionProblems } from "./unlock-condition";
 
 interface LookOptions {

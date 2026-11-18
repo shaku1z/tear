@@ -1,3 +1,4 @@
+import { bossKillStat } from "../../domain/progress-facts";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { BestiaryEntry } from "../../presentation/bestiary-catalog";
 
@@ -109,7 +110,7 @@ export function createLiveBestiaryPreview(d: BestiaryPreviewDependencies) {
     ];
     let felled;
     if (isBoss && entry.bossId !== undefined) {
-      const stat = d.PROFILE.stat("kill" + entry.bossId.charAt(0).toUpperCase() + entry.bossId.slice(1));
+      const stat = d.PROFILE.stat(bossKillStat(entry.bossId));
       if (stat) felled = { label: "☠ FELLED", color: "#2f9e6b" };
     } else if (!isBoss && inst.kind !== undefined) {
       const stat = d.PROFILE.stat("kill_" + inst.kind);
