@@ -30,6 +30,7 @@ describe("CanvasViewport", () => {
 
     viewport.start();
     expect([canvas.width, canvas.height]).toEqual([1600, 900]);
+    expect(viewport.pixelScale).toBe(1);
     Object.defineProperties(canvas, { clientWidth: { value: 1024 }, clientHeight: { value: 512 } });
     listeners.get("resize")?.(new Event("resize"));
     listeners.get("resize")?.(new Event("resize"));
@@ -37,6 +38,8 @@ describe("CanvasViewport", () => {
 
     viewport.resizeIfNeeded();
     expect([canvas.width, canvas.height]).toEqual([2048, 1024]);
+    // Device pixels per logical unit: the fitted scale, the number screens size image art by.
+    expect(viewport.pixelScale).toBeCloseTo(1024 / 900);
   });
 
   it("responds directly to an observed canvas content-box change", () => {
