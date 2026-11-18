@@ -1,6 +1,6 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
@@ -223,17 +223,5 @@ describe("Nightly checks workflow", () => {
 
   it("only reads the repository", () => {
     expect(nightly).toMatch(/permissions:\n {2}contents: read\n\n/u);
-  });
-});
-
-describe("Check list override", () => {
-  // TEAR_CHECKS_CONFIG swaps the list run-checks.mjs runs; only the runner's own tests may set it.
-  const workflows = readdirSync(resolve(root, ".github/workflows")).filter((name) => /\.ya?ml$/u.test(name));
-
-  it("is set by no workflow", () => {
-    expect(workflows).toEqual(expect.arrayContaining(["ci.yml", "nightly.yml"]));
-    for (const name of workflows) {
-      expect(read(`.github/workflows/${name}`), name).not.toMatch(/TEAR_CHECKS_CONFIG/u);
-    }
   });
 });

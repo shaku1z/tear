@@ -129,6 +129,44 @@ function summary(line) {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n`);
 }
 
+/** Runs one check as a child process, in the repository, with its output shown. */
+function executeCheck(check) {
+  const [command, ...args] = check.args;
+  return spawnSync(command === "node" ? process.execPath : command, args, {
+    cwd: root,
+    stdio: "inherit",
+    // Checks serve the builds already in dist/; TearBench scenario runs must not rebuild them.
+    env: { ...process.env, TEARBENCH_REUSE_VERIFIED_BUILDS: "1" },
+  });
+}
+
+/**
+ * Runs `checks` in list order through `execute` (a check to { status, signal, error }). Without
+ * `keepGoing` it stops at the first failing check and returns that check's exit status; with it,
+ * every check runs and the status is 1 when any failed. `failures` names each failed check and why.
+ */
+export function runCheckList(checks, { keepGoing = false, execute = executeCheck, onPass, onFail } = {}) {
+  const failures = [];
+  for (const [index, check] of checks.entries()) {
+    const name = `${check.group}.${check.id}`;
+    const checkStarted = Date.now();
+    console.log(`CHECK ${String(index + 1)}/${String(checks.length)} ${name}`);
+    const result = execute(check);
+    const seconds = ((Date.now() - checkStarted) / 1000).toFixed(1);
+    if (result.error !== undefined || result.status !== 0) {
+      const reason = result.error?.message ?? `exit ${String(result.status ?? result.signal)}`;
+      console.error(`FAIL ${name} after ${seconds} s (${reason}): ${check.run}`);
+      onFail?.(name, seconds, reason, check);
+      failures.push(`${name} (${reason})`);
+      if (!keepGoing) return { status: result.status || 1, failures, stopped: true };
+      continue;
+    }
+    console.log(`PASS ${name} ${seconds} s`);
+    onPass?.(name, seconds);
+  }
+  return { status: failures.length > 0 ? 1 : 0, failures, stopped: false };
+}
+
 async function main(argv) {
   const group = argv[0] === undefined || argv[0].startsWith("--") ? undefined : argv[0];
   const passedFile = gitPath(["rev-parse", "--git-path", "tear-check-passed.json"]);
@@ -142,8 +180,7 @@ async function main(argv) {
       return 1;
     }
   }
-  // TEAR_CHECKS_CONFIG points the runner at another list; only its own tests use it.
-  const checks = selectChecks(loadChecks(process.env.TEAR_CHECKS_CONFIG || undefined), group);
+  const checks = selectChecks(loadChecks(), group);
   if (argv.includes("--list")) {
     for (const check of checks) console.log(`${check.group}.${check.id}: ${check.run}`);
     return 0;
@@ -171,42 +208,31 @@ async function main(argv) {
       recordResult(resultsFile, run, { check, status, seconds: Number(seconds), ...(reason ? { reason } : {}) });
   };
   const keepGoing = argv.includes("--keep-going");
-  const failures = [];
   const startClean = git(["status", "--porcelain"]) === "";
   const started = Date.now();
+  let outcome;
   try {
-    for (const [index, check] of checks.entries()) {
-      const checkStarted = Date.now();
-      console.log(`CHECK ${String(index + 1)}/${String(checks.length)} ${check.group}.${check.id}`);
-      const [command, ...args] = check.args;
-      const result = spawnSync(command === "node" ? process.execPath : command, args, {
-        cwd: root,
-        stdio: "inherit",
-        // Checks serve the builds already in dist/; TearBench scenario runs must not rebuild them.
-        env: { ...process.env, TEARBENCH_REUSE_VERIFIED_BUILDS: "1" },
-      });
-      const seconds = ((Date.now() - checkStarted) / 1000).toFixed(1);
-      if (result.error !== undefined || result.status !== 0) {
-        const reason = result.error?.message ?? `exit ${String(result.status ?? result.signal)}`;
-        console.error(`FAIL ${check.group}.${check.id} after ${seconds} s (${reason}): ${check.run}`);
-        record(`${check.group}.${check.id}`, "fail", seconds, reason);
-        summary(`### Failed: \`${check.group}.${check.id}\`\n\n\`${check.run}\` (${reason}, after ${seconds} s)\n`);
-        if (!keepGoing) return result.status || 1;
-        failures.push(`${check.group}.${check.id} (${reason})`);
-        continue;
-      }
-      console.log(`PASS ${check.group}.${check.id} ${seconds} s`);
-      record(`${check.group}.${check.id}`, "pass", seconds);
-      const flaky = flakyLine(previous, run.tree, `${check.group}.${check.id}`, run.attempt);
-      if (flaky !== undefined) {
-        console.log(flaky);
-        if (!local) console.log(`::warning title=Flaky check::${flaky}`);
-        summary(`### ${flaky}\n`);
-      }
-    }
+    outcome = runCheckList(checks, {
+      keepGoing,
+      onFail: (name, seconds, reason, check) => {
+        record(name, "fail", seconds, reason);
+        summary(`### Failed: \`${name}\`\n\n\`${check.run}\` (${reason}, after ${seconds} s)\n`);
+      },
+      onPass: (name, seconds) => {
+        record(name, "pass", seconds);
+        const flaky = flakyLine(previous, run.tree, name, run.attempt);
+        if (flaky !== undefined) {
+          console.log(flaky);
+          if (!local) console.log(`::warning title=Flaky check::${flaky}`);
+          summary(`### ${flaky}\n`);
+        }
+      },
+    });
   } finally {
     release();
   }
+  if (outcome.stopped) return outcome.status;
+  const { failures } = outcome;
   const total = ((Date.now() - started) / 1000).toFixed(0);
   if (failures.length > 0) {
     const line = `FAIL ${String(failures.length)} of ${String(checks.length)} check(s) in ${total} s`;
