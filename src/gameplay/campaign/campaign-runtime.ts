@@ -1,23 +1,19 @@
-import type { CampaignStage, ChapterPage } from "../../gameplay/campaign/chapter-controller";
-import type { PreparedVictory } from "../../gameplay/run/outcome-planner";
+import type { CampaignStage, ChapterPage } from "./chapter-controller";
+import type { PreparedVictory } from "../run/outcome-planner";
 import type { CampaignCinematicChannel } from "./campaign-sequences";
 import { launchCampaignChapter } from "./campaign-sequences";
 import { chapterLaunchPolicy, type CinematicLaunchPolicy, type CinematicPreference } from "./cinematic-preference";
 import { dispatchChapterIntents, type ChapterIntentPorts } from "./campaign-intent-coordinator";
-import {
-  createFinaleRuntime,
-  type FinaleBladeSegment,
-  type FinaleIntentPorts,
-} from "../../gameplay/campaign/finale-runtime";
-import type { FinaleIntent } from "../../gameplay/campaign/finale-controller";
+import { createFinaleRuntime, type FinaleBladeSegment, type FinaleIntentPorts } from "./finale-runtime";
+import type { FinaleIntent } from "./finale-controller";
 import type { CampaignRuntimeState } from "./campaign-runtime-state";
 import {
   parseCampaignChapterBindingSpec,
   stageCampaignChapterBinding,
   type CampaignChapterBindingPort,
   type CampaignChapterBindingSpecV1,
-} from "../../gameplay/campaign/chapter-cinematic-binding";
-import type { CinematicDirectorBinding } from "../../gameplay/runtime/cinematic-director";
+} from "./chapter-cinematic-binding";
+import type { CinematicDirectorBinding } from "../runtime/cinematic-director";
 
 export interface LiveCampaignRun {
   readonly mode: string;

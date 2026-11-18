@@ -6,7 +6,7 @@ import type { LiveScreenNavigation } from "../interface/live-screen-navigation";
 import type { LiveGameplayEventFanOut } from "../run/live-gameplay-event-fanout";
 import type { LiveRunAbandonment } from "../run/live-run-abandonment";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GamePlayer } from "../shell/game-runtime-state";
+import type { GamePlayer } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveWorldComposition } from "../world/world-composition";
 import { createLiveGhostChallengeComposition } from "./ghost-challenge-composition";
 import { launchGhostPracticeChild } from "./ghost-practice-launch";

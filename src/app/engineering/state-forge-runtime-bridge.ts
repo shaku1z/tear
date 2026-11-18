@@ -4,7 +4,7 @@ import type { FinaleConfig } from "../../gameplay/campaign/finale-controller";
 import type { BossPracticeCandidate } from "../../gameplay/training/practice-boss-catalog";
 import type { CinematicDirectorBinding, CinematicDirectorPort } from "../../gameplay/runtime/cinematic-director";
 import { validateRunLifecycleSnapshot, type RunLifecycleSnapshot } from "../../gameplay/run/lifecycle";
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { BossIntroState } from "../world/game-host-state";
 
 interface StagedChapterBinding {

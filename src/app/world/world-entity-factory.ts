@@ -1,7 +1,13 @@
 import type { TearWorldEntityConstructionPort } from "../../gameplay/runtime/tear-world-entity-construction";
 import { createTearWorldLegacyEntityConstruction } from "../../gameplay/runtime/tear-world-legacy-entity-construction";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
+import type {
+  GameBlade,
+  GameEnemy,
+  GamePlayer,
+  GameProjectile,
+  GameRun,
+} from "../../gameplay/runtime/game-runtime-state";
 import { makeCombatEnemy } from "../shell/runtime-type-guards";
 import { applyVariant, findVariant } from "../../gameplay/variants";
 

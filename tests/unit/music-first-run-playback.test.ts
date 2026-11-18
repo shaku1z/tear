@@ -6,6 +6,7 @@ import { parseMusicCatalog } from "../../src/audio/music/catalog";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { BiomeStemBackend, type LoadedCueRef } from "../../src/audio/stems/biome-stem-backend";
 import type { StemCueManifest } from "../../src/audio/stems/types";
+import { dropWarmedStems } from "../../src/audio/stems/web-audio-backend";
 
 // The music this branch ships, as tear-music published it.
 const index = JSON.parse(readFileSync("public/audio/music.json", "utf8")) as {
@@ -205,5 +206,30 @@ describe("the Verdant Sanctum's music follows saved progress", () => {
     await enterVerdant(undefined);
     expect(cueRequested("once-at-a-time")).toBe(true);
     expect(cueRequested("spring")).toBe(false);
+  });
+});
+
+describe("warming the menu cue", () => {
+  it("fetches its first layer before music starts, and nothing once music has started", async () => {
+    const cues: LoadedCueRef[] = Object.entries(index.cues).map(([id, manifest]) => ({
+      id,
+      manifest,
+      baseUrl: `audio/cues/${id}`,
+    }));
+    const early = new BiomeStemBackend(
+      cues,
+      validateMusicRoutingManifest(index.routing),
+      parseMusicCatalog(index.catalog),
+    );
+    early.warmFirstLayer(early.menuCueId);
+    expect(cueRequested(early.menuCueId)).toBe(true);
+    dropWarmedStems();
+
+    // The first input came before the warm-up: the cue is already fetching its own stems.
+    const { backend } = await backendFor(undefined);
+    await settle();
+    requested.length = 0;
+    backend.warmFirstLayer(backend.menuCueId);
+    expect(requested).toEqual([]);
   });
 });

@@ -3,28 +3,28 @@ import type {
   LiveEnemy as OpeningEnemy,
   LivePlayer as OpeningPlayer,
   LiveRun as OpeningRun,
-} from "../../gameplay/combat/live-opening-phase";
+} from "../combat/live-opening-phase";
 import type {
   LiveBlade as CollisionBlade,
   LiveEnemy as CollisionEnemy,
   LivePlayer as CollisionPlayer,
   LiveProjectile,
   LiveRun as CollisionRun,
-} from "../../gameplay/combat/live-collision-phase";
-import type { LiveWaveRun } from "../../gameplay/run/live-wave-controller";
-import type { RunSession } from "../../gameplay/run/session";
+} from "../combat/live-collision-phase";
+import type { LiveWaveRun } from "../run/live-wave-controller";
+import type { RunSession } from "../run/session";
 import type { LiveCampaignRun } from "../campaign/campaign-runtime";
-import type { LiveStyleRun } from "../../gameplay/scoring/live-style-achievement-runtime";
-import type { LiveWeaponRun } from "../../gameplay/combat/live-weapon-runtime";
-import type { newMods } from "../../gameplay/upgrades";
-import type { UpgradeDefinition } from "../../gameplay/upgrades";
-import type { createPlayer } from "../../gameplay/entities/player";
-import type { createBlade } from "../../gameplay/entities/blade";
-import type { createEnemyTypes } from "../../gameplay/entities/enemies";
-import type { createProjectile } from "../../gameplay/entities/projectile";
-import type { BossId } from "../../gameplay/run/content-director";
-import type { SourceVoidState } from "../../gameplay/training/arena-rules";
-import type { ArenaPlatform } from "../../gameplay/training/arena-rules";
+import type { LiveStyleRun } from "../scoring/live-style-achievement-runtime";
+import type { LiveWeaponRun } from "../combat/live-weapon-runtime";
+import type { newMods } from "../upgrades";
+import type { UpgradeDefinition } from "../upgrades";
+import type { createPlayer } from "../entities/player";
+import type { createBlade } from "../entities/blade";
+import type { createEnemyTypes } from "../entities/enemies";
+import type { createProjectile } from "../entities/projectile";
+import type { BossId } from "../run/content-director";
+import type { SourceVoidState } from "../training/arena-rules";
+import type { ArenaPlatform } from "../training/arena-rules";
 
 type EnemyTypes = ReturnType<typeof createEnemyTypes>;
 export type GamePlayer = InstanceType<ReturnType<typeof createPlayer>> & OpeningPlayer & CollisionPlayer;

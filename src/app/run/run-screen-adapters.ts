@@ -1,5 +1,5 @@
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { RewardRuntime } from "../../gameplay/run/reward-runtime";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { dispatchChapterIntents, dispatchFinaleIntents } from "../../src/app/campaign/campaign-intent-coordinator";
+import { dispatchChapterIntents, dispatchFinaleIntents } from "../../src/gameplay/campaign/campaign-intent-coordinator";
 
 describe("campaign intent coordinators", () => {
   it("dispatches chapter and finale intents in authored order", () => {
