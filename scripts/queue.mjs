@@ -146,7 +146,7 @@ function liveTickets(directory, limits, now) {
   return live;
 }
 
-/** Resolves when the directory changes or after `wait` ms, whichever is first. */
+/** Resolves when a ticket is added or removed, or after `wait` ms, whichever is first. */
 function nextChange(directory, wait) {
   return new Promise((done) => {
     let watcher;
@@ -157,7 +157,11 @@ function nextChange(directory, wait) {
     };
     const timer = setTimeout(finish, wait);
     try {
-      watcher = watch(directory, finish);
+      // Only a ticket added or removed ("rename"). A touch is a "change" on Linux, and waking on
+      // it made waiters that touch every pass wake each other in a tight loop (#228 unit OOM).
+      watcher = watch(directory, (event) => {
+        if (event === "rename") finish();
+      });
     } catch {
       // No change notifications here: the timer alone wakes the waiter.
     }
