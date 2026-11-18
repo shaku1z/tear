@@ -109,6 +109,10 @@ export function createBrowserInput(dependencies: BrowserInputDependencies): Brow
       this.semantic.discardUnsealed();
       this.syncSemanticMovement();
     },
+    returnControl() {
+      this.discardSemanticInput();
+      this.semantic.push({ type: "resume" });
+    },
     discardScenePresses() {
       discardScenePresses(this);
     },
