@@ -269,6 +269,8 @@ export interface LiveTutorialRuntime {
   showHelp(): void;
   demonstrate(): boolean;
   captureSession(): ReturnType<TutorialController["captureSession"]> | undefined;
+  /** The course of a tutorial in free practice, or undefined; cheap enough to ask every tick. */
+  freePracticeCourse(): string | undefined;
   validateSession(
     value: unknown,
     candidateWeaponId?: string,
@@ -497,6 +499,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       syncCoach();
       coach.captureCommands(commands);
     },
+    freePracticeCourse: () => controller.freePracticeCourse(),
     captureSession: () => {
       if (controller.session().phase === "inactive") return undefined;
       if (controller.session().bossPractice && !controller.session().bossPractice?.defeated) bossPort?.capture();

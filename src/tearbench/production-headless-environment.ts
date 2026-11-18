@@ -580,7 +580,7 @@ export function createProductionHeadlessEnvironment(
             };
             return Object.freeze({
               id: `production:${String(value._gid ?? index + 1)}`,
-              kind: canonicalObservationEnemyKind({ ...value, kind: value.kind ?? "" }),
+              kind: canonicalObservationEnemyKind(value),
               x: value.x,
               y: value.y,
               vx: value.vx,
@@ -799,7 +799,9 @@ export function createProductionHeadlessEnvironment(
       deliveredCausalEventCount = current.nativeEvents.length;
       pendingEvents = [];
       return Object.freeze({
-        observation: result.state,
+        get observation() {
+          return result.state;
+        },
         events: Object.freeze(causalEvents),
         terminated,
         truncated,
