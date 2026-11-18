@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { indexedTestFiles } from "../../scripts/test-files.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const scripts = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).scripts;
@@ -165,6 +166,46 @@ describe("pitfall guards", () => {
         retryRequests(fs.readFileSync(path.join(root, file), "utf8")).map((line) => `${file}: ${line}`),
       );
       expect(offenders).toEqual([]);
+    });
+  });
+
+  describe("test runs collect only files in git's index (a stale untracked copy ran in #233)", () => {
+    it("an untracked test file on disk is not collected by the unit runner", async () => {
+      const probe = `tests/unit/untracked-probe-${process.pid}.test.mjs`;
+      fs.writeFileSync(
+        path.join(root, probe),
+        'import { it } from "vitest";\nit("must never run", () => { throw new Error("untracked test ran"); });\n',
+      );
+      try {
+        const { default: config } = await import("../../vitest.config.ts");
+        const include = config.test.include;
+        expect(fs.existsSync(path.join(root, probe))).toBe(true);
+        expect(include).toContain("tests/unit/pitfall-guards.test.mjs");
+        expect(include).not.toContain(probe);
+        expect(include.every((file) => !file.includes("*"))).toBe(true);
+      } finally {
+        fs.rmSync(path.join(root, probe), { force: true });
+      }
+    });
+
+    it("both runner configurations take their files from the index", () => {
+      for (const file of ["vitest.config.ts", "vitest.endurance.config.ts"])
+        expect(fs.readFileSync(path.join(root, file), "utf8"), file).toMatch(/include: indexedTestFiles\(/u);
+    });
+
+    it("asks git for index entries with glob pathspecs and refuses names it cannot pass back as globs", () => {
+      const calls = [];
+      const git = (files) => (args) => {
+        calls.push(args);
+        return files.join("\0") + "\0";
+      };
+      expect(indexedTestFiles(["tests/unit/**/*.test.ts"], { git: git(["tests/unit/a.test.ts"]) })).toEqual([
+        "tests/unit/a.test.ts",
+      ]);
+      expect(calls[0]).toEqual(["ls-files", "-z", "--", ":(glob)tests/unit/**/*.test.ts"]);
+      expect(() => indexedTestFiles(["tests/**/*.test.ts"], { git: git(["tests/unit/[a].test.ts"]) })).toThrow(
+        /glob characters/u,
+      );
     });
   });
 });
