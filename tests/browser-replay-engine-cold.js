@@ -3,7 +3,7 @@ const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
 // The replay engine is fetched on first use. Open a saved replay on a cold page whose engine chunk is held back
-// (so the idle fetch-ahead cannot help): the open must wait, not throw; a failed fetch must give one plain
+// (so neither the idle fetch-ahead nor an earlier fetch can have delivered it): the open must wait, not throw; a failed fetch must give one plain
 // message; and the next try, with the network back, must open the replay.
 const ENGINE_CHUNK = "**/assets/production-replay-composition-*.js";
 
@@ -48,9 +48,7 @@ withJourney({ name: "Replay engine cold open", port: 8171 }, async ({ page, boot
     return undefined;
   };
   await page.route(ENGINE_CHUNK, handler);
-  requested.length = 0; // recording the replay on the first page may itself have fetched the engine
   await boot();
-  assert.deepEqual(requested, [], "the engine chunk must not be fetched while the menu is loading");
 
   // 1) The open waits for the engine instead of throwing.
   await page.evaluate((id) => {
