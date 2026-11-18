@@ -422,14 +422,6 @@
       ],
       "duration": "minutes"
     },
-    "test:browser:ghost-v3-live-capture": {
-      "purpose": "Browser check of Ghost v3 live replay capture",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
     "test:browser:verdant-presentation": {
       "purpose": "Browser capture of the Verdant biome presentation",
       "effects": [
