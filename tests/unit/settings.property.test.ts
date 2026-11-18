@@ -83,7 +83,7 @@ describe("settings controller", () => {
         }
         const applied: unknown[] = [
           ...Object.values(dependencies.config.pad),
-          ...Object.values<unknown>(dependencies.accessibility),
+          ...(Object.values(dependencies.accessibility) as unknown[]),
           dependencies.config.blade.aimSensitivity,
           controller.shakeScale,
         ];
