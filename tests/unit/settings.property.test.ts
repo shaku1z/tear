@@ -81,9 +81,9 @@ describe("settings controller", () => {
           expect(typeof loaded, name).toBe(typeof value);
           if (typeof loaded === "number") expect(Number.isFinite(loaded), name).toBe(true);
         }
-        const applied = [
+        const applied: unknown[] = [
           ...Object.values(dependencies.config.pad),
-          ...Object.values(dependencies.accessibility),
+          ...Object.values<unknown>(dependencies.accessibility),
           dependencies.config.blade.aimSensitivity,
           controller.shakeScale,
         ];
