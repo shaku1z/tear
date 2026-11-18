@@ -87,12 +87,13 @@ does not seed test storage or load those hooks, so use a test build for them.
 ## How a change reaches players
 
 1. Open a pull request against `main`. `main` is protected.
-2. The **Validate** workflow (`.github/workflows/ci.yml`) runs
-   `pnpm check:functional`, the full functional gate (about 15 minutes in CI).
-   Pull requests that change only documentation run the documentation gates
-   instead.
+2. The **Validate** workflow (`.github/workflows/ci.yml`) runs the checks of
+   `pnpm check:functional` as parallel jobs: static, unit, one build, and the
+   browser checks in four shards that test that build. The required check
+   `check` passes only when every one of them passed. Pull requests that change
+   only documentation run the documentation gates instead.
 3. After merge, Validate runs again on `main` and stores the built targets as a
-   workflow artifact for 14 days.
+   workflow artifact for 7 days.
 4. A maintainer starts the manual **Deploy Cloudflare Production** workflow with
    that Validate run ID, and the `Production` environment requires approval.
    The workflow deploys the stored artifact; it does not rebuild.
