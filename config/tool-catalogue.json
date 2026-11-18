@@ -880,7 +880,7 @@
       "duration": "seconds"
     },
     "check:test-isolation": {
-      "purpose": "Fails if engineering or test-only code reached a production bundle",
+      "purpose": "Fails if a release build defines a test global",
       "effects": [
         "read-only"
       ],
@@ -1837,6 +1837,7 @@
     "scripts/architecture/selectors.mjs": [
       "scripts/architecture/analyze.mjs",
       "scripts/architecture/layering.mjs",
+      "scripts/release-developer-code.mjs",
       "tests/source-architecture.test.mjs"
     ],
     "scripts/architecture/source-graph.mjs": [
@@ -1890,6 +1891,10 @@
     "scripts/package-target.mjs": [
       "scripts/package-crazygames.mjs",
       "scripts/package-itch.mjs"
+    ],
+    "scripts/release-developer-code.mjs": [
+      "tests/unit/release-developer-code.test.mjs",
+      "vite.config.ts"
     ],
     "scripts/release-artifact.mjs": [
       "scripts/apply-workspace-quarantine.mjs",
@@ -1982,6 +1987,7 @@
     "scripts/campaign-publication-boundary.d.mts",
     "scripts/music-cover.d.mts",
     "scripts/release-artifact.d.mts",
+    "scripts/release-developer-code.d.mts",
     "scripts/scene/hidden-paint.d.mts",
     "scripts/scene/package-files.d.mts",
     "scripts/scene/pixel-checks.d.mts",
