@@ -1,9 +1,11 @@
 import type { MusicCollectionView, MusicCoverView, MusicShelfView, MusicSongView } from "./screens/contracts";
 import type { MusicRoutingManifest, MusicRoutingRule } from "../audio/music/music-routing-types";
 import { STAGES } from "../gameplay/stages";
+import { stageCover } from "./music-cover-art";
 
-/** The stage facts the collections need: its name, boss, hue and chapter glyph. */
+/** The stage facts the collections need: its id, name, boss, hue and chapter glyph. */
 export interface MusicStageFacts {
+  readonly id: string;
   readonly name: string;
   readonly boss: string;
   readonly accent: string;
@@ -12,6 +14,7 @@ export interface MusicStageFacts {
 
 /** The campaign's stages in order, as the MUSIC screen pictures them. */
 export const CAMPAIGN_STAGES: readonly MusicStageFacts[] = STAGES.map((stage) => ({
+  id: stage.id,
   name: stage.name,
   boss: stage.boss,
   accent: stage.accent,
@@ -49,14 +52,21 @@ export function songStage(
 const isBossSong = (workId: string, routing: Pick<MusicRoutingManifest, "rules">): boolean =>
   musicRoutes(workId, routing).some((rule) => Boolean(rule.match.bossId));
 
-/** A mixed collection's cover: up to four bands of its members' distinct hues, one glyph. */
+/**
+ * A mixed collection's cover: up to four bands of its members' distinct hues, one glyph, and
+ * up to four of their stage paintings (a 2x2 grid).
+ */
 function splitCover(songs: readonly MusicSongView[], glyph: string): MusicCoverView {
   const hues: string[] = [];
+  const art: string[] = [];
   for (const song of songs) {
     const hue = song.art?.hues[0];
     if (hue && !hues.includes(hue)) hues.push(hue);
+    const painting = song.art?.art?.[0];
+    if (painting && !art.includes(painting)) art.push(painting);
   }
-  return hues.length === 0 ? null : { hues: hues.slice(0, 4), glyph };
+  if (hues.length === 0) return null;
+  return art.length === 0 ? { hues: hues.slice(0, 4), glyph } : { hues: hues.slice(0, 4), glyph, art: art.slice(0, 4) };
 }
 
 const total = (songs: readonly MusicSongView[]): number => songs.reduce((sum, song) => sum + (song.seconds ?? 0), 0);
@@ -95,8 +105,7 @@ export function buildMusicCollections(
       .filter((song) => stageOf.get(song.id) === stage)
       .sort((a, b) => Number(isBossSong(a.id, routing)) - Number(isBossSong(b.id, routing)));
     if (members.length === 0) return [];
-    const cover = { hues: [stage.accent], glyph: stage.glyph };
-    return [collection(stageCollectionId(stage), stage.name, "Stage", cover, members)];
+    return [collection(stageCollectionId(stage), stage.name, "Stage", stageCover(stage), members)];
   });
   const bosses = songs.filter((song) => isBossSong(song.id, routing));
   const menus = songs.filter((song) => !stageOf.get(song.id));
