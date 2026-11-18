@@ -22,14 +22,6 @@ Race-derived local
 challenge/practice forks are explicitly unsupported; this is not full R16 closure.
 See the [current C37 contract](checkpoints/C37_COACH_PRACTICE_FOUNDATION.md#seed-locked-race-local-source-implementation-browser-acceptance-pending).
 
-Beat This Run now has a local source implementation: Career creates or receives
-a strict code for an already-public, verified native source; a fresh independent
-unranked attempt retains its goal and private legal decisions. Native result
-review, explicit save, reload and retry preserve source/attempt custody. Supported
-metrics expose missing authority honestly. Normal browser acceptance is pending;
-local provider contract evidence is not deployed-service or authenticated public
-publishing evidence. Existing private publication consent remains unchanged.
-
 Boss Memory now saves a named, annotated derived encounter from a verified
 living-boss checkpoint through native boss or player defeat. Recording history
 is removed; normal segment-only download/import, bounded Watch and independent
@@ -47,9 +39,8 @@ This is the migration checklist for the architectural redesign. A checked featur
   the release channel; test builds and `vite dev` use the engineering channel.
   Engineering-only (not drawn, not focusable, actions inert, screens refused):
   Boss Test and Enemy Test (still catalog modes) with the
-  boss picker, Seed-Locked Race, Beat This Run, Boss Memory, Coach, Replay
-  Editor, cloud capsule recovery, Vault/Career publish, support bundles,
-  linked-pair download, every engineering URL parameter (`test`, `stemcue`,
+  boss picker, Seed-Locked Race, Boss Memory, Coach, Replay
+  Editor, linked-pair download, every engineering URL parameter (`test`, `stemcue`,
   `stems`, `foundry*`, surface routes) and the weapon/audio-preview debug
   globals.
 - [x] The published Adventure is exactly six stages and 60 waves: Grounds,
@@ -1001,38 +992,9 @@ frozen evidence record.
    or target-hardware capacity evidence. Reward/draft/finale checkpoint recovery,
    natural victory coverage and target capacity remain separate obligations.
    Account/cloud identity and deletion, deployed verification, moderation operations,
-   and cloud/player lifecycle flows remain later completion work. C38 now has a
-   local-only immutable publication declaration: it binds a healthy complete
-   Vault export, manifest/root integrity, export SHA-256, exact deterministic
-   part topology SHA-256, consent/custody, and a Worker V2 part-count manifest;
-   it intentionally persists neither export bytes nor Firebase bearer/UID.
-   The authenticated Worker rejects retry drift and out-of-topology parts, has
-   owner-only status and abort/reset that clears its multipart ledger, and makes
-   only finalized, verified, public pseudonymous capsules discoverable. Verified
-   unlisted capsules remain direct-ID readable but never listable/searchable.
-   This is still not a
-   client transport, background sync, player UI, deployed Worker, or cloud
-   completion claim. The standalone composition now carries only an optional
-   HTTPS-configured C38 capability whose bearer is acquired at a later explicit
-   foreground action; missing/invalid endpoints and CrazyGames are visibly
-   unavailable. It does not route through, change, or invoke the legacy
-   Firestore replay APIs, transport, queue, UI, or deployment.
-   A strict versioned verdict receipt is now created only after R2 completion:
-   it binds verifier identity, verification version, issuance time, and capsule
-   identity. Transient verifier failure stays durably `verifying` for an exact
-   owner retry; malformed replies quarantine. Serving and discovery fail closed
-   unless the active receipt is verified and moderation-cleared. One
-   authenticated non-owner fixed-enum report per verified cleared public or
-   unlisted pseudonymous capsule is atomically audited, without auto-hold.
-   A Worker-only reviewer queue can now place an exact verified-cleared
-   pseudonymous public/unlisted capsule on a durable effective-private hold and
-   later restore only the visibility pinned at hold time. Reviewer authority is
-   an injected immutable Firebase-subject allowlist (empty by default); it
-   never trusts request headers, body, or JWT custom claims. Holds are separate
-   immutable moderation decisions/state, never fabricated verifier receipts,
-   and serving/discovery deny held capsules immediately. This remains bounded
-   moderation plumbing, not deployed moderation, appeals, RBAC administration,
-   reporter review, or player UI.
+   and cloud/player lifecycle flows remain later completion work. The C38 cloud publication
+   work (Worker, queue, transport and moderation plumbing) was removed in
+   shaku1z/tear#190 and shaku1z/tear#PRNUM; it was never deployed.
 
 ## Accessibility and settings
 
@@ -1129,7 +1091,7 @@ reexecute native catch/wave/boss conditions and retain a guarded local result;
 normal browser/profile-equality acceptance remains pending. Broader challenges
 remain separate work.
 
-### C38 local publication review
+### C38 Vault source retention
 
 Vault source retention now uses one shared backend with exact transaction
 guards, a manifest mutation fence, reference-safe shared-chunk removal, and
@@ -1140,66 +1102,20 @@ future exact source reappearance without certifying chunk health. Malformed or
 conflicting source/protection records stop destructive upkeep. Imports honor
 the reserved source ID/root and guard its exact protection revision. Unavailable
 sources cannot enter held-custody queries. Source removal and its custody
-tombstone commit together. Publication
-enqueue and transport persistence fence the exact validated consent, source
-manifest/chunks, custody, queued job, and prior transport state. Focused race
+tombstone commit together. Focused race
 regressions cover changes immediately before those transactions; real IndexedDB
 journeys separately check atomic guard rejection and preserved corrupt bytes.
-These checks do not establish full-run device storage or real cloud publication.
+These checks do not establish full-run device storage.
 
-Healthy complete Ghost Vault rows now expose a normal local publication-review
-route. It fails closed when standalone publication capability is unconfigured,
-the account is anonymous, browser Vault storage is absent, or the source is
-unhealthy. The screen shows only capsule/root custody, fixed pseudonymous and
-private constraints, and no-training disclosure. Explicit grant writes the
-capsule-bound local consent/custody and queues a local job; it does not acquire
-a bearer, contact a Worker, invoke transport, or start a timer. This is not
-configured cloud-publication evidence.
+### Removed: Ghost publication, support bundles, owner recovery and Beat This Run
 
-When that same review has a valid standalone capability and queued local job,
-the player may press **RUN UPLOAD ONCE** or **CANCEL PUBLICATION**. Each is a
-separate foreground action: it reconstructs custody, obtains a fresh bearer
-only for that action, and renders durable attempt/retry/terminal state. Opening
-or refreshing the screen never runs transport. Missing endpoint, unsupported
-target, anonymous account, unhealthy/revoked custody, or a missing job leaves
-both actions unavailable. This remains local browser wiring, not deployed or
-cross-device publication evidence.
-
-Reopening review restores the same queued job only for its current account and
-exact consent custody, preserving the consent revision and job identity.
-Superseded account, capsule, or foreground actions cannot send a pending bearer
-or repaint a newer screen; conditional transport commits preserve a newer
-cancellation across controller instances, including delayed success responses
-and response bodies. Durable job cancellation stops subsequent upload requests
-while remote abort is pending; exact consent withdrawal during token acquisition
-cancels the job before any request. Immutable remote uploads awaiting verification resume through
-verification without creating another multipart upload. The four focused
-publication controller/job/transport/Worker suites preserve these contracts.
-Configured-account browser resume and real cloud publication remain unproven.
-
-### C39 local sanitized Ghost support bundle
-
-A player-approved local support bundle can describe one exact healthy,
-complete V3 Ghost capsule and bounded requested tick/track scope. It validates
-every stored chunk and binds declared build/schema/root/repair lineage plus a
-strictly sanitized settings, platform, diagnostics, last-state-hash, and
-optional note record into one immutable hash. It contains no replay bytes,
-actions, identity, credentials, consent/training/moderation or
-publication/transport state, and it neither persists, displays, nor submits
-anything. `ghost-sanitized-support-bundle.test.ts` covers determinism,
-approval, tampering, and hostile-input refusal. This is a local support
-artifact foundation, not a submitted support case or C39 operations claim.
-
-### C39 normal local support-bundle review
-
-Healthy complete V3 Ghost Vault rows now expose **SUPPORT**. The normal review
-projects only exact capsule/root/build provenance and bounded tick/track scope.
-Its separate **CREATE LOCAL BUNDLE** action makes the existing sanitized bundle
-only in memory and projects its hash. It has no Vault write, network,
-submission, account lookup, raw replay/action view, consent/training change,
-publication, or transport path; unhealthy sources are unavailable. The screen
-explicitly names its excluded data and no-training/no-cloud/no-submission
-boundary. Focused unit and renderer evidence preserve this local UI boundary.
+These engineering-only features were removed in shaku1z/tear#PRNUM, after the
+worker they needed was removed in shaku1z/tear#190: the local publication
+review, queue and transport; the sanitized support bundle and its review
+screen; cloud owner recovery in Profile → Vault; and Beat This Run in Career.
+None was ever available in a release build. Records they left in a player's
+vault stay in place unread, and runs and replays recorded as Beat This Run
+attempts still load and are still labelled as such.
 
 ### Linked scored-run/finale portable files
 
@@ -1232,33 +1148,6 @@ file integrity/size audit passed for that short forensic-profile sample. A
 separate fresh-build check verified the shortened file-action labels and their
 normal Cancel/Restore actions. Remote redundancy, historical-runtime availability,
 device quotas, long-run performance and full C39 acceptance remain unproven.
-
-### C38 explicit foreground owner recovery
-
-The authenticated own-capsule catalog now carries immutable recovery custody
-metadata while excluding deleting/deleted rows. A separate foreground-only
-owner-recovery service obtains a fresh bearer for each catalog/object request,
-admits only finalized verified-cleared exact verdict metadata, requires one
-full 200 object response (never a range), bounds bytes, verifies SHA-256 and
-strict UTF-8, and imports/reopens only through the local Vault's existing
-schema/root validation. Exact existing custody is idempotent; absent cloud
-records are explicit and conflicting local custody refuses. It retains no
-cloud catalog metadata or object bytes outside Vault and creates no scan,
-timer, autosync, deploy, or account-lifecycle behavior.
-
-Profile → Vault now has explicit **LOAD MY CLOUD CAPSULES** and per-entry
-**RECOVER TO THIS DEVICE** controls in a separate owner catalog. The existing
-valid standalone capability, non-guest account and local storage are required.
-Navigation/render/refresh stay inert. Actual account notifications invalidate
-actor/generation-bound operations even across A→B→A; stale credentials/responses
-cannot issue later requests or initiate import. Already-started committed imports
-retain their original operation ID and do not repaint a newer account's view.
-Exact existing local custody is idempotent, while local health/playback remain
-separate. Focused controller/service/Vault and UI controls cover this local
-wiring; the parent owns fresh negative normal-browser navigation evidence.
-Positive real-account retrieval, cross-device/outage acceptance, deployment and
-account deletion remain unverified or separate work.
-
 
 ### Durable local Career Archive
 

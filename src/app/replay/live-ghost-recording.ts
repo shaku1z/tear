@@ -19,8 +19,6 @@ export interface LiveGhostRecordingOptions {
   readonly indexedDb: IDBFactory | undefined;
   readonly document: Document;
   readonly recorderOptions: BrowserGhostLiveRecorderOptions;
-  /** Beat This Run is told when one of its recordings is finalized. */
-  readonly beatFinalized: (manifestId: string) => void;
   readonly run: () => GameRun;
   readonly player: () => GamePlayer;
   readonly blade: () => GameBlade;
@@ -41,13 +39,7 @@ export interface LiveGhostRecordingOptions {
  */
 export function createLiveGhostRecording(options: LiveGhostRecordingOptions) {
   const { indexedDb, recorderOptions } = options;
-  const session = createLiveGhostRecordingSessionState(indexedDb, {
-    ...recorderOptions,
-    onFinalized: async (manifest, vault) => {
-      await recorderOptions.onFinalized?.(manifest, vault);
-      if (manifest.provenance?.beatThisRun !== undefined) options.beatFinalized(manifest.id);
-    },
-  });
+  const session = createLiveGhostRecordingSessionState(indexedDb, recorderOptions);
   const recorder = session.recorder();
   const career = createBrowserGhostCareer(indexedDb, options.document, {
     session,
@@ -100,7 +92,6 @@ export interface LiveGhostRecordingBoundaryPorts {
   readonly configurationProjection: () => unknown;
   readonly randomSnapshot: () => GhostReplayRunContextInput["rng"];
   readonly chaseConfiguration: (configHash: string) => void;
-  readonly beatDeclaration: () => unknown;
   readonly sessionNonce: () => string;
   readonly captureReceipt: (tick: number) => void;
   readonly finale: () => LiveGhostFinaleCompanion;
@@ -135,7 +126,6 @@ export function observeLiveGhostRecordingBoundaries(
                 ...context,
                 ...(run().ghostAssistance ? { ghostAssistance: run().ghostAssistance } : {}),
                 ...(run().seedRace ? { seedRace: run().seedRace } : {}),
-                ...(run().beatThisRun ? { beatThisRun: run().beatThisRun, beatCode: ports.beatDeclaration() } : {}),
                 [GHOST_REPLAY_CONTEXT_PROVENANCE_KEY]: replayContext,
               });
             } catch (error) {

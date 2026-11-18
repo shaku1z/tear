@@ -26,7 +26,6 @@ function navigationFor(channel: "release" | "engineering") {
   return createLiveScreenNavigation({
     app,
     input: { allowLock: false, discardSemanticInput: () => undefined },
-    beat: { screenChanged: () => undefined },
     runScreenFact: () => undefined,
   });
 }
@@ -67,9 +66,6 @@ describe("screen catalog", () => {
       "rename",
       "pgmenu",
       "pglab",
-
-      "ghostpublication",
-      "ghostsupport",
     ]);
     expect(new Set(listed(isMenuScreen))).toEqual(
       new Set([
@@ -129,7 +125,7 @@ describe("screen catalog", () => {
       new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings", "music"]),
     );
     expect(new Set(listed(screenResetsScrollOnEnter))).toEqual(new Set(["shop", "draft", "reserve", "tierup"]));
-    expect(ENGINEERING_SCREENS).toEqual(["ghostpublication", "ghostsupport"]);
+    expect(ENGINEERING_SCREENS).toEqual([]);
   });
 
   it("names only catalogued screens in transitions and lets rename return anywhere else", () => {

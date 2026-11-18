@@ -75,9 +75,6 @@
     "src/gameplay/voidgen-inspection.ts": {
       "largestFunctionStatements": 111
     },
-    "src/ghost/publication-transport.ts": {
-      "largestFunctionStatements": 100
-    },
     "src/ghost/replay-admission.ts": {
       "chars": 26832
     },

@@ -282,7 +282,7 @@ describe("legacy screen renderer registry", () => {
     expect(new Set(found).size).toBe(18);
   });
 
-  it("keeps local Vault controls stable and renders an explicit separate owner recovery catalog", () => {
+  it("keeps local Vault controls stable below the import toolbar", () => {
     const controls: ScreenControl[] = [],
       renderer = createScreenRenderers(createControlContext(controls));
     const local = {
@@ -303,43 +303,13 @@ describe("legacy screen renderer registry", () => {
         },
       ],
     };
-    const inactive = {
-      status: "unavailable" as const,
-      detail: "Sign in to your account.",
-      catalogVisible: false,
-      canLoad: false,
-      canRecover: false,
-      entries: [],
-    };
-    renderer.profile({ ...local, ownerRecovery: inactive });
-    expect(controls.find((control) => control.label === "MY ACCOUNT'S REPLAYS")).toMatchObject({
-      enabled: false,
-      action: { type: "profile.loadOwnGhostCapsules" },
-    });
+    renderer.profile(local);
     // The vault toolbar sits under the tabs (y 306); rows start below it (306 + 62).
     expect(controls.find((control) => control.label === "DOWNLOAD")).toMatchObject({
       x: 968,
       y: 430,
       action: { id: "local-source" },
     });
-    controls.length = 0;
-    renderer.profile({
-      ...local,
-      ownerRecovery: {
-        ...inactive,
-        status: "ready",
-        catalogVisible: true,
-        canLoad: true,
-        canRecover: true,
-        entries: [{ capsuleId: "cloud-source", buildId: "source-build", rootIntegrity: "root", byteLength: 123 }],
-      },
-    });
-    expect(controls.find((control) => control.label === "RESTORE TO THIS DEVICE")).toMatchObject({
-      enabled: true,
-      action: { type: "profile.recoverOwnGhostCapsule", id: "cloud-source" },
-    });
-    expect(controls.some((control) => control.label === "DOWNLOAD" || control.label.includes("THEATER"))).toBe(false);
-    expect(controls.some((control) => control.action.type === "profile.closeOwnGhostCatalog")).toBe(true);
   });
   it("pauses the Tutorial on the current lesson with plain actions and only reached lessons", () => {
     const controls: ScreenControl[] = [],
@@ -578,8 +548,6 @@ describe("legacy screen renderer registry", () => {
       "continue",
       "draft",
       "gameover",
-      "ghostpublication",
-      "ghostsupport",
       "leaderboards",
       "menu",
       "music",
@@ -1208,8 +1176,6 @@ describe("legacy screen renderer registry", () => {
         "profile.downloadGhostArchive",
         "profile.compareGhostCapsule",
         "profile.openGhostComparison",
-        "profile.openGhostPublication",
-        "profile.openGhostSupport",
         "profile.repairGhostCapsule",
         "profile.watchReplay",
         "profile.pinReplay",
@@ -1454,7 +1420,7 @@ describe("release and engineering surface rendering", () => {
   });
   it("closes up the Career command row when a command surface is unavailable", () => {
     const controls: ScreenControl[] = [];
-    const hidden = new Set(["coach", "publish", "race"]);
+    const hidden = new Set(["coach", "race"]);
     const context: ScreenRenderContext = {
       ...createRenderContext(controls),
       available: (action) => action.type !== "career.control" || !hidden.has(action.command),
@@ -1511,7 +1477,7 @@ describe("release and engineering surface rendering", () => {
     const row = controls.filter(
       (control) =>
         control.action.type === "career.control" &&
-        ["watch", "challenge", "download", "chase", "coach", "publish", "race"].includes(control.action.command),
+        ["watch", "challenge", "download", "chase", "coach", "race"].includes(control.action.command),
     );
     expect(row.map((control) => control.label)).toEqual(["THEATER", "CHALLENGE", "DOWNLOAD", "CHASE BEST"]);
     // The page pattern content column is 1120 wide.

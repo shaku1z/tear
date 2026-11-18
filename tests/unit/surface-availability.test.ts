@@ -16,13 +16,12 @@ import {
   AppStateController,
   UnavailableLegacyAppScreenError,
 } from "../../src/app/interface/app-state-controller";
-import { APP_SCREENS } from "../../src/domain/screen-catalog";
+import { APP_SCREENS, ENGINEERING_SCREENS } from "../../src/domain/screen-catalog";
 import { MODE_CATALOG, RELEASE_FALLBACK_MODE, admittedRunMode, modeSurface } from "../../src/gameplay/run/mode-catalog";
 
 const RELEASE = createSurfaceAvailability("release");
 const ENGINEERING = createSurfaceAvailability("engineering");
 const SURFACES = Object.keys(SURFACE_CHANNEL) as SurfaceId[];
-const ENGINEERING_SCREENS = ["ghostpublication", "ghostsupport"] as const;
 
 describe("surface availability policy", () => {
   it("is a frozen source-owned table whose release channel admits only release surfaces", () => {
@@ -46,18 +45,11 @@ describe("surface availability policy", () => {
       { type: "setup.start", race: true },
       { type: "setup.selectBoss", id: "warden" },
       { type: "career.control", command: "race" },
-      { type: "career.control", command: "beat" },
-      { type: "career.control", command: "beat-receive" },
       { type: "career.control", command: "coach" },
-      { type: "career.control", command: "publish" },
       { type: "replay.coach.open" },
       { type: "replay.editor.toggle" },
       { type: "replay.studio.toggle" },
       { type: "replay.challenge.start", id: "boss-memory-save" },
-      { type: "profile.loadOwnGhostCapsules" },
-      { type: "profile.openGhostPublication", id: "c" },
-      { type: "profile.openGhostSupport", id: "c" },
-      { type: "ghostsupport.create" },
       { type: "profile.downloadGhostArchive", id: "c", paired: true },
     ];
     for (const action of engineering) {
@@ -164,9 +156,9 @@ describe("application state controller surface guard", () => {
   });
   it("keeps every engineering screen enterable in engineering builds", () => {
     const controller = new AppStateController(ENGINEERING);
-    expect(controller.transition("profile")).toBe("profile");
-    expect(controller.transition("ghostpublication")).toBe("ghostpublication");
-    expect(controller.transition("profile")).toBe("profile");
-    expect(controller.transition("ghostsupport")).toBe("ghostsupport");
+    for (const screen of ENGINEERING_SCREENS) {
+      expect(controller.transition("profile")).toBe("profile");
+      expect(controller.transition(screen)).toBe(screen);
+    }
   });
 });

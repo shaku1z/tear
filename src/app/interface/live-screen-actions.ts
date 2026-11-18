@@ -1,9 +1,6 @@
 import { modeSurface } from "../../gameplay/run/mode-catalog";
 import type { LiveCampaignTrainingAssembly } from "../campaign/live-campaign-training-assembly";
 import type { GhostVaultLibraryPort } from "../library/ghost-vault-library-controller";
-import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
-import type { LiveGhostPublicationController } from "../replay/ghost-publication-controller";
-import type { LiveGhostSupportController } from "../replay/ghost-support-controller";
 import type { LiveGhostChaseRuntime } from "../replay/live-ghost-chase";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { GameRun } from "../shell/game-runtime-state";
@@ -13,18 +10,14 @@ import type { LiveWorldSessionState } from "../world/world-session-state";
 import {
   isRunDifficultySelection,
   isRunModeSelection,
-  type LiveInterfaceComposition,
   type LiveInterfaceCompositionOptions,
 } from "./interface-composition";
 import type { LiveInterfaceInteractionState } from "./interface-interaction-state";
 import type { LiveScreenNavigation } from "./live-screen-navigation";
 
-/** Ghost Vault, owner recovery, publication and support controllers behind the Profile screens. */
+/** The Ghost Vault controller behind the Profile screens. */
 export interface LiveGhostLibraryScreens {
   readonly vault: GhostVaultLibraryPort;
-  readonly ownerRecovery: LiveGhostOwnerRecoveryController;
-  readonly publication: LiveGhostPublicationController;
-  readonly support: LiveGhostSupportController;
 }
 
 export interface LiveScreenActionsOptions {
@@ -42,8 +35,6 @@ export interface LiveScreenActionsOptions {
   readonly run: () => GameRun;
   /** The browser pointer-lock request, not the input-authority-owned one. */
   readonly requestPointerLock: () => void;
-  /** The interface composition these actions belong to. */
-  readonly presentation: () => Pick<LiveInterfaceComposition, "frame" | "screens">;
 }
 
 /** The semantic action table that menu, setup, profile and replay screens dispatch into. */
@@ -53,12 +44,7 @@ export function createLiveScreenActions(
   const { dependencies, session, navigation, chase, run: liveRun, requestPointerLock: requestLock } = options;
   const { Cloud, VAULT } = dependencies;
   const { setScreen } = navigation;
-  const {
-    vault: ghostVault,
-    ownerRecovery,
-    publication: ghostPublicationScreen,
-    support: ghostSupportScreen,
-  } = options.ghostLibrary;
+  const { vault: ghostVault } = options.ghostLibrary;
   const { seedRace, settingsController } = options.services;
   const { resumeSavedFinale, claimSavedFinale, endRun, retryRun } = options.services.controllers.api;
   const {
@@ -67,51 +53,14 @@ export function createLiveScreenActions(
     dispatchPlaygroundAction,
     tutorialSessionActions,
   } = options.campaignTraining;
-  const render = () => {
-    options.presentation().frame.render();
-  };
   return {
     controlChase: (command) => {
       if (command === "toggle") chase.toggle();
       else chase.stop();
     },
     ghostFiles: ghostVault,
-    loadOwnGhostCapsules: () => {
-      void ownerRecovery.loadOwn().then(render);
-    },
-    recoverOwnGhostCapsule: (id) => {
-      void ownerRecovery.recover(id).then(render);
-    },
-    closeOwnGhostCatalog: () => {
-      ownerRecovery.close();
-    },
     setScreen: (screen) => {
-      if (screen !== "profile") ownerRecovery.close();
       setScreen(screen);
-    },
-    openGhostPublication: (id) => {
-      void ghostPublicationScreen.open(id).then(() => {
-        setScreen("ghostpublication");
-        render();
-      });
-    },
-    grantGhostPublication: () => {
-      void ghostPublicationScreen.grant().then(render);
-    },
-    runGhostPublicationOnce: () => {
-      void ghostPublicationScreen.runOnce().then(render);
-    },
-    cancelGhostPublication: () => {
-      void ghostPublicationScreen.cancel().then(render);
-    },
-    openGhostSupport: (id) => {
-      void ghostSupportScreen.open(id).then(() => {
-        setScreen("ghostsupport");
-        render();
-      });
-    },
-    createGhostSupport: () => {
-      void ghostSupportScreen.create().then(render);
     },
     resetScroll: () => {
       options.interaction.setScroll(0);

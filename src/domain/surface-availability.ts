@@ -13,26 +13,23 @@ import { ENGINEERING_SCREENS, screenFacts, type EngineeringScreen } from "./scre
 export type SurfaceChannel = "release" | "engineering";
 
 export type SurfaceId =
-  // Engineering screens (the unfinished Ghost V3 publication-service
-  // screens), plus every route into them. Their
+  // Engineering screens (none at present), plus every route into them. Their
   // channel is the screen catalog's (src/domain/screen-catalog.ts).
   | `screen:${EngineeringScreen}`
   // Boss Test boss picker on the setup screen.
   | "setup:boss-picker"
   // Unfinished player features.
   | "feature:seed-race"
-  | "feature:beat-this-run"
   | "feature:boss-memory"
   | "feature:coach"
   | "feature:replay-editor"
-  | "feature:ghost-cloud"
   | "feature:linked-pair-download"
   // Every engineering query parameter and surface route.
   | "route:engineering-query"
   // Engineering window globals.
   | "global:weapon-debug";
 
-const screenSurfaceId = (screen: EngineeringScreen): `screen:${EngineeringScreen}` => `screen:${screen}`;
+const screenSurfaceId = (screen: EngineeringScreen) => `screen:${screen}` as `screen:${EngineeringScreen}`;
 
 /**
  * The sole source-owned classification. Promote a surface by changing its
@@ -45,11 +42,9 @@ export const SURFACE_CHANNEL: Readonly<Record<SurfaceId, SurfaceChannel>> = Obje
   >),
   "setup:boss-picker": "engineering",
   "feature:seed-race": "engineering",
-  "feature:beat-this-run": "engineering",
   "feature:boss-memory": "engineering",
   "feature:coach": "engineering",
   "feature:replay-editor": "engineering",
-  "feature:ghost-cloud": "engineering",
   "feature:linked-pair-download": "engineering",
   "route:engineering-query": "engineering",
   "global:weapon-debug": "engineering",
@@ -86,12 +81,6 @@ export function screenSurface(screen: string): SurfaceId | undefined {
 const CAREER_COMMAND_SURFACES: Readonly<Partial<Record<string, SurfaceId>>> = Object.freeze({
   race: "feature:seed-race",
   coach: "feature:coach",
-  publish: "feature:ghost-cloud",
-  beat: "feature:beat-this-run",
-  "beat-receive": "feature:beat-this-run",
-  "beat-review": "feature:beat-this-run",
-  "beat-save": "feature:beat-this-run",
-  "beat-retry": "feature:beat-this-run",
 });
 
 /**
@@ -110,15 +99,6 @@ export function screenActionSurface(action: ScreenAction): SurfaceId | undefined
     return action.paired === true ? "feature:linked-pair-download" : undefined;
   if (type.startsWith("replay.coach.")) return "feature:coach";
   if (type.startsWith("replay.editor.") || type.startsWith("replay.studio.")) return "feature:replay-editor";
-  if (
-    type === "profile.loadOwnGhostCapsules" ||
-    type === "profile.recoverOwnGhostCapsule" ||
-    type === "profile.closeOwnGhostCatalog" ||
-    type === "profile.openGhostPublication" ||
-    type.startsWith("ghostpublication.")
-  )
-    return "feature:ghost-cloud";
-  if (type === "profile.openGhostSupport" || type.startsWith("ghostsupport.")) return "screen:ghostsupport";
   return undefined;
 }
 

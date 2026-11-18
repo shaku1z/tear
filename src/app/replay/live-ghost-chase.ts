@@ -32,7 +32,7 @@ export interface LiveGhostChaseRuntimeOptions {
   readonly world: Pick<LiveWorldComposition, "state" | "context">;
   readonly stage: LiveCampaignTraining["campaign"]["stage"];
   readonly session: LiveWorldSessionState;
-  readonly services: Pick<LiveSessionServices, "beat" | "seedRace" | "controllers">;
+  readonly services: Pick<LiveSessionServices, "seedRace" | "controllers">;
   readonly navigation: LiveScreenNavigation;
   readonly gameplayEvents: LiveGameplayEventFanOut;
   readonly run: () => GameRun;
@@ -42,12 +42,11 @@ export interface LiveGhostChaseRuntimeOptions {
 /** The live ghost chase reference: its launch from Profile, run-event feed, and screen-driven stop. */
 export function createLiveGhostChaseRuntime(options: LiveGhostChaseRuntimeOptions) {
   const { stage: stageRuntime, session, navigation } = options;
-  const { beat, seedRace } = options.services;
+  const { seedRace } = options.services;
   const { startRun: startRunImmediate } = options.services.controllers.api;
   const hostState = options.world.state;
   const CINEMA = options.world.context.cinema;
   const chase = createLiveGhostChase({
-    beat: beat.snapshot,
     factory: options.indexedDb,
     ui: options.ui,
     run: options.run,
