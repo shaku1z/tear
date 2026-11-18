@@ -90,6 +90,9 @@ class TestUi implements ScreenUiPort {
   fitText(...values: Parameters<ScreenUiPort["fitText"]>): ReturnType<ScreenUiPort["fitText"]> {
     return { size: values[3].size, lines: [values[1]], truncated: false, overflow: false };
   }
+  buttonFitWidth(...values: Parameters<ScreenUiPort["buttonFitWidth"]>): number {
+    return values[0].measureText(values[1].label).width + 16;
+  }
   emptyState(...values: Parameters<ScreenUiPort["emptyState"]>): number {
     return values[4] + 60;
   }
@@ -197,6 +200,7 @@ function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -248,6 +252,7 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {

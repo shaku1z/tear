@@ -308,25 +308,6 @@ async function withJourney(options, run) {
       const point = await labelPoint(label);
       await clickAndWait(point.x, point.y, screen);
     }
-    // The held blade aims at the pointer. A pointer that moves while the game is paused (to reach
-    // a pause-menu control) makes the blade swing to it on the first frames of play, fast enough to
-    // strike whatever is there; the click itself never reaches gameplay. A journey that resumes
-    // beside something it must not touch first rests the blade aimed at the control it will click,
-    // then clicks there without moving: a blade below CONFIG.blade.minHitSpeed deals no damage.
-    /** Points the blade at `point` (CSS pixels) and waits until it is held, not swinging, and slower than 30 px/s. */
-    async function restBlade(point) {
-      await page.mouse.move(point.x, point.y, { steps: 4 });
-      await page.waitForFunction(
-        () => {
-          const blade = window.__TEAR_RUNTIME_ENVIRONMENT__
-            .create("A")
-            .captureSnapshot("blade-rest", "recorded-canonical").state["tear.blade.v1"];
-          return blade?.state === "held" && blade.swingActive !== true && Math.abs(blade.tipSpeed ?? 0) < 30;
-        },
-        undefined,
-        { timeout: STATE_WAIT_MS },
-      );
-    }
     /** Centre of the drawn card whose key badge reads `number`: the smallest outlined frame around the badge. */
     async function cardCentre(number) {
       assert.ok(options.recordFrames, "cardCentre needs the recordFrames journey option");
@@ -398,7 +379,6 @@ async function withJourney(options, run) {
           clickLabel,
           cardCentre,
           clickCard,
-          restBlade,
         }),
         overLimit,
       ]);

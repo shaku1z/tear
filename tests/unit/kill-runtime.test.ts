@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { progressFacts } from "../../src/domain/progress-facts";
 import { resolveEnemyKill, type KillEnemy, type KillRuntimeOptions } from "../../src/gameplay/combat/kill-runtime";
 import { planWaveClear } from "../../src/gameplay/run/wave-clear-planner";
 
@@ -254,5 +255,19 @@ describe("enemy kill transaction", () => {
     expect(maxStat).toHaveBeenCalledWith("killWhite-hart", 1);
     expect(bossKillAchievement).toHaveBeenCalledWith(target);
     expect(input.run.finalBossDeath).toBeUndefined();
+  });
+
+  it("records a boss defeat where the condition language reads it", () => {
+    for (const bossId of ["rootbound", "white-hart", "source"]) {
+      const stats: Record<string, number> = {};
+      const input = options(enemy({ isBoss: true, bossId }));
+      input.maxStat = (key, value) => {
+        stats[key] = Math.max(stats[key] ?? 0, value);
+      };
+      resolveEnemyKill(input);
+      const facts = progressFacts({ stats, ach: {} });
+      expect(facts.bossDefeated(bossId), bossId).toBe(true);
+      expect(facts.bossDefeated("echo"), bossId).toBe(false);
+    }
   });
 });

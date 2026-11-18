@@ -5,6 +5,7 @@
  * phase, instrumental, menu edit…). The player selects the *work*; this layer
  * picks the best version that is actually playable in the current context.
  */
+import { conditionFrom, conditionProblems, type UnlockCondition } from "../../domain/unlock-condition";
 
 export type CompatibilityClass = "A" | "B" | "C" | "D";
 
@@ -59,6 +60,12 @@ export interface MusicVersion {
   readonly status?: string;
 }
 
+/**
+ * A work's requirement. "unreadable" is a condition this build cannot read (a newer kind from a newer
+ * catalog): the work can never unlock here, and the reason is in the catalog's `problems`.
+ */
+export type MusicUnlock = UnlockCondition | Readonly<{ type: "unreadable" }>;
+
 export interface MusicWork {
   readonly id: string;
   readonly title: string;
@@ -67,7 +74,8 @@ export interface MusicWork {
   readonly key: string;
   readonly tags: readonly string[];
   readonly stations: readonly string[];
-  readonly unlock: { readonly type: string; readonly bossId?: string; readonly biome?: string };
+  /** What the player must have done to hear it, in the shared condition language. */
+  readonly unlock: MusicUnlock;
   readonly rights: MusicRights;
   readonly versions: Readonly<Record<string, MusicVersion>>;
 }
@@ -86,6 +94,8 @@ export interface MusicCatalog {
   readonly version: 1;
   readonly works: readonly MusicWork[];
   readonly stations: readonly Station[];
+  /** Why any work's unlock could not be read; empty for a catalog this build fully understands. */
+  readonly problems: readonly string[];
   readonly [key: string]: unknown;
 }
 
@@ -119,7 +129,17 @@ export function parseMusicCatalog(value: unknown): MusicCatalog {
   ) {
     throw new TypeError("unsupported music catalog format/version");
   }
-  return Object.freeze({ ...value, format: "tear-music-catalog", version: 1 }) as MusicCatalog;
+  const base = { ...value, format: "tear-music-catalog", version: 1 } as MusicCatalog;
+  const problems: string[] = [];
+  const works = base.works.map((work) => {
+    const known: Record<string, unknown> = isRecord(work) ? work : {};
+    const unlock = conditionFrom(known.unlock);
+    if (unlock !== null) return { ...work, unlock };
+    const where = typeof known.id === "string" ? known.id : "a music work";
+    problems.push(...conditionProblems(known.unlock, `music work ${where}`));
+    return { ...work, unlock: { type: "unreadable" } as const };
+  });
+  return Object.freeze({ ...base, works, problems });
 }
 
 /** Semantic content used by compatibility tests and future catalog integrity checks. */

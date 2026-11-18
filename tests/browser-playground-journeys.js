@@ -11,7 +11,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 const journey = (practiceLab) =>
   withJourney(
     { name: practiceLab ? "practice lab journeys" : "playground journeys", port: practiceLab ? 8145 : 8144 },
-    async ({ page, boot, waitScreen, restBlade }) => {
+    async ({ page, boot, waitScreen }) => {
       async function pressUntilScreen(key, screen) {
         for (let attempt = 0; attempt < 12; attempt++) {
           await page.keyboard.press(key);
@@ -261,37 +261,45 @@ const journey = (practiceLab) =>
         assert.equal(opponent.snapshot.state["tear.enemy.v1"].length, 1);
         assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].kind, "charger");
         assert.notEqual(opponent.snapshot.state["tear.enemy.v1"][0].tutDummy, true);
-        // The restarted opponent spawns beside the player, and the blade swings to wherever the
-        // pointer moved while paused. Rest it aimed at RESTART LESSON first, so the click there
-        // resumes play with a still blade (see restBlade in the harness).
+        // A restart issues a full-health opponent, and the player's blade is live from its first
+        // tick. The restart re-seats the held blade overhead (resetTutorialActors); with a free
+        // cursor the next tick aims it back at RESTART LESSON, so play opens with a swing that no
+        // pointer placement avoids, and the new opponent can spawn inside it. The game guarantees
+        // the health at issue, not that nothing touches the opponent before the first read: it must
+        // be at full health unless the game counted a held-blade hit after the restart.
         await pressUntilScreen("p", "paused");
-        const restart = await labelAt("RESTART LESSON");
-        await pressUntilScreen("p", "playing");
-        await restBlade(restart);
-        await pressUntilScreen("p", "paused");
+        const heldHitsBefore = await page.evaluate(() => window.__PANTHEON_TEST.state().combatTrace.heldHits);
         await clickLabel("RESTART LESSON");
         await waitScreen("playing");
         opponent = await opponentAttempt();
         assert.equal(opponent.session.enemyPractice.defeated, false);
         {
-          // A restart issues a full-health opponent. If it is ever seen damaged, say how long it had
-          // been alive (spawnT counts down from its spawn-in) and what was near it in that same snapshot.
+          // If it is ever seen damaged with no held hit counted, say how long it had been alive
+          // (spawnT counts down from its spawn-in) and what was near it in that same snapshot.
           const state = opponent.snapshot.state;
           const enemy = state["tear.enemy.v1"][0];
+          const heldHitsAfter = opponent.state.combatTrace.heldHits;
+          // The count belongs to the run; a restart that began a new run would start it again at 0.
+          const heldHits = heldHitsAfter < heldHitsBefore ? heldHitsAfter : heldHitsAfter - heldHitsBefore;
           const pick = (value, keys) => Object.fromEntries(keys.map((key) => [key, value?.[key]]));
-          assert.equal(
-            enemy.hp,
-            enemy.maxHp,
-            `restarted practice opponent was damaged before the first read: ${JSON.stringify({
-              enemy: pick(enemy, ["x", "y", "vx", "vy", "spawnT", "aliveT", "atk", "atkT", "flash", "hitCd", "stun"]),
-              enemyStatus: pick(enemy, ["bleedStacks", "burnT", "burnDps", "_deathCause", "affixes"]),
-              blade: pick(state["tear.blade.v1"], ["state", "x", "y", "tipX", "tipY", "tipSpeed", "swingActive"]),
-              player: pick(state["tear.player.v1"], ["x", "y", "vx", "vy", "hp"]),
-              projectiles: state["tear.projectile.v1"]?.length,
-              hazards: pick(state["tear.hazard.v1"], ["stageId", "fields", "combatObjects"]),
-              clock: state["tear.world.v1"]?.clock,
-              simulationSeconds: state["tear.world.v1"]?.simulationSeconds,
-            })}`,
+          assert.ok(enemy.hp > 0 && enemy.hp <= enemy.maxHp, `restarted opponent hp ${enemy.hp} of ${enemy.maxHp}`);
+          assert.ok(
+            heldHits > 0 || enemy.hp === enemy.maxHp,
+            `restarted practice opponent was damaged before the first read with no held-blade hit counted: ${JSON.stringify(
+              {
+                heldHits: { before: heldHitsBefore, after: heldHitsAfter },
+                hp: enemy.hp,
+                maxHp: enemy.maxHp,
+                enemy: pick(enemy, ["x", "y", "vx", "vy", "spawnT", "aliveT", "atk", "atkT", "flash", "hitCd", "stun"]),
+                enemyStatus: pick(enemy, ["bleedStacks", "burnT", "burnDps", "_deathCause", "affixes"]),
+                blade: pick(state["tear.blade.v1"], ["state", "x", "y", "tipX", "tipY", "tipSpeed", "swingActive"]),
+                player: pick(state["tear.player.v1"], ["x", "y", "vx", "vy", "hp"]),
+                projectiles: state["tear.projectile.v1"]?.length,
+                hazards: pick(state["tear.hazard.v1"], ["stageId", "fields", "combatObjects"]),
+                clock: state["tear.world.v1"]?.clock,
+                simulationSeconds: state["tear.world.v1"]?.simulationSeconds,
+              },
+            )}`,
           );
         }
         await pressUntilScreen("p", "paused");
@@ -422,32 +430,72 @@ const journey = (practiceLab) =>
       });
       console.log("playground journey: combat hotkey spawns survive the tail commit");
 
-      // The in-world E shortcut shown by the production Playground help opens the tools.
+      // Every Playground control below is reached through its rendered label, so the journey
+      // follows the layout instead of fixed coordinates.
+      await page.evaluate(() => {
+        const captured = [],
+          original = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function playgroundText(value, x, y, ...rest) {
+          captured.push({ text: String(value), x, y });
+          if (captured.length > 1500) captured.splice(0, 750);
+          return original.call(this, value, x, y, ...rest);
+        };
+        window.__PLAYGROUND_TEXT__ = captured;
+      });
+      const drawn = (label) =>
+        page.evaluate((expected) => window.__PLAYGROUND_TEXT__.findLast((entry) => entry.text === expected), label);
+      const tabOpen = (heading) =>
+        page.waitForFunction(
+          (expected) => window.__PLAYGROUND_TEXT__.some((entry) => entry.text === expected),
+          heading,
+          { timeout: STATE_WAIT_MS },
+        );
+      const clickText = async (label) => {
+        await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+        await tabOpen(label);
+        const point = await drawn(label);
+        await page.mouse.click(point.x, point.y);
+      };
+
+      // E opens the menu on its first tab; the E that opened it does not also switch tabs.
       await pressUntilScreen("e", "pgmenu");
-      console.log("playground journey: build menu open");
+      await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+      await tabOpen("ENEMIES");
+      console.log("playground journey: menu open on SPAWN");
       const enemiesBefore = await page.evaluate(() => window.__PANTHEON_TEST.state().enemyCount);
-      await page.mouse.click(278, 229); // spawn the first enemy kind
+      await clickText("CHARGER");
       await page.waitForFunction((before) => window.__PANTHEON_TEST.state().enemyCount > before, enemiesBefore, {
         timeout: STATE_WAIT_MS,
       });
       console.log("playground journey: enemy spawned");
 
-      await page.mouse.click(330, 721); // ABILITY LAB
+      // Q / E step the tabs; a click opens one directly.
+      await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
+      await page.keyboard.press("e");
+      await tabOpen("SUMMON A BOSS");
+      await clickText("ARENA");
+      await tabOpen("ARENA");
+      assert.equal(await drawn("TRAINING GROUNDS"), undefined, "the Tutorial's training ground is not an arena");
+      console.log("playground journey: tabs switch by key and by click");
+
+      await clickText("ABILITIES");
       await waitScreen("pglab");
-      console.log("playground journey: ability lab open");
-      await page.mouse.click(721, 272); // TAKE the first available ability
-      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      await page.mouse.wheel(0, 500);
-      await page.mouse.click(800, 850); // BUILD MENU (lab back control)
-      await waitScreen("pgmenu");
-      console.log("playground journey: returned to build menu");
-      await page.mouse.click(800, 780); // RESUME (source-position band under the actions row)
+      console.log("playground journey: abilities tab open");
+      await clickText("TAKE");
+      await clickText("RESUME");
       await waitScreen("playing");
       console.log("playground journey: pointer resume");
 
+      // U opens ABILITIES; Tab leaves the menu from any tab.
       await pressUntilScreen("u", "pglab");
-      await pressUntilScreen("Tab", "pgmenu");
       await pressUntilScreen("Tab", "playing");
+      // Pause offers the menu: the route touch and controller players use.
+      await pressUntilScreen("Escape", "paused");
+      await clickText("PLAYGROUND MENU");
+      await waitScreen("pglab");
+      console.log("playground journey: pause opens the menu on the tab left open");
+      await clickText("RESUME");
+      await waitScreen("playing");
       assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().mode), "playground");
     },
   );
