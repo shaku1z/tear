@@ -18,6 +18,7 @@ import { DESKTOP } from "../../src/presentation/screens/codex-shop-metrics";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
+import { keyboardLabel } from "../../src/domain/keyboard-bindings";
 
 class TestUi implements ScreenUiPort {
   readonly ink = "#000";
@@ -536,6 +537,8 @@ describe("legacy screen renderer registry", () => {
       const draft = { id: "draft" as const, wave: 1, rerolls: 0, cards: [{ id: "speed", label: "SPEED" }] };
       renderer.draft(draft);
       const draftControls = [...controls];
+      // The reroll button names the key the binding table gives it.
+      expect(draftControls.map((control) => control.label)).toContain(`⟳  REROLL · 0  [${keyboardLabel("reroll")}]`);
       controls.length = 0;
       lines.length = 0;
       renderer.draft({ ...draft, onboarding: campaignDraftGuidance("campaign", 1, 0, 0) ?? "" });

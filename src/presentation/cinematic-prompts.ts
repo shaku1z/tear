@@ -1,3 +1,5 @@
+import { promptLabel } from "../domain/prompt-vocabulary";
+
 /**
  * Cinematic scripts author touch-first prompts ("TAP TO REVEAL · HOLD TO SKIP").
  * This rewrites them for the device that owns input so the prompt only promises
@@ -17,7 +19,9 @@ const TOUCH_ASSIST_CLAUSE = /\s*·\s*HOLD CONFIRM TO ASSIST|HOLD CONFIRM OR /gu;
 export function cinematicPromptForDevice(text: string, device: CinematicPromptDevice, confirmGlyph = "A"): string {
   if (text === "") return text;
   if (device === "touch") return text.replace(TOUCH_HOLD_CLAUSE, "").replace(TOUCH_ASSIST_CLAUSE, "");
-  const press = device === "mouse" ? "CLICK" : device === "keyboard" ? "SPACE" : confirmGlyph;
-  const key = device === "gamepad" ? confirmGlyph : "SPACE";
+  // The keyboard confirm keys come from the binding table, worded by the prompt vocabulary.
+  const confirmKeys = promptLabel("confirm", "keyboard") ?? "";
+  const press = device === "mouse" ? "CLICK" : device === "keyboard" ? confirmKeys : confirmGlyph;
+  const key = device === "gamepad" ? confirmGlyph : confirmKeys;
   return text.replace(HOLD_TO_SKIP, `HOLD ${key} TO SKIP`).replace(HOLD_CONFIRM, `HOLD ${key}`).replace(TAP, press);
 }
