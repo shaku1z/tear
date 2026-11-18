@@ -51,10 +51,16 @@ function slotMap(value: unknown): Record<string, EquippedEntry> {
   return output;
 }
 
+/** The entries of `map` whose key passes `keep`. */
+function keepKeys(map: Readonly<Record<string, number>>, keep: (id: string) => boolean): Record<string, number> {
+  return Object.fromEntries(Object.entries(map).filter(([id]) => keep(id)));
+}
+
 /**
  * Any stored or remote value to a valid state. Malformed entries are dropped, never thrown on. Unknown
- * item, slot and loadout ids are kept (a newer client may know them) and nothing is dropped for being
- * too many, so a save never loses an item depending on key order.
+ * item, slot and loadout ids are kept (a newer client may know them) and no owned item is dropped for being
+ * too many, so a save never loses an item depending on key order. `seen` is kept for owned items only: it
+ * records when an owned item was first shown, so an entry for anything else is noise.
  */
 export function normalizeCosmeticState(value: unknown): CosmeticState {
   if (!isRecord(value) || value.v !== COSMETIC_STATE_VERSION) return emptyCosmeticState();
@@ -74,10 +80,11 @@ export function normalizeCosmeticState(value: unknown): CosmeticState {
     isRecord(raw) && isItemId(raw.id) && wholeNumber(raw.at)
       ? { id: raw.id, at: raw.at }
       : { id: DEFAULT_LOADOUT_ID, at: 0 };
+  const owned = numberMap(value.owned);
   return {
     v: COSMETIC_STATE_VERSION,
-    owned: numberMap(value.owned),
-    seen: numberMap(value.seen),
+    owned,
+    seen: keepKeys(numberMap(value.seen), (id) => hasOwnKey(owned, id)),
     counters: numberMap(value.counters),
     loadouts,
     active,
@@ -116,18 +123,28 @@ function mergeNumbers(
   return output;
 }
 
-/** Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest active loadout. */
-export function mergeCosmeticStates(left: CosmeticState, right: CosmeticState): CosmeticState {
+/**
+ * Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest
+ * active loadout. Order-independent: merge(a, b) equals merge(b, a). Never drops an owned item. With the
+ * catalog, counters are kept for its items only (a counter may track an item not yet owned, but an id no
+ * catalog lists is noise); the catalog's worst case then bounds the merged record (`worstCaseStateSize`).
+ */
+export function mergeCosmeticStates(
+  left: CosmeticState,
+  right: CosmeticState,
+  catalog?: CosmeticCatalog,
+): CosmeticState {
   const loadouts: Record<string, SavedLoadout> = { ...left.loadouts };
   for (const [id, entry] of Object.entries(right.loadouts)) {
     const current = ownValue(loadouts, id);
     loadouts[id] = current ? mergeLoadout(current, entry) : entry;
   }
+  const counters = mergeNumbers(left.counters, right.counters, Math.max);
   return {
     v: COSMETIC_STATE_VERSION,
     owned: mergeNumbers(left.owned, right.owned, Math.max),
     seen: mergeNumbers(left.seen, right.seen, Math.min),
-    counters: mergeNumbers(left.counters, right.counters, Math.max),
+    counters: catalog ? keepKeys(counters, (id) => catalog.items.some((item) => item.id === id)) : counters,
     loadouts,
     active: newer(right.active, left.active) ? right.active : left.active,
   };

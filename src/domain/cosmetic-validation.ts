@@ -14,7 +14,6 @@ import {
   MAX_FLASHES_PER_SECOND,
   MAX_LOADOUT_NAME,
   MAX_LOADOUTS,
-  MAX_OWNED,
   MAX_PRICE,
   SLOT_GROUPS,
   COSMETIC_STATE_VERSION,
@@ -25,7 +24,7 @@ import {
   type LookFamily,
   type ParamSpec,
 } from "./cosmetic-types";
-import { isItemId, isReferenceId } from "./identifiers";
+import { isItemId, isReferenceId, MAX_ID_LENGTH } from "./identifiers";
 import { isRecord } from "./records";
 import { conditionProblems } from "./unlock-condition";
 
@@ -329,25 +328,36 @@ export function parseCosmeticCatalog(raw: RawCosmeticCatalog, backdrops: Readabi
 /** A time later than any real save time, so the worst case is never shorter than a real record. */
 const LATEST_PLAUSIBLE_TIME = 9_999_999_999_999;
 
-/** The largest record a player can produce, in characters: every cap reached at once. Must fit MAX_STATE_CHARS. */
+/**
+ * The largest cosmetic record this catalog allows, in characters. It must fit MAX_STATE_CHARS.
+ *
+ * Owned ids are never dropped, so the bound is the catalog, not MAX_OWNED (which only refuses a purchase).
+ * The worst case is every item owned, seen and counted, plus MAX_LOADOUTS loadouts with every slot filled.
+ * Every value is at its longest: the highest price, the latest plausible time, the largest counter, ids at
+ * MAX_ID_LENGTH where a player chooses them, and loadout names that each escape to six characters in JSON.
+ *
+ * An id from a newer client's catalog is kept too. That build checks its own catalog's worst case, so
+ * holding its items fits the same budget.
+ */
 export function worstCaseStateSize(catalog: CosmeticCatalog): number {
-  const id = "x".repeat(MAX_LOADOUT_NAME);
-  const owned = Object.fromEntries(
-    Array.from({ length: MAX_OWNED }, (_, index) => [`${id}${String(index)}`, MAX_PRICE]),
-  );
-  const slots = Object.fromEntries(catalog.slots.map((slot) => [slot.id, { id, at: LATEST_PLAUSIBLE_TIME }]));
+  const items = catalog.items.map((item) => item.id);
+  const longestItem = items.reduce((longest, id) => (id.length > longest.length ? id : longest), "");
+  const at = LATEST_PLAUSIBLE_TIME;
+  const every = (value: number) => Object.fromEntries(items.map((id) => [id, value]));
+  const slots = Object.fromEntries(catalog.slots.map((slot) => [slot.id, { id: longestItem, at }]));
+  const loadoutId = (index: number) => `${String(index)}_`.padEnd(MAX_ID_LENGTH, "x");
   const loadouts = Object.fromEntries(
     Array.from({ length: MAX_LOADOUTS }, (_, index) => [
-      `loadout_${String(index)}`,
-      { name: "x".repeat(MAX_LOADOUT_NAME), nameAt: LATEST_PLAUSIBLE_TIME, deletedAt: LATEST_PLAUSIBLE_TIME, slots },
+      loadoutId(index),
+      { name: "\u0001".repeat(MAX_LOADOUT_NAME), nameAt: at, deletedAt: at, slots },
     ]),
   );
   return JSON.stringify({
     v: COSMETIC_STATE_VERSION,
-    owned,
-    seen: owned,
-    counters: owned,
+    owned: every(MAX_PRICE),
+    seen: every(at),
+    counters: every(Number.MAX_SAFE_INTEGER),
     loadouts,
-    active: { id: "loadout_0", at: LATEST_PLAUSIBLE_TIME },
+    active: { id: loadoutId(0), at },
   }).length;
 }
