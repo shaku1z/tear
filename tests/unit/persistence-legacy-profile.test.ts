@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { dailyReceiptId } from "../../src/domain/reward-receipts";
 import { createProfileStore } from "../../src/persistence/profile-store";
 
 function storage(initial: Readonly<Record<string, string>> = {}) {
@@ -51,7 +52,7 @@ describe("legacy profile compatibility", () => {
       writerId: () => "test",
     });
     expect(profile.load().shards).toBe(4);
-    profile.addShards(2);
+    expect(profile.claimShards(dailyReceiptId("2026-7-19", "d_kills"), 2)).toBe(true);
     expect(saved.values.get("tear_profile_v2")).toBe(future);
     expect(saved.values.get("tear_profile")).toContain('"shards":6');
   });
