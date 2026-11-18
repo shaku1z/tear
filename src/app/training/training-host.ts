@@ -123,9 +123,6 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     restart: () => loaded?.tutorial.restart() ?? false,
     selectLesson: (id) => loaded?.tutorial.selectLesson(id) ?? false,
     selectAnnex: (id) => loaded?.tutorial.selectAnnex(id) ?? false,
-    showAnnexes: () => {
-      loaded?.tutorial.showAnnexes();
-    },
     bindBossPractice: (port) => {
       bossPractice = port;
       loaded?.tutorial.bindBossPractice(port);
@@ -144,14 +141,11 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       loaded?.tutorial.captureCoachCommands(commands);
     },
     coachAction: (command) => loaded?.tutorial.coachAction(command) ?? false,
-    showBosses: () => {
-      loaded?.tutorial.showBosses();
+    showPracticeTab: (tab) => {
+      loaded?.tutorial.showPracticeTab(tab);
     },
     selectBoss: (id, retained) => loaded?.tutorial.selectBoss(id, retained) ?? false,
     selectEnemy: (id) => loaded?.tutorial.selectEnemy(id) ?? false,
-    showCatalog: () => {
-      loaded?.tutorial.showCatalog();
-    },
     weaponEffect: (weaponId, effect) => {
       loaded?.tutorial.weaponEffect(weaponId, effect);
     },
