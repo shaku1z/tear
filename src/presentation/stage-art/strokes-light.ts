@@ -121,8 +121,11 @@ const REFLECTION_STRETCH = 1.5;
 const REFLECTION_FADE = 0.65;
 /** The key light on the water: half-width as a share of the water's depth, and its strength at full light. */
 const LIGHT_PATH_WIDTH = 0.9;
-const LIGHT_PATH_ALPHA = 0.5;
-const SURFACE_LINE_ALPHA = 0.6;
+const LIGHT_PATH_ALPHA = 0.32;
+/** World px over which the far edge of the water fades in, so it meets the scene without a line. */
+const SHORE_FEATHER = 26;
+/** How far the far water takes the colour of the air. */
+const FAR_WATER_HAZE = 0.6;
 
 export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void> {
   const { context, light } = kit;
@@ -131,9 +134,13 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
   const [left, , width, height] = kit.bounds;
   const bottom = kit.bounds[1] + height,
     depth = bottom - stroke.top;
+  // Graded by distance: the far water is pale and takes the air's colour, the near water is deep and saturated.
+  const far = hazed(kit, sampleRamp(stops, 0), FAR_WATER_HAZE, light.x, stroke.top);
+  const feather = Math.min(0.5, SHORE_FEATHER / depth);
   const body = context.createLinearGradient(0, stroke.top, 0, bottom);
-  body.addColorStop(0, rgba(sampleRamp(stops, 0)));
-  body.addColorStop(0.4, rgba(sampleRamp(stops, 0.5)));
+  body.addColorStop(0, rgba(far, 0));
+  body.addColorStop(feather, rgba(far));
+  body.addColorStop(0.45, rgba(sampleRamp(stops, 0.5)));
   body.addColorStop(1, rgba(sampleRamp(stops, 1)));
   context.fillStyle = body;
   context.fillRect(left, stroke.top, width, depth);
@@ -149,7 +156,7 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
       const sourceY = stroke.top - (row + REFLECTION_ROW) * REFLECTION_STRETCH;
       if (sourceY < kit.bounds[1]) break;
       const offset = Math.sin(row * 0.35 + random() * 0.6) * (1 + k * 6);
-      context.globalAlpha = stroke.reflection * (1 - k * REFLECTION_FADE);
+      context.globalAlpha = stroke.reflection * (1 - k * REFLECTION_FADE) * Math.min(1, row / SHORE_FEATHER);
       context.drawImage(
         behind,
         0,
@@ -199,12 +206,6 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
     context.lineTo(x + length, y);
     context.stroke();
   }
-  // The far edge of the water catches the light as one bright line.
-  const line = mix(kit.atmosphere.haze, light.core, 0.7);
-  context.fillStyle = rgba(line, SURFACE_LINE_ALPHA * 0.3);
-  context.fillRect(left, stroke.top - 3, width, 8);
-  context.fillStyle = rgba(line, SURFACE_LINE_ALPHA);
-  context.fillRect(left, stroke.top - 1, width, 2.5);
 }
 
 const FALLS_STREAKS_PER_PX = 0.9;

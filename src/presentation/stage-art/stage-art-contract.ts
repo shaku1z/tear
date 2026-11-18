@@ -118,8 +118,14 @@ export interface ArcadeStroke extends Seeded, Hazed {
   readonly mossRamp: string;
   /** Depth of the shadowed return face, world px (0 = a flat facade). */
   readonly thickness?: number;
-  /** Chance (0..1) that each stretch of the top edge has broken away. */
+  /** Chance (0..1) that each stretch of exposed top edge has lost a block of masonry. */
   readonly ruin?: number;
+  /** Share of bays still standing on each storey above the one below (1 or omitted = every bay). */
+  readonly standing?: number;
+  /** Column shaft width as a share of the pier (0 or omitted = plain piers). */
+  readonly columns?: number;
+  /** How dark the arch interiors are: 0 see-through .. 1 solid shadow. */
+  readonly reveal?: number;
   /** Ivy multiplier (1 = default growth). */
   readonly ivy?: number;
 }

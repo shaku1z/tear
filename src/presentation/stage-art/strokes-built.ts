@@ -27,9 +27,19 @@ const UNLIT_STONE = 0.5;
 /** Mist at the foot of a ruin: how far up the bottom storey it climbs, and its strength per unit of haze. */
 const BASE_MIST_RISE = 0.7;
 const BASE_MIST_PER_HAZE = 1.3;
+/** How dark an arch's interior is when the recipe does not say (0 see-through .. 1 solid shadow). */
+const DEFAULT_REVEAL = 0.2;
+/** Stretches of top edge per bay; each may break away as a block of masonry. */
+const EDGE_STEPS_PER_BAY = 4;
+/** A column's capital and base: width and height as multiples of the shaft width. */
+const CAPITAL_WIDTH = 1.6;
+const CAPITAL_HEIGHT = 0.55;
 
 /** One storey's measurements and the two paths everything else is drawn from. */
 interface Storey {
+  /** Left edge and bay count of this storey: upper storeys may stand over fewer bays. */
+  readonly x: number;
+  readonly bays: number;
   readonly top: number;
   readonly bottom: number;
   readonly width: number;
@@ -47,36 +57,53 @@ interface Storey {
   readonly openings: () => void;
 }
 
+/** Bays still standing on a storey, and where they start: upper storeys keep a share, gathered to one side. */
+function standingSpan(stroke: ArcadeStroke, level: number): readonly [x: number, bays: number] {
+  if (level >= stroke.levels) return [stroke.x, 0];
+  const bays = Math.max(1, Math.round(stroke.bays * Math.pow(stroke.standing ?? 1, level)));
+  const fromRight = stroke.seed % 2 === 1;
+  return [fromRight ? stroke.x + (stroke.bays - bays) * stroke.bayWidth : stroke.x, bays];
+}
+
 function storeyShape(kit: PaintKit, stroke: ArcadeStroke, level: number, random: () => number): Storey {
   const { context } = kit;
   const stone = ramp(kit, stroke.ramp);
+  const [x, bays] = standingSpan(stroke, level);
+  const [aboveX, aboveBays] = standingSpan(stroke, level + 1);
   const top = stroke.y - stroke.height * (level + 1),
     bottom = stroke.y - stroke.height * level;
-  const width = stroke.bays * stroke.bayWidth,
+  const width = bays * stroke.bayWidth,
     height = bottom - top;
   const pier = stroke.bayWidth * PIER_SHARE;
   const radius = Math.min((stroke.bayWidth - pier) / 2, height * MAX_ARCH_TO_HEIGHT);
   const spring = top + height * SPRING_DROP + radius;
-  const lit = UNLIT_STONE + (1 - UNLIT_STONE) * lightAt(kit, stroke.x + width / 2, top);
-  const tone = (value: number) => hazed(kit, sampleRamp(stone, value * lit), stroke.haze, stroke.x + width / 2, top);
-  // A ruined top storey loses chunks of its upper edge.
-  const segment = stroke.bayWidth / 3;
+  const lit = UNLIT_STONE + (1 - UNLIT_STONE) * lightAt(kit, x + width / 2, top);
+  const tone = (value: number) => hazed(kit, sampleRamp(stone, value * lit), stroke.haze, x + width / 2, top);
+  // Wherever nothing stands on it, the top edge loses blocks of masonry.
+  const segment = stroke.bayWidth / EDGE_STEPS_PER_BAY;
   const notches: number[] = [];
-  for (let x = 0; x <= width + segment; x += segment) {
-    const broken = level === stroke.levels - 1 && random() < (stroke.ruin ?? 0);
-    notches.push(broken ? height * 0.12 + random() * random() * height * 0.45 : 0);
+  for (let at = 0; at <= width + segment / 2; at += segment) {
+    const covered = x + at >= aboveX && x + at <= aboveX + aboveBays * stroke.bayWidth;
+    const broken = !covered && random() < (stroke.ruin ?? 0);
+    notches.push(broken ? height * 0.1 + random() * random() * height * 0.5 : 0);
   }
   const wall = () => {
-    context.moveTo(stroke.x, bottom);
+    let edge = top + (notches[0] ?? 0);
+    context.moveTo(x, bottom);
+    context.lineTo(x, edge);
     notches.forEach((drop, index) => {
-      context.lineTo(Math.min(stroke.x + width, stroke.x + index * segment), top + drop);
+      const at = Math.min(x + width, x + index * segment);
+      context.lineTo(at, edge);
+      edge = top + drop;
+      context.lineTo(at, edge);
     });
-    context.lineTo(stroke.x + width, bottom);
+    context.lineTo(x + width, edge);
+    context.lineTo(x + width, bottom);
     context.closePath();
   };
   const openings = () => {
-    for (let bay = 0; bay < stroke.bays; bay += 1) {
-      const left = stroke.x + bay * stroke.bayWidth + (stroke.bayWidth - radius * 2) / 2;
+    for (let bay = 0; bay < bays; bay += 1) {
+      const left = x + bay * stroke.bayWidth + (stroke.bayWidth - radius * 2) / 2;
       context.moveTo(left, bottom);
       context.lineTo(left, spring);
       context.arc(left + radius, spring, radius, Math.PI, 0);
@@ -84,7 +111,7 @@ function storeyShape(kit: PaintKit, stroke: ArcadeStroke, level: number, random:
       context.closePath();
     }
   };
-  return { top, bottom, width, height, pier, radius, spring, segment, notches, tone, wall, openings };
+  return { x, bays, top, bottom, width, height, pier, radius, spring, segment, notches, tone, wall, openings };
 }
 
 /** The return face in shadow, receding away from the light, gives the block depth. */
@@ -93,8 +120,8 @@ function paintReturnFace(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): v
   if (thickness <= 0) return;
   const { context } = kit;
   const { top, bottom, width, tone } = storey;
-  const away = stroke.x + width / 2 < kit.light.x ? -1 : 1;
-  const edgeX = away < 0 ? stroke.x : stroke.x + width;
+  const away = storey.x + width / 2 < kit.light.x ? -1 : 1;
+  const edgeX = away < 0 ? storey.x : storey.x + width;
   const rise = thickness * RETURN_RISE;
   // The side turned from the light: darkest at the base, picking up bounce toward the top.
   const side = context.createLinearGradient(0, top, 0, bottom);
@@ -110,10 +137,10 @@ function paintReturnFace(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): v
   context.fill();
   context.fillStyle = rgba(tone(0.85));
   context.beginPath();
-  context.moveTo(stroke.x, top);
-  context.lineTo(stroke.x + width, top);
-  context.lineTo(stroke.x + width + away * thickness, top - rise);
-  context.lineTo(stroke.x + away * thickness, top - rise);
+  context.moveTo(storey.x, top);
+  context.lineTo(storey.x + width, top);
+  context.lineTo(storey.x + width + away * thickness, top - rise);
+  context.lineTo(storey.x + away * thickness, top - rise);
   context.closePath();
   context.fill();
 }
@@ -127,7 +154,7 @@ function paintJambs(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
   if (jamb <= 0) return;
   const { context } = kit;
   const { top, bottom, width, spring, radius, tone } = storey;
-  const away = stroke.x + width / 2 < kit.light.x ? -1 : 1;
+  const away = storey.x + width / 2 < kit.light.x ? -1 : 1;
   context.save();
   context.beginPath();
   storey.openings();
@@ -150,26 +177,31 @@ function paintJambs(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
 function paintFace(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
   const { context } = kit;
   const { top, bottom, width, pier, radius, spring, tone } = storey;
-  context.fillStyle = rgba(tone(0.08), 0.2);
+  // The interior: deepest shadow under the arch, thinning toward the floor so the far side still shows.
+  const reveal = stroke.reveal ?? DEFAULT_REVEAL;
+  const interior = context.createLinearGradient(0, spring - radius, 0, bottom);
+  interior.addColorStop(0, rgba(tone(0.04), reveal));
+  interior.addColorStop(1, rgba(tone(0.1), reveal * 0.45));
+  context.fillStyle = interior;
   context.beginPath();
   storey.openings();
   context.fill();
   context.beginPath();
   storey.wall();
   storey.openings();
-  const face = context.createLinearGradient(stroke.x, top, stroke.x + width, top);
+  const face = context.createLinearGradient(storey.x, top, storey.x + width, top);
   face.addColorStop(0, rgba(tone(0.9)));
   face.addColorStop(1, rgba(tone(0.55)));
   context.fillStyle = face;
   context.fill("evenodd");
-  for (let bay = 0; bay < stroke.bays; bay += 1) {
-    const left = stroke.x + bay * stroke.bayWidth + (stroke.bayWidth - radius * 2) / 2;
-    const reveal = Math.max(2, pier * 0.4);
+  for (let bay = 0; bay < storey.bays; bay += 1) {
+    const left = storey.x + bay * stroke.bayWidth + (stroke.bayWidth - radius * 2) / 2;
+    const lip = Math.max(2, pier * 0.4);
     context.strokeStyle = rgba(tone(0.2), 0.9);
-    context.lineWidth = reveal;
+    context.lineWidth = lip;
     context.beginPath();
-    context.arc(left + radius, spring, radius - reveal / 2, Math.PI * 1.15, Math.PI * 1.95);
-    context.lineTo(left + radius * 2 - reveal / 2, bottom);
+    context.arc(left + radius, spring, radius - lip / 2, Math.PI * 1.15, Math.PI * 1.95);
+    context.lineTo(left + radius * 2 - lip / 2, bottom);
     context.stroke();
     context.strokeStyle = rgba(tone(1), 0.8);
     context.lineWidth = 1.5;
@@ -181,8 +213,42 @@ function paintFace(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
   }
 }
 
+/**
+ * A column standing against each pier: a shaft lit on the side facing the key
+ * light, a capital, a base and the shadow it casts on the wall behind.
+ */
+function paintColumns(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
+  const shaft = storey.pier * (stroke.columns ?? 0);
+  if (shaft <= 0) return;
+  const { context } = kit;
+  const { top, bottom, width, segment, notches, tone } = storey;
+  const towardLight = storey.x + width / 2 < kit.light.x ? 1 : -1;
+  const capital = shaft * CAPITAL_HEIGHT;
+  for (let pier = 0; pier <= storey.bays; pier += 1) {
+    const centre = Math.min(storey.x + width - shaft, Math.max(storey.x + shaft, storey.x + pier * stroke.bayWidth));
+    const head = top + (notches[Math.round((centre - storey.x) / segment)] ?? 0);
+    if (bottom - head < capital * 4) continue;
+    const left = centre - shaft / 2;
+    context.fillStyle = rgba(tone(0.12), 0.5);
+    context.fillRect(left - towardLight * shaft * 0.45, head + capital, shaft, bottom - head - capital);
+    const round = context.createLinearGradient(left, 0, left + shaft, 0);
+    round.addColorStop(towardLight > 0 ? 1 : 0, rgba(tone(1)));
+    round.addColorStop(0.5, rgba(tone(0.72)));
+    round.addColorStop(towardLight > 0 ? 0 : 1, rgba(tone(0.34)));
+    context.fillStyle = round;
+    context.fillRect(left, head + capital, shaft, bottom - head - capital * 2);
+    const block = shaft * CAPITAL_WIDTH;
+    context.fillStyle = rgba(tone(0.95));
+    context.fillRect(centre - block / 2, head, block, capital);
+    context.fillStyle = rgba(tone(0.6));
+    context.fillRect(centre - block / 2, bottom - capital, block, capital);
+    context.fillStyle = rgba(tone(0.2), 0.8);
+    context.fillRect(centre - block / 2, head + capital, block, Math.max(1, capital * 0.25));
+  }
+}
+
 /** Weathering inside the wall: courses, mottling and a darkening toward the base. */
-function paintWeathering(kit: PaintKit, stroke: ArcadeStroke, storey: Storey, random: () => number): void {
+function paintWeathering(kit: PaintKit, storey: Storey, random: () => number): void {
   const { context } = kit;
   const { top, bottom, width, height, tone } = storey;
   context.save();
@@ -195,32 +261,32 @@ function paintWeathering(kit: PaintKit, stroke: ArcadeStroke, storey: Storey, ra
   context.lineWidth = 1;
   for (let row = top + course; row < bottom; row += course) {
     context.beginPath();
-    context.moveTo(stroke.x, row);
-    context.lineTo(stroke.x + width, row);
+    context.moveTo(storey.x, row);
+    context.lineTo(storey.x + width, row);
     context.stroke();
   }
   const mottles = Math.round(width * height * 0.004 * kit.detail);
   for (let index = 0; index < mottles; index += 1) {
     const color = tone(random() < 0.6 ? 0.25 : 0.95);
-    dab(context, stroke.x + random() * width, top + random() * height, 2 + random() * 6, 0, color, 0.18, 1);
+    dab(context, storey.x + random() * width, top + random() * height, 2 + random() * 6, 0, color, 0.18, 1);
   }
   const stain = context.createLinearGradient(0, top, 0, bottom);
   stain.addColorStop(0, rgba(tone(0.2), 0));
   stain.addColorStop(1, rgba(tone(0.1), 0.45));
   context.fillStyle = stain;
-  context.fillRect(stroke.x, top, width, height);
+  context.fillRect(storey.x, top, width, height);
   context.restore();
 }
 
 /** Cornice runs along every stretch of the top edge that still stands. */
-function paintCornices(kit: PaintKit, stroke: ArcadeStroke, storey: Storey): void {
+function paintCornices(kit: PaintKit, storey: Storey): void {
   const { context } = kit;
   const { top, width, height, segment, notches, tone } = storey;
   const cornice = Math.max(3, height * 0.06);
   notches.forEach((drop, index) => {
     if (drop > 0 || (notches[index + 1] ?? 0) > 0) return;
-    const x = stroke.x + index * segment - (index === 0 ? 5 : 0);
-    const run = Math.min(segment + (index === 0 ? 5 : 0), stroke.x + width + 5 - x);
+    const x = storey.x + index * segment - (index === 0 ? 5 : 0);
+    const run = Math.min(segment + (index === 0 ? 5 : 0), storey.x + width + 5 - x);
     if (run <= 0) return;
     context.fillStyle = rgba(tone(1));
     context.fillRect(x, top, run, cornice);
@@ -239,8 +305,8 @@ function* paintIvy(kit: PaintKit, stroke: ArcadeStroke, storey: Storey, random: 
     dab(context, x, y, size, angle, hazed(kit, sampleRamp(moss, value), stroke.haze, x, y), 0.9);
   };
   const ivyAmount = stroke.ivy ?? 1;
-  for (let drip = 0; drip < stroke.bays * 3 * ivyAmount; drip += 1) {
-    const x = stroke.x + random() * width,
+  for (let drip = 0; drip < storey.bays * 3 * ivyAmount; drip += 1) {
+    const x = storey.x + random() * width,
       length = height * (0.2 + random() * 0.6);
     for (let travelled = 0; travelled < length; travelled += 3) {
       ivy(x + Math.sin(travelled * 0.2) * 2, top + travelled, 1.5 + random() * 2, 1.5, (random() - 0.5) * 0.4);
@@ -249,7 +315,7 @@ function* paintIvy(kit: PaintKit, stroke: ArcadeStroke, storey: Storey, random: 
   const tufts = Math.round(width * 1.2 * ivyAmount * kit.detail);
   for (let index = 0; index < tufts; index += 1) {
     if (index % BRUSH_OPERATIONS_PER_YIELD === 0) yield;
-    const x = stroke.x + random() * width,
+    const x = storey.x + random() * width,
       y = top - 3 + Math.pow(random(), 2.6) * height;
     ivy(x, y, 1.5 + random() * 2.5, random() * 3, (random() - 0.3) * 0.6 + lightAt(kit, x, y) * 0.2);
   }
@@ -261,8 +327,9 @@ function* storey(kit: PaintKit, stroke: ArcadeStroke, level: number, random: () 
   paintFace(kit, stroke, shape);
   paintJambs(kit, stroke, shape);
   yield;
-  paintWeathering(kit, stroke, shape, random);
-  paintCornices(kit, stroke, shape);
+  paintWeathering(kit, shape, random);
+  paintColumns(kit, stroke, shape);
+  paintCornices(kit, shape);
   yield;
   yield* paintIvy(kit, stroke, shape, random);
 }

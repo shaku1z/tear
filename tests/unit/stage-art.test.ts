@@ -224,6 +224,17 @@ describe("water and the ruins standing in it", () => {
     const far = await layerCalls([ruin(0.6)]);
     expect(clips(far.calls)).toBe(clips(near.calls) + 1);
   });
+
+  it("builds a ruin's structure from recipe parameters: fewer bays standing above, and columns", async () => {
+    const count = (calls: readonly string[], name: string) => calls.filter((call) => call.startsWith(name)).length;
+    const tall = { ...ruin(0), bays: 4, levels: 2 };
+    const whole = await layerCalls([tall]);
+    const broken = await layerCalls([{ ...tall, standing: 0.5 }]);
+    // Each standing bay draws its arch; an upper storey over half the bays draws fewer.
+    expect(count(broken.calls, "arc(")).toBeLessThan(count(whole.calls, "arc("));
+    const columned = await layerCalls([{ ...tall, columns: 0.6 }]);
+    expect(count(columned.calls, "fillRect(")).toBeGreaterThan(count(whole.calls, "fillRect("));
+  });
 });
 
 describe("layer coverage", () => {
