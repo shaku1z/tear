@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 import { migrateProfileEnvelope, PROFILE_ENVELOPE_VERSION } from "../../src/persistence/profile-envelope";
-import { activeLoadout } from "../../src/domain/cosmetics";
+import { activeLoadout, normalizeCosmeticState } from "../../src/domain/cosmetics";
 import { createProfileStore, type ProfileStore } from "../../src/persistence/profile-store";
 
 /** In-memory storage with the acknowledged channel the live platform provides. */
@@ -98,6 +98,20 @@ describe("profile envelope version 4", () => {
         },
       },
     });
+  });
+
+  it("starts a new profile with the same fields a migrated one has, cosmetics included", () => {
+    // Both save slots unreadable: the store starts from a fresh profile.
+    const { profile } = open(memory({ tear_profile_v2: "{broken", tear_profile: "{broken" }));
+    const fresh = { ...profile.data };
+    expect(fresh.cosmetics).toEqual(normalizeCosmeticState(undefined));
+    // The same profile saved by a client from before version 4 (no ledger) migrates to the same keys and ledger.
+    const older: Record<string, unknown> = { ...fresh };
+    delete older.cosmetics;
+    const migrated = migrateProfileEnvelope({ schema: "tear.profile", schemaVersion: 3, profile: older });
+    if (!migrated.ok) throw new Error(migrated.error);
+    expect(Object.keys(migrated.value.profile).sort()).toEqual(Object.keys(fresh).sort());
+    expect(migrated.value.profile.cosmetics).toEqual(fresh.cosmetics);
   });
 
   it("rejects a future version safely", () => {
