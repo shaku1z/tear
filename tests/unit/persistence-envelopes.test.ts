@@ -42,7 +42,11 @@ describe("versioned persistence envelopes", () => {
     const result = migrateProfileEnvelope({ shards: 12, futureFeature: { enabled: true } }, 500);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.profile).toEqual({ shards: 12, futureFeature: { enabled: true } });
+    expect(result.value.profile).toEqual({
+      shards: 12,
+      futureFeature: { enabled: true },
+      cosmetics: { v: 1, owned: {}, seen: {}, counters: {}, loadouts: {}, active: { id: "main", at: 0 } },
+    });
     expect(result.value.writerId).toBe("legacy");
     expect(result.value.updatedAtMs).toBe(500);
   });
