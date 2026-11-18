@@ -4,7 +4,7 @@ import { ghostCoachCandidate, type GhostCoachHistory } from "../../ghost/coach-h
 import type { GhostCoachHistoryPort } from "../library/ghost-coach-history-controller";
 
 function createCoachHistoryWorker(): Worker {
-  return new Worker(new URL("../../ghost/coach-history-worker.ts", import.meta.url), { type: "module" });
+  return new Worker(new URL("./coach-history-worker.ts", import.meta.url), { type: "module" });
 }
 
 export function createBrowserGhostCoachHistoryPort(factory: IDBFactory | undefined): GhostCoachHistoryPort {

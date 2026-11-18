@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LazyModuleUnavailable, loadOnce } from "../../src/platform/lazy-module";
+import { LazyModuleUnavailable, loadOnce } from "../../src/domain/lazy-module";
 
 describe("shared lazy loader", () => {
   it("shares one request between concurrent callers and then answers synchronously", async () => {

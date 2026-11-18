@@ -50,7 +50,7 @@
     {
       "from": "src/ghost/boss-memory.ts",
       "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "value"
+      "kind": "type"
     },
     {
       "from": "src/ghost/boss-memory.ts",
@@ -95,7 +95,7 @@
     {
       "from": "src/ghost/finale-playback.ts",
       "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "value"
+      "kind": "type"
     },
     {
       "from": "src/ghost/fork-origin.ts",
@@ -135,7 +135,7 @@
     {
       "from": "src/ghost/live-ghost-reference.ts",
       "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "value"
+      "kind": "type"
     },
     {
       "from": "src/ghost/live-ghost-reference.ts",
@@ -155,12 +155,7 @@
     {
       "from": "src/ghost/production-replay-session.ts",
       "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/production-replay-verification.ts",
-      "to": "src/tearbench/production-replay-composition.ts",
-      "kind": "value"
+      "kind": "type"
     },
     {
       "from": "src/ghost/recorded-challenge.ts",
@@ -170,11 +165,6 @@
     {
       "from": "src/ghost/recorded-challenge.ts",
       "to": "src/tearbench/gameplay-causal-events.ts",
-      "kind": "value"
-    },
-    {
-      "from": "src/ghost/recorded-challenge.ts",
-      "to": "src/tearbench/production-replay-composition.ts",
       "kind": "value"
     },
     {
@@ -314,8 +304,7 @@
       "src/ghost/live-causal-events.ts",
       "src/ghost/production-replay-session.ts",
       "src/ghost/production-replay-verification.ts",
-      "src/ghost/replay-admission.ts",
-      "src/tearbench/production-replay-composition.ts"
+      "src/ghost/replay-admission.ts"
     ]
   ]
 }

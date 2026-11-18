@@ -14,9 +14,16 @@
  * instead of a hang. A failed fetch (offline) is reported once, as
  * `LazyModuleUnavailable`, and the next call tries again.
  */
-import { LazyModuleUnavailable, loadOnce, type LazyModule, type LazyStatus } from "../platform/lazy-module";
+import { LazyModuleUnavailable, loadOnce, type LazyModule, type LazyStatus } from "../domain/lazy-module";
 
-export type ReplayEngine = typeof import("../tearbench/production-replay-composition");
+/**
+ * What the engine offers. The members are declared in `src/app/replay/replay-engine-shape.ts`
+ * (module augmentation), because their types belong to the layer that holds the engine and the
+ * ghost layer may not import that layer.
+ */
+export interface ReplayEngine {
+  readonly membersDeclaredByApplication?: never;
+}
 
 const OFFLINE_MESSAGE = "Replay needs one online visit to download its code. Check the connection and try again.";
 let engine: LazyModule<ReplayEngine> | undefined;

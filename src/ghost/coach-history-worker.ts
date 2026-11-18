@@ -8,11 +8,7 @@ import {
   readGhostCoachHistorySource,
   type GhostCoachCandidate,
 } from "./coach-history";
-import * as replayEngineModule from "../tearbench/production-replay-composition";
-import { ensureReplayEngine, installReplayEngine } from "./replay-engine";
-
-// This bundle already contains the engine; no separate chunk is fetched.
-installReplayEngine(() => Promise.resolve(replayEngineModule));
+import { ensureReplayEngine } from "./replay-engine";
 
 self.addEventListener("message", (event: MessageEvent<Readonly<{ sources: readonly GhostCoachCandidate[] }>>) => {
   void (async () => {
