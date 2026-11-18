@@ -136,6 +136,19 @@ applies them and answers yes or no with the reason; the merge helper calls it.
      reviewed.
    - Switching to `enforce` is the lead's decision, after a few days of
      observe with no false refusals.
+   - A label is answered by a line whose bold span starts with it as whole
+     words and ends in a colon, inside the span or after a qualifier:
+     `**Cause and check:**`, `**Cause**:` and `**Measured** (on CI):` count.
+     The answer is the rest of the line or, if that is empty, the indented
+     list under it. A heading such as `### Cause` does not count.
+   - False refusals found in observe, each fixed in the matcher with a test:
+     - #214 (2026-11-18) wrote `**Cause and check:**` and was reported as
+       "Cause (missing)".
+     - #205 (2026-11-18) wrote `**Measured** (…):` and answered Removed with
+       a nested list, and was reported as "Measured (missing), Removed
+       (empty)".
+   - Refusals the report shows that were right: #188 (no design-check
+     section) and #208 and #209 (a bare "n/a." for The next one).
    - The labels, the rule and the mode reader live once, in
      `scripts/design-check.mjs`. The pull request template test checks the
      template and the standard against that list.
