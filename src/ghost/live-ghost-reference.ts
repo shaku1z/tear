@@ -111,7 +111,7 @@ export async function prepareGhostLiveReference(
       if (boundary) boundaries.push(boundary);
     }
   });
-  const composition = replayEngine().createProductionGhostReplayComposition({
+  const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     seed: anchor.seed,
     raceDecisions: readSeedRaceDecisions(capsule, context.run.id),
     requireRecordedApplicationFrames: true,

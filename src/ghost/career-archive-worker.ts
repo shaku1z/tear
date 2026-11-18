@@ -5,7 +5,7 @@ import { GhostCareerStore } from "./career-archive-store";
 import { projectCareerEntry } from "./career-archive";
 import { verifyGhostCapsuleProductionReplay } from "./production-replay-verification";
 import { reopenRecordedGhostChallenge } from "./browser-recorded-challenge";
-import { ensureReplayEngine } from "./replay-engine";
+import { replayEngine } from "./replay-engine";
 
 const host = globalThis as unknown as {
   onmessage: ((event: MessageEvent<{ id: number }>) => void) | null;
@@ -13,7 +13,7 @@ const host = globalThis as unknown as {
 };
 host.onmessage = (event: MessageEvent<{ id: number }>) => {
   void (async () => {
-    await ensureReplayEngine();
+    await replayEngine.ensure();
     const backend = await createIndexedDbGhostVaultBackend(indexedDB),
       store = new GhostCareerStore(backend),
       reader = new GhostCapsuleReader(new GhostLocalVault(backend));

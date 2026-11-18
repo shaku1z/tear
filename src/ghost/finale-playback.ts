@@ -35,7 +35,7 @@ export function createGhostFinalePlayback(
   )
     throw new TypeError("Finale frame coverage or command range is incomplete");
   const inputSnapshots = new Map([[anchor.tick, origin.origin.input]]);
-  const composition = replayEngine().createProductionGhostReplayComposition({
+  const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     ...presentation,
     seed: anchor.seed,
     inputSnapshots,
@@ -121,7 +121,7 @@ export function createGhostFinalePlayback(
       }
       const replay = session.replay;
       actualHash = stableVerificationHash({
-        canonical: replayEngine().projectProductionReplayCanonicalState(
+        canonical: replayEngine.loaded().projectProductionReplayCanonicalState(
           replay,
           session.simulation.scheduler.tick,
           session.simulation.input,

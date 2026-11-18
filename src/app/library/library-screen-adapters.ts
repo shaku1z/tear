@@ -1,4 +1,4 @@
-import { ensureReplayEngine, replayEngineStatus } from "../../ghost/replay-engine";
+import { replayEngine } from "../../ghost/replay-engine";
 import type { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
@@ -150,14 +150,14 @@ export function createLiveLibraryScreenAdapters(services: LibraryScreenServices)
    * show one plain message (tap again to retry) when the fetch fails.
    */
   function invokeReplay(action: DeferredAction): void {
-    if (replayEngineStatus() === "ready") {
+    if (replayEngine.status() === "ready") {
       invoke(action);
       return;
     }
     invoke((value) => {
       value.setProfileMessage("Loading replay code…");
     });
-    ensureReplayEngine().then(
+    replayEngine.ensure().then(
       () => {
         invoke(action);
       },

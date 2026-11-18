@@ -4,6 +4,10 @@
  * One loader per module: concurrent callers share one request, a failed request
  * is forgotten so the next call retries, and a caller that needs the module
  * synchronously (`loaded`) gets a plain error if no one awaited `ensure` first.
+ *
+ * To defer another module: declare a `lazySlot` next to the code that uses it, and add one
+ * row for it to the table in `src/app/shell/deferred-modules.ts`, which names where it is
+ * fetched from and whether it is fetched ahead on an idle menu.
  */
 export type LazyStatus = "idle" | "loading" | "ready" | "failed";
 
@@ -53,5 +57,26 @@ export function loadOnce<Module>(load: () => Promise<Module>, failureMessage: st
       if (pending !== undefined) return "loading";
       return failed ? "failed" : "idle";
     },
+  };
+}
+
+/** A lazy module whose source is named later, by whoever owns the bundle (`install`). */
+export interface LazyModuleSlot<Module> extends LazyModule<Module> {
+  install(load: () => Promise<Module>): void;
+}
+
+export function lazySlot<Module>(failureMessage: string): LazyModuleSlot<Module> {
+  let lazy: LazyModule<Module> | undefined;
+  const installed = (): LazyModule<Module> => {
+    if (lazy === undefined) throw new LazyModuleUnavailable("This code has not been set up.");
+    return lazy;
+  };
+  return {
+    install(load) {
+      lazy = loadOnce(load, failureMessage);
+    },
+    ensure: () => installed().ensure(),
+    loaded: () => installed().loaded(),
+    status: () => (lazy === undefined ? "idle" : lazy.status()),
   };
 }

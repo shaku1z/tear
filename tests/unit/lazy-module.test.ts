@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { LazyModuleUnavailable, loadOnce } from "../../src/domain/lazy-module";
+import { LazyModuleUnavailable, lazySlot, loadOnce } from "../../src/domain/lazy-module";
 
 describe("shared lazy loader", () => {
   it("shares one request between concurrent callers and then answers synchronously", async () => {
@@ -32,5 +32,16 @@ describe("shared lazy loader", () => {
     expect(() => lazy.loaded()).toThrow(LazyModuleUnavailable);
     void lazy.ensure();
     expect(lazy.status()).toBe("loading");
+  });
+
+  it("takes its source later, and refuses use before that instead of hanging", async () => {
+    const slot = lazySlot<{ answer: number }>("needs a connection");
+    expect(slot.status()).toBe("idle");
+    expect(() => slot.loaded()).toThrow(LazyModuleUnavailable);
+    await expect(Promise.resolve().then(() => slot.ensure())).rejects.toBeInstanceOf(LazyModuleUnavailable);
+    slot.install(() => Promise.resolve({ answer: 7 }));
+    expect((await slot.ensure()).answer).toBe(7);
+    expect(slot.status()).toBe("ready");
+    expect(slot.loaded().answer).toBe(7);
   });
 });

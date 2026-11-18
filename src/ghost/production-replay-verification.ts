@@ -216,7 +216,7 @@ export function verifyGhostCapsuleOpeningContinuation(capsule: GhostReadCapsule)
       });
     }
     const derived = createGhostV3({ ...mapped.ghost, snapshots: [anchor] });
-    const composition = replayEngine().createProductionGhostReplayComposition({
+    const composition = replayEngine.loaded().createProductionGhostReplayComposition({
       seed: anchor.seed,
       openingPermit: permit,
       raceDecisions: readSeedRaceDecisions(capsule, context?.run.id ?? ""),
@@ -353,7 +353,7 @@ export function verifyGhostCapsuleProductionReplay(
       mappingIssues: Object.freeze([...mappingIssues, error instanceof Error ? error.message : String(error)]),
     });
   }
-  const composition = replayEngine().createProductionGhostReplayComposition({
+  const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
     inputSnapshots: inputs,
     ...(forkOrigin === undefined ? {} : { forkOrigin }),

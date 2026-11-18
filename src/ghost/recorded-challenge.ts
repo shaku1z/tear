@@ -207,7 +207,7 @@ export function verifyRecordedGhostChallenge(
     context.run.id,
     context.simulation.applicationFrames !== undefined,
   );
-  const composition = replayEngine().createProductionGhostReplayComposition({
+  const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     seed: anchor.seed,
     forkOrigin: origin,
     inputSnapshots: new Map([[anchor.tick, initial.input]]),

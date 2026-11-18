@@ -44,8 +44,8 @@ import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat"
 import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
 import { GHOST_WORKER_URLS } from "../replay/ghost-worker-urls";
-import { startIdleTask, startWorkerCacheWarmup } from "../../platform/worker-cache-warmup";
-import { ensureReplayEngine, installReplayEngine } from "../../ghost/replay-engine";
+import { startWorkerCacheWarmup } from "../../platform/worker-cache-warmup";
+import { startDeferredModules } from "./deferred-modules";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
 import { rotateGateShown } from "../../presentation/render-pipeline";
@@ -345,9 +345,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   };
   // The ghost worker scripts are cached by the service worker on first fetch; fetch any missing one on an idle menu.
   if (target === "standalone") startWorkerCacheWarmup(plainMainMenu, GHOST_WORKER_URLS);
-  installReplayEngine(() => import("../../tearbench/production-replay-composition"));
-  // The replay engine loads on first use; fetch it on an idle menu so the first replay opens without a wait.
-  startIdleTask(plainMainMenu, ensureReplayEngine);
+  startDeferredModules(plainMainMenu);
   // A waiting service-worker update is applied only on the plain main menu, after saves settle.
   pwaUpdate.setIdleHost({ isIdle: plainMainMenu, settle: () => PROFILE.flushAcknowledged() });
   const DIAG = new PerformanceMonitor();

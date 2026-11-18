@@ -153,7 +153,7 @@ export function createGhostProductionReplaySession(
     context?.run.id ?? "",
     context?.simulation.applicationFrames !== undefined,
   );
-  const composition = replayEngine().createProductionGhostReplayComposition({
+  const composition = replayEngine.loaded().createProductionGhostReplayComposition({
     ...presentation,
     ...(forkOrigin === undefined ? {} : { forkOrigin }),
     seed: mapped.ghost.snapshots[0]?.seed ?? "unknown",
