@@ -626,6 +626,7 @@
       "src/gameplay/environment/environment-runtime.ts",
       "src/gameplay/environment/biome-actors/rootbound-actors.ts",
       "src/presentation/enemies/renderers/rootbound-renderer.ts",
+      "src/presentation/enemies/figures/",
       "src/presentation/environment/verdant-environment-presentation.ts",
       "src/tearbench/rootbound-graft-anchor-forge.ts",
       "src/tearbench/state-forge-factories.ts",
@@ -636,7 +637,8 @@
       "src/tearbench/evidence-routes.json",
       "tests/browser-current-gameplay-scenarios.js",
       "tests/unit/rootbound-phase-two.test.ts",
-      "tests/unit/graft-anchor.test.ts"
+      "tests/unit/graft-anchor.test.ts",
+      "tests/unit/boss-figure.test.ts"
     ],
     "scenarios": [
       "rootbound-graft-anchor-destruction"
