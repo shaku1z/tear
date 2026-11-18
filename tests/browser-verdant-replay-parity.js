@@ -45,8 +45,9 @@ const CASES = [
   ),
   resolved("rootbound-phase-1", bossStart, undefined),
   resolved("rootbound-phase-2", bossStart, { boss: { hp: 1375 } }),
-  // Phase III plays through Regrowth into the Last Spring rotation before the run ends.
-  { ...resolved("rootbound-phase-3", bossStart, { boss: { hp: 625 } }), frames: 1500 },
+  // Phase III plays through Regrowth and the Last Spring rotation until the run ends by itself, about frame
+  // 1600. The budget must clear that end: stopping a run that is already ending breaks its recording.
+  { ...resolved("rootbound-phase-3", bossStart, { boss: { hp: 625 } }), frames: 2000 },
 ];
 
 // Each case gets a fresh page and Ghost vault, so recordings cannot interact through vault retention.
