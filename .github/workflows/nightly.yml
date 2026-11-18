@@ -49,9 +49,8 @@ jobs:
     # generous so a slow runner is not cut off, and a hung check still stops.
     timeout-minutes: 120
     steps:
+      # The commit the run is for: main on the schedule, the chosen branch when started by hand.
       - uses: actions/checkout@v4
-        with:
-          ref: main
       - uses: pnpm/action-setup@v4
         with:
           version: 11.15.0

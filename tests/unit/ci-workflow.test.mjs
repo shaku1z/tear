@@ -429,7 +429,10 @@ describe("Nightly checks workflow", () => {
 
   it("runs the nightly group on main once a day and by hand", () => {
     expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
-    expect(nightly).toMatch(/uses: actions\/checkout@v4\n {8}with:\n {10}ref: main/u);
+    // A schedule runs on the default branch, main; started by hand, it checks the chosen branch.
+    // Naming a ref would test a commit other than the one the run builds and labels.
+    expect(nightly).toMatch(/uses: actions\/checkout@v4/u);
+    expect(nightly).not.toMatch(/\n\s+ref:/u);
     expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
     expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
   });
