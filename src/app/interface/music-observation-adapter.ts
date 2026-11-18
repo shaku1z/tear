@@ -1,5 +1,5 @@
 import type { LiveMusicSyncInput } from "../shell/frame-runtime";
-import type { GameEnemy, GamePlayer, GameProjectile, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GamePlayer, GameProjectile, GameRun } from "../../gameplay/runtime/game-runtime-state";
 
 export function projectLiveMusicRun(active: GameRun | null | undefined): LiveMusicSyncInput["run"] {
   return active === null || active === undefined

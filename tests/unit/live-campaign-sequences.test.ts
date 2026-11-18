@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { CampaignRuntimeState } from "../../src/app/campaign/campaign-runtime-state";
+import { CampaignRuntimeState } from "../../src/gameplay/campaign/campaign-runtime-state";
 import {
   CampaignChapterController,
   type CampaignStage,
@@ -11,7 +11,7 @@ import {
   launchCampaignChapter,
   type CampaignCinematicChannel,
   type CampaignCinematicScript,
-} from "../../src/app/campaign/campaign-sequences";
+} from "../../src/gameplay/campaign/campaign-sequences";
 import type { FinaleIntent } from "../../src/gameplay/campaign/finale-controller";
 import type { CinematicDirectorBinding } from "../../src/gameplay/runtime/cinematic-director";
 

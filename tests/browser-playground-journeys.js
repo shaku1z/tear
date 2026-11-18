@@ -11,7 +11,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 const journey = (practiceLab) =>
   withJourney(
     { name: practiceLab ? "practice lab journeys" : "playground journeys", port: practiceLab ? 8145 : 8144 },
-    async ({ page, boot, waitScreen }) => {
+    async ({ page, boot, waitScreen, restBlade }) => {
       async function pressUntilScreen(key, screen) {
         for (let attempt = 0; attempt < 12; attempt++) {
           await page.keyboard.press(key);
@@ -99,7 +99,8 @@ const journey = (practiceLab) =>
         });
         const directory = process.env.TEAR_PRACTICE_LAB_ARTIFACT_DIR;
         if (directory) fs.mkdirSync(path.resolve(directory), { recursive: true });
-        const clickLabel = async (label) => {
+        // Where a label is drawn once the screen has eased in: two reads a frame apart agree.
+        const labelAt = async (label) => {
           try {
             await page.waitForFunction(
               (expected) => window.__TEAR_PRACTICE_LAB_TEXT__?.some((entry) => entry.text === expected),
@@ -116,10 +117,26 @@ const journey = (practiceLab) =>
               await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-failure.png") });
             throw error;
           }
-          const point = await page.evaluate(
-            (expected) => window.__TEAR_PRACTICE_LAB_TEXT__.findLast((entry) => entry.text === expected),
+          const handle = await page.waitForFunction(
+            (expected) => {
+              const entry = window.__TEAR_PRACTICE_LAB_TEXT__.findLast((candidate) => candidate.text === expected);
+              const point = entry ? { x: Math.round(entry.x), y: Math.round(entry.y) } : null;
+              const previous = window.__TEAR_PRACTICE_LAB_LAST_POINT__;
+              window.__TEAR_PRACTICE_LAB_LAST_POINT__ = { label: expected, point };
+              return point &&
+                previous?.label === expected &&
+                previous.point?.x === point.x &&
+                previous.point.y === point.y
+                ? point
+                : null;
+            },
             label,
+            { polling: "raf", timeout: STATE_WAIT_MS },
           );
+          return handle.jsonValue();
+        };
+        const clickLabel = async (label) => {
+          const point = await labelAt(label);
           await page.mouse.click(point.x, point.y);
         };
         const savedEffects = () =>
@@ -244,6 +261,13 @@ const journey = (practiceLab) =>
         assert.equal(opponent.snapshot.state["tear.enemy.v1"].length, 1);
         assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].kind, "charger");
         assert.notEqual(opponent.snapshot.state["tear.enemy.v1"][0].tutDummy, true);
+        // The restarted opponent spawns beside the player, and the blade swings to wherever the
+        // pointer moved while paused. Rest it aimed at RESTART LESSON first, so the click there
+        // resumes play with a still blade (see restBlade in the harness).
+        await pressUntilScreen("p", "paused");
+        const restart = await labelAt("RESTART LESSON");
+        await pressUntilScreen("p", "playing");
+        await restBlade(restart);
         await pressUntilScreen("p", "paused");
         await clickLabel("RESTART LESSON");
         await waitScreen("playing");

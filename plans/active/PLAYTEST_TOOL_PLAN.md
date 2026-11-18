@@ -305,6 +305,13 @@ Requirements from the verification runs:
 - Every player takes upgrade choices by the same scored rule (`buildWatchChoiceScore`), so a
   difference between players is never a difference between builds.
 
+Built first (2026-11-17, the lead's cut of this stage to one small pull request): a chosen boss in a
+headless boss-only run; `src/playtest/` with the boss view, the `scripted` and `avoids-tells` players,
+the fight measurement and the report; `pnpm playtest bosses`. A phase is reached by play. The fight
+loop advances application frames while a phase-change cinematic holds the simulation; without that a
+headless fight stops for ever at the first phase change. Still to do in this stage: the `still`,
+`walker` and `no-dodge` players, starting a fight at a chosen phase, boss movement, and the sweep.
+
 Done when:
 - [ ] `pnpm playtest bosses` prints, for all five campaign bosses, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, 4 seeds, Easy and Normal, in under 5 minutes on 6 jobs.
 - [ ] The three tests of failure modes 1, 2 and 6 pass.

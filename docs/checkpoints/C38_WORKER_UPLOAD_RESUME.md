@@ -1,5 +1,7 @@
 # C38 Worker authenticated upload resume boundary
 
+The Ghost publication Worker and the files this note names were removed in shaku1z/tear#190.
+
 The Ghost publication Worker now has a bounded, authenticated resumability
 seam. `GET /v1/uploads/:capsuleId` authenticates first and returns only the
 same owner's `capsuleId`, current status, declared byte length, and

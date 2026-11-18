@@ -50,6 +50,8 @@ export interface BossAttackContext<Phase extends string | number> {
   readonly random: RandomSource;
   /** Moves that may not be chosen now, by id (a move whose stage object is already out, say). */
   readonly blocked?: ReadonlySet<string>;
+  /** Scales the pause after a move that finishes now (a stage object that hastens the boss, say). Default 1. */
+  readonly gapMultiplier?: number;
 }
 
 export type BossAttackEvent<Place> =
@@ -156,11 +158,14 @@ function finish<Phase extends string | number, Place>(
   table: BossAttackTable<Phase, Place>,
   state: BossAttackRunnerState,
   attack: BossAttack<Phase, Place>,
-  tick: number,
+  context: BossAttackContext<Phase>,
 ): BossAttackRunnerState {
+  const tick = context.tick;
+  const scale = context.gapMultiplier ?? 1;
+  if (!Number.isFinite(scale) || scale < 0) throw new RangeError("a move gap multiplier is a finite number, 0 or more");
   return Object.freeze({
     run: null,
-    readyTick: tick + table.gap,
+    readyTick: tick + Math.round(table.gap * scale),
     lastAttackId: attack.id,
     cooldownUntil: Object.freeze({ ...state.cooldownUntil, [attack.id]: tick + attack.choose.cooldown }),
     exposed: null,
@@ -211,7 +216,7 @@ export function advanceBossAttack<Phase extends string | number, Place>(
   if (context.tick - run.stageTick < stageLength(table, attack, run)) return { state, events: [] };
   const stage = nextStage(attack, run.stage);
   if (stage === null)
-    return { state: finish(table, state, attack, context.tick), events: [{ type: "finished", attackId: attack.id }] };
+    return { state: finish(table, state, attack, context), events: [{ type: "finished", attackId: attack.id }] };
   const moved = Object.freeze({ ...run, stage, stageTick: context.tick });
   const events: BossAttackEvent<Place>[] = [{ type: "stage", attackId: attack.id, stage }];
   if (stage === "active") events.push(...placesAt(attack, "active"));
@@ -360,6 +365,39 @@ export function bossAttackDamageTaken(
   tick: number,
 ): number {
   return bossAttackExposed(state, tick) ? table.exposedDamageTaken : 1;
+}
+
+/** What the boss's body is doing, read from the runner state alone. */
+export interface BossAttackStatus {
+  /** "move:stage" while a move runs, otherwise null. */
+  readonly label: string | null;
+  readonly exposed: boolean;
+  /** True while the move itself carries the body (it does not fall or slide on its own). */
+  readonly carries: boolean;
+  /** True while out of sight and untouchable (a burrow). */
+  readonly hidden: boolean;
+  readonly parryable: boolean;
+}
+
+/**
+ * The flags a boss keeps about its own body. A boss sets them from this after every change to the runner
+ * state (a tick, a parry, a forced exposure, a reset), so none of them can be left over from a move that a
+ * parry or a cut ended early.
+ */
+export function bossAttackStatus<Phase extends string | number, Place>(
+  table: BossAttackTable<Phase, Place>,
+  state: BossAttackRunnerState,
+  context: BossAttackContext<Phase>,
+): BossAttackStatus {
+  const run = state.run;
+  const motion = bossAttackMotion(table, state, context);
+  return {
+    label: run === null ? null : `${run.attackId}:${run.stage}`,
+    exposed: bossAttackExposed(state, context.tick),
+    carries: motion !== null,
+    hidden: motion?.hidden ?? false,
+    parryable: bossAttackParryable(table, state, context.tick),
+  };
 }
 
 /**

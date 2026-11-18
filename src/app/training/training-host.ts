@@ -10,7 +10,7 @@ import type { TutorialGhostSnapshot, TutorialMark } from "../../gameplay/trainin
 import type { LiveWaveSpawnSpec } from "../../gameplay/run/live-enemy-spawn";
 import type { RunDifficulty } from "../../gameplay/run/session";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { AppScreen } from "../../domain/screen-catalog";
 
