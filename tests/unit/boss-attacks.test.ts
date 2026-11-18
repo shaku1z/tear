@@ -15,6 +15,7 @@ import {
   bossAttackHit,
   bossAttackMotion,
   bossAttackParryable,
+  bossAttackPose,
   bossAttackStatus,
   bossAttackTells,
   bossAttackThreatens,
@@ -618,5 +619,107 @@ describe("the move schedule: openings, once and every few moves", () => {
     expect(seen.get("lash:recover")).toBe(false);
     expect(seen.get("hop:tell")).toBe(false);
     expect(seen.get("hop:active")).toBe(false);
+  });
+});
+
+describe("a strike that repeats warns of each repeat", () => {
+  // Tell 60 ticks, then strikes 120 ticks apart: each is live for 60 ticks and the next is warned for 60.
+  // The active stage is 330 ticks, so there are three strikes and no fourth.
+  const channel = move("channel", {
+    timing: { tell: 0.5, active: 2.75, recover: 0.25 },
+    hit: {
+      shape: { kind: "travel", dy: 0, hw: 20, hh: 20, speed: 1200 },
+      damage: 15,
+      parryable: false,
+      repeat: { every: 1, tell: 0.5 },
+    },
+  });
+  const table = buildBossAttackTable(
+    definition([channel, move("rare", { choose: { range: [0, 1], weight: 1e-9, cooldown: 0 } })]),
+  );
+  const ACTIVE = 60;
+
+  /** The runner state at `tick`, with every strike marked landed the tick it first could hit. */
+  function at(tick: number, landing = false): BossAttackRunnerState {
+    let state = createBossAttackRunnerState();
+    for (let now = 0; now <= tick; now += 1) {
+      state = advanceBossAttack(table, state, context(now, { random: { next: () => 0 } })).state;
+      if (landing && now < tick && bossAttackHit(table, state, context(now)) !== null)
+        state = markBossAttackLanded(state);
+    }
+    return state;
+  }
+
+  it("turns the hit off for the warning before each repeat, and arms it again when the repeat starts", () => {
+    expect(bossAttackHit(table, at(ACTIVE + 59), context(ACTIVE + 59))?.area).toMatchObject({ x: 660 + 590 });
+    expect(bossAttackHit(table, at(ACTIVE + 60), context(ACTIVE + 60))).toBeNull();
+    expect(bossAttackHit(table, at(ACTIVE + 119), context(ACTIVE + 119))).toBeNull();
+    // The repeat starts again from the boss, and hits even though the strike before it landed.
+    expect(bossAttackHit(table, at(ACTIVE + 120, true), context(ACTIVE + 120))?.area).toMatchObject({ x: 660 });
+    expect(bossAttackThreatens(table, at(ACTIVE + 90))).toBe(true);
+  });
+
+  it("shows each repeat as a tell of its own, warned for its full length before it goes active", () => {
+    const seen: string[] = [];
+    const warned = new Map<string, number>();
+    for (let tick = 0; tick < ACTIVE + 330; tick += 1) {
+      const tell = bossAttackTells(table, at(tick), context(tick))[0];
+      if (tell === undefined) continue;
+      const label = `${tell.id}:${tell.stage}`;
+      if (seen.at(-1) !== label) seen.push(label);
+      if (tell.stage === "warning") warned.set(tell.id, (warned.get(tell.id) ?? 0) + 1);
+    }
+    expect(seen).toEqual([
+      "channel:warning",
+      "channel:active",
+      "channel:2:warning",
+      "channel:2:active",
+      "channel:3:warning",
+      "channel:3:active",
+    ]);
+    expect([...warned.values()]).toEqual([60, 60, 60]);
+    const second = bossAttackTells(table, at(ACTIVE + 60), context(ACTIVE + 60))[0];
+    expect(second).toMatchObject({ mark: "lane", damaging: true, leadSeconds: 0.5, remainingSeconds: 0.5, dir: 1 });
+    // The tell marks the path the strike covers while it is live.
+    expect((second?.x ?? 0) + (second?.hw ?? 0)).toBeCloseTo(600 + 40 + 1200 * 0.5 + 40);
+  });
+
+  it("shows no tell and has no hit once the last strike is over, though the stage runs on", () => {
+    const tick = ACTIVE + 310;
+    expect(at(tick).run?.stage).toBe("active");
+    expect(bossAttackTells(table, at(tick), context(tick))).toEqual([]);
+    expect(bossAttackHit(table, at(tick), context(tick))).toBeNull();
+  });
+
+  it("tells a renderer which repeat it is, whether it is striking and how far the next warning is", () => {
+    expect(bossAttackPose(table, at(ACTIVE + 30), context(ACTIVE + 30))).toMatchObject({
+      repeat: 0,
+      striking: true,
+      repeatWarning: null,
+    });
+    expect(bossAttackPose(table, at(ACTIVE + 90), context(ACTIVE + 90))).toMatchObject({
+      repeat: 0,
+      striking: false,
+      repeatWarning: 0.5,
+    });
+    expect(bossAttackPose(table, at(ACTIVE + 130), context(ACTIVE + 130))).toMatchObject({ repeat: 1, striking: true });
+    expect(bossAttackPose(table, at(30), context(30))).toMatchObject({ repeat: 0, striking: false });
+  });
+
+  it("rejects a repeat with a warning too short to read, or one that leaves the strike never live", () => {
+    const repeating = (repeat: { every: number; tell: number }) =>
+      move("channel", {
+        timing: { tell: 0.5, active: 2.75, recover: 0.25 },
+        hit: { shape: { kind: "ring", radius: 100 }, damage: 10, parryable: false, repeat },
+      });
+    expect(() => buildBossAttackTable(definition([move("lash"), repeating({ every: 1, tell: 0.3 })]))).toThrow(
+      /warns of a repeat for less/u,
+    );
+    expect(() => buildBossAttackTable(definition([move("lash"), repeating({ every: 0.5, tell: 0.5 })]))).toThrow(
+      /never live/u,
+    );
+    expect(() => buildBossAttackTable(definition([move("lash"), repeating({ every: 3, tell: 0.5 })]))).toThrow(
+      /not within its active window/u,
+    );
   });
 });
