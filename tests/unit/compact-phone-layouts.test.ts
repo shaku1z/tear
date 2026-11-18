@@ -1,3 +1,5 @@
+import { parseMusicCatalog } from "../../src/audio/music/catalog";
+import { buildMusicLibrary } from "../../src/audio/music/library";
 import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
@@ -893,7 +895,7 @@ describe("phone compositions (compact density)", () => {
       const view = (page: string) =>
         buildMusicScreenView({
           settings: {},
-          library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
+          library: buildMusicLibrary(parseMusicCatalog(catalog), validateMusicRoutingManifest(routing)),
           nowPlaying: { workId: "fillet", title: "Fillet" },
           preview: "spring",
           page,
@@ -934,8 +936,7 @@ describe("phone compositions (compact density)", () => {
       );
       expect(top.controls.some((control) => control.label === "▶  PLAY")).toBe(true);
       const settings = offered("settings");
-      for (const key of ["station", "menuMusic", "musicMode"])
-        expect(settings.some((action) => action.key === key)).toBe(true);
+      for (const key of ["menuMusic", "musicMode"]) expect(settings.some((action) => action.key === key)).toBe(true);
     });
 
     it(`lists every entry of each Drills tab uncut and reachable by scrolling at ${phone.name}`, () => {

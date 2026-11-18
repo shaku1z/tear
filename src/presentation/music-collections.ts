@@ -53,10 +53,10 @@ const isBossSong = (workId: string, routing: Pick<MusicRoutingManifest, "rules">
   musicRoutes(workId, routing).some((rule) => Boolean(rule.match.bossId));
 
 /**
- * A mixed collection's cover: up to four bands of its members' distinct hues, one glyph, and
- * up to four of their stage paintings (a 2x2 grid).
+ * A mixed collection's cover (a Radio channel's too): up to four bands of its members' distinct
+ * hues, one glyph, and up to four of their stage paintings (a 2x2 grid).
  */
-function splitCover(songs: readonly MusicSongView[], glyph: string): MusicCoverView {
+export function splitCover(songs: readonly MusicSongView[], glyph: string): MusicCoverView {
   const hues: string[] = [];
   const art: string[] = [];
   for (const song of songs) {

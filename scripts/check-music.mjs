@@ -56,11 +56,7 @@ if (routing) {
     for (const id of ids) need(id, `route ${rule.id}`);
   }
 }
-const stationIds = new Set((catalog?.stations ?? []).map((station) => station.id));
 for (const work of catalog?.works ?? []) {
-  for (const station of work.stations ?? []) {
-    if (!stationIds.has(station)) fail(`catalog ${work.id}: unknown station ${station}`);
-  }
   const game = work.versions?.["adaptive-game"];
   if (game?.available) {
     need(work.id, "catalog");
