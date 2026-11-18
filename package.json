@@ -78,6 +78,7 @@
     "test:browser:ghost-v3-corrupt-recovery": "node tests/browser-ghost-v3-corrupt-recovery.js",
     "test:browser:ghost-v3-storage-fault": "node tests/browser-ghost-v3-storage-fault.js",
     "test:browser:ghost-vault-library": "node tests/browser-ghost-vault-library.js",
+    "test:browser:replay-engine-cold": "node tests/browser-replay-engine-cold.js",
     "test:preservation-corpus": "pnpm exec vitest run tests/unit/ghost-preservation-corpus.test.ts --reporter=default --reporter=json --outputFile artifacts/tearbench/checkpoints/core/C39/preservation/preservation-corpus-vitest.json",
     "test:browser:ghost-vault-conditional-commit": "node tests/browser-ghost-vault-conditional-commit.js",
     "test:browser:ghost-vault-interrupted-recovery": "node tests/browser-ghost-vault-interrupted-recovery.js",

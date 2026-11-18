@@ -528,6 +528,13 @@
       ],
       "duration": "under-a-minute"
     },
+    "test:browser:replay-engine-cold": {
+      "purpose": "Browser check that a replay opened on a cold page waits for its code, reports a failed fetch plainly and opens on retry",
+      "effects": [
+        "launches-browser"
+      ],
+      "duration": "under-a-minute"
+    },
     "test:preservation-corpus": {
       "purpose": "Vitest ghost preservation corpus with a JSON report under artifacts/tearbench/checkpoints",
       "effects": [
