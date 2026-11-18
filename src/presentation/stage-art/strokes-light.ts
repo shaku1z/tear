@@ -114,6 +114,7 @@ export function* paintVignette(kit: PaintKit, stroke: VignetteStroke): Generator
 }
 
 const REFLECTION_ROW = 2;
+const REFLECTION_ROWS_PER_YIELD = 8;
 
 export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void> {
   const { context, light } = kit;
@@ -131,10 +132,11 @@ export function* paintWater(kit: PaintKit, stroke: WaterStroke): Generator<void>
   yield;
   // Rippled reflection: rows of everything painted above, mirrored about the waterline.
   const behind = kit.behind();
+  yield;
   if (behind !== undefined) {
     const scale = context.getTransform().a;
     for (let row = 0; row < depth; row += REFLECTION_ROW) {
-      if (row % (REFLECTION_ROW * 40) === 0) yield;
+      if (row % (REFLECTION_ROW * REFLECTION_ROWS_PER_YIELD) === 0) yield;
       const k = row / depth;
       const sourceY = stroke.top - row - REFLECTION_ROW;
       if (sourceY < kit.bounds[1]) break;

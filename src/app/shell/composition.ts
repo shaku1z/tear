@@ -156,7 +156,11 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const Scenes = createSceneLibrary({
     packages: SCENE_PACKAGES,
     world: { width: worldConfig.view.w, height: worldConfig.view.h, groundY: worldConfig.world.groundY },
-    nextSlice: () => new Promise((resolve) => setTimeout(resolve, 0)),
+    // One painting slice per frame, after the frame has drawn, so a stage that paints during play never delays a frame.
+    nextSlice: () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => setTimeout(resolve, 0));
+      }),
     loadImage: loadSceneBitmap,
     createCanvas: createSceneCanvas,
     releaseImage: releaseSceneBitmap,

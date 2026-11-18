@@ -314,9 +314,9 @@ export function* paintSurface(kit: PaintKit, surface: StageArtSurface): Generato
     moss = ramp(kit, surface.mossRamp);
   const { width, height } = surface;
   const body = context.createLinearGradient(0, 0, 0, height);
-  body.addColorStop(0, rgba(sampleRamp(stone, 0.55)));
-  body.addColorStop(0.3, rgba(sampleRamp(stone, 0.35)));
-  body.addColorStop(1, rgba(sampleRamp(stone, 0.1)));
+  body.addColorStop(0, rgba(sampleRamp(stone, 0.72)));
+  body.addColorStop(0.3, rgba(sampleRamp(stone, 0.52)));
+  body.addColorStop(1, rgba(sampleRamp(stone, 0.3)));
   context.fillStyle = body;
   context.fillRect(0, 0, width, height);
   // Draws at x and its wrapped twin so the strip tiles without a seam.

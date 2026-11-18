@@ -29,7 +29,7 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
     mossRamp: "moss",
     scale: 0.66,
     fill: "#0b1c14",
-    shadow: { color: "#04110c", opacity: 0.55, length: 46 },
+    shadow: { color: "#04110c", opacity: 0.34, length: 38 },
   },
   layers: [
     {
@@ -396,7 +396,7 @@ export const VERDANT_SANCTUM_ART: StageArtRecipe = {
           braid: 2,
           ramp: "bark",
           mossRamp: "moss",
-          haze: 0.3,
+          haze: 0.4,
           fibers: 36,
           twist: 3,
           litSide: -1,
