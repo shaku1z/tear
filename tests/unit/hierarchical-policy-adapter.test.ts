@@ -87,6 +87,35 @@ describe("live hierarchical policy adapter", () => {
     expect(decision.structuredIntent.memory.decisions).toBe(1);
   });
 
+  it("counts damage to an enemy as progress, so a fight that scores nothing is not taken for a softlock", () => {
+    const hit = (tick: number, hpRatio: number): TearAgentObservation => {
+      const base = observation(tick);
+      const enemy = base.state.entities[0];
+      if (enemy === undefined) throw new Error("fixture enemy missing");
+      return {
+        ...base,
+        state: {
+          ...base.state,
+          entities: [{ ...enemy, hpRatio }],
+          ...(base.state.diagnostics === undefined
+            ? {}
+            : { diagnostics: { ...base.state.diagnostics, softlockLimitTicks: 1_800 } }),
+        },
+      };
+    };
+    const fighting = new TearLiveHierarchicalPolicy("competent");
+    const stalled = new TearLiveHierarchicalPolicy("competent");
+    let fightingPaused = false;
+    let stalledPaused = false;
+    for (let tick = 1; tick <= 2_400; tick += 1) {
+      const ratio = 1 - tick / 4_800;
+      fightingPaused ||= fighting.decide(hit(tick, ratio)).actions.some((action) => action.type === "pause");
+      stalledPaused ||= stalled.decide(hit(tick, 1)).actions.some((action) => action.type === "pause");
+    }
+    expect(fightingPaused).toBe(false);
+    expect(stalledPaused).toBe(true);
+  });
+
   it("lets fatal invariant recovery override combat actions", () => {
     const policy = new TearLiveHierarchicalPolicy("competent");
     const decision = policy.decide(observation(2, -1));

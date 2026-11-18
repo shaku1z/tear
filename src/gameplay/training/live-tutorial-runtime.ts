@@ -24,6 +24,7 @@ import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import type { createPlayer } from "../entities/player";
 import type { createBlade } from "../entities/blade";
 import type { EnemyKind } from "../run/content-director";
+import type { PracticeTab } from "./practice-tabs";
 import { practiceEnemyIdentity, type PracticeEnemyEntry } from "./practice-enemy-catalog";
 
 type TrainingPlayer = Pick<
@@ -255,12 +256,10 @@ export interface LiveTutorialRuntime {
   selectLesson(id: string): boolean;
   selectAnnex(id: string): boolean;
   selectEnemy(id: string): boolean;
-  showCatalog(): void;
-  showBosses(): void;
+  showPracticeTab(tab: PracticeTab): void;
   selectBoss(id: string, retained?: PracticeBossState): boolean;
   bindBossPractice(port: BossPracticePort): void;
   afterWorldStep(frame?: TutorialGoldFrame, input?: AuthoritativeInputSnapshot): void;
-  showAnnexes(): void;
   interruptCoaching(): void;
   observeAttemptFact(fact: TutorialAttemptFact): void;
   advanceUnfinished(assisted?: boolean): boolean;
@@ -409,8 +408,8 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       port.resetTrainingSpace();
       return controller.selectBoss(entry, bossPort.begin(entry));
     },
-    showBosses: () => {
-      controller.showBosses();
+    showPracticeTab: (tab) => {
+      controller.showPracticeTab(tab);
     },
     restart: () => {
       const selected = controller.session().bossPractice;
@@ -470,12 +469,6 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
         }
       }
       return changed;
-    },
-    showCatalog: () => {
-      controller.showCatalog();
-    },
-    showAnnexes: () => {
-      controller.showAnnexes();
     },
     weaponEffect: (weaponId, effect) => {
       controller.weaponEffect(weaponId, effect);

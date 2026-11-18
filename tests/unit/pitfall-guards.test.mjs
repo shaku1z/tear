@@ -16,6 +16,29 @@ function listFiles(directory, extensions) {
     .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)).replaceAll("\\", "/"));
 }
 
+/** Body rows of the PITFALLS table, each as its trimmed cells (header and separator dropped). */
+function pitfallRows(markdown) {
+  return markdown
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith("|") && !/^\|\s*(?:What happened|-{3})/u.test(line))
+    .map((line) =>
+      line
+        .replace(/^\||\|$/gu, "")
+        .split(" | ")
+        .map((cell) => cell.trim()),
+    );
+}
+
+/** Cells in column `index` that appear in more than one row, compared ignoring case and spacing. */
+function duplicateCells(rows, index) {
+  const seen = new Map();
+  for (const cells of rows) {
+    const key = (cells[index] ?? "").toLowerCase().replace(/\s+/gu, " ");
+    seen.set(key, (seen.get(key) ?? 0) + 1);
+  }
+  return [...seen].filter(([, count]) => count > 1).map(([key]) => key);
+}
+
 describe("pitfall guards", () => {
   it("no package script can publish: every wrangler deploy is a dry run (pnpm deploy --help)", () => {
     for (const [name, command] of Object.entries(scripts)) {
@@ -61,6 +84,16 @@ describe("pitfall guards", () => {
     const offenders = current.filter((file) => stale.test(fs.readFileSync(path.join(root, file), "utf8")));
     expect(offenders).toEqual([]);
     expect(fs.readFileSync(path.join(root, "docs", "ARCHITECTURE.md"), "utf8")).toContain("**The module size rule.**");
+  });
+  it("docs/PITFALLS.md has no duplicate rows: no two rows share an incident or a rule, and every row names its guard", () => {
+    const rows = pitfallRows(fs.readFileSync(path.join(root, "docs", "PITFALLS.md"), "utf8"));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(duplicateCells(rows, 0)).toEqual([]);
+    expect(duplicateCells(rows, 2)).toEqual([]);
+    expect(rows.filter((cells) => cells.length !== 4 || cells[3] === "").map((cells) => cells[0])).toEqual([]);
+    const sample =
+      "| What happened | Cause | Rule | Guard |\n| --- | --- | --- | --- |\n| A | B | C | D |\n| a  | x | y | z |\n";
+    expect(duplicateCells(pitfallRows(sample), 0)).toEqual(["a"]);
   });
 
   describe("a test or check runs once, and that run is its verdict (flaky tests are fixed, never retried)", () => {

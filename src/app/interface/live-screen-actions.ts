@@ -104,8 +104,8 @@ export function createLiveScreenActions(
       VAULT.remove(id);
     },
     dispatchPlayground: dispatchPlaygroundAction,
-    tutorialAction: (command, lessonId) => {
-      tutorialSessionActions.dispatch(command, lessonId);
+    tutorialAction: (action) => {
+      tutorialSessionActions.dispatch(action);
     },
   };
 }

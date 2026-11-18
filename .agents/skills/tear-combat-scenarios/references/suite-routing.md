@@ -3,6 +3,7 @@
 | Contract | Preferred evidence |
 |---|---|
 | Pure math, timing, random sequence, state transition | Focused `tests/unit` Vitest case |
+| Rule that must hold for every input (round trips, idempotence, determinism, never throws) | Property test, `tests/unit/<area>.property.test.ts` through `tests/unit/property-harness.ts` (README "Property tests") |
 | Player movement and collision | Player locomotion/contact/runtime unit suite |
 | Weapon state, throw/recall, ability interaction | Weapon runtime plus weapon/ability conformance; legacy five-weapon gate when applicable |
 | Enemy construction or behavior | Enemy factory, catalogue, behavior matrix, or enemy harness |

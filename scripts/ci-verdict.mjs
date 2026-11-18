@@ -36,14 +36,19 @@ export function verdictProblems(needs, gate) {
   return problems;
 }
 
-if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const needs = JSON.parse(process.env.NEEDS ?? "null");
+/** What the `check` job runs: reads `NEEDS`, prints each job and any problem, returns the exit code. */
+export function main(env = process.env, log = console.log) {
+  const needs = JSON.parse(env.NEEDS ?? "null");
   const problems = verdictProblems(needs, loadChecks().gate);
-  for (const job of Object.keys(needs ?? {})) console.log(`${job}: ${String(needs[job].result)}`);
-  if (problems.length > 0) {
-    for (const problem of problems) console.log(`::error title=check::${problem}`);
-    process.exitCode = 1;
-  } else {
-    console.log("every needed job passed");
+  for (const job of Object.keys(needs ?? {})) log(`${job}: ${String(needs[job].result)}`);
+  if (problems.length === 0) {
+    log("every needed job passed");
+    return 0;
   }
+  for (const problem of problems) log(`::error title=check::${problem}`);
+  return 1;
+}
+
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = main();
 }
