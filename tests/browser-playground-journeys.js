@@ -167,7 +167,7 @@ const journey = (practiceLab) =>
         assert.equal(before.earned, 1000);
         assert.equal(before.spent, 375);
         assert.equal(before.buy.sharp, 1);
-        await clickLabel("PRACTICE LAB");
+        await clickLabel("DRILLS");
         await waitScreen("paused");
         let session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.practiceOnly, true);
@@ -178,6 +178,14 @@ const journey = (practiceLab) =>
           "historical lesson history must remain unknown",
         );
         if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-selector.png") });
+        // Q / E step the Drills tabs, as on every tabbed screen.
+        const openTab = () => page.evaluate(() => window.__PANTHEON_TEST.tutorial().session.practiceTab);
+        assert.equal(await openTab(), "lessons");
+        await page.keyboard.press("e");
+        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.practiceTab === "weapons");
+        await page.keyboard.press("q");
+        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.practiceTab === "lessons");
+        assert.equal(await openTab(), "lessons");
         await clickLabel("LAUNCH");
         await waitScreen("playing");
         assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().lessonIndex), 4);
@@ -188,7 +196,7 @@ const journey = (practiceLab) =>
         await waitScreen("playing");
         assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().counters.launch ?? 0), 0);
         await pressUntilScreen("p", "paused");
-        await clickLabel("WEAPON ANNEXES");
+        await clickLabel("WEAPONS");
         if (directory)
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-weapon-annexes.png") });
         for (const weapon of ["sword", "hammer", "greatsword", "chainblade", "riftlock"]) {
@@ -214,7 +222,7 @@ const journey = (practiceLab) =>
           assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().weapon), weapon);
           await pressUntilScreen("p", "paused");
         }
-        await clickLabel("ENEMY CATALOG");
+        await clickLabel("ENEMIES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
         assert.equal(
@@ -223,7 +231,7 @@ const journey = (practiceLab) =>
           "aggregate old support kills must not invent subtype history",
         );
         await page.waitForFunction(() =>
-          window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "HISTORY NOT RECORDED"),
+          window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "NOT MET YET"),
         );
         if (directory)
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-enemy-catalog.png") });
@@ -303,7 +311,7 @@ const journey = (practiceLab) =>
           );
         }
         await pressUntilScreen("p", "paused");
-        await clickLabel("BOSS PRACTICE");
+        await clickLabel("BOSSES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.bossCatalog.length, 18);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "colossus:1").knowledge, "defeated-identity");
@@ -378,16 +386,16 @@ const journey = (practiceLab) =>
         // Re-enter through the ordinary setup screen after a full page reload.
         await clickLabel("PLAY");
         await waitScreen("setup");
-        await clickLabel("PRACTICE LAB");
+        await clickLabel("DRILLS");
         await waitScreen("paused");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.practiceOnly, true);
         assert.equal(session.phase, "free-practice");
-        await clickLabel("ENEMY CATALOG");
+        await clickLabel("ENEMIES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "mender").canPractice, false);
-        await clickLabel("BOSS PRACTICE");
+        await clickLabel("BOSSES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:2").canPractice, true);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:3").canPractice, false);
