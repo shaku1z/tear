@@ -7,12 +7,15 @@ import {
 } from "../../src/gameplay/training/live-playground-presentation";
 
 describe("live playground presentation", () => {
-  it("only promises Tab / Esc to a keyboard; touch and controller are pointed at RESUME", () => {
+  it("words the help line from the prompt vocabulary for the device that owns input", () => {
     for (const device of ["mouse", "keyboard"] as const)
-      expect(playgroundMenuSubtitle(device)).toBe("Q / E switch tabs · Tab or Esc returns to the arena");
-    expect(playgroundMenuSubtitle("gamepad")).toBe("L1 / R1 switch tabs · RESUME returns to the arena");
-    expect(playgroundMenuSubtitle("touch")).toBe("RESUME returns to the arena");
-    for (const device of ["touch", "gamepad"] as const) expect(playgroundMenuSubtitle(device)).not.toMatch(/Tab|Esc/u);
+      expect(playgroundMenuSubtitle(device)).toBe("Q / E switch tabs · TAB / ESC returns to the arena");
+    // The pad names its own bumpers and back button, in the player's glyph style.
+    const xbox = (binding: string): string => ({ "tab-prev": "LB", "tab-next": "RB", back: "B" })[binding] ?? "?";
+    expect(playgroundMenuSubtitle("gamepad", xbox)).toBe("LB / RB switch tabs · B returns to the arena");
+    // Touch players tap the tab strip and RESUME: no line.
+    expect(playgroundMenuSubtitle("touch")).toBe("");
+    expect(playgroundMenuSubtitle("gamepad", xbox)).not.toMatch(/TAB|ESC|Q \/ E/u);
   });
 
   it("builds menu and ability-lab models while clamping scroll", () => {

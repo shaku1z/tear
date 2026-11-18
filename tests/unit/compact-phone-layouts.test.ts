@@ -444,7 +444,7 @@ const rankedView = {
 const playgroundMenu = {
   id: "pgmenu" as const,
   title: "PLAYGROUND",
-  subtitle: "Q / E switch tabs · Tab or Esc returns to the arena",
+  subtitle: "Q / E switch tabs · TAB / ESC returns to the arena",
   tabs: ["SPAWN", "BOSSES", "ARENA", "WEAPON", "RULES", "ABILITIES"].map((label, index) => ({
     id: `tab:${label.toLowerCase()}`,
     label,
@@ -524,7 +524,7 @@ const playgroundMenu = {
 const playgroundLab = {
   id: "pglab" as const,
   title: "PLAYGROUND",
-  subtitle: "Take or evolve any ability · Q / E switch tabs · Tab or Esc returns to the arena",
+  subtitle: "Take or evolve any ability · Q / E switch tabs · TAB / ESC returns to the arena",
   tabs: ["SPAWN", "BOSSES", "ARENA", "WEAPON", "RULES", "ABILITIES"].map((label, index) => ({
     id: `tab:${label.toLowerCase()}`,
     label,

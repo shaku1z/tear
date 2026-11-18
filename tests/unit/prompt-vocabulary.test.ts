@@ -10,7 +10,20 @@ import {
 } from "../../src/domain/prompt-vocabulary";
 
 const padLabel = (binding: PadBinding): string =>
-  ({ jump: "A", dash: "RB", throw: "RT", tether: "LT", confirm: "A", back: "B", pause: "MENU" })[binding];
+  ({
+    jump: "A",
+    dash: "RB",
+    throw: "RT",
+    tether: "LT",
+    confirm: "A",
+    back: "B",
+    pause: "MENU",
+    "tab-prev": "LB",
+    "tab-next": "RB",
+  })[binding];
+
+/** Tabbed-menu controls: a pad has them, a touch player taps the tab strip and RESUME instead. */
+const MENU_CONTROLS: readonly PromptAction[] = ["tab-prev", "tab-next", "close-menu"];
 
 const PLAYGROUND_HOTKEYS: readonly PromptAction[] = [
   "playground-menu",
@@ -35,7 +48,7 @@ describe("prompt vocabulary", () => {
       expect(promptLabel(action, "keyboard"), action).toMatch(/\S/u);
       for (const device of ["touch", "gamepad"] as const) {
         const label = promptLabel(action, device, padLabel);
-        if (PLAYGROUND_HOTKEYS.includes(action)) {
+        if (PLAYGROUND_HOTKEYS.includes(action) || (device === "touch" && MENU_CONTROLS.includes(action))) {
           expect(label, `${action} on ${device}`).toBeNull();
           expect(promptAvailable(action, device)).toBe(false);
         } else {
@@ -67,6 +80,12 @@ describe("prompt vocabulary", () => {
     expect(promptLabel("dash-down", "gamepad", padLabel)).toBe("LS ↓ + RB");
     expect(promptLabel("pause", "gamepad", padLabel)).toBe("MENU");
     expect(promptLabel("jump", "gamepad")).toBe("JUMP");
+  });
+
+  it("names the pad's bumpers and back button for tabbed menus", () => {
+    expect(promptLabels(["tab-prev", "tab-next"], "gamepad", padLabel)).toEqual(["LB", "RB"]);
+    expect(promptLabel("close-menu", "gamepad", padLabel)).toBe("B");
+    expect(promptLabels(["tab-prev", "tab-next", "close-menu"], "keyboard")).toEqual(["Q", "E", "TAB / ESC"]);
   });
 
   it("drops actions a device cannot trigger and merges duplicates", () => {
