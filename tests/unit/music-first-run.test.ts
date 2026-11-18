@@ -150,15 +150,30 @@ describe("saved progress at run start decides first runs and unlocks", () => {
     expect(routing({ kills: 99 }).isUnlocked("not-a-work")).toBe(false);
   });
 
-  it("refuses a catalog whose work has an unlock this build cannot read", () => {
-    const withUnlock = (unlock?: unknown) => ({
+  it("loads a catalog with an unlock it cannot read, keeps that work locked and plays the rest", () => {
+    const unlockCatalog = parseMusicCatalog({
       format: "tear-music-catalog",
       version: 1,
       stations: [],
-      works: [{ id: "w", ...(unlock === undefined ? {} : { unlock }) }],
+      works: [
+        { id: "open", unlock: { type: "default" } },
+        { id: "newer", unlock: { type: "moon-phase" } },
+        { id: "broken", unlock: { type: "boss-defeat" } },
+        { id: "bare" },
+      ],
     });
-    for (const unlock of [{ type: "moon-phase" }, { type: "boss-defeat" }, undefined])
-      expect(() => parseMusicCatalog(withUnlock(unlock)), JSON.stringify(unlock)).toThrow(/invalid music work unlock/u);
+    expect(unlockCatalog.works.map((work) => work.id)).toEqual(["open", "newer", "broken", "bare"]);
+    expect(unlockCatalog.problems).toHaveLength(3);
+    expect(unlockCatalog.problems.some((problem) => /newer.*moon-phase/u.test(problem))).toBe(true);
+    const routing = musicProgressRouting({ stats: { killRootbound: 1 }, ach: {} }, unlockCatalog, VERDANT);
+    expect(routing.isUnlocked("open")).toBe(true);
+    for (const id of ["newer", "broken", "bare"]) expect(routing.isUnlocked(id), id).toBe(false);
+  });
+
+  it("still rejects a catalog of the wrong format or version", () => {
+    expect(() => parseMusicCatalog({ format: "other", version: 1, works: [], stations: [] })).toThrow(
+      /unsupported music catalog/u,
+    );
   });
 
   it("gives no first run and no unlocks without progress (seed races, practice, menus)", () => {

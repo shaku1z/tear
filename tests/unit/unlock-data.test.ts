@@ -16,12 +16,19 @@ const musicIndex = JSON.parse(readFileSync("public/audio/music.json", "utf8")) a
 const music = parseMusicCatalog(musicIndex.catalog);
 
 const sources: readonly (readonly [string, UnlockCondition])[] = [
-  ...music.works.map((work) => [`music work ${work.id}`, work.unlock] as const),
+  ...music.works.flatMap((work) =>
+    work.unlock.type === "unreadable" ? [] : [[`music work ${work.id}`, work.unlock] as const],
+  ),
   ...COSMETIC_CATALOG.collections.map((collection) => [`collection ${collection.id}`, collection.unlock] as const),
   ...COSMETIC_CATALOG.items.flatMap((item) => (item.unlock ? [[`item ${item.id}`, item.unlock] as const] : [])),
 ];
 
 describe("conditions in the shipped data", () => {
+  it("are all readable by this build in the committed music catalog", () => {
+    expect(music.problems).toEqual([]);
+    expect(music.works.filter((work) => work.unlock.type === "unreadable")).toEqual([]);
+  });
+
   it("covers music, collections and items", () => {
     expect(music.works.length).toBeGreaterThan(0);
     expect(sources.length).toBeGreaterThan(music.works.length);

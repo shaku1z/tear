@@ -544,7 +544,7 @@ export function musicProgressRouting(
     firstRun: !facts.biomeEntered(biomeId),
     isUnlocked: (workId) => {
       const unlock = catalog?.works.find((work) => work.id === workId)?.unlock;
-      return unlock !== undefined && conditionMet(unlock, facts);
+      return unlock !== undefined && unlock.type !== "unreadable" && conditionMet(unlock, facts);
     },
   };
 }
