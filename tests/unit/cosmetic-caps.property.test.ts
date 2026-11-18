@@ -1,7 +1,8 @@
 /**
  * Property tests for the cosmetic record's bounds (src/domain/cosmetics.ts): merging two devices' records
- * never drops an owned item, keeps `seen` and `counters` for catalog items, does not depend on order, and
- * stays inside the catalog's worst case, which fits the saved-record budget.
+ * never drops an owned item or a counter (a newer client's purchases and progress), keeps `seen` for catalog
+ * items, does not depend on order, and stays inside the catalog's worst case, which fits the saved-record
+ * budget.
  */
 import { describe, expect, it } from "vitest";
 
@@ -59,14 +60,26 @@ const catalogRecord = savedRecord(fc.constantFrom(...catalogIds));
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
 describe("cosmetic record bounds", () => {
-  it("keeps every owned item from both sides, and seen and counters for catalog items only", () => {
+  it("keeps every owned item and counter from both sides, and seen marks for catalog items only", () => {
     checkProperty(
       fc.property(anyRecord, anyRecord, (left, right) => {
         const merged = mergeCosmeticStates(left, right, COSMETIC_CATALOG);
-        for (const id of [...Object.keys(left.owned), ...Object.keys(right.owned)])
-          expect(Object.hasOwn(merged.owned, id)).toBe(true);
+        for (const side of [left, right]) {
+          for (const id of Object.keys(side.owned)) expect(Object.hasOwn(merged.owned, id)).toBe(true);
+          for (const id of Object.keys(side.counters)) expect(Object.hasOwn(merged.counters, id)).toBe(true);
+        }
         for (const id of Object.keys(merged.seen)) expect(catalogIds).toContain(id);
-        for (const id of Object.keys(merged.counters)) expect(catalogIds).toContain(id);
+      }),
+    );
+  });
+
+  it("keeps a newer client's counter when an older catalog merges the profile, but not its seen mark", () => {
+    checkProperty(
+      fc.property(unknownId, fc.nat(), time, (id, count, at) => {
+        const newer = normalizeCosmeticState({ v: 1, counters: { [id]: count }, seen: { [id]: at } });
+        const merged = mergeCosmeticStates(newer, normalizeCosmeticState({ v: 1 }), COSMETIC_CATALOG);
+        expect(merged.counters[id]).toBe(count);
+        expect(Object.hasOwn(merged.seen, id)).toBe(false);
       }),
     );
   });

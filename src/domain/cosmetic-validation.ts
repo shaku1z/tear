@@ -331,13 +331,14 @@ const LATEST_PLAUSIBLE_TIME = 9_999_999_999_999;
 /**
  * The largest cosmetic record this catalog allows, in characters. It must fit MAX_STATE_CHARS.
  *
- * Owned ids are never dropped, so the bound is the catalog, not MAX_OWNED (which only refuses a purchase).
- * The worst case is every item owned, seen and counted, plus MAX_LOADOUTS loadouts with every slot filled.
+ * The bound is the catalog, not MAX_OWNED (which only refuses a purchase). The worst case is every item
+ * owned, seen and counted, plus MAX_LOADOUTS loadouts with every slot filled.
  * Every value is at its longest: the highest price, the latest plausible time, the largest counter, ids at
  * MAX_ID_LENGTH where a player chooses them, and loadout names that each escape to six characters in JSON.
  *
- * An id from a newer client's catalog is kept too. That build checks its own catalog's worst case, so
- * holding its items fits the same budget.
+ * Outside this bound: owned items and counters for ids this catalog does not list. Neither is ever dropped
+ * (`mergeCosmeticStates`), because they are a newer client's purchases and progress. That newer build checks
+ * its own catalog's worst case, so a profile holding its ids fits the budget that build was checked against.
  */
 export function worstCaseStateSize(catalog: CosmeticCatalog): number {
   const items = catalog.items.map((item) => item.id);

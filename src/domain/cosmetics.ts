@@ -123,12 +123,14 @@ function mergeNumbers(
 
 /**
  * Union of ownership (larger price on a clash), earliest seen, largest counters, per-slot newest equip, newest
- * active loadout. Order-independent: merge(a, b) equals merge(b, a). Never drops an owned item: dropping one
- * would refund its shards with nobody seeing why. With the catalog, `seen` and `counters` are kept for its
- * items only. Both may name an item the player does not own (looking at a shelf clears its NEW mark before
- * buying; a counter may track progress toward an item), but an id no catalog lists is noise. Each entry is
- * judged alone, so the merge stays commutative, associative and idempotent, and the catalog's worst case
- * bounds the merged record (`worstCaseStateSize`).
+ * active loadout. Order-independent: merge(a, b) equals merge(b, a).
+ *
+ * Owned items and counters are never dropped, whatever their id: dropping an owned item would refund its
+ * shards with nobody seeing why, and a counter may be a newer client's progress toward an item this build does
+ * not list yet, which an older device merging the profile must not erase. With the catalog, `seen` is kept
+ * for its items only: a seen mark may name an item the player does not own (looking at a shelf clears its NEW
+ * mark before buying), and losing one for an id this build does not list only shows NEW once more. Each entry
+ * is judged alone, so the merge stays commutative, associative and idempotent.
  */
 export function mergeCosmeticStates(
   left: CosmeticState,
@@ -140,13 +142,12 @@ export function mergeCosmeticStates(
     const current = ownValue(loadouts, id);
     loadouts[id] = current ? mergeLoadout(current, entry) : entry;
   }
-  const listed = (map: Record<string, number>): Record<string, number> =>
-    catalog ? keepKeys(map, (id) => catalog.items.some((item) => item.id === id)) : map;
+  const seen = mergeNumbers(left.seen, right.seen, Math.min);
   return {
     v: COSMETIC_STATE_VERSION,
     owned: mergeNumbers(left.owned, right.owned, Math.max),
-    seen: listed(mergeNumbers(left.seen, right.seen, Math.min)),
-    counters: listed(mergeNumbers(left.counters, right.counters, Math.max)),
+    seen: catalog ? keepKeys(seen, (id) => catalog.items.some((item) => item.id === id)) : seen,
+    counters: mergeNumbers(left.counters, right.counters, Math.max),
     loadouts,
     active: newer(right.active, left.active) ? right.active : left.active,
   };
