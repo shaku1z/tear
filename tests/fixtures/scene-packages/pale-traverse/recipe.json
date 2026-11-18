@@ -216,6 +216,19 @@
         "swell": 1,
         "waves": 4,
         "period": 4
+      },
+      {
+        "id": "snow",
+        "kind": "motes",
+        "layer": "far",
+        "rect": [0, -100, 1600, 900],
+        "count": 60,
+        "color": "#f4f8ff",
+        "opacity": 0.8,
+        "size": 2,
+        "rise": -40,
+        "wander": 24,
+        "period": 6
       }
     ],
     "encodedBudget": 60000,

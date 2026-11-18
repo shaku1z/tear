@@ -185,6 +185,81 @@
         1600,
         290.909
       ]
+    },
+    {
+      "id": "sun-shafts",
+      "kind": "light",
+      "layer": "far",
+      "rect": [
+        80,
+        -120,
+        1440,
+        800
+      ],
+      "from": [
+        745,
+        110
+      ],
+      "beams": [
+        {
+          "angle": -44,
+          "width": 220,
+          "length": 780
+        },
+        {
+          "angle": -30,
+          "width": 150,
+          "length": 720
+        },
+        {
+          "angle": -17,
+          "width": 230,
+          "length": 660
+        },
+        {
+          "angle": -3,
+          "width": 160,
+          "length": 620
+        },
+        {
+          "angle": 11,
+          "width": 220,
+          "length": 640
+        },
+        {
+          "angle": 26,
+          "width": 150,
+          "length": 700
+        },
+        {
+          "angle": 41,
+          "width": 220,
+          "length": 780
+        }
+      ],
+      "taper": 0.3,
+      "color": "#fff3c4",
+      "opacity": 0.24,
+      "period": 7,
+      "sway": 2
+    },
+    {
+      "id": "pollen",
+      "kind": "motes",
+      "layer": "far",
+      "rect": [
+        60,
+        40,
+        1480,
+        720
+      ],
+      "count": 110,
+      "color": "#eaffb0",
+      "opacity": 0.9,
+      "size": 2.2,
+      "rise": 7,
+      "wander": 16,
+      "period": 9
     }
   ],
   "sources": [

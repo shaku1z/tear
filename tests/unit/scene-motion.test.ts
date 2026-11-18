@@ -9,10 +9,13 @@ import {
 } from "../../src/presentation/scenes/scene-contract";
 import {
   drawLayerMotion,
+  motionCanvases,
   prepareMotion,
   SCENE_MOTION_RATE,
   waterRow,
+  type PreparedMotion,
 } from "../../src/presentation/scenes/scene-motion";
+import { SCENE_MOTE_SPRITE } from "../../src/presentation/scenes/scene-motion-contract";
 import { drawSceneBack, type LoadedScene, type SceneFrame } from "../../src/presentation/scenes/scene-renderer";
 import { fixturePackage } from "./scene-fixture";
 
@@ -81,7 +84,16 @@ function fakeCanvas(width: number, height: number, context: CanvasRenderingConte
 }
 
 function loadedScene(part: Record<string, unknown> = {}) {
-  const scene = validateScenePackage(withWater(part));
+  return loadedPackage(withWater(part));
+}
+
+/** The fixture with the water mask image and the given moving parts. */
+function withParts(...parts: Record<string, unknown>[]) {
+  return withWater({}, { motion: parts });
+}
+
+function loadedPackage(input: unknown) {
+  const scene = validateScenePackage(input);
   const work = recorder();
   const images = new Map<string, SceneBitmap>(
     scene.images.map((image) => [image.id, fakeCanvas(image.width, image.height, work.context)]),
@@ -93,6 +105,13 @@ function loadedScene(part: Record<string, unknown> = {}) {
   });
   const loaded: LoadedScene = { scene, images, shading: [], motion };
   return { scene, images, motion, loaded, work, created };
+}
+
+/** The first prepared part, which these tests make water. */
+function waterPart(motion: readonly PreparedMotion[]) {
+  const part = motion[0];
+  if (part === undefined || !("canvas" in part)) throw new Error("no water");
+  return part;
 }
 
 /** The far layer's decoded paint; every test scene has one. */
@@ -166,8 +185,8 @@ describe("drawing water", () => {
   it("makes one canvas the size of the paint under the water", () => {
     const { created, motion } = loadedScene();
     expect(created).toEqual([{ width: 1000, height: 240 }]);
-    expect(motion[0]?.source).toEqual([500, 672, 1000, 240]);
-    expect(motion[0]?.area).toEqual([200, 540, 1200, 300]);
+    expect(waterPart(motion).source).toEqual([500, 672, 1000, 240]);
+    expect(waterPart(motion).area).toEqual([200, 540, 1200, 300]);
   });
 
   it("redraws the rows, the glints and the mask, then draws the result over its layer", () => {
@@ -198,7 +217,7 @@ describe("drawing water", () => {
     expect(final?.args[0]).toBe(images.get("water"));
     expect(final?.blend).toBe("destination-in");
     expect(main.calls).toEqual([
-      { name: "drawImage", args: [motion[0]?.canvas, 200, 540, 1200, 300], blend: undefined },
+      { name: "drawImage", args: [waterPart(motion).canvas, 200, 540, 1200, 300], blend: undefined },
     ]);
   });
 
@@ -246,7 +265,7 @@ describe("the scene renderer", () => {
     const { loaded, motion } = loadedScene();
     const main = recorder();
     drawSceneBack(main.context, loaded, frame(overrides));
-    return main.calls.filter((call) => call.name === "drawImage" && call.args[0] === motion[0]?.canvas);
+    return main.calls.filter((call) => call.name === "drawImage" && call.args[0] === waterPart(motion).canvas);
   };
 
   it("draws the water right after its layer", () => {
@@ -268,5 +287,152 @@ describe("the scene renderer", () => {
     const prepared = recorder();
     drawSceneBack(prepared.context, { scene, images, shading: [], motion: [] }, frame());
     expect(prepared.calls).toEqual(plain.calls);
+  });
+});
+
+const light = {
+  id: "shafts",
+  kind: "light",
+  layer: "far",
+  rect: [100, -100, 1400, 800],
+  from: [800, 100],
+  beams: [
+    { angle: -30, width: 140, length: 700 },
+    { angle: 0, width: 120, length: 600 },
+    { angle: 30, width: 140, length: 700 },
+  ],
+  taper: 0.1,
+  color: "#fff3c4",
+  opacity: 0.2,
+  period: 7,
+  sway: 2,
+};
+
+const motes = {
+  id: "pollen",
+  kind: "motes",
+  layer: "far",
+  rect: [100, 50, 1400, 700] as const,
+  count: 40,
+  color: "#eaffb0",
+  opacity: 0.7,
+  size: 1.6,
+  rise: 8,
+  wander: 16,
+  period: 9,
+};
+
+describe("light and motes in a scene package", () => {
+  it("are package data beside water, each kind with its own fields", () => {
+    const scene = validateScenePackage(withParts(water, light, motes));
+    expect(scene.motion).toEqual([water, light, motes]);
+    expect(scene.motion.every((part) => Object.isFrozen(part))).toBe(true);
+  });
+
+  it.each([
+    ["light with no beams", { ...light, beams: [] }, /at least one beam/u],
+    ["a beam leaning past the horizon", { ...light, beams: [{ angle: 95, width: 100, length: 500 }] }, /angle/u],
+    ["light with no start point", { ...light, from: [800] }, /from/u],
+    ["more motes than draw cheaply", { ...motes, count: 1000 }, /count/u],
+    ["motes outside their layer", { ...motes, rect: [100, 50, 4000, 700] }, /inside layer/u],
+  ])("rejects %s", (_label, part, message) => {
+    expect(() => validateScenePackage(withParts(part))).toThrow(message);
+  });
+
+  it("counts the speck image of motes as decoded memory; light holds none", () => {
+    const still = decodedBytes(validateScenePackage(withParts()));
+    expect(decodedBytes(validateScenePackage(withParts(light)))).toBe(still);
+    expect(decodedBytes(validateScenePackage(withParts(motes)))).toBe(still + SCENE_MOTE_SPRITE ** 2 * 4);
+  });
+});
+
+describe("drawing light and motes", () => {
+  it("makes no canvas for light and one small speck for motes, and releases what it made", () => {
+    const { motion, created } = loadedPackage(withParts(water, light, motes));
+    expect(created).toEqual([
+      { width: 1000, height: 240 },
+      { width: SCENE_MOTE_SPRITE, height: SCENE_MOTE_SPRITE },
+    ]);
+    expect(motionCanvases(motion)).toHaveLength(2);
+  });
+
+  it("fills every beam, softly, inside the light's area and brightening what is under it", () => {
+    const { motion, images } = loadedPackage(withParts(light));
+    const main = recorder();
+    drawLayerMotion(main.context, motion, images, "far", farPaint(images), 1);
+    expect(main.calls.find((call) => call.name === "clip")).toBeDefined();
+    expect(main.calls.find((call) => call.name === "rect")?.args).toEqual(light.rect);
+    const fills = main.calls.filter((call) => call.name === "fill");
+    // Each beam is three nested fills, so its edge is soft.
+    expect(fills).toHaveLength(light.beams.length * 3);
+    expect(fills.every((call) => call.blend === "lighter")).toBe(true);
+    const turns = main.calls.filter((call) => call.name === "rotate").map((call) => call.args[0] as number);
+    // A beam leaning right (positive angle) turns the canvas the other way, and sway stays within its degrees.
+    for (const [index, beam] of light.beams.entries()) {
+      const lean = (-(turns[index] ?? 0) * 180) / Math.PI;
+      expect(Math.abs(lean - beam.angle)).toBeLessThanOrEqual(light.sway + 1e-9);
+    }
+  });
+
+  it("breathes: the beams are brighter or dimmer a moment later", () => {
+    const strength = (seconds: number) => {
+      const { motion, images } = loadedPackage(withParts(light));
+      const main = recorder();
+      const alphas: unknown[] = [];
+      const context = new Proxy(main.context, {
+        set(target, property, value): boolean {
+          if (property === "globalAlpha") alphas.push(value);
+          return Reflect.set(target, property, value);
+        },
+      });
+      context.globalAlpha = 1;
+      drawLayerMotion(context, motion, images, "far", farPaint(images), seconds);
+      return alphas.slice(1);
+    };
+    expect(strength(1)).not.toEqual(strength(3));
+    for (const alpha of strength(2)) expect(alpha).toBeLessThanOrEqual(light.opacity / 3 + 1e-9);
+  });
+
+  it("draws every mote from the speck, inside its area, and moves them", () => {
+    const positions = (seconds: number, part = motes) => {
+      const { motion, images } = loadedPackage(withParts(part));
+      const main = recorder();
+      drawLayerMotion(main.context, motion, images, "far", farPaint(images), seconds);
+      const draws = main.calls.filter((call) => call.name === "drawImage");
+      expect(draws).toHaveLength(part.count);
+      expect(draws.every((call) => call.blend === "lighter")).toBe(true);
+      return draws.map((call) => {
+        const [, x, y, size] = call.args as number[];
+        return [(x ?? 0) + (size ?? 0) / 2, (y ?? 0) + (size ?? 0) / 2] as const;
+      });
+    };
+    const [x, y, w, h] = motes.rect;
+    for (const [px, py] of positions(4)) {
+      expect(px).toBeGreaterThanOrEqual(x);
+      expect(px).toBeLessThanOrEqual(x + w);
+      expect(py).toBeGreaterThanOrEqual(y);
+      expect(py).toBeLessThanOrEqual(y + h);
+    }
+    expect(positions(4)).not.toEqual(positions(4.5));
+    // Rising motes climb a little each moment; falling ones (snow) come down.
+    const climb = (part: typeof motes) => {
+      const before = positions(4, part);
+      const after = positions(4.1, part);
+      return after.filter(([, py], index) => py < (before[index]?.[1] ?? 0)).length / part.count;
+    };
+    expect(climb(motes)).toBeGreaterThan(0.8);
+    expect(climb({ ...motes, rise: -40 })).toBeLessThan(0.2);
+  });
+
+  it("draws neither with reduced motion or low graphics", () => {
+    const calls = (overrides: Partial<SceneFrame>) => {
+      const { loaded } = loadedPackage(withParts(light, motes));
+      const main = recorder();
+      drawSceneBack(main.context, loaded, frame(overrides));
+      return main.calls.filter((call) => call.blend === "lighter").length;
+    };
+    expect(calls({})).toBeGreaterThan(0);
+    expect(calls({ reducedMotion: true })).toBe(0);
+    expect(calls({ lowGraphics: true })).toBe(0);
   });
 });

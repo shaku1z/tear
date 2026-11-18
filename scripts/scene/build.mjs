@@ -420,10 +420,14 @@ export async function buildScene(directory, sourcesDirectory, log = console.log)
     ),
     images,
     layers: template.layers.map((layer) => ({ ...layer, rect: placements.get(layer.image) })),
-    // A moving part covers the area its mask image was cut from.
+    // Water covers the area its mask image was cut from; light and motes give their own rect.
     ...(template.motion === undefined
       ? {}
-      : { motion: template.motion.map((part) => ({ ...part, rect: placements.get(part.mask) })) }),
+      : {
+          motion: template.motion.map((part) =>
+            part.mask === undefined ? part : { ...part, rect: placements.get(part.mask) },
+          ),
+        }),
   };
   const { validateScenePackage } = await loadContract();
   validateScenePackage(scene);

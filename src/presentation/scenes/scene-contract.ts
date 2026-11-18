@@ -3,9 +3,30 @@
  * painted stage background is delivered in, and the pure maths every consumer
  * shares (validation, parallax camera, coverage, surface binding).
  *
- * This module has no runtime imports so the `pnpm scene` CLI can load it with
- * Node's type stripping; keep it that way (type-only imports are erased).
+ * Field readers live in scene-fields.ts and the `motion` list in
+ * scene-motion-contract.ts. These modules import only each other, so the
+ * `pnpm scene` CLI can load them with Node's type stripping (its loader adds
+ * the `.ts` to their relative imports); keep them free of other imports.
  */
+import {
+  color,
+  digest,
+  fail,
+  finite,
+  id,
+  integer,
+  list,
+  record,
+  rect,
+  ScenePackageError,
+  text,
+  unique,
+  type Rect,
+} from "./scene-fields";
+import { parseMotion, SCENE_MOTE_SPRITE, type SceneMotion } from "./scene-motion-contract";
+
+export { ScenePackageError };
+export type { Point, Rect } from "./scene-fields";
 
 export const SCENE_PACKAGE_FORMAT = "tear-scene-package";
 export const SCENE_PACKAGE_VERSION = 1;
@@ -26,8 +47,6 @@ export const SCENE_DECODED_LIMIT = 24 * 1024 * 1024;
  */
 export const SCENE_MAX_PIXELS_PER_UNIT = 2.5;
 
-export type Rect = readonly [x: number, y: number, w: number, h: number];
-
 /** A decoded image the scene code can draw; ImageBitmap and canvases qualify. */
 export type SceneBitmap = CanvasImageSource & { readonly width: number; readonly height: number };
 
@@ -37,7 +56,6 @@ export interface SceneCanvas {
   readonly height: number;
   getContext(id: "2d"): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
 }
-export type Point = readonly [x: number, y: number];
 
 export type SceneSourceOrigin = "owner-supplied" | "image-tool" | "derived" | "procedural";
 
@@ -99,45 +117,6 @@ export interface SceneShade {
 }
 
 /**
- * Moving water: the part of a painted layer under `mask` is redrawn in
- * horizontal rows that slide and stretch a little, so the painted surface and
- * the reflections in it ripple while everything outside the mask stays still.
- * Rows are thin and move little at the far edge (`rect` top) and grow towards
- * the near edge, by `far` (far size as a share of near size), so the motion
- * follows the painted perspective. `glints` are short bright strokes on the
- * surface that fade in and out and drift.
- */
-export interface SceneWater {
-  readonly id: string;
-  readonly kind: "water";
-  /** The layer whose paint moves; the water is drawn right after it. */
-  readonly layer: string;
-  /** Image whose alpha says where water is, stretched over `rect`. */
-  readonly mask: string;
-  /** Layer-space area the mask covers, inside the layer's rect. */
-  readonly rect: Rect;
-  readonly rows: number;
-  readonly far: number;
-  /** World px a near row slides sideways and stretches vertically. */
-  readonly slide: number;
-  readonly swell: number;
-  /** Wave crests between the far and near edge, and seconds for one to pass. */
-  readonly waves: number;
-  readonly period: number;
-  readonly glints?: {
-    readonly count: number;
-    readonly color: string;
-    readonly opacity: number;
-    /** World px of a near glint, and world px a second it drifts sideways. */
-    readonly length: number;
-    readonly drift: number;
-  };
-}
-
-/** Everything in a scene that moves. Each kind is drawn by the shared renderer from this data alone. */
-export type SceneMotion = SceneWater;
-
-/**
  * How the game draws this stage's platforms and floor. Platforms are never part
  * of the painted layers: the stage's platform material draws them from the real
  * collision geometry, above the back plane and below actors. The package only
@@ -192,85 +171,6 @@ export interface ScenePackage {
   readonly encodedBudget: number;
   /** Decoded RGBA bytes the package may hold (width x height x 4, summed). */
   readonly decodedBudget: number;
-}
-
-type Raw = Record<string, unknown>;
-
-export class ScenePackageError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ScenePackageError";
-  }
-}
-
-function fail(path: string, message: string): never {
-  throw new ScenePackageError(`${path}: ${message}`);
-}
-
-function record(value: unknown, path: string): Raw {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) fail(path, "expected an object");
-  return value as Raw;
-}
-
-function list(value: unknown, path: string, max = 64): readonly unknown[] {
-  if (!Array.isArray(value)) fail(path, "expected an array");
-  if (value.length > max) fail(path, `more than ${String(max)} entries`);
-  return value as readonly unknown[];
-}
-
-function text(value: unknown, path: string, max = 4000): string {
-  if (typeof value !== "string" || value.length === 0 || value.length > max) fail(path, "expected a non-empty string");
-  return value;
-}
-
-function id(value: unknown, path: string): string {
-  const result = text(value, path, 64);
-  if (!/^[a-z0-9][a-z0-9-]*$/u.test(result)) fail(path, "ids are lower-case kebab-case");
-  return result;
-}
-
-function finite(value: unknown, path: string, min = -1e6, max = 1e6): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
-    fail(path, `expected a number in [${String(min)}, ${String(max)}]`);
-  }
-  return value;
-}
-
-function integer(value: unknown, path: string, min: number, max: number): number {
-  const result = finite(value, path, min, max);
-  if (!Number.isInteger(result)) fail(path, "expected an integer");
-  return result;
-}
-
-function color(value: unknown, path: string): string {
-  const result = text(value, path, 9);
-  if (!/^#[0-9a-f]{6}$/u.test(result)) fail(path, "colours are #rrggbb lower-case");
-  return result;
-}
-
-function digest(value: unknown, path: string): string {
-  const result = text(value, path, 64);
-  if (!/^[a-f0-9]{64}$/u.test(result)) fail(path, "expected a sha256 hex digest");
-  return result;
-}
-
-function rect(value: unknown, path: string): Rect {
-  const items = list(value, path, 4);
-  if (items.length !== 4) fail(path, "expected [x, y, w, h]");
-  const [x, y, w, h] = items.map((item, index) => finite(item, `${path}[${String(index)}]`));
-  if (x === undefined || y === undefined || w === undefined || h === undefined || w <= 0 || h <= 0) {
-    fail(path, "width and height must be positive");
-  }
-  return Object.freeze([x, y, w, h] as const);
-}
-
-function unique<T extends { readonly id: string }>(items: readonly T[], path: string): readonly T[] {
-  const seen = new Set<string>();
-  for (const item of items) {
-    if (seen.has(item.id)) fail(path, `duplicate id "${item.id}"`);
-    seen.add(item.id);
-  }
-  return Object.freeze(items);
 }
 
 const ORIGINS: readonly SceneSourceOrigin[] = ["owner-supplied", "image-tool", "derived", "procedural"];
@@ -362,50 +262,6 @@ export function layerImageRect(image: SceneImage, layer: SceneLayer, area: Rect)
   return [x, y, right - x, bottom - y];
 }
 
-function motion(
-  value: unknown,
-  path: string,
-  images: ReadonlyMap<string, SceneImage>,
-  layers: readonly SceneLayer[],
-): SceneMotion {
-  const raw = record(value, path);
-  if (raw.kind !== "water") fail(`${path}.kind`, 'expected "water"');
-  const layerId = id(raw.layer, `${path}.layer`);
-  const host = layers.find((item) => item.id === layerId);
-  if (host === undefined) fail(`${path}.layer`, `unknown layer "${layerId}"`);
-  const mask = id(raw.mask, `${path}.mask`);
-  if (images.get(mask)?.alpha !== true) fail(`${path}.mask`, `"${mask}" must be an image with alpha`);
-  const area = rect(raw.rect, `${path}.rect`);
-  const [x, y, w, h] = host.rect;
-  if (area[0] < x || area[1] < y || area[0] + area[2] > x + w + 0.01 || area[1] + area[3] > y + h + 0.01)
-    fail(`${path}.rect`, `must lie inside layer "${layerId}"`);
-  const glints = raw.glints === undefined ? undefined : record(raw.glints, `${path}.glints`);
-  return Object.freeze({
-    id: id(raw.id, `${path}.id`),
-    kind: "water" as const,
-    layer: layerId,
-    mask,
-    rect: area,
-    rows: integer(raw.rows, `${path}.rows`, 4, 96),
-    far: finite(raw.far, `${path}.far`, 0.05, 1),
-    slide: finite(raw.slide, `${path}.slide`, 0, 12),
-    swell: finite(raw.swell, `${path}.swell`, 0, 12),
-    waves: finite(raw.waves, `${path}.waves`, 0.5, 40),
-    period: finite(raw.period, `${path}.period`, 0.5, 60),
-    ...(glints === undefined
-      ? {}
-      : {
-          glints: Object.freeze({
-            count: integer(glints.count, `${path}.glints.count`, 1, 200),
-            color: color(glints.color, `${path}.glints.color`),
-            opacity: finite(glints.opacity, `${path}.glints.opacity`, 0, 1),
-            length: finite(glints.length, `${path}.glints.length`, 2, 200),
-            drift: finite(glints.drift, `${path}.glints.drift`, -200, 200),
-          }),
-        }),
-  });
-}
-
 function platforms(value: unknown, path: string, images: ReadonlyMap<string, SceneImage>): ScenePlatformBinding {
   const raw = record(value, path);
   const texture = id(raw.texture, `${path}.texture`);
@@ -492,7 +348,7 @@ export function validateScenePackage(input: unknown): ScenePackage {
     ),
     motion: unique(
       (raw.motion === undefined ? [] : list(raw.motion, "package.motion", 16)).map((item, index) =>
-        motion(item, `package.motion[${String(index)}]`, imageMap, layers),
+        parseMotion(item, `package.motion[${String(index)}]`, imageMap, layers),
       ),
       "package.motion",
     ),
@@ -526,13 +382,16 @@ export function validateScenePackage(input: unknown): ScenePackage {
 
 /**
  * Decoded RGBA bytes a shown scene holds: every image, plus the canvas each
- * moving part is redrawn into (the size of the paint it moves).
+ * stretch of water is redrawn into (the size of the paint it moves), and the
+ * speck image of each set of motes. Light is drawn straight onto the frame.
  */
 export function decodedBytes(
   scene: Pick<ScenePackage, "images"> & Partial<Pick<ScenePackage, "layers" | "motion">>,
 ): number {
   const images = scene.images.reduce((total, item) => total + item.width * item.height * 4, 0);
   return (scene.motion ?? []).reduce((total, item) => {
+    if (item.kind === "motes") return total + SCENE_MOTE_SPRITE * SCENE_MOTE_SPRITE * 4;
+    if (item.kind !== "water") return total;
     const layer = scene.layers?.find((entry) => entry.id === item.layer);
     const image = scene.images.find((entry) => entry.id === layer?.image);
     if (layer === undefined || image === undefined) return total;

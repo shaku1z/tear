@@ -1,5 +1,5 @@
 import { validateScenePackage, type SceneBitmap, type SceneCamera, type SceneCanvas } from "./scene-contract";
-import { prepareMotion } from "./scene-motion";
+import { motionCanvases, prepareMotion } from "./scene-motion";
 import {
   bakeShading,
   drawSceneBack,
@@ -124,7 +124,7 @@ interface Entry {
 function releaseImages(loaded: LoadedScene, ports: SceneLibraryPorts): void {
   if (ports.releaseImage === undefined) return;
   for (const image of loaded.images.values()) ports.releaseImage(image);
-  for (const part of loaded.motion ?? []) ports.releaseImage(part.canvas);
+  for (const canvas of motionCanvases(loaded.motion ?? [])) ports.releaseImage(canvas);
 }
 
 async function loadScene(module: ScenePackageModule, ports: SceneLibraryPorts): Promise<LoadedScene> {
