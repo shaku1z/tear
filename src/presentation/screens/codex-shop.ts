@@ -15,8 +15,18 @@ import { createPageFrame, type PageFrame, type ScrollBlock, type ScrollView } fr
 const GOLD = "#e0a326",
   SPECIAL_GOLD = "#e8a32e";
 
-/** Blocks side by side in columns: each column stacks its blocks `gap` apart from `inset` below the top. */
-function columns(stacks: readonly (readonly ScrollBlock[])[], gap: number, inset: number): ScrollBlock {
+/**
+ * Blocks side by side in columns: each column stacks its blocks `gap` apart from `inset` below the
+ * top. One column stays a list of its own blocks, so a scrolling body can rest on each row's edge;
+ * several columns become one block.
+ */
+function columns(stacks: readonly (readonly ScrollBlock[])[], gap: number, inset: number): readonly ScrollBlock[] {
+  const [only, ...others] = stacks;
+  if (only && others.length === 0) {
+    const [first, ...rest] = only;
+    if (!first) return [];
+    return [{ height: inset + first.height, draw: (y, view) => first.draw(y + inset, view) }, ...rest];
+  }
   const height = (blocks: readonly ScrollBlock[]): number =>
     blocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, blocks.length - 1) * gap;
   const draw = (y: number, view: ScrollView): void => {
@@ -28,7 +38,7 @@ function columns(stacks: readonly (readonly ScrollBlock[])[], gap: number, inset
       }
     }
   };
-  return { height: inset + Math.max(0, ...stacks.map(height)), draw };
+  return [{ height: inset + Math.max(0, ...stacks.map(height)), draw }];
 }
 
 /**
@@ -87,7 +97,7 @@ export function createCodexShopRenderers(context: ScreenRenderContext) {
     });
     const state = pf.body(frame, {
       head: [status],
-      list: [columns(stacks, m.gap, s.inset)],
+      list: columns(stacks, m.gap, s.inset),
       gap: m.gap,
       desktop: {
         top: frame.top,
