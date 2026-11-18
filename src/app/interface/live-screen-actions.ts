@@ -59,9 +59,7 @@ export function createLiveScreenActions(
       else chase.stop();
     },
     ghostFiles: ghostVault,
-    setScreen: (screen) => {
-      setScreen(screen);
-    },
+    setScreen,
     resetScroll: () => {
       options.interaction.setScroll(0);
     },

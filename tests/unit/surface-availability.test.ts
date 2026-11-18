@@ -11,17 +11,13 @@ import {
 import type { ScreenAction } from "../../src/domain/screen-actions";
 import { createEngineeringQuery } from "../../src/app/shell/engineering-query";
 import { gateScreenActions } from "../../src/app/interface/screen-action-bindings";
-import {
-  IllegalLegacyAppTransitionError,
-  AppStateController,
-  UnavailableLegacyAppScreenError,
-} from "../../src/app/interface/app-state-controller";
-import { APP_SCREENS, ENGINEERING_SCREENS } from "../../src/domain/screen-catalog";
+import { AppStateController } from "../../src/app/interface/app-state-controller";
+import { APP_SCREENS } from "../../src/domain/screen-catalog";
 import { MODE_CATALOG, RELEASE_FALLBACK_MODE, admittedRunMode, modeSurface } from "../../src/gameplay/run/mode-catalog";
 
 const RELEASE = createSurfaceAvailability("release");
 const ENGINEERING = createSurfaceAvailability("engineering");
-const SURFACES = Object.keys(SURFACE_CHANNEL) as SurfaceId[];
+const SURFACES = Object.keys(SURFACE_CHANNEL) as (keyof typeof SURFACE_CHANNEL)[];
 
 describe("surface availability policy", () => {
   it("is a frozen source-owned table whose release channel admits only release surfaces", () => {
@@ -38,7 +34,6 @@ describe("surface availability policy", () => {
   });
 
   it("classifies engineering screens, routes and unfinished features", () => {
-    for (const screen of ENGINEERING_SCREENS) expect(screenSurface(screen), screen).toBeDefined();
     for (const screen of ["menu", "setup", "profile", "replay", "leaderboards", "playing"])
       expect(screenSurface(screen), screen).toBeUndefined();
     const engineering: readonly ScreenAction[] = [
@@ -135,30 +130,9 @@ describe("run-mode admission", () => {
 });
 
 describe("application state controller surface guard", () => {
-  it("refuses every engineering screen in release by any path, including rename", () => {
-    for (const screen of ENGINEERING_SCREENS) {
-      const fromMenu = new AppStateController(RELEASE);
-      expect(fromMenu.canEnter(screen), screen).toBe(false);
-      expect(fromMenu.canTransition(screen), screen).toBe(false);
-      expect(() => fromMenu.transition(screen), screen).toThrow(UnavailableLegacyAppScreenError);
-      expect(fromMenu.screen).toBe("menu");
-      const fromRename = new AppStateController(RELEASE);
-      fromRename.transition("rename");
-      expect(() => fromRename.transition(screen), screen).toThrow(IllegalLegacyAppTransitionError);
-      expect(fromRename.screen).toBe("rename");
-    }
+  it("lets a release build enter every catalogued screen, since none is engineering-only", () => {
     const release = new AppStateController(RELEASE);
     expect(release.transition("setup")).toBe("setup");
-    for (const screen of APP_SCREENS) {
-      if (!(ENGINEERING_SCREENS as readonly string[]).includes(screen))
-        expect(release.canEnter(screen), screen).toBe(true);
-    }
-  });
-  it("keeps every engineering screen enterable in engineering builds", () => {
-    const controller = new AppStateController(ENGINEERING);
-    for (const screen of ENGINEERING_SCREENS) {
-      expect(controller.transition("profile")).toBe("profile");
-      expect(controller.transition(screen)).toBe(screen);
-    }
+    for (const screen of APP_SCREENS) expect(release.canEnter(screen), screen).toBe(true);
   });
 });

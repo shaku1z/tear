@@ -203,11 +203,6 @@ const CATALOG = {
 /** Every application screen. */
 export type AppScreen = keyof typeof CATALOG;
 
-/** The screens whose channel is engineering. */
-export type EngineeringScreen = {
-  [Screen in AppScreen]: (typeof CATALOG)[Screen]["channel"] extends "engineering" ? Screen : never;
-}[AppScreen];
-
 /** The catalog, checked: every transition names a catalogued screen. */
 export const SCREEN_CATALOG: Readonly<Record<AppScreen, ScreenFacts<AppScreen>>> = Object.freeze(CATALOG);
 
@@ -236,11 +231,6 @@ export const LEGAL_TRANSITIONS: Readonly<Record<AppScreen, readonly AppScreen[]>
       ];
     }),
   ) as Record<AppScreen, readonly AppScreen[]>,
-);
-
-/** The engineering screens, in catalog order. */
-export const ENGINEERING_SCREENS: readonly EngineeringScreen[] = Object.freeze(
-  APP_SCREENS.filter((screen): screen is EngineeringScreen => SCREEN_CATALOG[screen].channel === "engineering"),
 );
 
 /** True for a screen drawn over the menu backdrop. */

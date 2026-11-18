@@ -1,5 +1,5 @@
 import type { ScreenAction } from "./screen-actions";
-import { ENGINEERING_SCREENS, screenFacts, type EngineeringScreen } from "./screen-catalog";
+import { isAppScreen, screenFacts, SCREEN_CATALOG, type AppScreen } from "./screen-catalog";
 
 /**
  * Release/engineering surface availability.
@@ -12,10 +12,8 @@ import { ENGINEERING_SCREENS, screenFacts, type EngineeringScreen } from "./scre
  */
 export type SurfaceChannel = "release" | "engineering";
 
-export type SurfaceId =
-  // Engineering screens (none at present), plus every route into them. Their
-  // channel is the screen catalog's (src/domain/screen-catalog.ts).
-  | `screen:${EngineeringScreen}`
+/** Surfaces this module classifies. Screens are classified by the screen catalog instead. */
+type FeatureSurfaceId =
   // Boss Test boss picker on the setup screen.
   | "setup:boss-picker"
   // Unfinished player features.
@@ -29,17 +27,19 @@ export type SurfaceId =
   // Engineering window globals.
   | "global:weapon-debug";
 
-const screenSurfaceId = (screen: EngineeringScreen) => `screen:${screen}` as `screen:${EngineeringScreen}`;
+/**
+ * A screen, and every route into it, is a surface whose channel is the screen
+ * catalog's (src/domain/screen-catalog.ts); the other surfaces are listed here.
+ */
+export type SurfaceId = `screen:${AppScreen}` | FeatureSurfaceId;
+
+const SCREEN_SURFACE_PREFIX = "screen:";
 
 /**
  * The sole source-owned classification. Promote a surface by changing its
  * channel here, or a screen by changing its channel in the screen catalog.
  */
-export const SURFACE_CHANNEL: Readonly<Record<SurfaceId, SurfaceChannel>> = Object.freeze({
-  ...(Object.fromEntries(ENGINEERING_SCREENS.map((screen) => [screenSurfaceId(screen), "engineering"])) as Record<
-    `screen:${EngineeringScreen}`,
-    SurfaceChannel
-  >),
+export const SURFACE_CHANNEL: Readonly<Record<FeatureSurfaceId, SurfaceChannel>> = Object.freeze({
   "setup:boss-picker": "engineering",
   "feature:seed-race": "engineering",
   "feature:boss-memory": "engineering",
@@ -58,6 +58,11 @@ export interface SurfaceAvailability {
   admits(channel: SurfaceChannel): boolean;
 }
 
+function surfaceChannel(id: string): SurfaceChannel | undefined {
+  if (id.startsWith(SCREEN_SURFACE_PREFIX)) return screenFacts(id.slice(SCREEN_SURFACE_PREFIX.length))?.channel;
+  return Object.hasOwn(SURFACE_CHANNEL, id) ? SURFACE_CHANNEL[id as FeatureSurfaceId] : undefined;
+}
+
 export function createSurfaceAvailability(channel: SurfaceChannel): SurfaceAvailability {
   const requested: string = channel;
   if (requested !== "release" && requested !== "engineering") throw new TypeError("unknown surface channel");
@@ -65,7 +70,7 @@ export function createSurfaceAvailability(channel: SurfaceChannel): SurfaceAvail
   return Object.freeze({
     channel,
     allows: (id: SurfaceId): boolean => {
-      const surface = SURFACE_CHANNEL[id] as SurfaceChannel | undefined;
+      const surface = surfaceChannel(id);
       if (surface === undefined) throw new RangeError(`unknown surface: ${id}`);
       return admits(surface);
     },
@@ -75,7 +80,7 @@ export function createSurfaceAvailability(channel: SurfaceChannel): SurfaceAvail
 
 /** The surface that owns an application screen, or undefined for an ordinary player screen. */
 export function screenSurface(screen: string): SurfaceId | undefined {
-  return screenFacts(screen)?.channel === "engineering" ? screenSurfaceId(screen as EngineeringScreen) : undefined;
+  return isAppScreen(screen) && SCREEN_CATALOG[screen].channel === "engineering" ? `screen:${screen}` : undefined;
 }
 
 const CAREER_COMMAND_SURFACES: Readonly<Partial<Record<string, SurfaceId>>> = Object.freeze({

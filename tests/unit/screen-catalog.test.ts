@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   APP_SCREENS,
-  ENGINEERING_SCREENS,
   LEGAL_TRANSITIONS,
   SCREEN_CATALOG,
   isAppScreen,
@@ -15,20 +14,9 @@ import {
   screenResetsScrollOnEnter,
   type AppScreen,
 } from "../../src/domain/screen-catalog";
-import { createSurfaceAvailability, screenSurface, SURFACE_CHANNEL } from "../../src/domain/surface-availability";
-import { AppStateController, UnavailableLegacyAppScreenError } from "../../src/app/interface/app-state-controller";
-import { createLiveScreenNavigation } from "../../src/app/interface/live-screen-navigation";
+import { createSurfaceAvailability, screenSurface } from "../../src/domain/surface-availability";
 
 const listed = (predicate: (screen: string) => boolean): AppScreen[] => APP_SCREENS.filter(predicate);
-
-function navigationFor(channel: "release" | "engineering") {
-  const app = new AppStateController(createSurfaceAvailability(channel));
-  return createLiveScreenNavigation({
-    app,
-    input: { allowLock: false, discardSemanticInput: () => undefined },
-    runScreenFact: () => undefined,
-  });
-}
 
 describe("screen catalog", () => {
   it("the restore and frame-coordinator screen guard accepts every application screen", () => {
@@ -125,7 +113,7 @@ describe("screen catalog", () => {
       new Set(["setup", "shop", "codex", "profile", "achievements", "leaderboards", "settings", "music"]),
     );
     expect(new Set(listed(screenResetsScrollOnEnter))).toEqual(new Set(["shop", "draft", "reserve", "tierup"]));
-    expect(ENGINEERING_SCREENS).toEqual([]);
+    expect(listed((screen) => SCREEN_CATALOG[screen as AppScreen].channel === "engineering")).toEqual([]);
   });
 
   it("names only catalogued screens in transitions and lets rename return anywhere else", () => {
@@ -142,20 +130,7 @@ describe("screen catalog", () => {
     for (const screen of APP_SCREENS) {
       const engineering = SCREEN_CATALOG[screen].channel === "engineering";
       expect(screenSurface(screen), screen).toBe(engineering ? `screen:${screen}` : undefined);
-      if (engineering) expect(SURFACE_CHANNEL[`screen:${screen}` as keyof typeof SURFACE_CHANNEL]).toBe("engineering");
-    }
-  });
-
-  it("keeps engineering screens unreachable in release builds, now that the restore guard admits them", () => {
-    for (const screen of ENGINEERING_SCREENS) {
-      const release = navigationFor("release");
-      release.setScreen("rename");
-      // rename may return to every other screen, so only the surface policy can refuse.
-      expect(() => release.setScreen(screen), screen).toThrow(UnavailableLegacyAppScreenError);
-      expect(release.screen()).toBe("rename");
-      const engineering = navigationFor("engineering");
-      engineering.setScreen("rename");
-      expect(engineering.setScreen(screen), screen).toBe(screen);
+      expect(createSurfaceAvailability("release").allows(`screen:${screen}`), screen).toBe(!engineering);
     }
   });
 });
