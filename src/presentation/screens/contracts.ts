@@ -289,6 +289,8 @@ export interface ProfileScreenView {
   readonly stats: readonly StatView[];
   readonly message?: string;
   readonly replays?: readonly ReplayView[];
+  /** Vault tab only: set while the saved replays are being read, or when they could not be. */
+  readonly vaultList?: "opening" | "failed";
   readonly canScrollUp?: boolean;
   readonly canScrollDown?: boolean;
   readonly passport?: {
