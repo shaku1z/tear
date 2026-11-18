@@ -309,8 +309,16 @@ Built first (2026-11-17, the lead's cut of this stage to one small pull request)
 headless boss-only run; `src/playtest/` with the boss view, the `scripted` and `avoids-tells` players,
 the fight measurement and the report; `pnpm playtest bosses`. A phase is reached by play. The fight
 loop advances application frames while a phase-change cinematic holds the simulation; without that a
-headless fight stops for ever at the first phase change. Still to do in this stage: the `still`,
-`walker` and `no-dodge` players, starting a fight at a chosen phase, boss movement, and the sweep.
+headless fight stops for ever at the first phase change.
+
+Built second (2026-11-17): `--phase 2,3` starts a fight at a chosen phase through the game's own
+Playground boss practice. The tutorial's boss selection and the phase-practice runtime bring the boss
+there by its own transitions; nothing edits health. The game offers this with Sword on Normal only and
+for the campaign roster, which leaves out the White Hart. The Playground restores a defeated player;
+the fight counts that as the defeat and stops. The scripted player now counts damage to an enemy as
+progress, because in a fight that scores nothing its watchdog took the fight for a softlock and paused.
+Still to do in this stage: the `still`, `walker` and `no-dodge` players, a player that cuts Grafts,
+boss movement, and the sweep.
 
 Done when:
 - [ ] `pnpm playtest bosses` prints, for all five campaign bosses, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, 4 seeds, Easy and Normal, in under 5 minutes on 6 jobs.
