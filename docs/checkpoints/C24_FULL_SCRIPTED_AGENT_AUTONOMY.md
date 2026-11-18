@@ -6,6 +6,26 @@ Complete as of 2026-07-26 for the named Class A engineering exit gate.
 C24 does not claim Class B physical-input evidence, Class C pixel-only
 autonomy, a learned policy, or release certification.
 
+## Reading a red run today (2026-11-18)
+
+A failing `tests/browser-scripted-agent-autonomy.js` is not a regression by itself. The journey has no passing
+baseline for what it runs now:
+
+- The result below is the only recorded completion. It used `ringblade` and finished wave 50 with 1 HP.
+- On 2026-07-28 the five-weapon roster removed `ringblade` and the journey switched to `riftlock` (commit
+  `45e04113`). No completion with `riftlock` was recorded afterwards.
+- The weekly check that passed through 2026-11-08 did not run this journey. It runs only when `pnpm tearbench ci`
+  selects it as evidence.
+- Weekly run 44218184366 (2026-11-17) ended in a game over at wave 17, hp 0, with 6 enemies alive. #170 recorded
+  the same loss in the repeatability journey, and its completion assertions were removed there.
+- A headless replay of an easy `riftlock` campaign with the same player lost on seeds 117, 1, 2 and 3, between
+  waves 5 and 9. Most of the damage was contact damage from chargers and armored enemies in groups of five or
+  six. Nothing in those runs looked like a broken game state.
+
+Not established: whether the game became harder after July or the player was always this weak with `riftlock`.
+The journey still asserts `status === "completed"` and a return to the menu, so it fails until either the
+player can finish an easy campaign or the assertion is changed to what the repeatability journey checks.
+
 ## Exit-gate result
 
 The competent scripted policy completed Easy Adventure from the visible Watch
