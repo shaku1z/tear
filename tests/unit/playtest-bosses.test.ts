@@ -5,13 +5,16 @@ import {
   attributeHit,
   BODY_HIT,
   bossFightScenario,
+  bossPhaseCount,
   playBossFight,
   UNMARKED_HIT,
   type BossFightRequest,
 } from "../../src/playtest/boss-fight";
 import { createTellAvoidingBossPlayer, TELL_AVOIDANCE } from "../../src/playtest/boss-player";
-import { formatBossReport, noTellTotals } from "../../src/playtest/boss-report";
-import { readBoss, type BossView, type PlayerBox } from "../../src/playtest/boss-view";
+import { formatBossReport, noTellTotals, PRACTICE_REPORT_BOSSES, REPORT_BOSSES } from "../../src/playtest/boss-report";
+import { isPracticeBossId } from "../../src/gameplay/training/boss-phase-practice-runtime";
+import { readBoss, trainingResets, type BossView, type PlayerBox } from "../../src/playtest/boss-view";
+import { resolvePlayerDeath } from "../../src/gameplay/combat/combat-tail-runtime";
 import type { TearScenarioV1 } from "../../src/tearbench/contracts";
 import { createProductionHeadlessEnvironment } from "../../src/tearbench/production-headless-environment";
 import { requireProductionHeadlessScenario } from "../../src/tearbench/production-headless-scenario";
@@ -84,7 +87,7 @@ function boss(tells: readonly BossTell[]): BossView {
 const PLAYER: PlayerBox = { x: 520, y: 716, hw: 14, hh: 24 };
 
 describe("chosen boss in a headless boss-only run", () => {
-  it.each(["rootbound", "aldric", "white-hart"] as const)("starts the fight with %s", (id) => {
+  it.each(REPORT_BOSSES)("starts the fight with %s", (id) => {
     const environment = createProductionHeadlessEnvironment();
     try {
       environment.reset(bossOnly(id));
@@ -156,6 +159,105 @@ describe("chosen boss in a headless boss-only run", () => {
   });
 });
 
+describe("start at a chosen phase through the game's boss practice", () => {
+  const practice = (boss: BossFightRequest["boss"], phase: number): BossFightRequest => ({
+    boss,
+    difficulty: "normal",
+    weapon: "sword",
+    seed: "5",
+    player: "scripted",
+    phase,
+    maxTicks: 600,
+  });
+
+  // Every boss the game's practice accepts, at every later phase its definition has: no boss has its own path.
+  const entries = PRACTICE_REPORT_BOSSES.flatMap((boss) =>
+    Array.from({ length: bossPhaseCount(boss) - 1 }, (_, index) => [boss, index + 2] as const),
+  );
+  it.each(entries)("brings %s to phase %i by its own transitions, the player untouched", (boss, phase) => {
+    const environment = createProductionHeadlessEnvironment();
+    try {
+      environment.reset(bossFightScenario(practice(boss, phase)));
+      if (!isPracticeBossId(boss) || (phase !== 2 && phase !== 3)) throw new Error("not a practice entry");
+      const lifecycle = environment.practiceBoss(boss, phase);
+      let ticks = 0;
+      for (; ticks < 7200 && lifecycle() !== "active"; ticks += 1) environment.step([]);
+      expect(lifecycle()).toBe("active");
+      expect(ticks).toBeGreaterThan(0);
+      const seen = readBoss(environment.world());
+      expect(seen?.id).toBe(boss);
+      expect(seen?.phase).toBe(phase);
+      expect(environment.policyObservation().player.hp).toBe(environment.policyObservation().player.maxHp);
+    } finally {
+      environment.dispose();
+    }
+  });
+
+  it("takes the default bosses from the game's definitions", () => {
+    expect(REPORT_BOSSES).toContain("white-hart");
+    expect(PRACTICE_REPORT_BOSSES).toEqual(REPORT_BOSSES.filter(isPracticeBossId));
+    expect(PRACTICE_REPORT_BOSSES).not.toContain("white-hart");
+  });
+
+  it("starts the measured fight in the chosen phase and reports the setup time apart", () => {
+    const fight = playBossFight(practice("rootbound", 2));
+    expect(fight.end).not.toBe("broken");
+    expect(fight.setupTicks).toBeGreaterThan(0);
+    expect(fight.phases[0]?.phase).toBe(2);
+    expect(formatBossReport([fight])).toContain("start: phase II through the game's boss practice");
+  });
+
+  it("counts the Playground's reset of a defeated player as the defeat, and stops the fight there", () => {
+    const fight = playBossFight({ ...practice("aldric", 3), maxTicks: 21_600 });
+    expect(fight.end).toBe("player defeated");
+    expect(fight.reason).toContain("the Playground restored the player");
+    const taken = fight.phases.reduce((total, phase) => total + phase.damageTaken, 0);
+    expect(taken).toBeLessThanOrEqual(100);
+    expect(fight.killingHit).toBeDefined();
+  });
+
+  it("reads a training reset from the game's own count, and nothing else as one", () => {
+    const hooks = {
+      trainingReset: () => undefined,
+      shopRevive: () => undefined,
+      abilityRevive: () => undefined,
+      adAvailable: () => false,
+      requestAdContinue: () => undefined,
+      endRun: () => undefined,
+    };
+    const player = () => ({ hp: 0, maxHp: 100, iframe: 0, shopRevives: 0, abilityRevives: 0, oneHit: false });
+    const world = (run: object) => ({ enemies: () => [], player: () => undefined, run: () => run });
+    for (const mode of ["tutorial", "playground"]) {
+      const run = { mode, runTime: 0, waveTime: 0 };
+      expect(trainingResets(world(run))).toBe(0);
+      expect(resolvePlayerDeath(player() as never, run, hooks)).toBe("training-reset");
+      expect(resolvePlayerDeath({ ...player(), hp: 40 } as never, run, hooks)).toBe("alive");
+      expect(trainingResets(world(run))).toBe(1);
+    }
+    const ended = { mode: "bossonly", runTime: 0, waveTime: 0 };
+    expect(resolvePlayerDeath(player() as never, ended, hooks)).toBe("run-ended");
+    expect(trainingResets(world(ended))).toBe(0);
+  });
+
+  it("refuses, by name, a boss without phase practice and a weapon or difficulty the practice does not run", () => {
+    expect(() => bossFightScenario(practice("white-hart", 2))).toThrow("white-hart has no phase practice in the game");
+    expect(() => bossFightScenario(practice("rootbound", 4))).toThrow("rootbound has phases 1 to 3, not 4");
+    expect(() => bossFightScenario({ ...practice("rootbound", 2), weapon: "hammer" })).toThrow(
+      "runs only with Sword on Normal",
+    );
+    expect(() => bossFightScenario({ ...practice("rootbound", 2), difficulty: "hard" })).toThrow(
+      "runs only with Sword on Normal",
+    );
+    const environment = createProductionHeadlessEnvironment();
+    try {
+      environment.reset(bossOnly("rootbound"));
+      expect(() => environment.practiceBoss("rootbound", 2)).toThrow("starts only a fresh tutorial episode");
+    } finally {
+      environment.dispose();
+    }
+  });
+});
+
 describe("boss fight measurement", () => {
   it("gives the same table for the same seed", () => {
     const request = {
@@ -206,6 +308,7 @@ describe("boss fight measurement", () => {
       bossMaxHp: 100,
       bossHpLeft: 100,
       limitedTellData: true,
+      setupTicks: 0,
       cinematicTicks: 0,
       phases: [phase],
     } as const;
