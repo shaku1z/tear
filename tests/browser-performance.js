@@ -448,7 +448,9 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   await spawnRepresentativeEnemies(page, scenario.enemySpawnCommands, samplePeak);
   // Match the long-task baseline to the timing-sample window. Spawn-menu and
   // workload setup are intentionally warm-up, not measured active combat.
-  const longTasksBefore = (await diagnostics(page)).longTasks;
+  const beforeWindow = await diagnostics(page);
+  const longTasksBefore = beforeWindow.longTasks;
+  const stageArtSlicesBefore = gauge(beforeWindow, "stageArtSlices");
   const allocationSession = await startAllocationProfile(page);
   await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
   const sampleMeasuredPeak = async (snapshot) => {
@@ -483,6 +485,8 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     pacingAssessment: assessPacing(label, scenario, snapshot.frameInterval),
     backingStore: await canvasBackingStore(page),
     newLongTasks: snapshot.longTasks - longTasksBefore,
+    // Stage painting slices that ran inside the measured window; zero means no bake shared it.
+    stageArtSlicesInWindow: gauge(snapshot, "stageArtSlices") - stageArtSlicesBefore,
     peakGauges,
   };
   // Emit the measured values before enforcing budgets so a failing gate still
@@ -550,7 +554,9 @@ async function verdantGameplayScenario(browser, pageErrors) {
       peakEnvironmentKinds[key] = Math.max(peakEnvironmentKinds[key] || 0, count);
     await stopTraceAfterHitch(browser, snapshot, "Verdant");
   };
-  const longTasksBefore = (await diagnostics(page)).longTasks;
+  const beforeWindow = await diagnostics(page);
+  const longTasksBefore = beforeWindow.longTasks;
+  const stageArtSlicesBefore = gauge(beforeWindow, "stageArtSlices");
   const allocationSession = await startAllocationProfile(page);
   await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
   await markTrace(page, "tear-perf-verdant-start");
@@ -574,6 +580,8 @@ async function verdantGameplayScenario(browser, pageErrors) {
     outsideFrameWork: snapshot.outsideFrameWork,
     backingStore: await canvasBackingStore(page),
     newLongTasks: snapshot.longTasks - longTasksBefore,
+    // Stage painting slices that ran inside the measured window; zero means no bake shared it.
+    stageArtSlicesInWindow: gauge(snapshot, "stageArtSlices") - stageArtSlicesBefore,
     peakGauges,
     peakEnvironmentKinds,
   };
@@ -677,7 +685,9 @@ async function paleGameplayScenario(browser, pageErrors) {
       peakEnvironmentKinds[key] = Math.max(peakEnvironmentKinds[key] || 0, count);
   };
   await samplePeak();
-  const longTasksBefore = (await diagnostics(page)).longTasks;
+  const beforeWindow = await diagnostics(page);
+  const longTasksBefore = beforeWindow.longTasks;
+  const stageArtSlicesBefore = gauge(beforeWindow, "stageArtSlices");
   const allocationSession = await startAllocationProfile(page);
   await page.evaluate(() => window.__TEAR_DIAGNOSTICS__.resetTimingSamples());
   await markTrace(page, "tear-perf-pale-start");
@@ -706,6 +716,8 @@ async function paleGameplayScenario(browser, pageErrors) {
     outsideFrameWork: snapshot.outsideFrameWork,
     backingStore: await canvasBackingStore(page),
     newLongTasks: snapshot.longTasks - longTasksBefore,
+    // Stage painting slices that ran inside the measured window; zero means no bake shared it.
+    stageArtSlicesInWindow: gauge(snapshot, "stageArtSlices") - stageArtSlicesBefore,
     peakGauges,
     peakEnvironmentKinds,
     roster,

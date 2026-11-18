@@ -154,12 +154,16 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     reducedMotion: () => A11Y.reducedMotion,
     random: cosmeticEmissionRandom.next,
   });
+  let stageArtSlices = 0;
   const Scenes = createSceneLibrary({
     packages: SCENE_PACKAGES,
     world: { width: worldConfig.view.w, height: worldConfig.view.h, groundY: worldConfig.world.groundY },
     // One painting slice per frame, after the frame has drawn, so a stage that paints during play never delays a frame.
     nextSlice: () =>
       new Promise((resolve) => {
+        stageArtSlices += 1;
+        // Diagnostics show how many painting slices have run, so a frame-time run can tell whether a bake shared its window.
+        DIAG.gauge("stageArtSlices", stageArtSlices);
         requestAnimationFrame(() => setTimeout(resolve, 0));
       }),
     loadImage: loadSceneBitmap,
