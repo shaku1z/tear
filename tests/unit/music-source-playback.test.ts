@@ -35,7 +35,9 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-const hear = (progress: ProgressSource): void => setMusicProgressFacts(() => progressFacts(progress));
+const hear = (progress: ProgressSource): void => {
+  setMusicProgressFacts(() => progressFacts(progress));
+};
 const playing = (): string => getNowPlaying().workId;
 const nowPlaying = (workId: string) =>
   vi.waitFor(() => {

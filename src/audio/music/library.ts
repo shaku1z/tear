@@ -30,7 +30,17 @@ export function publishMusicLibrary(
   routing: MusicRoutingManifest,
   seconds: Readonly<Record<string, number>> = {},
 ): MusicLibrary {
-  const published: MusicLibrary = Object.freeze({
+  library = buildMusicLibrary(catalog, routing, seconds);
+  return library;
+}
+
+/** The library for a catalog and routing, without publishing it. */
+export function buildMusicLibrary(
+  catalog: Pick<MusicCatalog, "works" | "channels" | "radio">,
+  routing: MusicRoutingManifest,
+  seconds: Readonly<Record<string, number>> = {},
+): MusicLibrary {
+  return Object.freeze({
     songs: Object.freeze(
       catalog.works.map(({ id, title, tags, mood, unlock }) => {
         const length = seconds[id];
@@ -47,8 +57,6 @@ export function publishMusicLibrary(
     routing,
     radio: parseRadioProgramme(catalog.channels, catalog.radio),
   });
-  library = published;
-  return published;
 }
 
 /** The catalog in catalog order, or null until the music index has loaded. */

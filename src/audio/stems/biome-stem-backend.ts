@@ -147,7 +147,9 @@ export class BiomeStemBackend implements MusicBackend {
       this.#retune();
       this.#reroute();
     });
-    this.#stopNextWatch = onNextSongRequest(() => this.#nextOnRadio());
+    this.#stopNextWatch = onNextSongRequest(() => {
+      this.#nextOnRadio();
+    });
     this.#stopPreviewWatch = onMusicPreviewChange(() => {
       if (this.#onShell) this.#reroute();
     });
@@ -345,7 +347,9 @@ export class BiomeStemBackend implements MusicBackend {
     const cue = song === null ? undefined : this.#cues.get(song);
     if (!cue || this.#library === null) return;
     const seconds = radioPlaySeconds(loopSeconds(cue.manifest).lengthSeconds, this.#library.radio.songSeconds);
-    this.#radioTimer = setTimeout(() => this.#nextOnRadio(), seconds * 1000);
+    this.#radioTimer = setTimeout(() => {
+      this.#nextOnRadio();
+    }, seconds * 1000);
   }
 
   #clearRadioTimer(): void {

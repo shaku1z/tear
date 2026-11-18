@@ -6,10 +6,9 @@ import type { createUi } from "../../src/presentation/ui";
 import type { ScreenControl, ScreenRenderContext, ScreenUiPort } from "../../src/presentation/screens";
 import { createScreenRenderers } from "../../src/presentation/screens";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
-import { parseRadioProgramme } from "../../src/audio/music/radio";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { parseMusicCatalog } from "../../src/audio/music/catalog";
-import { publishMusicLibrary } from "../../src/audio/music/library";
+import { buildMusicLibrary, publishMusicLibrary } from "../../src/audio/music/library";
 import { setMusicProgressFacts } from "../../src/audio/music/music-source";
 import { progressFacts } from "../../src/domain/progress-facts";
 import { TEST_CHANNELS, index as musicIndex } from "./music-backend-harness";
@@ -605,12 +604,13 @@ describe("legacy screen renderer registry", () => {
     let written = -1;
     const music = JSON.parse(
       readFileSync(fileURLToPath(new URL("../../public/audio/music.json", import.meta.url)), "utf8"),
-    ) as { catalog: { works: { id: string; title: string }[] }; routing: unknown };
-    const library = {
-      songs: music.catalog.works.map((work) => ({ ...work, seconds: 30 })),
-      routing: validateMusicRoutingManifest(music.routing),
-      radio: parseRadioProgramme(undefined, undefined),
-    };
+    ) as { catalog: unknown; routing: unknown };
+    const catalog = parseMusicCatalog(music.catalog);
+    const library = buildMusicLibrary(
+      catalog,
+      validateMusicRoutingManifest(music.routing),
+      Object.fromEntries(catalog.works.map((work) => [work.id, 30])),
+    );
     const view = (page: string) =>
       buildMusicScreenView({
         settings: {},

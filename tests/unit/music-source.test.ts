@@ -21,10 +21,14 @@ function library(): MusicLibrary {
   );
 }
 
-const hear = (progress: ProgressSource): void => setMusicProgressFacts(() => progressFacts(progress));
+const hear = (progress: ProgressSource): void => {
+  setMusicProgressFacts(() => progressFacts(progress));
+};
 const FRESH: ProgressSource = { stats: {}, ach: {} };
 
-afterEach(() => setMusicProgressFacts(null));
+afterEach(() => {
+  setMusicProgressFacts(null);
+});
 
 describe("the saved music pick", () => {
   it("reads default, a song or a channel, and saves back what it read", () => {
