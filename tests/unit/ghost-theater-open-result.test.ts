@@ -23,6 +23,7 @@ import { createGhostReplayRunContext } from "../../src/ghost/replay-admission";
 import { ghostCoachCandidate, projectGhostCoachHistory } from "../../src/ghost/coach-history";
 import type { ReplayScreenView } from "../../src/presentation/screens/contracts";
 import type { GhostReadCapsule } from "../../src/ghost/capsule-reader";
+import { CURRENT_RULESET_VERSION } from "../../src/gameplay/run/ruleset-version";
 
 function hostileCapsule(): GhostReadCapsule {
   return {
@@ -172,7 +173,7 @@ describe("Coach cited seek refusal", () => {
           version: "1",
           revision: "test",
           target: "test-standalone",
-          rulesetVersion: "test",
+          rulesetVersion: CURRENT_RULESET_VERSION,
           contentHash: "test",
           configHash: "test",
         },

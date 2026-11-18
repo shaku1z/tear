@@ -4,7 +4,9 @@ import { migrateProfileEnvelope, PROFILE_ENVELOPE_VERSION } from "../../src/pers
 import {
   CURRENT_RULESET_VERSION,
   RULESET_STEPS,
+  SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION,
+  UNKNOWN_RULESET_REFUSAL,
   rulesetRefusal,
 } from "../../src/gameplay/run/ruleset-version";
 import { ReplayLibraryController, recordingRefusal } from "../../src/app/library/replay-library-controller";
@@ -104,36 +106,41 @@ describe("profile envelope version 5", () => {
 });
 
 describe("ruleset steps", () => {
-  it("lists every ruleset once, oldest first, ending at the current one", () => {
+  it("lists every ruleset once, oldest first, ending at the current one, each with what changed", () => {
     const versions = RULESET_STEPS.map((step) => step.version);
     expect(new Set(versions).size).toBe(versions.length);
     expect(versions.at(-1)).toBe(CURRENT_RULESET_VERSION);
     expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION);
-    for (const step of RULESET_STEPS) expect(step.refuses.length === 0 || step.reason.length > 0).toBe(true);
+    for (const step of RULESET_STEPS) expect(step.change.length).toBeGreaterThan(0);
   });
 
-  it("keeps an old Endless recording and refuses an old Gauntlet one with the reason", () => {
-    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION, "endless")).toBeNull();
-    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION, "gauntlet")).toBe(
-      "recorded under the old Gauntlet rules",
+  it("admits only the current ruleset, in every mode, and names the first change an older recording missed", () => {
+    expect(rulesetRefusal(CURRENT_RULESET_VERSION)).toBeNull();
+    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION)).toBe(
+      "recorded before the Gauntlet became a run of trials",
     );
-    expect(rulesetRefusal(CURRENT_RULESET_VERSION, "gauntlet")).toBeNull();
-    // A ruleset this build does not know counts as older than every step.
-    expect(rulesetRefusal("legacy-replay-v2", "gauntlet")).toBe("recorded under the old Gauntlet rules");
-    expect(rulesetRefusal("legacy-replay-v2", "campaign")).toBeNull();
+    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION)).toBe(
+      "recorded before each repeat of a boss strike got its own warning",
+    );
+    expect(rulesetRefusal("legacy-replay-v2")).toBe(UNKNOWN_RULESET_REFUSAL);
+    // A recording that names no ruleset is left to the older admission paths.
+    expect(rulesetRefusal(undefined)).toBeNull();
   });
 
-  it("refuses an old Gauntlet capsule from the Vault list and Theater with a message players read", () => {
+  it("refuses an older capsule of any mode from the Vault list and Theater with the named change", () => {
     const old = (mode: string) => ({ mode, provenance: { rulesetVersion: SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION } });
-    expect(recordingRefusal(old("endless"))).toBeNull();
-    expect(recordingRefusal(old("gauntlet"))).toBe("recorded under the old Gauntlet rules");
+    const current = (mode: string) => ({ mode, provenance: { rulesetVersion: CURRENT_RULESET_VERSION } });
+    const reason = "recorded before the Gauntlet became a run of trials";
+    expect(recordingRefusal(old("endless"))).toBe(reason);
+    expect(recordingRefusal(old("gauntlet"))).toBe(reason);
+    expect(recordingRefusal(current("gauntlet"))).toBeNull();
 
     const enterReplay = vi.fn(() => true),
       message = vi.fn();
     const controller = new ReplayLibraryController({
       vault: {
         index: () => [],
-        get: (id: string) => old(id === "old-gauntlet" ? "gauntlet" : "endless"),
+        get: (id: string) => (id === "old-gauntlet" ? old("gauntlet") : current("endless")),
         setShareId: vi.fn(),
       },
       cloud: { hasLeaderboards: () => false, loadGhost: vi.fn(), loadReplay: vi.fn(), publishReplay: vi.fn() },
@@ -141,14 +148,14 @@ describe("ruleset steps", () => {
       setProfileMessage: message,
       setLeaderboardMessage: vi.fn(),
     });
-    controller.watch("old-endless");
+    controller.watch("current-endless");
     expect(enterReplay).toHaveBeenCalledTimes(1);
     controller.watch("old-gauntlet");
     expect(enterReplay).toHaveBeenCalledTimes(1);
-    expect(message).toHaveBeenLastCalledWith("replay unavailable — recorded under the old Gauntlet rules");
+    expect(message).toHaveBeenLastCalledWith(`replay unavailable — ${reason}`);
 
-    expect(refuseGhostTheater("ruleset-retired", "root", 0, "recorded under the old Gauntlet rules").detail).toBe(
-      "This replay was recorded under the old Gauntlet rules.",
+    expect(refuseGhostTheater("ruleset-retired", "root", 0, reason).detail).toBe(
+      "This replay was recorded before the Gauntlet became a run of trials.",
     );
   });
 });

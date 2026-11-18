@@ -287,7 +287,7 @@ export function createGhostTheaterScreenAdapter(services: GhostTheaterScreenServ
       invalidateStudio();
       history.close();
       const recorded = readGhostReplayRunContext(capsule.manifest.provenance);
-      const retired = rulesetRefusal(recorded?.build.rulesetVersion, recorded?.run.mode);
+      const retired = rulesetRefusal(recorded?.build.rulesetVersion);
       if (retired !== null) {
         context = undefined;
         return refuseGhostTheater("ruleset-retired", capsule.manifest.rootIntegrity, 0, retired);

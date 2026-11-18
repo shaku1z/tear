@@ -1,16 +1,13 @@
 import { rulesetRefusal } from "../../gameplay/run/ruleset-version";
 
-/** Why a saved recording can no longer be watched under today's rules, or null. */
+/** Why a saved recording cannot be watched under today's ruleset, or null. */
 export function recordingRefusal(record: Readonly<Record<string, unknown>>): string | null {
   const provenance = record.provenance;
   const version =
     typeof provenance === "object" && provenance !== null
       ? (provenance as Readonly<Record<string, unknown>>).rulesetVersion
       : undefined;
-  return rulesetRefusal(
-    typeof version === "string" ? version : undefined,
-    typeof record.mode === "string" ? record.mode : undefined,
-  );
+  return rulesetRefusal(typeof version === "string" ? version : undefined);
 }
 
 interface ReplayIndexEntry {
