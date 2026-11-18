@@ -580,7 +580,12 @@ export function createProductionHeadlessEnvironment(
             };
             return Object.freeze({
               id: `production:${String(value._gid ?? index + 1)}`,
-              kind: canonicalObservationEnemyKind({ ...value, kind: value.kind ?? "" }),
+              kind: canonicalObservationEnemyKind({
+                kind: value.kind ?? "",
+                bossId: value.bossId,
+                supportType: value.supportType,
+                isVoidWisp: value.isVoidWisp,
+              }),
               x: value.x,
               y: value.y,
               vx: value.vx,
@@ -799,7 +804,10 @@ export function createProductionHeadlessEnvironment(
       deliveredCausalEventCount = current.nativeEvents.length;
       pendingEvents = [];
       return Object.freeze({
-        observation: result.state,
+        // Projected on first read: a caller that steps without reading the state does not pay for it.
+        get observation(): CanonicalGameplayState {
+          return result.state;
+        },
         events: Object.freeze(causalEvents),
         terminated,
         truncated,

@@ -476,10 +476,12 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
       tutorialSpawn = spawn;
     },
     tutorialHandoff: () => {
-      const session = tutorial.captureSession();
-      return world.state.run()?.mode === "tutorial" && session?.phase === "free-practice"
-        ? Object.freeze({ status: "awaiting-next-run" as const, courseSessionId: session.courseSessionId })
-        : null;
+      // Asked twice every tick, so it reads two fields and never builds a session checkpoint.
+      if (world.state.run()?.mode !== "tutorial") return null;
+      const courseSessionId = tutorial.freePracticeCourse();
+      return courseSessionId === undefined
+        ? null
+        : Object.freeze({ status: "awaiting-next-run" as const, courseSessionId });
     },
     installTrainingHome: () => {
       stage.platforms = trainingPlatforms(config.view.w, config.view.h, config.world.groundY).map((platform) => ({
