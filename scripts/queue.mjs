@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // One queue for heavy local commands, shared by every worktree of this repository.
 //
 //   pnpm queue -- pnpm test:unit:without-preservation-corpus
