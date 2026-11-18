@@ -79,7 +79,14 @@ export default tseslint.config(
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   {
-    files: ["src/**/*.ts", "tests/**/*.ts", "vite.config.ts", "vitest.config.ts", "vitest.endurance.config.ts"],
+    files: [
+      "src/**/*.ts",
+      "tests/**/*.ts",
+      "scripts/asset-sheets/**/*.ts",
+      "vite.config.ts",
+      "vitest.config.ts",
+      "vitest.endurance.config.ts",
+    ],
     languageOptions: {
       parserOptions: {
         projectService: true,
