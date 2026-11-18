@@ -25,7 +25,7 @@ import type { MusicRoutingManifest, RoutingScene } from "../music/music-routing-
 import { StemCuePlayer } from "./StemCuePlayer";
 import { loopSeconds, planTierGains } from "./tier";
 import { tierFromSnapshot } from "./tier-from-snapshot";
-import { WebAudioStemBackend } from "./web-audio-backend";
+import { WebAudioStemBackend, dropWarmedStems, warmStem } from "./web-audio-backend";
 import type { StemCueManifest, Tier } from "./types";
 
 export interface LoadedCueRef {
@@ -137,6 +137,31 @@ export class BiomeStemBackend implements MusicBackend {
     this.#stingers = new StingerPlayer(this.#context, this.#output);
     void this.#stingers.load();
     await this.#activate(this.#shellCueId(), CROSSFADE_SECONDS, 0, true);
+    // The first cue has taken what it needs; warmed bytes for anything else are let go.
+    void (this.#active?.player.allLoaded ?? Promise.resolve()).then(dropWarmedStems, dropWarmedStems);
+  }
+
+  /** The cue the menu would start with. */
+  get menuCueId(): string {
+    return this.#shellCueId();
+  }
+
+  /**
+   * Fetch the bytes of a cue's first layer (the stems audible at its calmest tier) ahead of
+   * playback: the menu cue, before the player's first input. Once music has started (the
+   * first input came first), the cue fetches its own stems, and a warm-up would only fetch
+   * them a second time alongside it, so it does nothing.
+   */
+  warmFirstLayer(cueId: string): void {
+    if (this.#context !== null) return;
+    const loaded = this.#cues.get(cueId);
+    if (!loaded) return;
+    const audible = new Set(
+      Object.entries(planTierGains(loaded.manifest, 0))
+        .filter(([, gain]) => gain > 0)
+        .map(([id]) => id),
+    );
+    for (const asset of loaded.manifest.stems) if (audible.has(asset.id)) warmStem(loaded.baseUrl, asset);
   }
 
   beginRun(metadata: MusicRunSessionMetadata): Promise<void> {

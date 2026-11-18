@@ -192,6 +192,49 @@ class WebAudioStemVoice implements StemVoice {
   }
 }
 
+/** Stem bytes fetched ahead of playback, by URL. The first voice that needs them takes them. */
+const warmed = new Map<string, Promise<ArrayBuffer>>();
+
+function fetchStemBytes(url: string, id: string, init?: RequestInit): Promise<ArrayBuffer> {
+  return fetch(url, init).then((response) => {
+    if (!response.ok) throw new Error(`Stem ${id} failed to load: ${String(response.status)}`);
+    return response.arrayBuffer();
+  });
+}
+
+/**
+ * Fetch one stem's bytes now, at low priority, without an AudioContext (so before the
+ * player's first input). Decoding waits for the voice that uses them.
+ */
+export function warmStem(baseUrl: string, asset: StemAsset, canPlay: (mime: string) => boolean = browserCanPlay): void {
+  const source = pickSource(asset.sources, canPlay);
+  if (!source) return;
+  const url = resolveUrl(baseUrl, source.url);
+  if (warmed.has(url)) return;
+  const pending = fetchStemBytes(url, asset.id, { priority: "low" });
+  pending.catch(() => {
+    warmed.delete(url);
+  });
+  warmed.set(url, pending);
+  // Bytes nobody takes are let go: music turned off, or another cue played first.
+  setTimeout(() => {
+    if (warmed.get(url) === pending) warmed.delete(url);
+  }, WARM_HOLD_MS);
+}
+
+/** How long warmed bytes wait for the voice that plays them. */
+export const WARM_HOLD_MS = 120_000;
+
+/** Let go of every warmed copy no voice has taken; called once the first cue has loaded. */
+export function dropWarmedStems(): void {
+  warmed.clear();
+}
+
+/** Warmed copies still held (for tests). */
+export function warmedStemCount(): number {
+  return warmed.size;
+}
+
 /** `StemAudioBackend` on the game's shared AudioContext — no Tone, no 2nd context. */
 export class WebAudioStemBackend implements StemAudioBackend {
   readonly #canPlay: (mime: string) => boolean;
@@ -213,10 +256,9 @@ export class WebAudioStemBackend implements StemAudioBackend {
     const source = pickSource(asset.sources, this.#canPlay);
     if (!source) throw new Error(`Stem ${asset.id} has no playable source.`);
     const url = resolveUrl(this.baseUrl, source.url);
-    const bytes = await fetch(url).then((response) => {
-      if (!response.ok) throw new Error(`Stem ${asset.id} failed to load: ${String(response.status)}`);
-      return response.arrayBuffer();
-    });
+    const early = warmed.get(url);
+    warmed.delete(url);
+    const bytes = await (early ? early.catch(() => fetchStemBytes(url, asset.id)) : fetchStemBytes(url, asset.id));
     const buffer = await this.context.decodeAudioData(bytes);
     return new WebAudioStemVoice(asset.id, this.context, buffer, this.output, asset.pan ?? 0);
   }

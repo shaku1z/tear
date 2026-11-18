@@ -1,4 +1,3 @@
-import type { createLiveBeatThisRunController } from "../replay/beat-this-run-controller";
 import type { CareerPort } from "./ghost-career-controller";
 import type { LibraryScreenServices as SharedLibraryScreenServices } from "./library-screen-adapters";
 import { legacyCareerRow } from "../../ghost/career-archive";
@@ -31,7 +30,6 @@ import {
 import { ReplayLibraryController } from "./replay-library-controller";
 import { renderReplayThumbnail } from "../../presentation/replay-thumbnail";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
-import type { LiveGhostOwnerRecoveryController } from "../replay/ghost-owner-recovery-controller";
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import { createLiveBestiaryPreview } from "./bestiary-preview";
 
@@ -72,7 +70,6 @@ type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 type Category = Readonly<{ name: string; color: string }>;
 
 export interface LibraryScreenServices {
-  readonly beat?: Pick<ReturnType<typeof createLiveBeatThisRunController>, "action" | "snapshot" | "cancel">;
   readonly chase?: NonNullable<SharedLibraryScreenServices["chase"]>;
   readonly dependencies: Dependencies;
   readonly renderers: Renderers;
@@ -90,7 +87,6 @@ export interface LibraryScreenServices {
   readonly career?: CareerPort;
   readonly enterCareerSource?: (id: string, command: string, expectedManifestHash?: string) => unknown;
   readonly ghostVault: GhostVaultLibraryPort;
-  readonly ownerRecovery?: Pick<LiveGhostOwnerRecoveryController, "snapshot" | "close">;
   readonly enterReplay: (record: unknown, from: string) => boolean;
   readonly enterGhostTheater: (id: string) => Promise<GhostTheaterOpenResult>;
   readonly enterGhostComparison: (ids: readonly string[]) => Promise<boolean>;
@@ -296,7 +292,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     profileTab = services.stepTab(profileTabs, profileTab, () => {
       services.setScroll(0);
       profileMessage = "";
-      services.ownerRecovery?.close();
       if (profileTab !== "career") career?.close();
     });
     let ghostVault = services.ghostVault.snapshot();
@@ -353,9 +348,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
             services.formatTime,
           )
         : [];
-    // The vault toolbar (import / account restore) sits above the list: profile-achievements vaultToolbar.
-    const archiveInset =
-      profileTab === "vault" && (ghostVault.archive !== undefined || services.ownerRecovery !== undefined) ? 84 : 0;
+    // The vault toolbar (import) sits above the list: profile-achievements vaultToolbar.
+    const archiveInset = profileTab === "vault" && ghostVault.archive !== undefined ? 84 : 0;
     const result = buildProfileSnapshot({
       tab: profileTab,
       tabs: profileTabs,
@@ -405,15 +399,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       formatTime: services.formatTime,
       difficultyAccent: (id) => difficultyHeat[id] ?? d.UI.t.color.danger,
     });
-    const ownerRecovery = profileTab === "vault" ? services.ownerRecovery?.snapshot() : undefined;
-    const maximumScroll =
-      ownerRecovery?.catalogVisible === true
-        ? Math.max(0, ownerRecovery.entries.length * 96 - (services.height - 110 - 390))
-        : result.maximumScroll;
-    clampScroll(maximumScroll);
-    const beatMessage = services.beat?.snapshot().message;
-    const chaseMessage =
-      beatMessage !== undefined && beatMessage.length > 0 ? beatMessage : services.chase?.snapshot().message;
+    clampScroll(result.maximumScroll);
+    const chaseMessage = services.chase?.snapshot().message;
     services.renderers.profile({
       ...result.view,
       ...(profileTab === "career" && career
@@ -424,10 +411,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
                 chaseMessage === undefined || chaseMessage.length === 0 ? career.snapshot().message : chaseMessage,
             },
           }
-        : {}),
-      ...(ownerRecovery === undefined ? {} : { ownerRecovery }),
-      ...(ownerRecovery?.catalogVisible === true
-        ? { canScrollUp: services.scroll() > 0, canScrollDown: services.scroll() < maximumScroll }
         : {}),
       ...(profileTab === "vault" && ghostVault.archive !== undefined ? { archive: ghostVault.archive } : {}),
     });
@@ -618,16 +601,10 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       if (count > 1) codexTierView[id] = ((codexTierView[id] ?? 0) + 1) % count;
     },
     careerAction: (command, id) => {
-      if (command.startsWith("beat")) {
-        const entry = career?.snapshot().selected?.entry;
-        services.beat?.action(command, entry?.id, entry?.manifestHash);
-        return;
-      }
-      if (command !== "suspend") services.beat?.cancel();
       if (command !== "chase" && command !== "race") services.chase?.cancelPreparation();
       if (command === "suspend") career?.close();
       else if (command === "select" && id) career?.select(id);
-      else if (["watch", "coach", "challenge", "download", "publish", "chase", "race"].includes(command)) {
+      else if (["watch", "coach", "challenge", "download", "chase", "race"].includes(command)) {
         void career?.sourceAction(async (source) => {
           if (career.snapshot().selected?.entry.kind === "legacy-visual") {
             if (command !== "watch") throw new Error("This tool requires a canonical capsule");
@@ -651,7 +628,6 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     },
     selectProfileTab: (id) => {
       if (id !== "career") career?.close();
-      services.ownerRecovery?.close();
       profileTab = id;
       services.setScroll(0);
       profileMessage = "";

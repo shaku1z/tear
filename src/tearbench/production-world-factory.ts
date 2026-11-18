@@ -7,7 +7,7 @@ import { createLiveSourceVoidController } from "../app/run/source-void-controlle
 import { stageAt } from "../gameplay/stages";
 import type { EnemyKind } from "../gameplay/run/content-director";
 import { A11Y, CONFIG, GFX, REMOTE } from "../config/game-config";
-import { createLiveAuthoritativeInputAdapter } from "../app/world/authoritative-input-adapter";
+import { createLiveAuthoritativeInputAdapter } from "../gameplay/runtime/authoritative-input-adapter";
 import { createLiveWorldComposition, type LiveWorldSessionPort } from "../app/world/world-composition";
 import type { GameRuntimeDependencies } from "../app/shell/game-runtime-dependencies";
 import { aabbOverlap, clamp, len, lerp, lerpAngle, segPointDist, segSegmentDist } from "../domain/geometry";
@@ -52,6 +52,8 @@ export interface ProductionReplayWorldOptions {
   readonly mode?: string;
   readonly weaponId?: string;
   readonly difficulty?: RunDifficulty;
+  /** Boss-only mode: the boss chosen on the start screen. It is fought first; the roster is drawn after it. */
+  readonly firstBoss?: string;
   /** Source-owned persisted discovery projection for detached Endless/Gauntlet runs. */
   readonly discoveredVariantIds?: readonly string[];
   /** Host-only notification; completion never issues a new run seed or writes progress. */
@@ -276,6 +278,7 @@ export function createProductionReplayWorld(options: ProductionReplayWorldOption
   const run = {
     ...createProductionReplayRun(options.mode, options.weaponId, runSeed, difficulty),
     variantDiscovery: [...(options.discoveredVariantIds ?? [])],
+    ...(options.firstBoss === undefined ? {} : { bossOrder: [options.firstBoss] }),
   };
   world.state.setRun(run as never);
   configuration.resetToBase();

@@ -2,7 +2,7 @@ import type { MusicDirector } from "../../audio/music-director";
 import type { MusicRunProgress } from "../../audio/music-contracts";
 import { admittedMusicProgress, musicRunProgress } from "../../audio/music/run-progress";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameBlade, GamePlayer, GameRun } from "../shell/game-runtime-state";
+import type { GameBlade, GamePlayer, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import { LiveRunStartController } from "../../gameplay/run/live-run-start-controller";
 import { planRunStart, type RunStartPlan } from "../../gameplay/run/run-start-plan";

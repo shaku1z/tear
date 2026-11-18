@@ -92,8 +92,12 @@ A boss is an enemy with phases, an arena and a move list.
 
   Two more tools: `context.blocked` is a set of move ids that may not start now (a move whose stage
   object is already out, say), and `exposeBossAttack` opens the boss for a time outside any move, for an
-  answer that is not a parry, such as cutting a stage object the boss depends on. Build the context once
-  and reuse it every tick; do not build objects per tick in a boss.
+  answer that is not a parry, such as cutting a stage object the boss depends on. `context.gapMultiplier`
+  scales the pause after a move (a stage object that hastens the boss); do not rewrite `readyTick` in the
+  boss. Keep the boss's own flags (carried by the move, hidden, parryable) by setting them from
+  `bossAttackStatus` after every change to the runner state, as `syncMoves` in `rootbound.ts` does, so a
+  parry or a forced exposure cannot leave one behind. Build the context once and reuse it every tick; do
+  not build objects per tick in a boss.
 - **Tells:** report them from `tells()` in the shared format (`src/gameplay/entities/boss-tells.ts`). The
   shared tell renderer draws them, and `tests/unit/boss-tell-rules.test.ts` checks every boss's warnings.
   The punish stage reports an `exposed` tell, so the player can see the opening.

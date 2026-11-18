@@ -12,7 +12,7 @@ import {
   type BossPhasePracticeWorld,
 } from "../../gameplay/training/boss-phase-practice-runtime";
 import type { BossPracticePort } from "../../gameplay/training/practice-boss-catalog";
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 
 type Binding = Pick<BossPhasePracticeState, "encounterId" | "generation" | "bossId" | "seed">;

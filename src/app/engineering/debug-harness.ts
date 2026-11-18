@@ -1,6 +1,6 @@
 import { releasePointerLock as unlockPointer } from "../../platform/browser-pointer-lock";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
-import type { GameEnemy, GameRun } from "../shell/game-runtime-state";
+import type { GameEnemy, GameRun } from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
 import type { RunDifficulty, RunMode } from "../../gameplay/run/session";

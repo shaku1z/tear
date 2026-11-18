@@ -140,9 +140,9 @@ const PORTABLE_RULES = [
     "tearbench.structural-world-ports",
     ["R06"],
     ["src/tearbench/**"],
-    ["@app.world-runtime-types"],
+    ["@gameplay.world-runtime-types"],
     "portable TearBench modules must consume structural simulation ports, not concrete app world types",
-    { fixtures: { reject: [{ imports: "@app.world-runtime-types", type: true }], accept: [] } },
+    { fixtures: { reject: [{ imports: "@gameplay.world-runtime-types", type: true }], accept: [] } },
   ),
   importRule(
     "gameplay.portable-core-imports",
@@ -171,7 +171,7 @@ const PORTABLE_RULES = [
     ["@tearbench.detached-world"],
     OUTWARD,
     "detached TearBench world modules cannot depend on outward app, presentation, service, or Ghost 2 adapters",
-    { fixtures: { reject: [{ imports: "@app.world-runtime-types", type: true }], accept: [] } },
+    { fixtures: { reject: [{ ...APP_IMPORT_FIXTURE, type: true }], accept: [] } },
   ),
   textRule(
     "tearbench.detached-world-browser-globals",

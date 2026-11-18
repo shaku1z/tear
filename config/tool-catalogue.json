@@ -187,6 +187,13 @@
       ],
       "duration": "long"
     },
+    "playtest": {
+      "purpose": "Plays the real game headless and prints results; `bosses` fights the named bosses with scripted players on fixed seeds, one table per fight",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute"
+    },
     "tearbench": {
       "purpose": "TearBench CLI (list, plan, explain, tasks, run, select, ci, parity, forge); effects depend on the subcommand",
       "effects": [
@@ -1127,27 +1134,6 @@
       ],
       "duration": "under-a-minute"
     },
-    "generate:ghost-types": {
-      "purpose": "Regenerates workers/worker-configuration.d.ts with Wrangler types",
-      "effects": [
-        "writes-repo-files"
-      ],
-      "duration": "seconds"
-    },
-    "check:ghost-types": {
-      "purpose": "Fails if workers/worker-configuration.d.ts is stale",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds"
-    },
-    "check:ghost-cloud": {
-      "purpose": "Ghost worker types check, worker typecheck and Wrangler dry-run of the ghost worker",
-      "effects": [
-        "writes-artifacts"
-      ],
-      "duration": "under-a-minute"
-    },
     "check:crazygames-package": {
       "purpose": "Packages an existing dist/crazygames and checks the upload size budget",
       "effects": [
@@ -1325,17 +1311,6 @@
         "check:game-reference"
       ]
     },
-    "scripts/check-ghost-worker-types.mjs": {
-      "purpose": "Checks (or with --write regenerates) workers/worker-configuration.d.ts via Wrangler",
-      "effects": [
-        "read-only"
-      ],
-      "duration": "seconds",
-      "via": [
-        "generate:ghost-types",
-        "check:ghost-types"
-      ]
-    },
     "scripts/check-music.mjs": {
       "purpose": "Verifies the shipped music cues against public/audio/music.json and the per-target Opus mirrors",
       "effects": [
@@ -1494,6 +1469,40 @@
       "duration": "seconds",
       "via": [
         "merge:ready"
+      ]
+    },
+    "scripts/ci-build-hashes.mjs": {
+      "purpose": "Prints the hashes of Validate's builds, or refuses a browser shard whose downloaded builds differ",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    "scripts/ci-check-times.mjs": {
+      "purpose": "Writes config/check-times.json, the browser shards' split, from the measured check times of given Validate runs",
+      "effects": [
+        "writes-repo-files",
+        "network"
+      ],
+      "duration": "under-a-minute",
+      "via": [],
+      "runBy": [
+        "scripts/run-checks.mjs"
+      ]
+    },
+    "scripts/ci-verdict.mjs": {
+      "purpose": "Validate's required check: fails unless every needed job ended as it should",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml"
       ]
     },
     "scripts/merge-batch.mjs": {
@@ -1668,6 +1677,16 @@
       "runBy": [
         "CONTRIBUTING.md",
         "tests/serve-contract.test.mjs"
+      ]
+    },
+    "scripts/playtest.mjs": {
+      "purpose": "Playtest command: loads src/playtest through Vite, plays boss fights headless and prints the tables; --json also writes them to the named file",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "playtest"
       ]
     },
     "scripts/tearbench.mjs": {

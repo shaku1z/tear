@@ -2,9 +2,9 @@ import type { LegacyAudioCompatibility } from "../../audio/legacy-live-audio";
 import { setMusicMode } from "../../audio/music-mode";
 import { MENU_MUSIC_DEFAULT, isMenuMusicChoice, setMenuMusic } from "../../audio/music/loadout";
 import { isStationChoice, setActiveStation } from "../../audio/music/active-station";
-import { sanitizeCinematicPreference, type CinematicPreference } from "../campaign/cinematic-preference";
+import { sanitizeCinematicPreference, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
-export type { CinematicPreference } from "../campaign/cinematic-preference";
+export type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
 export type GraphicsPreference = "auto" | "high" | "low";
 export type ControlPreference = "auto" | "desktop" | "touch";

@@ -1,3 +1,4 @@
+import { COSMETIC_CATALOG } from "../../gameplay/progression/cosmetic-catalog";
 import { createLiveTutorialCompletionPersistence } from "../progress/tutorial-completion-persistence";
 import { createLivePracticeEncounterPersistence } from "../progress/practice-encounter-persistence";
 import { createLegacySynthFacade } from "../../audio/legacy-synth";
@@ -43,8 +44,11 @@ import type { CrazyGamesSdkShape, createCrazyGamesPlatformServices } from "../..
 import { createLegacyPlatformCompatibility } from "../../platform/legacy-compat";
 import { createRunSeed } from "../../platform/run-seed";
 import type { PwaUpdateCapability } from "../../platform/pwa-update";
+import { GHOST_WORKER_URLS } from "../replay/ghost-worker-urls";
+import { startWorkerCacheWarmup } from "../../platform/worker-cache-warmup";
 import { createAttract } from "../../presentation/attract";
 import { createBackdrop } from "../../presentation/backdrop";
+import { rotateGateShown } from "../../presentation/render-pipeline";
 import { createSceneLibrary } from "../../presentation/scenes/scene-library";
 import { createSceneCanvas, loadSceneBitmap, releaseSceneBitmap } from "../../presentation/scenes/scene-bitmap";
 import { SCENE_PACKAGES } from "../../presentation/scenes/scene-registry";
@@ -288,6 +292,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     getMeta: () => META,
     writerId: () => (CG.live ? "crazygames" : "browser"),
     countedBiomeNames: STAGES.map(({ name }) => name),
+    getCosmeticCatalog: () => COSMETIC_CATALOG,
     log: (message) => {
       console.log(message);
     },
@@ -312,7 +317,7 @@ export function composeTearApplication(options: TearCompositionOptions): void {
       tearScore: () => SFX.musicReplayMetadata(),
     },
   });
-  const { Cloud, FirebaseProvider, ghostPublication } = createCloud({
+  const { Cloud, FirebaseProvider } = createCloud({
     target,
     getPlatform: () => platform.services,
     getProfile: () => PROFILE,
@@ -333,12 +338,16 @@ export function composeTearApplication(options: TearCompositionOptions): void {
   const practiceEncounterPersistence = createLivePracticeEncounterPersistence(PROFILE);
   const DAILY = createDailyChallenges({ achievements: ACH, profile: PROFILE, clock: localCalendarClock() });
   const APP = new AppStateController(surfaces);
+  // One rule for "plain main menu": the menu screen with no phone rotate gate drawn over it.
+  const plainMainMenu = (): boolean => {
+    const canvas = document.querySelector<HTMLCanvasElement>("#game");
+    const gate = canvas !== null && rotateGateShown(Input.touchActive(), canvas.clientWidth, canvas.clientHeight);
+    return APP.screen === "menu" && !gate;
+  };
+  // The ghost worker scripts are cached by the service worker on first fetch; fetch any missing one on an idle menu.
+  if (target === "standalone") startWorkerCacheWarmup(plainMainMenu, GHOST_WORKER_URLS);
   // A waiting service-worker update is applied only on the plain main menu, after saves settle.
-  pwaUpdate.setIdleHost({
-    // The phone rotate gate is drawn over the menu in portrait on touch devices: not idle.
-    isIdle: () => APP.screen === "menu" && compositionWindow.innerWidth >= compositionWindow.innerHeight,
-    settle: () => PROFILE.flushAcknowledged(),
-  });
+  pwaUpdate.setIdleHost({ isIdle: plainMainMenu, settle: () => PROFILE.flushAcknowledged() });
   const DIAG = new PerformanceMonitor();
   const achievementToastPersistence = createLiveAchievementToastPersistence(PROFILE);
   const biomeProgressPersistence = createLiveBiomeProgressPersistence(PROFILE);
@@ -387,7 +396,6 @@ export function composeTearApplication(options: TearCompositionOptions): void {
     Clipper: clipper,
     Cloud,
     Colossus,
-    ghostPublication,
     DAILY,
     DIAG,
     Echo,
@@ -532,6 +540,9 @@ export function composeTearApplication(options: TearCompositionOptions): void {
         },
       }),
       app: Object.freeze({ snapshot: () => APP.snapshot() }),
+      // What the isolated storage holds now, so a journey can boot a fresh page from it: the
+      // same contents a reload would find in the browser's real storage.
+      storage: Object.freeze({ snapshot: () => Object.fromEntries(disposableValues) }),
       viewport: Object.freeze({
         snapshot: () => {
           const canvas = document.querySelector<HTMLCanvasElement>("#game");
