@@ -1,9 +1,6 @@
+import { isRecord } from "../domain/records";
 import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import { migrateVisualRecording, verifyVisualReplayPacket, type VisualRecordingV2 } from "./visual-replay";
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 export function stringValue(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
