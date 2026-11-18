@@ -4,7 +4,7 @@ import { mkdtempSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { commandFrom, joinQueue, lightKind, quoteArgument, queueSlots } from "../../scripts/queue.mjs";
+import { commandFrom, joinQueue, lightKind, liveHeartbeats, quoteArgument, queueSlots } from "../../scripts/queue.mjs";
 
 const made = [];
 const directory = () => {
@@ -13,7 +13,12 @@ const directory = () => {
   return path;
 };
 afterEach(() => {
+  // A heartbeat left running would keep touching a ticket after its test; stop it and fail the test.
+  const leaked = [...liveHeartbeats];
+  for (const child of leaked) child.kill();
+  liveHeartbeats.clear();
   for (const path of made.splice(0)) rmSync(path, { recursive: true, force: true });
+  expect(leaked, "heartbeat processes left running").toEqual([]);
 });
 
 const quiet = { wait: 10, log: () => undefined };
@@ -94,10 +99,48 @@ describe("queue", () => {
     const queue = directory();
     const release = await joinQueue({ directory: queue, slots: 1, env: {}, refreshMs: 50, ...quiet });
     const [ticket] = readdirSync(queue);
-    const before = statSync(join(queue, ticket)).mtimeMs;
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 600);
-    expect(statSync(join(queue, ticket)).mtimeMs).toBeGreaterThan(before);
+    const touched = () => statSync(join(queue, ticket)).mtimeMs;
+    // The heartbeat's first touch says it is running; how long node takes to start is not the test.
+    const joined = touched();
+    while (touched() === joined) await pause(10);
+    const running = touched();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+    expect(touched()).toBeGreaterThan(running);
     release();
+  });
+
+  it("wakes waiters only when a ticket is added or removed, not when one is touched", async () => {
+    // Linux reports a touch as a "change" event. If waiters woke on it, each waiter's own touch
+    // would wake every other waiter, which touches and wakes them again (#228's unit OOM). The fake
+    // watcher reports a "change" for every look, so this fails on any platform if a change wakes.
+    const queue = directory();
+    const listeners = [];
+    let looks = 0;
+    const watchDirectory = (_directory, listener) => {
+      looks += 1;
+      listeners.push(listener);
+      setImmediate(() => listener("change"));
+      return { close: () => listeners.splice(listeners.indexOf(listener), 1) };
+    };
+    // Each join gets its own environment: a shared one would hand the waiters the holder's ticket.
+    const options = { directory: queue, slots: 1, log: () => undefined, wait: 60_000, watchDirectory };
+    const holder = await joinQueue({ ...options, env: {} });
+    const served = [];
+    const waiters = ["b", "c"].map((label) =>
+      joinQueue({ ...options, env: {}, label }).then((release) => {
+        served.push(label);
+        return release;
+      }),
+    );
+    await pause(100);
+    expect(looks).toBe(2);
+    holder();
+    for (const listener of [...listeners]) listener("rename");
+    (await waiters[0])();
+    for (const listener of [...listeners]) listener("rename");
+    (await waiters[1])();
+    expect(served).toEqual(["b", "c"]);
+    expect(looks).toBeLessThanOrEqual(5);
   });
 
   it("lets a command inside a holder through on the holder's ticket", async () => {

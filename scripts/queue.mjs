@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // One queue for heavy local commands, shared by every worktree of this repository.
 //
 //   pnpm queue -- pnpm test:unit:without-preservation-corpus
@@ -147,7 +146,7 @@ function liveTickets(directory, limits, now) {
 }
 
 /** Resolves when a ticket is added or removed, or after `wait` ms, whichever is first. */
-function nextChange(directory, wait) {
+function nextChange(directory, wait, watchDirectory) {
   return new Promise((done) => {
     let watcher;
     const finish = () => {
@@ -159,7 +158,7 @@ function nextChange(directory, wait) {
     try {
       // Only a ticket added or removed ("rename"). A touch is a "change" on Linux, and waking on
       // it made waiters that touch every pass wake each other in a tight loop (#228 unit OOM).
-      watcher = watch(directory, (event) => {
+      watcher = watchDirectory(directory, (event) => {
         if (event === "rename") finish();
       });
     } catch {
@@ -170,6 +169,9 @@ function nextChange(directory, wait) {
 
 let joined = 0;
 
+/** Heartbeat processes this process started and has not stopped yet (tests check it is empty). */
+export const liveHeartbeats = new Set();
+
 /** Starts the process that keeps a ticket fresh; it exits when this process does. */
 function startHeartbeat(path, refreshMs) {
   const script = fileURLToPath(import.meta.url);
@@ -179,6 +181,8 @@ function startHeartbeat(path, refreshMs) {
   });
   child.unref();
   child.channel?.unref();
+  liveHeartbeats.add(child);
+  child.on("exit", () => liveHeartbeats.delete(child));
   return child;
 }
 
@@ -194,7 +198,7 @@ function heartbeat(path, refreshMs) {
 /**
  * Joins the queue and resolves, once this caller is among the first `slots` live tickets, with a
  * function that leaves it. A caller whose environment already names a held ticket is inside a
- * holder's command and goes straight through.
+ * holder's command and goes straight through. `watchDirectory` is fs.watch; tests pass their own.
  */
 export async function joinQueue({
   directory,
@@ -207,6 +211,7 @@ export async function joinQueue({
   wait = 2000,
   log = console.error,
   now = Date.now,
+  watchDirectory = watch,
 }) {
   const inherited = env[TICKET_ENV];
   if (inherited !== undefined && existsSync(inherited)) return () => undefined;
@@ -231,7 +236,7 @@ export async function joinQueue({
     const waiting = (place === -1 ? live.length : place) - slots + 1;
     if (waiting !== ahead) log(`queue: ${String(waiting)} ahead of this command (${String(slots)} run at once)`);
     ahead = waiting;
-    await nextChange(directory, wait);
+    await nextChange(directory, wait, watchDirectory);
   }
   if (ahead !== undefined) log(`queue: started after ${String(Math.round((now() - started) / 1000))} s`);
   writeFileSync(path, JSON.stringify({ ...owner, served: now() }));
@@ -239,6 +244,7 @@ export async function joinQueue({
   env[TICKET_ENV] = path;
   return () => {
     beat.kill();
+    liveHeartbeats.delete(beat);
     rmSync(path, { force: true });
     if (env[TICKET_ENV] === path) Reflect.deleteProperty(env, TICKET_ENV);
   };
