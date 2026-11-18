@@ -204,6 +204,7 @@ function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -255,6 +256,7 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -382,7 +384,10 @@ describe("legacy screen renderer registry", () => {
       (control) => control.action.type === "tutorial.action" && control.action.command === "tab",
     );
     expect(
-      tabs.map((control) => [control.action.type === "tutorial.action" && control.action.lessonId, control.hiddenBox]),
+      tabs.map((control) => [
+        control.action.type === "tutorial.action" && control.action.command === "tab" && control.action.tab,
+        control.hiddenBox,
+      ]),
     ).toEqual([
       ["lessons", true],
       ["weapons", true],

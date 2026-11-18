@@ -74,7 +74,10 @@ applies them and answers yes or no with the reason; the merge helper calls it.
 3. **Every check is of the change merged with `main` as it is when the check
    starts.** Validate checks out the pull request's head, merges current `main`
    itself, and records both commits on the run as the `checked` annotation.
-   - A re-run therefore also tests current `main`.
+   - "Re-run all jobs" therefore also tests current `main`. "Re-run failed
+     jobs" keeps the first attempt's scope job, so it re-checks the `main` that
+     attempt recorded; `pnpm merge:ready` treats it as stale once `main` has
+     moved in files the change touches.
    - Neither a re-run nor a reopened pull request reuses GitHub's prepared
      merge ref.
    - The release artifact is named after the commit actually built.

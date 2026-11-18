@@ -11,7 +11,7 @@ import { wrapSpaceSeparated } from "../ui-text-fit";
 import { actionRow, overlayHeader, overlayLayout, tabs, verticalMenu, type OverlayLayout } from "./screen-primitives";
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
 import { LESSON_TEACHING, countedLessons } from "../../gameplay/training/training-exercises";
-import { PRACTICE_TABS, practiceTabDefinition } from "../../gameplay/training/practice-tabs";
+import { PRACTICE_TABS, practiceTabDefinition, type PracticeTab } from "../../gameplay/training/practice-tabs";
 import { buttonGrid } from "./choice-grid";
 import { createCompactPage } from "./compact-page";
 
@@ -284,11 +284,11 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
   }
 
   /** The Drills tabs over the list panel: the hubs' tab strip, framed to the panel. */
-  function drillTabs(open: string, x: number, y: number, w: number, h: number): void {
+  function drillTabs(open: PracticeTab, x: number, y: number, w: number, h: number): void {
     tabs(
       context,
       PRACTICE_TABS.map(({ id, label }) => ({ id, label, selected: id === open })),
-      (id) => ({ type: "tutorial.action", command: "tab", lessonId: id }),
+      (id) => ({ type: "tutorial.action", command: "tab", tab: id }),
       y,
       { x, w, h },
     );
