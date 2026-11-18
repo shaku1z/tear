@@ -100,8 +100,10 @@ A boss is an enemy with phases, an arena and a move list.
   not build objects per tick in a boss.
 
   A channel that keeps attacking (the Rootbound's `regrowth`) is a move with a long active stage and
-  `hit.every`: the strike is armed again each `every` seconds, and a travelling shape starts again from the
-  boss. A move that must come at a set point in the fight is scheduled in its `choose` data, never in the
+  `hit.repeat`: the strike is armed again each `every` seconds, and a travelling shape starts again from the
+  boss. The move's tell warns of the first strike; each later one is warned for the last `tell` seconds of
+  the repeat before it, with the hit off, and shows as a tell of its own (`regrowth:2`, `regrowth:3`). The
+  table refuses a repeat warned for less than the shortest boss warning. A move that must come at a set point in the fight is scheduled in its `choose` data, never in the
   boss: `opens` plays it first when a phase it belongs to starts (Phase II's planting, Phase III's
   Regrowth), `once` plays it at most once, and `afterMoves` brings it back after that many other moves and
   only then (Last Spring). A fight restored part-way through a phase calls `openBossPhase` so no opening is

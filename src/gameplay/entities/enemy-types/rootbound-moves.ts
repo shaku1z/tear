@@ -102,12 +102,18 @@ export const ROOTBOUND_MOVES: BossAttackTable<RootboundPhase, RootboundPlace> = 
     {
       // Phase III opens with it, once. The links grow at the tell and the channel runs to the end of the active
       // stage: tell plus active is the channel length in `regrowth-link.ts`. While it channels, a root wave runs
-      // from its front every 1.1 s.
+      // from its front every 1.1 s: live for 0.65 s, in which it covers the same 990 px as before, then 0.45 s
+      // of warning before the next.
       id: "regrowth",
       phases: [3],
       timing: { tell: 0.8, active: 3.2, recover: 0.65, punish: 1.1 },
       choose: { range: [0, 1600], weight: 1, cooldown: 0, opens: true, once: true },
-      hit: { shape: { kind: "travel", dy: 29, hw: 30, hh: 30, speed: 900 }, damage: 16, parryable: false, every: 1.1 },
+      hit: {
+        shape: { kind: "travel", dy: 29, hw: 30, hh: 30, speed: 1520 },
+        damage: 16,
+        parryable: false,
+        repeat: { every: 1.1, tell: 0.45 },
+      },
       tell: { mark: "lane" },
       places: [{ at: "tell", object: "regrowth" }],
     },
