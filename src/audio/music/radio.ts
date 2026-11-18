@@ -3,6 +3,8 @@
  * tear-music in the catalog, so a new song joins its channels by itself and a new channel is one
  * catalog row. Pure logic; playback lives in the stem backend.
  */
+import { isMusicId } from "../../domain/identifiers";
+import { SeededRandom } from "../../domain/random";
 
 /** A channel as the catalog publishes it. Its rule is read by `channelSongs`, the one evaluator. */
 export interface RadioChannel {
@@ -39,7 +41,6 @@ export interface RadioProgramme {
 /** About two minutes per song when the catalog does not say. */
 export const DEFAULT_RADIO_SONG_SECONDS = 120;
 
-const ID = /^[a-z0-9][a-z0-9-]{0,63}$/u;
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown): value is string => typeof value === "string" && value.length > 0;
@@ -51,7 +52,7 @@ const text = (value: unknown): value is string => typeof value === "string" && v
 export function parseRadioProgramme(channels: unknown, radio: unknown): RadioProgramme {
   const seen = new Set<string>();
   const parsed = (Array.isArray(channels) ? channels : []).flatMap((value: unknown): RadioChannel[] => {
-    if (!record(value) || !text(value.id) || !ID.test(value.id) || !text(value.name) || !record(value.rule)) return [];
+    if (!record(value) || !isMusicId(value.id) || !text(value.name) || !record(value.rule)) return [];
     if (seen.has(value.id)) return [];
     seen.add(value.id);
     const description = text(value.description) ? value.description : "";
@@ -125,23 +126,12 @@ export function radioPlaySeconds(loopSeconds: number | undefined, songSeconds = 
   return Math.max(1, Math.round(songSeconds / loopSeconds)) * loopSeconds;
 }
 
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /** A shuffled order of the song ids; with `avoidFirst`, that song does not open the order. */
 export function shuffleSongs(ids: readonly string[], seed: number, avoidFirst?: string): readonly string[] {
-  const random = mulberry32(seed);
+  const random = new SeededRandom(seed);
   const order = [...ids];
   for (let index = order.length - 1; index > 0; index -= 1) {
-    const pick = Math.floor(random() * (index + 1));
+    const pick = random.integer(0, index + 1);
     const here = order[index];
     const there = order[pick];
     if (here === undefined || there === undefined) continue;

@@ -11,6 +11,8 @@ const idShape =
 
 /** Ids of cosmetic items, slots, tiers, collections and loadouts: lowercase letters, digits and underscores. */
 export const isItemId = idShape(/^[a-z0-9_]{1,64}$/u);
+/** Ids of songs and Radio channels, as tear-music publishes them: lowercase letters, digits and hyphens. */
+export const isMusicId = idShape(/^[a-z0-9][a-z0-9-]{0,63}$/u);
 /** Ids that name things defined elsewhere (a look family). */
 export const isReferenceId = idShape(/^[A-Za-z0-9_-]{1,64}$/u);
 /**

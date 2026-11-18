@@ -8,6 +8,7 @@
  * an id this build does not know) plays as the default, and the saved value is left alone, so an
  * old save needs no migration and a pick comes back once it can be heard.
  */
+import { isMusicId } from "../../domain/identifiers";
 import { conditionMet, type ProgressFacts } from "../../domain/unlock-condition";
 import type { MusicScene } from "../music-contracts";
 import type { MusicUnlock } from "./catalog";
@@ -33,16 +34,15 @@ export function pickPlaysInRun(scene: MusicScene): boolean {
 }
 
 const CHANNEL_PREFIX = "channel:";
-const ID = /^[a-z0-9][a-z0-9-]{0,63}$/u;
 
 /** A saved value as a source: `default`, a song's id, or `channel:<id>`; anything else is the default. */
 export function parseMusicSource(value: unknown): MusicSource {
   if (typeof value !== "string" || value === "default") return DEFAULT_MUSIC_SOURCE;
   if (value.startsWith(CHANNEL_PREFIX)) {
     const channelId = value.slice(CHANNEL_PREFIX.length);
-    return ID.test(channelId) ? Object.freeze({ kind: "channel", channelId }) : DEFAULT_MUSIC_SOURCE;
+    return isMusicId(channelId) ? Object.freeze({ kind: "channel", channelId }) : DEFAULT_MUSIC_SOURCE;
   }
-  return ID.test(value) ? Object.freeze({ kind: "song", workId: value }) : DEFAULT_MUSIC_SOURCE;
+  return isMusicId(value) ? Object.freeze({ kind: "song", workId: value }) : DEFAULT_MUSIC_SOURCE;
 }
 
 /** The value a source is saved as; `parseMusicSource` reads it back. */
