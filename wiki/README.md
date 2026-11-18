@@ -4,6 +4,8 @@ The wiki at <https://wiki.tearblade.com> is built from this folder, from the sam
 There is no separate repository, no sync command and no data file to refresh: a page is wrong only if
 the game or a hand-written note is wrong.
 
+Changes here follow the Tear engineering standard (one source of truth, content as data, no one-off fixes): see `ENGINEERING_STANDARD.md` in the lead's notes folder until it is committed to the repository.
+
 ## Where each thing comes from
 
 | What | Source |
@@ -58,9 +60,7 @@ Staleness is information, never a failure. A game change never needs the picture
   adds about 30 minutes and is only for a release).
 - To refresh the committed pictures: `pnpm build:test:standalone && pnpm wiki:media`, then commit `wiki/pictures`.
 
-Boss wind-up times are measured by the same capture, so they are as old as the pictures. When boss
-telegraphs exist as data in the boss definitions, the exporter should read the lead times from there
-instead (they would then need the boss id, phase, attack id and telegraph seconds).
+Boss warning times come from two places. A boss whose moves are data (today only the Rootbound, `src/gameplay/entities/enemy-types/rootbound-moves.ts`) has its own warning times exported, so they are always current. The older bosses declare none, so their wind-ups are measured from timed play by the same capture as the pictures and are as old as the pictures. A phase that lists none had no wind-up state in the timed play, which does not mean the boss gives no warning. When another boss moves onto the shared move table, add it to `bossMoves` in `scripts/wiki-data-export.mjs`.
 
 ## Page weight
 

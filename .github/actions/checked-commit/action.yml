@@ -1,0 +1,65 @@
+name: Check out the checked commit
+description: >-
+  Every Validate job checks the same commit: a pull request's head merged with one main commit, made
+  with a fixed identity and date so each job's merge is the identical commit the scope job recorded.
+  Then Node, pnpm and the dependencies.
+inputs:
+  main:
+    description: The main commit to merge (empty on a push to main, which checks itself)
+    required: true
+  commit:
+    description: The commit the scope job recorded; empty only in the scope job itself
+    required: false
+    default: ""
+  install:
+    description: Install pnpm and the dependencies
+    required: false
+    default: "true"
+outputs:
+  commit:
+    description: The checked commit
+    value: ${{ steps.merge.outputs.commit }}
+runs:
+  using: composite
+  steps:
+    # A pull request is checked as its head merged with main as main was when the scope job ran,
+    # not GitHub's prepared merge ref, which a re-run reuses and a reopen can serve stale.
+    - name: Merge main into the change
+      id: merge
+      shell: bash
+      env:
+        MAIN: ${{ inputs.main }}
+        EXPECTED: ${{ inputs.commit }}
+      run: |
+        if [[ -n "$MAIN" ]]; then
+          git fetch --quiet origin "+$MAIN:refs/remotes/origin/main"
+          date="$(git log -1 --format=%cI "$MAIN")"
+          GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
+            git -c user.name=validate -c user.email=validate@invalid merge --quiet --no-edit -m "Validate: merge main $MAIN" "$MAIN" ||
+            { echo "::error::This change does not merge cleanly with current main. Bring it up to date."; exit 1; }
+        fi
+        commit="$(git rev-parse HEAD)"
+        if [[ -n "$EXPECTED" && "$commit" != "$EXPECTED" ]]; then
+          echo "::error::This job checked out $commit, not the commit the scope job recorded ($EXPECTED)."
+          exit 1
+        fi
+        echo "commit=$commit" >> "$GITHUB_OUTPUT"
+        # Every later step checks and builds this commit, not GitHub's GITHUB_SHA (its own merge ref).
+        echo "TEAR_RELEASE_SHA=$commit" >> "$GITHUB_ENV"
+        echo "TEAR_BUILD_GIT_SHA=$commit" >> "$GITHUB_ENV"
+    - if: inputs.install == 'true'
+      uses: pnpm/action-setup@v4
+      with:
+        version: 11.15.0
+    - if: inputs.install == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: pnpm
+    - if: inputs.install != 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+    - if: inputs.install == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile

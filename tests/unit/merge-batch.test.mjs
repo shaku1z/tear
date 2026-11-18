@@ -9,6 +9,7 @@ import {
   batchBranch,
   chooseMembers,
   failedChecks,
+  failedSteps,
   formatMembers,
   isNetworkFailure,
   mergeMessage,
@@ -162,6 +163,16 @@ describe("pnpm merge:batch", () => {
     const log =
       "PASS static.format 2 s\nFAIL unit.vitest after 81 s (exit 1): pnpm test\nFAIL browser.pale-variants after 13 s (exit 1)";
     expect(failedChecks(log)).toEqual(["unit.vitest", "browser.pale-variants"]);
+  });
+
+  it("names the failed steps of every job of a run, not only the required one", () => {
+    const jobs = [
+      { name: "unit", steps: [{ name: "Unit tests", conclusion: "success" }] },
+      { name: "browser (3/4)", steps: [{ name: "Browser checks", conclusion: "failure" }] },
+      { name: "check", steps: [{ name: "Every needed job passed", conclusion: "failure" }] },
+      { name: "docs" },
+    ];
+    expect(failedSteps(jobs)).toEqual(["browser (3/4): Browser checks", "check: Every needed job passed"]);
   });
 
   describe("Validate's --record step", { timeout: 30_000 }, () => {
