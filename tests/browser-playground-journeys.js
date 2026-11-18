@@ -11,7 +11,7 @@ const { STATE_WAIT_MS, pollEvery, settleFor } = require("./browser-waits");
 const journey = (practiceLab) =>
   withJourney(
     { name: practiceLab ? "practice lab journeys" : "playground journeys", port: practiceLab ? 8145 : 8144 },
-    async ({ page, boot, waitScreen, restBlade }) => {
+    async ({ page, boot, waitScreen }) => {
       async function pressUntilScreen(key, screen) {
         for (let attempt = 0; attempt < 12; attempt++) {
           await page.keyboard.press(key);
@@ -167,7 +167,7 @@ const journey = (practiceLab) =>
         assert.equal(before.earned, 1000);
         assert.equal(before.spent, 375);
         assert.equal(before.buy.sharp, 1);
-        await clickLabel("PRACTICE LAB");
+        await clickLabel("DRILLS");
         await waitScreen("paused");
         let session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.practiceOnly, true);
@@ -178,6 +178,14 @@ const journey = (practiceLab) =>
           "historical lesson history must remain unknown",
         );
         if (directory) await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-selector.png") });
+        // Q / E step the Drills tabs, as on every tabbed screen.
+        const openTab = () => page.evaluate(() => window.__PANTHEON_TEST.tutorial().session.practiceTab);
+        assert.equal(await openTab(), "lessons");
+        await page.keyboard.press("e");
+        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.practiceTab === "weapons");
+        await page.keyboard.press("q");
+        await page.waitForFunction(() => window.__PANTHEON_TEST.tutorial().session.practiceTab === "lessons");
+        assert.equal(await openTab(), "lessons");
         await clickLabel("LAUNCH");
         await waitScreen("playing");
         assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().lessonIndex), 4);
@@ -188,7 +196,7 @@ const journey = (practiceLab) =>
         await waitScreen("playing");
         assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.tutorial().counters.launch ?? 0), 0);
         await pressUntilScreen("p", "paused");
-        await clickLabel("WEAPON ANNEXES");
+        await clickLabel("WEAPONS");
         if (directory)
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-weapon-annexes.png") });
         for (const weapon of ["sword", "hammer", "greatsword", "chainblade", "riftlock"]) {
@@ -214,7 +222,7 @@ const journey = (practiceLab) =>
           assert.equal(await page.evaluate(() => window.__PANTHEON_TEST.state().weapon), weapon);
           await pressUntilScreen("p", "paused");
         }
-        await clickLabel("ENEMY CATALOG");
+        await clickLabel("ENEMIES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
         assert.equal(
@@ -223,7 +231,7 @@ const journey = (practiceLab) =>
           "aggregate old support kills must not invent subtype history",
         );
         await page.waitForFunction(() =>
-          window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "HISTORY NOT RECORDED"),
+          window.__TEAR_PRACTICE_LAB_TEXT__.some((entry) => entry.text === "NOT MET YET"),
         );
         if (directory)
           await page.screenshot({ path: path.join(path.resolve(directory), "practice-lab-enemy-catalog.png") });
@@ -261,41 +269,49 @@ const journey = (practiceLab) =>
         assert.equal(opponent.snapshot.state["tear.enemy.v1"].length, 1);
         assert.equal(opponent.snapshot.state["tear.enemy.v1"][0].kind, "charger");
         assert.notEqual(opponent.snapshot.state["tear.enemy.v1"][0].tutDummy, true);
-        // The restarted opponent spawns beside the player, and the blade swings to wherever the
-        // pointer moved while paused. Rest it aimed at RESTART LESSON first, so the click there
-        // resumes play with a still blade (see restBlade in the harness).
+        // A restart issues a full-health opponent, and the player's blade is live from its first
+        // tick. The restart re-seats the held blade overhead (resetTutorialActors); with a free
+        // cursor the next tick aims it back at RESTART LESSON, so play opens with a swing that no
+        // pointer placement avoids, and the new opponent can spawn inside it. The game guarantees
+        // the health at issue, not that nothing touches the opponent before the first read: it must
+        // be at full health unless the game counted a held-blade hit after the restart.
         await pressUntilScreen("p", "paused");
-        const restart = await labelAt("RESTART LESSON");
-        await pressUntilScreen("p", "playing");
-        await restBlade(restart);
-        await pressUntilScreen("p", "paused");
+        const heldHitsBefore = await page.evaluate(() => window.__PANTHEON_TEST.state().combatTrace.heldHits);
         await clickLabel("RESTART LESSON");
         await waitScreen("playing");
         opponent = await opponentAttempt();
         assert.equal(opponent.session.enemyPractice.defeated, false);
         {
-          // A restart issues a full-health opponent. If it is ever seen damaged, say how long it had
-          // been alive (spawnT counts down from its spawn-in) and what was near it in that same snapshot.
+          // If it is ever seen damaged with no held hit counted, say how long it had been alive
+          // (spawnT counts down from its spawn-in) and what was near it in that same snapshot.
           const state = opponent.snapshot.state;
           const enemy = state["tear.enemy.v1"][0];
+          const heldHitsAfter = opponent.state.combatTrace.heldHits;
+          // The count belongs to the run; a restart that began a new run would start it again at 0.
+          const heldHits = heldHitsAfter < heldHitsBefore ? heldHitsAfter : heldHitsAfter - heldHitsBefore;
           const pick = (value, keys) => Object.fromEntries(keys.map((key) => [key, value?.[key]]));
-          assert.equal(
-            enemy.hp,
-            enemy.maxHp,
-            `restarted practice opponent was damaged before the first read: ${JSON.stringify({
-              enemy: pick(enemy, ["x", "y", "vx", "vy", "spawnT", "aliveT", "atk", "atkT", "flash", "hitCd", "stun"]),
-              enemyStatus: pick(enemy, ["bleedStacks", "burnT", "burnDps", "_deathCause", "affixes"]),
-              blade: pick(state["tear.blade.v1"], ["state", "x", "y", "tipX", "tipY", "tipSpeed", "swingActive"]),
-              player: pick(state["tear.player.v1"], ["x", "y", "vx", "vy", "hp"]),
-              projectiles: state["tear.projectile.v1"]?.length,
-              hazards: pick(state["tear.hazard.v1"], ["stageId", "fields", "combatObjects"]),
-              clock: state["tear.world.v1"]?.clock,
-              simulationSeconds: state["tear.world.v1"]?.simulationSeconds,
-            })}`,
+          assert.ok(enemy.hp > 0 && enemy.hp <= enemy.maxHp, `restarted opponent hp ${enemy.hp} of ${enemy.maxHp}`);
+          assert.ok(
+            heldHits > 0 || enemy.hp === enemy.maxHp,
+            `restarted practice opponent was damaged before the first read with no held-blade hit counted: ${JSON.stringify(
+              {
+                heldHits: { before: heldHitsBefore, after: heldHitsAfter },
+                hp: enemy.hp,
+                maxHp: enemy.maxHp,
+                enemy: pick(enemy, ["x", "y", "vx", "vy", "spawnT", "aliveT", "atk", "atkT", "flash", "hitCd", "stun"]),
+                enemyStatus: pick(enemy, ["bleedStacks", "burnT", "burnDps", "_deathCause", "affixes"]),
+                blade: pick(state["tear.blade.v1"], ["state", "x", "y", "tipX", "tipY", "tipSpeed", "swingActive"]),
+                player: pick(state["tear.player.v1"], ["x", "y", "vx", "vy", "hp"]),
+                projectiles: state["tear.projectile.v1"]?.length,
+                hazards: pick(state["tear.hazard.v1"], ["stageId", "fields", "combatObjects"]),
+                clock: state["tear.world.v1"]?.clock,
+                simulationSeconds: state["tear.world.v1"]?.simulationSeconds,
+              },
+            )}`,
           );
         }
         await pressUntilScreen("p", "paused");
-        await clickLabel("BOSS PRACTICE");
+        await clickLabel("BOSSES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.bossCatalog.length, 18);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "colossus:1").knowledge, "defeated-identity");
@@ -370,16 +386,16 @@ const journey = (practiceLab) =>
         // Re-enter through the ordinary setup screen after a full page reload.
         await clickLabel("PLAY");
         await waitScreen("setup");
-        await clickLabel("PRACTICE LAB");
+        await clickLabel("DRILLS");
         await waitScreen("paused");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.practiceOnly, true);
         assert.equal(session.phase, "free-practice");
-        await clickLabel("ENEMY CATALOG");
+        await clickLabel("ENEMIES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "charger").knowledge, "confirmed-defeated");
         assert.equal(session.enemyCatalog.find((entry) => entry.id === "mender").canPractice, false);
-        await clickLabel("BOSS PRACTICE");
+        await clickLabel("BOSSES");
         session = await page.evaluate(() => window.__PANTHEON_TEST.tutorial().session);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:2").canPractice, true);
         assert.equal(session.bossCatalog.find((entry) => entry.id === "warden:3").canPractice, false);

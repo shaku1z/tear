@@ -849,6 +849,14 @@
       ],
       "duration": "minutes"
     },
+    "assets:sheets": {
+      "purpose": "SVG and transparent PNG pictures of everything the game draws, redrawn where its drawing code changed; written outside the repo",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes"
+    },
     "music:cover": {
       "purpose": "MUSIC covers: encode a stage painting at every size covers.json lists and write its row",
       "effects": [
@@ -920,6 +928,13 @@
         "read-only"
       ],
       "duration": "seconds"
+    },
+    "leftovers": {
+      "purpose": "Read-only: merged local branches, ignored tracked files, leftovers beside the repo and cache sizes",
+      "effects": [
+        "network"
+      ],
+      "duration": "minutes"
     },
     "merge:ready": {
       "purpose": "Says whether a pull request may merge: main green and its own check, or a passed batch, current against main; --refresh starts a fresh check",
@@ -1457,6 +1472,16 @@
         "scripts/governance/hooks/pre-push"
       ]
     },
+    "scripts/leftovers.mjs": {
+      "purpose": "Read-only leftovers report behind pnpm leftovers; never deletes, moves or fetches",
+      "effects": [
+        "network"
+      ],
+      "duration": "minutes",
+      "via": [
+        "leftovers"
+      ]
+    },
     "scripts/lint.mjs": {
       "purpose": "Runs ESLint over the canonical target list",
       "effects": [
@@ -1542,6 +1567,16 @@
       "duration": "under-a-minute",
       "via": [
         "merge:batch"
+      ]
+    },
+    "scripts/merge-ready.mjs": {
+      "purpose": "Merge readiness behind pnpm merge:ready: a red main stops merges and a stale pass is not a pass",
+      "effects": [
+        "network"
+      ],
+      "duration": "seconds",
+      "via": [
+        "merge:ready"
       ]
     },
     "scripts/package-crazygames.mjs": {
@@ -1673,6 +1708,17 @@
         "test:browser:current-live-detached-parity"
       ]
     },
+    "scripts/asset-sheets.mjs": {
+      "purpose": "The pnpm assets:sheets command; drives scripts/asset-sheets/page.html in headless Chrome and writes pictures outside the repo",
+      "effects": [
+        "writes-artifacts",
+        "launches-browser"
+      ],
+      "duration": "minutes",
+      "via": [
+        "assets:sheets"
+      ]
+    },
     "scripts/scene.mjs": {
       "purpose": "The pnpm scene command; build rewrites a package's images and manifest, reports and previews write elsewhere",
       "effects": [
@@ -1801,6 +1847,12 @@
       "scripts/architecture/evaluate.mjs",
       "scripts/check-source-architecture.mjs",
       "tests/source-architecture.test.mjs"
+    ],
+    "scripts/asset-sheets/fingerprint.mjs": [
+      "scripts/asset-sheets.mjs"
+    ],
+    "scripts/asset-sheets/output.mjs": [
+      "scripts/asset-sheets.mjs"
     ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
