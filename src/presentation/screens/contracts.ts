@@ -1,5 +1,4 @@
 import type { CareerRow, CareerQuery, CareerUsage } from "../../ghost/career-archive";
-import type { GhostCoachHistoryView } from "../../ghost/coach-history";
 import type { ScreenAction } from "../../domain/screen-actions";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { TutorialSessionView } from "../../gameplay/training/tutorial-controller";
@@ -414,7 +413,6 @@ export interface ReplayScreenView {
     result?: string;
     elapsedTicks?: number;
   }>;
-  readonly coach?: GhostCoachHistoryView;
   /** C37 verified, immutable Run DNA projection; absent metrics remain explicitly unavailable. */
   readonly runDna?: Readonly<{
     readonly available: boolean;
@@ -426,7 +424,6 @@ export interface ReplayScreenView {
     readonly unavailable: readonly string[];
   }>;
   readonly worldVisible?: boolean;
-  readonly coachReturnAvailable?: boolean;
   readonly studioMedia?: Readonly<{
     available: boolean;
     status: string;

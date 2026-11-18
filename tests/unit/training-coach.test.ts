@@ -103,7 +103,7 @@ describe("training coach", () => {
     const coach = new TrainingCoach();
     const marks = coach.step(frame({ playground: { runKey: run } }));
     expect(marks[0]?.mark).toMatchObject({ id: "playground:help", tone: "info" });
-    expect(marks[0]?.mark.text).toBe("E menu  ·  U abilities  ·  1–8 spawn");
+    expect(marks[0]?.mark.text).toBe("TAB menu  ·  U abilities  ·  1–8 spawn");
     let later = marks;
     for (let elapsed = 0; elapsed < COACH_HELP_SECONDS + 1; elapsed += 1)
       later = coach.step(frame({ deltaSeconds: 1, playground: { runKey: run } }));

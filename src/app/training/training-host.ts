@@ -70,7 +70,6 @@ function emptyProgress(): readonly [number, number] {
 const fallbackLesson: ReturnType<LiveTutorialRuntime["step"]> = Object.freeze({
   t: "",
   d: "",
-  keys: Object.freeze([]),
   need: undefined,
   ranged: undefined,
   final: undefined,
