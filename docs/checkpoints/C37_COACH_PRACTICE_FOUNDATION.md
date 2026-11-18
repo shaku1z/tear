@@ -1,5 +1,7 @@
 # C37 - Coach to Practice Verified Projection Foundation
 
+The replay Coach, the knowledge libraries and `tests/browser-ghost-v3-live-capture.js` named in this note were removed in shaku1z/tear#227.
+
 **Status:** native recorded-observation history is implemented in normal Theater;
 built-browser acceptance is pending. The legacy selected-pair analyzer remains a
 compatibility API. Challenges, rendered Studio media and inferred skill coaching

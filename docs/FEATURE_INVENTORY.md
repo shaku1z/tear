@@ -1109,7 +1109,7 @@ attempts still load and are still labelled as such.
 
 ### Removed: replay Coach, Coach history and the knowledge libraries
 
-Removed in shaku1z/tear#PRNUM. The engineering-only Coach panel in the
+Removed in shaku1z/tear#227. The engineering-only Coach panel in the
 Theater (selected-run history, View Moment, practice before a cited moment)
 and its worker are gone, with the unused coach analysis contracts. The
 knowledge libraries (Canon, Frontier, Corpus) never had a writer outside
