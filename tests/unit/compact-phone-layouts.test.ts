@@ -1396,3 +1396,35 @@ describe("button rows sized from their content (ui.buttonFitHeight)", () => {
     }
   });
 });
+
+describe("the Vault list before its saved replays have been read", () => {
+  const vault = { ...profileBase, tab: "vault", replays: [] };
+  const drawn = (view: Parameters<ReturnType<typeof createScreenRenderers>["profile"]>[0]) =>
+    [
+      render(PHONES[0], (r) => {
+        r.profile(view);
+      }),
+      renderDesktop({ width: 1600, height: 900 }, (r) => {
+        r.profile(view);
+      }),
+    ].map((frame) => frame.texts.map((glyphs) => glyphs.text).join(" | "));
+
+  it("says it is opening, and does not claim there are none, on the phone and on the desktop", () => {
+    for (const text of drawn({ ...vault, vaultList: "opening", message: "Opening your saved replays…" })) {
+      expect(text).toContain("Opening your saved replays…");
+      expect(text).not.toContain("No saved replays yet");
+    }
+  });
+
+  it("says they could not be opened, with the reason, when the Vault failed to open", () => {
+    for (const text of drawn({ ...vault, vaultList: "failed", message: "Ghost Vault could not open: blocked" })) {
+      expect(text).toContain("Saved replays could not be opened");
+      expect(text).toContain("blocked");
+      expect(text).not.toContain("No saved replays yet");
+    }
+  });
+
+  it("says there are none only once the list has been read and is empty", () => {
+    for (const text of drawn(vault)) expect(text).toContain("No saved replays yet");
+  });
+});

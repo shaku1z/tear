@@ -6,6 +6,7 @@ import {
   type ScrollBlock,
   type ScrollView,
 } from "./compact-page";
+import { profileListEmptyState } from "./profile-list-empty-state";
 
 const PROFILE_HUE = "#b06cff",
   GOLD = "#e0a326";
@@ -183,15 +184,13 @@ export function createCompactProfile(context: ScreenRenderContext) {
     const replays = view.replays ?? [],
       vault = view.tab === "vault";
     if (replays.length === 0) {
-      const detail = vault
-        ? (view.message ?? "Every run you finish is saved here automatically, ready to watch from the start.")
-        : (view.emptyMessage ?? "Every real run lands here automatically.");
+      const empty = profileListEmptyState(view);
       return [
         kit.empty(
           page,
-          vault ? "◆" : "▶",
-          vault ? "No saved replays yet" : "No runs recorded yet",
-          detail,
+          empty.glyph,
+          empty.line,
+          empty.detail,
           vault ? undefined : { label: "PLAY A RUN", action: { type: "profile.play" } },
         ),
       ];
