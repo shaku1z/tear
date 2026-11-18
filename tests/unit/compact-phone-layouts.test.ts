@@ -23,6 +23,10 @@ import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { catalog, routing } from "../../public/audio/music.json";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
+import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
+import { PRACTICE_TABS } from "../../src/gameplay/training/practice-tabs";
+import { practiceBossCatalog } from "../../src/gameplay/training/practice-boss-catalog";
+import { practiceEnemyCatalog } from "../../src/gameplay/training/practice-enemy-catalog";
 
 /**
  * The phone (compact density) compositions of the shop, codex, profile, leaderboards,
@@ -620,6 +624,23 @@ const careerView = (selected: boolean) =>
     selected: selected ? { entry: careerEntry, notes: { revision: 0, tags: [], retention: "recent" } } : undefined,
   }) as unknown as NonNullable<Parameters<ReturnType<typeof createScreenRenderers>["profile"]>[0]["career"]>;
 
+/** The Drills overlay on one tab, with every opponent met and every boss phase reached (the longest lists). */
+function drillsView(tab: (typeof PRACTICE_TABS)[number]["id"]) {
+  const controller = new TutorialController(CONFIG);
+  controller.openPractice(1600, 1);
+  controller.showPracticeTab(tab);
+  return {
+    id: "paused" as const,
+    abilities: [],
+    progress: [],
+    tutorial: {
+      ...controller.session(),
+      enemyCatalog: practiceEnemyCatalog(() => 1),
+      bossCatalog: practiceBossCatalog(() => 1),
+    },
+  };
+}
+
 describe("phone compositions (compact density)", () => {
   for (const phone of PHONES) {
     it(`lays out the shop as one scrolling column with every BUY reachable at ${phone.name}`, () => {
@@ -842,6 +863,28 @@ describe("phone compositions (compact density)", () => {
       const settings = offered("settings");
       for (const key of ["station", "menuMusic", "musicMode"])
         expect(settings.some((action) => action.key === key)).toBe(true);
+    });
+
+    it(`lists every entry of each Drills tab uncut and reachable by scrolling at ${phone.name}`, () => {
+      for (const { id } of PRACTICE_TABS) {
+        const view = drillsView(id),
+          offered = sweep(
+            phone,
+            (r) => {
+              r.paused(view);
+            },
+            `drills ${id} ${phone.name}`,
+          );
+        const entries = [
+          ...(id === "lessons" ? view.tutorial.lessons.filter((lesson) => lesson.id !== "ready") : []),
+          ...(id === "weapons" ? (view.tutorial.annexes ?? []) : []),
+          ...(id === "enemies" ? view.tutorial.enemyCatalog : []),
+          ...(id === "bosses" ? view.tutorial.bossCatalog : []),
+        ];
+        expect(entries.length, `${id}: has entries`).toBeGreaterThan(0);
+        const listed = [...offered].filter((action) => action.includes('"lessonId"') && !action.includes('"tab"'));
+        expect(listed.length, `drills ${id} ${phone.name}: every entry offered`).toBe(entries.length);
+      }
     });
 
     it(`keeps the Playground menu and its ABILITIES tab inside the frame at ${phone.name}`, () => {
@@ -1286,5 +1329,38 @@ describe("playground: one screen definition at both densities", () => {
       for (const action of actions(renderDesktop({ width: 1600, height: 900 }, lab, scroll).controls))
         desktopLab.add(action);
     expect([...sweep(phone, lab, "pglab phone")].sort()).toEqual([...desktopLab].sort());
+  });
+});
+
+describe("button rows sized from their content (ui.buttonFitHeight)", () => {
+  const desktopUi = () => {
+    const ui = createUi({
+      CLOCK: createTearWorldClock(),
+      presentation: { view: CONFIG.view, colors: CONFIG.colors, overscan: { x: 0, y: 0 } },
+      clamp,
+      Input: { mode: "mouse" },
+    });
+    ui.setDensity({ touch: false, cssPerLogicalPixel: 1 });
+    return ui;
+  };
+
+  it("keeps a one-line row at the list row token and grows a row with a status line to hold both", () => {
+    const ui = desktopUi(),
+      canvas = recordingCanvas([]);
+    expect(ui.buttonFitHeight(canvas, { label: "CHARGER", size: 14, w: 300 })).toBe(ui.t.metric.listRowH);
+    const status = ui.buttonFitHeight(canvas, { label: "CHARGER", sub: "DEFEATED", size: 14, w: 300 });
+    // The pair is drawn about the centre, the label 10 px above it and the sub line 13 px below.
+    expect(status).toBe(Math.ceil(2 * Math.max(10 + 14 / 2, 13 + ui.t.type.micro / 2) + 2 * 9));
+    // A name too long for one line at full size takes the two-line height.
+    expect(ui.buttonFitHeight(canvas, { label: "A NAME FAR TOO LONG FOR THIS BUTTON", size: 20, w: 120 })).toBe(
+      Math.max(ui.t.metric.listRowH, Math.ceil(Math.round(20 * 1.12) + 20 + 18)),
+    );
+  });
+
+  it("never answers less than a touch target on the phone", () => {
+    for (const phone of PHONES) {
+      const { ui, scale } = phoneUi(phone.width, phone.height);
+      expect(ui.buttonFitHeight(recordingCanvas([]), { label: "MOVE", w: 300 }) * scale).toBeGreaterThanOrEqual(44);
+    }
   });
 });

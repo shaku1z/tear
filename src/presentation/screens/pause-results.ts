@@ -12,11 +12,22 @@ import { actionRow, overlayHeader, overlayLayout, tabs, verticalMenu, type Overl
 import { arsenalPanel, panelTag, runProgressPanel, waveLogPanel } from "./run-overlay-panels";
 import { LESSON_TEACHING, countedLessons } from "../../gameplay/training/training-exercises";
 import { PRACTICE_TABS, practiceTabDefinition } from "../../gameplay/training/practice-tabs";
+import { buttonGrid } from "./choice-grid";
+import { createCompactPage } from "./compact-page";
 
-const clampValue = (value: number, minimum: number, maximum: number) => Math.max(minimum, Math.min(maximum, value));
+/** The status line under an opponent or boss in the Drills list, from what the profile knows of it. */
+const KNOWLEDGE_STATUS: Readonly<Record<string, string>> = Object.freeze({
+  "defeated-identity": "DEFEATED",
+  "encountered-phase": "PHASE REACHED",
+  "confirmed-defeated": "DEFEATED",
+  encountered: "MET",
+  "save-unconfirmed": "NOT SAVED YET",
+  unknown: "NOT MET YET",
+});
 
 export function createPauseResultRenderers(context: ScreenRenderContext) {
-  const { ui, width, height } = context;
+  const { ui, width, height } = context,
+    kit = createCompactPage(context);
 
   function wrapText(
     text: string,
@@ -134,9 +145,10 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
     });
     const panelX = width * 0.39,
       panelW = width * 0.54,
-      rowTop = top + (compact ? 38 : 45),
-      helpH = compact ? (catalog ? 70 : 90) : 130;
-    if (tab) drillTabs(tab.id, panelX, top, panelW, rowTop - top - (compact ? 6 : 10));
+      // The tab strip is one touch target tall; without tabs a tag and a line head the list.
+      tabH = ui.t.metric.minTarget,
+      rowTop = top + (tab ? tabH + (compact ? 6 : 10) : compact ? 38 : 45);
+    if (tab) drillTabs(tab.id, panelX, top, panelW, tabH);
     else {
       ui.tag(
         canvas,
@@ -174,47 +186,6 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
         : annexes
           ? (session.annexes ?? []).map((annex) => ({ ...annex, completed: false, reached: true, canPractice: true }))
           : session.lessons.filter((lesson) => lesson.id !== "ready" && (lab || complete || lesson.reached));
-    const rows = bosses ? (compact ? 3 : 6) : catalog ? Math.max(1, Math.ceil(exercises.length / 2)) : 7,
-      rowH = Math.min(bosses ? (compact ? 42 : 62) : catalog ? 62 : 46, (height - rowTop - helpH - 16) / rows);
-    const bossOffset = bosses && compact ? clampValue(Math.floor(context.scroll / 48), 0, 3) * 3 : 0;
-    exercises.forEach((lesson, originalIndex) => {
-      const index = originalIndex - bossOffset;
-      if (bosses && compact && (index < 0 || index >= 9)) return;
-      const columns = tab?.columns ?? 2,
-        column = index % columns,
-        row = Math.floor(index / columns);
-      context.enqueue({
-        x: panelX + column * (panelW / columns + 4),
-        y: rowTop + row * rowH,
-        w: panelW / columns - 8,
-        h: rowH - 4,
-        label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · SKIPPED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
-        ...("knowledge" in lesson && typeof lesson.knowledge === "string"
-          ? {
-              sub: (
-                {
-                  "defeated-identity": "DEFEATED",
-                  "encountered-phase": "PHASE REACHED",
-                  "confirmed-defeated": "DEFEATED",
-                  encountered: "MET",
-                  "save-unconfirmed": "NOT SAVED YET",
-                  unknown: "NOT MET YET",
-                } as Readonly<Record<string, string>>
-              )[lesson.knowledge],
-            }
-          : {}),
-        enabled: lesson.canPractice,
-        selected: lesson.current,
-        action: {
-          type: "tutorial.action",
-          command: tab?.select ?? "select",
-          lessonId: lesson.id,
-        },
-        size: compact ? ui.t.type.micro : ui.t.type.caption,
-      });
-    });
-    if (bosses && compact)
-      ui.scrollHint(canvas, panelX + panelW / 2, rowTop + rows * rowH + 10, bossOffset > 0, bossOffset < 9);
     // On the drill's own tab, the drill under way says what to do now; any other tab explains its list.
     const drillTab = session.annex
         ? "weapons"
@@ -233,12 +204,57 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
             : current
               ? `${LESSON_TEACHING[current.id].goal} ${LESSON_TEACHING[current.id].why}`
               : ""));
-    if (session.coach?.available && !bosses && !catalog && !annexes) {
-      const coach = session.coach,
-        controls: { label: string; command: "coach-rate" | "coach-compare" }[] = [
-          { label: `DEMO SPEED ${String(coach.rate)}×`, command: "coach-rate" },
-          ...(coach.canCompare ? [{ label: "COMPARE WITH DEMO", command: "coach-compare" as const }] : []),
-        ];
+    // The list takes the room the help leaves: the coach's copy over the footer row, or else the
+    // help's measured lines under the list (down to the overlay's bottom margin).
+    const coach = bosses || catalog || annexes ? undefined : session.coach,
+      helpSize = ui.t.type.caption,
+      helpLine = Math.round(helpSize * 1.35);
+    canvas.font = ui.font(helpSize, false);
+    const helpLines =
+      help === "" ? 0 : wrapSpaceSeparated((value) => canvas.measureText(value).width, help, panelW).length;
+    const listBottom = coach?.available
+      ? header.footerY - ui.t.space.md - ui.t.type.micro * 3 - ui.t.space.sm
+      : height - 16 - (helpLines === 0 ? 0 : ui.t.space.sm + helpSize + (helpLines - 1) * helpLine);
+    // The list is the shared button list: columns from the widest name, rows from the tallest
+    // (name and status line), scrolling inside the panel with its hint on a line of its own.
+    const buttons = exercises.map((lesson) => ({
+      label: `${lesson.completed && !lab ? "✓ " : ""}${lesson.title}${session.skipped?.some((id) => id === lesson.id) ? " · SKIPPED" : ""}${lesson.reached ? "" : " · LOCKED"}`,
+      ...("knowledge" in lesson && typeof lesson.knowledge === "string"
+        ? { sub: KNOWLEDGE_STATUS[lesson.knowledge] }
+        : {}),
+      enabled: lesson.canPractice,
+      selected: lesson.current,
+      action: { type: "tutorial.action", command: tab?.select ?? "select", lessonId: lesson.id } as const,
+      size: compact ? ui.t.type.micro : ui.t.type.caption,
+    }));
+    const columns = tab?.columns ?? 2,
+      cellGap = ui.t.metric.btnGap,
+      grid = buttonGrid(ui, canvas, buttons, {
+        minColumns: columns,
+        maxColumns: columns,
+        maxRows: Number.MAX_SAFE_INTEGER,
+        width: panelW,
+        gap: cellGap,
+      });
+    const list = kit.list(
+      { left: panelX, width: panelW, top: rowTop, bottom: listBottom },
+      kit.grid(
+        { left: panelX, width: panelW },
+        buttons,
+        grid.columns,
+        () => grid.rowHeight,
+        (button, x, y, w, h, view) => {
+          view.enqueue({ ...button, x, y, w, h });
+        },
+        cellGap,
+      ),
+      ui.t.space.xs,
+    );
+    if (coach?.available) {
+      const controls: { label: string; command: "coach-rate" | "coach-compare" }[] = [
+        { label: `DEMO SPEED ${String(coach.rate)}×`, command: "coach-rate" },
+        ...(coach.canCompare ? [{ label: "COMPARE WITH DEMO", command: "coach-compare" as const }] : []),
+      ];
       controls.forEach((control, index) => {
         context.enqueue({
           x: panelX + (index * panelW) / controls.length,
@@ -264,15 +280,7 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       return;
     }
     canvas.textBaseline = "alphabetic";
-    wrapText(
-      help,
-      panelX,
-      rowTop + rows * rowH + (catalog ? 28 : 18),
-      panelW,
-      Math.round(ui.t.type.caption * 1.35),
-      ui.t.type.caption,
-      ui.ink,
-    );
+    wrapText(help, panelX, list.bottom + ui.t.space.sm + helpSize, panelW, helpLine, helpSize, ui.ink);
   }
 
   /** The Drills tabs over the list panel: the hubs' tab strip, framed to the panel. */

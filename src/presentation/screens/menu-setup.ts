@@ -202,14 +202,35 @@ export function createMenuSetupRenderers(context: ScreenRenderContext) {
       rowTop = 168;
     const { modeX, modeWidth, difficultyX, difficultyWidth, weaponX, weaponWidth } = SETUP_COLUMNS;
     // Keep the oracle's rich row content on a shared grid so each choice scans
-    // cleanly across mode, difficulty, and weapon. Touch keeps the three columns at
-    // touch-sized rows and moves START into the footer row.
-    const compact = ui.density.touch;
-    const rowHeight = compact ? ui.t.metric.btnH : 56,
-      rowPitch = rowHeight + (compact ? 6 : 4),
-      rowSize = compact ? ui.t.type.label : 17;
+    // cleanly across mode, difficulty, and weapon. The rows are as tall as the tallest
+    // choice of the three columns needs (name and status line, ui.buttonFitHeight).
+    // Touch moves START into the footer row.
+    const compact = ui.density.touch,
+      rowSize = compact ? ui.t.type.label : 17,
+      publicModes = view.modes.filter((choice) => choice.debug !== true);
+    // Each choice as its button's text (the difficulty rows carry five heat pips).
+    const column = (
+      choices: readonly Readonly<{ label: string; sub?: string | undefined; glyph?: string | undefined }>[],
+      w: number,
+      pips = false,
+    ) =>
+      choices.map((choice) => ({
+        label: choice.label.toUpperCase(),
+        sub: choice.sub,
+        glyph: choice.glyph,
+        size: rowSize,
+        w,
+        ...(pips ? { pips: { n: 5, filled: 0, color: "" } } : {}),
+      }));
+    const rowHeight = Math.max(
+        ...[
+          ...column(publicModes, modeWidth),
+          ...column(view.difficulties, difficultyWidth, true),
+          ...column(view.weapons, weaponWidth),
+        ].map((button) => ui.buttonFitHeight(canvas, button)),
+      ),
+      rowPitch = rowHeight + (compact ? 6 : 4);
     ui.sectionLabel(canvas, "MODE", modeX, top, modeWidth);
-    const publicModes = view.modes.filter((choice) => choice.debug !== true);
     publicModes.forEach((choice, index) => {
       context.enqueue({
         x: modeX,

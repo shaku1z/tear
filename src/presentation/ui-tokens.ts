@@ -158,6 +158,8 @@ export function createUiState(colors: UiPalette) {
         focusGap: 3,
         // smallest interactive control; touch raises it to the 44 CSS px floor
         minTarget: 32,
+        // shortest row of a button list (ui.buttonFitHeight): taller only when its content needs it
+        listRowH: 46,
         // the shared page pattern (sheet-relative, see screen-primitives `page`)
         pageTitleY: 92,
         pageBodyTop: 156,
