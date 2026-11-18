@@ -39,8 +39,33 @@ function readable(body) {
 }
 
 /**
- * The labels a description leaves unanswered, each with why. An answer is the text after
- * `**Label:**` on its line. It must not be empty, and "n/a" counts only with a reason after it.
+ * The answer to `label`, or null when no line gives it. The label line is a list item or plain line
+ * whose bold span starts with the label as whole words, in any case, and ends in a colon inside the
+ * span or after it: `**Cause:**`, `**Cause**:`, `**Cause and check:**`, `**Measured** (on CI):`.
+ * A heading such as `### Cause` is prose, not an answer. The answer is the rest of that line or,
+ * when that is empty, the indented lines under it (a nested list).
+ */
+function answerFor(text, label) {
+  const bold = `\\*\\*${escape(label)}(?![\\p{L}\\p{N}])[^*\\n]*?(?::\\*\\*|\\*\\*[^:\\n]*:)`;
+  const line = new RegExp(`^[ \\t]*(?:[-*]|\\d+\\.)?[ \\t]*${bold}(.*)$`, "imu").exec(text);
+  if (line === null) return null;
+  const rest = line[1].trim();
+  if (rest !== "") return rest;
+  const below = text
+    .slice(line.index + line[0].length)
+    .split("\n")
+    .slice(1);
+  const nested = [];
+  for (const next of below) {
+    if (!/^[ \t]+\S/u.test(next)) break;
+    nested.push(next.trim().replace(/^(?:[-*]|\d+\.)\s+/u, ""));
+  }
+  return nested.join(" ");
+}
+
+/**
+ * The labels a description leaves unanswered, each with why (see answerFor for what an answer
+ * is). It must not be empty, and "n/a" counts only with a reason.
  * @param {string | undefined} body the pull request description
  * @returns {{ label: string, problem: string }[]}
  */
@@ -48,9 +73,8 @@ export function designCheckGaps(body) {
   const text = readable(body);
   const gaps = [];
   for (const label of DESIGN_CHECK_LABELS) {
-    const line = new RegExp(`^\\s*(?:[-*]|\\d+\\.)?\\s*\\*\\*${escape(label)}:\\*\\*(.*)$`, "mu").exec(text);
-    const answer = line?.[1].trim() ?? "";
-    if (line === null) gaps.push({ label, problem: "missing" });
+    const answer = answerFor(text, label);
+    if (answer === null) gaps.push({ label, problem: "missing" });
     else if (answer === "") gaps.push({ label, problem: "empty" });
     else if (BARE_NOT_APPLICABLE.test(answer)) gaps.push({ label, problem: '"n/a" without a reason' });
   }
