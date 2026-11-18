@@ -1,6 +1,6 @@
 # C38 local Ghost publication bearer
 
-The in-game code this note names was removed in shaku1z/tear#PRNUM.
+The in-game code this note names was removed in shaku1z/tear#204.
 
 This checkpoint adds only an action-time browser-side Firebase compatibility
 port for a future Ghost publication client. `GhostPublicationBearerPort` reads

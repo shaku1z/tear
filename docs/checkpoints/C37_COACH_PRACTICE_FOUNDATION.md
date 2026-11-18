@@ -424,7 +424,7 @@ remain open; source-only tests do not establish those outcomes.
 
 ## Beat This Run: local source implementation, normal browser acceptance pending
 
-Beat This Run was removed in shaku1z/tear#PRNUM.
+Beat This Run was removed in shaku1z/tear#204.
 
 Career exposes **BEAT THIS RUN**, **RECEIVE BEAT CODE**, **BEAT RESULT**,
 **SAVE RESULT** and **RETRY BEAT**. A bounded `BTR1` code binds an already-public

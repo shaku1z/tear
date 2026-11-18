@@ -1,6 +1,6 @@
 # C38 private finalized-object retrieval
 
-The Ghost publication Worker and the files this note names were removed in shaku1z/tear#190; the owner catalog and RECOVER TO THIS DEVICE in shaku1z/tear#PRNUM.
+The Ghost publication Worker and the files this note names were removed in shaku1z/tear#190; the owner catalog and RECOVER TO THIS DEVICE in shaku1z/tear#204.
 
 `GET /v1/capsules/:capsuleId/object` keeps verified public and unlisted
 public/pseudonymous capsule retrieval anonymous. A verified, finalized private

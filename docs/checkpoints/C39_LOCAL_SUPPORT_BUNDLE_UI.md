@@ -1,6 +1,6 @@
 # C39 — Local Sanitized Ghost Support Bundle UI
 
-The in-game code this note names was removed in shaku1z/tear#PRNUM.
+The in-game code this note names was removed in shaku1z/tear#204.
 
 Healthy, complete schema-v2 Ghost Vault rows expose **SUPPORT**. The normal
 review projects only capsule/root/build provenance plus the bounded tick and

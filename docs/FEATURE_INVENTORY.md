@@ -994,7 +994,7 @@ frozen evidence record.
    Account/cloud identity and deletion, deployed verification, moderation operations,
    and cloud/player lifecycle flows remain later completion work. The C38 cloud publication
    work (Worker, queue, transport and moderation plumbing) was removed in
-   shaku1z/tear#190 and shaku1z/tear#PRNUM; it was never deployed.
+   shaku1z/tear#190 and shaku1z/tear#204; it was never deployed.
 
 ## Accessibility and settings
 
@@ -1109,7 +1109,7 @@ These checks do not establish full-run device storage.
 
 ### Removed: Ghost publication, support bundles, owner recovery and Beat This Run
 
-These engineering-only features were removed in shaku1z/tear#PRNUM, after the
+These engineering-only features were removed in shaku1z/tear#204, after the
 worker they needed was removed in shaku1z/tear#190: the local publication
 review, queue and transport; the sanitized support bundle and its review
 screen; cloud owner recovery in Profile → Vault; and Beat This Run in Career.
