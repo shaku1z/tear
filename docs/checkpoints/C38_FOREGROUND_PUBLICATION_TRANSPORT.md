@@ -1,5 +1,7 @@
 # C38 foreground publication transport
 
+The in-game code this note names was removed in shaku1z/tear#PRNUM.
+
 This slice adds `GhostPublicationTransport.runOnce(jobId, now)`: an explicit,
 foreground-only bounded action over a locally custody-bound publication job and
 the authenticated Worker resume protocol. It does not add a timer, service

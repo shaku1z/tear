@@ -1,5 +1,7 @@
 # C38 local Ghost publication bearer
 
+The in-game code this note names was removed in shaku1z/tear#PRNUM.
+
 This checkpoint adds only an action-time browser-side Firebase compatibility
 port for a future Ghost publication client. `GhostPublicationBearerPort` reads
 the current Firebase compat user for each request and returns an in-memory

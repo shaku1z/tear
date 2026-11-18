@@ -1,5 +1,7 @@
 # C19 — Cloud Publication, Verification, Privacy, and Moderation
 
+The in-game code this note names was removed in shaku1z/tear#PRNUM.
+
 > **Historical scaffold report:** This report proves only the contract/prototype
 > evidence named below. Current operational status is governed by the C21
 > requirements annex and capability dashboard.

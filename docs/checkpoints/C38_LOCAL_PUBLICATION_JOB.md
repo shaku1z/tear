@@ -1,5 +1,7 @@
 # C38 local Ghost publication job custody
 
+The in-game code this note names was removed in shaku1z/tear#PRNUM.
+
 This bounded C38 slice provides local immutable publication intent only. It exports
 one complete healthy Vault capsule at enqueue time, freezes its manifest/root/export
 hash, privacy, visibility, eligibility, cloud-publication consent, and deterministic
