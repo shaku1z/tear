@@ -6,6 +6,7 @@ import type { createUi } from "../../src/presentation/ui";
 import type { ScreenControl, ScreenRenderContext, ScreenUiPort } from "../../src/presentation/screens";
 import { createScreenRenderers } from "../../src/presentation/screens";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
+import { parseRadioProgramme } from "../../src/audio/music/radio";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
 import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
@@ -611,6 +612,7 @@ describe("legacy screen renderer registry", () => {
     const library = {
       songs: music.catalog.works.map((work) => ({ ...work, seconds: 30 })),
       routing: validateMusicRoutingManifest(music.routing),
+      radio: parseRadioProgramme(undefined, undefined),
     };
     const view = (page: string) =>
       buildMusicScreenView({

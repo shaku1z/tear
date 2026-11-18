@@ -68,6 +68,8 @@ export interface MusicWork {
   readonly tags: readonly string[];
   readonly stations: readonly string[];
   readonly unlock: { readonly type: string; readonly bossId?: string; readonly biome?: string };
+  /** `calm` or `intense`; the Radio's mood channels select by it. Absent in older catalogs. */
+  readonly mood?: string;
   readonly rights: MusicRights;
   readonly versions: Readonly<Record<string, MusicVersion>>;
 }
@@ -86,6 +88,9 @@ export interface MusicCatalog {
   readonly version: 1;
   readonly works: readonly MusicWork[];
   readonly stations: readonly Station[];
+  /** Radio channels and song length: read only through `parseRadioProgramme`, which validates them. */
+  readonly channels?: unknown;
+  readonly radio?: unknown;
   readonly [key: string]: unknown;
 }
 
@@ -115,11 +120,22 @@ export function parseMusicCatalog(value: unknown): MusicCatalog {
     value.version !== 1 ||
     (value.format !== "tear-music-catalog" && value.format !== "tear-signal-catalog") ||
     !Array.isArray(value.works) ||
-    !Array.isArray(value.stations)
+    (value.stations !== undefined && !Array.isArray(value.stations))
   ) {
     throw new TypeError("unsupported music catalog format/version");
   }
-  return Object.freeze({ ...value, format: "tear-music-catalog", version: 1 }) as MusicCatalog;
+  // Stations are on their way out: a catalog without them (or a work without its station
+  // list) reads as having none.
+  const works = (value.works as unknown[]).map((work) =>
+    isRecord(work) && !Array.isArray(work.stations) ? { ...work, stations: [] } : work,
+  );
+  return Object.freeze({
+    ...value,
+    format: "tear-music-catalog",
+    version: 1,
+    works,
+    stations: value.stations ?? [],
+  }) as MusicCatalog;
 }
 
 /** Semantic content used by compatibility tests and future catalog integrity checks. */

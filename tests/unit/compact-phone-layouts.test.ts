@@ -1,3 +1,4 @@
+import { parseRadioProgramme } from "../../src/audio/music/radio";
 import { describe, expect, it } from "vitest";
 import { CONFIG } from "../../src/config/game-config";
 import { createTearWorldClock } from "../../src/gameplay/runtime/tear-world-clock";
@@ -769,7 +770,11 @@ describe("phone compositions (compact density)", () => {
       const view = (page: string) =>
         buildMusicScreenView({
           settings: {},
-          library: { songs: catalog.works, routing: validateMusicRoutingManifest(routing) },
+          library: {
+            songs: catalog.works,
+            routing: validateMusicRoutingManifest(routing),
+            radio: parseRadioProgramme(undefined, undefined),
+          },
           nowPlaying: { workId: "fillet", title: "Fillet" },
           preview: "spring",
           page,

@@ -9,6 +9,7 @@ import {
   setMusicPreview,
   stepMusicPreview,
 } from "../../src/audio/music/preview";
+import { parseRadioProgramme } from "../../src/audio/music/radio";
 import { resolveMenuCueId, setMenuMusic } from "../../src/audio/music/loadout";
 import { MUSIC_SCREEN_TITLE } from "../../src/audio/music/settings";
 import { buildMusicScreenView, musicWherePlays } from "../../src/presentation/music-snapshots";
@@ -59,7 +60,11 @@ describe("where a song plays", () => {
 });
 
 const seconds = Object.fromEntries(songs.map((song, index) => [song.id, 20 + index]));
-const library = { songs: songs.map((song) => ({ ...song, seconds: seconds[song.id] ?? 0 })), routing: published };
+const library = {
+  songs: songs.map((song) => ({ ...song, seconds: seconds[song.id] ?? 0 })),
+  routing: published,
+  radio: parseRadioProgramme(undefined, undefined),
+};
 const view = (page?: string, extra: Partial<Parameters<typeof buildMusicScreenView>[0]> = {}) =>
   buildMusicScreenView({
     settings: {},
