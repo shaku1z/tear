@@ -263,6 +263,38 @@ function drawMove(
   }
 }
 
+/**
+ * The body's stance for the current move, applied to the canvas before the body is drawn. Kneeling to
+ * plant or to channel Regrowth is low and wide, held until the move lets go. Any other wind-up leans in.
+ * Exposed after a heavy move or a parry, or by a cut Graft or cage outside any move: slumped forward
+ * inside a bright ring that drains as the opening closes, so it cannot be mistaken for the idle stance.
+ */
+function applyStance(
+  ctx: CanvasRenderingContext2D,
+  boss: RenderInstance<"Rootbound">,
+  pose: ReturnType<RenderInstance<"Rootbound">["movePose"]>,
+  ringColor: string,
+) {
+  const forced = boss.moveState.exposed;
+  const opening =
+    pose?.stage === "punish"
+      ? pose.progress
+      : pose === null && forced !== null && boss.moveTick < forced.until
+        ? (boss.moveTick - forced.from) / Math.max(1, forced.until - forced.from)
+        : null;
+  const kneels = pose !== null && (pose.attackId === "plant-graft" || pose.attackId === "regrowth");
+  if (kneels && (pose.stage === "tell" || pose.stage === "active")) {
+    const kneel = pose.stage === "tell" ? pose.progress : 1;
+    ctx.scale(1 + 0.12 * kneel, 1 - 0.34 * kneel);
+  } else if (pose?.stage === "tell") {
+    ctx.rotate(-boss.facing * 0.08 * pose.progress);
+  } else if (opening !== null) {
+    drawExposedRing(ctx, boss.hh, opening, ringColor);
+    ctx.rotate(boss.facing * 0.2);
+    ctx.scale(1.06, 0.8);
+  }
+}
+
 /** Rootbound's silhouette, its moves and the roots to its Grafts. Warning areas are drawn from its tells. */
 export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRendererRuntime): void {
   const { A11Y, CONFIG, GFX, THEME, clamp, lerp } = runtime;
@@ -307,28 +339,7 @@ export function installRootboundRenderer(types: EnemyTypes, runtime: EnemyRender
       }
       ctx.translate(this.x, footY);
       if (this.dying) ctx.rotate(this.facing * this.deathP * 0.4);
-      // Leans into a wind-up. Exposed after a heavy move or a parry: slumped forward inside a bright
-      // ring that drains as the opening closes, so it cannot be mistaken for the idle stance.
-      // A cut Graft or cage opens it the same way, outside any move.
-      const forced = this.moveState.exposed;
-      const opening =
-        pose?.stage === "punish"
-          ? pose.progress
-          : pose === null && forced !== null && this.moveTick < forced.until
-            ? (this.moveTick - forced.from) / Math.max(1, forced.until - forced.from)
-            : null;
-      // Kneeling to plant or to channel Regrowth: low and wide, held until the move lets go.
-      const kneels = pose !== null && (pose.attackId === "plant-graft" || pose.attackId === "regrowth");
-      if (kneels && (pose.stage === "tell" || pose.stage === "active")) {
-        const kneel = pose.stage === "tell" ? pose.progress : 1;
-        ctx.scale(1 + 0.12 * kneel, 1 - 0.34 * kneel);
-      } else if (pose?.stage === "tell") {
-        ctx.rotate(-this.facing * 0.08 * pose.progress);
-      } else if (opening !== null) {
-        drawExposedRing(ctx, this.hh, opening, A11Y.highContrast ? "#ffffff" : "#7fe3ff");
-        ctx.rotate(this.facing * 0.2);
-        ctx.scale(1.06, 0.8);
-      }
+      applyStance(ctx, this, pose, A11Y.highContrast ? "#ffffff" : "#7fe3ff");
 
       // Intro pose: the keeper rises out of the throne while the mantle opens.
       ctx.scale(lerp(0.9, 1, intro), lerp(0.72, 1, intro));
