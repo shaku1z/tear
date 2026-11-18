@@ -119,6 +119,7 @@
     "check:bundles": "node scripts/check-bundle-budget.mjs",
     "check:load-budgets": "node tests/browser-load-profile.js --check",
     "report:load": "node tests/browser-load-profile.js",
+    "music:cover": "node scripts/music-cover.mjs",
     "scene": "node scripts/scene.mjs",
     "check:architecture": "node scripts/check-source-architecture.mjs",
     "check:code-budget": "node scripts/check-code-budget.mjs",

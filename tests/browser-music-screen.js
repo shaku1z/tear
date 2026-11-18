@@ -11,7 +11,7 @@ const { catalog } = require("../public/audio/music.json");
  * sounding) and the transport's ▶▶ steps to the stage's next song. BACK goes up to Home, Songs
  * lists every catalogued song, and leaving the screen ends the preview so the menu music
  * returns. The same walk runs again on a touch phone in landscape, where the compact layout shows. Screenshots go to
- * TEAR_VISUAL_DIR when it is set.
+ * TEAR_VISUAL_DIR when it is set. Home and a stage page each wait for their stage paintings to load.
  */
 const TITLES = catalog.works.map((work) => work.title);
 const OPENED = "The Voidspire";
@@ -23,6 +23,46 @@ async function capture(page, name) {
   if (!process.env.TEAR_VISUAL_DIR) return;
   fs.mkdirSync(process.env.TEAR_VISUAL_DIR, { recursive: true });
   await page.screenshot({ path: path.join(process.env.TEAR_VISUAL_DIR, `music-screen-${name}.png`) });
+}
+
+/**
+ * Waits until the stage paintings the page asked for have arrived, then two frames, so a
+ * capture shows them rather than the hue covers they replace. Every request must succeed.
+ */
+async function paintingsShown(page) {
+  const pattern = String.raw`-(512|768)[^/]*\.webp$`;
+  await page.waitForFunction(
+    (source) => {
+      const entries = performance
+        .getEntriesByType("resource")
+        .filter((entry) => new RegExp(source, "u").test(new URL(entry.name).pathname));
+      return entries.length > 0 && entries.every((entry) => entry.responseEnd > 0);
+    },
+    pattern,
+    { timeout: STATE_WAIT_MS },
+  );
+  const statuses = await page.evaluate(
+    (source) =>
+      performance
+        .getEntriesByType("resource")
+        .filter((entry) => new RegExp(source, "u").test(new URL(entry.name).pathname))
+        .map((entry) => entry.responseStatus || 200),
+    pattern,
+  );
+  assert.ok(
+    statuses.every((status) => status === 200),
+    `every cover painting loads (${statuses.join(", ")})`,
+  );
+  // The game decodes each painting after its fetch; decoding the same cached files here ends
+  // no sooner, so two frames after it the covers show the paintings.
+  await page.evaluate(async (source) => {
+    const urls = performance
+      .getEntriesByType("resource")
+      .map((entry) => entry.name)
+      .filter((name) => new RegExp(source, "u").test(new URL(name).pathname));
+    await Promise.all(urls.map(async (url) => (await createImageBitmap(await (await fetch(url)).blob())).close()));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }, pattern);
 }
 
 /** Texts the last drawn frame shows. */
@@ -84,10 +124,12 @@ withJourney(
   async ({ page, waitScreen, clickLabel }) => {
     await startAudio(page);
     await openMusic(page, clickLabel);
+    await paintingsShown(page);
     await capture(page, "desktop-home");
     // A stage opens its page: PLAY previews its first song, then ▶▶ steps to its boss song.
     await clickLabel(OPENED, "music");
     await waitText(page, "STAGE");
+    await paintingsShown(page);
     await capture(page, "desktop-stage");
     await clickLabel("▶  PLAY", "music");
     await waitText(page, "■  STOP");
@@ -134,9 +176,11 @@ withJourney(
       async ({ page, waitScreen, clickLabel }) => {
         await startAudio(page);
         await openMusic(page, clickLabel);
+        await paintingsShown(page);
         await capture(page, "phone-home");
         await clickLabel(OPENED, "music");
         await waitText(page, "STAGE");
+        await paintingsShown(page);
         await capture(page, "phone-stage");
         await clickLabel("▶  PLAY", "music");
         await waitText(page, "■  STOP");

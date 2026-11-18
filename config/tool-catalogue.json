@@ -842,6 +842,13 @@
       ],
       "duration": "minutes"
     },
+    "music:cover": {
+      "purpose": "MUSIC covers: encode a stage painting at every size covers.json lists and write its row",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "under-a-minute"
+    },
     "scene": {
       "purpose": "Painted stage backgrounds: validate, build, contrast, contact sheet and in-game preview of scene packages",
       "effects": [
@@ -1639,6 +1646,16 @@
         "scene"
       ]
     },
+    "scripts/music-cover.mjs": {
+      "purpose": "The pnpm music:cover command; add encodes one painting into src/presentation/assets/music-covers and writes its covers.json row",
+      "effects": [
+        "writes-repo-files"
+      ],
+      "duration": "under-a-minute",
+      "via": [
+        "music:cover"
+      ]
+    },
     "scripts/serve.py": {
       "purpose": "Loopback-only static server for local tools such as the oracle workbench",
       "effects": [
@@ -1859,6 +1876,7 @@
   "declarations": [
     "scripts/build-targets.d.mts",
     "scripts/campaign-publication-boundary.d.mts",
+    "scripts/music-cover.d.mts",
     "scripts/release-artifact.d.mts",
     "scripts/scene/hidden-paint.d.mts",
     "scripts/scene/package-files.d.mts",

@@ -1,0 +1,162 @@
+{
+  "format": "tear-music-covers",
+  "version": 1,
+  "note": "Stage covers for the MUSIC screen, one row per stage. Add or replace one with `pnpm music:cover add <stageId> <painting.png> --description <text> --licence <text>`; it encodes every size below and writes the row. Sources stay with their owner (the repository is public); only the encoded files are kept here. A stage with no row keeps its hue cover.",
+  "encoding": {
+    "format": "webp",
+    "quality": 80,
+    "effort": 6,
+    "fit": "centre crop"
+  },
+  "sizes": [
+    512,
+    768
+  ],
+  "maxTotalBytes": 800000,
+  "covers": [
+    {
+      "stageId": "grounds",
+      "description": "A grey stone colonnade in morning light, a seedling in the paving.",
+      "origin": "owner-supplied",
+      "licence": "The owner's original work. Owner, 2026-11-17: \"the images are originals, license isn't an issue\".",
+      "source": {
+        "bytes": 2766167,
+        "sha256": "dae82bbde94a7189f19a01d7a15c0c0c8851c797deb008bb8b95e0efed2d338b"
+      },
+      "files": [
+        {
+          "file": "grounds-512.webp",
+          "size": 512,
+          "bytes": 23388,
+          "sha256": "a6eb3118e4bce9205fd82fb1484127ab510aa4dc691bd56a5903831d2efa69e5"
+        },
+        {
+          "file": "grounds-768.webp",
+          "size": 768,
+          "bytes": 56006,
+          "sha256": "3a030dfc7d84199169a027ebdb9076f6cf82fa851c8daed0dbcf5f58930ca04e"
+        }
+      ]
+    },
+    {
+      "stageId": "undercroft",
+      "description": "Gears, belts and catwalks under a foundry's grey haze.",
+      "origin": "owner-supplied",
+      "licence": "The owner's original work. Owner, 2026-11-17: \"the images are originals, license isn't an issue\".",
+      "source": {
+        "bytes": 2788885,
+        "sha256": "08ad7518640ad24eda9e9c8f1eac95d716c126456cb31e2804c24e4e30ae0864"
+      },
+      "files": [
+        {
+          "file": "undercroft-512.webp",
+          "size": 512,
+          "bytes": 36464,
+          "sha256": "a54f0da784be17f296d28a7db7b367d3065ddfa4cf26eace9107be6c05a7dc15"
+        },
+        {
+          "file": "undercroft-768.webp",
+          "size": 768,
+          "bytes": 79842,
+          "sha256": "460bf63030f12fee8f807d4b2404162eef06ba3fedec71749e80ed7a5bd4ffb0"
+        }
+      ]
+    },
+    {
+      "stageId": "crimson-fields",
+      "description": "Torn red banners over a stepped altar at sunset.",
+      "origin": "owner-supplied",
+      "licence": "The owner's original work. Owner, 2026-11-17: \"the images are originals, license isn't an issue\".",
+      "source": {
+        "bytes": 4100895,
+        "sha256": "a0ba8d6a6689d2fb7de263977da1b20acd45515bf64e535c064ec33611a9efdc"
+      },
+      "files": [
+        {
+          "file": "crimson-fields-512.webp",
+          "size": 512,
+          "bytes": 50626,
+          "sha256": "520d84a5ed3bc3c28252dd0855f3ffbd950cd046187c5680bb0e23167680ba6c"
+        },
+        {
+          "file": "crimson-fields-768.webp",
+          "size": 768,
+          "bytes": 108204,
+          "sha256": "9ee4ba1d26af96d1f8a0869f08de2027d97c12e13bcebf13835955284c4ce6ba"
+        }
+      ]
+    },
+    {
+      "stageId": "verdant-sanctum",
+      "description": "Flooded arches wound through with green roots and white lilies.",
+      "origin": "owner-supplied",
+      "licence": "The owner's original work. Owner, 2026-11-17: \"the images are originals, license isn't an issue\".",
+      "source": {
+        "bytes": 3173585,
+        "sha256": "f1d1fb85daadb26dd95fccbc113105bcf331e972c04a6e99649d1391ee5efc41"
+      },
+      "files": [
+        {
+          "file": "verdant-sanctum-512.webp",
+          "size": 512,
+          "bytes": 61550,
+          "sha256": "3cb337a3f75cca84c63bdc85d530d79088a34ca8b1bd135becc7c98d6ef2e067"
+        },
+        {
+          "file": "verdant-sanctum-768.webp",
+          "size": 768,
+          "bytes": 133894,
+          "sha256": "e96b8c23046abe26b99b55304af43f39333bc25d945d995dedd5142cc6e84ac4"
+        }
+      ]
+    },
+    {
+      "stageId": "voidspire",
+      "description": "Violet slabs floating over a mirrored plain.",
+      "origin": "owner-supplied",
+      "licence": "The owner's original work. Owner, 2026-11-17: \"the images are originals, license isn't an issue\".",
+      "source": {
+        "bytes": 2619701,
+        "sha256": "96ea2289230bb059c78c2a21747f128c0788305b46d72afa438ecd9d30628a22"
+      },
+      "files": [
+        {
+          "file": "voidspire-512.webp",
+          "size": 512,
+          "bytes": 20912,
+          "sha256": "7ba47ad554c9a961a29739cc5da5d8ba45ed03000205438a300d719c9134ef92"
+        },
+        {
+          "file": "voidspire-768.webp",
+          "size": 768,
+          "bytes": 48412,
+          "sha256": "176d2bf72ad0aa16f81258d73daa289e3027e3bc66cc34d6b16b7f61bbc58dfd"
+        }
+      ]
+    },
+    {
+      "stageId": "tear",
+      "description": "A cyan vortex of shards in the dark.",
+      "origin": "owner-supplied",
+      "licence": "The owner's original work. Owner, 2026-11-17: \"the images are originals, license isn't an issue\".",
+      "source": {
+        "bytes": 3107292,
+        "sha256": "c95e91518d6cf69c2b79721e6857d3191e7a8e3fccda44d3ca66ed5723dbd93a"
+      },
+      "files": [
+        {
+          "file": "tear-512.webp",
+          "size": 512,
+          "bytes": 39746,
+          "sha256": "95f0e460e47fb233e63b0a6e7035cff42d5fc3be7e82c4e1f2f3b6fdf6743055"
+        },
+        {
+          "file": "tear-768.webp",
+          "size": 768,
+          "bytes": 89998,
+          "sha256": "98a2728c81baf164e76ea34a0b8c15a7d6cb43f269240896370e6e5ed715c280"
+        }
+      ]
+    }
+  ]
+}
