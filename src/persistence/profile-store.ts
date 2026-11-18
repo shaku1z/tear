@@ -1,6 +1,7 @@
 import type { CosmeticCatalog, CosmeticState } from "../domain/cosmetic-types";
 import {
   claimableGrants,
+  emptyCosmeticState,
   equipCosmetic,
   grantItems,
   markSeen,
@@ -199,6 +200,8 @@ export function createProfileStore(options: ProfileStoreOptions): ProfileStore {
     modes: {},
     created: now(),
     achCoinsRetrofit: false,
+    // The same empty ledger migration gives an older save, so a new profile has every field from the start.
+    cosmetics: emptyCosmeticState(),
   });
 
   let knownProfile = fresh();
