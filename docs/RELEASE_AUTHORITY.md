@@ -7,7 +7,10 @@ Cloudflare is a publication target, not an independent source branch.
 
 1. A pull request is integrated into protected `main`.
 2. The `Validate` workflow runs the deterministic `pnpm check:functional`
-   contract at that exact SHA and uploads the resulting targets. The complete
+   contract at that exact SHA, as parallel jobs that all check the same merge
+   commit, and uploads the resulting targets. Its build job builds once; the
+   browser shards download that release artifact and refuse to test it unless
+   its hash matches the build job's. The complete
    `pnpm check` runs once for the final release candidate before the gate
    closes. The performance test is not part of `pnpm check`: it is in the
    nightly group. A release candidate also needs a `pnpm check:performance`
