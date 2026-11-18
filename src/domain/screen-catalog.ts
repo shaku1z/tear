@@ -186,7 +186,7 @@ const CATALOG = {
     frame: "menu",
     density: "phone",
     sheet: true,
-    transitions: ["menu", "setup", "achievements", "replay", "rename", "ghostpublication", "ghostsupport"],
+    transitions: ["menu", "setup", "achievements", "replay", "rename"],
   },
   achievements: { channel: "release", frame: "menu", density: "phone", sheet: true, transitions: ["menu", "rename"] },
   leaderboards: {
@@ -200,27 +200,10 @@ const CATALOG = {
   rename: { channel: "release", frame: "menu", density: "touch", transitions: "every-other-screen" },
   pgmenu: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pglab", "rename"] },
   pglab: { channel: "release", frame: "world", density: "phone", transitions: ["playing", "pgmenu", "rename"] },
-  ghostpublication: {
-    channel: "engineering",
-    frame: "standalone",
-    density: "touch",
-    transitions: ["profile", "menu", "rename"],
-  },
-  ghostsupport: {
-    channel: "engineering",
-    frame: "standalone",
-    density: "touch",
-    transitions: ["profile", "menu", "rename"],
-  },
 } as const;
 
 /** Every application screen. */
 export type AppScreen = keyof typeof CATALOG;
-
-/** The screens whose channel is engineering. */
-export type EngineeringScreen = {
-  [Screen in AppScreen]: (typeof CATALOG)[Screen]["channel"] extends "engineering" ? Screen : never;
-}[AppScreen];
 
 /** The catalog, checked: every transition names a catalogued screen. */
 export const SCREEN_CATALOG: Readonly<Record<AppScreen, ScreenFacts<AppScreen>>> = Object.freeze(CATALOG);
@@ -250,11 +233,6 @@ export const LEGAL_TRANSITIONS: Readonly<Record<AppScreen, readonly AppScreen[]>
       ];
     }),
   ) as Record<AppScreen, readonly AppScreen[]>,
-);
-
-/** The engineering screens, in catalog order. */
-export const ENGINEERING_SCREENS: readonly EngineeringScreen[] = Object.freeze(
-  APP_SCREENS.filter((screen): screen is EngineeringScreen => SCREEN_CATALOG[screen].channel === "engineering"),
 );
 
 /** True for a screen drawn over the menu backdrop. */

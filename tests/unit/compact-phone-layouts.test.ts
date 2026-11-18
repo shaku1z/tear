@@ -722,20 +722,12 @@ describe("phone compositions (compact density)", () => {
               canCancel: true,
               pairedCapsuleIds: ["a", "b"],
             },
-            ownerRecovery: {
-              status: "ready",
-              detail: "",
-              catalogVisible: false,
-              canLoad: true,
-              canRecover: true,
-              entries: [],
-            },
           });
         },
         `profile vault ${phone.name}`,
       );
       for (const replay of replays)
-        expect(vault.has(JSON.stringify({ type: "profile.openGhostSupport", id: replay.id }))).toBe(true);
+        expect(vault.has(JSON.stringify({ type: "profile.compareGhostCapsule", id: replay.id }))).toBe(true);
       sweep(
         phone,
         (r) => {

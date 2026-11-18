@@ -14,7 +14,6 @@ export interface LiveScreenTransitionHooks {
 export interface LiveScreenNavigationOptions {
   readonly app: AppStateController;
   readonly input: Pick<BrowserInput, "allowLock" | "discardSemanticInput">;
-  readonly beat: Readonly<{ screenChanged(next: AppScreen): void }>;
   readonly runScreenFact: (transition: "paused" | "resumed") => void;
 }
 
@@ -27,7 +26,7 @@ export interface LiveScreenNavigation {
 
 /** Owns the live application screen and the side effects of every transition. */
 export function createLiveScreenNavigation(options: LiveScreenNavigationOptions): LiveScreenNavigation {
-  const { app, input, beat } = options;
+  const { app, input } = options;
   let state: AppScreen = app.screen;
   let cancelChase: LiveScreenTransitionHooks["cancelChase"] = () => undefined;
   let cancelPendingReplayOpen: LiveScreenTransitionHooks["cancelPendingReplayOpen"] = () => {
@@ -40,7 +39,6 @@ export function createLiveScreenNavigation(options: LiveScreenNavigationOptions)
     /* Training is loaded later. */
   };
   function setScreen(next: AppScreen, context?: AppTransitionContext): AppScreen {
-    beat.screenChanged(next);
     cancelChase(next);
     const prior = state;
     state = app.transition(next, context);

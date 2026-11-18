@@ -34,11 +34,6 @@ export type ScreenAction =
   | { readonly type: "profile.cancelGhostRestore"; readonly id: string; readonly revision: number }
   | { readonly type: "profile.cancelGhostArchiveSelection" }
   | { readonly type: "profile.downloadGhostArchive"; readonly id: string; readonly paired?: true }
-  | { readonly type: "profile.loadOwnGhostCapsules" }
-  | { readonly type: "profile.recoverOwnGhostCapsule"; readonly id: string }
-  | { readonly type: "profile.closeOwnGhostCatalog" }
-  | { readonly type: "profile.openGhostPublication"; readonly id: string }
-  | { readonly type: "profile.openGhostSupport"; readonly id: string }
   | { readonly type: "profile.signIn" }
   | { readonly type: "profile.signOut" }
   | { readonly type: "profile.rename" }
@@ -88,10 +83,6 @@ export type ScreenAction =
   | { readonly type: "music.preview"; readonly id: string; readonly queue?: readonly string[] }
   | { readonly type: "music.step"; readonly delta: 1 | -1 }
   | { readonly type: "music.stopPreview" }
-  | { readonly type: "ghostpublication.grant" }
-  | { readonly type: "ghostpublication.runOnce" }
-  | { readonly type: "ghostpublication.cancel" }
-  | { readonly type: "ghostsupport.create" }
   | { readonly type: "rename.submit" }
   | { readonly type: "rename.cancel" }
   | { readonly type: "draft.choose"; readonly index: number }

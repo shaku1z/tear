@@ -1,0 +1,5 @@
+{
+  "about": "Mode of the design-check merge gate (scripts/design-check.mjs; pnpm merge:ready and the owner merge helper apply it, reading this file from origin/main, never the working tree). off: not checked. observe: merge:ready prints 'would refuse: <reason>' and lets the merge through. enforce: merge:ready refuses. A change with nothing to design may carry 'Design check: not applicable — <reason>', which is accepted and printed in every mode. Switching to enforce is the lead's decision, made after a few days of observe in which `pnpm design-check:report` shows no false refusals. observingSince is when the pull request template gained the design check (#199), where the report starts by default.",
+  "mode": "observe",
+  "observingSince": "2026-11-18T01:53:47Z"
+}

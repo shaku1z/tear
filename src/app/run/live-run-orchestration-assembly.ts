@@ -61,7 +61,7 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
   const { story } = campaignHost;
   const { tutorial: TUT } = trainingHost;
   const { achievements: AT, tracks: achTracks, check: achCheck } = campaignTraining.style;
-  const { controllers: runControllers, applySettings, seedRace, beat } = services;
+  const { controllers: runControllers, applySettings, seedRace } = services;
   const { awardCoins, telemetry: economyTelemetry } = services.economy;
   const { openDraft: openRewardDraft, openTier: openRewardTier } = services.reward;
   const { read: getBest, record: saveBest } = services.bestScores.api;
@@ -99,7 +99,6 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     },
     runInstalled: (run) => {
       options.chase.installed(run);
-      beat.installed(run);
     },
     selectedBoss: () => session.selectedBoss(),
     worldServices: world.context.services,
@@ -132,15 +131,8 @@ export function assembleLiveRunOrchestration(options: LiveRunOrchestrationAssemb
     resetCombatIdentity: () => {
       options.combat().combatEntityRuntime.resetIdentity();
     },
-    race: {
-      ...seedRace,
-      active: () => seedRace.active() || beat.active(),
-      finalize: () => {
-        seedRace.finalize();
-        beat.finalize();
-      },
-    },
-    createRunSeed: () => beat.seed() ?? seedRace.seed() ?? session.takeRunSeed() ?? dependencies.createRunSeed(),
+    race: seedRace,
+    createRunSeed: () => seedRace.seed() ?? session.takeRunSeed() ?? dependencies.createRunSeed(),
     withOpeningCapture: openingCapture.withCapture,
     openingExposed: openingCapture.exposed,
     discardOpeningCapture: openingCapture.discard,

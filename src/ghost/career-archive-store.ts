@@ -1,7 +1,5 @@
 import { parseGhostColdRestoreJob, parseGhostColdRestoreResult, ghostColdRestoreResultKey } from "./cold-restore-job";
 import { ghostArchiveSha256 } from "./capsule-archive";
-import { parseGhostLocalPublicationJob, parseGhostPublicationCustody } from "./local-publication-job";
-import { parseGhostPublicationTransportState } from "./publication-transport";
 import { canonicalStringify, stableVerificationHash } from "../domain/hash";
 import {
   GhostLocalVault,
@@ -33,8 +31,13 @@ const owner = (id: string) => `career:${id}`;
 const protectedTier = (tier: CareerNotes["retention"]) =>
   ["pinned", "milestone", "diagnostic", "imported"].includes(tier);
 
+/** Fields older Career indexes carry that no longer exist; they are dropped unread (removed in shaku1z/tear#204). */
+const RETIRED_CAREER_ENTRY_KEYS: ReadonlySet<string> = new Set(["sharing", "shared"]);
+
 function parseEntry(raw: string): CareerEntry {
-  const entry = careerObject(JSON.parse(raw));
+  const entry = Object.fromEntries(
+    Object.entries(careerObject(JSON.parse(raw))).filter(([key]) => !RETIRED_CAREER_ENTRY_KEYS.has(key)),
+  );
   if (
     entry.kind !== "capsule" ||
     entry.version !== CAREER_VERSION ||
@@ -57,14 +60,13 @@ function parseEntry(raw: string): CareerEntry {
     ![entry.mode, entry.difficulty, entry.weapon, entry.result, entry.gameVersion, entry.build].every(nullableText) ||
     (entry.beatAttempt !== undefined && typeof entry.beatAttempt !== "boolean") ||
     (entry.assisted !== undefined && typeof entry.assisted !== "boolean") ||
-    ![entry.resumed, entry.shared].every((v) => v === null || typeof v === "boolean") ||
+    !(entry.resumed === null || typeof entry.resumed === "boolean") ||
     typeof entry.present !== "boolean" ||
     ![entry.categories, entry.abilities, entry.bosses].every((v) => v === null || strings(v)) ||
     !strings(entry.unavailable) ||
     !strings(entry.witnesses) ||
     !["integrity", "receipts", "unavailable"].includes(String(entry.verified)) ||
     !["human", "bot", "unknown"].includes(String(entry.actor)) ||
-    !["public", "unlisted", "private", "queued", "unknown"].includes(String(entry.sharing)) ||
     typeof entry.catalogHash !== "string" ||
     entry.dna === null ||
     typeof entry.dna !== "object" ||
@@ -167,46 +169,6 @@ export class GhostCareerStore {
         /* A rejected derived index can be rebuilt from its source. */
       }
     }
-    const sharing = new Map<string, CareerEntry["sharing"]>();
-    for (const key of await this.backend.keys("uploadJobs")) {
-      signal?.throwIfAborted();
-      if (!key.startsWith("ghost-publication-job:v1:")) continue;
-      try {
-        const raw = await this.backend.get("uploadJobs", key);
-        if (!raw) continue;
-        const job = parseGhostLocalPublicationJob(raw),
-          entry = rows.get(careerKey(job.source.capsuleId, job.source.rootIntegrity));
-        if (entry?.manifestHash !== job.source.manifestHash || job.status !== "queued") continue;
-        const custodyRaw = await this.backend.get("analysis", `ghost-publication-custody:v1:${entry.id}`),
-          stateRaw = await this.backend.get("analysis", `ghost-publication-transport:v1:${job.id}`);
-        if (!custodyRaw) continue;
-        const custody = parseGhostPublicationCustody(custodyRaw);
-        if (
-          custody.custodyHash !== job.custodyHash ||
-          custody.sourceConsent.rootIntegrity !== entry.root ||
-          custody.capsuleId !== entry.id
-        )
-          continue;
-        const state = stateRaw ? parseGhostPublicationTransportState(stateRaw) : undefined;
-        const finalized =
-          state?.jobId === job.id &&
-          state.jobHash === job.jobHash &&
-          state.terminal === "finalized" &&
-          state.terminalMetadata?.status === "finalized";
-        sharing.set(
-          careerKey(entry.id, entry.root),
-          finalized
-            ? custody.visibility === "private"
-              ? "private"
-              : custody.visibility === "public"
-                ? "public"
-                : "unlisted"
-            : "queued",
-        );
-      } catch {
-        /* Invalid or stale sharing declarations remain unknown. */
-      }
-    }
     const result: CareerRow[] = [];
     for (const entry of rows.values()) {
       signal?.throwIfAborted();
@@ -216,17 +178,7 @@ export class GhostCareerStore {
       } catch {
         /* Keep source visible with annotation refusal on edit. */
       }
-      const state = sharing.get(careerKey(entry.id, entry.root)) ?? "unknown";
-      result.push(
-        Object.freeze({
-          entry: {
-            ...entry,
-            sharing: state,
-            shared: state === "public" || state === "unlisted" ? true : state === "private" ? false : null,
-          },
-          notes,
-        }),
-      );
+      result.push(Object.freeze({ entry, notes }));
     }
     return Object.freeze(result);
   }

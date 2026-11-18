@@ -1,3 +1,4 @@
+import type { ProgressSource } from "../domain/progress-facts";
 import type { AudioGraphContext, AudioNodePort, TemporaryMuteReason } from "./mixer";
 
 export const MUSIC_CONTEXT_SCHEMA_VERSION = 1 as const;
@@ -20,14 +21,7 @@ export interface MusicRunSessionMetadata {
    * Absent (seed races, practice, replays): no first-run song and nothing unlocked, so
    * everyone hears the same music.
    */
-  readonly progress?: MusicRunProgress;
-}
-
-export interface MusicRunProgress {
-  /** Biomes (stage names) any earlier run reached. */
-  readonly biomesReached: readonly string[];
-  /** Bosses (boss ids) the player has defeated. */
-  readonly bossesDefeated: readonly string[];
+  readonly progress?: ProgressSource;
 }
 
 export type MusicReplayMetadata =

@@ -37,15 +37,6 @@ export interface ScreenActionBindingPorts {
   readonly campaignDifficulty: () => RunDifficulty;
   readonly resetSettings: () => void;
   readonly buyShopItem: (id: string) => void;
-  readonly openGhostPublication: (id: string) => void;
-  readonly grantGhostPublication: () => void;
-  readonly runGhostPublicationOnce: () => void;
-  readonly cancelGhostPublication: () => void;
-  readonly openGhostSupport: (id: string) => void;
-  readonly createGhostSupport: () => void;
-  readonly loadOwnGhostCapsules: () => void;
-  readonly recoverOwnGhostCapsule: (id: string) => void;
-  readonly closeOwnGhostCatalog: () => void;
   readonly signIn: () => void;
   readonly signOut: () => void;
   readonly pinReplay: (id: string, pinned: boolean) => boolean;
@@ -227,35 +218,6 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     "profile.downloadGhostArchive": (action) => {
       if (action.paired === true) ports.ghostFiles.downloadArchive(action.id, true);
       else ports.ghostFiles.downloadArchive(action.id);
-    },
-    "profile.loadOwnGhostCapsules": () => {
-      ports.resetScroll();
-      ports.loadOwnGhostCapsules();
-    },
-    "profile.recoverOwnGhostCapsule": (action) => {
-      ports.recoverOwnGhostCapsule(action.id);
-    },
-    "profile.closeOwnGhostCatalog": () => {
-      ports.resetScroll();
-      ports.closeOwnGhostCatalog();
-    },
-    "profile.openGhostPublication": (action) => {
-      ports.openGhostPublication(action.id);
-    },
-    "profile.openGhostSupport": (action) => {
-      ports.openGhostSupport(action.id);
-    },
-    "ghostpublication.grant": () => {
-      ports.grantGhostPublication();
-    },
-    "ghostpublication.runOnce": () => {
-      ports.runGhostPublicationOnce();
-    },
-    "ghostpublication.cancel": () => {
-      ports.cancelGhostPublication();
-    },
-    "ghostsupport.create": () => {
-      ports.createGhostSupport();
     },
     "profile.signIn": () => {
       ports.signIn();
