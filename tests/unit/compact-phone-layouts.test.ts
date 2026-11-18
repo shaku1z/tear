@@ -147,6 +147,7 @@ function render(
     focus: -1,
     touch: true,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: -overscan.x, y: -overscan.y, w: 1600 + overscan.x * 2, h: 900 + overscan.y * 2 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -986,6 +987,7 @@ function renderDesktop(
       focus: -1,
       touch: false,
       reducedMotion: false,
+      pixelScale: 1,
       screenRectangle: { x: -overscan.x, y: -overscan.y, w: 1600 + overscan.x * 2, h: 900 + overscan.y * 2 },
       safeInsets: { l: 0, r: 0, t: 0, b: 0 },
       enqueue(control): void {

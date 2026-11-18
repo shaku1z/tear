@@ -42,8 +42,7 @@ export function drawCover(
   h: number,
 ): void {
   const { canvas, ui } = context;
-  const scale = typeof canvas.getTransform === "function" ? Math.abs(canvas.getTransform().a) : 1;
-  const paintings = loadedPaintings(cover, w * scale);
+  const paintings = loadedPaintings(cover, w * context.pixelScale);
   if (paintings) {
     canvas.save();
     canvas.imageSmoothingEnabled = true;

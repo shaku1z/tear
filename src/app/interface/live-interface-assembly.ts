@@ -201,6 +201,7 @@ export function assembleLiveInterface(options: LiveInterfaceAssemblyOptions) {
           focus: interfaceInteraction.focus,
           touch: () => Input.touchActive(),
           reducedMotion: () => A11Y.reducedMotion,
+          pixelScale: () => viewport.pixelScale,
           enqueue: interfaceInteraction.enqueue,
         },
         replay: {

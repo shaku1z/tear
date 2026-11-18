@@ -46,6 +46,8 @@ export interface ScreenRenderContext {
   readonly focus: number;
   readonly touch: boolean;
   readonly reducedMotion: boolean;
+  /** Device pixels per logical unit this frame (the canvas backing scale): what image art picks its size by. */
+  readonly pixelScale: number;
   /** True physical viewport expressed in logical coordinates, including aspect-ratio overscan. */
   readonly screenRectangle: Readonly<{ x: number; y: number; w: number; h: number }>;
   readonly safeInsets: Readonly<{ l: number; r: number; t: number; b: number }>;

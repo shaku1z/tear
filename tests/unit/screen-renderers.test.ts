@@ -197,6 +197,7 @@ function createControlContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
@@ -248,6 +249,7 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
     focus: 0,
     touch: false,
     reducedMotion: false,
+    pixelScale: 1,
     screenRectangle: { x: 0, y: 0, w: 1600, h: 900 },
     safeInsets: { l: 0, r: 0, t: 0, b: 0 },
     enqueue(control): void {
