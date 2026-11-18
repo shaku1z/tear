@@ -123,9 +123,6 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     restart: () => loaded?.tutorial.restart() ?? false,
     selectLesson: (id) => loaded?.tutorial.selectLesson(id) ?? false,
     selectAnnex: (id) => loaded?.tutorial.selectAnnex(id) ?? false,
-    showAnnexes: () => {
-      loaded?.tutorial.showAnnexes();
-    },
     bindBossPractice: (port) => {
       bossPractice = port;
       loaded?.tutorial.bindBossPractice(port);
@@ -144,14 +141,13 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
       loaded?.tutorial.captureCoachCommands(commands);
     },
     coachAction: (command) => loaded?.tutorial.coachAction(command) ?? false,
-    showBosses: () => {
-      loaded?.tutorial.showBosses();
+    showPracticeTab: (tab) => {
+      // Each Drills tab is its own list, so a new tab opens at its top.
+      loaded?.tutorial.showPracticeTab(tab);
+      context.resetScroll();
     },
     selectBoss: (id, retained) => loaded?.tutorial.selectBoss(id, retained) ?? false,
     selectEnemy: (id) => loaded?.tutorial.selectEnemy(id) ?? false,
-    showCatalog: () => {
-      loaded?.tutorial.showCatalog();
-    },
     weaponEffect: (weaponId, effect) => {
       loaded?.tutorial.weaponEffect(weaponId, effect);
     },
@@ -160,6 +156,7 @@ export function createLiveTrainingHost(context: LiveTrainingHostContext): LiveTr
     },
     demonstrate: () => loaded?.tutorial.demonstrate() ?? false,
     captureSession: () => loaded?.tutorial.captureSession(),
+    freePracticeCourse: () => loaded?.tutorial.freePracticeCourse(),
     validateSession: (value, weaponId, actors, candidate) => {
       if (!loaded && value !== undefined) throw new Error("Load training before restoring a tutorial session");
       loaded?.tutorial.validateSession(value, weaponId, actors, candidate);

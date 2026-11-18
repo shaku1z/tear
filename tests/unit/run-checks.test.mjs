@@ -1,9 +1,8 @@
 // The machine-wide check slots, the group selection and the flaky-check report of scripts/run-checks.mjs.
-import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_CHECK_SECONDS,
   flakyLine,
@@ -12,6 +11,7 @@ import {
   recordResult,
   parseShard,
   RESULTS_FORMAT,
+  runCheckList,
   selectChecks,
   shardChecks,
   takeSlot,
@@ -194,34 +194,68 @@ describe("shards", () => {
   });
 });
 
-describe("--keep-going", () => {
-  // A three-check list whose first and last checks fail.
-  function runList(extra) {
-    const dir = directory();
-    const config = join(dir, "checks.json");
-    const step = (id, code) => ({ id, run: `node -e process.exit(${String(code)})` });
-    writeFileSync(
-      config,
-      JSON.stringify({ gate: ["demo"], groups: { demo: [step("first", 3), step("second", 0), step("third", 4)] } }),
-    );
-    const env = { ...process.env, CI: "1", TEAR_CHECKS_CONFIG: config };
-    delete env.TEAR_CHECK_RESULTS;
-    delete env.GITHUB_STEP_SUMMARY;
-    return spawnSync(process.execPath, ["scripts/run-checks.mjs", "demo", ...extra], { encoding: "utf8", env });
+describe("running the list", () => {
+  // A three-check list whose first and last checks fail. The checks never start a process: each
+  // "runs" by returning its exit code, so the result does not depend on how busy the machine is.
+  const step = (id, code) => ({ group: "demo", id, run: `exit ${String(code)}`, code });
+  const list = [step("first", 3), step("second", 0), step("third", 4)];
+  function runList(options) {
+    const ran = [];
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const outcome = runCheckList(list, {
+        ...options,
+        execute: (check) => {
+          ran.push(check.id);
+          return { status: check.code };
+        },
+      });
+      return { ...outcome, ran };
+    } finally {
+      vi.restoreAllMocks();
+    }
   }
 
-  it("stops at the first failing check without it", () => {
-    const result = runList([]);
-    expect(result.status).toBe(3);
-    expect(result.stdout).not.toMatch(/demo\.second/u);
+  it("stops at the first failing check, with that check's exit status", () => {
+    const outcome = runList({});
+    expect(outcome).toMatchObject({ status: 3, stopped: true, ran: ["first"] });
   });
 
-  it("runs every check, lists each failure and still fails with it", () => {
-    const result = runList(["--keep-going"]);
-    expect(result.status).toBe(1);
-    expect(result.stdout).toMatch(/PASS demo\.second/u);
-    expect(result.stderr).toMatch(
-      /FAIL 2 of 3 check\(s\) in \d+ s:\n {2}demo\.first \(exit 3\)\n {2}demo\.third \(exit 4\)/u,
-    );
+  it("with keepGoing runs every check, names each failure and still fails", () => {
+    const outcome = runList({ keepGoing: true });
+    expect(outcome).toEqual({
+      status: 1,
+      stopped: false,
+      ran: ["first", "second", "third"],
+      failures: ["demo.first (exit 3)", "demo.third (exit 4)"],
+    });
+  });
+
+  it("reports each check to onPass or onFail by name", () => {
+    const passed = [];
+    const failed = [];
+    runList({
+      keepGoing: true,
+      onPass: (name) => passed.push(name),
+      onFail: (name, _seconds, reason) => failed.push(`${name}: ${reason}`),
+    });
+    expect(passed).toEqual(["demo.second"]);
+    expect(failed).toEqual(["demo.first: exit 3", "demo.third: exit 4"]);
+  });
+
+  it("counts a check that could not start, or was killed, as failed", () => {
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const outcome = runCheckList([step("missing", 0), step("killed", 0)], {
+        keepGoing: true,
+        execute: (check) =>
+          check.id === "missing" ? { error: new Error("spawn ENOENT") } : { status: null, signal: "SIGTERM" },
+      });
+      expect(outcome.failures).toEqual(["demo.missing (spawn ENOENT)", "demo.killed (exit SIGTERM)"]);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });

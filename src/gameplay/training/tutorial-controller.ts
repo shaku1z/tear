@@ -5,6 +5,7 @@ import {
   type PracticeBossState,
 } from "./practice-boss-catalog";
 import type { TutorialArenaId } from "./tutorial-arenas";
+import { practiceTabFlags, practiceTabFromFlags, type PracticeTab } from "./practice-tabs";
 import { productionGhostTraces, type TutorialGhostFrame, type TutorialGhostScript } from "./tutorial-production-ghost";
 import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import {
@@ -104,13 +105,12 @@ export interface TutorialSessionView {
   readonly skipped?: readonly TutorialLessonId[];
   readonly coach?: TutorialCoachView;
   readonly practiceOnly?: boolean;
-  readonly annexSelector?: boolean;
+  /** The open Drills tab (practice only). */
+  readonly practiceTab?: PracticeTab;
   readonly annex?: Readonly<TutorialWeaponAnnexState>;
   readonly annexes?: readonly Readonly<{ id: string; title: string; current: boolean }>[];
-  readonly catalogSelector?: boolean;
   readonly enemyPractice?: Readonly<PracticeEnemyState>;
   readonly bossPractice?: Readonly<PracticeBossState>;
-  readonly bossSelector?: boolean;
   readonly bossCatalog?: readonly PracticeBossEntry[];
   readonly enemyCatalog?: readonly PracticeEnemyEntry[];
   readonly phase: TutorialSessionPhase;
@@ -789,11 +789,9 @@ export class TutorialController {
   private interWaveRemaining = 0;
   private practiceOrigin: TutorialPracticeOrigin | undefined;
   private annex: TutorialWeaponAnnexState | undefined;
-  private annexSelector = false;
+  private practiceTab: PracticeTab = "lessons";
   private enemyPractice: PracticeEnemyState | undefined;
-  private catalogSelector = false;
   private bossPractice: PracticeBossState | undefined;
-  private bossSelector = false;
 
   get lessonId(): TutorialLessonId {
     return TUTORIAL_LESSON_IDS[this.lessonIndex] ?? "move";
@@ -827,13 +825,11 @@ export class TutorialController {
       ...(this.practiceOrigin === undefined
         ? {}
         : {
-            annexSelector: this.annexSelector,
+            practiceTab: this.practiceTab,
             annexes: TUTORIAL_WEAPON_ANNEXES.map(({ id, title }) => ({ id, title, current: this.annex?.id === id })),
           }),
       ...(this.annex === undefined ? {} : { annex: { ...this.annex } }),
-      ...(this.catalogSelector ? { catalogSelector: true } : {}),
       ...(this.enemyPractice === undefined ? {} : { enemyPractice: { ...this.enemyPractice } }),
-      ...(this.bossSelector ? { bossSelector: true } : {}),
       ...(this.bossPractice ? { bossPractice: this.bossPractice } : {}),
       instruction: lesson.instruction?.(this.counters) ?? lesson.description,
       progress: lesson.progress(this.counters),
@@ -870,7 +866,6 @@ export class TutorialController {
     this.annex = undefined;
     this.enemyPractice = undefined;
     this.bossPractice = undefined;
-    this.bossSelector = false;
     this.enterLesson(0);
     this.bossPractice = state;
     this.pendingArena = null;
@@ -878,9 +873,7 @@ export class TutorialController {
     this.completed.clear();
     this.active = true;
     this.phase = "lesson-practice";
-    this.bossSelector = true;
-    this.catalogSelector = false;
-    this.annexSelector = false;
+    this.practiceTab = "bosses";
     return true;
   }
   syncBoss(state: PracticeBossState): void {
@@ -890,26 +883,10 @@ export class TutorialController {
       this.phase = "free-practice";
     }
   }
-  showBosses(): void {
-    if (this.practiceOrigin) {
-      this.bossSelector = !this.bossSelector;
-      this.catalogSelector = false;
-      this.annexSelector = false;
-    }
-  }
-  showAnnexes(): void {
-    if (this.practiceOrigin !== undefined) {
-      this.annexSelector = !this.annexSelector;
-      this.bossSelector = false;
-      this.catalogSelector = false;
-    }
-  }
-  showCatalog(): void {
-    if (this.practiceOrigin !== undefined) {
-      this.catalogSelector = !this.catalogSelector;
-      this.bossSelector = false;
-      this.annexSelector = false;
-    }
+  /** Opens one Drills tab: exactly one list shows (LESSONS is the baseline exercises). */
+  showPracticeTab(tab: PracticeTab): void {
+    if (this.practiceOrigin === undefined) return;
+    this.practiceTab = tab;
   }
   selectEnemy(entry: PracticeEnemyEntry): boolean {
     if (!this.practiceOrigin || !entry.canPractice || entry.knowledge === "unknown" || !isPracticeEnemy(entry.id))
@@ -924,15 +901,13 @@ export class TutorialController {
     this.annex = undefined;
     this.enemyPractice = undefined;
     this.bossPractice = undefined;
-    this.bossSelector = false;
     this.enterLesson(0);
     this.enemyPractice = enemy;
     this.counters = {};
     this.completed.clear();
     this.active = true;
     this.phase = "lesson-practice";
-    this.catalogSelector = true;
-    this.annexSelector = false;
+    this.practiceTab = "enemies";
     this.pendingArena = "field-floor";
     return true;
   }
@@ -942,15 +917,13 @@ export class TutorialController {
     this.annex = undefined;
     this.enemyPractice = undefined;
     this.bossPractice = undefined;
-    this.bossSelector = false;
-    this.catalogSelector = false;
     this.enterLesson(0);
     this.annex = annex;
     this.counters = {};
     this.completed.clear();
     this.active = true;
     this.phase = "lesson-practice";
-    this.annexSelector = true;
+    this.practiceTab = "weapons";
     this.pendingArena = weaponAnnexLesson(annex).arena ?? "runway";
     return true;
   }
@@ -968,11 +941,9 @@ export class TutorialController {
     const index = TUTORIAL_LESSON_IDS.findIndex((entry) => entry === id);
     if (index < 0 || id === "ready" || !this.reached.has(id as TutorialLessonId)) return false;
     this.annex = undefined;
-    this.annexSelector = false;
+    this.practiceTab = "lessons";
     this.enemyPractice = undefined;
-    this.catalogSelector = false;
     this.bossPractice = undefined;
-    this.bossSelector = false;
     this.active = true;
     this.phase = this.completionAwarded || this.practiceOrigin !== undefined ? "lesson-practice" : "course";
     this.enterLesson(index);
@@ -1014,6 +985,10 @@ export class TutorialController {
     this.coachDemoTime = 6;
     this.coachIdle = 0;
     return true;
+  }
+  /** The course a finished tutorial hands to the next run, read without building a checkpoint. */
+  freePracticeCourse(): string | undefined {
+    return this.phase === "free-practice" ? this.courseSessionId : undefined;
   }
   captureSession() {
     const checkpoint = {
@@ -1067,9 +1042,7 @@ export class TutorialController {
       coachIdle: this.coachIdle,
       coachDemoTime: this.coachDemoTime,
       helpVisible: this.helpVisible,
-      ...(this.annexSelector ? { annexSelector: true } : {}),
-      ...(this.catalogSelector ? { catalogSelector: true } : {}),
-      ...(this.bossSelector ? { bossSelector: true } : {}),
+      ...practiceTabFlags(this.practiceTab),
     };
   }
   restoreSession(value: unknown): void {
@@ -1123,9 +1096,7 @@ export class TutorialController {
     this.coachIdle = value?.coachIdle ?? 0;
     this.coachDemoTime = value?.coachDemoTime ?? 0;
     this.helpVisible = value?.helpVisible ?? false;
-    this.annexSelector = value?.annexSelector === true;
-    this.catalogSelector = value?.catalogSelector === true;
-    this.bossSelector = value?.bossSelector === true;
+    this.practiceTab = practiceTabFromFlags(value);
   }
 
   constructor(config: typeof GameConfiguration) {
@@ -1135,11 +1106,9 @@ export class TutorialController {
   start(viewportWidth: number, courseSessionId = "tutorial"): void {
     this.practiceOrigin = undefined;
     this.annex = undefined;
-    this.annexSelector = false;
+    this.practiceTab = "lessons";
     this.enemyPractice = undefined;
-    this.catalogSelector = false;
     this.bossPractice = undefined;
-    this.bossSelector = false;
     this.curriculumVersion = 2;
     this.fieldEncounter = "charger";
     this.interWaveRemaining = 0;

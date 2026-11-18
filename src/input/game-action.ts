@@ -19,6 +19,8 @@ export type GameAction =
   | Readonly<{ type: "dash"; x: number; y: number }>
   | Readonly<{ type: "interact" }>
   | Readonly<{ type: "pause" }>
+  /** Control is handed back to the player (a resume or restart): the held blade re-seats along the aim. */
+  | Readonly<{ type: "resume" }>
   | Readonly<{ type: "confirm" }>
   | Readonly<{ type: "cancel" }>
   | Readonly<{ type: "draft-choice"; choiceId: string }>
@@ -113,6 +115,7 @@ export function normalizeGameAction(candidate: unknown): GameActionNormalization
     }
     case "interact":
     case "pause":
+    case "resume":
     case "confirm":
     case "cancel":
       return success({ type: candidate.type });

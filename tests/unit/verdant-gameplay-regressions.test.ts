@@ -5,7 +5,7 @@ import { bindVerdantEnvironmentActors } from "./environment-feature-fixture";
 import { createEnvironmentRuntime } from "../../src/gameplay/environment/environment-runtime";
 import { ROOTBOUND_REGROWTH_TIMING } from "../../src/gameplay/environment/regrowth-link";
 import { BLOOM_WELL_TIMING, createBloomWellState } from "../../src/gameplay/environment/bloom-well";
-import { ROOTBOUND_ENCOUNTER } from "../../src/gameplay/entities/enemy-types/rootbound";
+import { ROOTBOUND_ENCOUNTER, ROOTBOUND_HEALING } from "../../src/gameplay/entities/enemy-types/rootbound";
 import { ROOTBOUND_MOVES } from "../../src/gameplay/entities/enemy-types/rootbound-moves";
 import { createRootbinderState, severRootLink } from "../../src/gameplay/entities/rootbinder-runtime";
 import {
@@ -21,8 +21,8 @@ type Boss = InstanceType<Harness["types"]["Rootbound"]> & {
   phaseMarker: number;
   state: "intro" | "idle" | "recover";
   stateT: number;
-  lastSpringStage: string | null;
   lastSpringUseCount: number;
+  regrowthCalled: boolean;
   regrowthState: Readonly<{ phase: string }>;
   beginRegrowth(startTick: number, connectionIds: readonly string[]): boolean;
   advanceRegrowth(tick: number, ids: ReadonlySet<string>, broken?: boolean): unknown;
@@ -47,6 +47,7 @@ function resolvedPhaseThree(harness: Harness): Boss {
   actor.hp = actor.maxHp * 0.2;
   actor.update(dt, harness.platforms, harness.player);
   skipBeat(actor);
+  actor.regrowthCalled = true;
   actor.beginRegrowth(0, connections);
   actor.advanceRegrowth(ROOTBOUND_REGROWTH_TIMING.channelTicks, new Set(), false);
   actor.state = "idle";
@@ -56,7 +57,8 @@ function resolvedPhaseThree(harness: Harness): Boss {
 
 describe("Verdant gameplay regressions", () => {
   it("keeps attacking through Phase III and repeats Last Spring instead of idling forever", () => {
-    const harness = createEnemyHarness();
+    // Varied draws, so every move gets its turn rather than whichever one a fixed draw always lands on.
+    const harness = createEnemyHarness([0.15, 0.85, 0.5, 0.35, 0.65, 0.95, 0.05]);
     const actor = resolvedPhaseThree(harness);
     const started = new Set<string>();
     let idleRun = 0,
@@ -66,12 +68,15 @@ describe("Verdant gameplay regressions", () => {
       if (tick % 480 === 0) harness.player.x = actor.x < CONFIG.view.w / 2 ? CONFIG.view.w - 200 : 200;
       actor.update(dt, harness.platforms, harness.player);
       const verb = actor.atk.split(":")[0] ?? "";
-      if (verb !== "unavailable" && !verb.startsWith("regrowth")) started.add(verb);
+      if (verb !== "unavailable" && verb !== "exposed" && !verb.startsWith("regrowth")) started.add(verb);
       idleRun = actor.atk === "unavailable" ? idleRun + 1 : 0;
       longestIdle = Math.max(longestIdle, idleRun);
     }
-    const phaseThreeMoves = ROOTBOUND_MOVES.attacks.filter((move) => move.phases.includes(3)).map((move) => move.id);
-    expect([...started].sort()).toEqual([...phaseThreeMoves, "last-spring"].sort());
+    // Every Phase III move but Regrowth, which is played once and is already over here.
+    const phaseThreeMoves = ROOTBOUND_MOVES.attacks
+      .filter((move) => move.phases.includes(3) && move.id !== "regrowth")
+      .map((move) => move.id);
+    expect([...started].sort()).toEqual([...phaseThreeMoves].sort());
     expect(actor.lastSpringUseCount).toBeGreaterThanOrEqual(3);
     expect(longestIdle / 120).toBeLessThan(2);
   });
@@ -100,9 +105,10 @@ describe("Verdant gameplay regressions", () => {
     actor.hp = actor.maxHp * 0.2;
     actor.update(dt, harness.platforms, harness.player);
     skipBeat(actor);
+    actor.regrowthCalled = true;
     expect(actor.beginRegrowth(0, connections)).toBe(true);
     expect(actor.regrowthChannelBroken()).toBe(false);
-    actor.hit(actor.maxHp * (ROOTBOUND_ENCOUNTER.regrowthBreakFraction / 2), 1, 0);
+    actor.hit(actor.maxHp * (ROOTBOUND_HEALING.regrowthBreak / 2), 1, 0);
     expect(actor.regrowthChannelBroken()).toBe(false);
     actor.hitCd = 0;
     actor.hit(actor.maxHp * 10, 1, 0);

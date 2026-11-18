@@ -8,7 +8,8 @@ import { createScreenRenderers } from "../../src/presentation/screens";
 import { buildMusicScreenView } from "../../src/presentation/music-snapshots";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
 import { campaignDraftGuidance } from "../../src/app/run/run-screen-adapters";
-import { buildShopSnapshot } from "../../src/presentation/shop-snapshot";
+import { buildShopSnapshot, SHOP_LIST_TOP } from "../../src/presentation/shop-snapshot";
+import { DESKTOP } from "../../src/presentation/screens/codex-shop-metrics";
 import { CONFIG } from "../../src/config/game-config";
 import { TutorialController } from "../../src/gameplay/training/tutorial-controller";
 import { backControl, tabs, verticalMenu } from "../../src/presentation/screens/screen-primitives";
@@ -60,6 +61,7 @@ class TestUi implements ScreenUiPort {
       settingsControlH: 42,
       settingsStepperW: 54,
       minTarget: 32,
+      listRowH: 46,
       railFadeW: 800,
       railFadeMid: 0.56,
     },
@@ -92,6 +94,9 @@ class TestUi implements ScreenUiPort {
   }
   buttonFitWidth(...values: Parameters<ScreenUiPort["buttonFitWidth"]>): number {
     return values[0].measureText(values[1].label).width + 16;
+  }
+  buttonFitHeight(...values: Parameters<ScreenUiPort["buttonFitHeight"]>): number {
+    return values[1].sub === undefined ? this.t.metric.listRowH : this.t.metric.listRowH + 8;
   }
   emptyState(...values: Parameters<ScreenUiPort["emptyState"]>): number {
     return values[4] + 60;
@@ -262,11 +267,12 @@ function createRenderContext(controls: ScreenControl[]): ScreenRenderContext {
 }
 
 describe("legacy screen renderer registry", () => {
-  it("keeps boss phase controls and every Lab menu item reachable at 800 by 360 with the existing scroll owner", () => {
+  it("keeps every boss phase reachable by scrolling the Drills list at 800 by 360", () => {
     const controller = new TutorialController(CONFIG);
     controller.openPractice(800, 1);
     const found: string[] = [];
-    for (const scroll of [0, 144]) {
+    // The list scrolls over its measured extent (the shared scrolling list clamps past the end).
+    for (let scroll = 0; scroll <= 2400; scroll += 24) {
       // A small landscape touch screen runs the compact density (tutorial pause uses its tight composition).
       const controls: ScreenControl[] = [],
         context = createRenderContext(controls);
@@ -275,7 +281,7 @@ describe("legacy screen renderer registry", () => {
       const renderer = createScreenRenderers({ ...context, ui, width: 800, height: 360, scroll });
       renderer.paused({
         id: "paused",
-        tutorial: { ...controller.session(), bossSelector: true, bossCatalog: practiceBossCatalog(() => 1) },
+        tutorial: { ...controller.session(), practiceTab: "bosses", bossCatalog: practiceBossCatalog(() => 1) },
       } as Parameters<typeof renderer.paused>[0]);
       expect(controls.every((control) => control.y >= 0 && control.y + control.h <= 360 && control.h >= 24)).toBe(true);
       found.push(
@@ -353,7 +359,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls[1]?.label).toBe("KEEP PRACTICING");
     expect(controls.some((control) => control.label === "SKIP LESSON")).toBe(false);
   });
-  it("offers an explicit unlocked Practice Lab without labeling unknown historical lessons as learned", () => {
+  it("offers explicit unlocked Drills without labeling unknown historical lessons as learned", () => {
     const controls: ScreenControl[] = [],
       context = createRenderContext(controls),
       title = vi.spyOn(context.ui, "title"),
@@ -365,7 +371,7 @@ describe("legacy screen renderer registry", () => {
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
     expect(title).toHaveBeenCalledWith(
       expect.anything(),
-      "PRACTICE LAB",
+      "DRILLS",
       expect.anything(),
       expect.anything(),
       expect.anything(),
@@ -374,6 +380,25 @@ describe("legacy screen renderer registry", () => {
       (control) => control.action.type === "tutorial.action" && control.action.command === "select",
     );
     expect(exercises).toHaveLength(13);
+    // One tab row, the hubs' shared strip (hit boxes only), replaces the three mode buttons.
+    const tabs = controls.filter(
+      (control) => control.action.type === "tutorial.action" && control.action.command === "tab",
+    );
+    expect(
+      tabs.map((control) => [
+        control.action.type === "tutorial.action" && control.action.command === "tab" && control.action.tab,
+        control.hiddenBox,
+      ]),
+    ).toEqual([
+      ["lessons", true],
+      ["weapons", true],
+      ["enemies", true],
+      ["bosses", true],
+    ]);
+    expect(controller.session().practiceTab).toBe("lessons");
+    expect(controls.some((control) => /ANNEXES|CATALOG|BOSS PRACTICE|BASELINE EXERCISES/u.test(control.label))).toBe(
+      false,
+    );
     expect(
       exercises.every(
         (control) => control.enabled && !control.label.includes("✓") && !control.label.includes("LOCKED"),
@@ -409,7 +434,7 @@ describe("legacy screen renderer registry", () => {
         .every((control) => control.y + control.h <= context.height),
     ).toBe(true);
     controls.length = 0;
-    controller.showAnnexes();
+    controller.showPracticeTab("weapons");
     controller.selectAnnex("hammer");
     renderer.paused({ id: "paused", abilities: [], progress: [], tutorial: controller.session() });
     expect(
@@ -420,7 +445,7 @@ describe("legacy screen renderer registry", () => {
     expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
     controls.length = 0;
     copy.mockClear();
-    controller.showCatalog();
+    controller.showPracticeTab("enemies");
     renderer.paused({
       id: "paused",
       abilities: [],
@@ -435,16 +460,16 @@ describe("legacy screen renderer registry", () => {
     });
     expect(controls.find((control) => control.label === "CHARGER")).toMatchObject({
       enabled: true,
-      sub: "CONFIRMED DEFEATED",
+      sub: "DEFEATED",
       action: { command: "select-enemy", lessonId: "charger" },
     });
     expect(controls.find((control) => control.label === "MENDER")).toMatchObject({
       enabled: false,
-      sub: "HISTORY NOT RECORDED",
+      sub: "NOT MET YET",
     });
     expect(controls.some((control) => control.label === "SHOW DEMO")).toBe(false);
     expect(copy.mock.calls.map(([line]) => line).join(" ")).toContain(
-      "Confirmed defeated uses an existing recorded kill.",
+      "Opponents you have met in a run are listed here.",
     );
     expect(copy.mock.calls.map(([line]) => line).join(" ")).not.toContain("slam");
     const lastRowBottom = Math.max(
@@ -452,7 +477,10 @@ describe("legacy screen renderer registry", () => {
         .filter((control) => control.action.type === "tutorial.action" && control.action.command === "select-enemy")
         .map((control) => control.y + control.h),
     );
-    expect(copy.mock.calls.every(([, , y]) => y >= lastRowBottom + 28)).toBe(true);
+    // The help starts under the list, a gap clear of its last row (its first line's top below it).
+    expect(
+      copy.mock.calls.every(([, , y]) => y - context.ui.t.type.caption >= lastRowBottom + context.ui.t.space.sm),
+    ).toBe(true);
     expect(context.canvas.textBaseline).toBe("alphabetic");
     controls.length = 0;
     renderer.menu({
@@ -466,7 +494,7 @@ describe("legacy screen renderer registry", () => {
       difficultyLabel: "Normal",
       practiceAvailable: true,
     });
-    expect(controls.find((control) => control.label === "PRACTICE LAB")?.action).toEqual({
+    expect(controls.find((control) => control.label === "DRILLS")?.action).toEqual({
       type: "tutorial.action",
       command: "open-practice",
     });
@@ -517,6 +545,7 @@ describe("legacy screen renderer registry", () => {
       controls.length = 0;
       lines.length = 0;
       const shop = buildShopSnapshot({
+        tab: "upgrades",
         items: [{ id: "hp", cat: "vit", name: "HP", maxLevel: 2, desc: "health" }],
         realCoins: 0,
         displayedCoins: 0,
@@ -537,10 +566,10 @@ describe("legacy screen renderer registry", () => {
       controls.length = 0;
       renderer.shop(shop);
       expect(controls).toEqual(shopControls);
-      // The first-run hint takes the header status row at the subtitle's own (caption) size.
+      // The first-run hint takes the status row under the tabs, at caption size, above the list.
       const hint = hints.find((entry) => entry.text.includes("Buying is optional"));
       expect(hint).toMatchObject({ size: ui.t.type.caption });
-      expect((hint?.y ?? 0) > 138 && (hint?.y ?? 0) < 180).toBe(true);
+      expect((hint?.y ?? 0) > DESKTOP.shop.statusTop && (hint?.y ?? 0) < SHOP_LIST_TOP).toBe(true);
     }
   });
   it("is exhaustive for every canonical application screen", () => {
@@ -808,6 +837,8 @@ describe("legacy screen renderer registry", () => {
     const item = (id: string) => ({ id, label: id.toUpperCase(), level: 0, maxLevel: 3, cost: "10c", enabled: true });
     renderer.shop({
       id: "shop",
+      tab: "upgrades",
+      tabs: [],
       coins: 100,
       ownedLevels: 0,
       totalLevels: 18,
@@ -819,14 +850,16 @@ describe("legacy screen renderer registry", () => {
         { label: "FORTUNE", items: [item("f1"), item("f2")] },
       ],
     });
-    const buys = controls.filter((control) => control.action.type === "shop.buy");
+    const buyY = (id: string) =>
+      controls.find((control) => control.action.type === "shop.buy" && control.action.id === id)?.y ?? Number.NaN;
     // 88 px rows (two-line descriptions), 14 px between categories; columns flow independently.
     // A category label takes the shop's fixed head (the game's sectionLabel always advances 18 px),
-    // not this test UI's 24 px advance.
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "v1")?.y).toBe(237);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "b1")?.y).toBe(539);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "t1")?.y).toBe(237);
-    expect(buys.find((control) => control.action.type === "shop.buy" && control.action.id === "f1")?.y).toBe(363);
+    // not this test UI's 24 px advance. The first BUY sits a fixed distance under the list top.
+    const first = SHOP_LIST_TOP + 57;
+    expect(buyY("v1")).toBe(first);
+    expect(buyY("b1")).toBe(first + 302);
+    expect(buyY("t1")).toBe(first);
+    expect(buyY("f1")).toBe(first + 126);
   });
 
   it("models Codex guide details and rich profile/achievement surfaces without gameplay callbacks", () => {

@@ -1,5 +1,5 @@
 import type { ReplayView, ScreenAction, ScreenControl, ScreenRenderContext } from "./contracts";
-import { backControl } from "./screen-primitives";
+import { backControl, tabs as tabStrip } from "./screen-primitives";
 
 /**
  * THE COMPACT PAGE: the phone-landscape composition shared by the library and shop
@@ -44,6 +44,9 @@ export interface CompactHeader {
   /** Without a sheet (playground overlays) the page spans the safe frame. */
   readonly sheet?: boolean | undefined;
 }
+
+/** Where a scroll lays its blocks: a page body, or any panel that scrolls (the Drills list). */
+export type ScrollRegion = Pick<CompactPage, "left" | "width" | "top" | "bottom">;
 
 /** What a block sees while it draws: the clipped body span and a visibility-checked enqueue. */
 export interface ScrollView {
@@ -189,7 +192,7 @@ export function createCompactPage(context: ScreenRenderContext) {
       const strip = beside
         ? { x: besideX, y: rowTop, w: besideW }
         : { x: left, y: bottom + t.metric.btnGap, w: right - left };
-      tabStrip(tabs, spec.tabAction, strip.x, strip.y, strip.w);
+      tabStrip(context, tabs, spec.tabAction, strip.y, { x: strip.x, w: strip.w, h: ui.t.metric.btnH });
       if (!beside) bottom = strip.y + rowH;
     } else if (spec.subtitle && !spec.stat) {
       const room = right - (left + titleW + t.space.xl);
@@ -218,42 +221,6 @@ export function createCompactPage(context: ScreenRenderContext) {
       bottom: footerY - t.space.md,
       footerY,
     });
-  }
-
-  /** A tab strip in an explicit span, one full-height touch target per tab. */
-  function tabStrip(
-    tabs: readonly CompactChoice[],
-    action: (id: string) => ScreenAction,
-    x: number,
-    y: number,
-    w: number,
-  ): void {
-    const active = Math.max(
-      0,
-      tabs.findIndex((tab) => tab.selected),
-    );
-    ui.tabs(
-      context.canvas,
-      tabs.map((tab) => tab.id).join("-"),
-      tabs.map((tab) => tab.label),
-      active,
-      y,
-      (button) => {
-        const tab = tabs[button._tab ?? 0];
-        if (tab !== undefined)
-          context.enqueue({
-            x: button.x,
-            y: button.y,
-            w: button.w,
-            h: button.h,
-            label: "",
-            hiddenBox: true,
-            action: action(tab.id),
-          });
-      },
-      w,
-      { x, w, h: ui.t.metric.btnH },
-    );
   }
 
   /**
@@ -303,7 +270,7 @@ export function createCompactPage(context: ScreenRenderContext) {
    * Lays blocks top to bottom inside the page body, clamps the scroll to their measured
    * extent (and writes it back), then draws the visible blocks clipped to the body.
    */
-  function scroll(page: CompactPage, blocks: readonly ScrollBlock[], gap = ui.t.space.md): ScrollState {
+  function scroll(page: ScrollRegion, blocks: readonly ScrollBlock[], gap = ui.t.space.md): ScrollState {
     const { canvas } = context,
       visible = page.bottom - page.top;
     const total = blocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, blocks.length - 1) * gap;
@@ -336,6 +303,32 @@ export function createCompactPage(context: ScreenRenderContext) {
       canvas.restore();
     }
     return { canScrollUp: offset > 0, canScrollDown: offset < maximum };
+  }
+
+  /**
+   * A scrolling list inside a panel, its scroll hint on a line of its own: when the blocks overflow
+   * `region`, its last line is kept for the hint, centred under the list, so the hint never sits on
+   * what follows. A list that fits takes only its height. `bottom` is the y under the list and hint.
+   */
+  function list(
+    region: ScrollRegion,
+    blocks: readonly ScrollBlock[],
+    gap = ui.t.space.md,
+  ): ScrollState & Readonly<{ bottom: number }> {
+    const total = blocks.reduce((sum, block) => sum + block.height, 0) + Math.max(0, blocks.length - 1) * gap,
+      hintH = lineHeight(ui.t.type.caption) + ui.t.space.xs,
+      overflows = total > region.bottom - region.top;
+    const body = { ...region, bottom: overflows ? region.bottom - hintH : region.top + total };
+    const state = scroll(body, blocks, gap);
+    if (overflows)
+      ui.scrollHint(
+        context.canvas,
+        region.left + region.width / 2,
+        body.bottom + hintH / 2 + Math.round(ui.t.type.caption * 0.35),
+        state.canScrollUp,
+        state.canScrollDown,
+      );
+    return { ...state, bottom: overflows ? region.bottom : body.bottom };
   }
 
   /** Footer row: BACK centred (when given) and the scroll hint at the right end. */
@@ -568,6 +561,7 @@ export function createCompactPage(context: ScreenRenderContext) {
     header,
     toolbar,
     scroll,
+    list,
     footer,
     grid,
     section,

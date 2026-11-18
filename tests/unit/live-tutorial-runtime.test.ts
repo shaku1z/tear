@@ -167,9 +167,14 @@ describe("live tutorial runtime", () => {
       resetFocus: vi.fn(),
       resume: vi.fn(),
     });
-    actions.dispatch("select", "missing");
+    // A tab action names its tab in its own field and opens it without starting anything.
+    actions.dispatch({ type: "tutorial.action", command: "tab", tab: "bosses" });
+    expect(runtime.session().practiceTab).toBe("bosses");
+    actions.dispatch({ type: "tutorial.action", command: "tab", tab: "lessons" });
+    expect(runtime.session().practiceTab).toBe("lessons");
+    actions.dispatch({ type: "tutorial.action", command: "select", lessonId: "missing" });
     expect(startLessonRun).not.toHaveBeenCalled();
-    actions.dispatch("select", "launch");
+    actions.dispatch({ type: "tutorial.action", command: "select", lessonId: "launch" });
     expect(selectPracticeWeapon).toHaveBeenCalledWith("sword");
     expect(startLessonRun).toHaveBeenCalledOnce();
     expect(installArena).toHaveBeenLastCalledWith("launch-bay");
@@ -193,7 +198,7 @@ describe("live tutorial runtime", () => {
     expect(completeCourse).not.toHaveBeenCalled();
     expect(addProfileStat).not.toHaveBeenCalled();
     expect(checkAchievements).not.toHaveBeenCalled();
-    actions.dispatch("select-annex", "sword");
+    actions.dispatch({ type: "tutorial.action", command: "select-annex", lessonId: "sword" });
     runtime.weaponEffect("sword", "reversal");
     const retained = runtime.captureSession();
     expect(retained).toMatchObject({ version: 4, annex: { id: "sword", pendingEvidence: true } });
@@ -201,23 +206,23 @@ describe("live tutorial runtime", () => {
       runtime.validateSession(retained, "hammer");
     }).toThrow(/annex weapon/);
     expect(runtime.captureSession()).toEqual(retained);
-    actions.dispatch("select-annex", "missing");
+    actions.dispatch({ type: "tutorial.action", command: "select-annex", lessonId: "missing" });
     expect(runtime.captureSession()).toEqual(retained);
-    actions.dispatch("select-annex", "hammer");
+    actions.dispatch({ type: "tutorial.action", command: "select-annex", lessonId: "hammer" });
     expect(selectedWeapon).toBe("hammer");
     expect(runtime.captureSession()).toMatchObject({
       version: 4,
       annex: { id: "hammer", progress: 0, pendingEvidence: false },
     });
-    actions.dispatch("restart");
+    actions.dispatch({ type: "tutorial.action", command: "restart" });
     expect(runtime.session().progress).toEqual([0, 2]);
-    actions.dispatch("select", "launch");
+    actions.dispatch({ type: "tutorial.action", command: "select", lessonId: "launch" });
     expect(selectedWeapon).toBe("sword");
     expect(runtime.captureSession()).toMatchObject({ version: 3, lessonId: "launch", completionAwarded: false });
     const baseline = runtime.captureSession();
-    actions.dispatch("select-enemy", "ranged");
+    actions.dispatch({ type: "tutorial.action", command: "select-enemy", lessonId: "ranged" });
     expect(runtime.captureSession()).toEqual(baseline);
-    actions.dispatch("select-enemy", "charger");
+    actions.dispatch({ type: "tutorial.action", command: "select-enemy", lessonId: "charger" });
     const attempt = runtime.captureSession();
     expect(attempt).toMatchObject({
       version: 5,
@@ -234,7 +239,7 @@ describe("live tutorial runtime", () => {
       ]);
     }).toThrow(/actors/);
     expect(runtime.captureSession()).toEqual(attempt);
-    actions.dispatch("restart");
+    actions.dispatch({ type: "tutorial.action", command: "restart" });
     expect(runtime.captureSession()).toEqual(attempt);
     expect(runtime.demonstrate()).toBe(false);
     expect(completeCourse).not.toHaveBeenCalled();

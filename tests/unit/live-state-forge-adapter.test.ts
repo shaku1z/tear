@@ -440,7 +440,6 @@ describe("live State Forge adapter ownership boundary", () => {
       phaseTwoEntryHp: 321,
       healedFraction: 0.03,
       quietT: 1.25,
-      openingGraft: true,
       fullGrove: true,
       graftRegrowTick: 777,
       graftHeals: false,

@@ -24,6 +24,7 @@ import type { CONFIG as GameConfiguration } from "../../config/game-config";
 import type { createPlayer } from "../entities/player";
 import type { createBlade } from "../entities/blade";
 import type { EnemyKind } from "../run/content-director";
+import type { PracticeTab } from "./practice-tabs";
 import { practiceEnemyIdentity, type PracticeEnemyEntry } from "./practice-enemy-catalog";
 
 type TrainingPlayer = Pick<
@@ -49,6 +50,9 @@ type TrainingBlade = Pick<
   | "chainPrevious"
   | "slingCollided"
   | "resetRiftlock"
+  | "reseatHeld"
+  | "aimX"
+  | "aimY"
 >;
 
 /** The same actor reset at a real lesson transition in either host; hydration never calls it. */
@@ -93,28 +97,11 @@ export function resetTutorialActors(
   const handX = actor.x + config.blade.handOffsetX,
     handY = actor.y + config.blade.handOffsetY;
   blade.state = "held";
-  blade.x = handX;
-  blade.y = handY;
-  blade.vx = 0;
-  blade.vy = 0;
   blade.flyTime = 0;
   blade.throwOrigin = null;
   blade.pierced.clear();
   blade.trail.length = 0;
   Object.assign(blade, {
-    angle: -Math.PI / 2,
-    aimX: 0,
-    aimY: -config.blade.aimRadius,
-    tipX: handX,
-    tipY: handY - blade.curLength,
-    prevTipX: handX,
-    prevTipY: handY - blade.curLength,
-    reticleX: handX,
-    reticleY: handY - config.blade.aimRadius,
-    tipVX: 0,
-    tipVY: 0,
-    tipSpeed: 0,
-    glowV: 0,
     tetherFactor: 1,
     throwDmg: 0,
     throwBaseDmg: 0,
@@ -138,7 +125,6 @@ export function resetTutorialActors(
     slingRadius: 0,
     slingAngle: 0,
     slingAngularVelocity: 0,
-    swingActive: false,
     slingWorldCooldown: 0,
   });
   blade.threadcutRoute.length = 0;
@@ -160,6 +146,8 @@ export function resetTutorialActors(
   ])
     Reflect.deleteProperty(blade, key);
   blade.resetRiftlock();
+  // Still, along the aim the player last had: the shared hand-back re-seat, not a fixed overhead pose.
+  blade.reseatHeld({ x: handX, y: handY }, { x: blade.aimX, y: blade.aimY });
 }
 
 export function recoverTutorialBlade(
@@ -268,12 +256,10 @@ export interface LiveTutorialRuntime {
   selectLesson(id: string): boolean;
   selectAnnex(id: string): boolean;
   selectEnemy(id: string): boolean;
-  showCatalog(): void;
-  showBosses(): void;
+  showPracticeTab(tab: PracticeTab): void;
   selectBoss(id: string, retained?: PracticeBossState): boolean;
   bindBossPractice(port: BossPracticePort): void;
   afterWorldStep(frame?: TutorialGoldFrame, input?: AuthoritativeInputSnapshot): void;
-  showAnnexes(): void;
   interruptCoaching(): void;
   observeAttemptFact(fact: TutorialAttemptFact): void;
   advanceUnfinished(assisted?: boolean): boolean;
@@ -283,6 +269,8 @@ export interface LiveTutorialRuntime {
   showHelp(): void;
   demonstrate(): boolean;
   captureSession(): ReturnType<TutorialController["captureSession"]> | undefined;
+  /** The course of a tutorial in free practice, or undefined; cheap enough to ask every tick. */
+  freePracticeCourse(): string | undefined;
   validateSession(
     value: unknown,
     candidateWeaponId?: string,
@@ -422,8 +410,8 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       port.resetTrainingSpace();
       return controller.selectBoss(entry, bossPort.begin(entry));
     },
-    showBosses: () => {
-      controller.showBosses();
+    showPracticeTab: (tab) => {
+      controller.showPracticeTab(tab);
     },
     restart: () => {
       const selected = controller.session().bossPractice;
@@ -484,12 +472,6 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       }
       return changed;
     },
-    showCatalog: () => {
-      controller.showCatalog();
-    },
-    showAnnexes: () => {
-      controller.showAnnexes();
-    },
     weaponEffect: (weaponId, effect) => {
       controller.weaponEffect(weaponId, effect);
     },
@@ -517,6 +499,7 @@ export function createLiveTutorialRuntime<TEnemy extends LiveTutorialEnemy>(
       syncCoach();
       coach.captureCommands(commands);
     },
+    freePracticeCourse: () => controller.freePracticeCourse(),
     captureSession: () => {
       if (controller.session().phase === "inactive") return undefined;
       if (controller.session().bossPractice && !controller.session().bossPractice?.defeated) bossPort?.capture();

@@ -264,11 +264,17 @@ export function backControl(context: ScreenRenderContext, to: ScreenAction = { t
   });
 }
 
-export function tabs(
+/**
+ * The hub tab strip: one tab per value, the selected one underlined, each a hit box sending
+ * `action(id)`. Centred on the stage by default; `frame` places it in a span (a phone page, a
+ * panel), the tabs sharing it equally at the frame's height.
+ */
+export function tabs<Id extends string>(
   context: ScreenRenderContext,
-  values: readonly { id: string; label: string; selected?: boolean | undefined }[],
-  action: (id: string) => ScreenAction,
+  values: readonly { id: Id; label: string; selected?: boolean | undefined }[],
+  action: (id: Id) => ScreenAction,
   y = 124,
+  frame?: Readonly<{ x: number; w: number; h: number }>,
 ): void {
   if (values.length === 0) return;
   const active = Math.max(
@@ -295,6 +301,8 @@ export function tabs(
         action: action(value.id),
       });
     },
+    frame?.w,
+    frame,
   );
 }
 

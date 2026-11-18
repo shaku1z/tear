@@ -1,3 +1,4 @@
+import type { ShopShardsPort } from "../screens/menu-screen-adapters";
 import { createScreenActionRouter } from "./screen-action-router";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { LibraryScreenAdapters } from "../library/library-screen-adapters";
@@ -37,31 +38,13 @@ export interface ScreenActionBindingPorts {
   readonly campaignDifficulty: () => RunDifficulty;
   readonly resetSettings: () => void;
   readonly buyShopItem: (id: string) => void;
+  readonly shop: ShopShardsPort;
   readonly signIn: () => void;
   readonly signOut: () => void;
   readonly pinReplay: (id: string, pinned: boolean) => boolean;
   readonly deleteReplay: (id: string) => void;
   readonly dispatchPlayground: (id: string) => void;
-  readonly tutorialAction?: (
-    command:
-      | "open-practice"
-      | "restart"
-      | "select"
-      | "help"
-      | "demo"
-      | "coach-rate"
-      | "coach-compare"
-      | "coach-diagnostic"
-      | "skip"
-      | "assist"
-      | "annexes"
-      | "select-annex"
-      | "catalog"
-      | "select-enemy"
-      | "bosses"
-      | "select-boss",
-    lessonId?: string,
-  ) => void;
+  readonly tutorialAction?: (action: Extract<ScreenAction, { type: "tutorial.action" }>) => void;
   readonly library: LibraryScreenAdapters;
   readonly replay: ReplayScreenAdapter;
   readonly settings: SettingsRenameAdapters;
@@ -177,6 +160,15 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
     },
     "shop.buy": (action) => {
       ports.buyShopItem(action.id);
+    },
+    "shop.selectTab": (action) => {
+      ports.shop.selectShopTab(action.id);
+    },
+    "shards.buy": (action) => {
+      ports.shop.buyCosmetic(action.id);
+    },
+    "shards.equip": (action) => {
+      ports.shop.equipCosmetic(action.slot, action.id);
     },
     "profile.selectTab": (action) => {
       ports.library.selectProfileTab(action.id);
@@ -341,7 +333,7 @@ export function createLiveScreenActionBindings(ports: ScreenActionBindingPorts) 
       ports.dispatchPlayground(action.id);
     },
     "tutorial.action": (action) => {
-      ports.tutorialAction?.(action.command, action.lessonId);
+      ports.tutorialAction?.(action);
     },
     "codex.selectTab": (action) => {
       ports.library.selectCodexTab(action.id);
