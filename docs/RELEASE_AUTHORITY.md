@@ -113,6 +113,13 @@ applies them and answers yes or no with the reason; the merge helper calls it.
      hour of its push, before its run may have started.
    - The pre-push guard allows a deletion only for a name that is exactly a
      batch branch (owner decision, 2026-11-16).
+5. **The design check is answered.** The description must give a non-empty
+   answer after each of the six design-check labels of
+   [ENGINEERING_STANDARD.md](ENGINEERING_STANDARD.md) (general case, one owner,
+   the next one, cause, measured, removed). HTML comments do not count, and
+   "n/a" counts only with a reason after it. The labels live once, in
+   `scripts/design-check.mjs`; the pull request template test checks the
+   template and the standard against that list.
 
 ## Local boundary
 

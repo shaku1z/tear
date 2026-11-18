@@ -1,5 +1,7 @@
 // The merge rules of scripts/merge-ready.mjs, decided from fixed facts.
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
+import { DESIGN_CHECK_LABELS } from "../../scripts/design-check.mjs";
 import { batchNote } from "../../scripts/merge-batch.mjs";
 import { decide, FIX_LABEL, parseBatchNote, pickRun } from "../../scripts/merge-ready.mjs";
 
@@ -7,11 +9,13 @@ const head = "a".repeat(40);
 const checkedMain = "b".repeat(40);
 const green = { conclusion: "success", headSha: "c".repeat(40) };
 const red = { conclusion: "failure", headSha: "d".repeat(40) };
+const answered = DESIGN_CHECK_LABELS.map((label) => `- **${label}:** n/a: a fixture answer`).join("\n");
 const pr = (overrides = {}) => ({
   state: "OPEN",
   draft: false,
   headSha: head,
   labels: [],
+  body: answered,
   files: ["src/gameplay/run/live-enemy-spawn.ts"],
   ...overrides,
 });
@@ -24,6 +28,40 @@ const passed = (overrides = {}) => ({
 });
 
 describe("merge readiness", () => {
+  describe("rule 4: the design check is answered", () => {
+    const ready = (body) => decide({ main: green, pr: pr({ body }), run: passed(), mainFilesSince: [] });
+
+    it("refuses a description with no design check, naming every label", () => {
+      const decision = ready("## What and why\n\nA change.");
+      expect(decision.ready).toBe(false);
+      for (const label of DESIGN_CHECK_LABELS) expect(decision.reason).toContain(`${label} (missing)`);
+      expect(ready(undefined).ready).toBe(false);
+    });
+
+    it("refuses the unedited template: its prompts are comments, so every answer is empty", () => {
+      const template = fs.readFileSync(new URL("../../.github/pull_request_template.md", import.meta.url), "utf8");
+      const decision = ready(template);
+      expect(decision.ready).toBe(false);
+      for (const label of DESIGN_CHECK_LABELS) expect(decision.reason).toContain(`${label} (empty)`);
+    });
+
+    it("refuses a bare n/a and accepts n/a with a reason", () => {
+      const bare = answered.replace("**Measured:** n/a: a fixture answer", "**Measured:** N/A.");
+      expect(ready(bare)).toMatchObject({ ready: false });
+      expect(ready(bare).reason).toContain('Measured ("n/a" without a reason)');
+      expect(ready(answered.replace("n/a: a fixture answer", "n/a, docs only")).ready).toBe(true);
+    });
+
+    it("refuses a description that drops one label and accepts real answers", () => {
+      const lines = answered.split("\n");
+      expect(ready(lines.slice(1).join("\n")).reason).toContain("General case (missing)");
+      const real = DESIGN_CHECK_LABELS.map(
+        (label, index) => `${String(index + 1)}. **${label}:** answer ${String(index)}`,
+      );
+      expect(ready(real.join("\r\n")).ready).toBe(true);
+    });
+  });
+
   it("is ready when the check passed and main has not changed since", () => {
     expect(decide({ main: green, pr: pr(), run: passed(), mainFilesSince: [] })).toMatchObject({ ready: true });
   });

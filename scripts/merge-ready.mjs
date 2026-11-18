@@ -20,10 +20,14 @@
 //    head the batch checked. The combination on main was then itself checked, so main's newest
 //    commit need not have a finished run, and shared-file changes by other members do not make
 //    the pass stale. A red main still stops it.
+// 4. The design check is answered (docs/RELEASE_AUTHORITY.md, rule 5): the description gives a
+//    non-empty answer after each design-check label of docs/ENGINEERING_STANDARD.md, listed once in
+//    scripts/design-check.mjs. "n/a" counts only with a reason after it.
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { designCheckGaps } from "./design-check.mjs";
 import { BATCH_BRANCH } from "./merge-batch.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -122,6 +126,13 @@ export function decide(facts) {
   const no = (reason, action) => ({ ready: false, reason, action });
   if (pr.state !== "OPEN") return no(`the pull request is ${pr.state.toLowerCase()}`);
   if (pr.draft) return no("the pull request is a draft", "mark it ready, which starts a check");
+  const gaps = designCheckGaps(pr.body);
+  if (gaps.length > 0) {
+    return no(
+      `the design check is not answered: ${gaps.map((gap) => `${gap.label} (${gap.problem})`).join(", ")}`,
+      "answer each design-check label in the description (docs/ENGINEERING_STANDARD.md)",
+    );
+  }
   if (main === undefined) return no("main has no finished Validate run yet", "wait for main's check");
   if (main.conclusion !== "success" && !pr.labels.includes(FIX_LABEL)) {
     return no(
@@ -193,7 +204,9 @@ export function gatherFacts(
   number,
   slug = gh(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).trim(),
 ) {
-  const view = JSON.parse(gh(["pr", "view", String(number), "--json", "state,isDraft,headRefOid,headRefName,labels"]));
+  const view = JSON.parse(
+    gh(["pr", "view", String(number), "--json", "state,isDraft,headRefOid,headRefName,labels,body"]),
+  );
   const files = JSON.parse(gh(["api", `repos/${slug}/pulls/${String(number)}/files`, "--paginate", "--slurp"]))
     .flat()
     .flatMap((file) => [file.filename, ...(file.previous_filename ? [file.previous_filename] : [])]);
@@ -204,6 +217,7 @@ export function gatherFacts(
     headSha: view.headRefOid,
     headRefName: view.headRefName,
     labels: view.labels.map((label) => label.name),
+    body: view.body,
     files,
   };
   const mainRuns = api(

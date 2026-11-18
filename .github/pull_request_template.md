@@ -4,14 +4,14 @@
 
 ## Design check
 
-<!-- The design check from docs/ENGINEERING_STANDARD.md. Short answers are fine. "n/a" needs a reason, for example "n/a: docs only, no rule or content changed". -->
+<!-- The design check from docs/ENGINEERING_STANDARD.md. Answer after each label; short answers are fine. "n/a" needs a reason, for example "n/a: docs only, no rule or content changed". `pnpm merge:ready` refuses a description with a missing or empty answer or a bare "n/a". -->
 
-- **General case:** what is the general version of this, and where else does it (or will it) apply?
-- **One owner:** which single module or data file owns this rule or content now?
-- **The next one:** what does adding the second instance take?
-- **Cause:** for a fix, the cause, which other places shared it, and the check that stops it returning.
-- **Measured:** what numbers changed (time, bytes, frame cost, CI minutes), on which profile?
-- **Removed:** what this deleted or replaced (duplicates, dead code, old paths).
+- **General case:** <!-- What is the general version of this, and where else does it (or will it) apply? -->
+- **One owner:** <!-- Which single module or data file owns this rule or content now? -->
+- **The next one:** <!-- What does adding the second instance take? -->
+- **Cause:** <!-- For a fix: the cause, which other places shared it, and the check that stops it returning. -->
+- **Measured:** <!-- What numbers changed (time, bytes, frame cost, CI minutes), on which profile? -->
+- **Removed:** <!-- What this deleted or replaced (duplicates, dead code, old paths). -->
 
 ## Checks run here
 

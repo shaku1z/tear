@@ -1747,6 +1747,11 @@
       "scripts/build-target.mjs",
       "tests/unit/crazygames-artifact-scope.test.mjs"
     ],
+    "scripts/design-check.mjs": [
+      "scripts/merge-ready.mjs",
+      "tests/unit/merge-ready.test.mjs",
+      "tests/unit/pull-request-template.test.mjs"
+    ],
     "scripts/game-reference-export-preflight.mjs": [
       "scripts/export-game-reference.mjs",
       "tests/unit/game-reference-export-preflight.test.mjs"
