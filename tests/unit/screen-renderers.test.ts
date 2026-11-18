@@ -90,6 +90,9 @@ class TestUi implements ScreenUiPort {
   fitText(...values: Parameters<ScreenUiPort["fitText"]>): ReturnType<ScreenUiPort["fitText"]> {
     return { size: values[3].size, lines: [values[1]], truncated: false, overflow: false };
   }
+  buttonFitWidth(...values: Parameters<ScreenUiPort["buttonFitWidth"]>): number {
+    return values[0].measureText(values[1].label).width + 16;
+  }
   emptyState(...values: Parameters<ScreenUiPort["emptyState"]>): number {
     return values[4] + 60;
   }

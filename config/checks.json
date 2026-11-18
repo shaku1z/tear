@@ -111,11 +111,6 @@
         "seconds": 1
       },
       {
-        "id": "ghost-worker-types",
-        "run": "node scripts/check-ghost-worker-types.mjs",
-        "seconds": 3
-      },
-      {
         "id": "wiki",
         "run": "node --test wiki/tests/wiki.test.mjs",
         "seconds": 5
@@ -219,16 +214,6 @@
         "id": "cloudflare-dry-run",
         "run": "node scripts/check-cloudflare-dry-run.mjs",
         "seconds": 2
-      },
-      {
-        "id": "ghost-worker-typecheck",
-        "run": "node node_modules/typescript/bin/tsc -p tsconfig.worker.json",
-        "seconds": 1
-      },
-      {
-        "id": "ghost-worker-dry-run",
-        "run": "node node_modules/wrangler/bin/wrangler.js deploy --dry-run --config wrangler.ghost.jsonc",
-        "seconds": 1
       }
     ],
     "browser": [

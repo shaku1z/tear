@@ -41,7 +41,10 @@ describe("live playground presentation", () => {
       oneHit: () => false,
       kinds: ["charger"],
       difficulties: () => [{ id: "normal", label: "Normal" }],
-      bosses: [{ id: "warden", name: "Warden" }],
+      bosses: [
+        { id: "warden", name: "Warden" },
+        { id: "echo", name: "The Echo" },
+      ],
       weapons: () => [{ id: "sword", name: "Sword" }],
       colors: () => ({ charger: "#f00", boss: "#000" }),
       uiAccent: () => "#0ff",
@@ -102,6 +105,14 @@ describe("live playground presentation", () => {
     device = "gamepad";
     runtime.renderMenu();
     expect(menu?.sections[0]?.choices.some((choice) => choice.sub !== undefined)).toBe(false);
+    // BOSSES lists the roster once; the Echo's arena shortcut (M) sits on its own row.
+    device = "keyboard";
+    tab = "bosses";
+    runtime.renderMenu();
+    expect(menu?.sections.flatMap((section) => section.choices.map((choice) => [choice.id, choice.sub]))).toEqual([
+      ["boss:warden", undefined],
+      ["boss:echo", "KEY M"],
+    ]);
     // The arena tab lists the real stages only and marks the current one.
     tab = "arena";
     runtime.renderMenu();

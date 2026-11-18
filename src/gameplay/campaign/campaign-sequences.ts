@@ -1,17 +1,17 @@
-import type { CampaignStage, ChapterIntent, ChapterPage } from "../../gameplay/campaign/chapter-controller";
+import type { CampaignStage, ChapterIntent, ChapterPage } from "./chapter-controller";
 import type { CampaignRuntimeState } from "./campaign-runtime-state";
 import {
   createCampaignChapterBindingSpec,
   stageCampaignChapterBinding,
   type CampaignChapterBindingPort,
-} from "../../gameplay/campaign/chapter-cinematic-binding";
-import type { CinematicDirectorBinding } from "../../gameplay/runtime/cinematic-director";
+} from "./chapter-cinematic-binding";
+import type { CinematicDirectorBinding } from "../runtime/cinematic-director";
 import type {
   FinaleCinematicBeat,
   FinaleCinematicChannel,
   FinaleCinematicDirector,
   FinaleCinematicScript,
-} from "../../gameplay/campaign/finale-runtime";
+} from "./finale-runtime";
 
 export {
   beginFinaleRestoration,
@@ -19,7 +19,7 @@ export {
   severNextFinaleAnchor,
   type FinaleCutOptions,
   type FinaleSequenceLaunchOptions,
-} from "../../gameplay/campaign/finale-runtime";
+} from "./finale-runtime";
 
 export type CampaignCinematicDirector = FinaleCinematicDirector;
 export type CampaignCinematicBeat<Context> = FinaleCinematicBeat<Context>;

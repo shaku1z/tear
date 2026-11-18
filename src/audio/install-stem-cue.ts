@@ -1,3 +1,5 @@
+import type { AudioMixerSettings } from "../domain/audio-mixer-settings";
+import { readStoredAudioSettings } from "../persistence/audio-settings";
 import { installPrimaryMusicBackend } from "./music-backend-registry";
 import type { MusicBackend, MusicBackendHost, MusicRunSessionMetadata } from "./music-contracts";
 import { BiomeStemBackend, type LoadedCueRef } from "./stems/biome-stem-backend";
@@ -12,6 +14,31 @@ import { validateMusicRoutingManifest } from "./music/music-routing-validate";
  * tear-music from every song (catalog, routing and each cue manifest). Cue audio
  * stays lazy; it is fetched when a cue is first played.
  */
+/**
+ * Whether to fetch music ahead of the player's first input: not when the player has music
+ * off (or everything muted), and not when the browser asks to save data.
+ */
+export function musicWarmAllowed(
+  settings: Pick<AudioMixerSettings, "musicMuted" | "masterMuted">,
+  connection: { readonly saveData?: boolean } | undefined,
+): boolean {
+  if (connection?.saveData === true) return false;
+  return !settings.musicMuted && !settings.masterMuted;
+}
+
+function browserMusicWarmAllowed(): boolean {
+  let storage: Pick<Storage, "getItem">;
+  try {
+    storage = window.localStorage;
+  } catch {
+    storage = { getItem: () => null };
+  }
+  return musicWarmAllowed(
+    readStoredAudioSettings(storage),
+    (navigator as Navigator & { connection?: { saveData?: boolean } }).connection,
+  );
+}
+
 async function loadMusicIndex(): Promise<BiomeStemBackend> {
   const response = await fetch(new URL("audio/music.json", document.baseURI).href);
   if (!response.ok) throw new Error(`music index unavailable (${String(response.status)})`);
@@ -117,15 +144,31 @@ export function requestedStemsMode(
  * Returns at once: the index is requested after the first frame (or when audio
  * starts, if that comes first).
  */
+/** Runs `task` the next time the browser has idle time. */
+function whenIdle(task: () => void): void {
+  // Safari has no requestIdleCallback.
+  if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(task, { timeout: 2000 });
+  else setTimeout(task, 200);
+}
+
 export function installBiomeStemBackend(): void {
   let pending: Promise<BiomeStemBackend> | null = null;
   const ready = (): Promise<BiomeStemBackend> => (pending ??= loadMusicIndex());
-  // Two frames: the first paints, the second runs after it.
+  // Two frames: the first paints, the second runs after it; then the music index. The menu
+  // cue's first layer follows at the browser's next idle moment, at low priority, so the
+  // first input only has to decode it. Waiting for the page's load event instead came after
+  // a player's first input on a slow phone connection, and gained nothing.
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      ready().catch((error: unknown) => {
-        console.warn("Music index unavailable; built-in music will play", error);
-      });
+      ready()
+        .then((backend) => {
+          whenIdle(() => {
+            if (browserMusicWarmAllowed()) backend.warmFirstLayer(backend.menuCueId);
+          });
+        })
+        .catch((error: unknown) => {
+          console.warn("Music index unavailable; built-in music will play", error);
+        });
     }),
   );
   installPrimaryMusicBackend(() => new DeferredStemBackend(ready));

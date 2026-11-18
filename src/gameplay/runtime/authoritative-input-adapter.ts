@@ -1,9 +1,9 @@
 import type { CommandEnvelope } from "../../domain/envelopes";
 import type { GameAction } from "../../input/game-action";
-import type { AuthoritativeInputState } from "../../gameplay/runtime/authoritative-input";
-import type { TearSimulationActionPort } from "../../gameplay/runtime/tear-simulation-runtime";
-import type { BladePlayerPort, BladePoint } from "../../gameplay/entities/blade-contracts";
-import type { PlayerInputPort } from "../../gameplay/entities/player";
+import type { AuthoritativeInputState } from "./authoritative-input";
+import type { TearSimulationActionPort } from "./tear-simulation-runtime";
+import type { BladePlayerPort, BladePoint } from "../entities/blade-contracts";
+import type { PlayerInputPort } from "../entities/player";
 
 interface LiveInputPlayer extends BladePlayerPort {
   aiInput?: PlayerInputPort;

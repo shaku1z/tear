@@ -168,12 +168,13 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
           {
             label: "SUMMON A BOSS",
             choices: [
+              // One row per roster boss; an arena shortcut (M for the Echo) shows on that boss's row.
               ...options.bosses.map((boss) => ({
                 id: `boss:${boss.id}`,
                 label: boss.name.toUpperCase(),
                 accent: colors.boss ?? options.uiAccent(),
+                ...key(`boss:${boss.id}`),
               })),
-              { id: "boss:echo", label: "THE ECHO", accent: "#b06cff", ...key("boss:echo") },
             ],
           },
         ],

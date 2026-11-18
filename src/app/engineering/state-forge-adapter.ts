@@ -14,7 +14,7 @@ import type {
   GameRun,
   GameSlowZone,
   GameTemporaryWall,
-} from "../shell/game-runtime-state";
+} from "../../gameplay/runtime/game-runtime-state";
 import type { LiveGameHostState } from "../world/game-host-state";
 import type { LiveWorldEntityConstructionPort } from "../world/world-entity-factory";
 import type { RunRandomStreamsSnapshot } from "../../simulation/run-random";
