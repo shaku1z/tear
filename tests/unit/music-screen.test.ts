@@ -196,7 +196,7 @@ describe("song preview", () => {
   it("stops when the player leaves the MUSIC screen, but not under the rename overlay", () => {
     const navigation = createLiveScreenNavigation({
       app: new AppStateController(createSurfaceAvailability("release")),
-      input: { allowLock: false, discardSemanticInput: () => undefined },
+      input: { allowLock: false, discardSemanticInput: () => undefined, returnControl: () => undefined },
       runScreenFact: () => undefined,
     });
     navigation.setScreen("music");

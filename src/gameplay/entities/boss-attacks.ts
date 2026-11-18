@@ -67,6 +67,9 @@ export interface BossAttackSchedule {
 }
 
 /** One boss move as an author writes it. Every time is in seconds. */
+/** A strike that comes again: how often, and how long each repeat is warned (both in seconds). */
+export type BossStrikeRepeat = Readonly<{ every: number; tell: number }>;
+
 export interface BossAttackDefinition<Phase extends string | number, Place = never> {
   readonly id: string;
   readonly phases: readonly Phase[];
@@ -81,10 +84,12 @@ export interface BossAttackDefinition<Phase extends string | number, Place = nev
     BossAttackSchedule;
   readonly motion?: BossMotion;
   /**
-   * `every`: the strike repeats each `every` seconds of the active stage (a channel that keeps attacking); a
-   * travelling shape starts again from the boss each time. Without it the move strikes once.
+   * `repeat`: the strike comes again each `every` seconds of the active stage (a channel that keeps
+   * attacking); a travelling shape starts again from the boss each time. The tell of the move warns of the
+   * first strike. Each later one is warned for the last `tell` seconds of the repeat before it, and the hit is
+   * off during that warning. Without `repeat` the move strikes once.
    */
-  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean; every?: number }>;
+  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean; repeat?: BossStrikeRepeat }>;
   readonly tell: Readonly<{ mark: BossTellMark }>;
   readonly places?: readonly Readonly<{ at: "tell" | "active"; object: Place }>[];
 }
@@ -117,8 +122,14 @@ export interface BossAttack<Phase extends string | number, Place = never> {
   }> &
     BossAttackSchedule;
   readonly motion?: BossMotion;
-  /** `every` in ticks, 0 for a single strike. */
-  readonly hit?: Readonly<{ shape: BossHitShape; damage: number; parryable: boolean; every: number }>;
+  /** `every` and `repeatTell` in ticks, both 0 for a single strike. */
+  readonly hit?: Readonly<{
+    shape: BossHitShape;
+    damage: number;
+    parryable: boolean;
+    every: number;
+    repeatTell: number;
+  }>;
   readonly tell: Readonly<{ mark: BossTellMark }>;
   readonly places: readonly Readonly<{ at: "tell" | "active"; object: Place }>[];
 }
@@ -177,10 +188,16 @@ function buildHit(
 ): BossAttack<string>["hit"] {
   const hit = attack.hit;
   if (hit === undefined) return undefined;
-  const every = hit.every === undefined ? 0 : bossAttackSecondsToTicks(hit.every);
-  if (hit.every !== undefined && (every < 1 || every >= active))
+  const { repeat, ...strike } = hit;
+  const every = repeat === undefined ? 0 : bossAttackSecondsToTicks(repeat.every);
+  const repeatTell = repeat === undefined ? 0 : bossAttackSecondsToTicks(repeat.tell);
+  if (repeat !== undefined && (every < 1 || every >= active))
     fail(table, `${attack.id} repeats its strike less than once a tick or not within its active window`);
-  return Object.freeze({ ...hit, shape: buildShape(hit.shape), every });
+  if (repeat !== undefined && repeat.tell < BOSS_TELL_MIN_LEAD_SECONDS.normal)
+    fail(table, `${attack.id} warns of a repeat for less than ${String(BOSS_TELL_MIN_LEAD_SECONDS.normal)} s`);
+  if (repeat !== undefined && repeatTell >= every)
+    fail(table, `${attack.id} warns of a repeat for as long as the repeat lasts, so the strike is never live`);
+  return Object.freeze({ ...strike, shape: buildShape(hit.shape), every, repeatTell });
 }
 
 function buildAttack<Phase extends string | number, Place>(

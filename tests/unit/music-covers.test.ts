@@ -170,7 +170,7 @@ describe("music covers", () => {
     };
     const navigation = createLiveScreenNavigation({
       app: new AppStateController(createSurfaceAvailability("release")),
-      input: { allowLock: false, discardSemanticInput: () => undefined },
+      input: { allowLock: false, discardSemanticInput: () => undefined, returnControl: () => undefined },
       runScreenFact: () => undefined,
     });
     navigation.setScreen("music");

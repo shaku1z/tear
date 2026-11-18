@@ -50,6 +50,9 @@ type TrainingBlade = Pick<
   | "chainPrevious"
   | "slingCollided"
   | "resetRiftlock"
+  | "reseatHeld"
+  | "aimX"
+  | "aimY"
 >;
 
 /** The same actor reset at a real lesson transition in either host; hydration never calls it. */
@@ -94,28 +97,11 @@ export function resetTutorialActors(
   const handX = actor.x + config.blade.handOffsetX,
     handY = actor.y + config.blade.handOffsetY;
   blade.state = "held";
-  blade.x = handX;
-  blade.y = handY;
-  blade.vx = 0;
-  blade.vy = 0;
   blade.flyTime = 0;
   blade.throwOrigin = null;
   blade.pierced.clear();
   blade.trail.length = 0;
   Object.assign(blade, {
-    angle: -Math.PI / 2,
-    aimX: 0,
-    aimY: -config.blade.aimRadius,
-    tipX: handX,
-    tipY: handY - blade.curLength,
-    prevTipX: handX,
-    prevTipY: handY - blade.curLength,
-    reticleX: handX,
-    reticleY: handY - config.blade.aimRadius,
-    tipVX: 0,
-    tipVY: 0,
-    tipSpeed: 0,
-    glowV: 0,
     tetherFactor: 1,
     throwDmg: 0,
     throwBaseDmg: 0,
@@ -139,7 +125,6 @@ export function resetTutorialActors(
     slingRadius: 0,
     slingAngle: 0,
     slingAngularVelocity: 0,
-    swingActive: false,
     slingWorldCooldown: 0,
   });
   blade.threadcutRoute.length = 0;
@@ -161,6 +146,8 @@ export function resetTutorialActors(
   ])
     Reflect.deleteProperty(blade, key);
   blade.resetRiftlock();
+  // Still, along the aim the player last had: the shared hand-back re-seat, not a fixed overhead pose.
+  blade.reseatHeld({ x: handX, y: handY }, { x: blade.aimX, y: blade.aimY });
 }
 
 export function recoverTutorialBlade(
