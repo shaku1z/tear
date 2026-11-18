@@ -10,7 +10,11 @@ export function padPromptLabel(gamepad: Pick<BrowserGamepad, "bindingLabel" | "g
         ? gamepad.glyph(1)
         : binding === "pause"
           ? gamepad.glyph(9)
-          : gamepad.bindingLabel(binding);
+          : binding === "tab-prev"
+            ? gamepad.glyph(4)
+            : binding === "tab-next"
+              ? gamepad.glyph(5)
+              : gamepad.bindingLabel(binding);
 }
 
 /** The semantic edges a gold demonstration records, as prompt actions. */

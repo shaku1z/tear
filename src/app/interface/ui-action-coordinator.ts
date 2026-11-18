@@ -248,7 +248,12 @@ export function coordinateUiFrame(input: UiFrameInput): UiFrameDecision {
     return Object.freeze({ focus, scroll, action: shortcut, consumeBack: false, pointer: "leave", playUiSound: false });
 
   if (input.back) {
-    const index = input.buttons.findIndex((button) => button.enabled !== false && button.label?.includes("BACK"));
+    // Back presses BACK. A screen with no BACK (the pause screen, the Playground menu) is left
+    // through RESUME instead, once it has settled: the Escape that opened it is not a back.
+    const enabled = (button: UiActionButton): boolean => button.enabled !== false;
+    let index = input.buttons.findIndex((button) => enabled(button) && button.label?.includes("BACK") === true);
+    if (index < 0 && gate.confirm)
+      index = input.buttons.findIndex((button) => enabled(button) && button.label === "RESUME");
     if (index >= 0) {
       return Object.freeze({
         focus,

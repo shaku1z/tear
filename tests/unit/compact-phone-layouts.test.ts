@@ -17,7 +17,8 @@ import {
   createLivePlaygroundPresentation,
   type PlaygroundScreenModel,
 } from "../../src/gameplay/training/live-playground-presentation";
-import { PLAYGROUND_ALL_KINDS } from "../../src/gameplay/training/playground-controller";
+import { PLAYGROUND_ALL_KINDS, PLAYGROUND_HOTKEY_KINDS } from "../../src/gameplay/training/playground-controller";
+import { PLAYGROUND_STAGES } from "../../src/gameplay/stages";
 import { WEAPON_IDS } from "../../src/gameplay/weapon-selection";
 import { catalog, routing } from "../../public/audio/music.json";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
@@ -120,6 +121,22 @@ interface Frame {
   readonly controls: readonly ScreenControl[];
   readonly scroll: number;
   readonly scale: number;
+  /** Whether the button draw would cut this control's label with an ellipsis. */
+  readonly labelCut: (control: ScreenControl) => boolean;
+}
+
+/** Asks the live UI's button draw whether it would cut a control's label with an ellipsis. */
+function labelCutter(ui: ReturnType<typeof createUi>): Frame["labelCut"] {
+  const canvas = recordingCanvas([]);
+  return (control) =>
+    ui.buttonLabelFit(canvas, {
+      label: control.label,
+      w: control.w,
+      h: control.h,
+      ...(control.size === undefined ? {} : { size: control.size }),
+      ...(control.glyph === undefined ? {} : { glyph: control.glyph }),
+      ...(control.sub === undefined ? {} : { sub: control.sub }),
+    }).truncated;
 }
 
 /** Renders one screen at a phone size and scroll; returns what it drew and enqueued, and the scroll it wrote back. */
@@ -157,7 +174,7 @@ function render(
     },
   };
   draw(createScreenRenderers(context));
-  return { texts, controls, scroll: written, scale };
+  return { texts, controls, scroll: written, scale, labelCut: labelCutter(ui) };
 }
 
 const overlaps = (
@@ -172,8 +189,19 @@ const box = (control: ScreenControl) => ({
 });
 const textBox = (text: Glyphs) => ({ x: text.x, y: text.top, r: text.right, b: text.bottom });
 
-/** The phone contract: text floor, touch targets, nothing off the safe frame, nothing overlapping. */
+/** No default button cuts its label with an ellipsis (chips, rail buttons and hidden boxes draw their own way). */
+function expectNoCutLabels(frame: Frame, label: string): void {
+  for (const control of frame.controls)
+    if (control.label !== "" && control.hiddenBox !== true && control.chip !== true && control.ghost !== true)
+      expect(frame.labelCut(control), `${label}: "${control.label}" label cut`).toBe(false);
+}
+
+/**
+ * The phone contract: text floor, touch targets, nothing off the safe frame, nothing overlapping,
+ * and no button label cut with an ellipsis.
+ */
 function expectPhoneContract(frame: Frame, label: string): void {
+  expectNoCutLabels(frame, label);
   for (const text of frame.texts)
     expect(text.size * frame.scale, `${label}: "${text.text}" text size`).toBeGreaterThanOrEqual(11);
   for (const control of frame.controls) {
@@ -443,7 +471,12 @@ const rankedView = {
 const playgroundMenu = {
   id: "pgmenu" as const,
   title: "PLAYGROUND",
-  subtitle: "build the scene — Tab / Esc resumes",
+  subtitle: "Q / E switch tabs · TAB / ESC returns to the arena",
+  tabs: ["SPAWN", "BOSSES", "ARENA", "WEAPON", "RULES", "ABILITIES"].map((label, index) => ({
+    id: `tab:${label.toLowerCase()}`,
+    label,
+    selected: index === 0,
+  })),
   sections: [
     {
       label: "SPAWN ENEMIES",
@@ -508,7 +541,7 @@ const playgroundMenu = {
     },
     {
       label: "ACTIONS",
-      choices: ["ABILITY LAB ›", "CLEAR ENEMIES", "FULL HEAL", "RESET PLAYGROUND"].map((label) => ({
+      choices: ["CLEAR ENEMIES", "FULL HEAL", "RESET ALL"].map((label) => ({
         id: `action:${label}`,
         label,
       })),
@@ -517,8 +550,13 @@ const playgroundMenu = {
 };
 const playgroundLab = {
   id: "pglab" as const,
-  title: "ABILITY LAB",
-  subtitle: "take anything · evolve anything · no waves, just you",
+  title: "PLAYGROUND",
+  subtitle: "Take or evolve any ability · Q / E switch tabs · TAB / ESC returns to the arena",
+  tabs: ["SPAWN", "BOSSES", "ARENA", "WEAPON", "RULES", "ABILITIES"].map((label, index) => ({
+    id: `tab:${label.toLowerCase()}`,
+    label,
+    selected: index === 5,
+  })),
   sections: [
     {
       label: "FILTERS",
@@ -806,7 +844,7 @@ describe("phone compositions (compact density)", () => {
         expect(settings.some((action) => action.key === key)).toBe(true);
     });
 
-    it(`keeps the playground build menu and ability lab inside the frame at ${phone.name}`, () => {
+    it(`keeps the Playground menu and its ABILITIES tab inside the frame at ${phone.name}`, () => {
       const menu = sweep(
         phone,
         (r) => {
@@ -848,6 +886,14 @@ describe("phone compositions (compact density)", () => {
         expectPhoneContract(render(phone, draw, 0, false), "desktop composition");
       }).toThrow();
     }
+    // A label too long for its button is caught as cut, on one line beside a sub line or wrapped.
+    const frame = render(phone, (r) => {
+      r.pgmenu(playgroundMenu);
+    });
+    const box = { x: 0, y: 0, w: 160, h: 60, action: { type: "run.resume" } as const };
+    expect(frame.labelCut({ ...box, label: "SUMMON A VERY LONG BOSS NAME" })).toBe(true);
+    expect(frame.labelCut({ ...box, label: "SUMMON A VERY LONG BOSS NAME", glyph: "◆", sub: "KEY M" })).toBe(true);
+    expect(frame.labelCut({ ...box, label: "RESUME" })).toBe(false);
   });
 
   it("clamps an overscrolled page to its measured extent and writes it back", () => {
@@ -909,11 +955,16 @@ describe("phone compositions (compact density)", () => {
 });
 
 /** The live build-menu model from the real enemy, boss, difficulty and weapon rosters (plus optional extras). */
-function liveBuildMenu(extraKinds = 0, extraBosses = 0): PlaygroundScreenView {
+function liveBuildMenu(
+  extraKinds = 0,
+  extraBosses = 0,
+  tab = "spawn",
+  device: "mouse" | "keyboard" | "gamepad" = "mouse",
+): PlaygroundScreenView {
   let model: PlaygroundScreenModel | undefined;
   createLivePlaygroundPresentation({
-    run: () => ({ diff: "normal", pgArena: -1, pg: {}, mods: { owned: {}, tier: {} } }),
-    inputDevice: () => "mouse",
+    run: () => ({ diff: "normal", pgArena: 0, pg: {}, mods: { owned: {}, tier: {} } }),
+    inputDevice: () => device,
     oneHit: () => false,
     kinds: [...PLAYGROUND_ALL_KINDS, ...Array.from({ length: extraKinds }, (_, index) => `newkind${String(index)}`)],
     difficulties: () => CONFIG.difficulties,
@@ -928,7 +979,10 @@ function liveBuildMenu(extraKinds = 0, extraBosses = 0): PlaygroundScreenView {
     colors: () => ({}),
     uiAccent: () => "#13c4d6",
     stageAccent: () => "#13c4d6",
-    arenaName: () => "TRAINING GROUNDS",
+    arenaName: () => "ASHEN COURT",
+    arenas: () => PLAYGROUND_STAGES.map((stage) => stage.name),
+    tab: () => tab,
+    hotkeyKinds: PLAYGROUND_HOTKEY_KINDS,
     selectedWeapon: () => "sword",
     upgrades: () => [],
     abilityColors: () => ({}),
@@ -986,11 +1040,15 @@ function renderDesktop(
       setScroll: () => undefined,
     }),
   );
-  return { texts, controls, scroll, scale };
+  return { texts, controls, scroll, scale, labelCut: labelCutter(ui) };
 }
 
-/** No control, heading or label may overlap another, and everything stays on the 1600x900 stage. */
+/**
+ * No control, heading or label may overlap another, everything stays on the 1600x900 stage, and no
+ * button label is cut.
+ */
 function expectNoDesktopOverlap(frame: Frame, label: string): void {
+  expectNoCutLabels(frame, label);
   frame.controls.forEach((control, index) => {
     expect(
       control.x >= 0 && control.x + control.w <= 1600 && control.y >= 0 && control.y + control.h <= 900,
@@ -1004,7 +1062,8 @@ function expectNoDesktopOverlap(frame: Frame, label: string): void {
     for (const other of frame.texts.slice(index + 1)) {
       expect(overlaps(textBox(text), textBox(other)), `${label}: "${text.text}" overlaps "${other.text}"`).toBe(false);
     }
-    for (const control of frame.controls)
+    // A tab's hit area is an invisible control over its own label.
+    for (const control of frame.controls.filter((entry) => entry.hiddenBox !== true))
       expect(overlaps(textBox(text), box(control)), `${label}: "${text.text}" runs under "${control.label}"`).toBe(
         false,
       );
@@ -1012,32 +1071,39 @@ function expectNoDesktopOverlap(frame: Frame, label: string): void {
 }
 
 describe("desktop playground build menu", () => {
+  const headings: Readonly<Record<string, readonly string[]>> = {
+    spawn: ["ENEMIES", "HEALTH", "HOW MANY", "DIFFICULTY"],
+    bosses: ["SUMMON A BOSS"],
+    arena: ["ARENA"],
+    weapon: ["WEAPON · CHANGING IT RESTARTS THE ARENA"],
+    rules: ["RULES", "ARENA ACTIONS"],
+  };
   for (const size of [
     { width: 1600, height: 900 },
     { width: 1280, height: 720 },
-  ]) {
-    it(`lays out every live enemy, boss and heading without overlap at ${String(size.width)}x${String(size.height)}`, () => {
-      const view = liveBuildMenu();
-      const frame = renderDesktop(size, (r) => {
-        r.pgmenu(view);
-      });
-      expectNoDesktopOverlap(frame, `pgmenu ${String(size.width)}x${String(size.height)}`);
-      const offered = new Set(frame.controls.map((control) => JSON.stringify(control.action)));
-      for (const choice of view.sections.flatMap((section) => section.choices)) {
-        expect(
-          offered.has(JSON.stringify({ type: "playground.action", id: choice.id })),
-          `${choice.label} offered`,
-        ).toBe(true);
-      }
-      expect(offered.has(JSON.stringify({ type: "run.resume" }))).toBe(true);
-      for (const heading of ["SPAWN ENEMIES", "SPAWN MODIFIERS", "DIFFICULTY", "SUMMON A BOSS", "ARENA", "MODIFIERS"]) {
-        expect(
-          frame.texts.some((text) => text.text === heading),
-          `${heading} drawn`,
-        ).toBe(true);
-      }
-    });
-  }
+  ])
+    for (const [tab, labels] of Object.entries(headings))
+      for (const device of ["mouse", "keyboard", "gamepad"] as const)
+        it(`lays out the ${tab} tab without overlap at ${String(size.width)}x${String(size.height)} (${device})`, () => {
+          const view = liveBuildMenu(0, 0, tab, device);
+          const frame = renderDesktop(size, (r) => {
+            r.pgmenu(view);
+          });
+          expectNoDesktopOverlap(frame, `pgmenu ${tab} ${String(size.width)}x${String(size.height)}`);
+          const offered = new Set(frame.controls.map((control) => JSON.stringify(control.action)));
+          for (const choice of [...(view.tabs ?? []), ...view.sections.flatMap((section) => section.choices)]) {
+            expect(
+              offered.has(JSON.stringify({ type: "playground.action", id: choice.id })),
+              `${choice.label} offered`,
+            ).toBe(true);
+          }
+          expect(offered.has(JSON.stringify({ type: "run.resume" }))).toBe(true);
+          for (const heading of labels)
+            expect(
+              frame.texts.some((text) => text.text === heading),
+              `${heading} drawn`,
+            ).toBe(true);
+        });
 
   it("derives the grid from the item count, so added enemies and bosses push the next group down", () => {
     for (const [kinds, bosses] of [
@@ -1046,12 +1112,13 @@ describe("desktop playground build menu", () => {
       [3, 2],
       [4, 3],
     ] as const) {
-      expectNoDesktopOverlap(
-        renderDesktop({ width: 1600, height: 900 }, (r) => {
-          r.pgmenu(liveBuildMenu(kinds, bosses));
-        }),
-        `+${String(kinds)} kinds +${String(bosses)} bosses`,
-      );
+      for (const tab of ["spawn", "bosses"])
+        expectNoDesktopOverlap(
+          renderDesktop({ width: 1600, height: 900 }, (r) => {
+            r.pgmenu(liveBuildMenu(kinds, bosses, tab));
+          }),
+          `${tab} +${String(kinds)} kinds +${String(bosses)} bosses`,
+        );
     }
   });
 });
@@ -1200,7 +1267,7 @@ describe("shop BUY state at both densities", () => {
 });
 
 describe("playground: one screen definition at both densities", () => {
-  it("offers the same actions on the desktop board and the phone flow, and in the Ability Lab", () => {
+  it("offers the same actions on the desktop and phone menu tabs, and in ABILITIES", () => {
     const menu = (r: ReturnType<typeof createScreenRenderers>): void => {
       r.pgmenu(playgroundMenu);
     };
