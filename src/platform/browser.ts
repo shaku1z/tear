@@ -1,6 +1,7 @@
 import {
   available,
   unavailable,
+  type Capability,
   type FullscreenService,
   type OverlayService,
   type PlatformServices,
@@ -16,12 +17,23 @@ interface BrowserWindowLike {
   open?(url: string, target?: string, features?: string): BrowserWindowLike | null;
 }
 
-interface BrowserDocumentLike {
+interface FullscreenTargetLike {
+  requestFullscreen?: () => Promise<void>;
+}
+
+/**
+ * The element that goes fullscreen: the page's game wrapper, which holds the canvas and the
+ * HTML controls over it, so the stylesheet's `#wrap:fullscreen` rules apply.
+ */
+const FULLSCREEN_TARGET_ID = "wrap";
+
+export interface BrowserDocumentLike {
   readonly hidden?: boolean;
   readonly hasFocus?: () => boolean;
   readonly fullscreenEnabled?: boolean;
   readonly fullscreenElement?: unknown;
-  readonly documentElement?: { requestFullscreen?: () => Promise<void> };
+  readonly documentElement?: FullscreenTargetLike;
+  getElementById?(id: string): FullscreenTargetLike | null;
   exitFullscreen?: () => Promise<void>;
   addEventListener?(type: "visibilitychange", listener: () => void): void;
 }
@@ -47,9 +59,14 @@ function storageFrom(windowLike: BrowserWindowLike | undefined): SyncStringStora
   }
 }
 
-function fullscreenCapability(documentLike?: BrowserDocumentLike) {
-  const element = documentLike?.documentElement;
-  if (!documentLike?.fullscreenEnabled || !element?.requestFullscreen || !documentLike.exitFullscreen) {
+/**
+ * The one owner of page fullscreen; the fullscreen button and key both call it. Element
+ * fullscreen is optional: iPhone Safari has none (`fullscreenEnabled` is undefined), and a
+ * browser may refuse a request, so both report "not available" or `false` instead of throwing.
+ */
+export function browserFullscreen(documentLike?: BrowserDocumentLike): Capability<FullscreenService> {
+  const root = documentLike?.documentElement;
+  if (!documentLike?.fullscreenEnabled || !root?.requestFullscreen || !documentLike.exitFullscreen) {
     return unavailable<FullscreenService>("Fullscreen is not supported in this browser context.");
   }
   const service: FullscreenService = {
@@ -58,7 +75,9 @@ function fullscreenCapability(documentLike?: BrowserDocumentLike) {
     },
     async enter() {
       try {
-        await element.requestFullscreen?.();
+        // Looked up per request: the wrapper may be added after the services are created.
+        const target = documentLike.getElementById?.(FULLSCREEN_TARGET_ID) ?? root;
+        await target.requestFullscreen?.();
         return true;
       } catch {
         return false;
@@ -127,7 +146,7 @@ export function createBrowserPlatformServices(options: BrowserPlatformOptions = 
     ads: unavailable("Ads are not used in the standalone build."),
     achievements: unavailable("Platform achievements are unavailable."),
     analytics: unavailable("Analytics are not configured."),
-    fullscreen: fullscreenCapability(documentLike),
+    fullscreen: browserFullscreen(documentLike),
     overlay: overlayCapability(windowLike),
   });
 }

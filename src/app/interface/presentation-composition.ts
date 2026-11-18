@@ -7,7 +7,7 @@ import type { ButtonLayerUiPort, CanvasUiButton } from "../../presentation/scree
 import { createUiConfirmArming, type InteractiveUiButton, type UiRuntimeInput } from "./ui-runtime-controller";
 import { NO_POINTER } from "../../domain/pointer-ownership";
 import { shouldDrawCanvasCursor } from "../../presentation/cursor-contract";
-import { domChromeVisibility } from "../../presentation/dom-chrome-policy";
+import { controlHintText, domChromeVisibility } from "../../presentation/dom-chrome-policy";
 import { cinematicPromptForDevice } from "../../presentation/cinematic-prompts";
 import { createLivePresentationHost, type LivePresentationHost } from "./presentation-host";
 import { screenDensity } from "../../domain/screen-catalog";
@@ -142,6 +142,7 @@ export interface LivePresentationFrameServices<Screen extends string, Stage exte
   readonly lockHint: HTMLElement | null;
   readonly inputHint: HTMLElement | null;
   readonly fullscreenButton: HTMLElement | null;
+  readonly fullscreenAvailable: () => boolean;
   /** Current run age and the profile's completed runs, for the control legend. */
   readonly controlHintContext: () => Readonly<{ runSeconds: number; completedRuns: number }>;
   readonly clamp: (value: number, minimum: number, maximum: number) => number;
@@ -385,12 +386,14 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
       setFocus: state.setFocus,
       updateDomHints: (screen) => {
         const capture = services.capturePolicy(),
-          run = services.controlHintContext();
+          run = services.controlHintContext(),
+          fullscreenAvailable = services.fullscreenAvailable();
         const visible = domChromeVisibility({
           screen,
           uiIncluded: capture.ui === "include",
           pointerLockIncluded: capture.pointerLock === "include",
           touch: services.touchActive(),
+          fullscreenAvailable,
           inputMode: services.input.mode,
           pointerLocked: services.pointerLocked(),
           runSeconds: run.runSeconds,
@@ -398,6 +401,10 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
           presentationBusy: services.cinema.active || state.bossIntroActive(),
         });
         setDisplay(services.lockHint, visible.lockHint ? "block" : "none");
+        if (visible.controlHint && services.inputHint !== null) {
+          const text = controlHintText(fullscreenAvailable);
+          if (services.inputHint.textContent !== text) services.inputHint.textContent = text;
+        }
         setDisplay(services.inputHint, visible.controlHint ? "block" : "none");
         // "" hands display back to the stylesheet, which also hides it on coarse pointers.
         setDisplay(services.fullscreenButton, visible.fullscreen ? "" : "none");

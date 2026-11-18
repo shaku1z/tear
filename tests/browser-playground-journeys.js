@@ -453,8 +453,8 @@ const journey = (practiceLab) =>
         await page.mouse.click(point.x, point.y);
       };
 
-      // E opens the menu on its first tab; the E that opened it does not also switch tabs.
-      await pressUntilScreen("e", "pgmenu");
+      // Tab opens the menu on its first tab (E throws; the menu key is Tab in the binding table).
+      await pressUntilScreen("Tab", "pgmenu");
       await page.evaluate(() => window.__PLAYGROUND_TEXT__.splice(0));
       await tabOpen("ENEMIES");
       console.log("playground journey: menu open on SPAWN");

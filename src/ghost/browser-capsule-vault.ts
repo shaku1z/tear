@@ -23,7 +23,7 @@ import {
   type GhostVaultMaintenanceOptions,
   type GhostVaultMaintenanceReport,
 } from "./vault-maintenance";
-import { GhostVaultKnowledgeLibraries } from "./durable-knowledge-libraries";
+import { GhostCorruptCapsuleRecords } from "./corrupt-capsule-records";
 
 export interface BrowserGhostVaultCatalog {
   readonly manifests: readonly TearGhostManifest[];
@@ -77,7 +77,7 @@ export async function inspectBrowserGhostVaultReadOnly(
   const vault = await openBrowserGhostVault(factory),
     doctor = new GhostDoctor(vault);
   const manifests = await listBrowserGhostCapsuleManifests(factory);
-  const libraries = new GhostVaultKnowledgeLibraries(vault.backend());
+  const corruptRecords = new GhostCorruptCapsuleRecords(vault.backend());
   const reports = await Promise.all(manifests.map((manifest) => doctor.scan(manifest.id)));
   const integrity = manifests.map((manifest, index) =>
     Object.freeze({ id: manifest.id, healthy: reports[index]?.healthy === true }),
@@ -88,7 +88,7 @@ export async function inspectBrowserGhostVaultReadOnly(
       let complete = false;
       if (report !== undefined && !report.healthy) {
         try {
-          const prepared = await libraries.prepareCorruptCapsuleRecord(manifest, report, manifest.createdAt);
+          const prepared = await corruptRecords.prepare(manifest, report, manifest.createdAt);
           const write = ghostDoctorManifestIndexWrite(manifest);
           complete =
             prepared.write === undefined && (await vault.backend().get(write.store, write.key)) === write.value;
@@ -109,7 +109,6 @@ export async function inspectBrowserGhostVaultReadOnly(
       evictedCapsuleIds: Object.freeze([]),
       integrity: Object.freeze(integrity),
       rebuiltIndexes: 0,
-      libraries: await libraries.inventory(),
     }),
   });
 }
@@ -136,11 +135,7 @@ export async function repairBrowserGhostCapsule(
     );
   const sourceChunks = await chunkGuards(source);
   const report = await doctor.scan(id);
-  const membership = await new GhostVaultKnowledgeLibraries(backend).prepareCorruptCapsuleRecord(
-    source,
-    report,
-    new Date().toISOString(),
-  );
+  const corruptRecord = await new GhostCorruptCapsuleRecords(backend).prepare(source, report, new Date().toISOString());
   const indexWrite = ghostDoctorManifestIndexWrite(source),
     indexRaw = await backend.get(indexWrite.store, indexWrite.key);
   const manifests = await Promise.all(
@@ -195,11 +190,11 @@ export async function repairBrowserGhostCapsule(
       { store: "manifests", key: selected.id, expected: selected.raw },
       ...selected.chunks,
       { store: "indexes", key: indexWrite.key, ...(indexRaw === undefined ? {} : { expected: indexRaw }) },
-      membership.guard,
+      corruptRecord.guard,
     ],
     [
       ...(indexRaw === indexWrite.value ? [] : [indexWrite]),
-      ...(membership.write === undefined ? [] : [membership.write]),
+      ...(corruptRecord.write === undefined ? [] : [corruptRecord.write]),
     ],
   );
   return Object.freeze({ sourceId: id, childId: selected.id, reused });

@@ -119,7 +119,11 @@ its `references/gate-routing.md` instead of guessing. In short: targeted tests
 while iterating; `pnpm check:quick` for cheap static confidence;
 `pnpm check:functional` is what CI requires on every pull request;
 `pnpm check` is the full release gate and runs once for a release candidate
-([docs/RELEASE_AUTHORITY.md](docs/RELEASE_AUTHORITY.md)). Never weaken a gate to
+([docs/RELEASE_AUTHORITY.md](docs/RELEASE_AUTHORITY.md)). Locally, run any other heavy
+command (a whole suite, a build, a browser test) through `pnpm queue -- <command>`:
+every worktree shares one queue, served in arrival order, and the check groups
+other than `fast` join it themselves. Formatting, `pnpm lint --changed`, one test
+file and `pnpm check:quick` start at once. Never weaken a gate to
 make it pass. Prettier owns formatting: run `pnpm format` before handing off;
 `pnpm format:check` is in `check:quick` and CI (`static.format-check`). Settings
 are in `.prettierrc.json`, targets in `scripts/format.mjs` and exclusions (JSON

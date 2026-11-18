@@ -14,7 +14,7 @@ export interface ScenePressState {
   readonly pressed: { clear(): void };
   tJump: boolean;
   tDash: boolean;
-  /** The throw edge: right mouse button, the touch throw button or the controller's throw. */
+  /** The throw edge: right mouse button, the throw key, the touch throw button or the controller's throw. */
   rmb: boolean;
   takeClick(): unknown;
   readonly semantic: { discardPresses(): void };

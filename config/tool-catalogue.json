@@ -422,14 +422,6 @@
       ],
       "duration": "minutes"
     },
-    "test:browser:ghost-v3-live-capture": {
-      "purpose": "Browser check of Ghost v3 live replay capture",
-      "effects": [
-        "writes-artifacts",
-        "launches-browser"
-      ],
-      "duration": "under-a-minute"
-    },
     "test:browser:verdant-presentation": {
       "purpose": "Browser capture of the Verdant biome presentation",
       "effects": [
@@ -928,6 +920,13 @@
         "read-only"
       ],
       "duration": "seconds"
+    },
+    "queue": {
+      "purpose": "Runs a heavy local command in its turn in the queue all worktrees share; light commands start at once",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "long"
     },
     "leftovers": {
       "purpose": "Read-only: merged local branches, ignored tracked files, leftovers beside the repo and cache sizes",
@@ -1682,7 +1681,7 @@
       ]
     },
     "scripts/run-checks.mjs": {
-      "purpose": "Runs config/checks.json groups in order, stops at the first failure, shares machine-wide slots and records a full pass",
+      "purpose": "Runs config/checks.json groups in order, stops at the first failure, waits its turn in scripts/queue.mjs and records a full pass",
       "effects": [
         "writes-artifacts",
         "launches-browser"
@@ -1694,6 +1693,16 @@
         "check:quick",
         "check:nightly",
         "check:weekly"
+      ]
+    },
+    "scripts/queue.mjs": {
+      "purpose": "Arrival-order queue for heavy local commands shared by all worktrees; run-checks joins it too",
+      "effects": [
+        "writes-artifacts"
+      ],
+      "duration": "long",
+      "via": [
+        "queue"
       ]
     },
     "scripts/run-current-live-detached-parity.mjs": {

@@ -1,3 +1,6 @@
+import { dailyDateKey, dailyReceiptId } from "../../domain/reward-receipts";
+import type { Achievement } from "./achievements";
+
 export type DailyProgressMode = "add" | "max";
 
 export interface DailyChallenge {
@@ -9,21 +12,22 @@ export interface DailyChallenge {
   txt(goal: number): string;
 }
 
+/** Today's progress. Which challenges have paid is not kept here: each claim is a receipt in the profile. */
 export interface DailyState {
   date: string;
   prog: Record<string, number>;
-  done: Record<string, number>;
 }
 
 interface StoredDailyState {
   date?: string;
   prog?: Record<string, number>;
-  done?: Record<string, number>;
 }
 
 export interface DailyProfilePort {
   readonly data: { daily?: StoredDailyState; readonly [key: string]: unknown };
-  addShards(amount: number): void;
+  /** Pays once per receipt and saves; false when the receipt was paid already or its day is closed. */
+  claimShards(receiptId: string, shards: number): boolean;
+  shardsClaimable(receiptId: string): boolean;
   save(): void;
 }
 
@@ -62,10 +66,6 @@ export function localCalendarClock(): CalendarClockPort {
       return new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
     },
   };
-}
-
-export function dailyDateKey(date: Date): string {
-  return `${String(date.getFullYear())}-${String(date.getMonth() + 1)}-${String(date.getDate())}`;
 }
 
 export function selectDailyChallenges(
@@ -155,19 +155,20 @@ export function createDailyChallenges(dependencies: DailyChallengeDependencies):
     const key = daily.todayKey();
     const current = dependencies.profile.data.daily;
     if (current?.date !== key) {
-      const next = { date: key, prog: {}, done: {} };
+      const next = { date: key, prog: {} };
       dependencies.profile.data.daily = next;
       dependencies.profile.save();
       return next;
     }
-    if (!current.prog || !current.done) {
-      const repaired: DailyState = { date: current.date, prog: current.prog ?? {}, done: current.done ?? {} };
+    if (!current.prog) {
+      const repaired: DailyState = { date: current.date, prog: {} };
       dependencies.profile.data.daily = repaired;
       dependencies.profile.save();
       return repaired;
     }
-    return { date: current.date, prog: current.prog, done: current.done };
+    return { date: current.date, prog: current.prog };
   };
+  const receipt = (challenge: DailyChallenge): string => dailyReceiptId(daily.todayKey(), challenge.id);
 
   const daily: DailyChallenges = {
     POOL: pool,
@@ -191,7 +192,7 @@ export function createDailyChallenges(dependencies: DailyChallengeDependencies):
       return Math.min(ensure().prog[challenge.key] ?? 0, challenge.goal);
     },
     isDone(challenge) {
-      return (ensure().done[challenge.id] ?? 0) > 0;
+      return !dependencies.profile.shardsClaimable(receipt(challenge));
     },
     bump(key, value = 1, mode = "add") {
       const selected = this.today();
@@ -201,12 +202,10 @@ export function createDailyChallenges(dependencies: DailyChallengeDependencies):
       this.check();
     },
     check() {
-      const selected = this.today();
       const state = ensure();
-      for (const challenge of selected) {
-        if (state.done[challenge.id] || (state.prog[challenge.key] ?? 0) < challenge.goal) continue;
-        state.done[challenge.id] = 1;
-        dependencies.profile.addShards(challenge.shards);
+      for (const challenge of this.today()) {
+        if ((state.prog[challenge.key] ?? 0) < challenge.goal) continue;
+        if (!dependencies.profile.claimShards(receipt(challenge), challenge.shards)) continue;
         dependencies.achievements.pending.push({
           id: `daily_${challenge.id}`,
           name: "Daily Complete",
@@ -215,7 +214,6 @@ export function createDailyChallenges(dependencies: DailyChallengeDependencies):
           cat: "mastery",
           shards: challenge.shards,
         });
-        dependencies.profile.save();
       }
     },
     doneCount() {
@@ -224,4 +222,3 @@ export function createDailyChallenges(dependencies: DailyChallengeDependencies):
   };
   return daily;
 }
-import type { Achievement } from "./achievements";

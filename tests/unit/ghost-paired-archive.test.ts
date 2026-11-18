@@ -434,7 +434,6 @@ describe("linked parent/finale portable archive", () => {
             evictedCapsuleIds: [],
             integrity: [],
             rebuiltIndexes: 0,
-            libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] },
           },
         }),
       repair: vi.fn(),
