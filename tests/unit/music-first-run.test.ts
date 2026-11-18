@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MusicCatalog } from "../../src/audio/music/catalog";
+import { parseMusicCatalog, type MusicCatalog } from "../../src/audio/music/catalog";
 import { resolveMusicRoute } from "../../src/audio/music/music-routing-resolver";
 import type { MusicRoutingContext } from "../../src/audio/music/music-routing-types";
 import { validateMusicRoutingManifest } from "../../src/audio/music/music-routing-validate";
@@ -131,24 +131,34 @@ describe("saved progress at run start decides first runs and unlocks", () => {
     expect(after.isUnlocked("once-at-a-time")).toBe(true);
   });
 
-  it("reads any condition of the shared language, and keeps a work it cannot read locked", () => {
-    const withUnlocks = {
+  it("reads any condition of the shared language", () => {
+    const unlockCatalog = parseMusicCatalog({
+      format: "tear-music-catalog",
+      version: 1,
+      stations: [],
       works: [
         { id: "grinder", unlock: { type: "stat-threshold", stat: "kills", goal: 10 } },
         { id: "both", unlock: { type: "all", of: [{ type: "default" }, { type: "achievement", id: "first_boss" }] } },
-        { id: "mystery", unlock: { type: "moon-phase" } },
-        { id: "broken", unlock: { type: "boss-defeat" } },
-        { id: "missing" },
       ],
-    } as unknown as MusicCatalog;
+    });
     const routing = (stats: Record<string, unknown>, ach: Record<string, unknown> = {}) =>
-      musicProgressRouting({ stats, ach }, withUnlocks, VERDANT);
+      musicProgressRouting({ stats, ach }, unlockCatalog, VERDANT);
     expect(routing({ kills: 9 }).isUnlocked("grinder")).toBe(false);
     expect(routing({ kills: 10 }).isUnlocked("grinder")).toBe(true);
     expect(routing({}).isUnlocked("both")).toBe(false);
     expect(routing({}, { first_boss: 1 }).isUnlocked("both")).toBe(true);
-    for (const id of ["mystery", "broken", "missing", "not-a-work"])
-      expect(routing({ kills: 99 }).isUnlocked(id), id).toBe(false);
+    expect(routing({ kills: 99 }).isUnlocked("not-a-work")).toBe(false);
+  });
+
+  it("refuses a catalog whose work has an unlock this build cannot read", () => {
+    const withUnlock = (unlock?: unknown) => ({
+      format: "tear-music-catalog",
+      version: 1,
+      stations: [],
+      works: [{ id: "w", ...(unlock === undefined ? {} : { unlock }) }],
+    });
+    for (const unlock of [{ type: "moon-phase" }, { type: "boss-defeat" }, undefined])
+      expect(() => parseMusicCatalog(withUnlock(unlock)), JSON.stringify(unlock)).toThrow(/invalid music work unlock/u);
   });
 
   it("gives no first run and no unlocks without progress (seed races, practice, menus)", () => {

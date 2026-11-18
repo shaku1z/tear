@@ -19,8 +19,11 @@ function finite(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-/** `rootbound` to `killRootbound`: how a boss defeat is counted in the stats. */
-function bossKillStat(bossId: string): string {
+/**
+ * `rootbound` to `killRootbound`: the stat that counts a boss defeat. The one spelling: the kill runtime
+ * writes it, the screens read it, and `progressFacts` answers `bossDefeated` from it.
+ */
+export function bossKillStat(bossId: string): string {
   return `${BOSS_KILL_STAT_PREFIX}${bossId.charAt(0).toUpperCase()}${bossId.slice(1)}`;
 }
 

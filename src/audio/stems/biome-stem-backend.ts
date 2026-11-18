@@ -1,5 +1,5 @@
 import { progressFacts, type ProgressSource } from "../../domain/progress-facts";
-import { conditionFrom, conditionMet } from "../../domain/unlock-condition";
+import { conditionMet } from "../../domain/unlock-condition";
 import { unwrapBrowserAudioContext, unwrapBrowserAudioNode } from "../browser-audio";
 import type { TemporaryMuteReason } from "../mixer";
 import type {
@@ -543,8 +543,8 @@ export function musicProgressRouting(
   return {
     firstRun: !facts.biomeEntered(biomeId),
     isUnlocked: (workId) => {
-      const condition = conditionFrom(catalog?.works.find((work) => work.id === workId)?.unlock);
-      return condition !== null && conditionMet(condition, facts);
+      const unlock = catalog?.works.find((work) => work.id === workId)?.unlock;
+      return unlock !== undefined && conditionMet(unlock, facts);
     },
   };
 }

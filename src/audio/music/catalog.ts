@@ -5,6 +5,7 @@
  * phase, instrumental, menu edit…). The player selects the *work*; this layer
  * picks the best version that is actually playable in the current context.
  */
+import { conditionFrom, conditionProblems, type UnlockCondition } from "../../domain/unlock-condition";
 
 export type CompatibilityClass = "A" | "B" | "C" | "D";
 
@@ -67,7 +68,8 @@ export interface MusicWork {
   readonly key: string;
   readonly tags: readonly string[];
   readonly stations: readonly string[];
-  readonly unlock: { readonly type: string; readonly bossId?: string; readonly biome?: string };
+  /** What the player must have done to hear it, in the shared condition language. */
+  readonly unlock: UnlockCondition;
   readonly rights: MusicRights;
   readonly versions: Readonly<Record<string, MusicVersion>>;
 }
@@ -119,7 +121,17 @@ export function parseMusicCatalog(value: unknown): MusicCatalog {
   ) {
     throw new TypeError("unsupported music catalog format/version");
   }
-  return Object.freeze({ ...value, format: "tear-music-catalog", version: 1 }) as MusicCatalog;
+  const parsed = Object.freeze({ ...value, format: "tear-music-catalog", version: 1 }) as MusicCatalog;
+  const works = parsed.works.map((work) => {
+    const known: Record<string, unknown> = isRecord(work) ? work : {};
+    const unlock = conditionFrom(known.unlock);
+    if (unlock === null) {
+      const where = typeof known.id === "string" ? known.id : "a music work";
+      throw new TypeError(`invalid music work unlock: ${conditionProblems(known.unlock, where).join("; ")}`);
+    }
+    return { ...work, unlock };
+  });
+  return Object.freeze({ ...parsed, works });
 }
 
 /** Semantic content used by compatibility tests and future catalog integrity checks. */
