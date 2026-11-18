@@ -4,7 +4,7 @@ import { migrateProfileEnvelope, PROFILE_ENVELOPE_VERSION } from "../../src/pers
 import {
   CURRENT_RULESET_VERSION,
   RULESET_STEPS,
-  SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION,
+  SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION,
   rulesetRefusal,
 } from "../../src/gameplay/run/ruleset-version";
 import { ReplayLibraryController, recordingRefusal } from "../../src/app/library/replay-library-controller";
@@ -108,13 +108,13 @@ describe("ruleset steps", () => {
     const versions = RULESET_STEPS.map((step) => step.version);
     expect(new Set(versions).size).toBe(versions.length);
     expect(versions.at(-1)).toBe(CURRENT_RULESET_VERSION);
-    expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION);
+    expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION);
     for (const step of RULESET_STEPS) expect(step.refuses.length === 0 || step.reason.length > 0).toBe(true);
   });
 
   it("keeps an old Endless recording and refuses an old Gauntlet one with the reason", () => {
-    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION, "endless")).toBeNull();
-    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION, "gauntlet")).toBe(
+    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION, "endless")).toBeNull();
+    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION, "gauntlet")).toBe(
       "recorded under the old Gauntlet rules",
     );
     expect(rulesetRefusal(CURRENT_RULESET_VERSION, "gauntlet")).toBeNull();
@@ -124,7 +124,7 @@ describe("ruleset steps", () => {
   });
 
   it("refuses an old Gauntlet capsule from the Vault list and Theater with a message players read", () => {
-    const old = (mode: string) => ({ mode, provenance: { rulesetVersion: SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION } });
+    const old = (mode: string) => ({ mode, provenance: { rulesetVersion: SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION } });
     expect(recordingRefusal(old("endless"))).toBeNull();
     expect(recordingRefusal(old("gauntlet"))).toBe("recorded under the old Gauntlet rules");
 
