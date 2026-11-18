@@ -2,6 +2,7 @@ import { createCareerArchiveRenderer } from "./career-archive";
 import type { AchievementsScreenView, ProfileScreenView, ScreenRenderContext } from "./contracts";
 import { clipBody, page, pageFooter, replayRow, tabs } from "./screen-primitives";
 import { createCompactProfile } from "./compact-profile";
+import { profileListEmptyState } from "./profile-list-empty-state";
 
 const PROFILE_HUE = "#b06cff";
 /** First y under the profile tab strip; the snapshot's scroll bounds use the same value. */
@@ -61,20 +62,8 @@ export function createProfileAchievementRenderers(context: ScreenRenderContext) 
       const linkedPair = view.tab === "vault" && view.replays.some((r) => r.canDownloadLinkedPair);
       const rowHeight = linkedPair ? 128 : 96;
       if (listEmpty) {
-        const line = view.tab === "vault" ? "No saved replays yet" : "No runs recorded yet";
-        const detail =
-          view.tab === "vault"
-            ? (view.message ?? "Every run you finish is saved here automatically, ready to watch from the start.")
-            : (view.emptyMessage ?? "Every real run lands here automatically.");
-        const ctaY = ui.emptyState(
-          canvas,
-          view.tab === "vault" ? "◆" : "▶",
-          line,
-          context.width / 2,
-          top + 110,
-          detail,
-          720,
-        );
+        const empty = profileListEmptyState(view);
+        const ctaY = ui.emptyState(canvas, empty.glyph, empty.line, context.width / 2, top + 110, empty.detail, 720);
         if (view.tab === "replays")
           context.enqueue({
             x: context.width / 2 - 130,
