@@ -1,5 +1,6 @@
 import { releasePointerLock } from "../../platform/browser-pointer-lock";
 import { screenLoss } from "../../domain/screen-loss";
+import { anyKeyIn, keyCodes } from "../../domain/keyboard-bindings";
 import type { InputMode, Point } from "../../input/browser-input-contracts";
 import { UI_CONFIRM_SETTLE_SECONDS } from "../interface/ui-action-coordinator";
 
@@ -161,14 +162,14 @@ export class RuntimeFrameCoordinator {
       document.body.dataset.imode = input.mode;
     }
     if (clipper !== null) {
-      if (input.pressed.has("BracketLeft")) clipper.start();
-      if (input.pressed.has("BracketRight")) clipper.stop();
+      if (anyKeyIn(input.pressed, "clip-start")) clipper.start();
+      if (anyKeyIn(input.pressed, "clip-stop")) clipper.stop();
     }
     const confirm = { key: false, touch: false, pad: false, click: false };
     if (this.#options.state() === "playing" && cinema.active) {
       const gamepad = pad?.connected ? navigator.getGamepads()[pad.index] : null;
       Object.assign(confirm, {
-        key: input.held.has("Space") || input.held.has("Enter") || input.held.has("NumpadEnter"),
+        key: anyKeyIn(input.held, "confirm"),
         touch: !!input.btnHeld.jump,
         pad: !!gamepad?.buttons[0]?.pressed,
         click: !!input.takeClick() || input.tJump,
@@ -195,7 +196,7 @@ export class RuntimeFrameCoordinator {
     const lostScreen = screenLoss({ ...away, captureLost: this.#wasPointerLocked && !input.locked, touch });
     const portraitGate = touch && canvas.clientHeight > canvas.clientWidth;
     if (input.pausePressed() || input.escapePressed() || lostScreen !== null || portraitGate) {
-      this.#consume("KeyP", "Escape");
+      this.#consume(...keyCodes("pause"), "Escape");
       this.#pause();
       return 0;
     }
@@ -216,14 +217,17 @@ export class RuntimeFrameCoordinator {
       // P, Escape and controller Start toggle pause. The settle window keeps the Escape
       // that released pointer lock (and paused) from also resuming; a resume that cannot
       // recapture the mouse leaves uncaptured play with the click-to-capture hint.
-      this.#consume("KeyP", "Escape");
+      this.#consume(...keyCodes("pause"), "Escape");
       if (pauseSettled) {
         this.#options.setState("playing");
         this.#options.requestPointerLock();
       }
-    } else if ((state === "pgmenu" || state === "pglab") && (input.pressed.has("Tab") || input.escapePressed())) {
-      // ABILITIES is a tab of the Playground menu: Tab and Escape leave the menu from any tab.
-      this.#consume("Tab", "Escape");
+    } else if (
+      (state === "pgmenu" || state === "pglab") &&
+      (anyKeyIn(input.pressed, "close-menu") || input.escapePressed())
+    ) {
+      // ABILITIES is a tab of the Playground menu: the close key and Escape leave it from any tab.
+      this.#consume(...keyCodes("close-menu"), "Escape");
       this.#options.setState("playing");
       this.#options.requestPointerLock();
     } else if (state === "replay" && input.escapePressed()) {

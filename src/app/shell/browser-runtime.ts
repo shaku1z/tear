@@ -1,12 +1,12 @@
 import { CanvasViewport } from "../../presentation/canvas-viewport";
 import { BrowserPointerLock } from "../../platform/browser-pointer-lock";
-import { bindFullscreenButton } from "../../platform/browser-fullscreen";
+import { bindFullscreenControls } from "../../platform/browser-fullscreen";
 import { InstallPromptController } from "./runtime-initialization";
 import type { GameRuntimeDependencies } from "./game-runtime-dependencies";
 
 type BrowserDependencies = Pick<
   GameRuntimeDependencies,
-  "CONFIG" | "Input" | "OVERSCAN" | "SAFE" | "browserDocument" | "browserWindow" | "engineeringQuery"
+  "CONFIG" | "Input" | "OVERSCAN" | "SAFE" | "browserDocument" | "browserWindow" | "engineeringQuery" | "fullscreen"
 >;
 
 export interface LiveBrowserRuntime {
@@ -21,6 +21,8 @@ export interface LiveBrowserRuntime {
   readonly lockHint: HTMLElement | null;
   readonly hint: HTMLElement | null;
   readonly fullscreenButton: HTMLElement | null;
+  /** The platform can go fullscreen here (not on CrazyGames, which owns it, or iPhone Safari). */
+  readonly fullscreenAvailable: () => boolean;
   readonly pantheonDebug: boolean;
   readonly testMode: boolean;
 }
@@ -45,7 +47,12 @@ export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRun
     d.browserDocument,
   );
   viewport.start();
-  bindFullscreenButton(d.browserDocument);
+  bindFullscreenControls({
+    document: d.browserDocument,
+    window: d.browserWindow,
+    fullscreen: d.fullscreen,
+    textEntry: () => d.Input.textEntryMode,
+  });
   // Only composition-admitted engineering parameters are read; release builds receive none.
   const parameters = d.engineeringQuery;
   return Object.freeze({
@@ -62,6 +69,7 @@ export function createLiveBrowserRuntime(d: BrowserDependencies): LiveBrowserRun
     lockHint: d.browserDocument.getElementById("lockhint"),
     hint: d.browserDocument.getElementById("hint"),
     fullscreenButton: d.browserDocument.getElementById("fs"),
+    fullscreenAvailable: () => d.fullscreen().available,
     pantheonDebug: __TEAR_TEST_BUILD__ && parameters.get("bossdebug") === "1",
     testMode: parameters.get("test") === "1",
   });

@@ -12,6 +12,7 @@ import { buildGameoverSnapshot, buildWinSnapshot } from "../../src/presentation/
 import {
   CONTROL_HINT_RUN_LIMIT,
   CONTROL_HINT_SECONDS,
+  controlHintText,
   domChromeVisibility,
   type DomChromeInput,
 } from "../../src/presentation/dom-chrome-policy";
@@ -148,6 +149,7 @@ describe("DOM chrome over the canvas", () => {
     uiIncluded: true,
     pointerLockIncluded: true,
     touch: false,
+    fullscreenAvailable: true,
     inputMode: "mouse",
     pointerLocked: true,
     runSeconds: 1,
@@ -171,6 +173,17 @@ describe("DOM chrome over the canvas", () => {
     expect(domChromeVisibility({ ...playing, screen: "menu" }).fullscreen).toBe(true);
     expect(domChromeVisibility({ ...playing, screen: "menu", touch: true }).fullscreen).toBe(false);
     expect(domChromeVisibility({ ...playing, screen: "menu", uiIncluded: false }).fullscreen).toBe(false);
+  });
+
+  it("hides the fullscreen button where the platform cannot go fullscreen (CrazyGames, iPhone Safari)", () => {
+    expect(domChromeVisibility({ ...playing, screen: "menu", fullscreenAvailable: false }).fullscreen).toBe(false);
+  });
+
+  it("words the control legend from the binding table and names the fullscreen key only where it works", () => {
+    expect(controlHintText(true)).toContain("E / RIGHT CLICK throw / recall");
+    expect(controlHintText(true)).toContain("Q / LEFT CLICK tether");
+    expect(controlHintText(true)).toContain("F fullscreen");
+    expect(controlHintText(false)).not.toContain("fullscreen");
   });
 
   it("keeps the pointer-capture hint for uncaptured desktop play only", () => {
