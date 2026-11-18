@@ -131,6 +131,7 @@
     "position:render": "node scripts/position.mjs render",
     "check:position": "node scripts/position.mjs check",
     "who": "node scripts/who.mjs",
+    "queue": "node scripts/queue.mjs",
     "leftovers": "node scripts/leftovers.mjs",
     "merge:ready": "node scripts/merge-ready.mjs",
     "design-check:report": "node scripts/design-check-report.mjs",
