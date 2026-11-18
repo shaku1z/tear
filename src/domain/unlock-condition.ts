@@ -5,7 +5,8 @@
  * Adding a kind of requirement means one more member of `UnlockCondition`, one more case in
  * `parseCondition`, `conditionMet` and `conditionProgress`, and one more answer in `ProgressFacts`.
  */
-import { isRecord, PROFILE_NAME } from "./identifiers";
+import { PROFILE_NAME } from "./identifiers";
+import { isRecord } from "./records";
 
 export type UnlockCondition =
   | Readonly<{ type: "default" }>

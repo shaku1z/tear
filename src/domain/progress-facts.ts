@@ -3,7 +3,7 @@
  * a boss is defeated when its `kill<Boss>` stat is positive, a biome is entered when `stats._biomes`
  * names it, an achievement is unlocked when `ach` holds it.
  */
-import { isRecord } from "./identifiers";
+import { isRecord } from "./records";
 import type { ProgressFacts } from "./unlock-condition";
 
 /** The parts of a profile the condition language reads. The saved profile body has this shape. */
