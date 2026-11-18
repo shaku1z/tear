@@ -24,8 +24,8 @@ describe("the profile screen's empty Replays and Vault lists", () => {
       line: "Saved replays could not be opened",
       detail: "why",
     });
-    expect(profileListEmptyState({ tab: "vault", message: "" }).line).toBe("No saved replays yet");
-    expect(profileListEmptyState({ tab: "vault", message: "" }).detail).toMatch(/saved here automatically/u);
+    expect(profileListEmptyState({ tab: "vault" }).line).toBe("No saved replays yet");
+    expect(profileListEmptyState({ tab: "vault" }).detail).toMatch(/saved here automatically/u);
   });
 
   it("keeps the Replays tab's wording", () => {

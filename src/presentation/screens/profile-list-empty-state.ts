@@ -36,6 +36,6 @@ export function profileListEmptyState(
   return {
     glyph: "◆",
     line: "No saved replays yet",
-    detail: view.message || "Every run you finish is saved here automatically, ready to watch from the start.",
+    detail: view.message ?? "Every run you finish is saved here automatically, ready to watch from the start.",
   };
 }
