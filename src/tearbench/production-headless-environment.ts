@@ -24,7 +24,6 @@ import {
   type TearScenarioV1,
   type TearSnapshotV1,
 } from "./contracts";
-import { RUN_RANDOM_STREAM_NAMES } from "../simulation/run-random";
 import {
   TearHeadlessEnvironmentPool,
   type TearHeadlessEnvironment,
@@ -35,6 +34,7 @@ import {
 import { validateTearContract } from "./validation";
 import { requireProductionHeadlessScenario } from "./production-headless-scenario";
 import { beginProductionBossPractice } from "./production-boss-practice-start";
+import { requireProductionReplayBootstrap as requireBootstrap } from "./production-replay-bootstrap-check";
 import type { PracticeBossId, PracticeBossPhase } from "../gameplay/training/boss-phase-practice-runtime";
 import {
   canonicalObservationActions,
@@ -233,75 +233,6 @@ function cloneActions(actions: readonly CommandEnvelope<GameAction>[]): readonly
 
 function record(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function requireBootstrap(value: unknown): ProductionReplayBootstrap {
-  if (!record(value) || !record(value.build) || !record(value.rng)) {
-    throw new TypeError("production headless checkpoint bootstrap is invalid");
-  }
-  const build = value.build;
-  const policy = value.applicationFramePolicy;
-  if (
-    policy !== undefined &&
-    (!record(policy) ||
-      policy.version !== 1 ||
-      policy.kind !== "generated-step-intro" ||
-      policy.secondsPerStep !== 1 / 120 ||
-      Object.keys(policy).some((key) => !["version", "kind", "secondsPerStep"].includes(key)))
-  )
-    throw new TypeError("unsupported generated application-frame policy");
-  const buildKeys = ["version", "revision", "target", "rulesetVersion", "contentHash", "configHash"] as const;
-  if (buildKeys.some((key) => typeof build[key] !== "string" || build[key].length === 0)) {
-    throw new TypeError("production headless checkpoint build identity is invalid");
-  }
-  const streams: Record<
-    string,
-    Readonly<{ algorithm: "mulberry32"; seed: number; state: number; cursor: number }>
-  > = {};
-  for (const name of RUN_RANDOM_STREAM_NAMES) {
-    const stream = value.rng[name];
-    if (
-      !record(stream) ||
-      stream.algorithm !== "mulberry32" ||
-      typeof stream.seed !== "number" ||
-      !Number.isSafeInteger(stream.seed) ||
-      stream.seed < 0 ||
-      typeof stream.state !== "number" ||
-      !Number.isSafeInteger(stream.state) ||
-      stream.state < 0 ||
-      typeof stream.cursor !== "number" ||
-      !Number.isSafeInteger(stream.cursor) ||
-      stream.cursor < 0
-    ) {
-      throw new TypeError("production headless checkpoint random bootstrap is invalid");
-    }
-    streams[name] = Object.freeze({
-      algorithm: "mulberry32",
-      seed: stream.seed,
-      state: stream.state,
-      cursor: stream.cursor,
-    });
-  }
-  return Object.freeze({
-    build: Object.freeze({
-      version: build.version as string,
-      revision: build.revision as string,
-      target: build.target as string,
-      rulesetVersion: build.rulesetVersion as string,
-      contentHash: build.contentHash as string,
-      configHash: build.configHash as string,
-    }),
-    rng: Object.freeze(streams),
-    ...(policy === undefined
-      ? {}
-      : {
-          applicationFramePolicy: Object.freeze({
-            version: 1 as const,
-            kind: "generated-step-intro" as const,
-            secondsPerStep: 1 / 120,
-          }),
-        }),
-  });
 }
 
 export function validateProductionHeadlessCheckpoint(value: unknown): ProductionHeadlessCheckpoint {

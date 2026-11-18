@@ -1,9 +1,5 @@
 import type { AccountProvider, CloudSavePayload, CloudUser, SharedCloudService, SignInResult } from "./cloud";
 import type { FirebaseClientConfig } from "./firebase-config";
-import {
-  createFirebaseGhostPublicationBearerPort,
-  type GhostPublicationBearerPort,
-} from "./firebase-publication-bearer";
 
 type DataRecord = Record<string, unknown>;
 
@@ -94,8 +90,6 @@ export interface FirebaseCloudOptions {
 export interface FirebaseCloudCompatibility {
   readonly account: AccountProvider;
   readonly shared: SharedCloudService;
-  /** Safe action-time bearer port; never exposes Firebase Auth or a UID. */
-  readonly ghostPublicationBearer: GhostPublicationBearerPort;
 }
 
 export function createBrowserScriptLoader(documentLike: Document): (url: string) => Promise<void> {
@@ -155,15 +149,6 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
   let authUid: string | null = null;
   let retryMerge = false;
   let removeAuthListener: (() => void) | undefined;
-  const ghostPublicationBearer = createFirebaseGhostPublicationBearerPort(() => {
-    const user = auth?.currentUser;
-    if (!auth || !user || typeof (user as { readonly getIdToken?: unknown }).getIdToken !== "function")
-      return auth ? { currentUser: null } : null;
-    const tokenUser = user as AuthUser & { getIdToken(): Promise<string> };
-    return Object.freeze({
-      currentUser: Object.freeze({ isAnonymous: tokenUser.isAnonymous, getIdToken: () => tokenUser.getIdToken() }),
-    });
-  });
 
   const race = async <T>(promise: Promise<T>, milliseconds = timeoutMs): Promise<T> =>
     await new Promise<T>((resolve, reject) => {
@@ -546,5 +531,5 @@ export function createFirebaseCloudCompatibility(options: FirebaseCloudOptions):
     },
   };
 
-  return Object.freeze({ account, shared, ghostPublicationBearer });
+  return Object.freeze({ account, shared });
 }

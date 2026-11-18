@@ -53,7 +53,6 @@ export interface GhostLiveReference {
   readonly splits: readonly GhostReferenceBoundary[];
 }
 export interface GhostChaseView {
-  readonly beat?: boolean;
   readonly raceRole?: "reference" | "challenger";
   readonly active: boolean;
   readonly visible: boolean;

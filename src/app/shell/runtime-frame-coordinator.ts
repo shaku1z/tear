@@ -221,13 +221,11 @@ export class RuntimeFrameCoordinator {
         this.#options.setState("playing");
         this.#options.requestPointerLock();
       }
-    } else if (state === "pgmenu" && (input.pressed.has("Tab") || input.escapePressed())) {
+    } else if ((state === "pgmenu" || state === "pglab") && (input.pressed.has("Tab") || input.escapePressed())) {
+      // ABILITIES is a tab of the Playground menu: Tab and Escape leave the menu from any tab.
       this.#consume("Tab", "Escape");
       this.#options.setState("playing");
       this.#options.requestPointerLock();
-    } else if (state === "pglab" && (input.pressed.has("Tab") || input.escapePressed())) {
-      this.#consume("Tab", "Escape");
-      this.#options.setState("pgmenu");
     } else if (state === "replay" && input.escapePressed()) {
       this.#consume("Escape");
       this.#options.exitReplay();

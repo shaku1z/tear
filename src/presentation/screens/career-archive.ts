@@ -30,7 +30,6 @@ export const SOURCE_COMMANDS = Object.freeze([
   ["COACH", "coach"],
   ["CHALLENGE", "challenge"],
   ["DOWNLOAD", "download"],
-  ["PUBLISH", "publish"],
   ["CHASE BEST", "chase"],
   ["RACE THIS REFERENCE", "race"],
 ] as const);
@@ -223,7 +222,6 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
       control(labels[view.query.view] ?? title(view.query.view), "view"),
       control(`SORT: ${view.query.sort.toUpperCase()}`, "sort"),
       control("CLEAR", "clear"),
-      control("RECEIVE BEAT CODE", "beat-receive"),
     ];
     const found = `${view.total.toLocaleString("en-US")} ${view.total === 1 ? "run" : "runs"} found`,
       kept = `${view.retained.toLocaleString("en-US")} kept on this device`;
@@ -308,15 +306,7 @@ export function createCareerArchiveRenderer(context: ScreenRenderContext) {
       !e.assisted &&
       e.verified === "receipts" &&
       selected.detail?.startsWith("Recorded category best") === true;
-    const top: FlowAction[] = [
-      control("BACK TO RESULTS", "back"),
-      control(
-        e.beatAttempt ? "BEAT RESULT" : "BEAT THIS RUN",
-        e.beatAttempt ? "beat-review" : "beat",
-        e.present && e.kind === "capsule",
-      ),
-    ];
-    if (e.beatAttempt) top.push(control("SAVE RESULT", "beat-save"), control("RETRY BEAT", "beat-retry"));
+    const top: FlowAction[] = [control("BACK TO RESULTS", "back")];
     const facts = runFacts(e, selected.detail, notes, chaseEligible).map((fact, index) =>
       line(frame, fact, { ...m.fact, size: index === 0 ? t.type.lead : m.fact.size }, t.alpha.soft),
     );

@@ -98,18 +98,21 @@ describe("training coach", () => {
     expect(ids(coach.step(frame({ tutorial: lesson({ key: "13:READY", final: true }) })))).toEqual([]);
   });
 
-  it("shows the Playground shortcuts once per run, on keyboard only", () => {
+  it("shows the Playground help once per run, worded for the device", () => {
     const run = {};
     const coach = new TrainingCoach();
     const marks = coach.step(frame({ playground: { runKey: run } }));
     expect(marks[0]?.mark).toMatchObject({ id: "playground:help", tone: "info" });
-    expect(marks[0]?.mark.text).toContain("E build menu");
+    expect(marks[0]?.mark.text).toBe("E menu  ·  U abilities  ·  1–8 spawn");
     let later = marks;
     for (let elapsed = 0; elapsed < COACH_HELP_SECONDS + 1; elapsed += 1)
       later = coach.step(frame({ deltaSeconds: 1, playground: { runKey: run } }));
     expect(ids(later)).toEqual([]);
     expect(ids(coach.step(frame({ playground: { runKey: run, arena: 2 } })))).toEqual(["playground:help"]);
-    for (const inputMode of ["touch", "gamepad"] as const)
-      expect(ids(new TrainingCoach().step(frame({ inputMode, playground: { runKey: run } })))).toEqual([]);
+    // Touch and controller have no shortcuts: the help points at pause, which opens the menu.
+    for (const inputMode of ["touch", "gamepad"] as const) {
+      const help = new TrainingCoach().step(frame({ inputMode, playground: { runKey: run } }))[0]?.mark;
+      expect(help).toMatchObject({ id: "playground:help", text: "Pause for the Playground menu.", keys: ["PAUSE"] });
+    }
   });
 });

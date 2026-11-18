@@ -30,7 +30,6 @@ import {
   type SettingsRenameServices,
 } from "../screens/settings-rename-adapters";
 import { isAppScreen, type AppScreen } from "../../domain/screen-catalog";
-import type { GhostPublicationScreenView, GhostSupportScreenView } from "../../presentation/screens/contracts";
 
 type RendererBase = Omit<LiveScreenRendererOptions, "dispatch" | "renderPreview">;
 type ReplayBase = Omit<ReplayScreenServices, "renderers" | "categories" | "fallbackCategory" | "specialColor">;
@@ -71,8 +70,6 @@ export interface LiveScreenPresentationOptions {
   readonly menuState: MenuScreenState;
   readonly menuServices: MenuServicesBase;
   readonly playground: Readonly<{ renderMenu: () => void; renderLab: () => void }>;
-  readonly ghostPublication: () => GhostPublicationScreenView;
-  readonly ghostSupport: () => GhostSupportScreenView;
 }
 
 export interface LiveScreenPresentationComposition {
@@ -132,10 +129,6 @@ export function createLiveScreenPresentationComposition(
       }
       if (command === "download") {
         options.actions.ghostFiles.downloadArchive(id);
-        return;
-      }
-      if (command === "publish") {
-        options.actions.openGhostPublication(id);
         return;
       }
       const result = await replay.enterGhostCapsule(id, "profile");
@@ -208,12 +201,6 @@ export function createLiveScreenPresentationComposition(
       rename: settings.renderRename,
       pgmenu: options.playground.renderMenu,
       pglab: options.playground.renderLab,
-      ghostpublication: () => {
-        renderer.ghostpublication(options.ghostPublication());
-      },
-      ghostsupport: () => {
-        renderer.ghostsupport(options.ghostSupport());
-      },
     }),
     chooseUpgrade: run.chooseUpgrade,
     chooseReserve: run.chooseReserve,
