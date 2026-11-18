@@ -36,6 +36,8 @@ const player = { x: 360, y: 0, hw: 16, hh: 25, facing: 1, invulnerable: false, d
   Object.assign(inst, { x: 0, y: 0, facing: 1, flash: 0, stun: 0, spawnT: 0, _noBar: true });
   ctx.translate(80, 80); ctx.scale(s, s);
   inst.draw(ctx, player);
+  // A figure that drew nothing is no figure: the page then has no picture and no empty space for one.
+  if (!ctx.getImageData(0, 0, 160, 160).data.some((v, i) => i % 4 === 3 && v > 0)) return "";
   return canvas.toDataURL("image/webp", 0.8);
 };
 (window as unknown as { ready: boolean }).ready = true;

@@ -43,6 +43,11 @@ function pic(data, name, alt, cls = 'pic') {
   return name ? `<img class="${cls}" src="/media/${esc(name)}" alt="${esc(alt)}" loading="lazy" decoding="async">` : '';
 }
 
+/** The Codex line, with the figure beside it when there is one. A page with no figure is just the text, full width. */
+function intro(figure, text) {
+  return `<div class="intro${figure ? ' with-figure' : ''}"><p class="codex">${esc(text)}</p>${figure}</div>`;
+}
+
 function table(head, rows, caption = '') {
   return `<div class="scroll"><table>${caption ? `<caption>${esc(caption)}</caption>` : ''}<thead><tr>${head.map((h) => `<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell, i) => (i === 0 ? `<th scope="row">${cell}</th>` : `<td>${cell}</td>`)).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
@@ -182,8 +187,7 @@ export function enemyPage(data, enemy, note) {
   const variants = enemy.variants.length ? table(['Variant', 'Appears from'], [...enemy.variants].sort((a, b) => (a.minWave ?? 0) - (b.minWave ?? 0)).map((v) => [`<span id="variant-${esc(v.id)}">${esc(v.name)}</span>`, v.minWave === null ? 'Base form' : `Wave ${v.minWave}`])) : '<p>No variants.</p>';
   const affixes = enemy.affixIds.map((id) => link(url.affix(id), title(id))).join(', ') || 'none';
   const body = `${header(esc(title(enemy.role.toLowerCase())), enemy.name, null, enemy.color)}
-${pic(data, data.media?.figures[`enemies/${enemy.id}`], `${enemy.name} as it looks in the game`, 'pic fig')}
-<p class="codex">${esc(enemy.desc)}</p>
+${intro(pic(data, data.media?.figures[`enemies/${enemy.id}`], `${enemy.name} as it looks in the game`, 'pic fig'), enemy.desc)}
 ${statTiles(enemy.stats)}
 <h2>Variants</h2>${variants}
 <h2>Where it appears</h2>${found}
@@ -236,13 +240,18 @@ export function bossesIndex(data) {
 function phaseDetails(data, boss) {
   const measured = data.media?.bosses[boss.id];
   if (!measured?.length) return '';
+  const declared = boss.moves ?? [];
   const isWindup = (m) => /wind(up)?$/.test(m.state);
   const label = (state) => words(state.replace(/wind(up)?$/, '').replace(/([a-z])([A-Z])/g, '$1 $2').trim() || 'attack');
   const items = measured.map((p) => {
-    const warnings = p.moves.filter(isWindup).map((m) => `<li><b>${esc(label(m.state))}</b> shows a wind-up of about ${num(m.seconds)} s before it lands.</li>`).join('');
+    // A boss that declares its moves as data gets the game's own warning times; the others are read from play.
+    const warnings = declared.length
+      ? declared.filter((m) => m.phases.includes(p.phase)).map((m) => `<li><b>${esc(title(m.id))}</b> ${m.strikes ? `warns for ${num(m.tellSeconds)} s before it lands.` : `takes ${num(m.tellSeconds)} s to set up and places something on the stage.`}</li>`).join('')
+      : p.moves.filter(isWindup).map((m) => `<li><b>${esc(label(m.state))}</b> shows a wind-up of about ${num(m.seconds)} s before it lands.</li>`).join('');
     return `<section class="phase">${pic(data, p.image, `${boss.name}, phase ${p.phase}${p.tag ? `: ${p.tag}` : ''}`, 'pic wide')}<h3>Phase ${p.phase}${p.tag ? ` · ${esc(title(p.tag.toLowerCase()))}` : ''}</h3>${warnings ? `<ul>${warnings}</ul>` : '<p class="muted">No wind-up was seen in the timed play of this phase.</p>'}</section>`;
   }).join('');
-  return `<p class="muted">Pictures and wind-up times come from playing each phase in the game. The wind-up is the warning before the hit.</p>${items}`;
+  const source = declared.length ? 'Pictures come from playing each phase in the game. The warning times are the game's own, from the boss's move list.' : 'Pictures and wind-up times come from playing each phase in the game. The wind-up is the warning before the hit. A phase that lists none had no wind-up state in the timed play.';
+  return `<p class="muted">${source}</p>${items}`;
 }
 
 export function bossPage(data, boss, note) {
@@ -251,8 +260,7 @@ export function bossPage(data, boss, note) {
   const bar = `<div class="phasebar" role="img" aria-label="Health bar with phase changes at ${marks.map(pct).join(' and ')} HP">${marks.map((m) => `<i style="left:${m * 100}%"></i>`).join('')}</div>`;
   const phases = table(['Phase', 'Starts at'], [['Phase 1', '100% HP'], ...marks.map((m, i) => [`Phase ${i + 2}`, `${pct(m)} HP (${num(Math.round(boss.stats.hp * m))})`])]);
   const body = `${header(`Stage ${ordinalStage(data, boss.stageId)} boss · ${link(url.stage(stage.id), stage.name)}`, boss.name, null, stage.theme.accent)}
-${pic(data, data.media?.figures[`bosses/${boss.id}`], `${boss.name} as it looks in the game`, 'pic fig')}
-<p class="codex">${esc(boss.desc)}</p>
+${intro(pic(data, data.media?.figures[`bosses/${boss.id}`], `${boss.name} as it looks in the game`, 'pic fig'), boss.desc)}
 ${statTiles(boss.stats, true)}
 <h2>Phases</h2>${bar}${phases}${phaseDetails(data, boss)}
 ${guide(note)}`;
