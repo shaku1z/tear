@@ -7,11 +7,12 @@
  * (the profile's existing `shards`) minus the prices paid for owned items, so it cannot drift from
  * ownership and merges (max / union) converge on every device.
  */
-import { colourProblem, isHexColor } from "./cosmetic-readability";
+import { colourProblem, isHexColor, type ReadabilityBackdrops } from "./cosmetic-readability";
 
 export const COSMETIC_STATE_VERSION = 1;
 export const MAX_PRICE = 2000;
-const MAX_OWNED = 500;
+/** Most items a player can own. Applied only when buying: loading and merging never drop an entry. */
+export const MAX_OWNED = 500;
 const ID = /^[a-z0-9_]{1,64}$/u;
 
 export type CosmeticSlotId = "trail" | "spark" | "blade" | "title" | "banner";
@@ -81,11 +82,10 @@ export function normalizeCosmeticState(value: unknown): CosmeticState {
   if (!isRecord(value) || value.v !== COSMETIC_STATE_VERSION) return emptyCosmeticState();
   const owned: Record<string, number> = {};
   if (isRecord(value.owned))
-    for (const [id, price] of Object.entries(value.owned).slice(0, MAX_OWNED))
-      if (ID.test(id) && isPrice(price)) owned[id] = price;
+    for (const [id, price] of Object.entries(value.owned)) if (ID.test(id) && isPrice(price)) owned[id] = price;
   const equipped: Record<string, EquippedEntry> = {};
   if (isRecord(value.equipped))
-    for (const [slot, entry] of Object.entries(value.equipped).slice(0, 32)) {
+    for (const [slot, entry] of Object.entries(value.equipped)) {
       if (!ID.test(slot) || !isRecord(entry)) continue;
       const at = entry.at;
       if (typeof at !== "number" || !Number.isSafeInteger(at) || at < 0) continue;
@@ -129,7 +129,7 @@ export function itemStatus(
   return "available";
 }
 
-export type PurchaseRefusal = "unknown" | "owned" | "locked" | "insufficient";
+export type PurchaseRefusal = "unknown" | "owned" | "locked" | "insufficient" | "full";
 export type PurchaseResult =
   Readonly<{ ok: true; state: CosmeticState; paid: number }> | Readonly<{ ok: false; reason: PurchaseRefusal }>;
 
@@ -145,6 +145,7 @@ export function purchaseCosmetic(
   const status = itemStatus(catalog, state, item, bossKilled);
   if (status === "owned" || status === "equipped") return { ok: false, reason: "owned" };
   if (status === "locked") return { ok: false, reason: "locked" };
+  if (Object.keys(state.owned).length >= MAX_OWNED) return { ok: false, reason: "full" };
   if (shardBalance(earned, state) < item.price) return { ok: false, reason: "insufficient" };
   return { ok: true, paid: item.price, state: { ...state, owned: { ...state.owned, [item.id]: item.price } } };
 }
@@ -181,7 +182,7 @@ const BANNER_PATTERNS = ["flat", "split", "stripe"];
 const inRange = (value: unknown, low: number, high: number): boolean =>
   typeof value === "number" && Number.isFinite(value) && value >= low && value <= high;
 
-function lookProblems(item: CosmeticItem): string[] {
+function lookProblems(item: CosmeticItem, backdrops: ReadabilityBackdrops): string[] {
   const slot = COSMETIC_SLOTS.find((entry) => entry.id === item.slot);
   if (!slot || !isRecord(item.look)) return [`${item.id}: unknown slot or missing look`];
   const problems: string[] = [];
@@ -193,12 +194,12 @@ function lookProblems(item: CosmeticItem): string[] {
     if (!Array.isArray(value) || value.length < min || value.length > max)
       return void problems.push(`${item.id}: ${key} must list ${String(min)} to ${String(max)} colours`);
     for (const colour of value) {
-      const problem = colourProblem(colour as string);
+      const problem = colourProblem(colour as string, backdrops);
       if (problem) problems.push(`${item.id}: ${problem}`);
     }
   };
   const single = (key: string): void => {
-    const problem = colourProblem(look[key] as string);
+    const problem = colourProblem(look[key] as string, backdrops);
     if (problem) problems.push(`${item.id}: ${key} ${problem}`);
   };
   if (item.slot === "trail") {
@@ -226,7 +227,7 @@ function lookProblems(item: CosmeticItem): string[] {
 }
 
 /** Every reason the catalog is invalid, over every row. Empty means valid. */
-export function validateCosmeticCatalog(catalog: CosmeticCatalog): string[] {
+export function validateCosmeticCatalog(catalog: CosmeticCatalog, backdrops: ReadabilityBackdrops): string[] {
   const problems: string[] = [];
   const seen = new Set<string>();
   const collections = new Set(catalog.collections.map((entry) => entry.id));
@@ -244,7 +245,7 @@ export function validateCosmeticCatalog(catalog: CosmeticCatalog): string[] {
       problems.push(`${item.id}: price must be a whole number 0 to ${String(MAX_PRICE)}`);
     if (item.collection !== undefined && !collections.has(item.collection))
       problems.push(`${item.id}: unknown collection ${item.collection}`);
-    problems.push(...lookProblems(item));
+    problems.push(...lookProblems(item, backdrops));
   }
   return problems;
 }

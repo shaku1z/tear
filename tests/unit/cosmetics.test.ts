@@ -1,17 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import { stageDefinition } from "../../src/gameplay/stages";
 import { CONFIG } from "../../src/config/game-config";
-import {
-  colourProblem,
-  contrastRatio,
-  isTellColor,
-  READABILITY_BACKDROPS,
-} from "../../src/domain/cosmetic-readability";
+import { colourProblem, contrastRatio, isTellColor, relativeLuminance } from "../../src/domain/cosmetic-readability";
 import {
   COSMETIC_SLOTS,
   emptyCosmeticState,
   equipCosmetic,
   itemStatus,
+  MAX_OWNED,
   loadoutOf,
   mergeCosmeticStates,
   normalizeCosmeticState,
@@ -22,7 +19,7 @@ import {
   type CosmeticItem,
 } from "../../src/domain/cosmetics";
 import { ACHIEVEMENT_CATALOG } from "../../src/gameplay/progression/achievement-catalog";
-import { COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
+import { COSMETIC_BACKDROPS, COSMETIC_CATALOG } from "../../src/gameplay/progression/cosmetic-catalog";
 
 function firstItem(): CosmeticItem {
   const item = COSMETIC_CATALOG.items[0];
@@ -36,7 +33,7 @@ const COMMON_SHARDS = 5;
 
 describe("cosmetic catalog", () => {
   it("passes the validator on every row", () => {
-    expect(validateCosmeticCatalog(COSMETIC_CATALOG)).toEqual([]);
+    expect(validateCosmeticCatalog(COSMETIC_CATALOG, COSMETIC_BACKDROPS)).toEqual([]);
   });
 
   it("has items only in known slots, with looks that are colours, scales and text only", () => {
@@ -64,7 +61,7 @@ describe("cosmetic catalog", () => {
   it("rejects bad rows with a reason", () => {
     const base = firstItem();
     const row = (patch: Partial<CosmeticItem>): string =>
-      validateCosmeticCatalog({ collections: [], items: [{ ...base, ...patch }] }).join();
+      validateCosmeticCatalog({ collections: [], items: [{ ...base, ...patch }] }, COSMETIC_BACKDROPS).join();
     const trail = (colors: string[], extra: Record<string, unknown> = {}) => ({
       look: { colors, widthScale: 1, glow: 0, fade: "linear", ...extra },
     });
@@ -72,17 +69,17 @@ describe("cosmetic catalog", () => {
     expect(row({ price: 99_999 })).toContain("price");
     expect(row({ collection: "nope" })).toContain("unknown collection");
     expect(row(trail(["#e23b3b"]))).toContain("enemy-tell");
-    expect(row(trail(["#a0d8be"]))).toContain("contrast");
+    expect(row(trail(["#e0f4d8"]))).toContain("contrast");
     expect(row(trail(["#7a4ff0"], { widthScale: 3 }))).toContain("widthScale");
     expect(row(trail(["#7a4ff0"], { damage: 9 }))).toContain("not allowed");
     const duplicate: CosmeticCatalog = { collections: [], items: [base, base] };
-    expect(validateCosmeticCatalog(duplicate).join()).toContain("duplicate id");
+    expect(validateCosmeticCatalog(duplicate, COSMETIC_BACKDROPS).join()).toContain("duplicate id");
   });
 });
 
 describe("readability rules", () => {
   it("accept the game's own default swing trail colour", () => {
-    expect(colourProblem(CONFIG.colors.bladeTrail)).toBeNull();
+    expect(colourProblem(CONFIG.colors.bladeTrail, COSMETIC_BACKDROPS)).toBeNull();
   });
   it("flag the enemy-tell colours the game uses", () => {
     for (const tell of [CONFIG.colors.enemyShot, CONFIG.colors.slam, CONFIG.colors.scarf])
@@ -90,7 +87,8 @@ describe("readability rules", () => {
   });
   it("measure contrast against both reference backdrops", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 0);
-    expect(Object.keys(READABILITY_BACKDROPS)).toEqual(["verdant", "dark"]);
+    expect(COSMETIC_BACKDROPS.verdant).toBe(stageDefinition("verdant-sanctum").bg);
+    expect(relativeLuminance(COSMETIC_BACKDROPS.dark ?? "#fff")).toBeLessThan(0.02);
   });
 });
 
@@ -156,6 +154,13 @@ describe("cosmetic state", () => {
       equipped: { trail: { id: "future_trail", at: 3 }, spark: { id: "spark_1", at: 3 } },
     });
     expect(loadoutOf(COSMETIC_CATALOG, state)).toEqual({});
+  });
+
+  it("never drops entries on load, caps ownership only when buying", () => {
+    const owned = Object.fromEntries(Array.from({ length: MAX_OWNED + 5 }, (_, index) => [`item_${String(index)}`, 1]));
+    const state = normalizeCosmeticState({ v: 1, owned, equipped: {} });
+    expect(Object.keys(state.owned)).toHaveLength(MAX_OWNED + 5);
+    expect(purchaseCosmetic(COSMETIC_CATALOG, state, "title_1", 999, noBoss)).toEqual({ ok: false, reason: "full" });
   });
 
   it("merges by union and newest equip, commutatively, associatively and idempotently", () => {

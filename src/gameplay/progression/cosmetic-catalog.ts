@@ -4,6 +4,8 @@
  * stand-ins until the owner chooses them; the test lists what still needs a real name. The blade
  * slot has no rows yet: blade looks come last because the blade is what the player reads in a fight.
  */
+import { relativeLuminance, type ReadabilityBackdrops } from "../../domain/cosmetic-readability";
+import { AUTHORED_STAGES, stageDefinition } from "../stages";
 import type { CosmeticCatalog, CosmeticCollection, CosmeticItem } from "../../domain/cosmetics";
 
 const trail = (
@@ -80,4 +82,13 @@ const ITEMS: readonly CosmeticItem[] = [
 export const COSMETIC_CATALOG: CosmeticCatalog = Object.freeze({
   items: Object.freeze(ITEMS),
   collections: Object.freeze(COLLECTIONS),
+});
+
+/**
+ * The backdrops a look is checked against, read from the stage definitions so a repaint keeps the
+ * rule honest: the Verdant Sanctum background and the darkest background of any stage.
+ */
+export const COSMETIC_BACKDROPS: ReadabilityBackdrops = Object.freeze({
+  verdant: stageDefinition("verdant-sanctum").bg,
+  dark: [...AUTHORED_STAGES].sort((a, b) => relativeLuminance(a.bg) - relativeLuminance(b.bg))[0]?.bg ?? "#000000",
 });
