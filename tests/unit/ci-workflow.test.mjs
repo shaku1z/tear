@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import process from "node:process";
 import { describe, expect, it } from "vitest";
 import { hashMismatches } from "../../scripts/ci-build-hashes.mjs";
+import { lockedPlaywrightVersion, playwrightImage } from "../../scripts/ci-playwright-image.mjs";
 import { FIXED_JOBS, verdictProblems } from "../../scripts/ci-verdict.mjs";
 import { loadChecks, selectChecks, shardChecks } from "../../scripts/run-checks.mjs";
 
@@ -462,18 +463,45 @@ describe("Check list override", () => {
 });
 
 describe("Browser jobs' container", () => {
-  it("is Playwright's image for the version the lockfile installs", () => {
-    const locked = /\n {6}'@playwright\/test':\n {8}specifier: [^\n]+\n {8}version: ([\d.]+)/u.exec(
-      read("pnpm-lock.yaml"),
-    )?.[1];
-    const image = /\n {4}container:\n {6}image: mcr\.microsoft\.com\/playwright:v([\d.]+)-noble\n/u.exec(
-      jobBlocks.browser,
-    )?.[1];
-    expect(locked).toMatch(/^\d+\.\d+\.\d+$/u);
-    expect(image).toBe(locked);
+  // Every job of every workflow, as { file, id, block }.
+  const allJobs = readdirSync(resolve(root, ".github/workflows"))
+    .filter((name) => /\.ya?ml$/u.test(name))
+    .flatMap((name) =>
+      Object.entries(jobs(read(`.github/workflows/${name}`))).map(([id, block]) => ({ file: name, id, block })),
+    );
+  const where = (job) => `${job.file}: ${job.id}`;
+  // A job with an environment is owner-gated (a deploy); it is not run to test a change.
+  const gated = (job) => /\n {4}environment:/u.test(job.block);
+
+  it("takes its image from the version the lockfile installs", () => {
+    const lockfile = read("pnpm-lock.yaml");
+    const declared = JSON.parse(read("package.json")).devDependencies["@playwright/test"];
+    expect(lockedPlaywrightVersion(lockfile)).toBe(declared);
+    expect(playwrightImage("1.2.3")).toBe("mcr.microsoft.com/playwright:v1.2.3-noble");
+    expect(() => lockedPlaywrightVersion("lockfileVersion: '9.0'\n")).toThrow(/no @playwright\/test/u);
   });
 
-  it("installs no browser, so a slow package mirror cannot stall a shard", () => {
-    expect(jobBlocks.browser).not.toMatch(/playwright install/u);
+  it("is named by a job output in every workflow, never written by hand", () => {
+    const containers = allJobs.filter((job) => /\n {4}container:/u.test(job.block));
+    expect(containers.length).toBeGreaterThan(0);
+    for (const job of containers) {
+      const from = /\n {4}container:\n {6}image: \$\{\{ needs\.([\w-]+)\.outputs\.playwright_image \}\}\n/u.exec(
+        job.block,
+      )?.[1];
+      expect(from, where(job)).toBeDefined();
+      expect(needsOf(job.block), where(job)).toContain(from);
+      const source = allJobs.find((other) => other.file === job.file && other.id === from);
+      expect(source?.block, where(job)).toMatch(/node scripts\/ci-playwright-image\.mjs >> "\$GITHUB_OUTPUT"/u);
+      expect(job.block, where(job)).toMatch(
+        /\n {6}GIT_CONFIG_COUNT: 1\n {6}GIT_CONFIG_KEY_0: safe\.directory\n {6}GIT_CONFIG_VALUE_0: "\*"\n/u,
+      );
+    }
+  });
+
+  it("is where every job that needs a browser runs, so no such job installs one", () => {
+    for (const job of allJobs.filter((each) => !gated(each))) {
+      expect(job.block, where(job)).not.toMatch(/playwright install/u);
+      if (/xvfb-run/u.test(job.block)) expect(job.block, where(job)).toMatch(/\n {4}container:/u);
+    }
   });
 });

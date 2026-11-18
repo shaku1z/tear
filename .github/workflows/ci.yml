@@ -46,6 +46,7 @@ jobs:
       merge_main: ${{ steps.main.outputs.merge_main }}
       commit: ${{ steps.checked.outputs.commit }}
       docs_only: ${{ steps.validation-scope.outputs.docs_only }}
+      playwright_image: ${{ steps.image.outputs.playwright_image }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,6 +86,9 @@ jobs:
             docs_only=true
           fi
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+      - name: Name the browser jobs' image from the lockfile
+        id: image
+        run: node scripts/ci-playwright-image.mjs >> "$GITHUB_OUTPUT"
       # A batch (pnpm merge:batch) lists the pull request heads its commit must contain. Checked here
       # first, so a batch that checked less than it claims fails before any check runs; the `check`
       # job records the same list again where pnpm merge:ready and merge:batch read it.
@@ -261,10 +265,10 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4]
     name: browser (${{ matrix.shard }}/4)
-    # Playwright's own image for the lockfile's @playwright/test version (the ci-workflow test keeps
-    # them equal): Chromium and its system packages are already in it, so no shard installs them.
+    # Playwright's own image for the lockfile's @playwright/test version (scripts/ci-playwright-image.mjs):
+    # Chromium and its system packages are already in it, so no shard installs them.
     container:
-      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      image: ${{ needs.scope.outputs.playwright_image }}
       options: --ipc=host
     # The checkout is owned by the runner's user, not the container's, so git would refuse it as
     # "dubious ownership". This marks it safe for this job's git commands only, writing no config file.
