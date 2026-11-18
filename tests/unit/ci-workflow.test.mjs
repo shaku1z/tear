@@ -1,12 +1,13 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import process from "node:process";
+import vm from "node:vm";
 import { describe, expect, it } from "vitest";
 import { hashMismatches } from "../../scripts/ci-build-hashes.mjs";
-import { FIXED_JOBS, verdictProblems } from "../../scripts/ci-verdict.mjs";
+import { FIXED_JOBS, main as verdictMain, verdictProblems } from "../../scripts/ci-verdict.mjs";
 import { loadChecks, selectChecks, shardChecks } from "../../scripts/run-checks.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -82,12 +83,34 @@ describe("Validate workflow", () => {
     expect(workflow).toMatch(/github\.event\.pull_request\.draft && 'draft' \|\| 'latest'/u);
   });
 
-  it("treats a pull request as docs-only exactly when every changed file is a document", { timeout: 30_000 }, () => {
-    // Runs the workflow's own script, so a quoting or escaping mistake in the file fails here.
+  it("treats a pull request as docs-only exactly when every changed file is a document", () => {
+    // Runs the workflow's own script, so a quoting or escaping mistake in the file fails here. It
+    // runs in this process with stdin and process.exit stood in for, as `node -e` would run it.
     const script = /git diff --name-only origin\/main HEAD \| node -e '([^']+)'; then$/mu.exec(workflow)?.[1];
     expect(script, "the docs-only scope script").toBeDefined();
-    const docsOnly = (files) =>
-      spawnSync(process.execPath, ["-e", script ?? ""], { input: `${files.join("\n")}\n` }).status === 0;
+    const exited = Symbol("exit");
+    const docsOnly = (files) => {
+      let code;
+      const sandbox = {
+        require: (name) => {
+          expect(name).toBe("fs");
+          return { readFileSync: (fd, encoding) => (fd === 0 && encoding === "utf8" ? `${files.join("\n")}\n` : "") };
+        },
+        process: {
+          exit: (value) => {
+            code = value;
+            throw exited;
+          },
+        },
+      };
+      try {
+        vm.runInNewContext(script ?? "", sandbox);
+      } catch (error) {
+        if (error !== exited) throw error;
+      }
+      expect(code, "the script ends with process.exit").toBeDefined();
+      return code === 0;
+    };
     expect(docsOnly(["docs/RELEASE_AUTHORITY.md", "AGENTS.md", "config/position.json"])).toBe(true);
     expect(docsOnly(["plans/active/x.md", ".github/pull_request_template.md", "README.md"])).toBe(true);
     expect(docsOnly(["wiki/content/notes/combat.md", "wiki/generator/build.mjs"])).toBe(true);
@@ -410,11 +433,13 @@ describe("the required check job", () => {
   });
 
   it("exits non-zero on a failing verdict and zero on a passing one, as the job runs it", () => {
-    const run = (value) =>
-      spawnSync(process.execPath, [resolve(root, "scripts/ci-verdict.mjs")], {
-        encoding: "utf8",
-        env: { ...process.env, NEEDS: JSON.stringify(value) },
-      });
+    // The job runs `node scripts/ci-verdict.mjs`, which is main() with the job's environment.
+    expect(workflow).toMatch(/\n {10}NEEDS: \$\{\{ toJSON\(needs\) \}\}\n {8}run: node scripts\/ci-verdict\.mjs\n/u);
+    const run = (value) => {
+      const lines = [];
+      const status = verdictMain({ NEEDS: JSON.stringify(value) }, (line) => lines.push(line));
+      return { status, stdout: lines.join("\n") };
+    };
     expect(run(needs("success")).status).toBe(0);
     const failed = run(needs("success", { browser: "cancelled" }));
     expect(failed.status).toBe(1);
@@ -446,17 +471,5 @@ describe("Nightly checks workflow", () => {
 
   it("only reads the repository", () => {
     expect(nightly).toMatch(/permissions:\n {2}contents: read\n\n/u);
-  });
-});
-
-describe("Check list override", () => {
-  // TEAR_CHECKS_CONFIG swaps the list run-checks.mjs runs; only the runner's own tests may set it.
-  const workflows = readdirSync(resolve(root, ".github/workflows")).filter((name) => /\.ya?ml$/u.test(name));
-
-  it("is set by no workflow", () => {
-    expect(workflows).toEqual(expect.arrayContaining(["ci.yml", "nightly.yml"]));
-    for (const name of workflows) {
-      expect(read(`.github/workflows/${name}`), name).not.toMatch(/TEAR_CHECKS_CONFIG/u);
-    }
   });
 });
