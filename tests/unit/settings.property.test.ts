@@ -1,6 +1,8 @@
 /**
  * The live settings controller, whatever the `tear_settings` slot holds:
  * - loading never throws;
+ * - every setting keeps the type of its default, and every number the game is
+ *   handed is finite;
  * - saving and loading again gives back the settings that were loaded.
  * The audio fields are migrated by the audio port; `migrateAudioSettings` has
  * its own property in `save-migrations.property.test.ts`.
@@ -13,7 +15,7 @@ import { checkProperty, fc } from "./property-harness";
 
 const SLOT = "tear_settings";
 
-function openController(values: Map<string, string>): SettingsController {
+function open(values: Map<string, string>) {
   const dependencies: SettingsControllerDependencies = {
     config: {
       blade: { aimSensitivity: 0.9 },
@@ -37,7 +39,11 @@ function openController(values: Map<string, string>): SettingsController {
     navigator: { hardwareConcurrency: 8 },
     matchMedia: () => ({ matches: false }),
   };
-  return new SettingsController(dependencies);
+  return { controller: new SettingsController(dependencies), dependencies };
+}
+
+function openController(values: Map<string, string>): SettingsController {
+  return open(values).controller;
 }
 
 const SETTING_NAMES = Object.keys(openController(new Map()).settings);
@@ -61,6 +67,30 @@ describe("settings controller", () => {
     checkProperty(
       fc.property(stored, (text) => {
         expect(typeof openController(fill(text)).settings).toBe("object");
+      }),
+    );
+  });
+
+  it("every setting keeps the type of its default, and every applied number is finite", () => {
+    const defaults = openController(new Map()).settings;
+    checkProperty(
+      fc.property(stored, (text) => {
+        const { controller, dependencies } = open(fill(text));
+        for (const [name, value] of Object.entries(defaults)) {
+          const loaded = controller.settings[name];
+          expect(typeof loaded, name).toBe(typeof value);
+          if (typeof loaded === "number") expect(Number.isFinite(loaded), name).toBe(true);
+        }
+        const applied = [
+          ...Object.values(dependencies.config.pad),
+          ...Object.values(dependencies.accessibility),
+          dependencies.config.blade.aimSensitivity,
+          controller.shakeScale,
+        ];
+        for (const value of applied) if (typeof value === "number") expect(Number.isFinite(value)).toBe(true);
+        expect(typeof dependencies.config.pad.doubleTapDash).toBe("boolean");
+        expect(typeof dependencies.accessibility.reducedMotion).toBe("boolean");
+        expect(typeof dependencies.input.forceMode).toBe("string");
       }),
     );
   });
