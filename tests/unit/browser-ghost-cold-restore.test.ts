@@ -122,7 +122,6 @@ describe("normal browser cold restore facade", () => {
             evictedCapsuleIds: [],
             integrity: [],
             rebuiltIndexes: 0,
-            libraries: { schemaVersion: 1, entries: [], rejectedEntryKeys: [] },
           },
         }),
     });
