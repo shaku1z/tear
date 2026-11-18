@@ -130,9 +130,6 @@
     "src/presentation/platform-materials/verdant-rootstone.ts": {
       "largestFunctionStatements": 129
     },
-    "src/presentation/screens/leaderboards-replays.ts": {
-      "maxLineLength": 229
-    },
     "src/presentation/tear-wipe.ts": {
       "largestFunctionStatements": 106
     },

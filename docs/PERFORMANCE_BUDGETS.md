@@ -61,7 +61,7 @@ Path to budgets: once several clean runs on the controlled release host agree, p
 
 - **Startup scripts.** The bytes of the entry script plus every `modulepreload` that `index.html` references are at most `startupScriptBytes` (1,990,000 bytes uncompressed; about 1.85 MB measured). The on-demand tutorial corpus may never be among them. A second rule fails the check when a dynamic import resolves into a startup chunk: code that the source loads on demand must also stay out of the startup set (the replay engine, library screens, settings and the other lazy modules).
 - **Main chunk.** The largest application JavaScript chunk, excluding worker bundles and the on-demand tutorial corpus, stays within `standaloneMainGzipBytes` / `crazygamesMainGzipBytes` gzip bytes.
-- **Workers.** The largest worker bundle (Career Archive, coach history, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
+- **Workers.** The largest worker bundle (Career Archive, Chase Your Best reference, capsule encoder) is at most `workerGzipBytes` gzip bytes.
 - **Tutorial corpus.** The tutorial demonstration corpus is a separate chunk of at most `tutorialGoldGzipBytes` gzip bytes. Training preflight fetches it before a tutorial or practice run; the service worker runtime-caches it on first use, so it then works offline, rather than precaching it for every player.
 - **Precache.** The standalone service worker precaches at most `precacheEntries` files and `precacheBytes` bytes (46 entries and about 2.71 MB measured; the three large workers are cached on first use instead). The entry count rose from 36 because modules that load on demand are now separate files; the bytes did not, and never the tutorial corpus.
 

@@ -229,13 +229,7 @@ describe("Ghost replay world, Theater, and practice", () => {
     const before = JSON.stringify(source);
     const sourceSnapshot = source.snapshots[0];
     if (sourceSnapshot === undefined) throw new Error("fixture snapshot is missing");
-    for (const mode of [
-      "exact-practice",
-      "repetition-drill",
-      "counterfactual-sandbox",
-      "race-practice",
-      "coach-assisted",
-    ] as const) {
+    for (const mode of ["exact-practice", "repetition-drill", "counterfactual-sandbox", "race-practice"] as const) {
       const child = createPracticeFromHere(source, sourceSnapshot, mode);
       expect(child).toMatchObject({
         mode,

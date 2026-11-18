@@ -1,8 +1,8 @@
 /**
- * The three ghost workers (career archive, coach history, live reference) are not
+ * The two ghost workers (career archive, live reference) are not
  * precached: the service worker caches each script the first time it is fetched.
  * Fetching the missing ones once, on an idle main menu, makes an ordinary first session
- * end with all three cached, so the features still work if the player goes offline
+ * end with both cached, so the features still work if the player goes offline
  * before ever opening them. Nothing starts or parses a worker.
  */
 export interface WorkerCacheWarmupPorts {
