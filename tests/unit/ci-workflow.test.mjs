@@ -480,11 +480,20 @@ describe("Nightly checks workflow", () => {
   it("runs the nightly group on main once a day and by hand", () => {
     expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
     // A schedule runs on the default branch, main; started by hand, it checks the chosen branch.
-    // Naming a ref would test a commit other than the one the run builds and labels.
     expect(nightly).toMatch(/uses: actions\/checkout@v4/u);
-    expect(nightly).not.toMatch(/\n\s+ref:/u);
     expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
     expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
+  });
+
+  it("checks the commit named in the optional ref input, and says which commit it checked", () => {
+    // The input is optional and has no default, so the schedule and a plain run check what they always did.
+    expect(nightly).toMatch(/workflow_dispatch:\n {4}inputs:\n {6}ref:\n(?: {8}[^\n]+\n)*? {8}required: false\n/u);
+    expect(nightly).not.toMatch(/\n {8}default:/u);
+    // Exactly one job checks out that ref: the one that runs the checks. The image job reads only the lockfile.
+    const refs = nightly.match(/\n\s+ref: [^\n]+/gu) ?? [];
+    expect(refs.map((line) => line.trim())).toEqual(["ref: ${{ inputs.ref }}"]);
+    expect(nightly).toMatch(/git rev-parse HEAD\)" >> "\$GITHUB_STEP_SUMMARY"/u);
+    expect(nightly.indexOf("Name the checked commit")).toBeLessThan(nightly.indexOf("pnpm install"));
   });
 
   it("is the only workflow that keeps going past a failing check", () => {
