@@ -7,6 +7,7 @@
  * defaults stand. Every stored value is untrusted: see `sanitizeKeyboardRemap`.
  */
 import { sanitizeKeyboardRemap, type KeyboardRemap } from "../domain/keyboard-remap";
+import { isRecord } from "../domain/records";
 
 export const KEYBOARD_SETTINGS_VERSION = 1;
 
@@ -29,9 +30,8 @@ export interface KeyboardSettingsRead {
 }
 
 export function readKeyboardSettings(value: unknown): KeyboardSettingsRead {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    return Object.freeze({ stored: keyboardSettings(), remap: Object.freeze({}), future: false });
-  const record = value as Readonly<Record<string, unknown>>;
+  if (!isRecord(value)) return Object.freeze({ stored: keyboardSettings(), remap: Object.freeze({}), future: false });
+  const record: Readonly<Record<string, unknown>> = value;
   const version = record.version;
   if (typeof version === "number" && Number.isInteger(version) && version > KEYBOARD_SETTINGS_VERSION)
     return Object.freeze({ stored: record, remap: Object.freeze({}), future: true });

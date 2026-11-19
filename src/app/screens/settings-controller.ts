@@ -4,6 +4,7 @@ import { musicSourceValue, parseMusicSource, setMusicSource } from "../../audio/
 import { sanitizeCinematicPreference, type CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 import { applyKeyboardRemap, rebindKey, type RebindOutcome, type RebindableAction } from "../../domain/keyboard-remap";
 import { keyboardSettings, readKeyboardSettings, type KeyboardSettingsRead } from "../../persistence/keyboard-settings";
+import { asRecord } from "../../domain/records";
 
 export type { CinematicPreference } from "../../gameplay/campaign/cinematic-preference";
 
@@ -158,7 +159,7 @@ function parseStoredSettings(serialized: string | null): Record<string, unknown>
   if (serialized === null) return {};
   try {
     const parsed: unknown = JSON.parse(serialized);
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+    return asRecord(parsed) ?? {};
   } catch {
     return {};
   }

@@ -200,24 +200,16 @@
         "Ghost Studio"
       ],
       "persistenceImpact": {
-        "scope": "ghost-studio-edl v1 local edit decision lists and replay-screen actions",
-        "legacyRead": [
-          "ghost-studio-edl v1"
-        ],
-        "canonicalWrite": "Replay Editor EDL/action vocabulary",
-        "preserve": [
-          "sourceGhostId",
-          "sourceRootHash",
-          "clips",
-          "edlHash",
-          "local export semantics"
-        ]
+        "scope": "Replay screen copy and replay.editor action ids only; the cut list is built in memory and never saved",
+        "legacyRead": [],
+        "canonicalWrite": "REPLAY EDITOR panel of the Theater",
+        "preserve": ["replay.editor.toggle, replay.editor.appendClip and replay.editor.media action ids", "feature:replay-editor surface id"]
       },
-      "owner": "Replay presentation/EDL owner with ghost replay compatibility owner",
-      "compatibilityStrategy": "Read old EDL/action aliases and write canonical Replay Editor labels without changing clip or source-root hashes.",
+      "owner": "Replay screen owner",
+      "compatibilityStrategy": "None needed: no code reads or writes the old name. Ghost Studio stays a deprecated alias so it cannot return in player-facing copy.",
       "removalCheckpoint": {
         "id": "G4-D-REPLAY-EDITOR",
-        "condition": "Remove Ghost Studio aliases after EDL v1 reads, canonical writes, local export, replay-screen routes, and old bookmarks pass."
+        "condition": "Remove the alias once no player-facing copy or current evidence names Ghost Studio."
       }
     },
     {
@@ -760,70 +752,6 @@
         "expiry": {
           "checkpoint": "G4-B-MUSIC",
           "condition": "Canonical and legacy vendor path attributes are now present; retain both until the signed legacy-retirement migration gate."
-        }
-      },
-      {
-        "id": "compat-replay-editor-ghost",
-        "pathPattern": "src/ghost/player-experiences.ts",
-        "termIds": [
-          "replay-editor"
-        ],
-        "owner": "Replay EDL owner",
-        "reason": "Ghost replay/EDL implementation remains the source of truth beneath Replay Editor.",
-        "testEvidence": [
-          "tests/unit/ghost-player-experiences.test.ts",
-          "tests/unit/ghost-studio-cut-list-theater.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-D-REPLAY-EDITOR",
-          "condition": "Remove only after EDL v1 dual-read and canonical Replay Editor exports pass."
-        }
-      },
-      {
-        "id": "compat-replay-editor-app",
-        "pathPattern": "src/app/*/replay-*.ts",
-        "termIds": [
-          "replay-editor"
-        ],
-        "owner": "Replay screen owner",
-        "reason": "Replay action adapters retain studio aliases until Replay Editor routing is available.",
-        "testEvidence": [
-          "tests/unit/ghost-studio-cut-list-theater.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-D-REPLAY-EDITOR",
-          "condition": "Remove after canonical replay-editor action IDs and old route aliases pass."
-        }
-      },
-      {
-        "id": "compat-replay-editor-actions",
-        "pathPattern": "src/domain/screen-actions.ts",
-        "termIds": [
-          "replay-editor"
-        ],
-        "owner": "Navigation contract owner",
-        "reason": "replay.studio action IDs are serialized UI compatibility names.",
-        "testEvidence": [
-          "tests/unit/live-screen-action-bindings.test.ts",
-          "tests/unit/app-legacy-state-controller.test.ts"
-        ],
-        "expiry": {
-          "checkpoint": "G4-D-REPLAY-EDITOR",
-          "condition": "Remove only after old replay.studio actions map to canonical Replay Editor actions."
-        }
-      },
-      {
-        "id": "compat-replay-surface-route",
-        "pathPattern": "src/replay/surface-route.ts",
-        "termIds": [
-          "replay-editor"
-        ],
-        "owner": "Replay surface route owner",
-        "reason": "Canonical replay routes and legacy screen/action tokens share one explicit dual-read boundary.",
-        "testEvidence": ["tests/unit/surface-availability.test.ts"],
-        "expiry": {
-          "checkpoint": "G4-D-REPLAY-SURFACES",
-          "condition": "Remove legacy route/action aliases only after both Replay Editor and Replay Hub close conditions are signed."
         }
       },
       {

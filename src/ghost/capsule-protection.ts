@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import type { GhostVaultBackend, GhostVaultWrite, GhostVaultGuard } from "./capsule-vault-backend";
 import { parseGhostCapsuleManifest } from "./capsule-contract";
@@ -39,9 +40,7 @@ export function ghostCapsuleProtectionKey(id: string): string {
 
 export function parseGhostCapsuleProtection(raw: string, id: string): GhostCapsuleProtection {
   const value: unknown = JSON.parse(raw);
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("invalid capsule protection");
-  const entry = value as Record<string, unknown>;
+  const entry = requireRecord(value, "invalid capsule protection");
   const owners: readonly unknown[] = Array.isArray(entry.owners) ? (entry.owners as unknown[]) : [];
   if (
     Object.keys(entry).length !== 5 ||

@@ -1,3 +1,4 @@
+import { isObject, requireRecord } from "../../domain/records";
 import type {
   MusicRouteMatch,
   MusicRouteSelection,
@@ -9,8 +10,7 @@ import type {
 const SCENES: ReadonlySet<RoutingScene> = new Set(["gameplay", "boss", "menu", "victory", "defeat", "replay"]);
 
 function object(value: unknown, name: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${name} must be an object`);
-  return value as Record<string, unknown>;
+  return requireRecord(value, `${name} must be an object`);
 }
 
 function text(value: unknown, name: string): string {
@@ -77,7 +77,7 @@ const MATCH_KEYS: ReadonlySet<string> = new Set(["scene", "biome", "bossId", "bo
 function understood(value: unknown): boolean {
   const source = object(value, "routing rule");
   const conditions = source.match;
-  return !conditions || typeof conditions !== "object" || Object.keys(conditions).every((key) => MATCH_KEYS.has(key));
+  return !isObject(conditions) || Object.keys(conditions).every((key) => MATCH_KEYS.has(key));
 }
 
 function rule(value: unknown): MusicRoutingRule {

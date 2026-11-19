@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { canonicalStringify } from "../domain/hash";
 import {
   FINAL_FIVE_WEAPON_SCHEMA_VERSION,
@@ -200,9 +201,7 @@ const ACHIEVEMENT_CATEGORIES = Object.freeze(["combat", "skill", "progress", "bo
 const ACHIEVEMENT_RARITIES = Object.freeze(["common", "uncommon", "rare", "epic", "legendary"] as const);
 
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError(`${path} must be an object`);
-  return value as Record<string, unknown>;
+  return requireRecord(value, `${path} must be an object`);
 }
 
 function text(value: unknown, path: string): string {

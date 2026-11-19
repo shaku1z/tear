@@ -15,6 +15,7 @@ import {
   type KeyboardBinding,
   type KeyboardTable,
 } from "./keyboard-bindings";
+import { isRecord } from "./records";
 
 export const REBINDABLE_ACTIONS = Object.freeze([
   "move-left",
@@ -107,9 +108,9 @@ export function rebindKey(remap: KeyboardRemap, action: RebindableAction, code: 
  * that would give one key two meanings on a screen is dropped whole (the defaults stand).
  */
 export function sanitizeKeyboardRemap(value: unknown): KeyboardRemap {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return Object.freeze({});
+  if (!isRecord(value)) return Object.freeze({});
   const kept: Partial<Record<RebindableAction, string>> = {};
-  for (const [action, code] of Object.entries(value as Record<string, unknown>))
+  for (const [action, code] of Object.entries(value))
     if (isRebindableAction(action) && typeof code === "string" && KEY_CODE.test(code)) kept[action] = code;
   const remap = trimmed(kept);
   return keyboardCollisions(remappedBindings(remap)).length === 0 ? remap : Object.freeze({});

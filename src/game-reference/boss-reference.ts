@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import {
   BOSS_DEFINITIONS,
   isBossDefinitionId,
@@ -45,9 +46,7 @@ const ACTIVE_BOSS_STAGE_IDS = Object.freeze(
 );
 
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError(`${path} must be an object`);
-  return value as Record<string, unknown>;
+  return requireRecord(value, `${path} must be an object`);
 }
 
 function text(value: unknown, path: string): string {
