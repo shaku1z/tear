@@ -40,16 +40,23 @@ function readable(body) {
 
 /**
  * The answer to `label`, or null when no line gives it. The label line is a list item or plain line
- * whose bold span starts with the label as whole words, in any case, and ends in a colon inside the
- * span or after it: `**Cause:**`, `**Cause**:`, `**Cause and check:**`, `**Measured** (on CI):`.
- * A heading such as `### Cause` is prose, not an answer. The answer is the rest of that line or,
- * when that is empty, the indented lines under it (a nested list).
+ * whose bold span starts with the label as whole words, in any case, in one of three shapes:
+ * - a colon inside the span: `**Cause:**`, `**Cause and check:**`, `**Cause: the test, not the load.**`;
+ * - a colon right after the span, behind at most one parenthetical: `**Cause**:`, `**Measured** (on CI):`;
+ * - a label sentence ending in a full stop: `**Cause.**`.
+ * A colon further along the line is prose and does not make a label. A heading such as `### Cause`
+ * is prose, not an answer. The answer is what follows the colon inside the span plus the rest of
+ * the line or, when that is empty, the indented lines under it (a nested list).
  */
 function answerFor(text, label) {
-  const bold = `\\*\\*${escape(label)}(?![\\p{L}\\p{N}])[^*\\n]*?(?::\\*\\*|\\*\\*[^:\\n]*:)`;
-  const line = new RegExp(`^[ \\t]*(?:[-*]|\\d+\\.)?[ \\t]*${bold}(.*)$`, "imu").exec(text);
+  const name = `\\*\\*${escape(label)}(?![\\p{L}\\p{N}])`;
+  const inside = `[^*:\\n]*:([^*\\n]*)\\*\\*`;
+  const after = `[^*:\\n]*\\*\\*[ \\t]*(?:\\([^)\\n]*\\))?[ \\t]*:`;
+  const sentence = `[^*:\\n]*\\.\\*\\*`;
+  const pattern = `^[ \\t]*(?:[-*]|\\d+\\.)?[ \\t]*${name}(?:${inside}|${after}|${sentence})(.*)$`;
+  const line = new RegExp(pattern, "imu").exec(text);
   if (line === null) return null;
-  const rest = line[1].trim();
+  const rest = `${line[1] ?? ""} ${line[2]}`.trim();
   if (rest !== "") return rest;
   const below = text
     .slice(line.index + line[0].length)
