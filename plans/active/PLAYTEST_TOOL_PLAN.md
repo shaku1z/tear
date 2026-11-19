@@ -325,7 +325,11 @@ Grafts, Root Cage walls, Regrowth roots, and any later kind with no edit. The `c
 tell-avoiding player with one addition: it picks the nearest standing object, walks under it, jumps and
 swings, and leaves one it has not damaged in 6 seconds. A fight at a chosen phase now gets its whole time
 limit; the time the game takes to bring the boss there used to be taken out of it.
-Still to do in this stage: the `still`, `walker` and `no-dodge` players, boss movement, and the sweep.
+
+Built fourth (2026-11-19): the `no-dodge` player (the scripted player without its dash and its jump) and the
+`still` player (no input during play). Both measure what a boss does to them, so a fight of theirs stops, as
+a time limit with the reason, once a phase has been played for 60 seconds.
+Still to do in this stage: the `walker` player, boss movement, and the sweep.
 
 Done when:
 - [ ] `pnpm playtest bosses` prints, for all five campaign bosses, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, 4 seeds, Easy and Normal, in under 5 minutes on 6 jobs.

@@ -59,7 +59,7 @@ export function playBossReport(request: BossReportRequest): readonly BossFightRe
   const requests = bossFightRequests(request);
   // Every fight is admitted before the first is played, so a mistyped id costs no playing time.
   for (const fight of requests) bossFightScenario(fight);
-  return requests.map(playBossFight);
+  return requests.map((fight) => playBossFight(fight));
 }
 
 function table(rows: readonly (readonly string[])[]): string {

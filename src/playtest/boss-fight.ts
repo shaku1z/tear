@@ -9,7 +9,7 @@ import { requireProductionHeadlessScenario } from "../tearbench/production-headl
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
 import { createProductionHeadlessEnvironment } from "../tearbench/production-headless-environment";
 import { createObjectCounter, readCuttableObjects, type ObjectCount } from "./boss-objects";
-import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayerId } from "./boss-player";
+import { BOSS_PLAYER_IDS, createBossPlayer, type BossPlayer, type BossPlayerId } from "./boss-player";
 import { boxOverlaps, readBoss, readPlayerBox, trainingResets, type BossView, type PlayerBox } from "./boss-view";
 
 export interface BossFightRequest {
@@ -177,14 +177,19 @@ function bringToChosenPhase(
   return { setupTicks, reached: practice() === "active" };
 }
 
-/** Plays one boss fight on the real game, headless, and measures it phase by phase. */
-export function playBossFight(request: BossFightRequest): BossFightResult {
+/**
+ * Plays one boss fight on the real game, headless, and measures it phase by phase. The player is the one the
+ * request names; a caller may hand in its own instead.
+ */
+export function playBossFight(
+  request: BossFightRequest,
+  player: BossPlayer = createBossPlayer(request.player),
+): BossFightResult {
   const environment = createProductionHeadlessEnvironment();
   try {
     environment.reset(bossFightScenario(request));
     const { setupTicks, reached } = bringToChosenPhase(environment, request);
     if (!reached) return brokenFight(request, setupTicks, `the boss did not reach phase ${String(request.phase)}`);
-    const player = createBossPlayer(request.player);
     const phases: MutablePhase[] = [];
     const phaseRow = (phase: number): MutablePhase => {
       const last = phases.at(-1);
