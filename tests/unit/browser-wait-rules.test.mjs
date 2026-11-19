@@ -207,10 +207,8 @@ describe("reloadPage", () => {
   it("reports each worker's script URL from the page before the worker starts", () => {
     const reported = [];
     const constructed = [];
-    class FakeWorker {
-      constructor(url, options) {
-        constructed.push([String(url), options]);
-      }
+    function FakeWorker(url, options) {
+      constructed.push([String(url), options]);
     }
     const window = {
       Worker: FakeWorker,
