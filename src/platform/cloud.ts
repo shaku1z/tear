@@ -1,3 +1,4 @@
+import { isObject } from "../domain/records";
 import type { IdentityService, PlatformServices, Unsubscribe, TearBuildTarget } from "./contracts";
 
 export type CloudStatus = "local" | "guest" | "signedin";
@@ -278,7 +279,7 @@ export function createCloudCompatibility(options: CloudCompatibilityOptions): Cl
       if (!this.provider?.signIn) return false;
       try {
         const result = await this.provider.signIn(this);
-        if (typeof result === "object") {
+        if (isObject(result)) {
           this.authRetryPrompt = true;
           return result;
         }

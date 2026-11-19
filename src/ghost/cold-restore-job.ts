@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import type { GhostPortableArchiveBinding, GhostPairedArchiveBinding } from "./capsule-paired-archive";
 import { canonicalStringify } from "../domain/hash";
 import { ghostArchiveSha256, normalGhostArchiveLimits, type NormalGhostArchiveLimits } from "./capsule-archive";
@@ -38,9 +39,7 @@ export function ghostColdRestoreResultKey(id: string): string {
   return `ghost-cold-restore:result:v1:${id}`;
 }
 function object(value: unknown): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("invalid cold restore metadata");
-  return value as Record<string, unknown>;
+  return requireRecord(value, "invalid cold restore metadata");
 }
 function binding(value: unknown): GhostPortableArchiveBinding {
   const v = object(value);

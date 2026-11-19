@@ -1,3 +1,4 @@
+import { isObject, isRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import { decodeGhostChunkPayload } from "./capsule-codec";
 import {
@@ -32,10 +33,6 @@ import {
   type GhostVaultWrite,
   type GhostVaultGuard,
 } from "./capsule-vault-backend";
-
-function dataRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 export interface GhostVaultImportLimits {
   readonly maxEncodedBytes: number;
@@ -605,12 +602,12 @@ export class GhostLocalVault {
     const bytes = new TextEncoder().encode(encodedCapsule).byteLength;
     if (bytes > limits.maxEncodedBytes) throw new RangeError("capsule exceeds encoded byte limit");
     const parsed: unknown = JSON.parse(encodedCapsule);
-    if (typeof parsed !== "object" || parsed === null || !("manifest" in parsed) || !("chunks" in parsed)) {
+    if (!isObject(parsed) || !("manifest" in parsed) || !("chunks" in parsed)) {
       throw new TypeError("capsule must contain manifest and chunks");
     }
     const root = parsed as Record<string, unknown>;
     const manifest = parseGhostCapsuleManifest(root.manifest);
-    if (!dataRecord(root.chunks)) throw new TypeError("capsule chunks must be an object");
+    if (!isRecord(root.chunks)) throw new TypeError("capsule chunks must be an object");
     const chunks = root.chunks;
     if (manifest.chunks.length > limits.maxChunks) throw new RangeError("capsule exceeds chunk-count limit");
     if (ghostRootIntegrity(manifest.chunks) !== manifest.rootIntegrity)

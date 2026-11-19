@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { parseGhostColdRestoreJob, parseGhostColdRestoreResult, ghostColdRestoreResultKey } from "./cold-restore-job";
 import { ghostArchiveSha256 } from "./capsule-archive";
 import { canonicalStringify, stableVerificationHash } from "../domain/hash";
@@ -68,9 +69,7 @@ function parseEntry(raw: string): CareerEntry {
     !["integrity", "receipts", "unavailable"].includes(String(entry.verified)) ||
     !["human", "bot", "unknown"].includes(String(entry.actor)) ||
     typeof entry.catalogHash !== "string" ||
-    entry.dna === null ||
-    typeof entry.dna !== "object" ||
-    Array.isArray(entry.dna) ||
+    !isRecord(entry.dna) ||
     !Object.values(entry.dna).every(finite) ||
     (entry.loadout !== null &&
       !list(
@@ -96,12 +95,7 @@ function parseEntry(raw: string): CareerEntry {
     )
   )
     throw new TypeError("Malformed Career facts");
-  if (
-    entry.composition !== null &&
-    (typeof entry.composition !== "object" ||
-      Array.isArray(entry.composition) ||
-      !Object.values(entry.composition).every(finite))
-  )
+  if (entry.composition !== null && (!isRecord(entry.composition) || !Object.values(entry.composition).every(finite)))
     throw new TypeError("Malformed Career composition");
   if (entry.style !== null) {
     const style = careerObject(entry.style);

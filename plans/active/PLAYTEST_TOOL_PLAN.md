@@ -317,8 +317,15 @@ there by its own transitions; nothing edits health. The game offers this with Sw
 for the campaign roster, which leaves out the White Hart. The Playground restores a defeated player;
 the fight counts that as the defeat and stops. The scripted player now counts damage to an enemy as
 progress, because in a fight that scores nothing its watchdog took the fight for a softlock and paused.
-Still to do in this stage: the `still`, `walker` and `no-dodge` players, a player that cuts Grafts,
-boss movement, and the sweep.
+
+Built third (2026-11-19): the `cuts-objects` player and the "to cut" lines. The headless observation now
+carries what the stage holds (the same projection the browser's scripted player gets), so a fight counts,
+per phase and by name, what was planted for a weapon to cut, how long it stood and what the player cut:
+Grafts, Root Cage walls, Regrowth roots, and any later kind with no edit. The `cuts-objects` player is the
+tell-avoiding player with one addition: it picks the nearest standing object, walks under it, jumps and
+swings, and leaves one it has not damaged in 6 seconds. A fight at a chosen phase now gets its whole time
+limit; the time the game takes to bring the boss there used to be taken out of it.
+Still to do in this stage: the `still`, `walker` and `no-dodge` players, boss movement, and the sweep.
 
 Done when:
 - [ ] `pnpm playtest bosses` prints, for all five campaign bosses, per phase and per player: clear rate, time to kill, damage and hits taken, hits landed, boss movement, share of time open; 5 weapons, 4 seeds, Easy and Normal, in under 5 minutes on 6 jobs.

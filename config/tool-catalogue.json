@@ -1880,6 +1880,10 @@
       "scripts/asset-sheets/fingerprint.mjs",
       "tests/unit/tool-catalogue.test.mjs"
     ],
+    "scripts/eslint-rules/one-record-guard.mjs": [
+      "eslint.config.mjs",
+      "tests/unit/one-record-guard.test.mjs"
+    ],
     "scripts/build-targets.mjs": [
       "scripts/build-target.mjs",
       "scripts/check-reproducible-build.mjs",
