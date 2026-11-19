@@ -243,6 +243,13 @@ export default tseslint.config(
             "Do not wait for networkidle: wait for the state you need, or for a screen's lazy code with waitForScriptLoads(page) from tests/browser-waits.js.",
         },
         {
+          // A journey with no ceiling of its own holds the CI job until the job limit and prints
+          // nothing: page.evaluate and page.mouse never time out (nightly run 44221285956, two hours).
+          selector: "CallExpression[callee.object.name='chromium'][callee.property.name=/^launch/]",
+          message:
+            "Launch the browser with launchJourney(chromium, options) from tests/browser-waits.js: it gives the whole journey one ceiling and says what it was waiting on when it runs out.",
+        },
+        {
           // The same race when reading: a projectile found by one page call can be gone by the next.
           selector:
             "CallExpression[callee.property.name='evaluate']:has(MemberExpression[property.name='projectiles'])",

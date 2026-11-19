@@ -2,13 +2,24 @@ const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
+const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const {
+  assertFrameCostAssessment,
   assertPacingAssessment,
+  createFrameCostAssessment,
   createPacingAssessment,
   performanceHost,
 } = require("./browser-performance-pacing-policy");
-const { STATE_WAIT_MS, holdFor, pollEvery, trackScriptLoads, waitForScriptLoads } = require("./browser-waits");
+const {
+  STATE_WAIT_MS,
+  holdFor,
+  pollEvery,
+  trackScriptLoads,
+  waitForScriptLoads,
+  journeyStep,
+  launchJourney,
+} = require("./browser-waits");
 
 const projectRoot = path.resolve(__dirname, "..");
 const buildRoot = path.resolve(projectRoot, "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
@@ -42,8 +53,8 @@ const performanceBuild = {
   artifactHash: buildInfo.artifactHash,
   buildIdentityDigest: buildInfo.buildIdentityDigest,
 };
-const port = Number(process.env.TEAR_PERF_PORT || 8126);
-const baseUrl = `http://127.0.0.1:${port}`;
+// Set once the server listens on a free port (tests/local-server.js).
+let baseUrl = "http://127.0.0.1";
 const selectedScenario = process.env.TEAR_PERF_SCENARIO || "all";
 const durationMultiplier = Number(process.env.TEAR_PERF_DURATION_MULTIPLIER || "1");
 assert.ok(
@@ -144,7 +155,7 @@ function staticServer() {
 
 async function openInstrumentedPage(browser, pageErrors, options = {}) {
   const page = await browser.newPage({ viewport: budgets.referenceProfile.viewport, deviceScaleFactor });
-  trackScriptLoads(page);
+  await trackScriptLoads(page);
   await page.addInitScript((gfx) => {
     let settings = {};
     try {
@@ -395,6 +406,30 @@ function assertPacing(assessment, label, scenario, frameInterval) {
   for (const line of assertPacingAssessment(assessment, { label, scenario, frameInterval, host })) console.log(line);
 }
 
+/** The measured profile's own step and cadence rule, read from the budgets file. */
+function frameCostInput(label, scenario, snapshot) {
+  return {
+    label,
+    scenario,
+    profile: budgets.referenceProfile,
+    simulation: snapshot.simulation,
+    frame: snapshot.frame,
+    canonicalTick: snapshot.canonicalTick,
+    frameInterval: snapshot.frameInterval,
+  };
+}
+
+/** Prints a note in the log and in the job summary, so a figure that was not judged is never silent. */
+function note(line) {
+  console.log(line);
+  if (process.env.GITHUB_STEP_SUMMARY)
+    fs.appendFileSync(
+      process.env.GITHUB_STEP_SUMMARY,
+      `${line}
+`,
+    );
+}
+
 async function exerciseCombat(page, durationMs, onSample, minimumSamples = 0, minimumCollectionRateFps = 10) {
   const startedAt = Date.now();
   const sampleCollectionBoundMs = Math.ceil((minimumSamples / minimumCollectionRateFps) * 1000);
@@ -433,11 +468,13 @@ function measuredDuration(milliseconds) {
 }
 
 async function activeGameplayScenario(browser, pageErrors, scenario, label) {
+  journeyStep(browser, `${label}: opening the page`);
   const page = await openInstrumentedPage(browser, pageErrors, { playgroundControls: true });
   if (scenario.cpuThrottleRate) {
     const session = await page.context().newCDPSession(page);
     await session.send("Emulation.setCPUThrottlingRate", { rate: scenario.cpuThrottleRate });
   }
+  journeyStep(browser, `${label}: starting the Playground`);
   await startPlayground(page);
   await warmPlaygroundRuntime(page);
   const peakGauges = { enemies: 0, projectiles: 0, effects: 0 };
@@ -445,7 +482,9 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
   const samplePeak = (snapshot) => {
     for (const name of Object.keys(peakGauges)) peakGauges[name] = Math.max(peakGauges[name], gauge(snapshot, name));
   };
+  journeyStep(browser, `${label}: spawning ${String(scenario.enemySpawnCommands)} enemies`);
   await spawnRepresentativeEnemies(page, scenario.enemySpawnCommands, samplePeak);
+  journeyStep(browser, `${label}: measuring combat (${String(scenario.minimumSamples)} frame samples needed)`);
   // Match the long-task baseline to the timing-sample window. Spawn-menu and
   // workload setup are intentionally warm-up, not measured active combat.
   const longTasksBefore = (await diagnostics(page)).longTasks;
@@ -481,6 +520,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     frameInterval: snapshot.frameInterval,
     outsideFrameWork: snapshot.outsideFrameWork,
     pacingAssessment: assessPacing(label, scenario, snapshot.frameInterval),
+    frameCostAssessment: createFrameCostAssessment(frameCostInput(label, scenario, snapshot)),
     backingStore: await canvasBackingStore(page),
     newLongTasks: snapshot.longTasks - longTasksBefore,
     peakGauges,
@@ -492,9 +532,10 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
     activeFrameSamples >= scenario.minimumSamples,
     `${label} produced ${activeFrameSamples}/${scenario.minimumSamples} required active frame samples`,
   );
-  assertAtMost(snapshot.simulation.p95Ms, scenario.simulationP95Ms, `${label} simulation p95 ms`);
+  for (const line of assertFrameCostAssessment(result.frameCostAssessment, frameCostInput(label, scenario, snapshot))) {
+    note(line);
+  }
   assertAtMost(snapshot.render.p95Ms, scenario.renderP95Ms, `${label} render p95 ms`);
-  assertAtMost(snapshot.frame.p95Ms, scenario.frameP95Ms, `${label} frame-work p95 ms`);
   assertPacing(result.pacingAssessment, label, scenario, snapshot.frameInterval);
   assertAtMost(result.newLongTasks, scenario.newLongTasksMax, `${label} new >50 ms frames`);
   assert.ok(peakGauges.enemies > 0, `${label} did not exercise representative enemies`);
@@ -504,6 +545,7 @@ async function activeGameplayScenario(browser, pageErrors, scenario, label) {
 
 async function verdantGameplayScenario(browser, pageErrors) {
   const scenario = budgets.verdantGameplay;
+  journeyStep(browser, "Verdant gameplay");
   const page = await openInstrumentedPage(browser, pageErrors);
   await page.evaluate(() => window.__PANTHEON_TEST.startBoss("rootbound", "normal"));
   await page.waitForFunction(
@@ -604,6 +646,7 @@ async function verdantGameplayScenario(browser, pageErrors) {
 
 async function paleGameplayScenario(browser, pageErrors) {
   const scenario = budgets.paleGameplay;
+  journeyStep(browser, "Pale gameplay");
   const page = await openInstrumentedPage(browser, pageErrors);
   await page.evaluate(() => window.__PANTHEON_TEST.startBoss("white-hart", "normal"));
   await page.waitForFunction(
@@ -736,6 +779,7 @@ async function paleGameplayScenario(browser, pageErrors) {
 }
 
 async function repeatedRunScenario(browser, pageErrors) {
+  journeyStep(browser, "repeated runs");
   const page = await openInstrumentedPage(browser, pageErrors, { playgroundControls: true });
   const session = await page.context().newCDPSession(page);
   await session.send("HeapProfiler.enable");
@@ -785,20 +829,23 @@ async function repeatedRunScenario(browser, pageErrors) {
   const server = staticServer();
   let browser;
   try {
-    await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+    ({ origin: baseUrl } = await listenOnFreePort(server));
     const chromePath = selectedChromePath();
-    browser = await chromium.launch({
+    browser = await launchJourney(chromium, {
       headless: budgets.referenceProfile.headless,
       args: [
         "--disable-background-timer-throttling",
         "--disable-renderer-backgrounding",
         "--enable-precise-memory-info",
       ],
-      ...(chromePath ? { executablePath: chromePath } : {}),
+      // Without an installed Chrome, Playwright's full Chromium, not its headless shell: the shell is a
+      // separate, lighter build whose renderer crashed under the 4x throttle in the container (nightly
+      // 44282549007), and a frame-timing budget has to measure the real rendering pipeline.
+      ...(chromePath ? { executablePath: chromePath } : { channel: "chromium" }),
     });
     const browserRuntime = {
       version: browser.version(),
-      executable: chromePath || "playwright-bundled-chromium",
+      executable: chromePath || "playwright-chromium",
       archiveSha256: browserPreference === "pinned" ? pinnedBrowserArchiveSha256 : null,
     };
     // Emit the build identity before any scenario assertion so every failing

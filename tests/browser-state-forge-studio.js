@@ -4,7 +4,7 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS, settleFor } = require("./browser-waits");
 
-withJourney({ name: "C23 State Forge Studio", port: 8144 }, async ({ page, errors }) => {
+withJourney({ name: "C23 State Forge Studio" }, async ({ page, errors }) => {
   const url = new URL(page.url());
   url.searchParams.set("snapshot-editor", "1");
   await page.goto(url.toString(), { timeout: STATE_WAIT_MS, waitUntil: "domcontentloaded" });

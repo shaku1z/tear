@@ -5,9 +5,13 @@
  * fair healing) and a thrown blade cuts the stage objects a held blade cuts. v4: its Phase III is rebuilt
  * (Regrowth and Last Spring are moves on the shared layer; Regrowth keeps attacking and heals by the one table). v5: each
  * repeat of a repeating boss strike has a warning of its own, in which the hit is off. v6: the Gauntlet is a run
- * of trials, one per boss (see `gauntlet-trials.ts`).
+ * of trials, one per boss (see `gauntlet-trials.ts`). v7: a boss body hurts only inside a declared move (the
+ * Rootbound's blocks instead), and a move the target could not walk out of is not chosen.
  */
-export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v6";
+export const CURRENT_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v7";
+
+/** The identity while the Rootbound's idle body hurt on contact; historical replays only. */
+export const SIX_BIOME_PALE_PREVIEW_V6_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v6";
 
 /** The identity while the Gauntlet still cycled waves through the biomes; historical replays only. */
 export const SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION = "tear-rules-six-biome-verdant-r3-pale-preview-v5";
@@ -56,7 +60,8 @@ export const RULESET_STEPS: readonly RulesetStep[] = Object.freeze(
     { version: SIX_BIOME_PALE_PREVIEW_V3_RULESET_VERSION, change: "the Rootbound's second phase was rebuilt" },
     { version: SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION, change: "the Rootbound's third phase was rebuilt" },
     { version: SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION, change: "each repeat of a boss strike got its own warning" },
-    { version: CURRENT_RULESET_VERSION, change: "the Gauntlet became a run of trials" },
+    { version: SIX_BIOME_PALE_PREVIEW_V6_RULESET_VERSION, change: "the Gauntlet became a run of trials" },
+    { version: CURRENT_RULESET_VERSION, change: "a boss's body stopped hurting outside its moves" },
   ].map((step) => Object.freeze(step)),
 );
 
