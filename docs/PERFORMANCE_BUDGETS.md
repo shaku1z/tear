@@ -22,7 +22,7 @@ pnpm check:performance
 
 The test writes its measured profile to `artifacts/tearbench/generated/browser-performance.json` and exits non-zero on a regression. Each active workload includes a structured pacing assessment; CPU-throttled assessment failures stay visible in the artifact while only unthrottled pacing failures on a controlled host terminate the gate. A checkpoint run may set `TEAR_PERF_OUTPUT` to a canonical ignored checkpoint path. Diagnostic soaks may increase `TEAR_PERF_DURATION_MULTIPLIER`, select one scenario with `TEAR_PERF_SCENARIO`, exercise `TEAR_PERF_GFX` and `TEAR_PERF_DEVICE_SCALE_FACTOR`, select installed stable Chrome or Playwright's bundled Chromium with `TEAR_PERF_BROWSER=stable|bundled`, capture the first threshold-crossing Chrome trace with `TEAR_PERF_TRACE_PATH` and `TEAR_PERF_TRACE_HITCH_MS`, or write a selected scenario's sampled allocation profile with `TEAR_PERF_ALLOC_PROFILE_PATH`. Trace and allocation profiling each require one explicitly selected scenario so an earlier instrumented page cannot remain alive and contaminate a later workload. Allocation sampling adds profiler overhead and is diagnostic evidence, not a timing-budget run. These controls do not change checked budgets.
 
-Pull requests and `main` run the deterministic functional contract in the required `check` job. The performance test is in the `nightly` group of `config/checks.json`, which the daily Nightly checks workflow runs on a hosted runner. For a release candidate, run `pnpm check:performance` on the controlled release host; its report records the exact browser executable and version.
+Pull requests and `main` run the deterministic functional contract in the required `check` job. The performance test is in the `nightly` group of `config/checks.json`, which the daily Nightly checks workflow runs on a hosted runner. Started by hand, it checks the branch it was started on, or the commit, branch or tag typed into its optional `ref` input (a commit cannot be the run's own ref), and its job summary names the commit it checked; this is how one commit is measured against another on the same runner. For a release candidate, run `pnpm check:performance` on the controlled release host; its report records the exact browser executable and version.
 
 The test knows two host classes, recorded as `referenceProfile.host` and in each `pacingAssessment`:
 
@@ -32,6 +32,17 @@ The test knows two host classes, recorded as `referenceProfile.host` and in each
   - The game's own cost is still required on every host: simulation, render and frame-work p95, and no frame whose work exceeds 50 ms.
 
 `TEAR_PERF_HOST=controlled|shared` overrides the default. CPU-throttled pacing stays diagnostic on both classes.
+
+### Cost of one tick, and the per-frame figure at a slow cadence
+
+The per-frame `simulation` time is the work of a whole frame step, including every fixed tick that frame catches up, and the `frame` work includes it too. When the host delivers frames more slowly, a frame catches up more ticks and both figures rise although no tick got more expensive. The nightly hosted runner halved its cadence on 2026-11-18 (the unthrottled desktop run went from 17 ms to 33 ms between frames, with the same runner image and Chromium) and the constrained per-frame simulation p95 went from 9.7 to 14.6 and 15.1 ms (frame work from 12.5 to 18.7 ms), while the canonical tick p95 stayed at 1.1 to 1.3 ms. The old known-good commit also exceeded the 10 ms budget in a local run with software rendering at a similar cadence, so no commit was the cause.
+
+A scenario that sets `canonicalTickP95Ms` (the 4x constrained one) is therefore judged like this, by `createFrameCostAssessment` in `tests/browser-performance-pacing-policy.js`:
+
+- The p95 of one canonical tick is required on every host at every cadence. The budget is 3 ms: the highest p95 measured on the hosted runner is 1.3 ms and on a loaded local machine 2.3 ms, so 3 ms is 2.3 times the runner's worst and above the local worst. Lower it after a deliberate reduction; raise it only with the measured reason recorded here.
+- The per-frame simulation p95 and the frame-work p95 are required only when the median frame interval is at most `referenceProfile.judgedIntervalSteps` (2) times `referenceProfile.displayStepMs` (16.67 ms), that is 33.34 ms. Otherwise it is not judged, the run prints `per-frame sim not judged: interval X ms` and appends the same line to the job summary, and the report keeps the full assessment (`frameCostAssessment`).
+- Under the 4x throttle the median interval is usually far above that limit, even when the host is healthy (83 ms on the last good hosted run), so on a hosted runner the constrained per-frame figures are mostly not judged and the tick budget is the enforced cost. A local run on a fast machine judges both.
+- Scenarios without `canonicalTickP95Ms` (desktop, Verdant, Pale) still require the per-frame figures at every cadence. Giving them a tick budget, and the same switch, is the next step once their tick p95 has been measured on several runs.
 
 When hardware-independent changes deliberately alter the representative workload, capture several clean runs, document why the contract changed, and update the workload and budget together. Do not raise a threshold solely to silence one overloaded or contended machine.
 

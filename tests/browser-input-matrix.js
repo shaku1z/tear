@@ -2,9 +2,10 @@ const { chromium } = require("@playwright/test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
+const { listenOnFreePort } = require("./local-server");
 const path = require("node:path");
 const { chapterOpeningCarriesThroughOnEveryDevice } = require("./browser-chapter-opening");
-const { STATE_WAIT_MS, clickTarget, holdFor, notWithin, pollEvery } = require("./browser-waits");
+const { STATE_WAIT_MS, clickTarget, holdFor, notWithin, pollEvery, launchJourney } = require("./browser-waits");
 
 async function moveCapturedPointer(page, from, to) {
   await page.evaluate(
@@ -460,8 +461,8 @@ async function aRunPausesWhenTheGameLosesTheScreen(browser, configure) {
 
 async function main() {
   const root = path.resolve(__dirname, "..", "dist", process.env.TEAR_BROWSER_BUILD_DIR || "test-standalone");
-  const port = Number(process.env.TEAR_INPUT_TEST_PORT || 8128);
-  const baseUrl = `http://127.0.0.1:${port}`;
+  // Set once the server listens on a free port (tests/local-server.js).
+  let baseUrl = "http://127.0.0.1";
   const server = http.createServer((request, response) => {
     const pathname = new URL(request.url, baseUrl).pathname;
     const file = path.resolve(root, pathname === "/" ? "index.html" : pathname.slice(1));
@@ -475,8 +476,8 @@ async function main() {
     );
     fs.createReadStream(file).pipe(response);
   });
-  await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
-  const browser = await chromium.launch({ headless: true });
+  ({ origin: baseUrl } = await listenOnFreePort(server));
+  const browser = await launchJourney(chromium, { headless: true });
 
   async function configure(page) {
     await page.route("**/*", (route) =>

@@ -1,3 +1,4 @@
+import { BOSS_BODY_CONTACT, type BossBodyContactRow } from "./boss-body-contact";
 import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../training/boss-phase-practice-runtime";
 import type { BladePoint } from "./blade";
 import type { PlayerPlatformPort } from "./player";
@@ -463,6 +464,7 @@ export function createMirrorTypes(dependencies: MirrorDependencies) {
     _live: boolean;
     introT = 0;
 
+    override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT.echo;
     constructor(x: number, y: number, mods?: MirrorMods | null) {
       // heavier presence than the old Echo, and knockback tuned so hits FEEL like they land
       super(x, y, Object.assign({}, CONFIG.echo, { knockbackTaken: 5.5, weight: 1.35 }));

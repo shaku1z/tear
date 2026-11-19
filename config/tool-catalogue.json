@@ -1553,6 +1553,19 @@
         ".github/actions/checked-commit/action.yml"
       ]
     },
+    "scripts/ci-playwright-image.mjs": {
+      "purpose": "Names the Playwright container image every browser job runs in, from the version pnpm-lock.yaml installs",
+      "effects": [
+        "read-only"
+      ],
+      "duration": "seconds",
+      "via": [],
+      "runBy": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/nightly.yml",
+        ".github/workflows/tearbench-program.yml"
+      ]
+    },
     "scripts/ci-verdict.mjs": {
       "purpose": "Validate's required check: fails unless every needed job ended as it should",
       "effects": [

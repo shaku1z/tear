@@ -5,7 +5,7 @@
 import {
   createBrowserGhostReplayPresentation,
   type ReplayFrameLayer,
-} from "../../../src/app/replay/browser-ghost-studio-media";
+} from "../../../src/app/replay/browser-ghost-replay-presentation";
 import { CONFIG } from "../../../src/config/game-config";
 import { clamp } from "../../../src/domain/geometry";
 import { createSceneCanvas, loadSceneBitmap, releaseSceneBitmap } from "../../../src/presentation/scenes/scene-bitmap";

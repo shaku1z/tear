@@ -1057,13 +1057,14 @@ or physical-device qualification claim is made.
 
 The inventory is reviewed at every phase gate. New features added during the redesign must be appended here and implemented through the target boundaries; they may not add new shared globals or direct platform dependencies to domain code.
 
-### C37 verified Theater Studio Cut List
+### Replay editor: clip export from the Theater
 
 The verified V3 Theater now draws the reconstructed production world through
 per-world presentation ports and the shared actor/platform/world renderers.
-Studio marks verified IN/OUT checkpoints and appends immutable ranges in chosen
+The replay editor (`src/ghost/replay-cut-list.ts`, `src/app/replay/browser-replay-clip-export.ts`;
+engineering builds only) marks verified IN/OUT checkpoints and appends ranges in chosen
 order at the transport speed. Local native WebM encoding uses a dedicated canvas,
-reconstructed player-follow, deterministic aspect fit, and explicit simulation
+reconstructed player-follow at 640×360, and explicit simulation
 time. Output is bounded to 1800 frames/60 seconds and 64 MiB, with local decode,
 dimensions/duration checks, accepted-frame PNG thumbnail and separate download.
 Cancellation/source replacement discards stale work. GIF, historical camera/pixel

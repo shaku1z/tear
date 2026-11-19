@@ -83,7 +83,7 @@ class Vp8Webm {
     )
       throw new Error("Native VP8 output frame count/timestamps/keyframe do not match the plan");
     // Reserve container overhead before allocating/copying native encoded output.
-    if (this.#bytes + chunk.byteLength + 64 > MAX_BYTES - 4096) throw new RangeError("Studio media exceeds 64 MiB");
+    if (this.#bytes + chunk.byteLength + 64 > MAX_BYTES - 4096) throw new RangeError("Clip exceeds 64 MiB");
     const time = Math.round(chunk.timestamp / 1000); // TimestampScale = 1ms.
     let cluster = this.#clusters.at(-1);
     if (cluster === undefined || chunk.type === "key" || time - cluster.time > 30000) {
@@ -120,8 +120,8 @@ class Vp8Webm {
     const info = master(0x1549a966, [
       integer(0x2ad7b1, 1000000),
       float64(0x4489, (this.frames * 1000) / FPS),
-      element(0x4d80, text.encode("Tear Studio")),
-      element(0x5741, text.encode("Tear Studio")),
+      element(0x4d80, text.encode("Tear")),
+      element(0x5741, text.encode("Tear")),
     ]);
     const tracks = master(0x1654ae6b, [
       master(0xae, [
@@ -178,21 +178,21 @@ class Vp8Webm {
     const segmentBytes = parts.reduce((sum, part) => sum + part.length, 0);
     const bytes = join([ebml, uint(0x18538067), size(segmentBytes), ...parts]);
     this.#clusters.length = 0;
-    if (bytes.length > MAX_BYTES) throw new RangeError("Studio media exceeds 64 MiB");
+    if (bytes.length > MAX_BYTES) throw new RangeError("Clip exceeds 64 MiB");
     return bytes;
   }
 }
-export function studioWebCodecsAvailable(): boolean {
+export function clipWebCodecsAvailable(): boolean {
   return typeof VideoEncoder !== "undefined" && typeof VideoFrame !== "undefined";
 }
 /** The only retained pixel surfaces are the caller canvas and a bounded native encoder queue. */
-export async function encodeStudioVp8Webm(
+export async function encodeClipVp8Webm(
   canvas: HTMLCanvasElement,
   frames: number,
   draw: (index: number) => void,
   signal: AbortSignal,
 ): Promise<Uint8Array> {
-  if (!studioWebCodecsAvailable()) throw new Error("Timestamped WebCodecs VP8 export is unavailable in this browser");
+  if (!clipWebCodecsAvailable()) throw new Error("Timestamped WebCodecs VP8 export is unavailable in this browser");
   if (
     !Number.isSafeInteger(frames) ||
     frames < 1 ||
@@ -204,13 +204,13 @@ export async function encodeStudioVp8Webm(
     canvas.width > 640 ||
     canvas.height > 640
   )
-    throw new RangeError("Studio encode dimensions/frame budget is invalid");
+    throw new RangeError("Clip encode dimensions/frame budget is invalid");
   const started = performance.now();
   let encoder: VideoEncoder | undefined, failure: Error | undefined;
   const check = (): void => {
     signal.throwIfAborted();
     if (failure !== undefined) throw failure;
-    if (performance.now() - started >= WORK_MS) throw new Error("Studio encoding exceeded its 90 second work budget");
+    if (performance.now() - started >= WORK_MS) throw new Error("Clip encoding exceeded its 90 second work budget");
   };
   const wait = <T>(work: Promise<T>): Promise<T> => {
     return new Promise<T>((resolve, reject) => {
@@ -220,12 +220,12 @@ export async function encodeStudioVp8Webm(
       };
       const abort = (): void => {
         finish();
-        reject(new Error("Studio encoding cancelled", { cause: signal.reason }));
+        reject(new Error("Clip encoding cancelled", { cause: signal.reason }));
       };
       const timer = setTimeout(
         () => {
           finish();
-          reject(new Error("Studio encoding exceeded its 90 second work budget"));
+          reject(new Error("Clip encoding exceeded its 90 second work budget"));
         },
         Math.max(1, WORK_MS - (performance.now() - started)),
       );

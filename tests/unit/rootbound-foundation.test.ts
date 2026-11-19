@@ -52,13 +52,16 @@ const ALL_MOVES = [
   "last-spring",
 ];
 
-function recordingCanvas(calls: string[]): CanvasRenderingContext2D {
-  const values = new Map<PropertyKey, unknown>();
+/** Records each drawing call's name in `calls` and, when given, its name and arguments in `log`. */
+function recordingCanvas(calls: string[], log?: { name: string; args: unknown[] }[]): CanvasRenderingContext2D {
+  // A real canvas starts fully opaque; the figure layer multiplies into it.
+  const values = new Map<PropertyKey, unknown>([["globalAlpha", 1]]);
   return new Proxy({} as CanvasRenderingContext2D, {
     get(_target, property): unknown {
       if (values.has(property)) return values.get(property);
-      return (): void => {
+      return (...args: unknown[]): void => {
         calls.push(String(property));
+        log?.push({ name: String(property), args });
       };
     },
     set(_target, property, value): boolean {
@@ -123,13 +126,21 @@ describe("Rootbound production foundation", () => {
     ) as InstanceType<typeof harness.types.Rootbound> & {
       draw(canvas: CanvasRenderingContext2D, player: unknown): void;
     };
-    const calls: string[] = [];
-    boss.introT = CONFIG.bossTheater.introDur / 2;
-    boss.draw(recordingCanvas(calls), harness.player);
+    const drawing = (introT: number) => {
+      const calls: string[] = [];
+      const log: { name: string; args: unknown[] }[] = [];
+      boss.introT = introT;
+      boss.draw(recordingCanvas(calls, log), harness.player);
+      return { calls, scales: log.filter((call) => call.name === "scale").map((call) => call.args) };
+    };
+    const rising = drawing(CONFIG.bossTheater.introDur / 2);
+    const risen = drawing(0);
 
-    expect(calls.filter((name) => name === "lineTo").length).toBeGreaterThanOrEqual(14);
-    expect(calls.filter((name) => name === "arc").length).toBeGreaterThanOrEqual(7);
-    expect(calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
+    // The seed pod: two curved halves, each drawn as a filled and inked shape.
+    expect(rising.calls.filter((name) => name === "bezierCurveTo").length).toBeGreaterThanOrEqual(4);
+    expect(rising.calls).toEqual(expect.arrayContaining(["save", "translate", "scale", "fill", "stroke", "restore"]));
+    // The intro pose squashes the pod while it rises, and lets go once it has risen.
+    expect(rising.scales).not.toEqual(risen.scales);
   });
 
   it("hands every mark to the biome's skin, and puts a landing strike in front of the body", () => {
@@ -251,10 +262,18 @@ describe("Rootbound production foundation", () => {
     boss.update(1 / 120, harness.platforms, harness.player);
     boss.cinematicRequest = null;
     boss.cinematicT = 0;
+    // A root is a curve from the keeper's feet that ends at the foot of a Graft.
     const roots = (): number => {
-      const calls: string[] = [];
-      boss.draw(recordingCanvas(calls), harness.player);
-      return calls.filter((call) => call === "quadraticCurveTo").length;
+      const log: { name: string; args: unknown[] }[] = [];
+      boss.draw(recordingCanvas([], log), harness.player);
+      const graftFeet = boss
+        .graftAnchorPlacements()
+        .map(
+          (graft) =>
+            `${String(graft.geometry.x + (graft.geometry.w ?? 0) / 2)},${String(graft.geometry.y + (graft.geometry.h ?? 0))}`,
+        );
+      return log.filter((call) => call.name === "quadraticCurveTo" && graftFeet.includes(call.args.slice(2).join(",")))
+        .length;
     };
     const unrooted = roots();
     Object.assign(boss, {
@@ -383,17 +402,17 @@ describe("Rootbound production foundation", () => {
     boss.hp = boss.maxHp;
     expect(boss.phase).toBe(2);
 
-    // The opening contact grace outlasts the first recovery, so an overlapping spawn deals no touch damage.
+    // Its body never deals touch damage, so a spawn that overlaps the player costs nothing; it blocks instead.
     boss.update(1, harness.platforms, harness.player);
     expect(boss.state).toBe("idle");
-    expect(boss.contactDamageEnabled()).toBe(false);
     boss.update(0.25, harness.platforms, harness.player);
     expect(boss).toMatchObject({
       state: "idle",
       atk: "unavailable",
       availableAttacks: ALL_MOVES,
     });
-    expect(boss.contactDamageEnabled()).toBe(true);
+    expect(boss.contactDamageEnabled()).toBe(false);
+    expect(boss.bodyBlocks()).toBe(true);
   });
 
   it("cleans Rootbound idempotently at every encounter replacement boundary", () => {

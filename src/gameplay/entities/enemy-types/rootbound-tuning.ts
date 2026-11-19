@@ -41,8 +41,3 @@ export const ROOTBOUND_PHASE_TWO_CADENCE = Object.freeze({ openingDelay: 0.85, r
  * is the fastest. When Last Spring comes is its move's `afterMoves` (`rootbound-moves.ts`).
  */
 export const ROOTBOUND_PHASE_THREE_CADENCE = Object.freeze({ openingDelay: 0.7, gapMultiplier: 0.7 });
-/**
- * openingContactGrace: seconds after the intro before the body deals contact damage
- * (the boss spawns where the player stands).
- */
-export const ROOTBOUND_ENCOUNTER = Object.freeze({ openingContactGrace: 1.2 });

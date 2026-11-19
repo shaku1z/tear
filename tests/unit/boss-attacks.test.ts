@@ -330,6 +330,7 @@ describe("boss attack runner", () => {
       { kind: "column", anchor: "target", hw: 40, height: 400 },
       { kind: "ring", radius: 90 },
       { kind: "travel", dy: 0, hw: 20, hh: 20, speed: 2 },
+      { kind: "body", reach: 12 },
     ];
     const runState = {
       attackId: "x",
@@ -350,6 +351,7 @@ describe("boss attack runner", () => {
       { kind: "box", x: 300, y: 360, hw: 40, hh: 200 },
       { kind: "circle", x: 600, y: 500, r: 90 },
       { kind: "box", x: 540, y: 500, hw: 20, hh: 20 },
+      { kind: "box", x: 600, y: 500, hw: 52, hh: 60 },
     ]);
   });
 
@@ -721,5 +723,78 @@ describe("a strike that repeats warns of each repeat", () => {
     expect(() => buildBossAttackTable(definition([move("lash"), repeating({ every: 3, tell: 0.5 })]))).toThrow(
       /not within its active window/u,
     );
+  });
+});
+
+describe("a move the target could not walk out of is not chosen", () => {
+  // A ring of radius 150 round the boss after a 0.5 s tell. The target walks 430 px/s: 215 px in the tell.
+  const burst = move("burst", {
+    hit: { shape: { kind: "ring", radius: 150 }, damage: 16, parryable: false },
+    tell: { mark: "reticle" },
+  });
+  const table = buildBossAttackTable(
+    definition([
+      burst,
+      move("lash", { choose: { range: [0, 2000], weight: 1e-9, cooldown: 0 } }),
+      move("bolt", {
+        choose: { range: [0, 2000], weight: 1e-9, cooldown: 0 },
+        hit: { shape: { kind: "travel", dy: 0, hw: 20, hh: 20, speed: 1200 }, damage: 15, parryable: false },
+      }),
+    ]),
+  );
+  const walker = (blocked: boolean) => ({ speed: 430 / BOSS_ATTACK_TICKS_PER_SECOND, blocked });
+  const chosen = (bossX: number, targetX: number, overrides: Partial<BossAttackContext<Phase>> = {}) =>
+    chooseBossAttack(
+      table,
+      createBossAttackRunnerState(),
+      context(0, {
+        boss: { x: bossX, y: 500, hw: 59, hh: 59 },
+        target: { x: targetX, y: 520, hw: 18, hh: 36 },
+        random: { next: () => 0 },
+        ...overrides,
+      }),
+    )?.id;
+
+  it("plays it in the open, where the nearer edge of its area is a short walk", () => {
+    expect(chosen(800, 700, { walker: walker(true) })).toBe("burst");
+    expect(chosen(800, 900, { walker: walker(true) })).toBe("burst");
+  });
+
+  it("withholds it from a target between the body and a wall, and plays another weighted move (a phase has two)", () => {
+    // The nearer edge is outside the arena; the far edge is 265 px away and through the body.
+    expect(chosen(139, 42, { walker: walker(true) })).toBe("lash");
+    expect(chosen(1600 - 139, 1600 - 42, { walker: walker(true) })).toBe("lash");
+  });
+
+  it("withholds it from a target at the wall with no body in the way, when the far edge is too far to walk", () => {
+    expect(chosen(139, 42, { walker: walker(false) })).toBe("lash");
+    // The same target with a longer walk allowed (a faster walker) can leave by the far edge.
+    expect(chosen(139, 42, { walker: { speed: 600 / BOSS_ATTACK_TICKS_PER_SECOND, blocked: false } })).toBe("burst");
+  });
+
+  it("counts a body that blocks as in the way, and one that does not as open floor", () => {
+    // The near edge is out of the arena; the far edge is 208 px away, a walk the tell allows, past the body.
+    expect(chosen(150, 110, { walker: walker(false) })).toBe("burst");
+    expect(chosen(150, 110, { walker: walker(true) })).not.toBe("burst");
+  });
+
+  it("leaves a boss without a walker, and moves answered by a jump, as they were", () => {
+    expect(chosen(139, 42)).toBe("burst");
+    const jumped = buildBossAttackTable(
+      definition([
+        move("lash", { hit: { shape: { kind: "lane", length: 900, dy: 0, hh: 30 }, damage: 20, parryable: true } }),
+        move("bolt", {
+          choose: { range: [0, 2000], weight: 1e-9, cooldown: 0 },
+          hit: { shape: { kind: "travel", dy: 0, hw: 20, hh: 20, speed: 1200 }, damage: 15, parryable: false },
+        }),
+      ]),
+    );
+    const pinned = context(0, {
+      boss: { x: 139, y: 500, hw: 59, hh: 59 },
+      target: { x: 42, y: 520, hw: 18, hh: 36 },
+      random: { next: () => 0 },
+      walker: walker(true),
+    });
+    expect(chooseBossAttack(jumped, createBossAttackRunnerState(), pinned)?.id).toBe("lash");
   });
 });

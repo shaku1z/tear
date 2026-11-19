@@ -25,7 +25,6 @@ function scenario(id, seed, maxTicks) {
 withJourney(
   {
     name: "C28 Ghost Vault physical browser quota",
-    port: 8170,
     query: { "ghost-vault-storage": "physical-quota" },
   },
   async ({ page }) => {

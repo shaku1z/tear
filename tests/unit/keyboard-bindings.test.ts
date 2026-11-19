@@ -5,6 +5,7 @@ import {
   KEYBOARD_SCREENS,
   anyKeyIn,
   keyCodeLabel,
+  keyCodes,
   keyboardCollisions,
   keyboardLabel,
   rangeKeyIn,
@@ -52,6 +53,13 @@ describe("keyboard binding table", () => {
     expect(keyboardLabel("jump")).toBe("W / SPACE");
     expect(keyboardLabel("pause")).toBe("ESC / P");
     expect(keyboardLabel("quick-spawn")).toBe("1–8");
+    expect(keyboardLabel("confirm")).toBe("SPACE");
+  });
+
+  it("names only bound keys, and keeps Enter first for the pad's confirm", () => {
+    for (const action of KEYBOARD_ACTIONS)
+      for (const code of KEYBOARD_BINDINGS[action].named ?? []) expect(keyCodes(action), action).toContain(code);
+    expect(keyCodes("confirm")[0]).toBe("Enter");
   });
 
   it("reads held and pressed sets through the table, ranges in order", () => {

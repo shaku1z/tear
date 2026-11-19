@@ -512,7 +512,7 @@ test("boss, stage, progression, event, and player owners receive current mapped 
   for (const file of [
     "src/agents/live-watch-agent-host.ts",
     "src/agents/live-watch-agent-panel.ts",
-    "src/app/engineering/replay-editor.ts",
+    "src/app/replay/replay-screen-adapter.ts",
   ]) {
     const surface = select([file]);
     assert.ok(surface.routes.includes("current-player-surfaces"));
@@ -670,12 +670,12 @@ test("the scheduled TearBench workflow inspects the complete commit range", () =
   assert.match(scheduledWorkflow, /fetch-depth: 0/u);
 });
 
-test("the scheduled TearBench workflow runs only the weekly endurance job", () => {
+test("the scheduled TearBench workflow runs only the weekly endurance job, after the job naming its browser image", () => {
   const scheduledWorkflow = readFileSync(join(root, ".github", "workflows", "tearbench-program.yml"), "utf8");
   const jobs = scheduledWorkflow.slice(scheduledWorkflow.indexOf("\njobs:"));
   assert.deepEqual(
     [...jobs.matchAll(/^ {2}([\w-]+):$/gmu)].map((match) => match[1]),
-    ["weekly-endurance"],
+    ["image", "weekly-endurance"],
   );
   assert.deepEqual(
     [...scheduledWorkflow.matchAll(/cron: "([^"]+)"/gu)].map((match) => match[1]),
@@ -824,7 +824,7 @@ test("selected player journeys are actually dispatched through safe evidence exe
       };
     }
   });
-  const selection = select(["src/app/engineering/replay-editor.ts"], {
+  const selection = select(["src/app/replay/replay-screen-adapter.ts"], {
     routes: routePath,
     catalog,
     executeEvidence: true,

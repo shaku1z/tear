@@ -169,6 +169,12 @@ describe("chapter presentation contract", () => {
     expect(cinematicPromptForDevice(hint, "touch")).toBe("TAP TO CONTINUE");
   });
 
+  it("names SPACE in the keyboard and mouse skip prompts, the owner's wording", () => {
+    const hint = "TAP TO CONTINUE  ·  HOLD TO SKIP";
+    expect(cinematicPromptForDevice(hint, "mouse")).toBe("CLICK TO CONTINUE  ·  HOLD SPACE TO SKIP");
+    expect(cinematicPromptForDevice(hint, "keyboard")).toBe("SPACE TO CONTINUE  ·  HOLD SPACE TO SKIP");
+  });
+
   it("queues achievement toasts while a cinematic owns the screen", () => {
     const toasts = new AchievementToastController((value) => value);
     const pending = [{ id: "a", name: "Threshold", desc: "Clear a stage.", rarity: "common", cat: "run" }];
