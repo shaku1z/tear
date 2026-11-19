@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import {
   DIFFICULTY_CATALOG,
   DIFFICULTY_IDS,
@@ -30,9 +31,7 @@ const MODIFIER_KEYS = Object.freeze([
 ] as const);
 
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError(`${path} must be an object`);
-  return value as Record<string, unknown>;
+  return requireRecord(value, `${path} must be an object`);
 }
 
 function exactKeys(value: Record<string, unknown>, path: string, expected: readonly string[]): void {

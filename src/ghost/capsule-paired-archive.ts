@@ -1,3 +1,4 @@
+import { isObject, isRecord } from "../domain/records";
 import { parseGhostCapsuleManifest } from "./capsule-import-plan";
 import { canonicalStringify } from "../domain/hash";
 import {
@@ -67,9 +68,8 @@ export async function prepareGhostPortableArchive(
   if (input.byteLength > limits.maxEncodedBytes) throw new RangeError("Ghost pair exceeds encoded byte limit");
   const bytes = Uint8Array.from(input),
     root: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
-  if (typeof root !== "object" || root === null || Array.isArray(root) || !("format" in root))
-    return prepareGhostCapsuleArchive(bytes, limits);
-  const value = root as Record<string, unknown>;
+  if (!isRecord(root) || !("format" in root)) return prepareGhostCapsuleArchive(bytes, limits);
+  const value = root;
   if (
     Object.keys(value).length !== 4 ||
     value.format !== "tearghost-linked-archive" ||
@@ -81,8 +81,7 @@ export async function prepareGhostPortableArchive(
   // Reject aggregate declared work before either member's chunk decoder runs.
   const declared = [value.parent, value.companion].map((text) => {
     const inner: unknown = JSON.parse(text);
-    if (typeof inner !== "object" || inner === null || !("manifest" in inner))
-      throw new TypeError("Pair member envelope is invalid");
+    if (!isObject(inner) || !("manifest" in inner)) throw new TypeError("Pair member envelope is invalid");
     return parseGhostCapsuleManifest(inner.manifest);
   });
   if (

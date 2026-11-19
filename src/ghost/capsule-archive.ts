@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { readGhostBossMemory } from "./boss-memory-origin";
 import { verifyBossMemory } from "./boss-memory";
 import { GhostCapsuleReader } from "./capsule-reader";
@@ -68,9 +69,7 @@ export function normalGhostArchiveLimits(input: Partial<NormalGhostArchiveLimits
   return Object.freeze(limits);
 }
 function object(value: unknown): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("Ghost archive must contain data objects");
-  return value as Record<string, unknown>;
+  return requireRecord(value, "Ghost archive must contain data objects");
 }
 function validateManifestPolicy(manifest: TearGhostManifest, limits: NormalGhostArchiveLimits): void {
   if (manifest.status !== "complete") throw new TypeError("normal Ghost archive requires a complete manifest");
