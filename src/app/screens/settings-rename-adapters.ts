@@ -1,17 +1,13 @@
-import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
+import type { SettingsRenameServices as RuntimeServices } from "./settings-rename-adapters-runtime";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { AppScreen } from "../../domain/screen-catalog";
 import type { RenameSnapshot } from "./rename-controller";
 import type { SettingsController, GameSettings } from "./settings-controller";
 
-type Dependencies = Pick<
-  GameRuntimeDependencies,
-  "APP" | "GFX" | "Input" | "PAD" | "PROFILE" | "Cloud" | "PwaUpdate" | "UI"
->;
 type Renderers = ReturnType<typeof createLiveScreenRenderers>;
 
 export interface SettingsRenameServices {
-  readonly dependencies: Dependencies;
+  readonly dependencies: RuntimeServices["dependencies"];
   readonly document: Document;
   readonly window: Window;
   readonly canvas: HTMLCanvasElement;
