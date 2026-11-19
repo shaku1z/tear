@@ -30,12 +30,12 @@ export const LESSON_TEACHING: Readonly<Record<TutorialLessonId, ExerciseTeaching
     controls: ["move"],
   },
   jump: {
-    goal: "Jump three times. Climb the ledges.",
+    goal: "Jump three times.",
     why: "Height opens routes and air attacks.",
     controls: ["jump"],
   },
   dash: {
-    goal: "Dash through the lane three times.",
+    goal: "Dash three times.",
     why: "A dash carries you through danger. Steer it as you go.",
     controls: ["dash"],
   },
