@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const http = require("node:http");
+const { listenOnFreePort } = require("../local-server");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { STATE_WAIT_MS, holdFor, pollEvery, launchJourney } = require("../browser-waits");
@@ -167,8 +168,9 @@ function contentType(file) {
   return "application/octet-stream";
 }
 
-function createStaticServer(root, port) {
-  const baseUrl = `http://127.0.0.1:${String(port)}`;
+function createStaticServer(root) {
+  // Set once the server listens on a free port (tests/local-server.js).
+  let baseUrl = "http://127.0.0.1";
   const server = http.createServer((request, response) => {
     const pathname = decodeURIComponent(new URL(request.url, baseUrl).pathname);
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);
@@ -181,8 +183,12 @@ function createStaticServer(root, port) {
     fs.createReadStream(file).pipe(response);
   });
   return {
-    baseUrl,
-    listen: () => new Promise((resolve) => server.listen(port, "127.0.0.1", resolve)),
+    get baseUrl() {
+      return baseUrl;
+    },
+    listen: async () => {
+      ({ origin: baseUrl } = await listenOnFreePort(server));
+    },
     close: async () => {
       server.closeAllConnections();
       await new Promise((resolve) => server.close(resolve));
@@ -979,10 +985,8 @@ async function main() {
     assert.equal(oracleHead, ORACLE_REVISION, `oracle worktree is ${oracleHead}; expected ${ORACLE_REVISION}`);
   }
 
-  const currentServer = createStaticServer(currentRoot, Number(process.env.TEAR_PARITY_CURRENT_PORT || 8134));
-  const oracleServer = currentOnly
-    ? null
-    : createStaticServer(oracleRoot, Number(process.env.TEAR_PARITY_ORACLE_PORT || 8135));
+  const currentServer = createStaticServer(currentRoot);
+  const oracleServer = currentOnly ? null : createStaticServer(oracleRoot);
   let browser;
   try {
     await currentServer.listen();

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { pollEvery } = require("./browser-waits");
 
-withJourney({ name: "terminal journeys", port: 8143, recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
+withJourney({ name: "terminal journeys", recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
   const hooks = await page.evaluate(() => Object.keys(window.__PANTHEON_TEST));
   assert.ok(hooks.includes("openTerminal"), "built artifact is missing required PANTHEON_DEBUG hook: openTerminal");
 

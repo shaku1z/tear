@@ -48,10 +48,15 @@ try {
     JSON.stringify(["achievements", "bosses", "enemies", "modes", "public-tuning", "stages", "upgrades", "weapons"])
   )
     throw new Error("game reference check produced an invalid fixed collection authority");
-  if (reference.collections.upgrades?.status !== "complete" || reference.collections.upgrades.items?.length !== 60)
+  // The exporter checks the upgrades and achievements against their catalogs (every id, in its order),
+  // so the counts come from the catalogs and are not repeated here.
+  const upgradeIds = reference.collections.upgrades?.items?.map((upgrade) => upgrade.id) ?? [];
+  if (
+    reference.collections.upgrades?.status !== "complete" ||
+    upgradeIds.length === 0 ||
+    new Set(upgradeIds).size !== upgradeIds.length
+  )
     throw new Error("game reference check produced an incomplete upgrade catalog");
-  // The exporter checks the achievements against the catalog (every id, in its order), so the count
-  // comes from the catalog and is not repeated here.
   const achievementIds = reference.collections.achievements?.items?.map((achievement) => achievement.id) ?? [];
   if (
     reference.collections.achievements?.status !== "complete" ||

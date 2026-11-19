@@ -149,7 +149,7 @@ async function forcePhase(page, bossId, fraction, cinematicId) {
   return released;
 }
 
-withJourney({ name: "boss oracle parity", port: 8237, recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
+withJourney({ name: "boss oracle parity", recordFrames: true }, async ({ page, waitArmed, clickLabel }) => {
   if (!REQUIRE_POINTER_LOCK) {
     // Decline pointer lock for the whole run, in this page and after any reload. Dropping a lock
     // the game already holds would pause it (a lost capture pauses play), so it is never granted.

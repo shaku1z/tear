@@ -18,7 +18,7 @@
       "chars": 27922
     },
     "src/game-reference/game-reference.ts": {
-      "chars": 30641
+      "chars": 30503
     },
     "src/gameplay/combat/held-blade-collision-runtime.ts": {
       "largestFunctionStatements": 171
@@ -100,9 +100,6 @@
     "src/presentation/enemies/renderers/base-renderers.ts": {
       "largestFunctionStatements": 81
     },
-    "src/presentation/enemies/renderers/rootbound-renderer.ts": {
-      "largestFunctionStatements": 100
-    },
     "src/presentation/enemies/renderers/source-renderer.ts": {
       "largestFunctionStatements": 165
     },
@@ -158,7 +155,7 @@
       "chars": 30100
     },
     "src/tearbench/production-headless-environment.ts": {
-      "chars": 29925
+      "chars": 28010
     },
     "src/tearbench/production-replay-composition.ts": {
       "chars": 34925

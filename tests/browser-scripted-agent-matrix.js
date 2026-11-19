@@ -4,7 +4,16 @@ const path = require("node:path");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-const weapons = ["sword", "hammer", "greatsword", "chainblade", "riftlock"];
+// Riftlock goes first: it is the one weapon whose identity is throw and recall, so it can show every shared
+// mechanic and the weapons after it stop as soon as they have shown their own.
+const weapons = ["riftlock", "sword", "hammer", "greatsword", "chainblade"];
+/** Frames the Watch Agent runs between looks at what it has shown. */
+const batchFrames = 200;
+/**
+ * The most batches one weapon gets. Measured 2026-11-18 (seed 62): the last mechanic any weapon showed first
+ * appeared in batch 31, so 60 leaves twice that, and five weapons at the cap still end inside the journey limit.
+ */
+const maxBatches = 60;
 const difficulties = ["easy", "normal", "hard", "extreme", "onehit"];
 const collectiveRequiredCoreMechanics = [
   "heldSlash",
@@ -90,7 +99,7 @@ function mechanics(snapshot) {
   };
 }
 
-withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async ({ page, errors }) => {
+withJourney({ name: "C24 weapon and contract truth matrix" }, async ({ page, errors }) => {
   const artifactDirectory = path.resolve(__dirname, "..", "artifacts", "tearbench", "c24");
   const contractDirectory = path.join(artifactDirectory, "mode-contracts");
   fs.mkdirSync(contractDirectory, { recursive: true });
@@ -107,9 +116,27 @@ withJourney({ name: "C24 weapon and contract truth matrix", port: 8154 }, async 
     await page.getByLabel("Seed").fill("62");
     await page.getByRole("button", { name: "Start Watch Agent" }).click();
     let snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.snapshot());
-    for (let batch = 0; batch < 80 && snapshot.status === "running"; batch += 1) {
-      snapshot = await page.evaluate(() => window.__TEAR_WATCH_AGENT__.run(200));
+    // A weapon plays until it has shown what this journey asserts of it: its own mechanics, and any shared
+    // mechanic no earlier weapon has shown. Frames after that prove nothing here.
+    const owed = [
+      "heldSlash",
+      "tether",
+      ...weaponIdentityRequirements[weapon],
+      ...collectiveRequiredCoreMechanics.filter((mechanic) =>
+        results.every((entry) => entry.mechanics[mechanic].status !== "observed"),
+      ),
+    ];
+    const startedAt = Date.now();
+    let batches = 0;
+    const shown = () => owed.every((mechanic) => mechanics(snapshot)[mechanic].status === "observed");
+    while (batches < maxBatches && snapshot.status === "running" && !shown()) {
+      snapshot = await page.evaluate((frames) => window.__TEAR_WATCH_AGENT__.run(frames), batchFrames);
+      batches += 1;
     }
+    console.log(
+      `C24 matrix ${weapon}: ${String(batches)} batches, ${String(snapshot.fixedTicks)} ticks, ` +
+        `${((Date.now() - startedAt) / 1000).toFixed(1)} s, ${snapshot.status}`,
+    );
     const result = {
       weapon,
       selection: snapshot.selection,
