@@ -99,6 +99,15 @@ describe("SettingsController", () => {
     expect(controller.settings.padPreset).toBe("default");
   });
 
+  it("reads a stored array as no settings: every default stands and no index becomes a setting", () => {
+    const test = fixture(JSON.stringify([0.4, true, "low"]));
+    const controller = new SettingsController(test.dependencies);
+    const defaults = new SettingsController(fixture().dependencies).settings;
+
+    expect(controller.settings).toEqual(defaults);
+    expect(Object.keys(controller.settings)).not.toContain("0");
+  });
+
   it("recovers from malformed storage and persists the current record", () => {
     const test = fixture("not json");
     const controller = new SettingsController(test.dependencies);

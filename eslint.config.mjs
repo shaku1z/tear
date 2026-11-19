@@ -3,6 +3,8 @@ import globals from "globals";
 import path from "node:path";
 import tseslint from "typescript-eslint";
 
+import { oneRecordGuard } from "./scripts/eslint-rules/one-record-guard.mjs";
+
 const inwardLayers = Object.freeze({
   domain: new Set([
     "app",
@@ -21,6 +23,7 @@ const inwardLayers = Object.freeze({
 
 const tearArchitecture = {
   rules: {
+    "one-record-guard": oneRecordGuard,
     "inward-imports": {
       meta: {
         type: "problem",
@@ -274,6 +277,12 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // One plain-object guard: only src/domain/records.ts compares typeof with "object".
+    files: ["src/**/*.ts"],
+    plugins: { tear: tearArchitecture },
+    rules: { "tear/one-record-guard": "error" },
   },
   {
     files: ["src/domain/**/*.ts", "src/simulation/**/*.ts", "src/gameplay/**/*.ts"],

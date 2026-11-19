@@ -1,4 +1,4 @@
-import { isRecord } from "../domain/records";
+import { asRecord, isObject, isRecord } from "../domain/records";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | readonly JsonValue[];
@@ -26,7 +26,7 @@ export function validateJson(value: unknown, maxNodes = 20_000): ValidationResul
     if (typeof input === "number") {
       return Number.isFinite(input) ? { ok: true, value: input } : { ok: false, error: "JSON numbers must be finite." };
     }
-    if (typeof input !== "object") return { ok: false, error: "Value is not JSON serializable." };
+    if (!isObject(input)) return { ok: false, error: "Value is not JSON serializable." };
     if (ancestors.has(input)) return { ok: false, error: "Cyclic values are not accepted." };
     ancestors.add(input);
     if (Array.isArray(input)) {
@@ -61,10 +61,10 @@ export function validateJson(value: unknown, maxNodes = 20_000): ValidationResul
 export function validateJsonObject(value: unknown): ValidationResult<JsonObject> {
   const result = validateJson(value);
   if (!result.ok) return result;
-  if (Array.isArray(result.value) || result.value === null || typeof result.value !== "object") {
+  if (!isRecord(result.value)) {
     return { ok: false, error: "Expected a JSON object." };
   }
-  return { ok: true, value: result.value as JsonObject };
+  return { ok: true, value: result.value };
 }
 
 /** Explicit migration boundary for legacy systems that still mutate loaded save objects. */
@@ -74,7 +74,7 @@ function isJsonArray(value: JsonValue): value is readonly JsonValue[] {
 
 export function mutableJsonClone(value: JsonValue): MutableJsonValue {
   if (isJsonArray(value)) return value.map((entry) => mutableJsonClone(entry));
-  if (value !== null && typeof value === "object") {
+  if (isObject(value)) {
     const output: MutableJsonObject = {};
     for (const [key, entry] of Object.entries(value)) output[key] = mutableJsonClone(entry);
     return output;
@@ -89,10 +89,6 @@ export function parseStoredJson(text: string, maxCharacters = 5_000_000): Valida
   } catch {
     return { ok: false, error: "Stored value is not valid JSON." };
   }
-}
-
-export function asRecord(value: unknown): Record<string, unknown> | null {
-  return isRecord(value) ? value : null;
 }
 
 export function safeInteger(value: unknown, fallback: number): number {

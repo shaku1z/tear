@@ -12,7 +12,7 @@ import {
   type PurchaseRefusal,
 } from "../domain/cosmetics";
 import { progressFacts } from "../domain/progress-facts";
-import { finiteOrZero, hasOwnKey, ownValue, safeEntries } from "../domain/records";
+import { asRecord, finiteOrZero, hasOwnKey, ownValue, safeEntries } from "../domain/records";
 import type { ProgressFacts } from "../domain/unlock-condition";
 import type { AcknowledgedStorage } from "../platform/contracts";
 import {
@@ -144,7 +144,7 @@ export interface ProfileStoreOptions {
 }
 
 function record(value: unknown): Tracker | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Tracker) : null;
+  return asRecord(value) ?? null;
 }
 
 function boolMap(value: unknown): Record<string, boolean> {

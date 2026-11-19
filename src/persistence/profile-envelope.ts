@@ -1,7 +1,7 @@
 import { normalizeCosmeticState } from "../domain/cosmetics";
+import { asRecord } from "../domain/records";
 import { achievementOutbox, addGrant, dailyReceiptId, tutorialLedger } from "../domain/reward-receipts";
 import {
-  asRecord,
   extensionFields,
   mutableJsonClone,
   safeInteger,

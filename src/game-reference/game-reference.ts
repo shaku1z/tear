@@ -1,3 +1,4 @@
+import { requireRecord } from "../domain/records";
 import { canonicalStringify } from "../domain/hash";
 import {
   FINAL_FIVE_WEAPON_SCHEMA_VERSION,
@@ -203,9 +204,7 @@ if (CANONICAL_ACHIEVEMENT_IDS.length !== EXPECTED_ACHIEVEMENT_COUNT)
   throw new Error("canonical achievement catalog count changed without a reference-contract update");
 
 function record(value: unknown, path: string): Record<string, unknown> {
-  if (value === null || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError(`${path} must be an object`);
-  return value as Record<string, unknown>;
+  return requireRecord(value, `${path} must be an object`);
 }
 
 function text(value: unknown, path: string): string {

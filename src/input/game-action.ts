@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE } from "../domain/input-scales";
 
 export { AIM_MAGNITUDE_SCALE, AIM_TURN_SCALE, INPUT_AXIS_SCALE };
@@ -29,10 +30,6 @@ export type GameAction =
 
 export type GameActionNormalizationResult =
   Readonly<{ ok: true; action: GameAction }> | Readonly<{ ok: false; reason: string }>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function fixedInteger(value: unknown, min: number, max: number): number | undefined {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= min && value <= max ? value : undefined;

@@ -1,0 +1,327 @@
+{
+  "src/agents/live-watch-agent-host.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/app/campaign/cinematic-host.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/app/combat/combat-actions.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/app/engineering/debug-harness.ts": {
+    "tear/one-record-guard": {
+      "count": 4
+    }
+  },
+  "src/app/engineering/state-forge-adapter.ts": {
+    "tear/one-record-guard": {
+      "count": 3
+    }
+  },
+  "src/app/engineering/state-forge-runtime-bridge.ts": {
+    "tear/one-record-guard": {
+      "count": 15
+    }
+  },
+  "src/app/replay/browser-ghost-studio-media.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/app/replay/replay-screen-adapter-runtime.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/app/shell/runtime-type-guards.ts": {
+    "tear/one-record-guard": {
+      "count": 5
+    }
+  },
+  "src/app/world/world-presentation-adapters.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/campaign/chapter-cinematic-binding.ts": {
+    "tear/one-record-guard": {
+      "count": 4
+    }
+  },
+  "src/gameplay/campaign/finale-binding.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/campaign/finale-runtime.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/campaign/live-cinematic-runtime.ts": {
+    "tear/one-record-guard": {
+      "count": 5
+    }
+  },
+  "src/gameplay/combat/combat-entity-runtime.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/combat/live-collision-phase.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/gameplay/entities/boss-ritual-cues.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/environment/aurora-track.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/environment/bloom-well.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/environment/environment-cleanup.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/environment/environment-projection.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/environment/environment-state.ts": {
+    "tear/one-record-guard": {
+      "count": 4
+    }
+  },
+  "src/gameplay/environment/presentation-snapshot.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/progression/meta.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/run/beat-run.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/gameplay/run/ghost-assistance.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/run/lifecycle.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/run/outcome-chronology-journal.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/run/seed-locked-draft.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/runtime/cinematic-director.ts": {
+    "tear/one-record-guard": {
+      "count": 3
+    }
+  },
+  "src/gameplay/runtime/tear-world-configuration.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/scoring/best-scores.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/training/boss-phase-practice-runtime.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/gameplay/training/practice-boss-catalog.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/training/practice-enemy-catalog.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/training/tutorial-controller.ts": {
+    "tear/one-record-guard": {
+      "count": 3
+    }
+  },
+  "src/gameplay/training/tutorial-failure-coach.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/gameplay/training/tutorial-ghost-coach.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/gameplay/training/tutorial-gold-reference.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/training/tutorial-weapon-annexes.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/gameplay/upgrade-hooks.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/presentation/entities/canvas-surface.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/presentation/scenes/scene-contract.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/presentation/ui-cinematic.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/arena-slot-references.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/tearbench/browser/state-forge-studio.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/campaign-victory-origin.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/canonical-scenarios.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/detached-world-hydrator.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/tearbench/environment-codec.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/invariants.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/live-codec-validation.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/particle-presentation-checkpoint.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/tearbench/production-combat-phases.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/tearbench/production-headless-environment.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/reward-codec-hydrator.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/source-void-history-references.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/state-codecs.ts": {
+    "tear/one-record-guard": {
+      "count": 7
+    }
+  },
+  "src/tearbench/state-forge-exit-gate.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/state-forge-live-compiler.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/tearbench/state-forge-studio-model.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/state-validity.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/tearsdl.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  },
+  "src/tearbench/ui-presentation-checkpoint.ts": {
+    "tear/one-record-guard": {
+      "count": 2
+    }
+  },
+  "src/tearbench/validation.ts": {
+    "tear/one-record-guard": {
+      "count": 1
+    }
+  }
+}

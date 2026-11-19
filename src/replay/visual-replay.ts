@@ -1,3 +1,4 @@
+import { isRecord } from "../domain/records";
 import type { ReplayActionEnvelope, ReplayBuildMetadata, ReplayEnvelopeV2 } from "./envelope";
 import type { TearScoreReplayMetadata } from "../domain/tear-score-replay";
 import { CURRENT_REPLAY_SCHEMA_VERSION, REPLAY_FORMAT, validateReplayEnvelope } from "./envelope";
@@ -79,10 +80,6 @@ export interface VisualReplayProvenance {
 
 export type VisualReplayResult =
   Readonly<{ ok: true; recording: VisualRecordingV2 }> | Readonly<{ ok: false; error: string }>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function finiteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);

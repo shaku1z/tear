@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { stableVerificationHash } from "../domain/hash";
 import type { TearCausalEventV1, TearSnapshotV1 } from "../tearbench/contracts";
 import { createProductionGhostReplayComposition } from "../tearbench/production-replay-composition";
@@ -36,13 +37,8 @@ export interface RecordedGhostChallengeResult {
   readonly finalTick: number;
   readonly proof: ReturnType<typeof createChallengeAttemptProof>;
 }
-const record = (value: unknown): Readonly<Record<string, unknown>> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Readonly<Record<string, unknown>>)
-    : {};
-
 export function readRecordedGhostChallenge(value: unknown): RecordedGhostChallenge {
-  const raw = record(value);
+  const raw = asRecord(value) ?? {};
   if (
     Object.keys(raw).sort().join() !==
       ["format", "schemaVersion", "parentId", "parentRoot", "forkTick", "rule", "target", "limitTicks", "label"]
@@ -109,8 +105,11 @@ export function recordedGhostChallengeChoices(
   if (parent.manifest.provenance?.seedRace !== undefined) return Object.freeze([]);
   const mapped = mapGhostCapsuleToReplayEnvelope(parent),
     tick = snapshot.tick,
-    run = record(snapshot.state["tear.run.v1"]);
-  if (mapped.issues.length > 0 || !["playing", "paused"].includes(String(record(snapshot.state["tear.ui.v1"]).screen)))
+    run = asRecord(snapshot.state["tear.run.v1"]) ?? {};
+  if (
+    mapped.issues.length > 0 ||
+    !["playing", "paused"].includes(String(asRecord(snapshot.state["tear.ui.v1"])?.screen))
+  )
     return [];
   const make = (
     rule: RecordedGhostChallenge["rule"],
@@ -140,7 +139,7 @@ export function recordedGhostChallengeChoices(
   const bosses = snapshot.state["tear.boss.v1"];
   if (Array.isArray(bosses))
     for (const boss of bosses) {
-      const actor = record(boss);
+      const actor = asRecord(boss) ?? {};
       if (
         typeof actor.id === "string" &&
         typeof actor.bossId === "string" &&
@@ -253,8 +252,8 @@ export function verifyRecordedGhostChallenge(
           })))
   )
     throw new TypeError("Recorded challenge goal was not reproduced by native execution.");
-  const endings = capsule.tracks.results.filter((entry) => record(entry.value).format === "tearghost-challenge-end");
-  const end = record(endings[0]?.value),
+  const endings = capsule.tracks.results.filter((entry) => asRecord(entry.value)?.format === "tearghost-challenge-end");
+  const end = asRecord(endings[0]?.value) ?? {},
     reason = end.reason;
   if (
     endings.length !== 1 ||
