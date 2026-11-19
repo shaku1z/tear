@@ -171,6 +171,10 @@ export function createSpecialEnemyTypes(dependencies: EnemyDependencies, Enemy: 
       this.moves = ["charger"]; // overwritten at spawn from the wave roster
       this.curMove = "charger";
     }
+    override holdAttacks(seconds: number) {
+      super.holdAttacks(seconds);
+      this.copyT = Math.max(this.copyT, seconds);
+    }
     update(dt: number, platforms: readonly EnemyPlatform[], player: EnemyPlayerPort, projectiles: EnemyProjectile[]) {
       this.tickTimers(dt);
       const C = this.cfg,

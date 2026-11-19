@@ -59,6 +59,12 @@ retire, fails it.
   `config/terminology-registry.json`.
 - **Rules:** use the simulation tick and the injected random source; ESLint rejects `Math.random`,
   `Date.now` and browser globals in gameplay code.
+- **The opening grace:** a run's first wave, and a wave that follows a story, opens with
+  `OPENING_GRACE_SECONDS` (`src/gameplay/run/wave-rules.ts`) in which enemies close in but cannot
+  attack. The shared spawn step sets `attackHold` on each enemy; the enemy base holds body contact
+  and `atkCd` while it runs. An enemy that starts attacks from a clock of its own adds that clock in
+  an `override holdAttacks`. `tests/unit/wave-opening-grace.test.ts` stands every enemy kind beside
+  a still player and fails for one that harms during the hold.
 
 ## 4. The boss
 

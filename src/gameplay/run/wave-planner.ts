@@ -15,7 +15,7 @@ import type { RunMode } from "./session";
 import type { StageId } from "../stages";
 import { campaignStageCurve } from "./campaign-stage-curve";
 import { eligibleCompositionPool, emptyCompositionBudgetState, recordCompositionKind } from "./composition-budget";
-import { describeWave } from "./wave-rules";
+import { describeWave, openingGrace } from "./wave-rules";
 import { GAUNTLET_RULES, gauntletEnemyScale, gauntletRound, gauntletWave } from "./gauntlet-trials";
 
 export interface WaveTuning {
@@ -102,6 +102,8 @@ export interface PlannedWave {
   readonly waveTime: number | null;
   readonly waveKills: number | null;
   readonly wavePeak: number | null;
+  /** Seconds of opening grace this wave has once it is live (see `openingGrace`). */
+  readonly grace: number;
   readonly activationDeferred: boolean;
   readonly intents: readonly WavePlanIntent[];
 }
@@ -374,6 +376,7 @@ export function planNextWave(options: PlanNextWaveOptions): PlannedWave {
     waveTime: deferred ? null : 0,
     waveKills: deferred ? null : 0,
     wavePeak: deferred ? null : options.currentMultiplier,
+    grace: openingGrace({ wave, followsStory: deferred, bossWave: description.bossWave }),
     activationDeferred: deferred,
     intents,
   };

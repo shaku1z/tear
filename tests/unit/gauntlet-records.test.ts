@@ -7,6 +7,7 @@ import {
   SIX_BIOME_PALE_PREVIEW_V4_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V5_RULESET_VERSION,
   SIX_BIOME_PALE_PREVIEW_V6_RULESET_VERSION,
+  SIX_BIOME_PALE_PREVIEW_V7_RULESET_VERSION,
   UNKNOWN_RULESET_REFUSAL,
   rulesetRefusal,
 } from "../../src/gameplay/run/ruleset-version";
@@ -108,12 +109,15 @@ describe("ruleset steps", () => {
     const versions = RULESET_STEPS.map((step) => step.version);
     expect(new Set(versions).size).toBe(versions.length);
     expect(versions.at(-1)).toBe(CURRENT_RULESET_VERSION);
-    expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V6_RULESET_VERSION);
+    expect(versions.at(-2)).toBe(SIX_BIOME_PALE_PREVIEW_V7_RULESET_VERSION);
     for (const step of RULESET_STEPS) expect(step.change.length).toBeGreaterThan(0);
   });
 
   it("admits only the current ruleset, in every mode, and names the first change an older recording missed", () => {
     expect(rulesetRefusal(CURRENT_RULESET_VERSION)).toBeNull();
+    expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V7_RULESET_VERSION)).toBe(
+      "recorded before a run's first wave began with a grace",
+    );
     expect(rulesetRefusal(SIX_BIOME_PALE_PREVIEW_V6_RULESET_VERSION)).toBe(
       "recorded before a boss's body stopped hurting outside its moves",
     );
