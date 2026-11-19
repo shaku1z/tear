@@ -3,6 +3,7 @@ import type { TearAgentObservation } from "../agents/contracts";
 import type { BossTell } from "../gameplay/entities/boss-tells";
 import { INPUT_AXIS_SCALE, type GameAction } from "../input/game-action";
 import { TEAR_SIMULATION_TICKS_PER_SECOND } from "../tearbench/simulation-profile";
+import { aimAtObject, createObjectChoice, OBJECT_CUTTING } from "./boss-objects";
 import { boxOverlaps, type BossView, type PlayerBox } from "./boss-view";
 
 /**
@@ -26,7 +27,8 @@ export const TELL_AVOIDANCE = Object.freeze({
   bodyClearancePixels: 24,
 });
 
-export type BossPlayerId = "scripted" | "avoids-tells";
+export const BOSS_PLAYER_IDS = Object.freeze(["scripted", "avoids-tells", "cuts-objects"] as const);
+export type BossPlayerId = (typeof BOSS_PLAYER_IDS)[number];
 
 export interface BossPlayer {
   readonly id: BossPlayerId;
@@ -59,16 +61,24 @@ export function createScriptedBossPlayer(): BossPlayer {
  * The scripted player with one addition: it reads the tells the boss declares and steps out of an
  * area before it lands, and goes in when the boss reports itself exposed. It reads nothing else
  * about the boss, so it works on any boss that declares tells.
+ *
+ * As "cuts-objects" it also cuts what stands on the stage (Grafts, cage walls, roots) before it goes back to
+ * the boss: it walks under the object, jumps when it is higher up, and swings. It leaves them for the boss
+ * while the boss is open, and still steps out of a warned area first.
  */
-export function createTellAvoidingBossPlayer(): BossPlayer {
+export function createTellAvoidingBossPlayer(id: "avoids-tells" | "cuts-objects" = "avoids-tells"): BossPlayer {
   const policy = new TearLiveHierarchicalPolicy("competent");
   let side = 0;
   let lastX = Number.NaN;
   let stuck = 0;
+  const chooseObject = id === "cuts-objects" ? createObjectChoice() : undefined;
   return {
-    id: "avoids-tells",
+    id,
     decide(observation, boss, player) {
-      const base = policy.decide(withBoss(observation, boss)).actions;
+      const open = boss?.tells.some((tell) => tell.stage === "exposed") === true;
+      const object = open ? undefined : chooseObject?.(observation.state);
+      const shown = object === undefined ? observation : aimAtObject(observation, object);
+      const base = policy.decide(withBoss(shown, boss)).actions;
       if (boss === null || player === null || observation.ui?.screen !== "playing") return base;
       const threat = boss.tells
         .filter((tell) => threatening(tell) && boxOverlaps(player, tell, TELL_AVOIDANCE.marginPixels))
@@ -77,13 +87,20 @@ export function createTellAvoidingBossPlayer(): BossPlayer {
         side = 0;
         stuck = 0;
         lastX = player.x;
-        const exposed = boss.tells.some((tell) => tell.stage === "exposed");
         const toward = boss.x >= player.x ? INPUT_AXIS_SCALE : -INPUT_AXIS_SCALE;
         const steer = (x: number): readonly GameAction[] => [
           ...base.filter((action) => action.type !== "move" && action.type !== "dash"),
           { type: "move", x, y: 0 },
         ];
-        if (!exposed) return boxOverlaps(player, boss, TELL_AVOIDANCE.bodyClearancePixels) ? steer(-toward) : base;
+        if (object !== undefined) {
+          const sideways = object.x - player.x;
+          const x = Math.abs(sideways) <= OBJECT_CUTTING.standPixels ? 0 : Math.sign(sideways) * INPUT_AXIS_SCALE;
+          const actions: GameAction[] = [...base.filter((action) => !isMovement(action)), { type: "move", x, y: 0 }];
+          if (object.y < player.y - OBJECT_CUTTING.jumpAbovePixels && observation.state.player.grounded)
+            actions.push({ type: "jump", phase: "pressed" });
+          return actions;
+        }
+        if (!open) return boxOverlaps(player, boss, TELL_AVOIDANCE.bodyClearancePixels) ? steer(-toward) : base;
         return Math.abs(boss.x - player.x) <= boss.hw + TELL_AVOIDANCE.punishRangePixels ? base : steer(toward);
       }
       if (side === 0) side = player.x <= threat.x ? -1 : 1;
@@ -105,5 +122,5 @@ export function createTellAvoidingBossPlayer(): BossPlayer {
 }
 
 export function createBossPlayer(id: BossPlayerId): BossPlayer {
-  return id === "scripted" ? createScriptedBossPlayer() : createTellAvoidingBossPlayer();
+  return id === "scripted" ? createScriptedBossPlayer() : createTellAvoidingBossPlayer(id);
 }
