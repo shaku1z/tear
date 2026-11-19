@@ -125,7 +125,7 @@ describe("the MUSIC screen view", () => {
   });
 
   it("opens Home by default, a collection's page with BACK one level up, Songs and Settings", () => {
-    expect(view()).toMatchObject({ page: "home", collection: null, back: { type: "navigate", to: "menu" } });
+    expect(view()).toMatchObject({ page: "home", collection: null, back: { type: "navigate.back" } });
     expect(view().rail.map((entry) => [entry.id, entry.selected])).toEqual([
       ["home", true],
       ["songs", false],
@@ -137,7 +137,7 @@ describe("the MUSIC screen view", () => {
     expect(stage.back).toEqual({ type: "navigate", to: "music", tab: "songs" });
     expect(stage.rail.some((entry) => entry.selected)).toBe(false);
     const all = view("songs");
-    expect(all).toMatchObject({ page: "collection", back: { type: "navigate", to: "menu" } });
+    expect(all).toMatchObject({ page: "collection", back: { type: "navigate.back" } });
     expect(all.collection?.id).toBe("all");
     expect(view("settings").page).toBe("settings");
     expect(view("collection:nowhere").page).toBe("home");
@@ -240,6 +240,7 @@ describe("song preview", () => {
       app: new AppStateController(createSurfaceAvailability("release")),
       input: { allowLock: false, discardSemanticInput: () => undefined, returnControl: () => undefined },
       runScreenFact: () => undefined,
+      place: () => ({ focus: -1, scroll: 0 }),
     });
     navigation.setScreen("music");
     setMusicPreview("spring");

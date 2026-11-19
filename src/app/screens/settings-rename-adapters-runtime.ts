@@ -161,7 +161,6 @@ export function createLiveSettingsRenameAdaptersRuntime(services: SettingsRename
       tab: settingsTab,
       tabs: settingsTabs.map(([id, label]) => ({ id, label, selected: id === settingsTab })),
       sections,
-      returnTo: d.APP.settingsReturn,
       canScrollUp: services.scroll() > 0,
       canScrollDown: services.scroll() < maximumScroll,
     });

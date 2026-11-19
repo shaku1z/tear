@@ -381,7 +381,8 @@ export function createPauseResultRenderers(context: ScreenRenderContext) {
       context,
       [
         { label: "QUIT", action: { type: "run.quit" } },
-        { label: "CANCEL", action: { type: "navigate", to: "paused" } },
+        // A confirm opens on its safe choice, so a stray confirm press never quits.
+        { label: "CANCEL", action: { type: "navigate", to: "paused" }, entryFocus: true },
       ],
       layout.bodyTop + ui.t.space.lg,
       layout.width,

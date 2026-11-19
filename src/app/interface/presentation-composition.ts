@@ -104,6 +104,8 @@ export interface LivePresentationFrameState<Screen extends string> {
   readonly setEnterAmount: (value: number) => void;
   readonly scroll: () => number;
   readonly setScroll: (value: number) => void;
+  /** Where the player was on the current screen, when the last screen change returned to it. */
+  readonly arrival: () => Readonly<{ focus: number; scroll: number }> | undefined;
   readonly focus: () => number;
   readonly setFocus: (value: number) => void;
   readonly controls: () => PresentationControl[];
@@ -313,6 +315,8 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
       enterAmount: state.enterAmount,
       setEnterAmount: state.setEnterAmount,
       ease: services.ease,
+      setScroll: state.setScroll,
+      arrival: state.arrival,
       resetScroll: () => {
         state.setScroll(0);
       },
@@ -382,7 +386,7 @@ export function createLivePresentationFrameHost<Screen extends string, Stage ext
         if (services.capturePolicy().ui === "include")
           ui.rotateGate(context, host.screenRectangle(), state.timeSeconds());
       },
-      firstEnabledButton: host.firstEnabledButton,
+      entryFocus: host.entryFocus,
       setFocus: state.setFocus,
       updateDomHints: (screen) => {
         const capture = services.capturePolicy(),

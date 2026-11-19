@@ -4,12 +4,7 @@ import {
   type RenderPipelinePorts,
   type ScreenRectangle,
 } from "../../presentation/render-pipeline";
-import {
-  firstEnabledUiButton,
-  handleUiRuntimeFrame,
-  stepRuntimeTab,
-  type UiRuntimePorts,
-} from "./ui-runtime-controller";
+import { screenEntryFocus, handleUiRuntimeFrame, stepRuntimeTab, type UiRuntimePorts } from "./ui-runtime-controller";
 
 export interface PresentationDimensions {
   readonly width: number;
@@ -32,7 +27,7 @@ export interface LivePresentationHost {
   readonly render: () => void;
   readonly handleUi: () => void;
   readonly drawButtons: () => void;
-  readonly firstEnabledButton: () => number;
+  readonly entryFocus: (restored: number | undefined) => number;
   readonly stepTab: <Key>(
     tabs: readonly (readonly [Key, ...(readonly unknown[])])[],
     current: Key,
@@ -72,7 +67,7 @@ export function createLivePresentationHost<Screen extends string>(
     drawButtons: () => {
       renderButtonLayer(options.buttonLayer());
     },
-    firstEnabledButton: () => firstEnabledUiButton(ui().buttons()),
+    entryFocus: (restored: number | undefined) => screenEntryFocus(ui().buttons(), restored),
     stepTab: <Key>(
       tabs: readonly (readonly [Key, ...(readonly unknown[])])[],
       current: Key,

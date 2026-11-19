@@ -196,6 +196,7 @@ export function startLiveGame(
     app: APP,
     input: Input,
     runScreenFact: createTearRunScreenFactPublisher(GAMEPLAY_EVENTS, () => RUN_LIFECYCLE.snapshot(), liveRun),
+    place: () => ({ focus: interfaceInteraction.focus(), scroll: interfaceInteraction.scroll() }),
   });
   const interfaceFrame = createLiveInterfaceFrameState(navigation.screen());
   const currentOutcome = () => {

@@ -227,6 +227,8 @@ describe("presentation runtime boundaries", () => {
       },
       ease: (value) => value,
       resetScroll: () => events.push("scroll-reset"),
+      setScroll: (value) => events.push(`scroll-${String(value)}`),
+      arrival: () => undefined,
       renderMenuBackdrop: () => events.push("attract"),
       renderScreen: () => events.push("screen"),
       drawButtons: () => events.push("buttons"),
@@ -235,7 +237,7 @@ describe("presentation runtime boundaries", () => {
       showCanvasCursor: () => true,
       drawControllerToast: () => events.push("pad"),
       drawRotationGate: () => events.push("rotate"),
-      firstEnabledButton: () => 2,
+      entryFocus: (restored) => restored ?? 2,
       setFocus: (value) => {
         focus = value;
       },
@@ -247,5 +249,43 @@ describe("presentation runtime boundaries", () => {
     expect(events.indexOf("screen")).toBeLessThan(events.indexOf("post"));
     expect(previous).toBe("menu");
     expect(focus).toBe(2);
+  });
+
+  it("lands a return on the control and scroll the player left, and a fresh entry at the top", () => {
+    const calls: string[] = [];
+    let previous = "codex";
+    let arrival: { focus: number; scroll: number } | undefined = { focus: 4, scroll: 160 };
+    const context = new Proxy({}, { get: () => () => undefined, set: () => true }) as CanvasRenderingContext2D;
+    const ports = new Proxy(
+      {
+        canvas: { width: 1600, clientWidth: 1600, clientHeight: 900 } as HTMLCanvasElement,
+        context,
+        logicalWidth: 1600,
+        overscan: () => ({ x: 0, y: 0 }),
+        screen: () => "settings",
+        previousScreen: () => previous,
+        setPreviousScreen: (value: string) => {
+          previous = value;
+        },
+        screenRectangle: () => ({ x: 0, y: 0, w: 1600, h: 900 }),
+        background: () => "#fff",
+        isMenuScreen: () => false,
+        touchActive: () => false,
+        showCanvasCursor: () => false,
+        arrival: () => arrival,
+        setScroll: (value: number) => calls.push(`scroll ${String(value)}`),
+        resetScroll: () => calls.push("scroll top"),
+        entryFocus: (restored: number | undefined) => restored ?? 0,
+        setFocus: (value: number) => calls.push(`focus ${String(value)}`),
+      } as Partial<RenderPipelinePorts<string>>,
+      { get: (target, key) => (target as Record<string | symbol, unknown>)[key] ?? (() => undefined) },
+    ) as RenderPipelinePorts<string>;
+    renderPresentationFrame(ports);
+    expect(calls).toEqual(["scroll 160", "focus 4"]);
+    calls.length = 0;
+    previous = "menu";
+    arrival = undefined;
+    renderPresentationFrame(ports);
+    expect(calls).toEqual(["focus 0", "scroll top"]);
   });
 });

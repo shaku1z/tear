@@ -38,6 +38,9 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly setEnterAmount: (amount: number) => void;
   readonly ease: (amount: number) => number;
   readonly resetScroll: () => void;
+  readonly setScroll: (value: number) => void;
+  /** Where the player was on the current screen, when the last screen change returned to it. */
+  readonly arrival: () => Readonly<{ focus: number; scroll: number }> | undefined;
   readonly renderMenuBackdrop: (screenRectangle: ScreenRectangle, screen: Screen) => void;
   readonly renderScreen: (screen: Screen) => void;
   readonly drawButtons: () => void;
@@ -46,7 +49,8 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly showCanvasCursor: () => boolean;
   readonly drawControllerToast: () => void;
   readonly drawRotationGate: () => void;
-  readonly firstEnabledButton: () => number;
+  /** The control to focus as the screen opens; `restored` is the one the player left it on. */
+  readonly entryFocus: (restored: number | undefined) => number;
   readonly setFocus: (index: number) => void;
   readonly updateDomHints: (screen: Screen) => void;
 }
@@ -73,9 +77,13 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
   if (playLike) ports.renderWorldLayers(rectangle, playLike);
   if (screen === "playing") ports.renderReticle();
 
-  if (screen !== ports.previousScreen()) {
+  const entering = screen !== ports.previousScreen();
+  // A return lands where the player left the screen; any other entry starts at the top.
+  const arrival = entering ? ports.arrival() : undefined;
+  if (entering) {
     ports.setEnterSeconds(0);
-    if (screenResetsScrollOnEnter(screen)) ports.resetScroll();
+    if (arrival !== undefined) ports.setScroll(arrival.scroll);
+    else if (screenResetsScrollOnEnter(screen)) ports.resetScroll();
   }
   if (ports.isMenuScreen(screen)) {
     ports.setEnterAmount(ports.ease(ports.enterSeconds() / 0.24));
@@ -95,10 +103,10 @@ export function renderPresentationFrame<Screen extends string>(ports: RenderPipe
   ports.drawControllerToast();
   if (rotateGateShown(ports.touchActive(), ports.canvas.clientWidth, ports.canvas.clientHeight))
     ports.drawRotationGate();
-  if (screen !== ports.previousScreen()) {
+  if (entering) {
     ports.setPreviousScreen(screen);
-    ports.setFocus(ports.firstEnabledButton());
-    ports.resetScroll();
+    ports.setFocus(ports.entryFocus(arrival?.focus));
+    if (arrival === undefined) ports.resetScroll();
   }
   ports.updateDomHints(screen);
 }
