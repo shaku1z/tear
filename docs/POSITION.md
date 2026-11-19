@@ -24,6 +24,7 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 | [Repository structure and workflow](#repository-structure) | In progress | After the hooks pull request merges, run pnpm setup:hooks in the canonical checkout on main (scripts/governance/README.md). | — |
 | [Playtest tool](#playtest-tool) | Stage 1 in part: pnpm playtest bosses prints a table per boss fight and phase, from Phase I or a chosen phase | Rest of stage 1: a player that cuts Grafts, the still, walker and no-dodge players, and the sweep over weapons and seeds. | — |
 | [TearBench C21 to C40 program](#tearbench-program) | Paused at the 2026-08-30 state | Land or close pull request 84. | — |
+| [Mobile, touch and phone layouts](#mobile) | Paused by the owner 2026-11-19 | Leave the mobile code out of the production builds while keeping it in dev and test builds. | Say when mobile resumes. |
 
 <a id="release-readiness"></a>
 
@@ -124,3 +125,13 @@ https://tearblade.com runs `84761549` (deployed 2026-11-13). Deployed after the 
 - Next: Land or close pull request 84.
 - Owner action: none
 - Evidence: [config/tearbench-current-program-state.json](../config/tearbench-current-program-state.json), [plans/TEARBENCH_MASTER_HANDOFF.md](../plans/TEARBENCH_MASTER_HANDOFF.md), [#84](https://github.com/shaku1z/tear/pull/84)
+
+<a id="mobile"></a>
+
+### Mobile, touch and phone layouts
+
+**Paused by the owner 2026-11-19.** The owner paused all mobile work and wants it out of the official production builds until further notice. Touch controls, stick or drag aim, the rotate gate, phone layouts, touch density and haptics exist in the source. Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.
+
+- Next: Leave the mobile code out of the production builds while keeping it in dev and test builds.
+- Owner action: Say when mobile resumes.
+- Evidence: [plans/MOBILE_LATER.md](../plans/MOBILE_LATER.md), [#191](https://github.com/shaku1z/tear/pull/191)
