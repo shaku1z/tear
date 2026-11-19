@@ -108,9 +108,9 @@ describe("design-check verdict", () => {
 });
 
 describe("design-check setting", () => {
-  it("is observe in the repository for now, observing since the template gained the check", () => {
+  it("is enforce in the repository, observing since the template gained the check", () => {
     const text = fs.readFileSync(path.join(root, DESIGN_CHECK_CONFIG), "utf8");
-    expect(parseDesignCheckConfig(text)).toEqual({ mode: "observe", observingSince: "2026-11-18T01:53:47Z" });
+    expect(parseDesignCheckConfig(text)).toEqual({ mode: "enforce", observingSince: "2026-11-18T01:53:47Z" });
     const about = JSON.parse(text).about;
     expect(about).toContain("Switching to enforce is the lead's decision");
   });
