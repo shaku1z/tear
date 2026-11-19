@@ -98,7 +98,7 @@ type PresentationControl = InteractiveUiButton & CanvasUiButton;
 
 export interface LivePresentationFrameState<Screen extends string> {
   readonly screen: () => Screen;
-  readonly previousScreen: () => Screen;
+  readonly previousScreen: () => Screen | undefined;
   readonly setPreviousScreen: (screen: Screen) => void;
   readonly deltaSeconds: () => number;
   readonly enterSeconds: () => number;

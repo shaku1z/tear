@@ -198,7 +198,7 @@ export function startLiveGame(
     runScreenFact: createTearRunScreenFactPublisher(GAMEPLAY_EVENTS, () => RUN_LIFECYCLE.snapshot(), liveRun),
     place: () => ({ focus: interfaceInteraction.focus(), scroll: interfaceInteraction.scroll() }),
   });
-  const interfaceFrame = createLiveInterfaceFrameState(navigation.screen());
+  const interfaceFrame = createLiveInterfaceFrameState();
   const currentOutcome = () => {
     const outcome = session.outcome();
     if (outcome === null) throw new Error("Outcome screen requires a completed run");

@@ -19,7 +19,8 @@ export interface RenderPipelinePorts<Screen extends string> {
   readonly logicalHeight: number;
   readonly overscan: () => Readonly<{ x: number; y: number }>;
   readonly screen: () => Screen;
-  readonly previousScreen: () => Screen;
+  /** The screen the last frame drew; undefined before the first frame. */
+  readonly previousScreen: () => Screen | undefined;
   readonly setPreviousScreen: (screen: Screen) => void;
   readonly resizeIfNeeded: () => void;
   readonly screenRectangle: () => ScreenRectangle;
