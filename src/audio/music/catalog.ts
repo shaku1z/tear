@@ -5,6 +5,7 @@
  * phase, instrumental, menu edit…). The player selects the *work*; this layer
  * picks the best version that is actually playable in the current context.
  */
+import { isRecord } from "../../domain/records";
 import { conditionFrom, conditionProblems, type UnlockCondition } from "../../domain/unlock-condition";
 
 export type CompatibilityClass = "A" | "B" | "C" | "D";
@@ -102,10 +103,6 @@ export interface LegacyMusicCatalog {
 }
 
 export type MusicCatalogDocument = MusicCatalog | LegacyMusicCatalog;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Parse either catalog wire name and normalize it to the canonical Music form.

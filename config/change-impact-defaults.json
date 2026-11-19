@@ -141,6 +141,7 @@
         "AGENTS.md",
         "CLAUDE.md",
         "README.md",
+        "eslint-suppressions.json",
         "eslint.config.mjs",
         "firebase.json",
         "firestore.rules",

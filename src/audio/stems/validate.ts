@@ -1,13 +1,10 @@
+import { isRecord } from "../../domain/records";
 import type { CueValidationResult, StemCueManifest, Tier } from "./types";
 
 const TIERS: readonly Tier[] = [0, 1, 2, 3, 4];
 
 function isFrame(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 0;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function text(value: unknown): string {

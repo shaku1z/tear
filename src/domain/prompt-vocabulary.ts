@@ -6,7 +6,7 @@
  * wording names keyboard actions, and the keys come from the binding table.
  */
 
-import { keyboardLabel, type KeyboardAction } from "./keyboard-bindings";
+import { keyboardLabel, keyboardLabels, type KeyboardAction } from "./keyboard-bindings";
 
 export type PromptDevice = "keyboard" | "touch" | "gamepad";
 
@@ -133,7 +133,22 @@ export function promptLabel(action: PromptAction, device: PromptDevice, padLabel
 
 function keyboardWording(wording: KeyboardWording): string {
   if (typeof wording === "string") return wording;
-  return `${wording.prefix ?? ""}${wording.keys.map(keyboardLabel).join(wording.join ?? " / ")}${wording.suffix ?? ""}`;
+  return `${wording.prefix ?? ""}${keySets(wording)}${wording.suffix ?? ""}`;
+}
+
+/**
+ * The keys of a wording, every alternative named. Alternatives read set by set, so move is
+ * "A D / ← →" (the letters, or the arrows); a chord names each part's keys tightly, so dash down
+ * is "S/↓ + SHIFT". Both stay keycap-short.
+ */
+function keySets(wording: Exclude<KeyboardWording, string>): string {
+  const labels = wording.keys.map(keyboardLabels);
+  if (wording.join !== undefined) return labels.map((names) => names.join("/")).join(wording.join);
+  const sets = Math.max(0, ...labels.map((names) => names.length));
+  if (labels.length < 2 || sets < 2) return wording.keys.map(keyboardLabel).join(" / ");
+  return Array.from({ length: sets }, (_, set) =>
+    labels.map((names) => names[Math.min(set, names.length - 1)]).join(" "),
+  ).join(" / ");
 }
 
 /** Labels for a list of actions; actions with no direct control are dropped and duplicates merge. */

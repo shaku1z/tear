@@ -1,3 +1,4 @@
+import { asRecord } from "../domain/records";
 import { readSeedRaceRun } from "./seed-race-contract";
 import { stableVerificationHash } from "../domain/hash";
 import { readGhostReplayRunContext } from "./replay-admission";
@@ -132,8 +133,7 @@ export const emptyCareerQuery = (): CareerQuery => ({
   page: 0,
 });
 export const defaultCareerNotes = (): CareerNotes => ({ revision: 0, tags: [], retention: "recent" });
-export const careerObject = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+export const careerObject = (value: unknown): Record<string, unknown> => asRecord(value) ?? {};
 const number = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
 
