@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const { withJourney } = require("./browser-journey-harness");
 const { STATE_WAIT_MS } = require("./browser-waits");
 
-withJourney({ name: "fresh-run meta progression", port: 8162, deferBoot: true }, async ({ page, boot }) => {
+withJourney({ name: "fresh-run meta progression", deferBoot: true }, async ({ page, boot }) => {
   await page.addInitScript(() => {
     window.__TEAR_TEST_STORAGE__ = {
       tear_meta: JSON.stringify({

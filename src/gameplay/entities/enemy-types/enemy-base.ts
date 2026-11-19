@@ -7,6 +7,7 @@ import type {
   EnemyPlayerPort,
   EnemyProjectile,
 } from "../enemy-contracts";
+import { bossBodyHurts, type BossBodyContactRow } from "../boss-body-contact";
 import type { BossRuntime } from "./boss-runtime";
 
 export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: BossRuntime) {
@@ -101,6 +102,8 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
     phaseDamageMult: number;
     isBoss?: boolean;
     isMiniBoss?: boolean;
+    /** A boss's row in boss-body-contact.ts; null for every other enemy, whose body always hurts. */
+    bodyContact: BossBodyContactRow | null = null;
     _noBar?: boolean;
     declare bossName: string;
     declare bossId: string;
@@ -383,10 +386,17 @@ export function createEnemyBase(dependencies: EnemyDependencies, bossRuntime: Bo
       void context;
       return dmg;
     } // authored bosses may protect a phase boundary
-    // Optional authored contact gate. Most actors always deal body contact; stateful
-    // bosses can close the gate without mutating their difficulty-scaled contactDmg.
+    /** What the body is doing, as its boss-body-contact.ts row names it. Null: the row is "any" or "never". */
+    bodyContactLabel(): string | null {
+      return null;
+    }
+    // Most actors always deal body contact. A boss deals it only where its row in boss-body-contact.ts says.
     contactDamageEnabled() {
-      return true;
+      return this.bodyContact === null || bossBodyHurts(this.bodyContact, this.bodyContactLabel());
+    }
+    /** True while the body pushes the player out of itself instead of letting them walk through. */
+    bodyBlocks(): boolean {
+      return this.bodyContact?.blocks === true;
     }
     contactDamageAmount() {
       return this.contactDmg;

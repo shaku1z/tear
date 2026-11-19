@@ -1,3 +1,4 @@
+import { BOSS_BODY_CONTACT, type BossBodyContactRow } from "../boss-body-contact";
 import { practicePhaseEntryHealth, type BossPracticeActorEntry } from "../../training/boss-phase-practice-runtime";
 import type {
   EnemyDependencies,
@@ -89,6 +90,7 @@ export function createAldricType(
     debugGeometry: { a: Point; b: Point; radius: number }[] = [];
     declare cfg: typeof CONFIG.aldric;
 
+    override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT.aldric;
     constructor(x: number, y: number) {
       super(x, y, CONFIG.aldric);
       this.color = CONFIG.colors.charger;
@@ -215,8 +217,8 @@ export function createAldricType(
       }
       return greatCleaverPose(this, a, pa, o);
     }
-    override contactDamageEnabled() {
-      return !["lunge", "overhead", "royalvault", "ascend", "thronefall"].includes(this.state);
+    override bodyContactLabel() {
+      return this.state;
     }
     // during the fake he can't be killed (hit OR DoT) — he always rises into the frenzy
     override _deathLocked() {

@@ -1,3 +1,4 @@
+import { BOSS_BODY_CONTACT, type BossBodyContactRow } from "../boss-body-contact";
 import type {
   EnemyDependencies,
   EnemyPlatform,
@@ -93,6 +94,7 @@ export function createWhiteHartType(dependencies: EnemyDependencies, Enemy: Enem
     auroraBossChargeActive = false;
     parryOutcome: "none" | "deflect" | "perfect" = "none";
 
+    override bodyContact: BossBodyContactRow | null = BOSS_BODY_CONTACT["white-hart"];
     constructor(x: number, y: number) {
       super(x, y, CONFIG.whiteHart);
       this.kind = "white-hart";
@@ -119,11 +121,6 @@ export function createWhiteHartType(dependencies: EnemyDependencies, Enemy: Enem
     override limitIncomingDamage(damage: number): number {
       return this.introT > 0 ? 0 : damage;
     }
-    /** Body overlap never substitutes for an authored warned attack. */
-    override contactDamageEnabled(): boolean {
-      return false;
-    }
-
     batonSegment(): WeaponSegment & { radius: number } {
       const rootX = this.x + this.facing * this.hw * 0.48,
         tipX = this.x + this.facing * this.hw * 1.42;

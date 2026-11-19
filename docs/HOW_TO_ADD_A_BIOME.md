@@ -115,6 +115,17 @@ A boss is an enemy with phases, an arena and a move list.
   only then (Last Spring). A fight restored part-way through a phase calls `openBossPhase` so no opening is
   owed. `bossAttackThreatens` says whether a strike is on its way, for rules that must not count that time
   (the Rootbound's healing wait). Do not run a schedule as a state machine beside the table.
+- **Body contact:** a boss body hurts only inside a declared move. Give the boss a row in
+  `src/gameplay/entities/boss-body-contact.ts` with `hurtsIn: "never"` and set it as `bodyContact` in its
+  constructor. A charge or slam where the body is the strike is a move whose hit shape is `body`, so it
+  has a tell like any other strike. With `blocks: true` the body pushes the player out to the side
+  instead of letting them walk through; a player with no room between the body and the arena edge is
+  moved to the open side. The rows that list where an old boss's body hurts are a list that may only
+  shrink (`tests/unit/boss-body-contact.test.ts`); a new boss may not join it.
+- **Moves the player must be able to leave:** pass `walker` in the move context (the player's walking
+  speed in pixels per tick, and whether the body blocks). The chooser then does not play a ring, box or
+  column on a target who stands in it and could not walk out within the tell, counting the arena edge and
+  a blocking body. Lanes and travelling strikes are answered by a jump and are not affected.
 - **Tells:** report them from `tells()` in the shared format (`src/gameplay/entities/boss-tells.ts`). The
   shared tell renderer draws them, and `tests/unit/boss-tell-rules.test.ts` checks every boss's warnings.
   The punish stage reports an `exposed` tell, so the player can see the opening.

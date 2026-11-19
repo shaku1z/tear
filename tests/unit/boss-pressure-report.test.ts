@@ -179,13 +179,13 @@ const BOSS_PRESSURE_RECORD: Readonly<Record<BossId, Measured>> = {
 /** Rootbound against the reading player: what is left once the marks are answered. */
 // Phases I and II: every move can be answered. Phase III: Last Spring is left by the nearer edge of its band.
 // Regrowth's root wave warns of each repeat, so the reader jumps all of them; it took 3 hits (48) from them
-// while a repeat came with no tell of its own. The one hit left is a Thorn Burst (a ring of radius 150 after
-// a 0.5 s tell) that starts while the reader stands between the keeper and the left wall: it can only walk,
-// and there is no room to walk out on that side.
+// while a repeat came with no tell of its own. It took one more, [33, 1, 16, 8], from a Thorn Burst that
+// started while it stood between the keeper and the left wall; the keeper no longer plays a move the player
+// could not walk out of, so nothing lands.
 const READING_PLAYER_RECORD: Measured = [
-  [42, 0, 0, 2.5],
+  [43, 0, 0, 3.1],
   [46, 0, 0, 2.4],
-  [33, 1, 16, 8],
+  [23, 0, 0, 8.4],
 ];
 
 describe("boss pressure report", { timeout: 180_000 }, () => {

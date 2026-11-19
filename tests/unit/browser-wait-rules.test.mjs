@@ -8,8 +8,16 @@ import { describe, expect, it, vi } from "vitest";
 
 const root = resolve(import.meta.dirname, "../..");
 const eslint = new ESLint({ cwd: root });
-const { clickTarget, journeyStep, launchJourney, reloadPage, STATE_WAIT_MS, trackScriptLoads, waitForScriptLoads } =
-  createRequire(import.meta.url)("../browser-waits.js");
+const {
+  clickTarget,
+  journeyStep,
+  launchJourney,
+  reloadPage,
+  reportWorkerScripts,
+  STATE_WAIT_MS,
+  trackScriptLoads,
+  waitForScriptLoads,
+} = createRequire(import.meta.url)("../browser-waits.js");
 
 async function messages(code) {
   const [result] = await eslint.lintText(code, { filePath: resolve(root, "tests/rule-probe-browser.js") });
@@ -236,8 +244,10 @@ describe("reloadPage", () => {
     page.evaluate = async () => {
       frames += 1;
     };
+    page.exposeBinding = async () => undefined;
+    page.addInitScript = async () => undefined;
     await expect(waitForScriptLoads(page)).rejects.toThrow(/trackScriptLoads/u);
-    trackScriptLoads(page);
+    await trackScriptLoads(page);
     const request = (type, url) => ({ resourceType: () => type, url: () => url });
     const music = request("media", "http://127.0.0.1/assets/stem.ogg");
     page.emit("request", music); // still loading when the screen is ready: must not hold the wait
@@ -259,6 +269,57 @@ describe("reloadPage", () => {
     await waiting;
     expect(done).toBe(true);
     expect(frames).toBe(4);
+  });
+
+  it("never waits for a worker's script, which a worker terminated mid-load leaves open for good", async () => {
+    const page = new EventEmitter();
+    page.evaluate = async () => undefined;
+    let reportWorker;
+    page.exposeBinding = async (name, callback) => {
+      expect(name).toBe("__tearWorkerScript");
+      reportWorker = (url) => callback({}, url);
+    };
+    page.addInitScript = async () => undefined;
+    await trackScriptLoads(page);
+    const request = (url) => ({ resourceType: () => "script", url: () => url });
+    const early = "http://127.0.0.1/assets/career-archive-worker.js";
+    const late = "http://127.0.0.1/assets/capsule-encoder-worker.js";
+    // The page reports the worker first: its request is never counted.
+    reportWorker(early);
+    page.emit("request", request(early));
+    await waitForScriptLoads(page);
+    // The request arrives first: the report settles it. Neither ever gets requestfinished.
+    page.emit("request", request(late));
+    const waiting = waitForScriptLoads(page);
+    reportWorker(late);
+    await waiting;
+    // A screen chunk is still waited for.
+    const chunk = request("http://127.0.0.1/assets/cold-screen-renderers.js");
+    page.emit("request", chunk);
+    let done = false;
+    const chunkWait = waitForScriptLoads(page).then(() => (done = true));
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(done).toBe(false);
+    page.emit("requestfinished", chunk);
+    await chunkWait;
+  });
+
+  it("reports each worker's script URL from the page before the worker starts", () => {
+    const reported = [];
+    const constructed = [];
+    function FakeWorker(url, options) {
+      constructed.push([String(url), options]);
+    }
+    const window = {
+      Worker: FakeWorker,
+      location: { href: "http://127.0.0.1/index.html?test=1" },
+      __tearWorkerScript: (url) => (reported.push(url), Promise.resolve()),
+    };
+    new Function("window", `(${reportWorkerScripts.toString()})()`)(window);
+    const worker = new window.Worker("/assets/career-archive-worker.js", { type: "module" });
+    expect(worker).toBeInstanceOf(FakeWorker);
+    expect(reported).toEqual(["http://127.0.0.1/assets/career-archive-worker.js"]);
+    expect(constructed).toEqual([["/assets/career-archive-worker.js", { type: "module" }]]);
   });
 
   it("reloads with the state-wait ceiling", async () => {

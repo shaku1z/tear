@@ -37,7 +37,7 @@ async function main() {
       `${entry.id} must own canonical live State Forge execution outside the natural reset journey`,
     );
   }
-  await withJourney({ name: "current canonical gameplay scenario subjects", port: 8298 }, async ({ page }) => {
+  await withJourney({ name: "current canonical gameplay scenario subjects" }, async ({ page }) => {
     await page.waitForFunction(() => window.__TEAR_RUNTIME_ENVIRONMENT__ && window.__PANTHEON_TEST);
     for (const entry of scenarios) {
       assert.ok(entry.backends.includes("live"), `${entry.id} must honestly declare its live evidence backend`);
