@@ -130,6 +130,18 @@
         "plans/TEARBENCH_MASTER_HANDOFF.md",
         "https://github.com/shaku1z/tear/pull/84"
       ]
+    },
+    {
+      "id": "mobile",
+      "name": "Mobile, touch and phone layouts",
+      "state": "Paused by the owner 2026-11-19",
+      "summary": "The owner paused all mobile work and wants it out of the official production builds until further notice. Touch controls, stick or drag aim, the rotate gate, phone layouts, touch density and haptics exist in the source. Touch-aim fixes are parked as draft pull request 191. Sessions write anything mobile will need later in plans/MOBILE_LATER.md.",
+      "next": "Leave the mobile code out of the production builds while keeping it in dev and test builds.",
+      "owner_action": "Say when mobile resumes.",
+      "evidence": [
+        "plans/MOBILE_LATER.md",
+        "https://github.com/shaku1z/tear/pull/191"
+      ]
     }
   ]
 }
