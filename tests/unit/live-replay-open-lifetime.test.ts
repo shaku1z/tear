@@ -21,7 +21,6 @@ vi.mock("../../src/app/replay/browser-ghost-studio-media", () => ({
   createBrowserGhostStudioMedia: vi.fn(),
   createBrowserGhostReplayPresentation: vi.fn(),
 }));
-vi.mock("../../src/app/replay/browser-ghost-coach-history", () => ({ createBrowserGhostCoachHistoryPort: vi.fn() }));
 
 describe("pending finale Theater admission lifetime", () => {
   it.each(["read", "confirm"])("cannot replace a newer screen after a delayed %s", async (boundary) => {

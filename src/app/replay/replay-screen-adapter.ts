@@ -6,7 +6,6 @@ import { readGhostFinaleCompanion } from "../../ghost/finale-companion";
 import { reopenRecordedGhostChallenge } from "../../ghost/browser-recorded-challenge";
 import { createBrowserGhostReplayPresentation, createBrowserGhostStudioMedia } from "./browser-ghost-studio-media";
 import { stableVerificationHash } from "../../domain/hash";
-import { createBrowserGhostCoachHistoryPort } from "./browser-ghost-coach-history";
 import type { GameRuntimeDependencies } from "../shell/game-runtime-dependencies";
 import type { createLiveScreenRenderers } from "../../presentation/screens/live-screen-renderers";
 import type { AppScreen } from "../../domain/screen-catalog";
@@ -92,14 +91,6 @@ export interface ReplayScreenAdapter {
   readonly practice: () => void;
   readonly openChallenges: () => void;
   readonly startChallenge: (id: string) => void;
-  readonly openCoach: () => void;
-  readonly selectCoachBaseline: (id: string) => void;
-  readonly practiceCoachFinding: (findingId: string) => void;
-  readonly viewCoachMoment: (id: string) => void;
-  readonly controlCoach: (
-    command: "close" | "scene" | "page" | "metric" | "moment" | "details" | "sources" | "rows" | "section",
-    delta: number,
-  ) => void;
   readonly toggleRunDna: () => void;
   readonly toggleStudio: () => void;
   readonly createStudioCutList: () => void;
@@ -121,11 +112,6 @@ type LegacyReplayScreenAdapter = Omit<
   | "enterGhostCapsule"
   | "enterGhostComparison"
   | "practice"
-  | "openCoach"
-  | "selectCoachBaseline"
-  | "practiceCoachFinding"
-  | "viewCoachMoment"
-  | "controlCoach"
   | "toggleRunDna"
   | "toggleStudio"
   | "createStudioCutList"
@@ -167,7 +153,6 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
       },
     }),
     launchPractice: services.launchGhostPractice,
-    coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb),
   });
   const comparison = createGhostComparisonScreenAdapter({ render: services.renderers.replay });
   const createFinaleAdapter = () =>
@@ -187,7 +172,6 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
         },
       }),
       launchPractice: services.launchGhostPractice,
-      coachHistory: createBrowserGhostCoachHistoryPort(services.browserIndexedDb),
     });
   let finale = createFinaleAdapter();
   let active: "legacy" | "theater" | "comparison" | "finale" | undefined;
@@ -440,21 +424,6 @@ export function createLiveReplayScreenAdapter(services: ReplayScreenServices): R
     },
     startChallenge: (id) => {
       if (active === "theater") theater.startChallenge(id);
-    },
-    openCoach: () => {
-      if (active === "theater") theater.openCoach();
-    },
-    selectCoachBaseline: (id) => {
-      if (active === "theater") theater.selectCoachBaseline(id);
-    },
-    practiceCoachFinding: (findingId) => {
-      if (active === "theater") theater.practiceCoachFinding(findingId);
-    },
-    viewCoachMoment: (id) => {
-      if (active === "theater") theater.viewCoachMoment(id);
-    },
-    controlCoach: (command, delta) => {
-      if (active === "theater") theater.controlCoach(command, delta);
     },
     toggleRunDna: () => {
       if (active === "theater") theater.toggleRunDna();

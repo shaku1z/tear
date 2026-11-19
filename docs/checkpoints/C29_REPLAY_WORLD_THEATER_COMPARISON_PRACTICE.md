@@ -1,5 +1,7 @@
 # C29 - Replay World, Theater, Comparison, and Practice
 
+The replay Coach, the knowledge libraries and `tests/browser-ghost-v3-live-capture.js` named in this note were removed in shaku1z/tear#227.
+
 **Status:** complete - production-runtime replay, semantic Theater,
 player-visible Practice From Here, side-by-side semantic comparison, and
 durable active-campaign-cinematic restoration are proven by the named gate.

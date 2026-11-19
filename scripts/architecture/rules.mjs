@@ -647,10 +647,10 @@ const STRUCTURE_RULES = [
     "engineering.lazy-channel",
     ["N1"],
     ["src/**"],
-    ["@engineering.channel-entries"],
-    "engineering-channel modules may only be loaded through a guarded dynamic import, never a static value import",
+    ["@release.developer-only"],
+    "developer-only modules may only be loaded through a guarded dynamic import, never a static value import",
     {
-      except: ["@engineering.channel-entries"],
+      except: ["@release.developer-only", "@release.build-guarded-importers"],
       edges: "static-value",
       fixtures: {
         reject: [{ imports: "src/app/engineering/example-channel-entry", file: "@app.live-runtime-root" }],

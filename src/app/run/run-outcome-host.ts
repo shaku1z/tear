@@ -3,7 +3,7 @@ import {
   type RecordedReplay,
   type StoredRecordingSummary,
 } from "../../gameplay/run/live-recording-controller";
-import { LiveRunOutcomeController } from "../../gameplay/run/live-outcome-controller";
+import { LiveRunOutcomeController, type LiveOutcomeControllerPort } from "../../gameplay/run/live-outcome-controller";
 import type { OutcomeChronologyEffect } from "../../gameplay/run/outcome-chronology-journal";
 import type {
   OutcomeRunState,
@@ -55,6 +55,8 @@ export interface LiveRunOutcomeHostContext<TReplay extends RecordedReplay> {
   readonly publishTerminal: (outcome: "defeat" | "victory", run: OutcomeRunState) => void;
   readonly saveBest: (run: OutcomeRunState) => boolean;
   readonly best: (run: OutcomeRunState) => BestRecord;
+  readonly recordGauntletClear: NonNullable<LiveOutcomeControllerPort["recordGauntletClear"]>;
+  readonly gauntletBest: NonNullable<LiveOutcomeControllerPort["gauntletBest"]>;
   readonly awardCoins: (score: number) => number;
   readonly coins: () => number;
   readonly achievementTracking: () => boolean;
@@ -124,6 +126,8 @@ export function createLiveRunOutcomeHost<TReplay extends RecordedReplay>(
     publishTerminal: context.publishTerminal,
     saveBest: context.saveBest,
     best: context.best,
+    recordGauntletClear: context.recordGauntletClear,
+    gauntletBest: context.gauntletBest,
     awardCoins: context.awardCoins,
     coins: context.coins,
     achievementTracking: context.achievementTracking,

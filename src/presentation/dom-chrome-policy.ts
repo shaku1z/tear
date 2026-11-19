@@ -4,6 +4,28 @@
  * host only applies the result to the DOM.
  */
 
+import { promptLabel, type PromptAction } from "../domain/prompt-vocabulary";
+
+/** The keyboard control legend (#hint), worded by the prompt vocabulary. */
+const CONTROL_HINT: readonly Readonly<{ action: PromptAction; words: string }>[] = [
+  { action: "move", words: "move" },
+  { action: "jump", words: "jump" },
+  { action: "drop", words: "drop through" },
+  { action: "dash", words: "dash" },
+  { action: "swing", words: "blade" },
+  { action: "throw", words: "throw / recall" },
+  { action: "tether", words: "tether" },
+  { action: "pause", words: "pause" },
+  { action: "fullscreen", words: "fullscreen" },
+];
+
+/** The legend's text; the fullscreen key is named only where the platform can go fullscreen. */
+export function controlHintText(fullscreenAvailable: boolean): string {
+  return CONTROL_HINT.filter((entry) => fullscreenAvailable || entry.action !== "fullscreen")
+    .map((entry) => `${promptLabel(entry.action, "keyboard") ?? ""} ${entry.words}`)
+    .join("  ·  ");
+}
+
 /** The keyboard control legend is a first-moments aid, not permanent chrome. */
 export const CONTROL_HINT_SECONDS = 12;
 /** Profiles with this many completed runs know the controls. */
@@ -16,6 +38,8 @@ export interface DomChromeInput {
   /** Capture policy includes the pointer-lock hint. */
   readonly pointerLockIncluded: boolean;
   readonly touch: boolean;
+  /** The platform can go fullscreen (CrazyGames owns it; iPhone Safari has none). */
+  readonly fullscreenAvailable: boolean;
   readonly inputMode: "mouse" | "keyboard" | "gamepad" | "touch";
   readonly pointerLocked: boolean;
   /** Seconds of the current run; 0 outside a run. */
@@ -45,6 +69,6 @@ export function domChromeVisibility(input: DomChromeInput): DomChromeVisibility 
       input.completedRuns < CONTROL_HINT_RUN_LIMIT &&
       input.runSeconds < CONTROL_HINT_SECONDS,
     // Fullscreen lives on menus only; touch devices use the platform's own controls.
-    fullscreen: input.uiIncluded && !playing && !input.touch,
+    fullscreen: input.uiIncluded && !playing && !input.touch && input.fullscreenAvailable,
   });
 }

@@ -37,6 +37,8 @@ export interface HudRunSource {
   readonly comboTimer: number;
   readonly spawnQueue: readonly unknown[];
   readonly owned: Readonly<Record<string, number>>;
+  /** The run's boss order; in the Gauntlet it is the trial order. */
+  readonly bossOrder?: readonly string[];
 }
 export interface HudSnapshotInput {
   readonly player: HudPlayerSource;
@@ -125,6 +127,7 @@ export function buildHudSnapshot(input: HudSnapshotInput): HudSnapshotResult {
       mode: input.run.mode,
       bossWave: input.run.isBossWave === true,
       wave: input.run.wave,
+      ...(input.run.mode === "gauntlet" ? { trialCount: input.run.bossOrder?.length ?? 0 } : {}),
       score: input.run.score,
       timeLabel: input.formatTime(input.run.runTime),
       remaining: input.enemyCount + input.run.spawnQueue.length,

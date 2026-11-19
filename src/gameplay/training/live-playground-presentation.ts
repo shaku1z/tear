@@ -5,6 +5,7 @@ import {
   type PadBindingLabel,
   type PromptInputMode,
 } from "../../domain/prompt-vocabulary";
+import { keyCodeLabel, keyCodes, keyboardLabel, type KeyboardAction } from "../../domain/keyboard-bindings";
 import { PLAYGROUND_TABS } from "./runtime-bridge";
 
 export interface PlaygroundChoice {
@@ -64,14 +65,24 @@ export function playgroundMenuSubtitle(mode: PlaygroundPromptDevice, padLabel?: 
 }
 
 /** Keyboard shortcuts in the arena, shown on the choice they repeat (keyboard only). */
-export const PLAYGROUND_SHORTCUTS: Readonly<Record<string, string>> = Object.freeze({
-  dummy: "T",
-  "boss:next": "B",
-  "boss:echo": "M",
-  clear: "K",
-  heal: "H",
-  "tab:abilities": "U",
+export const PLAYGROUND_SHORTCUTS: Readonly<Record<string, KeyboardAction>> = Object.freeze({
+  dummy: "spawn-dummy",
+  "boss:next": "summon-boss",
+  "boss:echo": "summon-echo",
+  clear: "clear-enemies",
+  heal: "heal",
+  "tab:abilities": "abilities",
 });
+
+/** The key label for a choice's shortcut: its bound action, or the nth quick-spawn key. */
+function shortcutLabel(id: string, spawnIndex?: number): string | undefined {
+  if (spawnIndex !== undefined) {
+    const code = keyCodes("quick-spawn")[spawnIndex];
+    return code === undefined ? undefined : keyCodeLabel(code);
+  }
+  const action = PLAYGROUND_SHORTCUTS[id];
+  return action === undefined ? undefined : keyboardLabel(action);
+}
 
 function menuTabs(selected: string): PlaygroundScreenModel["tabs"] {
   return PLAYGROUND_TABS.map(([id, label]) => ({ id: `tab:${id}`, label, selected: id === selected }));
@@ -120,8 +131,10 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
         // Arena shortcuts are keys: shown only while the keyboard owns input.
         keyboard = promptDevice(device) === "keyboard",
         tab = options.tab();
-      const key = (id: string, hotkey = PLAYGROUND_SHORTCUTS[id]) =>
-        keyboard && hotkey !== undefined ? { sub: `KEY ${hotkey}` } : {};
+      const key = (id: string, spawnIndex?: number) => {
+        const hotkey = keyboard ? shortcutLabel(id, spawnIndex) : undefined;
+        return hotkey === undefined ? {} : { sub: `KEY ${hotkey}` };
+      };
       const pages: Readonly<Record<string, readonly PlaygroundSection[]>> = {
         spawn: [
           {
@@ -133,7 +146,7 @@ export function createLivePlaygroundPresentation(options: LivePlaygroundPresenta
                   id: `spawn:${kind}`,
                   label: kind.toUpperCase(),
                   accent: colors[kind] ?? "#888",
-                  ...key(kind, index < 0 ? undefined : String(index + 1)),
+                  ...(index < 0 ? {} : key(kind, index)),
                 };
               }),
               { id: "dummy", label: "TARGET DUMMY", accent: "#888", ...key("dummy") },

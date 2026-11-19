@@ -32,6 +32,7 @@ import { renderReplayThumbnail } from "../../presentation/replay-thumbnail";
 import type { GhostVaultLibraryPort } from "./ghost-vault-library-controller";
 import type { GhostTheaterOpenResult } from "../../ghost/theater-open-result";
 import { createLiveBestiaryPreview } from "./bestiary-preview";
+import { VAULT_OPENING_MESSAGE, vaultListState } from "../../presentation/screens/profile-list-empty-state";
 
 type Dependencies = Pick<
   GameRuntimeDependencies,
@@ -48,6 +49,7 @@ type Dependencies = Pick<
   | "DAILY"
   | "Echo"
   | "FirebaseProvider"
+  | "fullscreen"
   | "Flyer"
   | "META"
   | "PROFILE"
@@ -260,13 +262,18 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     });
     const guide =
       codexTab === "guide"
-        ? buildCodexGuide(d.CONFIG.trick.pts, d.CONFIG.trick.tiers, {
-            jump: d.PAD.bindingLabel("jump"),
-            dash: d.PAD.bindingLabel("dash"),
-            throw: d.PAD.bindingLabel("throw"),
-            tether: d.PAD.bindingLabel("tether"),
-            pause: d.PAD.glyph(9),
-          })
+        ? buildCodexGuide(
+            d.CONFIG.trick.pts,
+            d.CONFIG.trick.tiers,
+            {
+              jump: d.PAD.bindingLabel("jump"),
+              dash: d.PAD.bindingLabel("dash"),
+              throw: d.PAD.bindingLabel("throw"),
+              tether: d.PAD.bindingLabel("tether"),
+              pause: d.PAD.glyph(9),
+            },
+            d.fullscreen().available,
+          )
         : undefined;
     const result = buildCodexScreenSnapshot({
       tab: codexTab,
@@ -323,7 +330,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       }),
     );
     if (profileTab === "vault" && ghostVault.message !== undefined) profileMessage = ghostVault.message;
-    else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = "Opening your saved replays…";
+    else if (profileTab === "vault" && ghostVault.status === "loading") profileMessage = VAULT_OPENING_MESSAGE;
     else if (profileTab === "vault" && ghostVault.evictedCapsuleIds.length > 0) {
       profileMessage = `${String(ghostVault.evictedCapsuleIds.length)} older saved ${ghostVault.evictedCapsuleIds.length === 1 ? "replay was" : "replays were"} removed to make room.`;
     } else if (profileTab === "vault" && ghostVault.status === "ready" && ghostVault.capsules.length === 0) {
@@ -333,7 +340,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       profileTab === "vault" &&
       ghostVault.status === "ready" &&
       ghostVault.capsules.length > 0 &&
-      profileMessage === "Opening your saved replays…"
+      profileMessage === VAULT_OPENING_MESSAGE
     )
       profileMessage = "";
     const signedIn = d.Cloud.loggedIn(),
@@ -401,6 +408,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
     });
     clampScroll(result.maximumScroll);
     const chaseMessage = services.chase?.snapshot().message;
+    const vaultList = profileTab === "vault" ? vaultListState(ghostVault.status) : undefined;
     services.renderers.profile({
       ...result.view,
       ...(profileTab === "career" && career
@@ -413,6 +421,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
           }
         : {}),
       ...(profileTab === "vault" && ghostVault.archive !== undefined ? { archive: ghostVault.archive } : {}),
+      ...(vaultList === undefined ? {} : { vaultList }),
     });
   };
   const renderAchievements = (): void => {
@@ -604,7 +613,7 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       if (command !== "chase" && command !== "race") services.chase?.cancelPreparation();
       if (command === "suspend") career?.close();
       else if (command === "select" && id) career?.select(id);
-      else if (["watch", "coach", "challenge", "download", "chase", "race"].includes(command)) {
+      else if (["watch", "challenge", "download", "chase", "race"].includes(command)) {
         void career?.sourceAction(async (source) => {
           if (career.snapshot().selected?.entry.kind === "legacy-visual") {
             if (command !== "watch") throw new Error("This tool requires a canonical capsule");
@@ -659,7 +668,8 @@ export function createLiveLibraryScreenAdaptersRuntime(services: LibraryScreenSe
       void services.enterGhostTheater(id).then((result) => {
         if (result.kind === "refused") {
           services.ghostVault.setTheaterEligibility(id, result);
-          profileMessage = "This replay can't be played back right now.";
+          profileMessage =
+            result.category === "ruleset-retired" ? result.detail : "This replay can't be played back right now.";
         }
       });
     },

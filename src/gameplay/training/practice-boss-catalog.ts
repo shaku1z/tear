@@ -102,7 +102,6 @@ export function practiceBossLesson(state: PracticeBossState): TutorialLesson {
         : "Read this boss's attacks and recovery. Complete its real rituals and defeat it, or pause to reset. Baseline Sword · no rewards or discovery.",
     arena: "field-floor",
     teachingFocus: "encounter",
-    keys: ["MOUSE", "SHIFT", "RMB"],
     progress: () => [state.defeated ? 1 : 0, 1],
     complete: () => state.defeated,
   };

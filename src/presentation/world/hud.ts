@@ -1,6 +1,8 @@
 import type { BossHudSnapshot, HudSnapshot, WorldRenderContext, WorldUiPort, RunHudSnapshot } from "./contracts";
 import { clamp } from "./primitives";
 import { INTERFACE_ACCESSIBILITY } from "../../domain/interface-accessibility";
+import { GAUNTLET_WAVES_PER_TRIAL, gauntletWave } from "../../gameplay/run/gauntlet-trials";
+import { waveTitle } from "../../gameplay/run/wave-rules";
 
 /**
  * HUD layout. Groups anchor to the visible screen rectangle plus the device safe
@@ -240,13 +242,37 @@ export function createHudRenderer(context: WorldRenderContext) {
       Math.max(
         ...stats.map(([name, value]) => Math.max(measure(name, type.micro, false), measure(value, type.body, false))),
       ) + t.space.xl;
-    const title = run.bossWave ? "BOSS" : `WAVE ${String(run.wave)}`;
+    const title = waveTitle(run.mode, run.wave, run.bossWave, run.trialCount);
     ui.tag(canvas, title, cx, m.titleY, ui.ink, "center", type.h2);
+    if (run.trialCount !== undefined && run.trialCount > 0) trialStrip(run.trialCount, run.wave, cx, m.top);
     stats.forEach(([name, value], index) => {
       const x = cx + (index - 1) * column;
       ui.text(canvas, value, x, m.valueY, type.body, "center", t.alpha.full);
       ui.text(canvas, name, x, m.labelY, type.micro, "center", t.alpha.soft);
     });
+  }
+
+  /**
+   * The Gauntlet's trial strip over the title: one bar per trial, cleared trials full,
+   * the current one filled by the waves it has played. Bare marks, no plate.
+   */
+  function trialStrip(trialCount: number, wave: number, cx: number, top: number): void {
+    const position = gauntletWave(Math.max(1, wave));
+    const gap = 4,
+      width = Math.min(28, (320 - gap * (trialCount - 1)) / trialCount),
+      height = 3;
+    const left = cx - (width * trialCount + gap * (trialCount - 1)) / 2,
+      y = top + Math.max(2, Math.round(ui.t.metric.hudPad / 2) - height);
+    const doneInTrial = (position.round ?? GAUNTLET_WAVES_PER_TRIAL) - 1;
+    for (let index = 0; index < trialCount; index += 1) {
+      const x = left + index * (width + gap);
+      const fill = index < position.trial ? 1 : index === position.trial ? doneInTrial / GAUNTLET_WAVES_PER_TRIAL : 0;
+      canvas.globalAlpha = 0.18;
+      canvas.fillStyle = ui.ink;
+      canvas.fillRect(x, y, width, height);
+      canvas.globalAlpha = 1;
+      if (fill > 0) canvas.fillRect(x, y, width * fill, height);
+    }
   }
 
   /** Trick multiplier and combo meter, in the slot under the run group. */
