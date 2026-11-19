@@ -209,11 +209,6 @@
       "count": 1
     }
   },
-  "src/presentation/scenes/scene-contract.ts": {
-    "tear/one-record-guard": {
-      "count": 1
-    }
-  },
   "src/presentation/ui-cinematic.ts": {
     "tear/one-record-guard": {
       "count": 1
