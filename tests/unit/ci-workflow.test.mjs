@@ -1,10 +1,11 @@
 // What the Validate workflow must do, tested by behaviour rather than by its exact text.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import vm from "node:vm";
 import { describe, expect, it } from "vitest";
 import { hashMismatches } from "../../scripts/ci-build-hashes.mjs";
 import { main as checkedCommitMain } from "../../scripts/ci-checked-commit.mjs";
+import { lockedPlaywrightVersion, playwrightImage } from "../../scripts/ci-playwright-image.mjs";
 import { FIXED_JOBS, main as verdictMain, verdictProblems } from "../../scripts/ci-verdict.mjs";
 import { loadChecks, selectChecks, shardChecks } from "../../scripts/run-checks.mjs";
 
@@ -478,7 +479,10 @@ describe("Nightly checks workflow", () => {
 
   it("runs the nightly group on main once a day and by hand", () => {
     expect(nightly).toMatch(/schedule:\n {4}- cron: "\d{1,2} \d{1,2} \* \* \*"\n {2}workflow_dispatch:/u);
-    expect(nightly).toMatch(/uses: actions\/checkout@v4\n {8}with:\n {10}ref: main/u);
+    // A schedule runs on the default branch, main; started by hand, it checks the chosen branch.
+    // Naming a ref would test a commit other than the one the run builds and labels.
+    expect(nightly).toMatch(/uses: actions\/checkout@v4/u);
+    expect(nightly).not.toMatch(/\n\s+ref:/u);
     expect(nightly).toMatch(/run: xvfb-run -a node scripts\/run-checks\.mjs nightly --keep-going\n/u);
     expect(selectChecks(loadChecks(), "nightly").length).toBeGreaterThan(0);
   });
@@ -496,5 +500,49 @@ describe("Nightly checks workflow", () => {
 
   it("only reads the repository", () => {
     expect(nightly).toMatch(/permissions:\n {2}contents: read\n\n/u);
+  });
+});
+
+describe("Browser jobs' container", () => {
+  // Every job of every workflow, as { file, id, block }.
+  const allJobs = readdirSync(resolve(root, ".github/workflows"))
+    .filter((name) => /\.ya?ml$/u.test(name))
+    .flatMap((name) =>
+      Object.entries(jobs(read(`.github/workflows/${name}`))).map(([id, block]) => ({ file: name, id, block })),
+    );
+  const where = (job) => `${job.file}: ${job.id}`;
+  // A job with an environment is owner-gated (a deploy); it is not run to test a change.
+  const gated = (job) => /\n {4}environment:/u.test(job.block);
+
+  it("takes its image from the version the lockfile installs", () => {
+    const lockfile = read("pnpm-lock.yaml");
+    const declared = JSON.parse(read("package.json")).devDependencies["@playwright/test"];
+    expect(lockedPlaywrightVersion(lockfile)).toBe(declared);
+    expect(playwrightImage("1.2.3")).toBe("mcr.microsoft.com/playwright:v1.2.3-noble");
+    expect(() => lockedPlaywrightVersion("lockfileVersion: '9.0'\n")).toThrow(/no @playwright\/test/u);
+  });
+
+  it("is named by a job output in every workflow, never written by hand", () => {
+    const containers = allJobs.filter((job) => /\n {4}container:/u.test(job.block));
+    expect(containers.length).toBeGreaterThan(0);
+    for (const job of containers) {
+      const from = /\n {4}container:\n {6}image: \$\{\{ needs\.([\w-]+)\.outputs\.playwright_image \}\}\n/u.exec(
+        job.block,
+      )?.[1];
+      expect(from, where(job)).toBeDefined();
+      expect(needsOf(job.block), where(job)).toContain(from);
+      const source = allJobs.find((other) => other.file === job.file && other.id === from);
+      expect(source?.block, where(job)).toMatch(/node scripts\/ci-playwright-image\.mjs >> "\$GITHUB_OUTPUT"/u);
+      expect(job.block, where(job)).toMatch(
+        /\n {6}GIT_CONFIG_COUNT: 1\n {6}GIT_CONFIG_KEY_0: safe\.directory\n {6}GIT_CONFIG_VALUE_0: "\*"\n/u,
+      );
+    }
+  });
+
+  it("is where every job that needs a browser runs, so no such job installs one", () => {
+    for (const job of allJobs.filter((each) => !gated(each))) {
+      expect(job.block, where(job)).not.toMatch(/playwright install/u);
+      if (/xvfb-run/u.test(job.block)) expect(job.block, where(job)).toMatch(/\n {4}container:/u);
+    }
   });
 });
