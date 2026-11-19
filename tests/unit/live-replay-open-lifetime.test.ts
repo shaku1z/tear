@@ -17,8 +17,8 @@ vi.mock("../../src/app/library/ghost-theater-screen-adapter", () => ({
 vi.mock("../../src/app/replay/ghost-comparison-screen-adapter", () => ({
   createGhostComparisonScreenAdapter: () => ({ exit: vi.fn() }),
 }));
-vi.mock("../../src/app/replay/browser-ghost-studio-media", () => ({
-  createBrowserGhostStudioMedia: vi.fn(),
+vi.mock("../../src/app/replay/browser-replay-clip-export", () => ({ createBrowserReplayClipExport: vi.fn() }));
+vi.mock("../../src/app/replay/browser-ghost-replay-presentation", () => ({
   createBrowserGhostReplayPresentation: vi.fn(),
 }));
 
